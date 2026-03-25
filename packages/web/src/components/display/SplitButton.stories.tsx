@@ -51,10 +51,9 @@ export const OpenAndSelectOption: Story = {
     await userEvent.click(canvas.getByTestId("split-btn-chevron"));
     await expect(canvas.getByTestId("split-btn-menu")).toBeInTheDocument();
 
-    // Both options visible
-    const options = canvas.getAllByRole("button").filter(
-      (btn) => btn.closest("[data-testid='split-btn-menu']"),
-    );
+    // Both options visible in the menu
+    const menu = within(canvas.getByTestId("split-btn-menu"));
+    const options = menu.getAllByRole("menuitem");
     await expect(options).toHaveLength(2);
 
     // Click the second option ("Kill")
