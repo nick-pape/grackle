@@ -639,6 +639,15 @@ message CreateKnowledgeNodeResponse {
   string id = 1;
 }
 
+// ─── Version Status ─────────────────────────────────────────
+
+message VersionStatus {
+  string current_version = 1;
+  string latest_version = 2;
+  bool update_available = 3;
+  bool is_docker = 4;
+}
+
 // ─── Service ────────────────────────────────────────────────
 
 service Grackle {
@@ -730,4 +739,7 @@ service Grackle {
   rpc ExpandKnowledgeNode(ExpandKnowledgeNodeRequest) returns (ExpandKnowledgeNodeResponse);
   rpc ListRecentKnowledgeNodes(ListRecentKnowledgeNodesRequest) returns (ListRecentKnowledgeNodesResponse);
   rpc CreateKnowledgeNode(CreateKnowledgeNodeRequest) returns (CreateKnowledgeNodeResponse);
+
+  // Version
+  rpc GetVersionStatus(Empty) returns (VersionStatus);
 }
