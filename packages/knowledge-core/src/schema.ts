@@ -62,6 +62,49 @@ export function buildSchemaStatements(dimensions: number = EMBEDDING_DIMENSIONS)
  */
 export const SCHEMA_STATEMENTS: Record<string, string> = buildSchemaStatements();
 
+/** Maximum number of retry attempts for transient Neo4j errors (e.g., deadlocks). */
+const SCHEMA_RETRY_LIMIT: number = 3;
+
+/** Delay (ms) between schema statement retries. */
+const SCHEMA_RETRY_DELAY_MS: number = 500;
+
+/**
+ * Run a single schema statement with retry for transient errors and
+ * tolerance for "already exists" collisions.
+ */
+async function runStatementWithRetry(
+  session: import("neo4j-driver").Session,
+  name: string,
+  cypher: string,
+): Promise<void> {
+  for (let attempt = 1; attempt <= SCHEMA_RETRY_LIMIT; attempt++) {
+    try {
+      await session.run(cypher);
+      return;
+    } catch (error) {
+      const code = (error as { code?: string }).code ?? "";
+      // Neo4j CE throws EquivalentSchemaRuleAlreadyExists even with IF NOT EXISTS
+      // when an equivalent index exists with a different internal name.
+      if (code.includes("EquivalentSchemaRuleAlreadyExists")) {
+        logger.debug({ statement: name }, "Schema element already exists, skipping");
+        return;
+      }
+      // Transient errors (deadlocks, lock contention) are retryable
+      const retryable = (error as { retryable?: boolean }).retryable === true;
+      if (retryable && attempt < SCHEMA_RETRY_LIMIT) {
+        logger.warn({ statement: name, attempt }, "Transient schema error, retrying");
+        await new Promise((resolve) => setTimeout(resolve, SCHEMA_RETRY_DELAY_MS * attempt));
+        continue;
+      }
+      logger.error({ err: error, statement: name }, "Schema statement failed");
+      throw new Error(
+        `Schema statement "${name}" failed: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
+      );
+    }
+  }
+}
+
 /**
  * Initialize the Neo4j schema: constraints, property indexes, and the
  * vector index.
@@ -81,23 +124,7 @@ export async function initSchema(dimensions?: number): Promise<void> {
   try {
     for (const [name, cypher] of Object.entries(statements)) {
       logger.debug({ statement: name }, "Running schema statement");
-      try {
-        await session.run(cypher);
-      } catch (error) {
-        // Neo4j CE throws EquivalentSchemaRuleAlreadyExists even with IF NOT EXISTS
-        // when an equivalent index exists with a different internal name. This is
-        // safe to ignore — the schema is already in the desired state.
-        const code = (error as { code?: string }).code ?? "";
-        if (code.includes("EquivalentSchemaRuleAlreadyExists")) {
-          logger.debug({ statement: name }, "Schema element already exists, skipping");
-          continue;
-        }
-        logger.error({ err: error, statement: name }, "Schema statement failed");
-        throw new Error(
-          `Schema statement "${name}" failed: ${error instanceof Error ? error.message : String(error)}`,
-          { cause: error },
-        );
-      }
+      await runStatementWithRetry(session, name, cypher);
     }
     logger.info("Knowledge graph schema initialized");
   } finally {
