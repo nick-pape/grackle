@@ -1660,14 +1660,21 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (!task) {
         throw new ConnectError(`Task not found: ${req.taskId}`, Code.NotFound);
       }
-      // Validate workpad is valid JSON
+      // Validate workpad is a valid JSON object
       try {
-        JSON.parse(req.workpad);
-      } catch {
+        const parsed: unknown = JSON.parse(req.workpad);
+        if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+          throw new ConnectError("Workpad must be a JSON object", Code.InvalidArgument);
+        }
+      } catch (err) {
+        if (err instanceof ConnectError) {
+          throw err;
+        }
         throw new ConnectError("Workpad must be valid JSON", Code.InvalidArgument);
       }
       const MAX_WORKPAD_BYTES = 64 * 1024; // 64 KB
-      if (req.workpad.length > MAX_WORKPAD_BYTES) {
+      const workpadBytes = Buffer.byteLength(req.workpad, "utf8");
+      if (workpadBytes > MAX_WORKPAD_BYTES) {
         throw new ConnectError(`Workpad exceeds maximum size of ${MAX_WORKPAD_BYTES} bytes`, Code.InvalidArgument);
       }
       taskStore.setWorkpad(req.taskId, req.workpad);

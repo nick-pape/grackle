@@ -78,25 +78,13 @@ export async function assertCallerIsSelfOrAncestor(
     return;
   }
 
-  // Otherwise check ancestry (reuse the same walk)
-  let currentId = targetTaskId;
-  for (let i = 0; i < MAX_TASK_DEPTH; i++) {
-    const task = await client.getTask({ id: currentId });
-    const parentId = task.parentTaskId;
-
-    if (parentId === callerTaskId) {
-      return;
-    }
-
-    if (!parentId) {
-      break;
-    }
-
-    currentId = parentId;
+  // Otherwise defer to the ancestor-only check to reuse the same walk/limits
+  try {
+    await assertCallerIsAncestor(client, authContext, targetTaskId);
+  } catch {
+    throw new ConnectError(
+      "Target task is not self or a descendant of the caller's task",
+      Code.PermissionDenied,
+    );
   }
-
-  throw new ConnectError(
-    "Target task is not self or a descendant of the caller's task",
-    Code.PermissionDenied,
-  );
 }

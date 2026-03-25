@@ -101,7 +101,17 @@ export const workpadTools: ToolDefinition[] = [
         await assertCallerIsSelfOrAncestor(client, authContext, taskId);
 
         const task = await client.getTask({ id: taskId });
-        const workpad: Record<string, unknown> = task.workpad ? JSON.parse(task.workpad) as Record<string, unknown> : {};
+        let workpad: Record<string, unknown> = {};
+        if (task.workpad) {
+          try {
+            workpad = JSON.parse(task.workpad) as Record<string, unknown>;
+          } catch {
+            return {
+              content: [{ type: "text" as const, text: "Task workpad contains invalid JSON and could not be parsed." }],
+              isError: true,
+            };
+          }
+        }
         return jsonResult(workpad);
       } catch (error) {
         return grpcErrorToToolResult(error);
