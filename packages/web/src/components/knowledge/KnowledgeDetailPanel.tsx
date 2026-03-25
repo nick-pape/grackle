@@ -4,7 +4,7 @@
  * @module
  */
 
-import type { JSX } from "react";
+import { useMemo, type JSX } from "react";
 import type { GraphNode, NodeDetail } from "../../hooks/useKnowledge.js";
 import { taskUrl, sessionUrl } from "../../utils/navigation.js";
 import { useAppNavigate } from "../../utils/navigation.js";
@@ -26,7 +26,7 @@ export function KnowledgeDetailPanel({
 }: KnowledgeDetailPanelProps): JSX.Element {
   const navigate = useAppNavigate();
   const { node, edges } = detail;
-  const nodeById = new Map(nodes.map((n) => [n.id, n]));
+  const nodeById = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
 
   /** Navigate to the source entity for reference nodes. */
   function handleViewInGrackle(): void {
