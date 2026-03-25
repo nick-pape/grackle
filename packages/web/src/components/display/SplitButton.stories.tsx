@@ -53,7 +53,7 @@ export const OpenAndSelectOption: Story = {
 
     // Both options visible in the menu
     const menu = within(canvas.getByTestId("split-btn-menu"));
-    const options = menu.getAllByRole("menuitem");
+    const options = menu.getAllByRole("button");
     await expect(options).toHaveLength(2);
 
     // Click the second option ("Kill")

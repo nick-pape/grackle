@@ -97,12 +97,11 @@ export function SplitButton({
         ▾
       </button>
       {open && (
-        <div className={styles.dropdown} role="menu" data-testid={testId ? `${testId}-menu` : undefined}>
+        <div className={styles.dropdown} data-testid={testId ? `${testId}-menu` : undefined}>
           {options.map((opt, idx) => (
             <button
               key={idx}
               type="button"
-              role="menuitem"
               className={styles.option}
               onClick={() => {
                 opt.onClick();
