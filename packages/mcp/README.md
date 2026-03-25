@@ -121,7 +121,7 @@ Manage AI agent sessions — spawn, monitor, interact, and terminate.
 | `session_spawn` | Spawn a new agent session with a prompt and optional model config. | `environmentId` (string), `prompt` (string), `maxTurns?` (int), `personaId?` (string), `workingDirectory?` (string) |
 | `session_resume` | Resume a stopped agent session. | `sessionId` (string) |
 | `session_status` | List sessions with optional filtering by environment and status. | `environmentId?` (string), `all?` (boolean, default false) |
-| `session_kill` | Terminate a running session immediately. | `sessionId` (string) |
+| `session_kill` | Terminate a running session. Hard kill by default; graceful=true sends SIGTERM. | `sessionId` (string), `graceful?` (boolean, default false) |
 | `session_attach` | Stream events from a running session for a limited duration. | `sessionId` (string), `timeoutSeconds?` (int, default 30, max 300), `maxEvents?` (int) |
 | `session_send_input` | Send a text message to a session waiting for user input. | `sessionId` (string), `text` (string) |
 
@@ -192,6 +192,7 @@ Inter-process communication between parent and child agent sessions.
 | `ipc_spawn` | Spawn a child agent session with an IPC pipe. | `prompt` (string), `pipe` (`sync` \| `async` \| `detach`), `environmentId` (string), `personaId?` (string), `maxTurns?` (int) |
 | `ipc_write` | Write a message to a child session via a file descriptor. | `fd` (int), `message` (string) |
 | `ipc_close` | Close a file descriptor, optionally stopping the child. | `fd` (int) |
+| `ipc_terminate` | Send SIGTERM to a child session via its fd for graceful shutdown. | `fd` (int) |
 | `ipc_list_fds` | List your open file descriptors (IPC connections). | *(none)* |
 
 ### Log Tools
@@ -248,7 +249,7 @@ When an agent authenticates with a **scoped token** (issued automatically when a
 - `task_create`, `task_list`, `task_show`, `task_start`, `task_complete`
 - `session_send_input`
 - `persona_list`, `persona_show`
-- `ipc_spawn`, `ipc_write`, `ipc_close`, `ipc_list_fds`
+- `ipc_spawn`, `ipc_write`, `ipc_close`, `ipc_terminate`, `ipc_list_fds`
 - `knowledge_search`, `knowledge_get_node`
 
 Scoped tokens also enforce workspace isolation — agents can only see tasks and findings within their own workspace. Subtasks created by a scoped agent are automatically parented to the agent's own task.
