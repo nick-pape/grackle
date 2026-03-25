@@ -84,14 +84,6 @@ export async function initSchema(dimensions?: number): Promise<void> {
       try {
         await session.run(cypher);
       } catch (error) {
-        // Neo4j CE throws EquivalentSchemaRuleAlreadyExists even with IF NOT EXISTS
-        // when an equivalent index exists with a different internal name. This is
-        // safe to ignore — the schema is already in the desired state.
-        const code = (error as { code?: string }).code ?? "";
-        if (code.includes("EquivalentSchemaRuleAlreadyExists")) {
-          logger.debug({ statement: name }, "Schema element already exists, skipping");
-          continue;
-        }
         logger.error({ err: error, statement: name }, "Schema statement failed");
         throw new Error(
           `Schema statement "${name}" failed: ${error instanceof Error ? error.message : String(error)}`,
