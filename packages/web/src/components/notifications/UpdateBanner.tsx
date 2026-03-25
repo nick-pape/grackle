@@ -24,13 +24,12 @@ export function UpdateBanner({
   latestVersion,
   updateAvailable,
   isDocker,
-}: UpdateBannerProps): JSX.Element | null {
+}: UpdateBannerProps): JSX.Element {
   if (!updateAvailable) {
-    // eslint-disable-next-line @rushstack/no-new-null
-    return null;
+    return <></>;
   }
 
-  const command = isDocker
+  const command: string = isDocker
     ? `docker pull ghcr.io/nick-pape/grackle:latest && docker restart grackle`
     : `npm install -g @grackle-ai/cli@${latestVersion}`;
 
