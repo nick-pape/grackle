@@ -345,6 +345,24 @@ export function processEventStream(
             publishChildCompletion(sessionId, event.content);
           }
 
+          // On abnormal exit (killed/failed), write a minimal server-enriched workpad
+          // if the agent didn't write one during its session.
+          if (ctx.taskId && ["killed", "failed"].includes(event.content)) {
+            try {
+              const task = taskStore.getTask(ctx.taskId);
+              if (task && !task.workpad) {
+                const minimalWorkpad = JSON.stringify({
+                  status: event.content,
+                  summary: `Session ended abnormally (${event.content}). No agent-reported workpad.`,
+                  extra: { endReason: event.content, sessionId },
+                });
+                taskStore.setWorkpad(ctx.taskId, minimalWorkpad);
+              }
+            } catch (err) {
+              logger.warn({ err, sessionId }, "Failed to write server-enriched workpad");
+            }
+          }
+
           // Broadcast task_updated on status changes so frontend re-fetches computed status.
           // This covers both terminal events (completed/killed/failed) and non-terminal
           // transitions (running, waiting_input) that affect the computed task status.

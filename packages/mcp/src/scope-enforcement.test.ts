@@ -3,7 +3,7 @@ import { ConnectError, Code } from "@connectrpc/connect";
 import type { Client } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
 import type { AuthContext } from "@grackle-ai/auth";
-import { assertCallerIsAncestor } from "./scope-enforcement.js";
+import { assertCallerIsAncestor, assertCallerIsSelfOrAncestor } from "./scope-enforcement.js";
 
 type GrackleClient = Client<typeof grackle.Grackle>;
 
@@ -94,5 +94,39 @@ describe("assertCallerIsAncestor", () => {
     await expect(
       assertCallerIsAncestor(client, SCOPED_AUTH, "root-task"),
     ).rejects.toThrow(ConnectError);
+  });
+});
+
+describe("assertCallerIsSelfOrAncestor", () => {
+  test("no-op for non-scoped auth", async () => {
+    const client = createMockClient({});
+    await expect(assertCallerIsSelfOrAncestor(client, undefined, "any-task")).resolves.toBeUndefined();
+    await expect(assertCallerIsSelfOrAncestor(client, { type: "api-key" }, "any-task")).resolves.toBeUndefined();
+  });
+
+  test("allows self-access (target === caller task)", async () => {
+    const client = createMockClient({});
+    await expect(assertCallerIsSelfOrAncestor(client, SCOPED_AUTH, "parent-task")).resolves.toBeUndefined();
+    expect(client.getTask).not.toHaveBeenCalled();
+  });
+
+  test("allows descendant access", async () => {
+    const client = createMockClient({
+      "child-task": { parentTaskId: "parent-task" },
+    });
+    await expect(assertCallerIsSelfOrAncestor(client, SCOPED_AUTH, "child-task")).resolves.toBeUndefined();
+  });
+
+  test("rejects unrelated task", async () => {
+    const client = createMockClient({
+      "unrelated-task": { parentTaskId: "other-root" },
+      "other-root": { parentTaskId: "" },
+    });
+    await expect(
+      assertCallerIsSelfOrAncestor(client, SCOPED_AUTH, "unrelated-task"),
+    ).rejects.toThrow(ConnectError);
+    await expect(
+      assertCallerIsSelfOrAncestor(client, SCOPED_AUTH, "unrelated-task"),
+    ).rejects.toThrow("not self or a descendant");
   });
 });

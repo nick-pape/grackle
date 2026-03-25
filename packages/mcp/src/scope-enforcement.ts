@@ -51,3 +51,52 @@ export async function assertCallerIsAncestor(
     Code.PermissionDenied,
   );
 }
+
+/**
+ * Assert that the caller is either the target task itself OR an ancestor of it.
+ *
+ * Used by workpad tools where an agent needs to operate on its own task (self)
+ * or inspect/write a child task's workpad (ancestor).
+ *
+ * - No-op for non-scoped auth (api-key, oauth, undefined).
+ * - Allows targetTaskId === callerTaskId (self).
+ * - Otherwise walks up the parent chain like assertCallerIsAncestor.
+ */
+export async function assertCallerIsSelfOrAncestor(
+  client: Client<typeof grackle.Grackle>,
+  authContext: AuthContext | undefined,
+  targetTaskId: string,
+): Promise<void> {
+  if (authContext?.type !== "scoped") {
+    return;
+  }
+
+  const callerTaskId = authContext.taskId;
+
+  // Self-access is allowed
+  if (targetTaskId === callerTaskId) {
+    return;
+  }
+
+  // Otherwise check ancestry (reuse the same walk)
+  let currentId = targetTaskId;
+  for (let i = 0; i < MAX_TASK_DEPTH; i++) {
+    const task = await client.getTask({ id: currentId });
+    const parentId = task.parentTaskId;
+
+    if (parentId === callerTaskId) {
+      return;
+    }
+
+    if (!parentId) {
+      break;
+    }
+
+    currentId = parentId;
+  }
+
+  throw new ConnectError(
+    "Target task is not self or a descendant of the caller's task",
+    Code.PermissionDenied,
+  );
+}

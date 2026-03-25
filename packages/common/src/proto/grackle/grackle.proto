@@ -331,6 +331,7 @@ message Task {
   bool can_decompose = 20;
   reserved 21; // was persona_id (moved to Session)
   string default_persona_id = 22; // Default persona for this task (overrides workspace default)
+  string workpad = 23; // Persistent structured context (JSON) that survives across sessions
 }
 
 message TaskList {
@@ -380,6 +381,11 @@ message StartTaskRequest {
   string notes = 6; // Feedback/instructions for retry (included in system context)
   string pipe = 7; // "sync", "async", "detach", or "" (no pipe)
   string parent_session_id = 8; // Caller's session ID (for pipe setup)
+}
+
+message SetWorkpadRequest {
+  string task_id = 1;
+  string workpad = 2; // JSON string: { status, summary, extra }
 }
 
 // ─── Findings ──────────────────────────────────────────────
@@ -679,6 +685,7 @@ service Grackle {
   rpc CompleteTask(TaskId) returns (Task);
   rpc ResumeTask(TaskId) returns (Session);
   rpc StopTask(TaskId) returns (Task);
+  rpc SetWorkpad(SetWorkpadRequest) returns (Task);
   rpc DeleteTask(TaskId) returns (Empty);
 
   // Personas

@@ -248,7 +248,9 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
       sort_order    INTEGER NOT NULL DEFAULT 0,
       parent_task_id TEXT NOT NULL DEFAULT '',
       depth         INTEGER NOT NULL DEFAULT 0,
-      can_decompose INTEGER NOT NULL DEFAULT 0
+      can_decompose INTEGER NOT NULL DEFAULT 0,
+      default_persona_id TEXT NOT NULL DEFAULT '',
+      workpad       TEXT NOT NULL DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS findings (
@@ -478,6 +480,11 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
   tryMigration("add-tasks-default-persona-id", () => {
     conn.exec(
       "ALTER TABLE tasks ADD COLUMN default_persona_id TEXT NOT NULL DEFAULT ''",
+    );
+  });
+  tryMigration("add-tasks-workpad", () => {
+    conn.exec(
+      "ALTER TABLE tasks ADD COLUMN workpad TEXT NOT NULL DEFAULT ''",
     );
   });
 

@@ -190,6 +190,7 @@ function taskRowToProto(
     childTaskIds: childIds ?? taskStore.getChildren(row.id).map((c) => c.id),
     canDecompose: row.canDecompose,
     defaultPersonaId: row.defaultPersonaId,
+    workpad: row.workpad,
   });
 }
 
@@ -1503,6 +1504,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         canDecompose: task.canDecompose,
         personaPrompt: systemPrompt,
         taskDepth: task.depth,
+        workpad: task.workpad || undefined,
         ...orchestratorCtx,
         ...(orchestratorCtx && { triggerMode: "fresh" as const }),
       }).build();
@@ -1651,6 +1653,18 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const taskSessions = sessionStore.listSessionsForTask(task.id);
       const { status, latestSessionId } = computeTaskStatus(row!.status, taskSessions);
       return taskRowToProto(row!, undefined, status, latestSessionId);
+    },
+
+    async setWorkpad(req: grackle.SetWorkpadRequest) {
+      const task = taskStore.getTask(req.taskId);
+      if (!task) {
+        throw new ConnectError(`Task not found: ${req.taskId}`, Code.NotFound);
+      }
+      taskStore.setWorkpad(req.taskId, req.workpad);
+      const row = taskStore.getTask(req.taskId)!;
+      const taskSessions = sessionStore.listSessionsForTask(req.taskId);
+      const { status, latestSessionId } = computeTaskStatus(row.status, taskSessions);
+      return taskRowToProto(row, undefined, status, latestSessionId);
     },
 
     async resumeTask(req: grackle.TaskId) {

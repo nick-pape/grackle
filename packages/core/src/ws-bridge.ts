@@ -334,7 +334,8 @@ export async function startTaskSession(
   const systemContext = new SystemPromptBuilder({
     task: { title: freshTask.title, description: freshTask.description, notes: freshTask.id === ROOT_TASK_ID ? "" : (options?.notes || "") },
     taskId: freshTask.id, canDecompose: freshTask.canDecompose, personaPrompt: systemPrompt,
-    taskDepth: freshTask.depth, ...orchestratorCtx,
+    taskDepth: freshTask.depth, workpad: freshTask.workpad || undefined,
+    ...orchestratorCtx,
     ...(orchestratorCtx && { triggerMode: "fresh" as const }),
   }).build();
 
