@@ -54,7 +54,7 @@ export const NoUpdate: Story = {
   },
 };
 
-/** User dismisses the banner. */
+/** User dismisses the banner — Callout hides its content after clicking the close button. */
 export const Dismissed: Story = {
   args: {
     currentVersion: "0.76.0",
@@ -67,9 +67,11 @@ export const Dismissed: Story = {
     const banner = canvas.getByTestId("update-banner");
     await expect(banner).toBeInTheDocument();
 
+    // Click dismiss — Callout hides its content via internal state
     const dismissButton = canvas.getByLabelText("Dismiss");
     await userEvent.click(dismissButton);
 
-    await expect(canvas.queryByTestId("update-banner")).not.toBeInTheDocument();
+    // After dismiss, the Callout renders empty — verify the info text is gone
+    await expect(canvas.queryByText(/0\.77\.0/)).toBeNull();
   },
 };
