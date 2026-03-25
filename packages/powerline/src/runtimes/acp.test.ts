@@ -499,15 +499,18 @@ describe("AcpRuntime — runtime_session_id emission", () => {
   beforeEach(() => {
     vi.stubEnv("GRACKLE_MCP_CONFIG", "");
 
+    // Use a class instead of vi.fn(() => obj) — arrow functions are not valid JS constructors.
+    // The source calls `new sdk.ClientSideConnection(...)`, so the mock must support `new`.
+    const mockConnectionObj = {
+      initialize: vi.fn(async () => ({ authMethods: [] })),
+      newSession: vi.fn(async () => ({ sessionId: "acp-test-session-xyz" })),
+      prompt: vi.fn(async () => {}),
+      cancel: vi.fn(async () => {}),
+    };
     const mockSdk: AcpSdkModule = {
       ndJsonStream: vi.fn(() => ({})),
       PROTOCOL_VERSION: 1,
-      ClientSideConnection: vi.fn(() => ({
-        initialize: vi.fn(async () => ({ authMethods: [] })),
-        newSession: vi.fn(async () => ({ sessionId: "acp-test-session-xyz" })),
-        prompt: vi.fn(async () => {}),
-        cancel: vi.fn(async () => {}),
-      })) as unknown as AcpSdkModule["ClientSideConnection"],
+      ClientSideConnection: class { constructor() { return mockConnectionObj; } } as unknown as AcpSdkModule["ClientSideConnection"],
     };
 
     _setAcpSdkForTesting(mockSdk);
@@ -550,5 +553,201 @@ describe("AcpRuntime — runtime_session_id emission", () => {
     const rtIdEvent = events.find((e) => e.type === "runtime_session_id");
     expect(rtIdEvent, `Expected runtime_session_id event. Got: ${JSON.stringify(events.map(e => e.type))}`).toBeDefined();
     expect(rtIdEvent!.content).toBe("acp-old-session-456");
+  });
+});
+
+// ─── Multi-turn integration tests ──────────────────────────
+
+/** Drain events from a stream iterator until a status event with the given content. */
+async function drainUntilStatus(
+  nextEvent: () => Promise<AgentEvent | undefined>,
+  statusContent: string,
+): Promise<AgentEvent[]> {
+  const collected: AgentEvent[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- loop until match
+  while (true) {
+    const event = await nextEvent();
+    if (!event) {
+      throw new Error(`Stream ended before status "${statusContent}"`);
+    }
+    collected.push(event);
+    if (event.type === "status" && event.content === statusContent) {
+      return collected;
+    }
+  }
+}
+
+describe("AcpRuntime — multi-turn", () => {
+  const acpConfig = { name: "test-acp", command: "echo", args: ["--acp"] };
+  let capturedHandlerFactory: (() => { sessionUpdate: (params: Record<string, unknown>) => void }) | undefined;
+  let promptCallCount: number;
+  let mockConnection: Record<string, ReturnType<typeof vi.fn>>;
+
+  beforeEach(() => {
+    vi.stubEnv("GRACKLE_MCP_CONFIG", "");
+    capturedHandlerFactory = undefined;
+    promptCallCount = 0;
+
+    mockConnection = {
+      initialize: vi.fn(async () => ({ authMethods: [] })),
+      newSession: vi.fn(async () => ({ sessionId: "acp-mt-session" })),
+      prompt: vi.fn(async () => {
+        promptCallCount++;
+        const turn = promptCallCount;
+        // Invoke the captured handler factory to get the sessionUpdate callback,
+        // then fire events for this turn.
+        const handler = capturedHandlerFactory!();
+        handler.sessionUpdate({
+          update: {
+            sessionUpdate: "agent_message_chunk",
+            content: { type: "text", text: `turn${turn} response` },
+          },
+        });
+      }),
+      cancel: vi.fn(async () => {}),
+    };
+
+    // Use a class instead of vi.fn(() => obj) — arrow functions are not valid JS constructors.
+    // The source calls `new sdk.ClientSideConnection(handlerFactory, stream)`.
+    const mockSdk: AcpSdkModule = {
+      ndJsonStream: vi.fn(() => ({})),
+      PROTOCOL_VERSION: 1,
+      ClientSideConnection: class {
+        constructor(handlerFactory: () => Record<string, unknown>) {
+          capturedHandlerFactory = handlerFactory as typeof capturedHandlerFactory;
+          return mockConnection as unknown;
+        }
+      } as unknown as AcpSdkModule["ClientSideConnection"],
+    };
+
+    _setAcpSdkForTesting(mockSdk);
+  });
+
+  afterEach(() => {
+    _setAcpSdkForTesting(undefined);
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  /** Spawn a session and return an iterator-based event consumer. */
+  function spawnSession(prompt: string = "hello") {
+    const runtime = new AcpRuntime(acpConfig);
+    const session = runtime.spawn({
+      sessionId: "acp-mt",
+      prompt,
+      model: "test",
+      maxTurns: 0,
+    });
+    const streamIterator = session.stream()[Symbol.asyncIterator]();
+    const nextEvent = async (): Promise<AgentEvent | undefined> => {
+      const result = await streamIterator.next();
+      return result.done ? undefined : result.value;
+    };
+    return { session, nextEvent };
+  }
+
+  it("follow-up events appear in stream after sendInput", async () => {
+    const { session, nextEvent } = spawnSession();
+
+    // Drain initial turn
+    const turn1Events = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(turn1Events.some((e) => e.type === "text" && e.content === "turn1 response")).toBe(true);
+
+    // Send follow-up
+    session.sendInput("follow-up");
+    await drainUntilStatus(nextEvent, "running");
+    const turn2Events = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(turn2Events.some((e) => e.type === "text" && e.content === "turn2 response")).toBe(true);
+
+    session.kill();
+  });
+
+  it("connection is reused across turns (newSession once, prompt per turn)", async () => {
+    const { session, nextEvent } = spawnSession();
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    session.sendInput("second turn");
+    await drainUntilStatus(nextEvent, "running");
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    expect(mockConnection.newSession).toHaveBeenCalledTimes(1);
+    expect(promptCallCount).toBe(2); // once per turn
+
+    session.kill();
+  });
+
+  it("tool events in follow-up turn", async () => {
+    // Override prompt to fire tool events on the second call
+    let localCallCount = 0;
+    mockConnection.prompt.mockImplementation(async () => {
+      localCallCount++;
+      const handler = capturedHandlerFactory!();
+      if (localCallCount === 1) {
+        handler.sessionUpdate({
+          update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text: "initial" } },
+        });
+      } else {
+        handler.sessionUpdate({
+          update: { sessionUpdate: "tool_call", toolCallId: "tc-mt", title: "read_file", status: "pending", rawInput: { path: "/tmp/test" } },
+        });
+        handler.sessionUpdate({
+          update: { sessionUpdate: "tool_call_update", toolCallId: "tc-mt", status: "completed", rawOutput: { result: "file contents" } },
+        });
+      }
+    });
+
+    const { session, nextEvent } = spawnSession();
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    session.sendInput("read that file");
+    await drainUntilStatus(nextEvent, "running");
+    const turn2Events = await drainUntilStatus(nextEvent, "waiting_input");
+
+    expect(turn2Events.some((e) => e.type === "tool_use")).toBe(true);
+    expect(turn2Events.some((e) => e.type === "tool_result")).toBe(true);
+
+    const toolUse = turn2Events.find((e) => e.type === "tool_use")!;
+    const parsed = JSON.parse(toolUse.content);
+    expect(parsed.tool).toBe("read_file");
+    expect(parsed.args).toEqual({ path: "/tmp/test" });
+
+    session.kill();
+  });
+
+  it("error in follow-up does not crash the session", async () => {
+    let localCallCount = 0;
+    mockConnection.prompt.mockImplementation(async () => {
+      localCallCount++;
+      if (localCallCount === 1) {
+        const handler = capturedHandlerFactory!();
+        handler.sessionUpdate({
+          update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text: "initial" } },
+        });
+      } else if (localCallCount === 2) {
+        throw new Error("ACP subprocess crashed");
+      } else {
+        const handler = capturedHandlerFactory!();
+        handler.sessionUpdate({
+          update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text: "recovered" } },
+        });
+      }
+    });
+
+    const { session, nextEvent } = spawnSession();
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    // Follow-up that throws
+    session.sendInput("bad");
+    await drainUntilStatus(nextEvent, "running");
+    const errorTurnEvents = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(errorTurnEvents.some((e) => e.type === "error")).toBe(true);
+
+    // Session still alive
+    session.sendInput("retry");
+    await drainUntilStatus(nextEvent, "running");
+    const recoveryEvents = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(recoveryEvents.some((e) => e.type === "text" && e.content === "recovered")).toBe(true);
+
+    session.kill();
   });
 });

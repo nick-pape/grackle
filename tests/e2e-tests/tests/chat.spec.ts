@@ -57,7 +57,7 @@ test.describe("Chat Page (root task)", { tag: ["@session"] }, () => {
     await expect(input).toBeVisible({ timeout: 5_000 });
   });
 
-  test("can start root task via chat input", async ({ appPage }) => {
+  test("can start root task via chat input and queues first message as sendInput", async ({ appPage }) => {
     const page = appPage;
 
     await page.getByTestId("sidebar-tab-chat").click();
@@ -66,13 +66,18 @@ test.describe("Chat Page (root task)", { tag: ["@session"] }, () => {
     // Patch WS to force stub runtime
     await patchWsForStubRuntime(page);
 
-    // Type a message and submit
+    // Type a message and submit — this should start the root task with the
+    // hardcoded initial prompt and queue the user's text for sendInput.
     const input = page.locator('input[placeholder="Type a message..."]');
     await expect(input).toBeVisible({ timeout: 5_000 });
     await input.fill("Hello system");
     await page.getByRole("button", { name: "Send" }).click();
 
-    // Events should start appearing from the stub runtime
+    // Stub runtime starts with the hardcoded initial prompt (not user text)
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("text=Echo: Introduce yourself and Grackle!")).toBeVisible({ timeout: 5_000 });
+
+    // User's message is auto-sent via sendInput after session goes idle
+    await expect(page.locator("text=You said: Hello system")).toBeVisible({ timeout: 15_000 });
   });
 });

@@ -64,6 +64,7 @@ export function KnowledgePage(): JSX.Element {
         {knowledge.selectedNode && knowledge.selectedId && (
           <KnowledgeDetailPanel
             detail={knowledge.selectedNode}
+            nodes={knowledge.graphData.nodes}
             onClose={handleCloseDetail}
             onSelectNode={handleNodeClick}
           />

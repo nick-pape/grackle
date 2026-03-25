@@ -360,6 +360,27 @@ describe("resolveWorkingDirectory", () => {
     queue.close();
   });
 
+  it("falls back to /workspace when branch is set but no git repo exists (Docker without repo, #535)", async () => {
+    const git = createFakeGitRepository();
+    const locator = createFakeWorkspaceLocator(new Set(["/workspace"]), { "/workspace": [] });
+    const queue = new AsyncQueue<AgentEvent>();
+
+    const result = await resolveWorkingDirectory({
+      branch: "task/my-task",
+      workingDirectory: "/workspace",
+      useWorktrees: true,
+      eventQueue: queue,
+      git,
+      locator,
+    });
+
+    expect(result).toBe("/workspace");
+    const event = await queue.shift();
+    expect(event?.type).toBe("system");
+    expect(event?.content).toContain("No git repo found");
+    queue.close();
+  });
+
   it("emits no-repo event when git repo is not found and worktrees disabled", async () => {
     const git = createFakeGitRepository();
     const locator = createFakeWorkspaceLocator(new Set());

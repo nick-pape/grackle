@@ -100,32 +100,32 @@ test.describe("Stream smart scroll", { tag: ["@webui"] }, () => {
     const scrollContainer = page.getByTestId("event-stream-scroll");
     await expect(scrollContainer).toBeVisible();
 
-    // Scroll to the very top (away from anchor)
-    await scrollContainer.evaluate((el) => {
-      el.scrollTop = 0;
-    });
-
-    // Wait a moment for scroll event to fire
-    await page.waitForTimeout(300);
-
-    // FAB should appear if there's enough content to scroll
+    // Check if there's enough content to produce a scrollbar
     const hasScrollableContent = await scrollContainer.evaluate(
       (el) => el.scrollHeight > el.clientHeight + 60,
     );
 
     if (hasScrollableContent) {
+      // Scroll to the very top (away from anchor)
+      await scrollContainer.evaluate((el) => {
+        el.scrollTop = 0;
+      });
+
+      // FAB should appear once the scroll event fires (auto-retries)
       const fab = page.getByTestId("scroll-to-anchor");
       await expect(fab).toBeVisible({ timeout: 2_000 });
 
-      // Click FAB, verify it scrolls back to bottom and disappears
+      // Click FAB, wait for scroll animation to reach the bottom
       await fab.click();
-      await page.waitForTimeout(500);
-
-      const isNearBottom = await scrollContainer.evaluate((el) => {
-        const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-        return distanceFromBottom < 60;
-      });
-      expect(isNearBottom).toBe(true);
+      await expect
+        .poll(
+          async () =>
+            scrollContainer.evaluate(
+              (el) => el.scrollHeight - el.scrollTop - el.clientHeight,
+            ),
+          { timeout: 2_000 },
+        )
+        .toBeLessThan(60);
 
       await expect(fab).not.toBeVisible({ timeout: 2_000 });
     }

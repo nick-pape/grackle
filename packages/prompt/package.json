@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/prompt",
-  "version": "0.75.7",
+  "version": "0.75.13",
   "description": "System prompt assembly and persona resolution for Grackle agent sessions",
   "license": "MIT",
   "repository": {
@@ -9,6 +9,8 @@
     "directory": "packages/prompt"
   },
   "keywords": ["grackle", "prompt", "system-prompt", "persona", "orchestrator"],
+  "homepage": "https://github.com/nick-pape/grackle#readme",
+  "bugs": { "url": "https://github.com/nick-pape/grackle/issues" },
   "engines": { "node": ">=22.0.0" },
   "type": "module",
   "main": "dist/index.js",

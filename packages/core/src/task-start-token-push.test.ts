@@ -240,7 +240,7 @@ describe("task-start token push", () => {
           }),
         ],
       });
-      mockBuildProviderTokenBundle.mockReturnValue(mockBundle);
+      mockBuildProviderTokenBundle.mockResolvedValue(mockBundle);
 
       const mockConn = makeMockConnection();
       vi.spyOn(adapterManager, "getConnection").mockReturnValue(
@@ -256,7 +256,7 @@ describe("task-start token push", () => {
     });
 
     it("skips push when provider bundle is empty", async () => {
-      mockBuildProviderTokenBundle.mockReturnValue(
+      mockBuildProviderTokenBundle.mockResolvedValue(
         create(powerline.TokenBundleSchema, { tokens: [] }),
       );
 
@@ -280,7 +280,7 @@ describe("task-start token push", () => {
 
   describe("refreshTokensForTask()", () => {
     it("logs warnings but does not throw when pushes fail", async () => {
-      mockBuildProviderTokenBundle.mockReturnValue(
+      mockBuildProviderTokenBundle.mockResolvedValue(
         create(powerline.TokenBundleSchema, {
           tokens: [
             create(powerline.TokenItemSchema, {
