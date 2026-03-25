@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { StubMcpRuntime } from "./stub-mcp.js";
+import { resetMcpToolUseCounter } from "./stub.js";
 import type { AgentEvent } from "./runtime.js";
 
 // Mock the MCP SDK modules (dynamic imports in performMcpToolCall)
@@ -22,6 +23,7 @@ vi.mock("@modelcontextprotocol/sdk/client/streamableHttp.js", () => ({
 describe("StubMcpRuntime", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetMcpToolUseCounter();
   });
 
   it("has name 'stub-mcp'", () => {
@@ -65,10 +67,11 @@ describe("StubMcpRuntime", () => {
 
     await streamDone;
 
-    // Verify event sequence matches stub fallback
+    // Verify event sequence matches stub fallback (unified session emits runtime_session_id)
     const types = events.map((e) => e.type);
     expect(types).toEqual([
       "system",
+      "runtime_session_id",
       "text",
       "tool_use",
       "tool_result",
@@ -79,17 +82,18 @@ describe("StubMcpRuntime", () => {
     ]);
 
     // Verify content
-    expect(events[0].content).toBe("Stub MCP runtime initialized");
-    expect(events[1].content).toBe("Echo: test prompt");
-    expect(JSON.parse(events[2].content)).toEqual({
+    expect(events[0].content).toBe("Stub runtime initialized");
+    expect(events[1].content).toBe("stub-mcp-lifecycle-1");
+    expect(events[2].content).toBe("Echo: test prompt");
+    expect(JSON.parse(events[3].content)).toEqual({
       tool: "echo",
       args: { message: "test prompt" },
     });
-    expect(events[3].content).toBe('Tool output: "test prompt"');
-    expect(events[4].content).toBe("waiting_input");
-    expect(events[5].content).toBe("running");
-    expect(events[6].content).toBe("You said: user reply");
-    expect(events[7].content).toBe("waiting_input");
+    expect(events[4].content).toBe('Tool output: "test prompt"');
+    expect(events[5].content).toBe("waiting_input");
+    expect(events[6].content).toBe("running");
+    expect(events[7].content).toBe("You said: user reply");
+    expect(events[8].content).toBe("waiting_input");
 
     // Verify timestamps are ISO strings
     for (const event of events) {
