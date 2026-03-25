@@ -14,7 +14,7 @@ import { installWsTracker, injectWsMessage } from "./helpers.js";
 function makeInjectedTask(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id: "toast-test-task",
-    workspaceId: "",
+    workspaceId: "toast-test-ws",
     title: "Toast Test Task",
     description: "",
     status: "not_started",
@@ -39,7 +39,7 @@ async function injectTaskList(
 ): Promise<void> {
   await injectWsMessage(page, {
     type: "tasks",
-    payload: { workspaceId: "", tasks },
+    payload: { workspaceId: "toast-test-ws", tasks },
   });
 }
 
