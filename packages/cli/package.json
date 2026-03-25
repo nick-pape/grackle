@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/cli",
-  "version": "0.75.11",
+  "version": "0.75.12",
   "description": "Command-line interface for managing Grackle environments and agents",
   "license": "MIT",
   "repository": {
