@@ -50,7 +50,7 @@ export function SplitButton({
       return;
     }
     function handleClickOutside(e: MouseEvent): void {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (containerRef.current && e.target instanceof Node && !containerRef.current.contains(e.target)) {
         setOpen(false);
       }
     }
@@ -98,9 +98,9 @@ export function SplitButton({
       </button>
       {open && (
         <div className={styles.dropdown} role="menu" data-testid={testId ? `${testId}-menu` : undefined}>
-          {options.map((opt) => (
+          {options.map((opt, idx) => (
             <button
-              key={opt.label}
+              key={idx}
               type="button"
               role="menuitem"
               className={styles.option}

@@ -36,9 +36,13 @@
   @extend %splitBase;
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
   border-left: 1px solid rgba(255, 255, 255, 0.25);
-  padding-left: var(--space-xs);
-  padding-right: var(--space-xs);
   font-size: 0.6em;
+
+  // Override size-class padding to keep chevron compact
+  &.sm, &.md, &.lg {
+    padding-left: var(--space-xs);
+    padding-right: var(--space-xs);
+  }
 }
 
 // --- Sizes ------------------------------------------------------------------

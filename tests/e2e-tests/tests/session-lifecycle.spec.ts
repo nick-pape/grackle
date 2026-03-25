@@ -49,7 +49,7 @@ test.describe("Session Lifecycle (stub runtime)", { tag: ["@session"] }, () => {
     const inputField = page.locator('input[placeholder="Type a message..."]');
     await expect(inputField).toBeVisible({ timeout: 10_000 });
     await expect(page.locator("button", { hasText: "Send" })).toBeVisible();
-    await expect(page.locator("button", { hasText: "Stop" })).toBeVisible();
+    await expect(page.getByTestId("stop-split-button")).toBeVisible();
 
     // Send input
     await inputField.fill("follow up");
@@ -59,9 +59,10 @@ test.describe("Session Lifecycle (stub runtime)", { tag: ["@session"] }, () => {
     await expect(page.locator("text=You said: follow up")).toBeVisible({ timeout: 10_000 });
 
     // Session returns to idle (stub no longer self-completes).
-    // The input field reappears — click Stop to end the session.
+    // The input field reappears — use Kill (force) to end the session.
     await expect(inputField).toBeVisible({ timeout: 10_000 });
-    await page.locator("button", { hasText: "Stop" }).click();
+    await page.getByTestId("stop-split-button-chevron").click();
+    await page.locator("[data-testid='stop-split-button-menu'] button", { hasText: "Kill" }).click();
 
     // Session killed — UnifiedBar shows "Session killed" + "+ New Chat"
     await expect(page.locator("text=Session killed")).toBeVisible({ timeout: 10_000 });
