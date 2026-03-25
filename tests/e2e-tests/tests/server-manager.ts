@@ -183,6 +183,8 @@ export async function startGrackleStack(): Promise<E2EState> {
         GRACKLE_WEB_DIR: join(repoRoot, "packages/web/dist"),
         GRACKLE_SKIP_LOCAL_POWERLINE: "1",
         GRACKLE_SKIP_ROOT_AUTOSTART: "1",
+        // Enable knowledge graph when Neo4j is available (CI service container)
+        GRACKLE_KNOWLEDGE_ENABLED: process.env.GRACKLE_KNOWLEDGE_ENABLED ?? "",
       },
       stdio: "pipe",
     },

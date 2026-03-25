@@ -393,16 +393,21 @@ The following schema objects are created:
 | `INDEX_KIND` | Index on `kind` for efficient filtering by node type |
 | `INDEX_WORKSPACE` | Index on `workspaceId` for scoped queries |
 | `INDEX_SOURCE` | Composite index on `(sourceType, sourceId)` for reference lookups |
-| `VECTOR_INDEX` | Vector index on `embedding` for cosine similarity search (1536 dimensions) |
+| `VECTOR_INDEX` | Vector index on `embedding` for cosine similarity search (dimensions configurable) |
 
 ```typescript
+const embedder = createLocalEmbedder();
 await openNeo4j();
-await initSchema();
+await initSchema(embedder.dimensions); // creates a 384-dim vector index
 ```
+
+#### `buildSchemaStatements(dimensions?: number): Record<string, string>`
+
+Build the Cypher schema statements with a custom vector index dimensionality. Defaults to `EMBEDDING_DIMENSIONS` (1536) if omitted.
 
 #### `SCHEMA_STATEMENTS: Record<string, string>`
 
-The raw Cypher statements used by `initSchema()`, exported for inspection and testing.
+The raw Cypher statements using the default 1536 dimensions. Prefer `buildSchemaStatements(dimensions)` for custom dimensions.
 
 ### Embedders
 
@@ -457,9 +462,14 @@ const customEmbedder = createLocalEmbedder({
 });
 ```
 
-**Important:** The default local embedder produces 384-dimensional vectors, while the default Neo4j vector index schema created by `initSchema()` is configured for 1536 dimensions (see the `EMBEDDING_DIMENSIONS` constant in the library source). Because that constant is baked into the schema definition, downstream applications cannot realistically change it at runtime. If you use the local embedder, you should either:
-- Use an embedding model that produces 1536-dimensional vectors so it matches the default schema created by `initSchema()`, or
-- Skip `initSchema()` and create a custom Neo4j vector index whose dimensions match your embedder (for example, 384 for the default local model).
+**Dimension matching:** `initSchema()` accepts an optional `dimensions` parameter that controls the vector index size. Pass your embedder's dimensions to ensure they match:
+
+```typescript
+const embedder = createLocalEmbedder();
+await initSchema(embedder.dimensions); // creates a 384-dim vector index
+```
+
+If omitted, `initSchema()` defaults to `EMBEDDING_DIMENSIONS` (1536). Use `buildSchemaStatements(dimensions)` for custom dimensions when building statements manually.
 
 ### Chunkers
 

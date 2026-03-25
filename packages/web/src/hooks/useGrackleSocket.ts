@@ -257,7 +257,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const credentialsHook = useCredentials();
   const codespacesHook = useCodespaces();
   const personasHook = usePersonas();
-  const knowledgeHook = useKnowledge(send);
+  const knowledgeHook = useKnowledge();
 
   // --- Settings helpers ---
 
@@ -336,6 +336,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     if (tokensHook.handleEvent(event)) { return; }
     if (credentialsHook.handleEvent(event)) { return; }
     if (personasHook.handleEvent(event)) { return; }
+    if (knowledgeHook.handleEvent(event)) { return; }
   }
 
   function onMessage(msg: WsMessage | GrackleEvent): void {
@@ -347,7 +348,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
     // Real-time session events from subscribe_all
     if (sessionsHook.handleMessage(msg)) { return; }
-    if (knowledgeHook.handleMessage(msg)) { return; }
 
     // Legacy WS message handlers — these only fire when E2E tests inject
     // fake data via injectWsMessage(). Normal operation uses ConnectRPC.
