@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type JSX } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { ROOT_TASK_ID } from "@grackle-ai/common";
 import { useGrackle } from "../context/GrackleContext.js";
 import { EventStream } from "../components/display/EventStream.js";
@@ -35,6 +35,7 @@ export function ChatPage(): JSX.Element {
   } = useGrackle();
 
   const loadedSessionRef = useRef<string | undefined>(undefined);
+  const [pendingMessage, setPendingMessage] = useState<string | undefined>();
 
   // Find root task + its sessions.
   // Resolve latest session from the already-loaded sessions list first (available
@@ -83,6 +84,31 @@ export function ChatPage(): JSX.Element {
   const isSessionActive = latestSession !== undefined
     && latestSession.status !== "stopped" && latestSession.status !== "suspended";
 
+  const isSessionIdle = latestSession?.status === "idle";
+
+  // Auto-send pending message once the session becomes idle.
+  // The user's text is queued by handleStartTask and delivered via sendInput
+  // so the first user message is always a follow-up, not baked into the prompt.
+  useEffect(() => {
+    if (pendingMessage && latestSession && isSessionIdle) {
+      sendInput(latestSession.id, pendingMessage);
+      setPendingMessage(undefined);
+    }
+  }, [pendingMessage, isSessionIdle, latestSession?.id, sendInput]);
+
+  // Intercept start-mode submissions: start the root task without the user's
+  // text (the server uses a hardcoded initial prompt) and queue the text for
+  // sendInput once the session is up.
+  const handleStartTask = useCallback(
+    (taskId: string, personaId?: string, environmentId?: string, text?: string) => {
+      if (text) {
+        setPendingMessage(text);
+      }
+      startTask(taskId, personaId, environmentId);
+    },
+    [startTask],
+  );
+
   return (
     <div className={styles.panelContainer} data-testid="chat-page">
       <EventStream
@@ -114,7 +140,7 @@ export function ChatPage(): JSX.Element {
           environments={environments}
           onSendInput={sendInput}
           onSpawn={spawn}
-          onStartTask={startTask}
+          onStartTask={handleStartTask}
           onProvisionEnvironment={provisionEnvironment}
         />
       )}
