@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/knowledge",
-  "version": "0.75.9",
+  "version": "0.75.11",
   "description": "Knowledge graph subsystem for Grackle (Neo4j + vector search)",
   "license": "MIT",
   "repository": {
@@ -9,6 +9,8 @@
     "directory": "packages/knowledge"
   },
   "keywords": ["grackle", "knowledge-graph", "neo4j", "vector-search"],
+  "homepage": "https://github.com/nick-pape/grackle#readme",
+  "bugs": { "url": "https://github.com/nick-pape/grackle/issues" },
   "engines": { "node": ">=22.0.0" },
   "type": "module",
   "main": "dist/index.js",

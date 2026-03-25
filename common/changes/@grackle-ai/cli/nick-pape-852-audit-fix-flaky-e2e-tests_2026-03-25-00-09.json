@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "Add regression tests for Codex runtime on Docker without git repo",
-      "type": "patch",
+      "comment": "Audit and fix flaky E2E tests, move markdown rendering to Storybook",
+      "type": "none",
       "packageName": "@grackle-ai/cli"
     }
   ],

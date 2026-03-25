@@ -15,6 +15,12 @@ async function setOnboardingCompleted(
 test.describe.configure({ mode: "serial" });
 
 test.describe("Setup Wizard (FRE)", { tag: ["@settings"] }, () => {
+  // Always restore onboarding state after each test so that failures
+  // cannot cascade to other tests sharing this worker.
+  test.afterEach(async ({ grackle: { client } }) => {
+    await setOnboardingCompleted(client, "true");
+  });
+
   test("redirects to /setup when onboarding is incomplete", async ({ page, grackle: { client } }) => {
     await setOnboardingCompleted(client, "false");
 
@@ -24,8 +30,8 @@ test.describe("Setup Wizard (FRE)", { tag: ["@settings"] }, () => {
     await expect(page.getByText("Welcome to Grackle")).toBeVisible();
   });
 
-  test("back buttons navigate between steps", async ({ page }) => {
-    // Onboarding is still false from the previous test
+  test("back buttons navigate between steps", async ({ page, grackle: { client } }) => {
+    await setOnboardingCompleted(client, "false");
     await page.goto("/");
     await page.waitForURL("**/setup", { timeout: 10_000 });
 
@@ -47,8 +53,8 @@ test.describe("Setup Wizard (FRE)", { tag: ["@settings"] }, () => {
     await expect(page.getByTestId("setup-about")).toBeVisible();
   });
 
-  test("walks through all three steps and completes", async ({ page }) => {
-    // Onboarding is still false
+  test("walks through all three steps and completes", async ({ page, grackle: { client } }) => {
+    await setOnboardingCompleted(client, "false");
     await page.goto("/");
     await page.waitForURL("**/setup", { timeout: 10_000 });
 
@@ -97,8 +103,4 @@ test.describe("Setup Wizard (FRE)", { tag: ["@settings"] }, () => {
     await expect(page.getByTestId("setup-wizard")).not.toBeVisible();
   });
 
-  // Restore onboarding_completed so other specs sharing this worker aren't affected.
-  test("cleanup: restore onboarding state", async ({ grackle: { client } }) => {
-    await setOnboardingCompleted(client, "true");
-  });
 });

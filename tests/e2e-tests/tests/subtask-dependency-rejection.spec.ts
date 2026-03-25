@@ -40,28 +40,21 @@ test.describe("Subtask dependency rejection", { tag: ["@task"] }, () => {
     // Wait for the stub scenario to complete — the "Done creating subtasks" text appears
     await page.getByText("Done creating subtasks").waitFor({ timeout: 15_000 });
 
-    // Query tasks via gRPC — parent should have exactly 2 children (Research + Cleanup)
+    // Query tasks via gRPC — parent should have exactly 2 children (Research + Cleanup).
     // "Implement" should have been rejected due to unresolvable depends_on.
     // Poll briefly in case task creation events are still flushing.
-    let childTitles: string[] = [];
-    for (let attempt = 0; attempt < 10; attempt++) {
+    await expect(async () => {
       const resp = await client.listTasks({ workspaceId });
       const parent = resp.tasks.find((t) => t.title === "Decomposable Parent");
       expect(parent).toBeDefined();
 
       const childIds = parent!.childTaskIds;
-      childTitles = resp.tasks
+      const childTitles = resp.tasks
         .filter((t) => childIds.includes(t.id))
         .map((t) => t.title)
         .sort();
 
-      if (childTitles.length === 2) {
-        break;
-      }
-      await new Promise((r) => setTimeout(r, 500));
-    }
-
-    expect(childTitles).toHaveLength(2);
-    expect(childTitles).toEqual(["Cleanup", "Research"]);
+      expect(childTitles).toEqual(["Cleanup", "Research"]);
+    }).toPass({ timeout: 10_000, intervals: [500] });
   });
 });

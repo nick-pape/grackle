@@ -1,6 +1,21 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 24 Mar 2026 19:32:32 GMT and should not be manually modified.
+This log was last generated on Wed, 25 Mar 2026 00:31:42 GMT and should not be manually modified.
+
+## 0.75.11
+Wed, 25 Mar 2026 00:31:42 GMT
+
+### Patches
+
+- Add logo, badges, homepage, and bugs fields to all package READMEs and package.json files
+
+## 0.75.10
+Tue, 24 Mar 2026 23:59:57 GMT
+
+### Patches
+
+- Fix Copilot runtime auth on Docker/SSH: resolve GitHub token from gh CLI when env vars are not set
+- Add regression tests for Codex runtime on Docker without git repo
 
 ## 0.75.9
 Tue, 24 Mar 2026 19:32:32 GMT

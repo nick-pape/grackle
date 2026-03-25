@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/adapter-ssh",
-  "version": "0.75.9",
+  "version": "0.75.11",
   "description": "Grackle SSH environment adapter",
   "license": "MIT",
   "repository": {
@@ -9,6 +9,8 @@
     "directory": "packages/adapter-ssh"
   },
   "keywords": ["grackle", "adapter", "ssh", "environment"],
+  "homepage": "https://github.com/nick-pape/grackle#readme",
+  "bugs": { "url": "https://github.com/nick-pape/grackle/issues" },
   "engines": { "node": ">=22.0.0" },
   "type": "module",
   "main": "dist/index.js",

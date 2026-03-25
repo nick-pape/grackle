@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/core",
-  "version": "0.75.9",
+  "version": "0.75.11",
   "description": "Core gRPC business logic for Grackle — RPC handlers, event system, streaming, session lifecycle",
   "license": "MIT",
   "repository": {
@@ -9,6 +9,8 @@
     "directory": "packages/core"
   },
   "keywords": ["grackle", "core", "grpc", "event-system", "streaming"],
+  "homepage": "https://github.com/nick-pape/grackle#readme",
+  "bugs": { "url": "https://github.com/nick-pape/grackle/issues" },
   "engines": { "node": ">=22.0.0" },
   "type": "module",
   "main": "dist/index.js",
