@@ -1,6 +1,18 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 26 Mar 2026 05:16:56 GMT and should not be manually modified.
+This log was last generated on Thu, 26 Mar 2026 06:35:08 GMT and should not be manually modified.
+
+## 0.82.2
+Thu, 26 Mar 2026 06:35:08 GMT
+
+### Patches
+
+- Add TodoCard for todo/plan tool rendering
+- Extract runtimes from powerline into separate packages (runtime-sdk, runtime-claude-code, runtime-copilot, runtime-codex, runtime-genaiscript, runtime-acp)
+
+### Updates
+
+- Enhanced demo mock data with realistic session events and knowledge graph
 
 ## 0.82.1
 Thu, 26 Mar 2026 05:16:56 GMT
