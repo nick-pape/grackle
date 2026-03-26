@@ -271,6 +271,121 @@ describe("session_attach", () => {
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.code).toBe("NOT_FOUND");
   });
+
+  /** Should reject when scoped auth and session's task is not a descendant. */
+  test("rejects when scoped auth and session task is not a descendant", async () => {
+    const scopedAuth: AuthContext = {
+      type: "scoped",
+      taskId: "parent-task",
+      workspaceId: "proj-1",
+      personaId: "p-1",
+      taskSessionId: "sess-1",
+    };
+    const mockClient = createMockClient();
+    (mockClient.getSession as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "s1",
+      taskId: "unrelated-task",
+    });
+    (mockClient as unknown as { getTask: ReturnType<typeof vi.fn> }).getTask = vi.fn().mockResolvedValue({
+      id: "unrelated-task",
+      parentTaskId: "",
+    });
+
+    const result = await getTool("session_attach").handler(
+      { sessionId: "s1", timeoutSeconds: 5 },
+      mockClient,
+      scopedAuth,
+    );
+
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.code).toBe("PERMISSION_DENIED");
+  });
+
+  /** Should pass when scoped auth and session's task is a descendant. */
+  test("passes when scoped auth and session task is a descendant", async () => {
+    const scopedAuth: AuthContext = {
+      type: "scoped",
+      taskId: "parent-task",
+      workspaceId: "proj-1",
+      personaId: "p-1",
+      taskSessionId: "sess-1",
+    };
+    const mockClient = createMockClient();
+    (mockClient.getSession as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "s1",
+      taskId: "child-task",
+    });
+    (mockClient as unknown as { getTask: ReturnType<typeof vi.fn> }).getTask = vi.fn().mockResolvedValue({
+      id: "child-task",
+      parentTaskId: "parent-task",
+    });
+    const mockStream = (async function* () {
+      yield { type: 1, timestamp: "2026-01-01T00:00:00Z", content: "hello" };
+    })();
+    (mockClient.streamSession as ReturnType<typeof vi.fn>).mockReturnValue(mockStream);
+
+    const result = await getTool("session_attach").handler(
+      { sessionId: "s1", timeoutSeconds: 5 },
+      mockClient,
+      scopedAuth,
+    );
+
+    expect(result.isError).toBeUndefined();
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.events).toHaveLength(1);
+  });
+
+  /** Should return NOT_FOUND when scoped auth and session does not exist. */
+  test("returns NOT_FOUND when scoped auth and session not found", async () => {
+    const scopedAuth: AuthContext = {
+      type: "scoped",
+      taskId: "parent-task",
+      workspaceId: "proj-1",
+      personaId: "p-1",
+      taskSessionId: "sess-1",
+    };
+    const mockClient = createMockClient();
+    (mockClient.getSession as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new ConnectError("Session not found", Code.NotFound),
+    );
+
+    const result = await getTool("session_attach").handler(
+      { sessionId: "nonexistent", timeoutSeconds: 5 },
+      mockClient,
+      scopedAuth,
+    );
+
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.code).toBe("NOT_FOUND");
+  });
+
+  /** Should reject when scoped auth and session has no taskId (taskless session). */
+  test("rejects when scoped auth and session has empty taskId", async () => {
+    const scopedAuth: AuthContext = {
+      type: "scoped",
+      taskId: "parent-task",
+      workspaceId: "proj-1",
+      personaId: "p-1",
+      taskSessionId: "sess-1",
+    };
+    const mockClient = createMockClient();
+    (mockClient.getSession as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "s1",
+      taskId: "",
+    });
+
+    const result = await getTool("session_attach").handler(
+      { sessionId: "s1", timeoutSeconds: 5 },
+      mockClient,
+      scopedAuth,
+    );
+
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.code).toBe("PERMISSION_DENIED");
+  });
 });
 
 describe("session_send_input", () => {

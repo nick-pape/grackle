@@ -2,6 +2,7 @@ import { describe, test, expect, vi, beforeEach } from "vitest";
 import { ConnectError, Code } from "@connectrpc/connect";
 import type { Client } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
+import type { AuthContext } from "@grackle-ai/auth";
 import { logsTools } from "./logs.js";
 
 vi.mock("node:fs/promises", () => ({
@@ -206,5 +207,121 @@ describe("logs_get", () => {
     expect(result.isError).toBe(true);
     expect(parsed.error).toContain("Failed to read log file");
     expect(parsed.code).toBe("INTERNAL");
+  });
+
+  // ── Scoped auth ancestry enforcement ─────────────────────────
+
+  /** Should reject when scoped auth and session's task is not a descendant. */
+  test("rejects when scoped auth and session task is not a descendant", async () => {
+    const scopedAuth: AuthContext = {
+      type: "scoped",
+      taskId: "parent-task",
+      workspaceId: "proj-1",
+      personaId: "p-1",
+      taskSessionId: "sess-1",
+    };
+    const mockClient = createMockClient();
+    (mockClient.getSession as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "s1",
+      taskId: "unrelated-task",
+      logPath: "/logs/s1",
+    });
+    (mockClient as unknown as { getTask: ReturnType<typeof vi.fn> }).getTask = vi.fn().mockResolvedValue({
+      id: "unrelated-task",
+      parentTaskId: "",
+    });
+
+    const result = await getTool("logs_get").handler(
+      { sessionId: "s1" },
+      mockClient,
+      scopedAuth,
+    );
+
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.code).toBe("PERMISSION_DENIED");
+  });
+
+  /** Should pass when scoped auth and session's task is a descendant. */
+  test("passes when scoped auth and session task is a descendant", async () => {
+    const scopedAuth: AuthContext = {
+      type: "scoped",
+      taskId: "parent-task",
+      workspaceId: "proj-1",
+      personaId: "p-1",
+      taskSessionId: "sess-1",
+    };
+    const mockClient = createMockClient();
+    (mockClient.getSession as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "s1",
+      taskId: "child-task",
+      logPath: "/logs/s1",
+    });
+    (mockClient as unknown as { getTask: ReturnType<typeof vi.fn> }).getTask = vi.fn().mockResolvedValue({
+      id: "child-task",
+      parentTaskId: "parent-task",
+    });
+
+    const mockReadFile = readFile as ReturnType<typeof vi.fn>;
+    const jsonlContent = JSON.stringify({ type: "output", content: "line 1" });
+    mockReadFile.mockResolvedValue(jsonlContent);
+
+    const result = await getTool("logs_get").handler(
+      { sessionId: "s1" },
+      mockClient,
+      scopedAuth,
+    );
+
+    expect(result.isError).toBeUndefined();
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.sessionId).toBe("s1");
+  });
+
+  /** Should reject when scoped auth and session has no taskId (taskless session). */
+  test("rejects when scoped auth and session has empty taskId", async () => {
+    const scopedAuth: AuthContext = {
+      type: "scoped",
+      taskId: "parent-task",
+      workspaceId: "proj-1",
+      personaId: "p-1",
+      taskSessionId: "sess-1",
+    };
+    const mockClient = createMockClient();
+    (mockClient.getSession as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "s1",
+      taskId: "",
+      logPath: "/logs/s1",
+    });
+
+    const result = await getTool("logs_get").handler(
+      { sessionId: "s1" },
+      mockClient,
+      scopedAuth,
+    );
+
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.code).toBe("PERMISSION_DENIED");
+  });
+
+  /** Should not check ancestry for non-scoped auth. */
+  test("passes for non-scoped auth without ancestry check", async () => {
+    const apiKeyAuth: AuthContext = { type: "api-key" };
+    const mockClient = createMockClient();
+    mockSessionWithLogPath(mockClient, "s1", "/logs/s1");
+
+    const mockReadFile = readFile as ReturnType<typeof vi.fn>;
+    const jsonlContent = JSON.stringify({ type: "output", content: "line 1" });
+    mockReadFile.mockResolvedValue(jsonlContent);
+
+    const result = await getTool("logs_get").handler(
+      { sessionId: "s1" },
+      mockClient,
+      apiKeyAuth,
+    );
+
+    expect(result.isError).toBeUndefined();
+    // getTask should never have been called — no ancestry check for full-access auth
+    expect((mockClient as unknown as { getTask: ReturnType<typeof vi.fn> }).getTask).toBeUndefined();
   });
 });
