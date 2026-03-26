@@ -18,8 +18,8 @@ test.describe("Kill Session", { tag: ["@session"] }, () => {
     const inputField = page.locator('input[placeholder="Type a message..."]');
     await expect(inputField).toBeVisible({ timeout: 10_000 });
 
-    // Click Kill via the split button dropdown (wait for it to appear in header)
-    await page.getByTestId("stop-split-button-chevron").waitFor({ timeout: 10_000 });
+    // Click Kill via the split button dropdown (wait for session to be active first)
+    await page.getByTestId("stop-split-button").waitFor({ state: "visible", timeout: 15_000 });
     await page.getByTestId("stop-split-button-chevron").click();
     await page.locator("[data-testid='stop-split-button-menu'] button", { hasText: "Kill" }).click();
 
