@@ -2,6 +2,21 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.83.0",
+      "tag": "@grackle-ai/cli_v0.83.0",
+      "date": "Thu, 26 Mar 2026 14:54:35 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Orphan task reparenting: automatically reparent non-terminal children to grandparent when parent task completes or fails, with reconciliation safety net and [ADOPTED] signal delivery"
+          },
+          {
+            "comment": "Migrate web UI real-time streaming from WebSocket to ConnectRPC StreamEvents"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.82.2",
       "tag": "@grackle-ai/cli_v0.82.2",
       "date": "Thu, 26 Mar 2026 06:35:08 GMT",

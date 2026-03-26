@@ -1,6 +1,14 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 26 Mar 2026 06:35:08 GMT and should not be manually modified.
+This log was last generated on Thu, 26 Mar 2026 14:54:35 GMT and should not be manually modified.
+
+## 0.83.0
+Thu, 26 Mar 2026 14:54:35 GMT
+
+### Minor changes
+
+- Orphan task reparenting: automatically reparent non-terminal children to grandparent when parent task completes or fails, with reconciliation safety net and [ADOPTED] signal delivery
+- Migrate web UI real-time streaming from WebSocket to ConnectRPC StreamEvents
 
 ## 0.82.2
 Thu, 26 Mar 2026 06:35:08 GMT
