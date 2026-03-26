@@ -404,10 +404,12 @@ grackle persona create "Nightly Report" --type script --script-file ./scripts/re
 | `--runtime <runtime>` | `claude-code`, `copilot`, `codex`, `goose`, or `genaiscript` |
 | `--model <model>` | Default model |
 | `--max-turns <n>` | Maximum turns |
+| `--mcp-tools <tools>` | Comma-separated list of allowed MCP tool names |
+| `--mcp-tools-preset <preset>` | Use a preset: `default`, `worker`, `orchestrator`, `admin` |
 
 #### `grackle persona show <id>`
 
-Show full persona details including system prompt or script.
+Show full persona details including system prompt, script, and allowed MCP tools.
 
 #### `grackle persona edit <id>`
 

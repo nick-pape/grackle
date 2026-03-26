@@ -1,0 +1,109 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.count {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #888);
+}
+
+.presets {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.presetButton {
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--border-color, #444);
+  border-radius: 4px;
+  background: var(--bg-secondary, #2a2a2a);
+  color: var(--text-primary, #ddd);
+  cursor: pointer;
+  font-size: 0.8rem;
+
+  &:hover:not(:disabled) {
+    background: var(--bg-hover, #333);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.filterInput {
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--border-color, #444);
+  border-radius: 4px;
+  background: var(--bg-secondary, #2a2a2a);
+  color: var(--text-primary, #ddd);
+  font-size: 0.85rem;
+
+  &:disabled {
+    opacity: 0.5;
+  }
+}
+
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.group {
+  border: 1px solid var(--border-color, #333);
+  border-radius: 4px;
+  padding: 0.375rem 0.5rem;
+}
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.groupName {
+  text-transform: capitalize;
+}
+
+.groupCount {
+  font-weight: 400;
+  color: var(--text-secondary, #888);
+  font-size: 0.75rem;
+}
+
+.toolList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.125rem 0.75rem;
+  margin-top: 0.25rem;
+  padding-left: 1.25rem;
+}
+
+.toolItem {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.toolName {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+}

@@ -1,19 +1,9 @@
-import { ROOT_TASK_ID } from "@grackle-ai/common";
+import { ROOT_TASK_ID, DEFAULT_SCOPED_MCP_TOOLS } from "@grackle-ai/common";
 import type { AuthContext } from "@grackle-ai/auth";
 import type { ToolRegistry, ToolDefinition } from "./tool-registry.js";
 
-/** Tools exposed to scoped-token (agent) callers. */
-export const SCOPED_TOOLS: ReadonlySet<string> = new Set([
-  "finding_post", "finding_list",
-  "task_create", "task_list", "task_show", "task_start", "task_complete",
-  "session_attach", "session_send_input",
-  "persona_list", "persona_show",
-  "ipc_spawn", "ipc_write", "ipc_close", "ipc_terminate", "ipc_list_fds",
-  "knowledge_search", "knowledge_get_node",
-  "logs_get",
-  "workpad_write", "workpad_read",
-  "schedule_list", "schedule_show",
-]);
+/** Tools exposed to scoped-token (agent) callers when no persona override is set. */
+export const SCOPED_TOOLS: ReadonlySet<string> = new Set(DEFAULT_SCOPED_MCP_TOOLS);
 
 /** Auth types that receive full tool access. */
 const FULL_ACCESS_TYPES: ReadonlySet<AuthContext["type"]> = new Set(["api-key", "oauth"]);
@@ -30,26 +20,54 @@ function hasFullAccess(authContext: AuthContext): boolean {
   return false;
 }
 
-/** Resolve a tool by name with scope checks. */
+/**
+ * Resolve the effective tool allowlist for a scoped caller.
+ * If personaAllowedTools is provided and non-empty, use it.
+ * Otherwise fall back to the default SCOPED_TOOLS set.
+ */
+function effectiveAllowedTools(personaAllowedTools?: ReadonlySet<string>): ReadonlySet<string> {
+  if (personaAllowedTools && personaAllowedTools.size > 0) {
+    return personaAllowedTools;
+  }
+  return SCOPED_TOOLS;
+}
+
+/**
+ * Resolve a tool by name with scope checks.
+ *
+ * @param personaAllowedTools - Optional persona-specific tool set. When provided
+ *   and non-empty, overrides the default SCOPED_TOOLS for this scoped caller.
+ */
 export function resolveToolForAuth(
   registry: ToolRegistry,
   name: string,
   authContext: AuthContext,
+  personaAllowedTools?: ReadonlySet<string>,
 ): ToolDefinition | undefined {
   const tool = registry.get(name);
   if (!tool) {
     return undefined;
   }
-  if (!hasFullAccess(authContext) && !SCOPED_TOOLS.has(tool.name)) {
+  if (!hasFullAccess(authContext) && !effectiveAllowedTools(personaAllowedTools).has(tool.name)) {
     return undefined;
   }
   return tool;
 }
 
-/** List tools visible to the given auth context. */
-export function listToolsForAuth(registry: ToolRegistry, authContext: AuthContext): ToolDefinition[] {
+/**
+ * List tools visible to the given auth context.
+ *
+ * @param personaAllowedTools - Optional persona-specific tool set. When provided
+ *   and non-empty, overrides the default SCOPED_TOOLS for this scoped caller.
+ */
+export function listToolsForAuth(
+  registry: ToolRegistry,
+  authContext: AuthContext,
+  personaAllowedTools?: ReadonlySet<string>,
+): ToolDefinition[] {
   if (hasFullAccess(authContext)) {
     return registry.list();
   }
-  return registry.list((t) => SCOPED_TOOLS.has(t.name));
+  const allowed = effectiveAllowedTools(personaAllowedTools);
+  return registry.list((t) => allowed.has(t.name));
 }
