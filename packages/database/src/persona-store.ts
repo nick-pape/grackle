@@ -17,6 +17,7 @@ export function createPersona(
   mcpServers: string,
   type: string = "agent",
   script: string = "",
+  allowedMcpTools: string = "[]",
 ): void {
   db.insert(personas)
     .values({
@@ -31,6 +32,7 @@ export function createPersona(
       mcpServers,
       type,
       script,
+      allowedMcpTools,
     })
     .run();
 }
@@ -63,6 +65,7 @@ export function updatePersona(
   mcpServers: string,
   type: string = "agent",
   script: string = "",
+  allowedMcpTools: string = "[]",
 ): void {
   db.update(personas)
     .set({
@@ -76,6 +79,7 @@ export function updatePersona(
       mcpServers,
       type,
       script,
+      allowedMcpTools,
       updatedAt: sql`datetime('now')`,
     })
     .where(eq(personas.id, id))

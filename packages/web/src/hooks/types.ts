@@ -151,6 +151,7 @@ export interface PersonaData {
   updatedAt: string;
   type: string;
   script: string;
+  allowedMcpTools: string[];
 }
 
 /** Provisioning progress state for a single environment. */

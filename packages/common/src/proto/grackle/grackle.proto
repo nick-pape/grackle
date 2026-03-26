@@ -462,6 +462,7 @@ message Persona {
   string updated_at = 11;
   string type = 12; // "agent" (default) or "script"
   string script = 13; // Script source code (for script personas)
+  repeated string allowed_mcp_tools = 14; // Persona-scoped MCP tool allowlist (empty = default set)
 }
 
 message PersonaList {
@@ -483,6 +484,7 @@ message CreatePersonaRequest {
   repeated McpServerConfig mcp_servers = 8;
   string type = 9; // "agent" (default) or "script"
   string script = 10; // Script source code (for script personas)
+  repeated string allowed_mcp_tools = 11; // Persona-scoped MCP tool allowlist
 }
 
 message UpdatePersonaRequest {
@@ -497,6 +499,7 @@ message UpdatePersonaRequest {
   repeated McpServerConfig mcp_servers = 9;
   string type = 10; // "agent" or "script"
   string script = 11; // Script source code (for script personas)
+  repeated string allowed_mcp_tools = 12; // Persona-scoped MCP tool allowlist
 }
 
 // ─── Schedules ─────────────────────────────────────────────

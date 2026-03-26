@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures.js";
-import type { GrackleClient } from "./rpc-client.js";
+import { WORKER_MCP_TOOLS, DEFAULT_SCOPED_MCP_TOOLS } from "@grackle-ai/common";
 
 // Pure protocol tests (create, delete, update, validation) have been migrated to
 // packages/server/src/grpc-persona.test.ts as integration tests.
@@ -91,6 +91,104 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     await expect(page.getByText("Soon Deleted")).not.toBeVisible({
       timeout: 5_000,
     });
+  });
+
+  test("persona with custom MCP tools shows tools in detail view", async ({
+    appPage,
+    grackle: { client },
+  }) => {
+    const page = appPage;
+
+    // Create a persona with the worker MCP tools preset via gRPC
+    const persona = await client.createPersona({
+      name: "Worker Agent",
+      description: "Has restricted MCP tools",
+      systemPrompt: "You are a restricted worker.",
+      runtime: "stub",
+      model: "sonnet",
+      allowedMcpTools: [...WORKER_MCP_TOOLS],
+    });
+
+    // Navigate to the persona detail page
+    await page.locator('[data-testid="sidebar-tab-settings"]').click();
+    await page.getByRole("tab", { name: "Personas" }).click();
+    await expect(page.getByText("Worker Agent")).toBeVisible({ timeout: 5_000 });
+    await page.getByTestId(`persona-card-${persona.id}`).click();
+    await page.waitForURL(`**/settings/personas/${persona.id}`, { timeout: 5_000 });
+
+    // Verify the MCP tool selector is visible with the correct count
+    const selector = page.getByTestId("mcp-tool-selector");
+    await expect(selector).toBeVisible({ timeout: 5_000 });
+    await expect(selector).toContainText(`${WORKER_MCP_TOOLS.length} of`);
+
+    // Verify specific worker tools are checked
+    await expect(page.getByTestId("tool-finding_post")).toBeChecked();
+    await expect(page.getByTestId("tool-finding_list")).toBeChecked();
+    await expect(page.getByTestId("tool-workpad_read")).toBeChecked();
+
+    // Verify non-worker tools are NOT checked
+    await expect(page.getByTestId("tool-task_create")).not.toBeChecked();
+    await expect(page.getByTestId("tool-env_list")).not.toBeChecked();
+  });
+
+  test("persona without MCP tools shows default message", async ({
+    appPage,
+    grackle: { client },
+  }) => {
+    const page = appPage;
+
+    // Create a persona without explicit MCP tools (uses default)
+    const persona = await client.createPersona({
+      name: "Unscoped Tester",
+      systemPrompt: "You use default tools.",
+      runtime: "stub",
+      model: "sonnet",
+    });
+
+    // Navigate to persona detail
+    await page.locator('[data-testid="sidebar-tab-settings"]').click();
+    await page.getByRole("tab", { name: "Personas" }).click();
+    await expect(page.getByText("Unscoped Tester")).toBeVisible({ timeout: 5_000 });
+    await page.getByTestId(`persona-card-${persona.id}`).click();
+    await page.waitForURL(`**/settings/personas/${persona.id}`, { timeout: 5_000 });
+
+    // Verify it shows "Using default" message
+    const selector = page.getByTestId("mcp-tool-selector");
+    await expect(selector).toBeVisible({ timeout: 5_000 });
+    await expect(selector).toContainText(`Using default (${DEFAULT_SCOPED_MCP_TOOLS.length} tools)`);
+  });
+
+  test("clicking preset updates MCP tools selection", async ({
+    appPage,
+    grackle: { client },
+  }) => {
+    const page = appPage;
+
+    // Create a persona with no MCP tools
+    const persona = await client.createPersona({
+      name: "Preset Test Agent",
+      systemPrompt: "Testing presets.",
+      runtime: "stub",
+      model: "sonnet",
+    });
+
+    // Navigate to persona detail
+    await page.locator('[data-testid="sidebar-tab-settings"]').click();
+    await page.getByRole("tab", { name: "Personas" }).click();
+    await expect(page.getByText("Preset Test Agent")).toBeVisible({ timeout: 5_000 });
+    await page.getByTestId(`persona-card-${persona.id}`).click();
+    await page.waitForURL(`**/settings/personas/${persona.id}`, { timeout: 5_000 });
+
+    // Click "Worker" preset
+    await page.getByTestId("preset-worker").click();
+
+    // Wait for the selection count to update
+    const selector = page.getByTestId("mcp-tool-selector");
+    await expect(selector).toContainText(`${WORKER_MCP_TOOLS.length} of`, { timeout: 5_000 });
+
+    // Verify the change persisted by reloading the page
+    await page.reload();
+    await expect(page.getByTestId("mcp-tool-selector")).toContainText(`${WORKER_MCP_TOOLS.length} of`, { timeout: 10_000 });
   });
 
   test("personas tab shows breadcrumbs with Home > Settings", async ({ appPage }) => {
