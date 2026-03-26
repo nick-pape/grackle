@@ -23,9 +23,7 @@ export function ToolCard(props: ToolCardProps): JSX.Element {
     case "file-edit":
       return <FileEditCard {...props} />;
     case "file-write":
-      // Write uses the same card as Read but with green accent — FileReadCard
-      // handles both (the visual difference comes from the tool name display)
-      return <FileReadCard {...props} />;
+      return <FileReadCard {...props} writeVariant />;
     case "shell":
       return <ShellCard {...props} />;
     case "search":

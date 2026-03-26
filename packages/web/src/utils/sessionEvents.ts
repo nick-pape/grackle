@@ -49,14 +49,18 @@ export function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
     consumedIds.add(raw.tool_use_id);
 
     // Extract detailedResult from content when it's a JSON object with detailedContent
-    // (Copilot emits tool results in this format with embedded diffs)
+    // (Copilot emits tool results in this format with embedded diffs).
+    // Guard with startsWith check to avoid throwing on plain text / large outputs.
     let detailedResult: string | undefined;
-    try {
-      const parsed = JSON.parse(e.content) as Record<string, unknown>;
-      if (typeof parsed.detailedContent === "string") {
-        detailedResult = parsed.detailedContent;
-      }
-    } catch { /* content is plain text, not JSON */ }
+    const contentStr: string = e.content?.trim() ?? "";
+    if (contentStr.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(contentStr) as Record<string, unknown>;
+        if (typeof parsed.detailedContent === "string") {
+          detailedResult = parsed.detailedContent;
+        }
+      } catch { /* content looks like JSON but isn't — skip */ }
+    }
 
     return { ...e, toolUseCtx: { ...ctx, detailedResult } };
   });

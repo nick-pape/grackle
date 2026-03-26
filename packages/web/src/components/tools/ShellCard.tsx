@@ -49,11 +49,12 @@ export function ShellCard({ tool, args, result, isError }: ToolCardProps): JSX.E
   const outputLines = parsed?.output.split("\n") ?? [];
   const hasMore = outputLines.length > PREVIEW_LINES;
   const displayLines = expanded ? outputLines : outputLines.slice(0, PREVIEW_LINES);
-  const exitCode = parsed?.exitCode ?? null;
+  const exitCode: number | undefined = parsed?.exitCode;
+  const derivedIsError: boolean = isError || (exitCode !== undefined && exitCode !== 0);
 
   return (
     <div
-      className={`${styles.card} ${isError ? styles.cardRed : styles.cardNeutral}`}
+      className={`${styles.card} ${derivedIsError ? styles.cardRed : styles.cardNeutral}`}
       data-testid="tool-card-shell"
     >
       <div className={styles.header}>
@@ -66,7 +67,7 @@ export function ShellCard({ tool, args, result, isError }: ToolCardProps): JSX.E
         >
           {command}
         </span>
-        {exitCode !== null && (
+        {exitCode !== undefined && (
           <span
             className={exitCode === 0 ? styles.exitOk : styles.exitError}
             data-testid="tool-card-exit-code"

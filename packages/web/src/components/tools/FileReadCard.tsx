@@ -26,12 +26,22 @@ function basename(filePath: string): string {
 /** Number of preview lines shown when collapsed. */
 const PREVIEW_LINES: number = 5;
 
-/** Renders a file read tool call with syntax-highlighted content preview. */
-export function FileReadCard({ tool, args, result, isError }: ToolCardProps): JSX.Element {
+/** Extra props for FileReadCard to support write variant styling. */
+interface FileReadCardProps extends ToolCardProps {
+  /** When true, uses green accent and write icon instead of blue/read. */
+  writeVariant?: boolean;
+}
+
+/** Renders a file read/write tool call with syntax-highlighted content preview. */
+export function FileReadCard({ tool, args, result, isError, writeVariant }: FileReadCardProps): JSX.Element {
   const [expanded, setExpanded] = useState(false);
   const filePath = getFilePath(args);
   const name = basename(filePath);
   const inProgress = result === undefined;
+
+  const accentClass: string = isError ? styles.cardRed : (writeVariant ? styles.cardGreen : styles.cardBlue);
+  const accentColor: string = writeVariant ? "var(--accent-green)" : "var(--accent-blue)";
+  const icon: string = writeVariant ? "📝" : "📄";
 
   const lines = result?.split("\n") ?? [];
   const hasMore = lines.length > PREVIEW_LINES;
@@ -39,12 +49,12 @@ export function FileReadCard({ tool, args, result, isError }: ToolCardProps): JS
 
   return (
     <div
-      className={`${styles.card} ${isError ? styles.cardRed : styles.cardBlue} ${inProgress ? styles.inProgress : ""}`}
+      className={`${styles.card} ${accentClass} ${inProgress ? styles.inProgress : ""}`}
       data-testid="tool-card-file-read"
     >
       <div className={styles.header}>
-        <span className={styles.icon}>📄</span>
-        <span className={`${styles.toolName}`} style={{ color: "var(--accent-blue)" }}>{tool}</span>
+        <span className={styles.icon}>{icon}</span>
+        <span className={styles.toolName} style={{ color: accentColor }}>{tool}</span>
         {name && (
           <span className={styles.fileName} title={filePath}>{name}</span>
         )}
