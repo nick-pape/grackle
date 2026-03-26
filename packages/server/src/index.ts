@@ -253,7 +253,6 @@ async function main(): Promise<void> {
       }
       return allTasks;
     },
-    getTask: (id) => taskStore.getTask(id),
     reparentTask: (taskId, newParentTaskId) => taskStore.reparentTask(taskId, newParentTaskId),
     emit,
   });

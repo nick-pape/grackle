@@ -23,7 +23,7 @@ vi.mock("./signal-delivery.js", () => ({
 
 // ── Imports ──────────────────────────────────────────────────
 
-import { taskStore, sessionStore } from "@grackle-ai/database";
+import { taskStore } from "@grackle-ai/database";
 import { emit, subscribe } from "../event-bus.js";
 import { deliverSignalToTask } from "./signal-delivery.js";
 import { initOrphanReparentSubscriber, _resetForTesting } from "./orphan-reparent.js";

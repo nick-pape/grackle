@@ -22,8 +22,6 @@ const TERMINAL_TASK_STATUSES: ReadonlySet<string> = new Set([
 export interface OrphanPhaseDeps {
   /** Get all tasks (across all workspaces). */
   listAllTasks: () => TaskRow[];
-  /** Look up a single task by ID. */
-  getTask: (id: string) => TaskRow | undefined;
   /** Reparent a task to a new parent. */
   reparentTask: (taskId: string, newParentTaskId: string) => void;
   /** Emit a domain event. */

@@ -8,7 +8,6 @@ vi.mock("./logger.js", () => ({
 function makeDeps(overrides?: Partial<OrphanPhaseDeps>): OrphanPhaseDeps {
   return {
     listAllTasks: vi.fn(() => []),
-    getTask: vi.fn(() => undefined),
     reparentTask: vi.fn(),
     emit: vi.fn(),
     ...overrides,
