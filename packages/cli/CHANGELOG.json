@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.80.0",
+      "tag": "@grackle-ai/cli_v0.80.0",
+      "date": "Thu, 26 Mar 2026 03:07:51 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add session_attach and logs_get to scoped MCP tools with ancestry enforcement for orchestrator agents"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.79.1",
       "tag": "@grackle-ai/cli_v0.79.1",
       "date": "Thu, 26 Mar 2026 02:24:24 GMT",

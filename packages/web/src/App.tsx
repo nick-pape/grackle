@@ -12,7 +12,7 @@ import { useToast } from "./context/ToastContext.js";
 import { useEnvironmentToasts } from "./hooks/useEnvironmentToasts.js";
 import { useTaskToasts } from "./hooks/useTaskToasts.js";
 import { AnimatePresence, motion } from "motion/react";
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useParams } from "react-router";
+import { BrowserRouter, HashRouter, Routes, Route, Navigate, Outlet, useLocation, useParams } from "react-router";
 import { sessionUrl, useAppNavigate } from "./utils/navigation.js";
 import { EmptyPage, TasksEmptyPage, EnvironmentsEmptyPage } from "./pages/EmptyPage.js";
 import { ChatPage } from "./pages/ChatPage.js";
@@ -34,15 +34,22 @@ import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js
 import { SettingsAboutTab } from "./pages/settings/SettingsAboutTab.js";
 import { SettingsShortcutsTab } from "./pages/settings/SettingsShortcutsTab.js";
 import { GlobalShortcuts } from "./components/layout/GlobalShortcuts.js";
+import { DemoBanner } from "./components/display/DemoBanner.js";
 import { SetupWizard } from "./pages/SetupWizard.js";
 import styles from "./App.module.scss";
 
 // Lazy-loaded to keep the main bundle under the chunk size limit
 const KnowledgePage: LazyExoticComponent<() => JSX.Element> = lazy(() => import("./pages/KnowledgePage.js").then((m) => ({ default: m.KnowledgePage })));
 
-/** Whether the app is running in mock mode (`?mock` query parameter). */
+/** Build-time flag set when producing a static demo build (see vite.config.ts). */
+declare const __DEMO_MODE__: boolean;
+
+/** Build-time base URL path for the router (see vite.config.ts). */
+declare const __BASE_URL__: string;
+
+/** Whether the app is running in mock mode (`?mock` query parameter or demo build). */
 const IS_MOCK_MODE: boolean =
-  typeof window !== "undefined" && new URLSearchParams(window.location.search).has("mock");
+  __DEMO_MODE__ || (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("mock"));
 
 /** Inner layout body that conditionally renders the sidebar based on context content. */
 function AppShellBody(): JSX.Element {
@@ -136,6 +143,7 @@ function AppShell(): JSX.Element {
   return (
     <SidebarProvider>
       <div className={styles.root}>
+        {IS_MOCK_MODE && <DemoBanner />}
         <AppShellBody />
       </div>
     </SidebarProvider>
@@ -282,9 +290,15 @@ function AppContent(): JSX.Element {
           transition={{ duration: 0.25 }}
           style={{ minHeight: "100vh" }}
         >
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
+          {__DEMO_MODE__ ? (
+            <HashRouter>
+              <AppRoutes />
+            </HashRouter>
+          ) : (
+            <BrowserRouter basename={__BASE_URL__.replace(/\/$/, "")}>
+              <AppRoutes />
+            </BrowserRouter>
+          )}
         </motion.div>
       )}
     </AnimatePresence>

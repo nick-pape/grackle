@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "Add session_attach and logs_get to scoped MCP tools with ancestry enforcement for orchestrator agents",
-      "type": "minor",
+      "comment": "placeholder",
+      "type": "none",
       "packageName": "@grackle-ai/cli"
     }
   ],
