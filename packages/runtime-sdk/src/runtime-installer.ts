@@ -161,7 +161,7 @@ export function ensureRuntimeInstalled(
  * In dev mode, falls back to standard `import()` since Rush handles resolution.
  *
  * @param runtimeName - Runtime identifier (e.g. "claude-code")
- * @param packageName - npm package name to import (e.g. "@anthropic-ai/claude-agent-sdk")
+ * @param packageName - npm package name to import (e.g. `\@anthropic-ai/claude-agent-sdk`)
  * @returns The imported module
  */
 export async function importFromRuntime<T>(runtimeName: string, packageName: string): Promise<T> {
