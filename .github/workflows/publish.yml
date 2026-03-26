@@ -204,6 +204,15 @@ jobs:
       - name: Build docs site
         run: node common/scripts/install-run-rush.js build -t @grackle-ai/docs-site
 
+      - name: Build web demo
+        env:
+          VITE_DEMO_MODE: "true"
+          VITE_BASE_URL: /grackle/demo/
+        run: node common/scripts/install-run-rush.js build -t @grackle-ai/web
+
+      - name: Copy web demo into docs output
+        run: cp -r packages/web/dist apps/docs-site/build/demo
+
       - uses: actions/configure-pages@v4
 
       - uses: actions/upload-pages-artifact@v3
