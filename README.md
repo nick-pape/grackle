@@ -193,24 +193,29 @@ Docker spins up a container with PowerLine pre-installed. Local connects to a Po
 One command — includes the server, web UI, knowledge graph (Neo4j), and a local agent environment:
 
 ```bash
-docker run -d --name grackle -p 3000:3000 \
-  -v ~/.claude:/home/node/.claude:ro \
+docker run -d --name grackle -p 3000:3000 -v grackle-data:/data ghcr.io/nick-pape/grackle:latest
+```
+
+Open **http://localhost:3000**, pair with the code from `docker logs grackle`, and start working.
+
+To mount your Claude Code credentials so agents can authenticate:
+
+```bash
+docker run -d --name grackle -p 3000:3000 -v grackle-data:/data \
+  -v "${HOME}/.claude:/home/node/.claude:ro" \
   ghcr.io/nick-pape/grackle:latest
 ```
 
-> If `~/.claude` doesn't exist yet, run `claude` once on the host to create it, or use `-e ANTHROPIC_API_KEY=sk-...` instead of the volume mount.
-
-Open **http://localhost:3000**, pair with the code from `docker logs grackle`, and start working.
+> **Windows note**: The Claude Desktop app stores OAuth tokens in Windows Credential Manager (DPAPI), not `~/.claude/`. Use `-e ANTHROPIC_API_KEY=sk-...` instead of the volume mount. Same for `GH_TOKEN` — pass `-e GH_TOKEN=$(gh auth token)`.
 
 <details>
 <summary>Mount credentials for all runtimes</summary>
 
 ```bash
-docker run -d --name grackle \
-  -p 3000:3000 -p 7434:7434 -p 7435:7435 -p 7433:7433 \
-  -v ~/.claude:/home/node/.claude:ro \
-  -v ~/.copilot:/home/node/.copilot \
-  -v ~/.codex:/home/node/.codex \
+docker run -d --name grackle -p 3000:3000 -v grackle-data:/data \
+  -v "${HOME}/.claude:/home/node/.claude:ro" \
+  -v "${HOME}/.copilot:/home/node/.copilot" \
+  -v "${HOME}/.codex:/home/node/.codex" \
   -e GH_TOKEN=$(gh auth token) \
   ghcr.io/nick-pape/grackle:latest
 ```
@@ -218,19 +223,22 @@ docker run -d --name grackle \
 - **Claude**: mounted read-only (redirected via `CLAUDE_CONFIG_DIR`)
 - **Copilot / Codex**: mounted writable (their CLIs write session state with no config dir override)
 - **GH_TOKEN**: enables the GitHub CLI and Codespace adapter inside the container
+- Use `${HOME}` (not `~`) — tilde expansion doesn't work in Docker on Windows
 
 </details>
 
 <details>
 <summary>Docker Compose</summary>
 
-For a more complete setup with host Docker integration (via `/var/run/docker.sock`), credential mounts, and networking:
+For a more complete setup with Docker adapter integration, credential mounts, and networking:
 
 ```bash
-cd docker && docker compose up -d
+cp deploy/docker-compose.yml deploy/.env.example .
+cp .env.example .env  # edit as needed
+docker compose up -d
 ```
 
-See [`docker/docker-compose.yml`](docker/docker-compose.yml) for the full configuration.
+See [`deploy/docker-compose.yml`](deploy/docker-compose.yml) for the full configuration.
 
 </details>
 
