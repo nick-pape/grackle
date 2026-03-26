@@ -1,5 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import type { GrackleClient } from "./rpc-client.js";
+import { grackle } from "@grackle-ai/common";
 import {
   createWorkspace,
   createTaskDirect,
@@ -8,8 +9,8 @@ import {
   emitMcpCall,
 } from "./helpers.js";
 
-/** Event type enum values from proto. */
-const EVENT_TYPE_TOOL_RESULT = 3;
+/** Event type enum value from proto — avoids hardcoding the numeric value. */
+const EVENT_TYPE_TOOL_RESULT = grackle.EventType.TOOL_RESULT;
 
 /**
  * Helper: start a task via RPC with stub persona and return the session ID.
@@ -93,15 +94,14 @@ test.describe("Scoped session_attach and logs_get", { tag: ["@task"] }, () => {
       await client.killAgent({ id: s.id });
     }
     if (active.length > 0) {
-      const deadline = Date.now() + 5_000;
-      while (Date.now() < deadline) {
+      await expect(async () => {
         const recheck = await client.listSessions({});
         const remaining = recheck.sessions as Array<{ status: string }>;
-        if (!remaining.some((s) => s.status === "idle" || s.status === "running" || s.status === "pending")) {
-          break;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 250));
-      }
+        const stillActive = remaining.filter(
+          (s) => s.status === "idle" || s.status === "running" || s.status === "pending",
+        );
+        expect(stillActive.length).toBe(0);
+      }).toPass({ timeout: 5_000, intervals: [250] });
     }
   });
 
