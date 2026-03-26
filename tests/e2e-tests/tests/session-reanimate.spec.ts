@@ -48,6 +48,7 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
     await expect(page.locator("text=Echo: reanimate me")).toBeVisible();
 
     // ── 3. Session is idle — kill it to move to STOPPED ──────────────────
+    await page.getByTestId("stop-split-button-chevron").waitFor({ timeout: 10_000 });
     await page.getByTestId("stop-split-button-chevron").click();
     await page.locator("[data-testid='stop-split-button-menu'] button", { hasText: "Kill" }).click();
     await expect(page.locator("text=Session killed")).toBeVisible({ timeout: 10_000 });
@@ -83,6 +84,7 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
 
     // ── 8. Session returns to idle — kill it to stop ─────────────────────
     await expect(resumedInput).toBeVisible({ timeout: 10_000 });
+    await page.getByTestId("stop-split-button-chevron").waitFor({ timeout: 10_000 });
     await page.getByTestId("stop-split-button-chevron").click();
     await page.locator("[data-testid='stop-split-button-menu'] button", { hasText: "Kill" }).click();
     await expect(page.locator("text=Session killed")).toBeVisible({ timeout: 10_000 });
@@ -122,6 +124,7 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
     await expect(inputField).toBeVisible();
 
     // Cleanup
+    await page.getByTestId("stop-split-button-chevron").waitFor({ timeout: 10_000 });
     await page.getByTestId("stop-split-button-chevron").click();
     await page.locator("[data-testid='stop-split-button-menu'] button", { hasText: "Kill" }).click();
     await expect(page.locator("text=Session killed")).toBeVisible({ timeout: 5_000 });

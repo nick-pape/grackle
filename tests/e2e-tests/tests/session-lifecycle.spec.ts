@@ -61,6 +61,7 @@ test.describe("Session Lifecycle (stub runtime)", { tag: ["@session"] }, () => {
     // Session returns to idle (stub no longer self-completes).
     // The input field reappears — use Kill (force) to end the session.
     await expect(inputField).toBeVisible({ timeout: 10_000 });
+    await page.getByTestId("stop-split-button-chevron").waitFor({ timeout: 10_000 });
     await page.getByTestId("stop-split-button-chevron").click();
     await page.locator("[data-testid='stop-split-button-menu'] button", { hasText: "Kill" }).click();
 
