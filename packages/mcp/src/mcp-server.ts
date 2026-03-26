@@ -63,33 +63,97 @@ function createGrpcClient(bindHost: string, grpcPort: number, apiKey: string): C
   return createClient(grackle.Grackle, transport);
 }
 
+/**
+ * Resolve the persona's allowed MCP tools from the gRPC backend.
+ * Returns a ReadonlySet for filtering, or undefined to use the default SCOPED_TOOLS.
+ */
+async function resolvePersonaTools(
+  grpcClient: Client<typeof grackle.Grackle>,
+  authContext: AuthContext,
+): Promise<ReadonlySet<string> | undefined> {
+  if (authContext.type !== "scoped" || !authContext.personaId) {
+    return undefined;
+  }
+  try {
+    const persona = await grpcClient.getPersona({ id: authContext.personaId });
+    if (persona.allowedMcpTools.length > 0) {
+      const tools = new Set(persona.allowedMcpTools);
+      logger.info(
+        { personaId: authContext.personaId, toolCount: tools.size },
+        "Resolved persona MCP tools: %d tools",
+        tools.size,
+      );
+      return tools;
+    }
+  } catch (error) {
+    // Fail open to default scoped tools (not full access) on transient errors.
+    // This is a security tradeoff: a stricter persona would get broader access,
+    // but failing closed would make sessions unusable on transient backend errors.
+    // The default scoped set is still significantly restricted vs full access.
+    logger.warn(
+      { personaId: authContext.personaId, err: error },
+      "Failed to resolve persona for tool filtering; falling back to default scoped tools",
+    );
+  }
+  return undefined;
+}
+
 /** Create a low-level MCP Server instance with tool handlers wired to the ConnectRPC backend. */
-function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>, authContext: AuthContext): Server {
+async function createMcpServerInstance(
+  grpcClient: Client<typeof grackle.Grackle>,
+  authContext: AuthContext,
+): Promise<Server> {
   const registry = createToolRegistry();
+
+  // Resolve persona-scoped tool set once at session creation (cached for session lifetime)
+  const personaAllowedTools = await resolvePersonaTools(grpcClient, authContext);
+
+  const visibleTools = listToolsForAuth(registry, authContext, personaAllowedTools);
+  logger.info(
+    { authType: authContext.type, toolCount: visibleTools.length },
+    "MCP session exposing %d tools",
+    visibleTools.length,
+  );
 
   const server = new Server(
     { name: "grackle-mcp", version: PACKAGE_VERSION },
     { capabilities: { tools: {} } },
   );
 
+  // Pre-compute the visible tool list and names (immutable for this session)
+  const visibleToolDefs = visibleTools.map((t) => ({
+    name: t.name,
+    description: t.description,
+    inputSchema: z.toJSONSchema(t.inputSchema),
+    annotations: t.annotations,
+  }));
+  const visibleToolNames = visibleTools.map((t) => t.name).join(", ");
+
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    const tools = listToolsForAuth(registry, authContext);
-    return {
-      tools: tools.map((t) => ({
-        name: t.name,
-        description: t.description,
-        inputSchema: z.toJSONSchema(t.inputSchema),
-        annotations: t.annotations,
-      })),
-    };
+    return { tools: visibleToolDefs };
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (request): Promise<CallToolResult> => {
     const { name, arguments: args } = request.params;
-    const tool = resolveToolForAuth(registry, name, authContext);
+    const tool = resolveToolForAuth(registry, name, authContext, personaAllowedTools);
     if (!tool) {
+      // Distinguish "unknown tool" from "not permitted by persona/scope"
+      const existsInRegistry = registry.get(name) !== undefined;
+      if (!existsInRegistry) {
+        logger.warn({ tool: name }, "Unknown tool call: %s", name);
+        return {
+          content: [{ type: "text", text: `Unknown tool: ${name}` }],
+          isError: true,
+        };
+      }
+      const available = visibleToolNames;
+      logger.warn(
+        { tool: name, authType: authContext.type, personaId: authContext.type === "scoped" ? authContext.personaId : undefined },
+        "Tool call rejected by scope: %s",
+        name,
+      );
       return {
-        content: [{ type: "text", text: `Unknown tool: ${name}` }],
+        content: [{ type: "text", text: `Tool "${name}" is not permitted for this session. Available tools: ${available}` }],
         isError: true,
       };
     }
@@ -316,7 +380,7 @@ async function handlePost(
         }
       };
 
-      const mcpServer = createMcpServerInstance(grpcClient, authContext);
+      const mcpServer = await createMcpServerInstance(grpcClient, authContext);
       await mcpServer.connect(transport);
       await transport.handleRequest(req, res, body);
       return;

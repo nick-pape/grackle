@@ -3,6 +3,32 @@ import { createGrackleClient } from "../client.js";
 import Table from "cli-table3";
 import chalk from "chalk";
 import { readFileSync } from "node:fs";
+import { MCP_TOOL_PRESETS, DEFAULT_SCOPED_MCP_TOOLS } from "@grackle-ai/common";
+
+/**
+ * Resolve `--mcp-tools` and `--mcp-tools-preset` options into a tool name array.
+ * Returns undefined if neither flag was provided.
+ */
+function resolveMcpTools(opts: { mcpTools?: string; mcpToolsPreset?: string }): string[] | undefined {
+  if (opts.mcpTools && opts.mcpToolsPreset) {
+    console.error(chalk.red("Cannot specify both --mcp-tools and --mcp-tools-preset."));
+    process.exit(1);
+  }
+  if (opts.mcpToolsPreset) {
+    const preset: readonly string[] | undefined =
+      (MCP_TOOL_PRESETS as Record<string, readonly string[] | undefined>)[opts.mcpToolsPreset];
+    if (!preset) {
+      const validPresets = Object.keys(MCP_TOOL_PRESETS).join(", ");
+      console.error(chalk.red(`Unknown preset "${opts.mcpToolsPreset}". Valid presets: ${validPresets}`));
+      process.exit(1);
+    }
+    return [...preset];
+  }
+  if (opts.mcpTools) {
+    return opts.mcpTools.split(",").map((t) => t.trim()).filter(Boolean);
+  }
+  return undefined;
+}
 
 /** Register persona management commands: `persona list`, `create`, `show`, `edit`, `delete`. */
 export function registerPersonaCommands(program: Command): void {
@@ -51,11 +77,14 @@ export function registerPersonaCommands(program: Command): void {
     )
     .option("--model <model>", "Default model")
     .option("--max-turns <n>", "Maximum turns", parseInt)
-    .addHelpText("after", `\nExamples:\n  $ grackle persona create "Frontend Engineer" --prompt "You are a React specialist." --runtime claude-code\n  $ grackle persona create "Security Reviewer" --prompt-file ./prompts/security.md --model opus\n  $ grackle persona create "Nightly Report" --type script --script-file ./scripts/report.genai.mjs --runtime genaiscript`)
+    .option("--mcp-tools <tools>", "Comma-separated list of allowed MCP tool names")
+    .option("--mcp-tools-preset <preset>", "Use a preset: default, worker, orchestrator, admin")
+    .addHelpText("after", `\nExamples:\n  $ grackle persona create "Frontend Engineer" --prompt "You are a React specialist." --runtime claude-code\n  $ grackle persona create "Security Reviewer" --prompt-file ./prompts/security.md --model opus\n  $ grackle persona create "Nightly Report" --type script --script-file ./scripts/report.genai.mjs --runtime genaiscript\n  $ grackle persona create "Worker" --prompt "You are a worker." --mcp-tools-preset worker`)
     .action(async (name: string, opts: {
       type?: string; prompt?: string; promptFile?: string; desc?: string;
       runtime?: string; model?: string; maxTurns?: number;
       script?: string; scriptFile?: string;
+      mcpTools?: string; mcpToolsPreset?: string;
     }) => {
       const personaType = opts.type || "agent";
 
@@ -89,6 +118,8 @@ export function registerPersonaCommands(program: Command): void {
         }
       }
 
+      const allowedMcpTools = resolveMcpTools(opts);
+
       const client = createGrackleClient();
       const p = await client.createPersona({
         name,
@@ -99,6 +130,7 @@ export function registerPersonaCommands(program: Command): void {
         maxTurns: opts.maxTurns || 0,
         type: personaType,
         script: scriptContent,
+        allowedMcpTools: allowedMcpTools || [],
       });
       console.log(`Created persona: ${p.id} (${p.name})`);
     });
@@ -125,6 +157,11 @@ export function registerPersonaCommands(program: Command): void {
             `Blocked Tools: ${p.toolConfig.disallowedTools.join(", ")}`,
           );
         }
+      }
+      if (p.allowedMcpTools.length > 0) {
+        console.log(`MCP Tools:     ${p.allowedMcpTools.join(", ")}`);
+      } else {
+        console.log(`MCP Tools:     ${chalk.dim(`default (${DEFAULT_SCOPED_MCP_TOOLS.length} tools)`)}`);
       }
       if (p.mcpServers.length > 0) {
         console.log(`MCP Servers:`);
@@ -154,10 +191,13 @@ export function registerPersonaCommands(program: Command): void {
     .option("--runtime <runtime>", "New runtime")
     .option("--model <model>", "New model")
     .option("--max-turns <n>", "New max turns", parseInt)
+    .option("--mcp-tools <tools>", "Comma-separated list of allowed MCP tool names")
+    .option("--mcp-tools-preset <preset>", "Use a preset: default, worker, orchestrator, admin")
     .action(async (id: string, opts: {
       name?: string; type?: string; prompt?: string; promptFile?: string;
       desc?: string; runtime?: string; model?: string; maxTurns?: number;
       script?: string; scriptFile?: string;
+      mcpTools?: string; mcpToolsPreset?: string;
     }) => {
       let systemPrompt = opts.prompt || "";
       if (opts.promptFile) {
@@ -167,6 +207,8 @@ export function registerPersonaCommands(program: Command): void {
       if (opts.scriptFile) {
         scriptContent = readFileSync(opts.scriptFile, "utf8");
       }
+      const allowedMcpTools = resolveMcpTools(opts);
+
       const client = createGrackleClient();
       const p = await client.updatePersona({
         id,
@@ -178,6 +220,9 @@ export function registerPersonaCommands(program: Command): void {
         maxTurns: opts.maxTurns || 0,
         type: opts.type || "",
         script: scriptContent,
+        // Only send allowedMcpTools when explicitly provided via flags;
+        // omitting it (empty []) preserves the existing value on the server.
+        allowedMcpTools: allowedMcpTools ?? [],
       });
       console.log(`Updated persona: ${p.id} (${p.name})`);
     });

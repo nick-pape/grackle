@@ -24,6 +24,9 @@ type AddEnvironmentRequest = Message<"grackle.AddEnvironmentRequest"> & {
 const AddEnvironmentRequestSchema: GenMessage<AddEnvironmentRequest>;
 
 // @public
+export const ADMIN_MCP_TOOLS: readonly string[];
+
+// @public
 type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
     sessionId: string;
     type: string;
@@ -37,6 +40,9 @@ const AgentEventSchema: GenMessage<AgentEvent>;
 
 // @public
 export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "finding" | "subtask_create" | "runtime_session_id" | "usage";
+
+// @public
+export const ALL_MCP_TOOL_NAMES: ReadonlySet<string>;
 
 // @public
 export const API_KEY_FILENAME: string;
@@ -145,6 +151,7 @@ type CreatePersonaRequest = Message<"grackle.CreatePersonaRequest"> & {
     mcpServers: McpServerConfig[];
     type: string;
     script: string;
+    allowedMcpTools: string[];
 };
 
 // @public
@@ -215,6 +222,9 @@ export const DEFAULT_PERSONA_NAME: string;
 
 // @public
 export const DEFAULT_POWERLINE_PORT: number;
+
+// @public
+export const DEFAULT_SCOPED_MCP_TOOLS: readonly string[];
 
 // @public
 export const DEFAULT_SERVER_PORT: number;
@@ -1151,6 +1161,9 @@ export type MatchIndex = readonly [number, number];
 export const MAX_TASK_DEPTH: number;
 
 // @public
+export const MCP_TOOL_PRESETS: Readonly<Record<string, readonly string[]>>;
+
+// @public
 type McpServerConfig = Message<"grackle.McpServerConfig"> & {
     name: string;
     command: string;
@@ -1160,6 +1173,9 @@ type McpServerConfig = Message<"grackle.McpServerConfig"> & {
 
 // @public
 const McpServerConfigSchema: GenMessage<McpServerConfig>;
+
+// @public
+export const ORCHESTRATOR_MCP_TOOLS: readonly string[];
 
 // @public
 type PairingCodeResponse = Message<"grackle.PairingCodeResponse"> & {
@@ -1185,6 +1201,7 @@ type Persona = Message<"grackle.Persona"> & {
     updatedAt: string;
     type: string;
     script: string;
+    allowedMcpTools: string[];
 };
 
 // @public
@@ -1804,6 +1821,7 @@ type UpdatePersonaRequest = Message<"grackle.UpdatePersonaRequest"> & {
     mcpServers: McpServerConfig[];
     type: string;
     script: string;
+    allowedMcpTools: string[];
 };
 
 // @public
@@ -1891,6 +1909,9 @@ type WaitForPipeResponse = Message<"grackle.WaitForPipeResponse"> & {
 
 // @public
 const WaitForPipeResponseSchema: GenMessage<WaitForPipeResponse>;
+
+// @public
+export const WORKER_MCP_TOOLS: readonly string[];
 
 // @public
 type Workspace = Message<"grackle.Workspace"> & {

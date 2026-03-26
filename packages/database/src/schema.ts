@@ -190,6 +190,7 @@ export const personas = sqliteTable("personas", {
   mcpServers: text("mcp_servers").notNull().default("[]"),
   type: text("type").notNull().default("agent"),
   script: text("script").notNull().default(""),
+  allowedMcpTools: text("allowed_mcp_tools").notNull().default("[]"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),

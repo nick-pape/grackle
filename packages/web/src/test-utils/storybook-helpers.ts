@@ -149,6 +149,7 @@ export function makePersona(overrides: Partial<PersonaData> = {}): PersonaData {
     updatedAt: "2026-01-01T00:00:00Z",
     type: "agent",
     script: "",
+    allowedMcpTools: [],
     ...overrides,
   };
 }

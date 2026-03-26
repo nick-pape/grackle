@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
+import { ROOT_TASK_ID } from "@grackle-ai/common";
 import { ToolRegistry } from "./tool-registry.js";
 import type { ToolDefinition } from "./tool-registry.js";
 import type { AuthContext } from "@grackle-ai/auth";
@@ -51,6 +52,14 @@ const SCOPED_AUTH: AuthContext = {
   taskSessionId: "sess-1",
 };
 
+const ROOT_TASK_AUTH: AuthContext = {
+  type: "scoped",
+  taskId: ROOT_TASK_ID,
+  workspaceId: "proj-1",
+  personaId: "",
+  taskSessionId: "sess-root",
+};
+
 // ─── SCOPED_TOOLS constant ──────────────────────────────────
 
 describe("SCOPED_TOOLS", () => {
@@ -69,7 +78,7 @@ describe("SCOPED_TOOLS", () => {
   });
 });
 
-// ─── resolveToolForAuth ─────────────────────────────────────
+// ─── resolveToolForAuth (backward compat — no persona tools) ─
 
 describe("resolveToolForAuth", () => {
   it("returns tool by name for api-key auth", () => {
@@ -99,7 +108,7 @@ describe("resolveToolForAuth", () => {
   });
 });
 
-// ─── listToolsForAuth ───────────────────────────────────────
+// ─── listToolsForAuth (backward compat — no persona tools) ──
 
 describe("listToolsForAuth", () => {
   it("returns all tools for api-key auth", () => {
@@ -132,5 +141,61 @@ describe("listToolsForAuth", () => {
     const names = tools.map((t) => t.name);
     expect(names).not.toContain("env_list");
     expect(names).not.toContain("session_list");
+  });
+});
+
+// ─── Persona-scoped tool filtering ──────────────────────────
+
+describe("persona-scoped filtering", () => {
+  it("restricts tools to persona's allowed set", () => {
+    const registry = buildRegistry();
+    const personaTools = new Set(["finding_post"]);
+    const tools = listToolsForAuth(registry, SCOPED_AUTH, personaTools);
+    expect(tools.map((t) => t.name)).toEqual(["finding_post"]);
+  });
+
+  it("resolves only persona-allowed tools", () => {
+    const registry = buildRegistry();
+    const personaTools = new Set(["finding_post"]);
+    expect(resolveToolForAuth(registry, "finding_post", SCOPED_AUTH, personaTools)).toBeDefined();
+    expect(resolveToolForAuth(registry, "task_create", SCOPED_AUTH, personaTools)).toBeUndefined();
+    expect(resolveToolForAuth(registry, "env_list", SCOPED_AUTH, personaTools)).toBeUndefined();
+  });
+
+  it("falls back to SCOPED_TOOLS when personaAllowedTools is undefined", () => {
+    const registry = buildRegistry();
+    const withoutPersona = listToolsForAuth(registry, SCOPED_AUTH, undefined);
+    const defaultTools = listToolsForAuth(registry, SCOPED_AUTH);
+    expect(withoutPersona.map((t) => t.name).sort()).toEqual(
+      defaultTools.map((t) => t.name).sort(),
+    );
+  });
+
+  it("api-key auth ignores personaAllowedTools", () => {
+    const registry = buildRegistry();
+    const personaTools = new Set(["finding_post"]);
+    const tools = listToolsForAuth(registry, API_KEY_AUTH, personaTools);
+    // Full access — all 12 tools in the test registry
+    expect(tools).toHaveLength(12);
+  });
+
+  it("root task gets full access even with personaAllowedTools set", () => {
+    const registry = buildRegistry();
+    const personaTools = new Set(["finding_post"]);
+    const tools = listToolsForAuth(registry, ROOT_TASK_AUTH, personaTools);
+    expect(tools).toHaveLength(12);
+  });
+
+  it("root task can resolve any tool regardless of personaAllowedTools", () => {
+    const registry = buildRegistry();
+    const personaTools = new Set(["finding_post"]);
+    expect(resolveToolForAuth(registry, "env_list", ROOT_TASK_AUTH, personaTools)).toBeDefined();
+  });
+
+  it("supports multiple persona tools", () => {
+    const registry = buildRegistry();
+    const personaTools = new Set(["finding_post", "task_create", "task_list"]);
+    const tools = listToolsForAuth(registry, SCOPED_AUTH, personaTools);
+    expect(tools.map((t) => t.name).sort()).toEqual(["finding_post", "task_create", "task_list"]);
   });
 });
