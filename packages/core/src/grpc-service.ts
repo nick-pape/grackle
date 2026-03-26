@@ -35,6 +35,7 @@ import {
   claudeProviderModeToEnum,
   providerToggleToEnum,
   eventTypeToEnum,
+  ALL_MCP_TOOL_NAMES,
 } from "@grackle-ai/common";
 import * as logWriter from "./log-writer.js";
 import { resolvePersona, fetchOrchestratorContext, SystemPromptBuilder, buildTaskPrompt } from "@grackle-ai/prompt";
@@ -276,6 +277,9 @@ function personaRowToProto(row: personaStore.PersonaRow): grackle.Persona {
     updatedAt: row.updatedAt,
     type: row.type || "agent",
     script: row.script || "",
+    allowedMcpTools: safeParseJson<string[]>(row.allowedMcpTools, []).filter(
+      (t): t is string => typeof t === "string",
+    ),
   });
 }
 
@@ -1929,6 +1933,19 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         })),
       );
 
+      // Validate allowed MCP tools against the known tool registry
+      const allowedMcpTools = Array.isArray(req.allowedMcpTools) ? [...req.allowedMcpTools] : [];
+      if (allowedMcpTools.length > 0) {
+        const invalid = allowedMcpTools.filter((t) => !ALL_MCP_TOOL_NAMES.has(t));
+        if (invalid.length > 0) {
+          throw new ConnectError(
+            `Invalid MCP tool name(s): ${invalid.join(", ")}`,
+            Code.InvalidArgument,
+          );
+        }
+      }
+      const allowedMcpToolsJson = JSON.stringify(allowedMcpTools);
+
       personaStore.createPersona(
         id,
         req.name,
@@ -1941,6 +1958,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         mcpServersJson,
         personaType,
         req.script,
+        allowedMcpToolsJson,
       );
       emit("persona.created", { personaId: id });
       const row = personaStore.getPersona(id);
@@ -1997,6 +2015,22 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const updatedType = req.type || existing.type;
       const updatedScript = req.script || existing.script;
 
+      // Preserve existing allowedMcpTools if request provides empty array
+      const hasNewAllowedMcpTools = Array.isArray(req.allowedMcpTools) && req.allowedMcpTools.length > 0;
+      let allowedMcpToolsJson: string;
+      if (hasNewAllowedMcpTools) {
+        const invalid = req.allowedMcpTools.filter((t) => !ALL_MCP_TOOL_NAMES.has(t));
+        if (invalid.length > 0) {
+          throw new ConnectError(
+            `Invalid MCP tool name(s): ${invalid.join(", ")}`,
+            Code.InvalidArgument,
+          );
+        }
+        allowedMcpToolsJson = JSON.stringify([...req.allowedMcpTools]);
+      } else {
+        allowedMcpToolsJson = existing.allowedMcpTools;
+      }
+
       personaStore.updatePersona(
         req.id,
         name,
@@ -2009,6 +2043,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         mcpServersJson,
         updatedType,
         updatedScript,
+        allowedMcpToolsJson,
       );
       emit("persona.updated", { personaId: req.id });
       const row = personaStore.getPersona(req.id);

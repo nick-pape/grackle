@@ -28,6 +28,7 @@ export interface UsePersonasResult {
     maxTurns?: number,
     type?: string,
     script?: string,
+    allowedMcpTools?: string[],
   ) => Promise<PersonaData>;
   /** Update an existing persona. */
   updatePersona: (
@@ -40,6 +41,7 @@ export interface UsePersonasResult {
     maxTurns?: number,
     type?: string,
     script?: string,
+    allowedMcpTools?: string[],
   ) => Promise<PersonaData>;
   /** Delete a persona by ID. */
   deletePersona: (personaId: string) => Promise<void>;
@@ -84,6 +86,7 @@ export function usePersonas(): UsePersonasResult {
       maxTurns?: number,
       type?: string,
       script?: string,
+      allowedMcpTools?: string[],
     ): Promise<PersonaData> => {
       return grackleClient.createPersona({
         name,
@@ -94,6 +97,7 @@ export function usePersonas(): UsePersonasResult {
         maxTurns: maxTurns || 0,
         type: type || "agent",
         script: script || "",
+        allowedMcpTools: allowedMcpTools || [],
       }).then((resp) => {
         const createdPersona = protoToPersona(resp);
         setPersonas((prev) => [...prev.filter((persona) => persona.id !== createdPersona.id), createdPersona]);
@@ -114,6 +118,7 @@ export function usePersonas(): UsePersonasResult {
       maxTurns?: number,
       type?: string,
       script?: string,
+      allowedMcpTools?: string[],
     ): Promise<PersonaData> => {
       // Build the request with only defined fields so the server can distinguish
       // "not provided" (keep existing) from "set to empty" (clear).
@@ -126,6 +131,7 @@ export function usePersonas(): UsePersonasResult {
       if (maxTurns !== undefined) { request.maxTurns = maxTurns; }
       if (type !== undefined) { request.type = type; }
       if (script !== undefined) { request.script = script; }
+      if (allowedMcpTools !== undefined) { request.allowedMcpTools = allowedMcpTools; }
       return grackleClient.updatePersona(request).then((resp) => {
         const updatedPersona = protoToPersona(resp);
         setPersonas((prev) => prev.map((persona) => (

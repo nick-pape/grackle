@@ -8,6 +8,7 @@ import { EditableSelect, EditableTextArea, EditableTextField, type SelectOption 
 import { PERSONAS_URL, SETTINGS_URL, personaUrl, useAppNavigate } from "../../utils/navigation.js";
 import type { BreadcrumbSegment } from "../../utils/breadcrumbs.js";
 import type { PersonaData } from "../../hooks/types.js";
+import { McpToolSelector } from "../../components/personas/McpToolSelector.js";
 import styles from "../../components/personas/PersonaManager.module.scss";
 
 const RUNTIME_OPTIONS: SelectOption[] = [
@@ -80,10 +81,11 @@ interface PersonaFormProps {
   isNew: boolean;
   appDefaultPersonaId: string;
   onCreatePersona: (name: string, description: string, systemPrompt: string,
-    runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string) => Promise<PersonaData>;
+    runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string,
+    allowedMcpTools?: string[]) => Promise<PersonaData>;
   onUpdatePersona: (personaId: string, name?: string, description?: string,
     systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number,
-    type?: string, script?: string) => Promise<PersonaData>;
+    type?: string, script?: string, allowedMcpTools?: string[]) => Promise<PersonaData>;
   onDeletePersona: (personaId: string) => Promise<void>;
   onSetAppDefaultPersonaId: (personaId: string) => Promise<void>;
   onDone: () => void;
@@ -106,6 +108,7 @@ function PersonaForm({
     existing?.type === "script" ? "script" : "agent",
   );
   const [script, setScript] = useState(existing?.script ?? "");
+  const [allowedMcpTools, setAllowedMcpTools] = useState<string[]>(existing?.allowedMcpTools ?? []);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
 
@@ -123,6 +126,7 @@ function PersonaForm({
       setMaxTurns(existing.maxTurns);
       setPersonaType(editType);
       setScript(existing.script || "");
+      setAllowedMcpTools(existing.allowedMcpTools);
     }
   }, [isNew, existing, hydrated]);
 
@@ -173,7 +177,7 @@ function PersonaForm({
       );
       return;
     }
-    onCreatePersona(name, description, systemPrompt, runtime, model, maxTurns, personaType, script).then(
+    onCreatePersona(name, description, systemPrompt, runtime, model, maxTurns, personaType, script, allowedMcpTools).then(
       (createdPersona) => {
         showToast("Persona created", "success");
         navigate(personaUrl(createdPersona.id), { replace: true });
@@ -426,6 +430,15 @@ function PersonaForm({
               </label>
             </>
           )}
+          {personaType === "agent" && (
+            <div>
+              <label>Allowed MCP Tools</label>
+              <McpToolSelector
+                selectedTools={allowedMcpTools}
+                onChange={setAllowedMcpTools}
+              />
+            </div>
+          )}
           <div className={styles.formActions}>
             <Button type="submit" variant="primary" size="md" disabled={!canCreate} data-testid="persona-detail-save">
               Create
@@ -580,6 +593,27 @@ function PersonaForm({
                   data-testid="persona-script-editor"
                 />
               </label>
+            )}
+            {personaType === "agent" && (
+              <div>
+                <label>Allowed MCP Tools</label>
+                <McpToolSelector
+                  selectedTools={allowedMcpTools}
+                  onChange={(tools) => {
+                    setAllowedMcpTools(tools);
+                    saveField(
+                      () => onUpdatePersona(
+                        existing!.id,
+                        undefined, undefined, undefined, undefined, undefined,
+                        undefined, undefined, undefined, tools,
+                      ),
+                      () => {},
+                      "MCP tools updated",
+                      "Failed to update MCP tools",
+                    ).catch(() => {});
+                  }}
+                />
+              </div>
             )}
           </div>
 

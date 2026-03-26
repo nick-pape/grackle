@@ -500,6 +500,12 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
     );
   });
 
+  tryMigration("add-personas-allowed-mcp-tools", () => {
+    conn.exec(
+      "ALTER TABLE personas ADD COLUMN allowed_mcp_tools TEXT NOT NULL DEFAULT '[]'",
+    );
+  });
+
   tryMigration("add-sessions-parent-session-id", () => {
     conn.exec(
       "ALTER TABLE sessions ADD COLUMN parent_session_id TEXT NOT NULL DEFAULT ''",

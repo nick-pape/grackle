@@ -65,6 +65,7 @@ interface PersonaInfo {
   runtime: string;
   model: string;
   maxTurns: number;
+  allowedMcpTools: string[];
 }
 
 describe("gRPC persona handlers", () => {
@@ -195,6 +196,75 @@ describe("gRPC persona handlers", () => {
     // Verify the connection is still healthy
     const personas = await listPersonas();
     expect(Array.isArray(personas)).toBe(true);
+  });
+
+  it("createPersona with allowedMcpTools round-trips correctly", async () => {
+    const created = (await handlers.createPersona({
+      name: "Scoped Agent",
+      systemPrompt: "You have scoped tools.",
+      runtime: "stub",
+      mcpServers: [],
+      allowedMcpTools: ["finding_post", "task_list"],
+    })) as PersonaInfo;
+
+    const personas = await listPersonas();
+    const p = personas.find((x) => x.name === "Scoped Agent");
+    expect(p).toBeDefined();
+    expect(p!.allowedMcpTools).toEqual(["finding_post", "task_list"]);
+  });
+
+  it("createPersona rejects unknown tool names in allowedMcpTools", async () => {
+    const err = (await handlers
+      .createPersona({
+        name: "Bad Tools",
+        systemPrompt: "prompt",
+        mcpServers: [],
+        allowedMcpTools: ["finding_post", "nonexistent_tool"],
+      })
+      .catch((e: unknown) => e)) as ConnectError;
+
+    expect(err).toBeInstanceOf(ConnectError);
+    expect(err.message).toContain("nonexistent_tool");
+  });
+
+  it("updatePersona preserves allowedMcpTools when not provided", async () => {
+    const created = (await handlers.createPersona({
+      name: "Preserve MCP Tools",
+      systemPrompt: "prompt",
+      runtime: "stub",
+      mcpServers: [],
+      allowedMcpTools: ["finding_post", "task_create"],
+    })) as PersonaInfo;
+
+    await handlers.updatePersona({
+      id: created.id,
+      name: "Preserve MCP Tools Renamed",
+    });
+
+    const personas = await listPersonas();
+    const p = personas.find((x) => x.name === "Preserve MCP Tools Renamed");
+    expect(p).toBeDefined();
+    expect(p!.allowedMcpTools).toEqual(["finding_post", "task_create"]);
+  });
+
+  it("updatePersona replaces allowedMcpTools when provided", async () => {
+    const created = (await handlers.createPersona({
+      name: "Replace MCP Tools",
+      systemPrompt: "prompt",
+      runtime: "stub",
+      mcpServers: [],
+      allowedMcpTools: ["finding_post"],
+    })) as PersonaInfo;
+
+    await handlers.updatePersona({
+      id: created.id,
+      allowedMcpTools: ["task_list", "task_create"],
+    });
+
+    const personas = await listPersonas();
+    const p = personas.find((x) => x.name === "Replace MCP Tools");
+    expect(p).toBeDefined();
+    expect(p!.allowedMcpTools).toEqual(["task_list", "task_create"]);
   });
 
   it("updatePersona preserves fields that are not provided", async () => {

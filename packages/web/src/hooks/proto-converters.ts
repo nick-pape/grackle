@@ -184,6 +184,7 @@ export function protoToPersona(p: grackle.Persona): PersonaData {
     updatedAt: p.updatedAt,
     type: p.type || "agent",
     script: p.script,
+    allowedMcpTools: [...p.allowedMcpTools],
   };
 }
 

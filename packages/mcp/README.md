@@ -243,16 +243,35 @@ Query aggregated token usage and cost data.
 
 ## Scoped Access
 
-When an agent authenticates with a **scoped token** (issued automatically when a task session is started), only a subset of tools is available:
+When an agent authenticates with a **scoped token** (issued automatically when a task session is started), tool access is controlled by the task's **persona configuration**.
 
-- `finding_post`, `finding_list`
-- `task_create`, `task_list`, `task_show`, `task_start`, `task_complete`
-- `session_send_input`
-- `persona_list`, `persona_show`
-- `ipc_spawn`, `ipc_write`, `ipc_close`, `ipc_terminate`, `ipc_list_fds`
-- `knowledge_search`, `knowledge_get_node`
+### Persona-Scoped Tool Filtering
 
-Scoped tokens also enforce workspace isolation — agents can only see tasks and findings within their own workspace. Subtasks created by a scoped agent are automatically parented to the agent's own task.
+Each persona can define an `allowed_mcp_tools` list that restricts which MCP tools its agents can use. When a scoped token connects:
+
+1. The server looks up the persona's `allowed_mcp_tools` from the token's `personaId` claim.
+2. If the persona defines a non-empty tool list, only those tools are exposed via `tools/list`.
+3. If the persona has no explicit tool list (empty `allowed_mcp_tools`), the **default scoped set** is used:
+   - `finding_post`, `finding_list`
+   - `task_create`, `task_list`, `task_show`, `task_start`, `task_complete`
+   - `session_send_input`
+   - `persona_list`, `persona_show`
+   - `ipc_spawn`, `ipc_write`, `ipc_close`, `ipc_terminate`, `ipc_list_fds`
+   - `knowledge_search`, `knowledge_get_node`
+   - `workpad_write`, `workpad_read`
+
+### Preset Tool Sets
+
+Predefined presets are available for convenience (via CLI `--mcp-tools-preset` or the web UI):
+
+| Preset | Description |
+|--------|-------------|
+| `default` | The 19-tool default scoped set (backward compatible) |
+| `worker` | Subset of default — no task creation capabilities |
+| `orchestrator` | Default + task management, session spawning, persona creation |
+| `admin` | Full access to all 53 tools |
+
+Scoped tokens also enforce workspace isolation — agents can only see tasks and findings within their own workspace. Subtasks created by a scoped agent are automatically parented to the agent's own task. Tool calls to non-permitted tools return an error with a descriptive message listing the available tools.
 
 ## Requirements
 

@@ -912,7 +912,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       workspaceCreating: false,
       taskStartingId: undefined,
       personas,
-      createPersona: async (name: string, description: string, systemPrompt: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string) => {
+      createPersona: async (name: string, description: string, systemPrompt: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string, allowedMcpTools?: string[]) => {
         console.log("[MockGrackle] createPersona", { name });
         const newPersona: PersonaData = {
           id: `mock-persona-${Date.now()}`,
@@ -928,11 +928,12 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           updatedAt: new Date().toISOString(),
           type: type || "agent",
           script: script || "",
+          allowedMcpTools: allowedMcpTools || [],
         };
         setPersonas((prev) => [...prev, newPersona]);
         return newPersona;
       },
-      updatePersona: async (personaId: string, name?: string, description?: string, systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string) => {
+      updatePersona: async (personaId: string, name?: string, description?: string, systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string, allowedMcpTools?: string[]) => {
         console.log("[MockGrackle] updatePersona", { personaId, name });
         const existingPersona = personas.find((persona) => persona.id === personaId);
         if (!existingPersona) {
@@ -950,6 +951,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           ...(maxTurns !== undefined ? { maxTurns } : {}),
           ...(type !== undefined ? { type } : {}),
           ...(script !== undefined ? { script } : {}),
+          ...(allowedMcpTools !== undefined ? { allowedMcpTools } : {}),
           updatedAt,
         };
 
