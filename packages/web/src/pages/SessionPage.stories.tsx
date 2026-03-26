@@ -10,20 +10,19 @@ const meta: Meta<typeof SessionPage> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Active running session renders header with runtime and kill button. */
+/** Active running session renders header with runtime and split stop button. */
 export const ActiveSession: Story = {
   decorators: [withMockGrackleRoute(["/sessions/sess-001"], "/sessions/:sessionId")],
   play: async ({ canvas }) => {
     // Session header shows truncated ID + runtime + status
     await expect(canvas.getByText(/Session:\s*sess-001/)).toBeInTheDocument();
 
-    // At least one kill button visible (header and/or ChatInput both have one)
-    const killButtons: HTMLElement[] = canvas.getAllByTitle("Stop session");
-    await expect(killButtons.length).toBeGreaterThan(0);
+    // Split stop button visible in header
+    await expect(canvas.getByTestId("stop-split-button")).toBeInTheDocument();
   },
 };
 
-/** Stopped session shows end reason and no kill button. */
+/** Stopped session shows end reason and no stop button. */
 export const StoppedSession: Story = {
   decorators: [withMockGrackleRoute(["/sessions/sess-002"], "/sessions/:sessionId")],
   play: async ({ canvas }) => {
@@ -34,8 +33,7 @@ export const StoppedSession: Story = {
     const completedElements: HTMLElement[] = canvas.getAllByText(/completed/);
     await expect(completedElements.length).toBeGreaterThan(0);
 
-    // No kill button for stopped session
-    const killButtons: HTMLElement[] = canvas.queryAllByTitle("Stop session");
-    await expect(killButtons.length).toBe(0);
+    // No split stop button for stopped session
+    await expect(canvas.queryByTestId("stop-split-button")).not.toBeInTheDocument();
   },
 };

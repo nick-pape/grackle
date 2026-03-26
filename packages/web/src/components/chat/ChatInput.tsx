@@ -53,12 +53,8 @@ export interface ChatInputProps {
   environmentId?: string;
   /** Task ID to start (mode="start") */
   taskId?: string;
-  /** Show Stop button */
-  showStop?: boolean;
   /** Show persona selector dropdown (mode="spawn") */
   showPersonaSelect?: boolean;
-  /** Callback for Stop button */
-  onSessionKill?: () => void;
   /** All personas (for persona selector in spawn mode). */
   personas: PersonaData[];
   /** All environments (for disconnect detection). */
@@ -79,9 +75,7 @@ export function ChatInput({
   sessionId,
   environmentId,
   taskId,
-  showStop,
   showPersonaSelect,
-  onSessionKill,
   personas,
   environments,
   onSendInput,
@@ -167,9 +161,6 @@ export function ChatInput({
       <span title={envDisconnected ? "Environment is unavailable — reconnect first" : undefined}>
         <button type="submit" disabled={!text.trim() || envDisconnected} className={styles.btnPrimary}>Send</button>
       </span>
-      {showStop && onSessionKill && (
-        <button type="button" onClick={onSessionKill} className={styles.btnDanger} title="Stop session">Stop</button>
-      )}
     </form>
   );
 }

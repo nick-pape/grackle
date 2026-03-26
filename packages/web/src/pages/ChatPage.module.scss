@@ -11,6 +11,25 @@
   overflow: hidden;
 }
 
+.chatHeader {
+  @include surface-panel;
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 10;
+}
+
+.chatHeaderInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
 .emptyState {
   flex: 1;
   display: flex;
