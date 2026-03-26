@@ -60,20 +60,18 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
       }
 
       try {
-        let firstEvent: boolean = true;
         const stream = grackleClient.streamEvents({});
+
+        // Mark connected immediately — ConnectRPC streams don't have a
+        // separate "open" event. The stream object exists once the HTTP
+        // request is initiated. Data loading in onConnect runs optimistically.
+        setConnected(true);
+        onConnectRef.current?.();
 
         for await (const serverEvent of stream) {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- set by cleanup function
           if (cancelled) {
             break;
-          }
-
-          // Mark connected on first event received
-          if (firstEvent) {
-            firstEvent = false;
-            setConnected(true);
-            onConnectRef.current?.();
           }
 
           // Route the event based on the oneof case
