@@ -53,6 +53,7 @@ rush build -t @grackle-ai/<package>
 npx buf generate
 ```
 
+- **Treat "SUCCESS WITH WARNINGS" as a build failure.** CI runs `rush build` with warnings-as-errors. If your local `rush build` reports `Operations succeeded with warnings`, fix every warning before pushing — it **will** fail CI. Common culprits: missing type annotations (`@rushstack/typedef-var`), `null` instead of `undefined` (`@rushstack/no-new-null`), unused imports, and Vite chunk size warnings.
 - **Do not introduce new bare `tsc`, `npx`, or package-local script usages for builds/tests/tooling.** All *new* build, test, and tooling commands MUST go through Rush (`rush build`, `rush install`, `rushx`) or Heft (`heft build`, `heft test`). Bare commands like `npx tsc`, `npx vitest`, or `node_modules/.bin/...` bypass Rush's orchestration, miss dependency resolution, and may use wrong tool versions. The only exceptions are explicitly documented ones in this repo (e.g., `npx buf generate` for proto codegen and Storybook commands documented below).
 - **Rebuild before manual testing**: After making code changes to any package, you must run `rush build -t @grackle-ai/<package>` before starting or restarting the server. The server runs compiled JS from `dist/`, not TypeScript source files.
 - **CLI uses `GRACKLE_URL`, not `GRACKLE_PORT`**: The CLI client reads `GRACKLE_URL` (e.g., `http://127.0.0.1:7500`) to find the gRPC server. Setting `GRACKLE_PORT` only affects the server's listen port, not the CLI's connection target.

@@ -24,6 +24,7 @@ function applySchema(): void {
       mcp_servers   TEXT NOT NULL DEFAULT '[]',
       type          TEXT NOT NULL DEFAULT 'agent',
       script        TEXT NOT NULL DEFAULT '',
+      allowed_mcp_tools TEXT NOT NULL DEFAULT '[]',
       created_at    TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -278,5 +279,35 @@ describe("persona-store", () => {
     const p = personaStore.getPersona("p1");
     expect(p!.type).toBe("agent");
     expect(p!.script).toBe("");
+  });
+
+  it("creates persona with allowedMcpTools and retrieves it", () => {
+    personaStore.createPersona(
+      "mcp-1", "MCP Test", "", "prompt", "{}", "", "", 0, "[]",
+      "agent", "", '["finding_post","task_list"]',
+    );
+    const p = personaStore.getPersona("mcp-1");
+    expect(p).toBeDefined();
+    expect(p!.allowedMcpTools).toBe('["finding_post","task_list"]');
+  });
+
+  it("defaults allowedMcpTools to empty array JSON when not provided", () => {
+    personaStore.createPersona("mcp-2", "Default MCP", "", "prompt", "{}", "", "", 0, "[]");
+    const p = personaStore.getPersona("mcp-2");
+    expect(p).toBeDefined();
+    expect(p!.allowedMcpTools).toBe("[]");
+  });
+
+  it("updates allowedMcpTools", () => {
+    personaStore.createPersona(
+      "mcp-3", "Update MCP", "", "prompt", "{}", "", "", 0, "[]",
+      "agent", "", '["finding_post"]',
+    );
+    personaStore.updatePersona(
+      "mcp-3", "Update MCP", "", "prompt", "{}", "", "", 0, "[]",
+      "agent", "", '["task_list","task_create"]',
+    );
+    const p = personaStore.getPersona("mcp-3");
+    expect(p!.allowedMcpTools).toBe('["task_list","task_create"]');
   });
 });

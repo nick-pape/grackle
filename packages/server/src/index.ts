@@ -10,7 +10,7 @@ import {
   pushToEnv, attemptReconnects, resetReconnectState,
   parseAdapterConfig, isKnowledgeEnabled, initKnowledge,
   computeTaskStatus,
-  ReconciliationManager, createCronPhase, findFirstConnectedEnvironment,
+  ReconciliationManager, createCronPhase, findFirstConnectedEnvironment, lifecycleCleanupPhase,
   logger, exec, detectLanIp,
 } from "@grackle-ai/core";
 import { envRegistry, sessionStore, workspaceStore, taskStore, scheduleStore, personaStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome } from "@grackle-ai/database";
@@ -243,7 +243,7 @@ async function main(): Promise<void> {
       return env?.status === "connected";
     },
   });
-  const reconciliationManager = new ReconciliationManager([cronPhase]);
+  const reconciliationManager = new ReconciliationManager([cronPhase, lifecycleCleanupPhase]);
   reconciliationManager.start();
 
   // --- gRPC server (HTTP/2) ---

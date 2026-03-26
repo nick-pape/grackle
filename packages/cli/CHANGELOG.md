@@ -1,6 +1,47 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 25 Mar 2026 20:38:47 GMT and should not be manually modified.
+This log was last generated on Thu, 26 Mar 2026 05:16:56 GMT and should not be manually modified.
+
+## 0.82.1
+Thu, 26 Mar 2026 05:16:56 GMT
+
+### Patches
+
+- Specialized tool cards for session event stream
+- Add Node.js engine constraint (>=22 <24) to warn about incompatible Node versions where better-sqlite3 has no prebuilt binaries
+
+## 0.82.0
+Thu, 26 Mar 2026 04:36:32 GMT
+
+### Minor changes
+
+- Auto-reanimate on lifecycle stream subscribe + lifecycle cleanup reconciliation phase
+
+## 0.81.0
+Thu, 26 Mar 2026 04:19:23 GMT
+
+### Minor changes
+
+- Add persona-scoped MCP tool filtering: personas can define allowed_mcp_tools to control which MCP tools their task agents can access, with presets (default/worker/orchestrator/admin), server-side validation, CLI flags, and web UI multiselect
+
+### Updates
+
+- placeholder
+- placeholder
+
+## 0.80.0
+Thu, 26 Mar 2026 03:07:51 GMT
+
+### Minor changes
+
+- Add session_attach and logs_get to scoped MCP tools with ancestry enforcement for orchestrator agents
+
+## 0.79.1
+Thu, 26 Mar 2026 02:24:24 GMT
+
+### Patches
+
+- Generalize CronManager into ReconciliationManager with pluggable tick phases
 
 ## 0.79.0
 Wed, 25 Mar 2026 20:38:47 GMT

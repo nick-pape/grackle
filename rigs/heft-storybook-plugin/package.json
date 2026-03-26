@@ -1,6 +1,9 @@
 {
   "name": "@grackle-ai/heft-web-test-plugin",
   "version": "0.0.1",
+  "engines": {
+    "node": ">=22.0.0 <24.0.0"
+  },
   "private": true,
   "description": "Heft task plugins for web package testing (Storybook and Vitest)",
   "main": "lib/index.js",

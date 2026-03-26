@@ -1,0 +1,214 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Shared Tool Card Styles
+// =============================================================================
+// Common styles used across all tool card sub-components.
+// Each card variant uses @use './toolCards.module.scss' for shared classes
+// and defines its own module for card-specific styles.
+
+// --- Card container (used by all cards except MetadataCard) ---
+
+.card {
+  @include surface-card;
+  padding: var(--space-sm) var(--space-md);
+  margin: var(--space-xs) 0;
+  font-size: var(--font-size-sm);
+
+  @include mobile {
+    padding: var(--space-xs) var(--space-sm);
+  }
+}
+
+.cardBlue    { border-left: 3px solid var(--accent-blue); }
+.cardOrange  { border-left: 3px solid var(--accent-yellow); }
+.cardGreen   { border-left: 3px solid var(--accent-green); }
+.cardPurple  { border-left: 3px solid var(--accent-purple, #a78bfa); }
+.cardNeutral { border-left: 3px solid var(--border-subtle); }
+.cardRed     { border-left: 3px solid var(--accent-red); }
+
+// --- Header row ---
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: 20px;
+}
+
+.icon {
+  flex-shrink: 0;
+  font-size: 12px;
+  width: 16px;
+  text-align: center;
+}
+
+.toolName {
+  font-weight: var(--font-weight-bold);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  flex-shrink: 0;
+}
+
+.fileName {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.spacer {
+  flex: 1;
+}
+
+// --- Expandable body ---
+
+.bodyToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: none;
+  border: none;
+  padding: 2px 0;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast);
+
+  &:hover {
+    color: var(--text-secondary);
+  }
+}
+
+.chevron {
+  font-size: 10px;
+  transition: transform var(--transition-fast);
+}
+
+.chevronExpanded {
+  transform: rotate(90deg);
+}
+
+.pre {
+  @include surface-inset;
+  padding: var(--space-sm);
+  margin: var(--space-xs) 0 0;
+  overflow: auto;
+  max-height: 400px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.5;
+
+  @include mobile {
+    max-height: 250px;
+    font-size: 10px;
+  }
+}
+
+// --- Diff lines ---
+
+.diffAdd {
+  background: rgba(46, 160, 67, 0.15);
+  color: var(--accent-green);
+
+  &::before {
+    content: '+';
+    display: inline-block;
+    width: 14px;
+    color: var(--accent-green);
+    flex-shrink: 0;
+  }
+}
+
+.diffRemove {
+  background: rgba(248, 81, 73, 0.15);
+  color: var(--accent-red);
+
+  &::before {
+    content: '−';
+    display: inline-block;
+    width: 14px;
+    color: var(--accent-red);
+    flex-shrink: 0;
+  }
+}
+
+.diffContext {
+  color: var(--text-secondary);
+
+  &::before {
+    content: ' ';
+    display: inline-block;
+    width: 14px;
+  }
+}
+
+.diffHeader {
+  color: var(--accent-blue);
+  font-weight: var(--font-weight-bold);
+  font-size: 10px;
+}
+
+.diffLine {
+  display: block;
+  padding: 0 var(--space-xs);
+  min-height: 1.5em;
+}
+
+// --- Exit code badges ---
+
+.exitOk {
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  color: var(--accent-green);
+}
+
+.exitError {
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  color: var(--accent-red);
+}
+
+.exitPending {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+// --- In-progress / dimmed state ---
+
+.inProgress {
+  opacity: 0.6;
+}
+
+// --- Metadata (inline, no card) ---
+
+.metadata {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  padding: 2px 0;
+  font-family: var(--font-mono);
+}
+
+.metadataPrefix {
+  color: var(--text-tertiary);
+  margin-right: var(--space-xs);
+}

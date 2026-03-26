@@ -3,7 +3,7 @@ import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import { EventStream } from "../components/display/EventStream.js";
 import { ChatInput } from "../components/chat/index.js";
-import { Breadcrumbs } from "../components/display/index.js";
+import { Breadcrumbs, SplitButton } from "../components/display/index.js";
 import { buildSessionBreadcrumbs } from "../utils/breadcrumbs.js";
 import type { Session } from "../hooks/useGrackleSocket.js";
 import { groupConsecutiveTextEvents, pairToolEvents } from "../utils/sessionEvents.js";
@@ -15,11 +15,12 @@ interface SessionHeaderProps {
   sessionId: string;
   session: Session | undefined;
   isActive: boolean;
-  onKill: (sessionId: string) => void;
+  onStop: () => void;
+  onKill: () => void;
 }
 
-/** Displays session metadata and a kill button for active sessions. */
-function SessionHeader({ sessionId, session, isActive, onKill }: SessionHeaderProps): JSX.Element {
+/** Displays session metadata and stop/kill controls for active sessions. */
+function SessionHeader({ sessionId, session, isActive, onStop, onKill }: SessionHeaderProps): JSX.Element {
   return (
     <div className={styles.header}>
       <span>
@@ -34,13 +35,17 @@ function SessionHeader({ sessionId, session, isActive, onKill }: SessionHeaderPr
           <span>{session.prompt.length > 60 ? session.prompt.slice(0, 60) + "..." : session.prompt}</span>
         )}
         {isActive && (
-          <button
-            onClick={() => onKill(sessionId)}
-            title="Stop session"
-            className={styles.killButton}
-          >
-            {"\u00D7"}
-          </button>
+          <SplitButton
+            label="Stop"
+            onClick={onStop}
+            variant="danger"
+            size="sm"
+            data-testid="stop-split-button"
+            options={[
+              { label: "Stop", description: "Graceful shutdown", onClick: onStop },
+              { label: "Kill", description: "Force kill", onClick: onKill },
+            ]}
+          />
         )}
       </span>
     </div>
@@ -62,7 +67,7 @@ function SessionEmptyState({ session }: { session: Session | undefined }): JSX.E
 export function SessionPage(): JSX.Element {
   const { sessionId } = useParams<{ sessionId: string }>();
   const {
-    events, eventsDropped, sessions, kill, loadSessionEvents,
+    events, eventsDropped, sessions, kill, stopGraceful, loadSessionEvents,
     sendInput, spawn, startTask, personas, environments, provisionEnvironment,
   } = useGrackle();
   const loadedRef = useRef<string | undefined>(undefined);
@@ -100,10 +105,11 @@ export function SessionPage(): JSX.Element {
     <div className={styles.panelContainer}>
       <Breadcrumbs segments={breadcrumbs} />
       <SessionHeader
-        sessionId={sessionId}
+        sessionId={sessionId!}
         session={session}
         isActive={isActive}
-        onKill={kill}
+        onStop={() => stopGraceful(sessionId!)}
+        onKill={() => kill(sessionId!)}
       />
       <EventStream
         events={groupedEvents}
@@ -115,8 +121,6 @@ export function SessionPage(): JSX.Element {
           mode="send"
           sessionId={sessionId}
           environmentId={session!.environmentId}
-          showStop
-          onSessionKill={() => kill(sessionId)}
           personas={personas}
           environments={environments}
           onSendInput={sendInput}

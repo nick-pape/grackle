@@ -35,6 +35,7 @@ export { createCronPhase } from "./cron-phase.js";
 export type { CronPhaseDeps } from "./cron-phase.js";
 export { findFirstConnectedEnvironment } from "./find-connected-environment.js";
 export { validateExpression, computeNextRunAt } from "./schedule-expression.js";
+export { lifecycleCleanupPhase } from "./lifecycle-cleanup.js";
 
 // ─── Version Check ────────────────────────────────────────
 export { checkVersionStatus, clearVersionCache, type VersionStatus } from "./version-check.js";

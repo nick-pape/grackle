@@ -3,6 +3,7 @@ import { ROOT_TASK_ID } from "@grackle-ai/common";
 import { useGrackle } from "../context/GrackleContext.js";
 import { EventStream } from "../components/display/EventStream.js";
 import { ChatInput } from "../components/chat/index.js";
+import { SplitButton } from "../components/display/index.js";
 import { groupConsecutiveTextEvents, pairToolEvents } from "../utils/sessionEvents.js";
 import styles from "./ChatPage.module.scss";
 
@@ -29,7 +30,7 @@ function ChatEmptyState({ hasLocalEnvironment }: { hasLocalEnvironment: boolean 
 export function ChatPage(): JSX.Element {
   const {
     tasks, sessions, events, eventsDropped, environments,
-    loadTaskSessions, loadSessionEvents, kill,
+    loadTaskSessions, loadSessionEvents, kill, stopGraceful,
     taskSessions,
     sendInput, spawn, startTask, personas, provisionEnvironment,
   } = useGrackle();
@@ -111,6 +112,24 @@ export function ChatPage(): JSX.Element {
 
   return (
     <div className={styles.panelContainer} data-testid="chat-page">
+      {isSessionActive && (
+        <div className={styles.chatHeader}>
+          <span className={styles.chatHeaderInfo}>
+            Session: {latestSession!.id.slice(0, 8)} | {latestSession!.runtime} | {latestSession!.status}
+          </span>
+          <SplitButton
+            label="Stop"
+            onClick={() => stopGraceful(latestSession!.id)}
+            variant="danger"
+            size="sm"
+            data-testid="stop-split-button"
+            options={[
+              { label: "Stop", description: "Graceful shutdown", onClick: () => stopGraceful(latestSession!.id) },
+              { label: "Kill", description: "Force kill", onClick: () => kill(latestSession!.id) },
+            ]}
+          />
+        </div>
+      )}
       <EventStream
         events={groupedEvents}
         eventsDropped={eventsDropped}
@@ -121,8 +140,6 @@ export function ChatPage(): JSX.Element {
           mode="send"
           sessionId={latestSession!.id}
           environmentId={latestSession!.environmentId}
-          showStop
-          onSessionKill={() => kill(latestSession!.id)}
           personas={personas}
           environments={environments}
           onSendInput={sendInput}

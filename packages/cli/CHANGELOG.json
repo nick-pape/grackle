@@ -2,6 +2,77 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.82.1",
+      "tag": "@grackle-ai/cli_v0.82.1",
+      "date": "Thu, 26 Mar 2026 05:16:56 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Specialized tool cards for session event stream"
+          },
+          {
+            "comment": "Add Node.js engine constraint (>=22 <24) to warn about incompatible Node versions where better-sqlite3 has no prebuilt binaries"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.82.0",
+      "tag": "@grackle-ai/cli_v0.82.0",
+      "date": "Thu, 26 Mar 2026 04:36:32 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Auto-reanimate on lifecycle stream subscribe + lifecycle cleanup reconciliation phase"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.81.0",
+      "tag": "@grackle-ai/cli_v0.81.0",
+      "date": "Thu, 26 Mar 2026 04:19:23 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add persona-scoped MCP tool filtering: personas can define allowed_mcp_tools to control which MCP tools their task agents can access, with presets (default/worker/orchestrator/admin), server-side validation, CLI flags, and web UI multiselect"
+          }
+        ],
+        "none": [
+          {
+            "comment": "placeholder"
+          },
+          {
+            "comment": "placeholder"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.80.0",
+      "tag": "@grackle-ai/cli_v0.80.0",
+      "date": "Thu, 26 Mar 2026 03:07:51 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add session_attach and logs_get to scoped MCP tools with ancestry enforcement for orchestrator agents"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.79.1",
+      "tag": "@grackle-ai/cli_v0.79.1",
+      "date": "Thu, 26 Mar 2026 02:24:24 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Generalize CronManager into ReconciliationManager with pluggable tick phases"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.79.0",
       "tag": "@grackle-ai/cli_v0.79.0",
       "date": "Wed, 25 Mar 2026 20:38:47 GMT",

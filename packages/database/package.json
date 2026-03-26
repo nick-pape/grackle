@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/database",
-  "version": "0.79.0",
+  "version": "0.82.1",
   "description": "SQLite persistence layer for Grackle — schema, stores, and migrations",
   "license": "MIT",
   "repository": {
@@ -8,14 +8,25 @@
     "url": "https://github.com/nick-pape/grackle.git",
     "directory": "packages/database"
   },
-  "keywords": ["grackle", "sqlite", "database", "drizzle-orm"],
+  "keywords": [
+    "grackle",
+    "sqlite",
+    "database",
+    "drizzle-orm"
+  ],
   "homepage": "https://github.com/nick-pape/grackle#readme",
-  "bugs": { "url": "https://github.com/nick-pape/grackle/issues" },
-  "engines": { "node": ">=22.0.0" },
+  "bugs": {
+    "url": "https://github.com/nick-pape/grackle/issues"
+  },
+  "engines": {
+    "node": ">=22.0.0 <24.0.0"
+  },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist/"],
+  "files": [
+    "dist/"
+  ],
   "scripts": {
     "build": "heft build --clean",
     "test": "vitest run",
@@ -39,6 +50,8 @@
     "vitest": "^3.1.1"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["better-sqlite3"]
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
   }
 }

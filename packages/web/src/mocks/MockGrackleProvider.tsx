@@ -302,6 +302,31 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [cancelSessionTimers, updateSessionStatus, appendEvent],
   );
 
+  /** Graceful stop — mirrors kill but with "terminated" end reason. */
+  const stopGraceful: UseGrackleSocketResult["stopGraceful"] = useCallback(
+    (sessionId: string) => {
+      console.log("[MockGrackle] stopGraceful", sessionId);
+      cancelSessionTimers(sessionId);
+      pendingResumeRef.current.delete(sessionId);
+      updateSessionStatus(sessionId, "stopped", "terminated");
+      appendEvent({
+        sessionId,
+        eventType: "status",
+        timestamp: new Date().toISOString(),
+        content: "terminated",
+      });
+      // Reset tasks just like kill() — stopped sessions make tasks retryable
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.latestSessionId === sessionId && t.status === "working"
+            ? { ...t, status: "not_started" }
+            : t,
+        ),
+      );
+    },
+    [cancelSessionTimers, updateSessionStatus, appendEvent],
+  );
+
   /** No-op refresh — the mock has no server to re-fetch from. */
   const refresh: UseGrackleSocketResult["refresh"] = useCallback(() => {
     console.log("[MockGrackle] refresh");
@@ -849,6 +874,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       spawn,
       sendInput,
       kill,
+      stopGraceful,
       refresh,
       loadSessionEvents,
       clearEvents,
@@ -912,7 +938,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       workspaceCreating: false,
       taskStartingId: undefined,
       personas,
-      createPersona: async (name: string, description: string, systemPrompt: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string) => {
+      createPersona: async (name: string, description: string, systemPrompt: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string, allowedMcpTools?: string[]) => {
         console.log("[MockGrackle] createPersona", { name });
         const newPersona: PersonaData = {
           id: `mock-persona-${Date.now()}`,
@@ -928,11 +954,12 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           updatedAt: new Date().toISOString(),
           type: type || "agent",
           script: script || "",
+          allowedMcpTools: allowedMcpTools || [],
         };
         setPersonas((prev) => [...prev, newPersona]);
         return newPersona;
       },
-      updatePersona: async (personaId: string, name?: string, description?: string, systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string) => {
+      updatePersona: async (personaId: string, name?: string, description?: string, systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string, allowedMcpTools?: string[]) => {
         console.log("[MockGrackle] updatePersona", { personaId, name });
         const existingPersona = personas.find((persona) => persona.id === personaId);
         if (!existingPersona) {
@@ -950,6 +977,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           ...(maxTurns !== undefined ? { maxTurns } : {}),
           ...(type !== undefined ? { type } : {}),
           ...(script !== undefined ? { script } : {}),
+          ...(allowedMcpTools !== undefined ? { allowedMcpTools } : {}),
           updatedAt,
         };
 
@@ -1017,6 +1045,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       spawn,
       sendInput,
       kill,
+      stopGraceful,
       refresh,
       loadSessionEvents,
       clearEvents,
