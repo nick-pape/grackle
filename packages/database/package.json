@@ -1,7 +1,7 @@
 {
   "name": "@grackle-ai/database",
-  "version": "0.80.0",
-  "description": "SQLite persistence layer for Grackle \u00e2\u20ac\u201d schema, stores, and migrations",
+  "version": "0.81.0",
+  "description": "SQLite persistence layer for Grackle — schema, stores, and migrations",
   "license": "MIT",
   "repository": {
     "type": "git",

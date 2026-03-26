@@ -1,7 +1,7 @@
 {
   "name": "@grackle-ai/web-server",
-  "version": "0.80.0",
-  "description": "HTTP web server for Grackle \u00e2\u20ac\u201d static file serving, pairing, OAuth, and ConnectRPC proxy",
+  "version": "0.81.0",
+  "description": "HTTP web server for Grackle — static file serving, pairing, OAuth, and ConnectRPC proxy",
   "license": "MIT",
   "repository": {
     "type": "git",
