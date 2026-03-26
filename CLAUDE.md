@@ -46,7 +46,14 @@ git worktree prune
 
 **Rules:**
 - Never check out a feature branch on the main worktree — always create a new worktree
-- **`cd` into the worktree immediately after creating it** and stay there for all subsequent work. The stop hook, git commands, and rush builds all depend on cwd being inside the worktree. If your cwd is still the main repo, the hook won't see your PR branch.
+- **Prefix every command with `cd $WORKTREE_DIR &&`** after creating the worktree. Claude Code resets cwd to the project root between commands, so a bare `cd` won't persist. Set `WORKTREE_DIR` once and use it everywhere:
+  ```bash
+  WORKTREE_DIR="$HOME/src/grackle-worktrees/nick-pape-123-my-feature"
+  cd "$WORKTREE_DIR" && rush install && rush build
+  cd "$WORKTREE_DIR" && git add -A && git commit -m "..."
+  cd "$WORKTREE_DIR" && git push
+  ```
+  This ensures git commands, the stop hook, and builds all see the correct branch.
 - Each worktree needs its own `rush install && rush build` (node_modules are per-worktree)
 - You can't have the same branch checked out in two worktrees simultaneously
 - When syncing with main inside a worktree: `git fetch origin && git merge origin/main` (same as always, no rebase)
