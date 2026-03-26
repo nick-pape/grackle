@@ -120,16 +120,17 @@ async function createMcpServerInstance(
     { capabilities: { tools: {} } },
   );
 
+  // Pre-compute the visible tool list and names (immutable for this session)
+  const visibleToolDefs = visibleTools.map((t) => ({
+    name: t.name,
+    description: t.description,
+    inputSchema: z.toJSONSchema(t.inputSchema),
+    annotations: t.annotations,
+  }));
+  const visibleToolNames = visibleTools.map((t) => t.name).join(", ");
+
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    const tools = listToolsForAuth(registry, authContext, personaAllowedTools);
-    return {
-      tools: tools.map((t) => ({
-        name: t.name,
-        description: t.description,
-        inputSchema: z.toJSONSchema(t.inputSchema),
-        annotations: t.annotations,
-      })),
-    };
+    return { tools: visibleToolDefs };
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (request): Promise<CallToolResult> => {
@@ -145,9 +146,7 @@ async function createMcpServerInstance(
           isError: true,
         };
       }
-      const available = listToolsForAuth(registry, authContext, personaAllowedTools)
-        .map((t) => t.name)
-        .join(", ");
+      const available = visibleToolNames;
       logger.warn(
         { tool: name, authType: authContext.type, personaId: authContext.type === "scoped" ? authContext.personaId : undefined },
         "Tool call rejected by scope: %s",
