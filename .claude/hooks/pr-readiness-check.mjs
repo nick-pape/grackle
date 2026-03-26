@@ -197,11 +197,26 @@ function main() {
 
   // ── Check 0: PR already merged or closed ──────────────────────────
   if (pr.state === "MERGED" || pr.state === "CLOSED") {
-    block(
-      `PR #${prNumber} is already ${pr.state}. Switch back to main and pull:\n` +
-      `  git checkout main && git pull\n\n` +
-      `This will clear the stale branch context so the hook passes.`
-    );
+    // Detect if we're in a git worktree (vs the main working copy)
+    const worktreeCheck = run("git rev-parse --git-common-dir");
+    const gitDir = run("git rev-parse --git-dir");
+    const isWorktree = worktreeCheck.stdout && gitDir.stdout && worktreeCheck.stdout !== gitDir.stdout;
+
+    if (isWorktree) {
+      const cwd = run("pwd -P").stdout || process.cwd();
+      block(
+        `PR #${prNumber} is already ${pr.state}. This is a worktree — clean it up:\n` +
+        `  git worktree remove "${cwd}"\n` +
+        `  # or if the directory is already gone:\n` +
+        `  git worktree prune`
+      );
+    } else {
+      block(
+        `PR #${prNumber} is already ${pr.state}. Switch back to main and pull:\n` +
+        `  git checkout main && git pull\n\n` +
+        `This will clear the stale branch context so the hook passes.`
+      );
+    }
   }
 
   const issues = [];
