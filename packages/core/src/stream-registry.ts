@@ -124,6 +124,13 @@ const syncQueues: Map<string, AsyncQueue<StreamMessage>> = new Map();
 type OrphanCallback = (sessionId: string) => void;
 let orphanCallback: OrphanCallback | undefined;
 
+/** Callback invoked when an external subscription is created on a lifecycle stream. */
+type RevivedCallback = (targetSessionId: string, subscriberSessionId: string) => void;
+let revivedCallback: RevivedCallback | undefined;
+
+/** Prefix for lifecycle stream names. */
+const LIFECYCLE_PREFIX: string = "lifecycle:";
+
 // ─── Internal Helpers ─────────────────────────────────────────────────────────
 
 /** Allocate the next fd number for a session. */
@@ -283,6 +290,19 @@ export function subscribe(
   // Create a blocking queue for sync subscriptions (only readable ones)
   if (deliveryMode === "sync" && canReceive(sub)) {
     syncQueues.set(sub.id, new AsyncQueue<StreamMessage>());
+  }
+
+  // Fire revived callback when an external session subscribes to a lifecycle stream.
+  // "External" means the subscriber is not the target session itself.
+  if (revivedCallback && stream.name.startsWith(LIFECYCLE_PREFIX)) {
+    const targetSessionId: string = stream.name.slice(LIFECYCLE_PREFIX.length);
+    if (sessionId !== targetSessionId) {
+      try {
+        revivedCallback(targetSessionId, sessionId);
+      } catch (err) {
+        try { console.debug("stream-registry: revived callback error for", targetSessionId, err); } catch { /* ignore */ }
+      }
+    }
   }
 
   return sub;
@@ -448,6 +468,22 @@ export function onSessionOrphaned(cb: OrphanCallback): void {
   orphanCallback = cb;
 }
 
+/**
+ * Register a callback invoked when an external session subscribes to a
+ * lifecycle stream. Used by the lifecycle manager to auto-reanimate
+ * stopped sessions when a new fd is opened.
+ */
+export function onSessionRevived(cb: RevivedCallback): void {
+  revivedCallback = cb;
+}
+
+// ─── Enumeration ──────────────────────────────────────────────────────────────
+
+/** Return all active streams. Used by cleanup phases to scan for orphaned lifecycle streams. */
+export function listStreams(): Stream[] {
+  return Array.from(streams.values());
+}
+
 // ─── Testing ──────────────────────────────────────────────────────────────────
 
 /** Clear all state. For testing only. */
@@ -464,4 +500,5 @@ export function _resetForTesting(): void {
   }
   syncQueues.clear();
   orphanCallback = undefined;
+  revivedCallback = undefined;
 }
