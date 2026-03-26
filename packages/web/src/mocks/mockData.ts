@@ -1534,7 +1534,7 @@ export const MOCK_STREAM_SCENARIOS: MockStreamScenario[] = [
   {
     label: "Database Migration",
     pauseForInput: true,
-    pauseAfterStep: 5,
+    pauseAfterStep: 4,
     steps: [
       {
         delayMs: 0,
@@ -1574,7 +1574,7 @@ export const MOCK_STREAM_SCENARIOS: MockStreamScenario[] = [
           content: "I found the tables to modify:\n  - **users**: add column `last_login_at`\n  - **sessions**: add index on `expires_at`\n  - **audit_log**: new table\n\nThis migration will add a NOT NULL column to the `users` table. The table has **50,000+ rows** which may lock the table briefly.\n\nPlease confirm to proceed.",
         },
       },
-      // step index 5 is the last step before pause (indices 0-5)
+      // step index 4 is the last step before pause (indices 0-4)
     ],
     resumeSteps: [
       {
@@ -1934,13 +1934,25 @@ export const MOCK_KNOWLEDGE_LINKS: GraphLink[] = [
   { source: "kn-audit-schema", target: "kn-db-schema", type: "part_of" },
 ];
 
+/** Lookup map for knowledge nodes by ID. */
+const knowledgeNodeById: Map<string, GraphNode> = new Map(MOCK_KNOWLEDGE_NODES.map((n) => [n.id, n]));
+
+/** Helper to get a knowledge node by ID, throwing if not found (catches typos at startup). */
+function getNode(id: string): GraphNode {
+  const node = knowledgeNodeById.get(id);
+  if (!node) {
+    throw new Error(`MOCK_KNOWLEDGE_NODES is missing node "${id}"`);
+  }
+  return node;
+}
+
 /**
  * Pre-built detail data for knowledge nodes, keyed by node ID.
  * Used by the mock provider to populate the detail panel on node selection.
  */
 export const MOCK_KNOWLEDGE_DETAILS: Record<string, NodeDetail> = {
   "kn-auth-flow": {
-    node: MOCK_KNOWLEDGE_NODES.find((n) => n.id === "kn-auth-flow")!,
+    node: getNode("kn-auth-flow"),
     edges: [
       { fromId: "kn-auth-flow", toId: "kn-jwt-over-session", type: "decided_by" },
       { fromId: "kn-auth-flow", toId: "kn-jwt-middleware", type: "implemented_by" },
@@ -1950,7 +1962,7 @@ export const MOCK_KNOWLEDGE_DETAILS: Record<string, NodeDetail> = {
     ],
   },
   "kn-db-schema": {
-    node: MOCK_KNOWLEDGE_NODES.find((n) => n.id === "kn-db-schema")!,
+    node: getNode("kn-db-schema"),
     edges: [
       { fromId: "kn-db-schema", toId: "kn-pg-pool-decision", type: "decided_by" },
       { fromId: "kn-db-schema", toId: "kn-audit-schema", type: "contains" },
@@ -1960,7 +1972,7 @@ export const MOCK_KNOWLEDGE_DETAILS: Record<string, NodeDetail> = {
     ],
   },
   "kn-etl-pipeline": {
-    node: MOCK_KNOWLEDGE_NODES.find((n) => n.id === "kn-etl-pipeline")!,
+    node: getNode("kn-etl-pipeline"),
     edges: [
       { fromId: "kn-etl-pipeline", toId: "kn-parquet-format", type: "outputs_to" },
       { fromId: "kn-etl-pipeline", toId: "kn-watermark-decision", type: "decided_by" },
