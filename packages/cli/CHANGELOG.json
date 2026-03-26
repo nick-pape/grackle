@@ -2,6 +2,21 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.82.1",
+      "tag": "@grackle-ai/cli_v0.82.1",
+      "date": "Thu, 26 Mar 2026 05:16:56 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Specialized tool cards for session event stream"
+          },
+          {
+            "comment": "Add Node.js engine constraint (>=22 <24) to warn about incompatible Node versions where better-sqlite3 has no prebuilt binaries"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.82.0",
       "tag": "@grackle-ai/cli_v0.82.0",
       "date": "Thu, 26 Mar 2026 04:36:32 GMT",

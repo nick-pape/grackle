@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import { expect } from "@storybook/test";
 import { EventRenderer } from "./EventRenderer.js";
 import { makeEvent } from "../../test-utils/storybook-helpers.js";
 
@@ -9,7 +9,9 @@ const meta: Meta<typeof EventRenderer> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Tool result with success indicator and label. */
+// --- Tool card stories (now routed through ToolCard) ---
+
+/** Unpaired tool_result renders as a generic tool card. */
 export const ToolResultSuccess: Story = {
   args: {
     event: makeEvent({
@@ -19,104 +21,86 @@ export const ToolResultSuccess: Story = {
     }),
   },
   play: async ({ canvas }) => {
-    await expect(canvas.getByTestId("tool-result-indicator-ok")).toBeInTheDocument();
-    await expect(canvas.getByTestId("tool-result-label")).toHaveTextContent("Tool output");
+    await expect(canvas.getByTestId("tool-card-generic")).toBeInTheDocument();
   },
 };
 
-/** Short result (<=5 lines) has no expand toggle. */
-export const ShortResultNoToggle: Story = {
-  args: {
-    event: makeEvent({
-      eventType: "tool_result",
-      content: "Single line output",
-    }),
-  },
-  play: async ({ canvas }) => {
-    const result = canvas.getByTestId("tool-result");
-    const toggle = within(result).queryByText("\u25b8");
-    await expect(toggle).not.toBeInTheDocument();
-  },
-};
-
-/** Multi-line result (>5 lines) shows toggle and expands/collapses. */
-export const MultiLineExpandCollapse: Story = {
-  args: {
-    event: makeEvent({
-      eventType: "tool_result",
-      content: Array.from({ length: 10 }, (_, i) => `Line ${i + 1} of output`).join("\n"),
-    }),
-  },
-  play: async ({ canvas }) => {
-    // Initially collapsed — line 6+ not visible
-    await expect(canvas.queryByText(/Line 6 of output/)).not.toBeInTheDocument();
-
-    // Click to expand
-    const header = canvas.getByTestId("tool-result-header");
-    await userEvent.click(header);
-
-    // Now line 6 should be visible (use regex since text is inside a <pre>)
-    await expect(canvas.getByText(/Line 6 of output/)).toBeInTheDocument();
-
-    // Click to collapse
-    await userEvent.click(header);
-    await expect(canvas.queryByText(/Line 6 of output/)).not.toBeInTheDocument();
-  },
-};
-
-/** Error indicator shown when raw field has is_error=true. */
-export const ToolResultError: Story = {
-  args: {
-    event: makeEvent({
-      eventType: "tool_result",
-      content: "Command failed with exit code 1",
-      raw: JSON.stringify({ is_error: true }),
-    }),
-  },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByTestId("tool-result-indicator-error")).toBeInTheDocument();
-    await expect(canvas.getByTestId("tool-result-label")).toHaveTextContent("Tool error");
-  },
-};
-
-/** Success indicator when raw field has is_error=false. */
-export const ToolResultExplicitSuccess: Story = {
-  args: {
-    event: makeEvent({
-      eventType: "tool_result",
-      content: "OK",
-      raw: JSON.stringify({ is_error: false }),
-    }),
-  },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByTestId("tool-result-indicator-ok")).toBeInTheDocument();
-  },
-};
-
-/** Success indicator when raw field is absent. */
-export const ToolResultNoRaw: Story = {
-  args: {
-    event: makeEvent({
-      eventType: "tool_result",
-      content: "Output without raw",
-    }),
-  },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByTestId("tool-result-indicator-ok")).toBeInTheDocument();
-  },
-};
-
-/** Paired tool_use+tool_result shows tool name and command preview. */
+/** Paired tool_use+tool_result renders as a specialized card (FileReadCard). */
 export const PairedToolUseResult: Story = {
   args: {
     event: makeEvent({
       eventType: "tool_result",
-      content: "File contents here",
+      content: "import express from 'express';",
     }),
     toolUseCtx: { tool: "Read", args: { file_path: "/src/index.ts" } },
   },
   play: async ({ canvas }) => {
-    await expect(canvas.getByTestId("tool-result-label")).toHaveTextContent("Read");
+    await expect(canvas.getByTestId("tool-card-file-read")).toBeInTheDocument();
+    await expect(canvas.getByText("index.ts")).toBeInTheDocument();
+  },
+};
+
+/** Paired Edit tool renders as FileEditCard with diff. */
+export const PairedEditResult: Story = {
+  args: {
+    event: makeEvent({
+      eventType: "tool_result",
+      content: "File updated",
+    }),
+    toolUseCtx: {
+      tool: "Edit",
+      args: { file_path: "/src/config.ts", old_string: "port = 3000", new_string: "port = 8080" },
+    },
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByTestId("tool-card-file-edit")).toBeInTheDocument();
+    await expect(canvas.getByText("config.ts")).toBeInTheDocument();
+  },
+};
+
+/** Paired Bash tool renders as ShellCard. */
+export const PairedShellResult: Story = {
+  args: {
+    event: makeEvent({
+      eventType: "tool_result",
+      content: "[exit 0] Tests passed",
+    }),
+    toolUseCtx: { tool: "Bash", args: { command: "npm test" } },
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByTestId("tool-card-shell")).toBeInTheDocument();
+    await expect(canvas.getByTestId("tool-card-command")).toHaveTextContent("npm test");
+  },
+};
+
+/** Unpaired tool_use renders as an in-progress card. */
+export const UnpairedToolUse: Story = {
+  args: {
+    event: makeEvent({
+      eventType: "tool_use",
+      content: JSON.stringify({ tool: "Read", args: { file_path: "/src/app.ts" } }),
+    }),
+  },
+  play: async ({ canvas }) => {
+    // Should render as FileReadCard (in-progress, no result)
+    const card = canvas.getByTestId("tool-card-file-read");
+    await expect(card.className).toContain("inProgress");
+  },
+};
+
+/** Error tool_result renders with red accent. */
+export const ToolResultError: Story = {
+  args: {
+    event: makeEvent({
+      eventType: "tool_result",
+      content: "Error: ENOENT: no such file",
+      raw: JSON.stringify({ is_error: true }),
+    }),
+    toolUseCtx: { tool: "Read", args: { file_path: "/missing.ts" } },
+  },
+  play: async ({ canvas }) => {
+    const card = canvas.getByTestId("tool-card-file-read");
+    await expect(card.className).toContain("cardRed");
   },
 };
 

@@ -1,6 +1,9 @@
 {
   "name": "@grackle-ai/heft-vite-plugin",
   "version": "0.0.1",
+  "engines": {
+    "node": ">=22.0.0 <24.0.0"
+  },
   "private": true,
   "description": "Heft task plugin that runs Vite build",
   "main": "lib/ViteBuildPlugin.js",

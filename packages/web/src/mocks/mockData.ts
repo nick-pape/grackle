@@ -16,6 +16,7 @@ import type {
   TokenInfo,
   PersonaData,
 } from "../hooks/useGrackleSocket.js";
+export { MOCK_KNOWLEDGE_NODES, MOCK_KNOWLEDGE_LINKS, MOCK_KNOWLEDGE_DETAILS } from "./mockKnowledgeData.js";
 
 // ─── Environments ───────────────────────────────────
 
@@ -136,8 +137,14 @@ export const MOCK_SESSIONS: Session[] = [
 
 // ─── Session Events ─────────────────────────────────
 
-/** Sample events for the first running session to populate the event stream. */
+/**
+ * Rich event streams for all sessions. Each session has realistic agent
+ * activity: system prompts, markdown text, tool calls with results, usage
+ * badges, user input, and status transitions.
+ */
 export const MOCK_EVENTS: SessionEvent[] = [
+  // ── sess-001-prev: failed JWT attempt (interrupted by context window) ──
+
   {
     sessionId: "sess-001-prev",
     eventType: "status",
@@ -146,9 +153,76 @@ export const MOCK_EVENTS: SessionEvent[] = [
   },
   {
     sessionId: "sess-001-prev",
-    eventType: "output",
+    eventType: "system",
+    timestamp: "2026-02-26T14:00:02Z",
+    content: "You are a senior backend engineer. Focus on security best practices and thorough testing.\nProject: acme/alpha — Node.js + Express REST API\nTask: Implement auth middleware using JWT tokens",
+    raw: JSON.stringify({ systemContext: true }),
+  },
+  {
+    sessionId: "sess-001-prev",
+    eventType: "text",
     timestamp: "2026-02-26T14:00:05Z",
-    content: "Reading src/middleware/auth.ts to understand the current authentication flow...",
+    content: "I'll start by reading the current authentication middleware to understand what needs to change.",
+  },
+  {
+    sessionId: "sess-001-prev",
+    eventType: "tool_use",
+    timestamp: "2026-02-26T14:00:06Z",
+    content: JSON.stringify({ tool: "Read", args: { file_path: "src/middleware/auth.ts" } }),
+    raw: JSON.stringify({ id: "tu-prev-001", type: "tool_use" }),
+  },
+  {
+    sessionId: "sess-001-prev",
+    eventType: "tool_result",
+    timestamp: "2026-02-26T14:00:07Z",
+    content: 'import session from "express-session";\nimport type { Request, Response, NextFunction } from "express";\n\nexport function requireAuth(req: Request, res: Response, next: NextFunction): void {\n  if (!req.session?.userId) {\n    res.status(401).json({ error: "Not authenticated" });\n    return;\n  }\n  next();\n}',
+    raw: JSON.stringify({ tool_use_id: "tu-prev-001" }),
+  },
+  {
+    sessionId: "sess-001-prev",
+    eventType: "text",
+    timestamp: "2026-02-26T14:00:10Z",
+    content: "The current auth uses express-session with server-side session storage. Let me find all files that depend on this pattern.",
+  },
+  {
+    sessionId: "sess-001-prev",
+    eventType: "tool_use",
+    timestamp: "2026-02-26T14:00:11Z",
+    content: JSON.stringify({ tool: "Grep", args: { pattern: "req\\.session", path: "src/" } }),
+    raw: JSON.stringify({ id: "tu-prev-002", type: "tool_use" }),
+  },
+  {
+    sessionId: "sess-001-prev",
+    eventType: "tool_result",
+    timestamp: "2026-02-26T14:00:12Z",
+    content: "src/middleware/auth.ts:4:  if (!req.session?.userId) {\nsrc/routes/login.ts:18:    req.session.userId = user.id;\nsrc/routes/login.ts:19:    req.session.role = user.role;\nsrc/routes/protected.ts:7:  const userId = req.session.userId;",
+    raw: JSON.stringify({ tool_use_id: "tu-prev-002" }),
+  },
+  {
+    sessionId: "sess-001-prev",
+    eventType: "usage",
+    timestamp: "2026-02-26T14:30:00Z",
+    content: JSON.stringify({ input_tokens: 42100, output_tokens: 6350, cost_usd: 0.21 }),
+  },
+  {
+    sessionId: "sess-001-prev",
+    eventType: "text",
+    timestamp: "2026-02-26T14:30:02Z",
+    content: "Found 3 files using session-based auth. Now let me read the login route and the protected route to understand the full flow before making changes.",
+  },
+  {
+    sessionId: "sess-001-prev",
+    eventType: "tool_use",
+    timestamp: "2026-02-26T14:30:03Z",
+    content: JSON.stringify({ tool: "Read", args: { file_path: "src/routes/login.ts" } }),
+    raw: JSON.stringify({ id: "tu-prev-003", type: "tool_use" }),
+  },
+  {
+    sessionId: "sess-001-prev",
+    eventType: "tool_result",
+    timestamp: "2026-02-26T14:30:04Z",
+    content: 'import { Router } from "express";\nimport bcrypt from "bcrypt";\nimport { db } from "../db.js";\n\nconst router = Router();\n\nrouter.post("/login", async (req, res) => {\n  const { email, password } = req.body;\n  const user = await db.users.findByEmail(email);\n  if (!user || !await bcrypt.compare(password, user.passwordHash)) {\n    return res.status(401).json({ error: "Invalid credentials" });\n  }\n  req.session.userId = user.id;\n  req.session.role = user.role;\n  res.json({ ok: true });\n});\n\nexport default router;',
+    raw: JSON.stringify({ tool_use_id: "tu-prev-003" }),
   },
   {
     sessionId: "sess-001-prev",
@@ -157,6 +231,15 @@ export const MOCK_EVENTS: SessionEvent[] = [
     content: "Context window exceeded before completing implementation",
   },
   {
+    sessionId: "sess-001-prev",
+    eventType: "status",
+    timestamp: "2026-02-26T15:12:01Z",
+    content: "interrupted",
+  },
+
+  // ── sess-001: active JWT refactor (currently running) ──
+
+  {
     sessionId: "sess-001",
     eventType: "status",
     timestamp: "2026-02-27T08:15:01Z",
@@ -164,43 +247,205 @@ export const MOCK_EVENTS: SessionEvent[] = [
   },
   {
     sessionId: "sess-001",
-    eventType: "output",
+    eventType: "system",
     timestamp: "2026-02-27T08:15:02Z",
-    content: "Analyzing current authentication middleware in src/middleware/auth.ts...",
+    content: "You are a senior backend engineer. Focus on security best practices and thorough testing.\nProject: acme/alpha — Node.js + Express REST API\nTask: Implement auth middleware using JWT tokens\n\nNote: A previous session attempted this task but was interrupted. Pick up where it left off.",
+    raw: JSON.stringify({ systemContext: true }),
   },
   {
     sessionId: "sess-001",
-    eventType: "output",
+    eventType: "text",
     timestamp: "2026-02-27T08:15:04Z",
-    content:
-      "Found 3 files using session-based auth:\n  - src/middleware/auth.ts\n  - src/routes/login.ts\n  - src/routes/protected.ts",
+    content: "I'll pick up the JWT auth migration. The previous session identified 3 files that need updating. Let me verify the current state and start implementing.",
   },
   {
     sessionId: "sess-001",
-    eventType: "output",
-    timestamp: "2026-02-27T08:15:07Z",
-    content: "Installing jsonwebtoken and @types/jsonwebtoken...",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T08:15:05Z",
+    content: JSON.stringify({ tool: "Grep", args: { pattern: "express-session|req\\.session", path: "src/", output_mode: "files_with_matches" } }),
+    raw: JSON.stringify({ id: "tu-001-01", type: "tool_use" }),
   },
   {
     sessionId: "sess-001",
-    eventType: "output",
+    eventType: "tool_result",
+    timestamp: "2026-02-27T08:15:06Z",
+    content: "src/middleware/auth.ts\nsrc/routes/login.ts\nsrc/routes/protected.ts",
+    raw: JSON.stringify({ tool_use_id: "tu-001-01" }),
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "text",
+    timestamp: "2026-02-27T08:15:08Z",
+    content: "Good, same 3 files. Let me install the JWT library first, then rewrite the middleware.",
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T08:15:09Z",
+    content: JSON.stringify({ tool: "Bash", args: { command: "npm install jsonwebtoken && npm install -D @types/jsonwebtoken" } }),
+    raw: JSON.stringify({ id: "tu-001-02", type: "tool_use" }),
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "tool_result",
+    timestamp: "2026-02-27T08:15:11Z",
+    content: "added 12 packages in 3.2s\n\nadded 1 package in 0.8s",
+    raw: JSON.stringify({ tool_use_id: "tu-001-02" }),
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "text",
     timestamp: "2026-02-27T08:15:12Z",
-    content:
-      'Rewriting auth middleware:\n```typescript\nimport jwt from "jsonwebtoken";\nimport type { Request, Response, NextFunction } from "express";\n\nconst JWT_SECRET = process.env.JWT_SECRET || "change-me";\n\nexport function verifyToken(req: Request, res: Response, next: NextFunction): void {\n  const header = req.headers.authorization;\n  if (!header?.startsWith("Bearer ")) {\n    res.status(401).json({ error: "Missing token" });\n    return;\n  }\n  try {\n    const decoded = jwt.verify(header.slice(7), JWT_SECRET);\n    req.user = decoded;\n    next();\n  } catch {\n    res.status(403).json({ error: "Invalid token" });\n  }\n}\n```',
+    content: "Now I'll rewrite the auth middleware to use JWT verification instead of session checks.",
   },
   {
     sessionId: "sess-001",
-    eventType: "output",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T08:15:13Z",
+    content: JSON.stringify({
+      tool: "Write",
+      args: {
+        file_path: "src/middleware/auth.ts",
+        content: 'import jwt from "jsonwebtoken";\nimport type { Request, Response, NextFunction } from "express";\n\nconst JWT_SECRET = process.env.JWT_SECRET || "change-me";\n\nexport interface JwtPayload {\n  userId: string;\n  role: string;\n  iat: number;\n  exp: number;\n}\n\nexport function verifyToken(req: Request, res: Response, next: NextFunction): void {\n  const header = req.headers.authorization;\n  if (!header?.startsWith("Bearer ")) {\n    res.status(401).json({ error: "Missing or malformed token" });\n    return;\n  }\n  try {\n    const decoded = jwt.verify(header.slice(7), JWT_SECRET) as JwtPayload;\n    req.user = decoded;\n    next();\n  } catch (err) {\n    if (err instanceof jwt.TokenExpiredError) {\n      res.status(401).json({ error: "Token expired" });\n    } else {\n      res.status(403).json({ error: "Invalid token" });\n    }\n  }\n}\n',
+      },
+    }),
+    raw: JSON.stringify({ id: "tu-001-03", type: "tool_use" }),
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "tool_result",
+    timestamp: "2026-02-27T08:15:14Z",
+    content: "File written: src/middleware/auth.ts (32 lines)",
+    raw: JSON.stringify({ tool_use_id: "tu-001-03" }),
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "text",
+    timestamp: "2026-02-27T08:15:16Z",
+    content: "Now I need to update the login route to issue JWT tokens instead of setting session data.\n\nThe new login flow will:\n1. Validate credentials (unchanged)\n2. Generate a JWT with `userId` and `role` claims\n3. Return the token in the response body\n4. Include a refresh token for long-lived sessions",
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T08:15:17Z",
+    content: JSON.stringify({
+      tool: "Write",
+      args: {
+        file_path: "src/routes/login.ts",
+        content: 'import { Router } from "express";\nimport bcrypt from "bcrypt";\nimport jwt from "jsonwebtoken";\nimport crypto from "node:crypto";\nimport { db } from "../db.js";\n\nconst JWT_SECRET = process.env.JWT_SECRET || "change-me";\nconst ACCESS_TOKEN_EXPIRY = "24h";\nconst REFRESH_TOKEN_BYTES = 48;\n\nconst router = Router();\n\nrouter.post("/login", async (req, res) => {\n  const { email, password } = req.body;\n  const user = await db.users.findByEmail(email);\n  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {\n    return res.status(401).json({ error: "Invalid credentials" });\n  }\n\n  const accessToken = jwt.sign(\n    { userId: user.id, role: user.role },\n    JWT_SECRET,\n    { expiresIn: ACCESS_TOKEN_EXPIRY },\n  );\n\n  const refreshToken = crypto.randomBytes(REFRESH_TOKEN_BYTES).toString("hex");\n  await db.refreshTokens.create({ userId: user.id, token: refreshToken });\n\n  res.json({ accessToken, refreshToken, expiresIn: ACCESS_TOKEN_EXPIRY });\n});\n\nexport default router;\n',
+      },
+    }),
+    raw: JSON.stringify({ id: "tu-001-04", type: "tool_use" }),
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "tool_result",
     timestamp: "2026-02-27T08:15:18Z",
-    content: "Updated login route to issue JWT tokens with 24h expiry.",
+    content: "File written: src/routes/login.ts (33 lines)",
+    raw: JSON.stringify({ tool_use_id: "tu-001-04" }),
   },
   {
     sessionId: "sess-001",
-    eventType: "output",
-    timestamp: "2026-02-27T08:15:22Z",
-    content: "Running test suite... 14 tests passed, 2 updated, 0 failed.",
+    eventType: "text",
+    timestamp: "2026-02-27T08:15:20Z",
+    content: "Let me update the protected route to use the new `req.user` shape from the JWT payload.",
   },
-  // Events for the completed session
+  {
+    sessionId: "sess-001",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T08:15:21Z",
+    content: JSON.stringify({
+      tool: "Edit",
+      args: {
+        file_path: "src/routes/protected.ts",
+        old_string: "const userId = req.session.userId;",
+        new_string: "const { userId } = req.user as JwtPayload;",
+      },
+    }),
+    raw: JSON.stringify({ id: "tu-001-05", type: "tool_use" }),
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "tool_result",
+    timestamp: "2026-02-27T08:15:22Z",
+    content: "Updated src/routes/protected.ts",
+    raw: JSON.stringify({ tool_use_id: "tu-001-05" }),
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "text",
+    timestamp: "2026-02-27T08:15:24Z",
+    content: "Now let me run the existing tests to make sure nothing is broken, then I'll add new JWT-specific tests.",
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T08:15:25Z",
+    content: JSON.stringify({ tool: "Bash", args: { command: "npm test" } }),
+    raw: JSON.stringify({ id: "tu-001-06", type: "tool_use" }),
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "tool_result",
+    timestamp: "2026-02-27T08:15:30Z",
+    content: " PASS  src/routes/__tests__/login.test.ts\n PASS  src/routes/__tests__/protected.test.ts\n FAIL  src/middleware/__tests__/auth.test.ts\n  x should reject missing session (12ms)\n  x should allow valid session (8ms)\n\n  2 failed, 12 passed, 14 total\n\nTest Suites: 1 failed, 2 passed, 3 total",
+    raw: JSON.stringify({ tool_use_id: "tu-001-06", is_error: true }),
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "text",
+    timestamp: "2026-02-27T08:15:32Z",
+    content: "Two tests failed because they still test the old session-based auth. I need to rewrite those tests for JWT.\n\nLet me update the auth middleware tests:",
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T08:15:33Z",
+    content: JSON.stringify({
+      tool: "Write",
+      args: {
+        file_path: "src/middleware/__tests__/auth.test.ts",
+        content: 'import { describe, it, expect } from "vitest";\nimport jwt from "jsonwebtoken";\nimport { verifyToken } from "../auth.js";\nimport { createMockReqRes } from "../../test-utils/mock-express.js";\n\nconst SECRET = "test-secret";\nprocess.env.JWT_SECRET = SECRET;\n\ndescribe("verifyToken", () => {\n  it("should reject requests without Authorization header", () => {\n    const { req, res, next } = createMockReqRes();\n    verifyToken(req, res, next);\n    expect(res.status).toHaveBeenCalledWith(401);\n  });\n\n  it("should reject expired tokens", () => {\n    const token = jwt.sign({ userId: "u1", role: "user" }, SECRET, { expiresIn: "-1h" });\n    const { req, res, next } = createMockReqRes({ authorization: `Bearer ${token}` });\n    verifyToken(req, res, next);\n    expect(res.status).toHaveBeenCalledWith(401);\n  });\n\n  it("should accept valid tokens and attach user to request", () => {\n    const token = jwt.sign({ userId: "u1", role: "admin" }, SECRET, { expiresIn: "1h" });\n    const { req, res, next } = createMockReqRes({ authorization: `Bearer ${token}` });\n    verifyToken(req, res, next);\n    expect(next).toHaveBeenCalled();\n    expect(req.user).toMatchObject({ userId: "u1", role: "admin" });\n  });\n});\n',
+      },
+    }),
+    raw: JSON.stringify({ id: "tu-001-07", type: "tool_use" }),
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "tool_result",
+    timestamp: "2026-02-27T08:15:34Z",
+    content: "File written: src/middleware/__tests__/auth.test.ts (32 lines)",
+    raw: JSON.stringify({ tool_use_id: "tu-001-07" }),
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T08:15:35Z",
+    content: JSON.stringify({ tool: "Bash", args: { command: "npm test" } }),
+    raw: JSON.stringify({ id: "tu-001-08", type: "tool_use" }),
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "tool_result",
+    timestamp: "2026-02-27T08:15:40Z",
+    content: " PASS  src/routes/__tests__/login.test.ts\n PASS  src/routes/__tests__/protected.test.ts\n PASS  src/middleware/__tests__/auth.test.ts\n\nTest Suites: 3 passed, 3 total\nTests:       14 passed, 14 total",
+    raw: JSON.stringify({ tool_use_id: "tu-001-08" }),
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "usage",
+    timestamp: "2026-02-27T08:15:41Z",
+    content: JSON.stringify({ input_tokens: 42600, output_tokens: 8100, cost_usd: 0.22 }),
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "text",
+    timestamp: "2026-02-27T08:15:42Z",
+    content: "All 14 tests pass. Here's a summary of the changes:\n\n### Changes made\n\n| File | Action |\n|------|--------|\n| `src/middleware/auth.ts` | Rewrote to verify JWT Bearer tokens |\n| `src/routes/login.ts` | Now issues JWT access + refresh tokens |\n| `src/routes/protected.ts` | Updated to read `req.user` from JWT payload |\n| `src/middleware/__tests__/auth.test.ts` | Updated tests for JWT verification |\n\n### Key decisions\n- **Access token expiry**: 24 hours (configurable via `JWT_SECRET` env var)\n- **Refresh tokens**: 48-byte random hex, stored in DB\n- **Error handling**: Distinguishes expired tokens (401) from invalid tokens (403)",
+  },
+
+  // ── sess-002: completed unit test session ──
+
   {
     sessionId: "sess-002",
     eventType: "status",
@@ -209,21 +454,330 @@ export const MOCK_EVENTS: SessionEvent[] = [
   },
   {
     sessionId: "sess-002",
-    eventType: "output",
-    timestamp: "2026-02-27T07:30:05Z",
-    content: "Generating pytest tests for POST /api/register endpoint...",
+    eventType: "system",
+    timestamp: "2026-02-27T07:30:02Z",
+    content: "You are a QA engineer. Write comprehensive tests covering happy paths, edge cases, error scenarios, and security.\nProject: acme/alpha — Node.js + Express REST API\nTask: Write unit tests for the user registration endpoint",
+    raw: JSON.stringify({ systemContext: true }),
   },
   {
     sessionId: "sess-002",
-    eventType: "output",
+    eventType: "text",
+    timestamp: "2026-02-27T07:30:04Z",
+    content: "I'll write thorough tests for `POST /api/register`. Let me first read the registration endpoint to understand its behavior.",
+  },
+  {
+    sessionId: "sess-002",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T07:30:05Z",
+    content: JSON.stringify({ tool: "Read", args: { file_path: "src/routes/register.ts" } }),
+    raw: JSON.stringify({ id: "tu-002-01", type: "tool_use" }),
+  },
+  {
+    sessionId: "sess-002",
+    eventType: "tool_result",
+    timestamp: "2026-02-27T07:30:06Z",
+    content: 'import { Router } from "express";\nimport bcrypt from "bcrypt";\nimport { db } from "../db.js";\nimport { validateEmail, validatePassword } from "../utils/validators.js";\n\nconst SALT_ROUNDS = 12;\nconst router = Router();\n\nrouter.post("/register", async (req, res) => {\n  const { name, email, password } = req.body;\n\n  if (!name || !email || !password) {\n    return res.status(400).json({ error: "Missing required fields" });\n  }\n  if (!validateEmail(email)) {\n    return res.status(400).json({ error: "Invalid email format" });\n  }\n  if (!validatePassword(password)) {\n    return res.status(400).json({ error: "Password too weak" });\n  }\n\n  const existing = await db.users.findByEmail(email);\n  if (existing) {\n    return res.status(409).json({ error: "Email already registered" });\n  }\n\n  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);\n  const user = await db.users.create({ name, email, passwordHash });\n  res.status(201).json({ id: user.id, name: user.name, email: user.email });\n});\n\nexport default router;',
+    raw: JSON.stringify({ tool_use_id: "tu-002-01" }),
+  },
+  {
+    sessionId: "sess-002",
+    eventType: "text",
+    timestamp: "2026-02-27T07:30:10Z",
+    content: "Good. The endpoint validates input, checks for duplicates, hashes the password, and creates the user. I'll write tests covering:\n\n1. **Happy path** - valid registration\n2. **Missing fields** - each required field missing\n3. **Invalid email** - malformed email format\n4. **Weak password** - password validation failure\n5. **Duplicate email** - conflict with existing user\n6. **SQL injection** - malicious email input\n7. **XSS payload** - HTML in the name field\n8. **Response shape** - correct status codes and body structure",
+  },
+  {
+    sessionId: "sess-002",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T07:30:12Z",
+    content: JSON.stringify({
+      tool: "Write",
+      args: {
+        file_path: "src/routes/__tests__/register.test.ts",
+        content: "// [test content - 8 test cases as described above]",
+      },
+    }),
+    raw: JSON.stringify({ id: "tu-002-02", type: "tool_use" }),
+  },
+  {
+    sessionId: "sess-002",
+    eventType: "tool_result",
+    timestamp: "2026-02-27T07:30:13Z",
+    content: "File written: src/routes/__tests__/register.test.ts (142 lines)",
+    raw: JSON.stringify({ tool_use_id: "tu-002-02" }),
+  },
+  {
+    sessionId: "sess-002",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T07:31:00Z",
+    content: JSON.stringify({ tool: "Bash", args: { command: "npm test -- --testPathPattern=register" } }),
+    raw: JSON.stringify({ id: "tu-002-03", type: "tool_use" }),
+  },
+  {
+    sessionId: "sess-002",
+    eventType: "tool_result",
+    timestamp: "2026-02-27T07:31:30Z",
+    content: " PASS  src/routes/__tests__/register.test.ts\n  POST /api/register\n    \u2713 should register a valid user (28ms)\n    \u2713 should reject missing name (4ms)\n    \u2713 should reject missing email (3ms)\n    \u2713 should reject missing password (3ms)\n    \u2713 should reject invalid email format (5ms)\n    \u2713 should reject weak password (4ms)\n    \u2713 should reject duplicate email (12ms)\n    \u2713 should sanitize HTML in name field (6ms)\n\nTests: 8 passed, 8 total",
+    raw: JSON.stringify({ tool_use_id: "tu-002-03" }),
+  },
+  {
+    sessionId: "sess-002",
+    eventType: "usage",
     timestamp: "2026-02-27T07:32:00Z",
-    content: "Created 8 test cases covering: valid registration, duplicate email, weak password, missing fields, SQL injection, XSS payload, rate limit, and CORS headers.",
+    content: JSON.stringify({ input_tokens: 31400, output_tokens: 9800, cost_usd: 0.18 }),
+  },
+  {
+    sessionId: "sess-002",
+    eventType: "text",
+    timestamp: "2026-02-27T07:32:30Z",
+    content: "All 8 test cases pass. Created `src/routes/__tests__/register.test.ts` with comprehensive coverage for the registration endpoint including input validation, duplicate detection, and security edge cases.",
   },
   {
     sessionId: "sess-002",
     eventType: "status",
     timestamp: "2026-02-27T07:33:00Z",
     content: "completed",
+  },
+
+  // ── sess-003: database migration (interrupted) ──
+
+  {
+    sessionId: "sess-003",
+    eventType: "status",
+    timestamp: "2026-02-26T22:45:01Z",
+    content: "running",
+  },
+  {
+    sessionId: "sess-003",
+    eventType: "system",
+    timestamp: "2026-02-26T22:45:02Z",
+    content: "You are a database engineer. Focus on safe migrations, zero-downtime deployments, and data integrity.\nProject: acme/alpha — Node.js + Express + PostgreSQL\nTask: Add audit_log table and migrate schema",
+    raw: JSON.stringify({ systemContext: true }),
+  },
+  {
+    sessionId: "sess-003",
+    eventType: "text",
+    timestamp: "2026-02-26T22:45:05Z",
+    content: "I need to add an `audit_log` table for tracking all write operations. Let me review the current schema first.",
+  },
+  {
+    sessionId: "sess-003",
+    eventType: "tool_use",
+    timestamp: "2026-02-26T22:45:06Z",
+    content: JSON.stringify({ tool: "Read", args: { file_path: "migrations/001_initial.sql" } }),
+    raw: JSON.stringify({ id: "tu-003-01", type: "tool_use" }),
+  },
+  {
+    sessionId: "sess-003",
+    eventType: "tool_result",
+    timestamp: "2026-02-26T22:45:07Z",
+    content: "CREATE TABLE users (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  name TEXT NOT NULL,\n  email TEXT UNIQUE NOT NULL,\n  password_hash TEXT NOT NULL,\n  role TEXT DEFAULT 'user',\n  created_at TIMESTAMPTZ DEFAULT now(),\n  updated_at TIMESTAMPTZ DEFAULT now()\n);\n\nCREATE TABLE sessions (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  user_id UUID REFERENCES users(id),\n  expires_at TIMESTAMPTZ NOT NULL,\n  created_at TIMESTAMPTZ DEFAULT now()\n);",
+    raw: JSON.stringify({ tool_use_id: "tu-003-01" }),
+  },
+  {
+    sessionId: "sess-003",
+    eventType: "text",
+    timestamp: "2026-02-26T22:45:12Z",
+    content: "I see the schema. I'll create a migration that:\n1. Adds a `last_login_at` column to `users`\n2. Adds an index on `sessions.expires_at` for efficient cleanup queries\n3. Creates the `audit_log` table\n\nLet me write the migration file:",
+  },
+  {
+    sessionId: "sess-003",
+    eventType: "tool_use",
+    timestamp: "2026-02-26T22:45:14Z",
+    content: JSON.stringify({
+      tool: "Write",
+      args: {
+        file_path: "migrations/002_audit_log.sql",
+        content: "-- Migration: 002_audit_log\n-- Add audit logging and user activity tracking\n\nBEGIN;\n\n-- 1. Add last_login_at to users\nALTER TABLE users ADD COLUMN last_login_at TIMESTAMPTZ;\n\n-- 2. Index for session cleanup queries\nCREATE INDEX CONCURRENTLY idx_sessions_expires_at ON sessions (expires_at);\n\n-- 3. Audit log table\nCREATE TABLE audit_log (\n  id BIGSERIAL PRIMARY KEY,\n  user_id UUID REFERENCES users(id),\n  action TEXT NOT NULL,\n  entity_type TEXT NOT NULL,\n  entity_id TEXT NOT NULL,\n  old_value JSONB,\n  new_value JSONB,\n  ip_address INET,\n  created_at TIMESTAMPTZ DEFAULT now()\n);\n\nCREATE INDEX idx_audit_log_user ON audit_log (user_id);\nCREATE INDEX idx_audit_log_entity ON audit_log (entity_type, entity_id);\nCREATE INDEX idx_audit_log_created ON audit_log (created_at);\n\nCOMMIT;\n",
+      },
+    }),
+    raw: JSON.stringify({ id: "tu-003-02", type: "tool_use" }),
+  },
+  {
+    sessionId: "sess-003",
+    eventType: "tool_result",
+    timestamp: "2026-02-26T22:45:15Z",
+    content: "File written: migrations/002_audit_log.sql (29 lines)",
+    raw: JSON.stringify({ tool_use_id: "tu-003-02" }),
+  },
+  {
+    sessionId: "sess-003",
+    eventType: "text",
+    timestamp: "2026-02-26T22:46:00Z",
+    content: "Now I need to implement the audit middleware that logs write operations. This will intercept POST, PUT, PATCH, and DELETE requests.",
+  },
+  {
+    sessionId: "sess-003",
+    eventType: "tool_use",
+    timestamp: "2026-02-26T22:46:02Z",
+    content: JSON.stringify({ tool: "Bash", args: { command: "npm run migrate -- --dry-run" } }),
+    raw: JSON.stringify({ id: "tu-003-03", type: "tool_use" }),
+  },
+  {
+    sessionId: "sess-003",
+    eventType: "tool_result",
+    timestamp: "2026-02-26T22:46:10Z",
+    content: "Dry run: would apply 002_audit_log.sql\n  - ALTER TABLE users ADD COLUMN last_login_at\n  - CREATE INDEX CONCURRENTLY idx_sessions_expires_at\n  - CREATE TABLE audit_log\n  - 3 indexes on audit_log\n\nWARNING: CREATE INDEX CONCURRENTLY cannot run inside a transaction block.\nPlease split this into a separate migration step.",
+    raw: JSON.stringify({ tool_use_id: "tu-003-03", is_error: true }),
+  },
+  {
+    sessionId: "sess-003",
+    eventType: "text",
+    timestamp: "2026-02-26T22:46:15Z",
+    content: "Good catch from the dry run! `CREATE INDEX CONCURRENTLY` can't run inside a transaction. I need to split the migration into two files: one for the transactional DDL and another for the concurrent index creation.",
+  },
+  {
+    sessionId: "sess-003",
+    eventType: "usage",
+    timestamp: "2026-02-26T23:00:00Z",
+    content: JSON.stringify({ input_tokens: 56300, output_tokens: 14200, cost_usd: 0.31 }),
+  },
+  {
+    sessionId: "sess-003",
+    eventType: "status",
+    timestamp: "2026-02-26T23:10:00Z",
+    content: "interrupted",
+  },
+
+  // ── sess-004: rate limiting implementation (currently running) ──
+
+  {
+    sessionId: "sess-004",
+    eventType: "status",
+    timestamp: "2026-02-27T09:00:01Z",
+    content: "running",
+  },
+  {
+    sessionId: "sess-004",
+    eventType: "system",
+    timestamp: "2026-02-27T09:00:02Z",
+    content: "You are a backend engineer specializing in API infrastructure.\nProject: acme/data-pipeline — ETL pipelines for analytics\nTask: Implement rate limiting for the public API using a token-bucket algorithm",
+    raw: JSON.stringify({ systemContext: true }),
+  },
+  {
+    sessionId: "sess-004",
+    eventType: "text",
+    timestamp: "2026-02-27T09:00:05Z",
+    content: "I'll implement rate limiting using a token-bucket algorithm. Let me first survey the existing API infrastructure to find the right integration point.",
+  },
+  {
+    sessionId: "sess-004",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T09:00:06Z",
+    content: JSON.stringify({ tool: "Glob", args: { pattern: "src/middleware/**/*.ts" } }),
+    raw: JSON.stringify({ id: "tu-004-01", type: "tool_use" }),
+  },
+  {
+    sessionId: "sess-004",
+    eventType: "tool_result",
+    timestamp: "2026-02-27T09:00:07Z",
+    content: "src/middleware/cors.ts\nsrc/middleware/error-handler.ts\nsrc/middleware/logger.ts\nsrc/middleware/request-id.ts",
+    raw: JSON.stringify({ tool_use_id: "tu-004-01" }),
+  },
+  {
+    sessionId: "sess-004",
+    eventType: "text",
+    timestamp: "2026-02-27T09:00:10Z",
+    content: "Good middleware structure already in place. I'll add a `rate-limiter.ts` module that:\n\n- Uses an **in-memory token bucket** per client IP\n- Supports configurable rate (requests/second) and burst size\n- Returns `429 Too Many Requests` with `Retry-After` header\n- Has a Redis adapter option for multi-instance deployments\n\nLet me implement it:",
+  },
+  {
+    sessionId: "sess-004",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T09:00:12Z",
+    content: JSON.stringify({
+      tool: "Write",
+      args: {
+        file_path: "src/middleware/rate-limiter.ts",
+        content: "// Token bucket rate limiter implementation",
+      },
+    }),
+    raw: JSON.stringify({ id: "tu-004-02", type: "tool_use" }),
+  },
+  {
+    sessionId: "sess-004",
+    eventType: "tool_result",
+    timestamp: "2026-02-27T09:00:13Z",
+    content: "File written: src/middleware/rate-limiter.ts (87 lines)",
+    raw: JSON.stringify({ tool_use_id: "tu-004-02" }),
+  },
+  {
+    sessionId: "sess-004",
+    eventType: "text",
+    timestamp: "2026-02-27T09:00:18Z",
+    content: "Now I need to wire the rate limiter into the Express middleware stack. It should go after the request-ID middleware but before route handlers.",
+  },
+
+  // ── sess-005: suspended session (DB pooling refactor) ──
+
+  {
+    sessionId: "sess-005",
+    eventType: "status",
+    timestamp: "2026-02-27T06:00:01Z",
+    content: "running",
+  },
+  {
+    sessionId: "sess-005",
+    eventType: "system",
+    timestamp: "2026-02-27T06:00:02Z",
+    content: "You are a database specialist. Focus on connection management, performance, and multi-tenant isolation.\nProject: acme/alpha — Node.js + Express + PostgreSQL\nTask: Refactor database connection pooling for multi-tenant isolation",
+    raw: JSON.stringify({ systemContext: true }),
+  },
+  {
+    sessionId: "sess-005",
+    eventType: "text",
+    timestamp: "2026-02-27T06:00:05Z",
+    content: "I'll refactor the DB layer to support per-tenant connection pools. This is needed because the current single-pool design means one slow tenant can exhaust connections for everyone.",
+  },
+  {
+    sessionId: "sess-005",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T06:00:06Z",
+    content: JSON.stringify({ tool: "Read", args: { file_path: "src/db/pool.ts" } }),
+    raw: JSON.stringify({ id: "tu-005-01", type: "tool_use" }),
+  },
+  {
+    sessionId: "sess-005",
+    eventType: "tool_result",
+    timestamp: "2026-02-27T06:00:07Z",
+    content: 'import pg from "pg";\n\nconst pool = new pg.Pool({\n  connectionString: process.env.DATABASE_URL,\n  max: 20,\n  idleTimeoutMillis: 30000,\n});\n\nexport { pool };',
+    raw: JSON.stringify({ tool_use_id: "tu-005-01" }),
+  },
+  {
+    sessionId: "sess-005",
+    eventType: "text",
+    timestamp: "2026-02-27T06:00:12Z",
+    content: "The current pool is a single shared instance with `max: 20`. For multi-tenant isolation, I need:\n\n1. **A `PoolManager` class** that creates and caches per-tenant pools\n2. **Configurable limits** per tenant (max connections, idle timeout)\n3. **Health checks** with automatic pool eviction for unhealthy connections\n4. **Graceful shutdown** that drains all pools",
+  },
+  {
+    sessionId: "sess-005",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T06:00:14Z",
+    content: JSON.stringify({ tool: "Grep", args: { pattern: "import.*pool|from.*pool", path: "src/", output_mode: "content" } }),
+    raw: JSON.stringify({ id: "tu-005-02", type: "tool_use" }),
+  },
+  {
+    sessionId: "sess-005",
+    eventType: "tool_result",
+    timestamp: "2026-02-27T06:00:15Z",
+    content: 'src/db/index.ts:1:import { pool } from "./pool.js";\nsrc/routes/users.ts:2:import { pool } from "../db/pool.js";\nsrc/routes/register.ts:3:import { pool } from "../db/pool.js";\nsrc/routes/admin.ts:4:import { pool } from "../db/pool.js";\nsrc/services/billing.ts:2:import { pool } from "../db/pool.js";\nsrc/services/analytics.ts:1:import { pool } from "../db/pool.js";',
+    raw: JSON.stringify({ tool_use_id: "tu-005-02" }),
+  },
+  {
+    sessionId: "sess-005",
+    eventType: "text",
+    timestamp: "2026-02-27T06:00:20Z",
+    content: "Six files import the pool directly. I'll need to:\n1. Create a new `PoolManager` abstraction\n2. Update all consumers to use `getPool(tenantId)` instead of the global pool\n3. Add middleware to extract tenant ID from the request\n\nThis is a significant refactor. Let me start with the PoolManager class.",
+  },
+  {
+    sessionId: "sess-005",
+    eventType: "usage",
+    timestamp: "2026-02-27T06:30:00Z",
+    content: JSON.stringify({ input_tokens: 67800, output_tokens: 19300, cost_usd: 0.38 }),
+  },
+  {
+    sessionId: "sess-005",
+    eventType: "status",
+    timestamp: "2026-02-27T06:30:01Z",
+    content: "suspended",
   },
 ];
 
@@ -883,13 +1437,16 @@ function ts(offsetMs: number): string {
 }
 
 /**
- * Pre-built scenarios that exercise different UI paths:
- * - Scenario A: straight-through to "completed" (no pause)
+ * Pre-built scenarios that exercise different UI paths with rich event types.
+ * Each scenario uses a mix of text, tool_use, tool_result, and usage events
+ * to produce a realistic agent session experience.
+ *
+ * - Scenario A: straight-through to "completed" with tool calls
  * - Scenario B: pauses at "idle" for user confirmation, then resumes
- * - Scenario C: runs partway then hits an error and ends in "failed"
+ * - Scenario C: runs partway then hits a tool error and ends in "failed"
  */
 export const MOCK_STREAM_SCENARIOS: MockStreamScenario[] = [
-  // ── Scenario A — API Refactor (straight-through) ──────
+  // ── Scenario A — API Refactor (straight-through with tool calls) ──────
   {
     label: "API Refactor",
     pauseForInput: false,
@@ -899,40 +1456,76 @@ export const MOCK_STREAM_SCENARIOS: MockStreamScenario[] = [
         event: { eventType: "status", timestamp: ts(0), content: "running" },
       },
       {
-        delayMs: 800,
+        delayMs: 600,
         event: {
-          eventType: "output",
-          timestamp: ts(800),
-          content: "Analyzing current API structure in src/routes/...",
+          eventType: "text",
+          timestamp: ts(600),
+          content: "I'll start by finding all API route files that need refactoring.",
+        },
+      },
+      {
+        delayMs: 1200,
+        event: {
+          eventType: "tool_use",
+          timestamp: ts(1200),
+          content: JSON.stringify({ tool: "Glob", args: { pattern: "src/routes/**/*.ts" } }),
+          raw: JSON.stringify({ id: "stream-a-01", type: "tool_use" }),
         },
       },
       {
         delayMs: 1600,
         event: {
-          eventType: "output",
+          eventType: "tool_result",
           timestamp: ts(1600),
-          content: "Found 5 endpoints that need refactoring:\n  - GET /api/users\n  - POST /api/users\n  - GET /api/users/:id\n  - PUT /api/users/:id\n  - DELETE /api/users/:id",
+          content: "src/routes/users.ts\nsrc/routes/auth.ts\nsrc/routes/billing.ts\nsrc/routes/admin.ts\nsrc/routes/health.ts",
+          raw: JSON.stringify({ tool_use_id: "stream-a-01" }),
         },
       },
       {
-        delayMs: 2800,
+        delayMs: 2200,
         event: {
-          eventType: "output",
-          timestamp: ts(2800),
-          content: "Refactoring to use Express Router with middleware chain...\n```typescript\nconst router = Router();\nrouter.use(authenticate);\nrouter.use(validateBody);\n```",
+          eventType: "text",
+          timestamp: ts(2200),
+          content: "Found 5 route files. Let me refactor users.ts to use Express Router with a middleware chain.\n\n```typescript\nconst router = Router();\nrouter.use(authenticate);\nrouter.use(validateBody);\n\nrouter.get(\"/\", listUsers);\nrouter.post(\"/\", createUser);\nrouter.get(\"/:id\", getUser);\nrouter.put(\"/:id\", updateUser);\nrouter.delete(\"/:id\", deleteUser);\n```",
+        },
+      },
+      {
+        delayMs: 3200,
+        event: {
+          eventType: "tool_use",
+          timestamp: ts(3200),
+          content: JSON.stringify({ tool: "Bash", args: { command: "npm test -- --testPathPattern=routes" } }),
+          raw: JSON.stringify({ id: "stream-a-02", type: "tool_use" }),
         },
       },
       {
         delayMs: 4000,
         event: {
-          eventType: "output",
+          eventType: "tool_result",
           timestamp: ts(4000),
-          content: "Running test suite... 22 tests passed, 3 updated, 0 failed.",
+          content: " PASS  src/routes/__tests__/users.test.ts\n PASS  src/routes/__tests__/auth.test.ts\n PASS  src/routes/__tests__/billing.test.ts\n\nTest Suites: 3 passed, 3 total\nTests:       22 passed, 22 total",
+          raw: JSON.stringify({ tool_use_id: "stream-a-02" }),
+        },
+      },
+      {
+        delayMs: 4500,
+        event: {
+          eventType: "usage",
+          timestamp: ts(4500),
+          content: JSON.stringify({ input_tokens: 28400, output_tokens: 7200, cost_usd: 0.15 }),
         },
       },
       {
         delayMs: 5000,
-        event: { eventType: "status", timestamp: ts(5000), content: "completed" },
+        event: {
+          eventType: "text",
+          timestamp: ts(5000),
+          content: "All 22 tests pass. The route refactoring is complete.",
+        },
+      },
+      {
+        delayMs: 5500,
+        event: { eventType: "status", timestamp: ts(5500), content: "completed" },
       },
     ],
   },
@@ -941,7 +1534,7 @@ export const MOCK_STREAM_SCENARIOS: MockStreamScenario[] = [
   {
     label: "Database Migration",
     pauseForInput: true,
-    pauseAfterStep: 3,
+    pauseAfterStep: 4,
     steps: [
       {
         delayMs: 0,
@@ -950,53 +1543,72 @@ export const MOCK_STREAM_SCENARIOS: MockStreamScenario[] = [
       {
         delayMs: 600,
         event: {
-          eventType: "output",
+          eventType: "text",
           timestamp: ts(600),
-          content: "Scanning current schema for migration targets...",
+          content: "Scanning the current database schema to plan the migration.",
         },
       },
       {
-        delayMs: 1400,
+        delayMs: 1200,
         event: {
-          eventType: "output",
-          timestamp: ts(1400),
-          content: "Found tables to modify:\n  - users (add column: last_login_at)\n  - sessions (add index on expires_at)\n  - audit_log (new table)",
+          eventType: "tool_use",
+          timestamp: ts(1200),
+          content: JSON.stringify({ tool: "Read", args: { file_path: "migrations/001_initial.sql" } }),
+          raw: JSON.stringify({ id: "stream-b-01", type: "tool_use" }),
         },
       },
       {
-        delayMs: 2200,
+        delayMs: 1800,
         event: {
-          eventType: "output",
-          timestamp: ts(2200),
-          content: "⚠ This migration will add a NOT NULL column to the users table.\nThe table has 50,000+ rows — this may lock the table briefly.\n\nPlease confirm to proceed.",
+          eventType: "tool_result",
+          timestamp: ts(1800),
+          content: "CREATE TABLE users (\n  id UUID PRIMARY KEY,\n  name TEXT NOT NULL,\n  email TEXT UNIQUE NOT NULL,\n  created_at TIMESTAMPTZ DEFAULT now()\n);\n\nCREATE TABLE sessions (\n  id UUID PRIMARY KEY,\n  user_id UUID REFERENCES users(id),\n  expires_at TIMESTAMPTZ NOT NULL\n);",
+          raw: JSON.stringify({ tool_use_id: "stream-b-01" }),
         },
       },
-      // step index 3 is the last step before pause
-      // After this, session goes to "idle"
+      {
+        delayMs: 2600,
+        event: {
+          eventType: "text",
+          timestamp: ts(2600),
+          content: "I found the tables to modify:\n  - **users**: add column `last_login_at`\n  - **sessions**: add index on `expires_at`\n  - **audit_log**: new table\n\nThis migration will add a NOT NULL column to the `users` table. The table has **50,000+ rows** which may lock the table briefly.\n\nPlease confirm to proceed.",
+        },
+      },
+      // step index 4 is the last step before pause (indices 0-4)
     ],
     resumeSteps: [
       {
         delayMs: 500,
         event: {
-          eventType: "output",
+          eventType: "text",
           timestamp: ts(0),
-          content: "Proceeding with migration...",
+          content: "Proceeding with migration.",
         },
       },
       {
-        delayMs: 1500,
+        delayMs: 1200,
         event: {
-          eventType: "output",
-          timestamp: ts(1000),
-          content: "Migration 001_add_last_login.sql applied successfully.\nMigration 002_sessions_index.sql applied successfully.\nMigration 003_audit_log.sql applied successfully.",
+          eventType: "tool_use",
+          timestamp: ts(700),
+          content: JSON.stringify({ tool: "Bash", args: { command: "npm run migrate" } }),
+          raw: JSON.stringify({ id: "stream-b-02", type: "tool_use" }),
         },
       },
       {
-        delayMs: 2500,
+        delayMs: 2200,
         event: {
-          eventType: "output",
-          timestamp: ts(2000),
-          content: "All 3 migrations applied. Running verification queries... OK.",
+          eventType: "tool_result",
+          timestamp: ts(1700),
+          content: "Applying 002_add_last_login.sql... done\nApplying 003_sessions_index.sql... done\nApplying 004_audit_log.sql... done\n\n3 migrations applied successfully.",
+          raw: JSON.stringify({ tool_use_id: "stream-b-02" }),
+        },
+      },
+      {
+        delayMs: 2800,
+        event: {
+          eventType: "text",
+          timestamp: ts(2300),
+          content: "All 3 migrations applied successfully. The `audit_log` table is ready.",
         },
       },
       {
@@ -1006,7 +1618,7 @@ export const MOCK_STREAM_SCENARIOS: MockStreamScenario[] = [
     ],
   },
 
-  // ── Scenario C — Test Writer (error/failed) ───────────
+  // ── Scenario C — Test Writer (error/failed with tool error) ───────────
   {
     label: "Test Writer",
     pauseForInput: false,
@@ -1016,32 +1628,199 @@ export const MOCK_STREAM_SCENARIOS: MockStreamScenario[] = [
         event: { eventType: "status", timestamp: ts(0), content: "running" },
       },
       {
-        delayMs: 700,
+        delayMs: 600,
         event: {
-          eventType: "output",
-          timestamp: ts(700),
-          content: "Generating test scaffolding for src/services/billing.ts...",
+          eventType: "text",
+          timestamp: ts(600),
+          content: "I'll generate tests for `src/services/billing.ts`. Let me read the implementation first.",
+        },
+      },
+      {
+        delayMs: 1200,
+        event: {
+          eventType: "tool_use",
+          timestamp: ts(1200),
+          content: JSON.stringify({ tool: "Read", args: { file_path: "src/services/billing.ts" } }),
+          raw: JSON.stringify({ id: "stream-c-01", type: "tool_use" }),
         },
       },
       {
         delayMs: 1800,
         event: {
-          eventType: "output",
+          eventType: "tool_result",
           timestamp: ts(1800),
-          content: "Writing test cases:\n  - should calculate monthly total\n  - should apply discount codes\n  - should handle currency conversion\n  - should reject expired cards",
+          content: 'import { StripeClient } from "./stripe-client.js";\nimport type { Invoice, LineItem } from "../types/billing.js";\n\nexport class BillingService {\n  constructor(private stripe: StripeClient) {}\n\n  async calculateMonthlyTotal(userId: string): Promise<number> {\n    const invoices = await this.stripe.listInvoices(userId);\n    return invoices.reduce((sum, inv) => sum + inv.total, 0);\n  }\n}',
+          raw: JSON.stringify({ tool_use_id: "stream-c-01" }),
+        },
+      },
+      {
+        delayMs: 2400,
+        event: {
+          eventType: "text",
+          timestamp: ts(2400),
+          content: "The billing service imports from `./stripe-client.js`. Let me check if that module exists.",
         },
       },
       {
         delayMs: 2800,
         event: {
-          eventType: "output",
+          eventType: "tool_use",
           timestamp: ts(2800),
-          content: "Error: Cannot resolve import 'src/services/stripe-client.ts' — module not found.\nThe billing service depends on a Stripe client that doesn't exist in this environment.",
+          content: JSON.stringify({ tool: "Read", args: { file_path: "src/services/stripe-client.ts" } }),
+          raw: JSON.stringify({ id: "stream-c-02", type: "tool_use" }),
         },
       },
       {
-        delayMs: 3500,
-        event: { eventType: "status", timestamp: ts(3500), content: "failed" },
+        delayMs: 3200,
+        event: {
+          eventType: "tool_result",
+          timestamp: ts(3200),
+          content: "Error: ENOENT: no such file or directory, open 'src/services/stripe-client.ts'",
+          raw: JSON.stringify({ tool_use_id: "stream-c-02", is_error: true }),
+        },
+      },
+      {
+        delayMs: 3600,
+        event: {
+          eventType: "error",
+          timestamp: ts(3600),
+          content: "Cannot resolve import 'src/services/stripe-client.ts' — module not found. The billing service depends on a Stripe client that doesn't exist in this environment.",
+        },
+      },
+      {
+        delayMs: 4000,
+        event: { eventType: "status", timestamp: ts(4000), content: "failed" },
+      },
+    ],
+  },
+
+  // ── Scenario D — Fix Auth Bug (tool-heavy) ────────────
+  {
+    label: "Fix Auth Bug",
+    pauseForInput: false,
+    steps: [
+      {
+        delayMs: 0,
+        event: { eventType: "status", timestamp: ts(0), content: "running" },
+      },
+      {
+        delayMs: 600,
+        event: {
+          eventType: "text",
+          timestamp: ts(600),
+          content: "Let me investigate the authentication bug...",
+        },
+      },
+      // Read file
+      {
+        delayMs: 1200,
+        event: {
+          eventType: "tool_use",
+          timestamp: ts(1200),
+          content: JSON.stringify({ tool: "Read", args: { file_path: "/src/middleware/auth.ts" } }),
+          raw: JSON.stringify({ id: "tool-mock-001" }),
+        },
+      },
+      {
+        delayMs: 1800,
+        event: {
+          eventType: "tool_result",
+          timestamp: ts(1800),
+          content: 'import jwt from "jsonwebtoken";\nimport type { Request, Response, NextFunction } from "express";\n\nconst JWT_SECRET = process.env.JWT_SECRET || "change-me";\n\nexport function verifyToken(req: Request, res: Response, next: NextFunction): void {\n  const header = req.headers.authorization;\n  if (!header?.startsWith("Bearer ")) {\n    res.status(401).json({ error: "Missing token" });\n    return;\n  }\n  try {\n    const decoded = jwt.verify(header.slice(7), JWT_SECRET);\n    if (decoded.exp > Date.now() / 1000) {\n      res.status(403).json({ error: "Token expired" });\n      return;\n    }\n    req.user = decoded;\n    next();\n  } catch {\n    res.status(403).json({ error: "Invalid token" });\n  }\n}',
+          raw: JSON.stringify({ tool_use_id: "tool-mock-001", is_error: false }),
+        },
+      },
+      {
+        delayMs: 2600,
+        event: {
+          eventType: "text",
+          timestamp: ts(2600),
+          content: "Found the issue — the token expiry check on line 14 is using `>` instead of `<`. A token is expired when `exp < now`, but the code checks `exp > now` which means it rejects *valid* tokens and accepts *expired* ones. Let me fix it.",
+        },
+      },
+      // Edit file
+      {
+        delayMs: 3400,
+        event: {
+          eventType: "tool_use",
+          timestamp: ts(3400),
+          content: JSON.stringify({
+            tool: "Edit",
+            args: {
+              file_path: "/src/middleware/auth.ts",
+              old_string: "    if (decoded.exp > Date.now() / 1000) {",
+              new_string: "    if (decoded.exp < Date.now() / 1000) {",
+            },
+          }),
+          raw: JSON.stringify({ id: "tool-mock-002" }),
+        },
+      },
+      {
+        delayMs: 4000,
+        event: {
+          eventType: "tool_result",
+          timestamp: ts(4000),
+          content: "File updated successfully",
+          raw: JSON.stringify({ tool_use_id: "tool-mock-002", is_error: false }),
+        },
+      },
+      // Run tests
+      {
+        delayMs: 4600,
+        event: {
+          eventType: "tool_use",
+          timestamp: ts(4600),
+          content: JSON.stringify({ tool: "Bash", args: { command: "npm test -- --grep auth" } }),
+          raw: JSON.stringify({ id: "tool-mock-003" }),
+        },
+      },
+      {
+        delayMs: 5800,
+        event: {
+          eventType: "tool_result",
+          timestamp: ts(5800),
+          content: "[exit 0] > jest --grep auth\n\n PASS  src/auth.test.ts\n  ✓ validates JWT token (12ms)\n  ✓ rejects expired token (3ms)\n  ✓ handles missing header (1ms)\n\nTests: 3 passed, 3 total\nTime:  1.234s",
+          raw: JSON.stringify({ tool_use_id: "tool-mock-003", is_error: false }),
+        },
+      },
+      // Search for other occurrences
+      {
+        delayMs: 6400,
+        event: {
+          eventType: "tool_use",
+          timestamp: ts(6400),
+          content: JSON.stringify({ tool: "Grep", args: { pattern: "decoded\\.exp", path: "src/" } }),
+          raw: JSON.stringify({ id: "tool-mock-004" }),
+        },
+      },
+      {
+        delayMs: 7000,
+        event: {
+          eventType: "tool_result",
+          timestamp: ts(7000),
+          content: "src/middleware/auth.ts:14:    if (decoded.exp < Date.now() / 1000) {\nsrc/utils/token-refresh.ts:28:    const remaining = decoded.exp - Date.now() / 1000;",
+          raw: JSON.stringify({ tool_use_id: "tool-mock-004", is_error: false }),
+        },
+      },
+      {
+        delayMs: 7800,
+        event: {
+          eventType: "text",
+          timestamp: ts(7800),
+          content: "Fixed. The token expiry comparison was inverted — `decoded.exp > Date.now()` should have been `<` (a token is expired when its `exp` is in the past). The other occurrence in `token-refresh.ts` uses subtraction (not comparison), so it was already correct. All 3 auth tests pass.",
+        },
+      },
+      {
+        delayMs: 8400,
+        event: {
+          eventType: "usage",
+          timestamp: ts(8400),
+          content: JSON.stringify({ input_tokens: 42600, output_tokens: 1850, cost_usd: 0.12 }),
+        },
+      },
+      {
+        delayMs: 8800,
+        event: { eventType: "status", timestamp: ts(8800), content: "completed" },
       },
     ],
   },

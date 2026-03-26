@@ -1,6 +1,14 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 26 Mar 2026 04:36:32 GMT and should not be manually modified.
+This log was last generated on Thu, 26 Mar 2026 05:16:56 GMT and should not be manually modified.
+
+## 0.82.1
+Thu, 26 Mar 2026 05:16:56 GMT
+
+### Patches
+
+- Specialized tool cards for session event stream
+- Add Node.js engine constraint (>=22 <24) to warn about incompatible Node versions where better-sqlite3 has no prebuilt binaries
 
 ## 0.82.0
 Thu, 26 Mar 2026 04:36:32 GMT
