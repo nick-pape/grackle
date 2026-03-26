@@ -10,7 +10,7 @@ import {
   pushToEnv, attemptReconnects, resetReconnectState,
   parseAdapterConfig, isKnowledgeEnabled, initKnowledge,
   computeTaskStatus,
-  CronManager, findFirstConnectedEnvironment,
+  ReconciliationManager, createCronPhase, findFirstConnectedEnvironment,
   logger, exec, detectLanIp,
 } from "@grackle-ai/core";
 import { envRegistry, sessionStore, workspaceStore, taskStore, scheduleStore, personaStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome } from "@grackle-ai/database";
@@ -226,8 +226,8 @@ async function main(): Promise<void> {
   startSessionCleanup();
   startOAuthCleanup();
 
-  // --- Cron Manager ---
-  const cronManager = new CronManager({
+  // --- Reconciliation Manager ---
+  const cronPhase = createCronPhase({
     getDueSchedules: scheduleStore.getDueSchedules,
     advanceSchedule: scheduleStore.advanceSchedule,
     createTask: taskStore.createTask,
@@ -243,7 +243,8 @@ async function main(): Promise<void> {
       return env?.status === "connected";
     },
   });
-  cronManager.start();
+  const reconciliationManager = new ReconciliationManager([cronPhase]);
+  reconciliationManager.start();
 
   // --- gRPC server (HTTP/2) ---
   const grpcPort = parseInt(process.env.GRACKLE_PORT || String(DEFAULT_SERVER_PORT), 10);
@@ -443,7 +444,7 @@ async function main(): Promise<void> {
     stopPairingCleanup();
     stopSessionCleanup();
     stopOAuthCleanup();
-    await cronManager.stop();
+    await reconciliationManager.stop();
     const forceExit = setTimeout(() => {
       logger.warn("Shutdown timed out, forcing exit");
       process.exit(1);
