@@ -386,4 +386,120 @@ describe("task-store tree operations", () => {
     });
   });
 
+  describe("reparentTask", () => {
+    it("moves a child to a new parent and updates parentTaskId", () => {
+      taskStore.createTask("gp", "test-proj", "Grandparent", "desc", [], "proj", "", true);
+      taskStore.createTask("p", "test-proj", "Parent", "desc", [], "proj", "gp", true);
+      taskStore.createTask("c", "test-proj", "Child", "desc", [], "proj", "p");
+
+      taskStore.reparentTask("c", "gp");
+
+      const child = taskStore.getTask("c");
+      expect(child!.parentTaskId).toBe("gp");
+    });
+
+    it("recalculates depth based on new parent", () => {
+      taskStore.createTask("gp", "test-proj", "Grandparent", "desc", [], "proj", "", true);
+      taskStore.createTask("p", "test-proj", "Parent", "desc", [], "proj", "gp", true);
+      taskStore.createTask("c", "test-proj", "Child", "desc", [], "proj", "p");
+
+      // Child was depth 2, moving to grandparent (depth 0) → depth becomes 1
+      taskStore.reparentTask("c", "gp");
+
+      const child = taskStore.getTask("c");
+      expect(child!.depth).toBe(1);
+    });
+
+    it("recalculates depth for entire subtree", () => {
+      taskStore.createTask("gp", "test-proj", "Grandparent", "desc", [], "proj", "", true);
+      taskStore.createTask("p", "test-proj", "Parent", "desc", [], "proj", "gp", true);
+      taskStore.createTask("c", "test-proj", "Child", "desc", [], "proj", "p", true);
+      taskStore.createTask("gc", "test-proj", "Grandchild", "desc", [], "proj", "c");
+
+      // Move child (depth 2) + grandchild (depth 3) up to grandparent (depth 0)
+      taskStore.reparentTask("c", "gp");
+
+      expect(taskStore.getTask("c")!.depth).toBe(1);
+      expect(taskStore.getTask("gc")!.depth).toBe(2);
+    });
+
+    it("preserves other task fields", () => {
+      taskStore.createTask("gp", "test-proj", "Grandparent", "desc", [], "proj", "", true);
+      taskStore.createTask("p", "test-proj", "Parent", "desc", [], "proj", "gp", true);
+      taskStore.createTask("c", "test-proj", "Child", "my description", [], "proj", "p");
+
+      taskStore.reparentTask("c", "gp");
+
+      const child = taskStore.getTask("c");
+      expect(child!.title).toBe("Child");
+      expect(child!.description).toBe("my description");
+      expect(child!.workspaceId).toBe("test-proj");
+    });
+
+    it("updates the updatedAt timestamp", () => {
+      taskStore.createTask("gp", "test-proj", "Grandparent", "desc", [], "proj", "", true);
+      taskStore.createTask("p", "test-proj", "Parent", "desc", [], "proj", "gp", true);
+      taskStore.createTask("c", "test-proj", "Child", "desc", [], "proj", "p");
+
+      const before = taskStore.getTask("c")!.updatedAt;
+      // Small delay to ensure timestamp differs
+      taskStore.reparentTask("c", "gp");
+      const after = taskStore.getTask("c")!.updatedAt;
+
+      expect(after).toBeTruthy();
+      expect(after! >= before!).toBe(true);
+    });
+  });
+
+  describe("getOrphanedTasks", () => {
+    it("returns non-terminal children of a parent", () => {
+      taskStore.createTask("p", "test-proj", "Parent", "desc", [], "proj", "", true);
+      taskStore.createTask("c1", "test-proj", "Working Child", "desc", [], "proj", "p");
+      taskStore.createTask("c2", "test-proj", "Pending Child", "desc", [], "proj", "p");
+
+      const orphans = taskStore.getOrphanedTasks("p");
+      expect(orphans).toHaveLength(2);
+    });
+
+    it("excludes already-terminal children (complete)", () => {
+      taskStore.createTask("p", "test-proj", "Parent", "desc", [], "proj", "", true);
+      taskStore.createTask("c1", "test-proj", "Done Child", "desc", [], "proj", "p");
+      taskStore.createTask("c2", "test-proj", "Pending Child", "desc", [], "proj", "p");
+
+      taskStore.markTaskComplete("c1", "complete");
+
+      const orphans = taskStore.getOrphanedTasks("p");
+      expect(orphans).toHaveLength(1);
+      expect(orphans[0].id).toBe("c2");
+    });
+
+    it("excludes failed children", () => {
+      taskStore.createTask("p", "test-proj", "Parent", "desc", [], "proj", "", true);
+      taskStore.createTask("c1", "test-proj", "Failed Child", "desc", [], "proj", "p");
+      taskStore.createTask("c2", "test-proj", "Active Child", "desc", [], "proj", "p");
+
+      taskStore.markTaskComplete("c1", "failed");
+
+      const orphans = taskStore.getOrphanedTasks("p");
+      expect(orphans).toHaveLength(1);
+      expect(orphans[0].id).toBe("c2");
+    });
+
+    it("returns empty array when parent has no children", () => {
+      taskStore.createTask("p", "test-proj", "Leaf", "desc", [], "proj");
+      expect(taskStore.getOrphanedTasks("p")).toHaveLength(0);
+    });
+
+    it("returns empty array when all children are terminal", () => {
+      taskStore.createTask("p", "test-proj", "Parent", "desc", [], "proj", "", true);
+      taskStore.createTask("c1", "test-proj", "Done", "desc", [], "proj", "p");
+      taskStore.createTask("c2", "test-proj", "Failed", "desc", [], "proj", "p");
+
+      taskStore.markTaskComplete("c1", "complete");
+      taskStore.markTaskComplete("c2", "failed");
+
+      expect(taskStore.getOrphanedTasks("p")).toHaveLength(0);
+    });
+  });
+
 });

@@ -69,6 +69,8 @@ export function createDatabaseMock() {
       getDescendants: vi.fn(() => []),
       getAncestors: vi.fn(() => []),
       getChildStatusCounts: vi.fn(() => ({})),
+      reparentTask: vi.fn(),
+      getOrphanedTasks: vi.fn(() => []),
     },
 
     workspaceStore: {

@@ -11,6 +11,7 @@ export type GrackleEventType =
   | "task.started"
   | "task.completed"
   | "task.deleted"
+  | "task.reparented"
   | "workspace.created"
   | "workspace.archived"
   | "workspace.updated"
