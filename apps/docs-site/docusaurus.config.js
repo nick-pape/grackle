@@ -61,6 +61,7 @@ const config = {
       },
       items: [
         { to: '/', label: 'Docs', position: 'left' },
+        { href: '/grackle/demo/', label: 'Try Demo', position: 'left' },
         { href: 'https://github.com/nick-pape/grackle', label: 'GitHub', position: 'right' },
       ],
     },
