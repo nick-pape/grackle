@@ -12,8 +12,8 @@ import * as codespaces from "./codespace-handlers.js";
 import * as knowledge from "./knowledge-handlers.js";
 import * as settings from "./settings-handlers.js";
 
-// Re-export shared helpers that external modules (ws-bridge.ts) and
-// existing test files (to-dialable-host.test.ts, resolve-ancestor-env.test.ts)
+// Re-export shared helpers that existing test files
+// (to-dialable-host.test.ts, resolve-ancestor-env.test.ts)
 // import directly from this module.
 export { toDialableHost, resolveAncestorEnvironmentId } from "./grpc-shared.js";
 export { buildMcpServersJson } from "./grpc-mcp-config.js";
