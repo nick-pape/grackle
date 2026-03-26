@@ -110,7 +110,7 @@
 
 .dropdown {
   position: absolute;
-  top: calc(100% + var(--space-xs));
+  bottom: calc(100% + var(--space-xs));
   right: 0;
   z-index: var(--z-dropdown, 100);
   min-width: 160px;
