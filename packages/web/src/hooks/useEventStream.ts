@@ -2,7 +2,7 @@
  * ConnectRPC event stream hook — replaces the WebSocket transport.
  *
  * Calls `grackleClient.streamEvents({})` to receive a unified stream of
- * session events and domain events. Handles auto-reconnect with backoff.
+ * session events and domain events. Handles auto-reconnect with a fixed delay.
  *
  * @module
  */

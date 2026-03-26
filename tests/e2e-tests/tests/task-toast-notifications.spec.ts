@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures.js";
+import { grackle } from "@grackle-ai/common";
 import {
   stubScenario,
   emitText,
@@ -54,12 +55,12 @@ test.describe("Task State Toast Notifications", { tag: ["@task"] }, () => {
     const task = await stubTask.createTask("toast-fail");
     await navigateToTask(page, "toast-fail");
 
-    // Set task status to FAILED via UpdateTask (TASK_STATUS_FAILED = 6)
+    // Set task status to FAILED via UpdateTask
     await client.updateTask({
       id: task.id as string,
       title: "",
       description: "",
-      status: 6,
+      status: grackle.TaskStatus.FAILED,
       dependsOn: [],
     });
 

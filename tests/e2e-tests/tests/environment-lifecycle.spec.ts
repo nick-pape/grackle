@@ -74,7 +74,7 @@ test.describe("Environment Detail Page — Lifecycle Actions", { tag: ["@environ
   });
 });
 
-test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environment"] }, () => {
+test.describe("Environment Lifecycle — Server Events", { tag: ["@environment"] }, () => {
   test("stop_environment changes status to disconnected", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 

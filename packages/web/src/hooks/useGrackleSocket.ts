@@ -262,7 +262,9 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       try {
         const payload = JSON.parse(evt.payloadJson) as Record<string, unknown>;
         routeDomainEvent({ id: evt.id, type: evt.type, timestamp: evt.timestamp, payload });
-      } catch { /* ignore malformed domain events */ }
+      } catch {
+        console.warn("[grackle] Failed to parse domain event payloadJson:", evt.payloadJson);
+      }
     },
     onConnect: onStreamConnect,
     onDisconnect: onStreamDisconnect,
