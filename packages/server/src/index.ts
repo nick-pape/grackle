@@ -4,9 +4,9 @@ import http2 from "node:http2";
 import {
   registerGrackleRoutes,
   registerAdapter, startHeartbeat, getAdapter, setConnection, removeConnection,
-  initWsSubscriber, initSigchldSubscriber, initLifecycleManager,
+  initSigchldSubscriber, initLifecycleManager,
   emit, subscribe,
-  createWsBridge, startTaskSession,
+  startTaskSession,
   pushToEnv, attemptReconnects, resetReconnectState,
   parseAdapterConfig, isKnowledgeEnabled, initKnowledge,
   computeTaskStatus,
@@ -292,17 +292,6 @@ async function main(): Promise<void> {
     connectRoutes: registerGrackleRoutes,
   });
 
-  createWsBridge(webServer, {
-    verifyApiKey,
-    validateCookie: (cookieHeader: string) =>
-      validateSessionCookie(cookieHeader, apiKey),
-    webPort,
-    allowNetwork,
-  });
-
-  // Wire the event bus to forward domain events over WebSocket
-  initWsSubscriber();
-
   // Wire SIGCHLD: notify parent tasks when child sessions reach terminal status
   initSigchldSubscriber();
 
@@ -336,7 +325,7 @@ async function main(): Promise<void> {
           return;
         }
 
-        const err = await startTaskSession(undefined, rootTask, {
+        const err = await startTaskSession(rootTask, {
           environmentId: connectedEnv.id,
           notes: ROOT_TASK_INITIAL_PROMPT,
         });

@@ -13,12 +13,11 @@ export { parseAdapterConfig } from "./adapter-config.js";
 export { emit, subscribe } from "./event-bus.js";
 
 // ─── Wiring Initializers ───────────────────────────────────
-export { initWsSubscriber } from "./ws-broadcast.js";
 export { initSigchldSubscriber } from "./signals/sigchld.js";
 export { initLifecycleManager } from "./lifecycle.js";
 
-// ─── WebSocket Bridge (legacy — being phased out) ──────────
-export { createWsBridge, startTaskSession } from "./ws-bridge.js";
+// ─── Task Session ───────────────────────────────────────────
+export { startTaskSession } from "./task-session.js";
 
 // ─── Session / Environment ─────────────────────────────────
 export { attemptReconnects, resetReconnectState } from "./auto-reconnect.js";

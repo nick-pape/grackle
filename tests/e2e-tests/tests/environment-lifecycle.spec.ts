@@ -1,7 +1,5 @@
 import { test, expect } from "./fixtures.js";
 import {
-  installWsTracker,
-  injectWsMessage,
   goToEnvironments,
   provisionEnvironmentDirect,
 } from "./helpers.js";
@@ -16,7 +14,7 @@ async function navigateToEnvDetailPage(page: import("@playwright/test").Page): P
 }
 
 /**
- * Re-provision the test-local environment via WS and wait for it to become
+ * Re-provision the test-local environment and wait for it to become
  * connected again. Call this after any test that stops the environment so
  * subsequent tests (and subsequent spec files) are not affected.
  */
@@ -77,14 +75,8 @@ test.describe("Environment Detail Page — Lifecycle Actions", { tag: ["@environ
 });
 
 test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environment"] }, () => {
-  test("stop_environment changes status to disconnected", async ({ page, grackle: { client } }) => {
-    // Use raw page (not appPage) so we can install WS tracker first
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
-      { timeout: 10_000 },
-    );
+  test("stop_environment changes status to disconnected", async ({ appPage, grackle: { client } }) => {
+    const page = appPage;
 
     // Navigate to environment detail page
     await navigateToEnvDetailPage(page);
@@ -102,13 +94,8 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     await reprovisionTestLocal(page);
   });
 
-  test("provision_environment connects a disconnected environment", async ({ page, grackle: { client } }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
-      { timeout: 10_000 },
-    );
+  test("provision_environment connects a disconnected environment", async ({ appPage, grackle: { client } }) => {
+    const page = appPage;
 
     // Navigate to environment detail page
     await navigateToEnvDetailPage(page);
@@ -126,13 +113,8 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     await expect(page.locator("button", { hasText: "Stop" })).toBeVisible({ timeout: 15_000 });
   });
 
-  test("provision_progress messages update UI during provisioning", async ({ page, grackle: { client } }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
-      { timeout: 10_000 },
-    );
+  test("provision_progress messages update UI during provisioning", async ({ appPage, grackle: { client } }) => {
+    const page = appPage;
 
     // Navigate to environment detail page
     await navigateToEnvDetailPage(page);
@@ -150,39 +132,15 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     await expect(page.locator("button", { hasText: "Stop" })).toBeVisible({ timeout: 15_000 });
   });
 
-  test("remove_environment removes the environment from the nav", async ({ page }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
-      { timeout: 10_000 },
-    );
+  test("remove_environment removes the environment from the nav", async ({ appPage, grackle: { client } }) => {
+    const page = appPage;
 
     await goToEnvironments(page);
 
-    // Inject a fake environment into the list for testing removal
-    await injectWsMessage(page, {
-      type: "environments",
-      payload: {
-        environments: [
-          {
-            id: "test-local",
-            displayName: "test-local",
-            adapterType: "local",
-
-            status: "connected",
-            bootstrapped: true,
-          },
-          {
-            id: "temp-remove-test",
-            displayName: "temp-remove-test",
-            adapterType: "local",
-
-            status: "disconnected",
-            bootstrapped: false,
-          },
-        ],
-      },
+    // Add a real temporary environment for testing removal
+    const added = await client.addEnvironment({
+      displayName: "temp-remove-test",
+      adapterType: "local",
     });
 
     // Verify both environments appear in the nav
@@ -191,22 +149,8 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     await expect(page.getByText("temp-remove-test").first()).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("test-local").first()).toBeVisible();
 
-    // Inject an environment_removed message
-    await injectWsMessage(page, {
-      type: "environments",
-      payload: {
-        environments: [
-          {
-            id: "test-local",
-            displayName: "test-local",
-            adapterType: "local",
-
-            status: "connected",
-            bootstrapped: true,
-          },
-        ],
-      },
-    });
+    // Remove the temporary environment via RPC
+    await client.removeEnvironment({ id: added.id });
 
     // The temporary environment should be gone from the nav
     await expect(page.getByText("temp-remove-test")).not.toBeVisible({ timeout: 5_000 });
@@ -215,13 +159,8 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     await expect(navItems).toHaveCount(1, { timeout: 5_000 });
   });
 
-  test("auto-provision on spawn when environment is disconnected", async ({ page, grackle: { client } }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
-      { timeout: 10_000 },
-    );
+  test("auto-provision on spawn when environment is disconnected", async ({ appPage, grackle: { client } }) => {
+    const page = appPage;
 
     // Navigate to environment detail page
     await navigateToEnvDetailPage(page);

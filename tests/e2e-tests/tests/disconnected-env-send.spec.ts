@@ -6,175 +6,61 @@
  * should appear inline so the user can re-establish the connection without
  * navigating away from the stream view.
  *
- * Strategy: all task/session/environment state is injected directly into the
- * running app's WebSocket `onmessage` handler via `injectWsMessage`.  This
- * avoids actually starting a task (which requires a functioning PowerLine
- * gRPC connection) and keeps the tests fast and hermetic.
+ * Strategy: start a real task via the stub runtime, wait for it to go idle,
+ * then stop the environment via gRPC to trigger a genuine disconnected state.
+ * All state transitions flow through the ConnectRPC StreamEvents transport.
  */
 import { test, expect } from "./fixtures.js";
-import type { GrackleClient } from "./rpc-client.js";
+import type { StubTaskContext } from "./fixtures.js";
 import {
-  installWsTracker,
-  injectWsMessage,
-  createWorkspace,
-  createTaskDirect,
-  getWorkspaceId,
-  navigateToTask,
+  stubScenario,
+  emitText,
+  idle,
+  provisionEnvironmentDirect,
+  patchWsForStubRuntime,
 } from "./helpers.js";
 
 test.describe("Disconnected environment blocks message send", { tag: ["@error"] }, () => {
   /**
-   * Helper: set up the UI so it looks exactly like a task that is in the
-   * `idle` state with a disconnected environment — but without
-   * actually starting a real task (which requires a live PowerLine gRPC
-   * connection that is not available in all environments).
-   *
-   * The approach:
-   * 1. Create a workspace + task (task creation via RPC always works).
-   * 2. Navigate to the task so the app is in `task` view mode.
-   * 3. Inject a fake `sessions` message: one session with
-   *    `status = "idle"` and `environmentId = "test-local"`.
-   * 4. Inject a fake `tasks` message: the same task but now with
-   *    `status = "working"` and `sessionId` pointing to the fake session.
-   * 5. Inject an `environments` message marking `test-local` as disconnected.
-   *
-   * After step 5 the UnifiedBar renders the disconnected state:
-   *   – input disabled
-   *   – Reconnect button visible
-   *   – Send button disabled
+   * Start a stub task to idle state, then stop the environment to simulate
+   * a connectivity drop. Returns after the reconnect button is visible.
    */
-  async function setupWaitingInputWithDisconnectedEnv(
-    page: import("@playwright/test").Page,
-    client: GrackleClient,
-    workspaceName: string,
+  async function startTaskAndDisconnectEnv(
+    stubTask: StubTaskContext,
     taskTitle: string,
   ): Promise<void> {
-    // --- 1. Create workspace and task -----------------------------------------
-    await createWorkspace(client, workspaceName);
+    const { page, client } = stubTask;
+    await stubTask.createAndNavigate(taskTitle, stubScenario(emitText("hello"), idle()));
+    await page.getByTestId("task-header-start").click();
 
-    const workspaceId = await getWorkspaceId(client, workspaceName);
-    // createTaskDirect returns the full task row from the server, including all
-    // fields required by the app's `isTaskData` validator.
-    const task = await createTaskDirect(client, workspaceId, taskTitle, {
-      environmentId: "test-local",
-    });
+    // Wait for idle — input field appears
+    await page.locator('input[placeholder="Type a message..."]').waitFor({ timeout: 15_000 });
 
-    // Navigate directly to the task detail page via URL lookup.
-    await navigateToTask(page, taskTitle);
+    // Stop the environment via RPC — triggers domain event
+    await client.stopEnvironment({ id: "test-local" });
 
-    // --- 2. Inject an idle session -----------------------------------
-    const fakeSessionId = `e2e-disc-${Date.now()}`;
-    await injectWsMessage(page, {
-      type: "sessions",
-      payload: {
-        sessions: [
-          {
-            id: fakeSessionId,
-            environmentId: "test-local",
-            runtime: "stub",
-            status: "idle",
-            prompt: taskTitle,
-            startedAt: new Date().toISOString(),
-          },
-        ],
-      },
-    });
-
-    // --- 3. Inject task update: now working with the session -------------
-    // Supply every field that isTaskData validates to avoid silent drops.
-    await injectWsMessage(page, {
-      type: "tasks",
-      payload: {
-        workspaceId: task.workspaceId ?? workspaceId,
-        tasks: [
-          {
-            id: task.id,
-            workspaceId: task.workspaceId ?? workspaceId,
-            title: task.title ?? taskTitle,
-            description: task.description ?? "",
-            status: "working",
-            branch: task.branch ?? "",
-            latestSessionId: fakeSessionId,
-            dependsOn: Array.isArray(task.dependsOn) ? task.dependsOn : [],
-            sortOrder: typeof task.sortOrder === "number" ? task.sortOrder : 0,
-            createdAt: task.createdAt ?? new Date().toISOString(),
-            parentTaskId: task.parentTaskId ?? "",
-            depth: typeof task.depth === "number" ? task.depth : 0,
-            childTaskIds: Array.isArray(task.childTaskIds)
-              ? task.childTaskIds
-              : [],
-            canDecompose: task.canDecompose ?? false,
-          },
-        ],
-      },
-    });
-
-    // --- 4. Inject disconnected environment ----------------------------------
-    await injectWsMessage(page, {
-      type: "environments",
-      payload: {
-        environments: [
-          {
-            id: "test-local",
-            displayName: "test-local",
-            adapterType: "local",
-
-            status: "disconnected",
-            bootstrapped: true,
-          },
-        ],
-      },
-    });
-
-    // Reconnect button should now be visible — confirms all three injections
-    // were processed by the app correctly.
+    // Wait for reconnect button — confirms the UI processed the disconnect
     await page
       .locator('[data-testid="reconnect-btn"]')
-      .waitFor({ state: "visible", timeout: 5_000 });
+      .waitFor({ state: "visible", timeout: 10_000 });
   }
 
-  test("Send button is disabled when task environment is disconnected", async ({ page, grackle: { client } }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
-      { timeout: 10_000 },
-    );
-
-    await setupWaitingInputWithDisconnectedEnv(
-      page,
-      client,
-      "disc-env-proj-1",
-      "disc-env-task-1",
-    );
+  test("Send button and input are disabled when task environment is disconnected", async ({ stubTask }) => {
+    await startTaskAndDisconnectEnv(stubTask, "disc-task-1");
+    const { page } = stubTask;
 
     const sendBtn = page.locator("button", { hasText: "Send" });
     await expect(sendBtn).toBeDisabled({ timeout: 5_000 });
 
-    // The text input should also be disabled so the user can't accidentally
-    // type a message that they won't be able to send.
     const inputField = page.locator('input[placeholder="Type a message..."]');
     await expect(inputField).toBeDisabled({ timeout: 5_000 });
   });
 
-  test("Send button wrapper has explanatory title when environment is disconnected", async ({ page, grackle: { client } }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
-      { timeout: 10_000 },
-    );
+  test("Send button wrapper has explanatory title when environment is disconnected", async ({ stubTask }) => {
+    await startTaskAndDisconnectEnv(stubTask, "disc-task-2");
+    const { page } = stubTask;
 
-    await setupWaitingInputWithDisconnectedEnv(
-      page,
-      client,
-      "disc-env-proj-2",
-      "disc-env-task-2",
-    );
-
-    // The disabled Send button is wrapped in a <span title="..."> so the tooltip
-    // is shown reliably even when the button is disabled (disabled elements don't
-    // consistently fire hover events in all browsers).
+    // The disabled Send button is wrapped in a <span title="...">
     const sendBtn = page.locator("button", { hasText: "Send" });
     const sendBtnWrapper = sendBtn.locator("xpath=..");
     await expect(sendBtnWrapper).toHaveAttribute(
@@ -184,20 +70,9 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     );
   });
 
-  test("disconnect hint text is visible when environment is disconnected", async ({ page, grackle: { client } }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
-      { timeout: 10_000 },
-    );
-
-    await setupWaitingInputWithDisconnectedEnv(
-      page,
-      client,
-      "disc-env-proj-3",
-      "disc-env-task-3",
-    );
+  test("disconnect hint text is visible when environment is disconnected", async ({ stubTask }) => {
+    await startTaskAndDisconnectEnv(stubTask, "disc-task-3");
+    const { page } = stubTask;
 
     await expect(
       page.locator('[data-testid="env-disconnect-hint"]'),
@@ -207,43 +82,20 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     ).toContainText(/unavailable/i);
   });
 
-  test("Reconnect button is visible when environment is disconnected", async ({ page, grackle: { client } }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
-      { timeout: 10_000 },
-    );
-
-    await setupWaitingInputWithDisconnectedEnv(
-      page,
-      client,
-      "disc-env-proj-4",
-      "disc-env-task-4",
-    );
+  test("Reconnect button is visible when environment is disconnected", async ({ stubTask }) => {
+    await startTaskAndDisconnectEnv(stubTask, "disc-task-4");
+    const { page } = stubTask;
 
     const reconnectBtn = page.locator('[data-testid="reconnect-btn"]');
     await expect(reconnectBtn).toBeVisible({ timeout: 5_000 });
     await expect(reconnectBtn).toContainText("Reconnect");
   });
 
-  test("clicking Reconnect button sends provision_environment to server", async ({ page, grackle: { client } }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
-      { timeout: 10_000 },
-    );
-
-    await setupWaitingInputWithDisconnectedEnv(
-      page,
-      client,
-      "disc-env-proj-5",
-      "disc-env-task-5",
-    );
+  test("clicking Reconnect button sends provision_environment to server", async ({ stubTask }) => {
+    await startTaskAndDisconnectEnv(stubTask, "disc-task-5");
+    const { page } = stubTask;
 
     // Intercept outgoing fetch calls to capture ProvisionEnvironment RPC.
-    // (ConnectRPC sends provision requests via fetch, not WebSocket.)
     await page.evaluate(() => {
       const origFetch = window.fetch;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -269,102 +121,20 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     );
   });
 
-  test("Send button is disabled in session mode when environment is disconnected", async ({ page }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
-      { timeout: 10_000 },
-    );
-
-    // Spawn a real session using the stub runtime (no PowerLine gRPC needed).
-    // Environments tab → click "+" on the environment card → select stub → submit.
-    await page.locator('[data-testid="sidebar-tab-environments"]').click();
-    await page.getByTestId("env-nav-item").first().click();
-    await page.getByRole("button", { name: "New Chat" }).click();
-
-    const promptInput = page.locator('input[placeholder="Enter prompt..."]');
-    await promptInput.fill("hello stub");
-    await page.locator("button", { hasText: "Go" }).click();
-
-    // Wait for the session to reach idle state.
-    await page
-      .locator('input[placeholder="Type a message..."]')
-      .waitFor({ state: "visible", timeout: 15_000 });
-
-    // Inject a disconnected environment to simulate a connectivity drop.
-    // The global test setup seeds "test-local" as the only environment, so
-    // the stub session will always be running on that env ID.
-    await injectWsMessage(page, {
-      type: "environments",
-      payload: {
-        environments: [
-          {
-            id: "test-local",
-            displayName: "test-local",
-            adapterType: "local",
-
-            status: "disconnected",
-            bootstrapped: true,
-          },
-        ],
-      },
-    });
-
-    // Reconnect button must appear, confirming the injection was processed.
-    await page
-      .locator('[data-testid="reconnect-btn"]')
-      .waitFor({ state: "visible", timeout: 5_000 });
-
-    const sendBtn = page.locator("button", { hasText: "Send" });
-    await expect(sendBtn).toBeDisabled({ timeout: 5_000 });
-
-    const inputField = page.locator('input[placeholder="Type a message..."]');
-    await expect(inputField).toBeDisabled({ timeout: 5_000 });
-
-    await expect(
-      page.locator('[data-testid="env-disconnect-hint"]'),
-    ).toBeVisible({ timeout: 5_000 });
-  });
-
-  test("Send button re-enables when environment reconnects", async ({ page, grackle: { client } }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
-      { timeout: 10_000 },
-    );
-
-    await setupWaitingInputWithDisconnectedEnv(
-      page,
-      client,
-      "disc-env-proj-6",
-      "disc-env-task-6",
-    );
+  test("Send button re-enables when environment reconnects", async ({ stubTask }) => {
+    await startTaskAndDisconnectEnv(stubTask, "disc-task-6");
+    const { page } = stubTask;
 
     // Confirm Send is currently disabled
     const sendBtn = page.locator("button", { hasText: "Send" });
     await expect(sendBtn).toBeDisabled({ timeout: 5_000 });
 
-    // Simulate environment reconnecting
-    await injectWsMessage(page, {
-      type: "environments",
-      payload: {
-        environments: [
-          {
-            id: "test-local",
-            displayName: "test-local",
-            adapterType: "local",
+    // Re-provision the environment (simulates reconnection)
+    await provisionEnvironmentDirect("test-local");
 
-            status: "connected",
-            bootstrapped: true,
-          },
-        ],
-      },
-    });
-
-    // Input is now enabled — fill it so the only remaining gate is the env check.
+    // Input should be re-enabled — fill it so Send can be checked
     const inputField = page.locator('input[placeholder="Type a message..."]');
+    await expect(inputField).toBeEnabled({ timeout: 10_000 });
     await inputField.fill("hello");
 
     // Send button should become enabled now that env is connected + text present
@@ -379,87 +149,33 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     ).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("Send button is disabled when task environment is in error state", async ({ page, grackle: { client } }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
-      { timeout: 10_000 },
-    );
+  test("Send button is disabled in session mode when environment is disconnected", async ({ appPage, grackle: { client } }) => {
+    const page = appPage;
 
-    // Set up the waiting_input state via WS injection
-    await createWorkspace(client, "disc-env-proj-err");
+    // Apply stub runtime fetch patch for the session spawn
+    await patchWsForStubRuntime(page);
 
-    const workspaceId = await getWorkspaceId(client, "disc-env-proj-err");
-    const task = await createTaskDirect(client, workspaceId, "disc-env-task-err", {
-      environmentId: "test-local",
-    });
+    // Spawn a session via the environment detail page
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
+    await page.getByTestId("env-nav-item").first().click();
+    await page.getByRole("button", { name: "New Chat" }).click();
 
-    // Navigate directly to the task detail page via URL lookup.
-    await navigateToTask(page, "disc-env-task-err");
+    const promptInput = page.locator('input[placeholder="Enter prompt..."]');
+    await promptInput.fill("hello stub");
+    await page.locator("button", { hasText: "Go" }).click();
 
-    const fakeSessionId = `e2e-err-${Date.now()}`;
-    await injectWsMessage(page, {
-      type: "sessions",
-      payload: {
-        sessions: [
-          {
-            id: fakeSessionId,
-            environmentId: "test-local",
-            runtime: "stub",
-            status: "idle",
-            prompt: "disc-env-task-err",
-            startedAt: new Date().toISOString(),
-          },
-        ],
-      },
-    });
+    // Wait for the session to reach idle state
+    await page
+      .locator('input[placeholder="Type a message..."]')
+      .waitFor({ state: "visible", timeout: 15_000 });
 
-    await injectWsMessage(page, {
-      type: "tasks",
-      payload: {
-        workspaceId: task.workspaceId ?? workspaceId,
-        tasks: [
-          {
-            id: task.id,
-            workspaceId: task.workspaceId ?? workspaceId,
-            title: task.title ?? "disc-env-task-err",
-            description: task.description ?? "",
-            status: "working",
-            branch: task.branch ?? "",
-            latestSessionId: fakeSessionId,
-            dependsOn: Array.isArray(task.dependsOn) ? task.dependsOn : [],
-            sortOrder: typeof task.sortOrder === "number" ? task.sortOrder : 0,
-            createdAt: task.createdAt ?? new Date().toISOString(),
-            parentTaskId: task.parentTaskId ?? "",
-            depth: typeof task.depth === "number" ? task.depth : 0,
-            childTaskIds: Array.isArray(task.childTaskIds) ? task.childTaskIds : [],
-            canDecompose: task.canDecompose ?? false,
-          },
-        ],
-      },
-    });
+    // Stop the environment to simulate a connectivity drop
+    await client.stopEnvironment({ id: "test-local" });
 
-    // Inject environment in "error" state (not "disconnected")
-    await injectWsMessage(page, {
-      type: "environments",
-      payload: {
-        environments: [
-          {
-            id: "test-local",
-            displayName: "test-local",
-            adapterType: "local",
-
-            status: "error",
-            bootstrapped: true,
-          },
-        ],
-      },
-    });
-
+    // Reconnect button must appear, confirming the disconnect was processed
     await page
       .locator('[data-testid="reconnect-btn"]')
-      .waitFor({ state: "visible", timeout: 5_000 });
+      .waitFor({ state: "visible", timeout: 10_000 });
 
     const sendBtn = page.locator("button", { hasText: "Send" });
     await expect(sendBtn).toBeDisabled({ timeout: 5_000 });
