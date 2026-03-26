@@ -51,7 +51,7 @@ async function injectToolResult(
   });
 }
 
-test.describe("Tool card rendering (#303, #935)", { tag: ["@webui"] }, () => {
+test.describe("Tool card rendering (#935)", { tag: ["@webui"] }, () => {
   /** Navigate to the app, wait for connection, and inject a spawned event so
    *  the app enters session view mode for FAKE_SESSION_ID.
    *
