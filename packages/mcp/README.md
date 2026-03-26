@@ -266,10 +266,10 @@ Predefined presets are available for convenience (via CLI `--mcp-tools-preset` o
 
 | Preset | Description |
 |--------|-------------|
-| `default` | The 19-tool default scoped set (backward compatible) |
+| `default` | The 21-tool default scoped set (backward compatible) |
 | `worker` | Subset of default — no task creation capabilities |
-| `orchestrator` | Default + task management, session spawning, persona creation |
-| `admin` | Full access to all 53 tools |
+| `orchestrator` | Default + task management, session spawning, persona creation, scheduling |
+| `admin` | Full access to all 58 tools |
 
 Scoped tokens also enforce workspace isolation — agents can only see tasks and findings within their own workspace. Subtasks created by a scoped agent are automatically parented to the agent's own task. Tool calls to non-permitted tools return an error with a descriptive message listing the available tools.
 

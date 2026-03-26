@@ -2036,21 +2036,20 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const updatedType = req.type || existing.type;
       const updatedScript = req.script || existing.script;
 
-      // Preserve existing allowedMcpTools if request provides empty array
-      const hasNewAllowedMcpTools = Array.isArray(req.allowedMcpTools) && req.allowedMcpTools.length > 0;
-      let allowedMcpToolsJson: string;
-      if (hasNewAllowedMcpTools) {
-        const invalid = req.allowedMcpTools.filter((t) => !ALL_MCP_TOOL_NAMES.has(t));
+      // allowedMcpTools: always write the value from the request.
+      // An empty array means "use default scoped tools" (clearing any overrides).
+      // Proto3 repeated fields default to [] so this is always safe to persist.
+      const newAllowedMcpTools = Array.isArray(req.allowedMcpTools) ? [...req.allowedMcpTools] : [];
+      if (newAllowedMcpTools.length > 0) {
+        const invalid = newAllowedMcpTools.filter((t) => !ALL_MCP_TOOL_NAMES.has(t));
         if (invalid.length > 0) {
           throw new ConnectError(
             `Invalid MCP tool name(s): ${invalid.join(", ")}`,
             Code.InvalidArgument,
           );
         }
-        allowedMcpToolsJson = JSON.stringify([...req.allowedMcpTools]);
-      } else {
-        allowedMcpToolsJson = existing.allowedMcpTools;
       }
+      const allowedMcpToolsJson = JSON.stringify(newAllowedMcpTools);
 
       personaStore.updatePersona(
         req.id,

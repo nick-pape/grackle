@@ -100,7 +100,7 @@ export const ORCHESTRATOR_MCP_TOOLS: readonly string[] = [
 
 /**
  * Admin preset — full access to all MCP tools.
- * Stored as the explicit list of all 53 tools (no empty-array ambiguity).
+ * Stored as the explicit list of all registered tools (no empty-array ambiguity).
  */
 export const ADMIN_MCP_TOOLS: readonly string[] = [...ALL_MCP_TOOL_NAMES] as const;
 

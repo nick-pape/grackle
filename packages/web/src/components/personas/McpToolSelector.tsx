@@ -62,7 +62,7 @@ export function McpToolSelector({ selectedTools, onChange, disabled }: McpToolSe
     } else {
       next.add(tool);
     }
-    onChange([...next]);
+    onChange([...next].sort());
   }, [selectedSet, onChange, disabled]);
 
   const toggleGroup = useCallback((tools: string[], allSelected: boolean) => {
@@ -77,14 +77,14 @@ export function McpToolSelector({ selectedTools, onChange, disabled }: McpToolSe
         next.add(t);
       }
     }
-    onChange([...next]);
+    onChange([...next].sort());
   }, [selectedSet, onChange, disabled]);
 
   const applyPreset = useCallback((tools: readonly string[]) => {
     if (disabled) {
       return;
     }
-    onChange([...tools]);
+    onChange([...tools].sort());
   }, [onChange, disabled]);
 
   const lowerFilter = filter.toLowerCase();
@@ -94,7 +94,7 @@ export function McpToolSelector({ selectedTools, onChange, disabled }: McpToolSe
       <div className={styles.header}>
         <span className={styles.count}>
           {selectedTools.length === 0
-            ? "Using default (18 tools)"
+            ? `Using default (${DEFAULT_SCOPED_MCP_TOOLS.length} tools)`
             : `${selectedTools.length} of ${ALL_MCP_TOOL_NAMES.size} tools selected`}
         </span>
       </div>

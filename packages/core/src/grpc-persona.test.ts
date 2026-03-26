@@ -227,24 +227,26 @@ describe("gRPC persona handlers", () => {
     expect(err.message).toContain("nonexistent_tool");
   });
 
-  it("updatePersona preserves allowedMcpTools when not provided", async () => {
+  it("updatePersona clears allowedMcpTools when empty array is sent", async () => {
     const created = (await handlers.createPersona({
-      name: "Preserve MCP Tools",
+      name: "Clear MCP Tools",
       systemPrompt: "prompt",
       runtime: "stub",
       mcpServers: [],
       allowedMcpTools: ["finding_post", "task_create"],
     })) as PersonaInfo;
 
+    // Sending empty allowedMcpTools clears the override (reverts to default)
     await handlers.updatePersona({
       id: created.id,
-      name: "Preserve MCP Tools Renamed",
+      name: "Clear MCP Tools Renamed",
+      allowedMcpTools: [],
     });
 
     const personas = await listPersonas();
-    const p = personas.find((x) => x.name === "Preserve MCP Tools Renamed");
+    const p = personas.find((x) => x.name === "Clear MCP Tools Renamed");
     expect(p).toBeDefined();
-    expect(p!.allowedMcpTools).toEqual(["finding_post", "task_create"]);
+    expect(p!.allowedMcpTools).toEqual([]);
   });
 
   it("updatePersona replaces allowedMcpTools when provided", async () => {

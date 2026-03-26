@@ -30,8 +30,8 @@ export const EmptySelection: Story = {
     await expect(canvas.getByTestId("preset-admin")).toBeInTheDocument();
     // Verify filter input is visible
     await expect(canvas.getByTestId("mcp-tool-filter")).toBeInTheDocument();
-    // Verify "Using default" text
-    await expect(canvas.getByText("Using default (18 tools)")).toBeInTheDocument();
+    // Verify "Using default" text (count is dynamic from DEFAULT_SCOPED_MCP_TOOLS)
+    await expect(canvas.getByText(/Using default \(\d+ tools\)/)).toBeInTheDocument();
   },
 };
 

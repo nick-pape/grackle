@@ -3,7 +3,7 @@ import { createGrackleClient } from "../client.js";
 import Table from "cli-table3";
 import chalk from "chalk";
 import { readFileSync } from "node:fs";
-import { MCP_TOOL_PRESETS } from "@grackle-ai/common";
+import { MCP_TOOL_PRESETS, DEFAULT_SCOPED_MCP_TOOLS } from "@grackle-ai/common";
 
 /**
  * Resolve `--mcp-tools` and `--mcp-tools-preset` options into a tool name array.
@@ -161,7 +161,7 @@ export function registerPersonaCommands(program: Command): void {
       if (p.allowedMcpTools.length > 0) {
         console.log(`MCP Tools:     ${p.allowedMcpTools.join(", ")}`);
       } else {
-        console.log(`MCP Tools:     ${chalk.dim("default (18 tools)")}`);
+        console.log(`MCP Tools:     ${chalk.dim(`default (${DEFAULT_SCOPED_MCP_TOOLS.length} tools)`)}`);
       }
       if (p.mcpServers.length > 0) {
         console.log(`MCP Servers:`);

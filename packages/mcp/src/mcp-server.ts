@@ -132,16 +132,25 @@ async function createMcpServerInstance(
     const { name, arguments: args } = request.params;
     const tool = resolveToolForAuth(registry, name, authContext, personaAllowedTools);
     if (!tool) {
+      // Distinguish "unknown tool" from "not permitted by persona/scope"
+      const existsInRegistry = registry.get(name) !== undefined;
+      if (!existsInRegistry) {
+        logger.warn({ tool: name }, "Unknown tool call: %s", name);
+        return {
+          content: [{ type: "text", text: `Unknown tool: ${name}` }],
+          isError: true,
+        };
+      }
       const available = listToolsForAuth(registry, authContext, personaAllowedTools)
         .map((t) => t.name)
         .join(", ");
       logger.warn(
         { tool: name, authType: authContext.type, personaId: authContext.type === "scoped" ? authContext.personaId : undefined },
-        "Tool call rejected: %s",
+        "Tool call rejected by scope: %s",
         name,
       );
       return {
-        content: [{ type: "text", text: `Tool "${name}" is not available for this persona. Available tools: ${available}` }],
+        content: [{ type: "text", text: `Tool "${name}" is not permitted for this session. Available tools: ${available}` }],
         isError: true,
       };
     }
