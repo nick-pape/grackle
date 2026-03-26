@@ -375,6 +375,126 @@ describe("orphan reparenting subscriber", () => {
       expect(taskStore.reparentTask).not.toHaveBeenCalled();
     });
 
+    it("skips non-pipe subscriptions (lifecycle streams)", async () => {
+      vi.mocked(taskStore.getTask).mockReset();
+      vi.mocked(taskStore.getOrphanedTasks).mockReset();
+      vi.mocked(streamRegistry.subscribe).mockReset();
+      vi.mocked(streamRegistry.unsubscribe).mockReset();
+
+      const parentId = "pipe-lifecycle-parent";
+      const parent = { ...PARENT_TASK, id: parentId };
+
+      vi.mocked(taskStore.getTask).mockReturnValue(parent as never);
+      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([]);
+
+      vi.mocked(sessionStore.listSessionsForTask).mockReturnValue([
+        { id: "lc-sess", taskId: parentId, status: "idle" },
+      ] as never);
+      vi.mocked(sessionStore.getActiveSessionsForTask).mockReturnValue([
+        { id: "gp-lc-sess", taskId: "grandparent-1", status: "idle" },
+      ] as never);
+
+      // Parent session has ONLY a lifecycle subscription (no pipe:*)
+      vi.mocked(streamRegistry.getSubscriptionsForSession).mockReturnValue([
+        { id: "lc-sub", streamId: "lc-stream", sessionId: "lc-sess", fd: 1, permission: "rw", deliveryMode: "detach", createdBySpawn: true },
+      ] as never);
+      vi.mocked(streamRegistry.getStream).mockReturnValue({
+        id: "lc-stream", name: "lifecycle:some-session", subscriptions: new Map(),
+      } as never);
+
+      fireEvent({ type: "task.completed", payload: { taskId: parentId, workspaceId: "ws-1" } });
+      await flush();
+
+      // Should NOT transfer lifecycle subscriptions
+      expect(streamRegistry.subscribe).not.toHaveBeenCalled();
+      expect(streamRegistry.unsubscribe).not.toHaveBeenCalled();
+    });
+
+    it("transfers multiple pipe subs across multiple parent sessions", async () => {
+      vi.mocked(taskStore.getTask).mockReset();
+      vi.mocked(taskStore.getOrphanedTasks).mockReset();
+      vi.mocked(streamRegistry.subscribe).mockReset();
+      vi.mocked(streamRegistry.unsubscribe).mockReset();
+
+      const parentId = "multi-pipe-parent";
+      const parent = { ...PARENT_TASK, id: parentId };
+
+      vi.mocked(taskStore.getTask).mockReturnValue(parent as never);
+      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([]);
+
+      // Parent has TWO sessions (e.g., restarted task)
+      vi.mocked(sessionStore.listSessionsForTask).mockReturnValue([
+        { id: "sess-a", taskId: parentId, status: "stopped" },
+        { id: "sess-b", taskId: parentId, status: "idle" },
+      ] as never);
+      vi.mocked(sessionStore.getActiveSessionsForTask).mockReturnValue([
+        { id: "gp-multi-sess", taskId: "grandparent-1", status: "idle" },
+      ] as never);
+
+      // Each session has a pipe subscription
+      vi.mocked(streamRegistry.getSubscriptionsForSession)
+        .mockReturnValueOnce([
+          { id: "sub-a", streamId: "stream-a", sessionId: "sess-a", fd: 3, permission: "rw", deliveryMode: "async", createdBySpawn: true },
+        ] as never)
+        .mockReturnValueOnce([
+          { id: "sub-b", streamId: "stream-b", sessionId: "sess-b", fd: 4, permission: "rw", deliveryMode: "sync", createdBySpawn: true },
+        ] as never);
+      vi.mocked(streamRegistry.getStream)
+        .mockReturnValueOnce({ id: "stream-a", name: "pipe:child-a", subscriptions: new Map() } as never)
+        .mockReturnValueOnce({ id: "stream-b", name: "pipe:child-b", subscriptions: new Map() } as never);
+
+      fireEvent({ type: "task.completed", payload: { taskId: parentId, workspaceId: "ws-1" } });
+      await flush();
+
+      // Both pipe subs should be transferred
+      expect(streamRegistry.subscribe).toHaveBeenCalledTimes(2);
+      expect(streamRegistry.subscribe).toHaveBeenCalledWith("stream-a", "gp-multi-sess", "rw", "async", true);
+      expect(streamRegistry.subscribe).toHaveBeenCalledWith("stream-b", "gp-multi-sess", "rw", "sync", true);
+      expect(streamRegistry.unsubscribe).toHaveBeenCalledWith("sub-a");
+      expect(streamRegistry.unsubscribe).toHaveBeenCalledWith("sub-b");
+    });
+
+    it("continues transferring remaining subs if one fails", async () => {
+      vi.mocked(taskStore.getTask).mockReset();
+      vi.mocked(taskStore.getOrphanedTasks).mockReset();
+      vi.mocked(streamRegistry.subscribe).mockReset();
+      vi.mocked(streamRegistry.unsubscribe).mockReset();
+
+      const parentId = "fail-pipe-parent";
+      const parent = { ...PARENT_TASK, id: parentId };
+
+      vi.mocked(taskStore.getTask).mockReturnValue(parent as never);
+      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([]);
+
+      vi.mocked(sessionStore.listSessionsForTask).mockReturnValue([
+        { id: "fail-sess", taskId: parentId, status: "idle" },
+      ] as never);
+      vi.mocked(sessionStore.getActiveSessionsForTask).mockReturnValue([
+        { id: "gp-fail-sess", taskId: "grandparent-1", status: "idle" },
+      ] as never);
+
+      // Two pipe subscriptions — first transfer will throw
+      vi.mocked(streamRegistry.getSubscriptionsForSession).mockReturnValue([
+        { id: "fail-sub-1", streamId: "fail-stream-1", sessionId: "fail-sess", fd: 3, permission: "rw", deliveryMode: "async", createdBySpawn: true },
+        { id: "fail-sub-2", streamId: "fail-stream-2", sessionId: "fail-sess", fd: 4, permission: "rw", deliveryMode: "async", createdBySpawn: true },
+      ] as never);
+      vi.mocked(streamRegistry.getStream)
+        .mockReturnValueOnce({ id: "fail-stream-1", name: "pipe:child-fail-1", subscriptions: new Map() } as never)
+        .mockReturnValueOnce({ id: "fail-stream-2", name: "pipe:child-fail-2", subscriptions: new Map() } as never);
+
+      // First subscribe call throws, second succeeds
+      vi.mocked(streamRegistry.subscribe)
+        .mockImplementationOnce(() => { throw new Error("subscribe boom"); })
+        .mockReturnValueOnce({} as never);
+
+      fireEvent({ type: "task.completed", payload: { taskId: parentId, workspaceId: "ws-1" } });
+      await flush();
+
+      // Second sub should still be attempted despite first failure
+      expect(streamRegistry.subscribe).toHaveBeenCalledTimes(2);
+      expect(streamRegistry.unsubscribe).toHaveBeenCalledWith("fail-sub-2");
+    });
+
     it("skips transfer when no grandparent session is active", async () => {
       vi.mocked(taskStore.getTask).mockReset();
       vi.mocked(taskStore.getOrphanedTasks).mockReset();
