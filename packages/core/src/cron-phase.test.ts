@@ -4,7 +4,7 @@ vi.mock("./logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-import { CronManager, type CronManagerDeps } from "./cron-manager.js";
+import { createCronPhase, type CronPhaseDeps } from "./cron-phase.js";
 import type { ScheduleRow } from "@grackle-ai/database";
 import type { EnvironmentRow } from "@grackle-ai/database";
 
@@ -45,7 +45,7 @@ function makeEnv(overrides: Partial<EnvironmentRow> = {}): EnvironmentRow {
   };
 }
 
-function createMockDeps(): CronManagerDeps {
+function createMockDeps(): CronPhaseDeps {
   return {
     getDueSchedules: vi.fn().mockReturnValue([]),
     advanceSchedule: vi.fn(),
@@ -61,7 +61,7 @@ function createMockDeps(): CronManagerDeps {
   };
 }
 
-describe("CronManager", () => {
+describe("createCronPhase", () => {
   beforeEach(() => {
     vi.useFakeTimers({ now: new Date("2026-03-25T10:00:05Z") });
   });
@@ -71,107 +71,6 @@ describe("CronManager", () => {
     vi.clearAllMocks();
   });
 
-  // ── UT-1: Ticker starts and invokes tick on interval ────
-
-  it("starts and invokes tick on interval", async () => {
-    const deps = createMockDeps();
-    const mgr = new CronManager(deps, 50);
-    mgr.start();
-
-    // Advance past 3 ticks
-    await vi.advanceTimersByTimeAsync(160);
-
-    await mgr.stop();
-    expect(deps.getDueSchedules).toHaveBeenCalled();
-    expect(vi.mocked(deps.getDueSchedules).mock.calls.length).toBeGreaterThanOrEqual(3);
-  });
-
-  // ── UT-2: Ticker stops cleanly ──────────────────────────
-
-  it("stops cleanly with no further ticks", async () => {
-    const deps = createMockDeps();
-    const mgr = new CronManager(deps, 50);
-    mgr.start();
-
-    await vi.advanceTimersByTimeAsync(60);
-    const callsBefore = vi.mocked(deps.getDueSchedules).mock.calls.length;
-
-    await mgr.stop();
-    await vi.advanceTimersByTimeAsync(200);
-
-    expect(vi.mocked(deps.getDueSchedules).mock.calls.length).toBe(callsBefore);
-  });
-
-  // ── UT-3: In-flight tick completes before stop resolves ─
-
-  it("awaits in-flight tick before stop resolves", async () => {
-    const deps = createMockDeps();
-    let resolveStartTask!: () => void;
-    vi.mocked(deps.getDueSchedules).mockReturnValue([makeSchedule()]);
-    vi.mocked(deps.startTaskSession).mockImplementation(
-      () => new Promise<undefined>((r) => { resolveStartTask = () => r(undefined); }),
-    );
-
-    const mgr = new CronManager(deps, 50);
-    mgr.start();
-    await vi.advanceTimersByTimeAsync(60); // trigger tick
-
-    let stopped = false;
-    const stopPromise = mgr.stop().then(() => { stopped = true; });
-
-    // stop should NOT resolve while startTaskSession is pending
-    await vi.advanceTimersByTimeAsync(10);
-    expect(stopped).toBe(false);
-
-    // Complete the pending task start
-    resolveStartTask();
-    await stopPromise;
-    expect(stopped).toBe(true);
-  });
-
-  // ── UT-4: Ticks do not overlap ──────────────────────────
-
-  it("does not overlap ticks", async () => {
-    const deps = createMockDeps();
-    let tickCount = 0;
-    let maxConcurrent = 0;
-    let concurrent = 0;
-
-    vi.mocked(deps.getDueSchedules).mockImplementation(() => {
-      concurrent++;
-      tickCount++;
-      maxConcurrent = Math.max(maxConcurrent, concurrent);
-      return [];
-    });
-
-    // We need a way to detect overlap. Since getDueSchedules is sync,
-    // overlap would mean concurrent > 1. Let's use a slow async path instead.
-    vi.mocked(deps.getDueSchedules).mockReturnValue([makeSchedule()]);
-    let resolveTask!: () => void;
-    vi.mocked(deps.startTaskSession).mockImplementation(() => {
-      concurrent++;
-      maxConcurrent = Math.max(maxConcurrent, concurrent);
-      return new Promise<undefined>((r) => {
-        resolveTask = () => { concurrent--; r(undefined); };
-      });
-    });
-
-    const mgr = new CronManager(deps, 50);
-    mgr.start();
-
-    // Trigger first tick
-    await vi.advanceTimersByTimeAsync(60);
-    // Tick is now in-flight (startTaskSession pending)
-
-    // Advance past second tick interval — should NOT trigger because first is still running
-    await vi.advanceTimersByTimeAsync(60);
-
-    expect(maxConcurrent).toBe(1);
-
-    resolveTask();
-    await mgr.stop();
-  });
-
   // ── UT-5: Due schedule fires correctly ──────────────────
 
   it("fires a due schedule — creates task, starts session, advances", async () => {
@@ -179,10 +78,8 @@ describe("CronManager", () => {
     const schedule = makeSchedule();
     vi.mocked(deps.getDueSchedules).mockReturnValue([schedule]);
 
-    const mgr = new CronManager(deps, 50);
-    mgr.start();
-    await vi.advanceTimersByTimeAsync(60);
-    await mgr.stop();
+    const phase = createCronPhase(deps);
+    await phase.execute();
 
     // Task created
     expect(deps.createTask).toHaveBeenCalledTimes(1);
@@ -211,13 +108,11 @@ describe("CronManager", () => {
     vi.mocked(deps.getDueSchedules).mockReturnValue([s1, s2]);
     vi.mocked(deps.getPersona).mockImplementation((id: string) => {
       if (id === "missing-persona") { return undefined; }
-      return { id: "persona-1", name: "Test", runtime: "stub" } as ReturnType<CronManagerDeps["getPersona"]>;
+      return { id: "persona-1", name: "Test", runtime: "stub" } as ReturnType<CronPhaseDeps["getPersona"]>;
     });
 
-    const mgr = new CronManager(deps, 50);
-    mgr.start();
-    await vi.advanceTimersByTimeAsync(60);
-    await mgr.stop();
+    const phase = createCronPhase(deps);
+    await phase.execute();
 
     // s1 failed (no persona) but s2 should still fire
     expect(deps.createTask).toHaveBeenCalledTimes(1); // only s2
@@ -231,10 +126,8 @@ describe("CronManager", () => {
     const deps = createMockDeps();
     vi.mocked(deps.getDueSchedules).mockReturnValue([makeSchedule()]);
 
-    const mgr = new CronManager(deps, 50);
-    mgr.start();
-    await vi.advanceTimersByTimeAsync(60);
-    await mgr.stop();
+    const phase = createCronPhase(deps);
+    await phase.execute();
 
     expect(deps.emit).toHaveBeenCalledWith(
       "schedule.fired",
@@ -250,10 +143,8 @@ describe("CronManager", () => {
       makeSchedule({ environmentId: "explicit-env" }),
     ]);
 
-    const mgr = new CronManager(deps, 50);
-    mgr.start();
-    await vi.advanceTimersByTimeAsync(60);
-    await mgr.stop();
+    const phase = createCronPhase(deps);
+    await phase.execute();
 
     // Should NOT call findFirstConnectedEnvironment
     expect(deps.findFirstConnectedEnvironment).not.toHaveBeenCalled();
@@ -269,10 +160,8 @@ describe("CronManager", () => {
     const deps = createMockDeps();
     vi.mocked(deps.getDueSchedules).mockReturnValue([makeSchedule({ environmentId: "" })]);
 
-    const mgr = new CronManager(deps, 50);
-    mgr.start();
-    await vi.advanceTimersByTimeAsync(60);
-    await mgr.stop();
+    const phase = createCronPhase(deps);
+    await phase.execute();
 
     expect(deps.findFirstConnectedEnvironment).toHaveBeenCalled();
     expect(deps.startTaskSession).toHaveBeenCalledWith(
@@ -287,10 +176,8 @@ describe("CronManager", () => {
     vi.mocked(deps.getDueSchedules).mockReturnValue([makeSchedule()]);
     vi.mocked(deps.findFirstConnectedEnvironment).mockReturnValue(undefined);
 
-    const mgr = new CronManager(deps, 50);
-    mgr.start();
-    await vi.advanceTimersByTimeAsync(60);
-    await mgr.stop();
+    const phase = createCronPhase(deps);
+    await phase.execute();
 
     // Should NOT create task or start session
     expect(deps.createTask).not.toHaveBeenCalled();

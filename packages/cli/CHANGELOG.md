@@ -1,6 +1,20 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 25 Mar 2026 20:38:47 GMT and should not be manually modified.
+This log was last generated on Thu, 26 Mar 2026 03:07:51 GMT and should not be manually modified.
+
+## 0.80.0
+Thu, 26 Mar 2026 03:07:51 GMT
+
+### Minor changes
+
+- Add session_attach and logs_get to scoped MCP tools with ancestry enforcement for orchestrator agents
+
+## 0.79.1
+Thu, 26 Mar 2026 02:24:24 GMT
+
+### Patches
+
+- Generalize CronManager into ReconciliationManager with pluggable tick phases
 
 ## 0.79.0
 Wed, 25 Mar 2026 20:38:47 GMT

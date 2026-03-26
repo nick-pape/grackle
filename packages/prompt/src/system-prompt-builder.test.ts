@@ -309,6 +309,8 @@ describe("SystemPromptBuilder (orchestrator)", () => {
     expect(result).toContain("task_start");
     expect(result).toContain("finding_post");
     expect(result).toContain("finding_list");
+    expect(result).toContain("session_attach");
+    expect(result).toContain("logs_get");
   });
 
   it("uses leaf template when canDecompose is true but depth > 1", () => {

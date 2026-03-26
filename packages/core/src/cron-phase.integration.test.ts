@@ -15,7 +15,8 @@ initDatabase();
 seedDatabase(_sqlite!);
 const sqlite = _sqlite!;
 
-import { CronManager, type CronManagerDeps } from "./cron-manager.js";
+import { createCronPhase, type CronPhaseDeps } from "./cron-phase.js";
+import { ReconciliationManager } from "./reconciliation-manager.js";
 import { emit } from "./event-bus.js";
 import type { EnvironmentRow, TaskRow } from "@grackle-ai/database";
 
@@ -35,7 +36,7 @@ function makeEnv(): EnvironmentRow {
   };
 }
 
-describe("CronManager integration", () => {
+describe("Cron phase integration", () => {
   beforeEach(() => {
     vi.useFakeTimers({ now: new Date("2026-03-25T10:01:00Z") });
     vi.clearAllMocks();
@@ -91,7 +92,7 @@ describe("CronManager integration", () => {
     // Mock only the session start (no real PowerLine)
     const mockStartTaskSession = vi.fn().mockResolvedValue(undefined);
 
-    const deps: CronManagerDeps = {
+    const deps: CronPhaseDeps = {
       getDueSchedules: scheduleStore.getDueSchedules,
       advanceSchedule: scheduleStore.advanceSchedule,
       createTask: taskStore.createTask,
@@ -105,7 +106,8 @@ describe("CronManager integration", () => {
       isEnvironmentConnected: vi.fn().mockReturnValue(true),
     };
 
-    const mgr = new CronManager(deps, 50);
+    const cronPhase = createCronPhase(deps);
+    const mgr = new ReconciliationManager([cronPhase], 50);
     mgr.start();
     await vi.advanceTimersByTimeAsync(60);
     await mgr.stop();
@@ -159,7 +161,7 @@ describe("CronManager integration", () => {
 
     const mockStartTaskSession = vi.fn().mockResolvedValue(undefined);
 
-    const deps: CronManagerDeps = {
+    const deps: CronPhaseDeps = {
       getDueSchedules: scheduleStore.getDueSchedules,
       advanceSchedule: scheduleStore.advanceSchedule,
       createTask: taskStore.createTask,
@@ -173,7 +175,8 @@ describe("CronManager integration", () => {
       isEnvironmentConnected: vi.fn().mockReturnValue(true),
     };
 
-    const mgr = new CronManager(deps, 50);
+    const cronPhase = createCronPhase(deps);
+    const mgr = new ReconciliationManager([cronPhase], 50);
     mgr.start();
     await vi.advanceTimersByTimeAsync(120); // 2+ ticks
     await mgr.stop();

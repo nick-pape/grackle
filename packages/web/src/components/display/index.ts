@@ -5,6 +5,7 @@
 export { Breadcrumbs } from "./Breadcrumbs.js";
 export { Button } from "./Button.js";
 export { DemoBanner } from "./DemoBanner.js";
+export { SplitButton } from "./SplitButton.js";
 export { EventRenderer } from "./EventRenderer.js";
 export { ConfirmDialog } from "./ConfirmDialog.js";
 export { Spinner } from "./Spinner.js";

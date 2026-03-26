@@ -2,10 +2,12 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ConnectError, Code, type Client } from "@connectrpc/connect";
 import { type grackle, eventTypeToString } from "@grackle-ai/common";
+import type { AuthContext } from "@grackle-ai/auth";
 import { z } from "zod";
 import type { ToolDefinition } from "../tool-registry.js";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
+import { assertCallerIsAncestor } from "../scope-enforcement.js";
 
 /** Default timeout in seconds for tail mode. */
 const DEFAULT_TAIL_TIMEOUT_SECONDS: number = 10;
@@ -34,7 +36,7 @@ export const logsTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
       try {
         // Fetch the session directly by ID
         let session: Awaited<ReturnType<typeof client.getSession>> | undefined;
@@ -57,6 +59,14 @@ export const logsTools: ToolDefinition[] = [
             };
           }
           throw error;
+        }
+
+        // Scope enforcement: scoped agents can only read logs of descendant sessions
+        if (authContext?.type === "scoped") {
+          if (!session.taskId) {
+            throw new ConnectError("Cannot read logs for a taskless session via scoped auth", Code.PermissionDenied);
+          }
+          await assertCallerIsAncestor(client, authContext, session.taskId);
         }
 
         if (!session.logPath) {
