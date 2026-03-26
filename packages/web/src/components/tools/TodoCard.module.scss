@@ -37,7 +37,7 @@
 .activeIcon {
   color: var(--accent-blue);
   font-size: 8px;
-  animation: pulse 1.5s ease-in-out infinite;
+  animation: todoPulse 1.5s ease-in-out infinite;
   flex-shrink: 0;
 }
 
@@ -47,7 +47,7 @@
   font-style: italic;
 }
 
-@keyframes pulse {
+@keyframes todoPulse {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 1; }
 }
@@ -100,7 +100,7 @@
 
   .itemIcon {
     color: var(--accent-blue);
-    animation: pulse 1.5s ease-in-out infinite;
+    animation: todoPulse 1.5s ease-in-out infinite;
   }
 
   .itemText {
