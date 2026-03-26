@@ -52,7 +52,7 @@ export function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
     // (Copilot emits tool results in this format with embedded diffs).
     // Guard with startsWith check to avoid throwing on plain text / large outputs.
     let detailedResult: string | undefined;
-    const contentStr: string = e.content?.trim() ?? "";
+    const contentStr: string = e.content.trim();
     if (contentStr.startsWith("{")) {
       try {
         const parsed = JSON.parse(contentStr) as Record<string, unknown>;
