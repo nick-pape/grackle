@@ -399,6 +399,21 @@ function killSessionAndCleanup(session: SessionRow): void {
     });
   }
 
+  // Transfer pipe fds to grandparent BEFORE cleaning up subscriptions.
+  // Once subscriptions are removed, the pipe fds are gone.
+  if (session.taskId) {
+    const task = taskStore.getTask(session.taskId);
+    if (task) {
+      const orphanedChildren = taskStore.getOrphanedTasks(task.id);
+      if (orphanedChildren.length > 0) {
+        const grandparentId = task.parentTaskId || ROOT_TASK_ID;
+        for (const orphan of orphanedChildren) {
+          transferPipeSubscriptions(orphan.id, task.id, grandparentId);
+        }
+      }
+    }
+  }
+
   cleanupLifecycleStream(session.id);
   const subs = streamRegistry.getSubscriptionsForSession(session.id);
   for (const sub of subs) {

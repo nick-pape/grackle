@@ -224,12 +224,7 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
     expect(doneTask.parentTaskId).toBe(parentId);
   });
 
-  // Known issue: stub-mcp + ipc_spawn creates multiple sessions competing for
-  // the single test-local environment, causing signal delivery to fail with
-  // "Environment already has active session". The pipe transfer logic works
-  // (unit tested + synchronous in completeTask), but e2e environment contention
-  // prevents the [ADOPTED] signal from reaching the grandparent.
-  test.skip("pipe fds transfer to grandparent when parent completes", async ({ grackle: { client } }) => {
+  test("pipe fds transfer to grandparent when parent completes", async ({ grackle: { client } }) => {
     test.setTimeout(90_000);
 
     // 1. Create workspace + hierarchy: grandparent → parent (stub-mcp, spawns piped child)
@@ -247,14 +242,13 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
     await waitForSessionStatus(client, gpSessionId, "idle");
 
     // 3. Create parent task with stub-mcp scenario that spawns an async-piped child
-    //    The ipc_spawn MCP call will create a pipe stream between parent and spawned child
     const parentScenario = stubScenario(
       emitMcpCall("ipc_spawn", {
         prompt: JSON.stringify(stubScenario(emitText("piped child output"), idle())),
         pipe: "async",
         environmentId: "test-local",
       }),
-      idle(), // go idle after spawn so we can complete the parent externally
+      idle(),
     );
     const parent = await createTaskDirect(client, workspaceId, "Parent Pipe Spawner", {
       parentTaskId: grandparentId,
@@ -285,20 +279,108 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
     );
     expect(parentPipeFds.length).toBeGreaterThan(0);
 
-    // 6. Complete the parent → triggers orphan reparenting + pipe fd transfer
+    // 6. Complete the parent → triggers pipe fd transfer (synchronous) + reparenting
     await client.completeTask({ id: parentId });
 
-    // 7. Wait for grandparent to receive [ADOPTED] signal
-    await waitForSessionText(client, gpSessionId, "[ADOPTED]", 30_000);
+    // 7. Verify grandparent now has the pipe fd (transferred from dead parent)
+    //    Poll because the transfer is synchronous but getSessionFds may need a moment
+    const deadline = Date.now() + 15_000;
+    let gpPipeFdCount = 0;
+    while (Date.now() < deadline) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const gpFds = await client.getSessionFds({ id: gpSessionId }) as any;
+      gpPipeFdCount = (gpFds.fds || []).filter(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (f: any) => f.streamName?.startsWith("pipe:"),
+      ).length;
+      if (gpPipeFdCount > 0) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+    expect(gpPipeFdCount).toBeGreaterThan(0);
 
-    // 8. Verify grandparent now has the pipe fd (transferred from dead parent)
+    // Cleanup
+    await client.killAgent({ id: gpSessionId });
+    await waitForSessionStatus(client, gpSessionId, "stopped");
+  });
+
+  test("pipe fds transfer to grandparent when parent is force-killed", async ({ grackle: { client } }) => {
+    test.setTimeout(90_000);
+
+    // 1. Create workspace + hierarchy
+    await createWorkspace(client, "Orphan Kill Pipe");
+    const workspaceId = await getWorkspaceId(client, "Orphan Kill Pipe");
+
+    const grandparent = await createTaskDirect(client, workspaceId, "GP Kill Pipe", {
+      canDecompose: true,
+      environmentId: "test-local",
+    });
+    const grandparentId = grandparent.id as string;
+
+    // 2. Start grandparent → idle
+    const gpSessionId = await startTaskAndGetSessionId(client, grandparentId);
+    await waitForSessionStatus(client, gpSessionId, "idle");
+
+    // 3. Create parent with stub-mcp that spawns a piped child
+    const parentScenario = stubScenario(
+      emitMcpCall("ipc_spawn", {
+        prompt: JSON.stringify(stubScenario(emitText("piped child"), idle())),
+        pipe: "async",
+        environmentId: "test-local",
+      }),
+      idle(),
+    );
+    const parent = await createTaskDirect(client, workspaceId, "Parent Kill Spawner", {
+      parentTaskId: grandparentId,
+      canDecompose: true,
+      environmentId: "test-local",
+      description: JSON.stringify(parentScenario),
+    });
+    const parentId = parent.id as string;
+
+    // 4. Start parent with stub-mcp
+    const parentResp = await client.startTask({
+      taskId: parentId,
+      personaId: "stub-mcp",
+      environmentId: "test-local",
+    });
+    const parentSessionId = parentResp.id;
+    if (!parentSessionId) {
+      throw new Error("No session ID for parent");
+    }
+    await waitForSessionStatus(client, parentSessionId, "idle", 30_000);
+
+    // 5. Verify parent has pipe fd
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const gpFds = await client.getSessionFds({ id: gpSessionId }) as any;
-    const gpPipeFds = (gpFds.fds || []).filter(
+    const parentFds = await client.getSessionFds({ id: parentSessionId }) as any;
+    const parentPipeFds = (parentFds.fds || []).filter(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (f: any) => f.streamName?.startsWith("pipe:"),
     );
-    expect(gpPipeFds.length).toBeGreaterThan(0);
+    expect(parentPipeFds.length).toBeGreaterThan(0);
+
+    // 6. Force-kill the parent session (SIGKILL) — triggers killSessionAndCleanup
+    //    which now transfers pipe fds before cleanup
+    await client.killAgent({ id: parentSessionId, graceful: false });
+    await waitForSessionStatus(client, parentSessionId, "stopped");
+
+    // 7. Verify grandparent got the pipe fd
+    const deadline = Date.now() + 15_000;
+    let gpPipeFdCount = 0;
+    while (Date.now() < deadline) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const gpFds = await client.getSessionFds({ id: gpSessionId }) as any;
+      gpPipeFdCount = (gpFds.fds || []).filter(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (f: any) => f.streamName?.startsWith("pipe:"),
+      ).length;
+      if (gpPipeFdCount > 0) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+    expect(gpPipeFdCount).toBeGreaterThan(0);
 
     // Cleanup
     await client.killAgent({ id: gpSessionId });
