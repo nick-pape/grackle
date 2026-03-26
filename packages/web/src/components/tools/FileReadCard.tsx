@@ -82,7 +82,6 @@ export function FileReadCard({ tool, args, result, isError, writeVariant }: File
                   {i + 1}
                 </span>
                 {line}
-                {"\n"}
               </span>
             ))}
           </pre>

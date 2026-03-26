@@ -30,7 +30,7 @@ test.describe("Stub MCP Integration", { tag: ["@persona"] }, () => {
     await expect(toolCard).toBeVisible({ timeout: 10_000 });
 
     // Verify tool result content is present (real MCP response renders inside the card)
-    const toolResult = page.getByTestId("tool-card-result").first();
+    const toolResult = toolCard.getByTestId("tool-card-result");
     await expect(toolResult).toBeVisible({ timeout: 5_000 });
     const resultText = await toolResult.textContent();
     expect(resultText).toBeTruthy();

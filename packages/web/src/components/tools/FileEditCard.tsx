@@ -129,7 +129,6 @@ export function FileEditCard({ tool, args, result, isError, detailedResult }: To
               return (
                 <span key={i} className={`${styles.diffLine} ${lineClass}`}>
                   {line.content}
-                  {"\n"}
                 </span>
               );
             })}
