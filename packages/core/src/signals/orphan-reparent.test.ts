@@ -21,11 +21,25 @@ vi.mock("./signal-delivery.js", () => ({
   sendInputToSession: vi.fn().mockResolvedValue(true),
 }));
 
+vi.mock("../stream-registry.js", () => ({
+  getSubscriptionsForSession: vi.fn(() => []),
+  getStream: vi.fn(() => undefined),
+  subscribe: vi.fn(),
+  unsubscribe: vi.fn(),
+}));
+
+vi.mock("../pipe-delivery.js", () => ({
+  ensureAsyncDeliveryListener: vi.fn(),
+  cleanupAsyncListenerIfEmpty: vi.fn(),
+}));
+
 // ── Imports ──────────────────────────────────────────────────
 
-import { taskStore } from "@grackle-ai/database";
+import { taskStore, sessionStore } from "@grackle-ai/database";
 import { emit, subscribe } from "../event-bus.js";
 import { deliverSignalToTask } from "./signal-delivery.js";
+import * as streamRegistry from "../stream-registry.js";
+import { ensureAsyncDeliveryListener } from "../pipe-delivery.js";
 import { initOrphanReparentSubscriber, _resetForTesting } from "./orphan-reparent.js";
 import type { GrackleEvent } from "../event-bus.js";
 
@@ -278,6 +292,70 @@ describe("orphan reparenting subscriber", () => {
       await flush();
 
       expect(taskStore.getOrphanedTasks).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("pipe fd transfer", () => {
+    it("transfers pipe subscriptions from dead parent to grandparent session", async () => {
+      vi.mocked(taskStore.getTask).mockReset();
+      vi.mocked(taskStore.getOrphanedTasks).mockReset();
+      vi.mocked(taskStore.reparentTask).mockReset();
+
+      const parentId = "pipe-parent";
+      const parent = { ...PARENT_TASK, id: parentId };
+      const orphan = { ...CHILD_TASK_1, id: "pipe-child", parentTaskId: parentId };
+
+      vi.mocked(taskStore.getTask).mockReturnValue(parent as never);
+      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([orphan] as never);
+
+      // Parent has a session with a pipe subscription
+      vi.mocked(sessionStore.listSessionsForTask).mockReturnValue([
+        { id: "parent-sess", taskId: parentId, status: "stopped" },
+      ] as never);
+      vi.mocked(sessionStore.getActiveSessionsForTask).mockReturnValue([
+        { id: "gp-sess", taskId: "grandparent-1", status: "idle" },
+      ] as never);
+
+      // Parent session has a pipe subscription
+      vi.mocked(streamRegistry.getSubscriptionsForSession).mockReturnValue([
+        { id: "sub-1", streamId: "stream-1", sessionId: "parent-sess", fd: 3, permission: "rw", deliveryMode: "async", createdBySpawn: true },
+      ] as never);
+      vi.mocked(streamRegistry.getStream).mockReturnValue({
+        id: "stream-1", name: "pipe:child-sess-1", subscriptions: new Map(),
+      } as never);
+
+      fireEvent({ type: "task.completed", payload: { taskId: parentId, workspaceId: "ws-1" } });
+      await flush();
+
+      // Should create subscription for grandparent
+      expect(streamRegistry.subscribe).toHaveBeenCalledWith(
+        "stream-1", "gp-sess", "rw", "async", true,
+      );
+      // Should remove dead parent's subscription
+      expect(streamRegistry.unsubscribe).toHaveBeenCalledWith("sub-1");
+      // Should set up async listener
+      expect(ensureAsyncDeliveryListener).toHaveBeenCalledWith("gp-sess");
+    });
+
+    it("skips transfer when no grandparent session is active", async () => {
+      vi.mocked(taskStore.getTask).mockReset();
+      vi.mocked(taskStore.getOrphanedTasks).mockReset();
+      vi.mocked(taskStore.reparentTask).mockReset();
+      vi.mocked(streamRegistry.subscribe).mockReset();
+
+      const parentId = "pipe-parent-no-gp";
+      const parent = { ...PARENT_TASK, id: parentId };
+      const orphan = { ...CHILD_TASK_1, id: "pipe-child-2", parentTaskId: parentId };
+
+      vi.mocked(taskStore.getTask).mockReturnValue(parent as never);
+      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([orphan] as never);
+      vi.mocked(sessionStore.getActiveSessionsForTask).mockReturnValue([] as never);
+
+      fireEvent({ type: "task.completed", payload: { taskId: parentId, workspaceId: "ws-1" } });
+      await flush();
+
+      // Should NOT try to create subscriptions
+      expect(streamRegistry.subscribe).not.toHaveBeenCalled();
     });
   });
 });

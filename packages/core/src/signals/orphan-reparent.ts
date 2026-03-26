@@ -9,7 +9,9 @@
 
 import { ROOT_TASK_ID, TASK_STATUS } from "@grackle-ai/common";
 import { subscribe, emit, type GrackleEvent } from "../event-bus.js";
-import { taskStore } from "@grackle-ai/database";
+import { taskStore, sessionStore } from "@grackle-ai/database";
+import * as streamRegistry from "../stream-registry.js";
+import { ensureAsyncDeliveryListener } from "../pipe-delivery.js";
 import { deliverSignalToTask } from "./signal-delivery.js";
 import { logger } from "../logger.js";
 
@@ -107,6 +109,9 @@ async function handleParentTerminal(parentTaskId: string): Promise<void> {
     try {
       taskStore.reparentTask(orphan.id, grandparentId);
 
+      // Transfer pipe fds from dead parent's sessions to grandparent's session
+      transferPipeSubscriptions(orphan.id, parentTaskId, grandparentId);
+
       emit("task.reparented", {
         taskId: orphan.id,
         oldParentTaskId: parentTaskId,
@@ -138,6 +143,71 @@ async function handleParentTerminal(parentTaskId: string): Promise<void> {
   for (const [key, ts] of processed) {
     if (now - ts > DEDUP_TTL_MS) {
       processed.delete(key);
+    }
+  }
+}
+
+/**
+ * Transfer pipe subscriptions from the dead parent's sessions to the grandparent's
+ * active session. This allows the grandparent to receive output from adopted children.
+ */
+function transferPipeSubscriptions(
+  childTaskId: string,
+  deadParentTaskId: string,
+  grandparentTaskId: string,
+): void {
+  // Find grandparent's active session to receive the transferred fds
+  const grandparentSessions = sessionStore.getActiveSessionsForTask(grandparentTaskId);
+  if (grandparentSessions.length === 0) {
+    logger.debug(
+      { childTaskId, grandparentTaskId },
+      "No active grandparent session — skipping pipe fd transfer",
+    );
+    return;
+  }
+  const grandparentSessionId = grandparentSessions[0].id;
+
+  // Find all sessions belonging to the dead parent
+  const parentSessions = sessionStore.listSessionsForTask(deadParentTaskId);
+
+  for (const parentSession of parentSessions) {
+    const subs = streamRegistry.getSubscriptionsForSession(parentSession.id);
+
+    for (const sub of subs) {
+      const stream = streamRegistry.getStream(sub.streamId);
+      if (!stream?.name.startsWith("pipe:")) {
+        continue;
+      }
+
+      // This is a pipe subscription owned by the dead parent — transfer it
+      try {
+        // Create a matching subscription for the grandparent
+        streamRegistry.subscribe(
+          sub.streamId,
+          grandparentSessionId,
+          sub.permission,
+          sub.deliveryMode,
+          sub.createdBySpawn,
+        );
+
+        // Remove the dead parent's subscription
+        streamRegistry.unsubscribe(sub.id);
+
+        // Set up async delivery if needed
+        if (sub.deliveryMode === "async") {
+          ensureAsyncDeliveryListener(grandparentSessionId);
+        }
+
+        logger.info(
+          { childTaskId, stream: stream.name, fromSession: parentSession.id, toSession: grandparentSessionId },
+          "Transferred pipe fd to grandparent session",
+        );
+      } catch (err) {
+        logger.warn(
+          { err, childTaskId, stream: stream.name },
+          "Failed to transfer pipe fd — child may lose communication channel",
+        );
+      }
     }
   }
 }
