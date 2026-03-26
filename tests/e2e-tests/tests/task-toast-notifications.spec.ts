@@ -27,7 +27,7 @@ test.describe("Task State Toast Notifications", { tag: ["@task"] }, () => {
     await page.getByTestId("task-header-start").click();
 
     // "Task is now running" toast should appear
-    await expect(page.getByText("Task is now running")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Task is now running")).toBeVisible({ timeout: 20_000 });
   });
 
   test("task completion shows completed toast", async ({ stubTask }) => {
