@@ -2036,20 +2036,29 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const updatedType = req.type || existing.type;
       const updatedScript = req.script || existing.script;
 
-      // allowedMcpTools: always write the value from the request.
-      // An empty array means "use default scoped tools" (clearing any overrides).
-      // Proto3 repeated fields default to [] so this is always safe to persist.
-      const newAllowedMcpTools = Array.isArray(req.allowedMcpTools) ? [...req.allowedMcpTools] : [];
-      if (newAllowedMcpTools.length > 0) {
-        const invalid = newAllowedMcpTools.filter((t) => !ALL_MCP_TOOL_NAMES.has(t));
-        if (invalid.length > 0) {
-          throw new ConnectError(
-            `Invalid MCP tool name(s): ${invalid.join(", ")}`,
-            Code.InvalidArgument,
-          );
+      // Preserve existing allowedMcpTools unless the request provides a non-empty list.
+      // Proto3 repeated fields default to [], so we treat [] as "not provided" (keep existing).
+      // To clear overrides (revert to default), callers should use a sentinel like ["__clear__"]
+      // or the web UI handles it explicitly via the McpToolSelector onChange.
+      const hasNewAllowedMcpTools = Array.isArray(req.allowedMcpTools) && req.allowedMcpTools.length > 0;
+      let allowedMcpToolsJson: string;
+      if (hasNewAllowedMcpTools) {
+        // Check for the clear sentinel: a single-element array ["__clear__"] resets to default
+        if (req.allowedMcpTools.length === 1 && req.allowedMcpTools[0] === "__clear__") {
+          allowedMcpToolsJson = "[]";
+        } else {
+          const invalid = req.allowedMcpTools.filter((t) => !ALL_MCP_TOOL_NAMES.has(t));
+          if (invalid.length > 0) {
+            throw new ConnectError(
+              `Invalid MCP tool name(s): ${invalid.join(", ")}`,
+              Code.InvalidArgument,
+            );
+          }
+          allowedMcpToolsJson = JSON.stringify([...req.allowedMcpTools]);
         }
+      } else {
+        allowedMcpToolsJson = existing.allowedMcpTools;
       }
-      const allowedMcpToolsJson = JSON.stringify(newAllowedMcpTools);
 
       personaStore.updatePersona(
         req.id,

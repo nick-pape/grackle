@@ -227,7 +227,29 @@ describe("gRPC persona handlers", () => {
     expect(err.message).toContain("nonexistent_tool");
   });
 
-  it("updatePersona clears allowedMcpTools when empty array is sent", async () => {
+  it("updatePersona preserves allowedMcpTools when empty array is sent", async () => {
+    const created = (await handlers.createPersona({
+      name: "Preserve MCP Tools",
+      systemPrompt: "prompt",
+      runtime: "stub",
+      mcpServers: [],
+      allowedMcpTools: ["finding_post", "task_create"],
+    })) as PersonaInfo;
+
+    // Empty array = "not provided" in proto3; server preserves existing value
+    await handlers.updatePersona({
+      id: created.id,
+      name: "Preserve MCP Tools Renamed",
+      allowedMcpTools: [],
+    });
+
+    const personas = await listPersonas();
+    const p = personas.find((x) => x.name === "Preserve MCP Tools Renamed");
+    expect(p).toBeDefined();
+    expect(p!.allowedMcpTools).toEqual(["finding_post", "task_create"]);
+  });
+
+  it("updatePersona clears allowedMcpTools with __clear__ sentinel", async () => {
     const created = (await handlers.createPersona({
       name: "Clear MCP Tools",
       systemPrompt: "prompt",
@@ -236,15 +258,14 @@ describe("gRPC persona handlers", () => {
       allowedMcpTools: ["finding_post", "task_create"],
     })) as PersonaInfo;
 
-    // Sending empty allowedMcpTools clears the override (reverts to default)
+    // "__clear__" sentinel resets to default (empty array)
     await handlers.updatePersona({
       id: created.id,
-      name: "Clear MCP Tools Renamed",
-      allowedMcpTools: [],
+      allowedMcpTools: ["__clear__"],
     });
 
     const personas = await listPersonas();
-    const p = personas.find((x) => x.name === "Clear MCP Tools Renamed");
+    const p = personas.find((x) => x.name === "Clear MCP Tools");
     expect(p).toBeDefined();
     expect(p!.allowedMcpTools).toEqual([]);
   });

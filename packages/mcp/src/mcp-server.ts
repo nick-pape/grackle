@@ -86,9 +86,13 @@ async function resolvePersonaTools(
       return tools;
     }
   } catch (error) {
+    // Fail open to default scoped tools (not full access) on transient errors.
+    // This is a security tradeoff: a stricter persona would get broader access,
+    // but failing closed would make sessions unusable on transient backend errors.
+    // The default scoped set is still significantly restricted vs full access.
     logger.warn(
       { personaId: authContext.personaId, err: error },
-      "Failed to resolve persona for tool filtering; using default scoped tools",
+      "Failed to resolve persona for tool filtering; falling back to default scoped tools",
     );
   }
   return undefined;

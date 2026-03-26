@@ -601,11 +601,13 @@ function PersonaForm({
                   selectedTools={allowedMcpTools}
                   onChange={(tools) => {
                     setAllowedMcpTools(tools);
+                    // Send "__clear__" sentinel when clearing to distinguish from "not provided"
+                    const toSend = tools.length === 0 ? ["__clear__"] : tools;
                     saveField(
                       () => onUpdatePersona(
                         existing!.id,
                         undefined, undefined, undefined, undefined, undefined,
-                        undefined, undefined, undefined, tools,
+                        undefined, undefined, undefined, toSend,
                       ),
                       () => {},
                       "MCP tools updated",

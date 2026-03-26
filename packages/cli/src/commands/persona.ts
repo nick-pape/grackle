@@ -220,7 +220,9 @@ export function registerPersonaCommands(program: Command): void {
         maxTurns: opts.maxTurns || 0,
         type: opts.type || "",
         script: scriptContent,
-        allowedMcpTools: allowedMcpTools || [],
+        // Only send allowedMcpTools when explicitly provided via flags;
+        // omitting it (empty []) preserves the existing value on the server.
+        allowedMcpTools: allowedMcpTools ?? [],
       });
       console.log(`Updated persona: ${p.id} (${p.name})`);
     });
