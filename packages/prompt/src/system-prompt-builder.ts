@@ -358,7 +358,7 @@ export class SystemPromptBuilder {
       `- \`finding_post\` — Share a discovery (architecture decisions, patterns, bugs) with other agents.`,
       `- \`finding_list\` — List recent findings from all agents in this workspace.`,
       `- \`session_attach\` — Attach to a child session and stream live events (with timeout).`,
-      `- \`logs_get\` — Read a completed child session's transcript or raw event log.`,
+      `- \`logs_get\` — Read a child session's transcript or raw event log (including in-progress sessions and optional live tailing).`,
     ].join("\n");
   }
 
