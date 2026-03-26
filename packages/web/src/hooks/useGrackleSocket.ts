@@ -1,15 +1,15 @@
 /**
- * Composition hook that wires together all domain hooks over a single WebSocket
- * connection.  This is the only hook that components consume (via
- * {@link GrackleContext}).
+ * Composition hook that wires together all domain hooks over a unified
+ * ConnectRPC event stream. This is the only hook that components consume
+ * (via {@link GrackleContext}).
  *
  * @module
  */
 
 import { useCallback, useState } from "react";
-import type { WsMessage, SendFunction, GrackleEvent, UsageStats } from "./types.js";
-import { isGrackleEvent } from "./types.js";
-import { useWebSocket } from "./useWebSocket.js";
+import type { GrackleEvent, UsageStats } from "./types.js";
+import { useEventStream } from "./useEventStream.js";
+import { eventTypeToString } from "@grackle-ai/common";
 import { useEnvironments } from "./useEnvironments.js";
 import { useSessions } from "./useSessions.js";
 import { useWorkspaces } from "./useWorkspaces.js";
@@ -50,8 +50,6 @@ export { isGrackleEvent } from "./types.js";
 /** Return type for the {@link useGrackleSocket} hook. */
 export interface UseGrackleSocketResult {
   connected: boolean;
-  /** Raw send function for WebSocket messages. */
-  send: import("./types.js").SendFunction;
   environments: import("./types.js").Environment[];
   sessions: import("./types.js").Session[];
   events: import("./types.js").SessionEvent[];
@@ -232,22 +230,14 @@ export interface UseGrackleSocketResult {
  * @param url - Optional WebSocket URL override.
  * @returns The full Grackle client state and actions.
  */
-export function useGrackleSocket(url?: string): UseGrackleSocketResult {
+export function useGrackleSocket(): UseGrackleSocketResult {
   // --- Settings state ---
 
   const [appDefaultPersonaId, setAppDefaultPersonaIdState] = useState("");
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | undefined>(undefined);
   const [usageCache, setUsageCache] = useState<Record<string, UsageStats>>({});
 
-  // --- Transport (must be first to provide `send`) ---
-
-  const { connected, send } = useWebSocket(url, {
-    onMessage,
-    onConnect,
-    onDisconnect,
-  });
-
-  // --- Domain hooks (all receive stable `send`) ---
+  // --- Domain hooks ---
 
   const environmentsHook = useEnvironments();
   const sessionsHook = useSessions();
@@ -259,6 +249,28 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const codespacesHook = useCodespaces();
   const personasHook = usePersonas();
   const knowledgeHook = useKnowledge();
+
+  // --- Transport (ConnectRPC server-streaming) ---
+
+  const { connected } = useEventStream({
+    onSessionEvent: (evt) => {
+      sessionsHook.handleSessionEvent({
+        sessionId: evt.sessionId,
+        eventType: eventTypeToString(evt.type),
+        timestamp: evt.timestamp,
+        content: evt.content,
+        raw: evt.raw || undefined,
+      });
+    },
+    onDomainEvent: (evt) => {
+      try {
+        const payload = JSON.parse(evt.payloadJson) as Record<string, unknown>;
+        routeDomainEvent({ id: evt.id, type: evt.type, timestamp: evt.timestamp, payload });
+      } catch { /* ignore malformed domain events */ }
+    },
+    onConnect: onStreamConnect,
+    onDisconnect: onStreamDisconnect,
+  });
 
   // --- Settings helpers ---
 
@@ -338,29 +350,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     if (knowledgeHook.handleEvent(event)) { return; }
   }
 
-  function onMessage(msg: WsMessage | GrackleEvent): void {
-    // Domain events from event bus — already validated by parseWsMessage
-    if (isGrackleEvent(msg)) {
-      routeDomainEvent(msg);
-      return;
-    }
-
-    // Real-time session events from subscribe_all
-    if (sessionsHook.handleMessage(msg)) { return; }
-
-    // Legacy WS message handlers — these only fire when E2E tests inject
-    // fake data via injectWsMessage(). Normal operation uses ConnectRPC.
-    if (sessionsHook.handleLegacyMessage?.(msg)) { return; }
-    if (environmentsHook.handleLegacyMessage?.(msg)) { return; }
-    if (tasksHook.handleLegacyMessage?.(msg)) { return; }
-
-    if (msg.type === "error") {
-      console.error("[ws]", msg.payload?.message);
-      return;
-    }
-  }
-
-  function onConnect(sendFn: SendFunction): void {
+  function onStreamConnect(): void {
     environmentsHook.loadEnvironments();
     sessionsHook.loadSessions();
     workspacesHook.loadWorkspaces();
@@ -375,13 +365,10 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       (resp) => { setOnboardingCompleted(resp.value === "true"); },
       () => {},
     );
-    // Load an initial/global task list (server treats omitted workspaceId as "all workspaces",
-    // which includes any workspace-less tasks such as the root task)
     tasksHook.loadAllTasks();
-    sendFn({ type: "subscribe_all" });
   }
 
-  function onDisconnect(): void {
+  function onStreamDisconnect(): void {
     workspacesHook.onDisconnect();
     tasksHook.onDisconnect();
   }
@@ -395,7 +382,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
   return {
     connected,
-    send,
     environments: environmentsHook.environments,
     sessions: sessionsHook.sessions,
     events: sessionsHook.events,
