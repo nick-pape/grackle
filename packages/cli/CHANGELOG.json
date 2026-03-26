@@ -2,6 +2,26 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.81.0",
+      "tag": "@grackle-ai/cli_v0.81.0",
+      "date": "Thu, 26 Mar 2026 04:19:23 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add persona-scoped MCP tool filtering: personas can define allowed_mcp_tools to control which MCP tools their task agents can access, with presets (default/worker/orchestrator/admin), server-side validation, CLI flags, and web UI multiselect"
+          }
+        ],
+        "none": [
+          {
+            "comment": "placeholder"
+          },
+          {
+            "comment": "placeholder"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.80.0",
       "tag": "@grackle-ai/cli_v0.80.0",
       "date": "Thu, 26 Mar 2026 03:07:51 GMT",

@@ -1,6 +1,18 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 26 Mar 2026 03:07:51 GMT and should not be manually modified.
+This log was last generated on Thu, 26 Mar 2026 04:19:23 GMT and should not be manually modified.
+
+## 0.81.0
+Thu, 26 Mar 2026 04:19:23 GMT
+
+### Minor changes
+
+- Add persona-scoped MCP tool filtering: personas can define allowed_mcp_tools to control which MCP tools their task agents can access, with presets (default/worker/orchestrator/admin), server-side validation, CLI flags, and web UI multiselect
+
+### Updates
+
+- placeholder
+- placeholder
 
 ## 0.80.0
 Thu, 26 Mar 2026 03:07:51 GMT
