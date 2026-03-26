@@ -224,7 +224,7 @@ describe("gRPC listTasks handler", () => {
     handlers = getHandlers();
   });
 
-  it("filters by exact search term", async () => {
+  it("filters by substring search term", async () => {
     const result = await handlers.listTasks({
       workspaceId: WORKSPACE_ID,
       search: "login",
