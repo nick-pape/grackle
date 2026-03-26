@@ -10,7 +10,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const SuccessWithOutput: Story = {
-  name: "Success — exit 0",
+  name: "Success - exit 0",
   args: {
     tool: "Bash",
     args: { command: "npm test -- --grep auth" },
@@ -26,7 +26,7 @@ export const SuccessWithOutput: Story = {
 };
 
 export const ErrorExit: Story = {
-  name: "Failure — exit 1",
+  name: "Failure - exit 1",
   args: {
     tool: "Bash",
     args: { command: "npm run build" },
@@ -41,7 +41,7 @@ export const ErrorExit: Story = {
 };
 
 export const PowerShellWrapper: Story = {
-  name: "Codex — PowerShell wrapper simplified",
+  name: "Codex - PowerShell wrapper simplified",
   args: {
     tool: "command_execution",
     args: { command: '"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe" -Command \'Get-Content -Path README.md\'' },
@@ -54,7 +54,7 @@ export const PowerShellWrapper: Story = {
 };
 
 export const LongOutput: Story = {
-  name: "Long output — expand/collapse",
+  name: "Long output - expand/collapse",
   args: {
     tool: "Bash",
     args: { command: "git log --oneline -10" },
@@ -86,7 +86,7 @@ export const InProgress: Story = {
 };
 
 export const EmptyOutput: Story = {
-  name: "Exit 0 — no output",
+  name: "Exit 0 - no output",
   args: {
     tool: "Bash",
     args: { command: "mkdir -p dist" },

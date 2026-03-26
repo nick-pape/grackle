@@ -261,6 +261,24 @@ export const MOCK_EVENTS: SessionEvent[] = [
   {
     sessionId: "sess-001",
     eventType: "tool_use",
+    timestamp: "2026-02-27T08:15:04.5Z",
+    content: JSON.stringify({
+      tool: "TodoWrite",
+      args: {
+        todos: [
+          { content: "Install jsonwebtoken package", activeForm: "Installing jsonwebtoken", status: "pending" },
+          { content: "Rewrite auth middleware for JWT", activeForm: "Rewriting auth middleware", status: "pending" },
+          { content: "Update login route to issue tokens", activeForm: "Updating login route", status: "pending" },
+          { content: "Update protected routes", activeForm: "Updating protected routes", status: "pending" },
+          { content: "Fix and update tests", activeForm: "Fixing tests", status: "pending" },
+          { content: "Run full test suite", activeForm: "Running tests", status: "pending" },
+        ],
+      },
+    }),
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "tool_use",
     timestamp: "2026-02-27T08:15:05Z",
     content: JSON.stringify({ tool: "Grep", args: { pattern: "express-session|req\\.session", path: "src/", output_mode: "files_with_matches" } }),
     raw: JSON.stringify({ id: "tu-001-01", type: "tool_use" }),
@@ -291,6 +309,24 @@ export const MOCK_EVENTS: SessionEvent[] = [
     timestamp: "2026-02-27T08:15:11Z",
     content: "added 12 packages in 3.2s\n\nadded 1 package in 0.8s",
     raw: JSON.stringify({ tool_use_id: "tu-001-02" }),
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T08:15:11.5Z",
+    content: JSON.stringify({
+      tool: "TodoWrite",
+      args: {
+        todos: [
+          { content: "Install jsonwebtoken package", activeForm: "Installing jsonwebtoken", status: "completed" },
+          { content: "Rewrite auth middleware for JWT", activeForm: "Rewriting auth middleware", status: "in_progress" },
+          { content: "Update login route to issue tokens", activeForm: "Updating login route", status: "pending" },
+          { content: "Update protected routes", activeForm: "Updating protected routes", status: "pending" },
+          { content: "Fix and update tests", activeForm: "Fixing tests", status: "pending" },
+          { content: "Run full test suite", activeForm: "Running tests", status: "pending" },
+        ],
+      },
+    }),
   },
   {
     sessionId: "sess-001",
@@ -662,6 +698,23 @@ export const MOCK_EVENTS: SessionEvent[] = [
   {
     sessionId: "sess-004",
     eventType: "tool_use",
+    timestamp: "2026-02-27T09:00:05.5Z",
+    content: JSON.stringify({
+      tool: "TodoWrite",
+      args: {
+        todos: [
+          { content: "Survey middleware structure", activeForm: "Surveying middleware", status: "in_progress" },
+          { content: "Implement token-bucket algorithm", activeForm: "Implementing token bucket", status: "pending" },
+          { content: "Add rate limit middleware to app", activeForm: "Adding middleware", status: "pending" },
+          { content: "Write tests for rate limiting", activeForm: "Writing tests", status: "pending" },
+          { content: "Add Redis adapter for multi-instance", activeForm: "Adding Redis adapter", status: "pending" },
+        ],
+      },
+    }),
+  },
+  {
+    sessionId: "sess-004",
+    eventType: "tool_use",
     timestamp: "2026-02-27T09:00:06Z",
     content: JSON.stringify({ tool: "Glob", args: { pattern: "src/middleware/**/*.ts" } }),
     raw: JSON.stringify({ id: "tu-004-01", type: "tool_use" }),
@@ -672,6 +725,23 @@ export const MOCK_EVENTS: SessionEvent[] = [
     timestamp: "2026-02-27T09:00:07Z",
     content: "src/middleware/cors.ts\nsrc/middleware/error-handler.ts\nsrc/middleware/logger.ts\nsrc/middleware/request-id.ts",
     raw: JSON.stringify({ tool_use_id: "tu-004-01" }),
+  },
+  {
+    sessionId: "sess-004",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T09:00:09Z",
+    content: JSON.stringify({
+      tool: "TodoWrite",
+      args: {
+        todos: [
+          { content: "Survey middleware structure", activeForm: "Surveying middleware", status: "completed" },
+          { content: "Implement token-bucket algorithm", activeForm: "Implementing token bucket", status: "in_progress" },
+          { content: "Add rate limit middleware to app", activeForm: "Adding middleware", status: "pending" },
+          { content: "Write tests for rate limiting", activeForm: "Writing tests", status: "pending" },
+          { content: "Add Redis adapter for multi-instance", activeForm: "Adding Redis adapter", status: "pending" },
+        ],
+      },
+    }),
   },
   {
     sessionId: "sess-004",

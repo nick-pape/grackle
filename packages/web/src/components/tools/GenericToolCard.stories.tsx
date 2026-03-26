@@ -10,7 +10,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const McpTool: Story = {
-  name: "MCP tool — formatted name",
+  name: "MCP tool - formatted name",
   args: {
     tool: "mcp__github__create_pull_request",
     args: { title: "Add auth middleware", base: "main", head: "feat/auth" },
@@ -37,7 +37,7 @@ export const UnknownTool: Story = {
 };
 
 export const InProgress: Story = {
-  name: "In-progress — shows formatted args",
+  name: "In-progress - shows formatted args",
   args: {
     tool: "WebFetch",
     args: { url: "https://api.example.com/data" },
@@ -50,7 +50,7 @@ export const InProgress: Story = {
 };
 
 export const LongResult: Story = {
-  name: "Long result — expand/collapse",
+  name: "Long result - expand/collapse",
   args: {
     tool: "WebSearch",
     args: { query: "nodejs best practices 2026" },
