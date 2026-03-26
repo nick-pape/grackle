@@ -1,3 +1,6 @@
+# Developer compose file — builds from source.
+# For the published GHCR image, see deploy/docker-compose.yml instead.
+
 services:
   grackle:
     build:
