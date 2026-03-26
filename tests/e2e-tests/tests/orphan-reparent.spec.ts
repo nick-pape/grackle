@@ -224,10 +224,7 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
     expect(doneTask.parentTaskId).toBe(parentId);
   });
 
-  // TODO(#496): pipe fd transfer runs but grandparent ends up with 0 pipe fds.
-  // Needs debugging — likely a session ID mapping issue between stub-mcp broker
-  // sessions and the actual pipe subscriptions. Core reparenting works.
-  test.skip("pipe fds transfer to grandparent when parent completes", async ({ grackle: { client } }) => {
+  test("pipe fds transfer to grandparent when parent completes", async ({ grackle: { client } }) => {
     test.setTimeout(90_000);
 
     // 1. Create workspace + hierarchy: grandparent → parent (stub-mcp, spawns piped child)
@@ -308,8 +305,7 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
     await waitForSessionStatus(client, gpSessionId, "stopped");
   });
 
-  // TODO(#496): same pipe fd transfer issue as above.
-  test.skip("pipe fds transfer to grandparent when parent is force-killed", async ({ grackle: { client } }) => {
+  test("pipe fds transfer to grandparent when parent is force-killed", async ({ grackle: { client } }) => {
     test.setTimeout(90_000);
 
     // 1. Create workspace + hierarchy

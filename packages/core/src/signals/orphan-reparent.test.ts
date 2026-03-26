@@ -337,6 +337,44 @@ describe("orphan reparenting subscriber", () => {
       expect(ensureAsyncDeliveryListener).toHaveBeenCalledWith("gp-sess");
     });
 
+    it("transfers pipe subscriptions even when no orphaned tasks exist", async () => {
+      vi.mocked(taskStore.getTask).mockReset();
+      vi.mocked(taskStore.getOrphanedTasks).mockReset();
+      vi.mocked(taskStore.reparentTask).mockReset();
+
+      const parentId = "pipe-only-parent";
+      const parent = { ...PARENT_TASK, id: parentId };
+
+      vi.mocked(taskStore.getTask).mockReturnValue(parent as never);
+      // No orphaned tasks — child was spawned via ipc_spawn (session-only, no task)
+      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([]);
+
+      // Parent has a session with a pipe subscription
+      vi.mocked(sessionStore.listSessionsForTask).mockReturnValue([
+        { id: "parent-sess-only", taskId: parentId, status: "idle" },
+      ] as never);
+      vi.mocked(sessionStore.getActiveSessionsForTask).mockReturnValue([
+        { id: "gp-sess-only", taskId: "grandparent-1", status: "idle" },
+      ] as never);
+
+      vi.mocked(streamRegistry.getSubscriptionsForSession).mockReturnValue([
+        { id: "sub-only", streamId: "stream-only", sessionId: "parent-sess-only", fd: 3, permission: "rw", deliveryMode: "async", createdBySpawn: true },
+      ] as never);
+      vi.mocked(streamRegistry.getStream).mockReturnValue({
+        id: "stream-only", name: "pipe:child-sess-only", subscriptions: new Map(),
+      } as never);
+
+      fireEvent({ type: "task.completed", payload: { taskId: parentId, workspaceId: "ws-1" } });
+      await flush();
+
+      // Pipe should be transferred even though no tasks were reparented
+      expect(streamRegistry.subscribe).toHaveBeenCalledWith(
+        "stream-only", "gp-sess-only", "rw", "async", true,
+      );
+      expect(streamRegistry.unsubscribe).toHaveBeenCalledWith("sub-only");
+      expect(taskStore.reparentTask).not.toHaveBeenCalled();
+    });
+
     it("skips transfer when no grandparent session is active", async () => {
       vi.mocked(taskStore.getTask).mockReset();
       vi.mocked(taskStore.getOrphanedTasks).mockReset();

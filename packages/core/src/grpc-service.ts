@@ -400,9 +400,11 @@ function killSessionAndCleanup(session: SessionRow): void {
   }
 
   // Transfer ALL pipe fds to grandparent BEFORE cleaning up subscriptions.
+  // Always transfer regardless of orphaned tasks: ipc_spawn creates child sessions
+  // (not tasks), so pipe subs exist even when getOrphanedTasks returns empty.
   if (session.taskId) {
     const task = taskStore.getTask(session.taskId);
-    if (task && taskStore.getOrphanedTasks(task.id).length > 0) {
+    if (task) {
       const grandparentId = task.parentTaskId || ROOT_TASK_ID;
       transferAllPipeSubscriptions(task.id, grandparentId);
     }
@@ -1713,10 +1715,10 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       // Transfer ALL pipe fds from this task's sessions to the grandparent BEFORE
       // closing sessions — once sessions are cleaned up, their subscriptions are gone.
-      if (taskStore.getOrphanedTasks(task.id).length > 0) {
-        const grandparentId = task.parentTaskId || ROOT_TASK_ID;
-        transferAllPipeSubscriptions(task.id, grandparentId);
-      }
+      // Always transfer regardless of orphaned tasks: ipc_spawn creates child sessions
+      // (not tasks), so pipe subs exist even when getOrphanedTasks returns empty.
+      const grandparentId = task.parentTaskId || ROOT_TASK_ID;
+      transferAllPipeSubscriptions(task.id, grandparentId);
 
       // Close lifecycle FDs for any active sessions — cascades to STOPPED via orphan callback
       const activeSessions = sessionStore.getActiveSessionsForTask(req.id);

@@ -87,25 +87,33 @@ async function handleParentTerminal(parentTaskId: string): Promise<void> {
     return;
   }
 
-  // Get non-terminal children
-  const orphans = taskStore.getOrphanedTasks(parentTaskId);
-  if (orphans.length === 0) {
-    return;
-  }
-
   // Mark as processed before doing work (prevents concurrent re-entry)
   processed.set(parentTaskId, now);
 
   // Determine the grandparent (or root task as ultimate adopter)
   const grandparentId = parentTask.parentTaskId || ROOT_TASK_ID;
 
+  // Always transfer pipe fds from dead parent to grandparent, even when there
+  // are no orphaned tasks. ipc_spawn creates child sessions (not tasks), so
+  // pipe subscriptions can exist without corresponding child tasks.
+  transferAllPipeSubscriptions(parentTaskId, grandparentId);
+
+  // Get non-terminal children for reparenting
+  const orphans = taskStore.getOrphanedTasks(parentTaskId);
+  if (orphans.length === 0) {
+    // Evict stale dedup entries even when no reparenting needed
+    for (const [key, ts] of processed) {
+      if (now - ts > DEDUP_TTL_MS) {
+        processed.delete(key);
+      }
+    }
+    return;
+  }
+
   logger.info(
     { parentTaskId, grandparentId, orphanCount: orphans.length, reason: parentTask.status },
     "Reparenting orphaned children to grandparent",
   );
-
-  // Transfer ALL pipe fds from dead parent to grandparent (once, not per child)
-  transferAllPipeSubscriptions(parentTaskId, grandparentId);
 
   // Reparent each orphan
   for (const orphan of orphans) {
