@@ -219,15 +219,11 @@ export interface UseGrackleSocketResult {
 // ─── Composition hook ─────────────────────────────────────────────────────────
 
 /**
- * Top-level hook that composes all domain hooks over a single WebSocket.
+ * Top-level hook that composes all domain hooks over a unified ConnectRPC
+ * event stream. Domain hooks are called first (React hook order requirement),
+ * then {@link useEventStream} subscribes to `StreamEvents` and routes
+ * session/domain events to the appropriate hooks via refs.
  *
- * Hook call order is fixed (React requirement). `useWebSocket` is called first
- * to obtain a stable `send` reference. It stores `onMessage`/`onConnect`/
- * `onDisconnect` in refs, so they can safely reference domain hooks defined
- * after `useWebSocket` in the call order — the refs pick up the latest
- * callbacks each render.
- *
- * @param url - Optional WebSocket URL override.
  * @returns The full Grackle client state and actions.
  */
 export function useGrackleSocket(): UseGrackleSocketResult {
