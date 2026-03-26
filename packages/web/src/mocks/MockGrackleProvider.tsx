@@ -1035,10 +1035,11 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         searchQuery: knowledgeSearchQuery,
         search: (query: string) => {
           console.log("[MockGrackle] knowledge.search", query);
-          setKnowledgeSearchQuery(query);
           if (!query.trim()) {
+            setKnowledgeSearchQuery(query);
             return;
           }
+          setKnowledgeSearchQuery(query);
           // Start from workspace-scoped base set, not the full graph
           const wsId = knowledgeWorkspaceRef.current;
           const baseNodes = wsId
