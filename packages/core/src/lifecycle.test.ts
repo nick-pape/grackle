@@ -13,6 +13,10 @@ vi.mock("./event-bus.js", () => ({
   emit: vi.fn(),
 }));
 
+vi.mock("./event-processor.js", () => ({
+  processEventStream: vi.fn(),
+}));
+
 // ── Imports ─────────────────────────────────────────────────
 import { openDatabase, initDatabase, sqlite as _sqlite, sessionStore } from "@grackle-ai/database";
 openDatabase(":memory:");
@@ -324,5 +328,122 @@ describe("ensureLifecycleStream", () => {
     expect(final?.status).toBe("stopped");
     expect(final?.endReason).toBe("killed");
     expect(mockKill).toHaveBeenCalledOnce();
+  });
+});
+
+describe("auto-reanimate on subscribe", () => {
+  let mockKill: ReturnType<typeof vi.fn>;
+  let mockResume: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    sqlite.exec("DROP TABLE IF EXISTS environments");
+    applySchema();
+    vi.clearAllMocks();
+    streamRegistry._resetForTesting();
+    resetLifecycle();
+
+    initLifecycleManager();
+
+    mockKill = vi.fn().mockResolvedValue({});
+    mockResume = vi.fn().mockReturnValue((async function* () { /* empty stream */ })());
+    vi.spyOn(adapterManager, "getConnection").mockReturnValue({
+      client: { kill: mockKill, resume: mockResume },
+    } as unknown as ReturnType<typeof adapterManager.getConnection>);
+  });
+
+  it("reanimates STOPPED session when external subscription created", () => {
+    sessionStore.createSession("sess-1", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+    sessionStore.updateSession("sess-1", "stopped", undefined, undefined, "completed");
+    // Set runtimeSessionId (required for reanimate)
+    sqlite.exec("UPDATE sessions SET runtime_session_id = 'rt-1' WHERE id = 'sess-1'");
+
+    // Create lifecycle stream (simulates ensureLifecycleStream from a prior spawn)
+    const stream = streamRegistry.createStream("lifecycle:sess-1");
+    // Session's own subscription — should NOT trigger reanimate
+    streamRegistry.subscribe(stream.id, "sess-1", "rw", "detach", false);
+
+    // External subscription — SHOULD trigger reanimate
+    streamRegistry.subscribe(stream.id, "__server__", "rw", "detach", true);
+
+    const session = sessionStore.getSession("sess-1");
+    expect(session?.status).toBe("running");
+  });
+
+  it("does NOT reanimate active session", () => {
+    sessionStore.createSession("sess-1", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+    sessionStore.updateSessionStatus("sess-1", "running");
+    sqlite.exec("UPDATE sessions SET runtime_session_id = 'rt-1' WHERE id = 'sess-1'");
+
+    const stream = streamRegistry.createStream("lifecycle:sess-1");
+    streamRegistry.subscribe(stream.id, "sess-1", "rw", "detach", false);
+    streamRegistry.subscribe(stream.id, "__server__", "rw", "detach", true);
+
+    // Should stay running (not re-triggered)
+    expect(sessionStore.getSession("sess-1")?.status).toBe("running");
+    expect(mockResume).not.toHaveBeenCalled();
+  });
+
+  it("does NOT reanimate when session has no runtimeSessionId", () => {
+    sessionStore.createSession("sess-1", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+    sessionStore.updateSession("sess-1", "stopped", undefined, undefined, "completed");
+    // No runtimeSessionId set
+
+    const stream = streamRegistry.createStream("lifecycle:sess-1");
+    streamRegistry.subscribe(stream.id, "sess-1", "rw", "detach", false);
+    streamRegistry.subscribe(stream.id, "__server__", "rw", "detach", true);
+
+    expect(sessionStore.getSession("sess-1")?.status).toBe("stopped");
+    expect(mockResume).not.toHaveBeenCalled();
+  });
+
+  it("does NOT reanimate when environment has another active session", () => {
+    sessionStore.createSession("active-sess", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+    sessionStore.updateSessionStatus("active-sess", "running");
+
+    sessionStore.createSession("stopped-sess", "test-env", "claude-code", "test", "sonnet", "/tmp/log2");
+    sessionStore.updateSession("stopped-sess", "stopped", undefined, undefined, "completed");
+    sqlite.exec("UPDATE sessions SET runtime_session_id = 'rt-2' WHERE id = 'stopped-sess'");
+
+    const stream = streamRegistry.createStream("lifecycle:stopped-sess");
+    streamRegistry.subscribe(stream.id, "stopped-sess", "rw", "detach", false);
+    streamRegistry.subscribe(stream.id, "__server__", "rw", "detach", true);
+
+    expect(sessionStore.getSession("stopped-sess")?.status).toBe("stopped");
+    expect(mockResume).not.toHaveBeenCalled();
+  });
+
+  it("does NOT reanimate when environment is disconnected", () => {
+    sessionStore.createSession("sess-1", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+    sessionStore.updateSession("sess-1", "stopped", undefined, undefined, "completed");
+    sqlite.exec("UPDATE sessions SET runtime_session_id = 'rt-1' WHERE id = 'sess-1'");
+
+    // Override mock to return undefined (disconnected)
+    vi.spyOn(adapterManager, "getConnection").mockReturnValue(undefined as unknown as ReturnType<typeof adapterManager.getConnection>);
+
+    const stream = streamRegistry.createStream("lifecycle:sess-1");
+    streamRegistry.subscribe(stream.id, "sess-1", "rw", "detach", false);
+    streamRegistry.subscribe(stream.id, "__server__", "rw", "detach", true);
+
+    expect(sessionStore.getSession("sess-1")?.status).toBe("stopped");
+  });
+
+  it("reanimates regardless of endReason", () => {
+    for (const reason of ["completed", "killed", "interrupted", "terminated"]) {
+      sqlite.exec("DELETE FROM sessions");
+      streamRegistry._resetForTesting();
+      resetLifecycle();
+      initLifecycleManager();
+
+      sessionStore.createSession(`sess-${reason}`, "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+      sessionStore.updateSession(`sess-${reason}`, "stopped", undefined, undefined, reason);
+      sqlite.exec(`UPDATE sessions SET runtime_session_id = 'rt-${reason}' WHERE id = 'sess-${reason}'`);
+
+      const stream = streamRegistry.createStream(`lifecycle:sess-${reason}`);
+      streamRegistry.subscribe(stream.id, `sess-${reason}`, "rw", "detach", false);
+      streamRegistry.subscribe(stream.id, "__server__", "rw", "detach", true);
+
+      expect(sessionStore.getSession(`sess-${reason}`)?.status).toBe("running");
+    }
   });
 });
