@@ -123,8 +123,7 @@ describe("Cron phase integration", () => {
 
     // Verify startTaskSession was called with correct args
     expect(mockStartTaskSession).toHaveBeenCalledTimes(1);
-    const [ws, task, options] = mockStartTaskSession.mock.calls[0] as [undefined, TaskRow, { environmentId: string; personaId: string }];
-    expect(ws).toBeUndefined();
+    const [task, options] = mockStartTaskSession.mock.calls[0] as [TaskRow, { environmentId: string; personaId: string }];
     expect(task.id).toBe(tasks[0].id);
     expect(options.environmentId).toBe("local-env");
     expect(options.personaId).toBe("stub-persona");

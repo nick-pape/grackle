@@ -60,8 +60,11 @@ export interface UseSessionsResult {
   /**
    * Handle an incoming WebSocket message. Returns `true` if handled.
    * Only handles real-time `session_event` push messages from subscribe_all.
+   * @deprecated Use handleSessionEvent for ConnectRPC streaming.
    */
   handleMessage: (msg: WsMessage) => boolean;
+  /** Handle a session event from the ConnectRPC StreamEvents RPC. */
+  handleSessionEvent: (event: SessionEvent) => void;
   /** Handle legacy WS messages injected by E2E tests. */
   handleLegacyMessage?: (msg: WsMessage) => boolean;
 }
@@ -194,6 +197,11 @@ export function useSessions(): UseSessionsResult {
     }
     return true;
   }, []);
+
+  /** Handle a session event directly from ConnectRPC StreamEvents. */
+  const handleSessionEvent = useCallback((event: SessionEvent): void => {
+    handleMessage({ type: "session_event", payload: event as unknown as Record<string, unknown> });
+  }, [handleMessage]);
 
   const handleLegacyMessage = useCallback((msg: WsMessage): boolean => {
     switch (msg.type) {
@@ -356,6 +364,7 @@ export function useSessions(): UseSessionsResult {
     clearEvents,
     loadTaskSessions,
     handleMessage,
+    handleSessionEvent,
     handleLegacyMessage,
   };
 }

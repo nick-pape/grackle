@@ -30,10 +30,6 @@ vi.mock("../stream-hub.js", () => ({
   }),
 }));
 
-vi.mock("../ws-broadcast.js", () => ({
-  broadcast: vi.fn(),
-  setWssInstance: vi.fn(),
-}));
 
 vi.mock("../event-bus.js", () => {
   const subscribers: Array<(event: unknown) => void> = [];

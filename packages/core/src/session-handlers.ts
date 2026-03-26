@@ -29,6 +29,7 @@ import * as logWriter from "./log-writer.js";
 import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
 import { resolvePersona, SystemPromptBuilder } from "@grackle-ai/prompt";
 import { sendInputToSession } from "./signals/signal-delivery.js";
+import { createEventStream } from "./event-hub.js";
 import { sessionRowToProto } from "./grpc-proto-converters.js";
 import { validatePipeInputs, toDialableHost, killSessionAndCleanup } from "./grpc-shared.js";
 import { personaMcpServersToJson } from "./grpc-mcp-config.js";
@@ -582,6 +583,18 @@ export async function* streamSession(req: grackle.SessionId): AsyncGenerator<gra
 /** Stream all session events across all sessions. */
 export async function* streamAll(): AsyncGenerator<grackle.SessionEvent> {
   const stream = streamHub.createGlobalStream();
+  try {
+    for await (const event of stream) {
+      yield event;
+    }
+  } finally {
+    stream.cancel();
+  }
+}
+
+/** Stream domain events (replaces WebSocket event broadcasting). */
+export async function* streamEvents(): AsyncGenerator<grackle.ServerEvent> {
+  const stream = createEventStream();
   try {
     for await (const event of stream) {
       yield event;

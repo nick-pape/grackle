@@ -35,7 +35,6 @@ export interface CronPhaseDeps {
   setTaskScheduleId: (taskId: string, scheduleId: string) => void;
   /** Start a task session internally (same as root task boot listener). */
   startTaskSession: (
-    ws: undefined,
     task: TaskRow,
     options?: { personaId?: string; environmentId?: string; notes?: string },
   ) => Promise<string | undefined>;
@@ -162,7 +161,7 @@ async function fireSchedule(deps: CronPhaseDeps, schedule: ScheduleRow): Promise
     }
 
     // Start the task session
-    const error = await deps.startTaskSession(undefined, task, {
+    const error = await deps.startTaskSession(task, {
       environmentId,
       personaId: schedule.personaId,
     });

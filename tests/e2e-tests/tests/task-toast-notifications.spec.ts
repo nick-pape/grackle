@@ -1,118 +1,85 @@
 import { test, expect } from "./fixtures.js";
-import { installWsTracker, injectWsMessage } from "./helpers.js";
+import { grackle } from "@grackle-ai/common";
+import {
+  stubScenario,
+  emitText,
+  idle,
+  waitMs,
+  navigateToTask,
+} from "./helpers.js";
 
 /**
  * Tests that task state changes trigger toast notifications in the web UI.
  *
- * Uses WebSocket injection (same pattern as environment-status-broadcast.spec.ts)
- * to simulate task list updates without needing a real task runtime.
+ * Uses real task lifecycle operations (start, complete, update, delete) via the
+ * gRPC API with the stub runtime to produce genuine domain events that flow
+ * through the ConnectRPC StreamEvents transport.
  *
  * Toast messages are generic (no resource names) — see App.tsx comment.
  */
 
-/** Build a full task payload object for WS injection. */
-function makeInjectedTask(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    id: "toast-test-task",
-    workspaceId: "toast-test-ws",
-    title: "Toast Test Task",
-    description: "",
-    status: "not_started",
-    branch: "",
-    latestSessionId: "",
-    dependsOn: [],
-    sortOrder: 0,
-    createdAt: new Date().toISOString(),
-    parentTaskId: "",
-    depth: 0,
-    childTaskIds: [],
-    canDecompose: false,
-    defaultPersonaId: "",
-    ...overrides,
-  };
-}
-
-/** Inject a task list via WebSocket. */
-async function injectTaskList(
-  page: import("@playwright/test").Page,
-  tasks: Record<string, unknown>[],
-): Promise<void> {
-  await injectWsMessage(page, {
-    type: "tasks",
-    payload: { workspaceId: "toast-test-ws", tasks },
-  });
-}
-
 test.describe("Task State Toast Notifications", { tag: ["@task"] }, () => {
-  test("injected task status change to working shows started toast", async ({ page }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
+  test("task start shows started toast", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    // Inject task in initial state
-    await injectTaskList(page, [makeInjectedTask({ status: "not_started" })]);
+    // Create a task with a delay before idle to ensure the "working" state is
+    // visible long enough for the client's task fetch to return it. Without
+    // the delay, the stub runtime can reach idle before the first loadTasks
+    // completes, causing the client to see not_started→paused and skip the
+    // "Task is now running" toast entirely.
+    await stubTask.createAndNavigate("toast-start", stubScenario(emitText("working"), waitMs(3000), idle()));
 
-    // Transition to working
-    await injectTaskList(page, [makeInjectedTask({ status: "working" })]);
+    // Start the task — transitions from not_started → working
+    await page.getByTestId("task-header-start").click();
 
-    // Generic started toast should appear
-    await expect(page.getByText("Task is now running")).toBeVisible({ timeout: 5_000 });
+    // "Task is now running" toast should appear
+    await expect(page.getByText("Task is now running")).toBeVisible({ timeout: 20_000 });
   });
 
-  test("injected task completion shows completed toast", async ({ page }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
+  test("task completion shows completed toast", async ({ stubTask }) => {
+    const { page, client } = stubTask;
 
-    // Inject task in working state
-    await injectTaskList(page, [makeInjectedTask({ status: "working" })]);
+    const task = await stubTask.createTask("toast-complete");
+    await navigateToTask(page, "toast-complete");
 
-    // Transition to complete
-    await injectTaskList(page, [makeInjectedTask({ status: "complete" })]);
+    // Complete the task directly via RPC (not_started → complete)
+    await client.completeTask({ id: task.id as string });
 
-    // Generic completed toast should appear
-    await expect(page.getByText("Task complete")).toBeVisible({ timeout: 5_000 });
+    // "Task complete" toast should appear
+    await expect(page.getByText("Task complete", { exact: true })).toBeVisible({ timeout: 10_000 });
   });
 
-  test("injected task failure shows failed toast", async ({ page }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
+  test("task failure shows failed toast", async ({ stubTask }) => {
+    const { page, client } = stubTask;
 
-    // Inject task in working state
-    await injectTaskList(page, [makeInjectedTask({ status: "working" })]);
+    const task = await stubTask.createTask("toast-fail");
+    await navigateToTask(page, "toast-fail");
 
-    // Transition to failed
-    await injectTaskList(page, [makeInjectedTask({ status: "failed" })]);
+    // Set task status to FAILED via UpdateTask
+    await client.updateTask({
+      id: task.id as string,
+      title: "",
+      description: "",
+      status: grackle.TaskStatus.FAILED,
+      dependsOn: [],
+    });
 
-    // Generic failed toast should appear
-    await expect(page.getByText("Task failed to complete")).toBeVisible({ timeout: 5_000 });
+    // "Task failed to complete" toast should appear
+    await expect(page.getByText("Task failed to complete")).toBeVisible({ timeout: 10_000 });
   });
 
-  test("injected task removal shows deleted toast", async ({ page }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
+  test("task removal shows deleted toast", async ({ stubTask }) => {
+    const { page, client } = stubTask;
 
-    // Inject a task
-    await injectTaskList(page, [makeInjectedTask({ status: "working" })]);
+    const task = await stubTask.createTask("toast-delete");
 
-    // Remove the task (inject empty list)
-    await injectTaskList(page, []);
+    // Navigate to the task to ensure the client has processed the domain event
+    await navigateToTask(page, "toast-delete");
 
-    // Generic deleted toast should appear
+    // Delete the task via RPC
+    await client.deleteTask({ id: task.id as string });
+
+    // "Task deleted" toast should appear
     await expect(page.getByText("Task deleted")).toBeVisible({ timeout: 5_000 });
   });
 });
