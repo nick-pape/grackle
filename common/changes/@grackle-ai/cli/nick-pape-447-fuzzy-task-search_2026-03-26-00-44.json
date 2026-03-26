@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Use fuzzy search for server-side task search (CLI and MCP)",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
