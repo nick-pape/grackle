@@ -254,11 +254,13 @@ Each persona can define an `allowed_mcp_tools` list that restricts which MCP too
 3. If the persona has no explicit tool list (empty `allowed_mcp_tools`), the **default scoped set** is used:
    - `finding_post`, `finding_list`
    - `task_create`, `task_list`, `task_show`, `task_start`, `task_complete`
-   - `session_send_input`
+   - `session_attach`, `session_send_input`
    - `persona_list`, `persona_show`
    - `ipc_spawn`, `ipc_write`, `ipc_close`, `ipc_terminate`, `ipc_list_fds`
    - `knowledge_search`, `knowledge_get_node`
+   - `logs_get`
    - `workpad_write`, `workpad_read`
+   - `schedule_list`, `schedule_show`
 
 ### Preset Tool Sets
 
@@ -266,7 +268,7 @@ Predefined presets are available for convenience (via CLI `--mcp-tools-preset` o
 
 | Preset | Description |
 |--------|-------------|
-| `default` | The 21-tool default scoped set (backward compatible) |
+| `default` | The 23-tool default scoped set (backward compatible) |
 | `worker` | Subset of default — no task creation capabilities |
 | `orchestrator` | Default + task management, session spawning, persona creation, scheduling |
 | `admin` | Full access to all 58 tools |
