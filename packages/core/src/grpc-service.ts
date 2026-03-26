@@ -4,7 +4,7 @@ import { grackle, powerline } from "@grackle-ai/common";
 import type { PipeMode } from "@grackle-ai/common";
 import { v4 as uuid } from "uuid";
 import type { EnvironmentRow, SessionRow } from "@grackle-ai/database";
-import { envRegistry, sessionStore, tokenStore, workspaceStore, taskStore, findingStore, personaStore, settingsStore, isAllowedSettingKey, credentialProviders, grackleHome, safeParseJsonArray, slugify } from "@grackle-ai/database";
+import { envRegistry, sessionStore, tokenStore, workspaceStore, taskStore, findingStore, personaStore, settingsStore, scheduleStore, isAllowedSettingKey, credentialProviders, grackleHome, safeParseJsonArray, slugify } from "@grackle-ai/database";
 import * as adapterManager from "./adapter-manager.js";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import * as streamHub from "./stream-hub.js";
@@ -39,6 +39,7 @@ import {
 } from "@grackle-ai/common";
 import * as logWriter from "./log-writer.js";
 import { resolvePersona, fetchOrchestratorContext, SystemPromptBuilder, buildTaskPrompt } from "@grackle-ai/prompt";
+import { validateExpression, computeNextRunAt } from "./schedule-expression.js";
 import { createScopedToken, loadOrCreateApiKey, generatePairingCode } from "@grackle-ai/auth";
 import { computeTaskStatus } from "./compute-task-status.js";
 import { logger } from "./logger.js";
@@ -194,6 +195,26 @@ function taskRowToProto(
     canDecompose: row.canDecompose,
     defaultPersonaId: row.defaultPersonaId,
     workpad: row.workpad,
+    scheduleId: row.scheduleId,
+  });
+}
+
+function scheduleRowToProto(row: scheduleStore.ScheduleRow): grackle.Schedule {
+  return create(grackle.ScheduleSchema, {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    scheduleExpression: row.scheduleExpression,
+    personaId: row.personaId,
+    environmentId: row.environmentId,
+    workspaceId: row.workspaceId,
+    parentTaskId: row.parentTaskId,
+    enabled: row.enabled,
+    lastRunAt: row.lastRunAt ?? "",
+    nextRunAt: row.nextRunAt ?? "",
+    runCount: row.runCount,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   });
 }
 
@@ -2055,6 +2076,137 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       emit("persona.deleted", { personaId: req.id });
       return create(grackle.EmptySchema, {});
     },
+    // ─── Schedules ────────────────────────────────────────────
+
+    async createSchedule(req: grackle.CreateScheduleRequest) {
+      const title = req.title.trim();
+      const expr = req.scheduleExpression.trim();
+      const personaId = req.personaId.trim();
+      if (!title) {
+        throw new ConnectError("title is required", Code.InvalidArgument);
+      }
+      if (!expr) {
+        throw new ConnectError("schedule_expression is required", Code.InvalidArgument);
+      }
+      if (!personaId) {
+        throw new ConnectError("persona_id is required", Code.InvalidArgument);
+      }
+      // Validate persona exists
+      const persona = personaStore.getPersona(personaId);
+      if (!persona) {
+        throw new ConnectError(`Persona not found: ${personaId}`, Code.NotFound);
+      }
+      // Validate expression
+      try {
+        validateExpression(expr);
+      } catch (err) {
+        throw new ConnectError(
+          err instanceof Error ? err.message : "Invalid schedule expression",
+          Code.InvalidArgument,
+        );
+      }
+      const id = uuid();
+      const nextRunAt = computeNextRunAt(expr);
+      scheduleStore.createSchedule(
+        id,
+        title,
+        req.description,
+        expr,
+        personaId,
+        req.environmentId,
+        req.workspaceId,
+        req.parentTaskId,
+        nextRunAt,
+      );
+      emit("schedule.created", { scheduleId: id });
+      const row = scheduleStore.getSchedule(id);
+      return scheduleRowToProto(row!);
+    },
+
+    async listSchedules(req: grackle.ListSchedulesRequest) {
+      const rows = scheduleStore.listSchedules(req.workspaceId || undefined);
+      return create(grackle.ScheduleListSchema, {
+        schedules: rows.map(scheduleRowToProto),
+      });
+    },
+
+    async getSchedule(req: grackle.ScheduleId) {
+      const row = scheduleStore.getSchedule(req.id);
+      if (!row) {
+        throw new ConnectError(`Schedule not found: ${req.id}`, Code.NotFound);
+      }
+      return scheduleRowToProto(row);
+    },
+
+    async updateSchedule(req: grackle.UpdateScheduleRequest) {
+      const existing = scheduleStore.getSchedule(req.id);
+      if (!existing) {
+        throw new ConnectError(`Schedule not found: ${req.id}`, Code.NotFound);
+      }
+
+      const update: scheduleStore.ScheduleUpdate = {};
+      if (req.title !== undefined && req.title.trim() !== "") {
+        update.title = req.title.trim();
+      }
+      if (req.description !== undefined) {
+        update.description = req.description;
+      }
+      if (req.personaId !== undefined && req.personaId.trim() !== "") {
+        const trimmedPersonaId = req.personaId.trim();
+        const persona = personaStore.getPersona(trimmedPersonaId);
+        if (!persona) {
+          throw new ConnectError(`Persona not found: ${trimmedPersonaId}`, Code.NotFound);
+        }
+        update.personaId = trimmedPersonaId;
+      }
+      if (req.environmentId !== undefined) {
+        update.environmentId = req.environmentId;
+      }
+
+      // Handle schedule expression change
+      let expressionChanged = false;
+      if (req.scheduleExpression !== undefined && req.scheduleExpression !== "") {
+        const expr = req.scheduleExpression.trim();
+        try {
+          validateExpression(expr);
+        } catch (err) {
+          throw new ConnectError(
+            err instanceof Error ? err.message : "Invalid schedule expression",
+            Code.InvalidArgument,
+          );
+        }
+        update.scheduleExpression = expr;
+        expressionChanged = true;
+      }
+
+      // Handle enable/disable
+      if (req.enabled !== undefined) {
+        update.enabled = req.enabled;
+        if (req.enabled) {
+          const expr = update.scheduleExpression ?? existing.scheduleExpression;
+          update.nextRunAt = computeNextRunAt(expr);
+        } else {
+          update.nextRunAt = null;
+        }
+      } else if (expressionChanged) {
+        // Recompute nextRunAt when expression changes (if currently enabled)
+        if (existing.enabled) {
+          update.nextRunAt = computeNextRunAt(update.scheduleExpression!);
+        }
+      }
+
+      scheduleStore.updateSchedule(req.id, update);
+      emit("schedule.updated", { scheduleId: req.id });
+      const row = scheduleStore.getSchedule(req.id);
+      return scheduleRowToProto(row!);
+    },
+
+    async deleteSchedule(req: grackle.ScheduleId) {
+      scheduleStore.deleteSchedule(req.id);
+      emit("schedule.deleted", { scheduleId: req.id });
+      return create(grackle.EmptySchema, {});
+    },
+
     // ─── Settings ─────────────────────────────────────────────
 
     async getSetting(req: grackle.GetSettingRequest) {

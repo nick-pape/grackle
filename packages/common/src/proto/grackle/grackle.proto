@@ -342,6 +342,7 @@ message Task {
   reserved 21; // was persona_id (moved to Session)
   string default_persona_id = 22; // Default persona for this task (overrides workspace default)
   string workpad = 23; // Persistent structured context (JSON) that survives across sessions
+  string schedule_id = 24; // ID of the schedule that created this task (empty for manually-created tasks)
 }
 
 message TaskList {
@@ -499,6 +500,57 @@ message UpdatePersonaRequest {
   string type = 10; // "agent" or "script"
   string script = 11; // Script source code (for script personas)
   repeated string allowed_mcp_tools = 12; // Persona-scoped MCP tool allowlist
+}
+
+// ─── Schedules ─────────────────────────────────────────────
+
+message Schedule {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string schedule_expression = 4; // Interval shorthand ("30s", "5m") or cron expression ("0 9 * * MON")
+  string persona_id = 5;
+  string environment_id = 6; // Empty = auto-select first connected environment
+  string workspace_id = 7; // Empty = system-level schedule
+  string parent_task_id = 8; // Empty = ROOT_TASK_ID
+  bool enabled = 9;
+  string last_run_at = 10;
+  string next_run_at = 11;
+  int32 run_count = 12;
+  string created_at = 13;
+  string updated_at = 14;
+}
+
+message ScheduleId {
+  string id = 1;
+}
+
+message ScheduleList {
+  repeated Schedule schedules = 1;
+}
+
+message CreateScheduleRequest {
+  string title = 1;
+  string description = 2;
+  string schedule_expression = 3;
+  string persona_id = 4;
+  string environment_id = 5; // Empty = auto-select
+  string workspace_id = 6; // Empty = system-level
+  string parent_task_id = 7; // Empty = ROOT_TASK_ID
+}
+
+message UpdateScheduleRequest {
+  string id = 1;
+  optional string title = 2;
+  optional string description = 3;
+  optional string schedule_expression = 4;
+  optional string persona_id = 5;
+  optional string environment_id = 6;
+  optional bool enabled = 7;
+}
+
+message ListSchedulesRequest {
+  string workspace_id = 1; // Empty = all
 }
 
 // ─── Codespaces ────────────────────────────────────────────
@@ -720,6 +772,13 @@ service Grackle {
   // Findings
   rpc PostFinding(PostFindingRequest) returns (Finding);
   rpc QueryFindings(QueryFindingsRequest) returns (FindingList);
+
+  // Schedules
+  rpc CreateSchedule(CreateScheduleRequest) returns (Schedule);
+  rpc ListSchedules(ListSchedulesRequest) returns (ScheduleList);
+  rpc GetSchedule(ScheduleId) returns (Schedule);
+  rpc UpdateSchedule(UpdateScheduleRequest) returns (Schedule);
+  rpc DeleteSchedule(ScheduleId) returns (Empty);
 
   // Codespaces
   rpc ListCodespaces(Empty) returns (CodespaceList);

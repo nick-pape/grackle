@@ -46,7 +46,8 @@ function applySchema(): void {
       depth         INTEGER NOT NULL DEFAULT 0,
       can_decompose INTEGER NOT NULL DEFAULT 0,
       default_persona_id TEXT NOT NULL DEFAULT '',
-      workpad       TEXT NOT NULL DEFAULT ''
+      workpad       TEXT NOT NULL DEFAULT '',
+      schedule_id   TEXT NOT NULL DEFAULT ''
     );
   `);
 }
@@ -371,6 +372,17 @@ describe("task-store tree operations", () => {
 
       taskStore.setTaskWorkspace("t1", "ws-2");
       expect(taskStore.getTask("t1")!.workspaceId).toBe("ws-2");
+    });
+  });
+
+  describe("setTaskScheduleId", () => {
+    it("sets the schedule_id on a task", () => {
+      taskStore.createTask("t1", "test-proj", "Task", "desc", [], "proj");
+      expect(taskStore.getTask("t1")!.scheduleId).toBe("");
+
+      taskStore.setTaskScheduleId("t1", "sched-1");
+      const task = taskStore.getTask("t1");
+      expect(task!.scheduleId).toBe("sched-1");
     });
   });
 

@@ -9,8 +9,8 @@ import {
 } from "./mcp-tool-presets.js";
 
 describe("ALL_MCP_TOOL_NAMES", () => {
-  it("contains exactly 53 tool names", () => {
-    expect(ALL_MCP_TOOL_NAMES.size).toBe(53);
+  it("contains exactly 58 tool names", () => {
+    expect(ALL_MCP_TOOL_NAMES.size).toBe(58);
   });
 
   it("includes tools from every group", () => {
@@ -28,6 +28,7 @@ describe("ALL_MCP_TOOL_NAMES", () => {
       "token_list",
       "usage_get",
       "get_version_status",
+      "schedule_list",
       "workpad_write",
       "workspace_list",
     ];
@@ -38,12 +39,13 @@ describe("ALL_MCP_TOOL_NAMES", () => {
 });
 
 describe("DEFAULT_SCOPED_MCP_TOOLS", () => {
-  it("contains the current 18 scoped tools", () => {
+  it("contains the current 21 scoped tools", () => {
     expect([...DEFAULT_SCOPED_MCP_TOOLS].sort()).toEqual([
       "finding_list", "finding_post",
       "ipc_close", "ipc_list_fds", "ipc_spawn", "ipc_terminate", "ipc_write",
       "knowledge_get_node", "knowledge_search",
       "persona_list", "persona_show",
+      "schedule_list", "schedule_show",
       "session_send_input",
       "task_complete", "task_create", "task_list", "task_show", "task_start",
       "workpad_read", "workpad_write",
@@ -104,8 +106,8 @@ describe("ORCHESTRATOR_MCP_TOOLS", () => {
 });
 
 describe("ADMIN_MCP_TOOLS", () => {
-  it("contains all 53 tool names", () => {
-    expect(ADMIN_MCP_TOOLS).toHaveLength(53);
+  it("contains all 58 tool names", () => {
+    expect(ADMIN_MCP_TOOLS).toHaveLength(58);
   });
 
   it("matches ALL_MCP_TOOL_NAMES exactly", () => {

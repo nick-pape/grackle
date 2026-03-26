@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "placeholder",
-      "type": "none",
+      "comment": "Generalize CronManager into ReconciliationManager with pluggable tick phases",
+      "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
   ],

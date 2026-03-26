@@ -10,9 +10,10 @@ import {
   pushToEnv, attemptReconnects, resetReconnectState,
   parseAdapterConfig, isKnowledgeEnabled, initKnowledge,
   computeTaskStatus,
+  ReconciliationManager, createCronPhase, findFirstConnectedEnvironment,
   logger, exec, detectLanIp,
 } from "@grackle-ai/core";
-import { envRegistry, sessionStore, workspaceStore, taskStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome } from "@grackle-ai/database";
+import { envRegistry, sessionStore, workspaceStore, taskStore, scheduleStore, personaStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome } from "@grackle-ai/database";
 import { DockerAdapter } from "@grackle-ai/adapter-docker";
 import { LocalAdapter } from "@grackle-ai/adapter-local";
 import { SshAdapter } from "@grackle-ai/adapter-ssh";
@@ -225,6 +226,26 @@ async function main(): Promise<void> {
   startSessionCleanup();
   startOAuthCleanup();
 
+  // --- Reconciliation Manager ---
+  const cronPhase = createCronPhase({
+    getDueSchedules: scheduleStore.getDueSchedules,
+    advanceSchedule: scheduleStore.advanceSchedule,
+    createTask: taskStore.createTask,
+    setTaskScheduleId: taskStore.setTaskScheduleId,
+    startTaskSession,
+    emit,
+    findFirstConnectedEnvironment,
+    getPersona: personaStore.getPersona,
+    getTask: taskStore.getTask,
+    setScheduleEnabled: scheduleStore.setScheduleEnabled,
+    isEnvironmentConnected: (id: string) => {
+      const env = envRegistry.getEnvironment(id);
+      return env?.status === "connected";
+    },
+  });
+  const reconciliationManager = new ReconciliationManager([cronPhase]);
+  reconciliationManager.start();
+
   // --- gRPC server (HTTP/2) ---
   const grpcPort = parseInt(process.env.GRACKLE_PORT || String(DEFAULT_SERVER_PORT), 10);
   const bindHost = process.env.GRACKLE_HOST || "127.0.0.1";
@@ -310,9 +331,7 @@ async function main(): Promise<void> {
         }
 
         // Find any connected environment (prefer local)
-        const allEnvs = envRegistry.listEnvironments();
-        const connectedEnv = allEnvs.find((e: { status: string; adapterType: string }) => e.status === "connected" && e.adapterType === "local")
-          || allEnvs.find((e: { status: string }) => e.status === "connected");
+        const connectedEnv = findFirstConnectedEnvironment();
         if (!connectedEnv) {
           return;
         }
@@ -425,6 +444,7 @@ async function main(): Promise<void> {
     stopPairingCleanup();
     stopSessionCleanup();
     stopOAuthCleanup();
+    await reconciliationManager.stop();
     const forceExit = setTimeout(() => {
       logger.warn("Shutdown timed out, forcing exit");
       process.exit(1);

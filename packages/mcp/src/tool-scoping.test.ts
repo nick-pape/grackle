@@ -69,6 +69,7 @@ describe("SCOPED_TOOLS", () => {
       "ipc_close", "ipc_list_fds", "ipc_spawn", "ipc_terminate", "ipc_write",
       "knowledge_get_node", "knowledge_search",
       "persona_list", "persona_show",
+      "schedule_list", "schedule_show",
       "session_send_input",
       "task_complete", "task_create", "task_list", "task_show", "task_start",
       "workpad_read", "workpad_write",

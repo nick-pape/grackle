@@ -36,6 +36,8 @@ export const ALL_MCP_TOOL_NAMES: ReadonlySet<string> = new Set([
   "usage_get",
   // version
   "get_version_status",
+  // schedule
+  "schedule_list", "schedule_create", "schedule_show", "schedule_update", "schedule_delete",
   // workpad
   "workpad_write", "workpad_read",
   // workspace
@@ -57,6 +59,7 @@ export const DEFAULT_SCOPED_MCP_TOOLS: readonly string[] = [
   "ipc_spawn", "ipc_write", "ipc_close", "ipc_terminate", "ipc_list_fds",
   "knowledge_search", "knowledge_get_node",
   "workpad_write", "workpad_read",
+  "schedule_list", "schedule_show",
 ] as const;
 
 /**
@@ -86,11 +89,13 @@ export const ORCHESTRATOR_MCP_TOOLS: readonly string[] = [
   "ipc_spawn", "ipc_write", "ipc_close", "ipc_terminate", "ipc_list_fds",
   "knowledge_search", "knowledge_get_node",
   "workpad_write", "workpad_read",
+  "schedule_list", "schedule_show",
   // Additional management tools
   "task_update", "task_delete", "task_resume",
   "session_spawn", "session_kill", "session_status",
   "persona_create",
   "knowledge_create_node",
+  "schedule_create", "schedule_update", "schedule_delete",
 ] as const;
 
 /**
