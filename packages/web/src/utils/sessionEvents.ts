@@ -1,7 +1,7 @@
 import type { SessionEvent } from "../hooks/useGrackleSocket.js";
 
 /** Session event augmented with optional tool_use context for paired tool results. */
-export type DisplayEvent = SessionEvent & { toolUseCtx?: { tool: string; args: unknown } };
+export type DisplayEvent = SessionEvent & { toolUseCtx?: { tool: string; args: unknown; detailedResult?: string } };
 
 /** Merges consecutive "text" events into single entries with concatenated content. */
 export function groupConsecutiveTextEvents(events: SessionEvent[]): SessionEvent[] {
@@ -47,7 +47,22 @@ export function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
     const ctx = toolUseById.get(raw.tool_use_id);
     if (!ctx) return e;
     consumedIds.add(raw.tool_use_id);
-    return { ...e, toolUseCtx: ctx };
+
+    // Extract detailedResult from content when it's a JSON object with detailedContent
+    // (Copilot emits tool results in this format with embedded diffs).
+    // Guard with startsWith check to avoid throwing on plain text / large outputs.
+    let detailedResult: string | undefined;
+    const contentStr: string = e.content.trim();
+    if (contentStr.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(contentStr) as Record<string, unknown>;
+        if (typeof parsed.detailedContent === "string") {
+          detailedResult = parsed.detailedContent;
+        }
+      } catch { /* content looks like JSON but isn't — skip */ }
+    }
+
+    return { ...e, toolUseCtx: { ...ctx, detailedResult } };
   });
 
   return display.filter((e) => {

@@ -13,7 +13,7 @@ export default defineConfig({
     __BASE_URL__: JSON.stringify(process.env.VITE_BASE_URL || "/"),
   },
   build: {
-    chunkSizeWarningLimit: 600,
+    chunkSizeWarningLimit: 700,
     rollupOptions: {
       output: {
         manualChunks: {

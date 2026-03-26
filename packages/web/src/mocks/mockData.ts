@@ -1045,4 +1045,135 @@ export const MOCK_STREAM_SCENARIOS: MockStreamScenario[] = [
       },
     ],
   },
+
+  // ── Scenario D — Fix Auth Bug (tool-heavy) ────────────
+  {
+    label: "Fix Auth Bug",
+    pauseForInput: false,
+    steps: [
+      {
+        delayMs: 0,
+        event: { eventType: "status", timestamp: ts(0), content: "running" },
+      },
+      {
+        delayMs: 600,
+        event: {
+          eventType: "text",
+          timestamp: ts(600),
+          content: "Let me investigate the authentication bug...",
+        },
+      },
+      // Read file
+      {
+        delayMs: 1200,
+        event: {
+          eventType: "tool_use",
+          timestamp: ts(1200),
+          content: JSON.stringify({ tool: "Read", args: { file_path: "/src/middleware/auth.ts" } }),
+          raw: JSON.stringify({ id: "tool-mock-001" }),
+        },
+      },
+      {
+        delayMs: 1800,
+        event: {
+          eventType: "tool_result",
+          timestamp: ts(1800),
+          content: 'import jwt from "jsonwebtoken";\nimport type { Request, Response, NextFunction } from "express";\n\nconst JWT_SECRET = process.env.JWT_SECRET || "change-me";\n\nexport function verifyToken(req: Request, res: Response, next: NextFunction): void {\n  const header = req.headers.authorization;\n  if (!header?.startsWith("Bearer ")) {\n    res.status(401).json({ error: "Missing token" });\n    return;\n  }\n  try {\n    const decoded = jwt.verify(header.slice(7), JWT_SECRET);\n    if (decoded.exp > Date.now() / 1000) {\n      res.status(403).json({ error: "Token expired" });\n      return;\n    }\n    req.user = decoded;\n    next();\n  } catch {\n    res.status(403).json({ error: "Invalid token" });\n  }\n}',
+          raw: JSON.stringify({ tool_use_id: "tool-mock-001", is_error: false }),
+        },
+      },
+      {
+        delayMs: 2600,
+        event: {
+          eventType: "text",
+          timestamp: ts(2600),
+          content: "Found the issue — the token expiry check on line 14 is using `>` instead of `<`. A token is expired when `exp < now`, but the code checks `exp > now` which means it rejects *valid* tokens and accepts *expired* ones. Let me fix it.",
+        },
+      },
+      // Edit file
+      {
+        delayMs: 3400,
+        event: {
+          eventType: "tool_use",
+          timestamp: ts(3400),
+          content: JSON.stringify({
+            tool: "Edit",
+            args: {
+              file_path: "/src/middleware/auth.ts",
+              old_string: "    if (decoded.exp > Date.now() / 1000) {",
+              new_string: "    if (decoded.exp < Date.now() / 1000) {",
+            },
+          }),
+          raw: JSON.stringify({ id: "tool-mock-002" }),
+        },
+      },
+      {
+        delayMs: 4000,
+        event: {
+          eventType: "tool_result",
+          timestamp: ts(4000),
+          content: "File updated successfully",
+          raw: JSON.stringify({ tool_use_id: "tool-mock-002", is_error: false }),
+        },
+      },
+      // Run tests
+      {
+        delayMs: 4600,
+        event: {
+          eventType: "tool_use",
+          timestamp: ts(4600),
+          content: JSON.stringify({ tool: "Bash", args: { command: "npm test -- --grep auth" } }),
+          raw: JSON.stringify({ id: "tool-mock-003" }),
+        },
+      },
+      {
+        delayMs: 5800,
+        event: {
+          eventType: "tool_result",
+          timestamp: ts(5800),
+          content: "[exit 0] > jest --grep auth\n\n PASS  src/auth.test.ts\n  ✓ validates JWT token (12ms)\n  ✓ rejects expired token (3ms)\n  ✓ handles missing header (1ms)\n\nTests: 3 passed, 3 total\nTime:  1.234s",
+          raw: JSON.stringify({ tool_use_id: "tool-mock-003", is_error: false }),
+        },
+      },
+      // Search for other occurrences
+      {
+        delayMs: 6400,
+        event: {
+          eventType: "tool_use",
+          timestamp: ts(6400),
+          content: JSON.stringify({ tool: "Grep", args: { pattern: "decoded\\.exp", path: "src/" } }),
+          raw: JSON.stringify({ id: "tool-mock-004" }),
+        },
+      },
+      {
+        delayMs: 7000,
+        event: {
+          eventType: "tool_result",
+          timestamp: ts(7000),
+          content: "src/middleware/auth.ts:14:    if (decoded.exp < Date.now() / 1000) {\nsrc/utils/token-refresh.ts:28:    const remaining = decoded.exp - Date.now() / 1000;",
+          raw: JSON.stringify({ tool_use_id: "tool-mock-004", is_error: false }),
+        },
+      },
+      {
+        delayMs: 7800,
+        event: {
+          eventType: "text",
+          timestamp: ts(7800),
+          content: "Fixed. The token expiry comparison was inverted — `decoded.exp > Date.now()` should have been `<` (a token is expired when its `exp` is in the past). The other occurrence in `token-refresh.ts` uses subtraction (not comparison), so it was already correct. All 3 auth tests pass.",
+        },
+      },
+      {
+        delayMs: 8400,
+        event: {
+          eventType: "usage",
+          timestamp: ts(8400),
+          content: JSON.stringify({ input_tokens: 42600, output_tokens: 1850, cost_usd: 0.12 }),
+        },
+      },
+      {
+        delayMs: 8800,
+        event: { eventType: "status", timestamp: ts(8800), content: "completed" },
+      },
+    ],
+  },
 ];
