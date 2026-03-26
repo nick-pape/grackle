@@ -1,6 +1,9 @@
 {
   "name": "@grackle-ai/heft-playwright-plugin",
   "version": "0.0.1",
+  "engines": {
+    "node": ">=22.0.0 <24.0.0"
+  },
   "private": true,
   "description": "Heft task plugin that runs Playwright tests",
   "main": "lib/PlaywrightTestPlugin.js",

@@ -2,6 +2,9 @@
   "private": true,
   "name": "@grackle-ai/docs-site",
   "version": "0.0.1",
+  "engines": {
+    "node": ">=22.0.0 <24.0.0"
+  },
   "description": "Documentation site for Grackle",
   "scripts": {
     "dev": "docusaurus start",

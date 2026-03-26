@@ -8,17 +8,28 @@
     "url": "https://github.com/nick-pape/grackle.git",
     "directory": "packages/cli"
   },
-  "keywords": ["grackle", "cli", "grpc", "ai-agents"],
+  "keywords": [
+    "grackle",
+    "cli",
+    "grpc",
+    "ai-agents"
+  ],
   "homepage": "https://github.com/nick-pape/grackle#readme",
-  "bugs": { "url": "https://github.com/nick-pape/grackle/issues" },
-  "engines": { "node": ">=22.0.0" },
+  "bugs": {
+    "url": "https://github.com/nick-pape/grackle/issues"
+  },
+  "engines": {
+    "node": ">=22.0.0 <24.0.0"
+  },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
     "grackle": "dist/index.js"
   },
-  "files": ["dist/"],
+  "files": [
+    "dist/"
+  ],
   "scripts": {
     "build": "heft build --clean",
     "start": "node dist/index.js",
@@ -46,6 +57,8 @@
     "vitest": "^3.1.1"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["better-sqlite3"]
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
   }
 }

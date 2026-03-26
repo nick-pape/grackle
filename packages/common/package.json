@@ -8,14 +8,25 @@
     "url": "https://github.com/nick-pape/grackle.git",
     "directory": "packages/common"
   },
-  "keywords": ["grackle", "grpc", "protobuf", "connectrpc"],
+  "keywords": [
+    "grackle",
+    "grpc",
+    "protobuf",
+    "connectrpc"
+  ],
   "homepage": "https://github.com/nick-pape/grackle#readme",
-  "bugs": { "url": "https://github.com/nick-pape/grackle/issues" },
-  "engines": { "node": ">=22.0.0" },
+  "bugs": {
+    "url": "https://github.com/nick-pape/grackle/issues"
+  },
+  "engines": {
+    "node": ">=22.0.0 <24.0.0"
+  },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist/"],
+  "files": [
+    "dist/"
+  ],
   "scripts": {
     "build": "heft build --clean",
     "clean": "heft clean",
