@@ -1,6 +1,6 @@
 import { ConnectError, Code, type ConnectRouter } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle, powerline } from "@grackle-ai/common";
+import { grackle, powerline, fuzzySearch } from "@grackle-ai/common";
 import type { PipeMode } from "@grackle-ai/common";
 import { v4 as uuid } from "uuid";
 import type { EnvironmentRow, SessionRow } from "@grackle-ai/database";
@@ -1348,10 +1348,17 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     // ─── Tasks ───────────────────────────────────────────────
 
     async listTasks(req: grackle.ListTasksRequest) {
-      const rows = taskStore.listTasks(req.workspaceId || undefined, {
-        search: req.search || undefined,
+      const allRows = taskStore.listTasks(req.workspaceId || undefined, {
         status: req.status || undefined,
       });
+
+      // Apply fuzzy search in-memory when a search term is provided
+      const rows = req.search
+        ? fuzzySearch(allRows, req.search, [
+            { name: "title", weight: 2 },
+            { name: "description", weight: 1 },
+          ]).map((r) => r.item)
+        : allRows;
       const childIdsMap = taskStore.buildChildIdsMap(rows);
 
       // Batch-fetch sessions for all tasks and group by taskId

@@ -1,6 +1,6 @@
 import db from "./db.js";
 import { tasks, type TaskRow } from "./schema.js";
-import { eq, and, or, sql, asc, type SQL } from "drizzle-orm";
+import { eq, and, sql, asc, type SQL } from "drizzle-orm";
 import { TASK_STATUS, taskStatusToEnum, taskStatusToString } from "@grackle-ai/common";
 import type { TaskStatus } from "@grackle-ai/common";
 import { MAX_TASK_DEPTH } from "@grackle-ai/common";
@@ -121,18 +121,11 @@ export function getTask(id: string): TaskRow | undefined {
 
 /** Options for filtering the task list. */
 export interface ListTasksOptions {
-  /** Case-insensitive substring filter on title or description. Case folding is ASCII-only (SQLite LIKE default). */
-  search?: string;
   /** Exact match filter on task status (e.g. "not_started", "in_progress"). */
   status?: string;
 }
 
-/** Escape LIKE special characters so they match literally. */
-function escapeLikePattern(value: string): string {
-  return value.replace(/[%_\\]/g, (ch) => `\\${ch}`);
-}
-
-/** Return tasks for a workspace (or all tasks when workspaceId is omitted), with optional search/status filters, ordered by sort_order then created_at. */
+/** Return tasks for a workspace (or all tasks when workspaceId is omitted), with optional status filter, ordered by sort_order then created_at. */
 export function listTasks(workspaceId?: string, options?: ListTasksOptions): TaskRow[] {
   const conditions: SQL[] = [];
   if (workspaceId) {
@@ -148,17 +141,6 @@ export function listTasks(workspaceId?: string, options?: ListTasksOptions): Tas
       // Unknown status — match nothing rather than ignoring the filter
       conditions.push(sql`0`);
     }
-  }
-
-  if (options?.search) {
-    const escaped = escapeLikePattern(options.search);
-    const pattern = `%${escaped}%`;
-    conditions.push(
-      or(
-        sql`${tasks.title} LIKE ${pattern} ESCAPE '\\'`,
-        sql`${tasks.description} LIKE ${pattern} ESCAPE '\\'`,
-      )!,
-    );
   }
 
   const query = db

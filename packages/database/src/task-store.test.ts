@@ -199,29 +199,6 @@ describe("task-store tree operations", () => {
       taskStore.updateTaskStatus("t3", "complete");
     });
 
-    it("returns only tasks matching search in title", () => {
-      const results = taskStore.listTasks("test-proj", { search: "login" });
-      expect(results).toHaveLength(1);
-      expect(results[0].id).toBe("t1");
-    });
-
-    it("returns all tasks when search is empty", () => {
-      const results = taskStore.listTasks("test-proj", { search: "" });
-      expect(results).toHaveLength(3);
-    });
-
-    it("search is case-insensitive", () => {
-      const results = taskStore.listTasks("test-proj", { search: "FIX LOGIN" });
-      expect(results).toHaveLength(1);
-      expect(results[0].id).toBe("t1");
-    });
-
-    it("search matches against description", () => {
-      const results = taskStore.listTasks("test-proj", { search: "analytics" });
-      expect(results).toHaveLength(1);
-      expect(results[0].id).toBe("t2");
-    });
-
     it("filters by status", () => {
       const results = taskStore.listTasks("test-proj", { status: "working" });
       expect(results).toHaveLength(1);
@@ -239,46 +216,16 @@ describe("task-store tree operations", () => {
       expect(results).toHaveLength(0);
     });
 
-    it("combines search and status filters", () => {
-      const results = taskStore.listTasks("test-proj", { search: "auth", status: "complete" });
-      // "auth" matches t3 (title: "Update auth middleware") which is complete
-      expect(results).toHaveLength(1);
-      expect(results[0].id).toBe("t3");
+    it("returns all tasks when no filters are provided", () => {
+      const results = taskStore.listTasks("test-proj");
+      expect(results).toHaveLength(3);
     });
 
-    it("returns empty array when search has no matches", () => {
-      const results = taskStore.listTasks("test-proj", { search: "nonexistent" });
-      expect(results).toHaveLength(0);
-    });
-
-    it("preserves sort order in filtered results", () => {
-      taskStore.createTask("t4", "test-proj", "Another login fix", "Second login issue", [], "test-workspace");
-      const results = taskStore.listTasks("test-proj", { search: "login" });
-      expect(results).toHaveLength(2);
+    it("preserves sort order in results", () => {
+      const results = taskStore.listTasks("test-proj");
       expect(results[0].id).toBe("t1");
-      expect(results[1].id).toBe("t4");
-    });
-
-    it("escapes LIKE special characters in search", () => {
-      taskStore.createTask("t5", "test-proj", "100% complete task", "desc", [], "test-workspace");
-      const results = taskStore.listTasks("test-proj", { search: "100%" });
-      expect(results).toHaveLength(1);
-      expect(results[0].id).toBe("t5");
-    });
-
-    it("escapes backslashes in search", () => {
-      taskStore.createTask("t5", "test-proj", "path\\to\\file", "desc", [], "test-workspace");
-      const results = taskStore.listTasks("test-proj", { search: "path\\to" });
-      expect(results).toHaveLength(1);
-      expect(results[0].id).toBe("t5");
-    });
-
-    it("escapes underscores in search", () => {
-      taskStore.createTask("t5", "test-proj", "v2_final", "desc", [], "test-workspace");
-      taskStore.createTask("t6", "test-proj", "v2Xfinal", "desc", [], "test-workspace");
-      const results = taskStore.listTasks("test-proj", { search: "2_f" });
-      expect(results).toHaveLength(1);
-      expect(results[0].id).toBe("t5");
+      expect(results[1].id).toBe("t2");
+      expect(results[2].id).toBe("t3");
     });
   });
 

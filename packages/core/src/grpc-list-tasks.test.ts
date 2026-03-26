@@ -223,7 +223,7 @@ describe("gRPC listTasks handler", () => {
     handlers = getHandlers();
   });
 
-  it("filters by search term", async () => {
+  it("filters by exact search term", async () => {
     const result = await handlers.listTasks({
       workspaceId: WORKSPACE_ID,
       search: "login",
@@ -232,6 +232,29 @@ describe("gRPC listTasks handler", () => {
 
     expect(result.tasks).toHaveLength(1);
     expect(result.tasks[0].title).toBe("Fix login bug");
+  });
+
+  it("fuzzy matches typos (e.g. 'logn bug' matches 'Fix login bug')", async () => {
+    const result = await handlers.listTasks({
+      workspaceId: WORKSPACE_ID,
+      search: "logn bug",
+      status: "",
+    }) as grackle.TaskList;
+
+    expect(result.tasks.length).toBeGreaterThanOrEqual(1);
+    expect(result.tasks[0].title).toBe("Fix login bug");
+  });
+
+  it("ranks title matches higher than description-only matches", async () => {
+    // "auth" appears in title of "Update auth middleware" and description of task with "authentication"
+    const result = await handlers.listTasks({
+      workspaceId: WORKSPACE_ID,
+      search: "auth",
+      status: "",
+    }) as grackle.TaskList;
+
+    expect(result.tasks.length).toBeGreaterThanOrEqual(1);
+    expect(result.tasks[0].title).toBe("Update auth middleware");
   });
 
   it("filters by status", async () => {
@@ -264,6 +287,16 @@ describe("gRPC listTasks handler", () => {
 
     expect(result.tasks).toHaveLength(1);
     expect(result.tasks[0].title).toBe("Update auth middleware");
+  });
+
+  it("returns empty for search with no matches", async () => {
+    const result = await handlers.listTasks({
+      workspaceId: WORKSPACE_ID,
+      search: "xyznonexistent",
+      status: "",
+    }) as grackle.TaskList;
+
+    expect(result.tasks).toHaveLength(0);
   });
 
   it("returns tasks with computed status, childTaskIds, and latestSessionId", async () => {
