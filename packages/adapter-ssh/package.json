@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/adapter-ssh",
-  "version": "0.80.0",
+  "version": "0.82.0",
   "description": "Grackle SSH environment adapter",
   "license": "MIT",
   "repository": {
@@ -8,14 +8,25 @@
     "url": "https://github.com/nick-pape/grackle.git",
     "directory": "packages/adapter-ssh"
   },
-  "keywords": ["grackle", "adapter", "ssh", "environment"],
+  "keywords": [
+    "grackle",
+    "adapter",
+    "ssh",
+    "environment"
+  ],
   "homepage": "https://github.com/nick-pape/grackle#readme",
-  "bugs": { "url": "https://github.com/nick-pape/grackle/issues" },
-  "engines": { "node": ">=22.0.0" },
+  "bugs": {
+    "url": "https://github.com/nick-pape/grackle/issues"
+  },
+  "engines": {
+    "node": ">=22.0.0 <24.0.0"
+  },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist/"],
+  "files": [
+    "dist/"
+  ],
   "scripts": {
     "build": "heft build --clean",
     "test": "vitest run",

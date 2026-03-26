@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/mcp",
-  "version": "0.80.0",
+  "version": "0.82.0",
   "description": "MCP (Model Context Protocol) server for Grackle — translates MCP tool calls to ConnectRPC",
   "license": "MIT",
   "repository": {
@@ -8,17 +8,28 @@
     "url": "https://github.com/nick-pape/grackle.git",
     "directory": "packages/mcp"
   },
-  "keywords": ["grackle", "mcp", "model-context-protocol", "ai-agents"],
+  "keywords": [
+    "grackle",
+    "mcp",
+    "model-context-protocol",
+    "ai-agents"
+  ],
   "homepage": "https://github.com/nick-pape/grackle#readme",
-  "bugs": { "url": "https://github.com/nick-pape/grackle/issues" },
-  "engines": { "node": ">=22.0.0" },
+  "bugs": {
+    "url": "https://github.com/nick-pape/grackle/issues"
+  },
+  "engines": {
+    "node": ">=22.0.0 <24.0.0"
+  },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
     "grackle-mcp": "dist/standalone.js"
   },
-  "files": ["dist/"],
+  "files": [
+    "dist/"
+  ],
   "scripts": {
     "build": "heft build --clean",
     "start": "node dist/standalone.js",

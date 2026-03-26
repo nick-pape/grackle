@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "placeholder",
-      "type": "none",
+      "comment": "Specialized tool cards for session event stream",
+      "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
   ],

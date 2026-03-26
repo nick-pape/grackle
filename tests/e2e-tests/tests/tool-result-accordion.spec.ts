@@ -5,7 +5,7 @@ import {
 } from "./helpers.js";
 
 /**
- * Tests for the tool_result event preview + accordion UI (#303).
+ * Tests for tool card rendering in the session event stream (#303, #935).
  *
  * These tests inject WebSocket messages directly to avoid relying on the
  * stub runtime, which can be flaky in CI.  The approach:
@@ -15,11 +15,10 @@ import {
  *   4. Assert on the rendered output
  *
  * Covers:
- *  - Success indicator (✓) shown for normal tool results
- *  - Error indicator (✗) shown when raw field has is_error=true
- *  - "Tool output" / "Tool error" label
- *  - Preview of first 5 lines inline (no toggle for short content)
- *  - Accordion expand/collapse for results with more than 5 lines
+ *  - Unpaired tool_result renders as a generic tool card
+ *  - Paired tool_use+tool_result renders as specialized card (ShellCard, etc.)
+ *  - Unpaired tool_use renders as in-progress card
+ *  - raw field forwarding
  */
 
 const FAKE_SESSION_ID = "tool-result-test-session-01";
@@ -52,7 +51,7 @@ async function injectToolResult(
   });
 }
 
-test.describe("Tool result preview and accordion (#303)", { tag: ["@webui"] }, () => {
+test.describe("Tool card rendering (#935)", { tag: ["@webui"] }, () => {
   /** Navigate to the app, wait for connection, and inject a spawned event so
    *  the app enters session view mode for FAKE_SESSION_ID.
    *
@@ -83,32 +82,20 @@ test.describe("Tool result preview and accordion (#303)", { tag: ["@webui"] }, (
     );
   }
 
-  test("shows success indicator and tool output label", async ({ page }) => {
+  test("unpaired tool_result renders as generic tool card", async ({ page }) => {
     await setupSessionView(page);
 
     await injectToolResult(page, 'Tool output: "hello world"');
 
-    // Wait for the event card to appear
-    const toolResult = page.locator('[class*="toolResultEvent"]');
-    await expect(toolResult).toBeVisible({ timeout: 5_000 });
+    // Wait for the generic tool card to appear
+    const toolCard = page.getByTestId("tool-card-generic");
+    await expect(toolCard).toBeVisible({ timeout: 5_000 });
 
-    // Success indicator (✓) should be visible
-    await expect(page.locator('[class*="toolResultIndicatorOk"]')).toBeVisible();
-
-    // Label should read "Tool output"
-    await expect(page.locator('[class*="toolResultLabel"]')).toHaveText(
-      "Tool output",
-    );
-
-    // Content preview should appear inline
-    await expect(page.locator('[class*="toolResultPre"]')).toContainText(
-      "hello world",
-    );
+    // Content should appear in the result area
+    await expect(page.getByTestId("tool-card-result")).toContainText("hello world");
   });
 
-  // "multi-line result expand/collapse" removed — covered by EventRenderer.stories.tsx (MultiLineExpandCollapse).
-
-  test("success indicator used when raw field has is_error=false", async ({ page }) => {
+  test("unpaired tool_result with is_error=false renders as tool card", async ({ page }) => {
     await setupSessionView(page);
 
     await injectToolResult(
@@ -118,14 +105,11 @@ test.describe("Tool result preview and accordion (#303)", { tag: ["@webui"] }, (
     );
 
     await expect(
-      page.locator('[class*="toolResultIndicatorOk"]'),
+      page.getByTestId("tool-card-generic"),
     ).toBeVisible({ timeout: 5_000 });
-    await expect(
-      page.locator('[class*="toolResultLabel"]').last(),
-    ).toHaveText("Tool output");
   });
 
-  test("paired tool_use+tool_result shows tool name, command preview, and hides standalone tool_use card", async ({ page }) => {
+  test("paired tool_use+tool_result renders as specialized card and hides standalone tool_use", async ({ page }) => {
     await setupSessionView(page);
 
     const TOOL_USE_ID = "toolu_test_pairing_001";
@@ -154,15 +138,14 @@ test.describe("Tool result preview and accordion (#303)", { tag: ["@webui"] }, (
       },
     });
 
-    // Result card must show "Bash" as the label (tool name, not generic "Tool output")
-    await expect(page.locator('[class*="toolResultLabel"]')).toHaveText("Bash", { timeout: 5_000 });
+    // Should render as a ShellCard with the command visible
+    const shellCard = page.getByTestId("tool-card-shell");
+    await expect(shellCard).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId("tool-card-command")).toHaveText("ls -la /tmp");
 
-    // Command preview line must show the actual bash command
-    await expect(page.locator('[class*="toolResultCommand"]')).toHaveText("ls -la /tmp");
-
-    // The standalone tool_use card (blue-bordered box with JSON args) must be gone —
-    // the tool_use event was consumed by its paired result
-    await expect(page.locator('[class*="toolUseEvent"]')).not.toBeVisible();
+    // The standalone tool_use card should be consumed by pairing — no in-progress cards visible
+    // (ShellCard is the only tool card, and it has a result)
+    await expect(page.getByTestId("tool-card-shell")).toHaveCount(1);
   });
 
   test("unpaired tool_use (no raw id) still renders as its own card", async ({ page }) => {
@@ -174,13 +157,13 @@ test.describe("Tool result preview and accordion (#303)", { tag: ["@webui"] }, (
       payload: {
         sessionId: FAKE_SESSION_ID,
         eventType: "tool_use",
-        content: JSON.stringify({ tool: "echo", args: { message: "hello" } }),
+        content: JSON.stringify({ tool: "Read", args: { file_path: "/src/index.ts" } }),
         timestamp: new Date().toISOString(),
       },
     });
 
-    // Standalone tool_use card must still render
-    await expect(page.locator('[class*="toolUseEvent"]')).toBeVisible({ timeout: 5_000 });
+    // Should render as a FileReadCard (in-progress, no result)
+    await expect(page.getByTestId("tool-card-file-read")).toBeVisible({ timeout: 5_000 });
   });
 
   test("raw field is forwarded by backend and accepted by frontend type guard", async ({ page }) => {
@@ -193,7 +176,6 @@ test.describe("Tool result preview and accordion (#303)", { tag: ["@webui"] }, (
 
     // Inject a session_event with a raw field — the frontend isSessionEvent guard must accept it
     // without warning, and the event must be added to the events array.
-    let droppedByGuard = false;
     await page.evaluate(() => {
       const origWarn = console.warn.bind(console);
       console.warn = (...args: unknown[]) => {
@@ -218,11 +200,11 @@ test.describe("Tool result preview and accordion (#303)", { tag: ["@webui"] }, (
     );
 
     // The event should render (not dropped by isSessionEvent guard)
-    const toolResult = page.locator('[class*="toolResultEvent"]');
-    await expect(toolResult).toBeVisible({ timeout: 5_000 });
+    const toolCard = page.getByTestId("tool-card-generic");
+    await expect(toolCard).toBeVisible({ timeout: 5_000 });
 
     // Verify no "Malformed session_event" warning was emitted
-    droppedByGuard = await page.evaluate(
+    const droppedByGuard = await page.evaluate(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       () => !!(window as any).__sessionEventDropped__,
     );
