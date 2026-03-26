@@ -156,6 +156,7 @@ export function useTasks(): UseTasksResult {
       }
       case "task.completed":
       case "task.deleted":
+      case "task.reparented":
       case "task.updated": {
         const eventWsId = typeof p.workspaceId === "string" ? p.workspaceId : "";
         const eventTaskId = typeof p.taskId === "string" ? p.taskId : "";
