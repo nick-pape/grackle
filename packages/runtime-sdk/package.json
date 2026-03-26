@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/runtime-sdk",
-  "version": "0.79.0",
+  "version": "0.82.1",
   "description": "Grackle runtime SDK — interfaces, base classes, shared utilities, and runtime installer",
   "license": "MIT",
   "repository": {
@@ -26,7 +26,7 @@
   "dependencies": {
     "@grackle-ai/common": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.27.0",
-    "pino": "^9.6.0"
+    "pino": "^10.3.1"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
