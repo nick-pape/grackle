@@ -1,6 +1,9 @@
 {
   "name": "@grackle-ai/e2e-tests",
   "version": "0.0.1",
+  "engines": {
+    "node": ">=22.0.0 <24.0.0"
+  },
   "private": true,
   "type": "module",
   "description": "End-to-end Playwright tests for the Grackle platform",

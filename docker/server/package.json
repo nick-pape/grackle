@@ -1,6 +1,9 @@
 {
   "name": "grackle-server-agent-runtimes",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=22.0.0 <24.0.0"
+  },
   "private": true,
   "description": "Pinned agent runtime dependencies for the Grackle server Docker image",
   "dependencies": {
