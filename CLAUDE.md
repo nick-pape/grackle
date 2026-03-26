@@ -22,6 +22,28 @@ Do **not** update the root `README.md` as part of this process — it is a separ
 - **Never merge PRs** unless the user explicitly tells you to merge. Other agents may be coordinating merge order.
 - **Branch naming**: `<github-username>/<issue>-<feature>` when working on a GitHub issue (where `<issue>` is the numeric issue id, e.g., `nick-pape/149-agent-subtask-creation`), or `<github-username>/<feature>` when there's no issue (e.g., `nick-pape/fix-typo-in-readme`).
 
+### Worktree Workflow
+
+**All feature work must happen in a worktree**, not on the main working copy. Use Claude Code's built-in `EnterWorktree` tool to create an isolated worktree — it handles cwd, branch creation, and cleanup automatically.
+
+**Starting work:**
+1. Call `EnterWorktree` with a descriptive name (e.g., `EnterWorktree({ name: "123-my-feature" })`)
+2. This creates `.claude/worktrees/123-my-feature/` with branch `worktree-123-my-feature` and switches your cwd there
+3. Rename the branch to match our naming convention: `git branch -m <github-username>/123-my-feature`
+4. Run `rush install && rush build`
+5. Do all your work — cwd stays in the worktree, hooks fire correctly
+
+**Finishing work:**
+- After the PR is merged: call `ExitWorktree({ action: "remove" })` to clean up
+- To pause and come back later: call `ExitWorktree({ action: "keep" })`
+
+**Rules:**
+- Never check out a feature branch on the main worktree — always use `EnterWorktree`
+- Rename the branch immediately after entering (`git branch -m <github-username>/<issue>-<feature>`) to match our branch naming convention
+- Each worktree needs its own `rush install && rush build` (node_modules are per-worktree)
+- You can't have the same branch checked out in two worktrees simultaneously
+- When syncing with main inside a worktree: `git fetch origin && git merge origin/main` (same as always, no rebase)
+
 ## Planning
 
 - **Always plan tests**: Every implementation plan must include a section for tests (E2E Playwright specs for `@grackle-ai/web`, unit/integration tests for other packages). If the change is purely cosmetic or untestable, explicitly note why tests are skipped.
@@ -200,17 +222,15 @@ A `rush-qdrant mcp` daemon provides **semantic search** over the codebase via th
 
 **USE SEMANTIC SEARCH FIRST** when exploring code by concept, behavior, or intent. It understands natural language queries like "how does authentication work" or "websocket reconnection logic." Use `/codebase-search` to invoke the full search workflow, or call the MCP tools directly:
 
-- **`mcp__qdrant-search__semantic_search`** — Conceptual/exploratory search. Returns ranked results with file IDs, similarity scores, breadcrumbs, and code previews. **Always pass `catalog: "grackle6"`**.
+- **`mcp__qdrant-search__semantic_search`** — Conceptual/exploratory search. Returns ranked results with file IDs, similarity scores, breadcrumbs, and code previews. **Always pass `catalog: "grackle"`**.
 - **`mcp__qdrant-search__view_chunks`** — Retrieve full source content by file ID from search results. Supports selectors (`:3`, `:2-5`, `:3-end`).
 
 **When to use Grep/Glob instead**: exact string matches (`class SessionStore`), regex patterns, or symbol names you already know. If you don't know the exact name, start with semantic search.
 
 ### Catalog naming
 
-Each grackle clone is a separate catalog named after its folder (e.g., `grackle`, `grackle2`, `grackle6`). **Use the folder name of this repo as the catalog value** — run `basename $(git rev-parse --show-toplevel)` if unsure. Always scope searches to avoid mixing results from other clones:
+The canonical catalog is `"grackle"` (the main repo folder name). Worktrees share the same codebase, so always use `catalog: "grackle"` regardless of which worktree you're in:
 
 ```
-mcp__qdrant-search__semantic_search(query: "session spawning", catalog: "<folder-name>")
+mcp__qdrant-search__semantic_search(query: "session spawning", catalog: "grackle")
 ```
-
-Omit `catalog` only when you intentionally want to search across all repos.
