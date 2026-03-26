@@ -43,8 +43,12 @@ import {
   MOCK_PERSONAS,
   MOCK_TASK_SESSIONS,
   MOCK_STREAM_SCENARIOS,
+  MOCK_KNOWLEDGE_NODES,
+  MOCK_KNOWLEDGE_LINKS,
+  MOCK_KNOWLEDGE_DETAILS,
   type MockStreamStep,
 } from "./mockData.js";
+import type { GraphNode, GraphLink, NodeDetail } from "../hooks/useKnowledge.js";
 
 // ─── Constants ──────────────────────────────────────
 
@@ -84,6 +88,15 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   const [personas, setPersonas] = useState<PersonaData[]>(MOCK_PERSONAS);
   const [taskSessions] = useState<Record<string, Session[]>>(MOCK_TASK_SESSIONS);
   const [appDefaultPersonaId, setAppDefaultPersonaIdState] = useState<string>("");
+
+  // ── Knowledge state ────────────────────────────────
+  const [knowledgeNodes, setKnowledgeNodes] = useState<GraphNode[]>(MOCK_KNOWLEDGE_NODES);
+  const [knowledgeLinks, setKnowledgeLinks] = useState<GraphLink[]>(MOCK_KNOWLEDGE_LINKS);
+  const [knowledgeSelectedNode, setKnowledgeSelectedNode] = useState<NodeDetail | undefined>(undefined);
+  const [knowledgeSelectedId, setKnowledgeSelectedId] = useState<string | undefined>(undefined);
+  const [knowledgeSearchQuery, setKnowledgeSearchQuery] = useState<string>("");
+  /** Active workspace filter for knowledge graph. */
+  const knowledgeWorkspaceRef = useRef<string | undefined>(undefined);
 
   // ── Refs ──────────────────────────────────────────
   /** Auto-incrementing counter for generating unique mock IDs. */
@@ -1015,17 +1028,124 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         console.log(`[MockGrackle] loadUsage(${scope}, ${id})`);
       },
       knowledge: {
-        graphData: { nodes: [], links: [] },
-        selectedNode: undefined,
+        graphData: { nodes: knowledgeNodes, links: knowledgeLinks },
+        selectedNode: knowledgeSelectedNode,
         loading: false,
-        selectedId: undefined,
-        searchQuery: "",
-        search: () => {},
-        clearSearch: () => {},
-        selectNode: () => {},
-        clearSelection: () => {},
-        expandNode: () => {},
-        loadRecent: () => {},
+        selectedId: knowledgeSelectedId,
+        searchQuery: knowledgeSearchQuery,
+        search: (query: string) => {
+          console.log("[MockGrackle] knowledge.search", query);
+          if (!query.trim()) {
+            setKnowledgeSearchQuery(query);
+            return;
+          }
+          setKnowledgeSearchQuery(query);
+          // Start from workspace-scoped base set, not the full graph
+          const wsId = knowledgeWorkspaceRef.current;
+          const baseNodes = wsId
+            ? MOCK_KNOWLEDGE_NODES.filter((n) => !n.workspaceId || n.workspaceId === wsId)
+            : MOCK_KNOWLEDGE_NODES;
+          const lowerQuery = query.toLowerCase();
+          const filtered = baseNodes.filter((n) =>
+            n.label.toLowerCase().includes(lowerQuery)
+            || n.content?.toLowerCase().includes(lowerQuery)
+            || n.tags?.some((tag) => tag.toLowerCase().includes(lowerQuery))
+            || n.category?.toLowerCase().includes(lowerQuery),
+          );
+          setKnowledgeNodes(filtered);
+          const nodeIds = new Set(filtered.map((n) => n.id));
+          setKnowledgeLinks(
+            MOCK_KNOWLEDGE_LINKS.filter((l) => nodeIds.has(l.source) && nodeIds.has(l.target)),
+          );
+          setKnowledgeSelectedId(undefined);
+          setKnowledgeSelectedNode(undefined);
+        },
+        clearSearch: () => {
+          console.log("[MockGrackle] knowledge.clearSearch");
+          setKnowledgeSearchQuery("");
+          // Restore to workspace-scoped base set, not the full graph
+          const wsId = knowledgeWorkspaceRef.current;
+          const baseNodes = wsId
+            ? MOCK_KNOWLEDGE_NODES.filter((n) => !n.workspaceId || n.workspaceId === wsId)
+            : MOCK_KNOWLEDGE_NODES;
+          setKnowledgeNodes(baseNodes);
+          const nodeIds = new Set(baseNodes.map((n) => n.id));
+          setKnowledgeLinks(
+            MOCK_KNOWLEDGE_LINKS.filter((l) => nodeIds.has(l.source) && nodeIds.has(l.target)),
+          );
+        },
+        selectNode: (id: string) => {
+          console.log("[MockGrackle] knowledge.selectNode", id);
+          setKnowledgeSelectedId(id);
+          const detail: NodeDetail | undefined = id in MOCK_KNOWLEDGE_DETAILS
+            ? MOCK_KNOWLEDGE_DETAILS[id]
+            : undefined;
+          if (detail) {
+            setKnowledgeSelectedNode(detail);
+          } else {
+            // Build a detail from the node and its edges
+            const node = MOCK_KNOWLEDGE_NODES.find((n) => n.id === id);
+            if (node) {
+              const edges = MOCK_KNOWLEDGE_LINKS
+                .filter((l) => l.source === id || l.target === id)
+                .map((l) => ({ fromId: l.source, toId: l.target, type: l.type }));
+              setKnowledgeSelectedNode({ node, edges });
+            }
+          }
+        },
+        clearSelection: () => {
+          console.log("[MockGrackle] knowledge.clearSelection");
+          setKnowledgeSelectedId(undefined);
+          setKnowledgeSelectedNode(undefined);
+        },
+        expandNode: (id: string) => {
+          console.log("[MockGrackle] knowledge.expandNode", id);
+          // Use functional updaters to avoid stale closure over knowledgeNodes/knowledgeLinks
+          setKnowledgeNodes((prevNodes) => {
+            const currentIds = new Set(prevNodes.map((n) => n.id));
+            const connectedLinks = MOCK_KNOWLEDGE_LINKS.filter(
+              (l) => l.source === id || l.target === id,
+            );
+            const newNodeIds = new Set<string>();
+            for (const link of connectedLinks) {
+              if (!currentIds.has(link.source)) { newNodeIds.add(link.source); }
+              if (!currentIds.has(link.target)) { newNodeIds.add(link.target); }
+            }
+            if (newNodeIds.size === 0) {
+              return prevNodes;
+            }
+            const newNodes = MOCK_KNOWLEDGE_NODES.filter((n) => newNodeIds.has(n.id));
+            const allIds = new Set([...currentIds, ...newNodeIds]);
+            // Update links inside its own functional updater using the computed allIds
+            setKnowledgeLinks((prevLinks) => {
+              const existingSet = new Set(prevLinks.map((l) => `${l.source}|${l.target}|${l.type}`));
+              const newLinks = MOCK_KNOWLEDGE_LINKS.filter(
+                (l) => allIds.has(l.source) && allIds.has(l.target)
+                  && !existingSet.has(`${l.source}|${l.target}|${l.type}`),
+              );
+              return newLinks.length > 0 ? [...prevLinks, ...newLinks] : prevLinks;
+            });
+            return [...prevNodes, ...newNodes];
+          });
+        },
+        loadRecent: (workspaceId?: string) => {
+          console.log("[MockGrackle] knowledge.loadRecent", workspaceId);
+          knowledgeWorkspaceRef.current = workspaceId;
+          if (workspaceId) {
+            const filtered = MOCK_KNOWLEDGE_NODES.filter(
+              (n) => !n.workspaceId || n.workspaceId === workspaceId,
+            );
+            setKnowledgeNodes(filtered);
+            const nodeIds = new Set(filtered.map((n) => n.id));
+            setKnowledgeLinks(
+              MOCK_KNOWLEDGE_LINKS.filter((l) => nodeIds.has(l.source) && nodeIds.has(l.target)),
+            );
+          } else {
+            setKnowledgeNodes(MOCK_KNOWLEDGE_NODES);
+            setKnowledgeLinks(MOCK_KNOWLEDGE_LINKS);
+          }
+          setKnowledgeSearchQuery("");
+        },
         handleEvent: () => false,
       },
     }),
@@ -1042,6 +1162,11 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       personas,
       taskSessions,
       appDefaultPersonaId,
+      knowledgeNodes,
+      knowledgeLinks,
+      knowledgeSelectedNode,
+      knowledgeSelectedId,
+      knowledgeSearchQuery,
       spawn,
       sendInput,
       kill,
