@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 26 Mar 2026 04:19:23 GMT and should not be manually modified.
+This log was last generated on Thu, 26 Mar 2026 04:36:32 GMT and should not be manually modified.
+
+## 0.82.0
+Thu, 26 Mar 2026 04:36:32 GMT
+
+### Minor changes
+
+- Auto-reanimate on lifecycle stream subscribe + lifecycle cleanup reconciliation phase
 
 ## 0.81.0
 Thu, 26 Mar 2026 04:19:23 GMT

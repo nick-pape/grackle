@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.82.0",
+      "tag": "@grackle-ai/cli_v0.82.0",
+      "date": "Thu, 26 Mar 2026 04:36:32 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Auto-reanimate on lifecycle stream subscribe + lifecycle cleanup reconciliation phase"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.81.0",
       "tag": "@grackle-ai/cli_v0.81.0",
       "date": "Thu, 26 Mar 2026 04:19:23 GMT",
