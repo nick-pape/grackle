@@ -282,7 +282,7 @@ async function main(): Promise<void> {
     logger.info({ port: grpcPort, host: bindHost }, "gRPC server listening on http://%s:%d", urlHost, grpcPort);
   });
 
-  // --- Web + WebSocket server (HTTP/1.1) ---
+  // --- Web server (HTTP/1.1) ---
   const webPort = parseInt(process.env.GRACKLE_WEB_PORT || String(DEFAULT_WEB_PORT), 10);
   const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
   const webServer = createWebServer({
@@ -358,7 +358,7 @@ async function main(): Promise<void> {
   });
 
   webServer.listen(webPort, bindHost, () => {
-    logger.info({ port: webPort, host: bindHost }, "Web UI + WebSocket on http://%s:%d", urlHost, webPort);
+    logger.info({ port: webPort, host: bindHost }, "Web UI on http://%s:%d", urlHost, webPort);
 
     // Generate initial pairing code and print to terminal
     const code = generatePairingCode();
