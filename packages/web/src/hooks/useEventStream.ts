@@ -21,7 +21,7 @@ export interface UseEventStreamOptions {
   onSessionEvent: (event: { sessionId: string; type: number; timestamp: string; content: string; raw: string }) => void;
   /** Called for each domain event (task.created, environment.changed, etc.). */
   onDomainEvent: (event: { id: string; type: string; timestamp: string; payloadJson: string }) => void;
-  /** Called when the stream connects (first event received or reconnect). */
+  /** Called immediately after a new stream is created (including reconnects), before any events are received. */
   onConnect?: () => void;
   /** Called when the stream disconnects. */
   onDisconnect?: () => void;
