@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { registerRuntime, getRuntime, listRuntimes } from "./runtime-registry.js";
-import type { AgentRuntime } from "./runtimes/runtime.js";
+import type { AgentRuntime } from "@grackle-ai/runtime-sdk";
 
 function makeMockRuntime(name: string): AgentRuntime {
   return {

@@ -1,5 +1,5 @@
 import type { AgentEventType } from "@grackle-ai/common";
-import type { AgentEvent } from "./runtime.js";
+import type { AgentEvent } from "@grackle-ai/runtime-sdk";
 
 // ─── Step Types ─────────────────────────────────────────────
 

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Extract runtimes from powerline into separate packages (runtime-sdk, runtime-claude-code, runtime-copilot, runtime-codex, runtime-genaiscript, runtime-acp)",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

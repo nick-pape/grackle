@@ -105,10 +105,16 @@ Storybook is integrated into the Heft build pipeline via `@grackle-ai/heft-web-t
 
 ## Project Structure
 
-Rush monorepo with 6 packages under `packages/`:
+Rush monorepo with packages under `packages/`:
 - `@grackle-ai/adapter-sdk` — SDK for building environment adapters (interfaces, bootstrap, tunnel helpers)
 - `@grackle-ai/common` — Proto definitions, generated code, shared types
 - `@grackle-ai/powerline` — gRPC PowerLine server (ConnectRPC on HTTP/2)
+- `@grackle-ai/runtime-sdk` — Runtime interfaces, base classes, shared utilities (worktree, installer, async-queue)
+- `@grackle-ai/runtime-claude-code` — ClaudeCodeRuntime (Anthropic Claude Agent SDK)
+- `@grackle-ai/runtime-copilot` — CopilotRuntime (GitHub Copilot SDK)
+- `@grackle-ai/runtime-codex` — CodexRuntime (OpenAI Codex SDK)
+- `@grackle-ai/runtime-genaiscript` — GenAIScriptRuntime (GenAIScript CLI)
+- `@grackle-ai/runtime-acp` — AcpRuntime (Agent Client Protocol over stdio)
 - `@grackle-ai/server` — Central gRPC server, SQLite, WebSocket bridge
 - `@grackle-ai/cli` — Commander-based CLI client
 - `@grackle-ai/web` — React + Vite web UI
@@ -163,7 +169,7 @@ PRs that modify publishable packages need a change file. The `/create-pr` skill 
 - If `/create-pr` or CI indicates a lockstep change is required for `@grackle-ai/cli`, do not delete that generated change file just because the visible code changes are in `@grackle-ai/web`; `rush change --verify` can still require the lockstep main project change description for this repo's release policy.
 
 **Publishable packages** (lockstep versioning):
-- `@grackle-ai/adapter-sdk`, `@grackle-ai/adapter-local`, `@grackle-ai/adapter-ssh`, `@grackle-ai/adapter-codespace`, `@grackle-ai/adapter-docker`, `@grackle-ai/auth`, `@grackle-ai/cli`, `@grackle-ai/common`, `@grackle-ai/core`, `@grackle-ai/powerline`, `@grackle-ai/prompt`, `@grackle-ai/server`, `@grackle-ai/web-server`
+- `@grackle-ai/adapter-sdk`, `@grackle-ai/adapter-local`, `@grackle-ai/adapter-ssh`, `@grackle-ai/adapter-codespace`, `@grackle-ai/adapter-docker`, `@grackle-ai/auth`, `@grackle-ai/cli`, `@grackle-ai/common`, `@grackle-ai/core`, `@grackle-ai/powerline`, `@grackle-ai/prompt`, `@grackle-ai/runtime-sdk`, `@grackle-ai/runtime-claude-code`, `@grackle-ai/runtime-copilot`, `@grackle-ai/runtime-codex`, `@grackle-ai/runtime-genaiscript`, `@grackle-ai/runtime-acp`, `@grackle-ai/server`, `@grackle-ai/web-server`
 
 **Not publishable** (never need change files):
 - `@grackle-ai/web`, `@grackle-ai/heft-rig`, `@grackle-ai/heft-buf-plugin`, `@grackle-ai/heft-playwright-plugin`, `@grackle-ai/heft-vite-plugin`

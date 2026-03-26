@@ -1,0 +1,5 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/api-extractor/v7/api-extractor.schema.json",
+  "extends": "@grackle-ai/heft-rig/profiles/default/config/api-extractor-base.json",
+  "bundledPackages": ["@grackle-ai/common"]
+}

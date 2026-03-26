@@ -37,6 +37,36 @@
       "versionPolicyName": "grackle"
     },
     {
+      "packageName": "@grackle-ai/runtime-sdk",
+      "projectFolder": "packages/runtime-sdk",
+      "versionPolicyName": "grackle"
+    },
+    {
+      "packageName": "@grackle-ai/runtime-claude-code",
+      "projectFolder": "packages/runtime-claude-code",
+      "versionPolicyName": "grackle"
+    },
+    {
+      "packageName": "@grackle-ai/runtime-copilot",
+      "projectFolder": "packages/runtime-copilot",
+      "versionPolicyName": "grackle"
+    },
+    {
+      "packageName": "@grackle-ai/runtime-codex",
+      "projectFolder": "packages/runtime-codex",
+      "versionPolicyName": "grackle"
+    },
+    {
+      "packageName": "@grackle-ai/runtime-genaiscript",
+      "projectFolder": "packages/runtime-genaiscript",
+      "versionPolicyName": "grackle"
+    },
+    {
+      "packageName": "@grackle-ai/runtime-acp",
+      "projectFolder": "packages/runtime-acp",
+      "versionPolicyName": "grackle"
+    },
+    {
       "packageName": "@grackle-ai/adapter-sdk",
       "projectFolder": "packages/adapter-sdk",
       "versionPolicyName": "grackle"

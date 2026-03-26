@@ -402,7 +402,13 @@ export async function* bootstrapPowerLine(
 
     yield { stage: "bootstrapping", message: "Creating remote directories...", progress: 0.20 };
     await executor.exec(
-      `mkdir -p ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/common`,
+      `mkdir -p ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/common`
+      + ` ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/runtime-sdk`
+      + ` ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/runtime-claude-code`
+      + ` ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/runtime-copilot`
+      + ` ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/runtime-codex`
+      + ` ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/runtime-genaiscript`
+      + ` ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/runtime-acp`,
       { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
     );
 
@@ -416,6 +422,12 @@ export async function* bootstrapPowerLine(
       ["common", resolve(sdkDistDir, "../../common")],
       ["mcp", resolve(sdkDistDir, "../../mcp")],
       ["auth", resolve(sdkDistDir, "../../auth")],
+      ["runtime-sdk", resolve(sdkDistDir, "../../runtime-sdk")],
+      ["runtime-claude-code", resolve(sdkDistDir, "../../runtime-claude-code")],
+      ["runtime-copilot", resolve(sdkDistDir, "../../runtime-copilot")],
+      ["runtime-codex", resolve(sdkDistDir, "../../runtime-codex")],
+      ["runtime-genaiscript", resolve(sdkDistDir, "../../runtime-genaiscript")],
+      ["runtime-acp", resolve(sdkDistDir, "../../runtime-acp")],
     ];
 
     yield { stage: "bootstrapping", message: "Copying PowerLine artifacts...", progress: 0.25 };

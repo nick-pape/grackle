@@ -455,6 +455,24 @@ importers:
       '@grackle-ai/common':
         specifier: workspace:*
         version: link:../common
+      '@grackle-ai/runtime-acp':
+        specifier: workspace:*
+        version: link:../runtime-acp
+      '@grackle-ai/runtime-claude-code':
+        specifier: workspace:*
+        version: link:../runtime-claude-code
+      '@grackle-ai/runtime-codex':
+        specifier: workspace:*
+        version: link:../runtime-codex
+      '@grackle-ai/runtime-copilot':
+        specifier: workspace:*
+        version: link:../runtime-copilot
+      '@grackle-ai/runtime-genaiscript':
+        specifier: workspace:*
+        version: link:../runtime-genaiscript
+      '@grackle-ai/runtime-sdk':
+        specifier: workspace:*
+        version: link:../runtime-sdk
       '@modelcontextprotocol/sdk':
         specifier: ^1.27.0
         version: 1.27.1(zod@4.3.6)
@@ -486,6 +504,141 @@ importers:
       '@grackle-ai/database':
         specifier: workspace:*
         version: link:../database
+    devDependencies:
+      '@grackle-ai/heft-rig':
+        specifier: workspace:*
+        version: link:../../rigs/heft-rig
+      '@rushstack/heft':
+        specifier: 1.2.7
+        version: 1.2.7(@types/node@22.19.15)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      vitest:
+        specifier: ^3.1.1
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
+
+  ../../packages/runtime-acp:
+    dependencies:
+      '@grackle-ai/common':
+        specifier: workspace:*
+        version: link:../common
+      '@grackle-ai/runtime-sdk':
+        specifier: workspace:*
+        version: link:../runtime-sdk
+    devDependencies:
+      '@grackle-ai/heft-rig':
+        specifier: workspace:*
+        version: link:../../rigs/heft-rig
+      '@rushstack/heft':
+        specifier: 1.2.7
+        version: 1.2.7(@types/node@22.19.15)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      vitest:
+        specifier: ^3.1.1
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
+
+  ../../packages/runtime-claude-code:
+    dependencies:
+      '@grackle-ai/common':
+        specifier: workspace:*
+        version: link:../common
+      '@grackle-ai/runtime-sdk':
+        specifier: workspace:*
+        version: link:../runtime-sdk
+    devDependencies:
+      '@grackle-ai/heft-rig':
+        specifier: workspace:*
+        version: link:../../rigs/heft-rig
+      '@rushstack/heft':
+        specifier: 1.2.7
+        version: 1.2.7(@types/node@22.19.15)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      vitest:
+        specifier: ^3.1.1
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
+
+  ../../packages/runtime-codex:
+    dependencies:
+      '@grackle-ai/common':
+        specifier: workspace:*
+        version: link:../common
+      '@grackle-ai/runtime-sdk':
+        specifier: workspace:*
+        version: link:../runtime-sdk
+    devDependencies:
+      '@grackle-ai/heft-rig':
+        specifier: workspace:*
+        version: link:../../rigs/heft-rig
+      '@rushstack/heft':
+        specifier: 1.2.7
+        version: 1.2.7(@types/node@22.19.15)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      vitest:
+        specifier: ^3.1.1
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
+
+  ../../packages/runtime-copilot:
+    dependencies:
+      '@grackle-ai/common':
+        specifier: workspace:*
+        version: link:../common
+      '@grackle-ai/runtime-sdk':
+        specifier: workspace:*
+        version: link:../runtime-sdk
+    devDependencies:
+      '@grackle-ai/heft-rig':
+        specifier: workspace:*
+        version: link:../../rigs/heft-rig
+      '@rushstack/heft':
+        specifier: 1.2.7
+        version: 1.2.7(@types/node@22.19.15)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      vitest:
+        specifier: ^3.1.1
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
+
+  ../../packages/runtime-genaiscript:
+    dependencies:
+      '@grackle-ai/common':
+        specifier: workspace:*
+        version: link:../common
+      '@grackle-ai/runtime-sdk':
+        specifier: workspace:*
+        version: link:../runtime-sdk
+    devDependencies:
+      '@grackle-ai/heft-rig':
+        specifier: workspace:*
+        version: link:../../rigs/heft-rig
+      '@rushstack/heft':
+        specifier: 1.2.7
+        version: 1.2.7(@types/node@22.19.15)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      vitest:
+        specifier: ^3.1.1
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
+
+  ../../packages/runtime-sdk:
+    dependencies:
+      '@grackle-ai/common':
+        specifier: workspace:*
+        version: link:../common
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.27.0
+        version: 1.27.1(zod@4.3.6)
+      pino:
+        specifier: ^10.3.1
+        version: 10.3.1
     devDependencies:
       '@grackle-ai/heft-rig':
         specifier: workspace:*

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { removeSession, listAllSessions, parkSession, drainParkedSession, isParked } from "./session-mgr.js";
-import type { AgentEvent, AgentSession } from "./runtimes/runtime.js";
-import { AsyncQueue } from "./utils/async-queue.js";
+import type { AgentEvent, AgentSession } from "@grackle-ai/runtime-sdk";
+import { AsyncQueue } from "@grackle-ai/runtime-sdk";
 import type { ConnectRouter } from "@connectrpc/connect";
 import { powerline } from "@grackle-ai/common";
 

@@ -44,6 +44,12 @@
     "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-node": "^2.0.0",
     "@grackle-ai/common": "workspace:*",
+    "@grackle-ai/runtime-sdk": "workspace:*",
+    "@grackle-ai/runtime-claude-code": "workspace:*",
+    "@grackle-ai/runtime-copilot": "workspace:*",
+    "@grackle-ai/runtime-codex": "workspace:*",
+    "@grackle-ai/runtime-genaiscript": "workspace:*",
+    "@grackle-ai/runtime-acp": "workspace:*",
     "commander": "^13.0.0",
     "pino": "^10.3.1",
     "zod": "^4.0.0"
