@@ -17,7 +17,7 @@ export { initWsSubscriber } from "./ws-broadcast.js";
 export { initSigchldSubscriber } from "./signals/sigchld.js";
 export { initLifecycleManager } from "./lifecycle.js";
 
-// ─── WebSocket Bridge ──────────────────────────────────────
+// ─── WebSocket Bridge (legacy — being phased out) ──────────
 export { createWsBridge, startTaskSession } from "./ws-bridge.js";
 
 // ─── Session / Environment ─────────────────────────────────
