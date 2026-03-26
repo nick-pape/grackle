@@ -5,6 +5,7 @@ import { FileReadCard } from "./FileReadCard.js";
 import { FileEditCard } from "./FileEditCard.js";
 import { ShellCard } from "./ShellCard.js";
 import { SearchCard } from "./SearchCard.js";
+import { TodoCard } from "./TodoCard.js";
 import { MetadataCard } from "./MetadataCard.js";
 import { GenericToolCard } from "./GenericToolCard.js";
 
@@ -28,6 +29,8 @@ export function ToolCard(props: ToolCardProps): JSX.Element {
       return <ShellCard {...props} />;
     case "search":
       return <SearchCard {...props} />;
+    case "todo":
+      return <TodoCard {...props} />;
     case "metadata":
       return <MetadataCard {...props} />;
     default:

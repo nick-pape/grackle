@@ -12,6 +12,7 @@ export type ToolCategory =
   | "file-write"
   | "shell"
   | "search"
+  | "todo"
   | "metadata"
   | "generic";
 
@@ -34,6 +35,11 @@ const TOOL_MAP: Record<string, ToolCategory> = {
   // Search — Claude Code: Grep, Glob
   grep: "search",
   glob: "search",
+
+  // Todo — Claude Code: TodoWrite, Codex: update_plan, Goose: todo_write
+  todowrite: "todo",
+  update_plan: "todo",
+  todo_write: "todo",
 
   // Metadata — Copilot: report_intent
   report_intent: "metadata",

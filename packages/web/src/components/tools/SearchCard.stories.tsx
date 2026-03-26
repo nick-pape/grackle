@@ -10,7 +10,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const GrepWithMatches: Story = {
-  name: "Grep — multiple matches",
+  name: "Grep - multiple matches",
   args: {
     tool: "Grep",
     args: { pattern: "verifyToken", path: "src/" },
@@ -25,7 +25,7 @@ export const GrepWithMatches: Story = {
 };
 
 export const GlobFileList: Story = {
-  name: "Glob — file list",
+  name: "Glob - file list",
   args: {
     tool: "Glob",
     args: { pattern: "src/**/*.test.ts" },

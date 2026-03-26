@@ -10,7 +10,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const FromOldNewStrings: Story = {
-  name: "Claude Code — old/new strings",
+  name: "Claude Code - old/new strings",
   args: {
     tool: "Edit",
     args: {
@@ -29,7 +29,7 @@ export const FromOldNewStrings: Story = {
 };
 
 export const FromUnifiedDiff: Story = {
-  name: "Copilot — unified diff in detailedResult",
+  name: "Copilot - unified diff in detailedResult",
   args: {
     tool: "edit",
     args: {
@@ -85,7 +85,7 @@ export const SmallEdit: Story = {
 };
 
 export const LargeDiffExpandCollapse: Story = {
-  name: "Large diff — expand/collapse",
+  name: "Large diff - expand/collapse",
   args: {
     tool: "Edit",
     args: {

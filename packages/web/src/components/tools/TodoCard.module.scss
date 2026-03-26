@@ -1,0 +1,131 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// TodoCard — checklist with progress bar and active task highlight
+// =============================================================================
+
+// --- Progress bar ---
+
+.progressBar {
+  height: 3px;
+  background: var(--bg-inset);
+  border-radius: 2px;
+  margin: var(--space-xs) 0;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--accent-green);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+// --- Active task callout ---
+
+.activeTask {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  margin: var(--space-xs) 0;
+  background: rgba(59, 130, 246, 0.08);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+}
+
+.activeIcon {
+  color: var(--accent-blue);
+  font-size: 8px;
+  animation: todoPulse 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.activeText {
+  color: var(--accent-blue);
+  font-weight: var(--font-weight-medium);
+  font-style: italic;
+}
+
+@keyframes todoPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+// --- Checklist ---
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: var(--space-xs);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 3px var(--space-xs);
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+}
+
+.itemIcon {
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+}
+
+.itemText {
+  flex: 1;
+  min-width: 0;
+}
+
+// --- Status variants ---
+
+.pending {
+  color: var(--text-tertiary);
+
+  .itemIcon {
+    color: var(--text-tertiary);
+  }
+}
+
+.in_progress {
+  color: var(--text-primary);
+  background: rgba(59, 130, 246, 0.05);
+
+  .itemIcon {
+    color: var(--accent-blue);
+    animation: todoPulse 1.5s ease-in-out infinite;
+  }
+
+  .itemText {
+    font-weight: var(--font-weight-medium);
+  }
+}
+
+.completed {
+  color: var(--text-secondary);
+
+  .itemIcon {
+    color: var(--accent-green);
+  }
+
+  .itemText {
+    text-decoration: line-through;
+    text-decoration-color: var(--text-tertiary);
+  }
+}
+
+// --- Empty state ---
+
+.emptyMessage {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  font-style: italic;
+  padding: var(--space-xs) 0;
+}

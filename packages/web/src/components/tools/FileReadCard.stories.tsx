@@ -51,7 +51,7 @@ export const ExpandCollapse: Story = {
     result: SAMPLE_FILE,
   },
   play: async ({ canvas }) => {
-    // Initially collapsed — line 10 content should not be visible
+    // Initially collapsed - line 10 content should not be visible
     const content = canvas.getByTestId("tool-card-content");
     await expect(content.textContent).not.toContain("const decoded");
 
@@ -86,7 +86,7 @@ export const InProgress: Story = {
   args: {
     tool: "Read",
     args: { file_path: "/src/index.ts" },
-    // No result — still loading
+    // No result - still loading
   },
   play: async ({ canvas }) => {
     const card = canvas.getByTestId("tool-card-file-read");
