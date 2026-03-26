@@ -1,25 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { AgentEvent } from "./runtime.js";
+import type { AgentEvent } from "@grackle-ai/runtime-sdk";
 
 // Mock the logger before importing the module under test
-vi.mock("../logger.js", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
-
-vi.mock("./runtime-utils.js", async (importOriginal) => {
-  const original = await importOriginal<typeof import("./runtime-utils.js")>();
+vi.mock("@grackle-ai/runtime-sdk", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@grackle-ai/runtime-sdk")>();
   return {
     ...original,
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
     resolveWorkingDirectory: vi.fn(async () => "/workspace/repo"),
+    ensureRuntimeInstalled: vi.fn(async () => ""),
+    importFromRuntime: vi.fn(async (_runtime: string, pkg: string) => import(pkg)),
+    getRuntimeBinDirectory: vi.fn(() => ""),
+    isDevMode: vi.fn(() => true),
   };
 });
-
-vi.mock("../runtime-installer.js", () => ({
-  ensureRuntimeInstalled: vi.fn(async () => ""),
-  importFromRuntime: vi.fn(async (_runtime: string, pkg: string) => import(pkg)),
-  getRuntimeBinDirectory: vi.fn(() => ""),
-  isDevMode: vi.fn(() => true),
-}));
 
 // Mock the Claude Agent SDK so tests run without a real API key
 const mockQuery = vi.fn();

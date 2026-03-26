@@ -1,10 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { AgentEvent } from "./runtime.js";
+import type { AgentEvent } from "@grackle-ai/runtime-sdk";
 
 // Mock dependencies before importing
-vi.mock("../logger.js", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
+vi.mock("@grackle-ai/runtime-sdk", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@grackle-ai/runtime-sdk")>();
+  return {
+    ...original,
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+    resolveWorkingDirectory: vi.fn(async () => undefined),
+    ensureRuntimeInstalled: vi.fn(async () => ""),
+    importFromRuntime: vi.fn(async (_runtime: string, pkg: string) => import(pkg)),
+    getRuntimeBinDirectory: vi.fn(() => ""),
+    isDevMode: vi.fn(() => true),
+  };
+});
 vi.mock("node:fs", () => ({
   existsSync: vi.fn(() => false),
   readFileSync: vi.fn(() => "{}"),
@@ -25,20 +34,10 @@ vi.mock("node:child_process", async (importOriginal) => {
     })),
   };
 });
-vi.mock("./runtime-utils.js", async (importOriginal) => {
-  const original = await importOriginal<typeof import("./runtime-utils.js")>();
-  return { ...original, resolveWorkingDirectory: vi.fn(async () => undefined) };
-});
-vi.mock("../runtime-installer.js", () => ({
-  ensureRuntimeInstalled: vi.fn(async () => ""),
-  importFromRuntime: vi.fn(async (_runtime: string, pkg: string) => import(pkg)),
-  getRuntimeBinDirectory: vi.fn(() => ""),
-  isDevMode: vi.fn(() => true),
-}));
 
 import { mapSessionUpdate, autoApprovePermission, selectEnvVarAuthMethod, AcpRuntime, _setAcpSdkForTesting } from "./acp.js";
 import type { AcpSdkModule } from "./acp.js";
-import { convertMcpServers } from "./runtime-utils.js";
+import { convertMcpServers } from "@grackle-ai/runtime-sdk";
 
 // ─── mapSessionUpdate ───────────────────────────────────────
 

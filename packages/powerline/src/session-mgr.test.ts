@@ -8,7 +8,7 @@ import {
   drainParkedSession,
   isParked,
 } from "./session-mgr.js";
-import type { AgentSession } from "./runtimes/runtime.js";
+import type { AgentSession } from "@grackle-ai/runtime-sdk";
 
 function makeMockSession(id: string): AgentSession {
   return {

@@ -1,9 +1,5 @@
-import type { AgentSession } from "./runtime.js";
-import { BaseAgentSession } from "./base-session.js";
-import { BaseAgentRuntime } from "./base-runtime.js";
-import { resolveWorkingDirectory, resolveMcpServers } from "./runtime-utils.js";
-import { logger } from "../logger.js";
-import { ensureRuntimeInstalled, importFromRuntime } from "../runtime-installer.js";
+import type { AgentSession } from "@grackle-ai/runtime-sdk";
+import { BaseAgentSession, BaseAgentRuntime, resolveWorkingDirectory, resolveMcpServers, logger, ensureRuntimeInstalled, importFromRuntime } from "@grackle-ai/runtime-sdk";
 
 // ─── Environment variable names ────────────────────────────
 // All configuration is driven by environment variables so the
@@ -101,7 +97,7 @@ export function resolveProviderConfig(): Record<string, unknown> | undefined {
 
 // Re-export resolveMcpServers so existing imports from this module continue to work.
 // Note: the return type is now ResolvedMcpConfig (from runtime-utils) instead of Record<string, unknown> | undefined.
-export { resolveMcpServers } from "./runtime-utils.js";
+export { resolveMcpServers } from "@grackle-ai/runtime-sdk";
 
 // ─── Session ───────────────────────────────────────────────
 

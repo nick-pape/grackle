@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import type { AgentRuntime, AgentSession, AgentEvent, SpawnOptions, ResumeOptions } from "./runtime.js";
+import type { AgentRuntime, AgentSession, AgentEvent, SpawnOptions, ResumeOptions } from "@grackle-ai/runtime-sdk";
 import { SESSION_STATUS } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 import {

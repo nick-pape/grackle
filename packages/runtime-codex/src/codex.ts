@@ -1,10 +1,6 @@
-import type { AgentSession } from "./runtime.js";
-import { BaseAgentSession } from "./base-session.js";
+import type { AgentSession } from "@grackle-ai/runtime-sdk";
+import { BaseAgentSession, BaseAgentRuntime, resolveWorkingDirectory, resolveMcpServers, logger, ensureRuntimeInstalled, importFromRuntime } from "@grackle-ai/runtime-sdk";
 import { SESSION_STATUS } from "@grackle-ai/common";
-import { BaseAgentRuntime } from "./base-runtime.js";
-import { resolveWorkingDirectory, resolveMcpServers } from "./runtime-utils.js";
-import { logger } from "../logger.js";
-import { ensureRuntimeInstalled, importFromRuntime } from "../runtime-installer.js";
 
 // ─── Environment variable names ────────────────────────────
 // All configuration is driven by environment variables so the
@@ -52,8 +48,8 @@ function getCodexSdk(): Promise<CodexSdkModule> {
 // ─── Helpers ───────────────────────────────────────────────
 
 // Re-export resolveMcpServers and ResolvedMcpConfig for backwards compatibility
-export { resolveMcpServers } from "./runtime-utils.js";
-export type { ResolvedMcpConfig } from "./runtime-utils.js";
+export { resolveMcpServers } from "@grackle-ai/runtime-sdk";
+export type { ResolvedMcpConfig } from "@grackle-ai/runtime-sdk";
 
 /**
  * @internal Extract the `type` discriminator from a ThreadItem.

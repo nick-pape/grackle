@@ -1,4 +1,4 @@
-import type { AgentRuntime } from "./runtimes/runtime.js";
+import type { AgentRuntime } from "@grackle-ai/runtime-sdk";
 
 const runtimes: Map<string, AgentRuntime> = new Map<string, AgentRuntime>();
 

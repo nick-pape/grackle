@@ -1,12 +1,8 @@
 import { spawn } from "node:child_process";
 import { Readable, Writable } from "node:stream";
 import type { ChildProcess } from "node:child_process";
-import type { AgentSession, AgentEvent } from "./runtime.js";
-import { BaseAgentSession } from "./base-session.js";
-import { BaseAgentRuntime } from "./base-runtime.js";
-import { resolveWorkingDirectory, resolveMcpServers, convertMcpServers } from "./runtime-utils.js";
-import { logger } from "../logger.js";
-import { ensureRuntimeInstalled, importFromRuntime, getRuntimeBinDirectory } from "../runtime-installer.js";
+import type { AgentSession, AgentEvent } from "@grackle-ai/runtime-sdk";
+import { BaseAgentSession, BaseAgentRuntime, resolveWorkingDirectory, resolveMcpServers, convertMcpServers, logger, ensureRuntimeInstalled, importFromRuntime, getRuntimeBinDirectory } from "@grackle-ai/runtime-sdk";
 
 // ─── Configuration ──────────────────────────────────────────
 

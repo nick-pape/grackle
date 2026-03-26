@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 
 // Keep module mocks only for true cross-module boundaries
-vi.mock("../logger.js", () => ({
+vi.mock("./logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 vi.mock("node:fs", () => ({
@@ -9,7 +9,7 @@ vi.mock("node:fs", () => ({
   readFileSync: vi.fn(() => "{}"),
   readdirSync: vi.fn(() => []),
 }));
-vi.mock("../worktree.js", () => ({
+vi.mock("./worktree.js", () => ({
   ensureWorktree: vi.fn(),
 }));
 
@@ -19,10 +19,10 @@ import {
   resolveMcpServers,
 } from "./runtime-utils.js";
 import type { GitRepository, WorkspaceLocator } from "./runtime-utils.js";
-import { AsyncQueue } from "../utils/async-queue.js";
+import { AsyncQueue } from "./async-queue.js";
 import type { AgentEvent } from "./runtime.js";
 import { existsSync } from "node:fs";
-import { ensureWorktree } from "../worktree.js";
+import { ensureWorktree } from "./worktree.js";
 
 // ─── Fake helpers ──────────────────────────────────────────────────────────
 

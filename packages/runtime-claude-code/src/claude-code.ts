@@ -1,14 +1,8 @@
-import type { AgentEvent, AgentSession } from "./runtime.js";
-import { BaseAgentSession } from "./base-session.js";
-import { BaseAgentRuntime } from "./base-runtime.js";
-import { AsyncQueue } from "../utils/async-queue.js";
-import { resolveWorkingDirectory, resolveMcpServers } from "./runtime-utils.js";
-import { logger } from "../logger.js";
+import type { AgentEvent, AgentSession } from "@grackle-ai/runtime-sdk";
+import { BaseAgentSession, BaseAgentRuntime, AsyncQueue, resolveWorkingDirectory, resolveMcpServers, logger, ensureRuntimeInstalled, importFromRuntime } from "@grackle-ai/runtime-sdk";
 import { accessSync, mkdirSync, copyFileSync, chmodSync, constants as fsConstants } from "node:fs";
 import { join } from "node:path";
 import { homedir, tmpdir } from "node:os";
-
-import { ensureRuntimeInstalled, importFromRuntime } from "../runtime-installer.js";
 
 // Dynamic import — try @anthropic-ai/claude-agent-sdk first, then @anthropic-ai/claude-code
 type QueryFn = (opts: Record<string, unknown>) => Promise<unknown>;

@@ -1,0 +1,37 @@
+{
+  "name": "@grackle-ai/runtime-sdk",
+  "version": "0.79.0",
+  "description": "Grackle runtime SDK — interfaces, base classes, shared utilities, and runtime installer",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nick-pape/grackle.git",
+    "directory": "packages/runtime-sdk"
+  },
+  "keywords": ["grackle", "runtime", "sdk", "agent"],
+  "homepage": "https://github.com/nick-pape/grackle#readme",
+  "bugs": { "url": "https://github.com/nick-pape/grackle/issues" },
+  "engines": { "node": ">=22.0.0" },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist/"],
+  "scripts": {
+    "build": "heft build --clean",
+    "test": "vitest run",
+    "clean": "heft clean",
+    "_phase:build": "heft run --only build -- --clean",
+    "_phase:test": "vitest run"
+  },
+  "dependencies": {
+    "@grackle-ai/common": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.27.0",
+    "pino": "^9.6.0"
+  },
+  "devDependencies": {
+    "@grackle-ai/heft-rig": "workspace:*",
+    "@rushstack/heft": "1.2.7",
+    "@types/node": "^22.0.0",
+    "vitest": "^3.1.1"
+  }
+}

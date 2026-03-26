@@ -1,8 +1,8 @@
 import type { AgentSession, AgentEvent } from "./runtime.js";
 import { SESSION_STATUS } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
-import { AsyncQueue } from "../utils/async-queue.js";
-import { logger } from "../logger.js";
+import { AsyncQueue } from "./async-queue.js";
+import { logger } from "./logger.js";
 
 /**
  * Abstract base class for agent sessions that use the eventQueue + waiting_input lifecycle.

@@ -5,11 +5,10 @@ import { join, dirname } from "node:path";
 import { tmpdir, homedir } from "node:os";
 import { createInterface } from "node:readline";
 import { createRequire } from "node:module";
-import type { AgentRuntime, AgentSession, AgentEvent, SpawnOptions, ResumeOptions } from "./runtime.js";
+import type { AgentRuntime, AgentSession, AgentEvent, SpawnOptions, ResumeOptions } from "@grackle-ai/runtime-sdk";
+import { logger, ensureRuntimeInstalled } from "@grackle-ai/runtime-sdk";
 import { SESSION_STATUS } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
-import { logger } from "../logger.js";
-import { ensureRuntimeInstalled } from "../runtime-installer.js";
 
 /** Shape of the JSON result from genaiscript's res.json output. */
 interface GenAIResult {

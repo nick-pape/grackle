@@ -1,4 +1,4 @@
-import type { AgentEvent, AgentSession } from "./runtimes/runtime.js";
+import type { AgentEvent, AgentSession } from "@grackle-ai/runtime-sdk";
 
 const sessions: Map<string, AgentSession> = new Map<string, AgentSession>();
 

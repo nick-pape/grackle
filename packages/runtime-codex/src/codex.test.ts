@@ -1,11 +1,19 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import type { AgentEvent } from "./runtime.js";
+import type { AgentEvent } from "@grackle-ai/runtime-sdk";
 
 // ─── Mocks ──────────────────────────────────────────────────
 
-vi.mock("../logger.js", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
+vi.mock("@grackle-ai/runtime-sdk", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@grackle-ai/runtime-sdk")>();
+  return {
+    ...original,
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+    ensureRuntimeInstalled: vi.fn(async () => ""),
+    importFromRuntime: vi.fn(async (_runtime: string, pkg: string) => import(pkg)),
+    getRuntimeBinDirectory: vi.fn(() => ""),
+    isDevMode: vi.fn(() => true),
+  };
+});
 vi.mock("node:fs", () => ({
   existsSync: vi.fn(() => false),
   readFileSync: vi.fn(() => "{}"),
@@ -17,15 +25,6 @@ vi.mock("node:child_process", () => ({
 }));
 vi.mock("node:util", () => ({
   promisify: vi.fn(() => vi.fn()),
-}));
-vi.mock("../worktree.js", () => ({
-  ensureWorktree: vi.fn(),
-}));
-vi.mock("../runtime-installer.js", () => ({
-  ensureRuntimeInstalled: vi.fn(async () => ""),
-  importFromRuntime: vi.fn(async (_runtime: string, pkg: string) => import(pkg)),
-  getRuntimeBinDirectory: vi.fn(() => ""),
-  isDevMode: vi.fn(() => true),
 }));
 
 /** Creates an async iterable from an array of events. */
@@ -65,7 +64,7 @@ vi.mock("@openai/codex-sdk", () => ({
 }));
 
 import { itemType, CodexRuntime } from "./codex.js";
-import { resolveMcpServers } from "./runtime-utils.js";
+import { resolveMcpServers } from "@grackle-ai/runtime-sdk";
 import { existsSync, readFileSync } from "node:fs";
 
 // ─── Helpers ────────────────────────────────────────────────

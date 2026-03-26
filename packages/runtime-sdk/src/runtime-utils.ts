@@ -1,10 +1,10 @@
 import type { AgentEvent } from "./runtime.js";
-import type { AsyncQueue } from "../utils/async-queue.js";
+import type { AsyncQueue } from "./async-queue.js";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { ensureWorktree } from "../worktree.js";
-import { logger } from "../logger.js";
+import { ensureWorktree } from "./worktree.js";
+import { logger } from "./logger.js";
 
 // ─── Injectable interfaces ──────────────────────────────────
 

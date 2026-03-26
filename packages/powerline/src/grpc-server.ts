@@ -11,9 +11,9 @@ import {
   drainParkedSession,
 } from "./session-mgr.js";
 import { writeTokens } from "./token-writer.js";
-import { removeWorktree } from "./worktree.js";
+import { removeWorktree } from "@grackle-ai/runtime-sdk";
 import os from "node:os";
-import type { AgentEvent, AgentSession } from "./runtimes/runtime.js";
+import type { AgentEvent, AgentSession } from "@grackle-ai/runtime-sdk";
 
 const startTime: number = Date.now();
 
