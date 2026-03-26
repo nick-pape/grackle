@@ -176,8 +176,16 @@ export const sessionTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
       try {
+        if (authContext?.type === "scoped") {
+          const session = await client.getSession({ id: args.sessionId as string });
+          if (!session.taskId) {
+            throw new ConnectError("Cannot attach to a taskless session via scoped auth", Code.PermissionDenied);
+          }
+          await assertCallerIsAncestor(client, authContext, session.taskId);
+        }
+
         const timeout = Math.min(
           (args.timeoutSeconds as number | undefined) ?? DEFAULT_TIMEOUT_SECONDS,
           MAX_TIMEOUT_SECONDS,

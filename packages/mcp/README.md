@@ -247,10 +247,11 @@ When an agent authenticates with a **scoped token** (issued automatically when a
 
 - `finding_post`, `finding_list`
 - `task_create`, `task_list`, `task_show`, `task_start`, `task_complete`
-- `session_send_input`
+- `session_attach`, `session_send_input`
 - `persona_list`, `persona_show`
 - `ipc_spawn`, `ipc_write`, `ipc_close`, `ipc_terminate`, `ipc_list_fds`
 - `knowledge_search`, `knowledge_get_node`
+- `logs_get`
 
 Scoped tokens also enforce workspace isolation — agents can only see tasks and findings within their own workspace. Subtasks created by a scoped agent are automatically parented to the agent's own task.
 
