@@ -74,19 +74,15 @@ export const StartMode: Story = {
   },
 };
 
-/** Send mode with Stop split button visible. */
-export const SendModeWithStop: Story = {
+/** Send mode renders input and Send button (Stop is in page header, not ChatInput). */
+export const SendModeActive: Story = {
   args: {
     mode: "send",
     sessionId: "sess-1",
     environmentId: "local",
-    showStop: true,
-    onSessionStop: fn(),
-    onSessionKill: fn(),
   },
   play: async ({ canvas }) => {
-    await expect(canvas.getByTestId("stop-split-button-main")).toBeInTheDocument();
-    await expect(canvas.getByTestId("stop-split-button-main")).toHaveTextContent("Stop");
-    await expect(canvas.getByTestId("stop-split-button-chevron")).toBeInTheDocument();
+    await expect(canvas.getByPlaceholderText("Type a message...")).toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "Send" })).toBeDisabled();
   },
 };
