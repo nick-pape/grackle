@@ -14,6 +14,7 @@ export { emit, subscribe } from "./event-bus.js";
 
 // ─── Wiring Initializers ───────────────────────────────────
 export { initSigchldSubscriber } from "./signals/sigchld.js";
+export { initOrphanReparentSubscriber, transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
 export { initLifecycleManager } from "./lifecycle.js";
 
 // ─── Task Session ───────────────────────────────────────────
@@ -32,6 +33,8 @@ export { ReconciliationManager } from "./reconciliation-manager.js";
 export type { ReconciliationPhase } from "./reconciliation-manager.js";
 export { createCronPhase } from "./cron-phase.js";
 export type { CronPhaseDeps } from "./cron-phase.js";
+export { createOrphanPhase } from "./orphan-phase.js";
+export type { OrphanPhaseDeps } from "./orphan-phase.js";
 export { findFirstConnectedEnvironment } from "./find-connected-environment.js";
 export { validateExpression, computeNextRunAt } from "./schedule-expression.js";
 export { lifecycleCleanupPhase } from "./lifecycle-cleanup.js";

@@ -396,3 +396,61 @@ export function getChildStatusCounts(taskId: string): Record<string, number> {
   }
   return counts;
 }
+
+/** Terminal task statuses that indicate the task is done. */
+const TERMINAL_TASK_STATUSES: ReadonlySet<string> = new Set([
+  TASK_STATUS.COMPLETE,
+  TASK_STATUS.FAILED,
+]);
+
+/**
+ * Reparent a task to a new parent, updating parentTaskId and recalculating
+ * depth for the task and its entire subtree.
+ */
+export function reparentTask(taskId: string, newParentTaskId: string): void {
+  const task = getTask(taskId);
+  if (!task) {
+    throw new Error(`Task not found: ${taskId}`);
+  }
+  const newParent = getTask(newParentTaskId);
+  if (!newParent) {
+    throw new Error(`New parent task not found: ${newParentTaskId}`);
+  }
+
+  const newDepth = newParent.depth + 1;
+  const depthDelta = newDepth - task.depth;
+
+  // Update the task itself
+  db.update(tasks)
+    .set({
+      parentTaskId: newParentTaskId,
+      depth: newDepth,
+      updatedAt: sql`datetime('now')`,
+    })
+    .where(eq(tasks.id, taskId))
+    .run();
+
+  // Recalculate depth for all descendants
+  if (depthDelta !== 0) {
+    const descendants = getDescendants(taskId);
+    for (const desc of descendants) {
+      db.update(tasks)
+        .set({
+          depth: desc.depth + depthDelta,
+          updatedAt: sql`datetime('now')`,
+        })
+        .where(eq(tasks.id, desc.id))
+        .run();
+    }
+  }
+}
+
+/**
+ * Get non-terminal children of a parent task (potential orphans).
+ * Returns children whose status is not complete or failed.
+ */
+export function getOrphanedTasks(parentTaskId: string): TaskRow[] {
+  return getChildren(parentTaskId).filter(
+    (child) => !TERMINAL_TASK_STATUSES.has(child.status),
+  );
+}
