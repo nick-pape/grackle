@@ -204,7 +204,7 @@ export function EventRenderer({ event, toolUseCtx }: Props): JSX.Element {
         );
       }
       // Unpaired tool_result — use generic card with fallback label
-      return <ToolCard tool="Tool output" args={{}} result={resultContent} isError={isError} />;
+      return <ToolCard tool="Tool output" args={undefined} result={resultContent} isError={isError} />;
     }
     case "error":
       return <ErrorEvent content={event.content} />;

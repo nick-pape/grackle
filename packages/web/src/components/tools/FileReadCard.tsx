@@ -42,6 +42,7 @@ export function FileReadCard({ tool, args, result, isError, writeVariant }: File
   const accentClass: string = isError ? styles.cardRed : (writeVariant ? styles.cardGreen : styles.cardBlue);
   const accentColor: string = writeVariant ? "var(--accent-green)" : "var(--accent-blue)";
   const icon: string = writeVariant ? "📝" : "📄";
+  const testId: string = writeVariant ? "tool-card-file-write" : "tool-card-file-read";
 
   const lines = result?.split("\n") ?? [];
   const hasMore = lines.length > PREVIEW_LINES;
@@ -50,7 +51,7 @@ export function FileReadCard({ tool, args, result, isError, writeVariant }: File
   return (
     <div
       className={`${styles.card} ${accentClass} ${inProgress ? styles.inProgress : ""}`}
-      data-testid="tool-card-file-read"
+      data-testid={testId}
     >
       <div className={styles.header}>
         <span className={styles.icon}>{icon}</span>

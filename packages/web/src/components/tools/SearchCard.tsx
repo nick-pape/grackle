@@ -44,7 +44,7 @@ export function SearchCard({ tool, args, result, isError }: ToolCardProps): JSX.
             in {path}
           </span>
         )}
-        {!inProgress && lines.length > 0 && (
+        {!inProgress && !isError && lines.length > 0 && (
           <>
             <span className={styles.spacer} />
             <span className={styles.badge} data-testid="tool-card-match-count">
