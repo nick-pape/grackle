@@ -75,6 +75,17 @@ else
   rm -f "$CLAUDE_RO/.write-test" 2>/dev/null || true
 fi
 
+# ── Codex / Copilot writable check ───────────────────────────
+# Unlike Claude (which has CLAUDE_CONFIG_DIR), Codex and Copilot have no
+# config dir override. Their CLIs write directly to ~/.codex/ and ~/.copilot/.
+# These MUST be mounted writable (no :ro flag) or auth/session state will fail.
+for sdk_dir in /home/node/.codex /home/node/.copilot; do
+  if [ -d "$sdk_dir" ] && ! gosu node test -w "$sdk_dir"; then
+    echo "ERROR: $sdk_dir is mounted read-only but must be writable." >&2
+    echo "       Change the mount from ':ro' to writable in docker-compose.yml." >&2
+  fi
+done
+
 # ── Credential mount warnings ───────────────────────────────
 # For the local adapter, file tokens are NOT pushed via gRPC
 # (excludeFileTokens: true). Runtimes read credential files directly

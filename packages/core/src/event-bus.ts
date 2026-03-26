@@ -24,7 +24,11 @@ export type GrackleEventType =
   | "environment.provision_progress"
   | "token.changed"
   | "credential.providers_changed"
-  | "setting.changed";
+  | "setting.changed"
+  | "schedule.created"
+  | "schedule.updated"
+  | "schedule.deleted"
+  | "schedule.fired";
 
 /** A domain event emitted by the event bus. */
 export interface GrackleEvent {

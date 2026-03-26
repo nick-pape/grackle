@@ -2,6 +2,40 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.79.0",
+      "tag": "@grackle-ai/cli_v0.79.0",
+      "date": "Wed, 25 Mar 2026 20:38:47 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add scheduled triggers (cron primitive) for periodic task firing with interval and cron expression support"
+          }
+        ],
+        "none": [
+          {
+            "comment": "placeholder"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.78.0",
+      "tag": "@grackle-ai/cli_v0.78.0",
+      "date": "Wed, 25 Mar 2026 17:14:49 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Graceful shutdown signal (SIGTERM) for agents: two-mode KillAgent with graceful flag, new ipc_terminate MCP tool, system prompt SIGTERM instructions, and bug fix for PowerLine kill forwarding"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Fix knowledge sidebar workspace filter scope not preserved across search/clear"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.77.0",
       "tag": "@grackle-ai/cli_v0.77.0",
       "date": "Wed, 25 Mar 2026 16:30:59 GMT",

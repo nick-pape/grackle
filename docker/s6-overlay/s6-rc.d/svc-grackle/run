@@ -1,3 +1,9 @@
 #!/command/with-contenv bash
 
+# Source CLAUDE_CONFIG_DIR explicitly — with-contenv should inject it, but
+# gosu's exec can lose s6 container_environment vars on some platforms.
+if [ -r /run/s6/container_environment/CLAUDE_CONFIG_DIR ]; then
+  export CLAUDE_CONFIG_DIR="$(<"/run/s6/container_environment/CLAUDE_CONFIG_DIR")"
+fi
+
 exec gosu node grackle serve --allow-network

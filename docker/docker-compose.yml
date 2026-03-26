@@ -1,3 +1,6 @@
+# Developer compose file — builds from source.
+# For the published GHCR image, see deploy/docker-compose.yml instead.
+
 services:
   grackle:
     build:
@@ -22,9 +25,9 @@ services:
       # As an alternative, you can configure auth via env vars (e.g. ANTHROPIC_API_KEY,
       # OPENAI_API_KEY, COPILOT_GITHUB_TOKEN/GH_TOKEN/GITHUB_TOKEN). Omit any mount you
       # don't need (e.g. skip .copilot if not using Copilot).
-      - "${HOME}/.claude:/home/node/.claude:ro"                          # Claude auth + config
-      - "${HOME}/.copilot:/home/node/.copilot:ro"                        # Copilot auth
-      - "${HOME}/.codex:/home/node/.codex:ro"                            # Codex auth
+      - "${HOME}/.claude:/home/node/.claude:ro"                          # Claude auth + config (RO — redirected via CLAUDE_CONFIG_DIR)
+      - "${HOME}/.copilot:/home/node/.copilot"                           # Copilot auth + session state (writable — no config dir override)
+      - "${HOME}/.codex:/home/node/.codex"                               # Codex auth + skills cache (writable — no config dir override)
       # - "${HOME}/.config/goose:/home/node/.config/goose:ro"            # Goose auth (uncomment if using Goose)
     extra_hosts:
       - "host.docker.internal:host-gateway"

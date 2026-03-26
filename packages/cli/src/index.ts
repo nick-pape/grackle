@@ -13,6 +13,7 @@ import { registerWorkspaceCommands } from "./commands/workspace.js";
 import { registerTaskCommands } from "./commands/task.js";
 import { registerFindingCommands } from "./commands/findings.js";
 import { registerPersonaCommands } from "./commands/persona.js";
+import { registerScheduleCommands } from "./commands/schedule.js";
 import { registerCredentialProviderCommands } from "./commands/credential-provider.js";
 import { registerPairCommand } from "./commands/pair.js";
 import { registerConfigCommands } from "./commands/config.js";
@@ -57,23 +58,27 @@ registerWorkspaceCommands(program);
 registerTaskCommands(program);
 registerFindingCommands(program);
 registerPersonaCommands(program);
+registerScheduleCommands(program);
 registerCredentialProviderCommands(program);
 registerPairCommand(program);
 registerConfigCommands(program);
 
 // Print update notice after command execution (non-blocking).
-// checkVersionStatus has its own 5s fetch timeout internally.
-program.hook("postAction", async () => {
-  try {
-    const status = await checkVersionStatus();
-    const notice = formatVersionNotice(status);
-    if (notice) {
-      console.error(notice);
+// Skip in CI and non-interactive environments to avoid adding 5s latency
+// to every CLI invocation during E2E setup and automated pipelines.
+if (!process.env.CI && process.stderr.isTTY) {
+  program.hook("postAction", async () => {
+    try {
+      const status = await checkVersionStatus();
+      const notice = formatVersionNotice(status);
+      if (notice) {
+        console.error(notice);
+      }
+    } catch {
+      // Silent — version check is non-critical
     }
-  } catch {
-    // Silent — version check is non-critical
-  }
-});
+  });
+}
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   if (err instanceof ConnectError) {

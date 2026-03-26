@@ -13,6 +13,7 @@ import { ipcTools } from "./ipc.js";
 import { usageTools } from "./usage.js";
 import { knowledgeTools } from "./knowledge.js";
 import { workpadTools } from "./workpad.js";
+import { scheduleTools } from "./schedule.js";
 import { versionTools } from "./version.js";
 
 /** Create a ToolRegistry pre-populated with all available MCP tools. */
@@ -32,6 +33,7 @@ export function createToolRegistry(): ToolRegistry {
   registry.registerAll(usageTools);
   registry.registerAll(knowledgeTools);
   registry.registerAll(workpadTools);
+  registry.registerAll(scheduleTools);
   registry.registerAll(versionTools);
   return registry;
 }
