@@ -329,4 +329,22 @@ describe("gRPC listTasks handler", () => {
     expect(parent!.childTaskIds).toContain("tc2");
     expect(parent!.latestSessionId).toBe("sess-1");
   });
+
+  it("childTaskIds only includes tasks present in filtered results", async () => {
+    taskStore.createTask("tp", WORKSPACE_ID, "Parent task", "desc", [], "test-workspace", "", true);
+    taskStore.createTask("tc1", WORKSPACE_ID, "Child matching login", "desc", [], "test-workspace", "tp");
+    taskStore.createTask("tc2", WORKSPACE_ID, "Child unrelated", "desc", [], "test-workspace", "tp");
+
+    const result = await handlers.listTasks({
+      workspaceId: WORKSPACE_ID,
+      search: "login",
+      status: "",
+    }) as grackle.TaskList;
+
+    // Only tc1 matches "login", so parent's childTaskIds should not include tc2
+    const parent = result.tasks.find((t) => t.id === "tp");
+    if (parent) {
+      expect(parent.childTaskIds).not.toContain("tc2");
+    }
+  });
 });

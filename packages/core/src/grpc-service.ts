@@ -1381,7 +1381,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
             { name: "description", weight: 1 },
           ]).map((r) => r.item)
         : allRows;
-      const childIdsMap = taskStore.buildChildIdsMap(allRows);
+      const childIdsMap = taskStore.buildChildIdsMap(rows);
 
       // Batch-fetch sessions for all tasks and group by taskId
       const taskIds = rows.map((r) => r.id);
