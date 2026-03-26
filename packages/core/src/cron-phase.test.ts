@@ -150,7 +150,6 @@ describe("createCronPhase", () => {
     expect(deps.findFirstConnectedEnvironment).not.toHaveBeenCalled();
     // Should use explicit env
     expect(deps.startTaskSession).toHaveBeenCalledWith(
-      undefined,
       expect.anything(),
       expect.objectContaining({ environmentId: "explicit-env" }),
     );
@@ -165,7 +164,6 @@ describe("createCronPhase", () => {
 
     expect(deps.findFirstConnectedEnvironment).toHaveBeenCalled();
     expect(deps.startTaskSession).toHaveBeenCalledWith(
-      undefined,
       expect.anything(),
       expect.objectContaining({ environmentId: "local-env" }),
     );

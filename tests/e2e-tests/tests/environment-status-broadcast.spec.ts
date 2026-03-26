@@ -1,12 +1,8 @@
 import { test, expect } from "./fixtures.js";
-import {
-  installWsTracker,
-  injectWsMessage,
-  provisionEnvironmentDirect,
-} from "./helpers.js";
+import { provisionEnvironmentDirect } from "./helpers.js";
 
 /**
- * Tests that environment status changes broadcast via WebSocket
+ * Tests that environment status changes broadcast via ConnectRPC StreamEvents
  * update the StatusBar count and trigger toast notifications.
  *
  * Toast messages are generic (no resource names) to avoid strict-mode
@@ -14,25 +10,14 @@ import {
  */
 
 test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }, () => {
-  // Ensure the environment is connected before each test — previous tests
-  // may have stopped it and the reprovision may not have completed.
-  // No beforeEach needed — global-setup provisions the env. Tests that
-  // stop the env must reprovision at the end (afterEach or inline).
+  test("stop environment shows disconnected toast and updates StatusBar", async ({ appPage, grackle: { client } }) => {
+    const page = appPage;
 
-  test("stop environment shows disconnected toast and updates StatusBar", async ({ page, grackle: { client } }) => {
     // Ensure connected before starting (may have been left disconnected)
     await provisionEnvironmentDirect("test-local");
 
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") &&
-            document.body.innerText.includes("1/1 env"),
-      { timeout: 15_000 },
-    );
-
-    // Verify StatusBar initially shows connected count (1/1)
-    await expect(page.getByText("1/1 env")).toBeVisible({ timeout: 5_000 });
+    // Wait for fully connected state
+    await expect(page.getByText("1/1 env")).toBeVisible({ timeout: 15_000 });
 
     // Stop the environment via RPC
     await client.stopEnvironment({ id: "test-local" });
@@ -48,20 +33,14 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     await expect(page.getByText("1/1 env")).toBeVisible({ timeout: 15_000 });
   });
 
-  test("provision environment shows connected toast and updates StatusBar", async ({ page, grackle: { client } }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") &&
-            /\d+\/\d+ env/.test(document.body.innerText),
-      { timeout: 10_000 },
-    );
+  test("provision environment shows connected toast and updates StatusBar", async ({ appPage, grackle: { client } }) => {
+    const page = appPage;
 
     // Stop the environment first
     await client.stopEnvironment({ id: "test-local" });
     await expect(page.getByText("0/1 env")).toBeVisible({ timeout: 10_000 });
 
-    // Re-provision via direct gRPC call (HTTP/2)
+    // Re-provision via direct gRPC call
     await provisionEnvironmentDirect("test-local");
 
     // StatusBar should show 1/1 again
@@ -71,92 +50,26 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     await expect(page.getByText("Environment connected")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("injected environment removal shows removal toast", async ({ page }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
-      { timeout: 10_000 },
-    );
+  test("environment removal shows removal toast", async ({ appPage, grackle: { client } }) => {
+    const page = appPage;
 
-    // Inject a two-environment list first
-    await injectWsMessage(page, {
-      type: "environments",
-      payload: {
-        environments: [
-          {
-            id: "test-local",
-            displayName: "test-local",
-            adapterType: "local",
-
-            status: "connected",
-            bootstrapped: true,
-          },
-          {
-            id: "temp-env",
-            displayName: "Temp Env",
-            adapterType: "local",
-
-            status: "connected",
-            bootstrapped: false,
-          },
-        ],
-      },
+    // Add a real temporary environment
+    const added = await client.addEnvironment({
+      displayName: "Temp Env",
+      adapterType: "local",
     });
 
-    // Verify both appear in StatusBar count
-    await expect(page.getByText("2/2 envs")).toBeVisible({ timeout: 5_000 });
+    // Wait for the new environment to appear (total count increases to 2).
+    // The new env starts disconnected, so the count may be "1/2 envs" (not "2/2").
+    await expect(page.getByText(/\/2 envs/)).toBeVisible({ timeout: 10_000 });
 
-    // Now inject list without temp-env (simulate removal)
-    await injectWsMessage(page, {
-      type: "environments",
-      payload: {
-        environments: [
-          {
-            id: "test-local",
-            displayName: "test-local",
-            adapterType: "local",
-
-            status: "connected",
-            bootstrapped: true,
-          },
-        ],
-      },
-    });
+    // Remove the temporary environment via RPC
+    await client.removeEnvironment({ id: added.id });
 
     // Generic removal toast should appear
     await expect(page.getByText("Environment removed")).toBeVisible({ timeout: 5_000 });
 
     // StatusBar should now show 1/1
     await expect(page.getByText("1/1 env")).toBeVisible({ timeout: 5_000 });
-  });
-
-  test("injected error status shows provision failed toast", async ({ page }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
-
-    // Inject environment in error status
-    await injectWsMessage(page, {
-      type: "environments",
-      payload: {
-        environments: [
-          {
-            id: "test-local",
-            displayName: "test-local",
-            adapterType: "local",
-
-            status: "error",
-            bootstrapped: false,
-          },
-        ],
-      },
-    });
-
-    // Generic error toast should appear
-    await expect(page.getByText("Environment provision failed")).toBeVisible({ timeout: 5_000 });
   });
 });

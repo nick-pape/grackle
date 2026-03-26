@@ -37,12 +37,6 @@ vi.mock("./stream-hub.js", () => ({
   }),
 }));
 
-vi.mock("./ws-broadcast.js", () => ({
-  broadcast: vi.fn(),
-  setWssInstance: vi.fn(),
-  broadcastEnvironments: vi.fn(),
-  envRowToWs: vi.fn(),
-}));
 
 vi.mock("./event-bus.js", () => ({
   emit: vi.fn(),

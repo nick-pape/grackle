@@ -1,10 +1,5 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createWorkspace,
-  createTaskWithScenario,
-  navigateToTask,
-  patchWsForStubRuntime,
-  installWsTracker,
   stubScenario,
   emitText,
   emitToolUse,
@@ -82,18 +77,10 @@ test.describe("Stream smart scroll", { tag: ["@webui"] }, () => {
     expect(textBefore).not.toEqual(textAfter);
   });
 
-  test("scroll-to-anchor FAB appears when scrolled away", async ({ page, grackle: { client } }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
+  test("scroll-to-anchor FAB appears when scrolled away", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    await createWorkspace(client, "scroll-fab");
-    await createTaskWithScenario(client, "scroll-fab", "fab-task", scrollableScenario());
-    await navigateToTask(page, "fab-task");
-    await patchWsForStubRuntime(page);
+    await stubTask.createAndNavigate("fab-task", scrollableScenario());
     await runScenarioToCompletion(page);
 
     await page.locator("button", { hasText: "Stream" }).click();

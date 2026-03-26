@@ -1,93 +1,39 @@
 import { test, expect } from "./fixtures.js";
 import {
-  installWsTracker,
-  injectWsMessage,
+  stubScenario,
+  emitToolUse,
+  emitToolResult,
+  idle,
 } from "./helpers.js";
 
 /**
  * Tests for tool card rendering in the session event stream (#303, #935).
  *
- * These tests inject WebSocket messages directly to avoid relying on the
- * stub runtime, which can be flaky in CI.  The approach:
- *   1. installWsTracker + page.goto → "Connected"
- *   2. Inject `spawned` to switch the app into session view mode
- *   3. Inject `session_event` messages to populate the event stream
- *   4. Assert on the rendered output
- *
- * Covers:
+ * Uses the stub runtime to produce real tool_use and tool_result events
+ * through the server's event pipeline. Covers:
  *  - Unpaired tool_result renders as a generic tool card
  *  - Paired tool_use+tool_result renders as specialized card (ShellCard, etc.)
  *  - Unpaired tool_use renders as in-progress card
- *  - raw field forwarding
  */
 
-const FAKE_SESSION_ID = "tool-result-test-session-01";
-
-/** Helper: inject a `spawned` message so the app switches to session view. */
-async function injectSpawned(
-  page: import("@playwright/test").Page,
-): Promise<void> {
-  await injectWsMessage(page, {
-    type: "spawned",
-    payload: { sessionId: FAKE_SESSION_ID },
-  });
-}
-
-/** Helper: inject a tool_result session event. */
-async function injectToolResult(
-  page: import("@playwright/test").Page,
-  content: string,
-  raw?: string,
-): Promise<void> {
-  await injectWsMessage(page, {
-    type: "session_event",
-    payload: {
-      sessionId: FAKE_SESSION_ID,
-      eventType: "tool_result",
-      content,
-      timestamp: new Date().toISOString(),
-      ...(raw !== undefined ? { raw } : {}),
-    },
-  });
-}
-
 test.describe("Tool card rendering (#935)", { tag: ["@webui"] }, () => {
-  /** Navigate to the app, wait for connection, and inject a spawned event so
-   *  the app enters session view mode for FAKE_SESSION_ID.
-   *
-   *  After the `spawned` injection, SessionPanel fires `loadSessionEvents` which
-   *  sends a real `get_session_events` request to the server.  The server responds
-   *  with an empty `session_events` payload (fake session doesn't exist), which
-   *  clears any events for the fake session ID.  We wait until "Waiting for events…"
-   *  is visible — that text only appears after the replay response has landed and
-   *  the events list is empty — before injecting test events so they cannot be
-   *  wiped by the late-arriving replay. */
-  async function setupSessionView(
-    page: import("@playwright/test").Page,
-  ): Promise<void> {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
+  test("unpaired tool_result renders as generic tool card", async ({ stubTask }) => {
+    const { page } = stubTask;
+
+    // Scenario: emit a tool_result without a preceding tool_use
+    await stubTask.createAndNavigate(
+      "unpaired-result",
+      stubScenario(emitToolResult('Tool output: "hello world"'), idle()),
     );
-    await injectSpawned(page);
-    // Wait for "Waiting for events…" which confirms:
-    //  1. viewMode switched to session mode
-    //  2. server's get_session_events reply arrived (session unknown → empty)
-    //  3. safe to inject events; the replay handler won't wipe them afterwards
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Waiting for events"),
-      { timeout: 5_000 },
-    );
-  }
 
-  test("unpaired tool_result renders as generic tool card", async ({ page }) => {
-    await setupSessionView(page);
+    // Start the task and wait for idle
+    await page.getByTestId("task-header-start").click();
+    await page.locator('input[placeholder="Type a message..."]').waitFor({ timeout: 15_000 });
 
-    await injectToolResult(page, 'Tool output: "hello world"');
+    // Switch to stream tab
+    await page.locator("button", { hasText: "Stream" }).click();
 
-    // Wait for the generic tool card to appear
+    // The generic tool card should appear (no matching tool_use to pair with)
     const toolCard = page.getByTestId("tool-card-generic");
     await expect(toolCard).toBeVisible({ timeout: 5_000 });
 
@@ -95,119 +41,46 @@ test.describe("Tool card rendering (#935)", { tag: ["@webui"] }, () => {
     await expect(page.getByTestId("tool-card-result")).toContainText("hello world");
   });
 
-  test("unpaired tool_result with is_error=false renders as tool card", async ({ page }) => {
-    await setupSessionView(page);
+  test("paired tool_use+tool_result renders as specialized card and hides standalone tool_use", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    await injectToolResult(
-      page,
-      "Success",
-      JSON.stringify({ type: "tool_result", is_error: false }),
+    // Scenario: tool_use followed by tool_result (stub runtime auto-generates matching IDs)
+    await stubTask.createAndNavigate(
+      "paired-tools",
+      stubScenario(
+        emitToolUse("Bash", { command: "ls -la /tmp" }),
+        emitToolResult("total 12\ndrwxrwxrwt 5 root root 4096 Mar 14"),
+        idle(),
+      ),
     );
 
-    await expect(
-      page.getByTestId("tool-card-generic"),
-    ).toBeVisible({ timeout: 5_000 });
-  });
-
-  test("paired tool_use+tool_result renders as specialized card and hides standalone tool_use", async ({ page }) => {
-    await setupSessionView(page);
-
-    const TOOL_USE_ID = "toolu_test_pairing_001";
-
-    // Inject tool_use with a structured raw block (mimics claude-code runtime output)
-    await injectWsMessage(page, {
-      type: "session_event",
-      payload: {
-        sessionId: FAKE_SESSION_ID,
-        eventType: "tool_use",
-        content: JSON.stringify({ tool: "Bash", args: { command: "ls -la /tmp" } }),
-        timestamp: new Date().toISOString(),
-        raw: JSON.stringify({ type: "tool_use", id: TOOL_USE_ID, name: "Bash", input: { command: "ls -la /tmp" } }),
-      },
-    });
-
-    // Inject matching tool_result
-    await injectWsMessage(page, {
-      type: "session_event",
-      payload: {
-        sessionId: FAKE_SESSION_ID,
-        eventType: "tool_result",
-        content: "total 12\ndrwxrwxrwt 5 root root 4096 Mar 14",
-        timestamp: new Date().toISOString(),
-        raw: JSON.stringify({ type: "tool_result", tool_use_id: TOOL_USE_ID, is_error: false }),
-      },
-    });
+    await page.getByTestId("task-header-start").click();
+    await page.locator('input[placeholder="Type a message..."]').waitFor({ timeout: 15_000 });
+    await page.locator("button", { hasText: "Stream" }).click();
 
     // Should render as a ShellCard with the command visible
     const shellCard = page.getByTestId("tool-card-shell");
     await expect(shellCard).toBeVisible({ timeout: 5_000 });
     await expect(page.getByTestId("tool-card-command")).toHaveText("ls -la /tmp");
 
-    // The standalone tool_use card should be consumed by pairing — no in-progress cards visible
-    // (ShellCard is the only tool card, and it has a result)
+    // The standalone tool_use card should be consumed by pairing — only one shell card
     await expect(page.getByTestId("tool-card-shell")).toHaveCount(1);
   });
 
-  test("unpaired tool_use (no raw id) still renders as its own card", async ({ page }) => {
-    await setupSessionView(page);
+  test("unpaired tool_use renders as in-progress card", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    // Inject tool_use without raw → cannot be paired
-    await injectWsMessage(page, {
-      type: "session_event",
-      payload: {
-        sessionId: FAKE_SESSION_ID,
-        eventType: "tool_use",
-        content: JSON.stringify({ tool: "Read", args: { file_path: "/src/index.ts" } }),
-        timestamp: new Date().toISOString(),
-      },
-    });
+    // Scenario: tool_use without a following tool_result
+    await stubTask.createAndNavigate(
+      "unpaired-use",
+      stubScenario(emitToolUse("Read", { file_path: "/src/index.ts" }), idle()),
+    );
+
+    await page.getByTestId("task-header-start").click();
+    await page.locator('input[placeholder="Type a message..."]').waitFor({ timeout: 15_000 });
+    await page.locator("button", { hasText: "Stream" }).click();
 
     // Should render as a FileReadCard (in-progress, no result)
     await expect(page.getByTestId("tool-card-file-read")).toBeVisible({ timeout: 5_000 });
-  });
-
-  test("raw field is forwarded by backend and accepted by frontend type guard", async ({ page }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
-
-    // Inject a session_event with a raw field — the frontend isSessionEvent guard must accept it
-    // without warning, and the event must be added to the events array.
-    await page.evaluate(() => {
-      const origWarn = console.warn.bind(console);
-      console.warn = (...args: unknown[]) => {
-        if (
-          typeof args[0] === "string" &&
-          args[0].includes("Malformed") &&
-          typeof args[1] === "string" &&
-          args[1].includes("session_event")
-        ) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (window as any).__sessionEventDropped__ = true;
-        }
-        origWarn(...args);
-      };
-    });
-
-    await injectSpawned(page);
-    await injectToolResult(
-      page,
-      "raw-field test",
-      JSON.stringify({ type: "tool_result", is_error: false }),
-    );
-
-    // The event should render (not dropped by isSessionEvent guard)
-    const toolCard = page.getByTestId("tool-card-generic");
-    await expect(toolCard).toBeVisible({ timeout: 5_000 });
-
-    // Verify no "Malformed session_event" warning was emitted
-    const droppedByGuard = await page.evaluate(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      () => !!(window as any).__sessionEventDropped__,
-    );
-    expect(droppedByGuard).toBe(false);
   });
 });

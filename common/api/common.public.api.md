@@ -236,6 +236,17 @@ export const DEFAULT_WEB_PORT: number;
 export const DEFAULT_WORKSPACE_ID: string;
 
 // @public
+type DomainEvent = Message<"grackle.DomainEvent"> & {
+    id: string;
+    type: string;
+    timestamp: string;
+    payloadJson: string;
+};
+
+// @public
+const DomainEventSchema: GenMessage<DomainEvent>;
+
+// @public
 type DrainRequest = Message<"grackle.powerline.DrainRequest"> & {
     sessionId: string;
 };
@@ -792,6 +803,11 @@ const Grackle: GenService<{
         input: typeof EmptySchema;
         output: typeof VersionStatusSchema;
     };
+    streamEvents: {
+        methodKind: "server_streaming";
+        input: typeof EmptySchema;
+        output: typeof ServerEventSchema;
+    };
 }>;
 
 declare namespace grackle {
@@ -969,6 +985,10 @@ declare namespace grackle {
         CreateKnowledgeNodeResponseSchema,
         VersionStatus,
         VersionStatusSchema,
+        DomainEvent,
+        DomainEventSchema,
+        ServerEvent,
+        ServerEventSchema,
         EventType_2 as EventType,
         EventTypeSchema,
         TaskStatus_2 as TaskStatus,
@@ -1434,6 +1454,23 @@ const SearchKnowledgeResultSchema: GenMessage<SearchKnowledgeResult>;
 
 // @public
 export const SEED_PERSONA_ID: string;
+
+// @public
+type ServerEvent = Message<"grackle.ServerEvent"> & {
+    event: {
+        value: SessionEvent;
+        case: "sessionEvent";
+    } | {
+        value: DomainEvent;
+        case: "domainEvent";
+    } | {
+        case: undefined;
+        value?: undefined;
+    };
+};
+
+// @public
+const ServerEventSchema: GenMessage<ServerEvent>;
 
 // @public
 type Session = Message<"grackle.Session"> & {
