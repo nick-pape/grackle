@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Add Node.js engine constraint (>=22 <24) to prevent install failures on Node 24 where better-sqlite3 has no prebuilt binaries",
+      "comment": "Add Node.js engine constraint (>=22 <24) to warn about incompatible Node versions where better-sqlite3 has no prebuilt binaries",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
