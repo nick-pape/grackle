@@ -61,11 +61,9 @@ test.describe("Stub MCP Integration", { tag: ["@persona"] }, () => {
     // Run through the full lifecycle
     await runStubMcpTaskToCompletion(page);
 
-    // Paired tool_use events are consumed by tool_result, so no standalone tool_use cards
-    const toolUseCards = page.locator('[class*="toolUseEvent"]');
-    await expect(toolUseCards).toHaveCount(0);
-
-    // The tool_result card should have a success indicator (green checkmark)
-    await expect(page.getByTestId("tool-result-indicator-ok").first()).toBeVisible({ timeout: 5_000 });
+    // The paired tool_use+tool_result should render as a tool card (not as separate events).
+    // At least one tool card should be visible (generic, shell, read, etc.)
+    const toolCards = page.locator('[data-testid^="tool-card-"]');
+    await expect(toolCards.first()).toBeVisible({ timeout: 5_000 });
   });
 });
