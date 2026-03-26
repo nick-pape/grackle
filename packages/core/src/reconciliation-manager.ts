@@ -34,8 +34,26 @@ export class ReconciliationManager {
    */
   public constructor(phases: ReconciliationPhase[], tickIntervalMs?: number) {
     this.phases = phases;
-    this.tickIntervalMs = tickIntervalMs
-      ?? parseInt(process.env.GRACKLE_RECONCILIATION_TICK_MS || String(DEFAULT_TICK_INTERVAL_MS), 10);
+
+    if (tickIntervalMs !== undefined) {
+      this.tickIntervalMs = tickIntervalMs;
+    } else {
+      const envRaw = process.env.GRACKLE_RECONCILIATION_TICK_MS;
+      if (envRaw !== undefined && envRaw !== "") {
+        const parsed = parseInt(envRaw, 10);
+        if (Number.isFinite(parsed) && parsed > 0) {
+          this.tickIntervalMs = parsed;
+        } else {
+          logger.warn(
+            { envValue: envRaw, default: DEFAULT_TICK_INTERVAL_MS },
+            "Invalid GRACKLE_RECONCILIATION_TICK_MS; falling back to default",
+          );
+          this.tickIntervalMs = DEFAULT_TICK_INTERVAL_MS;
+        }
+      } else {
+        this.tickIntervalMs = DEFAULT_TICK_INTERVAL_MS;
+      }
+    }
   }
 
   /** Start the periodic ticker. */
