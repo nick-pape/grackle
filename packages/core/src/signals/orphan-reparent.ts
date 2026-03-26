@@ -104,13 +104,13 @@ async function handleParentTerminal(parentTaskId: string): Promise<void> {
     "Reparenting orphaned children to grandparent",
   );
 
+  // Transfer ALL pipe fds from dead parent to grandparent (once, not per child)
+  transferAllPipeSubscriptions(parentTaskId, grandparentId);
+
   // Reparent each orphan
   for (const orphan of orphans) {
     try {
       taskStore.reparentTask(orphan.id, grandparentId);
-
-      // Transfer pipe fds from dead parent's sessions to grandparent's session
-      transferPipeSubscriptions(orphan.id, parentTaskId, grandparentId);
 
       emit("task.reparented", {
         taskId: orphan.id,
@@ -148,30 +148,31 @@ async function handleParentTerminal(parentTaskId: string): Promise<void> {
 }
 
 /**
- * Transfer pipe subscriptions from the dead parent's sessions to the grandparent's
- * active session. This allows the grandparent to receive output from adopted children.
+ * Transfer ALL pipe subscriptions from a dead parent's sessions to the
+ * grandparent's active session. Called once per parent death (not per child).
  *
- * Exported so it can be called synchronously from completeTask() before sessions
- * are cleaned up, as well as from the async orphan handler.
+ * When a parent dies, all its pipe connections should move to the grandparent —
+ * like fd inheritance when a Unix process dies and init takes over.
+ *
+ * Exported so it can be called synchronously from completeTask() /
+ * killSessionAndCleanup() before sessions are cleaned up.
  */
-export function transferPipeSubscriptions(
-  childTaskId: string,
+export function transferAllPipeSubscriptions(
   deadParentTaskId: string,
   grandparentTaskId: string,
 ): void {
-  // Find grandparent's active session to receive the transferred fds
   const grandparentSessions = sessionStore.getActiveSessionsForTask(grandparentTaskId);
   if (grandparentSessions.length === 0) {
     logger.debug(
-      { childTaskId, grandparentTaskId },
+      { deadParentTaskId, grandparentTaskId },
       "No active grandparent session — skipping pipe fd transfer",
     );
     return;
   }
   const grandparentSessionId = grandparentSessions[0].id;
 
-  // Find all sessions belonging to the dead parent
   const parentSessions = sessionStore.listSessionsForTask(deadParentTaskId);
+  let transferred = 0;
 
   for (const parentSession of parentSessions) {
     const subs = streamRegistry.getSubscriptionsForSession(parentSession.id);
@@ -182,9 +183,7 @@ export function transferPipeSubscriptions(
         continue;
       }
 
-      // This is a pipe subscription owned by the dead parent — transfer it
       try {
-        // Create a matching subscription for the grandparent
         streamRegistry.subscribe(
           sub.streamId,
           grandparentSessionId,
@@ -192,26 +191,28 @@ export function transferPipeSubscriptions(
           sub.deliveryMode,
           sub.createdBySpawn,
         );
-
-        // Remove the dead parent's subscription
         streamRegistry.unsubscribe(sub.id);
 
-        // Set up async delivery if needed
         if (sub.deliveryMode === "async") {
           ensureAsyncDeliveryListener(grandparentSessionId);
         }
 
-        logger.info(
-          { childTaskId, stream: stream.name, fromSession: parentSession.id, toSession: grandparentSessionId },
-          "Transferred pipe fd to grandparent session",
-        );
+        transferred++;
       } catch (err) {
         logger.warn(
-          { err, childTaskId, stream: stream.name },
-          "Failed to transfer pipe fd — child may lose communication channel",
+          { err, stream: stream.name, deadParentTaskId },
+          "Failed to transfer pipe fd",
         );
       }
     }
+  }
+
+  if (transferred > 0) {
+    logger.info(
+      { deadParentTaskId, grandparentTaskId, grandparentSessionId, transferred },
+      "Transferred %d pipe fd(s) to grandparent session",
+      transferred,
+    );
   }
 }
 

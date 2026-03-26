@@ -15,7 +15,7 @@ export { emit, subscribe } from "./event-bus.js";
 // ─── Wiring Initializers ───────────────────────────────────
 export { initWsSubscriber } from "./ws-broadcast.js";
 export { initSigchldSubscriber } from "./signals/sigchld.js";
-export { initOrphanReparentSubscriber, transferPipeSubscriptions } from "./signals/orphan-reparent.js";
+export { initOrphanReparentSubscriber, transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
 export { initLifecycleManager } from "./lifecycle.js";
 
 // ─── WebSocket Bridge ──────────────────────────────────────

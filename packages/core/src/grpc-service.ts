@@ -67,7 +67,7 @@ import * as pipeDelivery from "./pipe-delivery.js";
 import { ensureAsyncDeliveryListener } from "./pipe-delivery.js";
 import { cleanupLifecycleStream, ensureLifecycleStream } from "./lifecycle.js";
 import { sendInputToSession } from "./signals/signal-delivery.js";
-import { transferPipeSubscriptions } from "./signals/orphan-reparent.js";
+import { transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
 
 /** Valid pipe mode values for SpawnRequest and StartTaskRequest. */
 const VALID_PIPE_MODES: ReadonlySet<string> = new Set(["", "sync", "async", "detach"]);
@@ -399,18 +399,12 @@ function killSessionAndCleanup(session: SessionRow): void {
     });
   }
 
-  // Transfer pipe fds to grandparent BEFORE cleaning up subscriptions.
-  // Once subscriptions are removed, the pipe fds are gone.
+  // Transfer ALL pipe fds to grandparent BEFORE cleaning up subscriptions.
   if (session.taskId) {
     const task = taskStore.getTask(session.taskId);
-    if (task) {
-      const orphanedChildren = taskStore.getOrphanedTasks(task.id);
-      if (orphanedChildren.length > 0) {
-        const grandparentId = task.parentTaskId || ROOT_TASK_ID;
-        for (const orphan of orphanedChildren) {
-          transferPipeSubscriptions(orphan.id, task.id, grandparentId);
-        }
-      }
+    if (task && taskStore.getOrphanedTasks(task.id).length > 0) {
+      const grandparentId = task.parentTaskId || ROOT_TASK_ID;
+      transferAllPipeSubscriptions(task.id, grandparentId);
     }
   }
 
@@ -1717,14 +1711,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       taskStore.markTaskComplete(task.id, TASK_STATUS.COMPLETE);
 
-      // Transfer pipe fds from this task's sessions to the grandparent BEFORE
+      // Transfer ALL pipe fds from this task's sessions to the grandparent BEFORE
       // closing sessions — once sessions are cleaned up, their subscriptions are gone.
-      const orphanedChildren = taskStore.getOrphanedTasks(task.id);
-      if (orphanedChildren.length > 0) {
+      if (taskStore.getOrphanedTasks(task.id).length > 0) {
         const grandparentId = task.parentTaskId || ROOT_TASK_ID;
-        for (const orphan of orphanedChildren) {
-          transferPipeSubscriptions(orphan.id, task.id, grandparentId);
-        }
+        transferAllPipeSubscriptions(task.id, grandparentId);
       }
 
       // Close lifecycle FDs for any active sessions — cascades to STOPPED via orphan callback
