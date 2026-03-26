@@ -3,6 +3,7 @@ import {
   stubScenario,
   emitText,
   idle,
+  waitMs,
   navigateToTask,
 } from "./helpers.js";
 
@@ -20,8 +21,12 @@ test.describe("Task State Toast Notifications", { tag: ["@task"] }, () => {
   test("task start shows started toast", async ({ stubTask }) => {
     const { page } = stubTask;
 
-    // Create a task that goes idle after starting (keeps task in working state)
-    await stubTask.createAndNavigate("toast-start", stubScenario(emitText("working"), idle()));
+    // Create a task with a delay before idle to ensure the "working" state is
+    // visible long enough for the client's task fetch to return it. Without
+    // the delay, the stub runtime can reach idle before the first loadTasks
+    // completes, causing the client to see not_started→paused and skip the
+    // "Task is now running" toast entirely.
+    await stubTask.createAndNavigate("toast-start", stubScenario(emitText("working"), waitMs(3000), idle()));
 
     // Start the task — transitions from not_started → working
     await page.getByTestId("task-header-start").click();
