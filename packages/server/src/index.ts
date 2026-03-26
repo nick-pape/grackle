@@ -10,7 +10,7 @@ import {
   pushToEnv, attemptReconnects, resetReconnectState,
   parseAdapterConfig, isKnowledgeEnabled, initKnowledge,
   computeTaskStatus,
-  ReconciliationManager, createCronPhase, createOrphanPhase, findFirstConnectedEnvironment,
+  ReconciliationManager, createCronPhase, createOrphanPhase, findFirstConnectedEnvironment, lifecycleCleanupPhase,
   initOrphanReparentSubscriber,
   logger, exec, detectLanIp,
 } from "@grackle-ai/core";
@@ -246,7 +246,6 @@ async function main(): Promise<void> {
   });
   const orphanPhase = createOrphanPhase({
     listAllTasks: () => {
-      // Scan all workspaces for tasks
       const workspaces = workspaceStore.listWorkspaces();
       const allTasks: Array<ReturnType<typeof taskStore.getTask> & {}> = [];
       for (const ws of workspaces) {
@@ -258,7 +257,7 @@ async function main(): Promise<void> {
     reparentTask: (taskId, newParentTaskId) => taskStore.reparentTask(taskId, newParentTaskId),
     emit,
   });
-  const reconciliationManager = new ReconciliationManager([cronPhase, orphanPhase]);
+  const reconciliationManager = new ReconciliationManager([cronPhase, lifecycleCleanupPhase, orphanPhase]);
   reconciliationManager.start();
 
   // --- gRPC server (HTTP/2) ---

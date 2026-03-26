@@ -20,6 +20,7 @@ import * as streamRegistry from "./stream-registry.js";
 import * as adapterManager from "./adapter-manager.js";
 import * as streamHub from "./stream-hub.js";
 import { emit } from "./event-bus.js";
+import { reanimateAgent } from "./reanimate-agent.js";
 import { logger } from "./logger.js";
 
 /** Whether the lifecycle manager has been initialized. */
@@ -99,6 +100,48 @@ export function initLifecycleManager(): void {
       if (task) {
         emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
       }
+    }
+  });
+
+  // ── Auto-reanimate: when an external session subscribes to a lifecycle
+  // stream whose session is stopped, automatically restart it. This is the
+  // "open() IS reanimate" model from the streams IPC spec.
+  streamRegistry.onSessionRevived((targetSessionId: string, _subscriberSessionId: string) => {
+    const session = sessionStore.getSession(targetSessionId);
+    if (!session) {
+      return;
+    }
+
+    // Only reanimate stopped or suspended sessions
+    if (!TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus) && session.status !== SESSION_STATUS.SUSPENDED) {
+      return;
+    }
+
+    // Must have a runtimeSessionId to resume from JSONL
+    if (!session.runtimeSessionId) {
+      logger.debug({ targetSessionId }, "Auto-reanimate skipped: no runtimeSessionId");
+      return;
+    }
+
+    // Environment must not have another active session
+    const existingActive = sessionStore.getActiveForEnv(session.environmentId);
+    if (existingActive) {
+      logger.debug({ targetSessionId, existingActive: existingActive.id }, "Auto-reanimate skipped: environment busy");
+      return;
+    }
+
+    // Environment must be connected
+    const conn = adapterManager.getConnection(session.environmentId);
+    if (!conn) {
+      logger.debug({ targetSessionId }, "Auto-reanimate skipped: environment disconnected");
+      return;
+    }
+
+    logger.info({ targetSessionId }, "Auto-reanimating session on new lifecycle subscription");
+    try {
+      reanimateAgent(targetSessionId);
+    } catch (err) {
+      logger.debug({ err, targetSessionId }, "Auto-reanimate failed (non-fatal)");
     }
   });
 

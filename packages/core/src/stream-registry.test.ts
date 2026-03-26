@@ -445,4 +445,89 @@ describe("stream-registry", () => {
       expect(registry.getSubscriptionsForSession("sess-1")).toEqual([]);
     });
   });
+
+  // ─── listStreams ──────────────────────────────────────────
+
+  describe("listStreams", () => {
+    it("returns empty array when no streams", () => {
+      expect(registry.listStreams()).toEqual([]);
+    });
+
+    it("returns all created streams", () => {
+      registry.createStream("stream-a");
+      registry.createStream("stream-b");
+      registry.createStream("stream-c");
+
+      const streams = registry.listStreams();
+      expect(streams).toHaveLength(3);
+      expect(streams.map((s) => s.name).sort()).toEqual(["stream-a", "stream-b", "stream-c"]);
+    });
+
+    it("excludes deleted streams", () => {
+      const a = registry.createStream("stream-a");
+      registry.createStream("stream-b");
+      registry.deleteStream(a.id);
+
+      const streams = registry.listStreams();
+      expect(streams).toHaveLength(1);
+      expect(streams[0].name).toBe("stream-b");
+    });
+  });
+
+  // ─── onSessionRevived callback ────────────────────────────
+
+  describe("onSessionRevived callback", () => {
+    it("fires when external subscription added to lifecycle stream", () => {
+      const callback = vi.fn();
+      registry.onSessionRevived(callback);
+
+      const stream = registry.createStream("lifecycle:target-sess");
+      // Session's own subscription — should NOT fire
+      registry.subscribe(stream.id, "target-sess", "rw", "detach", false);
+      expect(callback).not.toHaveBeenCalled();
+
+      // External subscription — SHOULD fire
+      registry.subscribe(stream.id, "parent-sess", "rw", "detach", true);
+      expect(callback).toHaveBeenCalledOnce();
+      expect(callback).toHaveBeenCalledWith("target-sess", "parent-sess");
+    });
+
+    it("does NOT fire for the session's own subscription", () => {
+      const callback = vi.fn();
+      registry.onSessionRevived(callback);
+
+      const stream = registry.createStream("lifecycle:my-sess");
+      registry.subscribe(stream.id, "my-sess", "rw", "detach", false);
+
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it("does NOT fire for non-lifecycle streams", () => {
+      const callback = vi.fn();
+      registry.onSessionRevived(callback);
+
+      const stream = registry.createStream("custom-pipe");
+      registry.subscribe(stream.id, "some-sess", "rw", "detach", true);
+
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it("does NOT fire when callback is not registered", () => {
+      // No callback registered — should not throw
+      const stream = registry.createStream("lifecycle:target-sess");
+      expect(() => {
+        registry.subscribe(stream.id, "parent-sess", "rw", "detach", true);
+      }).not.toThrow();
+    });
+
+    it("passes target sessionId and subscriber sessionId", () => {
+      const callback = vi.fn();
+      registry.onSessionRevived(callback);
+
+      const stream = registry.createStream("lifecycle:child-123");
+      registry.subscribe(stream.id, "parent-456", "rw", "detach", true);
+
+      expect(callback).toHaveBeenCalledWith("child-123", "parent-456");
+    });
+  });
 });
