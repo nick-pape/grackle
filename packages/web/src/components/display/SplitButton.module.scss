@@ -25,6 +25,12 @@
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
+
+  &:disabled {
+    opacity: 0.64;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
 }
 
 .mainButton {
@@ -69,21 +75,31 @@
 
 .primary {
   background: var(--accent-green);
+  border: 1px solid var(--accent-green);
   color: #ffffff;
   box-shadow: var(--shadow-xs);
 
   &:hover {
     box-shadow: var(--shadow-glow-green);
   }
+
+  &:active {
+    box-shadow: none;
+  }
 }
 
 .danger {
   background: var(--accent-red);
+  border: 1px solid var(--accent-red);
   color: #ffffff;
   box-shadow: var(--shadow-xs);
 
   &:hover {
     box-shadow: var(--shadow-glow-red);
+  }
+
+  &:active {
+    box-shadow: none;
   }
 }
 
@@ -110,7 +126,7 @@
 
 .dropdown {
   position: absolute;
-  bottom: calc(100% + var(--space-xs));
+  top: calc(100% + var(--space-xs));
   right: 0;
   z-index: var(--z-dropdown, 100);
   min-width: 160px;

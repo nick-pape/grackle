@@ -124,6 +124,7 @@ export function ChatPage(): JSX.Element {
           showStop
           onSessionStop={() => stopGraceful(latestSession!.id)}
           onSessionKill={() => kill(latestSession!.id)}
+
           personas={personas}
           environments={environments}
           onSendInput={sendInput}

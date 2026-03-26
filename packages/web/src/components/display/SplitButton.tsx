@@ -75,12 +75,19 @@ export function SplitButton({
   const variantClass = styles[variant] || "";
   const sizeClass = styles[size] || "";
 
+  const handleMainClick = (): void => {
+    if (open) {
+      setOpen(false);
+    }
+    onClick();
+  };
+
   return (
     <div ref={containerRef} className={styles.container} data-testid={testId}>
       <button
         type="button"
         className={`${styles.mainButton} ${variantClass} ${sizeClass}`}
-        onClick={onClick}
+        onClick={handleMainClick}
         data-testid={testId ? `${testId}-main` : undefined}
       >
         {label}
@@ -89,7 +96,7 @@ export function SplitButton({
         type="button"
         className={`${styles.chevronButton} ${variantClass} ${sizeClass}`}
         onClick={() => setOpen((prev) => !prev)}
-        aria-label="More options"
+        aria-label={`More options for ${label}`}
         aria-haspopup="menu"
         aria-expanded={open}
         data-testid={testId ? `${testId}-chevron` : undefined}
