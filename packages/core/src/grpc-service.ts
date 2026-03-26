@@ -1374,7 +1374,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       });
 
       // Apply fuzzy search in-memory when a search term is provided
-      const searchQuery = req.search?.trim() || "";
+      const searchQuery = req.search.trim();
       const rows = searchQuery
         ? fuzzySearch(allRows, searchQuery, [
             { name: "title", weight: 2 },
