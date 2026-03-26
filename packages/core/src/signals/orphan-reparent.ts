@@ -150,8 +150,11 @@ async function handleParentTerminal(parentTaskId: string): Promise<void> {
 /**
  * Transfer pipe subscriptions from the dead parent's sessions to the grandparent's
  * active session. This allows the grandparent to receive output from adopted children.
+ *
+ * Exported so it can be called synchronously from completeTask() before sessions
+ * are cleaned up, as well as from the async orphan handler.
  */
-function transferPipeSubscriptions(
+export function transferPipeSubscriptions(
   childTaskId: string,
   deadParentTaskId: string,
   grandparentTaskId: string,

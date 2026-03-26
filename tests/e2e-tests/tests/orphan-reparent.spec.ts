@@ -224,11 +224,7 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
     expect(doneTask.parentTaskId).toBe(parentId);
   });
 
-  // TODO: Fix race condition — completeTask() closes parent sessions (cleaning up
-  // pipe subscriptions) before the orphan handler can transfer them. The pipe fd
-  // transfer logic works (unit tested) but the timing in e2e is wrong. Need to
-  // either transfer fds synchronously in completeTask or defer session cleanup.
-  test.fixme("pipe fds transfer to grandparent when parent completes", async ({ grackle: { client } }) => {
+  test("pipe fds transfer to grandparent when parent completes", async ({ grackle: { client } }) => {
     test.setTimeout(90_000);
 
     // 1. Create workspace + hierarchy: grandparent → parent (stub-mcp, spawns piped child)
