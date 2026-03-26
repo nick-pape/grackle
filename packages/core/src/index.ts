@@ -28,9 +28,11 @@ export { computeTaskStatus } from "./compute-task-status.js";
 // ─── Knowledge ─────────────────────────────────────────────
 export { isKnowledgeEnabled, initKnowledge } from "./knowledge-init.js";
 
-// ─── Cron / Scheduling ────────────────────────────────────
-export { CronManager } from "./cron-manager.js";
-export type { CronManagerDeps } from "./cron-manager.js";
+// ─── Reconciliation / Scheduling ──────────────────────────
+export { ReconciliationManager } from "./reconciliation-manager.js";
+export type { ReconciliationPhase } from "./reconciliation-manager.js";
+export { createCronPhase } from "./cron-phase.js";
+export type { CronPhaseDeps } from "./cron-phase.js";
 export { findFirstConnectedEnvironment } from "./find-connected-environment.js";
 export { validateExpression, computeNextRunAt } from "./schedule-expression.js";
 
