@@ -68,6 +68,7 @@ import * as pipeDelivery from "./pipe-delivery.js";
 import { ensureAsyncDeliveryListener } from "./pipe-delivery.js";
 import { cleanupLifecycleStream, ensureLifecycleStream } from "./lifecycle.js";
 import { sendInputToSession } from "./signals/signal-delivery.js";
+import { transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
 
 /** Valid pipe mode values for SpawnRequest and StartTaskRequest. */
 const VALID_PIPE_MODES: ReadonlySet<string> = new Set(["", "sync", "async", "detach"]);
@@ -397,6 +398,17 @@ function killSessionAndCleanup(session: SessionRow): void {
     ).catch((err: unknown) => {
       logger.debug({ err, sessionId: session.id }, "PowerLine kill failed (process may have already exited)");
     });
+  }
+
+  // Transfer ALL pipe fds to grandparent BEFORE cleaning up subscriptions.
+  // Always transfer regardless of orphaned tasks: ipc_spawn creates child sessions
+  // (not tasks), so pipe subs exist even when getOrphanedTasks returns empty.
+  if (session.taskId) {
+    const task = taskStore.getTask(session.taskId);
+    if (task) {
+      const grandparentId = task.parentTaskId || ROOT_TASK_ID;
+      transferAllPipeSubscriptions(task.id, grandparentId);
+    }
   }
 
   cleanupLifecycleStream(session.id);
@@ -1712,6 +1724,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (!task) throw new ConnectError(`Task not found: ${req.id}`, Code.NotFound);
 
       taskStore.markTaskComplete(task.id, TASK_STATUS.COMPLETE);
+
+      // Transfer ALL pipe fds from this task's sessions to the grandparent BEFORE
+      // closing sessions — once sessions are cleaned up, their subscriptions are gone.
+      // Always transfer regardless of orphaned tasks: ipc_spawn creates child sessions
+      // (not tasks), so pipe subs exist even when getOrphanedTasks returns empty.
+      const grandparentId = task.parentTaskId || ROOT_TASK_ID;
+      transferAllPipeSubscriptions(task.id, grandparentId);
 
       // Close lifecycle FDs for any active sessions — cascades to STOPPED via orphan callback
       const activeSessions = sessionStore.getActiveSessionsForTask(req.id);

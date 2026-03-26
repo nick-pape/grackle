@@ -10,7 +10,8 @@ import {
   pushToEnv, attemptReconnects, resetReconnectState,
   parseAdapterConfig, isKnowledgeEnabled, initKnowledge,
   computeTaskStatus,
-  ReconciliationManager, createCronPhase, findFirstConnectedEnvironment, lifecycleCleanupPhase,
+  ReconciliationManager, createCronPhase, createOrphanPhase, findFirstConnectedEnvironment, lifecycleCleanupPhase,
+  initOrphanReparentSubscriber,
   logger, exec, detectLanIp,
 } from "@grackle-ai/core";
 import { envRegistry, sessionStore, workspaceStore, taskStore, scheduleStore, personaStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome } from "@grackle-ai/database";
@@ -243,7 +244,19 @@ async function main(): Promise<void> {
       return env?.status === "connected";
     },
   });
-  const reconciliationManager = new ReconciliationManager([cronPhase, lifecycleCleanupPhase]);
+  const orphanPhase = createOrphanPhase({
+    listAllTasks: () => {
+      const workspaces = workspaceStore.listWorkspaces();
+      const allTasks: Array<ReturnType<typeof taskStore.getTask> & {}> = [];
+      for (const ws of workspaces) {
+        allTasks.push(...taskStore.listTasks(ws.id));
+      }
+      return allTasks;
+    },
+    reparentTask: (taskId, newParentTaskId) => taskStore.reparentTask(taskId, newParentTaskId),
+    emit,
+  });
+  const reconciliationManager = new ReconciliationManager([cronPhase, lifecycleCleanupPhase, orphanPhase]);
   reconciliationManager.start();
 
   // --- gRPC server (HTTP/2) ---
@@ -294,6 +307,9 @@ async function main(): Promise<void> {
 
   // Wire SIGCHLD: notify parent tasks when child sessions reach terminal status
   initSigchldSubscriber();
+
+  // Wire orphan reparenting: reparent non-terminal children when parent task completes/fails
+  initOrphanReparentSubscriber();
 
   // Wire lifecycle manager: auto-hibernate sessions when all fds are closed
   initLifecycleManager();
