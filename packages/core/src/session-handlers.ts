@@ -25,7 +25,6 @@ import { logger } from "./logger.js";
 import { reanimateAgent } from "./reanimate-agent.js";
 import * as streamRegistry from "./stream-registry.js";
 import * as pipeDelivery from "./pipe-delivery.js";
-import { ensureAsyncDeliveryListener } from "./pipe-delivery.js";
 import * as logWriter from "./log-writer.js";
 import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
 import { resolvePersona, SystemPromptBuilder } from "@grackle-ai/prompt";
@@ -196,8 +195,8 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
     pipeFd = parentSub.fd;
 
     if (pipeMode === "async") {
-      ensureAsyncDeliveryListener(req.parentSessionId);  // parent receives child messages
-      ensureAsyncDeliveryListener(sessionId);             // child receives parent messages
+      pipeDelivery.ensureAsyncDeliveryListener(req.parentSessionId);  // parent receives child messages
+      pipeDelivery.ensureAsyncDeliveryListener(sessionId);             // child receives parent messages
     }
   }
 
