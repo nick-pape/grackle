@@ -16,6 +16,7 @@ import * as processorRegistry from "./processor-registry.js";
 import { recoverSuspendedSessions } from "./session-recovery.js";
 import { clearReconnectState } from "./auto-reconnect.js";
 import { checkVersionStatus } from "./version-check.js";
+import { createEventStream } from "./event-hub.js";
 import { join } from "node:path";
 import {
   LOGS_DIR,
@@ -1182,6 +1183,17 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async *streamAll() {
       const stream = streamHub.createGlobalStream();
+      try {
+        for await (const event of stream) {
+          yield event;
+        }
+      } finally {
+        stream.cancel();
+      }
+    },
+
+    async *streamEvents() {
+      const stream = createEventStream();
       try {
         for await (const event of stream) {
           yield event;

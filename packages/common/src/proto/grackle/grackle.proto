@@ -708,6 +708,22 @@ message VersionStatus {
   bool is_docker = 4;
 }
 
+// ─── Unified Event Streaming ────────────────────────────────
+
+message DomainEvent {
+  string id = 1;
+  string type = 2;         // e.g. "task.created", "environment.changed"
+  string timestamp = 3;
+  string payload_json = 4; // JSON-encoded payload
+}
+
+message ServerEvent {
+  oneof event {
+    SessionEvent session_event = 1;
+    DomainEvent domain_event = 2;
+  }
+}
+
 // ─── Service ────────────────────────────────────────────────
 
 service Grackle {
@@ -809,4 +825,7 @@ service Grackle {
 
   // Version
   rpc GetVersionStatus(Empty) returns (VersionStatus);
+
+  // Unified event streaming (replaces WebSocket)
+  rpc StreamEvents(Empty) returns (stream ServerEvent);
 }
