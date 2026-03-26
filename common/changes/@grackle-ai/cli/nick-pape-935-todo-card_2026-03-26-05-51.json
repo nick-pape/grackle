@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add TodoCard for todo/plan tool rendering",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
