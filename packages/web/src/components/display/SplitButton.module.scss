@@ -128,7 +128,7 @@
   position: absolute;
   top: calc(100% + var(--space-xs));
   right: 0;
-  z-index: var(--z-dropdown, 100);
+  z-index: 1000;
   min-width: 160px;
   background: var(--bg-surface);
   border: 1px solid var(--border-input);
