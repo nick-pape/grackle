@@ -27,6 +27,9 @@ Thumbs.db
 .env
 .env.local
 
+# Claude Code worktrees
+.claude/worktrees/
+
 # Playwright
 packages/web/test-results/
 test-results/

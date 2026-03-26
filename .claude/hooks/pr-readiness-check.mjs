@@ -203,12 +203,9 @@ function main() {
     const isWorktree = worktreeCheck.stdout && gitDir.stdout && worktreeCheck.stdout !== gitDir.stdout;
 
     if (isWorktree) {
-      const cwd = run("pwd -P").stdout || process.cwd();
       block(
-        `PR #${prNumber} is already ${pr.state}. This is a worktree — clean it up:\n` +
-        `  git worktree remove "${cwd}"\n` +
-        `  # or if the directory is already gone:\n` +
-        `  git worktree prune`
+        `PR #${prNumber} is already ${pr.state}. Clean up the worktree:\n` +
+        `  Call ExitWorktree({ action: "remove" }) to delete the worktree and return to the main repo.`
       );
     } else {
       block(

@@ -24,36 +24,22 @@ Do **not** update the root `README.md` as part of this process — it is a separ
 
 ### Worktree Workflow
 
-**All new branches must be created as git worktrees**, not on the main working copy. The main worktree (`~/src/grackle`) stays on `main` and is never used for feature work directly. This keeps the main copy clean and lets multiple agents/branches work in parallel without conflicts.
+**All feature work must happen in a worktree**, not on the main working copy. Use Claude Code's built-in `EnterWorktree` tool to create an isolated worktree — it handles cwd, branch creation, and cleanup automatically.
 
-```bash
-# Create a new worktree for a feature branch
-BRANCH="nick-pape/123-my-feature"
-WORKTREE_DIR="$HOME/src/grackle-worktrees/$(echo $BRANCH | tr '/' '-')"
-git worktree add "$WORKTREE_DIR" -b "$BRANCH"
-cd "$WORKTREE_DIR"
-rush install && rush build
-```
+**Starting work:**
+1. Call `EnterWorktree` with a descriptive name (e.g., `EnterWorktree({ name: "123-my-feature" })`)
+2. This creates `.claude/worktrees/123-my-feature/` with branch `worktree-123-my-feature` and switches your cwd there
+3. Rename the branch to match our naming convention: `git branch -m nick-pape/123-my-feature`
+4. Run `rush install && rush build`
+5. Do all your work — cwd stays in the worktree, hooks fire correctly
 
-Worktrees live under `~/src/grackle-worktrees/` and share the git object store with the main repo — no duplicated history, lightweight on disk.
-
-**Cleanup** after a branch is merged:
-```bash
-git worktree remove ~/src/grackle-worktrees/<worktree-dir>
-# or if the directory was already deleted:
-git worktree prune
-```
+**Finishing work:**
+- After the PR is merged: call `ExitWorktree({ action: "remove" })` to clean up
+- To pause and come back later: call `ExitWorktree({ action: "keep" })`
 
 **Rules:**
-- Never check out a feature branch on the main worktree — always create a new worktree
-- **Prefix every command with `cd $WORKTREE_DIR &&`** after creating the worktree. Claude Code resets cwd to the project root between commands, so a bare `cd` won't persist. Set `WORKTREE_DIR` once and use it everywhere:
-  ```bash
-  WORKTREE_DIR="$HOME/src/grackle-worktrees/nick-pape-123-my-feature"
-  cd "$WORKTREE_DIR" && rush install && rush build
-  cd "$WORKTREE_DIR" && git add -A && git commit -m "..."
-  cd "$WORKTREE_DIR" && git push
-  ```
-  This ensures git commands, the stop hook, and builds all see the correct branch.
+- Never check out a feature branch on the main worktree — always use `EnterWorktree`
+- Rename the branch immediately after entering (`git branch -m nick-pape/<issue>-<feature>`) to match our branch naming convention
 - Each worktree needs its own `rush install && rush build` (node_modules are per-worktree)
 - You can't have the same branch checked out in two worktrees simultaneously
 - When syncing with main inside a worktree: `git fetch origin && git merge origin/main` (same as always, no rebase)
