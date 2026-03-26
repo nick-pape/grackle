@@ -180,14 +180,17 @@ export function EventRenderer({ event, toolUseCtx }: Props): JSX.Element {
         } catch { /* ignore */ }
       }
 
-      // Try to extract displayable content from JSON-wrapped results
+      // Try to extract displayable content from JSON-wrapped results.
+      // Guard with startsWith check to avoid throwing on plain text content.
       let resultContent = event.content;
-      try {
-        const parsed = JSON.parse(event.content) as Record<string, unknown>;
-        if (typeof parsed.content === "string") {
-          resultContent = parsed.content;
-        }
-      } catch { /* content is plain text */ }
+      if (event.content.trimStart().startsWith("{")) {
+        try {
+          const parsed = JSON.parse(event.content) as Record<string, unknown>;
+          if (typeof parsed.content === "string") {
+            resultContent = parsed.content;
+          }
+        } catch { /* content looks like JSON but isn't — use as-is */ }
+      }
 
       if (toolUseCtx) {
         return (

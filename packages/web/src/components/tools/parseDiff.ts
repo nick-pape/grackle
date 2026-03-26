@@ -34,7 +34,10 @@ export function parseUnifiedDiff(diff: string): DiffLine[] {
     if (line.startsWith("diff --git") || line.startsWith("index ")) {
       continue;
     }
-    if (line.startsWith("---") || line.startsWith("+++")) {
+    // Skip file header lines (--- a/file, +++ b/file) but not hunk content
+    // lines that happen to start with "---" or "+++" (which appear as
+    // "----..." or "++++..." in the diff and are handled by +/- rules below).
+    if ((line.startsWith("--- ") || line.startsWith("+++ ")) && !line.startsWith("---- ") && !line.startsWith("++++ ")) {
       continue;
     }
     if (line.startsWith("@@")) {

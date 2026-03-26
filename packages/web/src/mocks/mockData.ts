@@ -1073,7 +1073,7 @@ export const MOCK_STREAM_SCENARIOS: MockStreamScenario[] = [
         event: {
           eventType: "tool_result",
           timestamp: ts(1800),
-          content: 'import jwt from "jsonwebtoken";\nimport type { Request, Response, NextFunction } from "express";\n\nconst JWT_SECRET = process.env.JWT_SECRET || "change-me";\n\nexport function verifyToken(req: Request, res: Response, next: NextFunction): void {\n  const header = req.headers.authorization;\n  if (!header?.startsWith("Bearer ")) {\n    res.status(401).json({ error: "Missing token" });\n    return;\n  }\n  try {\n    const decoded = jwt.verify(header.slice(7), JWT_SECRET);\n    if (decoded.exp < Date.now() / 1000) {\n      res.status(403).json({ error: "Token expired" });\n      return;\n    }\n    req.user = decoded;\n    next();\n  } catch {\n    res.status(403).json({ error: "Invalid token" });\n  }\n}',
+          content: 'import jwt from "jsonwebtoken";\nimport type { Request, Response, NextFunction } from "express";\n\nconst JWT_SECRET = process.env.JWT_SECRET || "change-me";\n\nexport function verifyToken(req: Request, res: Response, next: NextFunction): void {\n  const header = req.headers.authorization;\n  if (!header?.startsWith("Bearer ")) {\n    res.status(401).json({ error: "Missing token" });\n    return;\n  }\n  try {\n    const decoded = jwt.verify(header.slice(7), JWT_SECRET);\n    if (decoded.exp > Date.now() / 1000) {\n      res.status(403).json({ error: "Token expired" });\n      return;\n    }\n    req.user = decoded;\n    next();\n  } catch {\n    res.status(403).json({ error: "Invalid token" });\n  }\n}',
           raw: JSON.stringify({ tool_use_id: "tool-mock-001", is_error: false }),
         },
       },
@@ -1082,7 +1082,7 @@ export const MOCK_STREAM_SCENARIOS: MockStreamScenario[] = [
         event: {
           eventType: "text",
           timestamp: ts(2600),
-          content: "Found the issue — the token expiry check on line 14 is using `<` instead of `>`. The JWT `exp` field is a future timestamp, so `decoded.exp < Date.now()` is always true for valid tokens. Let me fix it.",
+          content: "Found the issue — the token expiry check on line 14 is using `>` instead of `<`. A token is expired when `exp < now`, but the code checks `exp > now` which means it rejects *valid* tokens and accepts *expired* ones. Let me fix it.",
         },
       },
       // Edit file
@@ -1095,8 +1095,8 @@ export const MOCK_STREAM_SCENARIOS: MockStreamScenario[] = [
             tool: "Edit",
             args: {
               file_path: "/src/middleware/auth.ts",
-              old_string: "    if (decoded.exp < Date.now() / 1000) {",
-              new_string: "    if (decoded.exp > Date.now() / 1000) {",
+              old_string: "    if (decoded.exp > Date.now() / 1000) {",
+              new_string: "    if (decoded.exp < Date.now() / 1000) {",
             },
           }),
           raw: JSON.stringify({ id: "tool-mock-002" }),
@@ -1145,7 +1145,7 @@ export const MOCK_STREAM_SCENARIOS: MockStreamScenario[] = [
         event: {
           eventType: "tool_result",
           timestamp: ts(7000),
-          content: "src/middleware/auth.ts:14:    if (decoded.exp > Date.now() / 1000) {\nsrc/utils/token-refresh.ts:28:    const remaining = decoded.exp - Date.now() / 1000;",
+          content: "src/middleware/auth.ts:14:    if (decoded.exp < Date.now() / 1000) {\nsrc/utils/token-refresh.ts:28:    const remaining = decoded.exp - Date.now() / 1000;",
           raw: JSON.stringify({ tool_use_id: "tool-mock-004", is_error: false }),
         },
       },
@@ -1154,7 +1154,7 @@ export const MOCK_STREAM_SCENARIOS: MockStreamScenario[] = [
         event: {
           eventType: "text",
           timestamp: ts(7800),
-          content: "Fixed. The token expiry comparison was inverted — `decoded.exp < Date.now()` should have been `>`. The other occurrence in `token-refresh.ts` uses subtraction (not comparison), so it was correct. All 3 auth tests pass.",
+          content: "Fixed. The token expiry comparison was inverted — `decoded.exp > Date.now()` should have been `<` (a token is expired when its `exp` is in the past). The other occurrence in `token-refresh.ts` uses subtraction (not comparison), so it was already correct. All 3 auth tests pass.",
         },
       },
       {

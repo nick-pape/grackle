@@ -46,12 +46,16 @@ function resolveDiff(args: unknown, detailedResult?: string): DiffLine[] | undef
   if (detailedResult) {
     // Copilot embeds diff in a JSON object sometimes
     let diffText = detailedResult;
-    try {
-      const parsed = JSON.parse(detailedResult) as Record<string, unknown>;
-      if (typeof parsed.detailedContent === "string") {
-        diffText = parsed.detailedContent;
-      }
-    } catch { /* use as-is */ }
+    // Only attempt JSON parse if it looks like a JSON object (avoids throwing
+    // on unified diff strings which are the common case)
+    if (detailedResult.trimStart().startsWith("{")) {
+      try {
+        const parsed = JSON.parse(detailedResult) as Record<string, unknown>;
+        if (typeof parsed.detailedContent === "string") {
+          diffText = parsed.detailedContent;
+        }
+      } catch { /* not valid JSON despite looking like one — use as-is */ }
+    }
 
     if (diffText.includes("@@") || diffText.startsWith("diff ")) {
       const lines = parseUnifiedDiff(diffText);
