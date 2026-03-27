@@ -77,7 +77,7 @@ PowerLine exposes a `/healthz` endpoint on the same HTTP/2 port for container he
 
 ```bash
 # Check with Node.js (HTTP/2)
-node -e "require('http2').connect('http://127.0.0.1:7433').request({':path':'/healthz'}).on('response',h=>console.log(h[':status'])).on('data',d=>console.log(d.toString())).end()"
+node -e "const client=require('http2').connect('http://127.0.0.1:7433'); const req=client.request({':path':'/healthz'}); req.on('response',h=>console.log(h[':status'])); req.on('data',d=>console.log(d.toString())); req.on('end',()=>client.close()); req.end();"
 ```
 
 ## Requirements

@@ -42,7 +42,7 @@ function request(
 ): Promise<{ status: number; headers: Record<string, string>; body: string }> {
   return new Promise((resolve, reject) => {
     const client = http2.connect(`http://127.0.0.1:${port}`);
-    client.on("error", reject);
+    client.on("error", (err) => { client.destroy(); reject(err); });
 
     const req = client.request({ ":method": "GET", ":path": path });
     let body = "";
@@ -62,25 +62,44 @@ function request(
       client.close();
       resolve({ status, headers, body });
     });
-    req.on("error", reject);
+    req.on("error", (err) => { client.destroy(); reject(err); });
     req.end();
   });
 }
 
 describe("PowerLine /healthz endpoint", () => {
   let port: number;
-  let child: ChildProcess;
+  let child: ChildProcess | undefined;
 
   beforeAll(async () => {
     port = await findFreePort();
     child = execFile(process.execPath, [ENTRY_POINT, "--no-auth", "--port", String(port)], {
       env: { ...process.env },
     });
-    await waitForPort(port);
+
+    // Wait for port, but fail fast if child exits early
+    await new Promise<void>((resolve, reject) => {
+      const onExit = (code: number | null, signal: NodeJS.Signals | null): void => {
+        reject(new Error(`PowerLine exited before ready (code=${code}, signal=${signal ?? "null"})`));
+      };
+      child!.once("exit", onExit);
+      waitForPort(port).then(
+        () => { child!.removeListener("exit", onExit); resolve(); },
+        (err) => { child!.removeListener("exit", onExit); reject(err); },
+      );
+    });
   }, 15_000);
 
-  afterAll(() => {
-    child?.kill();
+  afterAll(async () => {
+    if (!child || child.exitCode !== null || child.signalCode !== null) {
+      return;
+    }
+    const exitPromise = new Promise<void>((resolve) => {
+      child!.once("exit", () => resolve());
+    });
+    child.kill();
+    const timeout = new Promise<void>((resolve) => setTimeout(resolve, 5_000));
+    await Promise.race([exitPromise, timeout]);
   });
 
   it("returns 200 with status ok", async () => {
