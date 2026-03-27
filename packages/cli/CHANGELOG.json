@@ -2,6 +2,26 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.84.0",
+      "tag": "@grackle-ai/cli_v0.84.0",
+      "date": "Fri, 27 Mar 2026 05:00:06 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Decouple prompt package from database: pure functions with injected data instead of store calls"
+          },
+          {
+            "comment": "Rewrite README with value-prop-first structure, fresh screenshots, and new knowledge graph screenshot"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "Add /healthz and /readyz health check endpoints to the web server for container orchestration"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.83.2",
       "tag": "@grackle-ai/cli_v0.83.2",
       "date": "Fri, 27 Mar 2026 04:31:22 GMT",

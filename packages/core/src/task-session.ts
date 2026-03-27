@@ -11,7 +11,7 @@
 
 import { create } from "@bufbuild/protobuf";
 import { powerline } from "@grackle-ai/common";
-import { envRegistry, sessionStore, workspaceStore, taskStore, grackleHome } from "@grackle-ai/database";
+import { envRegistry, sessionStore, workspaceStore, taskStore, personaStore, settingsStore, grackleHome } from "@grackle-ai/database";
 import * as adapterManager from "./adapter-manager.js";
 import * as tokenPush from "./token-push.js";
 import { v4 as uuid } from "uuid";
@@ -21,12 +21,14 @@ import {
   DEFAULT_MCP_PORT,
   ROOT_TASK_ID,
 } from "@grackle-ai/common";
-import { resolvePersona, fetchOrchestratorContext, SystemPromptBuilder, buildTaskPrompt } from "@grackle-ai/prompt";
+import { resolvePersona, buildOrchestratorContext, SystemPromptBuilder, buildTaskPrompt } from "@grackle-ai/prompt";
 import { logger } from "./logger.js";
 import { processEventStream } from "./event-processor.js";
-import { buildMcpServersJson, toDialableHost } from "./grpc-service.js";
+import { personaMcpServersToJson } from "./grpc-mcp-config.js";
+import { toDialableHost } from "./grpc-shared.js";
 import { emit } from "./event-bus.js";
 import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
+import { toPersonaResolveInput, buildOrchestratorContextInput } from "./persona-mapper.js";
 
 /**
  * Start a new agent session for a task.
@@ -68,13 +70,19 @@ export async function startTaskSession(
   // Resolve persona via cascade (request → task → workspace → app default)
   let resolved;
   try {
-    resolved = resolvePersona(options?.personaId || "", task.defaultPersonaId, workspace?.defaultPersonaId || "");
+    resolved = resolvePersona(
+      options?.personaId || "",
+      task.defaultPersonaId,
+      workspace?.defaultPersonaId || "",
+      settingsStore.getSetting("default_persona_id") || undefined,
+      (id) => toPersonaResolveInput(personaStore.getPersona(id)),
+    );
   } catch (err) {
     return (err as Error).message;
   }
 
   const sessionId = uuid();
-  const { runtime, model, maxTurns, systemPrompt, persona: resolvedPersonaRow } = resolved;
+  const { runtime, model, maxTurns, systemPrompt } = resolved;
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
   const freshTask = taskStore.getTask(task.id) || task;
@@ -85,8 +93,12 @@ export async function startTaskSession(
     ? (options?.notes || "")
     : buildTaskPrompt(freshTask.title, freshTask.description, options?.notes);
 
-  const orchestratorCtx = freshTask.canDecompose && freshTask.depth <= 1
-    ? fetchOrchestratorContext(freshTask.workspaceId || "") : undefined;
+  const orchestratorCtx = freshTask.canDecompose && freshTask.depth <= 1 && !!freshTask.workspaceId
+    ? buildOrchestratorContext(buildOrchestratorContextInput(
+      freshTask.workspaceId!,
+      workspace ? { name: workspace.name, description: workspace.description, repoUrl: workspace.repoUrl } : undefined,
+    ))
+    : undefined;
   const systemContext = new SystemPromptBuilder({
     task: { title: freshTask.title, description: freshTask.description, notes: freshTask.id === ROOT_TASK_ID ? "" : (options?.notes || "") },
     taskId: freshTask.id, canDecompose: freshTask.canDecompose, personaPrompt: systemPrompt,
@@ -116,23 +128,7 @@ export async function startTaskSession(
   await tokenPush.refreshTokensForTask(environmentId, runtime,
     env.adapterType === "local" ? { excludeFileTokens: true } : undefined);
 
-  let mcpServersJson = "";
-  try {
-    const parsed: unknown = JSON.parse(resolvedPersonaRow.mcpServers || "[]");
-    if (Array.isArray(parsed)) {
-      const mcpServers = parsed as {
-        name: string;
-        command: string;
-        args?: string[];
-        tools?: string[];
-      }[];
-      if (mcpServers.length > 0) {
-        mcpServersJson = buildMcpServersJson(mcpServers);
-      }
-    }
-  } catch {
-    logger.warn("Failed to parse persona.mcpServers JSON; ignoring");
-  }
+  const mcpServersJson = personaMcpServersToJson(resolved.mcpServers, resolved.personaId);
 
   // Build MCP broker URL + scoped token so runtimes can call the MCP server.
   const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);

@@ -1,47 +1,26 @@
 /**
- * Unit tests for the orchestrator context data-fetching helper.
+ * Unit tests for the orchestrator context builder (pure, no database mocks).
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
+import type { OrchestratorContextInput } from "./orchestrator-context.js";
+import { buildOrchestratorContext } from "./orchestrator-context.js";
 
-vi.mock("@grackle-ai/database", () => ({
-  taskStore: { listTasks: vi.fn(() => []) },
-  personaStore: { listPersonas: vi.fn(() => []) },
-  envRegistry: { listEnvironments: vi.fn(() => []) },
-  workspaceStore: { getWorkspace: vi.fn(() => undefined) },
-  findingStore: { queryFindings: vi.fn(() => []) },
-  safeParseJsonArray: (s: string) => { try { return JSON.parse(s); } catch { return []; } },
-}));
+/** Helper: builds a minimal valid input with overrides. */
+function makeInput(overrides: Partial<OrchestratorContextInput> = {}): OrchestratorContextInput {
+  return {
+    tasks: [],
+    personas: [],
+    environments: [],
+    findings: [],
+    ...overrides,
+  };
+}
 
-import { fetchOrchestratorContext } from "./orchestrator-context.js";
-import { taskStore, personaStore, envRegistry, workspaceStore, findingStore } from "@grackle-ai/database";
-
-describe("fetchOrchestratorContext", () => {
-  beforeEach(() => {
-    vi.resetAllMocks();
-    // Re-establish default return values after reset
-    vi.mocked(taskStore.listTasks).mockReturnValue([]);
-    vi.mocked(personaStore.listPersonas).mockReturnValue([]);
-    vi.mocked(envRegistry.listEnvironments).mockReturnValue([]);
-    vi.mocked(workspaceStore.getWorkspace).mockReturnValue(undefined);
-    vi.mocked(findingStore.queryFindings).mockReturnValue([]);
-  });
-
-  it("returns workspace metadata when workspace exists", () => {
-    vi.mocked(workspaceStore.getWorkspace).mockReturnValue({
-      id: "ws-1",
-      name: "My Project",
-      description: "A cool project",
-      repoUrl: "https://github.com/test/repo",
-      environmentId: "env-1",
-      status: "active",
-      useWorktrees: true,
-      workingDirectory: "",
-      defaultPersonaId: "",
-      createdAt: "2026-01-01",
-      updatedAt: "2026-01-01",
-    });
-
-    const result = fetchOrchestratorContext("ws-1");
+describe("buildOrchestratorContext", () => {
+  it("returns workspace metadata when provided", () => {
+    const result = buildOrchestratorContext(makeInput({
+      workspace: { name: "My Project", description: "A cool project", repoUrl: "https://github.com/test/repo" },
+    }));
 
     expect(result.workspace).toEqual({
       name: "My Project",
@@ -50,38 +29,54 @@ describe("fetchOrchestratorContext", () => {
     });
   });
 
-  it("returns undefined workspace when not found", () => {
-    vi.mocked(workspaceStore.getWorkspace).mockReturnValue(undefined);
-
-    const result = fetchOrchestratorContext("ws-missing");
+  it("returns undefined workspace when not provided", () => {
+    const result = buildOrchestratorContext(makeInput());
 
     expect(result.workspace).toBeUndefined();
   });
 
   it("maps tasks to TaskTreeNode with resolved persona names", () => {
-    vi.mocked(personaStore.listPersonas).mockReturnValue([
-      { id: "eng", name: "Engineer", description: "Writes code", systemPrompt: "", toolConfig: "{}", runtime: "claude-code", model: "", maxTurns: 0, mcpServers: "[]", type: "agent", script: "", createdAt: "", updatedAt: "" },
-    ]);
-    vi.mocked(taskStore.listTasks).mockReturnValue([
-      { id: "t1", title: "Task 1", description: "", status: "working", branch: "feat-1", dependsOn: '["t0"]', startedAt: null, completedAt: null, createdAt: "", updatedAt: "", sortOrder: 0, parentTaskId: "", depth: 0, canDecompose: true, defaultPersonaId: "eng", workspaceId: "ws-1" },
-    ]);
-
-    const result = fetchOrchestratorContext("ws-1");
+    const result = buildOrchestratorContext(makeInput({
+      personas: [
+        { id: "eng", name: "Engineer", description: "Writes code", runtime: "claude-code", model: "" },
+      ],
+      tasks: [
+        { id: "t1", title: "Task 1", status: "working", depth: 0, parentTaskId: "", dependsOn: ["t0"], defaultPersonaId: "eng", branch: "feat-1", canDecompose: true },
+      ],
+    }));
 
     expect(result.taskTree).toHaveLength(1);
-    expect(result.taskTree[0].title).toBe("Task 1");
-    expect(result.taskTree[0].personaName).toBe("Engineer");
-    expect(result.taskTree[0].dependsOn).toEqual(["t0"]);
-    expect(result.taskTree[0].status).toBe("working");
+    expect(result.taskTree[0]).toEqual({
+      id: "t1",
+      title: "Task 1",
+      status: "working",
+      depth: 0,
+      parentTaskId: "",
+      dependsOn: ["t0"],
+      personaName: "Engineer",
+      branch: "feat-1",
+      canDecompose: true,
+    });
+  });
+
+  it("resolves persona name to empty string when persona not found", () => {
+    const result = buildOrchestratorContext(makeInput({
+      personas: [],
+      tasks: [
+        { id: "t1", title: "Task 1", status: "not_started", depth: 0, parentTaskId: "", dependsOn: [], defaultPersonaId: "unknown-persona", branch: "", canDecompose: false },
+      ],
+    }));
+
+    expect(result.taskTree[0].personaName).toBe("");
   });
 
   it("returns all personas as PersonaSummary", () => {
-    vi.mocked(personaStore.listPersonas).mockReturnValue([
-      { id: "eng", name: "Engineer", description: "Writes code", systemPrompt: "", toolConfig: "{}", runtime: "claude-code", model: "", maxTurns: 0, mcpServers: "[]", type: "agent", script: "", createdAt: "", updatedAt: "" },
-      { id: "rev", name: "Reviewer", description: "Reviews PRs", systemPrompt: "", toolConfig: "{}", runtime: "copilot", model: "", maxTurns: 0, mcpServers: "[]", type: "agent", script: "", createdAt: "", updatedAt: "" },
-    ]);
-
-    const result = fetchOrchestratorContext("ws-1");
+    const result = buildOrchestratorContext(makeInput({
+      personas: [
+        { id: "eng", name: "Engineer", description: "Writes code", runtime: "claude-code", model: "" },
+        { id: "rev", name: "Reviewer", description: "Reviews PRs", runtime: "copilot", model: "" },
+      ],
+    }));
 
     expect(result.availablePersonas).toEqual([
       { name: "Engineer", description: "Writes code", runtime: "claude-code", model: "" },
@@ -90,12 +85,12 @@ describe("fetchOrchestratorContext", () => {
   });
 
   it("returns all environments as EnvironmentSummary", () => {
-    vi.mocked(envRegistry.listEnvironments).mockReturnValue([
-      { id: "env-1", displayName: "Local Dev", adapterType: "local", adapterConfig: "{}", defaultRuntime: "claude-code", bootstrapped: true, status: "connected", lastSeen: null, envInfo: null, createdAt: "", powerlineToken: "" },
-      { id: "env-2", displayName: "SSH Box", adapterType: "ssh", adapterConfig: "{}", defaultRuntime: "claude-code", bootstrapped: false, status: "disconnected", lastSeen: null, envInfo: null, createdAt: "", powerlineToken: "" },
-    ]);
-
-    const result = fetchOrchestratorContext("ws-1");
+    const result = buildOrchestratorContext(makeInput({
+      environments: [
+        { displayName: "Local Dev", adapterType: "local", status: "connected", defaultRuntime: "claude-code" },
+        { displayName: "SSH Box", adapterType: "ssh", status: "disconnected", defaultRuntime: "claude-code" },
+      ],
+    }));
 
     expect(result.availableEnvironments).toEqual([
       { displayName: "Local Dev", adapterType: "local", status: "connected", defaultRuntime: "claude-code" },
@@ -104,20 +99,19 @@ describe("fetchOrchestratorContext", () => {
   });
 
   it("returns findings context string", () => {
-    vi.mocked(findingStore.queryFindings).mockReturnValue([
-      { id: "f1", workspaceId: "ws-1", taskId: "t1", sessionId: "s1", category: "decision", title: "Used React", content: "Chose React for the frontend.", tags: "[]", createdAt: "2026-01-01" },
-    ]);
-
-    const result = fetchOrchestratorContext("ws-1");
+    const result = buildOrchestratorContext(makeInput({
+      findings: [
+        { category: "decision", title: "Used React", content: "Chose React for the frontend." },
+      ],
+    }));
 
     expect(result.findingsContext).toContain("## Workspace Findings");
     expect(result.findingsContext).toContain("[decision] Used React");
     expect(result.findingsContext).toContain("Chose React for the frontend.");
-    expect(findingStore.queryFindings).toHaveBeenCalledWith("ws-1", undefined, undefined, 20);
   });
 
-  it("handles empty stores gracefully", () => {
-    const result = fetchOrchestratorContext("ws-1");
+  it("handles empty inputs gracefully", () => {
+    const result = buildOrchestratorContext(makeInput());
 
     expect(result.taskTree).toEqual([]);
     expect(result.availablePersonas).toEqual([]);
@@ -126,14 +120,50 @@ describe("fetchOrchestratorContext", () => {
     expect(result.workspace).toBeUndefined();
   });
 
-  it("resolves persona name to empty string when persona not found", () => {
-    vi.mocked(personaStore.listPersonas).mockReturnValue([]);
-    vi.mocked(taskStore.listTasks).mockReturnValue([
-      { id: "t1", title: "Task 1", description: "", status: "not_started", branch: "", dependsOn: "[]", startedAt: null, completedAt: null, createdAt: "", updatedAt: "", sortOrder: 0, parentTaskId: "", depth: 0, canDecompose: false, defaultPersonaId: "unknown-persona", workspaceId: "ws-1" },
-    ]);
+  it("truncates individual findings content to 500 characters", () => {
+    const longContent = "A".repeat(600);
+    const result = buildOrchestratorContext(makeInput({
+      findings: [
+        { category: "bug", title: "Long Finding", content: longContent },
+      ],
+    }));
 
-    const result = fetchOrchestratorContext("ws-1");
+    expect(result.findingsContext).toContain("A".repeat(500) + "...");
+    expect(result.findingsContext).not.toContain("A".repeat(501));
+  });
 
-    expect(result.taskTree[0].personaName).toBe("");
+  it("respects the 8K character budget for findings context", () => {
+    // Create 30 findings each ~400 chars — total would exceed 8K
+    const findings = Array.from({ length: 30 }, (_, i) => ({
+      category: "note",
+      title: `Finding ${i}`,
+      content: "B".repeat(400),
+    }));
+
+    const result = buildOrchestratorContext(makeInput({ findings }));
+
+    expect(result.findingsContext.length).toBeLessThanOrEqual(8500);
+    // Should include some but not all findings
+    expect(result.findingsContext).toContain("Finding 0");
+  });
+
+  it("handles tasks with multiple dependsOn entries", () => {
+    const result = buildOrchestratorContext(makeInput({
+      tasks: [
+        { id: "t3", title: "Final Task", status: "not_started", depth: 1, parentTaskId: "t0", dependsOn: ["t1", "t2"], defaultPersonaId: "", branch: "", canDecompose: false },
+      ],
+    }));
+
+    expect(result.taskTree[0].dependsOn).toEqual(["t1", "t2"]);
+  });
+
+  it("handles tasks with empty dependsOn", () => {
+    const result = buildOrchestratorContext(makeInput({
+      tasks: [
+        { id: "t1", title: "Solo Task", status: "not_started", depth: 0, parentTaskId: "", dependsOn: [], defaultPersonaId: "", branch: "", canDecompose: false },
+      ],
+    }));
+
+    expect(result.taskTree[0].dependsOn).toEqual([]);
   });
 });

@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/prompt",
-  "version": "0.83.2",
+  "version": "0.84.0",
   "description": "System prompt assembly and persona resolution for Grackle agent sessions",
   "license": "MIT",
   "repository": {
@@ -35,9 +35,7 @@
     "_phase:build": "heft run --only build -- --clean",
     "_phase:test": "vitest run"
   },
-  "dependencies": {
-    "@grackle-ai/database": "workspace:*"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
     "@rushstack/heft": "1.2.7",
