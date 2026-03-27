@@ -2,6 +2,29 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.86.0",
+      "tag": "@grackle-ai/cli_v0.86.0",
+      "date": "Fri, 27 Mar 2026 22:24:49 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix: make workspaceId optional in finding MCP tool schemas so agents can call finding_post without discovering their workspace ID"
+          },
+          {
+            "comment": "Add exponential backoff and reanimate-first strategy to root task boot"
+          },
+          {
+            "comment": "Extract presentational components into @grackle-ai/web-components package"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "Add request trace IDs across gRPC/PowerLine boundaries for cross-component log correlation"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.85.2",
       "tag": "@grackle-ai/cli_v0.85.2",
       "date": "Fri, 27 Mar 2026 21:24:58 GMT",
