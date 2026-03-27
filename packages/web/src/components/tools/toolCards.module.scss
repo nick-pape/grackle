@@ -193,6 +193,22 @@
   50% { opacity: 1; }
 }
 
+// --- Copy button (inline in header row) ---
+
+.copyButtonInline {
+  position: static !important;
+  flex-shrink: 0;
+  opacity: 0.4 !important;
+
+  &:hover {
+    opacity: 1 !important;
+  }
+
+  @include mobile {
+    opacity: 1 !important;
+  }
+}
+
 // --- In-progress / dimmed state ---
 
 .inProgress {

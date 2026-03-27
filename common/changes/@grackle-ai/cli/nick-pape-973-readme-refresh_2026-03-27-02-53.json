@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Rewrite README with value-prop-first structure, fresh screenshots, and new knowledge graph screenshot",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

@@ -1,5 +1,31 @@
-import { personaStore, settingsStore } from "@grackle-ai/database";
-import type { PersonaRow } from "@grackle-ai/database";
+/**
+ * Persona resolution with cascade logic.
+ * Pure function — no database or store dependencies.
+ */
+
+/** Database-agnostic persona data for resolution. */
+export interface PersonaResolveInput {
+  /** Persona ID. */
+  id: string;
+  /** Display name. */
+  name: string;
+  /** Agent runtime implementation (e.g. "claude-code", "codex", "genaiscript"). */
+  runtime: string;
+  /** LLM model identifier (e.g. "sonnet", "gpt-4.1"). */
+  model: string;
+  /** Maximum turns for the agent session (0 = unlimited). */
+  maxTurns: number;
+  /** System prompt to prepend. */
+  systemPrompt: string;
+  /** JSON tool configuration. */
+  toolConfig: string;
+  /** JSON array of MCP server configs. */
+  mcpServers: string;
+  /** Persona type: "agent" (interactive LLM session) or "script" (run-to-completion). */
+  type: string;
+  /** Script source code (non-empty for script personas). */
+  script: string;
+}
 
 /** Resolved persona fields needed to start a session. */
 export interface ResolvedPersona {
@@ -21,27 +47,34 @@ export interface ResolvedPersona {
   type: string;
   /** Script source code (non-empty for script personas). */
   script: string;
-  /** The full persona row for additional fields. */
-  persona: PersonaRow;
 }
 
 /**
  * Resolve a persona using the cascade:
- *   request persona → task default → workspace default → app default → error
+ *   request persona, task default, workspace default, app default, then error
  *
- * The first non-empty persona ID in the cascade is used to look up the persona.
- * Throws if no persona ID is found at any level, or if the resolved ID does not exist.
+ * The first non-empty persona ID in the cascade is used to look up the persona
+ * via the provided lookup function. Throws if no persona ID is found at any
+ * level, or if the resolved ID does not exist.
+ *
+ * @param requestPersonaId - Persona ID from the request (highest priority).
+ * @param taskDefaultPersonaId - Task-level default persona ID.
+ * @param workspaceDefaultPersonaId - Workspace-level default persona ID.
+ * @param appDefaultPersonaId - App-level default persona ID (pre-fetched from settings).
+ * @param lookupPersona - Function to look up a persona by ID. Returns undefined if not found.
  */
 export function resolvePersona(
   requestPersonaId: string,
-  taskDefaultPersonaId?: string,
-  workspaceDefaultPersonaId?: string,
+  taskDefaultPersonaId: string | undefined,
+  workspaceDefaultPersonaId: string | undefined,
+  appDefaultPersonaId: string | undefined,
+  lookupPersona: (id: string) => PersonaResolveInput | undefined,
 ): ResolvedPersona {
   const personaId =
     requestPersonaId ||
     taskDefaultPersonaId ||
     workspaceDefaultPersonaId ||
-    settingsStore.getSetting("default_persona_id") ||
+    appDefaultPersonaId ||
     "";
 
   if (!personaId) {
@@ -50,7 +83,7 @@ export function resolvePersona(
     );
   }
 
-  const persona = personaStore.getPersona(personaId);
+  const persona = lookupPersona(personaId);
   if (!persona) {
     throw new Error(`Persona not found: ${personaId}`);
   }
@@ -75,6 +108,5 @@ export function resolvePersona(
     mcpServers: persona.mcpServers,
     type: personaType,
     script: persona.script,
-    persona,
   };
 }

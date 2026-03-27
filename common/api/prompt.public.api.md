@@ -4,10 +4,19 @@
 
 ```ts
 
-import type { PersonaRow } from '@grackle-ai/database';
+// @public
+export function buildOrchestratorContext(input: OrchestratorContextInput): OrchestratorContext;
 
 // @public
 export function buildTaskPrompt(title: string, description: string, notes?: string): string;
+
+// @public
+export interface EnvironmentInput {
+    adapterType: string;
+    defaultRuntime: string;
+    displayName: string;
+    status: string;
+}
 
 // @public
 export interface EnvironmentSummary {
@@ -18,7 +27,11 @@ export interface EnvironmentSummary {
 }
 
 // @public
-export function fetchOrchestratorContext(workspaceId: string): OrchestratorContext | undefined;
+export interface FindingInput {
+    category: string;
+    content: string;
+    title: string;
+}
 
 // @public
 export interface OrchestratorContext {
@@ -34,6 +47,42 @@ export interface OrchestratorContext {
 }
 
 // @public
+export interface OrchestratorContextInput {
+    environments: EnvironmentInput[];
+    findings: FindingInput[];
+    personas: PersonaInput[];
+    tasks: TaskInput[];
+    workspace?: {
+        name: string;
+        description: string;
+        repoUrl: string;
+    };
+}
+
+// @public
+export interface PersonaInput {
+    description: string;
+    id: string;
+    model: string;
+    name: string;
+    runtime: string;
+}
+
+// @public
+export interface PersonaResolveInput {
+    id: string;
+    maxTurns: number;
+    mcpServers: string;
+    model: string;
+    name: string;
+    runtime: string;
+    script: string;
+    systemPrompt: string;
+    toolConfig: string;
+    type: string;
+}
+
+// @public
 export interface PersonaSummary {
     description: string;
     model: string;
@@ -46,7 +95,6 @@ export interface ResolvedPersona {
     maxTurns: number;
     mcpServers: string;
     model: string;
-    persona: PersonaRow;
     personaId: string;
     runtime: string;
     script: string;
@@ -56,7 +104,7 @@ export interface ResolvedPersona {
 }
 
 // @public
-export function resolvePersona(requestPersonaId: string, taskDefaultPersonaId?: string, workspaceDefaultPersonaId?: string): ResolvedPersona;
+export function resolvePersona(requestPersonaId: string, taskDefaultPersonaId: string | undefined, workspaceDefaultPersonaId: string | undefined, appDefaultPersonaId: string | undefined, lookupPersona: (id: string) => PersonaResolveInput | undefined): ResolvedPersona;
 
 // @public
 export class SystemPromptBuilder {
@@ -86,6 +134,19 @@ export interface SystemPromptOptions {
         description: string;
         repoUrl: string;
     };
+}
+
+// @public
+export interface TaskInput {
+    branch: string;
+    canDecompose: boolean;
+    defaultPersonaId: string;
+    dependsOn: string[];
+    depth: number;
+    id: string;
+    parentTaskId: string;
+    status: string;
+    title: string;
 }
 
 // @public

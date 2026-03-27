@@ -76,9 +76,14 @@
 }
 
 .textEvent {
+  position: relative;
   padding: var(--space-xs) 0;
   padding-left: var(--space-xs);
   line-height: var(--line-height);
+
+  &:hover .messageCopyButton {
+    opacity: 0.4;
+  }
 
   // --- Markdown element styles ---
 
@@ -165,6 +170,27 @@
     margin: var(--space-xs) 0;
     color: var(--text-secondary);
   }
+}
+
+// --- Copy button positioning ---
+
+.messageCopyButton {
+  // Positioned by CopyButton.module.scss (position: absolute, top/right).
+  // Opacity controlled by .textEvent:hover above.
+  // Mobile: base CopyButton handles always-visible (opacity: 1).
+}
+
+.codeBlockWrapper {
+  position: relative;
+
+  &:hover .codeBlockCopyButton {
+    opacity: 0.4;
+  }
+}
+
+.codeBlockCopyButton {
+  // Override absolute position from CopyButton default — sits inside the wrapper.
+  // Mobile: base CopyButton handles always-visible (opacity: 1).
 }
 
 // Tool card styles have moved to ../tools/toolCards.module.scss.

@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Remove dead try-catch around console.debug in stream-registry",
+      "comment": "Decouple prompt package from database: pure functions with injected data instead of store calls",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }

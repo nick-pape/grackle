@@ -14,10 +14,23 @@ export function createWebServer(options: WebServerOptions): http.Server;
 export function isWildcardAddress(host: string): boolean;
 
 // @public
+export interface ReadinessCheck {
+    message?: string;
+    ok: boolean;
+}
+
+// @public
+export interface ReadinessResult {
+    checks: Record<string, ReadinessCheck>;
+    ready: boolean;
+}
+
+// @public
 export interface WebServerOptions {
     apiKey: string;
     bindHost: string;
     connectRoutes?: (router: ConnectRouter) => void;
+    readinessCheck?: () => ReadinessResult | Promise<ReadinessResult>;
     webDistDir?: string;
     webPort: number;
 }

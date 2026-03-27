@@ -10,7 +10,7 @@ import {
   LOGS_DIR,
   eventTypeToEnum,
 } from "@grackle-ai/common";
-import { envRegistry, sessionStore, taskStore, grackleHome } from "@grackle-ai/database";
+import { envRegistry, sessionStore, taskStore, personaStore, settingsStore, grackleHome } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { join } from "node:path";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
@@ -28,6 +28,7 @@ import * as pipeDelivery from "./pipe-delivery.js";
 import * as logWriter from "./log-writer.js";
 import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
 import { resolvePersona, SystemPromptBuilder } from "@grackle-ai/prompt";
+import { toPersonaResolveInput } from "./persona-mapper.js";
 import { sendInputToSession } from "./signals/signal-delivery.js";
 import { createEventStream } from "./event-hub.js";
 import { sessionRowToProto } from "./grpc-proto-converters.js";
@@ -111,13 +112,19 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
   // Resolve persona via cascade (request → app default)
   let resolved: ReturnType<typeof resolvePersona>;
   try {
-    resolved = resolvePersona(req.personaId);
+    resolved = resolvePersona(
+      req.personaId,
+      undefined,
+      undefined,
+      settingsStore.getSetting("default_persona_id") || undefined,
+      (id) => toPersonaResolveInput(personaStore.getPersona(id)),
+    );
   } catch (err) {
     throw new ConnectError((err as Error).message, Code.FailedPrecondition);
   }
 
   const sessionId = uuid();
-  const { runtime, model, systemPrompt, persona } = resolved;
+  const { runtime, model, systemPrompt } = resolved;
   const maxTurns = req.maxTurns || resolved.maxTurns;
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
@@ -145,7 +152,7 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
     pipeMode || "",          // pipeMode
   );
 
-  const mcpServersJson = personaMcpServersToJson(persona);
+  const mcpServersJson = personaMcpServersToJson(resolved.mcpServers, resolved.personaId);
 
   const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
   const mcpDialHost = toDialableHost(process.env.GRACKLE_HOST || "127.0.0.1");
