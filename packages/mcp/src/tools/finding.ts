@@ -13,7 +13,7 @@ export const findingTools: ToolDefinition[] = [
     group: "finding",
     description: "Query findings for a workspace, optionally filtering by category and tags.",
     inputSchema: z.object({
-      workspaceId: z.string().describe("Workspace ID to query findings for"),
+      workspaceId: z.string().optional().describe("Workspace ID (auto-injected from session context when omitted)"),
       category: z.string().optional().describe("Filter by finding category"),
       tag: z.string().optional().describe("Filter by tag"),
       limit: z.number().int().positive().optional().describe("Maximum number of findings to return"),
@@ -27,9 +27,16 @@ export const findingTools: ToolDefinition[] = [
       openWorldHint: false,
     },
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+      const workspaceId = args.workspaceId as string | undefined;
+      if (!workspaceId) {
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify({ error: "workspaceId is required but was not provided or auto-injected. This session may not be associated with a workspace.", code: "INVALID_ARGUMENT" }, null, 2) }],
+          isError: true,
+        };
+      }
       try {
         const response = await client.queryFindings({
-          workspaceId: args.workspaceId as string,
+          workspaceId,
           categories: args.category ? [args.category as string] : [],
           tags: args.tag ? [args.tag as string] : [],
           limit: (args.limit as number | undefined) ?? 0,
@@ -57,7 +64,7 @@ export const findingTools: ToolDefinition[] = [
     group: "finding",
     description: "Post a new finding to a workspace with a title, category, content, and tags.",
     inputSchema: z.object({
-      workspaceId: z.string().describe("Workspace ID to post the finding to"),
+      workspaceId: z.string().optional().describe("Workspace ID (auto-injected from session context when omitted)"),
       title: z.string().describe("Finding title"),
       category: z.string().optional().describe("Finding category (e.g. 'bug', 'insight', 'risk')"),
       content: z.string().optional().describe("Detailed finding content"),
@@ -72,9 +79,16 @@ export const findingTools: ToolDefinition[] = [
       openWorldHint: false,
     },
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+      const workspaceId = args.workspaceId as string | undefined;
+      if (!workspaceId) {
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify({ error: "workspaceId is required but was not provided or auto-injected. This session may not be associated with a workspace.", code: "INVALID_ARGUMENT" }, null, 2) }],
+          isError: true,
+        };
+      }
       try {
         const finding = await client.postFinding({
-          workspaceId: args.workspaceId as string,
+          workspaceId,
           title: args.title as string,
           category: (args.category as string | undefined) ?? "",
           content: (args.content as string | undefined) ?? "",

@@ -256,3 +256,85 @@ describe("finding_post", () => {
     );
   });
 });
+
+describe("workspace ID schema optionality (#1041)", () => {
+  /** finding_post schema should accept calls without workspaceId (server auto-injects it). */
+  test("finding_post schema validates without workspaceId", () => {
+    const tool = getTool("finding_post");
+    const result = tool.inputSchema.safeParse({ title: "My finding" });
+    expect(result.success).toBe(true);
+  });
+
+  /** finding_list schema should accept calls without workspaceId. */
+  test("finding_list schema validates without workspaceId", () => {
+    const tool = getTool("finding_list");
+    const result = tool.inputSchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+
+  /** finding_post handler works with workspaceId injected via args (simulating server auto-injection). */
+  test("finding_post succeeds when workspaceId is injected into args", async () => {
+    const tool = getTool("finding_post");
+    const mockClient = {
+      postFinding: vi.fn().mockResolvedValue({
+        id: "f-injected",
+        workspaceId: "ws-auto",
+        category: "insight",
+        title: "Auto-injected workspace",
+        content: "",
+        tags: [],
+        createdAt: "2026-03-27T00:00:00Z",
+      }),
+    } as unknown as GrackleClient;
+
+    // Simulate what mcp-server.ts does: inject workspaceId into args before calling handler
+    const result = await tool.handler(
+      { workspaceId: "ws-auto", title: "Auto-injected workspace" },
+      mockClient,
+      { type: "scoped", taskId: "t-1", workspaceId: "ws-auto", personaId: "p-1", taskSessionId: "s-1" },
+    );
+
+    expect(mockClient.postFinding).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId: "ws-auto" }),
+    );
+    expect(result.isError).toBeUndefined();
+  });
+
+  /** finding_post handler returns error when workspaceId is missing (e.g., root task with no workspace). */
+  test("finding_post handler errors when workspaceId is omitted", async () => {
+    const tool = getTool("finding_post");
+    const mockClient = {
+      postFinding: vi.fn(),
+    } as unknown as GrackleClient;
+
+    const result = await tool.handler(
+      { title: "Missing workspace" },
+      mockClient,
+      { type: "scoped", taskId: "t-1", workspaceId: undefined as unknown as string, personaId: "p-1", taskSessionId: "s-1" },
+    );
+
+    expect(mockClient.postFinding).not.toHaveBeenCalled();
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.error).toContain("workspace");
+  });
+
+  /** finding_list handler returns error when workspaceId is missing. */
+  test("finding_list handler errors when workspaceId is omitted", async () => {
+    const tool = getTool("finding_list");
+    const mockClient = {
+      queryFindings: vi.fn(),
+    } as unknown as GrackleClient;
+
+    const result = await tool.handler(
+      {},
+      mockClient,
+      { type: "scoped", taskId: "t-1", workspaceId: undefined as unknown as string, personaId: "p-1", taskSessionId: "s-1" },
+    );
+
+    expect(mockClient.queryFindings).not.toHaveBeenCalled();
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.error).toContain("workspace");
+  });
+});
