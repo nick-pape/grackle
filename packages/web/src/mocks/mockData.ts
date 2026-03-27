@@ -919,14 +919,18 @@ export const MOCK_TASKS: TaskData[] = [
     canDecompose: true,
     defaultPersonaId: "",
     workpad: JSON.stringify({
-      approach: "Replace express-session with JWT Bearer tokens. Access tokens expire in 24h, refresh tokens stored in DB.",
-      files_changed: ["src/middleware/auth.ts", "src/routes/login.ts", "src/routes/protected.ts"],
-      decisions: [
-        "Chose jsonwebtoken over jose for consistency with existing codebase",
-        "24h access token expiry — long enough for dev sessions, short enough for security",
-        "Refresh tokens are 48-byte random hex stored in DB with user association",
-      ],
-      blockers: "Need to verify token rotation strategy with security team before merging",
+      status: "in_progress",
+      summary: "Design and implement JWT-based authentication with access/refresh tokens, replacing session-based auth.",
+      extra: {
+        approach: "Replace express-session with JWT Bearer tokens. Access tokens expire in 24h, refresh tokens stored in DB.",
+        files_changed: ["src/middleware/auth.ts", "src/routes/login.ts", "src/routes/protected.ts"],
+        decisions: [
+          "Chose jsonwebtoken over jose for consistency with existing codebase",
+          "24h access token expiry — long enough for dev sessions, short enough for security",
+          "Refresh tokens are 48-byte random hex stored in DB with user association",
+        ],
+        blockers: "Need to verify token rotation strategy with security team before merging",
+      },
     }),
   },
   // ── Children of task-001 ───────────────────────────
@@ -1083,9 +1087,13 @@ export const MOCK_TASKS: TaskData[] = [
     canDecompose: true,
     defaultPersonaId: "",
     workpad: JSON.stringify({
-      approach: "Use apache-arrow npm package for Parquet write support. Map internal column types to Arrow type system.",
-      compression: { supported: ["snappy", "zstd", "gzip"], default: "snappy" },
-      benchmarks: { "1M rows snappy": "2.3s", "1M rows zstd": "3.1s", "1M rows gzip": "4.8s" },
+      status: "in_progress",
+      summary: "Plan for adding Parquet export support, including compression options and performance benchmarks.",
+      extra: {
+        approach: "Use apache-arrow npm package for Parquet write support. Map internal column types to Arrow type system.",
+        compression: { supported: ["snappy", "zstd", "gzip"], default: "snappy" },
+        benchmarks: { "1M rows snappy": "2.3s", "1M rows zstd": "3.1s", "1M rows gzip": "4.8s" },
+      },
     }),
   },
   // ── Children of task-006 ───────────────────────────
