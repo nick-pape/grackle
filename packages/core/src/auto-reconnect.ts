@@ -6,6 +6,7 @@ import { recoverSuspendedSessions } from "./session-recovery.js";
 import { parseAdapterConfig } from "./adapter-config.js";
 import { emit } from "./event-bus.js";
 import { logger } from "./logger.js";
+import { resolveBootstrapRuntime } from "./resolve-bootstrap-runtime.js";
 
 // ─── Constants ──────────────────────────────────────────────
 
@@ -147,7 +148,7 @@ async function tryReconnect(environmentId: string): Promise<void> {
     emit("environment.changed", {});
 
     const config = parseAdapterConfig(env.adapterConfig);
-    config.defaultRuntime = env.defaultRuntime;
+    config.defaultRuntime = resolveBootstrapRuntime(env);
     const powerlineToken = env.powerlineToken;
 
     // Run reconnectOrProvision — tries fast reconnect if supported, falls back to provision

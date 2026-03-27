@@ -2,7 +2,7 @@ import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
 import { ALL_MCP_TOOL_NAMES } from "@grackle-ai/common";
-import { personaStore } from "@grackle-ai/database";
+import { personaStore, settingsStore, envRegistry } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { slugify } from "@grackle-ai/database";
 import { emit } from "./event-bus.js";
@@ -183,6 +183,20 @@ export async function updatePersona(req: grackle.UpdatePersonaRequest): Promise<
     updatedScript,
     allowedMcpToolsJson,
   );
+
+  // Sync the local environment's defaultRuntime when the app-level default
+  // persona's runtime changes, so bootstrap pre-installs the correct packages.
+  if (runtime !== existing.runtime) {
+    const appDefault = settingsStore.getSetting("default_persona_id") || "";
+    if (appDefault === req.id) {
+      const localEnv = envRegistry.getEnvironment("local");
+      if (localEnv) {
+        envRegistry.updateDefaultRuntime("local", runtime);
+        emit("environment.changed", {});
+      }
+    }
+  }
+
   emit("persona.updated", { personaId: req.id });
   const row = personaStore.getPersona(req.id);
   return personaRowToProto(row!);
