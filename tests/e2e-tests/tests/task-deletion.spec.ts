@@ -21,8 +21,9 @@ test.describe("Task Deletion", { tag: ["@task"] }, () => {
     // Navigate to Tasks tab to see the task in the TaskList sidebar
     await goToTasksTab(page);
 
-    // Verify the task is visible in the task list
-    await expect(page.getByText("doomed-task").first()).toBeVisible({ timeout: 5_000 });
+    // Verify the task is visible in the task list (scoped to sidebar)
+    const sidebar = page.getByTestId("sidebar");
+    await expect(sidebar.getByText("doomed-task")).toBeVisible({ timeout: 5_000 });
 
     // Get task ID and delete via RPC
     const workspaceId = await getWorkspaceId(client, workspaceName);
@@ -30,7 +31,7 @@ test.describe("Task Deletion", { tag: ["@task"] }, () => {
     await client.deleteTask({ id: taskId });
 
     // Verify task disappears from the task list
-    await expect(page.getByText("doomed-task")).not.toBeVisible({ timeout: 5_000 });
+    await expect(sidebar.getByText("doomed-task")).not.toBeVisible({ timeout: 5_000 });
   });
 
   test("delete in-progress task removes it and returns to workspace view", async ({ stubTask }) => {
@@ -51,9 +52,10 @@ test.describe("Task Deletion", { tag: ["@task"] }, () => {
     const taskId = await getTaskId(client, workspaceId, "active-task");
     await client.deleteTask({ id: taskId });
 
-    // Navigate to Tasks tab and verify task disappeared
+    // Navigate to Tasks tab and verify task disappeared from sidebar
     await goToTasksTab(page);
-    await expect(page.getByText("active-task")).not.toBeVisible({ timeout: 5_000 });
+    const sidebar = page.getByTestId("sidebar");
+    await expect(sidebar.getByText("active-task")).not.toBeVisible({ timeout: 5_000 });
   });
 
   // ConfirmDialog UI tests (accept/dismiss) removed — covered by
