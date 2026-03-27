@@ -9,7 +9,7 @@
 
 import { useState, useCallback } from "react";
 import { ConnectError } from "@connectrpc/connect";
-import type { Workspace, GrackleEvent } from "./types.js";
+import type { Workspace, GrackleEvent } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToWorkspace } from "./proto-converters.js";
 

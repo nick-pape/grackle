@@ -1,15 +1,9 @@
 import { useState, useEffect, type JSX, type FormEvent } from "react";
 import { useParams, Navigate } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
-import { useToast } from "../../context/ToastContext.js";
-import { Breadcrumbs, ConfirmDialog } from "../../components/display/index.js";
-import { Button } from "../../components/display/Button.js";
-import { EditableSelect, EditableTextArea, EditableTextField, type SelectOption } from "../../components/editable/index.js";
-import { PERSONAS_URL, SETTINGS_URL, personaUrl, useAppNavigate } from "../../utils/navigation.js";
-import type { BreadcrumbSegment } from "../../utils/breadcrumbs.js";
-import type { PersonaData } from "../../hooks/types.js";
-import { McpToolSelector } from "../../components/personas/McpToolSelector.js";
-import styles from "../../components/personas/PersonaManager.module.scss";
+import { Breadcrumbs, Button, ConfirmDialog, EditableSelect, EditableTextArea, EditableTextField, McpToolSelector, PERSONAS_URL, SETTINGS_URL, personaUrl, useAppNavigate, useToast } from "@grackle-ai/web-components";
+import type { BreadcrumbSegment, PersonaData, SelectOption } from "@grackle-ai/web-components";
+import styles from "@grackle-ai/web-components/src/components/personas/PersonaManager.module.scss";
 
 const RUNTIME_OPTIONS: SelectOption[] = [
   { value: "claude-code", label: "claude-code" },

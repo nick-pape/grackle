@@ -1,10 +1,8 @@
 import { useState, type JSX } from "react";
 import { useParams, Navigate } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
-import { ConfirmDialog } from "../components/display/index.js";
-import { environmentEditUrl, workspaceUrl, newChatUrl, useAppNavigate, ENVIRONMENTS_URL, NEW_WORKSPACE_URL } from "../utils/navigation.js";
+import { ConfirmDialog, ENVIRONMENTS_URL, NEW_WORKSPACE_URL, environmentEditUrl, formatCost, newChatUrl, useAppNavigate, workspaceUrl } from "@grackle-ai/web-components";
 import type { Workspace } from "../hooks/useGrackleSocket.js";
-import { formatCost } from "../utils/format.js";
 import styles from "./EnvironmentDetailPage.module.scss";
 
 /** Status-color mapping for the environment status badge. */

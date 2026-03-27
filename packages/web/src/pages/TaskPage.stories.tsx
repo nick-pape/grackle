@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect } from "@storybook/test";
-import { withMockGrackleRoute } from "../test-utils/storybook-helpers.js";
+import { withMockGrackleRoute } from "@grackle-ai/web-components";
 import { TaskPage } from "./TaskPage.js";
 
 const meta: Meta<typeof TaskPage> = {

@@ -1,19 +1,18 @@
 import { GrackleProvider } from "./context/GrackleContext.js";
-import { MockGrackleProvider } from "./mocks/MockGrackleProvider.js";
-import { ToastProvider } from "./context/ToastContext.js";
-import { ThemeProvider } from "./context/ThemeContext.js";
-import { StatusBar, AppNav, Sidebar, WithTaskSidebar, WithEnvironmentSidebar, WithSettingsSidebar, WithKnowledgeSidebar, BottomStatusBar } from "./components/layout/index.js";
-import { SidebarProvider, useSidebarContent } from "./context/SidebarContext.js";
-import { ToastContainer } from "./components/notifications/index.js";
-import { SplashScreen } from "./components/display/index.js";
+import {
+  ToastProvider, ThemeProvider, SidebarProvider,
+  StatusBar, AppNav, Sidebar, BottomStatusBar,
+  ToastContainer, SplashScreen, DemoBanner,
+  MockGrackleProvider,
+  useSidebarContent, useToast,
+  sessionUrl, useAppNavigate,
+} from "@grackle-ai/web-components";
 import { useCallback, useEffect, useState, Suspense, lazy, type LazyExoticComponent, type JSX } from "react";
 import { useGrackle } from "./context/GrackleContext.js";
-import { useToast } from "./context/ToastContext.js";
 import { useEnvironmentToasts } from "./hooks/useEnvironmentToasts.js";
 import { useTaskToasts } from "./hooks/useTaskToasts.js";
 import { AnimatePresence, motion } from "motion/react";
 import { BrowserRouter, HashRouter, Routes, Route, Navigate, Outlet, useLocation, useParams } from "react-router";
-import { sessionUrl, useAppNavigate } from "./utils/navigation.js";
 import { EmptyPage, TasksEmptyPage, EnvironmentsEmptyPage } from "./pages/EmptyPage.js";
 import { ChatPage } from "./pages/ChatPage.js";
 import { NewChatPage } from "./pages/NewChatPage.js";
@@ -34,7 +33,7 @@ import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js
 import { SettingsAboutTab } from "./pages/settings/SettingsAboutTab.js";
 import { SettingsShortcutsTab } from "./pages/settings/SettingsShortcutsTab.js";
 import { GlobalShortcuts } from "./components/layout/GlobalShortcuts.js";
-import { DemoBanner } from "./components/display/DemoBanner.js";
+import { WithTaskSidebar, WithEnvironmentSidebar, WithSettingsSidebar, WithKnowledgeSidebar } from "./components/layout/WithSidebar.js";
 import { SetupWizard } from "./pages/SetupWizard.js";
 import styles from "./App.module.scss";
 

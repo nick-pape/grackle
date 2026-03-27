@@ -1,6 +1,5 @@
 import type { JSX } from "react";
-import { useThemeContext } from "../../context/ThemeContext.js";
-import { AppearancePanel } from "../../components/panels/AppearancePanel.js";
+import { AppearancePanel, useThemeContext } from "@grackle-ai/web-components";
 
 /** Settings tab wrapping the appearance panel. */
 export function SettingsAppearanceTab(): JSX.Element {

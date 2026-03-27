@@ -724,6 +724,103 @@ importers:
       '@grackle-ai/common':
         specifier: workspace:*
         version: link:../common
+      '@grackle-ai/web-components':
+        specifier: workspace:*
+        version: link:../web-components
+      '@xyflow/react':
+        specifier: ^12.10.0
+        version: 12.10.1(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      motion:
+        specifier: ^11.18.0
+        version: 11.18.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.4(react@19.2.4)
+      react-markdown:
+        specifier: ^9.0.3
+        version: 9.1.0(@types/react@19.2.14)(react@19.2.4)
+      react-router:
+        specifier: ^7.0.0
+        version: 7.13.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      rehype-prism-plus:
+        specifier: ^2.0.0
+        version: 2.0.2
+      remark-gfm:
+        specifier: ^4.0.0
+        version: 4.0.1
+    devDependencies:
+      '@grackle-ai/heft-rig':
+        specifier: workspace:*
+        version: link:../../rigs/heft-rig
+      '@rushstack/heft':
+        specifier: 1.2.7
+        version: 1.2.7(@types/node@22.19.15)
+      '@storybook/react':
+        specifier: 8.6.18
+        version: 8.6.18(@storybook/test@8.6.18(storybook@8.6.18))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(storybook@8.6.18)(typescript@5.8.2)
+      '@storybook/react-vite':
+        specifier: 8.6.18
+        version: 8.6.18(@storybook/test@8.6.18(storybook@8.6.18))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(rollup@4.60.0)(storybook@8.6.18)(typescript@5.8.2)(vite@6.4.1(@types/node@22.19.15)(jiti@1.21.7)(sass@1.98.0)(terser@5.46.1))
+      '@storybook/test':
+        specifier: 8.6.18
+        version: 8.6.18(storybook@8.6.18)
+      '@storybook/test-runner':
+        specifier: ^0.21.0
+        version: 0.21.3(@types/node@22.19.15)(storybook@8.6.18)
+      '@testing-library/dom':
+        specifier: ^10.4.1
+        version: 10.4.1
+      '@testing-library/react':
+        specifier: ^16.3.2
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.2.3(@types/react@19.2.14)
+      '@vitejs/plugin-react':
+        specifier: ^4.0.0
+        version: 4.7.0(vite@6.4.1(@types/node@22.19.15)(jiti@1.21.7)(sass@1.98.0)(terser@5.46.1))
+      concurrently:
+        specifier: ^9.1.0
+        version: 9.2.1
+      http-server:
+        specifier: ^14.1.1
+        version: 14.1.1
+      jsdom:
+        specifier: ^29.0.0
+        version: 29.0.1
+      sass:
+        specifier: ^1.86.0
+        version: 1.98.0
+      storybook:
+        specifier: 8.6.18
+        version: 8.6.18
+      vite:
+        specifier: ^6.0.0
+        version: 6.4.1(@types/node@22.19.15)(jiti@1.21.7)(sass@1.98.0)(terser@5.46.1)
+      vitest:
+        specifier: ^3.1.1
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
+      wait-on:
+        specifier: ^8.0.0
+        version: 8.0.5
+
+  ../../packages/web-components:
+    dependencies:
+      '@bufbuild/protobuf':
+        specifier: ^2.5.0
+        version: 2.11.0
+      '@dagrejs/dagre':
+        specifier: ^2.0.4
+        version: 2.0.4
+      '@grackle-ai/common':
+        specifier: workspace:*
+        version: link:../common
       '@xyflow/react':
         specifier: ^12.10.0
         version: 12.10.1(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)

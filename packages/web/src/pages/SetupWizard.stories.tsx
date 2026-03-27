@@ -6,10 +6,8 @@ import type { Decorator } from "@storybook/react";
 import { expect, userEvent } from "@storybook/test";
 import { SYSTEM_PERSONA_ID } from "@grackle-ai/common";
 import { GrackleContext } from "../context/GrackleContext.js";
-import { SidebarProvider } from "../context/SidebarContext.js";
-import { MockGrackleProvider } from "../mocks/MockGrackleProvider.js";
-import { makePersona } from "../test-utils/storybook-helpers.js";
-import type { PersonaData } from "../hooks/types.js";
+import { MockGrackleProvider, SidebarProvider, makePersona } from "@grackle-ai/web-components";
+import type { PersonaData } from "@grackle-ai/web-components";
 import { SetupWizard } from "./SetupWizard.js";
 
 /** Seed persona required by SetupWizard (looks up id "claude-code"). */

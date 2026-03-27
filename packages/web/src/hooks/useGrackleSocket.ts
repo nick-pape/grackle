@@ -7,7 +7,7 @@
  */
 
 import { useCallback, useState } from "react";
-import type { GrackleEvent, UsageStats } from "./types.js";
+import type { GrackleEvent, UsageStats, UseGrackleSocketResult } from "@grackle-ai/web-components";
 import { useEventStream } from "./useEventStream.js";
 import { eventTypeToString } from "@grackle-ai/common";
 import { useEnvironments } from "./useEnvironments.js";
@@ -27,194 +27,24 @@ import { protoToUsageStats } from "./proto-converters.js";
 // Keep consumer imports (e.g. `from "../hooks/useGrackleSocket.js"`) working.
 
 export type {
-  Environment,
-  Session,
-  SessionEvent,
-  Workspace,
-  TaskData,
-  FindingData,
-  TokenInfo,
-  CredentialProviderConfig,
   Codespace,
+  CredentialProviderConfig,
+  Environment,
+  FindingData,
+  GrackleEvent,
   PersonaData,
   ProvisionStatus,
-  WsMessage,
   SendFunction,
-  GrackleEvent,
-} from "./types.js";
+  Session,
+  SessionEvent,
+  TaskData,
+  TokenInfo,
+  UseGrackleSocketResult,
+  WsMessage,
+  Workspace,
+} from "@grackle-ai/web-components";
 
-export { isGrackleEvent } from "./types.js";
-
-// ─── Result interface ─────────────────────────────────────────────────────────
-
-/** Return type for the {@link useGrackleSocket} hook. */
-export interface UseGrackleSocketResult {
-  connected: boolean;
-  environments: import("./types.js").Environment[];
-  sessions: import("./types.js").Session[];
-  events: import("./types.js").SessionEvent[];
-  /**
-   * The total number of events that have been silently dropped due to the
-   * MAX_EVENTS in-memory cap. A non-zero value means the user is only seeing
-   * the most-recent slice of a long session; older events are still available
-   * in the server-side JSONL log.
-   */
-  eventsDropped: number;
-  lastSpawnedId: string | undefined;
-  workspaces: import("./types.js").Workspace[];
-  tasks: import("./types.js").TaskData[];
-  findings: import("./types.js").FindingData[];
-  tokens: import("./types.js").TokenInfo[];
-  spawn: (
-    environmentId: string,
-    prompt: string,
-    personaId?: string,
-    workingDirectory?: string,
-  ) => void;
-  sendInput: (sessionId: string, text: string) => void;
-  kill: (sessionId: string) => void;
-  stopGraceful: (sessionId: string) => void;
-  refresh: () => void;
-  loadSessionEvents: (sessionId: string) => void;
-  clearEvents: () => void;
-  /** Request the current workspace list from the server. */
-  loadWorkspaces: () => void;
-  createWorkspace: (
-    name: string,
-    description?: string,
-    repoUrl?: string,
-    environmentId?: string,
-    defaultPersonaId?: string,
-    useWorktrees?: boolean,
-    workingDirectory?: string,
-    onSuccess?: () => void,
-    onError?: (message: string) => void,
-  ) => void;
-  archiveWorkspace: (workspaceId: string) => void;
-  updateWorkspace: (
-    workspaceId: string,
-    fields: {
-      name?: string;
-      description?: string;
-      repoUrl?: string;
-      environmentId?: string;
-      workingDirectory?: string;
-      useWorktrees?: boolean;
-      defaultPersonaId?: string;
-    },
-  ) => void;
-  loadTasks: (workspaceId: string) => void;
-  loadAllTasks: () => void;
-  createTask: (
-    workspaceId: string,
-    title: string,
-    description?: string,
-    dependsOn?: string[],
-    parentTaskId?: string,
-    defaultPersonaId?: string,
-    canDecompose?: boolean,
-    onSuccess?: () => void,
-    onError?: (message: string) => void,
-  ) => void;
-  startTask: (
-    taskId: string,
-    personaId?: string,
-    environmentId?: string,
-    notes?: string,
-  ) => void;
-  stopTask: (taskId: string) => void;
-  completeTask: (taskId: string) => void;
-  resumeTask: (taskId: string) => void;
-  updateTask: (
-    taskId: string,
-    title: string,
-    description: string,
-    dependsOn: string[],
-    defaultPersonaId?: string,
-  ) => void;
-  deleteTask: (taskId: string) => void;
-  loadFindings: (workspaceId: string) => void;
-  postFinding: (
-    workspaceId: string,
-    title: string,
-    content: string,
-    category?: string,
-    tags?: string[],
-  ) => void;
-  /** Request the current environment list from the server. */
-  loadEnvironments: () => void;
-  addEnvironment: (
-    displayName: string,
-    adapterType: string,
-    adapterConfig?: Record<string, unknown>,
-  ) => void;
-  updateEnvironment: (
-    environmentId: string,
-    fields: { displayName?: string; adapterConfig?: Record<string, unknown> },
-  ) => void;
-  loadTokens: () => void;
-  setToken: (
-    name: string,
-    value: string,
-    tokenType: string,
-    envVar: string,
-    filePath: string,
-  ) => void;
-  deleteToken: (name: string) => void;
-  credentialProviders: import("./types.js").CredentialProviderConfig;
-  updateCredentialProviders: (config: import("./types.js").CredentialProviderConfig) => void;
-  provisionStatus: Record<string, import("./types.js").ProvisionStatus>;
-  provisionEnvironment: (environmentId: string, force?: boolean) => void;
-  stopEnvironment: (environmentId: string) => void;
-  removeEnvironment: (environmentId: string) => void;
-  codespaces: import("./types.js").Codespace[];
-  codespaceError: string;
-  codespaceListError: string;
-  codespaceCreating: boolean;
-  listCodespaces: () => void;
-  createCodespace: (repo: string, machine?: string) => void;
-  workspaceCreating: boolean;
-  taskStartingId: string | undefined;
-  personas: import("./types.js").PersonaData[];
-  createPersona: (
-    name: string,
-    description: string,
-    systemPrompt: string,
-    runtime?: string,
-    model?: string,
-    maxTurns?: number,
-    type?: string,
-    script?: string,
-  ) => Promise<import("./types.js").PersonaData>;
-  updatePersona: (
-    personaId: string,
-    name?: string,
-    description?: string,
-    systemPrompt?: string,
-    runtime?: string,
-    model?: string,
-    maxTurns?: number,
-    type?: string,
-    script?: string,
-  ) => Promise<import("./types.js").PersonaData>;
-  deletePersona: (personaId: string) => Promise<void>;
-  taskSessions: Record<string, import("./types.js").Session[]>;
-  loadTaskSessions: (taskId: string) => void;
-  /** The app-level default persona ID (from server settings). */
-  appDefaultPersonaId: string;
-  /** Set the app-level default persona ID (persisted via server settings). */
-  setAppDefaultPersonaId: (personaId: string) => Promise<void>;
-  /** Whether the first-run onboarding wizard has been completed. `undefined` until the server responds. */
-  onboardingCompleted: boolean | undefined;
-  /** Mark onboarding as complete (persisted via server settings). */
-  completeOnboarding: () => Promise<void>;
-  /** Cached usage stats keyed by "scope:id" (e.g. "workspace:abc123"). */
-  usageCache: Record<string, import("./types.js").UsageStats>;
-  /** Request aggregated usage stats from the server for a given scope and entity ID. */
-  loadUsage: (scope: string, id: string) => void;
-  /** Knowledge graph hook. */
-  knowledge: import("./useKnowledge.js").UseKnowledgeResult;
-}
+export { isGrackleEvent } from "@grackle-ai/web-components";
 
 // ─── Composition hook ─────────────────────────────────────────────────────────
 
@@ -286,9 +116,11 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     [],
   );
 
-  const completeOnboarding = useCallback(async (): Promise<void> => {
-    await grackleClient.setSetting({ key: SETTING_KEY_ONBOARDING_COMPLETED, value: "true" });
+  const completeOnboarding = useCallback(() => {
     setOnboardingCompleted(true);
+    grackleClient.setSetting({ key: SETTING_KEY_ONBOARDING_COMPLETED, value: "true" }).catch(
+      () => {},
+    );
   }, []);
 
   const loadUsage = useCallback(

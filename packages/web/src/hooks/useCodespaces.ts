@@ -8,7 +8,7 @@
 
 import { useState, useCallback } from "react";
 import { ConnectError } from "@connectrpc/connect";
-import type { Codespace } from "./types.js";
+import type { Codespace } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToCodespace } from "./proto-converters.js";
 

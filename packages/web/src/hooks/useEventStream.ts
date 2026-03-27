@@ -10,7 +10,7 @@
 import { useState, useEffect, useRef } from "react";
 import { ConnectError, Code } from "@connectrpc/connect";
 import { grackleClient } from "./useGrackleClient.js";
-import { PAIR_PATH } from "../utils/navigation.js";
+import { PAIR_PATH } from "@grackle-ai/web-components";
 
 /** Reconnect delay in milliseconds. */
 const RECONNECT_DELAY_MS: number = 3_000;

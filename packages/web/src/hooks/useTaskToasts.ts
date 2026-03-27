@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { TaskData } from "./types.js";
-import type { ToastVariant } from "../context/ToastContext.js";
+import type { TaskData, ToastVariant } from "@grackle-ai/web-components";
 import { diffTasksForToasts } from "./taskToastHelpers.js";
 
 /**

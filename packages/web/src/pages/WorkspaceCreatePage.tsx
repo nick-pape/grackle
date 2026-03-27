@@ -1,16 +1,9 @@
 import { useEffect, useState, type JSX } from "react";
 import { useSearchParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
-import { useToast } from "../context/ToastContext.js";
-import { Breadcrumbs, Spinner } from "../components/display/index.js";
-import { environmentUrl, HOME_URL, useAppNavigate } from "../utils/navigation.js";
-import {
-  WorkspaceFormFields,
-  defaultFormValues,
-  type WorkspaceFormValues,
-} from "../components/workspace/WorkspaceFormFields.js";
-import type { BreadcrumbSegment } from "../utils/breadcrumbs.js";
-import styles from "../components/panels/TaskEditPanel.module.scss";
+import { Breadcrumbs, HOME_URL, Spinner, WorkspaceFormFields, defaultFormValues, environmentUrl, useAppNavigate, useToast } from "@grackle-ai/web-components";
+import type { BreadcrumbSegment, WorkspaceFormValues } from "@grackle-ai/web-components";
+import styles from "@grackle-ai/web-components/src/components/panels/TaskEditPanel.module.scss";
 
 /** Validate workspace form values and return field errors (if any). */
 function validate(v: WorkspaceFormValues): Partial<Record<keyof WorkspaceFormValues, string>> | undefined {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { isGrackleEvent, parseWsMessage } from "./types.js";
+import { isGrackleEvent, parseWsMessage } from "@grackle-ai/web-components";
 
 describe("isGrackleEvent", () => {
   it("returns true for a valid GrackleEvent", () => {

@@ -1,0 +1,119 @@
+/**
+ * Slide-in detail panel for a selected knowledge graph node.
+ *
+ * @module
+ */
+
+import { useMemo, type JSX } from "react";
+import type { GraphNode, NodeDetail } from "../../hooks/types.js";
+import { taskUrl, sessionUrl } from "../../utils/navigation.js";
+import { useAppNavigate } from "../../utils/navigation.js";
+import styles from "./KnowledgeDetailPanel.module.scss";
+
+interface KnowledgeDetailPanelProps {
+  detail: NodeDetail;
+  nodes: GraphNode[];
+  onClose: () => void;
+  onSelectNode: (id: string) => void;
+}
+
+/** Slide-in panel showing full details for a selected knowledge node. */
+export function KnowledgeDetailPanel({
+  detail,
+  nodes,
+  onClose,
+  onSelectNode,
+}: KnowledgeDetailPanelProps): JSX.Element {
+  const navigate = useAppNavigate();
+  const { node, edges } = detail;
+  const nodeById = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
+
+  /** Navigate to the source entity for reference nodes. */
+  function handleViewInGrackle(): void {
+    if (node.kind !== "reference" || !node.sourceId) {
+      return;
+    }
+    switch (node.sourceType) {
+      case "task":
+        navigate(taskUrl(node.sourceId));
+        break;
+      case "session":
+        navigate(sessionUrl(node.sourceId));
+        break;
+      default:
+        break;
+    }
+  }
+
+  return (
+    <div className={styles.panel} data-testid="knowledge-detail-panel">
+      <div className={styles.header}>
+        <h3 className={styles.title}>{node.label}</h3>
+        <button className={styles.closeButton} onClick={onClose} aria-label="Close">
+          &times;
+        </button>
+      </div>
+
+      <div className={styles.body}>
+        <div className={styles.badge}>
+          {node.kind === "reference" ? `Reference (${node.sourceType})` : node.category}
+        </div>
+
+        {node.content && (
+          <div className={styles.section}>
+            <div className={styles.sectionLabel}>Content</div>
+            <p className={styles.content}>{node.content}</p>
+          </div>
+        )}
+
+        {node.tags && node.tags.length > 0 && (
+          <div className={styles.section}>
+            <div className={styles.sectionLabel}>Tags</div>
+            <div className={styles.tags}>
+              {node.tags.map((tag) => (
+                <span key={tag} className={styles.tag}>{tag}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {node.kind === "reference" && node.sourceId && (
+          <div className={styles.section}>
+            <button className={styles.viewLink} onClick={handleViewInGrackle}>
+              View in Grackle &rarr;
+            </button>
+          </div>
+        )}
+
+        {edges.length > 0 && (
+          <div className={styles.section}>
+            <div className={styles.sectionLabel}>Edges ({edges.length})</div>
+            <ul className={styles.edgeList}>
+              {edges.map((edge) => {
+                const otherId: string = edge.fromId === node.id ? edge.toId : edge.fromId;
+                const edgeKey: string = `${edge.fromId}:${edge.toId}:${edge.type}`;
+                return (
+                  <li key={edgeKey} className={styles.edgeItem} data-testid="edge-item">
+                    <span className={styles.edgeType} data-testid="edge-type">{edge.type}</span>
+                    <button
+                      className={styles.edgeNodeLink}
+                      data-testid="edge-node-link"
+                      onClick={() => { onSelectNode(otherId); }}
+                    >
+                      {nodeById.get(otherId)?.label ?? `${otherId.substring(0, 8)}...`}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
+        <div className={styles.timestamps}>
+          {node.createdAt && <div>Created: {new Date(node.createdAt).toLocaleDateString()}</div>}
+          {node.updatedAt && <div>Updated: {new Date(node.updatedAt).toLocaleDateString()}</div>}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { TaskData } from "./types.js";
+import type { TaskData } from "@grackle-ai/web-components";
 import { taskStatusToToast, diffTasksForToasts } from "./taskToastHelpers.js";
 
 /** Build a minimal TaskData with sensible defaults. */

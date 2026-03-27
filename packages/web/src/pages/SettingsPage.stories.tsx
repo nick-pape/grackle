@@ -2,7 +2,7 @@ import type { JSX } from "react";
 import { MemoryRouter, Routes, Route } from "react-router";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect } from "@storybook/test";
-import { withMockGrackle } from "../test-utils/storybook-helpers.js";
+import { withMockGrackle } from "@grackle-ai/web-components";
 import { SettingsPage } from "./SettingsPage.js";
 import { SettingsCredentialsTab } from "./settings/SettingsCredentialsTab.js";
 import { SettingsPersonasTab } from "./settings/SettingsPersonasTab.js";

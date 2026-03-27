@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback } from "react";
-import type { PersonaData, GrackleEvent } from "./types.js";
+import type { PersonaData, GrackleEvent } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToPersona } from "./proto-converters.js";
 

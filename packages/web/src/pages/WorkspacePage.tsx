@@ -1,24 +1,11 @@
 import { useEffect, useRef, useState, type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
-import { useThemeContext } from "../context/ThemeContext.js";
+import { Breadcrumbs, ConfirmDialog, DagView, EditableCheckbox, EditableSelect, EditableTextArea, EditableTextField, EnvironmentSelect, WorkspaceBoard, buildWorkspaceBreadcrumbs, formatCost, newTaskUrl, useAppNavigate, useThemeContext } from "@grackle-ai/web-components";
 import { useHotkey } from "../hooks/useHotkey.js";
-import { DagView } from "../components/dag/DagView.js";
-import { WorkspaceBoard } from "../components/workspace/WorkspaceBoard.js";
-import { Breadcrumbs, ConfirmDialog } from "../components/display/index.js";
-import { buildWorkspaceBreadcrumbs } from "../utils/breadcrumbs.js";
-import { newTaskUrl, useAppNavigate } from "../utils/navigation.js";
-import {
-  EditableTextField,
-  EditableTextArea,
-  EditableSelect,
-  EditableCheckbox,
-  EnvironmentSelect,
-} from "../components/editable/index.js";
 import Markdown from "react-markdown";
-import { formatCost } from "../utils/format.js";
 import remarkGfm from "remark-gfm";
-import styles from "../components/panels/SessionPanel.module.scss";
+import styles from "@grackle-ai/web-components/src/components/panels/SessionPanel.module.scss";
 
 
 

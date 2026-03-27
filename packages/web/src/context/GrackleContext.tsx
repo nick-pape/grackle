@@ -1,29 +1,16 @@
-import React, { createContext, useContext, type ReactNode, type JSX } from "react";
+import type { ReactNode, JSX } from "react";
 import { useGrackleSocket } from "../hooks/useGrackleSocket.js";
-import type { UseGrackleSocketResult } from "../hooks/useGrackleSocket.js";
+import { GrackleContext, useGrackle } from "@grackle-ai/web-components";
+import type { UseGrackleSocketResult } from "@grackle-ai/web-components";
 
-/** Re-export the socket result type so mock providers can reference it. */
+/** Re-export so existing consumers keep working. */
 export type { UseGrackleSocketResult };
+export { GrackleContext, useGrackle };
 
-/** Alias for the context value type. */
-export type GrackleContextType = UseGrackleSocketResult;
-
-const GrackleContext: React.Context<GrackleContextType | undefined> = createContext<GrackleContextType | undefined>(undefined);
-
-/** Exported raw context for use by MockGrackleProvider and tests. */
-export { GrackleContext };
-
-/** Provides live WebSocket-backed Grackle state to the component tree. */
+/** Provides live ConnectRPC-backed Grackle state to the component tree. */
 export function GrackleProvider({ children }: { children: ReactNode }): JSX.Element {
   const socket = useGrackleSocket();
   return (
     <GrackleContext.Provider value={socket}>{children}</GrackleContext.Provider>
   );
-}
-
-/** Consumes the Grackle context; must be called within a GrackleProvider or MockGrackleProvider. */
-export function useGrackle(): GrackleContextType {
-  const ctx = useContext(GrackleContext);
-  if (!ctx) throw new Error("useGrackle must be used within GrackleProvider");
-  return ctx;
 }

@@ -8,10 +8,8 @@
  */
 
 import { useCallback, useEffect, type JSX } from "react";
-import { Breadcrumbs } from "../components/display/index.js";
-import { KnowledgeGraph, KnowledgeDetailPanel } from "../components/knowledge/index.js";
+import { Breadcrumbs, KNOWLEDGE_URL, KnowledgeDetailPanel, KnowledgeGraph } from "@grackle-ai/web-components";
 import { useGrackle } from "../context/GrackleContext.js";
-import { KNOWLEDGE_URL } from "../utils/navigation.js";
 import styles from "./KnowledgePage.module.scss";
 
 /** Knowledge Graph explorer page. */

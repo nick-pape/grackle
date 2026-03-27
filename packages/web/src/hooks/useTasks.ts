@@ -9,7 +9,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import { ConnectError } from "@connectrpc/connect";
-import type { TaskData, GrackleEvent, WsMessage } from "./types.js";
+import type { TaskData, GrackleEvent, WsMessage } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToTask } from "./proto-converters.js";
 

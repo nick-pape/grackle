@@ -1,7 +1,6 @@
 import { type JSX } from "react";
 import { Outlet, useLocation } from "react-router";
-import { Breadcrumbs } from "../components/display/index.js";
-import { buildSettingsBreadcrumbs } from "../utils/breadcrumbs.js";
+import { Breadcrumbs, buildSettingsBreadcrumbs } from "@grackle-ai/web-components";
 import styles from "./SettingsPage.module.scss";
 
 /** Maps settings URL path segments to display labels. */

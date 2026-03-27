@@ -1,8 +1,6 @@
 import type { JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
-import { useToast } from "../../context/ToastContext.js";
-import { CredentialProvidersPanel } from "../../components/panels/CredentialProvidersPanel.js";
-import { TokensPanel } from "../../components/panels/TokensPanel.js";
+import { CredentialProvidersPanel, TokensPanel, useToast } from "@grackle-ai/web-components";
 
 /** Settings tab combining credential providers and custom tokens. */
 export function SettingsCredentialsTab(): JSX.Element {

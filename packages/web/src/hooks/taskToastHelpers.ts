@@ -1,5 +1,4 @@
-import type { ToastVariant } from "../context/ToastContext.js";
-import type { TaskData } from "./types.js";
+import type { TaskData, ToastVariant } from "@grackle-ai/web-components";
 
 /** Descriptor for a toast to display after a task state change. */
 export interface TaskToastDescriptor {
