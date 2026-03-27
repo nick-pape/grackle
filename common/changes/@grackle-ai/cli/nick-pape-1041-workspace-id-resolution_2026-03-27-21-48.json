@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: make workspaceId optional in finding MCP tool schemas so agents can call finding_post without discovering their workspace ID",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
