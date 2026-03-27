@@ -1,6 +1,19 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 27 Mar 2026 21:24:58 GMT and should not be manually modified.
+This log was last generated on Fri, 27 Mar 2026 22:24:49 GMT and should not be manually modified.
+
+## 0.86.0
+Fri, 27 Mar 2026 22:24:49 GMT
+
+### Minor changes
+
+- Add request trace IDs across gRPC/PowerLine boundaries for cross-component log correlation
+
+### Patches
+
+- fix: make workspaceId optional in finding MCP tool schemas so agents can call finding_post without discovering their workspace ID
+- Add exponential backoff and reanimate-first strategy to root task boot
+- Extract presentational components into @grackle-ai/web-components package
 
 ## 0.85.2
 Fri, 27 Mar 2026 21:24:58 GMT
