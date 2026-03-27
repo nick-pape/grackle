@@ -16,15 +16,16 @@ import {
 import { getKnowledgeEmbedder, isKnowledgeEnabled } from "./knowledge-init.js";
 import { isNeo4jHealthy } from "./knowledge-health.js";
 import { knowledgeNodeToProto, knowledgeEdgeToProto } from "./grpc-proto-converters.js";
+import { logger } from "./logger.js";
 
 /** Error message returned when Neo4j is unreachable. */
 const NEO4J_UNAVAILABLE_MESSAGE: string =
   "Knowledge graph temporarily unavailable — Neo4j unreachable";
 
 /**
- * Guard that checks both embedder availability and Neo4j health.
+ * Guard that checks Neo4j health status.
  *
- * @throws ConnectError with Code.Unavailable if knowledge is not ready.
+ * @throws ConnectError with Code.Unavailable if Neo4j is unreachable.
  */
 function requireKnowledgeReady(): void {
   if (!isNeo4jHealthy()) {
@@ -56,11 +57,10 @@ function wrapNeo4jError(err: unknown): never {
   if (err instanceof ConnectError) {
     throw err;
   }
-  const detail: string = err instanceof Error ? err.message : String(err);
-  throw new ConnectError(
-    `${NEO4J_UNAVAILABLE_MESSAGE}: ${detail}`,
-    Code.Unavailable,
-  );
+  // Log the full error server-side for debugging; return a generic message
+  // to clients to avoid leaking internal details (hostnames, ports, etc.)
+  logger.error({ err }, "Knowledge graph operation failed");
+  throw new ConnectError(NEO4J_UNAVAILABLE_MESSAGE, Code.Unavailable);
 }
 
 /** Search the knowledge graph using semantic similarity. */

@@ -311,7 +311,8 @@ async function main(): Promise<void> {
       } catch (err) {
         checks.database = { ok: false, message: err instanceof Error ? err.message : "unknown error" };
       }
-      // Neo4j is optional — include status for visibility but don't gate readiness on it
+      // Neo4j/knowledge is optional — exposed for operator visibility but does
+      // not gate overall readiness. Only the database check is required.
       if (isKnowledgeEnabled()) {
         checks.knowledge = getKnowledgeReadinessCheck();
       }

@@ -16,8 +16,15 @@ import type { ReconciliationPhase } from "./reconciliation-manager.js";
 // Module-level state
 // ---------------------------------------------------------------------------
 
-/** Whether Neo4j was healthy on the last check. */
-let healthy: boolean = false;
+/**
+ * Whether Neo4j was healthy on the last check.
+ *
+ * Defaults to `true` (optimistic) because `initKnowledge()` verifies
+ * connectivity via `openNeo4j()` before subscribing to events. This
+ * avoids a startup gap where events would be dropped before the first
+ * reconciliation tick (~10s).
+ */
+let healthy: boolean = true;
 
 /** Whether at least one health check has completed. */
 let initialized: boolean = false;
@@ -65,8 +72,8 @@ export function createKnowledgeHealthPhase(
       healthy = result;
       initialized = true;
 
-      // Log only on transitions (not on every tick)
-      if (wasInitialized && previous && !result) {
+      // Log on state transitions and on first-check failures
+      if (previous && !result) {
         logger.warn("Neo4j became unreachable — knowledge graph operations will be skipped");
       } else if (wasInitialized && !previous && result) {
         logger.info("Neo4j recovered — knowledge graph operations resumed");
@@ -78,7 +85,8 @@ export function createKnowledgeHealthPhase(
 /**
  * Whether Neo4j is currently considered healthy.
  *
- * Returns `false` before the first health check has completed.
+ * Returns `true` before the first health check has completed (optimistic
+ * default — `initKnowledge()` verifies connectivity at startup).
  */
 export function isNeo4jHealthy(): boolean {
   return healthy;
@@ -87,12 +95,13 @@ export function isNeo4jHealthy(): boolean {
 /**
  * Get a readiness check result for the `/readyz` endpoint.
  *
- * Returns `{ ok: true }` when Neo4j is reachable, or `{ ok: false, message }`
- * when it is not (or before the first check completes).
+ * Returns `{ ok: true }` when Neo4j is reachable (or before the first check
+ * completes, using the optimistic default), or `{ ok: false, message }` when
+ * Neo4j has been observed unreachable.
  */
 export function getKnowledgeReadinessCheck(): KnowledgeReadinessCheck {
   if (!initialized) {
-    return { ok: false, message: "Neo4j health check has not run yet" };
+    return { ok: true, message: "Neo4j health check has not run yet" };
   }
   if (!healthy) {
     return { ok: false, message: "Neo4j is unreachable" };
@@ -106,6 +115,6 @@ export function getKnowledgeReadinessCheck(): KnowledgeReadinessCheck {
  * @internal
  */
 export function resetKnowledgeHealthState(): void {
-  healthy = false;
+  healthy = true;
   initialized = false;
 }

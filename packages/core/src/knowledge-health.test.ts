@@ -71,12 +71,25 @@ describe("createKnowledgeHealthPhase", () => {
     )).toBe(true);
   });
 
+  it("logs warning on first check when Neo4j is unreachable", async () => {
+    mockHealthCheck.mockResolvedValue(false);
+    const phase = createKnowledgeHealthPhase({ healthCheck: mockHealthCheck });
+
+    // First tick: unhealthy (default was optimistic true → transition to false)
+    await phase.execute();
+
+    expect(vi.mocked(logger.warn).mock.calls.some(
+      (call) => typeof call[0] === "string" && call[0].includes("Neo4j"),
+    )).toBe(true);
+  });
+
   it("logs when Neo4j transitions from unhealthy to healthy", async () => {
     mockHealthCheck.mockResolvedValue(false);
     const phase = createKnowledgeHealthPhase({ healthCheck: mockHealthCheck });
 
     // First tick: unhealthy
     await phase.execute();
+    vi.mocked(logger.info).mockClear();
 
     // Second tick: healthy again
     mockHealthCheck.mockResolvedValue(true);
@@ -138,8 +151,8 @@ describe("isNeo4jHealthy", () => {
     resetKnowledgeHealthState();
   });
 
-  it("returns false before any health check has run", () => {
-    expect(isNeo4jHealthy()).toBe(false);
+  it("returns true before any health check has run (optimistic default)", () => {
+    expect(isNeo4jHealthy()).toBe(true);
   });
 });
 
@@ -148,9 +161,9 @@ describe("getKnowledgeReadinessCheck", () => {
     resetKnowledgeHealthState();
   });
 
-  it("returns ok: false before any health check has run", () => {
+  it("returns ok: true before any health check has run (optimistic default)", () => {
     const check = getKnowledgeReadinessCheck();
-    expect(check.ok).toBe(false);
+    expect(check.ok).toBe(true);
     expect(check.message).toBeDefined();
   });
 

@@ -55,6 +55,10 @@ vi.mock("./grpc-proto-converters.js", () => ({
   knowledgeEdgeToProto: vi.fn((edge: unknown) => edge),
 }));
 
+vi.mock("./logger.js", () => ({
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
 import {
   searchKnowledge,
   getKnowledgeNode,
