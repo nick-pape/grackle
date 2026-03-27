@@ -2,14 +2,14 @@ import { useEffect, useState, type JSX } from "react";
 import { useSearchParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import { useToast } from "@grackle-ai/web-components";
-import { Breadcrumbs, Spinner } from "@grackle-ai/web-components/src/components/display/index.js";
-import { environmentUrl, HOME_URL, useAppNavigate } from "@grackle-ai/web-components/src/utils/navigation.js";
+import { Breadcrumbs, Spinner } from "@grackle-ai/web-components";
+import { environmentUrl, HOME_URL, useAppNavigate } from "@grackle-ai/web-components";
 import {
   WorkspaceFormFields,
   defaultFormValues,
   type WorkspaceFormValues,
-} from "@grackle-ai/web-components/src/components/workspace/WorkspaceFormFields.js";
-import type { BreadcrumbSegment } from "@grackle-ai/web-components/src/utils/breadcrumbs.js";
+} from "@grackle-ai/web-components";
+import type { BreadcrumbSegment } from "@grackle-ai/web-components";
 import styles from "@grackle-ai/web-components/src/components/panels/TaskEditPanel.module.scss";
 
 /** Validate workspace form values and return field errors (if any). */

@@ -3,7 +3,7 @@ import { Navigate } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { SYSTEM_PERSONA_ID } from "@grackle-ai/common";
 import { useGrackle } from "../context/GrackleContext.js";
-import { useAppNavigate } from "@grackle-ai/web-components/src/utils/navigation.js";
+import { useAppNavigate } from "@grackle-ai/web-components";
 import { WelcomeStep } from "./setup/WelcomeStep.js";
 import { AboutStep } from "./setup/AboutStep.js";
 import { RuntimeStep } from "./setup/RuntimeStep.js";

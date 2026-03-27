@@ -6,7 +6,7 @@ import type { Decorator } from "@storybook/react";
 import { expect, userEvent } from "@storybook/test";
 import { GrackleContext } from "../context/GrackleContext.js";
 import { SidebarProvider } from "@grackle-ai/web-components";
-import { MockGrackleProvider } from "@grackle-ai/web-components/src/mocks/MockGrackleProvider.js";
+import { MockGrackleProvider } from "@grackle-ai/web-components";
 import { SetupWizard } from "./SetupWizard.js";
 
 /**

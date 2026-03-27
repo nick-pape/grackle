@@ -3,10 +3,10 @@ import {
   ToastProvider, ThemeProvider, SidebarProvider,
   StatusBar, AppNav, Sidebar, BottomStatusBar,
   ToastContainer, SplashScreen, DemoBanner,
+  MockGrackleProvider,
   useSidebarContent, useToast,
   sessionUrl, useAppNavigate,
 } from "@grackle-ai/web-components";
-import { MockGrackleProvider } from "@grackle-ai/web-components/src/mocks/MockGrackleProvider.js";
 import { useCallback, useEffect, useState, Suspense, lazy, type LazyExoticComponent, type JSX } from "react";
 import { useGrackle } from "./context/GrackleContext.js";
 import { useEnvironmentToasts } from "./hooks/useEnvironmentToasts.js";

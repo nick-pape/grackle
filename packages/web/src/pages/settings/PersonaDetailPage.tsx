@@ -2,13 +2,13 @@ import { useState, useEffect, type JSX, type FormEvent } from "react";
 import { useParams, Navigate } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "@grackle-ai/web-components";
-import { Breadcrumbs, ConfirmDialog } from "@grackle-ai/web-components/src/components/display/index.js";
-import { Button } from "@grackle-ai/web-components/src/components/display/Button.js";
-import { EditableSelect, EditableTextArea, EditableTextField, type SelectOption } from "@grackle-ai/web-components/src/components/editable/index.js";
-import { PERSONAS_URL, SETTINGS_URL, personaUrl, useAppNavigate } from "@grackle-ai/web-components/src/utils/navigation.js";
-import type { BreadcrumbSegment } from "@grackle-ai/web-components/src/utils/breadcrumbs.js";
+import { Breadcrumbs, ConfirmDialog } from "@grackle-ai/web-components";
+import { Button } from "@grackle-ai/web-components";
+import { EditableSelect, EditableTextArea, EditableTextField, type SelectOption } from "@grackle-ai/web-components";
+import { PERSONAS_URL, SETTINGS_URL, personaUrl, useAppNavigate } from "@grackle-ai/web-components";
+import type { BreadcrumbSegment } from "@grackle-ai/web-components";
 import type { PersonaData } from "@grackle-ai/web-components";
-import { McpToolSelector } from "@grackle-ai/web-components/src/components/personas/McpToolSelector.js";
+import { McpToolSelector } from "@grackle-ai/web-components";
 import styles from "@grackle-ai/web-components/src/components/personas/PersonaManager.module.scss";
 
 const RUNTIME_OPTIONS: SelectOption[] = [

@@ -6,8 +6,8 @@ import {
   getActiveSessions,
   getAttentionTasks,
   getWorkspaceSnapshots,
-} from "@grackle-ai/web-components/src/utils/dashboard.js";
-import { sessionUrl, taskUrl, workspaceUrl, useAppNavigate } from "@grackle-ai/web-components/src/utils/navigation.js";
+} from "@grackle-ai/web-components";
+import { sessionUrl, taskUrl, workspaceUrl, useAppNavigate } from "@grackle-ai/web-components";
 import styles from "./DashboardPage.module.scss";
 
 // ─── Animation variants ─────────────────────────────────────────────────────

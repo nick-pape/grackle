@@ -81,7 +81,8 @@ export { parseShellOutput } from "./components/tools/parseShellOutput.js";
 
 // Workspace
 export { WorkspaceBoard } from "./components/workspace/WorkspaceBoard.js";
-export { WorkspaceFormFields } from "./components/workspace/WorkspaceFormFields.js";
+export { WorkspaceFormFields, defaultFormValues } from "./components/workspace/WorkspaceFormFields.js";
+export type { WorkspaceFormValues } from "./components/workspace/WorkspaceFormFields.js";
 
 // ─── Contexts ────────────────────────────────────────────────────────────────
 
@@ -124,7 +125,7 @@ export {
   SETTINGS_ENVIRONMENTS_URL, SETTINGS_CREDENTIALS_URL,
   PERSONAS_URL, NEW_PERSONA_URL, personaUrl,
   SETTINGS_APPEARANCE_URL, SETTINGS_ABOUT_URL, SETTINGS_SHORTCUTS_URL,
-  PAIR_PATH, NEW_WORKSPACE_URL, KNOWLEDGE_URL,
+  PAIR_PATH, NEW_WORKSPACE_URL, KNOWLEDGE_URL, HOME_URL,
 } from "./utils/navigation.js";
 
 export {
@@ -158,4 +159,10 @@ export { isNearAnchor, computeScrollCompensation, SCROLL_ANCHOR_THRESHOLD_PX } f
 
 // ─── Themes ──────────────────────────────────────────────────────────────────
 
-export { THEMES } from "./themes.js";
+export { THEMES, THEME_IDS, DEFAULT_THEME_ID, getThemeById } from "./themes.js";
+export type { ThemeDefinition } from "./themes.js";
+
+// ─── Mocks & Test Utilities ─────────────────────────────────────────────────
+
+export { MockGrackleProvider } from "./mocks/MockGrackleProvider.js";
+export { withMockGrackle, withMockGrackleRoute } from "./test-utils/storybook-helpers.js";

@@ -1,7 +1,7 @@
 import type { ReactNode, JSX } from "react";
 import { useGrackleSocket } from "../hooks/useGrackleSocket.js";
-import { GrackleContext, useGrackle } from "@grackle-ai/web-components/src/context/GrackleContext.js";
-import type { UseGrackleSocketResult } from "@grackle-ai/web-components/src/context/GrackleContextTypes.js";
+import { GrackleContext, useGrackle } from "@grackle-ai/web-components";
+import type { UseGrackleSocketResult } from "@grackle-ai/web-components";
 
 /** Re-export so existing consumers keep working. */
 export type { UseGrackleSocketResult };

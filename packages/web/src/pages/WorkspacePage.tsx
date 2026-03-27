@@ -3,20 +3,20 @@ import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import { useThemeContext } from "@grackle-ai/web-components";
 import { useHotkey } from "../hooks/useHotkey.js";
-import { DagView } from "@grackle-ai/web-components/src/components/dag/DagView.js";
-import { WorkspaceBoard } from "@grackle-ai/web-components/src/components/workspace/WorkspaceBoard.js";
-import { Breadcrumbs, ConfirmDialog } from "@grackle-ai/web-components/src/components/display/index.js";
-import { buildWorkspaceBreadcrumbs } from "@grackle-ai/web-components/src/utils/breadcrumbs.js";
-import { newTaskUrl, useAppNavigate } from "@grackle-ai/web-components/src/utils/navigation.js";
+import { DagView } from "@grackle-ai/web-components";
+import { WorkspaceBoard } from "@grackle-ai/web-components";
+import { Breadcrumbs, ConfirmDialog } from "@grackle-ai/web-components";
+import { buildWorkspaceBreadcrumbs } from "@grackle-ai/web-components";
+import { newTaskUrl, useAppNavigate } from "@grackle-ai/web-components";
 import {
   EditableTextField,
   EditableTextArea,
   EditableSelect,
   EditableCheckbox,
   EnvironmentSelect,
-} from "@grackle-ai/web-components/src/components/editable/index.js";
+} from "@grackle-ai/web-components";
 import Markdown from "react-markdown";
-import { formatCost } from "@grackle-ai/web-components/src/utils/format.js";
+import { formatCost } from "@grackle-ai/web-components";
 import remarkGfm from "remark-gfm";
 import styles from "@grackle-ai/web-components/src/components/panels/SessionPanel.module.scss";
 

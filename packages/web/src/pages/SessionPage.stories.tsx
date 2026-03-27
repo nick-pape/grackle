@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect } from "@storybook/test";
-import { withMockGrackleRoute } from "@grackle-ai/web-components/src/test-utils/storybook-helpers.js";
+import { withMockGrackleRoute } from "@grackle-ai/web-components";
 import { SessionPage } from "./SessionPage.js";
 
 const meta: Meta<typeof SessionPage> = {

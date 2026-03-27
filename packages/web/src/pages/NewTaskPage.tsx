@@ -2,7 +2,7 @@ import { type JSX } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import { useToast } from "@grackle-ai/web-components";
-import { TaskEditPanel } from "@grackle-ai/web-components/src/components/panels/TaskEditPanel.js";
+import { TaskEditPanel } from "@grackle-ai/web-components";
 
 /** Page for creating a new task, reading workspaceId and parentTaskId from route or query params. */
 export function NewTaskPage(): JSX.Element {

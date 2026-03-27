@@ -47,8 +47,8 @@ export { isGrackleEvent } from "@grackle-ai/web-components";
 
 // ─── Result interface ─────────────────────────────────────────────────────────
 
-export type { UseGrackleSocketResult } from "@grackle-ai/web-components/src/context/GrackleContextTypes.js";
-import type { UseGrackleSocketResult } from "@grackle-ai/web-components/src/context/GrackleContextTypes.js";
+export type { UseGrackleSocketResult } from "@grackle-ai/web-components";
+import type { UseGrackleSocketResult } from "@grackle-ai/web-components";
 
 // ─── Composition hook ─────────────────────────────────────────────────────────
 

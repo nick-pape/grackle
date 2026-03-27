@@ -1,7 +1,7 @@
 import { type JSX } from "react";
 import { useGrackle } from "../context/GrackleContext.js";
 import { useToast } from "@grackle-ai/web-components";
-import { EnvironmentEditPanel } from "@grackle-ai/web-components/src/components/panels/EnvironmentEditPanel.js";
+import { EnvironmentEditPanel } from "@grackle-ai/web-components";
 
 /** Page shown when adding a new environment. */
 export function NewEnvironmentPage(): JSX.Element {

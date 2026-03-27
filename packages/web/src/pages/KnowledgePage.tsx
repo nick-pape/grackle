@@ -8,10 +8,10 @@
  */
 
 import { useCallback, useEffect, type JSX } from "react";
-import { Breadcrumbs } from "@grackle-ai/web-components/src/components/display/index.js";
-import { KnowledgeGraph, KnowledgeDetailPanel } from "@grackle-ai/web-components/src/components/knowledge/index.js";
+import { Breadcrumbs } from "@grackle-ai/web-components";
+import { KnowledgeGraph, KnowledgeDetailPanel } from "@grackle-ai/web-components";
 import { useGrackle } from "../context/GrackleContext.js";
-import { KNOWLEDGE_URL } from "@grackle-ai/web-components/src/utils/navigation.js";
+import { KNOWLEDGE_URL } from "@grackle-ai/web-components";
 import styles from "./KnowledgePage.module.scss";
 
 /** Knowledge Graph explorer page. */
