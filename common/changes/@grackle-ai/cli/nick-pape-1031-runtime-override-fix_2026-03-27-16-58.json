@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: resolve bootstrap runtime from default persona instead of hardcoded env column; await persona updates during onboarding",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
