@@ -7,12 +7,13 @@ import {
   registerAdapter, startHeartbeat, getAdapter, setConnection, removeConnection,
   initSigchldSubscriber, initLifecycleManager,
   emit, subscribe,
-  startTaskSession,
+  startTaskSession, reanimateAgent,
   pushToEnv, attemptReconnects, resetReconnectState,
   parseAdapterConfig, isKnowledgeEnabled, initKnowledge, neo4jHealthCheck,
   createKnowledgeHealthPhase, getKnowledgeReadinessCheck,
   computeTaskStatus,
   ReconciliationManager, createCronPhase, createOrphanPhase, findFirstConnectedEnvironment, lifecycleCleanupPhase,
+  createRootTaskBoot,
   initOrphanReparentSubscriber,
   logger, exec, detectLanIp,
   runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace,
@@ -23,7 +24,7 @@ import { LocalAdapter } from "@grackle-ai/adapter-local";
 import { SshAdapter } from "@grackle-ai/adapter-ssh";
 import { CodespaceAdapter } from "@grackle-ai/adapter-codespace";
 import { closeAllTunnels, reconnectOrProvision } from "@grackle-ai/adapter-sdk";
-import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT, ROOT_TASK_ID, ROOT_TASK_INITIAL_PROMPT, DEFAULT_WORKSPACE_ID, TASK_STATUS } from "@grackle-ai/common";
+import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT, ROOT_TASK_ID, DEFAULT_WORKSPACE_ID } from "@grackle-ai/common";
 import { LocalPowerLineManager } from "./local-powerline-manager.js";
 import { createMcpServer } from "@grackle-ai/mcp";
 import {
@@ -364,54 +365,20 @@ async function main(): Promise<void> {
   initLifecycleManager();
 
   // Auto-start the root task (process 1) when any environment connects.
+  // Uses reanimate-first strategy with exponential backoff (issue #959).
   // Skipped in E2E tests where the root task session would conflict with test sessions.
   // Also deferred until onboarding is complete so the user's runtime choice is respected (#1031).
   if (process.env.GRACKLE_SKIP_ROOT_AUTOSTART !== "1") {
-    let starting = false;
-    const tryBootRootTask = async (): Promise<void> => {
-      if (starting) {
-        return;
-      }
-      // Don't auto-start before onboarding — the user hasn't chosen their
-      // runtime yet, so the root task would launch with the default "claude-code".
-      const onboarded = settingsStore.getSetting("onboarding_completed");
-      if (onboarded !== "true") {
-        return;
-      }
-      starting = true;
-      try {
-        const rootTask = taskStore.getTask(ROOT_TASK_ID);
-        if (!rootTask) {
-          return;
-        }
-
-        const taskSessions = sessionStore.listSessionsForTask(ROOT_TASK_ID);
-        const { status } = computeTaskStatus(rootTask.status, taskSessions);
-        if (status === TASK_STATUS.WORKING) {
-          return; // Already running
-        }
-
-        // Find any connected environment (prefer local)
-        const connectedEnv = findFirstConnectedEnvironment();
-        if (!connectedEnv) {
-          return;
-        }
-
-        const err = await startTaskSession(rootTask, {
-          environmentId: connectedEnv.id,
-          notes: ROOT_TASK_INITIAL_PROMPT,
-        });
-        if (err) {
-          logger.warn({ err }, "Root task auto-start failed");
-        } else {
-          logger.info({ environmentId: connectedEnv.id }, "Root task auto-started");
-        }
-      } catch (bootErr) {
-        logger.warn({ err: bootErr }, "Root task auto-start failed");
-      } finally {
-        starting = false; // eslint-disable-line require-atomic-updates -- single-threaded, flag guards re-entry
-      }
-    };
+    const tryBootRootTask = createRootTaskBoot({
+      getTask: taskStore.getTask,
+      listSessionsForTask: sessionStore.listSessionsForTask,
+      getLatestSessionForTask: sessionStore.getLatestSessionForTask,
+      computeTaskStatus,
+      findFirstConnectedEnvironment,
+      startTaskSession,
+      reanimateAgent,
+      isOnboarded: () => settingsStore.getSetting("onboarding_completed") === "true",
+    });
     subscribe((event) => {
       if (event.type === "environment.changed") {
         tryBootRootTask().catch(() => { /* logged inside */ });
