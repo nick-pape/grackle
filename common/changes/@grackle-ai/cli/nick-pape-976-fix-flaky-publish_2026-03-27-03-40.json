@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: restore pipe fd transfer before subscription cleanup, debounce task reloads",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

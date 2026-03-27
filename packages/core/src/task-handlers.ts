@@ -384,11 +384,12 @@ export async function completeTask(req: grackle.TaskId): Promise<grackle.Task> {
 
   taskStore.markTaskComplete(task.id, TASK_STATUS.COMPLETE);
 
-  // Transfer pipe fds to grandparent BEFORE cleaning up sessions —
-  // once subscriptions are unsubscribed the pipe references are lost.
-  if (task.parentTaskId) {
-    transferAllPipeSubscriptions(task.id, task.parentTaskId);
-  }
+  // Transfer ALL pipe fds from this task's sessions to the grandparent BEFORE
+  // closing sessions — once sessions are cleaned up, their subscriptions are gone.
+  // Always transfer regardless of orphaned tasks: ipc_spawn creates child sessions
+  // (not tasks), so pipe subs exist even when getOrphanedTasks returns empty.
+  const grandparentId = task.parentTaskId || ROOT_TASK_ID;
+  transferAllPipeSubscriptions(task.id, grandparentId);
 
   // Close lifecycle FDs for any active sessions — cascades to STOPPED via orphan callback
   const activeSessions = sessionStore.getActiveSessionsForTask(req.id);
