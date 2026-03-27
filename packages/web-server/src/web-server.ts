@@ -45,7 +45,7 @@ export interface WebServerOptions {
   /** Override the web UI dist directory (default: resolve from `grackle-ai/web`). */
   webDistDir?: string;
   /** Optional readiness probe callback. When omitted, `/readyz` returns a basic "ok". */
-  readinessCheck?: () => ReadinessResult;
+  readinessCheck?: () => ReadinessResult | Promise<ReadinessResult>;
 }
 
 // ─── Static File Config ─────────────────────────────────────
@@ -311,18 +311,28 @@ export function createWebServer(options: WebServerOptions): http.Server {
 
     // --- Health / Readiness probes (no auth) ---
     if (rawPath === "/healthz") {
-      res.writeHead(200, { "Content-Type": "application/json" });
+      res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
       res.end(JSON.stringify({ status: "ok" }));
       return;
     }
 
     if (rawPath === "/readyz") {
-      const result: ReadinessResult = readinessCheck
-        ? readinessCheck()
-        : { ready: true, checks: {} };
-      const statusCode = result.ready ? 200 : 503;
-      res.writeHead(statusCode, { "Content-Type": "application/json" });
-      res.end(JSON.stringify(result));
+      try {
+        const result: ReadinessResult = readinessCheck
+          ? await Promise.resolve(readinessCheck())
+          : { ready: true, checks: {} };
+        const statusCode = result.ready ? 200 : 503;
+        res.writeHead(statusCode, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+        res.end(JSON.stringify(result));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        const result: ReadinessResult = {
+          ready: false,
+          checks: { readinessCheck: { ok: false, message } },
+        };
+        res.writeHead(503, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+        res.end(JSON.stringify(result));
+      }
       return;
     }
 

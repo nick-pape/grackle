@@ -146,6 +146,28 @@ describe("createWebServer readiness check", () => {
     expect(body.checks.database.ok).toBe(true);
   });
 
+  it("returns 503 when readiness check throws and server stays up", async () => {
+    server = createWebServer({
+      apiKey: "x".repeat(64),
+      webPort: 0,
+      bindHost: "127.0.0.1",
+      readinessCheck: () => {
+        throw new Error("readiness check exploded");
+      },
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+
+    const first = await request(server, "/readyz");
+    expect(first.status).toBe(503);
+    const body = JSON.parse(first.body);
+    expect(body.ready).toBe(false);
+    expect(body.checks.readinessCheck.ok).toBe(false);
+
+    // Server is still alive after the throw
+    const second = await request(server, "/healthz");
+    expect(second.status).toBe(200);
+  });
+
   it("returns 503 when readiness check fails", async () => {
     server = createWebServer({
       apiKey: "x".repeat(64),
