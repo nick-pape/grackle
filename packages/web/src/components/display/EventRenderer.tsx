@@ -78,12 +78,21 @@ function extractText(node: ReactNode): string {
   return "";
 }
 
+/** Props passed by react-markdown to component overrides. */
+interface PreProps extends React.HTMLAttributes<HTMLPreElement> {
+  children?: ReactNode;
+  /** AST node injected by react-markdown — must not be spread onto the DOM element. */
+  node?: unknown;
+}
+
 /** Wraps markdown `<pre>` blocks with a CopyButton for code-only copy. */
-function CodeBlockWrapper({ children, className }: { children?: ReactNode; className?: string; node?: unknown }): JSX.Element {
+function CodeBlockWrapper({ children, node, ...preProps }: PreProps): JSX.Element {
+  // node is destructured solely to exclude it from the DOM spread
+  if (node === undefined) { /* intentionally unused */ }
   const rawText = extractText(children);
   return (
     <div className={styles.codeBlockWrapper}>
-      <pre className={className}>{children}</pre>
+      <pre {...preProps}>{children}</pre>
       <CopyButton text={rawText} data-testid="copy-code-block" className={styles.codeBlockCopyButton} />
     </div>
   );
