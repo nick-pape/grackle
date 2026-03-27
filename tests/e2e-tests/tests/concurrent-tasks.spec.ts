@@ -27,7 +27,7 @@ test.describe("Concurrent Tasks", { tag: ["@task"] }, () => {
 
     // Start task A
     await navigateToTask(page, "conc-task-a");
-    await page.locator("button", { hasText: "Start" }).click();
+    await page.getByTestId("task-header-start").click();
 
     // Wait for task A to reach waiting_input (scenario goes idle)
     const inputField = page.locator('input[placeholder="Type a message..."]');
@@ -35,7 +35,7 @@ test.describe("Concurrent Tasks", { tag: ["@task"] }, () => {
 
     // Start task B (navigate to it while A is running)
     await navigateToTask(page, "conc-task-b");
-    await page.locator("button", { hasText: "Start" }).click();
+    await page.getByTestId("task-header-start").click();
 
     // Wait for task B to reach waiting_input
     await inputField.waitFor({ timeout: 15_000 });
@@ -76,7 +76,7 @@ test.describe("Concurrent Tasks", { tag: ["@task"] }, () => {
 
     // Start task X
     await navigateToTask(page, "status-task-x");
-    await page.locator("button", { hasText: "Start" }).click();
+    await page.getByTestId("task-header-start").click();
 
     // Scope status checks to each task's sidebar entry (exact: true avoids matching the header)
     const taskXRow = page.getByText("status-task-x", { exact: true }).locator("..");
@@ -87,7 +87,7 @@ test.describe("Concurrent Tasks", { tag: ["@task"] }, () => {
 
     // Start task Y
     await navigateToTask(page, "status-task-y");
-    await page.locator("button", { hasText: "Start" }).click();
+    await page.getByTestId("task-header-start").click();
 
     // Wait for task Y to also be active — both tasks should show active icon in sidebar
     await expect(taskYRow.locator("text=/(●|◉)/")).toBeVisible({ timeout: 15_000 });
