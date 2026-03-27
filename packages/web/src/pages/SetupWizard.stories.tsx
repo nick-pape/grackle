@@ -78,3 +78,34 @@ export const RuntimeStep: Story = {
     await expect(canvas.getByTestId("runtime-card-copilot")).toBeInTheDocument();
   },
 };
+
+/** Full onboarding flow: select Copilot and finish without errors. */
+export const FinishWithCopilot: Story = {
+  play: async ({ canvas }) => {
+    // Welcome step
+    await userEvent.click(canvas.getByTestId("setup-get-started"));
+
+    // About step
+    const nextButton = await canvas.findByTestId("setup-about-next");
+    await userEvent.click(nextButton);
+
+    // Runtime step -- select Copilot
+    const copilotCard = await canvas.findByTestId("runtime-card-copilot");
+    await userEvent.click(copilotCard);
+    await expect(copilotCard).toHaveAttribute("data-selected", "true");
+
+    // Click Finish
+    const finishButton = canvas.getByTestId("setup-finish");
+    await expect(finishButton).not.toBeDisabled();
+    await userEvent.click(finishButton);
+
+    // After finishing, the wizard should navigate away (component unmounts).
+    // If it's still visible after a short wait, the update failed.
+    // We verify by checking the wizard is no longer in the DOM.
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // The setup wizard should have navigated away (no longer rendered)
+    const wizard = canvas.queryByTestId("setup-wizard");
+    await expect(wizard).not.toBeInTheDocument();
+  },
+};

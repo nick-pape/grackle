@@ -14,7 +14,7 @@ import {
   initOrphanReparentSubscriber,
   logger, exec, detectLanIp,
 } from "@grackle-ai/core";
-import { envRegistry, sessionStore, workspaceStore, taskStore, scheduleStore, personaStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome } from "@grackle-ai/database";
+import { envRegistry, sessionStore, workspaceStore, taskStore, scheduleStore, personaStore, settingsStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome } from "@grackle-ai/database";
 import { DockerAdapter } from "@grackle-ai/adapter-docker";
 import { LocalAdapter } from "@grackle-ai/adapter-local";
 import { SshAdapter } from "@grackle-ai/adapter-ssh";
@@ -85,6 +85,20 @@ async function main(): Promise<void> {
     } else {
       envRegistry.addEnvironment("local", "Local", "local", adapterConfig);
       localEnv = envRegistry.getEnvironment("local")!;
+    }
+
+    // Sync: keep the local environment's defaultRuntime in sync with the
+    // app-level default persona's runtime so bootstrap pre-installs the
+    // correct runtime packages (fixes #1031).
+    const defaultPersonaId = settingsStore.getSetting("default_persona_id") || "";
+    const defaultPersona = defaultPersonaId ? personaStore.getPersona(defaultPersonaId) : undefined;
+    if (defaultPersona?.runtime && localEnv.defaultRuntime !== defaultPersona.runtime) {
+      envRegistry.updateDefaultRuntime("local", defaultPersona.runtime);
+      localEnv = envRegistry.getEnvironment("local")!;
+      logger.info(
+        { from: localEnv.defaultRuntime, to: defaultPersona.runtime },
+        "Synced local environment defaultRuntime with default persona",
+      );
     }
 
     // Seed: ensure the default workspace exists (tied to the local environment).

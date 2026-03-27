@@ -3,6 +3,7 @@ import { Navigate } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { SYSTEM_PERSONA_ID } from "@grackle-ai/common";
 import { useGrackle } from "../context/GrackleContext.js";
+import { useToast } from "../context/ToastContext.js";
 import { useAppNavigate } from "../utils/navigation.js";
 import { WelcomeStep } from "./setup/WelcomeStep.js";
 import { AboutStep } from "./setup/AboutStep.js";
@@ -23,29 +24,43 @@ const DEFAULT_MODELS: Record<string, string> = {
 /** First-run experience wizard — guides new users through initial setup. */
 export function SetupWizard(): JSX.Element {
   const { personas, updatePersona, completeOnboarding, onboardingCompleted } = useGrackle();
+  const { showToast } = useToast();
   const navigate = useAppNavigate();
   const [step, setStep] = useState(0);
+  const [isFinishing, setIsFinishing] = useState(false);
 
   const seedPersona = personas.find((p) => p.id === "claude-code");
 
   const handleFinish = useCallback(
     (runtime: string) => {
+      setIsFinishing(true);
+
+      const updates: Promise<unknown>[] = [];
+
       // Update the seed persona's runtime if the user picked something different
       if (seedPersona && runtime !== seedPersona.runtime) {
-        // Set the model to a valid default for the chosen runtime
         const model = DEFAULT_MODELS[runtime] ?? "sonnet";
-        updatePersona(seedPersona.id, undefined, undefined, undefined, runtime, model).catch(() => {});
+        updates.push(updatePersona(seedPersona.id, undefined, undefined, undefined, runtime, model));
       }
       // Sync System persona runtime to match
       const systemPersona = personas.find((p) => p.id === SYSTEM_PERSONA_ID);
       if (systemPersona && runtime !== systemPersona.runtime) {
         const model = DEFAULT_MODELS[runtime] ?? "sonnet";
-        updatePersona(SYSTEM_PERSONA_ID, undefined, undefined, undefined, runtime, model).catch(() => {});
+        updates.push(updatePersona(SYSTEM_PERSONA_ID, undefined, undefined, undefined, runtime, model));
       }
-      completeOnboarding();
-      navigate("/", { replace: true });
+
+      Promise.all(updates).then(
+        () => {
+          completeOnboarding();
+          navigate("/", { replace: true });
+        },
+        () => {
+          showToast("Failed to update runtime -- please try again", "error");
+          setIsFinishing(false);
+        },
+      );
     },
-    [seedPersona, personas, updatePersona, completeOnboarding, navigate],
+    [seedPersona, personas, updatePersona, completeOnboarding, navigate, showToast],
   );
 
   // If onboarding is already complete, redirect to home
@@ -73,7 +88,7 @@ export function SetupWizard(): JSX.Element {
                 currentRuntime={seedPersona?.runtime ?? "claude-code"}
                 onFinish={handleFinish}
                 onBack={() => setStep(1)}
-                finishDisabled={!seedPersona}
+                finishDisabled={!seedPersona || isFinishing}
               />
             )}
           </motion.div>

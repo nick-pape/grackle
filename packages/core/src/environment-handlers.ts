@@ -12,6 +12,7 @@ import { clearReconnectState } from "./auto-reconnect.js";
 import { logger } from "./logger.js";
 import { envRowToProto } from "./grpc-proto-converters.js";
 import { killSessionAndCleanup } from "./grpc-shared.js";
+import { resolveBootstrapRuntime } from "./resolve-bootstrap-runtime.js";
 
 /** List all registered environments. */
 export async function listEnvironments(): Promise<grackle.EnvironmentList> {
@@ -154,7 +155,7 @@ export async function* provisionEnvironment(req: grackle.ProvisionEnvironmentReq
   emit("environment.changed", {});
 
   const config = parseAdapterConfig(env.adapterConfig);
-  config.defaultRuntime = env.defaultRuntime;
+  config.defaultRuntime = resolveBootstrapRuntime(env);
   const powerlineToken = env.powerlineToken;
 
   try {
