@@ -16,6 +16,7 @@ HTTP web server for [Grackle](https://github.com/nick-pape/grackle) — static f
 
 `createWebServer(options)` returns an `http.Server` that handles:
 
+- **Health probes** — `/healthz` (liveness) and `/readyz` (readiness) endpoints for container orchestration
 - **Static file serving** — serves the `@grackle-ai/web` SPA with path traversal protection and SPA fallback
 - **Device pairing** — `/pair` endpoint for pairing code entry and session cookie creation
 - **OAuth 2.1** — `/.well-known/oauth-authorization-server`, `/register`, `/authorize`, `/token` endpoints
@@ -49,6 +50,16 @@ webServer.listen(3000, "127.0.0.1");
 | `bindHost` | `string` | yes | Bind host (`127.0.0.1` or `0.0.0.0`) |
 | `connectRoutes` | `(router) => void` | no | ConnectRPC route registration function |
 | `webDistDir` | `string` | no | Override web UI dist directory |
+| `readinessCheck` | `() => ReadinessResult` | no | Callback for `/readyz` probe (checks database, etc.) |
+
+### Health Endpoints
+
+Both endpoints require no authentication and return JSON.
+
+| Endpoint | Purpose | Success | Failure |
+|----------|---------|---------|---------|
+| `GET /healthz` | Liveness — process is running, event loop responsive | `200 {"status":"ok"}` | N/A (if unreachable, process is dead) |
+| `GET /readyz` | Readiness — dependencies (database, etc.) are healthy | `200 {"ready":true,"checks":{...}}` | `503 {"ready":false,"checks":{...}}` |
 
 ### `isWildcardAddress(host: string): boolean`
 
