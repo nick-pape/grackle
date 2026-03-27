@@ -15,7 +15,7 @@ vi.mock("../log-writer.js", () => ({
   initLog: vi.fn(),
   writeEvent: vi.fn(),
   endSession: vi.fn(),
-  readLog: vi.fn(() => []),
+  readLastTextEntry: vi.fn(() => undefined),
 }));
 
 vi.mock("../stream-hub.js", () => ({
@@ -58,7 +58,7 @@ vi.mock("./signal-delivery.js", () => ({
 }));
 
 import { taskStore, sessionStore } from "@grackle-ai/database";
-import { readLog } from "../log-writer.js";
+import { readLastTextEntry } from "../log-writer.js";
 import { deliverSignalToTask } from "./signal-delivery.js";
 import { initSigchldSubscriber, _resetForTesting } from "./sigchld.js";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -143,9 +143,9 @@ describe("initSigchldSubscriber", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       makeSession({ status: "idle" }) as any,
     );
-    vi.mocked(readLog).mockReturnValue([
+    vi.mocked(readLastTextEntry).mockReturnValue(
       { session_id: "sess-child", type: "text", timestamp: "", content: "Created PR #42." },
-    ]);
+    );
 
     fireTaskUpdated("task-child");
     await flush();
@@ -171,7 +171,7 @@ describe("initSigchldSubscriber", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       makeSession({ status: "stopped", endReason: "killed" }) as any,
     );
-    vi.mocked(readLog).mockReturnValue([]);
+    vi.mocked(readLastTextEntry).mockReturnValue(undefined);
 
     fireTaskUpdated("task-child");
     await flush();
@@ -192,7 +192,7 @@ describe("initSigchldSubscriber", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       makeSession({ status: "stopped", endReason: "interrupted" }) as any,
     );
-    vi.mocked(readLog).mockReturnValue([]);
+    vi.mocked(readLastTextEntry).mockReturnValue(undefined);
 
     fireTaskUpdated("task-child");
     await flush();
@@ -240,7 +240,7 @@ describe("initSigchldSubscriber", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       makeSession({ status: "idle" }) as any,
     );
-    vi.mocked(readLog).mockReturnValue([]);
+    vi.mocked(readLastTextEntry).mockReturnValue(undefined);
 
     // Fire twice for the same child
     fireTaskUpdated("task-child");
@@ -260,10 +260,9 @@ describe("initSigchldSubscriber", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       makeSession({ status: "idle" }) as any,
     );
-    vi.mocked(readLog).mockReturnValue([
-      { session_id: "sess-child", type: "tool_use", timestamp: "", content: "ran tests" },
+    vi.mocked(readLastTextEntry).mockReturnValue(
       { session_id: "sess-child", type: "text", timestamp: "", content: "All tests pass. PR created." },
-    ]);
+    );
 
     fireTaskUpdated("task-child");
     await flush();
