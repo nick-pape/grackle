@@ -1,12 +1,84 @@
 /**
- * Fetches and assembles all data needed for the orchestrator system prompt.
- * Centralizes store reads so both gRPC and WebSocket call sites share
- * the same data-fetching logic.
+ * Builds the orchestrator context from pre-fetched data.
+ * Pure function — no database or store dependencies.
  */
 import type { TaskTreeNode, PersonaSummary, EnvironmentSummary } from "./system-prompt-builder.js";
-import { taskStore, personaStore, envRegistry, findingStore, workspaceStore, safeParseJsonArray } from "@grackle-ai/database";
 
-/** Pre-fetched orchestrator data matching SystemPromptOptions fields. */
+// ─── Input Types (database-agnostic) ────────────────────────
+
+/** Pre-parsed task data for building orchestrator context. */
+export interface TaskInput {
+  /** Task ID. */
+  id: string;
+  /** Task title. */
+  title: string;
+  /** Current lifecycle status. */
+  status: string;
+  /** Nesting depth in the hierarchy (0 = root). */
+  depth: number;
+  /** Parent task ID (empty string for root-level tasks). */
+  parentTaskId: string;
+  /** IDs of tasks this task depends on (pre-parsed from JSON). */
+  dependsOn: string[];
+  /** Default persona ID for this task. */
+  defaultPersonaId: string;
+  /** Git branch name (empty if none). */
+  branch: string;
+  /** Whether this task can create subtasks. */
+  canDecompose: boolean;
+}
+
+/** Persona data for building orchestrator context. */
+export interface PersonaInput {
+  /** Persona ID. */
+  id: string;
+  /** Display name. */
+  name: string;
+  /** Short description. */
+  description: string;
+  /** Runtime backend. */
+  runtime: string;
+  /** Default model. */
+  model: string;
+}
+
+/** Environment data for building orchestrator context. */
+export interface EnvironmentInput {
+  /** Human-readable name. */
+  displayName: string;
+  /** Adapter backend (local, ssh, codespace, docker). */
+  adapterType: string;
+  /** Connection status. */
+  status: string;
+  /** Default runtime for this environment. */
+  defaultRuntime: string;
+}
+
+/** Finding data for building orchestrator context. */
+export interface FindingInput {
+  /** Finding category (decision, bug, pattern, etc.). */
+  category: string;
+  /** Finding title. */
+  title: string;
+  /** Finding content. */
+  content: string;
+}
+
+/** All input data needed to build orchestrator context. */
+export interface OrchestratorContextInput {
+  /** Workspace metadata (undefined when workspace not found). */
+  workspace?: { name: string; description: string; repoUrl: string };
+  /** All tasks in the workspace. */
+  tasks: TaskInput[];
+  /** All available personas. */
+  personas: PersonaInput[];
+  /** All available environments. */
+  environments: EnvironmentInput[];
+  /** Recent findings for the workspace. */
+  findings: FindingInput[];
+}
+
+/** Pre-built orchestrator data matching SystemPromptOptions fields. */
 export interface OrchestratorContext {
   /** Workspace metadata (undefined when workspace not found). */
   workspace?: { name: string; description: string; repoUrl: string };
@@ -21,68 +93,52 @@ export interface OrchestratorContext {
 }
 
 /**
- * Fetch all data needed for an orchestrator system prompt.
+ * Build orchestrator context from pre-fetched data.
  *
- * @param workspaceId - The workspace to scope task/findings queries to.
+ * @param input - Pre-fetched workspace, task, persona, environment, and finding data.
  * @returns Data ready to spread into SystemPromptOptions.
  */
-export function fetchOrchestratorContext(workspaceId: string): OrchestratorContext | undefined {
-  // No workspace → no orchestrator context (root/System task)
-  if (!workspaceId) {
-    return undefined;
-  }
-
-  // Workspace metadata
-  const ws = workspaceStore.getWorkspace(workspaceId);
-
-  // All personas (used for both the roster and persona name resolution)
-  const allPersonas = personaStore.listPersonas();
+export function buildOrchestratorContext(input: OrchestratorContextInput): OrchestratorContext {
+  // Build persona ID → name map for task tree persona name resolution
   const personaNameMap = new Map<string, string>();
-  for (const p of allPersonas) {
+  for (const p of input.personas) {
     personaNameMap.set(p.id, p.name);
   }
 
-  // All tasks in this workspace → TaskTreeNode[]
-  const allTasks = taskStore.listTasks(workspaceId || undefined);
-  const taskTree: TaskTreeNode[] = allTasks.map((t) => ({
+  // Map tasks → TaskTreeNode[]
+  const taskTree: TaskTreeNode[] = input.tasks.map((t) => ({
     id: t.id,
     title: t.title,
     status: t.status,
     depth: t.depth,
     parentTaskId: t.parentTaskId,
-    dependsOn: safeParseJsonArray(t.dependsOn),
+    dependsOn: t.dependsOn,
     personaName: personaNameMap.get(t.defaultPersonaId) || "",
     branch: t.branch,
     canDecompose: t.canDecompose,
   }));
 
-  // Available personas
-  const availablePersonas: PersonaSummary[] = allPersonas.map((p) => ({
+  // Map personas → PersonaSummary[]
+  const availablePersonas: PersonaSummary[] = input.personas.map((p) => ({
     name: p.name,
     description: p.description,
     runtime: p.runtime,
     model: p.model,
   }));
 
-  // Available environments
-  const availableEnvironments: EnvironmentSummary[] = envRegistry.listEnvironments().map((e) => ({
+  // Map environments → EnvironmentSummary[]
+  const availableEnvironments: EnvironmentSummary[] = input.environments.map((e) => ({
     displayName: e.displayName,
     adapterType: e.adapterType,
     status: e.status,
     defaultRuntime: e.defaultRuntime,
   }));
 
-  // Findings context (pre-formatted markdown with 8K char budget)
-  const findingsContext = workspaceId
-    ? buildFindingsContext(workspaceId)
-    : "";
+  // Build findings context (pre-formatted markdown with 8K char budget)
+  const findingsContext = buildFindingsContext(input.findings);
 
   return {
-    workspace: ws ? {
-      name: ws.name,
-      description: ws.description,
-      repoUrl: ws.repoUrl,
-    } : undefined,
+    workspace: input.workspace,
     taskTree,
     availablePersonas,
     availableEnvironments,
@@ -98,17 +154,16 @@ const FINDINGS_MAX_CHARS: number = 8000;
 /** Maximum characters per individual finding's content. */
 const FINDINGS_MAX_PER_FINDING: number = 500;
 
-/** Build a summarized text context of recent findings for a workspace. */
-function buildFindingsContext(workspaceId: string): string {
-  const allFindings = findingStore.queryFindings(workspaceId, undefined, undefined, 20);
-  if (allFindings.length === 0) {
+/** Build a summarized text context of recent findings. */
+function buildFindingsContext(findings: FindingInput[]): string {
+  if (findings.length === 0) {
     return "";
   }
 
   const lines = ["## Workspace Findings (shared knowledge from other agents)\n"];
   let totalChars = lines[0].length;
 
-  for (const f of allFindings) {
+  for (const f of findings) {
     const content = f.content.length > FINDINGS_MAX_PER_FINDING
       ? f.content.slice(0, FINDINGS_MAX_PER_FINDING) + "..."
       : f.content;

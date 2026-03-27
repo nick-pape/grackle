@@ -34,7 +34,7 @@ vi.mock("@grackle-ai/adapter-sdk", () => ({
 }));
 vi.mock("@grackle-ai/prompt", () => ({
   resolvePersona: vi.fn(),
-  fetchOrchestratorContext: vi.fn(() => ""),
+  buildOrchestratorContext: vi.fn(() => ""),
   SystemPromptBuilder: vi.fn().mockImplementation(() => ({ build: () => "" })),
   buildTaskPrompt: vi.fn((t: string) => t),
 }));

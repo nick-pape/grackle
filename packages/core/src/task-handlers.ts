@@ -15,7 +15,7 @@ import {
   LOGS_DIR,
   taskStatusToString,
 } from "@grackle-ai/common";
-import { envRegistry, sessionStore, taskStore, workspaceStore, grackleHome, slugify, safeParseJsonArray } from "@grackle-ai/database";
+import { envRegistry, sessionStore, taskStore, workspaceStore, personaStore, findingStore, settingsStore, grackleHome, slugify, safeParseJsonArray } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { join } from "node:path";
 import * as adapterManager from "./adapter-manager.js";
@@ -26,7 +26,8 @@ import { emit } from "./event-bus.js";
 import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
 import { logger } from "./logger.js";
-import { resolvePersona, fetchOrchestratorContext, SystemPromptBuilder, buildTaskPrompt } from "@grackle-ai/prompt";
+import { resolvePersona, buildOrchestratorContext, SystemPromptBuilder, buildTaskPrompt } from "@grackle-ai/prompt";
+import { toPersonaResolveInput } from "./persona-mapper.js";
 import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
 import { cleanupLifecycleStream, ensureLifecycleStream } from "./lifecycle.js";
 import { ensureAsyncDeliveryListener } from "./pipe-delivery.js";
@@ -236,7 +237,13 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
   // Resolve persona via cascade (request → task → workspace → app default)
   let resolved: ReturnType<typeof resolvePersona>;
   try {
-    resolved = resolvePersona(req.personaId, task.defaultPersonaId, workspace?.defaultPersonaId || "");
+    resolved = resolvePersona(
+      req.personaId,
+      task.defaultPersonaId,
+      workspace?.defaultPersonaId || "",
+      settingsStore.getSetting("default_persona_id") || undefined,
+      (id) => toPersonaResolveInput(personaStore.getPersona(id)),
+    );
   } catch (err) {
     throw new ConnectError((err as Error).message, Code.FailedPrecondition);
   }
@@ -247,7 +254,7 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
 
   const env = envRegistry.getEnvironment(environmentId);
   const sessionId = uuid();
-  const { runtime, model, maxTurns, systemPrompt, persona } = resolved;
+  const { runtime, model, maxTurns, systemPrompt } = resolved;
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
   // Root task always starts with the hardcoded greeting prompt; user messages
@@ -257,7 +264,22 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
     : buildTaskPrompt(task.title, task.description, req.notes);
   const isOrchestrator = task.canDecompose && task.depth <= 1;
   const orchestratorCtx = isOrchestrator
-    ? fetchOrchestratorContext(task.workspaceId || "")
+    ? buildOrchestratorContext({
+      workspace: workspace ? { name: workspace.name, description: workspace.description, repoUrl: workspace.repoUrl } : undefined,
+      tasks: taskStore.listTasks(task.workspaceId || undefined).map((t) => ({
+        id: t.id, title: t.title, status: t.status, depth: t.depth, parentTaskId: t.parentTaskId,
+        dependsOn: safeParseJsonArray(t.dependsOn), defaultPersonaId: t.defaultPersonaId, branch: t.branch, canDecompose: t.canDecompose,
+      })),
+      personas: personaStore.listPersonas().map((p) => ({
+        id: p.id, name: p.name, description: p.description, runtime: p.runtime, model: p.model,
+      })),
+      environments: envRegistry.listEnvironments().map((e) => ({
+        displayName: e.displayName, adapterType: e.adapterType, status: e.status, defaultRuntime: e.defaultRuntime,
+      })),
+      findings: findingStore.queryFindings(task.workspaceId || "", undefined, undefined, 20).map((f) => ({
+        category: f.category, title: f.title, content: f.content,
+      })),
+    })
     : undefined;
 
   const systemContext = new SystemPromptBuilder({
@@ -290,7 +312,7 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
   await tokenPush.refreshTokensForTask(environmentId, runtime,
     env?.adapterType === "local" ? { excludeFileTokens: true } : undefined);
 
-  const mcpServersJson = personaMcpServersToJson(persona);
+  const mcpServersJson = personaMcpServersToJson(resolved.mcpServers, resolved.personaId);
 
   const useWorktrees = workspace?.useWorktrees ?? false;
   if (!useWorktrees) {

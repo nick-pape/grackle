@@ -14,22 +14,38 @@ System prompt assembly and persona resolution for [Grackle](https://github.com/n
 
 ## Overview
 
-This package prepares everything an agent session needs before it starts:
+This package is a **pure, zero-dependency** library for building agent session prompts. It has no database or store imports — callers provide pre-fetched data.
 
 - **System prompt building** — `SystemPromptBuilder` assembles prompts from discrete sections based on session type (orchestrator, leaf task, or ad-hoc). Orchestrator tasks get project context, task trees, persona rosters, and decomposition guidelines. Leaf tasks get a completion contract.
-- **Orchestrator context** — `fetchOrchestratorContext()` gathers all data needed for orchestrator prompts from the database: workspace metadata, task hierarchy, available personas/environments, and recent findings.
-- **Persona resolution** — `resolvePersona()` resolves which persona to use via a cascade: request persona → task default → workspace default → app default.
+- **Orchestrator context** — `buildOrchestratorContext()` transforms pre-fetched data (tasks, personas, environments, findings) into the slim types needed by `SystemPromptBuilder`.
+- **Persona resolution** — `resolvePersona()` resolves which persona to use via a cascade: request persona, task default, workspace default, app default. Accepts a lookup function instead of accessing the database directly.
 
 ## Usage
 
 ```typescript
-import { SystemPromptBuilder, fetchOrchestratorContext, resolvePersona } from "@grackle-ai/prompt";
+import {
+  SystemPromptBuilder,
+  buildOrchestratorContext,
+  resolvePersona,
+} from "@grackle-ai/prompt";
 
-// Resolve the persona for a session
-const resolved = resolvePersona(requestPersonaId, taskDefaultPersonaId, workspaceDefaultPersonaId);
+// Resolve the persona for a session (caller provides lookup function)
+const resolved = resolvePersona(
+  requestPersonaId,
+  taskDefaultPersonaId,
+  workspaceDefaultPersonaId,
+  appDefaultPersonaId,
+  (id) => personaStore.getPersona(id),
+);
 
-// Fetch orchestrator context (for orchestrator tasks)
-const context = fetchOrchestratorContext(workspaceId);
+// Build orchestrator context from pre-fetched data
+const context = buildOrchestratorContext({
+  workspace: { name: "My Project", description: "...", repoUrl: "..." },
+  tasks: [...],      // TaskInput[]
+  personas: [...],   // PersonaInput[]
+  environments: [...], // EnvironmentInput[]
+  findings: [...],   // FindingInput[]
+});
 
 // Build the system prompt
 const builder = new SystemPromptBuilder({
