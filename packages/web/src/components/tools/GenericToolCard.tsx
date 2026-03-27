@@ -1,5 +1,6 @@
 import { useState, type JSX } from "react";
 import type { ToolCardProps } from "./ToolCardProps.js";
+import { CopyButton } from "../display/CopyButton.js";
 import styles from "./toolCards.module.scss";
 
 /** Formats an MCP tool name for display: `mcp__server__tool` → `server / tool`. */
@@ -69,6 +70,9 @@ export function GenericToolCard({ tool, args, result, isError }: ToolCardProps):
         <span className={styles.toolName} style={{ color: "var(--accent-blue)" }}>{display}</span>
         {preview && (
           <span className={styles.fileName}>{preview}</span>
+        )}
+        {!inProgress && !isError && result && (
+          <CopyButton text={result} data-testid="tool-card-copy" className={styles.copyButtonInline} />
         )}
       </div>
 

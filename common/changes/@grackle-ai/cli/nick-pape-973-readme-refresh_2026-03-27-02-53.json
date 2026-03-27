@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Split grpc-service.ts into domain-scoped handler modules",
+      "comment": "Rewrite README with value-prop-first structure, fresh screenshots, and new knowledge graph screenshot",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }

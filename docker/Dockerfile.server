@@ -118,4 +118,6 @@ COPY docker/s6-overlay/ /etc/s6-overlay/
 RUN chmod +x /etc/s6-overlay/scripts/*
 
 EXPOSE 7434 3000 7435 7433
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD node -e "require('http').get('http://127.0.0.1:3000/readyz',r=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"
 ENTRYPOINT ["/init"]

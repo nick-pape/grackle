@@ -1,6 +1,7 @@
 import { useState, type JSX } from "react";
 import type { ToolCardProps } from "./ToolCardProps.js";
 import { parseShellOutput } from "./parseShellOutput.js";
+import { CopyButton } from "../display/CopyButton.js";
 import styles from "./toolCards.module.scss";
 
 /** Extracts the command string from shell tool args. */
@@ -74,6 +75,9 @@ export function ShellCard({ tool, args, result, isError }: ToolCardProps): JSX.E
           >
             {exitCode === 0 ? "✓" : "✗"} exit {exitCode}
           </span>
+        )}
+        {!inProgress && parsed && parsed.output.length > 0 && (
+          <CopyButton text={parsed.output} data-testid="tool-card-copy" className={styles.copyButtonInline} />
         )}
         {inProgress && (
           <span className={styles.exitPending} data-testid="tool-card-pending">●</span>

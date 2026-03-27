@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "fix: restore pipe fd transfer before subscription cleanup, debounce task reloads",
+      "comment": "Decouple prompt package from database: pure functions with injected data instead of store calls",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }

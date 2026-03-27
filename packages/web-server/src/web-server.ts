@@ -16,6 +16,22 @@ import {
 
 // ─── Options ────────────────────────────────────────────────
 
+/** Result of a single readiness sub-check. */
+export interface ReadinessCheck {
+  /** Whether this sub-check passed. */
+  ok: boolean;
+  /** Optional human-readable detail (e.g. error message). */
+  message?: string;
+}
+
+/** Aggregated readiness probe result. */
+export interface ReadinessResult {
+  /** Whether all sub-checks passed. */
+  ready: boolean;
+  /** Individual sub-check results keyed by name (e.g. "database", "grpc"). */
+  checks: Record<string, ReadinessCheck>;
+}
+
 /** Options for creating a Grackle web server. */
 export interface WebServerOptions {
   /** API key for session/bearer auth. */
@@ -28,6 +44,8 @@ export interface WebServerOptions {
   connectRoutes?: (router: ConnectRouter) => void;
   /** Override the web UI dist directory (default: resolve from `grackle-ai/web`). */
   webDistDir?: string;
+  /** Optional readiness probe callback. When omitted, `/readyz` returns a basic "ok". */
+  readinessCheck?: () => ReadinessResult | Promise<ReadinessResult>;
 }
 
 // ─── Static File Config ─────────────────────────────────────
@@ -263,7 +281,7 @@ export function isWildcardAddress(host: string): boolean {
  * @returns An `http.Server` ready to `.listen()`.
  */
 export function createWebServer(options: WebServerOptions): http.Server {
-  const { apiKey, webPort, bindHost, connectRoutes, webDistDir } = options;
+  const { apiKey, webPort, bindHost, connectRoutes, webDistDir, readinessCheck } = options;
   const distDir = webDistDir ?? resolveWebDistDir();
   const allowNetwork = isWildcardAddress(bindHost);
   const dialableHost = allowNetwork ? "127.0.0.1" : bindHost;
@@ -288,6 +306,33 @@ export function createWebServer(options: WebServerOptions): http.Server {
     } catch {
       res.writeHead(400);
       res.end("Bad Request");
+      return;
+    }
+
+    // --- Health / Readiness probes (no auth) ---
+    if (rawPath === "/healthz") {
+      res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+      res.end(JSON.stringify({ status: "ok" }));
+      return;
+    }
+
+    if (rawPath === "/readyz") {
+      try {
+        const result: ReadinessResult = readinessCheck
+          ? await Promise.resolve(readinessCheck())
+          : { ready: true, checks: {} };
+        const statusCode = result.ready ? 200 : 503;
+        res.writeHead(statusCode, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+        res.end(JSON.stringify(result));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        const result: ReadinessResult = {
+          ready: false,
+          checks: { readinessCheck: { ok: false, message } },
+        };
+        res.writeHead(503, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+        res.end(JSON.stringify(result));
+      }
       return;
     }
 

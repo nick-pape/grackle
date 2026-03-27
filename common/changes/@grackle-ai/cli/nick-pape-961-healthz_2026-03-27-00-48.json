@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "Use efficient readLastTextEntry in SIGCHLD handler instead of reading entire session log",
-      "type": "patch",
+      "comment": "Add /healthz and /readyz health check endpoints to the web server for container orchestration",
+      "type": "minor",
       "packageName": "@grackle-ai/cli"
     }
   ],

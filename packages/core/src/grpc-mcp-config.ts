@@ -1,4 +1,3 @@
-import type { personaStore } from "@grackle-ai/database";
 import { logger } from "./logger.js";
 
 /** Build a JSON string of MCP server configs for the PowerLine SpawnRequest. */
@@ -21,13 +20,13 @@ export function buildMcpServersJson(
   return JSON.stringify(obj);
 }
 
-/** Convert persona MCP server configs to a JSON string for the PowerLine SpawnRequest. */
-export function personaMcpServersToJson(row: personaStore.PersonaRow): string {
+/** Convert persona MCP server JSON string to a PowerLine-formatted JSON string. */
+export function personaMcpServersToJson(mcpServersJson: string, personaId: string): string {
   let mcpServers: { name: string; command: string; args?: string[]; tools?: string[] }[];
   try {
-    mcpServers = JSON.parse(row.mcpServers || "[]") as typeof mcpServers;
+    mcpServers = JSON.parse(mcpServersJson || "[]") as typeof mcpServers;
   } catch {
-    logger.warn({ personaId: row.id }, "Failed to parse persona mcpServers JSON; ignoring");
+    logger.warn({ personaId }, "Failed to parse persona mcpServers JSON; ignoring");
     return "";
   }
   if (!Array.isArray(mcpServers) || mcpServers.length === 0) {
