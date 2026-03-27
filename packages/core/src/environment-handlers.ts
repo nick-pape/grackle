@@ -35,6 +35,7 @@ export async function addEnvironment(req: grackle.AddEnvironmentRequest): Promis
     req.adapterConfig,
   );
   emit("environment.changed", {});
+  logger.info({ environmentId: id, adapterType: req.adapterType }, "Environment added");
   const row = envRegistry.getEnvironment(id);
   return envRowToProto(row!);
 }
@@ -110,6 +111,7 @@ export async function removeEnvironment(req: grackle.EnvironmentId): Promise<gra
   envRegistry.removeEnvironment(req.id);
   emit("environment.changed", {});
   emit("environment.removed", { environmentId: req.id });
+  logger.info({ environmentId: req.id }, "Environment removed");
   return create(grackle.EmptySchema, {});
 }
 
@@ -212,6 +214,8 @@ export async function* provisionEnvironment(req: grackle.ProvisionEnvironmentReq
     return;
   }
 
+  logger.info({ environmentId: req.id }, "Environment provisioned");
+
   // Best-effort: notify client that provision completed.
   // If the client already disconnected (e.g. fire-and-forget fetch in
   // test helpers), the yield throws — but the environment IS connected,
@@ -241,6 +245,7 @@ export async function stopEnvironment(req: grackle.EnvironmentId): Promise<grack
   adapterManager.removeConnection(req.id);
   envRegistry.updateEnvironmentStatus(req.id, "disconnected");
   emit("environment.changed", {});
+  logger.info({ environmentId: req.id }, "Environment stopped");
   return create(grackle.EmptySchema, {});
 }
 
@@ -258,5 +263,6 @@ export async function destroyEnvironment(req: grackle.EnvironmentId): Promise<gr
   adapterManager.removeConnection(req.id);
   envRegistry.updateEnvironmentStatus(req.id, "disconnected");
   emit("environment.changed", {});
+  logger.info({ environmentId: req.id }, "Environment destroyed");
   return create(grackle.EmptySchema, {});
 }

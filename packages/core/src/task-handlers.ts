@@ -26,6 +26,7 @@ import { emit } from "./event-bus.js";
 import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
 import { logger } from "./logger.js";
+import { getTraceId } from "./trace-context.js";
 import { resolvePersona, buildOrchestratorContext, SystemPromptBuilder, buildTaskPrompt } from "@grackle-ai/prompt";
 import { toPersonaResolveInput, buildOrchestratorContextInput } from "./persona-mapper.js";
 import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
@@ -114,6 +115,7 @@ export async function createTask(req: grackle.CreateTaskRequest): Promise<grackl
   );
   const row = taskStore.getTask(id);
   emit("task.created", { taskId: id, workspaceId: req.workspaceId });
+  logger.info({ taskId: id, workspaceId: req.workspaceId }, "Task created");
   return taskRowToProto(row!);
 }
 
@@ -185,6 +187,7 @@ export async function updateTask(req: grackle.UpdateTaskRequest): Promise<grackl
   }
 
   emit("task.updated", { taskId: req.id, workspaceId: existing.workspaceId || "" });
+  logger.info({ taskId: req.id }, "Task updated");
 
   const row = taskStore.getTask(req.id);
   const taskSessions = sessionStore.listSessionsForTask(req.id);
@@ -374,7 +377,10 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
     taskId: task.id,
     systemContext,
     prompt: taskPrompt,
+    traceId: getTraceId(),
   });
+
+  logger.info({ taskId: task.id, sessionId, workspaceId: task.workspaceId }, "Task started");
 
   const row = sessionStore.getSession(sessionId);
   const taskProto = sessionRowToProto(row!);
@@ -432,6 +438,7 @@ export async function completeTask(req: grackle.TaskId): Promise<grackle.Task> {
   }
 
   emit("task.completed", { taskId: task.id, workspaceId: task.workspaceId || "" });
+  logger.info({ taskId: task.id }, "Task completed");
   const row = taskStore.getTask(task.id);
   const taskSessions = sessionStore.listSessionsForTask(task.id);
   const { status, latestSessionId } = computeTaskStatus(row!.status, taskSessions);
@@ -522,9 +529,11 @@ export async function resumeTask(req: grackle.TaskId): Promise<grackle.Session> 
     logPath,
     workspaceId: task.workspaceId ?? undefined,
     taskId: task.id,
+    traceId: getTraceId(),
   });
 
   emit("task.started", { taskId: task.id, sessionId: latestSession.id, workspaceId: task.workspaceId || "" });
+  logger.info({ taskId: task.id, sessionId: latestSession.id }, "Task resumed");
 
   const row = sessionStore.getSession(latestSession.id);
   return sessionRowToProto(row!);
@@ -569,6 +578,7 @@ export async function stopTask(req: grackle.TaskId): Promise<grackle.Task> {
   }
 
   emit("task.completed", { taskId: task.id, workspaceId: task.workspaceId || "" });
+  logger.info({ taskId: req.id }, "Task stopped");
   const updated = taskStore.getTask(req.id);
   const taskSessions = sessionStore.listSessionsForTask(req.id);
   const { status, latestSessionId } = computeTaskStatus(updated!.status, taskSessions);
@@ -611,5 +621,6 @@ export async function deleteTask(req: grackle.TaskId): Promise<grackle.Empty> {
     );
   }
   emit("task.deleted", { taskId: req.id, workspaceId: task.workspaceId || "" });
+  logger.info({ taskId: req.id }, "Task deleted");
   return create(grackle.EmptySchema, {});
 }

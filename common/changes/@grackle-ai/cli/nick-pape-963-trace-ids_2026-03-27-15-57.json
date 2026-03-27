@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add request trace IDs across gRPC/PowerLine boundaries for cross-component log correlation",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

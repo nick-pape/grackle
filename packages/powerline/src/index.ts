@@ -1,8 +1,8 @@
 import { Command } from "commander";
 import { connectNodeAdapter } from "@connectrpc/connect-node";
-import { ConnectError, Code } from "@connectrpc/connect";
+import { ConnectError, Code, type Interceptor } from "@connectrpc/connect";
 import http2 from "node:http2";
-import { timingSafeEqual } from "node:crypto";
+import { timingSafeEqual, randomUUID } from "node:crypto";
 import { registerPowerLineRoutes } from "./grpc-server.js";
 import { registerRuntime } from "./runtime-registry.js";
 import { StubRuntime } from "./runtimes/stub.js";
@@ -15,6 +15,7 @@ import { AcpRuntime } from "@grackle-ai/runtime-acp";
 import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
 import { createRequire } from "node:module";
 import { logger } from "./logger.js";
+import { runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace } from "./trace-context.js";
 
 const esmRequire: NodeRequire = createRequire(import.meta.url);
 const { version } = esmRequire("../package.json") as { version: string };
@@ -68,22 +69,40 @@ function main(): void {
       registerRuntime(new AcpRuntime({ name: "claude-code-acp", command: "claude-agent-acp", args: [] }));
 
       // Start HTTP/2 server with optional auth
+      const interceptors: Interceptor[] = [
+        // Trace ID interceptor: extract or generate a trace ID for request correlation.
+        // For streaming RPCs, wraps the response's message iterable so the generator
+        // body runs within the trace context on each iteration step.
+        (next) => async (req) => {
+          const rawTraceId = req.header.get("x-trace-id") ?? undefined;
+          const traceId = isValidTraceId(rawTraceId) ? rawTraceId! : randomUUID();
+          const response = await runWithTrace(traceId, () => next(req));
+          if ("stream" in response && response.stream) {
+            const wrapped = wrapAsyncIterableWithTrace(traceId, response.message as AsyncIterable<unknown>);
+            (response as { message: AsyncIterable<unknown> }).message = wrapped;
+          }
+          return response;
+        },
+      ];
+
+      if (powerlineToken) {
+        interceptors.push(
+          (next) => async (req) => {
+            const authHeader = req.header.get("authorization") || "";
+            const token = authHeader.replace(/^Bearer\s+/i, "");
+            const a = Buffer.from(token);
+            const b = Buffer.from(powerlineToken);
+            if (a.length !== b.length || !timingSafeEqual(a, b)) {
+              throw new ConnectError("Unauthorized", Code.Unauthenticated);
+            }
+            return next(req);
+          },
+        );
+      }
+
       const handler = connectNodeAdapter({
         routes: registerPowerLineRoutes,
-        interceptors: powerlineToken
-          ? [
-              (next) => async (req) => {
-                const authHeader = req.header.get("authorization") || "";
-                const token = authHeader.replace(/^Bearer\s+/i, "");
-                const a = Buffer.from(token);
-                const b = Buffer.from(powerlineToken);
-                if (a.length !== b.length || !timingSafeEqual(a, b)) {
-                  throw new ConnectError("Unauthorized", Code.Unauthenticated);
-                }
-                return next(req);
-              },
-            ]
-          : [],
+        interceptors,
       });
 
       const server = http2.createServer((req, res) => {

@@ -1,6 +1,7 @@
 import { connectNodeAdapter } from "@connectrpc/connect-node";
 import { ConnectError, Code } from "@connectrpc/connect";
 import http2 from "node:http2";
+import { randomUUID } from "node:crypto";
 import {
   registerGrackleRoutes,
   registerAdapter, startHeartbeat, getAdapter, setConnection, removeConnection,
@@ -14,6 +15,7 @@ import {
   ReconciliationManager, createCronPhase, createOrphanPhase, findFirstConnectedEnvironment, lifecycleCleanupPhase,
   initOrphanReparentSubscriber,
   logger, exec, detectLanIp,
+  runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace,
 } from "@grackle-ai/core";
 import { envRegistry, sessionStore, workspaceStore, taskStore, scheduleStore, personaStore, settingsStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome } from "@grackle-ai/database";
 import { DockerAdapter } from "@grackle-ai/adapter-docker";
@@ -284,6 +286,20 @@ async function main(): Promise<void> {
   const grpcHandler = connectNodeAdapter({
     routes: registerGrackleRoutes,
     interceptors: [
+      // Trace ID interceptor: extract or generate a trace ID for request correlation.
+      // For streaming RPCs, wraps the response's message iterable so the generator
+      // body runs within the trace context on each iteration step.
+      (next) => async (req) => {
+        const rawTraceId = req.header.get("x-trace-id") ?? undefined;
+        const traceId = isValidTraceId(rawTraceId) ? rawTraceId! : randomUUID();
+        const response = await runWithTrace(traceId, () => next(req));
+        if ("stream" in response && response.stream) {
+          const wrapped = wrapAsyncIterableWithTrace(traceId, response.message as AsyncIterable<unknown>);
+          (response as { message: AsyncIterable<unknown> }).message = wrapped;
+        }
+        return response;
+      },
+      // Auth interceptor: validate Bearer token.
       (next) => async (req) => {
         const authHeader = req.header.get("authorization") || "";
         const token = authHeader.replace(/^Bearer\s+/i, "");

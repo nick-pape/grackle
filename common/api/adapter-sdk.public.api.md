@@ -76,10 +76,10 @@ export function closeAllTunnels(logger?: AdapterLogger): Promise<void>;
 export function closeTunnel(environmentId: string): Promise<void>;
 
 // @public
-export function connectThroughTunnel(environmentId: string, localPort: number, powerlineToken: string, logger?: AdapterLogger): Promise<PowerLineConnection>;
+export function connectThroughTunnel(environmentId: string, localPort: number, powerlineToken: string, logger?: AdapterLogger, traceId?: string): Promise<PowerLineConnection>;
 
 // @public
-export function createPowerLineClient(baseUrl: string, powerlineToken: string): PowerLineClient;
+export function createPowerLineClient(baseUrl: string, powerlineToken: string, traceId?: string): PowerLineClient;
 
 // @public
 export const defaultLogger: AdapterLogger;

@@ -4,6 +4,7 @@ import { grackle } from "@grackle-ai/common";
 import { workspaceStore, envRegistry, slugify } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { emit } from "./event-bus.js";
+import { logger } from "./logger.js";
 import { workspaceRowToProto } from "./grpc-proto-converters.js";
 
 /** List all workspaces, optionally filtered by environment. */
@@ -44,6 +45,7 @@ export async function createWorkspace(req: grackle.CreateWorkspaceRequest): Prom
     req.defaultPersonaId ?? "",
   );
   emit("workspace.created", { workspaceId: id });
+  logger.info({ workspaceId: id }, "Workspace created");
   const row = workspaceStore.getWorkspace(id);
   return workspaceRowToProto(row!);
 }
@@ -61,6 +63,7 @@ export async function getWorkspace(req: grackle.WorkspaceId): Promise<grackle.Wo
 export async function archiveWorkspace(req: grackle.WorkspaceId): Promise<grackle.Empty> {
   workspaceStore.archiveWorkspace(req.id);
   emit("workspace.archived", { workspaceId: req.id });
+  logger.info({ workspaceId: req.id }, "Workspace archived");
   return create(grackle.EmptySchema, {});
 }
 

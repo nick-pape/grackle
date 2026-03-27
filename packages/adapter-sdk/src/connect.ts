@@ -1,4 +1,4 @@
-import { createClient } from "@connectrpc/connect";
+import { createClient, type Interceptor } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
 import { powerline } from "@grackle-ai/common";
 import { createConnection } from "node:net";
@@ -27,18 +27,32 @@ const TUNNEL_PORT_POLL_MAX_ATTEMPTS: number = 20;
 /**
  * Create an authenticated gRPC client for a PowerLine.
  * The PowerLine token is sent as a Bearer token on every request.
+ * When `traceId` is provided, it is forwarded as the `x-trace-id` header for request correlation.
  */
-export function createPowerLineClient(baseUrl: string, powerlineToken: string): PowerLineClient {
+export function createPowerLineClient(baseUrl: string, powerlineToken: string, traceId?: string): PowerLineClient {
+  const interceptors: Interceptor[] = [];
+
+  if (powerlineToken) {
+    interceptors.push(
+      (next) => async (req) => {
+        req.header.set("Authorization", `Bearer ${powerlineToken}`);
+        return next(req);
+      },
+    );
+  }
+
+  if (traceId) {
+    interceptors.push(
+      (next) => async (req) => {
+        req.header.set("x-trace-id", traceId);
+        return next(req);
+      },
+    );
+  }
+
   const transport = createGrpcTransport({
     baseUrl,
-    interceptors: powerlineToken
-      ? [
-          (next) => async (req) => {
-            req.header.set("Authorization", `Bearer ${powerlineToken}`);
-            return next(req);
-          },
-        ]
-      : [],
+    interceptors,
   });
   return createClient(powerline.GracklePowerLine, transport);
 }
@@ -54,8 +68,9 @@ export async function connectThroughTunnel(
   localPort: number,
   powerlineToken: string,
   logger: AdapterLogger = defaultLogger,
+  traceId?: string,
 ): Promise<PowerLineConnection> {
-  const client = createPowerLineClient(`http://127.0.0.1:${localPort}`, powerlineToken);
+  const client = createPowerLineClient(`http://127.0.0.1:${localPort}`, powerlineToken, traceId);
 
   let lastError: unknown;
   for (let attempt = 0; attempt < CONNECT_MAX_RETRIES; attempt++) {
