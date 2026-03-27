@@ -140,6 +140,29 @@ async function attemptBoot(deps: RootTaskBootDeps): Promise<void> {
     return;
   }
 
+  // 2b. Crash-loop detection: if we recently started a session but the task
+  // is no longer working before the stability threshold, count it as a failure.
+  // This catches the case where startTaskSession succeeded but the session
+  // crashed shortly after (the main crash-loop scenario from issue #959).
+  if (state.lastSessionStartedAt > 0) {
+    const sinceLastStart = Date.now() - state.lastSessionStartedAt;
+    if (sinceLastStart < BOOT_STABLE_THRESHOLD_MS) {
+      // Session crashed before reaching stability — record as failure
+      if (state.lastFailureAt < state.lastSessionStartedAt) {
+        // Only record once per start (guard against multiple environment.changed events)
+        recordFailure();
+        logger.info(
+          { survivedMs: sinceLastStart, failures: state.failures },
+          "Root task session crashed before stability threshold — recording failure",
+        );
+      }
+    } else {
+      // Session survived past stability threshold but is now stopped — reset backoff
+      resetBackoff(sinceLastStart);
+    }
+    state.lastSessionStartedAt = 0;
+  }
+
   // 3. Find connected environment
   const connectedEnv = deps.findFirstConnectedEnvironment();
   if (!connectedEnv) {
@@ -176,7 +199,7 @@ async function attemptBoot(deps: RootTaskBootDeps): Promise<void> {
       deps.reanimateAgent(latestSession.id);
       booted = true;
       logger.info(
-        { sessionId: latestSession.id, environmentId: connectedEnv.id },
+        { sessionId: latestSession.id, environmentId: latestSession.environmentId },
         "Root task reanimated existing session",
       );
     } catch (reanimateErr) {
@@ -219,13 +242,17 @@ function checkStabilityReset(): void {
   if (state.failures > 0 && state.lastSessionStartedAt > 0) {
     const elapsed = Date.now() - state.lastSessionStartedAt;
     if (elapsed >= BOOT_STABLE_THRESHOLD_MS) {
-      logger.info(
-        { survivedMs: elapsed, previousFailures: state.failures },
-        "Root task session stable — resetting backoff",
-      );
-      state.failures = 0;
-      state.lastFailureAt = 0;
-      state.lastSessionStartedAt = 0;
+      resetBackoff(elapsed);
     }
   }
+}
+
+/** Zero out the backoff state after a session has proven stable. */
+function resetBackoff(survivedMs: number): void {
+  logger.info(
+    { survivedMs, previousFailures: state.failures },
+    "Root task session stable — resetting backoff",
+  );
+  state.failures = 0;
+  state.lastFailureAt = 0;
 }
