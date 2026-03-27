@@ -9,6 +9,7 @@ import * as processorRegistry from "./processor-registry.js";
 import { writeTranscript } from "./transcript.js";
 import { emit } from "./event-bus.js";
 import { logger } from "./logger.js";
+import { runWithTrace } from "./trace-context.js";
 import { publishChildCompletion } from "./pipe-delivery.js";
 import { cleanupLifecycleStream } from "./lifecycle.js";
 import type { ProcessorContext } from "./processor-registry.js";
@@ -23,6 +24,8 @@ export interface EventStreamOptions {
   systemContext?: string;
   /** Initial user prompt sent to the agent. Emitted as a user_input event after systemContext. */
   prompt?: string;
+  /** Trace ID for correlating logs across the request lifecycle. */
+  traceId?: string;
 }
 
 /**
@@ -235,9 +238,8 @@ export function processEventStream(
     replayLoggedEvents(ctx, subtaskLocalIdMap);
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-floating-promises
-  (async () => {
-
+  /** Inner processing logic, extracted so it can be wrapped in runWithTrace. */
+  const processEvents = async (): Promise<void> => {
     try {
       logWriter.initLog(logPath);
       sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.RUNNING);
@@ -411,5 +413,13 @@ export function processEventStream(
       logWriter.endSession(logPath);
       try { writeTranscript(logPath); } catch { /* non-critical */ }
     }
-  })();
+  };
+
+  if (options.traceId) {
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    runWithTrace(options.traceId, processEvents);
+  } else {
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    processEvents();
+  }
 }

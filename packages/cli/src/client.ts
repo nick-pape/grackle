@@ -4,6 +4,7 @@ import { grackle, DEFAULT_SERVER_PORT, GRACKLE_DIR, API_KEY_FILENAME } from "@gr
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { randomUUID } from "node:crypto";
 
 /** Load the API key from the on-disk key file under `GRACKLE_HOME` (or `~/.grackle`). */
 export function loadApiKey(): string {
@@ -33,6 +34,7 @@ export function createGrackleClient(serverUrl?: string, apiKey?: string): Client
     interceptors: [
       (next) => async (req) => {
         req.header.set("Authorization", `Bearer ${resolvedApiKey}`);
+        req.header.set("x-trace-id", randomUUID());
         return next(req);
       },
     ],

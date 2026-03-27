@@ -34,6 +34,7 @@ import { createEventStream } from "./event-hub.js";
 import { sessionRowToProto } from "./grpc-proto-converters.js";
 import { validatePipeInputs, toDialableHost, killSessionAndCleanup } from "./grpc-shared.js";
 import { personaMcpServersToJson } from "./grpc-mcp-config.js";
+import { getTraceId } from "./trace-context.js";
 
 /** Spawn a new agent session in the given environment. */
 export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Session> {
@@ -218,6 +219,7 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
     logPath,
     systemContext,
     prompt: req.prompt,
+    traceId: getTraceId(),
   });
 
   const row = sessionStore.getSession(sessionId);

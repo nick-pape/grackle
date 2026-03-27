@@ -26,6 +26,7 @@ import { emit } from "./event-bus.js";
 import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
 import { logger } from "./logger.js";
+import { getTraceId } from "./trace-context.js";
 import { resolvePersona, buildOrchestratorContext, SystemPromptBuilder, buildTaskPrompt } from "@grackle-ai/prompt";
 import { toPersonaResolveInput, buildOrchestratorContextInput } from "./persona-mapper.js";
 import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
@@ -374,6 +375,7 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
     taskId: task.id,
     systemContext,
     prompt: taskPrompt,
+    traceId: getTraceId(),
   });
 
   const row = sessionStore.getSession(sessionId);
@@ -522,6 +524,7 @@ export async function resumeTask(req: grackle.TaskId): Promise<grackle.Session> 
     logPath,
     workspaceId: task.workspaceId ?? undefined,
     taskId: task.id,
+    traceId: getTraceId(),
   });
 
   emit("task.started", { taskId: task.id, sessionId: latestSession.id, workspaceId: task.workspaceId || "" });

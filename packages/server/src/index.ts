@@ -1,6 +1,7 @@
 import { connectNodeAdapter } from "@connectrpc/connect-node";
 import { ConnectError, Code } from "@connectrpc/connect";
 import http2 from "node:http2";
+import { randomUUID } from "node:crypto";
 import {
   registerGrackleRoutes,
   registerAdapter, startHeartbeat, getAdapter, setConnection, removeConnection,
@@ -13,6 +14,7 @@ import {
   ReconciliationManager, createCronPhase, createOrphanPhase, findFirstConnectedEnvironment, lifecycleCleanupPhase,
   initOrphanReparentSubscriber,
   logger, exec, detectLanIp,
+  runWithTrace,
 } from "@grackle-ai/core";
 import { envRegistry, sessionStore, workspaceStore, taskStore, scheduleStore, personaStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome } from "@grackle-ai/database";
 import { DockerAdapter } from "@grackle-ai/adapter-docker";
@@ -269,6 +271,12 @@ async function main(): Promise<void> {
   const grpcHandler = connectNodeAdapter({
     routes: registerGrackleRoutes,
     interceptors: [
+      // Trace ID interceptor: extract or generate a trace ID for request correlation.
+      (next) => (req) => {
+        const traceId = req.header.get("x-trace-id") || randomUUID();
+        return runWithTrace(traceId, () => next(req));
+      },
+      // Auth interceptor: validate Bearer token.
       (next) => async (req) => {
         const authHeader = req.header.get("authorization") || "";
         const token = authHeader.replace(/^Bearer\s+/i, "");

@@ -3,6 +3,11 @@ import { create } from "@bufbuild/protobuf";
 import { powerline } from "@grackle-ai/common";
 
 // ── Mock all heavy dependencies before importing ──────────────
+vi.mock("./trace-context.js", () => ({
+  getTraceId: vi.fn(),
+  runWithTrace: vi.fn((traceId: string, fn: () => unknown) => fn()),
+}));
+
 vi.mock("./logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
@@ -36,6 +41,7 @@ import * as processorRegistry from "./processor-registry.js";
 import { emit } from "./event-bus.js";
 import * as logWriter from "./log-writer.js";
 import { logger } from "./logger.js";
+import { runWithTrace } from "./trace-context.js";
 
 /** Apply the minimal schema needed for tests. */
 function applySchema(): void {
@@ -127,7 +133,7 @@ async function* eventStream(events: powerline.AgentEvent[]): AsyncIterable<power
  *  or detecting the finally block has run (endSession called). */
 function waitForProcessing(
   events: powerline.AgentEvent[],
-  options: { sessionId: string; logPath: string; workspaceId?: string; taskId?: string },
+  options: { sessionId: string; logPath: string; workspaceId?: string; taskId?: string; traceId?: string },
 ): Promise<void> {
   const endSessionCallsBefore = vi.mocked(logWriter.endSession).mock.calls.length;
   return new Promise<void>((resolve, reject) => {
@@ -1360,5 +1366,53 @@ describe("event-processor usage event handling", () => {
     expect(session?.inputTokens).toBe(0);
     expect(session?.outputTokens).toBe(0);
     expect(session?.costUsd).toBe(0);
+  });
+});
+
+describe("event-processor traceId propagation", () => {
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS findings");
+    sqlite.exec("DROP TABLE IF EXISTS tasks");
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    sqlite.exec("DROP TABLE IF EXISTS workspaces");
+    applySchema();
+    vi.clearAllMocks();
+  });
+
+  it("calls runWithTrace when traceId is provided in options", async () => {
+    sessionStore.createSession("sess-trace", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+
+    const statusEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess-trace",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    });
+
+    await waitForProcessing([statusEvent], {
+      sessionId: "sess-trace",
+      logPath: "/tmp/log",
+      traceId: "trace-xyz",
+    });
+
+    expect(runWithTrace).toHaveBeenCalledWith("trace-xyz", expect.any(Function));
+  });
+
+  it("does not call runWithTrace when traceId is omitted", async () => {
+    sessionStore.createSession("sess-notrace", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+
+    const statusEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess-notrace",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    });
+
+    await waitForProcessing([statusEvent], {
+      sessionId: "sess-notrace",
+      logPath: "/tmp/log",
+    });
+
+    expect(runWithTrace).not.toHaveBeenCalled();
   });
 });

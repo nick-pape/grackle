@@ -45,6 +45,9 @@ export { checkVersionStatus, clearVersionCache, type VersionStatus } from "./ver
 // ─── Logger ────────────────────────────────────────────────
 export { logger } from "./logger.js";
 
+// ─── Trace Context ──────────────────────────────────────────
+export { getTraceId, runWithTrace } from "./trace-context.js";
+
 // ─── Utilities ─────────────────────────────────────────────
 export { exec } from "./utils/exec.js";
 export { detectLanIp } from "./utils/network.js";
