@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add copy-to-clipboard buttons to session chat messages, code blocks, and tool cards",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
