@@ -9,7 +9,6 @@ import {
   type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useThemeContext } from "../../context/ThemeContext.js";
 import type { TaskData } from "../../hooks/types.js";
 import { useDagLayout, type TaskNodeData } from "./useDagLayout.js";
 import { TaskNode } from "./TaskNode.js";
@@ -23,6 +22,8 @@ interface Props {
   environmentId: string;
   /** All tasks — filtered internally by workspaceId. */
   tasks: TaskData[];
+  /** Resolved theme ID, used to recompute CSS variable colors for the MiniMap. */
+  resolvedThemeId: string;
 }
 
 /** CSS variable mapping for MiniMap node coloring by task status. */
@@ -34,9 +35,8 @@ const nodeTypes: NodeTypes = {
 };
 
 /** Interactive DAG visualization of task hierarchy and dependency relationships. */
-export function DagView({ workspaceId, environmentId, tasks }: Props): JSX.Element {
+export function DagView({ workspaceId, environmentId, tasks, resolvedThemeId }: Props): JSX.Element {
   const navigate = useAppNavigate();
-  const { resolvedThemeId } = useThemeContext();
 
   const workspaceTasks = useMemo(
     () => tasks.filter((t) => t.workspaceId === workspaceId),

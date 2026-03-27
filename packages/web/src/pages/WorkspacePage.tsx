@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
+import { useThemeContext } from "../context/ThemeContext.js";
 import { useHotkey } from "../hooks/useHotkey.js";
 import { DagView } from "../components/dag/DagView.js";
 import { WorkspaceBoard } from "../components/workspace/WorkspaceBoard.js";
@@ -64,6 +65,7 @@ export function WorkspacePage(): JSX.Element {
     tasks, environments, workspaces, personas, sessions, archiveWorkspace, updateWorkspace,
     usageCache, loadUsage,
   } = useGrackle();
+  const { resolvedThemeId } = useThemeContext();
 
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>("tasks");
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
@@ -384,7 +386,7 @@ export function WorkspacePage(): JSX.Element {
         <WorkspaceBoard workspaceId={workspaceId!} environmentId={environmentId} tasks={tasks} sessions={sessions} personas={personas} environments={environments} />
       )}
       {workspaceTab === "graph" && (
-        <DagView workspaceId={workspaceId!} environmentId={environmentId} tasks={tasks} />
+        <DagView workspaceId={workspaceId!} environmentId={environmentId} tasks={tasks} resolvedThemeId={resolvedThemeId} />
       )}
 
       {/* Archive confirmation dialog */}

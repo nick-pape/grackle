@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type JSX } from "react";
-import { useToast } from "../../context/ToastContext.js";
+import type { ToastVariant } from "../../context/ToastContext.js";
 import type { Environment, PersonaData } from "../../hooks/types.js";
 import styles from "./ChatInput.module.scss";
 
@@ -67,6 +67,8 @@ export interface ChatInputProps {
   onStartTask: (taskId: string, personaId?: string, environmentId?: string, notes?: string) => void;
   /** Reconnect a disconnected environment. */
   onProvisionEnvironment: (environmentId: string) => void;
+  /** Display a toast notification. */
+  onShowToast?: (message: string, variant?: ToastVariant) => void;
 }
 
 /** Reusable form component for sending messages to agent sessions. */
@@ -82,8 +84,8 @@ export function ChatInput({
   onSpawn,
   onStartTask,
   onProvisionEnvironment,
+  onShowToast,
 }: ChatInputProps): JSX.Element {
-  const { showToast } = useToast();
 
   const [text, setText] = useState("");
   const [spawnPersonaId, setSpawnPersonaId] = useState("");
@@ -107,7 +109,7 @@ export function ChatInput({
         return;
       }
       onSpawn(environmentId, text, spawnPersonaId);
-      showToast("Session started", "success");
+      onShowToast?.("Session started", "success");
       setText("");
       setSpawnPersonaId("");
     } else {

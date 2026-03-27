@@ -1,5 +1,5 @@
 import { useState, useCallback, type JSX } from "react";
-import { useToast } from "../../context/ToastContext.js";
+import type { ToastVariant } from "../../context/ToastContext.js";
 import type { Environment, Codespace } from "../../hooks/types.js";
 import { ENVIRONMENTS_URL, environmentUrl, useAppNavigate } from "../../utils/navigation.js";
 import { EditableTextField } from "../editable/EditableTextField.js";
@@ -33,6 +33,8 @@ interface Props {
   codespaceCreating: boolean;
   /** Callback to create a new codespace. */
   onCreateCodespace: (repo: string, machine?: string) => void;
+  /** Display a toast notification. */
+  onShowToast: (message: string, variant?: ToastVariant) => void;
 }
 
 /** Returns true if portStr is empty (optional) or a valid integer in [1, 65535]. */
@@ -198,8 +200,7 @@ function CodespacePicker({ codespaceName, onCodespaceNameChange, envName, onEnvN
  * - edit: pre-populated form; uses click-to-edit fields that auto-save via
  *         updateEnvironment.
  */
-export function EnvironmentEditPanel({ mode, environmentId, environments, onAddEnvironment, onUpdateEnvironment, onListCodespaces, codespaces, codespaceError, codespaceListError, codespaceCreating, onCreateCodespace }: Props): JSX.Element {
-  const { showToast } = useToast();
+export function EnvironmentEditPanel({ mode, environmentId, environments, onAddEnvironment, onUpdateEnvironment, onListCodespaces, codespaces, codespaceError, codespaceListError, codespaceCreating, onCreateCodespace, onShowToast }: Props): JSX.Element {
   const navigate = useAppNavigate();
 
   const isEdit = mode === "edit";
@@ -286,7 +287,7 @@ export function EnvironmentEditPanel({ mode, environmentId, environments, onAddE
       return;
     }
     onAddEnvironment(envName.trim(), adapterType, buildCreateConfig());
-    showToast("Environment added successfully", "success");
+    onShowToast("Environment added successfully", "success");
     navigate(ENVIRONMENTS_URL, { replace: true });
   };
 

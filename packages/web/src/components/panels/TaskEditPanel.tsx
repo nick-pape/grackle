@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type JSX } from "react";
-import { useToast } from "../../context/ToastContext.js";
+import type { ToastVariant } from "../../context/ToastContext.js";
 import type { TaskData, Workspace, PersonaData } from "../../hooks/types.js";
 import { taskUrl, workspaceUrl, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./TaskEditPanel.module.scss";
@@ -34,6 +34,8 @@ interface Props {
   ) => void;
   /** Optional callback invoked when inline edit completes (save or cancel). When provided, navigation is skipped. */
   onEditDone?: () => void;
+  /** Display a toast notification. */
+  onShowToast: (message: string, variant?: ToastVariant) => void;
 }
 
 /**
@@ -44,8 +46,7 @@ interface Props {
  * - edit: pre-populated form; calls updateTask on save, then navigates
  *         back to the task overview.
  */
-export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, parentTaskId: parentTaskIdProp, environmentId: environmentIdProp, tasks, workspaces, personas, onCreateTask, onUpdateTask, onEditDone }: Props): JSX.Element {
-  const { showToast } = useToast();
+export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, parentTaskId: parentTaskIdProp, environmentId: environmentIdProp, tasks, workspaces, personas, onCreateTask, onUpdateTask, onEditDone, onShowToast }: Props): JSX.Element {
   const navigate = useAppNavigate();
 
   const isEdit = mode === "edit";
@@ -125,7 +126,7 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
     }
     if (isEdit && taskId) {
       onUpdateTask(taskId, title.trim(), description, selectedDeps, defaultPersonaId);
-      showToast("Task updated", "success");
+      onShowToast("Task updated", "success");
       if (onEditDone) {
         onEditDone();
       } else {
@@ -142,11 +143,11 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
         defaultPersonaId,
         canDecompose,
         () => {
-          showToast("Task created", "success");
+          onShowToast("Task created", "success");
           navigate(workspaceIdProp ? workspaceUrl(workspaceIdProp, environmentId) : "/tasks", { replace: true });
         },
         (message: string) => {
-          showToast(message, "error");
+          onShowToast(message, "error");
           setCreating(false);
         },
       );

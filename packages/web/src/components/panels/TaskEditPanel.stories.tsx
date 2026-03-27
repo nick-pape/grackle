@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn } from "@storybook/test";
-import { ToastProvider } from "../../context/ToastContext.js";
 import type { Workspace } from "../../hooks/types.js";
 import { buildWorkspace, buildPersona } from "../../test-utils/storybook-helpers.js";
 import { TaskEditPanel } from "./TaskEditPanel.js";
@@ -10,13 +9,6 @@ const defaultWorkspace: Workspace = buildWorkspace({ id: "ws-001", name: "Test W
 const meta: Meta<typeof TaskEditPanel> = {
   title: "Panels/TaskEditPanel",
   component: TaskEditPanel,
-  decorators: [
-    (Story) => (
-      <ToastProvider>
-        <Story />
-      </ToastProvider>
-    ),
-  ],
   args: {
     mode: "new",
     workspaceId: "ws-001",
@@ -25,6 +17,7 @@ const meta: Meta<typeof TaskEditPanel> = {
     personas: [buildPersona({ id: "p-1", name: "Coder" })],
     onCreateTask: fn(),
     onUpdateTask: fn(),
+    onShowToast: fn(),
   },
 };
 

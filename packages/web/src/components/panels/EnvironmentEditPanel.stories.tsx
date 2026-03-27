@@ -1,19 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent } from "@storybook/test";
-import { ToastProvider } from "../../context/ToastContext.js";
 import { EnvironmentEditPanel } from "./EnvironmentEditPanel.js";
 import { buildEnvironment } from "../../test-utils/storybook-helpers.js";
 
 const meta: Meta<typeof EnvironmentEditPanel> = {
   title: "Panels/EnvironmentEditPanel",
   component: EnvironmentEditPanel,
-  decorators: [
-    (Story) => (
-      <ToastProvider>
-        <Story />
-      </ToastProvider>
-    ),
-  ],
   args: {
     mode: "new",
     environments: [],
@@ -25,6 +17,7 @@ const meta: Meta<typeof EnvironmentEditPanel> = {
     codespaceListError: "",
     codespaceCreating: false,
     onCreateCodespace: fn(),
+    onShowToast: fn(),
   },
 };
 

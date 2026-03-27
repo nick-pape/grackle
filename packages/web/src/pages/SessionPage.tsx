@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
+import { useToast } from "../context/ToastContext.js";
 import { EventStream } from "../components/display/EventStream.js";
 import { ChatInput } from "../components/chat/index.js";
 import { Breadcrumbs, SplitButton } from "../components/display/index.js";
@@ -70,6 +71,7 @@ export function SessionPage(): JSX.Element {
     events, eventsDropped, sessions, kill, stopGraceful, loadSessionEvents,
     sendInput, spawn, startTask, personas, environments, provisionEnvironment,
   } = useGrackle();
+  const { showToast } = useToast();
   const loadedRef = useRef<string | undefined>(undefined);
 
   const breadcrumbs = buildSessionBreadcrumbs(sessionId!);
@@ -127,6 +129,7 @@ export function SessionPage(): JSX.Element {
           onSpawn={spawn}
           onStartTask={startTask}
           onProvisionEnvironment={provisionEnvironment}
+          onShowToast={showToast}
         />
       )}
     </div>
