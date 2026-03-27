@@ -9,20 +9,55 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    services:
-      neo4j:
-        image: neo4j:5-community
-        env:
-          NEO4J_AUTH: neo4j/grackle-dev
-        ports:
-          - 7687:7687
-        options: >-
-          --health-cmd "cypher-shell -u neo4j -p grackle-dev 'RETURN 1'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-
     steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get weekly cache key
+        id: week
+        run: echo "key=$(date +%Y-%W)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Neo4j Docker image
+        uses: actions/cache@v4
+        with:
+          path: /tmp/docker-images
+          key: docker-neo4j-5-community-${{ steps.week.outputs.key }}
+          restore-keys: |
+            docker-neo4j-5-community-
+
+      - name: Load or pull Neo4j image
+        run: |
+          if [ -f /tmp/docker-images/neo4j.tar ]; then
+            docker load < /tmp/docker-images/neo4j.tar
+          else
+            docker pull neo4j:5-community
+            mkdir -p /tmp/docker-images
+            docker save neo4j:5-community -o /tmp/docker-images/neo4j.tar
+          fi
+
+      - name: Start Neo4j
+        run: |
+          docker run -d --name neo4j \
+            -e NEO4J_AUTH=neo4j/grackle-dev \
+            -p 7687:7687 \
+            neo4j:5-community
+
+      - name: Wait for Neo4j
+        run: |
+          for i in $(seq 1 30); do
+            if docker exec neo4j cypher-shell -u neo4j -p grackle-dev 'RETURN 1' 2>/dev/null; then
+              echo "Neo4j is ready"
+              exit 0
+            fi
+            echo "Waiting for Neo4j... ($i/30)"
+            sleep 5
+          done
+          echo "Neo4j failed to start"
+          exit 1
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
