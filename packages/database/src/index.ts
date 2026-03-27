@@ -6,8 +6,7 @@
  */
 
 // ─── Database Lifecycle ────────────────────────────────────
-export { openDatabase, initDatabase, sqlite, default as db } from "./db.js";
-export type { MigrationError, InitDatabaseResult } from "./db.js";
+export { openDatabase, initDatabase, sqlite, CURRENT_VERSION, default as db } from "./db.js";
 export { seedDatabase } from "./db-seed.js";
 
 // ─── Schema ────────────────────────────────────────────────
