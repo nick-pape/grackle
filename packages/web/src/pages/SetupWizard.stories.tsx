@@ -21,6 +21,9 @@ const SYSTEM_PERSONA: PersonaData = makePersona({ id: SYSTEM_PERSONA_ID, name: "
  * Wrapper that reads the MockGrackleProvider context and re-provides it
  * with onboardingCompleted forced to false and the seed personas injected,
  * so the SetupWizard renders instead of redirecting to "/".
+ *
+ * Also wraps updatePersona so it handles the injected seed personas
+ * (the mock's internal state doesn't include them).
  */
 function OnboardingOverride({ children }: { children: ReactNode }): JSX.Element {
   const ctx = useContext(GrackleContext);
@@ -35,7 +38,17 @@ function OnboardingOverride({ children }: { children: ReactNode }): JSX.Element 
     ...(!hasClaudeCode ? [SEED_PERSONA] : []),
     ...(!hasSystem ? [SYSTEM_PERSONA] : []),
   ];
-  const overridden = { ...ctx, onboardingCompleted: false, personas };
+  // Wrap updatePersona to handle injected seed personas that the mock
+  // doesn't know about — resolves immediately for seed/system personas.
+  const seedIds: ReadonlySet<string> = new Set(["claude-code", SYSTEM_PERSONA_ID]);
+  const wrappedUpdatePersona: typeof ctx.updatePersona = async (personaId, ...args) => {
+    if (seedIds.has(personaId)) {
+      const match = personas.find((p) => p.id === personaId);
+      return match ?? SEED_PERSONA;
+    }
+    return ctx.updatePersona(personaId, ...args);
+  };
+  const overridden = { ...ctx, onboardingCompleted: false, personas, updatePersona: wrappedUpdatePersona };
   return (
     <GrackleContext.Provider value={overridden}>
       {children}
@@ -51,6 +64,7 @@ const withSetupContext: Decorator = (Story) => (
         <SidebarProvider>
           <Routes>
             <Route path="/setup" element={<Story />} />
+            <Route path="/" element={<div data-testid="home-page">Home</div>} />
           </Routes>
         </SidebarProvider>
       </MemoryRouter>
