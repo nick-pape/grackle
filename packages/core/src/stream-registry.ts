@@ -161,7 +161,7 @@ function cleanupSessionIfEmpty(sessionId: string): void {
     } catch (err) {
       // Best-effort — orphan callback errors must not break stream-registry cleanup.
       // Log at debug level for diagnosability.
-      try { console.debug("stream-registry: orphan callback error for", sessionId, err); } catch { /* ignore */ }
+      console.debug("stream-registry: orphan callback error for", sessionId, err);
     }
   }
 }
@@ -300,7 +300,7 @@ export function subscribe(
       try {
         revivedCallback(targetSessionId, sessionId);
       } catch (err) {
-        try { console.debug("stream-registry: revived callback error for", targetSessionId, err); } catch { /* ignore */ }
+        console.debug("stream-registry: revived callback error for", targetSessionId, err);
       }
     }
   }
