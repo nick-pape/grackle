@@ -35,7 +35,7 @@ interface Props {
   /** Optional callback invoked when inline edit completes (save or cancel). When provided, navigation is skipped. */
   onEditDone?: () => void;
   /** Display a toast notification. */
-  onShowToast: (message: string, variant?: ToastVariant) => void;
+  onShowToast?: (message: string, variant?: ToastVariant) => void;
 }
 
 /**
@@ -126,7 +126,7 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
     }
     if (isEdit && taskId) {
       onUpdateTask(taskId, title.trim(), description, selectedDeps, defaultPersonaId);
-      onShowToast("Task updated", "success");
+      onShowToast?.("Task updated", "success");
       if (onEditDone) {
         onEditDone();
       } else {
@@ -143,11 +143,11 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
         defaultPersonaId,
         canDecompose,
         () => {
-          onShowToast("Task created", "success");
+          onShowToast?.("Task created", "success");
           navigate(workspaceIdProp ? workspaceUrl(workspaceIdProp, environmentId) : "/tasks", { replace: true });
         },
         (message: string) => {
-          onShowToast(message, "error");
+          onShowToast?.(message, "error");
           setCreating(false);
         },
       );

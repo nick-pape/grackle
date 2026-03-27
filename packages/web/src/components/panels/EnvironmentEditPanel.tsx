@@ -34,7 +34,7 @@ interface Props {
   /** Callback to create a new codespace. */
   onCreateCodespace: (repo: string, machine?: string) => void;
   /** Display a toast notification. */
-  onShowToast: (message: string, variant?: ToastVariant) => void;
+  onShowToast?: (message: string, variant?: ToastVariant) => void;
 }
 
 /** Returns true if portStr is empty (optional) or a valid integer in [1, 65535]. */
@@ -287,7 +287,7 @@ export function EnvironmentEditPanel({ mode, environmentId, environments, onAddE
       return;
     }
     onAddEnvironment(envName.trim(), adapterType, buildCreateConfig());
-    onShowToast("Environment added successfully", "success");
+    onShowToast?.("Environment added successfully", "success");
     navigate(ENVIRONMENTS_URL, { replace: true });
   };
 
