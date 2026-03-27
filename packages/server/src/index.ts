@@ -93,10 +93,11 @@ async function main(): Promise<void> {
     const defaultPersonaId = settingsStore.getSetting("default_persona_id") || "";
     const defaultPersona = defaultPersonaId ? personaStore.getPersona(defaultPersonaId) : undefined;
     if (defaultPersona?.runtime && localEnv.defaultRuntime !== defaultPersona.runtime) {
+      const previousRuntime = localEnv.defaultRuntime;
       envRegistry.updateDefaultRuntime("local", defaultPersona.runtime);
       localEnv = envRegistry.getEnvironment("local")!;
       logger.info(
-        { from: localEnv.defaultRuntime, to: defaultPersona.runtime },
+        { from: previousRuntime, to: defaultPersona.runtime },
         "Synced local environment defaultRuntime with default persona",
       );
     }

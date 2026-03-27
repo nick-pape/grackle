@@ -4,7 +4,7 @@
  * These tests verify that bootstrap pre-installation reads the app-level
  * default persona's runtime rather than the hardcoded environment column.
  *
- * TDD: Written before the implementation — all tests should FAIL initially.
+ * Originally written using TDD; these tests now serve as a regression and behavior specification.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 

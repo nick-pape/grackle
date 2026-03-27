@@ -129,13 +129,8 @@ export const FinishWithCopilot: Story = {
     await expect(finishButton).not.toBeDisabled();
     await userEvent.click(finishButton);
 
-    // After finishing, the wizard should navigate away (component unmounts).
-    // If it's still visible after a short wait, the update failed.
-    // We verify by checking the wizard is no longer in the DOM.
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // The setup wizard should have navigated away (no longer rendered)
-    const wizard = canvas.queryByTestId("setup-wizard");
-    await expect(wizard).not.toBeInTheDocument();
+    // After finishing, the wizard navigates to "/" which renders the home-page
+    // element. Wait for it to appear rather than using a fixed sleep.
+    await expect(await canvas.findByTestId("home-page")).toBeInTheDocument();
   },
 };

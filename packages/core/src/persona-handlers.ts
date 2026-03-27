@@ -192,6 +192,7 @@ export async function updatePersona(req: grackle.UpdatePersonaRequest): Promise<
       const localEnv = envRegistry.getEnvironment("local");
       if (localEnv) {
         envRegistry.updateDefaultRuntime("local", runtime);
+        emit("environment.changed", {});
       }
     }
   }
