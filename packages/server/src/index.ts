@@ -44,14 +44,7 @@ let localPowerLineManager: LocalPowerLineManager | undefined;
 async function main(): Promise<void> {
   // Open the database, run schema migrations, then seed application defaults
   openDatabase();
-  const { migrationErrors } = initDatabase();
-  if (migrationErrors.length > 0) {
-    logger.warn(
-      { migrationNames: migrationErrors.map((m) => m.name), count: migrationErrors.length },
-      "Database migrations completed with %d idempotent issue(s)",
-      migrationErrors.length,
-    );
-  }
+  initDatabase();
   seedDatabase(sqlite!);
 
   // Reset all environment statuses on startup — in-memory connections are lost

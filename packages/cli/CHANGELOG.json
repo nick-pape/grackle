@@ -2,6 +2,32 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.85.0",
+      "tag": "@grackle-ai/cli_v0.85.0",
+      "date": "Fri, 27 Mar 2026 16:13:58 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Remove hacky DOM-scraping rich copy; add clipboard content assertions and extractText unit tests"
+          },
+          {
+            "comment": "Add /healthz endpoint to PowerLine for container health probes"
+          },
+          {
+            "comment": "Replace hand-rolled migrations with versioned PRAGMA user_version system"
+          },
+          {
+            "comment": "Add Storybook stories for DemoBanner component"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "Replace 12 positional params in BaseAgentRuntime.createSession() with CreateSessionOptions object"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.84.1",
       "tag": "@grackle-ai/cli_v0.84.1",
       "date": "Fri, 27 Mar 2026 05:31:41 GMT",
