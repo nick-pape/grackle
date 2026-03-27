@@ -55,6 +55,8 @@ export interface RootTaskBootDeps {
   startTaskSession: (task: TaskRow, options?: { environmentId?: string; notes?: string }) => Promise<string | undefined>;
   /** Reanimate a terminal session by resuming it on PowerLine. Throws on failure. */
   reanimateAgent: (sessionId: string) => SessionRow;
+  /** Whether onboarding is complete. Boot is deferred until the user has chosen a runtime (#1031). */
+  isOnboarded?: () => boolean;
 }
 
 /** In-memory backoff state for the root task boot flow. */
@@ -126,6 +128,12 @@ export function _resetForTesting(): void {
 
 /** Core boot logic — separated from the guard/error wrapper for clarity. */
 async function attemptBoot(deps: RootTaskBootDeps): Promise<void> {
+  // 0. Don't auto-start before onboarding — the user hasn't chosen their
+  // runtime yet, so the root task would launch with the default "claude-code".
+  if (deps.isOnboarded && !deps.isOnboarded()) {
+    return;
+  }
+
   // 1. Look up root task
   const rootTask = deps.getTask(ROOT_TASK_ID);
   if (!rootTask) {
@@ -239,11 +247,19 @@ function recordFailure(): void {
  * reset the backoff counter. Called when we detect the task is already running.
  */
 function checkStabilityReset(): void {
-  if (state.failures > 0 && state.lastSessionStartedAt > 0) {
+  if (state.failures === 0) {
+    return;
+  }
+  if (state.lastSessionStartedAt > 0) {
     const elapsed = Date.now() - state.lastSessionStartedAt;
     if (elapsed >= BOOT_STABLE_THRESHOLD_MS) {
       resetBackoff(elapsed);
     }
+  } else {
+    // Task is WORKING but we didn't start it (e.g., session recovery
+    // reanimated it externally). Begin tracking stability from now so
+    // backoff can eventually reset — otherwise MAX_FAILURES is permanent.
+    state.lastSessionStartedAt = Date.now();
   }
 }
 

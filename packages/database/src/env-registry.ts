@@ -96,6 +96,14 @@ export function updateEnvironment(id: string, fields: UpdateEnvironmentFields): 
     .run();
 }
 
+/** Update the default bootstrap runtime for an environment. */
+export function updateDefaultRuntime(id: string, runtime: string): void {
+  db.update(environments)
+    .set({ defaultRuntime: runtime })
+    .where(eq(environments.id, id))
+    .run();
+}
+
 /** Reset all environment statuses to disconnected on server startup. */
 export function resetAllStatuses(): void {
   db.update(environments).set({ status: "disconnected" }).run();

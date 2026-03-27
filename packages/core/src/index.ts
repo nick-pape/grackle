@@ -27,7 +27,9 @@ export { pushToEnv } from "./token-push.js";
 export { computeTaskStatus } from "./compute-task-status.js";
 
 // ─── Knowledge ─────────────────────────────────────────────
-export { isKnowledgeEnabled, initKnowledge } from "./knowledge-init.js";
+export { isKnowledgeEnabled, initKnowledge, neo4jHealthCheck } from "./knowledge-init.js";
+export { createKnowledgeHealthPhase, isNeo4jHealthy, getKnowledgeReadinessCheck } from "./knowledge-health.js";
+export type { KnowledgeHealthPhaseDeps, KnowledgeReadinessCheck } from "./knowledge-health.js";
 
 // ─── Reconciliation / Scheduling ──────────────────────────
 export { ReconciliationManager } from "./reconciliation-manager.js";

@@ -134,6 +134,17 @@ describe("createRootTaskBoot", () => {
       expect(deps.reanimateAgent).not.toHaveBeenCalled();
     });
 
+    it("skips when onboarding is not complete", async () => {
+      const deps = createMockDeps();
+      deps.isOnboarded = vi.fn().mockReturnValue(false);
+
+      const boot = createRootTaskBoot(deps);
+      await boot();
+
+      expect(deps.startTaskSession).not.toHaveBeenCalled();
+      expect(deps.reanimateAgent).not.toHaveBeenCalled();
+    });
+
     it("skips when no connected environment exists", async () => {
       const deps = createMockDeps();
       vi.mocked(deps.findFirstConnectedEnvironment).mockReturnValue(undefined);
@@ -326,6 +337,37 @@ describe("createRootTaskBoot", () => {
       vi.advanceTimersByTime(60_000);
       await boot();
       expect(deps.startTaskSession).toHaveBeenCalledTimes(5); // not called again
+    });
+
+    it("recovers from MAX_FAILURES when external recovery gets task running", async () => {
+      const deps = createMockDeps();
+      vi.mocked(deps.startTaskSession).mockResolvedValue("connection refused");
+
+      const boot = createRootTaskBoot(deps);
+
+      // Exhaust all 5 retries
+      for (let i = 0; i < 5; i++) {
+        vi.advanceTimersByTime(60_000);
+        await boot();
+      }
+      expect(deps.startTaskSession).toHaveBeenCalledTimes(5);
+
+      // Boot is now blocked. But session recovery reanimates the root task externally.
+      vi.mocked(deps.computeTaskStatus).mockReturnValue({ status: TASK_STATUS.WORKING, latestSessionId: "sess-ext" });
+
+      // First WORKING observation: begins tracking stability (lastSessionStartedAt set)
+      vi.advanceTimersByTime(1_000);
+      await boot();
+
+      // Advance past stability threshold
+      vi.advanceTimersByTime(31_000);
+      await boot(); // resets backoff
+
+      // Task crashes again — should be able to retry (backoff was reset)
+      vi.mocked(deps.computeTaskStatus).mockReturnValue({ status: TASK_STATUS.PAUSED, latestSessionId: "sess-ext" });
+      vi.mocked(deps.startTaskSession).mockResolvedValue(undefined);
+      await boot();
+      expect(deps.startTaskSession).toHaveBeenCalledTimes(6); // allowed after reset
     });
 
     it("resets backoff when root task has been WORKING for >30s", async () => {
