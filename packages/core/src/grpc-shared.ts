@@ -18,7 +18,6 @@ import * as streamRegistry from "./stream-registry.js";
 import { cleanupLifecycleStream } from "./lifecycle.js";
 import { logger } from "./logger.js";
 import { emit } from "./event-bus.js";
-import { transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
 
 /** Valid pipe mode values for SpawnRequest and StartTaskRequest. */
 export const VALID_PIPE_MODES: ReadonlySet<string> = new Set(["", "sync", "async", "detach"]);
