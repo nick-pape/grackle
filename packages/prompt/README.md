@@ -29,13 +29,19 @@ import {
   resolvePersona,
 } from "@grackle-ai/prompt";
 
-// Resolve the persona for a session (caller provides lookup function)
+// Resolve the persona for a session (caller maps DB row to PersonaResolveInput)
 const resolved = resolvePersona(
   requestPersonaId,
   taskDefaultPersonaId,
   workspaceDefaultPersonaId,
   appDefaultPersonaId,
-  (id) => personaStore.getPersona(id),
+  (id) => {
+    const row = personaStore.getPersona(id);
+    if (!row) return undefined;
+    return { id: row.id, name: row.name, runtime: row.runtime, model: row.model,
+      maxTurns: row.maxTurns, systemPrompt: row.systemPrompt, toolConfig: row.toolConfig,
+      mcpServers: row.mcpServers, type: row.type, script: row.script };
+  },
 );
 
 // Build orchestrator context from pre-fetched data

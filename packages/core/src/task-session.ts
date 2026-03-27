@@ -11,7 +11,7 @@
 
 import { create } from "@bufbuild/protobuf";
 import { powerline } from "@grackle-ai/common";
-import { envRegistry, sessionStore, workspaceStore, taskStore, personaStore, findingStore, settingsStore, grackleHome, safeParseJsonArray } from "@grackle-ai/database";
+import { envRegistry, sessionStore, workspaceStore, taskStore, personaStore, settingsStore, grackleHome } from "@grackle-ai/database";
 import * as adapterManager from "./adapter-manager.js";
 import * as tokenPush from "./token-push.js";
 import { v4 as uuid } from "uuid";
@@ -28,7 +28,7 @@ import { personaMcpServersToJson } from "./grpc-mcp-config.js";
 import { toDialableHost } from "./grpc-shared.js";
 import { emit } from "./event-bus.js";
 import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
-import { toPersonaResolveInput } from "./persona-mapper.js";
+import { toPersonaResolveInput, buildOrchestratorContextInput } from "./persona-mapper.js";
 
 /**
  * Start a new agent session for a task.
@@ -94,22 +94,10 @@ export async function startTaskSession(
     : buildTaskPrompt(freshTask.title, freshTask.description, options?.notes);
 
   const orchestratorCtx = freshTask.canDecompose && freshTask.depth <= 1 && !!freshTask.workspaceId
-    ? buildOrchestratorContext({
-      workspace: workspace ? { name: workspace.name, description: workspace.description, repoUrl: workspace.repoUrl } : undefined,
-      tasks: taskStore.listTasks(freshTask.workspaceId || undefined).map((t) => ({
-        id: t.id, title: t.title, status: t.status, depth: t.depth, parentTaskId: t.parentTaskId,
-        dependsOn: safeParseJsonArray(t.dependsOn), defaultPersonaId: t.defaultPersonaId, branch: t.branch, canDecompose: t.canDecompose,
-      })),
-      personas: personaStore.listPersonas().map((p) => ({
-        id: p.id, name: p.name, description: p.description, runtime: p.runtime, model: p.model,
-      })),
-      environments: envRegistry.listEnvironments().map((e) => ({
-        displayName: e.displayName, adapterType: e.adapterType, status: e.status, defaultRuntime: e.defaultRuntime,
-      })),
-      findings: findingStore.queryFindings(freshTask.workspaceId || "", undefined, undefined, 20).map((f) => ({
-        category: f.category, title: f.title, content: f.content,
-      })),
-    })
+    ? buildOrchestratorContext(buildOrchestratorContextInput(
+      freshTask.workspaceId!,
+      workspace ? { name: workspace.name, description: workspace.description, repoUrl: workspace.repoUrl } : undefined,
+    ))
     : undefined;
   const systemContext = new SystemPromptBuilder({
     task: { title: freshTask.title, description: freshTask.description, notes: freshTask.id === ROOT_TASK_ID ? "" : (options?.notes || "") },

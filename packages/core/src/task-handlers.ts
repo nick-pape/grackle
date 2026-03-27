@@ -15,7 +15,7 @@ import {
   LOGS_DIR,
   taskStatusToString,
 } from "@grackle-ai/common";
-import { envRegistry, sessionStore, taskStore, workspaceStore, personaStore, findingStore, settingsStore, grackleHome, slugify, safeParseJsonArray } from "@grackle-ai/database";
+import { envRegistry, sessionStore, taskStore, workspaceStore, personaStore, settingsStore, grackleHome, slugify, safeParseJsonArray } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { join } from "node:path";
 import * as adapterManager from "./adapter-manager.js";
@@ -27,7 +27,7 @@ import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
 import { logger } from "./logger.js";
 import { resolvePersona, buildOrchestratorContext, SystemPromptBuilder, buildTaskPrompt } from "@grackle-ai/prompt";
-import { toPersonaResolveInput } from "./persona-mapper.js";
+import { toPersonaResolveInput, buildOrchestratorContextInput } from "./persona-mapper.js";
 import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
 import { cleanupLifecycleStream, ensureLifecycleStream } from "./lifecycle.js";
 import { ensureAsyncDeliveryListener } from "./pipe-delivery.js";
@@ -265,22 +265,10 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
     : buildTaskPrompt(task.title, task.description, req.notes);
   const isOrchestrator = task.canDecompose && task.depth <= 1 && !!task.workspaceId;
   const orchestratorCtx = isOrchestrator
-    ? buildOrchestratorContext({
-      workspace: workspace ? { name: workspace.name, description: workspace.description, repoUrl: workspace.repoUrl } : undefined,
-      tasks: taskStore.listTasks(task.workspaceId || undefined).map((t) => ({
-        id: t.id, title: t.title, status: t.status, depth: t.depth, parentTaskId: t.parentTaskId,
-        dependsOn: safeParseJsonArray(t.dependsOn), defaultPersonaId: t.defaultPersonaId, branch: t.branch, canDecompose: t.canDecompose,
-      })),
-      personas: personaStore.listPersonas().map((p) => ({
-        id: p.id, name: p.name, description: p.description, runtime: p.runtime, model: p.model,
-      })),
-      environments: envRegistry.listEnvironments().map((e) => ({
-        displayName: e.displayName, adapterType: e.adapterType, status: e.status, defaultRuntime: e.defaultRuntime,
-      })),
-      findings: findingStore.queryFindings(task.workspaceId || "", undefined, undefined, 20).map((f) => ({
-        category: f.category, title: f.title, content: f.content,
-      })),
-    })
+    ? buildOrchestratorContext(buildOrchestratorContextInput(
+      task.workspaceId!,
+      workspace ? { name: workspace.name, description: workspace.description, repoUrl: workspace.repoUrl } : undefined,
+    ))
     : undefined;
 
   const systemContext = new SystemPromptBuilder({
