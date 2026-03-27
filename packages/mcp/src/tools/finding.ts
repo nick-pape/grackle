@@ -13,7 +13,7 @@ export const findingTools: ToolDefinition[] = [
     group: "finding",
     description: "Query findings for a workspace, optionally filtering by category and tags.",
     inputSchema: z.object({
-      workspaceId: z.string().describe("Workspace ID to query findings for"),
+      workspaceId: z.string().optional().describe("Workspace ID (auto-injected from session context when omitted)"),
       category: z.string().optional().describe("Filter by finding category"),
       tag: z.string().optional().describe("Filter by tag"),
       limit: z.number().int().positive().optional().describe("Maximum number of findings to return"),
@@ -29,7 +29,7 @@ export const findingTools: ToolDefinition[] = [
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
         const response = await client.queryFindings({
-          workspaceId: args.workspaceId as string,
+          workspaceId: (args.workspaceId as string | undefined) ?? "",
           categories: args.category ? [args.category as string] : [],
           tags: args.tag ? [args.tag as string] : [],
           limit: (args.limit as number | undefined) ?? 0,
@@ -57,7 +57,7 @@ export const findingTools: ToolDefinition[] = [
     group: "finding",
     description: "Post a new finding to a workspace with a title, category, content, and tags.",
     inputSchema: z.object({
-      workspaceId: z.string().describe("Workspace ID to post the finding to"),
+      workspaceId: z.string().optional().describe("Workspace ID (auto-injected from session context when omitted)"),
       title: z.string().describe("Finding title"),
       category: z.string().optional().describe("Finding category (e.g. 'bug', 'insight', 'risk')"),
       content: z.string().optional().describe("Detailed finding content"),
@@ -74,7 +74,7 @@ export const findingTools: ToolDefinition[] = [
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
       try {
         const finding = await client.postFinding({
-          workspaceId: args.workspaceId as string,
+          workspaceId: (args.workspaceId as string | undefined) ?? "",
           title: args.title as string,
           category: (args.category as string | undefined) ?? "",
           content: (args.content as string | undefined) ?? "",

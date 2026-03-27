@@ -256,3 +256,47 @@ describe("finding_post", () => {
     );
   });
 });
+
+describe("workspace ID schema optionality (#1041)", () => {
+  /** finding_post schema should accept calls without workspaceId (server auto-injects it). */
+  test("finding_post schema validates without workspaceId", () => {
+    const tool = getTool("finding_post");
+    const result = tool.inputSchema.safeParse({ title: "My finding" });
+    expect(result.success).toBe(true);
+  });
+
+  /** finding_list schema should accept calls without workspaceId. */
+  test("finding_list schema validates without workspaceId", () => {
+    const tool = getTool("finding_list");
+    const result = tool.inputSchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+
+  /** finding_post handler works with workspaceId injected via args (simulating server auto-injection). */
+  test("finding_post succeeds when workspaceId is injected into args", async () => {
+    const tool = getTool("finding_post");
+    const mockClient = {
+      postFinding: vi.fn().mockResolvedValue({
+        id: "f-injected",
+        workspaceId: "ws-auto",
+        category: "insight",
+        title: "Auto-injected workspace",
+        content: "",
+        tags: [],
+        createdAt: "2026-03-27T00:00:00Z",
+      }),
+    } as unknown as GrackleClient;
+
+    // Simulate what mcp-server.ts does: inject workspaceId into args before calling handler
+    const result = await tool.handler(
+      { workspaceId: "ws-auto", title: "Auto-injected workspace" },
+      mockClient,
+      { type: "scoped", taskId: "t-1", workspaceId: "ws-auto", personaId: "p-1", taskSessionId: "s-1" },
+    );
+
+    expect(mockClient.postFinding).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId: "ws-auto" }),
+    );
+    expect(result.isError).toBeUndefined();
+  });
+});
