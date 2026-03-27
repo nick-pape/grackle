@@ -63,6 +63,22 @@ describe("createWebServer", () => {
     expect(server).toBeInstanceOf(http.Server);
   });
 
+  it("returns 200 with status ok at /healthz", async () => {
+    const res = await request(server, "/healthz");
+
+    expect(res.status).toBe(200);
+    expect(JSON.parse(res.body)).toEqual({ status: "ok" });
+  });
+
+  it("returns 200 with default readiness at /readyz when no check provided", async () => {
+    const res = await request(server, "/readyz");
+
+    expect(res.status).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.ready).toBe(true);
+    expect(body.checks).toEqual({});
+  });
+
   it("shows pairing page at /pair when no code provided", async () => {
 
     const res = await request(server, "/pair");
@@ -100,6 +116,79 @@ describe("createWebServer", () => {
     expect(res.status).toBe(302);
     expect(res.headers.location).toBe("/");
     expect(res.headers["set-cookie"]).toBeDefined();
+  });
+});
+
+describe("createWebServer readiness check", () => {
+  let server: http.Server | undefined;
+
+  afterEach(async () => {
+    if (!server) {
+      return;
+    }
+    await new Promise<void>((resolve) => server!.close(() => resolve()));
+  });
+
+  it("returns 200 when readiness check passes", async () => {
+    server = createWebServer({
+      apiKey: "x".repeat(64),
+      webPort: 0,
+      bindHost: "127.0.0.1",
+      readinessCheck: () => ({
+        ready: true,
+        checks: { database: { ok: true } },
+      }),
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+
+    const res = await request(server, "/readyz");
+
+    expect(res.status).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.ready).toBe(true);
+    expect(body.checks.database.ok).toBe(true);
+  });
+
+  it("returns 503 when readiness check throws and server stays up", async () => {
+    server = createWebServer({
+      apiKey: "x".repeat(64),
+      webPort: 0,
+      bindHost: "127.0.0.1",
+      readinessCheck: () => {
+        throw new Error("readiness check exploded");
+      },
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+
+    const first = await request(server, "/readyz");
+    expect(first.status).toBe(503);
+    const body = JSON.parse(first.body);
+    expect(body.ready).toBe(false);
+    expect(body.checks.readinessCheck.ok).toBe(false);
+
+    // Server is still alive after the throw
+    const second = await request(server, "/healthz");
+    expect(second.status).toBe(200);
+  });
+
+  it("returns 503 when readiness check fails", async () => {
+    server = createWebServer({
+      apiKey: "x".repeat(64),
+      webPort: 0,
+      bindHost: "127.0.0.1",
+      readinessCheck: () => ({
+        ready: false,
+        checks: { database: { ok: false, message: "connection lost" } },
+      }),
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+
+    const res = await request(server, "/readyz");
+
+    expect(res.status).toBe(503);
+    const body = JSON.parse(res.body);
+    expect(body.ready).toBe(false);
+    expect(body.checks.database.message).toBe("connection lost");
   });
 });
 

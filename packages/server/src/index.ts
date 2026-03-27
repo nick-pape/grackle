@@ -31,7 +31,7 @@ import {
   startOAuthCleanup, stopOAuthCleanup,
   validateSessionCookie,
 } from "@grackle-ai/auth";
-import { createWebServer, isWildcardAddress } from "@grackle-ai/web-server";
+import { createWebServer, isWildcardAddress, type ReadinessResult } from "@grackle-ai/web-server";
 import { createRequire } from "node:module";
 
 /** Require function for loading optional native modules (qrcode). */
@@ -303,6 +303,19 @@ async function main(): Promise<void> {
     webPort,
     bindHost,
     connectRoutes: registerGrackleRoutes,
+    readinessCheck: (): ReadinessResult => {
+      const checks: ReadinessResult["checks"] = {};
+      try {
+        sqlite!.prepare("SELECT 1").get();
+        checks.database = { ok: true };
+      } catch (err) {
+        checks.database = { ok: false, message: err instanceof Error ? err.message : "unknown error" };
+      }
+      return {
+        ready: Object.values(checks).every((c) => c.ok),
+        checks,
+      };
+    },
   });
 
   // Wire SIGCHLD: notify parent tasks when child sessions reach terminal status
