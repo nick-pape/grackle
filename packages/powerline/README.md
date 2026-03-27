@@ -71,6 +71,15 @@ grackle-powerline --port 9000 --host 0.0.0.0 --token my-secret-token
 
 A token is required by default via `--token` or the `GRACKLE_POWERLINE_TOKEN` environment variable. To run without authentication for local development, pass `--no-auth` explicitly. When `--no-auth` is set, any token from `--token` or the environment variable is ignored.
 
+## Health check
+
+PowerLine exposes a `/healthz` endpoint on the same HTTP/2 port for container health probes. It requires no authentication and returns `200 {"status":"ok"}` with `Cache-Control: no-store`.
+
+```bash
+# Check with Node.js (HTTP/2)
+node -e "require('http2').connect('http://127.0.0.1:7433').request({':path':'/healthz'}).on('response',h=>console.log(h[':status'])).on('data',d=>console.log(d.toString())).end()"
+```
+
 ## Requirements
 
 - Node.js >= 22

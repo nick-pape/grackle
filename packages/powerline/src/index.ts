@@ -86,7 +86,16 @@ function main(): void {
           : [],
       });
 
-      const server = http2.createServer(handler);
+      const server = http2.createServer((req, res) => {
+        // Health probe — no auth, bypasses ConnectRPC
+        if (req.url === "/healthz") {
+          res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+          res.end(JSON.stringify({ status: "ok" }));
+          return;
+        }
+        // All other requests go through ConnectRPC (gRPC)
+        handler(req, res);
+      });
 
       server.on("error", (err: NodeJS.ErrnoException) => {
         if (err.code === "EADDRINUSE") {
