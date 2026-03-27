@@ -7,14 +7,12 @@
 import type { AgentEvent } from '@grackle-ai/runtime-sdk';
 import type { AgentSession } from '@grackle-ai/runtime-sdk';
 import { BaseAgentRuntime } from '@grackle-ai/runtime-sdk';
+import type { CreateSessionOptions } from '@grackle-ai/runtime-sdk';
 
 // @public
 export class ClaudeCodeRuntime extends BaseAgentRuntime {
     // (undocumented)
-    protected createSession(id: string, prompt: string, model: string, maxTurns: number, resumeSessionId?: string, branch?: string, workingDirectory?: string, systemContext?: string, mcpServers?: Record<string, unknown>, hooks?: Record<string, unknown>, mcpBroker?: {
-        url: string;
-        token: string;
-    }, useWorktrees?: boolean): AgentSession;
+    protected createSession(opts: CreateSessionOptions): AgentSession;
     // (undocumented)
     name: string;
 }

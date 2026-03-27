@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { useParams, useLocation } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
+import { useToast } from "../context/ToastContext.js";
 import { EventStream } from "../components/display/EventStream.js";
 import { ChatInput } from "../components/chat/index.js";
 import { FindingsPanel } from "../components/panels/FindingsPanel.js";
@@ -344,6 +345,7 @@ export function TaskPage(): JSX.Element {
   const { taskId, workspaceId: routeWorkspaceId, environmentId: routeEnvironmentId } = useParams<{ taskId: string; workspaceId?: string; environmentId?: string }>();
   const location = useLocation();
   const navigate = useAppNavigate();
+  const { showToast } = useToast();
   const {
     events, eventsDropped, tasks, sessions, environments, findings,
     loadSessionEvents, loadFindings,
@@ -585,6 +587,7 @@ export function TaskPage(): JSX.Element {
                     setIsEditing(false);
                   }
                 }}
+                onShowToast={showToast}
               />
             ) : task ? (
               <TaskOverview task={task} tasksById={tasksById} environments={environments} workspaces={workspaces} taskSessions={currentTaskSessions} selectedEnvId={selectedEnvId} />
@@ -649,6 +652,7 @@ export function TaskPage(): JSX.Element {
             onSpawn={spawn}
             onStartTask={startTask}
             onProvisionEnvironment={provisionEnvironment}
+            onShowToast={showToast}
           />
         );
       })()}

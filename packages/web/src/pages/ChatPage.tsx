@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { ROOT_TASK_ID } from "@grackle-ai/common";
 import { useGrackle } from "../context/GrackleContext.js";
+import { useToast } from "../context/ToastContext.js";
 import { EventStream } from "../components/display/EventStream.js";
 import { ChatInput } from "../components/chat/index.js";
 import { SplitButton } from "../components/display/index.js";
@@ -34,6 +35,7 @@ export function ChatPage(): JSX.Element {
     taskSessions,
     sendInput, spawn, startTask, personas, provisionEnvironment,
   } = useGrackle();
+  const { showToast } = useToast();
 
   const loadedSessionRef = useRef<string | undefined>(undefined);
   const [pendingMessage, setPendingMessage] = useState<string | undefined>();
@@ -146,6 +148,7 @@ export function ChatPage(): JSX.Element {
           onSpawn={spawn}
           onStartTask={startTask}
           onProvisionEnvironment={provisionEnvironment}
+          onShowToast={showToast}
         />
       )}
       {localEnvironment && !isSessionActive && (
@@ -159,6 +162,7 @@ export function ChatPage(): JSX.Element {
           onSpawn={spawn}
           onStartTask={handleStartTask}
           onProvisionEnvironment={provisionEnvironment}
+          onShowToast={showToast}
         />
       )}
     </div>

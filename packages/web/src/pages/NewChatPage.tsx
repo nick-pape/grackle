@@ -1,6 +1,7 @@
 import { type JSX } from "react";
 import { useSearchParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
+import { useToast } from "../context/ToastContext.js";
 import { Breadcrumbs } from "../components/display/index.js";
 import { ChatInput } from "../components/chat/index.js";
 import { buildNewChatBreadcrumbs } from "../utils/breadcrumbs.js";
@@ -12,6 +13,7 @@ export function NewChatPage(): JSX.Element {
   const [searchParams] = useSearchParams();
   const envId = searchParams.get("env") ?? "";
   const { sendInput, spawn, startTask, personas, environments, provisionEnvironment } = useGrackle();
+  const { showToast } = useToast();
 
   return (
     <div className={styles.panelContainer}>
@@ -29,6 +31,7 @@ export function NewChatPage(): JSX.Element {
         onSpawn={spawn}
         onStartTask={startTask}
         onProvisionEnvironment={provisionEnvironment}
+        onShowToast={showToast}
       />
     </div>
   );

@@ -1,12 +1,23 @@
 import type { JSX } from "react";
-import { useThemeContext } from "../../context/ThemeContext.js";
 import { THEMES } from "../../themes.js";
 import styles from "./SettingsPanel.module.scss";
 
-/** Appearance settings panel with theme picker and system preference toggle. */
-export function AppearancePanel(): JSX.Element {
-  const { themeId, resolvedThemeId, setTheme, preferSystem, setPreferSystem } = useThemeContext();
+/** Props for the AppearancePanel component. */
+export interface AppearancePanelProps {
+  /** The user's chosen theme ID. */
+  themeId: string;
+  /** The resolved data-theme value after system preference. */
+  resolvedThemeId: string;
+  /** Set a new theme by ID. */
+  onSetTheme: (nextId: string) => void;
+  /** Whether the theme follows the OS light/dark preference. */
+  preferSystem: boolean;
+  /** Toggle the OS preference behavior. */
+  onSetPreferSystem: (prefer: boolean) => void;
+}
 
+/** Appearance settings panel with theme picker and system preference toggle. */
+export function AppearancePanel({ themeId, resolvedThemeId, onSetTheme, preferSystem, onSetPreferSystem }: AppearancePanelProps): JSX.Element {
   return (
     <section className={styles.section}>
       <h3 className={styles.sectionTitle}>Appearance</h3>
@@ -26,7 +37,7 @@ export function AppearancePanel(): JSX.Element {
               type="button"
               className={`${styles.themeOption} ${isSelected ? styles.themeOptionSelected : ""}`}
               aria-pressed={isSelected}
-              onClick={() => setTheme(t.id)}
+              onClick={() => onSetTheme(t.id)}
             >
               <span className={styles.themeOptionHeader}>
                 <span>
@@ -39,8 +50,8 @@ export function AppearancePanel(): JSX.Element {
                       role="button"
                       tabIndex={0}
                       className={`${styles.variantButton} ${isSelected && isLight ? styles.variantActive : ""}`}
-                      onClick={(e) => { e.stopPropagation(); setPreferSystem(false); setTheme(t.variantLightId!); }}
-                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setPreferSystem(false); setTheme(t.variantLightId!); } }}
+                      onClick={(e) => { e.stopPropagation(); onSetPreferSystem(false); onSetTheme(t.variantLightId!); }}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onSetPreferSystem(false); onSetTheme(t.variantLightId!); } }}
                       aria-label="Light variant"
                       aria-pressed={isSelected && isLight}
                     >&#9788;</span>
@@ -48,8 +59,8 @@ export function AppearancePanel(): JSX.Element {
                       role="button"
                       tabIndex={0}
                       className={`${styles.variantButton} ${isSelected && !isLight ? styles.variantActive : ""}`}
-                      onClick={(e) => { e.stopPropagation(); setPreferSystem(false); setTheme(t.variantDarkId!); }}
-                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setPreferSystem(false); setTheme(t.variantDarkId!); } }}
+                      onClick={(e) => { e.stopPropagation(); onSetPreferSystem(false); onSetTheme(t.variantDarkId!); }}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onSetPreferSystem(false); onSetTheme(t.variantDarkId!); } }}
                       aria-label="Dark variant"
                       aria-pressed={isSelected && !isLight}
                     >&#9790;</span>
@@ -71,7 +82,7 @@ export function AppearancePanel(): JSX.Element {
         <input
           type="checkbox"
           checked={preferSystem}
-          onChange={(e) => setPreferSystem(e.target.checked)}
+          onChange={(e) => onSetPreferSystem(e.target.checked)}
         />
         <span>Match system light/dark preference</span>
       </label>

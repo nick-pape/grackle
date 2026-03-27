@@ -38,6 +38,34 @@ export interface ResumeOptions {
   runtimeSessionId: string;
 }
 
+/** Options for creating an agent session (used by BaseAgentRuntime.createSession and BaseAgentSession constructor). */
+export interface CreateSessionOptions {
+  /** Session identifier. */
+  id: string;
+  /** Initial prompt text. */
+  prompt: string;
+  /** LLM model identifier. */
+  model: string;
+  /** Maximum turns (0 = unlimited). */
+  maxTurns: number;
+  /** Runtime session ID to resume (undefined for new sessions). */
+  resumeSessionId?: string;
+  /** Git branch name. */
+  branch?: string;
+  /** Working directory for the agent. */
+  workingDirectory?: string;
+  /** Whether to use git worktrees for isolation. */
+  useWorktrees?: boolean;
+  /** System context prepended to the prompt. */
+  systemContext?: string;
+  /** MCP server configurations to pass to the agent SDK. */
+  mcpServers?: Record<string, unknown>;
+  /** SDK hook callbacks (e.g. Stop hooks). Only supported by the Claude Code runtime; other runtimes ignore this field. */
+  hooks?: Record<string, unknown>;
+  /** MCP broker connection details. Both url and token must be present together. */
+  mcpBroker?: { url: string; token: string };
+}
+
 /** Handle for an in-progress agent session with streaming, input, and kill capabilities. */
 export interface AgentSession {
   id: string;

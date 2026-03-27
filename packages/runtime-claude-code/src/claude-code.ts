@@ -1,4 +1,4 @@
-import type { AgentEvent, AgentSession } from "@grackle-ai/runtime-sdk";
+import type { AgentEvent, AgentSession, CreateSessionOptions } from "@grackle-ai/runtime-sdk";
 import { BaseAgentSession, BaseAgentRuntime, AsyncQueue, resolveWorkingDirectory, resolveMcpServers, logger, ensureRuntimeInstalled, importFromRuntime } from "@grackle-ai/runtime-sdk";
 import { accessSync, mkdirSync, copyFileSync, chmodSync, constants as fsConstants } from "node:fs";
 import { join } from "node:path";
@@ -543,20 +543,7 @@ function isDirectoryWritable(dir: string): boolean {
 export class ClaudeCodeRuntime extends BaseAgentRuntime {
   public name: string = "claude-code";
 
-  protected createSession(
-    id: string,
-    prompt: string,
-    model: string,
-    maxTurns: number,
-    resumeSessionId?: string,
-    branch?: string,
-    workingDirectory?: string,
-    systemContext?: string,
-    mcpServers?: Record<string, unknown>,
-    hooks?: Record<string, unknown>,
-    mcpBroker?: { url: string; token: string },
-    useWorktrees?: boolean,
-  ): AgentSession {
-    return new ClaudeCodeSession(id, prompt, model, maxTurns, resumeSessionId, branch, workingDirectory, systemContext, mcpServers, hooks, mcpBroker, useWorktrees);
+  protected createSession(opts: CreateSessionOptions): AgentSession {
+    return new ClaudeCodeSession(opts);
   }
 }

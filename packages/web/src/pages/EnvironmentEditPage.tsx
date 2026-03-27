@@ -1,6 +1,7 @@
 import { type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
+import { useToast } from "../context/ToastContext.js";
 import { EnvironmentEditPanel } from "../components/panels/EnvironmentEditPanel.js";
 
 /** Page shown when editing an existing environment. */
@@ -10,6 +11,7 @@ export function EnvironmentEditPage(): JSX.Element {
     environments, addEnvironment, updateEnvironment, listCodespaces,
     codespaces, codespaceError, codespaceListError, codespaceCreating, createCodespace,
   } = useGrackle();
+  const { showToast } = useToast();
 
   return (
     <EnvironmentEditPanel
@@ -24,6 +26,7 @@ export function EnvironmentEditPage(): JSX.Element {
       codespaceListError={codespaceListError}
       codespaceCreating={codespaceCreating}
       onCreateCodespace={createCodespace}
+      onShowToast={showToast}
     />
   );
 }

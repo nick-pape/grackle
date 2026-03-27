@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 27 Mar 2026 05:00:06 GMT and should not be manually modified.
+This log was last generated on Fri, 27 Mar 2026 05:31:41 GMT and should not be manually modified.
+
+## 0.84.1
+Fri, 27 Mar 2026 05:31:41 GMT
+
+### Patches
+
+- Lift context hooks (useToast, useThemeContext, useSidebarContent) out of 8 components into props for component library extraction
 
 ## 0.84.0
 Fri, 27 Mar 2026 05:00:06 GMT

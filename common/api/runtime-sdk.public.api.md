@@ -61,10 +61,7 @@ export class AsyncQueue<T> {
 
 // @public
 export abstract class BaseAgentRuntime implements AgentRuntime {
-    protected abstract createSession(id: string, prompt: string, model: string, maxTurns: number, resumeSessionId?: string, branch?: string, workingDirectory?: string, systemContext?: string, mcpServers?: Record<string, unknown>, hooks?: Record<string, unknown>, mcpBroker?: {
-        url: string;
-        token: string;
-    }, useWorktrees?: boolean): AgentSession;
+    protected abstract createSession(opts: CreateSessionOptions): AgentSession;
     // (undocumented)
     abstract name: string;
     resume(opts: ResumeOptions): AgentSession;
@@ -74,10 +71,7 @@ export abstract class BaseAgentRuntime implements AgentRuntime {
 
 // @public
 export abstract class BaseAgentSession implements AgentSession {
-    constructor(id: string, prompt: string, model: string, maxTurns: number, resumeSessionId?: string, branch?: string, workingDirectory?: string, systemContext?: string, mcpServers?: Record<string, unknown>, hooks?: Record<string, unknown>, mcpBroker?: {
-        url: string;
-        token: string;
-    }, useWorktrees?: boolean);
+    constructor(opts: CreateSessionOptions);
     protected abstract abortActive(): void;
     // (undocumented)
     protected readonly branch?: string;
@@ -140,6 +134,25 @@ export interface BrokerConfig {
 
 // @public
 export function convertMcpServers(servers: Record<string, unknown> | undefined): Record<string, unknown>[];
+
+// @public
+export interface CreateSessionOptions {
+    branch?: string;
+    hooks?: Record<string, unknown>;
+    id: string;
+    maxTurns: number;
+    mcpBroker?: {
+        url: string;
+        token: string;
+    };
+    mcpServers?: Record<string, unknown>;
+    model: string;
+    prompt: string;
+    resumeSessionId?: string;
+    systemContext?: string;
+    useWorktrees?: boolean;
+    workingDirectory?: string;
+}
 
 // @public
 export function ensureRuntimeInstalled(runtimeName: string, options?: RuntimeInstallOptions): Promise<string>;

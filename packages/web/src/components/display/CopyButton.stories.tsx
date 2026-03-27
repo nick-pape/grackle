@@ -11,10 +11,7 @@ const meta: Meta<typeof CopyButton> = {
       // navigator.clipboard is a read-only getter in Chromium, so
       // Object.assign fails; use defineProperty to override it.
       Object.defineProperty(navigator, "clipboard", {
-        value: {
-          writeText: fn().mockResolvedValue(undefined),
-          write: fn().mockResolvedValue(undefined),
-        },
+        value: { writeText: fn().mockResolvedValue(undefined) },
         writable: true,
         configurable: true,
       });
@@ -36,31 +33,35 @@ export const Default: Story = {
   },
 };
 
-export const ClickShowsCheckmark: Story = {
-  name: "Click toggles to checkmark and reverts",
+export const CopiesCorrectText: Story = {
+  name: "Click copies text and shows checkmark",
   args: {
-    text: "Some text to copy",
+    text: "# Hello\n\nSome **bold** markdown",
   },
   play: async ({ canvas }) => {
     const button = canvas.getByTestId("copy-button");
     await userEvent.click(button);
-    await expect(button).toHaveTextContent("\u2713");
-    // Wait for the checkmark to revert after COPIED_FEEDBACK_DURATION (2s)
-    await waitFor(() => expect(button).toHaveTextContent("\uD83D\uDCCB"), { timeout: 3000 });
+    // Wait for async clipboard write and state update
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- mock fn assigned by decorator
+    const writeTextMock = navigator.clipboard.writeText;
+    await waitFor(async () => {
+      await expect(button).toHaveTextContent("\u2713");
+      await expect(writeTextMock).toHaveBeenCalledWith("# Hello\n\nSome **bold** markdown");
+    });
   },
 };
 
-export const WithGetHtml: Story = {
-  name: "Rich copy (getHtml callback)",
+export const CheckmarkReverts: Story = {
+  name: "Checkmark reverts after 2 seconds",
   args: {
-    text: "# Hello\n\nSome **bold** text",
-    getHtml: () => "<h1>Hello</h1><p>Some <strong>bold</strong> text</p>",
+    text: "revert test",
   },
   play: async ({ canvas }) => {
     const button = canvas.getByTestId("copy-button");
     await userEvent.click(button);
-    // Checkmark proves the copy succeeded (rich copy via getHtml callback)
-    await expect(button).toHaveTextContent("\u2713");
+    await waitFor(() => expect(button).toHaveTextContent("\u2713"));
+    // Wait for the checkmark to revert after COPIED_FEEDBACK_DURATION (2s)
+    await waitFor(() => expect(button).toHaveTextContent("\uD83D\uDCCB"), { timeout: 3000 });
   },
 };
 

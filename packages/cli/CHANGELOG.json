@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.84.1",
+      "tag": "@grackle-ai/cli_v0.84.1",
+      "date": "Fri, 27 Mar 2026 05:31:41 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Lift context hooks (useToast, useThemeContext, useSidebarContent) out of 8 components into props for component library extraction"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.84.0",
       "tag": "@grackle-ai/cli_v0.84.0",
       "date": "Fri, 27 Mar 2026 05:00:06 GMT",

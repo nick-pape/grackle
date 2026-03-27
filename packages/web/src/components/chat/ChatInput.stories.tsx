@@ -15,6 +15,7 @@ const meta: Meta<typeof ChatInput> = {
     onSpawn: fn(),
     onStartTask: fn(),
     onProvisionEnvironment: fn(),
+    onShowToast: fn(),
   },
 };
 export default meta;

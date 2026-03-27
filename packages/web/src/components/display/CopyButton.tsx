@@ -6,10 +6,8 @@ const COPIED_FEEDBACK_DURATION: number = 2000;
 
 /** Props for the CopyButton component. */
 interface CopyButtonProps {
-  /** Plain text to copy (used as text/plain MIME type). */
+  /** Plain text to copy to the clipboard. */
   text: string;
-  /** Optional callback that returns HTML at click time (lazy evaluation avoids stale ref issues). */
-  getHtml?: () => string | undefined;
   /** Additional CSS class name for positioning variants. */
   className?: string;
   /** Test ID for Storybook and E2E tests. */
@@ -17,27 +15,12 @@ interface CopyButtonProps {
 }
 
 /**
- * Writes both rich (HTML) and plain text to the clipboard.
- *
- * When pasting into a rich editor (Slack, Google Docs), the HTML version is used.
- * When pasting into a plain text editor (VS Code, terminal), the plain text is used.
- */
-async function richCopy(text: string, html: string): Promise<void> {
-  const item = new ClipboardItem({
-    "text/html": new Blob([html], { type: "text/html" }),
-    "text/plain": new Blob([text], { type: "text/plain" }),
-  });
-  await navigator.clipboard.write([item]);
-}
-
-/**
  * Small copy-to-clipboard button with visual feedback.
  *
  * Shows a clipboard emoji by default, switches to a checkmark on click,
- * then reverts after 2 seconds. Supports both plain text and rich (HTML + text)
- * clipboard writes.
+ * then reverts after 2 seconds.
  */
-export function CopyButton({ text, getHtml, className, "data-testid": testId }: CopyButtonProps): JSX.Element {
+export function CopyButton({ text, className, "data-testid": testId }: CopyButtonProps): JSX.Element {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -51,17 +34,7 @@ export function CopyButton({ text, getHtml, className, "data-testid": testId }: 
 
   const handleClick = useCallback(async (): Promise<void> => {
     try {
-      const html = getHtml?.();
-      if (html) {
-        try {
-          await richCopy(text, html);
-        } catch {
-          // Rich copy unsupported (e.g. ClipboardItem not available) — fall back to plain text
-          await navigator.clipboard.writeText(text);
-        }
-      } else {
-        await navigator.clipboard.writeText(text);
-      }
+      await navigator.clipboard.writeText(text);
       setCopied(true);
       if (timerRef.current !== undefined) {
         clearTimeout(timerRef.current);
@@ -71,9 +44,9 @@ export function CopyButton({ text, getHtml, className, "data-testid": testId }: 
         timerRef.current = undefined;
       }, COPIED_FEEDBACK_DURATION);
     } catch {
-      /* clipboard API entirely unavailable — fail silently */
+      /* clipboard API unavailable — fail silently */
     }
-  }, [text, getHtml]);
+  }, [text]);
 
   return (
     <button
