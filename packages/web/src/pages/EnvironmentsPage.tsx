@@ -1,7 +1,6 @@
 import { type JSX } from "react";
 import { Outlet } from "react-router";
-import { Breadcrumbs } from "@grackle-ai/web-components";
-import { buildEnvironmentsBreadcrumbs } from "@grackle-ai/web-components";
+import { Breadcrumbs, buildEnvironmentsBreadcrumbs } from "@grackle-ai/web-components";
 import styles from "./SettingsPage.module.scss";
 
 /** Environments hub page with breadcrumbs and routed content area. */

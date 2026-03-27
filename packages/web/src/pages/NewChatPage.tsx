@@ -1,10 +1,7 @@
 import { type JSX } from "react";
 import { useSearchParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
-import { useToast } from "@grackle-ai/web-components";
-import { Breadcrumbs } from "@grackle-ai/web-components";
-import { ChatInput } from "@grackle-ai/web-components";
-import { buildNewChatBreadcrumbs } from "@grackle-ai/web-components";
+import { Breadcrumbs, ChatInput, buildNewChatBreadcrumbs, useToast } from "@grackle-ai/web-components";
 import styles from "@grackle-ai/web-components/src/components/panels/SessionPanel.module.scss";
 
 /** Page shown when starting a new chat session. */

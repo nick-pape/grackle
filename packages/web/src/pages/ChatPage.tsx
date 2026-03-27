@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { ROOT_TASK_ID } from "@grackle-ai/common";
 import { useGrackle } from "../context/GrackleContext.js";
-import { useToast } from "@grackle-ai/web-components";
-import { EventStream } from "@grackle-ai/web-components";
-import { ChatInput } from "@grackle-ai/web-components";
-import { SplitButton } from "@grackle-ai/web-components";
-import { groupConsecutiveTextEvents, pairToolEvents } from "@grackle-ai/web-components";
+import { ChatInput, EventStream, SplitButton, groupConsecutiveTextEvents, pairToolEvents, useToast } from "@grackle-ai/web-components";
 import styles from "./ChatPage.module.scss";
 
 /** Empty state shown when no session is active. */

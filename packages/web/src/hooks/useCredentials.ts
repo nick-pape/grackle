@@ -8,8 +8,8 @@
  */
 
 import { useState, useCallback } from "react";
-import type { CredentialProviderConfig, GrackleEvent } from "@grackle-ai/web-components";
 import { isCredentialProviderConfig } from "@grackle-ai/web-components";
+import type { CredentialProviderConfig, GrackleEvent } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToCredentialConfig } from "./proto-converters.js";
 

@@ -8,8 +8,8 @@
  */
 
 import { useState, useCallback } from "react";
-import type { Environment, ProvisionStatus, GrackleEvent, WsMessage } from "@grackle-ai/web-components";
 import { warnBadPayload } from "@grackle-ai/web-components";
+import type { Environment, GrackleEvent, ProvisionStatus, WsMessage } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToEnvironment } from "./proto-converters.js";
 

@@ -1,13 +1,7 @@
 import { useEffect, useMemo, useRef, type JSX } from "react";
 import { motion, type Variants } from "motion/react";
 import { useGrackle } from "../context/GrackleContext.js";
-import {
-  computeKpis,
-  getActiveSessions,
-  getAttentionTasks,
-  getWorkspaceSnapshots,
-} from "@grackle-ai/web-components";
-import { sessionUrl, taskUrl, workspaceUrl, useAppNavigate } from "@grackle-ai/web-components";
+import { computeKpis, getActiveSessions, getAttentionTasks, getWorkspaceSnapshots, sessionUrl, taskUrl, useAppNavigate, workspaceUrl } from "@grackle-ai/web-components";
 import styles from "./DashboardPage.module.scss";
 
 // ─── Animation variants ─────────────────────────────────────────────────────

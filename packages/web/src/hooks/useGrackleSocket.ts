@@ -7,7 +7,7 @@
  */
 
 import { useCallback, useState } from "react";
-import type { GrackleEvent, UsageStats } from "@grackle-ai/web-components";
+import type { GrackleEvent, UsageStats, UseGrackleSocketResult } from "@grackle-ai/web-components";
 import { useEventStream } from "./useEventStream.js";
 import { eventTypeToString } from "@grackle-ai/common";
 import { useEnvironments } from "./useEnvironments.js";
@@ -48,7 +48,6 @@ export { isGrackleEvent } from "@grackle-ai/web-components";
 // ─── Result interface ─────────────────────────────────────────────────────────
 
 export type { UseGrackleSocketResult } from "@grackle-ai/web-components";
-import type { UseGrackleSocketResult } from "@grackle-ai/web-components";
 
 // ─── Composition hook ─────────────────────────────────────────────────────────
 
