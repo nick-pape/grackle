@@ -16,3 +16,17 @@ export function getTraceId(): string | undefined {
 export function runWithTrace<T>(traceId: string, fn: () => T): T {
   return store.run({ traceId }, fn);
 }
+
+/** Maximum length for a trace ID to prevent log bloat. */
+const MAX_TRACE_ID_LENGTH: number = 128;
+
+/** Allowed character set for trace IDs: alphanumeric, hyphens, underscores, dots. */
+const TRACE_ID_PATTERN: RegExp = /^[A-Za-z0-9_.-]+$/;
+
+/** Validate that a trace ID is non-empty, within length limits, and uses safe characters. */
+export function isValidTraceId(value: string | undefined): boolean {
+  return typeof value === "string"
+    && value.length > 0
+    && value.length <= MAX_TRACE_ID_LENGTH
+    && TRACE_ID_PATTERN.test(value);
+}

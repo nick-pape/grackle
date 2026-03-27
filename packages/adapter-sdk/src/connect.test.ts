@@ -76,17 +76,25 @@ describe("waitForLocalPort", () => {
   });
 });
 
+/** Compose interceptors into a single handler using reduceRight (same as ConnectRPC). */
+function composeInterceptors(
+  interceptors: Array<(next: (req: unknown) => Promise<unknown>) => (req: unknown) => Promise<unknown>>,
+  terminal: (req: unknown) => Promise<unknown>,
+): (req: unknown) => Promise<unknown> {
+  return interceptors.reduceRight<(req: unknown) => Promise<unknown>>(
+    (next, interceptor) => (req) => interceptor(() => next(req))(req),
+    terminal,
+  );
+}
+
 describe("createPowerLineClient x-trace-id header", () => {
   it("sets x-trace-id header when traceId is provided", async () => {
     createPowerLineClient("http://127.0.0.1:7433", "test-token", "trace-abc");
 
-    // The transport should have interceptors
     const args = capturedTransportArgs[0];
     expect(args.interceptors).toBeDefined();
 
-    // Simulate an interceptor call to verify x-trace-id is set
     const interceptors = args.interceptors as Array<(next: (req: unknown) => Promise<unknown>) => (req: unknown) => Promise<unknown>>;
-
     const headers = new Map<string, string>();
     const mockReq = {
       header: {
@@ -94,22 +102,22 @@ describe("createPowerLineClient x-trace-id header", () => {
         get: (key: string) => headers.get(key),
       },
     };
-    const mockNext = vi.fn(async (req: unknown) => req);
+    const terminal = vi.fn(async (req: unknown) => req);
 
-    // Run all interceptors in chain
-    for (const interceptor of interceptors) {
-      const wrappedNext = interceptor(mockNext);
-      await wrappedNext(mockReq);
-    }
+    // Compose and invoke the full chain once
+    const handler = composeInterceptors(interceptors, terminal);
+    await handler(mockReq);
 
+    expect(terminal).toHaveBeenCalledTimes(1);
     expect(headers.get("x-trace-id")).toBe("trace-abc");
+    expect(headers.get("Authorization")).toBe("Bearer test-token");
   });
 
   it("does not set x-trace-id header when traceId is omitted", async () => {
     createPowerLineClient("http://127.0.0.1:7433", "test-token");
 
     const args = capturedTransportArgs[0];
-
+    const interceptors = (args.interceptors || []) as Array<(next: (req: unknown) => Promise<unknown>) => (req: unknown) => Promise<unknown>>;
     const headers = new Map<string, string>();
     const mockReq = {
       header: {
@@ -117,16 +125,13 @@ describe("createPowerLineClient x-trace-id header", () => {
         get: (key: string) => headers.get(key),
       },
     };
-    const mockNext = vi.fn(async (req: unknown) => req);
+    const terminal = vi.fn(async (req: unknown) => req);
 
-    // Run all interceptors
-    if (args.interceptors) {
-      for (const interceptor of args.interceptors as Array<(next: (req: unknown) => Promise<unknown>) => (req: unknown) => Promise<unknown>>) {
-        const wrappedNext = interceptor(mockNext);
-        await wrappedNext(mockReq);
-      }
-    }
+    const handler = composeInterceptors(interceptors, terminal);
+    await handler(mockReq);
 
+    expect(terminal).toHaveBeenCalledTimes(1);
     expect(headers.has("x-trace-id")).toBe(false);
+    expect(headers.get("Authorization")).toBe("Bearer test-token");
   });
 });

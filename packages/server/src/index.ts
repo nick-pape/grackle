@@ -14,7 +14,7 @@ import {
   ReconciliationManager, createCronPhase, createOrphanPhase, findFirstConnectedEnvironment, lifecycleCleanupPhase,
   initOrphanReparentSubscriber,
   logger, exec, detectLanIp,
-  runWithTrace,
+  runWithTrace, isValidTraceId,
 } from "@grackle-ai/core";
 import { envRegistry, sessionStore, workspaceStore, taskStore, scheduleStore, personaStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome } from "@grackle-ai/database";
 import { DockerAdapter } from "@grackle-ai/adapter-docker";
@@ -273,7 +273,8 @@ async function main(): Promise<void> {
     interceptors: [
       // Trace ID interceptor: extract or generate a trace ID for request correlation.
       (next) => (req) => {
-        const traceId = req.header.get("x-trace-id") || randomUUID();
+        const rawTraceId = req.header.get("x-trace-id") ?? undefined;
+        const traceId = isValidTraceId(rawTraceId) ? rawTraceId! : randomUUID();
         return runWithTrace(traceId, () => next(req));
       },
       // Auth interceptor: validate Bearer token.

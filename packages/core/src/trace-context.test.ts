@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getTraceId, runWithTrace } from "./trace-context.js";
+import { getTraceId, runWithTrace, isValidTraceId } from "./trace-context.js";
 
 describe("trace-context", () => {
   describe("getTraceId()", () => {
@@ -79,6 +79,40 @@ describe("trace-context", () => {
         // context active
       });
       expect(getTraceId()).toBeUndefined();
+    });
+  });
+
+  describe("isValidTraceId()", () => {
+    it("accepts a valid UUID", () => {
+      expect(isValidTraceId("550e8400-e29b-41d4-a716-446655440000")).toBe(true);
+    });
+
+    it("accepts alphanumeric with hyphens, underscores, dots", () => {
+      expect(isValidTraceId("trace_123.abc-def")).toBe(true);
+    });
+
+    it("rejects undefined", () => {
+      expect(isValidTraceId(undefined)).toBe(false);
+    });
+
+    it("rejects empty string", () => {
+      expect(isValidTraceId("")).toBe(false);
+    });
+
+    it("rejects strings exceeding max length", () => {
+      expect(isValidTraceId("a".repeat(129))).toBe(false);
+    });
+
+    it("accepts strings at max length", () => {
+      expect(isValidTraceId("a".repeat(128))).toBe(true);
+    });
+
+    it("rejects strings with spaces", () => {
+      expect(isValidTraceId("trace id")).toBe(false);
+    });
+
+    it("rejects strings with special characters", () => {
+      expect(isValidTraceId("trace<script>")).toBe(false);
     });
   });
 });

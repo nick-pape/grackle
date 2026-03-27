@@ -15,7 +15,7 @@ import { AcpRuntime } from "@grackle-ai/runtime-acp";
 import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
 import { createRequire } from "node:module";
 import { logger } from "./logger.js";
-import { runWithTrace } from "./trace-context.js";
+import { runWithTrace, isValidTraceId } from "./trace-context.js";
 
 const esmRequire: NodeRequire = createRequire(import.meta.url);
 const { version } = esmRequire("../package.json") as { version: string };
@@ -72,7 +72,8 @@ function main(): void {
       const interceptors: Interceptor[] = [
         // Trace ID interceptor: extract or generate a trace ID for request correlation.
         (next) => (req) => {
-          const traceId = req.header.get("x-trace-id") || randomUUID();
+          const rawTraceId = req.header.get("x-trace-id") ?? undefined;
+          const traceId = isValidTraceId(rawTraceId) ? rawTraceId! : randomUUID();
           return runWithTrace(traceId, () => next(req));
         },
       ];

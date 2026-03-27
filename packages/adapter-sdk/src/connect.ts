@@ -68,8 +68,9 @@ export async function connectThroughTunnel(
   localPort: number,
   powerlineToken: string,
   logger: AdapterLogger = defaultLogger,
+  traceId?: string,
 ): Promise<PowerLineConnection> {
-  const client = createPowerLineClient(`http://127.0.0.1:${localPort}`, powerlineToken);
+  const client = createPowerLineClient(`http://127.0.0.1:${localPort}`, powerlineToken, traceId);
 
   let lastError: unknown;
   for (let attempt = 0; attempt < CONNECT_MAX_RETRIES; attempt++) {
