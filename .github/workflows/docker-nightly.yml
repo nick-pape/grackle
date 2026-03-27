@@ -21,7 +21,14 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      - uses: docker/login-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -35,12 +42,21 @@ jobs:
             type=raw,value=latest
             type=raw,value=nightly-{{date 'YYYYMMDD'}}
 
-      - uses: docker/build-push-action@v5
+      # Resolve the actual published version so the Docker layer cache
+      # busts when a new @grackle-ai/cli is published, while heavy
+      # system-dep layers (apt, Neo4j, Java, etc.) stay cached.
+      - name: Resolve latest Grackle version
+        id: version
+        run: echo "version=$(npm view @grackle-ai/cli version)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/Dockerfile.server
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          no-cache: true  # Always pull fresh @latest npm packages
-          pull: true       # Always pull fresh base images
+          build-args: GRACKLE_VERSION=${{ steps.version.outputs.version }}
+          pull: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
