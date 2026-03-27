@@ -23,6 +23,8 @@ One platform to run [Claude Code](https://docs.anthropic.com/en/docs/agents-and-
 
 ![Dashboard — active sessions, task triage, environment health, and workspaces](screenshots/dashboard-projects-tasks.png)
 
+> **[Try the interactive demo](https://nick-pape.github.io/grackle/demo/)** — no install required. Explore the full UI with realistic mock data.
+
 ## What makes Grackle different
 
 **Agent IPC** — Parent sessions spawn children with bidirectional pipes. Structured communication between agents — no polling, no shared files, no prompt-stuffing.
@@ -30,8 +32,6 @@ One platform to run [Claude Code](https://docs.anthropic.com/en/docs/agents-and-
 **Knowledge persistence** — A semantic knowledge graph backed by Neo4j. One agent's architectural insight becomes another agent's context automatically. Search by concept, not keyword.
 
 **Session resilience** — Environments auto-reconnect on disconnect. Suspended sessions resume where they left off. Events buffer during outages and drain on reconnect. No lost work.
-
-**Scoped security** — Each agent gets a scoped MCP token with an allowlist of tools. A "Code Reviewer" persona can read code and post findings but can't write files or spawn sessions. Credentials are forwarded per-environment, never stored in prompts.
 
 **Multi-vendor, one interface** — Swap runtimes per persona or per task. Your orchestration doesn't break when you switch from Claude to Codex or add Copilot as a second opinion.
 
@@ -90,9 +90,9 @@ Each agent runs inside an isolated environment. Connect one or many:
 
 ### Themes
 
-10 built-in themes — Grackle, Grackle Light, Glassmorphism, Matrix, Neubrutalism, Monokai, Ubuntu, Sandstone, Verdigris, and Primer.
+10 built-in themes — Grackle, Grackle Light, Glassmorphism, Matrix, Neubrutalism, Monokai, Ubuntu, Sandstone, Verdigris, and Primer. Switch in Settings or match your system preference.
 
-![Themes — 10 built-in themes with light/dark variants](screenshots/theme-grid.png)
+![Themes — Grackle, Matrix, Grackle Light, Sandstone](screenshots/theme-grid.png)
 
 ## Features
 
