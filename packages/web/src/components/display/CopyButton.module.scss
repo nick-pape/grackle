@@ -28,6 +28,13 @@
     background: var(--bg-overlay);
   }
 
+  &:focus-visible {
+    opacity: 1 !important;
+    outline: 2px solid var(--accent-blue);
+    outline-offset: 2px;
+    background: var(--bg-overlay);
+  }
+
   @include mobile {
     opacity: 0.5;
   }

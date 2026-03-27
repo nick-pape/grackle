@@ -8,8 +8,8 @@ const COPIED_FEEDBACK_DURATION: number = 2000;
 interface CopyButtonProps {
   /** Plain text to copy (used as text/plain MIME type). */
   text: string;
-  /** Optional HTML to copy (used as text/html MIME type for rich paste). */
-  html?: string;
+  /** Optional callback that returns HTML at click time (lazy evaluation avoids stale ref issues). */
+  getHtml?: () => string | undefined;
   /** Additional CSS class name for positioning variants. */
   className?: string;
   /** Test ID for Storybook and E2E tests. */
@@ -37,7 +37,7 @@ async function richCopy(text: string, html: string): Promise<void> {
  * then reverts after 2 seconds. Supports both plain text and rich (HTML + text)
  * clipboard writes.
  */
-export function CopyButton({ text, html, className, "data-testid": testId }: CopyButtonProps): JSX.Element {
+export function CopyButton({ text, getHtml, className, "data-testid": testId }: CopyButtonProps): JSX.Element {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -51,6 +51,7 @@ export function CopyButton({ text, html, className, "data-testid": testId }: Cop
 
   const handleClick = useCallback(async (): Promise<void> => {
     try {
+      const html = getHtml?.();
       if (html) {
         await richCopy(text, html);
       } else {
@@ -67,7 +68,7 @@ export function CopyButton({ text, html, className, "data-testid": testId }: Cop
     } catch {
       /* clipboard API unavailable — fail silently */
     }
-  }, [text, html]);
+  }, [text, getHtml]);
 
   return (
     <button

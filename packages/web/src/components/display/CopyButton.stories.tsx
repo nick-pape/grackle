@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, fn } from "@storybook/test";
+import { expect, userEvent, fn, waitFor } from "@storybook/test";
 import { CopyButton } from "./CopyButton.js";
 
 const meta: Meta<typeof CopyButton> = {
@@ -37,7 +37,7 @@ export const Default: Story = {
 };
 
 export const ClickShowsCheckmark: Story = {
-  name: "Click toggles to checkmark",
+  name: "Click toggles to checkmark and reverts",
   args: {
     text: "Some text to copy",
   },
@@ -45,19 +45,24 @@ export const ClickShowsCheckmark: Story = {
     const button = canvas.getByTestId("copy-button");
     await userEvent.click(button);
     await expect(button).toHaveTextContent("\u2713");
+    // Wait for the checkmark to revert after COPIED_FEEDBACK_DURATION (2s)
+    await waitFor(() => expect(button).toHaveTextContent("\uD83D\uDCCB"), { timeout: 3000 });
   },
 };
 
-export const WithHtml: Story = {
-  name: "Rich copy (HTML + plain text)",
+export const WithGetHtml: Story = {
+  name: "Rich copy (getHtml callback)",
   args: {
     text: "# Hello\n\nSome **bold** text",
-    html: "<h1>Hello</h1><p>Some <strong>bold</strong> text</p>",
+    getHtml: () => "<h1>Hello</h1><p>Some <strong>bold</strong> text</p>",
   },
   play: async ({ canvas }) => {
     const button = canvas.getByTestId("copy-button");
     await userEvent.click(button);
     await expect(button).toHaveTextContent("\u2713");
+    // Verify rich copy was used (navigator.clipboard.write, not writeText)
+    const writeFn = navigator.clipboard.write.bind(navigator.clipboard);
+    await expect(writeFn).toHaveBeenCalled();
   },
 };
 

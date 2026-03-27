@@ -113,7 +113,10 @@ export function FileEditCard({ tool, args, result, isError, detailedResult }: To
         )}
         {!inProgress && !isError && (diffLines || result) && (
           <CopyButton
-            text={diffLines ? diffLines.map((l) => l.content).join("\n") : result!}
+            text={diffLines ? diffLines.map((l) => {
+              const prefix = l.type === "add" ? "+" : l.type === "remove" ? "-" : l.type === "header" ? "" : " ";
+              return `${prefix}${l.content}`;
+            }).join("\n") : result!}
             data-testid="tool-card-copy"
             className={styles.copyButtonInline}
           />
