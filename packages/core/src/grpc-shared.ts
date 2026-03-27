@@ -3,11 +3,13 @@ import { create } from "@bufbuild/protobuf";
 import { grackle, powerline } from "@grackle-ai/common";
 import {
   MAX_TASK_DEPTH,
+  ROOT_TASK_ID,
   SESSION_STATUS,
   TERMINAL_SESSION_STATUSES,
   type SessionStatus,
   END_REASON,
 } from "@grackle-ai/common";
+import { transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
 import type { SessionRow } from "@grackle-ai/database";
 import { sessionStore, taskStore } from "@grackle-ai/database";
 import * as adapterManager from "./adapter-manager.js";
@@ -112,6 +114,17 @@ export function killSessionAndCleanup(session: SessionRow): void {
     ).catch((err: unknown) => {
       logger.debug({ err, sessionId: session.id }, "PowerLine kill failed (process may have already exited)");
     });
+  }
+
+  // Transfer ALL pipe fds to grandparent BEFORE cleaning up subscriptions.
+  // Always transfer regardless of orphaned tasks: ipc_spawn creates child sessions
+  // (not tasks), so pipe subs exist even when getOrphanedTasks returns empty.
+  if (session.taskId) {
+    const task = taskStore.getTask(session.taskId);
+    if (task) {
+      const grandparentId = task.parentTaskId || ROOT_TASK_ID;
+      transferAllPipeSubscriptions(task.id, grandparentId);
+    }
   }
 
   cleanupLifecycleStream(session.id);
