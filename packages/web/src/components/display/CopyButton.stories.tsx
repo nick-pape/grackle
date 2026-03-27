@@ -2,9 +2,6 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, fn, waitFor } from "@storybook/test";
 import { CopyButton } from "./CopyButton.js";
 
-/** Captured writeText mock — set by the decorator, read by play functions. */
-let mockWriteText: ReturnType<typeof fn>;
-
 const meta: Meta<typeof CopyButton> = {
   component: CopyButton,
   title: "Display/CopyButton",
@@ -13,9 +10,8 @@ const meta: Meta<typeof CopyButton> = {
       // Mock the clipboard API for Storybook/test environments.
       // navigator.clipboard is a read-only getter in Chromium, so
       // Object.assign fails; use defineProperty to override it.
-      mockWriteText = fn().mockResolvedValue(undefined);
       Object.defineProperty(navigator, "clipboard", {
-        value: { writeText: mockWriteText },
+        value: { writeText: fn().mockResolvedValue(undefined) },
         writable: true,
         configurable: true,
       });
@@ -45,10 +41,13 @@ export const CopiesCorrectText: Story = {
   play: async ({ canvas }) => {
     const button = canvas.getByTestId("copy-button");
     await userEvent.click(button);
-    // Verify checkmark appears
-    await expect(button).toHaveTextContent("\u2713");
-    // Verify correct text was copied
-    await expect(mockWriteText).toHaveBeenCalledWith("# Hello\n\nSome **bold** markdown");
+    // Wait for async clipboard write and state update
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- mock fn assigned by decorator
+    const writeTextMock = navigator.clipboard.writeText;
+    await waitFor(async () => {
+      await expect(button).toHaveTextContent("\u2713");
+      await expect(writeTextMock).toHaveBeenCalledWith("# Hello\n\nSome **bold** markdown");
+    });
   },
 };
 
@@ -60,7 +59,7 @@ export const CheckmarkReverts: Story = {
   play: async ({ canvas }) => {
     const button = canvas.getByTestId("copy-button");
     await userEvent.click(button);
-    await expect(button).toHaveTextContent("\u2713");
+    await waitFor(() => expect(button).toHaveTextContent("\u2713"));
     // Wait for the checkmark to revert after COPIED_FEEDBACK_DURATION (2s)
     await waitFor(() => expect(button).toHaveTextContent("\uD83D\uDCCB"), { timeout: 3000 });
   },

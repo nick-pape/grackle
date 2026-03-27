@@ -42,7 +42,7 @@ describe("extractText", () => {
   });
 
   it("returns empty string for boolean children", () => {
-    expect(extractText(true as unknown as string)).toBe("");
-    expect(extractText(false as unknown as string)).toBe("");
+    expect(extractText(true)).toBe("");
+    expect(extractText(false)).toBe("");
   });
 });
