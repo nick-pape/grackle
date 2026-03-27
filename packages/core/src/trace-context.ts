@@ -50,6 +50,12 @@ export function wrapAsyncIterableWithTrace<T>(traceId: string, iterable: AsyncIt
           }
           return Promise.resolve({ done: true, value: undefined as unknown as T });
         },
+        throw(error?: unknown): Promise<IteratorResult<T>> {
+          if (iterator.throw) {
+            return store.run({ traceId }, () => iterator.throw!(error));
+          }
+          return Promise.reject(error);
+        },
       };
     },
   };
