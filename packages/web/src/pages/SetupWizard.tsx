@@ -49,16 +49,17 @@ export function SetupWizard(): JSX.Element {
         updates.push(updatePersona(SYSTEM_PERSONA_ID, undefined, undefined, undefined, runtime, model));
       }
 
-      Promise.all(updates).then(
-        () => {
-          completeOnboarding();
-          navigate("/", { replace: true });
-        },
-        () => {
-          showToast("Failed to update runtime -- please try again", "error");
-          setIsFinishing(false);
-        },
-      );
+      Promise.all(updates)
+        .then(() => completeOnboarding())
+        .then(
+          () => {
+            navigate("/", { replace: true });
+          },
+          () => {
+            showToast("Failed to update runtime -- please try again", "error");
+            setIsFinishing(false);
+          },
+        );
     },
     [seedPersona, personas, updatePersona, completeOnboarding, navigate, showToast],
   );
