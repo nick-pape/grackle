@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 27 Mar 2026 19:02:42 GMT and should not be manually modified.
+This log was last generated on Fri, 27 Mar 2026 21:24:58 GMT and should not be manually modified.
+
+## 0.85.2
+Fri, 27 Mar 2026 21:24:58 GMT
+
+### Patches
+
+- Add Neo4j health monitoring: periodic health check in reconciliation loop, circuit breaker on event sync, error wrapping in gRPC handlers, and /readyz visibility
 
 ## 0.85.1
 Fri, 27 Mar 2026 19:02:42 GMT

@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.85.2",
+      "tag": "@grackle-ai/cli_v0.85.2",
+      "date": "Fri, 27 Mar 2026 21:24:58 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add Neo4j health monitoring: periodic health check in reconciliation loop, circuit breaker on event sync, error wrapping in gRPC handlers, and /readyz visibility"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.85.1",
       "tag": "@grackle-ai/cli_v0.85.1",
       "date": "Fri, 27 Mar 2026 19:02:42 GMT",
