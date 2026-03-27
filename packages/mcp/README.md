@@ -158,8 +158,8 @@ Post and query categorized discoveries shared across agents.
 
 | Tool | Description | Parameters |
 |------|-------------|------------|
-| `finding_list` | Query findings for a workspace with optional filters. | `workspaceId?` (string, auto-injected from session), `category?` (string), `tag?` (string), `limit?` (int) |
-| `finding_post` | Post a new finding with title, category, content, and tags. | `workspaceId?` (string, auto-injected from session), `title` (string), `category?` (string), `content?` (string), `tags?` (string[]) |
+| `finding_list` | Query findings for a workspace with optional filters. | `workspaceId?` (string, auto-injected for scoped sessions; required for API key/OAuth), `category?` (string), `tag?` (string), `limit?` (int) |
+| `finding_post` | Post a new finding with title, category, content, and tags. | `workspaceId?` (string, auto-injected for scoped sessions; required for API key/OAuth), `title` (string), `category?` (string), `content?` (string), `tags?` (string[]) |
 
 ### Persona Tools
 

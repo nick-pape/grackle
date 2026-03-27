@@ -27,9 +27,16 @@ export const findingTools: ToolDefinition[] = [
       openWorldHint: false,
     },
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+      const workspaceId = args.workspaceId as string | undefined;
+      if (!workspaceId) {
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify({ error: "workspaceId is required but was not provided or auto-injected. This session may not be associated with a workspace.", code: "INVALID_ARGUMENT" }, null, 2) }],
+          isError: true,
+        };
+      }
       try {
         const response = await client.queryFindings({
-          workspaceId: (args.workspaceId as string | undefined) ?? "",
+          workspaceId,
           categories: args.category ? [args.category as string] : [],
           tags: args.tag ? [args.tag as string] : [],
           limit: (args.limit as number | undefined) ?? 0,
@@ -72,9 +79,16 @@ export const findingTools: ToolDefinition[] = [
       openWorldHint: false,
     },
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+      const workspaceId = args.workspaceId as string | undefined;
+      if (!workspaceId) {
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify({ error: "workspaceId is required but was not provided or auto-injected. This session may not be associated with a workspace.", code: "INVALID_ARGUMENT" }, null, 2) }],
+          isError: true,
+        };
+      }
       try {
         const finding = await client.postFinding({
-          workspaceId: (args.workspaceId as string | undefined) ?? "",
+          workspaceId,
           title: args.title as string,
           category: (args.category as string | undefined) ?? "",
           content: (args.content as string | undefined) ?? "",

@@ -299,4 +299,42 @@ describe("workspace ID schema optionality (#1041)", () => {
     );
     expect(result.isError).toBeUndefined();
   });
+
+  /** finding_post handler returns error when workspaceId is missing (e.g., root task with no workspace). */
+  test("finding_post handler errors when workspaceId is omitted", async () => {
+    const tool = getTool("finding_post");
+    const mockClient = {
+      postFinding: vi.fn(),
+    } as unknown as GrackleClient;
+
+    const result = await tool.handler(
+      { title: "Missing workspace" },
+      mockClient,
+      { type: "scoped", taskId: "t-1", workspaceId: undefined as unknown as string, personaId: "p-1", taskSessionId: "s-1" },
+    );
+
+    expect(mockClient.postFinding).not.toHaveBeenCalled();
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.error).toContain("workspace");
+  });
+
+  /** finding_list handler returns error when workspaceId is missing. */
+  test("finding_list handler errors when workspaceId is omitted", async () => {
+    const tool = getTool("finding_list");
+    const mockClient = {
+      queryFindings: vi.fn(),
+    } as unknown as GrackleClient;
+
+    const result = await tool.handler(
+      {},
+      mockClient,
+      { type: "scoped", taskId: "t-1", workspaceId: undefined as unknown as string, personaId: "p-1", taskSessionId: "s-1" },
+    );
+
+    expect(mockClient.queryFindings).not.toHaveBeenCalled();
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.error).toContain("workspace");
+  });
 });
