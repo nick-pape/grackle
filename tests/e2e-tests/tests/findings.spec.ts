@@ -31,7 +31,7 @@ test.describe("Findings", { tag: ["@error"] }, () => {
 
     // Navigate to task and switch to Findings tab
     await navigateToTask(page, "find-task-1");
-    await page.locator("button", { hasText: "Findings" }).click();
+    await page.getByLabel("Task view").getByRole("tab", { name: "Findings" }).click();
 
     // Verify finding card renders with title, category badge, and content
     await expect(page.getByText("Found a null pointer issue")).toBeVisible({ timeout: 5_000 });
@@ -83,7 +83,7 @@ test.describe("Findings", { tag: ["@error"] }, () => {
 
     // Navigate to task → Findings tab
     await navigateToTask(page, "find-task-2");
-    await page.locator("button", { hasText: "Findings" }).click();
+    await page.getByLabel("Task view").getByRole("tab", { name: "Findings" }).click();
 
     // Verify all 3 findings render
     await expect(page.getByText("Memory leak in cache")).toBeVisible({ timeout: 5_000 });
@@ -118,7 +118,7 @@ test.describe("Findings", { tag: ["@error"] }, () => {
 
     // Navigate to task → Findings tab
     await navigateToTask(page, "find-task-3");
-    await page.locator("button", { hasText: "Findings" }).click();
+    await page.getByLabel("Task view").getByRole("tab", { name: "Findings" }).click();
     await expect(page.getByText("Use PostgreSQL over MySQL")).toBeVisible({ timeout: 5_000 });
 
     // Switch to Stream tab
@@ -126,7 +126,7 @@ test.describe("Findings", { tag: ["@error"] }, () => {
     await expect(page.locator("button", { hasText: "Start" }).first()).toBeVisible();
 
     // Switch back to Findings tab — finding should still be there
-    await page.locator("button", { hasText: "Findings" }).click();
+    await page.getByLabel("Task view").getByRole("tab", { name: "Findings" }).click();
     await expect(page.getByText("Use PostgreSQL over MySQL")).toBeVisible({ timeout: 5_000 });
   });
 });

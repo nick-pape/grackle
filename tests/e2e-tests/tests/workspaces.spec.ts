@@ -153,7 +153,7 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     // Tab bar should show Overview, Stream, Findings
     await expect(page.getByRole("tab", { name: "Overview", exact: true })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Stream", exact: true })).toBeVisible();
-    await expect(page.getByRole("tab", { name: "Findings", exact: true })).toBeVisible();
+    await expect(page.getByLabel("Task view").getByRole("tab", { name: "Findings", exact: true })).toBeVisible();
 
     // Overview tab (default for pending) should be active
     await expect(page.getByRole("tab", { name: "Overview", exact: true })).toHaveAttribute("class", /active/);
@@ -162,7 +162,7 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.getByTestId("task-header-start")).toBeVisible();
 
     // Click Findings tab — shows empty state
-    await page.getByRole("tab", { name: "Findings", exact: true }).click();
+    await page.getByLabel("Task view").getByRole("tab", { name: "Findings", exact: true }).click();
     await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 5_000 });
   });
 
