@@ -16,6 +16,7 @@ import * as streamRegistry from "./stream-registry.js";
 import { cleanupLifecycleStream } from "./lifecycle.js";
 import { logger } from "./logger.js";
 import { emit } from "./event-bus.js";
+import { transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
 
 /** Valid pipe mode values for SpawnRequest and StartTaskRequest. */
 export const VALID_PIPE_MODES: ReadonlySet<string> = new Set(["", "sync", "async", "detach"]);
@@ -112,6 +113,15 @@ export function killSessionAndCleanup(session: SessionRow): void {
     ).catch((err: unknown) => {
       logger.debug({ err, sessionId: session.id }, "PowerLine kill failed (process may have already exited)");
     });
+  }
+
+  // Transfer pipe fds to the grandparent BEFORE cleaning up subscriptions —
+  // once unsubscribed the pipe references are lost.
+  if (session.taskId) {
+    const task = taskStore.getTask(session.taskId);
+    if (task?.parentTaskId) {
+      transferAllPipeSubscriptions(task.id, task.parentTaskId);
+    }
   }
 
   cleanupLifecycleStream(session.id);
