@@ -93,7 +93,7 @@ export async function startTaskSession(
     ? (options?.notes || "")
     : buildTaskPrompt(freshTask.title, freshTask.description, options?.notes);
 
-  const orchestratorCtx = freshTask.canDecompose && freshTask.depth <= 1
+  const orchestratorCtx = freshTask.canDecompose && freshTask.depth <= 1 && !!freshTask.workspaceId
     ? buildOrchestratorContext({
       workspace: workspace ? { name: workspace.name, description: workspace.description, repoUrl: workspace.repoUrl } : undefined,
       tasks: taskStore.listTasks(freshTask.workspaceId || undefined).map((t) => ({

@@ -263,7 +263,7 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
   const taskPrompt = task.id === ROOT_TASK_ID
     ? ROOT_TASK_INITIAL_PROMPT
     : buildTaskPrompt(task.title, task.description, req.notes);
-  const isOrchestrator = task.canDecompose && task.depth <= 1;
+  const isOrchestrator = task.canDecompose && task.depth <= 1 && !!task.workspaceId;
   const orchestratorCtx = isOrchestrator
     ? buildOrchestratorContext({
       workspace: workspace ? { name: workspace.name, description: workspace.description, repoUrl: workspace.repoUrl } : undefined,
