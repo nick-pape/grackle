@@ -120,10 +120,13 @@ describe("createWebServer", () => {
 });
 
 describe("createWebServer readiness check", () => {
-  let server: http.Server;
+  let server: http.Server | undefined;
 
   afterEach(async () => {
-    await new Promise<void>((resolve) => server.close(() => resolve()));
+    if (!server) {
+      return;
+    }
+    await new Promise<void>((resolve) => server!.close(() => resolve()));
   });
 
   it("returns 200 when readiness check passes", async () => {
