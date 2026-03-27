@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { Readable, Writable } from "node:stream";
 import type { ChildProcess } from "node:child_process";
-import type { AgentSession, AgentEvent } from "@grackle-ai/runtime-sdk";
+import type { AgentSession, AgentEvent, CreateSessionOptions } from "@grackle-ai/runtime-sdk";
 import { BaseAgentSession, BaseAgentRuntime, resolveWorkingDirectory, resolveMcpServers, convertMcpServers, logger, ensureRuntimeInstalled, importFromRuntime, getRuntimeBinDirectory } from "@grackle-ai/runtime-sdk";
 
 // ─── Configuration ──────────────────────────────────────────
@@ -238,22 +238,8 @@ class AcpSession extends BaseAgentSession {
   /** Last cumulative cost reported by usage_update (for delta computation). */
   private lastReportedCost: number = 0;
 
-  public constructor(
-    config: AcpAgentConfig,
-    id: string,
-    prompt: string,
-    model: string,
-    maxTurns: number,
-    resumeSessionId?: string,
-    branch?: string,
-    workingDirectory?: string,
-    systemContext?: string,
-    mcpServers?: Record<string, unknown>,
-    hooks?: Record<string, unknown>,
-    mcpBroker?: { url: string; token: string },
-    useWorktrees?: boolean,
-  ) {
-    super(id, prompt, model, maxTurns, resumeSessionId, branch, workingDirectory, systemContext, mcpServers, hooks, mcpBroker, useWorktrees);
+  public constructor(config: AcpAgentConfig, opts: CreateSessionOptions) {
+    super(opts);
     this.config = config;
     this.runtimeName = config.name;
     this.runtimeDisplayName = config.name;
@@ -539,34 +525,7 @@ export class AcpRuntime extends BaseAgentRuntime {
     this.config = config;
   }
 
-  protected createSession(
-    id: string,
-    prompt: string,
-    model: string,
-    maxTurns: number,
-    resumeSessionId?: string,
-    branch?: string,
-    workingDirectory?: string,
-    systemContext?: string,
-    mcpServers?: Record<string, unknown>,
-    _hooks?: Record<string, unknown>,
-    mcpBroker?: { url: string; token: string },
-    useWorktrees?: boolean,
-  ): AgentSession {
-    return new AcpSession(
-      this.config,
-      id,
-      prompt,
-      model,
-      maxTurns,
-      resumeSessionId,
-      branch,
-      workingDirectory,
-      systemContext,
-      mcpServers,
-      undefined, // hooks — not supported by ACP
-      mcpBroker,
-      useWorktrees,
-    );
+  protected createSession(opts: CreateSessionOptions): AgentSession {
+    return new AcpSession(this.config, opts);
   }
 }

@@ -106,7 +106,7 @@ function spawnSession(): {
   session: TestSession;
   nextEvent: () => Promise<AgentEvent | undefined>;
 } {
-  const session = new TestSession("test-1", "hello", "model", 0);
+  const session = new TestSession({ id: "test-1", prompt: "hello", model: "model", maxTurns: 0 });
   const streamIterator = session.stream()[Symbol.asyncIterator]();
 
   const nextEvent = async (): Promise<AgentEvent | undefined> => {

@@ -1,4 +1,4 @@
-import type { AgentSession } from "@grackle-ai/runtime-sdk";
+import type { AgentSession, CreateSessionOptions } from "@grackle-ai/runtime-sdk";
 import { BaseAgentSession, BaseAgentRuntime, resolveWorkingDirectory, resolveMcpServers, logger, ensureRuntimeInstalled, importFromRuntime } from "@grackle-ai/runtime-sdk";
 import { SESSION_STATUS } from "@grackle-ai/common";
 
@@ -427,20 +427,7 @@ class CodexSession extends BaseAgentSession {
 export class CodexRuntime extends BaseAgentRuntime {
   public name: string = "codex";
 
-  protected createSession(
-    id: string,
-    prompt: string,
-    model: string,
-    maxTurns: number,
-    resumeSessionId?: string,
-    branch?: string,
-    workingDirectory?: string,
-    systemContext?: string,
-    mcpServers?: Record<string, unknown>,
-    _hooks?: Record<string, unknown>, // Hooks not supported by Codex SDK — accepted for interface compatibility
-    mcpBroker?: { url: string; token: string },
-    useWorktrees?: boolean,
-  ): AgentSession {
-    return new CodexSession(id, prompt, model, maxTurns, resumeSessionId, branch, workingDirectory, systemContext, mcpServers, undefined, mcpBroker, useWorktrees);
+  protected createSession(opts: CreateSessionOptions): AgentSession {
+    return new CodexSession({ ...opts, hooks: undefined });
   }
 }

@@ -1,4 +1,4 @@
-import type { AgentSession, AgentEvent } from "./runtime.js";
+import type { AgentSession, AgentEvent, CreateSessionOptions } from "./runtime.js";
 import { SESSION_STATUS } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 import { AsyncQueue } from "./async-queue.js";
@@ -46,33 +46,20 @@ export abstract class BaseAgentSession implements AgentSession {
   /** Error message displayed when the initial query returns zero messages. */
   protected abstract readonly noMessagesError: string;
 
-  public constructor(
-    id: string,
-    prompt: string,
-    model: string,
-    maxTurns: number,
-    resumeSessionId?: string,
-    branch?: string,
-    workingDirectory?: string,
-    systemContext?: string,
-    mcpServers?: Record<string, unknown>,
-    hooks?: Record<string, unknown>,
-    mcpBroker?: { url: string; token: string },
-    useWorktrees?: boolean,
-  ) {
-    this.id = id;
-    this.prompt = prompt;
-    this.model = model;
-    this.maxTurns = maxTurns;
-    this.resumeSessionId = resumeSessionId;
-    this.branch = branch;
-    this.workingDirectory = workingDirectory;
-    this.useWorktrees = useWorktrees ?? true;
-    this.systemContext = systemContext;
-    this.mcpServers = mcpServers;
-    this.hooks = hooks;
-    this.mcpBroker = mcpBroker;
-    this.runtimeSessionId = resumeSessionId || "";
+  public constructor(opts: CreateSessionOptions) {
+    this.id = opts.id;
+    this.prompt = opts.prompt;
+    this.model = opts.model;
+    this.maxTurns = opts.maxTurns;
+    this.resumeSessionId = opts.resumeSessionId;
+    this.branch = opts.branch;
+    this.workingDirectory = opts.workingDirectory;
+    this.useWorktrees = opts.useWorktrees ?? true;
+    this.systemContext = opts.systemContext;
+    this.mcpServers = opts.mcpServers;
+    this.hooks = opts.hooks;
+    this.mcpBroker = opts.mcpBroker;
+    this.runtimeSessionId = opts.resumeSessionId || "";
   }
 
   // ─── Abstract methods for subclasses ──────────────────────

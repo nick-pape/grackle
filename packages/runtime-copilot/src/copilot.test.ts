@@ -112,14 +112,14 @@ describe("CopilotRuntime structural", () => {
 
 describe("CopilotSession — native system prompt injection", () => {
   it("buildInitialPrompt returns only the prompt (excludes systemContext)", () => {
-    const session = new CopilotSession("cop-prompt", "user task here", "gpt-4", 0, undefined, undefined, undefined, "system instructions");
+    const session = new CopilotSession({ id: "cop-prompt", prompt: "user task here", model: "gpt-4", maxTurns: 0, systemContext: "system instructions" });
     const result = (session as any).buildInitialPrompt();
     expect(result).toBe("user task here");
     expect(result).not.toContain("system instructions");
   });
 
   it("buildInitialPrompt returns prompt unchanged when no systemContext", () => {
-    const session = new CopilotSession("cop-no-ctx", "just the prompt", "gpt-4", 0);
+    const session = new CopilotSession({ id: "cop-no-ctx", prompt: "just the prompt", model: "gpt-4", maxTurns: 0 });
     const result = (session as any).buildInitialPrompt();
     expect(result).toBe("just the prompt");
   });
@@ -150,7 +150,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
    * which propagated out of kill() and surfaced as [internal] internal error.
    */
   it("UT-1: kill() does not throw when abort() is synchronous (returns void)", () => {
-    const session = new CopilotSession("s1", "prompt", "model", 0);
+    const session = new CopilotSession({ id: "s1", prompt: "prompt", model: "model", maxTurns: 0 });
     const mockSdkSession = {
       abort: vi.fn(() => { /* synchronous, returns undefined (void) */ }),
       destroy: vi.fn(() => Promise.resolve()),
@@ -166,7 +166,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
    * UT-2: kill() succeeds when the Copilot SDK abort() returns a Promise.
    */
   it("UT-2: kill() does not throw when abort() returns a resolved Promise", async () => {
-    const session = new CopilotSession("s2", "prompt", "model", 0);
+    const session = new CopilotSession({ id: "s2", prompt: "prompt", model: "model", maxTurns: 0 });
     const mockSdkSession = {
       abort: vi.fn(() => Promise.resolve()),
       destroy: vi.fn(() => Promise.resolve()),
@@ -184,7 +184,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
    * synchronously or returns a rejected Promise — no uncaught exception surfaces.
    */
   it("UT-3: kill() completes and cleanup (destroy) runs even when abort() throws synchronously", async () => {
-    const session = new CopilotSession("s3", "prompt", "model", 0);
+    const session = new CopilotSession({ id: "s3", prompt: "prompt", model: "model", maxTurns: 0 });
     const destroyFn = vi.fn(() => Promise.resolve());
     const mockSdkSession = {
       abort: vi.fn(() => { throw new Error("SDK exploded"); }),
@@ -203,7 +203,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
   });
 
   it("UT-3b: kill() completes and cleanup (destroy) runs even when abort() returns a rejected Promise", async () => {
-    const session = new CopilotSession("s3b", "prompt", "model", 0);
+    const session = new CopilotSession({ id: "s3b", prompt: "prompt", model: "model", maxTurns: 0 });
     const destroyFn = vi.fn(() => Promise.resolve());
     const mockSdkSession = {
       abort: vi.fn(() => Promise.reject(new Error("async abort failure"))),
@@ -224,7 +224,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
    * (iterating it should complete immediately without hanging).
    */
   it("UT-4: session status is 'killed' and event queue closes after kill()", async () => {
-    const session = new CopilotSession("s4", "prompt", "model", 0);
+    const session = new CopilotSession({ id: "s4", prompt: "prompt", model: "model", maxTurns: 0 });
     const mockSdkSession = {
       abort: vi.fn(() => Promise.resolve()),
       destroy: vi.fn(() => Promise.resolve()),
@@ -255,7 +255,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
    * set (SDK setup not started) must also be a no-op success.
    */
   it("kill() is safe when copilotSession has not been set yet", () => {
-    const session = new CopilotSession("s5", "prompt", "model", 0);
+    const session = new CopilotSession({ id: "s5", prompt: "prompt", model: "model", maxTurns: 0 });
     // Do NOT inject a mock — copilotSession is undefined
     expect(() => session.kill()).not.toThrow();
     expect(session.status).toBe("stopped");
