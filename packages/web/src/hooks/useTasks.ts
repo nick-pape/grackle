@@ -7,7 +7,7 @@
  * @module
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { ConnectError } from "@connectrpc/connect";
 import type { TaskData, GrackleEvent, WsMessage } from "./types.js";
 import { grackleClient } from "./useGrackleClient.js";
@@ -76,6 +76,8 @@ export function useTasks(): UseTasksResult {
   const [taskStartingId, setTaskStartingId] = useState<string | undefined>(
     undefined,
   );
+  /** Per-workspace debounce timers to coalesce rapid domain events into one RPC. */
+  const debounceTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   /** Fetch tasks for a single workspace and merge into state. */
   const loadTasks = useCallback((workspaceId: string) => {
@@ -108,15 +110,24 @@ export function useTasks(): UseTasksResult {
     );
   }, []);
 
-  /** Helper to refresh tasks for a given workspace or globally. */
+  /** Debounced refresh: coalesce rapid domain events for the same workspace. */
   const refreshTasksForEvent = useCallback((workspaceId: string, taskId: string) => {
+    /** Schedule a debounced loadTasks for a workspace (200ms window). */
+    const scheduleLoad = (wsId: string): void => {
+      clearTimeout(debounceTimersRef.current[wsId]);
+      debounceTimersRef.current[wsId] = setTimeout(() => {
+        delete debounceTimersRef.current[wsId];
+        loadTasks(wsId);
+      }, 200);
+    };
+
     if (workspaceId) {
-      loadTasks(workspaceId);
+      scheduleLoad(workspaceId);
     } else if (taskId) {
       setTasks((prev) => {
         const found = prev.find((t) => t.id === taskId);
         if (found?.workspaceId) {
-          loadTasks(found.workspaceId);
+          scheduleLoad(found.workspaceId);
         } else {
           loadAllTasks();
         }

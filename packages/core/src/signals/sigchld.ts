@@ -1,7 +1,7 @@
 import { SESSION_STATUS } from "@grackle-ai/common";
 import { subscribe, type GrackleEvent } from "../event-bus.js";
 import { taskStore, sessionStore } from "@grackle-ai/database";
-import { readLog } from "../log-writer.js";
+import { readLastTextEntry } from "../log-writer.js";
 import { deliverSignalToTask } from "./signal-delivery.js";
 import { logger } from "../logger.js";
 
@@ -166,6 +166,8 @@ function pruneDelivered(now: number): void {
 
 /**
  * Read the session log and extract the content of the last "text" entry.
+ * Uses readLastTextEntry which only reads the tail of the file (up to 64 KB)
+ * instead of parsing the entire log into memory.
  * Returns an empty string if no text entries exist or the log cannot be read.
  */
 function extractLastTextMessage(logPath: string | undefined): string {
@@ -174,13 +176,7 @@ function extractLastTextMessage(logPath: string | undefined): string {
   }
 
   try {
-    const entries = readLog(logPath);
-    for (let i = entries.length - 1; i >= 0; i--) {
-      if (entries[i].type === "text") {
-        return entries[i].content;
-      }
-    }
-    return "";
+    return readLastTextEntry(logPath)?.content ?? "";
   } catch {
     return "";
   }
