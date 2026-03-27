@@ -8,7 +8,8 @@ import {
   emit, subscribe,
   startTaskSession,
   pushToEnv, attemptReconnects, resetReconnectState,
-  parseAdapterConfig, isKnowledgeEnabled, initKnowledge,
+  parseAdapterConfig, isKnowledgeEnabled, initKnowledge, neo4jHealthCheck,
+  createKnowledgeHealthPhase, getKnowledgeReadinessCheck,
   computeTaskStatus,
   ReconciliationManager, createCronPhase, createOrphanPhase, findFirstConnectedEnvironment, lifecycleCleanupPhase,
   initOrphanReparentSubscriber,
@@ -256,7 +257,13 @@ async function main(): Promise<void> {
     reparentTask: (taskId, newParentTaskId) => taskStore.reparentTask(taskId, newParentTaskId),
     emit,
   });
-  const reconciliationManager = new ReconciliationManager([cronPhase, lifecycleCleanupPhase, orphanPhase]);
+  const reconciliationPhases = [cronPhase, lifecycleCleanupPhase, orphanPhase];
+  if (isKnowledgeEnabled()) {
+    reconciliationPhases.push(
+      createKnowledgeHealthPhase({ healthCheck: neo4jHealthCheck }),
+    );
+  }
+  const reconciliationManager = new ReconciliationManager(reconciliationPhases);
   reconciliationManager.start();
 
   // --- gRPC server (HTTP/2) ---
@@ -311,8 +318,12 @@ async function main(): Promise<void> {
       } catch (err) {
         checks.database = { ok: false, message: err instanceof Error ? err.message : "unknown error" };
       }
+      // Neo4j is optional — include status for visibility but don't gate readiness on it
+      if (isKnowledgeEnabled()) {
+        checks.knowledge = getKnowledgeReadinessCheck();
+      }
       return {
-        ready: Object.values(checks).every((c) => c.ok),
+        ready: checks.database?.ok ?? false,
         checks,
       };
     },
