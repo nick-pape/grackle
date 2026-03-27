@@ -1,6 +1,20 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 27 Mar 2026 05:31:41 GMT and should not be manually modified.
+This log was last generated on Fri, 27 Mar 2026 16:13:58 GMT and should not be manually modified.
+
+## 0.85.0
+Fri, 27 Mar 2026 16:13:58 GMT
+
+### Minor changes
+
+- Replace 12 positional params in BaseAgentRuntime.createSession() with CreateSessionOptions object
+
+### Patches
+
+- Remove hacky DOM-scraping rich copy; add clipboard content assertions and extractText unit tests
+- Add /healthz endpoint to PowerLine for container health probes
+- Replace hand-rolled migrations with versioned PRAGMA user_version system
+- Add Storybook stories for DemoBanner component
 
 ## 0.84.1
 Fri, 27 Mar 2026 05:31:41 GMT

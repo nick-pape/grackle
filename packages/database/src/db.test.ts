@@ -1,20 +1,21 @@
 import { describe, it, expect } from "vitest";
 import Database from "better-sqlite3";
 import { SYSTEM_PERSONA_ID, ROOT_TASK_ID } from "@grackle-ai/common";
-import { initDatabase } from "./db.js";
+import { initDatabase, CURRENT_VERSION } from "./db.js";
 import { seedDatabase } from "./db-seed.js";
 
 /** Expected tables created by initDatabase. */
 const EXPECTED_TABLES: string[] = [
+  "domain_events",
   "environments",
-  "sessions",
-  "tokens",
-  "workspaces",
-  "tasks",
   "findings",
   "personas",
+  "schedules",
+  "sessions",
   "settings",
-  "domain_events",
+  "tasks",
+  "tokens",
+  "workspaces",
 ];
 
 /** Helper: list all user tables in a SQLite database. */
@@ -23,6 +24,11 @@ function listTables(db: InstanceType<typeof Database>): string[] {
     .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
     .all() as Array<{ name: string }>;
   return rows.map((r) => r.name);
+}
+
+/** Helper: read PRAGMA user_version. */
+function getUserVersion(db: InstanceType<typeof Database>): number {
+  return db.pragma("user_version", { simple: true }) as number;
 }
 
 describe("initDatabase", () => {
@@ -38,25 +44,65 @@ describe("initDatabase", () => {
     }
   });
 
+  it("sets user_version to CURRENT_VERSION on fresh database", () => {
+    const mem = new Database(":memory:");
+    mem.pragma("foreign_keys = ON");
+
+    initDatabase(mem);
+
+    expect(getUserVersion(mem)).toBe(CURRENT_VERSION);
+  });
+
   it("is idempotent — second call succeeds without errors", () => {
     const mem = new Database(":memory:");
     mem.pragma("foreign_keys = ON");
 
-    const first = initDatabase(mem);
-    const second = initDatabase(mem);
+    initDatabase(mem);
+    initDatabase(mem);
 
-    // Second run collects expected idempotency errors (columns already exist, etc.)
-    expect(second.migrationErrors.length).toBeGreaterThan(0);
-
-    // Tables still present
     const tables = listTables(mem);
     for (const table of EXPECTED_TABLES) {
       expect(tables).toContain(table);
     }
+    expect(getUserVersion(mem)).toBe(CURRENT_VERSION);
+  });
 
-    // First run should have some migration errors (e.g. "no such table" for
-    // rename migrations on a fresh db)
-    expect(first.migrationErrors.length).toBeGreaterThan(0);
+  it("promotes a legacy database (user_version = 0) to baseline", () => {
+    const mem = new Database(":memory:");
+    mem.pragma("foreign_keys = ON");
+
+    // Simulate a legacy database: create tables, leave user_version at 0
+    initDatabase(mem);
+    mem.pragma("user_version = 0");
+
+    // Re-run — should detect existing tables and promote to baseline
+    initDatabase(mem);
+    expect(getUserVersion(mem)).toBe(CURRENT_VERSION);
+  });
+
+  it("throws on downgrade — database version newer than application", () => {
+    const mem = new Database(":memory:");
+    mem.pragma("foreign_keys = ON");
+
+    // Simulate a database upgraded by a newer binary
+    mem.pragma("user_version = 9999");
+
+    expect(() => initDatabase(mem)).toThrow("newer than this application supports");
+  });
+
+  it("throws on ancient database missing required columns", () => {
+    const mem = new Database(":memory:");
+    mem.pragma("foreign_keys = ON");
+
+    // Create a minimal sessions table missing cost_usd (a baseline-required column)
+    mem.exec(`
+      CREATE TABLE sessions (
+        id TEXT PRIMARY KEY,
+        status TEXT NOT NULL DEFAULT 'pending'
+      )
+    `);
+
+    expect(() => initDatabase(mem)).toThrow("Database schema is too old");
   });
 
   it("seeds the default persona on fresh install", () => {
@@ -133,20 +179,6 @@ describe("initDatabase", () => {
       .get() as { value: string } | undefined;
     expect(setting).toBeDefined();
     expect(setting!.value).toBe("claude-code");
-  });
-
-  it("returns migration errors from idempotent rename/add-column steps", () => {
-    const mem = new Database(":memory:");
-    mem.pragma("foreign_keys = ON");
-
-    const { migrationErrors } = initDatabase(mem);
-
-    // On a fresh database, renames like "projects → workspaces" fail because
-    // the source table/column doesn't exist — these are collected as errors.
-    expect(migrationErrors.length).toBeGreaterThan(0);
-
-    const names = migrationErrors.map((e) => e.name);
-    expect(names).toContain("rename-projects-to-workspaces");
   });
 
   it("throws when called without openDatabase and no override", () => {
