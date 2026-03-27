@@ -79,12 +79,11 @@ function extractText(node: ReactNode): string {
 }
 
 /** Wraps markdown `<pre>` blocks with a CopyButton for code-only copy. */
-function CodeBlockWrapper(props: { children?: ReactNode; className?: string }): JSX.Element {
-  const { children, className, ...rest } = props;
+function CodeBlockWrapper({ children, className }: { children?: ReactNode; className?: string; node?: unknown }): JSX.Element {
   const rawText = extractText(children);
   return (
     <div className={styles.codeBlockWrapper}>
-      <pre className={className} {...rest}>{children}</pre>
+      <pre className={className}>{children}</pre>
       <CopyButton text={rawText} data-testid="copy-code-block" className={styles.codeBlockCopyButton} />
     </div>
   );

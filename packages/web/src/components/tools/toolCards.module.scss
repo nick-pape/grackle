@@ -203,6 +203,10 @@
   &:hover {
     opacity: 1 !important;
   }
+
+  @include mobile {
+    opacity: 1;
+  }
 }
 
 // --- In-progress / dimmed state ---
