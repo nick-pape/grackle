@@ -16,6 +16,7 @@ const {
   mockSubscribe,
   mockGetTask,
   mockQueryFindings,
+  mockIsNeo4jHealthy,
 } = vi.hoisted(() => ({
   mockOpenNeo4j: vi.fn().mockResolvedValue(undefined),
   mockInitSchema: vi.fn().mockResolvedValue(undefined),
@@ -28,6 +29,7 @@ const {
   mockSubscribe: vi.fn().mockReturnValue(vi.fn()),
   mockGetTask: vi.fn(),
   mockQueryFindings: vi.fn().mockReturnValue([]),
+  mockIsNeo4jHealthy: vi.fn().mockReturnValue(true),
 }));
 
 vi.mock("@grackle-ai/knowledge", () => ({
@@ -61,6 +63,10 @@ vi.mock("@grackle-ai/database", async () => {
   mock.findingStore.queryFindings = mockQueryFindings;
   return mock;
 });
+
+vi.mock("./knowledge-health.js", () => ({
+  isNeo4jHealthy: mockIsNeo4jHealthy,
+}));
 
 vi.mock("./logger.js", () => ({
   logger: {
@@ -418,5 +424,104 @@ describe("entity sync handler", () => {
     await new Promise((r) => setTimeout(r, 50));
 
     expect(mockCreateEdge).not.toHaveBeenCalled();
+  });
+});
+
+describe("circuit breaker — skips sync when Neo4j is unhealthy", () => {
+  let eventHandler: (event: GrackleEvent) => void;
+
+  beforeEach(async () => {
+    mockSyncReferenceNode.mockClear();
+    mockSyncReferenceNode.mockResolvedValue("node-id");
+    mockDeleteReferenceNodeBySource.mockClear();
+    mockGetTask.mockClear();
+    mockQueryFindings.mockClear();
+    mockIsNeo4jHealthy.mockClear();
+
+    mockSubscribe.mockImplementation((handler: (event: GrackleEvent) => void) => {
+      eventHandler = handler;
+      return vi.fn();
+    });
+
+    await initKnowledge();
+  });
+
+  it("skips task sync when Neo4j is unhealthy", async () => {
+    mockIsNeo4jHealthy.mockReturnValue(false);
+    mockGetTask.mockReturnValue({
+      id: "t1",
+      title: "Fix bug",
+      description: "Auth is broken",
+      workspaceId: "ws-1",
+      parentTaskId: "",
+      dependsOn: "[]",
+    });
+
+    eventHandler({
+      id: "evt-cb-1",
+      type: "task.created",
+      timestamp: new Date().toISOString(),
+      payload: { taskId: "t1", workspaceId: "ws-1" },
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(mockSyncReferenceNode).not.toHaveBeenCalled();
+  });
+
+  it("skips task deletion when Neo4j is unhealthy", async () => {
+    mockIsNeo4jHealthy.mockReturnValue(false);
+
+    eventHandler({
+      id: "evt-cb-2",
+      type: "task.deleted",
+      timestamp: new Date().toISOString(),
+      payload: { taskId: "t1", workspaceId: "ws-1" },
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(mockDeleteReferenceNodeBySource).not.toHaveBeenCalled();
+  });
+
+  it("skips finding sync when Neo4j is unhealthy", async () => {
+    mockIsNeo4jHealthy.mockReturnValue(false);
+    mockQueryFindings.mockReturnValue([
+      { id: "f1", title: "Auth issue", content: "JWT expired", tags: '["auth"]' },
+    ]);
+
+    eventHandler({
+      id: "evt-cb-3",
+      type: "finding.posted",
+      timestamp: new Date().toISOString(),
+      payload: { findingId: "f1", workspaceId: "ws-1" },
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(mockSyncReferenceNode).not.toHaveBeenCalled();
+  });
+
+  it("proceeds with sync when Neo4j is healthy", async () => {
+    mockIsNeo4jHealthy.mockReturnValue(true);
+    mockGetTask.mockReturnValue({
+      id: "t1",
+      title: "Fix bug",
+      description: "Auth is broken",
+      workspaceId: "ws-1",
+      parentTaskId: "",
+      dependsOn: "[]",
+    });
+
+    eventHandler({
+      id: "evt-cb-4",
+      type: "task.created",
+      timestamp: new Date().toISOString(),
+      payload: { taskId: "t1", workspaceId: "ws-1" },
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(mockSyncReferenceNode).toHaveBeenCalled();
   });
 });

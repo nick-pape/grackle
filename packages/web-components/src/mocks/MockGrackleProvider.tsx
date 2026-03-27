@@ -1013,7 +1013,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         setAppDefaultPersonaIdState(personaId);
       },
       onboardingCompleted: true,
-      completeOnboarding: () => {
+      completeOnboarding: async () => {
         console.log("[MockGrackle] completeOnboarding");
       },
       usageCache: {

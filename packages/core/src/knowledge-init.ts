@@ -11,6 +11,7 @@ import {
   openNeo4j,
   initSchema,
   closeNeo4j,
+  healthCheck as neo4jHealthCheck,
   createLocalEmbedder,
   syncReferenceNode,
   deleteReferenceNodeBySource,
@@ -24,10 +25,14 @@ import {
 import { subscribe, type GrackleEvent } from "./event-bus.js";
 import { taskStore, findingStore, safeParseJsonArray } from "@grackle-ai/database";
 import { logger } from "./logger.js";
+import { isNeo4jHealthy } from "./knowledge-health.js";
 
 // ---------------------------------------------------------------------------
 // Configuration
 // ---------------------------------------------------------------------------
+
+/** Re-export Neo4j health check for use by the reconciliation health phase. */
+export { neo4jHealthCheck };
 
 /** Whether the knowledge graph subsystem is enabled. */
 export function isKnowledgeEnabled(): boolean {
@@ -127,6 +132,12 @@ async function syncTaskEdges(
 
 /** Handle a single entity event. */
 async function handleEvent(embedder: Embedder, event: GrackleEvent): Promise<void> {
+  // Circuit breaker: skip sync when Neo4j is known-unreachable
+  if (!isNeo4jHealthy()) {
+    logger.debug({ eventType: event.type }, "Knowledge sync skipped — Neo4j unhealthy");
+    return;
+  }
+
   try {
     const payload: Record<string, unknown> = event.payload;
 

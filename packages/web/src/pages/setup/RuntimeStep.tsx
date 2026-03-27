@@ -67,7 +67,7 @@ export function RuntimeStep({ currentRuntime, onFinish, onBack, finishDisabled }
         <button
           type="button"
           className={styles.primaryButton}
-          onClick={() => onFinish(selected)}
+          onClick={() => { onFinish(selected); }}
           disabled={finishDisabled}
           data-testid="setup-finish"
         >

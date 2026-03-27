@@ -2,7 +2,7 @@ import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
 import { DEFAULT_WEB_PORT } from "@grackle-ai/common";
-import { settingsStore, personaStore, isAllowedSettingKey } from "@grackle-ai/database";
+import { settingsStore, personaStore, envRegistry, isAllowedSettingKey } from "@grackle-ai/database";
 import { generatePairingCode as authGeneratePairingCode } from "@grackle-ai/auth";
 import { checkVersionStatus } from "./version-check.js";
 import { detectLanIp } from "./utils/network.js";
@@ -40,6 +40,20 @@ export async function setSetting(req: grackle.SetSettingRequest): Promise<grackl
   }
   settingsStore.setSetting(req.key, req.value);
   emit("setting.changed", { key: req.key, value: req.value });
+
+  // Sync the local environment's defaultRuntime when the default persona changes,
+  // so bootstrap pre-installs the correct runtime packages (fixes #1031).
+  if (req.key === "default_persona_id" && req.value) {
+    const newDefault = personaStore.getPersona(req.value);
+    if (newDefault?.runtime) {
+      const localEnv = envRegistry.getEnvironment("local");
+      if (localEnv && localEnv.defaultRuntime !== newDefault.runtime) {
+        envRegistry.updateDefaultRuntime("local", newDefault.runtime);
+        emit("environment.changed", {});
+      }
+    }
+  }
+
   return create(grackle.SettingResponseSchema, {
     key: req.key,
     value: req.value,

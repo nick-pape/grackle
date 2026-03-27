@@ -165,4 +165,4 @@ export type { ThemeDefinition } from "./themes.js";
 // ─── Mocks & Test Utilities ─────────────────────────────────────────────────
 
 export { MockGrackleProvider } from "./mocks/MockGrackleProvider.js";
-export { withMockGrackle, withMockGrackleRoute } from "./test-utils/storybook-helpers.js";
+export { withMockGrackle, withMockGrackleRoute, makePersona } from "./test-utils/storybook-helpers.js";
