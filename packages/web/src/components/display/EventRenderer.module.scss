@@ -177,9 +177,7 @@
 .messageCopyButton {
   // Positioned by CopyButton.module.scss (position: absolute, top/right).
   // Opacity controlled by .textEvent:hover above.
-  @include mobile {
-    opacity: 0.5;
-  }
+  // Mobile: base CopyButton handles always-visible (opacity: 1).
 }
 
 .codeBlockWrapper {
@@ -192,9 +190,7 @@
 
 .codeBlockCopyButton {
   // Override absolute position from CopyButton default — sits inside the wrapper.
-  @include mobile {
-    opacity: 0.5;
-  }
+  // Mobile: base CopyButton handles always-visible (opacity: 1).
 }
 
 // Tool card styles have moved to ../tools/toolCards.module.scss.

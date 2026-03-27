@@ -53,7 +53,12 @@ export function CopyButton({ text, getHtml, className, "data-testid": testId }: 
     try {
       const html = getHtml?.();
       if (html) {
-        await richCopy(text, html);
+        try {
+          await richCopy(text, html);
+        } catch {
+          // Rich copy unsupported (e.g. ClipboardItem not available) — fall back to plain text
+          await navigator.clipboard.writeText(text);
+        }
       } else {
         await navigator.clipboard.writeText(text);
       }
@@ -66,7 +71,7 @@ export function CopyButton({ text, getHtml, className, "data-testid": testId }: 
         timerRef.current = undefined;
       }, COPIED_FEEDBACK_DURATION);
     } catch {
-      /* clipboard API unavailable — fail silently */
+      /* clipboard API entirely unavailable — fail silently */
     }
   }, [text, getHtml]);
 
