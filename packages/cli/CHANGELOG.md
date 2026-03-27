@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 27 Mar 2026 16:13:58 GMT and should not be manually modified.
+This log was last generated on Fri, 27 Mar 2026 19:02:42 GMT and should not be manually modified.
+
+## 0.85.1
+Fri, 27 Mar 2026 19:02:42 GMT
+
+### Patches
+
+- fix: resolve bootstrap runtime from default persona instead of hardcoded env column; await persona updates during onboarding
 
 ## 0.85.0
 Fri, 27 Mar 2026 16:13:58 GMT
