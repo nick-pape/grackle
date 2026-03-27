@@ -7,12 +7,16 @@ const meta: Meta<typeof CopyButton> = {
   title: "Display/CopyButton",
   decorators: [
     (Story) => {
-      // Mock the clipboard API for Storybook environment
-      Object.assign(navigator, {
-        clipboard: {
+      // Mock the clipboard API for Storybook/test environments.
+      // navigator.clipboard is a read-only getter in Chromium, so
+      // Object.assign fails; use defineProperty to override it.
+      Object.defineProperty(navigator, "clipboard", {
+        value: {
           writeText: fn().mockResolvedValue(undefined),
           write: fn().mockResolvedValue(undefined),
         },
+        writable: true,
+        configurable: true,
       });
       return <Story />;
     },
