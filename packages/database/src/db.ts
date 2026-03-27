@@ -196,6 +196,15 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
   // Check current schema version before creating tables — an ancient database
   // with missing columns would cause index creation to fail with a confusing error.
   const currentVersion = conn.pragma("user_version", { simple: true }) as number;
+
+  // Prevent running an older binary against a database upgraded by a newer version.
+  if (currentVersion > CURRENT_VERSION) {
+    throw new Error(
+      `Database schema version (${currentVersion}) is newer than this application supports (${CURRENT_VERSION}). ` +
+      "Please upgrade the application or use a compatible database file.",
+    );
+  }
+
   if (currentVersion < BASELINE_VERSION) {
     validateBaselineSchema(conn);
   }
@@ -363,7 +372,16 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
       migration.up(conn);
       conn.pragma(`user_version = ${migration.version}`);
     });
-    run();
+    try {
+      run();
+    } catch (error) {
+      const label = `Migration v${migration.version} ("${migration.name}") failed`;
+      if (error instanceof Error) {
+        error.message = `${label}: ${error.message}`;
+        throw error;
+      }
+      throw new Error(`${label}: ${String(error)}`);
+    }
   }
 }
 

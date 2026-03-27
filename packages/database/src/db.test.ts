@@ -80,6 +80,16 @@ describe("initDatabase", () => {
     expect(getUserVersion(mem)).toBe(CURRENT_VERSION);
   });
 
+  it("throws on downgrade — database version newer than application", () => {
+    const mem = new Database(":memory:");
+    mem.pragma("foreign_keys = ON");
+
+    // Simulate a database upgraded by a newer binary
+    mem.pragma("user_version = 9999");
+
+    expect(() => initDatabase(mem)).toThrow("newer than this application supports");
+  });
+
   it("throws on ancient database missing required columns", () => {
     const mem = new Database(":memory:");
     mem.pragma("foreign_keys = ON");
