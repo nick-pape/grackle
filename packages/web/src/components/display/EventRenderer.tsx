@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useRef, useState, type JSX } from "react";
+import { type ReactNode, useState, type JSX } from "react";
 import Markdown from "react-markdown";
 import rehypePrismPlus from "rehype-prism-plus/common";
 import remarkGfm from "remark-gfm";
@@ -62,7 +62,7 @@ function SystemEvent({ time, content }: { time: string; content: string }): JSX.
 }
 
 /** Recursively extracts plain text from React children (for code block copy). */
-function extractText(node: ReactNode): string {
+export function extractText(node: ReactNode): string {
   if (typeof node === "string") {
     return node;
   }
@@ -105,33 +105,16 @@ const markdownComponents: Record<string, typeof CodeBlockWrapper> = {
 
 /** Renders an assistant text output event with markdown formatting. */
 function TextEvent({ content }: { content: string }): JSX.Element {
-  const markdownRef = useRef<HTMLDivElement>(null);
-
-  /** Lazily reads rendered HTML at click time, stripping injected CopyButton elements. */
-  const getHtml = useCallback((): string | undefined => {
-    if (!markdownRef.current) {
-      return undefined;
-    }
-    const clone = markdownRef.current.cloneNode(true) as HTMLElement;
-    for (const btn of clone.querySelectorAll("[data-testid='copy-code-block']")) {
-      btn.remove();
-    }
-    return clone.innerHTML;
-  }, []);
-
   return (
     <div className={styles.textEvent}>
       <CopyButton
         text={content}
-        getHtml={getHtml}
         data-testid="copy-message"
         className={styles.messageCopyButton}
       />
-      <div ref={markdownRef}>
-        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrismPlus]} components={markdownComponents}>
-          {content}
-        </Markdown>
-      </div>
+      <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrismPlus]} components={markdownComponents}>
+        {content}
+      </Markdown>
     </div>
   );
 }
