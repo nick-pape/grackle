@@ -16,11 +16,17 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Get weekly cache key
+        id: week
+        run: echo "key=$(date +%Y-%W)" >> "$GITHUB_OUTPUT"
+
       - name: Cache Neo4j Docker image
         uses: actions/cache@v4
         with:
           path: /tmp/docker-images
-          key: docker-neo4j-5-community
+          key: docker-neo4j-5-community-${{ steps.week.outputs.key }}
+          restore-keys: |
+            docker-neo4j-5-community-
 
       - name: Load or pull Neo4j image
         run: |
