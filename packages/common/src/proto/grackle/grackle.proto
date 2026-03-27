@@ -428,10 +428,15 @@ message PostFindingRequest {
 }
 
 message QueryFindingsRequest {
+  // Optional: when empty, returns findings across all workspaces.
   string workspace_id = 1;
   repeated string categories = 2;
   repeated string tags = 3;
   int32 limit = 4;
+}
+
+message GetFindingRequest {
+  string id = 1;
 }
 
 // ─── Personas ──────────────────────────────────────────────
@@ -788,6 +793,7 @@ service Grackle {
   // Findings
   rpc PostFinding(PostFindingRequest) returns (Finding);
   rpc QueryFindings(QueryFindingsRequest) returns (FindingList);
+  rpc GetFinding(GetFindingRequest) returns (Finding);
 
   // Schedules
   rpc CreateSchedule(CreateScheduleRequest) returns (Schedule);

@@ -1,0 +1,125 @@
+.container {
+  padding: var(--space-md);
+  max-width: 900px;
+}
+
+.notFound {
+  padding: var(--space-xl);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: var(--space-sm) 0 var(--space-md);
+}
+
+.categoryBadge {
+  border-radius: var(--radius-full);
+  padding: 2px var(--space-md);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.content {
+  color: var(--text-secondary);
+  font-size: var(--font-size-md);
+  line-height: 1.6;
+  margin-bottom: var(--space-md);
+
+  // Markdown content styles
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--text-primary);
+    margin-top: var(--space-md);
+    margin-bottom: var(--space-sm);
+  }
+
+  p {
+    margin-bottom: var(--space-sm);
+  }
+
+  code {
+    background: var(--bg-elevated);
+    padding: 1px var(--space-xs);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+  }
+
+  pre {
+    background: var(--bg-elevated);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    margin-bottom: var(--space-sm);
+
+    code {
+      background: none;
+      padding: 0;
+    }
+  }
+
+  ul, ol {
+    padding-left: var(--space-lg);
+    margin-bottom: var(--space-sm);
+  }
+
+  blockquote {
+    border-left: 3px solid var(--border-subtle);
+    padding-left: var(--space-md);
+    color: var(--text-tertiary);
+    margin: var(--space-sm) 0;
+  }
+}
+
+.tags {
+  display: flex;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-md);
+}
+
+.tag {
+  font-size: var(--font-size-xs);
+  padding: 2px var(--space-sm);
+  border-radius: var(--radius-full);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.metaTimestamp {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+}
+
+.metaLink {
+  font-size: var(--font-size-sm);
+  color: var(--accent-blue);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  padding: 0;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}

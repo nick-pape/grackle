@@ -19,10 +19,12 @@ const CATEGORY_COLORS: Record<string, { text: string; bg: string }> = {
 interface Props {
   /** Pre-filtered findings to display. */
   findings: FindingData[];
+  /** Optional click handler for finding cards. When provided, cards become clickable. */
+  onFindingClick?: (findingId: string) => void;
 }
 
 /** Displays workspace findings as styled cards with staggered entrance animation. */
-export function FindingsPanel({ findings }: Props): JSX.Element {
+export function FindingsPanel({ findings, onFindingClick }: Props): JSX.Element {
   if (findings.length === 0) {
     return (
       <div className={styles.emptyState}>
@@ -39,10 +41,14 @@ export function FindingsPanel({ findings }: Props): JSX.Element {
         return (
           <motion.div
             key={f.id}
-            className={styles.card}
+            className={`${styles.card} ${onFindingClick ? styles.cardClickable : ""}`}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05, duration: 0.2 }}
+            onClick={onFindingClick ? () => { onFindingClick(f.id); } : undefined}
+            role={onFindingClick ? "button" : undefined}
+            tabIndex={onFindingClick ? 0 : undefined}
+            onKeyDown={onFindingClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onFindingClick(f.id); } } : undefined}
           >
             <div className={styles.cardHeader}>
               <span

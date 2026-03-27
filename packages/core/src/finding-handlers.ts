@@ -40,3 +40,15 @@ export async function queryFindings(req: grackle.QueryFindingsRequest): Promise<
     findings: rows.map(findingRowToProto),
   });
 }
+
+/** Get a single finding by ID. */
+export async function getFinding(req: grackle.GetFindingRequest): Promise<grackle.Finding> {
+  if (!req.id) {
+    throw new ConnectError("id is required", Code.InvalidArgument);
+  }
+  const row = findingStore.getFinding(req.id);
+  if (!row) {
+    throw new ConnectError(`finding not found: ${req.id}`, Code.NotFound);
+  }
+  return findingRowToProto(row);
+}

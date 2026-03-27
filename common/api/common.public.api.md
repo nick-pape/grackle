@@ -443,6 +443,14 @@ export interface FuzzySearchOptions {
 }
 
 // @public
+type GetFindingRequest = Message<"grackle.GetFindingRequest"> & {
+    id: string;
+};
+
+// @public
+const GetFindingRequestSchema: GenMessage<GetFindingRequest>;
+
+// @public
 type GetKnowledgeNodeRequest = Message<"grackle.GetKnowledgeNodeRequest"> & {
     id: string;
 };
@@ -698,6 +706,11 @@ const Grackle: GenService<{
         input: typeof QueryFindingsRequestSchema;
         output: typeof FindingListSchema;
     };
+    getFinding: {
+        methodKind: "unary";
+        input: typeof GetFindingRequestSchema;
+        output: typeof FindingSchema;
+    };
     createSchedule: {
         methodKind: "unary";
         input: typeof CreateScheduleRequestSchema;
@@ -911,6 +924,8 @@ declare namespace grackle {
         PostFindingRequestSchema,
         QueryFindingsRequest,
         QueryFindingsRequestSchema,
+        GetFindingRequest,
+        GetFindingRequestSchema,
         McpServerConfig,
         McpServerConfigSchema,
         ToolConfig,
