@@ -4,22 +4,38 @@ import { MemoryRouter, Routes, Route } from "react-router";
 import type { Meta, StoryObj } from "@storybook/react";
 import type { Decorator } from "@storybook/react";
 import { expect, userEvent } from "@storybook/test";
+import { SYSTEM_PERSONA_ID } from "@grackle-ai/common";
 import { GrackleContext } from "../context/GrackleContext.js";
 import { SidebarProvider } from "../context/SidebarContext.js";
 import { MockGrackleProvider } from "../mocks/MockGrackleProvider.js";
+import { makePersona } from "../test-utils/storybook-helpers.js";
+import type { PersonaData } from "../hooks/types.js";
 import { SetupWizard } from "./SetupWizard.js";
+
+/** Seed persona required by SetupWizard (looks up id "claude-code"). */
+const SEED_PERSONA: PersonaData = makePersona({ id: "claude-code", name: "Software Engineer", runtime: "claude-code", model: "sonnet" });
+/** System persona synced during onboarding. */
+const SYSTEM_PERSONA: PersonaData = makePersona({ id: SYSTEM_PERSONA_ID, name: "System", runtime: "claude-code", model: "sonnet" });
 
 /**
  * Wrapper that reads the MockGrackleProvider context and re-provides it
- * with onboardingCompleted forced to false, so the SetupWizard renders
- * instead of redirecting to "/".
+ * with onboardingCompleted forced to false and the seed personas injected,
+ * so the SetupWizard renders instead of redirecting to "/".
  */
 function OnboardingOverride({ children }: { children: ReactNode }): JSX.Element {
   const ctx = useContext(GrackleContext);
   if (!ctx) {
     throw new Error("OnboardingOverride must be used within MockGrackleProvider");
   }
-  const overridden = { ...ctx, onboardingCompleted: false };
+  // Inject seed personas if not already present
+  const hasClaudeCode = ctx.personas.some((p) => p.id === "claude-code");
+  const hasSystem = ctx.personas.some((p) => p.id === SYSTEM_PERSONA_ID);
+  const personas = [
+    ...ctx.personas,
+    ...(!hasClaudeCode ? [SEED_PERSONA] : []),
+    ...(!hasSystem ? [SYSTEM_PERSONA] : []),
+  ];
+  const overridden = { ...ctx, onboardingCompleted: false, personas };
   return (
     <GrackleContext.Provider value={overridden}>
       {children}
