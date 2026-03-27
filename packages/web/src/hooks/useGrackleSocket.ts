@@ -27,27 +27,24 @@ import { protoToUsageStats } from "./proto-converters.js";
 // Keep consumer imports (e.g. `from "../hooks/useGrackleSocket.js"`) working.
 
 export type {
-  Environment,
-  Session,
-  SessionEvent,
-  Workspace,
-  TaskData,
-  FindingData,
-  TokenInfo,
-  CredentialProviderConfig,
   Codespace,
+  CredentialProviderConfig,
+  Environment,
+  FindingData,
+  GrackleEvent,
   PersonaData,
   ProvisionStatus,
-  WsMessage,
   SendFunction,
-  GrackleEvent,
+  Session,
+  SessionEvent,
+  TaskData,
+  TokenInfo,
+  UseGrackleSocketResult,
+  WsMessage,
+  Workspace,
 } from "@grackle-ai/web-components";
 
 export { isGrackleEvent } from "@grackle-ai/web-components";
-
-// ─── Result interface ─────────────────────────────────────────────────────────
-
-export type { UseGrackleSocketResult } from "@grackle-ai/web-components";
 
 // ─── Composition hook ─────────────────────────────────────────────────────────
 
