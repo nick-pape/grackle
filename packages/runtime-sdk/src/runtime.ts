@@ -38,7 +38,7 @@ export interface ResumeOptions {
   runtimeSessionId: string;
 }
 
-/** Options for creating an agent session (used by BaseAgentRuntime.createSession). */
+/** Options for creating an agent session (used by BaseAgentRuntime.createSession and BaseAgentSession constructor). */
 export interface CreateSessionOptions {
   /** Session identifier. */
   id: string;

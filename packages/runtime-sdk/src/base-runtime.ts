@@ -4,8 +4,8 @@ import type { AgentRuntime, AgentSession, SpawnOptions, ResumeOptions, CreateSes
  * Abstract base class for agent runtimes that share the spawn/resume pattern.
  *
  * Subclasses implement `createSession()` to construct the runtime-specific session.
- * The `spawn()` and `resume()` methods delegate to `createSession()` with the
- * appropriate parameters.
+ * The `spawn()` and `resume()` methods delegate to `createSession()` with a
+ * `CreateSessionOptions` object.
  */
 export abstract class BaseAgentRuntime implements AgentRuntime {
   public abstract name: string;

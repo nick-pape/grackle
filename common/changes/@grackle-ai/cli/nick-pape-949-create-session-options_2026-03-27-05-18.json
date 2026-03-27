@@ -2,7 +2,7 @@
   "changes": [
     {
       "comment": "Replace 12 positional params in BaseAgentRuntime.createSession() with CreateSessionOptions object",
-      "type": "patch",
+      "type": "minor",
       "packageName": "@grackle-ai/cli"
     }
   ],
