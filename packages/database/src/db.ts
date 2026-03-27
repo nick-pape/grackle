@@ -385,5 +385,86 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
   }
 }
 
+// ─── Integrity Check ────────────────────────────────────────
+
+/**
+ * Run `PRAGMA quick_check` to verify the database B-tree structure.
+ * Throws if the database is corrupt.
+ *
+ * @param conn - Optional SQLite instance. Defaults to the module-level singleton.
+ */
+export function checkDatabaseIntegrity(conn?: InstanceType<typeof Database>): void {
+  const c = conn ?? sqlite;
+  if (!c) {
+    return;
+  }
+  const result = c.pragma("quick_check", { simple: true }) as string;
+  if (result !== "ok") {
+    throw new Error(
+      `Database integrity check failed: ${result}. ` +
+      "The database file may be corrupt. " +
+      "Restore from a backup or delete the database file and restart.",
+    );
+  }
+}
+
+// ─── Backup ─────────────────────────────────────────────────
+
+/**
+ * Create a consistent backup of the database using the SQLite backup API.
+ * Handles WAL correctly (unlike a raw file copy).
+ *
+ * @param targetPath - Path to write the backup file.
+ * @param conn - Optional SQLite instance. Defaults to the module-level singleton.
+ */
+export async function backupDatabase(targetPath: string, conn?: InstanceType<typeof Database>): Promise<void> {
+  const c = conn ?? sqlite;
+  if (!c) {
+    return;
+  }
+  await c.backup(targetPath);
+}
+
+// ─── WAL Checkpoint Management ──────────────────────────────
+
+/** Interval between periodic WAL checkpoints (5 minutes). */
+const WAL_CHECKPOINT_INTERVAL_MS: number = 5 * 60 * 1000;
+
+/** Handle for the periodic WAL checkpoint timer. */
+let walTimer: ReturnType<typeof setInterval> | undefined;
+
+/**
+ * Run a passive WAL checkpoint. Non-blocking — does not interfere with readers.
+ *
+ * @param conn - Optional SQLite instance. Defaults to the module-level singleton.
+ */
+export function walCheckpoint(conn?: InstanceType<typeof Database>): void {
+  const c = conn ?? sqlite;
+  if (!c) {
+    return;
+  }
+  c.pragma("wal_checkpoint(PASSIVE)");
+}
+
+/**
+ * Start a periodic timer that runs {@link walCheckpoint} every 5 minutes.
+ * The timer is unref'd so it doesn't keep the process alive.
+ */
+export function startWalCheckpointTimer(): void {
+  if (walTimer) {
+    return;
+  }
+  walTimer = setInterval(walCheckpoint, WAL_CHECKPOINT_INTERVAL_MS);
+  walTimer.unref();
+}
+
+/** Stop the periodic WAL checkpoint timer. */
+export function stopWalCheckpointTimer(): void {
+  if (walTimer) {
+    clearInterval(walTimer);
+    walTimer = undefined;
+  }
+}
+
 export { sqlite, CURRENT_VERSION };
 export { db as default };

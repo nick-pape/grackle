@@ -1,7 +1,14 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import Database from "better-sqlite3";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { openSync, writeSync, closeSync, unlinkSync, existsSync, mkdtempSync, rmSync } from "node:fs";
 import { SYSTEM_PERSONA_ID, ROOT_TASK_ID } from "@grackle-ai/common";
-import { initDatabase, CURRENT_VERSION } from "./db.js";
+import {
+  initDatabase, CURRENT_VERSION,
+  checkDatabaseIntegrity, backupDatabase,
+  walCheckpoint, startWalCheckpointTimer, stopWalCheckpointTimer,
+} from "./db.js";
 import { seedDatabase } from "./db-seed.js";
 
 /** Expected tables created by initDatabase. */
@@ -186,5 +193,96 @@ describe("initDatabase", () => {
     // sqlite is undefined. Calling initDatabase() without an override triggers
     // the guard.
     expect(() => initDatabase()).toThrow("Database not initialized");
+  });
+});
+
+describe("checkDatabaseIntegrity", () => {
+  it("passes on a healthy database", () => {
+    const mem = new Database(":memory:");
+    mem.pragma("foreign_keys = ON");
+    initDatabase(mem);
+    // Should not throw
+    checkDatabaseIntegrity(mem);
+  });
+
+  it("throws on a corrupt database", () => {
+    const tmpPath = join(tmpdir(), `grackle-test-corrupt-${Date.now()}.db`);
+    // Create a database with enough data to span multiple pages
+    const db1 = new Database(tmpPath);
+    db1.pragma("journal_mode = DELETE");
+    db1.exec("CREATE TABLE test (id TEXT, val TEXT)");
+    for (let i = 0; i < 100; i++) {
+      db1.exec(`INSERT INTO test VALUES ('id${i}', '${"x".repeat(200)}')`);
+    }
+    db1.close();
+
+    // Corrupt page 2 (offset 4096 for default 4096-byte pages)
+    const fd = openSync(tmpPath, "r+");
+    writeSync(fd, Buffer.alloc(256, 0xff), 0, 256, 4096);
+    closeSync(fd);
+
+    // Reopen and check integrity
+    const db2 = new Database(tmpPath);
+    try {
+      expect(() => checkDatabaseIntegrity(db2)).toThrow("integrity check failed");
+    } finally {
+      db2.close();
+      try { unlinkSync(tmpPath); } catch { /* Windows EBUSY — OS will clean up temp */ }
+    }
+  });
+});
+
+describe("backupDatabase", () => {
+  const tmpDirs: string[] = [];
+  afterEach(() => {
+    for (const dir of tmpDirs) {
+      try { rmSync(dir, { recursive: true, force: true }); } catch { /* Windows EBUSY */ }
+    }
+    tmpDirs.length = 0;
+  });
+
+  it("creates a backup file that matches the source", async () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), "grackle-backup-"));
+    tmpDirs.push(tmpDir);
+
+    const srcPath = join(tmpDir, "source.db");
+    const backupPath = join(tmpDir, "backup.db");
+
+    const db = new Database(srcPath);
+    db.exec("CREATE TABLE test (id TEXT)");
+    db.exec("INSERT INTO test VALUES ('hello')");
+    await backupDatabase(backupPath, db);
+    db.close();
+
+    // Verify backup is a valid SQLite DB with the same data
+    const backup = new Database(backupPath);
+    const row = backup.prepare("SELECT id FROM test").get() as { id: string };
+    expect(row.id).toBe("hello");
+    backup.close();
+  });
+});
+
+describe("walCheckpoint", () => {
+  it("does not throw on a healthy database", () => {
+    const mem = new Database(":memory:");
+    mem.pragma("journal_mode = WAL");
+    expect(() => walCheckpoint(mem)).not.toThrow();
+  });
+});
+
+describe("startWalCheckpointTimer / stopWalCheckpointTimer", () => {
+  afterEach(() => {
+    stopWalCheckpointTimer();
+  });
+
+  it("starts and stops without error", () => {
+    startWalCheckpointTimer();
+    stopWalCheckpointTimer();
+  });
+
+  it("is idempotent — multiple starts do not error", () => {
+    startWalCheckpointTimer();
+    startWalCheckpointTimer();
+    stopWalCheckpointTimer();
   });
 });

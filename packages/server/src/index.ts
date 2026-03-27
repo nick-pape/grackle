@@ -15,7 +15,7 @@ import {
   initOrphanReparentSubscriber,
   logger, exec, detectLanIp,
 } from "@grackle-ai/core";
-import { envRegistry, sessionStore, workspaceStore, taskStore, scheduleStore, personaStore, settingsStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome } from "@grackle-ai/database";
+import { envRegistry, sessionStore, workspaceStore, taskStore, scheduleStore, personaStore, settingsStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome, checkDatabaseIntegrity, walCheckpoint, startWalCheckpointTimer, stopWalCheckpointTimer } from "@grackle-ai/database";
 import { DockerAdapter } from "@grackle-ai/adapter-docker";
 import { LocalAdapter } from "@grackle-ai/adapter-local";
 import { SshAdapter } from "@grackle-ai/adapter-ssh";
@@ -42,10 +42,12 @@ const esmRequire: NodeRequire = createRequire(import.meta.url);
 let localPowerLineManager: LocalPowerLineManager | undefined;
 
 async function main(): Promise<void> {
-  // Open the database, run schema migrations, then seed application defaults
+  // Open the database, verify integrity, run schema migrations, then seed defaults
   openDatabase();
+  checkDatabaseIntegrity();
   initDatabase();
   seedDatabase(sqlite!);
+  startWalCheckpointTimer();
 
   // Reset all environment statuses on startup — in-memory connections are lost
   envRegistry.resetAllStatuses();
@@ -322,6 +324,7 @@ async function main(): Promise<void> {
       const checks: ReadinessResult["checks"] = {};
       try {
         sqlite!.prepare("SELECT 1").get();
+        checkDatabaseIntegrity();
         checks.database = { ok: true };
       } catch (err) {
         checks.database = { ok: false, message: err instanceof Error ? err.message : "unknown error" };
@@ -494,6 +497,7 @@ async function main(): Promise<void> {
 
   async function shutdown(): Promise<void> {
     logger.info("Shutting down...");
+    stopWalCheckpointTimer();
     stopPairingCleanup();
     stopSessionCleanup();
     stopOAuthCleanup();
@@ -547,6 +551,8 @@ async function main(): Promise<void> {
       });
     });
 
+    // Final WAL checkpoint to flush all pending writes before exit
+    walCheckpoint();
     clearTimeout(forceExit);
     process.exit(process.exitCode || 0);
   }
