@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
-import type { TaskData } from "./types.js";
+import type { TaskData } from "@grackle-ai/web-components";
 import { useTaskToasts } from "./useTaskToasts.js";
 
 /** Build a minimal TaskData with sensible defaults. */

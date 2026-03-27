@@ -1,24 +1,24 @@
 import { useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { useParams, useLocation } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
-import { useToast } from "../context/ToastContext.js";
-import { EventStream } from "../components/display/EventStream.js";
-import { ChatInput } from "../components/chat/index.js";
-import { FindingsPanel } from "../components/panels/FindingsPanel.js";
-import { TaskEditPanel } from "../components/panels/TaskEditPanel.js";
-import { WorkpadPanel } from "../components/panels/WorkpadPanel.js";
-import { Breadcrumbs, ConfirmDialog } from "../components/display/index.js";
-import { buildTaskBreadcrumbs } from "../utils/breadcrumbs.js";
-import { taskUrl, workspaceUrl, useAppNavigate } from "../utils/navigation.js";
-import { getStatusBadgeClassKey, getStatusStyle } from "../utils/taskStatus.js";
+import { useToast } from "@grackle-ai/web-components";
+import { EventStream } from "@grackle-ai/web-components/src/components/display/EventStream.js";
+import { ChatInput } from "@grackle-ai/web-components/src/components/chat/index.js";
+import { FindingsPanel } from "@grackle-ai/web-components/src/components/panels/FindingsPanel.js";
+import { TaskEditPanel } from "@grackle-ai/web-components/src/components/panels/TaskEditPanel.js";
+import { WorkpadPanel } from "@grackle-ai/web-components/src/components/panels/WorkpadPanel.js";
+import { Breadcrumbs, ConfirmDialog } from "@grackle-ai/web-components/src/components/display/index.js";
+import { buildTaskBreadcrumbs } from "@grackle-ai/web-components/src/utils/breadcrumbs.js";
+import { taskUrl, workspaceUrl, useAppNavigate } from "@grackle-ai/web-components/src/utils/navigation.js";
+import { getStatusBadgeClassKey, getStatusStyle } from "@grackle-ai/web-components/src/utils/taskStatus.js";
 import type { Session, TaskData, Environment, Workspace } from "../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { formatCost } from "../utils/format.js";
-import { groupConsecutiveTextEvents, pairToolEvents } from "../utils/sessionEvents.js";
+import { formatCost } from "@grackle-ai/web-components/src/utils/format.js";
+import { groupConsecutiveTextEvents, pairToolEvents } from "@grackle-ai/web-components/src/utils/sessionEvents.js";
 import { useHotkey } from "../hooks/useHotkey.js";
-import styles from "../components/panels/SessionPanel.module.scss";
+import styles from "@grackle-ai/web-components/src/components/panels/SessionPanel.module.scss";
 
 type TaskTab = "overview" | "stream" | "findings";
 

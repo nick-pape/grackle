@@ -2,10 +2,7 @@ import { useCallback, useMemo, type JSX } from "react";
 import { Outlet } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useSidebarSlot } from "../../hooks/useSidebarSlot.js";
-import { TaskList } from "../lists/TaskList.js";
-import { EnvironmentNav } from "../lists/EnvironmentNav.js";
-import { SettingsNav } from "../settings/SettingsNav.js";
-import { KnowledgeNav } from "../knowledge/KnowledgeNav.js";
+import { TaskList, EnvironmentNav, SettingsNav, KnowledgeNav } from "@grackle-ai/web-components";
 
 /** Layout route wrapper that shows the TaskList in the sidebar. */
 export function WithTaskSidebar(): JSX.Element {

@@ -8,61 +8,15 @@
  */
 
 import { useState, useCallback, useRef } from "react";
-import type { GrackleEvent } from "./types.js";
+import type { GrackleEvent, GraphNode, GraphLink, NodeDetail, UseKnowledgeResult } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToGraphNode, protoToGraphLink } from "./proto-converters.js";
 
 // ---------------------------------------------------------------------------
-// Types
+// Types (re-exported from shared types module)
 // ---------------------------------------------------------------------------
 
-/** A node in the force graph. */
-export interface GraphNode {
-  id: string;
-  label: string;
-  kind: string;
-  category?: string;
-  sourceType?: string;
-  sourceId?: string;
-  content?: string;
-  tags?: string[];
-  workspaceId?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  /** Node size (edge count). */
-  val: number;
-}
-
-/** A link in the force graph. */
-export interface GraphLink {
-  source: string;
-  target: string;
-  type: string;
-}
-
-/** Full detail for a selected node. */
-export interface NodeDetail {
-  node: GraphNode;
-  edges: Array<{ fromId: string; toId: string; type: string; metadata?: Record<string, unknown> }>;
-}
-
-/** Result returned by useKnowledge. */
-export interface UseKnowledgeResult {
-  graphData: { nodes: GraphNode[]; links: GraphLink[] };
-  selectedNode: NodeDetail | undefined;
-  /** Currently selected node ID. */
-  selectedId: string | undefined;
-  loading: boolean;
-  searchQuery: string;
-  search(query: string): void;
-  clearSearch(): void;
-  selectNode(id: string): void;
-  clearSelection(): void;
-  expandNode(id: string): void;
-  loadRecent(workspaceId?: string): void;
-  /** Handle domain events from the event bus. Returns true if handled. */
-  handleEvent(event: GrackleEvent): boolean;
-}
+export type { GraphNode, GraphLink, NodeDetail, UseKnowledgeResult } from "@grackle-ai/web-components";
 
 // ---------------------------------------------------------------------------
 // Helpers

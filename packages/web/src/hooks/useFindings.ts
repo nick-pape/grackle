@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback } from "react";
-import type { FindingData, GrackleEvent } from "./types.js";
+import type { FindingData, GrackleEvent } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToFinding } from "./proto-converters.js";
 

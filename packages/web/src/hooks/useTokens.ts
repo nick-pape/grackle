@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback } from "react";
-import type { TokenInfo, GrackleEvent } from "./types.js";
+import type { TokenInfo, GrackleEvent } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToToken } from "./proto-converters.js";
 

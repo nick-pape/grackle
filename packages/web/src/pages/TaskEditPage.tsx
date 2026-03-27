@@ -1,8 +1,8 @@
 import { type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
-import { useToast } from "../context/ToastContext.js";
-import { TaskEditPanel } from "../components/panels/TaskEditPanel.js";
+import { useToast } from "@grackle-ai/web-components";
+import { TaskEditPanel } from "@grackle-ai/web-components/src/components/panels/TaskEditPanel.js";
 
 /** Page for editing an existing task, reading taskId from route params. */
 export function TaskEditPage(): JSX.Element {

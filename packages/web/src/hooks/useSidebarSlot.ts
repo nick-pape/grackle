@@ -1,5 +1,5 @@
 import { useLayoutEffect, type ReactNode } from "react";
-import { useSidebarSetter } from "../context/SidebarContext.js";
+import { useSidebarSetter } from "@grackle-ai/web-components";
 
 /**
  * Declares sidebar content for the current component's lifetime.

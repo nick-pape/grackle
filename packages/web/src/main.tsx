@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import "./styles/global.scss";
+import "@grackle-ai/web-components/src/styles/global.scss";
 import App from "./App.js";
 
 createRoot(document.getElementById("root")!).render(

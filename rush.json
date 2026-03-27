@@ -137,6 +137,10 @@
       "versionPolicyName": "grackle"
     },
     {
+      "packageName": "@grackle-ai/web-components",
+      "projectFolder": "packages/web-components"
+    },
+    {
       "packageName": "@grackle-ai/web",
       "projectFolder": "packages/web",
       "versionPolicyName": "grackle"

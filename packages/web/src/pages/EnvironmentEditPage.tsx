@@ -1,8 +1,8 @@
 import { type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
-import { useToast } from "../context/ToastContext.js";
-import { EnvironmentEditPanel } from "../components/panels/EnvironmentEditPanel.js";
+import { useToast } from "@grackle-ai/web-components";
+import { EnvironmentEditPanel } from "@grackle-ai/web-components/src/components/panels/EnvironmentEditPanel.js";
 
 /** Page shown when editing an existing environment. */
 export function EnvironmentEditPage(): JSX.Element {

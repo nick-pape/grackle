@@ -8,14 +8,14 @@
  */
 
 import { useState, useCallback } from "react";
-import type { Session, SessionEvent, WsMessage } from "./types.js";
+import type { Session, SessionEvent, WsMessage } from "@grackle-ai/web-components";
 import {
   isSessionEvent,
   warnBadPayload,
   mapSessionStatus,
   mapEndReason,
   MAX_EVENTS,
-} from "./types.js";
+} from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToSession, protoToSessionEvent } from "./proto-converters.js";
 

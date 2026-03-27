@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useRef, type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
-import { useToast } from "../context/ToastContext.js";
-import { EventStream } from "../components/display/EventStream.js";
-import { ChatInput } from "../components/chat/index.js";
-import { Breadcrumbs, SplitButton } from "../components/display/index.js";
-import { buildSessionBreadcrumbs } from "../utils/breadcrumbs.js";
+import { useToast } from "@grackle-ai/web-components";
+import { EventStream } from "@grackle-ai/web-components/src/components/display/EventStream.js";
+import { ChatInput } from "@grackle-ai/web-components/src/components/chat/index.js";
+import { Breadcrumbs, SplitButton } from "@grackle-ai/web-components/src/components/display/index.js";
+import { buildSessionBreadcrumbs } from "@grackle-ai/web-components/src/utils/breadcrumbs.js";
 import type { Session } from "../hooks/useGrackleSocket.js";
-import { groupConsecutiveTextEvents, pairToolEvents } from "../utils/sessionEvents.js";
-import { formatTokens, formatCost } from "../utils/format.js";
-import styles from "../components/panels/SessionPanel.module.scss";
+import { groupConsecutiveTextEvents, pairToolEvents } from "@grackle-ai/web-components/src/utils/sessionEvents.js";
+import { formatTokens, formatCost } from "@grackle-ai/web-components/src/utils/format.js";
+import styles from "@grackle-ai/web-components/src/components/panels/SessionPanel.module.scss";
 
 /** Props for the SessionHeader subcomponent. */
 interface SessionHeaderProps {

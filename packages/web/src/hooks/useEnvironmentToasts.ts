@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { Environment } from "./useGrackleSocket.js";
-import type { ToastVariant } from "../context/ToastContext.js";
+import type { ToastVariant } from "@grackle-ai/web-components";
 
 /**
  * Diffs the previous and current environment lists and fires toast

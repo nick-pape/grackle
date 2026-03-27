@@ -27,7 +27,7 @@ import type {
   Codespace,
   PersonaData,
   UsageStats,
-} from "./types.js";
+} from "@grackle-ai/web-components";
 import type { GraphNode, GraphLink } from "./useKnowledge.js";
 
 /** Convert a proto Environment to the UI Environment type. */

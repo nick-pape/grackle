@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
-import { AboutPanel } from "../../components/panels/AboutPanel.js";
-import { UpdateBanner } from "../../components/notifications/UpdateBanner.js";
+import { AboutPanel } from "@grackle-ai/web-components/src/components/panels/AboutPanel.js";
+import { UpdateBanner } from "@grackle-ai/web-components/src/components/notifications/UpdateBanner.js";
 import { useVersionStatus } from "../../hooks/useVersionStatus.js";
 
 /** Settings tab wrapping the about panel. */
