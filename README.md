@@ -1,4 +1,4 @@
-# 🐦‍⬛ Grackle
+# Grackle
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@grackle-ai/cli"><img src="https://img.shields.io/npm/v/@grackle-ai/cli.svg" alt="npm version" /></a>
@@ -13,180 +13,109 @@
   <img src="https://raw.githubusercontent.com/nick-pape/grackle/main/apps/docs-site/static/img/grackle-logo.png" alt="Grackle" width="200" />
 </p>
 
-**Run any AI coding agent on any remote environment. Orchestration optional.**
+## Stop babysitting your AI agents
 
-You're running Claude Code on a devbox. Or Codex in a container. Or Copilot over SSH. You wrote a janky script to set it up, it breaks every week, and you can't share it with your team.
+You have 6 agents running across 4 machines. You're tab-switching between terminals, copy-pasting context from one agent's output into another's prompt, and restarting dead sessions at 2 AM. Every agent has its own CLI, its own auth flow, its own way of crashing silently.
 
-Grackle gives you a single platform to run any coding agent on any environment — Docker, SSH, Codespaces, whatever. It handles provisioning, credentials, transport, and lifecycle. You get a CLI, web UI, and MCP server out of the box.
+Grackle is the control plane for AI coding agents. **Configure once, supervise by exception.**
 
-Want agents to share knowledge? There's a knowledge graph. Want one agent to spawn others? There's an MCP for that. Want task trees with dependencies and review gates? Same primitives. But you don't have to use any of that. **Start with one session on one box.**
+One platform to run [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview), [Copilot](https://github.com/features/copilot), [Codex](https://openai.com/index/codex/), [Goose](https://block.github.io/goose/), or [GenAIScript](https://microsoft.github.io/genaiscript/) on any environment — Docker, SSH, Codespaces, local. It handles provisioning, credentials, transport, and lifecycle. You get a CLI, web UI, and MCP server out of the box.
 
-![Dashboard — workspaces, active sessions, environment health, and task triage](screenshots/dashboard-projects-tasks.png)
+![Dashboard — active sessions, task triage, environment health, and workspaces](screenshots/dashboard-projects-tasks.png)
 
-## 💡 Philosophy
+## What makes Grackle different
 
-### 🔌 Environments are just compute
+**Agent IPC** — Parent sessions spawn children with bidirectional pipes. Structured communication between agents — no polling, no shared files, no prompt-stuffing.
 
-Docker, local, SSH, and GitHub Codespaces — it shouldn't matter where an agent runs. Grackle treats environments as interchangeable compute behind a single protocol. Same interface, same results, regardless of where the work happens.
+**Knowledge persistence** — A semantic knowledge graph backed by Neo4j. One agent's architectural insight becomes another agent's context automatically. Search by concept, not keyword.
 
-### 🔄 Runtime agnostic by design
+**Session resilience** — Environments auto-reconnect on disconnect. Suspended sessions resume where they left off. Events buffer during outages and drain on reconnect. No lost work.
 
-The agent loop landscape is wildly unstable. [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview), [Copilot](https://github.com/features/copilot), [Codex](https://openai.com/index/codex/), [Goose](https://block.github.io/goose/), [GenAIScript](https://microsoft.github.io/genaiscript/) — whatever ships next month. Grackle wraps them all behind a standard interface so you can swap runtimes without changing your workflow. Your tooling shouldn't be coupled to whichever vendor is winning this quarter.
+**Scoped security** — Each agent gets a scoped MCP token with an allowlist of tools. A "Code Reviewer" persona can read code and post findings but can't write files or spawn sessions. Credentials are forwarded per-environment, never stored in prompts.
 
-### 🧰 Primitives, not opinions
+**Multi-vendor, one interface** — Swap runtimes per persona or per task. Your orchestration doesn't break when you switch from Claude to Codex or add Copilot as a second opinion.
 
-Grackle doesn't tell you how to orchestrate your agents. It gives you the building blocks — sessions, tasks, findings, personas, an MCP control plane — and lets you compose them however you want. A single remote REPL session uses one primitive. A supervised swarm uses all of them. Same platform, same CLI, same MCP.
+**Script personas** — Not everything needs an LLM loop. [GenAIScript](https://microsoft.github.io/genaiscript/) personas run deterministic TypeScript workflows — linters, formatters, analyzers — under the same session and task primitives as any agent.
 
-### 📈 Scales from remote control to swarms
+## See it in action
 
-Most tools force a choice: run one agent manually, or build a bespoke swarm framework from scratch. Grackle covers the whole spectrum — start simple, scale up.
+### Live agent stream
 
-#### 🎮 Remote Control
+Watch tool calls, code output, and reasoning as they happen. Specialized cards for each tool type — file edits show diffs, grep results show matches, bash commands show output, and todo lists track progress.
 
-Manage a single agent in a remote environment. No task tree, no orchestration. Just a session.
+![Live agent stream — tool cards, code output, and inline interaction](screenshots/task-stream-view.png)
 
-```mermaid
-graph LR
-    You["👤 You"] --> S["⚡ Server"]
-    S -- PowerLine --> E["🐳 Environment"]
-    E --- A["🤖 Agent"]
-```
+### Task trees and dependencies
 
-![Live agent stream — real-time tool calls, code output, and inline interaction](screenshots/task-stream-view.png)
+Decompose work into parent/child hierarchies. Chain tasks with dependency gates. Every task gets its own git worktree — agents never step on each other's branches.
 
-#### ⛓️ Workflow
+![Task tree — hierarchical tasks with status indicators and dependency badges](screenshots/task-tree-hierarchy.png)
 
-Decompose work into task trees with parent/child hierarchy. Chain siblings with dependencies. Review artifacts at each step.
+### DAG visualization
 
-```mermaid
-graph TD
-    Root["📋 Implement Auth"] --> A["✅ Design token schema"]
-    Root --> B["🔄 Implement middleware"]
-    Root --> C["⏳ Write integration tests"]
-    B --> C
-```
+Interactive dependency graph showing hierarchy and blocking relationships. Click any node to see its stream, findings, or overview.
 
-![Task tree — hierarchical tasks with status indicators, dependencies, and expand/collapse](screenshots/task-tree-hierarchy.png)
+![DAG visualization — interactive task dependency graph](screenshots/dag-visualization.png)
 
-![DAG visualization — interactive dependency graph with hierarchy and dependency edges](screenshots/dag-visualization.png)
+### Knowledge graph
 
-#### 👥 Team
+Agents write findings to a semantic knowledge graph. Other agents query it by concept. The UI explorer shows nodes (concepts, decisions, snippets, insights) and their relationships.
 
-Multiple agents working in parallel on a shared workspace, coordinating through the knowledge graph and IPC pipes.
+![Knowledge graph — semantic search with interactive graph explorer](screenshots/knowledge-graph.png)
 
-```mermaid
-graph TD
-    P["📁 Workspace"]
-    P --> A1["🤖 Agent A"] & A2["🤖 Agent B"] & A3["🤖 Agent C"]
-    A1 & A2 & A3 <-.-> K["🧠 Knowledge Graph"]
-```
+### Findings
 
-#### 🐝 Swarm
-
-Autonomous task decomposition, agent recruitment, knowledge sharing.
-
-```mermaid
-graph TD
-    G["🎯 Goal"] --> D["Decompose"]
-    D --> T1["🤖"] & T2["🤖"] & T3["🤖"] & T4["🤖"]
-    T1 & T2 & T3 & T4 --> K["🧠 Knowledge Graph"]
-    K --> N["🤖 ...more agents"]
-    N -.-> D
-    style N fill:#333,stroke:#666,stroke-dasharray: 5 5
-```
-
-### 🔍 Workspaces and workpads
-
-A **workspace** is a place inside an environment where work gets done — typically a git repo clone. Each task in a workspace gets its own git worktree, so agents never step on each other's branches. The full conversation thread is stored in the central server database — every tool call, every decision, fully auditable. If you can read a diff, you can audit a swarm.
-
-**Workpads** (coming soon) are structured context surfaces attached to tasks — the artifacts, notes, and handoff data that one session produces and the next session picks up. Think of them as the structured memory for a task across multiple agent attempts.
-
-### 🧠 Agents that actually coordinate
-
-Agents coordinate through kernel primitives — pipes, file descriptors, and structured IPC — not just by sharing a database. A parent session can spawn child sessions with bidirectional pipes, wait for structured results, and react to lifecycle signals. Tasks move through a defined lifecycle with review gates at each transition. See the [Task Lifecycle epic](https://github.com/nick-pape/grackle/issues/462) and [Signals & Process Control epic](https://github.com/nick-pape/grackle/issues/468) for the full roadmap.
-
-Grackle deploys a **knowledge graph** backed by semantic search — agents write findings to it, and other agents query it by concept, not just keyword. One agent's architectural insight becomes another agent's context automatically. The knowledge graph UI explorer is [in progress](https://github.com/nick-pape/grackle/issues/764); the backend is shipped ([Epic #692](https://github.com/nick-pape/grackle/issues/692)).
+Categorized discoveries shared across agents within a workspace — architecture decisions, bugs, API patterns, dependency issues. Tagged and searchable.
 
 ![Findings — categorized discoveries shared across agents](screenshots/findings-panel.png)
 
-### 🎭 Personas
+### Personas
 
-Personas are Grackle's version of what other platforms call "agents" — a named configuration that bundles a system prompt, runtime, model, tool allowlists, and MCP server connections. Assign a "Software Architect" persona to decompose work, a "Code Reviewer" to audit diffs read-only, or a "QA Engineer" to write tests.
+Named agent configurations that bundle a system prompt, runtime, model, tool allowlists, and MCP permissions. Assign a "Software Architect" to decompose work, a "Code Reviewer" to audit diffs read-only, or a "Lint & Format" script persona for deterministic workflows.
 
-**Script personas** use [GenAIScript](https://microsoft.github.io/genaiscript/) — a lightweight TypeScript API from Microsoft for programmatic AI workflows. Unlike agent loops that rely on an LLM to figure out what to do, GenAIScript lets you *script* deterministic steps: run a linter, analyze the output with an LLM, and post a findings summary. Grackle exposes these scripts under the same session and task primitives as any agent loop — same lifecycle, same streaming, same MCP tools — but the work is scripted, not hoped for.
+![Personas — specialized agent templates with runtime, model, and MCP tool configuration](screenshots/persona-management-view.png)
 
-![Personas — specialized agent templates with runtime, model, and system prompt configuration](screenshots/persona-management-view.png)
-
-### 🎨 Themeable
-
-10 built-in themes — dark, light, and everything in between. Grackle, Grackle Light, Glassmorphism, Matrix, Neubrutalism, Monokai, Ubuntu, Sandstone, Verdigris, and Primer. Switch in Settings or match your system preference.
-
-![Theme grid — Grackle, Grackle Light, Matrix, Neubrutalism, Monokai, Sandstone](screenshots/theme-grid.png)
-
-## 🏗️ Example Topology
-
-```mermaid
-graph TD
-    UI["🌐 Web UI"]
-    CLI["⌨️ CLI"]
-    MCP["🔌 MCP Server"]
-    UI & CLI & MCP --- S["⚡ Grackle Server"]
-
-    subgraph D1["🐳 Docker"]
-        D1A["🤖 Claude"] & D1B["🤖 Claude"] & D1C["🤖 Copilot"] & D1D["..."]
-    end
-
-    subgraph D2["🐳 Docker"]
-        D2A["🤖 Copilot"] & D2B["🤖 Codex"] & D2C["..."]
-    end
-
-    subgraph CS1["☁️ Codespace"]
-        CS1A["🤖 Claude"] & CS1B["🤖 Copilot"] & CS1C["..."]
-    end
-
-    subgraph CS2["☁️ Codespace"]
-        CS2A["🤖 Claude"] & CS2B["🤖 Claude"] & CS2C["..."]
-    end
-
-    S --- D1 & D2 & CS1 & CS2
-```
-
-
-## ✨ Features
-
-| | Feature | Description |
-|---|---|---|
-| 📡 | **Real-time streaming** | Watch agent tool calls and output as they happen, bridged from gRPC to WebSocket |
-| 🌳 | **Git worktree isolation** | Every task gets its own branch in its own worktree — zero interference between agents |
-| 🧠 | **Knowledge graph** | Semantic search over session transcripts, findings, and task context — agents build shared understanding across sessions |
-| 🔄 | **Multi-runtime support** | [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview), [Copilot](https://github.com/features/copilot), [Codex](https://openai.com/index/codex/), [Goose](https://block.github.io/goose/), and [GenAIScript](https://microsoft.github.io/genaiscript/) — swap runtimes per persona or per task |
-| 🌲 | **Task tree hierarchy** | Decompose tasks into parent/child subtrees up to 5 levels deep — with recursive tree view, expand/collapse, and progress badges |
-| 🔗 | **Task dependencies** | Dependency gating — blocked tasks wait for their dependencies to complete |
-| 🎭 | **Personas** | Named agent configurations with system prompts, runtime/model, and tool allowlists. Script personas run [GenAIScript](https://microsoft.github.io/genaiscript/) programs for deterministic workflows |
-| 🔁 | **Session history** | Every task tracks its full session history — retry failed runs and compare attempts side by side |
-| ✅ | **Task review & approval** | Approve or reject completed tasks, with review notes for rejections that feed back into the next attempt |
-| 🔌 | **MCP server** | Expose Grackle's full capabilities as MCP tools — any agent with the MCP connected can create tasks, spawn sessions, query the knowledge graph, and orchestrate work |
-| 💬 | **Chat tab** | Talk to the root orchestrator directly — it has access to every MCP tool in Grackle. The fastest way to plan work, create tasks, and kick off agents |
-| 💰 | **Usage tracking** | Token counts and cost per session, task, or workspace — see spend at a glance in the dashboard, CLI, and task overview |
-| 🔄 | **Session suspend & recovery** | Environments auto-reconnect on disconnect. Suspended sessions resume where they left off — no lost work |
-| 🔀 | **IPC pipes** | Parent sessions spawn children with bidirectional pipes for structured communication — no polling, no shared files |
-
-## 🌍 Environments
+### Environments
 
 Each agent runs inside an isolated environment. Connect one or many:
 
-| Adapter | Status | Command |
-|---------|--------|---------|
-| 🐳 **Docker** | ✅ Available | `grackle env add my-env --docker` |
-| 💻 **Local** | ✅ Available | `grackle env add my-env --local` |
-| 🔒 **SSH** | ✅ Available | `grackle env add my-env --ssh --host ...` |
-| ☁️ **Codespace** | ✅ Available | `grackle env add my-env --codespace --codespace-name <name>` |
+| Adapter | Command |
+|---------|---------|
+| 🐳 **Docker** | `grackle env add my-env --docker` |
+| 💻 **Local** | `grackle env add my-env --local` |
+| 🔒 **SSH** | `grackle env add my-env --ssh --host ...` |
+| ☁️ **Codespace** | `grackle env add my-env --codespace --codespace-name <name>` |
 
-![Environment detail — adapter type, session count, cost, and nested workspaces](screenshots/agent-session-stream.png)
+![Environment detail — adapter type, session count, cost, workspaces, and management actions](screenshots/agent-session-stream.png)
 
-Docker spins up a container with PowerLine pre-installed. Local connects to a PowerLine instance already running on your machine. SSH connects to any remote host via OpenSSH. Codespace connects to an existing GitHub Codespace by name (use `gh codespace list` to find it).
+### Themes
 
-## 🚀 Quick Start
+10 built-in themes — Grackle, Grackle Light, Glassmorphism, Matrix, Neubrutalism, Monokai, Ubuntu, Sandstone, Verdigris, and Primer.
+
+![Themes — 10 built-in themes with light/dark variants](screenshots/theme-grid.png)
+
+## Features
+
+| | Feature | Description |
+|---|---|---|
+| 📡 | **Real-time streaming** | Watch agent tool calls and output as they happen — specialized cards for each tool type |
+| 🌳 | **Git worktree isolation** | Every task gets its own branch in its own worktree — zero interference between agents |
+| 🧠 | **Knowledge graph** | Semantic search over findings and task context — agents build shared understanding across sessions |
+| 🔄 | **Multi-runtime support** | Claude Code, Copilot, Codex, Goose, and GenAIScript — swap runtimes per persona or per task |
+| 🌲 | **Task tree hierarchy** | Parent/child subtrees with recursive tree view, expand/collapse, and progress badges |
+| 🔗 | **Task dependencies** | Dependency gating — blocked tasks wait for their dependencies to complete |
+| 🎭 | **Personas** | Named agent configs with system prompts, runtime/model, and scoped MCP tool allowlists |
+| 🔁 | **Session history** | Every task tracks its full session history — retry failed runs and compare attempts |
+| ✅ | **Task review & approval** | Approve or reject completed tasks with feedback that feeds into the next attempt |
+| 🔌 | **MCP server** | 50+ tools — any agent with MCP connected can create tasks, spawn sessions, query knowledge, and orchestrate work |
+| 💬 | **Chat** | Talk to the orchestrator directly — it has access to every MCP tool in Grackle |
+| 💰 | **Usage tracking** | Token counts and cost per session, task, or workspace |
+| 🔄 | **Session recovery** | Environments auto-reconnect. Suspended sessions resume where they left off |
+| 🔀 | **IPC pipes** | Parent sessions spawn children with bidirectional pipes for structured communication |
+| ⏰ | **Scheduled triggers** | Cron expressions and interval shortcuts for recurring task creation |
+| ⌨️ | **Keyboard shortcuts** | Global shortcuts for navigation and common actions |
+
+## Quick Start
 
 ### Docker (recommended)
 
@@ -248,7 +177,7 @@ See [`deploy/docker-compose.yml`](deploy/docker-compose.yml) for the full config
 # 1. Install the CLI
 npm install -g @grackle-ai/cli
 
-# 2. Start the server (gRPC + Web UI + WebSocket — all in one)
+# 2. Start the server (gRPC + Web UI — all in one)
 grackle serve
 
 # 3. Open the dashboard at http://localhost:3000
@@ -280,17 +209,25 @@ node packages/cli/dist/index.js serve
 ```
 </details>
 
-## 📋 Requirements
+## Progressive complexity
+
+Grackle covers the whole spectrum — start simple, scale up.
+
+**One agent, one box** — Manage a single agent in a remote environment. No task tree, no orchestration. Just `grackle spawn`.
+
+**Task trees** — Decompose work into parent/child hierarchies. Chain siblings with dependencies. Review artifacts at each step.
+
+**Multi-agent** — Multiple agents working in parallel on a shared workspace, coordinating through the knowledge graph and IPC pipes.
+
+**Autonomous swarms** — Task decomposition, agent recruitment, and knowledge sharing — all through the same primitives.
+
+## Requirements
 
 - Docker (recommended — the Grackle app and its dependencies are bundled in the image)
 - Node.js >= 22 (for npm install)
 
 > You still need to provide your own model credentials (via environment variables or mounted config files). Some features like the Docker adapter require access to the host Docker socket.
 
-## 📄 License
+## License
 
 MIT
-
----
-
-_See the [Agent Kernel RFC](https://github.com/nick-pape/grackle/issues/480) for the long-term roadmap._
