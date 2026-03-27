@@ -1,6 +1,7 @@
 import { useState, type JSX } from "react";
 import type { ToolCardProps } from "./ToolCardProps.js";
 import { parseUnifiedDiff, diffFromOldNew, diffStats, type DiffLine } from "./parseDiff.js";
+import { CopyButton } from "../display/CopyButton.js";
 import styles from "./toolCards.module.scss";
 
 /** Extracts file path from edit tool args (handles `file_path`, `path` variants). */
@@ -109,6 +110,13 @@ export function FileEditCard({ tool, args, result, isError, detailedResult }: To
               <span style={{ color: "var(--accent-red)" }}>−{stats.removed}</span>
             </span>
           </>
+        )}
+        {!inProgress && !isError && (diffLines || result) && (
+          <CopyButton
+            text={diffLines ? diffLines.map((l) => l.content).join("\n") : result!}
+            data-testid="tool-card-copy"
+            className={styles.copyButtonInline}
+          />
         )}
       </div>
 

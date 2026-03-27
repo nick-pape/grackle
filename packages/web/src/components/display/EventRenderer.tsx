@@ -1,10 +1,11 @@
-import { useState, type JSX } from "react";
+import { type ReactNode, useRef, useState, type JSX } from "react";
 import Markdown from "react-markdown";
 import rehypePrismPlus from "rehype-prism-plus/common";
 import remarkGfm from "remark-gfm";
 import type { SessionEvent } from "../../hooks/useGrackleSocket.js";
 import { formatTokens, formatCost } from "../../utils/format.js";
 import { ToolCard } from "../tools/ToolCard.js";
+import { CopyButton } from "./CopyButton.js";
 import styles from "./EventRenderer.module.scss";
 
 /** Props for the EventRenderer component. */
@@ -60,13 +61,56 @@ function SystemEvent({ time, content }: { time: string; content: string }): JSX.
   );
 }
 
+/** Recursively extracts plain text from React children (for code block copy). */
+function extractText(node: ReactNode): string {
+  if (typeof node === "string") {
+    return node;
+  }
+  if (typeof node === "number") {
+    return String(node);
+  }
+  if (Array.isArray(node)) {
+    return node.map(extractText).join("");
+  }
+  if (node !== null && node !== undefined && typeof node === "object" && "props" in node) {
+    return extractText((node as { props: { children?: ReactNode } }).props.children);
+  }
+  return "";
+}
+
+/** Wraps markdown `<pre>` blocks with a CopyButton for code-only copy. */
+function CodeBlockWrapper(props: { children?: ReactNode; className?: string }): JSX.Element {
+  const { children, className, ...rest } = props;
+  const rawText = extractText(children);
+  return (
+    <div className={styles.codeBlockWrapper}>
+      <pre className={className} {...rest}>{children}</pre>
+      <CopyButton text={rawText} data-testid="copy-code-block" className={styles.codeBlockCopyButton} />
+    </div>
+  );
+}
+
+/** Markdown component overrides for adding copy buttons to code blocks. */
+const markdownComponents: Record<string, typeof CodeBlockWrapper> = {
+  pre: CodeBlockWrapper,
+};
+
 /** Renders an assistant text output event with markdown formatting. */
 function TextEvent({ content }: { content: string }): JSX.Element {
+  const markdownRef = useRef<HTMLDivElement>(null);
   return (
     <div className={styles.textEvent}>
-      <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrismPlus]}>
-        {content}
-      </Markdown>
+      <CopyButton
+        text={content}
+        html={markdownRef.current?.innerHTML}
+        data-testid="copy-message"
+        className={styles.messageCopyButton}
+      />
+      <div ref={markdownRef}>
+        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrismPlus]} components={markdownComponents}>
+          {content}
+        </Markdown>
+      </div>
     </div>
   );
 }

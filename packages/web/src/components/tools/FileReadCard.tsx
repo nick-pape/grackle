@@ -1,5 +1,6 @@
 import { useState, type JSX } from "react";
 import type { ToolCardProps } from "./ToolCardProps.js";
+import { CopyButton } from "../display/CopyButton.js";
 import styles from "./toolCards.module.scss";
 
 /** Extracts the file path from tool args (handles both `file_path` and `path` variants). */
@@ -64,6 +65,9 @@ export function FileReadCard({ tool, args, result, isError, writeVariant }: File
             <span className={styles.spacer} />
             <span className={styles.badge}>{lines.length} lines</span>
           </>
+        )}
+        {!inProgress && !isError && result && (
+          <CopyButton text={result} data-testid="tool-card-copy" className={styles.copyButtonInline} />
         )}
       </div>
 
