@@ -299,44 +299,46 @@ describe("createRootTaskBoot", () => {
 
       const boot = createRootTaskBoot(deps);
 
-      // Simulate many failures to push backoff past the cap
-      // failure 1: backoff = 1s * 2^0 = 1s
+      // Burn through 7 failures to push backoff past 60s cap
+      // failure 1 (no delay needed — first call), then:
+      // delays after each failure: 1s, 2s, 4s, 8s, 16s, 32s
+      await boot(); // failure 1
+      const delays = [1, 2, 4, 8, 16, 32];
+      for (const delay of delays) {
+        vi.advanceTimersByTime(delay * 1_000);
+        await boot();
+      }
+      expect(deps.startTaskSession).toHaveBeenCalledTimes(7);
+
+      // After 7 failures, uncapped delay would be 1s * 2^6 = 64s,
+      // but cap limits it to 60s. Advancing 59s should NOT allow retry.
+      vi.advanceTimersByTime(59_000);
       await boot();
+      expect(deps.startTaskSession).toHaveBeenCalledTimes(7); // still throttled
+
+      // Advancing 1 more second (total 60s) should allow retry
       vi.advanceTimersByTime(1_000);
-      // failure 2: backoff = 1s * 2^1 = 2s
       await boot();
-      vi.advanceTimersByTime(2_000);
-      // failure 3: backoff = 1s * 2^2 = 4s
-      await boot();
-      vi.advanceTimersByTime(4_000);
-      // failure 4: backoff = 1s * 2^3 = 8s
-      await boot();
-
-      expect(deps.startTaskSession).toHaveBeenCalledTimes(4);
-
-      // After 4 failures, next backoff = min(1000 * 2^3 = 8s, 60s) = 8s
-      vi.advanceTimersByTime(8_000);
-      await boot();
-      expect(deps.startTaskSession).toHaveBeenCalledTimes(5);
+      expect(deps.startTaskSession).toHaveBeenCalledTimes(8); // allowed
     });
 
-    it("stops retrying after BOOT_MAX_FAILURES (5)", async () => {
+    it("stops retrying after BOOT_MAX_FAILURES (10)", async () => {
       const deps = createMockDeps();
       vi.mocked(deps.startTaskSession).mockResolvedValue("connection refused");
 
       const boot = createRootTaskBoot(deps);
 
-      // Burn through 5 failures with sufficient time between each
-      for (let i = 0; i < 5; i++) {
-        vi.advanceTimersByTime(60_000); // always past max delay
+      // Burn through 10 failures with sufficient time between each
+      for (let i = 0; i < 10; i++) {
+        vi.advanceTimersByTime(120_000); // always past max delay
         await boot();
       }
-      expect(deps.startTaskSession).toHaveBeenCalledTimes(5);
+      expect(deps.startTaskSession).toHaveBeenCalledTimes(10);
 
-      // 6th attempt should be blocked — max failures reached
-      vi.advanceTimersByTime(60_000);
+      // 11th attempt should be blocked — max failures reached
+      vi.advanceTimersByTime(120_000);
       await boot();
-      expect(deps.startTaskSession).toHaveBeenCalledTimes(5); // not called again
+      expect(deps.startTaskSession).toHaveBeenCalledTimes(10); // not called again
     });
 
     it("recovers from MAX_FAILURES when external recovery gets task running", async () => {
@@ -345,12 +347,12 @@ describe("createRootTaskBoot", () => {
 
       const boot = createRootTaskBoot(deps);
 
-      // Exhaust all 5 retries
-      for (let i = 0; i < 5; i++) {
-        vi.advanceTimersByTime(60_000);
+      // Exhaust all 10 retries
+      for (let i = 0; i < 10; i++) {
+        vi.advanceTimersByTime(120_000);
         await boot();
       }
-      expect(deps.startTaskSession).toHaveBeenCalledTimes(5);
+      expect(deps.startTaskSession).toHaveBeenCalledTimes(10);
 
       // Boot is now blocked. But session recovery reanimates the root task externally.
       vi.mocked(deps.computeTaskStatus).mockReturnValue({ status: TASK_STATUS.WORKING, latestSessionId: "sess-ext" });
@@ -367,7 +369,7 @@ describe("createRootTaskBoot", () => {
       vi.mocked(deps.computeTaskStatus).mockReturnValue({ status: TASK_STATUS.PAUSED, latestSessionId: "sess-ext" });
       vi.mocked(deps.startTaskSession).mockResolvedValue(undefined);
       await boot();
-      expect(deps.startTaskSession).toHaveBeenCalledTimes(6); // allowed after reset
+      expect(deps.startTaskSession).toHaveBeenCalledTimes(11); // allowed after reset
     });
 
     it("resets backoff when root task has been WORKING for >30s", async () => {

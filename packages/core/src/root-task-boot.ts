@@ -32,7 +32,7 @@ const BOOT_BACKOFF_MULTIPLIER: number = 2;
 const BOOT_MAX_DELAY_MS: number = 60_000;
 
 /** Maximum consecutive boot failures before giving up until server restart. */
-const BOOT_MAX_FAILURES: number = 5;
+const BOOT_MAX_FAILURES: number = 10;
 
 /** Minimum time a session must survive (ms) to be considered stable and reset backoff. */
 const BOOT_STABLE_THRESHOLD_MS: number = 30_000;
@@ -179,11 +179,14 @@ async function attemptBoot(deps: RootTaskBootDeps): Promise<void> {
 
   // 4. Check backoff
   if (state.failures >= BOOT_MAX_FAILURES) {
-    logger.error(
-      { failures: state.failures },
-      "Root task boot exhausted all retries (%d failures) — giving up until server restart",
-      state.failures,
-    );
+    // Log only once when the threshold is first reached to avoid spam
+    if (state.failures === BOOT_MAX_FAILURES) {
+      logger.error(
+        { failures: state.failures },
+        "Root task boot exhausted all retries (%d failures) — giving up until server restart",
+        state.failures,
+      );
+    }
     return;
   }
 
