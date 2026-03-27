@@ -14,7 +14,7 @@ import {
   ReconciliationManager, createCronPhase, createOrphanPhase, findFirstConnectedEnvironment, lifecycleCleanupPhase,
   initOrphanReparentSubscriber,
   logger, exec, detectLanIp,
-  runWithTrace, isValidTraceId,
+  runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace,
 } from "@grackle-ai/core";
 import { envRegistry, sessionStore, workspaceStore, taskStore, scheduleStore, personaStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome } from "@grackle-ai/database";
 import { DockerAdapter } from "@grackle-ai/adapter-docker";
@@ -265,10 +265,17 @@ async function main(): Promise<void> {
     routes: registerGrackleRoutes,
     interceptors: [
       // Trace ID interceptor: extract or generate a trace ID for request correlation.
-      (next) => (req) => {
+      // For streaming RPCs, wraps the response's message iterable so the generator
+      // body runs within the trace context on each iteration step.
+      (next) => async (req) => {
         const rawTraceId = req.header.get("x-trace-id") ?? undefined;
         const traceId = isValidTraceId(rawTraceId) ? rawTraceId! : randomUUID();
-        return runWithTrace(traceId, () => next(req));
+        const response = await runWithTrace(traceId, () => next(req));
+        if ("stream" in response && response.stream) {
+          const wrapped = wrapAsyncIterableWithTrace(traceId, response.message as AsyncIterable<unknown>);
+          (response as { message: AsyncIterable<unknown> }).message = wrapped;
+        }
+        return response;
       },
       // Auth interceptor: validate Bearer token.
       (next) => async (req) => {

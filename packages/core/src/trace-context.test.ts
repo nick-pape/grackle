@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getTraceId, runWithTrace, isValidTraceId } from "./trace-context.js";
+import { getTraceId, runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace } from "./trace-context.js";
 
 describe("trace-context", () => {
   describe("getTraceId()", () => {
@@ -113,6 +113,51 @@ describe("trace-context", () => {
 
     it("rejects strings with special characters", () => {
       expect(isValidTraceId("trace<script>")).toBe(false);
+    });
+  });
+
+  describe("wrapAsyncIterableWithTrace()", () => {
+    async function* generateValues(values: string[]): AsyncIterable<string> {
+      for (const v of values) {
+        yield v;
+      }
+    }
+
+    it("makes traceId available inside the async generator body", async () => {
+      const captured: (string | undefined)[] = [];
+
+      async function* gen(): AsyncIterable<string> {
+        captured.push(getTraceId());
+        yield "a";
+        captured.push(getTraceId());
+        yield "b";
+      }
+
+      const wrapped = wrapAsyncIterableWithTrace("stream-trace", gen());
+      const results: string[] = [];
+      for await (const val of wrapped) {
+        results.push(val);
+      }
+
+      expect(results).toEqual(["a", "b"]);
+      expect(captured).toEqual(["stream-trace", "stream-trace"]);
+    });
+
+    it("does not leak trace context outside the iterable", async () => {
+      const wrapped = wrapAsyncIterableWithTrace("inner-trace", generateValues(["x"]));
+      for await (const _val of wrapped) {
+        // consume
+      }
+      expect(getTraceId()).toBeUndefined();
+    });
+
+    it("preserves all yielded values", async () => {
+      const wrapped = wrapAsyncIterableWithTrace("t", generateValues(["a", "b", "c"]));
+      const results: string[] = [];
+      for await (const val of wrapped) {
+        results.push(val);
+      }
+      expect(results).toEqual(["a", "b", "c"]);
     });
   });
 });

@@ -30,3 +30,27 @@ export function isValidTraceId(value: string | undefined): boolean {
     && value.length <= MAX_TRACE_ID_LENGTH
     && TRACE_ID_PATTERN.test(value);
 }
+
+/**
+ * Wrap an AsyncIterable so that each iteration step runs within the given trace context.
+ * This is needed for streaming RPCs where the generator body runs outside the interceptor's
+ * {@link runWithTrace} scope.
+ */
+export function wrapAsyncIterableWithTrace<T>(traceId: string, iterable: AsyncIterable<T>): AsyncIterable<T> {
+  return {
+    [Symbol.asyncIterator](): AsyncIterator<T> {
+      const iterator = iterable[Symbol.asyncIterator]();
+      return {
+        next(): Promise<IteratorResult<T>> {
+          return store.run({ traceId }, () => iterator.next());
+        },
+        return(value?: unknown): Promise<IteratorResult<T>> {
+          if (iterator.return) {
+            return store.run({ traceId }, () => iterator.return!(value));
+          }
+          return Promise.resolve({ done: true, value: undefined as unknown as T });
+        },
+      };
+    },
+  };
+}
