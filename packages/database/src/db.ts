@@ -7,16 +7,81 @@ import { DB_FILENAME } from "@grackle-ai/common";
 import { grackleHome } from "./paths.js";
 import * as schema from "./schema.js";
 
-/** Error collected from a migration step that uses try-catch for idempotency. */
-export interface MigrationError {
+// ─── Schema Versioning ──────────────────────────────────────
+
+/**
+ * Schema version representing the consolidated baseline.
+ * All historical migrations (pre-versioning) are collapsed into this version.
+ */
+const BASELINE_VERSION: number = 1;
+
+/** A versioned database migration. */
+interface Migration {
+  /** Version this migration brings the schema to. Must be > BASELINE_VERSION. */
+  version: number;
+  /** Human-readable name for logging. */
   name: string;
-  error: unknown;
+  /** Forward migration function. Runs inside a transaction. */
+  up: (conn: InstanceType<typeof Database>) => void;
 }
 
-/** Result returned by {@link initDatabase}. */
-export interface InitDatabaseResult {
-  migrationErrors: MigrationError[];
+/**
+ * Ordered list of versioned migrations.
+ * Add new migrations to the end with incrementing version numbers.
+ */
+const MIGRATIONS: Migration[] = [
+  // Future migrations go here, e.g.:
+  // { version: 2, name: "add-foo-to-bar", up: (conn) => { conn.exec("ALTER TABLE ..."); } },
+];
+
+/** The highest schema version defined by BASELINE + MIGRATIONS. */
+const CURRENT_VERSION: number = MIGRATIONS.length > 0
+  ? MIGRATIONS[MIGRATIONS.length - 1]!.version
+  : BASELINE_VERSION;
+
+// ─── Legacy Schema Validation ───────────────────────────────
+
+/**
+ * Columns that must exist in a database to be considered baseline-compatible.
+ * These were added at various points during the historical migration sequence.
+ */
+const BASELINE_SCHEMA_CHECKS: Array<{ table: string; column: string }> = [
+  { table: "sessions", column: "cost_usd" },
+  { table: "tasks", column: "schedule_id" },
+  { table: "workspaces", column: "working_directory" },
+];
+
+/**
+ * Verify that an unversioned database has all columns expected by the baseline schema.
+ * Throws if tables exist but are missing columns, indicating the database predates
+ * historical migrations that have been removed.
+ */
+function validateBaselineSchema(conn: InstanceType<typeof Database>): void {
+  const tables = conn
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")
+    .all() as Array<{ name: string }>;
+
+  // No tables = fresh install, nothing to validate
+  if (tables.length === 0) {
+    return;
+  }
+
+  for (const { table, column } of BASELINE_SCHEMA_CHECKS) {
+    const cols = conn
+      .prepare(`PRAGMA table_info(${table})`)
+      .all() as Array<{ name: string }>;
+
+    // Table exists but is missing a required column
+    if (cols.length > 0 && !cols.some((c) => c.name === column)) {
+      throw new Error(
+        `Database schema is too old: table "${table}" is missing column "${column}". ` +
+        `Delete your database file and restart to create a fresh one.`,
+      );
+    }
+  }
 }
+
+// ─── Database Singleton ─────────────────────────────────────
 
 /** Raw better-sqlite3 instance. Available after {@link openDatabase} has been called. */
 let sqlite: InstanceType<typeof Database> | undefined;
@@ -111,14 +176,16 @@ export function openDatabase(dbPath?: string): void {
 }
 
 /**
- * Initialize all database tables and run migrations.
+ * Initialize all database tables and run any pending migrations.
  * Call once at startup after {@link openDatabase}, or pass an in-memory
  * SQLite instance for testing.
  *
+ * Uses `PRAGMA user_version` to track schema versions. Each migration runs
+ * exactly once, in order, inside a transaction.
+ *
  * @param sqliteOverride - Optional SQLite instance to use instead of the module-level one.
- * @returns Collected migration errors from idempotent try-catch steps.
  */
-export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): InitDatabaseResult {
+export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): void {
   const conn = sqliteOverride ?? sqlite;
   if (!conn) {
     throw new Error(
@@ -126,61 +193,15 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
     );
   }
 
-  const migrationErrors: MigrationError[] = [];
+  // Check current schema version before creating tables — an ancient database
+  // with missing columns would cause index creation to fail with a confusing error.
+  const currentVersion = conn.pragma("user_version", { simple: true }) as number;
+  if (currentVersion < BASELINE_VERSION) {
+    validateBaselineSchema(conn);
+  }
 
-  /** Check whether an error is an expected idempotent migration failure. */
-  const isExpectedIdempotencyError = (err: unknown): boolean => {
-    if (!(err instanceof Error)) {
-      return false;
-    }
-    const msg = err.message.toLowerCase();
-    return (
-      msg.includes("already exists") ||
-      msg.includes("duplicate column name") ||
-      msg.includes("no such table") ||
-      msg.includes("no such column")
-    );
-  };
-
-  /** Run a migration step, collecting expected idempotency errors. */
-  const tryMigration = (name: string, fn: () => void): void => {
-    try {
-      fn();
-    } catch (error) {
-      if (isExpectedIdempotencyError(error)) {
-        migrationErrors.push({ name, error });
-      } else {
-        throw error;
-      }
-    }
-  };
-
-  // Migration: rename projects table to workspaces
-  tryMigration("rename-projects-to-workspaces", () => {
-    conn.exec("ALTER TABLE projects RENAME TO workspaces");
-  });
-  // Migration: rename project_id column to workspace_id on tasks
-  tryMigration("rename-tasks-project-id", () => {
-    conn.exec("ALTER TABLE tasks RENAME COLUMN project_id TO workspace_id");
-  });
-  // Migration: rename project_id column to workspace_id on findings
-  tryMigration("rename-findings-project-id", () => {
-    conn.exec("ALTER TABLE findings RENAME COLUMN project_id TO workspace_id");
-  });
-  // Migration: drop old findings index after column rename
-  tryMigration("drop-idx-findings-project", () => {
-    conn.exec("DROP INDEX IF EXISTS idx_findings_project");
-  });
-
-  // Migration: rename default_env_id → environment_id on workspaces
-  // Must run BEFORE the backfill block below which references environment_id.
-  tryMigration("rename-workspaces-default-env-id", () => {
-    conn.exec(
-      "ALTER TABLE workspaces RENAME COLUMN default_env_id TO environment_id",
-    );
-  });
-
-  // Create tables — idempotent, safe to run every startup
+  // Create all tables and indices — IF NOT EXISTS makes this safe for both
+  // fresh installs and existing databases.
   conn.exec(`
     CREATE TABLE IF NOT EXISTS environments (
       id            TEXT PRIMARY KEY,
@@ -212,7 +233,13 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
       end_reason    TEXT,
       error         TEXT,
       task_id       TEXT NOT NULL DEFAULT '',
-      persona_id    TEXT NOT NULL DEFAULT ''
+      persona_id    TEXT NOT NULL DEFAULT '',
+      parent_session_id TEXT NOT NULL DEFAULT '',
+      pipe_mode     TEXT NOT NULL DEFAULT '',
+      input_tokens  INTEGER NOT NULL DEFAULT 0,
+      output_tokens INTEGER NOT NULL DEFAULT 0,
+      cost_usd      REAL NOT NULL DEFAULT 0,
+      sigterm_sent_at TEXT
     );
 
     CREATE TABLE IF NOT EXISTS tokens (
@@ -229,6 +256,8 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
       environment_id TEXT NOT NULL DEFAULT '' REFERENCES environments(id),
       status        TEXT NOT NULL DEFAULT 'active',
       use_worktrees INTEGER NOT NULL DEFAULT 1,
+      working_directory TEXT NOT NULL DEFAULT '',
+      default_persona_id TEXT NOT NULL DEFAULT '',
       created_at    TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -276,6 +305,9 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
       model         TEXT NOT NULL DEFAULT '',
       max_turns     INTEGER NOT NULL DEFAULT 0,
       mcp_servers   TEXT NOT NULL DEFAULT '[]',
+      type          TEXT NOT NULL DEFAULT 'agent',
+      script        TEXT NOT NULL DEFAULT '',
+      allowed_mcp_tools TEXT NOT NULL DEFAULT '[]',
       created_at    TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -285,8 +317,6 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
       value TEXT NOT NULL
     );
 
-    CREATE INDEX IF NOT EXISTS idx_findings_workspace ON findings(workspace_id);
-
     CREATE TABLE IF NOT EXISTS domain_events (
       id        TEXT PRIMARY KEY,
       type      TEXT NOT NULL,
@@ -294,333 +324,6 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
       payload   TEXT NOT NULL
     );
 
-    CREATE INDEX IF NOT EXISTS idx_domain_events_type ON domain_events(type);
-    CREATE INDEX IF NOT EXISTS idx_domain_events_timestamp ON domain_events(timestamp);
-  `);
-
-  // Migration: add powerline_token column if missing (older databases)
-  tryMigration("add-environments-powerline-token", () => {
-    conn.exec(
-      "ALTER TABLE environments ADD COLUMN powerline_token TEXT NOT NULL DEFAULT ''",
-    );
-  });
-
-  // Migration: rename sidecar_token → powerline_token (from older databases)
-  tryMigration("rename-environments-sidecar-token", () => {
-    conn.exec(
-      "ALTER TABLE environments RENAME COLUMN sidecar_token TO powerline_token",
-    );
-  });
-
-  // Migration: backfill NULLs in stage-2 tables from older schemas that lacked NOT NULL
-  conn.exec(`
-    UPDATE workspaces SET description = '' WHERE description IS NULL;
-    UPDATE workspaces SET repo_url = '' WHERE repo_url IS NULL;
-    UPDATE workspaces SET environment_id = COALESCE(
-      (SELECT id FROM environments LIMIT 1), ''
-    ) WHERE environment_id IS NULL OR environment_id = '';
-    UPDATE workspaces SET status = 'active' WHERE status IS NULL;
-    UPDATE workspaces SET created_at = datetime('now') WHERE created_at IS NULL;
-    UPDATE workspaces SET updated_at = datetime('now') WHERE updated_at IS NULL;
-
-    UPDATE tasks SET description = '' WHERE description IS NULL;
-    UPDATE tasks SET status = 'not_started' WHERE status IS NULL;
-    UPDATE tasks SET branch = '' WHERE branch IS NULL;
-    UPDATE tasks SET depends_on = '[]' WHERE depends_on IS NULL;
-    UPDATE tasks SET created_at = datetime('now') WHERE created_at IS NULL;
-    UPDATE tasks SET updated_at = datetime('now') WHERE updated_at IS NULL;
-    UPDATE tasks SET sort_order = 0 WHERE sort_order IS NULL;
-
-    UPDATE findings SET task_id = '' WHERE task_id IS NULL;
-    UPDATE findings SET session_id = '' WHERE session_id IS NULL;
-    UPDATE findings SET category = 'general' WHERE category IS NULL;
-    UPDATE findings SET tags = '[]' WHERE tags IS NULL;
-    UPDATE findings SET created_at = datetime('now') WHERE created_at IS NULL;
-  `);
-
-  // Migration: add parent_task_id and depth columns if missing (older databases)
-  tryMigration("add-tasks-parent-task-id", () => {
-    conn.exec(
-      "ALTER TABLE tasks ADD COLUMN parent_task_id TEXT NOT NULL DEFAULT ''",
-    );
-  });
-  tryMigration("add-tasks-depth", () => {
-    conn.exec(
-      "ALTER TABLE tasks ADD COLUMN depth INTEGER NOT NULL DEFAULT 0",
-    );
-  });
-
-  // Migration: add can_decompose column if missing (older databases)
-  tryMigration("add-tasks-can-decompose", () => {
-    conn.exec(
-      "ALTER TABLE tasks ADD COLUMN can_decompose INTEGER NOT NULL DEFAULT 0",
-    );
-
-    // Backfill: mark root tasks and tasks with existing children as decomposable
-    conn.exec(`
-      UPDATE tasks
-      SET can_decompose = 1
-      WHERE parent_task_id IS NULL OR parent_task_id = ''
-        OR id IN (
-          SELECT DISTINCT parent_task_id
-          FROM tasks
-          WHERE parent_task_id IS NOT NULL AND parent_task_id <> ''
-        )
-    `);
-  });
-
-  // Migration: add persona_id column to tasks if missing
-  tryMigration("add-tasks-persona-id", () => {
-    conn.exec(
-      "ALTER TABLE tasks ADD COLUMN persona_id TEXT NOT NULL DEFAULT ''",
-    );
-  });
-
-  // Migration: add task_id column to sessions if missing
-  tryMigration("add-sessions-task-id", () => {
-    conn.exec(
-      "ALTER TABLE sessions ADD COLUMN task_id TEXT NOT NULL DEFAULT ''",
-    );
-  });
-
-  // Migration: add use_worktrees column to workspaces if missing (older databases)
-  tryMigration("add-workspaces-use-worktrees", () => {
-    conn.exec(
-      "ALTER TABLE workspaces ADD COLUMN use_worktrees INTEGER NOT NULL DEFAULT 1",
-    );
-  });
-
-  // Migration: add worktree_base_path column to workspaces if missing (older databases)
-  // NOTE: column was later renamed to working_directory — see rename-worktree-base-path migration below.
-  tryMigration("add-workspaces-worktree-base-path", () => {
-    conn.exec(
-      "ALTER TABLE workspaces ADD COLUMN worktree_base_path TEXT NOT NULL DEFAULT ''",
-    );
-  });
-
-  // Migration: backfill task_id on existing sessions from tasks.session_id.
-  // Guard with try/catch since session_id column may have been dropped already.
-  tryMigration("backfill-sessions-task-id", () => {
-    conn.exec(`
-      UPDATE sessions SET task_id = (
-        SELECT id FROM tasks WHERE tasks.session_id = sessions.id LIMIT 1
-      ) WHERE task_id = '' AND EXISTS (
-        SELECT 1 FROM tasks WHERE tasks.session_id = sessions.id
-      )
-    `);
-  });
-
-  // Migration: add persona_id column to sessions if missing
-  tryMigration("add-sessions-persona-id", () => {
-    conn.exec(
-      "ALTER TABLE sessions ADD COLUMN persona_id TEXT NOT NULL DEFAULT ''",
-    );
-  });
-
-  // Migration: copy persona_id from tasks to sessions before dropping
-  tryMigration("copy-persona-id-tasks-to-sessions", () => {
-    conn.exec(`
-      UPDATE sessions SET persona_id = (
-        SELECT persona_id FROM tasks WHERE tasks.session_id = sessions.id LIMIT 1
-      ) WHERE persona_id = '' AND task_id != ''
-    `);
-  });
-
-  // Migration: drop columns that moved off the tasks table
-  tryMigration("drop-tasks-session-id", () => {
-    conn.exec("ALTER TABLE tasks DROP COLUMN session_id");
-  });
-  tryMigration("drop-tasks-env-id", () => {
-    conn.exec("ALTER TABLE tasks DROP COLUMN env_id");
-  });
-  tryMigration("drop-tasks-persona-id", () => {
-    conn.exec("ALTER TABLE tasks DROP COLUMN persona_id");
-  });
-
-  // Migration: normalize existing started_at values from SQLite datetime('now')
-  // format (YYYY-MM-DD HH:MM:SS) to ISO 8601 (YYYY-MM-DDTHH:MM:SS.000Z) so
-  // ordering is consistent with newly inserted rows.
-  conn.exec(`
-    UPDATE sessions
-    SET started_at = replace(started_at, ' ', 'T') || '.000Z'
-    WHERE started_at NOT LIKE '%T%'
-  `);
-
-  // Migration: normalize task statuses to simplified model
-  conn.exec(`
-    UPDATE tasks SET status = 'not_started' WHERE status IN ('pending', 'assigned');
-    UPDATE tasks SET status = 'complete' WHERE status = 'done';
-    UPDATE tasks SET status = 'not_started' WHERE status IN ('in_progress', 'waiting_input', 'review');
-  `);
-
-  // Migration: normalize session statuses
-  conn.exec(`
-    UPDATE sessions SET status = 'idle' WHERE status = 'waiting_input';
-    UPDATE sessions SET status = 'interrupted' WHERE status = 'killed';
-  `);
-
-  // Migration: drop stale columns from tasks
-  tryMigration("drop-tasks-assigned-at", () => {
-    conn.exec("ALTER TABLE tasks DROP COLUMN assigned_at");
-  });
-  tryMigration("drop-tasks-review-notes", () => {
-    conn.exec("ALTER TABLE tasks DROP COLUMN review_notes");
-  });
-
-  // Index for efficient session-by-task lookups
-  conn.exec(
-    "CREATE INDEX IF NOT EXISTS idx_sessions_task_id ON sessions(task_id)",
-  );
-
-  // Migration: add default_persona_id to workspaces and tasks
-  tryMigration("add-workspaces-default-persona-id", () => {
-    conn.exec(
-      "ALTER TABLE workspaces ADD COLUMN default_persona_id TEXT NOT NULL DEFAULT ''",
-    );
-  });
-  tryMigration("add-tasks-default-persona-id", () => {
-    conn.exec(
-      "ALTER TABLE tasks ADD COLUMN default_persona_id TEXT NOT NULL DEFAULT ''",
-    );
-  });
-  tryMigration("add-tasks-workpad", () => {
-    conn.exec(
-      "ALTER TABLE tasks ADD COLUMN workpad TEXT NOT NULL DEFAULT ''",
-    );
-  });
-
-  // Migration: add type and script columns to personas if missing
-  tryMigration("add-personas-type", () => {
-    conn.exec(
-      "ALTER TABLE personas ADD COLUMN type TEXT NOT NULL DEFAULT 'agent'",
-    );
-  });
-  tryMigration("add-personas-script", () => {
-    conn.exec(
-      "ALTER TABLE personas ADD COLUMN script TEXT NOT NULL DEFAULT ''",
-    );
-  });
-
-  tryMigration("add-personas-allowed-mcp-tools", () => {
-    conn.exec(
-      "ALTER TABLE personas ADD COLUMN allowed_mcp_tools TEXT NOT NULL DEFAULT '[]'",
-    );
-  });
-
-  tryMigration("add-sessions-parent-session-id", () => {
-    conn.exec(
-      "ALTER TABLE sessions ADD COLUMN parent_session_id TEXT NOT NULL DEFAULT ''",
-    );
-  });
-
-  tryMigration("add-sessions-pipe-mode", () => {
-    conn.exec(
-      "ALTER TABLE sessions ADD COLUMN pipe_mode TEXT NOT NULL DEFAULT ''",
-    );
-  });
-
-  tryMigration("add-sessions-input-tokens", () => {
-    conn.exec(
-      "ALTER TABLE sessions ADD COLUMN input_tokens INTEGER NOT NULL DEFAULT 0",
-    );
-  });
-
-  tryMigration("add-sessions-output-tokens", () => {
-    conn.exec(
-      "ALTER TABLE sessions ADD COLUMN output_tokens INTEGER NOT NULL DEFAULT 0",
-    );
-  });
-
-  tryMigration("add-sessions-cost-usd", () => {
-    conn.exec(
-      "ALTER TABLE sessions ADD COLUMN cost_usd REAL NOT NULL DEFAULT 0",
-    );
-  });
-
-  // Migration: add end_reason column to sessions if missing (older databases)
-  tryMigration("add-sessions-end-reason", () => {
-    conn.exec(
-      "ALTER TABLE sessions ADD COLUMN end_reason TEXT",
-    );
-  });
-
-  // Migration: normalize old session statuses to STOPPED + end_reason
-  conn.exec(`
-    UPDATE sessions SET end_reason = 'completed', status = 'stopped'
-      WHERE status = 'completed';
-    UPDATE sessions SET end_reason = 'interrupted', status = 'stopped'
-      WHERE status IN ('failed', 'interrupted');
-    UPDATE sessions SET end_reason = 'completed', status = 'stopped'
-      WHERE status = 'hibernating';
-  `);
-
-  // Migration: make workspace_id nullable on tasks.
-  // SQLite doesn't support ALTER COLUMN, so we recreate the table.
-  // Guard: only run if the column currently has NOT NULL.
-  {
-    const tableInfo = conn.prepare("PRAGMA table_info(tasks)").all() as Array<{ name: string; notnull: number }>;
-    const workspaceIdCol = tableInfo.find((c) => c.name === "workspace_id");
-    if (workspaceIdCol?.notnull === 1) {
-      conn.exec(`
-        BEGIN;
-        CREATE TABLE tasks_new (
-          id             TEXT PRIMARY KEY,
-          workspace_id   TEXT REFERENCES workspaces(id),
-          title          TEXT NOT NULL,
-          description    TEXT NOT NULL DEFAULT '',
-          status         TEXT NOT NULL DEFAULT 'not_started',
-          branch         TEXT NOT NULL DEFAULT '',
-          depends_on     TEXT NOT NULL DEFAULT '[]',
-          started_at     TEXT,
-          completed_at   TEXT,
-          created_at     TEXT NOT NULL DEFAULT (datetime('now')),
-          updated_at     TEXT NOT NULL DEFAULT (datetime('now')),
-          sort_order     INTEGER NOT NULL DEFAULT 0,
-          parent_task_id TEXT NOT NULL DEFAULT '',
-          depth          INTEGER NOT NULL DEFAULT 0,
-          can_decompose  INTEGER NOT NULL DEFAULT 0,
-          default_persona_id TEXT NOT NULL DEFAULT '',
-          workpad        TEXT NOT NULL DEFAULT '',
-          schedule_id    TEXT NOT NULL DEFAULT ''
-        );
-        INSERT INTO tasks_new SELECT
-          id, workspace_id, title, description, status, branch, depends_on,
-          started_at, completed_at, created_at, updated_at, sort_order,
-          parent_task_id, depth, can_decompose, default_persona_id,
-          COALESCE(workpad, ''),
-          COALESCE(schedule_id, '')
-        FROM tasks;
-        DROP TABLE tasks;
-        ALTER TABLE tasks_new RENAME TO tasks;
-        COMMIT;
-      `);
-    }
-  }
-
-  // Migration: add index on workspaces.environment_id for efficient lookup
-  conn.exec(
-    "CREATE INDEX IF NOT EXISTS idx_workspaces_environment_id ON workspaces(environment_id)",
-  );
-
-  tryMigration("add-sessions-sigterm-sent-at", () => {
-    conn.exec(
-      "ALTER TABLE sessions ADD COLUMN sigterm_sent_at TEXT",
-    );
-  });
-
-  // Migration: rename worktree_base_path → working_directory on workspaces table (#547)
-  // Guard: only run if the old column still exists (new databases already have working_directory).
-  tryMigration("rename-worktree-base-path", () => {
-    const tableInfo = conn.prepare("PRAGMA table_info(workspaces)").all() as Array<{ name: string }>;
-    if (tableInfo.some((c) => c.name === "worktree_base_path")) {
-      conn.exec(
-        "ALTER TABLE workspaces RENAME COLUMN worktree_base_path TO working_directory",
-      );
-    }
-  });
-
-  // ─── Schedules table ──────────────────────────────────────
-  conn.exec(`
     CREATE TABLE IF NOT EXISTS schedules (
       id                  TEXT PRIMARY KEY,
       title               TEXT NOT NULL,
@@ -637,18 +340,32 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
       created_at          TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE INDEX IF NOT EXISTS idx_findings_workspace ON findings(workspace_id);
+    CREATE INDEX IF NOT EXISTS idx_domain_events_type ON domain_events(type);
+    CREATE INDEX IF NOT EXISTS idx_domain_events_timestamp ON domain_events(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_sessions_task_id ON sessions(task_id);
+    CREATE INDEX IF NOT EXISTS idx_workspaces_environment_id ON workspaces(environment_id);
     CREATE INDEX IF NOT EXISTS idx_schedules_due ON schedules(enabled, next_run_at);
   `);
 
-  // Migration: add schedule_id to tasks table
-  tryMigration("add-tasks-schedule-id", () => {
-    conn.exec(
-      "ALTER TABLE tasks ADD COLUMN schedule_id TEXT NOT NULL DEFAULT ''",
-    );
-  });
+  // Mark unversioned databases as baseline now that tables are confirmed
+  if (currentVersion < BASELINE_VERSION) {
+    conn.pragma(`user_version = ${BASELINE_VERSION}`);
+  }
 
-  return { migrationErrors };
+  // Run any pending versioned migrations
+  for (const migration of MIGRATIONS) {
+    if (migration.version <= currentVersion) {
+      continue;
+    }
+    const run = conn.transaction(() => {
+      migration.up(conn);
+      conn.pragma(`user_version = ${migration.version}`);
+    });
+    run();
+  }
 }
 
-export { sqlite };
+export { sqlite, CURRENT_VERSION };
 export { db as default };
