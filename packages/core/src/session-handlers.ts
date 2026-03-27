@@ -223,6 +223,8 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
     traceId: getTraceId(),
   });
 
+  logger.info({ sessionId, environmentId: req.environmentId }, "Session spawned");
+
   const row = sessionStore.getSession(sessionId);
   const proto = sessionRowToProto(row!);
   proto.pipeFd = pipeFd;
@@ -232,6 +234,7 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
 /** Resume a previously suspended agent session. */
 export async function resumeAgent(req: grackle.ResumeRequest): Promise<grackle.Session> {
   const row = reanimateAgent(req.sessionId);
+  logger.info({ sessionId: req.sessionId }, "Session resumed");
   return sessionRowToProto(row);
 }
 
@@ -265,6 +268,8 @@ export async function sendInput(req: grackle.InputMessage): Promise<grackle.Empt
     logWriter.writeEvent(session.logPath, userInputEvent);
   }
   streamHub.publish(userInputEvent);
+
+  logger.debug({ sessionId: req.sessionId }, "User input received");
 
   await conn.client.sendInput(
     create(powerline.InputMessageSchema, {
@@ -311,6 +316,7 @@ export async function killAgent(req: grackle.KillAgentRequest): Promise<grackle.
   // for an explicit kill.
   killSessionAndCleanup(session);
 
+  logger.info({ sessionId: req.id }, "Session killed");
   return create(grackle.EmptySchema, {});
 }
 
