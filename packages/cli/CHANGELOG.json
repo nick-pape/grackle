@@ -2,6 +2,21 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.83.2",
+      "tag": "@grackle-ai/cli_v0.83.2",
+      "date": "Fri, 27 Mar 2026 04:31:22 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Remove dead try-catch around console.debug in stream-registry"
+          },
+          {
+            "comment": "Add copy-to-clipboard buttons to session chat UI; fix pipe fd transfer on task completion/kill"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.83.1",
       "tag": "@grackle-ai/cli_v0.83.1",
       "date": "Fri, 27 Mar 2026 04:01:50 GMT",

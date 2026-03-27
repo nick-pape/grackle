@@ -1,6 +1,14 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 27 Mar 2026 04:01:50 GMT and should not be manually modified.
+This log was last generated on Fri, 27 Mar 2026 04:31:22 GMT and should not be manually modified.
+
+## 0.83.2
+Fri, 27 Mar 2026 04:31:22 GMT
+
+### Patches
+
+- Remove dead try-catch around console.debug in stream-registry
+- Add copy-to-clipboard buttons to session chat UI; fix pipe fd transfer on task completion/kill
 
 ## 0.83.1
 Fri, 27 Mar 2026 04:01:50 GMT
