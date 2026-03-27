@@ -30,8 +30,8 @@ import { resolvePersona, fetchOrchestratorContext, SystemPromptBuilder, buildTas
 import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
 import { cleanupLifecycleStream, ensureLifecycleStream } from "./lifecycle.js";
 import { ensureAsyncDeliveryListener } from "./pipe-delivery.js";
-import { transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
 import { computeTaskStatus } from "./compute-task-status.js";
+import { transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
 import { taskRowToProto, sessionRowToProto } from "./grpc-proto-converters.js";
 import { validatePipeInputs, toDialableHost, resolveAncestorEnvironmentId } from "./grpc-shared.js";
 import { personaMcpServersToJson } from "./grpc-mcp-config.js";

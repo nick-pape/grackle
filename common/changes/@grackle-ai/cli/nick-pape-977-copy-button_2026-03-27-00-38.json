@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add copy-to-clipboard buttons to session chat UI; fix pipe fd transfer on task completion/kill",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
