@@ -1,4 +1,4 @@
-export type { AgentEvent, SpawnOptions, ResumeOptions, AgentSession, AgentRuntime } from "./runtime.js";
+export type { AgentEvent, SpawnOptions, ResumeOptions, CreateSessionOptions, AgentSession, AgentRuntime } from "./runtime.js";
 export { BaseAgentRuntime } from "./base-runtime.js";
 export { BaseAgentSession } from "./base-session.js";
 export {

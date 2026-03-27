@@ -1,4 +1,4 @@
-import type { AgentSession } from "@grackle-ai/runtime-sdk";
+import type { AgentSession, CreateSessionOptions } from "@grackle-ai/runtime-sdk";
 import { BaseAgentSession, BaseAgentRuntime, resolveWorkingDirectory, resolveMcpServers, logger, ensureRuntimeInstalled, importFromRuntime } from "@grackle-ai/runtime-sdk";
 
 // ─── Environment variable names ────────────────────────────
@@ -418,20 +418,7 @@ export class CopilotRuntime extends BaseAgentRuntime {
   public name: string = "copilot";
   protected resumePrompt: string = "(resumed)";
 
-  protected createSession(
-    id: string,
-    prompt: string,
-    model: string,
-    maxTurns: number,
-    resumeSessionId?: string,
-    branch?: string,
-    workingDirectory?: string,
-    systemContext?: string,
-    mcpServers?: Record<string, unknown>,
-    _hooks?: Record<string, unknown>, // Hooks not supported by Copilot SDK — accepted for interface compatibility
-    mcpBroker?: { url: string; token: string },
-    useWorktrees?: boolean,
-  ): AgentSession {
-    return new CopilotSession(id, prompt, model, maxTurns, resumeSessionId, branch, workingDirectory, systemContext, mcpServers, undefined, mcpBroker, useWorktrees);
+  protected createSession(opts: CreateSessionOptions): AgentSession {
+    return new CopilotSession({ ...opts, hooks: undefined });
   }
 }
