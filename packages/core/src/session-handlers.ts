@@ -34,6 +34,7 @@ import { createEventStream } from "./event-hub.js";
 import { sessionRowToProto } from "./grpc-proto-converters.js";
 import { validatePipeInputs, toDialableHost, killSessionAndCleanup } from "./grpc-shared.js";
 import { personaMcpServersToJson } from "./grpc-mcp-config.js";
+import { resolveBootstrapRuntime } from "./resolve-bootstrap-runtime.js";
 
 /** Spawn a new agent session in the given environment. */
 export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Session> {
@@ -58,7 +59,7 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
     emit("environment.changed", {});
 
     const config = parseAdapterConfig(env.adapterConfig);
-    config.defaultRuntime = env.defaultRuntime;
+    config.defaultRuntime = resolveBootstrapRuntime(env);
     const powerlineToken = env.powerlineToken;
 
     try {

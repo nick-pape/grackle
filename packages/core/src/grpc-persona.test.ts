@@ -4,7 +4,7 @@
  * Uses a real in-memory SQLite database; only side-effect modules are mocked.
  * Migrated from tests/e2e-tests/tests/persona.spec.ts (9 of 13 tests).
  */
-import { describe, it, expect, beforeAll, vi } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
 import { ConnectError } from "@connectrpc/connect";
 
 // ── Mock side-effect modules (resolved via __mocks__/ directory) ──
@@ -315,5 +315,88 @@ describe("gRPC persona handlers", () => {
     expect(renamed!.runtime).toBe("stub");
     expect(renamed!.model).toBe("sonnet");
     expect(renamed!.maxTurns).toBe(10);
+  });
+});
+
+describe("updatePersona syncs local environment runtime", () => {
+  let handlers: ReturnType<typeof getHandlers>;
+
+  beforeAll(() => {
+    // DB already initialized from the previous describe block
+    handlers = getHandlers();
+  });
+
+  /** Helper to list all personas. */
+  async function listPersonas(): Promise<PersonaInfo[]> {
+    const result = (await handlers.listPersonas()) as { personas: PersonaInfo[] };
+    return result.personas;
+  }
+
+  beforeEach(async () => {
+    // Ensure a "local" environment exists for sync tests.
+    // Import the env registry directly since it uses the real in-memory DB.
+    const { envRegistry } = await import("@grackle-ai/database");
+    if (!envRegistry.getEnvironment("local")) {
+      envRegistry.addEnvironment("local", "Local", "local", "{}");
+    }
+  });
+
+  it("updates local env defaultRuntime when default persona runtime changes", async () => {
+    // Create a persona with runtime "claude-code"
+    const created = (await handlers.createPersona({
+      name: "Sync Test Persona",
+      systemPrompt: "Test prompt",
+      runtime: "claude-code",
+      model: "sonnet",
+      mcpServers: [],
+    })) as PersonaInfo;
+
+    // Set it as the app-level default persona
+    const { settingsStore } = await import("@grackle-ai/database");
+    settingsStore.setSetting("default_persona_id", created.id);
+
+    // Update the persona's runtime to copilot
+    await handlers.updatePersona({
+      id: created.id,
+      runtime: "copilot",
+    });
+
+    // The local environment's defaultRuntime should now be "copilot"
+    const { envRegistry } = await import("@grackle-ai/database");
+    const localEnv = envRegistry.getEnvironment("local");
+    expect(localEnv).toBeDefined();
+    expect(localEnv!.defaultRuntime).toBe("copilot");
+  });
+
+  it("does NOT update local env when non-default persona changes", async () => {
+    const { envRegistry, settingsStore } = await import("@grackle-ai/database");
+
+    // Reset local env to "claude-code"
+    // (We'll need updateDefaultRuntime to exist for this, but for now check column directly)
+    const localEnvBefore = envRegistry.getEnvironment("local");
+    const runtimeBefore = localEnvBefore!.defaultRuntime;
+
+    // Create a non-default persona
+    const nonDefault = (await handlers.createPersona({
+      name: "Non-Default Persona",
+      systemPrompt: "Not the default",
+      runtime: "claude-code",
+      model: "sonnet",
+      mcpServers: [],
+    })) as PersonaInfo;
+
+    // Ensure default_persona_id points to someone else
+    const defaultId = settingsStore.getSetting("default_persona_id") || "";
+    expect(defaultId).not.toBe(nonDefault.id);
+
+    // Update the non-default persona's runtime
+    await handlers.updatePersona({
+      id: nonDefault.id,
+      runtime: "codex",
+    });
+
+    // Local env should be unchanged
+    const localEnvAfter = envRegistry.getEnvironment("local");
+    expect(localEnvAfter!.defaultRuntime).toBe(runtimeBefore);
   });
 });

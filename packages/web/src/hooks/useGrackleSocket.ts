@@ -207,7 +207,7 @@ export interface UseGrackleSocketResult {
   /** Whether the first-run onboarding wizard has been completed. `undefined` until the server responds. */
   onboardingCompleted: boolean | undefined;
   /** Mark onboarding as complete (persisted via server settings). */
-  completeOnboarding: () => void;
+  completeOnboarding: () => Promise<void>;
   /** Cached usage stats keyed by "scope:id" (e.g. "workspace:abc123"). */
   usageCache: Record<string, import("./types.js").UsageStats>;
   /** Request aggregated usage stats from the server for a given scope and entity ID. */
@@ -286,11 +286,9 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     [],
   );
 
-  const completeOnboarding = useCallback(() => {
+  const completeOnboarding = useCallback(async (): Promise<void> => {
+    await grackleClient.setSetting({ key: SETTING_KEY_ONBOARDING_COMPLETED, value: "true" });
     setOnboardingCompleted(true);
-    grackleClient.setSetting({ key: SETTING_KEY_ONBOARDING_COMPLETED, value: "true" }).catch(
-      () => {},
-    );
   }, []);
 
   const loadUsage = useCallback(

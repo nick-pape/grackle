@@ -14,7 +14,7 @@ import {
   initOrphanReparentSubscriber,
   logger, exec, detectLanIp,
 } from "@grackle-ai/core";
-import { envRegistry, sessionStore, workspaceStore, taskStore, scheduleStore, personaStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome } from "@grackle-ai/database";
+import { envRegistry, sessionStore, workspaceStore, taskStore, scheduleStore, personaStore, settingsStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome } from "@grackle-ai/database";
 import { DockerAdapter } from "@grackle-ai/adapter-docker";
 import { LocalAdapter } from "@grackle-ai/adapter-local";
 import { SshAdapter } from "@grackle-ai/adapter-ssh";
@@ -85,6 +85,21 @@ async function main(): Promise<void> {
     } else {
       envRegistry.addEnvironment("local", "Local", "local", adapterConfig);
       localEnv = envRegistry.getEnvironment("local")!;
+    }
+
+    // Sync: keep the local environment's defaultRuntime in sync with the
+    // app-level default persona's runtime so bootstrap pre-installs the
+    // correct runtime packages (fixes #1031).
+    const defaultPersonaId = settingsStore.getSetting("default_persona_id") || "";
+    const defaultPersona = defaultPersonaId ? personaStore.getPersona(defaultPersonaId) : undefined;
+    if (defaultPersona?.runtime && localEnv.defaultRuntime !== defaultPersona.runtime) {
+      const previousRuntime = localEnv.defaultRuntime;
+      envRegistry.updateDefaultRuntime("local", defaultPersona.runtime);
+      localEnv = envRegistry.getEnvironment("local")!;
+      logger.info(
+        { from: previousRuntime, to: defaultPersona.runtime },
+        "Synced local environment defaultRuntime with default persona",
+      );
     }
 
     // Seed: ensure the default workspace exists (tied to the local environment).
@@ -322,10 +337,17 @@ async function main(): Promise<void> {
 
   // Auto-start the root task (process 1) when any environment connects.
   // Skipped in E2E tests where the root task session would conflict with test sessions.
+  // Also deferred until onboarding is complete so the user's runtime choice is respected (#1031).
   if (process.env.GRACKLE_SKIP_ROOT_AUTOSTART !== "1") {
     let starting = false;
     const tryBootRootTask = async (): Promise<void> => {
       if (starting) {
+        return;
+      }
+      // Don't auto-start before onboarding — the user hasn't chosen their
+      // runtime yet, so the root task would launch with the default "claude-code".
+      const onboarded = settingsStore.getSetting("onboarding_completed");
+      if (onboarded !== "true") {
         return;
       }
       starting = true;
@@ -365,6 +387,14 @@ async function main(): Promise<void> {
     subscribe((event) => {
       if (event.type === "environment.changed") {
         tryBootRootTask().catch(() => { /* logged inside */ });
+      }
+      // Also try when onboarding completes — the environment is already
+      // connected but boot was deferred until the user chose a runtime.
+      if (event.type === "setting.changed") {
+        const payload = event.payload as { key?: string; value?: string } | undefined;
+        if (payload?.key === "onboarding_completed" && payload?.value === "true") {
+          tryBootRootTask().catch(() => { /* logged inside */ });
+        }
       }
     });
   }
