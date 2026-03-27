@@ -324,7 +324,6 @@ async function main(): Promise<void> {
       const checks: ReadinessResult["checks"] = {};
       try {
         sqlite!.prepare("SELECT 1").get();
-        checkDatabaseIntegrity();
         checks.database = { ok: true };
       } catch (err) {
         checks.database = { ok: false, message: err instanceof Error ? err.message : "unknown error" };
@@ -551,8 +550,10 @@ async function main(): Promise<void> {
       });
     });
 
-    // Final WAL checkpoint to flush all pending writes before exit
-    walCheckpoint();
+    // Final WAL checkpoint (TRUNCATE) to fully flush pending writes before exit
+    if (sqlite) {
+      sqlite.pragma("wal_checkpoint(TRUNCATE)");
+    }
     clearTimeout(forceExit);
     process.exit(process.exitCode || 0);
   }

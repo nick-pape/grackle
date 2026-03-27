@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import Database from "better-sqlite3";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { openSync, writeSync, closeSync, unlinkSync, existsSync, mkdtempSync, rmSync } from "node:fs";
+import { openSync, writeSync, closeSync, unlinkSync, mkdtempSync, rmSync } from "node:fs";
 import { SYSTEM_PERSONA_ID, ROOT_TASK_ID } from "@grackle-ai/common";
 import {
   initDatabase, CURRENT_VERSION,

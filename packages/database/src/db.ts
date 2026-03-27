@@ -1,8 +1,8 @@
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import { join } from "node:path";
-import { mkdirSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { DB_FILENAME } from "@grackle-ai/common";
 import { grackleHome } from "./paths.js";
 import * as schema from "./schema.js";
@@ -86,6 +86,9 @@ function validateBaselineSchema(conn: InstanceType<typeof Database>): void {
 /** Raw better-sqlite3 instance. Available after {@link openDatabase} has been called. */
 let sqlite: InstanceType<typeof Database> | undefined;
 
+/** Resolved path of the database file. Set by {@link openDatabase}. */
+let resolvedDbPath: string | undefined;
+
 /**
  * Drizzle ORM instance wrapping the SQLite database.
  * Available after {@link openDatabase} has been called.
@@ -108,7 +111,7 @@ export function openDatabase(dbPath?: string): void {
     return;
   }
 
-  const resolvedPath = dbPath ?? join(grackleHome, DB_FILENAME);
+  resolvedDbPath = dbPath ?? join(grackleHome, DB_FILENAME);
 
   // Ensure the grackle home directory exists (skip when a custom path is provided,
   // e.g. tests that point at an in-memory or temp-dir database).
@@ -117,7 +120,7 @@ export function openDatabase(dbPath?: string): void {
   }
 
   try {
-    sqlite = new Database(resolvedPath);
+    sqlite = new Database(resolvedDbPath);
   } catch (err) {
     if (err instanceof Error && err.message.includes("Could not locate the bindings file")) {
       process.stderr.write(
@@ -361,6 +364,15 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
   // Mark unversioned databases as baseline now that tables are confirmed
   if (currentVersion < BASELINE_VERSION) {
     conn.pragma(`user_version = ${BASELINE_VERSION}`);
+  }
+
+  // Back up the database before running any pending migrations.
+  // Skip for in-memory databases (tests) and fresh installs (no data to lose).
+  const hasPendingMigrations = MIGRATIONS.some((m) => m.version > currentVersion);
+  if (hasPendingMigrations && resolvedDbPath && currentVersion >= BASELINE_VERSION) {
+    const dbDir = dirname(resolvedDbPath);
+    const backupPath = join(dbDir, `grackle.db.backup-v${currentVersion}`);
+    writeFileSync(backupPath, conn.serialize());
   }
 
   // Run any pending versioned migrations
