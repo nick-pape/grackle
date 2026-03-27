@@ -18,7 +18,7 @@ export const FileRead: Story = {
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("tool-card-file-read")).toBeInTheDocument();
-    await expect(canvas.getByText("/src/index.ts")).toBeInTheDocument();
+    await expect(canvas.getByText("index.ts")).toBeInTheDocument();
   },
 };
 
