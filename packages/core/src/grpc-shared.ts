@@ -7,6 +7,7 @@ import {
   TERMINAL_SESSION_STATUSES,
   type SessionStatus,
   END_REASON,
+  ROOT_TASK_ID,
 } from "@grackle-ai/common";
 import type { SessionRow } from "@grackle-ai/database";
 import { sessionStore, taskStore } from "@grackle-ai/database";
@@ -17,7 +18,6 @@ import { cleanupLifecycleStream } from "./lifecycle.js";
 import { logger } from "./logger.js";
 import { emit } from "./event-bus.js";
 import { transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
-import { ROOT_TASK_ID } from "@grackle-ai/common";
 
 /** Valid pipe mode values for SpawnRequest and StartTaskRequest. */
 export const VALID_PIPE_MODES: ReadonlySet<string> = new Set(["", "sync", "async", "detach"]);

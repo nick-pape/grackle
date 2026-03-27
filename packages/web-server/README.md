@@ -50,7 +50,7 @@ webServer.listen(3000, "127.0.0.1");
 | `bindHost` | `string` | yes | Bind host (`127.0.0.1` or `0.0.0.0`) |
 | `connectRoutes` | `(router) => void` | no | ConnectRPC route registration function |
 | `webDistDir` | `string` | no | Override web UI dist directory |
-| `readinessCheck` | `() => ReadinessResult` | no | Callback for `/readyz` probe (checks database, etc.) |
+| `readinessCheck` | `() => ReadinessResult \| Promise<ReadinessResult>` | no | Callback for `/readyz` probe (checks database, etc.) |
 
 ### Health Endpoints
 
