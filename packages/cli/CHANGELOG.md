@@ -1,6 +1,15 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 26 Mar 2026 14:54:35 GMT and should not be manually modified.
+This log was last generated on Fri, 27 Mar 2026 04:01:50 GMT and should not be manually modified.
+
+## 0.83.1
+Fri, 27 Mar 2026 04:01:50 GMT
+
+### Patches
+
+- Split grpc-service.ts into domain-scoped handler modules
+- Use efficient readLastTextEntry in SIGCHLD handler instead of reading entire session log
+- fix: restore pipe fd transfer before subscription cleanup, debounce task reloads
 
 ## 0.83.0
 Thu, 26 Mar 2026 14:54:35 GMT

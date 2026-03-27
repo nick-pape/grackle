@@ -2,6 +2,24 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.83.1",
+      "tag": "@grackle-ai/cli_v0.83.1",
+      "date": "Fri, 27 Mar 2026 04:01:50 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Split grpc-service.ts into domain-scoped handler modules"
+          },
+          {
+            "comment": "Use efficient readLastTextEntry in SIGCHLD handler instead of reading entire session log"
+          },
+          {
+            "comment": "fix: restore pipe fd transfer before subscription cleanup, debounce task reloads"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.83.0",
       "tag": "@grackle-ai/cli_v0.83.0",
       "date": "Thu, 26 Mar 2026 14:54:35 GMT",
