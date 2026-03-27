@@ -7,7 +7,6 @@ import {
   TERMINAL_SESSION_STATUSES,
   type SessionStatus,
   END_REASON,
-  ROOT_TASK_ID,
 } from "@grackle-ai/common";
 import type { SessionRow } from "@grackle-ai/database";
 import { sessionStore, taskStore } from "@grackle-ai/database";
@@ -17,7 +16,6 @@ import * as streamRegistry from "./stream-registry.js";
 import { cleanupLifecycleStream } from "./lifecycle.js";
 import { logger } from "./logger.js";
 import { emit } from "./event-bus.js";
-import { transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
 
 /** Valid pipe mode values for SpawnRequest and StartTaskRequest. */
 export const VALID_PIPE_MODES: ReadonlySet<string> = new Set(["", "sync", "async", "detach"]);
@@ -114,16 +112,6 @@ export function killSessionAndCleanup(session: SessionRow): void {
     ).catch((err: unknown) => {
       logger.debug({ err, sessionId: session.id }, "PowerLine kill failed (process may have already exited)");
     });
-  }
-
-  // Transfer pipe fds to grandparent BEFORE cleaning up subscriptions —
-  // the async event handler fires too late (subscriptions already deleted).
-  if (session.taskId) {
-    const taskForPipe = taskStore.getTask(session.taskId);
-    if (taskForPipe) {
-      const grandparentId = taskForPipe.parentTaskId || ROOT_TASK_ID;
-      transferAllPipeSubscriptions(session.taskId, grandparentId);
-    }
   }
 
   cleanupLifecycleStream(session.id);

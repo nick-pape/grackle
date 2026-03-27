@@ -31,7 +31,6 @@ import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
 import { cleanupLifecycleStream, ensureLifecycleStream } from "./lifecycle.js";
 import { ensureAsyncDeliveryListener } from "./pipe-delivery.js";
 import { computeTaskStatus } from "./compute-task-status.js";
-import { transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
 import { taskRowToProto, sessionRowToProto } from "./grpc-proto-converters.js";
 import { validatePipeInputs, toDialableHost, resolveAncestorEnvironmentId } from "./grpc-shared.js";
 import { personaMcpServersToJson } from "./grpc-mcp-config.js";
@@ -383,11 +382,6 @@ export async function completeTask(req: grackle.TaskId): Promise<grackle.Task> {
   }
 
   taskStore.markTaskComplete(task.id, TASK_STATUS.COMPLETE);
-
-  // Transfer pipe fds to grandparent BEFORE cleaning up subscriptions —
-  // the async event handler fires too late (subscriptions already deleted).
-  const grandparentId = task.parentTaskId || ROOT_TASK_ID;
-  transferAllPipeSubscriptions(task.id, grandparentId);
 
   // Close lifecycle FDs for any active sessions — cascades to STOPPED via orphan callback
   const activeSessions = sessionStore.getActiveSessionsForTask(req.id);
