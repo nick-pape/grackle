@@ -1,6 +1,18 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 27 Mar 2026 04:31:22 GMT and should not be manually modified.
+This log was last generated on Fri, 27 Mar 2026 05:00:06 GMT and should not be manually modified.
+
+## 0.84.0
+Fri, 27 Mar 2026 05:00:06 GMT
+
+### Minor changes
+
+- Add /healthz and /readyz health check endpoints to the web server for container orchestration
+
+### Patches
+
+- Decouple prompt package from database: pure functions with injected data instead of store calls
+- Rewrite README with value-prop-first structure, fresh screenshots, and new knowledge graph screenshot
 
 ## 0.83.2
 Fri, 27 Mar 2026 04:31:22 GMT
