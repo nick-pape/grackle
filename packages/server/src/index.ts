@@ -337,10 +337,17 @@ async function main(): Promise<void> {
 
   // Auto-start the root task (process 1) when any environment connects.
   // Skipped in E2E tests where the root task session would conflict with test sessions.
+  // Also deferred until onboarding is complete so the user's runtime choice is respected (#1031).
   if (process.env.GRACKLE_SKIP_ROOT_AUTOSTART !== "1") {
     let starting = false;
     const tryBootRootTask = async (): Promise<void> => {
       if (starting) {
+        return;
+      }
+      // Don't auto-start before onboarding — the user hasn't chosen their
+      // runtime yet, so the root task would launch with the default "claude-code".
+      const onboarded = settingsStore.getSetting("onboarding_completed");
+      if (onboarded !== "true") {
         return;
       }
       starting = true;
@@ -380,6 +387,14 @@ async function main(): Promise<void> {
     subscribe((event) => {
       if (event.type === "environment.changed") {
         tryBootRootTask().catch(() => { /* logged inside */ });
+      }
+      // Also try when onboarding completes — the environment is already
+      // connected but boot was deferred until the user chose a runtime.
+      if (event.type === "setting.changed") {
+        const payload = event.payload as { key?: string; value?: string } | undefined;
+        if (payload?.key === "onboarding_completed" && payload?.value === "true") {
+          tryBootRootTask().catch(() => { /* logged inside */ });
+        }
       }
     });
   }
