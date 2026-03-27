@@ -196,16 +196,16 @@
 // --- Copy button (inline in header row) ---
 
 .copyButtonInline {
-  position: static;
+  position: static !important;
   flex-shrink: 0;
-  opacity: 0.4;
+  opacity: 0.4 !important;
 
   &:hover {
     opacity: 1 !important;
   }
 
   @include mobile {
-    opacity: 1;
+    opacity: 1 !important;
   }
 }
 
