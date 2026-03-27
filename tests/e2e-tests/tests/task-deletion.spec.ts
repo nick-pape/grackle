@@ -15,22 +15,23 @@ test.describe("Task Deletion", { tag: ["@task"] }, () => {
   test("delete pending task removes it from task list", async ({ stubTask }) => {
     const { page, client, workspaceName } = stubTask;
 
-    // Create task
+    // Create task and get its ID
     await createTask(client, workspaceName, "doomed-task", "test-local");
+    const workspaceId = await getWorkspaceId(client, workspaceName);
+    const taskId = await getTaskId(client, workspaceId, "doomed-task");
 
     // Navigate to Tasks tab to see the task in the TaskList sidebar
     await goToTasksTab(page);
 
-    // Verify the task is visible in the task list
-    await expect(page.getByText("doomed-task").first()).toBeVisible({ timeout: 5_000 });
+    // Verify the task row is visible via its stable data-task-id attribute
+    const taskRow = page.locator(`[data-task-id="${taskId}"]`);
+    await expect(taskRow).toBeVisible({ timeout: 5_000 });
 
-    // Get task ID and delete via RPC
-    const workspaceId = await getWorkspaceId(client, workspaceName);
-    const taskId = await getTaskId(client, workspaceId, "doomed-task");
+    // Delete via RPC
     await client.deleteTask({ id: taskId });
 
-    // Verify task disappears from the task list
-    await expect(page.getByText("doomed-task")).not.toBeVisible({ timeout: 5_000 });
+    // Verify task row disappears from the task list
+    await expect(taskRow).not.toBeVisible({ timeout: 5_000 });
   });
 
   test("delete in-progress task removes it and returns to workspace view", async ({ stubTask }) => {
@@ -51,9 +52,10 @@ test.describe("Task Deletion", { tag: ["@task"] }, () => {
     const taskId = await getTaskId(client, workspaceId, "active-task");
     await client.deleteTask({ id: taskId });
 
-    // Navigate to Tasks tab and verify task disappeared
+    // Navigate to Tasks tab and verify task row disappeared
     await goToTasksTab(page);
-    await expect(page.getByText("active-task")).not.toBeVisible({ timeout: 5_000 });
+    const taskRow = page.locator(`[data-task-id="${taskId}"]`);
+    await expect(taskRow).not.toBeVisible({ timeout: 5_000 });
   });
 
   // ConfirmDialog UI tests (accept/dismiss) removed — covered by

@@ -34,7 +34,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/huggingface
-        key: huggingface-${{ runner.os }}-${{ hashFiles('packages/knowledge/package.json') }}
+        key: huggingface-${{ runner.os }}-${{ hashFiles('packages/knowledge-core/package.json') }}
         restore-keys: |
           huggingface-${{ runner.os }}-
 
