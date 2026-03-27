@@ -1,12 +1,14 @@
 import { type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
+import { useToast } from "../context/ToastContext.js";
 import { TaskEditPanel } from "../components/panels/TaskEditPanel.js";
 
 /** Page for editing an existing task, reading taskId from route params. */
 export function TaskEditPage(): JSX.Element {
   const { taskId, workspaceId, environmentId } = useParams<{ taskId: string; workspaceId?: string; environmentId?: string }>();
   const { tasks, workspaces, personas, createTask, updateTask } = useGrackle();
+  const { showToast } = useToast();
 
   return (
     <TaskEditPanel
@@ -19,6 +21,7 @@ export function TaskEditPage(): JSX.Element {
       personas={personas}
       onCreateTask={createTask}
       onUpdateTask={updateTask}
+      onShowToast={showToast}
     />
   );
 }

@@ -54,6 +54,7 @@ const IS_MOCK_MODE: boolean =
 /** Inner layout body that conditionally renders the sidebar based on context content. */
 function AppShellBody(): JSX.Element {
   const { connected, environments, sessions, tasks } = useGrackle();
+  const { toasts, dismissToast } = useToast();
   const location = useLocation();
   const sidebarContent = useSidebarContent();
   const hasSidebar = sidebarContent !== undefined;
@@ -89,7 +90,7 @@ function AppShellBody(): JSX.Element {
             className={styles.sidebarWrapper}
             data-sidebar-open={sidebarOpen}
           >
-            <Sidebar />
+            <Sidebar content={sidebarContent} />
           </div>
         )}
         {hasSidebar && sidebarOpen && (
@@ -110,7 +111,7 @@ function AppShellBody(): JSX.Element {
           strict-mode safe. Use { exact: true } or data-testid selectors in
           tests when matching resource names that may also appear in transient
           toasts. */}
-      <ToastContainer />
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <GlobalShortcuts />
     </>
   );

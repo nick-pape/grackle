@@ -1,23 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent } from "@storybook/test";
-import { ToastProvider } from "../../context/ToastContext.js";
 import { MOCK_TOKENS } from "../../test-utils/storybook-helpers.js";
 import { TokensPanel } from "./TokensPanel.js";
 
 const meta: Meta<typeof TokensPanel> = {
   title: "Panels/TokensPanel",
   component: TokensPanel,
-  decorators: [
-    (Story) => (
-      <ToastProvider>
-        <Story />
-      </ToastProvider>
-    ),
-  ],
   args: {
     tokens: MOCK_TOKENS,
     onSetToken: fn(),
     onDeleteToken: fn(),
+    onShowToast: fn(),
   },
 };
 

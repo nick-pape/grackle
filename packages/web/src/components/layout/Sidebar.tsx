@@ -1,5 +1,4 @@
-import { useState, useRef, useEffect, type JSX } from "react";
-import { useSidebarContent } from "../../context/SidebarContext.js";
+import { useState, useRef, useEffect, type JSX, type ReactNode } from "react";
 import styles from "./Sidebar.module.scss";
 
 /** Default sidebar width in pixels. */
@@ -36,11 +35,16 @@ function saveWidth(width: number): void {
   }
 }
 
-/** Left sidebar rendering slot content provided via SidebarContext. */
-export function Sidebar(): JSX.Element | undefined {
+/** Props for the Sidebar component. */
+export interface SidebarProps {
+  /** Content to render inside the sidebar slot. When undefined, the sidebar is hidden. */
+  content: ReactNode | undefined;
+}
+
+/** Left sidebar rendering slot content passed via props. */
+export function Sidebar({ content }: SidebarProps): JSX.Element | undefined {
   const [width] = useState<number>(loadWidth);
   const containerRef = useRef<HTMLDivElement>(null);
-  const content = useSidebarContent();
 
   /** Observe container resizes and persist width to localStorage. */
   useEffect(() => {
