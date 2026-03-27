@@ -15,6 +15,10 @@ Each package under `packages/` has a `README.md` that is published to npm. **Whe
 
 Do **not** update the root `README.md` as part of this process — it is a separate marketing/overview document maintained independently.
 
+### Environment Variables
+
+The root `.env.example` documents every supported environment variable with defaults and descriptions. **When you add, remove, or rename a `process.env` read**, update `.env.example` to match.
+
 ## Git Workflow
 
 - **Never push directly to main.** All changes must go through a pull request. Always create a feature branch and open a PR — never commit and push to `main`.
