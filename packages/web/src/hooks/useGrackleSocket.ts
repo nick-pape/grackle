@@ -219,6 +219,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     tasks: tasksHook.tasks,
     findings: findingsHook.findings,
     selectedFinding: findingsHook.selectedFinding,
+    findingLoading: findingsHook.findingLoading,
     tokens: tokensHook.tokens,
     spawn: sessionsHook.spawn,
     sendInput: sessionsHook.sendInput,

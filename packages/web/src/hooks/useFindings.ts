@@ -16,8 +16,10 @@ import { protoToFinding } from "./proto-converters.js";
 export interface UseFindingsResult {
   /** All loaded findings. */
   findings: FindingData[];
-  /** The currently selected finding (loaded by ID). */
+  /** The currently selected finding (loaded by ID). `undefined` while loading or when not found. */
   selectedFinding: FindingData | undefined;
+  /** Whether a single finding is being loaded. */
+  findingLoading: boolean;
   /** Load findings for a given workspace. */
   loadFindings: (workspaceId: string) => void;
   /** Load findings across all workspaces. */
@@ -44,6 +46,7 @@ export interface UseFindingsResult {
 export function useFindings(): UseFindingsResult {
   const [findings, setFindings] = useState<FindingData[]>([]);
   const [selectedFinding, setSelectedFinding] = useState<FindingData | undefined>(undefined);
+  const [findingLoading, setFindingLoading] = useState(false);
 
   const loadFindings = useCallback((workspaceId: string) => {
     grackleClient.queryFindings({ workspaceId }).then(
@@ -60,9 +63,11 @@ export function useFindings(): UseFindingsResult {
   }, []);
 
   const loadFinding = useCallback((findingId: string) => {
+    setSelectedFinding(undefined);
+    setFindingLoading(true);
     grackleClient.getFinding({ id: findingId }).then(
-      (resp) => { setSelectedFinding(protoToFinding(resp)); },
-      () => { setSelectedFinding(undefined); },
+      (resp) => { setSelectedFinding(protoToFinding(resp)); setFindingLoading(false); },
+      () => { setSelectedFinding(undefined); setFindingLoading(false); },
     );
   }, []);
 
@@ -98,5 +103,5 @@ export function useFindings(): UseFindingsResult {
     [],
   );
 
-  return { findings, selectedFinding, loadFindings, loadAllFindings, loadFinding, postFinding, handleEvent };
+  return { findings, selectedFinding, findingLoading, loadFindings, loadAllFindings, loadFinding, postFinding, handleEvent };
 }

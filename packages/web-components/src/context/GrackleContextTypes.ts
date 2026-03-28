@@ -24,6 +24,7 @@ export interface UseGrackleSocketResult {
   tasks: TaskData[];
   findings: FindingData[];
   selectedFinding: FindingData | undefined;
+  findingLoading: boolean;
   tokens: TokenInfo[];
   spawn: (environmentId: string, prompt: string, personaId?: string, workingDirectory?: string) => void;
   sendInput: (sessionId: string, text: string) => void;

@@ -9,7 +9,7 @@ import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import {
   Breadcrumbs, FindingsPanel,
-  buildFindingsBreadcrumbs,
+  buildFindingsBreadcrumbs, buildFindingBreadcrumbs,
   findingUrl, useAppNavigate,
 } from "@grackle-ai/web-components";
 import styles from "./FindingsListPage.module.scss";
@@ -20,22 +20,23 @@ export function FindingsListPage(): JSX.Element {
     environmentId?: string;
     workspaceId?: string;
   }>();
-  const { findings, loadFindings, loadAllFindings } = useGrackle();
+  const { findings, loadFindings, workspaces, environments } = useGrackle();
   const navigate = useAppNavigate();
 
   useEffect(() => {
     if (workspaceId) {
       loadFindings(workspaceId);
-    } else {
-      loadAllFindings();
     }
-  }, [workspaceId, loadFindings, loadAllFindings]);
+    // Global findings are loaded by WithFindingsSidebar; only load here for workspace-scoped routes.
+  }, [workspaceId, loadFindings]);
 
   const handleFindingClick = useCallback((findingId: string) => {
     navigate(findingUrl(findingId, workspaceId, environmentId));
   }, [navigate, workspaceId, environmentId]);
 
-  const breadcrumbs = buildFindingsBreadcrumbs();
+  const breadcrumbs = (workspaceId && environmentId)
+    ? buildFindingBreadcrumbs("Findings", workspaceId, environmentId, workspaces, environments).slice(0, -1)
+    : buildFindingsBreadcrumbs();
 
   return (
     <div className={styles.container} data-testid="findings-list-page">

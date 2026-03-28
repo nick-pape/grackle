@@ -35,7 +35,7 @@ export function FindingDetailPage(): JSX.Element {
     environmentId?: string;
     workspaceId?: string;
   }>();
-  const { selectedFinding, loadFinding, workspaces, environments } = useGrackle();
+  const { selectedFinding, findingLoading, loadFinding, workspaces, environments } = useGrackle();
   const navigate = useAppNavigate();
 
   useEffect(() => {
@@ -43,6 +43,14 @@ export function FindingDetailPage(): JSX.Element {
       loadFinding(findingId);
     }
   }, [findingId, loadFinding]);
+
+  if (findingLoading) {
+    return (
+      <div className={styles.container} data-testid="finding-detail-page">
+        <div className={styles.notFound}>Loading...</div>
+      </div>
+    );
+  }
 
   if (!selectedFinding) {
     return (

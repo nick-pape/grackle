@@ -38,17 +38,16 @@ export function FindingsPanel({ findings, onFindingClick }: Props): JSX.Element 
       {findings.map((f, index) => {
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- category may not be in the map
         const categoryColor = CATEGORY_COLORS[f.category] || CATEGORY_COLORS.general;
+        const Tag = onFindingClick ? motion.button : motion.div;
         return (
-          <motion.div
+          <Tag
             key={f.id}
+            type={onFindingClick ? "button" : undefined}
             className={`${styles.card} ${onFindingClick ? styles.cardClickable : ""}`}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05, duration: 0.2 }}
             onClick={onFindingClick ? () => { onFindingClick(f.id); } : undefined}
-            role={onFindingClick ? "button" : undefined}
-            tabIndex={onFindingClick ? 0 : undefined}
-            onKeyDown={onFindingClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onFindingClick(f.id); } } : undefined}
           >
             <div className={styles.cardHeader}>
               <span
@@ -80,7 +79,7 @@ export function FindingsPanel({ findings, onFindingClick }: Props): JSX.Element 
                 ))}
               </div>
             )}
-          </motion.div>
+          </Tag>
         );
       })}
     </div>

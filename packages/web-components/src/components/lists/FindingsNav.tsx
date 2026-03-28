@@ -1,7 +1,7 @@
 /**
  * Sidebar navigation for the Findings pages.
  *
- * Displays a filterable list of findings with category pills and tag chips.
+ * Displays a list of findings with category pills and relative timestamps.
  *
  * @module
  */

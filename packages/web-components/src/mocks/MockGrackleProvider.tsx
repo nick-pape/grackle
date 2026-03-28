@@ -78,6 +78,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   const [tasks, setTasks] = useState<TaskData[]>(MOCK_TASKS);
   const [findings, setFindings] = useState<FindingData[]>(MOCK_FINDINGS);
   const [selectedFinding, setSelectedFinding] = useState<FindingData | undefined>(undefined);
+  const findingLoading = false;
   const [tokens, setTokens] = useState<TokenInfo[]>(MOCK_TOKENS);
   const [credentialProviders, setCredentialProviders] = useState<CredentialProviderConfig>({
     claude: "off",
@@ -898,6 +899,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       tasks,
       findings,
       selectedFinding,
+      findingLoading,
       tokens,
       credentialProviders,
 

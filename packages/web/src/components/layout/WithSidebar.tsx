@@ -30,7 +30,6 @@ export function WithSettingsSidebar(): JSX.Element {
 /** Layout route wrapper that shows the FindingsNav in the sidebar. */
 export function WithFindingsSidebar(): JSX.Element {
   const { findings, loadAllFindings } = useGrackle();
-  // Load all findings on mount so the sidebar is populated.
   useEffect(() => { loadAllFindings(); }, [loadAllFindings]);
   const sidebar = useMemo(() => <FindingsNav findings={findings} />, [findings]);
   useSidebarSlot(sidebar);

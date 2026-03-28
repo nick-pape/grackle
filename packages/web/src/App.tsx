@@ -214,6 +214,8 @@ function AppRoutes(): JSX.Element {
         <Route element={<WithFindingsSidebar />}>
           <Route path="findings" element={<FindingsListPage />} />
           <Route path="findings/:findingId" element={<FindingDetailPage />} />
+          <Route path="environments/:environmentId/workspaces/:workspaceId/findings" element={<FindingsListPage />} />
+          <Route path="environments/:environmentId/workspaces/:workspaceId/findings/:findingId" element={<FindingDetailPage />} />
         </Route>
 
         {/* Environments sidebar */}
@@ -229,8 +231,6 @@ function AppRoutes(): JSX.Element {
           <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/edit" element={<TaskPage />} />
           <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/stream" element={<TaskPage />} />
           <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/findings" element={<TaskPage />} />
-          <Route path="environments/:environmentId/workspaces/:workspaceId/findings" element={<FindingsListPage />} />
-          <Route path="environments/:environmentId/workspaces/:workspaceId/findings/:findingId" element={<FindingDetailPage />} />
           <Route path="environments" element={<EnvironmentsPage />}>
             <Route index element={<EnvironmentsEmptyPage />} />
             <Route path="new" element={<NewEnvironmentPage />} />
