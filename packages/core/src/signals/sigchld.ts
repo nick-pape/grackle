@@ -8,6 +8,12 @@ import { logger } from "../logger.js";
 /** Maximum length for the child's last text message in the notification. */
 const MAX_LAST_MESSAGE_LENGTH: number = 2000;
 
+/** Maximum number of inline delivery retries before giving up. */
+const MAX_DELIVERY_RETRIES: number = 2;
+
+/** Delay (ms) between delivery retries. */
+const DELIVERY_RETRY_DELAY_MS: number = 1_000;
+
 /**
  * Session statuses that trigger SIGCHLD. LLM agents don't reliably exit() —
  * they go IDLE when they stop working. STOPPED fires when the session's event
@@ -143,14 +149,30 @@ async function handleTaskUpdated(childTaskId: string): Promise<void> {
     "Delivering SIGCHLD to parent task",
   );
 
-  const success = await deliverSignalToTask(childTask.parentTaskId, "sigchld", message);
+  // Retry inline on failure to prevent signal loss from the dedup race condition:
+  // without retry, a concurrent handler that was deduped cannot re-attempt delivery,
+  // and deleting the key only helps if another task.updated event arrives (not guaranteed).
+  let success = false;
+  for (let attempt = 0; attempt <= MAX_DELIVERY_RETRIES; attempt++) {
+    if (attempt > 0) {
+      logger.warn(
+        { childTaskId, parentTaskId: childTask.parentTaskId, attempt },
+        "SIGCHLD delivery failed — retrying",
+      );
+      await new Promise<void>((resolve) => setTimeout(resolve, DELIVERY_RETRY_DELAY_MS));
+    }
+    success = await deliverSignalToTask(childTask.parentTaskId, "sigchld", message);
+    if (success) {
+      break;
+    }
+  }
 
-  // On failure, remove the optimistic dedup key so the next event can retry
   if (!success) {
+    // All retries exhausted — delete the dedup key so future events can try again
     delivered.delete(dedupeKey);
-    logger.warn(
-      { childTaskId, parentTaskId: childTask.parentTaskId },
-      "SIGCHLD delivery failed — will retry on next task.updated event",
+    logger.error(
+      { childTaskId, parentTaskId: childTask.parentTaskId, attempts: MAX_DELIVERY_RETRIES + 1 },
+      "SIGCHLD delivery failed after all retries",
     );
   }
 }

@@ -274,4 +274,88 @@ describe("initSigchldSubscriber", () => {
     expect(message).toContain("finished working");
     expect(message).toContain("All tests pass. PR created.");
   });
+
+  it("retries delivery when first attempt fails", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.spyOn(taskStore, "getTask").mockReturnValue(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      makeTask() as any,
+    );
+    vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      makeSession({ status: "idle" }) as any,
+    );
+    vi.mocked(readLastTextEntry).mockReturnValue(undefined);
+
+    // First delivery fails, retry should succeed
+    vi.mocked(deliverSignalToTask)
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true);
+
+    fireTaskUpdated("task-child");
+    // Advance past retry delays (MAX_DELIVERY_RETRIES * 1000ms + buffer)
+    await vi.advanceTimersByTimeAsync(5000);
+
+    // Should have been called twice: original attempt + retry
+    expect(deliverSignalToTask).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
+  it("does not lose signal when concurrent handlers race and first fails", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.spyOn(taskStore, "getTask").mockReturnValue(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      makeTask() as any,
+    );
+    vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      makeSession({ status: "idle" }) as any,
+    );
+    vi.mocked(readLastTextEntry).mockReturnValue(undefined);
+
+    // First attempt fails, retry succeeds
+    vi.mocked(deliverSignalToTask)
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true);
+
+    // Fire two events concurrently — handler B should be deduped,
+    // but handler A should retry and succeed
+    fireTaskUpdated("task-child");
+    fireTaskUpdated("task-child");
+    await vi.advanceTimersByTimeAsync(5000);
+
+    // At least one successful delivery must happen (via retry)
+    const calls = vi.mocked(deliverSignalToTask).mock.calls;
+    expect(calls.length).toBeGreaterThanOrEqual(2);
+    vi.useRealTimers();
+  });
+
+  it("deletes dedup key only after all retries are exhausted", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.spyOn(taskStore, "getTask").mockReturnValue(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      makeTask() as any,
+    );
+    vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      makeSession({ status: "idle" }) as any,
+    );
+    vi.mocked(readLastTextEntry).mockReturnValue(undefined);
+
+    // All attempts fail
+    vi.mocked(deliverSignalToTask).mockResolvedValue(false);
+
+    fireTaskUpdated("task-child");
+    await vi.advanceTimersByTimeAsync(10000);
+
+    // After all retries exhausted, a subsequent event should try again
+    vi.mocked(deliverSignalToTask).mockResolvedValue(true);
+    fireTaskUpdated("task-child");
+    await vi.advanceTimersByTimeAsync(5000);
+
+    // The last call should have succeeded
+    const lastCall = vi.mocked(deliverSignalToTask).mock.results.at(-1);
+    expect(await lastCall?.value).toBe(true);
+    vi.useRealTimers();
+  });
 });
