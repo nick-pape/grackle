@@ -58,7 +58,10 @@ export function ensureAsyncDeliveryListener(sessionId: string): void {
       throw new Error(`Async pipe delivery: environment ${session.environmentId} not connected`);
     }
 
-    const text = `[fd:${sub.fd}] ${msg.content}`;
+    // stdin streams deliver plain text; pipe/global streams prefix with [fd:N]
+    const stream = streamRegistry.getStream(sub.streamId);
+    const isStdin = stream?.name.startsWith("stdin:");
+    const text = isStdin ? msg.content : `[fd:${sub.fd}] ${msg.content}`;
     conn.client.sendInput(
       create(powerline.InputMessageSchema, { sessionId, text }),
     ).catch((err: unknown) => {

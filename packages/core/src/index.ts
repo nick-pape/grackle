@@ -16,6 +16,7 @@ export { emit, subscribe } from "./event-bus.js";
 export { initSigchldSubscriber } from "./signals/sigchld.js";
 export { initOrphanReparentSubscriber, transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
 export { initLifecycleManager } from "./lifecycle.js";
+export { ensureStdinStream, publishToStdin } from "./stdin-delivery.js";
 
 // ─── Task Session ───────────────────────────────────────────
 export { startTaskSession } from "./task-session.js";
