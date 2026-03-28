@@ -385,11 +385,12 @@ export class SystemPromptBuilder {
     return parts.filter(Boolean).join("\n\n");
   }
 
-  /** Contract for signaling task completion. */
+  /** Contract for signaling task completion (leaf tasks). */
   private buildCompletionContract(): string {
     return [
       `## Completion`,
-      `When you are done with your task, use \`task_complete\` to signal completion. Do not go idle without signaling — the orchestrator depends on an explicit completion signal to know you are finished.`,
+      `When you are done with your task, stop working. An ancestor task or the user will review your work and mark the task complete. Do NOT call \`task_complete\` on your own task — only ancestor tasks can complete their descendants.`,
+      `Write your results to the workpad before stopping so reviewers can see your work.`,
     ].join("\n");
   }
 
@@ -421,8 +422,7 @@ export class SystemPromptBuilder {
       `2. Save any in-progress work (commit, push, or post findings).`,
       `3. If you have a parent pipe, write a final summary via \`ipc_write\`.`,
       `4. Close all **owned** child fds with \`ipc_close\` (do not close non-owned parent fds).`,
-      `5. Call \`task_complete\` if your task is finished, or leave it for resumption if not.`,
-      `6. Stop working after completing these steps.`,
+      `5. Stop working after completing these steps.`,
     ].join("\n");
   }
 

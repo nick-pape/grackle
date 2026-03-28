@@ -48,3 +48,39 @@ export const GenericTool: Story = {
     await expect(canvas.getByText("MyCustomTool")).toBeInTheDocument();
   },
 };
+
+/** Claude Code Agent tool routes to the agent card. */
+export const AgentTool: Story = {
+  args: {
+    tool: "Agent",
+    args: { subagent_type: "Explore", description: "Find files", prompt: "Search for files." },
+    result: "Found 5 files.",
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByTestId("tool-card-agent")).toBeInTheDocument();
+  },
+};
+
+/** Copilot task tool routes to the agent card. */
+export const CopilotTaskTool: Story = {
+  args: {
+    tool: "task",
+    args: { agent_type: "explore", name: "search-task", prompt: "Search." },
+    result: "Agent started.",
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByTestId("tool-card-agent")).toBeInTheDocument();
+  },
+};
+
+/** Copilot read_agent tool routes to the agent card. */
+export const CopilotReadAgentTool: Story = {
+  args: {
+    tool: "read_agent",
+    args: { agent_id: "search-task" },
+    result: "Agent completed. agent_id: search-task, status: completed, elapsed: 3s",
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByTestId("tool-card-agent")).toBeInTheDocument();
+  },
+};

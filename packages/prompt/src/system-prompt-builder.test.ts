@@ -8,7 +8,6 @@ describe("SystemPromptBuilder", () => {
     }).build();
 
     expect(result).toContain("## Completion");
-    expect(result).toContain("task_complete");
     expect(result).toContain("## Signals");
     expect(result).toContain("[SIGCHLD]");
     expect(result).toContain("[SIGTERM]");
@@ -16,6 +15,20 @@ describe("SystemPromptBuilder", () => {
     expect(result).toContain("## Findings");
     expect(result).toContain("finding_post");
     expect(result).toContain("grackle");
+  });
+
+  it("leaf task completion contract tells agent to stop working, not self-complete", () => {
+    const result = new SystemPromptBuilder({
+      task: { title: "My Task", description: "Do the thing", notes: "" },
+    }).build();
+
+    // Leaf tasks should NOT be told to call task_complete on themselves anywhere
+    expect(result).not.toContain("use `task_complete` to signal completion");
+    expect(result).not.toContain("Call `task_complete` if your task is finished");
+    // They should be told to stop working and let an ancestor complete them
+    expect(result).toContain("stop working");
+    expect(result).toContain("Do NOT call `task_complete` on your own task");
+    expect(result).toContain("ancestor");
   });
 
   it("does not include task title or description in system prompt", () => {
