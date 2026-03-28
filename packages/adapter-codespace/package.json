@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/adapter-codespace",
-  "version": "0.88.0",
+  "version": "0.89.0",
   "description": "Grackle GitHub Codespace environment adapter",
   "license": "MIT",
   "repository": {

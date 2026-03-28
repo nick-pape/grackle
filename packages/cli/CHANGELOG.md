@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 28 Mar 2026 02:50:43 GMT and should not be manually modified.
+This log was last generated on Sat, 28 Mar 2026 03:00:43 GMT and should not be manually modified.
+
+## 0.89.0
+Sat, 28 Mar 2026 03:00:43 GMT
+
+### Minor changes
+
+- Add GetFinding RPC, cross-workspace QueryFindings, and first-class /findings routes with list/detail pages
 
 ## 0.88.0
 Sat, 28 Mar 2026 02:50:43 GMT
