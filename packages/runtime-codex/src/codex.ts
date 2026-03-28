@@ -197,10 +197,6 @@ class CodexSession extends BaseAgentSession {
     await this.consumeStream(streamResult);
   }
 
-  protected canAcceptInput(): boolean {
-    return !!this.thread;
-  }
-
   protected abortActive(): void {
     if (this.activeStream && typeof this.activeStream.abort === "function") {
       this.activeStream.abort();

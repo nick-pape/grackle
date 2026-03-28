@@ -76,7 +76,6 @@ export abstract class BaseAgentSession implements AgentSession {
     // (undocumented)
     protected readonly branch?: string;
     protected buildInitialPrompt(): string;
-    protected abstract canAcceptInput(): boolean;
     drainBufferedEvents(): AgentEvent[];
     // (undocumented)
     protected readonly eventQueue: AsyncQueue<AgentEvent>;

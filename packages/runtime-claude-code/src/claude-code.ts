@@ -253,12 +253,6 @@ class ClaudeCodeSession extends BaseAgentSession {
     }
   }
 
-  protected canAcceptInput(): boolean {
-    // Allow input even without runtimeSessionId — the first sendInput after
-    // an empty-prompt start acts as the initial query.
-    return !!this.cachedSdkOptions;
-  }
-
   protected abortActive(): void {
     if (this.activeAbort) {
       this.activeAbort.abort();
