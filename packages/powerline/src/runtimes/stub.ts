@@ -306,7 +306,9 @@ export class StubSession implements AgentSession {
       });
     } finally {
       if (mcpClient) {
-        await mcpClient.close().catch(() => {});
+        // Fire-and-forget — close() can hang on CI runners with stuck HTTP transports.
+        // Since events are already collected, we don't need to wait for cleanup.
+        mcpClient.close().catch(() => {});
       }
     }
     return events;
