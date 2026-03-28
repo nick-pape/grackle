@@ -42,6 +42,10 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   fullyParallel: true,
   grep: buildTagGrep(),
+  reporter: [
+    ["list"],
+    ["junit", { outputFile: "test-results/e2e-results.xml" }],
+  ],
   projects: [
     {
       name: "chromium",

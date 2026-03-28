@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -97,3 +102,22 @@ jobs:
         uses: ./.github/actions/build-and-test
         with:
           e2e-tags: ${{ steps.e2e-scope.outputs.tags }}
+
+      - name: E2E test report
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: E2E Test Results
+          path: tests/e2e-tests/test-results/e2e-results.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: BuildPulse — upload test results
+        if: always() && github.repository == 'nick-pape/grackle'
+        uses: buildpulse/buildpulse-action@main
+        with:
+          account: ${{ vars.BUILDPULSE_ACCOUNT_ID }}
+          repository: ${{ vars.BUILDPULSE_REPOSITORY_ID }}
+          path: tests/e2e-tests/test-results/e2e-results.xml
+          key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
+          secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
