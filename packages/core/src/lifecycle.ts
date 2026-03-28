@@ -163,6 +163,11 @@ export function cleanupLifecycleStream(sessionId: string): void {
   if (lifecycleStream) {
     streamRegistry.deleteStream(lifecycleStream.id);
   }
+  // Also clean up stdin stream to prevent it from keeping the session alive
+  const stdinStream = streamRegistry.getStreamByName(`stdin:${sessionId}`);
+  if (stdinStream) {
+    streamRegistry.deleteStream(stdinStream.id);
+  }
 }
 
 /**
