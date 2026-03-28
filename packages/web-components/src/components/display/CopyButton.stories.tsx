@@ -30,7 +30,7 @@ export const Default: Story = {
   play: async ({ canvas }) => {
     const button = canvas.getByTestId("copy-button");
     await expect(button).toBeInTheDocument();
-    await expect(button).toHaveTextContent("\uD83D\uDCCB");
+    await expect(button).toHaveAttribute("aria-label", "Copy to clipboard");
   },
 };
 
@@ -46,7 +46,7 @@ export const CopiesCorrectText: Story = {
     // eslint-disable-next-line @typescript-eslint/unbound-method -- mock fn assigned by decorator
     const writeTextMock = navigator.clipboard.writeText;
     await waitFor(async () => {
-      await expect(button).toHaveTextContent("\u2713");
+      await expect(button).toHaveAttribute("aria-label", "Copied");
       await expect(writeTextMock).toHaveBeenCalledWith("# Hello\n\nSome **bold** markdown");
     });
   },
@@ -60,9 +60,9 @@ export const CheckmarkReverts: Story = {
   play: async ({ canvas }) => {
     const button = canvas.getByTestId("copy-button");
     await userEvent.click(button);
-    await waitFor(() => expect(button).toHaveTextContent("\u2713"));
+    await waitFor(() => expect(button).toHaveAttribute("aria-label", "Copied"));
     // Wait for the checkmark to revert after COPIED_FEEDBACK_DURATION (2s)
-    await waitFor(() => expect(button).toHaveTextContent("\uD83D\uDCCB"), { timeout: 3000 });
+    await waitFor(() => expect(button).toHaveAttribute("aria-label", "Copy to clipboard"), { timeout: 3000 });
   },
 };
 

@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, type JSX } from "react";
+import { ChevronDown } from "lucide-react";
 import type { ButtonVariant, ButtonSize } from "./Button.js";
+import { ICON_MD } from "../../utils/iconSize.js";
 import styles from "./SplitButton.module.scss";
 
 /** A single option in the split button dropdown. */
@@ -101,7 +103,7 @@ export function SplitButton({
         aria-expanded={open}
         data-testid={testId ? `${testId}-chevron` : undefined}
       >
-        ▾
+        <ChevronDown size={ICON_MD} aria-hidden="true" />
       </button>
       {open && (
         <div className={styles.dropdown} data-testid={testId ? `${testId}-menu` : undefined}>

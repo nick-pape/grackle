@@ -4,7 +4,7 @@
  * @module
  */
 
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 import type { TaskData } from "../../hooks/types.js";
 import type { MatchIndex } from "@grackle-ai/common";
 import { SIDEBAR_STATUS_ORDER, getStatusStyle } from "../../utils/taskStatus.js";
@@ -89,7 +89,7 @@ export function buildTaskTree(taskList: TaskData[]): TaskNode[] {
 export interface StatusGroup {
   status: string;
   label: string;
-  style: { color: string; icon: string };
+  style: { color: string; icon: ReactNode };
   tasks: TaskData[];
 }
 

@@ -1,7 +1,9 @@
 import { useState, type JSX } from "react";
+import { ChevronRight, Pencil } from "lucide-react";
 import type { ToolCardProps } from "./ToolCardProps.js";
 import { parseUnifiedDiff, diffFromOldNew, diffStats, type DiffLine } from "./parseDiff.js";
 import { CopyButton } from "../display/CopyButton.js";
+import { ICON_SM, ICON_MD } from "../../utils/iconSize.js";
 import styles from "./toolCards.module.scss";
 
 /** Extracts file path from edit tool args (handles `file_path`, `path` variants). */
@@ -96,7 +98,7 @@ export function FileEditCard({ tool, args, result, isError, detailedResult }: To
       data-testid="tool-card-file-edit"
     >
       <div className={styles.header}>
-        <span className={styles.icon}>✏️</span>
+        <span className={styles.icon}><Pencil size={ICON_MD} /></span>
         <span className={styles.toolName} style={{ color: "var(--accent-yellow)" }}>{tool}</span>
         {name && (
           <span className={styles.fileName} title={filePath}>{name}</span>
@@ -152,7 +154,7 @@ export function FileEditCard({ tool, args, result, isError, detailedResult }: To
               aria-expanded={expanded}
               data-testid="tool-card-toggle"
             >
-              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}>▸</span>
+              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`} aria-hidden="true"><ChevronRight size={ICON_SM} /></span>
               {expanded ? "collapse" : `${(diffLines?.length ?? 0) - PREVIEW_LINES} more lines`}
             </button>
           )}

@@ -55,11 +55,11 @@
 }
 
 .icon {
-  font-size: var(--font-size-md);
   flex-shrink: 0;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 16px;
-  text-align: center;
 }
 
 .message {

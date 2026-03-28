@@ -1,6 +1,8 @@
-import { useCallback, useRef, type JSX, type KeyboardEvent } from "react";
+import { useCallback, useRef, type JSX, type KeyboardEvent, type ReactNode } from "react";
 import { useLocation } from "react-router";
+import { Info, Key, Keyboard, Palette, User } from "lucide-react";
 import { SETTINGS_URL, useAppNavigate } from "../../utils/navigation.js";
+import { ICON_LG } from "../../utils/iconSize.js";
 import styles from "./SettingsNav.module.scss";
 
 /** Tab definition for the settings navigation rail. */
@@ -9,17 +11,17 @@ interface SettingsTab {
   path: string;
   /** Display label for the tab. */
   label: string;
-  /** Icon character displayed before the label. */
-  icon: string;
+  /** Icon element displayed before the label. */
+  icon: ReactNode;
 }
 
 /** Ordered list of settings tabs. */
 const TABS: SettingsTab[] = [
-  { path: "credentials", label: "Credentials", icon: "\uD83D\uDD11" },
-  { path: "personas", label: "Personas", icon: "\uD83D\uDC64" },
-  { path: "appearance", label: "Appearance", icon: "\uD83C\uDFA8" },
-  { path: "shortcuts", label: "Shortcuts", icon: "\u2328\uFE0F" },
-  { path: "about", label: "About", icon: "\u2139\uFE0F" },
+  { path: "credentials", label: "Credentials", icon: <Key size={ICON_LG} /> },
+  { path: "personas", label: "Personas", icon: <User size={ICON_LG} /> },
+  { path: "appearance", label: "Appearance", icon: <Palette size={ICON_LG} /> },
+  { path: "shortcuts", label: "Shortcuts", icon: <Keyboard size={ICON_LG} /> },
+  { path: "about", label: "About", icon: <Info size={ICON_LG} /> },
 ];
 
 /** Vertical tab navigation rail for the settings hub. */

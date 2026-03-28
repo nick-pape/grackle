@@ -1,5 +1,7 @@
 import { useState, type ReactNode, type JSX } from "react";
+import { AlertTriangle, Check, Info, X } from "lucide-react";
 import styles from "./Callout.module.scss";
+import { ICON_LG, ICON_MD } from "../../utils/iconSize.js";
 
 /** Visual style variant for a callout. */
 export type CalloutVariant = "success" | "error" | "warning" | "info";
@@ -14,11 +16,11 @@ interface CalloutProps {
   className?: string;
 }
 
-const VARIANT_ICONS: Record<CalloutVariant, string> = {
-  success: "\u2713", // ✓
-  error: "\u2715",   // ✕
-  warning: "\u26A0", // ⚠
-  info: "\u2139",    // ℹ
+const VARIANT_ICONS: Record<CalloutVariant, ReactNode> = {
+  success: <Check size={ICON_LG} />,
+  error: <X size={ICON_LG} />,
+  warning: <AlertTriangle size={ICON_LG} />,
+  info: <Info size={ICON_LG} />,
 };
 
 /**
@@ -52,7 +54,7 @@ export function Callout({
               onClick={() => setDismissed(true)}
               aria-label="Dismiss"
             >
-              {"\u00D7"}
+              <X size={ICON_MD} aria-hidden="true" />
             </button>
           )}
         </div>

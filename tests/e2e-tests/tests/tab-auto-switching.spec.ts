@@ -19,8 +19,8 @@ test.describe("Tab Auto-Switching", { tag: ["@webui"] }, () => {
     // Start the task with stub runtime (patched by fixture)
     await page.locator("button", { hasText: "Start" }).click();
 
-    // Wait for task status to update in sidebar (● = in_progress or ⧖ = waiting_input)
-    await expect(page.locator("text=/(●|\u29D6)/").first()).toBeVisible({ timeout: 15_000 });
+    // Wait for task to start running — the stream tab auto-switches and shows runtime output
+    // (Status icons are now SVGs so we wait for the runtime output directly)
 
     // Verify Stream tab becomes active (auto-switch on in_progress)
     // Stream content should appear with runtime events
@@ -49,10 +49,8 @@ test.describe("Tab Auto-Switching", { tag: ["@webui"] }, () => {
     await runStubTaskToCompletion(page);
     await page.locator("button", { hasText: "Stop" }).click();
 
-    // Wait for task status to update in sidebar (✓ = done)
-    await expect(page.locator("text=✓").first()).toBeVisible({ timeout: 15_000 });
-
-    // Verify Findings tab becomes active (auto-switch on done status)
+    // Wait for task status to update in sidebar and Findings tab to become active
+    // (Status icons are now SVGs so we wait for the tab switch effect directly)
     await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 10_000 });
 
     // Stream content should NOT be visible

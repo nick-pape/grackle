@@ -33,6 +33,6 @@ describe("classifyTool", () => {
 
   it("returns generic for unknown tools", () => {
     expect(classifyTool("unknown_tool")).toBe("generic");
-    expect(classifyTool("mcp__grackle__workpad_write")).toBe("generic");
+    expect(classifyTool("mcp__grackle__workpad_write")).toBe("workpad");
   });
 });

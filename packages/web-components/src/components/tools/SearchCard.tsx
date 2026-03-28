@@ -1,6 +1,8 @@
 import { useState, type JSX } from "react";
+import { ChevronRight, Search } from "lucide-react";
 import type { ToolCardProps } from "./ToolCardProps.js";
 import { CopyButton } from "../display/CopyButton.js";
+import { ICON_SM, ICON_MD } from "../../utils/iconSize.js";
 import styles from "./toolCards.module.scss";
 
 /** Extracts search-relevant fields from tool args. */
@@ -33,7 +35,7 @@ export function SearchCard({ tool, args, result, isError }: ToolCardProps): JSX.
       data-testid="tool-card-search"
     >
       <div className={styles.header}>
-        <span className={styles.icon}>🔍</span>
+        <span className={styles.icon}><Search size={ICON_MD} /></span>
         <span className={styles.toolName} style={{ color: "var(--accent-purple, #a78bfa)" }}>{tool}</span>
         {pattern && (
           <span className={styles.fileName} data-testid="tool-card-pattern">
@@ -77,7 +79,7 @@ export function SearchCard({ tool, args, result, isError }: ToolCardProps): JSX.
               aria-expanded={expanded}
               data-testid="tool-card-toggle"
             >
-              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}>▸</span>
+              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`} aria-hidden="true"><ChevronRight size={ICON_SM} /></span>
               {expanded ? "collapse" : `${lines.length - PREVIEW_LINES} more matches`}
             </button>
           )}
