@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { grackle, powerline, SESSION_STATUS } from "@grackle-ai/common";
+import { grackle, powerline, SESSION_STATUS, END_REASON } from "@grackle-ai/common";
 import { sessionStore } from "@grackle-ai/database";
 import * as adapterManager from "../adapter-manager.js";
 import { reanimateAgent } from "../reanimate-agent.js";
@@ -58,6 +58,17 @@ export async function deliverSignalToTask(
     logger.warn(
       { taskId, sessionId: latest.id, signalType },
       "Latest session has no runtimeSessionId — cannot reanimate, signal dropped",
+    );
+    return false;
+  }
+
+  // Don't reanimate sessions that completed naturally — the agent finished its
+  // work and reanimating into the legacy/resume path would leave it stuck at
+  // waitForInput forever. Only reanimate sessions that were killed or interrupted.
+  if (latest.endReason === END_REASON.COMPLETED || latest.endReason === END_REASON.TERMINATED) {
+    logger.info(
+      { taskId, sessionId: latest.id, signalType, endReason: latest.endReason },
+      "Session completed naturally — signal dropped (not reanimating)",
     );
     return false;
   }
