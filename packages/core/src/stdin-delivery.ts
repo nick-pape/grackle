@@ -46,13 +46,16 @@ export function ensureStdinStream(sessionId: string): void {
 /**
  * Publish a message to a session's stdin stream.
  *
- * @throws If the stdin stream does not exist for the given session.
+ * Idempotently ensures the stdin stream exists before publishing.
+ * Safe to call even if the stream was previously cleaned up.
  */
 export function publishToStdin(sessionId: string, text: string): void {
+  ensureStdinStream(sessionId);
+
   const name = `${STDIN_PREFIX}${sessionId}`;
   const stream = streamRegistry.getStreamByName(name);
   if (!stream) {
-    throw new Error(`No stdin stream for session ${sessionId}`);
+    throw new Error(`Failed to ensure stdin stream for session ${sessionId}`);
   }
 
   streamRegistry.publish(stream.id, SERVER_SESSION_ID, text);

@@ -155,8 +155,10 @@ describe("stdin-delivery", () => {
       expect(stream).toBeDefined();
     });
 
-    it("throws if stdin stream does not exist", () => {
-      expect(() => publishToStdin("nonexistent", "hello")).toThrow();
+    it("idempotently creates stdin stream if it does not exist", () => {
+      // Should NOT throw — publishToStdin calls ensureStdinStream internally
+      publishToStdin("new-session", "hello");
+      expect(streamRegistry.getStreamByName("stdin:new-session")).toBeDefined();
     });
 
     it("delivers message to session via async listener as plain text", () => {
