@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 27 Mar 2026 22:24:49 GMT and should not be manually modified.
+This log was last generated on Sat, 28 Mar 2026 00:14:57 GMT and should not be manually modified.
+
+## 0.86.1
+Sat, 28 Mar 2026 00:14:57 GMT
+
+### Patches
+
+- Add database integrity checks, pre-migration backup, and WAL checkpoint management
 
 ## 0.86.0
 Fri, 27 Mar 2026 22:24:49 GMT

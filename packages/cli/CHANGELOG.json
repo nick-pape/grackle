@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.86.1",
+      "tag": "@grackle-ai/cli_v0.86.1",
+      "date": "Sat, 28 Mar 2026 00:14:57 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add database integrity checks, pre-migration backup, and WAL checkpoint management"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.86.0",
       "tag": "@grackle-ai/cli_v0.86.0",
       "date": "Fri, 27 Mar 2026 22:24:49 GMT",
