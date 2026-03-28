@@ -4,7 +4,8 @@ import { EnvironmentNav } from "./EnvironmentNav.js";
 import { buildEnvironment } from "../../test-utils/storybook-helpers.js";
 
 const meta: Meta<typeof EnvironmentNav> = {
-  title: "Lists/EnvironmentNav",
+  title: "Grackle/Lists/EnvironmentNav",
+  tags: ["autodocs"],
   component: EnvironmentNav,
   args: {
     environments: [

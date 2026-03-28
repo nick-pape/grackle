@@ -12,7 +12,7 @@ const defaultNode: GraphNode = makeGraphNode({
   id: "node-001",
   label: "Authentication Flow",
   content: "OAuth2 flow with PKCE for CLI clients.",
-  tags: ["auth", "security"],
+  tags: ["auth", "security", "autodocs"],
   val: 3,
 });
 
@@ -47,7 +47,7 @@ const allNodes: GraphNode[] = [defaultNode, connectedNodeA, connectedNodeB];
 // ---------------------------------------------------------------------------
 
 const meta: Meta<typeof KnowledgeDetailPanel> = {
-  title: "Knowledge/KnowledgeDetailPanel",
+  title: "Grackle/Knowledge/KnowledgeDetailPanel",
   component: KnowledgeDetailPanel,
   args: {
     detail: defaultDetail,

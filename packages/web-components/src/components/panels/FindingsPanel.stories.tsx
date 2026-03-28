@@ -4,7 +4,7 @@ import { FindingsPanel } from "./FindingsPanel.js";
 import { buildFinding } from "../../test-utils/storybook-helpers.js";
 
 const meta: Meta<typeof FindingsPanel> = {
-  title: "Panels/FindingsPanel",
+  title: "Grackle/Panels/FindingsPanel",
   component: FindingsPanel,
   args: {
     findings: [],

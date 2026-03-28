@@ -4,7 +4,7 @@ import { AppearancePanel } from "./AppearancePanel.js";
 
 const meta: Meta<typeof AppearancePanel> = {
   component: AppearancePanel,
-  title: "Panels/AppearancePanel",
+  title: "App/Panels/AppearancePanel",
   args: {
     themeId: "grackle",
     resolvedThemeId: "grackle-dark",

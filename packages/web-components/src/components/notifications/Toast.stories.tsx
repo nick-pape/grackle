@@ -7,7 +7,8 @@ const TEST_DURATION: number = 999999;
 
 const meta: Meta<typeof Toast> = {
   component: Toast,
-  title: "Notifications/Toast",
+  title: "Primitives/Notifications/Toast",
+  tags: ["autodocs"],
   args: {
     onDismiss: fn(),
   },

@@ -3,7 +3,8 @@ import { expect, fn } from "@storybook/test";
 import { EditableTextArea } from "./EditableTextArea.js";
 
 const meta: Meta<typeof EditableTextArea> = {
-  title: "Editable/EditableTextArea",
+  title: "Primitives/Editable/EditableTextArea",
+  tags: ["autodocs"],
   component: EditableTextArea,
   args: {
     value: "Multi-line\ntext content",

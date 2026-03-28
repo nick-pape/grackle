@@ -7,7 +7,7 @@ import { TaskEditPanel } from "./TaskEditPanel.js";
 const defaultWorkspace: Workspace = buildWorkspace({ id: "ws-001", name: "Test Workspace" });
 
 const meta: Meta<typeof TaskEditPanel> = {
-  title: "Panels/TaskEditPanel",
+  title: "App/Panels/TaskEditPanel",
   component: TaskEditPanel,
   args: {
     mode: "new",

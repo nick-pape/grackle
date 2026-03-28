@@ -4,7 +4,8 @@ import { KnowledgeNav } from "./KnowledgeNav.js";
 import { makeGraphNode, makeWorkspace } from "../../test-utils/storybook-helpers.js";
 
 const meta: Meta<typeof KnowledgeNav> = {
-  title: "Knowledge/KnowledgeNav",
+  title: "Grackle/Knowledge/KnowledgeNav",
+  tags: ["autodocs"],
   component: KnowledgeNav,
   decorators: [
     (Story) => (

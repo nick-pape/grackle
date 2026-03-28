@@ -4,7 +4,8 @@ import { Sidebar } from "./Sidebar.js";
 
 const meta: Meta<typeof Sidebar> = {
   component: Sidebar,
-  title: "Layout/Sidebar",
+  title: "Primitives/Layout/Sidebar",
+  tags: ["autodocs"],
 };
 export default meta;
 type Story = StoryObj<typeof meta>;

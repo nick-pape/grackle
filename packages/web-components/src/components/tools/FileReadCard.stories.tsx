@@ -4,7 +4,8 @@ import { FileReadCard } from "./FileReadCard.js";
 
 const meta: Meta<typeof FileReadCard> = {
   component: FileReadCard,
-  title: "Tools/FileReadCard",
+  title: "Grackle/Tools/FileReadCard",
+  tags: ["autodocs"],
 };
 export default meta;
 type Story = StoryObj<typeof meta>;

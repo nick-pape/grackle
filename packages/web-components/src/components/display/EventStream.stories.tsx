@@ -12,6 +12,8 @@ const sampleEvents: DisplayEvent[] = [
 
 const meta: Meta<typeof EventStream> = {
   component: EventStream,
+  title: "Grackle/Display/EventStream",
+  tags: ["autodocs"],
   args: {
     events: sampleEvents,
     eventsDropped: 0,

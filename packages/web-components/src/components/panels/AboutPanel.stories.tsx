@@ -4,7 +4,7 @@ import { AboutPanel } from "./AboutPanel.js";
 import { buildEnvironment, buildSession } from "../../test-utils/storybook-helpers.js";
 
 const meta: Meta<typeof AboutPanel> = {
-  title: "Panels/AboutPanel",
+  title: "App/Panels/AboutPanel",
   component: AboutPanel,
   args: {
     connected: true,

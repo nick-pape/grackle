@@ -4,7 +4,8 @@ import { SearchCard } from "./SearchCard.js";
 
 const meta: Meta<typeof SearchCard> = {
   component: SearchCard,
-  title: "Tools/SearchCard",
+  title: "Grackle/Tools/SearchCard",
+  tags: ["autodocs"],
 };
 export default meta;
 type Story = StoryObj<typeof meta>;

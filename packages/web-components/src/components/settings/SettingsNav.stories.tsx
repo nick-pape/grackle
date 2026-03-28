@@ -4,6 +4,7 @@ import { SettingsNav } from "./SettingsNav.js";
 
 const meta: Meta<typeof SettingsNav> = {
   component: SettingsNav,
+  title: "App/Settings/SettingsNav",
 };
 export default meta;
 type Story = StoryObj<typeof meta>;
