@@ -7,7 +7,8 @@ const WORKSPACE_ID: string = "ws-board";
 const ENVIRONMENT_ID: string = "env-board";
 
 const meta: Meta<typeof WorkspaceBoard> = {
-  title: "Workspace/WorkspaceBoard",
+  title: "Grackle/Workspace/WorkspaceBoard",
+  tags: ["autodocs"],
   component: WorkspaceBoard,
   args: {
     workspaceId: WORKSPACE_ID,

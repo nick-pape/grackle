@@ -3,7 +3,7 @@ import { expect, userEvent, within } from "@storybook/test";
 import { UpdateBanner } from "./UpdateBanner.js";
 
 const meta: Meta<typeof UpdateBanner> = {
-  title: "Notifications/UpdateBanner",
+  title: "App/Notifications/UpdateBanner",
   component: UpdateBanner,
 };
 

@@ -4,7 +4,8 @@ import { CopyButton } from "./CopyButton.js";
 
 const meta: Meta<typeof CopyButton> = {
   component: CopyButton,
-  title: "Display/CopyButton",
+  title: "Primitives/Display/CopyButton",
+  tags: ["autodocs"],
   decorators: [
     (Story) => {
       // Mock the clipboard API for Storybook/test environments.

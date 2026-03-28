@@ -9,7 +9,8 @@ const nodeB: GraphNode = makeGraphNode({ id: "n-2", label: "DB Schema", category
 const nodeC: GraphNode = makeGraphNode({ id: "n-3", label: "Perf Insight", category: "insight" });
 
 const meta: Meta<typeof KnowledgeGraph> = {
-  title: "Knowledge/KnowledgeGraph",
+  title: "Grackle/Knowledge/KnowledgeGraph",
+  tags: ["autodocs"],
   component: KnowledgeGraph,
   decorators: [
     (Story) => (

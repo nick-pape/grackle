@@ -4,7 +4,8 @@ import { Button } from "./Button.js";
 
 const meta: Meta<typeof Button> = {
   component: Button,
-  title: "Display/Button",
+  title: "Primitives/Display/Button",
+  tags: ["autodocs"],
   args: {
     children: "Click me",
     onClick: fn(),

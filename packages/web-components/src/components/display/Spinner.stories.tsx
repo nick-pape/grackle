@@ -4,7 +4,8 @@ import { Spinner } from "./Spinner.js";
 
 const meta: Meta<typeof Spinner> = {
   component: Spinner,
-  title: "Display/Spinner",
+  title: "Primitives/Display/Spinner",
+  tags: ["autodocs"],
 };
 export default meta;
 type Story = StoryObj<typeof meta>;

@@ -5,6 +5,8 @@ import { makeEnvironment, makeSession } from "../../test-utils/storybook-helpers
 
 const meta: Meta<typeof StatusBar> = {
   component: StatusBar,
+  title: "Grackle/Layout/StatusBar",
+  tags: ["autodocs"],
   args: {
     connected: true,
     environments: [makeEnvironment({ id: "local", displayName: "Local", status: "connected" })],

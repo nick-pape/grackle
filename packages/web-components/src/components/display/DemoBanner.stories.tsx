@@ -3,7 +3,7 @@ import { expect } from "@storybook/test";
 import { DemoBanner } from "./DemoBanner.js";
 
 const meta: Meta<typeof DemoBanner> = {
-  title: "Display/DemoBanner",
+  title: "App/Display/DemoBanner",
   component: DemoBanner,
 };
 

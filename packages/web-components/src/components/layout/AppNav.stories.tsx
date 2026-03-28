@@ -3,7 +3,8 @@ import { expect, userEvent } from "@storybook/test";
 import { AppNav } from "./AppNav.js";
 
 const meta: Meta<typeof AppNav> = {
-  title: "Layout/AppNav",
+  title: "Grackle/Layout/AppNav",
+  tags: ["autodocs"],
   component: AppNav,
 };
 export default meta;

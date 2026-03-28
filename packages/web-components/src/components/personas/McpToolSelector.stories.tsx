@@ -8,7 +8,8 @@ import {
 } from "@grackle-ai/common";
 
 const meta: Meta<typeof McpToolSelector> = {
-  title: "Personas/McpToolSelector",
+  title: "Grackle/Personas/McpToolSelector",
+  tags: ["autodocs"],
   component: McpToolSelector,
   args: {
     selectedTools: [],

@@ -4,7 +4,8 @@ import { Callout } from "./Callout.js";
 
 const meta: Meta<typeof Callout> = {
   component: Callout,
-  title: "Notifications/Callout",
+  title: "Primitives/Notifications/Callout",
+  tags: ["autodocs"],
   args: {
     children: "This is a callout message.",
   },

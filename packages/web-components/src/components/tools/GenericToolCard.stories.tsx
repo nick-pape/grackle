@@ -4,7 +4,8 @@ import { GenericToolCard } from "./GenericToolCard.js";
 
 const meta: Meta<typeof GenericToolCard> = {
   component: GenericToolCard,
-  title: "Tools/GenericToolCard",
+  title: "Grackle/Tools/GenericToolCard",
+  tags: ["autodocs"],
 };
 export default meta;
 type Story = StoryObj<typeof meta>;

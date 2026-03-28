@@ -9,7 +9,8 @@ const WORKSPACE_ID: string = "ws-tasklist";
 const defaultWorkspace: Workspace = buildWorkspace({ id: WORKSPACE_ID, name: "Test Workspace" });
 
 const meta: Meta<typeof TaskList> = {
-  title: "Lists/TaskList",
+  title: "Grackle/Lists/TaskList",
+  tags: ["autodocs"],
   component: TaskList,
   decorators: [
     (Story) => {

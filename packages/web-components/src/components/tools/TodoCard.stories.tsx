@@ -4,7 +4,8 @@ import { TodoCard } from "./TodoCard.js";
 
 const meta: Meta<typeof TodoCard> = {
   component: TodoCard,
-  title: "Tools/TodoCard",
+  title: "Grackle/Tools/TodoCard",
+  tags: ["autodocs"],
 };
 export default meta;
 type Story = StoryObj<typeof meta>;
