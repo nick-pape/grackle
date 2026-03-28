@@ -44,7 +44,7 @@ export function EnvironmentDetailPage(): JSX.Element {
   const statusColor = STATUS_COLORS[env.status] || "var(--text-tertiary)";
   const isConnected = env.status === "connected";
   const isConnecting = env.status === "connecting";
-  const isDisconnected = env.status === "disconnected" || env.status === "error";
+  const isDisconnected = env.status === "disconnected" || env.status === "error" || env.status === "sleeping";
   const progress = env.id in provisionStatus ? provisionStatus[env.id] : undefined;
 
   const handleDeleteEnv = (): void => {
@@ -130,7 +130,7 @@ export function EnvironmentDetailPage(): JSX.Element {
             className={styles.btnPrimary}
             onClick={() => provisionEnvironment(env.id)}
           >
-            {env.status === "error" ? "Retry" : "Connect"}
+            {env.status === "error" ? "Retry" : env.status === "sleeping" ? "Wake" : "Connect"}
           </button>
         )}
         {isConnecting && progress !== undefined && (

@@ -82,9 +82,9 @@ function applySchema(): void {
 
 // ── Helpers ─────────────────────────────────────────────────
 
-function insertEnv(id: string, status: string = "disconnected", bootstrapped: number = 1): void {
+function insertEnv(id: string, status: string = "disconnected", bootstrapped: number = 1, adapterType: string = "test"): void {
   sqlite.exec(`INSERT INTO environments (id, display_name, adapter_type, adapter_config, status, bootstrapped, powerline_token)
-    VALUES ('${id}', 'Test', 'test', '{}', '${status}', ${bootstrapped}, 'tok-${id}')`);
+    VALUES ('${id}', 'Test', '${adapterType}', '{}', '${status}', ${bootstrapped}, 'tok-${id}')`);
 }
 
 function makeAdapter(connectResult?: PowerLineConnection): EnvironmentAdapter {
@@ -156,22 +156,22 @@ describe("auto-reconnect", () => {
     expect(adapter.connect).not.toHaveBeenCalled();
   });
 
-  it("stops after max retries and sets status to error", async () => {
+  it("transitions to sleeping after max retries (not error)", async () => {
     insertEnv("env1");
     const adapter = makeAdapter();
     (adapter.connect as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("unreachable"));
     adapterManager.registerAdapter(adapter);
 
-    // Initialize + exhaust 5 retries
-    for (let i = 0; i < 7; i++) {
+    // Initialize + exhaust 5 retries (tick 0 initializes, ticks 1-5 attempt)
+    for (let i = 0; i < 6; i++) {
       vi.spyOn(Date, "now").mockReturnValue(Date.now() + 200_000 * (i + 1));
       await attemptReconnects();
       await new Promise((r) => setTimeout(r, 50));
     }
 
     const env = envRegistry.getEnvironment("env1");
-    expect(env?.status).toBe("error");
-    // Should have been called exactly 5 times (max retries)
+    expect(env?.status).toBe("sleeping");
+    // 5 reconnect attempts during the disconnected phase
     expect(adapter.connect).toHaveBeenCalledTimes(5);
   });
 
@@ -302,6 +302,172 @@ describe("auto-reconnect", () => {
     expect(adapter.connect).toHaveBeenCalledWith("env1", expect.any(Object), "tok-env1");
     expect(envRegistry.getEnvironment("env1")?.status).toBe("connected");
   });
+
+  // ── Sleeping / probe behavior ─────────────────────────────
+
+  it("probes sleeping environment after PROBE_INTERVAL_MS", async () => {
+    insertEnv("env1", "sleeping");
+    const adapter = makeAdapter();
+    adapterManager.registerAdapter(adapter);
+
+    // First tick: sleeping env has no in-memory state, initializes lastProbeAt
+    await attemptReconnects();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(adapter.connect).not.toHaveBeenCalled();
+
+    // Advance past probe interval (60s)
+    vi.spyOn(Date, "now").mockReturnValue(Date.now() + 65_000);
+    await attemptReconnects();
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Should have probed
+    expect(adapter.connect).toHaveBeenCalledWith("env1", expect.any(Object), "tok-env1");
+    expect(envRegistry.getEnvironment("env1")?.status).toBe("connected");
+  });
+
+  it("does not probe sleeping codespace environment", async () => {
+    insertEnv("cs1", "sleeping", 1, "codespace");
+    const adapter = makeAdapter();
+    (adapter as unknown as { type: string }).type = "codespace";
+    adapterManager.registerAdapter(adapter);
+
+    // Advance well past probe interval
+    vi.spyOn(Date, "now").mockReturnValue(Date.now() + 120_000);
+    await attemptReconnects();
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Should NOT have probed — codespace is excluded
+    expect(adapter.connect).not.toHaveBeenCalled();
+    expect(envRegistry.getEnvironment("cs1")?.status).toBe("sleeping");
+  });
+
+  it("successful probe recovers sessions and clears state", async () => {
+    insertEnv("env1", "sleeping");
+    const adapter = makeAdapter();
+    adapterManager.registerAdapter(adapter);
+
+    // Initialize probe state
+    await attemptReconnects();
+
+    // Advance past probe interval
+    vi.spyOn(Date, "now").mockReturnValue(Date.now() + 65_000);
+    await attemptReconnects();
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(envRegistry.getEnvironment("env1")?.status).toBe("connected");
+    expect(recoverSuspendedSessions).toHaveBeenCalled();
+    expect(emit).toHaveBeenCalledWith("environment.changed", {});
+  });
+
+  it("failed probe stays sleeping without incrementing attempts", async () => {
+    insertEnv("env1", "sleeping");
+    const adapter = makeAdapter();
+    (adapter.connect as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("still down"));
+    adapterManager.registerAdapter(adapter);
+
+    // Initialize probe state
+    await attemptReconnects();
+
+    // Advance past probe interval and probe
+    vi.spyOn(Date, "now").mockReturnValue(Date.now() + 65_000);
+    await attemptReconnects();
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Should stay sleeping
+    expect(envRegistry.getEnvironment("env1")?.status).toBe("sleeping");
+    // Should NOT have triggered session recovery
+    expect(recoverSuspendedSessions).not.toHaveBeenCalled();
+  });
+
+  it("probe respects concurrency lock", async () => {
+    insertEnv("env1", "sleeping");
+    const adapter = makeAdapter();
+    let connectCount = 0;
+    (adapter.connect as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      connectCount++;
+      return new Promise((resolve) => setTimeout(() => resolve({
+        client: {} as PowerLineConnection["client"],
+        environmentId: "env1",
+        port: 7433,
+      }), 100));
+    });
+    adapterManager.registerAdapter(adapter);
+
+    // Initialize probe state
+    await attemptReconnects();
+
+    // Advance past probe interval
+    vi.spyOn(Date, "now").mockReturnValue(Date.now() + 65_000);
+
+    // Fire two probe attempts concurrently
+    const p1 = attemptReconnects();
+    const p2 = attemptReconnects();
+    await Promise.all([p1, p2]);
+    await new Promise((r) => setTimeout(r, 150));
+
+    expect(connectCount).toBe(1);
+  });
+
+  it("clearReconnectState from sleeping prevents probing", async () => {
+    insertEnv("env1", "sleeping");
+    const adapter = makeAdapter();
+    adapterManager.registerAdapter(adapter);
+
+    // Initialize probe state
+    await attemptReconnects();
+
+    // Clear state (as if user manually provisioned)
+    clearReconnectState("env1");
+
+    // Advance past probe interval
+    vi.spyOn(Date, "now").mockReturnValue(Date.now() + 65_000);
+    await attemptReconnects();
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Should re-initialize (first tick for sleeping), not probe yet
+    expect(adapter.connect).not.toHaveBeenCalled();
+  });
+
+  it("sleeping env with no in-memory state gets probed on second tick", async () => {
+    // Simulates server restart: DB says sleeping but no in-memory state
+    insertEnv("env1", "sleeping");
+    const adapter = makeAdapter();
+    adapterManager.registerAdapter(adapter);
+
+    // First tick: creates state entry with lastProbeAt = now
+    await attemptReconnects();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(adapter.connect).not.toHaveBeenCalled();
+
+    // Second tick after probe interval: should probe
+    vi.spyOn(Date, "now").mockReturnValue(Date.now() + 65_000);
+    await attemptReconnects();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(adapter.connect).toHaveBeenCalled();
+  });
+
+  it("preserves sleeping state during cleanup sweep", async () => {
+    insertEnv("env1", "sleeping");
+    insertEnv("env2", "connected"); // should be cleaned up
+    const adapter = makeAdapter();
+    adapterManager.registerAdapter(adapter);
+
+    // Initialize sleeping state for env1
+    await attemptReconnects();
+
+    // Run again — env1 should NOT have its state deleted by the cleanup loop
+    await attemptReconnects();
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Advance past probe interval — env1 should still be probeable
+    vi.spyOn(Date, "now").mockReturnValue(Date.now() + 65_000);
+    await attemptReconnects();
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(adapter.connect).toHaveBeenCalled();
+  });
+
+  // ── Existing reset tests ─────────────────────────────────
 
   it("resetReconnectState resets attempt count for fresh retries", async () => {
     insertEnv("env1");

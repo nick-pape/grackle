@@ -22,14 +22,19 @@ const RECONNECT_MAX_DELAY_MS: number = 120_000;
 /** Multiplier for exponential backoff. */
 const RECONNECT_BACKOFF_MULTIPLIER: number = 2;
 
+/** Interval between probes for sleeping environments (milliseconds). */
+const PROBE_INTERVAL_MS: number = 60_000;
+
 // ─── State ──────────────────────────────────────────────────
 
-/** Per-environment retry state for exponential backoff. */
+/** Per-environment retry state for exponential backoff and sleeping probes. */
 interface ReconnectState {
   /** Number of reconnect attempts made so far. */
   attempts: number;
   /** Earliest timestamp (Date.now()) at which the next attempt is allowed. */
   nextRetryAt: number;
+  /** Timestamp (Date.now()) of the last probe for sleeping environments. */
+  lastProbeAt: number;
 }
 
 /** Tracks reconnect backoff state per environment. */
@@ -49,6 +54,8 @@ const reconnecting: Set<string> = new Set<string>();
  */
 export async function attemptReconnects(): Promise<void> {
   const environments = envRegistry.listEnvironments();
+
+  // ── Phase 1: Disconnected environments (exponential backoff) ──
   const disconnected = environments.filter((env) => env.status === "disconnected");
 
   for (const env of disconnected) {
@@ -59,6 +66,7 @@ export async function attemptReconnects(): Promise<void> {
       reconnectStates.set(env.id, {
         attempts: 0,
         nextRetryAt: Date.now() + RECONNECT_INITIAL_DELAY_MS,
+        lastProbeAt: 0,
       });
       continue;
     }
@@ -84,10 +92,49 @@ export async function attemptReconnects(): Promise<void> {
     });
   }
 
-  // Clean up state for environments that are no longer disconnected
+  // ── Phase 2: Sleeping environments (periodic probe) ──────
+  const sleeping = environments.filter((env) => env.status === "sleeping");
+
+  for (const env of sleeping) {
+    // Don't auto-probe codespace environments — gh codespace ssh can
+    // auto-start a stopped codespace, which is expensive.
+    if (env.adapterType === "codespace") {
+      continue;
+    }
+
+    const state = reconnectStates.get(env.id);
+
+    // First time seeing this sleeping env (e.g., after server restart)
+    // — initialize with lastProbeAt = now so first probe fires after interval.
+    if (!state) {
+      reconnectStates.set(env.id, {
+        attempts: RECONNECT_MAX_RETRIES,
+        nextRetryAt: 0,
+        lastProbeAt: Date.now(),
+      });
+      continue;
+    }
+
+    // Probe interval not elapsed yet
+    if (Date.now() - state.lastProbeAt < PROBE_INTERVAL_MS) {
+      continue;
+    }
+
+    // Already reconnecting/probing
+    if (reconnecting.has(env.id)) {
+      continue;
+    }
+
+    // Attempt probe (fire-and-forget)
+    tryProbe(env.id).catch((err) => {
+      logger.debug({ environmentId: env.id, err }, "Unhandled error during sleeping probe");
+    });
+  }
+
+  // Clean up state for environments that are no longer disconnected or sleeping
   for (const [envId] of reconnectStates) {
     const env = environments.find((e) => e.id === envId);
-    if (env?.status !== "disconnected") {
+    if (env?.status !== "disconnected" && env?.status !== "sleeping") {
       reconnectStates.delete(envId);
     }
   }
@@ -111,7 +158,7 @@ export function clearReconnectState(environmentId: string): void {
  * attempts to zero and nextRetryAt to now.
  */
 export function resetReconnectState(environmentId: string): void {
-  reconnectStates.set(environmentId, { attempts: 0, nextRetryAt: Date.now() });
+  reconnectStates.set(environmentId, { attempts: 0, nextRetryAt: Date.now(), lastProbeAt: 0 });
 }
 
 /** @internal Reset all reconnect state for testing. */
@@ -123,6 +170,68 @@ export function _resetForTesting(): void {
 // ─── Internal ───────────────────────────────────────────────
 
 /**
+ * Run the reconnect/provision flow and complete the connection.
+ * Shared success path for both {@link tryReconnect} and {@link tryProbe}.
+ *
+ * @returns `true` if the connection was established, `false` if skipped
+ *          (environment removed, no adapter registered).
+ */
+async function connectAndRecover(environmentId: string): Promise<boolean> {
+  const env = envRegistry.getEnvironment(environmentId);
+  if (!env) {
+    reconnectStates.delete(environmentId);
+    return false;
+  }
+
+  const adapter = adapterManager.getAdapter(env.adapterType);
+  if (!adapter) {
+    logger.warn({ environmentId, adapterType: env.adapterType }, "No adapter registered — skipping reconnect");
+    return false;
+  }
+
+  envRegistry.updateEnvironmentStatus(environmentId, "connecting");
+  emit("environment.changed", {});
+
+  const config = parseAdapterConfig(env.adapterConfig);
+  config.defaultRuntime = resolveBootstrapRuntime(env);
+  const powerlineToken = env.powerlineToken;
+
+  // Run reconnectOrProvision — tries fast reconnect if supported, falls back to provision
+  for await (const event of reconnectOrProvision(
+    environmentId,
+    adapter,
+    config,
+    powerlineToken,
+    !!env.bootstrapped,
+  )) {
+    logger.debug({ environmentId, stage: event.stage, message: event.message }, "Reconnect progress");
+  }
+
+  // Establish gRPC connection
+  const conn = await adapter.connect(environmentId, config, powerlineToken);
+  adapterManager.setConnection(environmentId, conn);
+
+  // Push tokens (local environments exclude file tokens)
+  if (env.adapterType === "local") {
+    await tokenPush.pushToEnv(environmentId, { excludeFileTokens: true });
+  } else {
+    await tokenPush.pushToEnv(environmentId);
+  }
+
+  envRegistry.updateEnvironmentStatus(environmentId, "connected");
+  envRegistry.markBootstrapped(environmentId);
+  emit("environment.changed", {});
+
+  // Auto-recover suspended sessions (fire-and-forget)
+  recoverSuspendedSessions(environmentId, conn).catch((recoverErr) => {
+    logger.error({ environmentId, err: recoverErr }, "Session recovery failed after auto-reconnect");
+  });
+
+  reconnectStates.delete(environmentId);
+  return true;
+}
+
+/**
  * Attempt to reconnect a single disconnected environment.
  * Uses the existing `reconnectOrProvision` flow from adapter-sdk.
  */
@@ -130,74 +239,27 @@ async function tryReconnect(environmentId: string): Promise<void> {
   reconnecting.add(environmentId);
 
   try {
-    // Re-fetch environment in case it was removed while waiting
-    const env = envRegistry.getEnvironment(environmentId);
-    if (!env) {
-      reconnectStates.delete(environmentId);
-      return;
+    logger.info({ environmentId }, "Attempting auto-reconnect");
+    const connected = await connectAndRecover(environmentId);
+    if (connected) {
+      logger.info({ environmentId }, "Auto-reconnect successful");
     }
-
-    const adapter = adapterManager.getAdapter(env.adapterType);
-    if (!adapter) {
-      logger.warn({ environmentId, adapterType: env.adapterType }, "No adapter registered — skipping reconnect");
-      return;
-    }
-
-    logger.info({ environmentId, adapterType: env.adapterType }, "Attempting auto-reconnect");
-    envRegistry.updateEnvironmentStatus(environmentId, "connecting");
-    emit("environment.changed", {});
-
-    const config = parseAdapterConfig(env.adapterConfig);
-    config.defaultRuntime = resolveBootstrapRuntime(env);
-    const powerlineToken = env.powerlineToken;
-
-    // Run reconnectOrProvision — tries fast reconnect if supported, falls back to provision
-    for await (const event of reconnectOrProvision(
-      environmentId,
-      adapter,
-      config,
-      powerlineToken,
-      !!env.bootstrapped,
-    )) {
-      logger.debug({ environmentId, stage: event.stage, message: event.message }, "Reconnect progress");
-    }
-
-    // Establish gRPC connection
-    const conn = await adapter.connect(environmentId, config, powerlineToken);
-    adapterManager.setConnection(environmentId, conn);
-
-    // Push tokens (local environments exclude file tokens)
-    if (env.adapterType === "local") {
-      await tokenPush.pushToEnv(environmentId, { excludeFileTokens: true });
-    } else {
-      await tokenPush.pushToEnv(environmentId);
-    }
-
-    envRegistry.updateEnvironmentStatus(environmentId, "connected");
-    envRegistry.markBootstrapped(environmentId);
-    emit("environment.changed", {});
-
-    // Auto-recover suspended sessions (fire-and-forget)
-    recoverSuspendedSessions(environmentId, conn).catch((err) => {
-      logger.error({ environmentId, err }, "Session recovery failed after auto-reconnect");
-    });
-
-    logger.info({ environmentId }, "Auto-reconnect successful");
-    reconnectStates.delete(environmentId);
 
   } catch (err) {
     // Clean up any partially-established connection to avoid leaking state
     adapterManager.removeConnection(environmentId);
 
-    const state = reconnectStates.get(environmentId) ?? { attempts: 0, nextRetryAt: 0 };
+    const state = reconnectStates.get(environmentId) ?? { attempts: 0, nextRetryAt: 0, lastProbeAt: 0 };
     state.attempts++;
 
     if (state.attempts >= RECONNECT_MAX_RETRIES) {
-      logger.error(
+      logger.warn(
         { environmentId, attempts: state.attempts, err },
-        "Auto-reconnect exhausted all retries — giving up",
+        "Auto-reconnect exhausted all retries — entering sleeping state for periodic probing",
       );
-      envRegistry.updateEnvironmentStatus(environmentId, "error");
+      envRegistry.updateEnvironmentStatus(environmentId, "sleeping");
+      state.lastProbeAt = Date.now();
+      reconnectStates.set(environmentId, state);
       emit("environment.changed", {});
     } else {
       const delay = Math.min(
@@ -214,6 +276,39 @@ async function tryReconnect(environmentId: string): Promise<void> {
       envRegistry.updateEnvironmentStatus(environmentId, "disconnected");
       emit("environment.changed", {});
     }
+  } finally {
+    reconnecting.delete(environmentId);
+  }
+}
+
+/**
+ * Probe a sleeping environment to check if it has become reachable.
+ * On success: transitions to connected and recovers sessions.
+ * On failure: stays sleeping, updates lastProbeAt, logs at debug level.
+ */
+async function tryProbe(environmentId: string): Promise<void> {
+  reconnecting.add(environmentId);
+
+  try {
+    logger.debug({ environmentId }, "Probing sleeping environment");
+    const recovered = await connectAndRecover(environmentId);
+    if (recovered) {
+      logger.info({ environmentId }, "Sleeping environment recovered — now connected");
+    }
+
+  } catch (err) {
+    // Clean up any partially-established connection
+    adapterManager.removeConnection(environmentId);
+
+    // Stay sleeping — update lastProbeAt but do NOT increment attempts
+    const state = reconnectStates.get(environmentId);
+    if (state) {
+      state.lastProbeAt = Date.now();
+    }
+
+    envRegistry.updateEnvironmentStatus(environmentId, "sleeping");
+    emit("environment.changed", {});
+    logger.debug({ environmentId, err }, "Sleeping probe failed — will retry later");
   } finally {
     reconnecting.delete(environmentId);
   }
