@@ -101,6 +101,22 @@ describe("createStream", () => {
     }
   });
 
+  it("rejects reserved stream name prefixes", async () => {
+    for (const name of ["lifecycle:foo", "pipe:bar"]) {
+      const req = create(grackle.CreateStreamRequestSchema, {
+        sessionId: "session-1",
+        name,
+      });
+
+      await expect(createStream(req)).rejects.toThrow(ConnectError);
+      try {
+        await createStream(req);
+      } catch (err) {
+        expect((err as ConnectError).code).toBe(Code.InvalidArgument);
+      }
+    }
+  });
+
   it("throws on missing name", async () => {
     const req = create(grackle.CreateStreamRequestSchema, {
       sessionId: "session-1",
@@ -233,6 +249,53 @@ describe("attachStream", () => {
       await attachStream(req);
     } catch (err) {
       expect((err as ConnectError).code).toBe(Code.NotFound);
+    }
+  });
+
+  it("rejects write-only permission with non-detach delivery mode", async () => {
+    const req = create(grackle.AttachStreamRequestSchema, {
+      sessionId: "creator",
+      fd: creatorFd,
+      targetSessionId: "target-1",
+      permission: "w",
+      deliveryMode: "async",
+    });
+
+    await expect(attachStream(req)).rejects.toThrow(ConnectError);
+    try {
+      await attachStream(req);
+    } catch (err) {
+      expect((err as ConnectError).code).toBe(Code.InvalidArgument);
+    }
+  });
+
+  it("allows write-only permission with detach delivery mode", async () => {
+    const req = create(grackle.AttachStreamRequestSchema, {
+      sessionId: "creator",
+      fd: creatorFd,
+      targetSessionId: "target-1",
+      permission: "w",
+      deliveryMode: "detach",
+    });
+
+    const res = await attachStream(req);
+    expect(res.fd).toBeGreaterThanOrEqual(3);
+  });
+
+  it("rejects invalid permission string", async () => {
+    const req = create(grackle.AttachStreamRequestSchema, {
+      sessionId: "creator",
+      fd: creatorFd,
+      targetSessionId: "target-1",
+      permission: "x",
+      deliveryMode: "async",
+    });
+
+    await expect(attachStream(req)).rejects.toThrow(ConnectError);
+    try {
+      await attachStream(req);
+    } catch (err) {
+      expect((err as ConnectError).code).toBe(Code.InvalidArgument);
     }
   });
 

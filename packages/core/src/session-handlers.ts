@@ -469,9 +469,15 @@ export async function closeFd(req: grackle.CloseFdRequest): Promise<grackle.Clos
   const streamId = sub.streamId;
   const stream = streamRegistry.getStream(streamId);
 
-  // Collect child sessions (inherited subscriptions, not the caller's)
+  // Only unsubscribe other participants for internal streams (pipe/lifecycle).
+  // Global streams (user-created) only unsubscribe the caller — closing your
+  // fd should not disconnect other participants from the shared stream.
+  const isInternalStream = stream
+    ? (stream.name.startsWith("pipe:") || stream.name.startsWith("lifecycle:"))
+    : false;
+
   const childSubs: Array<{ sessionId: string; subId: string }> = [];
-  if (stream) {
+  if (isInternalStream && stream) {
     for (const s of stream.subscriptions.values()) {
       if (s.sessionId !== req.sessionId) {
         childSubs.push({ sessionId: s.sessionId, subId: s.id });
@@ -482,8 +488,8 @@ export async function closeFd(req: grackle.CloseFdRequest): Promise<grackle.Clos
   // Unsubscribe the caller
   streamRegistry.unsubscribe(sub.id);
 
-  // Also unsubscribe children — when their last subscription is removed,
-  // the lifecycle manager's orphan callback auto-stops them.
+  // Also unsubscribe children on internal streams — when their last
+  // subscription is removed, the lifecycle manager's orphan callback auto-stops them.
   let stopped = false;
   for (const child of childSubs) {
     streamRegistry.unsubscribe(child.subId);
@@ -529,7 +535,16 @@ export function getSessionFds(req: grackle.SessionId): grackle.SessionFds {
   return create(grackle.SessionFdsSchema, { fds });
 }
 
-// ─── Permission Helpers ────────────────────────────────────────────────────────
+// ─── Global Stream Helpers ─────────────────────────────────────────────────────
+
+/** Valid permission values for stream subscriptions. */
+const VALID_PERMISSIONS: ReadonlySet<string> = new Set(["r", "w", "rw"]);
+
+/** Valid delivery mode values for stream subscriptions. */
+const VALID_DELIVERY_MODES: ReadonlySet<string> = new Set(["sync", "async", "detach"]);
+
+/** Reserved stream name prefixes used by internal subsystems. */
+const RESERVED_PREFIXES: readonly string[] = ["lifecycle:", "pipe:"];
 
 /** Check if a requested permission is a subset of the caller's permission. */
 function isPermissionSubset(requested: string, callerHas: string): boolean {
@@ -537,6 +552,28 @@ function isPermissionSubset(requested: string, callerHas: string): boolean {
     return true;
   }
   return requested === callerHas;
+}
+
+/** Validate permission and deliveryMode, enforcing the w-only → detach rule. */
+function validateSubscriptionParams(permission: string, deliveryMode: string): void {
+  if (!VALID_PERMISSIONS.has(permission)) {
+    throw new ConnectError(
+      `Invalid permission "${permission}" — must be "r", "w", or "rw"`,
+      Code.InvalidArgument,
+    );
+  }
+  if (!VALID_DELIVERY_MODES.has(deliveryMode)) {
+    throw new ConnectError(
+      `Invalid delivery_mode "${deliveryMode}" — must be "sync", "async", or "detach"`,
+      Code.InvalidArgument,
+    );
+  }
+  if (permission === "w" && deliveryMode !== "detach") {
+    throw new ConnectError(
+      `Write-only permission requires delivery_mode "detach" (got "${deliveryMode}")`,
+      Code.InvalidArgument,
+    );
+  }
 }
 
 // ─── Global Stream Handlers ────────────────────────────────────────────────────
@@ -548,6 +585,12 @@ export async function createStream(req: grackle.CreateStreamRequest): Promise<gr
   }
   if (!req.name) {
     throw new ConnectError("name is required", Code.InvalidArgument);
+  }
+  if (RESERVED_PREFIXES.some((prefix) => req.name.startsWith(prefix))) {
+    throw new ConnectError(
+      `Stream name "${req.name}" uses a reserved prefix`,
+      Code.InvalidArgument,
+    );
   }
 
   let stream;
@@ -584,6 +627,10 @@ export async function attachStream(req: grackle.AttachStreamRequest): Promise<gr
   }
 
   const permission = req.permission || "rw";
+  const deliveryMode = req.deliveryMode || "async";
+
+  validateSubscriptionParams(permission, deliveryMode);
+
   if (!isPermissionSubset(permission, callerSub.permission)) {
     throw new ConnectError(
       `Cannot grant "${permission}" — caller only has "${callerSub.permission}"`,
@@ -591,7 +638,6 @@ export async function attachStream(req: grackle.AttachStreamRequest): Promise<gr
     );
   }
 
-  const deliveryMode = req.deliveryMode || "async";
   const targetSub = streamRegistry.subscribe(
     callerSub.streamId,
     req.targetSessionId,

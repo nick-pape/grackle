@@ -252,7 +252,7 @@ export const ipcTools: ToolDefinition[] = [
   {
     name: "ipc_attach",
     group: "ipc",
-    description: "Grant another session access to a stream you hold an fd on. The target session receives a new fd with the specified permission and delivery mode. Permission must be equal to or less than your own (e.g., you can grant 'r' if you have 'rw', but not 'rw' if you only have 'r').",
+    description: "Grant another session access to a stream you hold an fd on. The target session receives a new fd with the specified permission and delivery mode. Permission must be equal to or less than your own (e.g., you can grant 'r' if you have 'rw', but not 'rw' if you only have 'r'). Write-only permission ('w') requires deliveryMode 'detach'.",
     inputSchema: z.object({
       fd: z.number().int().describe("Your file descriptor on the stream"),
       targetSessionId: z.string().describe("Session ID to grant access to"),
