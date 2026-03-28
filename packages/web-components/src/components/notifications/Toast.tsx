@@ -44,7 +44,7 @@ export function Toast({ toast, onDismiss }: ToastProps): JSX.Element {
         onClick={() => onDismiss(toast.id)}
         aria-label="Dismiss notification"
       >
-        <X size={ICON_MD} />
+        <X size={ICON_MD} aria-hidden="true" />
       </button>
     </motion.div>
   );

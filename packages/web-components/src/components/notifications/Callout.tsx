@@ -54,7 +54,7 @@ export function Callout({
               onClick={() => setDismissed(true)}
               aria-label="Dismiss"
             >
-              <X size={ICON_MD} />
+              <X size={ICON_MD} aria-hidden="true" />
             </button>
           )}
         </div>

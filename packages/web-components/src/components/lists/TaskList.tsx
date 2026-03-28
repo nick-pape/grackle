@@ -116,7 +116,7 @@ function StatusGroupAccordion({
                   data-task-id={task.id}
                 >
                   <span className={styles.leafSpacer} />
-                  <span className={styles.taskStatusIcon} style={{ color: statusStyle.color }} data-testid={`task-status-${resolveStatus(task.status)}`}>
+                  <span className={styles.taskStatusIcon} style={{ color: statusStyle.color }} aria-hidden="true" data-testid={`task-status-${resolveStatus(task.status)}`}>
                     {statusStyle.icon}
                   </span>
                   <span className={styles.taskTitle} title={task.title}>

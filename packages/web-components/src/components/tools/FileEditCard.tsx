@@ -154,7 +154,7 @@ export function FileEditCard({ tool, args, result, isError, detailedResult }: To
               aria-expanded={expanded}
               data-testid="tool-card-toggle"
             >
-              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}><ChevronRight size={ICON_SM} /></span>
+              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`} aria-hidden="true"><ChevronRight size={ICON_SM} /></span>
               {expanded ? "collapse" : `${(diffLines?.length ?? 0) - PREVIEW_LINES} more lines`}
             </button>
           )}

@@ -26,7 +26,7 @@ function EventOverflowBanner({ eventsDropped }: { eventsDropped: number }): JSX.
   }
   return (
     <div className={styles.eventOverflowWarning} role="alert">
-      <AlertTriangle size={ICON_MD} /> {eventsDropped.toLocaleString()} older event{eventsDropped === 1 ? "" : "s"} were dropped — only the most recent 5,000 are shown. Full history is available in the session log.
+      <AlertTriangle size={ICON_MD} aria-hidden="true" /> {eventsDropped.toLocaleString()} older event{eventsDropped === 1 ? "" : "s"} were dropped — only the most recent 5,000 are shown. Full history is available in the session log.
     </div>
   );
 }
@@ -85,7 +85,7 @@ export function EventStream({ events, eventsDropped, emptyState }: EventStreamPr
           aria-label={isReversed ? "Switch to newest at bottom" : "Switch to newest at top"}
           data-testid="direction-toggle"
         >
-          {isReversed ? <ArrowDown size={ICON_MD} /> : <ArrowUp size={ICON_MD} />}
+          {isReversed ? <ArrowDown size={ICON_MD} aria-hidden="true" /> : <ArrowUp size={ICON_MD} aria-hidden="true" />}
         </button>
       </div>
 
@@ -124,7 +124,7 @@ export function EventStream({ events, eventsDropped, emptyState }: EventStreamPr
             aria-label="Scroll to latest"
             data-testid="scroll-to-anchor"
           >
-            {isReversed ? <ArrowUp size={ICON_MD} /> : <ArrowDown size={ICON_MD} />} New events
+            {isReversed ? <ArrowUp size={ICON_MD} aria-hidden="true" /> : <ArrowDown size={ICON_MD} aria-hidden="true" />} New events
           </motion.button>
         )}
       </AnimatePresence>

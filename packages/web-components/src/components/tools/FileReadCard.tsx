@@ -99,7 +99,7 @@ export function FileReadCard({ tool, args, result, isError, writeVariant }: File
               aria-expanded={expanded}
               data-testid="tool-card-toggle"
             >
-              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}><ChevronRight size={ICON_SM} /></span>
+              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`} aria-hidden="true"><ChevronRight size={ICON_SM} /></span>
               {expanded ? "collapse" : `${lines.length - PREVIEW_LINES} more lines`}
             </button>
           )}
