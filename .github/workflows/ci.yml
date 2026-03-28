@@ -97,7 +97,7 @@ jobs:
           fail-on-error: false
 
       - name: BuildPulse — upload test results
-        if: always() && github.repository == 'nick-pape/grackle' && vars.BUILDPULSE_ACCOUNT_ID != '' && vars.BUILDPULSE_REPOSITORY_ID != '' && secrets.BUILDPULSE_ACCESS_KEY_ID != '' && secrets.BUILDPULSE_SECRET_ACCESS_KEY != ''
+        if: always() && github.repository == 'nick-pape/grackle' && vars.BUILDPULSE_ACCOUNT_ID != '' && vars.BUILDPULSE_REPOSITORY_ID != ''
         uses: buildpulse/buildpulse-action@v0.12.0
         with:
           account: ${{ vars.BUILDPULSE_ACCOUNT_ID }}
