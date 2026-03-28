@@ -54,8 +54,9 @@ export const SingleSegment: Story = {
     await expect(canvas.getByText("Home")).toBeInTheDocument();
     await expect(canvas.getByText("Home")).toHaveAttribute("aria-current", "page");
 
-    // No separator should be rendered
-    const separators = canvas.queryAllByText("\u203A");
+    // No separator should be rendered (separators are SVG chevron icons)
+    const nav = canvas.getByTestId("breadcrumbs");
+    const separators = nav.querySelectorAll("[aria-hidden='true'] svg");
     await expect(separators).toHaveLength(0);
   },
 };
@@ -71,7 +72,8 @@ export const SeparatorsBetweenSegments: Story = {
   },
   play: async ({ canvas }) => {
     // There should be separators between segments (n-1 separators for n segments)
-    const separators = canvas.queryAllByText("\u203A");
+    const nav = canvas.getByTestId("breadcrumbs");
+    const separators = nav.querySelectorAll("[aria-hidden='true'] svg");
     await expect(separators).toHaveLength(2);
   },
 };

@@ -19,7 +19,7 @@ export const SuccessWithOutput: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("tool-card-shell")).toBeInTheDocument();
     await expect(canvas.getByTestId("tool-card-command")).toHaveTextContent("npm test -- --grep auth");
-    await expect(canvas.getByTestId("tool-card-exit-code")).toHaveTextContent("✓ exit 0");
+    await expect(canvas.getByTestId("tool-card-exit-code")).toHaveTextContent("exit 0");
     // Should have toggle (>3 lines)
     await expect(canvas.getByTestId("tool-card-toggle")).toBeInTheDocument();
   },
@@ -34,7 +34,7 @@ export const ErrorExit: Story = {
     isError: true,
   },
   play: async ({ canvas }) => {
-    await expect(canvas.getByTestId("tool-card-exit-code")).toHaveTextContent("✗ exit 1");
+    await expect(canvas.getByTestId("tool-card-exit-code")).toHaveTextContent("exit 1");
     const card = canvas.getByTestId("tool-card-shell");
     await expect(card.className).toContain("cardRed");
   },
@@ -93,7 +93,7 @@ export const EmptyOutput: Story = {
     result: "[exit 0] ",
   },
   play: async ({ canvas }) => {
-    await expect(canvas.getByTestId("tool-card-exit-code")).toHaveTextContent("✓ exit 0");
+    await expect(canvas.getByTestId("tool-card-exit-code")).toHaveTextContent("exit 0");
   },
 };
 

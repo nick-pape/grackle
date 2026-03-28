@@ -54,11 +54,11 @@
 }
 
 .icon {
-  font-size: var(--font-size-sm);
   flex-shrink: 0;
-  line-height: 1.5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 16px;
-  text-align: center;
 }
 
 .content {

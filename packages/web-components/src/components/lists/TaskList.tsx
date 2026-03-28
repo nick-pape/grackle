@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, type CSSProperties, type JSX } from "react";
+import { ChevronRight, List } from "lucide-react";
 import { useMatch } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import type { Workspace, TaskData } from "../../hooks/types.js";
 import { MAX_TASK_DEPTH, fuzzySearch, type FuzzyKey, type MatchIndex } from "@grackle-ai/common";
+import { ICON_SM, ICON_MD } from "../../utils/iconSize.js";
 import { taskUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
 import { getStatusStyle } from "../../utils/taskStatus.js";
 import { HighlightedText, buildTaskTree, groupTasksByStatus, type TaskNode, type StatusGroup } from "./listHelpers.js";
@@ -83,7 +85,7 @@ function StatusGroupAccordion({
         }}
       >
         <span className={`${styles.expandArrow} ${isExpanded ? styles.expanded : ""}`}>
-          {"\u25B8"}
+          <ChevronRight size={ICON_SM} />
         </span>
         <span className={styles.statusGroupIcon} style={{ color: group.style.color }}>
           {group.style.icon}
@@ -190,7 +192,7 @@ function TaskTreeNode({
               }
             }}
           >
-            {"\u25B8"}
+            <ChevronRight size={ICON_SM} />
           </span>
         )}
         {!hasChildren && <span className={styles.leafSpacer} />}
@@ -414,7 +416,7 @@ export function TaskList({ workspaces, tasks }: TaskListProps): JSX.Element {
             title={groupByStatus ? "Switch to tree view" : "Group tasks by status"}
             data-testid="task-group-by-status-toggle"
           >
-            {"\u2261"}
+            <List size={ICON_MD} />
           </button>
           <button
             className={styles.addButton}

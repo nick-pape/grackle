@@ -1,7 +1,9 @@
 import { useState, type JSX } from "react";
+import { Check, ChevronRight, Loader, X } from "lucide-react";
 import type { ToolCardProps } from "./ToolCardProps.js";
 import { parseShellOutput } from "./parseShellOutput.js";
 import { CopyButton } from "../display/CopyButton.js";
+import { ICON_SM } from "../../utils/iconSize.js";
 import styles from "./toolCards.module.scss";
 
 /** Extracts the command string from shell tool args. */
@@ -73,14 +75,14 @@ export function ShellCard({ tool, args, result, isError }: ToolCardProps): JSX.E
             className={exitCode === 0 ? styles.exitOk : styles.exitError}
             data-testid="tool-card-exit-code"
           >
-            {exitCode === 0 ? "✓" : "✗"} exit {exitCode}
+            {exitCode === 0 ? <Check size={ICON_SM} /> : <X size={ICON_SM} />}{" "}exit {exitCode}
           </span>
         )}
         {!inProgress && parsed && parsed.output.length > 0 && (
           <CopyButton text={parsed.output} data-testid="tool-card-copy" className={styles.copyButtonInline} />
         )}
         {inProgress && (
-          <span className={styles.exitPending} data-testid="tool-card-pending">●</span>
+          <span className={styles.exitPending} data-testid="tool-card-pending"><Loader size={ICON_SM} /></span>
         )}
       </div>
 
@@ -97,7 +99,7 @@ export function ShellCard({ tool, args, result, isError }: ToolCardProps): JSX.E
               aria-expanded={expanded}
               data-testid="tool-card-toggle"
             >
-              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}>▸</span>
+              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}><ChevronRight size={ICON_SM} /></span>
               {expanded ? "collapse" : `${outputLines.length - PREVIEW_LINES} more lines`}
             </button>
           )}

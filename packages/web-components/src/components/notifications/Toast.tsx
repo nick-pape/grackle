@@ -1,13 +1,15 @@
-import { useEffect, type JSX } from "react";
+import { useEffect, type ReactNode, type JSX } from "react";
+import { AlertTriangle, Check, Info, X } from "lucide-react";
 import { motion } from "motion/react";
 import type { ToastItem } from "../../context/ToastContext.js";
 import styles from "./Toast.module.scss";
+import { ICON_LG, ICON_MD } from "../../utils/iconSize.js";
 
-const VARIANT_ICONS: Record<ToastItem["variant"], string> = {
-  success: "\u2713", // ✓
-  error: "\u2715",   // ✕
-  warning: "\u26A0", // ⚠
-  info: "\u2139",    // ℹ
+const VARIANT_ICONS: Record<ToastItem["variant"], ReactNode> = {
+  success: <Check size={ICON_LG} />,
+  error: <X size={ICON_LG} />,
+  warning: <AlertTriangle size={ICON_LG} />,
+  info: <Info size={ICON_LG} />,
 };
 
 interface ToastProps {
@@ -42,7 +44,7 @@ export function Toast({ toast, onDismiss }: ToastProps): JSX.Element {
         onClick={() => onDismiss(toast.id)}
         aria-label="Dismiss notification"
       >
-        {"\u00D7"}
+        <X size={ICON_MD} />
       </button>
     </motion.div>
   );

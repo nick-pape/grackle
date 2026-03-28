@@ -1,6 +1,8 @@
 import { useState, type JSX, type FormEvent } from "react";
+import { X } from "lucide-react";
 import type { ToastVariant } from "../../context/ToastContext.js";
 import type { TokenInfo } from "../../hooks/types.js";
+import { ICON_MD } from "../../utils/iconSize.js";
 import { ConfirmDialog } from "../display/index.js";
 import styles from "./SettingsPanel.module.scss";
 
@@ -88,7 +90,7 @@ export function TokensPanel({ tokens, onSetToken, onDeleteToken, onShowToast }: 
                   onClick={() => handleDelete(t.name)}
                   title={`Delete ${t.name}`}
                 >
-                  {"\u00D7"}
+                  <X size={ICON_MD} />
                 </button>
               </div>
             ))}

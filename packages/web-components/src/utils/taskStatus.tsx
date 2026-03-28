@@ -5,6 +5,10 @@
  * labels, icons, colors, and ordering stay consistent across the UI.
  */
 
+import type { ReactNode } from "react";
+import { Ban, Check, Circle, Pause, X } from "lucide-react";
+import { ICON_SM } from "./iconSize.js";
+
 // ---------------------------------------------------------------------------
 // Core types
 // ---------------------------------------------------------------------------
@@ -22,8 +26,8 @@ export type DisplayStatus = TaskStatusKey | VirtualStatus;
 export interface TaskStatusStyle {
   /** CSS color value (typically a custom-property reference). */
   color: string;
-  /** Single-character icon (Unicode). */
-  icon: string;
+  /** Status icon element. */
+  icon: ReactNode;
   /** Human-readable label. */
   label: string;
 }
@@ -34,12 +38,12 @@ export interface TaskStatusStyle {
 
 /** Complete style map for every displayable status (canonical + virtual). */
 export const TASK_STATUS_STYLES: Record<DisplayStatus, TaskStatusStyle> = {
-  not_started: { color: "var(--text-tertiary)", icon: "\u25CB", label: "Not Started" },
-  working:     { color: "var(--accent-green)",  icon: "\u25CF", label: "Working" },
-  paused:      { color: "var(--accent-yellow)", icon: "\u25C9", label: "Paused" },
-  complete:    { color: "var(--accent-green)",  icon: "\u2713", label: "Complete" },
-  failed:      { color: "var(--accent-red)",    icon: "\u2717", label: "Failed" },
-  blocked:     { color: "var(--accent-yellow)", icon: "\u29B8", label: "Blocked" },
+  not_started: { color: "var(--text-tertiary)", icon: <Circle size={ICON_SM} />,                     label: "Not Started" },
+  working:     { color: "var(--accent-green)",  icon: <Circle size={ICON_SM} fill="currentColor" />, label: "Working" },
+  paused:      { color: "var(--accent-yellow)", icon: <Pause size={ICON_SM} />,                      label: "Paused" },
+  complete:    { color: "var(--accent-green)",  icon: <Check size={ICON_SM} />,                      label: "Complete" },
+  failed:      { color: "var(--accent-red)",    icon: <X size={ICON_SM} />,                          label: "Failed" },
+  blocked:     { color: "var(--accent-yellow)", icon: <Ban size={ICON_SM} />,                        label: "Blocked" },
 };
 
 /** Safe accessor — returns a style for any status string, falling back to `not_started`. */

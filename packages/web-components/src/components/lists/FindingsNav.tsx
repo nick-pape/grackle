@@ -7,6 +7,7 @@
  */
 
 import { useCallback, useMemo, useRef, type JSX, type KeyboardEvent } from "react";
+import { Circle } from "lucide-react";
 import { useMatch } from "react-router";
 import type { FindingData } from "../../hooks/types.js";
 import { findingUrl, useAppNavigate } from "../../utils/navigation.js";
@@ -118,7 +119,7 @@ export function FindingsNav({ findings, workspaceId, environmentId }: FindingsNa
                 className={styles.categoryDot}
                 style={{ color: getCategoryColor(f.category).text }}
               >
-                {"\u25CF"}
+                <Circle size={8} fill="currentColor" />
               </span>
               <span className={styles.tabContent}>
                 <span className={styles.tabLabel} title={f.title}>

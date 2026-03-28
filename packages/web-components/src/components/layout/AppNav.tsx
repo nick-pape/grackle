@@ -1,6 +1,8 @@
-import { useCallback, useRef, type JSX, type KeyboardEvent } from "react";
+import { useCallback, useRef, type JSX, type KeyboardEvent, type ReactNode } from "react";
 import { useLocation } from "react-router";
+import { Brain, ClipboardList, Home, MessageSquare, Monitor, Search, Settings } from "lucide-react";
 import { CHAT_URL, ENVIRONMENTS_URL, FINDINGS_URL, HOME_URL, KNOWLEDGE_URL, SETTINGS_URL, SETTINGS_CREDENTIALS_URL, TASKS_URL, useAppNavigate } from "../../utils/navigation.js";
+import { ICON_LG } from "../../utils/iconSize.js";
 import styles from "./AppNav.module.scss";
 
 /** Application view identifiers. */
@@ -12,8 +14,8 @@ interface AppTab {
   view: AppView;
   /** Display label. */
   label: string;
-  /** Icon character displayed before the label. */
-  icon: string;
+  /** Icon element displayed before the label. */
+  icon: ReactNode;
   /** Route to navigate to when clicked. */
   route: string;
   /** data-testid suffix. */
@@ -22,13 +24,13 @@ interface AppTab {
 
 /** Ordered list of app navigation tabs. */
 const TABS: AppTab[] = [
-  { view: "dashboard", label: "Dashboard", icon: "\uD83C\uDFE0", route: HOME_URL, testId: "sidebar-tab-dashboard" },
-  { view: "chat", label: "Chat", icon: "\uD83D\uDCAC", route: CHAT_URL, testId: "sidebar-tab-chat" },
-  { view: "tasks", label: "Tasks", icon: "\uD83D\uDCCB", route: TASKS_URL, testId: "sidebar-tab-tasks" },
-  { view: "environments", label: "Environments", icon: "\uD83D\uDDA5\uFE0F", route: ENVIRONMENTS_URL, testId: "sidebar-tab-environments" },
-  { view: "knowledge", label: "Knowledge", icon: "\uD83E\uDDE0", route: KNOWLEDGE_URL, testId: "sidebar-tab-knowledge" },
-  { view: "findings", label: "Findings", icon: "\uD83D\uDD0D", route: FINDINGS_URL, testId: "sidebar-tab-findings" },
-  { view: "settings", label: "Settings", icon: "\u2699\uFE0F", route: SETTINGS_CREDENTIALS_URL, testId: "sidebar-tab-settings" },
+  { view: "dashboard", label: "Dashboard", icon: <Home size={ICON_LG} />, route: HOME_URL, testId: "sidebar-tab-dashboard" },
+  { view: "chat", label: "Chat", icon: <MessageSquare size={ICON_LG} />, route: CHAT_URL, testId: "sidebar-tab-chat" },
+  { view: "tasks", label: "Tasks", icon: <ClipboardList size={ICON_LG} />, route: TASKS_URL, testId: "sidebar-tab-tasks" },
+  { view: "environments", label: "Environments", icon: <Monitor size={ICON_LG} />, route: ENVIRONMENTS_URL, testId: "sidebar-tab-environments" },
+  { view: "knowledge", label: "Knowledge", icon: <Brain size={ICON_LG} />, route: KNOWLEDGE_URL, testId: "sidebar-tab-knowledge" },
+  { view: "findings", label: "Findings", icon: <Search size={ICON_LG} />, route: FINDINGS_URL, testId: "sidebar-tab-findings" },
+  { view: "settings", label: "Settings", icon: <Settings size={ICON_LG} />, route: SETTINGS_CREDENTIALS_URL, testId: "sidebar-tab-settings" },
 ];
 
 /** Derive the active application view from a URL pathname. */

@@ -1,9 +1,11 @@
 import { type ReactNode, useState, type JSX } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import Markdown from "react-markdown";
 import rehypePrismPlus from "rehype-prism-plus/common";
 import remarkGfm from "remark-gfm";
 import type { SessionEvent } from "../../hooks/types.js";
 import { formatTokens, formatCost } from "../../utils/format.js";
+import { ICON_SM } from "../../utils/iconSize.js";
 import { ToolCard } from "../tools/ToolCard.js";
 import { CopyButton } from "./CopyButton.js";
 import styles from "./EventRenderer.module.scss";
@@ -38,7 +40,7 @@ function SystemContextEvent({ content }: { content: string }): JSX.Element {
         <span className={styles.systemContextBadge}>SYSTEM PROMPT</span>
         {hasMore && (
           <span className={styles.systemContextToggle} aria-hidden="true">
-            {expanded ? "\u25be" : "\u25b8"}
+            {expanded ? <ChevronDown size={ICON_SM} /> : <ChevronRight size={ICON_SM} />}
           </span>
         )}
       </button>

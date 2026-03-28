@@ -48,6 +48,7 @@
     "react-markdown": "^9.0.3",
     "rehype-prism-plus": "^2.0.0",
     "remark-gfm": "^4.0.0",
+    "lucide-react": "~0.474.0",
     "react-router": "^7.0.0"
   },
   "devDependencies": {

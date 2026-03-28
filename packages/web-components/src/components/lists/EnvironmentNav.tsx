@@ -1,4 +1,5 @@
 import { useCallback, useRef, type JSX, type KeyboardEvent } from "react";
+import { Circle } from "lucide-react";
 import { useMatch } from "react-router";
 import type { Environment } from "../../hooks/types.js";
 import { environmentUrl, NEW_ENVIRONMENT_URL, useAppNavigate } from "../../utils/navigation.js";
@@ -100,7 +101,7 @@ export function EnvironmentNav({ environments }: EnvironmentNavProps): JSX.Eleme
                 className={`${styles.statusDot} ${isConnected ? styles.pulse : ""}`}
                 style={{ color: statusColor }}
               >
-                {"\u25CF"}
+                <Circle size={8} fill="currentColor" />
               </span>
               <span className={styles.tabLabel} title={env.displayName || env.id}>
                 {env.displayName || env.id}
