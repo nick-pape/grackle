@@ -12,14 +12,6 @@ function getQuery(args: unknown): string {
   return typeof a.query === "string" ? a.query : "";
 }
 
-/** Counts the number of tool definitions in the result text. */
-function countTools(result: string): number {
-  // ToolSearch returns text with tool names; count lines that look like tool entries
-  const lines = result.split("\n").filter((l) => l.trim().length > 0);
-  // Heuristic: tool definitions often start with "- " or contain function/tool names
-  return lines.length;
-}
-
 /** Number of lines shown when collapsed. */
 const PREVIEW_LINES: number = 8;
 
@@ -50,7 +42,7 @@ export function ToolSearchCard({ args, result, isError }: ToolCardProps): JSX.El
           <>
             <span className={styles.spacer} />
             <span className={styles.badge} data-testid="tool-card-tool-search-count">
-              {countTools(result)} lines
+              {resultLines.length} lines
             </span>
             <CopyButton text={result} data-testid="tool-card-copy" className={styles.copyButtonInline} />
           </>

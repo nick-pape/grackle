@@ -34,9 +34,11 @@ const KNOWN_MCP_SERVERS: Set<string> = new Set(["grackle"]);
  */
 export function extractBareName(toolName: string): string {
   // MCP double-underscore format: mcp__<server>__<tool>
-  const mcpMatch = /^mcp__(.+?)__(.+)$/.exec(toolName);
-  if (mcpMatch) {
-    return mcpMatch[2];
+  if (toolName.startsWith("mcp__")) {
+    const lastSep = toolName.lastIndexOf("__");
+    if (lastSep > 4) {
+      return toolName.slice(lastSep + 2);
+    }
   }
   // Copilot dash format: <server>-<tool> (only for known servers)
   const dashIndex = toolName.indexOf("-");
