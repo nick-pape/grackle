@@ -1,0 +1,118 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// AgentToolCard — subagent spawn/poll card styles
+// =============================================================================
+
+// --- Agent type / model badges ---
+
+.badgePill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: var(--font-weight-medium);
+  background: rgba(45, 212, 191, 0.12);
+  color: var(--accent-teal, #2dd4bf);
+  flex-shrink: 0;
+}
+
+.modelBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  background: var(--bg-inset);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+// --- Background indicator ---
+
+.backgroundBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.backgroundDot {
+  font-size: 8px;
+  color: var(--accent-teal, #2dd4bf);
+}
+
+.backgroundDotPulsing {
+  font-size: 8px;
+  color: var(--accent-teal, #2dd4bf);
+  animation: agentPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes agentPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+// --- Description line ---
+
+.description {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  padding: var(--space-xs) 0 0;
+  line-height: 1.4;
+}
+
+// --- Status line (read_agent metadata) ---
+
+.statusLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+  padding: var(--space-xs) 0 0;
+}
+
+.statusCompleted {
+  font-weight: var(--font-weight-bold);
+  color: var(--accent-green);
+}
+
+.statusRunning {
+  font-weight: var(--font-weight-bold);
+  color: var(--accent-teal, #2dd4bf);
+  animation: agentPulse 1.5s ease-in-out infinite;
+}
+
+.statusError {
+  font-weight: var(--font-weight-bold);
+  color: var(--accent-red);
+}
+
+// --- Prompt section (collapsible) ---
+
+.promptToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: none;
+  border: none;
+  padding: 2px 0;
+  margin-top: var(--space-xs);
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+
+  &:hover {
+    color: var(--text-secondary);
+  }
+}
