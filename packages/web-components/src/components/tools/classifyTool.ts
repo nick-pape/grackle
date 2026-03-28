@@ -28,8 +28,9 @@ const TOOL_MAP: Record<string, ToolCategory> = {
   // File write — Claude Code: Write
   write: "file-write",
 
-  // Shell — Claude Code: Bash, Codex: command_execution
+  // Shell — Claude Code: Bash, Copilot: powershell, Codex: command_execution
   bash: "shell",
+  powershell: "shell",
   command_execution: "shell",
 
   // Search — Claude Code: Grep, Glob
