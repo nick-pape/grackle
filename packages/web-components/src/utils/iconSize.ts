@@ -5,6 +5,9 @@
  * stays consistent across the UI.
  */
 
+/** Extra-small icon size (8px) — connection dots, status indicators. */
+export const ICON_XS: number = 8;
+
 /** Small icon size (12px) — inline status dots, small indicators, expand chevrons. */
 export const ICON_SM: number = 12;
 

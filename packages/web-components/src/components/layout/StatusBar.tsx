@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { Circle, Menu } from "lucide-react";
 import type { Environment, Session } from "../../hooks/types.js";
-import { ICON_LG } from "../../utils/iconSize.js";
+import { ICON_LG, ICON_XS } from "../../utils/iconSize.js";
 import { HOME_URL, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./StatusBar.module.scss";
 
@@ -40,7 +40,7 @@ export function StatusBar({ connected, environments, sessions, onToggleSidebar, 
       <div className={styles.info}>
         <span aria-label={connected ? "Connected" : "Disconnected"}>
           <span className={`${styles.connectionDot} ${connected ? styles.connected : styles.disconnected}`} aria-hidden="true">
-            <Circle size={8} fill="currentColor" />
+            <Circle size={ICON_XS} fill="currentColor" />
           </span>
           {" "}<span className={styles.connectionLabel} aria-hidden="true">{connected ? "Connected" : "Disconnected"}</span>
         </span>

@@ -68,7 +68,7 @@ export function GenericToolCard({ tool, args, result, isError }: ToolCardProps):
       data-testid="tool-card-generic"
     >
       <div className={styles.header}>
-        <span className={styles.icon}><Cog size={ICON_MD} /></span>
+        <span className={styles.icon}><Cog size={ICON_MD} aria-hidden="true" /></span>
         <span className={styles.toolName} style={{ color: "var(--accent-blue)" }}>{display}</span>
         {preview && (
           <span className={styles.fileName}>{preview}</span>

@@ -75,14 +75,14 @@ export function ShellCard({ tool, args, result, isError }: ToolCardProps): JSX.E
             className={exitCode === 0 ? styles.exitOk : styles.exitError}
             data-testid="tool-card-exit-code"
           >
-            {exitCode === 0 ? <Check size={ICON_SM} /> : <X size={ICON_SM} />}{" "}exit {exitCode}
+            {exitCode === 0 ? <Check size={ICON_SM} aria-hidden="true" /> : <X size={ICON_SM} aria-hidden="true" />}{" "}exit {exitCode}
           </span>
         )}
         {!inProgress && parsed && parsed.output.length > 0 && (
           <CopyButton text={parsed.output} data-testid="tool-card-copy" className={styles.copyButtonInline} />
         )}
         {inProgress && (
-          <span className={styles.exitPending} data-testid="tool-card-pending"><Loader size={ICON_SM} /></span>
+          <span className={styles.exitPending} data-testid="tool-card-pending"><Loader size={ICON_SM} aria-hidden="true" /></span>
         )}
       </div>
 
