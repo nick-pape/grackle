@@ -97,7 +97,10 @@ export class StubSession implements AgentSession {
 
     if (this.mcpBroker && this.workspaceId) {
       // Real MCP tool call when broker is available
-      yield* this.performMcpToolCall(ts, "task_list", {});
+      const mcpEvents = await this.performMcpToolCall(ts, "task_list", {});
+      for (const event of mcpEvents) {
+        yield event;
+      }
     } else {
       // Fallback: fake echo tool events
       yield {
@@ -216,7 +219,10 @@ export class StubSession implements AgentSession {
             raw: { type: "tool_result", tool_use_id: toolUseId, is_error: true },
           };
         } else {
-          yield* this.performMcpToolCall(ts, step.mcp_call, step.args ?? {});
+          const mcpEvents = await this.performMcpToolCall(ts, step.mcp_call, step.args ?? {});
+          for (const event of mcpEvents) {
+            yield event;
+          }
         }
       }
     }
@@ -227,22 +233,24 @@ export class StubSession implements AgentSession {
   }
 
   /**
-   * Connect to the MCP server and call a tool by name.
-   * Yields tool_use and tool_result events with proper raw metadata.
+   * Connect to the MCP server, call a tool, and return the events to yield.
+   * Returns an array instead of yielding directly so the MCP client is fully
+   * closed before the caller yields — preventing open HTTP/SSE connections
+   * from blocking the async generator on CI runners.
    */
-  private async *performMcpToolCall(
+  private async performMcpToolCall(
     ts: () => string,
     toolName: string,
     toolArgs: Record<string, unknown>,
-  ): AsyncIterable<AgentEvent> {
+  ): Promise<AgentEvent[]> {
     const toolUseId = `toolu_stub_mcp_${++mcpToolUseCounter}`;
     let mcpClient: InstanceType<typeof import("@modelcontextprotocol/sdk/client/index.js").Client> | undefined;
-    let yieldedToolUse = false;
-    const abortController = new AbortController();
+    const events: AgentEvent[] = [];
 
     try {
       const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
       const { StreamableHTTPClientTransport } = await import("@modelcontextprotocol/sdk/client/streamableHttp.js");
+
       const transport = new StreamableHTTPClientTransport(
         new URL(this.mcpBroker!.url),
         {
@@ -250,70 +258,58 @@ export class StubSession implements AgentSession {
             headers: {
               Authorization: `Bearer ${this.mcpBroker!.token}`,
             },
-            signal: abortController.signal,
           },
         },
       );
 
       mcpClient = new Client({ name: "stub-mcp-runtime", version: "1.0.0" });
-
-      // Connect with a timeout to prevent hangs
       await withTimeout(mcpClient.connect(transport), MCP_CONNECT_TIMEOUT_MS, "MCP connect timeout");
 
-      // Yield the tool_use event
-      yieldedToolUse = true;
-      yield {
+      events.push({
         type: "tool_use",
         timestamp: ts(),
         content: JSON.stringify({ tool: toolName, args: toolArgs }),
         raw: { type: "tool_use", id: toolUseId, name: toolName, input: toolArgs },
-      };
+      });
 
-      // Call the tool
       const result = await withTimeout(
         mcpClient.callTool({ name: toolName, arguments: toolArgs }),
         MCP_CONNECT_TIMEOUT_MS,
         "MCP tool call timeout",
       );
 
-      // Yield the tool_result event with the real MCP response
-      yield {
+      events.push({
         type: "tool_result",
         timestamp: ts(),
         content: JSON.stringify(result),
         raw: { type: "tool_result", tool_use_id: toolUseId, is_error: false },
-      };
+      });
     } catch (err) {
       logger.warn({ err, runtimeName: this.runtimeName }, `${this.runtimeName}: MCP tool call failed`);
 
-      // Yield tool_use if we haven't already (error during connect)
-      if (!yieldedToolUse) {
-        yield {
+      if (events.length === 0) {
+        events.push({
           type: "tool_use",
           timestamp: ts(),
           content: JSON.stringify({ tool: toolName, args: toolArgs }),
           raw: { type: "tool_use", id: toolUseId, name: toolName, input: toolArgs },
-        };
+        });
       }
 
-      // Yield error tool_result
-      yield {
+      events.push({
         type: "tool_result",
         timestamp: ts(),
         content: JSON.stringify({
           error: err instanceof Error ? err.message : String(err),
         }),
         raw: { type: "tool_result", tool_use_id: toolUseId, is_error: true },
-      };
+      });
     } finally {
-      // Abort the HTTP transport first to kill any SSE connections, then
-      // fire-and-forget close. Without abort, the transport's open connections
-      // can prevent the generator from advancing past subsequent yield points.
-      abortController!.abort();
       if (mcpClient) {
-        mcpClient.close().catch(() => {});
+        await mcpClient.close().catch(() => {});
       }
     }
+    return events;
   }
 
   /** Resolve which input action to take based on match rules and default handler. */
