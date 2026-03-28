@@ -339,7 +339,7 @@ export const taskTools: ToolDefinition[] = [
     name: "task_complete",
     group: "task",
     description:
-      "Mark a task as complete (human-authoritative — sticky status).",
+      "Mark a child or descendant task as complete. Cannot be used on your own task — only ancestors can complete a task. Human-authoritative (sticky status).",
     inputSchema: z.object({
       taskId: z.string().describe("The ID of the task to complete"),
     }),
