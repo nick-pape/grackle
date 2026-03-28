@@ -404,8 +404,11 @@ class ClaudeCodeSession extends BaseAgentSession {
       const events = mapMessage(msg);
       this.emitWithSyntheticToolResults(events, ts);
 
-      // Signal turn completion on result message
+      // Signal turn completion on result message. Flush pending tool_use IDs
+      // since mapMessage(result) returns [] — emitWithSyntheticToolResults won't
+      // see non-tool_use events to trigger a flush.
       if (msg.type === "result") {
+        this.flushPendingToolResults(ts);
         this.turnCompleteResolve?.();
       }
     }
@@ -448,6 +451,16 @@ class ClaudeCodeSession extends BaseAgentSession {
     if (this.pendingToolUseIds.size > 0) {
       const hasCompletion = events.some((e) => e.type !== "tool_use");
       if (hasCompletion) {
+        // Remove any pending IDs that have real tool_result events in this batch
+        // (the SDK may include tool_result blocks in some modes).
+        for (const event of events) {
+          if (event.type === "tool_result") {
+            const raw = event.raw as Record<string, unknown> | undefined;
+            if (raw && typeof raw.tool_use_id === "string") {
+              this.pendingToolUseIds.delete(raw.tool_use_id);
+            }
+          }
+        }
         this.flushPendingToolResults(ts);
       }
     }
@@ -511,6 +524,7 @@ class ClaudeCodeSession extends BaseAgentSession {
 
       // Check for result errors (e.g. invalid API key)
       if (msg.type === "result" && msg.is_error) {
+        this.flushPendingToolResults(ts);
         const errorMsg = (msg.result as string) || "Claude Code returned an error";
         this.eventQueue.push({ type: "error", timestamp: ts(), content: errorMsg, raw: msg });
         continue;
@@ -518,6 +532,7 @@ class ClaudeCodeSession extends BaseAgentSession {
 
       // Extract usage data from successful result messages
       if (msg.type === "result" && !msg.is_error) {
+        this.flushPendingToolResults(ts);
         const usage = msg.usage as {
           input_tokens?: number;
           output_tokens?: number;
