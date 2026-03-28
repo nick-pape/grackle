@@ -60,8 +60,9 @@ export function FindingCard({ tool, args, result, isError }: ToolCardProps): JSX
 
   // Determine title to show in header
   const displayTitle = single?.title ?? argData.title;
-  const displayCategory = single?.category ?? argData.category;
-  const displayTags = single?.tags ?? argData.tags;
+  // Only show category badge for single findings, not when displaying a list
+  const displayCategory = list ? undefined : (single?.category ?? argData.category);
+  const displayTags = list ? undefined : (single?.tags ?? argData.tags);
 
   return (
     <div
