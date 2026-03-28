@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 28 Mar 2026 03:00:43 GMT and should not be manually modified.
+This log was last generated on Sat, 28 Mar 2026 03:24:11 GMT and should not be manually modified.
+
+## 0.89.1
+Sat, 28 Mar 2026 03:24:11 GMT
+
+### Patches
+
+- Add circuit breaker with auto-recovery to environment reconnect logic
 
 ## 0.89.0
 Sat, 28 Mar 2026 03:00:43 GMT
