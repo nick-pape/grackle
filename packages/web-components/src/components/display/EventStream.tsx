@@ -104,7 +104,7 @@ export function EventStream({ events, eventsDropped, emptyState }: EventStreamPr
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: animationDuration, ease: "easeOut" }}
               >
-                <EventRenderer event={event} toolUseCtx={event.toolUseCtx} />
+                <EventRenderer event={event} toolUseCtx={event.toolUseCtx} settled={event.settled} />
               </motion.div>
             );
           })}

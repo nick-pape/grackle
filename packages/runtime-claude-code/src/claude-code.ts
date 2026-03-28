@@ -104,6 +104,14 @@ class ClaudeCodeSession extends BaseAgentSession {
   /** Cached SDK options built once during setupSdk(), reused for follow-up queries. */
   private cachedSdkOptions?: Record<string, unknown>;
 
+  /**
+   * IDs of tool_use blocks awaiting results. The Claude Agent SDK executes tools
+   * internally and does not surface tool_result events. When the next assistant
+   * message arrives (proving the tool completed), we emit synthetic tool_result
+   * events so the frontend can pair them with the original tool_use.
+   */
+  private pendingToolUseIds: Map<string, string> = new Map();
+
   // ─── Persistent process mode ────────────────────────────────
   // When active, ONE query() stays alive across multiple turns. The SDK's
   // AsyncIterable prompt mode keeps the process running and waiting for input.
@@ -394,15 +402,19 @@ class ClaudeCodeSession extends BaseAgentSession {
 
       // Map SDK messages to Grackle events
       const events = mapMessage(msg);
-      for (const event of events) {
-        this.eventQueue.push(event);
-      }
+      this.emitWithSyntheticToolResults(events, ts);
 
-      // Signal turn completion on result message
+      // Signal turn completion on result message. Flush pending tool_use IDs
+      // since mapMessage(result) returns [] — emitWithSyntheticToolResults won't
+      // see non-tool_use events to trigger a flush.
       if (msg.type === "result") {
+        this.flushPendingToolResults(ts);
         this.turnCompleteResolve?.();
       }
     }
+
+    // Flush any remaining pending tool_use IDs (tool completed but no follow-up message)
+    this.flushPendingToolResults(ts);
 
     // Stream ended — resolve any pending turn wait and clear persistent state
     // so follow-ups fall back to resume-per-input instead of trying to push
@@ -420,6 +432,62 @@ class ClaudeCodeSession extends BaseAgentSession {
         resolve(1);
       };
     });
+  }
+
+  // ─── Synthetic tool_result emission ─────────────────────
+
+  /**
+   * Emit events to the queue, synthesizing tool_result events for pending tool_use IDs.
+   *
+   * The Claude Agent SDK executes tools internally and only streams assistant messages.
+   * Tool results are never surfaced as events. When we see a new batch of events that
+   * contains non-tool_use events (text, usage, etc.), we know all pending tools have
+   * completed — so we emit synthetic tool_result events before the new events.
+   * This enables the frontend to pair tool_use/tool_result by ID.
+   */
+  private emitWithSyntheticToolResults(events: AgentEvent[], ts: () => string): void {
+    // If there are pending tool_use IDs and this batch contains non-tool_use events,
+    // the tools have completed — emit synthetic tool_result events first.
+    if (this.pendingToolUseIds.size > 0) {
+      const hasCompletion = events.some((e) => e.type !== "tool_use");
+      if (hasCompletion) {
+        // Remove any pending IDs that have real tool_result events in this batch
+        // (the SDK may include tool_result blocks in some modes).
+        for (const event of events) {
+          if (event.type === "tool_result") {
+            const raw = event.raw as Record<string, unknown> | undefined;
+            if (raw && typeof raw.tool_use_id === "string") {
+              this.pendingToolUseIds.delete(raw.tool_use_id);
+            }
+          }
+        }
+        this.flushPendingToolResults(ts);
+      }
+    }
+
+    // Push all events, tracking new tool_use IDs
+    for (const event of events) {
+      if (event.type === "tool_use") {
+        const raw = event.raw as Record<string, unknown> | undefined;
+        if (raw && typeof raw.id === "string") {
+          this.pendingToolUseIds.set(raw.id, raw.name as string || "");
+        }
+      }
+      this.eventQueue.push(event);
+    }
+  }
+
+  /** Emit synthetic tool_result events for all pending tool_use IDs and clear the map. */
+  private flushPendingToolResults(ts: () => string): void {
+    for (const [id] of this.pendingToolUseIds) {
+      this.eventQueue.push({
+        type: "tool_result",
+        timestamp: ts(),
+        content: "",
+        raw: { tool_use_id: id, is_error: false, synthetic: true },
+      });
+    }
+    this.pendingToolUseIds.clear();
   }
 
   // ─── Resume-per-input fallback ──────────────────────────
@@ -456,6 +524,7 @@ class ClaudeCodeSession extends BaseAgentSession {
 
       // Check for result errors (e.g. invalid API key)
       if (msg.type === "result" && msg.is_error) {
+        this.flushPendingToolResults(ts);
         const errorMsg = (msg.result as string) || "Claude Code returned an error";
         this.eventQueue.push({ type: "error", timestamp: ts(), content: errorMsg, raw: msg });
         continue;
@@ -463,6 +532,7 @@ class ClaudeCodeSession extends BaseAgentSession {
 
       // Extract usage data from successful result messages
       if (msg.type === "result" && !msg.is_error) {
+        this.flushPendingToolResults(ts);
         const usage = msg.usage as {
           input_tokens?: number;
           output_tokens?: number;
@@ -480,12 +550,12 @@ class ClaudeCodeSession extends BaseAgentSession {
       }
 
       const events = mapMessage(msg);
-      for (const event of events) {
-        messageCount++;
-        this.eventQueue.push(event);
-      }
+      messageCount += events.length;
+      this.emitWithSyntheticToolResults(events, ts);
     }
 
+    // Flush any remaining pending tool_use IDs
+    this.flushPendingToolResults(ts);
     return messageCount;
   }
 }
