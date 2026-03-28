@@ -243,6 +243,22 @@ describe("ClaudeCodeRuntime structural", () => {
     expect(session.runtimeSessionId).toBe("prev-session-123");
   });
 
+  it("setupSdk includes Agent and Task in allowedTools", async () => {
+    const { ClaudeCodeRuntime } = await import("./claude-code.js");
+    const runtime = new ClaudeCodeRuntime();
+    const session = runtime.spawn({
+      sessionId: "cc-allowed-tools",
+      prompt: "test",
+      model: "claude-3",
+      maxTurns: 0,
+    });
+    await (session as any).setupSdk();
+    const opts = (session as any).cachedSdkOptions;
+    const tools = opts.allowedTools as string[];
+    expect(tools).toContain("Agent");
+    expect(tools).toContain("Task");
+  });
+
   it("setupSdk includes settingSources with 'project'", async () => {
     const { ClaudeCodeRuntime } = await import("./claude-code.js");
     const runtime = new ClaudeCodeRuntime();

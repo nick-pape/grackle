@@ -89,7 +89,7 @@ export function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
 /** Built-in Claude Code tools that must be explicitly listed in allowedTools. */
 const BUILTIN_TOOLS: string[] = [
   "Bash", "Read", "Write", "Edit", "Glob", "Grep",
-  "WebSearch", "WebFetch", "Task", "NotebookEdit",
+  "WebSearch", "WebFetch", "Task", "Agent", "NotebookEdit",
 ];
 
 /** Agent session backed by the Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`). */

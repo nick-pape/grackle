@@ -14,6 +14,7 @@ export type ToolCategory =
   | "search"
   | "todo"
   | "metadata"
+  | "agent"
   | "generic";
 
 const TOOL_MAP: Record<string, ToolCategory> = {
@@ -43,6 +44,11 @@ const TOOL_MAP: Record<string, ToolCategory> = {
 
   // Metadata — Copilot: report_intent
   report_intent: "metadata",
+
+  // Agent — Claude Code: Agent (formerly Task), Copilot: task, read_agent
+  agent: "agent",
+  task: "agent",
+  read_agent: "agent",
 };
 
 /** Classifies a tool name to determine which card component should render it. */
