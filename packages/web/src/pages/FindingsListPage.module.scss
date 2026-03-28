@@ -1,0 +1,11 @@
+.container {
+  padding: var(--space-md);
+  max-width: 900px;
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin: var(--space-sm) 0 var(--space-md);
+}

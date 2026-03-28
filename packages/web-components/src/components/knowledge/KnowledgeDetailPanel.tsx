@@ -6,7 +6,7 @@
 
 import { useMemo, type JSX } from "react";
 import type { GraphNode, NodeDetail } from "../../hooks/types.js";
-import { taskUrl, sessionUrl } from "../../utils/navigation.js";
+import { taskUrl, sessionUrl, findingUrl } from "../../utils/navigation.js";
 import { useAppNavigate } from "../../utils/navigation.js";
 import styles from "./KnowledgeDetailPanel.module.scss";
 
@@ -39,6 +39,9 @@ export function KnowledgeDetailPanel({
         break;
       case "session":
         navigate(sessionUrl(node.sourceId));
+        break;
+      case "finding":
+        navigate(findingUrl(node.sourceId));
         break;
       default:
         break;

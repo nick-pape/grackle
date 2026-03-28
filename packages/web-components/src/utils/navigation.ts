@@ -163,6 +163,26 @@ export const NEW_WORKSPACE_URL: string = "/workspaces/new";
 /** URL for the knowledge graph explorer page. */
 export const KNOWLEDGE_URL: string = "/knowledge";
 
+/** URL for the findings landing page. */
+export const FINDINGS_URL: string = "/findings";
+
+/** Build URL for the findings list page, optionally scoped to a workspace. */
+export function findingsUrl(workspaceId?: string, environmentId?: string): string {
+  if (workspaceId && environmentId) {
+    return `/environments/${encodeURIComponent(environmentId)}/workspaces/${encodeURIComponent(workspaceId)}/findings`;
+  }
+  return FINDINGS_URL;
+}
+
+/** Build URL for a finding detail page, optionally scoped to a workspace. */
+export function findingUrl(findingId: string, workspaceId?: string, environmentId?: string): string {
+  const encodedFindingId = encodeURIComponent(findingId);
+  if (workspaceId && environmentId) {
+    return `/environments/${encodeURIComponent(environmentId)}/workspaces/${encodeURIComponent(workspaceId)}/findings/${encodedFindingId}`;
+  }
+  return `/findings/${encodedFindingId}`;
+}
+
 /** Build URL for the root-task chat page. */
 export function chatUrl(): string {
   return CHAT_URL;

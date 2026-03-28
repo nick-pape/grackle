@@ -8,6 +8,8 @@ import {
   buildNewTaskBreadcrumbs,
   buildNewChatBreadcrumbs,
   buildSessionBreadcrumbs,
+  buildFindingsBreadcrumbs,
+  buildFindingBreadcrumbs,
   type BreadcrumbSegment,
 } from "./breadcrumbs.js";
 import type { Environment, TaskData, Workspace } from "../hooks/types.js";
@@ -218,6 +220,47 @@ describe("breadcrumb builders", () => {
     const segments: BreadcrumbSegment[] = buildSessionBreadcrumbs("abcdef1234567890");
     expect(segments).toHaveLength(2);
     expect(segments[1].label).toBe("Session abcdef12");
+  });
+});
+
+describe("findings breadcrumb builders", () => {
+  it("buildFindingsBreadcrumbs returns Home > Findings (non-clickable)", () => {
+    const segments: BreadcrumbSegment[] = buildFindingsBreadcrumbs();
+    expect(segments).toHaveLength(2);
+    expect(segments[0].label).toBe("Home");
+    expect(segments[0].url).toBe("/");
+    expect(segments[1].label).toBe("Findings");
+    expect(segments[1].url).toBeUndefined();
+  });
+
+  it("buildFindingBreadcrumbs without scope returns Home > Findings > Title", () => {
+    const segments: BreadcrumbSegment[] = buildFindingBreadcrumbs("My Finding", undefined, undefined, [], []);
+    expect(segments).toHaveLength(3);
+    expect(segments[0].label).toBe("Home");
+    expect(segments[0].url).toBe("/");
+    expect(segments[1].label).toBe("Findings");
+    expect(segments[1].url).toBe("/findings");
+    expect(segments[2].label).toBe("My Finding");
+    expect(segments[2].url).toBeUndefined();
+  });
+
+  it("buildFindingBreadcrumbs with workspace scope returns full chain", () => {
+    const workspaces: Workspace[] = [makeWorkspace("ws1", "My Workspace", "env1")];
+    const environments: Environment[] = [makeEnvironment("env1", "Local Dev")];
+    const segments: BreadcrumbSegment[] = buildFindingBreadcrumbs("My Finding", "ws1", "env1", workspaces, environments);
+    expect(segments).toHaveLength(6);
+    expect(segments[0].label).toBe("Home");
+    expect(segments[0].url).toBe("/");
+    expect(segments[1].label).toBe("Environments");
+    expect(segments[1].url).toBe("/environments");
+    expect(segments[2].label).toBe("Local Dev");
+    expect(segments[2].url).toBe("/environments/env1");
+    expect(segments[3].label).toBe("My Workspace");
+    expect(segments[3].url).toBe("/environments/env1/workspaces/ws1");
+    expect(segments[4].label).toBe("Findings");
+    expect(segments[4].url).toBe("/environments/env1/workspaces/ws1/findings");
+    expect(segments[5].label).toBe("My Finding");
+    expect(segments[5].url).toBeUndefined();
   });
 });
 

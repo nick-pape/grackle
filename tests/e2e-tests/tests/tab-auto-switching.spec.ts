@@ -11,7 +11,7 @@ test.describe("Tab Auto-Switching", { tag: ["@webui"] }, () => {
 
     // Create task, switch to Findings tab first
     await stubTask.createAndNavigateSimple("tab-start-task");
-    await page.locator("button", { hasText: "Findings" }).click();
+    await page.getByLabel("Task view").getByRole("tab", { name: "Findings" }).click();
 
     // Verify Findings tab content is visible
     await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 10_000 });
@@ -68,7 +68,7 @@ test.describe("Tab Auto-Switching", { tag: ["@webui"] }, () => {
     await createTask(client, workspaceName, "sidebar-task-b", "test-local");
 
     // We're on task A — switch to Findings tab
-    await page.locator("button", { hasText: "Findings" }).click();
+    await page.getByLabel("Task view").getByRole("tab", { name: "Findings" }).click();
 
     // Verify Findings content is visible
     await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 5_000 });

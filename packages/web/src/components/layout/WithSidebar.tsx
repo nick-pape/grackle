@@ -1,8 +1,8 @@
-import { useCallback, useMemo, type JSX } from "react";
-import { Outlet } from "react-router";
+import { useCallback, useEffect, useMemo, type JSX } from "react";
+import { Outlet, useParams } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useSidebarSlot } from "../../hooks/useSidebarSlot.js";
-import { TaskList, EnvironmentNav, SettingsNav, KnowledgeNav } from "@grackle-ai/web-components";
+import { TaskList, EnvironmentNav, FindingsNav, SettingsNav, KnowledgeNav } from "@grackle-ai/web-components";
 
 /** Layout route wrapper that shows the TaskList in the sidebar. */
 export function WithTaskSidebar(): JSX.Element {
@@ -23,6 +23,27 @@ export function WithEnvironmentSidebar(): JSX.Element {
 /** Layout route wrapper that shows the SettingsNav in the sidebar. */
 export function WithSettingsSidebar(): JSX.Element {
   const sidebar = useMemo(() => <SettingsNav />, []);
+  useSidebarSlot(sidebar);
+  return <Outlet />;
+}
+
+/** Layout route wrapper that shows the FindingsNav in the sidebar. */
+export function WithFindingsSidebar(): JSX.Element {
+  const { findings, loadFindings, loadAllFindings } = useGrackle();
+  const { workspaceId, environmentId } = useParams<{ workspaceId?: string; environmentId?: string }>();
+
+  useEffect(() => {
+    if (workspaceId) {
+      loadFindings(workspaceId);
+    } else {
+      loadAllFindings();
+    }
+  }, [workspaceId, loadFindings, loadAllFindings]);
+
+  const sidebar = useMemo(
+    () => <FindingsNav findings={findings} workspaceId={workspaceId} environmentId={environmentId} />,
+    [findings, workspaceId, environmentId],
+  );
   useSidebarSlot(sidebar);
   return <Outlet />;
 }

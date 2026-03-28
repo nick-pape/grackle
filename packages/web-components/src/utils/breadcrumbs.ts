@@ -1,5 +1,5 @@
 import type { Environment, TaskData, Workspace } from "../hooks/types.js";
-import { ENVIRONMENTS_URL, environmentUrl, HOME_URL, SETTINGS_URL, taskUrl, workspaceUrl } from "./navigation.js";
+import { ENVIRONMENTS_URL, environmentUrl, FINDINGS_URL, findingsUrl, HOME_URL, SETTINGS_URL, taskUrl, workspaceUrl } from "./navigation.js";
 
 /** A single segment in the breadcrumb trail. */
 export interface BreadcrumbSegment {
@@ -181,5 +181,42 @@ export function buildNewTaskBreadcrumbs(
   }
 
   segments.push({ label: "New Task", url: undefined });
+  return segments;
+}
+
+/** Findings breadcrumb segment. */
+const FINDINGS_SEGMENT: BreadcrumbSegment = { label: "Findings", url: FINDINGS_URL };
+
+/** Build breadcrumbs for the findings landing page. */
+export function buildFindingsBreadcrumbs(): BreadcrumbSegment[] {
+  return [HOME_SEGMENT, { label: "Findings", url: undefined }];
+}
+
+/** Build breadcrumbs for a finding detail page, optionally scoped to a workspace. */
+export function buildFindingBreadcrumbs(
+  findingTitle: string,
+  workspaceId: string | undefined,
+  environmentId: string | undefined,
+  workspaces: Workspace[],
+  environments: Environment[],
+): BreadcrumbSegment[] {
+  const segments: BreadcrumbSegment[] = [HOME_SEGMENT];
+
+  if (workspaceId && environmentId) {
+    const workspace = workspaces.find((p) => p.id === workspaceId);
+    const environment = environments.find((e) => e.id === environmentId);
+    segments.push(ENVIRONMENTS_SEGMENT);
+    if (environment) {
+      segments.push({ label: environment.displayName, url: environmentUrl(environmentId) });
+    }
+    if (workspace) {
+      segments.push({ label: workspace.name, url: workspaceUrl(workspaceId, environmentId) });
+    }
+    segments.push({ label: "Findings", url: findingsUrl(workspaceId, environmentId) });
+  } else {
+    segments.push(FINDINGS_SEGMENT);
+  }
+
+  segments.push({ label: findingTitle, url: undefined });
   return segments;
 }

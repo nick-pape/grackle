@@ -42,7 +42,7 @@ export { KnowledgeGraph, KnowledgeDetailPanel, KnowledgeNav } from "./components
 export { StatusBar, AppNav, Sidebar, BottomStatusBar } from "./components/layout/index.js";
 
 // Lists
-export { EnvironmentNav } from "./components/lists/index.js";
+export { EnvironmentNav, FindingsNav } from "./components/lists/index.js";
 export { TaskList } from "./components/lists/TaskList.js";
 export { HighlightedText, buildTaskTree, groupTasksByStatus } from "./components/lists/listHelpers.js";
 
@@ -126,6 +126,7 @@ export {
   PERSONAS_URL, NEW_PERSONA_URL, personaUrl,
   SETTINGS_APPEARANCE_URL, SETTINGS_ABOUT_URL, SETTINGS_SHORTCUTS_URL,
   PAIR_PATH, NEW_WORKSPACE_URL, KNOWLEDGE_URL, HOME_URL,
+  FINDINGS_URL, findingsUrl, findingUrl,
 } from "./utils/navigation.js";
 
 export {
@@ -137,6 +138,8 @@ export type { TaskStatusKey, VirtualStatus, DisplayStatus, TaskStatusStyle } fro
 
 export { formatTokens, formatCost } from "./utils/format.js";
 export { formatRelativeTime } from "./utils/time.js";
+export { CATEGORY_COLORS, getCategoryColor } from "./utils/findingCategory.js";
+export type { CategoryColor } from "./utils/findingCategory.js";
 
 export type { BreadcrumbSegment } from "./utils/breadcrumbs.js";
 export {
@@ -144,6 +147,7 @@ export {
   buildEnvironmentsBreadcrumbs, buildNewEnvironmentBreadcrumbs,
   buildNewChatBreadcrumbs, buildSessionBreadcrumbs,
   buildWorkspaceBreadcrumbs, buildTaskBreadcrumbs, buildNewTaskBreadcrumbs,
+  buildFindingsBreadcrumbs, buildFindingBreadcrumbs,
 } from "./utils/breadcrumbs.js";
 
 export { groupConsecutiveTextEvents, pairToolEvents } from "./utils/sessionEvents.js";
