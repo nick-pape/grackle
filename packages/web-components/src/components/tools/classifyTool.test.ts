@@ -31,8 +31,14 @@ describe("classifyTool", () => {
     expect(classifyTool("GREP")).toBe("search");
   });
 
+  it("classifies Grackle MCP tools", () => {
+    expect(classifyTool("mcp__grackle__workpad_write")).toBe("workpad");
+    expect(classifyTool("mcp__grackle__finding_post")).toBe("finding");
+    expect(classifyTool("mcp__grackle__task_create")).toBe("task");
+  });
+
   it("returns generic for unknown tools", () => {
     expect(classifyTool("unknown_tool")).toBe("generic");
-    expect(classifyTool("mcp__grackle__workpad_write")).toBe("generic");
+    expect(classifyTool("mcp__unknown_server__foo")).toBe("generic");
   });
 });
