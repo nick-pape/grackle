@@ -2,6 +2,42 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.89.2",
+      "tag": "@grackle-ai/cli_v0.89.2",
+      "date": "Sat, 28 Mar 2026 22:37:21 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix leaf task prompt so agents no longer try to self-complete, update task_complete tool description, and add SIGCHLD regression test for web-UI-started children"
+          },
+          {
+            "comment": "Fix tool call rendering: pair tool_use/tool_result across all runtimes, synthesize tool_result for Claude Code, add powershell to tool classifier"
+          },
+          {
+            "comment": "Add AgentToolCard for first-class subagent rendering and add Agent to BUILTIN_TOOLS"
+          },
+          {
+            "comment": "Route sendInput through stdin stream — unifies human input with IPC stream model"
+          },
+          {
+            "comment": "fix: switch Codex runtime to danger-full-access sandbox mode to prevent silent read-only downgrades"
+          },
+          {
+            "comment": "Extract shared helpers (resolveWorkDir, resolveMcp, pushUsageEvent, setRuntimeSessionId, setupForResume) into BaseAgentSession to reduce boilerplate across runtimes"
+          },
+          {
+            "comment": "Fix SIGCHLD delivery loss by retrying inline when first attempt fails"
+          },
+          {
+            "comment": "Centralize server configuration with validation and ESLint enforcement"
+          },
+          {
+            "comment": "Fix stuck MCP stub sessions by fire-and-forget close instead of blocking the generator"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.89.1",
       "tag": "@grackle-ai/cli_v0.89.1",
       "date": "Sat, 28 Mar 2026 03:24:11 GMT",

@@ -1,6 +1,21 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 28 Mar 2026 03:24:11 GMT and should not be manually modified.
+This log was last generated on Sat, 28 Mar 2026 22:37:21 GMT and should not be manually modified.
+
+## 0.89.2
+Sat, 28 Mar 2026 22:37:21 GMT
+
+### Patches
+
+- Fix leaf task prompt so agents no longer try to self-complete, update task_complete tool description, and add SIGCHLD regression test for web-UI-started children
+- Fix tool call rendering: pair tool_use/tool_result across all runtimes, synthesize tool_result for Claude Code, add powershell to tool classifier
+- Add AgentToolCard for first-class subagent rendering and add Agent to BUILTIN_TOOLS
+- Route sendInput through stdin stream — unifies human input with IPC stream model
+- fix: switch Codex runtime to danger-full-access sandbox mode to prevent silent read-only downgrades
+- Extract shared helpers (resolveWorkDir, resolveMcp, pushUsageEvent, setRuntimeSessionId, setupForResume) into BaseAgentSession to reduce boilerplate across runtimes
+- Fix SIGCHLD delivery loss by retrying inline when first attempt fails
+- Centralize server configuration with validation and ESLint enforcement
+- Fix stuck MCP stub sessions by fire-and-forget close instead of blocking the generator
 
 ## 0.89.1
 Sat, 28 Mar 2026 03:24:11 GMT
