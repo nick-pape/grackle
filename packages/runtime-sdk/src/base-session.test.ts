@@ -337,8 +337,8 @@ describe("BaseAgentSession input serialization", () => {
 
 /**
  * Subclass that simulates a slow setupSdk() with a deferred gate,
- * and mirrors real runtime behavior where canAcceptInput() returns
- * false until the SDK is initialized.
+ * mirroring real runtime behavior where input sent before SDK initialization
+ * completes is queued and processed once setupSdk() finishes.
  */
 class SlowSetupSession extends TestSession {
   private readonly setupGate: Deferred = createDeferred();
@@ -386,7 +386,10 @@ describe("sendInput before SDK ready", () => {
     const startEvent = await nextEvent();
     expect(startEvent?.type).toBe("system");
 
-    // Send input BEFORE setupSdk resolves — this is the race window
+    // Yield to the event loop so runSession() starts and blocks on setupSdk()'s gate
+    await new Promise((r) => setTimeout(r, 0));
+
+    // Send input while setupSdk is genuinely pending
     session.sendInput("early");
 
     // Now resolve setup so the session can proceed
@@ -416,7 +419,10 @@ describe("sendInput before SDK ready", () => {
     const startEvent = await nextEvent();
     expect(startEvent?.type).toBe("system");
 
-    // Send 3 messages before SDK is ready
+    // Yield to the event loop so runSession() starts and blocks on setupSdk()'s gate
+    await new Promise((r) => setTimeout(r, 0));
+
+    // Send 3 messages while setupSdk is genuinely pending
     session.sendInput("alpha");
     session.sendInput("bravo");
     session.sendInput("charlie");
