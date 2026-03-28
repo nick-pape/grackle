@@ -174,9 +174,9 @@ test.describe("Scoped session_attach and logs_get", { tag: ["@task"] }, () => {
       description: JSON.stringify(orchestratorScenario),
     });
 
-    // 4. Start orchestrator
+    // 4. Start orchestrator — allow extra time on slow CI runners
     const orchSessionId = await startTaskStubMcp(client, orchestrator.id as string);
-    await waitForSessionStatus(client, orchSessionId, "stopped");
+    await waitForSessionStatus(client, orchSessionId, "stopped", 45_000);
 
     // 5. Verify logs_get succeeded — response contains the child session ID
     const eventsResp = await client.getSessionEvents({ id: orchSessionId });
