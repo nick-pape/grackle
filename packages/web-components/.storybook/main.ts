@@ -8,7 +8,7 @@ const config: StorybookConfig = {
     "@storybook/addon-controls",
   ],
   docs: {
-    autodocs: true,
+    autodocs: "tag",
   },
   core: {
     disableTelemetry: true,

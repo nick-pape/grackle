@@ -6,6 +6,7 @@ import { buildFinding } from "../../test-utils/storybook-helpers.js";
 const meta: Meta<typeof FindingsPanel> = {
   title: "Grackle/Panels/FindingsPanel",
   component: FindingsPanel,
+  tags: ["autodocs"],
   args: {
     findings: [],
   },
