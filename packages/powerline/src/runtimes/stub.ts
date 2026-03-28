@@ -18,9 +18,6 @@ import { logger } from "../logger.js";
 /** Timeout for connecting to the MCP server and completing a tool call. */
 const MCP_CONNECT_TIMEOUT_MS: number = 5_000;
 
-/** Timeout for closing the MCP client connection. */
-const MCP_CLOSE_TIMEOUT_MS: number = 2_000;
-
 /** Auto-incrementing counter for generating unique tool_use IDs within MCP calls. */
 let mcpToolUseCounter: number = 0;
 
@@ -309,11 +306,9 @@ export class StubSession implements AgentSession {
       };
     } finally {
       if (mcpClient) {
-        try {
-          await withTimeout(mcpClient.close(), MCP_CLOSE_TIMEOUT_MS, "MCP close timeout");
-        } catch {
-          // Ignore close errors — the connection may be in a bad state
-        }
+        // Fire-and-forget close — never block the generator. A hanging close()
+        // (e.g. stuck HTTP transport) would prevent "completed" from being yielded.
+        mcpClient.close().catch(() => {});
       }
     }
   }
