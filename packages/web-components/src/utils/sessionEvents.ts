@@ -187,7 +187,7 @@ export function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
         // No ID available — use a synthetic marker to track consumption
         consumedIds.add(`__seq_${useIdx}`);
         // Store the synthetic ID so the filter below can find it
-        parsedRaw.set(useEvent, { ...parsedRaw.get(useEvent), __seqId: `__seq_${useIdx}` });
+        parsedRaw.set(useEvent, { ...(raw ?? {}), __seqId: `__seq_${useIdx}` });
       }
       resultCursor++;
     }
@@ -212,8 +212,17 @@ export function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
   // the ShellCard shows a misleading in-progress spinner forever.
   for (let i = 0; i < filtered.length; i++) {
     if (filtered[i].eventType !== "tool_use") continue;
-    // If there are events after this tool_use, the tool must have completed
-    if (i < filtered.length - 1) {
+    // Only settle if there is at least one subsequent non-tool_use event.
+    // This avoids prematurely settling in multi-tool sequences where only
+    // more tool_use events follow (the tools may still be running).
+    let hasNonToolUseAfter = false;
+    for (let j = i + 1; j < filtered.length; j++) {
+      if (filtered[j].eventType !== "tool_use") {
+        hasNonToolUseAfter = true;
+        break;
+      }
+    }
+    if (hasNonToolUseAfter) {
       filtered[i] = { ...filtered[i], settled: true };
     }
   }

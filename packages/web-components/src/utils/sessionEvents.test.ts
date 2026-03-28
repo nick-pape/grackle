@@ -256,5 +256,24 @@ describe("pairToolEvents", () => {
       expect(result).toHaveLength(1);
       expect(result[0].settled).toBeUndefined();
     });
+
+    it("does not mark tool_use as settled when only more tool_use events follow", () => {
+      const events = [
+        makeEvent({
+          eventType: "tool_use",
+          content: JSON.stringify({ tool: "Bash", args: { command: "ls" } }),
+          raw: JSON.stringify({ type: "tool_use", id: "toolu_1" }),
+        }),
+        makeEvent({
+          eventType: "tool_use",
+          content: JSON.stringify({ tool: "Bash", args: { command: "pwd" } }),
+          raw: JSON.stringify({ type: "tool_use", id: "toolu_2" }),
+        }),
+      ];
+      const result = pairToolEvents(events);
+      expect(result).toHaveLength(2);
+      expect(result[0].settled).toBeUndefined();
+      expect(result[1].settled).toBeUndefined();
+    });
   });
 });
