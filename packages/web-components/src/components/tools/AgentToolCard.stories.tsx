@@ -244,6 +244,8 @@ export const CopilotReadAgentCompleted: Story = {
     // Status should show "completed"
     const status = canvas.getByTestId("tool-card-agent-status");
     await expect(status.textContent).toContain("completed");
+    // Agent ID should be displayed in header
+    await expect(canvas.getByTestId("tool-card-agent-id")).toHaveTextContent("find-grackle-files");
     // Result content should be the part after the prefix
     await expect(canvas.getByTestId("tool-card-result")).toHaveTextContent(/Found 12 matching files/);
   },

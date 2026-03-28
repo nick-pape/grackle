@@ -73,7 +73,7 @@ function parseAgentArgs(tool: string, args: unknown): AgentInfo {
 
 /** Regex to parse Copilot read_agent structured result prefix. */
 const READ_AGENT_STATUS_PATTERN: RegExp =
-  /^Agent\s+(completed|running|failed|error)\.\s*agent_id:\s*(\S+),?\s*(.*?)(?:\n\n([\s\S]*))?$/i;
+  /^Agent\s+(completed|running|failed|error)\.\s*agent_id:\s*(\S+),?\s*([^\n]*)(?:\n\n([\s\S]*))?$/i;
 
 /** Parsed result from a Copilot read_agent poll. */
 interface ReadAgentResult {
@@ -157,6 +157,12 @@ export function AgentToolCard({ tool, args, result, isError }: ToolCardProps): J
         {info.agentName && (
           <span className={styles.fileName} data-testid="tool-card-agent-name">
             {info.agentName}
+          </span>
+        )}
+
+        {info.agentId && (
+          <span className={styles.fileName} data-testid="tool-card-agent-id">
+            {info.agentId}
           </span>
         )}
 
