@@ -89,8 +89,9 @@ export function TokensPanel({ tokens, onSetToken, onDeleteToken, onShowToast }: 
                   className={styles.deleteButton}
                   onClick={() => handleDelete(t.name)}
                   title={`Delete ${t.name}`}
+                  aria-label={`Delete ${t.name}`}
                 >
-                  <X size={ICON_MD} />
+                  <X size={ICON_MD} aria-hidden="true" />
                 </button>
               </div>
             ))}

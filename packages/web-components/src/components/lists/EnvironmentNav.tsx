@@ -100,6 +100,7 @@ export function EnvironmentNav({ environments }: EnvironmentNavProps): JSX.Eleme
               <span
                 className={`${styles.statusDot} ${isConnected ? styles.pulse : ""}`}
                 style={{ color: statusColor }}
+                aria-hidden="true"
               >
                 <Circle size={8} fill="currentColor" />
               </span>

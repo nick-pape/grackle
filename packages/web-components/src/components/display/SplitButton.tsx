@@ -103,7 +103,7 @@ export function SplitButton({
         aria-expanded={open}
         data-testid={testId ? `${testId}-chevron` : undefined}
       >
-        <ChevronDown size={ICON_MD} />
+        <ChevronDown size={ICON_MD} aria-hidden="true" />
       </button>
       {open && (
         <div className={styles.dropdown} data-testid={testId ? `${testId}-menu` : undefined}>

@@ -58,7 +58,7 @@ export function CopyButton({ text, className, "data-testid": testId }: CopyButto
       aria-label={copied ? "Copied" : "Copy to clipboard"}
       data-testid={testId ?? "copy-button"}
     >
-      {copied ? <Check size={ICON_MD} /> : <Clipboard size={ICON_MD} />}
+      {copied ? <Check size={ICON_MD} aria-hidden="true" /> : <Clipboard size={ICON_MD} aria-hidden="true" />}
     </button>
   );
 }

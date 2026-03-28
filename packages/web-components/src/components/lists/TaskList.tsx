@@ -84,10 +84,10 @@ function StatusGroupAccordion({
           }
         }}
       >
-        <span className={`${styles.expandArrow} ${isExpanded ? styles.expanded : ""}`}>
+        <span className={`${styles.expandArrow} ${isExpanded ? styles.expanded : ""}`} aria-hidden="true">
           <ChevronRight size={ICON_SM} />
         </span>
-        <span className={styles.statusGroupIcon} style={{ color: group.style.color }}>
+        <span className={styles.statusGroupIcon} style={{ color: group.style.color }} aria-hidden="true">
           {group.style.icon}
         </span>
         <span className={styles.statusGroupLabel}>{group.label}</span>
@@ -192,11 +192,11 @@ function TaskTreeNode({
               }
             }}
           >
-            <ChevronRight size={ICON_SM} />
+            <ChevronRight size={ICON_SM} aria-hidden="true" />
           </span>
         )}
         {!hasChildren && <span className={styles.leafSpacer} />}
-        <span className={styles.taskStatusIcon} style={{ color: statusStyle.color }}>
+        <span className={styles.taskStatusIcon} style={{ color: statusStyle.color }} aria-hidden="true">
           {statusStyle.icon}
         </span>
         <span className={styles.taskTitle} title={node.title}>

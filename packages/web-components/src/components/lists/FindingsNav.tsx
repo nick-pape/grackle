@@ -118,6 +118,7 @@ export function FindingsNav({ findings, workspaceId, environmentId }: FindingsNa
               <span
                 className={styles.categoryDot}
                 style={{ color: getCategoryColor(f.category).text }}
+                aria-hidden="true"
               >
                 <Circle size={8} fill="currentColor" />
               </span>

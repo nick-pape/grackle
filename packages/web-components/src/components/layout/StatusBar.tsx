@@ -30,7 +30,7 @@ export function StatusBar({ connected, environments, sessions, onToggleSidebar, 
     <div className={styles.container}>
       {onToggleSidebar && (
         <button type="button" className={styles.hamburger} onClick={onToggleSidebar} aria-label="Toggle sidebar" aria-expanded={sidebarOpen}>
-          <Menu size={ICON_LG} />
+          <Menu size={ICON_LG} aria-hidden="true" />
         </button>
       )}
       <button type="button" className={styles.brand} onClick={() => navigate(HOME_URL)} title="Home">
