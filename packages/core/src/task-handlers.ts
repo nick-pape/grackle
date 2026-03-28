@@ -32,6 +32,7 @@ import { toPersonaResolveInput, buildOrchestratorContextInput } from "./persona-
 import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
 import { cleanupLifecycleStream, ensureLifecycleStream } from "./lifecycle.js";
 import { ensureAsyncDeliveryListener } from "./pipe-delivery.js";
+import { ensureStdinStream } from "./stdin-delivery.js";
 import { computeTaskStatus } from "./compute-task-status.js";
 import { transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
 import { taskRowToProto, sessionRowToProto } from "./grpc-proto-converters.js";
@@ -348,6 +349,9 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
   const taskSpawnerId = req.parentSessionId || "__server__";
   streamRegistry.subscribe(taskLifecycleStream.id, taskSpawnerId, "rw", "detach", true);
   streamRegistry.subscribe(taskLifecycleStream.id, sessionId, "rw", "detach", false);
+
+  // Create stdin stream — routes human input through the stream-registry
+  ensureStdinStream(sessionId);
 
   // Set up IPC pipe stream (optional)
   let taskPipeFd = 0;
