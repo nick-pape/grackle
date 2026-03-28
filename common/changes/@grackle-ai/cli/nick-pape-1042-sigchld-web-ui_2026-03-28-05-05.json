@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix leaf task prompt: agents no longer try to self-complete (only ancestors can complete tasks)",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
