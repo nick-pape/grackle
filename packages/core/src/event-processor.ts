@@ -255,7 +255,7 @@ export function processEventStream(
           content: options.systemContext,
           raw: JSON.stringify({ systemContext: true }),
         });
-        logWriter.writeEvent(logPath, sysCtxEvent);
+        await logWriter.writeEvent(logPath, sysCtxEvent);
         streamHub.publish(sysCtxEvent);
       }
       if (options.prompt && options.taskId) {
@@ -265,7 +265,7 @@ export function processEventStream(
           timestamp: new Date().toISOString(),
           content: options.prompt,
         });
-        logWriter.writeEvent(logPath, promptEvent);
+        await logWriter.writeEvent(logPath, promptEvent);
         streamHub.publish(promptEvent);
       }
 
@@ -286,7 +286,7 @@ export function processEventStream(
           content: event.content,
           raw: event.raw,
         });
-        logWriter.writeEvent(logPath, sessionEvent);
+        await logWriter.writeEvent(logPath, sessionEvent);
         streamHub.publish(sessionEvent);
 
         // Intercept finding events and store + broadcast them
