@@ -21,7 +21,7 @@ const sqlite = _sqlite!;
 import * as streamRegistry from "./stream-registry.js";
 import * as adapterManager from "./adapter-manager.js";
 import * as pipeDelivery from "./pipe-delivery.js";
-import { ensureStdinStream, publishToStdin } from "./stdin-delivery.js";
+import { ensureStdinStream, publishToStdin, cleanupStdinStream } from "./stdin-delivery.js";
 
 /** Apply minimal schema for sessions + environments. */
 function applySchema(): void {
@@ -256,6 +256,27 @@ describe("stdin-delivery", () => {
       streamRegistry.publish(stream.id, "__server__", "lost message");
 
       expect(mockSendInput).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── cleanupStdinStream ─────────────────────────────────
+
+  describe("cleanupStdinStream", () => {
+    it("removes the stdin stream and all subscriptions", () => {
+      ensureStdinStream("session-1");
+      expect(streamRegistry.getStreamByName("stdin:session-1")).toBeDefined();
+
+      cleanupStdinStream("session-1");
+
+      expect(streamRegistry.getStreamByName("stdin:session-1")).toBeUndefined();
+      const sessionSubs = streamRegistry.getSubscriptionsForSession("session-1")
+        .filter((s) => streamRegistry.getStream(s.streamId)?.name.startsWith("stdin:"));
+      expect(sessionSubs).toHaveLength(0);
+    });
+
+    it("is a no-op when stdin stream does not exist", () => {
+      // Should not throw
+      cleanupStdinStream("nonexistent");
     });
   });
 });

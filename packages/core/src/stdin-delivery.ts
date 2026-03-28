@@ -44,6 +44,22 @@ export function ensureStdinStream(sessionId: string): void {
 }
 
 /**
+ * Clean up a session's stdin stream and all its subscriptions.
+ *
+ * Idempotent — no-ops if the stream does not exist. Called alongside
+ * lifecycle stream cleanup to prevent stdin subscriptions from keeping
+ * sessions alive after lifecycle is closed.
+ */
+export function cleanupStdinStream(sessionId: string): void {
+  const name = `${STDIN_PREFIX}${sessionId}`;
+  const stream = streamRegistry.getStreamByName(name);
+  if (!stream) {
+    return;
+  }
+  streamRegistry.deleteStream(stream.id);
+}
+
+/**
  * Publish a message to a session's stdin stream.
  *
  * Idempotently ensures the stdin stream exists before publishing.
