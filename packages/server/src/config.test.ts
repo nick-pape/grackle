@@ -9,6 +9,15 @@ beforeEach(() => {
 
 describe("resolveServerConfig", () => {
   it("returns defaults when no env vars are set", () => {
+    // Explicitly clear all config env vars in case the test runner has them set
+    vi.stubEnv("GRACKLE_PORT", "");
+    vi.stubEnv("GRACKLE_WEB_PORT", "");
+    vi.stubEnv("GRACKLE_MCP_PORT", "");
+    vi.stubEnv("GRACKLE_POWERLINE_PORT", "");
+    vi.stubEnv("GRACKLE_HOST", "");
+    vi.stubEnv("GRACKLE_SKIP_LOCAL_POWERLINE", "");
+    vi.stubEnv("GRACKLE_SKIP_ROOT_AUTOSTART", "");
+
     const config = resolveServerConfig();
     expect(config.grpcPort).toBe(DEFAULT_SERVER_PORT);
     expect(config.webPort).toBe(DEFAULT_WEB_PORT);
@@ -44,6 +53,16 @@ describe("resolveServerConfig", () => {
 
   it("throws on negative port", () => {
     vi.stubEnv("GRACKLE_PORT", "-1");
+    expect(() => resolveServerConfig()).toThrow("Invalid port for GRACKLE_PORT");
+  });
+
+  it("throws on port with trailing garbage", () => {
+    vi.stubEnv("GRACKLE_PORT", "9000abc");
+    expect(() => resolveServerConfig()).toThrow("Invalid port for GRACKLE_PORT");
+  });
+
+  it("throws on decimal port", () => {
+    vi.stubEnv("GRACKLE_PORT", "9000.5");
     expect(() => resolveServerConfig()).toThrow("Invalid port for GRACKLE_PORT");
   });
 

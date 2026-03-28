@@ -28,8 +28,8 @@ function parsePort(envName: string, defaultValue: number): number {
   if (!raw) {
     return defaultValue;
   }
-  const parsed = parseInt(raw, 10);
-  if (!Number.isFinite(parsed) || parsed < 1 || parsed > 65535) {
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
     throw new Error(
       `Invalid port for ${envName}: "${raw}". Must be an integer between 1 and 65535.`,
     );
