@@ -206,6 +206,28 @@ message FdInfo {
   string target_session_id = 6; // the other session on this stream
 }
 
+message CreateStreamRequest {
+  string session_id = 1;          // Creator's session ID
+  string name = 2;                // Human-readable label (must be unique)
+}
+
+message CreateStreamResponse {
+  string stream_id = 1;           // Opaque stream identifier
+  int32 fd = 2;                   // Creator's fd (rw permission, async delivery)
+}
+
+message AttachStreamRequest {
+  string session_id = 1;          // Caller's session ID (must hold an fd to the stream)
+  int32 fd = 2;                   // Caller's fd on the stream
+  string target_session_id = 3;   // Session to grant access to
+  string permission = 4;          // "r", "w", or "rw" (must not exceed caller's)
+  string delivery_mode = 5;       // "sync", "async", or "detach"
+}
+
+message AttachStreamResponse {
+  int32 fd = 1;                   // The fd allocated for the target session
+}
+
 // ─── Streaming Events ───────────────────────────────────────
 
 message SessionEvent {
@@ -824,6 +846,8 @@ service Grackle {
   rpc WriteToFd(WriteToFdRequest) returns (Empty);
   rpc CloseFd(CloseFdRequest) returns (CloseFdResponse);
   rpc GetSessionFds(SessionId) returns (SessionFds);
+  rpc CreateStream(CreateStreamRequest) returns (CreateStreamResponse);
+  rpc AttachStream(AttachStreamRequest) returns (AttachStreamResponse);
 
   // Knowledge Graph
   rpc SearchKnowledge(SearchKnowledgeRequest) returns (SearchKnowledgeResponse);

@@ -469,9 +469,15 @@ export async function closeFd(req: grackle.CloseFdRequest): Promise<grackle.Clos
   const streamId = sub.streamId;
   const stream = streamRegistry.getStream(streamId);
 
-  // Collect child sessions (inherited subscriptions, not the caller's)
+  // Only unsubscribe other participants for internal streams (pipe/lifecycle).
+  // Global streams (user-created) only unsubscribe the caller — closing your
+  // fd should not disconnect other participants from the shared stream.
+  const isInternalStream = stream
+    ? (stream.name.startsWith("pipe:") || stream.name.startsWith("lifecycle:"))
+    : false;
+
   const childSubs: Array<{ sessionId: string; subId: string }> = [];
-  if (stream) {
+  if (isInternalStream && stream) {
     for (const s of stream.subscriptions.values()) {
       if (s.sessionId !== req.sessionId) {
         childSubs.push({ sessionId: s.sessionId, subId: s.id });
@@ -482,8 +488,8 @@ export async function closeFd(req: grackle.CloseFdRequest): Promise<grackle.Clos
   // Unsubscribe the caller
   streamRegistry.unsubscribe(sub.id);
 
-  // Also unsubscribe children — when their last subscription is removed,
-  // the lifecycle manager's orphan callback auto-stops them.
+  // Also unsubscribe children on internal streams — when their last
+  // subscription is removed, the lifecycle manager's orphan callback auto-stops them.
   let stopped = false;
   for (const child of childSubs) {
     streamRegistry.unsubscribe(child.subId);
@@ -527,6 +533,126 @@ export function getSessionFds(req: grackle.SessionId): grackle.SessionFds {
     });
   });
   return create(grackle.SessionFdsSchema, { fds });
+}
+
+// ─── Global Stream Helpers ─────────────────────────────────────────────────────
+
+/** Valid permission values for stream subscriptions. */
+const VALID_PERMISSIONS: ReadonlySet<string> = new Set(["r", "w", "rw"]);
+
+/** Valid delivery mode values for stream subscriptions. */
+const VALID_DELIVERY_MODES: ReadonlySet<string> = new Set(["sync", "async", "detach"]);
+
+/** Reserved stream name prefixes used by internal subsystems. */
+const RESERVED_PREFIXES: readonly string[] = ["lifecycle:", "pipe:"];
+
+/** Check if a requested permission is a subset of the caller's permission. */
+function isPermissionSubset(requested: string, callerHas: string): boolean {
+  if (callerHas === "rw") {
+    return true;
+  }
+  return requested === callerHas;
+}
+
+/** Validate permission and deliveryMode, enforcing the w-only → detach rule. */
+function validateSubscriptionParams(permission: string, deliveryMode: string): void {
+  if (!VALID_PERMISSIONS.has(permission)) {
+    throw new ConnectError(
+      `Invalid permission "${permission}" — must be "r", "w", or "rw"`,
+      Code.InvalidArgument,
+    );
+  }
+  if (!VALID_DELIVERY_MODES.has(deliveryMode)) {
+    throw new ConnectError(
+      `Invalid delivery_mode "${deliveryMode}" — must be "sync", "async", or "detach"`,
+      Code.InvalidArgument,
+    );
+  }
+  if (permission === "w" && deliveryMode !== "detach") {
+    throw new ConnectError(
+      `Write-only permission requires delivery_mode "detach" (got "${deliveryMode}")`,
+      Code.InvalidArgument,
+    );
+  }
+}
+
+// ─── Global Stream Handlers ────────────────────────────────────────────────────
+
+/** Create a new named stream. Creator gets an rw/async subscription. */
+export async function createStream(req: grackle.CreateStreamRequest): Promise<grackle.CreateStreamResponse> {
+  if (!req.sessionId) {
+    throw new ConnectError("session_id is required", Code.InvalidArgument);
+  }
+  if (!req.name) {
+    throw new ConnectError("name is required", Code.InvalidArgument);
+  }
+  if (RESERVED_PREFIXES.some((prefix) => req.name.startsWith(prefix))) {
+    throw new ConnectError(
+      `Stream name "${req.name}" uses a reserved prefix`,
+      Code.InvalidArgument,
+    );
+  }
+
+  let stream;
+  try {
+    stream = streamRegistry.createStream(req.name);
+  } catch {
+    throw new ConnectError(`Stream name "${req.name}" already exists`, Code.AlreadyExists);
+  }
+
+  const sub = streamRegistry.subscribe(stream.id, req.sessionId, "rw", "async", false);
+  pipeDelivery.ensureAsyncDeliveryListener(req.sessionId);
+
+  return create(grackle.CreateStreamResponseSchema, {
+    streamId: stream.id,
+    fd: sub.fd,
+  });
+}
+
+/** Attach another session to a stream the caller holds an fd on. */
+export async function attachStream(req: grackle.AttachStreamRequest): Promise<grackle.AttachStreamResponse> {
+  if (!req.sessionId) {
+    throw new ConnectError("session_id is required", Code.InvalidArgument);
+  }
+  if (!req.targetSessionId) {
+    throw new ConnectError("target_session_id is required", Code.InvalidArgument);
+  }
+
+  const callerSub = streamRegistry.getSubscription(req.sessionId, req.fd);
+  if (!callerSub) {
+    throw new ConnectError(
+      `No subscription found for session ${req.sessionId} fd ${String(req.fd)}`,
+      Code.NotFound,
+    );
+  }
+
+  const permission = req.permission || "rw";
+  const deliveryMode = req.deliveryMode || "async";
+
+  validateSubscriptionParams(permission, deliveryMode);
+
+  if (!isPermissionSubset(permission, callerSub.permission)) {
+    throw new ConnectError(
+      `Cannot grant "${permission}" — caller only has "${callerSub.permission}"`,
+      Code.PermissionDenied,
+    );
+  }
+
+  const targetSub = streamRegistry.subscribe(
+    callerSub.streamId,
+    req.targetSessionId,
+    permission as "r" | "w" | "rw",
+    deliveryMode as "sync" | "async" | "detach",
+    false,
+  );
+
+  if (deliveryMode === "async") {
+    pipeDelivery.ensureAsyncDeliveryListener(req.targetSessionId);
+  }
+
+  return create(grackle.AttachStreamResponseSchema, {
+    fd: targetSub.fd,
+  });
 }
 
 /** List sessions with optional filters. */

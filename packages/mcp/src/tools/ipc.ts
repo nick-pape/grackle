@@ -220,4 +220,68 @@ export const ipcTools: ToolDefinition[] = [
       }
     },
   },
+  {
+    name: "ipc_create_stream",
+    group: "ipc",
+    description: "Create a new named stream for inter-session communication. You get an rw file descriptor on the stream. Use ipc_attach to grant other sessions access, and ipc_write/ipc_close to send messages and close the fd.",
+    inputSchema: z.object({
+      name: z.string().describe("Human-readable name for the stream (must be unique)"),
+    }),
+    rpcMethod: "createStream",
+    mutating: true,
+    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+      try {
+        const sessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
+        if (!sessionId) {
+          return {
+            content: [{ type: "text" as const, text: "Error: ipc_create_stream requires scoped auth (agent context)" }],
+            isError: true,
+          };
+        }
+
+        const result = await client.createStream({
+          sessionId,
+          name: args.name as string,
+        });
+        return jsonResult({ streamId: result.streamId, fd: result.fd });
+      } catch (error) {
+        return grpcErrorToToolResult(error);
+      }
+    },
+  },
+  {
+    name: "ipc_attach",
+    group: "ipc",
+    description: "Grant another session access to a stream you hold an fd on. The target session receives a new fd with the specified permission and delivery mode. Permission must be equal to or less than your own (e.g., you can grant 'r' if you have 'rw', but not 'rw' if you only have 'r'). Write-only permission ('w') requires deliveryMode 'detach'.",
+    inputSchema: z.object({
+      fd: z.number().int().describe("Your file descriptor on the stream"),
+      targetSessionId: z.string().describe("Session ID to grant access to"),
+      permission: z.enum(["r", "w", "rw"]).default("rw").describe("Permission level for the target"),
+      deliveryMode: z.enum(["sync", "async", "detach"]).default("async").describe("How the target receives messages"),
+    }),
+    rpcMethod: "attachStream",
+    mutating: true,
+    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+      try {
+        const sessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
+        if (!sessionId) {
+          return {
+            content: [{ type: "text" as const, text: "Error: ipc_attach requires scoped auth (agent context)" }],
+            isError: true,
+          };
+        }
+
+        const result = await client.attachStream({
+          sessionId,
+          fd: args.fd as number,
+          targetSessionId: args.targetSessionId as string,
+          permission: (args.permission as string) || "rw",
+          deliveryMode: (args.deliveryMode as string) || "async",
+        });
+        return jsonResult({ fd: result.fd });
+      } catch (error) {
+        return grpcErrorToToolResult(error);
+      }
+    },
+  },
 ];
