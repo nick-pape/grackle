@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@grackle-ai/cli",
+      "comment": "Fix stuck MCP stub sessions by adding timeout to mcpClient.close(); remove E2E tag scoping to run all tests on every PR",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@grackle-ai/cli"
+}

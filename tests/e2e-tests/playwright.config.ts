@@ -1,23 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 import { cpus } from "node:os";
 
-/**
- * Build a grep RegExp from the E2E_TAGS environment variable.
- * E2E_TAGS is a comma-separated list of Playwright @-tags (e.g., "@task,@session").
- * When unset or empty, returns undefined so all tests run.
- */
-function buildTagGrep(): RegExp | undefined {
-  const raw = process.env.E2E_TAGS?.trim();
-  if (!raw || raw === "all") {
-    return undefined;
-  }
-  const tags = raw
-    .split(",")
-    .map((t) => t.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
-    .filter(Boolean);
-  return tags.length > 0 ? new RegExp(tags.join("|")) : undefined;
-}
-
 /** Default parallel workers: override via E2E_WORKERS, else 2 in CI, else min(4, cpuCount/2). */
 function getWorkerCount(): number | string {
   const envWorkers = process.env.E2E_WORKERS?.trim();
@@ -41,7 +24,6 @@ export default defineConfig({
   timeout: 30_000,
   retries: process.env.CI ? 1 : 0,
   fullyParallel: true,
-  grep: buildTagGrep(),
   reporter: [
     ["list"],
     ["junit", { outputFile: "test-results/e2e-results.xml" }],

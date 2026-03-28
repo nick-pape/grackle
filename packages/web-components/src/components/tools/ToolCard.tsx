@@ -8,6 +8,7 @@ import { SearchCard } from "./SearchCard.js";
 import { TodoCard } from "./TodoCard.js";
 import { MetadataCard } from "./MetadataCard.js";
 import { GenericToolCard } from "./GenericToolCard.js";
+import { AgentToolCard } from "./AgentToolCard.js";
 
 /**
  * Routes a tool event to the appropriate specialized card component.
@@ -33,6 +34,8 @@ export function ToolCard(props: ToolCardProps): JSX.Element {
       return <TodoCard {...props} />;
     case "metadata":
       return <MetadataCard {...props} />;
+    case "agent":
+      return <AgentToolCard {...props} />;
     default:
       return <GenericToolCard {...props} />;
   }

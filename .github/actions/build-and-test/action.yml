@@ -6,10 +6,6 @@ inputs:
     description: Skip E2E tests (Playwright install + rush e2e)
     required: false
     default: "false"
-  e2e-tags:
-    description: Comma-separated Playwright tags to filter E2E tests (empty or "all" = run all)
-    required: false
-    default: ""
 
 runs:
   using: composite
@@ -73,8 +69,6 @@ runs:
     - name: Run E2E tests
       if: inputs.skip-e2e != 'true'
       shell: bash
-      env:
-        E2E_TAGS: ${{ inputs.e2e-tags }}
       run: node common/scripts/install-run-rush.js e2e --verbose
 
     - name: Upload E2E test results

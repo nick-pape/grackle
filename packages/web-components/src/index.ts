@@ -74,6 +74,7 @@ export { SearchCard } from "./components/tools/SearchCard.js";
 export { TodoCard } from "./components/tools/TodoCard.js";
 export { MetadataCard } from "./components/tools/MetadataCard.js";
 export { GenericToolCard } from "./components/tools/GenericToolCard.js";
+export { AgentToolCard } from "./components/tools/AgentToolCard.js";
 export { classifyTool } from "./components/tools/classifyTool.js";
 export { parseUnifiedDiff, diffFromOldNew, diffStats } from "./components/tools/parseDiff.js";
 export type { DiffLine, DiffStats } from "./components/tools/parseDiff.js";
