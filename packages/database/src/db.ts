@@ -1,8 +1,8 @@
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import { join } from "node:path";
-import { mkdirSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { DB_FILENAME } from "@grackle-ai/common";
 import { grackleHome } from "./paths.js";
 import * as schema from "./schema.js";
@@ -86,6 +86,9 @@ function validateBaselineSchema(conn: InstanceType<typeof Database>): void {
 /** Raw better-sqlite3 instance. Available after {@link openDatabase} has been called. */
 let sqlite: InstanceType<typeof Database> | undefined;
 
+/** Resolved path of the database file. Set by {@link openDatabase}. */
+let resolvedDbPath: string | undefined;
+
 /**
  * Drizzle ORM instance wrapping the SQLite database.
  * Available after {@link openDatabase} has been called.
@@ -108,7 +111,7 @@ export function openDatabase(dbPath?: string): void {
     return;
   }
 
-  const resolvedPath = dbPath ?? join(grackleHome, DB_FILENAME);
+  resolvedDbPath = dbPath ?? join(grackleHome, DB_FILENAME);
 
   // Ensure the grackle home directory exists (skip when a custom path is provided,
   // e.g. tests that point at an in-memory or temp-dir database).
@@ -117,7 +120,7 @@ export function openDatabase(dbPath?: string): void {
   }
 
   try {
-    sqlite = new Database(resolvedPath);
+    sqlite = new Database(resolvedDbPath);
   } catch (err) {
     if (err instanceof Error && err.message.includes("Could not locate the bindings file")) {
       process.stderr.write(
@@ -363,6 +366,15 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
     conn.pragma(`user_version = ${BASELINE_VERSION}`);
   }
 
+  // Back up the database before running any pending migrations.
+  // Skip for in-memory databases (tests) and fresh installs (no data to lose).
+  const hasPendingMigrations = MIGRATIONS.some((m) => m.version > currentVersion);
+  if (hasPendingMigrations && resolvedDbPath && currentVersion >= BASELINE_VERSION) {
+    const dbDir = dirname(resolvedDbPath);
+    const backupPath = join(dbDir, `grackle.db.backup-v${currentVersion}`);
+    writeFileSync(backupPath, conn.serialize());
+  }
+
   // Run any pending versioned migrations
   for (const migration of MIGRATIONS) {
     if (migration.version <= currentVersion) {
@@ -382,6 +394,87 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
       }
       throw new Error(`${label}: ${String(error)}`);
     }
+  }
+}
+
+// ─── Integrity Check ────────────────────────────────────────
+
+/**
+ * Run `PRAGMA quick_check` to verify the database B-tree structure.
+ * Throws if the database is corrupt.
+ *
+ * @param conn - Optional SQLite instance. Defaults to the module-level singleton.
+ */
+export function checkDatabaseIntegrity(conn?: InstanceType<typeof Database>): void {
+  const c = conn ?? sqlite;
+  if (!c) {
+    return;
+  }
+  const result = c.pragma("quick_check", { simple: true }) as string;
+  if (result !== "ok") {
+    throw new Error(
+      `Database integrity check failed: ${result}. ` +
+      "The database file may be corrupt. " +
+      "Restore from a backup or delete the database file and restart.",
+    );
+  }
+}
+
+// ─── Backup ─────────────────────────────────────────────────
+
+/**
+ * Create a consistent backup of the database using the SQLite backup API.
+ * Handles WAL correctly (unlike a raw file copy).
+ *
+ * @param targetPath - Path to write the backup file.
+ * @param conn - Optional SQLite instance. Defaults to the module-level singleton.
+ */
+export async function backupDatabase(targetPath: string, conn?: InstanceType<typeof Database>): Promise<void> {
+  const c = conn ?? sqlite;
+  if (!c) {
+    return;
+  }
+  await c.backup(targetPath);
+}
+
+// ─── WAL Checkpoint Management ──────────────────────────────
+
+/** Interval between periodic WAL checkpoints (5 minutes). */
+const WAL_CHECKPOINT_INTERVAL_MS: number = 5 * 60 * 1000;
+
+/** Handle for the periodic WAL checkpoint timer. */
+let walTimer: ReturnType<typeof setInterval> | undefined;
+
+/**
+ * Run a passive WAL checkpoint. Non-blocking — does not interfere with readers.
+ *
+ * @param conn - Optional SQLite instance. Defaults to the module-level singleton.
+ */
+export function walCheckpoint(conn?: InstanceType<typeof Database>): void {
+  const c = conn ?? sqlite;
+  if (!c) {
+    return;
+  }
+  c.pragma("wal_checkpoint(PASSIVE)");
+}
+
+/**
+ * Start a periodic timer that runs {@link walCheckpoint} every 5 minutes.
+ * The timer is unref'd so it doesn't keep the process alive.
+ */
+export function startWalCheckpointTimer(): void {
+  if (walTimer) {
+    return;
+  }
+  walTimer = setInterval(walCheckpoint, WAL_CHECKPOINT_INTERVAL_MS);
+  walTimer.unref();
+}
+
+/** Stop the periodic WAL checkpoint timer. */
+export function stopWalCheckpointTimer(): void {
+  if (walTimer) {
+    clearInterval(walTimer);
+    walTimer = undefined;
   }
 }
 

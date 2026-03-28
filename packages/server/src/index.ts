@@ -18,7 +18,7 @@ import {
   logger, exec, detectLanIp,
   runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace,
 } from "@grackle-ai/core";
-import { envRegistry, sessionStore, workspaceStore, taskStore, scheduleStore, personaStore, settingsStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome } from "@grackle-ai/database";
+import { envRegistry, sessionStore, workspaceStore, taskStore, scheduleStore, personaStore, settingsStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome, checkDatabaseIntegrity, walCheckpoint, startWalCheckpointTimer, stopWalCheckpointTimer } from "@grackle-ai/database";
 import { DockerAdapter } from "@grackle-ai/adapter-docker";
 import { LocalAdapter } from "@grackle-ai/adapter-local";
 import { SshAdapter } from "@grackle-ai/adapter-ssh";
@@ -45,10 +45,12 @@ const esmRequire: NodeRequire = createRequire(import.meta.url);
 let localPowerLineManager: LocalPowerLineManager | undefined;
 
 async function main(): Promise<void> {
-  // Open the database, run schema migrations, then seed application defaults
+  // Open the database, verify integrity, run schema migrations, then seed defaults
   openDatabase();
+  checkDatabaseIntegrity();
   initDatabase();
   seedDatabase(sqlite!);
+  startWalCheckpointTimer();
 
   // Reset all environment statuses on startup — in-memory connections are lost
   envRegistry.resetAllStatuses();
@@ -477,6 +479,7 @@ async function main(): Promise<void> {
 
   async function shutdown(): Promise<void> {
     logger.info("Shutting down...");
+    stopWalCheckpointTimer();
     stopPairingCleanup();
     stopSessionCleanup();
     stopOAuthCleanup();
@@ -530,6 +533,10 @@ async function main(): Promise<void> {
       });
     });
 
+    // Final WAL checkpoint (TRUNCATE) to fully flush pending writes before exit
+    if (sqlite) {
+      sqlite.pragma("wal_checkpoint(TRUNCATE)");
+    }
     clearTimeout(forceExit);
     process.exit(process.exitCode || 0);
   }
