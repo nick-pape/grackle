@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/runtime-codex",
-  "version": "0.86.1",
+  "version": "0.87.0",
   "description": "Grackle OpenAI Codex runtime implementation",
   "license": "MIT",
   "repository": {
