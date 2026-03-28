@@ -36,7 +36,7 @@ function parseResult(result: string | undefined): { single?: TaskSummary; list?:
   try {
     const parsed: unknown = JSON.parse(result);
     if (Array.isArray(parsed)) {
-      return { list: parsed as TaskSummary[] };
+      return { list: (parsed as unknown[]).filter((v): v is TaskSummary => v !== null && typeof v === "object") };
     }
     if (typeof parsed === "object" && parsed !== null) {
       const obj = parsed as Record<string, unknown>;

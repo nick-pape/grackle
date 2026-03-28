@@ -43,7 +43,7 @@ function parseResult(result: string | undefined): { sessionId?: string; fd?: num
     return {
       sessionId: typeof obj.sessionId === "string" ? obj.sessionId : undefined,
       fd: typeof obj.fd === "number" ? obj.fd : undefined,
-      fds: Array.isArray(obj.fds) ? (obj.fds as FdEntry[]) : undefined,
+      fds: Array.isArray(obj.fds) ? (obj.fds as unknown[]).filter((v): v is FdEntry => v !== null && typeof v === "object") : undefined,
       success: typeof obj.success === "boolean" ? obj.success : undefined,
       output: typeof obj.output === "string" ? obj.output : undefined,
     };

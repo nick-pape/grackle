@@ -35,7 +35,7 @@ function parseResult(result: string | undefined): { single?: Finding; list?: Fin
   try {
     const parsed: unknown = JSON.parse(result);
     if (Array.isArray(parsed)) {
-      return { list: parsed as Finding[] };
+      return { list: (parsed as unknown[]).filter((v): v is Finding => v !== null && typeof v === "object") };
     }
     if (typeof parsed === "object" && parsed !== null) {
       return { single: parsed as Finding };

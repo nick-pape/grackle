@@ -97,6 +97,13 @@ export function WorkpadCard({ tool, args, result, isError }: ToolCardProps): JSX
         </pre>
       )}
 
+      {/* Raw result fallback when parsing yields nothing structured */}
+      {!isError && !inProgress && result && !displaySummary && !displayStatus && !resultData.extra && (
+        <pre className={styles.pre} data-testid="tool-card-result">
+          {result}
+        </pre>
+      )}
+
       {/* Extra data (expandable) */}
       {!isError && resultData.extra && (
         <>

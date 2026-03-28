@@ -46,7 +46,7 @@ function parseResult(result: string | undefined): { results?: KnowledgeResult[];
     const obj = parsed as Record<string, unknown>;
     // knowledge_search returns { results: [...], neighbors, neighborEdges }
     if (Array.isArray(obj.results)) {
-      return { results: obj.results as KnowledgeResult[] };
+      return { results: (obj.results as unknown[]).filter((v): v is KnowledgeResult => v !== null && typeof v === "object") };
     }
     // knowledge_get_node returns { node, edges, neighbors }
     if (typeof obj.node === "object" && obj.node !== null) {
