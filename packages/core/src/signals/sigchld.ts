@@ -8,8 +8,8 @@ import { logger } from "../logger.js";
 /** Maximum length for the child's last text message in the notification. */
 const MAX_LAST_MESSAGE_LENGTH: number = 2000;
 
-/** Maximum number of inline delivery retries before giving up. */
-const MAX_DELIVERY_RETRIES: number = 2;
+/** Maximum number of delivery attempts (1 initial + retries). */
+const MAX_DELIVERY_ATTEMPTS: number = 3;
 
 /** Delay (ms) between delivery retries. */
 const DELIVERY_RETRY_DELAY_MS: number = 1_000;
@@ -153,7 +153,7 @@ async function handleTaskUpdated(childTaskId: string): Promise<void> {
   // without retry, a concurrent handler that was deduped cannot re-attempt delivery,
   // and deleting the key only helps if another task.updated event arrives (not guaranteed).
   let success = false;
-  for (let attempt = 0; attempt <= MAX_DELIVERY_RETRIES; attempt++) {
+  for (let attempt = 0; attempt < MAX_DELIVERY_ATTEMPTS; attempt++) {
     if (attempt > 0) {
       logger.warn(
         { childTaskId, parentTaskId: childTask.parentTaskId, attempt },
@@ -171,7 +171,7 @@ async function handleTaskUpdated(childTaskId: string): Promise<void> {
     // All retries exhausted — delete the dedup key so future events can try again
     delivered.delete(dedupeKey);
     logger.error(
-      { childTaskId, parentTaskId: childTask.parentTaskId, attempts: MAX_DELIVERY_RETRIES + 1 },
+      { childTaskId, parentTaskId: childTask.parentTaskId, attempts: MAX_DELIVERY_ATTEMPTS },
       "SIGCHLD delivery failed after all retries",
     );
   }

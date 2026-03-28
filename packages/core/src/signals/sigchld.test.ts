@@ -128,6 +128,7 @@ async function flush(): Promise<void> {
 
 describe("initSigchldSubscriber", () => {
   beforeEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
     _resetForTesting();
     eventBusMock._testReset();
