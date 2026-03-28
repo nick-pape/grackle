@@ -20,6 +20,7 @@ export type ToolCategory =
   | "knowledge"
   | "ipc"
   | "tool-search"
+  | "agent"
   | "generic";
 
 /** Known MCP server names for bare-name extraction from Copilot dash format. */
@@ -116,6 +117,11 @@ const TOOL_MAP: Record<string, ToolCategory> = {
 
   // ToolSearch — Claude Code built-in
   toolsearch: "tool-search",
+
+  // Agent — Claude Code: Agent (formerly Task), Copilot: task, read_agent
+  agent: "agent",
+  task: "agent",
+  read_agent: "agent",
 };
 
 /** Classifies a tool name to determine which card component should render it. */

@@ -14,6 +14,7 @@ import { KnowledgeCard } from "./KnowledgeCard.js";
 import { IpcCard } from "./IpcCard.js";
 import { ToolSearchCard } from "./ToolSearchCard.js";
 import { GenericToolCard } from "./GenericToolCard.js";
+import { AgentToolCard } from "./AgentToolCard.js";
 
 /**
  * Routes a tool event to the appropriate specialized card component.
@@ -51,6 +52,8 @@ export function ToolCard(props: ToolCardProps): JSX.Element {
       return <IpcCard {...props} />;
     case "tool-search":
       return <ToolSearchCard {...props} />;
+    case "agent":
+      return <AgentToolCard {...props} />;
     default:
       return <GenericToolCard {...props} />;
   }
