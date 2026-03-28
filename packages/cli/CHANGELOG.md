@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 28 Mar 2026 02:26:43 GMT and should not be manually modified.
+This log was last generated on Sat, 28 Mar 2026 02:50:43 GMT and should not be manually modified.
+
+## 0.88.0
+Sat, 28 Mar 2026 02:50:43 GMT
+
+### Minor changes
+
+- Add createStream and attachStream gRPC endpoints and MCP tools for capability-based global streams
 
 ## 0.87.0
 Sat, 28 Mar 2026 02:26:43 GMT

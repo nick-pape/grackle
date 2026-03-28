@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.88.0",
+      "tag": "@grackle-ai/cli_v0.88.0",
+      "date": "Sat, 28 Mar 2026 02:50:43 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add createStream and attachStream gRPC endpoints and MCP tools for capability-based global streams"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.87.0",
       "tag": "@grackle-ai/cli_v0.87.0",
       "date": "Sat, 28 Mar 2026 02:26:43 GMT",
