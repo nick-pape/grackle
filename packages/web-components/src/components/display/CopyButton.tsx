@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type JSX } from "react";
+import { Check, Clipboard } from "lucide-react";
+import { ICON_MD } from "../../utils/iconSize.js";
 import styles from "./CopyButton.module.scss";
 
 /** Duration in milliseconds to show the "copied" checkmark before reverting. */
@@ -56,7 +58,7 @@ export function CopyButton({ text, className, "data-testid": testId }: CopyButto
       aria-label={copied ? "Copied" : "Copy to clipboard"}
       data-testid={testId ?? "copy-button"}
     >
-      {copied ? "\u2713" : "\uD83D\uDCCB"}
+      {copied ? <Check size={ICON_MD} aria-hidden="true" /> : <Clipboard size={ICON_MD} aria-hidden="true" />}
     </button>
   );
 }

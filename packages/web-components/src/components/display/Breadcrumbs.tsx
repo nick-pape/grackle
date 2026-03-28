@@ -1,15 +1,14 @@
 import type { JSX } from "react";
+import { ChevronRight } from "lucide-react";
 import { Link } from "react-router";
 import type { BreadcrumbSegment } from "../../utils/breadcrumbs.js";
+import { ICON_SM } from "../../utils/iconSize.js";
 import styles from "./Breadcrumbs.module.scss";
 
 /** Props for the Breadcrumbs component. */
 interface BreadcrumbsProps {
   segments: BreadcrumbSegment[];
 }
-
-/** Separator character between breadcrumb segments. */
-const SEPARATOR: string = "\u203A"; // ›
 
 /** Renders a clickable breadcrumb trail from a list of segments. */
 export function Breadcrumbs({ segments }: BreadcrumbsProps): JSX.Element {
@@ -22,7 +21,7 @@ export function Breadcrumbs({ segments }: BreadcrumbsProps): JSX.Element {
             <li key={index} className={styles.item}>
               {index > 0 && (
                 <span className={styles.separator} aria-hidden="true">
-                  {SEPARATOR}
+                  <ChevronRight size={ICON_SM} />
                 </span>
               )}
               {segment.url && !isLast ? (

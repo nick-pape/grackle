@@ -1,7 +1,9 @@
 import { useMemo, useRef, useState, type JSX, type ReactNode } from "react";
+import { AlertTriangle, ArrowDown, ArrowUp } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { EventRenderer } from "./EventRenderer.js";
 import { useSmartScroll } from "../../hooks/useSmartScroll.js";
+import { ICON_MD } from "../../utils/iconSize.js";
 import type { DisplayEvent } from "../../utils/sessionEvents.js";
 import styles from "./EventStream.module.scss";
 
@@ -24,7 +26,7 @@ function EventOverflowBanner({ eventsDropped }: { eventsDropped: number }): JSX.
   }
   return (
     <div className={styles.eventOverflowWarning} role="alert">
-      {"\u26A0"} {eventsDropped.toLocaleString()} older event{eventsDropped === 1 ? "" : "s"} were dropped — only the most recent 5,000 are shown. Full history is available in the session log.
+      <AlertTriangle size={ICON_MD} aria-hidden="true" /> {eventsDropped.toLocaleString()} older event{eventsDropped === 1 ? "" : "s"} were dropped — only the most recent 5,000 are shown. Full history is available in the session log.
     </div>
   );
 }
@@ -83,7 +85,7 @@ export function EventStream({ events, eventsDropped, emptyState }: EventStreamPr
           aria-label={isReversed ? "Switch to newest at bottom" : "Switch to newest at top"}
           data-testid="direction-toggle"
         >
-          {isReversed ? "\u2193" : "\u2191"}
+          {isReversed ? <ArrowDown size={ICON_MD} aria-hidden="true" /> : <ArrowUp size={ICON_MD} aria-hidden="true" />}
         </button>
       </div>
 
@@ -122,7 +124,7 @@ export function EventStream({ events, eventsDropped, emptyState }: EventStreamPr
             aria-label="Scroll to latest"
             data-testid="scroll-to-anchor"
           >
-            {isReversed ? "\u2191" : "\u2193"} New events
+            {isReversed ? <ArrowUp size={ICON_MD} aria-hidden="true" /> : <ArrowDown size={ICON_MD} aria-hidden="true" />} New events
           </motion.button>
         )}
       </AnimatePresence>

@@ -39,9 +39,11 @@
 
 .icon {
   flex-shrink: 0;
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 16px;
-  text-align: center;
+  font-size: var(--font-size-sm); // fallback for text icons (e.g. ShellCard "$")
 }
 
 .toolName {
@@ -93,7 +95,8 @@
 }
 
 .chevron {
-  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
   transition: transform var(--transition-fast);
 }
 
