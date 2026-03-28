@@ -25,12 +25,19 @@ export function handleFatalError(err: unknown, label: string): void {
   process.exit(1);
 }
 
+/** Whether crash handlers have already been registered. */
+let crashHandlersRegistered: boolean = false;
+
 /**
  * Register global `uncaughtException` and `unhandledRejection` handlers.
  * Call once at startup, before `main()`, so crashes during initialization
- * are also caught.
+ * are also caught. Idempotent — subsequent calls are no-ops.
  */
 export function registerCrashHandlers(): void {
+  if (crashHandlersRegistered) {
+    return;
+  }
+  crashHandlersRegistered = true;
   process.on("uncaughtException", (err) => handleFatalError(err, "Uncaught exception"));
   process.on("unhandledRejection", (reason) => handleFatalError(reason, "Unhandled rejection"));
 }

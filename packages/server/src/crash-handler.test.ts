@@ -1,7 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
 
 // ── Mock dependencies before importing ──────────────
-// vi.mock factories are hoisted — cannot reference variables declared outside.
 
 vi.mock("@grackle-ai/core", () => ({
   logger: {
@@ -30,16 +29,14 @@ const { __setSqlite } = await import("@grackle-ai/database") as unknown as {
 };
 
 const mockProcessExit = vi.spyOn(process, "exit").mockImplementation((() => {}) as never);
-const mockProcessOn = vi.spyOn(process, "on");
+
+afterAll(() => {
+  mockProcessExit.mockRestore();
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
   __setSqlite({ pragma: mockPragma });
-});
-
-afterEach(() => {
-  mockProcessExit.mockClear();
-  mockProcessOn.mockClear();
 });
 
 describe("handleFatalError", () => {
@@ -83,10 +80,15 @@ describe("handleFatalError", () => {
 
 describe("registerCrashHandlers", () => {
   it("registers uncaughtException and unhandledRejection handlers", () => {
-    registerCrashHandlers();
+    const mockProcessOn = vi.spyOn(process, "on").mockImplementation((() => process) as never);
+    try {
+      registerCrashHandlers();
 
-    const eventNames = mockProcessOn.mock.calls.map((call) => call[0]);
-    expect(eventNames).toContain("uncaughtException");
-    expect(eventNames).toContain("unhandledRejection");
+      const eventNames = mockProcessOn.mock.calls.map((call) => call[0]);
+      expect(eventNames).toContain("uncaughtException");
+      expect(eventNames).toContain("unhandledRejection");
+    } finally {
+      mockProcessOn.mockRestore();
+    }
   });
 });
