@@ -238,11 +238,11 @@ export class StubSession implements AgentSession {
     const toolUseId = `toolu_stub_mcp_${++mcpToolUseCounter}`;
     let mcpClient: InstanceType<typeof import("@modelcontextprotocol/sdk/client/index.js").Client> | undefined;
     let yieldedToolUse = false;
+    const abortController = new AbortController();
 
     try {
       const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
       const { StreamableHTTPClientTransport } = await import("@modelcontextprotocol/sdk/client/streamableHttp.js");
-
       const transport = new StreamableHTTPClientTransport(
         new URL(this.mcpBroker!.url),
         {
@@ -250,6 +250,7 @@ export class StubSession implements AgentSession {
             headers: {
               Authorization: `Bearer ${this.mcpBroker!.token}`,
             },
+            signal: abortController.signal,
           },
         },
       );
@@ -305,9 +306,11 @@ export class StubSession implements AgentSession {
         raw: { type: "tool_result", tool_use_id: toolUseId, is_error: true },
       };
     } finally {
+      // Abort the HTTP transport first to kill any SSE connections, then
+      // fire-and-forget close. Without abort, the transport's open connections
+      // can prevent the generator from advancing past subsequent yield points.
+      abortController!.abort();
       if (mcpClient) {
-        // Fire-and-forget close — never block the generator. A hanging close()
-        // (e.g. stuck HTTP transport) would prevent "completed" from being yielded.
         mcpClient.close().catch(() => {});
       }
     }
