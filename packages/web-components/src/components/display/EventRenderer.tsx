@@ -1,9 +1,11 @@
 import { type ReactNode, useState, type JSX } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import Markdown from "react-markdown";
 import rehypePrismPlus from "rehype-prism-plus/common";
 import remarkGfm from "remark-gfm";
 import type { SessionEvent } from "../../hooks/types.js";
 import { formatTokens, formatCost } from "../../utils/format.js";
+import { ICON_SM } from "../../utils/iconSize.js";
 import { ToolCard } from "../tools/ToolCard.js";
 import { CopyButton } from "./CopyButton.js";
 import styles from "./EventRenderer.module.scss";
@@ -13,6 +15,8 @@ interface Props {
   event: SessionEvent;
   /** Paired tool_use context, attached by SessionPanel when raw IDs match. */
   toolUseCtx?: { tool: string; args: unknown; detailedResult?: string };
+  /** True when a tool_use completed but has no tool_result (e.g. Claude Code text-result pattern). */
+  settled?: boolean;
 }
 
 // --- Individual event type renderers ---
@@ -38,7 +42,7 @@ function SystemContextEvent({ content }: { content: string }): JSX.Element {
         <span className={styles.systemContextBadge}>SYSTEM PROMPT</span>
         {hasMore && (
           <span className={styles.systemContextToggle} aria-hidden="true">
-            {expanded ? "\u25be" : "\u25b8"}
+            {expanded ? <ChevronDown size={ICON_SM} /> : <ChevronRight size={ICON_SM} />}
           </span>
         )}
       </button>
@@ -188,7 +192,7 @@ function DefaultEvent({ content }: { content: string }): JSX.Element {
 // --- Main component ---
 
 /** Renders a single session event, dispatching to the appropriate type-specific renderer. */
-export function EventRenderer({ event, toolUseCtx }: Props): JSX.Element {
+export function EventRenderer({ event, toolUseCtx, settled }: Props): JSX.Element {
   const time = new Date(event.timestamp).toLocaleTimeString();
 
   switch (event.eventType) {
@@ -215,7 +219,9 @@ export function EventRenderer({ event, toolUseCtx }: Props): JSX.Element {
         tool = parsed.tool || "";
         args = parsed.args;
       } catch { /* fallback to empty */ }
-      return <ToolCard tool={tool} args={args} />;
+      // When settled, pass empty result so the card shows as completed (no spinner)
+      // rather than in-progress. This handles Claude Code which emits results as text.
+      return <ToolCard tool={tool} args={args} result={settled ? "" : undefined} />;
     }
     case "tool_result": {
       // When paired, toolUseCtx provides the tool name, args, and optional detailedResult.

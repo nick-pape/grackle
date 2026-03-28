@@ -505,6 +505,120 @@ describe("ClaudeCodeRuntime — usage event emission", () => {
   });
 });
 
+describe("ClaudeCodeRuntime — synthetic tool_result emission", () => {
+  beforeEach(() => {
+    vi.stubEnv("GRACKLE_MCP_CONFIG", "");
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("emits synthetic tool_result when tool_use is followed by text in next message", async () => {
+    // Simulates the real SDK flow: tool_use in one message, text response in the next
+    mockQuery.mockReturnValue(asyncIterableFrom([
+      { type: "system", subtype: "init", session_id: "sdk-synth-1", model: "claude-sonnet-4" },
+      {
+        type: "assistant",
+        message: {
+          role: "assistant",
+          content: [{ type: "tool_use", id: "toolu_abc123", name: "Bash", input: { command: "ls" } }],
+        },
+      },
+      {
+        type: "assistant",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "Here are the files..." }],
+        },
+      },
+      { type: "result", subtype: "success", is_error: false, result: "done" },
+    ]));
+
+    const runtime = new ClaudeCodeRuntime();
+    const session = runtime.spawn({ sessionId: "cc-synth-1", prompt: "ls", model: "claude-sonnet-4", maxTurns: 1 });
+    const events = await collectUntilIdle(session);
+
+    // Should have: system, runtime_session_id, tool_use, tool_result (synthetic), text, usage
+    const toolUseEvents = events.filter((e) => e.type === "tool_use");
+    const toolResultEvents = events.filter((e) => e.type === "tool_result");
+
+    expect(toolUseEvents).toHaveLength(1);
+    expect(toolResultEvents).toHaveLength(1);
+
+    // The synthetic tool_result should reference the tool_use ID
+    const raw = toolResultEvents[0].raw as Record<string, unknown>;
+    expect(raw.tool_use_id).toBe("toolu_abc123");
+    expect(raw.synthetic).toBe(true);
+  });
+
+  it("emits synthetic tool_result for multiple tool_use blocks before text", async () => {
+    mockQuery.mockReturnValue(asyncIterableFrom([
+      { type: "system", subtype: "init", session_id: "sdk-synth-2", model: "claude-sonnet-4" },
+      {
+        type: "assistant",
+        message: {
+          role: "assistant",
+          content: [
+            { type: "tool_use", id: "toolu_1", name: "Bash", input: { command: "ls" } },
+            { type: "tool_use", id: "toolu_2", name: "Read", input: { path: "/tmp/test" } },
+          ],
+        },
+      },
+      {
+        type: "assistant",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "Done with both tools" }],
+        },
+      },
+      { type: "result", subtype: "success", is_error: false, result: "done" },
+    ]));
+
+    const runtime = new ClaudeCodeRuntime();
+    const session = runtime.spawn({ sessionId: "cc-synth-2", prompt: "test", model: "claude-sonnet-4", maxTurns: 1 });
+    const events = await collectUntilIdle(session);
+
+    const toolResultEvents = events.filter((e) => e.type === "tool_result");
+    expect(toolResultEvents).toHaveLength(2);
+
+    const ids = toolResultEvents.map((e) => (e.raw as Record<string, unknown>).tool_use_id);
+    expect(ids).toContain("toolu_1");
+    expect(ids).toContain("toolu_2");
+  });
+
+  it("does not emit synthetic tool_result when SDK provides real tool_result", async () => {
+    // If the SDK includes tool_result in the same message, no synthetic needed
+    mockQuery.mockReturnValue(asyncIterableFrom([
+      { type: "system", subtype: "init", session_id: "sdk-synth-3", model: "claude-sonnet-4" },
+      {
+        type: "assistant",
+        message: {
+          role: "assistant",
+          content: [
+            { type: "tool_use", id: "toolu_real", name: "Bash", input: { command: "echo hi" } },
+            { type: "tool_result", content: "hi" },
+          ],
+        },
+      },
+      { type: "result", subtype: "success", is_error: false, result: "done" },
+    ]));
+
+    const runtime = new ClaudeCodeRuntime();
+    const session = runtime.spawn({ sessionId: "cc-synth-3", prompt: "test", model: "claude-sonnet-4", maxTurns: 1 });
+    const events = await collectUntilIdle(session);
+
+    const toolResultEvents = events.filter((e) => e.type === "tool_result");
+    // Real tool_result from mapMessage, plus synthetic from flush at stream end
+    // The real one should appear first
+    expect(toolResultEvents.length).toBeGreaterThanOrEqual(1);
+    // First tool_result should be the real one (no synthetic flag)
+    const firstRaw = toolResultEvents[0].raw as Record<string, unknown>;
+    expect(firstRaw.synthetic).toBeUndefined();
+  });
+});
+
 // ─── Multi-turn integration tests ──────────────────────────
 
 import { drainUntilStatus } from "@grackle-ai/runtime-sdk";

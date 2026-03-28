@@ -1,6 +1,8 @@
-import { useState, type JSX } from "react";
+import { useState, type JSX, type ReactNode } from "react";
+import { ChevronRight, FilePen, FileText } from "lucide-react";
 import type { ToolCardProps } from "./ToolCardProps.js";
 import { CopyButton } from "../display/CopyButton.js";
+import { ICON_SM, ICON_MD } from "../../utils/iconSize.js";
 import styles from "./toolCards.module.scss";
 
 /** Extracts the file path from tool args (handles both `file_path` and `path` variants). */
@@ -42,7 +44,7 @@ export function FileReadCard({ tool, args, result, isError, writeVariant }: File
 
   const accentClass: string = isError ? styles.cardRed : (writeVariant ? styles.cardGreen : styles.cardBlue);
   const accentColor: string = writeVariant ? "var(--accent-green)" : "var(--accent-blue)";
-  const icon: string = writeVariant ? "📝" : "📄";
+  const icon: ReactNode = writeVariant ? <FilePen size={ICON_MD} /> : <FileText size={ICON_MD} />;
   const testId: string = writeVariant ? "tool-card-file-write" : "tool-card-file-read";
 
   const lines = result?.split("\n") ?? [];
@@ -97,7 +99,7 @@ export function FileReadCard({ tool, args, result, isError, writeVariant }: File
               aria-expanded={expanded}
               data-testid="tool-card-toggle"
             >
-              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}>▸</span>
+              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`} aria-hidden="true"><ChevronRight size={ICON_SM} /></span>
               {expanded ? "collapse" : `${lines.length - PREVIEW_LINES} more lines`}
             </button>
           )}

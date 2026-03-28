@@ -1,6 +1,8 @@
 import { useState, type JSX } from "react";
+import { ChevronRight, Cog } from "lucide-react";
 import type { ToolCardProps } from "./ToolCardProps.js";
 import { CopyButton } from "../display/CopyButton.js";
+import { ICON_SM, ICON_MD } from "../../utils/iconSize.js";
 import styles from "./toolCards.module.scss";
 
 /** Formats an MCP tool name for display: `mcp__server__tool` → `server / tool`. */
@@ -66,7 +68,7 @@ export function GenericToolCard({ tool, args, result, isError }: ToolCardProps):
       data-testid="tool-card-generic"
     >
       <div className={styles.header}>
-        <span className={styles.icon}>⚙</span>
+        <span className={styles.icon}><Cog size={ICON_MD} aria-hidden="true" /></span>
         <span className={styles.toolName} style={{ color: "var(--accent-blue)" }}>{display}</span>
         {preview && (
           <span className={styles.fileName}>{preview}</span>
@@ -102,7 +104,7 @@ export function GenericToolCard({ tool, args, result, isError }: ToolCardProps):
               aria-expanded={expanded}
               data-testid="tool-card-toggle"
             >
-              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}>▸</span>
+              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`} aria-hidden="true"><ChevronRight size={ICON_SM} /></span>
               {expanded ? "collapse" : `${resultLines.length - PREVIEW_LINES} more lines`}
             </button>
           )}

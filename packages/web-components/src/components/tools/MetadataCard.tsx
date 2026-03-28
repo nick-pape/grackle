@@ -1,5 +1,7 @@
 import type { JSX } from "react";
+import { CornerDownRight } from "lucide-react";
 import type { ToolCardProps } from "./ToolCardProps.js";
+import { ICON_SM } from "../../utils/iconSize.js";
 import styles from "./toolCards.module.scss";
 
 /** Extracts a human-readable summary from metadata tool args. */
@@ -30,7 +32,7 @@ export function MetadataCard({ tool, args }: ToolCardProps): JSX.Element {
 
   return (
     <div className={styles.metadata} data-testid="tool-card-metadata">
-      <span className={styles.metadataPrefix}>↳</span>
+      <span className={styles.metadataPrefix}><CornerDownRight size={ICON_SM} /></span>
       {summary}
     </div>
   );

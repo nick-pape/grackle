@@ -1,5 +1,7 @@
-import { type JSX } from "react";
+import { type JSX, type ReactNode } from "react";
+import { Check, Circle, ListChecks } from "lucide-react";
 import type { ToolCardProps } from "./ToolCardProps.js";
+import { ICON_SM, ICON_MD } from "../../utils/iconSize.js";
 import styles from "./toolCards.module.scss";
 import todoStyles from "./TodoCard.module.scss";
 
@@ -110,14 +112,14 @@ function parseMarkdownChecklist(content: string): TodoItem[] {
 }
 
 /** Status icon for a todo item. */
-function statusIcon(status: string): string {
+function statusIcon(status: string): ReactNode {
   switch (status) {
     case "completed":
-      return "✓";
+      return <Check size={ICON_SM} />;
     case "in_progress":
-      return "●";
+      return <Circle size={ICON_SM} fill="currentColor" />;
     default:
-      return "○";
+      return <Circle size={ICON_SM} />;
   }
 }
 
@@ -134,7 +136,7 @@ export function TodoCard({ args }: ToolCardProps): JSX.Element {
       data-testid="tool-card-todo"
     >
       <div className={styles.header}>
-        <span className={styles.icon}>☑</span>
+        <span className={styles.icon}><ListChecks size={ICON_MD} /></span>
         <span className={styles.toolName} style={{ color: "var(--accent-blue)" }}>
           {isEmpty ? "Todos cleared" : "Todos"}
         </span>
@@ -161,7 +163,7 @@ export function TodoCard({ args }: ToolCardProps): JSX.Element {
       {/* Active task callout */}
       {inProgress && (
         <div className={todoStyles.activeTask} data-testid="tool-card-todo-active">
-          <span className={todoStyles.activeIcon}>●</span>
+          <span className={todoStyles.activeIcon}><Circle size={ICON_SM} fill="currentColor" /></span>
           <span className={todoStyles.activeText}>
             {inProgress.activeForm || inProgress.content}
           </span>
