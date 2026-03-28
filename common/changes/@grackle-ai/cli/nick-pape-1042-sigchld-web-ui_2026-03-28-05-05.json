@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Fix leaf task prompt: agents no longer try to self-complete (only ancestors can complete tasks)",
+      "comment": "Fix leaf task prompt so agents no longer try to self-complete, update task_complete tool description, and add SIGCHLD regression test for web-UI-started children",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
