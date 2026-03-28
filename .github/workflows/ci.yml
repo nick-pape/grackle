@@ -112,7 +112,7 @@ jobs:
 
       - name: BuildPulse — upload test results
         if: always() && github.repository == 'nick-pape/grackle' && vars.BUILDPULSE_ACCOUNT_ID != ''
-        uses: buildpulse/buildpulse-action@v0.24.0
+        uses: buildpulse/buildpulse-action@v0.12.0
         with:
           account: ${{ vars.BUILDPULSE_ACCOUNT_ID }}
           repository: ${{ vars.BUILDPULSE_REPOSITORY_ID }}
