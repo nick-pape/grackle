@@ -2,7 +2,7 @@
   "changes": [
     {
       "comment": "refactor: replace __clear__ sentinel with AllowedMcpTools wrapper message for proto3 presence tracking on UpdatePersonaRequest",
-      "type": "patch",
+      "type": "minor",
       "packageName": "@grackle-ai/cli"
     }
   ],
