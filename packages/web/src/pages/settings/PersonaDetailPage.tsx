@@ -3,7 +3,7 @@ import { useParams, Navigate } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { Breadcrumbs, Button, ConfirmDialog, EditableSelect, EditableTextArea, EditableTextField, McpToolSelector, PERSONAS_URL, SETTINGS_URL, personaUrl, useAppNavigate, useToast } from "@grackle-ai/web-components";
 import type { BreadcrumbSegment, PersonaData, SelectOption } from "@grackle-ai/web-components";
-import styles from "@grackle-ai/web-components/src/components/personas/PersonaManager.module.scss";
+import styles from "./PersonaDetail.module.scss";
 
 const RUNTIME_OPTIONS: SelectOption[] = [
   { value: "claude-code", label: "claude-code" },

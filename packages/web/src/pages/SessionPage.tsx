@@ -3,7 +3,7 @@ import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import { Breadcrumbs, ChatInput, EventStream, SplitButton, buildSessionBreadcrumbs, formatCost, formatTokens, groupConsecutiveTextEvents, pairToolEvents, useToast } from "@grackle-ai/web-components";
 import type { Session } from "../hooks/useGrackleSocket.js";
-import styles from "@grackle-ai/web-components/src/components/panels/SessionPanel.module.scss";
+import styles from "./page-layout.module.scss";
 
 /** Props for the SessionHeader subcomponent. */
 interface SessionHeaderProps {

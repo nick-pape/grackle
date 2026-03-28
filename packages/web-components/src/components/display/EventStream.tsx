@@ -3,7 +3,6 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { EventRenderer } from "./EventRenderer.js";
 import { useSmartScroll } from "../../hooks/useSmartScroll.js";
 import type { DisplayEvent } from "../../utils/sessionEvents.js";
-import panelStyles from "../panels/SessionPanel.module.scss";
 import styles from "./EventStream.module.scss";
 
 /** localStorage key for persisting the direction preference. */
@@ -24,7 +23,7 @@ function EventOverflowBanner({ eventsDropped }: { eventsDropped: number }): JSX.
     return <></>;
   }
   return (
-    <div className={panelStyles.eventOverflowWarning} role="alert">
+    <div className={styles.eventOverflowWarning} role="alert">
       {"\u26A0"} {eventsDropped.toLocaleString()} older event{eventsDropped === 1 ? "" : "s"} were dropped — only the most recent 5,000 are shown. Full history is available in the session log.
     </div>
   );
