@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import { Breadcrumbs, HOME_URL, Spinner, WorkspaceFormFields, defaultFormValues, environmentUrl, useAppNavigate, useToast } from "@grackle-ai/web-components";
 import type { BreadcrumbSegment, WorkspaceFormValues } from "@grackle-ai/web-components";
-import styles from "@grackle-ai/web-components/src/components/panels/TaskEditPanel.module.scss";
+import styles from "./form-layout.module.scss";
 
 /** Validate workspace form values and return field errors (if any). */
 function validate(v: WorkspaceFormValues): Partial<Record<keyof WorkspaceFormValues, string>> | undefined {
