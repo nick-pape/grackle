@@ -386,17 +386,21 @@ describe("sendInput before SDK ready", () => {
     const startEvent = await nextEvent();
     expect(startEvent?.type).toBe("system");
 
-    // Yield to the event loop so runSession() starts and blocks on setupSdk()'s gate
-    await new Promise((r) => setTimeout(r, 0));
+    // Resume the generator WITHOUT awaiting — this kicks off runSession(),
+    // which calls setupSdk() and blocks on the deferred gate. The returned
+    // promise waits for the first eventQueue push (waiting_input after setup).
+    const pendingFirstEvent = nextEvent();
 
-    // Send input while setupSdk is genuinely pending
+    // Send input while setupSdk is genuinely in-flight
     session.sendInput("early");
 
     // Now resolve setup so the session can proceed
     session.resolveSetup();
 
-    // Drain until initial query completes → waiting_input
-    await drainUntilStatus(nextEvent, "waiting_input");
+    // The pending nextEvent resolves with the waiting_input status
+    const waitingEvent = await pendingFirstEvent;
+    expect(waitingEvent?.type).toBe("status");
+    expect(waitingEvent?.content).toBe("waiting_input");
 
     // The early message should be queued and processed as the first follow-up
     await drainUntilStatus(nextEvent, "running");
@@ -419,10 +423,11 @@ describe("sendInput before SDK ready", () => {
     const startEvent = await nextEvent();
     expect(startEvent?.type).toBe("system");
 
-    // Yield to the event loop so runSession() starts and blocks on setupSdk()'s gate
-    await new Promise((r) => setTimeout(r, 0));
+    // Resume the generator WITHOUT awaiting — kicks off runSession(),
+    // which blocks on setupSdk()'s deferred gate.
+    const pendingFirstEvent = nextEvent();
 
-    // Send 3 messages while setupSdk is genuinely pending
+    // Send 3 messages while setupSdk is genuinely in-flight
     session.sendInput("alpha");
     session.sendInput("bravo");
     session.sendInput("charlie");
@@ -430,8 +435,10 @@ describe("sendInput before SDK ready", () => {
     // Resolve setup
     session.resolveSetup();
 
-    // Drain until initial query completes
-    await drainUntilStatus(nextEvent, "waiting_input");
+    // The pending nextEvent resolves with waiting_input
+    const waitingEvent = await pendingFirstEvent;
+    expect(waitingEvent?.type).toBe("status");
+    expect(waitingEvent?.content).toBe("waiting_input");
 
     // All 3 should be processed in FIFO order
     for (const _expected of ["alpha", "bravo", "charlie"]) {
