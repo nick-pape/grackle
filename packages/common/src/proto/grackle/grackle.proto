@@ -448,6 +448,14 @@ message ToolConfig {
   repeated string disallowed_tools = 2; // Blocklist (takes precedence)
 }
 
+// Wrapper for allowed MCP tools with proto3 presence tracking.
+// When the message field is absent → "don't change" (preserve existing).
+// When present with empty tools → "clear to default" (revert to full set).
+// When present with tools → "replace with this list".
+message AllowedMcpTools {
+  repeated string tools = 1;
+}
+
 message Persona {
   string id = 1;
   string name = 2;
@@ -499,7 +507,8 @@ message UpdatePersonaRequest {
   repeated McpServerConfig mcp_servers = 9;
   string type = 10; // "agent" or "script"
   string script = 11; // Script source code (for script personas)
-  repeated string allowed_mcp_tools = 12; // Persona-scoped MCP tool allowlist
+  reserved 12; // was: repeated string allowed_mcp_tools (no presence tracking)
+  AllowedMcpTools allowed_mcp_tools = 13; // Presence-aware wrapper (absent = keep, empty = clear, populated = replace)
 }
 
 // ─── Schedules ─────────────────────────────────────────────

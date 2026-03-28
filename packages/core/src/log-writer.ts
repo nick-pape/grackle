@@ -9,8 +9,10 @@ import {
   closeSync,
   type WriteStream,
 } from "node:fs";
+import { once } from "node:events";
 import { join } from "node:path";
 import { type grackle, eventTypeToString } from "@grackle-ai/common";
+import { logger } from "./logger.js";
 
 const openStreams: Map<string, WriteStream> = new Map<string, WriteStream>();
 
@@ -36,9 +38,11 @@ export function ensureLogInitialized(logPath: string): void {
 }
 
 /** Append a session event as a JSON line to the session's log file. */
-export function writeEvent(logPath: string, event: grackle.SessionEvent): void {
+export async function writeEvent(logPath: string, event: grackle.SessionEvent): Promise<void> {
   const ws = openStreams.get(logPath);
-  if (!ws) return;
+  if (!ws) {
+    return;
+  }
 
   const line = JSON.stringify({
     session_id: event.sessionId,
@@ -48,7 +52,19 @@ export function writeEvent(logPath: string, event: grackle.SessionEvent): void {
     raw: event.raw || undefined,
   });
 
-  ws.write(line + "\n");
+  const ok = ws.write(line + "\n");
+  if (!ok) {
+    if (ws.destroyed || ws.writableEnded) {
+      return;
+    }
+    logger.warn({ logPath }, "Log writer backpressure — waiting for drain");
+    // Race drain against error/close to avoid hanging indefinitely
+    await Promise.race([
+      once(ws, "drain"),
+      once(ws, "error"),
+      once(ws, "close"),
+    ]);
+  }
 }
 
 /** Close the write stream for a session log. */

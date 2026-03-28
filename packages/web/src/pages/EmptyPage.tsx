@@ -2,7 +2,7 @@ import { type JSX } from "react";
 import { useGrackle } from "../context/GrackleContext.js";
 import { DashboardPage } from "./DashboardPage.js";
 import { NEW_WORKSPACE_URL, useAppNavigate } from "@grackle-ai/web-components";
-import styles from "@grackle-ai/web-components/src/components/panels/SessionPanel.module.scss";
+import styles from "./page-layout.module.scss";
 
 /** Empty page shown at /tasks when no task is selected. */
 export function TasksEmptyPage(): JSX.Element {

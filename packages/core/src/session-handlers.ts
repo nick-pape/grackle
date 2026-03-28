@@ -265,7 +265,7 @@ export async function sendInput(req: grackle.InputMessage): Promise<grackle.Empt
     raw: "",
   });
   if (session.logPath) {
-    logWriter.writeEvent(session.logPath, userInputEvent);
+    await logWriter.writeEvent(session.logPath, userInputEvent);
   }
   streamHub.publish(userInputEvent);
 

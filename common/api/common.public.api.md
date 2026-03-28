@@ -45,6 +45,14 @@ export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "st
 export const ALL_MCP_TOOL_NAMES: ReadonlySet<string>;
 
 // @public
+type AllowedMcpTools = Message<"grackle.AllowedMcpTools"> & {
+    tools: string[];
+};
+
+// @public
+const AllowedMcpToolsSchema: GenMessage<AllowedMcpTools>;
+
+// @public
 export const API_KEY_FILENAME: string;
 
 // @public
@@ -915,6 +923,8 @@ declare namespace grackle {
         McpServerConfigSchema,
         ToolConfig,
         ToolConfigSchema,
+        AllowedMcpTools,
+        AllowedMcpToolsSchema,
         Persona,
         PersonaSchema,
         PersonaList,
@@ -1858,7 +1868,7 @@ type UpdatePersonaRequest = Message<"grackle.UpdatePersonaRequest"> & {
     mcpServers: McpServerConfig[];
     type: string;
     script: string;
-    allowedMcpTools: string[];
+    allowedMcpTools?: AllowedMcpTools;
 };
 
 // @public

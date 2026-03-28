@@ -145,26 +145,23 @@ export async function updatePersona(req: grackle.UpdatePersonaRequest): Promise<
   const updatedType = req.type || existing.type;
   const updatedScript = req.script || existing.script;
 
-  // Preserve existing allowedMcpTools unless the request provides a non-empty list.
-  // Proto3 repeated fields default to [], so we treat [] as "not provided" (keep existing).
-  // To clear overrides (revert to default), callers should use a sentinel like ["__clear__"]
-  // or the web UI handles it explicitly via the McpToolSelector onChange.
-  const hasNewAllowedMcpTools = Array.isArray(req.allowedMcpTools) && req.allowedMcpTools.length > 0;
+  // AllowedMcpTools is a wrapper message with proto3 presence tracking:
+  // - absent (undefined) → preserve existing value
+  // - present with empty tools → clear to default (revert to full set)
+  // - present with tools → validate and replace
   let allowedMcpToolsJson: string;
-  if (hasNewAllowedMcpTools) {
-    // Check for the clear sentinel: a single-element array ["__clear__"] resets to default
-    if (req.allowedMcpTools.length === 1 && req.allowedMcpTools[0] === "__clear__") {
-      allowedMcpToolsJson = "[]";
-    } else {
-      const invalid = req.allowedMcpTools.filter((t) => !ALL_MCP_TOOL_NAMES.has(t));
+  if (req.allowedMcpTools) {
+    const tools = [...req.allowedMcpTools.tools];
+    if (tools.length > 0) {
+      const invalid = tools.filter((t) => !ALL_MCP_TOOL_NAMES.has(t));
       if (invalid.length > 0) {
         throw new ConnectError(
           `Invalid MCP tool name(s): ${invalid.join(", ")}`,
           Code.InvalidArgument,
         );
       }
-      allowedMcpToolsJson = JSON.stringify([...req.allowedMcpTools]);
     }
+    allowedMcpToolsJson = JSON.stringify(tools);
   } else {
     allowedMcpToolsJson = existing.allowedMcpTools;
   }

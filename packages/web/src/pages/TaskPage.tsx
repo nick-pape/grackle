@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from "motion/react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useHotkey } from "../hooks/useHotkey.js";
-import styles from "@grackle-ai/web-components/src/components/panels/SessionPanel.module.scss";
+import styles from "./page-layout.module.scss";
 
 type TaskTab = "overview" | "stream" | "findings";
 
