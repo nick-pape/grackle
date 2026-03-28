@@ -6,7 +6,7 @@ import type { Workspace, TaskData } from "../../hooks/types.js";
 import { MAX_TASK_DEPTH, fuzzySearch, type FuzzyKey, type MatchIndex } from "@grackle-ai/common";
 import { ICON_SM, ICON_MD } from "../../utils/iconSize.js";
 import { taskUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
-import { getStatusStyle } from "../../utils/taskStatus.js";
+import { getStatusStyle, resolveStatus } from "../../utils/taskStatus.js";
 import { HighlightedText, buildTaskTree, groupTasksByStatus, type TaskNode, type StatusGroup } from "./listHelpers.js";
 import styles from "./TaskList.module.scss";
 
@@ -116,7 +116,7 @@ function StatusGroupAccordion({
                   data-task-id={task.id}
                 >
                   <span className={styles.leafSpacer} />
-                  <span className={styles.taskStatusIcon} style={{ color: statusStyle.color }}>
+                  <span className={styles.taskStatusIcon} style={{ color: statusStyle.color }} data-testid={`task-status-${resolveStatus(task.status)}`}>
                     {statusStyle.icon}
                   </span>
                   <span className={styles.taskTitle} title={task.title}>
@@ -196,7 +196,7 @@ function TaskTreeNode({
           </span>
         )}
         {!hasChildren && <span className={styles.leafSpacer} />}
-        <span className={styles.taskStatusIcon} style={{ color: statusStyle.color }} aria-hidden="true">
+        <span className={styles.taskStatusIcon} style={{ color: statusStyle.color }} aria-hidden="true" data-testid={`task-status-${resolveStatus(node.status)}`}>
           {statusStyle.icon}
         </span>
         <span className={styles.taskTitle} title={node.title}>
