@@ -529,6 +529,86 @@ export function getSessionFds(req: grackle.SessionId): grackle.SessionFds {
   return create(grackle.SessionFdsSchema, { fds });
 }
 
+// ─── Permission Helpers ────────────────────────────────────────────────────────
+
+/** Check if a requested permission is a subset of the caller's permission. */
+function isPermissionSubset(requested: string, callerHas: string): boolean {
+  if (callerHas === "rw") {
+    return true;
+  }
+  return requested === callerHas;
+}
+
+// ─── Global Stream Handlers ────────────────────────────────────────────────────
+
+/** Create a new named stream. Creator gets an rw/async subscription. */
+export async function createStream(req: grackle.CreateStreamRequest): Promise<grackle.CreateStreamResponse> {
+  if (!req.sessionId) {
+    throw new ConnectError("session_id is required", Code.InvalidArgument);
+  }
+  if (!req.name) {
+    throw new ConnectError("name is required", Code.InvalidArgument);
+  }
+
+  let stream;
+  try {
+    stream = streamRegistry.createStream(req.name);
+  } catch {
+    throw new ConnectError(`Stream name "${req.name}" already exists`, Code.AlreadyExists);
+  }
+
+  const sub = streamRegistry.subscribe(stream.id, req.sessionId, "rw", "async", false);
+  pipeDelivery.ensureAsyncDeliveryListener(req.sessionId);
+
+  return create(grackle.CreateStreamResponseSchema, {
+    streamId: stream.id,
+    fd: sub.fd,
+  });
+}
+
+/** Attach another session to a stream the caller holds an fd on. */
+export async function attachStream(req: grackle.AttachStreamRequest): Promise<grackle.AttachStreamResponse> {
+  if (!req.sessionId) {
+    throw new ConnectError("session_id is required", Code.InvalidArgument);
+  }
+  if (!req.targetSessionId) {
+    throw new ConnectError("target_session_id is required", Code.InvalidArgument);
+  }
+
+  const callerSub = streamRegistry.getSubscription(req.sessionId, req.fd);
+  if (!callerSub) {
+    throw new ConnectError(
+      `No subscription found for session ${req.sessionId} fd ${String(req.fd)}`,
+      Code.NotFound,
+    );
+  }
+
+  const permission = req.permission || "rw";
+  if (!isPermissionSubset(permission, callerSub.permission)) {
+    throw new ConnectError(
+      `Cannot grant "${permission}" — caller only has "${callerSub.permission}"`,
+      Code.PermissionDenied,
+    );
+  }
+
+  const deliveryMode = req.deliveryMode || "async";
+  const targetSub = streamRegistry.subscribe(
+    callerSub.streamId,
+    req.targetSessionId,
+    permission as "r" | "w" | "rw",
+    deliveryMode as "sync" | "async" | "detach",
+    false,
+  );
+
+  if (deliveryMode === "async") {
+    pipeDelivery.ensureAsyncDeliveryListener(req.targetSessionId);
+  }
+
+  return create(grackle.AttachStreamResponseSchema, {
+    fd: targetSub.fd,
+  });
+}
+
 /** List sessions with optional filters. */
 export async function listSessions(req: grackle.SessionFilter): Promise<grackle.SessionList> {
   const rows = sessionStore.listSessions(req.environmentId, req.status);

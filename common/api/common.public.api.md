@@ -48,6 +48,26 @@ export const ALL_MCP_TOOL_NAMES: ReadonlySet<string>;
 export const API_KEY_FILENAME: string;
 
 // @public
+type AttachStreamRequest = Message<"grackle.AttachStreamRequest"> & {
+    sessionId: string;
+    fd: number;
+    targetSessionId: string;
+    permission: string;
+    deliveryMode: string;
+};
+
+// @public
+const AttachStreamRequestSchema: GenMessage<AttachStreamRequest>;
+
+// @public
+type AttachStreamResponse = Message<"grackle.AttachStreamResponse"> & {
+    fd: number;
+};
+
+// @public
+const AttachStreamResponseSchema: GenMessage<AttachStreamResponse>;
+
+// @public
 enum ClaudeProviderMode {
     API_KEY = 3,
     OFF = 1,
@@ -170,6 +190,24 @@ type CreateScheduleRequest = Message<"grackle.CreateScheduleRequest"> & {
 
 // @public
 const CreateScheduleRequestSchema: GenMessage<CreateScheduleRequest>;
+
+// @public
+type CreateStreamRequest = Message<"grackle.CreateStreamRequest"> & {
+    sessionId: string;
+    name: string;
+};
+
+// @public
+const CreateStreamRequestSchema: GenMessage<CreateStreamRequest>;
+
+// @public
+type CreateStreamResponse = Message<"grackle.CreateStreamResponse"> & {
+    streamId: string;
+    fd: number;
+};
+
+// @public
+const CreateStreamResponseSchema: GenMessage<CreateStreamResponse>;
 
 // @public
 type CreateTaskRequest = Message<"grackle.CreateTaskRequest"> & {
@@ -773,6 +811,16 @@ const Grackle: GenService<{
         input: typeof SessionIdSchema;
         output: typeof SessionFdsSchema;
     };
+    createStream: {
+        methodKind: "unary";
+        input: typeof CreateStreamRequestSchema;
+        output: typeof CreateStreamResponseSchema;
+    };
+    attachStream: {
+        methodKind: "unary";
+        input: typeof AttachStreamRequestSchema;
+        output: typeof AttachStreamResponseSchema;
+    };
     searchKnowledge: {
         methodKind: "unary";
         input: typeof SearchKnowledgeRequestSchema;
@@ -859,6 +907,14 @@ declare namespace grackle {
         SessionFdsSchema,
         FdInfo,
         FdInfoSchema,
+        CreateStreamRequest,
+        CreateStreamRequestSchema,
+        CreateStreamResponse,
+        CreateStreamResponseSchema,
+        AttachStreamRequest,
+        AttachStreamRequestSchema,
+        AttachStreamResponse,
+        AttachStreamResponseSchema,
         SessionEvent,
         SessionEventSchema,
         SessionEventList,
