@@ -32,3 +32,4 @@ export {
 } from "./runtime-installer.js";
 export type { RuntimeInstallOptions } from "./runtime-installer.js";
 export { logger } from "./logger.js";
+export { drainUntilStatus } from "./test-helpers.js";

@@ -1,5 +1,5 @@
 import type { AgentSession, CreateSessionOptions } from "@grackle-ai/runtime-sdk";
-import { BaseAgentSession, BaseAgentRuntime, resolveWorkingDirectory, resolveMcpServers, logger, ensureRuntimeInstalled, importFromRuntime } from "@grackle-ai/runtime-sdk";
+import { BaseAgentSession, BaseAgentRuntime, logger, ensureRuntimeInstalled, importFromRuntime } from "@grackle-ai/runtime-sdk";
 import { SESSION_STATUS } from "@grackle-ai/common";
 
 // ─── Environment variable names ────────────────────────────
@@ -92,12 +92,7 @@ class CodexSession extends BaseAgentSession {
     const { Codex } = await getCodexSdk();
 
     // ── Resolve working directory ──
-    const workingDirectory = await resolveWorkingDirectory({
-      branch: this.branch,
-      workingDirectory: this.workingDirectory,
-      useWorktrees: this.useWorktrees,
-      eventQueue: this.eventQueue,
-    });
+    const workingDirectory = await this.resolveWorkDir();
 
     // ── Create Codex instance ──
     const codexOptions: Record<string, unknown> = {};
@@ -123,7 +118,7 @@ class CodexSession extends BaseAgentSession {
     // MCP servers — pass via config overrides, filtering disallowed tools.
     // Codex CLI uses snake_case config keys and different field names than
     // the generic format returned by resolveMcpServers(), so we transform here.
-    const mcpConfig = resolveMcpServers(this.mcpServers, this.mcpBroker);
+    const mcpConfig = this.resolveMcp();
     if (mcpConfig.servers) {
       const codexServers: Record<string, unknown> = {};
       for (const [name, config] of Object.entries(mcpConfig.servers)) {
@@ -180,11 +175,7 @@ class CodexSession extends BaseAgentSession {
   protected async setupForResume(): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     this.thread = this.codexInstance.resumeThread(this.resumeSessionId, this.threadOptions);
-    this.eventQueue.push({
-      type: "system",
-      timestamp: new Date().toISOString(),
-      content: `Codex thread resumed (id: ${this.resumeSessionId})`,
-    });
+    await super.setupForResume();
   }
 
   protected async runInitialQuery(prompt: string): Promise<number> {
@@ -246,11 +237,7 @@ class CodexSession extends BaseAgentSession {
         case "thread.started": {
           const threadId = (event as Record<string, unknown>).thread_id as string | undefined;
           if (threadId) {
-            const wasEmpty = !this.runtimeSessionId;
-            this.runtimeSessionId = threadId;
-            if (wasEmpty) {
-              this.eventQueue.push({ type: "runtime_session_id", timestamp: ts(), content: this.runtimeSessionId });
-            }
+            this.setRuntimeSessionId(threadId);
           }
           this.eventQueue.push({
             type: "system",
@@ -378,13 +365,7 @@ class CodexSession extends BaseAgentSession {
           if (usage) {
             const inputTokens = (usage.input_tokens ?? 0) + (usage.cached_input_tokens ?? 0);
             const outputTokens = usage.output_tokens ?? 0;
-            if (inputTokens > 0 || outputTokens > 0) {
-              this.eventQueue.push({
-                type: "usage",
-                timestamp: ts(),
-                content: JSON.stringify({ input_tokens: inputTokens, output_tokens: outputTokens, cost_usd: 0 }),
-              });
-            }
+            this.pushUsageEvent(inputTokens, outputTokens, 0);
           }
           this.turnCount++;
           if (this.maxTurns > 0 && this.turnCount >= this.maxTurns) {

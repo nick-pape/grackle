@@ -2,6 +2,8 @@ import type { AgentSession, AgentEvent, CreateSessionOptions } from "./runtime.j
 import { SESSION_STATUS } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 import { AsyncQueue } from "./async-queue.js";
+import { resolveWorkingDirectory, resolveMcpServers } from "./runtime-utils.js";
+import type { ResolvedMcpConfig } from "./runtime-utils.js";
 import { logger } from "./logger.js";
 
 /**
@@ -73,8 +75,18 @@ export abstract class BaseAgentSession implements AgentSession {
   /**
    * Perform resume-specific setup (e.g. resume thread, emit system message).
    * Called only when `resumeSessionId` is set.
+   *
+   * Default implementation pushes a "Session resumed" system event.
+   * Override in subclasses that need SDK-specific resume logic (e.g. resuming a thread),
+   * and call `super.setupForResume()` to preserve the system event.
    */
-  protected abstract setupForResume(): Promise<void>;
+  protected async setupForResume(): Promise<void> {
+    this.eventQueue.push({
+      type: "system",
+      timestamp: new Date().toISOString(),
+      content: `Session resumed (id: ${this.resumeSessionId})`,
+    });
+  }
 
   /**
    * Run the initial query with the given prompt.
@@ -113,6 +125,62 @@ export abstract class BaseAgentSession implements AgentSession {
     return this.systemContext
       ? `${this.systemContext}\n\n---\n\n${this.prompt}`
       : this.prompt;
+  }
+
+  // ─── Shared convenience helpers ─────────────────────────
+
+  /**
+   * Resolve the working directory for the session, delegating to `resolveWorkingDirectory`
+   * with the session's branch, workingDirectory, useWorktrees, and eventQueue fields.
+   */
+  protected async resolveWorkDir(requireNonEmpty?: boolean): Promise<string | undefined> {
+    return resolveWorkingDirectory({
+      branch: this.branch,
+      workingDirectory: this.workingDirectory,
+      useWorktrees: this.useWorktrees,
+      eventQueue: this.eventQueue,
+      ...(requireNonEmpty ? { requireNonEmpty } : {}),
+    });
+  }
+
+  /** Resolve MCP server configuration from the session's mcpServers and mcpBroker. */
+  protected resolveMcp(): ResolvedMcpConfig {
+    return resolveMcpServers(this.mcpServers, this.mcpBroker);
+  }
+
+  /**
+   * Push a usage event with a standardized JSON shape.
+   * Skips the push when all values are zero (no meaningful usage to report).
+   */
+  protected pushUsageEvent(inputTokens: number, outputTokens: number, costUsd: number): void {
+    if (inputTokens === 0 && outputTokens === 0 && costUsd === 0) {
+      return;
+    }
+    this.eventQueue.push({
+      type: "usage",
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify({
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        cost_usd: costUsd,
+      }),
+    });
+  }
+
+  /**
+   * Set the runtime session ID and emit a `runtime_session_id` event.
+   * Idempotent: the event is only emitted on the first call with a non-empty ID.
+   */
+  protected setRuntimeSessionId(id: string): void {
+    const wasEmpty = !this.runtimeSessionId;
+    this.runtimeSessionId = id;
+    if (wasEmpty && id) {
+      this.eventQueue.push({
+        type: "runtime_session_id",
+        timestamp: new Date().toISOString(),
+        content: id,
+      });
+    }
   }
 
   // ─── Shared lifecycle implementation ──────────────────────

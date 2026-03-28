@@ -102,7 +102,10 @@ export abstract class BaseAgentSession implements AgentSession {
     protected abstract readonly noMessagesError: string;
     // (undocumented)
     protected readonly prompt: string;
+    protected pushUsageEvent(inputTokens: number, outputTokens: number, costUsd: number): void;
     protected releaseResources(): void;
+    protected resolveMcp(): ResolvedMcpConfig;
+    protected resolveWorkDir(requireNonEmpty?: boolean): Promise<string | undefined>;
     // (undocumented)
     protected readonly resumeSessionId?: string;
     protected abstract runInitialQuery(prompt: string): Promise<number>;
@@ -112,7 +115,8 @@ export abstract class BaseAgentSession implements AgentSession {
     // (undocumented)
     runtimeSessionId: string;
     sendInput(text: string): void;
-    protected abstract setupForResume(): Promise<void>;
+    protected setRuntimeSessionId(id: string): void;
+    protected setupForResume(): Promise<void>;
     protected abstract setupSdk(): Promise<void>;
     // (undocumented)
     status: SessionStatus;
@@ -153,6 +157,9 @@ export interface CreateSessionOptions {
     useWorktrees?: boolean;
     workingDirectory?: string;
 }
+
+// @public
+export function drainUntilStatus(nextEvent: () => Promise<AgentEvent | undefined>, statusContent: string): Promise<AgentEvent[]>;
 
 // @public
 export function ensureRuntimeInstalled(runtimeName: string, options?: RuntimeInstallOptions): Promise<string>;

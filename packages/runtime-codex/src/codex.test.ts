@@ -579,24 +579,7 @@ describe("Codex streaming field extraction", () => {
 
 // ─── Multi-turn integration tests ──────────────────────────
 
-/** Drain events from a stream iterator until a status event with the given content. */
-async function drainUntilStatus(
-  nextEvent: () => Promise<AgentEvent | undefined>,
-  statusContent: string,
-): Promise<AgentEvent[]> {
-  const collected: AgentEvent[] = [];
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- loop until match
-  while (true) {
-    const event = await nextEvent();
-    if (!event) {
-      throw new Error(`Stream ended before status "${statusContent}"`);
-    }
-    collected.push(event);
-    if (event.type === "status" && event.content === statusContent) {
-      return collected;
-    }
-  }
-}
+import { drainUntilStatus } from "@grackle-ai/runtime-sdk";
 
 describe("CodexRuntime — multi-turn", () => {
   beforeEach(() => {

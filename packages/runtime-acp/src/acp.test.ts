@@ -538,7 +538,7 @@ describe("AcpRuntime — runtime_session_id emission", () => {
     expect(rtIdEvent!.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
-  it("real setupSdk() emits runtime_session_id for a resumed session with the resume ID", async () => {
+  it("real setupSdk() does not re-emit runtime_session_id for a resumed session (already known)", async () => {
     const runtime = new AcpRuntime(config);
     const session = runtime.resume({ sessionId: "acp-resumed", runtimeSessionId: "acp-old-session-456" });
 
@@ -549,32 +549,17 @@ describe("AcpRuntime — runtime_session_id emission", () => {
       if (event.type === "status" && event.content === "failed") break;
     }
 
-    const rtIdEvent = events.find((e) => e.type === "runtime_session_id");
-    expect(rtIdEvent, `Expected runtime_session_id event. Got: ${JSON.stringify(events.map(e => e.type))}`).toBeDefined();
-    expect(rtIdEvent!.content).toBe("acp-old-session-456");
+    // For resumed sessions, runtimeSessionId was already set in the constructor from
+    // the resume options, so setRuntimeSessionId() correctly skips the duplicate event.
+    const rtIdEvents = events.filter((e) => e.type === "runtime_session_id");
+    expect(rtIdEvents).toHaveLength(0);
+    expect(session.runtimeSessionId).toBe("acp-old-session-456");
   });
 });
 
 // ─── Multi-turn integration tests ──────────────────────────
 
-/** Drain events from a stream iterator until a status event with the given content. */
-async function drainUntilStatus(
-  nextEvent: () => Promise<AgentEvent | undefined>,
-  statusContent: string,
-): Promise<AgentEvent[]> {
-  const collected: AgentEvent[] = [];
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- loop until match
-  while (true) {
-    const event = await nextEvent();
-    if (!event) {
-      throw new Error(`Stream ended before status "${statusContent}"`);
-    }
-    collected.push(event);
-    if (event.type === "status" && event.content === statusContent) {
-      return collected;
-    }
-  }
-}
+import { drainUntilStatus } from "@grackle-ai/runtime-sdk";
 
 describe("AcpRuntime — multi-turn", () => {
   const acpConfig = { name: "test-acp", command: "echo", args: ["--acp"] };
