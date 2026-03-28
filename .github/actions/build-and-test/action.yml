@@ -6,6 +6,10 @@ inputs:
     description: Skip E2E tests (Playwright install + rush e2e)
     required: false
     default: "false"
+  upload-e2e-results:
+    description: Upload E2E JUnit XML results as a build artifact
+    required: false
+    default: "false"
 
 runs:
   using: composite
@@ -72,7 +76,7 @@ runs:
       run: node common/scripts/install-run-rush.js e2e --verbose
 
     - name: Upload E2E test results
-      if: always()
+      if: always() && inputs.upload-e2e-results == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: e2e-test-results
