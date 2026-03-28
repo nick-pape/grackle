@@ -553,7 +553,7 @@ describe("Codex streaming field extraction", () => {
     expect(mockStartThread).toHaveBeenCalledTimes(1);
     const threadOpts = mockStartThread.mock.calls[0][0] as Record<string, unknown>;
     expect(threadOpts.skipGitRepoCheck).toBe(true);
-    expect(threadOpts.sandboxMode).toBe("workspace-write");
+    expect(threadOpts.sandboxMode).toBe("danger-full-access");
     expect(threadOpts.approvalPolicy).toBe("never");
   });
 

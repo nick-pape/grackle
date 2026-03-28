@@ -163,7 +163,7 @@ class CodexSession extends BaseAgentSession {
 
     // ── Thread options ──
     this.threadOptions = {
-      sandboxMode: "workspace-write",
+      sandboxMode: "danger-full-access",
       approvalPolicy: "never",
       skipGitRepoCheck: true,
     };
