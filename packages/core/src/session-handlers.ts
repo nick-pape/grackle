@@ -36,6 +36,7 @@ import { validatePipeInputs, toDialableHost, killSessionAndCleanup } from "./grp
 import { personaMcpServersToJson } from "./grpc-mcp-config.js";
 import { getTraceId } from "./trace-context.js";
 import { resolveBootstrapRuntime } from "./resolve-bootstrap-runtime.js";
+import { ensureStdinStream, publishToStdin } from "./stdin-delivery.js";
 
 /** Spawn a new agent session in the given environment. */
 export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Session> {
@@ -189,6 +190,9 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
   streamRegistry.subscribe(lifecycleStream.id, spawnerId, "rw", "detach", true);
   streamRegistry.subscribe(lifecycleStream.id, sessionId, "rw", "detach", false);
 
+  // Create stdin stream — routes human input through the stream-registry
+  ensureStdinStream(sessionId);
+
   // Set up IPC pipe stream (optional, on top of lifecycle stream)
   let pipeFd = 0;
   if (pipeMode && pipeMode !== "detach" && req.parentSessionId) {
@@ -271,12 +275,8 @@ export async function sendInput(req: grackle.InputMessage): Promise<grackle.Empt
 
   logger.debug({ sessionId: req.sessionId }, "User input received");
 
-  await conn.client.sendInput(
-    create(powerline.InputMessageSchema, {
-      sessionId: req.sessionId,
-      text: req.text,
-    }),
-  );
+  // Route through stdin stream — the async listener delivers to PowerLine
+  publishToStdin(req.sessionId, req.text);
 
   return create(grackle.EmptySchema, {});
 }
@@ -473,7 +473,7 @@ export async function closeFd(req: grackle.CloseFdRequest): Promise<grackle.Clos
   // Global streams (user-created) only unsubscribe the caller — closing your
   // fd should not disconnect other participants from the shared stream.
   const isInternalStream = stream
-    ? (stream.name.startsWith("pipe:") || stream.name.startsWith("lifecycle:"))
+    ? (stream.name.startsWith("pipe:") || stream.name.startsWith("lifecycle:") || stream.name.startsWith("stdin:"))
     : false;
 
   const childSubs: Array<{ sessionId: string; subId: string }> = [];
@@ -544,7 +544,7 @@ const VALID_PERMISSIONS: ReadonlySet<string> = new Set(["r", "w", "rw"]);
 const VALID_DELIVERY_MODES: ReadonlySet<string> = new Set(["sync", "async", "detach"]);
 
 /** Reserved stream name prefixes used by internal subsystems. */
-const RESERVED_PREFIXES: readonly string[] = ["lifecycle:", "pipe:"];
+const RESERVED_PREFIXES: readonly string[] = ["lifecycle:", "pipe:", "stdin:"];
 
 /** Check if a requested permission is a subset of the caller's permission. */
 function isPermissionSubset(requested: string, callerHas: string): boolean {

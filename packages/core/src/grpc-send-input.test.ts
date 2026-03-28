@@ -75,6 +75,11 @@ vi.mock("./event-processor.js", () => ({
   processEventStream: vi.fn(),
 }));
 
+vi.mock("./stdin-delivery.js", () => ({
+  ensureStdinStream: vi.fn(),
+  publishToStdin: vi.fn(),
+}));
+
 vi.mock("./processor-registry.js", () => ({
   get: vi.fn(() => undefined),
   lateBind: vi.fn(),
@@ -93,6 +98,7 @@ vi.mock("./github-import.js", () => ({
 import { registerGrackleRoutes } from "./grpc-service.js";
 import { sessionStore } from "@grackle-ai/database";
 import * as adapterManager from "./adapter-manager.js";
+import { publishToStdin } from "./stdin-delivery.js";
 import type { ConnectRouter } from "@connectrpc/connect";
 
 /**
@@ -191,7 +197,6 @@ describe("gRPC sendInput", () => {
   });
 
   it("succeeds when session is running and environment is connected", async () => {
-    const mockSendInput = vi.fn().mockResolvedValue({});
     vi.mocked(sessionStore.getSession).mockReturnValue({
       id: "sess-1",
       environmentId: "env-1",
@@ -210,7 +215,7 @@ describe("gRPC sendInput", () => {
       personaId: "",
     });
     vi.mocked(adapterManager.getConnection).mockReturnValue({
-      client: { sendInput: mockSendInput } as never,
+      client: { sendInput: vi.fn().mockResolvedValue({}) } as never,
     } as never);
 
     const result = await handlers.sendInput({
@@ -219,6 +224,7 @@ describe("gRPC sendInput", () => {
     });
 
     expect(result).toBeDefined();
-    expect(mockSendInput).toHaveBeenCalledOnce();
+    // sendInput now routes through stdin stream instead of direct PowerLine call
+    expect(publishToStdin).toHaveBeenCalledWith("sess-1", "hello world");
   });
 });
