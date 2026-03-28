@@ -1,6 +1,23 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { BaseAgentSession } from "./base-session.js";
-import type { AgentEvent } from "./runtime.js";
+import type { AgentEvent, CreateSessionOptions } from "./runtime.js";
+import { drainUntilStatus } from "./test-helpers.js";
+
+vi.mock("./logger.js", () => ({
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+const mockResolveWorkingDirectory = vi.fn<[], Promise<string | undefined>>();
+const mockResolveMcpServers = vi.fn();
+
+vi.mock("./runtime-utils.js", async (importOriginal) => {
+  const orig = await importOriginal<Record<string, unknown>>();
+  return {
+    ...orig,
+    resolveWorkingDirectory: (...args: unknown[]) => mockResolveWorkingDirectory(...(args as [])),
+    resolveMcpServers: (...args: unknown[]) => mockResolveMcpServers(...(args as [])),
+  };
+});
 
 /** A deferred promise that can be resolved externally. */
 interface Deferred {
@@ -20,8 +37,8 @@ function createDeferred(): Deferred {
 }
 
 /**
- * Minimal concrete subclass of BaseAgentSession for testing the input queue
- * and turn serialization behavior without any real SDK dependency.
+ * Minimal concrete subclass of BaseAgentSession for testing the input queue,
+ * turn serialization, and shared helper methods.
  */
 class TestSession extends BaseAgentSession {
   public runtimeName: string = "test";
@@ -54,9 +71,7 @@ class TestSession extends BaseAgentSession {
     // no-op
   }
 
-  protected async setupForResume(): Promise<void> {
-    // no-op
-  }
+  // setupForResume uses the base class default implementation
 
   protected async runInitialQuery(_prompt: string): Promise<number> {
     return 1;
@@ -80,33 +95,52 @@ class TestSession extends BaseAgentSession {
       await gate.promise;
     }
   }
+
+  // ─── Public wrappers to expose protected helpers for unit testing ───
+
+  public testResolveWorkDir(requireNonEmpty?: boolean): Promise<string | undefined> {
+    return this.resolveWorkDir(requireNonEmpty);
+  }
+
+  public testResolveMcp(): unknown {
+    return this.resolveMcp();
+  }
+
+  public testPushUsageEvent(inputTokens: number, outputTokens: number, costUsd: number): void {
+    this.pushUsageEvent(inputTokens, outputTokens, costUsd);
+  }
+
+  public testSetRuntimeSessionId(id: string): void {
+    this.setRuntimeSessionId(id);
+  }
 }
 
-/** Drain events from an async iterator until a status event with the given content. */
-async function drainUntilStatus(
-  nextEvent: () => Promise<AgentEvent | undefined>,
-  statusContent: string,
-): Promise<AgentEvent[]> {
-  const collected: AgentEvent[] = [];
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- loop until match
-  while (true) {
-    const event = await nextEvent();
-    if (!event) {
-      throw new Error(`Stream ended before status "${statusContent}"`);
-    }
-    collected.push(event);
-    if (event.type === "status" && event.content === statusContent) {
-      return collected;
-    }
+/**
+ * Subclass that overrides setupForResume to add custom behavior on top of the default.
+ */
+class OverrideResumeSession extends TestSession {
+  protected override async setupForResume(): Promise<void> {
+    await super.setupForResume();
+    this.eventQueue.push({
+      type: "system",
+      timestamp: new Date().toISOString(),
+      content: "custom-resume-action",
+    });
   }
 }
 
 /** Create a session and return helpers for consuming its event stream. */
-function spawnSession(): {
+function spawnSession(opts?: Partial<CreateSessionOptions>): {
   session: TestSession;
   nextEvent: () => Promise<AgentEvent | undefined>;
 } {
-  const session = new TestSession({ id: "test-1", prompt: "hello", model: "model", maxTurns: 0 });
+  const session = new TestSession({
+    id: "test-1",
+    prompt: "hello",
+    model: "model",
+    maxTurns: 0,
+    ...opts,
+  });
   const streamIterator = session.stream()[Symbol.asyncIterator]();
 
   const nextEvent = async (): Promise<AgentEvent | undefined> => {
@@ -119,6 +153,8 @@ function spawnSession(): {
 
   return { session, nextEvent };
 }
+
+// ─── Existing tests: input serialization ─────────────────────────
 
 describe("BaseAgentSession input serialization", () => {
   it("processes a single input through the queue", async () => {
@@ -298,5 +334,216 @@ describe("BaseAgentSession input serialization", () => {
     expect(session.followUpCalls).toEqual(["after-error"]);
 
     session.kill();
+  });
+});
+
+// ─── New tests: shared helper methods ────────────────────────────
+
+describe("BaseAgentSession.resolveWorkDir", () => {
+  beforeEach(() => {
+    mockResolveWorkingDirectory.mockReset();
+  });
+
+  it("delegates to resolveWorkingDirectory with session fields", async () => {
+    mockResolveWorkingDirectory.mockResolvedValue("/workspace/repo");
+    const session = new TestSession({
+      id: "t-1",
+      prompt: "p",
+      model: "m",
+      maxTurns: 0,
+      branch: "feat/x",
+      workingDirectory: "/home/user/code",
+      useWorktrees: false,
+    });
+
+    const result = await session.testResolveWorkDir();
+
+    expect(result).toBe("/workspace/repo");
+    expect(mockResolveWorkingDirectory).toHaveBeenCalledOnce();
+    const args = mockResolveWorkingDirectory.mock.calls[0]![0] as Record<string, unknown>;
+    expect(args.branch).toBe("feat/x");
+    expect(args.workingDirectory).toBe("/home/user/code");
+    expect(args.useWorktrees).toBe(false);
+    expect(args.eventQueue).toBeDefined();
+    expect(args.requireNonEmpty).toBeUndefined();
+  });
+
+  it("passes requireNonEmpty when specified", async () => {
+    mockResolveWorkingDirectory.mockResolvedValue("/workspace/repo");
+    const session = new TestSession({ id: "t-2", prompt: "p", model: "m", maxTurns: 0 });
+
+    await session.testResolveWorkDir(true);
+
+    const args = mockResolveWorkingDirectory.mock.calls[0]![0] as Record<string, unknown>;
+    expect(args.requireNonEmpty).toBe(true);
+  });
+
+  it("returns undefined when resolveWorkingDirectory returns undefined", async () => {
+    mockResolveWorkingDirectory.mockResolvedValue(undefined);
+    const session = new TestSession({ id: "t-3", prompt: "p", model: "m", maxTurns: 0 });
+
+    const result = await session.testResolveWorkDir();
+
+    expect(result).toBeUndefined();
+  });
+});
+
+describe("BaseAgentSession.resolveMcp", () => {
+  beforeEach(() => {
+    mockResolveMcpServers.mockReset();
+  });
+
+  it("delegates to resolveMcpServers with session mcpServers and mcpBroker", () => {
+    const mcpServers = { grackle: { type: "http", url: "http://localhost" } };
+    const mcpBroker = { url: "http://broker", token: "tok" };
+    mockResolveMcpServers.mockReturnValue({ servers: mcpServers, disallowedTools: [] });
+
+    const session = new TestSession({
+      id: "t-4",
+      prompt: "p",
+      model: "m",
+      maxTurns: 0,
+      mcpServers,
+      mcpBroker,
+    });
+
+    const result = session.testResolveMcp();
+
+    expect(mockResolveMcpServers).toHaveBeenCalledWith(mcpServers, mcpBroker);
+    expect(result).toEqual({ servers: mcpServers, disallowedTools: [] });
+  });
+
+  it("returns empty config when neither mcpServers nor mcpBroker set", () => {
+    mockResolveMcpServers.mockReturnValue({ servers: undefined, disallowedTools: [] });
+    const session = new TestSession({ id: "t-5", prompt: "p", model: "m", maxTurns: 0 });
+
+    const result = session.testResolveMcp();
+
+    expect(mockResolveMcpServers).toHaveBeenCalledWith(undefined, undefined);
+    expect(result).toEqual({ servers: undefined, disallowedTools: [] });
+  });
+});
+
+describe("BaseAgentSession.setupForResume default", () => {
+  it("pushes a system event with the resumeSessionId", async () => {
+    const { nextEvent } = spawnSession({ resumeSessionId: "prev-session-123" });
+
+    // Drain until waiting_input (resume path)
+    const events = await drainUntilStatus(nextEvent, "waiting_input");
+
+    const resumeEvent = events.find(
+      (e) => e.type === "system" && e.content.includes("Session resumed"),
+    );
+    expect(resumeEvent).toBeDefined();
+    expect(resumeEvent!.content).toBe("Session resumed (id: prev-session-123)");
+  });
+
+  it("can be overridden by subclasses", async () => {
+    const session = new OverrideResumeSession({
+      id: "t-resume",
+      prompt: "p",
+      model: "m",
+      maxTurns: 0,
+      resumeSessionId: "prev-456",
+    });
+    const streamIterator = session.stream()[Symbol.asyncIterator]();
+    const nextEvent = async (): Promise<AgentEvent | undefined> => {
+      const result = await streamIterator.next();
+      return !result.done && result.value ? result.value : undefined;
+    };
+
+    const events = await drainUntilStatus(nextEvent, "waiting_input");
+
+    // Both base and custom events should be present
+    const baseEvent = events.find((e) => e.type === "system" && e.content.includes("Session resumed"));
+    const customEvent = events.find((e) => e.type === "system" && e.content === "custom-resume-action");
+    expect(baseEvent).toBeDefined();
+    expect(customEvent).toBeDefined();
+
+    session.kill();
+  });
+});
+
+describe("BaseAgentSession.pushUsageEvent", () => {
+  it("pushes a usage event with correct JSON shape", () => {
+    const session = new TestSession({ id: "t-u1", prompt: "p", model: "m", maxTurns: 0 });
+
+    session.testPushUsageEvent(100, 20, 0.005);
+
+    const events = session.drainBufferedEvents();
+    const usage = events.find((e) => e.type === "usage");
+    expect(usage).toBeDefined();
+    const parsed = JSON.parse(usage!.content) as Record<string, number>;
+    expect(parsed).toEqual({ input_tokens: 100, output_tokens: 20, cost_usd: 0.005 });
+  });
+
+  it("skips push when all values are zero", () => {
+    const session = new TestSession({ id: "t-u2", prompt: "p", model: "m", maxTurns: 0 });
+
+    session.testPushUsageEvent(0, 0, 0);
+
+    const events = session.drainBufferedEvents();
+    expect(events.find((e) => e.type === "usage")).toBeUndefined();
+  });
+
+  it("pushes when only cost is non-zero", () => {
+    const session = new TestSession({ id: "t-u3", prompt: "p", model: "m", maxTurns: 0 });
+
+    session.testPushUsageEvent(0, 0, 0.01);
+
+    const events = session.drainBufferedEvents();
+    const usage = events.find((e) => e.type === "usage");
+    expect(usage).toBeDefined();
+    const parsed = JSON.parse(usage!.content) as Record<string, number>;
+    expect(parsed).toEqual({ input_tokens: 0, output_tokens: 0, cost_usd: 0.01 });
+  });
+
+  it("pushes when only tokens are non-zero", () => {
+    const session = new TestSession({ id: "t-u4", prompt: "p", model: "m", maxTurns: 0 });
+
+    session.testPushUsageEvent(50, 0, 0);
+
+    const events = session.drainBufferedEvents();
+    const usage = events.find((e) => e.type === "usage");
+    expect(usage).toBeDefined();
+    const parsed = JSON.parse(usage!.content) as Record<string, number>;
+    expect(parsed).toEqual({ input_tokens: 50, output_tokens: 0, cost_usd: 0 });
+  });
+});
+
+describe("BaseAgentSession.setRuntimeSessionId", () => {
+  it("sets runtimeSessionId and pushes event on first call", () => {
+    const session = new TestSession({ id: "t-s1", prompt: "p", model: "m", maxTurns: 0 });
+    expect(session.runtimeSessionId).toBe("");
+
+    session.testSetRuntimeSessionId("runtime-abc");
+
+    expect(session.runtimeSessionId).toBe("runtime-abc");
+    const events = session.drainBufferedEvents();
+    const idEvent = events.find((e) => e.type === "runtime_session_id");
+    expect(idEvent).toBeDefined();
+    expect(idEvent!.content).toBe("runtime-abc");
+  });
+
+  it("updates runtimeSessionId but does NOT push event on subsequent calls", () => {
+    const session = new TestSession({ id: "t-s2", prompt: "p", model: "m", maxTurns: 0 });
+
+    session.testSetRuntimeSessionId("first-id");
+    session.testSetRuntimeSessionId("second-id");
+
+    expect(session.runtimeSessionId).toBe("second-id");
+    const events = session.drainBufferedEvents();
+    const idEvents = events.filter((e) => e.type === "runtime_session_id");
+    expect(idEvents).toHaveLength(1);
+    expect(idEvents[0]!.content).toBe("first-id");
+  });
+
+  it("does not push event when id is empty string", () => {
+    const session = new TestSession({ id: "t-s3", prompt: "p", model: "m", maxTurns: 0 });
+
+    session.testSetRuntimeSessionId("");
+
+    const events = session.drainBufferedEvents();
+    expect(events.find((e) => e.type === "runtime_session_id")).toBeUndefined();
   });
 });
