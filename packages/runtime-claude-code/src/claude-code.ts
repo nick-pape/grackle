@@ -1,5 +1,5 @@
 import type { AgentEvent, AgentSession, CreateSessionOptions } from "@grackle-ai/runtime-sdk";
-import { BaseAgentSession, BaseAgentRuntime, AsyncQueue, resolveWorkingDirectory, resolveMcpServers, logger, ensureRuntimeInstalled, importFromRuntime } from "@grackle-ai/runtime-sdk";
+import { BaseAgentSession, BaseAgentRuntime, AsyncQueue, logger, ensureRuntimeInstalled, importFromRuntime } from "@grackle-ai/runtime-sdk";
 import { accessSync, mkdirSync, copyFileSync, chmodSync, constants as fsConstants } from "node:fs";
 import { join } from "node:path";
 import { homedir, tmpdir } from "node:os";
@@ -124,13 +124,7 @@ class ClaudeCodeSession extends BaseAgentSession {
 
   protected async setupSdk(): Promise<void> {
     // Determine cwd: worktree > /workspace > default
-    const cwd = await resolveWorkingDirectory({
-      branch: this.branch,
-      workingDirectory: this.workingDirectory,
-      useWorktrees: this.useWorktrees,
-      eventQueue: this.eventQueue,
-      requireNonEmpty: true,
-    });
+    const cwd = await this.resolveWorkDir(true);
 
     // SDK query() expects { prompt, options: { model, mcpServers, ... } }
     // Both permissionMode AND allowDangerouslySkipPermissions are needed for full bypass.
@@ -149,7 +143,7 @@ class ClaudeCodeSession extends BaseAgentSession {
     // resolveMcpServers() injects the Grackle MCP server entry. When broker config is
     // available, it uses HTTP (url + headers). The Claude Agent SDK supports both stdio
     // (command/args) and HTTP (url/headers) MCP server configs.
-    const mcpConfig = resolveMcpServers(this.mcpServers, this.mcpBroker);
+    const mcpConfig = this.resolveMcp();
     if (mcpConfig.servers) {
       sdkOptions.mcpServers = mcpConfig.servers;
     }
@@ -224,14 +218,6 @@ class ClaudeCodeSession extends BaseAgentSession {
     }
 
     this.cachedSdkOptions = sdkOptions;
-  }
-
-  protected async setupForResume(): Promise<void> {
-    this.eventQueue.push({
-      type: "system",
-      timestamp: new Date().toISOString(),
-      content: `Session resumed (id: ${this.resumeSessionId})`,
-    });
   }
 
   protected async runInitialQuery(prompt: string): Promise<number> {
@@ -380,11 +366,7 @@ class ClaudeCodeSession extends BaseAgentSession {
 
       // Extract session ID from system init message
       if (msg.type === "system" && msg.session_id) {
-        const wasEmpty = !this.runtimeSessionId;
-        this.runtimeSessionId = msg.session_id as string;
-        if (wasEmpty) {
-          this.eventQueue.push({ type: "runtime_session_id", timestamp: ts(), content: this.runtimeSessionId });
-        }
+        this.setRuntimeSessionId(msg.session_id as string);
       }
 
       // Check for result errors
@@ -406,15 +388,7 @@ class ClaudeCodeSession extends BaseAgentSession {
           const totalInput = (usage?.input_tokens ?? 0)
             + (usage?.cache_read_input_tokens ?? 0)
             + (usage?.cache_creation_input_tokens ?? 0);
-          this.eventQueue.push({
-            type: "usage",
-            timestamp: ts(),
-            content: JSON.stringify({
-              input_tokens: totalInput as number,
-              output_tokens: (usage?.output_tokens ?? 0) as number,
-              cost_usd: (costUsd ?? 0) as number,
-            }),
-          });
+          this.pushUsageEvent(totalInput, usage?.output_tokens ?? 0, costUsd ?? 0);
         }
       }
 
@@ -477,11 +451,7 @@ class ClaudeCodeSession extends BaseAgentSession {
 
       // Extract session ID from system init message
       if (msg.type === "system" && msg.session_id) {
-        const wasEmpty = !this.runtimeSessionId;
-        this.runtimeSessionId = msg.session_id as string;
-        if (wasEmpty) {
-          this.eventQueue.push({ type: "runtime_session_id", timestamp: ts(), content: this.runtimeSessionId });
-        }
+        this.setRuntimeSessionId(msg.session_id as string);
       }
 
       // Check for result errors (e.g. invalid API key)
@@ -505,15 +475,7 @@ class ClaudeCodeSession extends BaseAgentSession {
           const totalInput = (usage?.input_tokens ?? 0)
             + (usage?.cache_read_input_tokens ?? 0)
             + (usage?.cache_creation_input_tokens ?? 0);
-          this.eventQueue.push({
-            type: "usage",
-            timestamp: ts(),
-            content: JSON.stringify({
-              input_tokens: totalInput as number,
-              output_tokens: (usage?.output_tokens ?? 0) as number,
-              cost_usd: (costUsd ?? 0) as number,
-            }),
-          });
+          this.pushUsageEvent(totalInput, usage?.output_tokens ?? 0, costUsd ?? 0);
         }
       }
 
