@@ -1,5 +1,5 @@
 import type { AgentSession, CreateSessionOptions } from "@grackle-ai/runtime-sdk";
-import { BaseAgentSession, BaseAgentRuntime, resolveWorkingDirectory, resolveMcpServers, logger, ensureRuntimeInstalled, importFromRuntime } from "@grackle-ai/runtime-sdk";
+import { BaseAgentSession, BaseAgentRuntime, logger, ensureRuntimeInstalled, importFromRuntime } from "@grackle-ai/runtime-sdk";
 
 // ─── Environment variable names ────────────────────────────
 // All configuration is driven by environment variables so the
@@ -136,12 +136,7 @@ export class CopilotSession extends BaseAgentSession {
     const copilotSdk = await getCopilotSdk();
 
     // ── Resolve working directory ──
-    const workingDirectory = await resolveWorkingDirectory({
-      branch: this.branch,
-      workingDirectory: this.workingDirectory,
-      useWorktrees: this.useWorktrees,
-      eventQueue: this.eventQueue,
-    });
+    const workingDirectory = await this.resolveWorkDir();
 
     // ── Create CopilotClient ──
     const clientOptions: Record<string, unknown> = {
@@ -194,7 +189,7 @@ export class CopilotSession extends BaseAgentSession {
     }
 
     // MCP servers
-    const mcpConfig = resolveMcpServers(this.mcpServers, this.mcpBroker);
+    const mcpConfig = this.resolveMcp();
     if (mcpConfig.servers) {
       sessionConfig.mcpServers = mcpConfig.servers;
     }
@@ -219,8 +214,7 @@ export class CopilotSession extends BaseAgentSession {
       this.copilotSession = await this.copilotClient.createSession(sessionConfig);
     }
 
-    this.runtimeSessionId = (this.copilotSession.sessionId as string | undefined) || this.id;
-    this.eventQueue.push({ type: "runtime_session_id", timestamp: ts(), content: this.runtimeSessionId });
+    this.setRuntimeSessionId((this.copilotSession.sessionId as string | undefined) || this.id);
 
     this.eventQueue.push({
       type: "system",
@@ -316,13 +310,7 @@ export class CopilotSession extends BaseAgentSession {
         + (Number(data?.cacheReadTokens) || 0)
         + (Number(data?.cacheWriteTokens) || 0);
       const outputTokens = Number(data?.outputTokens) || 0;
-      if (inputTokens > 0 || outputTokens > 0) {
-        this.eventQueue.push({
-          type: "usage",
-          timestamp: ts(),
-          content: JSON.stringify({ input_tokens: inputTokens, output_tokens: outputTokens, cost_usd: 0 }),
-        });
-      }
+      this.pushUsageEvent(inputTokens, outputTokens, 0);
     });
 
     // Session error — data: { errorType, message, stack?, statusCode? }
@@ -331,14 +319,6 @@ export class CopilotSession extends BaseAgentSession {
       const message = (data?.message ?? String(event)) as string;
       this.eventQueue.push({ type: "error", timestamp: ts(), content: message, raw: event });
       this.idleReject?.(new Error(message));
-    });
-  }
-
-  protected async setupForResume(): Promise<void> {
-    this.eventQueue.push({
-      type: "system",
-      timestamp: new Date().toISOString(),
-      content: `Session resumed (id: ${this.resumeSessionId})`,
     });
   }
 

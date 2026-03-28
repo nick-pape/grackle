@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Add circuit breaker with auto-recovery to environment reconnect logic",
+      "comment": "fix: switch Codex runtime to danger-full-access sandbox mode to prevent silent read-only downgrades",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }

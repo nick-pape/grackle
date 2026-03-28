@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { Readable, Writable } from "node:stream";
 import type { ChildProcess } from "node:child_process";
 import type { AgentSession, AgentEvent, CreateSessionOptions } from "@grackle-ai/runtime-sdk";
-import { BaseAgentSession, BaseAgentRuntime, resolveWorkingDirectory, resolveMcpServers, convertMcpServers, logger, ensureRuntimeInstalled, importFromRuntime, getRuntimeBinDirectory } from "@grackle-ai/runtime-sdk";
+import { BaseAgentSession, BaseAgentRuntime, convertMcpServers, logger, ensureRuntimeInstalled, importFromRuntime, getRuntimeBinDirectory } from "@grackle-ai/runtime-sdk";
 
 // ─── Configuration ──────────────────────────────────────────
 
@@ -255,15 +255,10 @@ class AcpSession extends BaseAgentSession {
     const sdk = await getAcpSdk(this.config.name);
 
     // Resolve working directory
-    const cwd = await resolveWorkingDirectory({
-      branch: this.branch,
-      workingDirectory: this.workingDirectory,
-      useWorktrees: this.useWorktrees,
-      eventQueue: this.eventQueue,
-    });
+    const cwd = await this.resolveWorkDir();
 
     // Resolve MCP servers (shared config + spawn-provided servers + broker)
-    const mcpConfig = resolveMcpServers(this.mcpServers, this.mcpBroker);
+    const mcpConfig = this.resolveMcp();
 
     // Spawn agent subprocess in the resolved working directory
     const spawnCwd = cwd || process.cwd();
@@ -395,8 +390,7 @@ class AcpSession extends BaseAgentSession {
     // Create a new ACP session (or reuse existing for resume)
     if (this.resumeSessionId) {
       this.acpSessionId = this.resumeSessionId;
-      this.runtimeSessionId = this.resumeSessionId;
-      this.eventQueue.push({ type: "runtime_session_id", timestamp: ts(), content: this.runtimeSessionId });
+      this.setRuntimeSessionId(this.resumeSessionId);
       this.eventQueue.push({
         type: "system",
         timestamp: ts(),
@@ -419,8 +413,7 @@ class AcpSession extends BaseAgentSession {
     }
 
     this.acpSessionId = sessionResult.sessionId as string;
-    this.runtimeSessionId = this.acpSessionId || "";
-    this.eventQueue.push({ type: "runtime_session_id", timestamp: ts(), content: this.runtimeSessionId });
+    this.setRuntimeSessionId(this.acpSessionId || "");
 
     this.eventQueue.push({
       type: "system",
@@ -452,11 +445,7 @@ class AcpSession extends BaseAgentSession {
 
   protected async setupForResume(): Promise<void> {
     // setupSdk() already handled resume by setting acpSessionId = resumeSessionId
-    this.eventQueue.push({
-      type: "system",
-      timestamp: new Date().toISOString(),
-      content: `ACP session resumed (id: ${this.resumeSessionId || ""})`,
-    });
+    await super.setupForResume();
   }
 
   protected async runInitialQuery(prompt: string): Promise<number> {
