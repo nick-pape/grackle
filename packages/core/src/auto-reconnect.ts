@@ -172,18 +172,21 @@ export function _resetForTesting(): void {
 /**
  * Run the reconnect/provision flow and complete the connection.
  * Shared success path for both {@link tryReconnect} and {@link tryProbe}.
+ *
+ * @returns `true` if the connection was established, `false` if skipped
+ *          (environment removed, no adapter registered).
  */
-async function connectAndRecover(environmentId: string): Promise<void> {
+async function connectAndRecover(environmentId: string): Promise<boolean> {
   const env = envRegistry.getEnvironment(environmentId);
   if (!env) {
     reconnectStates.delete(environmentId);
-    return;
+    return false;
   }
 
   const adapter = adapterManager.getAdapter(env.adapterType);
   if (!adapter) {
     logger.warn({ environmentId, adapterType: env.adapterType }, "No adapter registered — skipping reconnect");
-    return;
+    return false;
   }
 
   envRegistry.updateEnvironmentStatus(environmentId, "connecting");
@@ -225,6 +228,7 @@ async function connectAndRecover(environmentId: string): Promise<void> {
   });
 
   reconnectStates.delete(environmentId);
+  return true;
 }
 
 /**
@@ -236,8 +240,10 @@ async function tryReconnect(environmentId: string): Promise<void> {
 
   try {
     logger.info({ environmentId }, "Attempting auto-reconnect");
-    await connectAndRecover(environmentId);
-    logger.info({ environmentId }, "Auto-reconnect successful");
+    const connected = await connectAndRecover(environmentId);
+    if (connected) {
+      logger.info({ environmentId }, "Auto-reconnect successful");
+    }
 
   } catch (err) {
     // Clean up any partially-established connection to avoid leaking state
@@ -285,8 +291,10 @@ async function tryProbe(environmentId: string): Promise<void> {
 
   try {
     logger.debug({ environmentId }, "Probing sleeping environment");
-    await connectAndRecover(environmentId);
-    logger.info({ environmentId }, "Sleeping environment recovered — now connected");
+    const recovered = await connectAndRecover(environmentId);
+    if (recovered) {
+      logger.info({ environmentId }, "Sleeping environment recovered — now connected");
+    }
 
   } catch (err) {
     // Clean up any partially-established connection
@@ -299,6 +307,7 @@ async function tryProbe(environmentId: string): Promise<void> {
     }
 
     envRegistry.updateEnvironmentStatus(environmentId, "sleeping");
+    emit("environment.changed", {});
     logger.debug({ environmentId, err }, "Sleeping probe failed — will retry later");
   } finally {
     reconnecting.delete(environmentId);
