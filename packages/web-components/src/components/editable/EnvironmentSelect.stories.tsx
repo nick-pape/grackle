@@ -27,7 +27,7 @@ const failedEnv: Environment = makeEnvironment({
 
 const meta: Meta<typeof EnvironmentSelect> = {
   component: EnvironmentSelect,
-  title: "Editable/EnvironmentSelect",
+  title: "App/Editable/EnvironmentSelect",
   args: {
     onSave: fn(),
     environments: [localEnv, sshEnv],

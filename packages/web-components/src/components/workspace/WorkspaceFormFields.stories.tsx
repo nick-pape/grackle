@@ -31,7 +31,8 @@ const personaWriter: PersonaData = makePersona({
 
 const meta: Meta<typeof WorkspaceFormFields> = {
   component: WorkspaceFormFields,
-  title: "Workspace/WorkspaceFormFields",
+  title: "Grackle/Workspace/WorkspaceFormFields",
+  tags: ["autodocs"],
   args: {
     values: defaultFormValues(),
     onChange: fn(),

@@ -5,7 +5,8 @@ import { BottomStatusBar } from "./BottomStatusBar.js";
 
 const meta: Meta<typeof BottomStatusBar> = {
   component: BottomStatusBar,
-  title: "Layout/BottomStatusBar",
+  title: "Grackle/Layout/BottomStatusBar",
+  tags: ["autodocs"],
   parameters: { skipRouter: true },
 };
 export default meta;

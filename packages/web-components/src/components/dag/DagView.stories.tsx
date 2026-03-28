@@ -15,7 +15,8 @@ const ENVIRONMENT_ID: string = "env-dag";
  * custom property values for the MiniMap when the theme changes.
  */
 const meta: Meta<typeof DagView> = {
-  title: "DAG/DagView",
+  title: "Grackle/DAG/DagView",
+  tags: ["autodocs"],
   component: DagView,
   decorators: [
     (Story) => (

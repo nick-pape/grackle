@@ -5,6 +5,8 @@ import { makeEvent } from "../../test-utils/storybook-helpers.js";
 
 const meta: Meta<typeof EventRenderer> = {
   component: EventRenderer,
+  title: "Grackle/Display/EventRenderer",
+  tags: ["autodocs"],
 };
 export default meta;
 type Story = StoryObj<typeof meta>;

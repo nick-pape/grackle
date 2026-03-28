@@ -4,7 +4,8 @@ import { MetadataCard } from "./MetadataCard.js";
 
 const meta: Meta<typeof MetadataCard> = {
   component: MetadataCard,
-  title: "Tools/MetadataCard",
+  title: "Grackle/Tools/MetadataCard",
+  tags: ["autodocs"],
 };
 export default meta;
 type Story = StoryObj<typeof meta>;

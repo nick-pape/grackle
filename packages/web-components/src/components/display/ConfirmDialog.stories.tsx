@@ -3,7 +3,8 @@ import { expect, fn, userEvent } from "@storybook/test";
 import { ConfirmDialog } from "./ConfirmDialog.js";
 
 const meta: Meta<typeof ConfirmDialog> = {
-  title: "Display/ConfirmDialog",
+  title: "Primitives/Display/ConfirmDialog",
+  tags: ["autodocs"],
   component: ConfirmDialog,
   args: {
     isOpen: true,

@@ -40,7 +40,8 @@ function TaskNodeWrapper(props: { data: Record<string, unknown> }): React.JSX.El
 
 const meta: Meta<typeof TaskNodeWrapper> = {
   component: TaskNodeWrapper,
-  title: "DAG/TaskNode",
+  title: "Grackle/DAG/TaskNode",
+  tags: ["autodocs"],
 };
 export default meta;
 type Story = StoryObj<typeof meta>;

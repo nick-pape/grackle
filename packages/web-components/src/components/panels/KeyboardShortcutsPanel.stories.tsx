@@ -3,7 +3,7 @@ import { expect } from "@storybook/test";
 import { KeyboardShortcutsPanel } from "./KeyboardShortcutsPanel.js";
 
 const meta: Meta<typeof KeyboardShortcutsPanel> = {
-  title: "Panels/KeyboardShortcutsPanel",
+  title: "App/Panels/KeyboardShortcutsPanel",
   component: KeyboardShortcutsPanel,
 };
 export default meta;

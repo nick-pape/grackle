@@ -4,6 +4,8 @@ import { SplitButton } from "./SplitButton.js";
 
 const meta: Meta<typeof SplitButton> = {
   component: SplitButton,
+  title: "Primitives/Display/SplitButton",
+  tags: ["autodocs"],
   args: {
     label: "Stop",
     onClick: fn(),

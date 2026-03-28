@@ -4,7 +4,8 @@ import { FileEditCard } from "./FileEditCard.js";
 
 const meta: Meta<typeof FileEditCard> = {
   component: FileEditCard,
-  title: "Tools/FileEditCard",
+  title: "Grackle/Tools/FileEditCard",
+  tags: ["autodocs"],
 };
 export default meta;
 type Story = StoryObj<typeof meta>;

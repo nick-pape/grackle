@@ -213,6 +213,16 @@ jobs:
       - name: Copy web demo into docs output
         run: cp -r packages/web/dist apps/docs-site/build/demo
 
+      - name: Build component library (Storybook)
+        env:
+          STORYBOOK_BASE: /grackle/components/
+        run: |
+          cd packages/web-components
+          npx storybook build --quiet
+
+      - name: Copy Storybook into docs output
+        run: cp -r packages/web-components/storybook-static apps/docs-site/build/components
+
       - uses: actions/configure-pages@v4
 
       - uses: actions/upload-pages-artifact@v3

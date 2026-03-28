@@ -4,7 +4,8 @@ import { SplashScreen } from "./SplashScreen.js";
 
 const meta: Meta<typeof SplashScreen> = {
   component: SplashScreen,
-  title: "Display/SplashScreen",
+  title: "Primitives/Display/SplashScreen",
+  tags: ["autodocs"],
 };
 export default meta;
 type Story = StoryObj<typeof meta>;

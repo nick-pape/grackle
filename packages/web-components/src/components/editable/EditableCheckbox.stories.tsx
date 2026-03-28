@@ -4,7 +4,8 @@ import { EditableCheckbox } from "./EditableCheckbox.js";
 
 const meta: Meta<typeof EditableCheckbox> = {
   component: EditableCheckbox,
-  title: "Editable/EditableCheckbox",
+  title: "Primitives/Editable/EditableCheckbox",
+  tags: ["autodocs"],
   args: {
     onChange: fn(),
     label: "Enable feature",

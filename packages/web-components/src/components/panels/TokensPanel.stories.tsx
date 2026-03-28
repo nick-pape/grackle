@@ -4,7 +4,7 @@ import { MOCK_TOKENS } from "../../test-utils/storybook-helpers.js";
 import { TokensPanel } from "./TokensPanel.js";
 
 const meta: Meta<typeof TokensPanel> = {
-  title: "Panels/TokensPanel",
+  title: "App/Panels/TokensPanel",
   component: TokensPanel,
   args: {
     tokens: MOCK_TOKENS,

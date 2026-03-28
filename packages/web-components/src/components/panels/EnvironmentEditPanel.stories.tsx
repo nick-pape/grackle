@@ -4,7 +4,7 @@ import { EnvironmentEditPanel } from "./EnvironmentEditPanel.js";
 import { buildEnvironment } from "../../test-utils/storybook-helpers.js";
 
 const meta: Meta<typeof EnvironmentEditPanel> = {
-  title: "Panels/EnvironmentEditPanel",
+  title: "App/Panels/EnvironmentEditPanel",
   component: EnvironmentEditPanel,
   args: {
     mode: "new",

@@ -7,6 +7,12 @@ import { ShellCard } from "./ShellCard.js";
 import { SearchCard } from "./SearchCard.js";
 import { TodoCard } from "./TodoCard.js";
 import { MetadataCard } from "./MetadataCard.js";
+import { FindingCard } from "./FindingCard.js";
+import { TaskCard } from "./TaskCard.js";
+import { WorkpadCard } from "./WorkpadCard.js";
+import { KnowledgeCard } from "./KnowledgeCard.js";
+import { IpcCard } from "./IpcCard.js";
+import { ToolSearchCard } from "./ToolSearchCard.js";
 import { GenericToolCard } from "./GenericToolCard.js";
 import { AgentToolCard } from "./AgentToolCard.js";
 
@@ -34,6 +40,18 @@ export function ToolCard(props: ToolCardProps): JSX.Element {
       return <TodoCard {...props} />;
     case "metadata":
       return <MetadataCard {...props} />;
+    case "finding":
+      return <FindingCard {...props} />;
+    case "task":
+      return <TaskCard {...props} />;
+    case "workpad":
+      return <WorkpadCard {...props} />;
+    case "knowledge":
+      return <KnowledgeCard {...props} />;
+    case "ipc":
+      return <IpcCard {...props} />;
+    case "tool-search":
+      return <ToolSearchCard {...props} />;
     case "agent":
       return <AgentToolCard {...props} />;
     default:
