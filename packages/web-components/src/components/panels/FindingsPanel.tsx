@@ -3,26 +3,18 @@ import { motion } from "motion/react";
 import type { FindingData } from "../../hooks/types.js";
 import styles from "./FindingsPanel.module.scss";
 import { formatRelativeTime } from "../../utils/time.js";
-
-/** Category color mapping using CSS custom property values. */
-const CATEGORY_COLORS: Record<string, { text: string; bg: string }> = {
-  architecture: { text: "var(--accent-blue)", bg: "var(--accent-blue-dim)" },
-  api: { text: "var(--accent-green)", bg: "var(--accent-green-dim)" },
-  bug: { text: "var(--accent-red)", bg: "var(--accent-red-dim)" },
-  decision: { text: "var(--accent-yellow)", bg: "var(--accent-yellow-dim)" },
-  dependency: { text: "var(--accent-purple)", bg: "var(--accent-purple-dim)" },
-  pattern: { text: "var(--accent-cyan)", bg: "var(--accent-cyan-dim)" },
-  general: { text: "var(--text-secondary)", bg: "var(--bg-elevated)" },
-};
+import { getCategoryColor } from "../../utils/findingCategory.js";
 
 /** Props for the FindingsPanel component. */
 interface Props {
   /** Pre-filtered findings to display. */
   findings: FindingData[];
+  /** Optional click handler for finding cards. When provided, cards become clickable. */
+  onFindingClick?: (findingId: string) => void;
 }
 
 /** Displays workspace findings as styled cards with staggered entrance animation. */
-export function FindingsPanel({ findings }: Props): JSX.Element {
+export function FindingsPanel({ findings, onFindingClick }: Props): JSX.Element {
   if (findings.length === 0) {
     return (
       <div className={styles.emptyState}>
@@ -34,15 +26,17 @@ export function FindingsPanel({ findings }: Props): JSX.Element {
   return (
     <div className={styles.container}>
       {findings.map((f, index) => {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- category may not be in the map
-        const categoryColor = CATEGORY_COLORS[f.category] || CATEGORY_COLORS.general;
+        const categoryColor = getCategoryColor(f.category);
+        const Tag = onFindingClick ? motion.button : motion.div;
         return (
-          <motion.div
+          <Tag
             key={f.id}
-            className={styles.card}
+            type={onFindingClick ? "button" : undefined}
+            className={`${styles.card} ${onFindingClick ? styles.cardClickable : ""}`}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05, duration: 0.2 }}
+            onClick={onFindingClick ? () => { onFindingClick(f.id); } : undefined}
           >
             <div className={styles.cardHeader}>
               <span
@@ -74,7 +68,7 @@ export function FindingsPanel({ findings }: Props): JSX.Element {
                 ))}
               </div>
             )}
-          </motion.div>
+          </Tag>
         );
       })}
     </div>

@@ -33,7 +33,9 @@ import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js
 import { SettingsAboutTab } from "./pages/settings/SettingsAboutTab.js";
 import { SettingsShortcutsTab } from "./pages/settings/SettingsShortcutsTab.js";
 import { GlobalShortcuts } from "./components/layout/GlobalShortcuts.js";
-import { WithTaskSidebar, WithEnvironmentSidebar, WithSettingsSidebar, WithKnowledgeSidebar } from "./components/layout/WithSidebar.js";
+import { WithTaskSidebar, WithEnvironmentSidebar, WithFindingsSidebar, WithSettingsSidebar, WithKnowledgeSidebar } from "./components/layout/WithSidebar.js";
+import { FindingsListPage } from "./pages/FindingsListPage.js";
+import { FindingDetailPage } from "./pages/FindingDetailPage.js";
 import { SetupWizard } from "./pages/SetupWizard.js";
 import styles from "./App.module.scss";
 
@@ -206,6 +208,14 @@ function AppRoutes(): JSX.Element {
           <Route path="tasks/:taskId/edit" element={<TaskPage />} />
           <Route path="tasks/:taskId/stream" element={<TaskPage />} />
           <Route path="tasks/:taskId/findings" element={<TaskPage />} />
+        </Route>
+
+        {/* Findings sidebar */}
+        <Route element={<WithFindingsSidebar />}>
+          <Route path="findings" element={<FindingsListPage />} />
+          <Route path="findings/:findingId" element={<FindingDetailPage />} />
+          <Route path="environments/:environmentId/workspaces/:workspaceId/findings" element={<FindingsListPage />} />
+          <Route path="environments/:environmentId/workspaces/:workspaceId/findings/:findingId" element={<FindingDetailPage />} />
         </Route>
 
         {/* Environments sidebar */}

@@ -1,6 +1,33 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 28 Mar 2026 00:14:57 GMT and should not be manually modified.
+This log was last generated on Sat, 28 Mar 2026 03:00:43 GMT and should not be manually modified.
+
+## 0.89.0
+Sat, 28 Mar 2026 03:00:43 GMT
+
+### Minor changes
+
+- Add GetFinding RPC, cross-workspace QueryFindings, and first-class /findings routes with list/detail pages
+
+## 0.88.0
+Sat, 28 Mar 2026 02:50:43 GMT
+
+### Minor changes
+
+- Add createStream and attachStream gRPC endpoints and MCP tools for capability-based global streams
+
+## 0.87.0
+Sat, 28 Mar 2026 02:26:43 GMT
+
+### Minor changes
+
+- refactor: replace __clear__ sentinel with AllowedMcpTools wrapper message for proto3 presence tracking on UpdatePersonaRequest
+
+### Patches
+
+- Eliminate SCSS deep imports from web into web-components internals
+- Add global uncaught exception and unhandled rejection handlers with WAL checkpoint on crash
+- Add backpressure to log-writer (async drain handling) and bounded queues to stream-hub (drop oldest on overflow)
 
 ## 0.86.1
 Sat, 28 Mar 2026 00:14:57 GMT

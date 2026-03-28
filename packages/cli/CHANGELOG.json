@@ -2,6 +2,53 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.89.0",
+      "tag": "@grackle-ai/cli_v0.89.0",
+      "date": "Sat, 28 Mar 2026 03:00:43 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add GetFinding RPC, cross-workspace QueryFindings, and first-class /findings routes with list/detail pages"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.88.0",
+      "tag": "@grackle-ai/cli_v0.88.0",
+      "date": "Sat, 28 Mar 2026 02:50:43 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add createStream and attachStream gRPC endpoints and MCP tools for capability-based global streams"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.87.0",
+      "tag": "@grackle-ai/cli_v0.87.0",
+      "date": "Sat, 28 Mar 2026 02:26:43 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Eliminate SCSS deep imports from web into web-components internals"
+          },
+          {
+            "comment": "Add global uncaught exception and unhandled rejection handlers with WAL checkpoint on crash"
+          },
+          {
+            "comment": "Add backpressure to log-writer (async drain handling) and bounded queues to stream-hub (drop oldest on overflow)"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "refactor: replace __clear__ sentinel with AllowedMcpTools wrapper message for proto3 presence tracking on UpdatePersonaRequest"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.86.1",
       "tag": "@grackle-ai/cli_v0.86.1",
       "date": "Sat, 28 Mar 2026 00:14:57 GMT",

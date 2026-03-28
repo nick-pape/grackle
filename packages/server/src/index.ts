@@ -26,6 +26,7 @@ import { CodespaceAdapter } from "@grackle-ai/adapter-codespace";
 import { closeAllTunnels, reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT, ROOT_TASK_ID, DEFAULT_WORKSPACE_ID } from "@grackle-ai/common";
 import { LocalPowerLineManager } from "./local-powerline-manager.js";
+import { registerCrashHandlers } from "./crash-handler.js";
 import { createMcpServer } from "@grackle-ai/mcp";
 import {
   loadOrCreateApiKey, verifyApiKey, setAuthLogger,
@@ -546,6 +547,9 @@ async function main(): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   process.on("SIGTERM", shutdown);
 }
+
+// Register global crash handlers before main() so they catch errors during startup too.
+registerCrashHandlers();
 
 main().catch((err) => {
   logger.fatal({ err }, "Failed to start server");

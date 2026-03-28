@@ -3,3 +3,4 @@
  * @module lists
  */
 export { EnvironmentNav } from "./EnvironmentNav.js";
+export { FindingsNav } from "./FindingsNav.js";

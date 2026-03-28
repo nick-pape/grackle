@@ -1,4 +1,4 @@
-@use '../../styles/mixins' as *;
+@use '../styles/mixins' as *;
 
 // =============================================================================
 // Session Panel — main content area (session stream, task tabs, empty states)
@@ -465,24 +465,6 @@
 
 .errorMessage {
   color: var(--accent-red);
-}
-
-// ---------------------------------------------------------------------------
-// Event overflow warning (shown when events exceed the 5,000 in-memory cap)
-// ---------------------------------------------------------------------------
-
-.eventOverflowWarning {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-xs) var(--space-sm);
-  margin-bottom: var(--space-sm);
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--accent-yellow) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent-yellow) 35%, transparent);
-  color: var(--accent-yellow);
-  font-size: var(--font-size-sm);
-  font-family: var(--font-mono);
 }
 
 // ---------------------------------------------------------------------------

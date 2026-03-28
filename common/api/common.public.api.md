@@ -45,7 +45,35 @@ export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "st
 export const ALL_MCP_TOOL_NAMES: ReadonlySet<string>;
 
 // @public
+type AllowedMcpTools = Message<"grackle.AllowedMcpTools"> & {
+    tools: string[];
+};
+
+// @public
+const AllowedMcpToolsSchema: GenMessage<AllowedMcpTools>;
+
+// @public
 export const API_KEY_FILENAME: string;
+
+// @public
+type AttachStreamRequest = Message<"grackle.AttachStreamRequest"> & {
+    sessionId: string;
+    fd: number;
+    targetSessionId: string;
+    permission: string;
+    deliveryMode: string;
+};
+
+// @public
+const AttachStreamRequestSchema: GenMessage<AttachStreamRequest>;
+
+// @public
+type AttachStreamResponse = Message<"grackle.AttachStreamResponse"> & {
+    fd: number;
+};
+
+// @public
+const AttachStreamResponseSchema: GenMessage<AttachStreamResponse>;
 
 // @public
 enum ClaudeProviderMode {
@@ -170,6 +198,24 @@ type CreateScheduleRequest = Message<"grackle.CreateScheduleRequest"> & {
 
 // @public
 const CreateScheduleRequestSchema: GenMessage<CreateScheduleRequest>;
+
+// @public
+type CreateStreamRequest = Message<"grackle.CreateStreamRequest"> & {
+    sessionId: string;
+    name: string;
+};
+
+// @public
+const CreateStreamRequestSchema: GenMessage<CreateStreamRequest>;
+
+// @public
+type CreateStreamResponse = Message<"grackle.CreateStreamResponse"> & {
+    streamId: string;
+    fd: number;
+};
+
+// @public
+const CreateStreamResponseSchema: GenMessage<CreateStreamResponse>;
 
 // @public
 type CreateTaskRequest = Message<"grackle.CreateTaskRequest"> & {
@@ -443,6 +489,14 @@ export interface FuzzySearchOptions {
 }
 
 // @public
+type GetFindingRequest = Message<"grackle.GetFindingRequest"> & {
+    id: string;
+};
+
+// @public
+const GetFindingRequestSchema: GenMessage<GetFindingRequest>;
+
+// @public
 type GetKnowledgeNodeRequest = Message<"grackle.GetKnowledgeNodeRequest"> & {
     id: string;
 };
@@ -698,6 +752,11 @@ const Grackle: GenService<{
         input: typeof QueryFindingsRequestSchema;
         output: typeof FindingListSchema;
     };
+    getFinding: {
+        methodKind: "unary";
+        input: typeof GetFindingRequestSchema;
+        output: typeof FindingSchema;
+    };
     createSchedule: {
         methodKind: "unary";
         input: typeof CreateScheduleRequestSchema;
@@ -772,6 +831,16 @@ const Grackle: GenService<{
         methodKind: "unary";
         input: typeof SessionIdSchema;
         output: typeof SessionFdsSchema;
+    };
+    createStream: {
+        methodKind: "unary";
+        input: typeof CreateStreamRequestSchema;
+        output: typeof CreateStreamResponseSchema;
+    };
+    attachStream: {
+        methodKind: "unary";
+        input: typeof AttachStreamRequestSchema;
+        output: typeof AttachStreamResponseSchema;
     };
     searchKnowledge: {
         methodKind: "unary";
@@ -859,6 +928,14 @@ declare namespace grackle {
         SessionFdsSchema,
         FdInfo,
         FdInfoSchema,
+        CreateStreamRequest,
+        CreateStreamRequestSchema,
+        CreateStreamResponse,
+        CreateStreamResponseSchema,
+        AttachStreamRequest,
+        AttachStreamRequestSchema,
+        AttachStreamResponse,
+        AttachStreamResponseSchema,
         SessionEvent,
         SessionEventSchema,
         SessionEventList,
@@ -911,10 +988,14 @@ declare namespace grackle {
         PostFindingRequestSchema,
         QueryFindingsRequest,
         QueryFindingsRequestSchema,
+        GetFindingRequest,
+        GetFindingRequestSchema,
         McpServerConfig,
         McpServerConfigSchema,
         ToolConfig,
         ToolConfigSchema,
+        AllowedMcpTools,
+        AllowedMcpToolsSchema,
         Persona,
         PersonaSchema,
         PersonaList,
@@ -1858,7 +1939,7 @@ type UpdatePersonaRequest = Message<"grackle.UpdatePersonaRequest"> & {
     mcpServers: McpServerConfig[];
     type: string;
     script: string;
-    allowedMcpTools: string[];
+    allowedMcpTools?: AllowedMcpTools;
 };
 
 // @public

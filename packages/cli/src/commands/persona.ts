@@ -220,9 +220,8 @@ export function registerPersonaCommands(program: Command): void {
         maxTurns: opts.maxTurns || 0,
         type: opts.type || "",
         script: scriptContent,
-        // Only send allowedMcpTools when explicitly provided via flags;
-        // omitting it (empty []) preserves the existing value on the server.
-        allowedMcpTools: allowedMcpTools ?? [],
+        // Wrapper message with presence: undefined = keep existing, present = replace/clear.
+        allowedMcpTools: allowedMcpTools !== undefined ? { tools: allowedMcpTools } : undefined,
       });
       console.log(`Updated persona: ${p.id} (${p.name})`);
     });

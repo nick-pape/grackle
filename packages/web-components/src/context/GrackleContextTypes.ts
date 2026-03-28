@@ -23,6 +23,8 @@ export interface UseGrackleSocketResult {
   workspaces: Workspace[];
   tasks: TaskData[];
   findings: FindingData[];
+  selectedFinding: FindingData | undefined;
+  findingLoading: boolean;
   tokens: TokenInfo[];
   spawn: (environmentId: string, prompt: string, personaId?: string, workingDirectory?: string) => void;
   sendInput: (sessionId: string, text: string) => void;
@@ -60,6 +62,8 @@ export interface UseGrackleSocketResult {
   updateTask: (taskId: string, title: string, description: string, dependsOn: string[], defaultPersonaId?: string) => void;
   deleteTask: (taskId: string) => void;
   loadFindings: (workspaceId: string) => void;
+  loadAllFindings: () => void;
+  loadFinding: (findingId: string) => void;
   postFinding: (workspaceId: string, title: string, content: string, category?: string, tags?: string[]) => void;
   loadEnvironments: () => void;
   addEnvironment: (displayName: string, adapterType: string, adapterConfig?: Record<string, unknown>) => void;

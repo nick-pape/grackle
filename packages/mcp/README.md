@@ -194,6 +194,8 @@ Inter-process communication between parent and child agent sessions.
 | `ipc_close` | Close a file descriptor, optionally stopping the child. | `fd` (int) |
 | `ipc_terminate` | Send SIGTERM to a child session via its fd for graceful shutdown. | `fd` (int) |
 | `ipc_list_fds` | List your open file descriptors (IPC connections). | *(none)* |
+| `ipc_create_stream` | Create a named stream for inter-session communication. Returns an rw fd. | `name` (string) |
+| `ipc_attach` | Grant another session access to a stream you hold an fd on. | `fd` (int), `targetSessionId` (string), `permission?` (`r` \| `w` \| `rw`), `deliveryMode?` (`sync` \| `async` \| `detach`) |
 
 ### Log Tools
 
@@ -256,7 +258,7 @@ Each persona can define an `allowed_mcp_tools` list that restricts which MCP too
    - `task_create`, `task_list`, `task_show`, `task_start`, `task_complete`
    - `session_attach`, `session_send_input`
    - `persona_list`, `persona_show`
-   - `ipc_spawn`, `ipc_write`, `ipc_close`, `ipc_terminate`, `ipc_list_fds`
+   - `ipc_spawn`, `ipc_write`, `ipc_close`, `ipc_terminate`, `ipc_list_fds`, `ipc_create_stream`, `ipc_attach`
    - `knowledge_search`, `knowledge_get_node`
    - `logs_get`
    - `workpad_write`, `workpad_read`
@@ -268,10 +270,10 @@ Predefined presets are available for convenience (via CLI `--mcp-tools-preset` o
 
 | Preset | Description |
 |--------|-------------|
-| `default` | The 23-tool default scoped set (backward compatible) |
+| `default` | The 25-tool default scoped set (backward compatible) |
 | `worker` | Subset of default — no task creation capabilities |
 | `orchestrator` | Default + task management, session spawning, persona creation, scheduling |
-| `admin` | Full access to all 58 tools |
+| `admin` | Full access to all 60 tools |
 
 Scoped tokens also enforce workspace isolation — agents can only see tasks and findings within their own workspace. Subtasks created by a scoped agent are automatically parented to the agent's own task. Tool calls to non-permitted tools return an error with a descriptive message listing the available tools.
 

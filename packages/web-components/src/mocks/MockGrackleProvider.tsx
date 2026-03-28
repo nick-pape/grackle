@@ -77,6 +77,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   const [workspaces, setWorkspaces] = useState<Workspace[]>(MOCK_WORKSPACES);
   const [tasks, setTasks] = useState<TaskData[]>(MOCK_TASKS);
   const [findings, setFindings] = useState<FindingData[]>(MOCK_FINDINGS);
+  const [selectedFinding, setSelectedFinding] = useState<FindingData | undefined>(undefined);
+  const findingLoading = false;
   const [tokens, setTokens] = useState<TokenInfo[]>(MOCK_TOKENS);
   const [credentialProviders, setCredentialProviders] = useState<CredentialProviderConfig>({
     claude: "off",
@@ -749,6 +751,22 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [],
   );
 
+  /** Load all findings across all workspaces. */
+  const loadAllFindings: UseGrackleSocketResult["loadAllFindings"] = useCallback(() => {
+    console.log("[MockGrackle] loadAllFindings");
+    setFindings([...MOCK_FINDINGS]);
+  }, []);
+
+  /** Load a single finding by ID. */
+  const loadFinding: UseGrackleSocketResult["loadFinding"] = useCallback(
+    (findingId: string) => {
+      console.log("[MockGrackle] loadFinding", findingId);
+      const found = MOCK_FINDINGS.find((f) => f.id === findingId);
+      setSelectedFinding(found);
+    },
+    [],
+  );
+
   /** Adds a new finding to state. */
   const postFinding: UseGrackleSocketResult["postFinding"] = useCallback(
     (
@@ -880,6 +898,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       workspaces,
       tasks,
       findings,
+      selectedFinding,
+      findingLoading,
       tokens,
       credentialProviders,
 
@@ -930,6 +950,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       updateTask,
       deleteTask,
       loadFindings,
+      loadAllFindings,
+      loadFinding,
       postFinding,
       loadEnvironments,
       addEnvironment,
@@ -1157,6 +1179,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       workspaces,
       tasks,
       findings,
+      selectedFinding,
       tokens,
       credentialProviders,
       personas,
@@ -1184,6 +1207,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       updateTask,
       deleteTask,
       loadFindings,
+      loadAllFindings,
+      loadFinding,
       postFinding,
       loadEnvironments,
       addEnvironment,

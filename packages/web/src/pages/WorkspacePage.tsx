@@ -5,7 +5,7 @@ import { Breadcrumbs, ConfirmDialog, DagView, EditableCheckbox, EditableSelect, 
 import { useHotkey } from "../hooks/useHotkey.js";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import styles from "@grackle-ai/web-components/src/components/panels/SessionPanel.module.scss";
+import styles from "./page-layout.module.scss";
 
 
 

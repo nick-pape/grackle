@@ -227,7 +227,7 @@ describe("gRPC persona handlers", () => {
     expect(err.message).toContain("nonexistent_tool");
   });
 
-  it("updatePersona preserves allowedMcpTools when empty array is sent", async () => {
+  it("updatePersona preserves allowedMcpTools when wrapper message is absent", async () => {
     const created = (await handlers.createPersona({
       name: "Preserve MCP Tools",
       systemPrompt: "prompt",
@@ -236,11 +236,11 @@ describe("gRPC persona handlers", () => {
       allowedMcpTools: ["finding_post", "task_create"],
     })) as PersonaInfo;
 
-    // Empty array = "not provided" in proto3; server preserves existing value
+    // Wrapper message absent (not provided) → server preserves existing value
     await handlers.updatePersona({
       id: created.id,
       name: "Preserve MCP Tools Renamed",
-      allowedMcpTools: [],
+      // allowedMcpTools intentionally omitted
     });
 
     const personas = await listPersonas();
@@ -249,7 +249,7 @@ describe("gRPC persona handlers", () => {
     expect(p!.allowedMcpTools).toEqual(["finding_post", "task_create"]);
   });
 
-  it("updatePersona clears allowedMcpTools with __clear__ sentinel", async () => {
+  it("updatePersona clears allowedMcpTools when wrapper message has empty tools", async () => {
     const created = (await handlers.createPersona({
       name: "Clear MCP Tools",
       systemPrompt: "prompt",
@@ -258,10 +258,10 @@ describe("gRPC persona handlers", () => {
       allowedMcpTools: ["finding_post", "task_create"],
     })) as PersonaInfo;
 
-    // "__clear__" sentinel resets to default (empty array)
+    // Wrapper message present with empty tools = explicitly clear to default
     await handlers.updatePersona({
       id: created.id,
-      allowedMcpTools: ["__clear__"],
+      allowedMcpTools: { tools: [] },
     });
 
     const personas = await listPersonas();
@@ -270,7 +270,7 @@ describe("gRPC persona handlers", () => {
     expect(p!.allowedMcpTools).toEqual([]);
   });
 
-  it("updatePersona replaces allowedMcpTools when provided", async () => {
+  it("updatePersona replaces allowedMcpTools when wrapper message has tools", async () => {
     const created = (await handlers.createPersona({
       name: "Replace MCP Tools",
       systemPrompt: "prompt",
@@ -279,9 +279,10 @@ describe("gRPC persona handlers", () => {
       allowedMcpTools: ["finding_post"],
     })) as PersonaInfo;
 
+    // Wrapper message present with tools = replace
     await handlers.updatePersona({
       id: created.id,
-      allowedMcpTools: ["task_list", "task_create"],
+      allowedMcpTools: { tools: ["task_list", "task_create"] },
     });
 
     const personas = await listPersonas();

@@ -28,7 +28,18 @@ export function postFinding(
   }).run();
 }
 
-/** Query findings for a workspace, optionally filtering by categories and tags. */
+/** Retrieve a single finding by ID. */
+export function getFinding(id: string): FindingRow | undefined {
+  return db.select().from(findings)
+    .where(eq(findings.id, id))
+    .get();
+}
+
+/**
+ * Query findings, optionally filtering by workspace, categories, and tags.
+ *
+ * When `workspaceId` is empty, returns findings across all workspaces.
+ */
 export function queryFindings(
   workspaceId: string,
   categories?: string[],
@@ -37,8 +48,11 @@ export function queryFindings(
 ): FindingRow[] {
   const maxResults = Math.min(limit || 50, 100);
 
+  const hasWorkspaceFilter = workspaceId.length > 0;
+  const hasCategoryFilter = categories !== undefined && categories.length > 0;
+
   let results: FindingRow[];
-  if (categories && categories.length > 0) {
+  if (hasWorkspaceFilter && hasCategoryFilter) {
     results = db.select().from(findings)
       .where(and(
         eq(findings.workspaceId, workspaceId),
@@ -47,9 +61,20 @@ export function queryFindings(
       .orderBy(desc(findings.createdAt))
       .limit(maxResults)
       .all();
-  } else {
+  } else if (hasWorkspaceFilter) {
     results = db.select().from(findings)
       .where(eq(findings.workspaceId, workspaceId))
+      .orderBy(desc(findings.createdAt))
+      .limit(maxResults)
+      .all();
+  } else if (hasCategoryFilter) {
+    results = db.select().from(findings)
+      .where(sql`${findings.category} IN (SELECT value FROM json_each(${JSON.stringify(categories)}))`)
+      .orderBy(desc(findings.createdAt))
+      .limit(maxResults)
+      .all();
+  } else {
+    results = db.select().from(findings)
       .orderBy(desc(findings.createdAt))
       .limit(maxResults)
       .all();

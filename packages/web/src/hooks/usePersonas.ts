@@ -131,7 +131,7 @@ export function usePersonas(): UsePersonasResult {
       if (maxTurns !== undefined) { request.maxTurns = maxTurns; }
       if (type !== undefined) { request.type = type; }
       if (script !== undefined) { request.script = script; }
-      if (allowedMcpTools !== undefined) { request.allowedMcpTools = allowedMcpTools; }
+      if (allowedMcpTools !== undefined) { request.allowedMcpTools = { tools: allowedMcpTools }; }
       return grackleClient.updatePersona(request).then((resp) => {
         const updatedPersona = protoToPersona(resp);
         setPersonas((prev) => prev.map((persona) => (

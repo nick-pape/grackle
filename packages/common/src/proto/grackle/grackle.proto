@@ -206,6 +206,28 @@ message FdInfo {
   string target_session_id = 6; // the other session on this stream
 }
 
+message CreateStreamRequest {
+  string session_id = 1;          // Creator's session ID
+  string name = 2;                // Human-readable label (must be unique)
+}
+
+message CreateStreamResponse {
+  string stream_id = 1;           // Opaque stream identifier
+  int32 fd = 2;                   // Creator's fd (rw permission, async delivery)
+}
+
+message AttachStreamRequest {
+  string session_id = 1;          // Caller's session ID (must hold an fd to the stream)
+  int32 fd = 2;                   // Caller's fd on the stream
+  string target_session_id = 3;   // Session to grant access to
+  string permission = 4;          // "r", "w", or "rw" (must not exceed caller's)
+  string delivery_mode = 5;       // "sync", "async", or "detach"
+}
+
+message AttachStreamResponse {
+  int32 fd = 1;                   // The fd allocated for the target session
+}
+
 // ─── Streaming Events ───────────────────────────────────────
 
 message SessionEvent {
@@ -428,10 +450,15 @@ message PostFindingRequest {
 }
 
 message QueryFindingsRequest {
+  // Optional: when empty, returns findings across all workspaces.
   string workspace_id = 1;
   repeated string categories = 2;
   repeated string tags = 3;
   int32 limit = 4;
+}
+
+message GetFindingRequest {
+  string id = 1;
 }
 
 // ─── Personas ──────────────────────────────────────────────
@@ -446,6 +473,14 @@ message McpServerConfig {
 message ToolConfig {
   repeated string allowed_tools = 1; // Allowlist (empty = allow all)
   repeated string disallowed_tools = 2; // Blocklist (takes precedence)
+}
+
+// Wrapper for allowed MCP tools with proto3 presence tracking.
+// When the message field is absent → "don't change" (preserve existing).
+// When present with empty tools → "clear to default" (revert to full set).
+// When present with tools → "replace with this list".
+message AllowedMcpTools {
+  repeated string tools = 1;
 }
 
 message Persona {
@@ -499,7 +534,8 @@ message UpdatePersonaRequest {
   repeated McpServerConfig mcp_servers = 9;
   string type = 10; // "agent" or "script"
   string script = 11; // Script source code (for script personas)
-  repeated string allowed_mcp_tools = 12; // Persona-scoped MCP tool allowlist
+  reserved 12; // was: repeated string allowed_mcp_tools (no presence tracking)
+  AllowedMcpTools allowed_mcp_tools = 13; // Presence-aware wrapper (absent = keep, empty = clear, populated = replace)
 }
 
 // ─── Schedules ─────────────────────────────────────────────
@@ -788,6 +824,7 @@ service Grackle {
   // Findings
   rpc PostFinding(PostFindingRequest) returns (Finding);
   rpc QueryFindings(QueryFindingsRequest) returns (FindingList);
+  rpc GetFinding(GetFindingRequest) returns (Finding);
 
   // Schedules
   rpc CreateSchedule(CreateScheduleRequest) returns (Schedule);
@@ -815,6 +852,8 @@ service Grackle {
   rpc WriteToFd(WriteToFdRequest) returns (Empty);
   rpc CloseFd(CloseFdRequest) returns (CloseFdResponse);
   rpc GetSessionFds(SessionId) returns (SessionFds);
+  rpc CreateStream(CreateStreamRequest) returns (CreateStreamResponse);
+  rpc AttachStream(AttachStreamRequest) returns (AttachStreamResponse);
 
   // Knowledge Graph
   rpc SearchKnowledge(SearchKnowledgeRequest) returns (SearchKnowledgeResponse);
