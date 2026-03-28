@@ -18,15 +18,16 @@ import {
   logger, exec, detectLanIp,
   runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace,
 } from "@grackle-ai/core";
-import { envRegistry, sessionStore, workspaceStore, taskStore, scheduleStore, personaStore, settingsStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome, checkDatabaseIntegrity, walCheckpoint, startWalCheckpointTimer, stopWalCheckpointTimer } from "@grackle-ai/database";
+import { envRegistry, sessionStore, workspaceStore, taskStore, scheduleStore, personaStore, settingsStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome, checkDatabaseIntegrity, startWalCheckpointTimer, stopWalCheckpointTimer } from "@grackle-ai/database";
 import { DockerAdapter } from "@grackle-ai/adapter-docker";
 import { LocalAdapter } from "@grackle-ai/adapter-local";
 import { SshAdapter } from "@grackle-ai/adapter-ssh";
 import { CodespaceAdapter } from "@grackle-ai/adapter-codespace";
 import { closeAllTunnels, reconnectOrProvision } from "@grackle-ai/adapter-sdk";
-import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT, ROOT_TASK_ID, DEFAULT_WORKSPACE_ID } from "@grackle-ai/common";
+import { ROOT_TASK_ID, DEFAULT_WORKSPACE_ID } from "@grackle-ai/common";
 import { LocalPowerLineManager } from "./local-powerline-manager.js";
 import { registerCrashHandlers } from "./crash-handler.js";
+import { resolveServerConfig } from "./config.js";
 import { createMcpServer } from "@grackle-ai/mcp";
 import {
   loadOrCreateApiKey, verifyApiKey, setAuthLogger,
@@ -34,7 +35,6 @@ import {
   startSessionCleanup, stopSessionCleanup,
   startPairingCleanup, stopPairingCleanup,
   startOAuthCleanup, stopOAuthCleanup,
-  validateSessionCookie,
 } from "@grackle-ai/auth";
 import { createWebServer, isWildcardAddress, type ReadinessResult } from "@grackle-ai/web-server";
 import { createRequire } from "node:module";
@@ -46,6 +46,10 @@ const esmRequire: NodeRequire = createRequire(import.meta.url);
 let localPowerLineManager: LocalPowerLineManager | undefined;
 
 async function main(): Promise<void> {
+  // Resolve and validate all server configuration from env vars (fail fast on invalid values)
+  const config = resolveServerConfig();
+  logger.info({ config }, "Server configuration resolved");
+
   // Open the database, verify integrity, run schema migrations, then seed defaults
   openDatabase();
   checkDatabaseIntegrity();
@@ -74,9 +78,9 @@ async function main(): Promise<void> {
   registerAdapter(new CodespaceAdapter(adapterDeps));
 
   // --- Auto-start local PowerLine ---
-  const skipLocalPowerLine = process.env.GRACKLE_SKIP_LOCAL_POWERLINE === "1";
-  const powerlinePort = parseInt(process.env.GRACKLE_POWERLINE_PORT || String(DEFAULT_POWERLINE_PORT), 10);
-  const plBindHost = process.env.GRACKLE_HOST || "127.0.0.1";
+  const skipLocalPowerLine = config.skipLocalPowerline;
+  const powerlinePort = config.powerlinePort;
+  const plBindHost = config.host;
 
   if (skipLocalPowerLine) {
     logger.info("Skipping local PowerLine auto-start (GRACKLE_SKIP_LOCAL_POWERLINE=1)");
@@ -281,8 +285,8 @@ async function main(): Promise<void> {
   reconciliationManager.start();
 
   // --- gRPC server (HTTP/2) ---
-  const grpcPort = parseInt(process.env.GRACKLE_PORT || String(DEFAULT_SERVER_PORT), 10);
-  const bindHost = process.env.GRACKLE_HOST || "127.0.0.1";
+  const grpcPort = config.grpcPort;
+  const bindHost = config.host;
   const allowNetwork = isWildcardAddress(bindHost);
 
   /** Format bindHost for embedding in a URL — IPv6 literals need brackets per RFC 2732. */
@@ -331,8 +335,8 @@ async function main(): Promise<void> {
   });
 
   // --- Web server (HTTP/1.1) ---
-  const webPort = parseInt(process.env.GRACKLE_WEB_PORT || String(DEFAULT_WEB_PORT), 10);
-  const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
+  const webPort = config.webPort;
+  const mcpPort = config.mcpPort;
   const webServer = createWebServer({
     apiKey,
     webPort,
@@ -352,7 +356,7 @@ async function main(): Promise<void> {
         checks.knowledge = getKnowledgeReadinessCheck();
       }
       return {
-        ready: checks.database?.ok ?? false,
+        ready: checks.database.ok,
         checks,
       };
     },
@@ -371,7 +375,7 @@ async function main(): Promise<void> {
   // Uses reanimate-first strategy with exponential backoff (issue #959).
   // Skipped in E2E tests where the root task session would conflict with test sessions.
   // Also deferred until onboarding is complete so the user's runtime choice is respected (#1031).
-  if (process.env.GRACKLE_SKIP_ROOT_AUTOSTART !== "1") {
+  if (!config.skipRootAutostart) {
     const tryBootRootTask = createRootTaskBoot({
       getTask: taskStore.getTask,
       listSessionsForTask: sessionStore.listSessionsForTask,
@@ -389,8 +393,8 @@ async function main(): Promise<void> {
       // Also try when onboarding completes — the environment is already
       // connected but boot was deferred until the user chose a runtime.
       if (event.type === "setting.changed") {
-        const payload = event.payload as { key?: string; value?: string } | undefined;
-        if (payload?.key === "onboarding_completed" && payload?.value === "true") {
+        const payload = event.payload as { key?: string; value?: string };
+        if (payload.key === "onboarding_completed" && payload.value === "true") {
           tryBootRootTask().catch(() => { /* logged inside */ });
         }
       }

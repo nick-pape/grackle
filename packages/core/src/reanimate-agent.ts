@@ -6,6 +6,7 @@ import { sessionStore, taskStore, grackleHome } from "@grackle-ai/database";
 import type { SessionRow } from "@grackle-ai/database";
 import * as adapterManager from "./adapter-manager.js";
 import { ensureLifecycleStream } from "./lifecycle.js";
+import { ensureStdinStream } from "./stdin-delivery.js";
 import { processEventStream } from "./event-processor.js";
 
 /**
@@ -98,6 +99,9 @@ export function reanimateAgent(sessionId: string): SessionRow {
   // "failed" event). No-op if it still exists (session went idle naturally).
   const spawnerId = session.parentSessionId || "__server__";
   ensureLifecycleStream(session.id, spawnerId);
+
+  // Re-create stdin stream if it was deleted (same lifecycle as lifecycle stream)
+  ensureStdinStream(session.id);
 
   processEventStream(resumeStream, {
     sessionId: session.id,
