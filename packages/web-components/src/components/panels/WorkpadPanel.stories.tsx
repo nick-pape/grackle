@@ -3,7 +3,7 @@ import { expect } from "@storybook/test";
 import { WorkpadPanel } from "./WorkpadPanel.js";
 
 const meta: Meta<typeof WorkpadPanel> = {
-  title: "Panels/WorkpadPanel",
+  title: "App/Panels/WorkpadPanel",
   component: WorkpadPanel,
 };
 

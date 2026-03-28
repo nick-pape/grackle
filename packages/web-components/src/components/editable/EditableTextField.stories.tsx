@@ -3,7 +3,8 @@ import { expect, fn } from "@storybook/test";
 import { EditableTextField } from "./EditableTextField.js";
 
 const meta: Meta<typeof EditableTextField> = {
-  title: "Editable/EditableTextField",
+  title: "Primitives/Editable/EditableTextField",
+  tags: ["autodocs"],
   component: EditableTextField,
   args: {
     value: "Hello World",

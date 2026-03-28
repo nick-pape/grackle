@@ -4,7 +4,8 @@ import { PersonaManager } from "./PersonaManager.js";
 import { buildPersona } from "../../test-utils/storybook-helpers.js";
 
 const meta: Meta<typeof PersonaManager> = {
-  title: "Personas/PersonaManager",
+  title: "Grackle/Personas/PersonaManager",
+  tags: ["autodocs"],
   component: PersonaManager,
   args: {
     personas: [],

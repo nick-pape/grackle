@@ -8,6 +8,8 @@ const connectedEnv: Environment = makeEnvironment({ id: "local", displayName: "L
 
 const meta: Meta<typeof ChatInput> = {
   component: ChatInput,
+  title: "Grackle/Chat/ChatInput",
+  tags: ["autodocs"],
   args: {
     personas: [makePersona({ id: "p1", name: "Software Engineer" })],
     environments: [connectedEnv],

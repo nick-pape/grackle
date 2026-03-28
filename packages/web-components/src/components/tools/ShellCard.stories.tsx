@@ -4,7 +4,8 @@ import { ShellCard } from "./ShellCard.js";
 
 const meta: Meta<typeof ShellCard> = {
   component: ShellCard,
-  title: "Tools/ShellCard",
+  title: "Grackle/Tools/ShellCard",
+  tags: ["autodocs"],
 };
 export default meta;
 type Story = StoryObj<typeof meta>;

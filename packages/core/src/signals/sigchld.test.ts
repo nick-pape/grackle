@@ -276,6 +276,33 @@ describe("initSigchldSubscriber", () => {
     expect(message).toContain("All tests pass. PR created.");
   });
 
+  it("delivers SIGCHLD when child session has no parentSessionId (web-UI-started)", async () => {
+    vi.spyOn(taskStore, "getTask").mockReturnValue(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      makeTask({ parentTaskId: "task-parent" }) as any,
+    );
+    vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      makeSession({
+        status: "idle",
+        parentSessionId: "",  // web UI starts sessions without parentSessionId
+        pipeMode: "",         // no pipe — not started via orchestrator IPC
+      }) as any,
+    );
+    vi.mocked(readLastTextEntry).mockReturnValue(undefined);
+
+    fireTaskUpdated("task-child");
+    await flush();
+
+    // SIGCHLD delivery should still work — it's based on task.parentTaskId,
+    // not session.parentSessionId
+    expect(deliverSignalToTask).toHaveBeenCalledWith(
+      "task-parent",
+      "sigchld",
+      expect.stringContaining("[SIGCHLD]"),
+    );
+  });
+
   it("retries delivery when first attempt fails", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.spyOn(taskStore, "getTask").mockReturnValue(

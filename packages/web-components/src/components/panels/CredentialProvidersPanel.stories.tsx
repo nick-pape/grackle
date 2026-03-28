@@ -4,7 +4,7 @@ import { CredentialProvidersPanel } from "./CredentialProvidersPanel.js";
 import { buildCredentialProviderConfig } from "../../test-utils/storybook-helpers.js";
 
 const meta: Meta<typeof CredentialProvidersPanel> = {
-  title: "Panels/CredentialProvidersPanel",
+  title: "App/Panels/CredentialProvidersPanel",
   component: CredentialProvidersPanel,
   args: {
     credentialProviders: buildCredentialProviderConfig(),

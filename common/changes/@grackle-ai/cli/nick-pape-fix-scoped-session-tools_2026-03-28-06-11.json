@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@grackle-ai/cli",
+      "comment": "Fix stuck MCP stub sessions by fire-and-forget close instead of blocking the generator",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@grackle-ai/cli"
+}
