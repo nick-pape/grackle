@@ -14,19 +14,9 @@ import {
   buildFindingBreadcrumbs,
   taskUrl, sessionUrl, useAppNavigate,
   formatRelativeTime,
+  getCategoryColor,
 } from "@grackle-ai/web-components";
 import styles from "./FindingDetailPage.module.scss";
-
-/** Category color mapping matching FindingsPanel. */
-const CATEGORY_COLORS: Record<string, { text: string; bg: string }> = {
-  architecture: { text: "var(--accent-blue)", bg: "var(--accent-blue-dim)" },
-  api: { text: "var(--accent-green)", bg: "var(--accent-green-dim)" },
-  bug: { text: "var(--accent-red)", bg: "var(--accent-red-dim)" },
-  decision: { text: "var(--accent-yellow)", bg: "var(--accent-yellow-dim)" },
-  dependency: { text: "var(--accent-purple)", bg: "var(--accent-purple-dim)" },
-  pattern: { text: "var(--accent-cyan)", bg: "var(--accent-cyan-dim)" },
-  general: { text: "var(--text-secondary)", bg: "var(--bg-elevated)" },
-};
 
 /** Finding detail page. */
 export function FindingDetailPage(): JSX.Element {
@@ -70,8 +60,7 @@ export function FindingDetailPage(): JSX.Element {
     environments,
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- category may not be in the map
-  const categoryColor = CATEGORY_COLORS[selectedFinding.category] || CATEGORY_COLORS.general;
+  const categoryColor = getCategoryColor(selectedFinding.category);
 
   return (
     <div className={styles.container} data-testid="finding-detail-page">

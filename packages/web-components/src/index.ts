@@ -138,6 +138,8 @@ export type { TaskStatusKey, VirtualStatus, DisplayStatus, TaskStatusStyle } fro
 
 export { formatTokens, formatCost } from "./utils/format.js";
 export { formatRelativeTime } from "./utils/time.js";
+export { CATEGORY_COLORS, getCategoryColor } from "./utils/findingCategory.js";
+export type { CategoryColor } from "./utils/findingCategory.js";
 
 export type { BreadcrumbSegment } from "./utils/breadcrumbs.js";
 export {

@@ -3,17 +3,7 @@ import { motion } from "motion/react";
 import type { FindingData } from "../../hooks/types.js";
 import styles from "./FindingsPanel.module.scss";
 import { formatRelativeTime } from "../../utils/time.js";
-
-/** Category color mapping using CSS custom property values. */
-const CATEGORY_COLORS: Record<string, { text: string; bg: string }> = {
-  architecture: { text: "var(--accent-blue)", bg: "var(--accent-blue-dim)" },
-  api: { text: "var(--accent-green)", bg: "var(--accent-green-dim)" },
-  bug: { text: "var(--accent-red)", bg: "var(--accent-red-dim)" },
-  decision: { text: "var(--accent-yellow)", bg: "var(--accent-yellow-dim)" },
-  dependency: { text: "var(--accent-purple)", bg: "var(--accent-purple-dim)" },
-  pattern: { text: "var(--accent-cyan)", bg: "var(--accent-cyan-dim)" },
-  general: { text: "var(--text-secondary)", bg: "var(--bg-elevated)" },
-};
+import { getCategoryColor } from "../../utils/findingCategory.js";
 
 /** Props for the FindingsPanel component. */
 interface Props {
@@ -36,8 +26,7 @@ export function FindingsPanel({ findings, onFindingClick }: Props): JSX.Element 
   return (
     <div className={styles.container}>
       {findings.map((f, index) => {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- category may not be in the map
-        const categoryColor = CATEGORY_COLORS[f.category] || CATEGORY_COLORS.general;
+        const categoryColor = getCategoryColor(f.category);
         const Tag = onFindingClick ? motion.button : motion.div;
         return (
           <Tag
