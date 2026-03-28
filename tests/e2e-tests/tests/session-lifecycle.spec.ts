@@ -43,7 +43,7 @@ test.describe("Session Lifecycle (stub runtime)", { tag: ["@session"] }, () => {
     await expect(toolUseBox.first()).toBeVisible();
 
     // Tool result renders inside a tool card (paired with tool_use "echo")
-    await expect(page.locator('[data-testid^="tool-card-"]')).toBeVisible();
+    await expect(page.locator('[data-testid^="tool-card-"]').first()).toBeVisible();
 
     // Session reaches waiting_input — UnifiedBar shows text input + Send + Stop
     const inputField = page.locator('input[placeholder="Type a message..."]');
