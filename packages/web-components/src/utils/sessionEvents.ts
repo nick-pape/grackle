@@ -125,9 +125,9 @@ export function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
     return { ...e, toolUseCtx: { ...ctx, detailedResult } };
   });
 
-  // Phase 2: Sequential fallback — pair remaining unpaired tool_use with the next
-  // unpaired tool_result in event order. This handles runtimes where raw IDs are
-  // absent or the format is not yet recognized.
+  // Phase 2: Adjacent fallback — pair remaining unpaired tool_use with an immediately
+  // adjacent unpaired tool_result. Only pairs when the tool_result directly follows
+  // the tool_use (no events between them) to avoid mis-pairing in async scenarios.
   const unpairedToolUseIndices: number[] = [];
   for (let i = 0; i < display.length; i++) {
     if (display[i].eventType !== "tool_use") continue;
@@ -143,7 +143,7 @@ export function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
     unpairedResultIndices.push(i);
   }
 
-  // Match unpaired tool_use to the next unpaired tool_result that follows it.
+  // Match unpaired tool_use to an immediately adjacent unpaired tool_result.
   let resultCursor = 0;
   for (const useIdx of unpairedToolUseIndices) {
     // Advance cursor past results that appear before this tool_use
@@ -153,6 +153,8 @@ export function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
     if (resultCursor >= unpairedResultIndices.length) break;
 
     const resultIdx = unpairedResultIndices[resultCursor];
+    // Only pair if the tool_result is the immediately next event (adjacent)
+    if (resultIdx !== useIdx + 1) continue;
     const useEvent = display[useIdx];
     const resultEvent = display[resultIdx];
 

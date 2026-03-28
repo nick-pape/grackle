@@ -116,8 +116,8 @@ describe("pairToolEvents", () => {
     });
   });
 
-  describe("sequential fallback pairing", () => {
-    it("pairs unpaired tool_use with next unpaired tool_result by order", () => {
+  describe("adjacent fallback pairing", () => {
+    it("pairs unpaired tool_use with immediately adjacent tool_result", () => {
       const events = [
         makeEvent({
           eventType: "tool_use",
@@ -154,6 +154,29 @@ describe("pairToolEvents", () => {
       expect(result[0].eventType).toBe("tool_result");
       expect(result[0].toolUseCtx).toBeUndefined();
       expect(result[1].eventType).toBe("tool_use");
+    });
+
+    it("does not pair non-adjacent tool_use and tool_result", () => {
+      const events = [
+        makeEvent({
+          eventType: "tool_use",
+          content: JSON.stringify({ tool: "Bash", args: { command: "ls" } }),
+        }),
+        makeEvent({
+          eventType: "text",
+          content: "some text in between",
+        }),
+        makeEvent({
+          eventType: "tool_result",
+          content: "result",
+        }),
+      ];
+      const result = pairToolEvents(events);
+      // All three remain (tool_use not consumed, text stays, tool_result unpaired)
+      expect(result).toHaveLength(3);
+      expect(result[0].eventType).toBe("tool_use");
+      expect(result[2].eventType).toBe("tool_result");
+      expect(result[2].toolUseCtx).toBeUndefined();
     });
   });
 
