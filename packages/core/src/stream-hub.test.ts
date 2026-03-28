@@ -38,15 +38,19 @@ describe("stream-hub", () => {
       stream.cancel();
     });
 
-    it("does not deliver to unrelated session subscriber", () => {
+    it("does not deliver to unrelated session subscriber", async () => {
       const stream = createStream("s1");
       publish(makeEvent("s2", "wrong session"));
 
-      // Queue should be empty — cancel to verify
+      // Publish an event for s1 so we can consume without hanging
+      publish(makeEvent("s1", "right session"));
+
+      const iter = stream[Symbol.asyncIterator]();
+      const result = await iter.next();
+      // Should receive only the s1 event, not the s2 event
+      expect(result.value.content).toBe("right session");
+
       stream.cancel();
-      // If event had been delivered, the queue would have it.
-      // Since we cancelled, and the iterator would hang on next() with empty queue,
-      // we just verify no error occurs.
     });
 
     it("delivers event to global subscriber via createGlobalStream", async () => {
