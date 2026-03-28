@@ -385,11 +385,12 @@ export class SystemPromptBuilder {
     return parts.filter(Boolean).join("\n\n");
   }
 
-  /** Contract for signaling task completion. */
+  /** Contract for signaling task completion (leaf tasks). */
   private buildCompletionContract(): string {
     return [
       `## Completion`,
-      `When you are done with your task, use \`task_complete\` to signal completion. Do not go idle without signaling — the orchestrator depends on an explicit completion signal to know you are finished.`,
+      `When you are done with your task, stop working. Your parent task or the user will review your work and mark the task complete. Do NOT call \`task_complete\` on your own task — only parent tasks can complete their children.`,
+      `Write your results to the workpad before stopping so reviewers can see your work.`,
     ].join("\n");
   }
 
