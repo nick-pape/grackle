@@ -329,6 +329,21 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
       value TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS escalations (
+      id              TEXT PRIMARY KEY,
+      workspace_id    TEXT NOT NULL DEFAULT '',
+      task_id         TEXT NOT NULL DEFAULT '',
+      title           TEXT NOT NULL,
+      message         TEXT NOT NULL DEFAULT '',
+      source          TEXT NOT NULL DEFAULT 'explicit',
+      urgency         TEXT NOT NULL DEFAULT 'normal',
+      status          TEXT NOT NULL DEFAULT 'pending',
+      created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      delivered_at    TEXT,
+      acknowledged_at TEXT,
+      task_url        TEXT NOT NULL DEFAULT ''
+    );
+
     CREATE TABLE IF NOT EXISTS domain_events (
       id        TEXT PRIMARY KEY,
       type      TEXT NOT NULL,
@@ -353,6 +368,8 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
       updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE INDEX IF NOT EXISTS idx_escalations_status ON escalations(status);
+    CREATE INDEX IF NOT EXISTS idx_escalations_workspace ON escalations(workspace_id);
     CREATE INDEX IF NOT EXISTS idx_findings_workspace ON findings(workspace_id);
     CREATE INDEX IF NOT EXISTS idx_domain_events_type ON domain_events(type);
     CREATE INDEX IF NOT EXISTS idx_domain_events_timestamp ON domain_events(timestamp);

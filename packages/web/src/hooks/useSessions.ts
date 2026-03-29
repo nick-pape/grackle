@@ -12,11 +12,14 @@ import { MAX_EVENTS, isSessionEvent, mapEndReason, mapSessionStatus, warnBadPayl
 import type { Session, SessionEvent, WsMessage } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToSession, protoToSessionEvent } from "./proto-converters.js";
+import { useLoadingState } from "./useLoadingState.js";
 
 /** Values returned by {@link useSessions}. */
 export interface UseSessionsResult {
   /** All known sessions. */
   sessions: Session[];
+  /** Whether the session list is currently being loaded. */
+  sessionsLoading: boolean;
   /** Session events currently loaded in memory. */
   events: SessionEvent[];
   /**
@@ -77,6 +80,7 @@ const ACTIVE_ORDER: readonly string[] = ["pending", "running", "idle"];
  */
 export function useSessions(): UseSessionsResult {
   const [sessions, setSessions] = useState<Session[]>([]);
+  const { loading: sessionsLoading, track: trackSessions } = useLoadingState();
   const [events, setEvents] = useState<SessionEvent[]>([]);
   const [eventsDropped, setEventsDropped] = useState<number>(0);
   const [lastSpawnedId, setLastSpawnedId] = useState<string | undefined>(
@@ -87,7 +91,7 @@ export function useSessions(): UseSessionsResult {
   /** Fetch the session list from the server via ConnectRPC. */
   const loadSessions = useCallback(async () => {
     try {
-      const resp = await grackleClient.listSessions({});
+      const resp = await trackSessions(grackleClient.listSessions({}));
       const incoming = resp.sessions.map(protoToSession);
       setSessions((prev) => {
         // Preserve real-time status/endReason updates that may be more recent
@@ -112,7 +116,7 @@ export function useSessions(): UseSessionsResult {
     } catch {
       // empty
     }
-  }, []);
+  }, [trackSessions]);
 
   /**
    * Handle real-time session_event push messages from subscribe_all.
@@ -351,6 +355,7 @@ export function useSessions(): UseSessionsResult {
 
   return {
     sessions,
+    sessionsLoading,
     events,
     eventsDropped,
     lastSpawnedId,

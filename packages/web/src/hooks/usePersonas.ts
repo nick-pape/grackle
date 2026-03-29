@@ -11,11 +11,14 @@ import { useState, useCallback } from "react";
 import type { PersonaData, GrackleEvent } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToPersona } from "./proto-converters.js";
+import { useLoadingState } from "./useLoadingState.js";
 
 /** Values returned by {@link usePersonas}. */
 export interface UsePersonasResult {
   /** All known personas. */
   personas: PersonaData[];
+  /** Whether the persona list is currently being loaded. */
+  personasLoading: boolean;
   /** Request the current persona list from the server. */
   loadPersonas: () => Promise<void>;
   /** Create a new persona. */
@@ -56,15 +59,16 @@ export interface UsePersonasResult {
  */
 export function usePersonas(): UsePersonasResult {
   const [personas, setPersonas] = useState<PersonaData[]>([]);
+  const { loading: personasLoading, track: trackPersonas } = useLoadingState();
 
   const loadPersonas = useCallback(async () => {
     try {
-      const resp = await grackleClient.listPersonas({});
+      const resp = await trackPersonas(grackleClient.listPersonas({}));
       setPersonas(resp.personas.map(protoToPersona));
     } catch {
       // empty
     }
-  }, []);
+  }, [trackPersonas]);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     switch (event.type) {
@@ -151,5 +155,5 @@ export function usePersonas(): UsePersonasResult {
     [],
   );
 
-  return { personas, loadPersonas, createPersona, updatePersona, deletePersona, handleEvent };
+  return { personas, personasLoading, loadPersonas, createPersona, updatePersona, deletePersona, handleEvent };
 }

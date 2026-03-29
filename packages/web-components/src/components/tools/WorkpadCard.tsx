@@ -1,7 +1,6 @@
 import { useState, type JSX } from "react";
 import type { ToolCardProps } from "./ToolCardProps.js";
 import { extractBareName } from "./classifyTool.js";
-import { CopyButton } from "../display/CopyButton.js";
 import styles from "./toolCards.module.scss";
 
 /** Extracts workpad-relevant fields from tool args. */
@@ -70,9 +69,6 @@ export function WorkpadCard({ tool, args, result, isError }: ToolCardProps): JSX
               {displayStatus}
             </span>
           </>
-        )}
-        {!inProgress && !isError && result && (
-          <CopyButton text={result} data-testid="tool-card-copy" className={styles.copyButtonInline} />
         )}
       </div>
 

@@ -1,6 +1,5 @@
 import { useState, type JSX } from "react";
 import type { ToolCardProps } from "./ToolCardProps.js";
-import { CopyButton } from "../display/CopyButton.js";
 import styles from "./toolCards.module.scss";
 import agentStyles from "./AgentToolCard.module.scss";
 
@@ -172,9 +171,6 @@ export function AgentToolCard({ tool, args, result, isError }: ToolCardProps): J
           <span className={styles.exitPending} data-testid="tool-card-pending">&#9679;</span>
         )}
 
-        {!inProgress && !isError && displayResult && (
-          <CopyButton text={displayResult} data-testid="tool-card-copy" className={styles.copyButtonInline} />
-        )}
       </div>
 
       {/* Description */}

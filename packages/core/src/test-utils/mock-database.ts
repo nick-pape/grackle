@@ -123,6 +123,14 @@ export function createDatabaseMock() {
       getBundle: vi.fn(() => ({ tokens: [] })),
     },
 
+    escalationStore: {
+      createEscalation: vi.fn(),
+      getEscalation: vi.fn(() => undefined),
+      listEscalations: vi.fn(() => []),
+      listPendingEscalations: vi.fn(() => []),
+      updateEscalationStatus: vi.fn(),
+    },
+
     credentialProviders: {
       getCredentialProviders: vi.fn(() => ({ claude: "off", github: "off", copilot: "off", codex: "off", goose: "off" })),
       setCredentialProviders: vi.fn(),

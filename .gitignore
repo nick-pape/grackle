@@ -47,3 +47,6 @@ tools/demo-recorder/test-output/
 tools/demo-recorder/voices/*.bak
 nul
 *.log
+
+# Docker (lockfile not used by Dockerfile; triggers false Dependabot alerts)
+docker/server/package-lock.json

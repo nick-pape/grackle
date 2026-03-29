@@ -20,6 +20,7 @@ import { useCredentials } from "./useCredentials.js";
 import { useCodespaces } from "./useCodespaces.js";
 import { usePersonas } from "./usePersonas.js";
 import { useKnowledge } from "./useKnowledge.js";
+import { useNotifications } from "./useNotifications.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToUsageStats } from "./proto-converters.js";
 
@@ -75,6 +76,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   const codespacesHook = useCodespaces();
   const personasHook = usePersonas();
   const knowledgeHook = useKnowledge();
+  const notificationsHook = useNotifications();
 
   // --- Transport (ConnectRPC server-streaming) ---
 
@@ -178,6 +180,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     if (credentialsHook.handleEvent(event)) { return; }
     if (personasHook.handleEvent(event)) { return; }
     if (knowledgeHook.handleEvent(event)) { return; }
+    if (notificationsHook.handleEvent(event)) { return; }
   }
 
   async function onStreamConnect(): Promise<void> {
@@ -218,6 +221,13 @@ export function useGrackleSocket(): UseGrackleSocketResult {
 
   return {
     connected,
+    environmentsLoading: environmentsHook.environmentsLoading,
+    sessionsLoading: sessionsHook.sessionsLoading,
+    workspacesLoading: workspacesHook.workspacesLoading,
+    tasksLoading: tasksHook.tasksLoading,
+    tokensLoading: tokensHook.tokensLoading,
+    credentialsLoading: credentialsHook.credentialsLoading,
+    personasLoading: personasHook.personasLoading,
     environments: environmentsHook.environments,
     sessions: sessionsHook.sessions,
     events: sessionsHook.events,
@@ -262,6 +272,8 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     credentialProviders: credentialsHook.credentialProviders,
     updateCredentialProviders: credentialsHook.updateCredentialProviders,
     provisionStatus: environmentsHook.provisionStatus,
+    environmentOperationError: environmentsHook.operationError,
+    clearEnvironmentOperationError: environmentsHook.clearOperationError,
     provisionEnvironment: environmentsHook.provisionEnvironment,
     stopEnvironment: environmentsHook.stopEnvironment,
     removeEnvironment: environmentsHook.removeEnvironment,

@@ -46,7 +46,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
 
     steps:
       - uses: actions/checkout@v4
@@ -62,7 +62,7 @@ jobs:
         uses: ./.github/actions/run-e2e-shard
         with:
           project: chromium
-          shard: "${{ matrix.shard }}/2"
+          shard: "${{ matrix.shard }}/3"
           artifact-name: "e2e-results-chromium-${{ matrix.shard }}"
 
   e2e-knowledge:

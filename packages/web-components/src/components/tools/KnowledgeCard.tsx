@@ -1,7 +1,6 @@
 import { useState, type JSX } from "react";
 import type { ToolCardProps } from "./ToolCardProps.js";
 import { extractBareName } from "./classifyTool.js";
-import { CopyButton } from "../display/CopyButton.js";
 import styles from "./toolCards.module.scss";
 
 /** Shape of a knowledge search result node. */
@@ -107,9 +106,6 @@ export function KnowledgeCard({ tool, args, result, isError }: ToolCardProps): J
               {resultData.edgeCount} {resultData.edgeCount === 1 ? "edge" : "edges"}
             </span>
           </>
-        )}
-        {!inProgress && !isError && result && (
-          <CopyButton text={result} data-testid="tool-card-copy" className={styles.copyButtonInline} />
         )}
       </div>
 

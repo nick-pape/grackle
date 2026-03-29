@@ -32,6 +32,8 @@ export type {
   NewPersona,
   ScheduleRow,
   NewSchedule,
+  EscalationRow,
+  NewEscalation,
 } from "./schema.js";
 
 // ─── Stores ────────────────────────────────────────────────
@@ -45,6 +47,7 @@ export * as envRegistry from "./env-registry.js";
 export * as tokenStore from "./token-store.js";
 export * as credentialProviders from "./credential-providers.js";
 export * as scheduleStore from "./schedule-store.js";
+export * as escalationStore from "./escalation-store.js";
 
 // Re-export key store types for convenience
 export type { InsertTaskFields } from "./task-store.js";

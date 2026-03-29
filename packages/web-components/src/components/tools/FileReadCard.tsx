@@ -1,7 +1,6 @@
 import { useState, type JSX, type ReactNode } from "react";
 import { ChevronRight, FilePen, FileText } from "lucide-react";
 import type { ToolCardProps } from "./ToolCardProps.js";
-import { CopyButton } from "../display/CopyButton.js";
 import { ICON_SM, ICON_MD } from "../../utils/iconSize.js";
 import styles from "./toolCards.module.scss";
 
@@ -67,9 +66,6 @@ export function FileReadCard({ tool, args, result, isError, writeVariant }: File
             <span className={styles.spacer} />
             <span className={styles.badge}>{lines.length} lines</span>
           </>
-        )}
-        {!inProgress && !isError && result && (
-          <CopyButton text={result} data-testid="tool-card-copy" className={styles.copyButtonInline} />
         )}
       </div>
 

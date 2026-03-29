@@ -1,7 +1,6 @@
 import { useState, type JSX } from "react";
 import { ChevronRight, Search } from "lucide-react";
 import type { ToolCardProps } from "./ToolCardProps.js";
-import { CopyButton } from "../display/CopyButton.js";
 import { ICON_SM, ICON_MD } from "../../utils/iconSize.js";
 import styles from "./toolCards.module.scss";
 
@@ -54,9 +53,6 @@ export function SearchCard({ tool, args, result, isError }: ToolCardProps): JSX.
               {lines.length} {lines.length === 1 ? "match" : "matches"}
             </span>
           </>
-        )}
-        {!inProgress && !isError && result && (
-          <CopyButton text={result} data-testid="tool-card-copy" className={styles.copyButtonInline} />
         )}
       </div>
 

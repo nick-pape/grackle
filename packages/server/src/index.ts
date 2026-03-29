@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import {
   registerGrackleRoutes,
   registerAdapter, startHeartbeat, getAdapter, setConnection, removeConnection,
-  initSigchldSubscriber, initLifecycleManager,
+  initSigchldSubscriber, initEscalationAutoSubscriber, initLifecycleManager,
   emit, subscribe,
   startTaskSession, reanimateAgent,
   pushToEnv, attemptReconnects, resetReconnectState,
@@ -364,6 +364,9 @@ async function main(): Promise<void> {
 
   // Wire SIGCHLD: notify parent tasks when child sessions reach terminal status
   initSigchldSubscriber();
+
+  // Wire escalation auto-detection: notify human when standalone tasks go idle
+  initEscalationAutoSubscriber();
 
   // Wire orphan reparenting: reparent non-terminal children when parent task completes/fails
   initOrphanReparentSubscriber();

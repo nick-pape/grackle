@@ -15,6 +15,20 @@ import type {
 /** Return type for the useGrackleSocket hook (and the GrackleContext value). */
 export interface UseGrackleSocketResult {
   connected: boolean;
+  /** Whether an environments fetch is in-flight. */
+  environmentsLoading: boolean;
+  /** Whether a sessions fetch is in-flight. */
+  sessionsLoading: boolean;
+  /** Whether a workspaces fetch is in-flight. */
+  workspacesLoading: boolean;
+  /** Whether a tasks fetch is in-flight. */
+  tasksLoading: boolean;
+  /** Whether a tokens fetch is in-flight. */
+  tokensLoading: boolean;
+  /** Whether a credentials fetch is in-flight. */
+  credentialsLoading: boolean;
+  /** Whether a personas fetch is in-flight. */
+  personasLoading: boolean;
   environments: Environment[];
   sessions: Session[];
   events: SessionEvent[];
@@ -74,6 +88,8 @@ export interface UseGrackleSocketResult {
   credentialProviders: CredentialProviderConfig;
   updateCredentialProviders: (config: CredentialProviderConfig) => Promise<void>;
   provisionStatus: Record<string, ProvisionStatus>;
+  environmentOperationError: string;
+  clearEnvironmentOperationError: () => void;
   provisionEnvironment: (environmentId: string, force?: boolean) => Promise<void>;
   stopEnvironment: (environmentId: string) => Promise<void>;
   removeEnvironment: (environmentId: string) => Promise<void>;

@@ -81,10 +81,6 @@
   padding-left: var(--space-xs);
   line-height: var(--line-height);
 
-  &:hover .messageCopyButton {
-    opacity: 0.4;
-  }
-
   // --- Markdown element styles ---
 
   h1, h2, h3, h4, h5, h6 {
@@ -173,12 +169,6 @@
 }
 
 // --- Copy button positioning ---
-
-.messageCopyButton {
-  // Positioned by CopyButton.module.scss (position: absolute, top/right).
-  // Opacity controlled by .textEvent:hover above.
-  // Mobile: base CopyButton handles always-visible (opacity: 1).
-}
 
 .codeBlockWrapper {
   position: relative;

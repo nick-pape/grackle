@@ -234,6 +234,31 @@ export type ScheduleRow = typeof schedules.$inferSelect;
 /** Shape accepted by INSERT into the schedules table. */
 export type NewSchedule = typeof schedules.$inferInsert;
 
+// ─── Escalations ─────────────────────────────────────────
+
+export const escalations = sqliteTable("escalations", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id").notNull().default(""),
+  taskId: text("task_id").notNull().default(""),
+  title: text("title").notNull(),
+  message: text("message").notNull().default(""),
+  source: text("source").notNull().default("explicit"),
+  urgency: text("urgency").notNull().default("normal"),
+  status: text("status").notNull().default("pending"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  deliveredAt: text("delivered_at"),
+  acknowledgedAt: text("acknowledged_at"),
+  taskUrl: text("task_url").notNull().default(""),
+});
+
+/** Row shape returned by a SELECT on the escalations table. */
+export type EscalationRow = typeof escalations.$inferSelect;
+
+/** Shape accepted by INSERT into the escalations table. */
+export type NewEscalation = typeof escalations.$inferInsert;
+
 // ─── Domain Events ───────────────────────────────────────
 
 export const domainEvents = sqliteTable("domain_events", {

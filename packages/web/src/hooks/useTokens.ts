@@ -11,11 +11,14 @@ import { useState, useCallback } from "react";
 import type { TokenInfo, GrackleEvent } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToToken } from "./proto-converters.js";
+import { useLoadingState } from "./useLoadingState.js";
 
 /** Values returned by {@link useTokens}. */
 export interface UseTokensResult {
   /** All known tokens. */
   tokens: TokenInfo[];
+  /** Whether the token list is currently being loaded. */
+  tokensLoading: boolean;
   /** Request the current token list from the server. */
   loadTokens: () => Promise<void>;
   /** Create or update a token on the server. */
@@ -39,15 +42,16 @@ export interface UseTokensResult {
  */
 export function useTokens(): UseTokensResult {
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
+  const { loading: tokensLoading, track: trackTokens } = useLoadingState();
 
   const loadTokens = useCallback(async () => {
     try {
-      const resp = await grackleClient.listTokens({});
+      const resp = await trackTokens(grackleClient.listTokens({}));
       setTokens(resp.tokens.map(protoToToken));
     } catch {
       // empty
     }
-  }, []);
+  }, [trackTokens]);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     if (event.type === "token.changed") {
@@ -85,5 +89,5 @@ export function useTokens(): UseTokensResult {
     [],
   );
 
-  return { tokens, loadTokens, setToken, deleteToken, handleEvent };
+  return { tokens, tokensLoading, loadTokens, setToken, deleteToken, handleEvent };
 }
