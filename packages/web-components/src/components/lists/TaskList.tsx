@@ -112,6 +112,15 @@ function StatusGroupAccordion({
                 <div
                   key={task.id}
                   onClick={() => navigate(taskUrl(task.id))}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={task.title}
+                  onKeyDown={(e) => {
+                    if (e.currentTarget === e.target && (e.key === "Enter" || e.key === " ")) {
+                      e.preventDefault();
+                      navigate(taskUrl(task.id));
+                    }
+                  }}
                   className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
                   style={{ '--task-indent': `${TASK_BASE_INDENT_PX}px` } as CSSProperties}
                   data-task-id={task.id}
@@ -174,6 +183,15 @@ function TaskTreeNode({
     <>
       <div
         onClick={() => navigate(taskUrl(node.id))}
+        role="button"
+        tabIndex={0}
+        aria-label={node.title}
+        onKeyDown={(e) => {
+          if (e.currentTarget === e.target && (e.key === "Enter" || e.key === " ")) {
+            e.preventDefault();
+            navigate(taskUrl(node.id));
+          }
+        }}
         className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
         style={{ '--task-indent': `${indent}px` } as CSSProperties}
         data-task-id={node.id}

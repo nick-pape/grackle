@@ -129,9 +129,9 @@ export function ChatInput({
         <span className={styles.badge}>
           new chat
         </span>
-        <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Enter prompt..." autoFocus className={styles.input} />
+        <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Enter prompt..." autoFocus className={styles.input} aria-label="Enter prompt" />
         {showPersonaSelect && (
-          <select value={spawnPersonaId} onChange={(e) => setSpawnPersonaId(e.target.value)} className={styles.select}>
+          <select value={spawnPersonaId} onChange={(e) => setSpawnPersonaId(e.target.value)} className={styles.select} aria-label="Select persona">
             <option value="">(Default)</option>
             {personas.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
@@ -147,7 +147,7 @@ export function ChatInput({
   if (mode === "start") {
     return (
       <form onSubmit={handleSubmit} className={styles.bar}>
-        <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message..." autoFocus className={styles.input} />
+        <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message..." autoFocus className={styles.input} aria-label="Type a message" />
         <button type="submit" disabled={!text.trim()} className={styles.btnPrimary}>Send</button>
       </form>
     );
@@ -159,7 +159,7 @@ export function ChatInput({
       {envDisconnected && environmentId && (
         <DisconnectedBanner environmentId={environmentId} onReconnect={onProvisionEnvironment} />
       )}
-      <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message..." autoFocus={!envDisconnected} disabled={envDisconnected} className={styles.input} />
+      <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message..." autoFocus={!envDisconnected} disabled={envDisconnected} className={styles.input} aria-label="Type a message" />
       <span title={envDisconnected ? "Environment is unavailable — reconnect first" : undefined}>
         <button type="submit" disabled={!text.trim() || envDisconnected} className={styles.btnPrimary}>Send</button>
       </span>
