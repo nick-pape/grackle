@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add shimmer loading states to all pages and findingsLoading flag",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
