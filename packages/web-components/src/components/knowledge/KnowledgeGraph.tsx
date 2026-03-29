@@ -18,6 +18,7 @@ import {
   type SimulationNodeDatum,
   type SimulationLinkDatum,
 } from "d3-force";
+import { drag, type D3DragEvent } from "d3-drag";
 import { select, type Selection } from "d3-selection";
 import { zoom, zoomIdentity, type ZoomBehavior } from "d3-zoom";
 import "d3-transition";
@@ -57,6 +58,9 @@ const NODE_WIDTH: number = 200;
 const NODE_HEIGHT: number = 52;
 const NODE_RADIUS: number = 12;
 
+/** Minimum drag distance (px) before a mouseup is treated as a drag-end rather than a click. */
+const DRAG_CLICK_THRESHOLD: number = 3;
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -81,6 +85,7 @@ export function KnowledgeGraph({
   const linkElsRef = useRef<Selection<SVGLineElement, SimLink, SVGGElement, unknown> | undefined>(undefined);
   const nodeElsRef = useRef<Selection<SVGGElement, SimNode, SVGGElement, unknown> | undefined>(undefined);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+  const dragDistanceRef = useRef(0);
 
   // Track container size
   useEffect(() => {
@@ -179,8 +184,11 @@ export function KnowledgeGraph({
       .enter()
       .append("g")
       .attr("class", `kg-node ${styles.node}`)
-      .style("cursor", "pointer")
       .on("click", (_event: MouseEvent, d: SimNode) => {
+        // Suppress click if the user just finished dragging
+        if (dragDistanceRef.current > DRAG_CLICK_THRESHOLD) {
+          return;
+        }
         onClickRef.current(d.id);
       })
       .on("dblclick", (_event: MouseEvent, d: SimNode) => {
@@ -243,6 +251,32 @@ export function KnowledgeGraph({
       });
 
     simRef.current = sim;
+
+    // Drag behavior — lets users grab and reposition nodes
+    const dragBehavior = drag<SVGGElement, SimNode>()
+      .on("start", (_event: D3DragEvent<SVGGElement, SimNode, SimNode>, d: SimNode) => {
+        d.fx = d.x;
+        d.fy = d.y;
+        dragDistanceRef.current = 0;
+      })
+      .on("drag", (event: D3DragEvent<SVGGElement, SimNode, SimNode>, d: SimNode) => {
+        d.fx = event.x;
+        d.fy = event.y;
+        dragDistanceRef.current += Math.abs(event.dx) + Math.abs(event.dy);
+        // Only reheat simulation once we confirm an actual drag gesture
+        if (dragDistanceRef.current > DRAG_CLICK_THRESHOLD && sim.alphaTarget() === 0) {
+          sim.alphaTarget(0.3).restart();
+        }
+      })
+      .on("end", (event: D3DragEvent<SVGGElement, SimNode, SimNode>, d: SimNode) => {
+        if (!event.active) {
+          sim.alphaTarget(0);
+        }
+        // Release node so it re-settles in the force layout
+        d.fx = undefined;
+        d.fy = undefined;
+      });
+    nodeEls.call(dragBehavior);
 
     // Fit to view after simulation settles
     const fitTimer: ReturnType<typeof setTimeout> = setTimeout(() => {
