@@ -11,6 +11,7 @@ import { useState, useCallback } from "react";
 import type { PersonaData, GrackleEvent } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToPersona } from "./proto-converters.js";
+import { useLoadingState } from "./useLoadingState.js";
 
 /** Values returned by {@link usePersonas}. */
 export interface UsePersonasResult {
@@ -58,19 +59,16 @@ export interface UsePersonasResult {
  */
 export function usePersonas(): UsePersonasResult {
   const [personas, setPersonas] = useState<PersonaData[]>([]);
-  const [personasLoading, setPersonasLoading] = useState(false);
+  const { loading: personasLoading, track: trackPersonas } = useLoadingState();
 
   const loadPersonas = useCallback(async () => {
-    setPersonasLoading(true);
     try {
-      const resp = await grackleClient.listPersonas({});
+      const resp = await trackPersonas(grackleClient.listPersonas({}));
       setPersonas(resp.personas.map(protoToPersona));
     } catch {
       // empty
-    } finally {
-      setPersonasLoading(false);
     }
-  }, []);
+  }, [trackPersonas]);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     switch (event.type) {

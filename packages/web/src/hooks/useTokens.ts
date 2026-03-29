@@ -11,6 +11,7 @@ import { useState, useCallback } from "react";
 import type { TokenInfo, GrackleEvent } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToToken } from "./proto-converters.js";
+import { useLoadingState } from "./useLoadingState.js";
 
 /** Values returned by {@link useTokens}. */
 export interface UseTokensResult {
@@ -41,19 +42,16 @@ export interface UseTokensResult {
  */
 export function useTokens(): UseTokensResult {
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
-  const [tokensLoading, setTokensLoading] = useState(false);
+  const { loading: tokensLoading, track: trackTokens } = useLoadingState();
 
   const loadTokens = useCallback(async () => {
-    setTokensLoading(true);
     try {
-      const resp = await grackleClient.listTokens({});
+      const resp = await trackTokens(grackleClient.listTokens({}));
       setTokens(resp.tokens.map(protoToToken));
     } catch {
       // empty
-    } finally {
-      setTokensLoading(false);
     }
-  }, []);
+  }, [trackTokens]);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     if (event.type === "token.changed") {

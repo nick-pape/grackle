@@ -12,6 +12,7 @@ import { warnBadPayload } from "@grackle-ai/web-components";
 import type { Environment, GrackleEvent, ProvisionStatus, WsMessage } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToEnvironment } from "./proto-converters.js";
+import { useLoadingState } from "./useLoadingState.js";
 
 /** Delay in milliseconds before clearing a successful provision status. */
 const PROVISION_STATUS_CLEAR_DELAY_MS: number = 5_000;
@@ -56,22 +57,19 @@ export interface UseEnvironmentsResult {
  */
 export function useEnvironments(): UseEnvironmentsResult {
   const [environments, setEnvironments] = useState<Environment[]>([]);
-  const [environmentsLoading, setEnvironmentsLoading] = useState(false);
+  const { loading: environmentsLoading, track: trackEnvironments } = useLoadingState();
   const [provisionStatus, setProvisionStatus] = useState<
     Record<string, ProvisionStatus>
   >({});
 
   const loadEnvironments = useCallback(async () => {
-    setEnvironmentsLoading(true);
     try {
-      const resp = await grackleClient.listEnvironments({});
+      const resp = await trackEnvironments(grackleClient.listEnvironments({}));
       setEnvironments(resp.environments.map(protoToEnvironment));
     } catch {
       // empty
-    } finally {
-      setEnvironmentsLoading(false);
     }
-  }, []);
+  }, [trackEnvironments]);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     switch (event.type) {

@@ -12,6 +12,7 @@ import { ConnectError } from "@connectrpc/connect";
 import type { Workspace, GrackleEvent } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToWorkspace } from "./proto-converters.js";
+import { useLoadingState } from "./useLoadingState.js";
 
 /** Values returned by {@link useWorkspaces}. */
 export interface UseWorkspacesResult {
@@ -63,20 +64,17 @@ export interface UseWorkspacesResult {
  */
 export function useWorkspaces(): UseWorkspacesResult {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [workspacesLoading, setWorkspacesLoading] = useState(false);
+  const { loading: workspacesLoading, track: trackWorkspaces } = useLoadingState();
   const [workspaceCreating, setWorkspaceCreating] = useState(false);
 
   const loadWorkspaces = useCallback(async () => {
-    setWorkspacesLoading(true);
     try {
-      const resp = await grackleClient.listWorkspaces({});
+      const resp = await trackWorkspaces(grackleClient.listWorkspaces({}));
       setWorkspaces(resp.workspaces.map(protoToWorkspace));
     } catch {
       // empty
-    } finally {
-      setWorkspacesLoading(false);
     }
-  }, []);
+  }, [trackWorkspaces]);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     switch (event.type) {

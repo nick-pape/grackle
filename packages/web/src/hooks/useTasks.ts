@@ -12,6 +12,7 @@ import { ConnectError } from "@connectrpc/connect";
 import type { TaskData, GrackleEvent, WsMessage } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToTask } from "./proto-converters.js";
+import { useLoadingState } from "./useLoadingState.js";
 
 /** Values returned by {@link useTasks}. */
 export interface UseTasksResult {
@@ -75,7 +76,7 @@ export interface UseTasksResult {
  */
 export function useTasks(): UseTasksResult {
   const [tasks, setTasks] = useState<TaskData[]>([]);
-  const [tasksLoading, setTasksLoading] = useState(false);
+  const { loading: tasksLoading, track: trackTasks } = useLoadingState();
   const [taskStartingId, setTaskStartingId] = useState<string | undefined>(
     undefined,
   );
@@ -98,9 +99,8 @@ export function useTasks(): UseTasksResult {
 
   /** Fetch all tasks (global, including workspace-less) and upsert into state. */
   const loadAllTasks = useCallback(async () => {
-    setTasksLoading(true);
     try {
-      const resp = await grackleClient.listTasks({});
+      const resp = await trackTasks(grackleClient.listTasks({}));
       const incoming = resp.tasks.map(protoToTask);
       setTasks((prev) => {
         const incomingIds = new Set(incoming.map((t) => t.id));
@@ -111,10 +111,8 @@ export function useTasks(): UseTasksResult {
       });
     } catch {
       // empty
-    } finally {
-      setTasksLoading(false);
     }
-  }, []);
+  }, [trackTasks]);
 
   /** Debounced refresh: coalesce rapid domain events for the same workspace. */
   const refreshTasksForEvent = useCallback((workspaceId: string, taskId: string) => {
