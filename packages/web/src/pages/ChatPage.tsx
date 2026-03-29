@@ -31,7 +31,7 @@ export function ChatPage(): JSX.Element {
     loadTaskSessions, loadSessionEvents, kill, stopGraceful,
     taskSessions,
     sendInput, spawn, startTask, personas, provisionEnvironment,
-    sessionsLoading,
+    sessionsLoading, tasksLoading,
   } = useGrackle();
   const { showToast } = useToast();
 
@@ -110,7 +110,7 @@ export function ChatPage(): JSX.Element {
     [startTask],
   );
 
-  if (sessionsLoading && !rootTask) {
+  if (!rootTask && (sessionsLoading || tasksLoading)) {
     return <ChatShimmer />;
   }
 

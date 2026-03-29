@@ -68,6 +68,8 @@ describe("useFindings loading state", () => {
       result.current.loadAllFindings().catch(() => {});
     });
 
+    expect(result.current.findingsLoading).toBe(true);
+
     await waitFor(() => {
       expect(result.current.findingsLoading).toBe(false);
     });

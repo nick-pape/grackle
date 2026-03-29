@@ -106,7 +106,8 @@ export function DashboardPage(): JSX.Element {
     [workspaces, tasks, environments],
   );
 
-  if (sessionsLoading || tasksLoading || environmentsLoading || workspacesLoading) {
+  const hasNoData = sessions.length === 0 && tasks.length === 0 && environments.length === 0 && workspaces.length === 0;
+  if (hasNoData && (sessionsLoading || tasksLoading || environmentsLoading || workspacesLoading)) {
     return <DashboardShimmer />;
   }
 
