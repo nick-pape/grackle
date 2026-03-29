@@ -6,11 +6,12 @@
  * tokens), the hook itself polls silently until something is actionable.
  *
  * Exit codes:
- *   0 — Allow stop (no PR, PR is ready, or rate-limited)
- *   2 — Block stop (message on stderr tells agent what to fix)
+ *   0 — Allow stop (no open PR for this branch, PR is ready, or rate-limited)
+ *   2 — Block stop (message on stderr tells agent what to fix, including
+ *       stale closed/merged PRs that need cleanup)
  *
- * State machine (CI x Copilot):
- *   HAS_COMMENTS (any CI)  → block: "fix comments" (CI restarts after push)
+ * State machine (CI x Review):
+ *   HAS_COMMENTS (any CI)  → block: "fix comments" (from any reviewer)
  *   FAILING (no comments)  → block: "fix CI"
  *   PASSING + CLEAN        → allow stop
  *   anything pending       → poll silently until actionable or timeout
@@ -25,8 +26,8 @@ import { execSync } from "node:child_process";
 /** Milliseconds between poll iterations. */
 const POLL_INTERVAL_MS = 30_000;
 
-/** Maximum total poll time before giving up (~18 min, leaves buffer for 20-min hook timeout). */
-const MAX_POLL_MS = 18 * 60 * 1000;
+/** Maximum total poll time before giving up (~16 min, leaves buffer for 20-min hook timeout). */
+const MAX_POLL_MS = 16 * 60 * 1000;
 
 /**
  * After CI passes but Copilot hasn't reviewed yet, wait at most this long
@@ -147,7 +148,7 @@ const GRAPHQL_QUERY = `query($owner: String!, $repo: String!, $branch: String!) 
             }
           }
         }
-        reviews(first: 50) {
+        reviews(last: 50) {
           nodes {
             author { login }
             state
@@ -232,6 +233,7 @@ function queryPrState(owner, repo, branch) {
             mergeable: "UNKNOWN",
             ciState: "PASSING",
             failingChecks: [],
+            reviewState: "CLEAN",
             copilotState: "CLEAN",
             unresolvedCount: 0,
             threadsHasNextPage: false,
@@ -268,19 +270,21 @@ function queryPrState(owner, repo, branch) {
     } else if (checkContexts.some((c) => PENDING_STATUSES.has(c.conclusion || c.status || c.state || ""))) {
       ciState = "PENDING";
     } else if (checksHasNextPage) {
-      ciState = "PENDING";
+      // >100 checks and all visible ones passed — assume passing.
+      // If some are failing beyond page 1, we'd have caught failures
+      // in the visible checks (GitHub returns them mixed, not sorted).
+      ciState = "PASSING";
     } else {
       ciState = "PASSING";
     }
   }
 
-  // ── Copilot state ────────────────────────────────────────────────
+  // ── Review state (comments from ANY reviewer) ──────────────────
   const threads = pr.reviewThreads?.nodes || [];
   const threadsHasNextPage = pr.reviewThreads?.pageInfo?.hasNextPage || false;
-  const unresolvedCopilotThreads = threads.filter(
-    (t) => !t.isResolved && t.comments?.nodes?.[0]?.author?.login === COPILOT_LOGIN
-  );
+  const unresolvedThreads = threads.filter((t) => !t.isResolved);
 
+  // ── Copilot review state (for polling: wait for Copilot auto-review) ──
   const reviews = pr.reviews?.nodes || [];
   const latestCopilotReview = reviews
     .filter((r) => r.author?.login === COPILOT_LOGIN && r.submittedAt)
@@ -298,20 +302,24 @@ function queryPrState(owner, repo, branch) {
     ? new Date(latestCopilotReview.submittedAt) >= new Date(commitDate)
     : false;
 
-  let copilotState;
-  if (unresolvedCopilotThreads.length > 0) {
-    copilotState = "HAS_COMMENTS";
+  // reviewState: tracks unresolved comments from ANY reviewer
+  // copilotState: tracks whether Copilot specifically has reviewed the latest commit
+  let reviewState;
+  if (unresolvedThreads.length > 0) {
+    reviewState = "HAS_COMMENTS";
   } else if (threadsHasNextPage) {
-    // Can't see all threads — there may be unresolved Copilot threads on later pages.
-    copilotState = "HAS_COMMENTS";
-  } else if (copilotRequested) {
-    // Copilot is in reviewRequests — review requested but not yet submitted
+    // Can't see all threads — there may be unresolved threads on later pages.
+    reviewState = "HAS_COMMENTS";
+  } else {
+    reviewState = "CLEAN";
+  }
+
+  let copilotState;
+  if (copilotRequested) {
     copilotState = "PENDING";
   } else if (copilotReviewedCurrentCommit) {
-    // Copilot reviewed after the latest commit — clean for this push
     copilotState = "CLEAN";
   } else {
-    // Either never reviewed, or last review was for an older commit
     copilotState = "PENDING";
   }
 
@@ -322,8 +330,9 @@ function queryPrState(owner, repo, branch) {
     mergeable: pr.mergeable,
     ciState,
     failingChecks,
+    reviewState,
     copilotState,
-    unresolvedCount: unresolvedCopilotThreads.length,
+    unresolvedCount: unresolvedThreads.length,
     threadsHasNextPage,
   };
 }
@@ -339,7 +348,7 @@ function evaluate(state) {
     return { action: "allow" };
   }
 
-  const { prNumber, prState, mergeable, ciState, failingChecks, copilotState, unresolvedCount, threadsHasNextPage } = state;
+  const { prNumber, prState, mergeable, ciState, failingChecks, reviewState, copilotState, unresolvedCount, threadsHasNextPage } = state;
 
   // PR already merged or closed → tell agent to clean up
   if (prState === "MERGED" || prState === "CLOSED") {
@@ -372,8 +381,8 @@ function evaluate(state) {
     };
   }
 
-  // Priority 1: Copilot comments — always fix these first (CI restarts after push)
-  if (copilotState === "HAS_COMMENTS") {
+  // Priority 1: Unresolved review comments (from any reviewer) — fix before CI
+  if (reviewState === "HAS_COMMENTS") {
     let countNote;
     if (threadsHasNextPage && unresolvedCount === 0) {
       countNote = "possible unresolved";
@@ -385,7 +394,7 @@ function evaluate(state) {
     return {
       action: "block",
       message:
-        `PR #${prNumber} — Copilot left ${countNote} comment(s). Address each one and push.\n` +
+        `PR #${prNumber} has ${countNote} unresolved review comment(s). Address each one and push.\n` +
         `CI will restart after your push — don't wait for the current run.\n` +
         (threadsHasNextPage ? `(PR has >100 review threads; check GitHub for the full list.)\n` : ""),
     };
@@ -405,12 +414,11 @@ function evaluate(state) {
     return { action: "poll" };
   }
 
-  // Both passing/clean → allow stop
-  if (ciState === "PASSING" && (copilotState === "CLEAN" || copilotState === "PENDING")) {
-    // If Copilot is pending but CI passed, we handle this in the poll loop
-    // with a grace period. But if we're in the instant-check path, we need
-    // to return "poll" so the grace period logic kicks in.
+  // All clear → allow stop (CI passing, no unresolved comments, Copilot reviewed)
+  if (ciState === "PASSING" && reviewState === "CLEAN") {
     if (copilotState === "PENDING") {
+      // CI passed, no unresolved comments, but Copilot hasn't reviewed
+      // the latest commit yet — poll with grace period
       return { action: "poll" };
     }
     return { action: "allow" };
@@ -483,7 +491,7 @@ function main() {
     }
 
     // Still polling — check Copilot grace period
-    if (state.ciState === "PASSING" && state.copilotState === "PENDING") {
+    if (state.ciState === "PASSING" && state.reviewState === "CLEAN" && state.copilotState === "PENDING") {
       if (!ciPassedAt) {
         ciPassedAt = Date.now();
       }
@@ -508,10 +516,11 @@ function main() {
   }
 
   const ciLabel = finalState.ciState || "UNKNOWN";
+  const reviewLabel = finalState.reviewState || "UNKNOWN";
   const copilotLabel = finalState.copilotState || "UNKNOWN";
   block(
     `PR #${finalState.prNumber} — still waiting after ${Math.round((Date.now() - pollStart) / 60000)} min ` +
-    `(CI: ${ciLabel}, Copilot: ${copilotLabel}).\n` +
+    `(CI: ${ciLabel}, Reviews: ${reviewLabel}, Copilot: ${copilotLabel}).\n` +
     `The hook will resume checking on your next stop attempt.`
   );
 }
