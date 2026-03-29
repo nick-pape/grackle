@@ -103,10 +103,11 @@ export function useEventSelection({
           if (next.size === 0) {
             setIsSelecting(false);
             anchorRef.current = undefined;
+          } else {
+            anchorRef.current = index;
           }
           return next;
         });
-        anchorRef.current = index;
       }
     },
     [events],
