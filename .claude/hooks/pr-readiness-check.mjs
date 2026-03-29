@@ -70,7 +70,16 @@ function block(message) {
 }
 
 function sleep(ms) {
-  execSync(`sleep ${Math.ceil(ms / 1000)}`, { stdio: "ignore" });
+  const sab = new SharedArrayBuffer(4);
+  const int32 = new Int32Array(sab);
+  const end = Date.now() + ms;
+  while (true) {
+    const remaining = end - Date.now();
+    if (remaining <= 0) {
+      break;
+    }
+    Atomics.wait(int32, 0, 0, Math.min(remaining, 0x7fffffff));
+  }
 }
 
 function isRateLimited(text) {
@@ -412,8 +421,11 @@ function main() {
       }
       if (Date.now() - ciPassedAt >= COPILOT_GRACE_MS) {
         // CI passed and Copilot hasn't reviewed after grace period —
-        // assume Copilot is clean or not configured
-        process.exit(0);
+        // assume Copilot is clean or not configured, but only if
+        // mergeability is known to be non-conflicting.
+        if (state.mergeable === "MERGEABLE") {
+          process.exit(0);
+        }
       }
     } else {
       // CI went back to pending (new push?) or Copilot showed up — reset grace timer
