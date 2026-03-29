@@ -8,6 +8,7 @@ import * as personas from "./persona-handlers.js";
 import * as schedules from "./schedule-handlers.js";
 import * as tokens from "./token-handlers.js";
 import * as findings from "./finding-handlers.js";
+import * as escalations from "./escalation-handlers.js";
 import * as codespaces from "./codespace-handlers.js";
 import * as knowledge from "./knowledge-handlers.js";
 import * as settings from "./settings-handlers.js";
@@ -29,6 +30,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     ...schedules,
     ...tokens,
     ...findings,
+    ...escalations,
     ...codespaces,
     ...knowledge,
     ...settings,

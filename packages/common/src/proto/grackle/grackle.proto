@@ -34,6 +34,7 @@ enum EventType {
   EVENT_TYPE_USER_INPUT = 9;
   EVENT_TYPE_SIGNAL = 10;
   EVENT_TYPE_USAGE = 11;
+  EVENT_TYPE_ESCALATION = 12;
 }
 
 enum TaskStatus {
@@ -461,6 +462,45 @@ message GetFindingRequest {
   string id = 1;
 }
 
+// ─── Escalations ───────────────────────────────────────────
+
+message Escalation {
+  string id = 1;
+  string workspace_id = 2;
+  string task_id = 3;
+  string title = 4;
+  string message = 5;
+  string source = 6;
+  string urgency = 7;
+  string status = 8;
+  string created_at = 9;
+  string delivered_at = 10;
+  string acknowledged_at = 11;
+  string task_url = 12;
+}
+
+message EscalationList {
+  repeated Escalation escalations = 1;
+}
+
+message CreateEscalationRequest {
+  string workspace_id = 1;
+  string task_id = 2;
+  string title = 3;
+  string message = 4;
+  string urgency = 5;
+}
+
+message ListEscalationsRequest {
+  string workspace_id = 1;
+  string status = 2;
+  int32 limit = 3;
+}
+
+message AcknowledgeEscalationRequest {
+  string id = 1;
+}
+
 // ─── Personas ──────────────────────────────────────────────
 
 message McpServerConfig {
@@ -825,6 +865,11 @@ service Grackle {
   rpc PostFinding(PostFindingRequest) returns (Finding);
   rpc QueryFindings(QueryFindingsRequest) returns (FindingList);
   rpc GetFinding(GetFindingRequest) returns (Finding);
+
+  // Escalations
+  rpc CreateEscalation(CreateEscalationRequest) returns (Escalation);
+  rpc ListEscalations(ListEscalationsRequest) returns (EscalationList);
+  rpc AcknowledgeEscalation(AcknowledgeEscalationRequest) returns (Escalation);
 
   // Schedules
   rpc CreateSchedule(CreateScheduleRequest) returns (Schedule);

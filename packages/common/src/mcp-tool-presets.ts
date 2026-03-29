@@ -42,6 +42,8 @@ export const ALL_MCP_TOOL_NAMES: ReadonlySet<string> = new Set([
   "workpad_write", "workpad_read",
   // workspace
   "workspace_list", "workspace_create", "workspace_get", "workspace_update", "workspace_archive",
+  // escalation
+  "escalate_to_human", "escalation_list", "escalation_acknowledge",
 ]);
 
 // ─── Preset Tool Sets ────────────────────────────────────────
@@ -102,6 +104,8 @@ export const ORCHESTRATOR_MCP_TOOLS: readonly string[] = [
   "persona_create",
   "knowledge_create_node",
   "schedule_create", "schedule_update", "schedule_delete",
+  // Escalation — orchestrators can page the human
+  "escalate_to_human",
 ] as const;
 
 /**
