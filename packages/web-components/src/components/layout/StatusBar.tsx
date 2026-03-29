@@ -3,6 +3,7 @@ import { Circle, Menu } from "lucide-react";
 import type { Environment, Session } from "../../hooks/types.js";
 import { ICON_LG, ICON_XS } from "../../utils/iconSize.js";
 import { HOME_URL, useAppNavigate } from "../../utils/navigation.js";
+import { Tooltip } from "../display/Tooltip.js";
 import styles from "./StatusBar.module.scss";
 
 /** Props for the StatusBar component. */
@@ -33,10 +34,12 @@ export function StatusBar({ connected, environments, sessions, onToggleSidebar, 
           <Menu size={ICON_LG} aria-hidden="true" />
         </button>
       )}
-      <button type="button" className={styles.brand} onClick={() => navigate(HOME_URL)} title="Home">
-        <img src="/icon-192x192.png" alt="" className={styles.brandLogo} aria-hidden="true" data-testid="statusbar-logo" />
-        Grackle
-      </button>
+      <Tooltip text="Home" placement="bottom">
+        <button type="button" className={styles.brand} onClick={() => navigate(HOME_URL)}>
+          <img src="/icon-192x192.png" alt="" className={styles.brandLogo} aria-hidden="true" data-testid="statusbar-logo" />
+          Grackle
+        </button>
+      </Tooltip>
       <div className={styles.info}>
         <span aria-label={connected ? "Connected" : "Disconnected"}>
           <span className={`${styles.connectionDot} ${connected ? styles.connected : styles.disconnected}`} aria-hidden="true">

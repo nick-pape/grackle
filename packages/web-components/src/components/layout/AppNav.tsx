@@ -3,6 +3,7 @@ import { useLocation } from "react-router";
 import { Brain, ClipboardList, Home, MessageSquare, Monitor, Search, Settings } from "lucide-react";
 import { CHAT_URL, ENVIRONMENTS_URL, FINDINGS_URL, HOME_URL, KNOWLEDGE_URL, SETTINGS_URL, SETTINGS_CREDENTIALS_URL, TASKS_URL, useAppNavigate } from "../../utils/navigation.js";
 import { ICON_LG } from "../../utils/iconSize.js";
+import { Tooltip } from "../display/Tooltip.js";
 import styles from "./AppNav.module.scss";
 
 /** Application view identifiers. */
@@ -110,21 +111,21 @@ export function AppNav(): JSX.Element {
       {TABS.map((tab) => {
         const isActive = tab.view === activeView;
         return (
-          <button
-            key={tab.view}
-            role="tab"
-            type="button"
-            aria-selected={isActive}
-            tabIndex={isActive ? 0 : -1}
-            className={`${styles.tab} ${isActive ? styles.tabActive : ""}`}
-            onClick={() => handleClick(tab)}
-            data-testid={tab.testId}
-            title={tab.label}
-            aria-label={tab.label}
-          >
-            <span className={styles.tabIcon} aria-hidden="true">{tab.icon}</span>
-            <span className={styles.tabLabel}>{tab.label}</span>
-          </button>
+          <Tooltip key={tab.view} text={tab.label} placement="bottom">
+            <button
+              role="tab"
+              type="button"
+              aria-selected={isActive}
+              tabIndex={isActive ? 0 : -1}
+              className={`${styles.tab} ${isActive ? styles.tabActive : ""}`}
+              onClick={() => handleClick(tab)}
+              data-testid={tab.testId}
+              aria-label={tab.label}
+            >
+              <span className={styles.tabIcon} aria-hidden="true">{tab.icon}</span>
+              <span className={styles.tabLabel}>{tab.label}</span>
+            </button>
+          </Tooltip>
         );
       })}
     </nav>

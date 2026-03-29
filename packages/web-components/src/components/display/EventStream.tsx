@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { EventRenderer } from "./EventRenderer.js";
 import { EventHoverRow } from "./EventHoverRow.js";
 import { FloatingActionBar } from "./FloatingActionBar.js";
+import { Tooltip } from "./Tooltip.js";
 import { useSmartScroll } from "../../hooks/useSmartScroll.js";
 import { useEventSelection } from "../../hooks/useEventSelection.js";
 import { isContentBearingEvent, getEventCopyText, formatEventsAsMarkdown } from "../../utils/eventContent.js";
@@ -140,15 +141,16 @@ export function EventStream({ events, eventsDropped, emptyState, onShowToast }: 
     <div className={styles.wrapper}>
       {/* Direction toggle */}
       <div className={styles.toolbar}>
-        <button
-          className={styles.directionToggle}
-          onClick={handleToggleDirection}
-          title={isReversed ? "Showing newest first" : "Showing oldest first"}
-          aria-label={isReversed ? "Switch to newest at bottom" : "Switch to newest at top"}
-          data-testid="direction-toggle"
-        >
-          {isReversed ? <ArrowDown size={ICON_MD} aria-hidden="true" /> : <ArrowUp size={ICON_MD} aria-hidden="true" />}
-        </button>
+        <Tooltip text={isReversed ? "Showing newest first" : "Showing oldest first"}>
+          <button
+            className={styles.directionToggle}
+            onClick={handleToggleDirection}
+            aria-label={isReversed ? "Switch to newest at bottom" : "Switch to newest at top"}
+            data-testid="direction-toggle"
+          >
+            {isReversed ? <ArrowDown size={ICON_MD} aria-hidden="true" /> : <ArrowUp size={ICON_MD} aria-hidden="true" />}
+          </button>
+        </Tooltip>
       </div>
 
       {/* Scroll container */}

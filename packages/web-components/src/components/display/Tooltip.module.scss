@@ -1,0 +1,83 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Tooltip — lightweight hover/focus tooltip
+// =============================================================================
+
+$arrow-size: 5px;
+$tooltip-gap: 6px;
+
+// Wrapper — inline by default, provides relative context
+.wrapper {
+  display: inline-flex;
+  position: relative;
+}
+
+.wrapperBlock {
+  display: flex;
+  position: relative;
+}
+
+// Tooltip bubble — fixed positioning escapes overflow:hidden ancestors
+.tooltip {
+  position: fixed;
+  z-index: 500;
+
+  max-width: 240px;
+  padding: var(--space-xs) var(--space-sm);
+
+  background: var(--bg-elevated);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(var(--glass-blur-card));
+  -webkit-backdrop-filter: blur(var(--glass-blur-card));
+
+  color: var(--text-primary);
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+
+  &.visible {
+    opacity: 1;
+  }
+}
+
+// Arrow — CSS triangle via ::after pseudo-element
+.tooltip::after {
+  content: '';
+  position: absolute;
+  border: $arrow-size solid transparent;
+}
+
+.top::after {
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-top-color: var(--bg-elevated);
+}
+
+.bottom::after {
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-bottom-color: var(--bg-elevated);
+}
+
+.left::after {
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-left-color: var(--bg-elevated);
+}
+
+.right::after {
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-right-color: var(--bg-elevated);
+}
