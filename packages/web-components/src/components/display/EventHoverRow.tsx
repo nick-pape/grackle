@@ -7,7 +7,7 @@
  * side effects via navigator.clipboard when the user clicks Copy.
  */
 
-import { useState, useCallback, useEffect, useRef, type JSX, type ReactNode } from "react";
+import { useState, useCallback, useEffect, useRef, type JSX, type ReactNode, type MouseEvent } from "react";
 import { Clipboard, Check, CheckSquare } from "lucide-react";
 import { ICON_SM } from "../../utils/iconSize.js";
 import styles from "./EventHoverRow.module.scss";
@@ -76,7 +76,7 @@ export function EventHoverRow({
   }, [copyText, onCopied]);
 
   const handleRowClick = useCallback(
-    (e: React.MouseEvent) => {
+    (e: MouseEvent<HTMLDivElement>) => {
       if (!isSelecting) {
         return;
       }
@@ -108,7 +108,7 @@ export function EventHoverRow({
           <input
             type="checkbox"
             checked={isSelected}
-            onChange={(e) => { onToggle((e.nativeEvent as MouseEvent).shiftKey); }}
+            onChange={(e) => { onToggle("shiftKey" in e.nativeEvent && !!(e.nativeEvent as Record<string, unknown>).shiftKey); }}
             onClick={(e) => { e.stopPropagation(); }}
             className={styles.checkbox}
             aria-label={checkboxLabel ?? "Select this event"}
