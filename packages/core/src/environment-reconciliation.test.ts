@@ -78,7 +78,7 @@ describe("environment status reconciliation phase", () => {
     expect(deps.emit).toHaveBeenCalledWith("environment.changed", {});
   });
 
-  it("forward drift: DB says connecting but no connection in memory", async () => {
+  it("does not touch connecting status (in-progress provisioning)", async () => {
     const deps = makeDeps({
       listEnvironments: vi.fn(() => [makeEnv({ id: "env-1", status: "connecting" })] as never),
       listConnectionIds: vi.fn(() => new Set()),
@@ -87,8 +87,9 @@ describe("environment status reconciliation phase", () => {
     const phase = createEnvironmentReconciliationPhase(deps);
     await phase.execute();
 
-    expect(deps.updateEnvironmentStatus).toHaveBeenCalledWith("env-1", "disconnected");
-    expect(deps.emit).toHaveBeenCalledWith("environment.changed", {});
+    expect(deps.updateEnvironmentStatus).not.toHaveBeenCalled();
+    expect(deps.removeConnection).not.toHaveBeenCalled();
+    expect(deps.emit).not.toHaveBeenCalled();
   });
 
   it("reverse drift: connection exists but DB says disconnected", async () => {

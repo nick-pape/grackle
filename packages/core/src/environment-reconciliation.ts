@@ -15,10 +15,16 @@ import { logger } from "./logger.js";
 import type { GrackleEventType } from "./event-bus.js";
 import type { ReconciliationPhase } from "./reconciliation-manager.js";
 
-/** Statuses that indicate the environment should have an active connection. */
+/**
+ * Statuses that indicate the environment should have an active connection.
+ *
+ * "connecting" is intentionally excluded — it represents an in-progress
+ * provision/connect where no in-memory connection exists yet. Reconciling
+ * it would incorrectly flip environments back to "disconnected" during
+ * normal provisioning flows.
+ */
 const ACTIVE_STATUSES: ReadonlySet<EnvironmentStatus> = new Set([
   "connected",
-  "connecting",
 ]);
 
 /** Statuses that indicate the environment should NOT have an in-memory connection. */
