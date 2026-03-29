@@ -33,10 +33,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/pr-readiness-check.mjs"
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/pr-readiness-check.mjs\""
           }
         ],
-        "timeout": 180
+        "timeout": 900
       }
     ]
   }
