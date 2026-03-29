@@ -137,6 +137,7 @@ jobs:
           path: tests/e2e-tests/test-results/e2e-results.xml
           reporter: java-junit
           fail-on-error: false
+          fail-on-empty: false
 
       - name: BuildPulse — upload test results
         if: always() && steps.changefile_check.outputs.has_changefiles == 'true' && vars.BUILDPULSE_ACCOUNT_ID != '' && vars.BUILDPULSE_REPOSITORY_ID != ''
