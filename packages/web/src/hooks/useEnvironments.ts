@@ -20,6 +20,8 @@ const PROVISION_STATUS_CLEAR_DELAY_MS: number = 5_000;
 export interface UseEnvironmentsResult {
   /** All known environments. */
   environments: Environment[];
+  /** Whether the environment list is currently being loaded. */
+  environmentsLoading: boolean;
   /** Per-environment provisioning progress. */
   provisionStatus: Record<string, ProvisionStatus>;
   /** Request the current environment list from the server. */
@@ -54,16 +56,20 @@ export interface UseEnvironmentsResult {
  */
 export function useEnvironments(): UseEnvironmentsResult {
   const [environments, setEnvironments] = useState<Environment[]>([]);
+  const [environmentsLoading, setEnvironmentsLoading] = useState(false);
   const [provisionStatus, setProvisionStatus] = useState<
     Record<string, ProvisionStatus>
   >({});
 
   const loadEnvironments = useCallback(async () => {
+    setEnvironmentsLoading(true);
     try {
       const resp = await grackleClient.listEnvironments({});
       setEnvironments(resp.environments.map(protoToEnvironment));
     } catch {
       // empty
+    } finally {
+      setEnvironmentsLoading(false);
     }
   }, []);
 
@@ -228,6 +234,7 @@ export function useEnvironments(): UseEnvironmentsResult {
 
   return {
     environments,
+    environmentsLoading,
     provisionStatus,
     loadEnvironments,
     addEnvironment,

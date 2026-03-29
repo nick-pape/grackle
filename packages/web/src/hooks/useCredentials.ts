@@ -17,6 +17,8 @@ import { protoToCredentialConfig } from "./proto-converters.js";
 export interface UseCredentialsResult {
   /** Current credential provider configuration. */
   credentialProviders: CredentialProviderConfig;
+  /** Whether the credential configuration is currently being loaded. */
+  credentialsLoading: boolean;
   /** Request the current credential provider configuration from the server. */
   loadCredentials: () => Promise<void>;
   /** Update the credential provider configuration on the server. */
@@ -38,13 +40,17 @@ export function useCredentials(): UseCredentialsResult {
     codex: "off",
     goose: "off",
   });
+  const [credentialsLoading, setCredentialsLoading] = useState(false);
 
   const loadCredentials = useCallback(async () => {
+    setCredentialsLoading(true);
     try {
       const resp = await grackleClient.getCredentialProviders({});
       setCredentialProviders(protoToCredentialConfig(resp));
     } catch {
       // empty
+    } finally {
+      setCredentialsLoading(false);
     }
   }, []);
 
@@ -76,5 +82,5 @@ export function useCredentials(): UseCredentialsResult {
     [],
   );
 
-  return { credentialProviders, loadCredentials, updateCredentialProviders, handleEvent };
+  return { credentialProviders, credentialsLoading, loadCredentials, updateCredentialProviders, handleEvent };
 }

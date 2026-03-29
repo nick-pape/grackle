@@ -17,6 +17,8 @@ import { protoToSession, protoToSessionEvent } from "./proto-converters.js";
 export interface UseSessionsResult {
   /** All known sessions. */
   sessions: Session[];
+  /** Whether the session list is currently being loaded. */
+  sessionsLoading: boolean;
   /** Session events currently loaded in memory. */
   events: SessionEvent[];
   /**
@@ -77,6 +79,7 @@ const ACTIVE_ORDER: readonly string[] = ["pending", "running", "idle"];
  */
 export function useSessions(): UseSessionsResult {
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
   const [events, setEvents] = useState<SessionEvent[]>([]);
   const [eventsDropped, setEventsDropped] = useState<number>(0);
   const [lastSpawnedId, setLastSpawnedId] = useState<string | undefined>(
@@ -86,6 +89,7 @@ export function useSessions(): UseSessionsResult {
 
   /** Fetch the session list from the server via ConnectRPC. */
   const loadSessions = useCallback(async () => {
+    setSessionsLoading(true);
     try {
       const resp = await grackleClient.listSessions({});
       const incoming = resp.sessions.map(protoToSession);
@@ -111,6 +115,8 @@ export function useSessions(): UseSessionsResult {
       });
     } catch {
       // empty
+    } finally {
+      setSessionsLoading(false);
     }
   }, []);
 
@@ -351,6 +357,7 @@ export function useSessions(): UseSessionsResult {
 
   return {
     sessions,
+    sessionsLoading,
     events,
     eventsDropped,
     lastSpawnedId,

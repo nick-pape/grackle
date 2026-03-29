@@ -17,6 +17,8 @@ import { protoToTask } from "./proto-converters.js";
 export interface UseTasksResult {
   /** All known tasks (may span multiple workspaces). */
   tasks: TaskData[];
+  /** Whether the task list is currently being loaded. */
+  tasksLoading: boolean;
   /** The ID of the task currently being started, or `undefined`. */
   taskStartingId: string | undefined;
   /** Load tasks for a given workspace. */
@@ -73,6 +75,7 @@ export interface UseTasksResult {
  */
 export function useTasks(): UseTasksResult {
   const [tasks, setTasks] = useState<TaskData[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
   const [taskStartingId, setTaskStartingId] = useState<string | undefined>(
     undefined,
   );
@@ -95,6 +98,7 @@ export function useTasks(): UseTasksResult {
 
   /** Fetch all tasks (global, including workspace-less) and upsert into state. */
   const loadAllTasks = useCallback(async () => {
+    setTasksLoading(true);
     try {
       const resp = await grackleClient.listTasks({});
       const incoming = resp.tasks.map(protoToTask);
@@ -107,6 +111,8 @@ export function useTasks(): UseTasksResult {
       });
     } catch {
       // empty
+    } finally {
+      setTasksLoading(false);
     }
   }, []);
 
@@ -318,6 +324,7 @@ export function useTasks(): UseTasksResult {
 
   return {
     tasks,
+    tasksLoading,
     taskStartingId,
     loadTasks,
     loadAllTasks,

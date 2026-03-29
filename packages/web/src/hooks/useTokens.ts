@@ -16,6 +16,8 @@ import { protoToToken } from "./proto-converters.js";
 export interface UseTokensResult {
   /** All known tokens. */
   tokens: TokenInfo[];
+  /** Whether the token list is currently being loaded. */
+  tokensLoading: boolean;
   /** Request the current token list from the server. */
   loadTokens: () => Promise<void>;
   /** Create or update a token on the server. */
@@ -39,13 +41,17 @@ export interface UseTokensResult {
  */
 export function useTokens(): UseTokensResult {
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
+  const [tokensLoading, setTokensLoading] = useState(false);
 
   const loadTokens = useCallback(async () => {
+    setTokensLoading(true);
     try {
       const resp = await grackleClient.listTokens({});
       setTokens(resp.tokens.map(protoToToken));
     } catch {
       // empty
+    } finally {
+      setTokensLoading(false);
     }
   }, []);
 
@@ -85,5 +91,5 @@ export function useTokens(): UseTokensResult {
     [],
   );
 
-  return { tokens, loadTokens, setToken, deleteToken, handleEvent };
+  return { tokens, tokensLoading, loadTokens, setToken, deleteToken, handleEvent };
 }
