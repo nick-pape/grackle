@@ -67,6 +67,13 @@ describe("authenticateMcpRequest", () => {
     expect(result).toBeUndefined();
   });
 
+  /** Bearer token containing spaces is rejected (tokens are non-whitespace). */
+  test("bearer token with spaces returns undefined", () => {
+    const req = mockRequest("Bearer token with spaces");
+    const result = authenticateMcpRequest(req, API_KEY);
+    expect(result).toBeUndefined();
+  });
+
   /** Wrong API key returns undefined. */
   test("wrong API key returns undefined", () => {
     const wrongKey = "b".repeat(64);

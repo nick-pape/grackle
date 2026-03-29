@@ -23,14 +23,14 @@ function getCommand(args: unknown): string {
  * Strips PowerShell wrappers like `"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'inner'`
  * down to just the inner command.
  */
-function simplifyCommand(cmd: string): string {
+export function simplifyCommand(cmd: string): string {
   // Match: "...pwsh.exe" -Command 'inner command'
-  const pwshMatch = /pwsh(?:\.exe)?["']?\s+-Command\s+'(.+?)'\s*$/i.exec(cmd);
+  const pwshMatch = /pwsh(?:\.exe)?["']?\s+-Command\s+'([^']*)'\s*$/i.exec(cmd);
   if (pwshMatch) {
     return pwshMatch[1];
   }
   // Match: "...pwsh.exe" -Command "inner command"
-  const pwshMatch2 = /pwsh(?:\.exe)?["']?\s+-Command\s+"(.+?)"\s*$/i.exec(cmd);
+  const pwshMatch2 = /pwsh(?:\.exe)?["']?\s+-Command\s+"([^"]*)"\s*$/i.exec(cmd);
   if (pwshMatch2) {
     return pwshMatch2[1];
   }
