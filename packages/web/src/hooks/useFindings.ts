@@ -21,11 +21,11 @@ export interface UseFindingsResult {
   /** Whether a single finding is being loaded. */
   findingLoading: boolean;
   /** Load findings for a given workspace. */
-  loadFindings: (workspaceId: string) => void;
+  loadFindings: (workspaceId: string) => Promise<void>;
   /** Load findings across all workspaces. */
-  loadAllFindings: () => void;
+  loadAllFindings: () => Promise<void>;
   /** Load a single finding by ID. */
-  loadFinding: (findingId: string) => void;
+  loadFinding: (findingId: string) => Promise<void>;
   /** Post a new finding to a workspace. */
   postFinding: (
     workspaceId: string,
@@ -33,7 +33,7 @@ export interface UseFindingsResult {
     content: string,
     category?: string,
     tags?: string[],
-  ) => void;
+  ) => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
 }
@@ -48,34 +48,42 @@ export function useFindings(): UseFindingsResult {
   const [selectedFinding, setSelectedFinding] = useState<FindingData | undefined>(undefined);
   const [findingLoading, setFindingLoading] = useState(false);
 
-  const loadFindings = useCallback((workspaceId: string) => {
-    grackleClient.queryFindings({ workspaceId }).then(
-      (resp) => { setFindings(resp.findings.map(protoToFinding)); },
-      () => {},
-    );
+  const loadFindings = useCallback(async (workspaceId: string) => {
+    try {
+      const resp = await grackleClient.queryFindings({ workspaceId });
+      setFindings(resp.findings.map(protoToFinding));
+    } catch {
+      // empty
+    }
   }, []);
 
-  const loadAllFindings = useCallback(() => {
-    grackleClient.queryFindings({ workspaceId: "" }).then(
-      (resp) => { setFindings(resp.findings.map(protoToFinding)); },
-      () => {},
-    );
+  const loadAllFindings = useCallback(async () => {
+    try {
+      const resp = await grackleClient.queryFindings({ workspaceId: "" });
+      setFindings(resp.findings.map(protoToFinding));
+    } catch {
+      // empty
+    }
   }, []);
 
-  const loadFinding = useCallback((findingId: string) => {
+  const loadFinding = useCallback(async (findingId: string) => {
     setSelectedFinding(undefined);
     setFindingLoading(true);
-    grackleClient.getFinding({ id: findingId }).then(
-      (resp) => { setSelectedFinding(protoToFinding(resp)); setFindingLoading(false); },
-      () => { setSelectedFinding(undefined); setFindingLoading(false); },
-    );
+    try {
+      const resp = await grackleClient.getFinding({ id: findingId });
+      setSelectedFinding(protoToFinding(resp));
+    } catch {
+      setSelectedFinding(undefined);
+    } finally {
+      setFindingLoading(false);
+    }
   }, []);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     if (event.type === "finding.posted") {
       const pid = typeof event.payload.workspaceId === "string" ? event.payload.workspaceId : "";
       if (pid) {
-        loadFindings(pid);
+        loadFindings(pid).catch(() => {});
       }
       return true;
     }
@@ -83,22 +91,24 @@ export function useFindings(): UseFindingsResult {
   }, [loadFindings]);
 
   const postFinding = useCallback(
-    (
+    async (
       workspaceId: string,
       title: string,
       content: string,
       category?: string,
       tags?: string[],
     ) => {
-      grackleClient.postFinding({
-        workspaceId,
-        title,
-        content,
-        category: category ?? "general",
-        tags: tags ?? [],
-      }).catch(
-        () => {},
-      );
+      try {
+        await grackleClient.postFinding({
+          workspaceId,
+          title,
+          content,
+          category: category ?? "general",
+          tags: tags ?? [],
+        });
+      } catch {
+        // empty
+      }
     },
     [],
   );

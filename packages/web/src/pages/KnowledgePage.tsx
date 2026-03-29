@@ -18,7 +18,7 @@ export function KnowledgePage(): JSX.Element {
 
   // Load recent nodes on mount
   const loadRecentFn = useCallback(
-    () => { knowledge.loadRecent(); },
+    () => { knowledge.loadRecent().catch(() => {}); },
     // eslint-disable-next-line @typescript-eslint/unbound-method -- stable useCallback ref
     [knowledge.loadRecent],
   );
@@ -27,11 +27,11 @@ export function KnowledgePage(): JSX.Element {
   }, [loadRecentFn]);
 
   const handleNodeClick = useCallback((nodeId: string) => {
-    knowledge.selectNode(nodeId);
+    knowledge.selectNode(nodeId).catch(() => {});
   }, [knowledge]);
 
   const handleNodeDoubleClick = useCallback((nodeId: string) => {
-    knowledge.expandNode(nodeId);
+    knowledge.expandNode(nodeId).catch(() => {});
   }, [knowledge]);
 
   const handleCloseDetail = useCallback(() => {

@@ -228,7 +228,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** Spawns a new session, appends it to state, and plays a stream scenario. */
   const spawn: UseGrackleSocketResult["spawn"] = useCallback(
-    (environmentId: string, prompt: string, _model?: string, runtime?: string) => {
+    async (environmentId: string, prompt: string, _model?: string, runtime?: string) => {
       console.log("[MockGrackle] spawn", { environmentId, prompt, runtime });
 
       const sessionId = nextId("sess");
@@ -284,7 +284,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** Kills a session: cancels timers, sets status to stopped with endReason killed, resets associated tasks. */
   const kill: UseGrackleSocketResult["kill"] = useCallback(
-    (sessionId: string) => {
+    async (sessionId: string) => {
       console.log("[MockGrackle] kill", sessionId);
 
       // 1. Cancel pending timers for this session
@@ -319,7 +319,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** Graceful stop — mirrors kill but with "terminated" end reason. */
   const stopGraceful: UseGrackleSocketResult["stopGraceful"] = useCallback(
-    (sessionId: string) => {
+    async (sessionId: string) => {
       console.log("[MockGrackle] stopGraceful", sessionId);
       cancelSessionTimers(sessionId);
       pendingResumeRef.current.delete(sessionId);
@@ -349,7 +349,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** No-op — events are already accumulated in state. */
   const loadSessionEvents: UseGrackleSocketResult["loadSessionEvents"] = useCallback(
-    (sessionId: string) => {
+    async (sessionId: string) => {
       console.log("[MockGrackle] loadSessionEvents", sessionId);
     },
     [],
@@ -363,7 +363,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** Creates a new workspace and adds it to state. */
   const createWorkspace: UseGrackleSocketResult["createWorkspace"] = useCallback(
-    (
+    async (
       name: string,
       description?: string,
       repoUrl?: string,
@@ -400,7 +400,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** Sets a workspace's status to "archived". */
   const archiveWorkspace: UseGrackleSocketResult["archiveWorkspace"] = useCallback(
-    (workspaceId: string) => {
+    async (workspaceId: string) => {
       console.log("[MockGrackle] archiveWorkspace", workspaceId);
       setWorkspaces((prev) =>
         prev.map((p) => (p.id === workspaceId ? { ...p, status: "archived" } : p)),
@@ -411,7 +411,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** No-op — tasks are already in state from initial load. */
   const loadTasks: UseGrackleSocketResult["loadTasks"] = useCallback(
-    (workspaceId: string) => {
+    async (workspaceId: string) => {
       console.log("[MockGrackle] loadTasks", workspaceId);
     },
     [],
@@ -419,7 +419,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** Creates a new task and adds it to state. */
   const createTask: UseGrackleSocketResult["createTask"] = useCallback(
-    (
+    async (
       workspaceId: string,
       title: string,
       description?: string,
@@ -483,7 +483,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
    * Also handles retry from "failed" — the task gets a fresh session.
    */
   const startTask: UseGrackleSocketResult["startTask"] = useCallback(
-    (taskId: string, _personaId?: string, _environmentId?: string, _notes?: string) => {
+    async (taskId: string, _personaId?: string, _environmentId?: string, _notes?: string) => {
       console.log("[MockGrackle] startTask", { taskId });
 
       // Find the task to get its metadata
@@ -618,7 +618,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
    * post-resume task → review transitions.
    */
   const sendInput: UseGrackleSocketResult["sendInput"] = useCallback(
-    (sessionId: string, text: string) => {
+    async (sessionId: string, text: string) => {
       console.log("[MockGrackle] sendInput", { sessionId, text });
 
       // 1. Append echo event
@@ -689,7 +689,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** Completes a task: sets status to "complete" (human-authoritative). */
   const completeTask: UseGrackleSocketResult["completeTask"] = useCallback(
-    (taskId: string) => {
+    async (taskId: string) => {
       console.log("[MockGrackle] completeTask", taskId);
       setTasks((prev) =>
         prev.map((t) => (t.id === taskId ? { ...t, status: "complete" } : t)),
@@ -700,7 +700,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** Resumes the latest session for a task (mock: no-op, just logs). */
   const resumeTask: UseGrackleSocketResult["resumeTask"] = useCallback(
-    (taskId: string) => {
+    async (taskId: string) => {
       console.log("[MockGrackle] resumeTask", taskId);
     },
     [],
@@ -708,7 +708,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** Updates title, description, dependencies, and default persona of a pending/assigned task. */
   const updateTask: UseGrackleSocketResult["updateTask"] = useCallback(
-    (
+    async (
       taskId: string,
       title: string,
       description: string,
@@ -735,7 +735,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** Removes a task from state. */
   const deleteTask: UseGrackleSocketResult["deleteTask"] = useCallback(
-    (taskId: string) => {
+    async (taskId: string) => {
       console.log("[MockGrackle] deleteTask", taskId);
       setTasks((prev) => prev.filter((t) => t.id !== taskId));
     },
@@ -744,7 +744,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** Filters findings by workspaceId. */
   const loadFindings: UseGrackleSocketResult["loadFindings"] = useCallback(
-    (workspaceId: string) => {
+    async (workspaceId: string) => {
       console.log("[MockGrackle] loadFindings", workspaceId);
       setFindings(MOCK_FINDINGS.filter((f) => f.workspaceId === workspaceId));
     },
@@ -752,14 +752,14 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   );
 
   /** Load all findings across all workspaces. */
-  const loadAllFindings: UseGrackleSocketResult["loadAllFindings"] = useCallback(() => {
+  const loadAllFindings: UseGrackleSocketResult["loadAllFindings"] = useCallback(async () => {
     console.log("[MockGrackle] loadAllFindings");
     setFindings([...MOCK_FINDINGS]);
   }, []);
 
   /** Load a single finding by ID. */
   const loadFinding: UseGrackleSocketResult["loadFinding"] = useCallback(
-    (findingId: string) => {
+    async (findingId: string) => {
       console.log("[MockGrackle] loadFinding", findingId);
       const found = MOCK_FINDINGS.find((f) => f.id === findingId);
       setSelectedFinding(found);
@@ -769,7 +769,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** Adds a new finding to state. */
   const postFinding: UseGrackleSocketResult["postFinding"] = useCallback(
-    (
+    async (
       workspaceId: string,
       title: string,
       content: string,
@@ -796,13 +796,13 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   );
 
   /** No-op in mock mode (environments are pre-seeded). */
-  const loadEnvironments: UseGrackleSocketResult["loadEnvironments"] = useCallback(() => {
+  const loadEnvironments: UseGrackleSocketResult["loadEnvironments"] = useCallback(async () => {
     console.log("[MockGrackle] loadEnvironments");
   }, []);
 
   /** Logs an add-environment call (mock does not persist). */
   const addEnvironment: UseGrackleSocketResult["addEnvironment"] = useCallback(
-    (
+    async (
       displayName: string,
       adapterType: string,
       adapterConfig?: Record<string, unknown>,
@@ -814,7 +814,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** Updates an environment in mock state so edits persist in mock mode. */
   const updateEnvironment: UseGrackleSocketResult["updateEnvironment"] = useCallback(
-    (
+    async (
       environmentId: string,
       fields: { displayName?: string; adapterConfig?: Record<string, unknown> },
     ) => {
@@ -840,13 +840,13 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   // ── Token methods ──────────────────────────────────
 
   /** No-op — tokens are already in state from initial load. */
-  const loadTokens: UseGrackleSocketResult["loadTokens"] = useCallback(() => {
+  const loadTokens: UseGrackleSocketResult["loadTokens"] = useCallback(async () => {
     console.log("[MockGrackle] loadTokens");
   }, []);
 
   /** Adds or replaces a token in state. */
   const mockSetToken: UseGrackleSocketResult["setToken"] = useCallback(
-    (name: string, _value: string, tokenType: string, envVar: string, filePath: string) => {
+    async (name: string, _value: string, tokenType: string, envVar: string, filePath: string) => {
       console.log("[MockGrackle] setToken", { name, tokenType });
       setTokens((prev) => {
         const without = prev.filter((t) => t.name !== name);
@@ -858,7 +858,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** Removes a token from state. */
   const mockDeleteToken: UseGrackleSocketResult["deleteToken"] = useCallback(
-    (name: string) => {
+    async (name: string) => {
       console.log("[MockGrackle] deleteToken", name);
       setTokens((prev) => prev.filter((t) => t.name !== name));
     },
@@ -867,7 +867,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** Updates credential provider configuration in state. */
   const mockUpdateCredentialProviders: UseGrackleSocketResult["updateCredentialProviders"] = useCallback(
-    (config: CredentialProviderConfig) => {
+    async (config: CredentialProviderConfig) => {
       console.log("[MockGrackle] updateCredentialProviders", config);
       setCredentialProviders(config);
     },
@@ -911,10 +911,10 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       refresh,
       loadSessionEvents,
       clearEvents,
-      loadWorkspaces: () => { console.log("[MockGrackle] loadWorkspaces"); },
+      loadWorkspaces: async () => { console.log("[MockGrackle] loadWorkspaces"); },
       createWorkspace,
       archiveWorkspace,
-      updateWorkspace: (workspaceId: string, fields: { name?: string; description?: string; repoUrl?: string; environmentId?: string; workingDirectory?: string; useWorktrees?: boolean; defaultPersonaId?: string }) => {
+      updateWorkspace: async (workspaceId: string, fields: { name?: string; description?: string; repoUrl?: string; environmentId?: string; workingDirectory?: string; useWorktrees?: boolean; defaultPersonaId?: string }) => {
         console.log("[MockGrackle] updateWorkspace", { workspaceId, ...fields });
         setWorkspaces((prev) =>
           prev.map((p) => {
@@ -936,14 +936,14 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         );
       },
       loadTasks,
-      loadAllTasks: () => {
+      loadAllTasks: async () => {
         console.log("[MockGrackle] loadAllTasks");
       },
       createTask,
       startTask,
-      stopTask: (taskId: string) => {
+      stopTask: async (taskId: string) => {
         console.log("[MockGrackle] stopTask", { taskId });
-        completeTask(taskId);
+        await completeTask(taskId);
       },
       completeTask,
       resumeTask,
@@ -961,15 +961,15 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       deleteToken: mockDeleteToken,
       updateCredentialProviders: mockUpdateCredentialProviders,
       provisionStatus: {},
-      provisionEnvironment: (_environmentId: string, _force?: boolean) => { },
-      stopEnvironment: () => { },
-      removeEnvironment: () => { },
+      provisionEnvironment: async (_environmentId: string, _force?: boolean) => { },
+      stopEnvironment: async () => { },
+      removeEnvironment: async () => { },
       codespaces: [],
       codespaceError: "",
       codespaceListError: "",
       codespaceCreating: false,
-      listCodespaces: () => { },
-      createCodespace: () => { },
+      listCodespaces: async () => { },
+      createCodespace: async () => { },
       workspaceCreating: false,
       taskStartingId: undefined,
       personas,
@@ -1026,7 +1026,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         setPersonas((prev) => prev.filter((p) => p.id !== personaId));
       },
       taskSessions,
-      loadTaskSessions: (taskId: string) => {
+      loadTaskSessions: async (taskId: string) => {
         console.log("[MockGrackle] loadTaskSessions", taskId);
       },
       appDefaultPersonaId,
@@ -1046,7 +1046,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         "task_tree:task-001": { inputTokens: 126_800, outputTokens: 20_850, costUsd: 0.63, sessionCount: 2 },
         "task_tree:task-006": { inputTokens: 18_900, outputTokens: 4_500, costUsd: 0.10, sessionCount: 1 },
       },
-      loadUsage: (scope: string, id: string) => {
+      loadUsage: async (scope: string, id: string) => {
         console.log(`[MockGrackle] loadUsage(${scope}, ${id})`);
       },
       knowledge: {
@@ -1055,7 +1055,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         loading: false,
         selectedId: knowledgeSelectedId,
         searchQuery: knowledgeSearchQuery,
-        search: (query: string) => {
+        search: async (query: string) => {
           console.log("[MockGrackle] knowledge.search", query);
           if (!query.trim()) {
             setKnowledgeSearchQuery(query);
@@ -1096,7 +1096,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
             MOCK_KNOWLEDGE_LINKS.filter((l) => nodeIds.has(l.source) && nodeIds.has(l.target)),
           );
         },
-        selectNode: (id: string) => {
+        selectNode: async (id: string) => {
           console.log("[MockGrackle] knowledge.selectNode", id);
           setKnowledgeSelectedId(id);
           const detail: NodeDetail | undefined = id in MOCK_KNOWLEDGE_DETAILS
@@ -1120,7 +1120,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           setKnowledgeSelectedId(undefined);
           setKnowledgeSelectedNode(undefined);
         },
-        expandNode: (id: string) => {
+        expandNode: async (id: string) => {
           console.log("[MockGrackle] knowledge.expandNode", id);
           // Use functional updaters to avoid stale closure over knowledgeNodes/knowledgeLinks
           setKnowledgeNodes((prevNodes) => {
@@ -1150,7 +1150,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
             return [...prevNodes, ...newNodes];
           });
         },
-        loadRecent: (workspaceId?: string) => {
+        loadRecent: async (workspaceId?: string) => {
           console.log("[MockGrackle] knowledge.loadRecent", workspaceId);
           knowledgeWorkspaceRef.current = workspaceId;
           if (workspaceId) {

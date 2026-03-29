@@ -47,13 +47,13 @@ export function ChatPage(): JSX.Element {
 
   // Load sessions on mount
   useEffect(() => {
-    loadTaskSessions(ROOT_TASK_ID);
+    loadTaskSessions(ROOT_TASK_ID).catch(() => {});
   }, [loadTaskSessions]);
 
   // Reload sessions when the root task's latest session changes
   useEffect(() => {
     if (rootTask?.latestSessionId) {
-      loadTaskSessions(ROOT_TASK_ID);
+      loadTaskSessions(ROOT_TASK_ID).catch(() => {});
     }
   }, [rootTask?.latestSessionId, loadTaskSessions]);
 
@@ -61,7 +61,7 @@ export function ChatPage(): JSX.Element {
   useEffect(() => {
     if (latestSession && latestSession.id !== loadedSessionRef.current) {
       loadedSessionRef.current = latestSession.id;
-      loadSessionEvents(latestSession.id);
+      loadSessionEvents(latestSession.id).catch(() => {});
     }
   }, [latestSession?.id, loadSessionEvents]);
 
@@ -90,7 +90,7 @@ export function ChatPage(): JSX.Element {
   // so the first user message is always a follow-up, not baked into the prompt.
   useEffect(() => {
     if (pendingMessage && latestSession && isSessionIdle) {
-      sendInput(latestSession.id, pendingMessage);
+      sendInput(latestSession.id, pendingMessage).catch(() => {});
       setPendingMessage(undefined);
     }
   }, [pendingMessage, isSessionIdle, latestSession?.id, sendInput]);
@@ -103,7 +103,7 @@ export function ChatPage(): JSX.Element {
       if (text) {
         setPendingMessage(text);
       }
-      startTask(taskId, personaId, environmentId);
+      startTask(taskId, personaId, environmentId).catch(() => {});
     },
     [startTask],
   );
@@ -117,13 +117,13 @@ export function ChatPage(): JSX.Element {
           </span>
           <SplitButton
             label="Stop"
-            onClick={() => stopGraceful(latestSession!.id)}
+            onClick={() => { stopGraceful(latestSession!.id).catch(() => {}); }}
             variant="danger"
             size="sm"
             data-testid="stop-split-button"
             options={[
-              { label: "Stop", description: "Graceful shutdown", onClick: () => stopGraceful(latestSession!.id) },
-              { label: "Kill", description: "Force kill", onClick: () => kill(latestSession!.id) },
+              { label: "Stop", description: "Graceful shutdown", onClick: () => { stopGraceful(latestSession!.id).catch(() => {}); } },
+              { label: "Kill", description: "Force kill", onClick: () => { kill(latestSession!.id).catch(() => {}); } },
             ]}
           />
         </div>
@@ -141,10 +141,10 @@ export function ChatPage(): JSX.Element {
           environmentId={latestSession!.environmentId}
           personas={personas}
           environments={environments}
-          onSendInput={sendInput}
-          onSpawn={spawn}
-          onStartTask={startTask}
-          onProvisionEnvironment={provisionEnvironment}
+          onSendInput={(sid, text) => { sendInput(sid, text).catch(() => {}); }}
+          onSpawn={(eid, prompt, pid) => { spawn(eid, prompt, pid).catch(() => {}); }}
+          onStartTask={(tid, pid, eid) => { startTask(tid, pid, eid).catch(() => {}); }}
+          onProvisionEnvironment={(eid) => { provisionEnvironment(eid).catch(() => {}); }}
           onShowToast={showToast}
         />
       )}
@@ -155,10 +155,10 @@ export function ChatPage(): JSX.Element {
           environmentId={localEnvironment.id}
           personas={personas}
           environments={environments}
-          onSendInput={sendInput}
-          onSpawn={spawn}
+          onSendInput={(sid, text) => { sendInput(sid, text).catch(() => {}); }}
+          onSpawn={(eid, prompt, pid) => { spawn(eid, prompt, pid).catch(() => {}); }}
           onStartTask={handleStartTask}
-          onProvisionEnvironment={provisionEnvironment}
+          onProvisionEnvironment={(eid) => { provisionEnvironment(eid).catch(() => {}); }}
           onShowToast={showToast}
         />
       )}

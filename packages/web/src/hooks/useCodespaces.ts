@@ -23,9 +23,9 @@ export interface UseCodespacesResult {
   /** Whether a codespace creation is currently in progress. */
   codespaceCreating: boolean;
   /** Request the current codespace list from the server. */
-  listCodespaces: () => void;
+  listCodespaces: () => Promise<void>;
   /** Create a new codespace for the given repo. */
-  createCodespace: (repo: string, machine?: string) => void;
+  createCodespace: (repo: string, machine?: string) => Promise<void>;
 }
 
 /**
@@ -39,33 +39,31 @@ export function useCodespaces(): UseCodespacesResult {
   const [codespaceListError, setCodespaceListError] = useState("");
   const [codespaceCreating, setCodespaceCreating] = useState(false);
 
-  const listCodespaces = useCallback(() => {
-    grackleClient.listCodespaces({}).then(
-      (resp) => {
-        setCodespaces(resp.codespaces.map(protoToCodespace));
-        setCodespaceListError(resp.error);
-      },
-      () => {},
-    );
+  const listCodespaces = useCallback(async () => {
+    try {
+      const resp = await grackleClient.listCodespaces({});
+      setCodespaces(resp.codespaces.map(protoToCodespace));
+      setCodespaceListError(resp.error);
+    } catch {
+      // empty
+    }
   }, []);
 
   const createCodespace = useCallback(
-    (repo: string, machine?: string) => {
+    async (repo: string, machine?: string) => {
       setCodespaceCreating(true);
       setCodespaceError("");
-      grackleClient.createCodespace({ repo, machine: machine ?? "" }).then(
-        () => {
-          setCodespaceCreating(false);
-          listCodespaces();
-        },
-        (err) => {
-          setCodespaceCreating(false);
-          const message = err instanceof ConnectError
-            ? err.message
-            : "Failed to create codespace";
-          setCodespaceError(message);
-        },
-      );
+      try {
+        await grackleClient.createCodespace({ repo, machine: machine ?? "" });
+        setCodespaceCreating(false);
+        await listCodespaces();
+      } catch (err) {
+        setCodespaceCreating(false);
+        const message = err instanceof ConnectError
+          ? err.message
+          : "Failed to create codespace";
+        setCodespaceError(message);
+      }
     },
     [listCodespaces],
   );

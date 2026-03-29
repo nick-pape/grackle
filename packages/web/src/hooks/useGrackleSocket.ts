@@ -116,25 +116,27 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     [],
   );
 
-  const completeOnboarding = useCallback(() => {
+  const completeOnboarding = useCallback(async () => {
     setOnboardingCompleted(true);
-    grackleClient.setSetting({ key: SETTING_KEY_ONBOARDING_COMPLETED, value: "true" }).catch(
-      () => {},
-    );
+    try {
+      await grackleClient.setSetting({ key: SETTING_KEY_ONBOARDING_COMPLETED, value: "true" });
+    } catch {
+      // empty
+    }
   }, []);
 
   const loadUsage = useCallback(
-    (scope: string, id: string) => {
-      grackleClient.getUsage({ scope, id }).then(
-        (resp) => {
-          const key = `${scope}:${id}`;
-          setUsageCache((prev) => ({
-            ...prev,
-            [key]: protoToUsageStats(resp),
-          }));
-        },
-        () => {},
-      );
+    async (scope: string, id: string) => {
+      try {
+        const resp = await grackleClient.getUsage({ scope, id });
+        const key = `${scope}:${id}`;
+        setUsageCache((prev) => ({
+          ...prev,
+          [key]: protoToUsageStats(resp),
+        }));
+      } catch {
+        // empty
+      }
     },
     [],
   );
@@ -159,7 +161,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
 
     if (environmentsHook.handleEvent(event)) {
       if (event.type === "environment.removed" || event.type === "environment.changed") {
-        sessionsHook.loadSessions();
+        sessionsHook.loadSessions().catch(() => {});
       }
       return;
     }
@@ -167,7 +169,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     if (tasksHook.handleEvent(event)) {
       // task.started also needs a session refresh (cross-concern)
       if (event.type === "task.started") {
-        sessionsHook.loadSessions();
+        sessionsHook.loadSessions().catch(() => {});
       }
       return;
     }
@@ -178,22 +180,28 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     if (knowledgeHook.handleEvent(event)) { return; }
   }
 
-  function onStreamConnect(): void {
-    environmentsHook.loadEnvironments();
-    sessionsHook.loadSessions();
-    workspacesHook.loadWorkspaces();
-    tokensHook.loadTokens();
-    credentialsHook.loadCredentials();
-    personasHook.loadPersonas();
-    grackleClient.getSetting({ key: SETTING_KEY_DEFAULT_PERSONA }).then(
-      (resp) => { setAppDefaultPersonaIdState(resp.value); },
-      () => {},
-    );
-    grackleClient.getSetting({ key: SETTING_KEY_ONBOARDING_COMPLETED }).then(
-      (resp) => { setOnboardingCompleted(resp.value === "true"); },
-      () => {},
-    );
-    tasksHook.loadAllTasks();
+  async function onStreamConnect(): Promise<void> {
+    // Fire-and-forget: all loads run concurrently
+    environmentsHook.loadEnvironments().catch(() => {});
+    sessionsHook.loadSessions().catch(() => {});
+    workspacesHook.loadWorkspaces().catch(() => {});
+    tokensHook.loadTokens().catch(() => {});
+    credentialsHook.loadCredentials().catch(() => {});
+    personasHook.loadPersonas().catch(() => {});
+    tasksHook.loadAllTasks().catch(() => {});
+
+    try {
+      const personaResp = await grackleClient.getSetting({ key: SETTING_KEY_DEFAULT_PERSONA });
+      setAppDefaultPersonaIdState(personaResp.value);
+    } catch {
+      // empty
+    }
+    try {
+      const onboardingResp = await grackleClient.getSetting({ key: SETTING_KEY_ONBOARDING_COMPLETED });
+      setOnboardingCompleted(onboardingResp.value === "true");
+    } catch {
+      // empty
+    }
   }
 
   function onStreamDisconnect(): void {
@@ -202,10 +210,10 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   }
 
   const refresh = useCallback(() => {
-    environmentsHook.loadEnvironments();
-    sessionsHook.loadSessions();
-    workspacesHook.loadWorkspaces();
-    tokensHook.loadTokens();
+    environmentsHook.loadEnvironments().catch(() => {});
+    sessionsHook.loadSessions().catch(() => {});
+    workspacesHook.loadWorkspaces().catch(() => {});
+    tokensHook.loadTokens().catch(() => {});
   }, [environmentsHook.loadEnvironments, sessionsHook.loadSessions, workspacesHook.loadWorkspaces, tokensHook.loadTokens]);
 
   return {

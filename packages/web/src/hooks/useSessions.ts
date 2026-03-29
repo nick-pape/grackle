@@ -31,26 +31,26 @@ export interface UseSessionsResult {
   /** Sessions grouped by task ID. */
   taskSessions: Record<string, Session[]>;
   /** Refresh the session list from the server. */
-  loadSessions: () => void;
+  loadSessions: () => Promise<void>;
   /** Spawn a new session in an environment. */
   spawn: (
     environmentId: string,
     prompt: string,
     personaId?: string,
     workingDirectory?: string,
-  ) => void;
+  ) => Promise<void>;
   /** Send text input to a running session. */
-  sendInput: (sessionId: string, text: string) => void;
+  sendInput: (sessionId: string, text: string) => Promise<void>;
   /** Kill a running session (hard kill / SIGKILL). */
-  kill: (sessionId: string) => void;
+  kill: (sessionId: string) => Promise<void>;
   /** Gracefully stop a running session (SIGTERM). */
-  stopGraceful: (sessionId: string) => void;
+  stopGraceful: (sessionId: string) => Promise<void>;
   /** Load stored events for a session from the server. */
-  loadSessionEvents: (sessionId: string) => void;
+  loadSessionEvents: (sessionId: string) => Promise<void>;
   /** Clear all in-memory events and reset the drop counter. */
   clearEvents: () => void;
   /** Load sessions associated with a task. */
-  loadTaskSessions: (taskId: string) => void;
+  loadTaskSessions: (taskId: string) => Promise<void>;
   /**
    * Handle an incoming WebSocket message. Returns `true` if handled.
    * Only handles real-time `session_event` push messages from subscribe_all.
@@ -85,33 +85,33 @@ export function useSessions(): UseSessionsResult {
   const [taskSessions, setTaskSessions] = useState<Record<string, Session[]>>({});
 
   /** Fetch the session list from the server via ConnectRPC. */
-  const loadSessions = useCallback(() => {
-    grackleClient.listSessions({}).then(
-      (resp) => {
-        const incoming = resp.sessions.map(protoToSession);
-        setSessions((prev) => {
-          // Preserve real-time status/endReason updates that may be more recent
-          const prevMap = new Map(prev.map((s) => [s.id, s]));
-          return incoming.map((s) => {
-            const prevSession = prevMap.get(s.id);
-            const prevStatus = prevSession?.status;
-            if (!prevStatus || prevStatus === s.status) {
-              return s;
-            }
-            if (TERMINAL_STATUSES.has(prevStatus) && ACTIVE_STATUSES.has(s.status)) {
-              return { ...s, status: prevStatus, ...(prevSession.endReason !== undefined ? { endReason: prevSession.endReason } : {}) };
-            }
-            if (ACTIVE_STATUSES.has(prevStatus) && ACTIVE_STATUSES.has(s.status)) {
-              if (ACTIVE_ORDER.indexOf(prevStatus) > ACTIVE_ORDER.indexOf(s.status)) {
-                return { ...s, status: prevStatus };
-              }
-            }
+  const loadSessions = useCallback(async () => {
+    try {
+      const resp = await grackleClient.listSessions({});
+      const incoming = resp.sessions.map(protoToSession);
+      setSessions((prev) => {
+        // Preserve real-time status/endReason updates that may be more recent
+        const prevMap = new Map(prev.map((s) => [s.id, s]));
+        return incoming.map((s) => {
+          const prevSession = prevMap.get(s.id);
+          const prevStatus = prevSession?.status;
+          if (!prevStatus || prevStatus === s.status) {
             return s;
-          });
+          }
+          if (TERMINAL_STATUSES.has(prevStatus) && ACTIVE_STATUSES.has(s.status)) {
+            return { ...s, status: prevStatus, ...(prevSession.endReason !== undefined ? { endReason: prevSession.endReason } : {}) };
+          }
+          if (ACTIVE_STATUSES.has(prevStatus) && ACTIVE_STATUSES.has(s.status)) {
+            if (ACTIVE_ORDER.indexOf(prevStatus) > ACTIVE_ORDER.indexOf(s.status)) {
+              return { ...s, status: prevStatus };
+            }
+          }
+          return s;
         });
-      },
-      () => {},
-    );
+      });
+    } catch {
+      // empty
+    }
   }, []);
 
   /**
@@ -209,7 +209,7 @@ export function useSessions(): UseSessionsResult {
         if (typeof spawnedId === "string" && spawnedId) {
           setLastSpawnedId(spawnedId);
         }
-        loadSessions();
+        loadSessions().catch(() => {});
         return true;
       }
       case "session_events": {
@@ -234,93 +234,99 @@ export function useSessions(): UseSessionsResult {
   }, [loadSessions]);
 
   const spawn = useCallback(
-    (
+    async (
       environmentId: string,
       prompt: string,
       personaId?: string,
       workingDirectory?: string,
     ) => {
-      grackleClient.spawnAgent({
-        environmentId,
-        prompt,
-        personaId: personaId || "",
-        workingDirectory: workingDirectory || "",
-      }).then(
-        (session) => {
-          setLastSpawnedId(session.id);
-          loadSessions();
-        },
-        () => {},
-      );
+      try {
+        const session = await grackleClient.spawnAgent({
+          environmentId,
+          prompt,
+          personaId: personaId || "",
+          workingDirectory: workingDirectory || "",
+        });
+        setLastSpawnedId(session.id);
+        await loadSessions();
+      } catch {
+        // empty
+      }
     },
     [loadSessions],
   );
 
   const sendInput = useCallback(
-    (sessionId: string, text: string) => {
-      grackleClient.sendInput({ sessionId, text }).catch(
-        () => {},
-      );
+    async (sessionId: string, text: string) => {
+      try {
+        await grackleClient.sendInput({ sessionId, text });
+      } catch {
+        // empty
+      }
     },
     [],
   );
 
   const kill = useCallback(
-    (sessionId: string) => {
-      grackleClient.killAgent({ id: sessionId, graceful: false }).catch(
-        () => {},
-      );
+    async (sessionId: string) => {
+      try {
+        await grackleClient.killAgent({ id: sessionId, graceful: false });
+      } catch {
+        // empty
+      }
     },
     [],
   );
 
   const stopGraceful = useCallback(
-    (sessionId: string) => {
-      grackleClient.killAgent({ id: sessionId, graceful: true }).catch(
-        () => {},
-      );
+    async (sessionId: string) => {
+      try {
+        await grackleClient.killAgent({ id: sessionId, graceful: true });
+      } catch {
+        // empty
+      }
     },
     [],
   );
 
   const loadSessionEvents = useCallback(
-    (sessionId: string) => {
-      grackleClient.getSessionEvents({ id: sessionId }).then(
-        (resp) => {
-          const replayEvents = resp.events.map(protoToSessionEvent);
-          if (replayEvents.length > 0) {
-            let replayDropped = 0;
-            setEvents((prev) => {
-              const existingKeys = new Set<string>();
-              for (const e of prev) {
-                if (e.sessionId === sessionId) {
-                  existingKeys.add(`${e.timestamp}|${e.eventType}`);
-                }
+    async (sessionId: string) => {
+      try {
+        const resp = await grackleClient.getSessionEvents({ id: sessionId });
+        const replayEvents = resp.events.map(protoToSessionEvent);
+        if (replayEvents.length > 0) {
+          let replayDropped = 0;
+          setEvents((prev) => {
+            const existingKeys = new Set<string>();
+            for (const e of prev) {
+              if (e.sessionId === sessionId) {
+                existingKeys.add(`${e.timestamp}|${e.eventType}`);
               }
-              const newFromReplay = replayEvents.filter(
-                (e) => !existingKeys.has(`${e.timestamp}|${e.eventType}`),
-              );
-              const merged = [...prev, ...newFromReplay].sort(
-                (a, b) => {
-                  if (a.sessionId !== b.sessionId) {
-                    return 0;
-                  }
-                  return a.timestamp.localeCompare(b.timestamp);
-                },
-              );
-              if (merged.length > MAX_EVENTS) {
-                replayDropped = merged.length - MAX_EVENTS;
-                return merged.slice(-MAX_EVENTS);
-              }
-              return merged;
-            });
-            if (replayDropped > 0) {
-              setEventsDropped((n) => n + replayDropped);
             }
+            const newFromReplay = replayEvents.filter(
+              (e) => !existingKeys.has(`${e.timestamp}|${e.eventType}`),
+            );
+            const merged = [...prev, ...newFromReplay].sort(
+              (a, b) => {
+                if (a.sessionId !== b.sessionId) {
+                  return 0;
+                }
+                return a.timestamp.localeCompare(b.timestamp);
+              },
+            );
+            if (merged.length > MAX_EVENTS) {
+              replayDropped = merged.length - MAX_EVENTS;
+              return merged.slice(-MAX_EVENTS);
+            }
+            return merged;
+          });
+          if (replayDropped > 0) {
+            setEventsDropped((n) => n + replayDropped);
           }
-        },
-        () => {},
-      );
+        }
+      } catch {
+        // empty
+      }
     },
     [],
   );
@@ -331,14 +337,14 @@ export function useSessions(): UseSessionsResult {
   }, []);
 
   const loadTaskSessions = useCallback(
-    (taskId: string) => {
-      grackleClient.getTaskSessions({ id: taskId }).then(
-        (resp) => {
-          const sessionsArr = resp.sessions.map(protoToSession);
-          setTaskSessions((prev) => ({ ...prev, [taskId]: sessionsArr }));
-        },
-        () => {},
-      );
+    async (taskId: string) => {
+      try {
+        const resp = await grackleClient.getTaskSessions({ id: taskId });
+        const sessionsArr = resp.sessions.map(protoToSession);
+        setTaskSessions((prev) => ({ ...prev, [taskId]: sessionsArr }));
+      } catch {
+        // empty
+      }
     },
     [],
   );

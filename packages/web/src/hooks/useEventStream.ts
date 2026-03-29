@@ -22,7 +22,7 @@ export interface UseEventStreamOptions {
   /** Called for each domain event (task.created, environment.changed, etc.). */
   onDomainEvent: (event: { id: string; type: string; timestamp: string; payloadJson: string }) => void;
   /** Called immediately after a new stream is created (including reconnects), before any events are received. */
-  onConnect?: () => void;
+  onConnect?: () => void | Promise<void>;
   /** Called when the stream disconnects. */
   onDisconnect?: () => void;
 }
@@ -66,7 +66,7 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
         // separate "open" event. The stream object exists once the HTTP
         // request is initiated. Data loading in onConnect runs optimistically.
         setConnected(true);
-        onConnectRef.current?.();
+        Promise.resolve(onConnectRef.current?.()).catch(() => {});
 
         for await (const serverEvent of stream) {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- set by cleanup function

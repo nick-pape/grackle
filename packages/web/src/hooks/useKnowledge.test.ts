@@ -91,7 +91,7 @@ describe("useKnowledge", () => {
       });
 
       const { result } = setup();
-      act(() => { result.current.loadRecent(); });
+      act(() => { result.current.loadRecent().catch(() => {}); });
 
       expect(result.current.loading).toBe(true);
 
@@ -118,7 +118,7 @@ describe("useKnowledge", () => {
     it("passes workspaceId through", () => {
       mockClient.listRecentKnowledgeNodes.mockResolvedValue({ nodes: [], edges: [] });
       const { result } = setup();
-      act(() => { result.current.loadRecent("ws-1"); });
+      act(() => { result.current.loadRecent("ws-1").catch(() => {}); });
       expect(mockClient.listRecentKnowledgeNodes).toHaveBeenCalledWith({
         limit: 30,
         workspaceId: "ws-1",
@@ -128,7 +128,7 @@ describe("useKnowledge", () => {
     it("sets loading=false on error", async () => {
       mockClient.listRecentKnowledgeNodes.mockRejectedValue(new Error("unavailable"));
       const { result } = setup();
-      act(() => { result.current.loadRecent(); });
+      act(() => { result.current.loadRecent().catch(() => {}); });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -148,7 +148,7 @@ describe("useKnowledge", () => {
       });
 
       const { result } = setup();
-      act(() => { result.current.search("test query"); });
+      act(() => { result.current.search("test query").catch(() => {}); });
 
       expect(result.current.loading).toBe(true);
       expect(result.current.searchQuery).toBe("test query");
@@ -166,7 +166,7 @@ describe("useKnowledge", () => {
 
     it("is a no-op for whitespace-only input", () => {
       const { result } = setup();
-      act(() => { result.current.search("   "); });
+      act(() => { result.current.search("   ").catch(() => {}); });
       expect(mockClient.searchKnowledge).not.toHaveBeenCalled();
       expect(result.current.loading).toBe(false);
     });
@@ -174,11 +174,11 @@ describe("useKnowledge", () => {
     it("clears selection when searching", () => {
       mockClient.getKnowledgeNode.mockResolvedValue({ node: makeProtoNode(), edges: [] });
       const { result } = setup();
-      act(() => { result.current.selectNode("n1"); });
+      act(() => { result.current.selectNode("n1").catch(() => {}); });
       expect(result.current.selectedId).toBe("n1");
 
       mockClient.searchKnowledge.mockResolvedValue({ results: [] });
-      act(() => { result.current.search("query"); });
+      act(() => { result.current.search("query").catch(() => {}); });
       expect(result.current.selectedId).toBeUndefined();
       expect(result.current.selectedNode).toBeUndefined();
     });
@@ -192,7 +192,7 @@ describe("useKnowledge", () => {
       mockClient.listRecentKnowledgeNodes.mockResolvedValue({ nodes: [], edges: [] });
 
       const { result } = setup();
-      act(() => { result.current.search("query"); });
+      act(() => { result.current.search("query").catch(() => {}); });
       mockClient.listRecentKnowledgeNodes.mockClear();
 
       act(() => { result.current.clearSearch(); });
@@ -211,7 +211,7 @@ describe("useKnowledge", () => {
       });
 
       const { result } = setup();
-      act(() => { result.current.selectNode("n1"); });
+      act(() => { result.current.selectNode("n1").catch(() => {}); });
 
       expect(result.current.selectedId).toBe("n1");
 
@@ -232,7 +232,7 @@ describe("useKnowledge", () => {
       mockClient.getKnowledgeNode.mockRejectedValue(new Error("not found"));
 
       const { result } = setup();
-      act(() => { result.current.selectNode("n1"); });
+      act(() => { result.current.selectNode("n1").catch(() => {}); });
 
       await waitFor(() => {
         expect(result.current.selectedNode).toBeUndefined();
@@ -246,7 +246,7 @@ describe("useKnowledge", () => {
     it("resets selectedId and selectedNode", () => {
       mockClient.getKnowledgeNode.mockResolvedValue({ node: makeProtoNode(), edges: [] });
       const { result } = setup();
-      act(() => { result.current.selectNode("n1"); });
+      act(() => { result.current.selectNode("n1").catch(() => {}); });
       expect(result.current.selectedId).toBe("n1");
 
       act(() => { result.current.clearSelection(); });
@@ -265,7 +265,7 @@ describe("useKnowledge", () => {
         edges: [],
       });
       const { result } = setup();
-      act(() => { result.current.loadRecent(); });
+      act(() => { result.current.loadRecent().catch(() => {}); });
       await waitFor(() => { expect(result.current.graphData.nodes).toHaveLength(1); });
 
       // Expand
@@ -276,7 +276,7 @@ describe("useKnowledge", () => {
         ],
         edges: [makeProtoEdge({ fromId: "n1", toId: "n2", type: "RELATES_TO" })],
       });
-      act(() => { result.current.expandNode("n1"); });
+      act(() => { result.current.expandNode("n1").catch(() => {}); });
 
       await waitFor(() => {
         expect(result.current.graphData.nodes).toHaveLength(2);
@@ -294,7 +294,7 @@ describe("useKnowledge", () => {
         edges: [makeProtoEdge({ fromId: "n1", toId: "n2", type: "RELATES_TO" })],
       });
       const { result } = setup();
-      act(() => { result.current.loadRecent(); });
+      act(() => { result.current.loadRecent().catch(() => {}); });
       await waitFor(() => { expect(result.current.graphData.links).toHaveLength(1); });
 
       mockClient.expandKnowledgeNode.mockResolvedValue({
@@ -304,7 +304,7 @@ describe("useKnowledge", () => {
           makeProtoEdge({ fromId: "n1", toId: "n3", type: "MENTIONS" }),   // new
         ],
       });
-      act(() => { result.current.expandNode("n1"); });
+      act(() => { result.current.expandNode("n1").catch(() => {}); });
 
       await waitFor(() => {
         expect(result.current.graphData.links).toHaveLength(2);
@@ -340,12 +340,12 @@ describe("useKnowledge", () => {
       const { result } = setup();
 
       // Select a workspace
-      act(() => { result.current.loadRecent("ws-1"); });
+      act(() => { result.current.loadRecent("ws-1").catch(() => {}); });
       await waitFor(() => { expect(result.current.loading).toBe(false); });
       mockClient.listRecentKnowledgeNodes.mockClear();
 
       // Search, then clear
-      act(() => { result.current.search("query"); });
+      act(() => { result.current.search("query").catch(() => {}); });
       await waitFor(() => { expect(result.current.loading).toBe(false); });
 
       act(() => { result.current.clearSearch(); });
@@ -364,11 +364,11 @@ describe("useKnowledge", () => {
       const { result } = setup();
 
       // Select a workspace
-      act(() => { result.current.loadRecent("ws-1"); });
+      act(() => { result.current.loadRecent("ws-1").catch(() => {}); });
       await waitFor(() => { expect(result.current.loading).toBe(false); });
 
       // Search
-      act(() => { result.current.search("query"); });
+      act(() => { result.current.search("query").catch(() => {}); });
 
       expect(mockClient.searchKnowledge).toHaveBeenCalledWith(
         expect.objectContaining({ workspaceId: "ws-1" }),
@@ -382,11 +382,11 @@ describe("useKnowledge", () => {
       const { result } = setup();
 
       // Perform a search
-      act(() => { result.current.search("active query"); });
+      act(() => { result.current.search("active query").catch(() => {}); });
       expect(result.current.searchQuery).toBe("active query");
 
       // Change workspace
-      act(() => { result.current.loadRecent("ws-2"); });
+      act(() => { result.current.loadRecent("ws-2").catch(() => {}); });
       expect(result.current.searchQuery).toBe("");
     });
   });

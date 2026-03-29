@@ -71,9 +71,9 @@ function TaskOverview({ task, tasksById, environments, workspaces, taskSessions,
   // Load usage stats for this task (and tree if it has children)
   const sessionCostSum = taskSessions.reduce((s, sess) => s + (sess.costUsd ?? 0), 0);
   useEffect(() => {
-    loadUsage("task", task.id);
+    loadUsage("task", task.id).catch(() => {});
     if (task.childTaskIds.length > 0) {
-      loadUsage("task_tree", task.id);
+      loadUsage("task_tree", task.id).catch(() => {});
     }
   }, [task.id, task.childTaskIds.length, loadUsage, sessionCostSum]);
 
@@ -416,7 +416,7 @@ export function TaskPage(): JSX.Element {
 
   const handleDeleteConfirm = (): void => {
     if (!task) return;
-    deleteTask(task.id);
+    deleteTask(task.id).catch(() => {});
     setShowDeleteConfirm(false);
     const envId = routeEnvironmentId ?? workspace?.environmentId;
     navigate(task.workspaceId && envId ? workspaceUrl(task.workspaceId, envId) : "/", { replace: true });
@@ -440,7 +440,7 @@ export function TaskPage(): JSX.Element {
     if (isNewTask || sessionChanged) {
       loadedTaskSessionsRef.current = task.id;
       prevTaskSessionIdRef.current = task.latestSessionId;
-      loadTaskSessions(task.id);
+      loadTaskSessions(task.id).catch(() => {});
     }
   }, [task?.id, task?.latestSessionId, loadTaskSessions]);
 
@@ -494,14 +494,14 @@ export function TaskPage(): JSX.Element {
   useEffect(() => {
     if (sessionId && sessionId !== loadedRef.current) {
       loadedRef.current = sessionId;
-      loadSessionEvents(sessionId);
+      loadSessionEvents(sessionId).catch(() => {});
     }
   }, [sessionId, loadSessionEvents]);
 
   // Load findings when switching to findings tab
   useEffect(() => {
     if (activeTaskTab === "findings" && workspaceId) {
-      loadFindings(workspaceId);
+      loadFindings(workspaceId).catch(() => {});
     }
   }, [activeTaskTab, workspaceId, loadFindings]);
 
@@ -531,10 +531,10 @@ export function TaskPage(): JSX.Element {
             task={task}
             sessionId={sessionId}
             isBlocked={isTaskBlocked}
-            onStart={() => startTask(task.id, undefined, selectedEnvId)}
-            onResume={() => resumeTask(task.id)}
-            onStop={() => stopTask(task.id)}
-            onPause={() => sessionId && kill(sessionId)}
+            onStart={() => { startTask(task.id, undefined, selectedEnvId).catch(() => {}); }}
+            onResume={() => { resumeTask(task.id).catch(() => {}); }}
+            onStop={() => { stopTask(task.id).catch(() => {}); }}
+            onPause={() => { if (sessionId) { kill(sessionId).catch(() => {}); } }}
             onDelete={handleDeleteTask}
             onEdit={() => setIsEditing(true)}
           />
@@ -567,8 +567,8 @@ export function TaskPage(): JSX.Element {
                 tasks={tasks}
                 workspaces={workspaces}
                 personas={personas}
-                onCreateTask={createTask}
-                onUpdateTask={updateTask}
+                onCreateTask={(wsId, title, desc, deps, parentId, personaId, canDecompose, onSuccess, onError) => { createTask(wsId, title, desc, deps, parentId, personaId, canDecompose, onSuccess, onError).catch(() => {}); }}
+                onUpdateTask={(tid, title, desc, deps, personaId) => { updateTask(tid, title, desc, deps, personaId).catch(() => {}); }}
                 onEditDone={() => {
                   if (isEditRoute) {
                     navigate(taskUrl(task.id, undefined, routeWorkspaceId, routeEnvironmentId), { replace: true });
@@ -599,7 +599,7 @@ export function TaskPage(): JSX.Element {
                     </div>
                   ) : (
                     <div className={styles.emptyCta}>
-                      <button data-testid="stream-start-cta" className={styles.ctaButton} onClick={() => startTask(task.id, undefined, selectedEnvId)}>Start Task</button>
+                      <button data-testid="stream-start-cta" className={styles.ctaButton} onClick={() => { startTask(task.id, undefined, selectedEnvId).catch(() => {}); }}>Start Task</button>
                       <div className={styles.ctaDescription}>Click to begin agent execution</div>
                     </div>
                   )
@@ -638,10 +638,10 @@ export function TaskPage(): JSX.Element {
             environmentId={taskSessionForChat.environmentId}
             personas={personas}
             environments={environments}
-            onSendInput={sendInput}
-            onSpawn={spawn}
-            onStartTask={startTask}
-            onProvisionEnvironment={provisionEnvironment}
+            onSendInput={(sid, text) => { sendInput(sid, text).catch(() => {}); }}
+            onSpawn={(eid, prompt, pid) => { spawn(eid, prompt, pid).catch(() => {}); }}
+            onStartTask={(tid, pid, eid) => { startTask(tid, pid, eid).catch(() => {}); }}
+            onProvisionEnvironment={(eid) => { provisionEnvironment(eid).catch(() => {}); }}
             onShowToast={showToast}
           />
         );

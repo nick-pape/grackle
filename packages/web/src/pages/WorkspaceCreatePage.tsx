@@ -79,7 +79,7 @@ export function WorkspaceCreatePage(): JSX.Element {
       (message: string) => {
         setSubmitError(message);
       },
-    );
+    ).catch(() => {});
   };
 
   const handleCancel = (): void => {

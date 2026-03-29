@@ -14,14 +14,14 @@ export function NewEnvironmentPage(): JSX.Element {
     <EnvironmentEditPanel
       mode="new"
       environments={environments}
-      onAddEnvironment={addEnvironment}
-      onUpdateEnvironment={updateEnvironment}
-      onListCodespaces={listCodespaces}
+      onAddEnvironment={(name, type, cfg) => { addEnvironment(name, type, cfg).catch(() => {}); }}
+      onUpdateEnvironment={(eid, fields) => { updateEnvironment(eid, fields).catch(() => {}); }}
+      onListCodespaces={() => { listCodespaces().catch(() => {}); }}
       codespaces={codespaces}
       codespaceError={codespaceError}
       codespaceListError={codespaceListError}
       codespaceCreating={codespaceCreating}
-      onCreateCodespace={createCodespace}
+      onCreateCodespace={(repo, machine) => { createCodespace(repo, machine).catch(() => {}); }}
       onShowToast={showToast}
     />
   );

@@ -18,9 +18,9 @@ export interface UseCredentialsResult {
   /** Current credential provider configuration. */
   credentialProviders: CredentialProviderConfig;
   /** Request the current credential provider configuration from the server. */
-  loadCredentials: () => void;
+  loadCredentials: () => Promise<void>;
   /** Update the credential provider configuration on the server. */
-  updateCredentialProviders: (config: CredentialProviderConfig) => void;
+  updateCredentialProviders: (config: CredentialProviderConfig) => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
 }
@@ -39,11 +39,13 @@ export function useCredentials(): UseCredentialsResult {
     goose: "off",
   });
 
-  const loadCredentials = useCallback(() => {
-    grackleClient.getCredentialProviders({}).then(
-      (resp) => { setCredentialProviders(protoToCredentialConfig(resp)); },
-      () => {},
-    );
+  const loadCredentials = useCallback(async () => {
+    try {
+      const resp = await grackleClient.getCredentialProviders({});
+      setCredentialProviders(protoToCredentialConfig(resp));
+    } catch {
+      // empty
+    }
   }, []);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
@@ -57,7 +59,7 @@ export function useCredentials(): UseCredentialsResult {
   }, []);
 
   const updateCredentialProviders = useCallback(
-    (config: CredentialProviderConfig) => {
+    async (config: CredentialProviderConfig) => {
       const entries: Array<{ provider: string; value: string }> = [
         { provider: "claude", value: config.claude },
         { provider: "github", value: config.github },
@@ -65,11 +67,11 @@ export function useCredentials(): UseCredentialsResult {
         { provider: "codex", value: config.codex },
         { provider: "goose", value: config.goose },
       ];
-      for (const { provider, value } of entries) {
-        grackleClient.setCredentialProvider({ provider, value }).catch(
-          () => {},
-        );
-      }
+      await Promise.allSettled(
+        entries.map(({ provider, value }) =>
+          grackleClient.setCredentialProvider({ provider, value }),
+        ),
+      );
     },
     [],
   );

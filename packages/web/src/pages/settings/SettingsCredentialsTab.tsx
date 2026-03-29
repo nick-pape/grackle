@@ -9,8 +9,8 @@ export function SettingsCredentialsTab(): JSX.Element {
 
   return (
     <>
-      <CredentialProvidersPanel credentialProviders={credentialProviders} onUpdateCredentialProviders={updateCredentialProviders} />
-      <TokensPanel tokens={tokens} onSetToken={setToken} onDeleteToken={deleteToken} onShowToast={showToast} />
+      <CredentialProvidersPanel credentialProviders={credentialProviders} onUpdateCredentialProviders={(cfg) => { updateCredentialProviders(cfg).catch(() => {}); }} />
+      <TokensPanel tokens={tokens} onSetToken={(name, value, tokenType, envVar, filePath) => { setToken(name, value, tokenType, envVar, filePath).catch(() => {}); }} onDeleteToken={(name) => { deleteToken(name).catch(() => {}); }} onShowToast={showToast} />
     </>
   );
 }

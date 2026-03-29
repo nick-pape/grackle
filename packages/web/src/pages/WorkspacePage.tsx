@@ -86,7 +86,7 @@ export function WorkspacePage(): JSX.Element {
   const totalSessionCost = sessions.reduce((s, sess) => s + (sess.costUsd ?? 0), 0);
   useEffect(() => {
     if (workspaceId) {
-      loadUsage("workspace", workspaceId);
+      loadUsage("workspace", workspaceId).catch(() => {});
     }
   }, [workspaceId, loadUsage, totalSessionCost]);
   const wsUsage = workspaceId ? usageCache[`workspace:${workspaceId}`] : undefined;
@@ -105,7 +105,7 @@ export function WorkspacePage(): JSX.Element {
         <span className={styles.workspaceName} data-testid="workspace-name">
           <EditableTextField
             value={workspace?.name || ""}
-            onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { name: v }); } }}
+            onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { name: v }).catch(() => {}); } }}
             validate={(v) => {
               const trimmed = v.trim();
               if (!trimmed) return "Name is required";
@@ -152,7 +152,7 @@ export function WorkspacePage(): JSX.Element {
             <div className={styles.metaValue}>
               <EditableTextArea
                 value={workspace?.description || ""}
-                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { description: v }); } }}
+                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { description: v }).catch(() => {}); } }}
                 fieldId="description"
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}
@@ -174,7 +174,7 @@ export function WorkspacePage(): JSX.Element {
             <div className={styles.metaValue}>
               <EditableTextField
                 value={workspace?.repoUrl || ""}
-                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { repoUrl: v }); } }}
+                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { repoUrl: v }).catch(() => {}); } }}
                 validate={(v) => {
                   const trimmed = v.trim();
                   if (trimmed && !/^https?:\/\/.+/.test(trimmed)) return "Must be a valid http(s) URL";
@@ -213,7 +213,7 @@ export function WorkspacePage(): JSX.Element {
             <div className={styles.metaValue}>
               <EnvironmentSelect
                 value={workspace?.environmentId || ""}
-                onSave={(v) => { if (workspace && v) { updateWorkspace(workspace.id, { environmentId: v }); } }}
+                onSave={(v) => { if (workspace && v) { updateWorkspace(workspace.id, { environmentId: v }).catch(() => {}); } }}
                 environments={environments}
                 fieldId="environmentId"
                 activeFieldId={activeFieldId}
@@ -231,7 +231,7 @@ export function WorkspacePage(): JSX.Element {
             <div className={styles.metaValue}>
               <EditableSelect
                 value={workspace?.defaultPersonaId || ""}
-                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { defaultPersonaId: v }); } }}
+                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { defaultPersonaId: v }).catch(() => {}); } }}
                 options={[
                   { value: "", label: "(Inherit)" },
                   ...personas.map((p) => ({ value: p.id, label: p.name })),
@@ -259,7 +259,7 @@ export function WorkspacePage(): JSX.Element {
                 checked={workspace?.useWorktrees ?? true}
                 onChange={(checked) => {
                   if (workspace) {
-                    updateWorkspace(workspace.id, { useWorktrees: checked });
+                    updateWorkspace(workspace.id, { useWorktrees: checked }).catch(() => {});
                   }
                 }}
                 label="Enable worktree isolation"
@@ -274,7 +274,7 @@ export function WorkspacePage(): JSX.Element {
             <div className={styles.metaValue}>
               <EditableTextField
                 value={workspace?.workingDirectory || ""}
-                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { workingDirectory: v }); } }}
+                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { workingDirectory: v }).catch(() => {}); } }}
                 fieldId="workingDirectory"
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}
@@ -384,7 +384,7 @@ export function WorkspacePage(): JSX.Element {
         confirmLabel="Archive"
         onConfirm={() => {
           if (workspace) {
-            archiveWorkspace(workspace.id);
+            archiveWorkspace(workspace.id).catch(() => {});
             navigate("/", { replace: true });
           }
           setShowArchiveConfirm(false);
