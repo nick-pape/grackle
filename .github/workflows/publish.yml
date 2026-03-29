@@ -140,7 +140,7 @@ jobs:
           fail-on-empty: false
 
       - name: BuildPulse — upload test results
-        if: always() && steps.changefile_check.outputs.has_changefiles == 'true' && vars.BUILDPULSE_ACCOUNT_ID != '' && vars.BUILDPULSE_REPOSITORY_ID != ''
+        if: always() && steps.changefile_check.outputs.has_changefiles == 'true' && github.repository == 'nick-pape/grackle' && vars.BUILDPULSE_ACCOUNT_ID != '' && vars.BUILDPULSE_REPOSITORY_ID != ''
         uses: buildpulse/buildpulse-action@v0.12.0
         with:
           account: ${{ vars.BUILDPULSE_ACCOUNT_ID }}
