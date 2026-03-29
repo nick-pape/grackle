@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      checks: write
 
     steps:
       - uses: actions/checkout@v4
@@ -125,6 +126,27 @@ jobs:
       - name: Build and test
         if: steps.changefile_check.outputs.has_changefiles == 'true'
         uses: ./.github/actions/build-and-test
+        with:
+          upload-e2e-results: "true"
+
+      - name: E2E test report
+        if: always() && steps.changefile_check.outputs.has_changefiles == 'true'
+        uses: dorny/test-reporter@v1
+        with:
+          name: E2E Test Results
+          path: tests/e2e-tests/test-results/e2e-results.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: BuildPulse — upload test results
+        if: always() && steps.changefile_check.outputs.has_changefiles == 'true' && vars.BUILDPULSE_ACCOUNT_ID != '' && vars.BUILDPULSE_REPOSITORY_ID != ''
+        uses: buildpulse/buildpulse-action@v0.12.0
+        with:
+          account: ${{ vars.BUILDPULSE_ACCOUNT_ID }}
+          repository: ${{ vars.BUILDPULSE_REPOSITORY_ID }}
+          path: tests/e2e-tests/test-results/e2e-results.xml
+          key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
+          secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
 
       # Run rush version --bump WITHOUT --target-branch so it only modifies
       # files on disk (no branch creation, no commits, no push). We handle
