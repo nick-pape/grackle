@@ -46,15 +46,13 @@ export function Tooltip({
   "data-testid": testId,
 }: TooltipProps): JSX.Element {
   const [visible, setVisible] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const wrapperRef = useRef<HTMLElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const tooltipId = useId();
 
-  // Gate portal rendering until the DOM is available (SSR safety).
-  useEffect(() => { setMounted(true); }, []);
+  const canPortal = typeof document !== "undefined";
 
   const computePosition = useCallback((): void => {
     if (!wrapperRef.current || !tooltipRef.current) {
@@ -172,7 +170,7 @@ export function Tooltip({
       onBlur={hide}
     >
       {renderedChildren}
-      {mounted ? createPortal(tooltipElement, document.body) : null}
+      {canPortal ? createPortal(tooltipElement, document.body) : null}
     </Tag>
   );
 }
