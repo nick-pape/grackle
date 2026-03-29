@@ -10,6 +10,17 @@ import { describe, it, expect, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 import type { DomainHook } from "./domainHook.js";
 import type { GrackleEvent } from "@grackle-ai/web-components";
+import { useEnvironments } from "./useEnvironments.js";
+import { useSessions } from "./useSessions.js";
+import { useWorkspaces } from "./useWorkspaces.js";
+import { useTasks } from "./useTasks.js";
+import { useFindings } from "./useFindings.js";
+import { useTokens } from "./useTokens.js";
+import { useCredentials } from "./useCredentials.js";
+import { useCodespaces } from "./useCodespaces.js";
+import { usePersonas } from "./usePersonas.js";
+import { useKnowledge } from "./useKnowledge.js";
+import { useNotifications } from "./useNotifications.js";
 
 // ---------------------------------------------------------------------------
 // Mock grackleClient (all hooks import it)
@@ -88,22 +99,6 @@ vi.mock("@grackle-ai/web-components", async (importOriginal) => {
   const orig = await importOriginal<Record<string, unknown>>();
   return { ...orig, warnBadPayload: vi.fn() };
 });
-
-// ---------------------------------------------------------------------------
-// Import all domain hooks
-// ---------------------------------------------------------------------------
-
-import { useEnvironments } from "./useEnvironments.js";
-import { useSessions } from "./useSessions.js";
-import { useWorkspaces } from "./useWorkspaces.js";
-import { useTasks } from "./useTasks.js";
-import { useFindings } from "./useFindings.js";
-import { useTokens } from "./useTokens.js";
-import { useCredentials } from "./useCredentials.js";
-import { useCodespaces } from "./useCodespaces.js";
-import { usePersonas } from "./usePersonas.js";
-import { useKnowledge } from "./useKnowledge.js";
-import { useNotifications } from "./useNotifications.js";
 
 // ---------------------------------------------------------------------------
 // Compile-time interface conformance
