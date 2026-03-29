@@ -1,7 +1,6 @@
 import { useState, type JSX } from "react";
 import type { ToolCardProps } from "./ToolCardProps.js";
 import { extractBareName } from "./classifyTool.js";
-import { CopyButton } from "../display/CopyButton.js";
 import styles from "./toolCards.module.scss";
 
 /** Shape of a file descriptor entry from ipc_list_fds. */
@@ -113,9 +112,6 @@ export function IpcCard({ tool, args, result, isError }: ToolCardProps): JSX.Ele
               {resultData.success ? "\u2713 ok" : "\u2717 failed"}
             </span>
           </>
-        )}
-        {!inProgress && !isError && result && (
-          <CopyButton text={result} data-testid="tool-card-copy" className={styles.copyButtonInline} />
         )}
       </div>
 

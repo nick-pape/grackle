@@ -1,7 +1,6 @@
 import { useState, type JSX } from "react";
 import { ChevronRight, Cog } from "lucide-react";
 import type { ToolCardProps } from "./ToolCardProps.js";
-import { CopyButton } from "../display/CopyButton.js";
 import { ICON_SM, ICON_MD } from "../../utils/iconSize.js";
 import styles from "./toolCards.module.scss";
 
@@ -72,9 +71,6 @@ export function GenericToolCard({ tool, args, result, isError }: ToolCardProps):
         <span className={styles.toolName} style={{ color: "var(--accent-blue)" }}>{display}</span>
         {preview && (
           <span className={styles.fileName}>{preview}</span>
-        )}
-        {!inProgress && !isError && result && (
-          <CopyButton text={result} data-testid="tool-card-copy" className={styles.copyButtonInline} />
         )}
       </div>
 

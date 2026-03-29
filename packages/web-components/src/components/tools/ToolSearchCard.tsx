@@ -1,6 +1,5 @@
 import { useState, type JSX } from "react";
 import type { ToolCardProps } from "./ToolCardProps.js";
-import { CopyButton } from "../display/CopyButton.js";
 import styles from "./toolCards.module.scss";
 
 /** Extracts query from ToolSearch args. */
@@ -44,7 +43,6 @@ export function ToolSearchCard({ args, result, isError }: ToolCardProps): JSX.El
             <span className={styles.badge} data-testid="tool-card-tool-search-count">
               {resultLines.length} lines
             </span>
-            <CopyButton text={result} data-testid="tool-card-copy" className={styles.copyButtonInline} />
           </>
         )}
       </div>

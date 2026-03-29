@@ -111,6 +111,7 @@ export function SessionPage(): JSX.Element {
         events={groupedEvents}
         eventsDropped={eventsDropped}
         emptyState={<SessionEmptyState session={session} />}
+        onShowToast={showToast}
       />
       {isActive && (
         <ChatInput

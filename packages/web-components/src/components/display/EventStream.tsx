@@ -1,11 +1,36 @@
-import { useMemo, useRef, useState, type JSX, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type JSX, type ReactNode } from "react";
 import { AlertTriangle, ArrowDown, ArrowUp } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { EventRenderer } from "./EventRenderer.js";
+import { EventHoverRow } from "./EventHoverRow.js";
+import { FloatingActionBar } from "./FloatingActionBar.js";
 import { useSmartScroll } from "../../hooks/useSmartScroll.js";
+import { useEventSelection } from "../../hooks/useEventSelection.js";
+import { isContentBearingEvent, getEventCopyText, formatEventsAsMarkdown } from "../../utils/eventContent.js";
+import type { ToastVariant } from "../../context/ToastContext.js";
 import { ICON_MD } from "../../utils/iconSize.js";
 import type { DisplayEvent } from "../../utils/sessionEvents.js";
+import type { SessionEvent } from "../../hooks/types.js";
 import styles from "./EventStream.module.scss";
+
+/** Build a descriptive label for the selection checkbox aria-label. */
+function buildCheckboxLabel(event: SessionEvent): string {
+  const time = new Date(event.timestamp).toLocaleTimeString();
+  switch (event.eventType) {
+    case "text":
+    case "output":
+      return `Select message from assistant at ${time}`;
+    case "user_input":
+      return `Select message from user at ${time}`;
+    case "tool_result":
+    case "tool_use":
+      return `Select tool event at ${time}`;
+    case "error":
+      return `Select error at ${time}`;
+    default:
+      return `Select event at ${time}`;
+  }
+}
 
 /** localStorage key for persisting the direction preference. */
 const DIRECTION_STORAGE_KEY: string = "grackle-stream-direction";
@@ -39,16 +64,30 @@ interface EventStreamProps {
   eventsDropped: number;
   /** Custom empty state content (e.g., CTA button or waiting message). */
   emptyState?: ReactNode;
+  /** Toast callback for copy feedback. If omitted, no toast is shown. */
+  onShowToast?: (message: string, variant?: ToastVariant) => void;
 }
 
 /**
  * Scrollable event stream with smart auto-scroll, direction toggle,
- * and animated entry for new events.
+ * animated entry for new events, hover actions, and multi-select mode.
  */
-export function EventStream({ events, eventsDropped, emptyState }: EventStreamProps): JSX.Element {
+export function EventStream({ events, eventsDropped, emptyState, onShowToast }: EventStreamProps): JSX.Element {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isReversed, setIsReversed] = useState(readStoredDirection);
   const shouldReduceMotion = useReducedMotion();
+
+  // Multi-select state
+  const selection = useEventSelection({
+    events,
+    formatForClipboard: formatEventsAsMarkdown,
+  });
+
+  // Count of selectable events (for floating action bar)
+  const totalSelectable = useMemo(
+    () => events.filter(isContentBearingEvent).length,
+    [events],
+  );
 
   const displayEvents = useMemo(() => {
     if (!isReversed) {
@@ -61,6 +100,7 @@ export function EventStream({ events, eventsDropped, emptyState }: EventStreamPr
     scrollRef,
     contentLength: events.length,
     isReversed,
+    paused: selection.isSelecting,
   });
 
   const handleToggleDirection = (): void => {
@@ -70,6 +110,28 @@ export function EventStream({ events, eventsDropped, emptyState }: EventStreamPr
       localStorage.setItem(DIRECTION_STORAGE_KEY, next ? "reversed" : "default");
     } catch { /* storage unavailable */ }
   };
+
+  // Escape key exits selection mode
+  useEffect(() => {
+    if (!selection.isSelecting) {
+      return;
+    }
+    const handler = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") {
+        selection.cancelSelection();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => { window.removeEventListener("keydown", handler); };
+  }, [selection.isSelecting, selection.cancelSelection]);
+
+  // Copy handler for the floating action bar
+  const handleCopySelected = useCallback(async () => {
+    const ok = await selection.copySelected();
+    if (ok) {
+      onShowToast?.(`Copied ${selection.selectedCount} message${selection.selectedCount === 1 ? "" : "s"} to clipboard`, "success");
+    }
+  }, [selection, onShowToast]);
 
   const animationDuration = shouldReduceMotion ? 0 : 0.2;
   const enterY = isReversed ? -8 : 8;
@@ -90,7 +152,11 @@ export function EventStream({ events, eventsDropped, emptyState }: EventStreamPr
       </div>
 
       {/* Scroll container */}
-      <div ref={scrollRef} className={styles.scrollContainer} data-testid="event-stream-scroll">
+      <div
+        ref={scrollRef}
+        className={`${styles.scrollContainer} ${selection.isSelecting ? styles.selectingPadding : ""}`}
+        data-testid="event-stream-scroll"
+      >
         {events.length === 0 && emptyState}
         <EventOverflowBanner eventsDropped={eventsDropped} />
         <AnimatePresence initial={false}>
@@ -104,12 +170,37 @@ export function EventStream({ events, eventsDropped, emptyState }: EventStreamPr
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: animationDuration, ease: "easeOut" }}
               >
-                <EventRenderer event={event} toolUseCtx={event.toolUseCtx} settled={event.settled} />
+                <EventHoverRow
+                  copyText={getEventCopyText(event)}
+                  isContentBearing={isContentBearingEvent(event)}
+                  isSelecting={selection.isSelecting}
+                  isSelected={selection.selectedIndices.has(originalIndex)}
+                  checkboxLabel={buildCheckboxLabel(event)}
+                  onSelect={() => { selection.enterSelectionMode(originalIndex); }}
+                  onToggle={(shiftKey) => { selection.toggleEvent(originalIndex, shiftKey); }}
+                  onCopied={() => { onShowToast?.("Copied to clipboard", "success"); }}
+                >
+                  <EventRenderer event={event} toolUseCtx={event.toolUseCtx} settled={event.settled} />
+                </EventHoverRow>
               </motion.div>
             );
           })}
         </AnimatePresence>
       </div>
+
+      {/* Floating action bar for multi-select mode */}
+      <AnimatePresence>
+        {selection.isSelecting && (
+          <FloatingActionBar
+            selectedCount={selection.selectedCount}
+            totalSelectable={totalSelectable}
+            onSelectAll={selection.selectAll}
+            onDeselectAll={selection.deselectAll}
+            onCopy={() => { handleCopySelected().catch(() => {}); }}
+            onCancel={selection.cancelSelection}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Floating "scroll to anchor" button */}
       <AnimatePresence>

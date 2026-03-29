@@ -1,7 +1,6 @@
 import { useState, type JSX } from "react";
 import type { ToolCardProps } from "./ToolCardProps.js";
 import { extractBareName } from "./classifyTool.js";
-import { CopyButton } from "../display/CopyButton.js";
 import styles from "./toolCards.module.scss";
 
 /** Shape of a single finding in MCP results. */
@@ -94,9 +93,6 @@ export function FindingCard({ tool, args, result, isError }: ToolCardProps): JSX
               {list.length} {list.length === 1 ? "finding" : "findings"}
             </span>
           </>
-        )}
-        {!inProgress && !isError && result && (
-          <CopyButton text={result} data-testid="tool-card-copy" className={styles.copyButtonInline} />
         )}
       </div>
 

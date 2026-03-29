@@ -23,6 +23,10 @@ export {
 } from "./components/display/index.js";
 export type { ButtonProps, ButtonVariant, ButtonSize } from "./components/display/index.js";
 export { EventStream } from "./components/display/EventStream.js";
+export { EventHoverRow } from "./components/display/EventHoverRow.js";
+export type { EventHoverRowProps } from "./components/display/EventHoverRow.js";
+export { FloatingActionBar } from "./components/display/FloatingActionBar.js";
+export type { FloatingActionBarProps } from "./components/display/FloatingActionBar.js";
 
 // Editable fields
 export {
@@ -117,6 +121,8 @@ export {
 // ─── Hooks ───────────────────────────────────────────────────────────────────
 
 export { useSmartScroll } from "./hooks/useSmartScroll.js";
+export { useEventSelection } from "./hooks/useEventSelection.js";
+export type { UseEventSelectionOptions, UseEventSelectionReturn } from "./hooks/useEventSelection.js";
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
@@ -154,6 +160,8 @@ export {
 
 export { groupConsecutiveTextEvents, pairToolEvents } from "./utils/sessionEvents.js";
 export type { DisplayEvent } from "./utils/sessionEvents.js";
+
+export { isContentBearingEvent, getEventCopyText, formatEventsAsMarkdown } from "./utils/eventContent.js";
 
 export type { BoardColumn, BoardTask } from "./utils/boardColumns.js";
 export { buildBoardColumns } from "./utils/boardColumns.js";

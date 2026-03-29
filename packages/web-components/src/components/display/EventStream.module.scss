@@ -16,6 +16,15 @@
   flex: 1;
   overflow: auto;
   padding: var(--space-md);
+  // Extra top padding so the first event's hover action bar (positioned
+  // above via top: -28px) is not clipped by the scroll container.
+  padding-top: calc(var(--space-md) + 28px);
+}
+
+// Extra bottom padding when floating action bar is visible, so the last event
+// is not occluded by the bar.
+.selectingPadding {
+  padding-bottom: 64px;
 }
 
 .toolbar {

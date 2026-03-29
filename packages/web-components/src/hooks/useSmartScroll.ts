@@ -10,6 +10,8 @@ interface UseSmartScrollOptions {
   contentLength: number;
   /** Whether newest-at-top mode is active (anchor is top instead of bottom). */
   isReversed: boolean;
+  /** When true, auto-scroll is suppressed (e.g. during multi-select mode). */
+  paused?: boolean;
 }
 
 /** Return value from the useSmartScroll hook. */
@@ -32,6 +34,7 @@ export function useSmartScroll({
   scrollRef,
   contentLength,
   isReversed,
+  paused,
 }: UseSmartScrollOptions): UseSmartScrollReturn {
   const [isAtAnchor, setIsAtAnchor] = useState(true);
   const prevScrollHeightRef = useRef<number>(0);
@@ -102,6 +105,14 @@ export function useSmartScroll({
       return;
     }
 
+    // Skip auto-scroll while paused (e.g. during multi-select mode) to avoid
+    // disrupting the user's selection. Still update prevScrollHeight so scroll
+    // compensation is correct when unpaused.
+    if (paused) {
+      prevScrollHeightRef.current = element.scrollHeight;
+      return;
+    }
+
     if (isReversed && !isAtAnchor) {
       // Compensate scrollTop to prevent viewport shift from prepended content
       const compensation = computeScrollCompensation(
@@ -124,7 +135,7 @@ export function useSmartScroll({
     // Update prevScrollHeight AFTER applying compensation/auto-scroll
     // so the next render can compute the delta correctly.
     prevScrollHeightRef.current = element.scrollHeight;
-  }, [contentLength, isAtAnchor, isReversed, scrollRef]);
+  }, [contentLength, isAtAnchor, isReversed, paused, scrollRef]);
 
   const scrollToAnchor = useCallback((): void => {
     const element = scrollRef.current;
