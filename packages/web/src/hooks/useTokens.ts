@@ -8,32 +8,12 @@
  */
 
 import { useState, useCallback } from "react";
-import type { TokenInfo, GrackleEvent } from "@grackle-ai/web-components";
+import type { TokenInfo, GrackleEvent, UseTokensResult } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToToken } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
 
-/** Values returned by {@link useTokens}. */
-export interface UseTokensResult {
-  /** All known tokens. */
-  tokens: TokenInfo[];
-  /** Whether the token list is currently being loaded. */
-  tokensLoading: boolean;
-  /** Request the current token list from the server. */
-  loadTokens: () => Promise<void>;
-  /** Create or update a token on the server. */
-  setToken: (
-    name: string,
-    value: string,
-    tokenType: string,
-    envVar: string,
-    filePath: string,
-  ) => Promise<void>;
-  /** Delete a token by name. */
-  deleteToken: (name: string) => Promise<void>;
-  /** Handle a domain event from the event bus. Returns `true` if handled. */
-  handleEvent: (event: GrackleEvent) => boolean;
-}
+export type { UseTokensResult } from "@grackle-ai/web-components";
 
 /**
  * Hook that manages token state and CRUD actions via ConnectRPC.

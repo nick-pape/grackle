@@ -27,11 +27,10 @@ function ChatEmptyState({ hasLocalEnvironment }: { hasLocalEnvironment: boolean 
 /** Clean full-page chat experience for the root task. */
 export function ChatPage(): JSX.Element {
   const {
-    tasks, sessions, events, eventsDropped, environments,
-    loadTaskSessions, loadSessionEvents, kill, stopGraceful,
-    taskSessions,
-    sendInput, spawn, startTask, personas, provisionEnvironment,
-    sessionsLoading, tasksLoading,
+    tasks: { tasks, tasksLoading, startTask },
+    sessions: { sessions, sessionsLoading, events, eventsDropped, taskSessions, loadTaskSessions, loadSessionEvents, kill, stopGraceful, sendInput, spawn },
+    environments: { environments, provisionEnvironment },
+    personas: { personas },
   } = useGrackle();
   const { showToast } = useToast();
 

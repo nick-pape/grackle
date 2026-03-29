@@ -24,7 +24,7 @@ export function EnvironmentsEmptyPage(): JSX.Element {
 
 /** Home page — shows the operations dashboard when workspaces exist, or the welcome CTA for first-time users. */
 export function EmptyPage(): JSX.Element {
-  const { workspaces, environments } = useGrackle();
+  const { workspaces: { workspaces }, environments: { environments } } = useGrackle();
   const navigate = useAppNavigate();
 
   const hasEnvironments = environments.length > 0;

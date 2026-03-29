@@ -22,7 +22,7 @@ const DEFAULT_MODELS: Record<string, string> = {
 
 /** First-run experience wizard — guides new users through initial setup. */
 export function SetupWizard(): JSX.Element {
-  const { personas, updatePersona, completeOnboarding, onboardingCompleted } = useGrackle();
+  const { personas: { personas, updatePersona }, completeOnboarding, onboardingCompleted } = useGrackle();
   const { showToast } = useToast();
   const navigate = useAppNavigate();
   const [step, setStep] = useState(0);

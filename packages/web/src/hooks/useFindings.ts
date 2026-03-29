@@ -8,38 +8,12 @@
  */
 
 import { useState, useCallback } from "react";
-import type { FindingData, GrackleEvent } from "@grackle-ai/web-components";
+import type { FindingData, GrackleEvent, UseFindingsResult } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToFinding } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
 
-/** Values returned by {@link useFindings}. */
-export interface UseFindingsResult {
-  /** All loaded findings. */
-  findings: FindingData[];
-  /** The currently selected finding (loaded by ID). `undefined` while loading or when not found. */
-  selectedFinding: FindingData | undefined;
-  /** Whether a single finding is being loaded. */
-  findingLoading: boolean;
-  /** Whether a findings list fetch is in-flight. */
-  findingsLoading: boolean;
-  /** Load findings for a given workspace. */
-  loadFindings: (workspaceId: string) => Promise<void>;
-  /** Load findings across all workspaces. */
-  loadAllFindings: () => Promise<void>;
-  /** Load a single finding by ID. */
-  loadFinding: (findingId: string) => Promise<void>;
-  /** Post a new finding to a workspace. */
-  postFinding: (
-    workspaceId: string,
-    title: string,
-    content: string,
-    category?: string,
-    tags?: string[],
-  ) => Promise<void>;
-  /** Handle a domain event from the event bus. Returns `true` if handled. */
-  handleEvent: (event: GrackleEvent) => boolean;
-}
+export type { UseFindingsResult } from "@grackle-ai/web-components";
 
 /**
  * Hook that manages findings state and actions via ConnectRPC.

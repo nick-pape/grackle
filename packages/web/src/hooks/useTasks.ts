@@ -9,65 +9,12 @@
 
 import { useState, useCallback, useRef } from "react";
 import { ConnectError } from "@connectrpc/connect";
-import type { TaskData, GrackleEvent, WsMessage } from "@grackle-ai/web-components";
+import type { TaskData, GrackleEvent, WsMessage, UseTasksResult } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToTask } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
 
-/** Values returned by {@link useTasks}. */
-export interface UseTasksResult {
-  /** All known tasks (may span multiple workspaces). */
-  tasks: TaskData[];
-  /** Whether the task list is currently being loaded. */
-  tasksLoading: boolean;
-  /** The ID of the task currently being started, or `undefined`. */
-  taskStartingId: string | undefined;
-  /** Load tasks for a given workspace. */
-  loadTasks: (workspaceId: string) => Promise<void>;
-  /** Load all tasks across all workspaces. */
-  loadAllTasks: () => Promise<void>;
-  /** Create a new task in a workspace. */
-  createTask: (
-    workspaceId: string,
-    title: string,
-    description?: string,
-    dependsOn?: string[],
-    parentTaskId?: string,
-    defaultPersonaId?: string,
-    canDecompose?: boolean,
-    onSuccess?: () => void,
-    onError?: (message: string) => void,
-  ) => Promise<void>;
-  /** Start a task, optionally specifying runtime parameters. */
-  startTask: (
-    taskId: string,
-    personaId?: string,
-    environmentId?: string,
-    notes?: string,
-  ) => Promise<void>;
-  /** Stop a task: kill active sessions + mark complete. */
-  stopTask: (taskId: string) => Promise<void>;
-  /** Mark a task as completed. */
-  completeTask: (taskId: string) => Promise<void>;
-  /** Resume a paused/waiting task. */
-  resumeTask: (taskId: string) => Promise<void>;
-  /** Update a task's title, description, dependencies, and default persona. */
-  updateTask: (
-    taskId: string,
-    title: string,
-    description: string,
-    dependsOn: string[],
-    defaultPersonaId?: string,
-  ) => Promise<void>;
-  /** Delete a task by ID. */
-  deleteTask: (taskId: string) => Promise<void>;
-  /** Handle a domain event from the event bus. Returns `true` if handled. */
-  handleEvent: (event: GrackleEvent) => boolean;
-  /** Reset transient state (e.g. `taskStartingId`) on disconnect. */
-  onDisconnect: () => void;
-  /** Handle legacy WS messages injected by E2E tests. */
-  handleLegacyMessage?: (msg: WsMessage) => boolean;
-}
+export type { UseTasksResult } from "@grackle-ai/web-components";
 
 /**
  * Hook that manages task state and lifecycle actions via ConnectRPC.
