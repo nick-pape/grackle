@@ -130,6 +130,27 @@ describe("useEnvironments — operationError", () => {
     expect(result.current.operationError).toBe("");
   });
 
+  it("sets operationError when provisionEnvironment stream rejects", async () => {
+    // Simulate a stream that throws immediately
+    mockClient.provisionEnvironment.mockImplementation(() => {
+      // Return an async iterable that throws
+      return {
+        [Symbol.asyncIterator](): AsyncIterator<unknown> {
+          return {
+            next: () => Promise.reject(connectError("provision denied")),
+          };
+        },
+      };
+    });
+    const { result } = renderHook(() => useEnvironments());
+
+    await act(async () => {
+      await result.current.provisionEnvironment("env-1");
+    });
+
+    expect(result.current.operationError).toContain("provision denied");
+  });
+
   it("does not set operationError when loadEnvironments rejects", async () => {
     mockClient.listEnvironments.mockRejectedValue(connectError("server down"));
     const { result } = renderHook(() => useEnvironments());

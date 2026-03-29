@@ -21,7 +21,7 @@ import type { ToastVariant } from "@grackle-ai/web-components";
 export function useEnvironmentOperationToasts(
   operationError: string,
   clearOperationError: () => void,
-  showToast: (message: string, variant?: ToastVariant) => void,
+  showToast: (message: string, variant?: ToastVariant, duration?: number) => void,
 ): void {
   const prevRef = useRef(operationError);
 
