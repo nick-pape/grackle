@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 28 Mar 2026 22:37:21 GMT and should not be manually modified.
+This log was last generated on Sun, 29 Mar 2026 01:57:32 GMT and should not be manually modified.
+
+## 0.89.3
+Sun, 29 Mar 2026 01:57:32 GMT
+
+### Patches
+
+- Remove canAcceptInput() guard so sendInput() always queues messages, even before SDK initialization completes
 
 ## 0.89.2
 Sat, 28 Mar 2026 22:37:21 GMT

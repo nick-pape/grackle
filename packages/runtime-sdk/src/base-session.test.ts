@@ -77,10 +77,6 @@ class TestSession extends BaseAgentSession {
     return 1;
   }
 
-  protected canAcceptInput(): boolean {
-    return true;
-  }
-
   protected abortActive(): void {
     // no-op
   }
@@ -337,7 +333,126 @@ describe("BaseAgentSession input serialization", () => {
   });
 });
 
-// ─── New tests: shared helper methods ────────────────────────────
+// ─── Slow-setup subclass for pre-readiness tests ──────────────────
+
+/**
+ * Subclass that simulates a slow setupSdk() with a deferred gate,
+ * mirroring real runtime behavior where input sent before SDK initialization
+ * completes is queued and processed once setupSdk() finishes.
+ */
+class SlowSetupSession extends TestSession {
+  private readonly setupGate: Deferred = createDeferred();
+
+  /** Resolve the setup gate (simulates SDK initialization completing). */
+  public resolveSetup(): void {
+    this.setupGate.resolve();
+  }
+
+  protected override async setupSdk(): Promise<void> {
+    await this.setupGate.promise;
+  }
+}
+
+/** Create a SlowSetupSession and return helpers for consuming its event stream. */
+function spawnSlowSession(opts?: Partial<CreateSessionOptions>): {
+  session: SlowSetupSession;
+  nextEvent: () => Promise<AgentEvent | undefined>;
+} {
+  const session = new SlowSetupSession({
+    id: "slow-1",
+    prompt: "hello",
+    model: "model",
+    maxTurns: 0,
+    ...opts,
+  });
+  const streamIterator = session.stream()[Symbol.asyncIterator]();
+
+  const nextEvent = async (): Promise<AgentEvent | undefined> => {
+    const result = await streamIterator.next();
+    if (!result.done && result.value) {
+      return result.value;
+    }
+    return undefined;
+  };
+
+  return { session, nextEvent };
+}
+
+describe("sendInput before SDK ready", () => {
+  it("queues input sent before setupSdk completes", async () => {
+    const { session, nextEvent } = spawnSlowSession();
+
+    // Drain the initial "Starting..." system event
+    const startEvent = await nextEvent();
+    expect(startEvent?.type).toBe("system");
+
+    // Resume the generator WITHOUT awaiting — this kicks off runSession(),
+    // which calls setupSdk() and blocks on the deferred gate. The returned
+    // promise waits for the first eventQueue push (waiting_input after setup).
+    const pendingFirstEvent = nextEvent();
+
+    // Send input while setupSdk is genuinely in-flight
+    session.sendInput("early");
+
+    // Now resolve setup so the session can proceed
+    session.resolveSetup();
+
+    // The pending nextEvent resolves with the waiting_input status
+    const waitingEvent = await pendingFirstEvent;
+    expect(waitingEvent?.type).toBe("status");
+    expect(waitingEvent?.content).toBe("waiting_input");
+
+    // The early message should be queued and processed as the first follow-up
+    await drainUntilStatus(nextEvent, "running");
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    // Send a normal post-ready message
+    session.sendInput("late");
+    await drainUntilStatus(nextEvent, "running");
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    expect(session.followUpCalls).toEqual(["early", "late"]);
+
+    session.kill();
+  });
+
+  it("queues multiple inputs sent before setupSdk and processes them in order", async () => {
+    const { session, nextEvent } = spawnSlowSession();
+
+    // Drain the initial system event
+    const startEvent = await nextEvent();
+    expect(startEvent?.type).toBe("system");
+
+    // Resume the generator WITHOUT awaiting — kicks off runSession(),
+    // which blocks on setupSdk()'s deferred gate.
+    const pendingFirstEvent = nextEvent();
+
+    // Send 3 messages while setupSdk is genuinely in-flight
+    session.sendInput("alpha");
+    session.sendInput("bravo");
+    session.sendInput("charlie");
+
+    // Resolve setup
+    session.resolveSetup();
+
+    // The pending nextEvent resolves with waiting_input
+    const waitingEvent = await pendingFirstEvent;
+    expect(waitingEvent?.type).toBe("status");
+    expect(waitingEvent?.content).toBe("waiting_input");
+
+    // All 3 should be processed in FIFO order
+    for (const _expected of ["alpha", "bravo", "charlie"]) {
+      await drainUntilStatus(nextEvent, "running");
+      await drainUntilStatus(nextEvent, "waiting_input");
+    }
+
+    expect(session.followUpCalls).toEqual(["alpha", "bravo", "charlie"]);
+
+    session.kill();
+  });
+});
+
+// ─── Shared helper method tests ──────────────────────────────────
 
 describe("BaseAgentSession.resolveWorkDir", () => {
   beforeEach(() => {

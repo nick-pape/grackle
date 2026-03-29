@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.89.3",
+      "tag": "@grackle-ai/cli_v0.89.3",
+      "date": "Sun, 29 Mar 2026 01:57:32 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Remove canAcceptInput() guard so sendInput() always queues messages, even before SDK initialization completes"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.89.2",
       "tag": "@grackle-ai/cli_v0.89.2",
       "date": "Sat, 28 Mar 2026 22:37:21 GMT",

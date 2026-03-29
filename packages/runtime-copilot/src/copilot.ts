@@ -330,10 +330,6 @@ export class CopilotSession extends BaseAgentSession {
     await this.sendAndWaitForIdle(text);
   }
 
-  protected canAcceptInput(): boolean {
-    return !!this.copilotSession;
-  }
-
   protected abortActive(): void {
     if (this.copilotSession) {
       try {
