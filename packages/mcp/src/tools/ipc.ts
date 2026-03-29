@@ -237,11 +237,35 @@ export const ipcTools: ToolDefinition[] = [
     async handler(
       _args: Record<string, unknown>,
       client: Client<typeof grackle.Grackle>,
+      authContext?: AuthContext,
     ) {
       try {
         const result = await client.listStreams({});
+
+        // Scoped agents only see streams they participate in
+        const filteredStreams = (() => {
+          if (authContext?.type === "scoped" && authContext.taskSessionId) {
+            const streams: typeof result.streams = [];
+            for (const s of result.streams) {
+              const scopedSubscribers = s.subscribers.filter(
+                (sub) => sub.sessionId === authContext.taskSessionId,
+              );
+              if (scopedSubscribers.length === 0) {
+                continue;
+              }
+              streams.push({
+                ...s,
+                subscribers: scopedSubscribers,
+                subscriberCount: scopedSubscribers.length,
+              });
+            }
+            return streams;
+          }
+          return result.streams;
+        })();
+
         return jsonResult({
-          streams: result.streams.map((s) => ({
+          streams: filteredStreams.map((s) => ({
             id: s.id,
             name: s.name,
             subscriberCount: s.subscriberCount,
