@@ -55,7 +55,7 @@ const IS_MOCK_MODE: boolean =
 
 /** Inner layout body that conditionally renders the sidebar based on context content. */
 function AppShellBody(): JSX.Element {
-  const { connected, environments, sessions, tasks } = useGrackle();
+  const { connected, environments: { environments }, sessions: { sessions }, tasks: { tasks } } = useGrackle();
   const { toasts, dismissToast } = useToast();
   const location = useLocation();
   const sidebarContent = useSidebarContent();
@@ -121,8 +121,7 @@ function AppShellBody(): JSX.Element {
 
 /** Application shell layout with StatusBar, Sidebar, Outlet, and BottomStatusBar. */
 function AppShell(): JSX.Element {
-  const { lastSpawnedId, environments, tasks, connected, onboardingCompleted,
-    environmentOperationError, clearEnvironmentOperationError } = useGrackle();
+  const { sessions: { lastSpawnedId }, environments: { environments, operationError: environmentOperationError, clearOperationError: clearEnvironmentOperationError }, tasks: { tasks }, connected, onboardingCompleted } = useGrackle();
   const { showToast } = useToast();
   useEnvironmentToasts(environments, showToast);
   useTaskToasts(tasks, showToast);
@@ -163,7 +162,7 @@ function AppShell(): JSX.Element {
  */
 function WorkspaceRedirect(): JSX.Element | undefined {
   const { workspaceId } = useParams<{ workspaceId: string }>();
-  const { workspaces } = useGrackle();
+  const { workspaces: { workspaces } } = useGrackle();
   const location = useLocation();
 
   const workspace = workspaces.find((w) => w.id === workspaceId);

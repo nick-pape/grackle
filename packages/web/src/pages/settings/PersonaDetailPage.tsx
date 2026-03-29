@@ -28,7 +28,7 @@ export function PersonaDetailPage(): JSX.Element {
   const navigate = useAppNavigate();
   const { showToast } = useToast();
   const {
-    personas, createPersona, updatePersona, deletePersona,
+    personas: { personas, createPersona, updatePersona, deletePersona },
     appDefaultPersonaId, setAppDefaultPersonaId,
   } = useGrackle();
 

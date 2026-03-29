@@ -4,7 +4,7 @@ import { NEW_PERSONA_URL, PersonaManager, personaUrl, useAppNavigate, useToast }
 
 /** Settings tab wrapping the persona list. */
 export function SettingsPersonasTab(): JSX.Element {
-  const { personas, deletePersona, appDefaultPersonaId, setAppDefaultPersonaId } = useGrackle();
+  const { personas: { personas, deletePersona }, appDefaultPersonaId, setAppDefaultPersonaId } = useGrackle();
   const { showToast } = useToast();
   const navigate = useAppNavigate();
 

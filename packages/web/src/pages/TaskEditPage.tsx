@@ -6,7 +6,7 @@ import { TaskEditPanel, useToast } from "@grackle-ai/web-components";
 /** Page for editing an existing task, reading taskId from route params. */
 export function TaskEditPage(): JSX.Element {
   const { taskId, workspaceId, environmentId } = useParams<{ taskId: string; workspaceId?: string; environmentId?: string }>();
-  const { tasks, workspaces, personas, createTask, updateTask } = useGrackle();
+  const { tasks: { tasks, createTask, updateTask }, workspaces: { workspaces }, personas: { personas } } = useGrackle();
   const { showToast } = useToast();
 
   return (

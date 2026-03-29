@@ -25,7 +25,7 @@ export function FindingDetailPage(): JSX.Element {
     environmentId?: string;
     workspaceId?: string;
   }>();
-  const { selectedFinding, findingLoading, loadFinding, workspaces, environments } = useGrackle();
+  const { findings: { selectedFinding, findingLoading, loadFinding }, workspaces: { workspaces }, environments: { environments } } = useGrackle();
   const navigate = useAppNavigate();
 
   useEffect(() => {

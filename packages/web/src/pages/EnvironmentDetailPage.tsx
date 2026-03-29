@@ -20,15 +20,9 @@ export function EnvironmentDetailPage(): JSX.Element {
   const { environmentId } = useParams<{ environmentId: string }>();
   const navigate = useAppNavigate();
   const {
-    environments,
-    workspaces,
-    sessions,
-    provisionStatus,
-    provisionEnvironment,
-    stopEnvironment,
-    removeEnvironment,
-    archiveWorkspace,
-    environmentsLoading,
+    environments: { environments, environmentsLoading, provisionStatus, provisionEnvironment, stopEnvironment, removeEnvironment },
+    workspaces: { workspaces, archiveWorkspace },
+    sessions: { sessions },
   } = useGrackle();
 
   const [showDeleteEnv, setShowDeleteEnv] = useState(false);

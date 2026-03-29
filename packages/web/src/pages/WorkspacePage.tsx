@@ -48,9 +48,9 @@ export function WorkspacePage(): JSX.Element {
   const { workspaceId, environmentId: routeEnvironmentId } = useParams<{ workspaceId: string; environmentId: string }>();
   const navigate = useAppNavigate();
   const {
-    tasks, environments, workspaces, personas, sessions, archiveWorkspace, updateWorkspace,
+    tasks: { tasks }, environments: { environments }, workspaces: { workspaces, workspacesLoading, archiveWorkspace, updateWorkspace },
+    personas: { personas }, sessions: { sessions },
     usageCache, loadUsage,
-    workspacesLoading,
   } = useGrackle();
   const { resolvedThemeId } = useThemeContext();
 

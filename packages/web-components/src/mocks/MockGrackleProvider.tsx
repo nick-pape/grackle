@@ -227,7 +227,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   // ── Actions ───────────────────────────────────────
 
   /** Spawns a new session, appends it to state, and plays a stream scenario. */
-  const spawn: UseGrackleSocketResult["spawn"] = useCallback(
+  const spawn: UseGrackleSocketResult["sessions"]["spawn"] = useCallback(
     async (environmentId: string, prompt: string, _model?: string, runtime?: string) => {
       console.log("[MockGrackle] spawn", { environmentId, prompt, runtime });
 
@@ -283,7 +283,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   );
 
   /** Kills a session: cancels timers, sets status to stopped with endReason killed, resets associated tasks. */
-  const kill: UseGrackleSocketResult["kill"] = useCallback(
+  const kill: UseGrackleSocketResult["sessions"]["kill"] = useCallback(
     async (sessionId: string) => {
       console.log("[MockGrackle] kill", sessionId);
 
@@ -318,7 +318,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   );
 
   /** Graceful stop — mirrors kill but with "terminated" end reason. */
-  const stopGraceful: UseGrackleSocketResult["stopGraceful"] = useCallback(
+  const stopGraceful: UseGrackleSocketResult["sessions"]["stopGraceful"] = useCallback(
     async (sessionId: string) => {
       console.log("[MockGrackle] stopGraceful", sessionId);
       cancelSessionTimers(sessionId);
@@ -343,12 +343,12 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   );
 
   /** No-op refresh — the mock has no server to re-fetch from. */
-  const refresh: UseGrackleSocketResult["refresh"] = useCallback(() => {
+  const refresh: UseGrackleSocketResult["refresh"] = useCallback((): void => {
     console.log("[MockGrackle] refresh");
   }, []);
 
   /** No-op — events are already accumulated in state. */
-  const loadSessionEvents: UseGrackleSocketResult["loadSessionEvents"] = useCallback(
+  const loadSessionEvents: UseGrackleSocketResult["sessions"]["loadSessionEvents"] = useCallback(
     async (sessionId: string) => {
       console.log("[MockGrackle] loadSessionEvents", sessionId);
     },
@@ -356,13 +356,13 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   );
 
   /** Clears all events from state. */
-  const clearEvents: UseGrackleSocketResult["clearEvents"] = useCallback(() => {
+  const clearEvents: UseGrackleSocketResult["sessions"]["clearEvents"] = useCallback(() => {
     console.log("[MockGrackle] clearEvents");
     setEvents([]);
   }, []);
 
   /** Creates a new workspace and adds it to state. */
-  const createWorkspace: UseGrackleSocketResult["createWorkspace"] = useCallback(
+  const createWorkspace: UseGrackleSocketResult["workspaces"]["createWorkspace"] = useCallback(
     async (
       name: string,
       description?: string,
@@ -399,7 +399,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   );
 
   /** Sets a workspace's status to "archived". */
-  const archiveWorkspace: UseGrackleSocketResult["archiveWorkspace"] = useCallback(
+  const archiveWorkspace: UseGrackleSocketResult["workspaces"]["archiveWorkspace"] = useCallback(
     async (workspaceId: string) => {
       console.log("[MockGrackle] archiveWorkspace", workspaceId);
       setWorkspaces((prev) =>
@@ -410,7 +410,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   );
 
   /** No-op — tasks are already in state from initial load. */
-  const loadTasks: UseGrackleSocketResult["loadTasks"] = useCallback(
+  const loadTasks: UseGrackleSocketResult["tasks"]["loadTasks"] = useCallback(
     async (workspaceId: string) => {
       console.log("[MockGrackle] loadTasks", workspaceId);
     },
@@ -418,7 +418,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   );
 
   /** Creates a new task and adds it to state. */
-  const createTask: UseGrackleSocketResult["createTask"] = useCallback(
+  const createTask: UseGrackleSocketResult["tasks"]["createTask"] = useCallback(
     async (
       workspaceId: string,
       title: string,
@@ -482,7 +482,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
    *
    * Also handles retry from "failed" — the task gets a fresh session.
    */
-  const startTask: UseGrackleSocketResult["startTask"] = useCallback(
+  const startTask: UseGrackleSocketResult["tasks"]["startTask"] = useCallback(
     async (taskId: string, _personaId?: string, _environmentId?: string, _notes?: string) => {
       console.log("[MockGrackle] startTask", { taskId });
 
@@ -617,7 +617,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
    * back to "running", plays any pending resume steps, and handles
    * post-resume task → review transitions.
    */
-  const sendInput: UseGrackleSocketResult["sendInput"] = useCallback(
+  const sendInput: UseGrackleSocketResult["sessions"]["sendInput"] = useCallback(
     async (sessionId: string, text: string) => {
       console.log("[MockGrackle] sendInput", { sessionId, text });
 
@@ -688,7 +688,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   );
 
   /** Completes a task: sets status to "complete" (human-authoritative). */
-  const completeTask: UseGrackleSocketResult["completeTask"] = useCallback(
+  const completeTask: UseGrackleSocketResult["tasks"]["completeTask"] = useCallback(
     async (taskId: string) => {
       console.log("[MockGrackle] completeTask", taskId);
       setTasks((prev) =>
@@ -699,7 +699,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   );
 
   /** Resumes the latest session for a task (mock: no-op, just logs). */
-  const resumeTask: UseGrackleSocketResult["resumeTask"] = useCallback(
+  const resumeTask: UseGrackleSocketResult["tasks"]["resumeTask"] = useCallback(
     async (taskId: string) => {
       console.log("[MockGrackle] resumeTask", taskId);
     },
@@ -707,7 +707,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   );
 
   /** Updates title, description, dependencies, and default persona of a pending/assigned task. */
-  const updateTask: UseGrackleSocketResult["updateTask"] = useCallback(
+  const updateTask: UseGrackleSocketResult["tasks"]["updateTask"] = useCallback(
     async (
       taskId: string,
       title: string,
@@ -734,7 +734,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   );
 
   /** Removes a task from state. */
-  const deleteTask: UseGrackleSocketResult["deleteTask"] = useCallback(
+  const deleteTask: UseGrackleSocketResult["tasks"]["deleteTask"] = useCallback(
     async (taskId: string) => {
       console.log("[MockGrackle] deleteTask", taskId);
       setTasks((prev) => prev.filter((t) => t.id !== taskId));
@@ -743,7 +743,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   );
 
   /** Filters findings by workspaceId. */
-  const loadFindings: UseGrackleSocketResult["loadFindings"] = useCallback(
+  const loadFindings: UseGrackleSocketResult["findings"]["loadFindings"] = useCallback(
     async (workspaceId: string) => {
       console.log("[MockGrackle] loadFindings", workspaceId);
       setFindings(MOCK_FINDINGS.filter((f) => f.workspaceId === workspaceId));
@@ -752,13 +752,13 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   );
 
   /** Load all findings across all workspaces. */
-  const loadAllFindings: UseGrackleSocketResult["loadAllFindings"] = useCallback(async () => {
+  const loadAllFindings: UseGrackleSocketResult["findings"]["loadAllFindings"] = useCallback(async () => {
     console.log("[MockGrackle] loadAllFindings");
     setFindings([...MOCK_FINDINGS]);
   }, []);
 
   /** Load a single finding by ID. */
-  const loadFinding: UseGrackleSocketResult["loadFinding"] = useCallback(
+  const loadFinding: UseGrackleSocketResult["findings"]["loadFinding"] = useCallback(
     async (findingId: string) => {
       console.log("[MockGrackle] loadFinding", findingId);
       const found = MOCK_FINDINGS.find((f) => f.id === findingId);
@@ -768,7 +768,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   );
 
   /** Adds a new finding to state. */
-  const postFinding: UseGrackleSocketResult["postFinding"] = useCallback(
+  const postFinding: UseGrackleSocketResult["findings"]["postFinding"] = useCallback(
     async (
       workspaceId: string,
       title: string,
@@ -796,12 +796,12 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   );
 
   /** No-op in mock mode (environments are pre-seeded). */
-  const loadEnvironments: UseGrackleSocketResult["loadEnvironments"] = useCallback(async () => {
+  const loadEnvironments: UseGrackleSocketResult["environments"]["loadEnvironments"] = useCallback(async () => {
     console.log("[MockGrackle] loadEnvironments");
   }, []);
 
   /** Logs an add-environment call (mock does not persist). */
-  const addEnvironment: UseGrackleSocketResult["addEnvironment"] = useCallback(
+  const addEnvironment: UseGrackleSocketResult["environments"]["addEnvironment"] = useCallback(
     async (
       displayName: string,
       adapterType: string,
@@ -813,7 +813,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   );
 
   /** Updates an environment in mock state so edits persist in mock mode. */
-  const updateEnvironment: UseGrackleSocketResult["updateEnvironment"] = useCallback(
+  const updateEnvironment: UseGrackleSocketResult["environments"]["updateEnvironment"] = useCallback(
     async (
       environmentId: string,
       fields: { displayName?: string; adapterConfig?: Record<string, unknown> },
@@ -840,12 +840,12 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   // ── Token methods ──────────────────────────────────
 
   /** No-op — tokens are already in state from initial load. */
-  const loadTokens: UseGrackleSocketResult["loadTokens"] = useCallback(async () => {
+  const loadTokens: UseGrackleSocketResult["tokens"]["loadTokens"] = useCallback(async () => {
     console.log("[MockGrackle] loadTokens");
   }, []);
 
   /** Adds or replaces a token in state. */
-  const mockSetToken: UseGrackleSocketResult["setToken"] = useCallback(
+  const mockSetToken: UseGrackleSocketResult["tokens"]["setToken"] = useCallback(
     async (name: string, _value: string, tokenType: string, envVar: string, filePath: string) => {
       console.log("[MockGrackle] setToken", { name, tokenType });
       setTokens((prev) => {
@@ -857,7 +857,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   );
 
   /** Removes a token from state. */
-  const mockDeleteToken: UseGrackleSocketResult["deleteToken"] = useCallback(
+  const mockDeleteToken: UseGrackleSocketResult["tokens"]["deleteToken"] = useCallback(
     async (name: string) => {
       console.log("[MockGrackle] deleteToken", name);
       setTokens((prev) => prev.filter((t) => t.name !== name));
@@ -866,7 +866,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   );
 
   /** Updates credential provider configuration in state. */
-  const mockUpdateCredentialProviders: UseGrackleSocketResult["updateCredentialProviders"] = useCallback(
+  const mockUpdateCredentialProviders: UseGrackleSocketResult["credentials"]["updateCredentialProviders"] = useCallback(
     async (config: CredentialProviderConfig) => {
       console.log("[MockGrackle] updateCredentialProviders", config);
       setCredentialProviders(config);
@@ -887,178 +887,183 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   const value: UseGrackleSocketResult = useMemo(
     () => ({
-      // State
       connected: true,
-      environmentsLoading: false,
-      sessionsLoading: false,
-      workspacesLoading: false,
-      tasksLoading: false,
-      tokensLoading: false,
-      credentialsLoading: false,
-      personasLoading: false,
-      send: () => {},
-      environments,
-      sessions,
-      events,
-      eventsDropped: 0,
-      lastSpawnedId,
-      workspaces,
-      tasks,
-      findings,
-      selectedFinding,
-      findingLoading,
-      findingsLoading: false,
-      tokens,
-      credentialProviders,
 
-      // Actions
-      spawn,
-      sendInput,
-      kill,
-      stopGraceful,
-      refresh,
-      loadSessionEvents,
-      clearEvents,
-      loadWorkspaces: async () => { console.log("[MockGrackle] loadWorkspaces"); },
-      createWorkspace,
-      archiveWorkspace,
-      updateWorkspace: async (workspaceId: string, fields: { name?: string; description?: string; repoUrl?: string; environmentId?: string; workingDirectory?: string; useWorktrees?: boolean; defaultPersonaId?: string }) => {
-        console.log("[MockGrackle] updateWorkspace", { workspaceId, ...fields });
-        setWorkspaces((prev) =>
-          prev.map((p) => {
-            if (p.id !== workspaceId) {
-              return p;
-            }
-            return {
-              ...p,
-              ...(fields.name !== undefined ? { name: fields.name } : {}),
-              ...(fields.description !== undefined ? { description: fields.description } : {}),
-              ...(fields.repoUrl !== undefined ? { repoUrl: fields.repoUrl } : {}),
-              ...(fields.environmentId !== undefined ? { environmentId: fields.environmentId } : {}),
-              ...(fields.workingDirectory !== undefined ? { workingDirectory: fields.workingDirectory } : {}),
-              ...(fields.useWorktrees !== undefined ? { useWorktrees: fields.useWorktrees } : {}),
-              ...(fields.defaultPersonaId !== undefined ? { defaultPersonaId: fields.defaultPersonaId } : {}),
-              updatedAt: new Date().toISOString(),
-            };
-          }),
-        );
-      },
-      loadTasks,
-      loadAllTasks: async () => {
-        console.log("[MockGrackle] loadAllTasks");
-      },
-      createTask,
-      startTask,
-      stopTask: async (taskId: string) => {
-        console.log("[MockGrackle] stopTask", { taskId });
-        await completeTask(taskId);
-      },
-      completeTask,
-      resumeTask,
-      updateTask,
-      deleteTask,
-      loadFindings,
-      loadAllFindings,
-      loadFinding,
-      postFinding,
-      loadEnvironments,
-      addEnvironment,
-      updateEnvironment,
-      loadTokens,
-      setToken: mockSetToken,
-      deleteToken: mockDeleteToken,
-      updateCredentialProviders: mockUpdateCredentialProviders,
-      provisionStatus: {},
-      environmentOperationError: "",
-      clearEnvironmentOperationError: () => { },
-      provisionEnvironment: async (_environmentId: string, _force?: boolean) => { },
-      stopEnvironment: async () => { },
-      removeEnvironment: async () => { },
-      codespaces: [],
-      codespaceError: "",
-      codespaceListError: "",
-      codespaceCreating: false,
-      listCodespaces: async () => { },
-      createCodespace: async () => { },
-      workspaceCreating: false,
-      taskStartingId: undefined,
-      personas,
-      createPersona: async (name: string, description: string, systemPrompt: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string, allowedMcpTools?: string[]) => {
-        console.log("[MockGrackle] createPersona", { name });
-        const newPersona: PersonaData = {
-          id: `mock-persona-${Date.now()}`,
-          name,
-          description,
-          systemPrompt,
-          toolConfig: "{}",
-          runtime: runtime ?? "claude-code",
-          model: model || "",
-          maxTurns: maxTurns || 0,
-          mcpServers: "[]",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          type: type || "agent",
-          script: script || "",
-          allowedMcpTools: allowedMcpTools || [],
-        };
-        setPersonas((prev) => [...prev, newPersona]);
-        return newPersona;
-      },
-      updatePersona: async (personaId: string, name?: string, description?: string, systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string, allowedMcpTools?: string[]) => {
-        console.log("[MockGrackle] updatePersona", { personaId, name });
-        const existingPersona = personas.find((persona) => persona.id === personaId);
-        if (!existingPersona) {
-          throw new Error(`Persona not found: ${personaId}`);
-        }
+      // ── Domain groups ────────────────────────────────
 
-        const updatedAt = new Date().toISOString();
-        const updatedPersona: PersonaData = {
-          ...existingPersona,
-          ...(name !== undefined ? { name } : {}),
-          ...(description !== undefined ? { description } : {}),
-          ...(systemPrompt !== undefined ? { systemPrompt } : {}),
-          ...(runtime !== undefined ? { runtime } : {}),
-          ...(model !== undefined ? { model } : {}),
-          ...(maxTurns !== undefined ? { maxTurns } : {}),
-          ...(type !== undefined ? { type } : {}),
-          ...(script !== undefined ? { script } : {}),
-          ...(allowedMcpTools !== undefined ? { allowedMcpTools } : {}),
-          updatedAt,
-        };
+      environments: {
+        environments,
+        environmentsLoading: false,
+        provisionStatus: {},
+        operationError: "",
+        clearOperationError: () => { },
+        loadEnvironments,
+        addEnvironment,
+        updateEnvironment,
+        provisionEnvironment: async (_environmentId: string, _force?: boolean) => { },
+        stopEnvironment: async () => { },
+        removeEnvironment: async () => { },
+      },
 
-        setPersonas((prev) =>
-          prev.map((persona) => (persona.id === personaId ? updatedPersona : persona)),
-        );
-        return updatedPersona;
+      sessions: {
+        sessions,
+        sessionsLoading: false,
+        events,
+        eventsDropped: 0,
+        lastSpawnedId,
+        taskSessions,
+        spawn,
+        sendInput,
+        kill,
+        stopGraceful,
+        loadSessionEvents,
+        clearEvents,
+        loadTaskSessions: async (taskId: string) => {
+          console.log("[MockGrackle] loadTaskSessions", taskId);
+        },
       },
-      deletePersona: async (personaId: string) => {
-        console.log("[MockGrackle] deletePersona", personaId);
-        setPersonas((prev) => prev.filter((p) => p.id !== personaId));
+
+      workspaces: {
+        workspaces,
+        workspacesLoading: false,
+        workspaceCreating: false,
+        loadWorkspaces: async () => { console.log("[MockGrackle] loadWorkspaces"); },
+        createWorkspace,
+        archiveWorkspace,
+        updateWorkspace: async (workspaceId: string, fields: { name?: string; description?: string; repoUrl?: string; environmentId?: string; workingDirectory?: string; useWorktrees?: boolean; defaultPersonaId?: string }) => {
+          console.log("[MockGrackle] updateWorkspace", { workspaceId, ...fields });
+          setWorkspaces((prev) =>
+            prev.map((p) => {
+              if (p.id !== workspaceId) {
+                return p;
+              }
+              return {
+                ...p,
+                ...(fields.name !== undefined ? { name: fields.name } : {}),
+                ...(fields.description !== undefined ? { description: fields.description } : {}),
+                ...(fields.repoUrl !== undefined ? { repoUrl: fields.repoUrl } : {}),
+                ...(fields.environmentId !== undefined ? { environmentId: fields.environmentId } : {}),
+                ...(fields.workingDirectory !== undefined ? { workingDirectory: fields.workingDirectory } : {}),
+                ...(fields.useWorktrees !== undefined ? { useWorktrees: fields.useWorktrees } : {}),
+                ...(fields.defaultPersonaId !== undefined ? { defaultPersonaId: fields.defaultPersonaId } : {}),
+                updatedAt: new Date().toISOString(),
+              };
+            }),
+          );
+        },
       },
-      taskSessions,
-      loadTaskSessions: async (taskId: string) => {
-        console.log("[MockGrackle] loadTaskSessions", taskId);
+
+      tasks: {
+        tasks,
+        tasksLoading: false,
+        taskStartingId: undefined,
+        loadTasks,
+        loadAllTasks: async () => {
+          console.log("[MockGrackle] loadAllTasks");
+        },
+        createTask,
+        startTask,
+        stopTask: async (taskId: string) => {
+          console.log("[MockGrackle] stopTask", { taskId });
+          await completeTask(taskId);
+        },
+        completeTask,
+        resumeTask,
+        updateTask,
+        deleteTask,
       },
-      appDefaultPersonaId,
-      setAppDefaultPersonaId: async (personaId: string) => {
-        console.log("[MockGrackle] setAppDefaultPersonaId", personaId);
-        setAppDefaultPersonaIdState(personaId);
+
+      findings: {
+        findings,
+        selectedFinding,
+        findingLoading,
+        findingsLoading: false,
+        loadFindings,
+        loadAllFindings,
+        loadFinding,
+        postFinding,
       },
-      onboardingCompleted: true,
-      completeOnboarding: async () => {
-        console.log("[MockGrackle] completeOnboarding");
+
+      tokens: {
+        tokens,
+        tokensLoading: false,
+        loadTokens,
+        setToken: mockSetToken,
+        deleteToken: mockDeleteToken,
       },
-      usageCache: {
-        "workspace:proj-alpha": { inputTokens: 214_500, outputTokens: 44_850, costUsd: 1.12, sessionCount: 4 },
-        "workspace:proj-beta": { inputTokens: 86_700, outputTokens: 23_800, costUsd: 0.48, sessionCount: 3 },
-        "task:task-001": { inputTokens: 126_800, outputTokens: 20_850, costUsd: 0.63, sessionCount: 2 },
-        "task:task-006": { inputTokens: 18_900, outputTokens: 4_500, costUsd: 0.10, sessionCount: 1 },
-        "task_tree:task-001": { inputTokens: 126_800, outputTokens: 20_850, costUsd: 0.63, sessionCount: 2 },
-        "task_tree:task-006": { inputTokens: 18_900, outputTokens: 4_500, costUsd: 0.10, sessionCount: 1 },
+
+      credentials: {
+        credentialProviders,
+        credentialsLoading: false,
+        updateCredentialProviders: mockUpdateCredentialProviders,
       },
-      loadUsage: async (scope: string, id: string) => {
-        console.log(`[MockGrackle] loadUsage(${scope}, ${id})`);
+
+      codespaces: {
+        codespaces: [],
+        codespaceError: "",
+        codespaceListError: "",
+        codespaceCreating: false,
+        listCodespaces: async () => { },
+        createCodespace: async () => { },
       },
+
+      personas: {
+        personas,
+        personasLoading: false,
+        createPersona: async (name: string, description: string, systemPrompt: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string, allowedMcpTools?: string[]) => {
+          console.log("[MockGrackle] createPersona", { name });
+          const newPersona: PersonaData = {
+            id: `mock-persona-${Date.now()}`,
+            name,
+            description,
+            systemPrompt,
+            toolConfig: "{}",
+            runtime: runtime ?? "claude-code",
+            model: model || "",
+            maxTurns: maxTurns || 0,
+            mcpServers: "[]",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            type: type || "agent",
+            script: script || "",
+            allowedMcpTools: allowedMcpTools || [],
+          };
+          setPersonas((prev) => [...prev, newPersona]);
+          return newPersona;
+        },
+        updatePersona: async (personaId: string, name?: string, description?: string, systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string, allowedMcpTools?: string[]) => {
+          console.log("[MockGrackle] updatePersona", { personaId, name });
+          const existingPersona = personas.find((persona) => persona.id === personaId);
+          if (!existingPersona) {
+            throw new Error(`Persona not found: ${personaId}`);
+          }
+
+          const updatedAt = new Date().toISOString();
+          const updatedPersona: PersonaData = {
+            ...existingPersona,
+            ...(name !== undefined ? { name } : {}),
+            ...(description !== undefined ? { description } : {}),
+            ...(systemPrompt !== undefined ? { systemPrompt } : {}),
+            ...(runtime !== undefined ? { runtime } : {}),
+            ...(model !== undefined ? { model } : {}),
+            ...(maxTurns !== undefined ? { maxTurns } : {}),
+            ...(type !== undefined ? { type } : {}),
+            ...(script !== undefined ? { script } : {}),
+            ...(allowedMcpTools !== undefined ? { allowedMcpTools } : {}),
+            updatedAt,
+          };
+
+          setPersonas((prev) =>
+            prev.map((persona) => (persona.id === personaId ? updatedPersona : persona)),
+          );
+          return updatedPersona;
+        },
+        deletePersona: async (personaId: string) => {
+          console.log("[MockGrackle] deletePersona", personaId);
+          setPersonas((prev) => prev.filter((p) => p.id !== personaId));
+        },
+      },
+
       knowledge: {
         graphData: { nodes: knowledgeNodes, links: knowledgeLinks },
         selectedNode: knowledgeSelectedNode,
@@ -1180,12 +1185,37 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         },
         handleEvent: () => false,
       },
+
+      // ── Top-level properties ─────────────────────────
+
+      appDefaultPersonaId,
+      setAppDefaultPersonaId: async (personaId: string) => {
+        console.log("[MockGrackle] setAppDefaultPersonaId", personaId);
+        setAppDefaultPersonaIdState(personaId);
+      },
+      onboardingCompleted: true,
+      completeOnboarding: async () => {
+        console.log("[MockGrackle] completeOnboarding");
+      },
+      usageCache: {
+        "workspace:proj-alpha": { inputTokens: 214_500, outputTokens: 44_850, costUsd: 1.12, sessionCount: 4 },
+        "workspace:proj-beta": { inputTokens: 86_700, outputTokens: 23_800, costUsd: 0.48, sessionCount: 3 },
+        "task:task-001": { inputTokens: 126_800, outputTokens: 20_850, costUsd: 0.63, sessionCount: 2 },
+        "task:task-006": { inputTokens: 18_900, outputTokens: 4_500, costUsd: 0.10, sessionCount: 1 },
+        "task_tree:task-001": { inputTokens: 126_800, outputTokens: 20_850, costUsd: 0.63, sessionCount: 2 },
+        "task_tree:task-006": { inputTokens: 18_900, outputTokens: 4_500, costUsd: 0.10, sessionCount: 1 },
+      },
+      loadUsage: async (scope: string, id: string) => {
+        console.log(`[MockGrackle] loadUsage(${scope}, ${id})`);
+      },
+      refresh,
     }),
     [
       environments,
       sessions,
       events,
       lastSpawnedId,
+      taskSessions,
       workspaces,
       tasks,
       findings,
@@ -1193,7 +1223,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       tokens,
       credentialProviders,
       personas,
-      taskSessions,
       appDefaultPersonaId,
       knowledgeNodes,
       knowledgeLinks,
@@ -1204,7 +1233,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       sendInput,
       kill,
       stopGraceful,
-      refresh,
       loadSessionEvents,
       clearEvents,
       createWorkspace,
@@ -1227,6 +1255,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       mockSetToken,
       mockDeleteToken,
       mockUpdateCredentialProviders,
+      refresh,
     ],
   );
 

@@ -30,7 +30,7 @@ export function WorkspaceCreatePage(): JSX.Element {
   const [searchParams] = useSearchParams();
   const presetEnvironmentId = searchParams.get("environment") ?? undefined;
 
-  const { environments, personas, createWorkspace, workspaceCreating } = useGrackle();
+  const { environments: { environments }, personas: { personas }, workspaces: { createWorkspace, workspaceCreating } } = useGrackle();
   const { showToast } = useToast();
   const navigate = useAppNavigate();
 

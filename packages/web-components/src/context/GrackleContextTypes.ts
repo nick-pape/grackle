@@ -7,119 +7,48 @@
  */
 
 import type {
-  Environment, Session, SessionEvent, Workspace, TaskData,
-  FindingData, TokenInfo, CredentialProviderConfig, Codespace,
-  PersonaData, ProvisionStatus, UsageStats, UseKnowledgeResult,
+  UsageStats, UseKnowledgeResult,
+  UseEnvironmentsResult, UseSessionsResult, UseWorkspacesResult,
+  UseTasksResult, UseFindingsResult, UseTokensResult,
+  UseCredentialsResult, UseCodespacesResult, UsePersonasResult,
 } from "../hooks/types.js";
 
 /** Return type for the useGrackleSocket hook (and the GrackleContext value). */
 export interface UseGrackleSocketResult {
+  /** Whether the event stream is connected. */
   connected: boolean;
-  /** Whether an environments fetch is in-flight. */
-  environmentsLoading: boolean;
-  /** Whether a sessions fetch is in-flight. */
-  sessionsLoading: boolean;
-  /** Whether a workspaces fetch is in-flight. */
-  workspacesLoading: boolean;
-  /** Whether a tasks fetch is in-flight. */
-  tasksLoading: boolean;
-  /** Whether a tokens fetch is in-flight. */
-  tokensLoading: boolean;
-  /** Whether a credentials fetch is in-flight. */
-  credentialsLoading: boolean;
-  /** Whether a personas fetch is in-flight. */
-  personasLoading: boolean;
-  environments: Environment[];
-  sessions: Session[];
-  events: SessionEvent[];
-  eventsDropped: number;
-  lastSpawnedId: string | undefined;
-  workspaces: Workspace[];
-  tasks: TaskData[];
-  findings: FindingData[];
-  selectedFinding: FindingData | undefined;
-  findingLoading: boolean;
-  /** Whether a findings list fetch is in-flight. */
-  findingsLoading: boolean;
-  tokens: TokenInfo[];
-  spawn: (environmentId: string, prompt: string, personaId?: string, workingDirectory?: string) => Promise<void>;
-  sendInput: (sessionId: string, text: string) => Promise<void>;
-  kill: (sessionId: string) => Promise<void>;
-  stopGraceful: (sessionId: string) => Promise<void>;
-  refresh: () => void;
-  loadSessionEvents: (sessionId: string) => Promise<void>;
-  clearEvents: () => void;
-  loadWorkspaces: () => Promise<void>;
-  createWorkspace: (
-    name: string, description?: string, repoUrl?: string, environmentId?: string,
-    defaultPersonaId?: string, useWorktrees?: boolean, workingDirectory?: string,
-    onSuccess?: () => void, onError?: (message: string) => void,
-  ) => Promise<void>;
-  archiveWorkspace: (workspaceId: string) => Promise<void>;
-  updateWorkspace: (
-    workspaceId: string,
-    fields: {
-      name?: string; description?: string; repoUrl?: string;
-      environmentId?: string; workingDirectory?: string;
-      useWorktrees?: boolean; defaultPersonaId?: string;
-    },
-  ) => Promise<void>;
-  loadTasks: (workspaceId: string) => Promise<void>;
-  loadAllTasks: () => Promise<void>;
-  createTask: (
-    workspaceId: string, title: string, description?: string, dependsOn?: string[],
-    parentTaskId?: string, defaultPersonaId?: string, canDecompose?: boolean,
-    onSuccess?: () => void, onError?: (message: string) => void,
-  ) => Promise<void>;
-  startTask: (taskId: string, personaId?: string, environmentId?: string, notes?: string) => Promise<void>;
-  stopTask: (taskId: string) => Promise<void>;
-  completeTask: (taskId: string) => Promise<void>;
-  resumeTask: (taskId: string) => Promise<void>;
-  updateTask: (taskId: string, title: string, description: string, dependsOn: string[], defaultPersonaId?: string) => Promise<void>;
-  deleteTask: (taskId: string) => Promise<void>;
-  loadFindings: (workspaceId: string) => Promise<void>;
-  loadAllFindings: () => Promise<void>;
-  loadFinding: (findingId: string) => Promise<void>;
-  postFinding: (workspaceId: string, title: string, content: string, category?: string, tags?: string[]) => Promise<void>;
-  loadEnvironments: () => Promise<void>;
-  addEnvironment: (displayName: string, adapterType: string, adapterConfig?: Record<string, unknown>) => Promise<void>;
-  updateEnvironment: (environmentId: string, fields: { displayName?: string; adapterConfig?: Record<string, unknown> }) => Promise<void>;
-  loadTokens: () => Promise<void>;
-  setToken: (name: string, value: string, tokenType: string, envVar: string, filePath: string) => Promise<void>;
-  deleteToken: (name: string) => Promise<void>;
-  credentialProviders: CredentialProviderConfig;
-  updateCredentialProviders: (config: CredentialProviderConfig) => Promise<void>;
-  provisionStatus: Record<string, ProvisionStatus>;
-  environmentOperationError: string;
-  clearEnvironmentOperationError: () => void;
-  provisionEnvironment: (environmentId: string, force?: boolean) => Promise<void>;
-  stopEnvironment: (environmentId: string) => Promise<void>;
-  removeEnvironment: (environmentId: string) => Promise<void>;
-  codespaces: Codespace[];
-  codespaceError: string;
-  codespaceListError: string;
-  codespaceCreating: boolean;
-  listCodespaces: () => Promise<void>;
-  createCodespace: (repo: string, machine?: string) => Promise<void>;
-  workspaceCreating: boolean;
-  taskStartingId: string | undefined;
-  personas: PersonaData[];
-  createPersona: (
-    name: string, description: string, systemPrompt: string, runtime?: string,
-    model?: string, maxTurns?: number, type?: string, script?: string,
-  ) => Promise<PersonaData>;
-  updatePersona: (
-    personaId: string, name?: string, description?: string, systemPrompt?: string,
-    runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string,
-  ) => Promise<PersonaData>;
-  deletePersona: (personaId: string) => Promise<void>;
-  taskSessions: Record<string, Session[]>;
-  loadTaskSessions: (taskId: string) => Promise<void>;
+  /** Environment state and actions. */
+  environments: Omit<UseEnvironmentsResult, "handleEvent" | "handleLegacyMessage">;
+  /** Session state and actions. */
+  sessions: Omit<UseSessionsResult, "handleMessage" | "handleSessionEvent" | "handleLegacyMessage" | "loadSessions">;
+  /** Workspace state and actions. */
+  workspaces: Omit<UseWorkspacesResult, "handleEvent" | "onDisconnect">;
+  /** Task state and actions. */
+  tasks: Omit<UseTasksResult, "handleEvent" | "onDisconnect" | "handleLegacyMessage">;
+  /** Finding state and actions. */
+  findings: Omit<UseFindingsResult, "handleEvent">;
+  /** Token state and actions. */
+  tokens: Omit<UseTokensResult, "handleEvent">;
+  /** Credential provider state and actions. */
+  credentials: Omit<UseCredentialsResult, "handleEvent" | "loadCredentials">;
+  /** GitHub Codespace state and actions. */
+  codespaces: UseCodespacesResult;
+  /** Persona state and actions. */
+  personas: Omit<UsePersonasResult, "handleEvent" | "loadPersonas">;
+  /** Knowledge graph state and actions. */
+  knowledge: Omit<UseKnowledgeResult, "handleEvent">;
+  /** App-level default persona ID setting. */
   appDefaultPersonaId: string;
+  /** Update the app-level default persona ID. */
   setAppDefaultPersonaId: (personaId: string) => Promise<void>;
+  /** Whether the user has completed onboarding. */
   onboardingCompleted: boolean | undefined;
+  /** Mark onboarding as completed. */
   completeOnboarding: () => Promise<void>;
+  /** Cached usage statistics keyed by "scope:id". */
   usageCache: Record<string, UsageStats>;
+  /** Load usage statistics for a given scope and ID. */
   loadUsage: (scope: string, id: string) => Promise<void>;
-  knowledge: UseKnowledgeResult;
+  /** Refresh environments, sessions, workspaces, and tokens from the server. */
+  refresh: () => void;
 }
