@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 29 Mar 2026 01:57:32 GMT and should not be manually modified.
+This log was last generated on Sun, 29 Mar 2026 04:51:59 GMT and should not be manually modified.
+
+## 0.89.4
+Sun, 29 Mar 2026 04:51:59 GMT
+
+### Patches
+
+- Standardize web hooks on async/await
 
 ## 0.89.3
 Sun, 29 Mar 2026 01:57:32 GMT

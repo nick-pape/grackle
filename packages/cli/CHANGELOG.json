@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.89.4",
+      "tag": "@grackle-ai/cli_v0.89.4",
+      "date": "Sun, 29 Mar 2026 04:51:59 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Standardize web hooks on async/await"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.89.3",
       "tag": "@grackle-ai/cli_v0.89.3",
       "date": "Sun, 29 Mar 2026 01:57:32 GMT",
