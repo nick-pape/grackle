@@ -45,7 +45,9 @@ export function useLoadingState(): UseLoadingStateResult {
 
   const track = useCallback(<T>(promise: Promise<T>): Promise<T> => {
     inflightRef.current++;
-    setLoading(true);
+    if (inflightRef.current === 1) {
+      setLoading(true);
+    }
     return promise.finally(() => {
       inflightRef.current--;
       if (inflightRef.current === 0) {
