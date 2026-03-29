@@ -153,6 +153,7 @@ jobs:
           path: test-results
 
       - name: E2E test report
+        if: always()
         uses: dorny/test-reporter@v1
         with:
           name: E2E Test Results
@@ -162,7 +163,7 @@ jobs:
           fail-on-empty: false
 
       - name: BuildPulse — upload test results
-        if: github.repository == 'nick-pape/grackle' && vars.BUILDPULSE_ACCOUNT_ID != '' && vars.BUILDPULSE_REPOSITORY_ID != ''
+        if: always() && github.repository == 'nick-pape/grackle' && vars.BUILDPULSE_ACCOUNT_ID != '' && vars.BUILDPULSE_REPOSITORY_ID != ''
         uses: buildpulse/buildpulse-action@v0.12.0
         with:
           account: ${{ vars.BUILDPULSE_ACCOUNT_ID }}
