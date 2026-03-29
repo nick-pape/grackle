@@ -3,6 +3,7 @@ import { useParams, Navigate } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import { ConfirmDialog, ENVIRONMENTS_URL, NEW_WORKSPACE_URL, environmentEditUrl, formatCost, newChatUrl, useAppNavigate, workspaceUrl } from "@grackle-ai/web-components";
 import type { Workspace } from "../hooks/useGrackleSocket.js";
+import { EnvironmentDetailShimmer } from "./EnvironmentDetailShimmer.js";
 import styles from "./EnvironmentDetailPage.module.scss";
 
 /** Status-color mapping for the environment status badge. */
@@ -27,6 +28,7 @@ export function EnvironmentDetailPage(): JSX.Element {
     stopEnvironment,
     removeEnvironment,
     archiveWorkspace,
+    environmentsLoading,
   } = useGrackle();
 
   const [showDeleteEnv, setShowDeleteEnv] = useState(false);
@@ -34,6 +36,11 @@ export function EnvironmentDetailPage(): JSX.Element {
   const [confirmArchiveId, setConfirmArchiveId] = useState<string | undefined>(undefined);
 
   const env = environments.find((e) => e.id === environmentId);
+
+  if (!env && environmentsLoading) {
+    return <EnvironmentDetailShimmer />;
+  }
+
   if (!environmentId || !env) {
     return <Navigate to={ENVIRONMENTS_URL} replace />;
   }

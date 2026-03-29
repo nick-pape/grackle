@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 29 Mar 2026 17:16:34 GMT and should not be manually modified.
+This log was last generated on Sun, 29 Mar 2026 18:40:32 GMT and should not be manually modified.
+
+## 0.91.1
+Sun, 29 Mar 2026 18:40:32 GMT
+
+### Patches
+
+- Add shimmer loading states to all pages and findingsLoading flag
 
 ## 0.91.0
 Sun, 29 Mar 2026 17:16:34 GMT

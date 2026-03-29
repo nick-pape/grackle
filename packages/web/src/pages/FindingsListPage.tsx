@@ -12,6 +12,7 @@ import {
   buildFindingsBreadcrumbs, buildFindingBreadcrumbs,
   findingUrl, useAppNavigate,
 } from "@grackle-ai/web-components";
+import { FindingsListShimmer } from "./FindingsListShimmer.js";
 import styles from "./FindingsListPage.module.scss";
 
 /** Findings list page with optional workspace scoping. */
@@ -20,7 +21,7 @@ export function FindingsListPage(): JSX.Element {
     environmentId?: string;
     workspaceId?: string;
   }>();
-  const { findings, loadFindings, workspaces, environments } = useGrackle();
+  const { findings, loadFindings, workspaces, environments, findingsLoading } = useGrackle();
   const navigate = useAppNavigate();
 
   useEffect(() => {
@@ -33,6 +34,10 @@ export function FindingsListPage(): JSX.Element {
   const handleFindingClick = useCallback((findingId: string) => {
     navigate(findingUrl(findingId, workspaceId, environmentId));
   }, [navigate, workspaceId, environmentId]);
+
+  if (findingsLoading) {
+    return <FindingsListShimmer />;
+  }
 
   const breadcrumbs = (workspaceId && environmentId)
     ? buildFindingBreadcrumbs("Findings", workspaceId, environmentId, workspaces, environments).slice(0, -1)
