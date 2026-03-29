@@ -186,7 +186,6 @@ export function useKnowledge(): UseKnowledgeResult {
     return false;
   }, []);
 
-  /* eslint-disable @typescript-eslint/no-misused-promises -- async hooks returned as fire-and-forget void actions */
   return {
     graphData: { nodes: [...nodes.values()], links },
     selectedNode,
@@ -201,5 +200,4 @@ export function useKnowledge(): UseKnowledgeResult {
     loadRecent,
     handleEvent,
   };
-  /* eslint-enable @typescript-eslint/no-misused-promises */
 }

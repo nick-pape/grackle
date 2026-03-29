@@ -30,7 +30,7 @@ export function FindingDetailPage(): JSX.Element {
 
   useEffect(() => {
     if (findingId) {
-      loadFinding(findingId);
+      loadFinding(findingId).catch(() => {});
     }
   }, [findingId, loadFinding]);
 

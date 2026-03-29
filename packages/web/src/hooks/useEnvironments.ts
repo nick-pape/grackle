@@ -23,24 +23,24 @@ export interface UseEnvironmentsResult {
   /** Per-environment provisioning progress. */
   provisionStatus: Record<string, ProvisionStatus>;
   /** Request the current environment list from the server. */
-  loadEnvironments: () => void;
+  loadEnvironments: () => Promise<void>;
   /** Add a new environment. */
   addEnvironment: (
     displayName: string,
     adapterType: string,
     adapterConfig?: Record<string, unknown>,
-  ) => void;
+  ) => Promise<void>;
   /** Update an existing environment's mutable fields. */
   updateEnvironment: (
     environmentId: string,
     fields: { displayName?: string; adapterConfig?: Record<string, unknown> },
-  ) => void;
+  ) => Promise<void>;
   /** Provision an environment by ID. When force is true, kills active sessions and forces full provision. */
-  provisionEnvironment: (environmentId: string, force?: boolean) => void;
+  provisionEnvironment: (environmentId: string, force?: boolean) => Promise<void>;
   /** Stop an environment by ID. */
-  stopEnvironment: (environmentId: string) => void;
+  stopEnvironment: (environmentId: string) => Promise<void>;
   /** Remove an environment by ID. */
-  removeEnvironment: (environmentId: string) => void;
+  removeEnvironment: (environmentId: string) => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
   /** Handle legacy WS messages injected by E2E tests. */
@@ -226,7 +226,6 @@ export function useEnvironments(): UseEnvironmentsResult {
     [],
   );
 
-  /* eslint-disable @typescript-eslint/no-misused-promises -- async hooks returned as fire-and-forget void actions */
   return {
     environments,
     provisionStatus,
@@ -239,5 +238,4 @@ export function useEnvironments(): UseEnvironmentsResult {
     handleEvent,
     handleLegacyMessage,
   };
-  /* eslint-enable @typescript-eslint/no-misused-promises */
 }

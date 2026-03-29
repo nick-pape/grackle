@@ -20,9 +20,9 @@ export interface UseTasksResult {
   /** The ID of the task currently being started, or `undefined`. */
   taskStartingId: string | undefined;
   /** Load tasks for a given workspace. */
-  loadTasks: (workspaceId: string) => void;
+  loadTasks: (workspaceId: string) => Promise<void>;
   /** Load all tasks across all workspaces. */
-  loadAllTasks: () => void;
+  loadAllTasks: () => Promise<void>;
   /** Create a new task in a workspace. */
   createTask: (
     workspaceId: string,
@@ -34,20 +34,20 @@ export interface UseTasksResult {
     canDecompose?: boolean,
     onSuccess?: () => void,
     onError?: (message: string) => void,
-  ) => void;
+  ) => Promise<void>;
   /** Start a task, optionally specifying runtime parameters. */
   startTask: (
     taskId: string,
     personaId?: string,
     environmentId?: string,
     notes?: string,
-  ) => void;
+  ) => Promise<void>;
   /** Stop a task: kill active sessions + mark complete. */
-  stopTask: (taskId: string) => void;
+  stopTask: (taskId: string) => Promise<void>;
   /** Mark a task as completed. */
-  completeTask: (taskId: string) => void;
+  completeTask: (taskId: string) => Promise<void>;
   /** Resume a paused/waiting task. */
-  resumeTask: (taskId: string) => void;
+  resumeTask: (taskId: string) => Promise<void>;
   /** Update a task's title, description, dependencies, and default persona. */
   updateTask: (
     taskId: string,
@@ -55,9 +55,9 @@ export interface UseTasksResult {
     description: string,
     dependsOn: string[],
     defaultPersonaId?: string,
-  ) => void;
+  ) => Promise<void>;
   /** Delete a task by ID. */
-  deleteTask: (taskId: string) => void;
+  deleteTask: (taskId: string) => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
   /** Reset transient state (e.g. `taskStartingId`) on disconnect. */
@@ -316,7 +316,6 @@ export function useTasks(): UseTasksResult {
     [],
   );
 
-  /* eslint-disable @typescript-eslint/no-misused-promises -- async hooks returned as fire-and-forget void actions */
   return {
     tasks,
     taskStartingId,
@@ -333,5 +332,4 @@ export function useTasks(): UseTasksResult {
     onDisconnect,
     handleLegacyMessage,
   };
-  /* eslint-enable @typescript-eslint/no-misused-promises */
 }

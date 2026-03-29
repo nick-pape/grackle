@@ -21,11 +21,11 @@ export interface UseFindingsResult {
   /** Whether a single finding is being loaded. */
   findingLoading: boolean;
   /** Load findings for a given workspace. */
-  loadFindings: (workspaceId: string) => void;
+  loadFindings: (workspaceId: string) => Promise<void>;
   /** Load findings across all workspaces. */
-  loadAllFindings: () => void;
+  loadAllFindings: () => Promise<void>;
   /** Load a single finding by ID. */
-  loadFinding: (findingId: string) => void;
+  loadFinding: (findingId: string) => Promise<void>;
   /** Post a new finding to a workspace. */
   postFinding: (
     workspaceId: string,
@@ -33,7 +33,7 @@ export interface UseFindingsResult {
     content: string,
     category?: string,
     tags?: string[],
-  ) => void;
+  ) => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
 }
@@ -113,7 +113,5 @@ export function useFindings(): UseFindingsResult {
     [],
   );
 
-  /* eslint-disable @typescript-eslint/no-misused-promises -- async hooks returned as fire-and-forget void actions */
   return { findings, selectedFinding, findingLoading, loadFindings, loadAllFindings, loadFinding, postFinding, handleEvent };
-  /* eslint-enable @typescript-eslint/no-misused-promises */
 }

@@ -34,9 +34,9 @@ export function WithFindingsSidebar(): JSX.Element {
 
   useEffect(() => {
     if (workspaceId) {
-      loadFindings(workspaceId);
+      loadFindings(workspaceId).catch(() => {});
     } else {
-      loadAllFindings();
+      loadAllFindings().catch(() => {});
     }
   }, [workspaceId, loadFindings, loadAllFindings]);
 
@@ -53,7 +53,7 @@ export function WithKnowledgeSidebar(): JSX.Element {
   const { knowledge, workspaces } = useGrackle();
 
   const handleSearch = useCallback((query: string) => {
-    knowledge.search(query);
+    knowledge.search(query).catch(() => {});
   }, [knowledge]);
 
   const handleClearSearch = useCallback(() => {
@@ -61,11 +61,11 @@ export function WithKnowledgeSidebar(): JSX.Element {
   }, [knowledge]);
 
   const handleSelectNode = useCallback((nodeId: string) => {
-    knowledge.selectNode(nodeId);
+    knowledge.selectNode(nodeId).catch(() => {});
   }, [knowledge]);
 
   const handleWorkspaceChange = useCallback((wsId: string) => {
-    knowledge.loadRecent(wsId || undefined);
+    knowledge.loadRecent(wsId || undefined).catch(() => {});
   }, [knowledge]);
 
   const sidebar = useMemo(() => (

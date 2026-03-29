@@ -17,7 +17,7 @@ export interface UseTokensResult {
   /** All known tokens. */
   tokens: TokenInfo[];
   /** Request the current token list from the server. */
-  loadTokens: () => void;
+  loadTokens: () => Promise<void>;
   /** Create or update a token on the server. */
   setToken: (
     name: string,
@@ -25,9 +25,9 @@ export interface UseTokensResult {
     tokenType: string,
     envVar: string,
     filePath: string,
-  ) => void;
+  ) => Promise<void>;
   /** Delete a token by name. */
-  deleteToken: (name: string) => void;
+  deleteToken: (name: string) => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
 }
@@ -85,7 +85,5 @@ export function useTokens(): UseTokensResult {
     [],
   );
 
-  /* eslint-disable @typescript-eslint/no-misused-promises -- async hooks returned as fire-and-forget void actions */
   return { tokens, loadTokens, setToken, deleteToken, handleEvent };
-  /* eslint-enable @typescript-eslint/no-misused-promises */
 }

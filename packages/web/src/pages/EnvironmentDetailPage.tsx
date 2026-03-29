@@ -48,18 +48,18 @@ export function EnvironmentDetailPage(): JSX.Element {
   const progress = env.id in provisionStatus ? provisionStatus[env.id] : undefined;
 
   const handleDeleteEnv = (): void => {
-    removeEnvironment(env.id);
+    removeEnvironment(env.id).catch(() => {});
     setShowDeleteEnv(false);
     navigate(ENVIRONMENTS_URL, { replace: true });
   };
 
   const handleReprovision = (): void => {
     setShowReprovision(false);
-    provisionEnvironment(env.id, true);
+    provisionEnvironment(env.id, true).catch(() => {});
   };
 
   const handleArchive = (workspaceId: string): void => {
-    archiveWorkspace(workspaceId);
+    archiveWorkspace(workspaceId).catch(() => {});
     setConfirmArchiveId(undefined);
   };
 
@@ -111,7 +111,7 @@ export function EnvironmentDetailPage(): JSX.Element {
             </button>
             <button
               className={styles.btnOutline}
-              onClick={() => stopEnvironment(env.id)}
+              onClick={() => { stopEnvironment(env.id).catch(() => {}); }}
             >
               Stop
             </button>
@@ -128,7 +128,7 @@ export function EnvironmentDetailPage(): JSX.Element {
         {isDisconnected && (
           <button
             className={styles.btnPrimary}
-            onClick={() => provisionEnvironment(env.id)}
+            onClick={() => { provisionEnvironment(env.id).catch(() => {}); }}
           >
             {env.status === "error" ? "Retry" : env.status === "sleeping" ? "Wake" : "Connect"}
           </button>

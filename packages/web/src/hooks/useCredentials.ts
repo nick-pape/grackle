@@ -18,9 +18,9 @@ export interface UseCredentialsResult {
   /** Current credential provider configuration. */
   credentialProviders: CredentialProviderConfig;
   /** Request the current credential provider configuration from the server. */
-  loadCredentials: () => void;
+  loadCredentials: () => Promise<void>;
   /** Update the credential provider configuration on the server. */
-  updateCredentialProviders: (config: CredentialProviderConfig) => void;
+  updateCredentialProviders: (config: CredentialProviderConfig) => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
 }
@@ -76,7 +76,5 @@ export function useCredentials(): UseCredentialsResult {
     [],
   );
 
-  /* eslint-disable @typescript-eslint/no-misused-promises -- async hooks returned as fire-and-forget void actions */
   return { credentialProviders, loadCredentials, updateCredentialProviders, handleEvent };
-  /* eslint-enable @typescript-eslint/no-misused-promises */
 }

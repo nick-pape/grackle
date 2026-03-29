@@ -23,9 +23,9 @@ export interface UseCodespacesResult {
   /** Whether a codespace creation is currently in progress. */
   codespaceCreating: boolean;
   /** Request the current codespace list from the server. */
-  listCodespaces: () => void;
+  listCodespaces: () => Promise<void>;
   /** Create a new codespace for the given repo. */
-  createCodespace: (repo: string, machine?: string) => void;
+  createCodespace: (repo: string, machine?: string) => Promise<void>;
 }
 
 /**
@@ -68,7 +68,6 @@ export function useCodespaces(): UseCodespacesResult {
     [listCodespaces],
   );
 
-  /* eslint-disable @typescript-eslint/no-misused-promises -- async hooks returned as fire-and-forget void actions */
   return {
     codespaces,
     codespaceError,
@@ -77,5 +76,4 @@ export function useCodespaces(): UseCodespacesResult {
     listCodespaces,
     createCodespace,
   };
-  /* eslint-enable @typescript-eslint/no-misused-promises */
 }

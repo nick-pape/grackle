@@ -161,7 +161,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
 
     if (environmentsHook.handleEvent(event)) {
       if (event.type === "environment.removed" || event.type === "environment.changed") {
-        sessionsHook.loadSessions();
+        sessionsHook.loadSessions().catch(() => {});
       }
       return;
     }
@@ -169,7 +169,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     if (tasksHook.handleEvent(event)) {
       // task.started also needs a session refresh (cross-concern)
       if (event.type === "task.started") {
-        sessionsHook.loadSessions();
+        sessionsHook.loadSessions().catch(() => {});
       }
       return;
     }
@@ -180,31 +180,28 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     if (knowledgeHook.handleEvent(event)) { return; }
   }
 
-  function onStreamConnect(): void {
+  async function onStreamConnect(): Promise<void> {
     // Fire-and-forget: all loads run concurrently
-    environmentsHook.loadEnvironments();
-    sessionsHook.loadSessions();
-    workspacesHook.loadWorkspaces();
-    tokensHook.loadTokens();
-    credentialsHook.loadCredentials();
-    personasHook.loadPersonas();
-    tasksHook.loadAllTasks();
+    environmentsHook.loadEnvironments().catch(() => {});
+    sessionsHook.loadSessions().catch(() => {});
+    workspacesHook.loadWorkspaces().catch(() => {});
+    tokensHook.loadTokens().catch(() => {});
+    credentialsHook.loadCredentials().catch(() => {});
+    personasHook.loadPersonas().catch(() => {});
+    tasksHook.loadAllTasks().catch(() => {});
 
-    const loadSettings = async (): Promise<void> => {
-      try {
-        const personaResp = await grackleClient.getSetting({ key: SETTING_KEY_DEFAULT_PERSONA });
-        setAppDefaultPersonaIdState(personaResp.value);
-      } catch {
-        // empty
-      }
-      try {
-        const onboardingResp = await grackleClient.getSetting({ key: SETTING_KEY_ONBOARDING_COMPLETED });
-        setOnboardingCompleted(onboardingResp.value === "true");
-      } catch {
-        // empty
-      }
-    };
-    loadSettings().catch(() => {});
+    try {
+      const personaResp = await grackleClient.getSetting({ key: SETTING_KEY_DEFAULT_PERSONA });
+      setAppDefaultPersonaIdState(personaResp.value);
+    } catch {
+      // empty
+    }
+    try {
+      const onboardingResp = await grackleClient.getSetting({ key: SETTING_KEY_ONBOARDING_COMPLETED });
+      setOnboardingCompleted(onboardingResp.value === "true");
+    } catch {
+      // empty
+    }
   }
 
   function onStreamDisconnect(): void {
@@ -213,13 +210,12 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   }
 
   const refresh = useCallback(() => {
-    environmentsHook.loadEnvironments();
-    sessionsHook.loadSessions();
-    workspacesHook.loadWorkspaces();
-    tokensHook.loadTokens();
+    environmentsHook.loadEnvironments().catch(() => {});
+    sessionsHook.loadSessions().catch(() => {});
+    workspacesHook.loadWorkspaces().catch(() => {});
+    tokensHook.loadTokens().catch(() => {});
   }, [environmentsHook.loadEnvironments, sessionsHook.loadSessions, workspacesHook.loadWorkspaces, tokensHook.loadTokens]);
 
-  /* eslint-disable @typescript-eslint/no-misused-promises -- async hooks returned as fire-and-forget void actions */
   return {
     connected,
     environments: environmentsHook.environments,
@@ -291,5 +287,4 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     loadUsage,
     knowledge: knowledgeHook,
   };
-  /* eslint-enable @typescript-eslint/no-misused-promises */
 }

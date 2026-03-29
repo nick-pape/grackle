@@ -31,26 +31,26 @@ export interface UseSessionsResult {
   /** Sessions grouped by task ID. */
   taskSessions: Record<string, Session[]>;
   /** Refresh the session list from the server. */
-  loadSessions: () => void;
+  loadSessions: () => Promise<void>;
   /** Spawn a new session in an environment. */
   spawn: (
     environmentId: string,
     prompt: string,
     personaId?: string,
     workingDirectory?: string,
-  ) => void;
+  ) => Promise<void>;
   /** Send text input to a running session. */
-  sendInput: (sessionId: string, text: string) => void;
+  sendInput: (sessionId: string, text: string) => Promise<void>;
   /** Kill a running session (hard kill / SIGKILL). */
-  kill: (sessionId: string) => void;
+  kill: (sessionId: string) => Promise<void>;
   /** Gracefully stop a running session (SIGTERM). */
-  stopGraceful: (sessionId: string) => void;
+  stopGraceful: (sessionId: string) => Promise<void>;
   /** Load stored events for a session from the server. */
-  loadSessionEvents: (sessionId: string) => void;
+  loadSessionEvents: (sessionId: string) => Promise<void>;
   /** Clear all in-memory events and reset the drop counter. */
   clearEvents: () => void;
   /** Load sessions associated with a task. */
-  loadTaskSessions: (taskId: string) => void;
+  loadTaskSessions: (taskId: string) => Promise<void>;
   /**
    * Handle an incoming WebSocket message. Returns `true` if handled.
    * Only handles real-time `session_event` push messages from subscribe_all.
@@ -349,7 +349,6 @@ export function useSessions(): UseSessionsResult {
     [],
   );
 
-  /* eslint-disable @typescript-eslint/no-misused-promises -- async hooks returned as fire-and-forget void actions */
   return {
     sessions,
     events,
@@ -368,5 +367,4 @@ export function useSessions(): UseSessionsResult {
     handleSessionEvent,
     handleLegacyMessage,
   };
-  /* eslint-enable @typescript-eslint/no-misused-promises */
 }
