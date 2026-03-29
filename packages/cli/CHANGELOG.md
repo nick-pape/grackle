@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 29 Mar 2026 15:36:04 GMT and should not be manually modified.
+This log was last generated on Sun, 29 Mar 2026 17:16:34 GMT and should not be manually modified.
+
+## 0.91.0
+Sun, 29 Mar 2026 17:16:34 GMT
+
+### Minor changes
+
+- Add escalate_to_human MCP tool, escalation store, notification router, auto-detection subscriber, CLI notify commands, and browser notification support
+
+### Patches
+
+- Add per-domain loading flags to useGrackle context for shimmer/skeleton loading states
 
 ## 0.90.0
 Sun, 29 Mar 2026 15:36:04 GMT
