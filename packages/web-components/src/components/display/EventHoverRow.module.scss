@@ -6,14 +6,17 @@
 
 .row {
   position: relative;
+  // Padding ensures the hover action bar (positioned above via top: -28px)
+  // has room and is not clipped by the scroll container.
+  padding-top: 4px;
 }
 
 // --- Hover action row (normal mode) ---
 
 .hoverActions {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: -28px;
+  right: var(--space-sm);
   z-index: 5;
   display: flex;
   gap: 2px;
@@ -23,6 +26,7 @@
   border: 1px solid var(--border-subtle);
   opacity: 0;
   transition: opacity var(--transition-fast);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 
   @include mobile {
     opacity: 1;
