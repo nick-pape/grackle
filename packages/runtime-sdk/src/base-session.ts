@@ -102,9 +102,6 @@ export abstract class BaseAgentSession implements AgentSession {
    */
   protected abstract executeFollowUp(text: string): Promise<void>;
 
-  /** Check whether the session is ready to accept follow-up input via `sendInput()`. */
-  protected abstract canAcceptInput(): boolean;
-
   /** Abort the currently active stream or query. */
   protected abstract abortActive(): void;
 
@@ -241,9 +238,11 @@ export abstract class BaseAgentSession implements AgentSession {
       this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
       this.startInputLoop();
     } catch (err) {
+      this.killed = true;
       this.status = SESSION_STATUS.STOPPED;
       this.eventQueue.push({ type: "error", timestamp: ts(), content: String(err) });
       this.eventQueue.push({ type: "status", timestamp: ts(), content: "failed" });
+      this.inputQueue.close();
       this.releaseResources();
       this.eventQueue.close();
     }
@@ -251,7 +250,7 @@ export abstract class BaseAgentSession implements AgentSession {
 
   /** Queue follow-up input for sequential processing by the input loop. */
   public sendInput(text: string): void {
-    if (this.killed || !this.canAcceptInput()) {
+    if (this.killed) {
       return;
     }
     this.inputQueue.push(text);

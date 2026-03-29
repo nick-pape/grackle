@@ -471,10 +471,6 @@ class AcpSession extends BaseAgentSession {
     });
   }
 
-  protected canAcceptInput(): boolean {
-    return !!this.connection && !!this.acpSessionId;
-  }
-
   protected abortActive(): void {
     if (this.connection && this.acpSessionId) {
       (this.connection.cancel({ sessionId: this.acpSessionId }) as Promise<void>).catch(() => {});
