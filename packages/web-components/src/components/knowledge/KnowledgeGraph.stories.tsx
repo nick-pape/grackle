@@ -114,16 +114,16 @@ export const ZoomToFitOnLoad: Story = {
     const svg = container.querySelector("svg");
     await expect(svg).not.toBeNull();
 
-    // Wait for the simulation to end and zoom-to-fit to apply a transform on <g>
+    // d3-force converges in ~300 iterations (~5s at 60fps), plus 500ms transition.
+    // The root <g> has no transform until the zoom-to-fit fires after simulation end.
     await waitFor(async () => {
-      const g = svg!.querySelector("g");
+      const g = svg!.querySelector(":scope > g");
       await expect(g).not.toBeNull();
       const transform = g!.getAttribute("transform");
-      await expect(transform).not.toBeNull();
-      // The transform should contain translate and scale (bounding-box fit)
+      await expect(transform).toBeTruthy();
       await expect(transform).toMatch(/translate/);
       await expect(transform).toMatch(/scale/);
-    }, { timeout: 5000 });
+    }, { timeout: 15000 });
   },
 };
 
