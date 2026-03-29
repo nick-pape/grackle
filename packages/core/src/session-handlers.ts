@@ -30,6 +30,7 @@ import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
 import { resolvePersona, SystemPromptBuilder } from "@grackle-ai/prompt";
 import { toPersonaResolveInput } from "./persona-mapper.js";
 import { sendInputToSession } from "./signals/signal-delivery.js";
+import { deliverPendingEscalations } from "./notification-router.js";
 import { createEventStream } from "./event-hub.js";
 import { sessionRowToProto } from "./grpc-proto-converters.js";
 import { validatePipeInputs, toDialableHost, killSessionAndCleanup } from "./grpc-shared.js";
@@ -736,6 +737,12 @@ export async function* streamAll(): AsyncGenerator<grackle.SessionEvent> {
 
 /** Stream domain events (replaces WebSocket event broadcasting). */
 export async function* streamEvents(): AsyncGenerator<grackle.ServerEvent> {
+  // Drain pending escalations on new client connection — emits domain events
+  // that flow through the stream to the newly connected client.
+  deliverPendingEscalations().catch((err) => {
+    logger.error({ err }, "Failed to drain pending escalations on stream connect");
+  });
+
   const stream = createEventStream();
   try {
     for await (const event of stream) {
