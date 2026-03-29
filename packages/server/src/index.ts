@@ -38,9 +38,10 @@ import { createShutdown } from "./shutdown.js";
 const esmRequire: NodeRequire = createRequire(import.meta.url);
 
 async function main(): Promise<void> {
-  // Declared early so server error handlers can reference it (assigned after servers are created)
+  // Initialized to a no-op so server error handlers that fire before createShutdown()
+  // don't throw. Replaced with the real shutdown function after all servers are created.
   // eslint-disable-next-line prefer-const -- assigned after servers are created but referenced in their error handlers
-  let shutdown: () => Promise<void>;
+  let shutdown: () => Promise<void> = async () => {};
 
   // Resolve and validate all server configuration from env vars (fail fast on invalid values)
   const config = resolveServerConfig();

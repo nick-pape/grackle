@@ -12,8 +12,9 @@ import {
 /**
  * Assemble the ordered list of reconciliation phases for the server.
  *
- * Returns cron, lifecycle-cleanup, and orphan-reparent phases. When the
- * knowledge subsystem is enabled, a knowledge-health phase is appended.
+ * Returns cron, lifecycle-cleanup, orphan-reparent, and environment-reconciliation
+ * phases. When the knowledge subsystem is enabled, a knowledge-health phase is
+ * appended.
  *
  * @returns An array of phases to pass to {@link ReconciliationManager}.
  */

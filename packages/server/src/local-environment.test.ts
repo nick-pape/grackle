@@ -362,6 +362,31 @@ describe("bootstrapLocalEnvironment", () => {
       expect(result.powerLineManager).toBeUndefined();
     });
 
+    it("logs warning and continues if manager.stop() throws during cleanup", async () => {
+      const mockManager = {
+        start: vi.fn(async () => {}),
+        stop: vi.fn(async () => { throw new Error("stop failed"); }),
+      };
+      const deps = createMockDeps({
+        createPowerLineManager: vi.fn(() => mockManager),
+        reconnectOrProvision: vi.fn(async function* () {
+          throw new Error("provision failed");
+        }),
+      });
+
+      const result = await bootstrapLocalEnvironment(
+        { powerlinePort: 7433, bindHost: "127.0.0.1", skipLocalPowerline: false },
+        deps,
+      );
+
+      // Should not throw — cleanup failure is caught
+      expect(result.powerLineManager).toBeUndefined();
+      expect(deps.logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({ err: expect.any(Error) }),
+        expect.stringContaining("Failed to stop local PowerLine during cleanup"),
+      );
+    });
+
     it("returns undefined manager on failure (non-fatal, does not throw)", async () => {
       const deps = createMockDeps({
         getAdapter: vi.fn(() => {

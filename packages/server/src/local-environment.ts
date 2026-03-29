@@ -196,7 +196,14 @@ export async function bootstrapLocalEnvironment(
   } catch (err) {
     // Clean up the PowerLine child if it started but provisioning/connection failed
     if (manager) {
-      await manager.stop();
+      try {
+        await manager.stop();
+      } catch (stopErr) {
+        logger.warn(
+          { err: stopErr, port: powerlinePort },
+          "Failed to stop local PowerLine during cleanup",
+        );
+      }
     }
     envRegistry.updateEnvironmentStatus("local", "error");
     deps.emit("environment.changed", {});
