@@ -108,7 +108,7 @@ export function EventHoverRow({
           <input
             type="checkbox"
             checked={isSelected}
-            onChange={(e) => { onToggle("shiftKey" in e.nativeEvent && !!(e.nativeEvent as Record<string, unknown>).shiftKey); }}
+            onChange={(e) => { onToggle((e.nativeEvent as globalThis.MouseEvent).shiftKey); }}
             onClick={(e) => { e.stopPropagation(); }}
             className={styles.checkbox}
             aria-label={checkboxLabel ?? "Select this event"}
