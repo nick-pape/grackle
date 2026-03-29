@@ -66,7 +66,7 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
         // separate "open" event. The stream object exists once the HTTP
         // request is initiated. Data loading in onConnect runs optimistically.
         setConnected(true);
-        onConnectRef.current?.()?.catch(() => {});
+        Promise.resolve(onConnectRef.current?.()).catch(() => {});
 
         for await (const serverEvent of stream) {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- set by cleanup function
