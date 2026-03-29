@@ -17,13 +17,9 @@ export function KnowledgePage(): JSX.Element {
   const { knowledge } = useGrackle();
 
   // Load recent nodes on mount
-  const loadRecentFn = useCallback(
-    () => { knowledge.loadRecent().catch(() => {}); },
-    [knowledge.loadRecent],
-  );
   useEffect(() => {
-    loadRecentFn();
-  }, [loadRecentFn]);
+    knowledge.loadRecent().catch(() => {});
+  }, [knowledge]);
 
   const handleNodeClick = useCallback((nodeId: string) => {
     knowledge.selectNode(nodeId).catch(() => {});
