@@ -119,6 +119,7 @@ const GRAPHQL_QUERY = `query($owner: String!, $repo: String!, $branch: String!) 
         commits(last: 1) {
           nodes {
             commit {
+              committedDate
               statusCheckRollup {
                 contexts(first: 100) {
                   pageInfo { hasNextPage }
@@ -138,10 +139,19 @@ const GRAPHQL_QUERY = `query($owner: String!, $repo: String!, $branch: String!) 
             }
           }
         }
+        reviewRequests(first: 20) {
+          nodes {
+            requestedReviewer {
+              ... on User { login }
+              ... on Bot { login }
+            }
+          }
+        }
         reviews(first: 50) {
           nodes {
             author { login }
             state
+            submittedAt
           }
         }
         reviewThreads(first: 100) {
@@ -272,18 +282,36 @@ function queryPrState(owner, repo, branch) {
   );
 
   const reviews = pr.reviews?.nodes || [];
-  const copilotHasReviewed = reviews.some((r) => r.author?.login === COPILOT_LOGIN);
+  const latestCopilotReview = reviews
+    .filter((r) => r.author?.login === COPILOT_LOGIN && r.submittedAt)
+    .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))[0];
+
+  // Check if Copilot is in reviewRequests (explicitly pending)
+  const reviewRequests = pr.reviewRequests?.nodes || [];
+  const copilotRequested = reviewRequests.some(
+    (r) => r.requestedReviewer?.login === COPILOT_LOGIN
+  );
+
+  // Check if Copilot's latest review covers the current commit
+  const commitDate = commitNode?.committedDate;
+  const copilotReviewedCurrentCommit = latestCopilotReview?.submittedAt && commitDate
+    ? new Date(latestCopilotReview.submittedAt) >= new Date(commitDate)
+    : false;
 
   let copilotState;
   if (unresolvedCopilotThreads.length > 0) {
     copilotState = "HAS_COMMENTS";
   } else if (threadsHasNextPage) {
     // Can't see all threads — there may be unresolved Copilot threads on later pages.
-    // Treat as HAS_COMMENTS to be safe (fail-closed).
     copilotState = "HAS_COMMENTS";
-  } else if (copilotHasReviewed) {
+  } else if (copilotRequested) {
+    // Copilot is in reviewRequests — review requested but not yet submitted
+    copilotState = "PENDING";
+  } else if (copilotReviewedCurrentCommit) {
+    // Copilot reviewed after the latest commit — clean for this push
     copilotState = "CLEAN";
   } else {
+    // Either never reviewed, or last review was for an older commit
     copilotState = "PENDING";
   }
 
