@@ -150,7 +150,7 @@ export const SelectAll: Story = {
   },
 };
 
-/** Cancel exits selection mode. */
+/** Cancel exits selection mode -- checkboxes disappear. */
 export const CancelSelection: Story = {
   args: {
     events: mixedEvents,
@@ -160,16 +160,20 @@ export const CancelSelection: Story = {
     const selectButtons = canvas.getAllByTestId("event-hover-select");
     await userEvent.click(selectButtons[0]);
 
-    // Verify floating bar is present
-    await expect(canvas.getByTestId("floating-action-bar")).toBeInTheDocument();
+    // Verify checkboxes are present (selection mode active)
+    const checkboxes = canvas.getAllByTestId("event-select-checkbox");
+    await expect(checkboxes.length).toBe(4);
 
     // Click cancel
     const cancelBtn = canvas.getByTestId("floating-bar-cancel");
     await userEvent.click(cancelBtn);
 
-    // Floating bar should be gone (may take a moment for animation)
-    // Use canvasElement for null checks since queryByTestId is not on canvas
-    const bar = canvasElement.querySelector("[data-testid='floating-action-bar']");
-    await expect(bar).toBeFalsy();
+    // Selection mode exited: checkboxes should be gone, hover rows should be back
+    const checkboxesAfter = canvasElement.querySelectorAll("[data-testid='event-select-checkbox']");
+    await expect(checkboxesAfter.length).toBe(0);
+
+    // Hover rows should be back (content events re-render in normal mode)
+    const hoverRows = canvas.getAllByTestId("event-hover-row");
+    await expect(hoverRows.length).toBe(4);
   },
 };
