@@ -391,12 +391,9 @@ function evaluate(state) {
     };
   }
 
-  // Merge status unknown — treat as poll-worthy (GitHub is still computing)
-  if (mergeable === "UNKNOWN" || !mergeable) {
-    return { action: "poll" };
-  }
-
   // All clear → allow stop (CI passing, no unresolved comments, Copilot not pending)
+  // Note: mergeable === "UNKNOWN" is ignored here — GitHub can be slow to compute
+  // mergeability and it shouldn't block stop when everything else is green.
   if (ciState === "PASSING" && reviewState === "CLEAN") {
     if (copilotState === "PENDING") {
       // CI passed, no unresolved comments, but Copilot review is
