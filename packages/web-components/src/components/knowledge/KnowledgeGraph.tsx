@@ -151,6 +151,7 @@ export function KnowledgeGraph({
   const nodeElsRef = useRef<Selection<SVGGElement, SimNode, SVGGElement, unknown> | undefined>(undefined);
   const selectedNodeIdRef = useRef(selectedNodeId);
   selectedNodeIdRef.current = selectedNodeId;
+  const didAutoFitRef = useRef(false);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const dragDistanceRef = useRef(0);
 
@@ -214,6 +215,9 @@ export function KnowledgeGraph({
       simRef.current.stop();
       simRef.current = undefined;
     }
+
+    // Reset auto-fit flag when graph data changes so the next simulation run fits the view
+    didAutoFitRef.current = false;
 
     if (graphData.nodes.length === 0) {
       select(g).selectAll("*").remove();
@@ -346,9 +350,11 @@ export function KnowledgeGraph({
     nodeEls.call(dragBehavior);
 
     // Zoom to fit all nodes once the force simulation has fully converged.
-    // Skip if a node is already selected — the center-on-node effect handles that case.
+    // One-shot: skip if already fitted (drag reheat would re-trigger), or if a node is selected.
     sim.on("end", () => {
-      if (svgRef.current && zoomRef.current && simNodes.length > 0 && !selectedNodeIdRef.current) {
+      if (svgRef.current && zoomRef.current && simNodes.length > 0
+        && !didAutoFitRef.current && !selectedNodeIdRef.current) {
+        didAutoFitRef.current = true;
         const fit: ZoomToFitResult | undefined = computeZoomToFit(simNodes, dimensions);
         if (!fit) {
           return;
