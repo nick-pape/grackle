@@ -94,7 +94,6 @@ async function handleTaskUpdated(taskId: string): Promise<void> {
   if (previousDelivery !== undefined && now - previousDelivery < DEDUP_TTL_MS) {
     return;
   }
-  delivered.set(dedupeKey, now);
 
   // Prune expired entries to prevent unbounded growth
   pruneDelivered(now);
@@ -119,6 +118,9 @@ async function handleTaskUpdated(taskId: string): Promise<void> {
     "normal",
     taskUrl,
   );
+
+  // Mark dedupe AFTER successful persistence so failures can retry
+  delivered.set(dedupeKey, now);
 
   // Route immediately — build the row inline to avoid a round-trip read
   await routeEscalation({

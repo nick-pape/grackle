@@ -34,7 +34,7 @@ export const escalationTools: ToolDefinition[] = [
       }
       try {
         const escalation = await client.createEscalation({
-          workspaceId: authContext?.type === "scoped" ? authContext.workspaceId : "",
+          workspaceId: authContext?.type === "scoped" ? authContext.workspaceId ?? "" : "",
           taskId: authContext?.type === "scoped" ? authContext.taskId : "",
           title: "Human escalation",
           message,
@@ -43,7 +43,7 @@ export const escalationTools: ToolDefinition[] = [
         return jsonResult({
           id: escalation.id,
           status: escalation.status,
-          message: "Escalation delivered. The human has been notified.",
+          message: "Escalation persisted and routed to available notification channels.",
         });
       } catch (error) {
         return grpcErrorToToolResult(error);

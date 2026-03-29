@@ -26,17 +26,12 @@ export function useNotifications(): {
 } {
   const permissionRef = useRef<NotificationPermission>("default");
 
-  // Request permission on mount
+  // Sync permission state on mount (don't auto-request — browsers require a user gesture)
   useEffect(() => {
     if (typeof Notification === "undefined") {
       return;
     }
     permissionRef.current = Notification.permission;
-    if (Notification.permission === "default") {
-      Notification.requestPermission().then((perm) => {
-        permissionRef.current = perm;
-      }).catch(() => {});
-    }
   }, []);
 
   function handleEvent(event: DomainEvent): boolean {
@@ -44,15 +39,28 @@ export function useNotifications(): {
       return false;
     }
 
-    if (typeof Notification === "undefined" || permissionRef.current !== "granted") {
-      return true; // Consumed the event but can't show notification
+    if (typeof Notification === "undefined") {
+      return true; // Consumed the event but browser doesn't support notifications
+    }
+
+    // Request permission on first escalation event (user gesture proxy — the
+    // event is triggered by agent activity, not page load)
+    if (permissionRef.current === "default") {
+      Notification.requestPermission().then((perm) => {
+        permissionRef.current = perm;
+      }).catch(() => {});
+      return true;
+    }
+
+    if (permissionRef.current !== "granted") {
+      return true; // Permission denied, consume silently
     }
 
     const payload = event.payload as unknown as EscalationPayload;
     const notification = new Notification(payload.title || "Agent needs input", {
       body: payload.message || "An agent is waiting for your input.",
       tag: payload.escalationId, // Prevents duplicate notifications for same escalation
-      icon: "/grackle-icon.png",
+      icon: "/icon-192x192.png",
     });
 
     notification.onclick = () => {

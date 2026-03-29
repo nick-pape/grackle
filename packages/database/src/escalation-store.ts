@@ -1,6 +1,6 @@
 import db from "./db.js";
 import { escalations, type EscalationRow } from "./schema.js";
-import { eq, desc, asc, and, sql } from "drizzle-orm";
+import { eq, desc, asc, and } from "drizzle-orm";
 
 export type { EscalationRow };
 

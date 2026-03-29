@@ -90,7 +90,7 @@ export function registerNotifyCommands(program: Command): void {
     .action(async () => {
       const client = createGrackleClient();
       const webhook = await client.getSetting({ key: "webhook_url" });
-      const pending = await client.listEscalations({ workspaceId: "", status: "pending", limit: 0 });
+      const pending = await client.listEscalations({ workspaceId: "", status: "pending" });
       console.log(`Webhook URL: ${webhook.value || "(not configured)"}`);
       console.log(`Pending escalations: ${pending.escalations.length}`);
     });

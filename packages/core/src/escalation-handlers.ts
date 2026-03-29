@@ -50,7 +50,7 @@ export async function listEscalations(req: grackle.ListEscalationsRequest): Prom
   const rows = escalationStore.listEscalations(
     req.workspaceId || undefined,
     req.status || undefined,
-    req.limit || undefined,
+    req.limit > 0 ? req.limit : undefined,
   );
   return create(grackle.EscalationListSchema, {
     escalations: rows.map(escalationRowToProto),
