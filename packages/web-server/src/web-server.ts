@@ -324,11 +324,10 @@ export function createWebServer(options: WebServerOptions): http.Server {
         const statusCode = result.ready ? 200 : 503;
         res.writeHead(statusCode, { "Content-Type": "application/json", "Cache-Control": "no-store" });
         res.end(JSON.stringify(result));
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+      } catch {
         const result: ReadinessResult = {
           ready: false,
-          checks: { readinessCheck: { ok: false, message } },
+          checks: { readinessCheck: { ok: false, message: "readiness check failed" } },
         };
         res.writeHead(503, { "Content-Type": "application/json", "Cache-Control": "no-store" });
         res.end(JSON.stringify(result));
