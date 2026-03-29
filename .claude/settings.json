@@ -36,7 +36,7 @@
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/pr-readiness-check.mjs\""
           }
         ],
-        "timeout": 900
+        "timeout": 600
       }
     ]
   }

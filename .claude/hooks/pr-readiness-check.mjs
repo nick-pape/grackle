@@ -25,8 +25,8 @@ import { execSync } from "node:child_process";
 /** Milliseconds between poll iterations. */
 const POLL_INTERVAL_MS = 30_000;
 
-/** Maximum total poll time before giving up (~14 min, leaves buffer for 15-min hook timeout). */
-const MAX_POLL_MS = 14 * 60 * 1000;
+/** Maximum total poll time before giving up (~9 min, leaves buffer for 10-min hook timeout). */
+const MAX_POLL_MS = 9 * 60 * 1000;
 
 /**
  * After CI passes but Copilot hasn't reviewed yet, wait at most this long
@@ -70,7 +70,7 @@ function block(message) {
 }
 
 function sleep(ms) {
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+  execSync(`sleep ${Math.ceil(ms / 1000)}`, { stdio: "ignore" });
 }
 
 function isRateLimited(text) {
