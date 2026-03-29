@@ -133,7 +133,7 @@ jobs:
         if: always() && steps.changefile_check.outputs.has_changefiles == 'true'
         uses: dorny/test-reporter@v1
         with:
-          name: E2E Test Results
+          name: E2E Test Results (Publish)
           path: tests/e2e-tests/test-results/e2e-results.xml
           reporter: java-junit
           fail-on-error: false
