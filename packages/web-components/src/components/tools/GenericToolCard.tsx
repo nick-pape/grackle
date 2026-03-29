@@ -6,7 +6,7 @@ import { ICON_SM, ICON_MD } from "../../utils/iconSize.js";
 import styles from "./toolCards.module.scss";
 
 /** Formats an MCP tool name for display: `mcp__server__tool` → `server / tool`. */
-function formatToolName(tool: string): { display: string; isMcp: boolean } {
+export function formatToolName(tool: string): { display: string; isMcp: boolean } {
   const mcpMatch = /^mcp__([^_]+(?:_[^_]+)*)__(.+)$/.exec(tool);
   if (mcpMatch) {
     return { display: `${mcpMatch[1]} / ${mcpMatch[2]}`, isMcp: true };
