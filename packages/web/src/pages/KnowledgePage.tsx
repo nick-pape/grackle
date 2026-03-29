@@ -19,7 +19,6 @@ export function KnowledgePage(): JSX.Element {
   // Load recent nodes on mount
   const loadRecentFn = useCallback(
     () => { knowledge.loadRecent().catch(() => {}); },
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- stable useCallback ref
     [knowledge.loadRecent],
   );
   useEffect(() => {

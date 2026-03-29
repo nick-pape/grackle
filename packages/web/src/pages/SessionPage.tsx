@@ -63,9 +63,10 @@ function SessionEmptyState({ session }: { session: Session | undefined }): JSX.E
 export function SessionPage(): JSX.Element {
   const { sessionId } = useParams<{ sessionId: string }>();
   const {
-    events, eventsDropped, sessions, kill, stopGraceful, loadSessionEvents,
-    sendInput, spawn, startTask, personas, environments, provisionEnvironment,
-    sessionsLoading,
+    sessions: { events, eventsDropped, sessions, sessionsLoading, kill, stopGraceful, loadSessionEvents, sendInput, spawn },
+    tasks: { startTask },
+    personas: { personas },
+    environments: { environments, provisionEnvironment },
   } = useGrackle();
   const { showToast } = useToast();
   const loadedRef = useRef<string | undefined>(undefined);

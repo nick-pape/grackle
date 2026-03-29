@@ -72,7 +72,7 @@ function KpiCard({ value, label, accent, index, testId }: KpiCardProps): JSX.Ele
 
 /** Operations dashboard showing KPIs, active sessions, attention items, and health. */
 export function DashboardPage(): JSX.Element {
-  const { workspaces, tasks, sessions, environments, loadTasks, sessionsLoading, tasksLoading, environmentsLoading, workspacesLoading } = useGrackle();
+  const { workspaces: { workspaces, workspacesLoading }, tasks: { tasks, tasksLoading, loadTasks }, sessions: { sessions, sessionsLoading }, environments: { environments, environmentsLoading } } = useGrackle();
   const navigate = useAppNavigate();
   const loadedWorkspaceIdsRef = useRef<Set<string>>(new Set());
 
