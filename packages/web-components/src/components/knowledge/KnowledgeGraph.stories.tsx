@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, waitFor } from "@storybook/test";
+import { expect, fn, fireEvent, waitFor } from "@storybook/test";
 import type { GraphNode } from "../../hooks/types.js";
 import { makeGraphNode, makeGraphLink } from "../../test-utils/storybook-helpers.js";
 import { KnowledgeGraph } from "./KnowledgeGraph.js";
@@ -95,6 +95,77 @@ export const SelectedNodeHighlight: Story = {
       const uniqueClasses = new Set(classLists);
       await expect(uniqueClasses.size).toBeGreaterThan(1);
     }, { timeout: 3000 });
+  },
+};
+
+/** Dragging a node updates its position in the graph. */
+export const DraggableNodes: Story = {
+  args: {
+    graphData: {
+      nodes: [nodeA, nodeB, nodeC],
+      links: [
+        makeGraphLink({ source: "n-1", target: "n-2", type: "relates_to" }),
+        makeGraphLink({ source: "n-2", target: "n-3", type: "derived_from" }),
+      ],
+    },
+  },
+  play: async ({ canvas }) => {
+    const container = canvas.getByTestId("knowledge-graph");
+
+    // Wait for D3 force simulation to create and position nodes
+    let targetNode!: Element;
+    await waitFor(async () => {
+      const nodeGroups = container.querySelectorAll("g.kg-node");
+      await expect(nodeGroups.length).toBe(3);
+      targetNode = nodeGroups[0];
+      // Node should have a transform set by the simulation
+      const transform = targetNode.getAttribute("transform");
+      await expect(transform).not.toBeNull();
+    }, { timeout: 3000 });
+
+    const beforeTransform = targetNode.getAttribute("transform");
+
+    // Simulate a drag: mousedown -> mousemove (large offset) -> mouseup
+    await fireEvent.mouseDown(targetNode, { clientX: 100, clientY: 100 });
+    await fireEvent.mouseMove(targetNode, { clientX: 250, clientY: 250 });
+    await fireEvent.mouseUp(targetNode, { clientX: 250, clientY: 250 });
+
+    // Wait a tick for simulation to update positions
+    await waitFor(async () => {
+      const afterTransform = targetNode.getAttribute("transform");
+      await expect(afterTransform).not.toBe(beforeTransform);
+    }, { timeout: 3000 });
+  },
+};
+
+/** Dragging a node more than 3px does NOT fire onNodeClick. */
+export const DragDoesNotTriggerClick: Story = {
+  args: {
+    graphData: {
+      nodes: [nodeA, nodeB],
+      links: [
+        makeGraphLink({ source: "n-1", target: "n-2", type: "relates_to" }),
+      ],
+    },
+    onNodeClick: fn(),
+  },
+  play: async ({ canvas, args }) => {
+    const container = canvas.getByTestId("knowledge-graph");
+
+    let targetNode!: Element;
+    await waitFor(async () => {
+      const nodeGroups = container.querySelectorAll("g.kg-node");
+      await expect(nodeGroups.length).toBe(2);
+      targetNode = nodeGroups[0];
+    }, { timeout: 3000 });
+
+    // Simulate a drag that moves more than the click threshold
+    await fireEvent.mouseDown(targetNode, { clientX: 100, clientY: 100 });
+    await fireEvent.mouseMove(targetNode, { clientX: 120, clientY: 120 });
+    await fireEvent.mouseUp(targetNode, { clientX: 120, clientY: 120 });
+
+    // onClick should NOT have been called since the mouse moved >3px
+    await expect(args.onNodeClick).not.toHaveBeenCalled();
   },
 };
 

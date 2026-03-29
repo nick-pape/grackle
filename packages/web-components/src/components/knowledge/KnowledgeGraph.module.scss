@@ -37,8 +37,12 @@
 // ── Nodes ──────────────────────────────────────────────────
 
 .node {
-  cursor: pointer;
+  cursor: grab;
   transition: opacity 0.4s ease;
+
+  &:active {
+    cursor: grabbing;
+  }
 
   &:hover {
     .nodeCard {
