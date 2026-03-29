@@ -12,11 +12,14 @@ import { ConnectError } from "@connectrpc/connect";
 import type { TaskData, GrackleEvent, WsMessage } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToTask } from "./proto-converters.js";
+import { useLoadingState } from "./useLoadingState.js";
 
 /** Values returned by {@link useTasks}. */
 export interface UseTasksResult {
   /** All known tasks (may span multiple workspaces). */
   tasks: TaskData[];
+  /** Whether the task list is currently being loaded. */
+  tasksLoading: boolean;
   /** The ID of the task currently being started, or `undefined`. */
   taskStartingId: string | undefined;
   /** Load tasks for a given workspace. */
@@ -73,6 +76,7 @@ export interface UseTasksResult {
  */
 export function useTasks(): UseTasksResult {
   const [tasks, setTasks] = useState<TaskData[]>([]);
+  const { loading: tasksLoading, track: trackTasks } = useLoadingState();
   const [taskStartingId, setTaskStartingId] = useState<string | undefined>(
     undefined,
   );
@@ -96,7 +100,7 @@ export function useTasks(): UseTasksResult {
   /** Fetch all tasks (global, including workspace-less) and upsert into state. */
   const loadAllTasks = useCallback(async () => {
     try {
-      const resp = await grackleClient.listTasks({});
+      const resp = await trackTasks(grackleClient.listTasks({}));
       const incoming = resp.tasks.map(protoToTask);
       setTasks((prev) => {
         const incomingIds = new Set(incoming.map((t) => t.id));
@@ -108,7 +112,7 @@ export function useTasks(): UseTasksResult {
     } catch {
       // empty
     }
-  }, []);
+  }, [trackTasks]);
 
   /** Debounced refresh: coalesce rapid domain events for the same workspace. */
   const refreshTasksForEvent = useCallback((workspaceId: string, taskId: string) => {
@@ -318,6 +322,7 @@ export function useTasks(): UseTasksResult {
 
   return {
     tasks,
+    tasksLoading,
     taskStartingId,
     loadTasks,
     loadAllTasks,

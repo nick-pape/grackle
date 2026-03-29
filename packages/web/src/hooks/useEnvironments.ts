@@ -13,6 +13,7 @@ import { warnBadPayload } from "@grackle-ai/web-components";
 import type { Environment, GrackleEvent, ProvisionStatus, WsMessage } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToEnvironment } from "./proto-converters.js";
+import { useLoadingState } from "./useLoadingState.js";
 
 /** Delay in milliseconds before clearing a successful provision status. */
 const PROVISION_STATUS_CLEAR_DELAY_MS: number = 5_000;
@@ -26,6 +27,8 @@ function extractErrorMessage(err: unknown): string {
 export interface UseEnvironmentsResult {
   /** All known environments. */
   environments: Environment[];
+  /** Whether the environment list is currently being loaded. */
+  environmentsLoading: boolean;
   /** Per-environment provisioning progress. */
   provisionStatus: Record<string, ProvisionStatus>;
   /** Request the current environment list from the server. */
@@ -64,6 +67,7 @@ export interface UseEnvironmentsResult {
  */
 export function useEnvironments(): UseEnvironmentsResult {
   const [environments, setEnvironments] = useState<Environment[]>([]);
+  const { loading: environmentsLoading, track: trackEnvironments } = useLoadingState();
   const [provisionStatus, setProvisionStatus] = useState<
     Record<string, ProvisionStatus>
   >({});
@@ -73,12 +77,12 @@ export function useEnvironments(): UseEnvironmentsResult {
 
   const loadEnvironments = useCallback(async () => {
     try {
-      const resp = await grackleClient.listEnvironments({});
+      const resp = await trackEnvironments(grackleClient.listEnvironments({}));
       setEnvironments(resp.environments.map(protoToEnvironment));
     } catch {
       // empty
     }
-  }, []);
+  }, [trackEnvironments]);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     switch (event.type) {
@@ -247,6 +251,7 @@ export function useEnvironments(): UseEnvironmentsResult {
 
   return {
     environments,
+    environmentsLoading,
     provisionStatus,
     operationError,
     clearOperationError,

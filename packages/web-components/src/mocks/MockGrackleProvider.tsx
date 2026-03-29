@@ -889,6 +889,13 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     () => ({
       // State
       connected: true,
+      environmentsLoading: false,
+      sessionsLoading: false,
+      workspacesLoading: false,
+      tasksLoading: false,
+      tokensLoading: false,
+      credentialsLoading: false,
+      personasLoading: false,
       send: () => {},
       environments,
       sessions,

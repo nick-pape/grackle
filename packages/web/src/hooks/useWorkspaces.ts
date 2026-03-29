@@ -12,11 +12,14 @@ import { ConnectError } from "@connectrpc/connect";
 import type { Workspace, GrackleEvent } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToWorkspace } from "./proto-converters.js";
+import { useLoadingState } from "./useLoadingState.js";
 
 /** Values returned by {@link useWorkspaces}. */
 export interface UseWorkspacesResult {
   /** All known workspaces. */
   workspaces: Workspace[];
+  /** Whether the workspace list is currently being loaded. */
+  workspacesLoading: boolean;
   /** Whether a workspace creation is currently in progress. */
   workspaceCreating: boolean;
   /** Request the current workspace list from the server. */
@@ -61,16 +64,17 @@ export interface UseWorkspacesResult {
  */
 export function useWorkspaces(): UseWorkspacesResult {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const { loading: workspacesLoading, track: trackWorkspaces } = useLoadingState();
   const [workspaceCreating, setWorkspaceCreating] = useState(false);
 
   const loadWorkspaces = useCallback(async () => {
     try {
-      const resp = await grackleClient.listWorkspaces({});
+      const resp = await trackWorkspaces(grackleClient.listWorkspaces({}));
       setWorkspaces(resp.workspaces.map(protoToWorkspace));
     } catch {
       // empty
     }
-  }, []);
+  }, [trackWorkspaces]);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     switch (event.type) {
@@ -160,6 +164,7 @@ export function useWorkspaces(): UseWorkspacesResult {
 
   return {
     workspaces,
+    workspacesLoading,
     workspaceCreating,
     loadWorkspaces,
     createWorkspace,

@@ -221,6 +221,13 @@ export function useGrackleSocket(): UseGrackleSocketResult {
 
   return {
     connected,
+    environmentsLoading: environmentsHook.environmentsLoading,
+    sessionsLoading: sessionsHook.sessionsLoading,
+    workspacesLoading: workspacesHook.workspacesLoading,
+    tasksLoading: tasksHook.tasksLoading,
+    tokensLoading: tokensHook.tokensLoading,
+    credentialsLoading: credentialsHook.credentialsLoading,
+    personasLoading: personasHook.personasLoading,
     environments: environmentsHook.environments,
     sessions: sessionsHook.sessions,
     events: sessionsHook.events,

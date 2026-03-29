@@ -12,11 +12,14 @@ import { isCredentialProviderConfig } from "@grackle-ai/web-components";
 import type { CredentialProviderConfig, GrackleEvent } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToCredentialConfig } from "./proto-converters.js";
+import { useLoadingState } from "./useLoadingState.js";
 
 /** Values returned by {@link useCredentials}. */
 export interface UseCredentialsResult {
   /** Current credential provider configuration. */
   credentialProviders: CredentialProviderConfig;
+  /** Whether the credential configuration is currently being loaded. */
+  credentialsLoading: boolean;
   /** Request the current credential provider configuration from the server. */
   loadCredentials: () => Promise<void>;
   /** Update the credential provider configuration on the server. */
@@ -38,15 +41,16 @@ export function useCredentials(): UseCredentialsResult {
     codex: "off",
     goose: "off",
   });
+  const { loading: credentialsLoading, track: trackCredentials } = useLoadingState();
 
   const loadCredentials = useCallback(async () => {
     try {
-      const resp = await grackleClient.getCredentialProviders({});
+      const resp = await trackCredentials(grackleClient.getCredentialProviders({}));
       setCredentialProviders(protoToCredentialConfig(resp));
     } catch {
       // empty
     }
-  }, []);
+  }, [trackCredentials]);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     if (event.type === "credential.providers_changed") {
@@ -76,5 +80,5 @@ export function useCredentials(): UseCredentialsResult {
     [],
   );
 
-  return { credentialProviders, loadCredentials, updateCredentialProviders, handleEvent };
+  return { credentialProviders, credentialsLoading, loadCredentials, updateCredentialProviders, handleEvent };
 }
