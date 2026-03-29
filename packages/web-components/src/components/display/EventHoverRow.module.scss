@@ -23,17 +23,14 @@
   border: 1px solid var(--border-subtle);
   opacity: 0;
   transition: opacity var(--transition-fast);
-  pointer-events: none;
 
   @include mobile {
     opacity: 1;
-    pointer-events: auto;
   }
 }
 
 .row:hover .hoverActions {
   opacity: 1;
-  pointer-events: auto;
 }
 
 .hoverButton {
