@@ -126,8 +126,6 @@ jobs:
       - name: Build and test
         if: steps.changefile_check.outputs.has_changefiles == 'true'
         uses: ./.github/actions/build-and-test
-        with:
-          upload-e2e-results: "true"
 
       - name: E2E test report
         if: always() && steps.changefile_check.outputs.has_changefiles == 'true'
