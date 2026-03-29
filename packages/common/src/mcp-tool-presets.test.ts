@@ -9,8 +9,8 @@ import {
 } from "./mcp-tool-presets.js";
 
 describe("ALL_MCP_TOOL_NAMES", () => {
-  it("contains exactly 63 tool names", () => {
-    expect(ALL_MCP_TOOL_NAMES.size).toBe(63);
+  it("contains exactly 64 tool names", () => {
+    expect(ALL_MCP_TOOL_NAMES.size).toBe(64);
   });
 
   it("includes tools from every group", () => {
@@ -107,8 +107,8 @@ describe("ORCHESTRATOR_MCP_TOOLS", () => {
 });
 
 describe("ADMIN_MCP_TOOLS", () => {
-  it("contains all 63 tool names", () => {
-    expect(ADMIN_MCP_TOOLS).toHaveLength(63);
+  it("contains all 64 tool names", () => {
+    expect(ADMIN_MCP_TOOLS).toHaveLength(64);
   });
 
   it("matches ALL_MCP_TOOL_NAMES exactly", () => {
