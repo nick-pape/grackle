@@ -262,6 +262,8 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     credentialProviders: credentialsHook.credentialProviders,
     updateCredentialProviders: credentialsHook.updateCredentialProviders,
     provisionStatus: environmentsHook.provisionStatus,
+    environmentOperationError: environmentsHook.operationError,
+    clearEnvironmentOperationError: environmentsHook.clearOperationError,
     provisionEnvironment: environmentsHook.provisionEnvironment,
     stopEnvironment: environmentsHook.stopEnvironment,
     removeEnvironment: environmentsHook.removeEnvironment,

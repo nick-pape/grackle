@@ -10,6 +10,7 @@ import {
 import { useCallback, useEffect, useState, Suspense, lazy, type LazyExoticComponent, type JSX } from "react";
 import { useGrackle } from "./context/GrackleContext.js";
 import { useEnvironmentToasts } from "./hooks/useEnvironmentToasts.js";
+import { useEnvironmentOperationToasts } from "./hooks/useEnvironmentOperationToasts.js";
 import { useTaskToasts } from "./hooks/useTaskToasts.js";
 import { AnimatePresence, motion } from "motion/react";
 import { BrowserRouter, HashRouter, Routes, Route, Navigate, Outlet, useLocation, useParams } from "react-router";
@@ -120,10 +121,12 @@ function AppShellBody(): JSX.Element {
 
 /** Application shell layout with StatusBar, Sidebar, Outlet, and BottomStatusBar. */
 function AppShell(): JSX.Element {
-  const { lastSpawnedId, environments, tasks, connected, onboardingCompleted } = useGrackle();
+  const { lastSpawnedId, environments, tasks, connected, onboardingCompleted,
+    environmentOperationError, clearEnvironmentOperationError } = useGrackle();
   const { showToast } = useToast();
   useEnvironmentToasts(environments, showToast);
   useTaskToasts(tasks, showToast);
+  useEnvironmentOperationToasts(environmentOperationError, clearEnvironmentOperationError, showToast);
   const navigate = useAppNavigate();
 
   const location = useLocation();
