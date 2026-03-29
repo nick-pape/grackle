@@ -1,4 +1,4 @@
-import { cloneElement, isValidElement, useCallback, useEffect, useId, useRef, useState, type JSX, type ReactElement } from "react";
+import { cloneElement, isValidElement, useCallback, useEffect, useId, useRef, useState, type JSX, type ReactElement, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import styles from "./Tooltip.module.scss";
 
@@ -16,7 +16,7 @@ export interface TooltipProps {
   /** Whether the wrapper is inline (`span`) or block (`div`). Defaults to `true`. */
   inline?: boolean;
   /** The trigger element to wrap. */
-  children: React.ReactNode;
+  children: ReactNode;
   /** Additional CSS class for the wrapper element. */
   className?: string;
   /** Test ID for the tooltip content element. */
