@@ -25,8 +25,8 @@ import { execSync } from "node:child_process";
 /** Milliseconds between poll iterations. */
 const POLL_INTERVAL_MS = 30_000;
 
-/** Maximum total poll time before giving up (~9 min, leaves buffer for 10-min hook timeout). */
-const MAX_POLL_MS = 9 * 60 * 1000;
+/** Maximum total poll time before giving up (~18 min, leaves buffer for 20-min hook timeout). */
+const MAX_POLL_MS = 18 * 60 * 1000;
 
 /**
  * After CI passes but Copilot hasn't reviewed yet, wait at most this long
