@@ -5,11 +5,12 @@
  * (PowerLine + Server on 4 unique ports, with its own GRACKLE_HOME and SQLite DB).
  * Multiple stacks can run in parallel for Playwright worker-level parallelism.
  */
-import { execSync, spawn, type ChildProcess } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { createServer } from "node:net";
 import { mkdtempSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { createTestClient, type GrackleClient } from "./rpc-client.js";
 
 const POLL_INTERVAL_MS = 300;
 const POLL_TIMEOUT_MS = 15_000;
@@ -85,33 +86,9 @@ async function waitForPort(port: number, timeoutMs: number): Promise<void> {
   });
 }
 
-/** Generate a pairing code via the CLI and redeem it via HTTP to obtain a session cookie. */
-async function obtainSessionCookie(serverPort: number, webPort: number, apiKey: string, grackleHome: string): Promise<string> {
-  const repoRoot = join(import.meta.dirname, "../../..");
-  const cliPath = join(repoRoot, "packages/cli/dist/index.js");
-
-  // Generate a pairing code via the CLI
-  const cliOutput = execSync(
-    `node "${cliPath}" pair`,
-    {
-      env: {
-        ...process.env,
-        GRACKLE_HOME: grackleHome,
-        GRACKLE_URL: `http://127.0.0.1:${serverPort}`,
-        GRACKLE_API_KEY: apiKey,
-        NO_COLOR: "1",
-        FORCE_COLOR: "0",
-      },
-      encoding: "utf8",
-    },
-  );
-
-  // Extract the code from CLI output (format: "  Pairing code: XXXXXX")
-  const codeMatch = cliOutput.match(/Pairing code:\s*(\S+)/i);
-  if (!codeMatch) {
-    throw new Error(`Could not extract pairing code from CLI output: ${cliOutput}`);
-  }
-  const code = codeMatch[1];
+/** Generate a pairing code via gRPC and redeem it via HTTP to obtain a session cookie. */
+async function obtainSessionCookie(client: GrackleClient, webPort: number): Promise<string> {
+  const { code } = await client.generatePairingCode({});
 
   // Redeem the code via HTTP to get a session cookie
   const http = await import("node:http");
@@ -137,6 +114,42 @@ async function obtainSessionCookie(serverPort: number, webPort: number, apiKey: 
     req.on("error", reject);
     req.end();
   });
+}
+
+/** Seed the test environment, personas, and settings via gRPC. */
+async function seedTestData(client: GrackleClient, powerlinePort: number, tag: string): Promise<void> {
+  // Add local PowerLine environment
+  await client.addEnvironment({
+    displayName: "test-local",
+    adapterType: "local",
+    adapterConfig: JSON.stringify({ port: powerlinePort }),
+  });
+  console.log(`${tag} Environment added`);
+
+  // Create stub personas and configure defaults.
+  // Model is required because resolvePersona() validates non-empty model;
+  // the stub runtime ignores it.
+  await client.createPersona({
+    name: "Stub",
+    systemPrompt: "E2E test persona",
+    runtime: "stub",
+    model: "sonnet",
+  });
+  await client.setSetting({ key: "default_persona_id", value: "stub" });
+  await client.createPersona({
+    name: "Stub MCP",
+    systemPrompt: "E2E MCP test persona",
+    runtime: "stub-mcp",
+    model: "sonnet",
+  });
+  await client.setSetting({ key: "onboarding_completed", value: "true" });
+  console.log(`${tag} Stub and Stub MCP personas created; Stub set as default; onboarding completed`);
+
+  // Provision the environment (server-streaming RPC — drain the stream)
+  for await (const _ of client.provisionEnvironment({ id: "test-local" })) {
+    // Drain provision events
+  }
+  console.log(`${tag} Environment provisioned`);
 }
 
 /** Options for starting a Grackle stack. */
@@ -221,50 +234,12 @@ export async function startGrackleStack(options: GrackleStackOptions = {}): Prom
   const apiKey = readFileSync(apiKeyPath, "utf8").trim();
   console.log(`${tag} API key loaded (${apiKey.length} chars)`);
 
-  // 7. Seed an environment via CLI
-  const cliPath = join(repoRoot, "packages/cli/dist/index.js");
-  const cliEnv = {
-    ...process.env,
-    GRACKLE_HOME: grackleHome,
-    GRACKLE_URL: `http://localhost:${serverPort}`,
-    GRACKLE_API_KEY: apiKey,
-  };
-
-  execSync(`node "${cliPath}" env add test-local --local --port ${powerlinePort}`, {
-    env: cliEnv,
-    stdio: "pipe",
-  });
-  console.log(`${tag} Environment added`);
-
-  // Create a stub persona and set it as the app default for E2E tests.
-  // --model sonnet is required because resolvePersona() validates non-empty model;
-  // the stub runtime ignores it.
-  execSync(`node "${cliPath}" persona create "Stub" --prompt "E2E test persona" --runtime stub --model sonnet`, {
-    env: cliEnv,
-    stdio: "pipe",
-  });
-  execSync(`node "${cliPath}" config set default-persona stub`, {
-    env: cliEnv,
-    stdio: "pipe",
-  });
-  execSync(`node "${cliPath}" persona create "Stub MCP" --prompt "E2E MCP test persona" --runtime stub-mcp --model sonnet`, {
-    env: cliEnv,
-    stdio: "pipe",
-  });
-  execSync(`node "${cliPath}" config set onboarding_completed true`, {
-    env: cliEnv,
-    stdio: "pipe",
-  });
-  console.log(`${tag} Stub and Stub MCP personas created; Stub set as default; onboarding completed`);
-
-  execSync(`node "${cliPath}" env provision test-local`, {
-    env: cliEnv,
-    stdio: "pipe",
-  });
-  console.log(`${tag} Environment provisioned`);
+  // 7. Seed test data via gRPC (environment, personas, settings, provision)
+  const client = createTestClient(serverPort, apiKey);
+  await seedTestData(client, powerlinePort, tag);
 
   // 8. Obtain a session cookie by generating and redeeming a pairing code
-  const pairingCookie = await obtainSessionCookie(serverPort, webPort, apiKey, grackleHome);
+  const pairingCookie = await obtainSessionCookie(client, webPort);
   console.log(`${tag} Session cookie obtained`);
 
   console.log(`${tag} Setup complete`);

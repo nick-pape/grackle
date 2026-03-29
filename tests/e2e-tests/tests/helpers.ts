@@ -313,32 +313,16 @@ export async function runStubMcpTaskToCompletion(page: Page): Promise<void> {
 }
 
 /**
- * Provision an environment using the CLI.
+ * Provision an environment via gRPC. No-ops if already connected.
  */
 export async function provisionEnvironmentDirect(
   environmentId: string,
-  serverPort?: number,
-  apiKey?: string,
+  client: GrackleClient,
 ): Promise<void> {
-  const { execSync } = await import("node:child_process");
-  const { resolve: pathResolve, dirname } = await import("node:path");
-  const { fileURLToPath } = await import("node:url");
-
-  const port = serverPort ?? Number(process.env.GRACKLE_E2E_SERVER_PORT);
-  const key = apiKey ?? process.env.GRACKLE_E2E_API_KEY ?? "";
-
-  const thisDir = dirname(fileURLToPath(import.meta.url));
-  const cliPath = pathResolve(thisDir, "..", "..", "..", "packages", "cli", "dist", "index.js");
   try {
-    execSync(`node "${cliPath}" env provision ${environmentId}`, {
-      env: {
-        ...process.env,
-        GRACKLE_URL: `http://127.0.0.1:${port}`,
-        GRACKLE_API_KEY: key,
-      },
-      timeout: 30_000,
-      stdio: "pipe",
-    });
+    for await (const _ of client.provisionEnvironment({ id: environmentId })) {
+      // Drain provision events
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (!msg.includes("already connected") && !msg.includes("Already connected")) {
