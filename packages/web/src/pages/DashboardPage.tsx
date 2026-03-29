@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, type JSX } from "react";
 import { motion, type Variants } from "motion/react";
 import { useGrackle } from "../context/GrackleContext.js";
 import { computeKpis, getActiveSessions, getAttentionTasks, getWorkspaceSnapshots, sessionUrl, taskUrl, useAppNavigate, workspaceUrl } from "@grackle-ai/web-components";
+import { DashboardShimmer } from "./DashboardShimmer.js";
 import styles from "./DashboardPage.module.scss";
 
 // ─── Animation variants ─────────────────────────────────────────────────────
@@ -71,7 +72,7 @@ function KpiCard({ value, label, accent, index, testId }: KpiCardProps): JSX.Ele
 
 /** Operations dashboard showing KPIs, active sessions, attention items, and health. */
 export function DashboardPage(): JSX.Element {
-  const { workspaces, tasks, sessions, environments, loadTasks } = useGrackle();
+  const { workspaces, tasks, sessions, environments, loadTasks, sessionsLoading, tasksLoading, environmentsLoading, workspacesLoading } = useGrackle();
   const navigate = useAppNavigate();
   const loadedWorkspaceIdsRef = useRef<Set<string>>(new Set());
 
@@ -104,6 +105,10 @@ export function DashboardPage(): JSX.Element {
     () => getWorkspaceSnapshots(workspaces, tasks, environments),
     [workspaces, tasks, environments],
   );
+
+  if (sessionsLoading || tasksLoading || environmentsLoading || workspacesLoading) {
+    return <DashboardShimmer />;
+  }
 
   return (
     <div className={styles.dashboard} data-testid="dashboard">

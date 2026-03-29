@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "motion/react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useHotkey } from "../hooks/useHotkey.js";
+import { TaskShimmer } from "./TaskShimmer.js";
 import styles from "./page-layout.module.scss";
 
 type TaskTab = "overview" | "stream" | "findings";
@@ -341,6 +342,7 @@ export function TaskPage(): JSX.Element {
     kill, startTask, stopTask, resumeTask, deleteTask, createTask, updateTask,
     workspaces, taskSessions: taskSessionsMap, loadTaskSessions,
     sendInput, spawn, personas, provisionEnvironment,
+    tasksLoading,
   } = useGrackle();
 
   const loadedRef = useRef<string | undefined>(undefined);
@@ -514,6 +516,10 @@ export function TaskPage(): JSX.Element {
   useHotkey({ key: "1" }, () => handleTabChange("overview"));
   useHotkey({ key: "2" }, () => handleTabChange("stream"));
   useHotkey({ key: "3" }, () => handleTabChange("findings"));
+
+  if (!task && tasksLoading) {
+    return <TaskShimmer />;
+  }
 
   return (
     <div className={styles.panelContainer}>

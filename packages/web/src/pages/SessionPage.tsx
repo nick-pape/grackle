@@ -3,6 +3,7 @@ import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import { Breadcrumbs, ChatInput, EventStream, SplitButton, buildSessionBreadcrumbs, formatCost, formatTokens, groupConsecutiveTextEvents, pairToolEvents, useToast } from "@grackle-ai/web-components";
 import type { Session } from "../hooks/useGrackleSocket.js";
+import { SessionShimmer } from "./SessionShimmer.js";
 import styles from "./page-layout.module.scss";
 
 /** Props for the SessionHeader subcomponent. */
@@ -64,6 +65,7 @@ export function SessionPage(): JSX.Element {
   const {
     events, eventsDropped, sessions, kill, stopGraceful, loadSessionEvents,
     sendInput, spawn, startTask, personas, environments, provisionEnvironment,
+    sessionsLoading,
   } = useGrackle();
   const { showToast } = useToast();
   const loadedRef = useRef<string | undefined>(undefined);
@@ -86,6 +88,10 @@ export function SessionPage(): JSX.Element {
       loadSessionEvents(sessionId).catch(() => {});
     }
   }, [sessionId, loadSessionEvents]);
+
+  if (!session && sessionsLoading) {
+    return <SessionShimmer />;
+  }
 
   if (!sessionId) {
     return (

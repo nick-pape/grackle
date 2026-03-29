@@ -907,6 +907,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       findings,
       selectedFinding,
       findingLoading,
+      findingsLoading: false,
       tokens,
       credentialProviders,
 
