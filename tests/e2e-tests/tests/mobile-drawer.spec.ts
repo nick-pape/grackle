@@ -81,7 +81,7 @@ test.describe("Mobile Drawer", { tag: ["@webui"] }, () => {
     await expect(sidebar).toBeVisible();
 
     // Navigate away (clicking Grackle brand)
-    await appPage.locator('button[title="Home"]').click();
+    await appPage.getByTestId("statusbar-brand").click();
 
     // Sidebar drawer should auto-close after navigation
     await expect(sidebar).not.toBeVisible({ timeout: 5_000 });

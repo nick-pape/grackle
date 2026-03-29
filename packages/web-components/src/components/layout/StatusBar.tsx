@@ -35,7 +35,7 @@ export function StatusBar({ connected, environments, sessions, onToggleSidebar, 
         </button>
       )}
       <Tooltip text="Home" placement="bottom">
-        <button type="button" className={styles.brand} onClick={() => navigate(HOME_URL)}>
+        <button type="button" className={styles.brand} onClick={() => navigate(HOME_URL)} data-testid="statusbar-brand">
           <img src="/icon-192x192.png" alt="" className={styles.brandLogo} aria-hidden="true" data-testid="statusbar-logo" />
           Grackle
         </button>
