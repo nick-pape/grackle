@@ -1,13 +1,12 @@
 import { useState, type JSX } from "react";
 import { ChevronRight, Cog } from "lucide-react";
 import type { ToolCardProps } from "./ToolCardProps.js";
-import { CopyButton } from "../display/CopyButton.js";
 import { ICON_SM, ICON_MD } from "../../utils/iconSize.js";
 import styles from "./toolCards.module.scss";
 
 /** Formats an MCP tool name for display: `mcp__server__tool` → `server / tool`. */
-function formatToolName(tool: string): { display: string; isMcp: boolean } {
-  const mcpMatch = /^mcp__(.+?)__(.+)$/.exec(tool);
+export function formatToolName(tool: string): { display: string; isMcp: boolean } {
+  const mcpMatch = /^mcp__([^_]+(?:_[^_]+)*)__(.+)$/.exec(tool);
   if (mcpMatch) {
     return { display: `${mcpMatch[1]} / ${mcpMatch[2]}`, isMcp: true };
   }
@@ -72,9 +71,6 @@ export function GenericToolCard({ tool, args, result, isError }: ToolCardProps):
         <span className={styles.toolName} style={{ color: "var(--accent-blue)" }}>{display}</span>
         {preview && (
           <span className={styles.fileName}>{preview}</span>
-        )}
-        {!inProgress && !isError && result && (
-          <CopyButton text={result} data-testid="tool-card-copy" className={styles.copyButtonInline} />
         )}
       </div>
 

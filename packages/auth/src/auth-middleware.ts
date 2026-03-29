@@ -37,7 +37,7 @@ function normalizeLoopback(url: string): string {
  */
 export function authenticateMcpRequest(req: http.IncomingMessage, apiKey: string): AuthContext | undefined {
   const authHeader = req.headers.authorization || "";
-  const match = /^Bearer\s+(.+)$/i.exec(authHeader);
+  const match = /^Bearer\s+(\S+)$/i.exec(authHeader);
   if (!match) {
     return undefined;
   }

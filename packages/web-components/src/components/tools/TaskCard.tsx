@@ -1,7 +1,6 @@
 import { useState, type JSX } from "react";
 import type { ToolCardProps } from "./ToolCardProps.js";
 import { extractBareName } from "./classifyTool.js";
-import { CopyButton } from "../display/CopyButton.js";
 import styles from "./toolCards.module.scss";
 
 /** Shape of a task in MCP results. */
@@ -139,9 +138,6 @@ export function TaskCard({ tool, args, result, isError }: ToolCardProps): JSX.El
               {list.length} {list.length === 1 ? "task" : "tasks"}
             </span>
           </>
-        )}
-        {!inProgress && !isError && result && (
-          <CopyButton text={result} data-testid="tool-card-copy" className={styles.copyButtonInline} />
         )}
       </div>
 

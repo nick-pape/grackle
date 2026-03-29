@@ -2,7 +2,6 @@ import { useState, type JSX } from "react";
 import { Check, ChevronRight, Loader, X } from "lucide-react";
 import type { ToolCardProps } from "./ToolCardProps.js";
 import { parseShellOutput } from "./parseShellOutput.js";
-import { CopyButton } from "../display/CopyButton.js";
 import { ICON_SM } from "../../utils/iconSize.js";
 import styles from "./toolCards.module.scss";
 
@@ -24,14 +23,14 @@ function getCommand(args: unknown): string {
  * Strips PowerShell wrappers like `"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'inner'`
  * down to just the inner command.
  */
-function simplifyCommand(cmd: string): string {
+export function simplifyCommand(cmd: string): string {
   // Match: "...pwsh.exe" -Command 'inner command'
-  const pwshMatch = /pwsh(?:\.exe)?["']?\s+-Command\s+'(.+?)'\s*$/i.exec(cmd);
+  const pwshMatch = /pwsh(?:\.exe)?["']?\s+-Command\s+'([^']*)'\s*$/i.exec(cmd);
   if (pwshMatch) {
     return pwshMatch[1];
   }
   // Match: "...pwsh.exe" -Command "inner command"
-  const pwshMatch2 = /pwsh(?:\.exe)?["']?\s+-Command\s+"(.+?)"\s*$/i.exec(cmd);
+  const pwshMatch2 = /pwsh(?:\.exe)?["']?\s+-Command\s+"([^"]*)"\s*$/i.exec(cmd);
   if (pwshMatch2) {
     return pwshMatch2[1];
   }
@@ -77,9 +76,6 @@ export function ShellCard({ tool, args, result, isError }: ToolCardProps): JSX.E
           >
             {exitCode === 0 ? <Check size={ICON_SM} aria-hidden="true" /> : <X size={ICON_SM} aria-hidden="true" />}{" "}exit {exitCode}
           </span>
-        )}
-        {!inProgress && parsed && parsed.output.length > 0 && (
-          <CopyButton text={parsed.output} data-testid="tool-card-copy" className={styles.copyButtonInline} />
         )}
         {inProgress && (
           <span className={styles.exitPending} data-testid="tool-card-pending"><Loader size={ICON_SM} aria-hidden="true" /></span>

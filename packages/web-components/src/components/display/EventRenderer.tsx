@@ -111,11 +111,6 @@ const markdownComponents: Record<string, typeof CodeBlockWrapper> = {
 function TextEvent({ content }: { content: string }): JSX.Element {
   return (
     <div className={styles.textEvent}>
-      <CopyButton
-        text={content}
-        data-testid="copy-message"
-        className={styles.messageCopyButton}
-      />
       <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrismPlus]} components={markdownComponents}>
         {content}
       </Markdown>

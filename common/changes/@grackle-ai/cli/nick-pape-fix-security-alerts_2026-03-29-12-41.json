@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix Dependabot and CodeQL security alerts: add pnpm overrides for vulnerable transitive deps, delete unused docker lockfile, fix ReDoS regexes, sanitize error in readiness endpoint",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

@@ -130,7 +130,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     await expect(sendBtn).toBeDisabled({ timeout: 5_000 });
 
     // Re-provision the environment (simulates reconnection)
-    await provisionEnvironmentDirect("test-local");
+    await provisionEnvironmentDirect("test-local", stubTask.client);
 
     // Input should be re-enabled — fill it so Send can be checked
     const inputField = page.locator('input[placeholder="Type a message..."]');

@@ -1,7 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import {
   goToEnvironments,
-  provisionEnvironmentDirect,
 } from "./helpers.js";
 
 /**

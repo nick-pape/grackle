@@ -1,0 +1,85 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// FloatingActionBar -- multi-select mode action bar at bottom of EventStream
+// =============================================================================
+
+.bar {
+  position: absolute;
+  bottom: var(--space-md);
+  left: var(--space-md);
+  right: var(--space-md);
+  z-index: 20;
+
+  @include surface-card;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-md);
+  gap: var(--space-sm);
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.count {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.toggleButton {
+  @include btn-ghost(var(--accent-blue));
+  font-size: var(--font-size-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.copyButton {
+  @include btn-ghost(var(--text-primary));
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-size-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: var(--accent-blue);
+  color: var(--accent-blue-fg, #fff);
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.1);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.cancelButton {
+  @include btn-ghost(var(--text-secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-overlay);
+  }
+}
