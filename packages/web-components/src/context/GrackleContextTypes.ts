@@ -15,19 +15,19 @@ import type {
 /** Return type for the useGrackleSocket hook (and the GrackleContext value). */
 export interface UseGrackleSocketResult {
   connected: boolean;
-  /** Whether the initial environments fetch is in-flight. */
+  /** Whether an environments fetch is in-flight. */
   environmentsLoading: boolean;
-  /** Whether the initial sessions fetch is in-flight. */
+  /** Whether a sessions fetch is in-flight. */
   sessionsLoading: boolean;
-  /** Whether the initial workspaces fetch is in-flight. */
+  /** Whether a workspaces fetch is in-flight. */
   workspacesLoading: boolean;
-  /** Whether the initial tasks fetch is in-flight. */
+  /** Whether a tasks fetch is in-flight. */
   tasksLoading: boolean;
-  /** Whether the initial tokens fetch is in-flight. */
+  /** Whether a tokens fetch is in-flight. */
   tokensLoading: boolean;
-  /** Whether the initial credentials fetch is in-flight. */
+  /** Whether a credentials fetch is in-flight. */
   credentialsLoading: boolean;
-  /** Whether the initial personas fetch is in-flight. */
+  /** Whether a personas fetch is in-flight. */
   personasLoading: boolean;
   environments: Environment[];
   sessions: Session[];
