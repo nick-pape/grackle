@@ -6,6 +6,9 @@ vi.mock("@grackle-ai/core", () => ({
   createCronPhase: vi.fn((deps: unknown) => ({ name: "cron", execute: async () => {}, _deps: deps })),
   createOrphanPhase: vi.fn((deps: unknown) => ({ name: "orphan-reparent", execute: async () => {}, _deps: deps })),
   lifecycleCleanupPhase: { name: "lifecycle-cleanup", execute: async () => {} },
+  createEnvironmentReconciliationPhase: vi.fn(() => ({ name: "environment", execute: async () => {} })),
+  listConnections: vi.fn(() => new Map()),
+  removeConnection: vi.fn(),
   createKnowledgeHealthPhase: vi.fn(() => ({ name: "knowledge-health", execute: async () => {} })),
   startTaskSession: vi.fn(),
   emit: vi.fn(),
@@ -35,6 +38,8 @@ vi.mock("@grackle-ai/database", () => ({
   },
   envRegistry: {
     getEnvironment: vi.fn(),
+    listEnvironments: vi.fn(() => []),
+    updateEnvironmentStatus: vi.fn(),
   },
 }));
 
@@ -47,10 +52,10 @@ beforeEach(() => {
 });
 
 describe("createReconciliationPhases", () => {
-  it("returns cron, lifecycle-cleanup, and orphan-reparent phases", () => {
+  it("returns cron, lifecycle-cleanup, orphan-reparent, and environment phases", () => {
     const phases = createReconciliationPhases();
     const names = phases.map((p) => p.name);
-    expect(names).toEqual(["cron", "lifecycle-cleanup", "orphan-reparent"]);
+    expect(names).toEqual(["cron", "lifecycle-cleanup", "orphan-reparent", "environment"]);
   });
 
   it("includes knowledge-health phase when knowledge is enabled", () => {
@@ -58,7 +63,7 @@ describe("createReconciliationPhases", () => {
     const phases = createReconciliationPhases();
     const names = phases.map((p) => p.name);
     expect(names).toContain("knowledge-health");
-    expect(phases).toHaveLength(4);
+    expect(phases).toHaveLength(5);
   });
 
   it("omits knowledge-health phase when knowledge is disabled", () => {

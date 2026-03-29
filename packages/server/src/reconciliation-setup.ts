@@ -1,5 +1,6 @@
 import {
   createCronPhase, createOrphanPhase, lifecycleCleanupPhase,
+  createEnvironmentReconciliationPhase, listConnections, removeConnection,
   isKnowledgeEnabled, createKnowledgeHealthPhase, neo4jHealthCheck,
   startTaskSession, emit, findFirstConnectedEnvironment,
 } from "@grackle-ai/core";
@@ -48,7 +49,15 @@ export function createReconciliationPhases(): ReconciliationPhase[] {
     emit,
   });
 
-  const phases: ReconciliationPhase[] = [cronPhase, lifecycleCleanupPhase, orphanPhase];
+  const environmentReconciliationPhase = createEnvironmentReconciliationPhase({
+    listEnvironments: envRegistry.listEnvironments,
+    listConnectionIds: () => new Set(listConnections().keys()),
+    updateEnvironmentStatus: envRegistry.updateEnvironmentStatus,
+    removeConnection,
+    emit,
+  });
+
+  const phases: ReconciliationPhase[] = [cronPhase, lifecycleCleanupPhase, orphanPhase, environmentReconciliationPhase];
 
   if (isKnowledgeEnabled()) {
     phases.push(
