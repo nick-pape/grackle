@@ -43,7 +43,6 @@ runs:
       run: node common/scripts/install-run-rush.js build
 
     - name: Cache Playwright browsers
-      if: inputs.skip-e2e != 'true'
       id: playwright-cache
       uses: actions/cache@v4
       with:
@@ -51,13 +50,13 @@ runs:
         key: playwright-${{ runner.os }}-${{ hashFiles('common/config/rush/pnpm-lock.yaml') }}
 
     - name: Install Playwright browsers
-      if: inputs.skip-e2e != 'true' && steps.playwright-cache.outputs.cache-hit != 'true'
+      if: steps.playwright-cache.outputs.cache-hit != 'true'
       shell: bash
       run: npx playwright install --with-deps chromium
       working-directory: tests/e2e-tests
 
     - name: Install Playwright system deps
-      if: inputs.skip-e2e != 'true' && steps.playwright-cache.outputs.cache-hit == 'true'
+      if: steps.playwright-cache.outputs.cache-hit == 'true'
       shell: bash
       run: npx playwright install-deps chromium
       working-directory: tests/e2e-tests
