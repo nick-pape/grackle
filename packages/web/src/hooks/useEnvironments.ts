@@ -8,6 +8,7 @@
  */
 
 import { useState, useCallback } from "react";
+import { ConnectError } from "@connectrpc/connect";
 import { warnBadPayload } from "@grackle-ai/web-components";
 import type { Environment, GrackleEvent, ProvisionStatus, WsMessage } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
@@ -15,6 +16,11 @@ import { protoToEnvironment } from "./proto-converters.js";
 
 /** Delay in milliseconds before clearing a successful provision status. */
 const PROVISION_STATUS_CLEAR_DELAY_MS: number = 5_000;
+
+/** Extracts a user-facing message from a caught error. */
+function extractErrorMessage(err: unknown): string {
+  return err instanceof ConnectError ? err.message : "Operation failed";
+}
 
 /** Values returned by {@link useEnvironments}. */
 export interface UseEnvironmentsResult {
@@ -41,6 +47,10 @@ export interface UseEnvironmentsResult {
   stopEnvironment: (environmentId: string) => Promise<void>;
   /** Remove an environment by ID. */
   removeEnvironment: (environmentId: string) => Promise<void>;
+  /** The last operation error message, or empty string if none. */
+  operationError: string;
+  /** Clear the current operation error. */
+  clearOperationError: () => void;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
   /** Handle legacy WS messages injected by E2E tests. */
@@ -57,6 +67,9 @@ export function useEnvironments(): UseEnvironmentsResult {
   const [provisionStatus, setProvisionStatus] = useState<
     Record<string, ProvisionStatus>
   >({});
+  const [operationError, setOperationError] = useState("");
+
+  const clearOperationError = useCallback(() => { setOperationError(""); }, []);
 
   const loadEnvironments = useCallback(async () => {
     try {
@@ -139,14 +152,15 @@ export function useEnvironments(): UseEnvironmentsResult {
       adapterType: string,
       adapterConfig?: Record<string, unknown>,
     ) => {
+      setOperationError("");
       try {
         await grackleClient.addEnvironment({
           displayName,
           adapterType,
           adapterConfig: JSON.stringify(adapterConfig ?? {}),
         });
-      } catch {
-        // empty
+      } catch (err) {
+        setOperationError(extractErrorMessage(err));
       }
     },
     [],
@@ -157,14 +171,15 @@ export function useEnvironments(): UseEnvironmentsResult {
       environmentId: string,
       fields: { displayName?: string; adapterConfig?: Record<string, unknown> },
     ) => {
+      setOperationError("");
       try {
         await grackleClient.updateEnvironment({
           id: environmentId,
           displayName: fields.displayName,
           adapterConfig: fields.adapterConfig ? JSON.stringify(fields.adapterConfig) : undefined,
         });
-      } catch {
-        // empty
+      } catch (err) {
+        setOperationError(extractErrorMessage(err));
       }
     },
     [],
@@ -172,6 +187,7 @@ export function useEnvironments(): UseEnvironmentsResult {
 
   const provisionEnvironment = useCallback(
     async (environmentId: string, force?: boolean) => {
+      setOperationError("");
       try {
         const stream = grackleClient.provisionEnvironment({ id: environmentId, force: force ?? false });
         for await (const event of stream) {
@@ -193,12 +209,13 @@ export function useEnvironments(): UseEnvironmentsResult {
             }, PROVISION_STATUS_CLEAR_DELAY_MS);
           }
         }
-      } catch {
+      } catch (err) {
         setProvisionStatus((prev) => {
           const next = { ...prev };
           delete next[environmentId];
           return next;
         });
+        setOperationError(extractErrorMessage(err));
       }
     },
     [],
@@ -206,10 +223,11 @@ export function useEnvironments(): UseEnvironmentsResult {
 
   const stopEnvironment = useCallback(
     async (environmentId: string) => {
+      setOperationError("");
       try {
         await grackleClient.stopEnvironment({ id: environmentId });
-      } catch {
-        // empty
+      } catch (err) {
+        setOperationError(extractErrorMessage(err));
       }
     },
     [],
@@ -217,10 +235,11 @@ export function useEnvironments(): UseEnvironmentsResult {
 
   const removeEnvironment = useCallback(
     async (environmentId: string) => {
+      setOperationError("");
       try {
         await grackleClient.removeEnvironment({ id: environmentId });
-      } catch {
-        // empty
+      } catch (err) {
+        setOperationError(extractErrorMessage(err));
       }
     },
     [],
@@ -229,6 +248,8 @@ export function useEnvironments(): UseEnvironmentsResult {
   return {
     environments,
     provisionStatus,
+    operationError,
+    clearOperationError,
     loadEnvironments,
     addEnvironment,
     updateEnvironment,

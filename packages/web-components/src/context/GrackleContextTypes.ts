@@ -74,6 +74,8 @@ export interface UseGrackleSocketResult {
   credentialProviders: CredentialProviderConfig;
   updateCredentialProviders: (config: CredentialProviderConfig) => Promise<void>;
   provisionStatus: Record<string, ProvisionStatus>;
+  environmentOperationError: string;
+  clearEnvironmentOperationError: () => void;
   provisionEnvironment: (environmentId: string, force?: boolean) => Promise<void>;
   stopEnvironment: (environmentId: string) => Promise<void>;
   removeEnvironment: (environmentId: string) => Promise<void>;

@@ -961,6 +961,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       deleteToken: mockDeleteToken,
       updateCredentialProviders: mockUpdateCredentialProviders,
       provisionStatus: {},
+      environmentOperationError: "",
+      clearEnvironmentOperationError: () => { },
       provisionEnvironment: async (_environmentId: string, _force?: boolean) => { },
       stopEnvironment: async () => { },
       removeEnvironment: async () => { },
