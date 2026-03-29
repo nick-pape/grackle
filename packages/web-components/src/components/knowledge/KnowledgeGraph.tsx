@@ -254,10 +254,7 @@ export function KnowledgeGraph({
 
     // Drag behavior — lets users grab and reposition nodes
     const dragBehavior = drag<SVGGElement, SimNode>()
-      .on("start", (event: D3DragEvent<SVGGElement, SimNode, SimNode>, d: SimNode) => {
-        if (!event.active) {
-          sim.alphaTarget(0.3).restart();
-        }
+      .on("start", (_event: D3DragEvent<SVGGElement, SimNode, SimNode>, d: SimNode) => {
         d.fx = d.x;
         d.fy = d.y;
         dragDistanceRef.current = 0;
@@ -266,6 +263,10 @@ export function KnowledgeGraph({
         d.fx = event.x;
         d.fy = event.y;
         dragDistanceRef.current += Math.abs(event.dx) + Math.abs(event.dy);
+        // Only reheat simulation once we confirm an actual drag gesture
+        if (dragDistanceRef.current > DRAG_CLICK_THRESHOLD && sim.alphaTarget() === 0) {
+          sim.alphaTarget(0.3).restart();
+        }
       })
       .on("end", (event: D3DragEvent<SVGGElement, SimNode, SimNode>, d: SimNode) => {
         if (!event.active) {
