@@ -2,6 +2,21 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.91.2",
+      "tag": "@grackle-ai/cli_v0.91.2",
+      "date": "Sun, 29 Mar 2026 23:27:43 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Refactor UseGrackleSocketResult to group properties by domain (environments, sessions, workspaces, etc.)"
+          },
+          {
+            "comment": "Add environment status reconciliation phase to detect and fix drift between in-memory connections and database status"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.91.1",
       "tag": "@grackle-ai/cli_v0.91.1",
       "date": "Sun, 29 Mar 2026 18:40:32 GMT",

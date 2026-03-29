@@ -1,6 +1,14 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 29 Mar 2026 18:40:32 GMT and should not be manually modified.
+This log was last generated on Sun, 29 Mar 2026 23:27:43 GMT and should not be manually modified.
+
+## 0.91.2
+Sun, 29 Mar 2026 23:27:43 GMT
+
+### Patches
+
+- Refactor UseGrackleSocketResult to group properties by domain (environments, sessions, workspaces, etc.)
+- Add environment status reconciliation phase to detect and fix drift between in-memory connections and database status
 
 ## 0.91.1
 Sun, 29 Mar 2026 18:40:32 GMT
