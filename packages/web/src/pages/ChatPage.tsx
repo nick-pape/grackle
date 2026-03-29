@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "rea
 import { ROOT_TASK_ID } from "@grackle-ai/common";
 import { useGrackle } from "../context/GrackleContext.js";
 import { ChatInput, EventStream, SplitButton, groupConsecutiveTextEvents, pairToolEvents, useToast } from "@grackle-ai/web-components";
+import { ChatShimmer } from "./ChatShimmer.js";
 import styles from "./ChatPage.module.scss";
 
 /** Empty state shown when no session is active. */
@@ -30,6 +31,7 @@ export function ChatPage(): JSX.Element {
     loadTaskSessions, loadSessionEvents, kill, stopGraceful,
     taskSessions,
     sendInput, spawn, startTask, personas, provisionEnvironment,
+    sessionsLoading, tasksLoading,
   } = useGrackle();
   const { showToast } = useToast();
 
@@ -107,6 +109,10 @@ export function ChatPage(): JSX.Element {
     },
     [startTask],
   );
+
+  if (!rootTask && (sessionsLoading || tasksLoading)) {
+    return <ChatShimmer />;
+  }
 
   return (
     <div className={styles.panelContainer} data-testid="chat-page">

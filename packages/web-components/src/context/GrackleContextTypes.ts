@@ -39,6 +39,8 @@ export interface UseGrackleSocketResult {
   findings: FindingData[];
   selectedFinding: FindingData | undefined;
   findingLoading: boolean;
+  /** Whether a findings list fetch is in-flight. */
+  findingsLoading: boolean;
   tokens: TokenInfo[];
   spawn: (environmentId: string, prompt: string, personaId?: string, workingDirectory?: string) => Promise<void>;
   sendInput: (sessionId: string, text: string) => Promise<void>;

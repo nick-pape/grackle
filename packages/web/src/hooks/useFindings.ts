@@ -11,6 +11,7 @@ import { useState, useCallback } from "react";
 import type { FindingData, GrackleEvent } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToFinding } from "./proto-converters.js";
+import { useLoadingState } from "./useLoadingState.js";
 
 /** Values returned by {@link useFindings}. */
 export interface UseFindingsResult {
@@ -20,6 +21,8 @@ export interface UseFindingsResult {
   selectedFinding: FindingData | undefined;
   /** Whether a single finding is being loaded. */
   findingLoading: boolean;
+  /** Whether a findings list fetch is in-flight. */
+  findingsLoading: boolean;
   /** Load findings for a given workspace. */
   loadFindings: (workspaceId: string) => Promise<void>;
   /** Load findings across all workspaces. */
@@ -47,24 +50,25 @@ export function useFindings(): UseFindingsResult {
   const [findings, setFindings] = useState<FindingData[]>([]);
   const [selectedFinding, setSelectedFinding] = useState<FindingData | undefined>(undefined);
   const [findingLoading, setFindingLoading] = useState(false);
+  const { loading: findingsLoading, track: trackFindings } = useLoadingState();
 
   const loadFindings = useCallback(async (workspaceId: string) => {
     try {
-      const resp = await grackleClient.queryFindings({ workspaceId });
+      const resp = await trackFindings(grackleClient.queryFindings({ workspaceId }));
       setFindings(resp.findings.map(protoToFinding));
     } catch {
       // empty
     }
-  }, []);
+  }, [trackFindings]);
 
   const loadAllFindings = useCallback(async () => {
     try {
-      const resp = await grackleClient.queryFindings({ workspaceId: "" });
+      const resp = await trackFindings(grackleClient.queryFindings({ workspaceId: "" }));
       setFindings(resp.findings.map(protoToFinding));
     } catch {
       // empty
     }
-  }, []);
+  }, [trackFindings]);
 
   const loadFinding = useCallback(async (findingId: string) => {
     setSelectedFinding(undefined);
@@ -113,5 +117,5 @@ export function useFindings(): UseFindingsResult {
     [],
   );
 
-  return { findings, selectedFinding, findingLoading, loadFindings, loadAllFindings, loadFinding, postFinding, handleEvent };
+  return { findings, selectedFinding, findingLoading, findingsLoading, loadFindings, loadAllFindings, loadFinding, postFinding, handleEvent };
 }

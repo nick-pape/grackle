@@ -5,9 +5,8 @@ import { Breadcrumbs, ConfirmDialog, DagView, EditableCheckbox, EditableSelect, 
 import { useHotkey } from "../hooks/useHotkey.js";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { WorkspaceShimmer } from "./WorkspaceShimmer.js";
 import styles from "./page-layout.module.scss";
-
-
 
 /** Converts an ISO timestamp into a human-friendly relative time string. */
 function relativeTime(iso: string | undefined): string {
@@ -51,6 +50,7 @@ export function WorkspacePage(): JSX.Element {
   const {
     tasks, environments, workspaces, personas, sessions, archiveWorkspace, updateWorkspace,
     usageCache, loadUsage,
+    workspacesLoading,
   } = useGrackle();
   const { resolvedThemeId } = useThemeContext();
 
@@ -61,6 +61,7 @@ export function WorkspacePage(): JSX.Element {
   const previousWorkspaceIdRef = useRef<string | undefined>(undefined);
 
   const workspace = workspaces.find((p) => p.id === workspaceId);
+
   const environmentId = routeEnvironmentId ?? workspace?.environmentId ?? "";
   const breadcrumbs = buildWorkspaceBreadcrumbs(workspaceId!, environmentId, workspaces, environments);
 
@@ -95,6 +96,10 @@ export function WorkspacePage(): JSX.Element {
   const done = workspaceTasks.filter((t) => t.status === "complete").length;
   const total = workspaceTasks.length;
   const progressPct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  if (!workspace && workspacesLoading) {
+    return <WorkspaceShimmer />;
+  }
 
   return (
     <div className={styles.panelContainer}>
