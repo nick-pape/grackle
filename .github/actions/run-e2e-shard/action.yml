@@ -1,11 +1,21 @@
-name: Build and Test
-description: Shared install → build → Playwright → test steps
+name: Run E2E Shard
+description: Run a Playwright E2E test shard with cached dependencies
 
 inputs:
-  skip-e2e:
-    description: Skip E2E tests (Playwright install + rush e2e)
+  project:
+    description: Playwright project name (chromium or knowledge)
+    required: true
+  shard:
+    description: 'Shard specification (e.g., "1/2") or empty for no sharding'
     required: false
-    default: "false"
+    default: ""
+  artifact-name:
+    description: Name for uploaded test results artifact
+    required: true
+  workers:
+    description: Override E2E_WORKERS (number of Playwright workers per shard)
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -43,7 +53,6 @@ runs:
       run: node common/scripts/install-run-rush.js build
 
     - name: Cache Playwright browsers
-      if: inputs.skip-e2e != 'true'
       id: playwright-cache
       uses: actions/cache@v4
       with:
@@ -51,22 +60,34 @@ runs:
         key: playwright-${{ runner.os }}-${{ hashFiles('common/config/rush/pnpm-lock.yaml') }}
 
     - name: Install Playwright browsers
-      if: inputs.skip-e2e != 'true' && steps.playwright-cache.outputs.cache-hit != 'true'
+      if: steps.playwright-cache.outputs.cache-hit != 'true'
       shell: bash
       run: npx playwright install --with-deps chromium
       working-directory: tests/e2e-tests
 
     - name: Install Playwright system deps
-      if: inputs.skip-e2e != 'true' && steps.playwright-cache.outputs.cache-hit == 'true'
+      if: steps.playwright-cache.outputs.cache-hit == 'true'
       shell: bash
       run: npx playwright install-deps chromium
       working-directory: tests/e2e-tests
 
-    - name: Run unit tests
-      shell: bash
-      run: node common/scripts/install-run-rush.js test --verbose
-
     - name: Run E2E tests
-      if: inputs.skip-e2e != 'true'
       shell: bash
-      run: node common/scripts/install-run-rush.js e2e --verbose
+      working-directory: tests/e2e-tests
+      env:
+        E2E_WORKERS: ${{ inputs.workers }}
+      run: |
+        ARGS="--project=${{ inputs.project }}"
+        if [ -n "${{ inputs.shard }}" ]; then
+          ARGS="$ARGS --shard=${{ inputs.shard }}"
+        fi
+        npx playwright test $ARGS
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: tests/e2e-tests/test-results/e2e-results.xml
+        if-no-files-found: ignore
+        retention-days: 30
