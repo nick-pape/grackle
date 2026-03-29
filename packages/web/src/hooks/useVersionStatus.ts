@@ -29,8 +29,9 @@ export function useVersionStatus(): VersionStatusInfo | undefined {
   useEffect(() => {
     let cancelled = false;
 
-    grackleClient.getVersionStatus({}).then(
-      (result) => {
+    const load = async (): Promise<void> => {
+      try {
+        const result = await grackleClient.getVersionStatus({});
         if (!cancelled) {
           setStatus({
             currentVersion: result.currentVersion,
@@ -39,11 +40,11 @@ export function useVersionStatus(): VersionStatusInfo | undefined {
             isDocker: result.isDocker,
           });
         }
-      },
-      () => {
+      } catch {
         // Silent failure — version check is non-critical
-      },
-    );
+      }
+    };
+    load().catch(() => {});
 
     return () => {
       cancelled = true;

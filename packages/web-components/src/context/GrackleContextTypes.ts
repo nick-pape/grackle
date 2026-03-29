@@ -26,20 +26,20 @@ export interface UseGrackleSocketResult {
   selectedFinding: FindingData | undefined;
   findingLoading: boolean;
   tokens: TokenInfo[];
-  spawn: (environmentId: string, prompt: string, personaId?: string, workingDirectory?: string) => void;
-  sendInput: (sessionId: string, text: string) => void;
-  kill: (sessionId: string) => void;
-  stopGraceful: (sessionId: string) => void;
+  spawn: (environmentId: string, prompt: string, personaId?: string, workingDirectory?: string) => Promise<void>;
+  sendInput: (sessionId: string, text: string) => Promise<void>;
+  kill: (sessionId: string) => Promise<void>;
+  stopGraceful: (sessionId: string) => Promise<void>;
   refresh: () => void;
-  loadSessionEvents: (sessionId: string) => void;
+  loadSessionEvents: (sessionId: string) => Promise<void>;
   clearEvents: () => void;
-  loadWorkspaces: () => void;
+  loadWorkspaces: () => Promise<void>;
   createWorkspace: (
     name: string, description?: string, repoUrl?: string, environmentId?: string,
     defaultPersonaId?: string, useWorktrees?: boolean, workingDirectory?: string,
     onSuccess?: () => void, onError?: (message: string) => void,
-  ) => void;
-  archiveWorkspace: (workspaceId: string) => void;
+  ) => Promise<void>;
+  archiveWorkspace: (workspaceId: string) => Promise<void>;
   updateWorkspace: (
     workspaceId: string,
     fields: {
@@ -47,42 +47,42 @@ export interface UseGrackleSocketResult {
       environmentId?: string; workingDirectory?: string;
       useWorktrees?: boolean; defaultPersonaId?: string;
     },
-  ) => void;
-  loadTasks: (workspaceId: string) => void;
-  loadAllTasks: () => void;
+  ) => Promise<void>;
+  loadTasks: (workspaceId: string) => Promise<void>;
+  loadAllTasks: () => Promise<void>;
   createTask: (
     workspaceId: string, title: string, description?: string, dependsOn?: string[],
     parentTaskId?: string, defaultPersonaId?: string, canDecompose?: boolean,
     onSuccess?: () => void, onError?: (message: string) => void,
-  ) => void;
-  startTask: (taskId: string, personaId?: string, environmentId?: string, notes?: string) => void;
-  stopTask: (taskId: string) => void;
-  completeTask: (taskId: string) => void;
-  resumeTask: (taskId: string) => void;
-  updateTask: (taskId: string, title: string, description: string, dependsOn: string[], defaultPersonaId?: string) => void;
-  deleteTask: (taskId: string) => void;
-  loadFindings: (workspaceId: string) => void;
-  loadAllFindings: () => void;
-  loadFinding: (findingId: string) => void;
-  postFinding: (workspaceId: string, title: string, content: string, category?: string, tags?: string[]) => void;
-  loadEnvironments: () => void;
-  addEnvironment: (displayName: string, adapterType: string, adapterConfig?: Record<string, unknown>) => void;
-  updateEnvironment: (environmentId: string, fields: { displayName?: string; adapterConfig?: Record<string, unknown> }) => void;
-  loadTokens: () => void;
-  setToken: (name: string, value: string, tokenType: string, envVar: string, filePath: string) => void;
-  deleteToken: (name: string) => void;
+  ) => Promise<void>;
+  startTask: (taskId: string, personaId?: string, environmentId?: string, notes?: string) => Promise<void>;
+  stopTask: (taskId: string) => Promise<void>;
+  completeTask: (taskId: string) => Promise<void>;
+  resumeTask: (taskId: string) => Promise<void>;
+  updateTask: (taskId: string, title: string, description: string, dependsOn: string[], defaultPersonaId?: string) => Promise<void>;
+  deleteTask: (taskId: string) => Promise<void>;
+  loadFindings: (workspaceId: string) => Promise<void>;
+  loadAllFindings: () => Promise<void>;
+  loadFinding: (findingId: string) => Promise<void>;
+  postFinding: (workspaceId: string, title: string, content: string, category?: string, tags?: string[]) => Promise<void>;
+  loadEnvironments: () => Promise<void>;
+  addEnvironment: (displayName: string, adapterType: string, adapterConfig?: Record<string, unknown>) => Promise<void>;
+  updateEnvironment: (environmentId: string, fields: { displayName?: string; adapterConfig?: Record<string, unknown> }) => Promise<void>;
+  loadTokens: () => Promise<void>;
+  setToken: (name: string, value: string, tokenType: string, envVar: string, filePath: string) => Promise<void>;
+  deleteToken: (name: string) => Promise<void>;
   credentialProviders: CredentialProviderConfig;
-  updateCredentialProviders: (config: CredentialProviderConfig) => void;
+  updateCredentialProviders: (config: CredentialProviderConfig) => Promise<void>;
   provisionStatus: Record<string, ProvisionStatus>;
-  provisionEnvironment: (environmentId: string, force?: boolean) => void;
-  stopEnvironment: (environmentId: string) => void;
-  removeEnvironment: (environmentId: string) => void;
+  provisionEnvironment: (environmentId: string, force?: boolean) => Promise<void>;
+  stopEnvironment: (environmentId: string) => Promise<void>;
+  removeEnvironment: (environmentId: string) => Promise<void>;
   codespaces: Codespace[];
   codespaceError: string;
   codespaceListError: string;
   codespaceCreating: boolean;
-  listCodespaces: () => void;
-  createCodespace: (repo: string, machine?: string) => void;
+  listCodespaces: () => Promise<void>;
+  createCodespace: (repo: string, machine?: string) => Promise<void>;
   workspaceCreating: boolean;
   taskStartingId: string | undefined;
   personas: PersonaData[];
@@ -96,12 +96,12 @@ export interface UseGrackleSocketResult {
   ) => Promise<PersonaData>;
   deletePersona: (personaId: string) => Promise<void>;
   taskSessions: Record<string, Session[]>;
-  loadTaskSessions: (taskId: string) => void;
+  loadTaskSessions: (taskId: string) => Promise<void>;
   appDefaultPersonaId: string;
   setAppDefaultPersonaId: (personaId: string) => Promise<void>;
   onboardingCompleted: boolean | undefined;
-  completeOnboarding: () => void;
+  completeOnboarding: () => Promise<void>;
   usageCache: Record<string, UsageStats>;
-  loadUsage: (scope: string, id: string) => void;
+  loadUsage: (scope: string, id: string) => Promise<void>;
   knowledge: UseKnowledgeResult;
 }

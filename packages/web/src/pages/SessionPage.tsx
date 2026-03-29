@@ -83,7 +83,7 @@ export function SessionPage(): JSX.Element {
   useEffect(() => {
     if (sessionId && sessionId !== loadedRef.current) {
       loadedRef.current = sessionId;
-      loadSessionEvents(sessionId);
+      loadSessionEvents(sessionId).catch(() => {});
     }
   }, [sessionId, loadSessionEvents]);
 
@@ -104,8 +104,8 @@ export function SessionPage(): JSX.Element {
         sessionId={sessionId!}
         session={session}
         isActive={isActive}
-        onStop={() => stopGraceful(sessionId!)}
-        onKill={() => kill(sessionId!)}
+        onStop={() => { stopGraceful(sessionId!).catch(() => {}); }}
+        onKill={() => { kill(sessionId!).catch(() => {}); }}
       />
       <EventStream
         events={groupedEvents}
@@ -119,10 +119,10 @@ export function SessionPage(): JSX.Element {
           environmentId={session!.environmentId}
           personas={personas}
           environments={environments}
-          onSendInput={sendInput}
-          onSpawn={spawn}
-          onStartTask={startTask}
-          onProvisionEnvironment={provisionEnvironment}
+          onSendInput={(sid, text) => { sendInput(sid, text).catch(() => {}); }}
+          onSpawn={(eid, prompt, pid) => { spawn(eid, prompt, pid).catch(() => {}); }}
+          onStartTask={(tid, pid, eid) => { startTask(tid, pid, eid).catch(() => {}); }}
+          onProvisionEnvironment={(eid) => { provisionEnvironment(eid).catch(() => {}); }}
           onShowToast={showToast}
         />
       )}

@@ -80,7 +80,7 @@ export function DashboardPage(): JSX.Element {
     for (const ws of workspaces) {
       if (!loadedWorkspaceIdsRef.current.has(ws.id)) {
         loadedWorkspaceIdsRef.current.add(ws.id);
-        loadTasks(ws.id);
+        loadTasks(ws.id).catch(() => {});
       }
     }
   }, [workspaces, loadTasks]);

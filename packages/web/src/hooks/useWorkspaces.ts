@@ -20,7 +20,7 @@ export interface UseWorkspacesResult {
   /** Whether a workspace creation is currently in progress. */
   workspaceCreating: boolean;
   /** Request the current workspace list from the server. */
-  loadWorkspaces: () => void;
+  loadWorkspaces: () => Promise<void>;
   /** Create a new workspace. */
   createWorkspace: (
     name: string,
@@ -32,9 +32,9 @@ export interface UseWorkspacesResult {
     workingDirectory?: string,
     onSuccess?: () => void,
     onError?: (message: string) => void,
-  ) => void;
+  ) => Promise<void>;
   /** Archive a workspace by ID. */
-  archiveWorkspace: (workspaceId: string) => void;
+  archiveWorkspace: (workspaceId: string) => Promise<void>;
   /** Update fields on an existing workspace. */
   updateWorkspace: (
     workspaceId: string,
@@ -47,7 +47,7 @@ export interface UseWorkspacesResult {
       useWorktrees?: boolean;
       defaultPersonaId?: string;
     },
-  ) => void;
+  ) => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
   /** Reset transient state (e.g. `workspaceCreating`) on disconnect. */
@@ -63,22 +63,24 @@ export function useWorkspaces(): UseWorkspacesResult {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceCreating, setWorkspaceCreating] = useState(false);
 
-  const loadWorkspaces = useCallback(() => {
-    grackleClient.listWorkspaces({}).then(
-      (resp) => { setWorkspaces(resp.workspaces.map(protoToWorkspace)); },
-      () => {},
-    );
+  const loadWorkspaces = useCallback(async () => {
+    try {
+      const resp = await grackleClient.listWorkspaces({});
+      setWorkspaces(resp.workspaces.map(protoToWorkspace));
+    } catch {
+      // empty
+    }
   }, []);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     switch (event.type) {
       case "workspace.created":
         setWorkspaceCreating(false);
-        loadWorkspaces();
+        loadWorkspaces().catch(() => {});
         return true;
       case "workspace.archived":
       case "workspace.updated":
-        loadWorkspaces();
+        loadWorkspaces().catch(() => {});
         return true;
       default:
         return false;
@@ -90,7 +92,7 @@ export function useWorkspaces(): UseWorkspacesResult {
   }, []);
 
   const createWorkspace = useCallback(
-    (
+    async (
       name: string,
       description?: string,
       repoUrl?: string,
@@ -102,40 +104,40 @@ export function useWorkspaces(): UseWorkspacesResult {
       onError?: (message: string) => void,
     ) => {
       setWorkspaceCreating(true);
-      grackleClient.createWorkspace({
-        name,
-        description: description || "",
-        repoUrl: repoUrl || "",
-        environmentId: environmentId || "",
-        defaultPersonaId: defaultPersonaId || undefined,
-        useWorktrees: useWorktrees ?? true,
-        workingDirectory: workingDirectory || undefined,
-      }).then(
-        () => {
-          setWorkspaceCreating(false);
-          onSuccess?.();
-        },
-        (err) => {
-          setWorkspaceCreating(false);
-          const message = err instanceof ConnectError ? err.message : "Failed to create workspace";
-          onError?.(message);
-        },
-      );
+      try {
+        await grackleClient.createWorkspace({
+          name,
+          description: description || "",
+          repoUrl: repoUrl || "",
+          environmentId: environmentId || "",
+          defaultPersonaId: defaultPersonaId || undefined,
+          useWorktrees: useWorktrees ?? true,
+          workingDirectory: workingDirectory || undefined,
+        });
+        setWorkspaceCreating(false);
+        onSuccess?.();
+      } catch (err) {
+        setWorkspaceCreating(false);
+        const message = err instanceof ConnectError ? err.message : "Failed to create workspace";
+        onError?.(message);
+      }
     },
     [],
   );
 
   const archiveWorkspace = useCallback(
-    (workspaceId: string) => {
-      grackleClient.archiveWorkspace({ id: workspaceId }).catch(
-        () => {},
-      );
+    async (workspaceId: string) => {
+      try {
+        await grackleClient.archiveWorkspace({ id: workspaceId });
+      } catch {
+        // empty
+      }
     },
     [],
   );
 
   const updateWorkspace = useCallback(
-    (
+    async (
       workspaceId: string,
       fields: {
         name?: string;
@@ -147,9 +149,11 @@ export function useWorkspaces(): UseWorkspacesResult {
         defaultPersonaId?: string;
       },
     ) => {
-      grackleClient.updateWorkspace({ id: workspaceId, ...fields }).catch(
-        () => {},
-      );
+      try {
+        await grackleClient.updateWorkspace({ id: workspaceId, ...fields });
+      } catch {
+        // empty
+      }
     },
     [],
   );

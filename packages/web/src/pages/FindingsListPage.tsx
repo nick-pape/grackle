@@ -25,7 +25,7 @@ export function FindingsListPage(): JSX.Element {
 
   useEffect(() => {
     if (workspaceId) {
-      loadFindings(workspaceId);
+      loadFindings(workspaceId).catch(() => {});
     }
     // Global findings are loaded by WithFindingsSidebar; only load here for workspace-scoped routes.
   }, [workspaceId, loadFindings]);

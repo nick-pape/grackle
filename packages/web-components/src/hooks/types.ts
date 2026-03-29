@@ -192,12 +192,12 @@ export interface UseKnowledgeResult {
   selectedId: string | undefined;
   loading: boolean;
   searchQuery: string;
-  search(query: string): void;
+  search(query: string): Promise<void>;
   clearSearch(): void;
-  selectNode(id: string): void;
+  selectNode(id: string): Promise<void>;
   clearSelection(): void;
-  expandNode(id: string): void;
-  loadRecent(workspaceId?: string): void;
+  expandNode(id: string): Promise<void>;
+  loadRecent(workspaceId?: string): Promise<void>;
   /** Handle domain events from the event bus. Returns true if handled. */
   handleEvent(event: GrackleEvent): boolean;
 }

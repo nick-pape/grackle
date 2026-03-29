@@ -18,8 +18,8 @@ export function TaskEditPage(): JSX.Element {
       tasks={tasks}
       workspaces={workspaces}
       personas={personas}
-      onCreateTask={createTask}
-      onUpdateTask={updateTask}
+      onCreateTask={(wsId, title, desc, deps, parentId, personaId, canDecompose, onSuccess, onError) => { createTask(wsId, title, desc, deps, parentId, personaId, canDecompose, onSuccess, onError).catch(() => {}); }}
+      onUpdateTask={(tid, title, desc, deps, personaId) => { updateTask(tid, title, desc, deps, personaId).catch(() => {}); }}
       onShowToast={showToast}
     />
   );

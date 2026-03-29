@@ -17,7 +17,7 @@ export interface UseTokensResult {
   /** All known tokens. */
   tokens: TokenInfo[];
   /** Request the current token list from the server. */
-  loadTokens: () => void;
+  loadTokens: () => Promise<void>;
   /** Create or update a token on the server. */
   setToken: (
     name: string,
@@ -25,9 +25,9 @@ export interface UseTokensResult {
     tokenType: string,
     envVar: string,
     filePath: string,
-  ) => void;
+  ) => Promise<void>;
   /** Delete a token by name. */
-  deleteToken: (name: string) => void;
+  deleteToken: (name: string) => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
 }
@@ -40,41 +40,47 @@ export interface UseTokensResult {
 export function useTokens(): UseTokensResult {
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
 
-  const loadTokens = useCallback(() => {
-    grackleClient.listTokens({}).then(
-      (resp) => { setTokens(resp.tokens.map(protoToToken)); },
-      () => {},
-    );
+  const loadTokens = useCallback(async () => {
+    try {
+      const resp = await grackleClient.listTokens({});
+      setTokens(resp.tokens.map(protoToToken));
+    } catch {
+      // empty
+    }
   }, []);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     if (event.type === "token.changed") {
-      loadTokens();
+      loadTokens().catch(() => {});
       return true;
     }
     return false;
   }, [loadTokens]);
 
   const setToken = useCallback(
-    (
+    async (
       name: string,
       value: string,
       tokenType: string,
       envVar: string,
       filePath: string,
     ) => {
-      grackleClient.setToken({ name, value, type: tokenType, envVar, filePath }).catch(
-        () => {},
-      );
+      try {
+        await grackleClient.setToken({ name, value, type: tokenType, envVar, filePath });
+      } catch {
+        // empty
+      }
     },
     [],
   );
 
   const deleteToken = useCallback(
-    (name: string) => {
-      grackleClient.deleteToken({ name }).catch(
-        () => {},
-      );
+    async (name: string) => {
+      try {
+        await grackleClient.deleteToken({ name });
+      } catch {
+        // empty
+      }
     },
     [],
   );
