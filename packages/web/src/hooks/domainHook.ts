@@ -11,14 +11,4 @@
  * @module
  */
 
-import type { GrackleEvent } from "@grackle-ai/web-components";
-
-/** Lifecycle contract that every domain hook must implement. */
-export interface DomainHook {
-  /** Reload data when the ConnectRPC stream connects or reconnects. */
-  onConnect(): Promise<void>;
-  /** Reset transient state when the stream disconnects. */
-  onDisconnect(): void;
-  /** Handle a domain event. Return `true` if the event was consumed. */
-  handleEvent(event: GrackleEvent): boolean;
-}
+export type { DomainHook } from "@grackle-ai/web-components";

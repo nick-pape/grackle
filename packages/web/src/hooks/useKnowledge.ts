@@ -40,7 +40,7 @@ function safeParseJson(json: string): Record<string, unknown> | undefined {
 // ---------------------------------------------------------------------------
 
 /** Hook for managing Knowledge Graph state via ConnectRPC. */
-export function useKnowledge(): UseKnowledgeResult & { domainHook: DomainHook } {
+export function useKnowledge(): UseKnowledgeResult {
   const [nodes, setNodes] = useState<Map<string, GraphNode>>(new Map());
   const [links, setLinks] = useState<GraphLink[]>([]);
   const [selectedNode, setSelectedNode] = useState<NodeDetail | undefined>(undefined);

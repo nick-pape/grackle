@@ -7,8 +7,8 @@ import { EnvironmentEditPanel, useToast } from "@grackle-ai/web-components";
 export function EnvironmentEditPage(): JSX.Element {
   const { environmentId } = useParams<{ environmentId: string }>();
   const {
-    environments, addEnvironment, updateEnvironment, listCodespaces,
-    codespaces, codespaceError, codespaceListError, codespaceCreating, createCodespace,
+    environments: { environments, addEnvironment, updateEnvironment },
+    codespaces: { codespaces, codespaceError, codespaceListError, codespaceCreating, listCodespaces, createCodespace },
   } = useGrackle();
   const { showToast } = useToast();
 

@@ -8,52 +8,13 @@
  */
 
 import { useState, useCallback } from "react";
-import type { PersonaData, GrackleEvent } from "@grackle-ai/web-components";
+import type { PersonaData, GrackleEvent, UsePersonasResult } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToPersona } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
 
-/** Values returned by {@link usePersonas}. */
-export interface UsePersonasResult {
-  /** All known personas. */
-  personas: PersonaData[];
-  /** Whether the persona list is currently being loaded. */
-  personasLoading: boolean;
-  /** Request the current persona list from the server. */
-  loadPersonas: () => Promise<void>;
-  /** Create a new persona. */
-  createPersona: (
-    name: string,
-    description: string,
-    systemPrompt: string,
-    runtime?: string,
-    model?: string,
-    maxTurns?: number,
-    type?: string,
-    script?: string,
-    allowedMcpTools?: string[],
-  ) => Promise<PersonaData>;
-  /** Update an existing persona. */
-  updatePersona: (
-    personaId: string,
-    name?: string,
-    description?: string,
-    systemPrompt?: string,
-    runtime?: string,
-    model?: string,
-    maxTurns?: number,
-    type?: string,
-    script?: string,
-    allowedMcpTools?: string[],
-  ) => Promise<PersonaData>;
-  /** Delete a persona by ID. */
-  deletePersona: (personaId: string) => Promise<void>;
-  /** Handle a domain event from the event bus. Returns `true` if handled. */
-  handleEvent: (event: GrackleEvent) => boolean;
-  /** Lifecycle hook for connect/disconnect/event routing. */
-  domainHook: DomainHook;
-}
+export type { UsePersonasResult } from "@grackle-ai/web-components";
 
 /**
  * Hook that manages persona state and CRUD actions via ConnectRPC.

@@ -111,6 +111,10 @@ export type {
   CredentialProviderConfig, Codespace, PersonaData,
   ProvisionStatus, GrackleEvent, WsMessage, SendFunction,
   GraphNode, GraphLink, NodeDetail, UseKnowledgeResult,
+  UseEnvironmentsResult, UseSessionsResult, UseWorkspacesResult,
+  UseTasksResult, UseFindingsResult, UseTokensResult,
+  UseCredentialsResult, UseCodespacesResult, UsePersonasResult,
+  DomainHook,
 } from "./hooks/types.js";
 export {
   isObject, warnBadPayload, isGrackleEvent, isSessionEvent,

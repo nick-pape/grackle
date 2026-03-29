@@ -9,65 +9,13 @@
 
 import { useState, useCallback } from "react";
 import { MAX_EVENTS, isSessionEvent, mapEndReason, mapSessionStatus, warnBadPayload } from "@grackle-ai/web-components";
-import type { Session, SessionEvent, WsMessage } from "@grackle-ai/web-components";
+import type { Session, SessionEvent, WsMessage, UseSessionsResult } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToSession, protoToSessionEvent } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
 
-/** Values returned by {@link useSessions}. */
-export interface UseSessionsResult {
-  /** All known sessions. */
-  sessions: Session[];
-  /** Whether the session list is currently being loaded. */
-  sessionsLoading: boolean;
-  /** Session events currently loaded in memory. */
-  events: SessionEvent[];
-  /**
-   * The total number of events that have been silently dropped due to the
-   * MAX_EVENTS in-memory cap. A non-zero value means the user is only seeing
-   * the most-recent slice of a long session; older events are still available
-   * in the server-side JSONL log.
-   */
-  eventsDropped: number;
-  /** The ID of the most recently spawned session, or `undefined`. */
-  lastSpawnedId: string | undefined;
-  /** Sessions grouped by task ID. */
-  taskSessions: Record<string, Session[]>;
-  /** Refresh the session list from the server. */
-  loadSessions: () => Promise<void>;
-  /** Spawn a new session in an environment. */
-  spawn: (
-    environmentId: string,
-    prompt: string,
-    personaId?: string,
-    workingDirectory?: string,
-  ) => Promise<void>;
-  /** Send text input to a running session. */
-  sendInput: (sessionId: string, text: string) => Promise<void>;
-  /** Kill a running session (hard kill / SIGKILL). */
-  kill: (sessionId: string) => Promise<void>;
-  /** Gracefully stop a running session (SIGTERM). */
-  stopGraceful: (sessionId: string) => Promise<void>;
-  /** Load stored events for a session from the server. */
-  loadSessionEvents: (sessionId: string) => Promise<void>;
-  /** Clear all in-memory events and reset the drop counter. */
-  clearEvents: () => void;
-  /** Load sessions associated with a task. */
-  loadTaskSessions: (taskId: string) => Promise<void>;
-  /**
-   * Handle an incoming WebSocket message. Returns `true` if handled.
-   * Only handles real-time `session_event` push messages from subscribe_all.
-   * @deprecated Use handleSessionEvent for ConnectRPC streaming.
-   */
-  handleMessage: (msg: WsMessage) => boolean;
-  /** Handle a session event from the ConnectRPC StreamEvents RPC. */
-  handleSessionEvent: (event: SessionEvent) => void;
-  /** Handle legacy WS messages injected by E2E tests. */
-  handleLegacyMessage?: (msg: WsMessage) => boolean;
-  /** Lifecycle hook for connect/disconnect/event routing. */
-  domainHook: DomainHook;
-}
+export type { UseSessionsResult } from "@grackle-ai/web-components";
 
 /** Set of session statuses considered active. */
 const ACTIVE_STATUSES: ReadonlySet<string> = new Set(["pending", "running", "idle"]);
