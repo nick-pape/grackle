@@ -9,6 +9,7 @@
 
 import { useState, useCallback } from "react";
 import type { FindingData, GrackleEvent } from "@grackle-ai/web-components";
+import type { DomainHook } from "./domainHook.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToFinding } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
@@ -39,6 +40,8 @@ export interface UseFindingsResult {
   ) => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
 }
 
 /**
@@ -117,5 +120,11 @@ export function useFindings(): UseFindingsResult {
     [],
   );
 
-  return { findings, selectedFinding, findingLoading, findingsLoading, loadFindings, loadAllFindings, loadFinding, postFinding, handleEvent };
+  const domainHook: DomainHook = {
+    onConnect: () => loadAllFindings(),
+    onDisconnect: () => {},
+    handleEvent,
+  };
+
+  return { findings, selectedFinding, findingLoading, findingsLoading, loadFindings, loadAllFindings, loadFinding, postFinding, handleEvent, domainHook };
 }

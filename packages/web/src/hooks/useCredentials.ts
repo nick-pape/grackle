@@ -10,6 +10,7 @@
 import { useState, useCallback } from "react";
 import { isCredentialProviderConfig } from "@grackle-ai/web-components";
 import type { CredentialProviderConfig, GrackleEvent } from "@grackle-ai/web-components";
+import type { DomainHook } from "./domainHook.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToCredentialConfig } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
@@ -26,6 +27,8 @@ export interface UseCredentialsResult {
   updateCredentialProviders: (config: CredentialProviderConfig) => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
 }
 
 /**
@@ -80,5 +83,11 @@ export function useCredentials(): UseCredentialsResult {
     [],
   );
 
-  return { credentialProviders, credentialsLoading, loadCredentials, updateCredentialProviders, handleEvent };
+  const domainHook: DomainHook = {
+    onConnect: () => loadCredentials(),
+    onDisconnect: () => {},
+    handleEvent,
+  };
+
+  return { credentialProviders, credentialsLoading, loadCredentials, updateCredentialProviders, handleEvent, domainHook };
 }

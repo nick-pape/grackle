@@ -10,6 +10,7 @@
 import { useState, useCallback } from "react";
 import { ConnectError } from "@connectrpc/connect";
 import type { Workspace, GrackleEvent } from "@grackle-ai/web-components";
+import type { DomainHook } from "./domainHook.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToWorkspace } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
@@ -55,6 +56,8 @@ export interface UseWorkspacesResult {
   handleEvent: (event: GrackleEvent) => boolean;
   /** Reset transient state (e.g. `workspaceCreating`) on disconnect. */
   onDisconnect: () => void;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
 }
 
 /**
@@ -162,6 +165,12 @@ export function useWorkspaces(): UseWorkspacesResult {
     [],
   );
 
+  const domainHook: DomainHook = {
+    onConnect: () => loadWorkspaces(),
+    onDisconnect,
+    handleEvent,
+  };
+
   return {
     workspaces,
     workspacesLoading,
@@ -172,5 +181,6 @@ export function useWorkspaces(): UseWorkspacesResult {
     updateWorkspace,
     handleEvent,
     onDisconnect,
+    domainHook,
   };
 }

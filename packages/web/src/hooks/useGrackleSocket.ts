@@ -10,6 +10,7 @@ import { useCallback, useState } from "react";
 import type { GrackleEvent, UsageStats, UseGrackleSocketResult } from "@grackle-ai/web-components";
 import { useEventStream } from "./useEventStream.js";
 import { eventTypeToString } from "@grackle-ai/common";
+import type { DomainHook } from "./domainHook.js";
 import { useEnvironments } from "./useEnvironments.js";
 import { useSessions } from "./useSessions.js";
 import { useWorkspaces } from "./useWorkspaces.js";
@@ -77,6 +78,23 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   const personasHook = usePersonas();
   const knowledgeHook = useKnowledge();
   const notificationsHook = useNotifications();
+
+  // --- Domain hook registry ---
+  // Every domain hook exposes a `domainHook` property implementing DomainHook.
+  // Adding a new hook? Add its domainHook here — TypeScript enforces the interface.
+  const domainHooks: DomainHook[] = [
+    environmentsHook.domainHook,
+    sessionsHook.domainHook,
+    workspacesHook.domainHook,
+    tasksHook.domainHook,
+    findingsHook.domainHook,
+    tokensHook.domainHook,
+    credentialsHook.domainHook,
+    codespacesHook.domainHook,
+    personasHook.domainHook,
+    knowledgeHook.domainHook,
+    notificationsHook.domainHook,
+  ];
 
   // --- Transport (ConnectRPC server-streaming) ---
 
@@ -150,7 +168,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     const key = event.payload.key as string | undefined;
     const value = event.payload.value as string | undefined;
 
-    // Settings events
+    // Settings events (not a domain hook — managed directly here)
     if (event.type === "setting.changed") {
       if (key === SETTING_KEY_DEFAULT_PERSONA) {
         setAppDefaultPersonaIdState(value ?? "");
@@ -161,38 +179,29 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       return;
     }
 
-    if (environmentsHook.handleEvent(event)) {
-      if (event.type === "environment.removed" || event.type === "environment.changed") {
-        sessionsHook.loadSessions().catch(() => {});
+    // Route to first matching domain hook
+    for (const hook of domainHooks) {
+      if (hook.handleEvent(event)) {
+        break;
       }
-      return;
     }
-    if (workspacesHook.handleEvent(event)) { return; }
-    if (tasksHook.handleEvent(event)) {
-      // task.started also needs a session refresh (cross-concern)
-      if (event.type === "task.started") {
-        sessionsHook.loadSessions().catch(() => {});
-      }
-      return;
+
+    // Cross-concern side effects: sessions need reloading when environments
+    // or tasks change (session list includes environment/task references)
+    if (
+      event.type === "environment.removed" ||
+      event.type === "environment.changed" ||
+      event.type === "task.started"
+    ) {
+      sessionsHook.loadSessions().catch(() => {});
     }
-    if (findingsHook.handleEvent(event)) { return; }
-    if (tokensHook.handleEvent(event)) { return; }
-    if (credentialsHook.handleEvent(event)) { return; }
-    if (personasHook.handleEvent(event)) { return; }
-    if (knowledgeHook.handleEvent(event)) { return; }
-    if (notificationsHook.handleEvent(event)) { return; }
   }
 
   async function onStreamConnect(): Promise<void> {
-    // Fire-and-forget: all loads run concurrently
-    environmentsHook.loadEnvironments().catch(() => {});
-    sessionsHook.loadSessions().catch(() => {});
-    workspacesHook.loadWorkspaces().catch(() => {});
-    tokensHook.loadTokens().catch(() => {});
-    credentialsHook.loadCredentials().catch(() => {});
-    personasHook.loadPersonas().catch(() => {});
-    tasksHook.loadAllTasks().catch(() => {});
+    // Domain hooks reload concurrently
+    await Promise.allSettled(domainHooks.map((h) => h.onConnect()));
 
+    // Settings (not a domain hook — managed directly here)
     try {
       const personaResp = await grackleClient.getSetting({ key: SETTING_KEY_DEFAULT_PERSONA });
       setAppDefaultPersonaIdState(personaResp.value);
@@ -208,8 +217,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   }
 
   function onStreamDisconnect(): void {
-    workspacesHook.onDisconnect();
-    tasksHook.onDisconnect();
+    domainHooks.forEach((h) => h.onDisconnect());
   }
 
   const refresh = useCallback(() => {

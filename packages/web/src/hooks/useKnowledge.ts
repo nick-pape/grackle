@@ -9,6 +9,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import type { GrackleEvent, GraphNode, GraphLink, NodeDetail, UseKnowledgeResult } from "@grackle-ai/web-components";
+import type { DomainHook } from "./domainHook.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToGraphNode, protoToGraphLink } from "./proto-converters.js";
 
@@ -39,7 +40,7 @@ function safeParseJson(json: string): Record<string, unknown> | undefined {
 // ---------------------------------------------------------------------------
 
 /** Hook for managing Knowledge Graph state via ConnectRPC. */
-export function useKnowledge(): UseKnowledgeResult {
+export function useKnowledge(): UseKnowledgeResult & { domainHook: DomainHook } {
   const [nodes, setNodes] = useState<Map<string, GraphNode>>(new Map());
   const [links, setLinks] = useState<GraphLink[]>([]);
   const [selectedNode, setSelectedNode] = useState<NodeDetail | undefined>(undefined);
@@ -186,6 +187,12 @@ export function useKnowledge(): UseKnowledgeResult {
     return false;
   }, []);
 
+  const domainHook: DomainHook = {
+    onConnect: async () => {}, // Knowledge is page-scoped; no global reload needed
+    onDisconnect: () => {},
+    handleEvent,
+  };
+
   return {
     graphData: { nodes: [...nodes.values()], links },
     selectedNode,
@@ -199,5 +206,6 @@ export function useKnowledge(): UseKnowledgeResult {
     expandNode,
     loadRecent,
     handleEvent,
+    domainHook,
   };
 }

@@ -9,6 +9,7 @@
 
 import { useState, useCallback } from "react";
 import type { PersonaData, GrackleEvent } from "@grackle-ai/web-components";
+import type { DomainHook } from "./domainHook.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToPersona } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
@@ -50,6 +51,8 @@ export interface UsePersonasResult {
   deletePersona: (personaId: string) => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
 }
 
 /**
@@ -155,5 +158,11 @@ export function usePersonas(): UsePersonasResult {
     [],
   );
 
-  return { personas, personasLoading, loadPersonas, createPersona, updatePersona, deletePersona, handleEvent };
+  const domainHook: DomainHook = {
+    onConnect: () => loadPersonas(),
+    onDisconnect: () => {},
+    handleEvent,
+  };
+
+  return { personas, personasLoading, loadPersonas, createPersona, updatePersona, deletePersona, handleEvent, domainHook };
 }

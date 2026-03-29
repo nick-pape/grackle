@@ -9,6 +9,7 @@
 import { useState, useCallback } from "react";
 import { ConnectError } from "@connectrpc/connect";
 import type { Codespace } from "@grackle-ai/web-components";
+import type { DomainHook } from "./domainHook.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToCodespace } from "./proto-converters.js";
 
@@ -26,6 +27,8 @@ export interface UseCodespacesResult {
   listCodespaces: () => Promise<void>;
   /** Create a new codespace for the given repo. */
   createCodespace: (repo: string, machine?: string) => Promise<void>;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
 }
 
 /**
@@ -68,6 +71,12 @@ export function useCodespaces(): UseCodespacesResult {
     [listCodespaces],
   );
 
+  const domainHook: DomainHook = {
+    onConnect: () => listCodespaces(),
+    onDisconnect: () => {},
+    handleEvent: () => false,
+  };
+
   return {
     codespaces,
     codespaceError,
@@ -75,5 +84,6 @@ export function useCodespaces(): UseCodespacesResult {
     codespaceCreating,
     listCodespaces,
     createCodespace,
+    domainHook,
   };
 }

@@ -10,6 +10,7 @@
 import { useState, useCallback, useRef } from "react";
 import { ConnectError } from "@connectrpc/connect";
 import type { TaskData, GrackleEvent, WsMessage } from "@grackle-ai/web-components";
+import type { DomainHook } from "./domainHook.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToTask } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
@@ -67,6 +68,8 @@ export interface UseTasksResult {
   onDisconnect: () => void;
   /** Handle legacy WS messages injected by E2E tests. */
   handleLegacyMessage?: (msg: WsMessage) => boolean;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
 }
 
 /**
@@ -320,6 +323,12 @@ export function useTasks(): UseTasksResult {
     [],
   );
 
+  const domainHook: DomainHook = {
+    onConnect: () => loadAllTasks(),
+    onDisconnect,
+    handleEvent,
+  };
+
   return {
     tasks,
     tasksLoading,
@@ -336,5 +345,6 @@ export function useTasks(): UseTasksResult {
     handleEvent,
     onDisconnect,
     handleLegacyMessage,
+    domainHook,
   };
 }
