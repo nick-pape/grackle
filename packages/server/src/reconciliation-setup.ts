@@ -39,7 +39,7 @@ export function createReconciliationPhases(): ReconciliationPhase[] {
   const orphanPhase = createOrphanPhase({
     listAllTasks: () => {
       const workspaces = workspaceStore.listWorkspaces();
-      const allTasks: Array<ReturnType<typeof taskStore.getTask> & {}> = [];
+      const allTasks: Array<NonNullable<ReturnType<typeof taskStore.getTask>>> = [];
       for (const ws of workspaces) {
         allTasks.push(...taskStore.listTasks(ws.id));
       }

@@ -94,7 +94,11 @@ export function createShutdown(context: ShutdownContext): () => Promise<void> {
 
     // Final WAL checkpoint (TRUNCATE) to fully flush pending writes before exit
     if (sqlite) {
-      sqlite.pragma("wal_checkpoint(TRUNCATE)");
+      try {
+        sqlite.pragma("wal_checkpoint(TRUNCATE)");
+      } catch (err) {
+        logger.error({ err }, "Error during final WAL checkpoint");
+      }
     }
     clearTimeout(forceExit);
     process.exit(process.exitCode || 0);

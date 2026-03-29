@@ -194,6 +194,18 @@ describe("createShutdown", () => {
     expect(mockPragma).toHaveBeenCalledWith("wal_checkpoint(TRUNCATE)");
   });
 
+  it("logs error and continues if WAL checkpoint throws", async () => {
+    mockPragma.mockImplementation(() => { throw new Error("WAL error"); });
+    const shutdown = createShutdown(createMockContext());
+    await shutdown();
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ err: expect.any(Error) }),
+      "Error during final WAL checkpoint",
+    );
+    // Should still exit cleanly
+    expect(mockProcessExit).toHaveBeenCalledWith(0);
+  });
+
   it("skips final WAL checkpoint when sqlite is undefined", async () => {
     __setSqlite(undefined);
     const shutdown = createShutdown(createMockContext());
