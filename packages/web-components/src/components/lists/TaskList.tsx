@@ -7,6 +7,7 @@ import { MAX_TASK_DEPTH, fuzzySearch, type FuzzyKey, type MatchIndex } from "@gr
 import { ICON_SM, ICON_MD } from "../../utils/iconSize.js";
 import { taskUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
 import { getStatusStyle, resolveStatus } from "../../utils/taskStatus.js";
+import { Tooltip } from "../display/Tooltip.js";
 import { HighlightedText, buildTaskTree, groupTasksByStatus, type TaskNode, type StatusGroup } from "./listHelpers.js";
 import styles from "./TaskList.module.scss";
 
@@ -219,17 +220,18 @@ function TaskTreeNode({
           </span>
         )}
         {depth < MAX_TASK_DEPTH && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(newTaskUrl(node.workspaceId, node.id));
-            }}
-            title="Add child task"
-            aria-label="Add child task"
-            className={styles.addChildButton}
-          >
-            +
-          </button>
+          <Tooltip text="Add child task">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(newTaskUrl(node.workspaceId, node.id));
+              }}
+              aria-label="Add child task"
+              className={styles.addChildButton}
+            >
+              +
+            </button>
+          </Tooltip>
         )}
       </div>
 
@@ -408,25 +410,27 @@ export function TaskList({ workspaces, tasks }: TaskListProps): JSX.Element {
       <div className={styles.header}>
         <span>Tasks</span>
         <div className={styles.headerActions}>
-          <button
-            className={`${styles.groupToggle} ${groupByStatus ? styles.groupToggleActive : ""}`}
-            onClick={toggleGroupByStatus}
-            aria-label={groupByStatus ? "Switch to tree view" : "Group tasks by status"}
-            aria-pressed={groupByStatus}
-            title={groupByStatus ? "Switch to tree view" : "Group tasks by status"}
-            data-testid="task-group-by-status-toggle"
-          >
-            <List size={ICON_MD} />
-          </button>
-          <button
-            className={styles.addButton}
-            onClick={() => navigate(newTaskUrl())}
-            aria-label="New task"
-            title="New task"
-            data-testid="new-task-button"
-          >
-            +
-          </button>
+          <Tooltip text={groupByStatus ? "Switch to tree view" : "Group tasks by status"}>
+            <button
+              className={`${styles.groupToggle} ${groupByStatus ? styles.groupToggleActive : ""}`}
+              onClick={toggleGroupByStatus}
+              aria-label={groupByStatus ? "Switch to tree view" : "Group tasks by status"}
+              aria-pressed={groupByStatus}
+              data-testid="task-group-by-status-toggle"
+            >
+              <List size={ICON_MD} />
+            </button>
+          </Tooltip>
+          <Tooltip text="New task">
+            <button
+              className={styles.addButton}
+              onClick={() => navigate(newTaskUrl())}
+              aria-label="New task"
+              data-testid="new-task-button"
+            >
+              +
+            </button>
+          </Tooltip>
         </div>
       </div>
 

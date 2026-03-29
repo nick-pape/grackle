@@ -101,7 +101,7 @@ test.describe("Navigation Between Settings and Environments", { tag: ["@environm
     await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
 
     // Click Grackle brand to go home
-    await page.locator('button[title="Home"]').click();
+    await page.getByTestId("statusbar-brand").click();
 
     // Should navigate to home (settings tab no longer active)
     await expect(page.locator('[data-testid="sidebar-tab-settings"]')).toHaveAttribute("aria-selected", "false", { timeout: 5_000 });
