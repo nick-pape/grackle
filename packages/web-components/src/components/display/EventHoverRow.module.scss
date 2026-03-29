@@ -1,0 +1,103 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// EventHoverRow -- hover actions + selection mode wrapper for events
+// =============================================================================
+
+.row {
+  position: relative;
+}
+
+// --- Hover action row (normal mode) ---
+
+.hoverActions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  pointer-events: none;
+
+  @include mobile {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.row:hover .hoverActions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.hoverButton {
+  @include btn-ghost(var(--text-secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-overlay);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-blue);
+    outline-offset: 1px;
+  }
+}
+
+// --- Selection mode ---
+
+.selectingRow {
+  display: flex;
+  align-items: flex-start;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+
+  &:hover {
+    background: color-mix(in srgb, var(--accent-blue) 5%, transparent);
+  }
+}
+
+.selected {
+  background: color-mix(in srgb, var(--accent-blue) 10%, transparent);
+
+  &:hover {
+    background: color-mix(in srgb, var(--accent-blue) 14%, transparent);
+  }
+}
+
+.checkboxArea {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  padding-top: var(--space-xs);
+  width: 28px;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--accent-blue);
+}
+
+.contentArea {
+  flex: 1;
+  min-width: 0;
+}

@@ -18,6 +18,12 @@
   padding: var(--space-md);
 }
 
+// Extra bottom padding when floating action bar is visible, so the last event
+// is not occluded by the bar.
+.selectingPadding {
+  padding-bottom: 64px;
+}
+
 .toolbar {
   position: absolute;
   top: var(--space-sm);

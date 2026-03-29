@@ -2,7 +2,6 @@ import { useState, type JSX } from "react";
 import { ChevronRight, Pencil } from "lucide-react";
 import type { ToolCardProps } from "./ToolCardProps.js";
 import { parseUnifiedDiff, diffFromOldNew, diffStats, type DiffLine } from "./parseDiff.js";
-import { CopyButton } from "../display/CopyButton.js";
 import { ICON_SM, ICON_MD } from "../../utils/iconSize.js";
 import styles from "./toolCards.module.scss";
 
@@ -112,16 +111,6 @@ export function FileEditCard({ tool, args, result, isError, detailedResult }: To
               <span style={{ color: "var(--accent-red)" }}>−{stats.removed}</span>
             </span>
           </>
-        )}
-        {!inProgress && !isError && (diffLines || result) && (
-          <CopyButton
-            text={diffLines ? diffLines.map((l) => {
-              const prefix = l.type === "add" ? "+" : l.type === "remove" ? "-" : l.type === "header" ? "" : " ";
-              return `${prefix}${l.content}`;
-            }).join("\n") : result!}
-            data-testid="tool-card-copy"
-            className={styles.copyButtonInline}
-          />
         )}
       </div>
 

@@ -132,6 +132,7 @@ export function ChatPage(): JSX.Element {
         events={groupedEvents}
         eventsDropped={eventsDropped}
         emptyState={<ChatEmptyState hasLocalEnvironment={!!localEnvironment} />}
+        onShowToast={showToast}
       />
       {localEnvironment && isSessionActive && (
         <ChatInput

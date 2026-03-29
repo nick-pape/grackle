@@ -607,6 +607,7 @@ export function TaskPage(): JSX.Element {
                   <div className={styles.waitingMessage}>Waiting for events...</div>
                 ) : undefined
               }
+              onShowToast={showToast}
             />
           </motion.div>
         )}
