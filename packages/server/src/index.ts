@@ -4,7 +4,7 @@ import http2 from "node:http2";
 import { randomUUID } from "node:crypto";
 import {
   registerGrackleRoutes,
-  registerAdapter, startHeartbeat, getAdapter, setConnection, removeConnection,
+  registerAdapter, startHeartbeat, getAdapter, setConnection, removeConnection, listConnections,
   initSigchldSubscriber, initEscalationAutoSubscriber, initLifecycleManager,
   emit, subscribe,
   startTaskSession, reanimateAgent,
@@ -12,7 +12,7 @@ import {
   parseAdapterConfig, isKnowledgeEnabled, initKnowledge, neo4jHealthCheck,
   createKnowledgeHealthPhase, getKnowledgeReadinessCheck,
   computeTaskStatus,
-  ReconciliationManager, createCronPhase, createOrphanPhase, findFirstConnectedEnvironment, lifecycleCleanupPhase,
+  ReconciliationManager, createCronPhase, createOrphanPhase, findFirstConnectedEnvironment, lifecycleCleanupPhase, createEnvironmentReconciliationPhase,
   createRootTaskBoot,
   initOrphanReparentSubscriber,
   logger, exec, detectLanIp,
@@ -275,7 +275,14 @@ async function main(): Promise<void> {
     reparentTask: (taskId, newParentTaskId) => taskStore.reparentTask(taskId, newParentTaskId),
     emit,
   });
-  const reconciliationPhases = [cronPhase, lifecycleCleanupPhase, orphanPhase];
+  const environmentReconciliationPhase = createEnvironmentReconciliationPhase({
+    listEnvironments: envRegistry.listEnvironments,
+    listConnectionIds: () => new Set(listConnections().keys()),
+    updateEnvironmentStatus: envRegistry.updateEnvironmentStatus,
+    removeConnection,
+    emit,
+  });
+  const reconciliationPhases = [cronPhase, lifecycleCleanupPhase, orphanPhase, environmentReconciliationPhase];
   if (isKnowledgeEnabled()) {
     reconciliationPhases.push(
       createKnowledgeHealthPhase({ healthCheck: neo4jHealthCheck }),
