@@ -6,11 +6,15 @@ import { ulid } from "ulid";
 import { routeEscalation } from "./notification-router.js";
 import { escalationRowToProto } from "./grpc-proto-converters.js";
 
+/** Valid urgency values for escalations. */
+const VALID_URGENCY: ReadonlySet<string> = new Set(["low", "normal", "high"]);
+
 /** Create a new escalation and route it to notification channels. */
 export async function createEscalation(req: grackle.CreateEscalationRequest): Promise<grackle.Escalation> {
   if (!req.message) {
     throw new ConnectError("message is required", Code.InvalidArgument);
   }
+  const urgency = VALID_URGENCY.has(req.urgency) ? req.urgency : "normal";
   const id = ulid();
   const taskUrl = req.taskId ? `/tasks/${req.taskId}` : "";
   escalationStore.createEscalation(
@@ -20,7 +24,7 @@ export async function createEscalation(req: grackle.CreateEscalationRequest): Pr
     req.title || "Escalation",
     req.message,
     "explicit",
-    req.urgency || "normal",
+    urgency,
     taskUrl,
   );
 

@@ -99,7 +99,8 @@ async function handleTaskUpdated(taskId: string): Promise<void> {
   pruneDelivered(now);
 
   // Extract the last text message from the session log
-  const lastEntry = readLastTextEntry(latestSession.logPath || "");
+  const logPath = latestSession.logPath || undefined;
+  const lastEntry = logPath ? readLastTextEntry(logPath) : undefined;
   const message = lastEntry?.content ?? "";
 
   // Build task URL

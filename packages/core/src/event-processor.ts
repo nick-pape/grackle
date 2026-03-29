@@ -2,6 +2,7 @@ import { create } from "@bufbuild/protobuf";
 import { grackle, powerline, eventTypeToEnum, SESSION_STATUS, TERMINAL_SESSION_STATUSES, END_REASON } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 import { v4 as uuid } from "uuid";
+import { ulid } from "ulid";
 import { sessionStore, findingStore, escalationStore, taskStore, workspaceStore, slugify } from "@grackle-ai/database";
 import * as streamHub from "./stream-hub.js";
 import * as logWriter from "./log-writer.js";
@@ -66,7 +67,7 @@ export function processFindingEvent(
 export function processEscalationEvent(
   ctx: ProcessorContext,
   content: string,
-  sessionId: string,
+  _sessionId: string,
 ): void {
   if (!ctx.workspaceId) {
     return;
@@ -75,7 +76,7 @@ export function processEscalationEvent(
     const data = JSON.parse(content) as {
       message?: string; title?: string; urgency?: string;
     };
-    const escalationId = uuid();
+    const escalationId = ulid();
     const taskUrl = ctx.taskId ? `/tasks/${ctx.taskId}` : "";
     escalationStore.createEscalation(
       escalationId, ctx.workspaceId, ctx.taskId || "", data.title || "Escalation",

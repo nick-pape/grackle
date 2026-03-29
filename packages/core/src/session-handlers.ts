@@ -737,13 +737,15 @@ export async function* streamAll(): AsyncGenerator<grackle.SessionEvent> {
 
 /** Stream domain events (replaces WebSocket event broadcasting). */
 export async function* streamEvents(): AsyncGenerator<grackle.ServerEvent> {
-  // Drain pending escalations on new client connection — emits domain events
-  // that flow through the stream to the newly connected client.
+  // Create the event stream FIRST so the domain-event subscription is registered
+  // before draining pending escalations (otherwise drained events would be missed).
+  const stream = createEventStream();
+
+  // Drain pending escalations — emits domain events that flow through the stream.
   deliverPendingEscalations().catch((err) => {
     logger.error({ err }, "Failed to drain pending escalations on stream connect");
   });
 
-  const stream = createEventStream();
   try {
     for await (const event of stream) {
       yield event;
