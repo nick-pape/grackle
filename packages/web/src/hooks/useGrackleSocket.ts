@@ -20,6 +20,7 @@ import { useCredentials } from "./useCredentials.js";
 import { useCodespaces } from "./useCodespaces.js";
 import { usePersonas } from "./usePersonas.js";
 import { useKnowledge } from "./useKnowledge.js";
+import { useNotifications } from "./useNotifications.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToUsageStats } from "./proto-converters.js";
 
@@ -75,6 +76,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   const codespacesHook = useCodespaces();
   const personasHook = usePersonas();
   const knowledgeHook = useKnowledge();
+  const notificationsHook = useNotifications();
 
   // --- Transport (ConnectRPC server-streaming) ---
 
@@ -178,6 +180,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     if (credentialsHook.handleEvent(event)) { return; }
     if (personasHook.handleEvent(event)) { return; }
     if (knowledgeHook.handleEvent(event)) { return; }
+    if (notificationsHook.handleEvent(event)) { return; }
   }
 
   async function onStreamConnect(): Promise<void> {

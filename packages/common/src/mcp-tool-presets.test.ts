@@ -9,8 +9,8 @@ import {
 } from "./mcp-tool-presets.js";
 
 describe("ALL_MCP_TOOL_NAMES", () => {
-  it("contains exactly 60 tool names", () => {
-    expect(ALL_MCP_TOOL_NAMES.size).toBe(60);
+  it("contains exactly 63 tool names", () => {
+    expect(ALL_MCP_TOOL_NAMES.size).toBe(63);
   });
 
   it("includes tools from every group", () => {
@@ -107,12 +107,35 @@ describe("ORCHESTRATOR_MCP_TOOLS", () => {
 });
 
 describe("ADMIN_MCP_TOOLS", () => {
-  it("contains all 60 tool names", () => {
-    expect(ADMIN_MCP_TOOLS).toHaveLength(60);
+  it("contains all 63 tool names", () => {
+    expect(ADMIN_MCP_TOOLS).toHaveLength(63);
   });
 
   it("matches ALL_MCP_TOOL_NAMES exactly", () => {
     expect(new Set(ADMIN_MCP_TOOLS)).toEqual(ALL_MCP_TOOL_NAMES);
+  });
+});
+
+describe("escalate_to_human scoping", () => {
+  it("is NOT in DEFAULT_SCOPED_MCP_TOOLS", () => {
+    expect(DEFAULT_SCOPED_MCP_TOOLS).not.toContain("escalate_to_human");
+  });
+
+  it("is NOT in WORKER_MCP_TOOLS", () => {
+    expect(WORKER_MCP_TOOLS).not.toContain("escalate_to_human");
+  });
+
+  it("IS in ORCHESTRATOR_MCP_TOOLS", () => {
+    expect(ORCHESTRATOR_MCP_TOOLS).toContain("escalate_to_human");
+  });
+
+  it("IS in ADMIN_MCP_TOOLS", () => {
+    expect(ADMIN_MCP_TOOLS).toContain("escalate_to_human");
+  });
+
+  it("escalation_list and escalation_acknowledge are in ALL_MCP_TOOL_NAMES", () => {
+    expect(ALL_MCP_TOOL_NAMES.has("escalation_list")).toBe(true);
+    expect(ALL_MCP_TOOL_NAMES.has("escalation_acknowledge")).toBe(true);
   });
 });
 

@@ -15,6 +15,7 @@ import { knowledgeTools } from "./knowledge.js";
 import { workpadTools } from "./workpad.js";
 import { scheduleTools } from "./schedule.js";
 import { versionTools } from "./version.js";
+import { escalationTools } from "./escalation.js";
 
 /** Create a ToolRegistry pre-populated with all available MCP tools. */
 export function createToolRegistry(): ToolRegistry {
@@ -35,5 +36,6 @@ export function createToolRegistry(): ToolRegistry {
   registry.registerAll(workpadTools);
   registry.registerAll(scheduleTools);
   registry.registerAll(versionTools);
+  registry.registerAll(escalationTools);
   return registry;
 }

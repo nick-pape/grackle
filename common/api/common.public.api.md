@@ -11,6 +11,14 @@ import type { GenService } from '@bufbuild/protobuf/codegenv2';
 import type { Message } from '@bufbuild/protobuf';
 
 // @public
+type AcknowledgeEscalationRequest = Message<"grackle.AcknowledgeEscalationRequest"> & {
+    id: string;
+};
+
+// @public
+const AcknowledgeEscalationRequestSchema: GenMessage<AcknowledgeEscalationRequest>;
+
+// @public
 export type AdapterType = "docker" | "local" | "codespace" | "ssh";
 
 // @public
@@ -146,6 +154,18 @@ type CreateCodespaceResponse = Message<"grackle.CreateCodespaceResponse"> & {
 
 // @public
 const CreateCodespaceResponseSchema: GenMessage<CreateCodespaceResponse>;
+
+// @public
+type CreateEscalationRequest = Message<"grackle.CreateEscalationRequest"> & {
+    workspaceId: string;
+    taskId: string;
+    title: string;
+    message: string;
+    urgency: string;
+};
+
+// @public
+const CreateEscalationRequestSchema: GenMessage<CreateEscalationRequest>;
 
 // @public
 type CreateKnowledgeNodeRequest = Message<"grackle.CreateKnowledgeNodeRequest"> & {
@@ -371,11 +391,39 @@ const EnvironmentSchema: GenMessage<Environment>;
 export type EnvironmentStatus = "disconnected" | "connecting" | "connected" | "sleeping" | "error";
 
 // @public
+type Escalation = Message<"grackle.Escalation"> & {
+    id: string;
+    workspaceId: string;
+    taskId: string;
+    title: string;
+    message: string;
+    source: string;
+    urgency: string;
+    status: string;
+    createdAt: string;
+    deliveredAt: string;
+    acknowledgedAt: string;
+    taskUrl: string;
+};
+
+// @public
+type EscalationList = Message<"grackle.EscalationList"> & {
+    escalations: Escalation[];
+};
+
+// @public
+const EscalationListSchema: GenMessage<EscalationList>;
+
+// @public
+const EscalationSchema: GenMessage<Escalation>;
+
+// @public
 export type EventType = AgentEventType | "user_input" | "signal";
 
 // @public
 enum EventType_2 {
     ERROR = 4,
+    ESCALATION = 12,
     FINDING = 7,
     SIGNAL = 10,
     STATUS = 5,
@@ -757,6 +805,21 @@ const Grackle: GenService<{
         input: typeof GetFindingRequestSchema;
         output: typeof FindingSchema;
     };
+    createEscalation: {
+        methodKind: "unary";
+        input: typeof CreateEscalationRequestSchema;
+        output: typeof EscalationSchema;
+    };
+    listEscalations: {
+        methodKind: "unary";
+        input: typeof ListEscalationsRequestSchema;
+        output: typeof EscalationListSchema;
+    };
+    acknowledgeEscalation: {
+        methodKind: "unary";
+        input: typeof AcknowledgeEscalationRequestSchema;
+        output: typeof EscalationSchema;
+    };
     createSchedule: {
         methodKind: "unary";
         input: typeof CreateScheduleRequestSchema;
@@ -990,6 +1053,16 @@ declare namespace grackle {
         QueryFindingsRequestSchema,
         GetFindingRequest,
         GetFindingRequestSchema,
+        Escalation,
+        EscalationSchema,
+        EscalationList,
+        EscalationListSchema,
+        CreateEscalationRequest,
+        CreateEscalationRequestSchema,
+        ListEscalationsRequest,
+        ListEscalationsRequestSchema,
+        AcknowledgeEscalationRequest,
+        AcknowledgeEscalationRequestSchema,
         McpServerConfig,
         McpServerConfigSchema,
         ToolConfig,
@@ -1207,6 +1280,16 @@ type KnowledgeNodeProto = Message<"grackle.KnowledgeNodeProto"> & {
 
 // @public
 const KnowledgeNodeProtoSchema: GenMessage<KnowledgeNodeProto>;
+
+// @public
+type ListEscalationsRequest = Message<"grackle.ListEscalationsRequest"> & {
+    workspaceId: string;
+    status: string;
+    limit: number;
+};
+
+// @public
+const ListEscalationsRequestSchema: GenMessage<ListEscalationsRequest>;
 
 // @public
 type ListRecentKnowledgeNodesRequest = Message<"grackle.ListRecentKnowledgeNodesRequest"> & {

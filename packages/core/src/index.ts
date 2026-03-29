@@ -14,6 +14,7 @@ export { emit, subscribe } from "./event-bus.js";
 
 // ─── Wiring Initializers ───────────────────────────────────
 export { initSigchldSubscriber } from "./signals/sigchld.js";
+export { initEscalationAutoSubscriber } from "./signals/escalation-auto.js";
 export { initOrphanReparentSubscriber, transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
 export { initLifecycleManager } from "./lifecycle.js";
 export { ensureStdinStream, publishToStdin, cleanupStdinStream } from "./stdin-delivery.js";

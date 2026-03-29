@@ -2,7 +2,7 @@ import { create } from "@bufbuild/protobuf";
 import { grackle, powerline, eventTypeToEnum, SESSION_STATUS, TERMINAL_SESSION_STATUSES, END_REASON } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 import { v4 as uuid } from "uuid";
-import { sessionStore, findingStore, taskStore, workspaceStore, slugify } from "@grackle-ai/database";
+import { sessionStore, findingStore, escalationStore, taskStore, workspaceStore, slugify } from "@grackle-ai/database";
 import * as streamHub from "./stream-hub.js";
 import * as logWriter from "./log-writer.js";
 import * as processorRegistry from "./processor-registry.js";
@@ -11,6 +11,7 @@ import { emit } from "./event-bus.js";
 import { logger } from "./logger.js";
 import { runWithTrace } from "./trace-context.js";
 import { publishChildCompletion } from "./pipe-delivery.js";
+import { routeEscalation } from "./notification-router.js";
 import { cleanupLifecycleStream } from "./lifecycle.js";
 import type { ProcessorContext } from "./processor-registry.js";
 
@@ -54,6 +55,42 @@ export function processFindingEvent(
     logger.info({ findingId, workspaceId: ctx.workspaceId, title: data.title }, "Finding stored");
   } catch (err) {
     logger.error({ err, workspaceId: ctx.workspaceId, taskId: ctx.taskId }, "Failed to store finding");
+  }
+}
+
+/**
+ * Process an escalation event from an agent, creating an escalation record
+ * and routing it to notification channels.
+ * Shared between live event processing and replay on late-bind.
+ */
+export function processEscalationEvent(
+  ctx: ProcessorContext,
+  content: string,
+  sessionId: string,
+): void {
+  if (!ctx.workspaceId) {
+    return;
+  }
+  try {
+    const data = JSON.parse(content) as {
+      message?: string; title?: string; urgency?: string;
+    };
+    const escalationId = uuid();
+    const taskUrl = ctx.taskId ? `/tasks/${ctx.taskId}` : "";
+    escalationStore.createEscalation(
+      escalationId, ctx.workspaceId, ctx.taskId || "", data.title || "Escalation",
+      data.message || "", "explicit", data.urgency || "normal", taskUrl,
+    );
+    const row = escalationStore.getEscalation(escalationId);
+    if (row) {
+      // Fire-and-forget — do not await in the synchronous event loop
+      routeEscalation(row).catch((err) => {
+        logger.error({ err, escalationId }, "Failed to route escalation");
+      });
+    }
+    logger.info({ escalationId, workspaceId: ctx.workspaceId, title: data.title }, "Escalation stored");
+  } catch (err) {
+    logger.error({ err, workspaceId: ctx.workspaceId, taskId: ctx.taskId }, "Failed to store escalation");
   }
 }
 
@@ -188,6 +225,8 @@ function replayLoggedEvents(ctx: ProcessorContext, subtaskLocalIdMap: Map<string
       } else if (entry.type === "subtask_create") {
         processSubtaskEvent(ctx, entry.content, subtaskLocalIdMap);
         subtasksReplayed++;
+      } else if (entry.type === "escalation") {
+        processEscalationEvent(ctx, entry.content, entry.session_id);
       }
     }
 
@@ -297,6 +336,11 @@ export function processEventStream(
         // Intercept subtask creation events and create child tasks
         if (event.type === "subtask_create" && ctx.taskId) {
           processSubtaskEvent(ctx, event.content, subtaskLocalIdMap);
+        }
+
+        // Intercept escalation events from agents
+        if (event.type === "escalation" && ctx.workspaceId) {
+          processEscalationEvent(ctx, event.content, sessionId);
         }
 
         // Intercept usage events and accumulate token counts on the session record
