@@ -29,7 +29,8 @@
   }
 }
 
-.row:hover .hoverActions {
+.row:hover .hoverActions,
+.row:focus-within .hoverActions {
   opacity: 1;
 }
 

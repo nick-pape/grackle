@@ -10,7 +10,27 @@ import { isContentBearingEvent, getEventCopyText, formatEventsAsMarkdown } from 
 import type { ToastVariant } from "../../context/ToastContext.js";
 import { ICON_MD } from "../../utils/iconSize.js";
 import type { DisplayEvent } from "../../utils/sessionEvents.js";
+import type { SessionEvent } from "../../hooks/types.js";
 import styles from "./EventStream.module.scss";
+
+/** Build a descriptive label for the selection checkbox aria-label. */
+function buildCheckboxLabel(event: SessionEvent): string {
+  const time = new Date(event.timestamp).toLocaleTimeString();
+  switch (event.eventType) {
+    case "text":
+    case "output":
+      return `Select message from assistant at ${time}`;
+    case "user_input":
+      return `Select message from user at ${time}`;
+    case "tool_result":
+    case "tool_use":
+      return `Select tool event at ${time}`;
+    case "error":
+      return `Select error at ${time}`;
+    default:
+      return `Select event at ${time}`;
+  }
+}
 
 /** localStorage key for persisting the direction preference. */
 const DIRECTION_STORAGE_KEY: string = "grackle-stream-direction";
@@ -155,6 +175,7 @@ export function EventStream({ events, eventsDropped, emptyState, onShowToast }: 
                   isContentBearing={isContentBearingEvent(event)}
                   isSelecting={selection.isSelecting}
                   isSelected={selection.selectedIndices.has(originalIndex)}
+                  checkboxLabel={buildCheckboxLabel(event)}
                   onSelect={() => { selection.enterSelectionMode(originalIndex); }}
                   onToggle={(shiftKey) => { selection.toggleEvent(originalIndex, shiftKey); }}
                   onCopied={() => { onShowToast?.("Copied to clipboard", "success"); }}

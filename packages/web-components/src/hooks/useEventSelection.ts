@@ -44,8 +44,9 @@ export interface UseEventSelectionReturn {
 /**
  * Hook that manages event selection state for the EventStream multi-select feature.
  *
- * Pure logic hook with no DOM manipulation. The caller is responsible for
- * rendering checkboxes, highlights, and action bars based on the returned state.
+ * The caller is responsible for rendering checkboxes, highlights, and action bars
+ * based on the returned state. The `copySelected` method uses `navigator.clipboard`
+ * and will return `false` in environments where the Clipboard API is unavailable.
  */
 export function useEventSelection({
   events,

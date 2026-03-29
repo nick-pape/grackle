@@ -39,6 +39,10 @@ export function isContentBearingEvent(event: SessionEvent): boolean {
 export function getEventCopyText(event: DisplayEvent): string {
   switch (event.eventType) {
     case "tool_result": {
+      // Prefer detailedResult when available (e.g. Copilot unified diffs)
+      if (event.toolUseCtx?.detailedResult) {
+        return event.toolUseCtx.detailedResult;
+      }
       // When paired, the result content may be JSON-wrapped. Extract the
       // displayable content the same way EventRenderer does.
       let resultContent = event.content;
@@ -123,15 +127,19 @@ export function formatEventsAsMarkdown(events: DisplayEvent[]): string {
         break;
       }
       case "tool_result": {
-        // Extract displayable content from JSON-wrapped results
-        let resultContent = event.content;
-        if (event.content.trimStart().startsWith("{")) {
-          try {
-            const parsed = JSON.parse(event.content) as Record<string, unknown>;
-            if (typeof parsed.content === "string") {
-              resultContent = parsed.content;
-            }
-          } catch { /* use as-is */ }
+        // Prefer detailedResult (e.g. Copilot unified diffs)
+        let resultContent = event.toolUseCtx?.detailedResult ?? undefined;
+        if (!resultContent) {
+          // Extract displayable content from JSON-wrapped results
+          resultContent = event.content;
+          if (event.content.trimStart().startsWith("{")) {
+            try {
+              const parsed = JSON.parse(event.content) as Record<string, unknown>;
+              if (typeof parsed.content === "string") {
+                resultContent = parsed.content;
+              }
+            } catch { /* use as-is */ }
+          }
         }
 
         if (event.toolUseCtx) {
@@ -155,7 +163,11 @@ export function formatEventsAsMarkdown(events: DisplayEvent[]): string {
         } catch { /* use defaults */ }
         const summary = toolArgsSummary(args);
         const label = summary ? `**Tool: ${tool}** ${summary}` : `**Tool: ${tool}**`;
-        parts.push(`${label} (${time}):`);
+        if (args !== undefined) {
+          parts.push(`${label} (${time}):\n\`\`\`json\n${JSON.stringify(args, undefined, 2)}\n\`\`\``);
+        } else {
+          parts.push(`${label} (${time}):`);
+        }
         break;
       }
       case "error": {

@@ -3,10 +3,11 @@
  * - Hover action row (Copy + Select) in normal mode
  * - Checkbox + full-row click target in selection mode
  *
- * Pure presentational component -- no useGrackle().
+ * Presentational component decoupled from useGrackle(). Performs clipboard
+ * side effects via navigator.clipboard when the user clicks Copy.
  */
 
-import { useState, useCallback, type JSX, type ReactNode } from "react";
+import { useState, useCallback, useEffect, useRef, type JSX, type ReactNode } from "react";
 import { Clipboard, Check, CheckSquare } from "lucide-react";
 import { ICON_SM } from "../../utils/iconSize.js";
 import styles from "./EventHoverRow.module.scss";
@@ -21,6 +22,8 @@ export interface EventHoverRowProps {
   isSelecting: boolean;
   /** Whether this event is currently selected in multi-select mode. */
   isSelected: boolean;
+  /** Accessible label for the selection checkbox (e.g. "Select message from assistant at 2:34 PM"). */
+  checkboxLabel?: string;
   /** Called when the Select button in the hover row is clicked (enters selection mode). */
   onSelect: () => void;
   /** Called when the row is clicked in selection mode. Receives the shiftKey state. */
@@ -40,19 +43,33 @@ export function EventHoverRow({
   isContentBearing,
   isSelecting,
   isSelected,
+  checkboxLabel,
   onSelect,
   onToggle,
   onCopied,
   children,
 }: EventHoverRowProps): JSX.Element {
   const [copied, setCopied] = useState(false);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  // Clear the "copied" feedback timer on unmount
+  useEffect(() => {
+    return () => {
+      if (copiedTimerRef.current !== undefined) {
+        clearTimeout(copiedTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(copyText);
       setCopied(true);
       onCopied?.();
-      setTimeout(() => { setCopied(false); }, 2000);
+      if (copiedTimerRef.current !== undefined) {
+        clearTimeout(copiedTimerRef.current);
+      }
+      copiedTimerRef.current = setTimeout(() => { setCopied(false); }, 2000);
     } catch {
       // Clipboard write failed silently
     }
@@ -74,18 +91,6 @@ export function EventHoverRow({
     [isSelecting, onToggle],
   );
 
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent) => {
-      if (!isContentBearing || isSelecting) {
-        return;
-      }
-      // Only prevent default if we would show our actions
-      // For now, clicking Select from hover or context menu enters selection mode
-      // A full custom context menu is a future enhancement
-    },
-    [isContentBearing, isSelecting],
-  );
-
   // Non-content-bearing events: render plain, no interactivity
   if (!isContentBearing) {
     return <div className={styles.row}>{children}</div>;
@@ -105,10 +110,10 @@ export function EventHoverRow({
           <input
             type="checkbox"
             checked={isSelected}
-            onChange={() => { onToggle(false); }}
+            onChange={(e) => { onToggle((e.nativeEvent as MouseEvent).shiftKey); }}
             onClick={(e) => { e.stopPropagation(); }}
             className={styles.checkbox}
-            aria-label="Select this event"
+            aria-label={checkboxLabel ?? "Select this event"}
             data-testid="event-select-checkbox"
           />
         </div>
@@ -121,7 +126,6 @@ export function EventHoverRow({
   return (
     <div
       className={styles.row}
-      onContextMenu={handleContextMenu}
       data-testid="event-hover-row"
     >
       <div className={styles.hoverActions} data-testid="event-hover-actions">

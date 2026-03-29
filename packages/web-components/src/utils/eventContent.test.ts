@@ -240,7 +240,7 @@ describe("formatEventsAsMarkdown", () => {
     expect(md).toContain("World");
   });
 
-  it("formats a tool_use event with tool name and args summary", () => {
+  it("formats a tool_use event with tool name, args summary, and JSON body", () => {
     const event = makeDisplayEvent({
       eventType: "tool_use",
       content: JSON.stringify({ tool: "Bash", args: { command: "npm test" } }),
@@ -248,5 +248,27 @@ describe("formatEventsAsMarkdown", () => {
     const md = formatEventsAsMarkdown([event]);
     expect(md).toContain("**Tool: Bash**");
     expect(md).toContain("`npm test`");
+    expect(md).toContain("```json");
+    expect(md).toContain("npm test");
+  });
+
+  it("prefers detailedResult for tool_result in getEventCopyText", () => {
+    const event = makeDisplayEvent({
+      eventType: "tool_result",
+      content: "short result",
+      toolUseCtx: { tool: "Edit", args: {}, detailedResult: "--- a/file\n+++ b/file\n@@ -1 +1 @@\n-old\n+new" },
+    });
+    expect(getEventCopyText(event)).toContain("--- a/file");
+  });
+
+  it("prefers detailedResult for tool_result in formatEventsAsMarkdown", () => {
+    const event = makeDisplayEvent({
+      eventType: "tool_result",
+      content: "short result",
+      toolUseCtx: { tool: "Edit", args: {}, detailedResult: "full diff content here" },
+    });
+    const md = formatEventsAsMarkdown([event]);
+    expect(md).toContain("full diff content here");
+    expect(md).not.toContain("short result");
   });
 });
