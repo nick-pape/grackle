@@ -316,11 +316,12 @@ function queryPrState(owner, repo, branch) {
 
   let copilotState;
   if (copilotRequested) {
+    // Copilot is in reviewRequests — review explicitly pending
     copilotState = "PENDING";
-  } else if (copilotReviewedCurrentCommit) {
-    copilotState = "CLEAN";
   } else {
-    copilotState = "PENDING";
+    // Copilot is NOT in reviewRequests — either already reviewed or not going to.
+    // Don't wait for a review that isn't coming.
+    copilotState = "CLEAN";
   }
 
   return {
