@@ -98,6 +98,35 @@ export const SelectedNodeHighlight: Story = {
   },
 };
 
+/** After simulation settles, the view zooms to fit all nodes. */
+export const ZoomToFitOnLoad: Story = {
+  args: {
+    graphData: {
+      nodes: [nodeA, nodeB, nodeC],
+      links: [
+        makeGraphLink({ source: "n-1", target: "n-2", type: "relates_to" }),
+        makeGraphLink({ source: "n-2", target: "n-3", type: "derived_from" }),
+      ],
+    },
+  },
+  play: async ({ canvas }) => {
+    const container = canvas.getByTestId("knowledge-graph");
+    const svg = container.querySelector("svg");
+    await expect(svg).not.toBeNull();
+
+    // Wait for the simulation to end and zoom-to-fit to apply a transform on <g>
+    await waitFor(async () => {
+      const g = svg!.querySelector("g");
+      await expect(g).not.toBeNull();
+      const transform = g!.getAttribute("transform");
+      await expect(transform).not.toBeNull();
+      // The transform should contain translate and scale (bounding-box fit)
+      await expect(transform).toMatch(/translate/);
+      await expect(transform).toMatch(/scale/);
+    }, { timeout: 5000 });
+  },
+};
+
 /** SVG element receives dimensions from the container. */
 export const SVGDimensions: Story = {
   play: async ({ canvas }) => {
