@@ -198,8 +198,10 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   }
 
   async function onStreamConnect(): Promise<void> {
-    // Domain hooks reload concurrently
-    await Promise.allSettled(domainHooks.map((h) => h.onConnect()));
+    // Fire-and-forget: domain hooks and settings reload concurrently
+    for (const h of domainHooks) {
+      h.onConnect().catch(() => {});
+    }
 
     // Settings (not a domain hook — managed directly here)
     try {

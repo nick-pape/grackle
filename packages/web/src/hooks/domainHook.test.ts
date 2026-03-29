@@ -3,7 +3,7 @@
  * Tests for the DomainHook self-registration pattern.
  *
  * These tests enforce that every domain hook exposes a `domainHook` property
- * and that the registry in useGrackleSocket wires them all in.
+ * and that the central registry of hooks includes them all with the expected size.
  */
 
 import { describe, it, expect, vi } from "vitest";

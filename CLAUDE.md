@@ -177,7 +177,7 @@ Rush monorepo with packages under `packages/`:
 
 - **New components must be pure presentational.** Components in `components/` should accept data and callbacks as props. Only page-level components (`pages/*.tsx`) should call `useGrackle()`.
 - **All components decoupled from `useGrackle()`** ([#805](https://github.com/nick-pape/grackle/issues/805)). Only page-level components (`pages/*.tsx`) should call `useGrackle()`. If you add a new component, follow this pattern: accept data and callbacks as props.
-- **Domain hooks must implement `DomainHook`.** Every `use*.ts` hook in `packages/web/src/hooks/` that manages server-side state must export a `domainHook: DomainHook` property (from `domainHook.ts`) and be added to the `domainHooks` array in `useGrackleSocket.ts`. This ensures reconnect, disconnect, and event routing are wired automatically. The compile-time type assertions in `domainHook.test.ts` enforce this — if a hook is missing `domainHook`, the build fails.
+- **Domain hooks must implement `DomainHook`.** Every `use*.ts` hook in `packages/web/src/hooks/` that manages server-side state must export a `domainHook: DomainHook` property (from `domainHook.ts`) and must also be manually added to the `domainHooks` array in `useGrackleSocket.ts`. This ensures reconnect, disconnect, and event routing are wired automatically. The compile-time type assertions in `domainHook.test.ts` only verify that each hook exposes a correctly typed `domainHook` property; they do **not** enforce that the hook has been registered in the `domainHooks` array.
 
 ### Dependencies
 - Cross-package deps use `"workspace:*"` (pnpm rewrites to real versions at publish time)
