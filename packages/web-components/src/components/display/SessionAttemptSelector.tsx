@@ -34,7 +34,7 @@ export function SessionAttemptSelector({ taskSessions, selectedSessionId, onSele
             key={s.id}
             className={`${styles.attemptButton} ${isActive ? styles.attemptActive : ""}`}
             onClick={() => onSelect(s.id)}
-            title={`Attempt #${i + 1} -- ${s.status}`}
+            title={`Attempt #${i + 1} \u2014 ${s.status}`}
             aria-label={`Attempt #${i + 1}, ${s.status}`}
             aria-pressed={isActive}
             data-testid={`attempt-${i + 1}`}

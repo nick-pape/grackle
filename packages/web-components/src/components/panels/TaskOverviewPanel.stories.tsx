@@ -102,7 +102,7 @@ export const NoTimeline: Story = {
     task: makeTask({
       id: "t-nt",
       status: "not_started",
-      createdAt: undefined as unknown as string,
+      createdAt: "",
     }),
     taskSessions: [],
   },

@@ -212,8 +212,54 @@
   gap: var(--space-md);
 }
 
-// NOTE: Overview Dashboard styles (statusBadge, overviewSection, timeline, etc.)
-// have been extracted to @grackle-ai/web-components TaskOverviewPanel.
+// NOTE: Full overview dashboard styles have been extracted to
+// @grackle-ai/web-components TaskOverviewPanel. A minimal subset is kept
+// here for TaskShimmer and other page-level consumers.
+
+.overviewDashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.overviewHero {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.overviewSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.overviewLabel {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.envRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.timelineRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  font-size: var(--font-size-sm);
+}
 
 .waitingMessage {
   color: var(--text-tertiary);
