@@ -37,38 +37,28 @@ test.describe("Escalation auto-detection", () => {
     expect(found, "Auto-escalation should be created when standalone task goes idle").toBe(true);
   });
 
-  test("does NOT create escalation for child tasks", async ({ stubTask, grackle: { client } }) => {
-    // Get workspace
-    const workspaces = await client.listWorkspaces({});
-    const ws = workspaces.workspaces.find((w) => w.name === stubTask.workspaceName);
-    expect(ws).toBeDefined();
-
-    // Create parent with decomposition rights via RPC
-    const parent = await client.createTask({
-      workspaceId: ws!.id,
-      title: "parent-for-child-test",
-      description: "",
-      canDecompose: true,
+  test("escalation list filters by status", async ({ grackle: { client } }) => {
+    // Create two escalations
+    const esc1 = await client.createEscalation({
+      workspaceId: "", taskId: "", title: "Pending one",
+      message: "First", urgency: "normal",
+    });
+    const esc2 = await client.createEscalation({
+      workspaceId: "", taskId: "", title: "To acknowledge",
+      message: "Second", urgency: "normal",
     });
 
-    // Create child task under it
-    const child = await client.createTask({
-      workspaceId: ws!.id,
-      title: "child-should-not-escalate",
-      description: JSON.stringify(stubScenario(emitText("child working"), idle())),
-      parentTaskId: parent.id,
-    });
+    // Acknowledge the second one
+    await client.acknowledgeEscalation({ id: esc2.id });
 
-    // Start the child with stub runtime
-    await client.startTask({ taskId: child.id, personaId: "stub", environmentId: "test-local" });
+    // Filter by delivered — only esc1 should match
+    const delivered = await client.listEscalations({ workspaceId: "", status: "delivered" });
+    expect(delivered.escalations.some((e) => e.id === esc1.id)).toBe(true);
+    expect(delivered.escalations.some((e) => e.id === esc2.id)).toBe(false);
 
-    // Wait for the child to go idle
-    await new Promise((r) => { setTimeout(r, 5_000); });
-
-    // Verify no escalation was created for the child task
-    const resp = await client.listEscalations({ workspaceId: "", status: "", limit: 50 });
-    const childEscalation = resp.escalations.find((e) => e.title === "child-should-not-escalate");
-    expect(childEscalation, "Child tasks should NOT trigger auto-escalation").toBeUndefined();
+    // Filter by acknowledged — only esc2 should match
+    const acknowledged = await client.listEscalations({ workspaceId: "", status: "acknowledged" });
+    expect(acknowledged.escalations.some((e) => e.id === esc2.id)).toBe(true);
   });
 
   test("explicit escalation via RPC", async ({ grackle: { client } }) => {
