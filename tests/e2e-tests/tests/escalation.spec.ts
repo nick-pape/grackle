@@ -38,37 +38,32 @@ test.describe("Escalation auto-detection", () => {
   });
 
   test("does NOT create escalation for child tasks", async ({ stubTask, grackle: { client } }) => {
-    const { page } = stubTask;
-
-    // Create a parent task
-    await stubTask.createAndNavigate(
-      "parent-no-escalate",
-      stubScenario(emitText("I am the parent"), idle()),
-    );
-
-    // Get workspace info for creating child task
+    // Get workspace
     const workspaces = await client.listWorkspaces({});
     const ws = workspaces.workspaces.find((w) => w.name === stubTask.workspaceName);
     expect(ws).toBeDefined();
 
-    // Get parent task
-    const tasks = await client.listTasks({ workspaceId: ws!.id });
-    const parent = tasks.tasks.find((t) => t.title === "parent-no-escalate");
-    expect(parent).toBeDefined();
+    // Create parent with decomposition rights via RPC
+    const parent = await client.createTask({
+      workspaceId: ws!.id,
+      title: "parent-for-child-test",
+      description: "",
+      canDecompose: true,
+    });
 
-    // Create a child task
+    // Create child task under it
     const child = await client.createTask({
       workspaceId: ws!.id,
       title: "child-should-not-escalate",
-      description: JSON.stringify({ scenario: stubScenario(emitText("child working"), idle()) }),
-      parentTaskId: parent!.id,
+      description: JSON.stringify(stubScenario(emitText("child working"), idle())),
+      parentTaskId: parent.id,
     });
 
-    // Start the child
+    // Start the child with stub runtime
     await client.startTask({ taskId: child.id, personaId: "stub", environmentId: "test-local" });
 
-    // Wait a bit for any escalation to potentially fire
-    await new Promise((r) => { setTimeout(r, 3_000); });
+    // Wait for the child to go idle
+    await new Promise((r) => { setTimeout(r, 5_000); });
 
     // Verify no escalation was created for the child task
     const resp = await client.listEscalations({ workspaceId: "", status: "", limit: 50 });
