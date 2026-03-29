@@ -50,43 +50,44 @@ export function useKnowledge(): UseKnowledgeResult {
   /** Tracks the active workspace filter so search and clearSearch can use it. */
   const workspaceIdRef = useRef("");
 
-  const loadRecent = useCallback((workspaceId?: string) => {
+  const loadRecent = useCallback(async (workspaceId?: string) => {
     const effectiveWsId = workspaceId ?? "";
     workspaceIdRef.current = effectiveWsId;
     setSearchQuery("");
     setLoading(true);
-    grackleClient.listRecentKnowledgeNodes({
-      limit: 30,
-      workspaceId: effectiveWsId,
-    }).then(
-      (resp) => {
-        const nodeMap = new Map<string, GraphNode>();
-        const linkList: GraphLink[] = [];
+    try {
+      const resp = await grackleClient.listRecentKnowledgeNodes({
+        limit: 30,
+        workspaceId: effectiveWsId,
+      });
+      const nodeMap = new Map<string, GraphNode>();
+      const linkList: GraphLink[] = [];
 
-        for (const p of resp.nodes) {
-          nodeMap.set(p.id, protoToGraphNode(p));
-        }
-        for (const e of resp.edges) {
-          linkList.push(protoToGraphLink(e));
-        }
+      for (const p of resp.nodes) {
+        nodeMap.set(p.id, protoToGraphNode(p));
+      }
+      for (const e of resp.edges) {
+        linkList.push(protoToGraphLink(e));
+      }
 
-        // Update edge counts
-        for (const link of linkList) {
-          const src = nodeMap.get(link.source);
-          if (src) { src.val += 1; }
-          const tgt = nodeMap.get(link.target);
-          if (tgt) { tgt.val += 1; }
-        }
+      // Update edge counts
+      for (const link of linkList) {
+        const src = nodeMap.get(link.source);
+        if (src) { src.val += 1; }
+        const tgt = nodeMap.get(link.target);
+        if (tgt) { tgt.val += 1; }
+      }
 
-        setNodes(nodeMap);
-        setLinks(linkList);
-        setLoading(false);
-      },
-      () => { setLoading(false); },
-    );
+      setNodes(nodeMap);
+      setLinks(linkList);
+    } catch {
+      // empty
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const search = useCallback((query: string) => {
+  const search = useCallback(async (query: string) => {
     if (!query.trim()) {
       return;
     }
@@ -94,52 +95,53 @@ export function useKnowledge(): UseKnowledgeResult {
     setSelectedId(undefined);
     setSelectedNode(undefined);
     setLoading(true);
-    grackleClient.searchKnowledge({ query, limit: 20, workspaceId: workspaceIdRef.current }).then(
-      (resp) => {
-        const nodeMap = new Map<string, GraphNode>();
-        const linkList: GraphLink[] = [];
+    try {
+      const resp = await grackleClient.searchKnowledge({ query, limit: 20, workspaceId: workspaceIdRef.current });
+      const nodeMap = new Map<string, GraphNode>();
+      const linkList: GraphLink[] = [];
 
-        for (const result of resp.results) {
-          if (result.node) {
-            nodeMap.set(result.node.id, protoToGraphNode(result.node, result.edges.length));
-          }
-          for (const e of result.edges) {
-            linkList.push(protoToGraphLink(e));
-          }
+      for (const result of resp.results) {
+        if (result.node) {
+          nodeMap.set(result.node.id, protoToGraphNode(result.node, result.edges.length));
         }
+        for (const e of result.edges) {
+          linkList.push(protoToGraphLink(e));
+        }
+      }
 
-        setNodes(nodeMap);
-        setLinks(linkList);
-        setLoading(false);
-      },
-      () => { setLoading(false); },
-    );
+      setNodes(nodeMap);
+      setLinks(linkList);
+    } catch {
+      // empty
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const clearSearch = useCallback(() => {
-    loadRecent(workspaceIdRef.current);
+    loadRecent(workspaceIdRef.current).catch(() => {});
   }, [loadRecent]);
 
-  const selectNode = useCallback((id: string) => {
+  const selectNode = useCallback(async (id: string) => {
     setSelectedId(id);
-    grackleClient.getKnowledgeNode({ id }).then(
-      (resp) => {
-        if (!resp.node) {
-          setSelectedNode(undefined);
-          return;
-        }
-        setSelectedNode({
-          node: protoToGraphNode(resp.node, resp.edges.length),
-          edges: resp.edges.map((e) => ({
-            fromId: e.fromId,
-            toId: e.toId,
-            type: e.type,
-            metadata: safeParseJson(e.metadataJson),
-          })),
-        });
-      },
-      () => { setSelectedNode(undefined); },
-    );
+    try {
+      const resp = await grackleClient.getKnowledgeNode({ id });
+      if (!resp.node) {
+        setSelectedNode(undefined);
+        return;
+      }
+      setSelectedNode({
+        node: protoToGraphNode(resp.node, resp.edges.length),
+        edges: resp.edges.map((e) => ({
+          fromId: e.fromId,
+          toId: e.toId,
+          type: e.type,
+          metadata: safeParseJson(e.metadataJson),
+        })),
+      });
+    } catch {
+      setSelectedNode(undefined);
+    }
   }, []);
 
   const clearSelection = useCallback(() => {
@@ -147,34 +149,34 @@ export function useKnowledge(): UseKnowledgeResult {
     setSelectedNode(undefined);
   }, []);
 
-  const expandNode = useCallback((id: string) => {
-    grackleClient.expandKnowledgeNode({ id, depth: 1 }).then(
-      (resp) => {
-        setNodes((prev) => {
-          const updated = new Map(prev);
-          for (const p of resp.nodes) {
-            if (!updated.has(p.id)) {
-              updated.set(p.id, protoToGraphNode(p));
-            }
+  const expandNode = useCallback(async (id: string) => {
+    try {
+      const resp = await grackleClient.expandKnowledgeNode({ id, depth: 1 });
+      setNodes((prev) => {
+        const updated = new Map(prev);
+        for (const p of resp.nodes) {
+          if (!updated.has(p.id)) {
+            updated.set(p.id, protoToGraphNode(p));
           }
-          return updated;
-        });
+        }
+        return updated;
+      });
 
-        setLinks((prev) => {
-          const existing = new Set(prev.map((l) => `${l.source}:${l.target}:${l.type}`));
-          const additions: GraphLink[] = [];
-          for (const e of resp.edges) {
-            const link = protoToGraphLink(e);
-            const key = `${link.source}:${link.target}:${link.type}`;
-            if (!existing.has(key)) {
-              additions.push(link);
-            }
+      setLinks((prev) => {
+        const existing = new Set(prev.map((l) => `${l.source}:${l.target}:${l.type}`));
+        const additions: GraphLink[] = [];
+        for (const e of resp.edges) {
+          const link = protoToGraphLink(e);
+          const key = `${link.source}:${link.target}:${link.type}`;
+          if (!existing.has(key)) {
+            additions.push(link);
           }
-          return [...prev, ...additions];
-        });
-      },
-      () => {},
-    );
+        }
+        return [...prev, ...additions];
+      });
+    } catch {
+      // empty
+    }
   }, []);
 
   /** Handle domain events from the event bus. */
@@ -184,6 +186,7 @@ export function useKnowledge(): UseKnowledgeResult {
     return false;
   }, []);
 
+  /* eslint-disable @typescript-eslint/no-misused-promises -- async hooks returned as fire-and-forget void actions */
   return {
     graphData: { nodes: [...nodes.values()], links },
     selectedNode,

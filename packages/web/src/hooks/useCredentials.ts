@@ -39,11 +39,13 @@ export function useCredentials(): UseCredentialsResult {
     goose: "off",
   });
 
-  const loadCredentials = useCallback(() => {
-    grackleClient.getCredentialProviders({}).then(
-      (resp) => { setCredentialProviders(protoToCredentialConfig(resp)); },
-      () => {},
-    );
+  const loadCredentials = useCallback(async () => {
+    try {
+      const resp = await grackleClient.getCredentialProviders({});
+      setCredentialProviders(protoToCredentialConfig(resp));
+    } catch {
+      // empty
+    }
   }, []);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
@@ -57,7 +59,7 @@ export function useCredentials(): UseCredentialsResult {
   }, []);
 
   const updateCredentialProviders = useCallback(
-    (config: CredentialProviderConfig) => {
+    async (config: CredentialProviderConfig) => {
       const entries: Array<{ provider: string; value: string }> = [
         { provider: "claude", value: config.claude },
         { provider: "github", value: config.github },
@@ -66,13 +68,16 @@ export function useCredentials(): UseCredentialsResult {
         { provider: "goose", value: config.goose },
       ];
       for (const { provider, value } of entries) {
-        grackleClient.setCredentialProvider({ provider, value }).catch(
-          () => {},
-        );
+        try {
+          await grackleClient.setCredentialProvider({ provider, value });
+        } catch {
+          // empty
+        }
       }
     },
     [],
   );
 
+  /* eslint-disable @typescript-eslint/no-misused-promises -- async hooks returned as fire-and-forget void actions */
   return { credentialProviders, loadCredentials, updateCredentialProviders, handleEvent };
 }

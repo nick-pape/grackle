@@ -116,25 +116,27 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     [],
   );
 
-  const completeOnboarding = useCallback(() => {
+  const completeOnboarding = useCallback(async () => {
     setOnboardingCompleted(true);
-    grackleClient.setSetting({ key: SETTING_KEY_ONBOARDING_COMPLETED, value: "true" }).catch(
-      () => {},
-    );
+    try {
+      await grackleClient.setSetting({ key: SETTING_KEY_ONBOARDING_COMPLETED, value: "true" });
+    } catch {
+      // empty
+    }
   }, []);
 
   const loadUsage = useCallback(
-    (scope: string, id: string) => {
-      grackleClient.getUsage({ scope, id }).then(
-        (resp) => {
-          const key = `${scope}:${id}`;
-          setUsageCache((prev) => ({
-            ...prev,
-            [key]: protoToUsageStats(resp),
-          }));
-        },
-        () => {},
-      );
+    async (scope: string, id: string) => {
+      try {
+        const resp = await grackleClient.getUsage({ scope, id });
+        const key = `${scope}:${id}`;
+        setUsageCache((prev) => ({
+          ...prev,
+          [key]: protoToUsageStats(resp),
+        }));
+      } catch {
+        // empty
+      }
     },
     [],
   );
@@ -179,21 +181,30 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   }
 
   function onStreamConnect(): void {
+    // Fire-and-forget: all loads run concurrently
     environmentsHook.loadEnvironments();
     sessionsHook.loadSessions();
     workspacesHook.loadWorkspaces();
     tokensHook.loadTokens();
     credentialsHook.loadCredentials();
     personasHook.loadPersonas();
-    grackleClient.getSetting({ key: SETTING_KEY_DEFAULT_PERSONA }).then(
-      (resp) => { setAppDefaultPersonaIdState(resp.value); },
-      () => {},
-    );
-    grackleClient.getSetting({ key: SETTING_KEY_ONBOARDING_COMPLETED }).then(
-      (resp) => { setOnboardingCompleted(resp.value === "true"); },
-      () => {},
-    );
     tasksHook.loadAllTasks();
+
+    const loadSettings = async (): Promise<void> => {
+      try {
+        const personaResp = await grackleClient.getSetting({ key: SETTING_KEY_DEFAULT_PERSONA });
+        setAppDefaultPersonaIdState(personaResp.value);
+      } catch {
+        // empty
+      }
+      try {
+        const onboardingResp = await grackleClient.getSetting({ key: SETTING_KEY_ONBOARDING_COMPLETED });
+        setOnboardingCompleted(onboardingResp.value === "true");
+      } catch {
+        // empty
+      }
+    };
+    loadSettings().catch(() => {});
   }
 
   function onStreamDisconnect(): void {
@@ -208,6 +219,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     tokensHook.loadTokens();
   }, [environmentsHook.loadEnvironments, sessionsHook.loadSessions, workspacesHook.loadWorkspaces, tokensHook.loadTokens]);
 
+  /* eslint-disable @typescript-eslint/no-misused-promises -- async hooks returned as fire-and-forget void actions */
   return {
     connected,
     environments: environmentsHook.environments,

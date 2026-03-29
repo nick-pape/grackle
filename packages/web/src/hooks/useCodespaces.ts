@@ -39,37 +39,36 @@ export function useCodespaces(): UseCodespacesResult {
   const [codespaceListError, setCodespaceListError] = useState("");
   const [codespaceCreating, setCodespaceCreating] = useState(false);
 
-  const listCodespaces = useCallback(() => {
-    grackleClient.listCodespaces({}).then(
-      (resp) => {
-        setCodespaces(resp.codespaces.map(protoToCodespace));
-        setCodespaceListError(resp.error);
-      },
-      () => {},
-    );
+  const listCodespaces = useCallback(async () => {
+    try {
+      const resp = await grackleClient.listCodespaces({});
+      setCodespaces(resp.codespaces.map(protoToCodespace));
+      setCodespaceListError(resp.error);
+    } catch {
+      // empty
+    }
   }, []);
 
   const createCodespace = useCallback(
-    (repo: string, machine?: string) => {
+    async (repo: string, machine?: string) => {
       setCodespaceCreating(true);
       setCodespaceError("");
-      grackleClient.createCodespace({ repo, machine: machine ?? "" }).then(
-        () => {
-          setCodespaceCreating(false);
-          listCodespaces();
-        },
-        (err) => {
-          setCodespaceCreating(false);
-          const message = err instanceof ConnectError
-            ? err.message
-            : "Failed to create codespace";
-          setCodespaceError(message);
-        },
-      );
+      try {
+        await grackleClient.createCodespace({ repo, machine: machine ?? "" });
+        setCodespaceCreating(false);
+        await listCodespaces();
+      } catch (err) {
+        setCodespaceCreating(false);
+        const message = err instanceof ConnectError
+          ? err.message
+          : "Failed to create codespace";
+        setCodespaceError(message);
+      }
     },
     [listCodespaces],
   );
 
+  /* eslint-disable @typescript-eslint/no-misused-promises -- async hooks returned as fire-and-forget void actions */
   return {
     codespaces,
     codespaceError,

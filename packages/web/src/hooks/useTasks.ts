@@ -80,34 +80,34 @@ export function useTasks(): UseTasksResult {
   const debounceTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   /** Fetch tasks for a single workspace and merge into state. */
-  const loadTasks = useCallback((workspaceId: string) => {
-    grackleClient.listTasks({ workspaceId }).then(
-      (resp) => {
-        const incoming = resp.tasks.map(protoToTask);
-        setTasks((prev) => [
-          ...prev.filter((t) => t.workspaceId !== workspaceId),
-          ...incoming,
-        ]);
-      },
-      () => {},
-    );
+  const loadTasks = useCallback(async (workspaceId: string) => {
+    try {
+      const resp = await grackleClient.listTasks({ workspaceId });
+      const incoming = resp.tasks.map(protoToTask);
+      setTasks((prev) => [
+        ...prev.filter((t) => t.workspaceId !== workspaceId),
+        ...incoming,
+      ]);
+    } catch {
+      // empty
+    }
   }, []);
 
   /** Fetch all tasks (global, including workspace-less) and upsert into state. */
-  const loadAllTasks = useCallback(() => {
-    grackleClient.listTasks({}).then(
-      (resp) => {
-        const incoming = resp.tasks.map(protoToTask);
-        setTasks((prev) => {
-          const incomingIds = new Set(incoming.map((t) => t.id));
-          return [
-            ...prev.filter((t) => !incomingIds.has(t.id)),
-            ...incoming,
-          ];
-        });
-      },
-      () => {},
-    );
+  const loadAllTasks = useCallback(async () => {
+    try {
+      const resp = await grackleClient.listTasks({});
+      const incoming = resp.tasks.map(protoToTask);
+      setTasks((prev) => {
+        const incomingIds = new Set(incoming.map((t) => t.id));
+        return [
+          ...prev.filter((t) => !incomingIds.has(t.id)),
+          ...incoming,
+        ];
+      });
+    } catch {
+      // empty
+    }
   }, []);
 
   /** Debounced refresh: coalesce rapid domain events for the same workspace. */
@@ -117,7 +117,7 @@ export function useTasks(): UseTasksResult {
       clearTimeout(debounceTimersRef.current[wsId]);
       debounceTimersRef.current[wsId] = setTimeout(() => {
         delete debounceTimersRef.current[wsId];
-        loadTasks(wsId);
+        loadTasks(wsId).catch(() => {});
       }, 200);
     };
 
@@ -129,7 +129,7 @@ export function useTasks(): UseTasksResult {
         if (found?.workspaceId) {
           scheduleLoad(found.workspaceId);
         } else {
-          loadAllTasks();
+          loadAllTasks().catch(() => {});
         }
         return prev;
       });
@@ -142,7 +142,7 @@ export function useTasks(): UseTasksResult {
       case "task.created": {
         const createdWsId = typeof p.workspaceId === "string" ? p.workspaceId : "";
         if (createdWsId) {
-          loadTasks(createdWsId);
+          loadTasks(createdWsId).catch(() => {});
         }
         return true;
       }
@@ -202,7 +202,7 @@ export function useTasks(): UseTasksResult {
   }, []);
 
   const createTask = useCallback(
-    (
+    async (
       workspaceId: string,
       title: string,
       description?: string,
@@ -213,95 +213,110 @@ export function useTasks(): UseTasksResult {
       onSuccess?: () => void,
       onError?: (message: string) => void,
     ) => {
-      grackleClient.createTask({
-        workspaceId,
-        title,
-        description: description || "",
-        dependsOn: dependsOn || [],
-        parentTaskId: parentTaskId || "",
-        defaultPersonaId: defaultPersonaId || undefined,
-        canDecompose: canDecompose ?? undefined,
-      }).then(
-        () => { onSuccess?.(); },
-        (err) => {
-          const message = err instanceof ConnectError ? err.message : "Failed to create task";
-          onError?.(message);
-        },
-      );
+      try {
+        await grackleClient.createTask({
+          workspaceId,
+          title,
+          description: description || "",
+          dependsOn: dependsOn || [],
+          parentTaskId: parentTaskId || "",
+          defaultPersonaId: defaultPersonaId || undefined,
+          canDecompose: canDecompose ?? undefined,
+        });
+        onSuccess?.();
+      } catch (err) {
+        const message = err instanceof ConnectError ? err.message : "Failed to create task";
+        onError?.(message);
+      }
     },
     [],
   );
 
   const startTask = useCallback(
-    (taskId: string, personaId?: string, environmentId?: string, notes?: string) => {
+    async (taskId: string, personaId?: string, environmentId?: string, notes?: string) => {
       setTaskStartingId(taskId);
-      grackleClient.startTask({
-        taskId,
-        personaId: personaId || "",
-        environmentId: environmentId || "",
-        notes: notes || "",
-      }).catch(() => {
+      try {
+        await grackleClient.startTask({
+          taskId,
+          personaId: personaId || "",
+          environmentId: environmentId || "",
+          notes: notes || "",
+        });
+      } catch {
         setTaskStartingId(undefined);
-      });
+      }
     },
     [],
   );
 
   const stopTask = useCallback(
-    (taskId: string) => {
-      grackleClient.stopTask({ id: taskId }).catch(
-        () => {},
-      );
+    async (taskId: string) => {
+      try {
+        await grackleClient.stopTask({ id: taskId });
+      } catch {
+        // empty
+      }
     },
     [],
   );
 
   const completeTask = useCallback(
-    (taskId: string) => {
-      grackleClient.completeTask({ id: taskId }).catch(
-        () => {},
-      );
+    async (taskId: string) => {
+      try {
+        await grackleClient.completeTask({ id: taskId });
+      } catch {
+        // empty
+      }
     },
     [],
   );
 
   const resumeTask = useCallback(
-    (taskId: string) => {
-      grackleClient.resumeTask({ id: taskId }).catch(
-        () => {},
-      );
+    async (taskId: string) => {
+      try {
+        await grackleClient.resumeTask({ id: taskId });
+      } catch {
+        // empty
+      }
     },
     [],
   );
 
   const updateTask = useCallback(
-    (
+    async (
       taskId: string,
       title: string,
       description: string,
       dependsOn: string[],
       defaultPersonaId?: string,
     ) => {
-      grackleClient.updateTask({
-        id: taskId,
-        title,
-        description,
-        dependsOn,
-        ...(defaultPersonaId !== undefined ? { defaultPersonaId } : {}),
-      }).catch(() => {});
+      try {
+        await grackleClient.updateTask({
+          id: taskId,
+          title,
+          description,
+          dependsOn,
+          ...(defaultPersonaId !== undefined ? { defaultPersonaId } : {}),
+        });
+      } catch {
+        // empty
+      }
     },
     [],
   );
 
   const deleteTask = useCallback(
-    (taskId: string) => {
-      grackleClient.deleteTask({ id: taskId }).catch(
-        () => {},
-      );
+    async (taskId: string) => {
+      try {
+        await grackleClient.deleteTask({ id: taskId });
+      } catch {
+        // empty
+      }
     },
     [],
   );
 
+  /* eslint-disable @typescript-eslint/no-misused-promises -- async hooks returned as fire-and-forget void actions */
   return {
     tasks,
     taskStartingId,

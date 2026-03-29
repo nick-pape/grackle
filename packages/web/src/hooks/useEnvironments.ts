@@ -58,11 +58,13 @@ export function useEnvironments(): UseEnvironmentsResult {
     Record<string, ProvisionStatus>
   >({});
 
-  const loadEnvironments = useCallback(() => {
-    grackleClient.listEnvironments({}).then(
-      (resp) => { setEnvironments(resp.environments.map(protoToEnvironment)); },
-      () => {},
-    );
+  const loadEnvironments = useCallback(async () => {
+    try {
+      const resp = await grackleClient.listEnvironments({});
+      setEnvironments(resp.environments.map(protoToEnvironment));
+    } catch {
+      // empty
+    }
   }, []);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
@@ -84,7 +86,7 @@ export function useEnvironments(): UseEnvironmentsResult {
         return true;
       }
       case "environment.changed":
-        loadEnvironments();
+        loadEnvironments().catch(() => {});
         return true;
       case "environment.provision_progress": {
         const pp = event.payload;
@@ -132,93 +134,99 @@ export function useEnvironments(): UseEnvironmentsResult {
   }, []);
 
   const addEnvironment = useCallback(
-    (
+    async (
       displayName: string,
       adapterType: string,
       adapterConfig?: Record<string, unknown>,
     ) => {
-      grackleClient.addEnvironment({
-        displayName,
-        adapterType,
-        adapterConfig: JSON.stringify(adapterConfig ?? {}),
-      }).catch(
-        () => {},
-      );
+      try {
+        await grackleClient.addEnvironment({
+          displayName,
+          adapterType,
+          adapterConfig: JSON.stringify(adapterConfig ?? {}),
+        });
+      } catch {
+        // empty
+      }
     },
     [],
   );
 
   const updateEnvironment = useCallback(
-    (
+    async (
       environmentId: string,
       fields: { displayName?: string; adapterConfig?: Record<string, unknown> },
     ) => {
-      grackleClient.updateEnvironment({
-        id: environmentId,
-        displayName: fields.displayName,
-        adapterConfig: fields.adapterConfig ? JSON.stringify(fields.adapterConfig) : undefined,
-      }).catch(
-        () => {},
-      );
+      try {
+        await grackleClient.updateEnvironment({
+          id: environmentId,
+          displayName: fields.displayName,
+          adapterConfig: fields.adapterConfig ? JSON.stringify(fields.adapterConfig) : undefined,
+        });
+      } catch {
+        // empty
+      }
     },
     [],
   );
 
   const provisionEnvironment = useCallback(
-    (environmentId: string, force?: boolean) => {
-      const runProvision = async (): Promise<void> => {
-        try {
-          const stream = grackleClient.provisionEnvironment({ id: environmentId, force: force ?? false });
-          for await (const event of stream) {
-            setProvisionStatus((prev) => ({
-              ...prev,
-              [environmentId]: {
-                stage: event.stage,
-                message: event.message,
-                progress: event.progress,
-              },
-            }));
-            if (event.stage === "ready") {
-              setTimeout(() => {
-                setProvisionStatus((prev) => {
-                  const next = { ...prev };
-                  delete next[environmentId];
-                  return next;
-                });
-              }, PROVISION_STATUS_CLEAR_DELAY_MS);
-            }
+    async (environmentId: string, force?: boolean) => {
+      try {
+        const stream = grackleClient.provisionEnvironment({ id: environmentId, force: force ?? false });
+        for await (const event of stream) {
+          setProvisionStatus((prev) => ({
+            ...prev,
+            [environmentId]: {
+              stage: event.stage,
+              message: event.message,
+              progress: event.progress,
+            },
+          }));
+          if (event.stage === "ready") {
+            setTimeout(() => {
+              setProvisionStatus((prev) => {
+                const next = { ...prev };
+                delete next[environmentId];
+                return next;
+              });
+            }, PROVISION_STATUS_CLEAR_DELAY_MS);
           }
-        } catch {
-          setProvisionStatus((prev) => {
-            const next = { ...prev };
-            delete next[environmentId];
-            return next;
-          });
         }
-      };
-      runProvision().catch(() => {});
+      } catch {
+        setProvisionStatus((prev) => {
+          const next = { ...prev };
+          delete next[environmentId];
+          return next;
+        });
+      }
     },
     [],
   );
 
   const stopEnvironment = useCallback(
-    (environmentId: string) => {
-      grackleClient.stopEnvironment({ id: environmentId }).catch(
-        () => {},
-      );
+    async (environmentId: string) => {
+      try {
+        await grackleClient.stopEnvironment({ id: environmentId });
+      } catch {
+        // empty
+      }
     },
     [],
   );
 
   const removeEnvironment = useCallback(
-    (environmentId: string) => {
-      grackleClient.removeEnvironment({ id: environmentId }).catch(
-        () => {},
-      );
+    async (environmentId: string) => {
+      try {
+        await grackleClient.removeEnvironment({ id: environmentId });
+      } catch {
+        // empty
+      }
     },
     [],
   );
 
+  /* eslint-disable @typescript-eslint/no-misused-promises -- async hooks returned as fire-and-forget void actions */
   return {
     environments,
     provisionStatus,

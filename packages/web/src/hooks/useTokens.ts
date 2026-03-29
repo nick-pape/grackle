@@ -40,44 +40,51 @@ export interface UseTokensResult {
 export function useTokens(): UseTokensResult {
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
 
-  const loadTokens = useCallback(() => {
-    grackleClient.listTokens({}).then(
-      (resp) => { setTokens(resp.tokens.map(protoToToken)); },
-      () => {},
-    );
+  const loadTokens = useCallback(async () => {
+    try {
+      const resp = await grackleClient.listTokens({});
+      setTokens(resp.tokens.map(protoToToken));
+    } catch {
+      // empty
+    }
   }, []);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     if (event.type === "token.changed") {
-      loadTokens();
+      loadTokens().catch(() => {});
       return true;
     }
     return false;
   }, [loadTokens]);
 
   const setToken = useCallback(
-    (
+    async (
       name: string,
       value: string,
       tokenType: string,
       envVar: string,
       filePath: string,
     ) => {
-      grackleClient.setToken({ name, value, type: tokenType, envVar, filePath }).catch(
-        () => {},
-      );
+      try {
+        await grackleClient.setToken({ name, value, type: tokenType, envVar, filePath });
+      } catch {
+        // empty
+      }
     },
     [],
   );
 
   const deleteToken = useCallback(
-    (name: string) => {
-      grackleClient.deleteToken({ name }).catch(
-        () => {},
-      );
+    async (name: string) => {
+      try {
+        await grackleClient.deleteToken({ name });
+      } catch {
+        // empty
+      }
     },
     [],
   );
 
+  /* eslint-disable @typescript-eslint/no-misused-promises -- async hooks returned as fire-and-forget void actions */
   return { tokens, loadTokens, setToken, deleteToken, handleEvent };
 }

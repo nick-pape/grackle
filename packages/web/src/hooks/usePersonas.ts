@@ -57,11 +57,13 @@ export interface UsePersonasResult {
 export function usePersonas(): UsePersonasResult {
   const [personas, setPersonas] = useState<PersonaData[]>([]);
 
-  const loadPersonas = useCallback(() => {
-    grackleClient.listPersonas({}).then(
-      (resp) => { setPersonas(resp.personas.map(protoToPersona)); },
-      () => {},
-    );
+  const loadPersonas = useCallback(async () => {
+    try {
+      const resp = await grackleClient.listPersonas({});
+      setPersonas(resp.personas.map(protoToPersona));
+    } catch {
+      // empty
+    }
   }, []);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
@@ -69,7 +71,7 @@ export function usePersonas(): UsePersonasResult {
       case "persona.created":
       case "persona.updated":
       case "persona.deleted":
-        loadPersonas();
+        loadPersonas().catch(() => {});
         return true;
       default:
         return false;
@@ -77,7 +79,7 @@ export function usePersonas(): UsePersonasResult {
   }, [loadPersonas]);
 
   const createPersona = useCallback(
-    (
+    async (
       name: string,
       description: string,
       systemPrompt: string,
@@ -88,7 +90,7 @@ export function usePersonas(): UsePersonasResult {
       script?: string,
       allowedMcpTools?: string[],
     ): Promise<PersonaData> => {
-      return grackleClient.createPersona({
+      const resp = await grackleClient.createPersona({
         name,
         description,
         systemPrompt,
@@ -98,17 +100,16 @@ export function usePersonas(): UsePersonasResult {
         type: type || "agent",
         script: script || "",
         allowedMcpTools: allowedMcpTools || [],
-      }).then((resp) => {
-        const createdPersona = protoToPersona(resp);
-        setPersonas((prev) => [...prev.filter((persona) => persona.id !== createdPersona.id), createdPersona]);
-        return createdPersona;
       });
+      const createdPersona = protoToPersona(resp);
+      setPersonas((prev) => [...prev.filter((persona) => persona.id !== createdPersona.id), createdPersona]);
+      return createdPersona;
     },
     [],
   );
 
   const updatePersona = useCallback(
-    (
+    async (
       personaId: string,
       name?: string,
       description?: string,
@@ -132,13 +133,12 @@ export function usePersonas(): UsePersonasResult {
       if (type !== undefined) { request.type = type; }
       if (script !== undefined) { request.script = script; }
       if (allowedMcpTools !== undefined) { request.allowedMcpTools = { tools: allowedMcpTools }; }
-      return grackleClient.updatePersona(request).then((resp) => {
-        const updatedPersona = protoToPersona(resp);
-        setPersonas((prev) => prev.map((persona) => (
-          persona.id === updatedPersona.id ? updatedPersona : persona
-        )));
-        return updatedPersona;
-      });
+      const resp = await grackleClient.updatePersona(request);
+      const updatedPersona = protoToPersona(resp);
+      setPersonas((prev) => prev.map((persona) => (
+        persona.id === updatedPersona.id ? updatedPersona : persona
+      )));
+      return updatedPersona;
     },
     [],
   );
@@ -151,5 +151,6 @@ export function usePersonas(): UsePersonasResult {
     [],
   );
 
+  /* eslint-disable @typescript-eslint/no-misused-promises -- async hooks returned as fire-and-forget void actions */
   return { personas, loadPersonas, createPersona, updatePersona, deletePersona, handleEvent };
 }
