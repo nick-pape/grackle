@@ -76,6 +76,7 @@ export function KnowledgeNav({
           value={searchInput}
           onChange={(e) => { setSearchInput(e.target.value); }}
           data-testid="knowledge-search-input"
+          aria-label="Search knowledge nodes"
         />
         <button type="submit" className={styles.searchButton} disabled={loading}>
           Go
@@ -92,6 +93,7 @@ export function KnowledgeNav({
         className={styles.workspaceSelect}
         onChange={(e) => { handleWorkspaceChange(e.target.value); }}
         data-testid="knowledge-workspace-filter"
+        aria-label="Filter by workspace"
       >
         <option value="">All workspaces</option>
         {workspaces.map((ws) => (
