@@ -135,6 +135,35 @@ export const DraggableNodes: Story = {
   },
 };
 
+/** After simulation settles, the view zooms to fit all nodes. */
+export const ZoomToFitOnLoad: Story = {
+  args: {
+    graphData: {
+      nodes: [nodeA, nodeB, nodeC],
+      links: [
+        makeGraphLink({ source: "n-1", target: "n-2", type: "relates_to" }),
+        makeGraphLink({ source: "n-2", target: "n-3", type: "derived_from" }),
+      ],
+    },
+  },
+  play: async ({ canvas }) => {
+    const container = canvas.getByTestId("knowledge-graph");
+    const svg = container.querySelector("svg");
+    await expect(svg).not.toBeNull();
+
+    // d3-force converges in ~300 iterations (~5s at 60fps), plus 500ms transition.
+    // The root <g> has no transform until the zoom-to-fit fires after simulation end.
+    await waitFor(async () => {
+      const g = svg!.querySelector(":scope > g");
+      await expect(g).not.toBeNull();
+      const transform = g!.getAttribute("transform");
+      await expect(transform).toBeTruthy();
+      await expect(transform).toMatch(/translate/);
+      await expect(transform).toMatch(/scale/);
+    }, { timeout: 15000 });
+  },
+};
+
 /** SVG element receives dimensions from the container. */
 export const SVGDimensions: Story = {
   play: async ({ canvas }) => {

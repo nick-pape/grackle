@@ -58,8 +58,73 @@ const NODE_WIDTH: number = 200;
 const NODE_HEIGHT: number = 52;
 const NODE_RADIUS: number = 12;
 
+/** Padding around the bounding box when computing zoom-to-fit. */
+const FIT_PADDING: number = 40;
+
 /** Minimum drag distance (px) before a mouseup is treated as a drag-end rather than a click. */
 const DRAG_CLICK_THRESHOLD: number = 3;
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+interface ZoomToFitResult {
+  translateX: number;
+  translateY: number;
+  scale: number;
+}
+
+/**
+ * Compute the transform needed to fit all nodes within the viewport.
+ *
+ * Returns translate + scale that centers the node bounding box with padding.
+ * Scale is capped at 1.0 so small graphs are never zoomed in past 100%.
+ */
+function computeZoomToFit(
+  nodes: readonly { x?: number; y?: number }[],
+  viewport: { width: number; height: number },
+): ZoomToFitResult | undefined {
+  if (viewport.width <= 0 || viewport.height <= 0) {
+    return undefined;
+  }
+
+  // Single-pass min/max to avoid stack overflow with large node counts
+  let minX: number = Infinity;
+  let maxX: number = -Infinity;
+  let minY: number = Infinity;
+  let maxY: number = -Infinity;
+  for (const n of nodes) {
+    const nx: number = n.x ?? 0;
+    const ny: number = n.y ?? 0;
+    if (nx < minX) { minX = nx; }
+    if (nx > maxX) { maxX = nx; }
+    if (ny < minY) { minY = ny; }
+    if (ny > maxY) { maxY = ny; }
+  }
+
+  const x0: number = minX - NODE_WIDTH / 2 - FIT_PADDING;
+  const x1: number = maxX + NODE_WIDTH / 2 + FIT_PADDING;
+  const y0: number = minY - NODE_HEIGHT / 2 - FIT_PADDING;
+  const y1: number = maxY + NODE_HEIGHT / 2 + FIT_PADDING;
+
+  const bboxWidth: number = x1 - x0;
+  const bboxHeight: number = y1 - y0;
+
+  const scale: number = Math.min(
+    viewport.width / bboxWidth,
+    viewport.height / bboxHeight,
+    1.0,
+  );
+
+  const bboxCenterX: number = (x0 + x1) / 2;
+  const bboxCenterY: number = (y0 + y1) / 2;
+
+  return {
+    translateX: viewport.width / 2 - bboxCenterX * scale,
+    translateY: viewport.height / 2 - bboxCenterY * scale,
+    scale,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -84,6 +149,9 @@ export function KnowledgeGraph({
   const zoomRef = useRef<ZoomBehavior<SVGSVGElement, unknown> | undefined>(undefined);
   const linkElsRef = useRef<Selection<SVGLineElement, SimLink, SVGGElement, unknown> | undefined>(undefined);
   const nodeElsRef = useRef<Selection<SVGGElement, SimNode, SVGGElement, unknown> | undefined>(undefined);
+  const selectedNodeIdRef = useRef(selectedNodeId);
+  selectedNodeIdRef.current = selectedNodeId;
+  const didAutoFitRef = useRef(false);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const dragDistanceRef = useRef(0);
 
@@ -147,6 +215,9 @@ export function KnowledgeGraph({
       simRef.current.stop();
       simRef.current = undefined;
     }
+
+    // Reset auto-fit flag when graph data changes so the next simulation run fits the view
+    didAutoFitRef.current = false;
 
     if (graphData.nodes.length === 0) {
       select(g).selectAll("*").remove();
@@ -278,21 +349,25 @@ export function KnowledgeGraph({
       });
     nodeEls.call(dragBehavior);
 
-    // Fit to view after simulation settles
-    const fitTimer: ReturnType<typeof setTimeout> = setTimeout(() => {
-      if (svgRef.current && zoomRef.current) {
+    // Zoom to fit all nodes once the force simulation has fully converged.
+    // One-shot: skip if already fitted (drag reheat would re-trigger), or if a node is selected.
+    sim.on("end", () => {
+      if (svgRef.current && zoomRef.current && simNodes.length > 0
+        && !didAutoFitRef.current && !selectedNodeIdRef.current) {
+        didAutoFitRef.current = true;
+        const fit: ZoomToFitResult | undefined = computeZoomToFit(simNodes, dimensions);
+        if (!fit) {
+          return;
+        }
+        const { translateX, translateY, scale }: ZoomToFitResult = fit;
         const zb: ZoomBehavior<SVGSVGElement, unknown> = zoomRef.current;
-        const t = zoomIdentity
-          .translate(dimensions.width / 2, dimensions.height / 2)
-          .scale(0.8)
-          .translate(-dimensions.width / 2, -dimensions.height / 2);
+        const t = zoomIdentity.translate(translateX, translateY).scale(scale);
         // eslint-disable-next-line @typescript-eslint/unbound-method -- d3 zoom API pattern
         select(svgRef.current).transition().duration(500).call(zb.transform, t);
       }
-    }, 1200);
+    });
 
     return () => {
-      clearTimeout(fitTimer);
       sim.stop();
     };
   }, [graphData, dimensions]);
