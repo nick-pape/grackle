@@ -130,6 +130,8 @@ export function KnowledgeGraph({
   const zoomRef = useRef<ZoomBehavior<SVGSVGElement, unknown> | undefined>(undefined);
   const linkElsRef = useRef<Selection<SVGLineElement, SimLink, SVGGElement, unknown> | undefined>(undefined);
   const nodeElsRef = useRef<Selection<SVGGElement, SimNode, SVGGElement, unknown> | undefined>(undefined);
+  const selectedNodeIdRef = useRef(selectedNodeId);
+  selectedNodeIdRef.current = selectedNodeId;
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
 
   // Track container size
@@ -294,9 +296,10 @@ export function KnowledgeGraph({
 
     simRef.current = sim;
 
-    // Zoom to fit all nodes once the force simulation has fully converged
+    // Zoom to fit all nodes once the force simulation has fully converged.
+    // Skip if a node is already selected — the center-on-node effect handles that case.
     sim.on("end", () => {
-      if (svgRef.current && zoomRef.current && simNodes.length > 0) {
+      if (svgRef.current && zoomRef.current && simNodes.length > 0 && !selectedNodeIdRef.current) {
         const { translateX, translateY, scale }: ZoomToFitResult =
           computeZoomToFit(simNodes, dimensions);
         const zb: ZoomBehavior<SVGSVGElement, unknown> = zoomRef.current;
