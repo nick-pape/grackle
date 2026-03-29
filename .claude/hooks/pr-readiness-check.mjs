@@ -151,12 +151,6 @@ const GRAPHQL_QUERY = `query($owner: String!, $repo: String!, $branch: String!) 
           pageInfo { hasNextPage }
           nodes {
             isResolved
-            isOutdated
-            comments(first: 1) {
-              nodes {
-                author { login }
-              }
-            }
           }
         }
       }
