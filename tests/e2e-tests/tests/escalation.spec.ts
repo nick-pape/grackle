@@ -37,7 +37,7 @@ test.describe("Escalation auto-detection", () => {
     expect(found, "Auto-escalation should be created when standalone task goes idle").toBe(true);
   });
 
-  test("escalation list filters by status", async ({ grackle: { client } }) => {
+  test("escalation list filters by status", async ({ stubTask, grackle: { client } }) => {
     // Create two escalations
     const esc1 = await client.createEscalation({
       workspaceId: "", taskId: "", title: "Pending one",
@@ -61,7 +61,7 @@ test.describe("Escalation auto-detection", () => {
     expect(acknowledged.escalations.some((e) => e.id === esc2.id)).toBe(true);
   });
 
-  test("explicit escalation via RPC", async ({ grackle: { client } }) => {
+  test("explicit escalation via RPC", async ({ stubTask, grackle: { client } }) => {
     // Create an escalation via the RPC directly (simulating what the MCP tool does)
     const esc = await client.createEscalation({
       workspaceId: "",
