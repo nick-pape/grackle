@@ -169,4 +169,5 @@ export function useWorkspaces(): UseWorkspacesResult {
     handleEvent,
     onDisconnect,
   };
+  /* eslint-enable @typescript-eslint/no-misused-promises */
 }

@@ -115,4 +115,5 @@ export function useFindings(): UseFindingsResult {
 
   /* eslint-disable @typescript-eslint/no-misused-promises -- async hooks returned as fire-and-forget void actions */
   return { findings, selectedFinding, findingLoading, loadFindings, loadAllFindings, loadFinding, postFinding, handleEvent };
+  /* eslint-enable @typescript-eslint/no-misused-promises */
 }

@@ -201,4 +201,5 @@ export function useKnowledge(): UseKnowledgeResult {
     loadRecent,
     handleEvent,
   };
+  /* eslint-enable @typescript-eslint/no-misused-promises */
 }

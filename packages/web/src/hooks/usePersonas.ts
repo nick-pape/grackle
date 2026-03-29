@@ -153,4 +153,5 @@ export function usePersonas(): UsePersonasResult {
 
   /* eslint-disable @typescript-eslint/no-misused-promises -- async hooks returned as fire-and-forget void actions */
   return { personas, loadPersonas, createPersona, updatePersona, deletePersona, handleEvent };
+  /* eslint-enable @typescript-eslint/no-misused-promises */
 }

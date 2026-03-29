@@ -291,4 +291,5 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     loadUsage,
     knowledge: knowledgeHook,
   };
+  /* eslint-enable @typescript-eslint/no-misused-promises */
 }

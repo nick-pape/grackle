@@ -333,4 +333,5 @@ export function useTasks(): UseTasksResult {
     onDisconnect,
     handleLegacyMessage,
   };
+  /* eslint-enable @typescript-eslint/no-misused-promises */
 }

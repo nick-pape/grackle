@@ -77,4 +77,5 @@ export function useCodespaces(): UseCodespacesResult {
     listCodespaces,
     createCodespace,
   };
+  /* eslint-enable @typescript-eslint/no-misused-promises */
 }

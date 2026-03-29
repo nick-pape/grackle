@@ -239,4 +239,5 @@ export function useEnvironments(): UseEnvironmentsResult {
     handleEvent,
     handleLegacyMessage,
   };
+  /* eslint-enable @typescript-eslint/no-misused-promises */
 }

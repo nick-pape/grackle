@@ -67,17 +67,16 @@ export function useCredentials(): UseCredentialsResult {
         { provider: "codex", value: config.codex },
         { provider: "goose", value: config.goose },
       ];
-      for (const { provider, value } of entries) {
-        try {
-          await grackleClient.setCredentialProvider({ provider, value });
-        } catch {
-          // empty
-        }
-      }
+      await Promise.allSettled(
+        entries.map(({ provider, value }) =>
+          grackleClient.setCredentialProvider({ provider, value }),
+        ),
+      );
     },
     [],
   );
 
   /* eslint-disable @typescript-eslint/no-misused-promises -- async hooks returned as fire-and-forget void actions */
   return { credentialProviders, loadCredentials, updateCredentialProviders, handleEvent };
+  /* eslint-enable @typescript-eslint/no-misused-promises */
 }

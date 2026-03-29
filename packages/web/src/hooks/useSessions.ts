@@ -368,4 +368,5 @@ export function useSessions(): UseSessionsResult {
     handleSessionEvent,
     handleLegacyMessage,
   };
+  /* eslint-enable @typescript-eslint/no-misused-promises */
 }

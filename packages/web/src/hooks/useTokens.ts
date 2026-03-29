@@ -87,4 +87,5 @@ export function useTokens(): UseTokensResult {
 
   /* eslint-disable @typescript-eslint/no-misused-promises -- async hooks returned as fire-and-forget void actions */
   return { tokens, loadTokens, setToken, deleteToken, handleEvent };
+  /* eslint-enable @typescript-eslint/no-misused-promises */
 }
