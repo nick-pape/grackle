@@ -14,7 +14,7 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     const page = appPage;
 
     // Ensure connected before starting (may have been left disconnected)
-    await provisionEnvironmentDirect("test-local");
+    await provisionEnvironmentDirect("test-local", client);
 
     // Wait for fully connected state
     await expect(page.getByText("1/1 env")).toBeVisible({ timeout: 15_000 });
@@ -29,7 +29,7 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     await expect(page.getByText("Environment disconnected")).toBeVisible({ timeout: 5_000 });
 
     // Re-provision so other tests aren't affected
-    await provisionEnvironmentDirect("test-local");
+    await provisionEnvironmentDirect("test-local", client);
     await expect(page.getByText("1/1 env")).toBeVisible({ timeout: 15_000 });
   });
 
@@ -41,7 +41,7 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     await expect(page.getByText("0/1 env")).toBeVisible({ timeout: 10_000 });
 
     // Re-provision via direct gRPC call
-    await provisionEnvironmentDirect("test-local");
+    await provisionEnvironmentDirect("test-local", client);
 
     // StatusBar should show 1/1 again
     await expect(page.getByText("1/1 env")).toBeVisible({ timeout: 15_000 });
