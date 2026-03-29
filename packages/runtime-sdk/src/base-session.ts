@@ -238,9 +238,11 @@ export abstract class BaseAgentSession implements AgentSession {
       this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
       this.startInputLoop();
     } catch (err) {
+      this.killed = true;
       this.status = SESSION_STATUS.STOPPED;
       this.eventQueue.push({ type: "error", timestamp: ts(), content: String(err) });
       this.eventQueue.push({ type: "status", timestamp: ts(), content: "failed" });
+      this.inputQueue.close();
       this.releaseResources();
       this.eventQueue.close();
     }
