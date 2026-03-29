@@ -22,7 +22,7 @@ import { execSync } from "node:child_process";
 
 // ── Configuration ────────────────────────────────────────────────────────────
 
-/** Seconds between poll iterations. */
+/** Milliseconds between poll iterations. */
 const POLL_INTERVAL_MS = 30_000;
 
 /** Maximum total poll time before giving up (~14 min, leaves buffer for 15-min hook timeout). */
@@ -87,15 +87,6 @@ function getOwnerRepo() {
     return null;
   }
   return { owner: match[1], repo: match[2] };
-}
-
-function readStdin() {
-  try {
-    const input = require("fs").readFileSync(0, "utf-8");
-    return JSON.parse(input);
-  } catch {
-    return {};
-  }
 }
 
 // ── GraphQL query ────────────────────────────────────────────────────────────
@@ -239,7 +230,11 @@ function queryPrState(owner, repo, branch) {
   const copilotHasReviewed = reviews.some((r) => r.author?.login === COPILOT_LOGIN);
 
   let copilotState;
-  if (unresolvedCopilotThreads.length > 0 || (threadsHasNextPage && unresolvedCopilotThreads.length > 0)) {
+  if (unresolvedCopilotThreads.length > 0) {
+    copilotState = "HAS_COMMENTS";
+  } else if (threadsHasNextPage) {
+    // Can't see all threads — there may be unresolved Copilot threads on later pages.
+    // Treat as HAS_COMMENTS to be safe (fail-closed).
     copilotState = "HAS_COMMENTS";
   } else if (copilotHasReviewed) {
     copilotState = "CLEAN";
@@ -306,12 +301,20 @@ function evaluate(state) {
 
   // Priority 1: Copilot comments — always fix these first (CI restarts after push)
   if (copilotState === "HAS_COMMENTS") {
-    const countNote = threadsHasNextPage ? `${unresolvedCount}+` : String(unresolvedCount);
+    let countNote;
+    if (threadsHasNextPage && unresolvedCount === 0) {
+      countNote = "possible unresolved";
+    } else if (threadsHasNextPage) {
+      countNote = `${unresolvedCount}+`;
+    } else {
+      countNote = String(unresolvedCount);
+    }
     return {
       action: "block",
       message:
-        `PR #${prNumber} — Copilot left ${countNote} unresolved comment(s). Address each one and push.\n` +
-        `CI will restart after your push — don't wait for the current run.`,
+        `PR #${prNumber} — Copilot left ${countNote} comment(s). Address each one and push.\n` +
+        `CI will restart after your push — don't wait for the current run.\n` +
+        (threadsHasNextPage ? `(PR has >100 review threads; check GitHub for the full list.)\n` : ""),
     };
   }
 
@@ -347,8 +350,6 @@ function evaluate(state) {
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 function main() {
-  const stdin = readStdin();
-
   // Check that gh CLI is available
   const ghVersion = run("gh --version");
   if (!ghVersion.stdout) {
