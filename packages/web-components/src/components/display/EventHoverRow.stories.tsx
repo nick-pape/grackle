@@ -57,7 +57,6 @@ export const SelectionModeUnselected: Story = {
   play: async ({ canvas }) => {
     const row = canvas.getByTestId("event-selectable-row");
     await expect(row).toBeInTheDocument();
-    await expect(row).toHaveAttribute("aria-selected", "false");
 
     const checkbox = canvas.getByTestId("event-select-checkbox");
     await expect(checkbox).toBeInTheDocument();
@@ -73,7 +72,7 @@ export const SelectionModeSelected: Story = {
   },
   play: async ({ canvas }) => {
     const row = canvas.getByTestId("event-selectable-row");
-    await expect(row).toHaveAttribute("aria-selected", "true");
+    await expect(row).toBeInTheDocument();
 
     const checkbox = canvas.getByTestId("event-select-checkbox");
     await expect(checkbox).toBeChecked();

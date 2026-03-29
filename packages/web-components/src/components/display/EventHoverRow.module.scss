@@ -6,9 +6,6 @@
 
 .row {
   position: relative;
-  // Padding ensures the hover action bar (positioned above via top: -28px)
-  // has room and is not clipped by the scroll container.
-  padding-top: 4px;
 }
 
 // --- Hover action row (normal mode) ---

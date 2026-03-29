@@ -102,8 +102,6 @@ export function EventHoverRow({
       <div
         className={`${styles.row} ${styles.selectingRow} ${isSelected ? styles.selected : ""}`}
         onClick={handleRowClick}
-        role="option"
-        aria-selected={isSelected}
         data-testid="event-selectable-row"
       >
         <div className={styles.checkboxArea}>
