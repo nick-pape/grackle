@@ -426,7 +426,9 @@ async function handleGet(
   res.on("close", () => {
     if (transports.has(sessionId)) {
       logger.info({ sessionId }, "SSE stream closed; cleaning up abandoned session");
-      transport.close().catch(() => {});
+      transport.close().catch((error) => {
+        logger.warn({ sessionId, err: error }, "Error closing transport for abandoned SSE session");
+      });
     }
   });
 

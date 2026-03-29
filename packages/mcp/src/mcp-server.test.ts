@@ -133,7 +133,11 @@ function openSseStream(
   sessionId: string,
 ): { req: http.ClientRequest; connected: Promise<void> } {
   let resolveConnected: () => void;
-  const connected = new Promise<void>((resolve) => { resolveConnected = resolve; });
+  let rejectConnected: (err: Error) => void;
+  const connected = new Promise<void>((resolve, reject) => {
+    resolveConnected = resolve;
+    rejectConnected = reject;
+  });
 
   const req = http.request({
     hostname: "127.0.0.1",
@@ -147,15 +151,24 @@ function openSseStream(
       "mcp-protocol-version": "2025-03-26",
     },
   }, (res) => {
-    // As soon as we get a response (200 + SSE headers), the stream is open
+    if (res.statusCode !== 200) {
+      rejectConnected!(new Error(`Unexpected SSE status code: ${res.statusCode}`));
+      res.resume();
+      return;
+    }
     resolveConnected!();
     // Keep consuming data so the stream stays open
     res.on("data", () => {});
     res.on("end", () => {});
   });
 
-  req.on("error", () => {
-    // Expected when we abort — ignore
+  req.on("error", (err: NodeJS.ErrnoException) => {
+    // Ignore the expected error when the client aborts the request,
+    // but surface all other errors so tests don't hang silently.
+    if (err.code === "ECONNRESET") {
+      return;
+    }
+    rejectConnected!(err);
   });
 
   req.end();
@@ -163,17 +176,29 @@ function openSseStream(
   return { req, connected };
 }
 
-/** Small delay to let event-loop ticks propagate close events. */
-function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+/** Poll until a condition is met, with a timeout to avoid hanging. */
+async function waitUntil(
+  fn: () => Promise<boolean>,
+  timeoutMs: number = 2000,
+  intervalMs: number = 20,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await fn()) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  throw new Error(`waitUntil timed out after ${timeoutMs}ms`);
 }
 
 describe("MCP session cleanup on SSE disconnect", () => {
-  let server: http.Server;
+  let server: http.Server | undefined;
 
   afterEach(async () => {
     if (server) {
-      await new Promise<void>((resolve) => { server.close(() => resolve()); });
+      await new Promise<void>((resolve) => { server!.close(() => resolve()); });
+      server = undefined;
     }
   });
 
@@ -181,37 +206,40 @@ describe("MCP session cleanup on SSE disconnect", () => {
     server = await startServer();
 
     // 1. Initialize a session
-    const sessionId = await initialize(server);
+    const sessionId = await initialize(server!);
     expect(sessionId).toBeTruthy();
 
     // 2. Verify session is alive
-    const alive = await postToSession(server, sessionId);
+    const alive = await postToSession(server!, sessionId);
     expect(alive.status).toBe(200);
 
     // 3. Open SSE stream, then abort it (simulate client crash)
-    const sse = openSseStream(server, sessionId);
+    const sse = openSseStream(server!, sessionId);
     await sse.connected;
     sse.req.destroy();
 
-    // 4. Wait for close event to propagate and transport.close() to complete
-    await wait(100);
+    // 4. Poll until session is cleaned up (close event propagation)
+    await waitUntil(async () => {
+      const resp = await postToSession(server!, sessionId);
+      return resp.status === 400;
+    });
 
     // 5. Session should be gone — POST with old session ID returns 400
-    const dead = await postToSession(server, sessionId);
+    const dead = await postToSession(server!, sessionId);
     expect(dead.status).toBe(400);
   });
 
   it("still cleans up session on explicit DELETE", async () => {
     server = await startServer();
 
-    const sessionId = await initialize(server);
+    const sessionId = await initialize(server!);
 
     // Send DELETE
     const deleteResult = await new Promise<number>((resolve, reject) => {
       const req = http.request(
         {
           hostname: "127.0.0.1",
-          port: port(server),
+          port: port(server!),
           path: "/mcp",
           method: "DELETE",
           headers: {
@@ -232,7 +260,7 @@ describe("MCP session cleanup on SSE disconnect", () => {
     expect(deleteResult).toBe(200);
 
     // Session should be gone
-    const dead = await postToSession(server, sessionId);
+    const dead = await postToSession(server!, sessionId);
     expect(dead.status).toBe(400);
   });
 
@@ -240,22 +268,26 @@ describe("MCP session cleanup on SSE disconnect", () => {
     server = await startServer();
 
     // Initialize two sessions
-    const sessionA = await initialize(server);
-    const sessionB = await initialize(server);
+    const sessionA = await initialize(server!);
+    const sessionB = await initialize(server!);
 
     // Open SSE for session A, then abort it
-    const sseA = openSseStream(server, sessionA);
+    const sseA = openSseStream(server!, sessionA);
     await sseA.connected;
     sseA.req.destroy();
 
-    await wait(100);
+    // Poll until session A is cleaned up
+    await waitUntil(async () => {
+      const resp = await postToSession(server!, sessionA);
+      return resp.status === 400;
+    });
 
     // Session A should be gone
-    const deadA = await postToSession(server, sessionA);
+    const deadA = await postToSession(server!, sessionA);
     expect(deadA.status).toBe(400);
 
     // Session B should still work
-    const aliveB = await postToSession(server, sessionB);
+    const aliveB = await postToSession(server!, sessionB);
     expect(aliveB.status).toBe(200);
   });
 });
