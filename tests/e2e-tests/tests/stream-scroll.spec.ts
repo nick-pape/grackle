@@ -47,11 +47,17 @@ test.describe("Stream smart scroll", { tag: ["@webui"] }, () => {
     const scrollContainer = page.getByTestId("event-stream-scroll");
     await expect(scrollContainer).toBeVisible();
 
-    const isNearBottom = await scrollContainer.evaluate((el) => {
-      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-      return distanceFromBottom < 60;
-    });
-    expect(isNearBottom).toBe(true);
+    await scrollContainer.waitFor({ state: "visible" });
+    await page.waitForFunction(
+      (selector) => {
+        const el = document.querySelector(selector);
+        if (!el) { return false; }
+        const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+        return distanceFromBottom < 60;
+      },
+      '[data-testid="event-stream-scroll"]',
+      { timeout: 5_000 },
+    );
   });
 
   test("direction toggle reverses event order", async ({ stubTask }) => {
