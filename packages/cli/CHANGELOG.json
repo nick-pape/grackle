@@ -2,6 +2,26 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.90.0",
+      "tag": "@grackle-ai/cli_v0.90.0",
+      "date": "Sun, 29 Mar 2026 15:36:04 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Surface environment operation errors as toasts instead of silently swallowing them"
+          },
+          {
+            "comment": "Fix Dependabot and CodeQL security alerts: add pnpm overrides for vulnerable transitive deps, delete unused docker lockfile, fix ReDoS regexes, sanitize error in readiness endpoint"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "Add multi-select messages with hover actions and floating action bar in session chat"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.89.4",
       "tag": "@grackle-ai/cli_v0.89.4",
       "date": "Sun, 29 Mar 2026 04:51:59 GMT",

@@ -1,6 +1,18 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 29 Mar 2026 04:51:59 GMT and should not be manually modified.
+This log was last generated on Sun, 29 Mar 2026 15:36:04 GMT and should not be manually modified.
+
+## 0.90.0
+Sun, 29 Mar 2026 15:36:04 GMT
+
+### Minor changes
+
+- Add multi-select messages with hover actions and floating action bar in session chat
+
+### Patches
+
+- Surface environment operation errors as toasts instead of silently swallowing them
+- Fix Dependabot and CodeQL security alerts: add pnpm overrides for vulnerable transitive deps, delete unused docker lockfile, fix ReDoS regexes, sanitize error in readiness endpoint
 
 ## 0.89.4
 Sun, 29 Mar 2026 04:51:59 GMT
