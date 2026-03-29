@@ -115,7 +115,7 @@ function StatusGroupAccordion({
                   tabIndex={0}
                   aria-label={task.title}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
+                    if (e.currentTarget === e.target && (e.key === "Enter" || e.key === " ")) {
                       e.preventDefault();
                       navigate(taskUrl(task.id));
                     }
@@ -186,7 +186,7 @@ function TaskTreeNode({
         tabIndex={0}
         aria-label={node.title}
         onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
+          if (e.currentTarget === e.target && (e.key === "Enter" || e.key === " ")) {
             e.preventDefault();
             navigate(taskUrl(node.id));
           }

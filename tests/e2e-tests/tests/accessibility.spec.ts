@@ -40,16 +40,18 @@ test.describe("Accessibility attributes", { tag: ["@a11y"] }, () => {
       // Wait for child to appear (auto-expand)
       await expect(page.getByText("a11y-child")).toBeVisible({ timeout: 5_000 });
 
-      // Assert parent row has role="button" and tabIndex
+      // Assert parent row has role="button", tabIndex, and aria-label
       const parentRow = page.locator(`[data-task-id="${parentId}"]`);
       await expect(parentRow).toHaveAttribute("role", "button");
       await expect(parentRow).toHaveAttribute("tabindex", "0");
+      await expect(parentRow).toHaveAttribute("aria-label", "a11y-parent");
 
-      // Assert child row has role="button" and tabIndex
+      // Assert child row has role="button", tabIndex, and aria-label
       const childId = await getTaskId(client, workspaceId, "a11y-child");
       const childRow = page.locator(`[data-task-id="${childId}"]`);
       await expect(childRow).toHaveAttribute("role", "button");
       await expect(childRow).toHaveAttribute("tabindex", "0");
+      await expect(childRow).toHaveAttribute("aria-label", "a11y-child");
 
       // Keyboard navigation: pressing Enter on child row navigates to task page
       await childRow.focus();
@@ -76,9 +78,10 @@ test.describe("Accessibility attributes", { tag: ["@a11y"] }, () => {
       const taskRow = page.locator(`[data-task-id="${taskId}"]`);
       await expect(taskRow).toBeVisible({ timeout: 5_000 });
 
-      // Assert row has accessibility attributes
+      // Assert row has accessibility attributes including aria-label
       await expect(taskRow).toHaveAttribute("role", "button");
       await expect(taskRow).toHaveAttribute("tabindex", "0");
+      await expect(taskRow).toHaveAttribute("aria-label", "a11y-status-task");
 
       // Keyboard navigation: pressing Enter navigates to task page
       await taskRow.focus();
@@ -105,7 +108,7 @@ test.describe("Accessibility attributes", { tag: ["@a11y"] }, () => {
       await expect(input).toHaveAttribute("aria-label");
     });
 
-    test("chat input in spawn mode has aria-label on input and persona select", async ({ appPage }) => {
+    test("chat input in spawn mode has aria-label on input", async ({ appPage }) => {
       const page = appPage;
 
       // Navigate to chat page — the spawn-mode input should be visible
@@ -119,8 +122,15 @@ test.describe("Accessibility attributes", { tag: ["@a11y"] }, () => {
       const spawnInput = await input.isVisible().catch(() => false) ? input : altInput;
       await expect(spawnInput).toBeVisible({ timeout: 5_000 });
 
-      // Assert aria-label
+      // Assert aria-label on input
       await expect(spawnInput).toHaveAttribute("aria-label");
+
+      // Assert persona select has aria-label (if visible — only shown when showPersonaSelect is true)
+      const personaSelect = page.locator('select[aria-label="Select persona"]');
+      const selectVisible = await personaSelect.isVisible().catch(() => false);
+      if (selectVisible) {
+        await expect(personaSelect).toHaveAttribute("aria-label", "Select persona");
+      }
     });
   });
 
