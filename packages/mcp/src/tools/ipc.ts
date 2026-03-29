@@ -221,6 +221,47 @@ export const ipcTools: ToolDefinition[] = [
     },
   },
   {
+    name: "ipc_list_streams",
+    group: "ipc",
+    description:
+      "List all active IPC streams with subscriber details and message buffer depth. Useful for debugging inter-session communication.",
+    inputSchema: z.object({}),
+    rpcMethod: "listStreams",
+    mutating: false,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+    async handler(
+      _args: Record<string, unknown>,
+      client: Client<typeof grackle.Grackle>,
+    ) {
+      try {
+        const result = await client.listStreams({});
+        return jsonResult({
+          streams: result.streams.map((s) => ({
+            id: s.id,
+            name: s.name,
+            subscriberCount: s.subscriberCount,
+            messageBufferDepth: s.messageBufferDepth,
+            subscribers: s.subscribers.map((sub) => ({
+              subscriptionId: sub.subscriptionId,
+              sessionId: sub.sessionId,
+              fd: sub.fd,
+              permission: sub.permission,
+              deliveryMode: sub.deliveryMode,
+              createdBySpawn: sub.createdBySpawn,
+            })),
+          })),
+        });
+      } catch (error) {
+        return grpcErrorToToolResult(error);
+      }
+    },
+  },
+  {
     name: "ipc_create_stream",
     group: "ipc",
     description: "Create a new named stream for inter-session communication. You get an rw file descriptor on the stream. Use ipc_attach to grant other sessions access, and ipc_write/ipc_close to send messages and close the fd.",
