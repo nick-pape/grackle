@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/runtime-claude-code",
-  "version": "0.91.0",
+  "version": "0.91.1",
   "description": "Grackle Claude Code runtime implementation",
   "license": "MIT",
   "repository": {
