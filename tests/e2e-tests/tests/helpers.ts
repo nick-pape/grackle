@@ -312,16 +312,23 @@ export async function runStubMcpTaskToCompletion(page: Page): Promise<void> {
     .waitFor({ timeout: 15_000 });
 }
 
+/** Timeout for provision stream drain (ms). */
+const PROVISION_TIMEOUT_MS = 30_000;
+
 /**
- * Provision an environment via gRPC. No-ops if already connected.
+ * Provision an environment via gRPC.
+ * Suppresses "already connected" errors so callers can safely re-provision.
  */
 export async function provisionEnvironmentDirect(
   environmentId: string,
   client: GrackleClient,
 ): Promise<void> {
   try {
-    for await (const _ of client.provisionEnvironment({ id: environmentId })) {
-      // Drain provision events
+    const signal = AbortSignal.timeout(PROVISION_TIMEOUT_MS);
+    for await (const event of client.provisionEnvironment({ id: environmentId }, { signal })) {
+      if (event.stage === "error") {
+        throw new Error(`Provisioning failed: ${event.message}`);
+      }
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

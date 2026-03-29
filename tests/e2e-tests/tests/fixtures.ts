@@ -112,10 +112,6 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   },
 
   appPage: async ({ page, workerServer, grackle }, use) => {
-    // Expose server details via env vars so helpers can access them without STATE_FILE
-    process.env.GRACKLE_E2E_SERVER_PORT = String(workerServer.serverPort);
-    process.env.GRACKLE_E2E_API_KEY = workerServer.apiKey;
-
     // Ensure the test-local environment is connected before each test.
     // Previous spec files may have stopped it.
     await provisionEnvironmentDirect("test-local", grackle.client);

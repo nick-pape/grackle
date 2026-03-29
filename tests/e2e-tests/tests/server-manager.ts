@@ -145,9 +145,12 @@ async function seedTestData(client: GrackleClient, powerlinePort: number, tag: s
   await client.setSetting({ key: "onboarding_completed", value: "true" });
   console.log(`${tag} Stub and Stub MCP personas created; Stub set as default; onboarding completed`);
 
-  // Provision the environment (server-streaming RPC — drain the stream)
-  for await (const _ of client.provisionEnvironment({ id: "test-local" })) {
-    // Drain provision events
+  // Provision the environment (server-streaming RPC — drain and check for errors)
+  const provisionAbort = AbortSignal.timeout(POLL_TIMEOUT_MS);
+  for await (const event of client.provisionEnvironment({ id: "test-local" }, { signal: provisionAbort })) {
+    if (event.stage === "error") {
+      throw new Error(`Provisioning failed: ${event.message}`);
+    }
   }
   console.log(`${tag} Environment provisioned`);
 }
@@ -216,9 +219,11 @@ export async function startGrackleStack(options: GrackleStackOptions = {}): Prom
   // 5. Wait for all ports
   console.log(`${tag} Waiting for PowerLine on :${powerlinePort}...`);
   await waitForPort(powerlinePort, POLL_TIMEOUT_MS);
-  console.log(`${tag} Waiting for server on :${webPort}...`);
+  console.log(`${tag} Waiting for gRPC on :${serverPort}...`);
+  await waitForPort(serverPort, POLL_TIMEOUT_MS);
+  console.log(`${tag} Waiting for web on :${webPort}...`);
   await waitForPort(webPort, POLL_TIMEOUT_MS);
-  console.log(`${tag} Waiting for MCP server on :${mcpPort}...`);
+  console.log(`${tag} Waiting for MCP on :${mcpPort}...`);
   await waitForPort(mcpPort, POLL_TIMEOUT_MS);
   console.log(`${tag} All servers ready`);
 
