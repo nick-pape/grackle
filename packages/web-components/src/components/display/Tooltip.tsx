@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState, type JSX } from "react";
+import { cloneElement, isValidElement, useCallback, useEffect, useId, useRef, useState, type JSX, type ReactElement } from "react";
 import { createPortal } from "react-dom";
 import styles from "./Tooltip.module.scss";
 
@@ -46,11 +46,15 @@ export function Tooltip({
   "data-testid": testId,
 }: TooltipProps): JSX.Element {
   const [visible, setVisible] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const wrapperRef = useRef<HTMLElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const tooltipId = useId();
+
+  // Gate portal rendering until the DOM is available (SSR safety).
+  useEffect(() => { setMounted(true); }, []);
 
   const computePosition = useCallback((): void => {
     if (!wrapperRef.current || !tooltipRef.current) {
@@ -100,7 +104,7 @@ export function Tooltip({
     setVisible(false);
   }, []);
 
-  // Dismiss on Escape key
+  // Dismiss on Escape key; reposition on scroll/resize while visible.
   useEffect(() => {
     if (!visible) {
       return;
@@ -111,8 +115,14 @@ export function Tooltip({
       }
     };
     document.addEventListener("keydown", handleKeyDown);
-    return () => { document.removeEventListener("keydown", handleKeyDown); };
-  }, [visible, hide]);
+    window.addEventListener("scroll", computePosition, true);
+    window.addEventListener("resize", computePosition);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("scroll", computePosition, true);
+      window.removeEventListener("resize", computePosition);
+    };
+  }, [visible, hide, computePosition]);
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -128,6 +138,16 @@ export function Tooltip({
     inline ? styles.wrapper : styles.wrapperBlock,
     className,
   ].filter(Boolean).join(" ");
+
+  // Inject aria-describedby onto the child element when it is a single
+  // ReactElement so screen readers announce the tooltip from the focused node.
+  const describedBy = visible ? tooltipId : undefined;
+  let renderedChildren: React.ReactNode = children;
+  if (isValidElement(children)) {
+    renderedChildren = cloneElement(children as ReactElement<{ "aria-describedby"?: string }>, {
+      "aria-describedby": describedBy,
+    });
+  }
 
   const tooltipElement = (
     <div
@@ -150,10 +170,9 @@ export function Tooltip({
       onMouseLeave={hide}
       onFocus={show}
       onBlur={hide}
-      aria-describedby={visible ? tooltipId : undefined}
     >
-      {children}
-      {createPortal(tooltipElement, document.body)}
+      {renderedChildren}
+      {mounted ? createPortal(tooltipElement, document.body) : null}
     </Tag>
   );
 }

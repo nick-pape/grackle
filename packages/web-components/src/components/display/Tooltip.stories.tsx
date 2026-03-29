@@ -205,10 +205,8 @@ export const AccessibilityAttributes: Story = {
       await expect(tooltip.className).toContain("visible");
     });
 
-    // The wrapper (parent of the button) links to the tooltip
-    const wrapper = trigger.closest("[aria-describedby]");
-    await expect(wrapper).toBeTruthy();
-    await expect(wrapper!.getAttribute("aria-describedby")).toBe(tooltipId);
+    // The trigger element itself carries aria-describedby (injected via cloneElement)
+    await expect(trigger.getAttribute("aria-describedby")).toBe(tooltipId);
   },
 };
 
