@@ -1,27 +1,41 @@
 /**
  * PR Readiness Check — Stop Hook
  *
- * This script runs as a Claude Code Stop hook. It prevents the agent from
- * stopping if the current branch has an open PR that isn't ready to merge.
+ * Prevents the agent from stopping if the current branch has an open PR that
+ * isn't ready to merge. Instead of telling the agent to wait (which burns
+ * tokens), the hook itself polls silently until something is actionable.
  *
  * Exit codes:
- *   0 — Allow stop (no PR, or PR is ready, or rate-limited)
- *   2 — Block stop (PR has issues; message on stderr tells agent what to fix)
+ *   0 — Allow stop (no open PR for this branch, PR is ready, or rate-limited)
+ *   2 — Block stop (message on stderr tells agent what to fix, including
+ *       stale closed/merged PRs that need cleanup)
  *
- * Checks performed (all in a single GraphQL query):
- *   1. Merge conflicts (PR mergeable state)
- *   2. CI status (all checks passing)
- *   3. Unresolved Copilot review threads
+ * State machine (CI x Review):
+ *   HAS_COMMENTS (any CI)  → block: "fix comments" (from any reviewer)
+ *   FAILING (no comments)  → block: "fix CI"
+ *   PASSING + CLEAN        → allow stop
+ *   anything pending       → poll silently until actionable or timeout
  *
- * Fail-closed: blocks on auth failures, network errors, and unexpected API
- * responses. The only exception is rate-limit errors, which exit 0 so agents
- * aren't stuck in a retry loop that burns even more quota.
+ * Merge conflicts short-circuit everything (block immediately).
  */
 
 import { execSync } from "node:child_process";
 
-/** Poll interval (seconds) for `gh pr checks --watch`. */
-const CHECK_WATCH_INTERVAL_SECONDS = 60;
+// ── Configuration ────────────────────────────────────────────────────────────
+
+/** Milliseconds between poll iterations. */
+const POLL_INTERVAL_MS = 30_000;
+
+/** Maximum total poll time before giving up (~16 min, leaves buffer for 20-min hook timeout). */
+const MAX_POLL_MS = 16 * 60 * 1000;
+
+/**
+ * After CI passes but Copilot hasn't reviewed yet, wait at most this long
+ * before assuming Copilot is clean / not configured.
+ */
+const COPILOT_GRACE_MS = 3 * 60 * 1000;
+
+const COPILOT_LOGIN = "copilot-pull-request-reviewer";
 
 const FAILING_CONCLUSIONS = new Set([
   "FAILURE", "ERROR", "TIMED_OUT", "CANCELLED",
@@ -32,13 +46,8 @@ const PENDING_STATUSES = new Set([
   "PENDING", "QUEUED", "IN_PROGRESS", "EXPECTED", "",
 ]);
 
-/**
- * Run a command and return its stdout (trimmed) and stderr.
- *
- * Returns an object:
- *   - On success: { stdout: string, stderr: string } (stderr usually empty).
- *   - On failure: { stdout: null, stderr: string, error: Error }.
- */
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
 function run(cmd, options) {
   try {
     const result = execSync(cmd, {
@@ -61,22 +70,28 @@ function block(message) {
   process.exit(2);
 }
 
-/**
- * Detect GitHub API rate-limit errors in command output.
- */
+function sleep(ms) {
+  const sab = new SharedArrayBuffer(4);
+  const int32 = new Int32Array(sab);
+  const end = Date.now() + ms;
+  while (true) {
+    const remaining = end - Date.now();
+    if (remaining <= 0) {
+      break;
+    }
+    Atomics.wait(int32, 0, 0, Math.min(remaining, 0x7fffffff));
+  }
+}
+
 function isRateLimited(text) {
   return /rate limit/i.test(text) || /API rate limit exceeded/i.test(text);
 }
 
-/**
- * Parse owner/repo from the git remote URL (no API call needed).
- */
 function getOwnerRepo() {
   const result = run("git remote get-url origin");
   if (!result.stdout) {
     return null;
   }
-  // Handles both HTTPS and SSH remote URLs
   const match = result.stdout.match(/[/:]([\w.-]+)\/([\w.-]+?)(?:\.git)?$/);
   if (!match) {
     return null;
@@ -84,33 +99,20 @@ function getOwnerRepo() {
   return { owner: match[1], repo: match[2] };
 }
 
-function main() {
-  // Check that gh CLI is available (local check, no API call)
-  const ghVersion = run("gh --version");
-  if (!ghVersion.stdout) {
-    block("gh CLI is not installed. Install it to enable PR readiness checks.");
-  }
+// ── GraphQL queries ──────────────────────────────────────────────────────────
 
-  // Get current branch name (local, no API call)
-  const branchResult = run("git branch --show-current");
-  if (!branchResult.stdout) {
-    // Detached HEAD or not in a git repo — nothing to check
-    process.exit(0);
-  }
-  const branch = branchResult.stdout;
-
-  // Parse owner/repo from git remote (local, no API call)
-  const ownerRepo = getOwnerRepo();
-  if (!ownerRepo) {
-    block("Could not parse owner/repo from git remote. Ensure the remote URL is set.");
-  }
-  const { owner, repo } = ownerRepo;
-
-  // ── Single GraphQL query for everything ──────────────────────────
-  const graphqlQuery = JSON.stringify({
-    query: `query($owner: String!, $repo: String!, $branch: String!) {
+/** Light query to check if a closed/merged PR exists (for worktree cleanup messaging). */
+const CLOSED_PR_QUERY = `query($owner: String!, $repo: String!, $branch: String!) {
   repository(owner: $owner, name: $repo) {
-    pullRequests(headRefName: $branch, states: [OPEN, MERGED, CLOSED], first: 1, orderBy: {field: UPDATED_AT, direction: DESC}) {
+    pullRequests(headRefName: $branch, states: [MERGED, CLOSED], first: 1, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      nodes { number state }
+    }
+  }
+}`;
+
+const GRAPHQL_QUERY = `query($owner: String!, $repo: String!, $branch: String!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequests(headRefName: $branch, states: [OPEN], first: 1, orderBy: {field: UPDATED_AT, direction: DESC}) {
       nodes {
         number
         state
@@ -123,10 +125,12 @@ function main() {
                   pageInfo { hasNextPage }
                   nodes {
                     ... on CheckRun {
+                      name
                       conclusion
                       status
                     }
                     ... on StatusContext {
+                      context
                       state
                     }
                   }
@@ -135,35 +139,45 @@ function main() {
             }
           }
         }
+        reviewRequests(first: 20) {
+          nodes {
+            requestedReviewer {
+              ... on User { login }
+              ... on Bot { login }
+            }
+          }
+        }
         reviewThreads(first: 100) {
           pageInfo { hasNextPage }
           nodes {
             isResolved
-            isOutdated
-            comments(first: 1) {
-              nodes {
-                author { login }
-              }
-            }
           }
         }
       }
     }
   }
-}`,
+}`;
+
+// ── PR state query + evaluation ──────────────────────────────────────────────
+
+/**
+ * Query GitHub and return a structured state object, or null on rate-limit.
+ * Calls block() on hard errors (auth, network, parse).
+ */
+function queryPrState(owner, repo, branch) {
+  const payload = JSON.stringify({
+    query: GRAPHQL_QUERY,
     variables: { owner, repo, branch },
   });
 
-  const result = run("gh api graphql --input -", { input: graphqlQuery });
+  const result = run("gh api graphql --input -", { input: payload });
 
-  // ── Rate limit / transient error handling ─────────────────────────
   if (!result.stdout) {
     const output = result.stderr || "";
     if (isRateLimited(output)) {
-      // Rate-limited — let the agent stop rather than spinning and burning more quota
-      process.exit(0);
+      return null; // caller should allow stop
     }
-    if (/authentication|auth|login|credentials/i.test(output) && !isRateLimited(output)) {
+    if (/authentication|auth|login|credentials/i.test(output)) {
       block("gh CLI is not authenticated. Run: gh auth login");
     }
     block(`Failed to query GitHub API: ${output.trim()}. Fix gh auth or network, then retry.`);
@@ -176,9 +190,8 @@ function main() {
     block(`Failed to parse GitHub API response. Raw output: ${result.stdout}`);
   }
 
-  // Check for GraphQL-level rate limiting
   if (data.errors?.some((e) => /rate limit/i.test(e.message || ""))) {
-    process.exit(0);
+    return null;
   }
 
   if (data.errors?.length > 0 || !data.data?.repository?.pullRequests) {
@@ -188,105 +201,307 @@ function main() {
 
   const prNodes = data.data.repository.pullRequests.nodes || [];
   if (prNodes.length === 0) {
-    // No PR on this branch — allow stop
-    process.exit(0);
+    // No open PR — check if a closed/merged PR exists (for cleanup messaging)
+    const closedPayload = JSON.stringify({
+      query: CLOSED_PR_QUERY,
+      variables: { owner, repo, branch },
+    });
+    const closedResult = run("gh api graphql --input -", { input: closedPayload });
+    if (closedResult.stdout) {
+      try {
+        const closedData = JSON.parse(closedResult.stdout);
+        const closedNodes = closedData.data?.repository?.pullRequests?.nodes || [];
+        if (closedNodes.length > 0) {
+          return {
+            noPr: false,
+            prNumber: closedNodes[0].number,
+            prState: closedNodes[0].state,
+            mergeable: "UNKNOWN",
+            ciState: "PASSING",
+            failingChecks: [],
+            reviewState: "CLEAN",
+            copilotState: "CLEAN",
+            unresolvedCount: 0,
+            threadsHasNextPage: false,
+          };
+        }
+      } catch {
+        // Parse error on fallback — just treat as no PR
+      }
+    }
+    return { noPr: true };
   }
 
   const pr = prNodes[0];
-  const prNumber = pr.number;
 
-  // ── Check 0: PR already merged or closed ──────────────────────────
-  if (pr.state === "MERGED" || pr.state === "CLOSED") {
-    // Detect if we're in a git worktree (vs the main working copy)
-    const worktreeCheck = run("git rev-parse --git-common-dir");
-    const gitDir = run("git rev-parse --git-dir");
-    const isWorktree = worktreeCheck.stdout && gitDir.stdout && worktreeCheck.stdout !== gitDir.stdout;
-
-    if (isWorktree) {
-      block(
-        `PR #${prNumber} is already ${pr.state}. Clean up the worktree:\n` +
-        `  Call ExitWorktree({ action: "remove" }) to delete the worktree and return to the main repo.`
-      );
-    } else {
-      block(
-        `PR #${prNumber} is already ${pr.state}. Switch back to main and pull:\n` +
-        `  git checkout main && git pull\n\n` +
-        `This will clear the stale branch context so the hook passes.`
-      );
-    }
-  }
-
-  const issues = [];
-
-  // ── Check 1: Merge conflicts ──────────────────────────────────────
-  if (pr.mergeable === "CONFLICTING") {
-    issues.push(`PR #${prNumber} has MERGE CONFLICTS. Run: git fetch origin && git merge origin/main (NEVER rebase), resolve conflicts, commit, and push.`);
-  } else if (pr.mergeable === "UNKNOWN" || !pr.mergeable) {
-    issues.push(`PR #${prNumber} merge status is UNKNOWN (GitHub may still be computing). Wait a moment and retry.`);
-  }
-
-  // ── Check 2: CI status ────────────────────────────────────────────
+  // ── CI state ─────────────────────────────────────────────────────
   const commitNode = pr.commits?.nodes?.[0]?.commit;
   const contextsConnection = commitNode?.statusCheckRollup?.contexts;
   const checkContexts = contextsConnection?.nodes || [];
   const checksHasNextPage = contextsConnection?.pageInfo?.hasNextPage || false;
 
   let ciState;
+  let failingChecks = [];
   if (checkContexts.length === 0) {
     ciState = "PENDING";
   } else {
-    const conclusions = checkContexts.map((c) => c.conclusion || c.status || c.state || "");
-    if (conclusions.some((c) => FAILING_CONCLUSIONS.has(c))) {
+    for (const c of checkContexts) {
+      const status = c.conclusion || c.status || c.state || "";
+      if (FAILING_CONCLUSIONS.has(status)) {
+        failingChecks.push(c.name || c.context || "unknown");
+      }
+    }
+    if (failingChecks.length > 0) {
       ciState = "FAILING";
-    } else if (conclusions.some((c) => PENDING_STATUSES.has(c))) {
+    } else if (checkContexts.some((c) => PENDING_STATUSES.has(c.conclusion || c.status || c.state || ""))) {
       ciState = "PENDING";
     } else if (checksHasNextPage) {
-      // More than 100 checks — we can't confirm all are passing
-      ciState = "PENDING";
+      // >100 checks and all visible ones passed — assume passing.
+      // If some are failing beyond page 1, we'd have caught failures
+      // in the visible checks (GitHub returns them mixed, not sorted).
+      ciState = "PASSING";
     } else {
       ciState = "PASSING";
     }
   }
 
+  // ── Review state (comments from ANY reviewer) ──────────────────
+  const threads = pr.reviewThreads?.nodes || [];
+  const threadsHasNextPage = pr.reviewThreads?.pageInfo?.hasNextPage || false;
+  const unresolvedThreads = threads.filter((t) => !t.isResolved);
+
+  // ── Copilot review state (for polling: wait for Copilot auto-review) ──
+  const reviewRequests = pr.reviewRequests?.nodes || [];
+  const copilotRequested = reviewRequests.some(
+    (r) => r.requestedReviewer?.login === COPILOT_LOGIN
+  );
+
+  // reviewState: tracks unresolved comments from ANY reviewer
+  // copilotState: tracks whether Copilot is expected to review (based on reviewRequests)
+  let reviewState;
+  if (unresolvedThreads.length > 0) {
+    reviewState = "HAS_COMMENTS";
+  } else if (threadsHasNextPage) {
+    // >100 threads but all visible ones are resolved. Unlikely to have
+    // unresolved ones hiding on later pages — treat as clean.
+    reviewState = "CLEAN";
+  } else {
+    reviewState = "CLEAN";
+  }
+
+  let copilotState;
+  if (copilotRequested) {
+    // Copilot is in reviewRequests — review explicitly pending
+    copilotState = "PENDING";
+  } else {
+    // Copilot is NOT in reviewRequests — either already reviewed or not going to.
+    // Don't wait for a review that isn't coming.
+    copilotState = "CLEAN";
+  }
+
+  return {
+    noPr: false,
+    prNumber: pr.number,
+    prState: pr.state,
+    mergeable: pr.mergeable,
+    ciState,
+    failingChecks,
+    reviewState,
+    copilotState,
+    unresolvedCount: unresolvedThreads.length,
+    threadsHasNextPage,
+  };
+}
+
+/**
+ * Evaluate the PR state and return an action:
+ *   { action: "allow" }
+ *   { action: "block", message: string }
+ *   { action: "poll" }   — nothing actionable yet, keep waiting
+ */
+function evaluate(state) {
+  if (!state || state.noPr) {
+    return { action: "allow" };
+  }
+
+  const { prNumber, prState, mergeable, ciState, failingChecks, reviewState, copilotState, unresolvedCount, threadsHasNextPage } = state;
+
+  // PR already merged or closed → tell agent to clean up
+  if (prState === "MERGED" || prState === "CLOSED") {
+    const worktreeCheck = run("git rev-parse --git-common-dir");
+    const gitDir = run("git rev-parse --git-dir");
+    const isWorktree = worktreeCheck.stdout && gitDir.stdout && worktreeCheck.stdout !== gitDir.stdout;
+
+    if (isWorktree) {
+      return {
+        action: "block",
+        message:
+          `PR #${prNumber} is already ${prState}. Clean up the worktree:\n` +
+          `  Call ExitWorktree({ action: "remove" }) to delete the worktree and return to the main repo.`,
+      };
+    }
+    return {
+      action: "block",
+      message:
+        `PR #${prNumber} is already ${prState}. Switch back to main and pull:\n` +
+        `  git checkout main && git pull\n\n` +
+        `This will clear the stale branch context so the hook passes.`,
+    };
+  }
+
+  // Merge conflicts — always block immediately
+  if (mergeable === "CONFLICTING") {
+    return {
+      action: "block",
+      message: `PR #${prNumber} has MERGE CONFLICTS. Run: git fetch origin && git merge origin/main (NEVER rebase), resolve conflicts, commit, and push.`,
+    };
+  }
+
+  // Priority 1: Unresolved review comments (from any reviewer) — fix before CI
+  if (reviewState === "HAS_COMMENTS") {
+    let countNote;
+    if (threadsHasNextPage && unresolvedCount === 0) {
+      countNote = "possible unresolved";
+    } else if (threadsHasNextPage) {
+      countNote = `${unresolvedCount}+`;
+    } else {
+      countNote = String(unresolvedCount);
+    }
+    return {
+      action: "block",
+      message:
+        `PR #${prNumber} has ${countNote} unresolved review comment(s). Address each one and push.\n` +
+        `CI will restart after your push — don't wait for the current run.\n` +
+        (threadsHasNextPage ? `(PR has >100 review threads; check GitHub for the full list.)\n` : ""),
+    };
+  }
+
+  // Priority 2: CI failing (no Copilot comments)
   if (ciState === "FAILING") {
-    issues.push(`PR #${prNumber} has FAILING CI checks. Read the failed log with: gh run view <RUN_ID> --log-failed, fix the issue, commit, and push.`);
-  } else if (ciState === "PENDING") {
-    const truncationNote = checksHasNextPage ? " (Note: PR has >100 checks; verify manually on GitHub.)" : "";
-    issues.push(`PR #${prNumber} CI checks are still RUNNING.${truncationNote} Wait for them to complete: gh pr checks ${prNumber} --watch --fail-fast -i ${CHECK_WATCH_INTERVAL_SECONDS}`);
+    const checkNames = failingChecks.length > 0 ? ` (${failingChecks.join(", ")})` : "";
+    return {
+      action: "block",
+      message: `PR #${prNumber} — CI is failing${checkNames}. Read the logs with: gh run view --log-failed\nFix the issue and push.`,
+    };
   }
 
-  // ── Check 3: Unresolved Copilot review threads ────────────────────
-  const threadsConnection = pr.reviewThreads;
-  const threads = threadsConnection?.nodes || [];
-  const threadsHasNextPage = threadsConnection?.pageInfo?.hasNextPage || false;
-  const unresolvedCount = threads.filter(
-    (t) => !t.isResolved && t.comments?.nodes?.[0]?.author?.login === "copilot-pull-request-reviewer"
-  ).length;
-
-  if (unresolvedCount > 0 || threadsHasNextPage) {
-    const count = threadsHasNextPage && unresolvedCount === 0
-      ? "possible additional"
-      : String(unresolvedCount);
-    const truncationNote = threadsHasNextPage ? " (PR has >100 review threads; there may be more.)" : "";
-    issues.push(`PR #${prNumber} has ${count} unresolved Copilot review thread(s).${truncationNote} For each: read the suggestion, fix the code or dismiss with explanation, reply to the comment, and resolve the thread.`);
+  // All clear → allow stop (CI passing, no unresolved comments, Copilot not pending)
+  // Note: mergeable === "UNKNOWN" is ignored here — GitHub can be slow to compute
+  // mergeability and it shouldn't block stop when everything else is green.
+  if (ciState === "PASSING" && reviewState === "CLEAN") {
+    if (copilotState === "PENDING") {
+      // CI passed, no unresolved comments, but Copilot review is
+      // still in reviewRequests — poll with grace period
+      return { action: "poll" };
+    }
+    return { action: "allow" };
   }
 
-  // ── Decision ──────────────────────────────────────────────────────
-  if (issues.length > 0) {
-    const bulletList = issues.map((i) => `- ${i}`).join("\n");
-    block(
-      `PR #${prNumber} is NOT ready. You must fix these issues before stopping:\n${bulletList}\n\nAfter fixing, commit and push, then wait for CI and Copilot review to complete.`
-    );
+  // Anything else is pending — poll
+  return { action: "poll" };
+}
+
+// ── Main ─────────────────────────────────────────────────────────────────────
+
+function main() {
+  // Check that gh CLI is available
+  const ghVersion = run("gh --version");
+  if (!ghVersion.stdout) {
+    block("gh CLI is not installed. Install it to enable PR readiness checks.");
   }
 
-  process.exit(0);
+  // Get current branch name
+  const branchResult = run("git branch --show-current");
+  if (!branchResult.stdout) {
+    process.exit(0); // Detached HEAD — nothing to check
+  }
+  const branch = branchResult.stdout;
+
+  // Parse owner/repo from git remote
+  const ownerRepo = getOwnerRepo();
+  if (!ownerRepo) {
+    block("Could not parse owner/repo from git remote. Ensure the remote URL is set.");
+  }
+  const { owner, repo } = ownerRepo;
+
+  // ── Initial check ────────────────────────────────────────────────
+  const initialState = queryPrState(owner, repo, branch);
+  if (!initialState) {
+    process.exit(0); // Rate-limited
+  }
+
+  const initialResult = evaluate(initialState);
+  if (initialResult.action === "allow") {
+    process.exit(0);
+  }
+  if (initialResult.action === "block") {
+    block(initialResult.message);
+  }
+
+  // ── Poll loop (action === "poll") ────────────────────────────────
+  const pollStart = Date.now();
+  let ciPassedAt = null; // Track when CI first passed (for Copilot grace period)
+
+  while (true) {
+    const elapsed = Date.now() - pollStart;
+    if (elapsed >= MAX_POLL_MS) {
+      break;
+    }
+    sleep(Math.min(POLL_INTERVAL_MS, MAX_POLL_MS - elapsed));
+
+    const state = queryPrState(owner, repo, branch);
+    if (!state) {
+      process.exit(0); // Rate-limited — let agent stop
+    }
+
+    const result = evaluate(state);
+
+    if (result.action === "allow") {
+      process.exit(0);
+    }
+    if (result.action === "block") {
+      block(result.message);
+    }
+
+    // Still polling — check Copilot grace period
+    if (state.ciState === "PASSING" && state.reviewState === "CLEAN" && state.copilotState === "PENDING") {
+      if (!ciPassedAt) {
+        ciPassedAt = Date.now();
+      }
+      if (Date.now() - ciPassedAt >= COPILOT_GRACE_MS) {
+        // CI passed and Copilot hasn't reviewed after grace period —
+        // assume Copilot is clean or not configured, but only if
+        // mergeability is known to be non-conflicting.
+        if (state.mergeable === "MERGEABLE") {
+          process.exit(0);
+        }
+      }
+    } else {
+      // CI went back to pending (new push?) or Copilot showed up — reset grace timer
+      ciPassedAt = null;
+    }
+  }
+
+  // ── Timeout ──────────────────────────────────────────────────────
+  const finalState = queryPrState(owner, repo, branch);
+  if (!finalState || finalState.noPr) {
+    process.exit(0);
+  }
+
+  const ciLabel = finalState.ciState || "UNKNOWN";
+  const reviewLabel = finalState.reviewState || "UNKNOWN";
+  const copilotLabel = finalState.copilotState || "UNKNOWN";
+  block(
+    `PR #${finalState.prNumber} — still waiting after ${Math.round((Date.now() - pollStart) / 60000)} min ` +
+    `(CI: ${ciLabel}, Reviews: ${reviewLabel}, Copilot: ${copilotLabel}).\n` +
+    `The hook will resume checking on your next stop attempt.`
+  );
 }
 
 try {
   main();
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
-  // If the unexpected error looks like a rate limit, don't block
   if (isRateLimited(message)) {
     process.exit(0);
   }

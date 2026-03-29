@@ -6,7 +6,7 @@ import { TaskList, EnvironmentNav, FindingsNav, SettingsNav, KnowledgeNav } from
 
 /** Layout route wrapper that shows the TaskList in the sidebar. */
 export function WithTaskSidebar(): JSX.Element {
-  const { workspaces, tasks } = useGrackle();
+  const { workspaces: { workspaces }, tasks: { tasks } } = useGrackle();
   const sidebar = useMemo(() => <TaskList workspaces={workspaces} tasks={tasks} />, [workspaces, tasks]);
   useSidebarSlot(sidebar);
   return <Outlet />;
@@ -14,7 +14,7 @@ export function WithTaskSidebar(): JSX.Element {
 
 /** Layout route wrapper that shows the EnvironmentNav in the sidebar. */
 export function WithEnvironmentSidebar(): JSX.Element {
-  const { environments } = useGrackle();
+  const { environments: { environments } } = useGrackle();
   const sidebar = useMemo(() => <EnvironmentNav environments={environments} />, [environments]);
   useSidebarSlot(sidebar);
   return <Outlet />;
@@ -29,7 +29,7 @@ export function WithSettingsSidebar(): JSX.Element {
 
 /** Layout route wrapper that shows the FindingsNav in the sidebar. */
 export function WithFindingsSidebar(): JSX.Element {
-  const { findings, loadFindings, loadAllFindings } = useGrackle();
+  const { findings: { findings, loadFindings, loadAllFindings } } = useGrackle();
   const { workspaceId, environmentId } = useParams<{ workspaceId?: string; environmentId?: string }>();
 
   useEffect(() => {
@@ -50,7 +50,7 @@ export function WithFindingsSidebar(): JSX.Element {
 
 /** Layout route wrapper that shows the KnowledgeNav in the sidebar. */
 export function WithKnowledgeSidebar(): JSX.Element {
-  const { knowledge, workspaces } = useGrackle();
+  const { knowledge, workspaces: { workspaces } } = useGrackle();
 
   const handleSearch = useCallback((query: string) => {
     knowledge.search(query).catch(() => {});

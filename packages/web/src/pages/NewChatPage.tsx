@@ -9,7 +9,7 @@ export function NewChatPage(): JSX.Element {
   const breadcrumbs = buildNewChatBreadcrumbs();
   const [searchParams] = useSearchParams();
   const envId = searchParams.get("env") ?? "";
-  const { sendInput, spawn, startTask, personas, environments, provisionEnvironment } = useGrackle();
+  const { sessions: { sendInput, spawn }, tasks: { startTask }, personas: { personas }, environments: { environments, provisionEnvironment } } = useGrackle();
   const { showToast } = useToast();
 
   return (

@@ -29,24 +29,28 @@ function OnboardingOverride({ children }: { children: ReactNode }): JSX.Element 
     throw new Error("OnboardingOverride must be used within MockGrackleProvider");
   }
   // Inject seed personas if not already present
-  const hasClaudeCode = ctx.personas.some((p) => p.id === "claude-code");
-  const hasSystem = ctx.personas.some((p) => p.id === SYSTEM_PERSONA_ID);
-  const personas = [
-    ...ctx.personas,
+  const hasClaudeCode = ctx.personas.personas.some((p) => p.id === "claude-code");
+  const hasSystem = ctx.personas.personas.some((p) => p.id === SYSTEM_PERSONA_ID);
+  const personasList = [
+    ...ctx.personas.personas,
     ...(!hasClaudeCode ? [SEED_PERSONA] : []),
     ...(!hasSystem ? [SYSTEM_PERSONA] : []),
   ];
   // Wrap updatePersona to handle injected seed personas that the mock
   // doesn't know about — resolves immediately for seed/system personas.
   const seedIds: ReadonlySet<string> = new Set(["claude-code", SYSTEM_PERSONA_ID]);
-  const wrappedUpdatePersona: typeof ctx.updatePersona = async (personaId, ...args) => {
+  const wrappedUpdatePersona: typeof ctx.personas.updatePersona = async (personaId, ...args) => {
     if (seedIds.has(personaId)) {
-      const match = personas.find((p) => p.id === personaId);
+      const match = personasList.find((p) => p.id === personaId);
       return match ?? SEED_PERSONA;
     }
-    return ctx.updatePersona(personaId, ...args);
+    return ctx.personas.updatePersona(personaId, ...args);
   };
-  const overridden = { ...ctx, onboardingCompleted: false, personas, updatePersona: wrappedUpdatePersona };
+  const overridden = {
+    ...ctx,
+    onboardingCompleted: false,
+    personas: { ...ctx.personas, personas: personasList, updatePersona: wrappedUpdatePersona },
+  };
   return (
     <GrackleContext.Provider value={overridden}>
       {children}

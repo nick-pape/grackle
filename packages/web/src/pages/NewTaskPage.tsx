@@ -9,7 +9,7 @@ export function NewTaskPage(): JSX.Element {
   const [searchParams] = useSearchParams();
   const workspaceId = routeWorkspaceId ?? searchParams.get("workspace") ?? "";
   const parentTaskId = searchParams.get("parent") ?? undefined;
-  const { tasks, workspaces, personas, createTask, updateTask } = useGrackle();
+  const { tasks: { tasks, createTask, updateTask }, workspaces: { workspaces }, personas: { personas } } = useGrackle();
   const { showToast } = useToast();
 
   return (

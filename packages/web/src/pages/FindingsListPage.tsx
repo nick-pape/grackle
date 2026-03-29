@@ -21,7 +21,7 @@ export function FindingsListPage(): JSX.Element {
     environmentId?: string;
     workspaceId?: string;
   }>();
-  const { findings, loadFindings, workspaces, environments, findingsLoading } = useGrackle();
+  const { findings: { findings, findingsLoading, loadFindings }, workspaces: { workspaces }, environments: { environments } } = useGrackle();
   const navigate = useAppNavigate();
 
   useEffect(() => {

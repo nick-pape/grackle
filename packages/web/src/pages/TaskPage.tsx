@@ -22,12 +22,13 @@ export function TaskPage(): JSX.Element {
   const navigate = useAppNavigate();
   const { showToast } = useToast();
   const {
-    events, eventsDropped, tasks, sessions, environments, findings,
-    loadSessionEvents, loadFindings, loadUsage, usageCache,
-    kill, startTask, stopTask, resumeTask, deleteTask, createTask, updateTask,
-    workspaces, taskSessions: taskSessionsMap, loadTaskSessions,
-    sendInput, spawn, personas, provisionEnvironment,
-    tasksLoading,
+    sessions: { events, eventsDropped, sessions, loadSessionEvents, taskSessions: taskSessionsMap, loadTaskSessions, sendInput, spawn, kill },
+    tasks: { tasks, tasksLoading, startTask, stopTask, resumeTask, deleteTask, createTask, updateTask },
+    environments: { environments, provisionEnvironment },
+    findings: { findings, loadFindings },
+    workspaces: { workspaces },
+    personas: { personas },
+    usageCache, loadUsage,
   } = useGrackle();
 
   const loadedRef = useRef<string | undefined>(undefined);

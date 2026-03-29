@@ -45,6 +45,8 @@ export { createRootTaskBoot } from "./root-task-boot.js";
 export type { RootTaskBootDeps } from "./root-task-boot.js";
 export { validateExpression, computeNextRunAt } from "./schedule-expression.js";
 export { lifecycleCleanupPhase } from "./lifecycle-cleanup.js";
+export { createEnvironmentReconciliationPhase } from "./environment-reconciliation.js";
+export type { EnvironmentReconciliationDeps } from "./environment-reconciliation.js";
 
 // ─── Version Check ────────────────────────────────────────
 export { checkVersionStatus, clearVersionCache, type VersionStatus } from "./version-check.js";

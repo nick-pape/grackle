@@ -8,25 +8,11 @@
 
 import { useState, useCallback } from "react";
 import { ConnectError } from "@connectrpc/connect";
-import type { Codespace } from "@grackle-ai/web-components";
+import type { Codespace, UseCodespacesResult } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToCodespace } from "./proto-converters.js";
 
-/** Values returned by {@link useCodespaces}. */
-export interface UseCodespacesResult {
-  /** All known codespaces. */
-  codespaces: Codespace[];
-  /** Error message from the most recent create attempt, or empty string. */
-  codespaceError: string;
-  /** Error message from the most recent list attempt, or empty string. */
-  codespaceListError: string;
-  /** Whether a codespace creation is currently in progress. */
-  codespaceCreating: boolean;
-  /** Request the current codespace list from the server. */
-  listCodespaces: () => Promise<void>;
-  /** Create a new codespace for the given repo. */
-  createCodespace: (repo: string, machine?: string) => Promise<void>;
-}
+export type { UseCodespacesResult } from "@grackle-ai/web-components";
 
 /**
  * Hook that manages codespace state and actions via ConnectRPC.

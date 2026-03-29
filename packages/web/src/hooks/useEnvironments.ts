@@ -10,7 +10,7 @@
 import { useState, useCallback } from "react";
 import { ConnectError } from "@connectrpc/connect";
 import { warnBadPayload } from "@grackle-ai/web-components";
-import type { Environment, GrackleEvent, ProvisionStatus, WsMessage } from "@grackle-ai/web-components";
+import type { Environment, GrackleEvent, ProvisionStatus, WsMessage, UseEnvironmentsResult } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToEnvironment } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
@@ -23,42 +23,7 @@ function extractErrorMessage(err: unknown): string {
   return err instanceof ConnectError ? err.message : "Operation failed";
 }
 
-/** Values returned by {@link useEnvironments}. */
-export interface UseEnvironmentsResult {
-  /** All known environments. */
-  environments: Environment[];
-  /** Whether the environment list is currently being loaded. */
-  environmentsLoading: boolean;
-  /** Per-environment provisioning progress. */
-  provisionStatus: Record<string, ProvisionStatus>;
-  /** Request the current environment list from the server. */
-  loadEnvironments: () => Promise<void>;
-  /** Add a new environment. */
-  addEnvironment: (
-    displayName: string,
-    adapterType: string,
-    adapterConfig?: Record<string, unknown>,
-  ) => Promise<void>;
-  /** Update an existing environment's mutable fields. */
-  updateEnvironment: (
-    environmentId: string,
-    fields: { displayName?: string; adapterConfig?: Record<string, unknown> },
-  ) => Promise<void>;
-  /** Provision an environment by ID. When force is true, kills active sessions and forces full provision. */
-  provisionEnvironment: (environmentId: string, force?: boolean) => Promise<void>;
-  /** Stop an environment by ID. */
-  stopEnvironment: (environmentId: string) => Promise<void>;
-  /** Remove an environment by ID. */
-  removeEnvironment: (environmentId: string) => Promise<void>;
-  /** The last operation error message, or empty string if none. */
-  operationError: string;
-  /** Clear the current operation error. */
-  clearOperationError: () => void;
-  /** Handle a domain event from the event bus. Returns `true` if handled. */
-  handleEvent: (event: GrackleEvent) => boolean;
-  /** Handle legacy WS messages injected by E2E tests. */
-  handleLegacyMessage?: (msg: WsMessage) => boolean;
-}
+export type { UseEnvironmentsResult } from "@grackle-ai/web-components";
 
 /**
  * Hook that manages environment state and lifecycle actions via ConnectRPC.

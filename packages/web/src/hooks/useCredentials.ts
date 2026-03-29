@@ -9,24 +9,12 @@
 
 import { useState, useCallback } from "react";
 import { isCredentialProviderConfig } from "@grackle-ai/web-components";
-import type { CredentialProviderConfig, GrackleEvent } from "@grackle-ai/web-components";
+import type { CredentialProviderConfig, GrackleEvent, UseCredentialsResult } from "@grackle-ai/web-components";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToCredentialConfig } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
 
-/** Values returned by {@link useCredentials}. */
-export interface UseCredentialsResult {
-  /** Current credential provider configuration. */
-  credentialProviders: CredentialProviderConfig;
-  /** Whether the credential configuration is currently being loaded. */
-  credentialsLoading: boolean;
-  /** Request the current credential provider configuration from the server. */
-  loadCredentials: () => Promise<void>;
-  /** Update the credential provider configuration on the server. */
-  updateCredentialProviders: (config: CredentialProviderConfig) => Promise<void>;
-  /** Handle a domain event from the event bus. Returns `true` if handled. */
-  handleEvent: (event: GrackleEvent) => boolean;
-}
+export type { UseCredentialsResult } from "@grackle-ai/web-components";
 
 /**
  * Hook that manages credential provider configuration state and actions via ConnectRPC.

@@ -5,7 +5,7 @@ import { useVersionStatus } from "../../hooks/useVersionStatus.js";
 
 /** Settings tab wrapping the about panel. */
 export function SettingsAboutTab(): JSX.Element {
-  const { connected, environments, sessions } = useGrackle();
+  const { connected, environments: { environments }, sessions: { sessions } } = useGrackle();
   const versionStatus = useVersionStatus();
 
   return (
