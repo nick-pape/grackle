@@ -98,11 +98,20 @@ function getOwnerRepo() {
   return { owner: match[1], repo: match[2] };
 }
 
-// ── GraphQL query ────────────────────────────────────────────────────────────
+// ── GraphQL queries ──────────────────────────────────────────────────────────
+
+/** Light query to check if a closed/merged PR exists (for worktree cleanup messaging). */
+const CLOSED_PR_QUERY = `query($owner: String!, $repo: String!, $branch: String!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequests(headRefName: $branch, states: [MERGED, CLOSED], first: 1, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      nodes { number state }
+    }
+  }
+}`;
 
 const GRAPHQL_QUERY = `query($owner: String!, $repo: String!, $branch: String!) {
   repository(owner: $owner, name: $repo) {
-    pullRequests(headRefName: $branch, states: [OPEN, MERGED, CLOSED], first: 1, orderBy: {field: UPDATED_AT, direction: DESC}) {
+    pullRequests(headRefName: $branch, states: [OPEN], first: 1, orderBy: {field: UPDATED_AT, direction: DESC}) {
       nodes {
         number
         state
@@ -195,6 +204,33 @@ function queryPrState(owner, repo, branch) {
 
   const prNodes = data.data.repository.pullRequests.nodes || [];
   if (prNodes.length === 0) {
+    // No open PR — check if a closed/merged PR exists (for cleanup messaging)
+    const closedPayload = JSON.stringify({
+      query: CLOSED_PR_QUERY,
+      variables: { owner, repo, branch },
+    });
+    const closedResult = run("gh api graphql --input -", { input: closedPayload });
+    if (closedResult.stdout) {
+      try {
+        const closedData = JSON.parse(closedResult.stdout);
+        const closedNodes = closedData.data?.repository?.pullRequests?.nodes || [];
+        if (closedNodes.length > 0) {
+          return {
+            noPr: false,
+            prNumber: closedNodes[0].number,
+            prState: closedNodes[0].state,
+            mergeable: "UNKNOWN",
+            ciState: "PASSING",
+            failingChecks: [],
+            copilotState: "CLEAN",
+            unresolvedCount: 0,
+            threadsHasNextPage: false,
+          };
+        }
+      } catch {
+        // Parse error on fallback — just treat as no PR
+      }
+    }
     return { noPr: true };
   }
 
@@ -397,8 +433,12 @@ function main() {
   const pollStart = Date.now();
   let ciPassedAt = null; // Track when CI first passed (for Copilot grace period)
 
-  while (Date.now() - pollStart < MAX_POLL_MS) {
-    sleep(POLL_INTERVAL_MS);
+  while (true) {
+    const elapsed = Date.now() - pollStart;
+    if (elapsed >= MAX_POLL_MS) {
+      break;
+    }
+    sleep(Math.min(POLL_INTERVAL_MS, MAX_POLL_MS - elapsed));
 
     const state = queryPrState(owner, repo, branch);
     if (!state) {
