@@ -95,6 +95,7 @@ jobs:
           path: tests/e2e-tests/test-results/e2e-results.xml
           reporter: java-junit
           fail-on-error: false
+          fail-on-empty: false
 
       - name: BuildPulse — upload test results
         if: always() && github.repository == 'nick-pape/grackle' && vars.BUILDPULSE_ACCOUNT_ID != '' && vars.BUILDPULSE_REPOSITORY_ID != ''
