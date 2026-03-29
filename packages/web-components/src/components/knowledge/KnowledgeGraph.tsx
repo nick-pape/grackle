@@ -79,14 +79,29 @@ interface ZoomToFitResult {
 function computeZoomToFit(
   nodes: readonly { x?: number; y?: number }[],
   viewport: { width: number; height: number },
-): ZoomToFitResult {
-  const xs: number[] = nodes.map((n) => n.x ?? 0);
-  const ys: number[] = nodes.map((n) => n.y ?? 0);
+): ZoomToFitResult | undefined {
+  if (viewport.width <= 0 || viewport.height <= 0) {
+    return undefined;
+  }
 
-  const x0: number = Math.min(...xs) - NODE_WIDTH / 2 - FIT_PADDING;
-  const x1: number = Math.max(...xs) + NODE_WIDTH / 2 + FIT_PADDING;
-  const y0: number = Math.min(...ys) - NODE_HEIGHT / 2 - FIT_PADDING;
-  const y1: number = Math.max(...ys) + NODE_HEIGHT / 2 + FIT_PADDING;
+  // Single-pass min/max to avoid stack overflow with large node counts
+  let minX: number = Infinity;
+  let maxX: number = -Infinity;
+  let minY: number = Infinity;
+  let maxY: number = -Infinity;
+  for (const n of nodes) {
+    const nx: number = n.x ?? 0;
+    const ny: number = n.y ?? 0;
+    if (nx < minX) { minX = nx; }
+    if (nx > maxX) { maxX = nx; }
+    if (ny < minY) { minY = ny; }
+    if (ny > maxY) { maxY = ny; }
+  }
+
+  const x0: number = minX - NODE_WIDTH / 2 - FIT_PADDING;
+  const x1: number = maxX + NODE_WIDTH / 2 + FIT_PADDING;
+  const y0: number = minY - NODE_HEIGHT / 2 - FIT_PADDING;
+  const y1: number = maxY + NODE_HEIGHT / 2 + FIT_PADDING;
 
   const bboxWidth: number = x1 - x0;
   const bboxHeight: number = y1 - y0;
@@ -300,8 +315,11 @@ export function KnowledgeGraph({
     // Skip if a node is already selected — the center-on-node effect handles that case.
     sim.on("end", () => {
       if (svgRef.current && zoomRef.current && simNodes.length > 0 && !selectedNodeIdRef.current) {
-        const { translateX, translateY, scale }: ZoomToFitResult =
-          computeZoomToFit(simNodes, dimensions);
+        const fit: ZoomToFitResult | undefined = computeZoomToFit(simNodes, dimensions);
+        if (!fit) {
+          return;
+        }
+        const { translateX, translateY, scale }: ZoomToFitResult = fit;
         const zb: ZoomBehavior<SVGSVGElement, unknown> = zoomRef.current;
         const t = zoomIdentity.translate(translateX, translateY).scale(scale);
         // eslint-disable-next-line @typescript-eslint/unbound-method -- d3 zoom API pattern
