@@ -29,7 +29,9 @@ export async function createEscalation(req: grackle.CreateEscalationRequest): Pr
     await routeEscalation(row);
   }
 
-  return escalationRowToProto(row ?? {
+  // Re-read after routing to get updated status
+  const updated = escalationStore.getEscalation(id);
+  return escalationRowToProto(updated ?? row ?? {
     id,
     workspaceId: req.workspaceId,
     taskId: req.taskId,
