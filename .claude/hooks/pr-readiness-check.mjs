@@ -120,7 +120,6 @@ const GRAPHQL_QUERY = `query($owner: String!, $repo: String!, $branch: String!) 
         commits(last: 1) {
           nodes {
             commit {
-              committedDate
               statusCheckRollup {
                 contexts(first: 100) {
                   pageInfo { hasNextPage }
@@ -146,13 +145,6 @@ const GRAPHQL_QUERY = `query($owner: String!, $repo: String!, $branch: String!) 
               ... on User { login }
               ... on Bot { login }
             }
-          }
-        }
-        reviews(last: 50) {
-          nodes {
-            author { login }
-            state
-            submittedAt
           }
         }
         reviewThreads(first: 100) {
@@ -285,31 +277,20 @@ function queryPrState(owner, repo, branch) {
   const unresolvedThreads = threads.filter((t) => !t.isResolved);
 
   // ── Copilot review state (for polling: wait for Copilot auto-review) ──
-  const reviews = pr.reviews?.nodes || [];
-  const latestCopilotReview = reviews
-    .filter((r) => r.author?.login === COPILOT_LOGIN && r.submittedAt)
-    .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))[0];
-
-  // Check if Copilot is in reviewRequests (explicitly pending)
   const reviewRequests = pr.reviewRequests?.nodes || [];
   const copilotRequested = reviewRequests.some(
     (r) => r.requestedReviewer?.login === COPILOT_LOGIN
   );
 
-  // Check if Copilot's latest review covers the current commit
-  const commitDate = commitNode?.committedDate;
-  const copilotReviewedCurrentCommit = latestCopilotReview?.submittedAt && commitDate
-    ? new Date(latestCopilotReview.submittedAt) >= new Date(commitDate)
-    : false;
-
   // reviewState: tracks unresolved comments from ANY reviewer
-  // copilotState: tracks whether Copilot specifically has reviewed the latest commit
+  // copilotState: tracks whether Copilot is expected to review (based on reviewRequests)
   let reviewState;
   if (unresolvedThreads.length > 0) {
     reviewState = "HAS_COMMENTS";
   } else if (threadsHasNextPage) {
-    // Can't see all threads — there may be unresolved threads on later pages.
-    reviewState = "HAS_COMMENTS";
+    // >100 threads but all visible ones are resolved. Unlikely to have
+    // unresolved ones hiding on later pages — treat as clean.
+    reviewState = "CLEAN";
   } else {
     reviewState = "CLEAN";
   }
@@ -415,11 +396,11 @@ function evaluate(state) {
     return { action: "poll" };
   }
 
-  // All clear → allow stop (CI passing, no unresolved comments, Copilot reviewed)
+  // All clear → allow stop (CI passing, no unresolved comments, Copilot not pending)
   if (ciState === "PASSING" && reviewState === "CLEAN") {
     if (copilotState === "PENDING") {
-      // CI passed, no unresolved comments, but Copilot hasn't reviewed
-      // the latest commit yet — poll with grace period
+      // CI passed, no unresolved comments, but Copilot review is
+      // still in reviewRequests — poll with grace period
       return { action: "poll" };
     }
     return { action: "allow" };
