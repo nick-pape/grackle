@@ -36,7 +36,8 @@ $tooltip-gap: 6px;
   color: var(--text-primary);
   font-size: var(--font-size-xs);
   line-height: 1.4;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
   pointer-events: none;
 
   opacity: 0;

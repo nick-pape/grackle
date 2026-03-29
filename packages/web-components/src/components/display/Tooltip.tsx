@@ -83,7 +83,7 @@ export function Tooltip({
     setCoords({ top, left });
   }, [placement]);
 
-  const show = useCallback((): void => {
+  const showWithDelay = useCallback((delay: number): void => {
     if (timerRef.current !== undefined) {
       clearTimeout(timerRef.current);
     }
@@ -91,8 +91,11 @@ export function Tooltip({
       computePosition();
       setVisible(true);
       timerRef.current = undefined;
-    }, delayMs);
-  }, [delayMs, computePosition]);
+    }, delay);
+  }, [computePosition]);
+
+  const showHover = useCallback((): void => { showWithDelay(delayMs); }, [delayMs, showWithDelay]);
+  const showFocus = useCallback((): void => { showWithDelay(0); }, [showWithDelay]);
 
   const hide = useCallback((): void => {
     if (timerRef.current !== undefined) {
@@ -139,11 +142,16 @@ export function Tooltip({
 
   // Inject aria-describedby onto the child element when it is a single
   // ReactElement so screen readers announce the tooltip from the focused node.
-  const describedBy = visible ? tooltipId : undefined;
+  // Merges with any existing aria-describedby value on the child.
   let renderedChildren: React.ReactNode = children;
   if (isValidElement(children)) {
-    renderedChildren = cloneElement(children as ReactElement<{ "aria-describedby"?: string }>, {
-      "aria-describedby": describedBy,
+    const child = children as ReactElement<{ "aria-describedby"?: string }>;
+    const existing = child.props["aria-describedby"];
+    const mergedDescribedBy = visible
+      ? (existing ? `${existing} ${tooltipId}` : tooltipId)
+      : existing;
+    renderedChildren = cloneElement(child, {
+      "aria-describedby": mergedDescribedBy,
     });
   }
 
@@ -164,9 +172,9 @@ export function Tooltip({
     <Tag
       ref={wrapperRef as React.Ref<HTMLSpanElement & HTMLDivElement>}
       className={wrapperClass}
-      onMouseEnter={show}
+      onMouseEnter={showHover}
       onMouseLeave={hide}
-      onFocus={show}
+      onFocus={showFocus}
       onBlur={hide}
     >
       {renderedChildren}
