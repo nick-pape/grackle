@@ -13,6 +13,8 @@ export { Skeleton, SkeletonText, SkeletonCard } from "./Skeleton.js";
 export { Spinner } from "./Spinner.js";
 export { SplashScreen } from "./SplashScreen.js";
 export { Tooltip } from "./Tooltip.js";
+export { SessionAttemptSelector } from "./SessionAttemptSelector.js";
 
 export type { ButtonProps, ButtonVariant, ButtonSize } from "./Button.js";
 export type { TooltipProps, TooltipPlacement } from "./Tooltip.js";
+export type { SessionAttemptSelectorProps } from "./SessionAttemptSelector.js";

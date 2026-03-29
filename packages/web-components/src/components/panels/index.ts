@@ -7,3 +7,5 @@ export { TokensPanel } from "./TokensPanel.js";
 export { AppearancePanel } from "./AppearancePanel.js";
 export { AboutPanel } from "./AboutPanel.js";
 export { TaskEditPanel } from "./TaskEditPanel.js";
+export { TaskActionButtons } from "./TaskActionButtons.js";
+export { TaskOverviewPanel } from "./TaskOverviewPanel.js";
