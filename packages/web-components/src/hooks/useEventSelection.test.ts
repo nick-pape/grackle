@@ -129,6 +129,18 @@ describe("useEventSelection", () => {
     expect(result.current.selectedIndices.has(5)).toBe(true);
   });
 
+  it("exits selection mode when last event is deselected", () => {
+    const { result } = renderSelection();
+    act(() => { result.current.enterSelectionMode(0); });
+    expect(result.current.isSelecting).toBe(true);
+    expect(result.current.selectedCount).toBe(1);
+
+    // Deselect the only selected event
+    act(() => { result.current.toggleEvent(0); });
+    expect(result.current.isSelecting).toBe(false);
+    expect(result.current.selectedCount).toBe(0);
+  });
+
   it("deselectAll clears selection but stays in selection mode", () => {
     const { result } = renderSelection();
     act(() => { result.current.enterSelectionMode(0); });

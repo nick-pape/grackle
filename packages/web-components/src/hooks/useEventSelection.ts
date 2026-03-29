@@ -92,13 +92,17 @@ export function useEventSelection({
           return next;
         });
       } else {
-        // Single toggle
+        // Single toggle — exit selection mode if deselecting the last item
         setSelectedIndices((prev) => {
           const next = new Set(prev);
           if (next.has(index)) {
             next.delete(index);
           } else {
             next.add(index);
+          }
+          if (next.size === 0) {
+            setIsSelecting(false);
+            anchorRef.current = undefined;
           }
           return next;
         });
