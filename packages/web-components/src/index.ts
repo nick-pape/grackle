@@ -18,7 +18,8 @@ export { useDagLayout } from "./components/dag/useDagLayout.js";
 // Display primitives
 export {
   Breadcrumbs, Button, CopyButton, DemoBanner, SplitButton,
-  EventRenderer, ConfirmDialog, Spinner, SplashScreen,
+  EventRenderer, ConfirmDialog, Skeleton, SkeletonText, SkeletonCard,
+  Spinner, SplashScreen,
 } from "./components/display/index.js";
 export type { ButtonProps, ButtonVariant, ButtonSize } from "./components/display/index.js";
 export { EventStream } from "./components/display/EventStream.js";

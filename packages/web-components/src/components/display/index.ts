@@ -9,6 +9,7 @@ export { DemoBanner } from "./DemoBanner.js";
 export { SplitButton } from "./SplitButton.js";
 export { EventRenderer } from "./EventRenderer.js";
 export { ConfirmDialog } from "./ConfirmDialog.js";
+export { Skeleton, SkeletonText, SkeletonCard } from "./Skeleton.js";
 export { Spinner } from "./Spinner.js";
 export { SplashScreen } from "./SplashScreen.js";
 

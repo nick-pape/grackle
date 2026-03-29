@@ -1,0 +1,58 @@
+// =============================================================================
+// Skeleton — shimmer loading placeholders
+// =============================================================================
+
+@use '../../styles/mixins' as *;
+
+// ─── Base shimmer block ──────────────────────────────────────────────────────
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  display: block;
+  background: linear-gradient(
+    90deg,
+    var(--bg-inset) 25%,
+    var(--bg-surface) 50%,
+    var(--bg-inset) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+.circular {
+  border-radius: 50%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+// ─── SkeletonText ────────────────────────────────────────────────────────────
+
+.textContainer {
+  display: flex;
+  flex-direction: column;
+}
+
+// ─── SkeletonCard ────────────────────────────────────────────────────────────
+
+.card {
+  @include surface-card;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+}
