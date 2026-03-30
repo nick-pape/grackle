@@ -101,7 +101,7 @@ describe("checkBudget", () => {
     expect(mockAggregateUsage).not.toHaveBeenCalled();
   });
 
-  it("returns null when usage is under token budget", () => {
+  it("returns undefined when usage is under token budget", () => {
     mockGetTask.mockReturnValue(fakeTask({ tokenBudget: 5000 }));
     mockAggregateUsage.mockReturnValue({ inputTokens: 1000, outputTokens: 500, costUsd: 0, sessionCount: 1 });
     expect(checkBudget("t1")).toBeUndefined();
@@ -126,7 +126,7 @@ describe("checkBudget", () => {
     expect(result!.reason).toBe("cost");
   });
 
-  it("returns null when workspace has no budget (0)", () => {
+  it("returns undefined when workspace has no budget (0)", () => {
     mockGetTask.mockReturnValue(fakeTask({ workspaceId: "ws1" }));
     mockGetWorkspace.mockReturnValue(fakeWorkspace({ tokenBudget: 0, costBudgetMillicents: 0 }));
     mockAggregateUsage.mockReturnValue({ inputTokens: 1000, outputTokens: 500, costUsd: 0.5, sessionCount: 1 });
@@ -163,7 +163,7 @@ describe("checkBudget", () => {
     expect(checkBudget("t1")).toBeUndefined();
   });
 
-  it("returns null when task not found", () => {
+  it("returns undefined when task not found", () => {
     mockGetTask.mockReturnValue(undefined);
     expect(checkBudget("nonexistent")).toBeUndefined();
   });

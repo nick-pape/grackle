@@ -378,7 +378,13 @@ export function processEventStream(
                       "then call task_complete and stop.";
                     sessionStore.setSigtermSentAt(sessionId);
                     ctx.budgetSigtermSent = true;
-                    sendInputToSession(sessionId, session.environmentId, sigMessage, "budget_exceeded").catch((err: unknown) => {
+                    sendInputToSession(sessionId, session.environmentId, sigMessage, "budget_exceeded").then((delivered: boolean) => {
+                      if (!delivered) {
+                        logger.error({ sessionId }, "Budget-exceeded SIGTERM delivery failed (env not connected)");
+                        sessionStore.clearSigtermSentAt(sessionId);
+                        ctx.budgetSigtermSent = false;
+                      }
+                    }).catch((err: unknown) => {
                       logger.error({ err, sessionId }, "Failed to deliver budget-exceeded SIGTERM");
                       sessionStore.clearSigtermSentAt(sessionId);
                       ctx.budgetSigtermSent = false;
