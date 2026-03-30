@@ -230,6 +230,27 @@ export function WorkspacePage(): JSX.Element {
             </div>
           </div>
 
+          {/* Linked Environments */}
+          <div className={styles.metaRow}>
+            <span className={styles.metaLabel}>Linked Envs</span>
+            <div className={styles.metaValue} data-testid="linked-environments">
+              {workspace && workspace.linkedEnvironmentIds.length > 0 ? (
+                <span className={styles.linkedEnvList}>
+                  {workspace.linkedEnvironmentIds.map((envId) => {
+                    const env = environments.find((e) => e.id === envId);
+                    return (
+                      <span key={envId} className={styles.linkedEnvChip} data-testid={`linked-env-${envId}`}>
+                        {env?.displayName || envId}
+                      </span>
+                    );
+                  })}
+                </span>
+              ) : (
+                <span className={styles.metaPlaceholder}>None</span>
+              )}
+            </div>
+          </div>
+
           {/* Default Persona */}
           <div className={styles.metaRow}>
             <span className={styles.metaLabel}>Persona</span>

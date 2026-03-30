@@ -9,6 +9,7 @@ function makeWorkspace(id: string, name: string, environmentId: string = "env-1"
     description: "",
     repoUrl: "",
     environmentId,
+    linkedEnvironmentIds: [],
     status: "active",
     workingDirectory: "",
     useWorktrees: true,

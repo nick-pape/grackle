@@ -74,6 +74,8 @@ export interface Workspace {
   description: string;
   repoUrl: string;
   environmentId: string;
+  /** IDs of additional environments linked to this workspace's pool. */
+  linkedEnvironmentIds: string[];
   status: string;
   workingDirectory: string;
   useWorktrees: boolean;
