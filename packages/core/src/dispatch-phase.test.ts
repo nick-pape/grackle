@@ -162,6 +162,23 @@ describe("createDispatchPhase", () => {
     expect(deps.dequeueEntry).not.toHaveBeenCalled();
   });
 
+  it("retries previously failed entry on next tick when capacity frees", async () => {
+    const deps = createMockDeps();
+    const entry = makeQueueEntry();
+    vi.mocked(deps.listPendingEntries).mockReturnValue([entry]);
+
+    // First tick: startTaskSession fails — entry stays queued
+    vi.mocked(deps.startTaskSession).mockResolvedValue("PowerLine unavailable");
+    const phase = createDispatchPhase(deps);
+    await phase.execute();
+    expect(deps.dequeueEntry).not.toHaveBeenCalled();
+
+    // Second tick: startTaskSession succeeds — entry dequeued
+    vi.mocked(deps.startTaskSession).mockResolvedValue(undefined);
+    await phase.execute();
+    expect(deps.dequeueEntry).toHaveBeenCalledWith("task-1");
+  });
+
   it("has name 'dispatch'", () => {
     const deps = createMockDeps();
     const phase = createDispatchPhase(deps);
