@@ -19,6 +19,7 @@ import { z } from "zod";
 import type { AuthContext } from "@grackle-ai/auth";
 import { authenticateMcpRequest, pruneRevocations } from "@grackle-ai/auth";
 import { grpcErrorToToolResult } from "./error-handler.js";
+import type { ToolDefinition } from "./tool-registry.js";
 import { createToolRegistry } from "./tools/index.js";
 import { resolveToolForAuth, listToolsForAuth } from "./tool-scoping.js";
 
@@ -48,7 +49,7 @@ export interface McpServerOptions {
   /** Base URL of the OAuth authorization server (web server). When set, enables OAuth discovery. */
   authorizationServerUrl?: string;
   /** Optional plugin-contributed tool groups to register alongside built-in tools. */
-  toolGroups?: import("./tool-registry.js").ToolDefinition[][];
+  toolGroups?: ToolDefinition[][];
 }
 
 /** Create a ConnectRPC client pointing at the co-located Grackle gRPC server. */
@@ -104,7 +105,7 @@ async function resolvePersonaTools(
 async function createMcpServerInstance(
   grpcClient: Client<typeof grackle.Grackle>,
   authContext: AuthContext,
-  toolGroups?: import("./tool-registry.js").ToolDefinition[][],
+  toolGroups?: ToolDefinition[][],
 ): Promise<Server> {
   const registry = createToolRegistry(toolGroups);
 
@@ -343,7 +344,7 @@ async function handlePost(
   transports: Map<string, StreamableHTTPServerTransport>,
   authContexts: Map<string, AuthContext>,
   authContext: AuthContext,
-  toolGroups?: import("./tool-registry.js").ToolDefinition[][],
+  toolGroups?: ToolDefinition[][],
 ): Promise<void> {
   try {
     const body = await parseBody(req);

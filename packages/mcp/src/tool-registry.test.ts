@@ -105,13 +105,16 @@ describe("ToolRegistry", () => {
 });
 
 describe("createToolRegistry with plugin tools", () => {
+  /** Baseline count of built-in tools so plugin tests don't hardcode the number. */
+  const builtinCount = createToolRegistry().list().length;
+
   it("registers plugin-contributed tools alongside built-ins", () => {
     const pluginTools = [
       createTestTool("plugin_alpha"),
       createTestTool("plugin_beta"),
     ];
     const registry = createToolRegistry([pluginTools]);
-    expect(registry.list()).toHaveLength(64 + 2);
+    expect(registry.list()).toHaveLength(builtinCount + 2);
     expect(registry.get("plugin_alpha")).toBeDefined();
     expect(registry.get("plugin_beta")).toBeDefined();
   });
@@ -120,7 +123,7 @@ describe("createToolRegistry with plugin tools", () => {
     const groupA = [createTestTool("plugin_a_one")];
     const groupB = [createTestTool("plugin_b_one"), createTestTool("plugin_b_two")];
     const registry = createToolRegistry([groupA, groupB]);
-    expect(registry.list()).toHaveLength(64 + 3);
+    expect(registry.list()).toHaveLength(builtinCount + 3);
     expect(registry.get("plugin_a_one")).toBeDefined();
     expect(registry.get("plugin_b_one")).toBeDefined();
     expect(registry.get("plugin_b_two")).toBeDefined();
@@ -143,7 +146,7 @@ describe("createToolRegistry with plugin tools", () => {
 
   it("empty additional groups array is a no-op", () => {
     const registry = createToolRegistry([]);
-    expect(registry.list()).toHaveLength(64);
+    expect(registry.list()).toHaveLength(builtinCount);
   });
 });
 
