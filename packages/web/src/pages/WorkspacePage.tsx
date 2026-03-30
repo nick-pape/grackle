@@ -235,33 +235,36 @@ export function WorkspacePage(): JSX.Element {
             <span className={styles.metaLabel}>Linked Envs</span>
             <div className={styles.metaValue} data-testid="linked-environments">
               {workspace && (
-                <>
-                  {[...new Set(workspace.linkedEnvironmentIds.filter((id) => id !== workspace.environmentId))].map((envId) => {
-                    const env = environments.find((e) => e.id === envId);
-                    return (
-                      <span key={envId} className={styles.linkedEnvChip} data-testid={`linked-env-${envId}`}>
-                        {env?.displayName || envId}
-                        <button
-                          className={styles.chipDismiss}
-                          onClick={() => { unlinkEnvironment(workspace.id, envId).catch(() => {}); }}
-                          title={`Unlink ${env?.displayName || envId}`}
-                          aria-label={`Unlink ${env?.displayName || envId}`}
-                          data-testid={`unlink-env-${envId}`}
-                        >
-                          x
-                        </button>
-                      </span>
-                    );
-                  })}
+                <span className={styles.linkedEnvList}>
+                  {(() => {
+                    const filtered = [...new Set(workspace.linkedEnvironmentIds.filter((id) => id !== workspace.environmentId))];
+                    if (filtered.length === 0) {
+                      return <span className={styles.metaPlaceholder}>None</span>;
+                    }
+                    return filtered.map((envId) => {
+                      const env = environments.find((e) => e.id === envId);
+                      return (
+                        <span key={envId} className={styles.linkedEnvChip} data-testid={`linked-env-${envId}`}>
+                          {env?.displayName || envId}
+                          <button
+                            className={styles.chipDismiss}
+                            onClick={() => { unlinkEnvironment(workspace.id, envId).catch(() => {}); }}
+                            title={`Unlink ${env?.displayName || envId}`}
+                            aria-label={`Unlink ${env?.displayName || envId}`}
+                            data-testid={`unlink-env-${envId}`}
+                          >
+                            x
+                          </button>
+                        </span>
+                      );
+                    });
+                  })()}
                   {(() => {
                     const linkedSet = new Set(workspace.linkedEnvironmentIds);
                     const available = environments.filter(
                       (e) => e.id !== workspace.environmentId && !linkedSet.has(e.id),
                     );
                     if (available.length === 0) {
-                      if (workspace.linkedEnvironmentIds.filter((id) => id !== workspace.environmentId).length === 0) {
-                        return <span className={styles.metaPlaceholder}>None</span>;
-                      }
                       return null;
                     }
                     return (
@@ -283,7 +286,7 @@ export function WorkspacePage(): JSX.Element {
                       </select>
                     );
                   })()}
-                </>
+                </span>
               )}
             </div>
           </div>

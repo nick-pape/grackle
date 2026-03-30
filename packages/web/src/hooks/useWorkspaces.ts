@@ -124,22 +124,14 @@ export function useWorkspaces(): UseWorkspacesResult {
 
   const linkEnvironment = useCallback(
     async (workspaceId: string, environmentId: string) => {
-      try {
-        await grackleClient.linkEnvironment({ workspaceId, environmentId });
-      } catch {
-        // domain events trigger re-fetch
-      }
+      await grackleClient.linkEnvironment({ workspaceId, environmentId });
     },
     [],
   );
 
   const unlinkEnvironment = useCallback(
     async (workspaceId: string, environmentId: string) => {
-      try {
-        await grackleClient.unlinkEnvironment({ workspaceId, environmentId });
-      } catch {
-        // domain events trigger re-fetch
-      }
+      await grackleClient.unlinkEnvironment({ workspaceId, environmentId });
     },
     [],
   );
