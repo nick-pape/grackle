@@ -112,3 +112,7 @@ export const ROOT_TASK_ID: string = "system";
 export const ROOT_TASK_INITIAL_PROMPT: string = "Introduce yourself and Grackle!";
 /** Well-known ID for the default workspace (created on first run, tied to local env). */
 export const DEFAULT_WORKSPACE_ID: string = "default";
+/** Default maximum concurrent agent sessions when no limit is configured. */
+export const DEFAULT_MAX_CONCURRENT_SESSIONS: number = 4;
+/** Settings-store key for the global concurrent session limit. */
+export const SETTINGS_KEY_MAX_CONCURRENT_SESSIONS: string = "max_concurrent_sessions";

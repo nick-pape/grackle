@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("@grackle-ai/core", () => ({
   createCronPhase: vi.fn((deps: unknown) => ({ name: "cron", execute: async () => {}, _deps: deps })),
   createOrphanPhase: vi.fn((deps: unknown) => ({ name: "orphan-reparent", execute: async () => {}, _deps: deps })),
+  createDispatchPhase: vi.fn((deps: unknown) => ({ name: "dispatch", execute: async () => {}, _deps: deps })),
   lifecycleCleanupPhase: { name: "lifecycle-cleanup", execute: async () => {} },
   createEnvironmentReconciliationPhase: vi.fn(() => ({ name: "environment", execute: async () => {} })),
   listConnections: vi.fn(() => new Map()),
@@ -13,9 +14,16 @@ vi.mock("@grackle-ai/core", () => ({
   startTaskSession: vi.fn(),
   emit: vi.fn(),
   findFirstConnectedEnvironment: vi.fn(),
+  hasCapacity: vi.fn(() => true),
+  computeTaskStatus: vi.fn(() => ({ status: "not_started", latestSessionId: undefined })),
   isKnowledgeEnabled: vi.fn(() => false),
   neo4jHealthCheck: vi.fn(),
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
+
+vi.mock("@grackle-ai/common", () => ({
+  TASK_STATUS: { NOT_STARTED: "not_started", WORKING: "working", PAUSED: "paused", COMPLETE: "complete", FAILED: "failed" },
+  ROOT_TASK_ID: "system",
 }));
 
 vi.mock("@grackle-ai/database", () => ({
@@ -29,6 +37,7 @@ vi.mock("@grackle-ai/database", () => ({
     setTaskScheduleId: vi.fn(),
     getTask: vi.fn(),
     listTasks: vi.fn(() => []),
+    areDependenciesMet: vi.fn(() => true),
   },
   workspaceStore: {
     listWorkspaces: vi.fn(() => []),
@@ -41,6 +50,18 @@ vi.mock("@grackle-ai/database", () => ({
     listEnvironments: vi.fn(() => []),
     updateEnvironmentStatus: vi.fn(),
   },
+  sessionStore: {
+    countActiveForEnvironment: vi.fn(() => 0),
+    getActiveSessionsForTask: vi.fn(() => []),
+    listSessionsForTask: vi.fn(() => []),
+  },
+  settingsStore: {
+    getSetting: vi.fn(),
+  },
+  dispatchQueueStore: {
+    listPending: vi.fn(() => []),
+    dequeue: vi.fn(),
+  },
 }));
 
 import { createReconciliationPhases } from "./reconciliation-setup.js";
@@ -52,10 +73,10 @@ beforeEach(() => {
 });
 
 describe("createReconciliationPhases", () => {
-  it("returns cron, lifecycle-cleanup, orphan-reparent, and environment phases", () => {
+  it("returns dispatch, cron, lifecycle-cleanup, orphan-reparent, and environment phases", () => {
     const phases = createReconciliationPhases();
     const names = phases.map((p) => p.name);
-    expect(names).toEqual(["cron", "lifecycle-cleanup", "orphan-reparent", "environment"]);
+    expect(names).toEqual(["dispatch", "cron", "lifecycle-cleanup", "orphan-reparent", "environment"]);
   });
 
   it("includes knowledge-health phase when knowledge is enabled", () => {
@@ -63,7 +84,7 @@ describe("createReconciliationPhases", () => {
     const phases = createReconciliationPhases();
     const names = phases.map((p) => p.name);
     expect(names).toContain("knowledge-health");
-    expect(phases).toHaveLength(5);
+    expect(phases).toHaveLength(6);
   });
 
   it("omits knowledge-health phase when knowledge is disabled", () => {
