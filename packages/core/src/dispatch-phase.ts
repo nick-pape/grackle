@@ -35,8 +35,8 @@ export interface DispatchPhaseDeps {
  * On each tick:
  * 1. Lists pending entries in FIFO order
  * 2. For each: skips if env disconnected or at capacity, removes stale entries
- * 3. Dequeues before spawning (prevents double-dispatch)
- * 4. Calls startTaskSession and emits task.started on success
+ * 3. Calls startTaskSession to spawn a session when possible
+ * 4. On successful start, dequeues the entry (startTaskSession emits task.started)
  */
 export function createDispatchPhase(deps: DispatchPhaseDeps): ReconciliationPhase {
   return {

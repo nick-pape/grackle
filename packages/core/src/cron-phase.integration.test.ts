@@ -33,6 +33,7 @@ function makeEnv(): EnvironmentRow {
     envInfo: null,
     createdAt: "2026-03-25T09:00:00Z",
     powerlineToken: "abc",
+    maxConcurrentSessions: 0,
   };
 }
 

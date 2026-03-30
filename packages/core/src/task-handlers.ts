@@ -275,7 +275,6 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
         personaId: resolved.personaId,
         notes: req.notes || "",
       });
-      emit("task.queued", { taskId: task.id, workspaceId: task.workspaceId || "" });
       logger.info({ taskId: task.id, environmentId }, "Task queued (environment at capacity)");
       throw new ConnectError("Environment at capacity; task queued for dispatch", Code.ResourceExhausted);
     }
