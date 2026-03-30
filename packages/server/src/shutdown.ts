@@ -99,7 +99,11 @@ export function createShutdown(context: ShutdownContext): () => Promise<void> {
     // are fully handled before unregistering handlers.
     if (context.subscribers) {
       for (const subscriber of context.subscribers) {
-        subscriber.dispose();
+        try {
+          subscriber.dispose();
+        } catch (err) {
+          logger.error({ err }, "Error while disposing subscriber during shutdown");
+        }
       }
     }
 
