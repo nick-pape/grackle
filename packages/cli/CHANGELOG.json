@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.96.0",
+      "tag": "@grackle-ai/cli_v0.96.0",
+      "date": "Mon, 30 Mar 2026 21:39:41 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add per-task and workspace token/cost budget enforcement with pre-spawn checks, mid-run SIGTERM, and BUDGET_EXCEEDED end reason"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.95.2",
       "tag": "@grackle-ai/cli_v0.95.2",
       "date": "Mon, 30 Mar 2026 20:03:42 GMT",
