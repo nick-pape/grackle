@@ -111,11 +111,11 @@ describe("loadPlugins — topological sort", () => {
 
 describe("loadPlugins — contribution collection", () => {
   it("collects gRPC handler registrations", async () => {
-    const fakeService = { typeName: "FakeService" } as GracklePlugin extends never ? never : Parameters<NonNullable<GracklePlugin["grpcHandlers"]>>[0] extends never ? never : unknown;
+    const fakeService = { typeName: "FakeService" } as unknown as import("@bufbuild/protobuf").DescService;
     const registration = { service: fakeService, handlers: { list: vi.fn() } };
     const plugin = createPlugin({
       name: "test",
-      grpcHandlers: () => [registration as never],
+      grpcHandlers: () => [registration],
     });
 
     const result = await loadPlugins([plugin], createMockContext());

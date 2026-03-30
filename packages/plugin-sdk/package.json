@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
-    "@rushstack/heft": "0.73.6",
+    "@rushstack/heft": "1.2.7",
     "@types/node": "^22.0.0",
     "vitest": "^3.2.1"
   }

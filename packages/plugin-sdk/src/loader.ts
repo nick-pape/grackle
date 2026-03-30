@@ -22,7 +22,7 @@ export interface LoadedPlugins {
   mcpTools: PluginToolDefinition[];
   /** All subscriber disposables (for shutdown). */
   subscriberDisposables: Disposable[];
-  /** Shutdown all plugins in reverse initialization order, then dispose subscribers. */
+  /** Dispose all subscribers, then shutdown plugins in reverse initialization order. */
   shutdown: () => Promise<void>;
 }
 
@@ -101,8 +101,8 @@ export async function loadPlugins(
     for (const disposable of subscriberDisposables) {
       try {
         disposable.dispose();
-      } catch {
-        // Subscriber dispose errors are non-fatal
+      } catch (err) {
+        ctx.logger.warn({ err }, "Subscriber dispose failed during shutdown");
       }
     }
 
@@ -112,8 +112,8 @@ export async function loadPlugins(
       if (plugin.shutdown) {
         try {
           await plugin.shutdown();
-        } catch {
-          // Plugin shutdown errors are non-fatal — continue with remaining plugins
+        } catch (err) {
+          ctx.logger.error({ err, plugin: plugin.name }, "Plugin '%s' shutdown failed", plugin.name);
         }
       }
     }
