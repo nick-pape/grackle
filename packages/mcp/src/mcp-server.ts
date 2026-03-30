@@ -47,6 +47,8 @@ export interface McpServerOptions {
   apiKey: string;
   /** Base URL of the OAuth authorization server (web server). When set, enables OAuth discovery. */
   authorizationServerUrl?: string;
+  /** Optional plugin-contributed tool groups to register alongside built-in tools. */
+  toolGroups?: import("./tool-registry.js").ToolDefinition[][];
 }
 
 /** Create a ConnectRPC client pointing at the co-located Grackle gRPC server. */
@@ -102,8 +104,9 @@ async function resolvePersonaTools(
 async function createMcpServerInstance(
   grpcClient: Client<typeof grackle.Grackle>,
   authContext: AuthContext,
+  toolGroups?: import("./tool-registry.js").ToolDefinition[][],
 ): Promise<Server> {
-  const registry = createToolRegistry();
+  const registry = createToolRegistry(toolGroups);
 
   // Resolve persona-scoped tool set once at session creation (cached for session lifetime)
   const personaAllowedTools = await resolvePersonaTools(grpcClient, authContext);
@@ -236,7 +239,7 @@ const REVOCATION_PRUNE_INTERVAL_MS: number = 60 * 60 * 1000;
  * and Server instance, tracked by session ID.
  */
 export function createMcpServer(options: McpServerOptions): http.Server {
-  const { bindHost, grpcPort, apiKey, authorizationServerUrl } = options;
+  const { bindHost, grpcPort, apiKey, authorizationServerUrl, toolGroups } = options;
   const grpcClient = createGrpcClient(bindHost, grpcPort, apiKey);
 
   /** Map of active session transports, keyed by session ID. */
@@ -289,7 +292,7 @@ export function createMcpServer(options: McpServerOptions): http.Server {
     const method = req.method?.toUpperCase();
 
     if (method === "POST") {
-      await handlePost(req, res, grpcClient, transports, authContexts, authContext);
+      await handlePost(req, res, grpcClient, transports, authContexts, authContext, toolGroups);
     } else if (method === "GET") {
       await handleGet(req, res, transports);
     } else if (method === "DELETE") {
@@ -340,6 +343,7 @@ async function handlePost(
   transports: Map<string, StreamableHTTPServerTransport>,
   authContexts: Map<string, AuthContext>,
   authContext: AuthContext,
+  toolGroups?: import("./tool-registry.js").ToolDefinition[][],
 ): Promise<void> {
   try {
     const body = await parseBody(req);
@@ -380,7 +384,7 @@ async function handlePost(
         }
       };
 
-      const mcpServer = await createMcpServerInstance(grpcClient, authContext);
+      const mcpServer = await createMcpServerInstance(grpcClient, authContext, toolGroups);
       await mcpServer.connect(transport);
       await transport.handleRequest(req, res, body);
       return;
