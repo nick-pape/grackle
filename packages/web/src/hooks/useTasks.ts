@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback, useRef } from "react";
-import { ConnectError } from "@connectrpc/connect";
+import { ConnectError, Code } from "@connectrpc/connect";
 import type { TaskData, GrackleEvent, WsMessage, UseTasksResult } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
 import { grackleClient } from "./useGrackleClient.js";
@@ -194,7 +194,14 @@ export function useTasks(): UseTasksResult {
           environmentId: environmentId || "",
           notes: notes || "",
         });
-      } catch {
+      } catch (err) {
+        // ResourceExhausted means the task was queued for dispatch — keep the
+        // loading state so the UI shows the task is "starting". The dispatch
+        // tick will start it when capacity frees up, and the event-driven
+        // refresh will clear the loading state naturally.
+        if (err instanceof ConnectError && err.code === Code.ResourceExhausted) {
+          return;
+        }
         setTaskStartingId(undefined);
       }
     },
