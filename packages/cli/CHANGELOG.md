@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 30 Mar 2026 16:06:29 GMT and should not be manually modified.
+This log was last generated on Mon, 30 Mar 2026 17:31:12 GMT and should not be manually modified.
+
+## 0.94.0
+Mon, 30 Mar 2026 17:31:12 GMT
+
+### Minor changes
+
+- Add dispatch queue with concurrency limits — startTask defers to reconciliation tick when environment is at capacity
 
 ## 0.93.0
 Mon, 30 Mar 2026 16:06:29 GMT

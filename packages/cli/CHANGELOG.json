@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.94.0",
+      "tag": "@grackle-ai/cli_v0.94.0",
+      "date": "Mon, 30 Mar 2026 17:31:12 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add dispatch queue with concurrency limits — startTask defers to reconciliation tick when environment is at capacity"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.93.0",
       "tag": "@grackle-ai/cli_v0.93.0",
       "date": "Mon, 30 Mar 2026 16:06:29 GMT",
