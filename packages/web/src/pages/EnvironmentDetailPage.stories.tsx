@@ -79,7 +79,7 @@ export const UnlinkRemovesCard: Story = {
     await userEvent.click(canvas.getByTestId("unlink-workspace-proj-alpha"));
     // Card should disappear
     await waitFor(() => {
-      expect(canvas.queryByTestId("linked-workspace-card-proj-alpha")).not.toBeInTheDocument();
+      void expect(canvas.queryByTestId("linked-workspace-card-proj-alpha")).not.toBeInTheDocument();
     });
     // Empty state should appear
     await expect(canvas.getByTestId("linked-workspaces-empty")).toBeInTheDocument();
