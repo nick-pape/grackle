@@ -43,6 +43,7 @@
     "@grackle-ai/auth": "workspace:*",
     "@grackle-ai/common": "workspace:*",
     "@grackle-ai/database": "workspace:*",
+    "@grackle-ai/plugin-sdk": "workspace:*",
     "@grackle-ai/knowledge": "workspace:*",
     "@grackle-ai/prompt": "workspace:*",
     "cron-parser": "^4.9.0",
