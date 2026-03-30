@@ -40,7 +40,9 @@ export function EnvironmentDetailPage(): JSX.Element {
   }
 
   const envWorkspaces = workspaces.filter((w) => w.environmentId === env.id);
-  const linkedWorkspaces = workspaces.filter((w) => w.linkedEnvironmentIds.includes(env.id));
+  const linkedWorkspaces = workspaces
+    .filter((w) => w.linkedEnvironmentIds.includes(env.id) && w.environmentId !== env.id)
+    .filter((w, index, self) => self.findIndex((other) => other.id === w.id) === index);
   const envSessions = sessions.filter((s) => s.environmentId === env.id);
   const envCost = envSessions.reduce((sum, s) => sum + (s.costUsd ?? 0), 0);
   const statusColor = STATUS_COLORS[env.status] || "var(--text-tertiary)";

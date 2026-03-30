@@ -234,9 +234,9 @@ export function WorkspacePage(): JSX.Element {
           <div className={styles.metaRow}>
             <span className={styles.metaLabel}>Linked Envs</span>
             <div className={styles.metaValue} data-testid="linked-environments">
-              {workspace && workspace.linkedEnvironmentIds.length > 0 ? (
+              {workspace && workspace.linkedEnvironmentIds.filter((id) => id !== workspace.environmentId).length > 0 ? (
                 <span className={styles.linkedEnvList}>
-                  {workspace.linkedEnvironmentIds.map((envId) => {
+                  {[...new Set(workspace.linkedEnvironmentIds.filter((id) => id !== workspace.environmentId))].map((envId) => {
                     const env = environments.find((e) => e.id === envId);
                     return (
                       <span key={envId} className={styles.linkedEnvChip} data-testid={`linked-env-${envId}`}>
