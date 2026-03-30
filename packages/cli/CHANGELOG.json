@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.96.1",
+      "tag": "@grackle-ai/cli_v0.96.1",
+      "date": "Mon, 30 Mar 2026 21:53:45 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add automatic environment resolution for dispatch (ancestor, workspace, linked, global fallback)"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.96.0",
       "tag": "@grackle-ai/cli_v0.96.0",
       "date": "Mon, 30 Mar 2026 21:39:41 GMT",

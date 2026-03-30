@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 30 Mar 2026 21:39:41 GMT and should not be manually modified.
+This log was last generated on Mon, 30 Mar 2026 21:53:45 GMT and should not be manually modified.
+
+## 0.96.1
+Mon, 30 Mar 2026 21:53:45 GMT
+
+### Patches
+
+- Add automatic environment resolution for dispatch (ancestor, workspace, linked, global fallback)
 
 ## 0.96.0
 Mon, 30 Mar 2026 21:39:41 GMT
