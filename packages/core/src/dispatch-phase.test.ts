@@ -55,6 +55,7 @@ function createMockDeps(): DispatchPhaseDeps {
     isTaskEligible: vi.fn().mockReturnValue(true),
     startTaskSession: vi.fn().mockResolvedValue(undefined),
     isEnvironmentConnected: vi.fn().mockReturnValue(true),
+    resolveEnvironment: vi.fn().mockReturnValue(undefined),
   };
 }
 
@@ -100,8 +101,27 @@ describe("createDispatchPhase", () => {
     expect(deps.startTaskSession).not.toHaveBeenCalled();
   });
 
-  it("skips entry with empty environmentId (awaiting auto-resolution)", async () => {
+  it("resolves environment for entry with empty environmentId", async () => {
     const deps = createMockDeps();
+    vi.mocked(deps.resolveEnvironment).mockReturnValue("resolved-env");
+    vi.mocked(deps.listPendingEntries).mockReturnValue([
+      makeQueueEntry({ environmentId: "" }),
+    ]);
+
+    const phase = createDispatchPhase(deps);
+    await phase.execute();
+
+    expect(deps.resolveEnvironment).toHaveBeenCalled();
+    expect(deps.startTaskSession).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ environmentId: "resolved-env" }),
+    );
+    expect(deps.dequeueEntry).toHaveBeenCalledWith("task-1");
+  });
+
+  it("stays queued when environment resolution returns undefined", async () => {
+    const deps = createMockDeps();
+    vi.mocked(deps.resolveEnvironment).mockReturnValue(undefined);
     vi.mocked(deps.listPendingEntries).mockReturnValue([
       makeQueueEntry({ environmentId: "" }),
     ]);
@@ -111,7 +131,16 @@ describe("createDispatchPhase", () => {
 
     expect(deps.dequeueEntry).not.toHaveBeenCalled();
     expect(deps.startTaskSession).not.toHaveBeenCalled();
-    expect(deps.environmentExists).not.toHaveBeenCalled();
+  });
+
+  it("does not call resolveEnvironment when environmentId is set", async () => {
+    const deps = createMockDeps();
+    vi.mocked(deps.listPendingEntries).mockReturnValue([makeQueueEntry()]);
+
+    const phase = createDispatchPhase(deps);
+    await phase.execute();
+
+    expect(deps.resolveEnvironment).not.toHaveBeenCalled();
   });
 
   it("skips dispatch when environment is disconnected", async () => {

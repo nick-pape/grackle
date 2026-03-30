@@ -2,14 +2,15 @@ import {
   createCronPhase, createOrphanPhase, createDispatchPhase, lifecycleCleanupPhase,
   createEnvironmentReconciliationPhase, listConnections, removeConnection,
   isKnowledgeEnabled, createKnowledgeHealthPhase, neo4jHealthCheck,
-  startTaskSession, emit,
+  startTaskSession, emit, logger,
   hasCapacity, computeTaskStatus,
+  resolveDispatchEnvironment, resolveAncestorEnvironmentId, findFirstConnectedEnvironment,
 } from "@grackle-ai/core";
 import { TASK_STATUS, ROOT_TASK_ID } from "@grackle-ai/common";
 import type { ReconciliationPhase } from "@grackle-ai/core";
 import {
   scheduleStore, taskStore, workspaceStore, personaStore, envRegistry,
-  sessionStore, settingsStore, dispatchQueueStore,
+  sessionStore, settingsStore, dispatchQueueStore, workspaceEnvironmentLinkStore,
 } from "@grackle-ai/database";
 
 /**
@@ -87,6 +88,20 @@ export function createReconciliationPhases(): ReconciliationPhase[] {
     isEnvironmentConnected: (id: string): boolean => {
       const env = envRegistry.getEnvironment(id);
       return env?.status === "connected";
+    },
+    resolveEnvironment: (task) => {
+      const resolved = resolveDispatchEnvironment(task, {
+        resolveAncestorEnvironmentId,
+        getWorkspace: workspaceStore.getWorkspace,
+        getLinkedEnvironmentIds: workspaceEnvironmentLinkStore.getLinkedEnvironmentIds,
+        isEnvironmentConnected: (id) => envRegistry.getEnvironment(id)?.status === "connected",
+        countActiveForEnvironment: sessionStore.countActiveForEnvironment,
+        findFirstConnectedEnvironment,
+      });
+      if (resolved) {
+        logger.debug({ workspaceId: task.workspaceId, environmentId: resolved }, "Dispatch resolved environment");
+      }
+      return resolved;
     },
   });
 

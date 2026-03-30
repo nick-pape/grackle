@@ -16,6 +16,8 @@ vi.mock("@grackle-ai/core", () => ({
   findFirstConnectedEnvironment: vi.fn(),
   hasCapacity: vi.fn(() => true),
   computeTaskStatus: vi.fn(() => ({ status: "not_started", latestSessionId: undefined })),
+  resolveDispatchEnvironment: vi.fn(),
+  resolveAncestorEnvironmentId: vi.fn(),
   isKnowledgeEnabled: vi.fn(() => false),
   neo4jHealthCheck: vi.fn(),
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -62,6 +64,9 @@ vi.mock("@grackle-ai/database", () => ({
     listPending: vi.fn(() => []),
     dequeue: vi.fn(),
     enqueue: vi.fn(),
+  },
+  workspaceEnvironmentLinkStore: {
+    getLinkedEnvironmentIds: vi.fn(() => []),
   },
 }));
 

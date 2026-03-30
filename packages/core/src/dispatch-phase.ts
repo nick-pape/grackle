@@ -31,6 +31,8 @@ export interface DispatchPhaseDeps {
   ) => Promise<string | undefined>;
   /** Check if an environment is connected. */
   isEnvironmentConnected: (environmentId: string) => boolean;
+  /** Resolve an environment for a task with no explicit environmentId. */
+  resolveEnvironment: (task: TaskRow) => string | undefined;
 }
 
 /**
@@ -72,30 +74,40 @@ export function createDispatchPhase(deps: DispatchPhaseDeps): ReconciliationPhas
 
 /** Process a single dispatch queue entry. */
 async function dispatchEntry(deps: DispatchPhaseDeps, entry: DispatchQueueRow): Promise<void> {
-  // Entries with no environmentId are waiting for auto-resolution (#927).
-  // Skip them for now — they'll be dispatched once environment resolution is implemented.
-  if (!entry.environmentId) {
-    return;
+  // Resolve environment if not explicitly set (auto-resolution cascade)
+  let environmentId = entry.environmentId;
+  if (!environmentId) {
+    const task = deps.getTask(entry.taskId);
+    if (!task) {
+      deps.dequeueEntry(entry.taskId);
+      logger.debug({ taskId: entry.taskId }, "Dispatch: dequeued stale entry (task deleted, pre-resolve)");
+      return;
+    }
+    environmentId = deps.resolveEnvironment(task) || "";
+    if (!environmentId) {
+      // No environment available — stay queued for retry next tick
+      return;
+    }
   }
 
   // Dequeue entries whose environment has been removed entirely (not just disconnected)
-  if (!deps.environmentExists(entry.environmentId)) {
+  if (!deps.environmentExists(environmentId)) {
     deps.dequeueEntry(entry.taskId);
-    logger.debug({ taskId: entry.taskId, environmentId: entry.environmentId }, "Dispatch: dequeued orphan (environment removed)");
+    logger.debug({ taskId: entry.taskId, environmentId }, "Dispatch: dequeued orphan (environment removed)");
     return;
   }
 
   // Skip if environment is disconnected (may reconnect later)
-  if (!deps.isEnvironmentConnected(entry.environmentId)) {
+  if (!deps.isEnvironmentConnected(environmentId)) {
     return;
   }
 
   // Skip if environment is at capacity
-  if (!deps.hasCapacity(entry.environmentId)) {
+  if (!deps.hasCapacity(environmentId)) {
     return;
   }
 
-  // Look up the task (may have been deleted since enqueue)
+  // Look up the task (may have been deleted since enqueue — check again after resolution)
   const task = deps.getTask(entry.taskId);
   if (!task) {
     deps.dequeueEntry(entry.taskId);
@@ -110,14 +122,14 @@ async function dispatchEntry(deps: DispatchPhaseDeps, entry: DispatchQueueRow): 
   }
 
   const error = await deps.startTaskSession(task, {
-    environmentId: entry.environmentId,
+    environmentId,
     personaId: entry.personaId,
     notes: entry.notes,
   });
 
   if (error) {
     logger.warn(
-      { taskId: entry.taskId, environmentId: entry.environmentId, error },
+      { taskId: entry.taskId, environmentId, error },
       "Dispatch: session start failed — entry stays queued for retry",
     );
   } else {
@@ -125,7 +137,7 @@ async function dispatchEntry(deps: DispatchPhaseDeps, entry: DispatchQueueRow): 
     // startTaskSession already emits "task.started" so we don't emit it here.
     deps.dequeueEntry(entry.taskId);
     logger.info(
-      { taskId: entry.taskId, environmentId: entry.environmentId },
+      { taskId: entry.taskId, environmentId },
       "Dispatch: task started",
     );
   }
