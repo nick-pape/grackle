@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 30 Mar 2026 02:02:43 GMT and should not be manually modified.
+This log was last generated on Mon, 30 Mar 2026 02:41:47 GMT and should not be manually modified.
+
+## 0.92.0
+Mon, 30 Mar 2026 02:41:47 GMT
+
+### Minor changes
+
+- Add ListStreams RPC, grackle streams list CLI command, and ipc_list_streams MCP tool for debugging active IPC streams
 
 ## 0.91.4
 Mon, 30 Mar 2026 02:02:43 GMT
