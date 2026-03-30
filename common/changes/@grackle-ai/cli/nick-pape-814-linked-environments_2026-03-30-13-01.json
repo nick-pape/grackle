@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add linked environments: workspaces can now link multiple environments for future task dispatch pooling",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
