@@ -234,7 +234,7 @@ export function WorkspacePage(): JSX.Element {
           <div className={styles.metaRow}>
             <span className={styles.metaLabel}>Linked Envs</span>
             <div className={styles.metaValue} data-testid="linked-environments">
-              {workspace && (
+              {workspace ? (
                 <span className={styles.linkedEnvList}>
                   {(() => {
                     const filtered = [...new Set(workspace.linkedEnvironmentIds.filter((id) => id !== workspace.environmentId))];
@@ -287,6 +287,8 @@ export function WorkspacePage(): JSX.Element {
                     );
                   })()}
                 </span>
+              ) : (
+                <span className={styles.metaPlaceholder}>None</span>
               )}
             </div>
           </div>
