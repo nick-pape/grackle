@@ -229,6 +229,29 @@ message AttachStreamResponse {
   int32 fd = 1;                   // The fd allocated for the target session
 }
 
+// ─── Stream Listing ──────────────────────────────────────────
+
+message StreamSubscriberInfo {
+  string subscription_id = 1;
+  string session_id = 2;
+  int32 fd = 3;
+  string permission = 4;         // "r", "w", or "rw"
+  string delivery_mode = 5;      // "sync", "async", or "detach"
+  bool created_by_spawn = 6;
+}
+
+message StreamInfo {
+  string id = 1;
+  string name = 2;
+  int32 subscriber_count = 3;
+  int32 message_buffer_depth = 4;
+  repeated StreamSubscriberInfo subscribers = 5;
+}
+
+message ListStreamsResponse {
+  repeated StreamInfo streams = 1;
+}
+
 // ─── Streaming Events ───────────────────────────────────────
 
 message SessionEvent {
@@ -899,6 +922,7 @@ service Grackle {
   rpc GetSessionFds(SessionId) returns (SessionFds);
   rpc CreateStream(CreateStreamRequest) returns (CreateStreamResponse);
   rpc AttachStream(AttachStreamRequest) returns (AttachStreamResponse);
+  rpc ListStreams(Empty) returns (ListStreamsResponse);
 
   // Knowledge Graph
   rpc SearchKnowledge(SearchKnowledgeRequest) returns (SearchKnowledgeResponse);
