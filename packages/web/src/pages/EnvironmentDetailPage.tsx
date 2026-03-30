@@ -229,8 +229,16 @@ export function EnvironmentDetailPage(): JSX.Element {
         )}
 
         {linkOperationError && (
-          <p className={styles.errorHint} data-testid="link-operation-error" onClick={clearLinkOperationError} role="alert">
+          <p className={styles.errorHint} data-testid="link-operation-error" role="alert">
             {linkOperationError}
+            <button
+              className={styles.btnSmall}
+              onClick={clearLinkOperationError}
+              aria-label="Dismiss error"
+              data-testid="dismiss-link-error"
+            >
+              Dismiss
+            </button>
           </p>
         )}
 
@@ -243,7 +251,7 @@ export function EnvironmentDetailPage(): JSX.Element {
                   <button className={styles.btnSmall} onClick={() => navigate(workspaceUrl(ws.id, ws.environmentId))}>Open</button>
                   <button
                     className={styles.btnSmall}
-                    onClick={() => { unlinkEnvironment(ws.id, env.id); }}
+                    onClick={() => { unlinkEnvironment(ws.id, env.id).catch(() => {}); }}
                     data-testid={`unlink-workspace-${ws.id}`}
                   >
                     Unlink

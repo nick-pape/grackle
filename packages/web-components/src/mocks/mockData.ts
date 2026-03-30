@@ -54,6 +54,14 @@ export const MOCK_ENVIRONMENTS: Environment[] = [
     status: "disconnected",
     bootstrapped: false,
   },
+  {
+    id: "error-env",
+    displayName: "Error Test",
+    adapterType: "local",
+    adapterConfig: "{}",
+    status: "connected",
+    bootstrapped: true,
+  },
 ];
 
 // ─── Sessions ───────────────────────────────────────

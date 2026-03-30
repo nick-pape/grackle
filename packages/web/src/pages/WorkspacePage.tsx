@@ -248,7 +248,7 @@ export function WorkspacePage(): JSX.Element {
                           {env?.displayName || envId}
                           <button
                             className={styles.chipDismiss}
-                            onClick={() => { unlinkEnvironment(workspace.id, envId); }}
+                            onClick={() => { unlinkEnvironment(workspace.id, envId).catch(() => {}); }}
                             title={`Unlink ${env?.displayName || envId}`}
                             aria-label={`Unlink ${env?.displayName || envId}`}
                             data-testid={`unlink-env-${envId}`}
@@ -273,7 +273,7 @@ export function WorkspacePage(): JSX.Element {
                         value=""
                         onChange={(e) => {
                           if (e.target.value) {
-                            linkEnvironment(workspace.id, e.target.value);
+                            linkEnvironment(workspace.id, e.target.value).catch(() => {});
                           }
                         }}
                         aria-label="Link environment"
@@ -290,10 +290,17 @@ export function WorkspacePage(): JSX.Element {
                     <span
                       className={styles.linkError}
                       data-testid="link-operation-error"
-                      onClick={clearLinkOperationError}
                       role="alert"
                     >
                       {linkOperationError}
+                      <button
+                        className={styles.chipDismiss}
+                        onClick={clearLinkOperationError}
+                        aria-label="Dismiss error"
+                        data-testid="dismiss-link-error"
+                      >
+                        x
+                      </button>
                     </span>
                   )}
                 </span>

@@ -69,6 +69,42 @@ export const UnlinkButtonOnCard: Story = {
   },
 };
 
+/** Linking a workspace to error-env shows an error message. */
+export const LinkErrorShowsMessage: Story = {
+  render: () => <DetailRouteWrapper envId="error-env" />,
+  play: async ({ canvas }) => {
+    // Select a workspace from the link dropdown to trigger a mock error
+    const linkSelect = canvas.getByTestId("link-workspace-select");
+    await userEvent.selectOptions(linkSelect, "proj-alpha");
+    // Error message should appear
+    await waitFor(() => {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      expect(canvas.getByTestId("link-operation-error")).toBeInTheDocument();
+    });
+    await expect(canvas.getByTestId("link-operation-error")).toHaveTextContent("Failed to link environment");
+  },
+};
+
+/** Clicking the error message dismisses it. */
+export const LinkErrorDismissible: Story = {
+  render: () => <DetailRouteWrapper envId="error-env" />,
+  play: async ({ canvas }) => {
+    // Trigger the error first
+    const linkSelect = canvas.getByTestId("link-workspace-select");
+    await userEvent.selectOptions(linkSelect, "proj-alpha");
+    await waitFor(() => {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      expect(canvas.getByTestId("link-operation-error")).toBeInTheDocument();
+    });
+    // Click the dismiss button
+    await userEvent.click(canvas.getByTestId("dismiss-link-error"));
+    await waitFor(() => {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      expect(canvas.queryByTestId("link-operation-error")).not.toBeInTheDocument();
+    });
+  },
+};
+
 /** Clicking Unlink removes the linked workspace card. */
 export const UnlinkRemovesCard: Story = {
   render: () => <DetailRouteWrapper envId="env-docker-01" />,
