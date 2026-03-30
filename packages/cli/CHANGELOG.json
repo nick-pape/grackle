@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.92.3",
+      "tag": "@grackle-ai/cli_v0.92.3",
+      "date": "Mon, 30 Mar 2026 15:00:21 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add notification permission step to onboarding wizard"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.92.2",
       "tag": "@grackle-ai/cli_v0.92.2",
       "date": "Mon, 30 Mar 2026 14:24:19 GMT",
