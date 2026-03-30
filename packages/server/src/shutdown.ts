@@ -48,13 +48,6 @@ export function createShutdown(context: ShutdownContext): () => Promise<void> {
     stopOAuthCleanup();
     await context.reconciliationManager.stop();
 
-    // Dispose all event subscribers so handlers don't fire during teardown
-    if (context.subscribers) {
-      for (const subscriber of context.subscribers) {
-        subscriber.dispose();
-      }
-    }
-
     const forceExit = setTimeout(() => {
       logger.warn("Shutdown timed out, forcing exit");
       process.exit(1);
@@ -101,6 +94,14 @@ export function createShutdown(context: ShutdownContext): () => Promise<void> {
         resolve();
       });
     });
+
+    // Dispose event subscribers after servers are closed so in-flight requests
+    // are fully handled before unregistering handlers.
+    if (context.subscribers) {
+      for (const subscriber of context.subscribers) {
+        subscriber.dispose();
+      }
+    }
 
     // Final WAL checkpoint (TRUNCATE) to fully flush pending writes before exit
     if (sqlite) {

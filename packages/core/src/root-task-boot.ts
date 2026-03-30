@@ -75,6 +75,7 @@ interface BootState {
 
 // ─── State ──────────────────────────────────────────────────
 
+/** Module-scoped state used by the legacy {@link createRootTaskBoot} API. */
 let state: BootState = createInitialState();
 
 function createInitialState(): BootState {
@@ -95,42 +96,30 @@ function createInitialState(): BootState {
  * event subscriptions. Each call checks whether the root task needs starting
  * and applies reanimate-first + exponential backoff logic.
  *
+ * Uses module-scoped backoff state. For independent per-instance state, use
+ * {@link createRootTaskBootSubscriber} instead.
+ *
  * @param deps - Injected dependencies for testability.
  * @returns An async function to call on each `environment.changed` event.
  */
 export function createRootTaskBoot(deps: RootTaskBootDeps): () => Promise<void> {
-  return async (): Promise<void> => {
-    // Guard: prevent concurrent boot attempts
-    if (state.inProgress) {
-      return;
-    }
-
-    state.inProgress = true;
-    try {
-      await attemptBoot(deps);
-    } catch (err) {
-      recordFailure();
-      logger.warn({ err }, "Root task boot failed with unexpected exception");
-    } finally {
-      state.inProgress = false; // eslint-disable-line require-atomic-updates -- single-threaded, flag guards re-entry
-    }
-  };
+  return createRootTaskBootHandler(deps, state);
 }
 
 /**
  * Create the root task boot subscriber.
  *
- * Wraps {@link createRootTaskBoot} and subscribes to `environment.changed`
- * and `setting.changed` events. Returns a Disposable that unsubscribes
- * and resets boot state.
+ * Creates independent backoff state (not shared with other factory calls)
+ * and subscribes to `environment.changed` and `setting.changed` events.
+ * Returns a Disposable that unsubscribes the handler.
  *
  * @param ctx - Plugin context providing event-bus access.
  * @param deps - Injected dependencies for testability.
- * @returns A Disposable that unsubscribes and resets boot state.
+ * @returns A Disposable that unsubscribes the handler.
  */
 export function createRootTaskBootSubscriber(ctx: PluginContext, deps: RootTaskBootDeps): Disposable {
-  state = createInitialState();
-  const tryBoot = createRootTaskBoot(deps);
+  const bootState = createInitialState();
+  const tryBoot = createRootTaskBootHandler(deps, bootState);
 
   const unsubscribe = ctx.subscribe((event: GrackleEvent) => {
     if (event.type === "environment.changed") {
@@ -149,7 +138,6 @@ export function createRootTaskBootSubscriber(ctx: PluginContext, deps: RootTaskB
   return {
     dispose(): void {
       unsubscribe();
-      state = createInitialState();
     },
   };
 }
@@ -165,8 +153,32 @@ export function _resetForTesting(): void {
 
 // ─── Internal ───────────────────────────────────────────────
 
+/**
+ * Create an async boot handler that uses the given backoff state.
+ * Shared implementation for both {@link createRootTaskBoot} and
+ * {@link createRootTaskBootSubscriber}.
+ */
+function createRootTaskBootHandler(deps: RootTaskBootDeps, s: BootState): () => Promise<void> {
+  return async (): Promise<void> => {
+    // Guard: prevent concurrent boot attempts
+    if (s.inProgress) {
+      return;
+    }
+
+    s.inProgress = true;
+    try {
+      await attemptBoot(deps, s);
+    } catch (err) {
+      recordFailure(s);
+      logger.warn({ err }, "Root task boot failed with unexpected exception");
+    } finally {
+      s.inProgress = false; // eslint-disable-line require-atomic-updates -- single-threaded, flag guards re-entry
+    }
+  };
+}
+
 /** Core boot logic — separated from the guard/error wrapper for clarity. */
-async function attemptBoot(deps: RootTaskBootDeps): Promise<void> {
+async function attemptBoot(deps: RootTaskBootDeps, s: BootState): Promise<void> {
   // 0. Don't auto-start before onboarding — the user hasn't chosen their
   // runtime yet, so the root task would launch with the default "claude-code".
   if (deps.isOnboarded && !deps.isOnboarded()) {
@@ -183,7 +195,7 @@ async function attemptBoot(deps: RootTaskBootDeps): Promise<void> {
   const sessions = deps.listSessionsForTask(ROOT_TASK_ID);
   const { status } = deps.computeTaskStatus(rootTask.status, sessions);
   if (status === TASK_STATUS.WORKING) {
-    checkStabilityReset();
+    checkStabilityReset(s);
     return;
   }
 
@@ -191,23 +203,23 @@ async function attemptBoot(deps: RootTaskBootDeps): Promise<void> {
   // is no longer working before the stability threshold, count it as a failure.
   // This catches the case where startTaskSession succeeded but the session
   // crashed shortly after (the main crash-loop scenario from issue #959).
-  if (state.lastSessionStartedAt > 0) {
-    const sinceLastStart = Date.now() - state.lastSessionStartedAt;
+  if (s.lastSessionStartedAt > 0) {
+    const sinceLastStart = Date.now() - s.lastSessionStartedAt;
     if (sinceLastStart < BOOT_STABLE_THRESHOLD_MS) {
       // Session crashed before reaching stability — record as failure
-      if (state.lastFailureAt < state.lastSessionStartedAt) {
+      if (s.lastFailureAt < s.lastSessionStartedAt) {
         // Only record once per start (guard against multiple environment.changed events)
-        recordFailure();
+        recordFailure(s);
         logger.info(
-          { survivedMs: sinceLastStart, failures: state.failures },
+          { survivedMs: sinceLastStart, failures: s.failures },
           "Root task session crashed before stability threshold — recording failure",
         );
       }
     } else {
       // Session survived past stability threshold but is now stopped — reset backoff
-      resetBackoff(sinceLastStart);
+      resetBackoff(s, sinceLastStart);
     }
-    state.lastSessionStartedAt = 0;
+    s.lastSessionStartedAt = 0;
   }
 
   // 3. Find connected environment
@@ -217,24 +229,24 @@ async function attemptBoot(deps: RootTaskBootDeps): Promise<void> {
   }
 
   // 4. Check backoff
-  if (state.failures >= BOOT_MAX_FAILURES) {
+  if (s.failures >= BOOT_MAX_FAILURES) {
     // Log only once when the threshold is first reached to avoid spam
-    if (state.failures === BOOT_MAX_FAILURES) {
+    if (s.failures === BOOT_MAX_FAILURES) {
       logger.error(
-        { failures: state.failures },
+        { failures: s.failures },
         "Root task boot exhausted all retries (%d failures) — giving up until server restart",
-        state.failures,
+        s.failures,
       );
     }
     return;
   }
 
-  if (state.failures > 0) {
+  if (s.failures > 0) {
     const delay = Math.min(
-      BOOT_INITIAL_DELAY_MS * Math.pow(BOOT_BACKOFF_MULTIPLIER, state.failures - 1),
+      BOOT_INITIAL_DELAY_MS * Math.pow(BOOT_BACKOFF_MULTIPLIER, s.failures - 1),
       BOOT_MAX_DELAY_MS,
     );
-    const elapsed = Date.now() - state.lastFailureAt;
+    const elapsed = Date.now() - s.lastFailureAt;
     if (elapsed < delay) {
       return; // backoff not elapsed yet
     }
@@ -267,7 +279,7 @@ async function attemptBoot(deps: RootTaskBootDeps): Promise<void> {
       notes: ROOT_TASK_INITIAL_PROMPT,
     });
     if (err) {
-      recordFailure();
+      recordFailure(s);
       logger.warn({ err }, "Root task auto-start failed");
       return;
     }
@@ -275,42 +287,42 @@ async function attemptBoot(deps: RootTaskBootDeps): Promise<void> {
   }
 
   // 7. Track session start time for stability detection
-  state.lastSessionStartedAt = Date.now(); // eslint-disable-line require-atomic-updates -- single-threaded
+  s.lastSessionStartedAt = Date.now(); // eslint-disable-line require-atomic-updates -- single-threaded
 }
 
 /** Record a boot failure: increment counter and timestamp. */
-function recordFailure(): void {
-  state.failures++;
-  state.lastFailureAt = Date.now();
+function recordFailure(s: BootState): void {
+  s.failures++;
+  s.lastFailureAt = Date.now();
 }
 
 /**
  * If the root task has been WORKING long enough (past the stability threshold),
  * reset the backoff counter. Called when we detect the task is already running.
  */
-function checkStabilityReset(): void {
-  if (state.failures === 0) {
+function checkStabilityReset(s: BootState): void {
+  if (s.failures === 0) {
     return;
   }
-  if (state.lastSessionStartedAt > 0) {
-    const elapsed = Date.now() - state.lastSessionStartedAt;
+  if (s.lastSessionStartedAt > 0) {
+    const elapsed = Date.now() - s.lastSessionStartedAt;
     if (elapsed >= BOOT_STABLE_THRESHOLD_MS) {
-      resetBackoff(elapsed);
+      resetBackoff(s, elapsed);
     }
   } else {
     // Task is WORKING but we didn't start it (e.g., session recovery
     // reanimated it externally). Begin tracking stability from now so
     // backoff can eventually reset — otherwise MAX_FAILURES is permanent.
-    state.lastSessionStartedAt = Date.now();
+    s.lastSessionStartedAt = Date.now();
   }
 }
 
 /** Zero out the backoff state after a session has proven stable. */
-function resetBackoff(survivedMs: number): void {
+function resetBackoff(s: BootState, survivedMs: number): void {
   logger.info(
-    { survivedMs, previousFailures: state.failures },
+    { survivedMs, previousFailures: s.failures },
     "Root task session stable — resetting backoff",
   );
-  state.failures = 0;
-  state.lastFailureAt = 0;
+  s.failures = 0;
+  s.lastFailureAt = 0;
 }

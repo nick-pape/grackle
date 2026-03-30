@@ -179,24 +179,20 @@ describe("lifecycle manager", () => {
     expect(sessionStore.getSession("child")?.endReason).toBe("completed");
   });
 
-  it("disposes unregisters callbacks", () => {
-    // Create a fresh subscriber and immediately dispose
-    const ctx2 = createMockContext();
-    const d = createLifecycleSubscriber(ctx2);
-    d.dispose();
+  it("dispose unregisters orphan callback so auto-stop no longer fires", () => {
+    // Dispose the lifecycle subscriber registered in beforeEach
+    disposable.dispose();
 
-    // Create a session and orphan it — the disposed lifecycle should NOT fire
+    // Now orphaning a session should NOT auto-stop it (no callback registered)
     sessionStore.createSession("sess-disposed", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
     sessionStore.updateSessionStatus("sess-disposed", "running");
     const stream = streamRegistry.createStream("lifecycle:sess-disposed");
     const sub = streamRegistry.subscribe(stream.id, "sess-disposed", "rw", "detach", false);
     streamRegistry.unsubscribe(sub.id);
 
-    // The disposed lifecycle's orphan callback should not have fired,
-    // so session stays running (only the main lifecycle from beforeEach fires)
-    // Since our main lifecycle IS still active, it will fire. But this test
-    // verifies that calling dispose twice doesn't throw.
-    d.dispose();
+    // Session should remain running — orphan callback was unregistered
+    const session = sessionStore.getSession("sess-disposed");
+    expect(session?.status).toBe("running");
   });
 });
 

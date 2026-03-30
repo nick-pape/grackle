@@ -464,6 +464,10 @@ export function registerAsyncListener(sessionId: string, callback: AsyncMessageL
  * Register a callback invoked when a session has zero remaining subscriptions.
  * Used by the lifecycle manager to auto-hibernate orphaned sessions.
  *
+ * **Singleton semantics**: only one callback is supported at a time. A new
+ * registration overwrites the previous one (last-wins). This is intentional —
+ * there is exactly one lifecycle manager per server instance.
+ *
  * @returns An unsubscribe function that removes the callback.
  */
 export function onSessionOrphaned(cb: OrphanCallback): () => void {
@@ -479,6 +483,10 @@ export function onSessionOrphaned(cb: OrphanCallback): () => void {
  * Register a callback invoked when an external session subscribes to a
  * lifecycle stream. Used by the lifecycle manager to auto-reanimate
  * stopped sessions when a new fd is opened.
+ *
+ * **Singleton semantics**: only one callback is supported at a time. A new
+ * registration overwrites the previous one (last-wins). This is intentional —
+ * there is exactly one lifecycle manager per server instance.
  *
  * @returns An unsubscribe function that removes the callback.
  */
