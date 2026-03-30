@@ -15,9 +15,14 @@ vi.mock("@grackle-ai/core", () => ({
   emit: vi.fn(),
   findFirstConnectedEnvironment: vi.fn(),
   hasCapacity: vi.fn(() => true),
+  computeTaskStatus: vi.fn(() => ({ status: "not_started", latestSessionId: undefined })),
   isKnowledgeEnabled: vi.fn(() => false),
   neo4jHealthCheck: vi.fn(),
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
+
+vi.mock("@grackle-ai/common", () => ({
+  TASK_STATUS: { NOT_STARTED: "not_started", WORKING: "working", PAUSED: "paused", COMPLETE: "complete", FAILED: "failed" },
 }));
 
 vi.mock("@grackle-ai/database", () => ({
@@ -31,6 +36,7 @@ vi.mock("@grackle-ai/database", () => ({
     setTaskScheduleId: vi.fn(),
     getTask: vi.fn(),
     listTasks: vi.fn(() => []),
+    areDependenciesMet: vi.fn(() => true),
   },
   workspaceStore: {
     listWorkspaces: vi.fn(() => []),
@@ -45,6 +51,7 @@ vi.mock("@grackle-ai/database", () => ({
   },
   sessionStore: {
     countActiveForEnvironment: vi.fn(() => 0),
+    getActiveSessionsForTask: vi.fn(() => []),
   },
   settingsStore: {
     getSetting: vi.fn(),

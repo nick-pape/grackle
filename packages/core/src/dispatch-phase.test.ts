@@ -51,6 +51,8 @@ function createMockDeps(): DispatchPhaseDeps {
     dequeueEntry: vi.fn(),
     getTask: vi.fn().mockReturnValue(makeTask()),
     hasCapacity: vi.fn().mockReturnValue(true),
+    environmentExists: vi.fn().mockReturnValue(true),
+    isTaskEligible: vi.fn().mockReturnValue(true),
     startTaskSession: vi.fn().mockResolvedValue(undefined),
     isEnvironmentConnected: vi.fn().mockReturnValue(true),
   };
@@ -177,6 +179,58 @@ describe("createDispatchPhase", () => {
     vi.mocked(deps.startTaskSession).mockResolvedValue(undefined);
     await phase.execute();
     expect(deps.dequeueEntry).toHaveBeenCalledWith("task-1");
+  });
+
+  it("dequeues entry when environment has been removed", async () => {
+    const deps = createMockDeps();
+    vi.mocked(deps.environmentExists).mockReturnValue(false);
+    vi.mocked(deps.listPendingEntries).mockReturnValue([makeQueueEntry()]);
+
+    const phase = createDispatchPhase(deps);
+    await phase.execute();
+
+    expect(deps.dequeueEntry).toHaveBeenCalledWith("task-1");
+    expect(deps.startTaskSession).not.toHaveBeenCalled();
+  });
+
+  it("dequeues entry when task is no longer eligible", async () => {
+    const deps = createMockDeps();
+    vi.mocked(deps.isTaskEligible).mockReturnValue(false);
+    vi.mocked(deps.listPendingEntries).mockReturnValue([makeQueueEntry()]);
+
+    const phase = createDispatchPhase(deps);
+    await phase.execute();
+
+    expect(deps.dequeueEntry).toHaveBeenCalledWith("task-1");
+    expect(deps.startTaskSession).not.toHaveBeenCalled();
+  });
+
+  it("catches thrown errors and continues processing remaining entries", async () => {
+    const deps = createMockDeps();
+    const entries = [
+      makeQueueEntry({ id: "dq-1", taskId: "task-a" }),
+      makeQueueEntry({ id: "dq-2", taskId: "task-b" }),
+    ];
+    vi.mocked(deps.listPendingEntries).mockReturnValue(entries);
+    vi.mocked(deps.getTask).mockImplementation((id) => makeTask({ id }));
+
+    // First entry throws, second should still be processed
+    let callCount = 0;
+    vi.mocked(deps.startTaskSession).mockImplementation(async () => {
+      callCount++;
+      if (callCount === 1) {
+        throw new Error("PowerLine crashed");
+      }
+      return undefined;
+    });
+
+    const phase = createDispatchPhase(deps);
+    await phase.execute();
+
+    // task-a threw — not dequeued (stays for retry)
+    // task-b succeeded — dequeued
+    expect(deps.dequeueEntry).toHaveBeenCalledTimes(1);
+    expect(deps.dequeueEntry).toHaveBeenCalledWith("task-b");
   });
 
   it("has name 'dispatch'", () => {

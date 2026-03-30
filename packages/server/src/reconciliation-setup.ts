@@ -3,8 +3,9 @@ import {
   createEnvironmentReconciliationPhase, listConnections, removeConnection,
   isKnowledgeEnabled, createKnowledgeHealthPhase, neo4jHealthCheck,
   startTaskSession, emit, findFirstConnectedEnvironment,
-  hasCapacity,
+  hasCapacity, computeTaskStatus,
 } from "@grackle-ai/core";
+import { TASK_STATUS } from "@grackle-ai/common";
 import type { ReconciliationPhase } from "@grackle-ai/core";
 import {
   scheduleStore, taskStore, workspaceStore, personaStore, envRegistry,
@@ -14,9 +15,9 @@ import {
 /**
  * Assemble the ordered list of reconciliation phases for the server.
  *
- * Returns cron, lifecycle-cleanup, orphan-reparent, and environment-reconciliation
- * phases. When the knowledge subsystem is enabled, a knowledge-health phase is
- * appended.
+ * Returns dispatch, cron, lifecycle-cleanup, orphan-reparent, and environment-reconciliation
+ * phases (in that order). When the knowledge subsystem is enabled, a knowledge-health
+ * phase is appended.
  *
  * @returns An array of phases to pass to {@link ReconciliationManager}.
  */
@@ -69,6 +70,19 @@ export function createReconciliationPhases(): ReconciliationPhase[] {
       getEnvironment: (id) => envRegistry.getEnvironment(id),
       getSetting: settingsStore.getSetting,
     }),
+    environmentExists: (id: string): boolean => envRegistry.getEnvironment(id) !== undefined,
+    isTaskEligible: (taskId: string): boolean => {
+      if (!taskStore.areDependenciesMet(taskId)) {
+        return false;
+      }
+      const sessions = sessionStore.getActiveSessionsForTask(taskId);
+      const task = taskStore.getTask(taskId);
+      if (!task) {
+        return false;
+      }
+      const { status } = computeTaskStatus(task.status, sessions);
+      return status === TASK_STATUS.NOT_STARTED || status === TASK_STATUS.FAILED;
+    },
     startTaskSession,
     isEnvironmentConnected: (id: string): boolean => {
       const env = envRegistry.getEnvironment(id);

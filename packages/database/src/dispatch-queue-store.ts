@@ -61,9 +61,9 @@ export function getByTaskId(taskId: string): DispatchQueueRow | undefined {
   return db.select().from(dispatchQueue).where(eq(dispatchQueue.taskId, taskId)).get();
 }
 
-/** List all pending dispatch entries in FIFO order (oldest first). */
+/** List all pending dispatch entries in FIFO order (oldest first, deterministic). */
 export function listPending(): DispatchQueueRow[] {
-  return db.select().from(dispatchQueue).orderBy(asc(dispatchQueue.enqueuedAt)).all();
+  return db.select().from(dispatchQueue).orderBy(asc(dispatchQueue.enqueuedAt), asc(dispatchQueue.id)).all();
 }
 
 /** List pending dispatch entries for a specific environment in FIFO order. */
@@ -71,6 +71,6 @@ export function listPendingForEnvironment(environmentId: string): DispatchQueueR
   return db.select()
     .from(dispatchQueue)
     .where(eq(dispatchQueue.environmentId, environmentId))
-    .orderBy(asc(dispatchQueue.enqueuedAt))
+    .orderBy(asc(dispatchQueue.enqueuedAt), asc(dispatchQueue.id))
     .all();
 }
