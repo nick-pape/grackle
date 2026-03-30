@@ -1274,6 +1274,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       lastSpawnedId,
       taskSessions,
       workspaces,
+      workspaceLinkError,
       tasks,
       findings,
       selectedFinding,
