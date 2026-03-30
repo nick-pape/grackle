@@ -38,6 +38,7 @@ export const workspaceTools: ToolDefinition[] = [
             description: p.description,
             repoUrl: p.repoUrl,
             environmentId: p.environmentId,
+            linkedEnvironmentIds: p.linkedEnvironmentIds,
             workingDirectory: p.workingDirectory,
             useWorktrees: p.useWorktrees,
             status: workspaceStatusToString(p.status) || "unspecified",
@@ -104,6 +105,7 @@ export const workspaceTools: ToolDefinition[] = [
           description: workspace.description,
           repoUrl: workspace.repoUrl,
           environmentId: workspace.environmentId,
+          linkedEnvironmentIds: workspace.linkedEnvironmentIds,
           defaultPersonaId: workspace.defaultPersonaId,
           workingDirectory: workspace.workingDirectory,
           useWorktrees: workspace.useWorktrees,
@@ -143,6 +145,7 @@ export const workspaceTools: ToolDefinition[] = [
           description: workspace.description,
           repoUrl: workspace.repoUrl,
           environmentId: workspace.environmentId,
+          linkedEnvironmentIds: workspace.linkedEnvironmentIds,
           workingDirectory: workspace.workingDirectory,
           useWorktrees: workspace.useWorktrees,
           status: workspaceStatusToString(workspace.status) || "unspecified",
@@ -216,6 +219,7 @@ export const workspaceTools: ToolDefinition[] = [
           description: workspace.description,
           repoUrl: workspace.repoUrl,
           environmentId: workspace.environmentId,
+          linkedEnvironmentIds: workspace.linkedEnvironmentIds,
           defaultPersonaId: workspace.defaultPersonaId,
           workingDirectory: workspace.workingDirectory,
           useWorktrees: workspace.useWorktrees,
@@ -250,6 +254,74 @@ export const workspaceTools: ToolDefinition[] = [
           id: args.workspaceId as string,
         });
         return jsonResult({ success: true });
+      } catch (error) {
+        return grpcErrorToToolResult(error);
+      }
+    },
+  },
+  {
+    name: "workspace_link_environment",
+    group: "workspace",
+    description:
+      "Link an additional environment to a workspace, adding it to the workspace's environment pool for task dispatch.",
+    inputSchema: z.object({
+      workspaceId: z.string().describe("Workspace to link the environment to"),
+      environmentId: z.string().describe("Environment to link"),
+    }),
+    rpcMethod: "linkEnvironment",
+    mutating: true,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false,
+    },
+    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+      try {
+        const workspace = await client.linkEnvironment({
+          workspaceId: args.workspaceId as string,
+          environmentId: args.environmentId as string,
+        });
+        return jsonResult({
+          id: workspace.id,
+          name: workspace.name,
+          environmentId: workspace.environmentId,
+          linkedEnvironmentIds: workspace.linkedEnvironmentIds,
+        });
+      } catch (error) {
+        return grpcErrorToToolResult(error);
+      }
+    },
+  },
+  {
+    name: "workspace_unlink_environment",
+    group: "workspace",
+    description:
+      "Remove a linked environment from a workspace's environment pool.",
+    inputSchema: z.object({
+      workspaceId: z.string().describe("Workspace to unlink the environment from"),
+      environmentId: z.string().describe("Environment to unlink"),
+    }),
+    rpcMethod: "unlinkEnvironment",
+    mutating: true,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+      try {
+        const workspace = await client.unlinkEnvironment({
+          workspaceId: args.workspaceId as string,
+          environmentId: args.environmentId as string,
+        });
+        return jsonResult({
+          id: workspace.id,
+          name: workspace.name,
+          environmentId: workspace.environmentId,
+          linkedEnvironmentIds: workspace.linkedEnvironmentIds,
+        });
       } catch (error) {
         return grpcErrorToToolResult(error);
       }

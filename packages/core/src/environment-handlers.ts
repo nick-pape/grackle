@@ -1,7 +1,7 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
-import { envRegistry, workspaceStore, sessionStore } from "@grackle-ai/database";
+import { envRegistry, workspaceStore, workspaceEnvironmentLinkStore, sessionStore } from "@grackle-ai/database";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import * as adapterManager from "./adapter-manager.js";
 import * as tokenPush from "./token-push.js";
@@ -83,7 +83,9 @@ export async function updateEnvironment(req: grackle.UpdateEnvironmentRequest): 
 
 /** Remove an environment after disconnecting it and cleaning up references. */
 export async function removeEnvironment(req: grackle.EnvironmentId): Promise<grackle.Empty> {
-  // Block deletion if workspaces still reference this environment
+  // Cascade-delete linked-environment references (links, not primary ownership)
+  workspaceEnvironmentLinkStore.deleteLinksForEnvironment(req.id);
+  // Block deletion if workspaces still reference this environment as primary
   const wsCount = workspaceStore.countWorkspacesByEnvironment(req.id);
   if (wsCount > 0) {
     throw new ConnectError(

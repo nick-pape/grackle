@@ -283,6 +283,14 @@ grackle workspace update ws-123 --env other-env    # reparent to different envir
 
 Archive a workspace.
 
+#### `grackle workspace link-env <workspace-id> --env <env-id>`
+
+Link an additional environment to a workspace's environment pool. The linked environment becomes eligible for task dispatch alongside the workspace's primary environment.
+
+#### `grackle workspace unlink-env <workspace-id> --env <env-id>`
+
+Remove a linked environment from a workspace's environment pool.
+
 ---
 
 ### Tasks

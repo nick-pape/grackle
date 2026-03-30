@@ -1,0 +1,71 @@
+import db from "./db.js";
+import { workspaceEnvironmentLinks } from "./schema.js";
+import { eq, and, sql } from "drizzle-orm";
+
+/** Create a link between a workspace and an environment. Throws on duplicate. */
+export function linkEnvironment(workspaceId: string, environmentId: string): void {
+  db.insert(workspaceEnvironmentLinks).values({ workspaceId, environmentId }).run();
+}
+
+/** Remove a link between a workspace and an environment. No-op if not linked. */
+export function unlinkEnvironment(workspaceId: string, environmentId: string): void {
+  db.delete(workspaceEnvironmentLinks)
+    .where(and(
+      eq(workspaceEnvironmentLinks.workspaceId, workspaceId),
+      eq(workspaceEnvironmentLinks.environmentId, environmentId),
+    ))
+    .run();
+}
+
+/** Return all linked environment IDs for a workspace (excludes the primary). */
+export function getLinkedEnvironmentIds(workspaceId: string): string[] {
+  const rows = db.select({ environmentId: workspaceEnvironmentLinks.environmentId })
+    .from(workspaceEnvironmentLinks)
+    .where(eq(workspaceEnvironmentLinks.workspaceId, workspaceId))
+    .all();
+  return rows.map((r) => r.environmentId);
+}
+
+/** Return all workspace IDs linked to an environment. */
+export function getWorkspaceIdsLinkedToEnvironment(environmentId: string): string[] {
+  const rows = db.select({ workspaceId: workspaceEnvironmentLinks.workspaceId })
+    .from(workspaceEnvironmentLinks)
+    .where(eq(workspaceEnvironmentLinks.environmentId, environmentId))
+    .all();
+  return rows.map((r) => r.workspaceId);
+}
+
+/** Check whether a specific link exists. */
+export function isLinked(workspaceId: string, environmentId: string): boolean {
+  const row = db.select({ workspaceId: workspaceEnvironmentLinks.workspaceId })
+    .from(workspaceEnvironmentLinks)
+    .where(and(
+      eq(workspaceEnvironmentLinks.workspaceId, workspaceId),
+      eq(workspaceEnvironmentLinks.environmentId, environmentId),
+    ))
+    .get();
+  return row !== undefined;
+}
+
+/** Count how many workspaces are linked to an environment. */
+export function countLinksForEnvironment(environmentId: string): number {
+  const row = db.select({ count: sql<number>`count(*)` })
+    .from(workspaceEnvironmentLinks)
+    .where(eq(workspaceEnvironmentLinks.environmentId, environmentId))
+    .get();
+  return row?.count ?? 0;
+}
+
+/** Delete all links for an environment (cascade helper for env removal). */
+export function deleteLinksForEnvironment(environmentId: string): void {
+  db.delete(workspaceEnvironmentLinks)
+    .where(eq(workspaceEnvironmentLinks.environmentId, environmentId))
+    .run();
+}
+
+/** Delete all links for a workspace (cascade helper for workspace archive/delete). */
+export function deleteLinksForWorkspace(workspaceId: string): void {
+  db.delete(workspaceEnvironmentLinks)
+    .where(eq(workspaceEnvironmentLinks.workspaceId, workspaceId))
+    .run();
+}

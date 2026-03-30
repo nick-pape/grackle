@@ -283,3 +283,95 @@ describe("workspace_archive", () => {
     expect(parsed.code).toBe("NOT_FOUND");
   });
 });
+
+describe("workspace_link_environment", () => {
+  const tool = getTool("workspace_link_environment");
+
+  test("happy path — links and returns workspace with linked IDs", async () => {
+    const mockClient = {
+      linkEnvironment: vi.fn().mockResolvedValue({
+        id: "ws-1",
+        name: "My Workspace",
+        environmentId: "env-primary",
+        linkedEnvironmentIds: ["env-2"],
+      }),
+    } as unknown as GrackleClient;
+
+    const result = await tool.handler(
+      { workspaceId: "ws-1", environmentId: "env-2" },
+      mockClient,
+    );
+
+    expect(mockClient.linkEnvironment).toHaveBeenCalledWith({
+      workspaceId: "ws-1",
+      environmentId: "env-2",
+    });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.linkedEnvironmentIds).toEqual(["env-2"]);
+    expect(result.isError).toBeUndefined();
+  });
+
+  test("gRPC ConnectError returns isError", async () => {
+    const mockClient = {
+      linkEnvironment: vi.fn().mockRejectedValue(
+        new ConnectError("Cannot link the primary environment", Code.InvalidArgument),
+      ),
+    } as unknown as GrackleClient;
+
+    const result = await tool.handler(
+      { workspaceId: "ws-1", environmentId: "env-primary" },
+      mockClient,
+    );
+
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.code).toBe("INVALID_ARGUMENT");
+  });
+});
+
+describe("workspace_unlink_environment", () => {
+  const tool = getTool("workspace_unlink_environment");
+
+  test("happy path — unlinks and returns workspace", async () => {
+    const mockClient = {
+      unlinkEnvironment: vi.fn().mockResolvedValue({
+        id: "ws-1",
+        name: "My Workspace",
+        environmentId: "env-primary",
+        linkedEnvironmentIds: [],
+      }),
+    } as unknown as GrackleClient;
+
+    const result = await tool.handler(
+      { workspaceId: "ws-1", environmentId: "env-2" },
+      mockClient,
+    );
+
+    expect(mockClient.unlinkEnvironment).toHaveBeenCalledWith({
+      workspaceId: "ws-1",
+      environmentId: "env-2",
+    });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.linkedEnvironmentIds).toEqual([]);
+    expect(result.isError).toBeUndefined();
+  });
+
+  test("gRPC ConnectError returns isError", async () => {
+    const mockClient = {
+      unlinkEnvironment: vi.fn().mockRejectedValue(
+        new ConnectError("link not found", Code.NotFound),
+      ),
+    } as unknown as GrackleClient;
+
+    const result = await tool.handler(
+      { workspaceId: "ws-1", environmentId: "env-2" },
+      mockClient,
+    );
+
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.code).toBe("NOT_FOUND");
+  });
+});

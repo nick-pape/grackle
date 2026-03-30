@@ -7,11 +7,26 @@ vi.mock("./db.js", async () => {
 
 // Import modules AFTER mock is set up
 import * as workspaceStore from "./workspace-store.js";
+import * as linkStore from "./workspace-environment-link-store.js";
 import { sqlite } from "./test-db.js";
 
 /** Apply the schema DDL to the in-memory database. */
 function applySchema(): void {
   sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS environments (
+      id            TEXT PRIMARY KEY,
+      display_name  TEXT NOT NULL,
+      adapter_type  TEXT NOT NULL,
+      adapter_config TEXT NOT NULL,
+      default_runtime TEXT NOT NULL DEFAULT 'claude-code',
+      bootstrapped  INTEGER NOT NULL DEFAULT 0,
+      status        TEXT NOT NULL DEFAULT 'disconnected',
+      last_seen     TEXT,
+      env_info      TEXT,
+      created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+      powerline_token TEXT NOT NULL DEFAULT ''
+    );
+
     CREATE TABLE IF NOT EXISTS workspaces (
       id                TEXT PRIMARY KEY,
       name              TEXT NOT NULL,
@@ -25,12 +40,26 @@ function applySchema(): void {
       created_at        TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at        TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS workspace_environment_links (
+      workspace_id    TEXT NOT NULL REFERENCES workspaces(id),
+      environment_id  TEXT NOT NULL REFERENCES environments(id),
+      created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (workspace_id, environment_id)
+    );
+
+    INSERT OR IGNORE INTO environments (id, display_name, adapter_type, adapter_config)
+      VALUES ('env-1', 'Env 1', 'local', '{}');
+    INSERT OR IGNORE INTO environments (id, display_name, adapter_type, adapter_config)
+      VALUES ('env-2', 'Env 2', 'docker', '{}');
   `);
 }
 
 describe("workspace-store", () => {
   beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS workspace_environment_links");
     sqlite.exec("DROP TABLE IF EXISTS workspaces");
+    sqlite.exec("DROP TABLE IF EXISTS environments");
     applySchema();
   });
 
@@ -62,6 +91,19 @@ describe("workspace-store", () => {
     expect(env1List[0].id).toBe("p1");
     const allList = workspaceStore.listWorkspaces();
     expect(allList).toHaveLength(2);
+  });
+
+  it("includes linked workspaces when filtering by environment", () => {
+    workspaceStore.createWorkspace("p1", "Env1 WS", "", "", "env-1");
+    workspaceStore.createWorkspace("p2", "Env2 WS", "", "", "env-2");
+    // Link p1 (primary env-1) to env-2
+    linkStore.linkEnvironment("p1", "env-2");
+    const env2List = workspaceStore.listWorkspaces("env-2");
+    // Should include both p2 (primary) and p1 (linked)
+    expect(env2List).toHaveLength(2);
+    const ids = env2List.map((w) => w.id);
+    expect(ids).toContain("p1");
+    expect(ids).toContain("p2");
   });
 
   it("counts all workspaces (including archived) by environment", () => {

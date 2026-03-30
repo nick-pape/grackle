@@ -18,10 +18,10 @@ export function registerWorkspaceCommands(program: Command): void {
         return;
       }
       const table = new Table({
-        head: ["ID", "Name", "Environment", "Worktrees", "Status", "Created"],
+        head: ["ID", "Name", "Environment", "Linked Envs", "Worktrees", "Status", "Created"],
       });
       for (const p of res.workspaces) {
-        table.push([p.id, p.name, p.environmentId || "-", p.useWorktrees ? "enabled" : "disabled", workspaceStatusToString(p.status), p.createdAt]);
+        table.push([p.id, p.name, p.environmentId || "-", String(p.linkedEnvironmentIds.length), p.useWorktrees ? "enabled" : "disabled", workspaceStatusToString(p.status), p.createdAt]);
       }
       console.log(table.toString());
     });
@@ -63,6 +63,7 @@ export function registerWorkspaceCommands(program: Command): void {
         { "Description": p.description || "-" },
         { "Repo URL": p.repoUrl || "-" },
         { "Environment": p.environmentId || "-" },
+        { "Linked Envs": p.linkedEnvironmentIds.length > 0 ? p.linkedEnvironmentIds.join(", ") : "none" },
         { "Worktrees": p.useWorktrees ? "enabled" : "disabled" },
         ...(p.workingDirectory ? [{ "Working Dir": p.workingDirectory }] : []),
         { "Status": workspaceStatusToString(p.status) },
@@ -111,5 +112,25 @@ export function registerWorkspaceCommands(program: Command): void {
       const client = createGrackleClient();
       await client.archiveWorkspace({ id });
       console.log(`Archived: ${id}`);
+    });
+
+  workspace
+    .command("link-env <workspace-id>")
+    .description("Link an additional environment to a workspace")
+    .requiredOption("--env <env-id>", "Environment ID to link")
+    .action(async (workspaceId: string, opts: { env: string }) => {
+      const client = createGrackleClient();
+      const p = await client.linkEnvironment({ workspaceId, environmentId: opts.env });
+      console.log(`Linked environment ${opts.env} to workspace ${p.id} (${p.name})`);
+    });
+
+  workspace
+    .command("unlink-env <workspace-id>")
+    .description("Remove a linked environment from a workspace")
+    .requiredOption("--env <env-id>", "Environment ID to unlink")
+    .action(async (workspaceId: string, opts: { env: string }) => {
+      const client = createGrackleClient();
+      const p = await client.unlinkEnvironment({ workspaceId, environmentId: opts.env });
+      console.log(`Unlinked environment ${opts.env} from workspace ${p.id} (${p.name})`);
     });
 }

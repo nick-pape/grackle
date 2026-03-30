@@ -715,6 +715,16 @@ const Grackle: GenService<{
         input: typeof WorkspaceIdSchema;
         output: typeof EmptySchema;
     };
+    linkEnvironment: {
+        methodKind: "unary";
+        input: typeof LinkEnvironmentRequestSchema;
+        output: typeof WorkspaceSchema;
+    };
+    unlinkEnvironment: {
+        methodKind: "unary";
+        input: typeof UnlinkEnvironmentRequestSchema;
+        output: typeof WorkspaceSchema;
+    };
     listTasks: {
         methodKind: "unary";
         input: typeof ListTasksRequestSchema;
@@ -1027,6 +1037,10 @@ declare namespace grackle {
         UpdateWorkspaceRequestSchema,
         WorkspaceId,
         WorkspaceIdSchema,
+        LinkEnvironmentRequest,
+        LinkEnvironmentRequestSchema,
+        UnlinkEnvironmentRequest,
+        UnlinkEnvironmentRequestSchema,
         Task,
         TaskSchema,
         TaskList,
@@ -1280,6 +1294,15 @@ type KnowledgeNodeProto = Message<"grackle.KnowledgeNodeProto"> & {
 
 // @public
 const KnowledgeNodeProtoSchema: GenMessage<KnowledgeNodeProto>;
+
+// @public
+type LinkEnvironmentRequest = Message<"grackle.LinkEnvironmentRequest"> & {
+    workspaceId: string;
+    environmentId: string;
+};
+
+// @public
+const LinkEnvironmentRequestSchema: GenMessage<LinkEnvironmentRequest>;
 
 // @public
 type ListEscalationsRequest = Message<"grackle.ListEscalationsRequest"> & {
@@ -2000,6 +2023,15 @@ type ToolConfig = Message<"grackle.ToolConfig"> & {
 const ToolConfigSchema: GenMessage<ToolConfig>;
 
 // @public
+type UnlinkEnvironmentRequest = Message<"grackle.UnlinkEnvironmentRequest"> & {
+    workspaceId: string;
+    environmentId: string;
+};
+
+// @public
+const UnlinkEnvironmentRequestSchema: GenMessage<UnlinkEnvironmentRequest>;
+
+// @public
 type UpdateEnvironmentRequest = Message<"grackle.UpdateEnvironmentRequest"> & {
     id: string;
     displayName?: string;
@@ -2127,6 +2159,7 @@ type Workspace = Message<"grackle.Workspace"> & {
     workingDirectory: string;
     defaultPersonaId: string;
     environmentId: string;
+    linkedEnvironmentIds: string[];
 };
 
 // @public

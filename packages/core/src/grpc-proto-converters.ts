@@ -5,7 +5,7 @@ import {
   taskStatusToEnum,
 } from "@grackle-ai/common";
 import type { EnvironmentRow, SessionRow } from "@grackle-ai/database";
-import { workspaceStore, taskStore, personaStore, findingStore, escalationStore, scheduleStore, safeParseJsonArray } from "@grackle-ai/database";
+import { workspaceStore, taskStore, personaStore, findingStore, escalationStore, scheduleStore, workspaceEnvironmentLinkStore, safeParseJsonArray } from "@grackle-ai/database";
 import type { KnowledgeNode, KnowledgeEdge } from "@grackle-ai/knowledge";
 
 /** Convert an environment database row to its proto representation. */
@@ -62,6 +62,7 @@ export function workspaceRowToProto(row: workspaceStore.WorkspaceRow): grackle.W
     useWorktrees: row.useWorktrees,
     workingDirectory: row.workingDirectory,
     defaultPersonaId: row.defaultPersonaId,
+    linkedEnvironmentIds: workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(row.id),
   });
 }
 

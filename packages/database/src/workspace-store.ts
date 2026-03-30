@@ -1,6 +1,6 @@
 import db from "./db.js";
-import { workspaces, type WorkspaceRow } from "./schema.js";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { workspaces, workspaceEnvironmentLinks, type WorkspaceRow } from "./schema.js";
+import { eq, and, or, desc, sql } from "drizzle-orm";
 
 export type { WorkspaceRow };
 
@@ -32,14 +32,36 @@ export function getWorkspace(id: string): WorkspaceRow | undefined {
   return db.select().from(workspaces).where(eq(workspaces.id, id)).get();
 }
 
-/** Return all active workspaces, newest first. Optionally filter by environment. */
+/**
+ * Return all active workspaces, newest first. Optionally filter by environment.
+ * When environmentId is provided, returns workspaces where the environment is
+ * either the primary or a linked environment.
+ */
 export function listWorkspaces(environmentId?: string): WorkspaceRow[] {
-  const conditions = [eq(workspaces.status, "active")];
   if (environmentId) {
-    conditions.push(eq(workspaces.environmentId, environmentId));
+    // Include workspaces where the env is primary OR linked
+    const linkedWorkspaceIds = db.select({ workspaceId: workspaceEnvironmentLinks.workspaceId })
+      .from(workspaceEnvironmentLinks)
+      .where(eq(workspaceEnvironmentLinks.environmentId, environmentId))
+      .all()
+      .map((r) => r.workspaceId);
+
+    const conditions = [
+      eq(workspaces.status, "active"),
+      linkedWorkspaceIds.length > 0
+        ? or(
+          eq(workspaces.environmentId, environmentId),
+          sql`${workspaces.id} IN (${sql.join(linkedWorkspaceIds.map((id) => sql`${id}`), sql`, `)})`,
+        )
+        : eq(workspaces.environmentId, environmentId),
+    ];
+    return db.select().from(workspaces)
+      .where(and(...conditions))
+      .orderBy(desc(workspaces.createdAt))
+      .all();
   }
   return db.select().from(workspaces)
-    .where(and(...conditions))
+    .where(eq(workspaces.status, "active"))
     .orderBy(desc(workspaces.createdAt))
     .all();
 }

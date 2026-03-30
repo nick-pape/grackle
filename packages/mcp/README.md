@@ -136,6 +136,8 @@ Manage workspaces that group tasks, agents, and repositories.
 | `workspace_get` | Get full details of a workspace by ID. | `workspaceId` (string) |
 | `workspace_update` | Update a workspace's name, description, repo, or settings. | `workspaceId` (string), `name?`, `description?`, `repoUrl?`, `environmentId?`, `workingDirectory?`, `useWorktrees?`, `defaultPersonaId?` |
 | `workspace_archive` | Archive a workspace, marking it as inactive. | `workspaceId` (string) |
+| `workspace_link_environment` | Link an additional environment to a workspace's pool. | `workspaceId` (string), `environmentId` (string) |
+| `workspace_unlink_environment` | Remove a linked environment from a workspace's pool. | `workspaceId` (string), `environmentId` (string) |
 
 ### Task Tools
 

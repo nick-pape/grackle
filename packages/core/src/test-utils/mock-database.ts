@@ -123,6 +123,17 @@ export function createDatabaseMock() {
       getBundle: vi.fn(() => ({ tokens: [] })),
     },
 
+    workspaceEnvironmentLinkStore: {
+      linkEnvironment: vi.fn(),
+      unlinkEnvironment: vi.fn(),
+      getLinkedEnvironmentIds: vi.fn(() => []),
+      getWorkspaceIdsLinkedToEnvironment: vi.fn(() => []),
+      isLinked: vi.fn(() => false),
+      countLinksForEnvironment: vi.fn(() => 0),
+      deleteLinksForEnvironment: vi.fn(),
+      deleteLinksForWorkspace: vi.fn(),
+    },
+
     escalationStore: {
       createEscalation: vi.fn(),
       getEscalation: vi.fn(() => undefined),
