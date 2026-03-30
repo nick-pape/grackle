@@ -1,6 +1,14 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 30 Mar 2026 00:49:02 GMT and should not be manually modified.
+This log was last generated on Mon, 30 Mar 2026 02:02:43 GMT and should not be manually modified.
+
+## 0.91.4
+Mon, 30 Mar 2026 02:02:43 GMT
+
+### Patches
+
+- Extract TaskPage subcomponents (TaskOverviewPanel, TaskActionButtons, SessionAttemptSelector) into web-components
+- Decompose server/index.ts into 6 testable modules with 72 new unit tests
 
 ## 0.91.3
 Mon, 30 Mar 2026 00:49:02 GMT

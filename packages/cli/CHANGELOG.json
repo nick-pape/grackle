@@ -2,6 +2,21 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.91.4",
+      "tag": "@grackle-ai/cli_v0.91.4",
+      "date": "Mon, 30 Mar 2026 02:02:43 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Extract TaskPage subcomponents (TaskOverviewPanel, TaskActionButtons, SessionAttemptSelector) into web-components"
+          },
+          {
+            "comment": "Decompose server/index.ts into 6 testable modules with 72 new unit tests"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.91.3",
       "tag": "@grackle-ai/cli_v0.91.3",
       "date": "Mon, 30 Mar 2026 00:49:02 GMT",
