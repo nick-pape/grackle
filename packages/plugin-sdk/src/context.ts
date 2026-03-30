@@ -38,6 +38,8 @@ export interface ServerConfig {
   worktreeBase?: string;
   /** Docker host for host mapping (GRACKLE_DOCKER_HOST). */
   dockerHost?: string;
+  /** Skip auto-starting the root task when an environment connects. */
+  skipRootAutostart?: boolean;
 }
 
 /** Event types emitted by the domain event bus. */
