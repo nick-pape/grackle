@@ -120,7 +120,7 @@ function fireSchedule(deps: CronPhaseDeps, schedule: ScheduleRow): void {
     deps.enqueueForDispatch({
       id: uuidv4(),
       taskId,
-      environmentId: schedule.environmentId || undefined,
+      environmentId: schedule.environmentId,
       personaId: schedule.personaId,
     });
 

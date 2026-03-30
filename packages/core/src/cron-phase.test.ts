@@ -97,7 +97,7 @@ describe("createCronPhase", () => {
     );
   });
 
-  it("enqueues with undefined environmentId when schedule has none", async () => {
+  it("enqueues with empty environmentId when schedule has none (dispatch resolves)", async () => {
     const deps = createMockDeps();
     vi.mocked(deps.getDueSchedules).mockReturnValue([makeSchedule({ environmentId: "" })]);
 
@@ -105,7 +105,7 @@ describe("createCronPhase", () => {
     await phase.execute();
 
     expect(deps.enqueueForDispatch).toHaveBeenCalledWith(
-      expect.objectContaining({ environmentId: undefined }),
+      expect.objectContaining({ environmentId: "" }),
     );
   });
 

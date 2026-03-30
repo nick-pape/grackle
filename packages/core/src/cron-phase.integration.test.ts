@@ -9,7 +9,7 @@ vi.mock("./event-bus.js", () => ({
 }));
 
 // Use real in-memory database
-import { openDatabase, initDatabase, seedDatabase, sqlite as _sqlite, taskStore, scheduleStore, personaStore } from "@grackle-ai/database";
+import { openDatabase, initDatabase, seedDatabase, sqlite as _sqlite, taskStore, scheduleStore, personaStore, dispatchQueueStore } from "@grackle-ai/database";
 openDatabase(":memory:");
 initDatabase();
 seedDatabase(_sqlite!);
@@ -49,6 +49,7 @@ describe("Cron phase integration", () => {
       scheduleStore.deleteSchedule(s.id);
     }
     sqlite.exec("DELETE FROM tasks WHERE id != 'system'");
+    sqlite.exec("DELETE FROM dispatch_queue");
   });
 
   it("full flow: schedule fires, task created, enqueued for dispatch, schedule advanced", async () => {
@@ -72,14 +73,12 @@ describe("Cron phase integration", () => {
     expect(before!.runCount).toBe(0);
     expect(before!.lastRunAt).toBeNull();
 
-    const mockEnqueue = vi.fn();
-
     const deps: CronPhaseDeps = {
       getDueSchedules: scheduleStore.getDueSchedules,
       advanceSchedule: scheduleStore.advanceSchedule,
       createTask: taskStore.createTask,
       setTaskScheduleId: taskStore.setTaskScheduleId,
-      enqueueForDispatch: mockEnqueue,
+      enqueueForDispatch: dispatchQueueStore.enqueue,
       emit: vi.mocked(emit),
       getPersona: personaStore.getPersona,
       setScheduleEnabled: scheduleStore.setScheduleEnabled,
@@ -100,14 +99,11 @@ describe("Cron phase integration", () => {
     expect(tasks[0]!.schedule_id).toBe("sched-int-1");
     expect(tasks[0]!.default_persona_id).toBe("stub-persona");
 
-    // Verify enqueued for dispatch with correct args
-    expect(mockEnqueue).toHaveBeenCalledTimes(1);
-    expect(mockEnqueue).toHaveBeenCalledWith(
-      expect.objectContaining({
-        taskId: tasks[0]!.id,
-        personaId: "stub-persona",
-      }),
-    );
+    // Verify dispatch queue row was written to real DB
+    const queueRows = dispatchQueueStore.listPending();
+    expect(queueRows).toHaveLength(1);
+    expect(queueRows[0]!.taskId).toBe(tasks[0]!.id);
+    expect(queueRows[0]!.personaId).toBe("stub-persona");
 
     // Verify schedule was advanced in DB
     const after = scheduleStore.getSchedule("sched-int-1");
@@ -139,14 +135,12 @@ describe("Cron phase integration", () => {
     );
     scheduleStore.setScheduleEnabled("sched-disabled", false, null);
 
-    const mockEnqueue = vi.fn();
-
     const deps: CronPhaseDeps = {
       getDueSchedules: scheduleStore.getDueSchedules,
       advanceSchedule: scheduleStore.advanceSchedule,
       createTask: taskStore.createTask,
       setTaskScheduleId: taskStore.setTaskScheduleId,
-      enqueueForDispatch: mockEnqueue,
+      enqueueForDispatch: dispatchQueueStore.enqueue,
       emit: vi.mocked(emit),
       getPersona: personaStore.getPersona,
       setScheduleEnabled: scheduleStore.setScheduleEnabled,
@@ -158,7 +152,7 @@ describe("Cron phase integration", () => {
     await vi.advanceTimersByTimeAsync(120);
     await mgr.stop();
 
-    expect(mockEnqueue).not.toHaveBeenCalled();
+    expect(dispatchQueueStore.listPending()).toHaveLength(0);
     const tasks = sqlite.prepare(
       "SELECT id FROM tasks WHERE schedule_id = 'sched-disabled'",
     ).all();

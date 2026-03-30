@@ -67,7 +67,7 @@ vi.mock("@grackle-ai/database", () => ({
 
 import { createReconciliationPhases } from "./reconciliation-setup.js";
 import { createCronPhase, createOrphanPhase, isKnowledgeEnabled, createKnowledgeHealthPhase, neo4jHealthCheck } from "@grackle-ai/core";
-import { workspaceStore, taskStore } from "@grackle-ai/database";
+import { workspaceStore, taskStore, dispatchQueueStore } from "@grackle-ai/database";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -127,6 +127,6 @@ describe("createReconciliationPhases", () => {
     const cronDeps = (createCronPhase as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
       enqueueForDispatch: (...args: unknown[]) => void;
     };
-    expect(cronDeps.enqueueForDispatch).toBeDefined();
+    expect(cronDeps.enqueueForDispatch).toBe(dispatchQueueStore.enqueue);
   });
 });
