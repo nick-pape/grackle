@@ -30,8 +30,32 @@ interface Migration {
  * Add new migrations to the end with incrementing version numbers.
  */
 const MIGRATIONS: Migration[] = [
-  // Future migrations go here, e.g.:
-  // { version: 2, name: "add-foo-to-bar", up: (conn) => { conn.exec("ALTER TABLE ..."); } },
+  {
+    version: 2,
+    name: "dispatch-queue",
+    up: (conn) => {
+      conn.exec(`
+        CREATE TABLE IF NOT EXISTS dispatch_queue (
+          id                TEXT PRIMARY KEY,
+          task_id           TEXT NOT NULL UNIQUE,
+          environment_id    TEXT NOT NULL DEFAULT '',
+          persona_id        TEXT NOT NULL DEFAULT '',
+          notes             TEXT NOT NULL DEFAULT '',
+          pipe              TEXT NOT NULL DEFAULT '',
+          parent_session_id TEXT NOT NULL DEFAULT '',
+          enqueued_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_dispatch_queue_enqueued ON dispatch_queue(enqueued_at);
+      `);
+      // ALTER TABLE fails if column already exists (fresh installs include it in baseline).
+      const cols = conn
+        .prepare("PRAGMA table_info(environments)")
+        .all() as Array<{ name: string }>;
+      if (!cols.some((c) => c.name === "max_concurrent_sessions")) {
+        conn.exec("ALTER TABLE environments ADD COLUMN max_concurrent_sessions INTEGER NOT NULL DEFAULT 0");
+      }
+    },
+  },
 ];
 
 /** The highest schema version defined by BASELINE + MIGRATIONS. */
@@ -226,7 +250,8 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
       last_seen     TEXT,
       env_info      TEXT,
       created_at    TEXT NOT NULL DEFAULT (datetime('now')),
-      powerline_token TEXT NOT NULL DEFAULT ''
+      powerline_token TEXT NOT NULL DEFAULT '',
+      max_concurrent_sessions INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS sessions (
@@ -368,6 +393,18 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
       updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS dispatch_queue (
+      id                TEXT PRIMARY KEY,
+      task_id           TEXT NOT NULL UNIQUE,
+      environment_id    TEXT NOT NULL DEFAULT '',
+      persona_id        TEXT NOT NULL DEFAULT '',
+      notes             TEXT NOT NULL DEFAULT '',
+      pipe              TEXT NOT NULL DEFAULT '',
+      parent_session_id TEXT NOT NULL DEFAULT '',
+      enqueued_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_dispatch_queue_enqueued ON dispatch_queue(enqueued_at);
     CREATE INDEX IF NOT EXISTS idx_escalations_status ON escalations(status);
     CREATE INDEX IF NOT EXISTS idx_escalations_workspace ON escalations(workspace_id);
     CREATE INDEX IF NOT EXISTS idx_findings_workspace ON findings(workspace_id);

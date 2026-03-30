@@ -15,7 +15,7 @@ import {
   LOGS_DIR,
   taskStatusToString,
 } from "@grackle-ai/common";
-import { envRegistry, sessionStore, taskStore, workspaceStore, personaStore, settingsStore, grackleHome, slugify, safeParseJsonArray } from "@grackle-ai/database";
+import { envRegistry, sessionStore, taskStore, workspaceStore, personaStore, settingsStore, dispatchQueueStore, grackleHome, slugify, safeParseJsonArray } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { join } from "node:path";
 import * as adapterManager from "./adapter-manager.js";
@@ -38,6 +38,7 @@ import { transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
 import { taskRowToProto, sessionRowToProto } from "./grpc-proto-converters.js";
 import { validatePipeInputs, toDialableHost, resolveAncestorEnvironmentId } from "./grpc-shared.js";
 import { personaMcpServersToJson } from "./grpc-mcp-config.js";
+import { hasCapacity, type ConcurrencyDeps } from "./concurrency.js";
 
 /** List tasks, optionally filtered by workspace, search query, or status. */
 export async function listTasks(req: grackle.ListTasksRequest): Promise<grackle.TaskList> {
@@ -256,6 +257,29 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
   // Validate pipe inputs before creating the session
   validatePipeInputs(req.pipe, req.parentSessionId);
   const taskPipeMode = req.pipe as PipeMode;
+
+  // ── Concurrency gate (hybrid fast-path) ──────────────────
+  // Pipe-mode tasks bypass the queue because the parent agent is waiting
+  // synchronously for the child session to start.
+  if (!taskPipeMode) {
+    const concurrencyDeps: ConcurrencyDeps = {
+      countActiveForEnvironment: sessionStore.countActiveForEnvironment,
+      getEnvironment: (id) => envRegistry.getEnvironment(id),
+      getSetting: settingsStore.getSetting,
+    };
+    if (!hasCapacity(environmentId, concurrencyDeps)) {
+      dispatchQueueStore.enqueue({
+        id: uuid(),
+        taskId: task.id,
+        environmentId,
+        personaId: resolved.personaId,
+        notes: req.notes || "",
+      });
+      emit("task.queued", { taskId: task.id, workspaceId: task.workspaceId || "" });
+      logger.info({ taskId: task.id, environmentId }, "Task queued (environment at capacity)");
+      return create(grackle.SessionSchema, { taskId: task.id });
+    }
+  }
 
   const env = envRegistry.getEnvironment(environmentId);
   const sessionId = uuid();

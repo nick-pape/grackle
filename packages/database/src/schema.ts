@@ -20,6 +20,7 @@ export const environments = sqliteTable("environments", {
     .notNull()
     .default(sql`(datetime('now'))`),
   powerlineToken: text("powerline_token").notNull().default(""),
+  maxConcurrentSessions: integer("max_concurrent_sessions").notNull().default(0),
 });
 
 /** Row shape returned by a SELECT on the environments table. */
@@ -258,6 +259,27 @@ export type EscalationRow = typeof escalations.$inferSelect;
 
 /** Shape accepted by INSERT into the escalations table. */
 export type NewEscalation = typeof escalations.$inferInsert;
+
+// ─── Dispatch Queue ──────────────────────────────────────
+
+export const dispatchQueue = sqliteTable("dispatch_queue", {
+  id: text("id").primaryKey(),
+  taskId: text("task_id").notNull().unique(),
+  environmentId: text("environment_id").notNull().default(""),
+  personaId: text("persona_id").notNull().default(""),
+  notes: text("notes").notNull().default(""),
+  pipe: text("pipe").notNull().default(""),
+  parentSessionId: text("parent_session_id").notNull().default(""),
+  enqueuedAt: text("enqueued_at")
+    .notNull()
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+});
+
+/** Row shape returned by a SELECT on the dispatch_queue table. */
+export type DispatchQueueRow = typeof dispatchQueue.$inferSelect;
+
+/** Shape accepted by INSERT into the dispatch_queue table. */
+export type NewDispatchQueueRow = typeof dispatchQueue.$inferInsert;
 
 // ─── Domain Events ───────────────────────────────────────
 

@@ -19,6 +19,7 @@ function applySchema(): void {
       host        TEXT NOT NULL DEFAULT '',
       port        INTEGER NOT NULL DEFAULT 0,
       powerline_token TEXT NOT NULL DEFAULT '',
+      max_concurrent_sessions INTEGER NOT NULL DEFAULT 0,
       workspace_id TEXT NOT NULL DEFAULT ''
     );
 
@@ -219,6 +220,59 @@ describe("session-store", () => {
       expect(result.outputTokens).toBe(0);
       expect(result.costUsd).toBe(0);
       expect(result.sessionCount).toBe(0);
+    });
+  });
+
+  describe("countActiveForEnvironment", () => {
+    it("returns 0 when no sessions exist", () => {
+      expect(sessionStore.countActiveForEnvironment("test-env")).toBe(0);
+    });
+
+    it("counts pending, running, and idle sessions", () => {
+      sessionStore.createSession("s-pending", "test-env", "rt", "p", "m", "/tmp/log");
+      // pending by default
+      sessionStore.createSession("s-running", "test-env", "rt", "p", "m", "/tmp/log");
+      sessionStore.updateSessionStatus("s-running", "running");
+      sessionStore.createSession("s-idle", "test-env", "rt", "p", "m", "/tmp/log");
+      sessionStore.updateSessionStatus("s-idle", "idle");
+
+      expect(sessionStore.countActiveForEnvironment("test-env")).toBe(3);
+    });
+
+    it("excludes stopped and suspended sessions", () => {
+      sessionStore.createSession("s-stopped", "test-env", "rt", "p", "m", "/tmp/log");
+      sessionStore.updateSession("s-stopped", "stopped");
+      sessionStore.createSession("s-suspended", "test-env", "rt", "p", "m", "/tmp/log");
+      sessionStore.updateSessionStatus("s-suspended", "suspended");
+      sessionStore.createSession("s-active", "test-env", "rt", "p", "m", "/tmp/log");
+      sessionStore.updateSessionStatus("s-active", "running");
+
+      expect(sessionStore.countActiveForEnvironment("test-env")).toBe(1);
+    });
+
+    it("only counts sessions for the specified environment", () => {
+      sqlite.exec("INSERT OR IGNORE INTO environments (id) VALUES ('other-env')");
+      sessionStore.createSession("s1", "test-env", "rt", "p", "m", "/tmp/log");
+      sessionStore.createSession("s2", "other-env", "rt", "p", "m", "/tmp/log");
+
+      expect(sessionStore.countActiveForEnvironment("test-env")).toBe(1);
+      expect(sessionStore.countActiveForEnvironment("other-env")).toBe(1);
+    });
+  });
+
+  describe("countActiveGlobal", () => {
+    it("returns 0 when no sessions exist", () => {
+      expect(sessionStore.countActiveGlobal()).toBe(0);
+    });
+
+    it("counts active sessions across all environments", () => {
+      sqlite.exec("INSERT OR IGNORE INTO environments (id) VALUES ('env-2')");
+      sessionStore.createSession("s1", "test-env", "rt", "p", "m", "/tmp/log");
+      sessionStore.createSession("s2", "env-2", "rt", "p", "m", "/tmp/log");
+      sessionStore.createSession("s3", "test-env", "rt", "p", "m", "/tmp/log");
+      sessionStore.updateSession("s3", "stopped");
+
+      expect(sessionStore.countActiveGlobal()).toBe(2);
     });
   });
 });

@@ -12,13 +12,14 @@ import {
   parseAdapterConfig, isKnowledgeEnabled, initKnowledge, neo4jHealthCheck,
   createKnowledgeHealthPhase, getKnowledgeReadinessCheck,
   computeTaskStatus,
-  ReconciliationManager, createCronPhase, createOrphanPhase, findFirstConnectedEnvironment, lifecycleCleanupPhase, createEnvironmentReconciliationPhase,
+  ReconciliationManager, createCronPhase, createOrphanPhase, createDispatchPhase, findFirstConnectedEnvironment, lifecycleCleanupPhase, createEnvironmentReconciliationPhase,
+  hasCapacity,
   createRootTaskBoot,
   initOrphanReparentSubscriber,
   logger, exec, detectLanIp,
   runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace,
 } from "@grackle-ai/core";
-import { envRegistry, sessionStore, workspaceStore, taskStore, scheduleStore, personaStore, settingsStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome, checkDatabaseIntegrity, startWalCheckpointTimer, stopWalCheckpointTimer } from "@grackle-ai/database";
+import { envRegistry, sessionStore, workspaceStore, taskStore, scheduleStore, personaStore, settingsStore, dispatchQueueStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome, checkDatabaseIntegrity, startWalCheckpointTimer, stopWalCheckpointTimer } from "@grackle-ai/database";
 import { DockerAdapter } from "@grackle-ai/adapter-docker";
 import { LocalAdapter } from "@grackle-ai/adapter-local";
 import { SshAdapter } from "@grackle-ai/adapter-ssh";
@@ -282,7 +283,23 @@ async function main(): Promise<void> {
     removeConnection,
     emit,
   });
-  const reconciliationPhases = [cronPhase, lifecycleCleanupPhase, orphanPhase, environmentReconciliationPhase];
+  const dispatchPhase = createDispatchPhase({
+    listPendingEntries: dispatchQueueStore.listPending,
+    dequeueEntry: dispatchQueueStore.dequeue,
+    getTask: taskStore.getTask,
+    hasCapacity: (environmentId: string) => hasCapacity(environmentId, {
+      countActiveForEnvironment: sessionStore.countActiveForEnvironment,
+      getEnvironment: (id) => envRegistry.getEnvironment(id),
+      getSetting: settingsStore.getSetting,
+    }),
+    startTaskSession,
+    emit,
+    isEnvironmentConnected: (id: string) => {
+      const env = envRegistry.getEnvironment(id);
+      return env?.status === "connected";
+    },
+  });
+  const reconciliationPhases = [dispatchPhase, cronPhase, lifecycleCleanupPhase, orphanPhase, environmentReconciliationPhase];
   if (isKnowledgeEnabled()) {
     reconciliationPhases.push(
       createKnowledgeHealthPhase({ healthCheck: neo4jHealthCheck }),

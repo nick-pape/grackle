@@ -30,7 +30,8 @@ export type GrackleEventType =
   | "schedule.updated"
   | "schedule.deleted"
   | "schedule.fired"
-  | "notification.escalated";
+  | "notification.escalated"
+  | "task.queued";
 
 /** A domain event emitted by the event bus. */
 export interface GrackleEvent {
