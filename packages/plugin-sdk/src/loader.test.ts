@@ -291,6 +291,27 @@ describe("loadPlugins — lifecycle", () => {
     expect(shutdownA).toHaveBeenCalledTimes(1);
   });
 
+  it("rolls back initialized plugins and disposes subscribers when contribution hook throws", async () => {
+    const shutdownA = vi.fn();
+    const dispose = vi.fn();
+    const pluginA = createPlugin({
+      name: "a",
+      shutdown: shutdownA,
+      eventSubscribers: () => [{ dispose }],
+    });
+    const pluginB = createPlugin({
+      name: "b",
+      dependencies: ["a"],
+      grpcHandlers: () => { throw new Error("handler registration failed"); },
+    });
+
+    await expect(loadPlugins([pluginA, pluginB], createMockContext()))
+      .rejects.toThrow("handler registration failed");
+    // A's subscriber should be disposed and A should be shut down
+    expect(dispose).toHaveBeenCalledTimes(1);
+    expect(shutdownA).toHaveBeenCalledTimes(1);
+  });
+
   it("shutdown() calls plugin shutdown in reverse order", async () => {
     const order: string[] = [];
     const pluginA = createPlugin({

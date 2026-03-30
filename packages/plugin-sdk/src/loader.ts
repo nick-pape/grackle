@@ -93,25 +93,47 @@ export async function loadPlugins(
     throw err;
   }
 
-  // 4. Collect contributions
+  // 4. Collect contributions (roll back on failure)
   const serviceRegistrations: ServiceRegistration[] = [];
   const reconciliationPhases: ReconciliationPhase[] = [];
   const mcpTools: PluginToolDefinition[] = [];
   const subscriberDisposables: Disposable[] = [];
 
-  for (const plugin of sorted) {
-    if (plugin.grpcHandlers) {
-      serviceRegistrations.push(...plugin.grpcHandlers(ctx));
+  try {
+    for (const plugin of sorted) {
+      if (plugin.grpcHandlers) {
+        serviceRegistrations.push(...plugin.grpcHandlers(ctx));
+      }
+      if (plugin.reconciliationPhases) {
+        reconciliationPhases.push(...plugin.reconciliationPhases(ctx));
+      }
+      if (plugin.mcpTools) {
+        mcpTools.push(...plugin.mcpTools(ctx));
+      }
+      if (plugin.eventSubscribers) {
+        subscriberDisposables.push(...plugin.eventSubscribers(ctx));
+      }
     }
-    if (plugin.reconciliationPhases) {
-      reconciliationPhases.push(...plugin.reconciliationPhases(ctx));
+  } catch (err) {
+    // Dispose any subscribers already collected, then shutdown initialized plugins
+    for (const disposable of subscriberDisposables) {
+      try { disposable.dispose(); } catch { /* best-effort */ }
     }
-    if (plugin.mcpTools) {
-      mcpTools.push(...plugin.mcpTools(ctx));
+    for (let i = initialized.length - 1; i >= 0; i--) {
+      const plugin = initialized[i];
+      if (plugin.shutdown) {
+        try {
+          await plugin.shutdown();
+        } catch (shutdownErr) {
+          ctx.logger.error(
+            { err: shutdownErr, plugin: plugin.name },
+            "Plugin '%s' shutdown failed during contribution rollback",
+            plugin.name,
+          );
+        }
+      }
     }
-    if (plugin.eventSubscribers) {
-      subscriberDisposables.push(...plugin.eventSubscribers(ctx));
-    }
+    throw err;
   }
 
   // 5. Build shutdown function (reverse order, catch errors)
