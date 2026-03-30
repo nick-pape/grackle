@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.92.1",
+      "tag": "@grackle-ai/cli_v0.92.1",
+      "date": "Mon, 30 Mar 2026 12:53:35 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "MCP tool registration is now plugin-contributable via optional additionalToolGroups parameter"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.92.0",
       "tag": "@grackle-ai/cli_v0.92.0",
       "date": "Mon, 30 Mar 2026 02:41:47 GMT",
