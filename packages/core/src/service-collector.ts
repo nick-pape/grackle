@@ -1,7 +1,13 @@
 import type { ConnectRouter } from "@connectrpc/connect";
 import type { DescService } from "@bufbuild/protobuf";
 
-/** A record of handler method implementations for a gRPC service. */
+/**
+ * A record of handler method implementations for a gRPC service.
+ *
+ * Uses `any` because handler functions have concrete parameter types (e.g.,
+ * `(req: GetSettingRequest) => Promise<SettingResponse>`) that are not
+ * assignable to `(...args: unknown[]) => unknown` due to contravariance.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type HandlerGroup = Record<string, (...args: any[]) => any>;
 
@@ -42,7 +48,8 @@ export function createServiceCollector(): ServiceCollector {
     },
 
     getHandlers(service: DescService): HandlerGroup {
-      return registry.get(service) ?? {};
+      const handlers = registry.get(service);
+      return handlers ? { ...handlers } : {};
     },
   };
 }
