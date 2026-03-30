@@ -131,9 +131,10 @@ export async function linkEnvironment(req: grackle.LinkEnvironmentRequest): Prom
     workspaceEnvironmentLinkStore.linkEnvironment(req.workspaceId, req.environmentId);
   } catch (err: unknown) {
     // Handle race condition: concurrent requests may both pass isLinked() check
-    // but one hits the unique constraint. Surface as InvalidArgument, not Internal.
+    // but one hits the unique/PK constraint. Surface as InvalidArgument, not Internal.
+    // Narrow to UNIQUE/PRIMARYKEY violations only — FK failures should bubble as-is.
     const message = err instanceof Error ? err.message : "";
-    if (/unique|constraint|duplicate/i.test(message)) {
+    if (/UNIQUE constraint failed|SQLITE_CONSTRAINT_PRIMARYKEY/i.test(message)) {
       throw new ConnectError(
         `Environment ${req.environmentId} is already linked to workspace ${req.workspaceId}`,
         Code.InvalidArgument,

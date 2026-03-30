@@ -1,7 +1,7 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
-import { envRegistry, workspaceStore, workspaceEnvironmentLinkStore, sessionStore } from "@grackle-ai/database";
+import { envRegistry, workspaceStore, workspaceEnvironmentLinkStore, sessionStore, sqlite } from "@grackle-ai/database";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import * as adapterManager from "./adapter-manager.js";
 import * as tokenPush from "./token-push.js";
@@ -106,11 +106,20 @@ export async function removeEnvironment(req: grackle.EnvironmentId): Promise<gra
     }
   }
   adapterManager.removeConnection(req.id);
-  // Cascade-delete linked-environment references (links, not primary ownership)
-  workspaceEnvironmentLinkStore.deleteLinksForEnvironment(req.id);
-  // Delete sessions referencing this environment (FK constraint)
-  sessionStore.deleteByEnvironment(req.id);
-  envRegistry.removeEnvironment(req.id);
+  // Delete links, sessions, and environment atomically to prevent partial cleanup
+  // if a concurrent LinkEnvironment RPC races between steps.
+  const conn = sqlite;
+  if (conn) {
+    conn.transaction(() => {
+      workspaceEnvironmentLinkStore.deleteLinksForEnvironment(req.id);
+      sessionStore.deleteByEnvironment(req.id);
+      envRegistry.removeEnvironment(req.id);
+    })();
+  } else {
+    workspaceEnvironmentLinkStore.deleteLinksForEnvironment(req.id);
+    sessionStore.deleteByEnvironment(req.id);
+    envRegistry.removeEnvironment(req.id);
+  }
   emit("environment.changed", {});
   emit("environment.removed", { environmentId: req.id });
   logger.info({ environmentId: req.id }, "Environment removed");
