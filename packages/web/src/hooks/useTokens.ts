@@ -9,6 +9,7 @@
 
 import { useState, useCallback } from "react";
 import type { TokenInfo, GrackleEvent, UseTokensResult } from "@grackle-ai/web-components";
+import type { DomainHook } from "./domainHook.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToToken } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
@@ -69,5 +70,11 @@ export function useTokens(): UseTokensResult {
     [],
   );
 
-  return { tokens, tokensLoading, loadTokens, setToken, deleteToken, handleEvent };
+  const domainHook: DomainHook = {
+    onConnect: () => loadTokens(),
+    onDisconnect: () => {},
+    handleEvent,
+  };
+
+  return { tokens, tokensLoading, loadTokens, setToken, deleteToken, handleEvent, domainHook };
 }

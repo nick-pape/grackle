@@ -11,6 +11,7 @@ import { useState, useCallback } from "react";
 import { ConnectError } from "@connectrpc/connect";
 import { warnBadPayload } from "@grackle-ai/web-components";
 import type { Environment, GrackleEvent, ProvisionStatus, WsMessage, UseEnvironmentsResult } from "@grackle-ai/web-components";
+import type { DomainHook } from "./domainHook.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToEnvironment } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
@@ -214,6 +215,12 @@ export function useEnvironments(): UseEnvironmentsResult {
     [],
   );
 
+  const domainHook: DomainHook = {
+    onConnect: () => loadEnvironments(),
+    onDisconnect: () => {},
+    handleEvent,
+  };
+
   return {
     environments,
     environmentsLoading,
@@ -228,5 +235,6 @@ export function useEnvironments(): UseEnvironmentsResult {
     removeEnvironment,
     handleEvent,
     handleLegacyMessage,
+    domainHook,
   };
 }

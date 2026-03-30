@@ -83,3 +83,27 @@ describe("useSessions loading state", () => {
     });
   });
 });
+
+describe("useSessions domainHook.onDisconnect", () => {
+  it("clears events and eventsDropped on disconnect", () => {
+    const { result } = setup();
+
+    // Inject a session event via handleSessionEvent
+    act(() => {
+      result.current.handleSessionEvent({
+        sessionId: "s1",
+        eventType: "text",
+        timestamp: "2026-01-01T00:00:00Z",
+        content: "hello",
+      });
+    });
+    expect(result.current.events).toHaveLength(1);
+
+    // Disconnect should clear events
+    act(() => {
+      result.current.domainHook.onDisconnect();
+    });
+    expect(result.current.events).toHaveLength(0);
+    expect(result.current.eventsDropped).toBe(0);
+  });
+});

@@ -114,6 +114,7 @@ export type {
   UseEnvironmentsResult, UseSessionsResult, UseWorkspacesResult,
   UseTasksResult, UseFindingsResult, UseTokensResult,
   UseCredentialsResult, UseCodespacesResult, UsePersonasResult,
+  DomainHook,
 } from "./hooks/types.js";
 export {
   isObject, warnBadPayload, isGrackleEvent, isSessionEvent,

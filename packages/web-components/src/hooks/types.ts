@@ -4,6 +4,18 @@
  * @module
  */
 
+// ─── Domain hook lifecycle ────────────────────────────────────────────────────
+
+/** Lifecycle contract that every domain hook must implement. */
+export interface DomainHook {
+  /** Reload data when the ConnectRPC stream connects or reconnects. */
+  onConnect(): Promise<void>;
+  /** Reset transient state when the stream disconnects. */
+  onDisconnect(): void;
+  /** Handle a domain event. Return `true` if the event was consumed. */
+  handleEvent(event: GrackleEvent): boolean;
+}
+
 // ─── Data interfaces ──────────────────────────────────────────────────────────
 
 /**
@@ -219,6 +231,8 @@ export interface UseEnvironmentsResult {
   handleEvent: (event: GrackleEvent) => boolean;
   /** Handle legacy WS messages injected by E2E tests. */
   handleLegacyMessage?: (msg: WsMessage) => boolean;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
 }
 
 /** Values returned by the sessions domain hook. */
@@ -265,6 +279,8 @@ export interface UseSessionsResult {
   handleSessionEvent: (event: SessionEvent) => void;
   /** Handle legacy WS messages injected by E2E tests. */
   handleLegacyMessage?: (msg: WsMessage) => boolean;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
 }
 
 /** Values returned by the workspaces domain hook. */
@@ -308,6 +324,8 @@ export interface UseWorkspacesResult {
   handleEvent: (event: GrackleEvent) => boolean;
   /** Reset transient state on disconnect. */
   onDisconnect: () => void;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
 }
 
 /** Values returned by the tasks domain hook. */
@@ -363,6 +381,8 @@ export interface UseTasksResult {
   onDisconnect: () => void;
   /** Handle legacy WS messages injected by E2E tests. */
   handleLegacyMessage?: (msg: WsMessage) => boolean;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
 }
 
 /** Values returned by the findings domain hook. */
@@ -391,6 +411,8 @@ export interface UseFindingsResult {
   ) => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
 }
 
 /** Values returned by the tokens domain hook. */
@@ -413,6 +435,8 @@ export interface UseTokensResult {
   deleteToken: (name: string) => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
 }
 
 /** Values returned by the credentials domain hook. */
@@ -427,6 +451,8 @@ export interface UseCredentialsResult {
   updateCredentialProviders: (config: CredentialProviderConfig) => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
 }
 
 /** Values returned by the codespaces domain hook. */
@@ -443,6 +469,8 @@ export interface UseCodespacesResult {
   listCodespaces: () => Promise<void>;
   /** Create a new codespace for the given repo. */
   createCodespace: (repo: string, machine?: string) => Promise<void>;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
 }
 
 /** Values returned by the personas domain hook. */
@@ -482,6 +510,8 @@ export interface UsePersonasResult {
   deletePersona: (personaId: string) => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
 }
 
 // ─── Knowledge hook result ────────────────────────────────────────────────────
@@ -502,6 +532,8 @@ export interface UseKnowledgeResult {
   loadRecent(workspaceId?: string): Promise<void>;
   /** Handle domain events from the event bus. Returns true if handled. */
   handleEvent(event: GrackleEvent): boolean;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
 }
 
 // ─── Runtime type guards ──────────────────────────────────────────────────────
