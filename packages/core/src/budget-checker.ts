@@ -1,6 +1,6 @@
 import { taskStore, workspaceStore, sessionStore } from "@grackle-ai/database";
 
-/** Result from a budget check. null means no budget exceeded. */
+/** Result from a budget check. undefined means no budget exceeded. */
 export interface BudgetExceeded {
   /** Which budget scope was exceeded. */
   scope: "task" | "workspace";
@@ -12,7 +12,7 @@ export interface BudgetExceeded {
 
 /** Convert a USD floating-point cost to integer millicents (1 millicent = $0.00001). */
 export function costUsdToMillicents(costUsd: number): number {
-  return Math.round(costUsd * 100_000);
+  return Math.floor(costUsd * 100_000);
 }
 
 /**
@@ -28,7 +28,15 @@ export function checkBudget(taskId: string, workspaceId?: string): BudgetExceede
   }
 
   // ── Task-level budget check ──
-  const taskUsage = sessionStore.aggregateUsage({ taskId });
+  // Skip aggregation when no task-level budgets are configured (common case)
+  if (task.tokenBudget <= 0 && task.costBudgetMillicents <= 0 && !workspaceId) {
+    return undefined;
+  }
+
+  const needsTaskUsage = task.tokenBudget > 0 || task.costBudgetMillicents > 0;
+  const taskUsage = needsTaskUsage
+    ? sessionStore.aggregateUsage({ taskId })
+    : { inputTokens: 0, outputTokens: 0, costUsd: 0, sessionCount: 0 };
   const totalTokens = taskUsage.inputTokens + taskUsage.outputTokens;
 
   if (task.tokenBudget > 0 && totalTokens >= task.tokenBudget) {

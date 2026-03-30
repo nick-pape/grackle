@@ -236,8 +236,8 @@ export const taskTools: ToolDefinition[] = [
           status: statusValue,
           dependsOn: (args.dependsOn as string[] | undefined) ?? [],
           sessionId: (args.sessionId as string | undefined) ?? "",
-          tokenBudget: (args.tokenBudget as number | undefined) ?? 0,
-          costBudgetMillicents: (args.costBudgetMillicents as number | undefined) ?? 0,
+          tokenBudget: args.tokenBudget as number | undefined,
+          costBudgetMillicents: args.costBudgetMillicents as number | undefined,
         });
         return jsonResult(taskToJson(task));
       } catch (error) {

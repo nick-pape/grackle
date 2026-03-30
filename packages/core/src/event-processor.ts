@@ -410,12 +410,14 @@ export function processEventStream(
               : session?.sigtermSentAt ? END_REASON.TERMINATED : END_REASON.COMPLETED;
             sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, endReason);
           } else if (event.content === "killed") {
-            sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.KILLED);
+            const killedEndReason = ctx.budgetSigtermSent ? END_REASON.BUDGET_EXCEEDED : END_REASON.KILLED;
+            sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, killedEndReason);
           } else if (event.content === "failed") {
             sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.INTERRUPTED);
             cleanupLifecycleStream(sessionId);
           } else if (event.content === "terminated") {
-            sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.TERMINATED);
+            const terminatedEndReason = ctx.budgetSigtermSent ? END_REASON.BUDGET_EXCEEDED : END_REASON.TERMINATED;
+            sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, terminatedEndReason);
           }
 
           // On terminal status (or idle for sync pipes): publish child completion

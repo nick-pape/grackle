@@ -102,6 +102,10 @@ export async function createTask(req: grackle.CreateTaskRequest): Promise<grackl
     }
   }
 
+  if ((req.tokenBudget ?? 0) < 0 || (req.costBudgetMillicents ?? 0) < 0) {
+    throw new ConnectError("Budget values must be >= 0", Code.InvalidArgument);
+  }
+
   const id = uuid().slice(0, 8);
   taskStore.createTask(
     id,
@@ -166,6 +170,9 @@ export async function updateTask(req: grackle.UpdateTaskRequest): Promise<grackl
   );
 
   // Update budget fields if explicitly set in the request (proto3 optional presence)
+  if ((req.tokenBudget !== undefined && req.tokenBudget < 0) || (req.costBudgetMillicents !== undefined && req.costBudgetMillicents < 0)) {
+    throw new ConnectError("Budget values must be >= 0", Code.InvalidArgument);
+  }
   if (req.tokenBudget !== undefined || req.costBudgetMillicents !== undefined) {
     taskStore.updateTaskBudget(
       req.id,

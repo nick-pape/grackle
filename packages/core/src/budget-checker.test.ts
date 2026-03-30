@@ -84,9 +84,9 @@ describe("costUsdToMillicents", () => {
     expect(costUsdToMillicents(0)).toBe(0);
   });
 
-  it("rounds to nearest integer", () => {
-    // 0.000006 * 100000 = 0.6 → rounds to 1
-    expect(costUsdToMillicents(0.000006)).toBe(1);
+  it("floors to avoid premature budget enforcement", () => {
+    // 0.000006 * 100000 = 0.6 → floors to 0
+    expect(costUsdToMillicents(0.000006)).toBe(0);
   });
 });
 
@@ -95,10 +95,10 @@ describe("checkBudget", () => {
     vi.clearAllMocks();
   });
 
-  it("returns null when task has no budget (0)", () => {
+  it("returns undefined when task has no budget (0) and skips aggregation", () => {
     mockGetTask.mockReturnValue(fakeTask({ tokenBudget: 0, costBudgetMillicents: 0 }));
-    mockAggregateUsage.mockReturnValue({ inputTokens: 1000, outputTokens: 500, costUsd: 0.5, sessionCount: 1 });
     expect(checkBudget("t1")).toBeUndefined();
+    expect(mockAggregateUsage).not.toHaveBeenCalled();
   });
 
   it("returns null when usage is under token budget", () => {
@@ -137,12 +137,10 @@ describe("checkBudget", () => {
     mockGetTask.mockReturnValue(fakeTask());
     mockGetWorkspace.mockReturnValue(fakeWorkspace({ tokenBudget: 5000 }));
     mockListTasks.mockReturnValue([fakeTask({ id: "t1" }), fakeTask({ id: "t2" })]);
-    // Task-level usage (first call) — under any task budget
-    // Workspace-level usage (second call) — over workspace budget
+    // Task has no budget, so task-level aggregation is skipped.
+    // Only the workspace-level aggregation call happens.
     mockAggregateUsage
-      .mockReturnValueOnce({ inputTokens: 100, outputTokens: 100, costUsd: 0, sessionCount: 1 })
       .mockReturnValueOnce({ inputTokens: 3000, outputTokens: 2500, costUsd: 0, sessionCount: 3 });
-    mockGetWorkspace.mockReturnValue(fakeWorkspace({ tokenBudget: 5000 }));
     const result = checkBudget("t1", "ws1");
     expect(result).not.toBeUndefined();
     expect(result!.scope).toBe("workspace");
