@@ -560,11 +560,6 @@
 .linkError {
   color: var(--accent-red);
   font-size: var(--font-size-xs);
-  cursor: pointer;
-
-  &:hover {
-    text-decoration: underline;
-  }
 }
 
 .linkEnvSelect {

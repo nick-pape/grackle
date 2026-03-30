@@ -451,11 +451,12 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     const page = appPage;
 
     // Add a second environment so we have something to link
-    await client.addEnvironment({
+    const addedEnv = await client.addEnvironment({
       displayName: "link-test-env",
       adapterType: "local",
       adapterConfig: JSON.stringify({ port: 0 }),
     });
+    const envId = addedEnv.id;
 
     // Create a workspace on test-local and navigate to it
     await createAndSelectWorkspace(client, page, "link-unlink-test");
@@ -470,19 +471,19 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(linkSelect).toBeVisible();
 
     // Select the second environment from the dropdown
-    await linkSelect.selectOption("link-test-env");
+    await linkSelect.selectOption(envId);
 
     // Chip for the linked environment should appear
-    await expect(page.getByTestId("linked-env-link-test-env")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId(`linked-env-${envId}`)).toBeVisible({ timeout: 10_000 });
 
     // "None" should no longer be visible
     await expect(linkedSection).not.toContainText("None");
 
     // Click the unlink (x) button on the chip
-    await page.getByTestId("unlink-env-link-test-env").click();
+    await page.getByTestId(`unlink-env-${envId}`).click();
 
     // Chip should disappear and "None" should return
-    await expect(page.getByTestId("linked-env-link-test-env")).not.toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId(`linked-env-${envId}`)).not.toBeVisible({ timeout: 10_000 });
     await expect(linkedSection).toContainText("None");
   });
 
@@ -490,15 +491,16 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     const page = appPage;
 
     // Add a second environment
-    await client.addEnvironment({
+    const addedEnv = await client.addEnvironment({
       displayName: "env-detail-link-test",
       adapterType: "local",
       adapterConfig: JSON.stringify({ port: 0 }),
     });
+    const envId = addedEnv.id;
 
     // Create a workspace and link the second environment via RPC
     const workspaceId = await createWorkspace(client, "env-detail-ws");
-    await client.linkEnvironment({ workspaceId, environmentId: "env-detail-link-test" });
+    await client.linkEnvironment({ workspaceId, environmentId: envId });
 
     // Navigate to the second environment's detail page
     await page.locator('[data-testid="sidebar-tab-environments"]').click();
