@@ -278,6 +278,8 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       createWorkspace: workspacesHook.createWorkspace,
       archiveWorkspace: workspacesHook.archiveWorkspace,
       updateWorkspace: workspacesHook.updateWorkspace,
+      linkEnvironment: workspacesHook.linkEnvironment,
+      unlinkEnvironment: workspacesHook.unlinkEnvironment,
       domainHook: workspacesHook.domainHook,
     },
     tasks: {

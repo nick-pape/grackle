@@ -962,6 +962,31 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
             }),
           );
         },
+        linkEnvironment: async (workspaceId: string, environmentId: string) => {
+          console.log("[MockGrackle] linkEnvironment", { workspaceId, environmentId });
+          setWorkspaces((prev) =>
+            prev.map((p) => {
+              if (p.id !== workspaceId) {
+                return p;
+              }
+              if (p.linkedEnvironmentIds.includes(environmentId)) {
+                return p;
+              }
+              return { ...p, linkedEnvironmentIds: [...p.linkedEnvironmentIds, environmentId] };
+            }),
+          );
+        },
+        unlinkEnvironment: async (workspaceId: string, environmentId: string) => {
+          console.log("[MockGrackle] unlinkEnvironment", { workspaceId, environmentId });
+          setWorkspaces((prev) =>
+            prev.map((p) => {
+              if (p.id !== workspaceId) {
+                return p;
+              }
+              return { ...p, linkedEnvironmentIds: p.linkedEnvironmentIds.filter((id) => id !== environmentId) };
+            }),
+          );
+        },
         domainHook: NOOP_DOMAIN_HOOK,
       },
 

@@ -57,3 +57,14 @@ export const LinkedWorkspacesEmpty: Story = {
     await expect(canvas.getByTestId("linked-workspaces-empty")).toBeInTheDocument();
   },
 };
+
+/** Linked workspace cards have an Unlink button. */
+export const UnlinkButtonOnCard: Story = {
+  render: () => <DetailRouteWrapper envId="env-docker-01" />,
+  play: async ({ canvas }) => {
+    // proj-alpha is linked to env-docker-01
+    const unlinkButton = canvas.getByTestId("unlink-workspace-proj-alpha");
+    await expect(unlinkButton).toBeInTheDocument();
+    await expect(unlinkButton).toHaveTextContent("Unlink");
+  },
+};

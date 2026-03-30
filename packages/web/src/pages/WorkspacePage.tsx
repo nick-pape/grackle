@@ -48,7 +48,7 @@ export function WorkspacePage(): JSX.Element {
   const { workspaceId, environmentId: routeEnvironmentId } = useParams<{ workspaceId: string; environmentId: string }>();
   const navigate = useAppNavigate();
   const {
-    tasks: { tasks }, environments: { environments }, workspaces: { workspaces, workspacesLoading, archiveWorkspace, updateWorkspace },
+    tasks: { tasks }, environments: { environments }, workspaces: { workspaces, workspacesLoading, archiveWorkspace, updateWorkspace, linkEnvironment, unlinkEnvironment },
     personas: { personas }, sessions: { sessions },
     usageCache, loadUsage,
   } = useGrackle();
@@ -234,19 +234,56 @@ export function WorkspacePage(): JSX.Element {
           <div className={styles.metaRow}>
             <span className={styles.metaLabel}>Linked Envs</span>
             <div className={styles.metaValue} data-testid="linked-environments">
-              {workspace && workspace.linkedEnvironmentIds.filter((id) => id !== workspace.environmentId).length > 0 ? (
-                <span className={styles.linkedEnvList}>
+              {workspace && (
+                <>
                   {[...new Set(workspace.linkedEnvironmentIds.filter((id) => id !== workspace.environmentId))].map((envId) => {
                     const env = environments.find((e) => e.id === envId);
                     return (
                       <span key={envId} className={styles.linkedEnvChip} data-testid={`linked-env-${envId}`}>
                         {env?.displayName || envId}
+                        <button
+                          className={styles.chipDismiss}
+                          onClick={() => { unlinkEnvironment(workspace.id, envId).catch(() => {}); }}
+                          title={`Unlink ${env?.displayName || envId}`}
+                          aria-label={`Unlink ${env?.displayName || envId}`}
+                          data-testid={`unlink-env-${envId}`}
+                        >
+                          x
+                        </button>
                       </span>
                     );
                   })}
-                </span>
-              ) : (
-                <span className={styles.metaPlaceholder}>None</span>
+                  {(() => {
+                    const linkedSet = new Set(workspace.linkedEnvironmentIds);
+                    const available = environments.filter(
+                      (e) => e.id !== workspace.environmentId && !linkedSet.has(e.id),
+                    );
+                    if (available.length === 0) {
+                      if (workspace.linkedEnvironmentIds.filter((id) => id !== workspace.environmentId).length === 0) {
+                        return <span className={styles.metaPlaceholder}>None</span>;
+                      }
+                      return null;
+                    }
+                    return (
+                      <select
+                        className={styles.linkEnvSelect}
+                        value=""
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            linkEnvironment(workspace.id, e.target.value).catch(() => {});
+                          }
+                        }}
+                        aria-label="Link environment"
+                        data-testid="link-env-select"
+                      >
+                        <option value="">+ Link</option>
+                        {available.map((e) => (
+                          <option key={e.id} value={e.id}>{e.displayName || e.id}</option>
+                        ))}
+                      </select>
+                    );
+                  })()}
+                </>
               )}
             </div>
           </div>

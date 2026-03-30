@@ -122,6 +122,28 @@ export function useWorkspaces(): UseWorkspacesResult {
     [],
   );
 
+  const linkEnvironment = useCallback(
+    async (workspaceId: string, environmentId: string) => {
+      try {
+        await grackleClient.linkEnvironment({ workspaceId, environmentId });
+      } catch {
+        // domain events trigger re-fetch
+      }
+    },
+    [],
+  );
+
+  const unlinkEnvironment = useCallback(
+    async (workspaceId: string, environmentId: string) => {
+      try {
+        await grackleClient.unlinkEnvironment({ workspaceId, environmentId });
+      } catch {
+        // domain events trigger re-fetch
+      }
+    },
+    [],
+  );
+
   const domainHook: DomainHook = {
     onConnect: () => loadWorkspaces(),
     onDisconnect,
@@ -136,6 +158,8 @@ export function useWorkspaces(): UseWorkspacesResult {
     createWorkspace,
     archiveWorkspace,
     updateWorkspace,
+    linkEnvironment,
+    unlinkEnvironment,
     handleEvent,
     onDisconnect,
     domainHook,

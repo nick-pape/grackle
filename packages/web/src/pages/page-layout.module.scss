@@ -541,3 +541,34 @@
   color: var(--text-secondary);
 }
 
+.chipDismiss {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+
+  &:hover {
+    color: var(--accent-red);
+    background: var(--bg-overlay);
+  }
+}
+
+.linkEnvSelect {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  background: transparent;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 1px var(--space-sm);
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+  }
+}
+

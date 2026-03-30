@@ -58,7 +58,7 @@ export const LinkedEnvironments: Story = {
   },
 };
 
-/** Workspace with no linked environments shows "None" placeholder. */
+/** Workspace with no linked environments shows "None" and a link dropdown. */
 export const NoLinkedEnvironments: Story = {
   decorators: [withMockGrackleRoute(
     ["/environments/env-docker-01/workspaces/proj-beta"],
@@ -69,5 +69,32 @@ export const NoLinkedEnvironments: Story = {
     const linkedSection = canvas.getByTestId("linked-environments");
     await expect(linkedSection).toBeInTheDocument();
     await expect(linkedSection).toHaveTextContent("None");
+  },
+};
+
+/** Linked environment chip has a dismiss (unlink) button. */
+export const UnlinkButtonOnChip: Story = {
+  decorators: [withMockGrackleRoute(
+    ["/environments/env-local-01/workspaces/proj-alpha"],
+    "/environments/:environmentId/workspaces/:workspaceId",
+  )],
+  play: async ({ canvas }) => {
+    // proj-alpha has env-docker-01 linked
+    const unlinkButton = canvas.getByTestId("unlink-env-env-docker-01");
+    await expect(unlinkButton).toBeInTheDocument();
+  },
+};
+
+/** Link environment dropdown shows available environments. */
+export const LinkEnvironmentDropdown: Story = {
+  decorators: [withMockGrackleRoute(
+    ["/environments/env-docker-01/workspaces/proj-beta"],
+    "/environments/:environmentId/workspaces/:workspaceId",
+  )],
+  play: async ({ canvas }) => {
+    // proj-beta has no linked envs and primary is env-docker-01
+    // Should show a link dropdown with available environments
+    const linkSelect = canvas.getByTestId("link-env-select");
+    await expect(linkSelect).toBeInTheDocument();
   },
 };
