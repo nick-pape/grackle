@@ -1,9 +1,8 @@
-// ─── gRPC Service ───────────────────────────────────────────
-export { registerGrackleRoutes, createDefaultCollector } from "./grpc-service.js";
+// ─── Service Collector ────────────────────────────────────────
 export { createServiceCollector } from "./service-collector.js";
 export type { ServiceCollector, HandlerGroup } from "./service-collector.js";
 
-// ─── Adapter Management ────────────────────────────────────
+// ─── Adapter Management ──────────────────────────────────────
 export {
   registerAdapter, getAdapter,
   setConnection, getConnection, removeConnection, listConnections,
@@ -11,61 +10,63 @@ export {
 } from "./adapter-manager.js";
 export { parseAdapterConfig } from "./adapter-config.js";
 
-// ─── Event System ──────────────────────────────────────────
+// ─── Event System ────────────────────────────────────────────
 export { emit, subscribe } from "./event-bus.js";
+export type { GrackleEvent, GrackleEventType, Subscriber } from "./event-bus.js";
 
-// ─── Subscriber Types ─────────────────────────────────────
+// ─── Subscriber Types ────────────────────────────────────────
 export type { Disposable, PluginContext, SubscriberFactory } from "./subscriber-types.js";
 
-// ─── Subscriber Factories ─────────────────────────────────
-export { createSigchldSubscriber } from "./signals/sigchld.js";
-export { createEscalationAutoSubscriber } from "./signals/escalation-auto.js";
-export { createOrphanReparentSubscriber, transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
-export { createLifecycleSubscriber } from "./lifecycle.js";
-export { ensureStdinStream, publishToStdin, cleanupStdinStream } from "./stdin-delivery.js";
-
-// ─── Task Session ───────────────────────────────────────────
+// ─── Task Session ────────────────────────────────────────────
 export { startTaskSession } from "./task-session.js";
 export { reanimateAgent } from "./reanimate-agent.js";
 
-// ─── Session / Environment ─────────────────────────────────
+// ─── Session / Environment ───────────────────────────────────
 export { attemptReconnects, resetReconnectState } from "./auto-reconnect.js";
 export { pushToEnv } from "./token-push.js";
 export { computeTaskStatus } from "./compute-task-status.js";
-
-// ─── Knowledge ─────────────────────────────────────────────
-export { isKnowledgeEnabled, initKnowledge, neo4jHealthCheck } from "./knowledge-init.js";
-export { createKnowledgeHealthPhase, isNeo4jHealthy, getKnowledgeReadinessCheck } from "./knowledge-health.js";
-export type { KnowledgeHealthPhaseDeps, KnowledgeReadinessCheck } from "./knowledge-health.js";
-
-// ─── Reconciliation / Scheduling ──────────────────────────
-export { ReconciliationManager } from "./reconciliation-manager.js";
-export type { ReconciliationPhase } from "./reconciliation-manager.js";
-export { createCronPhase } from "./cron-phase.js";
-export type { CronPhaseDeps } from "./cron-phase.js";
-export { createOrphanPhase } from "./orphan-phase.js";
-export type { OrphanPhaseDeps } from "./orphan-phase.js";
-export { createDispatchPhase } from "./dispatch-phase.js";
-export type { DispatchPhaseDeps } from "./dispatch-phase.js";
+export { findFirstConnectedEnvironment } from "./find-connected-environment.js";
 export { hasCapacity, getEffectiveLimit } from "./concurrency.js";
 export type { ConcurrencyDeps } from "./concurrency.js";
-export { findFirstConnectedEnvironment } from "./find-connected-environment.js";
-export { createRootTaskBootSubscriber } from "./root-task-boot.js";
-export type { RootTaskBootDeps } from "./root-task-boot.js";
-export { validateExpression, computeNextRunAt } from "./schedule-expression.js";
-export { lifecycleCleanupPhase } from "./lifecycle-cleanup.js";
-export { createEnvironmentReconciliationPhase } from "./environment-reconciliation.js";
-export type { EnvironmentReconciliationDeps } from "./environment-reconciliation.js";
 
-// ─── Version Check ────────────────────────────────────────
+// ─── Knowledge ───────────────────────────────────────────────
+export { isKnowledgeEnabled, initKnowledge, neo4jHealthCheck } from "./knowledge-init.js";
+
+// ─── Reconciliation Manager ─────────────────────────────────
+export { ReconciliationManager } from "./reconciliation-manager.js";
+export type { ReconciliationPhase } from "./reconciliation-manager.js";
+
+// ─── Version Check ───────────────────────────────────────────
 export { checkVersionStatus, clearVersionCache, type VersionStatus } from "./version-check.js";
 
-// ─── Logger ────────────────────────────────────────────────
+// ─── Logger ──────────────────────────────────────────────────
 export { logger } from "./logger.js";
 
-// ─── Trace Context ──────────────────────────────────────────
+// ─── Trace Context ───────────────────────────────────────────
 export { getTraceId, runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace } from "./trace-context.js";
 
-// ─── Utilities ─────────────────────────────────────────────
+// ─── Utilities ───────────────────────────────────────────────
 export { exec } from "./utils/exec.js";
 export { detectLanIp } from "./utils/network.js";
+
+// ─── Namespace Exports (for plugin-core handler imports) ─────
+export * as streamHub from "./stream-hub.js";
+export * as streamRegistry from "./stream-registry.js";
+export * as adapterManager from "./adapter-manager.js";
+export * as processorRegistry from "./processor-registry.js";
+export * as tokenPush from "./token-push.js";
+export * as logWriter from "./log-writer.js";
+export * as pipeDelivery from "./pipe-delivery.js";
+
+// ─── Individual Exports for Plugin-Core ──────────────────────
+export { processEventStream } from "./event-processor.js";
+export { createEventStream } from "./event-hub.js";
+export { recoverSuspendedSessions } from "./session-recovery.js";
+export { clearReconnectState } from "./auto-reconnect.js";
+export { resolveBootstrapRuntime } from "./resolve-bootstrap-runtime.js";
+export { ensureStdinStream, publishToStdin, cleanupStdinStream } from "./stdin-delivery.js";
+export { ensureLifecycleStream, cleanupLifecycleStream } from "./lifecycle.js";
+export { ensureAsyncDeliveryListener } from "./pipe-delivery.js";
+export { deliverPendingEscalations } from "./notification-router.js";
+export { sendInputToSession } from "./signals/signal-delivery.js";
+export { transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";

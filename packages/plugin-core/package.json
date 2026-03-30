@@ -1,0 +1,48 @@
+{
+  "name": "@grackle-ai/plugin-core",
+  "version": "0.95.2",
+  "description": "Core plugin for Grackle — gRPC handlers, reconciliation phases, and event subscribers",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nick-pape/grackle.git",
+    "directory": "packages/plugin-core"
+  },
+  "keywords": ["grackle", "plugin", "core"],
+  "homepage": "https://github.com/nick-pape/grackle#readme",
+  "bugs": { "url": "https://github.com/nick-pape/grackle/issues" },
+  "engines": { "node": ">=22.0.0 <24.0.0" },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist/"],
+  "scripts": {
+    "build": "heft build --clean",
+    "test": "vitest run",
+    "clean": "heft clean",
+    "_phase:build": "heft run --only build -- --clean",
+    "_phase:test": "vitest run"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.5.0",
+    "@connectrpc/connect": "^2.0.0",
+    "@connectrpc/connect-node": "^2.0.0",
+    "@grackle-ai/adapter-sdk": "workspace:*",
+    "@grackle-ai/auth": "workspace:*",
+    "@grackle-ai/common": "workspace:*",
+    "@grackle-ai/core": "workspace:*",
+    "@grackle-ai/database": "workspace:*",
+    "@grackle-ai/plugin-sdk": "workspace:*",
+    "@grackle-ai/prompt": "workspace:*",
+    "cron-parser": "^4.9.0",
+    "pino": "^10.3.1",
+    "uuid": "^11.0.0"
+  },
+  "devDependencies": {
+    "@grackle-ai/heft-rig": "workspace:*",
+    "@rushstack/heft": "1.2.7",
+    "@types/node": "^22.0.0",
+    "@types/uuid": "^10.0.0",
+    "vitest": "^3.2.1"
+  }
+}
