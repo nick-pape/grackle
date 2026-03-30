@@ -1,5 +1,7 @@
 // ─── gRPC Service ───────────────────────────────────────────
-export { registerGrackleRoutes } from "./grpc-service.js";
+export { registerGrackleRoutes, createDefaultCollector } from "./grpc-service.js";
+export { createServiceCollector } from "./service-collector.js";
+export type { ServiceCollector, HandlerGroup } from "./service-collector.js";
 
 // ─── Adapter Management ────────────────────────────────────
 export {
