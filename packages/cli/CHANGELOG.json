@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.95.0",
+      "tag": "@grackle-ai/cli_v0.95.0",
+      "date": "Mon, 30 Mar 2026 18:59:55 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add @grackle-ai/plugin-sdk with GracklePlugin contract and loadPlugins() loader"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.94.0",
       "tag": "@grackle-ai/cli_v0.94.0",
       "date": "Mon, 30 Mar 2026 17:31:12 GMT",
