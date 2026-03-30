@@ -281,6 +281,9 @@ const CredentialProviderConfigSchema: GenMessage<CredentialProviderConfig>;
 export const DB_FILENAME: string;
 
 // @public
+export const DEFAULT_MAX_CONCURRENT_SESSIONS: number;
+
+// @public
 export const DEFAULT_MCP_PORT: number;
 
 // @public
@@ -1823,6 +1826,9 @@ type SettingResponse = Message<"grackle.SettingResponse"> & {
 
 // @public
 const SettingResponseSchema: GenMessage<SettingResponse>;
+
+// @public
+export const SETTINGS_KEY_MAX_CONCURRENT_SESSIONS: string;
 
 // @public
 type SetWorkpadRequest = Message<"grackle.SetWorkpadRequest"> & {

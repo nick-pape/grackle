@@ -75,7 +75,8 @@ function applySchema(): void {
       last_seen TEXT,
       env_info TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      powerline_token TEXT NOT NULL DEFAULT ''
+      powerline_token TEXT NOT NULL DEFAULT '',
+      max_concurrent_sessions INTEGER NOT NULL DEFAULT 0
     );
   `);
 }

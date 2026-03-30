@@ -281,3 +281,28 @@ export function getChildSessions(parentSessionId: string): SessionRow[] {
     .orderBy(asc(sessions.startedAt), asc(sessions.id))
     .all();
 }
+
+/** Count active (pending/running/idle) sessions for a specific environment. */
+export function countActiveForEnvironment(environmentId: string): number {
+  const result = db.select({ count: sql<number>`COUNT(*)` })
+    .from(sessions)
+    .where(
+      and(
+        eq(sessions.environmentId, environmentId),
+        inArray(sessions.status, [SESSION_STATUS.PENDING, SESSION_STATUS.RUNNING, SESSION_STATUS.IDLE]),
+      ),
+    )
+    .get();
+  return result?.count ?? 0;
+}
+
+/** Count all active (pending/running/idle) sessions across the entire server. */
+export function countActiveGlobal(): number {
+  const result = db.select({ count: sql<number>`COUNT(*)` })
+    .from(sessions)
+    .where(
+      inArray(sessions.status, [SESSION_STATUS.PENDING, SESSION_STATUS.RUNNING, SESSION_STATUS.IDLE]),
+    )
+    .get();
+  return result?.count ?? 0;
+}

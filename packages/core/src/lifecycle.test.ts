@@ -38,6 +38,7 @@ function applySchema(): void {
       host        TEXT NOT NULL DEFAULT '',
       port        INTEGER NOT NULL DEFAULT 0,
       powerline_token TEXT NOT NULL DEFAULT '',
+      max_concurrent_sessions INTEGER NOT NULL DEFAULT 0,
       workspace_id TEXT NOT NULL DEFAULT ''
     );
 

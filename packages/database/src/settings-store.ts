@@ -12,6 +12,7 @@ export const WRITABLE_SETTING_KEYS: ReadonlySet<string> = new Set([
   "default_persona_id",
   "onboarding_completed",
   "webhook_url",
+  "max_concurrent_sessions",
 ]);
 
 /** Check whether a setting key is allowed for public read/write access. */
