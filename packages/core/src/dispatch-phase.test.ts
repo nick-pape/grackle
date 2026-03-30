@@ -52,7 +52,6 @@ function createMockDeps(): DispatchPhaseDeps {
     getTask: vi.fn().mockReturnValue(makeTask()),
     hasCapacity: vi.fn().mockReturnValue(true),
     startTaskSession: vi.fn().mockResolvedValue(undefined),
-    emit: vi.fn(),
     isEnvironmentConnected: vi.fn().mockReturnValue(true),
   };
 }
@@ -79,12 +78,12 @@ describe("createDispatchPhase", () => {
     const phase = createDispatchPhase(deps);
     await phase.execute();
 
-    expect(deps.dequeueEntry).toHaveBeenCalledWith("task-1");
     expect(deps.startTaskSession).toHaveBeenCalledWith(
       expect.objectContaining({ id: "task-1" }),
       { environmentId: "env-1", personaId: "persona-1", notes: "" },
     );
-    expect(deps.emit).toHaveBeenCalledWith("task.started", expect.objectContaining({ taskId: "task-1" }));
+    // Dequeued after successful start (startTaskSession emits task.started internally)
+    expect(deps.dequeueEntry).toHaveBeenCalledWith("task-1");
   });
 
   it("skips dispatch when environment is at capacity", async () => {
@@ -151,7 +150,7 @@ describe("createDispatchPhase", () => {
     expect(deps.dequeueEntry).not.toHaveBeenCalledWith("task-c");
   });
 
-  it("does not re-enqueue on startTaskSession failure", async () => {
+  it("keeps entry queued on startTaskSession failure for retry", async () => {
     const deps = createMockDeps();
     vi.mocked(deps.listPendingEntries).mockReturnValue([makeQueueEntry()]);
     vi.mocked(deps.startTaskSession).mockResolvedValue("Environment not connected");
@@ -159,10 +158,8 @@ describe("createDispatchPhase", () => {
     const phase = createDispatchPhase(deps);
     await phase.execute();
 
-    // Entry was dequeued (before spawn attempt)
-    expect(deps.dequeueEntry).toHaveBeenCalledWith("task-1");
-    // But no success event emitted
-    expect(deps.emit).not.toHaveBeenCalled();
+    // Entry stays in queue for retry on next tick
+    expect(deps.dequeueEntry).not.toHaveBeenCalled();
   });
 
   it("has name 'dispatch'", () => {

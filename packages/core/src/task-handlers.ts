@@ -277,8 +277,12 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
       });
       emit("task.queued", { taskId: task.id, workspaceId: task.workspaceId || "" });
       logger.info({ taskId: task.id, environmentId }, "Task queued (environment at capacity)");
-      return create(grackle.SessionSchema, { taskId: task.id });
+      throw new ConnectError("Environment at capacity; task queued for dispatch", Code.ResourceExhausted);
     }
+
+    // If this task was previously enqueued but we now have capacity,
+    // remove the stale queue entry to prevent duplicate dispatch.
+    dispatchQueueStore.dequeue(task.id);
   }
 
   const env = envRegistry.getEnvironment(environmentId);

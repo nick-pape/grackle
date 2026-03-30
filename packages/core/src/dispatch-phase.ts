@@ -8,7 +8,6 @@
 
 import { logger } from "./logger.js";
 import type { DispatchQueueRow, TaskRow } from "@grackle-ai/database";
-import type { GrackleEventType } from "./event-bus.js";
 import type { ReconciliationPhase } from "./reconciliation-manager.js";
 
 /** Dependencies injected into the dispatch phase for testability. */
@@ -26,8 +25,6 @@ export interface DispatchPhaseDeps {
     task: TaskRow,
     options?: { personaId?: string; environmentId?: string; notes?: string },
   ) => Promise<string | undefined>;
-  /** Emit a domain event. */
-  emit: (type: GrackleEventType, payload: Record<string, unknown>) => void;
   /** Check if an environment is connected. */
   isEnvironmentConnected: (environmentId: string) => boolean;
 }
@@ -71,9 +68,6 @@ export function createDispatchPhase(deps: DispatchPhaseDeps): ReconciliationPhas
           continue;
         }
 
-        // Dequeue before spawning to prevent double-dispatch on overlapping ticks
-        deps.dequeueEntry(entry.taskId);
-
         const error = await deps.startTaskSession(task, {
           environmentId: entry.environmentId,
           personaId: entry.personaId,
@@ -83,13 +77,12 @@ export function createDispatchPhase(deps: DispatchPhaseDeps): ReconciliationPhas
         if (error) {
           logger.warn(
             { taskId: entry.taskId, environmentId: entry.environmentId, error },
-            "Dispatch: session start failed",
+            "Dispatch: session start failed — entry stays queued for retry",
           );
         } else {
-          deps.emit("task.started", {
-            taskId: entry.taskId,
-            workspaceId: task.workspaceId || "",
-          });
+          // Dequeue only after successful start to avoid losing tasks on transient failures.
+          // startTaskSession already emits "task.started" so we don't emit it here.
+          deps.dequeueEntry(entry.taskId);
           logger.info(
             { taskId: entry.taskId, environmentId: entry.environmentId },
             "Dispatch: task started",

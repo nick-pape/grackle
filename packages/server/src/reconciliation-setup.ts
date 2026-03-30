@@ -70,7 +70,6 @@ export function createReconciliationPhases(): ReconciliationPhase[] {
       getSetting: settingsStore.getSetting,
     }),
     startTaskSession,
-    emit,
     isEnvironmentConnected: (id: string): boolean => {
       const env = envRegistry.getEnvironment(id);
       return env?.status === "connected";
