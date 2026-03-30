@@ -65,13 +65,32 @@ export async function loadPlugins(
   // 2. Topological sort (Kahn's algorithm)
   const sorted = topologicalSort(plugins);
 
-  // 3. Initialize in dependency order
+  // 3. Initialize in dependency order (clean up on failure)
   const initialized: GracklePlugin[] = [];
-  for (const plugin of sorted) {
-    if (plugin.initialize) {
-      await plugin.initialize(ctx);
+  try {
+    for (const plugin of sorted) {
+      if (plugin.initialize) {
+        await plugin.initialize(ctx);
+      }
+      initialized.push(plugin);
     }
-    initialized.push(plugin);
+  } catch (err) {
+    // Shutdown already-initialized plugins in reverse order before re-throwing
+    for (let i = initialized.length - 1; i >= 0; i--) {
+      const plugin = initialized[i];
+      if (plugin.shutdown) {
+        try {
+          await plugin.shutdown();
+        } catch (shutdownErr) {
+          ctx.logger.error(
+            { err: shutdownErr, plugin: plugin.name },
+            "Plugin '%s' shutdown failed during initialization rollback",
+            plugin.name,
+          );
+        }
+      }
+    }
+    throw err;
   }
 
   // 4. Collect contributions
@@ -147,9 +166,10 @@ function topologicalSort(plugins: GracklePlugin[]): GracklePlugin[] {
     dependents.set(plugin.name, []);
   }
 
-  // Build edges: dependency → dependent
+  // Build edges: dependency → dependent (deduplicate to avoid inflated inDegree)
   for (const plugin of plugins) {
-    for (const dep of plugin.dependencies ?? []) {
+    const uniqueDeps = [...new Set(plugin.dependencies ?? [])];
+    for (const dep of uniqueDeps) {
       dependents.get(dep)!.push(plugin.name);
       inDegree.set(plugin.name, inDegree.get(plugin.name)! + 1);
     }

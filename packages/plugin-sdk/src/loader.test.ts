@@ -105,6 +105,23 @@ describe("loadPlugins — topological sort", () => {
     await expect(loadPlugins([pluginA, pluginB], createMockContext()))
       .rejects.toThrow(/duplicate/i);
   });
+
+  it("handles duplicate entries in a plugin's dependencies array", async () => {
+    const order: string[] = [];
+    const pluginA = createPlugin({
+      name: "a",
+      dependencies: ["b", "b", "b"], // duplicated
+      initialize: async () => { order.push("a"); },
+    });
+    const pluginB = createPlugin({
+      name: "b",
+      initialize: async () => { order.push("b"); },
+    });
+
+    // Should not throw — duplicates are deduplicated
+    await loadPlugins([pluginA, pluginB], createMockContext());
+    expect(order).toEqual(["b", "a"]);
+  });
 });
 
 // ─── Contribution Collection ──────────────────────────────────
@@ -253,6 +270,25 @@ describe("loadPlugins — lifecycle", () => {
     await expect(loadPlugins([pluginA, pluginB], createMockContext()))
       .rejects.toThrow("init failed");
     expect(initB).not.toHaveBeenCalled();
+  });
+
+  it("shuts down already-initialized plugins when initialize() throws", async () => {
+    const shutdownA = vi.fn();
+    const pluginA = createPlugin({
+      name: "a",
+      initialize: async () => { /* succeeds */ },
+      shutdown: shutdownA,
+    });
+    const pluginB = createPlugin({
+      name: "b",
+      dependencies: ["a"],
+      initialize: async () => { throw new Error("b init failed"); },
+    });
+
+    await expect(loadPlugins([pluginA, pluginB], createMockContext()))
+      .rejects.toThrow("b init failed");
+    // A was initialized before B failed, so A's shutdown should be called
+    expect(shutdownA).toHaveBeenCalledTimes(1);
   });
 
   it("shutdown() calls plugin shutdown in reverse order", async () => {
