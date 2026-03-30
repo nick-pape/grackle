@@ -9,21 +9,23 @@ import type { Disposable, PluginContext, SubscriberFactory } from "@grackle-ai/c
 import { taskStore, sessionStore, settingsStore } from "@grackle-ai/database";
 
 /**
- * Wire all event subscribers (SIGCHLD, escalation, orphan reparent, lifecycle)
- * and optionally the root task auto-boot handler.
+ * Context accepted by createEventSubscribers.
  *
- * Returns an array of Disposable handles so that all subscribers can be
- * cleanly unregistered during shutdown.
- *
- * @param options.skipRootAutostart - When true, skip wiring the root task boot
- *   (used in E2E tests where the root session would conflict with test sessions).
- * @returns Array of disposables — call `.dispose()` on each to unsubscribe.
+ * Core's subscriber factories accept the narrow `PluginContext` (subscribe + emit).
+ * The SDK's wider `PluginContext` (with logger + config) is structurally compatible.
  */
-export function wireEventSubscribers(options: {
-  skipRootAutostart: boolean;
-}): Disposable[] {
-  const pluginContext: PluginContext = { subscribe, emit };
+interface SubscriberContext extends PluginContext {
+  config?: { skipRootAutostart?: boolean };
+}
 
+/**
+ * Create all event subscribers for the core plugin.
+ *
+ * @param ctx - Plugin context. Reads `ctx.config.skipRootAutostart` to decide
+ *   whether to include the root task boot subscriber.
+ * @returns Array of disposables.
+ */
+export function createEventSubscribers(ctx: SubscriberContext): Disposable[] {
   const factories: SubscriberFactory[] = [
     createSigchldSubscriber,
     createEscalationAutoSubscriber,
@@ -31,8 +33,8 @@ export function wireEventSubscribers(options: {
     createLifecycleSubscriber,
   ];
 
-  if (!options.skipRootAutostart) {
-    factories.push((ctx) => createRootTaskBootSubscriber(ctx, {
+  if (!ctx.config?.skipRootAutostart) {
+    factories.push((pluginCtx) => createRootTaskBootSubscriber(pluginCtx, {
       getTask: taskStore.getTask,
       listSessionsForTask: sessionStore.listSessionsForTask,
       getLatestSessionForTask: sessionStore.getLatestSessionForTask,
@@ -44,5 +46,20 @@ export function wireEventSubscribers(options: {
     }));
   }
 
-  return factories.map((factory) => factory(pluginContext));
+  return factories.map((factory) => factory(ctx));
+}
+
+/**
+ * Wire all event subscribers (backward-compatible wrapper).
+ *
+ * @deprecated Use `createEventSubscribers(ctx)` with a PluginContext instead.
+ */
+export function wireEventSubscribers(options: {
+  skipRootAutostart: boolean;
+}): Disposable[] {
+  return createEventSubscribers({
+    subscribe,
+    emit,
+    config: { skipRootAutostart: options.skipRootAutostart },
+  });
 }

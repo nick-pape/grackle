@@ -1,5 +1,4 @@
 import { logger } from "@grackle-ai/core";
-import type { Disposable } from "@grackle-ai/core";
 import { sqlite, stopWalCheckpointTimer } from "@grackle-ai/database";
 import { stopPairingCleanup, stopSessionCleanup, stopOAuthCleanup } from "@grackle-ai/auth";
 import { closeAllTunnels } from "@grackle-ai/adapter-sdk";
@@ -26,8 +25,8 @@ export interface ShutdownContext {
   localPowerLineManager?: { stop: () => Promise<void> };
   /** Optional knowledge graph cleanup function. */
   knowledgeCleanup?: () => Promise<void>;
-  /** Active event subscribers to dispose on shutdown. */
-  subscribers?: Disposable[];
+  /** Plugin shutdown function — disposes subscribers and calls plugin teardown hooks. */
+  pluginShutdown?: () => Promise<void>;
 }
 
 /**
@@ -95,15 +94,13 @@ export function createShutdown(context: ShutdownContext): () => Promise<void> {
       });
     });
 
-    // Dispose event subscribers after servers are closed so in-flight requests
-    // are fully handled before unregistering handlers.
-    if (context.subscribers) {
-      for (const subscriber of context.subscribers) {
-        try {
-          subscriber.dispose();
-        } catch (err) {
-          logger.error({ err }, "Error while disposing subscriber during shutdown");
-        }
+    // Run plugin shutdown (disposes subscribers + calls plugin teardown hooks)
+    // after servers are closed so in-flight requests are fully handled first.
+    if (context.pluginShutdown) {
+      try {
+        await context.pluginShutdown();
+      } catch (err) {
+        logger.error({ err }, "Error during plugin shutdown");
       }
     }
 

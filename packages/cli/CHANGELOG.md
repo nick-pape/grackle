@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 30 Mar 2026 19:25:19 GMT and should not be manually modified.
+This log was last generated on Mon, 30 Mar 2026 20:03:42 GMT and should not be manually modified.
+
+## 0.95.2
+Mon, 30 Mar 2026 20:03:42 GMT
+
+### Patches
+
+- Wire server startup to use loadPlugins() with core plugin
 
 ## 0.95.1
 Mon, 30 Mar 2026 19:25:19 GMT

@@ -3,15 +3,16 @@ import { ConnectError, Code } from "@connectrpc/connect";
 import http2 from "node:http2";
 import { randomUUID } from "node:crypto";
 import {
-  registerGrackleRoutes,
+  createServiceCollector,
   startHeartbeat, getAdapter, setConnection, removeConnection,
-  emit, pushToEnv, attemptReconnects, resetReconnectState,
+  emit, subscribe, pushToEnv, attemptReconnects, resetReconnectState,
   parseAdapterConfig, isKnowledgeEnabled, initKnowledge,
   getKnowledgeReadinessCheck,
   ReconciliationManager,
   logger, exec, detectLanIp,
   runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace,
 } from "@grackle-ai/core";
+import { loadPlugins, type PluginContext } from "@grackle-ai/plugin-sdk";
 import { envRegistry, sessionStore, settingsStore, personaStore, workspaceStore, taskStore, sqlite, grackleHome } from "@grackle-ai/database";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { LocalPowerLineManager } from "./local-powerline-manager.js";
@@ -30,8 +31,7 @@ import { createRequire } from "node:module";
 import { initializeDatabase } from "./database-init.js";
 import { registerAllAdapters } from "./adapter-registry.js";
 import { bootstrapLocalEnvironment } from "./local-environment.js";
-import { createReconciliationPhases } from "./reconciliation-setup.js";
-import { wireEventSubscribers } from "./event-subscribers.js";
+import { createCorePlugin } from "./core-plugin.js";
 import { createShutdown } from "./shutdown.js";
 
 /** Require function for loading optional native modules (qrcode). */
@@ -126,9 +126,37 @@ async function main(): Promise<void> {
   startSessionCleanup();
   startOAuthCleanup();
 
+  // --- Load plugins ---
+  const pluginContext: PluginContext = {
+    subscribe,
+    emit,
+    logger,
+    config: {
+      grpcPort: config.grpcPort,
+      webPort: config.webPort,
+      mcpPort: config.mcpPort,
+      powerlinePort: config.powerlinePort,
+      host: config.host,
+      grackleHome,
+      apiKey,
+      skipRootAutostart: config.skipRootAutostart,
+      workingDirectory: config.workingDirectory,
+      worktreeBase: config.worktreeBase,
+      dockerHost: config.dockerHost,
+    },
+  };
+
+  const loaded = await loadPlugins([createCorePlugin()], pluginContext);
+
+  // --- Wire gRPC handlers from plugins ---
+  const collector = createServiceCollector();
+  for (const reg of loaded.serviceRegistrations) {
+    collector.addHandlers(reg.service, reg.handlers);
+  }
+  const routes = collector.buildRoutes();
+
   // --- Reconciliation Manager ---
-  const reconciliationPhases = createReconciliationPhases();
-  const reconciliationManager = new ReconciliationManager(reconciliationPhases);
+  const reconciliationManager = new ReconciliationManager(loaded.reconciliationPhases);
   reconciliationManager.start();
 
   // --- gRPC server (HTTP/2) ---
@@ -139,7 +167,7 @@ async function main(): Promise<void> {
   /** Format bindHost for embedding in a URL — IPv6 literals need brackets per RFC 2732. */
   const urlHost = bindHost.includes(":") ? `[${bindHost}]` : bindHost;
   const grpcHandler = connectNodeAdapter({
-    routes: registerGrackleRoutes,
+    routes,
     interceptors: [
       // Trace ID interceptor: extract or generate a trace ID for request correlation.
       // For streaming RPCs, wraps the response's message iterable so the generator
@@ -188,7 +216,7 @@ async function main(): Promise<void> {
     apiKey,
     webPort,
     bindHost,
-    connectRoutes: registerGrackleRoutes,
+    connectRoutes: routes,
     readinessCheck: (): ReadinessResult => {
       const checks: ReadinessResult["checks"] = {};
       try {
@@ -208,9 +236,6 @@ async function main(): Promise<void> {
       };
     },
   });
-
-  // Wire event subscribers (SIGCHLD, escalation, orphan reparent, lifecycle, root task boot)
-  const activeSubscribers = wireEventSubscribers({ skipRootAutostart: config.skipRootAutostart });
 
   webServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {
@@ -297,7 +322,7 @@ async function main(): Promise<void> {
     reconciliationManager,
     localPowerLineManager,
     knowledgeCleanup,
-    subscribers: activeSubscribers,
+    pluginShutdown: loaded.shutdown,
   });
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
