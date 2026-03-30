@@ -230,7 +230,7 @@ export function EnvironmentDetailPage(): JSX.Element {
 
         <div className={styles.cardList} data-testid="linked-workspaces-list">
           {linkedWorkspaces.map((ws) => (
-            <div key={ws.id} className={styles.card} data-testid="linked-workspace-card">
+            <div key={ws.id} className={styles.card} data-testid={`linked-workspace-card-${ws.id}`}>
               <div className={styles.cardHeader}>
                 <strong className={styles.cardName}>{ws.name}</strong>
                 <div className={styles.cardActions}>

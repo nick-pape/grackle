@@ -43,7 +43,7 @@ export const LinkedWorkspacesVisible: Story = {
     // The "Linked Workspaces" heading should be present
     await expect(canvas.getByText("Linked Workspaces")).toBeInTheDocument();
     // At least one linked workspace card (e.g., proj-alpha / Workspace Alpha) should appear
-    const linkedWorkspaceCards = canvas.getAllByTestId("linked-workspace-card");
+    const linkedWorkspaceCards = canvas.getAllByTestId(/^linked-workspace-card-/);
     await expect(linkedWorkspaceCards.length).toBeGreaterThan(0);
   },
 };
@@ -79,7 +79,7 @@ export const UnlinkRemovesCard: Story = {
     await userEvent.click(canvas.getByTestId("unlink-workspace-proj-alpha"));
     // Card should disappear
     await waitFor(async () => {
-      await expect(canvas.queryByTestId("linked-workspace-card")).not.toBeInTheDocument();
+      await expect(canvas.queryByTestId("linked-workspace-card-proj-alpha")).not.toBeInTheDocument();
     });
     // Empty state should appear
     await expect(canvas.getByTestId("linked-workspaces-empty")).toBeInTheDocument();
