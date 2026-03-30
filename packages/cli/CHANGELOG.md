@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 30 Mar 2026 18:59:55 GMT and should not be manually modified.
+This log was last generated on Mon, 30 Mar 2026 19:25:19 GMT and should not be manually modified.
+
+## 0.95.1
+Mon, 30 Mar 2026 19:25:19 GMT
+
+### Patches
+
+- Decouple cron schedule firing from session start — cron creates tasks and enqueues for dispatch
 
 ## 0.95.0
 Mon, 30 Mar 2026 18:59:55 GMT
