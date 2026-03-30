@@ -104,6 +104,52 @@ describe("ToolRegistry", () => {
   });
 });
 
+describe("createToolRegistry with plugin tools", () => {
+  /** Baseline count of built-in tools so plugin tests don't hardcode the number. */
+  const builtinCount = createToolRegistry().list().length;
+
+  it("registers plugin-contributed tools alongside built-ins", () => {
+    const pluginTools = [
+      createTestTool("plugin_alpha"),
+      createTestTool("plugin_beta"),
+    ];
+    const registry = createToolRegistry([pluginTools]);
+    expect(registry.list()).toHaveLength(builtinCount + 2);
+    expect(registry.get("plugin_alpha")).toBeDefined();
+    expect(registry.get("plugin_beta")).toBeDefined();
+  });
+
+  it("registers multiple plugin groups", () => {
+    const groupA = [createTestTool("plugin_a_one")];
+    const groupB = [createTestTool("plugin_b_one"), createTestTool("plugin_b_two")];
+    const registry = createToolRegistry([groupA, groupB]);
+    expect(registry.list()).toHaveLength(builtinCount + 3);
+    expect(registry.get("plugin_a_one")).toBeDefined();
+    expect(registry.get("plugin_b_one")).toBeDefined();
+    expect(registry.get("plugin_b_two")).toBeDefined();
+  });
+
+  it("throws on plugin tool name collision with built-in", () => {
+    const conflicting = [createTestTool("env_list")];
+    expect(() => createToolRegistry([conflicting])).toThrow("Duplicate tool name: env_list");
+  });
+
+  it("plugin tools are filterable by predicate", () => {
+    const pluginTools: ToolDefinition[] = [
+      { ...createTestTool("my_plugin_tool"), group: "my_plugin" },
+    ];
+    const registry = createToolRegistry([pluginTools]);
+    const filtered = registry.list((t) => t.group === "my_plugin");
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].name).toBe("my_plugin_tool");
+  });
+
+  it("empty additional groups array is a no-op", () => {
+    const registry = createToolRegistry([]);
+    expect(registry.list()).toHaveLength(builtinCount);
+  });
+});
+
 // Token tools (token_set, token_list, token_delete) are intentionally excluded from
 // the MCP surface — tokens contain secrets and should not be managed by AI agents.
 describe("Full tool registry", () => {
