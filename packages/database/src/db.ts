@@ -73,6 +73,31 @@ const MIGRATIONS: Migration[] = [
       }
     },
   },
+  {
+    version: 4,
+    name: "add-budget-columns",
+    up: (conn) => {
+      // Guard against columns already existing (fresh installs include them in baseline).
+      const taskCols = conn
+        .prepare("PRAGMA table_info(tasks)")
+        .all() as Array<{ name: string }>;
+      if (!taskCols.some((c) => c.name === "token_budget")) {
+        conn.exec("ALTER TABLE tasks ADD COLUMN token_budget INTEGER NOT NULL DEFAULT 0");
+      }
+      if (!taskCols.some((c) => c.name === "cost_budget_millicents")) {
+        conn.exec("ALTER TABLE tasks ADD COLUMN cost_budget_millicents INTEGER NOT NULL DEFAULT 0");
+      }
+      const wsCols = conn
+        .prepare("PRAGMA table_info(workspaces)")
+        .all() as Array<{ name: string }>;
+      if (!wsCols.some((c) => c.name === "token_budget")) {
+        conn.exec("ALTER TABLE workspaces ADD COLUMN token_budget INTEGER NOT NULL DEFAULT 0");
+      }
+      if (!wsCols.some((c) => c.name === "cost_budget_millicents")) {
+        conn.exec("ALTER TABLE workspaces ADD COLUMN cost_budget_millicents INTEGER NOT NULL DEFAULT 0");
+      }
+    },
+  },
 ];
 
 /** The highest schema version defined by BASELINE + MIGRATIONS. */
@@ -312,6 +337,8 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
       use_worktrees INTEGER NOT NULL DEFAULT 1,
       working_directory TEXT NOT NULL DEFAULT '',
       default_persona_id TEXT NOT NULL DEFAULT '',
+      token_budget  INTEGER NOT NULL DEFAULT 0,
+      cost_budget_millicents INTEGER NOT NULL DEFAULT 0,
       created_at    TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -334,7 +361,9 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
       can_decompose INTEGER NOT NULL DEFAULT 0,
       default_persona_id TEXT NOT NULL DEFAULT '',
       workpad       TEXT NOT NULL DEFAULT '',
-      schedule_id   TEXT NOT NULL DEFAULT ''
+      schedule_id   TEXT NOT NULL DEFAULT '',
+      token_budget  INTEGER NOT NULL DEFAULT 0,
+      cost_budget_millicents INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS findings (

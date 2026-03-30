@@ -28,6 +28,8 @@ function makeWorkspace(id: string, name: string, environmentId: string = "env-1"
     workingDirectory: "",
     useWorktrees: true,
     defaultPersonaId: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
     createdAt: "",
     updatedAt: "",
   };
@@ -62,6 +64,8 @@ function makeTask(overrides: Partial<TaskData> & { id: string; workspaceId: stri
     canDecompose: false,
     defaultPersonaId: "",
     workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
     ...overrides,
   };
 }

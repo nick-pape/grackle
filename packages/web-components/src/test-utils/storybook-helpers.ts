@@ -77,6 +77,8 @@ export function makeWorkspace(overrides: Partial<Workspace> = {}): Workspace {
     workingDirectory: "",
     useWorktrees: false,
     defaultPersonaId: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
     createdAt: "2026-01-01T00:00:00Z",
     updatedAt: "2026-01-01T00:00:00Z",
     ...overrides,
@@ -102,6 +104,8 @@ export function makeTask(overrides: Partial<TaskData> = {}): TaskData {
     canDecompose: false,
     defaultPersonaId: "",
     workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
     ...overrides,
   };
 }

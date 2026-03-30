@@ -56,6 +56,8 @@ function applySchema(): void {
       use_worktrees INTEGER NOT NULL DEFAULT 1,
       working_directory TEXT NOT NULL DEFAULT '',
       default_persona_id TEXT NOT NULL DEFAULT '',
+      token_budget  INTEGER NOT NULL DEFAULT 0,
+      cost_budget_millicents INTEGER NOT NULL DEFAULT 0,
       created_at    TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -80,7 +82,9 @@ function applySchema(): void {
       can_decompose INTEGER NOT NULL DEFAULT 0,
       default_persona_id TEXT NOT NULL DEFAULT '',
       workpad   TEXT NOT NULL DEFAULT '',
-      schedule_id TEXT NOT NULL DEFAULT ''
+      schedule_id TEXT NOT NULL DEFAULT '',
+      token_budget  INTEGER NOT NULL DEFAULT 0,
+      cost_budget_millicents INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS sessions (
@@ -1366,6 +1370,142 @@ describe("event-processor usage event handling", () => {
     expect(session?.inputTokens).toBe(0);
     expect(session?.outputTokens).toBe(0);
     expect(session?.costUsd).toBe(0);
+  });
+});
+
+describe("budget-exceeded end reason on killed/terminated", () => {
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS findings");
+    sqlite.exec("DROP TABLE IF EXISTS tasks");
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    sqlite.exec("DROP TABLE IF EXISTS workspaces");
+    applySchema();
+    vi.clearAllMocks();
+
+    workspaceStore.createWorkspace("proj1", "Test Project", "desc", "", "env1");
+  });
+
+  /**
+   * Create an async iterable that yields events, calling a hook after
+   * the first event to mutate processor context before the terminal event.
+   */
+  async function* eventsWithHook(
+    events: powerline.AgentEvent[],
+    afterFirst: () => void,
+  ): AsyncIterable<powerline.AgentEvent> {
+    for (let i = 0; i < events.length; i++) {
+      if (i === 1) {
+        afterFirst();
+      }
+      yield events[i];
+    }
+  }
+
+  function waitForProcessingWithHook(
+    events: powerline.AgentEvent[],
+    options: { sessionId: string; logPath: string; workspaceId?: string; taskId?: string },
+    afterFirst: () => void,
+  ): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const endSessionCallsBefore = vi.mocked(logWriter.endSession).mock.calls.length;
+      const interval = setInterval(() => {
+        const s = sessionStore.getSession(options.sessionId);
+        if (s && ["stopped", "suspended"].includes(s.status)) {
+          clearInterval(interval);
+          setTimeout(resolve, 50);
+          return;
+        }
+        if (vi.mocked(logWriter.endSession).mock.calls.length > endSessionCallsBefore) {
+          clearInterval(interval);
+          setTimeout(resolve, 50);
+        }
+      }, 20);
+
+      processEventStream(eventsWithHook(events, afterFirst), options);
+    });
+  }
+
+  it("records BUDGET_EXCEEDED when killed after budget SIGTERM", async () => {
+    sessionStore.createSession("sess-bk", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    taskStore.createTask("task-bk", "proj1", "Budget Task", "", [], "test-workspace");
+
+    const runningEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess-bk",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "running",
+    });
+    const killedEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess-bk",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "killed",
+    });
+
+    await waitForProcessingWithHook(
+      [runningEvent, killedEvent],
+      { sessionId: "sess-bk", logPath: "/tmp/log", workspaceId: "proj1", taskId: "task-bk" },
+      () => {
+        // Simulate budget SIGTERM having been sent before the kill
+        const ctx = processorRegistry.get("sess-bk");
+        ctx!.budgetSigtermSent = true;
+      },
+    );
+
+    const session = sessionStore.getSession("sess-bk");
+    expect(session?.status).toBe("stopped");
+    expect(session?.endReason).toBe("budget_exceeded");
+  });
+
+  it("records BUDGET_EXCEEDED when terminated after budget SIGTERM", async () => {
+    sessionStore.createSession("sess-bt", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    taskStore.createTask("task-bt", "proj1", "Budget Task", "", [], "test-workspace");
+
+    const runningEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess-bt",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "running",
+    });
+    const terminatedEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess-bt",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "terminated",
+    });
+
+    await waitForProcessingWithHook(
+      [runningEvent, terminatedEvent],
+      { sessionId: "sess-bt", logPath: "/tmp/log", workspaceId: "proj1", taskId: "task-bt" },
+      () => {
+        const ctx = processorRegistry.get("sess-bt");
+        ctx!.budgetSigtermSent = true;
+      },
+    );
+
+    const session = sessionStore.getSession("sess-bt");
+    expect(session?.status).toBe("stopped");
+    expect(session?.endReason).toBe("budget_exceeded");
+  });
+
+  it("records KILLED (not BUDGET_EXCEEDED) when killed without budget SIGTERM", async () => {
+    sessionStore.createSession("sess-nk", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+
+    const killedEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess-nk",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "killed",
+    });
+
+    await waitForProcessing([killedEvent], {
+      sessionId: "sess-nk",
+      logPath: "/tmp/log",
+    });
+
+    const session = sessionStore.getSession("sess-nk");
+    expect(session?.status).toBe("stopped");
+    expect(session?.endReason).toBe("killed");
   });
 });
 

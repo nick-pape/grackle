@@ -77,6 +77,8 @@ function applySchema(): void {
       name TEXT NOT NULL,
       description TEXT NOT NULL DEFAULT '',
       status TEXT NOT NULL DEFAULT 'active',
+      token_budget  INTEGER NOT NULL DEFAULT 0,
+      cost_budget_millicents INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE TABLE IF NOT EXISTS tasks (
@@ -93,7 +95,9 @@ function applySchema(): void {
       depends_on TEXT NOT NULL DEFAULT '[]',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       workpad TEXT NOT NULL DEFAULT '',
-      schedule_id TEXT NOT NULL DEFAULT ''
+      schedule_id TEXT NOT NULL DEFAULT '',
+      token_budget  INTEGER NOT NULL DEFAULT 0,
+      cost_budget_millicents INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY,

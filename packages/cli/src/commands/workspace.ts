@@ -2,6 +2,7 @@ import type { Command } from "commander";
 import { createGrackleClient } from "../client.js";
 import { workspaceStatusToString } from "@grackle-ai/common";
 import Table from "cli-table3";
+import { formatTokens, formatCost, formatBudget } from "../format.js";
 
 export function registerWorkspaceCommands(program: Command): void {
   const workspace = program.command("workspace").description("Create and manage workspaces");
@@ -35,7 +36,9 @@ export function registerWorkspaceCommands(program: Command): void {
     .option("--no-worktrees", "Disable worktree isolation (agents share the main checkout)")
     .option("--working-directory <path>", "Working directory / repo root on the environment (e.g. /workspaces/my-repo)")
     .option("--worktree-base-path <path>", "(deprecated, use --working-directory)")
-    .action(async (name: string, opts: { worktrees?: boolean; desc?: string; repo?: string; env: string; workingDirectory?: string; worktreeBasePath?: string }) => {
+    .option("--token-budget <n>", "Aggregate token cap across all tasks; 0 = unlimited", parseInt)
+    .option("--cost-budget-millicents <n>", "Aggregate cost cap in millicents ($0.00001 units); 0 = unlimited", parseInt)
+    .action(async (name: string, opts: { worktrees?: boolean; desc?: string; repo?: string; env: string; workingDirectory?: string; worktreeBasePath?: string; tokenBudget?: number; costBudgetMillicents?: number }) => {
       const client = createGrackleClient();
       // Commander sets opts.worktrees = false when --no-worktrees is passed, true otherwise
       const useWorktrees = opts.worktrees !== false;
@@ -46,6 +49,8 @@ export function registerWorkspaceCommands(program: Command): void {
         environmentId: opts.env,
         useWorktrees,
         workingDirectory: opts.workingDirectory || opts.worktreeBasePath || "",
+        tokenBudget: opts.tokenBudget,
+        costBudgetMillicents: opts.costBudgetMillicents,
       });
       console.log(`Created workspace: ${p.id} (${p.name}) [worktrees: ${p.useWorktrees ? "enabled" : "disabled"}]`);
     });
@@ -56,6 +61,14 @@ export function registerWorkspaceCommands(program: Command): void {
     .action(async (id: string) => {
       const client = createGrackleClient();
       const p = await client.getWorkspace({ id });
+      // Fetch usage for budget display
+      let usage: { inputTokens: number; outputTokens: number; costUsd: number } | undefined;
+      try {
+        usage = await client.getUsage({ scope: "workspace", id });
+      } catch {
+        // Usage fetch may fail; continue without it
+      }
+
       const table = new Table();
       table.push(
         { "ID": p.id },
@@ -70,6 +83,20 @@ export function registerWorkspaceCommands(program: Command): void {
         { "Created": p.createdAt },
         { "Updated": p.updatedAt },
       );
+      if (usage && (usage.inputTokens || usage.outputTokens || usage.costUsd)) {
+        table.push(
+          { "Tokens": `${formatTokens(usage.inputTokens)} in / ${formatTokens(usage.outputTokens)} out` },
+          { "Cost": formatCost(usage.costUsd) },
+        );
+      }
+      if (p.tokenBudget > 0) {
+        const usedTokens = usage ? usage.inputTokens + usage.outputTokens : 0;
+        table.push({ "Token Budget": formatBudget(usedTokens, p.tokenBudget, "token") });
+      }
+      if (p.costBudgetMillicents > 0) {
+        const usedCost = usage ? usage.costUsd : 0;
+        table.push({ "Cost Budget": formatBudget(usedCost, p.costBudgetMillicents, "cost") });
+      }
       console.log(table.toString());
     });
 
@@ -84,7 +111,9 @@ export function registerWorkspaceCommands(program: Command): void {
     .option("--worktrees", "Enable worktree isolation (default)")
     .option("--working-directory <path>", "Working directory / repo root on the environment (e.g. /workspaces/my-repo)")
     .option("--worktree-base-path <path>", "(deprecated, use --working-directory)")
-    .action(async (id: string, opts: { worktrees?: boolean; name?: string; desc?: string; repo?: string; env?: string; workingDirectory?: string; worktreeBasePath?: string }) => {
+    .option("--token-budget <n>", "Aggregate token cap across all tasks; 0 = unlimited", parseInt)
+    .option("--cost-budget-millicents <n>", "Aggregate cost cap in millicents ($0.00001 units); 0 = unlimited", parseInt)
+    .action(async (id: string, opts: { worktrees?: boolean; name?: string; desc?: string; repo?: string; env?: string; workingDirectory?: string; worktreeBasePath?: string; tokenBudget?: number; costBudgetMillicents?: number }) => {
       const client = createGrackleClient();
       // Determine useWorktrees: explicit --worktrees → true, --no-worktrees → false, neither → undefined (no change)
       let useWorktrees: boolean | undefined;
@@ -101,6 +130,8 @@ export function registerWorkspaceCommands(program: Command): void {
         environmentId: opts.env,
         useWorktrees,
         workingDirectory: opts.workingDirectory || opts.worktreeBasePath,
+        tokenBudget: opts.tokenBudget,
+        costBudgetMillicents: opts.costBudgetMillicents,
       });
       console.log(`Updated workspace: ${p.id} (${p.name}) [worktrees: ${p.useWorktrees ? "enabled" : "disabled"}]`);
     });

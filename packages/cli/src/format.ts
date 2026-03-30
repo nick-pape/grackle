@@ -23,3 +23,19 @@ export function formatCost(usd: number): string {
   }
   return `$${usd.toFixed(2)}`;
 }
+
+/** Format a cost value for budget display, showing "$0.00" for zero instead of "-". */
+function formatBudgetCost(usd: number): string {
+  if (usd === 0) {
+    return "$0.00";
+  }
+  return formatCost(usd);
+}
+
+/** Format a budget display: "used / total" with appropriate formatting for tokens or cost. */
+export function formatBudget(used: number, budget: number, type: "token" | "cost"): string {
+  if (type === "token") {
+    return `${formatTokens(used)} / ${formatTokens(budget)}`;
+  }
+  return `${formatBudgetCost(used)} / ${formatBudgetCost(budget / 100000)}`;
+}

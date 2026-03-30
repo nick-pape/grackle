@@ -25,6 +25,7 @@ export const END_REASON = {
   KILLED: "killed",
   INTERRUPTED: "interrupted",
   TERMINATED: "terminated",
+  BUDGET_EXCEEDED: "budget_exceeded",
 } as const;
 
 /** The reason a session transitioned to STOPPED. */

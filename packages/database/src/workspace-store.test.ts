@@ -37,6 +37,8 @@ function applySchema(): void {
       use_worktrees     INTEGER NOT NULL DEFAULT 1,
       working_directory TEXT NOT NULL DEFAULT '',
       default_persona_id TEXT NOT NULL DEFAULT '',
+      token_budget      INTEGER NOT NULL DEFAULT 0,
+      cost_budget_millicents INTEGER NOT NULL DEFAULT 0,
       created_at        TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at        TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -269,6 +271,39 @@ describe("workspace-store", () => {
       workspaceStore.createWorkspace("p1", "Name", "", "", "", true, "/workspaces/foo");
       const updated = workspaceStore.updateWorkspace("p1", { workingDirectory: "" });
       expect(updated!.workingDirectory).toBe("");
+    });
+  });
+
+  describe("budget fields", () => {
+    it("defaults budget fields to 0", () => {
+      workspaceStore.createWorkspace("p1", "Name", "", "", "");
+      const ws = workspaceStore.getWorkspace("p1");
+      expect(ws!.tokenBudget).toBe(0);
+      expect(ws!.costBudgetMillicents).toBe(0);
+    });
+
+    it("stores budget values via createWorkspace", () => {
+      workspaceStore.createWorkspace("p1", "Name", "", "", "", true, "", "", 100000, 500000);
+      const ws = workspaceStore.getWorkspace("p1");
+      expect(ws!.tokenBudget).toBe(100000);
+      expect(ws!.costBudgetMillicents).toBe(500000);
+    });
+
+    it("updates budget via updateWorkspace", () => {
+      workspaceStore.createWorkspace("p1", "Name", "", "", "");
+      const updated = workspaceStore.updateWorkspace("p1", {
+        tokenBudget: 200000,
+        costBudgetMillicents: 300000,
+      });
+      expect(updated!.tokenBudget).toBe(200000);
+      expect(updated!.costBudgetMillicents).toBe(300000);
+    });
+
+    it("leaves budget unchanged when not in patch", () => {
+      workspaceStore.createWorkspace("p1", "Name", "", "", "", true, "", "", 100000, 200000);
+      const updated = workspaceStore.updateWorkspace("p1", { name: "New Name" });
+      expect(updated!.tokenBudget).toBe(100000);
+      expect(updated!.costBudgetMillicents).toBe(200000);
     });
   });
 });

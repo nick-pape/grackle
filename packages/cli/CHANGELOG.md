@@ -1,6 +1,20 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 30 Mar 2026 20:03:42 GMT and should not be manually modified.
+This log was last generated on Mon, 30 Mar 2026 21:53:45 GMT and should not be manually modified.
+
+## 0.96.1
+Mon, 30 Mar 2026 21:53:45 GMT
+
+### Patches
+
+- Add automatic environment resolution for dispatch (ancestor, workspace, linked, global fallback)
+
+## 0.96.0
+Mon, 30 Mar 2026 21:39:41 GMT
+
+### Minor changes
+
+- Add per-task and workspace token/cost budget enforcement with pre-spawn checks, mid-run SIGTERM, and BUDGET_EXCEEDED end reason
 
 ## 0.95.2
 Mon, 30 Mar 2026 20:03:42 GMT

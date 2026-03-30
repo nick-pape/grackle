@@ -38,7 +38,7 @@ import { transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
 import { taskRowToProto, sessionRowToProto } from "./grpc-proto-converters.js";
 import { validatePipeInputs, toDialableHost, resolveAncestorEnvironmentId } from "./grpc-shared.js";
 import { personaMcpServersToJson } from "./grpc-mcp-config.js";
-import { hasCapacity, type ConcurrencyDeps } from "@grackle-ai/core";
+import { hasCapacity, type ConcurrencyDeps, checkBudget } from "@grackle-ai/core";
 
 /** List tasks, optionally filtered by workspace, search query, or status. */
 export async function listTasks(req: grackle.ListTasksRequest): Promise<grackle.TaskList> {
@@ -101,6 +101,10 @@ export async function createTask(req: grackle.CreateTaskRequest): Promise<grackl
     }
   }
 
+  if ((req.tokenBudget ?? 0) < 0 || (req.costBudgetMillicents ?? 0) < 0) {
+    throw new ConnectError("Budget values must be >= 0", Code.InvalidArgument);
+  }
+
   const id = uuid().slice(0, 8);
   taskStore.createTask(
     id,
@@ -114,6 +118,8 @@ export async function createTask(req: grackle.CreateTaskRequest): Promise<grackl
     // Orchestrator/root processes that need fork() must opt in.
     req.canDecompose ?? false,
     req.defaultPersonaId ?? "",
+    req.tokenBudget ?? 0,
+    req.costBudgetMillicents ?? 0,
   );
   const row = taskStore.getTask(id);
   emit("task.created", { taskId: id, workspaceId: req.workspaceId });
@@ -161,6 +167,18 @@ export async function updateTask(req: grackle.UpdateTaskRequest): Promise<grackl
       : safeParseJsonArray(existing.dependsOn),
     req.defaultPersonaId,
   );
+
+  // Update budget fields if explicitly set in the request (proto3 optional presence)
+  if ((req.tokenBudget !== undefined && req.tokenBudget < 0) || (req.costBudgetMillicents !== undefined && req.costBudgetMillicents < 0)) {
+    throw new ConnectError("Budget values must be >= 0", Code.InvalidArgument);
+  }
+  if (req.tokenBudget !== undefined || req.costBudgetMillicents !== undefined) {
+    taskStore.updateTaskBudget(
+      req.id,
+      req.tokenBudget ?? existing.tokenBudget,
+      req.costBudgetMillicents ?? existing.costBudgetMillicents,
+    );
+  }
 
   // Late-bind: associate an existing session with this task
   if (req.sessionId !== "") {
@@ -220,6 +238,15 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
   }
   if (!taskStore.areDependenciesMet(req.taskId)) {
     throw new ConnectError(`Task ${req.taskId} has unmet dependencies`, Code.FailedPrecondition);
+  }
+
+  // ── Pre-spawn budget check ──
+  const budgetResult = checkBudget(req.taskId, task.workspaceId || undefined);
+  if (budgetResult) {
+    throw new ConnectError(
+      `Budget exceeded (${budgetResult.scope} ${budgetResult.reason}): ${budgetResult.message}`,
+      Code.ResourceExhausted,
+    );
   }
 
   const workspace = task.workspaceId ? workspaceStore.getWorkspace(task.workspaceId) : undefined;

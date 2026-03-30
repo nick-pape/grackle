@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
-import { Breadcrumbs, ConfirmDialog, DagView, EditableCheckbox, EditableSelect, EditableTextArea, EditableTextField, EnvironmentSelect, WorkspaceBoard, buildWorkspaceBreadcrumbs, formatCost, newTaskUrl, useAppNavigate, useThemeContext } from "@grackle-ai/web-components";
+import { Breadcrumbs, ConfirmDialog, DagView, EditableCheckbox, EditableSelect, EditableTextArea, EditableTextField, EnvironmentSelect, WorkspaceBoard, buildWorkspaceBreadcrumbs, formatCost, formatTokens, newTaskUrl, useAppNavigate, useThemeContext } from "@grackle-ai/web-components";
 import { useHotkey } from "../hooks/useHotkey.js";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -342,6 +342,22 @@ export function WorkspacePage(): JSX.Element {
         <div className={styles.progressBarContainer}>
           <span className={styles.progressLabel}>
             Usage: {formatCost(wsUsage.costUsd)} ({wsUsage.sessionCount} session{wsUsage.sessionCount !== 1 ? "s" : ""})
+          </span>
+        </div>
+      )}
+
+      {/* Budget display */}
+      {workspace && (workspace.tokenBudget > 0 || workspace.costBudgetMillicents > 0) && (
+        <div className={styles.progressBarContainer}>
+          <span className={styles.progressLabel}>
+            Budget:{" "}
+            {workspace.tokenBudget > 0 && (
+              <>Tokens: {formatTokens((wsUsage?.inputTokens ?? 0) + (wsUsage?.outputTokens ?? 0))} / {formatTokens(workspace.tokenBudget)}</>
+            )}
+            {workspace.tokenBudget > 0 && workspace.costBudgetMillicents > 0 && " | "}
+            {workspace.costBudgetMillicents > 0 && (
+              <>Cost: {formatCost(wsUsage?.costUsd ?? 0)} / {formatCost(workspace.costBudgetMillicents / 100_000)}</>
+            )}
           </span>
         </div>
       )}

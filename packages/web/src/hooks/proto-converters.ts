@@ -85,6 +85,8 @@ export function protoToWorkspace(p: grackle.Workspace): Workspace {
     workingDirectory: p.workingDirectory,
     useWorktrees: p.useWorktrees,
     defaultPersonaId: p.defaultPersonaId,
+    tokenBudget: p.tokenBudget,
+    costBudgetMillicents: p.costBudgetMillicents,
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
   };
@@ -111,6 +113,8 @@ export function protoToTask(p: grackle.Task): TaskData {
     canDecompose: p.canDecompose,
     defaultPersonaId: p.defaultPersonaId,
     workpad: p.workpad,
+    tokenBudget: p.tokenBudget,
+    costBudgetMillicents: p.costBudgetMillicents,
   };
 }
 
