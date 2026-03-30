@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/auth",
-  "version": "0.92.1",
+  "version": "0.92.3",
   "description": "Authentication and authorization primitives for Grackle",
   "license": "MIT",
   "repository": {
