@@ -69,9 +69,9 @@ export function RuntimeStep({ currentRuntime, onFinish, onBack, finishDisabled }
           className={styles.primaryButton}
           onClick={() => { onFinish(selected); }}
           disabled={finishDisabled}
-          data-testid="setup-finish"
+          data-testid="setup-runtime-next"
         >
-          Finish
+          Next
         </button>
       </div>
     </div>
