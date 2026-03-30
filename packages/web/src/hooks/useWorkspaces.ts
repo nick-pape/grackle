@@ -10,6 +10,7 @@
 import { useState, useCallback } from "react";
 import { ConnectError } from "@connectrpc/connect";
 import type { Workspace, GrackleEvent, UseWorkspacesResult } from "@grackle-ai/web-components";
+import type { DomainHook } from "./domainHook.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToWorkspace } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
@@ -121,6 +122,12 @@ export function useWorkspaces(): UseWorkspacesResult {
     [],
   );
 
+  const domainHook: DomainHook = {
+    onConnect: () => loadWorkspaces(),
+    onDisconnect,
+    handleEvent,
+  };
+
   return {
     workspaces,
     workspacesLoading,
@@ -131,5 +138,6 @@ export function useWorkspaces(): UseWorkspacesResult {
     updateWorkspace,
     handleEvent,
     onDisconnect,
+    domainHook,
   };
 }

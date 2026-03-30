@@ -10,6 +10,7 @@
 import { useState, useCallback } from "react";
 import { isCredentialProviderConfig } from "@grackle-ai/web-components";
 import type { CredentialProviderConfig, GrackleEvent, UseCredentialsResult } from "@grackle-ai/web-components";
+import type { DomainHook } from "./domainHook.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToCredentialConfig } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
@@ -68,5 +69,11 @@ export function useCredentials(): UseCredentialsResult {
     [],
   );
 
-  return { credentialProviders, credentialsLoading, loadCredentials, updateCredentialProviders, handleEvent };
+  const domainHook: DomainHook = {
+    onConnect: () => loadCredentials(),
+    onDisconnect: () => {},
+    handleEvent,
+  };
+
+  return { credentialProviders, credentialsLoading, loadCredentials, updateCredentialProviders, handleEvent, domainHook };
 }

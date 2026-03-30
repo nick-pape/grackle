@@ -1,334 +1,19 @@
 import { useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { useParams, useLocation } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
-import { Breadcrumbs, ChatInput, ConfirmDialog, EventStream, FindingsPanel, TaskEditPanel, WorkpadPanel, buildTaskBreadcrumbs, formatCost, getStatusBadgeClassKey, getStatusStyle, groupConsecutiveTextEvents, pairToolEvents, taskUrl, useAppNavigate, useToast, workspaceUrl } from "@grackle-ai/web-components";
-import type { Session, TaskData, Environment, Workspace } from "../hooks/useGrackleSocket.js";
+import {
+  Breadcrumbs, ChatInput, ConfirmDialog, EventStream, FindingsPanel,
+  SessionAttemptSelector, TaskActionButtons, TaskEditPanel, TaskOverviewPanel,
+  buildTaskBreadcrumbs, groupConsecutiveTextEvents, pairToolEvents,
+  taskUrl, useAppNavigate, useToast, workspaceUrl,
+} from "@grackle-ai/web-components";
+import type { UsageStats } from "@grackle-ai/web-components";
 import { AnimatePresence, motion } from "motion/react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { useHotkey } from "../hooks/useHotkey.js";
 import { TaskShimmer } from "./TaskShimmer.js";
 import styles from "./page-layout.module.scss";
 
 type TaskTab = "overview" | "stream" | "findings";
-
-// --- Helper functions ---
-
-function formatDate(iso: string | undefined): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return "—";
-  return d.toLocaleString(undefined, {
-    month: "short", day: "numeric", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  });
-}
-
-function formatDuration(start: string | undefined, end: string | undefined): string | undefined {
-  if (!start || !end) return undefined;
-  const ms = new Date(end).getTime() - new Date(start).getTime();
-  if (isNaN(ms) || ms < 0) return undefined;
-  const mins = Math.floor(ms / 60000);
-  const secs = Math.floor((ms % 60000) / 1000);
-  if (mins === 0) return `${secs}s`;
-  const hours = Math.floor(mins / 60);
-  const remMins = mins % 60;
-  if (hours === 0) return `${mins}m ${secs}s`;
-  return `${hours}h ${remMins}m`;
-}
-
-function envStatusClass(status: string): string {
-  const s = status.toLowerCase();
-  if (s === "ready" || s === "running" || s === "available" || s === "connected") return styles.envDotGreen;
-  if (s === "provisioning" || s === "starting" || s === "pending" || s === "connecting") return styles.envDotYellow;
-  if (s === "error" || s === "failed" || s === "disconnected") return styles.envDotRed;
-  return styles.envDotGray;
-}
-
-// --- Subcomponents ---
-
-function TaskStatusBadge({ status }: { status: string }): JSX.Element {
-  const style = getStatusStyle(status);
-  const classKey = getStatusBadgeClassKey(status);
-  return (
-    <span className={`${styles.statusBadge} ${styles[classKey] ?? styles.statusPending}`}>
-      {style.label}
-    </span>
-  );
-}
-
-interface TaskOverviewProps {
-  task: TaskData;
-  tasksById: Map<string, TaskData>;
-  environments: Environment[];
-  workspaces: Workspace[];
-  taskSessions: Session[];
-  selectedEnvId: string;
-}
-
-function TaskOverview({ task, tasksById, environments, workspaces, taskSessions, selectedEnvId }: TaskOverviewProps): JSX.Element {
-  const { loadUsage, usageCache } = useGrackle();
-
-  // Load usage stats for this task (and tree if it has children)
-  const sessionCostSum = taskSessions.reduce((s, sess) => s + (sess.costUsd ?? 0), 0);
-  useEffect(() => {
-    loadUsage("task", task.id).catch(() => {});
-    if (task.childTaskIds.length > 0) {
-      loadUsage("task_tree", task.id).catch(() => {});
-    }
-  }, [task.id, task.childTaskIds.length, loadUsage, sessionCostSum]);
-
-  const taskUsageKey = `task:${task.id}`;
-  const taskUsage = taskUsageKey in usageCache ? usageCache[taskUsageKey] : undefined;
-  const treeUsageKey = `task_tree:${task.id}`;
-  const treeUsage = task.childTaskIds.length > 0 && treeUsageKey in usageCache ? usageCache[treeUsageKey] : undefined;
-
-  const latestSession = taskSessions.length > 0 ? taskSessions[taskSessions.length - 1] : undefined;
-  const envId = latestSession?.environmentId ?? "";
-  const env = envId ? environments.find((e) => e.id === envId) : undefined;
-  const workspace = workspaces.find((p) => p.id === task.workspaceId);
-  const selectedEnv = environments.find((e) => e.id === selectedEnvId);
-  const branchUrl = task.branch && workspace?.repoUrl
-    ? `${workspace.repoUrl.replace(/\/$/, "")}/tree/${encodeURIComponent(task.branch)}`
-    : undefined;
-
-  return (
-    <div className={styles.overviewDashboard}>
-      <div className={styles.overviewHero}>
-        <TaskStatusBadge status={task.status} />
-        {task.branch && (
-          <span className={styles.overviewBranchPill}>
-            {branchUrl ? (
-              <a href={branchUrl} target="_blank" rel="noreferrer noopener" className={styles.branchLink}>
-                {"\u{1F517}"} {task.branch}
-              </a>
-            ) : (
-              <span>{"\u{1F517}"} {task.branch}</span>
-            )}
-          </span>
-        )}
-      </div>
-      {typeof task.description === "string" && task.description && (
-        <div className={styles.overviewSection}>
-          <div className={styles.overviewLabel}>Description</div>
-          <div className={styles.overviewMarkdown}>
-            <Markdown remarkPlugins={[remarkGfm]}>{task.description}</Markdown>
-          </div>
-        </div>
-      )}
-      {task.workpad && <WorkpadPanel workpad={task.workpad} />}
-      <div className={styles.overviewSection}>
-        <div className={styles.overviewLabel}>Environment</div>
-        {envId && env ? (
-          <div className={styles.envRow} data-testid="task-overview-environment">
-            <span className={`${styles.envDot} ${envStatusClass(env.status)}`} title={env.status} aria-label={`Status: ${env.status}`} role="img" />
-            <span className={styles.overviewValue}>{env.displayName}</span>
-          </div>
-        ) : selectedEnv ? (
-          <div className={styles.envRow} data-testid="task-overview-environment">
-            <span className={`${styles.envDot} ${envStatusClass(selectedEnv.status)}`} title={selectedEnv.status} aria-label={`Status: ${selectedEnv.status}`} role="img" />
-            <span className={styles.overviewValue}>{selectedEnv.displayName}</span>
-            <span className={styles.overviewMuted}>(workspace default)</span>
-          </div>
-        ) : (
-          <div className={styles.overviewMuted}>Set in workspace settings</div>
-        )}
-      </div>
-      <div className={styles.overviewSection} data-testid="task-overview-dependencies">
-        <div className={styles.overviewLabel}>Dependencies</div>
-        {task.dependsOn.length === 0 ? (
-          <div className={styles.overviewMuted}>None</div>
-        ) : (
-          <div className={styles.depList}>
-            {task.dependsOn.map((depId) => {
-              const dep = tasksById.get(depId);
-              const isDone = dep?.status === "complete";
-              return (
-                <div key={depId} className={`${styles.depItem} ${isDone ? styles.depDone : styles.depBlocked}`}>
-                  <span>{isDone ? "\u2713" : "\u25CB"}</span>
-                  <span>{dep?.title ?? depId}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-      <div className={styles.overviewSection}>
-        <div className={styles.overviewLabel}>Timeline</div>
-        <div className={styles.timeline}>
-          {task.createdAt && (
-            <div className={styles.timelineRow}>
-              <span className={styles.timelineKey}>Created</span>
-              <span className={styles.timelineValue}>{formatDate(task.createdAt)}</span>
-            </div>
-          )}
-          {task.assignedAt && (() => {
-            const delta = formatDuration(task.createdAt, task.assignedAt);
-            return (
-              <div className={styles.timelineRow}>
-                <span className={styles.timelineKey}>Assigned</span>
-                <span className={styles.timelineValue}>{formatDate(task.assignedAt)}</span>
-                {delta !== undefined && <span className={styles.timelineDelta}>{delta}</span>}
-              </div>
-            );
-          })()}
-          {task.startedAt && (() => {
-            const delta = formatDuration(task.assignedAt ?? task.createdAt, task.startedAt);
-            return (
-              <div className={styles.timelineRow}>
-                <span className={styles.timelineKey}>Started</span>
-                <span className={styles.timelineValue}>{formatDate(task.startedAt)}</span>
-                {delta !== undefined && <span className={styles.timelineDelta}>{delta}</span>}
-              </div>
-            );
-          })()}
-          {task.completedAt && (() => {
-            const delta = formatDuration(task.startedAt, task.completedAt);
-            return (
-              <div className={styles.timelineRow}>
-                <span className={styles.timelineKey}>Completed</span>
-                <span className={styles.timelineValue}>{formatDate(task.completedAt)}</span>
-                {delta !== undefined && <span className={styles.timelineDelta}>{delta}</span>}
-              </div>
-            );
-          })()}
-          {!task.createdAt && !task.assignedAt && !task.startedAt && !task.completedAt && (
-            <div className={styles.overviewMuted}>No timing data</div>
-          )}
-        </div>
-      </div>
-      {taskUsage && taskUsage.costUsd > 0 && (
-        <div className={styles.overviewSection}>
-          <div className={styles.overviewLabel}>Usage</div>
-          <div className={styles.timeline}>
-            <div className={styles.timelineRow}>
-              <span className={styles.timelineKey}>Cost</span>
-              <span className={styles.timelineValue}>{formatCost(taskUsage.costUsd)}</span>
-              <span className={styles.timelineDelta}>{taskUsage.sessionCount} session{taskUsage.sessionCount !== 1 ? "s" : ""}</span>
-            </div>
-            {treeUsage && treeUsage.costUsd > taskUsage.costUsd && (
-              <div className={styles.timelineRow}>
-                <span className={styles.timelineKey}>Total (incl. subtasks)</span>
-                <span className={styles.timelineValue}>{formatCost(treeUsage.costUsd)}</span>
-                <span className={styles.timelineDelta}>{treeUsage.sessionCount} session{treeUsage.sessionCount !== 1 ? "s" : ""}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-      {task.reviewNotes && (
-        <div className={styles.overviewSection}>
-          <div className={styles.overviewLabel}>Review Notes</div>
-          <div className={styles.reviewNotes}>{task.reviewNotes}</div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface TaskActionButtonsProps {
-  task: TaskData;
-  sessionId: string | undefined;
-  isBlocked: boolean;
-  onStart: () => void;
-  onResume: () => void;
-  onStop: () => void;
-  onPause: () => void;
-  onDelete: () => void;
-  onEdit: () => void;
-}
-
-function TaskActionButtons({
-  task, sessionId, isBlocked,
-  onStart, onResume, onStop, onPause, onDelete, onEdit,
-}: TaskActionButtonsProps): JSX.Element | undefined {
-  if (task.status === "not_started") {
-    if (isBlocked) {
-      return (
-        <div className={styles.headerActions}>
-          <button onClick={onEdit} className={styles.btnGhost}>Edit</button>
-          <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
-        </div>
-      );
-    }
-    return (
-      <div className={styles.headerActions}>
-        <button data-testid="task-header-start" onClick={onStart} className={styles.btnPrimary}>Start</button>
-        <button onClick={onEdit} className={styles.btnGhost}>Edit</button>
-        <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
-      </div>
-    );
-  }
-  if (task.status === "working") {
-    return (
-      <div className={styles.headerActions}>
-        <button onClick={onStop} className={styles.btnDanger}>Stop</button>
-        <button onClick={onPause} disabled={!sessionId} className={styles.btnGhost}>Pause</button>
-      </div>
-    );
-  }
-  if (task.status === "paused") {
-    return (
-      <div className={styles.headerActions}>
-        <button onClick={onStop} className={styles.btnPrimary}>Stop</button>
-        <button onClick={onResume} className={styles.btnGhost}>Resume</button>
-        <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
-      </div>
-    );
-  }
-  if (task.status === "complete") {
-    return (
-      <div className={styles.headerActions}>
-        <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
-      </div>
-    );
-  }
-  if (task.status === "failed") {
-    return (
-      <div className={styles.headerActions}>
-        <button onClick={onStart} className={styles.btnPrimary}>Retry</button>
-        <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
-      </div>
-    );
-  }
-  return undefined;
-}
-
-interface SessionAttemptSelectorProps {
-  taskSessions: Session[];
-  selectedSessionId: string | undefined;
-  onSelect: (sessionId: string) => void;
-}
-
-function SessionAttemptSelector({ taskSessions, selectedSessionId, onSelect }: SessionAttemptSelectorProps): JSX.Element | undefined {
-  if (taskSessions.length < 2) return undefined;
-  return (
-    <div className={styles.attemptSelector} data-testid="attempt-selector">
-      <span className={styles.attemptLabel}>Attempts:</span>
-      {taskSessions.map((s, i) => {
-        const isActive = s.id === selectedSessionId;
-        const statusIcon = s.status === "stopped" && s.endReason === "completed" ? "\u2713"
-          : s.status === "stopped" ? "\u2717"
-          : s.status === "running" || s.status === "idle" ? "\u25CF"
-          : "";
-        return (
-          <button
-            key={s.id}
-            className={`${styles.attemptButton} ${isActive ? styles.attemptActive : ""}`}
-            onClick={() => onSelect(s.id)}
-            title={`Attempt #${i + 1} — ${s.status}`}
-            aria-label={`Attempt #${i + 1}, ${s.status}`}
-            aria-pressed={isActive}
-            data-testid={`attempt-${i + 1}`}
-          >
-            #{i + 1}
-            {statusIcon && <span className={styles.attemptStatus}>{statusIcon}</span>}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 /** Task detail page with overview/stream/findings tabs. */
 export function TaskPage(): JSX.Element {
@@ -343,6 +28,7 @@ export function TaskPage(): JSX.Element {
     findings: { findings, loadFindings },
     workspaces: { workspaces },
     personas: { personas },
+    usageCache, loadUsage,
   } = useGrackle();
 
   const loadedRef = useRef<string | undefined>(undefined);
@@ -393,7 +79,9 @@ export function TaskPage(): JSX.Element {
 
   // Initialize env selector from workspace default when task/workspace loads
   useEffect(() => {
-    if (selectedEnvId !== "") return;
+    if (selectedEnvId !== "") {
+      return;
+    }
     if (workspace?.environmentId) {
       setSelectedEnvId(workspace.environmentId);
     } else if (environments.length > 0) {
@@ -417,7 +105,9 @@ export function TaskPage(): JSX.Element {
   };
 
   const handleDeleteConfirm = (): void => {
-    if (!task) return;
+    if (!task) {
+      return;
+    }
     deleteTask(task.id).catch(() => {});
     setShowDeleteConfirm(false);
     const envId = routeEnvironmentId ?? workspace?.environmentId;
@@ -436,7 +126,9 @@ export function TaskPage(): JSX.Element {
 
   // Load task sessions
   useEffect(() => {
-    if (!task?.id) return;
+    if (!task?.id) {
+      return;
+    }
     const isNewTask = task.id !== loadedTaskSessionsRef.current;
     const sessionChanged = task.latestSessionId !== prevTaskSessionIdRef.current;
     if (isNewTask || sessionChanged) {
@@ -447,7 +139,7 @@ export function TaskPage(): JSX.Element {
   }, [task?.id, task?.latestSessionId, loadTaskSessions]);
 
   // Auto-switch tab based on task status.
-  // Skip the initial status transition (undefined → first status) when the URL
+  // Skip the initial status transition (undefined -> first status) when the URL
   // explicitly targets a non-default tab, so deep links like /tasks/:id/stream
   // are not overridden by the status-based auto-switch.
   useEffect(() => {
@@ -506,6 +198,23 @@ export function TaskPage(): JSX.Element {
       loadFindings(workspaceId).catch(() => {});
     }
   }, [activeTaskTab, workspaceId, loadFindings]);
+
+  // Load usage stats for the overview panel (lifted from the old inline TaskOverview)
+  const sessionCostSum = currentTaskSessions.reduce((s, sess) => s + (sess.costUsd ?? 0), 0);
+  useEffect(() => {
+    if (!task) {
+      return;
+    }
+    loadUsage("task", task.id).catch(() => {});
+    if (task.childTaskIds.length > 0) {
+      loadUsage("task_tree", task.id).catch(() => {});
+    }
+  }, [task?.id, task?.childTaskIds.length, loadUsage, sessionCostSum]);
+
+  const taskUsageKey = task ? `task:${task.id}` : "";
+  const taskUsage: UsageStats | undefined = taskUsageKey in usageCache ? usageCache[taskUsageKey] : undefined;
+  const treeUsageKey = task ? `task_tree:${task.id}` : "";
+  const treeUsage: UsageStats | undefined = task && task.childTaskIds.length > 0 && treeUsageKey in usageCache ? usageCache[treeUsageKey] : undefined;
 
   const handleTabChange = (tab: TaskTab): void => {
     setActiveTaskTab(tab);
@@ -585,7 +294,16 @@ export function TaskPage(): JSX.Element {
                 onShowToast={showToast}
               />
             ) : task ? (
-              <TaskOverview task={task} tasksById={tasksById} environments={environments} workspaces={workspaces} taskSessions={currentTaskSessions} selectedEnvId={selectedEnvId} />
+              <TaskOverviewPanel
+                task={task}
+                tasksById={tasksById}
+                environments={environments}
+                workspaces={workspaces}
+                taskSessions={currentTaskSessions}
+                selectedEnvId={selectedEnvId}
+                taskUsage={taskUsage}
+                treeUsage={treeUsage}
+              />
             ) : (
               <div className={styles.waitingMessage}>No additional details</div>
             )}

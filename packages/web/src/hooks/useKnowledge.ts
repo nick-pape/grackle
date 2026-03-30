@@ -9,6 +9,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import type { GrackleEvent, GraphNode, GraphLink, NodeDetail, UseKnowledgeResult } from "@grackle-ai/web-components";
+import type { DomainHook } from "./domainHook.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToGraphNode, protoToGraphLink } from "./proto-converters.js";
 
@@ -186,6 +187,12 @@ export function useKnowledge(): UseKnowledgeResult {
     return false;
   }, []);
 
+  const domainHook: DomainHook = {
+    onConnect: async () => {}, // Knowledge is page-scoped; no global reload needed
+    onDisconnect: () => {},
+    handleEvent,
+  };
+
   return {
     graphData: { nodes: [...nodes.values()], links },
     selectedNode,
@@ -199,5 +206,6 @@ export function useKnowledge(): UseKnowledgeResult {
     expandNode,
     loadRecent,
     handleEvent,
+    domainHook,
   };
 }

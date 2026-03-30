@@ -10,6 +10,7 @@
 import { useState, useCallback, useRef } from "react";
 import { ConnectError } from "@connectrpc/connect";
 import type { TaskData, GrackleEvent, WsMessage, UseTasksResult } from "@grackle-ai/web-components";
+import type { DomainHook } from "./domainHook.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToTask } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
@@ -267,6 +268,12 @@ export function useTasks(): UseTasksResult {
     [],
   );
 
+  const domainHook: DomainHook = {
+    onConnect: () => loadAllTasks(),
+    onDisconnect,
+    handleEvent,
+  };
+
   return {
     tasks,
     tasksLoading,
@@ -283,5 +290,6 @@ export function useTasks(): UseTasksResult {
     handleEvent,
     onDisconnect,
     handleLegacyMessage,
+    domainHook,
   };
 }

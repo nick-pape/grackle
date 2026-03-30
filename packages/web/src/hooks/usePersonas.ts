@@ -9,6 +9,7 @@
 
 import { useState, useCallback } from "react";
 import type { PersonaData, GrackleEvent, UsePersonasResult } from "@grackle-ai/web-components";
+import type { DomainHook } from "./domainHook.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToPersona } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
@@ -118,5 +119,11 @@ export function usePersonas(): UsePersonasResult {
     [],
   );
 
-  return { personas, personasLoading, loadPersonas, createPersona, updatePersona, deletePersona, handleEvent };
+  const domainHook: DomainHook = {
+    onConnect: () => loadPersonas(),
+    onDisconnect: () => {},
+    handleEvent,
+  };
+
+  return { personas, personasLoading, loadPersonas, createPersona, updatePersona, deletePersona, handleEvent, domainHook };
 }

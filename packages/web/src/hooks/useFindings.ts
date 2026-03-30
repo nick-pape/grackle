@@ -9,6 +9,7 @@
 
 import { useState, useCallback } from "react";
 import type { FindingData, GrackleEvent, UseFindingsResult } from "@grackle-ai/web-components";
+import type { DomainHook } from "./domainHook.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToFinding } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
@@ -91,5 +92,11 @@ export function useFindings(): UseFindingsResult {
     [],
   );
 
-  return { findings, selectedFinding, findingLoading, findingsLoading, loadFindings, loadAllFindings, loadFinding, postFinding, handleEvent };
+  const domainHook: DomainHook = {
+    onConnect: () => loadAllFindings(),
+    onDisconnect: () => {},
+    handleEvent,
+  };
+
+  return { findings, selectedFinding, findingLoading, findingsLoading, loadFindings, loadAllFindings, loadFinding, postFinding, handleEvent, domainHook };
 }

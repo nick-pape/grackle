@@ -4,28 +4,16 @@ import http2 from "node:http2";
 import { randomUUID } from "node:crypto";
 import {
   registerGrackleRoutes,
-  registerAdapter, startHeartbeat, getAdapter, setConnection, removeConnection, listConnections,
-  initSigchldSubscriber, initEscalationAutoSubscriber, initLifecycleManager,
-  emit, subscribe,
-  startTaskSession, reanimateAgent,
-  pushToEnv, attemptReconnects, resetReconnectState,
-  parseAdapterConfig, isKnowledgeEnabled, initKnowledge, neo4jHealthCheck,
-  createKnowledgeHealthPhase, getKnowledgeReadinessCheck,
-  computeTaskStatus,
-  ReconciliationManager, createCronPhase, createOrphanPhase, createDispatchPhase, findFirstConnectedEnvironment, lifecycleCleanupPhase, createEnvironmentReconciliationPhase,
-  hasCapacity,
-  createRootTaskBoot,
-  initOrphanReparentSubscriber,
+  startHeartbeat, getAdapter, setConnection, removeConnection,
+  emit, pushToEnv, attemptReconnects, resetReconnectState,
+  parseAdapterConfig, isKnowledgeEnabled, initKnowledge,
+  getKnowledgeReadinessCheck,
+  ReconciliationManager,
   logger, exec, detectLanIp,
   runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace,
 } from "@grackle-ai/core";
-import { envRegistry, sessionStore, workspaceStore, taskStore, scheduleStore, personaStore, settingsStore, dispatchQueueStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome, checkDatabaseIntegrity, startWalCheckpointTimer, stopWalCheckpointTimer } from "@grackle-ai/database";
-import { DockerAdapter } from "@grackle-ai/adapter-docker";
-import { LocalAdapter } from "@grackle-ai/adapter-local";
-import { SshAdapter } from "@grackle-ai/adapter-ssh";
-import { CodespaceAdapter } from "@grackle-ai/adapter-codespace";
-import { closeAllTunnels, reconnectOrProvision } from "@grackle-ai/adapter-sdk";
-import { ROOT_TASK_ID, DEFAULT_WORKSPACE_ID } from "@grackle-ai/common";
+import { envRegistry, sessionStore, settingsStore, personaStore, workspaceStore, taskStore, sqlite, grackleHome } from "@grackle-ai/database";
+import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { LocalPowerLineManager } from "./local-powerline-manager.js";
 import { registerCrashHandlers } from "./crash-handler.js";
 import { resolveServerConfig } from "./config.js";
@@ -33,33 +21,33 @@ import { createMcpServer } from "@grackle-ai/mcp";
 import {
   loadOrCreateApiKey, verifyApiKey, setAuthLogger,
   generatePairingCode,
-  startSessionCleanup, stopSessionCleanup,
-  startPairingCleanup, stopPairingCleanup,
-  startOAuthCleanup, stopOAuthCleanup,
+  startSessionCleanup,
+  startPairingCleanup,
+  startOAuthCleanup,
 } from "@grackle-ai/auth";
 import { createWebServer, isWildcardAddress, type ReadinessResult } from "@grackle-ai/web-server";
 import { createRequire } from "node:module";
+import { initializeDatabase } from "./database-init.js";
+import { registerAllAdapters } from "./adapter-registry.js";
+import { bootstrapLocalEnvironment } from "./local-environment.js";
+import { createReconciliationPhases } from "./reconciliation-setup.js";
+import { wireEventSubscribers } from "./event-subscribers.js";
+import { createShutdown } from "./shutdown.js";
 
 /** Require function for loading optional native modules (qrcode). */
 const esmRequire: NodeRequire = createRequire(import.meta.url);
 
-/** Manager for local PowerLine lifecycle (start, stop, auto-restart). */
-let localPowerLineManager: LocalPowerLineManager | undefined;
-
 async function main(): Promise<void> {
+  // Initialized to a no-op so server error handlers that fire before createShutdown()
+  // don't throw. Replaced with the real shutdown function after all servers are created.
+  let shutdown: () => Promise<void> = async () => {};
+
   // Resolve and validate all server configuration from env vars (fail fast on invalid values)
   const config = resolveServerConfig();
   logger.info({ config }, "Server configuration resolved");
 
   // Open the database, verify integrity, run schema migrations, then seed defaults
-  openDatabase();
-  checkDatabaseIntegrity();
-  initDatabase();
-  seedDatabase(sqlite!);
-  startWalCheckpointTimer();
-
-  // Reset all environment statuses on startup — in-memory connections are lost
-  envRegistry.resetAllStatuses();
+  initializeDatabase();
 
   // Configure auth logger to use the server's pino instance
   setAuthLogger(logger);
@@ -67,132 +55,23 @@ async function main(): Promise<void> {
   // Load (or generate) the API key on startup
   const apiKey = loadOrCreateApiKey(grackleHome);
 
-  // Register adapters with server dependencies injected
-  const adapterDeps = {
-    exec,
-    logger,
-    isGitHubProviderEnabled: (): boolean => credentialProviders.getCredentialProviders().github !== "off",
-  };
-  registerAdapter(new DockerAdapter(adapterDeps));
-  registerAdapter(new LocalAdapter());
-  registerAdapter(new SshAdapter(adapterDeps));
-  registerAdapter(new CodespaceAdapter(adapterDeps));
+  // Register all built-in environment adapters
+  registerAllAdapters();
 
-  // --- Auto-start local PowerLine ---
-  const skipLocalPowerLine = config.skipLocalPowerline;
-  const powerlinePort = config.powerlinePort;
-  const plBindHost = config.host;
-
-  if (skipLocalPowerLine) {
-    logger.info("Skipping local PowerLine auto-start (GRACKLE_SKIP_LOCAL_POWERLINE=1)");
-  } else try {
-    // Ensure the "local" environment exists in the database
-    let localEnv = envRegistry.getEnvironment("local");
-    const adapterConfig = JSON.stringify({ port: powerlinePort, host: plBindHost });
-
-    if (localEnv) {
-      // Update the adapter config to match the current port/host
-      envRegistry.updateAdapterConfig("local", adapterConfig);
-      localEnv = envRegistry.getEnvironment("local")!;
-    } else {
-      envRegistry.addEnvironment("local", "Local", "local", adapterConfig);
-      localEnv = envRegistry.getEnvironment("local")!;
-    }
-
-    // Sync: keep the local environment's defaultRuntime in sync with the
-    // app-level default persona's runtime so bootstrap pre-installs the
-    // correct runtime packages (fixes #1031).
-    const defaultPersonaId = settingsStore.getSetting("default_persona_id") || "";
-    const defaultPersona = defaultPersonaId ? personaStore.getPersona(defaultPersonaId) : undefined;
-    if (defaultPersona?.runtime && localEnv.defaultRuntime !== defaultPersona.runtime) {
-      const previousRuntime = localEnv.defaultRuntime;
-      envRegistry.updateDefaultRuntime("local", defaultPersona.runtime);
-      localEnv = envRegistry.getEnvironment("local")!;
-      logger.info(
-        { from: previousRuntime, to: defaultPersona.runtime },
-        "Synced local environment defaultRuntime with default persona",
-      );
-    }
-
-    // Seed: ensure the default workspace exists (tied to the local environment).
-    // The system task needs a workspace to resolve an environment for execution.
-    const defaultWorkspace = workspaceStore.getWorkspace(DEFAULT_WORKSPACE_ID);
-    if (!defaultWorkspace) {
-      workspaceStore.createWorkspace(DEFAULT_WORKSPACE_ID, "Default", "", "", "local", false);
-      logger.info("Created default workspace for local environment");
-    } else if (defaultWorkspace.environmentId !== "local") {
-      logger.warn(
-        { workspaceId: DEFAULT_WORKSPACE_ID, environmentId: defaultWorkspace.environmentId },
-        "Default workspace is not bound to local environment; skipping system task association",
-      );
-    }
-    // Backfill: assign the default workspace to the system task if it has none.
-    const systemTask = taskStore.getTask(ROOT_TASK_ID);
-    const resolvedDefault = workspaceStore.getWorkspace(DEFAULT_WORKSPACE_ID);
-    if (systemTask && !systemTask.workspaceId && resolvedDefault?.environmentId === "local") {
-      taskStore.setTaskWorkspace(ROOT_TASK_ID, DEFAULT_WORKSPACE_ID);
-      logger.info("Assigned default workspace to system task");
-    }
-
-    // Spawn the PowerLine child process with auto-restart on crash
-    localPowerLineManager = new LocalPowerLineManager({
-      port: powerlinePort,
-      host: plBindHost,
-      token: localEnv.powerlineToken,
-      onStatusChange: (status) => {
-        envRegistry.updateEnvironmentStatus("local", status);
-        emit("environment.changed", {});
-      },
-      onRestarted: () => {
-        resetReconnectState("local");
-      },
-    });
-    await localPowerLineManager.start();
-
-    // Auto-provision: connect the local adapter
-    const localAdapter = getAdapter("local")!;
-    const config = parseAdapterConfig(localEnv.adapterConfig);
-
-    envRegistry.updateEnvironmentStatus("local", "connecting");
-    emit("environment.changed", {});
-
-    for await (const event of reconnectOrProvision(
-      "local",
-      localAdapter,
-      config,
-      localEnv.powerlineToken,
-      !!localEnv.bootstrapped,
-    )) {
-      logger.info({ stage: event.stage, progress: event.progress }, "Local env: %s", event.message);
-    }
-
-    const conn = await localAdapter.connect("local", config, localEnv.powerlineToken);
-    setConnection("local", conn);
-    // Push env-var tokens only — file tokens would just overwrite local credential
-    // files (e.g. ~/.claude/credentials.json) with their own content.
-    await pushToEnv("local", { excludeFileTokens: true });
-    envRegistry.updateEnvironmentStatus("local", "connected");
-    envRegistry.markBootstrapped("local");
-    emit("environment.changed", {});
-
-    logger.info({ port: powerlinePort }, "Local environment auto-connected");
-  } catch (err) {
-    // Clean up the PowerLine child if it started but provisioning/connection failed
-    const failedManager: LocalPowerLineManager | undefined = localPowerLineManager;
-    localPowerLineManager = undefined;
-    if (failedManager) {
-      await failedManager.stop();
-    }
-    envRegistry.updateEnvironmentStatus("local", "error");
-    emit("environment.changed", {});
-
-    logger.error(
-      { err, port: powerlinePort },
-      "Failed to start local PowerLine — local environment will not be available. Is port %d in use?",
-      powerlinePort,
-    );
-    // Non-fatal: server continues without local env (remote envs still work)
-  }
+  // Bootstrap the local environment (PowerLine + provisioning)
+  const { powerLineManager: localPowerLineManager } = await bootstrapLocalEnvironment(
+    {
+      powerlinePort: config.powerlinePort,
+      bindHost: config.host,
+      skipLocalPowerline: config.skipLocalPowerline,
+    },
+    {
+      envRegistry, settingsStore, personaStore, workspaceStore, taskStore,
+      getAdapter, parseAdapterConfig, setConnection, pushToEnv,
+      reconnectOrProvision, emit, resetReconnectState, logger,
+      createPowerLineManager: (opts) => new LocalPowerLineManager(opts),
+    },
+  );
 
   // Non-blocking startup diagnostic: check gh CLI availability
   const GH_CHECK_TIMEOUT_MS: number = 5_000;
@@ -248,63 +127,7 @@ async function main(): Promise<void> {
   startOAuthCleanup();
 
   // --- Reconciliation Manager ---
-  const cronPhase = createCronPhase({
-    getDueSchedules: scheduleStore.getDueSchedules,
-    advanceSchedule: scheduleStore.advanceSchedule,
-    createTask: taskStore.createTask,
-    setTaskScheduleId: taskStore.setTaskScheduleId,
-    startTaskSession,
-    emit,
-    findFirstConnectedEnvironment,
-    getPersona: personaStore.getPersona,
-    getTask: taskStore.getTask,
-    setScheduleEnabled: scheduleStore.setScheduleEnabled,
-    isEnvironmentConnected: (id: string) => {
-      const env = envRegistry.getEnvironment(id);
-      return env?.status === "connected";
-    },
-  });
-  const orphanPhase = createOrphanPhase({
-    listAllTasks: () => {
-      const workspaces = workspaceStore.listWorkspaces();
-      const allTasks: Array<ReturnType<typeof taskStore.getTask> & {}> = [];
-      for (const ws of workspaces) {
-        allTasks.push(...taskStore.listTasks(ws.id));
-      }
-      return allTasks;
-    },
-    reparentTask: (taskId, newParentTaskId) => taskStore.reparentTask(taskId, newParentTaskId),
-    emit,
-  });
-  const environmentReconciliationPhase = createEnvironmentReconciliationPhase({
-    listEnvironments: envRegistry.listEnvironments,
-    listConnectionIds: () => new Set(listConnections().keys()),
-    updateEnvironmentStatus: envRegistry.updateEnvironmentStatus,
-    removeConnection,
-    emit,
-  });
-  const dispatchPhase = createDispatchPhase({
-    listPendingEntries: dispatchQueueStore.listPending,
-    dequeueEntry: dispatchQueueStore.dequeue,
-    getTask: taskStore.getTask,
-    hasCapacity: (environmentId: string) => hasCapacity(environmentId, {
-      countActiveForEnvironment: sessionStore.countActiveForEnvironment,
-      getEnvironment: (id) => envRegistry.getEnvironment(id),
-      getSetting: settingsStore.getSetting,
-    }),
-    startTaskSession,
-    emit,
-    isEnvironmentConnected: (id: string) => {
-      const env = envRegistry.getEnvironment(id);
-      return env?.status === "connected";
-    },
-  });
-  const reconciliationPhases = [dispatchPhase, cronPhase, lifecycleCleanupPhase, orphanPhase, environmentReconciliationPhase];
-  if (isKnowledgeEnabled()) {
-    reconciliationPhases.push(
-      createKnowledgeHealthPhase({ healthCheck: neo4jHealthCheck }),
-    );
-  }
+  const reconciliationPhases = createReconciliationPhases();
   const reconciliationManager = new ReconciliationManager(reconciliationPhases);
   reconciliationManager.start();
 
@@ -386,47 +209,8 @@ async function main(): Promise<void> {
     },
   });
 
-  // Wire SIGCHLD: notify parent tasks when child sessions reach terminal status
-  initSigchldSubscriber();
-
-  // Wire escalation auto-detection: notify human when standalone tasks go idle
-  initEscalationAutoSubscriber();
-
-  // Wire orphan reparenting: reparent non-terminal children when parent task completes/fails
-  initOrphanReparentSubscriber();
-
-  // Wire lifecycle manager: auto-hibernate sessions when all fds are closed
-  initLifecycleManager();
-
-  // Auto-start the root task (process 1) when any environment connects.
-  // Uses reanimate-first strategy with exponential backoff (issue #959).
-  // Skipped in E2E tests where the root task session would conflict with test sessions.
-  // Also deferred until onboarding is complete so the user's runtime choice is respected (#1031).
-  if (!config.skipRootAutostart) {
-    const tryBootRootTask = createRootTaskBoot({
-      getTask: taskStore.getTask,
-      listSessionsForTask: sessionStore.listSessionsForTask,
-      getLatestSessionForTask: sessionStore.getLatestSessionForTask,
-      computeTaskStatus,
-      findFirstConnectedEnvironment,
-      startTaskSession,
-      reanimateAgent,
-      isOnboarded: () => settingsStore.getSetting("onboarding_completed") === "true",
-    });
-    subscribe((event) => {
-      if (event.type === "environment.changed") {
-        tryBootRootTask().catch(() => { /* logged inside */ });
-      }
-      // Also try when onboarding completes — the environment is already
-      // connected but boot was deferred until the user chose a runtime.
-      if (event.type === "setting.changed") {
-        const payload = event.payload as { key?: string; value?: string };
-        if (payload.key === "onboarding_completed" && payload.value === "true") {
-          tryBootRootTask().catch(() => { /* logged inside */ });
-        }
-      }
-    });
-  }
+  // Wire event subscribers (SIGCHLD, escalation, orphan reparent, lifecycle, root task boot)
+  wireEventSubscribers({ skipRootAutostart: config.skipRootAutostart });
 
   webServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {
@@ -471,7 +255,6 @@ async function main(): Promise<void> {
       process.stdout.write("\n");
 
       logger.info({ url: pairingUrl }, "Pairing URL generated");
-
     }
   });
 
@@ -506,72 +289,15 @@ async function main(): Promise<void> {
     logger.info({ port: mcpPort, host: bindHost }, "MCP server on http://%s:%d/mcp", urlHost, mcpPort);
   });
 
-  // Graceful shutdown with a hard timeout so upgraded WS connections don't block exit.
-  const SHUTDOWN_TIMEOUT_MS: number = 5_000;
-
-  async function shutdown(): Promise<void> {
-    logger.info("Shutting down...");
-    stopWalCheckpointTimer();
-    stopPairingCleanup();
-    stopSessionCleanup();
-    stopOAuthCleanup();
-    await reconciliationManager.stop();
-    const forceExit = setTimeout(() => {
-      logger.warn("Shutdown timed out, forcing exit");
-      process.exit(1);
-    }, SHUTDOWN_TIMEOUT_MS);
-
-    // Stop the local PowerLine child process first
-    const plManager: LocalPowerLineManager | undefined = localPowerLineManager;
-    localPowerLineManager = undefined;
-    if (plManager) {
-      await plManager.stop();
-    }
-
-    if (knowledgeCleanup) {
-      try {
-        await knowledgeCleanup();
-      } catch (err) {
-        logger.error({ err }, "Error while shutting down knowledge graph");
-      }
-    }
-
-    await closeAllTunnels();
-
-    await new Promise<void>((resolve) => {
-      grpcServer.close((err?: Error) => {
-        if (err) {
-          logger.error({ err }, "Error while closing gRPC server");
-        }
-        resolve();
-      });
-    });
-
-    await new Promise<void>((resolve) => {
-      webServer.close((err?: Error) => {
-        if (err) {
-          logger.error({ err }, "Error while closing web server");
-        }
-        resolve();
-      });
-    });
-
-    await new Promise<void>((resolve) => {
-      mcpServer.close((err?: Error) => {
-        if (err) {
-          logger.error({ err }, "Error while closing MCP server");
-        }
-        resolve();
-      });
-    });
-
-    // Final WAL checkpoint (TRUNCATE) to fully flush pending writes before exit
-    if (sqlite) {
-      sqlite.pragma("wal_checkpoint(TRUNCATE)");
-    }
-    clearTimeout(forceExit);
-    process.exit(process.exitCode || 0);
-  }
+  // --- Graceful shutdown ---
+  shutdown = createShutdown({
+    grpcServer,
+    webServer,
+    mcpServer,
+    reconciliationManager,
+    localPowerLineManager,
+    knowledgeCleanup,
+  });
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   process.on("SIGINT", shutdown);
