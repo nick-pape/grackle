@@ -10,8 +10,12 @@ import { workspaceRowToProto } from "./grpc-proto-converters.js";
 /** List all workspaces, optionally filtered by environment. */
 export async function listWorkspaces(req: grackle.ListWorkspacesRequest): Promise<grackle.WorkspaceList> {
   const rows = workspaceStore.listWorkspaces(req.environmentId || undefined);
+  // Batch-fetch linked environment IDs to avoid N+1 queries
+  const linkedEnvMap = workspaceEnvironmentLinkStore.getLinkedEnvironmentIdsByWorkspaces(
+    rows.map((r) => r.id),
+  );
   return create(grackle.WorkspaceListSchema, {
-    workspaces: rows.map(workspaceRowToProto),
+    workspaces: rows.map((row) => workspaceRowToProto(row, linkedEnvMap)),
   });
 }
 

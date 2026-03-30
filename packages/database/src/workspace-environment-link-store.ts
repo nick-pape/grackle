@@ -35,6 +35,33 @@ export function getWorkspaceIdsLinkedToEnvironment(environmentId: string): strin
   return rows.map((r) => r.workspaceId);
 }
 
+/**
+ * Batch-fetch linked environment IDs for multiple workspaces in a single query.
+ * Returns a Map from workspace ID to its linked environment IDs.
+ */
+export function getLinkedEnvironmentIdsByWorkspaces(workspaceIds: string[]): Map<string, string[]> {
+  const result = new Map<string, string[]>();
+  if (workspaceIds.length === 0) {
+    return result;
+  }
+  const rows = db.select({
+    workspaceId: workspaceEnvironmentLinks.workspaceId,
+    environmentId: workspaceEnvironmentLinks.environmentId,
+  })
+    .from(workspaceEnvironmentLinks)
+    .where(sql`${workspaceEnvironmentLinks.workspaceId} IN (${sql.join(workspaceIds.map((id) => sql`${id}`), sql`, `)})`)
+    .all();
+  for (const row of rows) {
+    const existing = result.get(row.workspaceId);
+    if (existing) {
+      existing.push(row.environmentId);
+    } else {
+      result.set(row.workspaceId, [row.environmentId]);
+    }
+  }
+  return result;
+}
+
 /** Check whether a specific link exists. */
 export function isLinked(workspaceId: string, environmentId: string): boolean {
   const row = db.select({ workspaceId: workspaceEnvironmentLinks.workspaceId })

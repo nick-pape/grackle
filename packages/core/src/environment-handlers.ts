@@ -83,8 +83,6 @@ export async function updateEnvironment(req: grackle.UpdateEnvironmentRequest): 
 
 /** Remove an environment after disconnecting it and cleaning up references. */
 export async function removeEnvironment(req: grackle.EnvironmentId): Promise<grackle.Empty> {
-  // Cascade-delete linked-environment references (links, not primary ownership)
-  workspaceEnvironmentLinkStore.deleteLinksForEnvironment(req.id);
   // Block deletion if workspaces still reference this environment as primary
   const wsCount = workspaceStore.countWorkspacesByEnvironment(req.id);
   if (wsCount > 0) {
@@ -108,6 +106,8 @@ export async function removeEnvironment(req: grackle.EnvironmentId): Promise<gra
     }
   }
   adapterManager.removeConnection(req.id);
+  // Cascade-delete linked-environment references (links, not primary ownership)
+  workspaceEnvironmentLinkStore.deleteLinksForEnvironment(req.id);
   // Delete sessions referencing this environment (FK constraint)
   sessionStore.deleteByEnvironment(req.id);
   envRegistry.removeEnvironment(req.id);

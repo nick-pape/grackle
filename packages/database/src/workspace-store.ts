@@ -39,24 +39,22 @@ export function getWorkspace(id: string): WorkspaceRow | undefined {
  */
 export function listWorkspaces(environmentId?: string): WorkspaceRow[] {
   if (environmentId) {
-    // Include workspaces where the env is primary OR linked
-    const linkedWorkspaceIds = db.select({ workspaceId: workspaceEnvironmentLinks.workspaceId })
-      .from(workspaceEnvironmentLinks)
-      .where(eq(workspaceEnvironmentLinks.environmentId, environmentId))
-      .all()
-      .map((r) => r.workspaceId);
-
-    const conditions = [
-      eq(workspaces.status, "active"),
-      linkedWorkspaceIds.length > 0
-        ? or(
-          eq(workspaces.environmentId, environmentId),
-          sql`${workspaces.id} IN (${sql.join(linkedWorkspaceIds.map((id) => sql`${id}`), sql`, `)})`,
-        )
-        : eq(workspaces.environmentId, environmentId),
-    ];
+    // Include workspaces where the env is primary OR linked, using a single query.
     return db.select().from(workspaces)
-      .where(and(...conditions))
+      .where(
+        and(
+          eq(workspaces.status, "active"),
+          or(
+            eq(workspaces.environmentId, environmentId),
+            sql`exists (
+              select 1
+              from ${workspaceEnvironmentLinks}
+              where ${workspaceEnvironmentLinks.workspaceId} = ${workspaces.id}
+                and ${workspaceEnvironmentLinks.environmentId} = ${environmentId}
+            )`,
+          ),
+        ),
+      )
       .orderBy(desc(workspaces.createdAt))
       .all();
   }

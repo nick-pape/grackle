@@ -307,7 +307,7 @@ export const workspaceTools: ToolDefinition[] = [
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
-      idempotentHint: true,
+      idempotentHint: false,
       openWorldHint: false,
     },
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
