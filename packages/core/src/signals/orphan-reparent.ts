@@ -8,12 +8,13 @@
  */
 
 import { ROOT_TASK_ID, TASK_STATUS } from "@grackle-ai/common";
-import { subscribe, emit, type GrackleEvent } from "../event-bus.js";
+import type { GrackleEvent } from "../event-bus.js";
 import { taskStore, sessionStore } from "@grackle-ai/database";
 import * as streamRegistry from "../stream-registry.js";
 import { ensureAsyncDeliveryListener } from "../pipe-delivery.js";
 import { deliverSignalToTask } from "./signal-delivery.js";
 import { logger } from "../logger.js";
+import type { Disposable, PluginContext } from "../subscriber-types.js";
 
 /** Terminal task statuses that trigger orphan reparenting. */
 const TERMINAL_TASK_STATUSES: ReadonlySet<string> = new Set([
@@ -24,23 +25,20 @@ const TERMINAL_TASK_STATUSES: ReadonlySet<string> = new Set([
 /** How long (ms) to remember a processed parent before allowing re-processing. */
 const DEDUP_TTL_MS: number = 3_600_000; // 1 hour
 
-/** Track processed parents to prevent duplicate reparenting: parentTaskId → timestamp. */
-const processed: Map<string, number> = new Map();
-
-/** Whether the subscriber has been initialized. */
-let initialized: boolean = false;
-
 /**
- * Initialize the orphan reparenting event-bus subscriber.
- * Idempotent — safe to call multiple times.
+ * Create the orphan reparenting event-bus subscriber.
+ *
+ * Watches for parent tasks reaching terminal state and reparents their
+ * non-terminal children to the grandparent (or root task as ultimate adopter).
+ *
+ * @param ctx - Plugin context providing event-bus access.
+ * @returns A Disposable that unsubscribes and clears dedup state.
  */
-export function initOrphanReparentSubscriber(): void {
-  if (initialized) {
-    return;
-  }
-  initialized = true;
+export function createOrphanReparentSubscriber(ctx: PluginContext): Disposable {
+  /** Track processed parents to prevent duplicate reparenting: parentTaskId → timestamp. */
+  const processed: Map<string, number> = new Map();
 
-  subscribe((event: GrackleEvent) => {
+  const unsubscribe = ctx.subscribe((event: GrackleEvent) => {
     if (event.type !== "task.completed" && event.type !== "task.updated") {
       return;
     }
@@ -58,18 +56,29 @@ export function initOrphanReparentSubscriber(): void {
     // Fire-and-forget async handler — errors are logged, never thrown
     (async () => {
       try {
-        await handleParentTerminal(parentTaskId);
+        await handleParentTerminal(ctx, processed, parentTaskId);
       } catch (err) {
         logger.error({ err, parentTaskId }, "Orphan reparenting failed for parent task");
       }
     })().catch(() => { /* swallowed — logged above */ });
   });
+
+  return {
+    dispose(): void {
+      unsubscribe();
+      processed.clear();
+    },
+  };
 }
 
 /**
  * Check if a parent task is terminal and reparent its non-terminal children.
  */
-async function handleParentTerminal(parentTaskId: string): Promise<void> {
+async function handleParentTerminal(
+  ctx: PluginContext,
+  processed: Map<string, number>,
+  parentTaskId: string,
+): Promise<void> {
   const parentTask = taskStore.getTask(parentTaskId);
   if (!parentTask) {
     return;
@@ -120,14 +129,14 @@ async function handleParentTerminal(parentTaskId: string): Promise<void> {
     try {
       taskStore.reparentTask(orphan.id, grandparentId);
 
-      emit("task.reparented", {
+      ctx.emit("task.reparented", {
         taskId: orphan.id,
         oldParentTaskId: parentTaskId,
         newParentTaskId: grandparentId,
         workspaceId: orphan.workspaceId || "",
       });
 
-      emit("task.updated", {
+      ctx.emit("task.updated", {
         taskId: orphan.id,
         workspaceId: orphan.workspaceId || "",
       });
@@ -222,13 +231,4 @@ export function transferAllPipeSubscriptions(
       transferred,
     );
   }
-}
-
-/**
- * Reset module state. For testing only.
- * @internal
- */
-export function _resetForTesting(): void {
-  initialized = false;
-  processed.clear();
 }

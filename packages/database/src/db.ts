@@ -32,6 +32,23 @@ interface Migration {
 const MIGRATIONS: Migration[] = [
   {
     version: 2,
+    name: "add-workspace-environment-links",
+    up: (conn) => {
+      conn.exec(`
+        CREATE TABLE IF NOT EXISTS workspace_environment_links (
+          workspace_id    TEXT NOT NULL REFERENCES workspaces(id),
+          environment_id  TEXT NOT NULL REFERENCES environments(id),
+          created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+          PRIMARY KEY (workspace_id, environment_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_workspace_environment_links_environment_id
+          ON workspace_environment_links(environment_id);
+      `);
+    },
+  },
+  {
+    version: 3,
     name: "dispatch-queue",
     up: (conn) => {
       conn.exec(`
@@ -392,6 +409,16 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
       created_at          TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS workspace_environment_links (
+      workspace_id    TEXT NOT NULL REFERENCES workspaces(id),
+      environment_id  TEXT NOT NULL REFERENCES environments(id),
+      created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (workspace_id, environment_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_workspace_environment_links_environment_id
+      ON workspace_environment_links(environment_id);
 
     CREATE TABLE IF NOT EXISTS dispatch_queue (
       id                TEXT PRIMARY KEY,

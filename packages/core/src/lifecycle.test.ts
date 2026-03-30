@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 // ── Mocks ───────────────────────────────────────────────────
 vi.mock("./logger.js", () => ({
@@ -7,10 +7,6 @@ vi.mock("./logger.js", () => ({
 
 vi.mock("./stream-hub.js", () => ({
   publish: vi.fn(),
-}));
-
-vi.mock("./event-bus.js", () => ({
-  emit: vi.fn(),
 }));
 
 vi.mock("./event-processor.js", () => ({
@@ -25,11 +21,11 @@ const sqlite = _sqlite!;
 import * as streamRegistry from "./stream-registry.js";
 import * as adapterManager from "./adapter-manager.js";
 import {
-  initLifecycleManager,
+  createLifecycleSubscriber,
   cleanupLifecycleStream,
   ensureLifecycleStream,
-  _resetForTesting as resetLifecycle,
 } from "./lifecycle.js";
+import type { Disposable, PluginContext } from "./subscriber-types.js";
 
 /** Apply minimal schema. */
 function applySchema(): void {
@@ -74,8 +70,18 @@ function applySchema(): void {
   sqlite.exec("INSERT OR IGNORE INTO environments (id) VALUES ('test-env')");
 }
 
+/** Create a mock PluginContext for lifecycle subscriber. */
+function createMockContext(): PluginContext {
+  return {
+    subscribe: vi.fn(() => vi.fn()),
+    emit: vi.fn(),
+  };
+}
+
 describe("lifecycle manager", () => {
   let mockKill: ReturnType<typeof vi.fn>;
+  let ctx: PluginContext;
+  let disposable: Disposable;
 
   beforeEach(() => {
     sqlite.exec("DROP TABLE IF EXISTS sessions");
@@ -83,15 +89,18 @@ describe("lifecycle manager", () => {
     applySchema();
     vi.clearAllMocks();
     streamRegistry._resetForTesting();
-    resetLifecycle();
 
-    // Re-initialize lifecycle manager (registers orphan callback)
-    initLifecycleManager();
+    ctx = createMockContext();
+    disposable = createLifecycleSubscriber(ctx);
 
     mockKill = vi.fn().mockResolvedValue({});
     vi.spyOn(adapterManager, "getConnection").mockReturnValue({
       client: { kill: mockKill },
     } as unknown as ReturnType<typeof adapterManager.getConnection>);
+  });
+
+  afterEach(() => {
+    disposable.dispose();
   });
 
   it("auto-stops session when last subscription removed", () => {
@@ -170,10 +179,28 @@ describe("lifecycle manager", () => {
     expect(sessionStore.getSession("child")?.status).toBe("stopped");
     expect(sessionStore.getSession("child")?.endReason).toBe("completed");
   });
+
+  it("dispose unregisters orphan callback so auto-stop no longer fires", () => {
+    // Dispose the lifecycle subscriber registered in beforeEach
+    disposable.dispose();
+
+    // Now orphaning a session should NOT auto-stop it (no callback registered)
+    sessionStore.createSession("sess-disposed", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+    sessionStore.updateSessionStatus("sess-disposed", "running");
+    const stream = streamRegistry.createStream("lifecycle:sess-disposed");
+    const sub = streamRegistry.subscribe(stream.id, "sess-disposed", "rw", "detach", false);
+    streamRegistry.unsubscribe(sub.id);
+
+    // Session should remain running — orphan callback was unregistered
+    const session = sessionStore.getSession("sess-disposed");
+    expect(session?.status).toBe("running");
+  });
 });
 
 describe("SIGTERM end reason derivation", () => {
   let mockKill: ReturnType<typeof vi.fn>;
+  let ctx: PluginContext;
+  let disposable: Disposable;
 
   beforeEach(() => {
     sqlite.exec("DROP TABLE IF EXISTS sessions");
@@ -181,13 +208,18 @@ describe("SIGTERM end reason derivation", () => {
     applySchema();
     vi.clearAllMocks();
     streamRegistry._resetForTesting();
-    resetLifecycle();
-    initLifecycleManager();
+
+    ctx = createMockContext();
+    disposable = createLifecycleSubscriber(ctx);
 
     mockKill = vi.fn().mockResolvedValue({});
     vi.spyOn(adapterManager, "getConnection").mockReturnValue({
       client: { kill: mockKill },
     } as unknown as ReturnType<typeof adapterManager.getConnection>);
+  });
+
+  afterEach(() => {
+    disposable.dispose();
   });
 
   it("sets endReason to terminated when IDLE session has sigtermSentAt", () => {
@@ -237,6 +269,8 @@ describe("SIGTERM end reason derivation", () => {
 
 describe("ensureLifecycleStream", () => {
   let mockKill: ReturnType<typeof vi.fn>;
+  let ctx: PluginContext;
+  let disposable: Disposable;
 
   beforeEach(() => {
     sqlite.exec("DROP TABLE IF EXISTS sessions");
@@ -244,14 +278,18 @@ describe("ensureLifecycleStream", () => {
     applySchema();
     vi.clearAllMocks();
     streamRegistry._resetForTesting();
-    resetLifecycle();
 
-    initLifecycleManager();
+    ctx = createMockContext();
+    disposable = createLifecycleSubscriber(ctx);
 
     mockKill = vi.fn().mockResolvedValue({});
     vi.spyOn(adapterManager, "getConnection").mockReturnValue({
       client: { kill: mockKill },
     } as unknown as ReturnType<typeof adapterManager.getConnection>);
+  });
+
+  afterEach(() => {
+    disposable.dispose();
   });
 
   it("creates lifecycle stream when none exists", () => {
@@ -335,6 +373,8 @@ describe("ensureLifecycleStream", () => {
 describe("auto-reanimate on subscribe", () => {
   let mockKill: ReturnType<typeof vi.fn>;
   let mockResume: ReturnType<typeof vi.fn>;
+  let ctx: PluginContext;
+  let disposable: Disposable;
 
   beforeEach(() => {
     sqlite.exec("DROP TABLE IF EXISTS sessions");
@@ -342,15 +382,19 @@ describe("auto-reanimate on subscribe", () => {
     applySchema();
     vi.clearAllMocks();
     streamRegistry._resetForTesting();
-    resetLifecycle();
 
-    initLifecycleManager();
+    ctx = createMockContext();
+    disposable = createLifecycleSubscriber(ctx);
 
     mockKill = vi.fn().mockResolvedValue({});
     mockResume = vi.fn().mockReturnValue((async function* () { /* empty stream */ })());
     vi.spyOn(adapterManager, "getConnection").mockReturnValue({
       client: { kill: mockKill, resume: mockResume },
     } as unknown as ReturnType<typeof adapterManager.getConnection>);
+  });
+
+  afterEach(() => {
+    disposable.dispose();
   });
 
   it("reanimates STOPPED session when external subscription created", () => {
@@ -433,8 +477,8 @@ describe("auto-reanimate on subscribe", () => {
     for (const reason of ["completed", "killed", "interrupted", "terminated"]) {
       sqlite.exec("DELETE FROM sessions");
       streamRegistry._resetForTesting();
-      resetLifecycle();
-      initLifecycleManager();
+      disposable.dispose();
+      disposable = createLifecycleSubscriber(createMockContext());
 
       sessionStore.createSession(`sess-${reason}`, "test-env", "claude-code", "test", "sonnet", "/tmp/log");
       sessionStore.updateSession(`sess-${reason}`, "stopped", undefined, undefined, reason);

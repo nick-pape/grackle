@@ -1,6 +1,27 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 30 Mar 2026 02:41:47 GMT and should not be manually modified.
+This log was last generated on Mon, 30 Mar 2026 15:00:21 GMT and should not be manually modified.
+
+## 0.92.3
+Mon, 30 Mar 2026 15:00:21 GMT
+
+### Patches
+
+- Add notification permission step to onboarding wizard
+
+## 0.92.2
+Mon, 30 Mar 2026 14:24:19 GMT
+
+### Patches
+
+- Introduce ServiceCollector for modular gRPC handler registration
+
+## 0.92.1
+Mon, 30 Mar 2026 12:53:35 GMT
+
+### Patches
+
+- MCP tool registration is now plugin-contributable via optional additionalToolGroups parameter
 
 ## 0.92.0
 Mon, 30 Mar 2026 02:41:47 GMT

@@ -1,5 +1,7 @@
 // ─── gRPC Service ───────────────────────────────────────────
-export { registerGrackleRoutes } from "./grpc-service.js";
+export { registerGrackleRoutes, createDefaultCollector } from "./grpc-service.js";
+export { createServiceCollector } from "./service-collector.js";
+export type { ServiceCollector, HandlerGroup } from "./service-collector.js";
 
 // ─── Adapter Management ────────────────────────────────────
 export {
@@ -12,11 +14,14 @@ export { parseAdapterConfig } from "./adapter-config.js";
 // ─── Event System ──────────────────────────────────────────
 export { emit, subscribe } from "./event-bus.js";
 
-// ─── Wiring Initializers ───────────────────────────────────
-export { initSigchldSubscriber } from "./signals/sigchld.js";
-export { initEscalationAutoSubscriber } from "./signals/escalation-auto.js";
-export { initOrphanReparentSubscriber, transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
-export { initLifecycleManager } from "./lifecycle.js";
+// ─── Subscriber Types ─────────────────────────────────────
+export type { Disposable, PluginContext, SubscriberFactory } from "./subscriber-types.js";
+
+// ─── Subscriber Factories ─────────────────────────────────
+export { createSigchldSubscriber } from "./signals/sigchld.js";
+export { createEscalationAutoSubscriber } from "./signals/escalation-auto.js";
+export { createOrphanReparentSubscriber, transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
+export { createLifecycleSubscriber } from "./lifecycle.js";
 export { ensureStdinStream, publishToStdin, cleanupStdinStream } from "./stdin-delivery.js";
 
 // ─── Task Session ───────────────────────────────────────────
@@ -45,7 +50,7 @@ export type { DispatchPhaseDeps } from "./dispatch-phase.js";
 export { hasCapacity, getEffectiveLimit } from "./concurrency.js";
 export type { ConcurrencyDeps } from "./concurrency.js";
 export { findFirstConnectedEnvironment } from "./find-connected-environment.js";
-export { createRootTaskBoot } from "./root-task-boot.js";
+export { createRootTaskBootSubscriber } from "./root-task-boot.js";
 export type { RootTaskBootDeps } from "./root-task-boot.js";
 export { validateExpression, computeNextRunAt } from "./schedule-expression.js";
 export { lifecycleCleanupPhase } from "./lifecycle-cleanup.js";

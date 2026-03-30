@@ -2,11 +2,11 @@
  * Shared setup for gRPC handler integration tests.
  *
  * Provides an in-memory SQLite database (real stores, no database mocks)
- * and a helper to extract handler methods from {@link registerGrackleRoutes}.
+ * and a helper to extract handler methods via {@link createDefaultCollector}.
  */
 import { openDatabase, initDatabase, sqlite, seedDatabase } from "@grackle-ai/database";
-import { registerGrackleRoutes } from "../grpc-service.js";
-import type { ConnectRouter } from "@connectrpc/connect";
+import { grackle } from "@grackle-ai/common";
+import { createDefaultCollector } from "../grpc-service.js";
 
 /**
  * Initialize an in-memory SQLite database with all tables and seed data.
@@ -19,16 +19,9 @@ export function initTestDatabase(): void {
 }
 
 /**
- * Extract the service handler map from `registerGrackleRoutes` by
- * calling it with a fake router that captures the method implementations.
+ * Extract the service handler map for the Grackle service.
+ * Uses the {@link createDefaultCollector} to get all built-in handlers.
  */
 export function getHandlers(): Record<string, (...args: unknown[]) => unknown> {
-  let handlers: Record<string, (...args: unknown[]) => unknown> = {};
-  const fakeRouter = {
-    service(_def: unknown, impl: Record<string, (...args: unknown[]) => unknown>) {
-      handlers = impl;
-    },
-  } as unknown as ConnectRouter;
-  registerGrackleRoutes(fakeRouter);
-  return handlers;
+  return createDefaultCollector().getHandlers(grackle.Grackle) as Record<string, (...args: unknown[]) => unknown>;
 }

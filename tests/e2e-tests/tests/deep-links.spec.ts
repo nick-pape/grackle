@@ -99,10 +99,10 @@ test.describe("Deep linking", { tag: ["@webui"] }, () => {
     const page = appPage;
 
     await page.goto("/this-route-does-not-exist");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
+    // Wait for the router redirect to complete — waitForFunction on "Connected" alone
+    // has a race: AppShell renders (showing "Connected") before Navigate's effect
+    // fires, so the URL may still be the unknown path when the function resolves.
+    await page.waitForURL("/", { timeout: 10_000 });
 
     // Should redirect to the dashboard home route.
     expect(new URL(page.url()).pathname).toBe("/");

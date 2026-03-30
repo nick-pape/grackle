@@ -1,9 +1,10 @@
 import { SESSION_STATUS } from "@grackle-ai/common";
-import { subscribe, type GrackleEvent } from "../event-bus.js";
+import type { GrackleEvent } from "../event-bus.js";
 import { taskStore, sessionStore } from "@grackle-ai/database";
 import { readLastTextEntry } from "../log-writer.js";
 import { deliverSignalToTask } from "./signal-delivery.js";
 import { logger } from "../logger.js";
+import type { Disposable, PluginContext } from "../subscriber-types.js";
 
 /** Maximum length for the child's last text message in the notification. */
 const MAX_LAST_MESSAGE_LENGTH: number = 2000;
@@ -30,27 +31,25 @@ const SIGCHLD_STATUSES: ReadonlySet<string> = new Set([
 /** How long (ms) to remember a delivered notification before allowing re-delivery. */
 const DEDUP_TTL_MS: number = 3_600_000; // 1 hour
 
-/** Track delivered notifications to prevent duplicates: key → delivery timestamp. */
-const delivered: Map<string, number> = new Map();
-
 /** Human-readable status labels for the notification text (non-STOPPED statuses only). */
 const STATUS_LABELS: Record<string, string> = {
   [SESSION_STATUS.IDLE]: "finished working (awaiting review)",
 };
 
 /**
- * Initialize the SIGCHLD event-bus subscriber.
- * Idempotent — safe to call multiple times.
+ * Create the SIGCHLD event-bus subscriber.
+ *
+ * Watches for child tasks whose latest session reaches a SIGCHLD-triggering
+ * status (idle or stopped) and delivers a notification to the parent task.
+ *
+ * @param ctx - Plugin context providing event-bus access.
+ * @returns A Disposable that unsubscribes and clears dedup state.
  */
-let initialized: boolean = false;
+export function createSigchldSubscriber(ctx: PluginContext): Disposable {
+  /** Track delivered notifications to prevent duplicates: key → delivery timestamp. */
+  const delivered: Map<string, number> = new Map();
 
-export function initSigchldSubscriber(): void {
-  if (initialized) {
-    return;
-  }
-  initialized = true;
-
-  subscribe((event: GrackleEvent) => {
+  const unsubscribe = ctx.subscribe((event: GrackleEvent) => {
     if (event.type !== "task.updated") {
       return;
     }
@@ -63,7 +62,7 @@ export function initSigchldSubscriber(): void {
     // Fire-and-forget async handler — errors are logged, never thrown
     (async () => {
       try {
-        await handleTaskUpdated(childTaskId);
+        await handleTaskUpdated(delivered, childTaskId);
       } catch (err) {
         logger.error({ err, childTaskId }, "SIGCHLD handler error");
       }
@@ -71,6 +70,13 @@ export function initSigchldSubscriber(): void {
   });
 
   logger.info("SIGCHLD subscriber initialized");
+
+  return {
+    dispose(): void {
+      unsubscribe();
+      delivered.clear();
+    },
+  };
 }
 
 /**
@@ -78,7 +84,7 @@ export function initSigchldSubscriber(): void {
  * session has reached a SIGCHLD-triggering status (idle or terminal),
  * and if so, deliver a SIGCHLD notification to the parent.
  */
-async function handleTaskUpdated(childTaskId: string): Promise<void> {
+async function handleTaskUpdated(delivered: Map<string, number>, childTaskId: string): Promise<void> {
   const childTask = taskStore.getTask(childTaskId);
   if (!childTask) {
     return;
@@ -111,7 +117,7 @@ async function handleTaskUpdated(childTaskId: string): Promise<void> {
   delivered.set(dedupeKey, now);
 
   // Prune expired entries to prevent unbounded growth
-  pruneDelivered(now);
+  pruneMap(delivered, now);
 
   // Extract the last text message from the child's session log
   const lastTextMessage = extractLastTextMessage(latestSession.logPath || undefined);
@@ -178,10 +184,10 @@ async function handleTaskUpdated(childTaskId: string): Promise<void> {
 }
 
 /** Remove dedup entries older than DEDUP_TTL_MS. */
-function pruneDelivered(now: number): void {
-  for (const [key, timestamp] of delivered) {
+function pruneMap(map: Map<string, number>, now: number): void {
+  for (const [key, timestamp] of map) {
     if (now - timestamp >= DEDUP_TTL_MS) {
-      delivered.delete(key);
+      map.delete(key);
     }
   }
 }
@@ -202,13 +208,4 @@ function extractLastTextMessage(logPath: string | undefined): string {
   } catch {
     return "";
   }
-}
-
-/**
- * Reset module state. For use in tests only.
- * @internal
- */
-export function _resetForTesting(): void {
-  delivered.clear();
-  initialized = false;
 }

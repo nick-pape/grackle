@@ -19,25 +19,22 @@ import { sessionStore, taskStore } from "@grackle-ai/database";
 import * as streamRegistry from "./stream-registry.js";
 import * as adapterManager from "./adapter-manager.js";
 import * as streamHub from "./stream-hub.js";
-import { emit } from "./event-bus.js";
 import { reanimateAgent } from "./reanimate-agent.js";
 import { logger } from "./logger.js";
-
-/** Whether the lifecycle manager has been initialized. */
-let initialized: boolean = false;
+import type { Disposable, PluginContext } from "./subscriber-types.js";
 
 /**
- * Initialize the lifecycle manager. Registers the orphan callback on the
- * stream-registry so that sessions auto-stop when all fds are closed.
- * Idempotent — safe to call multiple times.
+ * Create the lifecycle manager subscriber.
+ *
+ * Registers orphan and revival callbacks on the stream-registry so that
+ * sessions auto-stop when all fds are closed and auto-reanimate when
+ * a new fd is opened.
+ *
+ * @param ctx - Plugin context providing event-bus access.
+ * @returns A Disposable that unregisters both callbacks.
  */
-export function initLifecycleManager(): void {
-  if (initialized) {
-    return;
-  }
-  initialized = true;
-
-  streamRegistry.onSessionOrphaned((sessionId: string) => {
+export function createLifecycleSubscriber(ctx: PluginContext): Disposable {
+  const unsubOrphan = streamRegistry.onSessionOrphaned((sessionId: string) => {
     const session = sessionStore.getSession(sessionId);
     if (!session) {
       return;
@@ -98,7 +95,7 @@ export function initLifecycleManager(): void {
     if (session.taskId) {
       const task = taskStore.getTask(session.taskId);
       if (task) {
-        emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
+        ctx.emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
       }
     }
   });
@@ -106,7 +103,7 @@ export function initLifecycleManager(): void {
   // ── Auto-reanimate: when an external session subscribes to a lifecycle
   // stream whose session is stopped, automatically restart it. This is the
   // "open() IS reanimate" model from the streams IPC spec.
-  streamRegistry.onSessionRevived((targetSessionId: string, _subscriberSessionId: string) => {
+  const unsubRevived = streamRegistry.onSessionRevived((targetSessionId: string, _subscriberSessionId: string) => {
     const session = sessionStore.getSession(targetSessionId);
     if (!session) {
       return;
@@ -146,6 +143,13 @@ export function initLifecycleManager(): void {
   });
 
   logger.info("Lifecycle manager initialized");
+
+  return {
+    dispose(): void {
+      unsubOrphan();
+      unsubRevived();
+    },
+  };
 }
 
 /**
@@ -184,12 +188,4 @@ export function ensureLifecycleStream(sessionId: string, spawnerId: string): voi
   const stream = streamRegistry.createStream(`lifecycle:${sessionId}`);
   streamRegistry.subscribe(stream.id, spawnerId, "rw", "detach", true);
   streamRegistry.subscribe(stream.id, sessionId, "rw", "detach", false);
-}
-
-/**
- * Reset module state. For testing only.
- * @internal
- */
-export function _resetForTesting(): void {
-  initialized = false;
 }

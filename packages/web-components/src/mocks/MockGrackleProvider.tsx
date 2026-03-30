@@ -390,6 +390,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         description: description || "",
         repoUrl: repoUrl || "",
         environmentId: environmentId || "",
+        linkedEnvironmentIds: [],
         status: "active",
         workingDirectory: workingDirectory || "",
         useWorktrees: useWorktrees ?? true,

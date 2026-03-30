@@ -518,3 +518,26 @@
   gap: var(--space-xs);
 }
 
+.metaPlaceholder {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.linkedEnvList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.linkedEnvChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 1px var(--space-sm);
+  border-radius: var(--radius-full);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-subtle);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+

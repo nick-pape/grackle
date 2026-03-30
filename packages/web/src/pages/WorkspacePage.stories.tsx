@@ -25,7 +25,7 @@ export const WorkspaceWithTasks: Story = {
   },
 };
 
-/** Metadata section shows Description, Repository, Environment, and Persona fields. */
+/** Metadata section shows Description, Repository, Environment, Linked Envs, and Persona fields. */
 export const MetadataSection: Story = {
   decorators: [withMockGrackleRoute(
     ["/environments/env-local-01/workspaces/proj-alpha"],
@@ -38,6 +38,36 @@ export const MetadataSection: Story = {
     await expect(canvas.getByText("Description")).toBeInTheDocument();
     await expect(canvas.getByText("Repository")).toBeInTheDocument();
     await expect(canvas.getByText("Environment")).toBeInTheDocument();
+    await expect(canvas.getByText("Linked Envs")).toBeInTheDocument();
     await expect(canvas.getByText("Persona")).toBeInTheDocument();
+  },
+};
+
+/** Linked environments section shows chips for each linked environment. */
+export const LinkedEnvironments: Story = {
+  decorators: [withMockGrackleRoute(
+    ["/environments/env-local-01/workspaces/proj-alpha"],
+    "/environments/:environmentId/workspaces/:workspaceId",
+  )],
+  play: async ({ canvas }) => {
+    // proj-alpha has linkedEnvironmentIds: ["env-docker-01"] in mock data
+    const linkedSection = canvas.getByTestId("linked-environments");
+    await expect(linkedSection).toBeInTheDocument();
+    // Should show the linked environment chip (Docker Dev is env-docker-01's displayName)
+    await expect(canvas.getByTestId("linked-env-env-docker-01")).toBeInTheDocument();
+  },
+};
+
+/** Workspace with no linked environments shows "None" placeholder. */
+export const NoLinkedEnvironments: Story = {
+  decorators: [withMockGrackleRoute(
+    ["/environments/env-docker-01/workspaces/proj-beta"],
+    "/environments/:environmentId/workspaces/:workspaceId",
+  )],
+  play: async ({ canvas }) => {
+    // proj-beta has linkedEnvironmentIds: [] in mock data
+    const linkedSection = canvas.getByTestId("linked-environments");
+    await expect(linkedSection).toBeInTheDocument();
+    await expect(linkedSection).toHaveTextContent("None");
   },
 };

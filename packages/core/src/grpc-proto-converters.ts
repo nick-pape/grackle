@@ -5,7 +5,7 @@ import {
   taskStatusToEnum,
 } from "@grackle-ai/common";
 import type { EnvironmentRow, SessionRow } from "@grackle-ai/database";
-import { workspaceStore, taskStore, personaStore, findingStore, escalationStore, scheduleStore, safeParseJsonArray } from "@grackle-ai/database";
+import { workspaceStore, taskStore, personaStore, findingStore, escalationStore, scheduleStore, workspaceEnvironmentLinkStore, safeParseJsonArray } from "@grackle-ai/database";
 import type { KnowledgeNode, KnowledgeEdge } from "@grackle-ai/knowledge";
 
 /** Convert an environment database row to its proto representation. */
@@ -48,8 +48,18 @@ export function sessionRowToProto(row: SessionRow): grackle.Session {
   });
 }
 
-/** Convert a workspace database row to its proto representation. */
-export function workspaceRowToProto(row: workspaceStore.WorkspaceRow): grackle.Workspace {
+/**
+ * Convert a workspace database row to its proto representation.
+ * When converting many workspaces (e.g. listWorkspaces), pass a pre-fetched
+ * linkedEnvMap to avoid N+1 queries. When omitted, falls back to a per-row query.
+ */
+export function workspaceRowToProto(
+  row: workspaceStore.WorkspaceRow,
+  linkedEnvMap?: Map<string, string[]>,
+): grackle.Workspace {
+  const linkedIds = linkedEnvMap
+    ? (linkedEnvMap.get(row.id) ?? [])
+    : workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(row.id);
   return create(grackle.WorkspaceSchema, {
     id: row.id,
     name: row.name,
@@ -62,6 +72,7 @@ export function workspaceRowToProto(row: workspaceStore.WorkspaceRow): grackle.W
     useWorktrees: row.useWorktrees,
     workingDirectory: row.workingDirectory,
     defaultPersonaId: row.defaultPersonaId,
+    linkedEnvironmentIds: linkedIds,
   });
 }
 

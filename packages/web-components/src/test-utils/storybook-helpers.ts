@@ -72,6 +72,7 @@ export function makeWorkspace(overrides: Partial<Workspace> = {}): Workspace {
     description: "",
     repoUrl: "",
     environmentId: "env-1",
+    linkedEnvironmentIds: [],
     status: "active",
     workingDirectory: "",
     useWorktrees: false,
