@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/runtime-genaiscript",
-  "version": "0.92.1",
+  "version": "0.92.2",
   "description": "Grackle GenAIScript runtime implementation",
   "license": "MIT",
   "repository": {

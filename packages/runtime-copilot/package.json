@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/runtime-copilot",
-  "version": "0.92.1",
+  "version": "0.92.2",
   "description": "Grackle GitHub Copilot runtime implementation",
   "license": "MIT",
   "repository": {
