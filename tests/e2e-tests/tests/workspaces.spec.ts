@@ -444,4 +444,83 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.locator('[data-testid="progress-bar"]')).toBeVisible({ timeout: 5_000 });
     await expect(page.locator('[data-testid="progress-bar"]')).toContainText("0/1");
   });
+
+  // ─── Link / Unlink Environment Tests ────────────────────────────
+
+  test("link environment via dropdown adds chip, unlink removes it", async ({ appPage, grackle: { client } }) => {
+    const page = appPage;
+
+    // Add a second environment so we have something to link
+    await client.addEnvironment({
+      displayName: "link-test-env",
+      adapterType: "local",
+      adapterConfig: JSON.stringify({ port: 0 }),
+    });
+
+    // Create a workspace on test-local and navigate to it
+    await createAndSelectWorkspace(client, page, "link-unlink-test");
+
+    // Linked Envs should show "None" initially
+    const linkedSection = page.getByTestId("linked-environments");
+    await expect(linkedSection).toBeVisible({ timeout: 5_000 });
+    await expect(linkedSection).toContainText("None");
+
+    // Link dropdown should be visible with the second environment
+    const linkSelect = page.getByTestId("link-env-select");
+    await expect(linkSelect).toBeVisible();
+
+    // Select the second environment from the dropdown
+    await linkSelect.selectOption("link-test-env");
+
+    // Chip for the linked environment should appear
+    await expect(page.getByTestId("linked-env-link-test-env")).toBeVisible({ timeout: 10_000 });
+
+    // "None" should no longer be visible
+    await expect(linkedSection).not.toContainText("None");
+
+    // Click the unlink (x) button on the chip
+    await page.getByTestId("unlink-env-link-test-env").click();
+
+    // Chip should disappear and "None" should return
+    await expect(page.getByTestId("linked-env-link-test-env")).not.toBeVisible({ timeout: 10_000 });
+    await expect(linkedSection).toContainText("None");
+  });
+
+  test("linked workspace appears on environment detail page with unlink button", async ({ appPage, grackle: { client } }) => {
+    const page = appPage;
+
+    // Add a second environment
+    await client.addEnvironment({
+      displayName: "env-detail-link-test",
+      adapterType: "local",
+      adapterConfig: JSON.stringify({ port: 0 }),
+    });
+
+    // Create a workspace and link the second environment via RPC
+    const workspaceId = await createWorkspace(client, "env-detail-ws");
+    await client.linkEnvironment({ workspaceId, environmentId: "env-detail-link-test" });
+
+    // Navigate to the second environment's detail page
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
+    await page.getByTestId("env-nav-item").filter({ hasText: "env-detail-link-test" }).click();
+
+    // The linked workspace card should appear
+    const linkedCard = page.getByTestId(`linked-workspace-card-${workspaceId}`);
+    await expect(linkedCard).toBeVisible({ timeout: 10_000 });
+    await expect(linkedCard).toContainText("env-detail-ws");
+
+    // Unlink button should be visible
+    const unlinkButton = page.getByTestId(`unlink-workspace-${workspaceId}`);
+    await expect(unlinkButton).toBeVisible();
+    await expect(unlinkButton).toContainText("Unlink");
+
+    // Click unlink
+    await unlinkButton.click();
+
+    // Card should disappear
+    await expect(linkedCard).not.toBeVisible({ timeout: 10_000 });
+
+    // Empty state should appear
+    await expect(page.getByTestId("linked-workspaces-empty")).toBeVisible();
+  });
 });
