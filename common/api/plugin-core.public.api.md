@@ -42,21 +42,15 @@ export { buildOrchestratorContextInput }
 
 export { cleanupLifecycleStream }
 
-// Warning: (ae-forgotten-export) The symbol "CronPhaseDeps" needs to be exported by the entry point index.d.ts
-//
 // @public
 export function createCronPhase(deps: CronPhaseDeps): ReconciliationPhase;
 
 // @public
 export function createDefaultCollector(): ServiceCollector;
 
-// Warning: (ae-forgotten-export) The symbol "DispatchPhaseDeps" needs to be exported by the entry point index.d.ts
-//
 // @public
 export function createDispatchPhase(deps: DispatchPhaseDeps): ReconciliationPhase;
 
-// Warning: (ae-forgotten-export) The symbol "EnvironmentReconciliationDeps" needs to be exported by the entry point index.d.ts
-//
 // @public
 export function createEnvironmentReconciliationPhase(deps: EnvironmentReconciliationDeps): ReconciliationPhase;
 
@@ -68,8 +62,6 @@ export { createKnowledgeHealthPhase }
 // @public
 export function createLifecycleSubscriber(ctx: PluginContext): Disposable_2;
 
-// Warning: (ae-forgotten-export) The symbol "OrphanPhaseDeps" needs to be exported by the entry point index.d.ts
-//
 // @public
 export function createOrphanPhase(deps: OrphanPhaseDeps): ReconciliationPhase;
 
@@ -82,9 +74,56 @@ export function createRootTaskBootSubscriber(ctx: PluginContext, deps: RootTaskB
 // @public
 export function createSigchldSubscriber(ctx: PluginContext): Disposable_2;
 
+// @public
+export interface CronPhaseDeps {
+    advanceSchedule: (id: string, lastRunAt: string, nextRunAt: string) => void;
+    createTask: (id: string, workspaceId: string | undefined, title: string, description: string, dependsOn: string[], workspaceSlug: string, parentTaskId?: string, canDecompose?: boolean, defaultPersonaId?: string) => void;
+    emit: (type: GrackleEventType, payload: Record<string, unknown>) => void;
+    enqueueForDispatch: (entry: {
+        id: string;
+        taskId: string;
+        environmentId?: string;
+        personaId?: string;
+    }) => void;
+    getDueSchedules: () => ScheduleRow[];
+    getPersona: (id: string) => {
+        id: string;
+        name: string;
+        runtime: string;
+    } | undefined;
+    setScheduleEnabled: (id: string, enabled: boolean, nextRunAt: string | null) => void;
+    setTaskScheduleId: (taskId: string, scheduleId: string) => void;
+}
+
 export { deliverPendingEscalations }
 
+// @public
+export interface DispatchPhaseDeps {
+    dequeueEntry: (taskId: string) => void;
+    environmentExists: (environmentId: string) => boolean;
+    getTask: (taskId: string) => TaskRow | undefined;
+    hasCapacity: (environmentId: string) => boolean;
+    isEnvironmentConnected: (environmentId: string) => boolean;
+    isTaskEligible: (taskId: string) => boolean;
+    listPendingEntries: () => DispatchQueueRow[];
+    resolveEnvironment: (task: TaskRow) => string | undefined;
+    startTaskSession: (task: TaskRow, options?: {
+        personaId?: string;
+        environmentId?: string;
+        notes?: string;
+    }) => Promise<string | undefined>;
+}
+
 export { ensureLifecycleStream }
+
+// @public
+export interface EnvironmentReconciliationDeps {
+    emit: (type: GrackleEventType, payload: Record<string, unknown>) => void;
+    listConnectionIds: () => Set<string>;
+    listEnvironments: () => EnvironmentRow[];
+    removeConnection: (environmentId: string) => void;
+    updateEnvironmentStatus: (id: string, status: EnvironmentStatus) => void;
+}
 
 export { getKnowledgeReadinessCheck }
 
@@ -99,6 +138,13 @@ export { KnowledgeReadinessCheck }
 
 // @public
 export const lifecycleCleanupPhase: ReconciliationPhase;
+
+// @public
+export interface OrphanPhaseDeps {
+    emit: (type: GrackleEventType, payload: Record<string, unknown>) => void;
+    listAllTasks: () => TaskRow[];
+    reparentTask: (taskId: string, newParentTaskId: string) => void;
+}
 
 export { personaMcpServersToJson }
 
