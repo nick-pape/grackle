@@ -1,4 +1,5 @@
 import { logger } from "@grackle-ai/core";
+import type { Disposable } from "@grackle-ai/core";
 import { sqlite, stopWalCheckpointTimer } from "@grackle-ai/database";
 import { stopPairingCleanup, stopSessionCleanup, stopOAuthCleanup } from "@grackle-ai/auth";
 import { closeAllTunnels } from "@grackle-ai/adapter-sdk";
@@ -25,6 +26,8 @@ export interface ShutdownContext {
   localPowerLineManager?: { stop: () => Promise<void> };
   /** Optional knowledge graph cleanup function. */
   knowledgeCleanup?: () => Promise<void>;
+  /** Active event subscribers to dispose on shutdown. */
+  subscribers?: Disposable[];
 }
 
 /**
@@ -44,6 +47,13 @@ export function createShutdown(context: ShutdownContext): () => Promise<void> {
     stopSessionCleanup();
     stopOAuthCleanup();
     await context.reconciliationManager.stop();
+
+    // Dispose all event subscribers so handlers don't fire during teardown
+    if (context.subscribers) {
+      for (const subscriber of context.subscribers) {
+        subscriber.dispose();
+      }
+    }
 
     const forceExit = setTimeout(() => {
       logger.warn("Shutdown timed out, forcing exit");

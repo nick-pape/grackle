@@ -8,33 +8,31 @@
  */
 
 import { SESSION_STATUS, ROOT_TASK_ID } from "@grackle-ai/common";
-import { subscribe, type GrackleEvent } from "../event-bus.js";
+import type { GrackleEvent } from "../event-bus.js";
 import { taskStore, sessionStore, escalationStore } from "@grackle-ai/database";
 import { readLastTextEntry } from "../log-writer.js";
 import { routeEscalation } from "../notification-router.js";
 import { logger } from "../logger.js";
 import { ulid } from "ulid";
+import type { Disposable, PluginContext } from "../subscriber-types.js";
 
 /** How long (ms) to remember a delivered notification before allowing re-delivery. */
 const DEDUP_TTL_MS: number = 3_600_000; // 1 hour
 
-/** Track delivered notifications to prevent duplicates: key -> delivery timestamp. */
-const delivered: Map<string, number> = new Map();
-
-/** Whether the subscriber has been initialized. */
-let initialized: boolean = false;
-
 /**
- * Initialize the auto-escalation event-bus subscriber.
- * Idempotent — safe to call multiple times.
+ * Create the auto-escalation event-bus subscriber.
+ *
+ * Watches for standalone (parentless, non-ROOT) tasks whose latest session
+ * goes IDLE and automatically creates an escalation.
+ *
+ * @param ctx - Plugin context providing event-bus access.
+ * @returns A Disposable that unsubscribes and clears dedup state.
  */
-export function initEscalationAutoSubscriber(): void {
-  if (initialized) {
-    return;
-  }
-  initialized = true;
+export function createEscalationAutoSubscriber(ctx: PluginContext): Disposable {
+  /** Track delivered notifications to prevent duplicates: key -> delivery timestamp. */
+  const delivered: Map<string, number> = new Map();
 
-  subscribe((event: GrackleEvent) => {
+  const unsubscribe = ctx.subscribe((event: GrackleEvent) => {
     if (event.type !== "task.updated") {
       return;
     }
@@ -47,7 +45,7 @@ export function initEscalationAutoSubscriber(): void {
     // Fire-and-forget async handler — errors are logged, never thrown
     (async () => {
       try {
-        await handleTaskUpdated(taskId);
+        await handleTaskUpdated(delivered, taskId);
       } catch (err) {
         logger.error({ err, taskId }, "Escalation auto-detect handler error");
       }
@@ -55,13 +53,20 @@ export function initEscalationAutoSubscriber(): void {
   });
 
   logger.info("Escalation auto-detect subscriber initialized");
+
+  return {
+    dispose(): void {
+      unsubscribe();
+      delivered.clear();
+    },
+  };
 }
 
 /**
  * Handle a task.updated event: check if the task is a standalone root task
  * whose latest session has gone IDLE, and if so, auto-escalate.
  */
-async function handleTaskUpdated(taskId: string): Promise<void> {
+async function handleTaskUpdated(delivered: Map<string, number>, taskId: string): Promise<void> {
   const task = taskStore.getTask(taskId);
   if (!task) {
     return;
@@ -96,7 +101,7 @@ async function handleTaskUpdated(taskId: string): Promise<void> {
   }
 
   // Prune expired entries to prevent unbounded growth
-  pruneDelivered(now);
+  pruneDelivered(delivered, now);
 
   // Extract the last text message from the session log
   const logPath = latestSession.logPath || undefined;
@@ -146,19 +151,10 @@ async function handleTaskUpdated(taskId: string): Promise<void> {
 }
 
 /** Remove dedup entries older than DEDUP_TTL_MS. */
-function pruneDelivered(now: number): void {
+function pruneDelivered(delivered: Map<string, number>, now: number): void {
   for (const [key, timestamp] of delivered) {
     if (now - timestamp >= DEDUP_TTL_MS) {
       delivered.delete(key);
     }
   }
-}
-
-/**
- * Reset module state. For use in tests only.
- * @internal
- */
-export function _resetForTesting(): void {
-  delivered.clear();
-  initialized = false;
 }

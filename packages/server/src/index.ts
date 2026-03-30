@@ -210,7 +210,7 @@ async function main(): Promise<void> {
   });
 
   // Wire event subscribers (SIGCHLD, escalation, orphan reparent, lifecycle, root task boot)
-  wireEventSubscribers({ skipRootAutostart: config.skipRootAutostart });
+  const activeSubscribers = wireEventSubscribers({ skipRootAutostart: config.skipRootAutostart });
 
   webServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {
@@ -297,6 +297,7 @@ async function main(): Promise<void> {
     reconciliationManager,
     localPowerLineManager,
     knowledgeCleanup,
+    subscribers: activeSubscribers,
   });
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises

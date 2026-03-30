@@ -17,8 +17,10 @@
 
 import { ROOT_TASK_ID, ROOT_TASK_INITIAL_PROMPT, TASK_STATUS } from "@grackle-ai/common";
 import type { TaskRow, SessionRow, EnvironmentRow } from "@grackle-ai/database";
+import type { GrackleEvent } from "./event-bus.js";
 import type { TaskStatusResult } from "./compute-task-status.js";
 import { logger } from "./logger.js";
+import type { Disposable, PluginContext } from "./subscriber-types.js";
 
 // ─── Constants ──────────────────────────────────────────────
 
@@ -112,6 +114,43 @@ export function createRootTaskBoot(deps: RootTaskBootDeps): () => Promise<void> 
     } finally {
       state.inProgress = false; // eslint-disable-line require-atomic-updates -- single-threaded, flag guards re-entry
     }
+  };
+}
+
+/**
+ * Create the root task boot subscriber.
+ *
+ * Wraps {@link createRootTaskBoot} and subscribes to `environment.changed`
+ * and `setting.changed` events. Returns a Disposable that unsubscribes
+ * and resets boot state.
+ *
+ * @param ctx - Plugin context providing event-bus access.
+ * @param deps - Injected dependencies for testability.
+ * @returns A Disposable that unsubscribes and resets boot state.
+ */
+export function createRootTaskBootSubscriber(ctx: PluginContext, deps: RootTaskBootDeps): Disposable {
+  state = createInitialState();
+  const tryBoot = createRootTaskBoot(deps);
+
+  const unsubscribe = ctx.subscribe((event: GrackleEvent) => {
+    if (event.type === "environment.changed") {
+      tryBoot().catch(() => { /* logged inside */ });
+    }
+    // Also try when onboarding completes — the environment is already
+    // connected but boot was deferred until the user chose a runtime.
+    if (event.type === "setting.changed") {
+      const payload = event.payload as { key?: string; value?: string };
+      if (payload.key === "onboarding_completed" && payload.value === "true") {
+        tryBoot().catch(() => { /* logged inside */ });
+      }
+    }
+  });
+
+  return {
+    dispose(): void {
+      unsubscribe();
+      state = createInitialState();
+    },
   };
 }
 

@@ -80,8 +80,7 @@ vi.mock("./compute-task-status.js", () => ({
 vi.mock("./lifecycle.js", () => ({
   cleanupLifecycleStream: vi.fn(),
   ensureLifecycleStream: vi.fn(),
-  initLifecycleManager: vi.fn(),
-  _resetForTesting: vi.fn(),
+  createLifecycleSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
 }));
 
 // ── Import AFTER mocks ──────────────────────────────────────────

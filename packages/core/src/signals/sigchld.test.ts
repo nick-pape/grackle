@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 // ── Mock dependencies ────────────────────────────────────────
 
@@ -30,25 +30,6 @@ vi.mock("../stream-hub.js", () => ({
   }),
 }));
 
-
-vi.mock("../event-bus.js", () => {
-  const subscribers: Array<(event: unknown) => void> = [];
-  return {
-    emit: vi.fn(),
-    subscribe: vi.fn((fn: (event: unknown) => void) => {
-      subscribers.push(fn);
-      return () => {
-        const idx = subscribers.indexOf(fn);
-        if (idx >= 0) subscribers.splice(idx, 1);
-      };
-    }),
-    _testFire: (event: unknown) => {
-      for (const fn of subscribers) fn(event);
-    },
-    _testReset: () => { subscribers.length = 0; },
-  };
-});
-
 vi.mock("../reanimate-agent.js", () => ({
   reanimateAgent: vi.fn(),
 }));
@@ -60,9 +41,9 @@ vi.mock("./signal-delivery.js", () => ({
 import { taskStore, sessionStore } from "@grackle-ai/database";
 import { readLastTextEntry } from "../log-writer.js";
 import { deliverSignalToTask } from "./signal-delivery.js";
-import { initSigchldSubscriber, _resetForTesting } from "./sigchld.js";
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const eventBusMock = await import("../event-bus.js") as any;
+import { createSigchldSubscriber } from "./sigchld.js";
+import type { GrackleEvent } from "../event-bus.js";
+import type { Disposable, PluginContext } from "../subscriber-types.js";
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -110,15 +91,6 @@ function makeSession(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function fireTaskUpdated(taskId: string) {
-  eventBusMock._testFire({
-    id: "evt-1",
-    type: "task.updated",
-    timestamp: new Date().toISOString(),
-    payload: { taskId, workspaceId: "proj-1" },
-  });
-}
-
 /** Wait for async event-bus microtask + fire-and-forget promise. */
 async function flush(): Promise<void> {
   await new Promise((r) => setTimeout(r, 50));
@@ -126,13 +98,48 @@ async function flush(): Promise<void> {
 
 // ── Tests ────────────────────────────────────────────────────
 
-describe("initSigchldSubscriber", () => {
+describe("createSigchldSubscriber", () => {
+  let ctx: PluginContext;
+  let capturedHandler: (event: GrackleEvent) => void;
+  let disposable: Disposable;
+  let unsubscribeFn: ReturnType<typeof vi.fn>;
+
+  function fireTaskUpdated(taskId: string): void {
+    capturedHandler({
+      id: "evt-1",
+      type: "task.updated",
+      timestamp: new Date().toISOString(),
+      payload: { taskId, workspaceId: "proj-1" },
+    });
+  }
+
   beforeEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
-    _resetForTesting();
-    eventBusMock._testReset();
-    initSigchldSubscriber();
+
+    unsubscribeFn = vi.fn();
+    ctx = {
+      subscribe: vi.fn((fn: (event: GrackleEvent) => void) => {
+        capturedHandler = fn;
+        return unsubscribeFn;
+      }),
+      emit: vi.fn(),
+    };
+
+    disposable = createSigchldSubscriber(ctx);
+  });
+
+  afterEach(() => {
+    disposable.dispose();
+  });
+
+  it("subscribes to event bus on creation", () => {
+    expect(ctx.subscribe).toHaveBeenCalledOnce();
+  });
+
+  it("unsubscribes on dispose", () => {
+    disposable.dispose();
+    expect(unsubscribeFn).toHaveBeenCalledOnce();
   });
 
   it("calls deliverSignalToTask with correct args when child goes idle", async () => {
@@ -385,5 +392,45 @@ describe("initSigchldSubscriber", () => {
     const lastCall = vi.mocked(deliverSignalToTask).mock.results.at(-1);
     expect(await lastCall?.value).toBe(true);
     vi.useRealTimers();
+  });
+
+  it("creates independent state per factory call (no shared module state)", async () => {
+    // Create a second subscriber with its own context
+    const unsub2 = vi.fn();
+    let handler2: (event: GrackleEvent) => void;
+    const ctx2: PluginContext = {
+      subscribe: vi.fn((fn: (event: GrackleEvent) => void) => {
+        handler2 = fn;
+        return unsub2;
+      }),
+      emit: vi.fn(),
+    };
+    const disposable2 = createSigchldSubscriber(ctx2);
+
+    vi.spyOn(taskStore, "getTask").mockReturnValue(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      makeTask() as any,
+    );
+    vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      makeSession({ status: "idle" }) as any,
+    );
+    vi.mocked(readLastTextEntry).mockReturnValue(undefined);
+
+    // Fire via first subscriber
+    fireTaskUpdated("task-child");
+    await flush();
+
+    // Fire via second subscriber — should ALSO deliver (independent dedup state)
+    handler2!({
+      id: "evt-2",
+      type: "task.updated",
+      timestamp: new Date().toISOString(),
+      payload: { taskId: "task-child", workspaceId: "proj-1" },
+    });
+    await flush();
+
+    expect(deliverSignalToTask).toHaveBeenCalledTimes(2);
+    disposable2.dispose();
   });
 });
