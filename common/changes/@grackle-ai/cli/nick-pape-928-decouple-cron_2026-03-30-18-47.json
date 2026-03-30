@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Decouple cron schedule firing from session start — cron creates tasks and enqueues for dispatch",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
