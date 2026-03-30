@@ -1,14 +1,15 @@
 /**
  * Cron reconciliation phase — fires due schedules on each tick.
  *
- * Extracted from the former CronManager so it can plug into the
- * ReconciliationManager as one of several ordered phases.
+ * Creates tasks for due schedules and enqueues them for dispatch.
+ * The dispatch phase (separate reconciliation phase) handles starting
+ * sessions, respecting concurrency limits, and environment resolution.
  */
 
 import { v4 as uuidv4 } from "uuid";
 import { logger } from "./logger.js";
 import { computeNextRunAt } from "./schedule-expression.js";
-import type { ScheduleRow, EnvironmentRow, TaskRow } from "@grackle-ai/database";
+import type { ScheduleRow } from "@grackle-ai/database";
 import type { GrackleEventType } from "./event-bus.js";
 import type { ReconciliationPhase } from "./reconciliation-manager.js";
 import { ROOT_TASK_ID } from "@grackle-ai/common";
@@ -33,24 +34,15 @@ export interface CronPhaseDeps {
   ) => void;
   /** Set the schedule_id FK on a task. */
   setTaskScheduleId: (taskId: string, scheduleId: string) => void;
-  /** Start a task session internally (same as root task boot listener). */
-  startTaskSession: (
-    task: TaskRow,
-    options?: { personaId?: string; environmentId?: string; notes?: string },
-  ) => Promise<string | undefined>;
+  /** Enqueue a task for the dispatch phase to start. */
+  enqueueForDispatch: (entry: { id: string; taskId: string; environmentId?: string; personaId?: string }) => void;
   /** Emit a domain event. */
   emit: (type: GrackleEventType, payload: Record<string, unknown>) => void;
-  /** Find the first connected environment (prefers local). */
-  findFirstConnectedEnvironment: () => EnvironmentRow | undefined;
   /** Look up a persona by ID. */
   getPersona: (id: string) => { id: string; name: string; runtime: string } | undefined;
-  /** Look up a task by ID (to pass to startTaskSession). */
-  getTask: (id: string) => TaskRow | undefined;
   /** Enable or disable a schedule, setting or clearing nextRunAt. */
   // eslint-disable-next-line @rushstack/no-new-null
   setScheduleEnabled: (id: string, enabled: boolean, nextRunAt: string | null) => void;
-  /** Check if an environment is connected. */
-  isEnvironmentConnected: (environmentId: string) => boolean;
 }
 
 /**
@@ -69,14 +61,14 @@ export function createCronPhase(deps: CronPhaseDeps): ReconciliationPhase {
       }
       logger.debug({ count: due.length }, "Cron phase: due schedules");
       for (const schedule of due) {
-        await fireSchedule(deps, schedule);
+        fireSchedule(deps, schedule);
       }
     },
   };
 }
 
-/** Fire a single schedule: create task, start session, advance. */
-async function fireSchedule(deps: CronPhaseDeps, schedule: ScheduleRow): Promise<void> {
+/** Fire a single schedule: create task, enqueue for dispatch, advance. */
+function fireSchedule(deps: CronPhaseDeps, schedule: ScheduleRow): void {
   const now = new Date().toISOString();
 
   let nextRunAt: string;
@@ -94,33 +86,6 @@ async function fireSchedule(deps: CronPhaseDeps, schedule: ScheduleRow): Promise
   }
 
   try {
-    // Resolve environment — check connectivity before creating tasks to avoid orphan tasks
-    let environmentId: string | undefined;
-    if (schedule.environmentId) {
-      // Explicit environment: verify it's connected before creating a task
-      if (!deps.isEnvironmentConnected(schedule.environmentId)) {
-        logger.warn(
-          { scheduleId: schedule.id, environmentId: schedule.environmentId },
-          "Schedule fire skipped: specified environment not connected",
-        );
-        deps.advanceSchedule(schedule.id, now, nextRunAt);
-        return;
-      }
-      environmentId = schedule.environmentId;
-    } else {
-      // Auto-select first connected environment
-      const env = deps.findFirstConnectedEnvironment();
-      if (!env) {
-        logger.warn(
-          { scheduleId: schedule.id },
-          "Schedule fire skipped: no connected environment",
-        );
-        deps.advanceSchedule(schedule.id, now, nextRunAt);
-        return;
-      }
-      environmentId = env.id;
-    }
-
     // Validate persona exists
     const persona = deps.getPersona(schedule.personaId);
     if (!persona) {
@@ -149,35 +114,19 @@ async function fireSchedule(deps: CronPhaseDeps, schedule: ScheduleRow): Promise
     );
     deps.setTaskScheduleId(taskId, schedule.id);
 
-    // Fetch the created task for startTaskSession
-    const task = deps.getTask(taskId);
-    if (!task) {
-      logger.error(
-        { scheduleId: schedule.id, taskId },
-        "Schedule fire failed: created task not found",
-      );
-      deps.advanceSchedule(schedule.id, now, nextRunAt);
-      return;
-    }
-
-    // Start the task session
-    const error = await deps.startTaskSession(task, {
-      environmentId,
+    // Enqueue for the dispatch phase to start (respects concurrency limits).
+    // Environment resolution is handled by the dispatch phase; we pass the
+    // schedule's preferred environmentId as a hint.
+    deps.enqueueForDispatch({
+      id: uuidv4(),
+      taskId,
+      environmentId: schedule.environmentId || undefined,
       personaId: schedule.personaId,
     });
 
-    // Advance schedule regardless of session start outcome
+    // Advance schedule
     deps.advanceSchedule(schedule.id, now, nextRunAt);
 
-    if (error) {
-      logger.warn(
-        { scheduleId: schedule.id, taskId, error },
-        "Schedule fire: task created but session start failed",
-      );
-      return;
-    }
-
-    // Emit event only on successful fire
     deps.emit("schedule.fired", {
       scheduleId: schedule.id,
       taskId,

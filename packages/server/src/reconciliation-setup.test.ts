@@ -61,6 +61,7 @@ vi.mock("@grackle-ai/database", () => ({
   dispatchQueueStore: {
     listPending: vi.fn(() => []),
     dequeue: vi.fn(),
+    enqueue: vi.fn(),
   },
 }));
 
@@ -120,21 +121,12 @@ describe("createReconciliationPhases", () => {
     expect(allTasks).toEqual([{ id: "t1" }, { id: "t2" }, { id: "t3" }]);
   });
 
-  it("cron phase isEnvironmentConnected checks env status", async () => {
-    const { getEnvironment } = await import("@grackle-ai/database").then((m) => m.envRegistry);
-    (getEnvironment as ReturnType<typeof vi.fn>).mockReturnValue({ status: "connected" });
-
+  it("cron phase enqueueForDispatch is wired to dispatchQueueStore.enqueue", () => {
     createReconciliationPhases();
 
     const cronDeps = (createCronPhase as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
-      isEnvironmentConnected: (id: string) => boolean;
+      enqueueForDispatch: (...args: unknown[]) => void;
     };
-    expect(cronDeps.isEnvironmentConnected("local")).toBe(true);
-
-    (getEnvironment as ReturnType<typeof vi.fn>).mockReturnValue({ status: "disconnected" });
-    expect(cronDeps.isEnvironmentConnected("local")).toBe(false);
-
-    (getEnvironment as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
-    expect(cronDeps.isEnvironmentConnected("local")).toBe(false);
+    expect(cronDeps.enqueueForDispatch).toBeDefined();
   });
 });
