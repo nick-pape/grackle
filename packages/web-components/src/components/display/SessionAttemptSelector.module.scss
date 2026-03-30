@@ -1,0 +1,50 @@
+@use '../../styles/mixins' as *;
+
+.attemptSelector {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+
+  @include mobile {
+    flex-wrap: wrap;
+  }
+}
+
+.attemptLabel {
+  margin-right: var(--space-xs);
+}
+
+.attemptButton {
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-sm);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    color: var(--text-secondary);
+    border-color: var(--border-primary);
+    background: var(--bg-surface);
+  }
+}
+
+.attemptActive {
+  color: var(--accent-green);
+  border-color: var(--accent-green);
+  background: var(--accent-green-dim);
+}
+
+.attemptStatus {
+  font-size: 10px;
+  margin-left: 2px;
+  opacity: 0.7;
+}

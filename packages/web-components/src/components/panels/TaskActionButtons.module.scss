@@ -1,0 +1,22 @@
+@use '../../styles/mixins' as *;
+
+.actionButtons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.btnPrimary {
+  @include btn-primary;
+}
+
+.btnDanger {
+  @include btn-danger;
+}
+
+.btnGhost {
+  @include btn-ghost(var(--text-secondary));
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--font-size-sm);
+}
