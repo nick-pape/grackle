@@ -2,7 +2,7 @@
   "changes": [
     {
       "comment": "Normalize event subscribers to factory pattern returning Disposable for plugin architecture",
-      "type": "patch",
+      "type": "minor",
       "packageName": "@grackle-ai/cli"
     }
   ],
