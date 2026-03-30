@@ -1,6 +1,14 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 29 Mar 2026 23:27:43 GMT and should not be manually modified.
+This log was last generated on Mon, 30 Mar 2026 00:49:02 GMT and should not be manually modified.
+
+## 0.91.3
+Mon, 30 Mar 2026 00:49:02 GMT
+
+### Patches
+
+- fix: self-registering DomainHook pattern for ConnectRPC reconnect safety
+- Clean up abandoned MCP sessions when SSE stream disconnects
 
 ## 0.91.2
 Sun, 29 Mar 2026 23:27:43 GMT

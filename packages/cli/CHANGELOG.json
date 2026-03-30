@@ -2,6 +2,21 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.91.3",
+      "tag": "@grackle-ai/cli_v0.91.3",
+      "date": "Mon, 30 Mar 2026 00:49:02 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix: self-registering DomainHook pattern for ConnectRPC reconnect safety"
+          },
+          {
+            "comment": "Clean up abandoned MCP sessions when SSE stream disconnects"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.91.2",
       "tag": "@grackle-ai/cli_v0.91.2",
       "date": "Sun, 29 Mar 2026 23:27:43 GMT",
