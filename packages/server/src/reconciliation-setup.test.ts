@@ -23,6 +23,7 @@ vi.mock("@grackle-ai/core", () => ({
 
 vi.mock("@grackle-ai/common", () => ({
   TASK_STATUS: { NOT_STARTED: "not_started", WORKING: "working", PAUSED: "paused", COMPLETE: "complete", FAILED: "failed" },
+  ROOT_TASK_ID: "system",
 }));
 
 vi.mock("@grackle-ai/database", () => ({
@@ -52,6 +53,7 @@ vi.mock("@grackle-ai/database", () => ({
   sessionStore: {
     countActiveForEnvironment: vi.fn(() => 0),
     getActiveSessionsForTask: vi.fn(() => []),
+    listSessionsForTask: vi.fn(() => []),
   },
   settingsStore: {
     getSetting: vi.fn(),

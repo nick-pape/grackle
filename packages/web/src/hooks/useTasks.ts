@@ -123,6 +123,11 @@ export function useTasks(): UseTasksResult {
       case "task.updated": {
         const eventWsId = typeof p.workspaceId === "string" ? p.workspaceId : "";
         const eventTaskId = typeof p.taskId === "string" ? p.taskId : "";
+        // Clear loading state if the task being waited on was deleted/updated
+        // (prevents stuck "starting" spinner for queued tasks that get removed).
+        setTaskStartingId((prev) =>
+          eventTaskId && prev === eventTaskId ? undefined : prev,
+        );
         refreshTasksForEvent(eventWsId, eventTaskId);
         return true;
       }

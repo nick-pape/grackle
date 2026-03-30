@@ -5,7 +5,7 @@ import {
   startTaskSession, emit, findFirstConnectedEnvironment,
   hasCapacity, computeTaskStatus,
 } from "@grackle-ai/core";
-import { TASK_STATUS } from "@grackle-ai/common";
+import { TASK_STATUS, ROOT_TASK_ID } from "@grackle-ai/common";
 import type { ReconciliationPhase } from "@grackle-ai/core";
 import {
   scheduleStore, taskStore, workspaceStore, personaStore, envRegistry,
@@ -75,12 +75,18 @@ export function createReconciliationPhases(): ReconciliationPhase[] {
       if (!taskStore.areDependenciesMet(taskId)) {
         return false;
       }
-      const sessions = sessionStore.getActiveSessionsForTask(taskId);
       const task = taskStore.getTask(taskId);
       if (!task) {
         return false;
       }
+      // Use full session history (not just active) so computeTaskStatus can
+      // correctly distinguish paused/complete/failed from not_started.
+      const sessions = sessionStore.listSessionsForTask(taskId);
       const { status } = computeTaskStatus(task.status, sessions);
+      // Root task can restart from any non-WORKING state (matches startTask handler)
+      if (taskId === ROOT_TASK_ID) {
+        return status !== TASK_STATUS.WORKING;
+      }
       return status === TASK_STATUS.NOT_STARTED || status === TASK_STATUS.FAILED;
     },
     startTaskSession,

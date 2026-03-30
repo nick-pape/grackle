@@ -193,7 +193,7 @@ describe("createDispatchPhase", () => {
     expect(deps.startTaskSession).not.toHaveBeenCalled();
   });
 
-  it("dequeues entry when task is no longer eligible", async () => {
+  it("skips ineligible task without dequeuing (may become eligible later)", async () => {
     const deps = createMockDeps();
     vi.mocked(deps.isTaskEligible).mockReturnValue(false);
     vi.mocked(deps.listPendingEntries).mockReturnValue([makeQueueEntry()]);
@@ -201,7 +201,7 @@ describe("createDispatchPhase", () => {
     const phase = createDispatchPhase(deps);
     await phase.execute();
 
-    expect(deps.dequeueEntry).toHaveBeenCalledWith("task-1");
+    expect(deps.dequeueEntry).not.toHaveBeenCalled();
     expect(deps.startTaskSession).not.toHaveBeenCalled();
   });
 

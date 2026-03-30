@@ -97,10 +97,9 @@ async function dispatchEntry(deps: DispatchPhaseDeps, entry: DispatchQueueRow): 
     return;
   }
 
-  // Verify the task is still eligible (deps met, not already working from a concurrent start)
+  // Verify the task is still eligible (deps met, not already working from a concurrent start).
+  // Skip rather than dequeue — eligibility may change (e.g. deps become met on a later tick).
   if (!deps.isTaskEligible(entry.taskId)) {
-    deps.dequeueEntry(entry.taskId);
-    logger.debug({ taskId: entry.taskId }, "Dispatch: dequeued entry (task no longer eligible)");
     return;
   }
 
