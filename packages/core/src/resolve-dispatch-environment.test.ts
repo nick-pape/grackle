@@ -53,12 +53,11 @@ describe("resolveDispatchEnvironment", () => {
   it("skips disconnected workspace legacy env", () => {
     const deps = createMockDeps({
       getWorkspace: vi.fn().mockReturnValue({ environmentId: "ws-env" }),
-      isEnvironmentConnected: vi.fn((id) => id !== "ws-env"),
+      isEnvironmentConnected: vi.fn().mockReturnValue(false),
       getLinkedEnvironmentIds: vi.fn().mockReturnValue(["linked-1"]),
     });
 
-    // ws-env disconnected, linked-1 should be checked
-    // but linked-1 is also disconnected by default mock
+    // ws-env disconnected, linked-1 also disconnected — falls through to global (undefined)
     expect(resolveDispatchEnvironment(task, deps)).toBeUndefined();
   });
 

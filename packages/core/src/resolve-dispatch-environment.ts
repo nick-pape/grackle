@@ -4,9 +4,9 @@
  * When a queued task has no explicit environmentId, this function resolves
  * one using a priority cascade: ancestor session → workspace legacy env →
  * workspace linked envs (load balanced) → global fallback.
+ *
+ * This module is side-effect-free; logging is left to the caller.
  */
-
-import { logger } from "./logger.js";
 
 /** Dependencies for environment resolution, injected for testability. */
 export interface ResolveEnvironmentDeps {
@@ -44,7 +44,6 @@ export function resolveDispatchEnvironment(
   if (task.parentTaskId) {
     const ancestorEnvId = deps.resolveAncestorEnvironmentId(task.parentTaskId);
     if (ancestorEnvId && deps.isEnvironmentConnected(ancestorEnvId)) {
-      logger.debug({ taskParentId: task.parentTaskId, environmentId: ancestorEnvId }, "Dispatch resolve: ancestor environment");
       return ancestorEnvId;
     }
   }
@@ -55,7 +54,6 @@ export function resolveDispatchEnvironment(
 
     // 2. Workspace legacy environmentId
     if (workspace?.environmentId && deps.isEnvironmentConnected(workspace.environmentId)) {
-      logger.debug({ workspaceId: task.workspaceId, environmentId: workspace.environmentId }, "Dispatch resolve: workspace default environment");
       return workspace.environmentId;
     }
 
@@ -63,21 +61,29 @@ export function resolveDispatchEnvironment(
     const linkedIds = deps.getLinkedEnvironmentIds(task.workspaceId);
     const connectedLinked = linkedIds.filter((id) => deps.isEnvironmentConnected(id));
     if (connectedLinked.length > 0) {
-      // Sort by active session count ascending (load balance)
-      connectedLinked.sort((a, b) => deps.countActiveForEnvironment(a) - deps.countActiveForEnvironment(b));
-      const picked = connectedLinked[0]!;
-      logger.debug(
-        { workspaceId: task.workspaceId, environmentId: picked, candidates: connectedLinked.length },
-        "Dispatch resolve: linked environment (load balanced)",
-      );
-      return picked;
+      // Precompute active session counts once to avoid repeated DB hits during sort.
+      const activeCounts = new Map<string, number>();
+      for (const id of connectedLinked) {
+        activeCounts.set(id, deps.countActiveForEnvironment(id));
+      }
+
+      // Sort by active session count ascending (load balance), with deterministic tie-breaker.
+      connectedLinked.sort((a, b) => {
+        const countA = activeCounts.get(a)!;
+        const countB = activeCounts.get(b)!;
+        if (countA !== countB) {
+          return countA - countB;
+        }
+        // Tie-break on ID to keep ordering deterministic when counts are equal.
+        return a.localeCompare(b);
+      });
+      return connectedLinked[0]!;
     }
   }
 
   // 4. Global fallback — any connected environment
   const fallback = deps.findFirstConnectedEnvironment();
   if (fallback) {
-    logger.debug({ environmentId: fallback.id }, "Dispatch resolve: global fallback");
     return fallback.id;
   }
 
