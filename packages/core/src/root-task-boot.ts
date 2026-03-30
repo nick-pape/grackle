@@ -75,9 +75,7 @@ interface BootState {
 
 // ─── State ──────────────────────────────────────────────────
 
-/** Module-scoped state used by the legacy {@link createRootTaskBoot} API. */
-let state: BootState = createInitialState();
-
+/** Create a fresh backoff state. */
 function createInitialState(): BootState {
   return {
     failures: 0,
@@ -96,14 +94,13 @@ function createInitialState(): BootState {
  * event subscriptions. Each call checks whether the root task needs starting
  * and applies reanimate-first + exponential backoff logic.
  *
- * Uses module-scoped backoff state. For independent per-instance state, use
- * {@link createRootTaskBootSubscriber} instead.
+ * Each call creates independent backoff state (not shared across calls).
  *
  * @param deps - Injected dependencies for testability.
  * @returns An async function to call on each `environment.changed` event.
  */
 export function createRootTaskBoot(deps: RootTaskBootDeps): () => Promise<void> {
-  return createRootTaskBootHandler(deps, state);
+  return createRootTaskBootHandler(deps, createInitialState());
 }
 
 /**
@@ -140,15 +137,6 @@ export function createRootTaskBootSubscriber(ctx: PluginContext, deps: RootTaskB
       unsubscribe();
     },
   };
-}
-
-/**
- * Reset in-memory backoff state. For use in tests only.
- *
- * @internal
- */
-export function _resetForTesting(): void {
-  state = createInitialState();
 }
 
 // ─── Internal ───────────────────────────────────────────────
