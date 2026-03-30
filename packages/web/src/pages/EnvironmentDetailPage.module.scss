@@ -152,6 +152,17 @@
   padding: var(--space-xl);
 }
 
+.errorHint {
+  color: var(--accent-red);
+  font-size: var(--font-size-sm);
+  padding: var(--space-xs) 0;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 // --- Buttons ---
 
 .btnPrimary {

@@ -21,7 +21,7 @@ export function EnvironmentDetailPage(): JSX.Element {
   const navigate = useAppNavigate();
   const {
     environments: { environments, environmentsLoading, provisionStatus, provisionEnvironment, stopEnvironment, removeEnvironment },
-    workspaces: { workspaces, archiveWorkspace, linkEnvironment, unlinkEnvironment },
+    workspaces: { workspaces, archiveWorkspace, linkEnvironment, unlinkEnvironment, linkOperationError, clearLinkOperationError },
     sessions: { sessions },
   } = useGrackle();
 
@@ -228,6 +228,12 @@ export function EnvironmentDetailPage(): JSX.Element {
           </p>
         )}
 
+        {linkOperationError && (
+          <p className={styles.errorHint} data-testid="link-operation-error" onClick={clearLinkOperationError} role="alert">
+            {linkOperationError}
+          </p>
+        )}
+
         <div className={styles.cardList} data-testid="linked-workspaces-list">
           {linkedWorkspaces.map((ws) => (
             <div key={ws.id} className={styles.card} data-testid={`linked-workspace-card-${ws.id}`}>
@@ -237,7 +243,7 @@ export function EnvironmentDetailPage(): JSX.Element {
                   <button className={styles.btnSmall} onClick={() => navigate(workspaceUrl(ws.id, ws.environmentId))}>Open</button>
                   <button
                     className={styles.btnSmall}
-                    onClick={() => { unlinkEnvironment(ws.id, env.id).catch(() => {}); }}
+                    onClick={() => { unlinkEnvironment(ws.id, env.id); }}
                     data-testid={`unlink-workspace-${ws.id}`}
                   >
                     Unlink

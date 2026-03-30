@@ -83,6 +83,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   const [events, setEvents] = useState<SessionEvent[]>(MOCK_EVENTS);
   const [lastSpawnedId, setLastSpawnedId] = useState<string | undefined>(undefined);
   const [workspaces, setWorkspaces] = useState<Workspace[]>(MOCK_WORKSPACES);
+  const [workspaceLinkError, setWorkspaceLinkError] = useState("");
   const [tasks, setTasks] = useState<TaskData[]>(MOCK_TASKS);
   const [findings, setFindings] = useState<FindingData[]>(MOCK_FINDINGS);
   const [selectedFinding, setSelectedFinding] = useState<FindingData | undefined>(undefined);
@@ -964,6 +965,11 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         },
         linkEnvironment: async (workspaceId: string, environmentId: string) => {
           console.log("[MockGrackle] linkEnvironment", { workspaceId, environmentId });
+          if (environmentId === "error-env") {
+            setWorkspaceLinkError("Failed to link environment");
+            return;
+          }
+          setWorkspaceLinkError("");
           setWorkspaces((prev) =>
             prev.map((p) => {
               if (p.id !== workspaceId) {
@@ -978,6 +984,11 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         },
         unlinkEnvironment: async (workspaceId: string, environmentId: string) => {
           console.log("[MockGrackle] unlinkEnvironment", { workspaceId, environmentId });
+          if (environmentId === "error-env") {
+            setWorkspaceLinkError("Failed to unlink environment");
+            return;
+          }
+          setWorkspaceLinkError("");
           setWorkspaces((prev) =>
             prev.map((p) => {
               if (p.id !== workspaceId) {
@@ -987,6 +998,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
             }),
           );
         },
+        linkOperationError: workspaceLinkError,
+        clearLinkOperationError: () => { setWorkspaceLinkError(""); },
         domainHook: NOOP_DOMAIN_HOOK,
       },
 
