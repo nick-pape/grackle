@@ -196,6 +196,7 @@ Inter-process communication between parent and child agent sessions.
 | `ipc_close` | Close a file descriptor, optionally stopping the child. | `fd` (int) |
 | `ipc_terminate` | Send SIGTERM to a child session via its fd for graceful shutdown. | `fd` (int) |
 | `ipc_list_fds` | List your open file descriptors (IPC connections). | *(none)* |
+| `ipc_list_streams` | List all active IPC streams with subscriber details and buffer depth. | *(none)* |
 | `ipc_create_stream` | Create a named stream for inter-session communication. Returns an rw fd. | `name` (string) |
 | `ipc_attach` | Grant another session access to a stream you hold an fd on. | `fd` (int), `targetSessionId` (string), `permission?` (`r` \| `w` \| `rw`), `deliveryMode?` (`sync` \| `async` \| `detach`) |
 

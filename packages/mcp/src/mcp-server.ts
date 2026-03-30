@@ -420,6 +420,18 @@ async function handleGet(
   }
 
   const transport = transports.get(sessionId)!;
+
+  // When the SSE connection drops (client crash/disconnect), close the
+  // transport so the existing onclose handler cleans up the session maps.
+  res.on("close", () => {
+    if (transports.has(sessionId)) {
+      logger.info({ sessionId }, "SSE stream closed; cleaning up abandoned session");
+      transport.close().catch((error) => {
+        logger.warn({ sessionId, err: error }, "Error closing transport for abandoned SSE session");
+      });
+    }
+  });
+
   await transport.handleRequest(req, res);
 }
 

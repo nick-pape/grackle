@@ -19,7 +19,7 @@ export const ALL_MCP_TOOL_NAMES: ReadonlySet<string> = new Set([
   // finding
   "finding_list", "finding_post",
   // ipc
-  "ipc_spawn", "ipc_write", "ipc_close", "ipc_list_fds", "ipc_terminate", "ipc_create_stream", "ipc_attach",
+  "ipc_spawn", "ipc_write", "ipc_close", "ipc_list_fds", "ipc_list_streams", "ipc_terminate", "ipc_create_stream", "ipc_attach",
   // knowledge
   "knowledge_search", "knowledge_get_node", "knowledge_create_node",
   // logs

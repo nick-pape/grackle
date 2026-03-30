@@ -30,8 +30,16 @@ import type {
   TokenInfo,
   PersonaData,
   CredentialProviderConfig,
+  DomainHook,
 } from "../hooks/types.js";
 import { mapSessionStatus, mapEndReason } from "../hooks/types.js";
+
+/** No-op domain hook for mock providers. */
+const NOOP_DOMAIN_HOOK: DomainHook = {
+  onConnect: async () => {},
+  onDisconnect: () => {},
+  handleEvent: () => false,
+};
 import {
   MOCK_ENVIRONMENTS,
   MOCK_SESSIONS,
@@ -903,6 +911,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         provisionEnvironment: async (_environmentId: string, _force?: boolean) => { },
         stopEnvironment: async () => { },
         removeEnvironment: async () => { },
+        domainHook: NOOP_DOMAIN_HOOK,
       },
 
       sessions: {
@@ -921,6 +930,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         loadTaskSessions: async (taskId: string) => {
           console.log("[MockGrackle] loadTaskSessions", taskId);
         },
+        domainHook: NOOP_DOMAIN_HOOK,
       },
 
       workspaces: {
@@ -951,6 +961,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
             }),
           );
         },
+        domainHook: NOOP_DOMAIN_HOOK,
       },
 
       tasks: {
@@ -971,6 +982,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         resumeTask,
         updateTask,
         deleteTask,
+        domainHook: NOOP_DOMAIN_HOOK,
       },
 
       findings: {
@@ -982,6 +994,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         loadAllFindings,
         loadFinding,
         postFinding,
+        domainHook: NOOP_DOMAIN_HOOK,
       },
 
       tokens: {
@@ -990,12 +1003,14 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         loadTokens,
         setToken: mockSetToken,
         deleteToken: mockDeleteToken,
+        domainHook: NOOP_DOMAIN_HOOK,
       },
 
       credentials: {
         credentialProviders,
         credentialsLoading: false,
         updateCredentialProviders: mockUpdateCredentialProviders,
+        domainHook: NOOP_DOMAIN_HOOK,
       },
 
       codespaces: {
@@ -1005,6 +1020,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         codespaceCreating: false,
         listCodespaces: async () => { },
         createCodespace: async () => { },
+        domainHook: NOOP_DOMAIN_HOOK,
       },
 
       personas: {
@@ -1062,6 +1078,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           console.log("[MockGrackle] deletePersona", personaId);
           setPersonas((prev) => prev.filter((p) => p.id !== personaId));
         },
+        domainHook: NOOP_DOMAIN_HOOK,
       },
 
       knowledge: {
@@ -1184,6 +1201,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           setKnowledgeSearchQuery("");
         },
         handleEvent: () => false,
+        domainHook: NOOP_DOMAIN_HOOK,
       },
 
       // ── Top-level properties ─────────────────────────

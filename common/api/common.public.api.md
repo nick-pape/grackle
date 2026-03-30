@@ -915,6 +915,11 @@ const Grackle: GenService<{
         input: typeof AttachStreamRequestSchema;
         output: typeof AttachStreamResponseSchema;
     };
+    listStreams: {
+        methodKind: "unary";
+        input: typeof EmptySchema;
+        output: typeof ListStreamsResponseSchema;
+    };
     searchKnowledge: {
         methodKind: "unary";
         input: typeof SearchKnowledgeRequestSchema;
@@ -1009,6 +1014,12 @@ declare namespace grackle {
         AttachStreamRequestSchema,
         AttachStreamResponse,
         AttachStreamResponseSchema,
+        StreamSubscriberInfo,
+        StreamSubscriberInfoSchema,
+        StreamInfo,
+        StreamInfoSchema,
+        ListStreamsResponse,
+        ListStreamsResponseSchema,
         SessionEvent,
         SessionEventSchema,
         SessionEventList,
@@ -1339,6 +1350,14 @@ type ListSchedulesRequest = Message<"grackle.ListSchedulesRequest"> & {
 
 // @public
 const ListSchedulesRequestSchema: GenMessage<ListSchedulesRequest>;
+
+// @public
+type ListStreamsResponse = Message<"grackle.ListStreamsResponse"> & {
+    streams: StreamInfo[];
+};
+
+// @public
+const ListStreamsResponseSchema: GenMessage<ListStreamsResponse>;
 
 // @public
 type ListTasksRequest = Message<"grackle.ListTasksRequest"> & {
@@ -1865,6 +1884,31 @@ type StartTaskRequest = Message<"grackle.StartTaskRequest"> & {
 
 // @public
 const StartTaskRequestSchema: GenMessage<StartTaskRequest>;
+
+// @public
+type StreamInfo = Message<"grackle.StreamInfo"> & {
+    id: string;
+    name: string;
+    subscriberCount: number;
+    messageBufferDepth: number;
+    subscribers: StreamSubscriberInfo[];
+};
+
+// @public
+const StreamInfoSchema: GenMessage<StreamInfo>;
+
+// @public
+type StreamSubscriberInfo = Message<"grackle.StreamSubscriberInfo"> & {
+    subscriptionId: string;
+    sessionId: string;
+    fd: number;
+    permission: string;
+    deliveryMode: string;
+    createdBySpawn: boolean;
+};
+
+// @public
+const StreamSubscriberInfoSchema: GenMessage<StreamSubscriberInfo>;
 
 // @public
 export const SYSTEM_PERSONA_ID: string;

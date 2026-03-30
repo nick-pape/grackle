@@ -567,6 +567,27 @@ grackle logs abc12345 --tail         # stream live events
 
 ---
 
+### Streams
+
+Inspect active IPC streams for debugging inter-session communication.
+
+#### `grackle streams list`
+
+List all active IPC streams with subscriber details and message buffer depth.
+
+```bash
+grackle streams list
+# ┌──────────┬────────────────┬─────────────────────────┬──────────────┐
+# │ ID       │ Name           │ Subscribers             │ Buffer Depth │
+# ├──────────┼────────────────┼─────────────────────────┼──────────────┤
+# │ a1b2c3d4 │ shared-bus     │ 2                       │ 5            │
+# │          │   e5f6g7h8     │   fd=3 rw/async         │              │
+# │          │   i9j0k1l2     │   fd=4 r/sync           │              │
+# └──────────┴────────────────┴─────────────────────────┴──────────────┘
+```
+
+---
+
 ### Pairing
 
 #### `grackle pair`

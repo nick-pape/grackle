@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import type { DomainHook } from "./domainHook.js";
 
 /** Payload shape for notification.escalated domain events. */
 interface EscalationPayload {
@@ -23,6 +24,7 @@ interface DomainEvent {
  */
 export function useNotifications(): {
   handleEvent: (event: DomainEvent) => boolean;
+  domainHook: DomainHook;
 } {
   const permissionRef = useRef<NotificationPermission>("default");
 
@@ -74,5 +76,11 @@ export function useNotifications(): {
     return true;
   }
 
-  return { handleEvent };
+  const domainHook: DomainHook = {
+    onConnect: async () => {},
+    onDisconnect: () => {},
+    handleEvent,
+  };
+
+  return { handleEvent, domainHook };
 }

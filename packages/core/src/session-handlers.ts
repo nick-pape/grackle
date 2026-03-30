@@ -656,6 +656,32 @@ export async function attachStream(req: grackle.AttachStreamRequest): Promise<gr
   });
 }
 
+/** List all active IPC streams with subscriber details and message buffer depth. */
+export async function listStreams(): Promise<grackle.ListStreamsResponse> {
+  const allStreams = streamRegistry.listStreams();
+  return create(grackle.ListStreamsResponseSchema, {
+    streams: allStreams.map((stream) => {
+      const subscribers = Array.from(stream.subscriptions.values()).map((sub) =>
+        create(grackle.StreamSubscriberInfoSchema, {
+          subscriptionId: sub.id,
+          sessionId: sub.sessionId,
+          fd: sub.fd,
+          permission: sub.permission,
+          deliveryMode: sub.deliveryMode,
+          createdBySpawn: sub.createdBySpawn,
+        }),
+      );
+      return create(grackle.StreamInfoSchema, {
+        id: stream.id,
+        name: stream.name,
+        subscriberCount: stream.subscriptions.size,
+        messageBufferDepth: stream.messages.length,
+        subscribers,
+      });
+    }),
+  });
+}
+
 /** List sessions with optional filters. */
 export async function listSessions(req: grackle.SessionFilter): Promise<grackle.SessionList> {
   const rows = sessionStore.listSessions(req.environmentId, req.status);

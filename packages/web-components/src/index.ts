@@ -28,6 +28,8 @@ export { EventHoverRow } from "./components/display/EventHoverRow.js";
 export type { EventHoverRowProps } from "./components/display/EventHoverRow.js";
 export { FloatingActionBar } from "./components/display/FloatingActionBar.js";
 export type { FloatingActionBarProps } from "./components/display/FloatingActionBar.js";
+export { SessionAttemptSelector } from "./components/display/SessionAttemptSelector.js";
+export type { SessionAttemptSelectorProps } from "./components/display/SessionAttemptSelector.js";
 
 // Editable fields
 export {
@@ -58,7 +60,9 @@ export type { CalloutVariant } from "./components/notifications/index.js";
 export { UpdateBanner } from "./components/notifications/UpdateBanner.js";
 
 // Panels
-export { FindingsPanel, TokensPanel, AppearancePanel, AboutPanel, TaskEditPanel } from "./components/panels/index.js";
+export { FindingsPanel, TokensPanel, AppearancePanel, AboutPanel, TaskEditPanel, TaskActionButtons, TaskOverviewPanel } from "./components/panels/index.js";
+export type { TaskActionButtonsProps } from "./components/panels/TaskActionButtons.js";
+export type { TaskOverviewPanelProps } from "./components/panels/TaskOverviewPanel.js";
 export { EnvironmentEditPanel } from "./components/panels/EnvironmentEditPanel.js";
 export { KeyboardShortcutsPanel } from "./components/panels/KeyboardShortcutsPanel.js";
 export { WorkpadPanel } from "./components/panels/WorkpadPanel.js";
@@ -114,6 +118,7 @@ export type {
   UseEnvironmentsResult, UseSessionsResult, UseWorkspacesResult,
   UseTasksResult, UseFindingsResult, UseTokensResult,
   UseCredentialsResult, UseCodespacesResult, UsePersonasResult,
+  DomainHook,
 } from "./hooks/types.js";
 export {
   isObject, warnBadPayload, isGrackleEvent, isSessionEvent,

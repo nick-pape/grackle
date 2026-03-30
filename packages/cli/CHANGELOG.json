@@ -2,6 +2,48 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.92.0",
+      "tag": "@grackle-ai/cli_v0.92.0",
+      "date": "Mon, 30 Mar 2026 02:41:47 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add ListStreams RPC, grackle streams list CLI command, and ipc_list_streams MCP tool for debugging active IPC streams"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.91.4",
+      "tag": "@grackle-ai/cli_v0.91.4",
+      "date": "Mon, 30 Mar 2026 02:02:43 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Extract TaskPage subcomponents (TaskOverviewPanel, TaskActionButtons, SessionAttemptSelector) into web-components"
+          },
+          {
+            "comment": "Decompose server/index.ts into 6 testable modules with 72 new unit tests"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.91.3",
+      "tag": "@grackle-ai/cli_v0.91.3",
+      "date": "Mon, 30 Mar 2026 00:49:02 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix: self-registering DomainHook pattern for ConnectRPC reconnect safety"
+          },
+          {
+            "comment": "Clean up abandoned MCP sessions when SSE stream disconnects"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.91.2",
       "tag": "@grackle-ai/cli_v0.91.2",
       "date": "Sun, 29 Mar 2026 23:27:43 GMT",

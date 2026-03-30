@@ -221,6 +221,71 @@ export const ipcTools: ToolDefinition[] = [
     },
   },
   {
+    name: "ipc_list_streams",
+    group: "ipc",
+    description:
+      "List all active IPC streams with subscriber details and message buffer depth. Useful for debugging inter-session communication.",
+    inputSchema: z.object({}),
+    rpcMethod: "listStreams",
+    mutating: false,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+    async handler(
+      _args: Record<string, unknown>,
+      client: Client<typeof grackle.Grackle>,
+      authContext?: AuthContext,
+    ) {
+      try {
+        const result = await client.listStreams({});
+
+        // Scoped agents only see streams they participate in
+        const filteredStreams = (() => {
+          if (authContext?.type === "scoped" && authContext.taskSessionId) {
+            const streams: typeof result.streams = [];
+            for (const s of result.streams) {
+              const scopedSubscribers = s.subscribers.filter(
+                (sub) => sub.sessionId === authContext.taskSessionId,
+              );
+              if (scopedSubscribers.length === 0) {
+                continue;
+              }
+              streams.push({
+                ...s,
+                subscribers: scopedSubscribers,
+                subscriberCount: scopedSubscribers.length,
+              });
+            }
+            return streams;
+          }
+          return result.streams;
+        })();
+
+        return jsonResult({
+          streams: filteredStreams.map((s) => ({
+            id: s.id,
+            name: s.name,
+            subscriberCount: s.subscriberCount,
+            messageBufferDepth: s.messageBufferDepth,
+            subscribers: s.subscribers.map((sub) => ({
+              subscriptionId: sub.subscriptionId,
+              sessionId: sub.sessionId,
+              fd: sub.fd,
+              permission: sub.permission,
+              deliveryMode: sub.deliveryMode,
+              createdBySpawn: sub.createdBySpawn,
+            })),
+          })),
+        });
+      } catch (error) {
+        return grpcErrorToToolResult(error);
+      }
+    },
+  },
+  {
     name: "ipc_create_stream",
     group: "ipc",
     description: "Create a new named stream for inter-session communication. You get an rw file descriptor on the stream. Use ipc_attach to grant other sessions access, and ipc_write/ipc_close to send messages and close the fd.",
