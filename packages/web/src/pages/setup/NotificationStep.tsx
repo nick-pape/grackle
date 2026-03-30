@@ -1,4 +1,4 @@
-import { useState, type JSX } from "react";
+import { type JSX } from "react";
 import styles from "../SetupWizard.module.scss";
 
 /** Props for the {@link NotificationStep} component. */
@@ -17,28 +17,23 @@ function notificationsSupported(): boolean {
 /**
  * Notification permission step -- explains why browser notifications are useful
  * and requests permission via a real user gesture (button click).
+ *
+ * The permission request is fire-and-forget: we call requestPermission() during
+ * the click (satisfying the user-gesture requirement) but immediately proceed
+ * with onFinish(). The browser prompt resolves independently -- we don't need
+ * to wait for the answer since useNotifications already checks permission state
+ * when escalation events arrive.
  */
 export function NotificationStep({ onFinish, onBack, finishDisabled }: NotificationStepProps): JSX.Element {
-  const [requesting, setRequesting] = useState(false);
-
   const supported = notificationsSupported();
   const alreadyDecided = supported && Notification.permission !== "default";
 
-  /** Request permission then advance. */
-  async function handleEnable(): Promise<void> {
-    if (!supported) {
-      onFinish();
-      return;
+  /** Fire permission request (non-blocking) then advance. */
+  function handleEnable(): void {
+    if (supported) {
+      Notification.requestPermission().catch(() => {});
     }
-    setRequesting(true);
-    try {
-      await Notification.requestPermission().catch(() => {
-        // Swallow errors from the permission request; onFinish will still be called.
-      });
-      onFinish();
-    } finally {
-      setRequesting(false);
-    }
+    onFinish();
   }
 
   return (
@@ -62,7 +57,7 @@ export function NotificationStep({ onFinish, onBack, finishDisabled }: Notificat
           type="button"
           className={styles.ghostButton}
           onClick={onBack}
-          disabled={finishDisabled || requesting}
+          disabled={finishDisabled}
         >
           Back
         </button>
@@ -73,7 +68,7 @@ export function NotificationStep({ onFinish, onBack, finishDisabled }: Notificat
               type="button"
               className={styles.ghostButton}
               onClick={onFinish}
-              disabled={finishDisabled || requesting}
+              disabled={finishDisabled}
               data-testid="setup-notifications-skip"
             >
               Skip
@@ -81,8 +76,8 @@ export function NotificationStep({ onFinish, onBack, finishDisabled }: Notificat
             <button
               type="button"
               className={styles.primaryButton}
-              onClick={() => { handleEnable().catch(() => {}); }}
-              disabled={finishDisabled || requesting}
+              onClick={handleEnable}
+              disabled={finishDisabled}
               data-testid="setup-notifications-enable"
             >
               Enable Notifications
