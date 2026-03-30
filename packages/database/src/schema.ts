@@ -93,6 +93,8 @@ export const workspaces = sqliteTable("workspaces", {
     .default(true),
   workingDirectory: text("working_directory").notNull().default(""),
   defaultPersonaId: text("default_persona_id").notNull().default(""),
+  tokenBudget: integer("token_budget").notNull().default(0),
+  costBudgetMillicents: integer("cost_budget_millicents").notNull().default(0),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),
@@ -150,6 +152,8 @@ export const tasks = sqliteTable("tasks", {
   defaultPersonaId: text("default_persona_id").notNull().default(""),
   workpad: text("workpad").notNull().default(""),
   scheduleId: text("schedule_id").notNull().default(""),
+  tokenBudget: integer("token_budget").notNull().default(0),
+  costBudgetMillicents: integer("cost_budget_millicents").notNull().default(0),
 });
 
 /** Row shape returned by a SELECT on the tasks table. */

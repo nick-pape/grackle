@@ -14,6 +14,8 @@ export function createWorkspace(
   useWorktrees: boolean = true,
   workingDirectory: string = "",
   defaultPersonaId: string = "",
+  tokenBudget: number = 0,
+  costBudgetMillicents: number = 0,
 ): void {
   db.insert(workspaces).values({
     id,
@@ -24,6 +26,8 @@ export function createWorkspace(
     useWorktrees,
     workingDirectory: workingDirectory.trim(),
     defaultPersonaId,
+    tokenBudget,
+    costBudgetMillicents,
   }).run();
 }
 
@@ -94,6 +98,10 @@ export interface UpdateWorkspaceFields {
   workingDirectory?: string;
   /** Default persona for tasks in this workspace. */
   defaultPersonaId?: string;
+  /** Total token cap across all tasks in this workspace. 0 = unlimited. */
+  tokenBudget?: number;
+  /** Total cost cap in millicents across all tasks. 0 = unlimited. */
+  costBudgetMillicents?: number;
 }
 
 /** Update one or more fields on an existing workspace. Returns the updated row, or undefined if not found. */
@@ -119,6 +127,12 @@ export function updateWorkspace(id: string, fields: UpdateWorkspaceFields): Work
   }
   if (fields.defaultPersonaId !== undefined) {
     sets.defaultPersonaId = fields.defaultPersonaId;
+  }
+  if (fields.tokenBudget !== undefined) {
+    sets.tokenBudget = fields.tokenBudget;
+  }
+  if (fields.costBudgetMillicents !== undefined) {
+    sets.costBudgetMillicents = fields.costBudgetMillicents;
   }
   db.update(workspaces).set(sets).where(eq(workspaces.id, id)).run();
   return getWorkspace(id);

@@ -395,6 +395,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         workingDirectory: workingDirectory || "",
         useWorktrees: useWorktrees ?? true,
         defaultPersonaId: defaultPersonaId || "",
+        tokenBudget: 0,
+        costBudgetMillicents: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -473,6 +475,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           canDecompose: canDecompose ?? !parentTaskId,
           defaultPersonaId: defaultPersonaId || "",
           workpad: "",
+          tokenBudget: 0,
+          costBudgetMillicents: 0,
         };
 
         return [...prev, newTask];

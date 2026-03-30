@@ -23,3 +23,11 @@ export function formatCost(usd: number): string {
   }
   return `$${usd.toFixed(2)}`;
 }
+
+/** Format a budget display: "used / total" with appropriate formatting for tokens or cost. */
+export function formatBudget(used: number, budget: number, type: "token" | "cost"): string {
+  if (type === "token") {
+    return `${formatTokens(used)} / ${formatTokens(budget)}`;
+  }
+  return `${formatCost(used)} / ${formatCost(budget / 100000)}`;
+}

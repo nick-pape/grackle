@@ -47,7 +47,9 @@ function createSchema(db: InstanceType<typeof Database>): void {
       can_decompose  INTEGER NOT NULL DEFAULT 0,
       default_persona_id TEXT NOT NULL DEFAULT '',
       workpad        TEXT NOT NULL DEFAULT '',
-      schedule_id    TEXT NOT NULL DEFAULT ''
+      schedule_id    TEXT NOT NULL DEFAULT '',
+      token_budget  INTEGER NOT NULL DEFAULT 0,
+      cost_budget_millicents INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS settings (
@@ -80,6 +82,8 @@ function createSchema(db: InstanceType<typeof Database>): void {
       environment_id     TEXT NOT NULL DEFAULT '',
       status             TEXT NOT NULL DEFAULT 'active',
       default_persona_id TEXT NOT NULL DEFAULT '',
+      token_budget  INTEGER NOT NULL DEFAULT 0,
+      cost_budget_millicents INTEGER NOT NULL DEFAULT 0,
       created_at         TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
     );

@@ -866,6 +866,8 @@ export const MOCK_WORKSPACES: Workspace[] = [
     workingDirectory: "",
     useWorktrees: true,
     defaultPersonaId: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
     createdAt: "2026-01-15T10:00:00Z",
     updatedAt: "2026-01-15T10:00:00Z",
   },
@@ -880,6 +882,8 @@ export const MOCK_WORKSPACES: Workspace[] = [
     workingDirectory: "",
     useWorktrees: true,
     defaultPersonaId: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
     createdAt: "2026-02-01T14:30:00Z",
     updatedAt: "2026-02-01T14:30:00Z",
   },
@@ -894,6 +898,8 @@ export const MOCK_WORKSPACES: Workspace[] = [
     workingDirectory: "",
     useWorktrees: true,
     defaultPersonaId: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
     createdAt: "2025-11-20T09:00:00Z",
     updatedAt: "2025-11-20T09:00:00Z",
   },
@@ -935,6 +941,8 @@ export const MOCK_TASKS: TaskData[] = [
         blockers: "Need to verify token rotation strategy with security team before merging",
       },
     }),
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
   },
   // ── Children of task-001 ───────────────────────────
   {
@@ -955,6 +963,8 @@ export const MOCK_TASKS: TaskData[] = [
     canDecompose: false,
     defaultPersonaId: "",
     workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
   },
   {
     id: "task-001b",
@@ -974,6 +984,8 @@ export const MOCK_TASKS: TaskData[] = [
     canDecompose: false,
     defaultPersonaId: "",
     workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
   },
   {
     id: "task-001c",
@@ -993,6 +1005,8 @@ export const MOCK_TASKS: TaskData[] = [
     canDecompose: false,
     defaultPersonaId: "",
     workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
   },
   // ── Remaining root tasks for proj-alpha ────────────
   {
@@ -1013,6 +1027,8 @@ export const MOCK_TASKS: TaskData[] = [
     canDecompose: false,
     defaultPersonaId: "",
     workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
   },
   {
     id: "task-003",
@@ -1032,6 +1048,8 @@ export const MOCK_TASKS: TaskData[] = [
     canDecompose: false,
     defaultPersonaId: "",
     workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
   },
   {
     id: "task-004",
@@ -1051,6 +1069,8 @@ export const MOCK_TASKS: TaskData[] = [
     canDecompose: false,
     defaultPersonaId: "",
     workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
   },
   {
     id: "task-005",
@@ -1070,6 +1090,8 @@ export const MOCK_TASKS: TaskData[] = [
     canDecompose: false,
     defaultPersonaId: "",
     workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
   },
   // ── Tasks for proj-beta ────────────────────────────
   {
@@ -1098,6 +1120,8 @@ export const MOCK_TASKS: TaskData[] = [
         benchmarks: { "1M rows snappy": "2.3s", "1M rows zstd": "3.1s", "1M rows gzip": "4.8s" },
       },
     }),
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
   },
   // ── Children of task-006 ───────────────────────────
   {
@@ -1118,6 +1142,8 @@ export const MOCK_TASKS: TaskData[] = [
     canDecompose: false,
     defaultPersonaId: "",
     workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
   },
   {
     id: "task-006b",
@@ -1137,6 +1163,8 @@ export const MOCK_TASKS: TaskData[] = [
     canDecompose: false,
     defaultPersonaId: "",
     workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
   },
   {
     id: "task-006c",
@@ -1156,6 +1184,8 @@ export const MOCK_TASKS: TaskData[] = [
     canDecompose: false,
     defaultPersonaId: "",
     workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
   },
   {
     id: "task-006d",
@@ -1175,6 +1205,8 @@ export const MOCK_TASKS: TaskData[] = [
     canDecompose: false,
     defaultPersonaId: "",
     workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
   },
   // ── Remaining root tasks for proj-beta ─────────────
   {
@@ -1195,6 +1227,8 @@ export const MOCK_TASKS: TaskData[] = [
     canDecompose: true,
     defaultPersonaId: "",
     workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
   },
   // ── Children of task-007 ───────────────────────────
   {
@@ -1215,6 +1249,8 @@ export const MOCK_TASKS: TaskData[] = [
     canDecompose: false,
     defaultPersonaId: "",
     workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
   },
   {
     id: "task-007b",
@@ -1234,6 +1270,8 @@ export const MOCK_TASKS: TaskData[] = [
     canDecompose: false,
     defaultPersonaId: "",
     workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
   },
   {
     id: "task-008",
@@ -1253,6 +1291,8 @@ export const MOCK_TASKS: TaskData[] = [
     canDecompose: false,
     defaultPersonaId: "",
     workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
   },
 ];
 

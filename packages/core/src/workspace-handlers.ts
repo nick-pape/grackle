@@ -47,6 +47,8 @@ export async function createWorkspace(req: grackle.CreateWorkspaceRequest): Prom
     useWorktrees,
     req.workingDirectory ?? "",
     req.defaultPersonaId ?? "",
+    req.tokenBudget ?? 0,
+    req.costBudgetMillicents ?? 0,
   );
   emit("workspace.created", { workspaceId: id });
   logger.info({ workspaceId: id }, "Workspace created");
@@ -97,6 +99,8 @@ export async function updateWorkspace(req: grackle.UpdateWorkspaceRequest): Prom
     useWorktrees: req.useWorktrees ?? undefined,
     workingDirectory: req.workingDirectory,
     defaultPersonaId: req.defaultPersonaId,
+    tokenBudget: req.tokenBudget,
+    costBudgetMillicents: req.costBudgetMillicents,
   });
   if (!row) {
     throw new ConnectError(`Workspace not found after update: ${req.id}`, Code.NotFound);

@@ -3,7 +3,7 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { TaskData, Session, Environment, Workspace, UsageStats } from "../../hooks/types.js";
 import { getStatusStyle, getStatusBadgeClassKey } from "../../utils/taskStatus.js";
-import { formatCost } from "../../utils/format.js";
+import { formatCost, formatTokens } from "../../utils/format.js";
 import { WorkpadPanel } from "./WorkpadPanel.js";
 import styles from "./TaskOverviewPanel.module.scss";
 
@@ -231,6 +231,29 @@ export function TaskOverviewPanel({
                 <span className={styles.timelineKey}>Total (incl. subtasks)</span>
                 <span className={styles.timelineValue}>{formatCost(treeUsage.costUsd)}</span>
                 <span className={styles.timelineDelta}>{treeUsage.sessionCount} session{treeUsage.sessionCount !== 1 ? "s" : ""}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {(task.tokenBudget > 0 || task.costBudgetMillicents > 0) && (
+        <div className={styles.overviewSection} data-testid="task-overview-budget">
+          <div className={styles.overviewLabel}>Budget</div>
+          <div className={styles.timeline}>
+            {task.tokenBudget > 0 && (
+              <div className={styles.timelineRow}>
+                <span className={styles.timelineKey}>Tokens</span>
+                <span className={styles.timelineValue}>
+                  {formatTokens((taskUsage?.inputTokens ?? 0) + (taskUsage?.outputTokens ?? 0))} / {formatTokens(task.tokenBudget)}
+                </span>
+              </div>
+            )}
+            {task.costBudgetMillicents > 0 && (
+              <div className={styles.timelineRow}>
+                <span className={styles.timelineKey}>Cost</span>
+                <span className={styles.timelineValue}>
+                  {formatCost(taskUsage?.costUsd ?? 0)} / {formatCost(task.costBudgetMillicents / 100_000)}
+                </span>
               </div>
             )}
           </div>
