@@ -7,10 +7,11 @@ import { useAppNavigate, useToast } from "@grackle-ai/web-components";
 import { WelcomeStep } from "./setup/WelcomeStep.js";
 import { AboutStep } from "./setup/AboutStep.js";
 import { RuntimeStep } from "./setup/RuntimeStep.js";
+import { NotificationStep } from "./setup/NotificationStep.js";
 import styles from "./SetupWizard.module.scss";
 
 /** Total number of steps in the wizard. */
-const TOTAL_STEPS: number = 3;
+const TOTAL_STEPS: number = 4;
 
 /** Default model for each runtime. resolvePersona() requires a non-empty model. */
 const DEFAULT_MODELS: Record<string, string> = {
@@ -26,12 +27,23 @@ export function SetupWizard(): JSX.Element {
   const { showToast } = useToast();
   const navigate = useAppNavigate();
   const [step, setStep] = useState(0);
+  const [selectedRuntime, setSelectedRuntime] = useState("claude-code");
   const [isFinishing, setIsFinishing] = useState(false);
 
   const seedPersona = personas.find((p) => p.id === "claude-code");
 
-  const handleFinish = useCallback(
+  /** Save runtime choice and advance to notification permission step. */
+  const handleRuntimeNext = useCallback(
     (runtime: string) => {
+      setSelectedRuntime(runtime);
+      setStep(3);
+    },
+    [],
+  );
+
+  const handleFinish = useCallback(
+    () => {
+      const runtime = selectedRuntime;
       setIsFinishing(true);
 
       const updates: Promise<unknown>[] = [];
@@ -60,7 +72,7 @@ export function SetupWizard(): JSX.Element {
           },
         );
     },
-    [seedPersona, personas, updatePersona, completeOnboarding, navigate, showToast],
+    [selectedRuntime, seedPersona, personas, updatePersona, completeOnboarding, navigate, showToast],
   );
 
   // If onboarding is already complete, redirect to home
@@ -86,9 +98,16 @@ export function SetupWizard(): JSX.Element {
             {step === 2 && (
               <RuntimeStep
                 currentRuntime={seedPersona?.runtime ?? "claude-code"}
-                onFinish={handleFinish}
+                onFinish={handleRuntimeNext}
                 onBack={() => setStep(1)}
-                finishDisabled={!seedPersona || isFinishing}
+                finishDisabled={!seedPersona}
+              />
+            )}
+            {step === 3 && (
+              <NotificationStep
+                onFinish={handleFinish}
+                onBack={() => setStep(2)}
+                finishDisabled={isFinishing}
               />
             )}
           </motion.div>
