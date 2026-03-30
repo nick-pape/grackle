@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect } from "@storybook/test";
+import { expect, userEvent, waitFor } from "@storybook/test";
 import { withMockGrackleRoute } from "@grackle-ai/web-components";
 import { WorkspacePage } from "./WorkspacePage.js";
 
@@ -96,5 +96,46 @@ export const LinkEnvironmentDropdown: Story = {
     // Should show a link dropdown with available environments
     const linkSelect = canvas.getByTestId("link-env-select");
     await expect(linkSelect).toBeInTheDocument();
+  },
+};
+
+/** Clicking unlink removes the linked environment chip. */
+export const UnlinkRemovesChip: Story = {
+  decorators: [withMockGrackleRoute(
+    ["/environments/env-local-01/workspaces/proj-alpha"],
+    "/environments/:environmentId/workspaces/:workspaceId",
+  )],
+  play: async ({ canvas }) => {
+    // proj-alpha starts with env-docker-01 linked
+    await expect(canvas.getByTestId("linked-env-env-docker-01")).toBeInTheDocument();
+    // Click unlink
+    await userEvent.click(canvas.getByTestId("unlink-env-env-docker-01"));
+    // Chip should disappear (MockGrackleProvider removes it from state)
+    await waitFor(async () => {
+      await expect(canvas.queryByTestId("linked-env-env-docker-01")).not.toBeInTheDocument();
+    });
+    // "None" placeholder should appear
+    const linkedSection = canvas.getByTestId("linked-environments");
+    await expect(linkedSection).toHaveTextContent("None");
+  },
+};
+
+/** Selecting from the link dropdown adds a linked environment chip. */
+export const LinkAddsChip: Story = {
+  decorators: [withMockGrackleRoute(
+    ["/environments/env-docker-01/workspaces/proj-beta"],
+    "/environments/:environmentId/workspaces/:workspaceId",
+  )],
+  play: async ({ canvas }) => {
+    // proj-beta starts with no linked envs, "None" shown
+    const linkedSection = canvas.getByTestId("linked-environments");
+    await expect(linkedSection).toHaveTextContent("None");
+    // Select "Local" from the link dropdown (env-local-01)
+    const linkSelect = canvas.getByTestId("link-env-select");
+    await userEvent.selectOptions(linkSelect, "env-local-01");
+    // A chip for env-local-01 should appear
+    await waitFor(async () => {
+      await expect(canvas.getByTestId("linked-env-env-local-01")).toBeInTheDocument();
+    });
   },
 };

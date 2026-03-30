@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { MemoryRouter, Routes, Route } from "react-router";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect } from "@storybook/test";
+import { expect, userEvent, waitFor } from "@storybook/test";
 import { withMockGrackle } from "@grackle-ai/web-components";
 import { EnvironmentDetailPage } from "./EnvironmentDetailPage.js";
 
@@ -66,5 +66,22 @@ export const UnlinkButtonOnCard: Story = {
     const unlinkButton = canvas.getByTestId("unlink-workspace-proj-alpha");
     await expect(unlinkButton).toBeInTheDocument();
     await expect(unlinkButton).toHaveTextContent("Unlink");
+  },
+};
+
+/** Clicking Unlink removes the linked workspace card. */
+export const UnlinkRemovesCard: Story = {
+  render: () => <DetailRouteWrapper envId="env-docker-01" />,
+  play: async ({ canvas }) => {
+    // proj-alpha is linked to env-docker-01
+    await expect(canvas.getByTestId("unlink-workspace-proj-alpha")).toBeInTheDocument();
+    // Click Unlink
+    await userEvent.click(canvas.getByTestId("unlink-workspace-proj-alpha"));
+    // Card should disappear
+    await waitFor(async () => {
+      await expect(canvas.queryByTestId("linked-workspace-card")).not.toBeInTheDocument();
+    });
+    // Empty state should appear
+    await expect(canvas.getByTestId("linked-workspaces-empty")).toBeInTheDocument();
   },
 };
