@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/server",
-  "version": "0.94.0",
+  "version": "0.95.2",
   "description": "Grackle server orchestrator — spawns and wires core (gRPC), web-server (HTTP), MCP, and PowerLine",
   "license": "MIT",
   "repository": {
@@ -47,6 +47,7 @@
     "@grackle-ai/core": "workspace:*",
     "@grackle-ai/database": "workspace:*",
     "@grackle-ai/mcp": "workspace:*",
+    "@grackle-ai/plugin-sdk": "workspace:*",
     "@grackle-ai/powerline": "workspace:*",
     "@grackle-ai/web-server": "workspace:*",
     "pino": "^10.3.1",

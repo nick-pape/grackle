@@ -2,6 +2,42 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.95.2",
+      "tag": "@grackle-ai/cli_v0.95.2",
+      "date": "Mon, 30 Mar 2026 20:03:42 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Wire server startup to use loadPlugins() with core plugin"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.95.1",
+      "tag": "@grackle-ai/cli_v0.95.1",
+      "date": "Mon, 30 Mar 2026 19:25:19 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Decouple cron schedule firing from session start — cron creates tasks and enqueues for dispatch"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.95.0",
+      "tag": "@grackle-ai/cli_v0.95.0",
+      "date": "Mon, 30 Mar 2026 18:59:55 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add @grackle-ai/plugin-sdk with GracklePlugin contract and loadPlugins() loader"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.94.0",
       "tag": "@grackle-ai/cli_v0.94.0",
       "date": "Mon, 30 Mar 2026 17:31:12 GMT",

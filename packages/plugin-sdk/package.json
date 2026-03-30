@@ -1,32 +1,21 @@
 {
-  "name": "@grackle-ai/adapter-docker",
+  "name": "@grackle-ai/plugin-sdk",
   "version": "0.95.2",
-  "description": "Grackle Docker environment adapter",
+  "description": "Plugin contract and loader for Grackle — defines GracklePlugin, PluginContext, and loadPlugins()",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/nick-pape/grackle.git",
-    "directory": "packages/adapter-docker"
+    "directory": "packages/plugin-sdk"
   },
-  "keywords": [
-    "grackle",
-    "adapter",
-    "docker",
-    "environment"
-  ],
+  "keywords": ["grackle", "plugin", "sdk"],
   "homepage": "https://github.com/nick-pape/grackle#readme",
-  "bugs": {
-    "url": "https://github.com/nick-pape/grackle/issues"
-  },
-  "engines": {
-    "node": ">=22.0.0 <24.0.0"
-  },
+  "bugs": { "url": "https://github.com/nick-pape/grackle/issues" },
+  "engines": { "node": ">=22.0.0 <24.0.0" },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": [
-    "dist/"
-  ],
+  "files": ["dist/"],
   "scripts": {
     "build": "heft build --clean",
     "test": "vitest run",
@@ -35,13 +24,13 @@
     "_phase:test": "vitest run"
   },
   "dependencies": {
-    "@grackle-ai/adapter-sdk": "workspace:*",
-    "@grackle-ai/common": "workspace:*"
+    "@bufbuild/protobuf": "^2.11.0",
+    "pino": "^10.3.1"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
     "@rushstack/heft": "1.2.7",
     "@types/node": "^22.0.0",
-    "vitest": "^3.1.1"
+    "vitest": "^3.2.1"
   }
 }

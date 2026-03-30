@@ -72,6 +72,12 @@ export function createDispatchPhase(deps: DispatchPhaseDeps): ReconciliationPhas
 
 /** Process a single dispatch queue entry. */
 async function dispatchEntry(deps: DispatchPhaseDeps, entry: DispatchQueueRow): Promise<void> {
+  // Entries with no environmentId are waiting for auto-resolution (#927).
+  // Skip them for now — they'll be dispatched once environment resolution is implemented.
+  if (!entry.environmentId) {
+    return;
+  }
+
   // Dequeue entries whose environment has been removed entirely (not just disconnected)
   if (!deps.environmentExists(entry.environmentId)) {
     deps.dequeueEntry(entry.taskId);

@@ -2,7 +2,7 @@ import {
   createCronPhase, createOrphanPhase, createDispatchPhase, lifecycleCleanupPhase,
   createEnvironmentReconciliationPhase, listConnections, removeConnection,
   isKnowledgeEnabled, createKnowledgeHealthPhase, neo4jHealthCheck,
-  startTaskSession, emit, findFirstConnectedEnvironment,
+  startTaskSession, emit,
   hasCapacity, computeTaskStatus,
 } from "@grackle-ai/core";
 import { TASK_STATUS, ROOT_TASK_ID } from "@grackle-ai/common";
@@ -27,16 +27,10 @@ export function createReconciliationPhases(): ReconciliationPhase[] {
     advanceSchedule: scheduleStore.advanceSchedule,
     createTask: taskStore.createTask,
     setTaskScheduleId: taskStore.setTaskScheduleId,
-    startTaskSession,
+    enqueueForDispatch: dispatchQueueStore.enqueue,
     emit,
-    findFirstConnectedEnvironment,
     getPersona: personaStore.getPersona,
-    getTask: taskStore.getTask,
     setScheduleEnabled: scheduleStore.setScheduleEnabled,
-    isEnvironmentConnected: (id: string): boolean => {
-      const env = envRegistry.getEnvironment(id);
-      return env?.status === "connected";
-    },
   });
 
   const orphanPhase = createOrphanPhase({

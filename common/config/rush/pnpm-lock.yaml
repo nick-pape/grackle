@@ -291,6 +291,9 @@ importers:
       '@grackle-ai/knowledge':
         specifier: workspace:*
         version: link:../knowledge
+      '@grackle-ai/plugin-sdk':
+        specifier: workspace:*
+        version: link:../plugin-sdk
       '@grackle-ai/prompt':
         specifier: workspace:*
         version: link:../prompt
@@ -442,6 +445,28 @@ importers:
         version: 22.19.15
       vitest:
         specifier: ^3.1.1
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
+
+  ../../packages/plugin-sdk:
+    dependencies:
+      '@bufbuild/protobuf':
+        specifier: ^2.11.0
+        version: 2.11.0
+      pino:
+        specifier: ^10.3.1
+        version: 10.3.1
+    devDependencies:
+      '@grackle-ai/heft-rig':
+        specifier: workspace:*
+        version: link:../../rigs/heft-rig
+      '@rushstack/heft':
+        specifier: 1.2.7
+        version: 1.2.7(@types/node@22.19.15)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      vitest:
+        specifier: ^3.2.1
         version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
 
   ../../packages/powerline:
@@ -690,6 +715,9 @@ importers:
       '@grackle-ai/mcp':
         specifier: workspace:*
         version: link:../mcp
+      '@grackle-ai/plugin-sdk':
+        specifier: workspace:*
+        version: link:../plugin-sdk
       '@grackle-ai/powerline':
         specifier: workspace:*
         version: link:../powerline

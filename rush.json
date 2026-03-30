@@ -77,6 +77,11 @@
       "versionPolicyName": "grackle"
     },
     {
+      "packageName": "@grackle-ai/plugin-sdk",
+      "projectFolder": "packages/plugin-sdk",
+      "versionPolicyName": "grackle"
+    },
+    {
       "packageName": "@grackle-ai/prompt",
       "projectFolder": "packages/prompt",
       "versionPolicyName": "grackle"

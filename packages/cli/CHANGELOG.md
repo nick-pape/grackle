@@ -1,6 +1,27 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 30 Mar 2026 17:31:12 GMT and should not be manually modified.
+This log was last generated on Mon, 30 Mar 2026 20:03:42 GMT and should not be manually modified.
+
+## 0.95.2
+Mon, 30 Mar 2026 20:03:42 GMT
+
+### Patches
+
+- Wire server startup to use loadPlugins() with core plugin
+
+## 0.95.1
+Mon, 30 Mar 2026 19:25:19 GMT
+
+### Patches
+
+- Decouple cron schedule firing from session start — cron creates tasks and enqueues for dispatch
+
+## 0.95.0
+Mon, 30 Mar 2026 18:59:55 GMT
+
+### Minor changes
+
+- Add @grackle-ai/plugin-sdk with GracklePlugin contract and loadPlugins() loader
 
 ## 0.94.0
 Mon, 30 Mar 2026 17:31:12 GMT

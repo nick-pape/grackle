@@ -100,6 +100,20 @@ describe("createDispatchPhase", () => {
     expect(deps.startTaskSession).not.toHaveBeenCalled();
   });
 
+  it("skips entry with empty environmentId (awaiting auto-resolution)", async () => {
+    const deps = createMockDeps();
+    vi.mocked(deps.listPendingEntries).mockReturnValue([
+      makeQueueEntry({ environmentId: "" }),
+    ]);
+
+    const phase = createDispatchPhase(deps);
+    await phase.execute();
+
+    expect(deps.dequeueEntry).not.toHaveBeenCalled();
+    expect(deps.startTaskSession).not.toHaveBeenCalled();
+    expect(deps.environmentExists).not.toHaveBeenCalled();
+  });
+
   it("skips dispatch when environment is disconnected", async () => {
     const deps = createMockDeps();
     vi.mocked(deps.isEnvironmentConnected).mockReturnValue(false);
