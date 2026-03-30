@@ -83,6 +83,7 @@ export interface ServerConfig {
     host: string;
     mcpPort: number;
     powerlinePort: number;
+    skipRootAutostart?: boolean;
     webPort: number;
     workingDirectory?: string;
     worktreeBase?: string;
