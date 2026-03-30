@@ -92,16 +92,19 @@ describe("linkEnvironment", () => {
     });
   });
 
-  it("propagates RPC errors to caller", async () => {
+  it("does not propagate RPC errors to caller", async () => {
     mockClient.linkEnvironment.mockRejectedValue(new Error("already linked"));
 
     const { result } = setup();
 
-    await expect(
-      act(async () => {
-        await result.current.linkEnvironment("ws-1", "env-2");
-      }),
-    ).rejects.toThrow("already linked");
+    await act(async () => {
+      await result.current.linkEnvironment("ws-1", "env-2");
+    });
+
+    expect(mockClient.linkEnvironment).toHaveBeenCalledWith({
+      workspaceId: "ws-1",
+      environmentId: "env-2",
+    });
   });
 });
 
@@ -121,15 +124,18 @@ describe("unlinkEnvironment", () => {
     });
   });
 
-  it("propagates RPC errors to caller", async () => {
+  it("does not propagate RPC errors to caller", async () => {
     mockClient.unlinkEnvironment.mockRejectedValue(new Error("not found"));
 
     const { result } = setup();
 
-    await expect(
-      act(async () => {
-        await result.current.unlinkEnvironment("ws-1", "env-2");
-      }),
-    ).rejects.toThrow("not found");
+    await act(async () => {
+      await result.current.unlinkEnvironment("ws-1", "env-2");
+    });
+
+    expect(mockClient.unlinkEnvironment).toHaveBeenCalledWith({
+      workspaceId: "ws-1",
+      environmentId: "env-2",
+    });
   });
 });
