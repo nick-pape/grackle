@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // ── Mock dependencies before importing ──────────────
 
 const mockDisposable = { dispose: vi.fn() };
-const mockBootFn = vi.fn(async () => {});
 
 vi.mock("@grackle-ai/core", () => ({
   createSigchldSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
@@ -11,7 +10,6 @@ vi.mock("@grackle-ai/core", () => ({
   createOrphanReparentSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
   createLifecycleSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
   createRootTaskBootSubscriber: vi.fn(() => mockDisposable),
-  createRootTaskBoot: vi.fn(() => mockBootFn),
   subscribe: vi.fn(() => vi.fn()),
   emit: vi.fn(),
   computeTaskStatus: vi.fn(),
@@ -34,7 +32,6 @@ import {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockBootFn.mockClear();
   mockDisposable.dispose.mockClear();
 });
 

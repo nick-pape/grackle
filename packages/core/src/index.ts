@@ -44,7 +44,7 @@ export type { CronPhaseDeps } from "./cron-phase.js";
 export { createOrphanPhase } from "./orphan-phase.js";
 export type { OrphanPhaseDeps } from "./orphan-phase.js";
 export { findFirstConnectedEnvironment } from "./find-connected-environment.js";
-export { createRootTaskBoot, createRootTaskBootSubscriber } from "./root-task-boot.js";
+export { createRootTaskBootSubscriber } from "./root-task-boot.js";
 export type { RootTaskBootDeps } from "./root-task-boot.js";
 export { validateExpression, computeNextRunAt } from "./schedule-expression.js";
 export { lifecycleCleanupPhase } from "./lifecycle-cleanup.js";
