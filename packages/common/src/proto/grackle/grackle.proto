@@ -325,6 +325,7 @@ message Workspace {
   string working_directory = 10; // Working directory / repo root (e.g. /workspaces/my-repo)
   string default_persona_id = 11; // Default persona for tasks in this workspace
   string environment_id = 12; // Owning environment — every workspace belongs to exactly one environment
+  repeated string linked_environment_ids = 13; // Linked environments (read-only, set via Link/Unlink RPCs)
 }
 
 message WorkspaceList {
@@ -360,6 +361,16 @@ message UpdateWorkspaceRequest {
 
 message WorkspaceId {
   string id = 1;
+}
+
+message LinkEnvironmentRequest {
+  string workspace_id = 1;
+  string environment_id = 2;
+}
+
+message UnlinkEnvironmentRequest {
+  string workspace_id = 1;
+  string environment_id = 2;
 }
 
 // ─── Tasks ─────────────────────────────────────────────────
@@ -864,6 +875,8 @@ service Grackle {
   rpc GetWorkspace(WorkspaceId) returns (Workspace);
   rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (Workspace);
   rpc ArchiveWorkspace(WorkspaceId) returns (Empty);
+  rpc LinkEnvironment(LinkEnvironmentRequest) returns (Workspace);
+  rpc UnlinkEnvironment(UnlinkEnvironmentRequest) returns (Workspace);
 
   // Tasks
   rpc ListTasks(ListTasksRequest) returns (TaskList);

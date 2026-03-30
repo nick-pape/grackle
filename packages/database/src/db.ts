@@ -30,8 +30,23 @@ interface Migration {
  * Add new migrations to the end with incrementing version numbers.
  */
 const MIGRATIONS: Migration[] = [
-  // Future migrations go here, e.g.:
-  // { version: 2, name: "add-foo-to-bar", up: (conn) => { conn.exec("ALTER TABLE ..."); } },
+  {
+    version: 2,
+    name: "add-workspace-environment-links",
+    up: (conn) => {
+      conn.exec(`
+        CREATE TABLE IF NOT EXISTS workspace_environment_links (
+          workspace_id    TEXT NOT NULL REFERENCES workspaces(id),
+          environment_id  TEXT NOT NULL REFERENCES environments(id),
+          created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+          PRIMARY KEY (workspace_id, environment_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_workspace_environment_links_environment_id
+          ON workspace_environment_links(environment_id);
+      `);
+    },
+  },
 ];
 
 /** The highest schema version defined by BASELINE + MIGRATIONS. */
@@ -368,6 +383,15 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
       updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS workspace_environment_links (
+      workspace_id    TEXT NOT NULL REFERENCES workspaces(id),
+      environment_id  TEXT NOT NULL REFERENCES environments(id),
+      created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (workspace_id, environment_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_workspace_environment_links_environment_id
+      ON workspace_environment_links(environment_id);
     CREATE INDEX IF NOT EXISTS idx_escalations_status ON escalations(status);
     CREATE INDEX IF NOT EXISTS idx_escalations_workspace ON escalations(workspace_id);
     CREATE INDEX IF NOT EXISTS idx_findings_workspace ON findings(workspace_id);

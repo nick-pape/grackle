@@ -1,7 +1,7 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
-import { workspaceStore, envRegistry, slugify } from "@grackle-ai/database";
+import { workspaceStore, envRegistry, workspaceEnvironmentLinkStore, slugify } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { emit } from "./event-bus.js";
 import { logger } from "./logger.js";
@@ -10,8 +10,12 @@ import { workspaceRowToProto } from "./grpc-proto-converters.js";
 /** List all workspaces, optionally filtered by environment. */
 export async function listWorkspaces(req: grackle.ListWorkspacesRequest): Promise<grackle.WorkspaceList> {
   const rows = workspaceStore.listWorkspaces(req.environmentId || undefined);
+  // Batch-fetch linked environment IDs to avoid N+1 queries
+  const linkedEnvMap = workspaceEnvironmentLinkStore.getLinkedEnvironmentIdsByWorkspaces(
+    rows.map((r) => r.id),
+  );
   return create(grackle.WorkspaceListSchema, {
-    workspaces: rows.map(workspaceRowToProto),
+    workspaces: rows.map((row) => workspaceRowToProto(row, linkedEnvMap)),
   });
 }
 
@@ -99,4 +103,64 @@ export async function updateWorkspace(req: grackle.UpdateWorkspaceRequest): Prom
   }
   emit("workspace.updated", { workspaceId: req.id });
   return workspaceRowToProto(row);
+}
+
+/** Link an additional environment to a workspace's pool. */
+export async function linkEnvironment(req: grackle.LinkEnvironmentRequest): Promise<grackle.Workspace> {
+  const workspace = workspaceStore.getWorkspace(req.workspaceId);
+  if (!workspace) {
+    throw new ConnectError(`Workspace not found: ${req.workspaceId}`, Code.NotFound);
+  }
+  const env = envRegistry.getEnvironment(req.environmentId);
+  if (!env) {
+    throw new ConnectError(`Environment not found: ${req.environmentId}`, Code.NotFound);
+  }
+  if (workspace.environmentId === req.environmentId) {
+    throw new ConnectError(
+      "Cannot link the primary environment — it is already in the pool",
+      Code.InvalidArgument,
+    );
+  }
+  if (workspaceEnvironmentLinkStore.isLinked(req.workspaceId, req.environmentId)) {
+    throw new ConnectError(
+      `Environment ${req.environmentId} is already linked to workspace ${req.workspaceId}`,
+      Code.InvalidArgument,
+    );
+  }
+  try {
+    workspaceEnvironmentLinkStore.linkEnvironment(req.workspaceId, req.environmentId);
+  } catch (err: unknown) {
+    // Handle race condition: concurrent requests may both pass isLinked() check
+    // but one hits the unique/PK constraint. Surface as InvalidArgument, not Internal.
+    // Narrow to UNIQUE/PRIMARYKEY violations only — FK failures should bubble as-is.
+    const message = err instanceof Error ? err.message : "";
+    if (/UNIQUE constraint failed|SQLITE_CONSTRAINT_PRIMARYKEY/i.test(message)) {
+      throw new ConnectError(
+        `Environment ${req.environmentId} is already linked to workspace ${req.workspaceId}`,
+        Code.InvalidArgument,
+      );
+    }
+    throw err;
+  }
+  emit("workspace.updated", { workspaceId: req.workspaceId });
+  logger.info({ workspaceId: req.workspaceId, environmentId: req.environmentId }, "Environment linked to workspace");
+  return workspaceRowToProto(workspace);
+}
+
+/** Remove a linked environment from a workspace's pool. */
+export async function unlinkEnvironment(req: grackle.UnlinkEnvironmentRequest): Promise<grackle.Workspace> {
+  const workspace = workspaceStore.getWorkspace(req.workspaceId);
+  if (!workspace) {
+    throw new ConnectError(`Workspace not found: ${req.workspaceId}`, Code.NotFound);
+  }
+  if (!workspaceEnvironmentLinkStore.isLinked(req.workspaceId, req.environmentId)) {
+    throw new ConnectError(
+      `Environment ${req.environmentId} is not linked to workspace ${req.workspaceId}`,
+      Code.NotFound,
+    );
+  }
+  workspaceEnvironmentLinkStore.unlinkEnvironment(req.workspaceId, req.environmentId);
+  emit("workspace.updated", { workspaceId: req.workspaceId });
+  logger.info({ workspaceId: req.workspaceId, environmentId: req.environmentId }, "Environment unlinked from workspace");
+  return workspaceRowToProto(workspace);
 }

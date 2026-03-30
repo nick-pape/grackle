@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, primaryKey } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 // ─── Environments ──────────────────────────────────────────
@@ -105,6 +105,21 @@ export type WorkspaceRow = typeof workspaces.$inferSelect;
 
 /** Shape accepted by INSERT into the workspaces table. */
 export type NewWorkspace = typeof workspaces.$inferInsert;
+
+// ─── Workspace–Environment Links ─────────────────────────
+
+export const workspaceEnvironmentLinks = sqliteTable("workspace_environment_links", {
+  workspaceId: text("workspace_id").notNull().references(() => workspaces.id),
+  environmentId: text("environment_id").notNull().references(() => environments.id),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+}, (table) => [
+  primaryKey({ columns: [table.workspaceId, table.environmentId] }),
+]);
+
+/** Row shape returned by a SELECT on the workspace_environment_links table. */
+export type WorkspaceEnvironmentLinkRow = typeof workspaceEnvironmentLinks.$inferSelect;
 
 // ─── Tasks ────────────────────────────────────────────────
 

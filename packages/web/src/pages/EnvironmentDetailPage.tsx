@@ -40,6 +40,9 @@ export function EnvironmentDetailPage(): JSX.Element {
   }
 
   const envWorkspaces = workspaces.filter((w) => w.environmentId === env.id);
+  const linkedWorkspaces = workspaces
+    .filter((w) => w.linkedEnvironmentIds.includes(env.id) && w.environmentId !== env.id)
+    .filter((w, index, self) => self.findIndex((other) => other.id === w.id) === index);
   const envSessions = sessions.filter((s) => s.environmentId === env.id);
   const envCost = envSessions.reduce((sum, s) => sum + (s.costUsd ?? 0), 0);
   const statusColor = STATUS_COLORS[env.status] || "var(--text-tertiary)";
@@ -183,6 +186,38 @@ export function EnvironmentDetailPage(): JSX.Element {
               onConfirmArchive={() => handleArchive(ws.id)}
               onCancelArchive={() => setConfirmArchiveId(undefined)}
             />
+          ))}
+        </div>
+      </div>
+
+      {/* Linked workspaces — workspaces from other environments that include this env in their pool */}
+      <div className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h3>Linked Workspaces</h3>
+        </div>
+
+        {linkedWorkspaces.length === 0 && (
+          <p className={styles.empty} data-testid="linked-workspaces-empty">
+            No workspaces are linked to this environment. Link one from a workspace&apos;s detail page.
+          </p>
+        )}
+
+        <div className={styles.cardList} data-testid="linked-workspaces-list">
+          {linkedWorkspaces.map((ws) => (
+            <div key={ws.id} className={styles.card} data-testid="linked-workspace-card">
+              <div className={styles.cardHeader}>
+                <strong className={styles.cardName}>{ws.name}</strong>
+                <div className={styles.cardActions}>
+                  <button className={styles.btnSmall} onClick={() => navigate(workspaceUrl(ws.id, ws.environmentId))}>Open</button>
+                </div>
+              </div>
+              {ws.description && (
+                <p className={styles.cardDescription}>{ws.description}</p>
+              )}
+              <div className={styles.cardMeta}>
+                Primary: {environments.find((e) => e.id === ws.environmentId)?.displayName || ws.environmentId}
+              </div>
+            </div>
           ))}
         </div>
       </div>
