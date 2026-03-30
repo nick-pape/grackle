@@ -1,6 +1,14 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 30 Mar 2026 15:00:21 GMT and should not be manually modified.
+This log was last generated on Mon, 30 Mar 2026 16:06:29 GMT and should not be manually modified.
+
+## 0.93.0
+Mon, 30 Mar 2026 16:06:29 GMT
+
+### Minor changes
+
+- Normalize event subscribers to factory pattern returning Disposable for plugin architecture
+- Add linked environments: workspaces can now link multiple environments for future task dispatch pooling
 
 ## 0.92.3
 Mon, 30 Mar 2026 15:00:21 GMT

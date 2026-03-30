@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/server",
-  "version": "0.92.3",
+  "version": "0.93.0",
   "description": "Grackle server orchestrator — spawns and wires core (gRPC), web-server (HTTP), MCP, and PowerLine",
   "license": "MIT",
   "repository": {

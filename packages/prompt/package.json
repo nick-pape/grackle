@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/prompt",
-  "version": "0.92.3",
+  "version": "0.93.0",
   "description": "System prompt assembly and persona resolution for Grackle agent sessions",
   "license": "MIT",
   "repository": {

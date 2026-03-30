@@ -2,6 +2,21 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.93.0",
+      "tag": "@grackle-ai/cli_v0.93.0",
+      "date": "Mon, 30 Mar 2026 16:06:29 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Normalize event subscribers to factory pattern returning Disposable for plugin architecture"
+          },
+          {
+            "comment": "Add linked environments: workspaces can now link multiple environments for future task dispatch pooling"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.92.3",
       "tag": "@grackle-ai/cli_v0.92.3",
       "date": "Mon, 30 Mar 2026 15:00:21 GMT",
