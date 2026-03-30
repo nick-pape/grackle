@@ -25,19 +25,20 @@ export function NotificationStep({ onFinish, onBack, finishDisabled }: Notificat
   const alreadyDecided = supported && Notification.permission !== "default";
 
   /** Request permission then advance. */
-  function handleEnable(): void {
+  async function handleEnable(): Promise<void> {
     if (!supported) {
       onFinish();
       return;
     }
     setRequesting(true);
-    Notification.requestPermission()
-      .then(() => {
-        onFinish();
-      })
-      .catch(() => {
-        onFinish();
+    try {
+      await Notification.requestPermission().catch(() => {
+        // Swallow errors from the permission request; onFinish will still be called.
       });
+      onFinish();
+    } finally {
+      setRequesting(false);
+    }
   }
 
   return (
@@ -61,6 +62,7 @@ export function NotificationStep({ onFinish, onBack, finishDisabled }: Notificat
           type="button"
           className={styles.ghostButton}
           onClick={onBack}
+          disabled={finishDisabled || requesting}
         >
           Back
         </button>
@@ -79,7 +81,7 @@ export function NotificationStep({ onFinish, onBack, finishDisabled }: Notificat
             <button
               type="button"
               className={styles.primaryButton}
-              onClick={handleEnable}
+              onClick={() => { handleEnable().catch(() => {}); }}
               disabled={finishDisabled || requesting}
               data-testid="setup-notifications-enable"
             >

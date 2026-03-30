@@ -48,12 +48,20 @@ test.describe("Setup Wizard (FRE)", { tag: ["@settings"] }, () => {
     await page.getByTestId("setup-about-next").click();
     await expect(page.getByTestId("setup-runtime")).toBeVisible();
 
+    // Runtime → Notifications
+    await page.getByTestId("setup-runtime-next").click();
+    await expect(page.getByTestId("setup-notifications")).toBeVisible();
+
+    // Notifications → back to Runtime
+    await page.getByRole("button", { name: "Back" }).click();
+    await expect(page.getByTestId("setup-runtime")).toBeVisible();
+
     // Runtime → back to About
     await page.getByRole("button", { name: "Back" }).click();
     await expect(page.getByTestId("setup-about")).toBeVisible();
   });
 
-  test("walks through all three steps and completes", async ({ page, grackle: { client } }) => {
+  test("walks through all four steps and completes", async ({ page, grackle: { client } }) => {
     await setOnboardingCompleted(client, "false");
     await page.goto("/");
     await page.waitForURL("**/setup", { timeout: 10_000 });
@@ -75,8 +83,20 @@ test.describe("Setup Wizard (FRE)", { tag: ["@settings"] }, () => {
     await page.getByTestId("runtime-card-copilot").click();
     await expect(page.getByTestId("runtime-card-copilot")).toHaveAttribute("aria-pressed", "true");
 
-    // Finish — should navigate to /
-    await page.getByTestId("setup-finish").click();
+    // Advance to notification step
+    await page.getByTestId("setup-runtime-next").click();
+
+    // Step 3: Notifications — skip or finish
+    await expect(page.getByTestId("setup-notifications")).toBeVisible();
+    // Click whichever button is available (Skip if permission is "default", Finish otherwise)
+    const skipButton = page.getByTestId("setup-notifications-skip");
+    const finishButton = page.getByTestId("setup-finish");
+    if (await skipButton.isVisible().catch(() => false)) {
+      await skipButton.click();
+    } else {
+      await finishButton.click();
+    }
+
     await page.waitForFunction(
       () => document.body.innerText.includes("Connected"),
       { timeout: 10_000 },

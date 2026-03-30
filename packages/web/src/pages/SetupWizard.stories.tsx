@@ -82,8 +82,14 @@ const meta: Meta<typeof SetupWizard> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/** Subset of Storybook's canvas queries used by step-advance helpers. */
+interface StepCanvas {
+  getByTestId: (id: string) => HTMLElement;
+  findByTestId: (id: string) => Promise<HTMLElement>;
+}
+
 /** Helper: advance the wizard from Welcome through About to the Runtime step. */
-async function advanceToRuntime(canvas: ReturnType<typeof expect>["not"] extends never ? never : { getByTestId: (id: string) => HTMLElement; findByTestId: (id: string) => Promise<HTMLElement> }): Promise<void> {
+async function advanceToRuntime(canvas: StepCanvas): Promise<void> {
   await userEvent.click(canvas.getByTestId("setup-get-started"));
   const nextButton = await canvas.findByTestId("setup-about-next");
   await userEvent.click(nextButton);
@@ -91,7 +97,7 @@ async function advanceToRuntime(canvas: ReturnType<typeof expect>["not"] extends
 }
 
 /** Helper: advance from Welcome through Runtime to the Notification step. */
-async function advanceToNotifications(canvas: Parameters<typeof advanceToRuntime>[0]): Promise<void> {
+async function advanceToNotifications(canvas: StepCanvas): Promise<void> {
   await advanceToRuntime(canvas);
   const runtimeNext = await canvas.findByTestId("setup-runtime-next");
   await userEvent.click(runtimeNext);

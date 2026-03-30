@@ -97,7 +97,7 @@ export function SetupWizard(): JSX.Element {
             )}
             {step === 2 && (
               <RuntimeStep
-                currentRuntime={seedPersona?.runtime ?? "claude-code"}
+                currentRuntime={selectedRuntime}
                 onFinish={handleRuntimeNext}
                 onBack={() => setStep(1)}
                 finishDisabled={!seedPersona}
