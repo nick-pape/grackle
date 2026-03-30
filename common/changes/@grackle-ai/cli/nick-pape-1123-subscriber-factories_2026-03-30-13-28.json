@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Normalize event subscribers to factory pattern returning Disposable for plugin architecture",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

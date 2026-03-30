@@ -14,11 +14,14 @@ export { parseAdapterConfig } from "./adapter-config.js";
 // ─── Event System ──────────────────────────────────────────
 export { emit, subscribe } from "./event-bus.js";
 
-// ─── Wiring Initializers ───────────────────────────────────
-export { initSigchldSubscriber } from "./signals/sigchld.js";
-export { initEscalationAutoSubscriber } from "./signals/escalation-auto.js";
-export { initOrphanReparentSubscriber, transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
-export { initLifecycleManager } from "./lifecycle.js";
+// ─── Subscriber Types ─────────────────────────────────────
+export type { Disposable, PluginContext, SubscriberFactory } from "./subscriber-types.js";
+
+// ─── Subscriber Factories ─────────────────────────────────
+export { createSigchldSubscriber } from "./signals/sigchld.js";
+export { createEscalationAutoSubscriber } from "./signals/escalation-auto.js";
+export { createOrphanReparentSubscriber, transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
+export { createLifecycleSubscriber } from "./lifecycle.js";
 export { ensureStdinStream, publishToStdin, cleanupStdinStream } from "./stdin-delivery.js";
 
 // ─── Task Session ───────────────────────────────────────────
@@ -43,7 +46,7 @@ export type { CronPhaseDeps } from "./cron-phase.js";
 export { createOrphanPhase } from "./orphan-phase.js";
 export type { OrphanPhaseDeps } from "./orphan-phase.js";
 export { findFirstConnectedEnvironment } from "./find-connected-environment.js";
-export { createRootTaskBoot } from "./root-task-boot.js";
+export { createRootTaskBootSubscriber } from "./root-task-boot.js";
 export type { RootTaskBootDeps } from "./root-task-boot.js";
 export { validateExpression, computeNextRunAt } from "./schedule-expression.js";
 export { lifecycleCleanupPhase } from "./lifecycle-cleanup.js";

@@ -1,4 +1,5 @@
 import { logger } from "@grackle-ai/core";
+import type { Disposable } from "@grackle-ai/core";
 import { sqlite, stopWalCheckpointTimer } from "@grackle-ai/database";
 import { stopPairingCleanup, stopSessionCleanup, stopOAuthCleanup } from "@grackle-ai/auth";
 import { closeAllTunnels } from "@grackle-ai/adapter-sdk";
@@ -25,6 +26,8 @@ export interface ShutdownContext {
   localPowerLineManager?: { stop: () => Promise<void> };
   /** Optional knowledge graph cleanup function. */
   knowledgeCleanup?: () => Promise<void>;
+  /** Active event subscribers to dispose on shutdown. */
+  subscribers?: Disposable[];
 }
 
 /**
@@ -91,6 +94,18 @@ export function createShutdown(context: ShutdownContext): () => Promise<void> {
         resolve();
       });
     });
+
+    // Dispose event subscribers after servers are closed so in-flight requests
+    // are fully handled before unregistering handlers.
+    if (context.subscribers) {
+      for (const subscriber of context.subscribers) {
+        try {
+          subscriber.dispose();
+        } catch (err) {
+          logger.error({ err }, "Error while disposing subscriber during shutdown");
+        }
+      }
+    }
 
     // Final WAL checkpoint (TRUNCATE) to fully flush pending writes before exit
     if (sqlite) {

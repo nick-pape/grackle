@@ -8,7 +8,7 @@ vi.mock("./logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-import { createRootTaskBoot, _resetForTesting, type RootTaskBootDeps } from "./root-task-boot.js";
+import { createRootTaskBoot, type RootTaskBootDeps } from "./root-task-boot.js";
 import type { TaskRow, SessionRow, EnvironmentRow } from "@grackle-ai/database";
 import { TASK_STATUS, ROOT_TASK_ID, ROOT_TASK_INITIAL_PROMPT } from "@grackle-ai/common";
 import type { TaskStatusResult } from "./compute-task-status.js";
@@ -101,7 +101,6 @@ function createMockDeps(): RootTaskBootDeps {
 describe("createRootTaskBoot", () => {
   beforeEach(() => {
     vi.useFakeTimers({ now: new Date("2026-03-27T10:00:00Z") });
-    _resetForTesting();
   });
 
   afterEach(() => {

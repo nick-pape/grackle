@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 // ── Mock dependencies ────────────────────────────────────────
 
@@ -9,11 +9,6 @@ vi.mock("@grackle-ai/database", async () => {
 
 vi.mock("../logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
-
-vi.mock("../event-bus.js", () => ({
-  emit: vi.fn(),
-  subscribe: vi.fn(),
 }));
 
 vi.mock("./signal-delivery.js", () => ({
@@ -36,23 +31,14 @@ vi.mock("../pipe-delivery.js", () => ({
 // ── Imports ──────────────────────────────────────────────────
 
 import { taskStore, sessionStore } from "@grackle-ai/database";
-import { emit, subscribe } from "../event-bus.js";
 import { deliverSignalToTask } from "./signal-delivery.js";
 import * as streamRegistry from "../stream-registry.js";
 import { ensureAsyncDeliveryListener } from "../pipe-delivery.js";
-import { initOrphanReparentSubscriber, _resetForTesting } from "./orphan-reparent.js";
+import { createOrphanReparentSubscriber } from "./orphan-reparent.js";
 import type { GrackleEvent } from "../event-bus.js";
+import type { Disposable, PluginContext } from "../subscriber-types.js";
 
 // ── Helpers ──────────────────────────────────────────────────
-
-/** Simulate an event by calling the subscriber callback directly. */
-function fireEvent(event: Partial<GrackleEvent>): void {
-  const callback = vi.mocked(subscribe).mock.calls[0]?.[0];
-  if (!callback) {
-    throw new Error("No subscriber registered — did you call initOrphanReparentSubscriber()?");
-  }
-  callback(event as GrackleEvent);
-}
 
 /** Wait for async fire-and-forget handlers to complete. */
 async function flush(): Promise<void> {
@@ -98,18 +84,43 @@ const CHILD_TASK_2 = {
 
 // ── Tests ────────────────────────────────────────────────────
 
-describe("orphan reparenting subscriber", () => {
+describe("createOrphanReparentSubscriber", () => {
+  let ctx: PluginContext;
+  let capturedHandler: (event: GrackleEvent) => void;
+  let disposable: Disposable;
+  let unsubscribeFn: ReturnType<typeof vi.fn>;
+
+  /** Simulate an event by calling the subscriber callback directly. */
+  function fireEvent(event: Partial<GrackleEvent>): void {
+    capturedHandler(event as GrackleEvent);
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
-    _resetForTesting();
-    initOrphanReparentSubscriber();
+
+    unsubscribeFn = vi.fn();
+    ctx = {
+      subscribe: vi.fn((fn: (event: GrackleEvent) => void) => {
+        capturedHandler = fn;
+        return unsubscribeFn;
+      }),
+      emit: vi.fn(),
+    };
+
+    disposable = createOrphanReparentSubscriber(ctx);
   });
 
-  it("is idempotent — safe to call multiple times", () => {
-    initOrphanReparentSubscriber();
-    initOrphanReparentSubscriber();
-    // subscribe should only have been called once (from beforeEach)
-    expect(subscribe).toHaveBeenCalledTimes(1);
+  afterEach(() => {
+    disposable.dispose();
+  });
+
+  it("subscribes to event bus on creation", () => {
+    expect(ctx.subscribe).toHaveBeenCalledOnce();
+  });
+
+  it("unsubscribes on dispose", () => {
+    disposable.dispose();
+    expect(unsubscribeFn).toHaveBeenCalledOnce();
   });
 
   describe("task.completed events", () => {
@@ -149,7 +160,7 @@ describe("orphan reparenting subscriber", () => {
       expect(taskStore.reparentTask).not.toHaveBeenCalled();
     });
 
-    it("emits task.reparented event for each child", async () => {
+    it("emits task.reparented event via ctx.emit for each child", async () => {
       vi.mocked(taskStore.getTask)
         .mockReturnValueOnce(PARENT_TASK as never)
         .mockReturnValueOnce(PARENT_TASK as never);
@@ -158,14 +169,14 @@ describe("orphan reparenting subscriber", () => {
       fireEvent({ type: "task.completed", payload: { taskId: "parent-1", workspaceId: "ws-1" } });
       await flush();
 
-      expect(emit).toHaveBeenCalledWith("task.reparented", expect.objectContaining({
+      expect(ctx.emit).toHaveBeenCalledWith("task.reparented", expect.objectContaining({
         taskId: "child-1",
         oldParentTaskId: "parent-1",
         newParentTaskId: "grandparent-1",
       }));
     });
 
-    it("emits task.updated event for each reparented child", async () => {
+    it("emits task.updated event via ctx.emit for each reparented child", async () => {
       vi.mocked(taskStore.getTask)
         .mockReturnValueOnce(PARENT_TASK as never)
         .mockReturnValueOnce(PARENT_TASK as never);
@@ -174,7 +185,7 @@ describe("orphan reparenting subscriber", () => {
       fireEvent({ type: "task.completed", payload: { taskId: "parent-1", workspaceId: "ws-1" } });
       await flush();
 
-      expect(emit).toHaveBeenCalledWith("task.updated", expect.objectContaining({
+      expect(ctx.emit).toHaveBeenCalledWith("task.updated", expect.objectContaining({
         taskId: "child-1",
         workspaceId: "ws-1",
       }));

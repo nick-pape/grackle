@@ -2,15 +2,16 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ── Mock dependencies before importing ──────────────
 
-const mockBootFn = vi.fn(async () => {});
+const mockDisposable = { dispose: vi.fn() };
 
 vi.mock("@grackle-ai/core", () => ({
-  initSigchldSubscriber: vi.fn(),
-  initEscalationAutoSubscriber: vi.fn(),
-  initOrphanReparentSubscriber: vi.fn(),
-  initLifecycleManager: vi.fn(),
-  createRootTaskBoot: vi.fn(() => mockBootFn),
-  subscribe: vi.fn(),
+  createSigchldSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
+  createEscalationAutoSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
+  createOrphanReparentSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
+  createLifecycleSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
+  createRootTaskBootSubscriber: vi.fn(() => mockDisposable),
+  subscribe: vi.fn(() => vi.fn()),
+  emit: vi.fn(),
   computeTaskStatus: vi.fn(),
   findFirstConnectedEnvironment: vi.fn(),
   startTaskSession: vi.fn(),
@@ -25,87 +26,54 @@ vi.mock("@grackle-ai/database", () => ({
 
 import { wireEventSubscribers } from "./event-subscribers.js";
 import {
-  initSigchldSubscriber, initEscalationAutoSubscriber,
-  initOrphanReparentSubscriber, initLifecycleManager,
-  createRootTaskBoot, subscribe,
+  createSigchldSubscriber, createEscalationAutoSubscriber,
+  createOrphanReparentSubscriber, createLifecycleSubscriber,
 } from "@grackle-ai/core";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockBootFn.mockClear();
+  mockDisposable.dispose.mockClear();
 });
 
 describe("wireEventSubscribers", () => {
-  it("calls initSigchldSubscriber", () => {
+  it("calls createSigchldSubscriber with PluginContext", () => {
     wireEventSubscribers({ skipRootAutostart: true });
-    expect(initSigchldSubscriber).toHaveBeenCalledOnce();
+    expect(createSigchldSubscriber).toHaveBeenCalledOnce();
+    expect(createSigchldSubscriber).toHaveBeenCalledWith(
+      expect.objectContaining({ subscribe: expect.any(Function), emit: expect.any(Function) }),
+    );
   });
 
-  it("calls initEscalationAutoSubscriber", () => {
+  it("calls createEscalationAutoSubscriber with PluginContext", () => {
     wireEventSubscribers({ skipRootAutostart: true });
-    expect(initEscalationAutoSubscriber).toHaveBeenCalledOnce();
+    expect(createEscalationAutoSubscriber).toHaveBeenCalledOnce();
   });
 
-  it("calls initOrphanReparentSubscriber", () => {
+  it("calls createOrphanReparentSubscriber with PluginContext", () => {
     wireEventSubscribers({ skipRootAutostart: true });
-    expect(initOrphanReparentSubscriber).toHaveBeenCalledOnce();
+    expect(createOrphanReparentSubscriber).toHaveBeenCalledOnce();
   });
 
-  it("calls initLifecycleManager", () => {
+  it("calls createLifecycleSubscriber with PluginContext", () => {
     wireEventSubscribers({ skipRootAutostart: true });
-    expect(initLifecycleManager).toHaveBeenCalledOnce();
+    expect(createLifecycleSubscriber).toHaveBeenCalledOnce();
   });
 
-  it("does not create root task boot when skipRootAutostart is true", () => {
-    wireEventSubscribers({ skipRootAutostart: true });
-    expect(createRootTaskBoot).not.toHaveBeenCalled();
-    expect(subscribe).not.toHaveBeenCalled();
+  it("returns Disposable array", () => {
+    const disposables = wireEventSubscribers({ skipRootAutostart: true });
+    expect(disposables).toHaveLength(4);
+    for (const d of disposables) {
+      expect(d).toHaveProperty("dispose");
+    }
   });
 
-  it("wires root task boot to environment.changed when skipRootAutostart is false", () => {
-    wireEventSubscribers({ skipRootAutostart: false });
-    expect(createRootTaskBoot).toHaveBeenCalledOnce();
-    expect(subscribe).toHaveBeenCalledOnce();
-
-    // Get the subscriber callback and trigger environment.changed
-    const subscriberFn = (subscribe as ReturnType<typeof vi.fn>).mock.calls[0][0] as
-      (event: { type: string; payload?: unknown }) => void;
-    subscriberFn({ type: "environment.changed" });
-    expect(mockBootFn).toHaveBeenCalledOnce();
+  it("does not include root task boot when skipRootAutostart is true", () => {
+    const disposables = wireEventSubscribers({ skipRootAutostart: true });
+    expect(disposables).toHaveLength(4);
   });
 
-  it("wires root task boot to setting.changed (onboarding_completed)", () => {
-    wireEventSubscribers({ skipRootAutostart: false });
-
-    const subscriberFn = (subscribe as ReturnType<typeof vi.fn>).mock.calls[0][0] as
-      (event: { type: string; payload?: unknown }) => void;
-    subscriberFn({
-      type: "setting.changed",
-      payload: { key: "onboarding_completed", value: "true" },
-    });
-    expect(mockBootFn).toHaveBeenCalledOnce();
-  });
-
-  it("does not trigger boot on irrelevant setting.changed events", () => {
-    wireEventSubscribers({ skipRootAutostart: false });
-
-    const subscriberFn = (subscribe as ReturnType<typeof vi.fn>).mock.calls[0][0] as
-      (event: { type: string; payload?: unknown }) => void;
-
-    subscriberFn({
-      type: "setting.changed",
-      payload: { key: "theme", value: "dark" },
-    });
-    expect(mockBootFn).not.toHaveBeenCalled();
-  });
-
-  it("does not trigger boot on unrelated event types", () => {
-    wireEventSubscribers({ skipRootAutostart: false });
-
-    const subscriberFn = (subscribe as ReturnType<typeof vi.fn>).mock.calls[0][0] as
-      (event: { type: string; payload?: unknown }) => void;
-
-    subscriberFn({ type: "task.updated" });
-    expect(mockBootFn).not.toHaveBeenCalled();
+  it("includes root task boot when skipRootAutostart is false", () => {
+    const disposables = wireEventSubscribers({ skipRootAutostart: false });
+    expect(disposables).toHaveLength(5);
   });
 });

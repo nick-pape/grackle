@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 // ── Mock dependencies ────────────────────────────────────────
 
@@ -15,24 +15,6 @@ vi.mock("../log-writer.js", () => ({
   readLastTextEntry: vi.fn(() => undefined),
 }));
 
-vi.mock("../event-bus.js", () => {
-  const subscribers: Array<(event: unknown) => void> = [];
-  return {
-    emit: vi.fn(),
-    subscribe: vi.fn((fn: (event: unknown) => void) => {
-      subscribers.push(fn);
-      return () => {
-        const idx = subscribers.indexOf(fn);
-        if (idx >= 0) { subscribers.splice(idx, 1); }
-      };
-    }),
-    _testFire: (event: unknown) => {
-      for (const fn of subscribers) { fn(event); }
-    },
-    _testReset: () => { subscribers.length = 0; },
-  };
-});
-
 vi.mock("../notification-router.js", () => ({
   routeEscalation: vi.fn().mockResolvedValue(undefined),
 }));
@@ -41,10 +23,9 @@ import { SESSION_STATUS, ROOT_TASK_ID } from "@grackle-ai/common";
 import { taskStore, sessionStore, escalationStore } from "@grackle-ai/database";
 import { readLastTextEntry } from "../log-writer.js";
 import { routeEscalation } from "../notification-router.js";
-import { initEscalationAutoSubscriber, _resetForTesting } from "./escalation-auto.js";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const eventBusMock = await import("../event-bus.js") as any;
+import { createEscalationAutoSubscriber } from "./escalation-auto.js";
+import type { GrackleEvent } from "../event-bus.js";
+import type { Disposable, PluginContext } from "../subscriber-types.js";
 
 // ── Helpers ─────────────────────────────────────────────────
 
@@ -80,15 +61,6 @@ function makeSession(overrides: Partial<MockSession> = {}): MockSession {
   };
 }
 
-function fireTaskUpdated(taskId: string): void {
-  eventBusMock._testFire({
-    id: "evt-1",
-    type: "task.updated",
-    timestamp: new Date().toISOString(),
-    payload: { taskId },
-  });
-}
-
 /** Wait for queued microtasks to flush. */
 async function flush(): Promise<void> {
   await new Promise<void>((r) => { setTimeout(r, 10); });
@@ -96,12 +68,47 @@ async function flush(): Promise<void> {
 
 // ── Tests ───────────────────────────────────────────────────
 
-describe("escalation-auto subscriber", () => {
+describe("createEscalationAutoSubscriber", () => {
+  let ctx: PluginContext;
+  let capturedHandler: (event: GrackleEvent) => void;
+  let disposable: Disposable;
+  let unsubscribeFn: ReturnType<typeof vi.fn>;
+
+  function fireTaskUpdated(taskId: string): void {
+    capturedHandler({
+      id: "evt-1",
+      type: "task.updated",
+      timestamp: new Date().toISOString(),
+      payload: { taskId },
+    });
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
-    _resetForTesting();
-    eventBusMock._testReset();
-    initEscalationAutoSubscriber();
+
+    unsubscribeFn = vi.fn();
+    ctx = {
+      subscribe: vi.fn((fn: (event: GrackleEvent) => void) => {
+        capturedHandler = fn;
+        return unsubscribeFn;
+      }),
+      emit: vi.fn(),
+    };
+
+    disposable = createEscalationAutoSubscriber(ctx);
+  });
+
+  afterEach(() => {
+    disposable.dispose();
+  });
+
+  it("subscribes to event bus on creation", () => {
+    expect(ctx.subscribe).toHaveBeenCalledOnce();
+  });
+
+  it("unsubscribes on dispose", () => {
+    disposable.dispose();
+    expect(unsubscribeFn).toHaveBeenCalledOnce();
   });
 
   it("fires escalation when parentless non-ROOT task goes IDLE", async () => {
