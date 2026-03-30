@@ -79,6 +79,18 @@ export const workspaceTools: ToolDefinition[] = [
         .string()
         .optional()
         .describe("Default persona for tasks in this workspace"),
+      tokenBudget: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe("Token budget (input + output); 0 = unlimited"),
+      costBudgetMillicents: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe("Cost budget in millicents ($0.00001 units); 0 = unlimited"),
     }),
     rpcMethod: "createWorkspace",
     mutating: true,
@@ -98,6 +110,8 @@ export const workspaceTools: ToolDefinition[] = [
           workingDirectory: (args.workingDirectory as string | undefined) ?? "",
           useWorktrees: args.useWorktrees as boolean | undefined,
           defaultPersonaId: (args.defaultPersonaId as string | undefined) ?? "",
+          tokenBudget: (args.tokenBudget as number | undefined) ?? 0,
+          costBudgetMillicents: (args.costBudgetMillicents as number | undefined) ?? 0,
         });
         return jsonResult({
           id: workspace.id,
@@ -192,6 +206,18 @@ export const workspaceTools: ToolDefinition[] = [
         .string()
         .optional()
         .describe("Default persona for tasks in this workspace"),
+      tokenBudget: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe("Token budget (input + output); 0 = unlimited"),
+      costBudgetMillicents: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe("Cost budget in millicents ($0.00001 units); 0 = unlimited"),
     }),
     rpcMethod: "updateWorkspace",
     mutating: true,
@@ -212,6 +238,8 @@ export const workspaceTools: ToolDefinition[] = [
           workingDirectory: args.workingDirectory as string | undefined,
           useWorktrees: args.useWorktrees as boolean | undefined,
           defaultPersonaId: args.defaultPersonaId as string | undefined,
+          tokenBudget: args.tokenBudget as number | undefined,
+          costBudgetMillicents: args.costBudgetMillicents as number | undefined,
         });
         return jsonResult({
           id: workspace.id,

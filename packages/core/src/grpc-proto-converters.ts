@@ -73,6 +73,8 @@ export function workspaceRowToProto(
     workingDirectory: row.workingDirectory,
     defaultPersonaId: row.defaultPersonaId,
     linkedEnvironmentIds: linkedIds,
+    tokenBudget: row.tokenBudget,
+    costBudgetMillicents: row.costBudgetMillicents,
   });
 }
 
@@ -104,6 +106,8 @@ export function taskRowToProto(
     defaultPersonaId: row.defaultPersonaId,
     workpad: row.workpad,
     scheduleId: row.scheduleId,
+    tokenBudget: row.tokenBudget,
+    costBudgetMillicents: row.costBudgetMillicents,
   });
 }
 

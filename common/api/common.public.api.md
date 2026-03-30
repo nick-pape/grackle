@@ -246,6 +246,8 @@ type CreateTaskRequest = Message<"grackle.CreateTaskRequest"> & {
     parentTaskId: string;
     canDecompose?: boolean;
     defaultPersonaId?: string;
+    tokenBudget?: number;
+    costBudgetMillicents?: number;
 };
 
 // @public
@@ -260,6 +262,8 @@ type CreateWorkspaceRequest = Message<"grackle.CreateWorkspaceRequest"> & {
     workingDirectory?: string;
     defaultPersonaId?: string;
     environmentId: string;
+    tokenBudget?: number;
+    costBudgetMillicents?: number;
 };
 
 // @public
@@ -341,6 +345,7 @@ export const END_REASON: {
     readonly KILLED: "killed";
     readonly INTERRUPTED: "interrupted";
     readonly TERMINATED: "terminated";
+    readonly BUDGET_EXCEEDED: "budget_exceeded";
 };
 
 // @public
@@ -1944,6 +1949,8 @@ type Task = Message<"grackle.Task"> & {
     defaultPersonaId: string;
     workpad: string;
     scheduleId: string;
+    tokenBudget: number;
+    costBudgetMillicents: number;
 };
 
 // @public
@@ -2133,6 +2140,8 @@ type UpdateTaskRequest = Message<"grackle.UpdateTaskRequest"> & {
     dependsOn: string[];
     sessionId: string;
     defaultPersonaId?: string;
+    tokenBudget?: number;
+    costBudgetMillicents?: number;
 };
 
 // @public
@@ -2148,6 +2157,8 @@ type UpdateWorkspaceRequest = Message<"grackle.UpdateWorkspaceRequest"> & {
     workingDirectory?: string;
     defaultPersonaId?: string;
     environmentId?: string;
+    tokenBudget?: number;
+    costBudgetMillicents?: number;
 };
 
 // @public
@@ -2210,6 +2221,8 @@ type Workspace = Message<"grackle.Workspace"> & {
     defaultPersonaId: string;
     environmentId: string;
     linkedEnvironmentIds: string[];
+    tokenBudget: number;
+    costBudgetMillicents: number;
 };
 
 // @public

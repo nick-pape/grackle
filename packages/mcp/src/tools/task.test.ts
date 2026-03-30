@@ -159,6 +159,8 @@ describe("task_create", () => {
       parentTaskId: "",
       canDecompose: false,
       defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
     });
   });
 
@@ -189,6 +191,40 @@ describe("task_create", () => {
       parentTaskId: "",
       canDecompose: false,
       defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
+  });
+
+  /** Should pass tokenBudget and costBudgetMillicents to client. */
+  test("passes token_budget and cost_budget_millicents to client", async () => {
+    const mockClient = createMockClient();
+    (mockClient.createTask as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "t4",
+      title: "Budget task",
+      status: 0,
+    });
+
+    await getTool("task_create").handler(
+      {
+        workspaceId: "proj-1",
+        title: "Budget task",
+        tokenBudget: 50000,
+        costBudgetMillicents: 100,
+      },
+      mockClient,
+    );
+
+    expect(mockClient.createTask).toHaveBeenCalledWith({
+      workspaceId: "proj-1",
+      title: "Budget task",
+      description: "",
+      dependsOn: [],
+      parentTaskId: "",
+      canDecompose: false,
+      defaultPersonaId: "",
+      tokenBudget: 50000,
+      costBudgetMillicents: 100,
     });
   });
 
@@ -288,6 +324,25 @@ describe("task_update", () => {
 
     const callArgs = (mockClient.updateTask as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(callArgs.status).toBe(0);
+  });
+
+  /** Should pass budget fields when provided. */
+  test("passes budget fields when provided", async () => {
+    const mockClient = createMockClient();
+    (mockClient.updateTask as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "t1",
+      title: "Budget update",
+      status: 1,
+    });
+
+    await getTool("task_update").handler(
+      { taskId: "t1", tokenBudget: 25000, costBudgetMillicents: 500 },
+      mockClient,
+    );
+
+    const callArgs = (mockClient.updateTask as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(callArgs.tokenBudget).toBe(25000);
+    expect(callArgs.costBudgetMillicents).toBe(500);
   });
 
   /** Should return a structured error on ConnectError. */

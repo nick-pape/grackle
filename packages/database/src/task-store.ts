@@ -21,6 +21,8 @@ export interface InsertTaskFields {
   depth: number;
   canDecompose: boolean;
   defaultPersonaId: string;
+  tokenBudget: number;
+  costBudgetMillicents: number;
 }
 
 /**
@@ -54,6 +56,8 @@ export function insertTask(fields: InsertTaskFields): void {
       depth: fields.depth,
       canDecompose: fields.canDecompose,
       defaultPersonaId: fields.defaultPersonaId,
+      tokenBudget: fields.tokenBudget,
+      costBudgetMillicents: fields.costBudgetMillicents,
     })
     .run();
 }
@@ -73,6 +77,8 @@ export function createTask(
   parentTaskId: string = "",
   canDecompose?: boolean,
   defaultPersonaId: string = "",
+  tokenBudget: number = 0,
+  costBudgetMillicents: number = 0,
 ): void {
   let depth = 0;
   let branch: string;
@@ -111,6 +117,8 @@ export function createTask(
     depth,
     canDecompose: resolvedCanDecompose,
     defaultPersonaId,
+    tokenBudget,
+    costBudgetMillicents,
   });
 }
 
@@ -193,6 +201,22 @@ export function updateTask(
   }
   db.update(tasks)
     .set(sets)
+    .where(eq(tasks.id, id))
+    .run();
+}
+
+/** Update the token and cost budget for a task. */
+export function updateTaskBudget(
+  id: string,
+  tokenBudget: number,
+  costBudgetMillicents: number,
+): void {
+  db.update(tasks)
+    .set({
+      tokenBudget,
+      costBudgetMillicents,
+      updatedAt: sql`datetime('now')`,
+    })
     .where(eq(tasks.id, id))
     .run();
 }

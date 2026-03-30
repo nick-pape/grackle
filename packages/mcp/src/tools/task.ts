@@ -95,6 +95,18 @@ export const taskTools: ToolDefinition[] = [
         .string()
         .optional()
         .describe("Default persona for this task (overrides workspace default)"),
+      tokenBudget: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe("Token budget (input + output); 0 = unlimited"),
+      costBudgetMillicents: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe("Cost budget in millicents ($0.00001 units); 0 = unlimited"),
     }),
     rpcMethod: "createTask",
     mutating: true,
@@ -114,6 +126,8 @@ export const taskTools: ToolDefinition[] = [
           parentTaskId: (args.parentTaskId as string | undefined) ?? "",
           canDecompose: (args.canDecompose as boolean | undefined) ?? false,
           defaultPersonaId: (args.defaultPersonaId as string | undefined) ?? "",
+          tokenBudget: (args.tokenBudget as number | undefined) ?? 0,
+          costBudgetMillicents: (args.costBudgetMillicents as number | undefined) ?? 0,
         });
         return jsonResult(taskToJson(task));
       } catch (error) {
@@ -184,6 +198,18 @@ export const taskTools: ToolDefinition[] = [
         .string()
         .optional()
         .describe("Bind an existing running session to this task (late-bind)"),
+      tokenBudget: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe("Token budget (input + output); 0 = unlimited"),
+      costBudgetMillicents: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe("Cost budget in millicents ($0.00001 units); 0 = unlimited"),
     }),
     rpcMethod: "updateTask",
     mutating: true,
@@ -210,6 +236,8 @@ export const taskTools: ToolDefinition[] = [
           status: statusValue,
           dependsOn: (args.dependsOn as string[] | undefined) ?? [],
           sessionId: (args.sessionId as string | undefined) ?? "",
+          tokenBudget: args.tokenBudget as number | undefined,
+          costBudgetMillicents: args.costBudgetMillicents as number | undefined,
         });
         return jsonResult(taskToJson(task));
       } catch (error) {

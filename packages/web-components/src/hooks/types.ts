@@ -80,6 +80,10 @@ export interface Workspace {
   workingDirectory: string;
   useWorktrees: boolean;
   defaultPersonaId: string;
+  /** Total token cap across all tasks; 0 = unlimited. */
+  tokenBudget: number;
+  /** Cost cap in millicents across all tasks; 0 = unlimited. */
+  costBudgetMillicents: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -109,6 +113,10 @@ export interface TaskData {
   canDecompose: boolean;
   defaultPersonaId: string;
   workpad: string;
+  /** Total token cap (input + output); 0 = unlimited. */
+  tokenBudget: number;
+  /** Cost cap in millicents ($0.00001 units); 0 = unlimited. */
+  costBudgetMillicents: number;
 }
 
 /** A finding posted by an agent or user. */

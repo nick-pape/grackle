@@ -8,7 +8,7 @@ import {
 } from "@grackle-ai/common";
 import Table from "cli-table3";
 import chalk from "chalk";
-import { formatTokens, formatCost } from "../format.js";
+import { formatTokens, formatCost, formatBudget } from "../format.js";
 
 export function registerTaskCommands(program: Command): void {
   const task = program.command("task").description("Create, start, and manage tasks");
@@ -73,7 +73,9 @@ export function registerTaskCommands(program: Command): void {
     .option("--depends-on <ids>", "Comma-separated dependency task IDs")
     .option("--can-decompose", "Allow this task to create subtasks")
     .option("--parent <task-id>", "Parent task ID (creates a subtask)")
-    .action(async (title: string, opts: { workspace?: string; dependsOn?: string; desc?: string; canDecompose?: boolean; parent?: string }) => {
+    .option("--token-budget <n>", "Total token cap (input + output); 0 = unlimited", parseInt)
+    .option("--cost-budget-millicents <n>", "Cost cap in millicents ($0.00001 units); 0 = unlimited", parseInt)
+    .action(async (title: string, opts: { workspace?: string; dependsOn?: string; desc?: string; canDecompose?: boolean; parent?: string; tokenBudget?: number; costBudgetMillicents?: number }) => {
       const client = createGrackleClient();
       const dependsOn: string[] = opts.dependsOn
         ? opts.dependsOn.split(",").map((s: string) => s.trim()).filter(Boolean)
@@ -85,6 +87,8 @@ export function registerTaskCommands(program: Command): void {
         dependsOn,
         canDecompose: opts.canDecompose || false,
         parentTaskId: opts.parent || "",
+        tokenBudget: opts.tokenBudget,
+        costBudgetMillicents: opts.costBudgetMillicents,
       });
       console.log(`Created task: ${t.id} (${t.title}) branch: ${t.branch}`);
     });
@@ -107,19 +111,31 @@ export function registerTaskCommands(program: Command): void {
       if (t.description) {
         console.log(`Description: ${t.description}`);
       }
-      // Show usage from the latest session if available
-      if (t.latestSessionId) {
-        try {
-          const session = await client.getSession({ id: t.latestSessionId });
-          if (session.inputTokens || session.outputTokens || session.costUsd) {
-            console.log(`Tokens:      ${formatTokens(session.inputTokens)} in / ${formatTokens(session.outputTokens)} out`);
-            console.log(`Cost:        ${formatCost(session.costUsd)}`);
-          }
-        } catch (err: unknown) {
-          // Only suppress NotFound (session cleaned up); surface other errors
-          if (!(err instanceof ConnectError && err.code === Code.NotFound)) {
-            console.log(chalk.yellow(`Tokens:      (unavailable)`));
-          }
+      // Show usage from the task scope
+      try {
+        const usage = await client.getUsage({ scope: "task", id: taskId });
+        if (usage.inputTokens || usage.outputTokens || usage.costUsd) {
+          console.log(`Tokens:      ${formatTokens(usage.inputTokens)} in / ${formatTokens(usage.outputTokens)} out`);
+          console.log(`Cost:        ${formatCost(usage.costUsd)}`);
+        }
+        if (t.tokenBudget > 0) {
+          const usedTokens = usage.inputTokens + usage.outputTokens;
+          console.log(`Token Budget:  ${formatBudget(usedTokens, t.tokenBudget, "token")}`);
+        }
+        if (t.costBudgetMillicents > 0) {
+          console.log(`Cost Budget:   ${formatBudget(usage.costUsd, t.costBudgetMillicents, "cost")}`);
+        }
+      } catch (err: unknown) {
+        // Only suppress NotFound (session cleaned up); surface other errors
+        if (!(err instanceof ConnectError && err.code === Code.NotFound)) {
+          console.log(chalk.yellow(`Tokens:      (unavailable)`));
+        }
+        // Still show budgets even if usage fetch fails
+        if (t.tokenBudget > 0) {
+          console.log(`Token Budget:  ${formatBudget(0, t.tokenBudget, "token")}`);
+        }
+        if (t.costBudgetMillicents > 0) {
+          console.log(`Cost Budget:   ${formatBudget(0, t.costBudgetMillicents, "cost")}`);
         }
       }
       if (t.workpad) {
@@ -153,7 +169,9 @@ export function registerTaskCommands(program: Command): void {
     .option("--depends-on <ids>", "Comma-separated dependency task IDs")
     .option("--session <session-id>", "Bind an existing session to this task")
     .option("--persona <id>", "Default persona ID for this task")
-    .action(async (taskId: string, opts: { status?: string; dependsOn?: string; title?: string; desc?: string; session?: string; persona?: string }) => {
+    .option("--token-budget <n>", "Total token cap (input + output); 0 = unlimited", parseInt)
+    .option("--cost-budget-millicents <n>", "Cost cap in millicents ($0.00001 units); 0 = unlimited", parseInt)
+    .action(async (taskId: string, opts: { status?: string; dependsOn?: string; title?: string; desc?: string; session?: string; persona?: string; tokenBudget?: number; costBudgetMillicents?: number }) => {
       if (taskId === ROOT_TASK_ID && opts.status) {
         console.error(chalk.red("Cannot change the status of the system task"));
         process.exitCode = 1;
@@ -193,6 +211,8 @@ export function registerTaskCommands(program: Command): void {
         dependsOn,
         sessionId: opts.session || "",
         defaultPersonaId: opts.persona,
+        tokenBudget: opts.tokenBudget,
+        costBudgetMillicents: opts.costBudgetMillicents,
       });
       console.log(
         `Updated: ${t.id} (${t.title}) status: ${taskStatusToString(t.status)}`,

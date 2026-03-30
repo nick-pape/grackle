@@ -36,6 +36,9 @@ export async function createWorkspace(req: grackle.CreateWorkspaceRequest): Prom
   if (workspaceStore.getWorkspace(id)) {
     id = `${id}-${uuid().slice(0, 4)}`;
   }
+  if ((req.tokenBudget ?? 0) < 0 || (req.costBudgetMillicents ?? 0) < 0) {
+    throw new ConnectError("Budget values must be >= 0", Code.InvalidArgument);
+  }
   // useWorktrees defaults to true when not specified
   const useWorktrees = req.useWorktrees ?? true;
   workspaceStore.createWorkspace(
@@ -47,6 +50,8 @@ export async function createWorkspace(req: grackle.CreateWorkspaceRequest): Prom
     useWorktrees,
     req.workingDirectory ?? "",
     req.defaultPersonaId ?? "",
+    req.tokenBudget ?? 0,
+    req.costBudgetMillicents ?? 0,
   );
   emit("workspace.created", { workspaceId: id });
   logger.info({ workspaceId: id }, "Workspace created");
@@ -89,6 +94,9 @@ export async function updateWorkspace(req: grackle.UpdateWorkspaceRequest): Prom
       throw new ConnectError(`Environment not found: ${req.environmentId}`, Code.NotFound);
     }
   }
+  if ((req.tokenBudget !== undefined && req.tokenBudget < 0) || (req.costBudgetMillicents !== undefined && req.costBudgetMillicents < 0)) {
+    throw new ConnectError("Budget values must be >= 0", Code.InvalidArgument);
+  }
   const row = workspaceStore.updateWorkspace(req.id, {
     name: req.name !== undefined ? req.name.trim() : undefined,
     description: req.description,
@@ -97,6 +105,8 @@ export async function updateWorkspace(req: grackle.UpdateWorkspaceRequest): Prom
     useWorktrees: req.useWorktrees ?? undefined,
     workingDirectory: req.workingDirectory,
     defaultPersonaId: req.defaultPersonaId,
+    tokenBudget: req.tokenBudget,
+    costBudgetMillicents: req.costBudgetMillicents,
   });
   if (!row) {
     throw new ConnectError(`Workspace not found after update: ${req.id}`, Code.NotFound);

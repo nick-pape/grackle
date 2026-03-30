@@ -231,6 +231,35 @@ describe("workspace_update", () => {
     expect(result.isError).toBeUndefined();
   });
 
+  /** Verify budget fields are passed through when provided. */
+  test("passes budget fields when provided", async () => {
+    const mockClient = {
+      updateWorkspace: vi.fn().mockResolvedValue({
+        id: "proj-1",
+        name: "Alpha",
+        description: "First workspace",
+        repoUrl: "https://github.com/org/alpha",
+        environmentId: "env-1",
+        status: 1,
+        createdAt: "2026-01-01T00:00:00Z",
+        updatedAt: "2026-01-03T00:00:00Z",
+      }),
+    } as unknown as GrackleClient;
+
+    await tool.handler(
+      { workspaceId: "proj-1", tokenBudget: 100000, costBudgetMillicents: 2000 },
+      mockClient,
+    );
+
+    expect(mockClient.updateWorkspace).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "proj-1",
+        tokenBudget: 100000,
+        costBudgetMillicents: 2000,
+      }),
+    );
+  });
+
   /** Verify gRPC ConnectError is surfaced as an error result. */
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {

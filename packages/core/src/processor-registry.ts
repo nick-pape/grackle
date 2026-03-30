@@ -6,6 +6,8 @@ export interface ProcessorContext {
   logPath: string;
   workspaceId?: string;
   taskId: string;
+  /** Set when a budget-exceeded SIGTERM has been sent to this session. */
+  budgetSigtermSent?: boolean;
 }
 
 /** Registry of active event processor contexts, keyed by sessionId. */

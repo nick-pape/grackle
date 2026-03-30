@@ -22,6 +22,8 @@ function makeTask(overrides: Partial<TaskData> & { id: string }): TaskData {
     canDecompose: false,
     defaultPersonaId: "",
     workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
     ...overrides,
   };
 }

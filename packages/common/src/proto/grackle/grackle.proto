@@ -326,6 +326,8 @@ message Workspace {
   string default_persona_id = 11; // Default persona for tasks in this workspace
   string environment_id = 12; // Owning environment — every workspace belongs to exactly one environment
   repeated string linked_environment_ids = 13; // Linked environments (read-only, set via Link/Unlink RPCs)
+  int32 token_budget = 14; // Aggregate token cap across all tasks; 0 = unlimited
+  int32 cost_budget_millicents = 15; // Aggregate cost cap in millicents; 0 = unlimited
 }
 
 message WorkspaceList {
@@ -345,6 +347,8 @@ message CreateWorkspaceRequest {
   optional string working_directory = 6; // Working directory / repo root (e.g. /workspaces/my-repo)
   optional string default_persona_id = 7; // Default persona for tasks in this workspace
   string environment_id = 8; // Required: owning environment
+  optional int32 token_budget = 9; // Aggregate token cap; 0 = unlimited
+  optional int32 cost_budget_millicents = 10; // Aggregate cost cap in millicents; 0 = unlimited
 }
 
 message UpdateWorkspaceRequest {
@@ -357,6 +361,8 @@ message UpdateWorkspaceRequest {
   optional string working_directory = 7; // Working directory / repo root (e.g. /workspaces/my-repo)
   optional string default_persona_id = 8; // Default persona for tasks in this workspace
   optional string environment_id = 9; // Reparent to a different environment
+  optional int32 token_budget = 10; // Aggregate token cap; 0 = unlimited
+  optional int32 cost_budget_millicents = 11; // Aggregate cost cap in millicents; 0 = unlimited
 }
 
 message WorkspaceId {
@@ -400,6 +406,8 @@ message Task {
   string default_persona_id = 22; // Default persona for this task (overrides workspace default)
   string workpad = 23; // Persistent structured context (JSON) that survives across sessions
   string schedule_id = 24; // ID of the schedule that created this task (empty for manually-created tasks)
+  int32 token_budget = 25; // Total token cap (input + output); 0 = unlimited
+  int32 cost_budget_millicents = 26; // Cost cap in millicents ($0.00001 units); 0 = unlimited
 }
 
 message TaskList {
@@ -422,6 +430,8 @@ message CreateTaskRequest {
   optional bool can_decompose = 7;
   reserved 8; // was persona_id (moved to StartTaskRequest/Session)
   optional string default_persona_id = 9; // Default persona for this task
+  optional int32 token_budget = 10; // Total token cap (input + output); 0 = unlimited
+  optional int32 cost_budget_millicents = 11; // Cost cap in millicents; 0 = unlimited
 }
 
 message TaskId {
@@ -438,6 +448,8 @@ message UpdateTaskRequest {
   reserved 7; // was review_notes (moved to StartTaskRequest)
   string session_id = 8; // Optional: late-bind an existing session to this task
   optional string default_persona_id = 9; // Default persona for this task
+  optional int32 token_budget = 10; // Total token cap (input + output); 0 = unlimited
+  optional int32 cost_budget_millicents = 11; // Cost cap in millicents; 0 = unlimited
 }
 
 message StartTaskRequest {

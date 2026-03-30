@@ -23,6 +23,8 @@ function applySchema(): void {
       use_worktrees INTEGER NOT NULL DEFAULT 1,
       working_directory TEXT NOT NULL DEFAULT '',
       default_persona_id TEXT NOT NULL DEFAULT '',
+      token_budget  INTEGER NOT NULL DEFAULT 0,
+      cost_budget_millicents INTEGER NOT NULL DEFAULT 0,
       created_at    TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -47,7 +49,9 @@ function applySchema(): void {
       can_decompose INTEGER NOT NULL DEFAULT 0,
       default_persona_id TEXT NOT NULL DEFAULT '',
       workpad       TEXT NOT NULL DEFAULT '',
-      schedule_id   TEXT NOT NULL DEFAULT ''
+      schedule_id   TEXT NOT NULL DEFAULT '',
+      token_budget  INTEGER NOT NULL DEFAULT 0,
+      cost_budget_millicents INTEGER NOT NULL DEFAULT 0
     );
   `);
 }
@@ -499,6 +503,38 @@ describe("task-store tree operations", () => {
       taskStore.markTaskComplete("c2", "failed");
 
       expect(taskStore.getOrphanedTasks("p")).toHaveLength(0);
+    });
+  });
+
+  describe("budget fields", () => {
+    it("defaults token_budget and cost_budget_millicents to 0", () => {
+      taskStore.createTask("t1", "test-proj", "Task", "desc", [], "proj");
+      const task = taskStore.getTask("t1");
+      expect(task!.tokenBudget).toBe(0);
+      expect(task!.costBudgetMillicents).toBe(0);
+    });
+
+    it("stores budget values via createTask", () => {
+      taskStore.createTask("t1", "test-proj", "Task", "desc", [], "proj", "", false, "", 50000, 100000);
+      const task = taskStore.getTask("t1");
+      expect(task!.tokenBudget).toBe(50000);
+      expect(task!.costBudgetMillicents).toBe(100000);
+    });
+
+    it("updates budget via updateTaskBudget", () => {
+      taskStore.createTask("t1", "test-proj", "Task", "desc", [], "proj");
+      taskStore.updateTaskBudget("t1", 200000, 500000);
+      const task = taskStore.getTask("t1");
+      expect(task!.tokenBudget).toBe(200000);
+      expect(task!.costBudgetMillicents).toBe(500000);
+    });
+
+    it("updateTaskBudget sets updatedAt", () => {
+      taskStore.createTask("t1", "test-proj", "Task", "desc", [], "proj");
+      const before = taskStore.getTask("t1")!.updatedAt;
+      taskStore.updateTaskBudget("t1", 100, 200);
+      const after = taskStore.getTask("t1")!.updatedAt;
+      expect(after >= before).toBe(true);
     });
   });
 
