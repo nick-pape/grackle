@@ -111,8 +111,8 @@ export const UnlinkRemovesChip: Story = {
     // Click unlink
     await userEvent.click(canvas.getByTestId("unlink-env-env-docker-01"));
     // Chip should disappear (MockGrackleProvider removes it from state)
-    await waitFor(() => {
-      void expect(canvas.queryByTestId("linked-env-env-docker-01")).not.toBeInTheDocument();
+    await waitFor(async () => {
+      await expect(canvas.queryByTestId("linked-env-env-docker-01")).not.toBeInTheDocument();
     });
     // "None" placeholder should appear
     const linkedSection = canvas.getByTestId("linked-environments");
