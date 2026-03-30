@@ -7,45 +7,37 @@ vi.mock("@grackle-ai/database", async () => {
   return createDatabaseMock();
 });
 
-vi.mock("../logger.js", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
-
-vi.mock("../log-writer.js", () => ({
-  initLog: vi.fn(),
-  ensureLogInitialized: vi.fn(),
-  writeEvent: vi.fn(),
-  endSession: vi.fn(),
-  readLog: vi.fn(() => []),
-}));
-
-vi.mock("../stream-hub.js", () => ({
-  publish: vi.fn(),
-  createStream: vi.fn(() => {
-    const iter = (async function* () {})();
-    return Object.assign(iter, { cancel: vi.fn() });
-  }),
-  createGlobalStream: vi.fn(() => {
-    const iter = (async function* () {})();
-    return Object.assign(iter, { cancel: vi.fn() });
-  }),
-}));
-
-
-vi.mock("../event-bus.js", () => ({
-  emit: vi.fn(),
-  subscribe: vi.fn(),
-}));
-
-vi.mock("../reanimate-agent.js", () => ({
-  reanimateAgent: vi.fn(),
-}));
+vi.mock("@grackle-ai/core", async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>;
+  return {
+    ...actual,
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+    logWriter: {
+      initLog: vi.fn(),
+      ensureLogInitialized: vi.fn(),
+      writeEvent: vi.fn(),
+      endSession: vi.fn(),
+      readLog: vi.fn(() => []),
+    },
+    streamHub: {
+      publish: vi.fn(),
+      createStream: vi.fn(() => {
+        const iter = (async function* () {})();
+        return Object.assign(iter, { cancel: vi.fn() });
+      }),
+      createGlobalStream: vi.fn(() => {
+        const iter = (async function* () {})();
+        return Object.assign(iter, { cancel: vi.fn() });
+      }),
+    },
+    emit: vi.fn(),
+    subscribe: vi.fn(),
+    reanimateAgent: vi.fn(),
+  };
+});
 
 import { sessionStore } from "@grackle-ai/database";
-import * as adapterManager from "../adapter-manager.js";
-import * as streamHub from "../stream-hub.js";
-import { reanimateAgent } from "../reanimate-agent.js";
-import { logger } from "../logger.js";
+import { adapterManager, streamHub, reanimateAgent, logger } from "@grackle-ai/core";
 import { grackle } from "@grackle-ai/common";
 import { deliverSignalToTask, sendInputToSession } from "./signal-delivery.js";
 

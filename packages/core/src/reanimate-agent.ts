@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { sessionStore, taskStore, grackleHome } from "@grackle-ai/database";
 import type { SessionRow } from "@grackle-ai/database";
 import * as adapterManager from "./adapter-manager.js";
-import { ensureLifecycleStream } from "./lifecycle.js";
+import { ensureLifecycleStream } from "./lifecycle-streams.js";
 import { ensureStdinStream } from "./stdin-delivery.js";
 import { processEventStream } from "./event-processor.js";
 

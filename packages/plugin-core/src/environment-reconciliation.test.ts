@@ -4,9 +4,13 @@ import {
   type EnvironmentReconciliationDeps,
 } from "./environment-reconciliation.js";
 
-vi.mock("./logger.js", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
+vi.mock("@grackle-ai/core", async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>;
+  return {
+    ...actual,
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+  };
+});
 
 function makeDeps(overrides?: Partial<EnvironmentReconciliationDeps>): EnvironmentReconciliationDeps {
   return {
@@ -214,7 +218,7 @@ describe("environment status reconciliation phase", () => {
   });
 
   it("logs warning with count when drift is fixed", async () => {
-    const { logger } = await import("./logger.js");
+    const { logger } = await import("@grackle-ai/core");
     const deps = makeDeps({
       listEnvironments: vi.fn(() => [makeEnv({ id: "env-1", status: "connected" })] as never),
       listConnectionIds: vi.fn(() => new Set()),
@@ -231,7 +235,7 @@ describe("environment status reconciliation phase", () => {
   });
 
   it("does not log warning when no drift detected", async () => {
-    const { logger } = await import("./logger.js");
+    const { logger } = await import("@grackle-ai/core");
     vi.mocked(logger.warn).mockClear();
 
     const deps = makeDeps({

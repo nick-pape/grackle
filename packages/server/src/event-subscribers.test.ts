@@ -5,17 +5,20 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockDisposable = { dispose: vi.fn() };
 
 vi.mock("@grackle-ai/core", () => ({
-  createSigchldSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
-  createEscalationAutoSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
-  createOrphanReparentSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
-  createLifecycleSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
-  createRootTaskBootSubscriber: vi.fn(() => mockDisposable),
   subscribe: vi.fn(() => vi.fn()),
   emit: vi.fn(),
   computeTaskStatus: vi.fn(),
   findFirstConnectedEnvironment: vi.fn(),
   startTaskSession: vi.fn(),
   reanimateAgent: vi.fn(),
+}));
+
+vi.mock("@grackle-ai/plugin-core", () => ({
+  createSigchldSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
+  createEscalationAutoSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
+  createOrphanReparentSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
+  createLifecycleSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
+  createRootTaskBootSubscriber: vi.fn(() => mockDisposable),
 }));
 
 vi.mock("@grackle-ai/database", () => ({
@@ -28,7 +31,7 @@ import { wireEventSubscribers } from "./event-subscribers.js";
 import {
   createSigchldSubscriber, createEscalationAutoSubscriber,
   createOrphanReparentSubscriber, createLifecycleSubscriber,
-} from "@grackle-ai/core";
+} from "@grackle-ai/plugin-core";
 
 beforeEach(() => {
   vi.clearAllMocks();

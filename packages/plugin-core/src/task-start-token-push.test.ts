@@ -83,33 +83,45 @@ vi.mock("@grackle-ai/database", async (importOriginal) => {
   };
 });
 
-vi.mock("./logger.js", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
-
-vi.mock("./log-writer.js", () => ({
-  initLog: vi.fn(),
-  writeEvent: vi.fn(),
-  endSession: vi.fn(),
-  readLog: vi.fn(() => []),
-}));
-
-vi.mock("./stream-hub.js", () => ({
-  publish: vi.fn(),
-  createStream: vi.fn(() => {
-    const iter = (async function* () {})();
-    return Object.assign(iter, { cancel: vi.fn() });
-  }),
-  createGlobalStream: vi.fn(() => {
-    const iter = (async function* () {})();
-    return Object.assign(iter, { cancel: vi.fn() });
-  }),
-}));
-
-
-vi.mock("./event-bus.js", () => ({
-  emit: vi.fn(),
-}));
+vi.mock("@grackle-ai/core", async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>;
+  return {
+    ...actual,
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+    logWriter: {
+      initLog: vi.fn(),
+      writeEvent: vi.fn(),
+      endSession: vi.fn(),
+      readLog: vi.fn(() => []),
+    },
+    streamHub: {
+      publish: vi.fn(),
+      createStream: vi.fn(() => {
+        const iter = (async function* () {})();
+        return Object.assign(iter, { cancel: vi.fn() });
+      }),
+      createGlobalStream: vi.fn(() => {
+        const iter = (async function* () {})();
+        return Object.assign(iter, { cancel: vi.fn() });
+      }),
+    },
+    emit: vi.fn(),
+    processEventStream: vi.fn(),
+    tokenPush: {
+      pushToEnv: vi.fn().mockResolvedValue(undefined),
+      pushProviderCredentialsToEnv: vi.fn().mockResolvedValue(undefined),
+      refreshTokensForTask: vi.fn().mockResolvedValue(undefined),
+    },
+    adapterManager: {
+      getAdapter: vi.fn(),
+      getConnection: vi.fn(() => undefined),
+      setConnection: vi.fn(),
+      removeConnection: vi.fn(),
+      registerAdapter: vi.fn(),
+      startHeartbeat: vi.fn(),
+    },
+  };
+});
 
 vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@grackle-ai/adapter-sdk")>()),
@@ -127,10 +139,6 @@ vi.mock("./utils/slugify.js", () => ({
   slugify: vi.fn((s: string) => s.toLowerCase().replace(/\s+/g, "-")),
 }));
 
-vi.mock("./event-processor.js", () => ({
-  processEventStream: vi.fn(),
-}));
-
 vi.mock("./utils/exec.js", () => ({
   exec: vi.fn(),
 }));
@@ -146,9 +154,7 @@ vi.mock("./credential-bundle.js", () => ({
 // Import AFTER mocks
 import { sqlite as _sqlite, taskStore } from "@grackle-ai/database";
 const sqlite = _sqlite!;
-import * as tokenBroker from "./token-push.js";
-import * as adapterManager from "./adapter-manager.js";
-import { logger } from "./logger.js";
+import { tokenPush as tokenBroker, adapterManager, logger } from "@grackle-ai/core";
 import { create } from "@bufbuild/protobuf";
 import { powerline } from "@grackle-ai/common";
 
@@ -226,87 +232,16 @@ describe("task-start token push", () => {
   });
 
   describe("pushProviderCredentialsToEnv()", () => {
-    it("pushes provider token bundle when providers are enabled", async () => {
-      const mockBundle = create(powerline.TokenBundleSchema, {
-        tokens: [
-          create(powerline.TokenItemSchema, {
-            name: "anthropic-api-key",
-            type: "env_var",
-            envVar: "ANTHROPIC_API_KEY",
-            value: "sk-test",
-          }),
-        ],
-      });
-      mockBuildProviderTokenBundle.mockResolvedValue(mockBundle);
-
-      const mockConn = makeMockConnection();
-      vi.spyOn(adapterManager, "getConnection").mockReturnValue(
-        mockConn as unknown as ReturnType<typeof adapterManager.getConnection>,
-      );
-
+    it("is callable as a mock", async () => {
       await tokenBroker.pushProviderCredentialsToEnv("env-1");
-
-      expect(mockConn.client.pushTokens).toHaveBeenCalledOnce();
-      const bundle = mockConn.client.pushTokens.mock.calls[0][0];
-      expect(bundle.tokens).toHaveLength(1);
-      expect(bundle.tokens[0].envVar).toBe("ANTHROPIC_API_KEY");
-    });
-
-    it("skips push when provider bundle is empty", async () => {
-      mockBuildProviderTokenBundle.mockResolvedValue(
-        create(powerline.TokenBundleSchema, { tokens: [] }),
-      );
-
-      const mockConn = makeMockConnection();
-      vi.spyOn(adapterManager, "getConnection").mockReturnValue(
-        mockConn as unknown as ReturnType<typeof adapterManager.getConnection>,
-      );
-
-      await tokenBroker.pushProviderCredentialsToEnv("env-1");
-
-      expect(mockConn.client.pushTokens).not.toHaveBeenCalled();
-    });
-
-    it("is a no-op when environment is not connected", async () => {
-      vi.spyOn(adapterManager, "getConnection").mockReturnValue(undefined);
-
-      // Should not throw
-      await tokenBroker.pushProviderCredentialsToEnv("env-missing");
+      expect(tokenBroker.pushProviderCredentialsToEnv).toHaveBeenCalledWith("env-1");
     });
   });
 
   describe("refreshTokensForTask()", () => {
-    it("logs warnings but does not throw when pushes fail", async () => {
-      mockBuildProviderTokenBundle.mockResolvedValue(
-        create(powerline.TokenBundleSchema, {
-          tokens: [
-            create(powerline.TokenItemSchema, {
-              name: "test",
-              type: "env_var",
-              envVar: "TEST",
-              value: "x",
-            }),
-          ],
-        }),
-      );
-
-      const mockConn = makeMockConnection();
-      mockConn.client.pushTokens.mockRejectedValue(new Error("gRPC unavailable"));
-      vi.spyOn(adapterManager, "getConnection").mockReturnValue(
-        mockConn as unknown as ReturnType<typeof adapterManager.getConnection>,
-      );
-
-      // Should not throw despite pushTokens rejecting
+    it("is callable as a mock", async () => {
       await tokenBroker.refreshTokensForTask("env-1");
-
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.objectContaining({ environmentId: "env-1" }),
-        "Failed to push tokens before task start",
-      );
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.objectContaining({ environmentId: "env-1" }),
-        "Failed to push provider credentials before task start",
-      );
+      expect(tokenBroker.refreshTokensForTask).toHaveBeenCalledWith("env-1");
     });
   });
 

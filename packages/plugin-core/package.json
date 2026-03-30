@@ -33,9 +33,11 @@
     "@grackle-ai/core": "workspace:*",
     "@grackle-ai/database": "workspace:*",
     "@grackle-ai/plugin-sdk": "workspace:*",
+    "@grackle-ai/knowledge": "workspace:*",
     "@grackle-ai/prompt": "workspace:*",
     "cron-parser": "^4.9.0",
     "pino": "^10.3.1",
+    "ulid": "^2.3.0",
     "uuid": "^11.0.0"
   },
   "devDependencies": {

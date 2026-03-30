@@ -7,42 +7,42 @@ vi.mock("@grackle-ai/database", async () => {
   return createDatabaseMock();
 });
 
-vi.mock("../logger.js", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
-
-vi.mock("../log-writer.js", () => ({
-  initLog: vi.fn(),
-  writeEvent: vi.fn(),
-  endSession: vi.fn(),
-  readLastTextEntry: vi.fn(() => undefined),
-}));
-
-vi.mock("../stream-hub.js", () => ({
-  publish: vi.fn(),
-  createStream: vi.fn(() => {
-    const iter = (async function* () {})();
-    return Object.assign(iter, { cancel: vi.fn() });
-  }),
-  createGlobalStream: vi.fn(() => {
-    const iter = (async function* () {})();
-    return Object.assign(iter, { cancel: vi.fn() });
-  }),
-}));
-
-vi.mock("../reanimate-agent.js", () => ({
-  reanimateAgent: vi.fn(),
-}));
+vi.mock("@grackle-ai/core", async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>;
+  return {
+    ...actual,
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+    logWriter: {
+      initLog: vi.fn(),
+      writeEvent: vi.fn(),
+      endSession: vi.fn(),
+      readLastTextEntry: vi.fn(() => undefined),
+    },
+    readLastTextEntry: vi.fn(() => undefined),
+    streamHub: {
+      publish: vi.fn(),
+      createStream: vi.fn(() => {
+        const iter = (async function* () {})();
+        return Object.assign(iter, { cancel: vi.fn() });
+      }),
+      createGlobalStream: vi.fn(() => {
+        const iter = (async function* () {})();
+        return Object.assign(iter, { cancel: vi.fn() });
+      }),
+    },
+    reanimateAgent: vi.fn(),
+  };
+});
 
 vi.mock("./signal-delivery.js", () => ({
   deliverSignalToTask: vi.fn().mockResolvedValue(true),
 }));
 
 import { taskStore, sessionStore } from "@grackle-ai/database";
-import { readLastTextEntry } from "../log-writer.js";
+import { readLastTextEntry } from "@grackle-ai/core";
 import { deliverSignalToTask } from "./signal-delivery.js";
 import { createSigchldSubscriber } from "./sigchld.js";
-import type { GrackleEvent } from "../event-bus.js";
+import type { GrackleEvent } from "@grackle-ai/core";
 import type { Disposable, PluginContext } from "../subscriber-types.js";
 
 // ── Helpers ──────────────────────────────────────────────────

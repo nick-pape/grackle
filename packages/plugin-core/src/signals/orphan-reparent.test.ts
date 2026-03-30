@@ -7,35 +7,37 @@ vi.mock("@grackle-ai/database", async () => {
   return createDatabaseMock();
 });
 
-vi.mock("../logger.js", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
+vi.mock("@grackle-ai/core", async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>;
+  return {
+    ...actual,
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+    streamRegistry: {
+      getSubscriptionsForSession: vi.fn(() => []),
+      getStream: vi.fn(() => undefined),
+      subscribe: vi.fn(),
+      unsubscribe: vi.fn(),
+    },
+    ensureAsyncDeliveryListener: vi.fn(),
+    pipeDelivery: {
+      ensureAsyncDeliveryListener: vi.fn(),
+      cleanupAsyncListenerIfEmpty: vi.fn(),
+    },
+  };
+});
 
 vi.mock("./signal-delivery.js", () => ({
   deliverSignalToTask: vi.fn().mockResolvedValue(true),
   sendInputToSession: vi.fn().mockResolvedValue(true),
 }));
 
-vi.mock("../stream-registry.js", () => ({
-  getSubscriptionsForSession: vi.fn(() => []),
-  getStream: vi.fn(() => undefined),
-  subscribe: vi.fn(),
-  unsubscribe: vi.fn(),
-}));
-
-vi.mock("../pipe-delivery.js", () => ({
-  ensureAsyncDeliveryListener: vi.fn(),
-  cleanupAsyncListenerIfEmpty: vi.fn(),
-}));
-
 // ── Imports ──────────────────────────────────────────────────
 
 import { taskStore, sessionStore } from "@grackle-ai/database";
 import { deliverSignalToTask } from "./signal-delivery.js";
-import * as streamRegistry from "../stream-registry.js";
-import { ensureAsyncDeliveryListener } from "../pipe-delivery.js";
+import { streamRegistry, ensureAsyncDeliveryListener } from "@grackle-ai/core";
 import { createOrphanReparentSubscriber } from "./orphan-reparent.js";
-import type { GrackleEvent } from "../event-bus.js";
+import type { GrackleEvent } from "@grackle-ai/core";
 import type { Disposable, PluginContext } from "../subscriber-types.js";
 
 // ── Helpers ──────────────────────────────────────────────────

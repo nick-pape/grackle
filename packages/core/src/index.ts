@@ -25,12 +25,13 @@ export { reanimateAgent } from "./reanimate-agent.js";
 export { attemptReconnects, resetReconnectState } from "./auto-reconnect.js";
 export { pushToEnv } from "./token-push.js";
 export { computeTaskStatus } from "./compute-task-status.js";
+export type { TaskStatusResult } from "./compute-task-status.js";
 export { findFirstConnectedEnvironment } from "./find-connected-environment.js";
 export { hasCapacity, getEffectiveLimit } from "./concurrency.js";
 export type { ConcurrencyDeps } from "./concurrency.js";
 
 // ─── Knowledge ───────────────────────────────────────────────
-export { isKnowledgeEnabled, initKnowledge, neo4jHealthCheck } from "./knowledge-init.js";
+export { isKnowledgeEnabled, initKnowledge, neo4jHealthCheck, getKnowledgeEmbedder } from "./knowledge-init.js";
 
 // ─── Reconciliation Manager ─────────────────────────────────
 export { ReconciliationManager } from "./reconciliation-manager.js";
@@ -65,8 +66,16 @@ export { recoverSuspendedSessions } from "./session-recovery.js";
 export { clearReconnectState } from "./auto-reconnect.js";
 export { resolveBootstrapRuntime } from "./resolve-bootstrap-runtime.js";
 export { ensureStdinStream, publishToStdin, cleanupStdinStream } from "./stdin-delivery.js";
-export { ensureLifecycleStream, cleanupLifecycleStream } from "./lifecycle.js";
+export { ensureLifecycleStream, cleanupLifecycleStream } from "./lifecycle-streams.js";
 export { ensureAsyncDeliveryListener } from "./pipe-delivery.js";
-export { deliverPendingEscalations } from "./notification-router.js";
-export { sendInputToSession } from "./signals/signal-delivery.js";
-export { transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
+export { readLastTextEntry } from "./log-writer.js";
+
+// ─── Shared Utilities (used by both core and plugin-core) ────
+export { routeEscalation, deliverPendingEscalations } from "./notification-router.js";
+export {
+  createKnowledgeHealthPhase, isNeo4jHealthy, getKnowledgeReadinessCheck, resetKnowledgeHealthState,
+} from "./knowledge-health.js";
+export type { KnowledgeHealthPhaseDeps, KnowledgeReadinessCheck } from "./knowledge-health.js";
+export { buildMcpServersJson, personaMcpServersToJson } from "./grpc-mcp-config.js";
+export { toDialableHost, validatePipeInputs, resolveAncestorEnvironmentId, VALID_PIPE_MODES } from "./grpc-shared-utils.js";
+export { toPersonaResolveInput, buildOrchestratorContextInput } from "./persona-mapper.js";

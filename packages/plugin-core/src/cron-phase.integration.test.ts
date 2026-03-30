@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-vi.mock("./logger.js", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
-
-vi.mock("./event-bus.js", () => ({
-  emit: vi.fn(),
-}));
+vi.mock("@grackle-ai/core", async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>;
+  return {
+    ...actual,
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+    emit: vi.fn(),
+  };
+});
 
 // Use real in-memory database
 import { openDatabase, initDatabase, seedDatabase, sqlite as _sqlite, taskStore, scheduleStore, personaStore, dispatchQueueStore } from "@grackle-ai/database";
@@ -16,8 +17,7 @@ seedDatabase(_sqlite!);
 const sqlite = _sqlite!;
 
 import { createCronPhase, type CronPhaseDeps } from "./cron-phase.js";
-import { ReconciliationManager } from "./reconciliation-manager.js";
-import { emit } from "./event-bus.js";
+import { ReconciliationManager, emit } from "@grackle-ai/core";
 
 describe("Cron phase integration", () => {
   beforeEach(() => {

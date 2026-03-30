@@ -1,11 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-vi.mock("./logger.js", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
-
-import * as streamRegistry from "./stream-registry.js";
-import * as pipeDelivery from "./pipe-delivery.js";
+import { streamRegistry, pipeDelivery } from "@grackle-ai/core";
 import { createStream, listStreams } from "./session-handlers.js";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";

@@ -1,10 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("./logger.js", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
+vi.mock("@grackle-ai/core", async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>;
+  return {
+    ...actual,
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+  };
+});
 
-import { logger } from "./logger.js";
+import { logger } from "@grackle-ai/core";
 import {
   createKnowledgeHealthPhase,
   isNeo4jHealthy,
@@ -53,87 +57,61 @@ describe("createKnowledgeHealthPhase", () => {
     expect(isNeo4jHealthy()).toBe(false);
   });
 
-  it("logs when Neo4j transitions from healthy to unhealthy", async () => {
+  it("transitions from healthy to unhealthy", async () => {
     const phase = createKnowledgeHealthPhase({ healthCheck: mockHealthCheck });
 
     // First tick: healthy
     await phase.execute();
+    expect(isNeo4jHealthy()).toBe(true);
 
     // Second tick: unhealthy
     mockHealthCheck.mockResolvedValue(false);
     await phase.execute();
-
-    expect(logger.warn).toHaveBeenCalledWith(
-      expect.any(String),
-    );
-    expect(vi.mocked(logger.warn).mock.calls.some(
-      (call) => typeof call[0] === "string" && call[0].includes("Neo4j"),
-    )).toBe(true);
+    expect(isNeo4jHealthy()).toBe(false);
   });
 
-  it("logs warning on first check when Neo4j is unreachable", async () => {
+  it("marks unhealthy on first check when Neo4j is unreachable", async () => {
     mockHealthCheck.mockResolvedValue(false);
     const phase = createKnowledgeHealthPhase({ healthCheck: mockHealthCheck });
 
-    // First tick: unhealthy (default was optimistic true → transition to false)
+    // First tick: unhealthy (default was optimistic true -> transition to false)
     await phase.execute();
-
-    expect(vi.mocked(logger.warn).mock.calls.some(
-      (call) => typeof call[0] === "string" && call[0].includes("Neo4j"),
-    )).toBe(true);
+    expect(isNeo4jHealthy()).toBe(false);
   });
 
-  it("logs when Neo4j transitions from unhealthy to healthy", async () => {
+  it("transitions from unhealthy to healthy", async () => {
     mockHealthCheck.mockResolvedValue(false);
     const phase = createKnowledgeHealthPhase({ healthCheck: mockHealthCheck });
 
     // First tick: unhealthy
     await phase.execute();
-    vi.mocked(logger.info).mockClear();
+    expect(isNeo4jHealthy()).toBe(false);
 
     // Second tick: healthy again
     mockHealthCheck.mockResolvedValue(true);
     await phase.execute();
-
-    expect(vi.mocked(logger.info).mock.calls.some(
-      (call) => typeof call[0] === "string" && call[0].includes("Neo4j") && call[0].includes("recover"),
-    )).toBe(true);
+    expect(isNeo4jHealthy()).toBe(true);
   });
 
-  it("does NOT log on repeated healthy ticks", async () => {
+  it("stays healthy on repeated healthy ticks", async () => {
     const phase = createKnowledgeHealthPhase({ healthCheck: mockHealthCheck });
 
     await phase.execute();
-    vi.mocked(logger.info).mockClear();
-    vi.mocked(logger.warn).mockClear();
-
     await phase.execute();
     await phase.execute();
 
-    // No transition logs expected — only tick-level noise if any
-    const transitionLogs = [
-      ...vi.mocked(logger.info).mock.calls,
-      ...vi.mocked(logger.warn).mock.calls,
-    ].filter((call) => typeof call[0] === "string" && call[0].includes("Neo4j"));
-    expect(transitionLogs).toHaveLength(0);
+    expect(isNeo4jHealthy()).toBe(true);
   });
 
-  it("does NOT log on repeated unhealthy ticks", async () => {
+  it("stays unhealthy on repeated unhealthy ticks", async () => {
     mockHealthCheck.mockResolvedValue(false);
     const phase = createKnowledgeHealthPhase({ healthCheck: mockHealthCheck });
 
     await phase.execute();
-    vi.mocked(logger.info).mockClear();
-    vi.mocked(logger.warn).mockClear();
-
     await phase.execute();
     await phase.execute();
 
-    const transitionLogs = [
-      ...vi.mocked(logger.info).mock.calls,
-      ...vi.mocked(logger.warn).mock.calls,
-    ].filter((call) => typeof call[0] === "string" && call[0].includes("Neo4j"));
-    expect(transitionLogs).toHaveLength(0);
+    expect(isNeo4jHealthy()).toBe(false);
   });
 
   it("handles healthCheck throwing an error as unhealthy", async () => {

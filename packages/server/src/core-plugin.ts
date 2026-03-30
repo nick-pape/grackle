@@ -10,7 +10,7 @@
 
 import type { GracklePlugin } from "@grackle-ai/plugin-sdk";
 import { grackle } from "@grackle-ai/common";
-import { createDefaultCollector } from "@grackle-ai/core";
+import { createDefaultCollector } from "@grackle-ai/plugin-core";
 import { createReconciliationPhases } from "./reconciliation-setup.js";
 import { createEventSubscribers } from "./event-subscribers.js";
 

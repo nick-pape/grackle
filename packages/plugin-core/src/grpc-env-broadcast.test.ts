@@ -12,48 +12,44 @@ vi.mock("@grackle-ai/database", async () => {
   return createDatabaseMock();
 });
 
-vi.mock("./logger.js", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
-
-vi.mock("./log-writer.js", () => ({
-  initLog: vi.fn(),
-  writeEvent: vi.fn(),
-  endSession: vi.fn(),
-  readLog: vi.fn(() => []),
-}));
-
-vi.mock("./stream-hub.js", () => ({
-  publish: vi.fn(),
-  createStream: vi.fn(() => {
-    const iter = (async function* () {})();
-    return Object.assign(iter, { cancel: vi.fn() });
-  }),
-  createGlobalStream: vi.fn(() => {
-    const iter = (async function* () {})();
-    return Object.assign(iter, { cancel: vi.fn() });
-  }),
-}));
-
-
-vi.mock("./event-bus.js", () => ({
-  emit: vi.fn(),
-}));
-
-vi.mock("./token-push.js", () => ({
-  pushToEnv: vi.fn(),
-  pushProviderCredentialsToEnv: vi.fn(),
-  refreshTokensForTask: vi.fn(),
-}));
-
-vi.mock("./adapter-manager.js", () => ({
-  getAdapter: vi.fn(),
-  getConnection: vi.fn(() => undefined),
-  setConnection: vi.fn(),
-  removeConnection: vi.fn(),
-  registerAdapter: vi.fn(),
-  startHeartbeat: vi.fn(),
-}));
+vi.mock("@grackle-ai/core", async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>;
+  return {
+    ...actual,
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+    logWriter: {
+      initLog: vi.fn(),
+      writeEvent: vi.fn(),
+      endSession: vi.fn(),
+      readLog: vi.fn(() => []),
+    },
+    streamHub: {
+      publish: vi.fn(),
+      createStream: vi.fn(() => {
+        const iter = (async function* () {})();
+        return Object.assign(iter, { cancel: vi.fn() });
+      }),
+      createGlobalStream: vi.fn(() => {
+        const iter = (async function* () {})();
+        return Object.assign(iter, { cancel: vi.fn() });
+      }),
+    },
+    emit: vi.fn(),
+    tokenPush: {
+      pushToEnv: vi.fn(),
+      pushProviderCredentialsToEnv: vi.fn(),
+      refreshTokensForTask: vi.fn(),
+    },
+    adapterManager: {
+      getAdapter: vi.fn(),
+      getConnection: vi.fn(() => undefined),
+      setConnection: vi.fn(),
+      removeConnection: vi.fn(),
+      registerAdapter: vi.fn(),
+      startHeartbeat: vi.fn(),
+    },
+  };
+});
 
 vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@grackle-ai/adapter-sdk")>()),
@@ -69,24 +65,14 @@ vi.mock("./utils/slugify.js", () => ({
   slugify: vi.fn((s: string) => s.toLowerCase().replace(/\s+/g, "-")),
 }));
 
-vi.mock("./event-processor.js", () => ({
-  processEventStream: vi.fn(),
-}));
-
-vi.mock("./processor-registry.js", () => ({
-  get: vi.fn(() => undefined),
-  lateBind: vi.fn(),
-}));
-
 vi.mock("./compute-task-status.js", () => ({
   computeTaskStatus: vi.fn(() => ({ status: "not_started", latestSessionId: "" })),
 }));
 
 // Import AFTER mocks — use the mocked versions
 import { registerGrackleRoutes } from "./grpc-service.js";
-import { emit } from "./event-bus.js";
+import { emit, adapterManager } from "@grackle-ai/core";
 import { envRegistry } from "@grackle-ai/database";
-import * as adapterManager from "./adapter-manager.js";
 import type { ConnectRouter } from "@connectrpc/connect";
 
 /** Fake environment row returned by getEnvironment. */

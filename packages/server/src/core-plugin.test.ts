@@ -5,6 +5,21 @@ import type { Logger } from "pino";
 // ── Mock dependencies ────────────────────────────────
 
 vi.mock("@grackle-ai/core", () => ({
+  subscribe: vi.fn(() => vi.fn()),
+  emit: vi.fn(),
+  computeTaskStatus: vi.fn(),
+  findFirstConnectedEnvironment: vi.fn(),
+  startTaskSession: vi.fn(),
+  reanimateAgent: vi.fn(),
+  isKnowledgeEnabled: vi.fn(() => false),
+  createKnowledgeHealthPhase: vi.fn(() => ({ name: "knowledge-health", execute: vi.fn() })),
+  neo4jHealthCheck: vi.fn(),
+  listConnections: vi.fn(() => new Map()),
+  removeConnection: vi.fn(),
+  hasCapacity: vi.fn(() => true),
+}));
+
+vi.mock("@grackle-ai/plugin-core", () => ({
   createDefaultCollector: vi.fn(() => ({
     getHandlers: vi.fn(() => ({
       listEnvironments: vi.fn(),
@@ -19,23 +34,11 @@ vi.mock("@grackle-ai/core", () => ({
   createOrphanReparentSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
   createLifecycleSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
   createRootTaskBootSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
-  subscribe: vi.fn(() => vi.fn()),
-  emit: vi.fn(),
-  computeTaskStatus: vi.fn(),
-  findFirstConnectedEnvironment: vi.fn(),
-  startTaskSession: vi.fn(),
-  reanimateAgent: vi.fn(),
   createCronPhase: vi.fn(() => ({ name: "cron", execute: vi.fn() })),
   createOrphanPhase: vi.fn(() => ({ name: "orphan-reparent", execute: vi.fn() })),
   createDispatchPhase: vi.fn(() => ({ name: "dispatch", execute: vi.fn() })),
   lifecycleCleanupPhase: { name: "lifecycle-cleanup", execute: vi.fn() },
   createEnvironmentReconciliationPhase: vi.fn(() => ({ name: "environment-status", execute: vi.fn() })),
-  isKnowledgeEnabled: vi.fn(() => false),
-  createKnowledgeHealthPhase: vi.fn(() => ({ name: "knowledge-health", execute: vi.fn() })),
-  neo4jHealthCheck: vi.fn(),
-  listConnections: vi.fn(() => new Map()),
-  removeConnection: vi.fn(),
-  hasCapacity: vi.fn(() => true),
 }));
 
 vi.mock("@grackle-ai/common", () => ({

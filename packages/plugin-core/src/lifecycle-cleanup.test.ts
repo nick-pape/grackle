@@ -1,14 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-vi.mock("./logger.js", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
+vi.mock("@grackle-ai/core", async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>;
+  return {
+    ...actual,
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+  };
+});
 
 import { openDatabase, initDatabase, sqlite as _sqlite, sessionStore } from "@grackle-ai/database";
 openDatabase(":memory:");
 initDatabase();
 const sqlite = _sqlite!;
-import * as streamRegistry from "./stream-registry.js";
+import { streamRegistry } from "@grackle-ai/core";
 import { lifecycleCleanupPhase } from "./lifecycle-cleanup.js";
 
 function applySchema(): void {

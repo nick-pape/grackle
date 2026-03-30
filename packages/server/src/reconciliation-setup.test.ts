@@ -3,11 +3,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // ── Mock dependencies before importing ──────────────
 
 vi.mock("@grackle-ai/core", () => ({
-  createCronPhase: vi.fn((deps: unknown) => ({ name: "cron", execute: async () => {}, _deps: deps })),
-  createOrphanPhase: vi.fn((deps: unknown) => ({ name: "orphan-reparent", execute: async () => {}, _deps: deps })),
-  createDispatchPhase: vi.fn((deps: unknown) => ({ name: "dispatch", execute: async () => {}, _deps: deps })),
-  lifecycleCleanupPhase: { name: "lifecycle-cleanup", execute: async () => {} },
-  createEnvironmentReconciliationPhase: vi.fn(() => ({ name: "environment", execute: async () => {} })),
   listConnections: vi.fn(() => new Map()),
   removeConnection: vi.fn(),
   createKnowledgeHealthPhase: vi.fn(() => ({ name: "knowledge-health", execute: async () => {} })),
@@ -19,6 +14,14 @@ vi.mock("@grackle-ai/core", () => ({
   isKnowledgeEnabled: vi.fn(() => false),
   neo4jHealthCheck: vi.fn(),
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
+
+vi.mock("@grackle-ai/plugin-core", () => ({
+  createCronPhase: vi.fn((deps: unknown) => ({ name: "cron", execute: async () => {}, _deps: deps })),
+  createOrphanPhase: vi.fn((deps: unknown) => ({ name: "orphan-reparent", execute: async () => {}, _deps: deps })),
+  createDispatchPhase: vi.fn((deps: unknown) => ({ name: "dispatch", execute: async () => {}, _deps: deps })),
+  lifecycleCleanupPhase: { name: "lifecycle-cleanup", execute: async () => {} },
+  createEnvironmentReconciliationPhase: vi.fn(() => ({ name: "environment", execute: async () => {} })),
 }));
 
 vi.mock("@grackle-ai/common", () => ({
@@ -66,7 +69,8 @@ vi.mock("@grackle-ai/database", () => ({
 }));
 
 import { createReconciliationPhases } from "./reconciliation-setup.js";
-import { createCronPhase, createOrphanPhase, isKnowledgeEnabled, createKnowledgeHealthPhase, neo4jHealthCheck } from "@grackle-ai/core";
+import { isKnowledgeEnabled, createKnowledgeHealthPhase, neo4jHealthCheck } from "@grackle-ai/core";
+import { createCronPhase, createOrphanPhase } from "@grackle-ai/plugin-core";
 import { workspaceStore, taskStore, dispatchQueueStore } from "@grackle-ai/database";
 
 beforeEach(() => {

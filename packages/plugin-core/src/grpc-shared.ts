@@ -1,8 +1,17 @@
-import { ConnectError, Code } from "@connectrpc/connect";
+/**
+ * gRPC handler shared utilities.
+ *
+ * Utility functions (`toDialableHost`, `validatePipeInputs`, `resolveAncestorEnvironmentId`,
+ * `VALID_PIPE_MODES`) are defined in `@grackle-ai/core` and re-exported here for
+ * backward compatibility with existing plugin-core consumers.
+ *
+ * `killSessionAndCleanup` is plugin-core-specific (uses lifecycle streams, orphan
+ * reparent, and stream cleanup).
+ */
+
 import { create } from "@bufbuild/protobuf";
 import { grackle, powerline } from "@grackle-ai/common";
 import {
-  MAX_TASK_DEPTH,
   ROOT_TASK_ID,
   SESSION_STATUS,
   TERMINAL_SESSION_STATUSES,
@@ -12,70 +21,14 @@ import {
 import { transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
 import type { SessionRow } from "@grackle-ai/database";
 import { sessionStore, taskStore } from "@grackle-ai/database";
-import { adapterManager } from "@grackle-ai/core";
-import { streamHub } from "@grackle-ai/core";
-import { streamRegistry } from "@grackle-ai/core";
-import { cleanupLifecycleStream } from "./lifecycle.js";
-import { logger } from "@grackle-ai/core";
-import { emit } from "@grackle-ai/core";
+import {
+  adapterManager, streamHub, streamRegistry,
+  cleanupLifecycleStream, logger, emit,
+  toDialableHost, validatePipeInputs, resolveAncestorEnvironmentId, VALID_PIPE_MODES,
+} from "@grackle-ai/core";
 
-/** Valid pipe mode values for SpawnRequest and StartTaskRequest. */
-export const VALID_PIPE_MODES: ReadonlySet<string> = new Set(["", "sync", "async", "detach"]);
-
-/** Validate pipe mode and parentSessionId. Throws ConnectError on invalid input. */
-export function validatePipeInputs(pipe: string, parentSessionId: string): void {
-  if (pipe && !VALID_PIPE_MODES.has(pipe)) {
-    throw new ConnectError(
-      `Invalid pipe mode: "${pipe}". Must be "sync", "async", "detach", or empty.`,
-      Code.InvalidArgument,
-    );
-  }
-  if (pipe && pipe !== "detach" && !parentSessionId) {
-    throw new ConnectError(
-      `Pipe mode "${pipe}" requires parent_session_id`,
-      Code.InvalidArgument,
-    );
-  }
-}
-
-/**
- * Map a bind host to a dialable URL host. Wildcard addresses become loopback,
- * unless GRACKLE_DOCKER_HOST is set (DooD mode) — in that case, use that value
- * so sibling containers can reach the server by container name.
- */
-export function toDialableHost(bindHost: string): string {
-  if (bindHost === "0.0.0.0" || bindHost === "::") {
-    const dockerHost = process.env.GRACKLE_DOCKER_HOST;
-    if (dockerHost) {
-      if (dockerHost.startsWith("[") && dockerHost.endsWith("]")) {
-        return dockerHost;
-      }
-      return dockerHost.includes(":") ? `[${dockerHost}]` : dockerHost;
-    }
-    return bindHost === "::" ? "[::1]" : "127.0.0.1";
-  }
-  return bindHost.includes(":") ? `[${bindHost}]` : bindHost;
-}
-
-/**
- * Walk up the task parent chain and return the environmentId from the first
- * ancestor that has a session. Returns empty string if no ancestor has one.
- */
-export function resolveAncestorEnvironmentId(parentTaskId: string): string {
-  let currentId = parentTaskId;
-  for (let i = 0; i < MAX_TASK_DEPTH && currentId; i++) {
-    const session = sessionStore.getLatestSessionForTask(currentId);
-    if (session?.environmentId) {
-      return session.environmentId;
-    }
-    const parent = taskStore.getTask(currentId);
-    if (!parent) {
-      break;
-    }
-    currentId = parent.parentTaskId;
-  }
-  return "";
-}
+// Re-export shared utilities from core so existing consumers don't break.
+export { toDialableHost, validatePipeInputs, resolveAncestorEnvironmentId, VALID_PIPE_MODES };
 
 /**
  * Terminate a session and clean up all associated streams and subscriptions.

@@ -55,9 +55,15 @@ vi.mock("./grpc-proto-converters.js", () => ({
   knowledgeEdgeToProto: vi.fn((edge: unknown) => edge),
 }));
 
-vi.mock("./logger.js", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
+vi.mock("@grackle-ai/core", async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>;
+  return {
+    ...actual,
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+    getKnowledgeEmbedder: mockGetKnowledgeEmbedder,
+    isKnowledgeEnabled: mockIsKnowledgeEnabled,
+  };
+});
 
 import {
   searchKnowledge,

@@ -12,48 +12,51 @@ vi.mock("@grackle-ai/database", async () => {
   return createDatabaseMock();
 });
 
-vi.mock("./logger.js", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
-
-vi.mock("./log-writer.js", () => ({
-  initLog: vi.fn(),
-  writeEvent: vi.fn(),
-  endSession: vi.fn(),
-  readLog: vi.fn(() => []),
-}));
-
-vi.mock("./stream-hub.js", () => ({
-  publish: vi.fn(),
-  createStream: vi.fn(() => {
-    const iter = (async function* () {})();
-    return Object.assign(iter, { cancel: vi.fn() });
-  }),
-  createGlobalStream: vi.fn(() => {
-    const iter = (async function* () {})();
-    return Object.assign(iter, { cancel: vi.fn() });
-  }),
-}));
-
-
-vi.mock("./token-push.js", () => ({
-  pushToEnv: vi.fn(),
-  pushProviderCredentialsToEnv: vi.fn(),
-  refreshTokensForTask: vi.fn(),
-}));
-
-vi.mock("./adapter-manager.js", () => ({
-  getAdapter: vi.fn(),
-  getConnection: vi.fn(() => undefined),
-  setConnection: vi.fn(),
-  removeConnection: vi.fn(),
-  registerAdapter: vi.fn(),
-  startHeartbeat: vi.fn(),
-}));
-
-vi.mock("./adapters/adapter.js", () => ({
-  reconnectOrProvision: vi.fn(async function* () {}),
-}));
+vi.mock("@grackle-ai/core", async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>;
+  return {
+    ...actual,
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+    logWriter: {
+      initLog: vi.fn(),
+      writeEvent: vi.fn(),
+      endSession: vi.fn(),
+      readLog: vi.fn(() => []),
+    },
+    streamHub: {
+      publish: vi.fn(),
+      createStream: vi.fn(() => {
+        const iter = (async function* () {})();
+        return Object.assign(iter, { cancel: vi.fn() });
+      }),
+      createGlobalStream: vi.fn(() => {
+        const iter = (async function* () {})();
+        return Object.assign(iter, { cancel: vi.fn() });
+      }),
+    },
+    tokenPush: {
+      pushToEnv: vi.fn(),
+      pushProviderCredentialsToEnv: vi.fn(),
+      refreshTokensForTask: vi.fn(),
+    },
+    adapterManager: {
+      getAdapter: vi.fn(),
+      getConnection: vi.fn(() => undefined),
+      setConnection: vi.fn(),
+      removeConnection: vi.fn(),
+      registerAdapter: vi.fn(),
+      startHeartbeat: vi.fn(),
+    },
+    processEventStream: vi.fn(),
+    processorRegistry: {
+      get: vi.fn(() => undefined),
+      lateBind: vi.fn(),
+    },
+    cleanupLifecycleStream: vi.fn(),
+    ensureLifecycleStream: vi.fn(),
+    reanimateAgent: vi.fn(),
+  };
+});
 
 vi.mock("@grackle-ai/prompt", () => ({
   SystemPromptBuilder: vi.fn().mockImplementation(() => ({ build: () => "" })),
@@ -64,32 +67,15 @@ vi.mock("./utils/slugify.js", () => ({
   slugify: vi.fn((s: string) => s.toLowerCase().replace(/\s+/g, "-")),
 }));
 
-vi.mock("./event-processor.js", () => ({
-  processEventStream: vi.fn(),
-}));
-
-vi.mock("./processor-registry.js", () => ({
-  get: vi.fn(() => undefined),
-  lateBind: vi.fn(),
-}));
-
 vi.mock("./compute-task-status.js", () => ({
   computeTaskStatus: vi.fn(() => ({ status: "not_started", latestSessionId: "" })),
-}));
-
-vi.mock("./lifecycle.js", () => ({
-  cleanupLifecycleStream: vi.fn(),
-  ensureLifecycleStream: vi.fn(),
-  createLifecycleSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
 }));
 
 // ── Import AFTER mocks ──────────────────────────────────────────
 
 import { registerGrackleRoutes } from "./grpc-service.js";
 import { sessionStore, taskStore } from "@grackle-ai/database";
-import * as adapterManager from "./adapter-manager.js";
-import { processEventStream } from "./event-processor.js";
-import { ensureLifecycleStream } from "./lifecycle.js";
+import { adapterManager, processEventStream, ensureLifecycleStream, reanimateAgent } from "@grackle-ai/core";
 import type { ConnectRouter } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
 
@@ -175,8 +161,10 @@ describe("gRPC resumeAgent", () => {
     handlers = getHandlers();
   });
 
-  it("throws NotFound when session does not exist", async () => {
-    vi.mocked(sessionStore.getSession).mockReturnValue(undefined);
+  it("throws NotFound when reanimateAgent throws NotFound", async () => {
+    vi.mocked(reanimateAgent).mockImplementation(() => {
+      throw new ConnectError("Session not found: no-such", Code.NotFound);
+    });
 
     const err = await handlers.resumeAgent({ sessionId: "no-such" }).catch((e: unknown) => e) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
@@ -184,26 +172,10 @@ describe("gRPC resumeAgent", () => {
     expect(err.message).toContain("no-such");
   });
 
-  it("throws FailedPrecondition when status is IDLE", async () => {
-    vi.mocked(sessionStore.getSession).mockReturnValue(makeSession({ status: "idle" }));
-
-    const err = await handlers.resumeAgent({ sessionId: "sess-1" }).catch((e: unknown) => e) as ConnectError;
-    expect(err).toBeInstanceOf(ConnectError);
-    expect(err.code).toBe(Code.FailedPrecondition);
-    expect(err.message).toContain("already active");
-  });
-
-  it("throws FailedPrecondition when status is RUNNING", async () => {
-    vi.mocked(sessionStore.getSession).mockReturnValue(makeSession({ status: "running" }));
-
-    const err = await handlers.resumeAgent({ sessionId: "sess-1" }).catch((e: unknown) => e) as ConnectError;
-    expect(err).toBeInstanceOf(ConnectError);
-    expect(err.code).toBe(Code.FailedPrecondition);
-    expect(err.message).toContain("already active");
-  });
-
-  it("throws FailedPrecondition when status is PENDING", async () => {
-    vi.mocked(sessionStore.getSession).mockReturnValue(makeSession({ status: "pending" }));
+  it("throws FailedPrecondition when session is already active", async () => {
+    vi.mocked(reanimateAgent).mockImplementation(() => {
+      throw new ConnectError("Session sess-1 is already active (status: idle)", Code.FailedPrecondition);
+    });
 
     const err = await handlers.resumeAgent({ sessionId: "sess-1" }).catch((e: unknown) => e) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
@@ -212,9 +184,9 @@ describe("gRPC resumeAgent", () => {
   });
 
   it("throws FailedPrecondition when terminal session has no runtimeSessionId", async () => {
-    vi.mocked(sessionStore.getSession).mockReturnValue(
-      makeSession({ status: "stopped", runtimeSessionId: null }),
-    );
+    vi.mocked(reanimateAgent).mockImplementation(() => {
+      throw new ConnectError("Session sess-1 has no runtime session ID", Code.FailedPrecondition);
+    });
 
     const err = await handlers.resumeAgent({ sessionId: "sess-1" }).catch((e: unknown) => e) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
@@ -223,10 +195,9 @@ describe("gRPC resumeAgent", () => {
   });
 
   it("throws FailedPrecondition when another active session exists on the environment", async () => {
-    vi.mocked(sessionStore.getSession).mockReturnValue(makeSession({ status: "stopped" }));
-    vi.mocked(sessionStore.getActiveForEnv).mockReturnValue(
-      makeSession({ id: "sess-other", status: "running" }),
-    );
+    vi.mocked(reanimateAgent).mockImplementation(() => {
+      throw new ConnectError("Environment already has active session sess-other", Code.FailedPrecondition);
+    });
 
     const err = await handlers.resumeAgent({ sessionId: "sess-1" }).catch((e: unknown) => e) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
@@ -235,9 +206,9 @@ describe("gRPC resumeAgent", () => {
   });
 
   it("throws FailedPrecondition when environment is offline (no connection)", async () => {
-    vi.mocked(sessionStore.getSession).mockReturnValue(makeSession({ status: "stopped" }));
-    vi.mocked(sessionStore.getActiveForEnv).mockReturnValue(undefined);
-    vi.mocked(adapterManager.getConnection).mockReturnValue(undefined);
+    vi.mocked(reanimateAgent).mockImplementation(() => {
+      throw new ConnectError("Environment env-1 not connected", Code.FailedPrecondition);
+    });
 
     const err = await handlers.resumeAgent({ sessionId: "sess-1" }).catch((e: unknown) => e) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
@@ -245,73 +216,46 @@ describe("gRPC resumeAgent", () => {
     expect(err.message).toContain("not connected");
   });
 
-  it("reanimates a STOPPED session: calls reanimateSession and processEventStream", async () => {
-    const stoppedSession = makeSession({ status: "stopped" });
+  it("reanimates a STOPPED session: calls reanimateAgent and returns session", async () => {
     const runningSession = makeSession({ status: "running", endedAt: null });
-    vi.mocked(sessionStore.getSession)
-      .mockReturnValueOnce(stoppedSession)
-      .mockReturnValueOnce(runningSession);
-    vi.mocked(sessionStore.getActiveForEnv).mockReturnValue(undefined);
-    const conn = makeConnection();
-    vi.mocked(adapterManager.getConnection).mockReturnValue(conn as never);
+    vi.mocked(reanimateAgent).mockReturnValue(runningSession);
 
     const result = await handlers.resumeAgent({ sessionId: "sess-1" }) as grackle.Session;
 
-    expect(sessionStore.reanimateSession).toHaveBeenCalledWith("sess-1");
-    expect(ensureLifecycleStream).toHaveBeenCalledWith("sess-1", "__server__");
-    expect(conn.client.resume).toHaveBeenCalled();
-    expect(processEventStream).toHaveBeenCalled();
+    expect(reanimateAgent).toHaveBeenCalledWith("sess-1");
     expect(result.id).toBe("sess-1");
+    expect(result.status).toBe("running");
   });
 
   it("reanimates a SUSPENDED session successfully", async () => {
-    const suspendedSession = makeSession({ status: "suspended" });
     const runningSession = makeSession({ status: "running", error: null });
-    vi.mocked(sessionStore.getSession)
-      .mockReturnValueOnce(suspendedSession)
-      .mockReturnValueOnce(runningSession);
-    vi.mocked(sessionStore.getActiveForEnv).mockReturnValue(undefined);
-    vi.mocked(adapterManager.getConnection).mockReturnValue(makeConnection() as never);
+    vi.mocked(reanimateAgent).mockReturnValue(runningSession);
 
     const result = await handlers.resumeAgent({ sessionId: "sess-1" }) as grackle.Session;
 
-    expect(sessionStore.reanimateSession).toHaveBeenCalledWith("sess-1");
-    expect(ensureLifecycleStream).toHaveBeenCalledWith("sess-1", "__server__");
+    expect(reanimateAgent).toHaveBeenCalledWith("sess-1");
     expect(result.id).toBe("sess-1");
   });
 
-  it("uses parentSessionId as spawner when available", async () => {
-    const session = makeSession({ status: "stopped", parentSessionId: "parent-sess" });
-    const runningSession = makeSession({ status: "running", endedAt: null });
-    vi.mocked(sessionStore.getSession)
-      .mockReturnValueOnce(session)
-      .mockReturnValueOnce(runningSession);
-    vi.mocked(sessionStore.getActiveForEnv).mockReturnValue(undefined);
-    vi.mocked(adapterManager.getConnection).mockReturnValue(makeConnection() as never);
+  it("propagates FailedPrecondition from reanimateAgent when env not connected", async () => {
+    vi.mocked(reanimateAgent).mockImplementation(() => {
+      throw new ConnectError("Environment env-1 not connected", Code.FailedPrecondition);
+    });
 
-    await handlers.resumeAgent({ sessionId: "sess-1" });
-
-    expect(ensureLifecycleStream).toHaveBeenCalledWith("sess-1", "parent-sess");
+    const err = await handlers.resumeAgent({ sessionId: "sess-1" }).catch((e: unknown) => e) as ConnectError;
+    expect(err).toBeInstanceOf(ConnectError);
+    expect(err.code).toBe(Code.FailedPrecondition);
+    expect(err.message).toContain("not connected");
   });
 
   it("can reanimate a session a second time after it stops again", async () => {
-    const stoppedSession = makeSession({ status: "stopped" });
     const runningSession = makeSession({ status: "running", endedAt: null });
-    const stoppedAgain = makeSession({ status: "stopped" });
-
-    vi.mocked(sessionStore.getSession)
-      .mockReturnValueOnce(stoppedSession)    // first reanimate: lookup
-      .mockReturnValueOnce(runningSession)    // first reanimate: return value
-      .mockReturnValueOnce(stoppedAgain)      // second reanimate: lookup
-      .mockReturnValueOnce(runningSession);   // second reanimate: return value
-    vi.mocked(sessionStore.getActiveForEnv).mockReturnValue(undefined);
-    vi.mocked(adapterManager.getConnection).mockReturnValue(makeConnection() as never);
+    vi.mocked(reanimateAgent).mockReturnValue(runningSession);
 
     await handlers.resumeAgent({ sessionId: "sess-1" });
     await handlers.resumeAgent({ sessionId: "sess-1" });
 
-    expect(sessionStore.reanimateSession).toHaveBeenCalledTimes(2);
-    expect(processEventStream).toHaveBeenCalledTimes(2);
+    expect(reanimateAgent).toHaveBeenCalledTimes(2);
   });
 });
 

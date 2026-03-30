@@ -1,12 +1,15 @@
 import {
-  createCronPhase, createOrphanPhase, createDispatchPhase, lifecycleCleanupPhase,
-  createEnvironmentReconciliationPhase, listConnections, removeConnection,
+  listConnections, removeConnection,
   isKnowledgeEnabled, createKnowledgeHealthPhase, neo4jHealthCheck,
   startTaskSession, emit,
   hasCapacity, computeTaskStatus,
 } from "@grackle-ai/core";
-import { TASK_STATUS, ROOT_TASK_ID } from "@grackle-ai/common";
 import type { ReconciliationPhase } from "@grackle-ai/core";
+import {
+  createCronPhase, createOrphanPhase, createDispatchPhase, lifecycleCleanupPhase,
+  createEnvironmentReconciliationPhase,
+} from "@grackle-ai/plugin-core";
+import { TASK_STATUS, ROOT_TASK_ID } from "@grackle-ai/common";
 import {
   scheduleStore, taskStore, workspaceStore, personaStore, envRegistry,
   sessionStore, settingsStore, dispatchQueueStore,

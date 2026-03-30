@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { toDialableHost } from "./grpc-service.js";
+import { toDialableHost } from "./grpc-shared-utils.js";
 
 describe("toDialableHost()", () => {
   afterEach(() => {

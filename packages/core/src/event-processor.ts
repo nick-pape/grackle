@@ -13,7 +13,7 @@ import { logger } from "./logger.js";
 import { runWithTrace } from "./trace-context.js";
 import { publishChildCompletion } from "./pipe-delivery.js";
 import { routeEscalation } from "./notification-router.js";
-import { cleanupLifecycleStream } from "./lifecycle.js";
+import { cleanupLifecycleStream } from "./lifecycle-streams.js";
 import type { ProcessorContext } from "./processor-registry.js";
 
 /** Options for processing an agent event stream. */

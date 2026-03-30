@@ -473,6 +473,9 @@ importers:
       '@grackle-ai/database':
         specifier: workspace:*
         version: link:../database
+      '@grackle-ai/knowledge':
+        specifier: workspace:*
+        version: link:../knowledge
       '@grackle-ai/plugin-sdk':
         specifier: workspace:*
         version: link:../plugin-sdk
@@ -485,6 +488,9 @@ importers:
       pino:
         specifier: ^10.3.1
         version: 10.3.1
+      ulid:
+        specifier: ^2.3.0
+        version: 2.4.0
       uuid:
         specifier: ^11.0.0
         version: 11.1.0
@@ -773,6 +779,9 @@ importers:
       '@grackle-ai/mcp':
         specifier: workspace:*
         version: link:../mcp
+      '@grackle-ai/plugin-core':
+        specifier: workspace:*
+        version: link:../plugin-core
       '@grackle-ai/plugin-sdk':
         specifier: workspace:*
         version: link:../plugin-sdk

@@ -13,48 +13,54 @@ vi.mock("@grackle-ai/database", async () => {
   return createDatabaseMock();
 });
 
-vi.mock("./logger.js", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
-
-vi.mock("./log-writer.js", () => ({
-  initLog: vi.fn(),
-  writeEvent: vi.fn(),
-  endSession: vi.fn(),
-  readLog: vi.fn(() => []),
-}));
-
-vi.mock("./stream-hub.js", () => ({
-  publish: vi.fn(),
-  createStream: vi.fn(() => {
-    const iter = (async function* () {})();
-    return Object.assign(iter, { cancel: vi.fn() });
-  }),
-  createGlobalStream: vi.fn(() => {
-    const iter = (async function* () {})();
-    return Object.assign(iter, { cancel: vi.fn() });
-  }),
-}));
-
-
-vi.mock("./event-bus.js", () => ({
-  emit: vi.fn(),
-}));
-
-vi.mock("./token-push.js", () => ({
-  pushToEnv: vi.fn(),
-  pushProviderCredentialsToEnv: vi.fn(),
-  refreshTokensForTask: vi.fn(),
-}));
-
-vi.mock("./adapter-manager.js", () => ({
-  getAdapter: vi.fn(),
-  getConnection: vi.fn(() => undefined),
-  setConnection: vi.fn(),
-  removeConnection: vi.fn(),
-  registerAdapter: vi.fn(),
-  startHeartbeat: vi.fn(),
-}));
+vi.mock("@grackle-ai/core", async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>;
+  return {
+    ...actual,
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+    logWriter: {
+      initLog: vi.fn(),
+      writeEvent: vi.fn(),
+      endSession: vi.fn(),
+      readLog: vi.fn(() => []),
+    },
+    streamHub: {
+      publish: vi.fn(),
+      createStream: vi.fn(() => {
+        const iter = (async function* () {})();
+        return Object.assign(iter, { cancel: vi.fn() });
+      }),
+      createGlobalStream: vi.fn(() => {
+        const iter = (async function* () {})();
+        return Object.assign(iter, { cancel: vi.fn() });
+      }),
+    },
+    emit: vi.fn(),
+    tokenPush: {
+      pushToEnv: vi.fn(),
+      pushProviderCredentialsToEnv: vi.fn(),
+      refreshTokensForTask: vi.fn(),
+    },
+    adapterManager: {
+      getAdapter: vi.fn(),
+      getConnection: vi.fn(() => undefined),
+      setConnection: vi.fn(),
+      removeConnection: vi.fn(),
+      registerAdapter: vi.fn(),
+      startHeartbeat: vi.fn(),
+    },
+    streamRegistry: {
+      getSubscriptionsForSession: vi.fn(() => []),
+      subscribe: vi.fn(),
+      unsubscribe: vi.fn(),
+    },
+    processEventStream: vi.fn(),
+    clearReconnectState: vi.fn(),
+    recoverSuspendedSessions: vi.fn().mockResolvedValue(undefined),
+    cleanupLifecycleStream: vi.fn(),
+    ensureLifecycleStream: vi.fn(),
+  };
+});
 
 vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@grackle-ai/adapter-sdk")>()),
@@ -66,36 +72,8 @@ vi.mock("@grackle-ai/prompt", () => ({
   buildTaskPrompt: vi.fn((title: string) => title),
 }));
 
-vi.mock("./event-processor.js", () => ({
-  processEventStream: vi.fn(),
-}));
-
-vi.mock("./processor-registry.js", () => ({
-  get: vi.fn(() => undefined),
-  lateBind: vi.fn(),
-}));
-
 vi.mock("./compute-task-status.js", () => ({
   computeTaskStatus: vi.fn(() => ({ status: "not_started", latestSessionId: "" })),
-}));
-
-vi.mock("./lifecycle.js", () => ({
-  cleanupLifecycleStream: vi.fn(),
-  ensureLifecycleStream: vi.fn(),
-}));
-
-vi.mock("./stream-registry.js", () => ({
-  getSubscriptionsForSession: vi.fn(() => []),
-  subscribe: vi.fn(),
-  unsubscribe: vi.fn(),
-}));
-
-vi.mock("./session-recovery.js", () => ({
-  recoverSuspendedSessions: vi.fn().mockResolvedValue(undefined),
-}));
-
-vi.mock("./auto-reconnect.js", () => ({
-  clearReconnectState: vi.fn(),
 }));
 
 vi.mock("./knowledge-init.js", () => ({
@@ -129,10 +107,7 @@ vi.mock("./utils/format-gh-error.js", () => ({
 // Import AFTER mocks — use the mocked versions
 import { registerGrackleRoutes } from "./grpc-service.js";
 import { envRegistry, sessionStore, taskStore } from "@grackle-ai/database";
-import * as adapterManager from "./adapter-manager.js";
-import * as streamHub from "./stream-hub.js";
-import * as streamRegistry from "./stream-registry.js";
-import { cleanupLifecycleStream } from "./lifecycle.js";
+import { adapterManager, streamHub, streamRegistry, cleanupLifecycleStream } from "@grackle-ai/core";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import type { ConnectRouter } from "@connectrpc/connect";
 
