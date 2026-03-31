@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/runtime-acp",
-  "version": "0.104.0",
+  "version": "0.105.0",
   "description": "Grackle Agent Client Protocol (ACP) runtime implementation",
   "license": "MIT",
   "repository": {

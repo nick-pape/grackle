@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.105.0",
+      "tag": "@grackle-ai/cli_v0.105.0",
+      "date": "Tue, 31 Mar 2026 18:56:53 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add ipc_share_stream MCP tool for child-to-parent stream reference passing with capability attenuation"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.104.0",
       "tag": "@grackle-ai/cli_v0.104.0",
       "date": "Tue, 31 Mar 2026 16:23:11 GMT",

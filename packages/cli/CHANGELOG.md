@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 31 Mar 2026 16:23:11 GMT and should not be manually modified.
+This log was last generated on Tue, 31 Mar 2026 18:56:53 GMT and should not be manually modified.
+
+## 0.105.0
+Tue, 31 Mar 2026 18:56:53 GMT
+
+### Minor changes
+
+- Add ipc_share_stream MCP tool for child-to-parent stream reference passing with capability attenuation
 
 ## 0.104.0
 Tue, 31 Mar 2026 16:23:11 GMT
