@@ -147,7 +147,7 @@ export const NoDependencies: Story = {
 /** Usage section renders when taskUsage has a positive cost. */
 export const WithUsage: Story = {
   args: {
-    taskUsage: { inputTokens: 1000, outputTokens: 500, costUsd: 0.15, sessionCount: 2 },
+    taskUsage: { inputTokens: 1000, outputTokens: 500, costMillicents: 15_000, sessionCount: 2 },
   },
   play: async ({ canvas }) => {
     const usage = canvas.getByTestId("task-overview-usage");
@@ -160,8 +160,8 @@ export const WithUsage: Story = {
 export const WithTreeUsage: Story = {
   args: {
     task: makeTask({ id: "t-tu", childTaskIds: ["child-1"] }),
-    taskUsage: { inputTokens: 1000, outputTokens: 500, costUsd: 0.15, sessionCount: 2 },
-    treeUsage: { inputTokens: 5000, outputTokens: 2000, costUsd: 0.85, sessionCount: 6 },
+    taskUsage: { inputTokens: 1000, outputTokens: 500, costMillicents: 15_000, sessionCount: 2 },
+    treeUsage: { inputTokens: 5000, outputTokens: 2000, costMillicents: 85_000, sessionCount: 6 },
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByText("Cost")).toBeInTheDocument();

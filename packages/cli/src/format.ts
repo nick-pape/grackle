@@ -13,23 +13,24 @@ export function formatTokens(n: number): string {
   return String(n);
 }
 
-/** Format a USD cost for display (e.g. 0.005 → "$0.0050", 1.23 → "$1.23"). */
-export function formatCost(usd: number): string {
-  if (usd === 0) {
+/** Format an integer millicent cost for display (e.g. 500 → "$0.0050", 123000 → "$1.23"). */
+export function formatCost(millicents: number): string {
+  if (millicents === 0) {
     return "-";
   }
+  const usd = millicents / 100_000;
   if (usd < 0.01) {
     return `$${usd.toFixed(4)}`;
   }
   return `$${usd.toFixed(2)}`;
 }
 
-/** Format a cost value for budget display, showing "$0.00" for zero instead of "-". */
-function formatBudgetCost(usd: number): string {
-  if (usd === 0) {
+/** Format a millicent cost value for budget display, showing "$0.00" for zero instead of "-". */
+function formatBudgetCost(millicents: number): string {
+  if (millicents === 0) {
     return "$0.00";
   }
-  return formatCost(usd);
+  return formatCost(millicents);
 }
 
 /** Format a budget display: "used / total" with appropriate formatting for tokens or cost. */
@@ -37,5 +38,5 @@ export function formatBudget(used: number, budget: number, type: "token" | "cost
   if (type === "token") {
     return `${formatTokens(used)} / ${formatTokens(budget)}`;
   }
-  return `${formatBudgetCost(used)} / ${formatBudgetCost(budget / 100000)}`;
+  return `${formatBudgetCost(used)} / ${formatBudgetCost(budget)}`;
 }

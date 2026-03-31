@@ -101,7 +101,7 @@ describe("initDatabase", () => {
     const mem = new Database(":memory:");
     mem.pragma("foreign_keys = ON");
 
-    // Create a minimal sessions table missing cost_usd (a baseline-required column)
+    // Create a minimal sessions table missing cost_millicents (a baseline-required column)
     mem.exec(`
       CREATE TABLE sessions (
         id TEXT PRIMARY KEY,

@@ -573,7 +573,7 @@ describe("Codex streaming field extraction", () => {
     const data = JSON.parse(usageEvents[0].content) as Record<string, number>;
     expect(data.input_tokens).toBe(700); // 500 + 200 cached
     expect(data.output_tokens).toBe(30);
-    expect(data.cost_usd).toBe(0); // Codex SDK doesn't provide USD cost
+    expect(data.cost_millicents).toBe(0); // Codex SDK doesn't provide USD cost
   });
 });
 

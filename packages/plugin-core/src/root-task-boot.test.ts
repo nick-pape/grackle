@@ -61,7 +61,7 @@ function makeSession(overrides: Partial<SessionRow> = {}): SessionRow {
     pipeMode: "",
     inputTokens: 100,
     outputTokens: 200,
-    costUsd: 0.01,
+    costMillicents: 1000,
     sigtermSentAt: null,
     ...overrides,
   };

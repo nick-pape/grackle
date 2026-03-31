@@ -43,7 +43,7 @@ export function sessionRowToProto(row: SessionRow): grackle.Session {
     personaId: row.personaId,
     inputTokens: row.inputTokens,
     outputTokens: row.outputTokens,
-    costUsd: row.costUsd,
+    costMillicents: row.costMillicents,
     endReason: row.endReason ?? "",
   });
 }

@@ -153,7 +153,7 @@ const ACTIVE_SESSION = {
   pipeMode: "",
   inputTokens: 0,
   outputTokens: 0,
-  costUsd: 0,
+  costMillicents: 0,
   sigtermSentAt: null,
 };
 

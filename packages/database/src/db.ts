@@ -98,6 +98,23 @@ const MIGRATIONS: Migration[] = [
       }
     },
   },
+  {
+    version: 5,
+    name: "cost-usd-to-millicents",
+    up: (conn) => {
+      const sessionCols = conn
+        .prepare("PRAGMA table_info(sessions)")
+        .all() as Array<{ name: string }>;
+      if (!sessionCols.some((c) => c.name === "cost_millicents")) {
+        conn.exec("ALTER TABLE sessions ADD COLUMN cost_millicents INTEGER NOT NULL DEFAULT 0");
+        conn.exec("UPDATE sessions SET cost_millicents = CAST(ROUND(cost_usd * 100000) AS INTEGER)");
+      }
+      // DROP COLUMN is supported in SQLite 3.35.0+ (bundled with better-sqlite3)
+      if (sessionCols.some((c) => c.name === "cost_usd")) {
+        conn.exec("ALTER TABLE sessions DROP COLUMN cost_usd");
+      }
+    },
+  },
 ];
 
 /** The highest schema version defined by BASELINE + MIGRATIONS. */
@@ -112,7 +129,7 @@ const CURRENT_VERSION: number = MIGRATIONS.length > 0
  * These were added at various points during the historical migration sequence.
  */
 const BASELINE_SCHEMA_CHECKS: Array<{ table: string; column: string }> = [
-  { table: "sessions", column: "cost_usd" },
+  { table: "sessions", column: "cost_millicents" },
   { table: "tasks", column: "schedule_id" },
   { table: "workspaces", column: "working_directory" },
 ];
@@ -317,7 +334,7 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
       pipe_mode     TEXT NOT NULL DEFAULT '',
       input_tokens  INTEGER NOT NULL DEFAULT 0,
       output_tokens INTEGER NOT NULL DEFAULT 0,
-      cost_usd      REAL NOT NULL DEFAULT 0,
+      cost_millicents INTEGER NOT NULL DEFAULT 0,
       sigterm_sent_at TEXT
     );
 

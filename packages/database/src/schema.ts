@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, primaryKey } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, primaryKey } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 // ─── Environments ──────────────────────────────────────────
@@ -56,7 +56,7 @@ export const sessions = sqliteTable("sessions", {
   pipeMode: text("pipe_mode").notNull().default(""),
   inputTokens: integer("input_tokens").notNull().default(0),
   outputTokens: integer("output_tokens").notNull().default(0),
-  costUsd: real("cost_usd").notNull().default(0),
+  costMillicents: integer("cost_millicents").notNull().default(0),
   sigtermSentAt: text("sigterm_sent_at"),
 });
 

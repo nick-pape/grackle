@@ -26,14 +26,14 @@ describe("formatCost", () => {
     expect(formatCost(0)).toBe("-");
   });
 
-  it("shows 4 decimal places for small costs", () => {
-    expect(formatCost(0.0039)).toBe("$0.0039");
-    expect(formatCost(0.005)).toBe("$0.0050");
+  it("shows 4 decimal places for small costs (under $0.01 = 1000 millicents)", () => {
+    expect(formatCost(390)).toBe("$0.0039");
+    expect(formatCost(500)).toBe("$0.0050");
   });
 
-  it("shows 2 decimal places for larger costs", () => {
-    expect(formatCost(0.01)).toBe("$0.01");
-    expect(formatCost(1.23)).toBe("$1.23");
-    expect(formatCost(12.5)).toBe("$12.50");
+  it("shows 2 decimal places for larger costs (1000+ millicents)", () => {
+    expect(formatCost(1000)).toBe("$0.01");
+    expect(formatCost(123_000)).toBe("$1.23");
+    expect(formatCost(1_250_000)).toBe("$12.50");
   });
 });

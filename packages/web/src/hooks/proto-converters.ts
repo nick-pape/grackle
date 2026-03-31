@@ -57,7 +57,7 @@ export function protoToSession(p: grackle.Session): Session {
     personaId: p.personaId || undefined,
     inputTokens: p.inputTokens,
     outputTokens: p.outputTokens,
-    costUsd: p.costUsd,
+    costMillicents: p.costMillicents,
   };
 }
 
@@ -198,7 +198,7 @@ export function protoToUsageStats(p: grackle.UsageStats): UsageStats {
   return {
     inputTokens: p.inputTokens,
     outputTokens: p.outputTokens,
-    costUsd: p.costUsd,
+    costMillicents: p.costMillicents,
     sessionCount: p.sessionCount,
   };
 }

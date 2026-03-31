@@ -107,7 +107,7 @@ function applySchema(): void {
       pipe_mode         TEXT NOT NULL DEFAULT '',
       input_tokens      INTEGER NOT NULL DEFAULT 0,
       output_tokens     INTEGER NOT NULL DEFAULT 0,
-      cost_usd          REAL NOT NULL DEFAULT 0,
+      cost_millicents   INTEGER NOT NULL DEFAULT 0,
       end_reason        TEXT,
       sigterm_sent_at   TEXT
     );
@@ -1287,7 +1287,7 @@ describe("event-processor usage event handling", () => {
       sessionId: "sess-usage",
       type: "usage",
       timestamp: new Date().toISOString(),
-      content: JSON.stringify({ input_tokens: 1000, output_tokens: 50, cost_usd: 0.005 }),
+      content: JSON.stringify({ input_tokens: 1000, output_tokens: 50, cost_millicents: 500 }),
     });
 
     const statusEvent = create(powerline.AgentEventSchema, {
@@ -1305,7 +1305,7 @@ describe("event-processor usage event handling", () => {
     const session = sessionStore.getSession("sess-usage");
     expect(session?.inputTokens).toBe(1000);
     expect(session?.outputTokens).toBe(50);
-    expect(session?.costUsd).toBeCloseTo(0.005);
+    expect(session?.costMillicents).toBe(500);
   });
 
   it("accumulates multiple usage events", async () => {
@@ -1315,14 +1315,14 @@ describe("event-processor usage event handling", () => {
       sessionId: "sess-multi",
       type: "usage",
       timestamp: new Date().toISOString(),
-      content: JSON.stringify({ input_tokens: 500, output_tokens: 25, cost_usd: 0.003 }),
+      content: JSON.stringify({ input_tokens: 500, output_tokens: 25, cost_millicents: 300 }),
     });
 
     const usage2 = create(powerline.AgentEventSchema, {
       sessionId: "sess-multi",
       type: "usage",
       timestamp: new Date().toISOString(),
-      content: JSON.stringify({ input_tokens: 300, output_tokens: 75, cost_usd: 0.007 }),
+      content: JSON.stringify({ input_tokens: 300, output_tokens: 75, cost_millicents: 700 }),
     });
 
     const statusEvent = create(powerline.AgentEventSchema, {
@@ -1340,7 +1340,7 @@ describe("event-processor usage event handling", () => {
     const session = sessionStore.getSession("sess-multi");
     expect(session?.inputTokens).toBe(800);
     expect(session?.outputTokens).toBe(100);
-    expect(session?.costUsd).toBeCloseTo(0.010);
+    expect(session?.costMillicents).toBe(1000);
   });
 
   it("handles malformed usage event content gracefully", async () => {
@@ -1369,7 +1369,7 @@ describe("event-processor usage event handling", () => {
     const session = sessionStore.getSession("sess-bad");
     expect(session?.inputTokens).toBe(0);
     expect(session?.outputTokens).toBe(0);
-    expect(session?.costUsd).toBe(0);
+    expect(session?.costMillicents).toBe(0);
   });
 });
 

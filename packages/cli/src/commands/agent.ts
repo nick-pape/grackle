@@ -77,7 +77,7 @@ export function registerAgentCommands(program: Command): void {
           s.runtime,
           statusDisplay,
           tokens,
-          formatCost(s.costUsd),
+          formatCost(s.costMillicents),
           prompt,
           s.startedAt,
         ]);

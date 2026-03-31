@@ -335,7 +335,7 @@ export async function getUsage(req: grackle.GetUsageRequest): Promise<grackle.Us
       return create(grackle.UsageStatsSchema, {
         inputTokens: session.inputTokens,
         outputTokens: session.outputTokens,
-        costUsd: session.costUsd,
+        costMillicents: session.costMillicents,
         sessionCount: 1,
       });
     }
@@ -354,7 +354,7 @@ export async function getUsage(req: grackle.GetUsageRequest): Promise<grackle.Us
       const taskIds = tasks.map((t) => t.id);
       const usage = taskIds.length > 0
         ? sessionStore.aggregateUsage({ taskIds })
-        : { inputTokens: 0, outputTokens: 0, costUsd: 0, sessionCount: 0 };
+        : { inputTokens: 0, outputTokens: 0, costMillicents: 0, sessionCount: 0 };
       return create(grackle.UsageStatsSchema, usage);
     }
     case "environment": {

@@ -302,7 +302,7 @@ export class CopilotSession extends BaseAgentSession {
 
     // Usage data — fires after each LLM API call with per-request token counts
     // Note: Copilot SDK's `cost` field is in nano-AIU (GitHub billing units), not USD.
-    // We emit tokens only; cost_usd is 0 until a conversion rate is available.
+    // We emit tokens only; cost_millicents is 0 until a conversion rate is available.
     this.copilotSession.on("assistant.usage", (event: Record<string, unknown>) => {
       if (this.killed) { return; }
       const data = event.data as Record<string, unknown> | undefined;

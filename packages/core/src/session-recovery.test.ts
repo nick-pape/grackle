@@ -117,7 +117,7 @@ function applySchema(): void {
       persona_id TEXT NOT NULL DEFAULT '',
       input_tokens INTEGER NOT NULL DEFAULT 0,
       output_tokens INTEGER NOT NULL DEFAULT 0,
-      cost_usd REAL NOT NULL DEFAULT 0,
+      cost_millicents INTEGER NOT NULL DEFAULT 0,
       pipe_mode TEXT NOT NULL DEFAULT '',
       parent_session_id TEXT NOT NULL DEFAULT '',
       pipe_fd INTEGER,

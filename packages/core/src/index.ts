@@ -33,7 +33,7 @@ export type { ConcurrencyDeps } from "./concurrency.js";
 // ─── Dispatch / Budget (new from #1144, #1146) ──────────────
 export { resolveDispatchEnvironment } from "./resolve-dispatch-environment.js";
 export type { ResolveEnvironmentDeps } from "./resolve-dispatch-environment.js";
-export { checkBudget, costUsdToMillicents } from "./budget-checker.js";
+export { checkBudget } from "./budget-checker.js";
 export type { BudgetExceeded } from "./budget-checker.js";
 export { sendInputToSession, deliverSignalToTask } from "./signals/signal-delivery.js";
 
