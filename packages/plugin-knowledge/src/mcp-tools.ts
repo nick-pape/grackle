@@ -2,8 +2,7 @@
  * MCP tools for the Grackle knowledge graph.
  *
  * Exposes high-level operations (search, retrieve, create) to agents.
- * All calls go through gRPC to the Grackle server — the MCP package
- * does not access knowledge-core or Neo4j directly.
+ * All calls go through gRPC to the Grackle server.
  *
  * @module
  */
@@ -12,8 +11,7 @@ import type { Client } from "@connectrpc/connect";
 import { grackle } from "@grackle-ai/common";
 import { z } from "zod";
 import type { AuthContext } from "@grackle-ai/auth";
-import type { ToolDefinition } from "../tool-registry.js";
-import { jsonResult } from "../result-helpers.js";
+import type { PluginToolDefinition } from "@grackle-ai/plugin-sdk";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -96,12 +94,19 @@ function clampInt(value: number | undefined, min: number, max: number, defaultVa
   return Math.max(min, Math.min(max, Math.floor(value)));
 }
 
+/** Return a JSON text content block. */
+function jsonResult(data: unknown): { content: { type: "text"; text: string }[] } {
+  return {
+    content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Tool definitions
 // ---------------------------------------------------------------------------
 
-/** Knowledge graph MCP tools. */
-export const knowledgeTools: ToolDefinition[] = [
+/** Knowledge graph MCP tools contributed by the plugin. */
+export const knowledgeMcpTools: PluginToolDefinition[] = [
   {
     name: "knowledge_search",
     group: "knowledge",
@@ -144,10 +149,12 @@ export const knowledgeTools: ToolDefinition[] = [
       openWorldHint: false,
     },
     async handler(
-      args: Record<string, unknown>,
-      client: Client<typeof grackle.Grackle>,
-      authContext?: AuthContext,
-    ) {
+      args: unknown,
+      client: unknown,
+      authContext?: unknown,
+    ): Promise<unknown> {
+      const typedClient = client as Client<typeof grackle.Grackle>;
+      const typedAuth = authContext as AuthContext | undefined;
       const {
         query,
         limit,
@@ -164,12 +171,12 @@ export const knowledgeTools: ToolDefinition[] = [
 
       // For scoped callers, always use the auth context workspace.
       const resolvedWorkspaceId: string =
-        authContext?.type === "scoped"
-          ? authContext.workspaceId ?? ""
+        typedAuth?.type === "scoped"
+          ? typedAuth.workspaceId ?? ""
           : workspaceId ?? "";
 
       const safeLimit: number = clampInt(limit, 1, MAX_SEARCH_LIMIT, 10);
-      const response: grackle.SearchKnowledgeResponse = await client.searchKnowledge({
+      const response: grackle.SearchKnowledgeResponse = await typedClient.searchKnowledge({
         query,
         limit: safeLimit,
         workspaceId: resolvedWorkspaceId,
@@ -180,7 +187,6 @@ export const knowledgeTools: ToolDefinition[] = [
       let neighbors: Record<string, unknown>[] | undefined;
       let neighborEdges: Record<string, unknown>[] | undefined;
       if (expand && response.results.length > 0) {
-        // Expand each result node via gRPC
         const safeDepth: number = clampInt(expandDepth, 1, MAX_EXPAND_DEPTH, 1);
         const allNeighbors = new Map<string, Record<string, unknown>>();
         const allEdges: Record<string, unknown>[] = [];
@@ -193,7 +199,7 @@ export const knowledgeTools: ToolDefinition[] = [
             continue;
           }
           const expansion: grackle.ExpandKnowledgeNodeResponse =
-            await client.expandKnowledgeNode({
+            await typedClient.expandKnowledgeNode({
               id: result.node.id,
               depth: safeDepth,
             });
@@ -210,9 +216,8 @@ export const knowledgeTools: ToolDefinition[] = [
         neighbors = [...allNeighbors.values()];
         neighborEdges = allEdges;
 
-        // Filter expanded neighbors to the caller's workspace for scoped callers.
-        if (authContext?.type === "scoped") {
-          const allowedWorkspaceId: string = authContext.workspaceId ?? "";
+        if (typedAuth?.type === "scoped") {
+          const allowedWorkspaceId: string = typedAuth.workspaceId ?? "";
           const allowedIds: Set<string> = new Set<string>();
           neighbors = neighbors.filter((n) => {
             const allowed = n.workspaceId === allowedWorkspaceId;
@@ -269,10 +274,12 @@ export const knowledgeTools: ToolDefinition[] = [
       openWorldHint: false,
     },
     async handler(
-      args: Record<string, unknown>,
-      client: Client<typeof grackle.Grackle>,
-      authContext?: AuthContext,
-    ) {
+      args: unknown,
+      client: unknown,
+      authContext?: unknown,
+    ): Promise<unknown> {
+      const typedClient = client as Client<typeof grackle.Grackle>;
+      const typedAuth = authContext as AuthContext | undefined;
       const { id, expand, expandDepth } = args as {
         id: string;
         expand?: boolean;
@@ -280,7 +287,7 @@ export const knowledgeTools: ToolDefinition[] = [
       };
 
       const response: grackle.GetKnowledgeNodeResponse =
-        await client.getKnowledgeNode({ id });
+        await typedClient.getKnowledgeNode({ id });
 
       if (!response.node) {
         return {
@@ -294,10 +301,8 @@ export const knowledgeTools: ToolDefinition[] = [
         };
       }
 
-      // For scoped callers, deny access to nodes outside their workspace.
-      // Return "not found" to avoid leaking that the node exists.
-      if (authContext?.type === "scoped") {
-        if (response.node.workspaceId !== (authContext.workspaceId ?? "")) {
+      if (typedAuth?.type === "scoped") {
+        if (response.node.workspaceId !== (typedAuth.workspaceId ?? "")) {
           return {
             content: [
               {
@@ -318,13 +323,12 @@ export const knowledgeTools: ToolDefinition[] = [
       if (expand) {
         const safeDepth: number = clampInt(expandDepth, 1, MAX_EXPAND_DEPTH, 1);
         const expansion: grackle.ExpandKnowledgeNodeResponse =
-          await client.expandKnowledgeNode({ id, depth: safeDepth });
+          await typedClient.expandKnowledgeNode({ id, depth: safeDepth });
         let expandedNodes: Record<string, unknown>[] = expansion.nodes.map(formatNode);
         let expandedEdges: Record<string, unknown>[] = expansion.edges.map(formatEdge);
 
-        // Filter expanded neighbors to the caller's workspace for scoped callers.
-        if (authContext?.type === "scoped") {
-          const allowedWorkspaceId: string = authContext.workspaceId ?? "";
+        if (typedAuth?.type === "scoped") {
+          const allowedWorkspaceId: string = typedAuth.workspaceId ?? "";
           const allowedIds: Set<string> = new Set<string>([id]);
           expandedNodes = expandedNodes.filter((n) => {
             const allowed = n.workspaceId === allowedWorkspaceId;
@@ -395,10 +399,12 @@ export const knowledgeTools: ToolDefinition[] = [
       openWorldHint: false,
     },
     async handler(
-      args: Record<string, unknown>,
-      client: Client<typeof grackle.Grackle>,
-      authContext?: AuthContext,
-    ) {
+      args: unknown,
+      client: unknown,
+      authContext?: unknown,
+    ): Promise<unknown> {
+      const typedClient = client as Client<typeof grackle.Grackle>;
+      const typedAuth = authContext as AuthContext | undefined;
       const {
         title,
         content,
@@ -415,22 +421,18 @@ export const knowledgeTools: ToolDefinition[] = [
 
       // For scoped callers, always use the auth context workspace.
       const resolvedWorkspaceId: string =
-        authContext?.type === "scoped"
-          ? authContext.workspaceId ?? ""
+        typedAuth?.type === "scoped"
+          ? typedAuth.workspaceId ?? ""
           : workspaceId ?? "";
 
       const response: grackle.CreateKnowledgeNodeResponse =
-        await client.createKnowledgeNode({
+        await typedClient.createKnowledgeNode({
           title,
           content,
           category: category ?? "insight",
           tags: tags ?? [],
           workspaceId: resolvedWorkspaceId,
         });
-
-      // Note: edge creation is now handled server-side or as a follow-up.
-      // The gRPC CreateKnowledgeNode endpoint creates the node; edges
-      // can be added in a future enhancement.
 
       return jsonResult({
         id: response.id,

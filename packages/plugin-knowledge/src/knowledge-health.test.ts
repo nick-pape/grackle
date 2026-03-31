@@ -10,6 +10,7 @@ import {
   isNeo4jHealthy,
   getKnowledgeReadinessCheck,
   resetKnowledgeHealthState,
+  markKnowledgeInitFailed,
 } from "./knowledge-health.js";
 
 describe("createKnowledgeHealthPhase", () => {
@@ -110,7 +111,6 @@ describe("createKnowledgeHealthPhase", () => {
     await phase.execute();
     await phase.execute();
 
-    // No transition logs expected — only tick-level noise if any
     const transitionLogs = [
       ...vi.mocked(logger.info).mock.calls,
       ...vi.mocked(logger.warn).mock.calls,
@@ -187,5 +187,23 @@ describe("getKnowledgeReadinessCheck", () => {
     const check = getKnowledgeReadinessCheck();
     expect(check.ok).toBe(false);
     expect(check.message).toContain("Neo4j");
+  });
+});
+
+describe("markKnowledgeInitFailed", () => {
+  beforeEach(() => {
+    resetKnowledgeHealthState();
+  });
+
+  it("marks readiness as unhealthy immediately", () => {
+    markKnowledgeInitFailed();
+    const check = getKnowledgeReadinessCheck();
+    expect(check.ok).toBe(false);
+    expect(check.message).toContain("Neo4j");
+  });
+
+  it("marks isNeo4jHealthy as false immediately", () => {
+    markKnowledgeInitFailed();
+    expect(isNeo4jHealthy()).toBe(false);
   });
 });

@@ -6,19 +6,19 @@ import {
   createServiceCollector,
   startHeartbeat, getAdapter, setConnection, removeConnection,
   emit, subscribe, pushToEnv, attemptReconnects, resetReconnectState,
-  parseAdapterConfig, isKnowledgeEnabled, initKnowledge,
-  getKnowledgeReadinessCheck,
+  parseAdapterConfig,
   ReconciliationManager,
   logger, exec, detectLanIp,
   runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace,
 } from "@grackle-ai/core";
+import { createKnowledgePlugin, getKnowledgeReadinessCheck } from "@grackle-ai/plugin-knowledge";
 import { loadPlugins, type PluginContext } from "@grackle-ai/plugin-sdk";
 import { envRegistry, sessionStore, settingsStore, personaStore, workspaceStore, taskStore, sqlite, grackleHome } from "@grackle-ai/database";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { LocalPowerLineManager } from "./local-powerline-manager.js";
 import { registerCrashHandlers } from "./crash-handler.js";
 import { resolveServerConfig } from "./config.js";
-import { createMcpServer } from "@grackle-ai/mcp";
+import { createMcpServer, type ToolDefinition } from "@grackle-ai/mcp";
 import {
   loadOrCreateApiKey, verifyApiKey, setAuthLogger,
   generatePairingCode,
@@ -155,6 +155,9 @@ async function main(): Promise<void> {
   if (!config.skipOrchestration) {
     plugins.push(createOrchestrationPlugin());
   }
+  if (config.knowledgeEnabled) {
+    plugins.push(createKnowledgePlugin());
+  }
   const loaded = await loadPlugins(plugins, pluginContext);
 
   // --- Wire gRPC handlers from plugins ---
@@ -237,7 +240,7 @@ async function main(): Promise<void> {
       }
       // Neo4j/knowledge is optional — exposed for operator visibility but does
       // not gate overall readiness. Only the database check is required.
-      if (isKnowledgeEnabled()) {
+      if (config.knowledgeEnabled) {
         checks.knowledge = getKnowledgeReadinessCheck();
       }
       return {
@@ -293,22 +296,25 @@ async function main(): Promise<void> {
     }
   });
 
-  // --- Knowledge graph subsystem (opt-in) ---
-  let knowledgeCleanup: (() => Promise<void>) | undefined;
-  if (isKnowledgeEnabled()) {
-    try {
-      knowledgeCleanup = await initKnowledge();
-    } catch (err) {
-      logger.error({ err }, "Failed to initialize knowledge graph — continuing without it");
-    }
-  }
-
   // --- MCP server (HTTP/1.1, Streamable HTTP) ---
   // Use dialable host for OAuth URLs (wildcard → 127.0.0.1)
   const dialableHost = isWildcardAddress(bindHost) ? "127.0.0.1" : bindHost;
   const dialableUrlHost = dialableHost.includes(":") ? `[${dialableHost}]` : dialableHost;
   const authServerUrl = `http://${dialableUrlHost}:${webPort}`;
-  const mcpServer = createMcpServer({ bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl: authServerUrl });
+  // Adapt plugin-contributed tools to the concrete ToolDefinition type expected by MCP.
+  // Validates shape at startup so runtime failures surface immediately with a clear message.
+  const pluginToolGroups: ToolDefinition[][] = loaded.mcpTools.length > 0
+    ? [loaded.mcpTools.map((t) => {
+        if (typeof (t.inputSchema as { safeParse?: unknown }).safeParse !== "function") {
+          throw new Error(`Plugin tool "${t.name}": inputSchema must be a Zod schema (missing safeParse)`);
+        }
+        if (typeof t.handler !== "function") {
+          throw new Error(`Plugin tool "${t.name}": handler must be a function`);
+        }
+        return t as unknown as ToolDefinition;
+      })]
+    : [];
+  const mcpServer = createMcpServer({ bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl: authServerUrl, toolGroups: pluginToolGroups });
 
   mcpServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {
@@ -331,7 +337,6 @@ async function main(): Promise<void> {
     mcpServer,
     reconciliationManager,
     localPowerLineManager,
-    knowledgeCleanup,
     pluginShutdown: loaded.shutdown,
   });
 

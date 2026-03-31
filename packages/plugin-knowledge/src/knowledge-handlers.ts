@@ -13,10 +13,10 @@ import {
   type Embedder,
   type EdgeType,
 } from "@grackle-ai/knowledge";
-import { getKnowledgeEmbedder, isKnowledgeEnabled } from "@grackle-ai/core";
-import { isNeo4jHealthy } from "@grackle-ai/core";
-import { knowledgeNodeToProto, knowledgeEdgeToProto } from "./grpc-proto-converters.js";
-import { logger } from "@grackle-ai/core";
+import { getKnowledgeEmbedder } from "./knowledge-init.js";
+import { isNeo4jHealthy } from "./knowledge-health.js";
+import { knowledgeNodeToProto, knowledgeEdgeToProto } from "./proto-converters.js";
+import { logger } from "./logger.js";
 
 /** Error message returned when Neo4j is unreachable. */
 const NEO4J_UNAVAILABLE_MESSAGE: string =
@@ -89,9 +89,6 @@ export async function searchKnowledge(req: grackle.SearchKnowledgeRequest): Prom
 
 /** Get a knowledge node by ID. */
 export async function getKnowledgeNode(req: grackle.GetKnowledgeNodeRequest): Promise<grackle.GetKnowledgeNodeResponse> {
-  if (!isKnowledgeEnabled()) {
-    throw new ConnectError("Knowledge graph not available", Code.Unavailable);
-  }
   requireKnowledgeReady();
 
   try {
@@ -111,9 +108,6 @@ export async function getKnowledgeNode(req: grackle.GetKnowledgeNodeRequest): Pr
 
 /** Expand a knowledge node to retrieve its neighbors. */
 export async function expandKnowledgeNode(req: grackle.ExpandKnowledgeNodeRequest): Promise<grackle.ExpandKnowledgeNodeResponse> {
-  if (!isKnowledgeEnabled()) {
-    throw new ConnectError("Knowledge graph not available", Code.Unavailable);
-  }
   requireKnowledgeReady();
 
   try {
@@ -133,9 +127,6 @@ export async function expandKnowledgeNode(req: grackle.ExpandKnowledgeNodeReques
 
 /** List recently created knowledge nodes. */
 export async function listRecentKnowledgeNodes(req: grackle.ListRecentKnowledgeNodesRequest): Promise<grackle.ListRecentKnowledgeNodesResponse> {
-  if (!isKnowledgeEnabled()) {
-    throw new ConnectError("Knowledge graph not available", Code.Unavailable);
-  }
   requireKnowledgeReady();
 
   try {

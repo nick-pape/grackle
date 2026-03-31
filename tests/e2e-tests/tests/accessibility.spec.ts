@@ -143,7 +143,7 @@ test.describe("Accessibility attributes", { tag: ["@a11y"] }, () => {
         await client.searchKnowledge({ query: "probe", limit: 1 });
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
-        if (message.includes("not available") || message.includes("Unavailable") || message.includes("unavailable")) {
+        if (message.includes("not available") || message.includes("Unavailable") || message.includes("unavailable") || message.includes("unimplemented")) {
           test.skip(true, "Knowledge graph not available in this environment");
         }
         throw error;

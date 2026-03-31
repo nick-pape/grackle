@@ -11,7 +11,6 @@ import { tokenTools } from "./token.js";
 import { configTools } from "./config.js";
 import { ipcTools } from "./ipc.js";
 import { usageTools } from "./usage.js";
-import { knowledgeTools } from "./knowledge.js";
 import { workpadTools } from "./workpad.js";
 import { scheduleTools } from "./schedule.js";
 import { versionTools } from "./version.js";
@@ -31,7 +30,6 @@ const builtinToolGroups: ToolDefinition[][] = [
   configTools,
   ipcTools,
   usageTools,
-  knowledgeTools,
   workpadTools,
   scheduleTools,
   versionTools,
