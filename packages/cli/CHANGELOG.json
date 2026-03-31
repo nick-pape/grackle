@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.96.2",
+      "tag": "@grackle-ai/cli_v0.96.2",
+      "date": "Tue, 31 Mar 2026 00:58:00 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add interactive link/unlink environment controls to workspace and environment detail pages"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.96.1",
       "tag": "@grackle-ai/cli_v0.96.1",
       "date": "Mon, 30 Mar 2026 21:53:45 GMT",

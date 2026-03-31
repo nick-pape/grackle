@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 30 Mar 2026 21:53:45 GMT and should not be manually modified.
+This log was last generated on Tue, 31 Mar 2026 00:58:00 GMT and should not be manually modified.
+
+## 0.96.2
+Tue, 31 Mar 2026 00:58:00 GMT
+
+### Patches
+
+- Add interactive link/unlink environment controls to workspace and environment detail pages
 
 ## 0.96.1
 Mon, 30 Mar 2026 21:53:45 GMT
