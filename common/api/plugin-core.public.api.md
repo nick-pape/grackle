@@ -100,6 +100,17 @@ export interface OrphanPhaseDeps {
 }
 
 // @public
+export const PLUGIN_REGISTRY: ReadonlyArray<PluginRegistryEntry>;
+
+// @public
+export interface PluginRegistryEntry {
+    defaultEnabled: boolean;
+    description: string;
+    name: string;
+    required: boolean;
+}
+
+// @public
 export function registerGrackleRoutes(router: ConnectRouter): void;
 
 export { resolveAncestorEnvironmentId }
@@ -118,6 +129,9 @@ export interface RootTaskBootDeps {
         notes?: string;
     }) => Promise<string | undefined>;
 }
+
+// @public
+export function setLoadedPluginNames(names: Set<string>): void;
 
 export { toDialableHost }
 

@@ -11,6 +11,7 @@ import type {
   UseEnvironmentsResult, UseSessionsResult, UseWorkspacesResult,
   UseTasksResult, UseFindingsResult, UseTokensResult,
   UseCredentialsResult, UseCodespacesResult, UsePersonasResult,
+  UsePluginsResult,
   UseSchedulesResult,
 } from "../hooks/types.js";
 
@@ -40,6 +41,8 @@ export interface UseGrackleSocketResult {
   schedules: Omit<UseSchedulesResult, "handleEvent" | "loadSchedules">;
   /** Knowledge graph state and actions. */
   knowledge: Omit<UseKnowledgeResult, "handleEvent">;
+  /** Plugin state and actions. */
+  plugins: Omit<UsePluginsResult, "domainHook">;
   /** App-level default persona ID setting. */
   appDefaultPersonaId: string;
   /** Update the app-level default persona ID. */

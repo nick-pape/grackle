@@ -25,6 +25,7 @@ import { usePersonas } from "./usePersonas.js";
 import { useSchedules } from "./useSchedules.js";
 import { useKnowledge } from "./useKnowledge.js";
 import { useNotifications } from "./useNotifications.js";
+import { usePlugins } from "./usePlugins.js";
 import { coreClient as grackleClient } from "./useGrackleClient.js";
 import { protoToUsageStats } from "./proto-converters.js";
 
@@ -99,6 +100,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   const schedulesHook = useSchedules();
   const knowledgeHook = useKnowledge();
   const notificationsHook = useNotifications();
+  const pluginsHook = usePlugins();
 
   // --- Domain hook registry ---
   // Only hooks whose plugin is active are registered for onConnect() / handleEvent().
@@ -116,6 +118,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     ...(activeHookKeys.has("schedules")    ? [schedulesHook.domainHook]    : []),
     ...(activeHookKeys.has("knowledge")    ? [knowledgeHook.domainHook]    : []),
     ...(activeHookKeys.has("notifications") ? [notificationsHook.domainHook] : []),
+    ...(activeHookKeys.has("plugins") ? [pluginsHook.domainHook] : []),
   ];
 
   // --- Transport (ConnectRPC server-streaming) ---
@@ -363,6 +366,12 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       domainHook: schedulesHook.domainHook,
     },
     knowledge: knowledgeHook,
+    plugins: {
+      plugins: pluginsHook.plugins,
+      pluginsLoading: pluginsHook.pluginsLoading,
+      loadPlugins: pluginsHook.loadPlugins,
+      setPluginEnabled: pluginsHook.setPluginEnabled,
+    },
     appDefaultPersonaId,
     setAppDefaultPersonaId,
     onboardingCompleted,
