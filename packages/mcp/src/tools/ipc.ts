@@ -355,18 +355,23 @@ export const ipcTools: ToolDefinition[] = [
     group: "ipc",
     description:
       "Share a stream you hold with your parent session. Auto-discovers the parent via the inherited pipe fd and grants access using the attachStream RPC (with permission defaulting to your own permission on the fd if omitted), then sends a [stream-ref] notification through the pipe so the parent knows the new fd. For sibling-to-sibling sharing: share with parent, parent can use ipc_attach to forward to the sibling.",
-    inputSchema: z.object({
-      fd: z.number().int().optional().describe("Your file descriptor on the stream to share (mutually exclusive with streamName)"),
-      streamName: z.string().optional().describe("Name of the stream to share — the fd is looked up via getSessionFds (mutually exclusive with fd)"),
-      permission: z
-        .enum(["r", "w", "rw"])
-        .optional()
-        .describe("Permission to grant the parent; if omitted, defaults to your own permission on the fd"),
-      deliveryMode: z
-        .enum(["sync", "async", "detach"])
-        .optional()
-        .describe("How the parent receives messages from the stream; defaults to \"detach\" for write-only (\"w\") permission and \"async\" otherwise"),
-    }),
+    inputSchema: z
+      .object({
+        fd: z.number().int().optional().describe("Your file descriptor on the stream to share (mutually exclusive with streamName)"),
+        streamName: z.string().optional().describe("Name of the stream to share — the fd is looked up via getSessionFds (mutually exclusive with fd)"),
+        permission: z
+          .enum(["r", "w", "rw"])
+          .optional()
+          .describe("Permission to grant the parent; if omitted, defaults to your own permission on the fd"),
+        deliveryMode: z
+          .enum(["sync", "async", "detach"])
+          .optional()
+          .describe("How the parent receives messages from the stream; defaults to \"detach\" for write-only (\"w\") permission and \"async\" otherwise"),
+      })
+      .refine(
+        (data) => (data.fd === undefined) !== (data.streamName === undefined),
+        { message: "Exactly one of `fd` or `streamName` must be provided", path: ["fd"] },
+      ),
     rpcMethod: "attachStream",
     mutating: true,
     async handler(args: Record<string, unknown>, { core: client }: GrackleClients, authContext?: AuthContext) {

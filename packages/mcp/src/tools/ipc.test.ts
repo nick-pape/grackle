@@ -397,6 +397,28 @@ describe("ipc_share_stream", () => {
     expect(result.content[0].text).toContain("either fd or streamName");
   });
 
+  test("schema rejects both fd and streamName provided (XOR enforcement)", () => {
+    const schema = getTool("ipc_share_stream").inputSchema;
+    const result = schema.safeParse({ fd: 4, streamName: "my-stream" });
+    expect(result.success).toBe(false);
+  });
+
+  test("schema rejects neither fd nor streamName provided (XOR enforcement)", () => {
+    const schema = getTool("ipc_share_stream").inputSchema;
+    const result = schema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+
+  test("schema accepts fd only", () => {
+    const schema = getTool("ipc_share_stream").inputSchema;
+    expect(schema.safeParse({ fd: 4 }).success).toBe(true);
+  });
+
+  test("schema accepts streamName only", () => {
+    const schema = getTool("ipc_share_stream").inputSchema;
+    expect(schema.safeParse({ streamName: "my-stream" }).success).toBe(true);
+  });
+
   test("write-only permission defaults deliveryMode to detach", async () => {
     const mockClient = createMockClient();
     (mockClient.getSessionFds as ReturnType<typeof vi.fn>).mockResolvedValue(makeFds("w"));

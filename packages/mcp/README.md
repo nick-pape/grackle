@@ -200,7 +200,7 @@ Inter-process communication between parent and child agent sessions.
 | `ipc_list_streams` | List all active IPC streams with subscriber details and buffer depth. | *(none)* |
 | `ipc_create_stream` | Create a named stream for inter-session communication. Returns an rw fd. | `name` (string), `selfEcho?` (boolean, default `false`) |
 | `ipc_attach` | Grant another session access to a stream you hold an fd on. | `fd` (int), `targetSessionId` (string), `permission?` (`r` \| `w` \| `rw`), `deliveryMode?` (`sync` \| `async` \| `detach`) |
-| `ipc_share_stream` | Share a stream with your parent session. Auto-discovers the parent via the inherited pipe fd, grants access, and sends a `[stream-ref]` notification through the pipe. | `fd` (int), `permission?` (`r` \| `w` \| `rw`), `deliveryMode?` (`sync` \| `async` \| `detach`) |
+| `ipc_share_stream` | Share a stream with your parent session. Auto-discovers the parent via the inherited pipe fd, grants access, and sends a `[stream-ref]` notification through the pipe. | `fd?` (int) or `streamName?` (string; exactly one required), `permission?` (`r` \| `w` \| `rw`), `deliveryMode?` (`sync` \| `async` \| `detach`) |
 
 ### Log Tools
 
