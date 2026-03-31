@@ -28,7 +28,7 @@ import { processorRegistry } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
 import { getTraceId } from "@grackle-ai/core";
 import { resolvePersona, buildOrchestratorContext, SystemPromptBuilder, buildTaskPrompt } from "@grackle-ai/prompt";
-import { toPersonaResolveInput, buildOrchestratorContextInput } from "./persona-mapper.js";
+import { toPersonaResolveInput, buildOrchestratorContextInput } from "@grackle-ai/core";
 import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
 import { cleanupLifecycleStream, ensureLifecycleStream } from "./lifecycle.js";
 import { ensureAsyncDeliveryListener } from "@grackle-ai/core";
@@ -37,7 +37,7 @@ import { computeTaskStatus } from "@grackle-ai/core";
 import { transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
 import { taskRowToProto, sessionRowToProto } from "./grpc-proto-converters.js";
 import { validatePipeInputs, toDialableHost, resolveAncestorEnvironmentId } from "./grpc-shared.js";
-import { personaMcpServersToJson } from "./grpc-mcp-config.js";
+import { personaMcpServersToJson } from "@grackle-ai/core";
 import { hasCapacity, type ConcurrencyDeps, checkBudget } from "@grackle-ai/core";
 
 /** List tasks, optionally filtered by workspace, search query, or status. */

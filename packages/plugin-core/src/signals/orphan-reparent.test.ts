@@ -23,18 +23,15 @@ vi.mock("@grackle-ai/core", async (importOriginal) => {
       ensureAsyncDeliveryListener: vi.fn(),
       cleanupAsyncListenerIfEmpty: vi.fn(),
     },
+    deliverSignalToTask: vi.fn().mockResolvedValue(true),
+    sendInputToSession: vi.fn().mockResolvedValue(true),
   };
 });
-
-vi.mock("./signal-delivery.js", () => ({
-  deliverSignalToTask: vi.fn().mockResolvedValue(true),
-  sendInputToSession: vi.fn().mockResolvedValue(true),
-}));
 
 // ── Imports ──────────────────────────────────────────────────
 
 import { taskStore, sessionStore } from "@grackle-ai/database";
-import { deliverSignalToTask } from "./signal-delivery.js";
+import { deliverSignalToTask } from "@grackle-ai/core";
 import { streamRegistry, ensureAsyncDeliveryListener } from "@grackle-ai/core";
 import { createOrphanReparentSubscriber } from "./orphan-reparent.js";
 import type { GrackleEvent } from "@grackle-ai/core";

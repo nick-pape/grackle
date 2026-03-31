@@ -14,7 +14,7 @@ import {
   type EdgeType,
 } from "@grackle-ai/knowledge";
 import { getKnowledgeEmbedder, isKnowledgeEnabled } from "@grackle-ai/core";
-import { isNeo4jHealthy } from "./knowledge-health.js";
+import { isNeo4jHealthy } from "@grackle-ai/core";
 import { knowledgeNodeToProto, knowledgeEdgeToProto } from "./grpc-proto-converters.js";
 import { logger } from "@grackle-ai/core";
 

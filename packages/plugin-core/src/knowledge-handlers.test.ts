@@ -46,10 +46,6 @@ vi.mock("./knowledge-init.js", () => ({
   isKnowledgeEnabled: mockIsKnowledgeEnabled,
 }));
 
-vi.mock("./knowledge-health.js", () => ({
-  isNeo4jHealthy: mockIsNeo4jHealthy,
-}));
-
 vi.mock("./grpc-proto-converters.js", () => ({
   knowledgeNodeToProto: vi.fn((node: unknown) => node),
   knowledgeEdgeToProto: vi.fn((edge: unknown) => edge),
@@ -62,6 +58,7 @@ vi.mock("@grackle-ai/core", async (importOriginal) => {
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
     getKnowledgeEmbedder: mockGetKnowledgeEmbedder,
     isKnowledgeEnabled: mockIsKnowledgeEnabled,
+    isNeo4jHealthy: mockIsNeo4jHealthy,
   };
 });
 

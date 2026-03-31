@@ -13,17 +13,13 @@ vi.mock("@grackle-ai/core", async (importOriginal) => {
     ...actual,
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
     readLastTextEntry: vi.fn(() => undefined),
+    routeEscalation: vi.fn().mockResolvedValue(undefined),
   };
 });
 
-vi.mock("../notification-router.js", () => ({
-  routeEscalation: vi.fn().mockResolvedValue(undefined),
-}));
-
 import { SESSION_STATUS, ROOT_TASK_ID } from "@grackle-ai/common";
 import { taskStore, sessionStore, escalationStore } from "@grackle-ai/database";
-import { readLastTextEntry } from "@grackle-ai/core";
-import { routeEscalation } from "../notification-router.js";
+import { readLastTextEntry, routeEscalation } from "@grackle-ai/core";
 import { createEscalationAutoSubscriber } from "./escalation-auto.js";
 import type { GrackleEvent } from "@grackle-ai/core";
 import type { Disposable, PluginContext } from "../subscriber-types.js";

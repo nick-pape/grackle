@@ -8,6 +8,10 @@ import { ConnectError, Code } from "@connectrpc/connect";
 
 // ── Mock heavy dependencies before importing the module ──────────
 
+const { mockSendInputToSession } = vi.hoisted(() => ({
+  mockSendInputToSession: vi.fn().mockResolvedValue(true),
+}));
+
 vi.mock("@grackle-ai/database", async () => {
   const { createDatabaseMock } = await import("./test-utils/mock-database.js");
   return createDatabaseMock();
@@ -61,6 +65,8 @@ vi.mock("@grackle-ai/core", async (importOriginal) => {
     clearReconnectState: vi.fn(),
     cleanupLifecycleStream: vi.fn(),
     ensureLifecycleStream: vi.fn(),
+    sendInputToSession: (...args: unknown[]) => mockSendInputToSession(...args),
+    deliverSignalToTask: vi.fn(),
   };
 });
 
@@ -99,12 +105,6 @@ vi.mock("./utils/network.js", () => ({
 
 vi.mock("./utils/slugify.js", () => ({
   slugify: vi.fn((s: string) => s.toLowerCase().replace(/\s+/g, "-")),
-}));
-
-const mockSendInputToSession = vi.fn().mockResolvedValue(true);
-vi.mock("./signals/signal-delivery.js", () => ({
-  sendInputToSession: (...args: unknown[]) => mockSendInputToSession(...args),
-  deliverSignalToTask: vi.fn(),
 }));
 
 // ── Import AFTER mocks ──────────────────────────────────────────

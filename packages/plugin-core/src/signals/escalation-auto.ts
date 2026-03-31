@@ -11,7 +11,7 @@ import { SESSION_STATUS, ROOT_TASK_ID } from "@grackle-ai/common";
 import type { GrackleEvent } from "@grackle-ai/core";
 import { taskStore, sessionStore, escalationStore } from "@grackle-ai/database";
 import { readLastTextEntry } from "@grackle-ai/core";
-import { routeEscalation } from "../notification-router.js";
+import { routeEscalation } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
 import { ulid } from "ulid";
 import type { Disposable, PluginContext } from "@grackle-ai/core";

@@ -31,16 +31,12 @@ vi.mock("@grackle-ai/core", async (importOriginal) => {
       }),
     },
     reanimateAgent: vi.fn(),
+    deliverSignalToTask: vi.fn().mockResolvedValue(true),
   };
 });
 
-vi.mock("./signal-delivery.js", () => ({
-  deliverSignalToTask: vi.fn().mockResolvedValue(true),
-}));
-
 import { taskStore, sessionStore } from "@grackle-ai/database";
-import { readLastTextEntry } from "@grackle-ai/core";
-import { deliverSignalToTask } from "./signal-delivery.js";
+import { readLastTextEntry, deliverSignalToTask } from "@grackle-ai/core";
 import { createSigchldSubscriber } from "./sigchld.js";
 import type { GrackleEvent } from "@grackle-ai/core";
 import type { Disposable, PluginContext } from "../subscriber-types.js";

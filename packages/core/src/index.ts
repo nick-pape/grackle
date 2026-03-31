@@ -35,7 +35,7 @@ export { resolveDispatchEnvironment } from "./resolve-dispatch-environment.js";
 export type { ResolveEnvironmentDeps } from "./resolve-dispatch-environment.js";
 export { checkBudget, costUsdToMillicents } from "./budget-checker.js";
 export type { BudgetExceeded } from "./budget-checker.js";
-export { sendInputToSession } from "./signals/signal-delivery.js";
+export { sendInputToSession, deliverSignalToTask } from "./signals/signal-delivery.js";
 
 // ─── Knowledge ───────────────────────────────────────────────
 export { isKnowledgeEnabled, initKnowledge, neo4jHealthCheck, getKnowledgeEmbedder } from "./knowledge-init.js";

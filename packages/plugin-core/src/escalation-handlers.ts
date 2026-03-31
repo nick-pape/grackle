@@ -3,7 +3,7 @@ import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
 import { escalationStore } from "@grackle-ai/database";
 import { ulid } from "ulid";
-import { routeEscalation } from "./notification-router.js";
+import { routeEscalation } from "@grackle-ai/core";
 import { escalationRowToProto } from "./grpc-proto-converters.js";
 
 /** Valid urgency values for escalations. */

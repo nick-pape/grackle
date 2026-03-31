@@ -2,7 +2,7 @@ import { SESSION_STATUS } from "@grackle-ai/common";
 import type { GrackleEvent } from "@grackle-ai/core";
 import { taskStore, sessionStore } from "@grackle-ai/database";
 import { readLastTextEntry } from "@grackle-ai/core";
-import { deliverSignalToTask } from "./signal-delivery.js";
+import { deliverSignalToTask } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
 import type { Disposable, PluginContext } from "@grackle-ai/core";
 

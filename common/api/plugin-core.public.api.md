@@ -4,41 +4,25 @@
 
 ```ts
 
-import { buildMcpServersJson } from '@grackle-ai/core';
-import { buildOrchestratorContextInput } from '@grackle-ai/core';
 import { cleanupLifecycleStream } from '@grackle-ai/core';
 import type { ConnectRouter } from '@connectrpc/connect';
-import { createKnowledgeHealthPhase } from '@grackle-ai/core';
-import { deliverPendingEscalations } from '@grackle-ai/core';
 import type { DispatchQueueRow } from '@grackle-ai/database';
 import type { Disposable as Disposable_2 } from '@grackle-ai/core';
 import { ensureLifecycleStream } from '@grackle-ai/core';
 import type { EnvironmentRow } from '@grackle-ai/database';
 import type { EnvironmentStatus } from '@grackle-ai/common';
-import { getKnowledgeReadinessCheck } from '@grackle-ai/core';
 import type { GrackleEventType } from '@grackle-ai/core';
-import { isNeo4jHealthy } from '@grackle-ai/core';
-import { KnowledgeHealthPhaseDeps } from '@grackle-ai/core';
-import { KnowledgeReadinessCheck } from '@grackle-ai/core';
-import { personaMcpServersToJson } from '@grackle-ai/core';
 import type { PluginContext } from '@grackle-ai/core';
 import type { ReconciliationPhase } from '@grackle-ai/core';
-import { resetKnowledgeHealthState } from '@grackle-ai/core';
 import { resolveAncestorEnvironmentId } from '@grackle-ai/core';
-import { routeEscalation } from '@grackle-ai/core';
 import type { ScheduleRow } from '@grackle-ai/database';
 import { ServiceCollector } from '@grackle-ai/core';
 import type { SessionRow } from '@grackle-ai/database';
 import type { TaskRow } from '@grackle-ai/database';
 import type { TaskStatusResult } from '@grackle-ai/core';
 import { toDialableHost } from '@grackle-ai/core';
-import { toPersonaResolveInput } from '@grackle-ai/core';
 import { VALID_PIPE_MODES } from '@grackle-ai/core';
 import { validatePipeInputs } from '@grackle-ai/core';
-
-export { buildMcpServersJson }
-
-export { buildOrchestratorContextInput }
 
 export { cleanupLifecycleStream }
 
@@ -56,8 +40,6 @@ export function createEnvironmentReconciliationPhase(deps: EnvironmentReconcilia
 
 // @public
 export function createEscalationAutoSubscriber(ctx: PluginContext): Disposable_2;
-
-export { createKnowledgeHealthPhase }
 
 // @public
 export function createLifecycleSubscriber(ctx: PluginContext): Disposable_2;
@@ -95,8 +77,6 @@ export interface CronPhaseDeps {
     setTaskScheduleId: (taskId: string, scheduleId: string) => void;
 }
 
-export { deliverPendingEscalations }
-
 // @public
 export interface DispatchPhaseDeps {
     dequeueEntry: (taskId: string) => void;
@@ -125,16 +105,8 @@ export interface EnvironmentReconciliationDeps {
     updateEnvironmentStatus: (id: string, status: EnvironmentStatus) => void;
 }
 
-export { getKnowledgeReadinessCheck }
-
-export { isNeo4jHealthy }
-
 // @public
 export function killSessionAndCleanup(session: SessionRow): void;
-
-export { KnowledgeHealthPhaseDeps }
-
-export { KnowledgeReadinessCheck }
 
 // @public
 export const lifecycleCleanupPhase: ReconciliationPhase;
@@ -146,12 +118,8 @@ export interface OrphanPhaseDeps {
     reparentTask: (taskId: string, newParentTaskId: string) => void;
 }
 
-export { personaMcpServersToJson }
-
 // @public
 export function registerGrackleRoutes(router: ConnectRouter): void;
-
-export { resetKnowledgeHealthState }
 
 export { resolveAncestorEnvironmentId }
 
@@ -170,14 +138,7 @@ export interface RootTaskBootDeps {
     }) => Promise<string | undefined>;
 }
 
-export { routeEscalation }
-
-// @public
-export function sendInputToSession(sessionId: string, environmentId: string, text: string, signalType: string): Promise<boolean>;
-
 export { toDialableHost }
-
-export { toPersonaResolveInput }
 
 // @public
 export function transferAllPipeSubscriptions(deadParentTaskId: string, grandparentTaskId: string): void;
