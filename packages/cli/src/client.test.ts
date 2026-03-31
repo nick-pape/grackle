@@ -33,7 +33,7 @@ vi.mock("node:os", () => ({
   homedir: () => "/home/user",
 }));
 
-describe("createGrackleClientss", () => {
+describe("createGrackleClients", () => {
   afterEach(() => {
     // Clean up env overrides between tests
     delete process.env.GRACKLE_URL;
