@@ -80,7 +80,8 @@ export async function listTasks(req: grackle.ListTasksRequest): Promise<grackle.
 
 /** Fuzzy search tasks by title and description, returning results ranked by relevance. */
 export async function searchTasks(req: grackle.SearchTasksRequest): Promise<grackle.SearchTasksResponse> {
-  if (!req.query.trim()) {
+  const query = req.query.trim();
+  if (!query) {
     throw new ConnectError("query is required", Code.InvalidArgument);
   }
 
@@ -88,10 +89,10 @@ export async function searchTasks(req: grackle.SearchTasksRequest): Promise<grac
 
   // Fetch rows filtered by workspace/status at the DB level; fuzzy match happens in-memory
   const rows = taskStore.listTasks(req.workspaceId || undefined, {
-    status: req.status || undefined,
+    status: req.status ? req.status.toLowerCase() : undefined,
   });
 
-  const fuzzyResults = fuzzySearch(rows, req.query, TASK_SEARCH_KEYS, { limit });
+  const fuzzyResults = fuzzySearch(rows, query, TASK_SEARCH_KEYS, { limit });
 
   // Build childIdsMap from ALL fetched rows so that parent tasks include their full child list
   // even when the children themselves are not among the fuzzy search results

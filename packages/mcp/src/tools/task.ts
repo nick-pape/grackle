@@ -74,8 +74,8 @@ export const taskTools: ToolDefinition[] = [
     inputSchema: z.object({
       query: z.string().describe("Fuzzy search query string"),
       workspaceId: z.string().optional().describe("Scope to a specific workspace (optional — omit to search all workspaces)"),
-      limit: z.number().optional().describe("Maximum number of results to return (default 10)"),
-      status: z.string().optional().describe("Filter by task status: not_started, working, paused, complete, failed"),
+      limit: z.number().int().positive().optional().describe("Maximum number of results to return (default 10)"),
+      status: z.enum(["not_started", "working", "paused", "complete", "failed"]).optional().describe("Filter by task status"),
     }),
     rpcMethod: "searchTasks",
     mutating: false,

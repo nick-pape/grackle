@@ -72,12 +72,34 @@ export function registerTaskCommands(program: Command): void {
     .option("--limit <n>", "Maximum results to return (default 10)", parseInt)
     .option("--status <status>", "Filter by status (not_started, working, paused, complete, failed)")
     .action(async (query: string, opts: { workspace?: string; limit?: number; status?: string }) => {
+      const VALID_STATUSES = new Set([
+        "not_started",
+        "working",
+        "paused",
+        "complete",
+        "failed",
+      ]);
+
+      if (opts.status !== undefined && !VALID_STATUSES.has(String(opts.status).toLowerCase())) {
+        console.error(
+          `Invalid status: "${opts.status}". Valid values are: ${[...VALID_STATUSES].join(", ")}`,
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      if (opts.limit !== undefined && (isNaN(opts.limit) || opts.limit < 1)) {
+        console.error("Invalid limit: must be a positive integer.");
+        process.exitCode = 1;
+        return;
+      }
+
       const { orchestration: client } = createGrackleClients();
       const res = await client.searchTasks({
         query,
         workspaceId: opts.workspace || "",
         limit: opts.limit ?? 0,
-        status: opts.status || "",
+        status: opts.status ? String(opts.status).toLowerCase() : "",
       });
       if (res.results.length === 0) {
         console.log("No matching tasks.");
