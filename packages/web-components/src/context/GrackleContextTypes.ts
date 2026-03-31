@@ -13,12 +13,13 @@ import type {
   UseCredentialsResult, UseCodespacesResult, UsePersonasResult,
   UsePluginsResult,
   UseSchedulesResult,
+  ConnectionStatus,
 } from "../hooks/types.js";
 
 /** Return type for the useGrackleSocket hook (and the GrackleContext value). */
 export interface UseGrackleSocketResult {
-  /** Whether the event stream is connected. */
-  connected: boolean;
+  /** Current connection state of the event stream. */
+  connectionStatus: ConnectionStatus;
   /** Environment state and actions. */
   environments: Omit<UseEnvironmentsResult, "handleEvent" | "handleLegacyMessage">;
   /** Session state and actions. */

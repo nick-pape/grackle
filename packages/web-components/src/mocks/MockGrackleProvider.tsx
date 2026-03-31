@@ -902,7 +902,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   const value: UseGrackleSocketResult = useMemo(
     () => ({
-      connected: true,
+      connectionStatus: "connected",
 
       // ── Domain groups ────────────────────────────────
 

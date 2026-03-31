@@ -128,6 +128,7 @@ export type {
   UseCredentialsResult, UseCodespacesResult, UsePersonasResult,
   UsePluginsResult, PluginData,
   DomainHook,
+  ConnectionStatus,
 } from "./hooks/types.js";
 export {
   isObject, warnBadPayload, isGrackleEvent, isSessionEvent,

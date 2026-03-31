@@ -329,3 +329,8 @@
 .aboutDotDisconnected {
   background: var(--accent-red);
 }
+
+.aboutDotConnecting {
+  background: var(--accent-yellow);
+  animation: pulse 1.5s ease-in-out infinite;
+}

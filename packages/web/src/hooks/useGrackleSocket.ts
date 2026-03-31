@@ -123,7 +123,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
 
   // --- Transport (ConnectRPC server-streaming) ---
 
-  const { connected } = useEventStream({
+  const { connectionStatus } = useEventStream({
     onSessionEvent: (evt) => {
       sessionsHook.handleSessionEvent({
         sessionId: evt.sessionId,
@@ -255,7 +255,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   }, [environmentsHook.loadEnvironments, sessionsHook.loadSessions, workspacesHook.loadWorkspaces, tokensHook.loadTokens]);
 
   return {
-    connected,
+    connectionStatus,
     environments: {
       environments: environmentsHook.environments,
       environmentsLoading: environmentsHook.environmentsLoading,

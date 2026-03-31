@@ -10,6 +10,7 @@
 import { useState, useEffect, useRef } from "react";
 import { ConnectError, Code } from "@connectrpc/connect";
 import { coreClient as grackleClient } from "./useGrackleClient.js";
+import type { ConnectionStatus } from "@grackle-ai/web-components";
 import { PAIR_PATH } from "@grackle-ai/web-components";
 
 /** Reconnect delay in milliseconds. */
@@ -29,8 +30,8 @@ export interface UseEventStreamOptions {
 
 /** Return value of the event stream hook. */
 export interface UseEventStreamResult {
-  /** Whether the event stream is currently connected. */
-  connected: boolean;
+  /** Current connection state of the event stream. */
+  connectionStatus: ConnectionStatus;
 }
 
 /**
@@ -38,7 +39,7 @@ export interface UseEventStreamResult {
  * Replaces `useWebSocket` — no more WebSocket transport.
  */
 export function useEventStream(options: UseEventStreamOptions): UseEventStreamResult {
-  const [connected, setConnected] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("connecting");
 
   // Store callbacks in refs so the effect doesn't re-run when they change.
   const onSessionEventRef = useRef(options.onSessionEvent);
@@ -65,7 +66,7 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
         // Mark connected immediately — ConnectRPC streams don't have a
         // separate "open" event. The stream object exists once the HTTP
         // request is initiated. Data loading in onConnect runs optimistically.
-        setConnected(true);
+        setConnectionStatus("connected");
         Promise.resolve(onConnectRef.current?.()).catch(() => {});
 
         for await (const serverEvent of stream) {
@@ -103,10 +104,12 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
         }
       }
 
-      // Stream ended or errored — reconnect
+      // Stream ended or errored — schedule reconnect.
+      // Show "connecting" during the retry delay rather than "disconnected",
+      // so the UI does not oscillate between states on transient drops.
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- set by cleanup function
       if (!cancelled) {
-        setConnected(false);
+        setConnectionStatus("connecting");
         onDisconnectRef.current?.();
         reconnectTimer = setTimeout(() => {
           connectStream().catch(() => {});
@@ -119,9 +122,9 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
     return () => {
       cancelled = true;
       clearTimeout(reconnectTimer);
-      setConnected(false);
+      setConnectionStatus("disconnected");
     };
   }, []);
 
-  return { connected };
+  return { connectionStatus };
 }

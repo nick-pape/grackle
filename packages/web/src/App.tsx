@@ -61,7 +61,7 @@ const IS_MOCK_MODE: boolean =
 
 /** Inner layout body that conditionally renders the sidebar based on context content. */
 function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
-  const { connected, environments: { environments }, sessions: { sessions }, tasks: { tasks } } = useGrackle();
+  const { connectionStatus, environments: { environments }, sessions: { sessions }, tasks: { tasks } } = useGrackle();
   const { toasts, dismissToast } = useToast();
   const location = useLocation();
   const sidebarContent = useSidebarContent();
@@ -90,7 +90,7 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
 
   return (
     <>
-      <StatusBar connected={connected} environments={environments} sessions={sessions} onToggleSidebar={hasSidebar ? toggleSidebar : undefined} sidebarOpen={sidebarOpen} />
+      <StatusBar connectionStatus={connectionStatus} environments={environments} sessions={sessions} onToggleSidebar={hasSidebar ? toggleSidebar : undefined} sidebarOpen={sidebarOpen} />
       <AppNav tabs={tabs} />
       <div className={styles.body}>
         {hasSidebar && (
@@ -127,7 +127,7 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
 
 /** Application shell layout with StatusBar, Sidebar, Outlet, and BottomStatusBar. */
 function AppShell(): JSX.Element {
-  const { sessions: { lastSpawnedId }, environments: { environments, operationError: environmentOperationError, clearOperationError: clearEnvironmentOperationError }, tasks: { tasks }, connected, onboardingCompleted } = useGrackle();
+  const { sessions: { lastSpawnedId }, environments: { environments, operationError: environmentOperationError, clearOperationError: clearEnvironmentOperationError }, tasks: { tasks }, connectionStatus, onboardingCompleted } = useGrackle();
   const { pluginNames } = useManifest();
   const { showToast } = useToast();
   useEnvironmentToasts(environments, showToast);
@@ -147,7 +147,7 @@ function AppShell(): JSX.Element {
   }, [lastSpawnedId, navigate, location.pathname]);
 
   // Redirect to setup wizard if onboarding hasn't been completed
-  if (connected && onboardingCompleted === false) {
+  if (connectionStatus === "connected" && onboardingCompleted === false) {
     return <Navigate to="/setup" replace />;
   }
 
