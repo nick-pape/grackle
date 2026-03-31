@@ -3,8 +3,8 @@ import { test, expect } from "./fixtures.js";
 test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
   // Delete all schedules before each test so state from prior tests doesn't bleed in.
   test.beforeEach(async ({ grackle: { client } }) => {
-    const list = await client.listSchedules({});
-    await Promise.all(list.schedules.map((s) => client.deleteSchedule({ id: s.id })));
+    const list = await client.scheduling.listSchedules({});
+    await Promise.all(list.schedules.map((s) => client.scheduling.deleteSchedule({ id: s.id })));
   });
 
   test("schedule management view shows created schedule", async ({
@@ -14,13 +14,13 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     const page = appPage;
 
     // A schedule requires a persona — create one first
-    const persona = await client.createPersona({
+    const persona = await client.orchestration.createPersona({
       name: "Schedule Watcher",
       systemPrompt: "You watch things.",
       runtime: "stub",
     });
 
-    await client.createSchedule({
+    await client.scheduling.createSchedule({
       title: "Nightly Review",
       description: "Reviews things at night",
       scheduleExpression: "0 21 * * *",
@@ -50,13 +50,13 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
   }) => {
     const page = appPage;
 
-    const persona = await client.createPersona({
+    const persona = await client.orchestration.createPersona({
       name: "Temp Persona",
       systemPrompt: "Temporary.",
       runtime: "stub",
     });
 
-    await client.createSchedule({
+    await client.scheduling.createSchedule({
       title: "Soon Deleted Schedule",
       scheduleExpression: "5m",
       personaId: persona.id,
@@ -67,10 +67,10 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     await expect(page.getByText("Soon Deleted Schedule")).toBeVisible({ timeout: 5_000 });
 
     // Delete via RPC
-    const list = await client.listSchedules({});
+    const list = await client.scheduling.listSchedules({});
     const toDelete = list.schedules.find((s) => s.title === "Soon Deleted Schedule");
     expect(toDelete).toBeDefined();
-    await client.deleteSchedule({ id: toDelete!.id });
+    await client.scheduling.deleteSchedule({ id: toDelete!.id });
 
     await expect(page.getByText("Soon Deleted Schedule")).not.toBeVisible({ timeout: 5_000 });
   });
@@ -82,7 +82,7 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     const page = appPage;
 
     // Need a persona to select in the create form
-    await client.createPersona({
+    await client.orchestration.createPersona({
       name: "UI Test Persona",
       systemPrompt: "For UI testing.",
       runtime: "stub",
@@ -110,7 +110,7 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     // Verify schedule was created in the backend
     let createdSchedule: { id: string; title: string } | undefined;
     await expect.poll(async () => {
-      const listResp = await client.listSchedules({});
+      const listResp = await client.scheduling.listSchedules({});
       createdSchedule = listResp.schedules.find((s) => s.title === "UI Created Schedule");
       return createdSchedule;
     }, { timeout: 5_000 }).toBeDefined();
@@ -128,7 +128,7 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
 
     let updatedSchedule: { id: string; title: string } | undefined;
     await expect.poll(async () => {
-      const listResp = await client.listSchedules({});
+      const listResp = await client.scheduling.listSchedules({});
       updatedSchedule = listResp.schedules.find((s) => s.title === "UI Updated Schedule");
       return updatedSchedule;
     }, { timeout: 5_000 }).toBeDefined();
