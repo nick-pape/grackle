@@ -210,6 +210,7 @@ message FdInfo {
 message CreateStreamRequest {
   string session_id = 1;          // Creator's session ID
   string name = 2;                // Human-readable label (must be unique)
+  bool self_echo = 3;             // When true, publishers receive their own messages echoed back (chatroom mode)
 }
 
 message CreateStreamResponse {
@@ -246,6 +247,7 @@ message StreamInfo {
   int32 subscriber_count = 3;
   int32 message_buffer_depth = 4;
   repeated StreamSubscriberInfo subscribers = 5;
+  bool self_echo = 6;             // Whether publishers receive their own messages echoed back
 }
 
 message ListStreamsResponse {

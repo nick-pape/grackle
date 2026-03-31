@@ -266,6 +266,7 @@ export const ipcTools: ToolDefinition[] = [
           streams: filteredStreams.map((s) => ({
             id: s.id,
             name: s.name,
+            selfEcho: s.selfEcho,
             subscriberCount: s.subscriberCount,
             messageBufferDepth: s.messageBufferDepth,
             subscribers: s.subscribers.map((sub) => ({
@@ -289,6 +290,7 @@ export const ipcTools: ToolDefinition[] = [
     description: "Create a new named stream for inter-session communication. You get an rw file descriptor on the stream. Use ipc_attach to grant other sessions access, and ipc_write/ipc_close to send messages and close the fd.",
     inputSchema: z.object({
       name: z.string().describe("Human-readable name for the stream (must be unique)"),
+      selfEcho: z.boolean().optional().default(false).describe("Whether participants receive their own messages echoed back (for chatroom scenarios)"),
     }),
     rpcMethod: "createStream",
     mutating: true,
@@ -305,6 +307,7 @@ export const ipcTools: ToolDefinition[] = [
         const result = await client.createStream({
           sessionId,
           name: args.name as string,
+          selfEcho: args.selfEcho as boolean,
         });
         return jsonResult({ streamId: result.streamId, fd: result.fd });
       } catch (error) {

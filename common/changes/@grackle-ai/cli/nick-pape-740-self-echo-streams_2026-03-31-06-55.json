@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add selfEcho option to CreateStream for chatroom mode: publishers can receive their own messages echoed back",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
