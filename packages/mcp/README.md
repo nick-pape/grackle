@@ -96,7 +96,7 @@ Point your client at `http://127.0.0.1:7435/mcp` using the Streamable HTTP trans
 
 ## Tool Reference
 
-The MCP server exposes 50 tools organized into 13 groups. Each tool validates its inputs against a strict schema and returns structured JSON results.
+The MCP server exposes 51 tools organized into 13 groups. Each tool validates its inputs against a strict schema and returns structured JSON results.
 
 ### Environment Tools
 
@@ -199,6 +199,7 @@ Inter-process communication between parent and child agent sessions.
 | `ipc_list_streams` | List all active IPC streams with subscriber details and buffer depth. | *(none)* |
 | `ipc_create_stream` | Create a named stream for inter-session communication. Returns an rw fd. | `name` (string), `selfEcho?` (boolean, default `false`) |
 | `ipc_attach` | Grant another session access to a stream you hold an fd on. | `fd` (int), `targetSessionId` (string), `permission?` (`r` \| `w` \| `rw`), `deliveryMode?` (`sync` \| `async` \| `detach`) |
+| `ipc_share_stream` | Share a stream with your parent session. Auto-discovers the parent via the inherited pipe fd, grants access, and sends a `[stream-ref]` notification through the pipe. | `fd` (int), `permission?` (`r` \| `w` \| `rw`), `deliveryMode?` (`sync` \| `async` \| `detach`) |
 
 ### Log Tools
 
@@ -261,7 +262,7 @@ Each persona can define an `allowed_mcp_tools` list that restricts which MCP too
    - `task_create`, `task_list`, `task_show`, `task_start`, `task_complete`
    - `session_attach`, `session_send_input`
    - `persona_list`, `persona_show`
-   - `ipc_spawn`, `ipc_write`, `ipc_close`, `ipc_terminate`, `ipc_list_fds`, `ipc_create_stream`, `ipc_attach`
+   - `ipc_spawn`, `ipc_write`, `ipc_close`, `ipc_terminate`, `ipc_list_fds`, `ipc_create_stream`, `ipc_attach`, `ipc_share_stream`
    - `knowledge_search`, `knowledge_get_node`
    - `logs_get`
    - `workpad_write`, `workpad_read`
@@ -276,7 +277,7 @@ Predefined presets are available for convenience (via CLI `--mcp-tools-preset` o
 | `default` | The 25-tool default scoped set (backward compatible) |
 | `worker` | Subset of default — no task creation capabilities |
 | `orchestrator` | Default + task management, session spawning, persona creation, scheduling |
-| `admin` | Full access to all 60 tools |
+| `admin` | Full access to all 65 tools |
 
 Scoped tokens also enforce workspace isolation — agents can only see tasks and findings within their own workspace. Subtasks created by a scoped agent are automatically parented to the agent's own task. Tool calls to non-permitted tools return an error with a descriptive message listing the available tools.
 

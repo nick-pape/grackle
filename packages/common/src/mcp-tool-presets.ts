@@ -19,7 +19,7 @@ export const ALL_MCP_TOOL_NAMES: ReadonlySet<string> = new Set([
   // finding
   "finding_list", "finding_post",
   // ipc
-  "ipc_spawn", "ipc_write", "ipc_close", "ipc_list_fds", "ipc_list_streams", "ipc_terminate", "ipc_create_stream", "ipc_attach",
+  "ipc_spawn", "ipc_write", "ipc_close", "ipc_list_fds", "ipc_list_streams", "ipc_terminate", "ipc_create_stream", "ipc_attach", "ipc_share_stream",
   // knowledge
   "knowledge_search", "knowledge_get_node", "knowledge_create_node",
   // logs
@@ -59,7 +59,7 @@ export const DEFAULT_SCOPED_MCP_TOOLS: readonly string[] = [
   "session_attach", "session_send_input",
   "persona_list", "persona_show",
   "ipc_spawn", "ipc_write", "ipc_close", "ipc_terminate", "ipc_list_fds",
-  "ipc_create_stream", "ipc_attach",
+  "ipc_create_stream", "ipc_attach", "ipc_share_stream",
   "knowledge_search", "knowledge_get_node",
   "logs_get",
   "workpad_write", "workpad_read",
@@ -76,7 +76,7 @@ export const WORKER_MCP_TOOLS: readonly string[] = [
   "session_attach", "session_send_input",
   "persona_list", "persona_show",
   "ipc_spawn", "ipc_write", "ipc_close", "ipc_terminate", "ipc_list_fds",
-  "ipc_create_stream", "ipc_attach",
+  "ipc_create_stream", "ipc_attach", "ipc_share_stream",
   "knowledge_search", "knowledge_get_node",
   "logs_get",
   "workpad_write", "workpad_read",
@@ -93,7 +93,7 @@ export const ORCHESTRATOR_MCP_TOOLS: readonly string[] = [
   "session_attach", "session_send_input",
   "persona_list", "persona_show",
   "ipc_spawn", "ipc_write", "ipc_close", "ipc_terminate", "ipc_list_fds",
-  "ipc_create_stream", "ipc_attach",
+  "ipc_create_stream", "ipc_attach", "ipc_share_stream",
   "knowledge_search", "knowledge_get_node",
   "logs_get",
   "workpad_write", "workpad_read",

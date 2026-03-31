@@ -9,8 +9,8 @@ import {
 } from "./mcp-tool-presets.js";
 
 describe("ALL_MCP_TOOL_NAMES", () => {
-  it("contains exactly 64 tool names", () => {
-    expect(ALL_MCP_TOOL_NAMES.size).toBe(64);
+  it("contains exactly 65 tool names", () => {
+    expect(ALL_MCP_TOOL_NAMES.size).toBe(65);
   });
 
   it("includes tools from every group", () => {
@@ -42,7 +42,7 @@ describe("DEFAULT_SCOPED_MCP_TOOLS", () => {
   it("contains the current default scoped tools", () => {
     expect([...DEFAULT_SCOPED_MCP_TOOLS].sort()).toEqual([
       "finding_list", "finding_post",
-      "ipc_attach", "ipc_close", "ipc_create_stream", "ipc_list_fds", "ipc_spawn", "ipc_terminate", "ipc_write",
+      "ipc_attach", "ipc_close", "ipc_create_stream", "ipc_list_fds", "ipc_share_stream", "ipc_spawn", "ipc_terminate", "ipc_write",
       "knowledge_get_node", "knowledge_search",
       "logs_get",
       "persona_list", "persona_show",
@@ -107,8 +107,8 @@ describe("ORCHESTRATOR_MCP_TOOLS", () => {
 });
 
 describe("ADMIN_MCP_TOOLS", () => {
-  it("contains all 64 tool names", () => {
-    expect(ADMIN_MCP_TOOLS).toHaveLength(64);
+  it("contains all 65 tool names", () => {
+    expect(ADMIN_MCP_TOOLS).toHaveLength(65);
   });
 
   it("matches ALL_MCP_TOOL_NAMES exactly", () => {

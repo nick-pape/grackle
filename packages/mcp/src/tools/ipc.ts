@@ -350,4 +350,96 @@ export const ipcTools: ToolDefinition[] = [
       }
     },
   },
+  {
+    name: "ipc_share_stream",
+    group: "ipc",
+    description:
+      "Share a stream you hold with your parent session. Auto-discovers the parent via the inherited pipe fd and grants access via ipc_attach, then sends a [stream-ref] notification through the pipe so the parent knows the new fd. For sibling-to-sibling sharing: share with parent, parent uses ipc_attach to forward to the sibling.",
+    inputSchema: z.object({
+      fd: z.number().int().describe("Your file descriptor on the stream to share"),
+      permission: z
+        .enum(["r", "w", "rw"])
+        .optional()
+        .describe("Permission to grant the parent (default: your own permission on the fd)"),
+      deliveryMode: z
+        .enum(["sync", "async", "detach"])
+        .optional()
+        .default("async")
+        .describe("How the parent receives messages from the stream"),
+    }),
+    rpcMethod: "attachStream",
+    mutating: true,
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients, authContext?: AuthContext) {
+      try {
+        const sessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
+        if (!sessionId) {
+          return {
+            content: [{ type: "text" as const, text: "Error: ipc_share_stream requires scoped auth (agent context)" }],
+            isError: true,
+          };
+        }
+
+        const fdsResult = await client.getSessionFds({ id: sessionId });
+
+        // Find the inherited pipe fd — the link back to the parent
+        const pipeFdInfo = fdsResult.fds.find((f) => f.streamName.startsWith("pipe:") && !f.owned);
+        if (!pipeFdInfo) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "Error: no parent pipe — session was spawned without a pipe. Use ipc_attach directly.",
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        const parentSessionId = pipeFdInfo.targetSessionId;
+        if (!parentSessionId) {
+          return {
+            content: [{ type: "text" as const, text: "Error: parent has disconnected from the pipe" }],
+            isError: true,
+          };
+        }
+
+        // Verify the stream fd exists
+        const fd = args.fd as number;
+        const streamFdInfo = fdsResult.fds.find((f) => f.fd === fd);
+        if (!streamFdInfo) {
+          return {
+            content: [{ type: "text" as const, text: `Error: fd ${String(fd)} not found` }],
+            isError: true,
+          };
+        }
+
+        // Default to the caller's own permission if not specified
+        const permission = (args.permission as string | undefined) ?? streamFdInfo.permission;
+        const deliveryMode = (args.deliveryMode as string | undefined) ?? "async";
+
+        // Grant parent access — attachStream validates permission attenuation server-side
+        const attachResult = await client.attachStream({
+          sessionId,
+          fd,
+          targetSessionId: parentSessionId,
+          permission,
+          deliveryMode,
+        });
+
+        const parentFd = attachResult.fd;
+        const streamName = streamFdInfo.streamName;
+
+        // Notify the parent through the pipe
+        await client.writeToFd({
+          sessionId,
+          fd: pipeFdInfo.fd,
+          message: `[stream-ref] Shared stream "${streamName}" — your fd: ${String(parentFd)}, permission: ${permission}`,
+        });
+
+        return jsonResult({ parentFd, streamName, parentSessionId });
+      } catch (error) {
+        return grpcErrorToToolResult(error);
+      }
+    },
+  },
 ];
