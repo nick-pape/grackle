@@ -528,21 +528,17 @@ export function registerAsyncListener(sessionId: string, callback: AsyncMessageL
  * should call this after `publish()`. Messages delivered by a synchronous listener are already
  * marked delivered and have no pending entries, so this is a no-op for them.
  *
- * After all Promises settle, pruning is run on the stream so that fully-delivered messages
- * are removed from the buffer.
+ * Cleanup (deleting the pending entry and pruning) is handled exclusively by the
+ * auto-finalize scheduled inside `publish()`, so this function is a pure barrier.
  */
 export async function awaitPendingDeliveries(msg: StreamMessage): Promise<void> {
   const entry = pendingDeliveries.get(msg.id);
   if (!entry || entry.promises.length === 0) {
-    pendingDeliveries.delete(msg.id);
     return;
   }
   await Promise.all(entry.promises);
-  pendingDeliveries.delete(msg.id);
-  const stream = streams.get(entry.streamId);
-  if (stream) {
-    pruneDeliveredMessages(stream);
-  }
+  // No cleanup here — publish()'s Promise.allSettled auto-finalize owns that exclusively,
+  // eliminating any race between this barrier and the background finalization.
 }
 
 // ─── Lifecycle Callbacks ──────────────────────────────────────────────────────
