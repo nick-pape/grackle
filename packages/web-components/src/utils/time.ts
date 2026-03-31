@@ -56,6 +56,9 @@ export function formatRelativeTime(isoString: string): string {
  */
 export function formatCountdown(isoString: string): string {
   const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) {
+    return "\u2014";
+  }
   const now = new Date();
   const diffMs = date.getTime() - now.getTime();
 

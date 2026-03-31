@@ -1,9 +1,8 @@
 import { useState, useEffect, type JSX, type FormEvent } from "react";
 import { useParams, Navigate } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
-import { Breadcrumbs, Button, ConfirmDialog, EditableSelect, EditableTextField, SCHEDULES_URL, SETTINGS_URL, scheduleUrl, useAppNavigate, useToast } from "@grackle-ai/web-components";
+import { Breadcrumbs, Button, ConfirmDialog, EditableSelect, EditableTextField, SCHEDULES_URL, SETTINGS_URL, scheduleUrl, useAppNavigate, useToast, formatRelativeTime, formatCountdown } from "@grackle-ai/web-components";
 import type { BreadcrumbSegment, ScheduleData, ScheduleUpdate, SelectOption } from "@grackle-ai/web-components";
-import { formatRelativeTime, formatCountdown } from "@grackle-ai/web-components";
 import styles from "./ScheduleDetail.module.scss";
 
 /** ScheduleDetailPage handles both create (/settings/schedules/new) and edit (/settings/schedules/:scheduleId). */

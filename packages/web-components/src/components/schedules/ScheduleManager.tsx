@@ -1,4 +1,4 @@
-import { useState, type JSX } from "react";
+import { useState, useMemo, type JSX } from "react";
 import type { PersonaData, ScheduleData, ScheduleUpdate } from "../../hooks/types.js";
 import { Button } from "../display/Button.js";
 import { ConfirmDialog } from "../display/index.js";
@@ -35,9 +35,15 @@ export function ScheduleManager({
     setConfirmDelete(null);
   };
 
-  const resolvePersonaName = (personaId: string): string => {
-    return personas.find((p) => p.id === personaId)?.name ?? personaId;
-  };
+  const personaNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of personas) {
+      map.set(p.id, p.name);
+    }
+    return map;
+  }, [personas]);
+
+  const resolvePersonaName = (personaId: string): string => personaNameMap.get(personaId) ?? personaId;
 
   return (
     <div className={styles.container}>
