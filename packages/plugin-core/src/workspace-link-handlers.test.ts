@@ -26,7 +26,7 @@ function getHandlers(): Record<string, (...args: any[]) => any> {
   const fakeRouter = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     service(_def: unknown, impl: Record<string, (...args: any[]) => any>) {
-      handlers = impl;
+      handlers = { ...handlers, ...impl };
     },
   } as unknown as ConnectRouter;
   registerGrackleRoutes(fakeRouter);
