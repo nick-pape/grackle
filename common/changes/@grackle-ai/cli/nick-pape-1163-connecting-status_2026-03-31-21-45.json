@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Show Connecting... status in StatusBar and AboutPanel during WebSocket reconnection attempts",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
