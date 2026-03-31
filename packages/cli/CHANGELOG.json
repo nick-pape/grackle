@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.106.1",
+      "tag": "@grackle-ai/cli_v0.106.1",
+      "date": "Tue, 31 Mar 2026 21:45:28 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix scheduled tasks bypassing workspace environment pool by removing environment_id from schedules; cron-fired tasks now resolve via workspace linked envs with load balancing"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.106.0",
       "tag": "@grackle-ai/cli_v0.106.0",
       "date": "Tue, 31 Mar 2026 19:07:08 GMT",

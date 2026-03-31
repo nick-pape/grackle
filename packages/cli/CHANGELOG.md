@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 31 Mar 2026 19:07:08 GMT and should not be manually modified.
+This log was last generated on Tue, 31 Mar 2026 21:45:28 GMT and should not be manually modified.
+
+## 0.106.1
+Tue, 31 Mar 2026 21:45:28 GMT
+
+### Patches
+
+- Fix scheduled tasks bypassing workspace environment pool by removing environment_id from schedules; cron-fired tasks now resolve via workspace linked envs with load balancing
 
 ## 0.106.0
 Tue, 31 Mar 2026 19:07:08 GMT
