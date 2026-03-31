@@ -38,7 +38,7 @@ export interface LocalEnvironmentDeps {
     getPersona: (id: string) => { runtime: string } | undefined;
   };
   /** Workspace store (database module namespace). */
-  workspaceStore: Pick<typeof workspaceStoreModule, "getWorkspace" | "createWorkspace">;
+  workspaceStore: Pick<typeof workspaceStoreModule, "getWorkspace" | "createWorkspaceAndLink">;
   /** Workspace-environment link store (database module namespace). */
   workspaceEnvironmentLinkStore: Pick<typeof workspaceEnvironmentLinkStoreModule, "linkEnvironment" | "isLinked">;
   /** Task store (database module namespace). */
@@ -135,8 +135,7 @@ export async function bootstrapLocalEnvironment(
     // Seed: ensure the default workspace exists (tied to the local environment).
     const defaultWorkspace = workspaceStore.getWorkspace(DEFAULT_WORKSPACE_ID);
     if (!defaultWorkspace) {
-      workspaceStore.createWorkspace(DEFAULT_WORKSPACE_ID, "Default", "", "", false);
-      workspaceEnvironmentLinkStore.linkEnvironment(DEFAULT_WORKSPACE_ID, "local");
+      workspaceStore.createWorkspaceAndLink(DEFAULT_WORKSPACE_ID, "Default", "", "", false, "", "", 0, 0, "local");
       logger.info("Created default workspace for local environment");
     } else if (!workspaceEnvironmentLinkStore.isLinked(DEFAULT_WORKSPACE_ID, "local")) {
       logger.warn(

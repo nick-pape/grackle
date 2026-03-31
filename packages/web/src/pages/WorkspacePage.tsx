@@ -234,6 +234,7 @@ export function WorkspacePage(): JSX.Element {
                             title={`Unlink ${env?.displayName || envId}`}
                             aria-label={`Unlink ${env?.displayName || envId}`}
                             data-testid={`unlink-env-${envId}`}
+                            disabled={filtered.length <= 1}
                           >
                             x
                           </button>

@@ -42,7 +42,7 @@ function createMockDeps(overrides?: Partial<LocalEnvironmentDeps>): LocalEnviron
     },
     workspaceStore: {
       getWorkspace: vi.fn(() => ({ id: DEFAULT_WORKSPACE_ID })),
-      createWorkspace: vi.fn(),
+      createWorkspaceAndLink: vi.fn(),
     },
     workspaceEnvironmentLinkStore: {
       linkEnvironment: vi.fn(),
@@ -186,11 +186,8 @@ describe("bootstrapLocalEnvironment", () => {
         { powerlinePort: 7433, bindHost: "127.0.0.1", skipLocalPowerline: false },
         deps,
       );
-      expect(deps.workspaceStore.createWorkspace).toHaveBeenCalledWith(
-        DEFAULT_WORKSPACE_ID, "Default", "", "", false,
-      );
-      expect(deps.workspaceEnvironmentLinkStore.linkEnvironment).toHaveBeenCalledWith(
-        DEFAULT_WORKSPACE_ID, "local",
+      expect(deps.workspaceStore.createWorkspaceAndLink).toHaveBeenCalledWith(
+        DEFAULT_WORKSPACE_ID, "Default", "", "", false, "", "", 0, 0, "local",
       );
     });
 
@@ -201,7 +198,7 @@ describe("bootstrapLocalEnvironment", () => {
         { powerlinePort: 7433, bindHost: "127.0.0.1", skipLocalPowerline: false },
         deps,
       );
-      expect(deps.workspaceStore.createWorkspace).not.toHaveBeenCalled();
+      expect(deps.workspaceStore.createWorkspaceAndLink).not.toHaveBeenCalled();
     });
 
     it("warns if default workspace is not linked to local env", async () => {
