@@ -537,7 +537,6 @@ export interface ScheduleData {
   description: string;
   scheduleExpression: string;
   personaId: string;
-  environmentId: string;
   workspaceId: string;
   parentTaskId: string;
   enabled: boolean;
@@ -554,7 +553,6 @@ export interface ScheduleUpdate {
   description?: string;
   scheduleExpression?: string;
   personaId?: string;
-  environmentId?: string;
   enabled?: boolean;
 }
 
@@ -572,7 +570,6 @@ export interface UseSchedulesResult {
     description: string,
     scheduleExpression: string,
     personaId: string,
-    environmentId?: string,
     workspaceId?: string,
     parentTaskId?: string,
   ) => Promise<ScheduleData>;

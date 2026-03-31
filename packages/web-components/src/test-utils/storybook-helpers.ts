@@ -167,7 +167,6 @@ export function makeSchedule(overrides: Partial<ScheduleData> = {}): ScheduleDat
     description: "A test schedule",
     scheduleExpression: "5m",
     personaId: "persona-1",
-    environmentId: "",
     workspaceId: "",
     parentTaskId: "",
     enabled: true,

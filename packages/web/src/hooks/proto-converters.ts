@@ -211,7 +211,6 @@ export function protoToSchedule(p: grackle.Schedule): ScheduleData {
     description: p.description,
     scheduleExpression: p.scheduleExpression,
     personaId: p.personaId,
-    environmentId: p.environmentId,
     workspaceId: p.workspaceId,
     parentTaskId: p.parentTaskId,
     enabled: p.enabled,

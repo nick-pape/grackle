@@ -164,6 +164,21 @@ const MIGRATIONS: Migration[] = [
       }
     },
   },
+  {
+    version: 8,
+    name: "remove-schedule-environment-id",
+    up: (conn) => {
+      // Check whether the legacy column exists (won't be present on fresh installs).
+      const cols = conn
+        .prepare("PRAGMA table_info(schedules)")
+        .all() as Array<{ name: string }>;
+      if (cols.some((c) => c.name === "environment_id")) {
+        // No backfill needed — scheduled tasks now resolve their environment at dispatch
+        // time via the workspace's linked environment pool (workspace_environment_links).
+        conn.exec("ALTER TABLE schedules DROP COLUMN environment_id");
+      }
+    },
+  },
 ];
 
 /** The highest schema version defined by BASELINE + MIGRATIONS. */
@@ -493,7 +508,6 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
       description         TEXT NOT NULL DEFAULT '',
       schedule_expression TEXT NOT NULL,
       persona_id          TEXT NOT NULL,
-      environment_id      TEXT NOT NULL DEFAULT '',
       workspace_id        TEXT NOT NULL DEFAULT '',
       parent_task_id      TEXT NOT NULL DEFAULT '',
       enabled             INTEGER NOT NULL DEFAULT 1,

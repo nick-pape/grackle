@@ -11,7 +11,6 @@ function makeSchedule(overrides: Partial<ScheduleRow> = {}): ScheduleRow {
     description: "",
     scheduleExpression: "30s",
     personaId: "persona-1",
-    environmentId: "",
     workspaceId: "",
     parentTaskId: "",
     enabled: true,
@@ -86,30 +85,16 @@ describe("createCronPhase", () => {
     expect(deps.advanceSchedule).toHaveBeenCalledTimes(1);
   });
 
-  it("enqueues with schedule's environmentId when provided", async () => {
+  it("enqueues without environmentId so dispatch resolves via workspace pool", async () => {
     const deps = createMockDeps();
-    vi.mocked(deps.getDueSchedules).mockReturnValue([
-      makeSchedule({ environmentId: "explicit-env" }),
-    ]);
+    vi.mocked(deps.getDueSchedules).mockReturnValue([makeSchedule()]);
 
     const phase = createCronPhase(deps);
     await phase.execute();
 
-    expect(deps.enqueueForDispatch).toHaveBeenCalledWith(
-      expect.objectContaining({ environmentId: "explicit-env", personaId: "persona-1" }),
-    );
-  });
-
-  it("enqueues with empty environmentId when schedule has none (dispatch resolves)", async () => {
-    const deps = createMockDeps();
-    vi.mocked(deps.getDueSchedules).mockReturnValue([makeSchedule({ environmentId: "" })]);
-
-    const phase = createCronPhase(deps);
-    await phase.execute();
-
-    expect(deps.enqueueForDispatch).toHaveBeenCalledWith(
-      expect.objectContaining({ environmentId: "" }),
-    );
+    const call = vi.mocked(deps.enqueueForDispatch).mock.calls[0]![0];
+    expect(call.personaId).toBe("persona-1");
+    expect(call).not.toHaveProperty("environmentId");
   });
 
   it("emits schedule.fired event on successful fire", async () => {
