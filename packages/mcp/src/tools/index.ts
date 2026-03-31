@@ -15,6 +15,7 @@ import { workpadTools } from "./workpad.js";
 import { scheduleTools } from "./schedule.js";
 import { versionTools } from "./version.js";
 import { escalationTools } from "./escalation.js";
+import { pluginTools } from "./plugin.js";
 
 /** Built-in tool groups shipped with the MCP package. */
 const builtinToolGroups: ToolDefinition[][] = [
@@ -34,6 +35,7 @@ const builtinToolGroups: ToolDefinition[][] = [
   scheduleTools,
   versionTools,
   escalationTools,
+  pluginTools,
 ];
 
 /**

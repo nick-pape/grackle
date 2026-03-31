@@ -36,6 +36,7 @@ import { PersonaDetailPage } from "./pages/settings/PersonaDetailPage.js";
 import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js";
 import { SettingsAboutTab } from "./pages/settings/SettingsAboutTab.js";
 import { SettingsShortcutsTab } from "./pages/settings/SettingsShortcutsTab.js";
+import { SettingsPluginsTab } from "./pages/settings/SettingsPluginsTab.js";
 import { GlobalShortcuts } from "./components/layout/GlobalShortcuts.js";
 import { WithTaskSidebar, WithEnvironmentSidebar, WithFindingsSidebar, WithSettingsSidebar, WithKnowledgeSidebar } from "./components/layout/WithSidebar.js";
 import { FindingsListPage } from "./pages/FindingsListPage.js";
@@ -269,6 +270,7 @@ function AppRoutes(): JSX.Element {
             <Route path="personas/:personaId" element={<PersonaDetailPage />} />
             <Route path="appearance" element={<SettingsAppearanceTab />} />
             <Route path="shortcuts" element={<SettingsShortcutsTab />} />
+            <Route path="plugins" element={<SettingsPluginsTab />} />
             <Route path="about" element={<SettingsAboutTab />} />
           </Route>
         </Route>

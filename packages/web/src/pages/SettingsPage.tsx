@@ -10,6 +10,7 @@ const SETTINGS_TAB_LABELS: Record<string, string> = {
   appearance: "Appearance",
   about: "About",
   shortcuts: "Shortcuts",
+  plugins: "Plugins",
 };
 
 /** Settings hub with breadcrumbs and tab content area. */

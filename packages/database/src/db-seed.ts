@@ -1,6 +1,6 @@
 /**
  * Application-level database seeding — creates default personas, root task,
- * and backfills settings for fresh installs and upgrades.
+ * optional plugin rows, and backfills settings for fresh installs and upgrades.
  *
  * Separated from {@link initDatabase} (which owns schema migrations) so that
  * the persistence layer stays free of business/domain knowledge.
@@ -179,6 +179,24 @@ IMPORTANT: The PR is the deliverable, but a PR with failing CI or unresolved rev
         .run(fallback.id);
     }
   }
+
+  // Seed: ensure optional plugin rows exist with correct initial enabled state.
+  // Uses INSERT OR IGNORE so existing DB rows are never overwritten (DB is authoritative after first run).
+  // On first run, env vars can override the default (all plugins default to enabled=true).
+  const orchestrationEnabled = process.env["GRACKLE_SKIP_ORCHESTRATION"] === "1" ? 0 : 1;
+  const schedulingEnabled = process.env["GRACKLE_SKIP_SCHEDULING"] === "1" ? 0 : 1;
+  // GRACKLE_KNOWLEDGE_ENABLED defaults true; only false when explicitly set to "false"
+  const knowledgeEnabled = process.env["GRACKLE_KNOWLEDGE_ENABLED"] === "false" ? 0 : 1;
+
+  conn
+    .prepare("INSERT OR IGNORE INTO plugins (name, enabled) VALUES (?, ?)")
+    .run("orchestration", orchestrationEnabled);
+  conn
+    .prepare("INSERT OR IGNORE INTO plugins (name, enabled) VALUES (?, ?)")
+    .run("scheduling", schedulingEnabled);
+  conn
+    .prepare("INSERT OR IGNORE INTO plugins (name, enabled) VALUES (?, ?)")
+    .run("knowledge", knowledgeEnabled);
 
   // Backfill: ensure onboarding_completed setting exists.
   // Fresh installs (no pre-existing environments or personas) get "false" to trigger

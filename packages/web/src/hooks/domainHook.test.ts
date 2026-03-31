@@ -21,6 +21,7 @@ import { useCodespaces } from "./useCodespaces.js";
 import { usePersonas } from "./usePersonas.js";
 import { useKnowledge } from "./useKnowledge.js";
 import { useNotifications } from "./useNotifications.js";
+import { usePlugins } from "./usePlugins.js";
 
 // ---------------------------------------------------------------------------
 // Mock grackleClient (all hooks import it)
@@ -73,6 +74,8 @@ const mockClient = vi.hoisted(() => ({
   setSetting: vi.fn(),
   getUsage: vi.fn(),
   streamEvents: vi.fn(),
+  listPlugins: vi.fn().mockResolvedValue({ plugins: [] }),
+  setPluginEnabled: vi.fn(),
 }));
 
 vi.mock("./useGrackleClient.js", () => ({
@@ -123,9 +126,11 @@ type _Per = AssertHasDomainHook<ReturnType<typeof usePersonas>>;
 type _Kn = AssertHasDomainHook<ReturnType<typeof useKnowledge>>;
 type _Not = AssertHasDomainHook<ReturnType<typeof useNotifications>>;
 
+type _Plg = AssertHasDomainHook<ReturnType<typeof usePlugins>>;
+
 // Suppress unused-variable warnings — these exist solely for the type check
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-type _All = _Env | _Ses | _Ws | _Tsk | _Fnd | _Tok | _Crd | _Cs | _Per | _Kn | _Not;
+type _All = _Env | _Ses | _Ws | _Tsk | _Fnd | _Tok | _Crd | _Cs | _Per | _Kn | _Not | _Plg;
 
 // ---------------------------------------------------------------------------
 // Runtime tests
@@ -155,10 +160,11 @@ const ALL_HOOKS = [
   { name: "usePersonas", hook: usePersonas },
   { name: "useKnowledge", hook: useKnowledge },
   { name: "useNotifications", hook: useNotifications },
+  { name: "usePlugins", hook: usePlugins },
 ] as const;
 
 /** Expected number of domain hooks. Bump this when adding a new hook. */
-const EXPECTED_HOOK_COUNT = 11;
+const EXPECTED_HOOK_COUNT = 12;
 
 describe("DomainHook registry", () => {
   it(`has exactly ${EXPECTED_HOOK_COUNT} registered hooks`, () => {

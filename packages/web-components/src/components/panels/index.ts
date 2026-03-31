@@ -9,3 +9,5 @@ export { AboutPanel } from "./AboutPanel.js";
 export { TaskEditPanel } from "./TaskEditPanel.js";
 export { TaskActionButtons } from "./TaskActionButtons.js";
 export { TaskOverviewPanel } from "./TaskOverviewPanel.js";
+export { PluginsPanel } from "./PluginsPanel.js";
+export type { PluginsPanelProps } from "./PluginsPanel.js";

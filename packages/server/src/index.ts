@@ -13,7 +13,7 @@ import {
 } from "@grackle-ai/core";
 import { createKnowledgePlugin, getKnowledgeReadinessCheck } from "@grackle-ai/plugin-knowledge";
 import { loadPlugins, type PluginContext } from "@grackle-ai/plugin-sdk";
-import { envRegistry, sessionStore, settingsStore, personaStore, workspaceStore, taskStore, sqlite, grackleHome } from "@grackle-ai/database";
+import { envRegistry, sessionStore, settingsStore, personaStore, workspaceStore, taskStore, sqlite, grackleHome, pluginStore } from "@grackle-ai/database";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { LocalPowerLineManager } from "./local-powerline-manager.js";
 import { registerCrashHandlers } from "./crash-handler.js";
@@ -34,6 +34,7 @@ import { bootstrapLocalEnvironment } from "./local-environment.js";
 import { createCorePlugin } from "./core-plugin.js";
 import { createSchedulingPlugin } from "@grackle-ai/plugin-scheduling";
 import { createOrchestrationPlugin } from "@grackle-ai/plugin-orchestration";
+import { setLoadedPluginNames } from "@grackle-ai/plugin-core";
 import { createShutdown } from "./shutdown.js";
 
 /** Require function for loading optional native modules (qrcode). */
@@ -148,17 +149,20 @@ async function main(): Promise<void> {
     },
   };
 
+  // DB is the sole authority on plugin enabled state after initial seeding.
+  // The ?? true fallback is defense-in-depth: should never trigger after seedDatabase() runs.
   const plugins = [createCorePlugin()];
-  if (!config.skipScheduling) {
-    plugins.push(createSchedulingPlugin());
-  }
-  if (!config.skipOrchestration) {
+  if (pluginStore.getPluginEnabled("orchestration") ?? true) {
     plugins.push(createOrchestrationPlugin());
   }
-  if (config.knowledgeEnabled) {
+  if (pluginStore.getPluginEnabled("scheduling") ?? true) {
+    plugins.push(createSchedulingPlugin());
+  }
+  if (pluginStore.getPluginEnabled("knowledge") ?? true) {
     plugins.push(createKnowledgePlugin());
   }
   const loaded = await loadPlugins(plugins, pluginContext);
+  setLoadedPluginNames(new Set(loaded.pluginNames));
 
   // --- Wire gRPC handlers from plugins ---
   const collector = createServiceCollector();
@@ -240,7 +244,7 @@ async function main(): Promise<void> {
       }
       // Neo4j/knowledge is optional — exposed for operator visibility but does
       // not gate overall readiness. Only the database check is required.
-      if (config.knowledgeEnabled) {
+      if (pluginStore.getPluginEnabled("knowledge") ?? true) {
         checks.knowledge = getKnowledgeReadinessCheck();
       }
       return {

@@ -1247,6 +1247,22 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         domainHook: NOOP_DOMAIN_HOOK,
       },
 
+      // ── Plugins ─────────────────────────────────────
+
+      plugins: {
+        plugins: [
+          { name: "core", description: "Core infrastructure", enabled: true, required: true, loaded: true },
+          { name: "orchestration", description: "Task orchestration", enabled: true, required: false, loaded: true },
+          { name: "scheduling", description: "Scheduled triggers", enabled: true, required: false, loaded: true },
+          { name: "knowledge", description: "Knowledge graph", enabled: false, required: false, loaded: false },
+        ],
+        pluginsLoading: false,
+        loadPlugins: async () => { console.log("[MockGrackle] loadPlugins"); },
+        setPluginEnabled: async (name: string, enabled: boolean) => {
+          console.log("[MockGrackle] setPluginEnabled", name, enabled);
+        },
+      },
+
       // ── Top-level properties ─────────────────────────
 
       appDefaultPersonaId,

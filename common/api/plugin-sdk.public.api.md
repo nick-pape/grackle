@@ -22,7 +22,7 @@ export interface GrackleEvent {
 }
 
 // @public
-export type GrackleEventType = "task.created" | "task.updated" | "task.started" | "task.completed" | "task.deleted" | "task.reparented" | "workspace.created" | "workspace.archived" | "workspace.updated" | "persona.created" | "persona.updated" | "persona.deleted" | "finding.posted" | "environment.added" | "environment.removed" | "environment.changed" | "environment.provision_progress" | "token.changed" | "credential.providers_changed" | "setting.changed" | "schedule.created" | "schedule.updated" | "schedule.deleted" | "schedule.fired" | "notification.escalated";
+export type GrackleEventType = "task.created" | "task.updated" | "task.started" | "task.completed" | "task.deleted" | "task.reparented" | "workspace.created" | "workspace.archived" | "workspace.updated" | "persona.created" | "persona.updated" | "persona.deleted" | "finding.posted" | "environment.added" | "environment.removed" | "environment.changed" | "environment.provision_progress" | "token.changed" | "credential.providers_changed" | "setting.changed" | "schedule.created" | "schedule.updated" | "schedule.deleted" | "schedule.fired" | "notification.escalated" | "plugin.changed";
 
 // @public
 export interface GracklePlugin {
