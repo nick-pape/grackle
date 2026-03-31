@@ -28,7 +28,7 @@ test.describe("Task Deletion", { tag: ["@task"] }, () => {
     await expect(taskRow).toBeVisible({ timeout: 5_000 });
 
     // Delete via RPC
-    await client.deleteTask({ id: taskId });
+    await client.orchestration.deleteTask({ id: taskId });
 
     // Verify task row disappears from the task list
     await expect(taskRow).not.toBeVisible({ timeout: 5_000 });
@@ -50,7 +50,7 @@ test.describe("Task Deletion", { tag: ["@task"] }, () => {
     // Delete the task via RPC while it's running
     const workspaceId = await getWorkspaceId(client, workspaceName);
     const taskId = await getTaskId(client, workspaceId, "active-task");
-    await client.deleteTask({ id: taskId });
+    await client.orchestration.deleteTask({ id: taskId });
 
     // Navigate to Tasks tab and verify task row disappeared
     await goToTasksTab(page);

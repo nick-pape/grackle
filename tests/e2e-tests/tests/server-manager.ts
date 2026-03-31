@@ -88,7 +88,7 @@ async function waitForPort(port: number, timeoutMs: number): Promise<void> {
 
 /** Generate a pairing code via gRPC and redeem it via HTTP to obtain a session cookie. */
 async function obtainSessionCookie(client: GrackleClient, webPort: number): Promise<string> {
-  const { code } = await client.generatePairingCode({});
+  const { code } = await client.core.generatePairingCode({});
 
   // Redeem the code via HTTP to get a session cookie
   const http = await import("node:http");
@@ -119,7 +119,7 @@ async function obtainSessionCookie(client: GrackleClient, webPort: number): Prom
 /** Seed the test environment, personas, and settings via gRPC. */
 async function seedTestData(client: GrackleClient, powerlinePort: number, tag: string): Promise<void> {
   // Add local PowerLine environment
-  await client.addEnvironment({
+  await client.core.addEnvironment({
     displayName: "test-local",
     adapterType: "local",
     adapterConfig: JSON.stringify({ port: powerlinePort }),
@@ -129,25 +129,25 @@ async function seedTestData(client: GrackleClient, powerlinePort: number, tag: s
   // Create stub personas and configure defaults.
   // Model is required because resolvePersona() validates non-empty model;
   // the stub runtime ignores it.
-  await client.createPersona({
+  await client.orchestration.createPersona({
     name: "Stub",
     systemPrompt: "E2E test persona",
     runtime: "stub",
     model: "sonnet",
   });
-  await client.setSetting({ key: "default_persona_id", value: "stub" });
-  await client.createPersona({
+  await client.core.setSetting({ key: "default_persona_id", value: "stub" });
+  await client.orchestration.createPersona({
     name: "Stub MCP",
     systemPrompt: "E2E MCP test persona",
     runtime: "stub-mcp",
     model: "sonnet",
   });
-  await client.setSetting({ key: "onboarding_completed", value: "true" });
+  await client.core.setSetting({ key: "onboarding_completed", value: "true" });
   console.log(`${tag} Stub and Stub MCP personas created; Stub set as default; onboarding completed`);
 
   // Provision the environment (server-streaming RPC — drain and check for errors)
   const provisionAbort = AbortSignal.timeout(POLL_TIMEOUT_MS);
-  for await (const event of client.provisionEnvironment({ id: "test-local" }, { signal: provisionAbort })) {
+  for await (const event of client.core.provisionEnvironment({ id: "test-local" }, { signal: provisionAbort })) {
     if (event.stage === "error") {
       throw new Error(`Provisioning failed: ${event.message}`);
     }

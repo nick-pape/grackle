@@ -10,9 +10,9 @@ import type { GrackleClient } from "./rpc-client.js";
 
 /** Archive all existing workspaces via RPC so the welcome CTA appears. */
 async function archiveAllWorkspaces(client: GrackleClient, page: import("@playwright/test").Page): Promise<void> {
-  const resp = await client.listWorkspaces({});
+  const resp = await client.core.listWorkspaces({});
   for (const workspace of resp.workspaces) {
-    await client.archiveWorkspace({ id: workspace.id });
+    await client.core.archiveWorkspace({ id: workspace.id });
   }
   // Navigate to home so the UI reflects the empty state (welcome CTA is on the home page)
   await page.goto("/");
@@ -451,7 +451,7 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     const page = appPage;
 
     // Add a second environment so we have something to link
-    const addedEnv = await client.addEnvironment({
+    const addedEnv = await client.core.addEnvironment({
       displayName: "link-test-env",
       adapterType: "local",
       adapterConfig: JSON.stringify({ port: 0 }),
@@ -491,7 +491,7 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     const page = appPage;
 
     // Add a second environment
-    const addedEnv = await client.addEnvironment({
+    const addedEnv = await client.core.addEnvironment({
       displayName: "env-detail-link-test",
       adapterType: "local",
       adapterConfig: JSON.stringify({ port: 0 }),
@@ -500,7 +500,7 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
 
     // Create a workspace and link the second environment via RPC
     const workspaceId = await createWorkspace(client, "env-detail-ws");
-    await client.linkEnvironment({ workspaceId, environmentId: envId });
+    await client.core.linkEnvironment({ workspaceId, environmentId: envId });
 
     // Navigate to the second environment's detail page
     await page.locator('[data-testid="sidebar-tab-environments"]').click();

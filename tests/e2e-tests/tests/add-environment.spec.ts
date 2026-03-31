@@ -29,10 +29,10 @@ test.describe("Add Environment — UI Form", { tag: ["@environment"] }, () => {
     await expect(page.getByText("ui-test-env", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     // Clean up via RPC
-    const listResponse = await client.listEnvironments({});
+    const listResponse = await client.core.listEnvironments({});
     const added = listResponse.environments.find((e) => e.displayName === "ui-test-env");
     if (added) {
-      await client.removeEnvironment({ id: added.id });
+      await client.core.removeEnvironment({ id: added.id });
     }
   });
 });

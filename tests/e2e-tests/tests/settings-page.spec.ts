@@ -67,14 +67,14 @@ test.describe("Settings Page", { tag: ["@settings"] }, () => {
     await expect(page.getByText("UI_TEST_TOKEN", { exact: true })).toBeVisible();
 
     // Clean up via RPC
-    await client.deleteToken({ name: "ui-test-token" });
+    await client.core.deleteToken({ name: "ui-test-token" });
   });
 
   test("delete token via settings page", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
     // First create a token via RPC
-    await client.setToken({
+    await client.core.setToken({
       name: "ui-delete-test",
       value: "to-delete",
       type: "env_var",
@@ -124,7 +124,7 @@ test.describe("Settings Page", { tag: ["@settings"] }, () => {
     await expect(valueInput).toHaveValue("");
 
     // Clean up
-    await client.deleteToken({ name: "clear-test-token" });
+    await client.core.deleteToken({ name: "clear-test-token" });
   });
 
   test("settings page description text is visible in Credentials tab", async ({ appPage }) => {

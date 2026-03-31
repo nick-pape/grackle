@@ -28,7 +28,7 @@ test.describe("Error States — UI", { tag: ["@error"] }, () => {
 
     let error: Error | undefined;
     try {
-      await client.startTask({ taskId });
+      await client.orchestration.startTask({ taskId });
     } catch (e) {
       error = e as Error;
     }

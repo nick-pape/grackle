@@ -8,7 +8,7 @@ async function setOnboardingCompleted(
   client: GrackleClient,
   value: "true" | "false",
 ): Promise<void> {
-  await client.setSetting({ key: "onboarding_completed", value });
+  await client.core.setSetting({ key: "onboarding_completed", value });
 }
 
 // Run tests serially — they share server state (onboarding_completed setting).
