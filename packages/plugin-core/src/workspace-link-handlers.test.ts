@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ConnectError, Code } from "@connectrpc/connect";
 
-vi.mock("@grackle-ai/database", async () => {
+vi.mock("@grackle-ai/database", async (importActual) => {
   const { createDatabaseMock } = await import("./test-utils/mock-database.js");
-  return createDatabaseMock();
+  const actual = await importActual<typeof import("@grackle-ai/database")>();
+  return { ...createDatabaseMock(), LastEnvironmentError: actual.LastEnvironmentError };
 });
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {
@@ -17,7 +18,7 @@ vi.mock("@grackle-ai/core", async (importOriginal) => {
 
 import type { ConnectRouter } from "@connectrpc/connect";
 import { registerGrackleRoutes } from "./grpc-service.js";
-import { workspaceStore, envRegistry, workspaceEnvironmentLinkStore } from "@grackle-ai/database";
+import { workspaceStore, envRegistry, workspaceEnvironmentLinkStore, LastEnvironmentError } from "@grackle-ai/database";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getHandlers(): Record<string, (...args: any[]) => any> {
@@ -143,7 +144,7 @@ describe("unlinkEnvironment", () => {
     vi.mocked(workspaceStore.getWorkspace).mockReturnValue(makeWorkspaceRow() as never);
     vi.mocked(workspaceEnvironmentLinkStore.isLinked).mockReturnValue(true);
     vi.mocked(workspaceEnvironmentLinkStore.unlinkEnvironmentIfNotLast).mockImplementation(() => {
-      throw new Error("Cannot unlink the last environment from workspace ws-1");
+      throw new LastEnvironmentError("ws-1");
     });
 
     const err = await handlers.unlinkEnvironment({
