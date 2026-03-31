@@ -113,7 +113,6 @@ export function useWorkspaces(): UseWorkspacesResult {
         name?: string;
         description?: string;
         repoUrl?: string;
-        environmentId?: string;
         workingDirectory?: string;
         useWorktrees?: boolean;
         defaultPersonaId?: string;

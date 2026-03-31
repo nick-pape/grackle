@@ -11,7 +11,7 @@ import {
 } from "@grackle-ai/plugin-core";
 import { TASK_STATUS, ROOT_TASK_ID } from "@grackle-ai/common";
 import {
-  taskStore, workspaceStore, envRegistry,
+  taskStore, envRegistry,
   sessionStore, settingsStore, dispatchQueueStore, workspaceEnvironmentLinkStore,
 } from "@grackle-ai/database";
 
@@ -70,7 +70,6 @@ export function createCoreReconciliationPhases(): ReconciliationPhase[] {
     resolveEnvironment: (task) => {
       const resolved = resolveDispatchEnvironment(task, {
         resolveAncestorEnvironmentId,
-        getWorkspace: workspaceStore.getWorkspace,
         getLinkedEnvironmentIds: workspaceEnvironmentLinkStore.getLinkedEnvironmentIds,
         isEnvironmentConnected: (id) => envRegistry.getEnvironment(id)?.status === "connected",
         countActiveForEnvironment: sessionStore.countActiveForEnvironment,

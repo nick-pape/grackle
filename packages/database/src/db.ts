@@ -129,6 +129,28 @@ const MIGRATIONS: Migration[] = [
       }
     },
   },
+  {
+    version: 6,
+    name: "remove-workspace-environment-id",
+    up: (conn) => {
+      // Check whether the legacy column exists (won't be present on fresh installs).
+      const wsCols = conn
+        .prepare("PRAGMA table_info(workspaces)")
+        .all() as Array<{ name: string }>;
+      if (wsCols.some((c) => c.name === "environment_id")) {
+        // Migrate legacy FK values into the links table before dropping the column.
+        // INSERT OR IGNORE is idempotent — safe to run on databases that already have links.
+        conn.exec(`
+          INSERT OR IGNORE INTO workspace_environment_links (workspace_id, environment_id)
+            SELECT id, environment_id FROM workspaces WHERE environment_id != '';
+        `);
+        // Drop index before dropping column (SQLite requirement).
+        conn.exec("DROP INDEX IF EXISTS idx_workspaces_environment_id");
+        // DROP COLUMN is supported in SQLite 3.35.0+ (bundled with better-sqlite3).
+        conn.exec("ALTER TABLE workspaces DROP COLUMN environment_id");
+      }
+    },
+  },
 ];
 
 /** The highest schema version defined by BASELINE + MIGRATIONS. */
@@ -363,7 +385,6 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
       name          TEXT NOT NULL,
       description   TEXT NOT NULL DEFAULT '',
       repo_url      TEXT NOT NULL DEFAULT '',
-      environment_id TEXT NOT NULL DEFAULT '' REFERENCES environments(id),
       status        TEXT NOT NULL DEFAULT 'active',
       use_worktrees INTEGER NOT NULL DEFAULT 1,
       working_directory TEXT NOT NULL DEFAULT '',
@@ -498,7 +519,6 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
     CREATE INDEX IF NOT EXISTS idx_domain_events_type ON domain_events(type);
     CREATE INDEX IF NOT EXISTS idx_domain_events_timestamp ON domain_events(timestamp);
     CREATE INDEX IF NOT EXISTS idx_sessions_task_id ON sessions(task_id);
-    CREATE INDEX IF NOT EXISTS idx_workspaces_environment_id ON workspaces(environment_id);
     CREATE INDEX IF NOT EXISTS idx_schedules_due ON schedules(enabled, next_run_at);
   `);
 

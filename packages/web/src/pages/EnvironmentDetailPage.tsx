@@ -21,7 +21,7 @@ export function EnvironmentDetailPage(): JSX.Element {
   const navigate = useAppNavigate();
   const {
     environments: { environments, environmentsLoading, provisionStatus, provisionEnvironment, stopEnvironment, removeEnvironment },
-    workspaces: { workspaces, archiveWorkspace, linkEnvironment, unlinkEnvironment, linkOperationError, clearLinkOperationError },
+    workspaces: { workspaces, archiveWorkspace, linkEnvironment, linkOperationError, clearLinkOperationError },
     sessions: { sessions },
   } = useGrackle();
 
@@ -39,10 +39,7 @@ export function EnvironmentDetailPage(): JSX.Element {
     return <Navigate to={ENVIRONMENTS_URL} replace />;
   }
 
-  const envWorkspaces = workspaces.filter((w) => w.environmentId === env.id);
-  const linkedWorkspaces = workspaces
-    .filter((w) => w.linkedEnvironmentIds.includes(env.id) && w.environmentId !== env.id)
-    .filter((w, index, self) => self.findIndex((other) => other.id === w.id) === index);
+  const envWorkspaces = workspaces.filter((w) => w.linkedEnvironmentIds.includes(env.id));
   const envSessions = sessions.filter((s) => s.environmentId === env.id);
   const envCost = envSessions.reduce((sum, s) => sum + (s.costMillicents ?? 0), 0);
   const statusColor = STATUS_COLORS[env.status] || "var(--text-tertiary)";
@@ -169,34 +166,9 @@ export function EnvironmentDetailPage(): JSX.Element {
           >
             + New Workspace
           </button>
-        </div>
-
-        {envWorkspaces.length === 0 && (
-          <p className={styles.empty}>No workspaces yet. Create one to get started.</p>
-        )}
-
-        <div className={styles.cardList}>
-          {envWorkspaces.map((ws) => (
-            <WorkspaceCard
-              key={ws.id}
-              workspace={ws}
-              confirmArchiveId={confirmArchiveId}
-              onOpen={() => navigate(workspaceUrl(ws.id, env.id))}
-              onArchive={() => setConfirmArchiveId(ws.id)}
-              onConfirmArchive={() => handleArchive(ws.id)}
-              onCancelArchive={() => setConfirmArchiveId(undefined)}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Linked workspaces — workspaces from other environments that include this env in their pool */}
-      <div className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <h3>Linked Workspaces</h3>
           {(() => {
             const linkable = workspaces.filter(
-              (w) => w.environmentId !== env.id && !w.linkedEnvironmentIds.includes(env.id) && w.status === "active",
+              (w) => !w.linkedEnvironmentIds.includes(env.id) && w.status === "active",
             );
             if (linkable.length === 0) {
               return null;
@@ -222,12 +194,6 @@ export function EnvironmentDetailPage(): JSX.Element {
           })()}
         </div>
 
-        {linkedWorkspaces.length === 0 && (
-          <p className={styles.empty} data-testid="linked-workspaces-empty">
-            No workspaces are linked to this environment.
-          </p>
-        )}
-
         {linkOperationError && (
           <p className={styles.errorHint} data-testid="link-operation-error" role="alert">
             {linkOperationError}
@@ -242,29 +208,21 @@ export function EnvironmentDetailPage(): JSX.Element {
           </p>
         )}
 
+        {envWorkspaces.length === 0 && (
+          <p className={styles.empty} data-testid="linked-workspaces-empty">No workspaces yet. Create one to get started.</p>
+        )}
+
         <div className={styles.cardList} data-testid="linked-workspaces-list">
-          {linkedWorkspaces.map((ws) => (
-            <div key={ws.id} className={styles.card} data-testid={`linked-workspace-card-${ws.id}`}>
-              <div className={styles.cardHeader}>
-                <strong className={styles.cardName}>{ws.name}</strong>
-                <div className={styles.cardActions}>
-                  <button className={styles.btnSmall} onClick={() => navigate(workspaceUrl(ws.id, ws.environmentId))}>Open</button>
-                  <button
-                    className={styles.btnSmall}
-                    onClick={() => { unlinkEnvironment(ws.id, env.id).catch(() => {}); }}
-                    data-testid={`unlink-workspace-${ws.id}`}
-                  >
-                    Unlink
-                  </button>
-                </div>
-              </div>
-              {ws.description && (
-                <p className={styles.cardDescription}>{ws.description}</p>
-              )}
-              <div className={styles.cardMeta}>
-                Primary: {environments.find((e) => e.id === ws.environmentId)?.displayName || ws.environmentId}
-              </div>
-            </div>
+          {envWorkspaces.map((ws) => (
+            <WorkspaceCard
+              key={ws.id}
+              workspace={ws}
+              confirmArchiveId={confirmArchiveId}
+              onOpen={() => navigate(workspaceUrl(ws.id, env.id))}
+              onArchive={() => setConfirmArchiveId(ws.id)}
+              onConfirmArchive={() => handleArchive(ws.id)}
+              onCancelArchive={() => setConfirmArchiveId(undefined)}
+            />
           ))}
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
-import { Breadcrumbs, ConfirmDialog, DagView, EditableCheckbox, EditableSelect, EditableTextArea, EditableTextField, EnvironmentSelect, WorkspaceBoard, buildWorkspaceBreadcrumbs, formatCost, formatTokens, newTaskUrl, useAppNavigate, useThemeContext } from "@grackle-ai/web-components";
+import { Breadcrumbs, ConfirmDialog, DagView, EditableCheckbox, EditableSelect, EditableTextArea, EditableTextField, WorkspaceBoard, buildWorkspaceBreadcrumbs, formatCost, formatTokens, newTaskUrl, useAppNavigate, useThemeContext } from "@grackle-ai/web-components";
 import { useHotkey } from "../hooks/useHotkey.js";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -62,7 +62,7 @@ export function WorkspacePage(): JSX.Element {
 
   const workspace = workspaces.find((p) => p.id === workspaceId);
 
-  const environmentId = routeEnvironmentId ?? workspace?.environmentId ?? "";
+  const environmentId = routeEnvironmentId ?? workspace?.linkedEnvironmentIds[0] ?? "";
   const breadcrumbs = buildWorkspaceBreadcrumbs(workspaceId!, environmentId, workspaces, environments);
 
   // Keyboard shortcuts: 1/2/3 to switch views
@@ -212,32 +212,14 @@ export function WorkspacePage(): JSX.Element {
             </div>
           </div>
 
-          {/* Default Environment */}
+          {/* Environments */}
           <div className={styles.metaRow}>
-            <span className={styles.metaLabel}>Environment</span>
-            <div className={styles.metaValue}>
-              <EnvironmentSelect
-                value={workspace?.environmentId || ""}
-                onSave={(v) => { if (workspace && v) { updateWorkspace(workspace.id, { environmentId: v }).catch(() => {}); } }}
-                environments={environments}
-                fieldId="environmentId"
-                activeFieldId={activeFieldId}
-                onActivate={setActiveFieldId}
-                placeholder="Select environment"
-                ariaLabel="Workspace environment"
-                data-testid="edit-env"
-              />
-            </div>
-          </div>
-
-          {/* Linked Environments */}
-          <div className={styles.metaRow}>
-            <span className={styles.metaLabel}>Linked Envs</span>
+            <span className={styles.metaLabel}>Environments</span>
             <div className={styles.metaValue} data-testid="linked-environments">
               {workspace ? (
                 <span className={styles.linkedEnvList}>
                   {(() => {
-                    const filtered = [...new Set(workspace.linkedEnvironmentIds.filter((id) => id !== workspace.environmentId))];
+                    const filtered = [...new Set(workspace.linkedEnvironmentIds)];
                     if (filtered.length === 0) {
                       return <span className={styles.metaPlaceholder}>None</span>;
                     }
@@ -262,7 +244,7 @@ export function WorkspacePage(): JSX.Element {
                   {(() => {
                     const linkedSet = new Set(workspace.linkedEnvironmentIds);
                     const available = environments.filter(
-                      (e) => e.id !== workspace.environmentId && !linkedSet.has(e.id),
+                      (e) => !linkedSet.has(e.id),
                     );
                     if (available.length === 0) {
                       return null;

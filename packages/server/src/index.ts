@@ -13,7 +13,7 @@ import {
 } from "@grackle-ai/core";
 import { createKnowledgePlugin, getKnowledgeReadinessCheck } from "@grackle-ai/plugin-knowledge";
 import { loadPlugins, type PluginContext } from "@grackle-ai/plugin-sdk";
-import { envRegistry, sessionStore, settingsStore, personaStore, workspaceStore, taskStore, sqlite, grackleHome } from "@grackle-ai/database";
+import { envRegistry, sessionStore, settingsStore, personaStore, workspaceStore, workspaceEnvironmentLinkStore, taskStore, sqlite, grackleHome } from "@grackle-ai/database";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { LocalPowerLineManager } from "./local-powerline-manager.js";
 import { registerCrashHandlers } from "./crash-handler.js";
@@ -68,7 +68,7 @@ async function main(): Promise<void> {
       skipLocalPowerline: config.skipLocalPowerline,
     },
     {
-      envRegistry, settingsStore, personaStore, workspaceStore, taskStore,
+      envRegistry, settingsStore, personaStore, workspaceStore, workspaceEnvironmentLinkStore, taskStore,
       getAdapter, parseAdapterConfig, setConnection, pushToEnv,
       reconnectOrProvision, emit, resetReconnectState, logger,
       createPowerLineManager: (opts) => new LocalPowerLineManager(opts),

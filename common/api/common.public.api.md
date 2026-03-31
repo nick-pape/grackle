@@ -2189,7 +2189,6 @@ type UpdateWorkspaceRequest = Message<"grackle.UpdateWorkspaceRequest"> & {
     useWorktrees?: boolean;
     workingDirectory?: string;
     defaultPersonaId?: string;
-    environmentId?: string;
     tokenBudget?: number;
     costBudgetMillicents?: number;
 };
@@ -2252,7 +2251,6 @@ type Workspace = Message<"grackle.Workspace"> & {
     useWorktrees: boolean;
     workingDirectory: string;
     defaultPersonaId: string;
-    environmentId: string;
     linkedEnvironmentIds: string[];
     tokenBudget: number;
     costBudgetMillicents: number;

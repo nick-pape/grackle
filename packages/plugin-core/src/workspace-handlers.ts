@@ -19,7 +19,7 @@ export async function listWorkspaces(req: grackle.ListWorkspacesRequest): Promis
   });
 }
 
-/** Create a new workspace. */
+/** Create a new workspace and auto-link the initial environment. */
 export async function createWorkspace(req: grackle.CreateWorkspaceRequest): Promise<grackle.Workspace> {
   if (!req.name) {
     throw new ConnectError("name is required", Code.InvalidArgument);
@@ -46,15 +46,16 @@ export async function createWorkspace(req: grackle.CreateWorkspaceRequest): Prom
     req.name,
     req.description,
     req.repoUrl,
-    req.environmentId,
     useWorktrees,
     req.workingDirectory ?? "",
     req.defaultPersonaId ?? "",
     req.tokenBudget ?? 0,
     req.costBudgetMillicents ?? 0,
   );
+  // Auto-link the initial environment into the workspace's environment pool.
+  workspaceEnvironmentLinkStore.linkEnvironment(id, req.environmentId);
   emit("workspace.created", { workspaceId: id });
-  logger.info({ workspaceId: id }, "Workspace created");
+  logger.info({ workspaceId: id, environmentId: req.environmentId }, "Workspace created");
   const row = workspaceStore.getWorkspace(id);
   return workspaceRowToProto(row!);
 }
@@ -88,12 +89,6 @@ export async function updateWorkspace(req: grackle.UpdateWorkspaceRequest): Prom
   if (req.repoUrl !== undefined && req.repoUrl !== "" && !/^https?:\/\//i.test(req.repoUrl)) {
     throw new ConnectError("Repository URL must use http or https scheme", Code.InvalidArgument);
   }
-  if (req.environmentId !== undefined) {
-    const env = envRegistry.getEnvironment(req.environmentId);
-    if (!env) {
-      throw new ConnectError(`Environment not found: ${req.environmentId}`, Code.NotFound);
-    }
-  }
   if ((req.tokenBudget !== undefined && req.tokenBudget < 0) || (req.costBudgetMillicents !== undefined && req.costBudgetMillicents < 0)) {
     throw new ConnectError("Budget values must be >= 0", Code.InvalidArgument);
   }
@@ -101,7 +96,6 @@ export async function updateWorkspace(req: grackle.UpdateWorkspaceRequest): Prom
     name: req.name !== undefined ? req.name.trim() : undefined,
     description: req.description,
     repoUrl: req.repoUrl,
-    environmentId: req.environmentId,
     useWorktrees: req.useWorktrees ?? undefined,
     workingDirectory: req.workingDirectory,
     defaultPersonaId: req.defaultPersonaId,
@@ -124,12 +118,6 @@ export async function linkEnvironment(req: grackle.LinkEnvironmentRequest): Prom
   const env = envRegistry.getEnvironment(req.environmentId);
   if (!env) {
     throw new ConnectError(`Environment not found: ${req.environmentId}`, Code.NotFound);
-  }
-  if (workspace.environmentId === req.environmentId) {
-    throw new ConnectError(
-      "Cannot link the primary environment — it is already in the pool",
-      Code.InvalidArgument,
-    );
   }
   if (workspaceEnvironmentLinkStore.isLinked(req.workspaceId, req.environmentId)) {
     throw new ConnectError(

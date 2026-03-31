@@ -64,7 +64,6 @@ export function workspaceRowToProto(
     name: row.name,
     description: row.description,
     repoUrl: row.repoUrl,
-    environmentId: row.environmentId,
     status: workspaceStatusToEnum(row.status),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

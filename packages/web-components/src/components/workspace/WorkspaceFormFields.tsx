@@ -26,7 +26,7 @@ export function defaultFormValues(ws?: Workspace, environmentId?: string): Works
     name: ws?.name ?? "",
     description: ws?.description ?? "",
     repoUrl: ws?.repoUrl ?? "",
-    environmentId: ws?.environmentId ?? environmentId ?? "",
+    environmentId: ws?.linkedEnvironmentIds[0] ?? environmentId ?? "",
     defaultPersonaId: ws?.defaultPersonaId ?? "",
     useWorktrees: ws?.useWorktrees ?? true,
     workingDirectory: ws?.workingDirectory ?? "",

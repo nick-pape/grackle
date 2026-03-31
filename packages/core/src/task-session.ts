@@ -52,7 +52,7 @@ export async function startTaskSession(
     return `Workspace not found: ${task.workspaceId}`;
   }
 
-  const environmentId = options?.environmentId || workspace?.environmentId || "";
+  const environmentId = options?.environmentId || "";
   const env = envRegistry.getEnvironment(environmentId);
   if (!env) {
     logger.warn(

@@ -174,7 +174,8 @@ function WorkspaceRedirect(): JSX.Element | undefined {
   const location = useLocation();
 
   const workspace = workspaces.find((w) => w.id === workspaceId);
-  if (!workspace?.environmentId) {
+  const primaryEnvId = workspace?.linkedEnvironmentIds[0];
+  if (!primaryEnvId) {
     // Workspaces load asynchronously — avoid redirecting before data arrives.
     if (workspaces.length === 0) {
       return undefined;
@@ -189,7 +190,7 @@ function WorkspaceRedirect(): JSX.Element | undefined {
   const suffix = location.pathname.startsWith(encodedPrefix)
     ? location.pathname.slice(encodedPrefix.length)
     : "";
-  const target = `/environments/${encodeURIComponent(workspace.environmentId)}/workspaces/${encodedWorkspaceId}${suffix}${location.search}${location.hash}`;
+  const target = `/environments/${encodeURIComponent(primaryEnvId)}/workspaces/${encodedWorkspaceId}${suffix}${location.search}${location.hash}`;
   return <Navigate to={target} replace />;
 }
 

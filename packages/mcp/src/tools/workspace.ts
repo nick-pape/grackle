@@ -36,7 +36,6 @@ export const workspaceTools: ToolDefinition[] = [
             name: p.name,
             description: p.description,
             repoUrl: p.repoUrl,
-            environmentId: p.environmentId,
             linkedEnvironmentIds: p.linkedEnvironmentIds,
             workingDirectory: p.workingDirectory,
             useWorktrees: p.useWorktrees,
@@ -52,12 +51,12 @@ export const workspaceTools: ToolDefinition[] = [
     name: "workspace_create",
     group: "workspace",
     description:
-      "Create a new Grackle workspace with a name, optional description, repository URL, and default environment.",
+      "Create a new Grackle workspace with a name, optional description, repository URL, and initial environment.",
     inputSchema: z.object({
       name: z.string().describe("Display name for the new workspace"),
       environmentId: z
         .string()
-        .describe("ID of the owning environment (required)"),
+        .describe("ID of the initial environment to link (required)"),
       description: z
         .string()
         .optional()
@@ -117,7 +116,6 @@ export const workspaceTools: ToolDefinition[] = [
           name: workspace.name,
           description: workspace.description,
           repoUrl: workspace.repoUrl,
-          environmentId: workspace.environmentId,
           linkedEnvironmentIds: workspace.linkedEnvironmentIds,
           defaultPersonaId: workspace.defaultPersonaId,
           workingDirectory: workspace.workingDirectory,
@@ -157,7 +155,6 @@ export const workspaceTools: ToolDefinition[] = [
           name: workspace.name,
           description: workspace.description,
           repoUrl: workspace.repoUrl,
-          environmentId: workspace.environmentId,
           linkedEnvironmentIds: workspace.linkedEnvironmentIds,
           workingDirectory: workspace.workingDirectory,
           useWorktrees: workspace.useWorktrees,
@@ -174,7 +171,7 @@ export const workspaceTools: ToolDefinition[] = [
     name: "workspace_update",
     group: "workspace",
     description:
-      "Update an existing Grackle workspace's name, description, repository URL, owning environment, or worktree settings.",
+      "Update an existing Grackle workspace's name, description, repository URL, or worktree settings. To change linked environments, use workspace_link_environment or workspace_unlink_environment.",
     inputSchema: z.object({
       workspaceId: z.string().describe("Unique identifier of the workspace to update"),
       name: z
@@ -189,10 +186,6 @@ export const workspaceTools: ToolDefinition[] = [
         .string()
         .optional()
         .describe("New repository URL for the workspace"),
-      environmentId: z
-        .string()
-        .optional()
-        .describe("Reparent workspace to a different environment"),
       workingDirectory: z
         .string()
         .optional()
@@ -233,7 +226,6 @@ export const workspaceTools: ToolDefinition[] = [
           name: args.name as string | undefined,
           description: args.description as string | undefined,
           repoUrl: args.repoUrl as string | undefined,
-          environmentId: args.environmentId as string | undefined,
           workingDirectory: args.workingDirectory as string | undefined,
           useWorktrees: args.useWorktrees as boolean | undefined,
           defaultPersonaId: args.defaultPersonaId as string | undefined,
@@ -245,7 +237,6 @@ export const workspaceTools: ToolDefinition[] = [
           name: workspace.name,
           description: workspace.description,
           repoUrl: workspace.repoUrl,
-          environmentId: workspace.environmentId,
           linkedEnvironmentIds: workspace.linkedEnvironmentIds,
           defaultPersonaId: workspace.defaultPersonaId,
           workingDirectory: workspace.workingDirectory,
@@ -312,7 +303,6 @@ export const workspaceTools: ToolDefinition[] = [
         return jsonResult({
           id: workspace.id,
           name: workspace.name,
-          environmentId: workspace.environmentId,
           linkedEnvironmentIds: workspace.linkedEnvironmentIds,
         });
       } catch (error) {
@@ -346,7 +336,6 @@ export const workspaceTools: ToolDefinition[] = [
         return jsonResult({
           id: workspace.id,
           name: workspace.name,
-          environmentId: workspace.environmentId,
           linkedEnvironmentIds: workspace.linkedEnvironmentIds,
         });
       } catch (error) {

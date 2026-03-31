@@ -40,7 +40,6 @@ function makeWorkspaceRow(overrides: Record<string, unknown> = {}): Record<strin
     name: "Test Workspace",
     description: "",
     repoUrl: "",
-    environmentId: "env-primary",
     status: "active",
     useWorktrees: true,
     workingDirectory: "",
@@ -98,19 +97,6 @@ describe("linkEnvironment", () => {
 
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
-  });
-
-  it("throws InvalidArgument when linking primary environment", async () => {
-    vi.mocked(workspaceStore.getWorkspace).mockReturnValue(makeWorkspaceRow() as never);
-    vi.mocked(envRegistry.getEnvironment).mockReturnValue({ id: "env-primary" } as never);
-
-    const err = await handlers.linkEnvironment({
-      workspaceId: "ws-1",
-      environmentId: "env-primary",
-    }).catch((e: unknown) => e) as ConnectError;
-
-    expect(err).toBeInstanceOf(ConnectError);
-    expect(err.code).toBe(Code.InvalidArgument);
   });
 
   it("throws InvalidArgument when link already exists", async () => {
