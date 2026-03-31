@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.101.0",
+      "tag": "@grackle-ai/cli_v0.101.0",
+      "date": "Tue, 31 Mar 2026 13:50:31 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Split monolithic grackle.proto into per-plugin gRPC services (GrackleCore, GrackleOrchestration, GrackleScheduling, GrackleKnowledge); update all clients, tools, and tests to use typed per-service clients"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.100.1",
       "tag": "@grackle-ai/cli_v0.100.1",
       "date": "Tue, 31 Mar 2026 06:01:21 GMT",
