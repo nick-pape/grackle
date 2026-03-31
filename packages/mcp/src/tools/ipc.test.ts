@@ -265,6 +265,17 @@ describe("ipc_share_stream", () => {
     expect(result.content[0].text).toContain("fd 99 not found");
   });
 
+  test("returns error when sharing the pipe fd itself", async () => {
+    const mockClient = createMockClient();
+    (mockClient.getSessionFds as ReturnType<typeof vi.fn>).mockResolvedValue(makeFds());
+
+    // fd 3 is the pipe fd (streamName: "pipe:child-sess")
+    const result = await getTool("ipc_share_stream").handler({ fd: 3 }, { core: mockClient }, CHILD_AUTH);
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain("pipe fd");
+  });
+
   test("permission downgrade — child has rw, shares as r", async () => {
     const mockClient = createMockClient();
     (mockClient.getSessionFds as ReturnType<typeof vi.fn>).mockResolvedValue(makeFds("rw"));

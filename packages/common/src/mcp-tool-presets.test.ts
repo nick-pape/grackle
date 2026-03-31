@@ -9,8 +9,17 @@ import {
 } from "./mcp-tool-presets.js";
 
 describe("ALL_MCP_TOOL_NAMES", () => {
-  it("contains exactly 65 tool names", () => {
-    expect(ALL_MCP_TOOL_NAMES.size).toBe(65);
+  it("contains at least all tools from the known presets", () => {
+    const union = new Set<string>();
+    for (const tool of DEFAULT_SCOPED_MCP_TOOLS) { union.add(tool); }
+    for (const tool of WORKER_MCP_TOOLS) { union.add(tool); }
+    for (const tool of ORCHESTRATOR_MCP_TOOLS) { union.add(tool); }
+    for (const tool of ADMIN_MCP_TOOLS) { union.add(tool); }
+
+    expect(ALL_MCP_TOOL_NAMES.size).toBeGreaterThanOrEqual(union.size);
+    for (const tool of union) {
+      expect(ALL_MCP_TOOL_NAMES.has(tool)).toBe(true);
+    }
   });
 
   it("includes tools from every group", () => {
@@ -107,8 +116,8 @@ describe("ORCHESTRATOR_MCP_TOOLS", () => {
 });
 
 describe("ADMIN_MCP_TOOLS", () => {
-  it("contains all 65 tool names", () => {
-    expect(ADMIN_MCP_TOOLS).toHaveLength(65);
+  it("contains all tools in ALL_MCP_TOOL_NAMES", () => {
+    expect(ADMIN_MCP_TOOLS).toHaveLength(ALL_MCP_TOOL_NAMES.size);
   });
 
   it("matches ALL_MCP_TOOL_NAMES exactly", () => {

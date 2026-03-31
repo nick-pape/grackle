@@ -354,7 +354,7 @@ export const ipcTools: ToolDefinition[] = [
     name: "ipc_share_stream",
     group: "ipc",
     description:
-      "Share a stream you hold with your parent session. Auto-discovers the parent via the inherited pipe fd and grants access via ipc_attach, then sends a [stream-ref] notification through the pipe so the parent knows the new fd. For sibling-to-sibling sharing: share with parent, parent uses ipc_attach to forward to the sibling.",
+      "Share a stream you hold with your parent session. Auto-discovers the parent via the inherited pipe fd and grants access using the attachStream RPC (same semantics as ipc_attach), then sends a [stream-ref] notification through the pipe so the parent knows the new fd. For sibling-to-sibling sharing: share with parent, parent can use ipc_attach to forward to the sibling.",
     inputSchema: z.object({
       fd: z.number().int().describe("Your file descriptor on the stream to share"),
       permission: z
@@ -403,12 +403,18 @@ export const ipcTools: ToolDefinition[] = [
           };
         }
 
-        // Verify the stream fd exists
+        // Verify the stream fd exists and is a shareable user stream (not the pipe itself)
         const fd = args.fd as number;
         const streamFdInfo = fdsResult.fds.find((f) => f.fd === fd);
         if (!streamFdInfo) {
           return {
             content: [{ type: "text" as const, text: `Error: fd ${String(fd)} not found` }],
+            isError: true,
+          };
+        }
+        if (streamFdInfo.streamName.startsWith("pipe:")) {
+          return {
+            content: [{ type: "text" as const, text: `Error: fd ${String(fd)} is a pipe fd and cannot be shared — only user-created streams can be shared` }],
             isError: true,
           };
         }

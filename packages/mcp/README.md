@@ -96,7 +96,7 @@ Point your client at `http://127.0.0.1:7435/mcp` using the Streamable HTTP trans
 
 ## Tool Reference
 
-The MCP server exposes 51 tools organized into 13 groups. Each tool validates its inputs against a strict schema and returns structured JSON results.
+The MCP server exposes a rich set of tools organized into groups. Each tool validates its inputs against a strict schema and returns structured JSON results.
 
 ### Environment Tools
 
@@ -277,7 +277,7 @@ Predefined presets are available for convenience (via CLI `--mcp-tools-preset` o
 | `default` | The 25-tool default scoped set (backward compatible) |
 | `worker` | Subset of default — no task creation capabilities |
 | `orchestrator` | Default + task management, session spawning, persona creation, scheduling |
-| `admin` | Full access to all 65 tools |
+| `admin` | Full access to all available tools |
 
 Scoped tokens also enforce workspace isolation — agents can only see tasks and findings within their own workspace. Subtasks created by a scoped agent are automatically parented to the agent's own task. Tool calls to non-permitted tools return an error with a descriptive message listing the available tools.
 

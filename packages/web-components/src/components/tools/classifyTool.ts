@@ -116,6 +116,7 @@ const TOOL_MAP: Record<string, ToolCategory> = {
   ipc_create_stream: "ipc",
   ipc_attach: "ipc",
   ipc_share_stream: "ipc",
+  ipc_list_streams: "ipc",
 
   // ToolSearch — Claude Code built-in
   toolsearch: "tool-search",
