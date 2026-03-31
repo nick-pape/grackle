@@ -106,7 +106,7 @@ export function useSchedules(): UseSchedulesResult {
 
   const domainHook: DomainHook = {
     onConnect: () => loadSchedules(),
-    onDisconnect: () => {},
+    onDisconnect: () => { clearTimeout(firedDebounceRef.current); },
     handleEvent,
   };
 

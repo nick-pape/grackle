@@ -266,7 +266,7 @@ describe("useSchedules deleteSchedule", () => {
 });
 
 describe("useSchedules handleEvent", () => {
-  it.each(["schedule.created", "schedule.updated", "schedule.deleted", "schedule.fired"] as const)(
+  it.each(["schedule.created", "schedule.updated", "schedule.deleted"] as const)(
     "returns true and triggers reload for %s",
     async (eventType) => {
       mockClient.listSchedules.mockResolvedValue({ schedules: [] });
@@ -285,6 +285,28 @@ describe("useSchedules handleEvent", () => {
       });
     },
   );
+
+  it("returns true and triggers reload for schedule.fired (debounced)", async () => {
+    vi.useFakeTimers();
+    mockClient.listSchedules.mockResolvedValue({ schedules: [] });
+
+    const { result } = setup();
+
+    let handled: boolean = false;
+    act(() => {
+      handled = result.current.handleEvent({ type: "schedule.fired" } as GrackleEvent);
+    });
+
+    expect(handled).toBe(true);
+    expect(mockClient.listSchedules).not.toHaveBeenCalled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(mockClient.listSchedules).toHaveBeenCalled();
+    vi.useRealTimers();
+  });
 
   it("returns false and does not reload for unrelated events", async () => {
     const { result } = setup();
