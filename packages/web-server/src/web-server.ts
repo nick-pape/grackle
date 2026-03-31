@@ -672,7 +672,13 @@ export function createWebServer(options: WebServerOptions): http.Server {
     const hasValidBearer = bearerToken.length > 0 && verifyApiKey(bearerToken);
 
     // --- ConnectRPC routes (Connect protocol over HTTP/1.1) ---
-    if (rawPath.startsWith("/grackle.Grackle") && webConnectHandler) {
+    if (
+      (
+        rawPath.startsWith("/grackle.GrackleCore/") ||
+        rawPath.startsWith("/grackle.GrackleOrchestration/") ||
+        rawPath.startsWith("/grackle.GrackleScheduling/") ||
+        rawPath.startsWith("/grackle.GrackleKnowledge/")
+      ) && webConnectHandler) {
       if (!hasValidSession && !hasValidBearer) {
         res.writeHead(401, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Unauthorized" }));

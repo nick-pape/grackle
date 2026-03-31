@@ -19,10 +19,11 @@ export function initTestDatabase(): void {
 }
 
 /**
- * Extract a merged handler map from all built-in Grackle services.
+ * Extract a merged handler map from the default built-in Grackle services.
  *
- * Combines GrackleCore and GrackleOrchestration handlers so integration
- * tests can call any handler method regardless of which service it belongs to.
+ * Combines GrackleCore and GrackleOrchestration handlers (the two services
+ * registered by {@link createDefaultCollector}) so integration tests can call
+ * any handler method regardless of which service it belongs to.
  */
 export function getHandlers(): Record<string, (...args: unknown[]) => unknown> {
   const collector = createDefaultCollector();
