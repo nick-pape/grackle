@@ -64,7 +64,7 @@ export function ensureAsyncDeliveryListener(sessionId: string): void {
     const text = isStdin ? msg.content : `[fd:${sub.fd}] ${msg.content}`;
     return conn.client.sendInput(
       create(powerline.InputMessageSchema, { sessionId, text }),
-    ).then(() => undefined as void).catch((err: unknown) => {
+    ).then(() => {}).catch((err: unknown) => {
       logger.warn({ err, sessionId }, "Async pipe delivery: sendInput failed — message left undelivered");
       throw err;
     });

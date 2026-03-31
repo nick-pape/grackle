@@ -121,7 +121,8 @@ const asyncListeners: Map<string, AsyncMessageListener> = new Map();
 
 /**
  * Pending async delivery Promises for messages whose listeners returned Promises.
- * Keyed by message ID. Populated by publish() and cleared by awaitPendingDeliveries().
+ * Keyed by message ID. Populated by publish(); entries are cleaned up by publish()
+ * auto-finalization and when streams/subscriptions are deleted or unsubscribed.
  */
 const pendingDeliveries: Map<string, { streamId: string; promises: Array<Promise<void>> }> = new Map();
 
@@ -456,7 +457,8 @@ export function publish(streamId: string, senderId: string, content: string): St
   } else {
     const streamId = stream.id;
     Promise.allSettled(pending.promises).then(() => {
-      // Only clean up if this entry hasn't already been removed by awaitPendingDeliveries()
+      // Only clean up if this entry still exists; it may already have been removed by
+      // a previous auto-finalization pass or by stream teardown (deleteStream/unsubscribe/_resetForTesting).
       if (pendingDeliveries.has(msg.id)) {
         pendingDeliveries.delete(msg.id);
         const s = streams.get(streamId);
@@ -464,8 +466,9 @@ export function publish(streamId: string, senderId: string, content: string): St
           pruneDeliveredMessages(s);
         }
       }
-    }).catch(() => {
-      // allSettled never rejects — this branch is unreachable but satisfies strict tooling
+    }).catch((err: unknown) => {
+      // allSettled never rejects; this catches unexpected errors in the pruning logic
+      logger.error({ err, streamId, messageId: msg.id }, "Error while finalizing async deliveries for stream");
     });
   }
 
