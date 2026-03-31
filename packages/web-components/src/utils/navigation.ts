@@ -159,6 +159,11 @@ export const PAIR_PATH: string = "/pair";
 /** URL for the root-task chat page. */
 export const CHAT_URL: string = "/chat";
 
+/** Build URL for a specific IPC stream's chat page. */
+export function chatStreamUrl(streamId: string): string {
+  return `/chat/${encodeURIComponent(streamId)}`;
+}
+
 /** URL for the home dashboard page. */
 export const HOME_URL: string = "/";
 

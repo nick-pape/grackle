@@ -82,6 +82,10 @@ export type { ScheduleManagerProps } from "./components/schedules/ScheduleManage
 // Settings
 export { SettingsNav } from "./components/settings/SettingsNav.js";
 
+// Streams
+export { StreamList, StreamDetailPanel } from "./components/streams/index.js";
+export type { StreamListProps, StreamDetailPanelProps } from "./components/streams/index.js";
+
 // Tools
 export { ToolCard } from "./components/tools/ToolCard.js";
 export { FileEditCard } from "./components/tools/FileEditCard.js";
@@ -127,6 +131,7 @@ export type {
   UseTasksResult, UseFindingsResult, UseTokensResult,
   UseCredentialsResult, UseCodespacesResult, UsePersonasResult,
   UsePluginsResult, PluginData,
+  StreamData, StreamSubscriberData, UseStreamsResult,
   DomainHook,
 } from "./hooks/types.js";
 export {
@@ -154,7 +159,7 @@ export {
   SETTINGS_APPEARANCE_URL, SETTINGS_ABOUT_URL, SETTINGS_SHORTCUTS_URL,
   PAIR_PATH, NEW_WORKSPACE_URL, KNOWLEDGE_URL, HOME_URL,
   FINDINGS_URL, findingsUrl, findingUrl,
-  CHAT_URL, TASKS_URL,
+  CHAT_URL, chatStreamUrl, TASKS_URL,
 } from "./utils/navigation.js";
 
 export {

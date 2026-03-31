@@ -1168,6 +1168,13 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         domainHook: NOOP_DOMAIN_HOOK,
       },
 
+      streams: {
+        streams: [],
+        streamsLoading: false,
+        loadStreams: async () => {},
+        domainHook: NOOP_DOMAIN_HOOK,
+      },
+
       knowledge: {
         graphData: { nodes: knowledgeNodes, links: knowledgeLinks },
         selectedNode: knowledgeSelectedNode,

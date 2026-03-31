@@ -13,6 +13,7 @@ import type {
   UseCredentialsResult, UseCodespacesResult, UsePersonasResult,
   UsePluginsResult,
   UseSchedulesResult,
+  UseStreamsResult,
 } from "../hooks/types.js";
 
 /** Return type for the useGrackleSocket hook (and the GrackleContext value). */
@@ -39,6 +40,8 @@ export interface UseGrackleSocketResult {
   personas: Omit<UsePersonasResult, "handleEvent" | "loadPersonas">;
   /** Schedule state and actions. */
   schedules: Omit<UseSchedulesResult, "handleEvent" | "loadSchedules">;
+  /** IPC stream state and actions. */
+  streams: Omit<UseStreamsResult, "handleEvent">;
   /** Knowledge graph state and actions. */
   knowledge: Omit<UseKnowledgeResult, "handleEvent">;
   /** Plugin state and actions. */
