@@ -46,6 +46,7 @@
     "@grackle-ai/common": "workspace:*",
     "@grackle-ai/core": "workspace:*",
     "@grackle-ai/plugin-core": "workspace:*",
+    "@grackle-ai/plugin-orchestration": "workspace:*",
     "@grackle-ai/database": "workspace:*",
     "@grackle-ai/mcp": "workspace:*",
     "@grackle-ai/plugin-sdk": "workspace:*",

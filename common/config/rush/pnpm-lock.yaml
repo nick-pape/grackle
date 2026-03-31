@@ -511,6 +511,40 @@ importers:
         specifier: ^3.2.1
         version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
 
+  ../../packages/plugin-orchestration:
+    dependencies:
+      '@bufbuild/protobuf':
+        specifier: ^2.5.0
+        version: 2.11.0
+      '@grackle-ai/common':
+        specifier: workspace:*
+        version: link:../common
+      '@grackle-ai/core':
+        specifier: workspace:*
+        version: link:../core
+      '@grackle-ai/database':
+        specifier: workspace:*
+        version: link:../database
+      '@grackle-ai/plugin-core':
+        specifier: workspace:*
+        version: link:../plugin-core
+      '@grackle-ai/plugin-sdk':
+        specifier: workspace:*
+        version: link:../plugin-sdk
+    devDependencies:
+      '@grackle-ai/heft-rig':
+        specifier: workspace:*
+        version: link:../../rigs/heft-rig
+      '@rushstack/heft':
+        specifier: 1.2.7
+        version: 1.2.7(@types/node@22.19.15)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      vitest:
+        specifier: ^3.2.1
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
+
   ../../packages/plugin-sdk:
     dependencies:
       '@bufbuild/protobuf':
@@ -782,6 +816,9 @@ importers:
       '@grackle-ai/plugin-core':
         specifier: workspace:*
         version: link:../plugin-core
+      '@grackle-ai/plugin-orchestration':
+        specifier: workspace:*
+        version: link:../plugin-orchestration
       '@grackle-ai/plugin-sdk':
         specifier: workspace:*
         version: link:../plugin-sdk

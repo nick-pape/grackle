@@ -1,27 +1,27 @@
 /**
- * Core plugin — wraps all built-in Grackle handler groups, reconciliation
- * phases, and event subscribers into a single GracklePlugin.
+ * Core plugin — wraps the core (non-orchestration) Grackle handler groups,
+ * reconciliation phases, and event subscribers into a single GracklePlugin.
  *
- * Handler files remain in `@grackle-ai/core`. This plugin groups their
- * contributions for the `loadPlugins()` loader.
+ * Orchestration concerns (tasks, personas, findings, escalations, orphan-reparent,
+ * and their event subscribers) live in `@grackle-ai/plugin-orchestration`.
  *
  * @module
  */
 
 import type { GracklePlugin } from "@grackle-ai/plugin-sdk";
 import { grackle } from "@grackle-ai/common";
-import { createDefaultCollector } from "@grackle-ai/plugin-core";
-import { createReconciliationPhases } from "./reconciliation-setup.js";
+import { createCoreCollector } from "@grackle-ai/plugin-core";
+import { createCoreReconciliationPhases } from "./reconciliation-setup.js";
 import { createEventSubscribers } from "./event-subscribers.js";
 
 /**
- * Create the core plugin that contributes all built-in server capabilities.
+ * Create the core plugin that contributes non-orchestration server capabilities.
  *
- * - **gRPC handlers**: All 12 handler groups (environments, sessions, tasks, etc.)
- * - **Reconciliation phases**: dispatch, cron, lifecycle-cleanup, orphan-reparent,
+ * - **gRPC handlers**: 8 handler groups (environments, sessions, workspaces,
+ *   schedules, tokens, codespaces, knowledge, settings)
+ * - **Reconciliation phases**: dispatch, cron, lifecycle-cleanup,
  *   environment-reconciliation, and optionally knowledge-health
- * - **Event subscribers**: SIGCHLD, escalation auto-detect, orphan reparent,
- *   lifecycle manager, and optionally root task boot
+ * - **Event subscribers**: lifecycle manager and optionally root task boot
  *
  * @returns A GracklePlugin ready to pass to `loadPlugins()`.
  */
@@ -31,10 +31,10 @@ export function createCorePlugin(): GracklePlugin {
 
     grpcHandlers: () => [{
       service: grackle.Grackle,
-      handlers: createDefaultCollector().getHandlers(grackle.Grackle),
+      handlers: createCoreCollector().getHandlers(grackle.Grackle),
     }],
 
-    reconciliationPhases: () => createReconciliationPhases(),
+    reconciliationPhases: () => createCoreReconciliationPhases(),
 
     eventSubscribers: (ctx) => createEventSubscribers(ctx),
   };

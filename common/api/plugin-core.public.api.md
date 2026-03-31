@@ -27,6 +27,9 @@ import { validatePipeInputs } from '@grackle-ai/core';
 export { cleanupLifecycleStream }
 
 // @public
+export function createCoreCollector(): ServiceCollector;
+
+// @public
 export function createCronPhase(deps: CronPhaseDeps): ReconciliationPhase;
 
 // @public
@@ -43,6 +46,9 @@ export function createEscalationAutoSubscriber(ctx: PluginContext): Disposable_2
 
 // @public
 export function createLifecycleSubscriber(ctx: PluginContext): Disposable_2;
+
+// @public
+export function createOrchestrationCollector(): ServiceCollector;
 
 // @public
 export function createOrphanPhase(deps: OrphanPhaseDeps): ReconciliationPhase;

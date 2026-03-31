@@ -20,7 +20,6 @@ vi.mock("@grackle-ai/core", () => ({
 
 vi.mock("@grackle-ai/plugin-core", () => ({
   createCronPhase: vi.fn((deps: unknown) => ({ name: "cron", execute: async () => {}, _deps: deps })),
-  createOrphanPhase: vi.fn((deps: unknown) => ({ name: "orphan-reparent", execute: async () => {}, _deps: deps })),
   createDispatchPhase: vi.fn((deps: unknown) => ({ name: "dispatch", execute: async () => {}, _deps: deps })),
   lifecycleCleanupPhase: { name: "lifecycle-cleanup", execute: async () => {} },
   createEnvironmentReconciliationPhase: vi.fn(() => ({ name: "environment", execute: async () => {} })),
@@ -73,65 +72,46 @@ vi.mock("@grackle-ai/database", () => ({
   },
 }));
 
-import { createReconciliationPhases } from "./reconciliation-setup.js";
+import { createCoreReconciliationPhases } from "./reconciliation-setup.js";
 import { isKnowledgeEnabled, createKnowledgeHealthPhase, neo4jHealthCheck } from "@grackle-ai/core";
-import { createCronPhase, createOrphanPhase } from "@grackle-ai/plugin-core";
-import { workspaceStore, taskStore, dispatchQueueStore } from "@grackle-ai/database";
+import { createCronPhase } from "@grackle-ai/plugin-core";
+import { dispatchQueueStore } from "@grackle-ai/database";
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("createReconciliationPhases", () => {
-  it("returns dispatch, cron, lifecycle-cleanup, orphan-reparent, and environment phases", () => {
-    const phases = createReconciliationPhases();
+describe("createCoreReconciliationPhases", () => {
+  it("returns dispatch, cron, lifecycle-cleanup, and environment phases (no orphan-reparent)", () => {
+    const phases = createCoreReconciliationPhases();
     const names = phases.map((p) => p.name);
-    expect(names).toEqual(["dispatch", "cron", "lifecycle-cleanup", "orphan-reparent", "environment"]);
+    expect(names).toEqual(["dispatch", "cron", "lifecycle-cleanup", "environment"]);
+    expect(names).not.toContain("orphan-reparent");
   });
 
   it("includes knowledge-health phase when knowledge is enabled", () => {
     (isKnowledgeEnabled as ReturnType<typeof vi.fn>).mockReturnValue(true);
-    const phases = createReconciliationPhases();
+    const phases = createCoreReconciliationPhases();
     const names = phases.map((p) => p.name);
     expect(names).toContain("knowledge-health");
-    expect(phases).toHaveLength(6);
+    expect(phases).toHaveLength(5);
   });
 
   it("omits knowledge-health phase when knowledge is disabled", () => {
     (isKnowledgeEnabled as ReturnType<typeof vi.fn>).mockReturnValue(false);
-    const phases = createReconciliationPhases();
+    const phases = createCoreReconciliationPhases();
     const names = phases.map((p) => p.name);
     expect(names).not.toContain("knowledge-health");
   });
 
   it("passes neo4jHealthCheck to knowledge health phase", () => {
     (isKnowledgeEnabled as ReturnType<typeof vi.fn>).mockReturnValue(true);
-    createReconciliationPhases();
+    createCoreReconciliationPhases();
     expect(createKnowledgeHealthPhase).toHaveBeenCalledWith({ healthCheck: neo4jHealthCheck });
   });
 
-  it("orphan phase listAllTasks aggregates tasks across all workspaces", () => {
-    const ws1Tasks = [{ id: "t1" }];
-    const ws2Tasks = [{ id: "t2" }, { id: "t3" }];
-    (workspaceStore.listWorkspaces as ReturnType<typeof vi.fn>).mockReturnValue([
-      { id: "ws1" }, { id: "ws2" },
-    ]);
-    (taskStore.listTasks as ReturnType<typeof vi.fn>)
-      .mockReturnValueOnce(ws1Tasks)
-      .mockReturnValueOnce(ws2Tasks);
-
-    createReconciliationPhases();
-
-    // Extract the deps passed to createOrphanPhase and call listAllTasks
-    const orphanDeps = (createOrphanPhase as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
-      listAllTasks: () => Array<{ id: string }>;
-    };
-    const allTasks = orphanDeps.listAllTasks();
-    expect(allTasks).toEqual([{ id: "t1" }, { id: "t2" }, { id: "t3" }]);
-  });
-
   it("cron phase enqueueForDispatch is wired to dispatchQueueStore.enqueue", () => {
-    createReconciliationPhases();
+    createCoreReconciliationPhases();
 
     const cronDeps = (createCronPhase as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
       enqueueForDispatch: (...args: unknown[]) => void;

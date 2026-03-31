@@ -32,6 +32,7 @@ import { initializeDatabase } from "./database-init.js";
 import { registerAllAdapters } from "./adapter-registry.js";
 import { bootstrapLocalEnvironment } from "./local-environment.js";
 import { createCorePlugin } from "./core-plugin.js";
+import { createOrchestrationPlugin } from "@grackle-ai/plugin-orchestration";
 import { createShutdown } from "./shutdown.js";
 
 /** Require function for loading optional native modules (qrcode). */
@@ -146,7 +147,7 @@ async function main(): Promise<void> {
     },
   };
 
-  const loaded = await loadPlugins([createCorePlugin()], pluginContext);
+  const loaded = await loadPlugins([createCorePlugin(), createOrchestrationPlugin()], pluginContext);
 
   // --- Wire gRPC handlers from plugins ---
   const collector = createServiceCollector();
