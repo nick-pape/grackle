@@ -433,6 +433,11 @@ export async function writeToFd(req: grackle.WriteToFdRequest): Promise<grackle.
   // used by publishChildCompletion for child→parent delivery.
   const msg = streamRegistry.publish(sub.streamId, req.sessionId, req.message);
 
+  // Await pending async deliveries (gRPC sendInput Promises) before checking
+  // deliveredTo. Without this, a rejected gRPC call after dispatch would still
+  // appear delivered because deliveredTo was populated synchronously.
+  await streamRegistry.awaitPendingDeliveries(msg);
+
   // Verify delivery to async subscribers — check if the published message
   // was marked as delivered for each async target. Sync and detach subscribers
   // are excluded (sync waits for consumeSync, detach buffers silently).

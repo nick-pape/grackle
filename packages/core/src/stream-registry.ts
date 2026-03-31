@@ -53,8 +53,8 @@ export interface Subscription {
   readonly createdBySpawn: boolean;
 }
 
-/** Callback invoked when a message arrives on an async subscription. */
-export type AsyncMessageListener = (sub: Subscription, msg: StreamMessage) => void;
+/** Callback invoked when a message arrives on an async subscription. May return a Promise to defer delivery tracking. */
+export type AsyncMessageListener = (sub: Subscription, msg: StreamMessage) => void | Promise<void>;
 
 // ─── Async Queue (blocking reads for sync subscriptions) ──────────────────────
 
@@ -118,6 +118,13 @@ const fdCounters: Map<string, number> = new Map();
 
 /** Async message listeners keyed by session ID. Invoked when a message arrives on an async subscription. */
 const asyncListeners: Map<string, AsyncMessageListener> = new Map();
+
+/**
+ * Pending async delivery Promises for messages whose listeners returned Promises.
+ * Keyed by message ID. Populated by publish(); entries are cleaned up by publish()
+ * auto-finalization and when streams/subscriptions are deleted or unsubscribed.
+ */
+const pendingDeliveries: Map<string, { streamId: string; promises: Array<Promise<void>> }> = new Map();
 
 /** Blocking queues for sync subscriptions, keyed by subscription ID. */
 const syncQueues: Map<string, AsyncQueue<StreamMessage>> = new Map();
@@ -251,6 +258,10 @@ export function deleteStream(id: string): void {
       cleanupSessionIfEmpty(sub.sessionId);
     }
   }
+  // Clean up any pending delivery entries for messages in this stream
+  for (const msg of stream.messages) {
+    pendingDeliveries.delete(msg.id);
+  }
   streamsByName.delete(stream.name);
   streams.delete(id);
 }
@@ -330,6 +341,10 @@ export function unsubscribe(subscriptionId: string): void {
   if (stream) {
     stream.subscriptions.delete(sub.id);
     if (stream.subscriptions.size === 0) {
+      // Clean up any pending delivery entries for messages in this stream
+      for (const msg of stream.messages) {
+        pendingDeliveries.delete(msg.id);
+      }
       streamsByName.delete(stream.name);
       streams.delete(sub.streamId);
     }
@@ -398,8 +413,29 @@ export function publish(streamId: string, senderId: string, content: string): St
       const listener = asyncListeners.get(sub.sessionId);
       if (listener) {
         try {
-          listener(sub, msg);
-          msg.deliveredTo.add(sub.id);
+          const result = listener(sub, msg);
+          // Check for a thenable: void return (undefined) is the backward-compat path;
+          // any non-undefined value with a .then function is treated as a Promise.
+          // Accessing .then on a non-object (e.g. null from an untyped caller) would
+          // throw and be caught by the surrounding catch block, leaving the message undelivered.
+          if (result !== undefined && typeof (result as Promise<void>).then === "function") {
+            // Async listener — defer delivery tracking until the Promise settles
+            const subId = sub.id;
+            const streamId = sub.streamId;
+            const deliveryPromise = (result as Promise<void>).then(
+              () => { msg.deliveredTo.add(subId); },
+              (err: unknown) => { logger.warn({ err, subscriptionId: subId }, "Async listener delivery failed — message left undelivered"); },
+            );
+            let pending = pendingDeliveries.get(msg.id);
+            if (!pending) {
+              pending = { streamId, promises: [] };
+              pendingDeliveries.set(msg.id, pending);
+            }
+            pending.promises.push(deliveryPromise);
+          } else {
+            // Synchronous listener — mark delivered immediately (backward compatible)
+            msg.deliveredTo.add(sub.id);
+          }
         } catch (err) {
           logger.warn({ err, subscriptionId: sub.id }, "Async listener threw — message left undelivered");
         }
@@ -415,8 +451,30 @@ export function publish(streamId: string, senderId: string, content: string): St
     // "detach" mode: message stays in buffer, no notification
   }
 
-  // Prune messages that have been fully delivered
-  pruneDeliveredMessages(stream);
+  // If there are pending async deliveries, schedule auto-finalization so that callers
+  // that do not call awaitPendingDeliveries() still get pruning once all Promises settle.
+  // This prevents fully-delivered messages from leaking in stream.messages indefinitely
+  // (e.g. stdin delivery never calls awaitPendingDeliveries).
+  const pending = pendingDeliveries.get(msg.id);
+  if (!pending) {
+    pruneDeliveredMessages(stream);
+  } else {
+    const streamId = stream.id;
+    Promise.allSettled(pending.promises).then(() => {
+      // Only clean up if this entry still exists; it may already have been removed by
+      // a previous auto-finalization pass or by stream teardown (deleteStream/unsubscribe/_resetForTesting).
+      if (pendingDeliveries.has(msg.id)) {
+        pendingDeliveries.delete(msg.id);
+        const s = streams.get(streamId);
+        if (s) {
+          pruneDeliveredMessages(s);
+        }
+      }
+    }).catch((err: unknown) => {
+      // allSettled never rejects; this catches unexpected errors in the pruning logic
+      logger.error({ err, streamId, messageId: msg.id }, "Error while finalizing async deliveries for stream");
+    });
+  }
 
   return msg;
 }
@@ -468,6 +526,31 @@ export function registerAsyncListener(sessionId: string, callback: AsyncMessageL
   return () => {
     asyncListeners.delete(sessionId);
   };
+}
+
+/**
+ * Await all in-flight async delivery Promises for a message.
+ *
+ * Callers that need guaranteed delivery confirmation (e.g., `writeToFd`, `publishChildCompletion`)
+ * should call this after `publish()`. Messages delivered by a synchronous listener are already
+ * marked delivered and have no pending entries, so this is a no-op for them.
+ *
+ * Cleanup (deleting the pending entry and pruning) is handled exclusively by the
+ * auto-finalize scheduled inside `publish()`, so this function is a pure barrier.
+ *
+ * Note: pruning is driven by `publish()`'s auto-finalize (`Promise.allSettled`) and runs
+ * independently of this barrier. Callers must not assume any particular pruning state
+ * when this returns — only that `msg.deliveredTo` is accurate and `hasUndeliveredMessages`
+ * returns the correct value.
+ */
+export async function awaitPendingDeliveries(msg: StreamMessage): Promise<void> {
+  const entry = pendingDeliveries.get(msg.id);
+  if (!entry || entry.promises.length === 0) {
+    return;
+  }
+  await Promise.all(entry.promises);
+  // No cleanup here — publish()'s Promise.allSettled auto-finalize owns that exclusively,
+  // eliminating any race between this barrier and the background finalization.
 }
 
 // ─── Lifecycle Callbacks ──────────────────────────────────────────────────────
@@ -528,6 +611,7 @@ export function _resetForTesting(): void {
   subscriptionsById.clear();
   fdCounters.clear();
   asyncListeners.clear();
+  pendingDeliveries.clear();
   // Close all sync queues before clearing
   for (const queue of syncQueues.values()) {
     queue.close();

@@ -651,4 +651,144 @@ describe("stream-registry", () => {
       expect(callback).toHaveBeenCalledWith("child-123", "parent-456");
     });
   });
+
+  // ─── Async delivery (Promise-returning listeners) ──────────
+
+  describe("awaitPendingDeliveries", () => {
+    it("defers marking delivered when listener returns a resolving Promise", async () => {
+      const stream = registry.createStream("pipe");
+      registry.subscribe(stream.id, "parent", "rw", "async", true);
+      const childSub = registry.subscribe(stream.id, "child", "rw", "async", false);
+
+      registry.registerAsyncListener("child", async (_sub, _msg) => {
+        // async listener — returns a Promise
+      });
+
+      const msg = registry.publish(stream.id, "parent", "hello");
+
+      // Not yet delivered synchronously
+      expect(msg.deliveredTo.has(childSub.id)).toBe(false);
+
+      await registry.awaitPendingDeliveries(msg);
+
+      // Now marked delivered
+      expect(msg.deliveredTo.has(childSub.id)).toBe(true);
+    });
+
+    it("leaves message undelivered when listener returns a rejecting Promise", async () => {
+      const stream = registry.createStream("pipe");
+      registry.subscribe(stream.id, "parent", "rw", "async", true);
+      const childSub = registry.subscribe(stream.id, "child", "rw", "async", false);
+
+      registry.registerAsyncListener("child", async (_sub, _msg) => {
+        throw new Error("gRPC send failed");
+      });
+
+      const msg = registry.publish(stream.id, "parent", "hello");
+      await registry.awaitPendingDeliveries(msg);
+
+      expect(msg.deliveredTo.has(childSub.id)).toBe(false);
+    });
+
+    it("marks delivered immediately for sync (void) listeners — backward compatible", () => {
+      const stream = registry.createStream("pipe");
+      registry.subscribe(stream.id, "parent", "rw", "async", true);
+      const childSub = registry.subscribe(stream.id, "child", "rw", "async", false);
+
+      registry.registerAsyncListener("child", (_sub, _msg) => {
+        // sync listener — returns undefined
+      });
+
+      const msg = registry.publish(stream.id, "parent", "hello");
+
+      // Sync listener: delivered immediately without awaiting
+      expect(msg.deliveredTo.has(childSub.id)).toBe(true);
+    });
+
+    it("handles partial delivery: one resolves, one rejects", async () => {
+      const stream = registry.createStream("pipe");
+      registry.subscribe(stream.id, "sender", "rw", "async", true);
+      const sub1 = registry.subscribe(stream.id, "receiver1", "rw", "async", false);
+      const sub2 = registry.subscribe(stream.id, "receiver2", "rw", "async", false);
+
+      registry.registerAsyncListener("receiver1", async () => {
+        // resolves
+      });
+      registry.registerAsyncListener("receiver2", async () => {
+        throw new Error("delivery failed");
+      });
+
+      const msg = registry.publish(stream.id, "sender", "hello");
+      await registry.awaitPendingDeliveries(msg);
+
+      expect(msg.deliveredTo.has(sub1.id)).toBe(true);
+      expect(msg.deliveredTo.has(sub2.id)).toBe(false);
+    });
+
+    it("is a no-op when no pending deliveries exist (sync listener)", async () => {
+      const stream = registry.createStream("pipe");
+      registry.subscribe(stream.id, "parent", "rw", "async", true);
+      registry.subscribe(stream.id, "child", "rw", "async", false);
+
+      registry.registerAsyncListener("child", () => {
+        // sync
+      });
+
+      const msg = registry.publish(stream.id, "parent", "hello");
+      // Should resolve immediately with no effect
+      await expect(registry.awaitPendingDeliveries(msg)).resolves.toBeUndefined();
+    });
+
+    it("hasUndeliveredMessages returns true while delivery is pending", async () => {
+      const stream = registry.createStream("pipe");
+      registry.subscribe(stream.id, "parent", "rw", "async", true);
+      const childSub = registry.subscribe(stream.id, "child", "rw", "async", false);
+
+      let resolveDelivery!: () => void;
+      const deliveryPromise = new Promise<void>((resolve) => {
+        resolveDelivery = resolve;
+      });
+
+      registry.registerAsyncListener("child", () => deliveryPromise);
+
+      const msg = registry.publish(stream.id, "parent", "hello");
+
+      // Still in-flight: undelivered
+      expect(registry.hasUndeliveredMessages(childSub.id)).toBe(true);
+
+      // Resolve and await
+      resolveDelivery();
+      await registry.awaitPendingDeliveries(msg);
+
+      expect(registry.hasUndeliveredMessages(childSub.id)).toBe(false);
+    });
+
+    it("defers pruning until pending deliveries resolve", async () => {
+      const stream = registry.createStream("pipe");
+      registry.subscribe(stream.id, "parent", "rw", "async", true);
+      registry.subscribe(stream.id, "child", "rw", "async", false);
+
+      let resolveDelivery!: () => void;
+      const deliveryPromise = new Promise<void>((resolve) => {
+        resolveDelivery = resolve;
+      });
+
+      registry.registerAsyncListener("child", () => deliveryPromise);
+
+      const msg = registry.publish(stream.id, "parent", "hello");
+
+      // Message should still be in the buffer (not pruned yet)
+      expect(stream.messages).toContain(msg);
+
+      // Resolve and await — now it can be pruned
+      resolveDelivery();
+      await registry.awaitPendingDeliveries(msg);
+      // Flush any remaining microtasks so the auto-finalize Promise.allSettled callback
+      // (which calls pruneDeliveredMessages) has a chance to run before we assert.
+      await Promise.resolve();
+
+      // After delivery, the message is eligible for pruning
+      expect(stream.messages).not.toContain(msg);
+    });
+  });
 });

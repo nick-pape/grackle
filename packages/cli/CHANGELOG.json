@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.106.2",
+      "tag": "@grackle-ai/cli_v0.106.2",
+      "date": "Tue, 31 Mar 2026 22:07:04 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Track async pipe delivery end-to-end: defer marking delivered until gRPC sendInput Promise resolves, expose awaitPendingDeliveries(), fix hasUndeliveredMessages accuracy for post-dispatch failures"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.106.1",
       "tag": "@grackle-ai/cli_v0.106.1",
       "date": "Tue, 31 Mar 2026 21:45:28 GMT",

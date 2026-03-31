@@ -86,7 +86,7 @@ describe("pipe-delivery integration", () => {
   // ─── Async Pipe ────────────────────────────────────────────
 
   describe("async pipe: child completion delivers to parent", () => {
-    it("calls sendInput on parent with rich message content", () => {
+    it("calls sendInput on parent with rich message content", async () => {
       // Create parent + child sessions
       sessionStore.createSession("parent", "test-env", "claude-code", "parent prompt", "sonnet", "/tmp/parent");
       sessionStore.createSession("child", "test-env", "claude-code", "child prompt", "sonnet", "/tmp/child", "", "", "parent", "async");
@@ -100,7 +100,7 @@ describe("pipe-delivery integration", () => {
       pipeDelivery.setupAsyncPipeDelivery("parent");
 
       // Trigger child completion
-      pipeDelivery.publishChildCompletion("child", "completed");
+      await pipeDelivery.publishChildCompletion("child", "completed");
 
       // Verify sendInput called on parent with message containing status + child output
       expect(mockSendInput).toHaveBeenCalledOnce();
@@ -121,13 +121,13 @@ describe("pipe-delivery integration", () => {
       streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
       pipeDelivery.setupAsyncPipeDelivery("parent");
 
-      pipeDelivery.publishChildCompletion("child", "completed");
+      await pipeDelivery.publishChildCompletion("child", "completed");
 
       // Stream should be cleaned up after successful delivery
       expect(streamRegistry.getStreamByName("pipe:child")).toBeUndefined();
     });
 
-    it("keeps stream when delivery fails (listener throws)", () => {
+    it("keeps stream when delivery fails (listener throws)", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
       sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
 
@@ -139,7 +139,7 @@ describe("pipe-delivery integration", () => {
       vi.spyOn(adapterManager, "getConnection").mockReturnValue(undefined as unknown as ReturnType<typeof adapterManager.getConnection>);
       pipeDelivery.setupAsyncPipeDelivery("parent");
 
-      pipeDelivery.publishChildCompletion("child", "completed");
+      await pipeDelivery.publishChildCompletion("child", "completed");
 
       // Stream should still exist (undelivered message retained)
       expect(streamRegistry.getStreamByName("pipe:child")).toBeDefined();
@@ -208,14 +208,14 @@ describe("pipe-delivery integration", () => {
       const consumePromise = streamRegistry.consumeSync(parentSub.id);
 
       // Trigger child completion (publishes to stream, unblocking consumeSync)
-      pipeDelivery.publishChildCompletion("child", "completed");
+      await pipeDelivery.publishChildCompletion("child", "completed");
 
       const msg = await consumePromise;
       expect(msg.content).toContain("completed");
       expect(msg.content).toContain("Child's final output");
     });
 
-    it("does NOT clean up stream (waitForPipe handles that)", () => {
+    it("does NOT clean up stream (waitForPipe handles that)", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
       sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
 
@@ -223,7 +223,7 @@ describe("pipe-delivery integration", () => {
       streamRegistry.subscribe(stream.id, "parent", "rw", "sync", true);
       streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
 
-      pipeDelivery.publishChildCompletion("child", "completed");
+      await pipeDelivery.publishChildCompletion("child", "completed");
 
       // Stream should still exist (sync cleanup is consumer's responsibility)
       expect(streamRegistry.getStreamByName("pipe:child")).toBeDefined();
@@ -245,14 +245,14 @@ describe("pipe-delivery integration", () => {
       const consumePromise = streamRegistry.consumeSync(parentSub.id);
 
       // Trigger child idle (should publish to stream, unblocking consumeSync)
-      pipeDelivery.publishChildCompletion("child", "waiting_input");
+      await pipeDelivery.publishChildCompletion("child", "waiting_input");
 
       const msg = await consumePromise;
       expect(msg.content).toContain("finished (idle)");
       expect(msg.content).toContain("Child's final output");
     });
 
-    it("does NOT clean up stream (waitForPipe handles that)", () => {
+    it("does NOT clean up stream (waitForPipe handles that)", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
       sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
 
@@ -260,7 +260,7 @@ describe("pipe-delivery integration", () => {
       streamRegistry.subscribe(stream.id, "parent", "rw", "sync", true);
       streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
 
-      pipeDelivery.publishChildCompletion("child", "waiting_input");
+      await pipeDelivery.publishChildCompletion("child", "waiting_input");
 
       // Stream should still exist (sync cleanup is consumer's responsibility)
       expect(streamRegistry.getStreamByName("pipe:child")).toBeDefined();
@@ -268,7 +268,7 @@ describe("pipe-delivery integration", () => {
   });
 
   describe("async pipe: waiting_input is a no-op", () => {
-    it("does not deliver or clean up on waiting_input", () => {
+    it("does not deliver or clean up on waiting_input", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
       sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
 
@@ -277,7 +277,7 @@ describe("pipe-delivery integration", () => {
       streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
       pipeDelivery.setupAsyncPipeDelivery("parent");
 
-      pipeDelivery.publishChildCompletion("child", "waiting_input");
+      await pipeDelivery.publishChildCompletion("child", "waiting_input");
 
       // Async pipe should ignore waiting_input — child can still accept input
       expect(mockSendInput).not.toHaveBeenCalled();
@@ -354,7 +354,7 @@ describe("pipe-delivery integration", () => {
   // ─── No-ops ────────────────────────────────────────────────
 
   describe("no-op cases", () => {
-    it("does nothing for detach pipe even with stream set up", () => {
+    it("does nothing for detach pipe even with stream set up", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
       sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "detach");
 
@@ -364,14 +364,14 @@ describe("pipe-delivery integration", () => {
       streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
       pipeDelivery.setupAsyncPipeDelivery("parent");
 
-      pipeDelivery.publishChildCompletion("child", "completed");
+      await pipeDelivery.publishChildCompletion("child", "completed");
 
       expect(mockSendInput).not.toHaveBeenCalled();
       // Stream should be untouched (no messages buffered)
       expect(stream.messages).toHaveLength(0);
     });
 
-    it("does nothing for session without parent even with stream set up", () => {
+    it("does nothing for session without parent even with stream set up", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
       sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c");
 
@@ -381,23 +381,69 @@ describe("pipe-delivery integration", () => {
       streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
       pipeDelivery.setupAsyncPipeDelivery("parent");
 
-      pipeDelivery.publishChildCompletion("child", "completed");
+      await pipeDelivery.publishChildCompletion("child", "completed");
 
       expect(mockSendInput).not.toHaveBeenCalled();
       expect(stream.messages).toHaveLength(0);
     });
 
-    it("does nothing for nonexistent session", () => {
-      pipeDelivery.publishChildCompletion("nonexistent", "completed");
+    it("does nothing for nonexistent session", async () => {
+      await pipeDelivery.publishChildCompletion("nonexistent", "completed");
 
       expect(mockSendInput).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── End-to-end delivery tracking (post-dispatch gRPC failures) ──
+
+  describe("async pipe: post-dispatch gRPC failure tracking", () => {
+    it("leaves message undelivered and keeps stream when sendInput rejects", async () => {
+      sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
+      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+
+      const stream = streamRegistry.createStream("pipe:child");
+      const parentSub = streamRegistry.subscribe(stream.id, "parent", "rw", "async", true);
+      streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
+
+      // Mock sendInput to reject — simulates network/gRPC failure after dispatch
+      mockSendInput.mockRejectedValue(new Error("gRPC network failure"));
+      pipeDelivery.ensureAsyncDeliveryListener("parent");
+
+      await pipeDelivery.publishChildCompletion("child", "completed");
+
+      // Message should still be undelivered (gRPC failed)
+      expect(streamRegistry.hasUndeliveredMessages(parentSub.id)).toBe(true);
+
+      // Stream should NOT be cleaned up — undelivered message must be retained
+      expect(streamRegistry.getStreamByName("pipe:child")).toBeDefined();
+    });
+
+    it("marks message delivered and cleans up stream when sendInput resolves", async () => {
+      sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
+      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+
+      const stream = streamRegistry.createStream("pipe:child");
+      const parentSub = streamRegistry.subscribe(stream.id, "parent", "rw", "async", true);
+      streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
+
+      // Mock sendInput to resolve — normal successful delivery
+      mockSendInput.mockResolvedValue({});
+      pipeDelivery.ensureAsyncDeliveryListener("parent");
+
+      await pipeDelivery.publishChildCompletion("child", "completed");
+
+      // Message should be marked delivered
+      expect(streamRegistry.hasUndeliveredMessages(parentSub.id)).toBe(false);
+
+      // Stream should be cleaned up after successful delivery
+      expect(streamRegistry.getStreamByName("pipe:child")).toBeUndefined();
     });
   });
 
   // ─── Idempotency ───────────────────────────────────────────
 
   describe("setupAsyncPipeDelivery idempotency", () => {
-    it("only calls registerAsyncListener once when invoked twice", () => {
+    it("only calls registerAsyncListener once when invoked twice", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
       sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
 
@@ -414,7 +460,7 @@ describe("pipe-delivery integration", () => {
       // registerAsyncListener should only be called once (second call is idempotent no-op)
       expect(spy).toHaveBeenCalledOnce();
 
-      pipeDelivery.publishChildCompletion("child", "completed");
+      await pipeDelivery.publishChildCompletion("child", "completed");
 
       // Should only deliver once
       expect(mockSendInput).toHaveBeenCalledOnce();
