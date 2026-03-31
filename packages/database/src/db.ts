@@ -105,12 +105,26 @@ const MIGRATIONS: Migration[] = [
       const sessionCols = conn
         .prepare("PRAGMA table_info(sessions)")
         .all() as Array<{ name: string }>;
-      if (!sessionCols.some((c) => c.name === "cost_millicents")) {
+      const hasCostMillicents = sessionCols.some((c) => c.name === "cost_millicents");
+      const hasCostUsd = sessionCols.some((c) => c.name === "cost_usd");
+
+      // Add the new column only if it is missing and cost_usd exists to convert from.
+      if (!hasCostMillicents && hasCostUsd) {
         conn.exec("ALTER TABLE sessions ADD COLUMN cost_millicents INTEGER NOT NULL DEFAULT 0");
-        conn.exec("UPDATE sessions SET cost_millicents = CAST(ROUND(cost_usd * 100000) AS INTEGER)");
       }
+
+      // Always backfill from cost_usd when it is present — this handles the case
+      // where cost_millicents already existed with 0 values from a partial migration.
+      if (hasCostUsd) {
+        conn.exec(
+          "UPDATE sessions " +
+          "SET cost_millicents = CAST(ROUND(cost_usd * 100000) AS INTEGER) " +
+          "WHERE cost_usd IS NOT NULL AND cost_millicents = 0"
+        );
+      }
+
       // DROP COLUMN is supported in SQLite 3.35.0+ (bundled with better-sqlite3)
-      if (sessionCols.some((c) => c.name === "cost_usd")) {
+      if (hasCostUsd) {
         conn.exec("ALTER TABLE sessions DROP COLUMN cost_usd");
       }
     },
@@ -129,7 +143,7 @@ const CURRENT_VERSION: number = MIGRATIONS.length > 0
  * These were added at various points during the historical migration sequence.
  */
 const BASELINE_SCHEMA_CHECKS: Array<{ table: string; column: string }> = [
-  { table: "sessions", column: "cost_millicents" },
+  { table: "sessions", column: "input_tokens" },
   { table: "tasks", column: "schedule_id" },
   { table: "workspaces", column: "working_directory" },
 ];

@@ -20,7 +20,8 @@ export function formatCost(millicents: number): string {
   }
   const usd = millicents / 100_000;
   if (usd < 0.01) {
-    return `$${usd.toFixed(4)}`;
+    const decimals = millicents < 5 ? 5 : 4;
+    return `$${usd.toFixed(decimals)}`;
   }
   return `$${usd.toFixed(2)}`;
 }

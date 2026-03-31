@@ -26,9 +26,15 @@ describe("formatCost", () => {
     expect(formatCost(0)).toBe("-");
   });
 
-  it("shows 4 decimal places for small costs (under $0.01 = 1000 millicents)", () => {
+  it("shows 4 decimal places for small costs (5–999 millicents)", () => {
+    expect(formatCost(5)).toBe("$0.0001");
     expect(formatCost(390)).toBe("$0.0039");
     expect(formatCost(500)).toBe("$0.0050");
+  });
+
+  it("shows 5 decimal places for sub-5-millicent costs to avoid displaying $0.0000", () => {
+    expect(formatCost(1)).toBe("$0.00001");
+    expect(formatCost(4)).toBe("$0.00004");
   });
 
   it("shows 2 decimal places for larger costs (1000+ millicents)", () => {
