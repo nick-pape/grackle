@@ -533,6 +533,10 @@ export function registerAsyncListener(sessionId: string, callback: AsyncMessageL
  *
  * Cleanup (deleting the pending entry and pruning) is handled exclusively by the
  * auto-finalize scheduled inside `publish()`, so this function is a pure barrier.
+ *
+ * Note: pruning runs asynchronously via auto-finalize (a later microtask after this
+ * returns). Callers must not assume `stream.messages` has been pruned — only that
+ * `msg.deliveredTo` is accurate and `hasUndeliveredMessages` returns the correct value.
  */
 export async function awaitPendingDeliveries(msg: StreamMessage): Promise<void> {
   const entry = pendingDeliveries.get(msg.id);
