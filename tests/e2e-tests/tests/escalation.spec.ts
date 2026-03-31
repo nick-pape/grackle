@@ -21,7 +21,7 @@ test.describe("Escalation auto-detection", () => {
     const deadline = Date.now() + 10_000;
     let found = false;
     while (Date.now() < deadline) {
-      const resp = await client.listEscalations({ workspaceId: "", status: "", limit: 50 });
+      const resp = await client.orchestration.listEscalations({ workspaceId: "", status: "", limit: 50 });
       const match = resp.escalations.find((e) =>
         e.title === "escalation-auto-test" && e.source === "auto",
       );
@@ -39,31 +39,31 @@ test.describe("Escalation auto-detection", () => {
 
   test("escalation list filters by status", async ({ stubTask, grackle: { client } }) => {
     // Create two escalations
-    const esc1 = await client.createEscalation({
+    const esc1 = await client.orchestration.createEscalation({
       workspaceId: "", taskId: "", title: "Pending one",
       message: "First", urgency: "normal",
     });
-    const esc2 = await client.createEscalation({
+    const esc2 = await client.orchestration.createEscalation({
       workspaceId: "", taskId: "", title: "To acknowledge",
       message: "Second", urgency: "normal",
     });
 
     // Acknowledge the second one
-    await client.acknowledgeEscalation({ id: esc2.id });
+    await client.orchestration.acknowledgeEscalation({ id: esc2.id });
 
     // Filter by delivered — only esc1 should match
-    const delivered = await client.listEscalations({ workspaceId: "", status: "delivered" });
+    const delivered = await client.orchestration.listEscalations({ workspaceId: "", status: "delivered" });
     expect(delivered.escalations.some((e) => e.id === esc1.id)).toBe(true);
     expect(delivered.escalations.some((e) => e.id === esc2.id)).toBe(false);
 
     // Filter by acknowledged — only esc2 should match
-    const acknowledged = await client.listEscalations({ workspaceId: "", status: "acknowledged" });
+    const acknowledged = await client.orchestration.listEscalations({ workspaceId: "", status: "acknowledged" });
     expect(acknowledged.escalations.some((e) => e.id === esc2.id)).toBe(true);
   });
 
   test("explicit escalation via RPC", async ({ stubTask, grackle: { client } }) => {
     // Create an escalation via the RPC directly (simulating what the MCP tool does)
-    const esc = await client.createEscalation({
+    const esc = await client.orchestration.createEscalation({
       workspaceId: "",
       taskId: "",
       title: "Manual escalation",
@@ -77,12 +77,12 @@ test.describe("Escalation auto-detection", () => {
     expect(esc.status).toBe("delivered");
 
     // Acknowledge it
-    const acked = await client.acknowledgeEscalation({ id: esc.id });
+    const acked = await client.orchestration.acknowledgeEscalation({ id: esc.id });
     expect(acked.status).toBe("acknowledged");
     expect(acked.acknowledgedAt).toBeTruthy();
 
     // List and verify
-    const list = await client.listEscalations({ workspaceId: "", status: "acknowledged" });
+    const list = await client.orchestration.listEscalations({ workspaceId: "", status: "acknowledged" });
     const found = list.escalations.find((e) => e.id === esc.id);
     expect(found).toBeDefined();
     expect(found!.status).toBe("acknowledged");

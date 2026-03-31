@@ -1,4 +1,3 @@
-import type { Client } from "@connectrpc/connect";
 import {
   type grackle,
   taskStatusToEnum,
@@ -6,7 +5,7 @@ import {
   ROOT_TASK_ID,
 } from "@grackle-ai/common";
 import { z } from "zod";
-import type { ToolDefinition } from "../tool-registry.js";
+import type { GrackleClients, ToolDefinition } from "../tool-registry.js";
 import type { AuthContext } from "@grackle-ai/auth";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
@@ -41,7 +40,7 @@ export const taskTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
       try {
         const response = await client.listTasks({
           workspaceId: (args.workspaceId as string | undefined) ?? "",
@@ -116,7 +115,7 @@ export const taskTools: ToolDefinition[] = [
       idempotentHint: false,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
       try {
         const task = await client.createTask({
           workspaceId: (args.workspaceId as string | undefined) ?? "",
@@ -153,7 +152,7 @@ export const taskTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
       try {
         const task = await client.getTask({
           id: args.taskId as string,
@@ -219,7 +218,7 @@ export const taskTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
       try {
         const taskId = args.taskId as string;
         if (taskId === ROOT_TASK_ID && args.status) {
@@ -279,7 +278,7 @@ export const taskTools: ToolDefinition[] = [
       idempotentHint: false,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+    async handler(args: Record<string, unknown>, { orchestration: client, core }: GrackleClients, authContext?: AuthContext) {
       try {
         await assertCallerIsAncestor(client, authContext, args.taskId as string);
         const pipe = (args.pipe as string) || "";
@@ -306,7 +305,7 @@ export const taskTools: ToolDefinition[] = [
         const base = { sessionId: response.id, taskId: args.taskId as string };
 
         if (pipe === "sync") {
-          const result = await client.waitForPipe({
+          const result = await core.waitForPipe({
             sessionId: parentSessionId,
             fd: response.pipeFd,
           });
@@ -348,7 +347,7 @@ export const taskTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
       try {
         const taskId = args.taskId as string;
         if (taskId === ROOT_TASK_ID) {
@@ -379,7 +378,7 @@ export const taskTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+    async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients, authContext?: AuthContext) {
       try {
         const taskId = args.taskId as string;
         if (taskId === ROOT_TASK_ID) {
@@ -411,7 +410,7 @@ export const taskTools: ToolDefinition[] = [
       idempotentHint: false,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
       try {
         const session = await client.resumeTask({
           id: args.taskId as string,

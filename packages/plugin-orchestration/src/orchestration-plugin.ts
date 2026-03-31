@@ -33,8 +33,8 @@ export function createOrchestrationPlugin(): GracklePlugin {
     dependencies: ["core"],
 
     grpcHandlers: () => [{
-      service: grackle.Grackle,
-      handlers: createOrchestrationCollector().getHandlers(grackle.Grackle),
+      service: grackle.GrackleOrchestration,
+      handlers: createOrchestrationCollector().getHandlers(grackle.GrackleOrchestration),
     }],
 
     reconciliationPhases: (ctx) => [

@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import chalk from "chalk";
-import { createGrackleClient } from "../client.js";
+import { createGrackleClients } from "../client.js";
 
 /** Known setting key aliases mapped to their canonical gRPC key. */
 const SETTING_KEY_ALIASES: Record<string, string> = {
@@ -26,7 +26,7 @@ export function registerConfigCommands(program: Command): void {
     .command("get <key>")
     .description("Get a setting value")
     .action(async (key: string) => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       const settingKey = resolveSettingKey(key);
       const result = await client.getSetting({ key: settingKey });
       if (result.value) {
@@ -40,7 +40,7 @@ export function registerConfigCommands(program: Command): void {
     .command("set <key> <value>")
     .description("Set a setting value")
     .action(async (key: string, value: string) => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       const settingKey = resolveSettingKey(key);
       await client.setSetting({ key: settingKey, value });
       console.log(`Set ${chalk.bold(key)} = ${chalk.cyan(value)}`);

@@ -153,7 +153,7 @@ export const knowledgeMcpTools: PluginToolDefinition[] = [
       client: unknown,
       authContext?: unknown,
     ): Promise<unknown> {
-      const typedClient = client as Client<typeof grackle.Grackle>;
+      const typedClient = (client as { knowledge: Client<typeof grackle.GrackleKnowledge> }).knowledge;
       const typedAuth = authContext as AuthContext | undefined;
       const {
         query,
@@ -278,7 +278,7 @@ export const knowledgeMcpTools: PluginToolDefinition[] = [
       client: unknown,
       authContext?: unknown,
     ): Promise<unknown> {
-      const typedClient = client as Client<typeof grackle.Grackle>;
+      const typedClient = (client as { knowledge: Client<typeof grackle.GrackleKnowledge> }).knowledge;
       const typedAuth = authContext as AuthContext | undefined;
       const { id, expand, expandDepth } = args as {
         id: string;
@@ -403,7 +403,7 @@ export const knowledgeMcpTools: PluginToolDefinition[] = [
       client: unknown,
       authContext?: unknown,
     ): Promise<unknown> {
-      const typedClient = client as Client<typeof grackle.Grackle>;
+      const typedClient = (client as { knowledge: Client<typeof grackle.GrackleKnowledge> }).knowledge;
       const typedAuth = authContext as AuthContext | undefined;
       const {
         title,

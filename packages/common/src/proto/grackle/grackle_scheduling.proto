@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package grackle;
+
+import "grackle/grackle_types.proto";
+
+service GrackleScheduling {
+  // Schedules
+  rpc CreateSchedule(CreateScheduleRequest) returns (Schedule);
+  rpc ListSchedules(ListSchedulesRequest) returns (ScheduleList);
+  rpc GetSchedule(ScheduleId) returns (Schedule);
+  rpc UpdateSchedule(UpdateScheduleRequest) returns (Schedule);
+  rpc DeleteSchedule(ScheduleId) returns (Empty);
+}

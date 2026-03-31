@@ -5,7 +5,7 @@ import type { grackle } from "@grackle-ai/common";
 import type { AuthContext } from "@grackle-ai/auth";
 import { sessionTools } from "./session.js";
 
-type GrackleClient = Client<typeof grackle.Grackle>;
+type GrackleClient = Client<typeof grackle.GrackleCore>;
 
 /** Helper to find a tool definition by name. */
 const getTool = (name: string) => sessionTools.find((t) => t.name === name)!;
@@ -40,7 +40,7 @@ describe("session_spawn", () => {
         model: "claude-sonnet-4-20250514",
         maxTurns: 10,
       },
-      mockClient,
+      { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -58,7 +58,7 @@ describe("session_spawn", () => {
 
     const result = await getTool("session_spawn").handler(
       { environmentId: "env-missing", prompt: "test" },
-      mockClient,
+      { core: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -77,8 +77,7 @@ describe("session_resume", () => {
     });
 
     const result = await getTool("session_resume").handler(
-      { sessionId: "session-2" },
-      mockClient,
+      { sessionId: "session-2" }, { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -94,8 +93,7 @@ describe("session_resume", () => {
     );
 
     const result = await getTool("session_resume").handler(
-      { sessionId: "no-such" },
-      mockClient,
+      { sessionId: "no-such" }, { core: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -120,8 +118,7 @@ describe("session_status", () => {
     });
 
     const result = await getTool("session_status").handler(
-      { all: false },
-      mockClient,
+      { all: false }, { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -138,8 +135,7 @@ describe("session_status", () => {
     });
 
     const result = await getTool("session_status").handler(
-      { all: true },
-      mockClient,
+      { all: true }, { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -153,7 +149,7 @@ describe("session_status", () => {
       new ConnectError("unavailable", Code.Unavailable),
     );
 
-    const result = await getTool("session_status").handler({}, mockClient);
+    const result = await getTool("session_status").handler({}, { core: mockClient });
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
@@ -168,8 +164,7 @@ describe("session_kill", () => {
     (mockClient.killAgent as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     const result = await getTool("session_kill").handler(
-      { sessionId: "session-99" },
-      mockClient,
+      { sessionId: "session-99" }, { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -189,7 +184,7 @@ describe("session_kill", () => {
 
     await getTool("session_kill").handler(
       { sessionId: "session-99", graceful: true },
-      mockClient,
+      { core: mockClient },
     );
 
     expect(mockClient.killAgent).toHaveBeenCalledWith({ id: "session-99", graceful: true });
@@ -203,8 +198,7 @@ describe("session_kill", () => {
     );
 
     const result = await getTool("session_kill").handler(
-      { sessionId: "no-such" },
-      mockClient,
+      { sessionId: "no-such" }, { core: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -223,7 +217,7 @@ describe("session_attach", () => {
 
     const result = await getTool("session_attach").handler(
       { sessionId: "s1", timeoutSeconds: 30 },
-      mockClient,
+      { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -246,7 +240,7 @@ describe("session_attach", () => {
 
     const result = await getTool("session_attach").handler(
       { sessionId: "s1", timeoutSeconds: 30, maxEvents: 2 },
-      mockClient,
+      { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -264,7 +258,7 @@ describe("session_attach", () => {
 
     const result = await getTool("session_attach").handler(
       { sessionId: "no-such", timeoutSeconds: 5 },
-      mockClient,
+      { core: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -293,7 +287,7 @@ describe("session_attach", () => {
 
     const result = await getTool("session_attach").handler(
       { sessionId: "s1", timeoutSeconds: 5 },
-      mockClient,
+      { core: mockClient, orchestration: mockClient },
       scopedAuth,
     );
 
@@ -327,7 +321,7 @@ describe("session_attach", () => {
 
     const result = await getTool("session_attach").handler(
       { sessionId: "s1", timeoutSeconds: 5 },
-      mockClient,
+      { core: mockClient, orchestration: mockClient },
       scopedAuth,
     );
 
@@ -352,7 +346,7 @@ describe("session_attach", () => {
 
     const result = await getTool("session_attach").handler(
       { sessionId: "nonexistent", timeoutSeconds: 5 },
-      mockClient,
+      { core: mockClient },
       scopedAuth,
     );
 
@@ -378,7 +372,7 @@ describe("session_attach", () => {
 
     const result = await getTool("session_attach").handler(
       { sessionId: "s1", timeoutSeconds: 5 },
-      mockClient,
+      { core: mockClient },
       scopedAuth,
     );
 
@@ -396,7 +390,7 @@ describe("session_send_input", () => {
 
     const result = await getTool("session_send_input").handler(
       { sessionId: "s1", text: "yes" },
-      mockClient,
+      { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -416,7 +410,7 @@ describe("session_send_input", () => {
 
     const result = await getTool("session_send_input").handler(
       { sessionId: "s1", text: "yes" },
-      mockClient,
+      { core: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -445,7 +439,7 @@ describe("session_send_input", () => {
 
     const result = await getTool("session_send_input").handler(
       { sessionId: "s1", text: "yes" },
-      mockClient,
+      { core: mockClient, orchestration: mockClient },
       scopedAuth,
     );
 
@@ -476,7 +470,7 @@ describe("session_send_input", () => {
 
     const result = await getTool("session_send_input").handler(
       { sessionId: "s1", text: "yes" },
-      mockClient,
+      { core: mockClient, orchestration: mockClient },
       scopedAuth,
     );
 
@@ -501,7 +495,7 @@ describe("session_send_input", () => {
 
     const result = await getTool("session_send_input").handler(
       { sessionId: "nonexistent", text: "yes" },
-      mockClient,
+      { core: mockClient },
       scopedAuth,
     );
 
@@ -527,7 +521,7 @@ describe("session_send_input", () => {
 
     const result = await getTool("session_send_input").handler(
       { sessionId: "s1", text: "yes" },
-      mockClient,
+      { core: mockClient },
       scopedAuth,
     );
 

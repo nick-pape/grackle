@@ -10,7 +10,7 @@
 import { useState, useCallback } from "react";
 import type { FindingData, GrackleEvent, UseFindingsResult } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
-import { grackleClient } from "./useGrackleClient.js";
+import { orchestrationClient as grackleClient } from "./useGrackleClient.js";
 import { protoToFinding } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
 

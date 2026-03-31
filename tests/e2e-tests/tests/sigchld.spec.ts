@@ -13,7 +13,7 @@ async function startTaskAndGetSessionId(
   client: GrackleClient,
   taskId: string,
 ): Promise<string> {
-  const resp = await client.startTask({
+  const resp = await client.orchestration.startTask({
     taskId,
     personaId: "stub",
     environmentId: "test-local",
@@ -36,7 +36,7 @@ async function waitForSessionStatus(
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const resp = await client.listSessions({});
+    const resp = await client.core.listSessions({});
     const sessions = resp.sessions;
     const session = sessions.find((s) => s.id === sessionId);
     if (session && session.status === targetStatus) {
@@ -62,7 +62,7 @@ async function waitForSessionText(
 ): Promise<string> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const resp = await client.getSessionEvents({ id: sessionId });
+    const resp = await client.core.getSessionEvents({ id: sessionId });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const events = (resp.events || []) as any[];
     const match = events.find(
@@ -95,16 +95,16 @@ test.describe("SIGCHLD — child completion notification", { tag: ["@error"] }, 
   // Without this, sessions from earlier tests (or session recovery) can block
   // reanimateAgent with "Environment already has active session".
   test.beforeEach(async ({ grackle: { client } }) => {
-    const sessionsResp = await client.listSessions({});
+    const sessionsResp = await client.core.listSessions({});
     const all = sessionsResp.sessions as Array<{ id: string; status: string }>;
     const active = all.filter((s) => s.status === "idle" || s.status === "running" || s.status === "pending");
     for (const s of active) {
-      await client.killAgent({ id: s.id });
+      await client.core.killAgent({ id: s.id });
     }
     if (active.length > 0) {
       const deadline = Date.now() + 5_000;
       while (Date.now() < deadline) {
-        const recheck = await client.listSessions({});
+        const recheck = await client.core.listSessions({});
         const remaining = recheck.sessions as Array<{ status: string }>;
         if (!remaining.some((s) => s.status === "idle" || s.status === "running" || s.status === "pending")) {
           break;
@@ -153,9 +153,9 @@ test.describe("SIGCHLD — child completion notification", { tag: ["@error"] }, 
     expect(sigchldContent).toContain("finished working");
 
     // Cleanup: kill both sessions to free the environment for subsequent tests
-    await client.killAgent({ id: childSessionId });
+    await client.core.killAgent({ id: childSessionId });
     await waitForSessionStatus(client, childSessionId, "stopped");
-    await client.killAgent({ id: parentSessionId });
+    await client.core.killAgent({ id: parentSessionId });
     await waitForSessionStatus(client, parentSessionId, "stopped");
   });
 
@@ -183,7 +183,7 @@ test.describe("SIGCHLD — child completion notification", { tag: ["@error"] }, 
     // 4. Start parent → IDLE → kill it to make it dead (STOPPED)
     const parentSessionId = await startTaskAndGetSessionId(client, parentTaskId);
     await waitForSessionStatus(client, parentSessionId, "idle");
-    await client.killAgent({ id: parentSessionId });
+    await client.core.killAgent({ id: parentSessionId });
     await waitForSessionStatus(client, parentSessionId, "stopped");
 
     // 5. Start child → idle (SIGCHLD fires but reanimate fails: env busy).
@@ -192,7 +192,7 @@ test.describe("SIGCHLD — child completion notification", { tag: ["@error"] }, 
     //    This time reanimate succeeds.
     const childSessionId = await startTaskAndGetSessionId(client, childTaskId);
     await waitForSessionStatus(client, childSessionId, "idle");
-    await client.killAgent({ id: childSessionId });
+    await client.core.killAgent({ id: childSessionId });
     await waitForSessionStatus(client, childSessionId, "stopped");
 
     // 6. SIGCHLD triggers reanimate of parent session.

@@ -1,5 +1,5 @@
 /**
- * ConnectRPC client for calling the Grackle gRPC service from the browser.
+ * ConnectRPC clients for calling the Grackle gRPC services from the browser.
  *
  * Uses the Connect protocol over HTTP/1.1 (same-origin requests to the web
  * server on port 3000), with session cookie auth sent automatically.
@@ -31,8 +31,14 @@ const transport: ReturnType<typeof createConnectTransport> = createConnectTransp
   fetch: customFetch as typeof globalThis.fetch,
 });
 
-/** Typed ConnectRPC client for the Grackle service. */
-export const grackleClient: Client<typeof grackle.Grackle> = createClient(grackle.Grackle, transport);
+/** Typed ConnectRPC client for core RPCs (environments, sessions, workspaces, etc.). */
+export const coreClient: Client<typeof grackle.GrackleCore> = createClient(grackle.GrackleCore, transport);
 
-/** Re-export the Client type for hooks that accept the client as a parameter. */
-export type GrackleClient = Client<typeof grackle.Grackle>;
+/** Typed ConnectRPC client for orchestration RPCs (tasks, personas, findings, escalations). */
+export const orchestrationClient: Client<typeof grackle.GrackleOrchestration> = createClient(grackle.GrackleOrchestration, transport);
+
+/** Typed ConnectRPC client for scheduling RPCs. */
+export const schedulingClient: Client<typeof grackle.GrackleScheduling> = createClient(grackle.GrackleScheduling, transport);
+
+/** Typed ConnectRPC client for knowledge graph RPCs. */
+export const knowledgeClient: Client<typeof grackle.GrackleKnowledge> = createClient(grackle.GrackleKnowledge, transport);

@@ -4,7 +4,7 @@ import type { grackle } from "@grackle-ai/common";
 import type { AuthContext } from "@grackle-ai/auth";
 import { ipcTools } from "./ipc.js";
 
-type GrackleClient = Client<typeof grackle.Grackle>;
+type GrackleClient = Client<typeof grackle.GrackleCore>;
 
 /** Helper to find a tool definition by name. */
 const getTool = (name: string) => ipcTools.find((t) => t.name === name)!;
@@ -47,8 +47,7 @@ describe("ipc_terminate", () => {
     (mockClient.killAgent as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     const result = await getTool("ipc_terminate").handler(
-      { fd: 3 },
-      mockClient,
+      { fd: 3 }, { core: mockClient },
       SCOPED_AUTH,
     );
     const parsed = JSON.parse(result.content[0].text);
@@ -65,8 +64,7 @@ describe("ipc_terminate", () => {
     });
 
     const result = await getTool("ipc_terminate").handler(
-      { fd: 99 },
-      mockClient,
+      { fd: 99 }, { core: mockClient },
       SCOPED_AUTH,
     );
 
@@ -90,8 +88,7 @@ describe("ipc_terminate", () => {
     });
 
     const result = await getTool("ipc_terminate").handler(
-      { fd: 3 },
-      mockClient,
+      { fd: 3 }, { core: mockClient },
       SCOPED_AUTH,
     );
 
@@ -115,8 +112,7 @@ describe("ipc_terminate", () => {
     });
 
     const result = await getTool("ipc_terminate").handler(
-      { fd: 3 },
-      mockClient,
+      { fd: 3 }, { core: mockClient },
       SCOPED_AUTH,
     );
 
@@ -128,8 +124,7 @@ describe("ipc_terminate", () => {
     const mockClient = createMockClient();
 
     const result = await getTool("ipc_terminate").handler(
-      { fd: 3 },
-      mockClient,
+      { fd: 3 }, { core: mockClient },
       undefined,
     );
 

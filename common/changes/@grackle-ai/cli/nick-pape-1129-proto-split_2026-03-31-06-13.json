@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Split monolithic grackle.proto into per-plugin gRPC services (GrackleCore, GrackleOrchestration, GrackleScheduling, GrackleKnowledge); update all clients, tools, and tests to use typed per-service clients",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

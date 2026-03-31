@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { createGrackleClient } from "../client.js";
+import { createGrackleClients } from "../client.js";
 import Table from "cli-table3";
 import chalk from "chalk";
 import { readFileSync } from "node:fs";
@@ -39,7 +39,7 @@ export function registerPersonaCommands(program: Command): void {
     .description("List all personas")
     .addHelpText("after", "\nExample:\n  $ grackle persona list")
     .action(async () => {
-      const client = createGrackleClient();
+      const { orchestration: client } = createGrackleClients();
       const res = await client.listPersonas({});
       if (res.personas.length === 0) {
         console.log("No personas.");
@@ -120,7 +120,7 @@ export function registerPersonaCommands(program: Command): void {
 
       const allowedMcpTools = resolveMcpTools(opts);
 
-      const client = createGrackleClient();
+      const { orchestration: client } = createGrackleClients();
       const p = await client.createPersona({
         name,
         description: opts.desc || "",
@@ -139,7 +139,7 @@ export function registerPersonaCommands(program: Command): void {
     .command("show <id>")
     .description("Show persona details")
     .action(async (id: string) => {
-      const client = createGrackleClient();
+      const { orchestration: client } = createGrackleClients();
       const p = await client.getPersona({ id });
       console.log(`ID:            ${p.id}`);
       console.log(`Name:          ${p.name}`);
@@ -209,7 +209,7 @@ export function registerPersonaCommands(program: Command): void {
       }
       const allowedMcpTools = resolveMcpTools(opts);
 
-      const client = createGrackleClient();
+      const { orchestration: client } = createGrackleClients();
       const p = await client.updatePersona({
         id,
         name: opts.name || "",
@@ -230,7 +230,7 @@ export function registerPersonaCommands(program: Command): void {
     .command("delete <id>")
     .description("Delete a persona")
     .action(async (id: string) => {
-      const client = createGrackleClient();
+      const { orchestration: client } = createGrackleClients();
       await client.deletePersona({ id });
       console.log(`Deleted persona: ${id}`);
     });

@@ -12,7 +12,7 @@ import { ConnectError } from "@connectrpc/connect";
 import { warnBadPayload } from "@grackle-ai/web-components";
 import type { Environment, GrackleEvent, ProvisionStatus, WsMessage, UseEnvironmentsResult } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
-import { grackleClient } from "./useGrackleClient.js";
+import { coreClient as grackleClient } from "./useGrackleClient.js";
 import { protoToEnvironment } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
 

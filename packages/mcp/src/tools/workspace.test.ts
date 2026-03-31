@@ -4,7 +4,7 @@ import type { Client } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
 import { workspaceTools } from "./workspace.js";
 
-type GrackleClient = Client<typeof grackle.Grackle>;
+type GrackleClient = Client<typeof grackle.GrackleCore>;
 
 /** Look up a tool definition by name from the workspaceTools array. */
 const getTool = (name: string) => workspaceTools.find((t) => t.name === name)!;
@@ -29,7 +29,7 @@ describe("workspace_list", () => {
       }),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({}, mockClient);
+    const result = await tool.handler({}, { core: mockClient });
 
     expect(mockClient.listWorkspaces).toHaveBeenCalledWith({ environmentId: "" });
 
@@ -49,7 +49,7 @@ describe("workspace_list", () => {
       ),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({}, mockClient);
+    const result = await tool.handler({}, { core: mockClient });
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
@@ -83,7 +83,7 @@ describe("workspace_create", () => {
         repoUrl: "https://github.com/org/beta",
         environmentId: "env-2",
       },
-      mockClient,
+      { core: mockClient },
     );
 
     expect(mockClient.createWorkspace).toHaveBeenCalledWith(
@@ -117,7 +117,7 @@ describe("workspace_create", () => {
       }),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({ name: "Minimal", environmentId: "env-1" }, mockClient);
+    const result = await tool.handler({ name: "Minimal", environmentId: "env-1" }, { core: mockClient });
 
     expect(mockClient.createWorkspace).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -140,7 +140,7 @@ describe("workspace_create", () => {
       ),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({ name: "Dupe" }, mockClient);
+    const result = await tool.handler({ name: "Dupe" }, { core: mockClient });
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
@@ -167,7 +167,7 @@ describe("workspace_get", () => {
       }),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({ workspaceId: "proj-1" }, mockClient);
+    const result = await tool.handler({ workspaceId: "proj-1" }, { core: mockClient });
 
     expect(mockClient.getWorkspace).toHaveBeenCalledWith({ id: "proj-1" });
 
@@ -186,7 +186,7 @@ describe("workspace_get", () => {
       ),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({ workspaceId: "proj-missing" }, mockClient);
+    const result = await tool.handler({ workspaceId: "proj-missing" }, { core: mockClient });
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
@@ -215,7 +215,7 @@ describe("workspace_update", () => {
 
     const result = await tool.handler(
       { workspaceId: "proj-1", name: "Alpha Renamed" },
-      mockClient,
+      { core: mockClient },
     );
 
     expect(mockClient.updateWorkspace).toHaveBeenCalledWith(
@@ -248,7 +248,7 @@ describe("workspace_update", () => {
 
     await tool.handler(
       { workspaceId: "proj-1", tokenBudget: 100000, costBudgetMillicents: 2000 },
-      mockClient,
+      { core: mockClient },
     );
 
     expect(mockClient.updateWorkspace).toHaveBeenCalledWith(
@@ -270,7 +270,7 @@ describe("workspace_update", () => {
 
     const result = await tool.handler(
       { workspaceId: "proj-missing", name: "Nope" },
-      mockClient,
+      { core: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -288,7 +288,7 @@ describe("workspace_archive", () => {
       archiveWorkspace: vi.fn().mockResolvedValue({}),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({ workspaceId: "proj-1" }, mockClient);
+    const result = await tool.handler({ workspaceId: "proj-1" }, { core: mockClient });
 
     expect(mockClient.archiveWorkspace).toHaveBeenCalledWith({ id: "proj-1" });
 
@@ -305,7 +305,7 @@ describe("workspace_archive", () => {
       ),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({ workspaceId: "proj-missing" }, mockClient);
+    const result = await tool.handler({ workspaceId: "proj-missing" }, { core: mockClient });
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
@@ -328,7 +328,7 @@ describe("workspace_link_environment", () => {
 
     const result = await tool.handler(
       { workspaceId: "ws-1", environmentId: "env-2" },
-      mockClient,
+      { core: mockClient },
     );
 
     expect(mockClient.linkEnvironment).toHaveBeenCalledWith({
@@ -350,7 +350,7 @@ describe("workspace_link_environment", () => {
 
     const result = await tool.handler(
       { workspaceId: "ws-1", environmentId: "env-primary" },
-      mockClient,
+      { core: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -374,7 +374,7 @@ describe("workspace_unlink_environment", () => {
 
     const result = await tool.handler(
       { workspaceId: "ws-1", environmentId: "env-2" },
-      mockClient,
+      { core: mockClient },
     );
 
     expect(mockClient.unlinkEnvironment).toHaveBeenCalledWith({
@@ -396,7 +396,7 @@ describe("workspace_unlink_environment", () => {
 
     const result = await tool.handler(
       { workspaceId: "ws-1", environmentId: "env-2" },
-      mockClient,
+      { core: mockClient },
     );
 
     expect(result.isError).toBe(true);

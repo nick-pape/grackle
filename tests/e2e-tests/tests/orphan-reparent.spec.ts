@@ -17,7 +17,7 @@ async function startTaskAndGetSessionId(
   client: GrackleClient,
   taskId: string,
 ): Promise<string> {
-  const resp = await client.startTask({
+  const resp = await client.orchestration.startTask({
     taskId,
     personaId: "stub",
     environmentId: "test-local",
@@ -39,7 +39,7 @@ async function waitForSessionStatus(
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const resp = await client.listSessions({});
+    const resp = await client.core.listSessions({});
     const session = resp.sessions.find((s) => s.id === sessionId);
     if (session && session.status === targetStatus) {
       return;
@@ -61,7 +61,7 @@ async function waitForTaskParent(
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const task = await client.getTask({ id: taskId }) as any;
+    const task = await client.orchestration.getTask({ id: taskId }) as any;
     if (task.parentTaskId === expectedParentId) {
       return;
     }
@@ -81,7 +81,7 @@ async function waitForSessionText(
 ): Promise<string> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const resp = await client.getSessionEvents({ id: sessionId });
+    const resp = await client.core.getSessionEvents({ id: sessionId });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const events = (resp.events || []) as any[];
     const match = events.find(
@@ -110,16 +110,16 @@ async function waitForSessionText(
 test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => {
   // Kill stale sessions before each test
   test.beforeEach(async ({ grackle: { client } }) => {
-    const sessionsResp = await client.listSessions({});
+    const sessionsResp = await client.core.listSessions({});
     const all = sessionsResp.sessions as Array<{ id: string; status: string }>;
     const active = all.filter((s) => s.status === "idle" || s.status === "running" || s.status === "pending");
     for (const s of active) {
-      await client.killAgent({ id: s.id });
+      await client.core.killAgent({ id: s.id });
     }
     if (active.length > 0) {
       const deadline = Date.now() + 5_000;
       while (Date.now() < deadline) {
-        const recheck = await client.listSessions({});
+        const recheck = await client.core.listSessions({});
         const remaining = recheck.sessions as Array<{ status: string }>;
         if (!remaining.some((s) => s.status === "idle" || s.status === "running" || s.status === "pending")) {
           break;
@@ -162,7 +162,7 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
     await waitForSessionStatus(client, childSessionId, "idle");
 
     // 4. Complete the parent task
-    await client.completeTask({ id: parentId });
+    await client.orchestration.completeTask({ id: parentId });
 
     // 5. Verify child was reparented to grandparent
     await waitForTaskParent(client, childId, grandparentId, 15_000);
@@ -173,9 +173,9 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
     expect(adoptedContent).toContain("Parent Worker");
 
     // Cleanup
-    await client.killAgent({ id: childSessionId });
+    await client.core.killAgent({ id: childSessionId });
     await waitForSessionStatus(client, childSessionId, "stopped");
-    await client.killAgent({ id: gpSessionId });
+    await client.core.killAgent({ id: gpSessionId });
     await waitForSessionStatus(client, gpSessionId, "stopped");
   });
 
@@ -210,17 +210,17 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
     const activeChildId = activeChild.id as string;
 
     // 2. Complete one child first
-    await client.completeTask({ id: doneChildId });
+    await client.orchestration.completeTask({ id: doneChildId });
 
     // 3. Complete parent
-    await client.completeTask({ id: parentId });
+    await client.orchestration.completeTask({ id: parentId });
 
     // 4. Active child should be reparented to grandparent
     await waitForTaskParent(client, activeChildId, grandparentId, 15_000);
 
     // 5. Done child should remain under original parent (not reparented)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const doneTask = await client.getTask({ id: doneChildId }) as any;
+    const doneTask = await client.orchestration.getTask({ id: doneChildId }) as any;
     expect(doneTask.parentTaskId).toBe(parentId);
   });
 
@@ -259,7 +259,7 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
     const parentId = parent.id as string;
 
     // 4. Start parent with stub-mcp (real MCP calls)
-    const parentResp = await client.startTask({
+    const parentResp = await client.orchestration.startTask({
       taskId: parentId,
       personaId: "stub-mcp",
       environmentId: "test-local",
@@ -272,7 +272,7 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
 
     // 5. Verify parent session has a pipe fd (from ipc_spawn)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const parentFds = await client.getSessionFds({ id: parentSessionId }) as any;
+    const parentFds = await client.core.getSessionFds({ id: parentSessionId }) as any;
     const parentPipeFds = (parentFds.fds || []).filter(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (f: any) => f.streamName?.startsWith("pipe:"),
@@ -280,7 +280,7 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
     expect(parentPipeFds.length).toBeGreaterThan(0);
 
     // 6. Complete the parent → triggers pipe fd transfer (synchronous) + reparenting
-    await client.completeTask({ id: parentId });
+    await client.orchestration.completeTask({ id: parentId });
 
     // 7. Verify grandparent now has the pipe fd (transferred from dead parent)
     //    Poll because the transfer is synchronous but getSessionFds may need a moment
@@ -288,7 +288,7 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
     let gpPipeFdCount = 0;
     while (Date.now() < deadline) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const gpFds = await client.getSessionFds({ id: gpSessionId }) as any;
+      const gpFds = await client.core.getSessionFds({ id: gpSessionId }) as any;
       gpPipeFdCount = (gpFds.fds || []).filter(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (f: any) => f.streamName?.startsWith("pipe:"),
@@ -301,7 +301,7 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
     expect(gpPipeFdCount).toBeGreaterThan(0);
 
     // Cleanup
-    await client.killAgent({ id: gpSessionId });
+    await client.core.killAgent({ id: gpSessionId });
     await waitForSessionStatus(client, gpSessionId, "stopped");
   });
 
@@ -340,7 +340,7 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
     const parentId = parent.id as string;
 
     // 4. Start parent with stub-mcp
-    const parentResp = await client.startTask({
+    const parentResp = await client.orchestration.startTask({
       taskId: parentId,
       personaId: "stub-mcp",
       environmentId: "test-local",
@@ -353,7 +353,7 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
 
     // 5. Verify parent has pipe fd
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const parentFds = await client.getSessionFds({ id: parentSessionId }) as any;
+    const parentFds = await client.core.getSessionFds({ id: parentSessionId }) as any;
     const parentPipeFds = (parentFds.fds || []).filter(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (f: any) => f.streamName?.startsWith("pipe:"),
@@ -362,7 +362,7 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
 
     // 6. Force-kill the parent session (SIGKILL) — triggers killSessionAndCleanup
     //    which now transfers pipe fds before cleanup
-    await client.killAgent({ id: parentSessionId, graceful: false });
+    await client.core.killAgent({ id: parentSessionId, graceful: false });
     await waitForSessionStatus(client, parentSessionId, "stopped");
 
     // 7. Verify grandparent got the pipe fd
@@ -370,7 +370,7 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
     let gpPipeFdCount = 0;
     while (Date.now() < deadline) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const gpFds = await client.getSessionFds({ id: gpSessionId }) as any;
+      const gpFds = await client.core.getSessionFds({ id: gpSessionId }) as any;
       gpPipeFdCount = (gpFds.fds || []).filter(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (f: any) => f.streamName?.startsWith("pipe:"),
@@ -383,7 +383,7 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
     expect(gpPipeFdCount).toBeGreaterThan(0);
 
     // Cleanup
-    await client.killAgent({ id: gpSessionId });
+    await client.core.killAgent({ id: gpSessionId });
     await waitForSessionStatus(client, gpSessionId, "stopped");
   });
 });

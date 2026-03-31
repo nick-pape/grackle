@@ -5,13 +5,13 @@ import { useVersionStatus } from "./useVersionStatus.js";
 
 // Mock the gRPC client
 vi.mock("./useGrackleClient.js", () => ({
-  grackleClient: {
+  coreClient: {
     getVersionStatus: vi.fn(),
   },
 }));
 
-import { grackleClient } from "./useGrackleClient.js";
-const mockGetVersionStatus = vi.mocked(grackleClient.getVersionStatus);
+import { coreClient } from "./useGrackleClient.js";
+const mockGetVersionStatus = vi.mocked(coreClient.getVersionStatus);
 
 describe("useVersionStatus", () => {
   beforeEach(() => {

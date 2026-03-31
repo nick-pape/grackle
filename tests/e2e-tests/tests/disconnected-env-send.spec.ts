@@ -37,7 +37,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     await page.locator('input[placeholder="Type a message..."]').waitFor({ timeout: 15_000 });
 
     // Stop the environment via RPC — triggers domain event
-    await client.stopEnvironment({ id: "test-local" });
+    await client.core.stopEnvironment({ id: "test-local" });
 
     // Wait for reconnect button — confirms the UI processed the disconnect
     await page
@@ -170,7 +170,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
       .waitFor({ state: "visible", timeout: 15_000 });
 
     // Stop the environment to simulate a connectivity drop
-    await client.stopEnvironment({ id: "test-local" });
+    await client.core.stopEnvironment({ id: "test-local" });
 
     // Reconnect button must appear, confirming the disconnect was processed
     await page

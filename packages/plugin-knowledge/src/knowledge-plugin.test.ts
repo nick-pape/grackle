@@ -61,7 +61,7 @@ vi.mock("./logger.js", () => ({
 }));
 
 vi.mock("@grackle-ai/common", () => ({
-  grackle: { Grackle: { typeName: "grackle.Grackle" } },
+  grackle: { GrackleKnowledge: { typeName: "grackle.GrackleKnowledge" } },
 }));
 
 import { createKnowledgePlugin } from "./knowledge-plugin.js";

@@ -25,8 +25,20 @@ export function loadApiKey(): string {
   return key;
 }
 
-/** Create an authenticated ConnectRPC client for the central Grackle server. */
-export function createGrackleClient(serverUrl?: string, apiKey?: string): Client<typeof grackle.Grackle> {
+/** Per-service ConnectRPC clients for the central Grackle server. */
+export interface GrackleClients {
+  /** Core RPCs: environments, sessions, workspaces, tokens, settings, IPC, etc. */
+  core: Client<typeof grackle.GrackleCore>;
+  /** Orchestration RPCs: tasks, personas, findings, escalations. */
+  orchestration: Client<typeof grackle.GrackleOrchestration>;
+  /** Scheduling RPCs: schedules. */
+  scheduling: Client<typeof grackle.GrackleScheduling>;
+  /** Knowledge graph RPCs. */
+  knowledge: Client<typeof grackle.GrackleKnowledge>;
+}
+
+/** Create authenticated ConnectRPC clients for the central Grackle server. */
+export function createGrackleClients(serverUrl?: string, apiKey?: string): GrackleClients {
   const url = serverUrl || process.env.GRACKLE_URL || `http://127.0.0.1:${DEFAULT_SERVER_PORT}`;
   const resolvedApiKey = apiKey ?? process.env.GRACKLE_API_KEY ?? loadApiKey();
   const transport = createGrpcTransport({
@@ -39,5 +51,10 @@ export function createGrackleClient(serverUrl?: string, apiKey?: string): Client
       },
     ],
   });
-  return createClient(grackle.Grackle, transport);
+  return {
+    core: createClient(grackle.GrackleCore, transport),
+    orchestration: createClient(grackle.GrackleOrchestration, transport),
+    scheduling: createClient(grackle.GrackleScheduling, transport),
+    knowledge: createClient(grackle.GrackleKnowledge, transport),
+  };
 }

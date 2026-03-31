@@ -13,7 +13,7 @@ import type { AuthContext } from "@grackle-ai/auth";
  *   or reaches a root task (reject with PERMISSION_DENIED).
  */
 export async function assertCallerIsAncestor(
-  client: Client<typeof grackle.Grackle>,
+  client: Client<typeof grackle.GrackleOrchestration>,
   authContext: AuthContext | undefined,
   targetTaskId: string,
 ): Promise<void> {
@@ -63,7 +63,7 @@ export async function assertCallerIsAncestor(
  * - Otherwise walks up the parent chain like assertCallerIsAncestor.
  */
 export async function assertCallerIsSelfOrAncestor(
-  client: Client<typeof grackle.Grackle>,
+  client: Client<typeof grackle.GrackleOrchestration>,
   authContext: AuthContext | undefined,
   targetTaskId: string,
 ): Promise<void> {

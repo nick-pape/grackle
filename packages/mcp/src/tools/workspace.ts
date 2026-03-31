@@ -1,7 +1,6 @@
-import type { Client } from "@connectrpc/connect";
-import { type grackle, workspaceStatusToString } from "@grackle-ai/common";
+import { workspaceStatusToString } from "@grackle-ai/common";
 import { z } from "zod";
-import type { ToolDefinition } from "../tool-registry.js";
+import type { GrackleClients, ToolDefinition } from "../tool-registry.js";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
 
@@ -26,7 +25,7 @@ export const workspaceTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients) {
       try {
         const response = await client.listWorkspaces({
           environmentId: (args.environmentId as string | undefined) ?? "",
@@ -100,7 +99,7 @@ export const workspaceTools: ToolDefinition[] = [
       idempotentHint: false,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients) {
       try {
         const workspace = await client.createWorkspace({
           name: args.name as string,
@@ -148,7 +147,7 @@ export const workspaceTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients) {
       try {
         const workspace = await client.getWorkspace({
           id: args.workspaceId as string,
@@ -227,7 +226,7 @@ export const workspaceTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients) {
       try {
         const workspace = await client.updateWorkspace({
           id: args.workspaceId as string,
@@ -276,7 +275,7 @@ export const workspaceTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients) {
       try {
         await client.archiveWorkspace({
           id: args.workspaceId as string,
@@ -304,7 +303,7 @@ export const workspaceTools: ToolDefinition[] = [
       idempotentHint: false,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients) {
       try {
         const workspace = await client.linkEnvironment({
           workspaceId: args.workspaceId as string,
@@ -338,7 +337,7 @@ export const workspaceTools: ToolDefinition[] = [
       idempotentHint: false,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients) {
       try {
         const workspace = await client.unlinkEnvironment({
           workspaceId: args.workspaceId as string,
