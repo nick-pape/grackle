@@ -10,7 +10,7 @@
 import { useState, useCallback, useRef } from "react";
 import type { ScheduleData, GrackleEvent, UseSchedulesResult, ScheduleUpdate } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
-import { grackleClient } from "./useGrackleClient.js";
+import { schedulingClient as grackleClient } from "./useGrackleClient.js";
 import { protoToSchedule } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
 

@@ -16,7 +16,7 @@ const mockClient = vi.hoisted(() => ({
 }));
 
 vi.mock("./useGrackleClient.js", () => ({
-  grackleClient: mockClient,
+  schedulingClient: mockClient,
 }));
 
 // Mock proto-converters — identity passthrough for these tests

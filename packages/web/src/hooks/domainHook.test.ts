@@ -80,6 +80,7 @@ const mockClient = vi.hoisted(() => ({
 vi.mock("./useGrackleClient.js", () => ({
   coreClient: mockClient,
   orchestrationClient: mockClient,
+  schedulingClient: mockClient,
   knowledgeClient: mockClient,
 }));
 
