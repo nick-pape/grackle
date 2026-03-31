@@ -53,7 +53,7 @@ export const pluginTools: ToolDefinition[] = [
           name: res.name,
           enabled: res.enabled,
           loaded: res.loaded,
-          restartRequired: true,
+          restartRequired: res.enabled !== res.loaded,
         });
       } catch (error) {
         return grpcErrorToToolResult(error);

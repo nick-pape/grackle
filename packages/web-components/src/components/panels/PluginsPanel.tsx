@@ -64,6 +64,7 @@ export function PluginsPanel({ plugins, loading, onSetPluginEnabled }: PluginsPa
                   disabled={plugin.required}
                   onChange={(e) => onSetPluginEnabled(plugin.name, e.target.checked)}
                   data-testid={`plugin-toggle-${plugin.name}`}
+                  aria-label={`Enable or disable ${plugin.name} plugin`}
                   style={{ accentColor: "var(--accent-green)", width: "16px", height: "16px" }}
                 />
               </label>

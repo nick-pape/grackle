@@ -244,7 +244,7 @@ async function main(): Promise<void> {
       }
       // Neo4j/knowledge is optional — exposed for operator visibility but does
       // not gate overall readiness. Only the database check is required.
-      if (pluginStore.getPluginEnabled("knowledge") ?? true) {
+      if (loaded.pluginNames.includes("knowledge")) {
         checks.knowledge = getKnowledgeReadinessCheck();
       }
       return {
