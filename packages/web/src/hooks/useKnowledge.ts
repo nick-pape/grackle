@@ -10,7 +10,7 @@
 import { useState, useCallback, useRef } from "react";
 import type { GrackleEvent, GraphNode, GraphLink, NodeDetail, UseKnowledgeResult } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
-import { grackleClient } from "./useGrackleClient.js";
+import { knowledgeClient as grackleClient } from "./useGrackleClient.js";
 import { protoToGraphNode, protoToGraphLink } from "./proto-converters.js";
 
 // ---------------------------------------------------------------------------

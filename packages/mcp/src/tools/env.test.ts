@@ -4,7 +4,7 @@ import type { Client } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
 import { envTools } from "./env.js";
 
-type GrackleClient = Client<typeof grackle.Grackle>;
+type GrackleClient = Client<typeof grackle.GrackleCore>;
 
 /** Helper to find a tool definition by name. */
 const getTool = (name: string) => envTools.find((t) => t.name === name)!;
@@ -36,7 +36,7 @@ describe("env_list", () => {
       ],
     });
 
-    const result = await getTool("env_list").handler({}, mockClient);
+    const result = await getTool("env_list").handler({}, { core: mockClient });
     const parsed = JSON.parse(result.content[0].text);
 
     expect(parsed).toEqual([
@@ -57,7 +57,7 @@ describe("env_list", () => {
       new ConnectError("not found", Code.NotFound),
     );
 
-    const result = await getTool("env_list").handler({}, mockClient);
+    const result = await getTool("env_list").handler({}, { core: mockClient });
     const parsed = JSON.parse(result.content[0].text);
 
     expect(result.isError).toBe(true);
@@ -80,7 +80,7 @@ describe("env_add", () => {
         adapterType: "codespace",
         adapterConfig: { owner: "octocat", repo: "hello" },
       },
-      mockClient,
+      { core: mockClient },
     );
 
     expect(mockClient.addEnvironment).toHaveBeenCalledWith({
@@ -101,7 +101,7 @@ describe("env_add", () => {
 
     await getTool("env_add").handler(
       { displayName: "Plain", adapterType: "local" },
-      mockClient,
+      { core: mockClient },
     );
 
     expect(mockClient.addEnvironment).toHaveBeenCalledWith({
@@ -120,7 +120,7 @@ describe("env_add", () => {
 
     const result = await getTool("env_add").handler(
       { displayName: "Dup", adapterType: "ssh" },
-      mockClient,
+      { core: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -141,8 +141,7 @@ describe("env_provision", () => {
     (mockClient.provisionEnvironment as ReturnType<typeof vi.fn>).mockReturnValue(mockStream);
 
     const result = await getTool("env_provision").handler(
-      { environmentId: "env-1" },
-      mockClient,
+      { environmentId: "env-1" }, { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -163,8 +162,7 @@ describe("env_provision", () => {
     (mockClient.provisionEnvironment as ReturnType<typeof vi.fn>).mockReturnValue(mockStream);
 
     const result = await getTool("env_provision").handler(
-      { environmentId: "env-missing" },
-      mockClient,
+      { environmentId: "env-missing" }, { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -182,8 +180,7 @@ describe("env_provision", () => {
     (mockClient.provisionEnvironment as ReturnType<typeof vi.fn>).mockReturnValue(mockStream);
 
     const result = await getTool("env_provision").handler(
-      { environmentId: "env-1" },
-      mockClient,
+      { environmentId: "env-1" }, { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -203,7 +200,7 @@ describe("env_provision", () => {
 
     await getTool("env_provision").handler(
       { environmentId: "env-1", force: true },
-      mockClient,
+      { core: mockClient },
     );
 
     expect(mockClient.provisionEnvironment).toHaveBeenCalledWith({
@@ -221,8 +218,7 @@ describe("env_provision", () => {
     (mockClient.provisionEnvironment as ReturnType<typeof vi.fn>).mockReturnValue(mockStream);
 
     await getTool("env_provision").handler(
-      { environmentId: "env-1" },
-      mockClient,
+      { environmentId: "env-1" }, { core: mockClient },
     );
 
     expect(mockClient.provisionEnvironment).toHaveBeenCalledWith({
@@ -239,8 +235,7 @@ describe("env_stop", () => {
     (mockClient.stopEnvironment as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     const result = await getTool("env_stop").handler(
-      { environmentId: "env-1" },
-      mockClient,
+      { environmentId: "env-1" }, { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -256,8 +251,7 @@ describe("env_stop", () => {
     );
 
     const result = await getTool("env_stop").handler(
-      { environmentId: "env-1" },
-      mockClient,
+      { environmentId: "env-1" }, { core: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -273,8 +267,7 @@ describe("env_destroy", () => {
     (mockClient.destroyEnvironment as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     const result = await getTool("env_destroy").handler(
-      { environmentId: "env-1" },
-      mockClient,
+      { environmentId: "env-1" }, { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -290,8 +283,7 @@ describe("env_destroy", () => {
     );
 
     const result = await getTool("env_destroy").handler(
-      { environmentId: "env-1" },
-      mockClient,
+      { environmentId: "env-1" }, { core: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -305,8 +297,7 @@ describe("env_remove", () => {
     (mockClient.removeEnvironment as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     const result = await getTool("env_remove").handler(
-      { environmentId: "env-1" },
-      mockClient,
+      { environmentId: "env-1" }, { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -322,8 +313,7 @@ describe("env_remove", () => {
     );
 
     const result = await getTool("env_remove").handler(
-      { environmentId: "env-1" },
-      mockClient,
+      { environmentId: "env-1" }, { core: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -343,8 +333,7 @@ describe("env_wake", () => {
     (mockClient.provisionEnvironment as ReturnType<typeof vi.fn>).mockReturnValue(mockStream);
 
     const result = await getTool("env_wake").handler(
-      { environmentId: "env-1" },
-      mockClient,
+      { environmentId: "env-1" }, { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -362,8 +351,7 @@ describe("env_wake", () => {
     (mockClient.provisionEnvironment as ReturnType<typeof vi.fn>).mockReturnValue(mockStream);
 
     const result = await getTool("env_wake").handler(
-      { environmentId: "env-1" },
-      mockClient,
+      { environmentId: "env-1" }, { core: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -381,8 +369,7 @@ describe("env_wake", () => {
     (mockClient.provisionEnvironment as ReturnType<typeof vi.fn>).mockReturnValue(mockStream);
 
     const result = await getTool("env_wake").handler(
-      { environmentId: "env-1" },
-      mockClient,
+      { environmentId: "env-1" }, { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 

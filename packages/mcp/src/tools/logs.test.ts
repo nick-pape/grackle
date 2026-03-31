@@ -11,7 +11,7 @@ vi.mock("node:fs/promises", () => ({
 
 import { readFile } from "node:fs/promises";
 
-type GrackleClient = Client<typeof grackle.Grackle>;
+type GrackleClient = Client<typeof grackle.GrackleCore>;
 
 /** Helper to find a tool definition by name. */
 const getTool = (name: string) => logsTools.find((t) => t.name === name)!;
@@ -45,8 +45,7 @@ describe("logs_get", () => {
     );
 
     const result = await getTool("logs_get").handler(
-      { sessionId: "no-such" },
-      mockClient,
+      { sessionId: "no-such" }, { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -64,8 +63,7 @@ describe("logs_get", () => {
     });
 
     const result = await getTool("logs_get").handler(
-      { sessionId: "s1" },
-      mockClient,
+      { sessionId: "s1" }, { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -88,7 +86,7 @@ describe("logs_get", () => {
 
     const result = await getTool("logs_get").handler(
       { sessionId: "s1", tail: true, timeoutSeconds: 10 },
-      mockClient,
+      { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -111,7 +109,7 @@ describe("logs_get", () => {
 
     const result = await getTool("logs_get").handler(
       { sessionId: "s1", transcript: true },
-      mockClient,
+      { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -132,7 +130,7 @@ describe("logs_get", () => {
 
     const result = await getTool("logs_get").handler(
       { sessionId: "s1", transcript: true },
-      mockClient,
+      { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -156,8 +154,7 @@ describe("logs_get", () => {
     mockReadFile.mockResolvedValue(jsonlContent);
 
     const result = await getTool("logs_get").handler(
-      { sessionId: "s1" },
-      mockClient,
+      { sessionId: "s1" }, { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -178,8 +175,7 @@ describe("logs_get", () => {
     mockReadFile.mockRejectedValue(enoent);
 
     const result = await getTool("logs_get").handler(
-      { sessionId: "s1" },
-      mockClient,
+      { sessionId: "s1" }, { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -199,8 +195,7 @@ describe("logs_get", () => {
     mockReadFile.mockRejectedValue(permError);
 
     const result = await getTool("logs_get").handler(
-      { sessionId: "s1" },
-      mockClient,
+      { sessionId: "s1" }, { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -232,8 +227,7 @@ describe("logs_get", () => {
     });
 
     const result = await getTool("logs_get").handler(
-      { sessionId: "s1" },
-      mockClient,
+      { sessionId: "s1" }, { core: mockClient, orchestration: mockClient },
       scopedAuth,
     );
 
@@ -267,8 +261,7 @@ describe("logs_get", () => {
     mockReadFile.mockResolvedValue(jsonlContent);
 
     const result = await getTool("logs_get").handler(
-      { sessionId: "s1" },
-      mockClient,
+      { sessionId: "s1" }, { core: mockClient, orchestration: mockClient },
       scopedAuth,
     );
 
@@ -294,8 +287,7 @@ describe("logs_get", () => {
     });
 
     const result = await getTool("logs_get").handler(
-      { sessionId: "s1" },
-      mockClient,
+      { sessionId: "s1" }, { core: mockClient },
       scopedAuth,
     );
 
@@ -315,8 +307,7 @@ describe("logs_get", () => {
     mockReadFile.mockResolvedValue(jsonlContent);
 
     const result = await getTool("logs_get").handler(
-      { sessionId: "s1" },
-      mockClient,
+      { sessionId: "s1" }, { core: mockClient },
       apiKeyAuth,
     );
 

@@ -1,8 +1,7 @@
-import type { Client } from "@connectrpc/connect";
 import { ConnectError, Code } from "@connectrpc/connect";
 import { z } from "zod";
 import { grackle, eventTypeToString, SESSION_STATUS } from "@grackle-ai/common";
-import type { ToolDefinition } from "../tool-registry.js";
+import type { GrackleClients, ToolDefinition } from "../tool-registry.js";
 import type { AuthContext } from "@grackle-ai/auth";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
@@ -39,7 +38,7 @@ export const sessionTools: ToolDefinition[] = [
       idempotentHint: false,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients) {
       try {
         const session = await client.spawnAgent({
           environmentId: args.environmentId as string,
@@ -70,7 +69,7 @@ export const sessionTools: ToolDefinition[] = [
       idempotentHint: false,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients) {
       try {
         const session = await client.resumeAgent({
           sessionId: args.sessionId as string,
@@ -98,7 +97,7 @@ export const sessionTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients) {
       try {
         const response = await client.listSessions({
           environmentId: args.environmentId as string | undefined,
@@ -145,7 +144,7 @@ export const sessionTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients) {
       try {
         await client.killAgent({
           id: args.sessionId as string,
@@ -176,14 +175,14 @@ export const sessionTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+    async handler(args: Record<string, unknown>, { core: client, orchestration }: GrackleClients, authContext?: AuthContext) {
       try {
         if (authContext?.type === "scoped") {
           const session = await client.getSession({ id: args.sessionId as string });
           if (!session.taskId) {
             throw new ConnectError("Cannot attach to a taskless session via scoped auth", Code.PermissionDenied);
           }
-          await assertCallerIsAncestor(client, authContext, session.taskId);
+          await assertCallerIsAncestor(orchestration, authContext, session.taskId);
         }
 
         const timeout = Math.min(
@@ -246,14 +245,14 @@ export const sessionTools: ToolDefinition[] = [
       idempotentHint: false,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+    async handler(args: Record<string, unknown>, { core: client, orchestration }: GrackleClients, authContext?: AuthContext) {
       try {
         if (authContext?.type === "scoped") {
           const session = await client.getSession({ id: args.sessionId as string });
           if (!session.taskId) {
             throw new ConnectError("Cannot send input to a taskless session via scoped auth", Code.PermissionDenied);
           }
-          await assertCallerIsAncestor(client, authContext, session.taskId);
+          await assertCallerIsAncestor(orchestration, authContext, session.taskId);
         }
         await client.sendInput({
           sessionId: args.sessionId as string,

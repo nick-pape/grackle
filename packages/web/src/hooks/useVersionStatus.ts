@@ -1,14 +1,14 @@
 /**
  * Hook to fetch the server's version status (current vs latest).
  *
- * Calls {@link grackleClient.getVersionStatus} once on mount and returns
+ * Calls {@link coreClient.getVersionStatus} once on mount and returns
  * the result, or `undefined` if still loading or on error.
  *
  * @module
  */
 
 import { useEffect, useState } from "react";
-import { grackleClient } from "./useGrackleClient.js";
+import { coreClient as grackleClient } from "./useGrackleClient.js";
 
 /** Version status returned by the server. */
 export interface VersionStatusInfo {

@@ -22,7 +22,7 @@ async function waitForSessionStatus(
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const resp = await client.getSession({ id: sessionId });
+    const resp = await client.core.getSession({ id: sessionId });
     if (resp.status === targetStatus) {
       return;
     }
@@ -34,16 +34,16 @@ async function waitForSessionStatus(
 test.describe("sync pipe idle delivery (#824)", { tag: ["@session"] }, () => {
   // Kill any stale active sessions before each test to free the environment.
   test.beforeEach(async ({ grackle: { client } }) => {
-    const sessionsResp = await client.listSessions({});
+    const sessionsResp = await client.core.listSessions({});
     const all = sessionsResp.sessions as Array<{ id: string; status: string }>;
     const active = all.filter((s) => ["idle", "running", "pending"].includes(s.status));
     for (const s of active) {
-      await client.killAgent({ id: s.id });
+      await client.core.killAgent({ id: s.id });
     }
     if (active.length > 0) {
       const deadline = Date.now() + 5_000;
       while (Date.now() < deadline) {
-        const recheck = await client.listSessions({});
+        const recheck = await client.core.listSessions({});
         const remaining = recheck.sessions as Array<{ status: string }>;
         if (!remaining.some((s) => ["idle", "running", "pending"].includes(s.status))) {
           break;
@@ -59,7 +59,7 @@ test.describe("sync pipe idle delivery (#824)", { tag: ["@session"] }, () => {
 
     // 2. Spawn a parent session that stays idle (it will call waitForPipe)
     const parentScenario = stubScenario(idle());
-    const parentSession = await client.spawnAgent({
+    const parentSession = await client.core.spawnAgent({
       environmentId: "test-local",
       prompt: JSON.stringify(parentScenario),
       personaId: "stub",
@@ -73,7 +73,7 @@ test.describe("sync pipe idle delivery (#824)", { tag: ["@session"] }, () => {
       emitText("Here is the result of my work."),
       idle(),
     );
-    const childSession = await client.spawnAgent({
+    const childSession = await client.core.spawnAgent({
       environmentId: "test-local",
       prompt: JSON.stringify(childScenario),
       personaId: "stub",
@@ -86,7 +86,7 @@ test.describe("sync pipe idle delivery (#824)", { tag: ["@session"] }, () => {
 
     // 4. waitForPipe should unblock when the child goes idle (not hang forever)
     //    This is the core assertion for #824 — before the fix, this would deadlock.
-    const pipeResult = await client.waitForPipe({
+    const pipeResult = await client.core.waitForPipe({
       sessionId: parentSessionId,
       fd: pipeFd,
     });
@@ -100,7 +100,7 @@ test.describe("sync pipe idle delivery (#824)", { tag: ["@session"] }, () => {
     await waitForSessionStatus(client, childSessionId, "stopped", 10_000);
 
     // Cleanup: kill the parent
-    await client.killAgent({ id: parentSessionId });
+    await client.core.killAgent({ id: parentSessionId });
     await waitForSessionStatus(client, parentSessionId, "stopped");
   });
 
@@ -109,7 +109,7 @@ test.describe("sync pipe idle delivery (#824)", { tag: ["@session"] }, () => {
     await createWorkspace(client, "sync-pipe-test-complete");
 
     // Parent goes idle
-    const parentSession = await client.spawnAgent({
+    const parentSession = await client.core.spawnAgent({
       environmentId: "test-local",
       prompt: JSON.stringify(stubScenario(idle())),
       personaId: "stub",
@@ -118,7 +118,7 @@ test.describe("sync pipe idle delivery (#824)", { tag: ["@session"] }, () => {
     await waitForSessionStatus(client, parentSessionId, "idle");
 
     // Child emits text and completes (no idle step — scenario ends → "completed")
-    const childSession = await client.spawnAgent({
+    const childSession = await client.core.spawnAgent({
       environmentId: "test-local",
       prompt: JSON.stringify(stubScenario(emitText("Done!"))),
       personaId: "stub",
@@ -128,7 +128,7 @@ test.describe("sync pipe idle delivery (#824)", { tag: ["@session"] }, () => {
     const pipeFd = childSession.pipeFd;
     expect(pipeFd).toBeGreaterThan(0);
 
-    const pipeResult = await client.waitForPipe({
+    const pipeResult = await client.core.waitForPipe({
       sessionId: parentSessionId,
       fd: pipeFd,
     });
@@ -140,7 +140,7 @@ test.describe("sync pipe idle delivery (#824)", { tag: ["@session"] }, () => {
     await waitForSessionStatus(client, childSession.id, "stopped", 10_000);
 
     // Cleanup
-    await client.killAgent({ id: parentSessionId });
+    await client.core.killAgent({ id: parentSessionId });
     await waitForSessionStatus(client, parentSessionId, "stopped");
   });
 });

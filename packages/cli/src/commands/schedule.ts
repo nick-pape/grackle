@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { createGrackleClient } from "../client.js";
+import { createGrackleClients } from "../client.js";
 import Table from "cli-table3";
 import chalk from "chalk";
 
@@ -12,7 +12,7 @@ export function registerScheduleCommands(program: Command): void {
     .description("List all schedules")
     .option("--workspace <id>", "Filter by workspace ID")
     .action(async (opts: { workspace?: string }) => {
-      const client = createGrackleClient();
+      const { scheduling: client } = createGrackleClients();
       const res = await client.listSchedules({
         workspaceId: opts.workspace || "",
       });
@@ -58,7 +58,7 @@ export function registerScheduleCommands(program: Command): void {
           parentTask?: string;
         },
       ) => {
-        const client = createGrackleClient();
+        const { scheduling: client } = createGrackleClients();
         const res = await client.createSchedule({
           title,
           scheduleExpression: opts.schedule,
@@ -80,7 +80,7 @@ export function registerScheduleCommands(program: Command): void {
     .command("show <id>")
     .description("Show schedule details")
     .action(async (id: string) => {
-      const client = createGrackleClient();
+      const { scheduling: client } = createGrackleClients();
       const res = await client.getSchedule({ id });
       console.log(`ID:          ${res.id}`);
       console.log(`Title:       ${res.title}`);
@@ -101,7 +101,7 @@ export function registerScheduleCommands(program: Command): void {
     .command("enable <id>")
     .description("Enable a schedule")
     .action(async (id: string) => {
-      const client = createGrackleClient();
+      const { scheduling: client } = createGrackleClients();
       await client.updateSchedule({ id, enabled: true });
       console.log(`Schedule ${id} enabled.`);
     });
@@ -110,7 +110,7 @@ export function registerScheduleCommands(program: Command): void {
     .command("disable <id>")
     .description("Disable a schedule")
     .action(async (id: string) => {
-      const client = createGrackleClient();
+      const { scheduling: client } = createGrackleClients();
       await client.updateSchedule({ id, enabled: false });
       console.log(`Schedule ${id} disabled.`);
     });
@@ -119,7 +119,7 @@ export function registerScheduleCommands(program: Command): void {
     .command("delete <id>")
     .description("Delete a schedule (running tasks are not affected)")
     .action(async (id: string) => {
-      const client = createGrackleClient();
+      const { scheduling: client } = createGrackleClients();
       await client.deleteSchedule({ id });
       console.log(`Deleted schedule ${id}.`);
     });

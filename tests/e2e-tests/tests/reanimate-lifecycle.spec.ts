@@ -25,7 +25,7 @@ async function startTaskAndGetSessionId(
   client: GrackleClient,
   taskId: string,
 ): Promise<string> {
-  const resp = await client.startTask({
+  const resp = await client.orchestration.startTask({
     taskId,
     personaId: "stub",
     environmentId: "test-local",
@@ -48,7 +48,7 @@ async function waitForSessionStatus(
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const resp = await client.listSessions({});
+    const resp = await client.core.listSessions({});
     const session = resp.sessions.find((s) => s.id === sessionId);
     if (session && session.status === targetStatus) {
       return;
@@ -81,22 +81,22 @@ test.describe("Reanimate lifecycle stream (#828)", { tag: ["@task"] }, () => {
     await waitForSessionStatus(client, sessionId, "idle");
 
     // 3. Stop task → session killed, lifecycle stream deleted
-    await client.stopTask({ id: taskId });
+    await client.orchestration.stopTask({ id: taskId });
     await waitForSessionStatus(client, sessionId, "stopped");
 
     // 4. Resume task → session reanimated (lifecycle stream recreated by fix)
-    const resumeResult = await client.resumeTask({ id: taskId });
+    const resumeResult = await client.orchestration.resumeTask({ id: taskId });
     expect(resumeResult.id).toBeTruthy();
     await waitForSessionStatus(client, sessionId, "idle");
 
     // 5. Complete task → lifecycle stream cleanup triggers orphan cascade
     //    → session should auto-stop. This is the core assertion for #828:
     //    without ensureLifecycleStream, the session would stay idle forever.
-    await client.completeTask({ id: taskId });
+    await client.orchestration.completeTask({ id: taskId });
     await waitForSessionStatus(client, sessionId, "stopped", 15_000);
 
     // 6. Verify task is complete and session is stopped with correct reason
-    const sessionsResp = await client.listSessions({});
+    const sessionsResp = await client.core.listSessions({});
     const session = sessionsResp.sessions.find((s) => s.id === sessionId);
     expect(session?.status).toBe("stopped");
   });

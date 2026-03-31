@@ -10,7 +10,7 @@
 import { useState, useCallback } from "react";
 import type { TokenInfo, GrackleEvent, UseTokensResult } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
-import { grackleClient } from "./useGrackleClient.js";
+import { coreClient as grackleClient } from "./useGrackleClient.js";
 import { protoToToken } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
 

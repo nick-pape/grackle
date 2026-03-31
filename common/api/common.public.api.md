@@ -487,7 +487,19 @@ type FdInfo = Message<"grackle.FdInfo"> & {
 const FdInfoSchema: GenMessage<FdInfo>;
 
 // @public
-const file_grackle_grackle: GenFile;
+const file_grackle_grackle_core: GenFile;
+
+// @public
+const file_grackle_grackle_knowledge: GenFile;
+
+// @public
+const file_grackle_grackle_orchestration: GenFile;
+
+// @public
+const file_grackle_grackle_scheduling: GenFile;
+
+// @public
+const file_grackle_grackle_types: GenFile;
 
 // @public
 const file_grackle_powerline_powerline: GenFile;
@@ -586,388 +598,9 @@ type GetUsageRequest = Message<"grackle.GetUsageRequest"> & {
 // @public
 const GetUsageRequestSchema: GenMessage<GetUsageRequest>;
 
-// @public
-const Grackle: GenService<{
-    listEnvironments: {
-        methodKind: "unary";
-        input: typeof EmptySchema;
-        output: typeof EnvironmentListSchema;
-    };
-    addEnvironment: {
-        methodKind: "unary";
-        input: typeof AddEnvironmentRequestSchema;
-        output: typeof EnvironmentSchema;
-    };
-    removeEnvironment: {
-        methodKind: "unary";
-        input: typeof EnvironmentIdSchema;
-        output: typeof EmptySchema;
-    };
-    provisionEnvironment: {
-        methodKind: "server_streaming";
-        input: typeof ProvisionEnvironmentRequestSchema;
-        output: typeof ProvisionEventSchema;
-    };
-    updateEnvironment: {
-        methodKind: "unary";
-        input: typeof UpdateEnvironmentRequestSchema;
-        output: typeof EnvironmentSchema;
-    };
-    stopEnvironment: {
-        methodKind: "unary";
-        input: typeof EnvironmentIdSchema;
-        output: typeof EmptySchema;
-    };
-    destroyEnvironment: {
-        methodKind: "unary";
-        input: typeof EnvironmentIdSchema;
-        output: typeof EmptySchema;
-    };
-    spawnAgent: {
-        methodKind: "unary";
-        input: typeof SpawnRequestSchema;
-        output: typeof SessionSchema;
-    };
-    resumeAgent: {
-        methodKind: "unary";
-        input: typeof ResumeRequestSchema;
-        output: typeof SessionSchema;
-    };
-    sendInput: {
-        methodKind: "unary";
-        input: typeof InputMessageSchema;
-        output: typeof EmptySchema;
-    };
-    killAgent: {
-        methodKind: "unary";
-        input: typeof KillAgentRequestSchema;
-        output: typeof EmptySchema;
-    };
-    listSessions: {
-        methodKind: "unary";
-        input: typeof SessionFilterSchema;
-        output: typeof SessionListSchema;
-    };
-    getSession: {
-        methodKind: "unary";
-        input: typeof SessionIdSchema;
-        output: typeof SessionSchema;
-    };
-    getSessionEvents: {
-        methodKind: "unary";
-        input: typeof SessionIdSchema;
-        output: typeof SessionEventListSchema;
-    };
-    getTaskSessions: {
-        methodKind: "unary";
-        input: typeof TaskIdSchema;
-        output: typeof SessionListSchema;
-    };
-    streamSession: {
-        methodKind: "server_streaming";
-        input: typeof SessionIdSchema;
-        output: typeof SessionEventSchema;
-    };
-    streamAll: {
-        methodKind: "server_streaming";
-        input: typeof EmptySchema;
-        output: typeof SessionEventSchema;
-    };
-    setToken: {
-        methodKind: "unary";
-        input: typeof TokenEntrySchema;
-        output: typeof EmptySchema;
-    };
-    listTokens: {
-        methodKind: "unary";
-        input: typeof EmptySchema;
-        output: typeof TokenListSchema;
-    };
-    deleteToken: {
-        methodKind: "unary";
-        input: typeof TokenNameSchema;
-        output: typeof EmptySchema;
-    };
-    getCredentialProviders: {
-        methodKind: "unary";
-        input: typeof EmptySchema;
-        output: typeof CredentialProviderConfigSchema;
-    };
-    setCredentialProvider: {
-        methodKind: "unary";
-        input: typeof SetCredentialProviderRequestSchema;
-        output: typeof CredentialProviderConfigSchema;
-    };
-    listWorkspaces: {
-        methodKind: "unary";
-        input: typeof ListWorkspacesRequestSchema;
-        output: typeof WorkspaceListSchema;
-    };
-    createWorkspace: {
-        methodKind: "unary";
-        input: typeof CreateWorkspaceRequestSchema;
-        output: typeof WorkspaceSchema;
-    };
-    getWorkspace: {
-        methodKind: "unary";
-        input: typeof WorkspaceIdSchema;
-        output: typeof WorkspaceSchema;
-    };
-    updateWorkspace: {
-        methodKind: "unary";
-        input: typeof UpdateWorkspaceRequestSchema;
-        output: typeof WorkspaceSchema;
-    };
-    archiveWorkspace: {
-        methodKind: "unary";
-        input: typeof WorkspaceIdSchema;
-        output: typeof EmptySchema;
-    };
-    linkEnvironment: {
-        methodKind: "unary";
-        input: typeof LinkEnvironmentRequestSchema;
-        output: typeof WorkspaceSchema;
-    };
-    unlinkEnvironment: {
-        methodKind: "unary";
-        input: typeof UnlinkEnvironmentRequestSchema;
-        output: typeof WorkspaceSchema;
-    };
-    listTasks: {
-        methodKind: "unary";
-        input: typeof ListTasksRequestSchema;
-        output: typeof TaskListSchema;
-    };
-    createTask: {
-        methodKind: "unary";
-        input: typeof CreateTaskRequestSchema;
-        output: typeof TaskSchema;
-    };
-    getTask: {
-        methodKind: "unary";
-        input: typeof TaskIdSchema;
-        output: typeof TaskSchema;
-    };
-    updateTask: {
-        methodKind: "unary";
-        input: typeof UpdateTaskRequestSchema;
-        output: typeof TaskSchema;
-    };
-    startTask: {
-        methodKind: "unary";
-        input: typeof StartTaskRequestSchema;
-        output: typeof SessionSchema;
-    };
-    completeTask: {
-        methodKind: "unary";
-        input: typeof TaskIdSchema;
-        output: typeof TaskSchema;
-    };
-    resumeTask: {
-        methodKind: "unary";
-        input: typeof TaskIdSchema;
-        output: typeof SessionSchema;
-    };
-    stopTask: {
-        methodKind: "unary";
-        input: typeof TaskIdSchema;
-        output: typeof TaskSchema;
-    };
-    setWorkpad: {
-        methodKind: "unary";
-        input: typeof SetWorkpadRequestSchema;
-        output: typeof TaskSchema;
-    };
-    deleteTask: {
-        methodKind: "unary";
-        input: typeof TaskIdSchema;
-        output: typeof EmptySchema;
-    };
-    listPersonas: {
-        methodKind: "unary";
-        input: typeof EmptySchema;
-        output: typeof PersonaListSchema;
-    };
-    createPersona: {
-        methodKind: "unary";
-        input: typeof CreatePersonaRequestSchema;
-        output: typeof PersonaSchema;
-    };
-    getPersona: {
-        methodKind: "unary";
-        input: typeof PersonaIdSchema;
-        output: typeof PersonaSchema;
-    };
-    updatePersona: {
-        methodKind: "unary";
-        input: typeof UpdatePersonaRequestSchema;
-        output: typeof PersonaSchema;
-    };
-    deletePersona: {
-        methodKind: "unary";
-        input: typeof PersonaIdSchema;
-        output: typeof EmptySchema;
-    };
-    postFinding: {
-        methodKind: "unary";
-        input: typeof PostFindingRequestSchema;
-        output: typeof FindingSchema;
-    };
-    queryFindings: {
-        methodKind: "unary";
-        input: typeof QueryFindingsRequestSchema;
-        output: typeof FindingListSchema;
-    };
-    getFinding: {
-        methodKind: "unary";
-        input: typeof GetFindingRequestSchema;
-        output: typeof FindingSchema;
-    };
-    createEscalation: {
-        methodKind: "unary";
-        input: typeof CreateEscalationRequestSchema;
-        output: typeof EscalationSchema;
-    };
-    listEscalations: {
-        methodKind: "unary";
-        input: typeof ListEscalationsRequestSchema;
-        output: typeof EscalationListSchema;
-    };
-    acknowledgeEscalation: {
-        methodKind: "unary";
-        input: typeof AcknowledgeEscalationRequestSchema;
-        output: typeof EscalationSchema;
-    };
-    createSchedule: {
-        methodKind: "unary";
-        input: typeof CreateScheduleRequestSchema;
-        output: typeof ScheduleSchema;
-    };
-    listSchedules: {
-        methodKind: "unary";
-        input: typeof ListSchedulesRequestSchema;
-        output: typeof ScheduleListSchema;
-    };
-    getSchedule: {
-        methodKind: "unary";
-        input: typeof ScheduleIdSchema;
-        output: typeof ScheduleSchema;
-    };
-    updateSchedule: {
-        methodKind: "unary";
-        input: typeof UpdateScheduleRequestSchema;
-        output: typeof ScheduleSchema;
-    };
-    deleteSchedule: {
-        methodKind: "unary";
-        input: typeof ScheduleIdSchema;
-        output: typeof EmptySchema;
-    };
-    listCodespaces: {
-        methodKind: "unary";
-        input: typeof EmptySchema;
-        output: typeof CodespaceListSchema;
-    };
-    createCodespace: {
-        methodKind: "unary";
-        input: typeof CreateCodespaceRequestSchema;
-        output: typeof CreateCodespaceResponseSchema;
-    };
-    getSetting: {
-        methodKind: "unary";
-        input: typeof GetSettingRequestSchema;
-        output: typeof SettingResponseSchema;
-    };
-    setSetting: {
-        methodKind: "unary";
-        input: typeof SetSettingRequestSchema;
-        output: typeof SettingResponseSchema;
-    };
-    generatePairingCode: {
-        methodKind: "unary";
-        input: typeof EmptySchema;
-        output: typeof PairingCodeResponseSchema;
-    };
-    getUsage: {
-        methodKind: "unary";
-        input: typeof GetUsageRequestSchema;
-        output: typeof UsageStatsSchema;
-    };
-    waitForPipe: {
-        methodKind: "unary";
-        input: typeof WaitForPipeRequestSchema;
-        output: typeof WaitForPipeResponseSchema;
-    };
-    writeToFd: {
-        methodKind: "unary";
-        input: typeof WriteToFdRequestSchema;
-        output: typeof EmptySchema;
-    };
-    closeFd: {
-        methodKind: "unary";
-        input: typeof CloseFdRequestSchema;
-        output: typeof CloseFdResponseSchema;
-    };
-    getSessionFds: {
-        methodKind: "unary";
-        input: typeof SessionIdSchema;
-        output: typeof SessionFdsSchema;
-    };
-    createStream: {
-        methodKind: "unary";
-        input: typeof CreateStreamRequestSchema;
-        output: typeof CreateStreamResponseSchema;
-    };
-    attachStream: {
-        methodKind: "unary";
-        input: typeof AttachStreamRequestSchema;
-        output: typeof AttachStreamResponseSchema;
-    };
-    listStreams: {
-        methodKind: "unary";
-        input: typeof EmptySchema;
-        output: typeof ListStreamsResponseSchema;
-    };
-    searchKnowledge: {
-        methodKind: "unary";
-        input: typeof SearchKnowledgeRequestSchema;
-        output: typeof SearchKnowledgeResponseSchema;
-    };
-    getKnowledgeNode: {
-        methodKind: "unary";
-        input: typeof GetKnowledgeNodeRequestSchema;
-        output: typeof GetKnowledgeNodeResponseSchema;
-    };
-    expandKnowledgeNode: {
-        methodKind: "unary";
-        input: typeof ExpandKnowledgeNodeRequestSchema;
-        output: typeof ExpandKnowledgeNodeResponseSchema;
-    };
-    listRecentKnowledgeNodes: {
-        methodKind: "unary";
-        input: typeof ListRecentKnowledgeNodesRequestSchema;
-        output: typeof ListRecentKnowledgeNodesResponseSchema;
-    };
-    createKnowledgeNode: {
-        methodKind: "unary";
-        input: typeof CreateKnowledgeNodeRequestSchema;
-        output: typeof CreateKnowledgeNodeResponseSchema;
-    };
-    getVersionStatus: {
-        methodKind: "unary";
-        input: typeof EmptySchema;
-        output: typeof VersionStatusSchema;
-    };
-    streamEvents: {
-        methodKind: "server_streaming";
-        input: typeof EmptySchema;
-        output: typeof ServerEventSchema;
-    };
-}>;
-
 declare namespace grackle {
     export {
-        file_grackle_grackle,
+        file_grackle_grackle_types,
         Empty,
         EmptySchema,
         EnvironmentId,
@@ -1186,12 +819,381 @@ declare namespace grackle {
         ClaudeProviderModeSchema,
         ProviderToggle,
         ProviderToggleSchema,
-        Grackle
+        file_grackle_grackle_core,
+        GrackleCore,
+        file_grackle_grackle_orchestration,
+        GrackleOrchestration,
+        file_grackle_grackle_scheduling,
+        GrackleScheduling,
+        file_grackle_grackle_knowledge,
+        GrackleKnowledge
     }
 }
 
 // @public
 export const GRACKLE_DIR: string;
+
+// @public
+const GrackleCore: GenService<{
+    listEnvironments: {
+        methodKind: "unary";
+        input: typeof EmptySchema;
+        output: typeof EnvironmentListSchema;
+    };
+    addEnvironment: {
+        methodKind: "unary";
+        input: typeof AddEnvironmentRequestSchema;
+        output: typeof EnvironmentSchema;
+    };
+    removeEnvironment: {
+        methodKind: "unary";
+        input: typeof EnvironmentIdSchema;
+        output: typeof EmptySchema;
+    };
+    provisionEnvironment: {
+        methodKind: "server_streaming";
+        input: typeof ProvisionEnvironmentRequestSchema;
+        output: typeof ProvisionEventSchema;
+    };
+    updateEnvironment: {
+        methodKind: "unary";
+        input: typeof UpdateEnvironmentRequestSchema;
+        output: typeof EnvironmentSchema;
+    };
+    stopEnvironment: {
+        methodKind: "unary";
+        input: typeof EnvironmentIdSchema;
+        output: typeof EmptySchema;
+    };
+    destroyEnvironment: {
+        methodKind: "unary";
+        input: typeof EnvironmentIdSchema;
+        output: typeof EmptySchema;
+    };
+    spawnAgent: {
+        methodKind: "unary";
+        input: typeof SpawnRequestSchema;
+        output: typeof SessionSchema;
+    };
+    resumeAgent: {
+        methodKind: "unary";
+        input: typeof ResumeRequestSchema;
+        output: typeof SessionSchema;
+    };
+    sendInput: {
+        methodKind: "unary";
+        input: typeof InputMessageSchema;
+        output: typeof EmptySchema;
+    };
+    killAgent: {
+        methodKind: "unary";
+        input: typeof KillAgentRequestSchema;
+        output: typeof EmptySchema;
+    };
+    listSessions: {
+        methodKind: "unary";
+        input: typeof SessionFilterSchema;
+        output: typeof SessionListSchema;
+    };
+    getSession: {
+        methodKind: "unary";
+        input: typeof SessionIdSchema;
+        output: typeof SessionSchema;
+    };
+    getSessionEvents: {
+        methodKind: "unary";
+        input: typeof SessionIdSchema;
+        output: typeof SessionEventListSchema;
+    };
+    getTaskSessions: {
+        methodKind: "unary";
+        input: typeof TaskIdSchema;
+        output: typeof SessionListSchema;
+    };
+    streamSession: {
+        methodKind: "server_streaming";
+        input: typeof SessionIdSchema;
+        output: typeof SessionEventSchema;
+    };
+    streamAll: {
+        methodKind: "server_streaming";
+        input: typeof EmptySchema;
+        output: typeof SessionEventSchema;
+    };
+    setToken: {
+        methodKind: "unary";
+        input: typeof TokenEntrySchema;
+        output: typeof EmptySchema;
+    };
+    listTokens: {
+        methodKind: "unary";
+        input: typeof EmptySchema;
+        output: typeof TokenListSchema;
+    };
+    deleteToken: {
+        methodKind: "unary";
+        input: typeof TokenNameSchema;
+        output: typeof EmptySchema;
+    };
+    getCredentialProviders: {
+        methodKind: "unary";
+        input: typeof EmptySchema;
+        output: typeof CredentialProviderConfigSchema;
+    };
+    setCredentialProvider: {
+        methodKind: "unary";
+        input: typeof SetCredentialProviderRequestSchema;
+        output: typeof CredentialProviderConfigSchema;
+    };
+    listWorkspaces: {
+        methodKind: "unary";
+        input: typeof ListWorkspacesRequestSchema;
+        output: typeof WorkspaceListSchema;
+    };
+    createWorkspace: {
+        methodKind: "unary";
+        input: typeof CreateWorkspaceRequestSchema;
+        output: typeof WorkspaceSchema;
+    };
+    getWorkspace: {
+        methodKind: "unary";
+        input: typeof WorkspaceIdSchema;
+        output: typeof WorkspaceSchema;
+    };
+    updateWorkspace: {
+        methodKind: "unary";
+        input: typeof UpdateWorkspaceRequestSchema;
+        output: typeof WorkspaceSchema;
+    };
+    archiveWorkspace: {
+        methodKind: "unary";
+        input: typeof WorkspaceIdSchema;
+        output: typeof EmptySchema;
+    };
+    linkEnvironment: {
+        methodKind: "unary";
+        input: typeof LinkEnvironmentRequestSchema;
+        output: typeof WorkspaceSchema;
+    };
+    unlinkEnvironment: {
+        methodKind: "unary";
+        input: typeof UnlinkEnvironmentRequestSchema;
+        output: typeof WorkspaceSchema;
+    };
+    listCodespaces: {
+        methodKind: "unary";
+        input: typeof EmptySchema;
+        output: typeof CodespaceListSchema;
+    };
+    createCodespace: {
+        methodKind: "unary";
+        input: typeof CreateCodespaceRequestSchema;
+        output: typeof CreateCodespaceResponseSchema;
+    };
+    getSetting: {
+        methodKind: "unary";
+        input: typeof GetSettingRequestSchema;
+        output: typeof SettingResponseSchema;
+    };
+    setSetting: {
+        methodKind: "unary";
+        input: typeof SetSettingRequestSchema;
+        output: typeof SettingResponseSchema;
+    };
+    generatePairingCode: {
+        methodKind: "unary";
+        input: typeof EmptySchema;
+        output: typeof PairingCodeResponseSchema;
+    };
+    getUsage: {
+        methodKind: "unary";
+        input: typeof GetUsageRequestSchema;
+        output: typeof UsageStatsSchema;
+    };
+    waitForPipe: {
+        methodKind: "unary";
+        input: typeof WaitForPipeRequestSchema;
+        output: typeof WaitForPipeResponseSchema;
+    };
+    writeToFd: {
+        methodKind: "unary";
+        input: typeof WriteToFdRequestSchema;
+        output: typeof EmptySchema;
+    };
+    closeFd: {
+        methodKind: "unary";
+        input: typeof CloseFdRequestSchema;
+        output: typeof CloseFdResponseSchema;
+    };
+    getSessionFds: {
+        methodKind: "unary";
+        input: typeof SessionIdSchema;
+        output: typeof SessionFdsSchema;
+    };
+    createStream: {
+        methodKind: "unary";
+        input: typeof CreateStreamRequestSchema;
+        output: typeof CreateStreamResponseSchema;
+    };
+    attachStream: {
+        methodKind: "unary";
+        input: typeof AttachStreamRequestSchema;
+        output: typeof AttachStreamResponseSchema;
+    };
+    listStreams: {
+        methodKind: "unary";
+        input: typeof EmptySchema;
+        output: typeof ListStreamsResponseSchema;
+    };
+    getVersionStatus: {
+        methodKind: "unary";
+        input: typeof EmptySchema;
+        output: typeof VersionStatusSchema;
+    };
+    streamEvents: {
+        methodKind: "server_streaming";
+        input: typeof EmptySchema;
+        output: typeof ServerEventSchema;
+    };
+}>;
+
+// @public
+const GrackleKnowledge: GenService<{
+    searchKnowledge: {
+        methodKind: "unary";
+        input: typeof SearchKnowledgeRequestSchema;
+        output: typeof SearchKnowledgeResponseSchema;
+    };
+    getKnowledgeNode: {
+        methodKind: "unary";
+        input: typeof GetKnowledgeNodeRequestSchema;
+        output: typeof GetKnowledgeNodeResponseSchema;
+    };
+    expandKnowledgeNode: {
+        methodKind: "unary";
+        input: typeof ExpandKnowledgeNodeRequestSchema;
+        output: typeof ExpandKnowledgeNodeResponseSchema;
+    };
+    listRecentKnowledgeNodes: {
+        methodKind: "unary";
+        input: typeof ListRecentKnowledgeNodesRequestSchema;
+        output: typeof ListRecentKnowledgeNodesResponseSchema;
+    };
+    createKnowledgeNode: {
+        methodKind: "unary";
+        input: typeof CreateKnowledgeNodeRequestSchema;
+        output: typeof CreateKnowledgeNodeResponseSchema;
+    };
+}>;
+
+// @public
+const GrackleOrchestration: GenService<{
+    listTasks: {
+        methodKind: "unary";
+        input: typeof ListTasksRequestSchema;
+        output: typeof TaskListSchema;
+    };
+    createTask: {
+        methodKind: "unary";
+        input: typeof CreateTaskRequestSchema;
+        output: typeof TaskSchema;
+    };
+    getTask: {
+        methodKind: "unary";
+        input: typeof TaskIdSchema;
+        output: typeof TaskSchema;
+    };
+    updateTask: {
+        methodKind: "unary";
+        input: typeof UpdateTaskRequestSchema;
+        output: typeof TaskSchema;
+    };
+    startTask: {
+        methodKind: "unary";
+        input: typeof StartTaskRequestSchema;
+        output: typeof SessionSchema;
+    };
+    completeTask: {
+        methodKind: "unary";
+        input: typeof TaskIdSchema;
+        output: typeof TaskSchema;
+    };
+    resumeTask: {
+        methodKind: "unary";
+        input: typeof TaskIdSchema;
+        output: typeof SessionSchema;
+    };
+    stopTask: {
+        methodKind: "unary";
+        input: typeof TaskIdSchema;
+        output: typeof TaskSchema;
+    };
+    setWorkpad: {
+        methodKind: "unary";
+        input: typeof SetWorkpadRequestSchema;
+        output: typeof TaskSchema;
+    };
+    deleteTask: {
+        methodKind: "unary";
+        input: typeof TaskIdSchema;
+        output: typeof EmptySchema;
+    };
+    listPersonas: {
+        methodKind: "unary";
+        input: typeof EmptySchema;
+        output: typeof PersonaListSchema;
+    };
+    createPersona: {
+        methodKind: "unary";
+        input: typeof CreatePersonaRequestSchema;
+        output: typeof PersonaSchema;
+    };
+    getPersona: {
+        methodKind: "unary";
+        input: typeof PersonaIdSchema;
+        output: typeof PersonaSchema;
+    };
+    updatePersona: {
+        methodKind: "unary";
+        input: typeof UpdatePersonaRequestSchema;
+        output: typeof PersonaSchema;
+    };
+    deletePersona: {
+        methodKind: "unary";
+        input: typeof PersonaIdSchema;
+        output: typeof EmptySchema;
+    };
+    postFinding: {
+        methodKind: "unary";
+        input: typeof PostFindingRequestSchema;
+        output: typeof FindingSchema;
+    };
+    queryFindings: {
+        methodKind: "unary";
+        input: typeof QueryFindingsRequestSchema;
+        output: typeof FindingListSchema;
+    };
+    getFinding: {
+        methodKind: "unary";
+        input: typeof GetFindingRequestSchema;
+        output: typeof FindingSchema;
+    };
+    createEscalation: {
+        methodKind: "unary";
+        input: typeof CreateEscalationRequestSchema;
+        output: typeof EscalationSchema;
+    };
+    listEscalations: {
+        methodKind: "unary";
+        input: typeof ListEscalationsRequestSchema;
+        output: typeof EscalationListSchema;
+    };
+    acknowledgeEscalation: {
+        methodKind: "unary";
+        input: typeof AcknowledgeEscalationRequestSchema;
+        output: typeof EscalationSchema;
+    };
+}>;
 
 // @public
 const GracklePowerLine: GenService<{
@@ -1244,6 +1246,35 @@ const GracklePowerLine: GenService<{
         methodKind: "server_streaming";
         input: typeof DrainRequestSchema;
         output: typeof AgentEventSchema;
+    };
+}>;
+
+// @public
+const GrackleScheduling: GenService<{
+    createSchedule: {
+        methodKind: "unary";
+        input: typeof CreateScheduleRequestSchema;
+        output: typeof ScheduleSchema;
+    };
+    listSchedules: {
+        methodKind: "unary";
+        input: typeof ListSchedulesRequestSchema;
+        output: typeof ScheduleListSchema;
+    };
+    getSchedule: {
+        methodKind: "unary";
+        input: typeof ScheduleIdSchema;
+        output: typeof ScheduleSchema;
+    };
+    updateSchedule: {
+        methodKind: "unary";
+        input: typeof UpdateScheduleRequestSchema;
+        output: typeof ScheduleSchema;
+    };
+    deleteSchedule: {
+        methodKind: "unary";
+        input: typeof ScheduleIdSchema;
+        output: typeof EmptySchema;
     };
 }>;
 

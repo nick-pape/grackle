@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import chalk from "chalk";
-import { createGrackleClient } from "../client.js";
+import { createGrackleClients } from "../client.js";
 
 /** Register the `pair` command that generates a new pairing code for web UI access. */
 export function registerPairCommand(program: Command): void {
@@ -8,7 +8,7 @@ export function registerPairCommand(program: Command): void {
     .command("pair")
     .description("Generate a new pairing code for the web UI")
     .action(async () => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       const response = await client.generatePairingCode({});
 
       console.log("");

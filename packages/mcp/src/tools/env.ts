@@ -1,7 +1,5 @@
-import type { Client } from "@connectrpc/connect";
-import type { grackle } from "@grackle-ai/common";
 import { z } from "zod";
-import type { ToolDefinition } from "../tool-registry.js";
+import type { GrackleClients, ToolDefinition } from "../tool-registry.js";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
 
@@ -22,7 +20,7 @@ export const envTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(_args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(_args: Record<string, unknown>, { core: client }: GrackleClients) {
       try {
         const response = await client.listEnvironments({});
         return jsonResult(
@@ -61,7 +59,7 @@ export const envTools: ToolDefinition[] = [
       idempotentHint: false,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients) {
       try {
         const parsed = args as {
           displayName: string;
@@ -100,7 +98,7 @@ export const envTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients) {
       const { environmentId, force } = args as { environmentId: string; force?: boolean };
       const events: { stage: string; message: string; progress: number }[] = [];
       try {
@@ -155,7 +153,7 @@ export const envTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients) {
       try {
         const { environmentId } = args as { environmentId: string };
         await client.stopEnvironment({ id: environmentId });
@@ -183,7 +181,7 @@ export const envTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients) {
       try {
         const { environmentId } = args as { environmentId: string };
         await client.destroyEnvironment({ id: environmentId });
@@ -211,7 +209,7 @@ export const envTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients) {
       try {
         const { environmentId } = args as { environmentId: string };
         await client.removeEnvironment({ id: environmentId });
@@ -241,7 +239,7 @@ export const envTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients) {
       const { environmentId } = args as { environmentId: string };
       const events: { stage: string; message: string; progress: number }[] = [];
       try {

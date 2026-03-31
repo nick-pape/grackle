@@ -44,7 +44,7 @@ test.describe("Subtask dependency rejection", { tag: ["@task"] }, () => {
     // "Implement" should have been rejected due to unresolvable depends_on.
     // Poll briefly in case task creation events are still flushing.
     await expect(async () => {
-      const resp = await client.listTasks({ workspaceId });
+      const resp = await client.orchestration.listTasks({ workspaceId });
       const parent = resp.tasks.find((t) => t.title === "Decomposable Parent");
       expect(parent).toBeDefined();
 

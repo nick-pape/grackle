@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import chalk from "chalk";
-import { createGrackleClient } from "../client.js";
+import { createGrackleClients } from "../client.js";
 import type { AdapterType } from "@grackle-ai/common";
 import Table from "cli-table3";
 
@@ -12,7 +12,7 @@ export function registerEnvCommands(program: Command): void {
     .command("list")
     .description("List all environments")
     .action(async () => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       const res = await client.listEnvironments({});
       if (res.environments.length === 0) {
         console.log("No environments configured.");
@@ -54,7 +54,7 @@ export function registerEnvCommands(program: Command): void {
       volume?: string[]; gpu?: string | boolean; sshPort?: string;
       identityFile?: string; codespaceName?: string;
     }) => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       let adapterType: AdapterType = "docker";
       const config: Record<string, unknown> = {};
 
@@ -112,7 +112,7 @@ export function registerEnvCommands(program: Command): void {
     .command("stop <id>")
     .description("Stop an environment")
     .action(async (id: string) => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       await client.stopEnvironment({ id });
       console.log(`Stopped: ${id}`);
     });
@@ -121,7 +121,7 @@ export function registerEnvCommands(program: Command): void {
     .command("destroy <id>")
     .description("Destroy an environment")
     .action(async (id: string) => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       await client.destroyEnvironment({ id });
       console.log(`Destroyed: ${id}`);
     });
@@ -130,14 +130,14 @@ export function registerEnvCommands(program: Command): void {
     .command("remove <id>")
     .description("Remove environment from registry")
     .action(async (id: string) => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       await client.removeEnvironment({ id });
       console.log(`Removed: ${id}`);
     });
 
   /** Shared action for provisioning / waking an environment. */
   async function provisionAction(id: string, options: { force?: boolean } = {}): Promise<void> {
-    const client = createGrackleClient();
+    const { core: client } = createGrackleClients();
     for await (const event of client.provisionEnvironment({ id, force: options.force ?? false })) {
       const pct = Math.round(event.progress * 100);
       console.log(`[${pct}%] ${event.stage}: ${event.message}`);

@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { createGrackleClient } from "../client.js";
+import { createGrackleClients } from "../client.js";
 import { workspaceStatusToString } from "@grackle-ai/common";
 import Table from "cli-table3";
 import { formatTokens, formatCost, formatBudget } from "../format.js";
@@ -12,7 +12,7 @@ export function registerWorkspaceCommands(program: Command): void {
     .description("List all active workspaces")
     .option("--env <env-id>", "Filter by environment ID")
     .action(async (opts: { env?: string }) => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       const res = await client.listWorkspaces({ environmentId: opts.env || "" });
       if (res.workspaces.length === 0) {
         console.log("No workspaces.");
@@ -39,7 +39,7 @@ export function registerWorkspaceCommands(program: Command): void {
     .option("--token-budget <n>", "Aggregate token cap across all tasks; 0 = unlimited", parseInt)
     .option("--cost-budget-millicents <n>", "Aggregate cost cap in millicents ($0.00001 units); 0 = unlimited", parseInt)
     .action(async (name: string, opts: { worktrees?: boolean; desc?: string; repo?: string; env: string; workingDirectory?: string; worktreeBasePath?: string; tokenBudget?: number; costBudgetMillicents?: number }) => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       // Commander sets opts.worktrees = false when --no-worktrees is passed, true otherwise
       const useWorktrees = opts.worktrees !== false;
       const p = await client.createWorkspace({
@@ -59,7 +59,7 @@ export function registerWorkspaceCommands(program: Command): void {
     .command("get <id>")
     .description("Show full workspace details")
     .action(async (id: string) => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       const p = await client.getWorkspace({ id });
       // Fetch usage for budget display
       let usage: { inputTokens: number; outputTokens: number; costMillicents: number } | undefined;
@@ -114,7 +114,7 @@ export function registerWorkspaceCommands(program: Command): void {
     .option("--token-budget <n>", "Aggregate token cap across all tasks; 0 = unlimited", parseInt)
     .option("--cost-budget-millicents <n>", "Aggregate cost cap in millicents ($0.00001 units); 0 = unlimited", parseInt)
     .action(async (id: string, opts: { worktrees?: boolean; name?: string; desc?: string; repo?: string; env?: string; workingDirectory?: string; worktreeBasePath?: string; tokenBudget?: number; costBudgetMillicents?: number }) => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       // Determine useWorktrees: explicit --worktrees → true, --no-worktrees → false, neither → undefined (no change)
       let useWorktrees: boolean | undefined;
       if (opts.worktrees === true) {
@@ -140,7 +140,7 @@ export function registerWorkspaceCommands(program: Command): void {
     .command("archive <id>")
     .description("Archive a workspace")
     .action(async (id: string) => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       await client.archiveWorkspace({ id });
       console.log(`Archived: ${id}`);
     });
@@ -150,7 +150,7 @@ export function registerWorkspaceCommands(program: Command): void {
     .description("Link an additional environment to a workspace")
     .requiredOption("--env <env-id>", "Environment ID to link")
     .action(async (workspaceId: string, opts: { env: string }) => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       const p = await client.linkEnvironment({ workspaceId, environmentId: opts.env });
       console.log(`Linked environment ${opts.env} to workspace ${p.id} (${p.name})`);
     });
@@ -160,7 +160,7 @@ export function registerWorkspaceCommands(program: Command): void {
     .description("Remove a linked environment from a workspace")
     .requiredOption("--env <env-id>", "Environment ID to unlink")
     .action(async (workspaceId: string, opts: { env: string }) => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       const p = await client.unlinkEnvironment({ workspaceId, environmentId: opts.env });
       console.log(`Unlinked environment ${opts.env} from workspace ${p.id} (${p.name})`);
     });

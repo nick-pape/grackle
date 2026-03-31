@@ -5,7 +5,7 @@ import type { grackle } from "@grackle-ai/common";
 import type { AuthContext } from "@grackle-ai/auth";
 import { workpadTools } from "./workpad.js";
 
-type GrackleClient = Client<typeof grackle.Grackle>;
+type GrackleClient = Client<typeof grackle.GrackleOrchestration>;
 
 /** Helper to find a tool definition by name. */
 const getTool = (name: string) => workpadTools.find((t) => t.name === name)!;
@@ -33,7 +33,7 @@ describe("workpad_write", () => {
 
     const result = await tool.handler(
       { status: "completed", summary: "Done" },
-      mockClient,
+      { orchestration: mockClient },
       scopedAuth,
     );
 
@@ -60,7 +60,7 @@ describe("workpad_write", () => {
 
     const result = await tool.handler(
       { taskId: "child-1", status: "in progress", summary: "Working on it" },
-      mockClient,
+      { orchestration: mockClient },
       scopedAuth,
     );
 
@@ -76,7 +76,7 @@ describe("workpad_write", () => {
 
     const result = await tool.handler(
       { status: "done", summary: "Finished" },
-      mockClient,
+      { orchestration: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -100,8 +100,7 @@ describe("workpad_write", () => {
     };
 
     const result = await tool.handler(
-      { status: "done" },
-      mockClient,
+      { status: "done" }, { orchestration: mockClient },
       scopedAuth,
     );
 
@@ -126,7 +125,7 @@ describe("workpad_write", () => {
 
     await tool.handler(
       { status: "completed", summary: "PR opened", extra: { branch: "feat/x", pr: 42 } },
-      mockClient,
+      { orchestration: mockClient },
       scopedAuth,
     );
 
@@ -155,7 +154,7 @@ describe("workpad_read", () => {
       taskSessionId: "sess-1",
     };
 
-    const result = await tool.handler({}, mockClient, scopedAuth);
+    const result = await tool.handler({}, { orchestration: mockClient }, scopedAuth);
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.status).toBe("in progress");
     expect(parsed.summary).toBe("Working");
@@ -180,7 +179,7 @@ describe("workpad_read", () => {
       taskSessionId: "sess-1",
     };
 
-    const result = await tool.handler({ taskId: "child-1" }, mockClient, scopedAuth);
+    const result = await tool.handler({ taskId: "child-1" }, { orchestration: mockClient }, scopedAuth);
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.status).toBe("done");
   });
@@ -198,7 +197,7 @@ describe("workpad_read", () => {
       taskSessionId: "sess-1",
     };
 
-    const result = await tool.handler({}, mockClient, scopedAuth);
+    const result = await tool.handler({}, { orchestration: mockClient }, scopedAuth);
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed).toEqual({});
   });
@@ -206,7 +205,7 @@ describe("workpad_read", () => {
   test("returns error when no task context", async () => {
     const mockClient = {} as unknown as GrackleClient;
 
-    const result = await tool.handler({}, mockClient);
+    const result = await tool.handler({}, { orchestration: mockClient });
 
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("No task context");
@@ -227,7 +226,7 @@ describe("workpad_read", () => {
       taskSessionId: "sess-1",
     };
 
-    const result = await tool.handler({ taskId: "t-missing" }, mockClient, scopedAuth);
+    const result = await tool.handler({ taskId: "t-missing" }, { orchestration: mockClient }, scopedAuth);
     expect(result.isError).toBe(true);
   });
 });

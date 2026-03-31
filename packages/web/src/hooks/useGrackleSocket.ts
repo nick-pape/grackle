@@ -24,7 +24,7 @@ import { useCodespaces } from "./useCodespaces.js";
 import { usePersonas } from "./usePersonas.js";
 import { useKnowledge } from "./useKnowledge.js";
 import { useNotifications } from "./useNotifications.js";
-import { grackleClient } from "./useGrackleClient.js";
+import { coreClient as grackleClient } from "./useGrackleClient.js";
 import { protoToUsageStats } from "./proto-converters.js";
 
 // ─── Re-exports ───────────────────────────────────────────────────────────────

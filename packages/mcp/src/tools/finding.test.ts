@@ -4,7 +4,7 @@ import type { Client } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
 import { findingTools } from "./finding.js";
 
-type GrackleClient = Client<typeof grackle.Grackle>;
+type GrackleClient = Client<typeof grackle.GrackleOrchestration>;
 
 /** Look up a tool definition by name from the findingTools array. */
 const getTool = (name: string) => findingTools.find((t) => t.name === name)!;
@@ -34,7 +34,7 @@ describe("finding_list", () => {
 
     const result = await tool.handler(
       { workspaceId: "p-1", category: "bug", tag: "t1", limit: 10 },
-      mockClient,
+      { orchestration: mockClient },
     );
 
     expect(mockClient.queryFindings).toHaveBeenCalledWith({
@@ -66,7 +66,7 @@ describe("finding_list", () => {
       queryFindings: vi.fn().mockResolvedValue({ findings: [] }),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({ workspaceId: "p-1" }, mockClient);
+    const result = await tool.handler({ workspaceId: "p-1" }, { orchestration: mockClient });
 
     expect(mockClient.queryFindings).toHaveBeenCalledWith({
       workspaceId: "p-1",
@@ -87,7 +87,7 @@ describe("finding_list", () => {
       ),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({ workspaceId: "p-missing" }, mockClient);
+    const result = await tool.handler({ workspaceId: "p-missing" }, { orchestration: mockClient });
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
@@ -121,7 +121,7 @@ describe("finding_post", () => {
         content: "Caching reduces latency by 40%",
         tags: ["t1"],
       },
-      mockClient,
+      { orchestration: mockClient },
     );
 
     expect(mockClient.postFinding).toHaveBeenCalledWith({
@@ -163,7 +163,7 @@ describe("finding_post", () => {
 
     const result = await tool.handler(
       { workspaceId: "p-1", title: "Minimal finding" },
-      mockClient,
+      { orchestration: mockClient },
     );
 
     expect(mockClient.postFinding).toHaveBeenCalledWith({
@@ -191,7 +191,7 @@ describe("finding_post", () => {
 
     const result = await tool.handler(
       { workspaceId: "p-missing", title: "Oops" },
-      mockClient,
+      { orchestration: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -216,7 +216,7 @@ describe("finding_post", () => {
 
     await tool.handler(
       { workspaceId: "p-1", title: "Scoped finding" },
-      mockClient,
+      { orchestration: mockClient },
       { type: "scoped", taskId: "task-42", workspaceId: "p-1", personaId: "per-1", taskSessionId: "sess-99" },
     );
 
@@ -244,7 +244,7 @@ describe("finding_post", () => {
 
     await tool.handler(
       { workspaceId: "p-1", title: "API key finding" },
-      mockClient,
+      { orchestration: mockClient },
       { type: "api-key" },
     );
 
@@ -290,7 +290,7 @@ describe("workspace ID schema optionality (#1041)", () => {
     // Simulate what mcp-server.ts does: inject workspaceId into args before calling handler
     const result = await tool.handler(
       { workspaceId: "ws-auto", title: "Auto-injected workspace" },
-      mockClient,
+      { orchestration: mockClient },
       { type: "scoped", taskId: "t-1", workspaceId: "ws-auto", personaId: "p-1", taskSessionId: "s-1" },
     );
 
@@ -308,8 +308,7 @@ describe("workspace ID schema optionality (#1041)", () => {
     } as unknown as GrackleClient;
 
     const result = await tool.handler(
-      { title: "Missing workspace" },
-      mockClient,
+      { title: "Missing workspace" }, { orchestration: mockClient },
       { type: "scoped", taskId: "t-1", workspaceId: undefined as unknown as string, personaId: "p-1", taskSessionId: "s-1" },
     );
 
@@ -327,8 +326,7 @@ describe("workspace ID schema optionality (#1041)", () => {
     } as unknown as GrackleClient;
 
     const result = await tool.handler(
-      {},
-      mockClient,
+      {}, { orchestration: mockClient },
       { type: "scoped", taskId: "t-1", workspaceId: undefined as unknown as string, personaId: "p-1", taskSessionId: "s-1" },
     );
 

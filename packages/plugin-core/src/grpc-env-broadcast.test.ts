@@ -97,7 +97,7 @@ function getHandlers(): Record<string, (...args: unknown[]) => unknown> {
   let handlers: Record<string, (...args: unknown[]) => unknown> = {};
   const fakeRouter = {
     service(_def: unknown, impl: Record<string, (...args: unknown[]) => unknown>) {
-      handlers = impl;
+      handlers = { ...handlers, ...impl };
     },
   } as unknown as ConnectRouter;
   registerGrackleRoutes(fakeRouter);

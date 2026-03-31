@@ -16,7 +16,7 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     client: ReturnType<typeof import("./rpc-client.js").createTestClient>,
   ): Promise<void> {
     try {
-      await client.searchKnowledge({ query: "probe", limit: 1 });
+      await client.knowledge.searchKnowledge({ query: "probe", limit: 1 });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       if (message.includes("not available") || message.includes("Unavailable") || message.includes("unavailable")) {
@@ -45,14 +45,14 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
 
     // Seed knowledge data with unique titles to avoid cross-test contamination
     const wsId = await createWorkspace(client, "kg-seeded");
-    await client.createKnowledgeNode({
+    await client.knowledge.createKnowledgeNode({
       title: "E2E Auth Flow Design 7x9k",
       content: "OAuth2 PKCE flow for CLI clients",
       category: "concept",
       tags: ["auth"],
       workspaceId: wsId,
     });
-    await client.createKnowledgeNode({
+    await client.knowledge.createKnowledgeNode({
       title: "E2E Database Schema 7x9k",
       content: "SQLite for single-node deployments",
       category: "decision",
@@ -75,7 +75,7 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     await skipIfKnowledgeUnavailable(client);
 
     const wsId = await createWorkspace(client, "kg-detail");
-    await client.createKnowledgeNode({
+    await client.knowledge.createKnowledgeNode({
       title: "E2E Click Target q3m8",
       content: "This content should appear in the detail panel",
       category: "insight",
@@ -100,7 +100,7 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     await skipIfKnowledgeUnavailable(client);
 
     const wsId = await createWorkspace(client, "kg-search");
-    await client.createKnowledgeNode({
+    await client.knowledge.createKnowledgeNode({
       title: "E2E Searchable Alpha p4n2",
       content: "Content specifically about alpha concepts for search testing",
       category: "concept",

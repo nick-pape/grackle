@@ -11,16 +11,16 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
   // Kill any stale active sessions from previous specs so the shared
   // test-local environment is clean before each test in this file.
   test.beforeEach(async ({ appPage, grackle: { client } }) => {
-    const sessionsResp = await client.listSessions({});
+    const sessionsResp = await client.core.listSessions({});
     const all = sessionsResp.sessions as Array<{ id: string; status: string }>;
     const active = all.filter((s) => s.status === "idle" || s.status === "running" || s.status === "pending");
     for (const s of active) {
-      await client.killAgent({ id: s.id });
+      await client.core.killAgent({ id: s.id });
     }
     // Wait until the environment has no active sessions before proceeding.
     if (active.length > 0) {
       await expect(async () => {
-        const recheck = await client.listSessions({});
+        const recheck = await client.core.listSessions({});
         const remaining = recheck.sessions as Array<{ status: string }>;
         const anyActive = remaining.some(
           (s) => s.status === "idle" || s.status === "running" || s.status === "pending",
@@ -56,7 +56,7 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
     // ── 4. Find the killed session ID via RPC ────────────────────────────
     // Pick the most recently started stopped/killed stub session (other specs may
     // have also left stopped stub sessions in the DB).
-    const sessionsResp = await client.listSessions({ status: "stopped" });
+    const sessionsResp = await client.core.listSessions({ status: "stopped" });
     const sessions = sessionsResp.sessions as Array<{
       id: string; status: string; endReason: string; runtime: string; startedAt: string;
     }>;
@@ -67,7 +67,7 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
     const sessionId = killed.id;
 
     // ── 5. Reanimate via ConnectRPC resume_agent ───────────────────────────
-    const resumeResult = await client.resumeAgent({ sessionId });
+    const resumeResult = await client.core.resumeAgent({ sessionId });
     expect(resumeResult.id).toBeTruthy();
 
     // ── 6. UI transitions: session re-enters waiting_input ────────────────
@@ -105,7 +105,7 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
     await expect(inputField).toBeVisible({ timeout: 10_000 });
 
     // Get the idle session ID
-    const sessionsResp = await client.listSessions({ status: "idle" });
+    const sessionsResp = await client.core.listSessions({ status: "idle" });
     const sessions = sessionsResp.sessions as Array<{ id: string; status: string; runtime: string }>;
     const idleSession = sessions.find((s) => s.status === "idle" && s.runtime === "stub");
     expect(idleSession, "Expected an idle stub session").toBeTruthy();
@@ -113,7 +113,7 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
     // Resuming an IDLE session should error — it is already active
     let error: Error | undefined;
     try {
-      await client.resumeAgent({ sessionId: idleSession!.id });
+      await client.core.resumeAgent({ sessionId: idleSession!.id });
     } catch (e) {
       error = e as Error;
     }
@@ -133,7 +133,7 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
   test("resume a non-existent session returns an error via RPC", async ({ grackle: { client } }) => {
     let error: Error | undefined;
     try {
-      await client.resumeAgent({ sessionId: "no-such-session-id" });
+      await client.core.resumeAgent({ sessionId: "no-such-session-id" });
     } catch (e) {
       error = e as Error;
     }

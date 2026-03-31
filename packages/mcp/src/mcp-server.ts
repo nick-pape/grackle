@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import http from "node:http";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createClient, type Client } from "@connectrpc/connect";
+import { createClient } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
 import { grackle } from "@grackle-ai/common";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -19,7 +19,7 @@ import { z } from "zod";
 import type { AuthContext } from "@grackle-ai/auth";
 import { authenticateMcpRequest, pruneRevocations } from "@grackle-ai/auth";
 import { grpcErrorToToolResult } from "./error-handler.js";
-import type { ToolDefinition } from "./tool-registry.js";
+import type { ToolDefinition, GrackleClients } from "./tool-registry.js";
 import { createToolRegistry } from "./tools/index.js";
 import { resolveToolForAuth, listToolsForAuth } from "./tool-scoping.js";
 
@@ -52,8 +52,8 @@ export interface McpServerOptions {
   toolGroups?: ToolDefinition[][];
 }
 
-/** Create a ConnectRPC client pointing at the co-located Grackle gRPC server. */
-function createGrpcClient(bindHost: string, grpcPort: number, apiKey: string): Client<typeof grackle.Grackle> {
+/** Create per-service ConnectRPC clients pointing at the co-located Grackle gRPC server. */
+function createGrpcClients(bindHost: string, grpcPort: number, apiKey: string): GrackleClients {
   const transport = createGrpcTransport({
     baseUrl: `http://${bindHost}:${grpcPort}`,
     interceptors: [
@@ -63,7 +63,12 @@ function createGrpcClient(bindHost: string, grpcPort: number, apiKey: string): C
       },
     ],
   });
-  return createClient(grackle.Grackle, transport);
+  return {
+    core: createClient(grackle.GrackleCore, transport),
+    orchestration: createClient(grackle.GrackleOrchestration, transport),
+    scheduling: createClient(grackle.GrackleScheduling, transport),
+    knowledge: createClient(grackle.GrackleKnowledge, transport),
+  };
 }
 
 /**
@@ -71,14 +76,14 @@ function createGrpcClient(bindHost: string, grpcPort: number, apiKey: string): C
  * Returns a ReadonlySet for filtering, or undefined to use the default SCOPED_TOOLS.
  */
 async function resolvePersonaTools(
-  grpcClient: Client<typeof grackle.Grackle>,
+  grpcClients: GrackleClients,
   authContext: AuthContext,
 ): Promise<ReadonlySet<string> | undefined> {
   if (authContext.type !== "scoped" || !authContext.personaId) {
     return undefined;
   }
   try {
-    const persona = await grpcClient.getPersona({ id: authContext.personaId });
+    const persona = await grpcClients.orchestration.getPersona({ id: authContext.personaId });
     if (persona.allowedMcpTools.length > 0) {
       const tools = new Set(persona.allowedMcpTools);
       logger.info(
@@ -103,14 +108,14 @@ async function resolvePersonaTools(
 
 /** Create a low-level MCP Server instance with tool handlers wired to the ConnectRPC backend. */
 async function createMcpServerInstance(
-  grpcClient: Client<typeof grackle.Grackle>,
+  grpcClients: GrackleClients,
   authContext: AuthContext,
   toolGroups?: ToolDefinition[][],
 ): Promise<Server> {
   const registry = createToolRegistry(toolGroups);
 
   // Resolve persona-scoped tool set once at session creation (cached for session lifetime)
-  const personaAllowedTools = await resolvePersonaTools(grpcClient, authContext);
+  const personaAllowedTools = await resolvePersonaTools(grpcClients, authContext);
 
   const visibleTools = listToolsForAuth(registry, authContext, personaAllowedTools);
   logger.info(
@@ -174,7 +179,7 @@ async function createMcpServerInstance(
       // Skip check when caller has no workspace (root task agents can see any task).
       if (name === "task_show" && authContext.workspaceId && typeof rawArgs.taskId === "string" && rawArgs.taskId) {
         try {
-          const task = await grpcClient.getTask({ id: rawArgs.taskId as string });
+          const task = await grpcClients.orchestration.getTask({ id: rawArgs.taskId as string });
           if ((task.workspaceId || undefined) !== authContext.workspaceId) {
             return {
               content: [{ type: "text", text: JSON.stringify({ error: "Task belongs to a different workspace", code: "PERMISSION_DENIED" }, null, 2) }],
@@ -211,7 +216,7 @@ async function createMcpServerInstance(
 
     try {
       logger.info({ tool: name, resolved: tool.name }, "Executing MCP tool: %s", name);
-      const result = await tool.handler(parsed.data as Record<string, unknown>, grpcClient, authContext);
+      const result = await tool.handler(parsed.data as Record<string, unknown>, grpcClients, authContext);
       return result as CallToolResult;
     } catch (error: unknown) {
       logger.error({ tool: name, err: error }, "Tool execution failed: %s", name);
@@ -241,7 +246,7 @@ const REVOCATION_PRUNE_INTERVAL_MS: number = 60 * 60 * 1000;
  */
 export function createMcpServer(options: McpServerOptions): http.Server {
   const { bindHost, grpcPort, apiKey, authorizationServerUrl, toolGroups } = options;
-  const grpcClient = createGrpcClient(bindHost, grpcPort, apiKey);
+  const grpcClients = createGrpcClients(bindHost, grpcPort, apiKey);
 
   /** Map of active session transports, keyed by session ID. */
   const transports: Map<string, StreamableHTTPServerTransport> = new Map();
@@ -293,7 +298,7 @@ export function createMcpServer(options: McpServerOptions): http.Server {
     const method = req.method?.toUpperCase();
 
     if (method === "POST") {
-      await handlePost(req, res, grpcClient, transports, authContexts, authContext, toolGroups);
+      await handlePost(req, res, grpcClients, transports, authContexts, authContext, toolGroups);
     } else if (method === "GET") {
       await handleGet(req, res, transports);
     } else if (method === "DELETE") {
@@ -340,7 +345,7 @@ async function parseBody(req: http.IncomingMessage): Promise<unknown> {
 async function handlePost(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  grpcClient: Client<typeof grackle.Grackle>,
+  grpcClients: GrackleClients,
   transports: Map<string, StreamableHTTPServerTransport>,
   authContexts: Map<string, AuthContext>,
   authContext: AuthContext,
@@ -385,7 +390,7 @@ async function handlePost(
         }
       };
 
-      const mcpServer = await createMcpServerInstance(grpcClient, authContext, toolGroups);
+      const mcpServer = await createMcpServerInstance(grpcClients, authContext, toolGroups);
       await mcpServer.connect(transport);
       await transport.handleRequest(req, res, body);
       return;

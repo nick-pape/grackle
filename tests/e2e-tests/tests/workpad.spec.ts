@@ -14,7 +14,7 @@ async function startTaskStubMcp(
   client: GrackleClient,
   taskId: string,
 ): Promise<string> {
-  const resp = await client.startTask({
+  const resp = await client.orchestration.startTask({
     taskId,
     personaId: "stub-mcp",
     environmentId: "test-local",
@@ -37,7 +37,7 @@ async function waitForSessionStatus(
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const resp = await client.listSessions({});
+    const resp = await client.core.listSessions({});
     const sessions = resp.sessions;
     const session = sessions.find((s) => s.id === sessionId);
     if (session && session.status === targetStatus) {
@@ -51,16 +51,16 @@ async function waitForSessionStatus(
 test.describe("Workpad E2E", { tag: ["@task"] }, () => {
   // Kill any stale active sessions before each test to free the environment.
   test.beforeEach(async ({ grackle: { client } }) => {
-    const sessionsResp = await client.listSessions({});
+    const sessionsResp = await client.core.listSessions({});
     const all = sessionsResp.sessions as Array<{ id: string; status: string }>;
     const active = all.filter((s) => s.status === "idle" || s.status === "running" || s.status === "pending");
     for (const s of active) {
-      await client.killAgent({ id: s.id });
+      await client.core.killAgent({ id: s.id });
     }
     if (active.length > 0) {
       const deadline = Date.now() + 5_000;
       while (Date.now() < deadline) {
-        const recheck = await client.listSessions({});
+        const recheck = await client.core.listSessions({});
         const remaining = recheck.sessions as Array<{ status: string }>;
         if (!remaining.some((s) => s.status === "idle" || s.status === "running" || s.status === "pending")) {
           break;
@@ -94,7 +94,7 @@ test.describe("Workpad E2E", { tag: ["@task"] }, () => {
     await waitForSessionStatus(client, sessionId, "stopped");
 
     // 4. Fetch task and verify workpad was persisted
-    const updatedTask = await client.getTask({ id: taskId });
+    const updatedTask = await client.orchestration.getTask({ id: taskId });
     expect(updatedTask.workpad).toBeTruthy();
     const workpad = JSON.parse(updatedTask.workpad) as Record<string, unknown>;
     expect(workpad.status).toBe("completed");
@@ -116,7 +116,7 @@ test.describe("Workpad E2E", { tag: ["@task"] }, () => {
     const taskId = task.id as string;
 
     // 2. Write workpad directly via RPC (simulates a previous session having written it)
-    await client.setWorkpad({
+    await client.orchestration.setWorkpad({
       taskId,
       workpad: JSON.stringify({ status: "done", summary: "Previous agent completed PR #100" }),
     });
@@ -126,7 +126,7 @@ test.describe("Workpad E2E", { tag: ["@task"] }, () => {
     await waitForSessionStatus(client, sessionId, "stopped");
 
     // 4. Fetch session events and verify system context contains workpad
-    const eventsResp = await client.getSessionEvents({ id: sessionId });
+    const eventsResp = await client.core.getSessionEvents({ id: sessionId });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const events = (eventsResp.events || []) as any[];
     const systemEvent = events.find(

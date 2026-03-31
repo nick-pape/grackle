@@ -20,7 +20,7 @@ test.describe("Findings", { tag: ["@error"] }, () => {
     const taskId = await getTaskId(client, workspaceId, "find-task-1");
 
     // Post a finding via RPC
-    await client.postFinding({
+    await client.orchestration.postFinding({
       workspaceId,
       taskId,
       category: "bug",
@@ -54,7 +54,7 @@ test.describe("Findings", { tag: ["@error"] }, () => {
     const taskId = await getTaskId(client, workspaceId, "find-task-2");
 
     // Post 3 findings with different categories
-    await client.postFinding({
+    await client.orchestration.postFinding({
       workspaceId,
       taskId,
       category: "bug",
@@ -63,7 +63,7 @@ test.describe("Findings", { tag: ["@error"] }, () => {
       tags: [],
     });
 
-    await client.postFinding({
+    await client.orchestration.postFinding({
       workspaceId,
       taskId,
       category: "architecture",
@@ -72,7 +72,7 @@ test.describe("Findings", { tag: ["@error"] }, () => {
       tags: ["design"],
     });
 
-    await client.postFinding({
+    await client.orchestration.postFinding({
       workspaceId,
       taskId,
       category: "general",
@@ -107,7 +107,7 @@ test.describe("Findings", { tag: ["@error"] }, () => {
     const taskId = await getTaskId(client, workspaceId, "find-task-3");
 
     // Post a finding
-    await client.postFinding({
+    await client.orchestration.postFinding({
       workspaceId,
       taskId,
       category: "decision",

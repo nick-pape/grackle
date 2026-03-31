@@ -11,7 +11,7 @@ import { useState, useCallback } from "react";
 import { MAX_EVENTS, isSessionEvent, mapEndReason, mapSessionStatus, warnBadPayload } from "@grackle-ai/web-components";
 import type { Session, SessionEvent, WsMessage, UseSessionsResult } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
-import { grackleClient } from "./useGrackleClient.js";
+import { coreClient as grackleClient } from "./useGrackleClient.js";
 import { protoToSession, protoToSessionEvent } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
 

@@ -12,7 +12,7 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     const page = appPage;
 
     // Create a persona
-    await client.createPersona({
+    await client.orchestration.createPersona({
       name: "Security Reviewer",
       description: "Reviews code for vulnerabilities",
       systemPrompt: "You review code for security issues.",
@@ -40,7 +40,7 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
   }) => {
     const page = appPage;
 
-    await client.createPersona({
+    await client.orchestration.createPersona({
       name: "Detailed Persona",
       description: "A persona with full details",
       systemPrompt: "You are detailed.",
@@ -67,7 +67,7 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     const page = appPage;
 
     // Create a persona
-    await client.createPersona({
+    await client.orchestration.createPersona({
       name: "Soon Deleted",
       systemPrompt: "Will be deleted",
     });
@@ -81,11 +81,11 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     });
 
     // Delete via RPC
-    const personas = await client.listPersonas({});
+    const personas = await client.orchestration.listPersonas({});
     const toDelete = personas.personas.find((p) => p.name === "Soon Deleted");
     expect(toDelete).toBeDefined();
 
-    await client.deletePersona({ id: toDelete!.id });
+    await client.orchestration.deletePersona({ id: toDelete!.id });
 
     // The management view should no longer show the persona
     await expect(page.getByText("Soon Deleted")).not.toBeVisible({
@@ -100,7 +100,7 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     const page = appPage;
 
     // Create a persona with the worker MCP tools preset via gRPC
-    const persona = await client.createPersona({
+    const persona = await client.orchestration.createPersona({
       name: "Worker Agent",
       description: "Has restricted MCP tools",
       systemPrompt: "You are a restricted worker.",
@@ -138,7 +138,7 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     const page = appPage;
 
     // Create a persona without explicit MCP tools (uses default)
-    const persona = await client.createPersona({
+    const persona = await client.orchestration.createPersona({
       name: "Unscoped Tester",
       systemPrompt: "You use default tools.",
       runtime: "stub",
@@ -165,7 +165,7 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     const page = appPage;
 
     // Create a persona with no MCP tools
-    const persona = await client.createPersona({
+    const persona = await client.orchestration.createPersona({
       name: "Preset Test Agent",
       systemPrompt: "Testing presets.",
       runtime: "stub",
@@ -227,7 +227,7 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     // Poll listPersonas until the created persona appears (avoids racing the create RPC)
     let createdPersona: { id: string; name: string } | undefined;
     await expect.poll(async () => {
-      const personasAfterCreate = await client.listPersonas({});
+      const personasAfterCreate = await client.orchestration.listPersonas({});
       createdPersona = personasAfterCreate.personas.find((persona) => persona.name === "Route Created Persona");
       return createdPersona;
     }, { timeout: 5_000 }).toBeDefined();
@@ -256,7 +256,7 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     // Poll listPersonas until the update is reflected (avoids racing the update RPC)
     let updatedPersona: { id: string; name: string } | undefined;
     await expect.poll(async () => {
-      const personasAfterUpdate = await client.listPersonas({});
+      const personasAfterUpdate = await client.orchestration.listPersonas({});
       updatedPersona = personasAfterUpdate.personas.find((persona) => persona.name === "Route Updated Persona");
       return updatedPersona;
     }, { timeout: 5_000 }).toBeDefined();
