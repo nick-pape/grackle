@@ -110,6 +110,17 @@ export function getKnowledgeReadinessCheck(): KnowledgeReadinessCheck {
 }
 
 /**
+ * Mark the knowledge subsystem as unhealthy immediately.
+ *
+ * Called when plugin initialization fails (e.g. Neo4j unreachable at startup)
+ * so that `/readyz` returns an accurate status instead of the optimistic default.
+ */
+export function markKnowledgeInitFailed(): void {
+  healthy = false;
+  initialized = true;
+}
+
+/**
  * Reset health state for testing.
  *
  * @internal

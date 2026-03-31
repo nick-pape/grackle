@@ -9,6 +9,7 @@ const {
   mockInitKnowledge,
   mockCreateEntitySyncSubscriber,
   mockCreateKnowledgeHealthPhase,
+  mockMarkKnowledgeInitFailed,
   mockSearchKnowledge,
   mockGetKnowledgeNode,
   mockExpandKnowledgeNode,
@@ -19,6 +20,7 @@ const {
   mockInitKnowledge: vi.fn().mockResolvedValue(vi.fn()),
   mockCreateEntitySyncSubscriber: vi.fn().mockReturnValue({ dispose: vi.fn() }),
   mockCreateKnowledgeHealthPhase: vi.fn().mockReturnValue({ name: "knowledge-health", execute: vi.fn() }),
+  mockMarkKnowledgeInitFailed: vi.fn(),
   mockSearchKnowledge: vi.fn(),
   mockGetKnowledgeNode: vi.fn(),
   mockExpandKnowledgeNode: vi.fn(),
@@ -39,6 +41,7 @@ vi.mock("./knowledge-init.js", () => ({
 
 vi.mock("./knowledge-health.js", () => ({
   createKnowledgeHealthPhase: mockCreateKnowledgeHealthPhase,
+  markKnowledgeInitFailed: mockMarkKnowledgeInitFailed,
 }));
 
 vi.mock("./knowledge-handlers.js", () => ({
@@ -127,6 +130,16 @@ describe("knowledge plugin lifecycle", () => {
     await plugin.shutdown!(); // second call should be safe
 
     expect(mockCleanup).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls markKnowledgeInitFailed when initialization throws", async () => {
+    mockInitKnowledge.mockRejectedValue(new Error("Neo4j unreachable"));
+
+    const plugin = createKnowledgePlugin();
+    const ctx = makeCtx();
+    await plugin.initialize!(ctx); // must not throw
+
+    expect(mockMarkKnowledgeInitFailed).toHaveBeenCalledOnce();
   });
 });
 

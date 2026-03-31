@@ -15,7 +15,7 @@ import {
   createEntitySyncSubscriber,
   neo4jHealthCheck,
 } from "./knowledge-init.js";
-import { createKnowledgeHealthPhase } from "./knowledge-health.js";
+import { createKnowledgeHealthPhase, markKnowledgeInitFailed } from "./knowledge-health.js";
 import {
   searchKnowledge,
   getKnowledgeNode,
@@ -51,7 +51,8 @@ export function createKnowledgePlugin(): GracklePlugin {
         cleanup = await initKnowledge(ctx);
       } catch (err: unknown) {
         // Knowledge init failure (e.g. Neo4j unreachable) is non-fatal.
-        // Handlers will return errors individually; health check will show degraded.
+        // Mark health as failed immediately so /readyz reflects accurate status.
+        markKnowledgeInitFailed();
         logger.error({ err }, "Knowledge plugin initialization failed — running degraded");
       }
     },
