@@ -72,6 +72,11 @@ export { CredentialProvidersPanel } from "./components/panels/CredentialProvider
 // Personas
 export { PersonaManager } from "./components/personas/PersonaManager.js";
 export { McpToolSelector } from "./components/personas/McpToolSelector.js";
+export type { PersonaManagerProps } from "./components/personas/PersonaManager.js";
+
+// Schedules
+export { ScheduleManager } from "./components/schedules/ScheduleManager.js";
+export type { ScheduleManagerProps } from "./components/schedules/ScheduleManager.js";
 
 // Settings
 export { SettingsNav } from "./components/settings/SettingsNav.js";
@@ -114,6 +119,7 @@ export type {
   Environment, Session, UsageStats, SessionEvent,
   Workspace, TaskData, FindingData, TokenInfo,
   CredentialProviderConfig, Codespace, PersonaData,
+  ScheduleData, ScheduleUpdate, UseSchedulesResult,
   ProvisionStatus, GrackleEvent, WsMessage, SendFunction,
   GraphNode, GraphLink, NodeDetail, UseKnowledgeResult,
   UseEnvironmentsResult, UseSessionsResult, UseWorkspacesResult,
@@ -142,6 +148,7 @@ export {
   environmentUrl, environmentEditUrl, SETTINGS_URL,
   SETTINGS_ENVIRONMENTS_URL, SETTINGS_CREDENTIALS_URL,
   PERSONAS_URL, NEW_PERSONA_URL, personaUrl,
+  SCHEDULES_URL, NEW_SCHEDULE_URL, scheduleUrl,
   SETTINGS_APPEARANCE_URL, SETTINGS_ABOUT_URL, SETTINGS_SHORTCUTS_URL,
   PAIR_PATH, NEW_WORKSPACE_URL, KNOWLEDGE_URL, HOME_URL,
   FINDINGS_URL, findingsUrl, findingUrl,
@@ -156,7 +163,7 @@ export {
 export type { TaskStatusKey, VirtualStatus, DisplayStatus, TaskStatusStyle } from "./utils/taskStatus.js";
 
 export { formatTokens, formatCost } from "./utils/format.js";
-export { formatRelativeTime } from "./utils/time.js";
+export { formatRelativeTime, formatCountdown } from "./utils/time.js";
 export { CATEGORY_COLORS, getCategoryColor } from "./utils/findingCategory.js";
 export type { CategoryColor } from "./utils/findingCategory.js";
 
@@ -190,4 +197,4 @@ export type { ThemeDefinition } from "./themes.js";
 // ─── Mocks & Test Utilities ─────────────────────────────────────────────────
 
 export { MockGrackleProvider } from "./mocks/MockGrackleProvider.js";
-export { withMockGrackle, withMockGrackleRoute, makePersona } from "./test-utils/storybook-helpers.js";
+export { withMockGrackle, withMockGrackleRoute, makePersona, makeSchedule } from "./test-utils/storybook-helpers.js";

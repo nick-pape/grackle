@@ -22,6 +22,7 @@ import { useTokens } from "./useTokens.js";
 import { useCredentials } from "./useCredentials.js";
 import { useCodespaces } from "./useCodespaces.js";
 import { usePersonas } from "./usePersonas.js";
+import { useSchedules } from "./useSchedules.js";
 import { useKnowledge } from "./useKnowledge.js";
 import { useNotifications } from "./useNotifications.js";
 import { grackleClient } from "./useGrackleClient.js";
@@ -38,6 +39,7 @@ export type {
   GrackleEvent,
   PersonaData,
   ProvisionStatus,
+  ScheduleData,
   SendFunction,
   Session,
   SessionEvent,
@@ -53,6 +55,7 @@ export type {
   UseCredentialsResult,
   UseCodespacesResult,
   UsePersonasResult,
+  UseSchedulesResult,
   WsMessage,
   Workspace,
 } from "@grackle-ai/web-components";
@@ -93,6 +96,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   const credentialsHook = useCredentials();
   const codespacesHook = useCodespaces();
   const personasHook = usePersonas();
+  const schedulesHook = useSchedules();
   const knowledgeHook = useKnowledge();
   const notificationsHook = useNotifications();
 
@@ -109,6 +113,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     ...(activeHookKeys.has("credentials")  ? [credentialsHook.domainHook]  : []),
     ...(activeHookKeys.has("codespaces")   ? [codespacesHook.domainHook]   : []),
     ...(activeHookKeys.has("personas")     ? [personasHook.domainHook]     : []),
+    ...(activeHookKeys.has("schedules")    ? [schedulesHook.domainHook]    : []),
     ...(activeHookKeys.has("knowledge")    ? [knowledgeHook.domainHook]    : []),
     ...(activeHookKeys.has("notifications") ? [notificationsHook.domainHook] : []),
   ];
@@ -348,6 +353,14 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       updatePersona: personasHook.updatePersona,
       deletePersona: personasHook.deletePersona,
       domainHook: personasHook.domainHook,
+    },
+    schedules: {
+      schedules: schedulesHook.schedules,
+      schedulesLoading: schedulesHook.schedulesLoading,
+      createSchedule: schedulesHook.createSchedule,
+      updateSchedule: schedulesHook.updateSchedule,
+      deleteSchedule: schedulesHook.deleteSchedule,
+      domainHook: schedulesHook.domainHook,
     },
     knowledge: knowledgeHook,
     appDefaultPersonaId,

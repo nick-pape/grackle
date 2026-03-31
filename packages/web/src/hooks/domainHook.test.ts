@@ -19,6 +19,7 @@ import { useTokens } from "./useTokens.js";
 import { useCredentials } from "./useCredentials.js";
 import { useCodespaces } from "./useCodespaces.js";
 import { usePersonas } from "./usePersonas.js";
+import { useSchedules } from "./useSchedules.js";
 import { useKnowledge } from "./useKnowledge.js";
 import { useNotifications } from "./useNotifications.js";
 
@@ -35,6 +36,7 @@ const mockClient = vi.hoisted(() => ({
   listTokens: vi.fn().mockResolvedValue({ tokens: [] }),
   getCredentials: vi.fn().mockResolvedValue({ providers: [] }),
   listPersonas: vi.fn().mockResolvedValue({ personas: [] }),
+  listSchedules: vi.fn().mockResolvedValue({ schedules: [] }),
   listCodespaces: vi.fn().mockResolvedValue({ codespaces: [], error: "" }),
   listKnowledgeNodes: vi.fn().mockResolvedValue({ nodes: [], links: [] }),
   addEnvironment: vi.fn(),
@@ -89,6 +91,7 @@ vi.mock("./proto-converters.js", () => ({
   protoToToken: (x: unknown) => x,
   protoToCredentialConfig: (x: unknown) => x,
   protoToPersona: (x: unknown) => x,
+  protoToSchedule: (x: unknown) => x,
   protoToCodespace: (x: unknown) => x,
   protoToGraphNode: (x: unknown) => x,
   protoToGraphLink: (x: unknown) => x,
@@ -118,12 +121,13 @@ type _Tok = AssertHasDomainHook<ReturnType<typeof useTokens>>;
 type _Crd = AssertHasDomainHook<ReturnType<typeof useCredentials>>;
 type _Cs = AssertHasDomainHook<ReturnType<typeof useCodespaces>>;
 type _Per = AssertHasDomainHook<ReturnType<typeof usePersonas>>;
+type _Sch = AssertHasDomainHook<ReturnType<typeof useSchedules>>;
 type _Kn = AssertHasDomainHook<ReturnType<typeof useKnowledge>>;
 type _Not = AssertHasDomainHook<ReturnType<typeof useNotifications>>;
 
 // Suppress unused-variable warnings — these exist solely for the type check
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-type _All = _Env | _Ses | _Ws | _Tsk | _Fnd | _Tok | _Crd | _Cs | _Per | _Kn | _Not;
+type _All = _Env | _Ses | _Ws | _Tsk | _Fnd | _Tok | _Crd | _Cs | _Per | _Sch | _Kn | _Not;
 
 // ---------------------------------------------------------------------------
 // Runtime tests
@@ -151,12 +155,13 @@ const ALL_HOOKS = [
   { name: "useCredentials", hook: useCredentials },
   { name: "useCodespaces", hook: useCodespaces },
   { name: "usePersonas", hook: usePersonas },
+  { name: "useSchedules", hook: useSchedules },
   { name: "useKnowledge", hook: useKnowledge },
   { name: "useNotifications", hook: useNotifications },
 ] as const;
 
 /** Expected number of domain hooks. Bump this when adding a new hook. */
-const EXPECTED_HOOK_COUNT = 11;
+const EXPECTED_HOOK_COUNT = 12;
 
 describe("DomainHook registry", () => {
   it(`has exactly ${EXPECTED_HOOK_COUNT} registered hooks`, () => {

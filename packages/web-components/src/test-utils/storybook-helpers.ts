@@ -14,6 +14,7 @@ import type {
   FindingData,
   TokenInfo,
   PersonaData,
+  ScheduleData,
   CredentialProviderConfig,
   Codespace,
 } from "../hooks/types.js";
@@ -155,6 +156,27 @@ export function makePersona(overrides: Partial<PersonaData> = {}): PersonaData {
     type: "agent",
     script: "",
     allowedMcpTools: [],
+    ...overrides,
+  };
+}
+
+/** Create a ScheduleData with sensible defaults. */
+export function makeSchedule(overrides: Partial<ScheduleData> = {}): ScheduleData {
+  return {
+    id: nextId("schedule"),
+    title: "Test Schedule",
+    description: "A test schedule",
+    scheduleExpression: "5m",
+    personaId: "persona-1",
+    environmentId: "",
+    workspaceId: "",
+    parentTaskId: "",
+    enabled: true,
+    lastRunAt: "",
+    nextRunAt: new Date(Date.now() + 5 * 60_000).toISOString(),
+    runCount: 0,
+    createdAt: "2026-01-01T00:00:00Z",
+    updatedAt: "2026-01-01T00:00:00Z",
     ...overrides,
   };
 }
