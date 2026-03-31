@@ -482,9 +482,6 @@ importers:
       '@grackle-ai/prompt':
         specifier: workspace:*
         version: link:../prompt
-      cron-parser:
-        specifier: ^4.9.0
-        version: 4.9.0
       pino:
         specifier: ^10.3.1
         version: 10.3.1
@@ -541,6 +538,52 @@ importers:
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.15
+      vitest:
+        specifier: ^3.2.1
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
+
+  ../../packages/plugin-scheduling:
+    dependencies:
+      '@bufbuild/protobuf':
+        specifier: ^2.5.0
+        version: 2.11.0
+      '@connectrpc/connect':
+        specifier: ^2.0.0
+        version: 2.1.1(@bufbuild/protobuf@2.11.0)
+      '@grackle-ai/common':
+        specifier: workspace:*
+        version: link:../common
+      '@grackle-ai/core':
+        specifier: workspace:*
+        version: link:../core
+      '@grackle-ai/database':
+        specifier: workspace:*
+        version: link:../database
+      '@grackle-ai/plugin-sdk':
+        specifier: workspace:*
+        version: link:../plugin-sdk
+      cron-parser:
+        specifier: ^4.9.0
+        version: 4.9.0
+      pino:
+        specifier: ^10.3.1
+        version: 10.3.1
+      uuid:
+        specifier: ^11.0.0
+        version: 11.1.0
+    devDependencies:
+      '@grackle-ai/heft-rig':
+        specifier: workspace:*
+        version: link:../../rigs/heft-rig
+      '@rushstack/heft':
+        specifier: 1.2.7
+        version: 1.2.7(@types/node@22.19.15)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      '@types/uuid':
+        specifier: ^10.0.0
+        version: 10.0.0
       vitest:
         specifier: ^3.2.1
         version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
@@ -819,6 +862,9 @@ importers:
       '@grackle-ai/plugin-orchestration':
         specifier: workspace:*
         version: link:../plugin-orchestration
+      '@grackle-ai/plugin-scheduling':
+        specifier: workspace:*
+        version: link:../plugin-scheduling
       '@grackle-ai/plugin-sdk':
         specifier: workspace:*
         version: link:../plugin-sdk

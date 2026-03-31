@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 
-vi.mock("./logger.js", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
-
 import {
   parseDuration,
   isIntervalExpression,

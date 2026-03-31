@@ -92,6 +92,11 @@
       "versionPolicyName": "grackle"
     },
     {
+      "packageName": "@grackle-ai/plugin-scheduling",
+      "projectFolder": "packages/plugin-scheduling",
+      "versionPolicyName": "grackle"
+    },
+    {
       "packageName": "@grackle-ai/prompt",
       "projectFolder": "packages/prompt",
       "versionPolicyName": "grackle"

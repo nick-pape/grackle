@@ -22,7 +22,6 @@ vi.mock("@grackle-ai/common", () => ({
 vi.mock("./environment-handlers.js", () => ({ listEnvironments: vi.fn() }));
 vi.mock("./session-handlers.js", () => ({ spawnAgent: vi.fn() }));
 vi.mock("./workspace-handlers.js", () => ({ listWorkspaces: vi.fn() }));
-vi.mock("./schedule-handlers.js", () => ({ listSchedules: vi.fn() }));
 vi.mock("./token-handlers.js", () => ({ getToken: vi.fn() }));
 vi.mock("./codespace-handlers.js", () => ({ listCodespaces: vi.fn() }));
 vi.mock("./knowledge-handlers.js", () => ({ queryKnowledge: vi.fn() }));
@@ -40,17 +39,18 @@ beforeEach(() => {
 });
 
 describe("createCoreCollector", () => {
-  it("adds environments, sessions, workspaces, schedules, tokens, codespaces, knowledge, settings", () => {
+  it("adds environments, sessions, workspaces, tokens, codespaces, knowledge, settings (no schedules)", () => {
     createCoreCollector();
     const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
     expect(addedModules.some((m) => "listEnvironments" in m)).toBe(true);
     expect(addedModules.some((m) => "spawnAgent" in m)).toBe(true);
     expect(addedModules.some((m) => "listWorkspaces" in m)).toBe(true);
-    expect(addedModules.some((m) => "listSchedules" in m)).toBe(true);
     expect(addedModules.some((m) => "getToken" in m)).toBe(true);
     expect(addedModules.some((m) => "listCodespaces" in m)).toBe(true);
     expect(addedModules.some((m) => "queryKnowledge" in m)).toBe(true);
     expect(addedModules.some((m) => "getSetting" in m)).toBe(true);
+    // Schedules are contributed by @grackle-ai/plugin-scheduling
+    expect(addedModules.some((m) => "listSchedules" in m)).toBe(false);
   });
 
   it("does NOT add task, persona, finding, or escalation handlers", () => {
@@ -62,9 +62,9 @@ describe("createCoreCollector", () => {
     expect(addedModules.some((m) => "createEscalation" in m)).toBe(false);
   });
 
-  it("adds exactly 8 handler groups", () => {
+  it("adds exactly 7 handler groups", () => {
     createCoreCollector();
-    expect(addHandlersMock).toHaveBeenCalledTimes(8);
+    expect(addHandlersMock).toHaveBeenCalledTimes(7);
   });
 });
 
@@ -92,7 +92,7 @@ describe("createOrchestrationCollector", () => {
 });
 
 describe("createDefaultCollector (regression)", () => {
-  it("adds all 12 handler groups including orchestration", () => {
+  it("adds all 11 handler groups including orchestration (no schedules — plugin-scheduling owns those)", () => {
     createDefaultCollector();
     const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
     expect(addedModules.some((m) => "listEnvironments" in m)).toBe(true);
@@ -100,6 +100,6 @@ describe("createDefaultCollector (regression)", () => {
     expect(addedModules.some((m) => "listPersonas" in m)).toBe(true);
     expect(addedModules.some((m) => "postFinding" in m)).toBe(true);
     expect(addedModules.some((m) => "createEscalation" in m)).toBe(true);
-    expect(addHandlersMock).toHaveBeenCalledTimes(12);
+    expect(addHandlersMock).toHaveBeenCalledTimes(11);
   });
 });

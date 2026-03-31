@@ -30,7 +30,6 @@ vi.mock("@grackle-ai/plugin-core", () => ({
   })),
   createLifecycleSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
   createRootTaskBootSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
-  createCronPhase: vi.fn(() => ({ name: "cron", execute: vi.fn() })),
   createDispatchPhase: vi.fn(() => ({ name: "dispatch", execute: vi.fn() })),
   lifecycleCleanupPhase: { name: "lifecycle-cleanup", execute: vi.fn() },
   createEnvironmentReconciliationPhase: vi.fn(() => ({ name: "environment-status", execute: vi.fn() })),
@@ -43,7 +42,6 @@ vi.mock("@grackle-ai/common", () => ({
 }));
 
 vi.mock("@grackle-ai/database", () => ({
-  scheduleStore: { getDueSchedules: vi.fn(), advanceSchedule: vi.fn(), setScheduleEnabled: vi.fn() },
   taskStore: { createTask: vi.fn(), setTaskScheduleId: vi.fn(), getTask: vi.fn(), listTasks: vi.fn(), reparentTask: vi.fn(), areDependenciesMet: vi.fn() },
   workspaceStore: { listWorkspaces: vi.fn(() => []) },
   personaStore: { getPersona: vi.fn() },
@@ -101,14 +99,14 @@ describe("createCorePlugin", () => {
     expect(registrations[0].handlers).not.toHaveProperty("listPersonas");
   });
 
-  it("reconciliationPhases returns core phases without orphan-reparent", () => {
+  it("reconciliationPhases returns core phases without cron or orphan-reparent", () => {
     const plugin = createCorePlugin();
     const ctx = createMockContext();
     const phases = plugin.reconciliationPhases!(ctx);
 
     const names = phases.map((p) => p.name);
     expect(names).toContain("dispatch");
-    expect(names).toContain("cron");
+    expect(names).not.toContain("cron");
     expect(names).toContain("lifecycle-cleanup");
     expect(names).toContain("environment-status");
     // orphan-reparent belongs to the orchestration plugin

@@ -7,39 +7,26 @@ import {
 } from "@grackle-ai/core";
 import type { ReconciliationPhase } from "@grackle-ai/core";
 import {
-  createCronPhase, createDispatchPhase, lifecycleCleanupPhase,
+  createDispatchPhase, lifecycleCleanupPhase,
   createEnvironmentReconciliationPhase,
 } from "@grackle-ai/plugin-core";
 import { TASK_STATUS, ROOT_TASK_ID } from "@grackle-ai/common";
 import {
-  scheduleStore, taskStore, workspaceStore, personaStore, envRegistry,
+  taskStore, workspaceStore, envRegistry,
   sessionStore, settingsStore, dispatchQueueStore, workspaceEnvironmentLinkStore,
 } from "@grackle-ai/database";
 
 /**
  * Assemble the ordered list of core reconciliation phases for the server.
  *
- * Returns dispatch, cron, lifecycle-cleanup, and environment-reconciliation
- * phases (in that order). When the knowledge subsystem is enabled, a
- * knowledge-health phase is appended.
- *
- * The orphan-reparent phase is NOT included here — it is contributed by
- * `@grackle-ai/plugin-orchestration`.
+ * Returns dispatch, lifecycle-cleanup, and environment-reconciliation phases
+ * (in that order). The cron phase is contributed by the scheduling plugin.
+ * The orphan-reparent phase is contributed by the orchestration plugin.
+ * When the knowledge subsystem is enabled, a knowledge-health phase is appended.
  *
  * @returns An array of phases to pass to {@link ReconciliationManager}.
  */
 export function createCoreReconciliationPhases(): ReconciliationPhase[] {
-  const cronPhase = createCronPhase({
-    getDueSchedules: scheduleStore.getDueSchedules,
-    advanceSchedule: scheduleStore.advanceSchedule,
-    createTask: taskStore.createTask,
-    setTaskScheduleId: taskStore.setTaskScheduleId,
-    enqueueForDispatch: dispatchQueueStore.enqueue,
-    emit,
-    getPersona: personaStore.getPersona,
-    setScheduleEnabled: scheduleStore.setScheduleEnabled,
-  });
-
   const environmentReconciliationPhase = createEnvironmentReconciliationPhase({
     listEnvironments: envRegistry.listEnvironments,
     listConnectionIds: () => new Set(listConnections().keys()),
@@ -97,7 +84,7 @@ export function createCoreReconciliationPhases(): ReconciliationPhase[] {
     },
   });
 
-  const phases: ReconciliationPhase[] = [dispatchPhase, cronPhase, lifecycleCleanupPhase, environmentReconciliationPhase];
+  const phases: ReconciliationPhase[] = [dispatchPhase, lifecycleCleanupPhase, environmentReconciliationPhase];
 
   if (isKnowledgeEnabled()) {
     phases.push(

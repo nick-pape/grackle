@@ -7,11 +7,11 @@
  */
 
 import { v4 as uuidv4 } from "uuid";
-import { logger } from "@grackle-ai/core";
+import type { Logger } from "pino";
 import { computeNextRunAt } from "./schedule-expression.js";
 import type { ScheduleRow } from "@grackle-ai/database";
 import type { GrackleEventType } from "@grackle-ai/core";
-import type { ReconciliationPhase } from "@grackle-ai/core";
+import type { ReconciliationPhase } from "@grackle-ai/plugin-sdk";
 import { ROOT_TASK_ID } from "@grackle-ai/common";
 
 /** Dependencies injected into the cron phase for testability. */
@@ -43,6 +43,8 @@ export interface CronPhaseDeps {
   /** Enable or disable a schedule, setting or clearing nextRunAt. */
   // eslint-disable-next-line @rushstack/no-new-null
   setScheduleEnabled: (id: string, enabled: boolean, nextRunAt: string | null) => void;
+  /** Logger instance provided by the plugin context. */
+  logger: Pick<Logger, "debug" | "info" | "warn" | "error">;
 }
 
 /**
@@ -59,7 +61,7 @@ export function createCronPhase(deps: CronPhaseDeps): ReconciliationPhase {
       if (due.length === 0) {
         return;
       }
-      logger.debug({ count: due.length }, "Cron phase: due schedules");
+      deps.logger.debug({ count: due.length }, "Cron phase: due schedules");
       for (const schedule of due) {
         fireSchedule(deps, schedule);
       }
@@ -76,7 +78,7 @@ function fireSchedule(deps: CronPhaseDeps, schedule: ScheduleRow): void {
     // Anchor to the schedule's lastRunAt (not current time) to prevent drift
     nextRunAt = computeNextRunAt(schedule.scheduleExpression, schedule.lastRunAt ?? undefined);
   } catch (err) {
-    logger.error(
+    deps.logger.error(
       { scheduleId: schedule.id, scheduleExpression: schedule.scheduleExpression, err },
       "Cron phase: failed to compute nextRunAt; disabling schedule",
     );
@@ -89,7 +91,7 @@ function fireSchedule(deps: CronPhaseDeps, schedule: ScheduleRow): void {
     // Validate persona exists
     const persona = deps.getPersona(schedule.personaId);
     if (!persona) {
-      logger.warn(
+      deps.logger.warn(
         { scheduleId: schedule.id, personaId: schedule.personaId },
         "Schedule fire skipped: persona not found",
       );
@@ -133,12 +135,12 @@ function fireSchedule(deps: CronPhaseDeps, schedule: ScheduleRow): void {
       firedAt: now,
     });
 
-    logger.info(
+    deps.logger.info(
       { scheduleId: schedule.id, taskId, title: schedule.title },
       "Schedule fired",
     );
   } catch (err) {
-    logger.error(
+    deps.logger.error(
       { scheduleId: schedule.id, err },
       "Schedule fire failed with exception",
     );
