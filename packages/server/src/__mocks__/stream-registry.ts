@@ -12,5 +12,6 @@ export const publish = vi.fn();
 export const consumeSync = vi.fn();
 export const hasUndeliveredMessages = vi.fn(() => false);
 export const registerAsyncListener = vi.fn();
+export const awaitPendingDeliveries = vi.fn().mockResolvedValue(undefined);
 export const onSessionOrphaned = vi.fn();
 export const _resetForTesting = vi.fn();

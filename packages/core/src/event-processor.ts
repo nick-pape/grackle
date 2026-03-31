@@ -431,7 +431,7 @@ export function processEventStream(
           // unblock when a child goes idle without calling task_complete (#824).
           // publishChildCompletion internally skips waiting_input for async pipes.
           if (["completed", "killed", "failed", "terminated", "waiting_input"].includes(event.content)) {
-            publishChildCompletion(sessionId, event.content);
+            await publishChildCompletion(sessionId, event.content);
           }
 
           // On abnormal exit (killed/failed), write a minimal server-enriched workpad
