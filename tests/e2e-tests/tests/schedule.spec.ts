@@ -26,7 +26,7 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
 
     await expect(page.getByRole("heading", { name: "Schedules" })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("Nightly Review")).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("Reviews things at night")).toBeVisible();
+    await expect(page.getByText("0 21 * * *")).toBeVisible({ timeout: 5_000 });
   });
 
   test("empty state is shown when no schedules exist", async ({ appPage }) => {
