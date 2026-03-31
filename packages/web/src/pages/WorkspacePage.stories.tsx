@@ -25,7 +25,7 @@ export const WorkspaceWithTasks: Story = {
   },
 };
 
-/** Metadata section shows Description, Repository, Environment, Linked Envs, and Persona fields. */
+/** Metadata section shows Description, Repository, Environments, and Persona fields. */
 export const MetadataSection: Story = {
   decorators: [withMockGrackleRoute(
     ["/environments/env-local-01/workspaces/proj-alpha"],
@@ -37,8 +37,7 @@ export const MetadataSection: Story = {
     // Verify key metadata labels are present
     await expect(canvas.getByText("Description")).toBeInTheDocument();
     await expect(canvas.getByText("Repository")).toBeInTheDocument();
-    await expect(canvas.getByText("Environment")).toBeInTheDocument();
-    await expect(canvas.getByText("Linked Envs")).toBeInTheDocument();
+    await expect(canvas.getByText("Environments")).toBeInTheDocument();
     await expect(canvas.getByText("Persona")).toBeInTheDocument();
   },
 };
@@ -58,17 +57,20 @@ export const LinkedEnvironments: Story = {
   },
 };
 
-/** Workspace with no linked environments shows "None" and a link dropdown. */
+/** Workspace with one linked environment shows the chip and the unlink button is disabled. */
 export const NoLinkedEnvironments: Story = {
   decorators: [withMockGrackleRoute(
     ["/environments/env-docker-01/workspaces/proj-beta"],
     "/environments/:environmentId/workspaces/:workspaceId",
   )],
   play: async ({ canvas }) => {
-    // proj-beta has linkedEnvironmentIds: [] in mock data
+    // proj-beta has linkedEnvironmentIds: ["env-docker-01"] — only one env, so unlink is disabled
     const linkedSection = canvas.getByTestId("linked-environments");
     await expect(linkedSection).toBeInTheDocument();
-    await expect(linkedSection).toHaveTextContent("None");
+    const chip = canvas.getByTestId("linked-env-env-docker-01");
+    await expect(chip).toBeInTheDocument();
+    const unlinkBtn = canvas.getByTestId("unlink-env-env-docker-01");
+    await expect(unlinkBtn).toBeDisabled();
   },
 };
 
@@ -99,25 +101,25 @@ export const LinkEnvironmentDropdown: Story = {
   },
 };
 
-/** Clicking unlink removes the linked environment chip. */
+/** Clicking unlink removes the linked environment chip; remaining chip stays. */
 export const UnlinkRemovesChip: Story = {
   decorators: [withMockGrackleRoute(
     ["/environments/env-local-01/workspaces/proj-alpha"],
     "/environments/:environmentId/workspaces/:workspaceId",
   )],
   play: async ({ canvas }) => {
-    // proj-alpha starts with env-docker-01 linked
+    // proj-alpha starts with env-local-01 and env-docker-01 linked
     await expect(canvas.getByTestId("linked-env-env-docker-01")).toBeInTheDocument();
-    // Click unlink
+    // Click unlink on env-docker-01 (allowed because 2 envs are linked)
     await userEvent.click(canvas.getByTestId("unlink-env-env-docker-01"));
-    // Chip should disappear (MockGrackleProvider removes it from state)
+    // env-docker-01 chip should disappear
     await waitFor(() => {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       expect(canvas.queryByTestId("linked-env-env-docker-01")).not.toBeInTheDocument();
     });
-    // "None" placeholder should appear
-    const linkedSection = canvas.getByTestId("linked-environments");
-    await expect(linkedSection).toHaveTextContent("None");
+    // env-local-01 chip should remain and its unlink button is now disabled (last env)
+    await expect(canvas.getByTestId("linked-env-env-local-01")).toBeInTheDocument();
+    await expect(canvas.getByTestId("unlink-env-env-local-01")).toBeDisabled();
   },
 };
 
