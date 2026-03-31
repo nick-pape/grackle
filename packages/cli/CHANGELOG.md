@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 31 Mar 2026 15:27:16 GMT and should not be manually modified.
+This log was last generated on Tue, 31 Mar 2026 16:23:11 GMT and should not be manually modified.
+
+## 0.104.0
+Tue, 31 Mar 2026 16:23:11 GMT
+
+### Minor changes
+
+- Add plugin enable/disable management: plugins DB table, proto RPCs (ListPlugins, SetPluginEnabled), CLI commands (grackle plugin list/enable/disable), and MCP tools (plugin_list, plugin_set_enabled)
 
 ## 0.103.0
 Tue, 31 Mar 2026 15:27:16 GMT

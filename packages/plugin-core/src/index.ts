@@ -18,6 +18,10 @@ export { lifecycleCleanupPhase } from "./lifecycle-cleanup.js";
 export { createEnvironmentReconciliationPhase } from "./environment-reconciliation.js";
 export type { EnvironmentReconciliationDeps } from "./environment-reconciliation.js";
 
+// ─── Plugin Registry ────────────────────────────────────────
+export { setLoadedPluginNames, PLUGIN_REGISTRY } from "./plugin-registry.js";
+export type { PluginRegistryEntry } from "./plugin-registry.js";
+
 // ─── Handler Utilities ──────────────────────────────────────
 export { killSessionAndCleanup } from "./grpc-shared.js";
 

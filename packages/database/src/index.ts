@@ -37,6 +37,7 @@ export type {
   WorkspaceEnvironmentLinkRow,
   DispatchQueueRow,
   NewDispatchQueueRow,
+  PluginRow,
 } from "./schema.js";
 
 // ─── Stores ────────────────────────────────────────────────
@@ -53,6 +54,7 @@ export * as scheduleStore from "./schedule-store.js";
 export * as escalationStore from "./escalation-store.js";
 export * as workspaceEnvironmentLinkStore from "./workspace-environment-link-store.js";
 export * as dispatchQueueStore from "./dispatch-queue-store.js";
+export * as pluginStore from "./plugin-store.js";
 
 // Re-export key store types for convenience
 export type { InsertTaskFields } from "./task-store.js";

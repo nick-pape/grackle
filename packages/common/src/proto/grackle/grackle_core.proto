@@ -72,6 +72,10 @@ service GrackleCore {
   // Version
   rpc GetVersionStatus(Empty) returns (VersionStatus);
 
+  // Plugins
+  rpc ListPlugins(Empty) returns (PluginList);
+  rpc SetPluginEnabled(SetPluginEnabledRequest) returns (PluginInfo);
+
   // Unified event streaming (replaces WebSocket)
   rpc StreamEvents(Empty) returns (stream ServerEvent);
 }

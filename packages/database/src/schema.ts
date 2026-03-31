@@ -311,3 +311,16 @@ export const domainEvents = sqliteTable("domain_events", {
 
 /** Row shape returned by a SELECT on the domain_events table. */
 export type DomainEventRow = typeof domainEvents.$inferSelect;
+
+// ─── Plugins ─────────────────────────────────────────────────
+
+export const plugins = sqliteTable("plugins", {
+  name: text("name").primaryKey(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
+/** Row shape returned by a SELECT on the plugins table. */
+export type PluginRow = typeof plugins.$inferSelect;
