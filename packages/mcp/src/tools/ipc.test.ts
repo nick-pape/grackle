@@ -349,4 +349,83 @@ describe("ipc_share_stream", () => {
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("PERMISSION_DENIED");
   });
+
+  test("share by streamName — resolves fd from name and attaches", async () => {
+    const mockClient = createMockClient();
+    (mockClient.getSessionFds as ReturnType<typeof vi.fn>).mockResolvedValue(makeFds());
+    (mockClient.attachStream as ReturnType<typeof vi.fn>).mockResolvedValue({ fd: 9 });
+    (mockClient.writeToFd as ReturnType<typeof vi.fn>).mockResolvedValue({});
+
+    const result = await getTool("ipc_share_stream").handler(
+      { streamName: "my-stream" },
+      { core: mockClient },
+      CHILD_AUTH,
+    );
+    const parsed = JSON.parse(result.content[0].text);
+
+    expect(result.isError).toBeFalsy();
+    expect(parsed.parentFd).toBe(9);
+    expect(parsed.streamName).toBe("my-stream");
+    expect(mockClient.attachStream).toHaveBeenCalledWith(expect.objectContaining({ fd: 4 }));
+  });
+
+  test("returns error when streamName not found", async () => {
+    const mockClient = createMockClient();
+    (mockClient.getSessionFds as ReturnType<typeof vi.fn>).mockResolvedValue(makeFds());
+
+    const result = await getTool("ipc_share_stream").handler(
+      { streamName: "nonexistent-stream" },
+      { core: mockClient },
+      CHILD_AUTH,
+    );
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain("nonexistent-stream");
+  });
+
+  test("returns error when neither fd nor streamName is provided", async () => {
+    const mockClient = createMockClient();
+    (mockClient.getSessionFds as ReturnType<typeof vi.fn>).mockResolvedValue(makeFds());
+
+    const result = await getTool("ipc_share_stream").handler(
+      {},
+      { core: mockClient },
+      CHILD_AUTH,
+    );
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain("either fd or streamName");
+  });
+
+  test("write-only permission defaults deliveryMode to detach", async () => {
+    const mockClient = createMockClient();
+    (mockClient.getSessionFds as ReturnType<typeof vi.fn>).mockResolvedValue(makeFds("w"));
+    (mockClient.attachStream as ReturnType<typeof vi.fn>).mockResolvedValue({ fd: 10 });
+    (mockClient.writeToFd as ReturnType<typeof vi.fn>).mockResolvedValue({});
+
+    const result = await getTool("ipc_share_stream").handler(
+      { fd: 4 },
+      { core: mockClient },
+      CHILD_AUTH,
+    );
+
+    expect(result.isError).toBeFalsy();
+    expect(mockClient.attachStream).toHaveBeenCalledWith(
+      expect.objectContaining({ permission: "w", deliveryMode: "detach" }),
+    );
+  });
+
+  test("write-only permission with non-detach deliveryMode returns error", async () => {
+    const mockClient = createMockClient();
+    (mockClient.getSessionFds as ReturnType<typeof vi.fn>).mockResolvedValue(makeFds("rw"));
+
+    const result = await getTool("ipc_share_stream").handler(
+      { fd: 4, permission: "w", deliveryMode: "async" },
+      { core: mockClient },
+      CHILD_AUTH,
+    );
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain("detach");
+  });
 });

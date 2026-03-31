@@ -356,7 +356,8 @@ export const ipcTools: ToolDefinition[] = [
     description:
       "Share a stream you hold with your parent session. Auto-discovers the parent via the inherited pipe fd and grants access using the attachStream RPC (with permission defaulting to your own permission on the fd if omitted), then sends a [stream-ref] notification through the pipe so the parent knows the new fd. For sibling-to-sibling sharing: share with parent, parent can use ipc_attach to forward to the sibling.",
     inputSchema: z.object({
-      fd: z.number().int().describe("Your file descriptor on the stream to share"),
+      fd: z.number().int().optional().describe("Your file descriptor on the stream to share (mutually exclusive with streamName)"),
+      streamName: z.string().optional().describe("Name of the stream to share — the fd is looked up via getSessionFds (mutually exclusive with fd)"),
       permission: z
         .enum(["r", "w", "rw"])
         .optional()
@@ -364,8 +365,7 @@ export const ipcTools: ToolDefinition[] = [
       deliveryMode: z
         .enum(["sync", "async", "detach"])
         .optional()
-        .default("async")
-        .describe("How the parent receives messages from the stream"),
+        .describe("How the parent receives messages from the stream; defaults to \"detach\" for write-only (\"w\") permission and \"async\" otherwise"),
     }),
     rpcMethod: "attachStream",
     mutating: true,
@@ -403,15 +403,35 @@ export const ipcTools: ToolDefinition[] = [
           };
         }
 
-        // Verify the stream fd exists and is a shareable user stream (not the pipe itself)
-        const fd = args.fd as number;
-        const streamFdInfo = fdsResult.fds.find((f) => f.fd === fd);
-        if (!streamFdInfo) {
+        // Resolve the stream fd — either by fd number or by stream name
+        const fdArg = args.fd as number | undefined;
+        const streamNameArg = args.streamName as string | undefined;
+        let streamFdInfo: (typeof fdsResult.fds)[number] | undefined;
+        if (fdArg !== undefined) {
+          streamFdInfo = fdsResult.fds.find((f) => f.fd === fdArg);
+          if (!streamFdInfo) {
+            return {
+              content: [{ type: "text" as const, text: `Error: fd ${String(fdArg)} not found` }],
+              isError: true,
+            };
+          }
+        } else if (streamNameArg !== undefined) {
+          streamFdInfo = fdsResult.fds.find((f) => f.streamName === streamNameArg);
+          if (!streamFdInfo) {
+            return {
+              content: [{ type: "text" as const, text: `Error: stream "${streamNameArg}" not found in your open fds` }],
+              isError: true,
+            };
+          }
+        } else {
           return {
-            content: [{ type: "text" as const, text: `Error: fd ${String(fd)} not found` }],
+            content: [{ type: "text" as const, text: "Error: either fd or streamName must be provided" }],
             isError: true,
           };
         }
+        const fd = streamFdInfo.fd;
+
+        // Verify the stream is shareable (not an internal/reserved stream)
         const RESERVED_STREAM_PREFIXES: readonly string[] = ["pipe:", "lifecycle:", "stdin:"];
         if (RESERVED_STREAM_PREFIXES.some((prefix) => streamFdInfo.streamName.startsWith(prefix))) {
           return {
@@ -420,9 +440,19 @@ export const ipcTools: ToolDefinition[] = [
           };
         }
 
-        // Default to the caller's own permission if not specified
+        // Default permission to the caller's own permission on the fd
         const permission = (args.permission as string | undefined) ?? streamFdInfo.permission;
-        const deliveryMode = (args.deliveryMode as string | undefined) ?? "async";
+
+        // Default deliveryMode: write-only streams require "detach"; otherwise "async"
+        const deliveryMode = (args.deliveryMode as string | undefined) ?? (permission === "w" ? "detach" : "async");
+
+        // Pre-validate: server rejects write-only + non-detach, give a clearer error upfront
+        if (permission === "w" && deliveryMode !== "detach") {
+          return {
+            content: [{ type: "text" as const, text: `Error: write-only streams (permission "w") can only be shared with deliveryMode "detach", but "${deliveryMode}" was requested` }],
+            isError: true,
+          };
+        }
 
         // Grant parent access — attachStream validates permission attenuation server-side
         const attachResult = await client.attachStream({

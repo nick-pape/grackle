@@ -96,17 +96,9 @@ test.describe("ipc_share_stream", () => {
     const workspaceId = await getWorkspaceId(client, "IPC Share Stream");
 
     // 2. Build the child scenario.
-    //
-    //    A standalone session (spawned via ipc_spawn) gets three internal fds before
-    //    any user streams are created:
-    //      fd 3 — lifecycle:child  (every session gets one)
-    //      fd 4 — stdin:child      (every session gets one via ensureStdinStream)
-    //      fd 5 — pipe:child       (inherited from parent; owned=false)
-    //    ipc_create_stream then allocates fd 6 (first user-created stream).
-    //    ipc_share_stream(fd: 6) auto-discovers the parent via the pipe fd and grants access.
     const childScenario = stubScenario(
       emitMcpCall("ipc_create_stream", { name: "e2e-shared-stream" }),
-      emitMcpCall("ipc_share_stream", { fd: 6 }),
+      emitMcpCall("ipc_share_stream", { streamName: "e2e-shared-stream" }),
       idle(),
     );
 

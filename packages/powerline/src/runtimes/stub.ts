@@ -37,9 +37,9 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, message: string):
 /**
  * Unified stub session supporting both scenario execution and real MCP tool calls.
  *
- * When `mcpBroker` and `workspaceId` are provided (via SpawnOptions), the session
- * can make real MCP tool calls — either through `mcp_call` scenario steps or via
- * the legacy fallback path (replacing fake echo tools with a real `task_list` call).
+ * When `mcpBroker` is provided (via SpawnOptions), the session can make real MCP
+ * tool calls — either through `mcp_call` scenario steps or via the legacy fallback
+ * path (replacing fake echo tools with a real `task_list` call).
  *
  * When no MCP broker is available, the session falls back to fake echo tool events.
  */
@@ -95,7 +95,7 @@ export class StubSession implements AgentSession {
 
     if (this.killed as boolean) { yield { type: "status", timestamp: ts(), content: this.killReason }; return; }
 
-    if (this.mcpBroker && this.workspaceId) {
+    if (this.mcpBroker) {
       // Real MCP tool call when broker is available
       const mcpEvents = await this.performMcpToolCall(ts, "task_list", {});
       for (const event of mcpEvents) {
