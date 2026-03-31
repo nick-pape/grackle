@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.96.3",
+      "tag": "@grackle-ai/cli_v0.96.3",
+      "date": "Tue, 31 Mar 2026 01:19:21 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Extract plugin-core package from core — gRPC handlers, subscriber factories, and phase factories moved to @grackle-ai/plugin-core"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.96.2",
       "tag": "@grackle-ai/cli_v0.96.2",
       "date": "Tue, 31 Mar 2026 00:58:00 GMT",
