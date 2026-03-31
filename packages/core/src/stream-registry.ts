@@ -340,6 +340,10 @@ export function unsubscribe(subscriptionId: string): void {
   if (stream) {
     stream.subscriptions.delete(sub.id);
     if (stream.subscriptions.size === 0) {
+      // Clean up any pending delivery entries for messages in this stream
+      for (const msg of stream.messages) {
+        pendingDeliveries.delete(msg.id);
+      }
       streamsByName.delete(stream.name);
       streams.delete(sub.streamId);
     }
@@ -442,10 +446,27 @@ export function publish(streamId: string, senderId: string, content: string): St
     // "detach" mode: message stays in buffer, no notification
   }
 
-  // Only prune if there are no pending async deliveries for this message.
-  // When deliveries are pending, awaitPendingDeliveries() handles pruning after they settle.
-  if (!pendingDeliveries.has(msg.id)) {
+  // If there are pending async deliveries, schedule auto-finalization so that callers
+  // that do not call awaitPendingDeliveries() still get pruning once all Promises settle.
+  // This prevents fully-delivered messages from leaking in stream.messages indefinitely
+  // (e.g. stdin delivery never calls awaitPendingDeliveries).
+  const pending = pendingDeliveries.get(msg.id);
+  if (!pending) {
     pruneDeliveredMessages(stream);
+  } else {
+    const streamId = stream.id;
+    Promise.allSettled(pending.promises).then(() => {
+      // Only clean up if this entry hasn't already been removed by awaitPendingDeliveries()
+      if (pendingDeliveries.has(msg.id)) {
+        pendingDeliveries.delete(msg.id);
+        const s = streams.get(streamId);
+        if (s) {
+          pruneDeliveredMessages(s);
+        }
+      }
+    }).catch(() => {
+      // allSettled never rejects — this branch is unreachable but satisfies strict tooling
+    });
   }
 
   return msg;
