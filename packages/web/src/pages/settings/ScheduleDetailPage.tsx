@@ -20,8 +20,8 @@ export function ScheduleDetailPage(): JSX.Element {
   const isNew = scheduleId === undefined;
   const existing: ScheduleData | undefined = isNew ? undefined : schedules.find((s) => s.id === scheduleId);
 
-  // Redirect to list if schedule not found (and schedules have finished loading)
-  if (!isNew && !schedulesLoading && !existing) {
+  // Redirect to list if schedule not found, but only after at least one schedule has been loaded
+  if (!isNew && !schedulesLoading && schedules.length > 0 && !existing) {
     return <Navigate to={SCHEDULES_URL} replace />;
   }
 

@@ -1,6 +1,12 @@
 import { test, expect } from "./fixtures.js";
 
 test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
+  // Delete all schedules before each test so state from prior tests doesn't bleed in.
+  test.beforeEach(async ({ grackle: { client } }) => {
+    const list = await client.listSchedules({});
+    await Promise.all(list.schedules.map((s) => client.deleteSchedule({ id: s.id })));
+  });
+
   test("schedule management view shows created schedule", async ({
     appPage,
     grackle: { client },
