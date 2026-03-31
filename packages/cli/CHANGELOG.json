@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.100.1",
+      "tag": "@grackle-ai/cli_v0.100.1",
+      "date": "Tue, 31 Mar 2026 06:01:21 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Migrate cost storage from floating-point USD to integer millicents across proto, database, runtimes, event processor, budget checker, and display layers"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.100.0",
       "tag": "@grackle-ai/cli_v0.100.0",
       "date": "Tue, 31 Mar 2026 05:30:18 GMT",

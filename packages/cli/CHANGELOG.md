@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 31 Mar 2026 05:30:18 GMT and should not be manually modified.
+This log was last generated on Tue, 31 Mar 2026 06:01:21 GMT and should not be manually modified.
+
+## 0.100.1
+Tue, 31 Mar 2026 06:01:21 GMT
+
+### Patches
+
+- Migrate cost storage from floating-point USD to integer millicents across proto, database, runtimes, event processor, budget checker, and display layers
 
 ## 0.100.0
 Tue, 31 Mar 2026 05:30:18 GMT
