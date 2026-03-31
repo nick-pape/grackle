@@ -195,10 +195,11 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.locator('[data-testid="meta-toggle"]')).toBeVisible();
     await expect(page.locator('[data-testid="workspace-meta"]')).toBeVisible();
 
-    // Should show labels for Description, Repository, Environments
-    await expect(page.getByText("Description", { exact: true })).toBeVisible();
-    await expect(page.getByText("Repository", { exact: true })).toBeVisible();
-    await expect(page.getByText("Environments", { exact: true })).toBeVisible();
+    // Should show labels for Description, Repository, Environments (scoped to metadata section to avoid sidebar nav match)
+    const metaSection = page.locator('[data-testid="workspace-meta"]');
+    await expect(metaSection.getByText("Description", { exact: true })).toBeVisible();
+    await expect(metaSection.getByText("Repository", { exact: true })).toBeVisible();
+    await expect(metaSection.getByText("Environments", { exact: true })).toBeVisible();
 
     // Should show placeholders for empty fields
     await expect(page.getByText("No description")).toBeVisible();
