@@ -207,9 +207,12 @@ export function EventStream({
 
   /** Execute the actual forward after all confirmations. */
   const executeForward = useCallback(async (sessionId: string, text: string) => {
+    if (!onForward) {
+      return;
+    }
     const targetLabel = getSessionLabel(sessionId);
     try {
-      await onForward?.(sessionId, text);
+      await onForward(sessionId, text);
       const count = selection.selectedCount;
       onShowToast?.(`Forwarded ${count} message${count === 1 ? "" : "s"} to ${targetLabel}`, "success");
       selection.cancelSelection();

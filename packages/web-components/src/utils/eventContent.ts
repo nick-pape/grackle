@@ -193,6 +193,17 @@ export function formatEventsAsMarkdown(events: DisplayEvent[]): string {
  * @returns The complete envelope string ready to pass to `sendInput`.
  */
 export function formatForwardEnvelope(sourceLabel: string, events: DisplayEvent[]): string {
+  const safeLabel = sanitizeSourceLabel(sourceLabel);
   const body = formatEventsAsMarkdown(events);
-  return `--- Forwarded from ${sourceLabel} ---\n\n${body}\n\n--- End forwarded ---`;
+  return `--- Forwarded from ${safeLabel} ---\n\n${body}\n\n--- End forwarded ---`;
+}
+
+/**
+ * Ensures a source label is a single line and cannot break envelope delimiters.
+ *
+ * Strips newlines and replaces `---` sequences with an em-dash so the label
+ * cannot be confused with the envelope's own `---` markers.
+ */
+function sanitizeSourceLabel(label: string): string {
+  return label.replace(/[\r\n]+/g, " ").trim().replace(/---/g, "\u2014");
 }

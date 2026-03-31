@@ -297,11 +297,26 @@ describe("formatForwardEnvelope", () => {
     expect(result).toContain("Fix the bug");
   });
 
-  it("uses the provided sourceLabel verbatim in the header", () => {
+  it("includes the sourceLabel in the header", () => {
     const result = formatForwardEnvelope("prod-env / main", [
       makeDisplayEvent({ eventType: "text", content: "done" }),
     ]);
     expect(result).toContain("--- Forwarded from prod-env / main ---");
+  });
+
+  it("sanitizes newlines in sourceLabel to spaces", () => {
+    const result = formatForwardEnvelope("env\nwith\nnewlines", [
+      makeDisplayEvent({ eventType: "text", content: "x" }),
+    ]);
+    expect(result).toContain("--- Forwarded from env with newlines ---");
+  });
+
+  it("sanitizes --- sequences in sourceLabel to em-dashes", () => {
+    const result = formatForwardEnvelope("env---name", [
+      makeDisplayEvent({ eventType: "text", content: "x" }),
+    ]);
+    expect(result).toContain("--- Forwarded from env\u2014name ---");
+    expect(result).not.toContain("env---name");
   });
 
   it("envelope body starts after header and ends before footer", () => {

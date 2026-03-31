@@ -213,11 +213,7 @@ export function useSessions(): UseSessionsResult {
 
   const sendInput = useCallback(
     async (sessionId: string, text: string) => {
-      try {
-        await grackleClient.sendInput({ sessionId, text });
-      } catch {
-        // empty
-      }
+      await grackleClient.sendInput({ sessionId, text });
     },
     [],
   );
