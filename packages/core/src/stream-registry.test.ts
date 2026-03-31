@@ -407,6 +407,17 @@ describe("stream-registry", () => {
     it("returns false for unknown subscription", () => {
       expect(registry.hasUndeliveredMessages("nonexistent")).toBe(false);
     });
+
+    it("returns false for write-only subscription even when messages exist", () => {
+      const stream = registry.createStream("pipe");
+      registry.subscribe(stream.id, "sender", "rw", "async", true);
+      const writeSub = registry.subscribe(stream.id, "writer", "w", "detach", false);
+
+      registry.publish(stream.id, "sender", "some message");
+
+      // write-only can never consume — should always be false
+      expect(registry.hasUndeliveredMessages(writeSub.id)).toBe(false);
+    });
   });
 
   // ─── Self-echo ─────────────────────────────────────────────

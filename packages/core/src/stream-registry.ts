@@ -440,6 +440,11 @@ export function hasUndeliveredMessages(subscriptionId: string): boolean {
     return false;
   }
 
+  // Write-only subscriptions can never consume messages
+  if (!canReceive(sub)) {
+    return false;
+  }
+
   const stream = streams.get(sub.streamId);
   if (!stream) {
     return false;
