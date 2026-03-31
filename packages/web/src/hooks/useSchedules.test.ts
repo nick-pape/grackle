@@ -123,7 +123,6 @@ describe("useSchedules createSchedule", () => {
       description: "",
       scheduleExpression: "1d",
       personaId: "p1",
-      environmentId: "",
       workspaceId: "",
       parentTaskId: "",
     });
@@ -131,14 +130,14 @@ describe("useSchedules createSchedule", () => {
     expect(result.current.schedules).toContainEqual(newSchedule);
   });
 
-  it("passes optional environmentId, workspaceId, parentTaskId", async () => {
+  it("passes optional workspaceId, parentTaskId", async () => {
     const newSchedule = { id: "s3", title: "Custom" };
     mockClient.createSchedule.mockResolvedValue(newSchedule);
 
     const { result } = setup();
 
     await act(async () => {
-      await result.current.createSchedule("Custom", "desc", "5m", "p2", "env-1", "ws-1", "task-1");
+      await result.current.createSchedule("Custom", "desc", "5m", "p2", "ws-1", "task-1");
     });
 
     expect(mockClient.createSchedule).toHaveBeenCalledWith({
@@ -146,7 +145,6 @@ describe("useSchedules createSchedule", () => {
       description: "desc",
       scheduleExpression: "5m",
       personaId: "p2",
-      environmentId: "env-1",
       workspaceId: "ws-1",
       parentTaskId: "task-1",
     });

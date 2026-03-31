@@ -43,7 +43,6 @@ export function registerScheduleCommands(program: Command): void {
     .requiredOption("--schedule <expression>", "Interval (e.g. '30s', '5m') or cron expression (e.g. '0 9 * * MON')")
     .requiredOption("--persona <id>", "Persona ID to use when firing")
     .option("--desc <text>", "Description")
-    .option("--environment <id>", "Environment to run on (auto-select if omitted)")
     .option("--workspace <id>", "Workspace scope")
     .option("--parent-task <id>", "Parent task for spawned children")
     .action(
@@ -53,7 +52,6 @@ export function registerScheduleCommands(program: Command): void {
           schedule: string;
           persona: string;
           desc?: string;
-          environment?: string;
           workspace?: string;
           parentTask?: string;
         },
@@ -64,7 +62,6 @@ export function registerScheduleCommands(program: Command): void {
           scheduleExpression: opts.schedule,
           personaId: opts.persona,
           description: opts.desc || "",
-          environmentId: opts.environment || "",
           workspaceId: opts.workspace || "",
           parentTaskId: opts.parentTask || "",
         });
@@ -87,7 +84,6 @@ export function registerScheduleCommands(program: Command): void {
       console.log(`Description: ${res.description || "(none)"}`);
       console.log(`Schedule:    ${res.scheduleExpression}`);
       console.log(`Persona:     ${res.personaId}`);
-      console.log(`Environment: ${res.environmentId || "(auto-select)"}`);
       console.log(`Workspace:   ${res.workspaceId || "(system-level)"}`);
       console.log(`Parent Task: ${res.parentTaskId || "(root)"}`);
       console.log(`Enabled:     ${res.enabled ? chalk.green("yes") : chalk.red("no")}`);

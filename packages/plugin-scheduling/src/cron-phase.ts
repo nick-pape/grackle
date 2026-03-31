@@ -117,12 +117,11 @@ function fireSchedule(deps: CronPhaseDeps, schedule: ScheduleRow): void {
     deps.setTaskScheduleId(taskId, schedule.id);
 
     // Enqueue for the dispatch phase to start (respects concurrency limits).
-    // Environment resolution is handled by the dispatch phase; we pass the
-    // schedule's preferred environmentId as a hint.
+    // No environmentId hint — dispatch will resolve via the workspace's linked
+    // environment pool (ancestor session → linked envs load-balanced → global fallback).
     deps.enqueueForDispatch({
       id: uuidv4(),
       taskId,
-      environmentId: schedule.environmentId,
       personaId: schedule.personaId,
     });
 

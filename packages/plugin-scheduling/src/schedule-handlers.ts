@@ -65,7 +65,6 @@ export function createScheduleHandlers(emit: PluginContext["emit"]): {
       req.description,
       expr,
       personaId,
-      req.environmentId,
       req.workspaceId,
       req.parentTaskId,
       nextRunAt,
@@ -114,10 +113,6 @@ export function createScheduleHandlers(emit: PluginContext["emit"]): {
       }
       update.personaId = trimmedPersonaId;
     }
-    if (req.environmentId !== undefined) {
-      update.environmentId = req.environmentId;
-    }
-
     // Handle schedule expression change
     let expressionChanged = false;
     if (req.scheduleExpression !== undefined && req.scheduleExpression !== "") {

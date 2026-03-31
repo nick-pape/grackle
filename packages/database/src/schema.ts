@@ -232,7 +232,6 @@ export const schedules = sqliteTable("schedules", {
   description: text("description").notNull().default(""),
   scheduleExpression: text("schedule_expression").notNull(),
   personaId: text("persona_id").notNull(),
-  environmentId: text("environment_id").notNull().default(""),
   workspaceId: text("workspace_id").notNull().default(""),
   parentTaskId: text("parent_task_id").notNull().default(""),
   enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),

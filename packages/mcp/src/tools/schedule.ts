@@ -10,7 +10,6 @@ function serializeSchedule(s: {
   description: string;
   scheduleExpression: string;
   personaId: string;
-  environmentId: string;
   workspaceId: string;
   parentTaskId: string;
   enabled: boolean;
@@ -26,7 +25,6 @@ function serializeSchedule(s: {
     description: s.description,
     scheduleExpression: s.scheduleExpression,
     personaId: s.personaId,
-    environmentId: s.environmentId || "",
     workspaceId: s.workspaceId || "",
     parentTaskId: s.parentTaskId || "",
     enabled: s.enabled,
@@ -75,7 +73,6 @@ export const scheduleTools: ToolDefinition[] = [
       scheduleExpression: z.string().describe("Interval shorthand (e.g. '30s', '5m') or 5-field cron expression (e.g. '0 9 * * MON')"),
       personaId: z.string().describe("Persona ID to use when firing"),
       description: z.string().optional().describe("Optional description"),
-      environmentId: z.string().optional().describe("Environment to run on (empty = auto-select)"),
       workspaceId: z.string().optional().describe("Workspace scope (empty = system-level)"),
       parentTaskId: z.string().optional().describe("Parent task for spawned children (empty = root task)"),
     }),
@@ -94,7 +91,6 @@ export const scheduleTools: ToolDefinition[] = [
           scheduleExpression: args.scheduleExpression as string,
           personaId: args.personaId as string,
           description: (args.description as string | undefined) ?? "",
-          environmentId: (args.environmentId as string | undefined) ?? "",
           workspaceId: (args.workspaceId as string | undefined) ?? "",
           parentTaskId: (args.parentTaskId as string | undefined) ?? "",
         });
@@ -140,7 +136,6 @@ export const scheduleTools: ToolDefinition[] = [
       description: z.string().optional().describe("New description"),
       scheduleExpression: z.string().optional().describe("New schedule expression"),
       personaId: z.string().optional().describe("New persona ID"),
-      environmentId: z.string().optional().describe("New environment ID"),
       enabled: z.boolean().optional().describe("Enable or disable the schedule"),
     }),
     rpcMethod: "updateSchedule",
@@ -159,7 +154,6 @@ export const scheduleTools: ToolDefinition[] = [
           description: (args.description as string | undefined) ?? undefined,
           scheduleExpression: (args.scheduleExpression as string | undefined) ?? undefined,
           personaId: (args.personaId as string | undefined) ?? undefined,
-          environmentId: (args.environmentId as string | undefined) ?? undefined,
           enabled: args.enabled as boolean | undefined,
         });
         return jsonResult(serializeSchedule(response));

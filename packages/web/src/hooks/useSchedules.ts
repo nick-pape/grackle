@@ -59,7 +59,6 @@ export function useSchedules(): UseSchedulesResult {
       description: string,
       scheduleExpression: string,
       personaId: string,
-      environmentId?: string,
       workspaceId?: string,
       parentTaskId?: string,
     ): Promise<ScheduleData> => {
@@ -68,7 +67,6 @@ export function useSchedules(): UseSchedulesResult {
         description,
         scheduleExpression,
         personaId,
-        environmentId: environmentId || "",
         workspaceId: workspaceId || "",
         parentTaskId: parentTaskId || "",
       });
@@ -86,7 +84,6 @@ export function useSchedules(): UseSchedulesResult {
       if (fields.description !== undefined) { request.description = fields.description; }
       if (fields.scheduleExpression !== undefined) { request.scheduleExpression = fields.scheduleExpression; }
       if (fields.personaId !== undefined) { request.personaId = fields.personaId; }
-      if (fields.environmentId !== undefined) { request.environmentId = fields.environmentId; }
       if (fields.enabled !== undefined) { request.enabled = fields.enabled; }
       const resp = await grackleClient.updateSchedule(request);
       const updated = protoToSchedule(resp);
