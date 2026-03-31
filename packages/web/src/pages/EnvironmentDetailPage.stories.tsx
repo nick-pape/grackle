@@ -50,8 +50,8 @@ export const LinkedWorkspacesVisible: Story = {
 
 /** Linked Workspaces section shows empty state when no workspaces are linked. */
 export const LinkedWorkspacesEmpty: Story = {
-  // env-local-01 has primary workspaces but no linked ones in mock data
-  render: () => <DetailRouteWrapper envId="env-local-01" />,
+  // env-cs-01 has no workspaces linked to it in mock data
+  render: () => <DetailRouteWrapper envId="env-cs-01" />,
   play: async ({ canvas }) => {
     await expect(canvas.getByText("Linked Workspaces")).toBeInTheDocument();
     await expect(canvas.getByTestId("linked-workspaces-empty")).toBeInTheDocument();
@@ -113,12 +113,11 @@ export const UnlinkRemovesCard: Story = {
     await expect(canvas.getByTestId("unlink-workspace-proj-alpha")).toBeInTheDocument();
     // Click Unlink
     await userEvent.click(canvas.getByTestId("unlink-workspace-proj-alpha"));
-    // Card should disappear
+    // proj-alpha card should disappear (proj-beta remains, so no empty state)
     await waitFor(() => {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       expect(canvas.queryByTestId("linked-workspace-card-proj-alpha")).not.toBeInTheDocument();
     });
-    // Empty state should appear
-    await expect(canvas.getByTestId("linked-workspaces-empty")).toBeInTheDocument();
+    await expect(canvas.getByTestId("linked-workspace-card-proj-beta")).toBeInTheDocument();
   },
 };

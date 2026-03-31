@@ -21,7 +21,7 @@ export function EnvironmentDetailPage(): JSX.Element {
   const navigate = useAppNavigate();
   const {
     environments: { environments, environmentsLoading, provisionStatus, provisionEnvironment, stopEnvironment, removeEnvironment },
-    workspaces: { workspaces, archiveWorkspace, linkEnvironment, linkOperationError, clearLinkOperationError },
+    workspaces: { workspaces, archiveWorkspace, linkEnvironment, unlinkEnvironment, linkOperationError, clearLinkOperationError },
     sessions: { sessions },
   } = useGrackle();
 
@@ -158,7 +158,7 @@ export function EnvironmentDetailPage(): JSX.Element {
       {/* Workspace cards */}
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
-          <h3>Workspaces</h3>
+          <h3>Linked Workspaces</h3>
           <button
             className={styles.btnPrimary}
             onClick={() => navigate(`${NEW_WORKSPACE_URL}?environment=${encodeURIComponent(env.id)}`)}
@@ -222,6 +222,7 @@ export function EnvironmentDetailPage(): JSX.Element {
               onArchive={() => setConfirmArchiveId(ws.id)}
               onConfirmArchive={() => handleArchive(ws.id)}
               onCancelArchive={() => setConfirmArchiveId(undefined)}
+              onUnlink={() => { unlinkEnvironment(ws.id, env.id).catch(() => {}); }}
             />
           ))}
         </div>
@@ -244,9 +245,11 @@ interface WorkspaceCardProps {
   onConfirmArchive: () => void;
   /** Cancel the archive confirmation. */
   onCancelArchive: () => void;
+  /** Unlink this workspace from the current environment. */
+  onUnlink: () => void;
 }
 
-/** Card displaying a workspace's summary with Open and Archive actions. */
+/** Card displaying a workspace's summary with Open, Unlink, and Archive actions. */
 function WorkspaceCard({
   workspace,
   confirmArchiveId,
@@ -254,16 +257,24 @@ function WorkspaceCard({
   onArchive,
   onConfirmArchive,
   onCancelArchive,
+  onUnlink,
 }: WorkspaceCardProps): JSX.Element {
   const isConfirming = confirmArchiveId === workspace.id;
   const isValidUrl = workspace.repoUrl && /^https?:\/\//.test(workspace.repoUrl);
 
   return (
-    <div className={styles.card} data-testid="workspace-card">
+    <div className={styles.card} data-testid={`linked-workspace-card-${workspace.id}`}>
       <div className={styles.cardHeader}>
         <strong className={styles.cardName}>{workspace.name}</strong>
         <div className={styles.cardActions}>
           <button className={styles.btnSmall} onClick={onOpen}>Open</button>
+          <button
+            className={styles.btnSmall}
+            onClick={onUnlink}
+            data-testid={`unlink-workspace-${workspace.id}`}
+          >
+            Unlink
+          </button>
           {isConfirming ? (
             <>
               <button className={styles.btnDanger} onClick={onConfirmArchive}>Confirm</button>
