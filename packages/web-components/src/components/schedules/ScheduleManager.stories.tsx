@@ -15,8 +15,8 @@ const meta: Meta<typeof ScheduleManager> = {
   args: {
     schedules: [],
     personas: MOCK_PERSONAS,
-    onDeleteSchedule: fn(),
-    onToggleEnabled: fn(),
+    onDeleteSchedule: fn().mockResolvedValue(undefined),
+    onToggleEnabled: fn().mockResolvedValue(undefined),
     onNavigateToNew: fn(),
     onNavigateToSchedule: fn(),
   },
