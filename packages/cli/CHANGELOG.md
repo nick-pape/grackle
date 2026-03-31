@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 31 Mar 2026 00:58:00 GMT and should not be manually modified.
+This log was last generated on Tue, 31 Mar 2026 01:19:21 GMT and should not be manually modified.
+
+## 0.96.3
+Tue, 31 Mar 2026 01:19:21 GMT
+
+### Patches
+
+- Extract plugin-core package from core — gRPC handlers, subscriber factories, and phase factories moved to @grackle-ai/plugin-core
 
 ## 0.96.2
 Tue, 31 Mar 2026 00:58:00 GMT
