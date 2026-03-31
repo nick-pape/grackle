@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 31 Mar 2026 13:50:31 GMT and should not be manually modified.
+This log was last generated on Tue, 31 Mar 2026 14:52:41 GMT and should not be manually modified.
+
+## 0.102.0
+Tue, 31 Mar 2026 14:52:41 GMT
+
+### Minor changes
+
+- Add selfEcho option to CreateStream for chatroom mode: publishers can receive their own messages echoed back
+
+### Patches
+
+- Add schedule management UI: Settings > Schedules tab with list, create/edit form, enable/disable, and delete
 
 ## 0.101.0
 Tue, 31 Mar 2026 13:50:31 GMT

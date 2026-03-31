@@ -2,6 +2,23 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.102.0",
+      "tag": "@grackle-ai/cli_v0.102.0",
+      "date": "Tue, 31 Mar 2026 14:52:41 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add selfEcho option to CreateStream for chatroom mode: publishers can receive their own messages echoed back"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Add schedule management UI: Settings > Schedules tab with list, create/edit form, enable/disable, and delete"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.101.0",
       "tag": "@grackle-ai/cli_v0.101.0",
       "date": "Tue, 31 Mar 2026 13:50:31 GMT",
