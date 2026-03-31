@@ -84,7 +84,8 @@ export function ScheduleManager({
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      onToggleEnabled(s.id, { enabled: !s.enabled }).catch(() => undefined);
+                      const toggle = async (): Promise<void> => { await onToggleEnabled(s.id, { enabled: !s.enabled }); };
+                      toggle().catch(() => undefined);
                     }}
                     data-testid={`schedule-toggle-${s.id}`}
                     title={s.enabled ? "Disable schedule" : "Enable schedule"}
