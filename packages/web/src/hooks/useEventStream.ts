@@ -122,7 +122,10 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
     return () => {
       cancelled = true;
       clearTimeout(reconnectTimer);
-      setConnectionStatus("disconnected");
+      // No state update here: React 18 StrictMode double-invokes the cleanup
+      // while the component is still mounted, which would briefly flash
+      // "Disconnected" on initial load. After a real unmount, state updates
+      // are silently dropped by React anyway.
     };
   }, []);
 

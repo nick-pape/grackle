@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Show Connecting... status in StatusBar and AboutPanel during WebSocket reconnection attempts",
+      "comment": "Show Connecting... status in StatusBar and AboutPanel during event stream reconnection attempts",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
