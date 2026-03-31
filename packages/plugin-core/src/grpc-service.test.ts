@@ -60,9 +60,9 @@ describe("createCoreCollector", () => {
     expect(addedModules.some((m) => "createEscalation" in m)).toBe(false);
   });
 
-  it("adds exactly 7 handler groups", () => {
+  it("adds exactly 6 handler groups", () => {
     createCoreCollector();
-    expect(addHandlersMock).toHaveBeenCalledTimes(7);
+    expect(addHandlersMock).toHaveBeenCalledTimes(6);
   });
 });
 
@@ -90,7 +90,7 @@ describe("createOrchestrationCollector", () => {
 });
 
 describe("createDefaultCollector (regression)", () => {
-  it("adds all 11 handler groups including orchestration (knowledge and schedules moved to plugins)", () => {
+  it("adds all 10 handler groups including orchestration (knowledge and schedules moved to plugins)", () => {
     createDefaultCollector();
     const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
     expect(addedModules.some((m) => "listEnvironments" in m)).toBe(true);
@@ -98,6 +98,6 @@ describe("createDefaultCollector (regression)", () => {
     expect(addedModules.some((m) => "listPersonas" in m)).toBe(true);
     expect(addedModules.some((m) => "postFinding" in m)).toBe(true);
     expect(addedModules.some((m) => "createEscalation" in m)).toBe(true);
-    expect(addHandlersMock).toHaveBeenCalledTimes(11);
+    expect(addHandlersMock).toHaveBeenCalledTimes(10);
   });
 });
