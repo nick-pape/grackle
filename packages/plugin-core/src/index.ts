@@ -1,5 +1,5 @@
 // ─── gRPC Handler Aggregator ─────────────────────────────────
-export { createDefaultCollector, registerGrackleRoutes } from "./grpc-service.js";
+export { createCoreCollector, createOrchestrationCollector, createDefaultCollector, registerGrackleRoutes } from "./grpc-service.js";
 
 // ─── Subscriber Factories ───────────────────────────────────
 export { createLifecycleSubscriber } from "./lifecycle.js";

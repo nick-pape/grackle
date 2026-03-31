@@ -82,6 +82,11 @@
       "versionPolicyName": "grackle"
     },
     {
+      "packageName": "@grackle-ai/plugin-orchestration",
+      "projectFolder": "packages/plugin-orchestration",
+      "versionPolicyName": "grackle"
+    },
+    {
       "packageName": "@grackle-ai/plugin-sdk",
       "projectFolder": "packages/plugin-sdk",
       "versionPolicyName": "grackle"

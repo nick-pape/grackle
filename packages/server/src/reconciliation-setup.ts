@@ -7,7 +7,7 @@ import {
 } from "@grackle-ai/core";
 import type { ReconciliationPhase } from "@grackle-ai/core";
 import {
-  createCronPhase, createOrphanPhase, createDispatchPhase, lifecycleCleanupPhase,
+  createCronPhase, createDispatchPhase, lifecycleCleanupPhase,
   createEnvironmentReconciliationPhase,
 } from "@grackle-ai/plugin-core";
 import { TASK_STATUS, ROOT_TASK_ID } from "@grackle-ai/common";
@@ -17,15 +17,18 @@ import {
 } from "@grackle-ai/database";
 
 /**
- * Assemble the ordered list of reconciliation phases for the server.
+ * Assemble the ordered list of core reconciliation phases for the server.
  *
- * Returns dispatch, cron, lifecycle-cleanup, orphan-reparent, and environment-reconciliation
- * phases (in that order). When the knowledge subsystem is enabled, a knowledge-health
- * phase is appended.
+ * Returns dispatch, cron, lifecycle-cleanup, and environment-reconciliation
+ * phases (in that order). When the knowledge subsystem is enabled, a
+ * knowledge-health phase is appended.
+ *
+ * The orphan-reparent phase is NOT included here — it is contributed by
+ * `@grackle-ai/plugin-orchestration`.
  *
  * @returns An array of phases to pass to {@link ReconciliationManager}.
  */
-export function createReconciliationPhases(): ReconciliationPhase[] {
+export function createCoreReconciliationPhases(): ReconciliationPhase[] {
   const cronPhase = createCronPhase({
     getDueSchedules: scheduleStore.getDueSchedules,
     advanceSchedule: scheduleStore.advanceSchedule,
@@ -35,20 +38,6 @@ export function createReconciliationPhases(): ReconciliationPhase[] {
     emit,
     getPersona: personaStore.getPersona,
     setScheduleEnabled: scheduleStore.setScheduleEnabled,
-  });
-
-  const orphanPhase = createOrphanPhase({
-    listAllTasks: () => {
-      const workspaces = workspaceStore.listWorkspaces();
-      const allTasks: Array<NonNullable<ReturnType<typeof taskStore.getTask>>> = [];
-      for (const ws of workspaces) {
-        allTasks.push(...taskStore.listTasks(ws.id));
-      }
-      return allTasks;
-    },
-    reparentTask: (taskId: string, newParentTaskId: string) =>
-      taskStore.reparentTask(taskId, newParentTaskId),
-    emit,
   });
 
   const environmentReconciliationPhase = createEnvironmentReconciliationPhase({
@@ -108,7 +97,7 @@ export function createReconciliationPhases(): ReconciliationPhase[] {
     },
   });
 
-  const phases: ReconciliationPhase[] = [dispatchPhase, cronPhase, lifecycleCleanupPhase, orphanPhase, environmentReconciliationPhase];
+  const phases: ReconciliationPhase[] = [dispatchPhase, cronPhase, lifecycleCleanupPhase, environmentReconciliationPhase];
 
   if (isKnowledgeEnabled()) {
     phases.push(
