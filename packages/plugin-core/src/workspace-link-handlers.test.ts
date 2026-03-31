@@ -1,10 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ConnectError, Code } from "@connectrpc/connect";
 
-vi.mock("@grackle-ai/database", async (importActual) => {
+vi.mock("@grackle-ai/database", async () => {
   const { createDatabaseMock } = await import("./test-utils/mock-database.js");
-  const actual = await importActual<typeof import("@grackle-ai/database")>();
-  return { ...createDatabaseMock(), LastEnvironmentError: actual.LastEnvironmentError };
+  // Define LastEnvironmentError within the factory so both the handler (which imports
+  // from the mocked module) and the test use the exact same class reference, making
+  // `instanceof` checks reliable without depending on importActual resolving the dist/.
+  class LastEnvironmentError extends Error {
+    constructor(workspaceId: string) {
+      super(`Cannot unlink the last environment from workspace ${workspaceId}`);
+      this.name = "LastEnvironmentError";
+    }
+  }
+  return { ...createDatabaseMock(), LastEnvironmentError };
 });
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {
