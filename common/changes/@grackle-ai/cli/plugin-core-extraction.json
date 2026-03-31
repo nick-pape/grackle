@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@grackle-ai/cli",
+      "comment": "Extract plugin-core package from core — gRPC handlers, subscriber factories, and phase factories moved to @grackle-ai/plugin-core",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@grackle-ai/cli"
+}

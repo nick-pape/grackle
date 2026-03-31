@@ -105,7 +105,7 @@ vi.mock("./utils/network.js", () => ({
 
 // ── Import AFTER mocks ──────────────────────────────────────────
 
-import { resolveAncestorEnvironmentId } from "./grpc-service.js";
+import { resolveAncestorEnvironmentId } from "./grpc-shared-utils.js";
 import { sessionStore, taskStore } from "@grackle-ai/database";
 import type { SessionRow, TaskRow } from "@grackle-ai/database";
 

@@ -31,12 +31,6 @@ vi.mock("../stream-hub.js", () => ({
   }),
 }));
 
-
-vi.mock("../event-bus.js", () => ({
-  emit: vi.fn(),
-  subscribe: vi.fn(),
-}));
-
 vi.mock("../reanimate-agent.js", () => ({
   reanimateAgent: vi.fn(),
 }));

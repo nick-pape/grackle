@@ -77,6 +77,11 @@
       "versionPolicyName": "grackle"
     },
     {
+      "packageName": "@grackle-ai/plugin-core",
+      "projectFolder": "packages/plugin-core",
+      "versionPolicyName": "grackle"
+    },
+    {
       "packageName": "@grackle-ai/plugin-sdk",
       "projectFolder": "packages/plugin-sdk",
       "versionPolicyName": "grackle"

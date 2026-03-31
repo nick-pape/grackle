@@ -25,7 +25,7 @@ import { resolvePersona, buildOrchestratorContext, SystemPromptBuilder, buildTas
 import { logger } from "./logger.js";
 import { processEventStream } from "./event-processor.js";
 import { personaMcpServersToJson } from "./grpc-mcp-config.js";
-import { toDialableHost } from "./grpc-shared.js";
+import { toDialableHost } from "./grpc-shared-utils.js";
 import { emit } from "./event-bus.js";
 import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
 import { toPersonaResolveInput, buildOrchestratorContextInput } from "./persona-mapper.js";
