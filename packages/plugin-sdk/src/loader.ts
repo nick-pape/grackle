@@ -14,6 +14,8 @@ import type { PluginContext, Disposable } from "./context.js";
 
 /** Aggregated contributions from all loaded plugins. */
 export interface LoadedPlugins {
+  /** Names of all loaded plugins, in topological load order. */
+  pluginNames: string[];
   /** All gRPC service registrations, in plugin load order. */
   serviceRegistrations: ServiceRegistration[];
   /** All reconciliation phases, in plugin load order. */
@@ -161,6 +163,7 @@ export async function loadPlugins(
   };
 
   return {
+    pluginNames: sorted.map((p) => p.name),
     serviceRegistrations,
     reconciliationPhases,
     mcpTools,

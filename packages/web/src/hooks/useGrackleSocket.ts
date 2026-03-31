@@ -11,6 +11,8 @@ import type { GrackleEvent, UsageStats, UseGrackleSocketResult } from "@grackle-
 import { useEventStream } from "./useEventStream.js";
 import { eventTypeToString } from "@grackle-ai/common";
 import type { DomainHook } from "./domainHook.js";
+import { useManifest } from "../context/ManifestContext.js";
+import { buildActiveHookKeys } from "../plugin-registry.js";
 import { useEnvironments } from "./useEnvironments.js";
 import { useSessions } from "./useSessions.js";
 import { useWorkspaces } from "./useWorkspaces.js";
@@ -74,7 +76,13 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | undefined>(undefined);
   const [usageCache, setUsageCache] = useState<Record<string, UsageStats>>({});
 
-  // --- Domain hooks ---
+  // --- Manifest (which plugins are active) ---
+  // Must be called before any domain hook to keep React hook call order stable.
+
+  const { pluginNames } = useManifest();
+  const activeHookKeys = buildActiveHookKeys(pluginNames);
+
+  // --- Domain hooks (all called unconditionally — Rules of Hooks) ---
 
   const environmentsHook = useEnvironments();
   const sessionsHook = useSessions();
@@ -89,20 +97,20 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   const notificationsHook = useNotifications();
 
   // --- Domain hook registry ---
-  // Every domain hook exposes a `domainHook` property implementing DomainHook.
-  // Adding a new hook? Add its domainHook here — TypeScript enforces the interface.
+  // Only hooks whose plugin is active are registered for onConnect() / handleEvent().
+  // All hooks are still instantiated above (Rules of Hooks requires unconditional calls).
   const domainHooks: DomainHook[] = [
-    environmentsHook.domainHook,
-    sessionsHook.domainHook,
-    workspacesHook.domainHook,
-    tasksHook.domainHook,
-    findingsHook.domainHook,
-    tokensHook.domainHook,
-    credentialsHook.domainHook,
-    codespacesHook.domainHook,
-    personasHook.domainHook,
-    knowledgeHook.domainHook,
-    notificationsHook.domainHook,
+    ...(activeHookKeys.has("environments") ? [environmentsHook.domainHook] : []),
+    ...(activeHookKeys.has("sessions")     ? [sessionsHook.domainHook]     : []),
+    ...(activeHookKeys.has("workspaces")   ? [workspacesHook.domainHook]   : []),
+    ...(activeHookKeys.has("tasks")        ? [tasksHook.domainHook]        : []),
+    ...(activeHookKeys.has("findings")     ? [findingsHook.domainHook]     : []),
+    ...(activeHookKeys.has("tokens")       ? [tokensHook.domainHook]       : []),
+    ...(activeHookKeys.has("credentials")  ? [credentialsHook.domainHook]  : []),
+    ...(activeHookKeys.has("codespaces")   ? [codespacesHook.domainHook]   : []),
+    ...(activeHookKeys.has("personas")     ? [personasHook.domainHook]     : []),
+    ...(activeHookKeys.has("knowledge")    ? [knowledgeHook.domainHook]    : []),
+    ...(activeHookKeys.has("notifications") ? [notificationsHook.domainHook] : []),
   ];
 
   // --- Transport (ConnectRPC server-streaming) ---

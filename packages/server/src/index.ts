@@ -226,6 +226,7 @@ async function main(): Promise<void> {
     webPort,
     bindHost,
     connectRoutes: routes,
+    pluginNames: loaded.pluginNames,
     readinessCheck: (): ReadinessResult => {
       const checks: ReadinessResult["checks"] = {};
       try {

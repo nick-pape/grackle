@@ -39,6 +39,7 @@ export interface GracklePlugin {
 // @public
 export interface LoadedPlugins {
     mcpTools: PluginToolDefinition[];
+    pluginNames: string[];
     reconciliationPhases: ReconciliationPhase[];
     serviceRegistrations: ServiceRegistration[];
     shutdown: () => Promise<void>;
