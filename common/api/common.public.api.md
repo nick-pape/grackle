@@ -211,7 +211,6 @@ type CreateScheduleRequest = Message<"grackle.CreateScheduleRequest"> & {
     description: string;
     scheduleExpression: string;
     personaId: string;
-    environmentId: string;
     workspaceId: string;
     parentTaskId: string;
 };
@@ -1687,7 +1686,6 @@ type Schedule = Message<"grackle.Schedule"> & {
     description: string;
     scheduleExpression: string;
     personaId: string;
-    environmentId: string;
     workspaceId: string;
     parentTaskId: string;
     enabled: boolean;
@@ -2241,7 +2239,6 @@ type UpdateScheduleRequest = Message<"grackle.UpdateScheduleRequest"> & {
     description?: string;
     scheduleExpression?: string;
     personaId?: string;
-    environmentId?: string;
     enabled?: boolean;
 };
 

@@ -14,7 +14,6 @@ export function scheduleRowToProto(row: scheduleStore.ScheduleRow): grackle.Sche
     description: row.description,
     scheduleExpression: row.scheduleExpression,
     personaId: row.personaId,
-    environmentId: row.environmentId,
     workspaceId: row.workspaceId,
     parentTaskId: row.parentTaskId,
     enabled: row.enabled,

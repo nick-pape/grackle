@@ -10,7 +10,6 @@ export interface ScheduleUpdate {
   description?: string;
   scheduleExpression?: string;
   personaId?: string;
-  environmentId?: string;
   enabled?: boolean;
   nextRunAt?: string | null;
 }
@@ -23,7 +22,6 @@ export interface ScheduleUpdate {
  * @param description - Optional description
  * @param scheduleExpression - Interval shorthand or cron expression
  * @param personaId - Persona to use when firing
- * @param environmentId - Optional environment override (empty = auto-select)
  * @param workspaceId - Optional workspace scope (empty = system-level)
  * @param parentTaskId - Parent task for spawned children (empty = ROOT_TASK_ID)
  * @param nextRunAt - Pre-computed next fire time (null if disabled)
@@ -34,7 +32,6 @@ export function createSchedule(
   description: string,
   scheduleExpression: string,
   personaId: string,
-  environmentId: string,
   workspaceId: string,
   parentTaskId: string,
   nextRunAt: string | null,
@@ -46,7 +43,6 @@ export function createSchedule(
       description,
       scheduleExpression,
       personaId,
-      environmentId,
       workspaceId,
       parentTaskId,
       nextRunAt,
@@ -91,9 +87,6 @@ export function updateSchedule(id: string, update: ScheduleUpdate): void {
   }
   if (update.personaId !== undefined) {
     sets.personaId = update.personaId;
-  }
-  if (update.environmentId !== undefined) {
-    sets.environmentId = update.environmentId;
   }
   if (update.enabled !== undefined) {
     sets.enabled = update.enabled;

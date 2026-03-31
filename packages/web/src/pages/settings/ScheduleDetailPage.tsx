@@ -13,7 +13,6 @@ export function ScheduleDetailPage(): JSX.Element {
   const {
     schedules: { schedules, schedulesLoading, createSchedule, updateSchedule, deleteSchedule },
     personas: { personas },
-    environments: { environments },
     workspaces: { workspaces },
   } = useGrackle();
 
@@ -38,7 +37,6 @@ export function ScheduleDetailPage(): JSX.Element {
         existing={existing}
         isNew={isNew}
         personas={personas}
-        environments={environments}
         workspaces={workspaces}
         onCreateSchedule={createSchedule}
         onUpdateSchedule={updateSchedule}
@@ -58,11 +56,10 @@ interface ScheduleFormProps {
   existing: ScheduleData | undefined;
   isNew: boolean;
   personas: Array<{ id: string; name: string }>;
-  environments: Array<{ id: string; displayName: string }>;
   workspaces: Array<{ id: string; name: string }>;
   onCreateSchedule: (
     title: string, description: string, scheduleExpression: string,
-    personaId: string, environmentId?: string, workspaceId?: string, parentTaskId?: string,
+    personaId: string, workspaceId?: string, parentTaskId?: string,
   ) => Promise<ScheduleData>;
   onUpdateSchedule: (scheduleId: string, fields: ScheduleUpdate) => Promise<ScheduleData>;
   onDeleteSchedule: (scheduleId: string) => Promise<void>;
@@ -72,7 +69,7 @@ interface ScheduleFormProps {
 
 function ScheduleForm({
   existing, isNew,
-  personas, environments, workspaces,
+  personas, workspaces,
   onCreateSchedule, onUpdateSchedule, onDeleteSchedule,
   onDone, showToast,
 }: ScheduleFormProps): JSX.Element {
@@ -81,7 +78,6 @@ function ScheduleForm({
   const [description, setDescription] = useState(existing?.description ?? "");
   const [scheduleExpression, setScheduleExpression] = useState(existing?.scheduleExpression ?? "");
   const [personaId, setPersonaId] = useState(existing?.personaId ?? "");
-  const [environmentId, setEnvironmentId] = useState(existing?.environmentId ?? "");
   const [workspaceId, setWorkspaceId] = useState(existing?.workspaceId ?? "");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
@@ -95,7 +91,6 @@ function ScheduleForm({
     setDescription(existing.description);
     setScheduleExpression(existing.scheduleExpression);
     setPersonaId(existing.personaId);
-    setEnvironmentId(existing.environmentId);
     setWorkspaceId(existing.workspaceId);
   }, [isNew, existing, activeFieldId]);
 
@@ -103,10 +98,6 @@ function ScheduleForm({
   const canCreate = isNew && title.trim().length > 0 && scheduleExpression.trim().length > 0 && personaId.length > 0;
 
   const personaOptions: SelectOption[] = personas.map((p) => ({ value: p.id, label: p.name }));
-  const environmentOptions: SelectOption[] = [
-    { value: "", label: "Auto-select (first connected)" },
-    ...environments.map((e) => ({ value: e.id, label: e.displayName })),
-  ];
   const workspaceOptions: SelectOption[] = [
     { value: "", label: "System-level (no workspace)" },
     ...workspaces.map((w) => ({ value: w.id, label: w.name })),
@@ -117,7 +108,7 @@ function ScheduleForm({
     if (!canCreate) {
       return;
     }
-    onCreateSchedule(title, description, scheduleExpression, personaId, environmentId || undefined, workspaceId || undefined).then(
+    onCreateSchedule(title, description, scheduleExpression, personaId, workspaceId || undefined).then(
       (created) => {
         showToast("Schedule created", "success");
         navigate(scheduleUrl(created.id), { replace: true });
@@ -139,7 +130,6 @@ function ScheduleForm({
         if (field === "description") { setDescription(String(value)); }
         if (field === "scheduleExpression") { setScheduleExpression(String(value)); }
         if (field === "personaId") { setPersonaId(String(value)); }
-        if (field === "environmentId") { setEnvironmentId(String(value)); }
       },
       () => {
         showToast("Failed to update schedule", "error");
@@ -233,14 +223,6 @@ function ScheduleForm({
             >
               <option value="">Select a persona...</option>
               {personaOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Environment <span className={styles.optional}>(optional)</span>
-            <select value={environmentId} onChange={(e) => setEnvironmentId(e.target.value)} data-testid="schedule-detail-environment">
-              {environmentOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
@@ -341,19 +323,6 @@ function ScheduleForm({
                 onActivate={setActiveFieldId}
                 ariaLabel="Schedule persona"
                 data-testid="schedule-detail-persona"
-              />
-            </label>
-            <label>
-              Environment <span className={styles.optional}>(optional — empty = auto-select)</span>
-              <EditableSelect
-                value={environmentId}
-                onSave={(value) => { handleFieldSave("environmentId", value); }}
-                options={environmentOptions}
-                fieldId="schedule-environment"
-                activeFieldId={activeFieldId}
-                onActivate={setActiveFieldId}
-                ariaLabel="Schedule environment"
-                data-testid="schedule-detail-environment"
               />
             </label>
             <label>

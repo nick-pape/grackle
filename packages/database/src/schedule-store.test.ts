@@ -17,7 +17,6 @@ function applySchema(): void {
       description         TEXT NOT NULL DEFAULT '',
       schedule_expression TEXT NOT NULL,
       persona_id          TEXT NOT NULL,
-      environment_id      TEXT NOT NULL DEFAULT '',
       workspace_id        TEXT NOT NULL DEFAULT '',
       parent_task_id      TEXT NOT NULL DEFAULT '',
       enabled             INTEGER NOT NULL DEFAULT 1,
@@ -46,7 +45,6 @@ describe("schedule-store", () => {
       "recon-persona",
       "",
       "",
-      "",
       "2026-03-25T10:00:30Z",
     );
     const s = scheduleStore.getSchedule("sched-1");
@@ -65,23 +63,23 @@ describe("schedule-store", () => {
   });
 
   it("lists all schedules", () => {
-    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "", "", null);
-    scheduleStore.createSchedule("s2", "B", "", "5m", "p2", "", "", "", null);
+    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "", null);
+    scheduleStore.createSchedule("s2", "B", "", "5m", "p2", "", "", null);
     const all = scheduleStore.listSchedules();
     expect(all).toHaveLength(2);
   });
 
   it("lists schedules filtered by workspaceId", () => {
-    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "ws-1", "", null);
-    scheduleStore.createSchedule("s2", "B", "", "5m", "p2", "", "ws-2", "", null);
-    scheduleStore.createSchedule("s3", "C", "", "1h", "p3", "", "", "", null);
+    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "ws-1", "", null);
+    scheduleStore.createSchedule("s2", "B", "", "5m", "p2", "ws-2", "", null);
+    scheduleStore.createSchedule("s3", "C", "", "1h", "p3", "", "", null);
     const ws1 = scheduleStore.listSchedules("ws-1");
     expect(ws1).toHaveLength(1);
     expect(ws1[0].title).toBe("A");
   });
 
   it("updates mutable fields", () => {
-    scheduleStore.createSchedule("s1", "Original", "", "30s", "p1", "", "", "", null);
+    scheduleStore.createSchedule("s1", "Original", "", "30s", "p1", "", "", null);
     scheduleStore.updateSchedule("s1", {
       title: "Updated",
       description: "new desc",
@@ -98,7 +96,7 @@ describe("schedule-store", () => {
   });
 
   it("updates only provided fields", () => {
-    scheduleStore.createSchedule("s1", "Keep", "desc", "30s", "p1", "", "", "", null);
+    scheduleStore.createSchedule("s1", "Keep", "desc", "30s", "p1", "", "", null);
     scheduleStore.updateSchedule("s1", { title: "Changed" });
     const s = scheduleStore.getSchedule("s1");
     expect(s!.title).toBe("Changed");
@@ -107,7 +105,7 @@ describe("schedule-store", () => {
   });
 
   it("deletes a schedule", () => {
-    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "", "", null);
+    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "", null);
     scheduleStore.deleteSchedule("s1");
     expect(scheduleStore.getSchedule("s1")).toBeUndefined();
   });
@@ -115,9 +113,9 @@ describe("schedule-store", () => {
   it("getDueSchedules returns enabled schedules with nextRunAt in the past", () => {
     const past = "2020-01-01T00:00:00Z";
     const future = "2099-01-01T00:00:00Z";
-    scheduleStore.createSchedule("due", "Due", "", "30s", "p1", "", "", "", past);
-    scheduleStore.createSchedule("not-due", "NotDue", "", "30s", "p2", "", "", "", future);
-    scheduleStore.createSchedule("disabled", "Disabled", "", "30s", "p3", "", "", "", past);
+    scheduleStore.createSchedule("due", "Due", "", "30s", "p1", "", "", past);
+    scheduleStore.createSchedule("not-due", "NotDue", "", "30s", "p2", "", "", future);
+    scheduleStore.createSchedule("disabled", "Disabled", "", "30s", "p3", "", "", past);
     scheduleStore.updateSchedule("disabled", { enabled: false });
 
     const due = scheduleStore.getDueSchedules();
@@ -127,12 +125,12 @@ describe("schedule-store", () => {
 
   it("getDueSchedules returns empty when no schedules are due", () => {
     const future = "2099-01-01T00:00:00Z";
-    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "", "", future);
+    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "", future);
     expect(scheduleStore.getDueSchedules()).toHaveLength(0);
   });
 
   it("advanceSchedule updates lastRunAt, nextRunAt, and runCount", () => {
-    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "", "", "2026-03-25T10:00:00Z");
+    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "", "2026-03-25T10:00:00Z");
     const now = "2026-03-25T10:00:30Z";
     const nextRun = "2026-03-25T10:01:00Z";
     scheduleStore.advanceSchedule("s1", now, nextRun);
@@ -143,7 +141,7 @@ describe("schedule-store", () => {
   });
 
   it("advanceSchedule increments runCount cumulatively", () => {
-    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "", "", "2026-03-25T10:00:00Z");
+    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "", "2026-03-25T10:00:00Z");
     scheduleStore.advanceSchedule("s1", "2026-03-25T10:00:30Z", "2026-03-25T10:01:00Z");
     scheduleStore.advanceSchedule("s1", "2026-03-25T10:01:00Z", "2026-03-25T10:01:30Z");
     const s = scheduleStore.getSchedule("s1");
@@ -151,7 +149,7 @@ describe("schedule-store", () => {
   });
 
   it("setScheduleEnabled enables and sets nextRunAt", () => {
-    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "", "", null);
+    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "", null);
     scheduleStore.updateSchedule("s1", { enabled: false });
     expect(scheduleStore.getSchedule("s1")!.enabled).toBe(false);
 
@@ -162,7 +160,7 @@ describe("schedule-store", () => {
   });
 
   it("setScheduleEnabled disables and clears nextRunAt", () => {
-    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "", "", "2026-03-25T10:00:30Z");
+    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "", "2026-03-25T10:00:30Z");
     scheduleStore.setScheduleEnabled("s1", false, null);
     const s = scheduleStore.getSchedule("s1");
     expect(s!.enabled).toBe(false);

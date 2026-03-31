@@ -249,6 +249,31 @@ describe("initDatabase", () => {
     const fkViolations = mem.prepare("PRAGMA foreign_key_check").all() as unknown[];
     expect(fkViolations.length).toBe(0);
   });
+
+  it("migration v8 — drops environment_id column from schedules", () => {
+    const mem = new Database(":memory:");
+    mem.pragma("foreign_keys = ON");
+
+    // Step 1: Create the current (post-migration) schema so all tables exist.
+    initDatabase(mem);
+
+    // Step 2: Mutate to a pre-v8 shape — add the legacy column back and rewind
+    // user_version so initDatabase will re-run migration v8 on the next call.
+    mem.exec("ALTER TABLE schedules ADD COLUMN environment_id TEXT NOT NULL DEFAULT ''");
+    mem.pragma("user_version = 7");
+
+    // Run migration.
+    initDatabase(mem);
+
+    // Assert: environment_id column was dropped.
+    const cols = mem
+      .prepare("PRAGMA table_info(schedules)")
+      .all() as Array<{ name: string }>;
+    expect(cols.some((c) => c.name === "environment_id")).toBe(false);
+
+    // Assert: schema version advanced to current.
+    expect(mem.pragma("user_version", { simple: true })).toBe(CURRENT_VERSION);
+  });
 });
 
 describe("checkDatabaseIntegrity", () => {

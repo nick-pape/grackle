@@ -1128,7 +1128,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       schedules: {
         schedules,
         schedulesLoading: false,
-        createSchedule: async (title: string, description: string, scheduleExpression: string, personaId: string, environmentId?: string, workspaceId?: string) => {
+        createSchedule: async (title: string, description: string, scheduleExpression: string, personaId: string, workspaceId?: string) => {
           console.log("[MockGrackle] createSchedule", { title });
           const newSchedule: ScheduleData = {
             id: `mock-schedule-${Date.now()}`,
@@ -1136,7 +1136,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
             description,
             scheduleExpression,
             personaId,
-            environmentId: environmentId ?? "",
             workspaceId: workspaceId ?? "",
             parentTaskId: "",
             enabled: true,
