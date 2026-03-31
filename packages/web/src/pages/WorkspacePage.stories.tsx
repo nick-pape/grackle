@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor } from "@storybook/test";
+import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { withMockGrackleRoute } from "@grackle-ai/web-components";
 import { WorkspacePage } from "./WorkspacePage.js";
 
@@ -33,12 +33,14 @@ export const MetadataSection: Story = {
   )],
   play: async ({ canvas }) => {
     // The metadata panel should be visible by default
-    await expect(canvas.getByTestId("workspace-meta")).toBeInTheDocument();
-    // Verify key metadata labels are present
-    await expect(canvas.getByText("Description")).toBeInTheDocument();
-    await expect(canvas.getByText("Repository")).toBeInTheDocument();
-    await expect(canvas.getByText("Environments")).toBeInTheDocument();
-    await expect(canvas.getByText("Persona")).toBeInTheDocument();
+    const meta = canvas.getByTestId("workspace-meta");
+    await expect(meta).toBeInTheDocument();
+    // Verify key metadata labels are present (scope within meta to avoid ambiguity)
+    const metaSection = within(meta);
+    await expect(metaSection.getByText("Description")).toBeInTheDocument();
+    await expect(metaSection.getByText("Repository")).toBeInTheDocument();
+    await expect(metaSection.getByText("Environments")).toBeInTheDocument();
+    await expect(metaSection.getByText("Persona")).toBeInTheDocument();
   },
 };
 
@@ -172,9 +174,8 @@ export const LinkAddsChip: Story = {
     "/environments/:environmentId/workspaces/:workspaceId",
   )],
   play: async ({ canvas }) => {
-    // proj-beta starts with no linked envs, "None" shown
-    const linkedSection = canvas.getByTestId("linked-environments");
-    await expect(linkedSection).toHaveTextContent("None");
+    // proj-beta starts with env-docker-01 linked; env-local-01 is available to link
+    await expect(canvas.getByTestId("linked-env-env-docker-01")).toBeInTheDocument();
     // Select "Local" from the link dropdown (env-local-01)
     const linkSelect = canvas.getByTestId("link-env-select");
     await userEvent.selectOptions(linkSelect, "env-local-01");
