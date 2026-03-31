@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.103.0",
+      "tag": "@grackle-ai/cli_v0.103.0",
+      "date": "Tue, 31 Mar 2026 15:27:16 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add server-side fuzzy task search: new SearchTasks gRPC RPC, task_search MCP tool, and grackle task search CLI command with relevance scoring"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.102.0",
       "tag": "@grackle-ai/cli_v0.102.0",
       "date": "Tue, 31 Mar 2026 14:52:41 GMT",
