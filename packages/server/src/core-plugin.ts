@@ -17,9 +17,9 @@ import { createEventSubscribers } from "./event-subscribers.js";
 /**
  * Create the core plugin that contributes non-orchestration server capabilities.
  *
- * - **gRPC handlers**: 8 handler groups (environments, sessions, workspaces,
- *   schedules, tokens, codespaces, knowledge, settings)
- * - **Reconciliation phases**: dispatch, cron, lifecycle-cleanup,
+ * - **gRPC handlers**: 7 handler groups (environments, sessions, workspaces,
+ *   tokens, codespaces, knowledge, settings)
+ * - **Reconciliation phases**: dispatch, lifecycle-cleanup,
  *   environment-reconciliation, and optionally knowledge-health
  * - **Event subscribers**: lifecycle manager and optionally root task boot
  *

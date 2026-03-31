@@ -1,8 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-
-vi.mock("./logger.js", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
+import type { Logger } from "pino";
 
 import { createCronPhase, type CronPhaseDeps } from "./cron-phase.js";
 import type { ScheduleRow } from "@grackle-ai/database";
@@ -37,6 +34,12 @@ function createMockDeps(): CronPhaseDeps {
     emit: vi.fn(),
     getPersona: vi.fn().mockReturnValue({ id: "persona-1", name: "Test", runtime: "stub" }),
     setScheduleEnabled: vi.fn(),
+    logger: {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    } as unknown as Pick<Logger, "debug" | "info" | "warn" | "error">,
   };
 }
 

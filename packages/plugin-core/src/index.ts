@@ -10,8 +10,6 @@ export { createRootTaskBootSubscriber } from "./root-task-boot.js";
 export type { RootTaskBootDeps } from "./root-task-boot.js";
 
 // ─── Reconciliation Phases ──────────────────────────────────
-export { createCronPhase } from "./cron-phase.js";
-export type { CronPhaseDeps } from "./cron-phase.js";
 export { createDispatchPhase } from "./dispatch-phase.js";
 export type { DispatchPhaseDeps } from "./dispatch-phase.js";
 export { createOrphanPhase } from "./orphan-phase.js";

@@ -16,7 +16,6 @@ import * as sessions from "./session-handlers.js";
 import * as tasks from "./task-handlers.js";
 import * as workspaces from "./workspace-handlers.js";
 import * as personas from "./persona-handlers.js";
-import * as schedules from "./schedule-handlers.js";
 import * as tokens from "./token-handlers.js";
 import * as findings from "./finding-handlers.js";
 import * as escalations from "./escalation-handlers.js";
@@ -36,7 +35,6 @@ export function createDefaultCollector(): ServiceCollector {
   collector.addHandlers(grackle.Grackle, tasks);
   collector.addHandlers(grackle.Grackle, workspaces);
   collector.addHandlers(grackle.Grackle, personas);
-  collector.addHandlers(grackle.Grackle, schedules);
   collector.addHandlers(grackle.Grackle, tokens);
   collector.addHandlers(grackle.Grackle, findings);
   collector.addHandlers(grackle.Grackle, escalations);
@@ -46,20 +44,20 @@ export function createDefaultCollector(): ServiceCollector {
 }
 
 /**
- * Create a `ServiceCollector` pre-loaded with only the core (non-orchestration)
- * Grackle handler groups: environments, sessions, workspaces, schedules, tokens,
- * codespaces, and settings.
+ * Create a `ServiceCollector` pre-loaded with only the core (non-orchestration,
+ * non-scheduling) Grackle handler groups: environments, sessions, workspaces,
+ * tokens, codespaces, and settings.
  *
- * Orchestration handlers (tasks, personas, findings, escalations) and knowledge
- * handlers are intentionally excluded — they are contributed by their respective
- * plugins via {@link createOrchestrationCollector} and `@grackle-ai/plugin-knowledge`.
+ * Orchestration handlers (tasks, personas, findings, escalations) are contributed
+ * by `@grackle-ai/plugin-orchestration` via {@link createOrchestrationCollector}.
+ * Schedule handlers are contributed by `@grackle-ai/plugin-scheduling`.
+ * Knowledge handlers are contributed by `@grackle-ai/plugin-knowledge`.
  */
 export function createCoreCollector(): ServiceCollector {
   const collector = createServiceCollector();
   collector.addHandlers(grackle.Grackle, environments);
   collector.addHandlers(grackle.Grackle, sessions);
   collector.addHandlers(grackle.Grackle, workspaces);
-  collector.addHandlers(grackle.Grackle, schedules);
   collector.addHandlers(grackle.Grackle, tokens);
   collector.addHandlers(grackle.Grackle, codespaces);
   collector.addHandlers(grackle.Grackle, settings);

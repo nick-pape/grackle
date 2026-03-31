@@ -32,6 +32,7 @@ import { initializeDatabase } from "./database-init.js";
 import { registerAllAdapters } from "./adapter-registry.js";
 import { bootstrapLocalEnvironment } from "./local-environment.js";
 import { createCorePlugin } from "./core-plugin.js";
+import { createSchedulingPlugin } from "@grackle-ai/plugin-scheduling";
 import { createOrchestrationPlugin } from "@grackle-ai/plugin-orchestration";
 import { createShutdown } from "./shutdown.js";
 
@@ -148,6 +149,9 @@ async function main(): Promise<void> {
   };
 
   const plugins = [createCorePlugin()];
+  if (!config.skipScheduling) {
+    plugins.push(createSchedulingPlugin());
+  }
   if (!config.skipOrchestration) {
     plugins.push(createOrchestrationPlugin());
   }

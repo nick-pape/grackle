@@ -22,7 +22,6 @@ vi.mock("@grackle-ai/common", () => ({
 vi.mock("./environment-handlers.js", () => ({ listEnvironments: vi.fn() }));
 vi.mock("./session-handlers.js", () => ({ spawnAgent: vi.fn() }));
 vi.mock("./workspace-handlers.js", () => ({ listWorkspaces: vi.fn() }));
-vi.mock("./schedule-handlers.js", () => ({ listSchedules: vi.fn() }));
 vi.mock("./token-handlers.js", () => ({ getToken: vi.fn() }));
 vi.mock("./codespace-handlers.js", () => ({ listCodespaces: vi.fn() }));
 vi.mock("./settings-handlers.js", () => ({ getSetting: vi.fn() }));
@@ -39,16 +38,17 @@ beforeEach(() => {
 });
 
 describe("createCoreCollector", () => {
-  it("adds environments, sessions, workspaces, schedules, tokens, codespaces, settings", () => {
+  it("adds environments, sessions, workspaces, tokens, codespaces, settings (no schedules, no knowledge)", () => {
     createCoreCollector();
     const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
     expect(addedModules.some((m) => "listEnvironments" in m)).toBe(true);
     expect(addedModules.some((m) => "spawnAgent" in m)).toBe(true);
     expect(addedModules.some((m) => "listWorkspaces" in m)).toBe(true);
-    expect(addedModules.some((m) => "listSchedules" in m)).toBe(true);
     expect(addedModules.some((m) => "getToken" in m)).toBe(true);
     expect(addedModules.some((m) => "listCodespaces" in m)).toBe(true);
     expect(addedModules.some((m) => "getSetting" in m)).toBe(true);
+    // Schedules are contributed by @grackle-ai/plugin-scheduling
+    expect(addedModules.some((m) => "listSchedules" in m)).toBe(false);
   });
 
   it("does NOT add task, persona, finding, escalation, or knowledge handlers", () => {
@@ -90,7 +90,7 @@ describe("createOrchestrationCollector", () => {
 });
 
 describe("createDefaultCollector (regression)", () => {
-  it("adds all 11 handler groups including orchestration (knowledge moved to plugin)", () => {
+  it("adds all 11 handler groups including orchestration (knowledge and schedules moved to plugins)", () => {
     createDefaultCollector();
     const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
     expect(addedModules.some((m) => "listEnvironments" in m)).toBe(true);
