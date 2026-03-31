@@ -19,10 +19,10 @@ export function registerWorkspaceCommands(program: Command): void {
         return;
       }
       const table = new Table({
-        head: ["ID", "Name", "Environment", "Linked Envs", "Worktrees", "Status", "Created"],
+        head: ["ID", "Name", "Linked Envs", "Worktrees", "Status", "Created"],
       });
       for (const p of res.workspaces) {
-        table.push([p.id, p.name, p.environmentId || "-", String(p.linkedEnvironmentIds.length), p.useWorktrees ? "enabled" : "disabled", workspaceStatusToString(p.status), p.createdAt]);
+        table.push([p.id, p.name, p.linkedEnvironmentIds.join(", ") || "-", p.useWorktrees ? "enabled" : "disabled", workspaceStatusToString(p.status), p.createdAt]);
       }
       console.log(table.toString());
     });
@@ -30,7 +30,7 @@ export function registerWorkspaceCommands(program: Command): void {
   workspace
     .command("create <name>")
     .description("Create a new workspace")
-    .requiredOption("--env <env-id>", "Environment ID (required)")
+    .requiredOption("--env <env-id>", "Environment ID (required, auto-linked as the initial environment)")
     .option("--repo <url>", "Repository URL")
     .option("--desc <description>", "Workspace description")
     .option("--no-worktrees", "Disable worktree isolation (agents share the main checkout)")
@@ -75,7 +75,6 @@ export function registerWorkspaceCommands(program: Command): void {
         { "Name": p.name },
         { "Description": p.description || "-" },
         { "Repo URL": p.repoUrl || "-" },
-        { "Environment": p.environmentId || "-" },
         { "Linked Envs": p.linkedEnvironmentIds.length > 0 ? p.linkedEnvironmentIds.join(", ") : "none" },
         { "Worktrees": p.useWorktrees ? "enabled" : "disabled" },
         ...(p.workingDirectory ? [{ "Working Dir": p.workingDirectory }] : []),
@@ -106,14 +105,13 @@ export function registerWorkspaceCommands(program: Command): void {
     .option("--name <name>", "Workspace name")
     .option("--desc <description>", "Workspace description")
     .option("--repo <url>", "Repository URL")
-    .option("--env <env-id>", "Reparent to a different environment")
     .option("--no-worktrees", "Disable worktree isolation (agents share the main checkout)")
     .option("--worktrees", "Enable worktree isolation (default)")
     .option("--working-directory <path>", "Working directory / repo root on the environment (e.g. /workspaces/my-repo)")
     .option("--worktree-base-path <path>", "(deprecated, use --working-directory)")
     .option("--token-budget <n>", "Aggregate token cap across all tasks; 0 = unlimited", parseInt)
     .option("--cost-budget-millicents <n>", "Aggregate cost cap in millicents ($0.00001 units); 0 = unlimited", parseInt)
-    .action(async (id: string, opts: { worktrees?: boolean; name?: string; desc?: string; repo?: string; env?: string; workingDirectory?: string; worktreeBasePath?: string; tokenBudget?: number; costBudgetMillicents?: number }) => {
+    .action(async (id: string, opts: { worktrees?: boolean; name?: string; desc?: string; repo?: string; workingDirectory?: string; worktreeBasePath?: string; tokenBudget?: number; costBudgetMillicents?: number }) => {
       const { core: client } = createGrackleClients();
       // Determine useWorktrees: explicit --worktrees → true, --no-worktrees → false, neither → undefined (no change)
       let useWorktrees: boolean | undefined;
@@ -127,7 +125,6 @@ export function registerWorkspaceCommands(program: Command): void {
         name: opts.name,
         description: opts.desc,
         repoUrl: opts.repo,
-        environmentId: opts.env,
         useWorktrees,
         workingDirectory: opts.workingDirectory || opts.worktreeBasePath,
         tokenBudget: opts.tokenBudget,

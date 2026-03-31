@@ -80,7 +80,6 @@ export function protoToWorkspace(p: grackle.Workspace): Workspace {
     name: p.name,
     description: p.description,
     repoUrl: p.repoUrl,
-    environmentId: p.environmentId,
     linkedEnvironmentIds: [...p.linkedEnvironmentIds],
     status: workspaceStatusToString(p.status),
     workingDirectory: p.workingDirectory,

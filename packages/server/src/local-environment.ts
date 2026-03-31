@@ -6,6 +6,7 @@ import type {
   envRegistry as envRegistryModule,
   taskStore as taskStoreModule,
   workspaceStore as workspaceStoreModule,
+  workspaceEnvironmentLinkStore as workspaceEnvironmentLinkStoreModule,
 } from "@grackle-ai/database";
 import type { emit as emitFn } from "@grackle-ai/core";
 import type { LocalPowerLineManager } from "./local-powerline-manager.js";
@@ -37,7 +38,9 @@ export interface LocalEnvironmentDeps {
     getPersona: (id: string) => { runtime: string } | undefined;
   };
   /** Workspace store (database module namespace). */
-  workspaceStore: Pick<typeof workspaceStoreModule, "getWorkspace" | "createWorkspace">;
+  workspaceStore: Pick<typeof workspaceStoreModule, "getWorkspace" | "createWorkspaceAndLink">;
+  /** Workspace-environment link store (database module namespace). */
+  workspaceEnvironmentLinkStore: Pick<typeof workspaceEnvironmentLinkStoreModule, "linkEnvironment" | "isLinked">;
   /** Task store (database module namespace). */
   taskStore: Pick<typeof taskStoreModule, "getTask" | "setTaskWorkspace">;
   getAdapter: (type: string) => EnvironmentAdapter | undefined;
@@ -90,7 +93,7 @@ export async function bootstrapLocalEnvironment(
   deps: LocalEnvironmentDeps,
 ): Promise<LocalEnvironmentResult> {
   const { powerlinePort, bindHost, skipLocalPowerline } = options;
-  const { envRegistry, settingsStore, personaStore, workspaceStore, taskStore, logger } = deps;
+  const { envRegistry, settingsStore, personaStore, workspaceStore, workspaceEnvironmentLinkStore, taskStore, logger } = deps;
 
   if (skipLocalPowerline) {
     logger.info("Skipping local PowerLine auto-start (GRACKLE_SKIP_LOCAL_POWERLINE=1)");
@@ -132,19 +135,18 @@ export async function bootstrapLocalEnvironment(
     // Seed: ensure the default workspace exists (tied to the local environment).
     const defaultWorkspace = workspaceStore.getWorkspace(DEFAULT_WORKSPACE_ID);
     if (!defaultWorkspace) {
-      workspaceStore.createWorkspace(DEFAULT_WORKSPACE_ID, "Default", "", "", "local", false);
+      workspaceStore.createWorkspaceAndLink(DEFAULT_WORKSPACE_ID, "Default", "", "", false, "", "", 0, 0, "local");
       logger.info("Created default workspace for local environment");
-    } else if (defaultWorkspace.environmentId !== "local") {
+    } else if (!workspaceEnvironmentLinkStore.isLinked(DEFAULT_WORKSPACE_ID, "local")) {
       logger.warn(
-        { workspaceId: DEFAULT_WORKSPACE_ID, environmentId: defaultWorkspace.environmentId },
-        "Default workspace is not bound to local environment; skipping system task association",
+        { workspaceId: DEFAULT_WORKSPACE_ID },
+        "Default workspace is not linked to local environment; skipping system task association",
       );
     }
 
     // Backfill: assign the default workspace to the system task if it has none.
     const systemTask = taskStore.getTask(ROOT_TASK_ID);
-    const resolvedDefault = workspaceStore.getWorkspace(DEFAULT_WORKSPACE_ID);
-    if (systemTask && !systemTask.workspaceId && resolvedDefault?.environmentId === "local") {
+    if (systemTask && !systemTask.workspaceId && workspaceEnvironmentLinkStore.isLinked(DEFAULT_WORKSPACE_ID, "local")) {
       taskStore.setTaskWorkspace(ROOT_TASK_ID, DEFAULT_WORKSPACE_ID);
       logger.info("Assigned default workspace to system task");
     }

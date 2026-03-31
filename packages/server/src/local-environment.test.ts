@@ -41,8 +41,12 @@ function createMockDeps(overrides?: Partial<LocalEnvironmentDeps>): LocalEnviron
       getPersona: vi.fn(() => undefined),
     },
     workspaceStore: {
-      getWorkspace: vi.fn(() => ({ id: DEFAULT_WORKSPACE_ID, environmentId: "local" })),
-      createWorkspace: vi.fn(),
+      getWorkspace: vi.fn(() => ({ id: DEFAULT_WORKSPACE_ID })),
+      createWorkspaceAndLink: vi.fn(),
+    },
+    workspaceEnvironmentLinkStore: {
+      linkEnvironment: vi.fn(),
+      isLinked: vi.fn(() => true),
     },
     taskStore: {
       getTask: vi.fn(() => ({ id: ROOT_TASK_ID, workspaceId: DEFAULT_WORKSPACE_ID })),
@@ -182,8 +186,8 @@ describe("bootstrapLocalEnvironment", () => {
         { powerlinePort: 7433, bindHost: "127.0.0.1", skipLocalPowerline: false },
         deps,
       );
-      expect(deps.workspaceStore.createWorkspace).toHaveBeenCalledWith(
-        DEFAULT_WORKSPACE_ID, "Default", "", "", "local", false,
+      expect(deps.workspaceStore.createWorkspaceAndLink).toHaveBeenCalledWith(
+        DEFAULT_WORKSPACE_ID, "Default", "", "", false, "", "", 0, 0, "local",
       );
     });
 
@@ -194,23 +198,20 @@ describe("bootstrapLocalEnvironment", () => {
         { powerlinePort: 7433, bindHost: "127.0.0.1", skipLocalPowerline: false },
         deps,
       );
-      expect(deps.workspaceStore.createWorkspace).not.toHaveBeenCalled();
+      expect(deps.workspaceStore.createWorkspaceAndLink).not.toHaveBeenCalled();
     });
 
-    it("warns if default workspace is on non-local env", async () => {
+    it("warns if default workspace is not linked to local env", async () => {
       const deps = createMockDeps();
-      (deps.workspaceStore.getWorkspace as ReturnType<typeof vi.fn>).mockReturnValue({
-        id: DEFAULT_WORKSPACE_ID,
-        environmentId: "remote-ssh",
-      });
+      (deps.workspaceEnvironmentLinkStore.isLinked as ReturnType<typeof vi.fn>).mockReturnValue(false);
 
       await bootstrapLocalEnvironment(
         { powerlinePort: 7433, bindHost: "127.0.0.1", skipLocalPowerline: false },
         deps,
       );
       expect(deps.logger.warn).toHaveBeenCalledWith(
-        { workspaceId: DEFAULT_WORKSPACE_ID, environmentId: "remote-ssh" },
-        "Default workspace is not bound to local environment; skipping system task association",
+        { workspaceId: DEFAULT_WORKSPACE_ID },
+        "Default workspace is not linked to local environment; skipping system task association",
       );
     });
   });
@@ -242,16 +243,13 @@ describe("bootstrapLocalEnvironment", () => {
       expect(deps.taskStore.setTaskWorkspace).not.toHaveBeenCalled();
     });
 
-    it("does not backfill if default workspace is on non-local env", async () => {
+    it("does not backfill if default workspace is not linked to local env", async () => {
       const deps = createMockDeps();
       (deps.taskStore.getTask as ReturnType<typeof vi.fn>).mockReturnValue({
         id: ROOT_TASK_ID,
         workspaceId: undefined,
       });
-      (deps.workspaceStore.getWorkspace as ReturnType<typeof vi.fn>).mockReturnValue({
-        id: DEFAULT_WORKSPACE_ID,
-        environmentId: "remote-ssh",
-      });
+      (deps.workspaceEnvironmentLinkStore.isLinked as ReturnType<typeof vi.fn>).mockReturnValue(false);
 
       await bootstrapLocalEnvironment(
         { powerlinePort: 7433, bindHost: "127.0.0.1", skipLocalPowerline: false },

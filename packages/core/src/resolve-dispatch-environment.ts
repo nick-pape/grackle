@@ -2,8 +2,8 @@
  * Automatic environment resolution for the dispatch phase.
  *
  * When a queued task has no explicit environmentId, this function resolves
- * one using a priority cascade: ancestor session → workspace legacy env →
- * workspace linked envs (load balanced) → global fallback.
+ * one using a priority cascade: ancestor session → workspace linked envs
+ * (load balanced) → global fallback.
  *
  * This module is side-effect-free; logging is left to the caller.
  */
@@ -12,9 +12,7 @@
 export interface ResolveEnvironmentDeps {
   /** Walk the parent task chain for an ancestor with a session environment. */
   resolveAncestorEnvironmentId: (parentTaskId: string) => string;
-  /** Look up a workspace by ID. */
-  getWorkspace: (id: string) => { environmentId: string } | undefined;
-  /** Get all environment IDs linked to a workspace (#814). */
+  /** Get all environment IDs linked to a workspace. */
   getLinkedEnvironmentIds: (workspaceId: string) => string[];
   /** Check if an environment is connected. */
   isEnvironmentConnected: (id: string) => boolean;
@@ -29,9 +27,8 @@ export interface ResolveEnvironmentDeps {
  *
  * Cascade:
  * 1. Ancestor task's session environment (parent chain walk)
- * 2. Workspace's legacy `environmentId` field (if connected)
- * 3. Workspace's linked environments (pick connected with fewest active sessions)
- * 4. Global fallback (`findFirstConnectedEnvironment`)
+ * 2. Workspace's linked environments (pick connected with fewest active sessions)
+ * 3. Global fallback (`findFirstConnectedEnvironment`)
  *
  * @returns The resolved environment ID, or `undefined` if none available.
  */
@@ -48,16 +45,8 @@ export function resolveDispatchEnvironment(
     }
   }
 
-  // 2 & 3. Workspace-scoped resolution (only if task has a workspace)
+  // 2. Workspace linked environments — pick connected with fewest active sessions
   if (task.workspaceId) {
-    const workspace = deps.getWorkspace(task.workspaceId);
-
-    // 2. Workspace legacy environmentId
-    if (workspace?.environmentId && deps.isEnvironmentConnected(workspace.environmentId)) {
-      return workspace.environmentId;
-    }
-
-    // 3. Workspace linked environments — pick connected with fewest active sessions
     const linkedIds = deps.getLinkedEnvironmentIds(task.workspaceId);
     const connectedLinked = linkedIds.filter((id) => deps.isEnvironmentConnected(id));
     if (connectedLinked.length > 0) {
@@ -81,12 +70,12 @@ export function resolveDispatchEnvironment(
     }
   }
 
-  // 4. Global fallback — any connected environment
+  // 3. Global fallback — any connected environment
   const fallback = deps.findFirstConnectedEnvironment();
   if (fallback) {
     return fallback.id;
   }
 
-  // 5. No environment available
+  // 4. No environment available
   return undefined;
 }

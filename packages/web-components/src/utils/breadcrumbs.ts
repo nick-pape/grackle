@@ -101,7 +101,7 @@ export function buildTaskBreadcrumbs(
   const task = tasksById.get(taskId);
   const taskWorkspaceId = task?.workspaceId;
   const workspace = taskWorkspaceId ? workspaces.find((p) => p.id === taskWorkspaceId) : undefined;
-  const environmentId = routeEnvironmentId ?? workspace?.environmentId;
+  const environmentId = routeEnvironmentId ?? workspace?.linkedEnvironmentIds[0];
   const environment = environmentId ? environments.find((e) => e.id === environmentId) : undefined;
 
   const segments: BreadcrumbSegment[] = [HOME_SEGMENT];
@@ -147,7 +147,7 @@ export function buildNewTaskBreadcrumbs(
   tasksById: Map<string, TaskData>,
 ): BreadcrumbSegment[] {
   const workspace = workspaces.find((p) => p.id === workspaceIdParam);
-  const envId = environmentId ?? workspace?.environmentId;
+  const envId = environmentId ?? workspace?.linkedEnvironmentIds[0];
   const environment = envId ? environments.find((e) => e.id === envId) : undefined;
 
   const segments: BreadcrumbSegment[] = [HOME_SEGMENT];

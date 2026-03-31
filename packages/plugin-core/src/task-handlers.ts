@@ -309,7 +309,6 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
 
   const environmentId = req.environmentId
     || resolveAncestorEnvironmentId(task.parentTaskId)
-    || workspace?.environmentId
     || "";
   if (!environmentId) {
     throw new ConnectError("No environment specified for task, ancestor, or workspace", Code.FailedPrecondition);

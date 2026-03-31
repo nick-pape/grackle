@@ -1,6 +1,6 @@
 import db from "./db.js";
 import { workspaceEnvironmentLinks } from "./schema.js";
-import { eq, and, inArray, sql } from "drizzle-orm";
+import { eq, and, inArray, sql, asc } from "drizzle-orm";
 
 /** Create a link between a workspace and an environment. Throws on duplicate. */
 export function linkEnvironment(workspaceId: string, environmentId: string): void {
@@ -17,11 +17,36 @@ export function unlinkEnvironment(workspaceId: string, environmentId: string): v
     .run();
 }
 
-/** Return all linked environment IDs for a workspace (excludes the primary). */
+/**
+ * Atomically remove a linked environment only if the workspace has more than one.
+ * Throws if removing this link would leave the workspace with zero linked environments.
+ * Using a transaction prevents a TOCTOU race where two concurrent unlinks both observe
+ * length > 1 and both proceed, leaving zero links.
+ */
+export function unlinkEnvironmentIfNotLast(workspaceId: string, environmentId: string): void {
+  db.transaction(() => {
+    const countRow = db.select({ count: sql<number>`count(*)` })
+      .from(workspaceEnvironmentLinks)
+      .where(eq(workspaceEnvironmentLinks.workspaceId, workspaceId))
+      .get();
+    if ((countRow?.count ?? 0) <= 1) {
+      throw new Error(`Cannot unlink the last environment from workspace ${workspaceId}`);
+    }
+    db.delete(workspaceEnvironmentLinks)
+      .where(and(
+        eq(workspaceEnvironmentLinks.workspaceId, workspaceId),
+        eq(workspaceEnvironmentLinks.environmentId, environmentId),
+      ))
+      .run();
+  });
+}
+
+/** Return all linked environment IDs for a workspace, ordered deterministically by ID. */
 export function getLinkedEnvironmentIds(workspaceId: string): string[] {
   const rows = db.select({ environmentId: workspaceEnvironmentLinks.environmentId })
     .from(workspaceEnvironmentLinks)
     .where(eq(workspaceEnvironmentLinks.workspaceId, workspaceId))
+    .orderBy(asc(workspaceEnvironmentLinks.environmentId))
     .all();
   return rows.map((r) => r.environmentId);
 }
@@ -50,6 +75,7 @@ export function getLinkedEnvironmentIdsByWorkspaces(workspaceIds: string[]): Map
   })
     .from(workspaceEnvironmentLinks)
     .where(inArray(workspaceEnvironmentLinks.workspaceId, workspaceIds))
+    .orderBy(asc(workspaceEnvironmentLinks.environmentId))
     .all();
   for (const row of rows) {
     const existing = result.get(row.workspaceId);

@@ -3,7 +3,16 @@ import { ConnectError, Code } from "@connectrpc/connect";
 
 vi.mock("@grackle-ai/database", async () => {
   const { createDatabaseMock } = await import("./test-utils/mock-database.js");
-  return createDatabaseMock();
+  // Define LastEnvironmentError within the factory so both the handler (which imports
+  // from the mocked module) and the test use the exact same class reference, making
+  // `instanceof` checks reliable without depending on importActual resolving the dist/.
+  class LastEnvironmentError extends Error {
+    constructor(workspaceId: string) {
+      super(`Cannot unlink the last environment from workspace ${workspaceId}`);
+      this.name = "LastEnvironmentError";
+    }
+  }
+  return { ...createDatabaseMock(), LastEnvironmentError };
 });
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {
@@ -17,7 +26,7 @@ vi.mock("@grackle-ai/core", async (importOriginal) => {
 
 import type { ConnectRouter } from "@connectrpc/connect";
 import { registerGrackleRoutes } from "./grpc-service.js";
-import { workspaceStore, envRegistry, workspaceEnvironmentLinkStore } from "@grackle-ai/database";
+import { workspaceStore, envRegistry, workspaceEnvironmentLinkStore, LastEnvironmentError } from "@grackle-ai/database";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getHandlers(): Record<string, (...args: any[]) => any> {
@@ -40,7 +49,6 @@ function makeWorkspaceRow(overrides: Record<string, unknown> = {}): Record<strin
     name: "Test Workspace",
     description: "",
     repoUrl: "",
-    environmentId: "env-primary",
     status: "active",
     useWorktrees: true,
     workingDirectory: "",
@@ -100,19 +108,6 @@ describe("linkEnvironment", () => {
     expect(err.code).toBe(Code.NotFound);
   });
 
-  it("throws InvalidArgument when linking primary environment", async () => {
-    vi.mocked(workspaceStore.getWorkspace).mockReturnValue(makeWorkspaceRow() as never);
-    vi.mocked(envRegistry.getEnvironment).mockReturnValue({ id: "env-primary" } as never);
-
-    const err = await handlers.linkEnvironment({
-      workspaceId: "ws-1",
-      environmentId: "env-primary",
-    }).catch((e: unknown) => e) as ConnectError;
-
-    expect(err).toBeInstanceOf(ConnectError);
-    expect(err.code).toBe(Code.InvalidArgument);
-  });
-
   it("throws InvalidArgument when link already exists", async () => {
     vi.mocked(workspaceStore.getWorkspace).mockReturnValue(makeWorkspaceRow() as never);
     vi.mocked(envRegistry.getEnvironment).mockReturnValue({ id: "env-2" } as never);
@@ -140,15 +135,33 @@ describe("unlinkEnvironment", () => {
   it("unlinks an environment and returns workspace without it", async () => {
     vi.mocked(workspaceStore.getWorkspace).mockReturnValue(makeWorkspaceRow() as never);
     vi.mocked(workspaceEnvironmentLinkStore.isLinked).mockReturnValue(true);
-    vi.mocked(workspaceEnvironmentLinkStore.getLinkedEnvironmentIds).mockReturnValue([]);
+    // unlinkEnvironmentIfNotLast succeeds (no error); workspaceRowToProto reads remaining envs
+    vi.mocked(workspaceEnvironmentLinkStore.unlinkEnvironmentIfNotLast).mockReturnValue(undefined);
+    vi.mocked(workspaceEnvironmentLinkStore.getLinkedEnvironmentIds).mockReturnValue(["env-1"]);
 
     const result = await handlers.unlinkEnvironment({
       workspaceId: "ws-1",
       environmentId: "env-2",
     });
 
-    expect(workspaceEnvironmentLinkStore.unlinkEnvironment).toHaveBeenCalledWith("ws-1", "env-2");
-    expect(result.linkedEnvironmentIds).toEqual([]);
+    expect(workspaceEnvironmentLinkStore.unlinkEnvironmentIfNotLast).toHaveBeenCalledWith("ws-1", "env-2");
+    expect(result.linkedEnvironmentIds).toEqual(["env-1"]);
+  });
+
+  it("throws FailedPrecondition when unlinking the last environment", async () => {
+    vi.mocked(workspaceStore.getWorkspace).mockReturnValue(makeWorkspaceRow() as never);
+    vi.mocked(workspaceEnvironmentLinkStore.isLinked).mockReturnValue(true);
+    vi.mocked(workspaceEnvironmentLinkStore.unlinkEnvironmentIfNotLast).mockImplementation(() => {
+      throw new LastEnvironmentError("ws-1");
+    });
+
+    const err = await handlers.unlinkEnvironment({
+      workspaceId: "ws-1",
+      environmentId: "env-1",
+    }).catch((e: unknown) => e) as ConnectError;
+
+    expect(err).toBeInstanceOf(ConnectError);
+    expect(err.code).toBe(Code.FailedPrecondition);
   });
 
   it("throws NotFound when workspace does not exist", async () => {

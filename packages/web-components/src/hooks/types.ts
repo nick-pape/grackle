@@ -73,8 +73,7 @@ export interface Workspace {
   name: string;
   description: string;
   repoUrl: string;
-  environmentId: string;
-  /** IDs of additional environments linked to this workspace's pool. */
+  /** IDs of all environments linked to this workspace's pool. */
   linkedEnvironmentIds: string[];
   status: string;
   workingDirectory: string;
@@ -324,7 +323,6 @@ export interface UseWorkspacesResult {
       name?: string;
       description?: string;
       repoUrl?: string;
-      environmentId?: string;
       workingDirectory?: string;
       useWorktrees?: boolean;
       defaultPersonaId?: string;

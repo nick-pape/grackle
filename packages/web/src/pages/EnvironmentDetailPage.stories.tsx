@@ -35,25 +35,25 @@ export const NewChatButtonVisible: Story = {
   },
 };
 
-/** Linked Workspaces section shows workspaces that include this env in their pool. */
+/** Workspaces section shows workspaces that include this env in their pool. */
 export const LinkedWorkspacesVisible: Story = {
   // env-docker-01 is linked to proj-alpha (which has primary env-local-01)
   render: () => <DetailRouteWrapper envId="env-docker-01" />,
   play: async ({ canvas }) => {
-    // The "Linked Workspaces" heading should be present
-    await expect(canvas.getByText("Linked Workspaces")).toBeInTheDocument();
+    // The "Workspaces" heading should be present
+    await expect(canvas.getByText("Workspaces")).toBeInTheDocument();
     // At least one linked workspace card (e.g., proj-alpha / Workspace Alpha) should appear
-    const linkedWorkspaceCards = canvas.getAllByTestId(/^linked-workspace-card-/);
+    const linkedWorkspaceCards = canvas.getAllByTestId("workspace-card");
     await expect(linkedWorkspaceCards.length).toBeGreaterThan(0);
   },
 };
 
-/** Linked Workspaces section shows empty state when no workspaces are linked. */
+/** Workspaces section shows empty state when no workspaces are linked. */
 export const LinkedWorkspacesEmpty: Story = {
-  // env-local-01 has primary workspaces but no linked ones in mock data
-  render: () => <DetailRouteWrapper envId="env-local-01" />,
+  // env-cs-01 has no workspaces linked to it in mock data
+  render: () => <DetailRouteWrapper envId="env-cs-01" />,
   play: async ({ canvas }) => {
-    await expect(canvas.getByText("Linked Workspaces")).toBeInTheDocument();
+    await expect(canvas.getByText("Workspaces")).toBeInTheDocument();
     await expect(canvas.getByTestId("linked-workspaces-empty")).toBeInTheDocument();
   },
 };
@@ -113,12 +113,12 @@ export const UnlinkRemovesCard: Story = {
     await expect(canvas.getByTestId("unlink-workspace-proj-alpha")).toBeInTheDocument();
     // Click Unlink
     await userEvent.click(canvas.getByTestId("unlink-workspace-proj-alpha"));
-    // Card should disappear
+    // proj-alpha card should disappear (its unlink button is gone)
     await waitFor(() => {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      expect(canvas.queryByTestId("linked-workspace-card-proj-alpha")).not.toBeInTheDocument();
+      expect(canvas.queryByTestId("unlink-workspace-proj-alpha")).not.toBeInTheDocument();
     });
-    // Empty state should appear
-    await expect(canvas.getByTestId("linked-workspaces-empty")).toBeInTheDocument();
+    // proj-beta card remains
+    await expect(canvas.getByTestId("unlink-workspace-proj-beta")).toBeInTheDocument();
   },
 };

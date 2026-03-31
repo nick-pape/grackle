@@ -52,7 +52,14 @@ export async function startTaskSession(
     return `Workspace not found: ${task.workspaceId}`;
   }
 
-  const environmentId = options?.environmentId || workspace?.environmentId || "";
+  const environmentId = options?.environmentId;
+  if (!environmentId) {
+    logger.warn(
+      { taskId: task.id },
+      "startTaskSession failed: environmentId not provided",
+    );
+    return "Environment ID is required to start a task session";
+  }
   const env = envRegistry.getEnvironment(environmentId);
   if (!env) {
     logger.warn(
@@ -71,7 +78,7 @@ export async function startTaskSession(
   let resolved;
   try {
     resolved = resolvePersona(
-      options?.personaId || "",
+      options.personaId || "",
       task.defaultPersonaId,
       workspace?.defaultPersonaId || "",
       settingsStore.getSetting("default_persona_id") || undefined,
@@ -90,8 +97,8 @@ export async function startTaskSession(
   // as the initial prompt instead of the task title "System".
   // For regular tasks, build the prompt from title + description.
   const taskPrompt = freshTask.id === ROOT_TASK_ID
-    ? (options?.notes || "")
-    : buildTaskPrompt(freshTask.title, freshTask.description, options?.notes);
+    ? (options.notes || "")
+    : buildTaskPrompt(freshTask.title, freshTask.description, options.notes);
 
   const orchestratorCtx = freshTask.canDecompose && freshTask.depth <= 1 && !!freshTask.workspaceId
     ? buildOrchestratorContext(buildOrchestratorContextInput(
@@ -100,7 +107,7 @@ export async function startTaskSession(
     ))
     : undefined;
   const systemContext = new SystemPromptBuilder({
-    task: { title: freshTask.title, description: freshTask.description, notes: freshTask.id === ROOT_TASK_ID ? "" : (options?.notes || "") },
+    task: { title: freshTask.title, description: freshTask.description, notes: freshTask.id === ROOT_TASK_ID ? "" : (options.notes || "") },
     taskId: freshTask.id, canDecompose: freshTask.canDecompose, personaPrompt: systemPrompt,
     taskDepth: freshTask.depth, ...orchestratorCtx,
     ...(orchestratorCtx && { triggerMode: "fresh" as const }),

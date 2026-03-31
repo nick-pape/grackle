@@ -59,9 +59,9 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(initialWorkspaceId);
   const workspaceId = initialWorkspaceId || selectedWorkspaceId;
 
-  /** Resolve environmentId from prop, or from the workspace's environmentId. */
+  /** Resolve environmentId from prop, or from the workspace's first linked environment. */
   const resolvedWorkspace = workspaces.find((w) => w.id === workspaceId);
-  const environmentId = environmentIdProp ?? resolvedWorkspace?.environmentId;
+  const environmentId = environmentIdProp ?? resolvedWorkspace?.linkedEnvironmentIds[0];
 
   /** Whether the workspace dropdown should be shown (new mode without pre-set workspace). */
   const showWorkspaceSelector = !isEdit && !workspaceIdProp;

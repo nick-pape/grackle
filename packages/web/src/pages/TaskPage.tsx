@@ -82,13 +82,13 @@ export function TaskPage(): JSX.Element {
     if (selectedEnvId !== "") {
       return;
     }
-    if (workspace?.environmentId) {
-      setSelectedEnvId(workspace.environmentId);
+    if (workspace?.linkedEnvironmentIds[0]) {
+      setSelectedEnvId(workspace.linkedEnvironmentIds[0]);
     } else if (environments.length > 0) {
       const connected = environments.find((e) => e.status === "connected");
       setSelectedEnvId(connected?.id ?? environments[0].id);
     }
-  }, [selectedEnvId, workspace?.environmentId, environments]);
+  }, [selectedEnvId, workspace?.linkedEnvironmentIds[0], environments]);
 
   // Resolve effective sessionId from the task's eagerly-patched latestSessionId
   // (set by the task_started handler) or from the user's attempt selection.
@@ -110,7 +110,7 @@ export function TaskPage(): JSX.Element {
     }
     deleteTask(task.id).catch(() => {});
     setShowDeleteConfirm(false);
-    const envId = routeEnvironmentId ?? workspace?.environmentId;
+    const envId = routeEnvironmentId ?? workspace?.linkedEnvironmentIds[0];
     navigate(task.workspaceId && envId ? workspaceUrl(task.workspaceId, envId) : "/", { replace: true });
   };
 

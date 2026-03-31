@@ -263,7 +263,7 @@ export function DashboardPage(): JSX.Element {
                     key={workspace.id}
                     type="button"
                     className={styles.workspaceRow}
-                    onClick={() => navigate(workspaceUrl(workspace.id, workspace.environmentId))}
+                    onClick={() => navigate(workspaceUrl(workspace.id, workspace.linkedEnvironmentIds[0]))}
                     data-testid="workspace-row"
                   >
                     <div className={styles.workspaceTop}>

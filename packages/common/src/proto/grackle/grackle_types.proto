@@ -326,7 +326,7 @@ message Workspace {
   bool use_worktrees = 9; // When false, agents work in the main checkout (no worktree dirs created)
   string working_directory = 10; // Working directory / repo root (e.g. /workspaces/my-repo)
   string default_persona_id = 11; // Default persona for tasks in this workspace
-  string environment_id = 12; // Owning environment — every workspace belongs to exactly one environment
+  reserved 12; // was environment_id (replaced by workspace_environment_links table)
   repeated string linked_environment_ids = 13; // Linked environments (read-only, set via Link/Unlink RPCs)
   int32 token_budget = 14; // Aggregate token cap across all tasks; 0 = unlimited
   int32 cost_budget_millicents = 15; // Aggregate cost cap in millicents; 0 = unlimited
@@ -348,7 +348,7 @@ message CreateWorkspaceRequest {
   optional bool use_worktrees = 5; // Default true when omitted
   optional string working_directory = 6; // Working directory / repo root (e.g. /workspaces/my-repo)
   optional string default_persona_id = 7; // Default persona for tasks in this workspace
-  string environment_id = 8; // Required: owning environment
+  string environment_id = 8; // Required: initial environment to link
   optional int32 token_budget = 9; // Aggregate token cap; 0 = unlimited
   optional int32 cost_budget_millicents = 10; // Aggregate cost cap in millicents; 0 = unlimited
 }
@@ -362,7 +362,7 @@ message UpdateWorkspaceRequest {
   optional bool use_worktrees = 6; // When false, disables worktree isolation for this workspace
   optional string working_directory = 7; // Working directory / repo root (e.g. /workspaces/my-repo)
   optional string default_persona_id = 8; // Default persona for tasks in this workspace
-  optional string environment_id = 9; // Reparent to a different environment
+  reserved 9; // was environment_id (reparenting removed; use Link/Unlink RPCs instead)
   optional int32 token_budget = 10; // Aggregate token cap; 0 = unlimited
   optional int32 cost_budget_millicents = 11; // Aggregate cost cap in millicents; 0 = unlimited
 }
