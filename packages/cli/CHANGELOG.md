@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 31 Mar 2026 14:52:41 GMT and should not be manually modified.
+This log was last generated on Tue, 31 Mar 2026 15:27:16 GMT and should not be manually modified.
+
+## 0.103.0
+Tue, 31 Mar 2026 15:27:16 GMT
+
+### Minor changes
+
+- Add server-side fuzzy task search: new SearchTasks gRPC RPC, task_search MCP tool, and grackle task search CLI command with relevance scoring
 
 ## 0.102.0
 Tue, 31 Mar 2026 14:52:41 GMT

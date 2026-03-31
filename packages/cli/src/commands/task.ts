@@ -66,6 +66,61 @@ export function registerTaskCommands(program: Command): void {
     });
 
   task
+    .command("search <query>")
+    .description("Fuzzy search for tasks by title or description, ranked by relevance")
+    .option("--workspace <workspace-id>", "Scope to a specific workspace (optional)")
+    .option("--limit <n>", "Maximum results to return (default 10)", parseInt)
+    .option("--status <status>", "Filter by status (not_started, working, paused, complete, failed)")
+    .action(async (query: string, opts: { workspace?: string; limit?: number; status?: string }) => {
+      const VALID_STATUSES = new Set([
+        "not_started",
+        "working",
+        "paused",
+        "complete",
+        "failed",
+      ]);
+
+      if (opts.status !== undefined && !VALID_STATUSES.has(String(opts.status).toLowerCase())) {
+        console.error(
+          `Invalid status: "${opts.status}". Valid values are: ${[...VALID_STATUSES].join(", ")}`,
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      if (opts.limit !== undefined && (isNaN(opts.limit) || opts.limit < 1)) {
+        console.error("Invalid limit: must be a positive integer.");
+        process.exitCode = 1;
+        return;
+      }
+
+      const { orchestration: client } = createGrackleClients();
+      const res = await client.searchTasks({
+        query,
+        workspaceId: opts.workspace || "",
+        limit: opts.limit ?? 0,
+        status: opts.status ? String(opts.status).toLowerCase() : "",
+      });
+      if (res.results.length === 0) {
+        console.log("No matching tasks.");
+        return;
+      }
+      const table = new Table({
+        head: ["Score", "ID", "Title", "Status"],
+      });
+      for (const r of res.results) {
+        const t = r.task!;
+        table.push([
+          chalk.yellow((r.relevanceScore * 100).toFixed(0) + "%"),
+          t.id,
+          t.title.slice(0, 40),
+          taskStatusToString(t.status),
+        ]);
+      }
+      console.log(table.toString());
+    });
+
+  task
     .command("create <title>")
     .description("Create a task")
     .option("--workspace <workspace-id>", "Workspace to create the task in (optional)")
