@@ -10,7 +10,7 @@
  */
 
 import { logger } from "./logger.js";
-import type { ReconciliationPhase } from "./reconciliation-manager.js";
+import type { ReconciliationPhase } from "@grackle-ai/plugin-sdk";
 
 // ---------------------------------------------------------------------------
 // Module-level state
@@ -107,6 +107,17 @@ export function getKnowledgeReadinessCheck(): KnowledgeReadinessCheck {
     return { ok: false, message: "Neo4j is unreachable" };
   }
   return { ok: true };
+}
+
+/**
+ * Mark the knowledge subsystem as unhealthy immediately.
+ *
+ * Called when plugin initialization fails (e.g. Neo4j unreachable at startup)
+ * so that `/readyz` returns an accurate status instead of the optimistic default.
+ */
+export function markKnowledgeInitFailed(): void {
+  healthy = false;
+  initialized = true;
 }
 
 /**

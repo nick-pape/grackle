@@ -1,14 +1,14 @@
 {
-  "name": "@grackle-ai/plugin-scheduling",
+  "name": "@grackle-ai/plugin-knowledge",
   "version": "0.99.0",
-  "description": "Scheduling plugin for Grackle — schedule CRUD handlers, cron reconciliation phase, and expression parsing",
+  "description": "Knowledge graph plugin for Grackle — Neo4j, embeddings, and knowledge MCP tools",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/nick-pape/grackle.git",
-    "directory": "packages/plugin-scheduling"
+    "directory": "packages/plugin-knowledge"
   },
-  "keywords": ["grackle", "plugin", "scheduling", "cron"],
+  "keywords": ["grackle", "plugin", "knowledge", "neo4j"],
   "homepage": "https://github.com/nick-pape/grackle#readme",
   "bugs": { "url": "https://github.com/nick-pape/grackle/issues" },
   "engines": { "node": ">=22.0.0 <24.0.0" },
@@ -26,19 +26,19 @@
   "dependencies": {
     "@bufbuild/protobuf": "^2.5.0",
     "@connectrpc/connect": "^2.0.0",
+    "@grackle-ai/auth": "workspace:*",
     "@grackle-ai/common": "workspace:*",
     "@grackle-ai/core": "workspace:*",
     "@grackle-ai/database": "workspace:*",
+    "@grackle-ai/knowledge": "workspace:*",
     "@grackle-ai/plugin-sdk": "workspace:*",
-    "cron-parser": "^4.9.0",
     "pino": "^10.3.1",
-    "uuid": "^11.0.0"
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
     "@rushstack/heft": "1.2.7",
     "@types/node": "^22.0.0",
-    "@types/uuid": "^10.0.0",
     "vitest": "^3.2.1"
   }
 }

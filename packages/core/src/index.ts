@@ -37,9 +37,6 @@ export { checkBudget } from "./budget-checker.js";
 export type { BudgetExceeded } from "./budget-checker.js";
 export { sendInputToSession, deliverSignalToTask } from "./signals/signal-delivery.js";
 
-// ─── Knowledge ───────────────────────────────────────────────
-export { isKnowledgeEnabled, initKnowledge, neo4jHealthCheck, getKnowledgeEmbedder } from "./knowledge-init.js";
-
 // ─── Reconciliation Manager ─────────────────────────────────
 export { ReconciliationManager } from "./reconciliation-manager.js";
 export type { ReconciliationPhase } from "./reconciliation-manager.js";
@@ -79,10 +76,6 @@ export { readLastTextEntry } from "./log-writer.js";
 
 // ─── Shared Utilities (used by both core and plugin-core) ────
 export { routeEscalation, deliverPendingEscalations } from "./notification-router.js";
-export {
-  createKnowledgeHealthPhase, isNeo4jHealthy, getKnowledgeReadinessCheck, resetKnowledgeHealthState,
-} from "./knowledge-health.js";
-export type { KnowledgeHealthPhaseDeps, KnowledgeReadinessCheck } from "./knowledge-health.js";
 export { buildMcpServersJson, personaMcpServersToJson } from "./grpc-mcp-config.js";
 export { toDialableHost, validatePipeInputs, resolveAncestorEnvironmentId, VALID_PIPE_MODES } from "./grpc-shared-utils.js";
 export { toPersonaResolveInput, buildOrchestratorContextInput } from "./persona-mapper.js";

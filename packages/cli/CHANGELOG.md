@@ -1,6 +1,20 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 31 Mar 2026 02:21:56 GMT and should not be manually modified.
+This log was last generated on Tue, 31 Mar 2026 04:41:40 GMT and should not be manually modified.
+
+## 0.99.0
+Tue, 31 Mar 2026 04:41:40 GMT
+
+### Minor changes
+
+- Extract knowledge graph functionality (Neo4j, embeddings, gRPC handlers, MCP tools) into new @grackle-ai/plugin-knowledge package
+
+## 0.98.0
+Tue, 31 Mar 2026 03:27:06 GMT
+
+### Minor changes
+
+- Add @grackle-ai/plugin-scheduling with schedule handlers, cron reconciliation phase, and expression parsing. Remove schedule code from plugin-core. Server loads scheduling plugin alongside core and orchestration plugins.
 
 ## 0.97.0
 Tue, 31 Mar 2026 02:21:56 GMT

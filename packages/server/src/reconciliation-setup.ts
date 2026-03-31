@@ -1,6 +1,5 @@
 import {
   listConnections, removeConnection,
-  isKnowledgeEnabled, createKnowledgeHealthPhase, neo4jHealthCheck,
   startTaskSession, emit, logger,
   hasCapacity, computeTaskStatus,
   resolveDispatchEnvironment, resolveAncestorEnvironmentId, findFirstConnectedEnvironment,
@@ -22,7 +21,7 @@ import {
  * Returns dispatch, lifecycle-cleanup, and environment-reconciliation phases
  * (in that order). The cron phase is contributed by the scheduling plugin.
  * The orphan-reparent phase is contributed by the orchestration plugin.
- * When the knowledge subsystem is enabled, a knowledge-health phase is appended.
+ * The knowledge-health phase is contributed by the knowledge plugin.
  *
  * @returns An array of phases to pass to {@link ReconciliationManager}.
  */
@@ -85,12 +84,6 @@ export function createCoreReconciliationPhases(): ReconciliationPhase[] {
   });
 
   const phases: ReconciliationPhase[] = [dispatchPhase, lifecycleCleanupPhase, environmentReconciliationPhase];
-
-  if (isKnowledgeEnabled()) {
-    phases.push(
-      createKnowledgeHealthPhase({ healthCheck: neo4jHealthCheck }),
-    );
-  }
 
   return phases;
 }

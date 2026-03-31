@@ -56,7 +56,6 @@ function createMockContext(overrides?: Partial<ShutdownContext>): ShutdownContex
     mcpServer: { close: vi.fn((cb: (err?: Error) => void) => { cb(); }) },
     reconciliationManager: { stop: vi.fn(async () => {}) },
     localPowerLineManager: { stop: vi.fn(async () => {}) },
-    knowledgeCleanup: vi.fn(async () => {}),
     ...overrides,
   };
 }
@@ -119,34 +118,6 @@ describe("createShutdown", () => {
     const shutdown = createShutdown(ctx);
     // Should not throw
     await shutdown();
-  });
-
-  it("calls knowledgeCleanup when present", async () => {
-    const ctx = createMockContext();
-    const shutdown = createShutdown(ctx);
-    await shutdown();
-    expect(ctx.knowledgeCleanup).toHaveBeenCalledOnce();
-  });
-
-  it("skips knowledgeCleanup when undefined", async () => {
-    const ctx = createMockContext({ knowledgeCleanup: undefined });
-    const shutdown = createShutdown(ctx);
-    // Should not throw
-    await shutdown();
-  });
-
-  it("logs error but continues when knowledgeCleanup throws", async () => {
-    const ctx = createMockContext({
-      knowledgeCleanup: vi.fn(async () => { throw new Error("neo4j down"); }),
-    });
-    const shutdown = createShutdown(ctx);
-    await shutdown();
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.objectContaining({ err: expect.any(Error) }),
-      "Error while shutting down knowledge graph",
-    );
-    // Should still close servers (not bail out)
-    expect(ctx.grpcServer.close).toHaveBeenCalled();
   });
 
   it("closes all tunnels", async () => {
