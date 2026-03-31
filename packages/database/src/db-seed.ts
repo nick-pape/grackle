@@ -185,8 +185,16 @@ IMPORTANT: The PR is the deliverable, but a PR with failing CI or unresolved rev
   // On first run, env vars can override the default (all plugins default to enabled=true).
   const orchestrationEnabled = process.env["GRACKLE_SKIP_ORCHESTRATION"] === "1" ? 0 : 1;
   const schedulingEnabled = process.env["GRACKLE_SKIP_SCHEDULING"] === "1" ? 0 : 1;
-  // GRACKLE_KNOWLEDGE_ENABLED defaults true; only false when explicitly set to "false"
-  const knowledgeEnabled = process.env["GRACKLE_KNOWLEDGE_ENABLED"] === "false" ? 0 : 1;
+  // GRACKLE_KNOWLEDGE_ENABLED defaults to enabled; respect "true"/"1" (enabled) and "false"/"0" (disabled).
+  const knowledgeEnv = process.env["GRACKLE_KNOWLEDGE_ENABLED"];
+  const knowledgeEnabled =
+    knowledgeEnv === undefined
+      ? 1
+      : knowledgeEnv === "1" || knowledgeEnv.toLowerCase() === "true"
+        ? 1
+        : knowledgeEnv === "0" || knowledgeEnv.toLowerCase() === "false"
+          ? 0
+          : 1;
 
   conn
     .prepare("INSERT OR IGNORE INTO plugins (name, enabled) VALUES (?, ?)")
