@@ -9,8 +9,8 @@ import {
 } from "./mcp-tool-presets.js";
 
 describe("ALL_MCP_TOOL_NAMES", () => {
-  it("contains exactly 64 tool names", () => {
-    expect(ALL_MCP_TOOL_NAMES.size).toBe(64);
+  it("contains exactly 65 tool names", () => {
+    expect(ALL_MCP_TOOL_NAMES.size).toBe(65);
   });
 
   it("includes tools from every group", () => {
@@ -48,7 +48,7 @@ describe("DEFAULT_SCOPED_MCP_TOOLS", () => {
       "persona_list", "persona_show",
       "schedule_list", "schedule_show",
       "session_attach", "session_send_input",
-      "task_complete", "task_create", "task_list", "task_show", "task_start",
+      "task_complete", "task_create", "task_list", "task_search", "task_show", "task_start",
       "workpad_read", "workpad_write",
     ]);
   });
@@ -107,8 +107,8 @@ describe("ORCHESTRATOR_MCP_TOOLS", () => {
 });
 
 describe("ADMIN_MCP_TOOLS", () => {
-  it("contains all 64 tool names", () => {
-    expect(ADMIN_MCP_TOOLS).toHaveLength(64);
+  it("contains all 65 tool names", () => {
+    expect(ADMIN_MCP_TOOLS).toHaveLength(65);
   });
 
   it("matches ALL_MCP_TOOL_NAMES exactly", () => {
