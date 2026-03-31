@@ -15,7 +15,6 @@ import type { GrackleEventType } from '@grackle-ai/core';
 import type { PluginContext } from '@grackle-ai/core';
 import type { ReconciliationPhase } from '@grackle-ai/core';
 import { resolveAncestorEnvironmentId } from '@grackle-ai/core';
-import type { ScheduleRow } from '@grackle-ai/database';
 import { ServiceCollector } from '@grackle-ai/core';
 import type { SessionRow } from '@grackle-ai/database';
 import type { TaskRow } from '@grackle-ai/database';
@@ -28,9 +27,6 @@ export { cleanupLifecycleStream }
 
 // @public
 export function createCoreCollector(): ServiceCollector;
-
-// @public
-export function createCronPhase(deps: CronPhaseDeps): ReconciliationPhase;
 
 // @public
 export function createDefaultCollector(): ServiceCollector;
@@ -61,27 +57,6 @@ export function createRootTaskBootSubscriber(ctx: PluginContext, deps: RootTaskB
 
 // @public
 export function createSigchldSubscriber(ctx: PluginContext): Disposable_2;
-
-// @public
-export interface CronPhaseDeps {
-    advanceSchedule: (id: string, lastRunAt: string, nextRunAt: string) => void;
-    createTask: (id: string, workspaceId: string | undefined, title: string, description: string, dependsOn: string[], workspaceSlug: string, parentTaskId?: string, canDecompose?: boolean, defaultPersonaId?: string) => void;
-    emit: (type: GrackleEventType, payload: Record<string, unknown>) => void;
-    enqueueForDispatch: (entry: {
-        id: string;
-        taskId: string;
-        environmentId?: string;
-        personaId?: string;
-    }) => void;
-    getDueSchedules: () => ScheduleRow[];
-    getPersona: (id: string) => {
-        id: string;
-        name: string;
-        runtime: string;
-    } | undefined;
-    setScheduleEnabled: (id: string, enabled: boolean, nextRunAt: string | null) => void;
-    setTaskScheduleId: (taskId: string, scheduleId: string) => void;
-}
 
 // @public
 export interface DispatchPhaseDeps {
