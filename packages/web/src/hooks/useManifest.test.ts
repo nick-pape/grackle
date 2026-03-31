@@ -24,7 +24,7 @@ describe("useManifest", () => {
 
     expect(result.current.loading).toBe(true);
     // Fail-open: all known plugins active during loading so domain hooks are not starved
-    expect(result.current.pluginNames).toEqual(["core", "orchestration"]);
+    expect(result.current.pluginNames).toEqual(["core", "orchestration", "scheduling"]);
   });
 
   it("returns pluginNames from a successful manifest fetch", async () => {
@@ -54,7 +54,7 @@ describe("useManifest", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.pluginNames).toEqual(["core", "orchestration"]);
+    expect(result.current.pluginNames).toEqual(["core", "orchestration", "scheduling"]);
     expect(result.current.error).toBeInstanceOf(Error);
   });
 
@@ -73,7 +73,7 @@ describe("useManifest", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.pluginNames).toEqual(["core", "orchestration"]);
+    expect(result.current.pluginNames).toEqual(["core", "orchestration", "scheduling"]);
     expect(result.current.error).toBeInstanceOf(Error);
   });
 
@@ -91,6 +91,6 @@ describe("useManifest", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.pluginNames).toEqual(["core", "orchestration"]);
+    expect(result.current.pluginNames).toEqual(["core", "orchestration", "scheduling"]);
   });
 });

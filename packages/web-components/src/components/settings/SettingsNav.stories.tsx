@@ -14,6 +14,7 @@ export const AllTabsRendered: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("tab", { name: /Credentials/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Personas/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("tab", { name: /Schedules/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Appearance/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Shortcuts/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /About/ })).toBeInTheDocument();
@@ -39,10 +40,10 @@ export const KeyboardNavigation: Story = {
     const personasTab = canvas.getByRole("tab", { name: /Personas/ });
     await expect(personasTab).toHaveFocus();
 
-    // ArrowDown again to Appearance
+    // ArrowDown again to Schedules
     await userEvent.keyboard("{ArrowDown}");
-    const appearanceTab = canvas.getByRole("tab", { name: /Appearance/ });
-    await expect(appearanceTab).toHaveFocus();
+    const schedulesTab = canvas.getByRole("tab", { name: /Schedules/ });
+    await expect(schedulesTab).toHaveFocus();
 
     // Home goes to first tab
     await userEvent.keyboard("{Home}");

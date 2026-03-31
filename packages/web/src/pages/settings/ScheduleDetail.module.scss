@@ -1,0 +1,88 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// ScheduleDetail — page-level styles for schedule create/edit
+// =============================================================================
+
+.container {
+  padding: var(--space-lg);
+  max-width: 800px;
+  color: var(--text-primary);
+}
+
+.form {
+  @include surface-card;
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+
+  h3 {
+    margin: 0 0 var(--space-md);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-medium);
+  }
+
+  label {
+    display: block;
+    margin-bottom: var(--space-sm);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+
+    input,
+    select {
+      @include input-field;
+      display: block;
+      width: 100%;
+      margin-top: var(--space-xs);
+      box-sizing: border-box;
+    }
+  }
+}
+
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.editableSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+}
+
+.helperText {
+  margin-top: var(--space-xs);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.metaSection {
+  margin-top: var(--space-md);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+
+  span {
+    @include surface-inset;
+    padding: 2px var(--space-sm);
+  }
+}
+
+.optional {
+  font-weight: normal;
+  color: var(--text-tertiary);
+}
+
+.readonlyValue {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}

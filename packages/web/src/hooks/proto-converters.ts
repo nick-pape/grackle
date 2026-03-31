@@ -26,6 +26,7 @@ import type {
   CredentialProviderConfig,
   Codespace,
   PersonaData,
+  ScheduleData,
   UsageStats,
 } from "@grackle-ai/web-components";
 import type { GraphNode, GraphLink } from "./useKnowledge.js";
@@ -200,6 +201,26 @@ export function protoToUsageStats(p: grackle.UsageStats): UsageStats {
     outputTokens: p.outputTokens,
     costMillicents: p.costMillicents,
     sessionCount: p.sessionCount,
+  };
+}
+
+/** Convert a proto Schedule to the UI ScheduleData type. */
+export function protoToSchedule(p: grackle.Schedule): ScheduleData {
+  return {
+    id: p.id,
+    title: p.title,
+    description: p.description,
+    scheduleExpression: p.scheduleExpression,
+    personaId: p.personaId,
+    environmentId: p.environmentId,
+    workspaceId: p.workspaceId,
+    parentTaskId: p.parentTaskId,
+    enabled: p.enabled,
+    lastRunAt: p.lastRunAt,
+    nextRunAt: p.nextRunAt,
+    runCount: p.runCount,
+    createdAt: p.createdAt,
+    updatedAt: p.updatedAt,
   };
 }
 

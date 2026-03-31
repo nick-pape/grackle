@@ -33,6 +33,8 @@ import { SettingsPage } from "./pages/SettingsPage.js";
 import { SettingsCredentialsTab } from "./pages/settings/SettingsCredentialsTab.js";
 import { SettingsPersonasTab } from "./pages/settings/SettingsPersonasTab.js";
 import { PersonaDetailPage } from "./pages/settings/PersonaDetailPage.js";
+import { SettingsSchedulesTab } from "./pages/settings/SettingsSchedulesTab.js";
+import { ScheduleDetailPage } from "./pages/settings/ScheduleDetailPage.js";
 import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js";
 import { SettingsAboutTab } from "./pages/settings/SettingsAboutTab.js";
 import { SettingsShortcutsTab } from "./pages/settings/SettingsShortcutsTab.js";
@@ -267,6 +269,9 @@ function AppRoutes(): JSX.Element {
             <Route path="personas" element={<SettingsPersonasTab />} />
             <Route path="personas/new" element={<PersonaDetailPage />} />
             <Route path="personas/:personaId" element={<PersonaDetailPage />} />
+            <Route path="schedules" element={<SettingsSchedulesTab />} />
+            <Route path="schedules/new" element={<ScheduleDetailPage />} />
+            <Route path="schedules/:scheduleId" element={<ScheduleDetailPage />} />
             <Route path="appearance" element={<SettingsAppearanceTab />} />
             <Route path="shortcuts" element={<SettingsShortcutsTab />} />
             <Route path="about" element={<SettingsAboutTab />} />

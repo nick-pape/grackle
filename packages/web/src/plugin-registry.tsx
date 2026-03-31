@@ -46,6 +46,10 @@ export const PLUGIN_REGISTRY: Readonly<Record<string, PluginClientEntry | undefi
     navItems: TABS.filter((t) => ORCHESTRATION_VIEWS.has(t.view)),
     domainHookKeys: ["tasks", "findings", "personas", "notifications"],
   },
+  scheduling: {
+    navItems: [],
+    domainHookKeys: ["schedules"],
+  },
   knowledge: {
     navItems: TABS.filter((t) => KNOWLEDGE_VIEWS.has(t.view)),
     domainHookKeys: ["knowledge"],
