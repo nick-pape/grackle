@@ -48,6 +48,7 @@
     "@grackle-ai/plugin-core": "workspace:*",
     "@grackle-ai/database": "workspace:*",
     "@grackle-ai/mcp": "workspace:*",
+    "@grackle-ai/plugin-scheduling": "workspace:*",
     "@grackle-ai/plugin-sdk": "workspace:*",
     "@grackle-ai/powerline": "workspace:*",
     "@grackle-ai/web-server": "workspace:*",

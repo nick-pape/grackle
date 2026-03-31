@@ -19,11 +19,10 @@ vi.mock("@grackle-ai/core", () => ({
 }));
 
 vi.mock("@grackle-ai/plugin-core", () => ({
-  createCronPhase: vi.fn((deps: unknown) => ({ name: "cron", execute: async () => {}, _deps: deps })),
   createOrphanPhase: vi.fn((deps: unknown) => ({ name: "orphan-reparent", execute: async () => {}, _deps: deps })),
   createDispatchPhase: vi.fn((deps: unknown) => ({ name: "dispatch", execute: async () => {}, _deps: deps })),
   lifecycleCleanupPhase: { name: "lifecycle-cleanup", execute: async () => {} },
-  createEnvironmentReconciliationPhase: vi.fn(() => ({ name: "environment", execute: async () => {} })),
+  createEnvironmentReconciliationPhase: vi.fn(() => ({ name: "environment-status", execute: async () => {} })),
 }));
 
 vi.mock("@grackle-ai/common", () => ({
@@ -32,20 +31,17 @@ vi.mock("@grackle-ai/common", () => ({
 }));
 
 vi.mock("@grackle-ai/database", () => ({
-  scheduleStore: {
-    getDueSchedules: vi.fn(() => []),
-    advanceSchedule: vi.fn(),
-    setScheduleEnabled: vi.fn(),
-  },
   taskStore: {
     createTask: vi.fn(),
     setTaskScheduleId: vi.fn(),
     getTask: vi.fn(),
     listTasks: vi.fn(() => []),
     areDependenciesMet: vi.fn(() => true),
+    reparentTask: vi.fn(),
   },
   workspaceStore: {
     listWorkspaces: vi.fn(() => []),
+    getWorkspace: vi.fn(),
   },
   personaStore: {
     getPersona: vi.fn(),
@@ -75,18 +71,19 @@ vi.mock("@grackle-ai/database", () => ({
 
 import { createReconciliationPhases } from "./reconciliation-setup.js";
 import { isKnowledgeEnabled, createKnowledgeHealthPhase, neo4jHealthCheck } from "@grackle-ai/core";
-import { createCronPhase, createOrphanPhase } from "@grackle-ai/plugin-core";
-import { workspaceStore, taskStore, dispatchQueueStore } from "@grackle-ai/database";
+import { createOrphanPhase } from "@grackle-ai/plugin-core";
+import { workspaceStore, taskStore } from "@grackle-ai/database";
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
 describe("createReconciliationPhases", () => {
-  it("returns dispatch, cron, lifecycle-cleanup, orphan-reparent, and environment phases", () => {
+  it("returns dispatch, lifecycle-cleanup, orphan-reparent, and environment phases (no cron — scheduling plugin owns that)", () => {
     const phases = createReconciliationPhases();
     const names = phases.map((p) => p.name);
-    expect(names).toEqual(["dispatch", "cron", "lifecycle-cleanup", "orphan-reparent", "environment"]);
+    expect(names).toEqual(["dispatch", "lifecycle-cleanup", "orphan-reparent", "environment-status"]);
+    expect(names).not.toContain("cron");
   });
 
   it("includes knowledge-health phase when knowledge is enabled", () => {
@@ -94,7 +91,7 @@ describe("createReconciliationPhases", () => {
     const phases = createReconciliationPhases();
     const names = phases.map((p) => p.name);
     expect(names).toContain("knowledge-health");
-    expect(phases).toHaveLength(6);
+    expect(phases).toHaveLength(5);
   });
 
   it("omits knowledge-health phase when knowledge is disabled", () => {
@@ -128,14 +125,5 @@ describe("createReconciliationPhases", () => {
     };
     const allTasks = orphanDeps.listAllTasks();
     expect(allTasks).toEqual([{ id: "t1" }, { id: "t2" }, { id: "t3" }]);
-  });
-
-  it("cron phase enqueueForDispatch is wired to dispatchQueueStore.enqueue", () => {
-    createReconciliationPhases();
-
-    const cronDeps = (createCronPhase as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
-      enqueueForDispatch: (...args: unknown[]) => void;
-    };
-    expect(cronDeps.enqueueForDispatch).toBe(dispatchQueueStore.enqueue);
   });
 });

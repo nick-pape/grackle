@@ -34,7 +34,6 @@ vi.mock("@grackle-ai/plugin-core", () => ({
   createOrphanReparentSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
   createLifecycleSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
   createRootTaskBootSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
-  createCronPhase: vi.fn(() => ({ name: "cron", execute: vi.fn() })),
   createOrphanPhase: vi.fn(() => ({ name: "orphan-reparent", execute: vi.fn() })),
   createDispatchPhase: vi.fn(() => ({ name: "dispatch", execute: vi.fn() })),
   lifecycleCleanupPhase: { name: "lifecycle-cleanup", execute: vi.fn() },
@@ -48,7 +47,6 @@ vi.mock("@grackle-ai/common", () => ({
 }));
 
 vi.mock("@grackle-ai/database", () => ({
-  scheduleStore: { getDueSchedules: vi.fn(), advanceSchedule: vi.fn(), setScheduleEnabled: vi.fn() },
   taskStore: { createTask: vi.fn(), setTaskScheduleId: vi.fn(), getTask: vi.fn(), listTasks: vi.fn(), reparentTask: vi.fn(), areDependenciesMet: vi.fn() },
   workspaceStore: { listWorkspaces: vi.fn(() => []) },
   personaStore: { getPersona: vi.fn() },
@@ -56,6 +54,7 @@ vi.mock("@grackle-ai/database", () => ({
   sessionStore: { listSessionsForTask: vi.fn(), getLatestSessionForTask: vi.fn(), countActiveForEnvironment: vi.fn() },
   settingsStore: { getSetting: vi.fn() },
   dispatchQueueStore: { listPending: vi.fn(() => []), dequeue: vi.fn() },
+  workspaceEnvironmentLinkStore: { getLinkedEnvironmentIds: vi.fn(() => []) },
 }));
 
 import { createCorePlugin } from "./core-plugin.js";
@@ -102,14 +101,14 @@ describe("createCorePlugin", () => {
     expect(registrations[0].handlers).toHaveProperty("spawnAgent");
   });
 
-  it("reconciliationPhases returns expected phases", () => {
+  it("reconciliationPhases returns expected phases (cron moved to scheduling plugin)", () => {
     const plugin = createCorePlugin();
     const ctx = createMockContext();
     const phases = plugin.reconciliationPhases!(ctx);
 
     const names = phases.map((p) => p.name);
     expect(names).toContain("dispatch");
-    expect(names).toContain("cron");
+    expect(names).not.toContain("cron");
     expect(names).toContain("lifecycle-cleanup");
     expect(names).toContain("orphan-reparent");
     expect(names).toContain("environment-status");

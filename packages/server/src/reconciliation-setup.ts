@@ -7,36 +7,25 @@ import {
 } from "@grackle-ai/core";
 import type { ReconciliationPhase } from "@grackle-ai/core";
 import {
-  createCronPhase, createOrphanPhase, createDispatchPhase, lifecycleCleanupPhase,
+  createOrphanPhase, createDispatchPhase, lifecycleCleanupPhase,
   createEnvironmentReconciliationPhase,
 } from "@grackle-ai/plugin-core";
 import { TASK_STATUS, ROOT_TASK_ID } from "@grackle-ai/common";
 import {
-  scheduleStore, taskStore, workspaceStore, personaStore, envRegistry,
+  taskStore, workspaceStore, envRegistry,
   sessionStore, settingsStore, dispatchQueueStore, workspaceEnvironmentLinkStore,
 } from "@grackle-ai/database";
 
 /**
  * Assemble the ordered list of reconciliation phases for the server.
  *
- * Returns dispatch, cron, lifecycle-cleanup, orphan-reparent, and environment-reconciliation
- * phases (in that order). When the knowledge subsystem is enabled, a knowledge-health
- * phase is appended.
+ * Returns dispatch, lifecycle-cleanup, orphan-reparent, and environment-reconciliation
+ * phases (in that order). The cron phase is contributed by the scheduling plugin.
+ * When the knowledge subsystem is enabled, a knowledge-health phase is appended.
  *
  * @returns An array of phases to pass to {@link ReconciliationManager}.
  */
 export function createReconciliationPhases(): ReconciliationPhase[] {
-  const cronPhase = createCronPhase({
-    getDueSchedules: scheduleStore.getDueSchedules,
-    advanceSchedule: scheduleStore.advanceSchedule,
-    createTask: taskStore.createTask,
-    setTaskScheduleId: taskStore.setTaskScheduleId,
-    enqueueForDispatch: dispatchQueueStore.enqueue,
-    emit,
-    getPersona: personaStore.getPersona,
-    setScheduleEnabled: scheduleStore.setScheduleEnabled,
-  });
-
   const orphanPhase = createOrphanPhase({
     listAllTasks: () => {
       const workspaces = workspaceStore.listWorkspaces();
@@ -108,7 +97,7 @@ export function createReconciliationPhases(): ReconciliationPhase[] {
     },
   });
 
-  const phases: ReconciliationPhase[] = [dispatchPhase, cronPhase, lifecycleCleanupPhase, orphanPhase, environmentReconciliationPhase];
+  const phases: ReconciliationPhase[] = [dispatchPhase, lifecycleCleanupPhase, orphanPhase, environmentReconciliationPhase];
 
   if (isKnowledgeEnabled()) {
     phases.push(
