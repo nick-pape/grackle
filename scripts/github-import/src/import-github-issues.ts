@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import { createClient } from "@connectrpc/connect";
+import { createClient, type Client } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
 import { grackle, DEFAULT_SERVER_PORT } from "@grackle-ai/common";
 import { fetchGitHubIssues } from "./github-client.js";
@@ -17,8 +17,8 @@ interface ImportResult {
 
 /** Per-service ConnectRPC clients for the Grackle server. */
 interface GrackleClients {
-  core: ReturnType<typeof createClient<typeof grackle.GrackleCore>>;
-  orchestration: ReturnType<typeof createClient<typeof grackle.GrackleOrchestration>>;
+  core: Client<typeof grackle.GrackleCore>;
+  orchestration: Client<typeof grackle.GrackleOrchestration>;
 }
 
 /** Create authenticated ConnectRPC clients for the Grackle server. */

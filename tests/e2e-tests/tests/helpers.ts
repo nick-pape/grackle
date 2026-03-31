@@ -21,7 +21,8 @@ async function callRpc(
         ListWorkspaces: "grackle.GrackleCore",
         ListTasks: "grackle.GrackleOrchestration",
       };
-      const svc = serviceMap[m] ?? "grackle.GrackleCore";
+      const svc = serviceMap[m];
+      if (!svc) { throw new Error(`callRpc: no service mapping for method "${m}"`); }
       const resp = await fetch(`/${svc}/${m}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
