@@ -254,10 +254,11 @@ describe("initDatabase", () => {
     const mem = new Database(":memory:");
     mem.pragma("foreign_keys = ON");
 
-    // Build schema up to v7.
+    // Step 1: Create the current (post-migration) schema so all tables exist.
     initDatabase(mem);
 
-    // Simulate a pre-v8 database: add the legacy column back and rewind.
+    // Step 2: Mutate to a pre-v8 shape — add the legacy column back and rewind
+    // user_version so initDatabase will re-run migration v8 on the next call.
     mem.exec("ALTER TABLE schedules ADD COLUMN environment_id TEXT NOT NULL DEFAULT ''");
     mem.pragma("user_version = 7");
 
