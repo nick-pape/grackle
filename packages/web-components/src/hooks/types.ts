@@ -330,6 +330,14 @@ export interface UseWorkspacesResult {
       defaultPersonaId?: string;
     },
   ) => Promise<void>;
+  /** Link an additional environment to a workspace's pool. */
+  linkEnvironment: (workspaceId: string, environmentId: string) => Promise<void>;
+  /** Remove a linked environment from a workspace's pool. */
+  unlinkEnvironment: (workspaceId: string, environmentId: string) => Promise<void>;
+  /** The last link/unlink operation error message, or empty string if none. */
+  linkOperationError: string;
+  /** Clear the current link/unlink operation error. */
+  clearLinkOperationError: () => void;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
   /** Reset transient state on disconnect. */

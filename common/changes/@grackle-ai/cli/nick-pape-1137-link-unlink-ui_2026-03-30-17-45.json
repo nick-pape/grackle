@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add interactive link/unlink environment controls to workspace and environment detail pages",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

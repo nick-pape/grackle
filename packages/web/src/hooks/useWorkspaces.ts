@@ -22,10 +22,16 @@ export type { UseWorkspacesResult } from "@grackle-ai/web-components";
  *
  * @returns Workspace state, actions, an event handler, and a disconnect callback.
  */
+/** Extracts a user-facing message from a caught error. */
+function extractErrorMessage(err: unknown): string {
+  return err instanceof ConnectError ? err.message : "Operation failed";
+}
+
 export function useWorkspaces(): UseWorkspacesResult {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const { loading: workspacesLoading, track: trackWorkspaces } = useLoadingState();
   const [workspaceCreating, setWorkspaceCreating] = useState(false);
+  const [linkOperationError, setLinkOperationError] = useState("");
 
   const loadWorkspaces = useCallback(async () => {
     try {
@@ -122,6 +128,34 @@ export function useWorkspaces(): UseWorkspacesResult {
     [],
   );
 
+  const clearLinkOperationError = useCallback(() => { setLinkOperationError(""); }, []);
+
+  const linkEnvironment = useCallback(
+    async (workspaceId: string, environmentId: string) => {
+      try {
+        setLinkOperationError("");
+        await grackleClient.linkEnvironment({ workspaceId, environmentId });
+        await loadWorkspaces().catch(() => {});
+      } catch (err) {
+        setLinkOperationError(extractErrorMessage(err));
+      }
+    },
+    [loadWorkspaces],
+  );
+
+  const unlinkEnvironment = useCallback(
+    async (workspaceId: string, environmentId: string) => {
+      try {
+        setLinkOperationError("");
+        await grackleClient.unlinkEnvironment({ workspaceId, environmentId });
+        await loadWorkspaces().catch(() => {});
+      } catch (err) {
+        setLinkOperationError(extractErrorMessage(err));
+      }
+    },
+    [loadWorkspaces],
+  );
+
   const domainHook: DomainHook = {
     onConnect: () => loadWorkspaces(),
     onDisconnect,
@@ -136,6 +170,10 @@ export function useWorkspaces(): UseWorkspacesResult {
     createWorkspace,
     archiveWorkspace,
     updateWorkspace,
+    linkEnvironment,
+    unlinkEnvironment,
+    linkOperationError,
+    clearLinkOperationError,
     handleEvent,
     onDisconnect,
     domainHook,

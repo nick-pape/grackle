@@ -9,6 +9,8 @@ import { useWorkspaces } from "./useWorkspaces.js";
 
 const mockClient = vi.hoisted(() => ({
   listWorkspaces: vi.fn(),
+  linkEnvironment: vi.fn(),
+  unlinkEnvironment: vi.fn(),
 }));
 
 vi.mock("./useGrackleClient.js", () => ({
@@ -70,6 +72,70 @@ describe("useWorkspaces loading state", () => {
 
     await waitFor(() => {
       expect(result.current.workspacesLoading).toBe(false);
+    });
+  });
+});
+
+describe("linkEnvironment", () => {
+  it("calls grackleClient.linkEnvironment with correct args", async () => {
+    mockClient.linkEnvironment.mockResolvedValue({});
+
+    const { result } = setup();
+
+    await act(async () => {
+      await result.current.linkEnvironment("ws-1", "env-2");
+    });
+
+    expect(mockClient.linkEnvironment).toHaveBeenCalledWith({
+      workspaceId: "ws-1",
+      environmentId: "env-2",
+    });
+  });
+
+  it("does not propagate RPC errors to caller", async () => {
+    mockClient.linkEnvironment.mockRejectedValue(new Error("already linked"));
+
+    const { result } = setup();
+
+    await act(async () => {
+      await result.current.linkEnvironment("ws-1", "env-2");
+    });
+
+    expect(mockClient.linkEnvironment).toHaveBeenCalledWith({
+      workspaceId: "ws-1",
+      environmentId: "env-2",
+    });
+  });
+});
+
+describe("unlinkEnvironment", () => {
+  it("calls grackleClient.unlinkEnvironment with correct args", async () => {
+    mockClient.unlinkEnvironment.mockResolvedValue({});
+
+    const { result } = setup();
+
+    await act(async () => {
+      await result.current.unlinkEnvironment("ws-1", "env-2");
+    });
+
+    expect(mockClient.unlinkEnvironment).toHaveBeenCalledWith({
+      workspaceId: "ws-1",
+      environmentId: "env-2",
+    });
+  });
+
+  it("does not propagate RPC errors to caller", async () => {
+    mockClient.unlinkEnvironment.mockRejectedValue(new Error("not found"));
+
+    const { result } = setup();
+
+    await act(async () => {
+      await result.current.unlinkEnvironment("ws-1", "env-2");
+    });
+
+    expect(mockClient.unlinkEnvironment).toHaveBeenCalledWith({
+      workspaceId: "ws-1",
+      environmentId: "env-2",
     });
   });
 });

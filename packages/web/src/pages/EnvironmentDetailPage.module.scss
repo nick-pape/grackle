@@ -152,6 +152,12 @@
   padding: var(--space-xl);
 }
 
+.errorHint {
+  color: var(--accent-red);
+  font-size: var(--font-size-sm);
+  padding: var(--space-xs) 0;
+}
+
 // --- Buttons ---
 
 .btnPrimary {

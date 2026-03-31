@@ -21,7 +21,7 @@ export function EnvironmentDetailPage(): JSX.Element {
   const navigate = useAppNavigate();
   const {
     environments: { environments, environmentsLoading, provisionStatus, provisionEnvironment, stopEnvironment, removeEnvironment },
-    workspaces: { workspaces, archiveWorkspace },
+    workspaces: { workspaces, archiveWorkspace, linkEnvironment, unlinkEnvironment, linkOperationError, clearLinkOperationError },
     sessions: { sessions },
   } = useGrackle();
 
@@ -194,21 +194,68 @@ export function EnvironmentDetailPage(): JSX.Element {
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
           <h3>Linked Workspaces</h3>
+          {(() => {
+            const linkable = workspaces.filter(
+              (w) => w.environmentId !== env.id && !w.linkedEnvironmentIds.includes(env.id) && w.status === "active",
+            );
+            if (linkable.length === 0) {
+              return null;
+            }
+            return (
+              <select
+                className={styles.btnPrimary}
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) {
+                    linkEnvironment(e.target.value, env.id).catch(() => {});
+                  }
+                }}
+                aria-label="Link a workspace"
+                data-testid="link-workspace-select"
+              >
+                <option value="">+ Link Workspace</option>
+                {linkable.map((w) => (
+                  <option key={w.id} value={w.id}>{w.name}</option>
+                ))}
+              </select>
+            );
+          })()}
         </div>
 
         {linkedWorkspaces.length === 0 && (
           <p className={styles.empty} data-testid="linked-workspaces-empty">
-            No workspaces are linked to this environment. Link one from a workspace&apos;s detail page.
+            No workspaces are linked to this environment.
+          </p>
+        )}
+
+        {linkOperationError && (
+          <p className={styles.errorHint} data-testid="link-operation-error" role="alert">
+            {linkOperationError}
+            <button
+              className={styles.btnSmall}
+              onClick={clearLinkOperationError}
+              aria-label="Dismiss error"
+              data-testid="dismiss-link-error"
+            >
+              Dismiss
+            </button>
           </p>
         )}
 
         <div className={styles.cardList} data-testid="linked-workspaces-list">
           {linkedWorkspaces.map((ws) => (
-            <div key={ws.id} className={styles.card} data-testid="linked-workspace-card">
+            <div key={ws.id} className={styles.card} data-testid={`linked-workspace-card-${ws.id}`}>
               <div className={styles.cardHeader}>
                 <strong className={styles.cardName}>{ws.name}</strong>
                 <div className={styles.cardActions}>
                   <button className={styles.btnSmall} onClick={() => navigate(workspaceUrl(ws.id, ws.environmentId))}>Open</button>
+                  <button
+                    className={styles.btnSmall}
+                    onClick={() => { unlinkEnvironment(ws.id, env.id).catch(() => {}); }}
+                    data-testid={`unlink-workspace-${ws.id}`}
+                  >
+                    Unlink
+                  </button>
                 </div>
               </div>
               {ws.description && (
