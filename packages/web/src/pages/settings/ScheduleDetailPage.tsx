@@ -12,7 +12,7 @@ export function ScheduleDetailPage(): JSX.Element {
   const navigate = useAppNavigate();
   const { showToast } = useToast();
   const {
-    schedules: { schedules, createSchedule, updateSchedule, deleteSchedule },
+    schedules: { schedules, schedulesLoading, createSchedule, updateSchedule, deleteSchedule },
     personas: { personas },
     environments: { environments },
     workspaces: { workspaces },
@@ -21,8 +21,8 @@ export function ScheduleDetailPage(): JSX.Element {
   const isNew = scheduleId === undefined;
   const existing: ScheduleData | undefined = isNew ? undefined : schedules.find((s) => s.id === scheduleId);
 
-  // Redirect to list if schedule not found (and schedules have loaded)
-  if (!isNew && schedules.length > 0 && !existing) {
+  // Redirect to list if schedule not found (and schedules have finished loading)
+  if (!isNew && !schedulesLoading && !existing) {
     return <Navigate to={SCHEDULES_URL} replace />;
   }
 
@@ -357,6 +357,12 @@ function ScheduleForm({
                 ariaLabel="Schedule environment"
                 data-testid="schedule-detail-environment"
               />
+            </label>
+            <label>
+              Workspace <span className={styles.optional}>(optional — set at creation)</span>
+              <span className={styles.readonlyValue} data-testid="schedule-detail-workspace">
+                {workspaces.find((w) => w.id === existing.workspaceId)?.name ?? "System-level (no workspace)"}
+              </span>
             </label>
           </div>
 
