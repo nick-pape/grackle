@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.106.0",
+      "tag": "@grackle-ai/cli_v0.106.0",
+      "date": "Tue, 31 Mar 2026 19:07:08 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Remove legacy workspace.environmentId FK; all environments are now equal links via the workspace_environment_links join table"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.105.0",
       "tag": "@grackle-ai/cli_v0.105.0",
       "date": "Tue, 31 Mar 2026 18:56:53 GMT",

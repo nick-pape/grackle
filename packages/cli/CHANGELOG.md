@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 31 Mar 2026 18:56:53 GMT and should not be manually modified.
+This log was last generated on Tue, 31 Mar 2026 19:07:08 GMT and should not be manually modified.
+
+## 0.106.0
+Tue, 31 Mar 2026 19:07:08 GMT
+
+### Minor changes
+
+- Remove legacy workspace.environmentId FK; all environments are now equal links via the workspace_environment_links join table
 
 ## 0.105.0
 Tue, 31 Mar 2026 18:56:53 GMT
