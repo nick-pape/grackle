@@ -18,7 +18,7 @@ import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { LocalPowerLineManager } from "./local-powerline-manager.js";
 import { registerCrashHandlers } from "./crash-handler.js";
 import { resolveServerConfig } from "./config.js";
-import { createMcpServer } from "@grackle-ai/mcp";
+import { createMcpServer, type ToolDefinition } from "@grackle-ai/mcp";
 import {
   loadOrCreateApiKey, verifyApiKey, setAuthLogger,
   generatePairingCode,
@@ -296,7 +296,12 @@ async function main(): Promise<void> {
   const dialableHost = isWildcardAddress(bindHost) ? "127.0.0.1" : bindHost;
   const dialableUrlHost = dialableHost.includes(":") ? `[${dialableHost}]` : dialableHost;
   const authServerUrl = `http://${dialableUrlHost}:${webPort}`;
-  const mcpServer = createMcpServer({ bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl: authServerUrl });
+  // Map plugin-contributed MCP tools (PluginToolDefinition) to ToolDefinition.
+  // The handler signatures are structurally compatible at runtime; the cast is safe.
+  const pluginToolGroups: ToolDefinition[][] = loaded.mcpTools.length > 0
+    ? [loaded.mcpTools as unknown as ToolDefinition[]]
+    : [];
+  const mcpServer = createMcpServer({ bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl: authServerUrl, toolGroups: pluginToolGroups });
 
   mcpServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {

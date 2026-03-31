@@ -48,7 +48,7 @@ export function createDefaultCollector(): ServiceCollector {
 /**
  * Create a `ServiceCollector` pre-loaded with only the core (non-orchestration)
  * Grackle handler groups: environments, sessions, workspaces, schedules, tokens,
- * codespaces, knowledge, and settings.
+ * codespaces, and settings.
  *
  * Orchestration handlers (tasks, personas, findings, escalations) and knowledge
  * handlers are intentionally excluded — they are contributed by their respective

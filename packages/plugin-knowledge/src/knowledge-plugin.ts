@@ -9,6 +9,7 @@
 
 import type { GracklePlugin, PluginContext } from "@grackle-ai/plugin-sdk";
 import { grackle } from "@grackle-ai/common";
+import { logger } from "./logger.js";
 import {
   initKnowledge,
   createEntitySyncSubscriber,
@@ -46,7 +47,13 @@ export function createKnowledgePlugin(): GracklePlugin {
     dependencies: ["core"],
 
     initialize: async (ctx: PluginContext): Promise<void> => {
-      cleanup = await initKnowledge(ctx);
+      try {
+        cleanup = await initKnowledge(ctx);
+      } catch (err: unknown) {
+        // Knowledge init failure (e.g. Neo4j unreachable) is non-fatal.
+        // Handlers will return errors individually; health check will show degraded.
+        logger.error({ err }, "Knowledge plugin initialization failed — running degraded");
+      }
     },
 
     shutdown: async (): Promise<void> => {
