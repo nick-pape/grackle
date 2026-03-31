@@ -126,24 +126,25 @@ describe("unlinkEnvironment", () => {
   it("unlinks an environment and returns workspace without it", async () => {
     vi.mocked(workspaceStore.getWorkspace).mockReturnValue(makeWorkspaceRow() as never);
     vi.mocked(workspaceEnvironmentLinkStore.isLinked).mockReturnValue(true);
-    // First call: guard check (2 envs → allowed); second call: workspaceRowToProto (1 env remaining)
-    vi.mocked(workspaceEnvironmentLinkStore.getLinkedEnvironmentIds)
-      .mockReturnValueOnce(["env-1", "env-2"])
-      .mockReturnValueOnce(["env-1"]);
+    // unlinkEnvironmentIfNotLast succeeds (no error); workspaceRowToProto reads remaining envs
+    vi.mocked(workspaceEnvironmentLinkStore.unlinkEnvironmentIfNotLast).mockReturnValue(undefined);
+    vi.mocked(workspaceEnvironmentLinkStore.getLinkedEnvironmentIds).mockReturnValue(["env-1"]);
 
     const result = await handlers.unlinkEnvironment({
       workspaceId: "ws-1",
       environmentId: "env-2",
     });
 
-    expect(workspaceEnvironmentLinkStore.unlinkEnvironment).toHaveBeenCalledWith("ws-1", "env-2");
+    expect(workspaceEnvironmentLinkStore.unlinkEnvironmentIfNotLast).toHaveBeenCalledWith("ws-1", "env-2");
     expect(result.linkedEnvironmentIds).toEqual(["env-1"]);
   });
 
   it("throws FailedPrecondition when unlinking the last environment", async () => {
     vi.mocked(workspaceStore.getWorkspace).mockReturnValue(makeWorkspaceRow() as never);
     vi.mocked(workspaceEnvironmentLinkStore.isLinked).mockReturnValue(true);
-    vi.mocked(workspaceEnvironmentLinkStore.getLinkedEnvironmentIds).mockReturnValue(["env-1"]);
+    vi.mocked(workspaceEnvironmentLinkStore.unlinkEnvironmentIfNotLast).mockImplementation(() => {
+      throw new Error("Cannot unlink the last environment from workspace ws-1");
+    });
 
     const err = await handlers.unlinkEnvironment({
       workspaceId: "ws-1",

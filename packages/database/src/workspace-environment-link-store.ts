@@ -17,6 +17,30 @@ export function unlinkEnvironment(workspaceId: string, environmentId: string): v
     .run();
 }
 
+/**
+ * Atomically remove a linked environment only if the workspace has more than one.
+ * Throws if removing this link would leave the workspace with zero linked environments.
+ * Using a transaction prevents a TOCTOU race where two concurrent unlinks both observe
+ * length > 1 and both proceed, leaving zero links.
+ */
+export function unlinkEnvironmentIfNotLast(workspaceId: string, environmentId: string): void {
+  db.transaction(() => {
+    const countRow = db.select({ count: sql<number>`count(*)` })
+      .from(workspaceEnvironmentLinks)
+      .where(eq(workspaceEnvironmentLinks.workspaceId, workspaceId))
+      .get();
+    if ((countRow?.count ?? 0) <= 1) {
+      throw new Error(`Cannot unlink the last environment from workspace ${workspaceId}`);
+    }
+    db.delete(workspaceEnvironmentLinks)
+      .where(and(
+        eq(workspaceEnvironmentLinks.workspaceId, workspaceId),
+        eq(workspaceEnvironmentLinks.environmentId, environmentId),
+      ))
+      .run();
+  });
+}
+
 /** Return all linked environment IDs for a workspace, ordered deterministically by ID. */
 export function getLinkedEnvironmentIds(workspaceId: string): string[] {
   const rows = db.select({ environmentId: workspaceEnvironmentLinks.environmentId })

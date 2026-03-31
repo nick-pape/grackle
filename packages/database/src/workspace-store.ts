@@ -4,7 +4,12 @@ import { eq, and, desc, sql } from "drizzle-orm";
 
 export type { WorkspaceRow };
 
-/** Insert a new workspace record. */
+/**
+ * Insert a new workspace record without linking it to any environment.
+ * @remarks Prefer {@link createWorkspaceAndLink} for production use — a workspace
+ * with zero linked environments breaks routing and dispatch resolution.
+ * This bare insert is intended for test helpers that manage links separately.
+ */
 export function createWorkspace(
   id: string,
   name: string,

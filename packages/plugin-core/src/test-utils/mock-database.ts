@@ -126,6 +126,7 @@ export function createDatabaseMock() {
     workspaceEnvironmentLinkStore: {
       linkEnvironment: vi.fn(),
       unlinkEnvironment: vi.fn(),
+      unlinkEnvironmentIfNotLast: vi.fn(),
       getLinkedEnvironmentIds: vi.fn(() => []),
       getLinkedEnvironmentIdsByWorkspaces: vi.fn(() => new Map()),
       getWorkspaceIdsLinkedToEnvironment: vi.fn(() => []),

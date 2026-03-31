@@ -35,25 +35,25 @@ export const NewChatButtonVisible: Story = {
   },
 };
 
-/** Linked Workspaces section shows workspaces that include this env in their pool. */
+/** Workspaces section shows workspaces that include this env in their pool. */
 export const LinkedWorkspacesVisible: Story = {
   // env-docker-01 is linked to proj-alpha (which has primary env-local-01)
   render: () => <DetailRouteWrapper envId="env-docker-01" />,
   play: async ({ canvas }) => {
-    // The "Linked Workspaces" heading should be present
-    await expect(canvas.getByText("Linked Workspaces")).toBeInTheDocument();
+    // The "Workspaces" heading should be present
+    await expect(canvas.getByText("Workspaces")).toBeInTheDocument();
     // At least one linked workspace card (e.g., proj-alpha / Workspace Alpha) should appear
     const linkedWorkspaceCards = canvas.getAllByTestId(/^linked-workspace-card-/);
     await expect(linkedWorkspaceCards.length).toBeGreaterThan(0);
   },
 };
 
-/** Linked Workspaces section shows empty state when no workspaces are linked. */
+/** Workspaces section shows empty state when no workspaces are linked. */
 export const LinkedWorkspacesEmpty: Story = {
   // env-cs-01 has no workspaces linked to it in mock data
   render: () => <DetailRouteWrapper envId="env-cs-01" />,
   play: async ({ canvas }) => {
-    await expect(canvas.getByText("Linked Workspaces")).toBeInTheDocument();
+    await expect(canvas.getByText("Workspaces")).toBeInTheDocument();
     await expect(canvas.getByTestId("linked-workspaces-empty")).toBeInTheDocument();
   },
 };

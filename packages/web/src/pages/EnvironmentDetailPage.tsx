@@ -158,7 +158,7 @@ export function EnvironmentDetailPage(): JSX.Element {
       {/* Workspace cards */}
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
-          <h3>Linked Workspaces</h3>
+          <h3>Workspaces</h3>
           <button
             className={styles.btnPrimary}
             onClick={() => navigate(`${NEW_WORKSPACE_URL}?environment=${encodeURIComponent(env.id)}`)}

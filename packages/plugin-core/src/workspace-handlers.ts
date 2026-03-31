@@ -158,14 +158,15 @@ export async function unlinkEnvironment(req: grackle.UnlinkEnvironmentRequest): 
       Code.NotFound,
     );
   }
-  const linkedIds = workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(req.workspaceId);
-  if (linkedIds.length <= 1) {
-    throw new ConnectError(
-      `Cannot unlink the last environment from workspace ${req.workspaceId}`,
-      Code.FailedPrecondition,
-    );
+  try {
+    workspaceEnvironmentLinkStore.unlinkEnvironmentIfNotLast(req.workspaceId, req.environmentId);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "";
+    if (message.includes("Cannot unlink the last environment")) {
+      throw new ConnectError(message, Code.FailedPrecondition);
+    }
+    throw err;
   }
-  workspaceEnvironmentLinkStore.unlinkEnvironment(req.workspaceId, req.environmentId);
   emit("workspace.updated", { workspaceId: req.workspaceId });
   logger.info({ workspaceId: req.workspaceId, environmentId: req.environmentId }, "Environment unlinked from workspace");
   return workspaceRowToProto(workspace);
