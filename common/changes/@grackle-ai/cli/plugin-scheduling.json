@@ -1,5 +1,0 @@
-{
-  "packageName": "@grackle-ai/cli",
-  "comment": "Extract plugin-scheduling package with schedule handlers, cron phase, and expression parsing",
-  "type": "patch"
-}
