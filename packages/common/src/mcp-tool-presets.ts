@@ -29,7 +29,7 @@ export const ALL_MCP_TOOL_NAMES: ReadonlySet<string> = new Set([
   // session
   "session_spawn", "session_resume", "session_status", "session_kill", "session_attach", "session_send_input",
   // task
-  "task_list", "task_create", "task_show", "task_update", "task_start", "task_delete", "task_complete", "task_resume",
+  "task_list", "task_search", "task_create", "task_show", "task_update", "task_start", "task_delete", "task_complete", "task_resume",
   // token
   "token_list", "token_set", "token_delete",
   // usage
@@ -55,7 +55,7 @@ export const ALL_MCP_TOOL_NAMES: ReadonlySet<string> = new Set([
  */
 export const DEFAULT_SCOPED_MCP_TOOLS: readonly string[] = [
   "finding_post", "finding_list",
-  "task_create", "task_list", "task_show", "task_start", "task_complete",
+  "task_create", "task_list", "task_search", "task_show", "task_start", "task_complete",
   "session_attach", "session_send_input",
   "persona_list", "persona_show",
   "ipc_spawn", "ipc_write", "ipc_close", "ipc_terminate", "ipc_list_fds",
@@ -89,7 +89,7 @@ export const WORKER_MCP_TOOLS: readonly string[] = [
 export const ORCHESTRATOR_MCP_TOOLS: readonly string[] = [
   // All default scoped tools
   "finding_post", "finding_list",
-  "task_create", "task_list", "task_show", "task_start", "task_complete",
+  "task_create", "task_list", "task_search", "task_show", "task_start", "task_complete",
   "session_attach", "session_send_input",
   "persona_list", "persona_show",
   "ipc_spawn", "ipc_write", "ipc_close", "ipc_terminate", "ipc_list_fds",

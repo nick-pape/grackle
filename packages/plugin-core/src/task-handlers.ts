@@ -14,6 +14,8 @@ import {
   MAX_TASK_DEPTH,
   LOGS_DIR,
   taskStatusToString,
+  fuzzySearch,
+  type FuzzyKey,
 } from "@grackle-ai/common";
 import { envRegistry, sessionStore, taskStore, workspaceStore, personaStore, settingsStore, dispatchQueueStore, grackleHome, slugify, safeParseJsonArray } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
@@ -40,6 +42,15 @@ import { validatePipeInputs, toDialableHost, resolveAncestorEnvironmentId } from
 import { personaMcpServersToJson } from "@grackle-ai/core";
 import { hasCapacity, type ConcurrencyDeps, checkBudget } from "@grackle-ai/core";
 
+/** Weighted fields for fuzzy task search: title is twice as important as description. */
+const TASK_SEARCH_KEYS: FuzzyKey[] = [
+  { name: "title", weight: 2 },
+  { name: "description", weight: 1 },
+];
+
+/** Default maximum number of results returned by searchTasks when limit is unset. */
+const DEFAULT_SEARCH_LIMIT = 10;
+
 /** List tasks, optionally filtered by workspace, search query, or status. */
 export async function listTasks(req: grackle.ListTasksRequest): Promise<grackle.TaskList> {
   const rows = taskStore.listTasks(req.workspaceId || undefined, {
@@ -63,6 +74,47 @@ export async function listTasks(req: grackle.ListTasksRequest): Promise<grackle.
       const taskSessions = sessionsByTask.get(r.id) ?? [];
       const { status, latestSessionId } = computeTaskStatus(r.status, taskSessions);
       return taskRowToProto(r, childIdsMap.get(r.id) ?? [], status, latestSessionId);
+    }),
+  });
+}
+
+/** Fuzzy search tasks by title and description, returning results ranked by relevance. */
+export async function searchTasks(req: grackle.SearchTasksRequest): Promise<grackle.SearchTasksResponse> {
+  if (!req.query.trim()) {
+    throw new ConnectError("query is required", Code.InvalidArgument);
+  }
+
+  const limit = req.limit > 0 ? req.limit : DEFAULT_SEARCH_LIMIT;
+
+  // Fetch rows filtered by workspace/status at the DB level; fuzzy match happens in-memory
+  const rows = taskStore.listTasks(req.workspaceId || undefined, {
+    status: req.status || undefined,
+  });
+
+  const fuzzyResults = fuzzySearch(rows, req.query, TASK_SEARCH_KEYS, { limit });
+
+  // Build childIdsMap from ALL fetched rows so that parent tasks include their full child list
+  // even when the children themselves are not among the fuzzy search results
+  const childIdsMap = taskStore.buildChildIdsMap(rows);
+
+  // Batch-fetch sessions for matched tasks and group by taskId
+  const taskIds = fuzzyResults.map((r) => r.item.id);
+  const allSessions = sessionStore.listSessionsByTaskIds(taskIds);
+  const sessionsByTask = new Map<string, typeof allSessions>();
+  for (const s of allSessions) {
+    const arr = sessionsByTask.get(s.taskId) ?? [];
+    arr.push(s);
+    sessionsByTask.set(s.taskId, arr);
+  }
+
+  return create(grackle.SearchTasksResponseSchema, {
+    results: fuzzyResults.map((r) => {
+      const taskSessions = sessionsByTask.get(r.item.id) ?? [];
+      const { status, latestSessionId } = computeTaskStatus(r.item.status, taskSessions);
+      return create(grackle.SearchTaskResultSchema, {
+        task: taskRowToProto(r.item, childIdsMap.get(r.item.id) ?? [], status, latestSessionId),
+        relevanceScore: 1 - r.score, // invert fuse.js score: 1.0 = perfect match, 0.0 = no match
+      });
     }),
   });
 }

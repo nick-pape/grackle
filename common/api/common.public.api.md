@@ -699,6 +699,12 @@ declare namespace grackle {
         TaskListSchema,
         ListTasksRequest,
         ListTasksRequestSchema,
+        SearchTasksRequest,
+        SearchTasksRequestSchema,
+        SearchTaskResult,
+        SearchTaskResultSchema,
+        SearchTasksResponse,
+        SearchTasksResponseSchema,
         CreateTaskRequest,
         CreateTaskRequestSchema,
         TaskId,
@@ -1092,6 +1098,11 @@ const GrackleOrchestration: GenService<{
         methodKind: "unary";
         input: typeof ListTasksRequestSchema;
         output: typeof TaskListSchema;
+    };
+    searchTasks: {
+        methodKind: "unary";
+        input: typeof SearchTasksRequestSchema;
+        output: typeof SearchTasksResponseSchema;
     };
     createTask: {
         methodKind: "unary";
@@ -1696,6 +1707,34 @@ type SearchKnowledgeResult = Message<"grackle.SearchKnowledgeResult"> & {
 
 // @public
 const SearchKnowledgeResultSchema: GenMessage<SearchKnowledgeResult>;
+
+// @public
+type SearchTaskResult = Message<"grackle.SearchTaskResult"> & {
+    task?: Task;
+    relevanceScore: number;
+};
+
+// @public
+const SearchTaskResultSchema: GenMessage<SearchTaskResult>;
+
+// @public
+type SearchTasksRequest = Message<"grackle.SearchTasksRequest"> & {
+    query: string;
+    workspaceId: string;
+    limit: number;
+    status: string;
+};
+
+// @public
+const SearchTasksRequestSchema: GenMessage<SearchTasksRequest>;
+
+// @public
+type SearchTasksResponse = Message<"grackle.SearchTasksResponse"> & {
+    results: SearchTaskResult[];
+};
+
+// @public
+const SearchTasksResponseSchema: GenMessage<SearchTasksResponse>;
 
 // @public
 export const SEED_PERSONA_ID: string;

@@ -420,6 +420,22 @@ message ListTasksRequest {
   string status = 3;      // optional status filter (e.g. "not_started", "working", "complete")
 }
 
+message SearchTasksRequest {
+  string query = 1;        // fuzzy search query (required)
+  string workspace_id = 2; // optional workspace scope
+  int32 limit = 3;         // max results to return; 0 means use default (10)
+  string status = 4;       // optional status filter (e.g. "not_started", "working", "complete")
+}
+
+message SearchTaskResult {
+  Task task = 1;
+  double relevance_score = 2; // relevance score 0.0–1.0, higher is more relevant
+}
+
+message SearchTasksResponse {
+  repeated SearchTaskResult results = 1;
+}
+
 message CreateTaskRequest {
   optional string workspace_id = 1;
   string title = 2;
