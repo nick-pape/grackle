@@ -39,7 +39,6 @@ const mockStreams: StreamData[] = [
 const meta: Meta<typeof StreamList> = {
   title: "Grackle/Streams/StreamList",
   component: StreamList,
-  decorators: [withMockGrackleRoute(["/chat"], "/chat")],
   parameters: { skipRouter: true },
   args: {
     streams: mockStreams,
@@ -56,10 +55,13 @@ type Story = StoryObj<typeof StreamList>;
 // ---------------------------------------------------------------------------
 
 /** Default: shows System pinned row and a list of named streams. */
-export const Default: Story = {};
+export const Default: Story = {
+  decorators: [withMockGrackleRoute(["/chat"], "/chat")],
+};
 
 /** Empty state: no named streams, only the System row. */
 export const Empty: Story = {
+  decorators: [withMockGrackleRoute(["/chat"], "/chat")],
   args: {
     streams: [],
   },
@@ -67,6 +69,7 @@ export const Empty: Story = {
 
 /** Loading state while streams are being fetched. */
 export const Loading: Story = {
+  decorators: [withMockGrackleRoute(["/chat"], "/chat")],
   args: {
     streams: [],
     loading: true,
@@ -76,7 +79,6 @@ export const Loading: Story = {
 /** System row is visually selected when on the /chat route. */
 export const SystemSelected: Story = {
   decorators: [withMockGrackleRoute(["/chat"], "/chat")],
-  parameters: { skipRouter: true },
   play: async ({ canvas }) => {
     const systemRow = canvas.getByTestId("stream-list-system-row");
     await expect(systemRow).toBeInTheDocument();
@@ -87,7 +89,6 @@ export const SystemSelected: Story = {
 /** A named stream is selected when on its /chat/:streamId route. */
 export const StreamSelected: Story = {
   decorators: [withMockGrackleRoute(["/chat/stream-001"], "/chat/:streamId")],
-  parameters: { skipRouter: true },
   play: async ({ canvas }) => {
     const streamRow = canvas.getByTestId("stream-list-row-stream-001");
     await expect(streamRow).toBeInTheDocument();
