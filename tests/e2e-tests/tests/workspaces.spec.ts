@@ -195,10 +195,10 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.locator('[data-testid="meta-toggle"]')).toBeVisible();
     await expect(page.locator('[data-testid="workspace-meta"]')).toBeVisible();
 
-    // Should show labels for Description, Repository, Environment
+    // Should show labels for Description, Repository, Environments
     await expect(page.getByText("Description", { exact: true })).toBeVisible();
     await expect(page.getByText("Repository", { exact: true })).toBeVisible();
-    await expect(page.getByText("Environment", { exact: true })).toBeVisible();
+    await expect(page.getByText("Environments", { exact: true })).toBeVisible();
 
     // Should show placeholders for empty fields
     await expect(page.getByText("No description")).toBeVisible();
@@ -290,7 +290,6 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.locator('[data-testid="edit-name-button"]')).toBeVisible();
     await expect(page.locator('[data-testid="edit-description-button"]')).toBeVisible();
     await expect(page.locator('[data-testid="edit-repo-button"]')).toBeVisible();
-    await expect(page.locator('[data-testid="edit-env-button"]')).toBeVisible();
   });
 
   test("archive workspace flow", async ({ appPage, grackle: { client } }) => {
@@ -310,17 +309,12 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.locator('[data-testid="workspace-name"]')).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("change default environment", async ({ appPage, grackle: { client } }) => {
+  test("linked environment chip is shown for initial environment", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
     await createAndSelectWorkspace(client, page, "env-edit-test");
 
-    const envSelect = page.locator('[data-testid="edit-env-select"]');
-    await page.locator('[data-testid="edit-env-button"]').click();
-    await expect(envSelect).toBeVisible();
-    await envSelect.selectOption("test-local");
-
-    // Environment name should now be displayed
-    await expect(page.getByTestId("workspace-meta").getByText("test-local", { exact: true })).toBeVisible({ timeout: 5_000 });
+    // Workspace is auto-linked to test-local on creation; chip should be visible
+    await expect(page.getByTestId("linked-env-test-local")).toBeVisible({ timeout: 5_000 });
   });
 
   test("click-to-edit on field values", async ({ appPage, grackle: { client } }) => {
@@ -461,10 +455,10 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     // Create a workspace on test-local and navigate to it
     await createAndSelectWorkspace(client, page, "link-unlink-test");
 
-    // Linked Envs should show "None" initially
+    // Linked Envs section should show the initial test-local chip (workspace auto-links on creation)
     const linkedSection = page.getByTestId("linked-environments");
     await expect(linkedSection).toBeVisible({ timeout: 5_000 });
-    await expect(linkedSection).toContainText("None");
+    await expect(page.getByTestId("linked-env-test-local")).toBeVisible({ timeout: 5_000 });
 
     // Link dropdown should be visible with the second environment
     const linkSelect = page.getByTestId("link-env-select");
@@ -476,15 +470,12 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     // Chip for the linked environment should appear
     await expect(page.getByTestId(`linked-env-${envId}`)).toBeVisible({ timeout: 10_000 });
 
-    // "None" should no longer be visible
-    await expect(linkedSection).not.toContainText("None");
-
     // Click the unlink (x) button on the chip
     await page.getByTestId(`unlink-env-${envId}`).click();
 
-    // Chip should disappear and "None" should return
+    // Chip should disappear; test-local chip remains
     await expect(page.getByTestId(`linked-env-${envId}`)).not.toBeVisible({ timeout: 10_000 });
-    await expect(linkedSection).toContainText("None");
+    await expect(page.getByTestId("linked-env-test-local")).toBeVisible();
   });
 
   test("linked workspace appears on environment detail page with unlink button", async ({ appPage, grackle: { client } }) => {
@@ -507,9 +498,8 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await page.getByTestId("env-nav-item").filter({ hasText: "env-detail-link-test" }).click();
 
     // The linked workspace card should appear
-    const linkedCard = page.getByTestId(`linked-workspace-card-${workspaceId}`);
+    const linkedCard = page.getByTestId("workspace-card").filter({ hasText: "env-detail-ws" });
     await expect(linkedCard).toBeVisible({ timeout: 10_000 });
-    await expect(linkedCard).toContainText("env-detail-ws");
 
     // Unlink button should be visible
     const unlinkButton = page.getByTestId(`unlink-workspace-${workspaceId}`);

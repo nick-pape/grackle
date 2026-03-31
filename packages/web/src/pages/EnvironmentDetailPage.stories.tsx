@@ -113,11 +113,12 @@ export const UnlinkRemovesCard: Story = {
     await expect(canvas.getByTestId("unlink-workspace-proj-alpha")).toBeInTheDocument();
     // Click Unlink
     await userEvent.click(canvas.getByTestId("unlink-workspace-proj-alpha"));
-    // proj-alpha card should disappear (proj-beta remains, so no empty state)
+    // proj-alpha card should disappear (its unlink button is gone)
     await waitFor(() => {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      expect(canvas.queryByTestId("linked-workspace-card-proj-alpha")).not.toBeInTheDocument();
+      expect(canvas.queryByTestId("unlink-workspace-proj-alpha")).not.toBeInTheDocument();
     });
-    await expect(canvas.getByTestId("linked-workspace-card-proj-beta")).toBeInTheDocument();
+    // proj-beta card remains
+    await expect(canvas.getByTestId("unlink-workspace-proj-beta")).toBeInTheDocument();
   },
 };

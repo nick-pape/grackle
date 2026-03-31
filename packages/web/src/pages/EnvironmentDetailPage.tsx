@@ -263,7 +263,7 @@ function WorkspaceCard({
   const isValidUrl = workspace.repoUrl && /^https?:\/\//.test(workspace.repoUrl);
 
   return (
-    <div className={styles.card} data-testid={`linked-workspace-card-${workspace.id}`}>
+    <div className={styles.card} data-testid="workspace-card" data-workspace-id={workspace.id}>
       <div className={styles.cardHeader}>
         <strong className={styles.cardName}>{workspace.name}</strong>
         <div className={styles.cardActions}>
