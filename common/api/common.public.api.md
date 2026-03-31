@@ -223,6 +223,7 @@ const CreateScheduleRequestSchema: GenMessage<CreateScheduleRequest>;
 type CreateStreamRequest = Message<"grackle.CreateStreamRequest"> & {
     sessionId: string;
     name: string;
+    selfEcho: boolean;
 };
 
 // @public
@@ -1934,6 +1935,7 @@ type StreamInfo = Message<"grackle.StreamInfo"> & {
     subscriberCount: number;
     messageBufferDepth: number;
     subscribers: StreamSubscriberInfo[];
+    selfEcho: boolean;
 };
 
 // @public

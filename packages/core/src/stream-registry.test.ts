@@ -407,6 +407,127 @@ describe("stream-registry", () => {
     it("returns false for unknown subscription", () => {
       expect(registry.hasUndeliveredMessages("nonexistent")).toBe(false);
     });
+
+    it("returns false for write-only subscription even when messages exist", () => {
+      const stream = registry.createStream("pipe");
+      registry.subscribe(stream.id, "sender", "rw", "async", true);
+      const writeSub = registry.subscribe(stream.id, "writer", "w", "detach", false);
+
+      registry.publish(stream.id, "sender", "some message");
+
+      // write-only can never consume — should always be false
+      expect(registry.hasUndeliveredMessages(writeSub.id)).toBe(false);
+    });
+  });
+
+  // ─── Self-echo ─────────────────────────────────────────────
+
+  describe("selfEcho", () => {
+    it("createStream stores selfEcho=true", () => {
+      const stream = registry.createStream("chat", true);
+      expect(stream.selfEcho).toBe(true);
+    });
+
+    it("createStream defaults selfEcho to false", () => {
+      const stream = registry.createStream("pipe");
+      expect(stream.selfEcho).toBe(false);
+    });
+
+    it("publish with selfEcho=false skips sender (default behavior)", () => {
+      const stream = registry.createStream("pipe", false);
+      const senderSub = registry.subscribe(stream.id, "sender", "rw", "async", true);
+
+      const received: StreamMessage[] = [];
+      registry.registerAsyncListener("sender", (_sub, msg) => {
+        received.push(msg);
+      });
+
+      registry.publish(stream.id, "sender", "hello");
+
+      expect(received).toHaveLength(0);
+      expect(registry.hasUndeliveredMessages(senderSub.id)).toBe(false);
+    });
+
+    it("publish with selfEcho=true delivers to sender via async", () => {
+      const stream = registry.createStream("chat", true);
+      const senderSub = registry.subscribe(stream.id, "sender", "rw", "async", true);
+
+      const received: StreamMessage[] = [];
+      registry.registerAsyncListener("sender", (_sub, msg) => {
+        received.push(msg);
+      });
+
+      registry.publish(stream.id, "sender", "echo me");
+
+      expect(received).toHaveLength(1);
+      expect(received[0].content).toBe("echo me");
+      expect(received[0].deliveredTo.has(senderSub.id)).toBe(true);
+    });
+
+    it("publish with selfEcho=true delivers to sender via sync", async () => {
+      const stream = registry.createStream("chat", true);
+      const senderSub = registry.subscribe(stream.id, "sender", "rw", "sync", true);
+
+      const consumePromise = registry.consumeSync(senderSub.id);
+      registry.publish(stream.id, "sender", "sync echo");
+
+      const msg = await consumePromise;
+      expect(msg.content).toBe("sync echo");
+      expect(msg.deliveredTo.has(senderSub.id)).toBe(true);
+    });
+
+    it("hasUndeliveredMessages returns true for sender when selfEcho=true", () => {
+      const stream = registry.createStream("chat", true);
+      const senderSub = registry.subscribe(stream.id, "sender", "rw", "detach", true);
+
+      registry.publish(stream.id, "sender", "my message");
+
+      expect(registry.hasUndeliveredMessages(senderSub.id)).toBe(true);
+    });
+
+    it("hasUndeliveredMessages returns false for sender when selfEcho=false", () => {
+      const stream = registry.createStream("pipe", false);
+      const senderSub = registry.subscribe(stream.id, "sender", "rw", "detach", true);
+
+      registry.publish(stream.id, "sender", "my message");
+
+      expect(registry.hasUndeliveredMessages(senderSub.id)).toBe(false);
+    });
+
+    it("pruneDeliveredMessages does not prune sender message when selfEcho=true and sender unread", () => {
+      const stream = registry.createStream("chat", true);
+      registry.subscribe(stream.id, "sender", "rw", "detach", true);
+      registry.subscribe(stream.id, "other", "rw", "detach", false);
+
+      // Sender publishes; mark "other" as delivered — sender still hasn't read it
+      const msg = registry.publish(stream.id, "sender", "hello");
+      const otherSub = Array.from(stream.subscriptions.values()).find((s) => s.sessionId === "other")!;
+      msg.deliveredTo.add(otherSub.id);
+
+      // Trigger a second publish, which calls pruneDeliveredMessages again
+      registry.publish(stream.id, "sender", "second message");
+
+      // Original message must still be present — sender's echo is unread
+      expect(stream.messages).toHaveLength(2);
+    });
+
+    it("selfEcho delivers to both sender and receiver", () => {
+      const stream = registry.createStream("chat", true);
+      const senderSub = registry.subscribe(stream.id, "alice", "rw", "async", true);
+      const receiverSub = registry.subscribe(stream.id, "bob", "rw", "async", false);
+
+      const aliceReceived: StreamMessage[] = [];
+      const bobReceived: StreamMessage[] = [];
+      registry.registerAsyncListener("alice", (_sub, msg) => { aliceReceived.push(msg); });
+      registry.registerAsyncListener("bob", (_sub, msg) => { bobReceived.push(msg); });
+
+      registry.publish(stream.id, "alice", "hi everyone");
+
+      expect(aliceReceived).toHaveLength(1);
+      expect(bobReceived).toHaveLength(1);
+      expect(aliceReceived[0].deliveredTo.has(senderSub.id)).toBe(true);
+      expect(bobReceived[0].deliveredTo.has(receiverSub.id)).toBe(true);
+    });
   });
 
   // ─── Async Listener ────────────────────────────────────────

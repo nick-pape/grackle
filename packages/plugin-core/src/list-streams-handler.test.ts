@@ -35,6 +35,30 @@ describe("listStreams", () => {
     expect(res.streams[0].messageBufferDepth).toBe(0);
   });
 
+  it("surfaces selfEcho=false by default", async () => {
+    await createStream(
+      create(grackle.CreateStreamRequestSchema, { sessionId: "session-1", name: "pipe-stream" }),
+    );
+
+    const res = await listStreams();
+
+    expect(res.streams[0].selfEcho).toBe(false);
+  });
+
+  it("surfaces selfEcho=true when stream created with selfEcho", async () => {
+    await createStream(
+      create(grackle.CreateStreamRequestSchema, {
+        sessionId: "session-1",
+        name: "chat-stream",
+        selfEcho: true,
+      }),
+    );
+
+    const res = await listStreams();
+
+    expect(res.streams[0].selfEcho).toBe(true);
+  });
+
   it("maps subscriber details correctly", async () => {
     await createStream(
       create(grackle.CreateStreamRequestSchema, {
