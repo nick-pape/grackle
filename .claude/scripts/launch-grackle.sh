@@ -28,9 +28,9 @@ async function main() {
   console.log([...ports].join(' '));
 }
 main();
-")"
-if [ $? -ne 0 ] || [ -z "$GRACKLE_PORTS" ]; then
-  echo "Error: failed to allocate ports via node; GRACKLE_PORTS='$GRACKLE_PORTS'" >&2
+")" || { echo "Error: node port-finder exited non-zero" >&2; exit 1; }
+if [ -z "$GRACKLE_PORTS" ]; then
+  echo "Error: node port-finder produced no output" >&2
   exit 1
 fi
 read -r GRPC_PORT WEB_PORT MCP_PORT POWERLINE_PORT <<< "$GRACKLE_PORTS"
@@ -103,11 +103,22 @@ while [ ! -f "$API_KEY_FILE" ] && [ $TRIES -gt 0 ]; do
   sleep 1
   TRIES=$((TRIES - 1))
 done
+if [ ! -f "$API_KEY_FILE" ]; then
+  echo "Error: API key file '$API_KEY_FILE' was not created within the expected time." >&2
+  echo "Check '$GRACKLE_HOME/server.log' for details." >&2
+  exit 1
+fi
 GRACKLE_API_KEY="$(cat "$API_KEY_FILE")"
 echo "API key loaded (${#GRACKLE_API_KEY} chars)"
 
 # === Generate a pairing code ===
-PAIR_OUTPUT="$(GRACKLE_URL="http://127.0.0.1:$GRPC_PORT" GRACKLE_API_KEY="$GRACKLE_API_KEY" NO_COLOR=1 FORCE_COLOR=0 node "$REPO_ROOT/packages/cli/dist/index.js" pair 2>&1)"
+PAIR_OUTPUT=""
+if ! PAIR_OUTPUT="$(GRACKLE_URL="http://127.0.0.1:$GRPC_PORT" GRACKLE_API_KEY="$GRACKLE_API_KEY" NO_COLOR=1 FORCE_COLOR=0 node "$REPO_ROOT/packages/cli/dist/index.js" pair 2>&1)"; then
+  echo "Error: 'grackle pair' CLI exited non-zero." >&2
+  echo "Raw output:" >&2
+  echo "$PAIR_OUTPUT" | head -n 40 >&2
+  exit 1
+fi
 PAIRING_CODE="$(echo "$PAIR_OUTPUT" | node -e "const m=require('fs').readFileSync(0,'utf8').match(/Pairing code:\s*(\S+)/);if(m)process.stdout.write(m[1])")"
 if [ -z "$PAIRING_CODE" ]; then
   echo "Error: failed to extract pairing code from CLI output." >&2
