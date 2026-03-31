@@ -187,10 +187,13 @@ describe("writeToFd + closeFd — async delivery integration", () => {
 
       // Publish directly — sendInput rejects → parent sub stays undelivered
       const stream = streamRegistry.getStreamByName("pipe:child")!;
-      streamRegistry.publish(stream.id, "child", "message that won't arrive");
+      const msg = streamRegistry.publish(stream.id, "child", "message that won't arrive");
 
-      // Allow the async rejection to settle
-      await new Promise<void>((r) => setTimeout(r, 10));
+      // Wait for all pending delivery Promises to settle (deterministic — no setTimeout).
+      // awaitPendingDeliveries uses Promise.all on the same deliveryPromise array, so it
+      // returns once the sendInput rejection has propagated through the .then(ok, fail)
+      // handler and deliveredTo has been left unpopulated.
+      await streamRegistry.awaitPendingDeliveries(msg);
 
       let caughtErr: unknown;
       try {

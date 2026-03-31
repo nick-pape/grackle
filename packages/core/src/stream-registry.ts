@@ -414,6 +414,10 @@ export function publish(streamId: string, senderId: string, content: string): St
       if (listener) {
         try {
           const result = listener(sub, msg);
+          // Check for a thenable: void return (undefined) is the backward-compat path;
+          // any non-undefined value with a .then function is treated as a Promise.
+          // Accessing .then on a non-object (e.g. null from an untyped caller) would
+          // throw and be caught by the surrounding catch block, leaving the message undelivered.
           if (result !== undefined && typeof (result as Promise<void>).then === "function") {
             // Async listener — defer delivery tracking until the Promise settles
             const subId = sub.id;
@@ -534,9 +538,10 @@ export function registerAsyncListener(sessionId: string, callback: AsyncMessageL
  * Cleanup (deleting the pending entry and pruning) is handled exclusively by the
  * auto-finalize scheduled inside `publish()`, so this function is a pure barrier.
  *
- * Note: pruning runs asynchronously via auto-finalize (a later microtask after this
- * returns). Callers must not assume `stream.messages` has been pruned — only that
- * `msg.deliveredTo` is accurate and `hasUndeliveredMessages` returns the correct value.
+ * Note: pruning is driven by `publish()`'s auto-finalize (`Promise.allSettled`) and runs
+ * independently of this barrier. Callers must not assume any particular pruning state
+ * when this returns — only that `msg.deliveredTo` is accurate and `hasUndeliveredMessages`
+ * returns the correct value.
  */
 export async function awaitPendingDeliveries(msg: StreamMessage): Promise<void> {
   const entry = pendingDeliveries.get(msg.id);

@@ -783,6 +783,9 @@ describe("stream-registry", () => {
       // Resolve and await — now it can be pruned
       resolveDelivery();
       await registry.awaitPendingDeliveries(msg);
+      // Flush any remaining microtasks so the auto-finalize Promise.allSettled callback
+      // (which calls pruneDeliveredMessages) has a chance to run before we assert.
+      await Promise.resolve();
 
       // After delivery, the message is eligible for pruning
       expect(stream.messages).not.toContain(msg);
