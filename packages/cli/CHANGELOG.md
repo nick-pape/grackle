@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 31 Mar 2026 04:41:40 GMT and should not be manually modified.
+This log was last generated on Tue, 31 Mar 2026 05:30:18 GMT and should not be manually modified.
+
+## 0.100.0
+Tue, 31 Mar 2026 05:30:18 GMT
+
+### Minor changes
+
+- Add GET /api/manifest endpoint; add pluginNames to LoadedPlugins; manifest-driven nav tabs, routes, and domain hooks in web UI
 
 ## 0.99.0
 Tue, 31 Mar 2026 04:41:40 GMT

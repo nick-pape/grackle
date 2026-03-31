@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.100.0",
+      "tag": "@grackle-ai/cli_v0.100.0",
+      "date": "Tue, 31 Mar 2026 05:30:18 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add GET /api/manifest endpoint; add pluginNames to LoadedPlugins; manifest-driven nav tabs, routes, and domain hooks in web UI"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.99.0",
       "tag": "@grackle-ai/cli_v0.99.0",
       "date": "Tue, 31 Mar 2026 04:41:40 GMT",
