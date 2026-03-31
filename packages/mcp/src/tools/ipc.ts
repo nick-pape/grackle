@@ -354,13 +354,13 @@ export const ipcTools: ToolDefinition[] = [
     name: "ipc_share_stream",
     group: "ipc",
     description:
-      "Share a stream you hold with your parent session. Auto-discovers the parent via the inherited pipe fd and grants access using the attachStream RPC (same semantics as ipc_attach), then sends a [stream-ref] notification through the pipe so the parent knows the new fd. For sibling-to-sibling sharing: share with parent, parent can use ipc_attach to forward to the sibling.",
+      "Share a stream you hold with your parent session. Auto-discovers the parent via the inherited pipe fd and grants access using the attachStream RPC (with permission defaulting to your own permission on the fd if omitted), then sends a [stream-ref] notification through the pipe so the parent knows the new fd. For sibling-to-sibling sharing: share with parent, parent can use ipc_attach to forward to the sibling.",
     inputSchema: z.object({
       fd: z.number().int().describe("Your file descriptor on the stream to share"),
       permission: z
         .enum(["r", "w", "rw"])
         .optional()
-        .describe("Permission to grant the parent (default: your own permission on the fd)"),
+        .describe("Permission to grant the parent; if omitted, defaults to your own permission on the fd"),
       deliveryMode: z
         .enum(["sync", "async", "detach"])
         .optional()
@@ -412,9 +412,10 @@ export const ipcTools: ToolDefinition[] = [
             isError: true,
           };
         }
-        if (streamFdInfo.streamName.startsWith("pipe:")) {
+        const RESERVED_STREAM_PREFIXES: readonly string[] = ["pipe:", "lifecycle:", "stdin:"];
+        if (RESERVED_STREAM_PREFIXES.some((prefix) => streamFdInfo.streamName.startsWith(prefix))) {
           return {
-            content: [{ type: "text" as const, text: `Error: fd ${String(fd)} is a pipe fd and cannot be shared — only user-created streams can be shared` }],
+            content: [{ type: "text" as const, text: `Error: fd ${String(fd)} is an internal stream and cannot be shared — only user-created streams can be shared` }],
             isError: true,
           };
         }

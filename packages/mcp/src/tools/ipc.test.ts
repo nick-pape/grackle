@@ -273,7 +273,46 @@ describe("ipc_share_stream", () => {
     const result = await getTool("ipc_share_stream").handler({ fd: 3 }, { core: mockClient }, CHILD_AUTH);
 
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain("pipe fd");
+    expect(result.content[0].text).toContain("internal stream");
+  });
+
+  test("returns error when sharing reserved internal streams (lifecycle, stdin)", async () => {
+    const mockClient = createMockClient();
+    (mockClient.getSessionFds as ReturnType<typeof vi.fn>).mockResolvedValue({
+      fds: [
+        // pipe fd so the parent-discovery guard passes
+        {
+          fd: 3,
+          streamName: "pipe:child-sess",
+          owned: false,
+          targetSessionId: "parent-sess",
+          permission: "rw",
+          deliveryMode: "async",
+        },
+        {
+          fd: 10,
+          streamName: "lifecycle:some-session",
+          owned: true,
+          targetSessionId: "",
+          permission: "rw",
+          deliveryMode: "async",
+        },
+        {
+          fd: 11,
+          streamName: "stdin:some-session",
+          owned: true,
+          targetSessionId: "",
+          permission: "rw",
+          deliveryMode: "async",
+        },
+      ],
+    });
+
+    for (const fd of [10, 11]) {
+      const result = await getTool("ipc_share_stream").handler({ fd }, { core: mockClient }, CHILD_AUTH);
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain("internal stream");
+    }
   });
 
   test("permission downgrade — child has rw, shares as r", async () => {
