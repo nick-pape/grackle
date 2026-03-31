@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add plugin enable/disable management: plugins DB table, proto RPCs (ListPlugins, SetPluginEnabled), CLI commands (grackle plugin list/enable/disable), and MCP tools (plugin_list, plugin_set_enabled)",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

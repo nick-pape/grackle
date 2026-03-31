@@ -131,6 +131,19 @@ const MIGRATIONS: Migration[] = [
   },
   {
     version: 6,
+    name: "add-plugins-table",
+    up: (conn) => {
+      conn.exec(`
+        CREATE TABLE IF NOT EXISTS plugins (
+          name       TEXT PRIMARY KEY,
+          enabled    INTEGER NOT NULL DEFAULT 1,
+          updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+      `);
+    },
+  },
+  {
+    version: 7,
     name: "remove-workspace-environment-id",
     up: (conn) => {
       // Check whether the legacy column exists (won't be present on fresh installs).
@@ -519,6 +532,12 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
     CREATE INDEX IF NOT EXISTS idx_domain_events_type ON domain_events(type);
     CREATE INDEX IF NOT EXISTS idx_domain_events_timestamp ON domain_events(timestamp);
     CREATE INDEX IF NOT EXISTS idx_sessions_task_id ON sessions(task_id);
+    CREATE TABLE IF NOT EXISTS plugins (
+      name       TEXT PRIMARY KEY,
+      enabled    INTEGER NOT NULL DEFAULT 1,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_schedules_due ON schedules(enabled, next_run_at);
   `);
 

@@ -17,9 +17,6 @@ describe("resolveServerConfig", () => {
     vi.stubEnv("GRACKLE_HOST", "");
     vi.stubEnv("GRACKLE_SKIP_LOCAL_POWERLINE", "");
     vi.stubEnv("GRACKLE_SKIP_ROOT_AUTOSTART", "");
-    vi.stubEnv("GRACKLE_SKIP_ORCHESTRATION", "");
-    vi.stubEnv("GRACKLE_SKIP_SCHEDULING", "");
-    vi.stubEnv("GRACKLE_KNOWLEDGE_ENABLED", "");
 
     const config = resolveServerConfig();
     expect(config.grpcPort).toBe(DEFAULT_SERVER_PORT);
@@ -29,9 +26,6 @@ describe("resolveServerConfig", () => {
     expect(config.host).toBe("127.0.0.1");
     expect(config.skipLocalPowerline).toBe(false);
     expect(config.skipRootAutostart).toBe(false);
-    expect(config.skipScheduling).toBe(false);
-    expect(config.skipOrchestration).toBe(false);
-    expect(config.knowledgeEnabled).toBe(false);
   });
 
   it("parses valid port numbers from env vars", () => {
@@ -90,40 +84,19 @@ describe("resolveServerConfig", () => {
   it("parses boolean flags — '1' is true", () => {
     vi.stubEnv("GRACKLE_SKIP_LOCAL_POWERLINE", "1");
     vi.stubEnv("GRACKLE_SKIP_ROOT_AUTOSTART", "1");
-    vi.stubEnv("GRACKLE_SKIP_SCHEDULING", "1");
-    vi.stubEnv("GRACKLE_SKIP_ORCHESTRATION", "1");
 
     const config = resolveServerConfig();
     expect(config.skipLocalPowerline).toBe(true);
     expect(config.skipRootAutostart).toBe(true);
-    expect(config.skipScheduling).toBe(true);
-    expect(config.skipOrchestration).toBe(true);
   });
 
   it("parses boolean flags — anything else is false", () => {
     vi.stubEnv("GRACKLE_SKIP_LOCAL_POWERLINE", "true");
     vi.stubEnv("GRACKLE_SKIP_ROOT_AUTOSTART", "0");
-    vi.stubEnv("GRACKLE_SKIP_SCHEDULING", "0");
-    vi.stubEnv("GRACKLE_SKIP_ORCHESTRATION", "0");
 
     const config = resolveServerConfig();
     expect(config.skipLocalPowerline).toBe(false);
     expect(config.skipRootAutostart).toBe(false);
-    expect(config.skipScheduling).toBe(false);
-    expect(config.skipOrchestration).toBe(false);
-  });
-
-  it("knowledgeEnabled is true when GRACKLE_KNOWLEDGE_ENABLED=true", () => {
-    vi.stubEnv("GRACKLE_KNOWLEDGE_ENABLED", "true");
-    expect(resolveServerConfig().knowledgeEnabled).toBe(true);
-  });
-
-  it("knowledgeEnabled is false for other values ('1', 'yes', unset)", () => {
-    vi.stubEnv("GRACKLE_KNOWLEDGE_ENABLED", "1");
-    expect(resolveServerConfig().knowledgeEnabled).toBe(false);
-
-    vi.stubEnv("GRACKLE_KNOWLEDGE_ENABLED", "");
-    expect(resolveServerConfig().knowledgeEnabled).toBe(false);
   });
 
   it("uses GRACKLE_HOST when set", () => {
