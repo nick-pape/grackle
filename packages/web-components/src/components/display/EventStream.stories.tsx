@@ -187,7 +187,7 @@ export const ForwardButtonDisabled: Story = {
     await userEvent.click(selectButtons[0]);
 
     const forwardBtn = canvas.getByTestId("floating-bar-forward");
-    await expect(forwardBtn).toBeDisabled();
+    await expect(forwardBtn).toHaveAttribute("aria-disabled", "true");
   },
 };
 
