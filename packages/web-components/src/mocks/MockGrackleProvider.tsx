@@ -29,6 +29,7 @@ import type {
   Workspace,
   TokenInfo,
   PersonaData,
+  ScheduleData,
   CredentialProviderConfig,
   DomainHook,
 } from "../hooks/types.js";
@@ -97,6 +98,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     goose: "off",
   });
   const [personas, setPersonas] = useState<PersonaData[]>(MOCK_PERSONAS);
+  const [schedules, setSchedules] = useState<ScheduleData[]>([]);
   const [taskSessions] = useState<Record<string, Session[]>>(MOCK_TASK_SESSIONS);
   const [appDefaultPersonaId, setAppDefaultPersonaIdState] = useState<string>("");
 
@@ -1124,6 +1126,50 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         domainHook: NOOP_DOMAIN_HOOK,
       },
 
+      schedules: {
+        schedules,
+        schedulesLoading: false,
+        createSchedule: async (title: string, description: string, scheduleExpression: string, personaId: string, environmentId?: string, workspaceId?: string) => {
+          console.log("[MockGrackle] createSchedule", { title });
+          const newSchedule: ScheduleData = {
+            id: `mock-schedule-${Date.now()}`,
+            title,
+            description,
+            scheduleExpression,
+            personaId,
+            environmentId: environmentId ?? "",
+            workspaceId: workspaceId ?? "",
+            parentTaskId: "",
+            enabled: true,
+            lastRunAt: "",
+            nextRunAt: new Date(Date.now() + 60_000).toISOString(),
+            runCount: 0,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          setSchedules((prev) => [...prev, newSchedule]);
+          return newSchedule;
+        },
+        updateSchedule: async (scheduleId: string, fields: Partial<ScheduleData>) => {
+          console.log("[MockGrackle] updateSchedule", { scheduleId, fields });
+          let updated: ScheduleData | undefined;
+          setSchedules((prev) => prev.map((s) => {
+            if (s.id !== scheduleId) { return s; }
+            updated = { ...s, ...fields, updatedAt: new Date().toISOString() };
+            return updated;
+          }));
+          if (!updated) {
+            throw new Error(`Schedule not found: ${scheduleId}`);
+          }
+          return updated;
+        },
+        deleteSchedule: async (scheduleId: string) => {
+          console.log("[MockGrackle] deleteSchedule", scheduleId);
+          setSchedules((prev) => prev.filter((s) => s.id !== scheduleId));
+        },
+        domainHook: NOOP_DOMAIN_HOOK,
+      },
+
       knowledge: {
         graphData: { nodes: knowledgeNodes, links: knowledgeLinks },
         selectedNode: knowledgeSelectedNode,
@@ -1301,6 +1347,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       tokens,
       credentialProviders,
       personas,
+      schedules,
       appDefaultPersonaId,
       knowledgeNodes,
       knowledgeLinks,

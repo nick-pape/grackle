@@ -532,6 +532,62 @@ export interface UsePersonasResult {
   domainHook: DomainHook;
 }
 
+/** A cron schedule entry. */
+export interface ScheduleData {
+  id: string;
+  title: string;
+  description: string;
+  scheduleExpression: string;
+  personaId: string;
+  environmentId: string;
+  workspaceId: string;
+  parentTaskId: string;
+  enabled: boolean;
+  lastRunAt: string;
+  nextRunAt: string;
+  runCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Fields that can be updated on an existing schedule. */
+export interface ScheduleUpdate {
+  title?: string;
+  description?: string;
+  scheduleExpression?: string;
+  personaId?: string;
+  environmentId?: string;
+  enabled?: boolean;
+}
+
+/** Values returned by the schedules domain hook. */
+export interface UseSchedulesResult {
+  /** All known schedules. */
+  schedules: ScheduleData[];
+  /** Whether the schedule list is currently being loaded. */
+  schedulesLoading: boolean;
+  /** Request the current schedule list from the server. */
+  loadSchedules: () => Promise<void>;
+  /** Create a new schedule. */
+  createSchedule: (
+    title: string,
+    description: string,
+    scheduleExpression: string,
+    personaId: string,
+    environmentId?: string,
+    workspaceId?: string,
+    parentTaskId?: string,
+  ) => Promise<ScheduleData>;
+  /** Update an existing schedule. */
+  updateSchedule: (scheduleId: string, fields: ScheduleUpdate) => Promise<ScheduleData>;
+  /** Delete a schedule by ID. */
+  deleteSchedule: (scheduleId: string) => Promise<void>;
+  /** Handle a domain event from the event bus. Returns `true` if handled. */
+  handleEvent: (event: GrackleEvent) => boolean;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
+}
+
 // ─── Knowledge hook result ────────────────────────────────────────────────────
 
 /** Result returned by useKnowledge. */
