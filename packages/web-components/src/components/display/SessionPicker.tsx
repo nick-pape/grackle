@@ -6,10 +6,10 @@
  * Pure presentational component -- no useGrackle().
  */
 
-import { useState, type JSX } from "react";
+import { useEffect, useRef, useState, type JSX } from "react";
 import { X, Search } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import type { Session, Environment } from "../../hooks/types.js";
+import type { Session, Environment, PersonaData } from "../../hooks/types.js";
 import { ICON_SM, ICON_MD } from "../../utils/iconSize.js";
 import styles from "./SessionPicker.module.scss";
 
@@ -29,6 +29,8 @@ export interface SessionPickerProps {
   sessions: Session[];
   /** Environments for name lookup. */
   environments: Environment[];
+  /** Personas for name lookup (optional — persona name is shown when available). */
+  personas?: PersonaData[];
   /** Called when the user selects a target session. */
   onSelect: (sessionId: string) => void;
   /** Called when the user dismisses the picker without selecting. */
@@ -56,20 +58,40 @@ export function SessionPicker({
   isOpen,
   sessions,
   environments,
+  personas,
   onSelect,
   onCancel,
 }: SessionPickerProps): JSX.Element {
   const [filter, setFilter] = useState("");
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Focus the dialog when it opens so Escape is reliably captured
+  useEffect(() => {
+    if (isOpen) {
+      // Filter input has autoFocus when shown; otherwise fall back to close button
+      if (sessions.length <= 4) {
+        closeButtonRef.current?.focus();
+      }
+    }
+  }, [isOpen, sessions.length]);
 
   // Build lookup for environment names
   const envNameById = new Map<string, string>(
     environments.map((e) => [e.id, e.displayName]),
   );
 
+  // Build lookup for persona names
+  const personaNameById = new Map<string, string>(
+    (personas ?? []).map((p) => [p.id, p.name]),
+  );
+
   const entries: SessionPickerEntry[] = sessions.map((s) => ({
     session: s,
     environmentName: envNameById.get(s.environmentId) ?? s.environmentId,
   }));
+
+  const showFilter = sessions.length > 4;
 
   const filtered = filter.trim()
     ? entries.filter(
@@ -96,6 +118,7 @@ export function SessionPicker({
           data-testid="session-picker-overlay"
         >
           <motion.div
+            ref={dialogRef}
             className={styles.dialog}
             initial={{ opacity: 0, scale: 0.93, y: -10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -107,6 +130,7 @@ export function SessionPicker({
             <div className={styles.header}>
               <h3 className={styles.title}>Forward to session</h3>
               <button
+                ref={closeButtonRef}
                 type="button"
                 className={styles.closeButton}
                 onClick={onCancel}
@@ -117,7 +141,7 @@ export function SessionPicker({
               </button>
             </div>
 
-            {sessions.length > 4 && (
+            {showFilter && (
               <div className={styles.filterRow}>
                 <Search size={ICON_SM} className={styles.searchIcon} aria-hidden="true" />
                 <input
@@ -132,45 +156,55 @@ export function SessionPicker({
               </div>
             )}
 
-            <ul className={styles.list} data-testid="session-picker-list">
-              {filtered.length === 0 ? (
-                <li className={styles.emptyItem} data-testid="session-picker-empty">
-                  No matching sessions
-                </li>
-              ) : (
-                filtered.map(({ session, environmentName }) => (
-                  <li key={session.id}>
-                    <button
-                      type="button"
-                      className={styles.sessionRow}
-                      onClick={() => { onSelect(session.id); }}
-                      data-testid={`session-picker-item-${session.id}`}
-                    >
-                      <div className={styles.sessionMain}>
-                        <span className={styles.envName}>{environmentName}</span>
-                        <span
-                          className={`${styles.statusBadge} ${styles[`status_${session.status}`] ?? styles.status_other}`}
-                          data-testid={`session-picker-status-${session.id}`}
-                        >
-                          {statusLabel(session.status)}
-                        </span>
-                      </div>
-                      <div className={styles.sessionPrompt}>
-                        {session.prompt.length > 80
-                          ? `${session.prompt.slice(0, 80)}...`
-                          : session.prompt}
-                      </div>
-                    </button>
-                  </li>
-                ))
-              )}
-            </ul>
-
-            {sessions.length === 0 && (
+            {sessions.length === 0 ? (
               <div className={styles.noSessions} data-testid="session-picker-no-sessions">
                 <Search size={ICON_MD} aria-hidden="true" />
                 <p>No active sessions to forward to.</p>
               </div>
+            ) : (
+              <ul className={styles.list} data-testid="session-picker-list">
+                {filtered.length === 0 ? (
+                  <li className={styles.emptyItem} data-testid="session-picker-empty">
+                    No matching sessions
+                  </li>
+                ) : (
+                  filtered.map(({ session, environmentName }) => {
+                    const personaName = session.personaId
+                      ? (personaNameById.get(session.personaId) ?? undefined)
+                      : undefined;
+                    return (
+                      <li key={session.id}>
+                        <button
+                          type="button"
+                          className={styles.sessionRow}
+                          onClick={() => { onSelect(session.id); }}
+                          data-testid={`session-picker-item-${session.id}`}
+                        >
+                          <div className={styles.sessionMain}>
+                            <span className={styles.envName}>{environmentName}</span>
+                            {personaName !== undefined && (
+                              <span className={styles.personaName} data-testid={`session-picker-persona-${session.id}`}>
+                                {personaName}
+                              </span>
+                            )}
+                            <span
+                              className={`${styles.statusBadge} ${styles[`status_${session.status}`] ?? styles.status_other}`}
+                              data-testid={`session-picker-status-${session.id}`}
+                            >
+                              {statusLabel(session.status)}
+                            </span>
+                          </div>
+                          <div className={styles.sessionPrompt}>
+                            {session.prompt.length > 80
+                              ? `${session.prompt.slice(0, 80)}...`
+                              : session.prompt}
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })
+                )}
+              </ul>
             )}
           </motion.div>
         </motion.div>

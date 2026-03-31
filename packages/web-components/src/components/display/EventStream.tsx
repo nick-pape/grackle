@@ -13,7 +13,7 @@ import { isContentBearingEvent, getEventCopyText, formatEventsAsMarkdown, format
 import type { ToastVariant } from "../../context/ToastContext.js";
 import { ICON_MD } from "../../utils/iconSize.js";
 import type { DisplayEvent } from "../../utils/sessionEvents.js";
-import type { Session, Environment, SessionEvent } from "../../hooks/types.js";
+import type { Session, Environment, PersonaData, SessionEvent } from "../../hooks/types.js";
 import styles from "./EventStream.module.scss";
 
 /** Byte size threshold above which a large-message confirmation is shown (10 KB). */
@@ -81,6 +81,8 @@ interface EventStreamProps {
   currentSessionId?: string;
   /** All known environments (used to look up display names in the forward picker). */
   environments?: Environment[];
+  /** All known personas (used to show persona name in the session picker). */
+  personas?: PersonaData[];
   /**
    * Called when the user forwards selected events to another session.
    * Receives the target session ID and the formatted envelope text.
@@ -100,6 +102,7 @@ export function EventStream({
   sessions,
   currentSessionId,
   environments,
+  personas,
   onForward,
 }: EventStreamProps): JSX.Element {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -155,19 +158,20 @@ export function EventStream({
     } catch { /* storage unavailable */ }
   };
 
-  // Escape key exits selection mode
+  // Escape key exits selection mode, but not while a modal is open
+  // (the modal's own Escape handler takes priority)
   useEffect(() => {
     if (!selection.isSelecting) {
       return;
     }
     const handler = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !showSessionPicker && !confirmLargeMessage) {
         selection.cancelSelection();
       }
     };
     window.addEventListener("keydown", handler);
     return () => { window.removeEventListener("keydown", handler); };
-  }, [selection.isSelecting, selection.cancelSelection]);
+  }, [selection.isSelecting, selection.cancelSelection, showSessionPicker, confirmLargeMessage]);
 
   // Copy handler for the floating action bar
   const handleCopySelected = useCallback(async () => {
@@ -185,8 +189,14 @@ export function EventStream({
       .map((i) => events[i]);
   }, [selection.selectedIndices, events]);
 
-  /** Get the environment display name for the target session. */
-  const getSessionLabel = useCallback((sessionId: string): string => {
+  /**
+   * Returns a human-readable label for a session by its ID.
+   * Falls back to "this session" when sessionId is undefined/empty.
+   */
+  const getSessionLabel = useCallback((sessionId: string | undefined): string => {
+    if (!sessionId) {
+      return "this session";
+    }
     const session = sessions?.find((s) => s.id === sessionId);
     if (!session) {
       return sessionId.slice(0, 8);
@@ -213,7 +223,7 @@ export function EventStream({
     setShowSessionPicker(false);
 
     const selectedEvents = getSelectedEvents();
-    const sourceLabel = getSessionLabel(currentSessionId ?? "");
+    const sourceLabel = getSessionLabel(currentSessionId);
     const envelope = formatForwardEnvelope(sourceLabel, selectedEvents);
 
     if (new TextEncoder().encode(envelope).length > LARGE_MESSAGE_THRESHOLD_BYTES) {
@@ -319,6 +329,7 @@ export function EventStream({
         isOpen={showSessionPicker}
         sessions={forwardTargets}
         environments={environments ?? []}
+        personas={personas}
         onSelect={handlePickSession}
         onCancel={() => { setShowSessionPicker(false); }}
       />

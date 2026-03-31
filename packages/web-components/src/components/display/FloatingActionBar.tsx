@@ -91,8 +91,12 @@ export function FloatingActionBar({
             <button
               type="button"
               className={styles.forwardButton}
-              onClick={onForward}
-              disabled={forwardDisabled || selectedCount === 0}
+              aria-disabled={forwardDisabled || selectedCount === 0}
+              onClick={() => {
+                if (!forwardDisabled && selectedCount > 0) {
+                  onForward();
+                }
+              }}
               data-testid="floating-bar-forward"
             >
               <Forward size={ICON_SM} aria-hidden="true" />

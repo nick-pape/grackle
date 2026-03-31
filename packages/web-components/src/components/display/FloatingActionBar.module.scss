@@ -80,11 +80,11 @@
   color: var(--text-primary);
   white-space: nowrap;
 
-  &:hover:not(:disabled) {
+  &:hover:not([aria-disabled='true']) {
     background: var(--bg-hover);
   }
 
-  &:disabled {
+  &[aria-disabled='true'] {
     opacity: 0.4;
     cursor: not-allowed;
   }

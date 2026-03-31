@@ -122,6 +122,7 @@ export function SessionPage(): JSX.Element {
         sessions={sessions}
         currentSessionId={sessionId}
         environments={environments}
+        personas={personas}
         onForward={(targetSessionId, text) => sendInput(targetSessionId, text)}
       />
       {isActive && (

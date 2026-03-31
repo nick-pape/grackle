@@ -94,7 +94,7 @@ export const ForwardDisabled: Story = {
   },
   play: async ({ canvas }) => {
     const forwardBtn = canvas.getByTestId("floating-bar-forward");
-    await expect(forwardBtn).toBeDisabled();
+    await expect(forwardBtn).toHaveAttribute("aria-disabled", "true");
   },
 };
 
