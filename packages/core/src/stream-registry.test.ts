@@ -499,14 +499,16 @@ describe("stream-registry", () => {
       registry.subscribe(stream.id, "sender", "rw", "detach", true);
       registry.subscribe(stream.id, "other", "rw", "detach", false);
 
-      // Sender publishes; other reads it; sender has not yet read it
+      // Sender publishes; mark "other" as delivered — sender still hasn't read it
       const msg = registry.publish(stream.id, "sender", "hello");
-      // Mark other as delivered manually
-      msg.deliveredTo.add(Array.from(stream.subscriptions.values()).find((s) => s.sessionId === "other")!.id);
+      const otherSub = Array.from(stream.subscriptions.values()).find((s) => s.sessionId === "other")!;
+      msg.deliveredTo.add(otherSub.id);
 
-      // After prune attempt, message should remain because sender hasn't read it
-      // (pruneDeliveredMessages is called inside publish; test that the message persists)
-      expect(stream.messages).toHaveLength(1);
+      // Trigger a second publish, which calls pruneDeliveredMessages again
+      registry.publish(stream.id, "sender", "second message");
+
+      // Original message must still be present — sender's echo is unread
+      expect(stream.messages).toHaveLength(2);
     });
 
     it("selfEcho delivers to both sender and receiver", () => {

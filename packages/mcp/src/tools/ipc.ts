@@ -266,6 +266,7 @@ export const ipcTools: ToolDefinition[] = [
           streams: filteredStreams.map((s) => ({
             id: s.id,
             name: s.name,
+            selfEcho: s.selfEcho,
             subscriberCount: s.subscriberCount,
             messageBufferDepth: s.messageBufferDepth,
             subscribers: s.subscribers.map((sub) => ({
