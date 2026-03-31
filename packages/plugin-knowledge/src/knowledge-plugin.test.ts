@@ -53,6 +53,10 @@ vi.mock("./mcp-tools.js", () => ({
   knowledgeMcpTools: mockKnowledgeMcpTools,
 }));
 
+vi.mock("./logger.js", () => ({
+  logger: { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
+
 vi.mock("@grackle-ai/common", () => ({
   grackle: { Grackle: { typeName: "grackle.Grackle" } },
 }));
