@@ -350,4 +350,138 @@ export const ipcTools: ToolDefinition[] = [
       }
     },
   },
+  {
+    name: "ipc_share_stream",
+    group: "ipc",
+    description:
+      "Share a stream you hold with your parent session. Auto-discovers the parent via the inherited pipe fd and grants access using the attachStream RPC (with permission defaulting to your own permission on the fd if omitted), then sends a [stream-ref] notification through the pipe so the parent knows the new fd. For sibling-to-sibling sharing: share with parent, parent can use ipc_attach to forward to the sibling.",
+    inputSchema: z
+      .object({
+        fd: z.number().int().optional().describe("Your file descriptor on the stream to share (mutually exclusive with streamName)"),
+        streamName: z.string().optional().describe("Name of the stream to share — the fd is looked up via getSessionFds (mutually exclusive with fd)"),
+        permission: z
+          .enum(["r", "w", "rw"])
+          .optional()
+          .describe("Permission to grant the parent; if omitted, defaults to your own permission on the fd"),
+        deliveryMode: z
+          .enum(["sync", "async", "detach"])
+          .optional()
+          .describe("How the parent receives messages from the stream; defaults to \"detach\" for write-only (\"w\") permission and \"async\" otherwise"),
+      })
+      .refine(
+        (data) => (data.fd === undefined) !== (data.streamName === undefined),
+        { message: "Exactly one of `fd` or `streamName` must be provided", path: ["fd"] },
+      ),
+    rpcMethod: "attachStream",
+    mutating: true,
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients, authContext?: AuthContext) {
+      try {
+        const sessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
+        if (!sessionId) {
+          return {
+            content: [{ type: "text" as const, text: "Error: ipc_share_stream requires scoped auth (agent context)" }],
+            isError: true,
+          };
+        }
+
+        const fdsResult = await client.getSessionFds({ id: sessionId });
+
+        // Find the inherited pipe fd — the link back to the parent
+        const pipeFdInfo = fdsResult.fds.find((f) => f.streamName.startsWith("pipe:") && !f.owned);
+        if (!pipeFdInfo) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "Error: no parent pipe — session was spawned without a pipe. Use ipc_attach directly.",
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        const parentSessionId = pipeFdInfo.targetSessionId;
+        if (!parentSessionId) {
+          return {
+            content: [{ type: "text" as const, text: "Error: parent has disconnected from the pipe" }],
+            isError: true,
+          };
+        }
+
+        // Resolve the stream fd — either by fd number or by stream name
+        const fdArg = args.fd as number | undefined;
+        const streamNameArg = args.streamName as string | undefined;
+        let streamFdInfo: (typeof fdsResult.fds)[number] | undefined;
+        if (fdArg !== undefined) {
+          streamFdInfo = fdsResult.fds.find((f) => f.fd === fdArg);
+          if (!streamFdInfo) {
+            return {
+              content: [{ type: "text" as const, text: `Error: fd ${String(fdArg)} not found` }],
+              isError: true,
+            };
+          }
+        } else if (streamNameArg !== undefined) {
+          streamFdInfo = fdsResult.fds.find((f) => f.streamName === streamNameArg);
+          if (!streamFdInfo) {
+            return {
+              content: [{ type: "text" as const, text: `Error: stream "${streamNameArg}" not found in your open fds` }],
+              isError: true,
+            };
+          }
+        } else {
+          return {
+            content: [{ type: "text" as const, text: "Error: either fd or streamName must be provided" }],
+            isError: true,
+          };
+        }
+        const fd = streamFdInfo.fd;
+
+        // Verify the stream is shareable (not an internal/reserved stream)
+        const RESERVED_STREAM_PREFIXES: readonly string[] = ["pipe:", "lifecycle:", "stdin:"];
+        if (RESERVED_STREAM_PREFIXES.some((prefix) => streamFdInfo.streamName.startsWith(prefix))) {
+          return {
+            content: [{ type: "text" as const, text: `Error: fd ${String(fd)} is an internal stream and cannot be shared — only user-created streams can be shared` }],
+            isError: true,
+          };
+        }
+
+        // Default permission to the caller's own permission on the fd
+        const permission = (args.permission as string | undefined) ?? streamFdInfo.permission;
+
+        // Default deliveryMode: write-only streams require "detach"; otherwise "async"
+        const deliveryMode = (args.deliveryMode as string | undefined) ?? (permission === "w" ? "detach" : "async");
+
+        // Pre-validate: server rejects write-only + non-detach, give a clearer error upfront
+        if (permission === "w" && deliveryMode !== "detach") {
+          return {
+            content: [{ type: "text" as const, text: `Error: write-only streams (permission "w") can only be shared with deliveryMode "detach", but "${deliveryMode}" was requested` }],
+            isError: true,
+          };
+        }
+
+        // Grant parent access — attachStream validates permission attenuation server-side
+        const attachResult = await client.attachStream({
+          sessionId,
+          fd,
+          targetSessionId: parentSessionId,
+          permission,
+          deliveryMode,
+        });
+
+        const parentFd = attachResult.fd;
+        const streamName = streamFdInfo.streamName;
+
+        // Notify the parent through the pipe
+        await client.writeToFd({
+          sessionId,
+          fd: pipeFdInfo.fd,
+          message: `[stream-ref] Shared stream "${streamName}" — your fd: ${String(parentFd)}, permission: ${permission}`,
+        });
+
+        return jsonResult({ parentFd, streamName, parentSessionId });
+      } catch (error) {
+        return grpcErrorToToolResult(error);
+      }
+    },
+  },
 ];
