@@ -10,11 +10,6 @@ export interface BudgetExceeded {
   message: string;
 }
 
-/** Convert a USD floating-point cost to integer millicents (1 millicent = $0.00001). */
-export function costUsdToMillicents(costUsd: number): number {
-  return Math.floor(costUsd * 100_000);
-}
-
 /**
  * Check whether any budget is exceeded for the given task/workspace.
  * Returns undefined if within budget, or a BudgetExceeded descriptor.
@@ -36,7 +31,7 @@ export function checkBudget(taskId: string, workspaceId?: string): BudgetExceede
   const needsTaskUsage = task.tokenBudget > 0 || task.costBudgetMillicents > 0;
   const taskUsage = needsTaskUsage
     ? sessionStore.aggregateUsage({ taskId })
-    : { inputTokens: 0, outputTokens: 0, costUsd: 0, sessionCount: 0 };
+    : { inputTokens: 0, outputTokens: 0, costMillicents: 0, sessionCount: 0 };
   const totalTokens = taskUsage.inputTokens + taskUsage.outputTokens;
 
   if (task.tokenBudget > 0 && totalTokens >= task.tokenBudget) {
@@ -47,15 +42,12 @@ export function checkBudget(taskId: string, workspaceId?: string): BudgetExceede
     };
   }
 
-  if (task.costBudgetMillicents > 0) {
-    const usedMillicents = costUsdToMillicents(taskUsage.costUsd);
-    if (usedMillicents >= task.costBudgetMillicents) {
-      return {
-        scope: "task",
-        reason: "cost",
-        message: `Task cost ${usedMillicents} millicents, budget is ${task.costBudgetMillicents}`,
-      };
-    }
+  if (task.costBudgetMillicents > 0 && taskUsage.costMillicents >= task.costBudgetMillicents) {
+    return {
+      scope: "task",
+      reason: "cost",
+      message: `Task cost ${taskUsage.costMillicents} millicents, budget is ${task.costBudgetMillicents}`,
+    };
   }
 
   // ── Workspace-level budget check ──
@@ -77,7 +69,7 @@ export function checkBudget(taskId: string, workspaceId?: string): BudgetExceede
   const taskIds = allTasks.map((t) => t.id);
   const wsUsage = taskIds.length > 0
     ? sessionStore.aggregateUsage({ taskIds })
-    : { inputTokens: 0, outputTokens: 0, costUsd: 0, sessionCount: 0 };
+    : { inputTokens: 0, outputTokens: 0, costMillicents: 0, sessionCount: 0 };
   const wsTotalTokens = wsUsage.inputTokens + wsUsage.outputTokens;
 
   if (workspace.tokenBudget > 0 && wsTotalTokens >= workspace.tokenBudget) {
@@ -88,15 +80,12 @@ export function checkBudget(taskId: string, workspaceId?: string): BudgetExceede
     };
   }
 
-  if (workspace.costBudgetMillicents > 0) {
-    const wsUsedMillicents = costUsdToMillicents(wsUsage.costUsd);
-    if (wsUsedMillicents >= workspace.costBudgetMillicents) {
-      return {
-        scope: "workspace",
-        reason: "cost",
-        message: `Workspace cost ${wsUsedMillicents} millicents, budget is ${workspace.costBudgetMillicents}`,
-      };
-    }
+  if (workspace.costBudgetMillicents > 0 && wsUsage.costMillicents >= workspace.costBudgetMillicents) {
+    return {
+      scope: "workspace",
+      reason: "cost",
+      message: `Workspace cost ${wsUsage.costMillicents} millicents, budget is ${workspace.costBudgetMillicents}`,
+    };
   }
 
   return undefined;

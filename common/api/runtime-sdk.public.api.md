@@ -101,7 +101,7 @@ export abstract class BaseAgentSession implements AgentSession {
     protected abstract readonly noMessagesError: string;
     // (undocumented)
     protected readonly prompt: string;
-    protected pushUsageEvent(inputTokens: number, outputTokens: number, costUsd: number): void;
+    protected pushUsageEvent(inputTokens: number, outputTokens: number, costMillicents: number): void;
     protected releaseResources(): void;
     protected resolveMcp(): ResolvedMcpConfig;
     protected resolveWorkDir(requireNonEmpty?: boolean): Promise<string | undefined>;

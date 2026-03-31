@@ -47,7 +47,8 @@ export type {
 export { KnowledgeGraph, KnowledgeDetailPanel, KnowledgeNav } from "./components/knowledge/index.js";
 
 // Layout
-export { StatusBar, AppNav, Sidebar, BottomStatusBar } from "./components/layout/index.js";
+export { StatusBar, AppNav, Sidebar, BottomStatusBar, TABS } from "./components/layout/index.js";
+export type { AppTab } from "./components/layout/index.js";
 
 // Lists
 export { EnvironmentNav, FindingsNav } from "./components/lists/index.js";
@@ -144,6 +145,7 @@ export {
   SETTINGS_APPEARANCE_URL, SETTINGS_ABOUT_URL, SETTINGS_SHORTCUTS_URL,
   PAIR_PATH, NEW_WORKSPACE_URL, KNOWLEDGE_URL, HOME_URL,
   FINDINGS_URL, findingsUrl, findingUrl,
+  CHAT_URL, TASKS_URL,
 } from "./utils/navigation.js";
 
 export {

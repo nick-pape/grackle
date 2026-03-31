@@ -10,7 +10,7 @@ import styles from "./AppNav.module.scss";
 export type AppView = "dashboard" | "chat" | "tasks" | "environments" | "knowledge" | "findings" | "settings";
 
 /** Tab definition for the application navigation bar. */
-interface AppTab {
+export interface AppTab {
   /** View identifier. */
   view: AppView;
   /** Display label. */
@@ -23,8 +23,8 @@ interface AppTab {
   testId: string;
 }
 
-/** Ordered list of app navigation tabs. */
-const TABS: AppTab[] = [
+/** Ordered list of all app navigation tabs. Exported for plugin registry use. */
+export const TABS: AppTab[] = [
   { view: "dashboard", label: "Dashboard", icon: <Home size={ICON_LG} />, route: HOME_URL, testId: "sidebar-tab-dashboard" },
   { view: "chat", label: "Chat", icon: <MessageSquare size={ICON_LG} />, route: CHAT_URL, testId: "sidebar-tab-chat" },
   { view: "tasks", label: "Tasks", icon: <ClipboardList size={ICON_LG} />, route: TASKS_URL, testId: "sidebar-tab-tasks" },
@@ -58,7 +58,7 @@ export function getActiveView(pathname: string): AppView {
 }
 
 /** Full-width navigation bar below the StatusBar for switching between app views. */
-export function AppNav(): JSX.Element {
+export function AppNav({ tabs = TABS }: { tabs?: AppTab[] }): JSX.Element {
   const location = useLocation();
   const navigate = useAppNavigate();
   const tabListRef = useRef<HTMLElement>(null);
@@ -75,28 +75,28 @@ export function AppNav(): JSX.Element {
       return;
     }
     const focusedIndex = Array.from(buttons).findIndex((b) => b === document.activeElement);
-    const currentIndex = focusedIndex >= 0 ? focusedIndex : TABS.findIndex((t) => t.view === activeView);
+    const currentIndex = focusedIndex >= 0 ? focusedIndex : tabs.findIndex((t) => t.view === activeView);
     let nextIndex = currentIndex;
 
     if (e.key === "ArrowRight" || e.key === "j" || e.key === "J") {
       e.preventDefault();
-      nextIndex = (currentIndex + 1) % TABS.length;
+      nextIndex = (currentIndex + 1) % tabs.length;
     } else if (e.key === "ArrowLeft" || e.key === "k" || e.key === "K") {
       e.preventDefault();
-      nextIndex = (currentIndex - 1 + TABS.length) % TABS.length;
+      nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
     } else if (e.key === "Home") {
       e.preventDefault();
       nextIndex = 0;
     } else if (e.key === "End") {
       e.preventDefault();
-      nextIndex = TABS.length - 1;
+      nextIndex = tabs.length - 1;
     } else {
       return;
     }
 
-    navigate(TABS[nextIndex].route);
+    navigate(tabs[nextIndex].route);
     buttons[nextIndex]?.focus(); // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- index may be out of bounds
-  }, [activeView, navigate]);
+  }, [activeView, navigate, tabs]);
 
   return (
     <nav
@@ -108,7 +108,7 @@ export function AppNav(): JSX.Element {
       onKeyDown={handleKeyDown}
       data-testid="sidebar-nav"
     >
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const isActive = tab.view === activeView;
         return (
           <Tooltip key={tab.view} text={tab.label} placement="bottom">

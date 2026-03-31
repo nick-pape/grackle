@@ -36,6 +36,25 @@ describe("loadPlugins — topological sort", () => {
     expect(result.reconciliationPhases).toEqual([]);
     expect(result.mcpTools).toEqual([]);
     expect(result.subscriberDisposables).toEqual([]);
+    expect(result.pluginNames).toEqual([]);
+  });
+
+  it("returns pluginNames in topological load order", async () => {
+    const pluginA = createPlugin({ name: "a", dependencies: ["b"] });
+    const pluginB = createPlugin({ name: "b" });
+
+    const result = await loadPlugins([pluginA, pluginB], createMockContext());
+
+    // B loads first (dependency of A)
+    expect(result.pluginNames).toEqual(["b", "a"]);
+  });
+
+  it("returns pluginNames for a single plugin", async () => {
+    const plugin = createPlugin({ name: "core" });
+
+    const result = await loadPlugins([plugin], createMockContext());
+
+    expect(result.pluginNames).toEqual(["core"]);
   });
 
   it("loads a single plugin with no dependencies", async () => {

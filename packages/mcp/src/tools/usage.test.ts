@@ -21,7 +21,7 @@ describe("usage_get", () => {
     mockGetUsage.mockResolvedValue({
       inputTokens: 1000,
       outputTokens: 50,
-      costUsd: 0.05,
+      costMillicents: 5000,
       sessionCount: 2,
     });
 
@@ -35,7 +35,7 @@ describe("usage_get", () => {
     const data = JSON.parse((result.content[0] as { text: string }).text);
     expect(data.inputTokens).toBe(1000);
     expect(data.outputTokens).toBe(50);
-    expect(data.costUsd).toBe(0.05);
+    expect(data.costMillicents).toBe(5000);
     expect(data.sessionCount).toBe(2);
   });
 

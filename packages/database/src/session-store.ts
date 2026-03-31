@@ -144,13 +144,13 @@ export function updateSessionUsage(
   id: string,
   inputTokens: number,
   outputTokens: number,
-  costUsd: number,
+  costMillicents: number,
 ): void {
   db.update(sessions)
     .set({
       inputTokens: sql`${sessions.inputTokens} + ${inputTokens}`,
       outputTokens: sql`${sessions.outputTokens} + ${outputTokens}`,
-      costUsd: sql`${sessions.costUsd} + ${costUsd}`,
+      costMillicents: sql`${sessions.costMillicents} + ${costMillicents}`,
     })
     .where(eq(sessions.id, id))
     .run();
@@ -159,7 +159,7 @@ export function updateSessionUsage(
 /** Aggregate usage stats across sessions matching the given filter. */
 export function aggregateUsage(
   filter: { taskId?: string; taskIds?: string[]; environmentId?: string },
-): { inputTokens: number; outputTokens: number; costUsd: number; sessionCount: number } {
+): { inputTokens: number; outputTokens: number; costMillicents: number; sessionCount: number } {
   const conditions = [];
   if (filter.taskId) {
     conditions.push(eq(sessions.taskId, filter.taskId));
@@ -174,10 +174,10 @@ export function aggregateUsage(
   const result = db.select({
     inputTokens: sql<number>`COALESCE(SUM(${sessions.inputTokens}), 0)`,
     outputTokens: sql<number>`COALESCE(SUM(${sessions.outputTokens}), 0)`,
-    costUsd: sql<number>`COALESCE(SUM(${sessions.costUsd}), 0)`,
+    costMillicents: sql<number>`COALESCE(SUM(${sessions.costMillicents}), 0)`,
     sessionCount: sql<number>`COUNT(*)`,
   }).from(sessions).where(where).get();
-  return result ?? { inputTokens: 0, outputTokens: 0, costUsd: 0, sessionCount: 0 };
+  return result ?? { inputTokens: 0, outputTokens: 0, costMillicents: 0, sessionCount: 0 };
 }
 
 /** Delete all sessions belonging to a specific environment. */

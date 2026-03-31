@@ -1,4 +1,6 @@
 import { GrackleProvider } from "./context/GrackleContext.js";
+import { ManifestProvider, useManifest } from "./context/ManifestContext.js";
+import { buildTabs } from "./plugin-registry.js";
 import {
   ToastProvider, ThemeProvider, SidebarProvider,
   StatusBar, AppNav, Sidebar, BottomStatusBar,
@@ -6,6 +8,7 @@ import {
   MockGrackleProvider,
   useSidebarContent, useToast,
   sessionUrl, useAppNavigate,
+  type AppTab,
 } from "@grackle-ai/web-components";
 import { useCallback, useEffect, useState, Suspense, lazy, type LazyExoticComponent, type JSX } from "react";
 import { useGrackle } from "./context/GrackleContext.js";
@@ -54,7 +57,7 @@ const IS_MOCK_MODE: boolean =
   __DEMO_MODE__ || (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("mock"));
 
 /** Inner layout body that conditionally renders the sidebar based on context content. */
-function AppShellBody(): JSX.Element {
+function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
   const { connected, environments: { environments }, sessions: { sessions }, tasks: { tasks } } = useGrackle();
   const { toasts, dismissToast } = useToast();
   const location = useLocation();
@@ -85,7 +88,7 @@ function AppShellBody(): JSX.Element {
   return (
     <>
       <StatusBar connected={connected} environments={environments} sessions={sessions} onToggleSidebar={hasSidebar ? toggleSidebar : undefined} sidebarOpen={sidebarOpen} />
-      <AppNav />
+      <AppNav tabs={tabs} />
       <div className={styles.body}>
         {hasSidebar && (
           <div
@@ -122,6 +125,7 @@ function AppShellBody(): JSX.Element {
 /** Application shell layout with StatusBar, Sidebar, Outlet, and BottomStatusBar. */
 function AppShell(): JSX.Element {
   const { sessions: { lastSpawnedId }, environments: { environments, operationError: environmentOperationError, clearOperationError: clearEnvironmentOperationError }, tasks: { tasks }, connected, onboardingCompleted } = useGrackle();
+  const { pluginNames } = useManifest();
   const { showToast } = useToast();
   useEnvironmentToasts(environments, showToast);
   useTaskToasts(tasks, showToast);
@@ -144,11 +148,13 @@ function AppShell(): JSX.Element {
     return <Navigate to="/setup" replace />;
   }
 
+  const tabs = buildTabs(pluginNames);
+
   return (
     <SidebarProvider>
       <div className={styles.root}>
         {IS_MOCK_MODE && <DemoBanner />}
-        <AppShellBody />
+        <AppShellBody tabs={tabs} />
       </div>
     </SidebarProvider>
   );
@@ -187,6 +193,10 @@ function WorkspaceRedirect(): JSX.Element | undefined {
 
 /** Route configuration for the application. */
 function AppRoutes(): JSX.Element {
+  const { pluginNames } = useManifest();
+  const hasOrchestration = pluginNames.includes("orchestration");
+  const hasKnowledge = pluginNames.includes("knowledge");
+
   return (
     <Routes>
       <Route path="setup" element={<SetupWizard />} />
@@ -197,28 +207,34 @@ function AppRoutes(): JSX.Element {
         <Route path="sessions/new" element={<NewChatPage />} />
         <Route path="sessions/:sessionId" element={<SessionPage />} />
 
-        {/* Knowledge sidebar */}
-        <Route element={<WithKnowledgeSidebar />}>
-          <Route path="knowledge" element={<Suspense fallback={<SplashScreen />}><KnowledgePage /></Suspense>} />
-        </Route>
+        {/* Knowledge sidebar (knowledge plugin) */}
+        {hasKnowledge && (
+          <Route element={<WithKnowledgeSidebar />}>
+            <Route path="knowledge" element={<Suspense fallback={<SplashScreen />}><KnowledgePage /></Suspense>} />
+          </Route>
+        )}
 
-        {/* Tasks sidebar */}
-        <Route element={<WithTaskSidebar />}>
-          <Route path="tasks" element={<TasksEmptyPage />} />
-          <Route path="tasks/new" element={<NewTaskPage />} />
-          <Route path="tasks/:taskId" element={<TaskPage />} />
-          <Route path="tasks/:taskId/edit" element={<TaskPage />} />
-          <Route path="tasks/:taskId/stream" element={<TaskPage />} />
-          <Route path="tasks/:taskId/findings" element={<TaskPage />} />
-        </Route>
+        {/* Tasks sidebar (orchestration plugin) */}
+        {hasOrchestration && (
+          <Route element={<WithTaskSidebar />}>
+            <Route path="tasks" element={<TasksEmptyPage />} />
+            <Route path="tasks/new" element={<NewTaskPage />} />
+            <Route path="tasks/:taskId" element={<TaskPage />} />
+            <Route path="tasks/:taskId/edit" element={<TaskPage />} />
+            <Route path="tasks/:taskId/stream" element={<TaskPage />} />
+            <Route path="tasks/:taskId/findings" element={<TaskPage />} />
+          </Route>
+        )}
 
-        {/* Findings sidebar */}
-        <Route element={<WithFindingsSidebar />}>
-          <Route path="findings" element={<FindingsListPage />} />
-          <Route path="findings/:findingId" element={<FindingDetailPage />} />
-          <Route path="environments/:environmentId/workspaces/:workspaceId/findings" element={<FindingsListPage />} />
-          <Route path="environments/:environmentId/workspaces/:workspaceId/findings/:findingId" element={<FindingDetailPage />} />
-        </Route>
+        {/* Findings sidebar (orchestration plugin) */}
+        {hasOrchestration && (
+          <Route element={<WithFindingsSidebar />}>
+            <Route path="findings" element={<FindingsListPage />} />
+            <Route path="findings/:findingId" element={<FindingDetailPage />} />
+            <Route path="environments/:environmentId/workspaces/:workspaceId/findings" element={<FindingsListPage />} />
+            <Route path="environments/:environmentId/workspaces/:workspaceId/findings/:findingId" element={<FindingDetailPage />} />
+          </Route>
+        )}
 
         {/* Environments sidebar */}
         <Route element={<WithEnvironmentSidebar />}>
@@ -321,12 +337,14 @@ function AppContent(): JSX.Element {
 export default function App(): JSX.Element {
   const Provider = IS_MOCK_MODE ? MockGrackleProvider : GrackleProvider;
   return (
-    <ThemeProvider>
-      <ToastProvider>
-        <Provider>
-          <AppContent />
-        </Provider>
-      </ToastProvider>
-    </ThemeProvider>
+    <ManifestProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <Provider>
+            <AppContent />
+          </Provider>
+        </ToastProvider>
+      </ThemeProvider>
+    </ManifestProvider>
   );
 }

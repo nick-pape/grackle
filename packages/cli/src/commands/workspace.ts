@@ -62,7 +62,7 @@ export function registerWorkspaceCommands(program: Command): void {
       const { core: client } = createGrackleClients();
       const p = await client.getWorkspace({ id });
       // Fetch usage for budget display
-      let usage: { inputTokens: number; outputTokens: number; costUsd: number } | undefined;
+      let usage: { inputTokens: number; outputTokens: number; costMillicents: number } | undefined;
       try {
         usage = await client.getUsage({ scope: "workspace", id });
       } catch {
@@ -83,10 +83,10 @@ export function registerWorkspaceCommands(program: Command): void {
         { "Created": p.createdAt },
         { "Updated": p.updatedAt },
       );
-      if (usage && (usage.inputTokens || usage.outputTokens || usage.costUsd)) {
+      if (usage && (usage.inputTokens || usage.outputTokens || usage.costMillicents)) {
         table.push(
           { "Tokens": `${formatTokens(usage.inputTokens)} in / ${formatTokens(usage.outputTokens)} out` },
-          { "Cost": formatCost(usage.costUsd) },
+          { "Cost": formatCost(usage.costMillicents) },
         );
       }
       if (p.tokenBudget > 0) {
@@ -94,7 +94,7 @@ export function registerWorkspaceCommands(program: Command): void {
         table.push({ "Token Budget": formatBudget(usedTokens, p.tokenBudget, "token") });
       }
       if (p.costBudgetMillicents > 0) {
-        const usedCost = usage ? usage.costUsd : 0;
+        const usedCost = usage ? usage.costMillicents : 0;
         table.push({ "Cost Budget": formatBudget(usedCost, p.costBudgetMillicents, "cost") });
       }
       console.log(table.toString());

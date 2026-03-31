@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/adapter-ssh",
-  "version": "0.98.0",
+  "version": "0.100.1",
   "description": "Grackle SSH environment adapter",
   "license": "MIT",
   "repository": {

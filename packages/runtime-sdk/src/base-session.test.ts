@@ -102,8 +102,8 @@ class TestSession extends BaseAgentSession {
     return this.resolveMcp();
   }
 
-  public testPushUsageEvent(inputTokens: number, outputTokens: number, costUsd: number): void {
-    this.pushUsageEvent(inputTokens, outputTokens, costUsd);
+  public testPushUsageEvent(inputTokens: number, outputTokens: number, costMillicents: number): void {
+    this.pushUsageEvent(inputTokens, outputTokens, costMillicents);
   }
 
   public testSetRuntimeSessionId(id: string): void {
@@ -583,13 +583,13 @@ describe("BaseAgentSession.pushUsageEvent", () => {
   it("pushes a usage event with correct JSON shape", () => {
     const session = new TestSession({ id: "t-u1", prompt: "p", model: "m", maxTurns: 0 });
 
-    session.testPushUsageEvent(100, 20, 0.005);
+    session.testPushUsageEvent(100, 20, 500);
 
     const events = session.drainBufferedEvents();
     const usage = events.find((e) => e.type === "usage");
     expect(usage).toBeDefined();
     const parsed = JSON.parse(usage!.content) as Record<string, number>;
-    expect(parsed).toEqual({ input_tokens: 100, output_tokens: 20, cost_usd: 0.005 });
+    expect(parsed).toEqual({ input_tokens: 100, output_tokens: 20, cost_millicents: 500 });
   });
 
   it("skips push when all values are zero", () => {
@@ -604,13 +604,13 @@ describe("BaseAgentSession.pushUsageEvent", () => {
   it("pushes when only cost is non-zero", () => {
     const session = new TestSession({ id: "t-u3", prompt: "p", model: "m", maxTurns: 0 });
 
-    session.testPushUsageEvent(0, 0, 0.01);
+    session.testPushUsageEvent(0, 0, 1000);
 
     const events = session.drainBufferedEvents();
     const usage = events.find((e) => e.type === "usage");
     expect(usage).toBeDefined();
     const parsed = JSON.parse(usage!.content) as Record<string, number>;
-    expect(parsed).toEqual({ input_tokens: 0, output_tokens: 0, cost_usd: 0.01 });
+    expect(parsed).toEqual({ input_tokens: 0, output_tokens: 0, cost_millicents: 1000 });
   });
 
   it("pushes when only tokens are non-zero", () => {
@@ -622,7 +622,7 @@ describe("BaseAgentSession.pushUsageEvent", () => {
     const usage = events.find((e) => e.type === "usage");
     expect(usage).toBeDefined();
     const parsed = JSON.parse(usage!.content) as Record<string, number>;
-    expect(parsed).toEqual({ input_tokens: 50, output_tokens: 0, cost_usd: 0 });
+    expect(parsed).toEqual({ input_tokens: 50, output_tokens: 0, cost_millicents: 0 });
   });
 });
 

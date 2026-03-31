@@ -116,7 +116,7 @@ function makeSession(overrides: Partial<{
   endReason: string | null;
   inputTokens: number;
   outputTokens: number;
-  costUsd: number;
+  costMillicents: number;
 }> = {}) {
   return {
     id: "sess-1",
@@ -139,7 +139,7 @@ function makeSession(overrides: Partial<{
     endReason: null,
     inputTokens: 0,
     outputTokens: 0,
-    costUsd: 0,
+    costMillicents: 0,
     ...overrides,
   };
 }

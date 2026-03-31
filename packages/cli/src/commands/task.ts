@@ -114,16 +114,16 @@ export function registerTaskCommands(program: Command): void {
       // Show usage from the task scope
       try {
         const usage = await core.getUsage({ scope: "task", id: taskId });
-        if (usage.inputTokens || usage.outputTokens || usage.costUsd) {
+        if (usage.inputTokens || usage.outputTokens || usage.costMillicents) {
           console.log(`Tokens:      ${formatTokens(usage.inputTokens)} in / ${formatTokens(usage.outputTokens)} out`);
-          console.log(`Cost:        ${formatCost(usage.costUsd)}`);
+          console.log(`Cost:        ${formatCost(usage.costMillicents)}`);
         }
         if (t.tokenBudget > 0) {
           const usedTokens = usage.inputTokens + usage.outputTokens;
           console.log(`Token Budget:  ${formatBudget(usedTokens, t.tokenBudget, "token")}`);
         }
         if (t.costBudgetMillicents > 0) {
-          console.log(`Cost Budget:   ${formatBudget(usage.costUsd, t.costBudgetMillicents, "cost")}`);
+          console.log(`Cost Budget:   ${formatBudget(usage.costMillicents, t.costBudgetMillicents, "cost")}`);
         }
       } catch (err: unknown) {
         // Only suppress NotFound (session cleaned up); surface other errors

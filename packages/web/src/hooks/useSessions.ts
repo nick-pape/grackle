@@ -101,8 +101,8 @@ export function useSessions(): UseSessionsResult {
         const data = JSON.parse(event.content) as Record<string, unknown>;
         const inputTokens = Number(data.input_tokens) || 0;
         const outputTokens = Number(data.output_tokens) || 0;
-        const costUsd = Number(data.cost_usd) || 0;
-        if (inputTokens > 0 || outputTokens > 0 || costUsd > 0) {
+        const costMillicents = Number(data.cost_millicents) || 0;
+        if (inputTokens > 0 || outputTokens > 0 || costMillicents > 0) {
           setSessions((prev) =>
             prev.map((s) =>
               s.id === event.sessionId
@@ -110,7 +110,7 @@ export function useSessions(): UseSessionsResult {
                     ...s,
                     inputTokens: (s.inputTokens ?? 0) + inputTokens,
                     outputTokens: (s.outputTokens ?? 0) + outputTokens,
-                    costUsd: (s.costUsd ?? 0) + costUsd,
+                    costMillicents: (s.costMillicents ?? 0) + costMillicents,
                   }
                 : s,
             ),

@@ -446,7 +446,7 @@ describe("ClaudeCodeRuntime — usage event emission", () => {
     const data = JSON.parse(usageEvents[0].content) as Record<string, number>;
     expect(data.input_tokens).toBe(1952);
     expect(data.output_tokens).toBe(4);
-    expect(data.cost_usd).toBe(0.005916);
+    expect(data.cost_millicents).toBe(592); // Math.round(0.005916 * 100_000)
   });
 
   it("includes cache tokens in total input count", async () => {
@@ -473,7 +473,7 @@ describe("ClaudeCodeRuntime — usage event emission", () => {
     // Total input = 3 (non-cached) + 5000 (cache creation) + 10000 (cache read)
     expect(data.input_tokens).toBe(15003);
     expect(data.output_tokens).toBe(4);
-    expect(data.cost_usd).toBe(0.048);
+    expect(data.cost_millicents).toBe(4800); // Math.round(0.048 * 100_000)
   });
 
   it("does not emit usage event for error results", async () => {
@@ -855,12 +855,12 @@ describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
     const usage1 = JSON.parse(usageEvents[0].content) as Record<string, number>;
     expect(usage1.input_tokens).toBe(100);
     expect(usage1.output_tokens).toBe(10);
-    expect(usage1.cost_usd).toBe(0.01);
+    expect(usage1.cost_millicents).toBe(1000); // Math.round(0.01 * 100_000)
 
     const usage2 = JSON.parse(usageEvents[1].content) as Record<string, number>;
     expect(usage2.input_tokens).toBe(250); // 200 + 50 cached
     expect(usage2.output_tokens).toBe(20);
-    expect(usage2.cost_usd).toBe(0.02);
+    expect(usage2.cost_millicents).toBe(2000); // Math.round(0.02 * 100_000)
 
     session.kill();
   });

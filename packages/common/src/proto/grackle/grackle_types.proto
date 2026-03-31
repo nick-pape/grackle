@@ -130,7 +130,7 @@ message Session {
   string persona_id = 15;
   int32 input_tokens = 16;
   int32 output_tokens = 17;
-  double cost_usd = 18;
+  int32 cost_millicents = 18; // int32 sufficient: max ~$21,474 (2^31-1 millicents); avoids BigInt in TS clients
   int32 pipe_fd = 19; // fd assigned to parent for pipe IPC (0 = no pipe)
   string end_reason = 20; // Why the session stopped: "completed", "killed", "interrupted"
 }
@@ -732,7 +732,7 @@ message GetUsageRequest {
 message UsageStats {
   int32 input_tokens = 1;
   int32 output_tokens = 2;
-  double cost_usd = 3;
+  int32 cost_millicents = 3; // int32 sufficient: max ~$21,474 (2^31-1 millicents); avoids BigInt in TS clients
   int32 session_count = 4;
 }
 

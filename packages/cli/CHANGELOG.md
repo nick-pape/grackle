@@ -1,6 +1,27 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 31 Mar 2026 03:27:06 GMT and should not be manually modified.
+This log was last generated on Tue, 31 Mar 2026 06:01:21 GMT and should not be manually modified.
+
+## 0.100.1
+Tue, 31 Mar 2026 06:01:21 GMT
+
+### Patches
+
+- Migrate cost storage from floating-point USD to integer millicents across proto, database, runtimes, event processor, budget checker, and display layers
+
+## 0.100.0
+Tue, 31 Mar 2026 05:30:18 GMT
+
+### Minor changes
+
+- Add GET /api/manifest endpoint; add pluginNames to LoadedPlugins; manifest-driven nav tabs, routes, and domain hooks in web UI
+
+## 0.99.0
+Tue, 31 Mar 2026 04:41:40 GMT
+
+### Minor changes
+
+- Extract knowledge graph functionality (Neo4j, embeddings, gRPC handlers, MCP tools) into new @grackle-ai/plugin-knowledge package
 
 ## 0.98.0
 Tue, 31 Mar 2026 03:27:06 GMT

@@ -352,7 +352,7 @@ export function processEventStream(
             const data = JSON.parse(event.content) as {
               input_tokens?: number;
               output_tokens?: number;
-              cost_usd?: number;
+              cost_millicents?: number;
             };
             const inputTokens = Number.isFinite(data.input_tokens)
               ? Math.max(0, Math.trunc(data.input_tokens as number))
@@ -360,11 +360,11 @@ export function processEventStream(
             const outputTokens = Number.isFinite(data.output_tokens)
               ? Math.max(0, Math.trunc(data.output_tokens as number))
               : 0;
-            const costUsd = Number.isFinite(data.cost_usd)
-              ? Math.max(0, data.cost_usd as number)
+            const costMillicents = Number.isFinite(data.cost_millicents)
+              ? Math.max(0, Math.trunc(data.cost_millicents as number))
               : 0;
-            if (inputTokens > 0 || outputTokens > 0 || costUsd > 0) {
-              sessionStore.updateSessionUsage(sessionId, inputTokens, outputTokens, costUsd);
+            if (inputTokens > 0 || outputTokens > 0 || costMillicents > 0) {
+              sessionStore.updateSessionUsage(sessionId, inputTokens, outputTokens, costMillicents);
 
               // ── Post-usage budget check ──
               if (ctx.taskId && !ctx.budgetSigtermSent) {

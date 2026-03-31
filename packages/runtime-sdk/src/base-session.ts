@@ -149,8 +149,8 @@ export abstract class BaseAgentSession implements AgentSession {
    * Push a usage event with a standardized JSON shape.
    * Skips the push when all values are zero (no meaningful usage to report).
    */
-  protected pushUsageEvent(inputTokens: number, outputTokens: number, costUsd: number): void {
-    if (inputTokens === 0 && outputTokens === 0 && costUsd === 0) {
+  protected pushUsageEvent(inputTokens: number, outputTokens: number, costMillicents: number): void {
+    if (inputTokens === 0 && outputTokens === 0 && costMillicents === 0) {
       return;
     }
     this.eventQueue.push({
@@ -159,7 +159,7 @@ export abstract class BaseAgentSession implements AgentSession {
       content: JSON.stringify({
         input_tokens: inputTokens,
         output_tokens: outputTokens,
-        cost_usd: costUsd,
+        cost_millicents: costMillicents,
       }),
     });
   }

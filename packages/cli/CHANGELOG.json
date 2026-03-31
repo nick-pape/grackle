@@ -2,6 +2,42 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.100.1",
+      "tag": "@grackle-ai/cli_v0.100.1",
+      "date": "Tue, 31 Mar 2026 06:01:21 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Migrate cost storage from floating-point USD to integer millicents across proto, database, runtimes, event processor, budget checker, and display layers"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.100.0",
+      "tag": "@grackle-ai/cli_v0.100.0",
+      "date": "Tue, 31 Mar 2026 05:30:18 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add GET /api/manifest endpoint; add pluginNames to LoadedPlugins; manifest-driven nav tabs, routes, and domain hooks in web UI"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.99.0",
+      "tag": "@grackle-ai/cli_v0.99.0",
+      "date": "Tue, 31 Mar 2026 04:41:40 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Extract knowledge graph functionality (Neo4j, embeddings, gRPC handlers, MCP tools) into new @grackle-ai/plugin-knowledge package"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.98.0",
       "tag": "@grackle-ai/cli_v0.98.0",
       "date": "Tue, 31 Mar 2026 03:27:06 GMT",
