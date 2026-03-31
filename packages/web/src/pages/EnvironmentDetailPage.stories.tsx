@@ -43,7 +43,7 @@ export const LinkedWorkspacesVisible: Story = {
     // The "Workspaces" heading should be present
     await expect(canvas.getByText("Workspaces")).toBeInTheDocument();
     // At least one linked workspace card (e.g., proj-alpha / Workspace Alpha) should appear
-    const linkedWorkspaceCards = canvas.getAllByTestId(/^linked-workspace-card-/);
+    const linkedWorkspaceCards = canvas.getAllByTestId("workspace-card");
     await expect(linkedWorkspaceCards.length).toBeGreaterThan(0);
   },
 };
