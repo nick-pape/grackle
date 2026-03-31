@@ -7,7 +7,7 @@
  * @module
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import type { ScheduleData, GrackleEvent, UseSchedulesResult, ScheduleUpdate } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
 import { grackleClient } from "./useGrackleClient.js";
@@ -24,6 +24,8 @@ export type { UseSchedulesResult } from "@grackle-ai/web-components";
 export function useSchedules(): UseSchedulesResult {
   const [schedules, setSchedules] = useState<ScheduleData[]>([]);
   const { loading: schedulesLoading, track: trackSchedules } = useLoadingState();
+  /** Debounce timer to coalesce rapid schedule.fired events into a single reload. */
+  const firedDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const loadSchedules = useCallback(async () => {
     try {
@@ -39,8 +41,12 @@ export function useSchedules(): UseSchedulesResult {
       case "schedule.created":
       case "schedule.updated":
       case "schedule.deleted":
-      case "schedule.fired":
         loadSchedules().catch(() => {});
+        return true;
+      case "schedule.fired":
+        // Debounce reloads for fired events — schedules can fire rapidly at short intervals.
+        clearTimeout(firedDebounceRef.current);
+        firedDebounceRef.current = setTimeout(() => { loadSchedules().catch(() => {}); }, 500);
         return true;
       default:
         return false;

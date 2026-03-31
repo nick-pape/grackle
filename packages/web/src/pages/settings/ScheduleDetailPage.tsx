@@ -86,19 +86,18 @@ function ScheduleForm({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
 
-  // Hydrate form when existing schedule loads asynchronously
-  const [hydrated, setHydrated] = useState(!!isNew);
+  // Sync form state from existing schedule when it changes, as long as user isn't actively editing.
   useEffect(() => {
-    if (!isNew && existing && !hydrated) {
-      setHydrated(true);
-      setTitle(existing.title);
-      setDescription(existing.description);
-      setScheduleExpression(existing.scheduleExpression);
-      setPersonaId(existing.personaId);
-      setEnvironmentId(existing.environmentId);
-      setWorkspaceId(existing.workspaceId);
-    }
-  }, [isNew, existing, hydrated]);
+    if (isNew) { return; }
+    if (!existing) { return; }
+    if (activeFieldId !== null) { return; }
+    setTitle(existing.title);
+    setDescription(existing.description);
+    setScheduleExpression(existing.scheduleExpression);
+    setPersonaId(existing.personaId);
+    setEnvironmentId(existing.environmentId);
+    setWorkspaceId(existing.workspaceId);
+  }, [isNew, existing, activeFieldId]);
 
   const isLoadingExisting = !isNew && existing === undefined;
   const canCreate = isNew && title.trim().length > 0 && scheduleExpression.trim().length > 0 && personaId.length > 0;
