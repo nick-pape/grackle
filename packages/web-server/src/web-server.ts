@@ -46,6 +46,8 @@ export interface WebServerOptions {
   webDistDir?: string;
   /** Optional readiness probe callback. When omitted, `/readyz` returns a basic "ok". */
   readinessCheck?: () => ReadinessResult | Promise<ReadinessResult>;
+  /** Names of loaded plugins, served at `GET /api/manifest`. */
+  pluginNames?: string[];
 }
 
 // ─── Static File Config ─────────────────────────────────────
@@ -281,7 +283,7 @@ export function isWildcardAddress(host: string): boolean {
  * @returns An `http.Server` ready to `.listen()`.
  */
 export function createWebServer(options: WebServerOptions): http.Server {
-  const { apiKey, webPort, bindHost, connectRoutes, webDistDir, readinessCheck } = options;
+  const { apiKey, webPort, bindHost, connectRoutes, webDistDir, readinessCheck, pluginNames } = options;
   const distDir = webDistDir ?? resolveWebDistDir();
   const allowNetwork = isWildcardAddress(bindHost);
   const dialableHost = allowNetwork ? "127.0.0.1" : bindHost;
@@ -332,6 +334,14 @@ export function createWebServer(options: WebServerOptions): http.Server {
         res.writeHead(503, { "Content-Type": "application/json", "Cache-Control": "no-store" });
         res.end(JSON.stringify(result));
       }
+      return;
+    }
+
+    // --- Plugin manifest (no auth) ---
+    if (rawPath === "/api/manifest") {
+      const manifest = { plugins: (pluginNames ?? []).map((name) => ({ name })) };
+      res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+      res.end(JSON.stringify(manifest));
       return;
     }
 

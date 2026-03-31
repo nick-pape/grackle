@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent } from "@storybook/test";
+import { Brain, ClipboardList, Home, MessageSquare, Monitor, Search, Settings } from "lucide-react";
 import { AppNav } from "./AppNav.js";
+import { ICON_LG } from "../../utils/iconSize.js";
+import { HOME_URL, CHAT_URL, ENVIRONMENTS_URL, SETTINGS_CREDENTIALS_URL, TASKS_URL, FINDINGS_URL, KNOWLEDGE_URL } from "../../utils/navigation.js";
 
 const meta: Meta<typeof AppNav> = {
   title: "Grackle/Layout/AppNav",
@@ -10,7 +13,7 @@ const meta: Meta<typeof AppNav> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** All six navigation tabs are rendered. */
+/** All tabs rendered (default behavior, no tabs prop). */
 export const AllTabsRendered: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("tab", { name: /Dashboard/ })).toBeInTheDocument();
@@ -19,6 +22,47 @@ export const AllTabsRendered: Story = {
     await expect(canvas.getByRole("tab", { name: /Environments/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Knowledge/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Settings/ })).toBeInTheDocument();
+  },
+};
+
+/** Core-only tabs: orchestration (Tasks, Findings) and knowledge tabs are absent. */
+export const CoreOnlyTabs: Story = {
+  args: {
+    tabs: [
+      { view: "dashboard", label: "Dashboard", icon: <Home size={ICON_LG} />, route: HOME_URL, testId: "sidebar-tab-dashboard" },
+      { view: "chat", label: "Chat", icon: <MessageSquare size={ICON_LG} />, route: CHAT_URL, testId: "sidebar-tab-chat" },
+      { view: "environments", label: "Environments", icon: <Monitor size={ICON_LG} />, route: ENVIRONMENTS_URL, testId: "sidebar-tab-environments" },
+      { view: "settings", label: "Settings", icon: <Settings size={ICON_LG} />, route: SETTINGS_CREDENTIALS_URL, testId: "sidebar-tab-settings" },
+    ],
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("tab", { name: /Dashboard/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("tab", { name: /Chat/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("tab", { name: /Environments/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("tab", { name: /Settings/ })).toBeInTheDocument();
+    await expect(canvas.queryByRole("tab", { name: /Tasks/ })).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("tab", { name: /Findings/ })).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("tab", { name: /Knowledge/ })).not.toBeInTheDocument();
+  },
+};
+
+/** All tabs explicitly provided via tabs prop. */
+export const AllTabsExplicit: Story = {
+  args: {
+    tabs: [
+      { view: "dashboard", label: "Dashboard", icon: <Home size={ICON_LG} />, route: HOME_URL, testId: "sidebar-tab-dashboard" },
+      { view: "chat", label: "Chat", icon: <MessageSquare size={ICON_LG} />, route: CHAT_URL, testId: "sidebar-tab-chat" },
+      { view: "tasks", label: "Tasks", icon: <ClipboardList size={ICON_LG} />, route: TASKS_URL, testId: "sidebar-tab-tasks" },
+      { view: "environments", label: "Environments", icon: <Monitor size={ICON_LG} />, route: ENVIRONMENTS_URL, testId: "sidebar-tab-environments" },
+      { view: "knowledge", label: "Knowledge", icon: <Brain size={ICON_LG} />, route: KNOWLEDGE_URL, testId: "sidebar-tab-knowledge" },
+      { view: "findings", label: "Findings", icon: <Search size={ICON_LG} />, route: FINDINGS_URL, testId: "sidebar-tab-findings" },
+      { view: "settings", label: "Settings", icon: <Settings size={ICON_LG} />, route: SETTINGS_CREDENTIALS_URL, testId: "sidebar-tab-settings" },
+    ],
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("tab", { name: /Tasks/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("tab", { name: /Findings/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("tab", { name: /Knowledge/ })).toBeInTheDocument();
   },
 };
 

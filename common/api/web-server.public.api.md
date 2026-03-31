@@ -30,6 +30,7 @@ export interface WebServerOptions {
     apiKey: string;
     bindHost: string;
     connectRoutes?: (router: ConnectRouter) => void;
+    pluginNames?: string[];
     readinessCheck?: () => ReadinessResult | Promise<ReadinessResult>;
     webDistDir?: string;
     webPort: number;

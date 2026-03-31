@@ -192,6 +192,64 @@ describe("createWebServer readiness check", () => {
   });
 });
 
+describe("createWebServer /api/manifest", () => {
+  let server: http.Server | undefined;
+
+  afterEach(async () => {
+    if (!server) {
+      return;
+    }
+    await new Promise<void>((resolve) => server!.close(() => resolve()));
+  });
+
+  it("returns empty plugin list when no pluginNames provided", async () => {
+    server = createWebServer({
+      apiKey: "x".repeat(64),
+      webPort: 0,
+      bindHost: "127.0.0.1",
+    });
+    await new Promise<void>((resolve) => server!.listen(0, "127.0.0.1", resolve));
+
+    const res = await request(server, "/api/manifest");
+
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toContain("application/json");
+    expect(JSON.parse(res.body)).toEqual({ plugins: [] });
+  });
+
+  it("returns plugin list with provided pluginNames", async () => {
+    server = createWebServer({
+      apiKey: "x".repeat(64),
+      webPort: 0,
+      bindHost: "127.0.0.1",
+      pluginNames: ["core", "orchestration"],
+    });
+    await new Promise<void>((resolve) => server!.listen(0, "127.0.0.1", resolve));
+
+    const res = await request(server, "/api/manifest");
+
+    expect(res.status).toBe(200);
+    expect(JSON.parse(res.body)).toEqual({
+      plugins: [{ name: "core" }, { name: "orchestration" }],
+    });
+  });
+
+  it("is accessible without auth (no session cookie or bearer token)", async () => {
+    server = createWebServer({
+      apiKey: "x".repeat(64),
+      webPort: 0,
+      bindHost: "127.0.0.1",
+      pluginNames: ["core"],
+    });
+    await new Promise<void>((resolve) => server!.listen(0, "127.0.0.1", resolve));
+
+    // No auth headers — should still get 200
+    const res = await request(server, "/api/manifest", {});
+
+    expect(res.status).toBe(200);
+  });
+});
+
 describe("isWildcardAddress", () => {
   it("returns true for 0.0.0.0", () => {
     expect(isWildcardAddress("0.0.0.0")).toBe(true);
