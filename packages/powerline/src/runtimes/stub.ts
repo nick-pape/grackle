@@ -203,9 +203,9 @@ export class StubSession implements AgentSession {
       } else if (isOnInputMatchStep(step)) {
         this.inputMatchRules = step.on_input_match;
       } else if (isMcpCallStep(step)) {
-        if (!this.mcpBroker || !this.workspaceId) {
+        if (!this.mcpBroker) {
           const toolUseId = `toolu_stub_mcp_${++mcpToolUseCounter}`;
-          logger.warn(`${this.runtimeName}: mcp_call step "${step.mcp_call}" but no MCP broker/workspace configured`);
+          logger.warn(`${this.runtimeName}: mcp_call step "${step.mcp_call}" but no MCP broker configured`);
           yield {
             type: "tool_use",
             timestamp: ts(),
@@ -215,7 +215,7 @@ export class StubSession implements AgentSession {
           yield {
             type: "tool_result",
             timestamp: ts(),
-            content: JSON.stringify({ error: `Cannot execute MCP tool "${step.mcp_call}": session not spawned with MCP broker/workspace` }),
+            content: JSON.stringify({ error: `Cannot execute MCP tool "${step.mcp_call}": session not spawned with MCP broker` }),
             raw: { type: "tool_result", tool_use_id: toolUseId, is_error: true },
           };
         } else {
