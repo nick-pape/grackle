@@ -20,21 +20,16 @@ vi.mock("@grackle-ai/core", () => ({
 }));
 
 vi.mock("@grackle-ai/plugin-core", () => ({
-  createDefaultCollector: vi.fn(() => ({
+  createCoreCollector: vi.fn(() => ({
     getHandlers: vi.fn(() => ({
       listEnvironments: vi.fn(),
       addEnvironment: vi.fn(),
       spawnAgent: vi.fn(),
-      listTasks: vi.fn(),
       listWorkspaces: vi.fn(),
     })),
   })),
-  createSigchldSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
-  createEscalationAutoSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
-  createOrphanReparentSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
   createLifecycleSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
   createRootTaskBootSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
-  createOrphanPhase: vi.fn(() => ({ name: "orphan-reparent", execute: vi.fn() })),
   createDispatchPhase: vi.fn(() => ({ name: "dispatch", execute: vi.fn() })),
   lifecycleCleanupPhase: { name: "lifecycle-cleanup", execute: vi.fn() },
   createEnvironmentReconciliationPhase: vi.fn(() => ({ name: "environment-status", execute: vi.fn() })),
@@ -90,7 +85,7 @@ describe("createCorePlugin", () => {
     expect(plugin.dependencies).toBeUndefined();
   });
 
-  it("grpcHandlers returns a ServiceRegistration for grackle.Grackle", () => {
+  it("grpcHandlers returns core-only handlers (no task/persona/finding/escalation)", () => {
     const plugin = createCorePlugin();
     const ctx = createMockContext();
     const registrations = plugin.grpcHandlers!(ctx);
@@ -99,9 +94,12 @@ describe("createCorePlugin", () => {
     expect(registrations[0].service).toHaveProperty("typeName", "grackle.Grackle");
     expect(registrations[0].handlers).toHaveProperty("listEnvironments");
     expect(registrations[0].handlers).toHaveProperty("spawnAgent");
+    // Orchestration handlers must NOT be in the core plugin
+    expect(registrations[0].handlers).not.toHaveProperty("listTasks");
+    expect(registrations[0].handlers).not.toHaveProperty("listPersonas");
   });
 
-  it("reconciliationPhases returns expected phases (cron moved to scheduling plugin)", () => {
+  it("reconciliationPhases returns core phases without cron or orphan-reparent", () => {
     const plugin = createCorePlugin();
     const ctx = createMockContext();
     const phases = plugin.reconciliationPhases!(ctx);
@@ -110,19 +108,18 @@ describe("createCorePlugin", () => {
     expect(names).toContain("dispatch");
     expect(names).not.toContain("cron");
     expect(names).toContain("lifecycle-cleanup");
-    expect(names).toContain("orphan-reparent");
     expect(names).toContain("environment-status");
+    // orphan-reparent belongs to the orchestration plugin
+    expect(names).not.toContain("orphan-reparent");
   });
 
-  it("eventSubscribers returns disposables (without root boot when skipRootAutostart)", () => {
+  it("eventSubscribers returns only lifecycle when skipRootAutostart is true", () => {
     const plugin = createCorePlugin();
     const ctx = createMockContext({ skipRootAutostart: true });
     const disposables = plugin.eventSubscribers!(ctx);
 
-    expect(disposables.length).toBe(4);
-    for (const d of disposables) {
-      expect(d).toHaveProperty("dispose");
-    }
+    expect(disposables.length).toBe(1);
+    expect(disposables[0]).toHaveProperty("dispose");
   });
 
   it("eventSubscribers includes root boot when skipRootAutostart is false", () => {
@@ -130,6 +127,6 @@ describe("createCorePlugin", () => {
     const ctx = createMockContext({ skipRootAutostart: false });
     const disposables = plugin.eventSubscribers!(ctx);
 
-    expect(disposables.length).toBe(5);
+    expect(disposables.length).toBe(2);
   });
 });

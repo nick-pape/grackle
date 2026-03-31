@@ -33,6 +33,7 @@ import { registerAllAdapters } from "./adapter-registry.js";
 import { bootstrapLocalEnvironment } from "./local-environment.js";
 import { createCorePlugin } from "./core-plugin.js";
 import { createSchedulingPlugin } from "@grackle-ai/plugin-scheduling";
+import { createOrchestrationPlugin } from "@grackle-ai/plugin-orchestration";
 import { createShutdown } from "./shutdown.js";
 
 /** Require function for loading optional native modules (qrcode). */
@@ -147,7 +148,11 @@ async function main(): Promise<void> {
     },
   };
 
-  const loaded = await loadPlugins([createCorePlugin(), createSchedulingPlugin()], pluginContext);
+  const plugins = [createCorePlugin(), createSchedulingPlugin()];
+  if (!config.skipOrchestration) {
+    plugins.push(createOrchestrationPlugin());
+  }
+  const loaded = await loadPlugins(plugins, pluginContext);
 
   // --- Wire gRPC handlers from plugins ---
   const collector = createServiceCollector();

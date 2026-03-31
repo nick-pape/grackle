@@ -45,6 +45,43 @@ export function createDefaultCollector(): ServiceCollector {
   return collector;
 }
 
+/**
+ * Create a `ServiceCollector` pre-loaded with only the core (non-orchestration,
+ * non-scheduling) Grackle handler groups: environments, sessions, workspaces,
+ * tokens, codespaces, knowledge, and settings.
+ *
+ * Orchestration handlers (tasks, personas, findings, escalations) are contributed
+ * by `@grackle-ai/plugin-orchestration` via {@link createOrchestrationCollector}.
+ * Schedule handlers are contributed by `@grackle-ai/plugin-scheduling`.
+ */
+export function createCoreCollector(): ServiceCollector {
+  const collector = createServiceCollector();
+  collector.addHandlers(grackle.Grackle, environments);
+  collector.addHandlers(grackle.Grackle, sessions);
+  collector.addHandlers(grackle.Grackle, workspaces);
+  collector.addHandlers(grackle.Grackle, tokens);
+  collector.addHandlers(grackle.Grackle, codespaces);
+  collector.addHandlers(grackle.Grackle, knowledge);
+  collector.addHandlers(grackle.Grackle, settings);
+  return collector;
+}
+
+/**
+ * Create a `ServiceCollector` pre-loaded with only the orchestration handler
+ * groups: tasks, personas, findings, and escalations.
+ *
+ * Use this in `@grackle-ai/plugin-orchestration` to contribute the 21
+ * orchestration RPCs without duplicating the handler imports.
+ */
+export function createOrchestrationCollector(): ServiceCollector {
+  const collector = createServiceCollector();
+  collector.addHandlers(grackle.Grackle, tasks);
+  collector.addHandlers(grackle.Grackle, personas);
+  collector.addHandlers(grackle.Grackle, findings);
+  collector.addHandlers(grackle.Grackle, escalations);
+  return collector;
+}
+
 /** Register all Grackle gRPC service handlers on the given ConnectRPC router. */
 export function registerGrackleRoutes(router: ConnectRouter): void {
   createDefaultCollector().buildRoutes()(router);

@@ -5,8 +5,7 @@ import {
 } from "@grackle-ai/core";
 import type { Disposable, PluginContext, SubscriberFactory } from "@grackle-ai/core";
 import {
-  createSigchldSubscriber, createEscalationAutoSubscriber,
-  createOrphanReparentSubscriber, createLifecycleSubscriber,
+  createLifecycleSubscriber,
   createRootTaskBootSubscriber,
 } from "@grackle-ai/plugin-core";
 import { taskStore, sessionStore, settingsStore } from "@grackle-ai/database";
@@ -22,7 +21,10 @@ interface SubscriberContext extends PluginContext {
 }
 
 /**
- * Create all event subscribers for the core plugin.
+ * Create the core event subscribers.
+ *
+ * Orchestration subscribers (sigchld, escalation-auto, orphan-reparent) are
+ * intentionally excluded — they are contributed by `@grackle-ai/plugin-orchestration`.
  *
  * @param ctx - Plugin context. Reads `ctx.config.skipRootAutostart` to decide
  *   whether to include the root task boot subscriber.
@@ -30,9 +32,6 @@ interface SubscriberContext extends PluginContext {
  */
 export function createEventSubscribers(ctx: SubscriberContext): Disposable[] {
   const factories: SubscriberFactory[] = [
-    createSigchldSubscriber,
-    createEscalationAutoSubscriber,
-    createOrphanReparentSubscriber,
     createLifecycleSubscriber,
   ];
 
@@ -53,7 +52,7 @@ export function createEventSubscribers(ctx: SubscriberContext): Disposable[] {
 }
 
 /**
- * Wire all event subscribers (backward-compatible wrapper).
+ * Wire core event subscribers (backward-compatible wrapper).
  *
  * @deprecated Use `createEventSubscribers(ctx)` with a PluginContext instead.
  */

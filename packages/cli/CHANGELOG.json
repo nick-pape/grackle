@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.97.0",
+      "tag": "@grackle-ai/cli_v0.97.0",
+      "date": "Tue, 31 Mar 2026 02:21:56 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add @grackle-ai/plugin-orchestration with task/persona/finding/escalation handlers, orphan-reparent phase, and sigchld/escalation-auto/orphan-reparent subscribers. Add createCoreCollector() and createOrchestrationCollector() to plugin-core. Slim down core plugin to exclude orchestration concerns."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.96.3",
       "tag": "@grackle-ai/cli_v0.96.3",
       "date": "Tue, 31 Mar 2026 01:19:21 GMT",

@@ -1,17 +1,17 @@
 {
-  "name": "@grackle-ai/runtime-acp",
+  "name": "@grackle-ai/plugin-orchestration",
   "version": "0.97.0",
-  "description": "Grackle Agent Client Protocol (ACP) runtime implementation",
+  "description": "Orchestration plugin for Grackle — tasks, personas, findings, and escalations",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/nick-pape/grackle.git",
-    "directory": "packages/runtime-acp"
+    "directory": "packages/plugin-orchestration"
   },
-  "keywords": ["grackle", "runtime", "acp", "agent-client-protocol"],
+  "keywords": ["grackle", "plugin", "orchestration"],
   "homepage": "https://github.com/nick-pape/grackle#readme",
   "bugs": { "url": "https://github.com/nick-pape/grackle/issues" },
-  "engines": { "node": ">=22.0.0" },
+  "engines": { "node": ">=22.0.0 <24.0.0" },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -24,13 +24,17 @@
     "_phase:test": "vitest run"
   },
   "dependencies": {
+    "@bufbuild/protobuf": "^2.5.0",
     "@grackle-ai/common": "workspace:*",
-    "@grackle-ai/runtime-sdk": "workspace:*"
+    "@grackle-ai/core": "workspace:*",
+    "@grackle-ai/database": "workspace:*",
+    "@grackle-ai/plugin-core": "workspace:*",
+    "@grackle-ai/plugin-sdk": "workspace:*"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
     "@rushstack/heft": "1.2.7",
     "@types/node": "^22.0.0",
-    "vitest": "^3.1.1"
+    "vitest": "^3.2.1"
   }
 }

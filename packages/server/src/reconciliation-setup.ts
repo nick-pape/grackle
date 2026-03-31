@@ -7,7 +7,7 @@ import {
 } from "@grackle-ai/core";
 import type { ReconciliationPhase } from "@grackle-ai/core";
 import {
-  createOrphanPhase, createDispatchPhase, lifecycleCleanupPhase,
+  createDispatchPhase, lifecycleCleanupPhase,
   createEnvironmentReconciliationPhase,
 } from "@grackle-ai/plugin-core";
 import { TASK_STATUS, ROOT_TASK_ID } from "@grackle-ai/common";
@@ -17,29 +17,16 @@ import {
 } from "@grackle-ai/database";
 
 /**
- * Assemble the ordered list of reconciliation phases for the server.
+ * Assemble the ordered list of core reconciliation phases for the server.
  *
- * Returns dispatch, lifecycle-cleanup, orphan-reparent, and environment-reconciliation
- * phases (in that order). The cron phase is contributed by the scheduling plugin.
+ * Returns dispatch, lifecycle-cleanup, and environment-reconciliation phases
+ * (in that order). The cron phase is contributed by the scheduling plugin.
+ * The orphan-reparent phase is contributed by the orchestration plugin.
  * When the knowledge subsystem is enabled, a knowledge-health phase is appended.
  *
  * @returns An array of phases to pass to {@link ReconciliationManager}.
  */
-export function createReconciliationPhases(): ReconciliationPhase[] {
-  const orphanPhase = createOrphanPhase({
-    listAllTasks: () => {
-      const workspaces = workspaceStore.listWorkspaces();
-      const allTasks: Array<NonNullable<ReturnType<typeof taskStore.getTask>>> = [];
-      for (const ws of workspaces) {
-        allTasks.push(...taskStore.listTasks(ws.id));
-      }
-      return allTasks;
-    },
-    reparentTask: (taskId: string, newParentTaskId: string) =>
-      taskStore.reparentTask(taskId, newParentTaskId),
-    emit,
-  });
-
+export function createCoreReconciliationPhases(): ReconciliationPhase[] {
   const environmentReconciliationPhase = createEnvironmentReconciliationPhase({
     listEnvironments: envRegistry.listEnvironments,
     listConnectionIds: () => new Set(listConnections().keys()),
@@ -97,7 +84,7 @@ export function createReconciliationPhases(): ReconciliationPhase[] {
     },
   });
 
-  const phases: ReconciliationPhase[] = [dispatchPhase, lifecycleCleanupPhase, orphanPhase, environmentReconciliationPhase];
+  const phases: ReconciliationPhase[] = [dispatchPhase, lifecycleCleanupPhase, environmentReconciliationPhase];
 
   if (isKnowledgeEnabled()) {
     phases.push(

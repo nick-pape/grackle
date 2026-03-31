@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 31 Mar 2026 01:19:21 GMT and should not be manually modified.
+This log was last generated on Tue, 31 Mar 2026 02:21:56 GMT and should not be manually modified.
+
+## 0.97.0
+Tue, 31 Mar 2026 02:21:56 GMT
+
+### Minor changes
+
+- Add @grackle-ai/plugin-orchestration with task/persona/finding/escalation handlers, orphan-reparent phase, and sigchld/escalation-auto/orphan-reparent subscribers. Add createCoreCollector() and createOrchestrationCollector() to plugin-core. Slim down core plugin to exclude orchestration concerns.
 
 ## 0.96.3
 Tue, 31 Mar 2026 01:19:21 GMT

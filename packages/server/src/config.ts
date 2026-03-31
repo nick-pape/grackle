@@ -16,6 +16,8 @@ export interface ServerConfig {
   skipLocalPowerline: boolean;
   /** Skip auto-starting the root task when an environment connects (GRACKLE_SKIP_ROOT_AUTOSTART=1). */
   skipRootAutostart: boolean;
+  /** Disable the orchestration plugin entirely (GRACKLE_SKIP_ORCHESTRATION=1). */
+  skipOrchestration: boolean;
   /** Override agent working directory (GRACKLE_WORKING_DIRECTORY). */
   workingDirectory?: string;
   /** Worktree base path (GRACKLE_WORKTREE_BASE). */
@@ -61,6 +63,7 @@ export function resolveServerConfig(): ServerConfig {
     host: process.env.GRACKLE_HOST || "127.0.0.1",
     skipLocalPowerline: parseFlag("GRACKLE_SKIP_LOCAL_POWERLINE"),
     skipRootAutostart: parseFlag("GRACKLE_SKIP_ROOT_AUTOSTART"),
+    skipOrchestration: parseFlag("GRACKLE_SKIP_ORCHESTRATION"),
     workingDirectory: process.env.GRACKLE_WORKING_DIRECTORY || undefined,
     worktreeBase: process.env.GRACKLE_WORKTREE_BASE || undefined,
     dockerHost: process.env.GRACKLE_DOCKER_HOST || undefined,
