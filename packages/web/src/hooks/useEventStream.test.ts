@@ -20,8 +20,9 @@ vi.mock("@grackle-ai/web-components", () => ({
   PAIR_PATH: "/pair",
 }));
 
-// Mirrors the constant in useEventStream.ts
+// Mirror constants from useEventStream.ts
 const RECONNECT_DELAY_MS = 3_000;
+const CONNECT_GRACE_PERIOD_MS = 3_000;
 
 // ---------------------------------------------------------------------------
 // Helpers: controllable async iterable stream
@@ -116,20 +117,77 @@ describe("useEventStream", () => {
   // by the time renderHook returns, the stream has already connected.
   // This initial state is verified visually in the Storybook "Connecting" story.
 
-  it("connectionStatus is connected after stream opens", async () => {
+  it("connectionStatus is connected after receiving first event", async () => {
     const { result } = renderHook(() =>
       useEventStream({ onSessionEvent: vi.fn(), onDomainEvent: vi.fn() }),
     );
+
+    // Wait for stream to be established
+    await waitFor(() => {
+      expect(mockClient.streamEvents).toHaveBeenCalledTimes(1);
+    });
+
+    // Emitting an event triggers markConnected immediately
+    act(() => {
+      stream.emit({
+        event: { case: "sessionEvent", value: { sessionId: "", type: 0, timestamp: "", content: "", raw: "" } },
+      });
+    });
 
     await waitFor(() => {
       expect(result.current.connectionStatus).toBe("connected");
     });
   });
 
+  it("stays connecting when stream errors immediately (server unreachable)", async () => {
+    vi.useFakeTimers();
+    try {
+      const errorStream = createMockStream();
+      mockClient.streamEvents.mockReturnValue(errorStream.iterable);
+
+      const { result } = renderHook(() =>
+        useEventStream({ onSessionEvent: vi.fn(), onDomainEvent: vi.fn() }),
+      );
+
+      // Flush microtasks so connectStream runs and the for-await begins
+      await act(async () => { await Promise.resolve(); });
+      await act(async () => { await Promise.resolve(); });
+
+      // Immediately error the stream — simulates ECONNREFUSED
+      act(() => {
+        errorStream.error(new Error("ECONNREFUSED"));
+      });
+
+      // Flush microtasks for the catch block to run (clears the connect timer)
+      await act(async () => { await Promise.resolve(); });
+      await act(async () => { await Promise.resolve(); });
+
+      // Advance past the grace period — the timer was cancelled, so "connected" must NOT fire
+      await act(async () => {
+        vi.advanceTimersByTime(CONNECT_GRACE_PERIOD_MS + 10);
+      });
+
+      expect(result.current.connectionStatus).toBe("connecting");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("connectionStatus transitions to connecting (not disconnected) after stream drops", async () => {
     const { result } = renderHook(() =>
       useEventStream({ onSessionEvent: vi.fn(), onDomainEvent: vi.fn() }),
     );
+
+    await waitFor(() => {
+      expect(mockClient.streamEvents).toHaveBeenCalledTimes(1);
+    });
+
+    // Emit an event to mark the stream as "connected"
+    act(() => {
+      stream.emit({
+        event: { case: "sessionEvent", value: { sessionId: "", type: 0, timestamp: "", content: "", raw: "" } },
+      });
+    });
 
     await waitFor(() => {
       expect(result.current.connectionStatus).toBe("connected");
@@ -149,12 +207,13 @@ describe("useEventStream", () => {
   // state updates on unmounted components. The cleanup function still runs
   // correctly (timer is cleared, cancelled flag is set) — just not testable here.
 
-  it("calls onConnect callback when stream connects", async () => {
+  it("calls onConnect callback immediately when stream is created", async () => {
     const onConnect = vi.fn();
     renderHook(() =>
       useEventStream({ onSessionEvent: vi.fn(), onDomainEvent: vi.fn(), onConnect }),
     );
 
+    // onConnect fires as soon as the stream attempt begins (data loading is optimistic)
     await waitFor(() => {
       expect(onConnect).toHaveBeenCalledTimes(1);
     });

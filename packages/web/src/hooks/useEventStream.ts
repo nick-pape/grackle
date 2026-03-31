@@ -60,16 +60,32 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
         return;
       }
 
+      // Fire onConnect immediately — data loading is optimistic and domain
+      // hooks handle request failures gracefully.  This is kept separate from
+      // the "connected" status so the UI status accurately reflects stream
+      // liveness without delaying data fetching.
+      Promise.resolve(onConnectRef.current?.()).catch(() => {});
+
+      // Transition to "connected" on first data received OR after a grace
+      // period for servers that are alive but idle.
+      // On Windows, HTTP/2 connection-pool reuse means ECONNREFUSED can take
+      // ~2 s to propagate.  3 000 ms ensures the timer is cancelled before it
+      // fires when the server is unreachable (matching the reconnect delay for
+      // symmetry).
+      let markedConnected: boolean = false;
+      const markConnected = (): void => {
+        if (!markedConnected && !cancelled) {
+          markedConnected = true;
+          setConnectionStatus("connected");
+        }
+      };
+      const connectTimer: ReturnType<typeof setTimeout> = setTimeout(markConnected, 3_000);
+
       try {
         const stream = grackleClient.streamEvents({});
 
-        // Mark connected immediately — ConnectRPC streams don't have a
-        // separate "open" event. The stream object exists once the HTTP
-        // request is initiated. Data loading in onConnect runs optimistically.
-        setConnectionStatus("connected");
-        Promise.resolve(onConnectRef.current?.()).catch(() => {});
-
         for await (const serverEvent of stream) {
+          markConnected(); // also fire immediately on first data
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- set by cleanup function
           if (cancelled) {
             break;
@@ -97,6 +113,7 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
           }
         }
       } catch (err) {
+        clearTimeout(connectTimer);
         // Redirect to pairing page on unauthenticated error
         if (err instanceof ConnectError && err.code === Code.Unauthenticated) {
           window.location.href = PAIR_PATH;
@@ -104,6 +121,7 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
         }
       }
 
+      clearTimeout(connectTimer);
       // Stream ended or errored — schedule reconnect.
       // Show "connecting" during the retry delay rather than "disconnected",
       // so the UI does not oscillate between states on transient drops.
