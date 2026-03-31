@@ -4,15 +4,23 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { EventRenderer } from "./EventRenderer.js";
 import { EventHoverRow } from "./EventHoverRow.js";
 import { FloatingActionBar } from "./FloatingActionBar.js";
+import { SessionPicker } from "./SessionPicker.js";
+import { ConfirmDialog } from "./ConfirmDialog.js";
 import { Tooltip } from "./Tooltip.js";
 import { useSmartScroll } from "../../hooks/useSmartScroll.js";
 import { useEventSelection } from "../../hooks/useEventSelection.js";
-import { isContentBearingEvent, getEventCopyText, formatEventsAsMarkdown } from "../../utils/eventContent.js";
+import { isContentBearingEvent, getEventCopyText, formatEventsAsMarkdown, formatForwardEnvelope } from "../../utils/eventContent.js";
 import type { ToastVariant } from "../../context/ToastContext.js";
 import { ICON_MD } from "../../utils/iconSize.js";
 import type { DisplayEvent } from "../../utils/sessionEvents.js";
-import type { SessionEvent } from "../../hooks/types.js";
+import type { Session, Environment, SessionEvent } from "../../hooks/types.js";
 import styles from "./EventStream.module.scss";
+
+/** Byte size threshold above which a large-message confirmation is shown (10 KB). */
+const LARGE_MESSAGE_THRESHOLD_BYTES: number = 10 * 1024;
+
+/** Active session statuses eligible as forward targets. */
+const ACTIVE_STATUSES: ReadonlySet<string> = new Set(["running", "idle"]);
 
 /** Build a descriptive label for the selection checkbox aria-label. */
 function buildCheckboxLabel(event: SessionEvent): string {
@@ -67,16 +75,41 @@ interface EventStreamProps {
   emptyState?: ReactNode;
   /** Toast callback for copy feedback. If omitted, no toast is shown. */
   onShowToast?: (message: string, variant?: ToastVariant) => void;
+  /** All known sessions (used to build the forward-target picker). */
+  sessions?: Session[];
+  /** ID of the session currently being viewed (excluded from forward picker). */
+  currentSessionId?: string;
+  /** All known environments (used to look up display names in the forward picker). */
+  environments?: Environment[];
+  /**
+   * Called when the user forwards selected events to another session.
+   * Receives the target session ID and the formatted envelope text.
+   */
+  onForward?: (sessionId: string, text: string) => Promise<void>;
 }
 
 /**
  * Scrollable event stream with smart auto-scroll, direction toggle,
  * animated entry for new events, hover actions, and multi-select mode.
  */
-export function EventStream({ events, eventsDropped, emptyState, onShowToast }: EventStreamProps): JSX.Element {
+export function EventStream({
+  events,
+  eventsDropped,
+  emptyState,
+  onShowToast,
+  sessions,
+  currentSessionId,
+  environments,
+  onForward,
+}: EventStreamProps): JSX.Element {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isReversed, setIsReversed] = useState(readStoredDirection);
   const shouldReduceMotion = useReducedMotion();
+
+  // Forward flow state
+  const [showSessionPicker, setShowSessionPicker] = useState(false);
+  const [confirmLargeMessage, setConfirmLargeMessage] = useState(false);
+  const [pendingForward, setPendingForward] = useState<{ sessionId: string; text: string } | undefined>(undefined);
 
   // Multi-select state
   const selection = useEventSelection({
@@ -89,6 +122,16 @@ export function EventStream({ events, eventsDropped, emptyState, onShowToast }: 
     () => events.filter(isContentBearingEvent).length,
     [events],
   );
+
+  // Active sessions that can receive a forwarded message (excluding current)
+  const forwardTargets = useMemo<Session[]>(() => {
+    if (!sessions) {
+      return [];
+    }
+    return sessions.filter(
+      (s) => ACTIVE_STATUSES.has(s.status) && s.id !== currentSessionId,
+    );
+  }, [sessions, currentSessionId]);
 
   const displayEvents = useMemo(() => {
     if (!isReversed) {
@@ -134,8 +177,73 @@ export function EventStream({ events, eventsDropped, emptyState, onShowToast }: 
     }
   }, [selection, onShowToast]);
 
+  /** Build the sorted list of selected DisplayEvents in chronological order. */
+  const getSelectedEvents = useCallback((): DisplayEvent[] => {
+    const sorted = [...selection.selectedIndices].sort((a, b) => a - b);
+    return sorted
+      .filter((i) => i < events.length)
+      .map((i) => events[i]);
+  }, [selection.selectedIndices, events]);
+
+  /** Get the environment display name for the target session. */
+  const getSessionLabel = useCallback((sessionId: string): string => {
+    const session = sessions?.find((s) => s.id === sessionId);
+    if (!session) {
+      return sessionId.slice(0, 8);
+    }
+    const env = environments?.find((e) => e.id === session.environmentId);
+    return env?.displayName ?? session.environmentId.slice(0, 8);
+  }, [sessions, environments]);
+
+  /** Execute the actual forward after all confirmations. */
+  const executeForward = useCallback(async (sessionId: string, text: string) => {
+    const targetLabel = getSessionLabel(sessionId);
+    try {
+      await onForward?.(sessionId, text);
+      const count = selection.selectedCount;
+      onShowToast?.(`Forwarded ${count} message${count === 1 ? "" : "s"} to ${targetLabel}`, "success");
+      selection.cancelSelection();
+    } catch {
+      onShowToast?.("Failed to forward messages", "error");
+    }
+  }, [onForward, getSessionLabel, onShowToast, selection]);
+
+  /** Called when the user picks a target session in the picker. */
+  const handlePickSession = useCallback((sessionId: string) => {
+    setShowSessionPicker(false);
+
+    const selectedEvents = getSelectedEvents();
+    const sourceLabel = getSessionLabel(currentSessionId ?? "");
+    const envelope = formatForwardEnvelope(sourceLabel, selectedEvents);
+
+    if (new TextEncoder().encode(envelope).length > LARGE_MESSAGE_THRESHOLD_BYTES) {
+      setPendingForward({ sessionId, text: envelope });
+      setConfirmLargeMessage(true);
+      return;
+    }
+
+    executeForward(sessionId, envelope).catch(() => {});
+  }, [getSelectedEvents, getSessionLabel, currentSessionId, executeForward]);
+
+  const handleConfirmLargeMessage = useCallback(() => {
+    setConfirmLargeMessage(false);
+    if (pendingForward) {
+      executeForward(pendingForward.sessionId, pendingForward.text).catch(() => {});
+      setPendingForward(undefined);
+    }
+  }, [pendingForward, executeForward]);
+
+  const handleCancelLargeMessage = useCallback(() => {
+    setConfirmLargeMessage(false);
+    setPendingForward(undefined);
+  }, []);
+
   const animationDuration = shouldReduceMotion ? 0 : 0.2;
   const enterY = isReversed ? -8 : 8;
+
+  const largeMessageSizeKb = pendingForward
+    ? Math.round(new TextEncoder().encode(pendingForward.text).length / 1024)
+    : 0;
 
   return (
     <div className={styles.wrapper}>
@@ -199,10 +307,31 @@ export function EventStream({ events, eventsDropped, emptyState, onShowToast }: 
             onSelectAll={selection.selectAll}
             onDeselectAll={selection.deselectAll}
             onCopy={() => { handleCopySelected().catch(() => {}); }}
+            onForward={onForward !== undefined ? () => { setShowSessionPicker(true); } : undefined}
+            forwardDisabled={forwardTargets.length === 0}
             onCancel={selection.cancelSelection}
           />
         )}
       </AnimatePresence>
+
+      {/* Session picker for forwarding */}
+      <SessionPicker
+        isOpen={showSessionPicker}
+        sessions={forwardTargets}
+        environments={environments ?? []}
+        onSelect={handlePickSession}
+        onCancel={() => { setShowSessionPicker(false); }}
+      />
+
+      {/* Large message confirmation */}
+      <ConfirmDialog
+        isOpen={confirmLargeMessage}
+        title="Send large message?"
+        description={`This will forward a large message (${largeMessageSizeKb} KB). Continue?`}
+        confirmLabel="Send"
+        onConfirm={handleConfirmLargeMessage}
+        onCancel={handleCancelLargeMessage}
+      />
 
       {/* Floating "scroll to anchor" button */}
       <AnimatePresence>

@@ -1,14 +1,16 @@
 /**
  * Floating action bar shown at the bottom of EventStream during multi-select mode.
  *
- * Displays selection count, select all/deselect all toggle, Copy button, and Cancel.
+ * Displays selection count, select all/deselect all toggle, Copy button,
+ * Forward button, and Cancel.
  * Pure presentational component -- no useGrackle().
  */
 
 import { type JSX } from "react";
-import { Copy, X } from "lucide-react";
+import { Copy, Forward, X } from "lucide-react";
 import { motion } from "motion/react";
 import { ICON_SM } from "../../utils/iconSize.js";
+import { Tooltip } from "./Tooltip.js";
 import styles from "./FloatingActionBar.module.scss";
 
 /** Props for the FloatingActionBar component. */
@@ -23,6 +25,10 @@ export interface FloatingActionBarProps {
   onDeselectAll: () => void;
   /** Called when "Copy" is clicked. */
   onCopy: () => void;
+  /** Called when "Forward" is clicked. Omit to hide the Forward button. */
+  onForward?: () => void;
+  /** When true, the Forward button is rendered but disabled. */
+  forwardDisabled?: boolean;
   /** Called when "Cancel" (X) is clicked. */
   onCancel: () => void;
 }
@@ -39,6 +45,8 @@ export function FloatingActionBar({
   onSelectAll,
   onDeselectAll,
   onCopy,
+  onForward,
+  forwardDisabled = false,
   onCancel,
 }: FloatingActionBarProps): JSX.Element {
   const allSelected = selectedCount > 0 && selectedCount >= totalSelectable;
@@ -76,6 +84,22 @@ export function FloatingActionBar({
           <Copy size={ICON_SM} aria-hidden="true" />
           Copy
         </button>
+        {onForward !== undefined && (
+          <Tooltip
+            text={forwardDisabled ? "No active sessions to forward to" : "Forward to another session"}
+          >
+            <button
+              type="button"
+              className={styles.forwardButton}
+              onClick={onForward}
+              disabled={forwardDisabled || selectedCount === 0}
+              data-testid="floating-bar-forward"
+            >
+              <Forward size={ICON_SM} aria-hidden="true" />
+              Forward
+            </button>
+          </Tooltip>
+        )}
         <button
           type="button"
           className={styles.cancelButton}

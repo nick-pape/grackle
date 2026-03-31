@@ -30,6 +30,8 @@ export { FloatingActionBar } from "./components/display/FloatingActionBar.js";
 export type { FloatingActionBarProps } from "./components/display/FloatingActionBar.js";
 export { SessionAttemptSelector } from "./components/display/SessionAttemptSelector.js";
 export type { SessionAttemptSelectorProps } from "./components/display/SessionAttemptSelector.js";
+export { SessionPicker } from "./components/display/SessionPicker.js";
+export type { SessionPickerProps, SessionPickerEntry } from "./components/display/SessionPicker.js";
 
 // Editable fields
 export {
@@ -181,7 +183,7 @@ export {
 export { groupConsecutiveTextEvents, pairToolEvents } from "./utils/sessionEvents.js";
 export type { DisplayEvent } from "./utils/sessionEvents.js";
 
-export { isContentBearingEvent, getEventCopyText, formatEventsAsMarkdown } from "./utils/eventContent.js";
+export { isContentBearingEvent, getEventCopyText, formatEventsAsMarkdown, formatForwardEnvelope } from "./utils/eventContent.js";
 
 export type { BoardColumn, BoardTask } from "./utils/boardColumns.js";
 export { buildBoardColumns } from "./utils/boardColumns.js";

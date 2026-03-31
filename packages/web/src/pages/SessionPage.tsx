@@ -119,6 +119,10 @@ export function SessionPage(): JSX.Element {
         eventsDropped={eventsDropped}
         emptyState={<SessionEmptyState session={session} />}
         onShowToast={showToast}
+        sessions={sessions}
+        currentSessionId={sessionId}
+        environments={environments}
+        onForward={(targetSessionId, text) => sendInput(targetSessionId, text)}
       />
       {isActive && (
         <ChatInput
