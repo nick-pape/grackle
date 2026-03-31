@@ -194,6 +194,61 @@ describe("initDatabase", () => {
     // the guard.
     expect(() => initDatabase()).toThrow("Database not initialized");
   });
+
+  it("migration v7 — backfills workspace_environment_links and drops environment_id", () => {
+    const mem = new Database(":memory:");
+    mem.pragma("foreign_keys = ON");
+
+    // Step 1: create the current schema (v7) as the starting point.
+    initDatabase(mem);
+
+    // Step 2: simulate a pre-v7 database by adding back the legacy column,
+    // inserting a workspace whose environment_id has no matching link yet,
+    // then rewinding user_version to 6.  FK checks are disabled during setup
+    // because the re-added column's DEFAULT '' has no matching environment row.
+    mem.pragma("foreign_keys = OFF");
+    mem.exec("ALTER TABLE workspaces ADD COLUMN environment_id TEXT NOT NULL DEFAULT ''");
+
+    // Insert the environment row first so the FK is satisfiable once FK is re-enabled.
+    mem.prepare(
+      "INSERT INTO environments (id, display_name, adapter_type, adapter_config, status) VALUES (?, ?, ?, ?, ?)",
+    ).run("env-migrate-test", "Migrate Env", "local", "{}", "disconnected");
+
+    // Insert a workspace that references the environment via the legacy column.
+    mem.prepare(
+      "INSERT INTO workspaces (id, name, environment_id) VALUES (?, ?, ?)",
+    ).run("ws-migrate-test", "Migrate WS", "env-migrate-test");
+
+    // Ensure no pre-existing link exists for this workspace (backfill not yet done).
+    mem.exec("DELETE FROM workspace_environment_links WHERE workspace_id = 'ws-migrate-test'");
+
+    // Rewind to version 6 so initDatabase will run migration v7.
+    mem.pragma("user_version = 6");
+    mem.pragma("foreign_keys = ON");
+
+    // Step 3: run migration.
+    initDatabase(mem);
+
+    // Assert: link was backfilled from environment_id.
+    const link = mem
+      .prepare("SELECT * FROM workspace_environment_links WHERE workspace_id = 'ws-migrate-test'")
+      .get() as Record<string, unknown> | undefined;
+    expect(link).toBeDefined();
+    expect(link!.environment_id).toBe("env-migrate-test");
+
+    // Assert: environment_id column was dropped.
+    const cols = mem
+      .prepare("PRAGMA table_info(workspaces)")
+      .all() as Array<{ name: string }>;
+    expect(cols.some((c) => c.name === "environment_id")).toBe(false);
+
+    // Assert: schema version advanced to current.
+    expect(mem.pragma("user_version", { simple: true })).toBe(CURRENT_VERSION);
+
+    // Assert: no FK violations remain.
+    const fkViolations = mem.prepare("PRAGMA foreign_key_check").all() as unknown[];
+    expect(fkViolations.length).toBe(0);
+  });
 });
 
 describe("checkDatabaseIntegrity", () => {
