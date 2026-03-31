@@ -300,10 +300,18 @@ async function main(): Promise<void> {
   const dialableHost = isWildcardAddress(bindHost) ? "127.0.0.1" : bindHost;
   const dialableUrlHost = dialableHost.includes(":") ? `[${dialableHost}]` : dialableHost;
   const authServerUrl = `http://${dialableUrlHost}:${webPort}`;
-  // Map plugin-contributed MCP tools (PluginToolDefinition) to ToolDefinition.
-  // The handler signatures are structurally compatible at runtime; the cast is safe.
+  // Adapt plugin-contributed tools to the concrete ToolDefinition type expected by MCP.
+  // Validates shape at startup so runtime failures surface immediately with a clear message.
   const pluginToolGroups: ToolDefinition[][] = loaded.mcpTools.length > 0
-    ? [loaded.mcpTools as unknown as ToolDefinition[]]
+    ? [loaded.mcpTools.map((t) => {
+        if (typeof (t.inputSchema as { safeParse?: unknown }).safeParse !== "function") {
+          throw new Error(`Plugin tool "${t.name}": inputSchema must be a Zod schema (missing safeParse)`);
+        }
+        if (typeof t.handler !== "function") {
+          throw new Error(`Plugin tool "${t.name}": handler must be a function`);
+        }
+        return t as unknown as ToolDefinition;
+      })]
     : [];
   const mcpServer = createMcpServer({ bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl: authServerUrl, toolGroups: pluginToolGroups });
 
