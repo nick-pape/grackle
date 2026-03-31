@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // ── Mock dependencies ─────────────────────────────────────────────────────────
 
 vi.mock("@grackle-ai/core", () => ({
-  emit: vi.fn(),
   subscribe: vi.fn(() => vi.fn()),
 }));
 
@@ -15,9 +14,6 @@ vi.mock("@grackle-ai/database", () => ({
   taskStore: {
     listTasks: vi.fn(() => []),
     reparentTask: vi.fn(),
-  },
-  workspaceStore: {
-    listWorkspaces: vi.fn(() => []),
   },
 }));
 
@@ -50,7 +46,7 @@ import {
   createEscalationAutoSubscriber,
   createOrphanReparentSubscriber,
 } from "@grackle-ai/plugin-core";
-import { workspaceStore, taskStore } from "@grackle-ai/database";
+import { taskStore } from "@grackle-ai/database";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -96,23 +92,21 @@ describe("createOrchestrationPlugin", () => {
     expect(phases[0].name).toBe("orphan-reparent");
   });
 
-  it("reconciliationPhases wires orphan listAllTasks to aggregate across workspaces", () => {
-    const ws1Tasks = [{ id: "t1" }];
-    const ws2Tasks = [{ id: "t2" }, { id: "t3" }];
-    (workspaceStore.listWorkspaces as ReturnType<typeof vi.fn>).mockReturnValue([
-      { id: "ws1" }, { id: "ws2" },
-    ]);
-    (taskStore.listTasks as ReturnType<typeof vi.fn>)
-      .mockReturnValueOnce(ws1Tasks)
-      .mockReturnValueOnce(ws2Tasks);
+  it("reconciliationPhases wires orphan listAllTasks to taskStore.listTasks() and emit to ctx.emit", () => {
+    const allTasks = [{ id: "t1" }, { id: "t2" }, { id: "t3" }];
+    (taskStore.listTasks as ReturnType<typeof vi.fn>).mockReturnValue(allTasks);
 
     const plugin = createOrchestrationPlugin();
-    plugin.reconciliationPhases!(createCtx() as never);
+    const ctx = createCtx();
+    plugin.reconciliationPhases!(ctx as never);
 
     const orphanDeps = (createOrphanPhase as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
       listAllTasks: () => Array<{ id: string }>;
+      emit: unknown;
     };
-    expect(orphanDeps.listAllTasks()).toEqual([{ id: "t1" }, { id: "t2" }, { id: "t3" }]);
+    expect(orphanDeps.listAllTasks()).toEqual(allTasks);
+    expect(taskStore.listTasks).toHaveBeenCalledWith();
+    expect(orphanDeps.emit).toBe(ctx.emit);
   });
 
   it("eventSubscribers returns exactly 3 disposables (sigchld, escalation-auto, orphan-reparent)", () => {

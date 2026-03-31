@@ -8,13 +8,12 @@
 
 import type { GracklePlugin } from "@grackle-ai/plugin-sdk";
 import { grackle } from "@grackle-ai/common";
-import { emit } from "@grackle-ai/core";
 import {
   createOrchestrationCollector,
   createOrphanPhase,
   createSigchldSubscriber, createEscalationAutoSubscriber, createOrphanReparentSubscriber,
 } from "@grackle-ai/plugin-core";
-import { taskStore, workspaceStore } from "@grackle-ai/database";
+import { taskStore } from "@grackle-ai/database";
 
 /**
  * Create the orchestration plugin that contributes task/persona/finding/escalation
@@ -38,20 +37,13 @@ export function createOrchestrationPlugin(): GracklePlugin {
       handlers: createOrchestrationCollector().getHandlers(grackle.Grackle),
     }],
 
-    reconciliationPhases: () => [
+    reconciliationPhases: (ctx) => [
       createOrphanPhase({
-        listAllTasks: () => {
-          const workspaces = workspaceStore.listWorkspaces();
-          const allTasks: Array<NonNullable<ReturnType<typeof taskStore.listTasks>[number]>> = [];
-          for (const ws of workspaces) {
-            allTasks.push(...taskStore.listTasks(ws.id));
-          }
-          return allTasks;
-        },
+        listAllTasks: () => taskStore.listTasks(),
         reparentTask: (taskId: string, newParentTaskId: string): void => {
           taskStore.reparentTask(taskId, newParentTaskId);
         },
-        emit,
+        emit: ctx.emit,
       }),
     ],
 

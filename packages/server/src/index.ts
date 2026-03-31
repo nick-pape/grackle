@@ -147,7 +147,11 @@ async function main(): Promise<void> {
     },
   };
 
-  const loaded = await loadPlugins([createCorePlugin(), createOrchestrationPlugin()], pluginContext);
+  const plugins = [createCorePlugin()];
+  if (!config.skipOrchestration) {
+    plugins.push(createOrchestrationPlugin());
+  }
+  const loaded = await loadPlugins(plugins, pluginContext);
 
   // --- Wire gRPC handlers from plugins ---
   const collector = createServiceCollector();
