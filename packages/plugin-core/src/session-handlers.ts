@@ -596,7 +596,7 @@ export async function createStream(req: grackle.CreateStreamRequest): Promise<gr
 
   let stream;
   try {
-    stream = streamRegistry.createStream(req.name);
+    stream = streamRegistry.createStream(req.name, req.selfEcho);
   } catch {
     throw new ConnectError(`Stream name "${req.name}" already exists`, Code.AlreadyExists);
   }
@@ -677,6 +677,7 @@ export async function listStreams(): Promise<grackle.ListStreamsResponse> {
         subscriberCount: stream.subscriptions.size,
         messageBufferDepth: stream.messages.length,
         subscribers,
+        selfEcho: stream.selfEcho,
       });
     }),
   });

@@ -27,6 +27,8 @@ export interface Stream {
   readonly name: string;
   readonly messages: StreamMessage[];
   readonly subscriptions: Map<string, Subscription>;
+  /** When true, publishers receive their own messages echoed back (chatroom mode). */
+  readonly selfEcho: boolean;
 }
 
 /** A message published to a stream. */
@@ -185,7 +187,7 @@ function pruneDeliveredMessages(stream: Stream): void {
   let pruneCount = 0;
   for (const msg of stream.messages) {
     const allDelivered = readableSubs.every(
-      (sub) => msg.deliveredTo.has(sub.id) || msg.senderId === sub.sessionId,
+      (sub) => msg.deliveredTo.has(sub.id) || (!stream.selfEcho && msg.senderId === sub.sessionId),
     );
     if (allDelivered) {
       pruneCount++;
@@ -201,7 +203,7 @@ function pruneDeliveredMessages(stream: Stream): void {
 // ─── Stream Lifecycle ─────────────────────────────────────────────────────────
 
 /** Create a new named stream. Names must be unique — throws if a stream with the same name exists. */
-export function createStream(name: string): Stream {
+export function createStream(name: string, selfEcho: boolean = false): Stream {
   if (streamsByName.has(name)) {
     throw new Error(`Stream with name "${name}" already exists`);
   }
@@ -211,6 +213,7 @@ export function createStream(name: string): Stream {
     name,
     messages: [],
     subscriptions: new Map(),
+    selfEcho,
   };
   streams.set(stream.id, stream);
   streamsByName.set(name, stream.id);
@@ -381,9 +384,9 @@ export function publish(streamId: string, senderId: string, content: string): St
 
   stream.messages.push(msg);
 
-  // Notify subscribers (skip the sender and write-only subscriptions)
+  // Notify subscribers (skip write-only subscriptions; skip sender unless self-echo is enabled)
   for (const sub of stream.subscriptions.values()) {
-    if (sub.sessionId === senderId) {
+    if (!stream.selfEcho && sub.sessionId === senderId) {
       continue;
     }
     if (!canReceive(sub)) {
@@ -442,7 +445,11 @@ export function hasUndeliveredMessages(subscriptionId: string): boolean {
     return false;
   }
 
-  return stream.messages.some((msg) => !msg.deliveredTo.has(subscriptionId) && msg.senderId !== sub.sessionId);
+  return stream.messages.some(
+    (msg) =>
+      !msg.deliveredTo.has(subscriptionId) &&
+      (stream.selfEcho || msg.senderId !== sub.sessionId),
+  );
 }
 
 // ─── Notification Registration ────────────────────────────────────────────────
