@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package grackle;
+
+import "grackle/grackle_types.proto";
+
+service GrackleKnowledge {
+  // Knowledge Graph
+  rpc SearchKnowledge(SearchKnowledgeRequest) returns (SearchKnowledgeResponse);
+  rpc GetKnowledgeNode(GetKnowledgeNodeRequest) returns (GetKnowledgeNodeResponse);
+  rpc ExpandKnowledgeNode(ExpandKnowledgeNodeRequest) returns (ExpandKnowledgeNodeResponse);
+  rpc ListRecentKnowledgeNodes(ListRecentKnowledgeNodesRequest) returns (ListRecentKnowledgeNodesResponse);
+  rpc CreateKnowledgeNode(CreateKnowledgeNodeRequest) returns (CreateKnowledgeNodeResponse);
+}

@@ -30,16 +30,16 @@ import * as settings from "./settings-handlers.js";
  */
 export function createDefaultCollector(): ServiceCollector {
   const collector = createServiceCollector();
-  collector.addHandlers(grackle.Grackle, environments);
-  collector.addHandlers(grackle.Grackle, sessions);
-  collector.addHandlers(grackle.Grackle, tasks);
-  collector.addHandlers(grackle.Grackle, workspaces);
-  collector.addHandlers(grackle.Grackle, personas);
-  collector.addHandlers(grackle.Grackle, tokens);
-  collector.addHandlers(grackle.Grackle, findings);
-  collector.addHandlers(grackle.Grackle, escalations);
-  collector.addHandlers(grackle.Grackle, codespaces);
-  collector.addHandlers(grackle.Grackle, settings);
+  collector.addHandlers(grackle.GrackleCore, environments);
+  collector.addHandlers(grackle.GrackleCore, sessions);
+  collector.addHandlers(grackle.GrackleOrchestration, tasks);
+  collector.addHandlers(grackle.GrackleCore, workspaces);
+  collector.addHandlers(grackle.GrackleOrchestration, personas);
+  collector.addHandlers(grackle.GrackleCore, tokens);
+  collector.addHandlers(grackle.GrackleOrchestration, findings);
+  collector.addHandlers(grackle.GrackleOrchestration, escalations);
+  collector.addHandlers(grackle.GrackleCore, codespaces);
+  collector.addHandlers(grackle.GrackleCore, settings);
   return collector;
 }
 
@@ -55,12 +55,12 @@ export function createDefaultCollector(): ServiceCollector {
  */
 export function createCoreCollector(): ServiceCollector {
   const collector = createServiceCollector();
-  collector.addHandlers(grackle.Grackle, environments);
-  collector.addHandlers(grackle.Grackle, sessions);
-  collector.addHandlers(grackle.Grackle, workspaces);
-  collector.addHandlers(grackle.Grackle, tokens);
-  collector.addHandlers(grackle.Grackle, codespaces);
-  collector.addHandlers(grackle.Grackle, settings);
+  collector.addHandlers(grackle.GrackleCore, environments);
+  collector.addHandlers(grackle.GrackleCore, sessions);
+  collector.addHandlers(grackle.GrackleCore, workspaces);
+  collector.addHandlers(grackle.GrackleCore, tokens);
+  collector.addHandlers(grackle.GrackleCore, codespaces);
+  collector.addHandlers(grackle.GrackleCore, settings);
   return collector;
 }
 
@@ -73,10 +73,10 @@ export function createCoreCollector(): ServiceCollector {
  */
 export function createOrchestrationCollector(): ServiceCollector {
   const collector = createServiceCollector();
-  collector.addHandlers(grackle.Grackle, tasks);
-  collector.addHandlers(grackle.Grackle, personas);
-  collector.addHandlers(grackle.Grackle, findings);
-  collector.addHandlers(grackle.Grackle, escalations);
+  collector.addHandlers(grackle.GrackleOrchestration, tasks);
+  collector.addHandlers(grackle.GrackleOrchestration, personas);
+  collector.addHandlers(grackle.GrackleOrchestration, findings);
+  collector.addHandlers(grackle.GrackleOrchestration, escalations);
   return collector;
 }
 

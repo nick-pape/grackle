@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import { createClient, type Client } from "@connectrpc/connect";
+import { createClient } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
 import { grackle, DEFAULT_SERVER_PORT } from "@grackle-ai/common";
 import { fetchGitHubIssues } from "./github-client.js";
@@ -15,8 +15,14 @@ interface ImportResult {
   dependencies: number;
 }
 
-/** Create an authenticated ConnectRPC client for the Grackle server. */
-function createGrackleClient(serverUrl: string, apiKey: string): Client<typeof grackle.Grackle> {
+/** Per-service ConnectRPC clients for the Grackle server. */
+interface GrackleClients {
+  core: ReturnType<typeof createClient<typeof grackle.GrackleCore>>;
+  orchestration: ReturnType<typeof createClient<typeof grackle.GrackleOrchestration>>;
+}
+
+/** Create authenticated ConnectRPC clients for the Grackle server. */
+function createGrackleClients(serverUrl: string, apiKey: string): GrackleClients {
   const transport = createGrpcTransport({
     baseUrl: serverUrl,
     interceptors: [
@@ -26,7 +32,10 @@ function createGrackleClient(serverUrl: string, apiKey: string): Client<typeof g
       },
     ],
   });
-  return createClient(grackle.Grackle, transport);
+  return {
+    core: createClient(grackle.GrackleCore, transport),
+    orchestration: createClient(grackle.GrackleOrchestration, transport),
+  };
 }
 
 /**
@@ -35,7 +44,7 @@ function createGrackleClient(serverUrl: string, apiKey: string): Client<typeof g
  * Orchestrates: validate workspace -> fetch issues -> dedup -> plan -> create tasks -> set deps.
  */
 async function runImport(
-  client: Client<typeof grackle.Grackle>,
+  { core, orchestration }: GrackleClients,
   workspaceId: string,
   repo: string,
   state: string,
@@ -43,14 +52,14 @@ async function runImport(
   includeComments: boolean = true,
 ): Promise<ImportResult> {
   // 1. Validate workspace exists
-  await client.getWorkspace({ id: workspaceId });
+  await core.getWorkspace({ id: workspaceId });
 
   // 2. Fetch issues from GitHub
   const issues = await fetchGitHubIssues(repo, state, label, includeComments);
   console.log(`Fetched ${issues.length} issues from ${repo} (state=${state})`);
 
   // 3. Get existing tasks for deduplication
-  const existingTasksResponse = await client.listTasks({ workspaceId });
+  const existingTasksResponse = await orchestration.listTasks({ workspaceId });
   const existingTasks = existingTasksResponse.tasks.map((t) => ({ id: t.id, title: t.title }));
   const { issueNumberToTaskId: existingIssueNumberToTaskId, existingIssueNumbers } =
     buildExistingIssueMap(existingTasks);
@@ -70,7 +79,7 @@ async function runImport(
       realParentTaskId = provisionalToReal.get(task.parentTaskId) ?? task.parentTaskId;
     }
 
-    const created = await client.createTask({
+    const created = await orchestration.createTask({
       workspaceId,
       title: task.title,
       description: task.description,
@@ -87,7 +96,7 @@ async function runImport(
     const realTaskId = provisionalToReal.get(dep.taskId) ?? dep.taskId;
     const realDependsOn = dep.dependsOn.map((d) => provisionalToReal.get(d) ?? d);
 
-    await client.updateTask({
+    await orchestration.updateTask({
       id: realTaskId,
       dependsOn: realDependsOn,
     });
@@ -134,7 +143,7 @@ async function main(): Promise<void> {
         process.exit(1);
       }
 
-      const client = createGrackleClient(serverUrl, apiKey);
+      const client = createGrackleClients(serverUrl, apiKey);
 
       try {
         const result = await runImport(

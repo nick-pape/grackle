@@ -10,7 +10,7 @@ import { useState, useCallback } from "react";
 import { ConnectError } from "@connectrpc/connect";
 import type { Codespace, UseCodespacesResult } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
-import { grackleClient } from "./useGrackleClient.js";
+import { coreClient as grackleClient } from "./useGrackleClient.js";
 import { protoToCodespace } from "./proto-converters.js";
 
 export type { UseCodespacesResult } from "@grackle-ai/web-components";

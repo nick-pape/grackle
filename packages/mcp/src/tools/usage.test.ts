@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { usageTools } from "./usage.js";
 
 const mockGetUsage = vi.fn();
-const mockClient = { getUsage: mockGetUsage } as unknown as Parameters<(typeof usageTools)[0]["handler"]>[1];
+const mockClient = { core: { getUsage: mockGetUsage } } as unknown as Parameters<(typeof usageTools)[0]["handler"]>[1];
 
 describe("usage_get", () => {
   const tool = usageTools.find((t) => t.name === "usage_get")!;

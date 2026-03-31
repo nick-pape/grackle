@@ -1,7 +1,7 @@
 /**
  * ConnectRPC event stream hook — replaces the WebSocket transport.
  *
- * Calls `grackleClient.streamEvents({})` to receive a unified stream of
+ * Calls `coreClient.streamEvents({})` to receive a unified stream of
  * session events and domain events. Handles auto-reconnect with a fixed delay.
  *
  * @module
@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { ConnectError, Code } from "@connectrpc/connect";
-import { grackleClient } from "./useGrackleClient.js";
+import { coreClient as grackleClient } from "./useGrackleClient.js";
 import { PAIR_PATH } from "@grackle-ai/web-components";
 
 /** Reconnect delay in milliseconds. */

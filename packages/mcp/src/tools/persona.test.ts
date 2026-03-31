@@ -4,7 +4,7 @@ import type { Client } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
 import { personaTools } from "./persona.js";
 
-type GrackleClient = Client<typeof grackle.Grackle>;
+type GrackleClient = Client<typeof grackle.GrackleOrchestration>;
 
 /** Look up a tool definition by name from the personaTools array. */
 const getTool = (name: string) => personaTools.find((t) => t.name === name)!;
@@ -35,7 +35,7 @@ describe("persona_list", () => {
       }),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({}, mockClient);
+    const result = await tool.handler({}, { orchestration: mockClient });
 
     expect(mockClient.listPersonas).toHaveBeenCalledWith({});
 
@@ -53,7 +53,7 @@ describe("persona_list", () => {
       ),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({}, mockClient);
+    const result = await tool.handler({}, { orchestration: mockClient });
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
@@ -80,7 +80,7 @@ describe("persona_create", () => {
         model: "claude-sonnet-4-20250514",
         maxTurns: 10,
       },
-      mockClient,
+      { orchestration: mockClient },
     );
 
     expect(mockClient.createPersona).toHaveBeenCalledWith({
@@ -116,7 +116,7 @@ describe("persona_create", () => {
 
     const result = await tool.handler(
       { name: "Minimal", systemPrompt: "Do stuff." },
-      mockClient,
+      { orchestration: mockClient },
     );
 
     expect(mockClient.createPersona).toHaveBeenCalledWith({
@@ -146,7 +146,7 @@ describe("persona_create", () => {
 
     const result = await tool.handler(
       { name: "Dupe", systemPrompt: "prompt" },
-      mockClient,
+      { orchestration: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -165,7 +165,7 @@ describe("persona_show", () => {
       getPersona: vi.fn().mockResolvedValue(MOCK_PERSONA),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({ personaId: "per-1" }, mockClient);
+    const result = await tool.handler({ personaId: "per-1" }, { orchestration: mockClient });
 
     expect(mockClient.getPersona).toHaveBeenCalledWith({ id: "per-1" });
 
@@ -182,7 +182,7 @@ describe("persona_show", () => {
       ),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({ personaId: "per-missing" }, mockClient);
+    const result = await tool.handler({ personaId: "per-missing" }, { orchestration: mockClient });
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
@@ -203,7 +203,7 @@ describe("persona_edit", () => {
 
     const result = await tool.handler(
       { personaId: "per-1", name: "Senior Reviewer" },
-      mockClient,
+      { orchestration: mockClient },
     );
 
     expect(mockClient.updatePersona).toHaveBeenCalledWith({
@@ -234,7 +234,7 @@ describe("persona_edit", () => {
 
     const result = await tool.handler(
       { personaId: "per-missing", name: "Nope" },
-      mockClient,
+      { orchestration: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -252,7 +252,7 @@ describe("persona_delete", () => {
       deletePersona: vi.fn().mockResolvedValue({}),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({ personaId: "per-1" }, mockClient);
+    const result = await tool.handler({ personaId: "per-1" }, { orchestration: mockClient });
 
     expect(mockClient.deletePersona).toHaveBeenCalledWith({ id: "per-1" });
 
@@ -269,7 +269,7 @@ describe("persona_delete", () => {
       ),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({ personaId: "per-missing" }, mockClient);
+    const result = await tool.handler({ personaId: "per-missing" }, { orchestration: mockClient });
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);

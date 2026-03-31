@@ -13,7 +13,7 @@ import type { PluginContext, Disposable } from "./context.js";
 
 /** A set of gRPC handler methods contributed to a ConnectRPC service. */
 export interface ServiceRegistration {
-  /** The proto service definition (e.g., grackle.Grackle). */
+  /** The proto service definition (e.g., grackle.GrackleCore, grackle.GrackleOrchestration). */
   service: DescService;
   /**
    * Handler method implementations.

@@ -63,7 +63,7 @@ export function createKnowledgePlugin(): GracklePlugin {
     },
 
     grpcHandlers: () => [{
-      service: grackle.Grackle,
+      service: grackle.GrackleKnowledge,
       handlers: {
         searchKnowledge,
         getKnowledgeNode,

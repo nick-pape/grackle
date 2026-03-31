@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { createGrackleClient } from "../client.js";
+import { createGrackleClients } from "../client.js";
 import Table from "cli-table3";
 
 export function registerFindingCommands(program: Command): void {
@@ -12,7 +12,7 @@ export function registerFindingCommands(program: Command): void {
     .option("--tag <tag>", "Filter by tag")
     .option("--limit <n>", "Max results", parseInt)
     .action(async (workspaceId: string, opts: { category?: string; tag?: string; limit?: number }) => {
-      const client = createGrackleClient();
+      const { orchestration: client } = createGrackleClients();
       const res = await client.queryFindings({
         workspaceId,
         categories: opts.category ? [opts.category] : [],
@@ -45,7 +45,7 @@ export function registerFindingCommands(program: Command): void {
     .option("--content <text>", "Finding content", "")
     .option("--tags <tags>", "Comma-separated tags")
     .action(async (workspaceId: string, title: string, opts: { tags?: string; category: string; content: string }) => {
-      const client = createGrackleClient();
+      const { orchestration: client } = createGrackleClients();
       const tags: string[] = opts.tags ? opts.tags.split(",") : [];
       const f = await client.postFinding({
         workspaceId,

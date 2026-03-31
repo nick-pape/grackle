@@ -7,7 +7,7 @@ vi.mock("@grackle-ai/core", () => ({
 }));
 
 vi.mock("@grackle-ai/common", () => ({
-  grackle: { Grackle: { typeName: "grackle.Grackle" } },
+  grackle: { GrackleOrchestration: { typeName: "grackle.GrackleOrchestration" } },
 }));
 
 vi.mock("@grackle-ai/database", () => ({
@@ -69,7 +69,7 @@ describe("createOrchestrationPlugin", () => {
     const registrations = plugin.grpcHandlers!(createCtx() as never);
 
     expect(registrations).toHaveLength(1);
-    expect(registrations[0].service).toHaveProperty("typeName", "grackle.Grackle");
+    expect(registrations[0].service).toHaveProperty("typeName", "grackle.GrackleOrchestration");
     // Representative methods from each handler group
     expect(registrations[0].handlers).toHaveProperty("listTasks");
     expect(registrations[0].handlers).toHaveProperty("createTask");

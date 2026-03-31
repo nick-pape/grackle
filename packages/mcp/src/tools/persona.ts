@@ -1,7 +1,5 @@
-import type { Client } from "@connectrpc/connect";
-import type { grackle } from "@grackle-ai/common";
 import { z } from "zod";
-import type { ToolDefinition } from "../tool-registry.js";
+import type { GrackleClients, ToolDefinition } from "../tool-registry.js";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
 
@@ -49,7 +47,7 @@ export const personaTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(_args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(_args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
       try {
         const response = await client.listPersonas({});
         return jsonResult(response.personas.map(serializePersona));
@@ -80,7 +78,7 @@ export const personaTools: ToolDefinition[] = [
       idempotentHint: false,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
       try {
         const persona = await client.createPersona({
           name: args.name as string,
@@ -114,7 +112,7 @@ export const personaTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
       try {
         const persona = await client.getPersona({ id: args.personaId as string });
         return jsonResult(serializePersona(persona));
@@ -146,7 +144,7 @@ export const personaTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
       try {
         const persona = await client.updatePersona({
           id: args.personaId as string,
@@ -181,7 +179,7 @@ export const personaTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
       try {
         await client.deletePersona({ id: args.personaId as string });
         return jsonResult({ success: true });

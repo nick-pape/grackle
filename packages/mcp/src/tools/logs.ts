@@ -1,10 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { ConnectError, Code, type Client } from "@connectrpc/connect";
-import { type grackle, eventTypeToString } from "@grackle-ai/common";
+import { ConnectError, Code } from "@connectrpc/connect";
+import { eventTypeToString } from "@grackle-ai/common";
 import type { AuthContext } from "@grackle-ai/auth";
 import { z } from "zod";
-import type { ToolDefinition } from "../tool-registry.js";
+import type { GrackleClients, ToolDefinition } from "../tool-registry.js";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
 import { assertCallerIsAncestor } from "../scope-enforcement.js";
@@ -36,7 +36,7 @@ export const logsTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+    async handler(args: Record<string, unknown>, { core: client, orchestration }: GrackleClients, authContext?: AuthContext) {
       try {
         // Fetch the session directly by ID
         let session: Awaited<ReturnType<typeof client.getSession>> | undefined;
@@ -66,7 +66,7 @@ export const logsTools: ToolDefinition[] = [
           if (!session.taskId) {
             throw new ConnectError("Cannot read logs for a taskless session via scoped auth", Code.PermissionDenied);
           }
-          await assertCallerIsAncestor(client, authContext, session.taskId);
+          await assertCallerIsAncestor(orchestration, authContext, session.taskId);
         }
 
         if (!session.logPath) {

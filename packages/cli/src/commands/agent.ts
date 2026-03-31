@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import chalk from "chalk";
-import { createGrackleClient } from "../client.js";
+import { createGrackleClients } from "../client.js";
 import { grackle, SESSION_STATUS } from "@grackle-ai/common";
 import Table from "cli-table3";
 import { formatTokens, formatCost } from "../format.js";
@@ -13,7 +13,7 @@ export function registerAgentCommands(program: Command): void {
     .option("--max-turns <n>", "Maximum turns", parseInt)
     .option("--persona <id>", "Persona to use (falls back to app default)")
     .action(async (environmentId: string, prompt: string, opts: { maxTurns?: number; persona?: string }) => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       const session = await client.spawnAgent({
         environmentId,
         prompt,
@@ -33,7 +33,7 @@ export function registerAgentCommands(program: Command): void {
     .command("resume <session-id>")
     .description("Resume a paused session")
     .action(async (sessionId: string) => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       const session = await client.resumeAgent({ sessionId });
       console.log(`Resumed session: ${session.id}`);
     });
@@ -44,7 +44,7 @@ export function registerAgentCommands(program: Command): void {
     .option("--env <env-id>", "Filter by environment")
     .option("--all", "Show all sessions including stopped")
     .action(async (opts: { env?: string; all?: boolean }) => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       const res = await client.listSessions({
         environmentId: opts.env || "",
         status: "",
@@ -90,7 +90,7 @@ export function registerAgentCommands(program: Command): void {
     .description("Stop a running session")
     .option("-g, --graceful", "Send SIGTERM for graceful shutdown instead of hard kill")
     .action(async (sessionId: string, opts: { graceful?: boolean }) => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       await client.killAgent({ id: sessionId, graceful: opts.graceful ?? false });
       console.log(opts.graceful ? `Sent SIGTERM to: ${sessionId}` : `Killed: ${sessionId}`);
     });
@@ -99,7 +99,7 @@ export function registerAgentCommands(program: Command): void {
     .command("send-input <session-id> <text>")
     .description("Send input to a waiting session")
     .action(async (sessionId: string, text: string) => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       await client.sendInput({ sessionId, text });
       console.log(chalk.green(`Sent input to session ${sessionId}`));
     });
@@ -108,7 +108,7 @@ export function registerAgentCommands(program: Command): void {
     .command("attach <session-id>")
     .description("Attach to a live session")
     .action(async (sessionId: string) => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       console.log(`Attached to ${sessionId} (Ctrl+C to detach)\n`);
 
       const readline = await import("node:readline");

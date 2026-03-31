@@ -14,7 +14,10 @@ vi.mock("@grackle-ai/core", () => ({
 }));
 
 vi.mock("@grackle-ai/common", () => ({
-  grackle: { Grackle: { typeName: "grackle.Grackle" } },
+  grackle: {
+    GrackleCore: { typeName: "grackle.GrackleCore" },
+    GrackleOrchestration: { typeName: "grackle.GrackleOrchestration" },
+  },
 }));
 
 // ── Mock handler modules with one representative method each ─────────────────

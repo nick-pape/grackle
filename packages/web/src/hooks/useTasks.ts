@@ -11,7 +11,7 @@ import { useState, useCallback, useRef } from "react";
 import { ConnectError, Code } from "@connectrpc/connect";
 import type { TaskData, GrackleEvent, WsMessage, UseTasksResult } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
-import { grackleClient } from "./useGrackleClient.js";
+import { orchestrationClient as grackleClient } from "./useGrackleClient.js";
 import { protoToTask } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
 

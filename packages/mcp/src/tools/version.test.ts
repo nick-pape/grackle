@@ -4,7 +4,7 @@ import type { Client } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
 import { versionTools } from "./version.js";
 
-type GrackleClient = Client<typeof grackle.Grackle>;
+type GrackleClient = Client<typeof grackle.GrackleCore>;
 
 const getTool = (name: string) => versionTools.find((t) => t.name === name)!;
 
@@ -21,7 +21,7 @@ describe("get_version_status", () => {
       }),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({}, mockClient);
+    const result = await tool.handler({}, { core: mockClient });
 
     expect(mockClient.getVersionStatus).toHaveBeenCalledWith({});
 
@@ -40,7 +40,7 @@ describe("get_version_status", () => {
       ),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({}, mockClient);
+    const result = await tool.handler({}, { core: mockClient });
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);

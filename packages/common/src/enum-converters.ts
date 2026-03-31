@@ -11,7 +11,7 @@ import {
   WorkspaceStatus,
   ClaudeProviderMode,
   ProviderToggle,
-} from "./gen/grackle/grackle_pb.js";
+} from "./gen/grackle/grackle_types_pb.js";
 
 // ─── EventType ──────────────────────────────────────────────
 

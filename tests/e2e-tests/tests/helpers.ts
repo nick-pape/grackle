@@ -17,7 +17,12 @@ async function callRpc(
 ): Promise<WsPayload> {
   return page.evaluate(
     async ({ method: m, body: b }) => {
-      const resp = await fetch(`/grackle.Grackle/${m}`, {
+      const serviceMap: Record<string, string> = {
+        ListWorkspaces: "grackle.GrackleCore",
+        ListTasks: "grackle.GrackleOrchestration",
+      };
+      const svc = serviceMap[m] ?? "grackle.GrackleCore";
+      const resp = await fetch(`/${svc}/${m}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(b),
@@ -45,7 +50,7 @@ export async function getWorkspaceId(
   client: GrackleClient,
   workspaceName: string,
 ): Promise<string> {
-  const resp = await client.listWorkspaces({});
+  const resp = await client.core.listWorkspaces({});
   const workspace = resp.workspaces.find((w) => w.name === workspaceName);
   if (!workspace) {
     throw new Error(`Workspace "${workspaceName}" not found`);
@@ -59,7 +64,7 @@ export async function getTaskId(
   workspaceId: string,
   taskTitle: string,
 ): Promise<string> {
-  const resp = await client.listTasks({ workspaceId });
+  const resp = await client.orchestration.listTasks({ workspaceId });
   const task = resp.tasks.find((t) => t.title === taskTitle);
   if (!task) {
     throw new Error(`Task "${taskTitle}" not found in workspace ${workspaceId}`);
@@ -76,7 +81,7 @@ export async function createWorkspace(
   name: string,
   environmentId: string = "test-local",
 ): Promise<string> {
-  const resp = await client.createWorkspace({ name, environmentId });
+  const resp = await client.core.createWorkspace({ name, environmentId });
   return resp.id;
 }
 
@@ -96,7 +101,7 @@ export async function createTaskDirect(
     canDecompose?: boolean;
   },
 ): Promise<WsPayload> {
-  const resp = await client.createTask({
+  const resp = await client.orchestration.createTask({
     workspaceId,
     title,
     description: options?.description || "",
@@ -217,7 +222,7 @@ export async function patchWsForStubRuntime(page: Page, environmentId: string = 
 
     window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
       const url = typeof input === "string" ? input : (input instanceof URL ? input.toString() : input.url);
-      if ((url.includes("/grackle.Grackle/StartTask") || url.includes("/grackle.Grackle/SpawnAgent")) && init?.body) {
+      if ((url.includes("/grackle.GrackleOrchestration/StartTask") || url.includes("/grackle.GrackleCore/SpawnAgent")) && init?.body) {
         try {
           let bodyStr: string;
           if (init.body instanceof Uint8Array) {
@@ -254,7 +259,7 @@ export async function patchWsForStubMcpRuntime(page: Page, environmentId: string
 
     window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
       const url = typeof input === "string" ? input : (input instanceof URL ? input.toString() : input.url);
-      if ((url.includes("/grackle.Grackle/StartTask") || url.includes("/grackle.Grackle/SpawnAgent")) && init?.body) {
+      if ((url.includes("/grackle.GrackleOrchestration/StartTask") || url.includes("/grackle.GrackleCore/SpawnAgent")) && init?.body) {
         try {
           let bodyStr: string;
           if (init.body instanceof Uint8Array) {
@@ -325,7 +330,7 @@ export async function provisionEnvironmentDirect(
 ): Promise<void> {
   try {
     const signal = AbortSignal.timeout(PROVISION_TIMEOUT_MS);
-    for await (const event of client.provisionEnvironment({ id: environmentId }, { signal })) {
+    for await (const event of client.core.provisionEnvironment({ id: environmentId }, { signal })) {
       if (event.stage === "error") {
         throw new Error(`Provisioning failed: ${event.message}`);
       }
