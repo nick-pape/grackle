@@ -390,7 +390,7 @@ class ClaudeCodeSession extends BaseAgentSession {
           const totalInput = (usage?.input_tokens ?? 0)
             + (usage?.cache_read_input_tokens ?? 0)
             + (usage?.cache_creation_input_tokens ?? 0);
-          this.pushUsageEvent(totalInput, usage?.output_tokens ?? 0, costUsd ?? 0);
+          this.pushUsageEvent(totalInput, usage?.output_tokens ?? 0, Math.round((costUsd ?? 0) * 100_000));
         }
       }
 
@@ -539,7 +539,7 @@ class ClaudeCodeSession extends BaseAgentSession {
           const totalInput = (usage?.input_tokens ?? 0)
             + (usage?.cache_read_input_tokens ?? 0)
             + (usage?.cache_creation_input_tokens ?? 0);
-          this.pushUsageEvent(totalInput, usage?.output_tokens ?? 0, costUsd ?? 0);
+          this.pushUsageEvent(totalInput, usage?.output_tokens ?? 0, Math.round((costUsd ?? 0) * 100_000));
         }
       }
 

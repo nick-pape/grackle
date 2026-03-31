@@ -83,8 +83,8 @@ export function WorkspacePage(): JSX.Element {
   }, [workspaceId, activeFieldId]);
 
   // Load usage stats for the workspace.
-  // Re-fetch when sessions change (e.g. usage event updates a session's costUsd).
-  const totalSessionCost = sessions.reduce((s, sess) => s + (sess.costUsd ?? 0), 0);
+  // Re-fetch when sessions change (e.g. usage event updates a session's costMillicents).
+  const totalSessionCost = sessions.reduce((s, sess) => s + (sess.costMillicents ?? 0), 0);
   useEffect(() => {
     if (workspaceId) {
       loadUsage("workspace", workspaceId).catch(() => {});
@@ -397,10 +397,10 @@ export function WorkspacePage(): JSX.Element {
       )}
 
       {/* Usage summary */}
-      {wsUsage && wsUsage.costUsd > 0 && (
+      {wsUsage && wsUsage.costMillicents > 0 && (
         <div className={styles.progressBarContainer}>
           <span className={styles.progressLabel}>
-            Usage: {formatCost(wsUsage.costUsd)} ({wsUsage.sessionCount} session{wsUsage.sessionCount !== 1 ? "s" : ""})
+            Usage: {formatCost(wsUsage.costMillicents)} ({wsUsage.sessionCount} session{wsUsage.sessionCount !== 1 ? "s" : ""})
           </span>
         </div>
       )}
@@ -415,7 +415,7 @@ export function WorkspacePage(): JSX.Element {
             )}
             {workspace.tokenBudget > 0 && workspace.costBudgetMillicents > 0 && " | "}
             {workspace.costBudgetMillicents > 0 && (
-              <>Cost: {formatCost(wsUsage?.costUsd ?? 0)} / {formatCost(workspace.costBudgetMillicents / 100_000)}</>
+              <>Cost: {formatCost(wsUsage?.costMillicents ?? 0)} / {formatCost(workspace.costBudgetMillicents)}</>
             )}
           </span>
         </div>

@@ -1705,7 +1705,7 @@ type Session = Message<"grackle.Session"> & {
     personaId: string;
     inputTokens: number;
     outputTokens: number;
-    costUsd: number;
+    costMillicents: number;
     pipeFd: number;
     endReason: string;
 };
@@ -2168,7 +2168,7 @@ const UpdateWorkspaceRequestSchema: GenMessage<UpdateWorkspaceRequest>;
 type UsageStats = Message<"grackle.UsageStats"> & {
     inputTokens: number;
     outputTokens: number;
-    costUsd: number;
+    costMillicents: number;
     sessionCount: number;
 };
 

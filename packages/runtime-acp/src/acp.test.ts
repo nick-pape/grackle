@@ -196,7 +196,7 @@ describe("mapSessionUpdate", () => {
     expect(events).toHaveLength(1);
     expect(events[0].type).toBe("usage");
     const data = JSON.parse(events[0].content) as Record<string, number>;
-    expect(data.cost_usd).toBe(0.05);
+    expect(data.cost_millicents).toBe(5000); // Math.round(0.05 * 100_000)
     expect(data.input_tokens).toBe(0);
     expect(data.output_tokens).toBe(0);
   });

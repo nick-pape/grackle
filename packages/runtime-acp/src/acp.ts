@@ -161,10 +161,10 @@ export function mapSessionUpdate(update: Record<string, unknown>): AgentEvent[] 
     case "usage_update": {
       const cost = update.cost as { amount?: number; currency?: string } | undefined;
       const rawAmount = cost?.currency === "USD" ? Number(cost.amount) : 0;
-      const costAmount = Number.isFinite(rawAmount) ? rawAmount : 0;
-      if (costAmount > 0) {
+      const costUsd = Number.isFinite(rawAmount) ? rawAmount : 0;
+      if (costUsd > 0) {
         return [{ type: "usage", timestamp: ts, content: JSON.stringify({
-          input_tokens: 0, output_tokens: 0, cost_usd: costAmount,
+          input_tokens: 0, output_tokens: 0, cost_millicents: Math.round(costUsd * 100_000),
         }), raw }];
       }
       return [];
@@ -321,12 +321,12 @@ class AcpSession extends BaseAgentSession {
             // Apply cumulative→delta conversion for ACP usage_update cost
             if (event.type === "usage") {
               try {
-                const data = JSON.parse(event.content) as { input_tokens: number; output_tokens: number; cost_usd: number };
-                if (data.cost_usd > 0) {
-                  const delta = data.cost_usd - this.lastReportedCost;
-                  this.lastReportedCost = data.cost_usd;
+                const data = JSON.parse(event.content) as { input_tokens: number; output_tokens: number; cost_millicents: number };
+                if (data.cost_millicents > 0) {
+                  const delta = data.cost_millicents - this.lastReportedCost;
+                  this.lastReportedCost = data.cost_millicents;
                   if (delta <= 0) { continue; }
-                  this.eventQueue.push({ ...event, content: JSON.stringify({ ...data, cost_usd: delta }) });
+                  this.eventQueue.push({ ...event, content: JSON.stringify({ ...data, cost_millicents: delta }) });
                   this.messageCount++;
                   continue;
                 }

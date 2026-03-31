@@ -171,10 +171,10 @@ class GenAIScriptSession implements AgentSession {
       if (result?.usage) {
         const inputTokens = result.usage.prompt;
         const outputTokens = result.usage.completion;
-        const costUsd = result.usage.cost ?? 0;
-        if (inputTokens > 0 || outputTokens > 0 || costUsd > 0) {
+        const costMillicents = Math.round((result.usage.cost ?? 0) * 100_000);
+        if (inputTokens > 0 || outputTokens > 0 || costMillicents > 0) {
           yield { type: "usage", timestamp: ts(), content: JSON.stringify({
-            input_tokens: inputTokens, output_tokens: outputTokens, cost_usd: costUsd,
+            input_tokens: inputTokens, output_tokens: outputTokens, cost_millicents: costMillicents,
           }) };
         }
       }

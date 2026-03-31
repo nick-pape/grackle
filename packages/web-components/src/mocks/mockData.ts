@@ -80,7 +80,7 @@ export const MOCK_SESSIONS: Session[] = [
     error: "Context window exceeded before completing implementation",
     inputTokens: 84_200,
     outputTokens: 12_750,
-    costUsd: 0.41,
+    costMillicents: 41_000,
   },
   {
     id: "sess-001",
@@ -91,7 +91,7 @@ export const MOCK_SESSIONS: Session[] = [
     startedAt: "2026-02-27T08:15:00Z",
     inputTokens: 42_600,
     outputTokens: 8_100,
-    costUsd: 0.22,
+    costMillicents: 22_000,
   },
   {
     id: "sess-002",
@@ -104,7 +104,7 @@ export const MOCK_SESSIONS: Session[] = [
     endedAt: "2026-02-27T07:33:00Z",
     inputTokens: 31_400,
     outputTokens: 9_800,
-    costUsd: 0.18,
+    costMillicents: 18_000,
   },
   {
     id: "sess-003",
@@ -117,7 +117,7 @@ export const MOCK_SESSIONS: Session[] = [
     endedAt: "2026-02-26T23:10:00Z",
     inputTokens: 56_300,
     outputTokens: 14_200,
-    costUsd: 0.31,
+    costMillicents: 31_000,
   },
   {
     id: "sess-004",
@@ -128,7 +128,7 @@ export const MOCK_SESSIONS: Session[] = [
     startedAt: "2026-02-27T09:00:00Z",
     inputTokens: 18_900,
     outputTokens: 4_500,
-    costUsd: 0.10,
+    costMillicents: 10_000,
   },
   {
     id: "sess-005",
@@ -139,7 +139,7 @@ export const MOCK_SESSIONS: Session[] = [
     startedAt: "2026-02-27T06:00:00Z",
     inputTokens: 67_800,
     outputTokens: 19_300,
-    costUsd: 0.38,
+    costMillicents: 38_000,
   },
 ];
 
@@ -210,7 +210,7 @@ export const MOCK_EVENTS: SessionEvent[] = [
     sessionId: "sess-001-prev",
     eventType: "usage",
     timestamp: "2026-02-26T14:30:00Z",
-    content: JSON.stringify({ input_tokens: 42100, output_tokens: 6350, cost_usd: 0.21 }),
+    content: JSON.stringify({ input_tokens: 42100, output_tokens: 6350, cost_millicents: 21000 }),
   },
   {
     sessionId: "sess-001-prev",
@@ -479,7 +479,7 @@ export const MOCK_EVENTS: SessionEvent[] = [
     sessionId: "sess-001",
     eventType: "usage",
     timestamp: "2026-02-27T08:15:41Z",
-    content: JSON.stringify({ input_tokens: 42600, output_tokens: 8100, cost_usd: 0.22 }),
+    content: JSON.stringify({ input_tokens: 42600, output_tokens: 8100, cost_millicents: 22000 }),
   },
   {
     sessionId: "sess-001",
@@ -567,7 +567,7 @@ export const MOCK_EVENTS: SessionEvent[] = [
     sessionId: "sess-002",
     eventType: "usage",
     timestamp: "2026-02-27T07:32:00Z",
-    content: JSON.stringify({ input_tokens: 31400, output_tokens: 9800, cost_usd: 0.18 }),
+    content: JSON.stringify({ input_tokens: 31400, output_tokens: 9800, cost_millicents: 18000 }),
   },
   {
     sessionId: "sess-002",
@@ -673,7 +673,7 @@ export const MOCK_EVENTS: SessionEvent[] = [
     sessionId: "sess-003",
     eventType: "usage",
     timestamp: "2026-02-26T23:00:00Z",
-    content: JSON.stringify({ input_tokens: 56300, output_tokens: 14200, cost_usd: 0.31 }),
+    content: JSON.stringify({ input_tokens: 56300, output_tokens: 14200, cost_millicents: 31000 }),
   },
   {
     sessionId: "sess-003",
@@ -849,7 +849,7 @@ export const MOCK_EVENTS: SessionEvent[] = [
     sessionId: "sess-005",
     eventType: "usage",
     timestamp: "2026-02-27T06:30:00Z",
-    content: JSON.stringify({ input_tokens: 67800, output_tokens: 19300, cost_usd: 0.38 }),
+    content: JSON.stringify({ input_tokens: 67800, output_tokens: 19300, cost_millicents: 38000 }),
   },
   {
     sessionId: "sess-005",
@@ -1654,7 +1654,7 @@ export const MOCK_STREAM_SCENARIOS: MockStreamScenario[] = [
         event: {
           eventType: "usage",
           timestamp: ts(4500),
-          content: JSON.stringify({ input_tokens: 28400, output_tokens: 7200, cost_usd: 0.15 }),
+          content: JSON.stringify({ input_tokens: 28400, output_tokens: 7200, cost_millicents: 15000 }),
         },
       },
       {
@@ -1957,7 +1957,7 @@ export const MOCK_STREAM_SCENARIOS: MockStreamScenario[] = [
         event: {
           eventType: "usage",
           timestamp: ts(8400),
-          content: JSON.stringify({ input_tokens: 42600, output_tokens: 1850, cost_usd: 0.12 }),
+          content: JSON.stringify({ input_tokens: 42600, output_tokens: 1850, cost_millicents: 12000 }),
         },
       },
       {

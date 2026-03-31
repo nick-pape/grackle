@@ -1259,12 +1259,12 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         console.log("[MockGrackle] completeOnboarding");
       },
       usageCache: {
-        "workspace:proj-alpha": { inputTokens: 214_500, outputTokens: 44_850, costUsd: 1.12, sessionCount: 4 },
-        "workspace:proj-beta": { inputTokens: 86_700, outputTokens: 23_800, costUsd: 0.48, sessionCount: 3 },
-        "task:task-001": { inputTokens: 126_800, outputTokens: 20_850, costUsd: 0.63, sessionCount: 2 },
-        "task:task-006": { inputTokens: 18_900, outputTokens: 4_500, costUsd: 0.10, sessionCount: 1 },
-        "task_tree:task-001": { inputTokens: 126_800, outputTokens: 20_850, costUsd: 0.63, sessionCount: 2 },
-        "task_tree:task-006": { inputTokens: 18_900, outputTokens: 4_500, costUsd: 0.10, sessionCount: 1 },
+        "workspace:proj-alpha": { inputTokens: 214_500, outputTokens: 44_850, costMillicents: 112_000, sessionCount: 4 },
+        "workspace:proj-beta": { inputTokens: 86_700, outputTokens: 23_800, costMillicents: 48_000, sessionCount: 3 },
+        "task:task-001": { inputTokens: 126_800, outputTokens: 20_850, costMillicents: 63_000, sessionCount: 2 },
+        "task:task-006": { inputTokens: 18_900, outputTokens: 4_500, costMillicents: 10_000, sessionCount: 1 },
+        "task_tree:task-001": { inputTokens: 126_800, outputTokens: 20_850, costMillicents: 63_000, sessionCount: 2 },
+        "task_tree:task-006": { inputTokens: 18_900, outputTokens: 4_500, costMillicents: 10_000, sessionCount: 1 },
       },
       loadUsage: async (scope: string, id: string) => {
         console.log(`[MockGrackle] loadUsage(${scope}, ${id})`);

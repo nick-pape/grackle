@@ -167,7 +167,7 @@ function UsageEvent({ content }: { content: string }): JSX.Element {
     const inTok = Number(data.input_tokens) || 0;
     const outTok = Number(data.output_tokens) || 0;
     const tokens = formatTokens(inTok + outTok);
-    const cost = formatCost(Number(data.cost_usd) || 0);
+    const cost = formatCost(Number(data.cost_millicents) || 0);
     label = `${tokens} tokens \u00b7 ${cost}`;
   } catch { /* show raw content if JSON fails */ }
   return (

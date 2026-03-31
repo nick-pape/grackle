@@ -217,19 +217,19 @@ export function TaskOverviewPanel({
           )}
         </div>
       </div>
-      {taskUsage && taskUsage.costUsd > 0 && (
+      {taskUsage && taskUsage.costMillicents > 0 && (
         <div className={styles.overviewSection} data-testid="task-overview-usage">
           <div className={styles.overviewLabel}>Usage</div>
           <div className={styles.timeline}>
             <div className={styles.timelineRow}>
               <span className={styles.timelineKey}>Cost</span>
-              <span className={styles.timelineValue}>{formatCost(taskUsage.costUsd)}</span>
+              <span className={styles.timelineValue}>{formatCost(taskUsage.costMillicents)}</span>
               <span className={styles.timelineDelta}>{taskUsage.sessionCount} session{taskUsage.sessionCount !== 1 ? "s" : ""}</span>
             </div>
-            {treeUsage && treeUsage.costUsd > taskUsage.costUsd && (
+            {treeUsage && treeUsage.costMillicents > taskUsage.costMillicents && (
               <div className={styles.timelineRow}>
                 <span className={styles.timelineKey}>Total (incl. subtasks)</span>
-                <span className={styles.timelineValue}>{formatCost(treeUsage.costUsd)}</span>
+                <span className={styles.timelineValue}>{formatCost(treeUsage.costMillicents)}</span>
                 <span className={styles.timelineDelta}>{treeUsage.sessionCount} session{treeUsage.sessionCount !== 1 ? "s" : ""}</span>
               </div>
             )}
@@ -252,7 +252,7 @@ export function TaskOverviewPanel({
               <div className={styles.timelineRow}>
                 <span className={styles.timelineKey}>Cost</span>
                 <span className={styles.timelineValue}>
-                  {formatCost(taskUsage?.costUsd ?? 0)} / {formatCost(task.costBudgetMillicents / 100_000)}
+                  {formatCost(taskUsage?.costMillicents ?? 0)} / {formatCost(task.costBudgetMillicents)}
                 </span>
               </div>
             )}

@@ -46,14 +46,14 @@ export interface Session {
   personaId?: string;
   inputTokens?: number;
   outputTokens?: number;
-  costUsd?: number;
+  costMillicents?: number;
 }
 
 /** Aggregated usage statistics for a scope (session, task, workspace, environment). */
 export interface UsageStats {
   inputTokens: number;
   outputTokens: number;
-  costUsd: number;
+  costMillicents: number;
   sessionCount: number;
 }
 

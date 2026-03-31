@@ -43,7 +43,7 @@ function applySchema(): void {
       pipe_mode          TEXT NOT NULL DEFAULT '',
       input_tokens       INTEGER NOT NULL DEFAULT 0,
       output_tokens      INTEGER NOT NULL DEFAULT 0,
-      cost_usd           REAL NOT NULL DEFAULT 0,
+      cost_millicents    INTEGER NOT NULL DEFAULT 0,
       end_reason         TEXT,
       sigterm_sent_at    TEXT
     );
@@ -130,29 +130,31 @@ describe("session-store", () => {
   describe("updateSessionUsage", () => {
     it("stores usage values on first call", () => {
       sessionStore.createSession("usage-1", "test-env", "claude-code", "test", "model", "/tmp/log");
-      sessionStore.updateSessionUsage("usage-1", 100, 50, 0.005);
+      sessionStore.updateSessionUsage("usage-1", 100, 50, 500);
       const session = sessionStore.getSession("usage-1");
       expect(session?.inputTokens).toBe(100);
       expect(session?.outputTokens).toBe(50);
-      expect(session?.costUsd).toBeCloseTo(0.005);
+      expect(session?.costMillicents).toBe(500);
     });
 
     it("accumulates values on subsequent calls", () => {
       sessionStore.createSession("usage-2", "test-env", "claude-code", "test", "model", "/tmp/log");
-      sessionStore.updateSessionUsage("usage-2", 100, 50, 0.005);
-      sessionStore.updateSessionUsage("usage-2", 200, 75, 0.010);
+      sessionStore.updateSessionUsage("usage-2", 100, 50, 500);
+      sessionStore.updateSessionUsage("usage-2", 200, 75, 1000);
       const session = sessionStore.getSession("usage-2");
       expect(session?.inputTokens).toBe(300);
       expect(session?.outputTokens).toBe(125);
-      expect(session?.costUsd).toBeCloseTo(0.015);
+      expect(session?.costMillicents).toBe(1500);
     });
 
-    it("handles fractional cost values precisely", () => {
+    it("accumulates integer millicents exactly (no floating-point error)", () => {
       sessionStore.createSession("usage-3", "test-env", "claude-code", "test", "model", "/tmp/log");
-      sessionStore.updateSessionUsage("usage-3", 0, 0, 0.001234);
-      sessionStore.updateSessionUsage("usage-3", 0, 0, 0.005678);
+      // Simulate 10 calls of 123 millicents each — integers accumulate exactly
+      for (let i = 0; i < 10; i++) {
+        sessionStore.updateSessionUsage("usage-3", 0, 0, 123);
+      }
       const session = sessionStore.getSession("usage-3");
-      expect(session?.costUsd).toBeCloseTo(0.006912, 6);
+      expect(session?.costMillicents).toBe(1230);
     });
 
     it("defaults to zero when no usage has been recorded", () => {
@@ -160,7 +162,7 @@ describe("session-store", () => {
       const session = sessionStore.getSession("usage-4");
       expect(session?.inputTokens).toBe(0);
       expect(session?.outputTokens).toBe(0);
-      expect(session?.costUsd).toBe(0);
+      expect(session?.costMillicents).toBe(0);
     });
   });
 
@@ -183,34 +185,34 @@ describe("session-store", () => {
     it("aggregates by taskId", () => {
       sessionStore.createSession("agg-1", "test-env", "claude-code", "test", "model", "/tmp/log", "task-a");
       sessionStore.createSession("agg-2", "test-env", "claude-code", "test", "model", "/tmp/log", "task-a");
-      sessionStore.updateSessionUsage("agg-1", 100, 10, 0.01);
-      sessionStore.updateSessionUsage("agg-2", 200, 20, 0.02);
+      sessionStore.updateSessionUsage("agg-1", 100, 10, 1000);
+      sessionStore.updateSessionUsage("agg-2", 200, 20, 2000);
       const result = sessionStore.aggregateUsage({ taskId: "task-a" });
       expect(result.inputTokens).toBe(300);
       expect(result.outputTokens).toBe(30);
-      expect(result.costUsd).toBeCloseTo(0.03);
+      expect(result.costMillicents).toBe(3000);
       expect(result.sessionCount).toBe(2);
     });
 
     it("aggregates by taskIds", () => {
       sessionStore.createSession("agg-3", "test-env", "claude-code", "test", "model", "/tmp/log", "task-b");
       sessionStore.createSession("agg-4", "test-env", "claude-code", "test", "model", "/tmp/log", "task-c");
-      sessionStore.updateSessionUsage("agg-3", 50, 5, 0.005);
-      sessionStore.updateSessionUsage("agg-4", 75, 8, 0.008);
+      sessionStore.updateSessionUsage("agg-3", 50, 5, 500);
+      sessionStore.updateSessionUsage("agg-4", 75, 8, 800);
       const result = sessionStore.aggregateUsage({ taskIds: ["task-b", "task-c"] });
       expect(result.inputTokens).toBe(125);
       expect(result.outputTokens).toBe(13);
-      expect(result.costUsd).toBeCloseTo(0.013);
+      expect(result.costMillicents).toBe(1300);
       expect(result.sessionCount).toBe(2);
     });
 
     it("aggregates by environmentId", () => {
       sessionStore.createSession("agg-5", "test-env", "claude-code", "test", "model", "/tmp/log");
-      sessionStore.updateSessionUsage("agg-5", 500, 50, 0.05);
+      sessionStore.updateSessionUsage("agg-5", 500, 50, 5000);
       const result = sessionStore.aggregateUsage({ environmentId: "test-env" });
       expect(result.inputTokens).toBe(500);
       expect(result.outputTokens).toBe(50);
-      expect(result.costUsd).toBeCloseTo(0.05);
+      expect(result.costMillicents).toBe(5000);
       expect(result.sessionCount).toBe(1);
     });
 
@@ -218,7 +220,7 @@ describe("session-store", () => {
       const result = sessionStore.aggregateUsage({ taskId: "nonexistent" });
       expect(result.inputTokens).toBe(0);
       expect(result.outputTokens).toBe(0);
-      expect(result.costUsd).toBe(0);
+      expect(result.costMillicents).toBe(0);
       expect(result.sessionCount).toBe(0);
     });
   });

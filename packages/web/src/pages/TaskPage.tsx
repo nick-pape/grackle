@@ -200,7 +200,7 @@ export function TaskPage(): JSX.Element {
   }, [activeTaskTab, workspaceId, loadFindings]);
 
   // Load usage stats for the overview panel (lifted from the old inline TaskOverview)
-  const sessionCostSum = currentTaskSessions.reduce((s, sess) => s + (sess.costUsd ?? 0), 0);
+  const sessionCostSum = currentTaskSessions.reduce((s, sess) => s + (sess.costMillicents ?? 0), 0);
   useEffect(() => {
     if (!task) {
       return;

@@ -13,13 +13,15 @@ export function formatTokens(n: number): string {
   return String(n);
 }
 
-/** Format a USD cost for display (e.g. 0.005 → "$0.0050", 1.23 → "$1.23"). */
-export function formatCost(usd: number): string {
-  if (usd === 0) {
+/** Format an integer millicent cost for display (e.g. 500 → "$0.0050", 123000 → "$1.23"). */
+export function formatCost(millicents: number): string {
+  if (millicents === 0) {
     return "-";
   }
+  const usd = millicents / 100_000;
   if (usd < 0.01) {
-    return `$${usd.toFixed(4)}`;
+    const decimals = millicents < 5 ? 5 : 4;
+    return `$${usd.toFixed(decimals)}`;
   }
   return `$${usd.toFixed(2)}`;
 }
