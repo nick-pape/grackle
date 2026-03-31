@@ -25,7 +25,6 @@ vi.mock("./workspace-handlers.js", () => ({ listWorkspaces: vi.fn() }));
 vi.mock("./schedule-handlers.js", () => ({ listSchedules: vi.fn() }));
 vi.mock("./token-handlers.js", () => ({ getToken: vi.fn() }));
 vi.mock("./codespace-handlers.js", () => ({ listCodespaces: vi.fn() }));
-vi.mock("./knowledge-handlers.js", () => ({ queryKnowledge: vi.fn() }));
 vi.mock("./settings-handlers.js", () => ({ getSetting: vi.fn() }));
 
 vi.mock("./task-handlers.js", () => ({ listTasks: vi.fn() }));
@@ -40,7 +39,7 @@ beforeEach(() => {
 });
 
 describe("createCoreCollector", () => {
-  it("adds environments, sessions, workspaces, schedules, tokens, codespaces, knowledge, settings", () => {
+  it("adds environments, sessions, workspaces, schedules, tokens, codespaces, settings", () => {
     createCoreCollector();
     const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
     expect(addedModules.some((m) => "listEnvironments" in m)).toBe(true);
@@ -49,11 +48,10 @@ describe("createCoreCollector", () => {
     expect(addedModules.some((m) => "listSchedules" in m)).toBe(true);
     expect(addedModules.some((m) => "getToken" in m)).toBe(true);
     expect(addedModules.some((m) => "listCodespaces" in m)).toBe(true);
-    expect(addedModules.some((m) => "queryKnowledge" in m)).toBe(true);
     expect(addedModules.some((m) => "getSetting" in m)).toBe(true);
   });
 
-  it("does NOT add task, persona, finding, or escalation handlers", () => {
+  it("does NOT add task, persona, finding, escalation, or knowledge handlers", () => {
     createCoreCollector();
     const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
     expect(addedModules.some((m) => "listTasks" in m)).toBe(false);
@@ -62,9 +60,9 @@ describe("createCoreCollector", () => {
     expect(addedModules.some((m) => "createEscalation" in m)).toBe(false);
   });
 
-  it("adds exactly 8 handler groups", () => {
+  it("adds exactly 7 handler groups", () => {
     createCoreCollector();
-    expect(addHandlersMock).toHaveBeenCalledTimes(8);
+    expect(addHandlersMock).toHaveBeenCalledTimes(7);
   });
 });
 
@@ -92,7 +90,7 @@ describe("createOrchestrationCollector", () => {
 });
 
 describe("createDefaultCollector (regression)", () => {
-  it("adds all 12 handler groups including orchestration", () => {
+  it("adds all 11 handler groups including orchestration (knowledge moved to plugin)", () => {
     createDefaultCollector();
     const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
     expect(addedModules.some((m) => "listEnvironments" in m)).toBe(true);
@@ -100,6 +98,6 @@ describe("createDefaultCollector (regression)", () => {
     expect(addedModules.some((m) => "listPersonas" in m)).toBe(true);
     expect(addedModules.some((m) => "postFinding" in m)).toBe(true);
     expect(addedModules.some((m) => "createEscalation" in m)).toBe(true);
-    expect(addHandlersMock).toHaveBeenCalledTimes(12);
+    expect(addHandlersMock).toHaveBeenCalledTimes(11);
   });
 });

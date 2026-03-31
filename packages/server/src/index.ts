@@ -6,12 +6,12 @@ import {
   createServiceCollector,
   startHeartbeat, getAdapter, setConnection, removeConnection,
   emit, subscribe, pushToEnv, attemptReconnects, resetReconnectState,
-  parseAdapterConfig, isKnowledgeEnabled, initKnowledge,
-  getKnowledgeReadinessCheck,
+  parseAdapterConfig,
   ReconciliationManager,
   logger, exec, detectLanIp,
   runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace,
 } from "@grackle-ai/core";
+import { createKnowledgePlugin, getKnowledgeReadinessCheck } from "@grackle-ai/plugin-knowledge";
 import { loadPlugins, type PluginContext } from "@grackle-ai/plugin-sdk";
 import { envRegistry, sessionStore, settingsStore, personaStore, workspaceStore, taskStore, sqlite, grackleHome } from "@grackle-ai/database";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
@@ -151,6 +151,9 @@ async function main(): Promise<void> {
   if (!config.skipOrchestration) {
     plugins.push(createOrchestrationPlugin());
   }
+  if (config.knowledgeEnabled) {
+    plugins.push(createKnowledgePlugin());
+  }
   const loaded = await loadPlugins(plugins, pluginContext);
 
   // --- Wire gRPC handlers from plugins ---
@@ -232,7 +235,7 @@ async function main(): Promise<void> {
       }
       // Neo4j/knowledge is optional — exposed for operator visibility but does
       // not gate overall readiness. Only the database check is required.
-      if (isKnowledgeEnabled()) {
+      if (config.knowledgeEnabled) {
         checks.knowledge = getKnowledgeReadinessCheck();
       }
       return {
@@ -288,16 +291,6 @@ async function main(): Promise<void> {
     }
   });
 
-  // --- Knowledge graph subsystem (opt-in) ---
-  let knowledgeCleanup: (() => Promise<void>) | undefined;
-  if (isKnowledgeEnabled()) {
-    try {
-      knowledgeCleanup = await initKnowledge();
-    } catch (err) {
-      logger.error({ err }, "Failed to initialize knowledge graph — continuing without it");
-    }
-  }
-
   // --- MCP server (HTTP/1.1, Streamable HTTP) ---
   // Use dialable host for OAuth URLs (wildcard → 127.0.0.1)
   const dialableHost = isWildcardAddress(bindHost) ? "127.0.0.1" : bindHost;
@@ -326,7 +319,6 @@ async function main(): Promise<void> {
     mcpServer,
     reconciliationManager,
     localPowerLineManager,
-    knowledgeCleanup,
     pluginShutdown: loaded.shutdown,
   });
 

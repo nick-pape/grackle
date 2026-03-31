@@ -511,6 +511,52 @@ importers:
         specifier: ^3.2.1
         version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
 
+  ../../packages/plugin-knowledge:
+    dependencies:
+      '@bufbuild/protobuf':
+        specifier: ^2.5.0
+        version: 2.11.0
+      '@connectrpc/connect':
+        specifier: ^2.0.0
+        version: 2.1.1(@bufbuild/protobuf@2.11.0)
+      '@grackle-ai/auth':
+        specifier: workspace:*
+        version: link:../auth
+      '@grackle-ai/common':
+        specifier: workspace:*
+        version: link:../common
+      '@grackle-ai/core':
+        specifier: workspace:*
+        version: link:../core
+      '@grackle-ai/database':
+        specifier: workspace:*
+        version: link:../database
+      '@grackle-ai/knowledge':
+        specifier: workspace:*
+        version: link:../knowledge
+      '@grackle-ai/plugin-sdk':
+        specifier: workspace:*
+        version: link:../plugin-sdk
+      pino:
+        specifier: ^10.3.1
+        version: 10.3.1
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@grackle-ai/heft-rig':
+        specifier: workspace:*
+        version: link:../../rigs/heft-rig
+      '@rushstack/heft':
+        specifier: 1.2.7
+        version: 1.2.7(@types/node@22.19.15)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      vitest:
+        specifier: ^3.2.1
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
+
   ../../packages/plugin-orchestration:
     dependencies:
       '@bufbuild/protobuf':
@@ -816,6 +862,9 @@ importers:
       '@grackle-ai/plugin-core':
         specifier: workspace:*
         version: link:../plugin-core
+      '@grackle-ai/plugin-knowledge':
+        specifier: workspace:*
+        version: link:../plugin-knowledge
       '@grackle-ai/plugin-orchestration':
         specifier: workspace:*
         version: link:../plugin-orchestration
@@ -10631,6 +10680,9 @@ packages:
     resolution: {integrity: sha512-pM/SU9d3YAggzi6MtR4h7ruuQlqKtad8e9S0fmxcMi+ueAK5Korys/aWcV9LIIHTVbj01NdzxcnXSN+O74ZIVA==}
     peerDependencies:
       zod: ^3.25 || ^4
+
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
   zod@4.3.6:
     resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
@@ -22424,6 +22476,8 @@ snapshots:
   zod-to-json-schema@3.25.1(zod@4.3.6):
     dependencies:
       zod: 4.3.6
+
+  zod@3.25.76: {}
 
   zod@4.3.6: {}
 

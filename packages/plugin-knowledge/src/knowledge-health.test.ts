@@ -110,7 +110,6 @@ describe("createKnowledgeHealthPhase", () => {
     await phase.execute();
     await phase.execute();
 
-    // No transition logs expected — only tick-level noise if any
     const transitionLogs = [
       ...vi.mocked(logger.info).mock.calls,
       ...vi.mocked(logger.warn).mock.calls,

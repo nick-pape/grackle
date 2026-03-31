@@ -1,6 +1,5 @@
 import {
   listConnections, removeConnection,
-  isKnowledgeEnabled, createKnowledgeHealthPhase, neo4jHealthCheck,
   startTaskSession, emit, logger,
   hasCapacity, computeTaskStatus,
   resolveDispatchEnvironment, resolveAncestorEnvironmentId, findFirstConnectedEnvironment,
@@ -98,12 +97,6 @@ export function createCoreReconciliationPhases(): ReconciliationPhase[] {
   });
 
   const phases: ReconciliationPhase[] = [dispatchPhase, cronPhase, lifecycleCleanupPhase, environmentReconciliationPhase];
-
-  if (isKnowledgeEnabled()) {
-    phases.push(
-      createKnowledgeHealthPhase({ healthCheck: neo4jHealthCheck }),
-    );
-  }
 
   return phases;
 }

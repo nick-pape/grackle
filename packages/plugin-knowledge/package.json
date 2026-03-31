@@ -1,0 +1,44 @@
+{
+  "name": "@grackle-ai/plugin-knowledge",
+  "version": "0.97.0",
+  "description": "Knowledge graph plugin for Grackle — Neo4j, embeddings, and knowledge MCP tools",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nick-pape/grackle.git",
+    "directory": "packages/plugin-knowledge"
+  },
+  "keywords": ["grackle", "plugin", "knowledge", "neo4j"],
+  "homepage": "https://github.com/nick-pape/grackle#readme",
+  "bugs": { "url": "https://github.com/nick-pape/grackle/issues" },
+  "engines": { "node": ">=22.0.0 <24.0.0" },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist/"],
+  "scripts": {
+    "build": "heft build --clean",
+    "test": "vitest run",
+    "clean": "heft clean",
+    "_phase:build": "heft run --only build -- --clean",
+    "_phase:test": "vitest run"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.5.0",
+    "@connectrpc/connect": "^2.0.0",
+    "@grackle-ai/auth": "workspace:*",
+    "@grackle-ai/common": "workspace:*",
+    "@grackle-ai/core": "workspace:*",
+    "@grackle-ai/database": "workspace:*",
+    "@grackle-ai/knowledge": "workspace:*",
+    "@grackle-ai/plugin-sdk": "workspace:*",
+    "pino": "^10.3.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@grackle-ai/heft-rig": "workspace:*",
+    "@rushstack/heft": "1.2.7",
+    "@types/node": "^22.0.0",
+    "vitest": "^3.2.1"
+  }
+}

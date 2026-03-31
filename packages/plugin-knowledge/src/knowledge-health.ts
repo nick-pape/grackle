@@ -10,7 +10,7 @@
  */
 
 import { logger } from "./logger.js";
-import type { ReconciliationPhase } from "./reconciliation-manager.js";
+import type { ReconciliationPhase } from "@grackle-ai/plugin-sdk";
 
 // ---------------------------------------------------------------------------
 // Module-level state

@@ -18,6 +18,8 @@ export interface ServerConfig {
   skipRootAutostart: boolean;
   /** Disable the orchestration plugin entirely (GRACKLE_SKIP_ORCHESTRATION=1). */
   skipOrchestration: boolean;
+  /** Enable the knowledge graph plugin (GRACKLE_KNOWLEDGE_ENABLED=true). */
+  knowledgeEnabled: boolean;
   /** Override agent working directory (GRACKLE_WORKING_DIRECTORY). */
   workingDirectory?: string;
   /** Worktree base path (GRACKLE_WORKTREE_BASE). */
@@ -64,6 +66,7 @@ export function resolveServerConfig(): ServerConfig {
     skipLocalPowerline: parseFlag("GRACKLE_SKIP_LOCAL_POWERLINE"),
     skipRootAutostart: parseFlag("GRACKLE_SKIP_ROOT_AUTOSTART"),
     skipOrchestration: parseFlag("GRACKLE_SKIP_ORCHESTRATION"),
+    knowledgeEnabled: process.env.GRACKLE_KNOWLEDGE_ENABLED === "true",
     workingDirectory: process.env.GRACKLE_WORKING_DIRECTORY || undefined,
     worktreeBase: process.env.GRACKLE_WORKTREE_BASE || undefined,
     dockerHost: process.env.GRACKLE_DOCKER_HOST || undefined,

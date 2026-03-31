@@ -50,18 +50,24 @@ vi.mock("@grackle-ai/knowledge", () => ({
     MENTIONS: "MENTIONS",
     PART_OF: "PART_OF",
   },
-}));
-
-vi.mock("./event-bus.js", () => ({
-  subscribe: mockSubscribe,
+  healthCheck: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock("@grackle-ai/database", async () => {
-  const { createDatabaseMock } = await import("./test-utils/mock-database.js");
-  const mock = createDatabaseMock();
-  mock.taskStore.getTask = mockGetTask;
-  mock.findingStore.queryFindings = mockQueryFindings;
-  return mock;
+  return {
+    taskStore: { getTask: mockGetTask },
+    findingStore: { queryFindings: mockQueryFindings },
+    safeParseJsonArray: (val: string | null): string[] => {
+      if (!val) {
+        return [];
+      }
+      try {
+        return JSON.parse(val) as string[];
+      } catch {
+        return [];
+      }
+    },
+  };
 });
 
 vi.mock("./knowledge-health.js", () => ({
@@ -77,39 +83,29 @@ vi.mock("./logger.js", () => ({
   },
 }));
 
-import { isKnowledgeEnabled, initKnowledge } from "./knowledge-init.js";
-import type { GrackleEvent } from "./event-bus.js";
+import { initKnowledge, createEntitySyncSubscriber } from "./knowledge-init.js";
+import type { GrackleEvent, PluginContext } from "@grackle-ai/plugin-sdk";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function makeCtx(overrides?: Partial<PluginContext>): PluginContext {
+  return {
+    subscribe: mockSubscribe,
+    emit: vi.fn(),
+    logger: { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() } as unknown as PluginContext["logger"],
+    config: {
+      grpcPort: 7434, webPort: 3000, mcpPort: 7435, powerlinePort: 7433,
+      host: "127.0.0.1", grackleHome: "/tmp/.grackle", apiKey: "test-key",
+    },
+    ...overrides,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
-
-describe("isKnowledgeEnabled", () => {
-  const originalEnv = process.env.GRACKLE_KNOWLEDGE_ENABLED;
-
-  afterEach(() => {
-    if (originalEnv === undefined) {
-      delete process.env.GRACKLE_KNOWLEDGE_ENABLED;
-    } else {
-      process.env.GRACKLE_KNOWLEDGE_ENABLED = originalEnv;
-    }
-  });
-
-  it("returns false when env var is not set", () => {
-    delete process.env.GRACKLE_KNOWLEDGE_ENABLED;
-    expect(isKnowledgeEnabled()).toBe(false);
-  });
-
-  it("returns true when env var is 'true'", () => {
-    process.env.GRACKLE_KNOWLEDGE_ENABLED = "true";
-    expect(isKnowledgeEnabled()).toBe(true);
-  });
-
-  it("returns false for other values", () => {
-    process.env.GRACKLE_KNOWLEDGE_ENABLED = "1";
-    expect(isKnowledgeEnabled()).toBe(false);
-  });
-});
 
 describe("initKnowledge", () => {
   beforeEach(() => {
@@ -122,37 +118,25 @@ describe("initKnowledge", () => {
   });
 
   it("opens Neo4j and initializes schema", async () => {
-    await initKnowledge();
+    await initKnowledge(makeCtx());
     expect(mockOpenNeo4j).toHaveBeenCalledTimes(1);
     expect(mockInitSchema).toHaveBeenCalledTimes(1);
   });
 
   it("creates a local embedder for gRPC handlers", async () => {
-    await initKnowledge();
+    await initKnowledge(makeCtx());
     expect(mockCreateLocalEmbedder).toHaveBeenCalledTimes(1);
-    // Embedder is now accessible via getKnowledgeEmbedder() — verified by server gRPC handlers
   });
 
-  it("subscribes to the event bus", async () => {
-    await initKnowledge();
-    expect(mockSubscribe).toHaveBeenCalledTimes(1);
-    expect(typeof mockSubscribe.mock.calls[0][0]).toBe("function");
-  });
-
-  it("returns a cleanup function that closes Neo4j and unsubscribes", async () => {
-    const mockUnsubscribe = vi.fn();
-    mockSubscribe.mockReturnValue(mockUnsubscribe);
-
-    const cleanup = await initKnowledge();
+  it("returns a cleanup function that closes Neo4j", async () => {
+    const cleanup = await initKnowledge(makeCtx());
     await cleanup();
 
-    expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
-    // setKnowledgeEmbedder no longer called — MCP uses gRPC now
     expect(mockCloseNeo4j).toHaveBeenCalledTimes(1);
   });
 });
 
-describe("entity sync handler", () => {
+describe("createEntitySyncSubscriber", () => {
   let eventHandler: (event: GrackleEvent) => void;
 
   beforeEach(async () => {
@@ -171,7 +155,25 @@ describe("entity sync handler", () => {
       return vi.fn();
     });
 
-    await initKnowledge();
+    // Must init first so embedder is available, then subscribe to set eventHandler
+    await initKnowledge(makeCtx());
+    createEntitySyncSubscriber(makeCtx());
+  });
+
+  it("subscribes to events via ctx.subscribe", () => {
+    const ctx = makeCtx();
+    mockSubscribe.mockClear();
+    createEntitySyncSubscriber(ctx);
+    expect(mockSubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns a Disposable that calls unsubscribe on dispose", () => {
+    const mockUnsubscribe = vi.fn();
+    mockSubscribe.mockReturnValue(mockUnsubscribe);
+    const ctx = makeCtx();
+    const disposable = createEntitySyncSubscriber(ctx);
+    disposable.dispose();
+    expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
   });
 
   it("syncs a task on task.created", async () => {
@@ -313,11 +315,10 @@ describe("entity sync handler", () => {
       parentTaskId: "parent-1",
       dependsOn: "[]",
     });
-    // ensureTaskReferenceNode: parent not yet synced, getTask returns parent
     mockFindReferenceNodeBySource.mockResolvedValue(undefined);
     mockSyncReferenceNode
-      .mockResolvedValueOnce("child-node-id")   // child sync
-      .mockResolvedValueOnce("parent-node-id"); // parent ensure
+      .mockResolvedValueOnce("child-node-id")
+      .mockResolvedValueOnce("parent-node-id");
 
     eventHandler({
       id: "evt-10",
@@ -443,7 +444,8 @@ describe("circuit breaker — skips sync when Neo4j is unhealthy", () => {
       return vi.fn();
     });
 
-    await initKnowledge();
+    await initKnowledge(makeCtx());
+    createEntitySyncSubscriber(makeCtx());
   });
 
   it("skips task sync when Neo4j is unhealthy", async () => {
@@ -525,3 +527,7 @@ describe("circuit breaker — skips sync when Neo4j is unhealthy", () => {
     expect(mockSyncReferenceNode).toHaveBeenCalled();
   });
 });
+
+// Avoid unused import warning for afterEach
+const _afterEach = afterEach;
+void _afterEach;

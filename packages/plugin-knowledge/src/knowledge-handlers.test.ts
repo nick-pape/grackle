@@ -16,7 +16,6 @@ const {
   mockCreatePassThroughChunker,
   mockListRecentNodes,
   mockGetKnowledgeEmbedder,
-  mockIsKnowledgeEnabled,
   mockIsNeo4jHealthy,
 } = vi.hoisted(() => ({
   mockKnowledgeSearch: vi.fn().mockResolvedValue([]),
@@ -27,7 +26,6 @@ const {
   mockCreatePassThroughChunker: vi.fn().mockReturnValue({}),
   mockListRecentNodes: vi.fn().mockResolvedValue({ nodes: [], edges: [] }),
   mockGetKnowledgeEmbedder: vi.fn().mockReturnValue({ dimensions: 384, embed: vi.fn() }),
-  mockIsKnowledgeEnabled: vi.fn().mockReturnValue(true),
   mockIsNeo4jHealthy: vi.fn().mockReturnValue(true),
 }));
 
@@ -43,24 +41,20 @@ vi.mock("@grackle-ai/knowledge", () => ({
 
 vi.mock("./knowledge-init.js", () => ({
   getKnowledgeEmbedder: mockGetKnowledgeEmbedder,
-  isKnowledgeEnabled: mockIsKnowledgeEnabled,
 }));
 
-vi.mock("./grpc-proto-converters.js", () => ({
+vi.mock("./knowledge-health.js", () => ({
+  isNeo4jHealthy: mockIsNeo4jHealthy,
+}));
+
+vi.mock("./proto-converters.js", () => ({
   knowledgeNodeToProto: vi.fn((node: unknown) => node),
   knowledgeEdgeToProto: vi.fn((edge: unknown) => edge),
 }));
 
-vi.mock("@grackle-ai/core", async (importOriginal) => {
-  const actual = await importOriginal() as Record<string, unknown>;
-  return {
-    ...actual,
-    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-    getKnowledgeEmbedder: mockGetKnowledgeEmbedder,
-    isKnowledgeEnabled: mockIsKnowledgeEnabled,
-    isNeo4jHealthy: mockIsNeo4jHealthy,
-  };
-});
+vi.mock("./logger.js", () => ({
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
 
 import {
   searchKnowledge,
@@ -105,7 +99,6 @@ describe("knowledge handler health gate", () => {
   beforeEach(() => {
     mockIsNeo4jHealthy.mockReturnValue(false);
     mockGetKnowledgeEmbedder.mockReturnValue({ dimensions: 384, embed: vi.fn() });
-    mockIsKnowledgeEnabled.mockReturnValue(true);
   });
 
   it("searchKnowledge throws Unavailable when Neo4j is unhealthy", async () => {
@@ -166,7 +159,6 @@ describe("knowledge handler Neo4j error wrapping", () => {
   beforeEach(() => {
     mockIsNeo4jHealthy.mockReturnValue(true);
     mockGetKnowledgeEmbedder.mockReturnValue({ dimensions: 384, embed: vi.fn() });
-    mockIsKnowledgeEnabled.mockReturnValue(true);
   });
 
   it("wraps unexpected errors from knowledgeSearch as Unavailable", async () => {
