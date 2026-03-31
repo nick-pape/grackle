@@ -39,8 +39,8 @@ const asyncListenerCleanups: Map<string, () => void> = new Map();
  *
  * The listener throws if pre-dispatch checks fail (session not found, environment
  * disconnected), which causes the stream-registry to leave the message as undelivered.
- * Note: once sendInput is dispatched, the message is marked delivered even if the
- * gRPC call later fails — delivery tracking covers pre-dispatch failures only.
+ * The listener returns the sendInput Promise so the stream-registry can track delivery
+ * end-to-end: the message is only marked delivered when the gRPC call resolves.
  */
 export function ensureAsyncDeliveryListener(sessionId: string): void {
   if (asyncListenerCleanups.has(sessionId)) {
@@ -62,10 +62,11 @@ export function ensureAsyncDeliveryListener(sessionId: string): void {
     const stream = streamRegistry.getStream(sub.streamId);
     const isStdin = stream?.name.startsWith("stdin:");
     const text = isStdin ? msg.content : `[fd:${sub.fd}] ${msg.content}`;
-    conn.client.sendInput(
+    return conn.client.sendInput(
       create(powerline.InputMessageSchema, { sessionId, text }),
-    ).catch((err: unknown) => {
-      logger.warn({ err, sessionId }, "Async pipe delivery: sendInput failed after dispatch");
+    ).then(() => undefined as void).catch((err: unknown) => {
+      logger.warn({ err, sessionId }, "Async pipe delivery: sendInput failed — message left undelivered");
+      throw err;
     });
   });
 
@@ -89,7 +90,7 @@ export function setupAsyncPipeDelivery(parentSessionId: string): void {
  * For sync pipes: does NOT clean up — the WaitForPipe consumer handles cleanup
  * after it reads the message (avoids race where cleanup runs before consumer reads).
  */
-export function publishChildCompletion(childSessionId: string, status: string): void {
+export async function publishChildCompletion(childSessionId: string, status: string): Promise<void> {
   const session = sessionStore.getSession(childSessionId);
   if (!session) {
     return;
@@ -115,15 +116,21 @@ export function publishChildCompletion(childSessionId: string, status: string): 
   // Build rich completion message with child's actual output
   const message = buildCompletionMessage(session, status);
 
+  let msg: ReturnType<typeof streamRegistry.publish> | undefined;
   try {
-    streamRegistry.publish(pipeStream.id, childSessionId, message);
+    msg = streamRegistry.publish(pipeStream.id, childSessionId, message);
   } catch (err) {
     logger.warn({ err, childSessionId }, "Failed to publish child completion to IPC stream");
+    return;
   }
 
+  // Await pending async deliveries (e.g. gRPC sendInput Promises) so that
+  // hasUndeliveredMessages reflects the true post-gRPC delivery state.
+  await streamRegistry.awaitPendingDeliveries(msg);
+
   // For async pipes, only clean up if all messages were successfully delivered.
-  // If delivery failed (listener threw), keep the stream so hasUndeliveredMessages
-  // stays accurate for close() buffer drain checks.
+  // If delivery failed (listener threw or gRPC rejected), keep the stream so
+  // hasUndeliveredMessages stays accurate for close() buffer drain checks.
   // For sync pipes, the WaitForPipe handler cleans up after consumeSync returns.
   if (session.pipeMode === "async") {
     // Check all parent subscriptions — if any have undelivered messages, keep the stream

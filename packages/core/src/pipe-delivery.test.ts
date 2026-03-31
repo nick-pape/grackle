@@ -121,13 +121,13 @@ describe("pipe-delivery integration", () => {
       streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
       pipeDelivery.setupAsyncPipeDelivery("parent");
 
-      pipeDelivery.publishChildCompletion("child", "completed");
+      await pipeDelivery.publishChildCompletion("child", "completed");
 
       // Stream should be cleaned up after successful delivery
       expect(streamRegistry.getStreamByName("pipe:child")).toBeUndefined();
     });
 
-    it("keeps stream when delivery fails (listener throws)", () => {
+    it("keeps stream when delivery fails (listener throws)", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
       sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
 
@@ -139,7 +139,7 @@ describe("pipe-delivery integration", () => {
       vi.spyOn(adapterManager, "getConnection").mockReturnValue(undefined as unknown as ReturnType<typeof adapterManager.getConnection>);
       pipeDelivery.setupAsyncPipeDelivery("parent");
 
-      pipeDelivery.publishChildCompletion("child", "completed");
+      await pipeDelivery.publishChildCompletion("child", "completed");
 
       // Stream should still exist (undelivered message retained)
       expect(streamRegistry.getStreamByName("pipe:child")).toBeDefined();
@@ -394,10 +394,56 @@ describe("pipe-delivery integration", () => {
     });
   });
 
+  // ─── End-to-end delivery tracking (post-dispatch gRPC failures) ──
+
+  describe("async pipe: post-dispatch gRPC failure tracking", () => {
+    it("leaves message undelivered and keeps stream when sendInput rejects", async () => {
+      sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
+      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+
+      const stream = streamRegistry.createStream("pipe:child");
+      const parentSub = streamRegistry.subscribe(stream.id, "parent", "rw", "async", true);
+      streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
+
+      // Mock sendInput to reject — simulates network/gRPC failure after dispatch
+      mockSendInput.mockRejectedValue(new Error("gRPC network failure"));
+      pipeDelivery.ensureAsyncDeliveryListener("parent");
+
+      await pipeDelivery.publishChildCompletion("child", "completed");
+
+      // Message should still be undelivered (gRPC failed)
+      expect(streamRegistry.hasUndeliveredMessages(parentSub.id)).toBe(true);
+
+      // Stream should NOT be cleaned up — undelivered message must be retained
+      expect(streamRegistry.getStreamByName("pipe:child")).toBeDefined();
+    });
+
+    it("marks message delivered and cleans up stream when sendInput resolves", async () => {
+      sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
+      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+
+      const stream = streamRegistry.createStream("pipe:child");
+      const parentSub = streamRegistry.subscribe(stream.id, "parent", "rw", "async", true);
+      streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
+
+      // Mock sendInput to resolve — normal successful delivery
+      mockSendInput.mockResolvedValue({});
+      pipeDelivery.ensureAsyncDeliveryListener("parent");
+
+      await pipeDelivery.publishChildCompletion("child", "completed");
+
+      // Message should be marked delivered
+      expect(streamRegistry.hasUndeliveredMessages(parentSub.id)).toBe(false);
+
+      // Stream should be cleaned up after successful delivery
+      expect(streamRegistry.getStreamByName("pipe:child")).toBeUndefined();
+    });
+  });
+
   // ─── Idempotency ───────────────────────────────────────────
 
   describe("setupAsyncPipeDelivery idempotency", () => {
-    it("only calls registerAsyncListener once when invoked twice", () => {
+    it("only calls registerAsyncListener once when invoked twice", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
       sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
 
@@ -414,7 +460,7 @@ describe("pipe-delivery integration", () => {
       // registerAsyncListener should only be called once (second call is idempotent no-op)
       expect(spy).toHaveBeenCalledOnce();
 
-      pipeDelivery.publishChildCompletion("child", "completed");
+      await pipeDelivery.publishChildCompletion("child", "completed");
 
       // Should only deliver once
       expect(mockSendInput).toHaveBeenCalledOnce();
