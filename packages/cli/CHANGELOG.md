@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 31 Mar 2026 03:27:06 GMT and should not be manually modified.
+This log was last generated on Tue, 31 Mar 2026 04:41:40 GMT and should not be manually modified.
+
+## 0.99.0
+Tue, 31 Mar 2026 04:41:40 GMT
+
+### Minor changes
+
+- Extract knowledge graph functionality (Neo4j, embeddings, gRPC handlers, MCP tools) into new @grackle-ai/plugin-knowledge package
 
 ## 0.98.0
 Tue, 31 Mar 2026 03:27:06 GMT
