@@ -13,11 +13,12 @@ Launches an isolated Grackle server instance with ephemeral ports and a branch-s
 - `rush build` must have been run (server runs from `dist/`)
 - If you only changed one package, `rush build -t @grackle-ai/<package>` is sufficient
 
-## Step 1: Find Free Ports
+## Launch (run as a single bash call)
 
-Use this inline Node.js snippet to find 4 ephemeral ports (there is a small race window between closing the probe sockets and the server binding, but in practice collisions are rare):
+> **Important:** Run the entire block below as **one** Bash call. Variables set in one call do not persist to the next in MSYS2/Git Bash, so splitting across multiple calls will cause `$GRACKLE_HOME`, `$GRPC_PORT`, and friends to be empty in later steps — producing broken paths like `/.grackle/api-key` or `C:\Program Files\Git\packages\...`.
 
 ```bash
+# === Find 4 free ports ===
 GRACKLE_PORTS="$(node -e "
 const net = require('net');
 function findPort() {
@@ -39,25 +40,15 @@ main();
 ")"
 read -r GRPC_PORT WEB_PORT MCP_PORT POWERLINE_PORT <<< "$GRACKLE_PORTS"
 echo "Ports: gRPC=$GRPC_PORT web=$WEB_PORT mcp=$MCP_PORT powerline=$POWERLINE_PORT"
-```
 
-## Step 2: Create Isolated Home Directory
-
-The home directory is based on the current git branch so each branch gets its own SQLite database:
-
-```bash
+# === Create isolated home directory ===
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 SAFE_BRANCH="$(printf '%s' "$BRANCH" | tr '/' '-' | tr -c 'a-zA-Z0-9_-' '_')"
-export GRACKLE_HOME="/tmp/grackle-${SAFE_BRANCH}"
+GRACKLE_HOME="/tmp/grackle-${SAFE_BRANCH}"
 mkdir -p "$GRACKLE_HOME"
 echo "GRACKLE_HOME=$GRACKLE_HOME"
-```
 
-## Step 3: Launch the Server
-
-Start the server in the background with the allocated ports. The browser does not auto-open by default. Redirect output to a log file:
-
-```bash
+# === Launch the server ===
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 GRACKLE_PORT=$GRPC_PORT \
 GRACKLE_WEB_PORT=$WEB_PORT \
@@ -68,15 +59,15 @@ GRACKLE_HOME="$GRACKLE_HOME" \
 node "$REPO_ROOT/packages/server/dist/index.js" > "$GRACKLE_HOME/server.log" 2>&1 &
 SERVER_PID=$!
 echo "Server PID: $SERVER_PID"
-```
 
-## Step 4: Wait for Server to Be Ready
-
-Wait for the gRPC and web ports to accept connections (up to 15 seconds):
-
-```bash
-node -e "
+# === Wait for server to be ready ===
+# Ports are passed via env vars to avoid MSYS2 converting numeric-looking shell
+# variable substitutions inside the node -e string.
+WAIT_GRPC=$GRPC_PORT WAIT_WEB=$WEB_PORT WAIT_PL=$POWERLINE_PORT node -e "
 const net = require('net');
+const grpcPort = parseInt(process.env.WAIT_GRPC);
+const webPort = parseInt(process.env.WAIT_WEB);
+const powerlinePort = parseInt(process.env.WAIT_PL);
 async function waitForPort(port) {
   const deadline = Date.now() + 15000;
   while (Date.now() < deadline) {
@@ -91,17 +82,12 @@ async function waitForPort(port) {
   }
   throw new Error('Timeout waiting for port ' + port);
 }
-Promise.all([waitForPort($GRPC_PORT), waitForPort($WEB_PORT), waitForPort($POWERLINE_PORT)])
+Promise.all([waitForPort(grpcPort), waitForPort(webPort), waitForPort(powerlinePort)])
   .then(() => console.log('Server ready'))
   .catch(e => { console.error(e.message); process.exit(1); });
 "
-```
 
-## Step 5: Read the API Key
-
-The server auto-generates an API key on first launch. Read it:
-
-```bash
+# === Read the API key ===
 API_KEY_FILE="$GRACKLE_HOME/.grackle/api-key"
 TRIES=15
 while [ ! -f "$API_KEY_FILE" ] && [ $TRIES -gt 0 ]; do
@@ -110,26 +96,29 @@ while [ ! -f "$API_KEY_FILE" ] && [ $TRIES -gt 0 ]; do
 done
 GRACKLE_API_KEY="$(cat "$API_KEY_FILE")"
 echo "API key loaded (${#GRACKLE_API_KEY} chars)"
-```
 
-## Step 6: Generate a Pairing Code
-
-The web UI requires authentication via a pairing code. Generate one using the CLI:
-
-```bash
-REPO_ROOT="$(git rev-parse --show-toplevel)"
+# === Generate a pairing code ===
 PAIR_OUTPUT="$(GRACKLE_URL="http://127.0.0.1:$GRPC_PORT" GRACKLE_API_KEY="$GRACKLE_API_KEY" NO_COLOR=1 FORCE_COLOR=0 node "$REPO_ROOT/packages/cli/dist/index.js" pair 2>&1)"
 PAIRING_CODE="$(echo "$PAIR_OUTPUT" | node -e "const m=require('fs').readFileSync(0,'utf8').match(/Pairing code:\s*(\S+)/);if(m)process.stdout.write(m[1])")"
 PAIRING_URL="http://127.0.0.1:$WEB_PORT/pair?code=$PAIRING_CODE"
 echo "Pairing code: $PAIRING_CODE"
-echo "Pairing URL: $PAIRING_URL"
-```
+echo "Pairing URL:  $PAIRING_URL"
 
-## Step 7: Report URLs
+# === Save env to file so follow-up bash calls can source it ===
+{
+  echo "export GRPC_PORT=$GRPC_PORT"
+  echo "export WEB_PORT=$WEB_PORT"
+  echo "export MCP_PORT=$MCP_PORT"
+  echo "export POWERLINE_PORT=$POWERLINE_PORT"
+  echo "export GRACKLE_HOME=$GRACKLE_HOME"
+  echo "export REPO_ROOT=$REPO_ROOT"
+  echo "export SERVER_PID=$SERVER_PID"
+  echo "export GRACKLE_API_KEY=$GRACKLE_API_KEY"
+  echo "export PAIRING_CODE=$PAIRING_CODE"
+  echo "export PAIRING_URL=$PAIRING_URL"
+} > "$GRACKLE_HOME/env.sh"
 
-Print all the connection details:
-
-```bash
+# === Report ===
 echo ""
 echo "=== Grackle Test Server Ready ==="
 echo "  Web UI:       http://127.0.0.1:$WEB_PORT"
@@ -141,12 +130,24 @@ echo "  API Key:      $GRACKLE_API_KEY"
 echo "  Home:         $GRACKLE_HOME"
 echo "  PID:          $SERVER_PID"
 echo "  Server log:   $GRACKLE_HOME/server.log"
+echo "  Env file:     $GRACKLE_HOME/env.sh"
 echo ""
 echo "CLI usage:"
 echo "  GRACKLE_URL=http://127.0.0.1:$GRPC_PORT GRACKLE_API_KEY=$GRACKLE_API_KEY grackle <command>"
 echo ""
 echo "To stop:"
 echo "  kill $SERVER_PID"
+```
+
+## Using the env in follow-up bash calls
+
+After launch, any subsequent bash call can source the env file to restore all variables. Derive `GRACKLE_HOME` from the current branch (same formula as above):
+
+```bash
+BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+SAFE_BRANCH="$(printf '%s' "$BRANCH" | tr '/' '-' | tr -c 'a-zA-Z0-9_-' '_')"
+source "/tmp/grackle-${SAFE_BRANCH}/env.sh"
+# Now $GRPC_PORT, $WEB_PORT, $GRACKLE_API_KEY, $SERVER_PID, etc. are available
 ```
 
 ## Pairing / Auth Flow
@@ -166,6 +167,7 @@ The web UI uses pairing-code authentication — it does NOT accept the API key d
 - After that, the browser has a valid session and you can navigate freely
 - If the pairing code has expired, generate a new one with:
   ```bash
+  # Source the env file first (see above), then:
   GRACKLE_URL="http://127.0.0.1:$GRPC_PORT" GRACKLE_API_KEY="$GRACKLE_API_KEY" grackle pair
   ```
 
@@ -178,6 +180,9 @@ The web UI uses pairing-code authentication — it does NOT accept the API key d
 When done testing, kill the server process:
 
 ```bash
+BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+SAFE_BRANCH="$(printf '%s' "$BRANCH" | tr '/' '-' | tr -c 'a-zA-Z0-9_-' '_')"
+source "/tmp/grackle-${SAFE_BRANCH}/env.sh"
 kill $SERVER_PID 2>/dev/null
 ```
 
