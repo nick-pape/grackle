@@ -72,7 +72,7 @@ describe("SCOPED_TOOLS", () => {
       "persona_list", "persona_show",
       "schedule_list", "schedule_show",
       "session_attach", "session_send_input",
-      "task_complete", "task_create", "task_list", "task_show", "task_start",
+      "task_complete", "task_create", "task_list", "task_search", "task_show", "task_start",
       "workpad_read", "workpad_write",
     ]);
   });

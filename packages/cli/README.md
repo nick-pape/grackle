@@ -312,6 +312,22 @@ grackle task list ws-123 --search "auth"
 | `--search <query>` | Filter by title/description substring |
 | `--status <status>` | Filter by status: `not_started`, `working`, `paused`, `complete`, `failed` |
 
+#### `grackle task search <query>`
+
+Fuzzy search tasks by title or description, ranked by relevance with scores.
+
+```bash
+grackle task search "login bug"
+grackle task search "authentication" --workspace ws-123
+grackle task search "payment" --status working --limit 5
+```
+
+| Option | Description |
+|--------|-------------|
+| `--workspace <workspace-id>` | Scope to a specific workspace |
+| `--limit <n>` | Maximum results to return (default 10) |
+| `--status <status>` | Filter by status before searching |
+
 #### `grackle task create <title>`
 
 Create a new task.

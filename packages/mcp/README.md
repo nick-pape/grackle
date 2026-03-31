@@ -146,6 +146,7 @@ Create, manage, and run tasks within workspaces. Supports hierarchical task tree
 | Tool | Description | Parameters |
 |------|-------------|------------|
 | `task_list` | List tasks with optional search and status filters. | `workspaceId?` (string), `search?` (string), `status?` (string: `not_started`, `working`, `paused`, `complete`, `failed`) |
+| `task_search` | Fuzzy search tasks by title or description, ranked by relevance. Returns results with a `relevanceScore` (0.0–1.0, higher = better match). Prefer this over `task_list` when matching approximate descriptions. | `query` (string), `workspaceId?` (string), `limit?` (number, default 10), `status?` (string) |
 | `task_create` | Create a new task with dependencies and parent hierarchy. | `workspaceId?` (string), `title` (string), `description?` (string), `dependsOn?` (string[]), `parentTaskId?` (string), `canDecompose?` (boolean), `defaultPersonaId?` (string) |
 | `task_show` | Get full details of a task. | `taskId` (string) |
 | `task_update` | Update a task's title, description, status, or dependencies. | `taskId` (string), `title?`, `description?`, `status?` (enum), `dependsOn?` (string[]), `sessionId?` (string) |
