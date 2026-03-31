@@ -7,6 +7,7 @@ import styles from "./SettingsPage.module.scss";
 const SETTINGS_TAB_LABELS: Record<string, string> = {
   credentials: "Credentials",
   personas: "Personas",
+  schedules: "Schedules",
   appearance: "Appearance",
   about: "About",
   shortcuts: "Shortcuts",

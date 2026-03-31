@@ -1,0 +1,98 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// ScheduleManager — CRUD for cron schedules
+// =============================================================================
+
+.container {
+  padding: var(--space-lg);
+  max-width: 800px;
+  color: var(--text-primary);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-lg);
+
+  h2 {
+    margin: 0;
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
+  }
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.card {
+  @include surface-card;
+  padding: var(--space-md);
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--border-hover);
+  }
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+
+  strong {
+    font-size: var(--font-size-md);
+    color: var(--text-primary);
+  }
+}
+
+.statusBadge {
+  @include surface-inset;
+  padding: 2px var(--space-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-sm);
+
+  &.enabled {
+    color: var(--accent-green);
+  }
+
+  &.disabled {
+    color: var(--text-tertiary);
+  }
+}
+
+.cardActions {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.cardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+
+  span {
+    @include surface-inset;
+    padding: 2px var(--space-sm);
+  }
+}
+
+.empty {
+  text-align: center;
+  color: var(--text-tertiary);
+  padding: var(--space-xl);
+}
