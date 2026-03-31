@@ -17,13 +17,14 @@ describe("useManifest", () => {
     global.fetch = originalFetch;
   });
 
-  it("starts in loading state", () => {
+  it("starts in loading state with fail-open plugin names", () => {
     global.fetch = vi.fn(() => new Promise(() => { /* never resolves */ })) as typeof fetch;
 
     const { result } = renderHook(() => useManifest(), { wrapper });
 
     expect(result.current.loading).toBe(true);
-    expect(result.current.pluginNames).toEqual([]);
+    // Fail-open: all known plugins active during loading so domain hooks are not starved
+    expect(result.current.pluginNames).toEqual(["core", "orchestration"]);
   });
 
   it("returns pluginNames from a successful manifest fetch", async () => {

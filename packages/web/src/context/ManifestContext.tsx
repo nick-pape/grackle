@@ -41,7 +41,7 @@ const ManifestContext: Context<ManifestValue> = createContext<ManifestValue>({
  * known plugins (fail open) so the app remains usable without a server.
  */
 export function ManifestProvider({ children }: { children: ReactNode }): JSX.Element {
-  const [pluginNames, setPluginNames] = useState<string[]>([]);
+  const [pluginNames, setPluginNames] = useState<string[]>([...ALL_KNOWN_PLUGINS]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | undefined>(undefined);
 
