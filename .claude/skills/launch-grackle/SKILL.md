@@ -38,7 +38,16 @@ async function main() {
 }
 main();
 ")"
+if [ $? -ne 0 ] || [ -z "$GRACKLE_PORTS" ]; then
+  echo "Error: failed to allocate ports via node; GRACKLE_PORTS='$GRACKLE_PORTS'" >&2
+  exit 1
+fi
 read -r GRPC_PORT WEB_PORT MCP_PORT POWERLINE_PORT <<< "$GRACKLE_PORTS"
+for p in "$GRPC_PORT" "$WEB_PORT" "$MCP_PORT" "$POWERLINE_PORT"; do
+  case "$p" in
+    ''|*[!0-9]*) echo "Error: invalid port value '$p' in GRACKLE_PORTS='$GRACKLE_PORTS'" >&2; exit 1 ;;
+  esac
+done
 echo "Ports: gRPC=$GRPC_PORT web=$WEB_PORT mcp=$MCP_PORT powerline=$POWERLINE_PORT"
 
 # === Create isolated home directory ===
@@ -65,9 +74,19 @@ echo "Server PID: $SERVER_PID"
 # variable substitutions inside the node -e string.
 WAIT_GRPC=$GRPC_PORT WAIT_WEB=$WEB_PORT WAIT_PL=$POWERLINE_PORT node -e "
 const net = require('net');
-const grpcPort = parseInt(process.env.WAIT_GRPC);
-const webPort = parseInt(process.env.WAIT_WEB);
-const powerlinePort = parseInt(process.env.WAIT_PL);
+function parsePort(envName) {
+  const raw = process.env[envName];
+  const port = Number.parseInt(raw, 10);
+  if (!Number.isInteger(port) || port <= 0) {
+    console.error('Environment variable ' + envName + ' must be a positive integer port, got: ' +
+      (raw === undefined ? 'undefined' : JSON.stringify(raw)));
+    process.exit(1);
+  }
+  return port;
+}
+const grpcPort = parsePort('WAIT_GRPC');
+const webPort = parsePort('WAIT_WEB');
+const powerlinePort = parsePort('WAIT_PL');
 async function waitForPort(port) {
   const deadline = Date.now() + 15000;
   while (Date.now() < deadline) {
@@ -100,23 +119,31 @@ echo "API key loaded (${#GRACKLE_API_KEY} chars)"
 # === Generate a pairing code ===
 PAIR_OUTPUT="$(GRACKLE_URL="http://127.0.0.1:$GRPC_PORT" GRACKLE_API_KEY="$GRACKLE_API_KEY" NO_COLOR=1 FORCE_COLOR=0 node "$REPO_ROOT/packages/cli/dist/index.js" pair 2>&1)"
 PAIRING_CODE="$(echo "$PAIR_OUTPUT" | node -e "const m=require('fs').readFileSync(0,'utf8').match(/Pairing code:\s*(\S+)/);if(m)process.stdout.write(m[1])")"
+if [ -z "$PAIRING_CODE" ]; then
+  echo "Error: failed to extract pairing code from CLI output." >&2
+  echo "Raw 'pair' command output:" >&2
+  echo "$PAIR_OUTPUT" | head -n 40 >&2
+  exit 1
+fi
 PAIRING_URL="http://127.0.0.1:$WEB_PORT/pair?code=$PAIRING_CODE"
 echo "Pairing code: $PAIRING_CODE"
 echo "Pairing URL:  $PAIRING_URL"
 
 # === Save env to file so follow-up bash calls can source it ===
+# Use printf '%q' to shell-escape all values (handles spaces, $, backslashes, etc.)
 {
-  echo "export GRPC_PORT=$GRPC_PORT"
-  echo "export WEB_PORT=$WEB_PORT"
-  echo "export MCP_PORT=$MCP_PORT"
-  echo "export POWERLINE_PORT=$POWERLINE_PORT"
-  echo "export GRACKLE_HOME=$GRACKLE_HOME"
-  echo "export REPO_ROOT=$REPO_ROOT"
-  echo "export SERVER_PID=$SERVER_PID"
-  echo "export GRACKLE_API_KEY=$GRACKLE_API_KEY"
-  echo "export PAIRING_CODE=$PAIRING_CODE"
-  echo "export PAIRING_URL=$PAIRING_URL"
+  printf 'export GRPC_PORT=%q\n' "$GRPC_PORT"
+  printf 'export WEB_PORT=%q\n' "$WEB_PORT"
+  printf 'export MCP_PORT=%q\n' "$MCP_PORT"
+  printf 'export POWERLINE_PORT=%q\n' "$POWERLINE_PORT"
+  printf 'export GRACKLE_HOME=%q\n' "$GRACKLE_HOME"
+  printf 'export REPO_ROOT=%q\n' "$REPO_ROOT"
+  printf 'export SERVER_PID=%q\n' "$SERVER_PID"
+  printf 'export GRACKLE_API_KEY=%q\n' "$GRACKLE_API_KEY"
+  printf 'export PAIRING_CODE=%q\n' "$PAIRING_CODE"
+  printf 'export PAIRING_URL=%q\n' "$PAIRING_URL"
 } > "$GRACKLE_HOME/env.sh"
+chmod 600 "$GRACKLE_HOME/env.sh"
 
 # === Report ===
 echo ""
