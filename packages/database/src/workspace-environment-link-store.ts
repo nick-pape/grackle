@@ -1,6 +1,6 @@
 import db from "./db.js";
 import { workspaceEnvironmentLinks } from "./schema.js";
-import { eq, and, inArray, sql } from "drizzle-orm";
+import { eq, and, inArray, sql, asc } from "drizzle-orm";
 
 /** Create a link between a workspace and an environment. Throws on duplicate. */
 export function linkEnvironment(workspaceId: string, environmentId: string): void {
@@ -17,11 +17,12 @@ export function unlinkEnvironment(workspaceId: string, environmentId: string): v
     .run();
 }
 
-/** Return all linked environment IDs for a workspace (excludes the primary). */
+/** Return all linked environment IDs for a workspace, ordered deterministically by ID. */
 export function getLinkedEnvironmentIds(workspaceId: string): string[] {
   const rows = db.select({ environmentId: workspaceEnvironmentLinks.environmentId })
     .from(workspaceEnvironmentLinks)
     .where(eq(workspaceEnvironmentLinks.workspaceId, workspaceId))
+    .orderBy(asc(workspaceEnvironmentLinks.environmentId))
     .all();
   return rows.map((r) => r.environmentId);
 }
@@ -50,6 +51,7 @@ export function getLinkedEnvironmentIdsByWorkspaces(workspaceIds: string[]): Map
   })
     .from(workspaceEnvironmentLinks)
     .where(inArray(workspaceEnvironmentLinks.workspaceId, workspaceIds))
+    .orderBy(asc(workspaceEnvironmentLinks.environmentId))
     .all();
   for (const row of rows) {
     const existing = result.get(row.workspaceId);

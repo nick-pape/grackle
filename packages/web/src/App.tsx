@@ -175,7 +175,9 @@ function WorkspaceRedirect(): JSX.Element | undefined {
   const location = useLocation();
 
   const workspace = workspaces.find((w) => w.id === workspaceId);
-  const primaryEnvId = workspace?.linkedEnvironmentIds[0];
+  const primaryEnvId = workspace?.linkedEnvironmentIds
+    ? [...workspace.linkedEnvironmentIds].sort()[0]
+    : undefined;
   if (!primaryEnvId) {
     // Workspaces load asynchronously — avoid redirecting before data arrives.
     if (workspaces.length === 0) {

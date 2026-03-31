@@ -41,7 +41,9 @@ export async function createWorkspace(req: grackle.CreateWorkspaceRequest): Prom
   }
   // useWorktrees defaults to true when not specified
   const useWorktrees = req.useWorktrees ?? true;
-  workspaceStore.createWorkspace(
+  // Create the workspace and its initial environment link in a single transaction
+  // so a link failure can never leave an orphaned workspace with no linked environments.
+  workspaceStore.createWorkspaceAndLink(
     id,
     req.name,
     req.description,
@@ -51,9 +53,8 @@ export async function createWorkspace(req: grackle.CreateWorkspaceRequest): Prom
     req.defaultPersonaId ?? "",
     req.tokenBudget ?? 0,
     req.costBudgetMillicents ?? 0,
+    req.environmentId,
   );
-  // Auto-link the initial environment into the workspace's environment pool.
-  workspaceEnvironmentLinkStore.linkEnvironment(id, req.environmentId);
   emit("workspace.created", { workspaceId: id });
   logger.info({ workspaceId: id, environmentId: req.environmentId }, "Workspace created");
   const row = workspaceStore.getWorkspace(id);

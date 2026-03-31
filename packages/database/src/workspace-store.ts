@@ -29,6 +29,39 @@ export function createWorkspace(
   }).run();
 }
 
+/**
+ * Create a workspace and atomically link it to its initial environment in a
+ * single SQLite transaction.  If the link insert fails the workspace row is
+ * rolled back, leaving no orphaned workspace with zero linked environments.
+ */
+export function createWorkspaceAndLink(
+  id: string,
+  name: string,
+  description: string,
+  repoUrl: string,
+  useWorktrees: boolean = true,
+  workingDirectory: string = "",
+  defaultPersonaId: string = "",
+  tokenBudget: number = 0,
+  costBudgetMillicents: number = 0,
+  environmentId: string,
+): void {
+  db.transaction((tx) => {
+    tx.insert(workspaces).values({
+      id,
+      name,
+      description,
+      repoUrl,
+      useWorktrees,
+      workingDirectory: workingDirectory.trim(),
+      defaultPersonaId,
+      tokenBudget,
+      costBudgetMillicents,
+    }).run();
+    tx.insert(workspaceEnvironmentLinks).values({ workspaceId: id, environmentId }).run();
+  });
+}
+
 /** Retrieve a single workspace by ID. */
 export function getWorkspace(id: string): WorkspaceRow | undefined {
   return db.select().from(workspaces).where(eq(workspaces.id, id)).get();
