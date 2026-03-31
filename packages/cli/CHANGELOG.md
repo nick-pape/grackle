@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 31 Mar 2026 21:45:28 GMT and should not be manually modified.
+This log was last generated on Tue, 31 Mar 2026 22:07:04 GMT and should not be manually modified.
+
+## 0.106.2
+Tue, 31 Mar 2026 22:07:04 GMT
+
+### Patches
+
+- Track async pipe delivery end-to-end: defer marking delivered until gRPC sendInput Promise resolves, expose awaitPendingDeliveries(), fix hasUndeliveredMessages accuracy for post-dispatch failures
 
 ## 0.106.1
 Tue, 31 Mar 2026 21:45:28 GMT
