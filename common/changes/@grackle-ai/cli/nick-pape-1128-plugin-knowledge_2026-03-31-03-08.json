@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Extract knowledge graph functionality (Neo4j, embeddings, gRPC handlers, MCP tools) into new @grackle-ai/plugin-knowledge package",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

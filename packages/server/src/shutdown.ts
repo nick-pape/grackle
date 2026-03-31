@@ -23,8 +23,6 @@ export interface ShutdownContext {
   reconciliationManager: { stop: () => Promise<void> };
   /** The local PowerLine child-process manager, if running. */
   localPowerLineManager?: { stop: () => Promise<void> };
-  /** Optional knowledge graph cleanup function. */
-  knowledgeCleanup?: () => Promise<void>;
   /** Plugin shutdown function — disposes subscribers and calls plugin teardown hooks. */
   pluginShutdown?: () => Promise<void>;
 }
@@ -55,14 +53,6 @@ export function createShutdown(context: ShutdownContext): () => Promise<void> {
     // Stop the local PowerLine child process first
     if (context.localPowerLineManager) {
       await context.localPowerLineManager.stop();
-    }
-
-    if (context.knowledgeCleanup) {
-      try {
-        await context.knowledgeCleanup();
-      } catch (err) {
-        logger.error({ err }, "Error while shutting down knowledge graph");
-      }
     }
 
     await closeAllTunnels();

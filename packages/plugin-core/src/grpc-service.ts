@@ -20,7 +20,6 @@ import * as tokens from "./token-handlers.js";
 import * as findings from "./finding-handlers.js";
 import * as escalations from "./escalation-handlers.js";
 import * as codespaces from "./codespace-handlers.js";
-import * as knowledge from "./knowledge-handlers.js";
 import * as settings from "./settings-handlers.js";
 
 /**
@@ -40,7 +39,6 @@ export function createDefaultCollector(): ServiceCollector {
   collector.addHandlers(grackle.Grackle, findings);
   collector.addHandlers(grackle.Grackle, escalations);
   collector.addHandlers(grackle.Grackle, codespaces);
-  collector.addHandlers(grackle.Grackle, knowledge);
   collector.addHandlers(grackle.Grackle, settings);
   return collector;
 }
@@ -48,11 +46,12 @@ export function createDefaultCollector(): ServiceCollector {
 /**
  * Create a `ServiceCollector` pre-loaded with only the core (non-orchestration,
  * non-scheduling) Grackle handler groups: environments, sessions, workspaces,
- * tokens, codespaces, knowledge, and settings.
+ * tokens, codespaces, and settings.
  *
  * Orchestration handlers (tasks, personas, findings, escalations) are contributed
  * by `@grackle-ai/plugin-orchestration` via {@link createOrchestrationCollector}.
  * Schedule handlers are contributed by `@grackle-ai/plugin-scheduling`.
+ * Knowledge handlers are contributed by `@grackle-ai/plugin-knowledge`.
  */
 export function createCoreCollector(): ServiceCollector {
   const collector = createServiceCollector();
@@ -61,7 +60,6 @@ export function createCoreCollector(): ServiceCollector {
   collector.addHandlers(grackle.Grackle, workspaces);
   collector.addHandlers(grackle.Grackle, tokens);
   collector.addHandlers(grackle.Grackle, codespaces);
-  collector.addHandlers(grackle.Grackle, knowledge);
   collector.addHandlers(grackle.Grackle, settings);
   return collector;
 }

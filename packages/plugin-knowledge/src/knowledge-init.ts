@@ -2,7 +2,7 @@
  * Knowledge graph subsystem initialization and lifecycle management.
  *
  * Wires Neo4j, the local embedder, and event-driven reference node sync
- * into the Grackle server. Opt-in via `GRACKLE_KNOWLEDGE_ENABLED=true`.
+ * into the Grackle server. Opt-in by loading the plugin.
  *
  * @module
  */
@@ -22,22 +22,13 @@ import {
   EDGE_TYPE,
   type Embedder,
 } from "@grackle-ai/knowledge";
-import { subscribe, type GrackleEvent } from "./event-bus.js";
+import type { GrackleEvent, PluginContext, Disposable } from "@grackle-ai/plugin-sdk";
 import { taskStore, findingStore, safeParseJsonArray } from "@grackle-ai/database";
 import { logger } from "./logger.js";
 import { isNeo4jHealthy } from "./knowledge-health.js";
 
-// ---------------------------------------------------------------------------
-// Configuration
-// ---------------------------------------------------------------------------
-
 /** Re-export Neo4j health check for use by the reconciliation health phase. */
 export { neo4jHealthCheck };
-
-/** Whether the knowledge graph subsystem is enabled. */
-export function isKnowledgeEnabled(): boolean {
-  return process.env.GRACKLE_KNOWLEDGE_ENABLED === "true";
-}
 
 /** Module-level embedder, available after initKnowledge() completes. */
 let knowledgeEmbedder: Embedder | undefined;
@@ -230,17 +221,14 @@ async function handleEvent(embedder: Embedder, event: GrackleEvent): Promise<voi
 /**
  * Initialize the knowledge graph subsystem.
  *
- * Opens Neo4j, initializes the schema, creates the local embedder,
- * injects it into MCP tools, and subscribes to the event bus for
- * automatic reference node sync.
- *
+ * Opens Neo4j, initializes the schema, and creates the local embedder.
  * If any step after Neo4j connection fails, cleans up the connection
  * before re-throwing.
  *
- * @returns A cleanup function that closes Neo4j and unsubscribes from events.
+ * @returns A cleanup function that closes Neo4j.
  */
-export async function initKnowledge(): Promise<() => Promise<void>> {
-  logger.info("Initializing knowledge graph subsystem");
+export async function initKnowledge(ctx: PluginContext): Promise<() => Promise<void>> {
+  ctx.logger.info("Initializing knowledge graph subsystem");
 
   const embedder: Embedder = createLocalEmbedder();
 
@@ -251,16 +239,13 @@ export async function initKnowledge(): Promise<() => Promise<void>> {
 
     knowledgeEmbedder = embedder;
 
-    const unsubscribe: () => void = subscribe(createEntitySyncHandler(embedder));
-
-    logger.info("Knowledge graph subsystem ready");
+    ctx.logger.info("Knowledge graph subsystem ready");
 
     return async (): Promise<void> => {
-      logger.info("Shutting down knowledge graph subsystem");
-      unsubscribe();
+      ctx.logger.info("Shutting down knowledge graph subsystem");
       knowledgeEmbedder = undefined;
       await closeNeo4j();
-      logger.info("Knowledge graph subsystem stopped");
+      ctx.logger.info("Knowledge graph subsystem stopped");
     };
   } catch (err) {
     // Clean up Neo4j if a later step fails
@@ -268,4 +253,25 @@ export async function initKnowledge(): Promise<() => Promise<void>> {
     await closeNeo4j().catch(() => {});
     throw err;
   }
+}
+
+/**
+ * Create an entity sync subscriber that listens for task/finding events
+ * and keeps the knowledge graph in sync.
+ *
+ * @returns A Disposable that unsubscribes when disposed.
+ */
+export function createEntitySyncSubscriber(ctx: PluginContext): Disposable {
+  const embedder: Embedder | undefined = knowledgeEmbedder;
+  if (!embedder) {
+    return { dispose: () => {} };
+  }
+
+  const unsubscribe: () => void = ctx.subscribe(createEntitySyncHandler(embedder));
+
+  return {
+    dispose: (): void => {
+      unsubscribe();
+    },
+  };
 }
