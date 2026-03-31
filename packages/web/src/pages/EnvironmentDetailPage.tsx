@@ -271,6 +271,7 @@ function WorkspaceCard({
           <button
             className={styles.btnSmall}
             onClick={onUnlink}
+            disabled={workspace.linkedEnvironmentIds.length <= 1}
             data-testid={`unlink-workspace-${workspace.id}`}
           >
             Unlink
