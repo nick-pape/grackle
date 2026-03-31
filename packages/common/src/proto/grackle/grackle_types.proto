@@ -863,3 +863,22 @@ message ServerEvent {
     DomainEvent domain_event = 2;
   }
 }
+
+// ─── Plugins ─────────────────────────────────────────────────
+
+message PluginInfo {
+  string name = 1;
+  string description = 2;
+  bool enabled = 3;    // DB-persisted desired state
+  bool required = 4;   // true for core (cannot be disabled)
+  bool loaded = 5;     // currently running in this server instance
+}
+
+message PluginList {
+  repeated PluginInfo plugins = 1;
+}
+
+message SetPluginEnabledRequest {
+  string name = 1;
+  bool enabled = 2;
+}

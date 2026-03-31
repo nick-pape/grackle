@@ -816,6 +816,12 @@ declare namespace grackle {
         DomainEventSchema,
         ServerEvent,
         ServerEventSchema,
+        PluginInfo,
+        PluginInfoSchema,
+        PluginList,
+        PluginListSchema,
+        SetPluginEnabledRequest,
+        SetPluginEnabledRequestSchema,
         EventType_2 as EventType,
         EventTypeSchema,
         TaskStatus_2 as TaskStatus,
@@ -1056,6 +1062,16 @@ const GrackleCore: GenService<{
         methodKind: "unary";
         input: typeof EmptySchema;
         output: typeof VersionStatusSchema;
+    };
+    listPlugins: {
+        methodKind: "unary";
+        input: typeof EmptySchema;
+        output: typeof PluginListSchema;
+    };
+    setPluginEnabled: {
+        methodKind: "unary";
+        input: typeof SetPluginEnabledRequestSchema;
+        output: typeof PluginInfoSchema;
     };
     streamEvents: {
         methodKind: "server_streaming";
@@ -1504,6 +1520,26 @@ const PersonaSchema: GenMessage<Persona>;
 export type PipeMode = "sync" | "async" | "detach" | "";
 
 // @public
+type PluginInfo = Message<"grackle.PluginInfo"> & {
+    name: string;
+    description: string;
+    enabled: boolean;
+    required: boolean;
+    loaded: boolean;
+};
+
+// @public
+const PluginInfoSchema: GenMessage<PluginInfo>;
+
+// @public
+type PluginList = Message<"grackle.PluginList"> & {
+    plugins: PluginInfo[];
+};
+
+// @public
+const PluginListSchema: GenMessage<PluginList>;
+
+// @public
 type Pong = Message<"grackle.powerline.Pong"> & {
     timestamp: bigint;
 };
@@ -1884,6 +1920,15 @@ type SetCredentialProviderRequest = Message<"grackle.SetCredentialProviderReques
 
 // @public
 const SetCredentialProviderRequestSchema: GenMessage<SetCredentialProviderRequest>;
+
+// @public
+type SetPluginEnabledRequest = Message<"grackle.SetPluginEnabledRequest"> & {
+    name: string;
+    enabled: boolean;
+};
+
+// @public
+const SetPluginEnabledRequestSchema: GenMessage<SetPluginEnabledRequest>;
 
 // @public
 type SetSettingRequest = Message<"grackle.SetSettingRequest"> & {

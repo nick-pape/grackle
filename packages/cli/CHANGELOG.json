@@ -2,6 +2,30 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.104.0",
+      "tag": "@grackle-ai/cli_v0.104.0",
+      "date": "Tue, 31 Mar 2026 16:23:11 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add plugin enable/disable management: plugins DB table, proto RPCs (ListPlugins, SetPluginEnabled), CLI commands (grackle plugin list/enable/disable), and MCP tools (plugin_list, plugin_set_enabled)"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.103.0",
+      "tag": "@grackle-ai/cli_v0.103.0",
+      "date": "Tue, 31 Mar 2026 15:27:16 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add server-side fuzzy task search: new SearchTasks gRPC RPC, task_search MCP tool, and grackle task search CLI command with relevance scoring"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.102.0",
       "tag": "@grackle-ai/cli_v0.102.0",
       "date": "Tue, 31 Mar 2026 14:52:41 GMT",

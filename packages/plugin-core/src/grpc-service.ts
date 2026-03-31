@@ -21,6 +21,7 @@ import * as findings from "./finding-handlers.js";
 import * as escalations from "./escalation-handlers.js";
 import * as codespaces from "./codespace-handlers.js";
 import * as settings from "./settings-handlers.js";
+import * as pluginHandlers from "./plugin-handlers.js";
 
 /**
  * Create a `ServiceCollector` pre-loaded with all built-in Grackle handler groups.
@@ -40,6 +41,7 @@ export function createDefaultCollector(): ServiceCollector {
   collector.addHandlers(grackle.GrackleOrchestration, escalations);
   collector.addHandlers(grackle.GrackleCore, codespaces);
   collector.addHandlers(grackle.GrackleCore, settings);
+  collector.addHandlers(grackle.GrackleCore, pluginHandlers);
   return collector;
 }
 
@@ -61,6 +63,7 @@ export function createCoreCollector(): ServiceCollector {
   collector.addHandlers(grackle.GrackleCore, tokens);
   collector.addHandlers(grackle.GrackleCore, codespaces);
   collector.addHandlers(grackle.GrackleCore, settings);
+  collector.addHandlers(grackle.GrackleCore, pluginHandlers);
   return collector;
 }
 

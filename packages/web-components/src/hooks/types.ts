@@ -776,6 +776,36 @@ export interface NodeDetail {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+// ─── Plugins ─────────────────────────────────────────────────────────────────
+
+/** Metadata for a Grackle plugin. */
+export interface PluginData {
+  /** Plugin identifier (e.g. "core", "orchestration"). */
+  name: string;
+  /** Human-readable description. */
+  description: string;
+  /** DB-persisted desired enabled state. */
+  enabled: boolean;
+  /** True for the core plugin — cannot be disabled. */
+  required: boolean;
+  /** Whether the plugin is currently running in this server instance. */
+  loaded: boolean;
+}
+
+/** Values returned by the plugins domain hook. */
+export interface UsePluginsResult {
+  /** All known plugins. */
+  plugins: PluginData[];
+  /** Whether the plugin list is currently loading. */
+  pluginsLoading: boolean;
+  /** Request the current plugin list from the server. */
+  loadPlugins: () => Promise<void>;
+  /** Enable or disable a plugin by name. */
+  setPluginEnabled: (name: string, enabled: boolean) => Promise<void>;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
+}
+
 /** Delay in milliseconds before attempting a WebSocket reconnect. */
 export const WS_RECONNECT_DELAY_MS: number = 3_000;
 
