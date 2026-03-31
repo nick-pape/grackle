@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { ConnectError, Code } from "@connectrpc/connect";
-import { useEventStream } from "./useEventStream.js";
+import { useEventStream, RECONNECT_DELAY_MS, CONNECT_GRACE_PERIOD_MS } from "./useEventStream.js";
 
 // ---------------------------------------------------------------------------
 // Mock grackleClient
@@ -20,9 +20,7 @@ vi.mock("@grackle-ai/web-components", () => ({
   PAIR_PATH: "/pair",
 }));
 
-// Mirror constants from useEventStream.ts
-const RECONNECT_DELAY_MS = 3_000;
-const CONNECT_GRACE_PERIOD_MS = 3_000;
+// Re-exported from useEventStream.ts — imported above, referenced below.
 
 // ---------------------------------------------------------------------------
 // Helpers: controllable async iterable stream
@@ -202,10 +200,10 @@ describe("useEventStream", () => {
     });
   });
 
-  // NOTE: The "disconnected on unmount" state (set in the cleanup function)
-  // cannot be observed via result.current because React 18 silently drops
-  // state updates on unmounted components. The cleanup function still runs
-  // correctly (timer is cleared, cancelled flag is set) — just not testable here.
+  // NOTE: Cleanup on unmount (clearing timers, setting cancelled flag) runs
+  // correctly but cannot be observed via result.current — React 18 drops all
+  // state updates on unmounted components silently. This hook intentionally
+  // does not call setConnectionStatus in cleanup.
 
   it("calls onConnect callback immediately when stream is created", async () => {
     const onConnect = vi.fn();

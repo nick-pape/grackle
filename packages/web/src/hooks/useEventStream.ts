@@ -14,7 +14,16 @@ import type { ConnectionStatus } from "@grackle-ai/web-components";
 import { PAIR_PATH } from "@grackle-ai/web-components";
 
 /** Reconnect delay in milliseconds. */
-const RECONNECT_DELAY_MS: number = 3_000;
+export const RECONNECT_DELAY_MS: number = 3_000;
+
+/**
+ * Grace period before marking the stream as "connected" when no event has been received.
+ * Matches the reconnect delay so that the two values cannot drift independently.
+ * Must exceed the worst-case ECONNREFUSED propagation time (~2 s on Windows HTTP/2
+ * due to connection-pool reuse) so that a failed reconnect attempt never briefly
+ * shows "Connected" before reverting to "Connecting...".
+ */
+export const CONNECT_GRACE_PERIOD_MS: number = RECONNECT_DELAY_MS;
 
 /** Options for the event stream hook. */
 export interface UseEventStreamOptions {
@@ -53,7 +62,8 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
 
   useEffect(() => {
     let cancelled: boolean = false;
-    let reconnectTimer: ReturnType<typeof setTimeout>;
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+    let connectTimer: ReturnType<typeof setTimeout> | undefined;
 
     async function connectStream(): Promise<void> {
       if (cancelled) {
@@ -79,7 +89,7 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
           setConnectionStatus("connected");
         }
       };
-      const connectTimer: ReturnType<typeof setTimeout> = setTimeout(markConnected, 3_000);
+      connectTimer = setTimeout(markConnected, CONNECT_GRACE_PERIOD_MS);
 
       try {
         const stream = grackleClient.streamEvents({});
@@ -140,10 +150,11 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
     return () => {
       cancelled = true;
       clearTimeout(reconnectTimer);
+      clearTimeout(connectTimer);
       // No state update here: React 18 StrictMode double-invokes the cleanup
-      // while the component is still mounted, which would briefly flash
-      // "Disconnected" on initial load. After a real unmount, state updates
-      // are silently dropped by React anyway.
+      // while the component is still mounted, which can cause unexpected state
+      // flashes. After a real unmount, state updates are silently dropped by
+      // React anyway.
     };
   }, []);
 
