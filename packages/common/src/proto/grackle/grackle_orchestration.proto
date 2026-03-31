@@ -7,6 +7,7 @@ import "grackle/grackle_types.proto";
 service GrackleOrchestration {
   // Tasks
   rpc ListTasks(ListTasksRequest) returns (TaskList);
+  rpc SearchTasks(SearchTasksRequest) returns (SearchTasksResponse);
   rpc CreateTask(CreateTaskRequest) returns (Task);
   rpc GetTask(TaskId) returns (Task);
   rpc UpdateTask(UpdateTaskRequest) returns (Task);

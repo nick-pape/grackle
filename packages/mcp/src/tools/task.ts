@@ -65,6 +65,44 @@ export const taskTools: ToolDefinition[] = [
     },
   },
 
+  // ── task_search ─────────────────────────────────────────────────────────
+  {
+    name: "task_search",
+    group: "task",
+    description:
+      "Fuzzy search for tasks by title or description. Returns results ranked by relevance with scores. Use this when you need approximate matching (e.g. 'login bug' matches 'Fix authentication failure on login page').",
+    inputSchema: z.object({
+      query: z.string().describe("Fuzzy search query string"),
+      workspaceId: z.string().optional().describe("Scope to a specific workspace (optional — omit to search all workspaces)"),
+      limit: z.number().int().positive().optional().describe("Maximum number of results to return (default 10)"),
+      status: z.enum(["not_started", "working", "paused", "complete", "failed"]).optional().describe("Filter by task status"),
+    }),
+    rpcMethod: "searchTasks",
+    mutating: false,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+    async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
+      try {
+        const response = await client.searchTasks({
+          query: (args.query as string),
+          workspaceId: (args.workspaceId as string | undefined) ?? "",
+          limit: (args.limit as number | undefined) ?? 0,
+          status: (args.status as string | undefined) ?? "",
+        });
+        return jsonResult(response.results.map((r) => ({
+          ...taskToJson(r.task!),
+          relevanceScore: Math.round(r.relevanceScore * 100) / 100,
+        })));
+      } catch (error) {
+        return grpcErrorToToolResult(error);
+      }
+    },
+  },
+
   // ── task_create ─────────────────────────────────────────────────────────
   {
     name: "task_create",
