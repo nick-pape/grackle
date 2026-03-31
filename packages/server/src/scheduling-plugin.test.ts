@@ -1,38 +1,19 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { PluginContext } from "@grackle-ai/plugin-sdk";
 import type { Logger } from "pino";
 
-// ── Mock dependencies ────────────────────────────────
-
-vi.mock("@grackle-ai/plugin-scheduling", () => ({
-  createSchedulingPlugin: vi.fn(() => ({
-    name: "scheduling",
-    dependencies: ["core"],
-    grpcHandlers: vi.fn(() => [{
-      service: { typeName: "grackle.Grackle" },
-      handlers: {
-        createSchedule: vi.fn(),
-        listSchedules: vi.fn(),
-        getSchedule: vi.fn(),
-        updateSchedule: vi.fn(),
-        deleteSchedule: vi.fn(),
-      },
-    }]),
-    reconciliationPhases: vi.fn(() => [
-      { name: "cron", execute: vi.fn() },
-    ]),
-  })),
-}));
-
-vi.mock("@grackle-ai/common", () => ({
-  grackle: { Grackle: { typeName: "grackle.Grackle" } },
-}));
+// ── Mock external dependencies used by the real scheduling plugin ─────────────
+// (The real createSchedulingPlugin() is imported below — no mock of the plugin itself)
 
 vi.mock("@grackle-ai/database", () => ({
   scheduleStore: { getDueSchedules: vi.fn(), advanceSchedule: vi.fn(), setScheduleEnabled: vi.fn() },
   taskStore: { createTask: vi.fn(), setTaskScheduleId: vi.fn() },
   personaStore: { getPersona: vi.fn() },
   dispatchQueueStore: { enqueue: vi.fn() },
+}));
+
+vi.mock("@grackle-ai/common", () => ({
+  grackle: { Grackle: { typeName: "grackle.Grackle" } },
 }));
 
 import { createSchedulingPlugin } from "@grackle-ai/plugin-scheduling";
@@ -55,6 +36,10 @@ function createMockContext(): PluginContext {
     },
   };
 }
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("createSchedulingPlugin (server integration)", () => {
   it("returns name 'scheduling'", () => {

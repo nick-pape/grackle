@@ -10,9 +10,10 @@ Scheduling plugin for Grackle. Provides:
 
 ```typescript
 import { createSchedulingPlugin } from "@grackle-ai/plugin-scheduling";
+import { createCorePlugin } from "@grackle-ai/server";
 import { loadPlugins } from "@grackle-ai/plugin-sdk";
 
-const plugins = await loadPlugins([createCorePlugin(), createSchedulingPlugin()], ctx);
+const loaded = await loadPlugins([createCorePlugin(), createSchedulingPlugin()], ctx);
 ```
 
 The scheduling plugin declares `dependencies: ["core"]` so it is always loaded after the core plugin.

@@ -148,7 +148,10 @@ async function main(): Promise<void> {
     },
   };
 
-  const plugins = [createCorePlugin(), createSchedulingPlugin()];
+  const plugins = [createCorePlugin()];
+  if (!config.skipScheduling) {
+    plugins.push(createSchedulingPlugin());
+  }
   if (!config.skipOrchestration) {
     plugins.push(createOrchestrationPlugin());
   }
