@@ -1,7 +1,5 @@
-import type { Client } from "@connectrpc/connect";
-import type { grackle } from "@grackle-ai/common";
 import { z } from "zod";
-import type { ToolDefinition } from "../tool-registry.js";
+import type { GrackleClients, ToolDefinition } from "../tool-registry.js";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
 
@@ -57,7 +55,7 @@ export const scheduleTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { scheduling: client }: GrackleClients) {
       try {
         const response = await client.listSchedules({
           workspaceId: (args.workspaceId as string | undefined) ?? "",
@@ -89,7 +87,7 @@ export const scheduleTools: ToolDefinition[] = [
       idempotentHint: false,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { scheduling: client }: GrackleClients) {
       try {
         const response = await client.createSchedule({
           title: args.title as string,
@@ -121,7 +119,7 @@ export const scheduleTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { scheduling: client }: GrackleClients) {
       try {
         const response = await client.getSchedule({
           id: args.scheduleId as string,
@@ -153,7 +151,7 @@ export const scheduleTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { scheduling: client }: GrackleClients) {
       try {
         const response = await client.updateSchedule({
           id: args.scheduleId as string,
@@ -185,7 +183,7 @@ export const scheduleTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, { scheduling: client }: GrackleClients) {
       try {
         await client.deleteSchedule({
           id: args.scheduleId as string,

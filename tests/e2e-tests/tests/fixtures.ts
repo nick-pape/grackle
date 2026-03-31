@@ -153,7 +153,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       (window as any).__origFetch__ = origFetch;
       window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
         const url = typeof input === "string" ? input : (input instanceof URL ? input.toString() : input.url);
-        if ((url.includes("/grackle.Grackle/StartTask") || url.includes("/grackle.Grackle/SpawnAgent")) && init?.body) {
+        if ((url.includes("/grackle.GrackleOrchestration/StartTask") || url.includes("/grackle.GrackleCore/SpawnAgent")) && init?.body) {
           try {
             let bodyStr: string;
             if (init.body instanceof Uint8Array) {

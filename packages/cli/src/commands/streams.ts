@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import Table from "cli-table3";
-import { createGrackleClient } from "../client.js";
+import { createGrackleClients } from "../client.js";
 
 /** Register stream inspection commands: `streams list`. */
 export function registerStreamCommands(program: Command): void {
@@ -10,7 +10,7 @@ export function registerStreamCommands(program: Command): void {
     .command("list")
     .description("List active IPC streams with subscriber details")
     .action(async () => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       const res = await client.listStreams({});
       if (res.streams.length === 0) {
         console.log("No active streams.");

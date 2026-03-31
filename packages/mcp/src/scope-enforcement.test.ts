@@ -5,7 +5,7 @@ import type { grackle } from "@grackle-ai/common";
 import type { AuthContext } from "@grackle-ai/auth";
 import { assertCallerIsAncestor, assertCallerIsSelfOrAncestor } from "./scope-enforcement.js";
 
-type GrackleClient = Client<typeof grackle.Grackle>;
+type GrackleClient = Client<typeof grackle.GrackleOrchestration>;
 
 /** Build a mock client whose getTask returns tasks from a lookup table. */
 function createMockClient(tasks: Record<string, { parentTaskId: string }>): GrackleClient {

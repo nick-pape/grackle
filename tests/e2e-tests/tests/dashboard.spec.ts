@@ -4,9 +4,9 @@ import type { GrackleClient } from "./rpc-client.js";
 
 /** Archive all existing workspaces so we start from a clean slate. */
 async function archiveAllWorkspaces(client: GrackleClient): Promise<void> {
-  const response = await client.listWorkspaces({});
+  const response = await client.core.listWorkspaces({});
   for (const workspace of response.workspaces) {
-    await client.archiveWorkspace({ id: workspace.id });
+    await client.core.archiveWorkspace({ id: workspace.id });
   }
 }
 

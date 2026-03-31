@@ -1,7 +1,5 @@
-import type { Client } from "@connectrpc/connect";
 import { z } from "zod";
-import { grackle } from "@grackle-ai/common";
-import type { ToolDefinition } from "../tool-registry.js";
+import type { GrackleClients, ToolDefinition } from "../tool-registry.js";
 import type { AuthContext } from "@grackle-ai/auth";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
@@ -22,7 +20,7 @@ export const ipcTools: ToolDefinition[] = [
     rpcMethod: "spawnAgent",
     mutating: true,
     annotations: { openWorldHint: true },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients, authContext?: AuthContext) {
       try {
         const pipe = (args.pipe as string) || "detach";
         const parentSessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
@@ -81,7 +79,7 @@ export const ipcTools: ToolDefinition[] = [
     }),
     rpcMethod: "writeToFd",
     mutating: true,
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients, authContext?: AuthContext) {
       try {
         const sessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
         if (!sessionId) {
@@ -111,7 +109,7 @@ export const ipcTools: ToolDefinition[] = [
     }),
     rpcMethod: "closeFd",
     mutating: true,
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients, authContext?: AuthContext) {
       try {
         const sessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
         if (!sessionId) {
@@ -138,7 +136,7 @@ export const ipcTools: ToolDefinition[] = [
     inputSchema: z.object({}),
     rpcMethod: "getSessionFds",
     mutating: false,
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients, authContext?: AuthContext) {
       try {
         const sessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
         if (!sessionId) {
@@ -179,7 +177,7 @@ export const ipcTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients, authContext?: AuthContext) {
       try {
         const sessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
         if (!sessionId) {
@@ -236,7 +234,7 @@ export const ipcTools: ToolDefinition[] = [
     },
     async handler(
       _args: Record<string, unknown>,
-      client: Client<typeof grackle.Grackle>,
+      { core: client }: GrackleClients,
       authContext?: AuthContext,
     ) {
       try {
@@ -294,7 +292,7 @@ export const ipcTools: ToolDefinition[] = [
     }),
     rpcMethod: "createStream",
     mutating: true,
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients, authContext?: AuthContext) {
       try {
         const sessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
         if (!sessionId) {
@@ -326,7 +324,7 @@ export const ipcTools: ToolDefinition[] = [
     }),
     rpcMethod: "attachStream",
     mutating: true,
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients, authContext?: AuthContext) {
       try {
         const sessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
         if (!sessionId) {

@@ -20,7 +20,7 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     await expect(page.getByText("1/1 env")).toBeVisible({ timeout: 15_000 });
 
     // Stop the environment via RPC
-    await client.stopEnvironment({ id: "test-local" });
+    await client.core.stopEnvironment({ id: "test-local" });
 
     // StatusBar should update to show 0 connected (0/1)
     await expect(page.getByText("0/1 env")).toBeVisible({ timeout: 10_000 });
@@ -37,7 +37,7 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     const page = appPage;
 
     // Stop the environment first
-    await client.stopEnvironment({ id: "test-local" });
+    await client.core.stopEnvironment({ id: "test-local" });
     await expect(page.getByText("0/1 env")).toBeVisible({ timeout: 10_000 });
 
     // Re-provision via direct gRPC call
@@ -54,7 +54,7 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     const page = appPage;
 
     // Add a real temporary environment
-    const added = await client.addEnvironment({
+    const added = await client.core.addEnvironment({
       displayName: "Temp Env",
       adapterType: "local",
     });
@@ -64,7 +64,7 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     await expect(page.getByText(/\/2 envs/)).toBeVisible({ timeout: 10_000 });
 
     // Remove the temporary environment via RPC
-    await client.removeEnvironment({ id: added.id });
+    await client.core.removeEnvironment({ id: added.id });
 
     // Generic removal toast should appear
     await expect(page.getByText("Environment removed")).toBeVisible({ timeout: 5_000 });

@@ -140,7 +140,7 @@ test.describe("Accessibility attributes", { tag: ["@a11y"] }, () => {
       client: ReturnType<typeof import("./rpc-client.js").createTestClient>,
     ): Promise<void> {
       try {
-        await client.searchKnowledge({ query: "probe", limit: 1 });
+        await client.knowledge.searchKnowledge({ query: "probe", limit: 1 });
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
         if (message.includes("not available") || message.includes("Unavailable") || message.includes("unavailable") || message.includes("unimplemented")) {

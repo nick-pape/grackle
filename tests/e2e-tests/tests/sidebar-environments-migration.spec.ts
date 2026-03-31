@@ -83,11 +83,11 @@ test.describe("Environments Page", { tag: ["@environment"] }, () => {
     await expect(page.getByText("settings-test-env", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     // Clean up
-    const listResponse = await client.listEnvironments({});
+    const listResponse = await client.core.listEnvironments({});
     const envs = listResponse.environments as Array<{ id: string; displayName: string }>;
     const added = envs.find((e) => e.displayName === "settings-test-env");
     if (added) {
-      await client.removeEnvironment({ id: added.id });
+      await client.core.removeEnvironment({ id: added.id });
     }
   });
 });

@@ -15,7 +15,7 @@ const mockClient = vi.hoisted(() => ({
 }));
 
 vi.mock("./useGrackleClient.js", () => ({
-  grackleClient: mockClient,
+  knowledgeClient: mockClient,
 }));
 
 // ---------------------------------------------------------------------------

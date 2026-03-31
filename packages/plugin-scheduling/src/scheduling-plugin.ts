@@ -26,7 +26,7 @@ export function createSchedulingPlugin(): GracklePlugin {
     dependencies: ["core"],
 
     grpcHandlers: (ctx: PluginContext) => [{
-      service: grackle.Grackle,
+      service: grackle.GrackleScheduling,
       handlers: createScheduleHandlers(ctx.emit),
     }],
 

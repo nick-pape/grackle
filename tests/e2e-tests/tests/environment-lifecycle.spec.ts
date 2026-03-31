@@ -84,7 +84,7 @@ test.describe("Environment Lifecycle — Server Events", { tag: ["@environment"]
     await expect(page.locator("button", { hasText: "Stop" })).toBeVisible({ timeout: 5_000 });
 
     // Stop environment via RPC
-    await client.stopEnvironment({ id: "test-local" });
+    await client.core.stopEnvironment({ id: "test-local" });
 
     // Wait for Connect button to appear (indicates disconnected)
     await expect(page.locator("button", { hasText: "Connect" })).toBeVisible({ timeout: 5_000 });
@@ -100,7 +100,7 @@ test.describe("Environment Lifecycle — Server Events", { tag: ["@environment"]
     await navigateToEnvDetailPage(page);
 
     // First stop the environment
-    await client.stopEnvironment({ id: "test-local" });
+    await client.core.stopEnvironment({ id: "test-local" });
 
     // Wait for disconnected state — Connect button should appear
     await expect(page.locator("button", { hasText: "Connect" })).toBeVisible({ timeout: 5_000 });
@@ -119,7 +119,7 @@ test.describe("Environment Lifecycle — Server Events", { tag: ["@environment"]
     await navigateToEnvDetailPage(page);
 
     // Stop the environment first
-    await client.stopEnvironment({ id: "test-local" });
+    await client.core.stopEnvironment({ id: "test-local" });
 
     // Wait for it to show as disconnected
     await expect(page.locator("button", { hasText: "Connect" })).toBeVisible({ timeout: 5_000 });
@@ -137,7 +137,7 @@ test.describe("Environment Lifecycle — Server Events", { tag: ["@environment"]
     await goToEnvironments(page);
 
     // Add a real temporary environment for testing removal
-    const added = await client.addEnvironment({
+    const added = await client.core.addEnvironment({
       displayName: "temp-remove-test",
       adapterType: "local",
     });
@@ -149,7 +149,7 @@ test.describe("Environment Lifecycle — Server Events", { tag: ["@environment"]
     await expect(page.getByText("test-local").first()).toBeVisible();
 
     // Remove the temporary environment via RPC
-    await client.removeEnvironment({ id: added.id });
+    await client.core.removeEnvironment({ id: added.id });
 
     // The temporary environment should be gone from the nav
     await expect(page.getByText("temp-remove-test")).not.toBeVisible({ timeout: 5_000 });
@@ -165,13 +165,13 @@ test.describe("Environment Lifecycle — Server Events", { tag: ["@environment"]
     await navigateToEnvDetailPage(page);
 
     // Stop the environment
-    await client.stopEnvironment({ id: "test-local" });
+    await client.core.stopEnvironment({ id: "test-local" });
 
     // Verify environment is disconnected — Connect button should appear
     await expect(page.locator("button", { hasText: "Connect" })).toBeVisible({ timeout: 5_000 });
 
     // Spawn via RPC — the server should auto-provision
-    const response = await client.spawnAgent({
+    const response = await client.core.spawnAgent({
       environmentId: "test-local",
       prompt: "auto-provision test",
       personaId: "stub",

@@ -17,7 +17,7 @@ async function startTaskAndGetSessionId(
   client: GrackleClient,
   taskId: string,
 ): Promise<string> {
-  const resp = await client.startTask({
+  const resp = await client.orchestration.startTask({
     taskId,
     personaId: "stub",
     environmentId: "test-local",
@@ -40,7 +40,7 @@ async function waitForSessionStatus(
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const resp = await client.listSessions({});
+    const resp = await client.core.listSessions({});
     const session = resp.sessions.find((s) => s.id === sessionId);
     if (session && session.status === targetStatus) {
       return;
@@ -62,7 +62,7 @@ async function waitForSessionText(
 ): Promise<string> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const resp = await client.getSessionEvents({ id: sessionId });
+    const resp = await client.core.getSessionEvents({ id: sessionId });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const events = (resp.events || []) as any[];
     const match = events.find(
@@ -98,7 +98,7 @@ async function getSession(
   sessionId: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<Record<string, any>> {
-  const resp = await client.getSession({ id: sessionId });
+  const resp = await client.core.getSession({ id: sessionId });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return resp as unknown as Record<string, any>;
 }
@@ -106,16 +106,16 @@ async function getSession(
 test.describe("SIGTERM — graceful shutdown signal", { tag: ["@session"] }, () => {
   // Kill any stale active sessions on test-local so the environment is free.
   test.beforeEach(async ({ grackle: { client } }) => {
-    const sessionsResp = await client.listSessions({});
+    const sessionsResp = await client.core.listSessions({});
     const all = sessionsResp.sessions as Array<{ id: string; status: string }>;
     const active = all.filter((s) => s.status === "idle" || s.status === "running" || s.status === "pending");
     for (const s of active) {
-      await client.killAgent({ id: s.id });
+      await client.core.killAgent({ id: s.id });
     }
     if (active.length > 0) {
       const deadline = Date.now() + 5_000;
       while (Date.now() < deadline) {
-        const recheck = await client.listSessions({});
+        const recheck = await client.core.listSessions({});
         const remaining = recheck.sessions as Array<{ status: string }>;
         if (!remaining.some((s) => s.status === "idle" || s.status === "running" || s.status === "pending")) {
           break;
@@ -142,7 +142,7 @@ test.describe("SIGTERM — graceful shutdown signal", { tag: ["@session"] }, () 
     await waitForSessionStatus(client, sessionId, "idle");
 
     // 3. Send graceful kill (SIGTERM)
-    await client.killAgent({ id: sessionId, graceful: true });
+    await client.core.killAgent({ id: sessionId, graceful: true });
 
     // 4. Verify [SIGTERM] signal was delivered and echoed by the stub runtime
     const sigtermContent = await waitForSessionText(client, sessionId, "[SIGTERM]", 30_000);
@@ -170,7 +170,7 @@ test.describe("SIGTERM — graceful shutdown signal", { tag: ["@session"] }, () 
     await waitForSessionStatus(client, sessionId, "idle");
 
     // 3. Send hard kill (SIGKILL)
-    await client.killAgent({ id: sessionId, graceful: false });
+    await client.core.killAgent({ id: sessionId, graceful: false });
 
     // 4. Session should be stopped immediately
     await waitForSessionStatus(client, sessionId, "stopped");
@@ -192,13 +192,13 @@ test.describe("SIGTERM — graceful shutdown signal", { tag: ["@session"] }, () 
     // 2. Start task → wait for IDLE → hard kill
     const sessionId = await startTaskAndGetSessionId(client, taskId);
     await waitForSessionStatus(client, sessionId, "idle");
-    await client.killAgent({ id: sessionId, graceful: false });
+    await client.core.killAgent({ id: sessionId, graceful: false });
     await waitForSessionStatus(client, sessionId, "stopped");
 
     // 3. Graceful kill on stopped session — should not throw, session stays killed
     // The handler skips SIGTERM delivery for terminal sessions and falls through to hard kill,
     // which is a no-op on already-stopped sessions.
-    await client.killAgent({ id: sessionId, graceful: true });
+    await client.core.killAgent({ id: sessionId, graceful: true });
 
     // 4. Verify session is still stopped with original endReason
     const session = await getSession(client, sessionId);

@@ -10,7 +10,12 @@ vi.mock("@connectrpc/connect-node", () => ({
 }));
 
 vi.mock("@grackle-ai/common", () => ({
-  grackle: { Grackle: {} },
+  grackle: {
+    GrackleCore: {},
+    GrackleOrchestration: {},
+    GrackleScheduling: {},
+    GrackleKnowledge: {},
+  },
   DEFAULT_SERVER_PORT: 7434,
   GRACKLE_DIR: ".grackle",
   API_KEY_FILENAME: "api_key",
@@ -28,7 +33,7 @@ vi.mock("node:os", () => ({
   homedir: () => "/home/user",
 }));
 
-describe("createGrackleClient", () => {
+describe("createGrackleClients", () => {
   afterEach(() => {
     // Clean up env overrides between tests
     delete process.env.GRACKLE_URL;
@@ -40,9 +45,9 @@ describe("createGrackleClient", () => {
 
   it("UT-1: defaults to http://127.0.0.1:7434 (not localhost)", async () => {
     const { createGrpcTransport } = await import("@connectrpc/connect-node");
-    const { createGrackleClient } = await import("./client.js");
+    const { createGrackleClients } = await import("./client.js");
 
-    createGrackleClient();
+    createGrackleClients();
 
     expect(createGrpcTransport).toHaveBeenCalledWith(
       expect.objectContaining({ baseUrl: "http://127.0.0.1:7434" }),
@@ -52,9 +57,9 @@ describe("createGrackleClient", () => {
   it("UT-2: uses GRACKLE_URL env var when set", async () => {
     process.env.GRACKLE_URL = "http://192.168.1.10:7434";
     const { createGrpcTransport } = await import("@connectrpc/connect-node");
-    const { createGrackleClient } = await import("./client.js");
+    const { createGrackleClients } = await import("./client.js");
 
-    createGrackleClient();
+    createGrackleClients();
 
     expect(createGrpcTransport).toHaveBeenCalledWith(
       expect.objectContaining({ baseUrl: "http://192.168.1.10:7434" }),
@@ -63,9 +68,9 @@ describe("createGrackleClient", () => {
 
   it("UT-1b: explicit serverUrl argument overrides default", async () => {
     const { createGrpcTransport } = await import("@connectrpc/connect-node");
-    const { createGrackleClient } = await import("./client.js");
+    const { createGrackleClients } = await import("./client.js");
 
-    createGrackleClient("http://[::1]:9000");
+    createGrackleClients("http://[::1]:9000");
 
     expect(createGrpcTransport).toHaveBeenCalledWith(
       expect.objectContaining({ baseUrl: "http://[::1]:9000" }),
@@ -77,9 +82,9 @@ describe("createGrackleClient", () => {
     vi.mocked(fs.readFileSync).mockImplementation(() => {
       throw new Error("ENOENT: no such file or directory");
     });
-    const { createGrackleClient } = await import("./client.js");
+    const { createGrackleClients } = await import("./client.js");
 
-    expect(() => createGrackleClient()).toThrow(
+    expect(() => createGrackleClients()).toThrow(
       "Could not read API key from",
     );
   });
@@ -87,18 +92,18 @@ describe("createGrackleClient", () => {
   it("UT-4: throws when API key file is empty", async () => {
     const fs = await import("node:fs");
     vi.mocked(fs.readFileSync).mockReturnValue("");
-    const { createGrackleClient } = await import("./client.js");
+    const { createGrackleClients } = await import("./client.js");
 
-    expect(() => createGrackleClient()).toThrow(
+    expect(() => createGrackleClients()).toThrow(
       "API key file is empty",
     );
   });
 
   it("UT-5: uses explicit apiKey argument when provided", async () => {
     const fs = await import("node:fs");
-    const { createGrackleClient } = await import("./client.js");
+    const { createGrackleClients } = await import("./client.js");
 
-    createGrackleClient(undefined, "injected-key");
+    createGrackleClients(undefined, "injected-key");
 
     expect(fs.readFileSync).not.toHaveBeenCalled();
   });
@@ -106,9 +111,9 @@ describe("createGrackleClient", () => {
   it("UT-6: GRACKLE_API_KEY env var takes precedence over file", async () => {
     process.env.GRACKLE_API_KEY = "env-key";
     const fs = await import("node:fs");
-    const { createGrackleClient } = await import("./client.js");
+    const { createGrackleClients } = await import("./client.js");
 
-    createGrackleClient();
+    createGrackleClients();
 
     expect(fs.readFileSync).not.toHaveBeenCalled();
   });

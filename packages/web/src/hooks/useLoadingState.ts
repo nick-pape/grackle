@@ -31,7 +31,7 @@ export interface UseLoadingStateResult {
  *
  * const loadSessions = useCallback(async () => {
  *   try {
- *     const resp = await track(grackleClient.listSessions({}));
+ *     const resp = await track(coreClient.listSessions({}));
  *     setSessions(resp.sessions.map(protoToSession));
  *   } catch {
  *     // empty

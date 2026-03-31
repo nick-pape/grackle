@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 31 Mar 2026 06:01:21 GMT and should not be manually modified.
+This log was last generated on Tue, 31 Mar 2026 13:50:31 GMT and should not be manually modified.
+
+## 0.101.0
+Tue, 31 Mar 2026 13:50:31 GMT
+
+### Minor changes
+
+- Split monolithic grackle.proto into per-plugin gRPC services (GrackleCore, GrackleOrchestration, GrackleScheduling, GrackleKnowledge); update all clients, tools, and tests to use typed per-service clients
 
 ## 0.100.1
 Tue, 31 Mar 2026 06:01:21 GMT

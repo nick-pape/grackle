@@ -35,7 +35,16 @@ export default defineConfig({
         target: "ws://localhost:3000",
         ws: true,
       },
-      "/grackle.Grackle": {
+      "/grackle.GrackleCore": {
+        target: "http://localhost:3000",
+      },
+      "/grackle.GrackleOrchestration": {
+        target: "http://localhost:3000",
+      },
+      "/grackle.GrackleScheduling": {
+        target: "http://localhost:3000",
+      },
+      "/grackle.GrackleKnowledge": {
         target: "http://localhost:3000",
       },
     },

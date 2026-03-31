@@ -172,7 +172,7 @@ test.describe("Task tree hierarchy", { tag: ["@task"] }, () => {
     // Attempt to delete parent — should get an error
     let error: Error | undefined;
     try {
-      await client.deleteTask({ id: parentId });
+      await client.orchestration.deleteTask({ id: parentId });
     } catch (e) {
       error = e as Error;
     }
@@ -180,10 +180,10 @@ test.describe("Task tree hierarchy", { tag: ["@task"] }, () => {
     expect(error!.message).toContain("children");
 
     // Delete child first — should succeed
-    await client.deleteTask({ id: child.id as string });
+    await client.orchestration.deleteTask({ id: child.id as string });
 
     // Now delete parent — should succeed
-    await client.deleteTask({ id: parentId });
+    await client.orchestration.deleteTask({ id: parentId });
 
     // Parent task should be gone from the page
     await expect(page.getByText("del-parent")).not.toBeVisible({ timeout: 5_000 });

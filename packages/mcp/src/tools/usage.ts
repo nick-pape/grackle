@@ -1,7 +1,5 @@
-import type { Client } from "@connectrpc/connect";
 import { z } from "zod";
-import { grackle } from "@grackle-ai/common";
-import type { ToolDefinition } from "../tool-registry.js";
+import type { GrackleClients, ToolDefinition } from "../tool-registry.js";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
 
@@ -20,7 +18,7 @@ export const usageTools: ToolDefinition[] = [
     rpcMethod: "getUsage",
     mutating: false,
     annotations: { readOnlyHint: true },
-    handler: async (args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) => {
+    handler: async (args: Record<string, unknown>, { core: client }: GrackleClients) => {
       try {
         const result = await client.getUsage({ scope: args.scope as string, id: args.id as string });
         return jsonResult(result);

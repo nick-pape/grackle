@@ -30,8 +30,8 @@ export function createCorePlugin(): GracklePlugin {
     name: "core",
 
     grpcHandlers: () => [{
-      service: grackle.Grackle,
-      handlers: createCoreCollector().getHandlers(grackle.Grackle),
+      service: grackle.GrackleCore,
+      handlers: createCoreCollector().getHandlers(grackle.GrackleCore),
     }],
 
     reconciliationPhases: () => createCoreReconciliationPhases(),

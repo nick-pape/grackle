@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import chalk from "chalk";
 import Table from "cli-table3";
-import { createGrackleClient } from "../client.js";
+import { createGrackleClients } from "../client.js";
 import {
   claudeProviderModeToString,
   providerToggleToString,
@@ -28,7 +28,7 @@ export function registerCredentialProviderCommands(program: Command): void {
   cp.command("list")
     .description("Show current credential provider configuration")
     .action(async () => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       const config = await client.getCredentialProviders({});
       const table = new Table({
         head: ["Provider", "Status"],
@@ -61,7 +61,7 @@ export function registerCredentialProviderCommands(program: Command): void {
         process.exit(1);
       }
 
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
       const updated = await client.setCredentialProvider({ provider, value });
       console.log(
         chalk.green(`${provider} → ${value}`),

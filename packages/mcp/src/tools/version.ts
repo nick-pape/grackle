@@ -1,7 +1,5 @@
-import type { Client } from "@connectrpc/connect";
-import type { grackle } from "@grackle-ai/common";
 import { z } from "zod";
-import type { ToolDefinition } from "../tool-registry.js";
+import type { GrackleClients, ToolDefinition } from "../tool-registry.js";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
 
@@ -21,7 +19,7 @@ export const versionTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: true,
     },
-    async handler(_args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(_args: Record<string, unknown>, { core: client }: GrackleClients) {
       try {
         const status = await client.getVersionStatus({});
         return jsonResult({

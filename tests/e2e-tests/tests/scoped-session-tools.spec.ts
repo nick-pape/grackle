@@ -19,7 +19,7 @@ async function startTaskStub(
   client: GrackleClient,
   taskId: string,
 ): Promise<string> {
-  const resp = await client.startTask({
+  const resp = await client.orchestration.startTask({
     taskId,
     personaId: "stub",
     environmentId: "test-local",
@@ -38,7 +38,7 @@ async function startTaskStubMcp(
   client: GrackleClient,
   taskId: string,
 ): Promise<string> {
-  const resp = await client.startTask({
+  const resp = await client.orchestration.startTask({
     taskId,
     personaId: "stub-mcp",
     environmentId: "test-local",
@@ -61,7 +61,7 @@ async function waitForSessionStatus(
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const resp = await client.listSessions({});
+    const resp = await client.core.listSessions({});
     const session = resp.sessions.find((s) => s.id === sessionId);
     if (session && session.status === targetStatus) {
       return;
@@ -87,15 +87,15 @@ function findToolResult(events: any[], contentSubstring: string): any | undefine
 test.describe("Scoped session_attach and logs_get", { tag: ["@task"] }, () => {
   // Kill any stale active sessions before each test to free the environment.
   test.beforeEach(async ({ grackle: { client } }) => {
-    const sessionsResp = await client.listSessions({});
+    const sessionsResp = await client.core.listSessions({});
     const all = sessionsResp.sessions as Array<{ id: string; status: string }>;
     const active = all.filter((s) => s.status === "idle" || s.status === "running" || s.status === "pending");
     for (const s of active) {
-      await client.killAgent({ id: s.id });
+      await client.core.killAgent({ id: s.id });
     }
     if (active.length > 0) {
       await expect(async () => {
-        const recheck = await client.listSessions({});
+        const recheck = await client.core.listSessions({});
         const remaining = recheck.sessions as Array<{ status: string }>;
         const stillActive = remaining.filter(
           (s) => s.status === "idle" || s.status === "running" || s.status === "pending",
@@ -127,7 +127,7 @@ test.describe("Scoped session_attach and logs_get", { tag: ["@task"] }, () => {
     const orchestratorScenario = stubScenario(
       emitMcpCall("session_attach", { sessionId: childSessionId, timeoutSeconds: 2 }),
     );
-    await client.updateTask({
+    await client.orchestration.updateTask({
       id: orchestrator.id as string,
       description: JSON.stringify(orchestratorScenario),
     });
@@ -137,7 +137,7 @@ test.describe("Scoped session_attach and logs_get", { tag: ["@task"] }, () => {
     await waitForSessionStatus(client, orchSessionId, "stopped");
 
     // 5. Verify the session_attach MCP call succeeded
-    const eventsResp = await client.getSessionEvents({ id: orchSessionId });
+    const eventsResp = await client.core.getSessionEvents({ id: orchSessionId });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const events = (eventsResp.events || []) as any[];
 
@@ -169,7 +169,7 @@ test.describe("Scoped session_attach and logs_get", { tag: ["@task"] }, () => {
     const orchestratorScenario = stubScenario(
       emitMcpCall("logs_get", { sessionId: childSessionId }),
     );
-    await client.updateTask({
+    await client.orchestration.updateTask({
       id: orchestrator.id as string,
       description: JSON.stringify(orchestratorScenario),
     });
@@ -179,7 +179,7 @@ test.describe("Scoped session_attach and logs_get", { tag: ["@task"] }, () => {
     await waitForSessionStatus(client, orchSessionId, "stopped", 45_000);
 
     // 5. Verify logs_get succeeded — response contains the child session ID
-    const eventsResp = await client.getSessionEvents({ id: orchSessionId });
+    const eventsResp = await client.core.getSessionEvents({ id: orchSessionId });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const events = (eventsResp.events || []) as any[];
 

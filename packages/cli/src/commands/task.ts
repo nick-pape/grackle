@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import { ConnectError, Code } from "@connectrpc/connect";
-import { createGrackleClient } from "../client.js";
+import { createGrackleClients } from "../client.js";
 import {
   taskStatusToString,
   taskStatusToEnum,
@@ -38,7 +38,7 @@ export function registerTaskCommands(program: Command): void {
         return;
       }
 
-      const client = createGrackleClient();
+      const { orchestration: client } = createGrackleClients();
       const res = await client.listTasks({
         workspaceId: workspaceId || "",
         search: opts.search || "",
@@ -76,7 +76,7 @@ export function registerTaskCommands(program: Command): void {
     .option("--token-budget <n>", "Total token cap (input + output); 0 = unlimited", parseInt)
     .option("--cost-budget-millicents <n>", "Cost cap in millicents ($0.00001 units); 0 = unlimited", parseInt)
     .action(async (title: string, opts: { workspace?: string; dependsOn?: string; desc?: string; canDecompose?: boolean; parent?: string; tokenBudget?: number; costBudgetMillicents?: number }) => {
-      const client = createGrackleClient();
+      const { orchestration: client } = createGrackleClients();
       const dependsOn: string[] = opts.dependsOn
         ? opts.dependsOn.split(",").map((s: string) => s.trim()).filter(Boolean)
         : [];
@@ -97,7 +97,7 @@ export function registerTaskCommands(program: Command): void {
     .command("show <task-id>")
     .description("Show task details")
     .action(async (taskId: string) => {
-      const client = createGrackleClient();
+      const { orchestration: client, core } = createGrackleClients();
       const t = await client.getTask({ id: taskId });
       console.log(`ID:          ${t.id}`);
       console.log(`Title:       ${t.title}`);
@@ -113,7 +113,7 @@ export function registerTaskCommands(program: Command): void {
       }
       // Show usage from the task scope
       try {
-        const usage = await client.getUsage({ scope: "task", id: taskId });
+        const usage = await core.getUsage({ scope: "task", id: taskId });
         if (usage.inputTokens || usage.outputTokens || usage.costMillicents) {
           console.log(`Tokens:      ${formatTokens(usage.inputTokens)} in / ${formatTokens(usage.outputTokens)} out`);
           console.log(`Cost:        ${formatCost(usage.costMillicents)}`);
@@ -197,7 +197,7 @@ export function registerTaskCommands(program: Command): void {
         return;
       }
 
-      const client = createGrackleClient();
+      const { orchestration: client } = createGrackleClients();
       const dependsOn: string[] = opts.dependsOn
         ? opts.dependsOn.split(",").map((s: string) => s.trim()).filter(Boolean)
         : [];
@@ -226,7 +226,7 @@ export function registerTaskCommands(program: Command): void {
     .option("--env <env-id>", "Environment to run on")
     .option("--notes <text>", "Feedback/instructions for retry")
     .action(async (taskId: string, opts: { persona?: string; env?: string; notes?: string }) => {
-      const client = createGrackleClient();
+      const { orchestration: client } = createGrackleClients();
       const session = await client.startTask({
         taskId,
         personaId: opts.persona || "",
@@ -245,7 +245,7 @@ export function registerTaskCommands(program: Command): void {
         process.exitCode = 1;
         return;
       }
-      const client = createGrackleClient();
+      const { orchestration: client } = createGrackleClients();
       await client.deleteTask({ id: taskId });
       console.log(`Deleted: ${taskId}`);
     });
@@ -259,7 +259,7 @@ export function registerTaskCommands(program: Command): void {
         process.exitCode = 1;
         return;
       }
-      const client = createGrackleClient();
+      const { orchestration: client } = createGrackleClients();
       const t = await client.completeTask({ id: taskId });
       console.log(`Completed: ${t.id} → ${taskStatusToString(t.status)}`);
     });
@@ -268,7 +268,7 @@ export function registerTaskCommands(program: Command): void {
     .command("resume <task-id>")
     .description("Resume the latest interrupted/completed session for a task")
     .action(async (taskId: string) => {
-      const client = createGrackleClient();
+      const { orchestration: client } = createGrackleClients();
       const session = await client.resumeTask({ id: taskId });
       console.log(`Resumed task. Session: ${session.id}`);
     });

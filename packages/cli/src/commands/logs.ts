@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import { ConnectError, Code } from "@connectrpc/connect";
-import { createGrackleClient } from "../client.js";
+import { createGrackleClients } from "../client.js";
 import { eventTypeToString } from "@grackle-ai/common";
 
 /** Register the `logs` command for viewing session logs, transcripts, and live tailing. */
@@ -11,7 +11,7 @@ export function registerLogCommands(program: Command): void {
     .option("--transcript", "Show markdown transcript")
     .option("--tail", "Follow live events")
     .action(async (sessionId: string, opts: { transcript?: boolean; tail?: boolean }) => {
-      const client = createGrackleClient();
+      const { core: client } = createGrackleClients();
 
       if (opts.tail) {
         // Stream live

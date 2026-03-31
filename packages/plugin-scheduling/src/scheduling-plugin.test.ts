@@ -22,7 +22,7 @@ vi.mock("@grackle-ai/database", () => ({
 }));
 
 vi.mock("@grackle-ai/common", () => ({
-  grackle: { Grackle: { typeName: "grackle.Grackle" } },
+  grackle: { GrackleScheduling: { typeName: "grackle.GrackleScheduling" } },
 }));
 
 import { createSchedulingPlugin } from "./scheduling-plugin.js";
@@ -62,13 +62,13 @@ describe("createSchedulingPlugin", () => {
     expect(plugin.dependencies).toEqual(["core"]);
   });
 
-  it("grpcHandlers returns 1 ServiceRegistration on grackle.Grackle", () => {
+  it("grpcHandlers returns 1 ServiceRegistration on grackle.GrackleScheduling", () => {
     const plugin = createSchedulingPlugin();
     const ctx = createMockContext();
     const registrations = plugin.grpcHandlers!(ctx);
 
     expect(registrations).toHaveLength(1);
-    expect(registrations[0]!.service).toHaveProperty("typeName", "grackle.Grackle");
+    expect(registrations[0]!.service).toHaveProperty("typeName", "grackle.GrackleScheduling");
   });
 
   it("grpcHandlers registration includes all 5 schedule methods", () => {

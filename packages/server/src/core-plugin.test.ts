@@ -36,7 +36,7 @@ vi.mock("@grackle-ai/plugin-core", () => ({
 }));
 
 vi.mock("@grackle-ai/common", () => ({
-  grackle: { Grackle: { typeName: "grackle.Grackle" } },
+  grackle: { GrackleCore: { typeName: "grackle.GrackleCore" } },
   TASK_STATUS: { NOT_STARTED: "NOT_STARTED", WORKING: "WORKING", FAILED: "FAILED" },
   ROOT_TASK_ID: "system",
 }));
@@ -91,7 +91,7 @@ describe("createCorePlugin", () => {
     const registrations = plugin.grpcHandlers!(ctx);
 
     expect(registrations).toHaveLength(1);
-    expect(registrations[0].service).toHaveProperty("typeName", "grackle.Grackle");
+    expect(registrations[0].service).toHaveProperty("typeName", "grackle.GrackleCore");
     expect(registrations[0].handlers).toHaveProperty("listEnvironments");
     expect(registrations[0].handlers).toHaveProperty("spawnAgent");
     // Orchestration handlers must NOT be in the core plugin

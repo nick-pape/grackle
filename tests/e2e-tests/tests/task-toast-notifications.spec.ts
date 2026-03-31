@@ -43,7 +43,7 @@ test.describe("Task State Toast Notifications", { tag: ["@task"] }, () => {
     await navigateToTask(page, "toast-complete");
 
     // Complete the task directly via RPC (not_started → complete)
-    await client.completeTask({ id: task.id as string });
+    await client.orchestration.completeTask({ id: task.id as string });
 
     // "Task complete" toast should appear
     await expect(page.getByText("Task complete", { exact: true })).toBeVisible({ timeout: 10_000 });
@@ -56,7 +56,7 @@ test.describe("Task State Toast Notifications", { tag: ["@task"] }, () => {
     await navigateToTask(page, "toast-fail");
 
     // Set task status to FAILED via UpdateTask
-    await client.updateTask({
+    await client.orchestration.updateTask({
       id: task.id as string,
       title: "",
       description: "",
@@ -77,7 +77,7 @@ test.describe("Task State Toast Notifications", { tag: ["@task"] }, () => {
     await navigateToTask(page, "toast-delete");
 
     // Delete the task via RPC
-    await client.deleteTask({ id: task.id as string });
+    await client.orchestration.deleteTask({ id: task.id as string });
 
     // "Task deleted" toast should appear
     await expect(page.getByText("Task deleted")).toBeVisible({ timeout: 5_000 });
