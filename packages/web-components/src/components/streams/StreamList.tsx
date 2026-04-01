@@ -48,13 +48,6 @@ export function StreamList({ streams, loading, onRefresh }: StreamListProps): JS
     navigate(chatStreamUrl(streamId));
   }, [navigate]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent, action: () => void) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      action();
-    }
-  }, []);
-
   return (
     <div className={styles.container} data-testid="stream-list">
       <div className={styles.header}>
@@ -72,18 +65,16 @@ export function StreamList({ streams, loading, onRefresh }: StreamListProps): JS
       </div>
 
       {/* Pinned System row */}
-      <div
+      <button
+        type="button"
         className={`${styles.systemRow}${isSystemSelected ? ` ${styles.selected}` : ""}`}
-        role="button"
-        tabIndex={0}
         onClick={handleSystemClick}
-        onKeyDown={(e) => handleKeyDown(e, handleSystemClick)}
         data-testid="stream-list-system-row"
-        aria-selected={isSystemSelected}
+        aria-current={isSystemSelected ? "page" : undefined}
       >
         <MessageSquare size={ICON_SIZE} className={styles.streamIcon} />
         <span className={styles.streamName}>System</span>
-      </div>
+      </button>
 
       {/* Named streams */}
       {loading && sortedStreams.length === 0 && (
@@ -95,22 +86,20 @@ export function StreamList({ streams, loading, onRefresh }: StreamListProps): JS
       {sortedStreams.map((stream) => {
         const isSelected = selectedStreamId === stream.id;
         return (
-          <div
+          <button
             key={stream.id}
+            type="button"
             className={`${styles.streamRow}${isSelected ? ` ${styles.selected}` : ""}`}
-            role="button"
-            tabIndex={0}
             onClick={() => handleStreamClick(stream.id)}
-            onKeyDown={(e) => handleKeyDown(e, () => handleStreamClick(stream.id))}
             data-testid={`stream-list-row-${stream.id}`}
-            aria-selected={isSelected}
+            aria-current={isSelected ? "page" : undefined}
           >
             <Radio size={ICON_SIZE} className={styles.streamIcon} />
             <span className={styles.streamName}>{stream.name}</span>
             {stream.subscriberCount > 0 && (
               <span className={styles.subscriberBadge}>{stream.subscriberCount}</span>
             )}
-          </div>
+          </button>
         );
       })}
     </div>

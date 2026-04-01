@@ -124,9 +124,10 @@ export function ChatPage(): JSX.Element {
     }
   }, [latestSession?.id, loadSessionEvents]);
 
-  // Reset loaded session ref when switching streams
+  // Reset loaded session ref and close detail drawer when switching streams
   useEffect(() => {
     loadedSessionRef.current = undefined;
+    setShowDetail(false);
   }, [streamId]);
 
   // Filter + group events for display
@@ -178,7 +179,7 @@ export function ChatPage(): JSX.Element {
 
   // ── Stream mode — not found ───────────────────────────────────────────────
 
-  if (streamId !== undefined && !streamsLoading && !selectedStream) {
+  if (streamId !== undefined && !streamsLoading && !selectedStream && streams.length > 0) {
     return (
       <div className={styles.panelContainer} data-testid="chat-page">
         <EventStream
@@ -233,7 +234,7 @@ export function ChatPage(): JSX.Element {
         </div>
       )}
 
-      {streamId !== undefined && selectedStream && !latestSession && (
+      {streamId !== undefined && selectedStream && !latestSession && !sessionsLoading && (
         <EventStream
           events={[]}
           eventsDropped={0}

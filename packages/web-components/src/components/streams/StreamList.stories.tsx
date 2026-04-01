@@ -82,7 +82,7 @@ export const SystemSelected: Story = {
   play: async ({ canvas }) => {
     const systemRow = canvas.getByTestId("stream-list-system-row");
     await expect(systemRow).toBeInTheDocument();
-    await expect(systemRow).toHaveAttribute("aria-selected", "true");
+    await expect(systemRow).toHaveAttribute("aria-current", "page");
   },
 };
 
@@ -92,8 +92,8 @@ export const StreamSelected: Story = {
   play: async ({ canvas }) => {
     const streamRow = canvas.getByTestId("stream-list-row-stream-001");
     await expect(streamRow).toBeInTheDocument();
-    await expect(streamRow).toHaveAttribute("aria-selected", "true");
+    await expect(streamRow).toHaveAttribute("aria-current", "page");
     const systemRow = canvas.getByTestId("stream-list-system-row");
-    await expect(systemRow).toHaveAttribute("aria-selected", "false");
+    await expect(systemRow).not.toHaveAttribute("aria-current");
   },
 };
