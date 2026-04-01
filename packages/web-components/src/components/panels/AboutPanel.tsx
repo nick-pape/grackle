@@ -1,13 +1,27 @@
 import type { JSX } from "react";
-import type { Environment, Session } from "../../hooks/types.js";
+import type { ConnectionStatus, Environment, Session } from "../../hooks/types.js";
 import styles from "./SettingsPanel.module.scss";
 
 declare const __APP_VERSION__: string;
 
+/** Human-readable label for each connection state. */
+const CONNECTION_LABEL: Record<ConnectionStatus, string> = {
+  connected: "Connected",
+  connecting: "Connecting...",
+  disconnected: "Disconnected",
+};
+
+/** CSS class for the connection dot in each state. */
+const CONNECTION_DOT_CLASS: Record<ConnectionStatus, string> = {
+  connected: styles.aboutDotConnected,
+  connecting: styles.aboutDotConnecting,
+  disconnected: styles.aboutDotDisconnected,
+};
+
 /** Props for the AboutPanel component. */
 interface AboutPanelProps {
-  /** Whether the WebSocket connection to the server is active. */
-  connected: boolean;
+  /** Current connection state of the event stream. */
+  connectionStatus: ConnectionStatus;
   /** List of all environments. */
   environments: Environment[];
   /** List of all sessions. */
@@ -15,7 +29,7 @@ interface AboutPanelProps {
 }
 
 /** About panel showing connection status, environment summary, session count, and version. */
-export function AboutPanel({ connected, environments, sessions }: AboutPanelProps): JSX.Element {
+export function AboutPanel({ connectionStatus, environments, sessions }: AboutPanelProps): JSX.Element {
   const connectedEnvs = environments.filter((e) => e.status === "connected").length;
   const totalEnvs = environments.length;
   const activeSessionCount = sessions.filter((s) => ["running", "idle"].includes(s.status)).length;
@@ -30,8 +44,8 @@ export function AboutPanel({ connected, environments, sessions }: AboutPanelProp
         <div className={styles.aboutItem}>
           <span className={styles.aboutLabel}>Connection</span>
           <span className={styles.aboutValue}>
-            <span className={`${styles.aboutDot} ${connected ? styles.aboutDotConnected : styles.aboutDotDisconnected}`} />
-            {connected ? "Connected" : "Disconnected"}
+            <span className={`${styles.aboutDot} ${CONNECTION_DOT_CLASS[connectionStatus]}`} />
+            {CONNECTION_LABEL[connectionStatus]}
           </span>
         </div>
         <div className={styles.aboutItem}>

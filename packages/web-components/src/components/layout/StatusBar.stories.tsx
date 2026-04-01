@@ -8,7 +8,7 @@ const meta: Meta<typeof StatusBar> = {
   title: "Grackle/Layout/StatusBar",
   tags: ["autodocs"],
   args: {
-    connected: true,
+    connectionStatus: "connected",
     environments: [makeEnvironment({ id: "local", displayName: "Local", status: "connected" })],
     sessions: [makeSession({ status: "running" })],
   },
@@ -30,12 +30,27 @@ export const Connected: Story = {
 /** Disconnected state. */
 export const Disconnected: Story = {
   args: {
-    connected: false,
+    connectionStatus: "disconnected",
     environments: [],
     sessions: [],
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByText("Disconnected")).toBeInTheDocument();
+    await expect(canvas.getByText("0/0 envs")).toBeInTheDocument();
+    await expect(canvas.getByText("0 active")).toBeInTheDocument();
+  },
+};
+
+/** Connecting state shown during reconnection attempts. */
+export const Connecting: Story = {
+  args: {
+    connectionStatus: "connecting",
+    environments: [],
+    sessions: [],
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByLabelText("Connecting...")).toBeInTheDocument();
+    await expect(canvas.getByText("Connecting...")).toBeInTheDocument();
     await expect(canvas.getByText("0/0 envs")).toBeInTheDocument();
     await expect(canvas.getByText("0 active")).toBeInTheDocument();
   },
@@ -83,7 +98,7 @@ export const NoPersonaButton: Story = {
   },
 };
 
-/** Multiple environments — some connected, some not. */
+/** Multiple environments -- some connected, some not. */
 export const MultipleEnvironments: Story = {
   args: {
     environments: [

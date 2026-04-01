@@ -10,10 +10,20 @@
 import { useState, useEffect, useRef } from "react";
 import { ConnectError, Code } from "@connectrpc/connect";
 import { coreClient as grackleClient } from "./useGrackleClient.js";
+import type { ConnectionStatus } from "@grackle-ai/web-components";
 import { PAIR_PATH } from "@grackle-ai/web-components";
 
 /** Reconnect delay in milliseconds. */
-const RECONNECT_DELAY_MS: number = 3_000;
+export const RECONNECT_DELAY_MS: number = 3_000;
+
+/**
+ * Grace period before marking the stream as "connected" when no event has been received.
+ * Matches the reconnect delay so that the two values cannot drift independently.
+ * Must exceed the worst-case ECONNREFUSED propagation time (~2 s on Windows HTTP/2
+ * due to connection-pool reuse) so that a failed reconnect attempt never briefly
+ * shows "Connected" before reverting to "Connecting...".
+ */
+export const CONNECT_GRACE_PERIOD_MS: number = RECONNECT_DELAY_MS;
 
 /** Options for the event stream hook. */
 export interface UseEventStreamOptions {
@@ -29,8 +39,8 @@ export interface UseEventStreamOptions {
 
 /** Return value of the event stream hook. */
 export interface UseEventStreamResult {
-  /** Whether the event stream is currently connected. */
-  connected: boolean;
+  /** Current connection state of the event stream. */
+  connectionStatus: ConnectionStatus;
 }
 
 /**
@@ -38,7 +48,7 @@ export interface UseEventStreamResult {
  * Replaces `useWebSocket` — no more WebSocket transport.
  */
 export function useEventStream(options: UseEventStreamOptions): UseEventStreamResult {
-  const [connected, setConnected] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("connecting");
 
   // Store callbacks in refs so the effect doesn't re-run when they change.
   const onSessionEventRef = useRef(options.onSessionEvent);
@@ -52,23 +62,40 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
 
   useEffect(() => {
     let cancelled: boolean = false;
-    let reconnectTimer: ReturnType<typeof setTimeout>;
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+    let connectTimer: ReturnType<typeof setTimeout> | undefined;
 
     async function connectStream(): Promise<void> {
       if (cancelled) {
         return;
       }
 
+      // Fire onConnect immediately — data loading is optimistic and domain
+      // hooks handle request failures gracefully.  This is kept separate from
+      // the "connected" status so the UI status accurately reflects stream
+      // liveness without delaying data fetching.
+      Promise.resolve(onConnectRef.current?.()).catch(() => {});
+
+      // Transition to "connected" on first data received OR after a grace
+      // period for servers that are alive but idle.
+      // On Windows, HTTP/2 connection-pool reuse means ECONNREFUSED can take
+      // ~2 s to propagate.  3 000 ms ensures the timer is cancelled before it
+      // fires when the server is unreachable (matching the reconnect delay for
+      // symmetry).
+      let markedConnected: boolean = false;
+      const markConnected = (): void => {
+        if (!markedConnected && !cancelled) {
+          markedConnected = true;
+          setConnectionStatus("connected");
+        }
+      };
+      connectTimer = setTimeout(markConnected, CONNECT_GRACE_PERIOD_MS);
+
       try {
         const stream = grackleClient.streamEvents({});
 
-        // Mark connected immediately — ConnectRPC streams don't have a
-        // separate "open" event. The stream object exists once the HTTP
-        // request is initiated. Data loading in onConnect runs optimistically.
-        setConnected(true);
-        Promise.resolve(onConnectRef.current?.()).catch(() => {});
-
         for await (const serverEvent of stream) {
+          markConnected(); // also fire immediately on first data
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- set by cleanup function
           if (cancelled) {
             break;
@@ -96,6 +123,7 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
           }
         }
       } catch (err) {
+        clearTimeout(connectTimer);
         // Redirect to pairing page on unauthenticated error
         if (err instanceof ConnectError && err.code === Code.Unauthenticated) {
           window.location.href = PAIR_PATH;
@@ -103,10 +131,13 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
         }
       }
 
-      // Stream ended or errored — reconnect
+      clearTimeout(connectTimer);
+      // Stream ended or errored — schedule reconnect.
+      // Show "connecting" during the retry delay rather than "disconnected",
+      // so the UI does not oscillate between states on transient drops.
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- set by cleanup function
       if (!cancelled) {
-        setConnected(false);
+        setConnectionStatus("connecting");
         onDisconnectRef.current?.();
         reconnectTimer = setTimeout(() => {
           connectStream().catch(() => {});
@@ -119,9 +150,13 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
     return () => {
       cancelled = true;
       clearTimeout(reconnectTimer);
-      setConnected(false);
+      clearTimeout(connectTimer);
+      // No state update here: React 18 StrictMode double-invokes the cleanup
+      // while the component is still mounted, which can cause unexpected state
+      // flashes. After a real unmount, state updates are silently dropped by
+      // React anyway.
     };
   }, []);
 
-  return { connected };
+  return { connectionStatus };
 }
