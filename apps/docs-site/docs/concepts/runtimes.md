@@ -21,6 +21,19 @@ All four runtimes support the same Grackle features: streaming, tool use, sessio
 
 Goose is provider-agnostic — it can use Anthropic, OpenAI, Google, and many other LLM providers. Configure your Goose provider and model via `goose configure` or environment variables (`GOOSE_PROVIDER`, `GOOSE_MODEL`). Goose must be [installed](https://block.github.io/goose/docs/getting-started/installation/) separately on the system.
 
+## Runtime × environment compatibility
+
+All runtimes are tested across all environment types. Here's the current support matrix:
+
+| Runtime | Local | Docker | SSH | Codespace |
+|---------|:-----:|:------:|:---:|:---------:|
+| **Claude Code** | ✅ | ✅ | ✅ | ✅ |
+| **Copilot** | ✅ | ✅ | ✅ | ✅ |
+| **Codex** | ✅ | ✅ | ✅ | ✅ |
+| **Goose** | ✅ | ✅ | ✅ | ✅ |
+
+Grackle handles credential injection, git repo setup, and agent bootstrapping for each combination. If a runtime needs a specific token on a remote environment (e.g., `GITHUB_TOKEN` for Copilot on Docker), the [token broker](../guides/credentials) pushes it automatically.
+
 ### ACP (Agent Client Protocol)
 
 Grackle also supports runtimes that implement the **Agent Client Protocol** — a cross-vendor standard for agent communication. ACP variants exist for Claude, Copilot, and Codex. Goose natively speaks ACP, so it uses this protocol directly. The other ACP variants use a stdio-based bridge instead of the native SDKs.

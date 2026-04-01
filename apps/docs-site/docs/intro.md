@@ -5,43 +5,37 @@ slug: /
 sidebar_position: 1
 ---
 
-# Grackle
+# Stop babysitting your AI agents
 
-**Run any AI coding agent on any remote environment. Orchestration optional.**
+You have 6 agents running across 4 machines. You're tab-switching between terminals, copy-pasting context from one agent's output into another's prompt, and restarting dead sessions at 2 AM. Every agent has its own CLI, its own auth flow, its own way of crashing silently.
 
-You're running Claude Code on a devbox. Or Codex in a container. Or Copilot over SSH. You wrote a janky script to set it up, it breaks every week, and you can't share it with your team.
+**Grackle is the control plane for AI coding agents.** Configure once, supervise by exception.
 
-Grackle gives you a single platform to run any coding agent on any environment — Docker, SSH, Codespaces, whatever. It handles provisioning, credentials, transport, and lifecycle. You get a CLI, web UI, and MCP server out of the box.
+One platform to run [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview), [Copilot](https://github.com/features/copilot), [Codex](https://openai.com/index/codex/), or [Goose](https://block.github.io/goose/) on any environment — Docker, SSH, Codespaces, local. It handles provisioning, credentials, transport, and lifecycle. You get a CLI, web UI, and MCP server out of the box.
 
-Want agents to share knowledge? There's a findings system. Want one agent to spawn others? There's an MCP for that. Want task trees with dependencies and review gates? Same primitives. But you don't have to use any of that. **Start with one session on one box.**
+![Dashboard — active sessions, task triage, and workspaces](/img/dashboard-projects-tasks.png)
 
 :::warning
 Grackle is pre-1.0 and still experimental. It may have unresolved security issues, annoying bugs, and broken workflows. Not recommended for use in production systems.
 :::
 
-## Philosophy
+## What makes Grackle different
 
-### Environments are just compute
+**Agent IPC** — Parent sessions spawn children with bidirectional pipes. Structured communication between agents — no polling, no shared files, no prompt-stuffing.
 
-Docker, local, SSH, and GitHub Codespaces — it shouldn't matter where an agent runs. Grackle treats environments as interchangeable compute behind a single protocol. Same interface, same results, regardless of where the work happens.
+**Knowledge persistence** — A [semantic knowledge graph](./guides/knowledge-graph) backed by Neo4j. One agent's architectural insight becomes another agent's context automatically. Search by concept, not keyword.
 
-### Runtime agnostic by design
+**Session resilience** — Environments auto-reconnect on disconnect. Suspended sessions resume where they left off. Events buffer during outages and drain on reconnect. No lost work.
 
-The agent loop landscape is wildly unstable. Claude Code, Copilot, Codex — whatever ships next month. Grackle wraps them all behind a standard interface so you can swap runtimes without changing your workflow. Your tooling shouldn't be coupled to whichever vendor is winning this quarter.
+**Multi-vendor, one interface** — Swap runtimes per persona or per task. Your orchestration doesn't break when you switch from Claude to Codex or add Copilot as a second opinion.
 
-### Primitives, not opinions
-
-Grackle doesn't tell you how to orchestrate your agents. It gives you the building blocks — sessions, tasks, findings, personas, an MCP control plane — and lets you compose them however you want. A single remote REPL session uses one primitive. A supervised swarm uses all of them. Same platform, same CLI, same MCP.
-
-### Scales from remote control to swarms
-
-Most tools force a choice: run one agent manually, or build a bespoke swarm framework from scratch. Grackle covers the whole spectrum — start simple, scale up.
+**Plugin architecture** — The server is [composed of plugins](./guides/plugins) that you can toggle on and off. Run the full orchestration stack or strip down to a lightweight session manager.
 
 ## How it fits together
 
 ```mermaid
 graph TD
-    UI["🌐 Web UI"]
+    UI["🌐 Web UI + Chat"]
     CLI["⌨️ CLI"]
     MCP["🔌 MCP Server"]
     UI & CLI & MCP --- S["⚡ Grackle Server"]
@@ -55,31 +49,45 @@ graph TD
     end
 
     subgraph CS["☁️ Codespace"]
-        CS1A["🤖 Claude"] & CS1B["🤖 Claude"]
+        CS1A["🤖 Claude"] & CS1B["🤖 Goose"]
     end
 
     S --- D1 & SSH & CS
 ```
 
-The **Grackle Server** is the control plane. It manages environments, sessions, tasks, and credentials. You interact with it through the **CLI**, **web UI**, or **MCP server**. Inside each environment, **PowerLine** runs the actual agent and streams events back to the server.
+The **Grackle Server** is the control plane. It manages environments, sessions, tasks, and credentials. You interact with it through the **[chat interface](./guides/chat)**, **CLI**, **web UI**, or **[MCP server](./guides/mcp)**. Inside each environment, **[PowerLine](./concepts/powerline)** runs the actual agent and streams events back to the server.
 
 ## Features
 
 | Feature | Description |
 |---|---|
+| **[Chat interface](./guides/chat)** | Natural language command interface — just describe what you want |
 | **Real-time streaming** | Watch agent tool calls and output as they happen |
 | **Git worktree isolation** | Every task gets its own branch — zero interference between agents |
-| **Findings** | Agents post discoveries that become context for other agents |
-| **Multi-runtime** | Claude Code, Copilot, and Codex — swap freely |
-| **Task trees** | Decompose work into parent/child subtasks up to 8 levels deep |
-| **Task dependencies** | Blocked tasks wait for their dependencies to complete |
-| **Personas** | Specialized agent configs with system prompts, tools, and model selection |
-| **Session history** | Every task tracks its full session history — retry and compare |
-| **Review & approval** | Approve or reject completed tasks with feedback |
-| **MCP server** | Expose Grackle's full API as MCP tools for any AI agent |
+| **[Knowledge graph](./guides/knowledge-graph)** | Semantic memory backed by Neo4j — agents share knowledge automatically |
+| **[Findings](./concepts/findings)** | Categorized discoveries shared across agents within a workspace |
+| **Multi-runtime** | Claude Code, Copilot, Codex, and Goose — swap freely |
+| **[Task trees](./concepts/projects-tasks)** | Decompose work into parent/child subtasks up to 8 levels deep |
+| **[Signals](./guides/orchestration#signals)** | SIGTERM, SIGCHLD, cascade kill, orphan adoption — kernel-style process control |
+| **[Personas](./concepts/personas)** | Specialized agent configs with system prompts, tools, and model selection |
+| **[Scheduled triggers](./guides/scheduled-triggers)** | Cron-style automated task creation |
+| **[Plugin system](./guides/plugins)** | Compose server capabilities — orchestration, scheduling, knowledge graph |
+| **[MCP server](./guides/mcp)** | Expose Grackle's full API as MCP tools for any AI agent |
+
+## Scales from remote control to swarms
+
+| Level | What you get | What you use |
+|-------|-------------|-------------|
+| **1. Remote control** | One agent, one environment, you watch it work | Sessions, environments |
+| **2. Structured tasks** | Break work into tasks with branches and review gates | + Projects, tasks, personas |
+| **3. Parallel agents** | Multiple agents working independently, sharing findings | + Multiple environments, findings |
+| **4. Orchestrator pattern** | Parent agent decomposes work and coordinates child agents via MCP | + Task trees, MCP broker, signals |
+
+You don't need to adopt everything at once. Each level builds on the last — see the [orchestration guide](./guides/orchestration) for details.
 
 ## Next steps
 
 - **[Getting Started](./getting-started)** — Install Grackle and run your first agent in 5 minutes
+- **[Credential Setup](./guides/credentials)** — Configure API keys for Claude, Copilot, Codex, and Goose
 - **[Concepts](./concepts/environments)** — Understand environments, sessions, tasks, and the rest of the model
-- **[Guides](./guides/auth)** — Practical guides for auth, orchestration, the web UI, and more
+- **[Guides](./guides/web-ui)** — Web UI, orchestration, chat, plugins, and more

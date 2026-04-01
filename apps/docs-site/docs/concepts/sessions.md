@@ -50,6 +50,9 @@ stateDiagram-v2
     running --> failed: error
     running --> interrupted: kill
     idle --> interrupted: kill
+    running --> suspended: suspend
+    idle --> suspended: suspend
+    suspended --> running: resume
     completed --> running: resume
     interrupted --> running: resume
 ```
@@ -60,6 +63,25 @@ stateDiagram-v2
 - **completed** — Agent finished successfully
 - **failed** — Agent hit an error
 - **interrupted** — Manually killed
+- **suspended** — Parked in memory, not consuming compute (see below)
+
+## Session parking (suspend/resume)
+
+Sessions can be **suspended** — parked with their full conversation state preserved but not consuming compute. This is Grackle's analog to SIGSTOP/SIGCONT in Unix.
+
+```bash
+# Suspend a running or idle session
+grackle session suspend <session-id>
+
+# Resume it later — picks up exactly where it left off
+grackle session resume <session-id>
+```
+
+Suspended sessions:
+- Keep their full conversation history and context
+- Don't consume tokens or compute while parked
+- Can be resumed instantly on the same or a different environment
+- Are useful for pausing expensive agents during human review
 
 ## Sending input
 
