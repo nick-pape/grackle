@@ -169,7 +169,7 @@ export function ChatPage(): JSX.Element {
       sendInput(latestSession.id, pendingMessage).catch(() => { showToast("Failed to send message", "error"); });
       setPendingMessage(undefined);
     }
-  }, [pendingMessage, isSessionIdle, latestSession?.id, sendInput]);
+  }, [pendingMessage, isSessionIdle, latestSession?.id, sendInput, showToast]);
 
   const handleStartTask = useCallback(
     (taskId: string, personaId?: string, environmentId?: string, text?: string) => {
