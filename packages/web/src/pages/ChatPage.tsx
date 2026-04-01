@@ -173,13 +173,13 @@ export function ChatPage(): JSX.Element {
     return <ChatShimmer />;
   }
 
-  if (streamId !== undefined && streamsLoading && !selectedStream) {
+  if (streamId !== undefined && !selectedStream && (streamsLoading || !streamsLoadedOnce)) {
     return <ChatShimmer />;
   }
 
   // ── Stream mode — not found ───────────────────────────────────────────────
 
-  if (streamId !== undefined && !streamsLoading && !selectedStream && streamsLoadedOnce) {
+  if (streamId !== undefined && !selectedStream) {
     return (
       <div className={styles.panelContainer} data-testid="chat-page">
         <EventStream
@@ -250,7 +250,7 @@ export function ChatPage(): JSX.Element {
           emptyState={
             streamId === undefined
               ? <ChatEmptyState hasLocalEnvironment={!!localEnvironment} />
-              : <StreamNoSessionState streamName={selectedStream?.name ?? ""} />
+              : undefined
           }
           onShowToast={showToast}
         />

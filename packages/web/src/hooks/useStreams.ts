@@ -8,7 +8,7 @@
  * @module
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import type { StreamData, GrackleEvent, UseStreamsResult } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
 import { coreClient as grackleClient } from "./useGrackleClient.js";
@@ -26,15 +26,22 @@ export function useStreams(): UseStreamsResult {
   const [streams, setStreams] = useState<StreamData[]>([]);
   const [streamsLoadedOnce, setStreamsLoadedOnce] = useState(false);
   const { loading: streamsLoading, track: trackStreams } = useLoadingState();
+  /** Incremented on disconnect so in-flight responses from the previous connection are discarded. */
+  const epochRef = useRef(0);
 
   const loadStreams = useCallback(async (): Promise<void> => {
+    const myEpoch = epochRef.current;
     try {
       const resp = await trackStreams(grackleClient.listStreams({}));
-      setStreams(resp.streams.map(protoToStream));
+      if (epochRef.current === myEpoch) {
+        setStreams(resp.streams.map(protoToStream));
+      }
     } catch {
       // empty
     } finally {
-      setStreamsLoadedOnce(true);
+      if (epochRef.current === myEpoch) {
+        setStreamsLoadedOnce(true);
+      }
     }
   }, [trackStreams]);
 
@@ -45,7 +52,7 @@ export function useStreams(): UseStreamsResult {
 
   const domainHook: DomainHook = {
     onConnect: loadStreams,
-    onDisconnect: () => { setStreams([]); setStreamsLoadedOnce(false); },
+    onDisconnect: () => { epochRef.current += 1; setStreams([]); setStreamsLoadedOnce(false); },
     handleEvent,
   };
 
