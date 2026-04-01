@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 01 Apr 2026 03:52:53 GMT and should not be manually modified.
+This log was last generated on Wed, 01 Apr 2026 16:08:37 GMT and should not be manually modified.
+
+## 0.107.2
+Wed, 01 Apr 2026 16:08:37 GMT
+
+### Patches
+
+- Add @grackle-ai/web-components to version policy so it is published to npm
 
 ## 0.107.1
 Wed, 01 Apr 2026 03:52:53 GMT

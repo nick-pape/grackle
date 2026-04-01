@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.107.2",
+      "tag": "@grackle-ai/cli_v0.107.2",
+      "date": "Wed, 01 Apr 2026 16:08:37 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add @grackle-ai/web-components to version policy so it is published to npm"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.107.1",
       "tag": "@grackle-ai/cli_v0.107.1",
       "date": "Wed, 01 Apr 2026 03:52:53 GMT",
