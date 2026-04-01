@@ -133,6 +133,7 @@ export type {
   UsePluginsResult, PluginData,
   StreamData, StreamSubscriberData, UseStreamsResult,
   DomainHook,
+  ConnectionStatus,
 } from "./hooks/types.js";
 export {
   isObject, warnBadPayload, isGrackleEvent, isSessionEvent,

@@ -7,7 +7,7 @@ const meta: Meta<typeof AboutPanel> = {
   title: "App/Panels/AboutPanel",
   component: AboutPanel,
   args: {
-    connected: true,
+    connectionStatus: "connected",
     environments: [],
     sessions: [],
   },
@@ -29,17 +29,27 @@ export const ConnectedEmpty: Story = {
 /** Disconnected state. */
 export const Disconnected: Story = {
   args: {
-    connected: false,
+    connectionStatus: "disconnected",
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByText("Disconnected")).toBeInTheDocument();
   },
 };
 
+/** Connecting state shown during reconnection attempts. */
+export const Connecting: Story = {
+  args: {
+    connectionStatus: "connecting",
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("Connecting...")).toBeInTheDocument();
+  },
+};
+
 /** Shows environment and session counts when data is present. */
 export const WithEnvironmentsAndSessions: Story = {
   args: {
-    connected: true,
+    connectionStatus: "connected",
     environments: [
       buildEnvironment({ id: "env-1", status: "connected" }),
       buildEnvironment({ id: "env-2", status: "disconnected" }),

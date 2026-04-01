@@ -16,6 +16,9 @@ export interface DomainHook {
   handleEvent(event: GrackleEvent): boolean;
 }
 
+/** Connection state of the event stream. */
+export type ConnectionStatus = "connected" | "connecting" | "disconnected";
+
 // ─── Data interfaces ──────────────────────────────────────────────────────────
 
 /**
