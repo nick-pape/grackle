@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 01 Apr 2026 03:01:05 GMT and should not be manually modified.
+This log was last generated on Wed, 01 Apr 2026 03:52:53 GMT and should not be manually modified.
+
+## 0.107.1
+Wed, 01 Apr 2026 03:52:53 GMT
+
+### Patches
+
+- Improve error handling when sending input to sessions — show an error toast instead of silently discarding failures.
 
 ## 0.107.0
 Wed, 01 Apr 2026 03:01:05 GMT
