@@ -40,7 +40,7 @@ export interface PluginClientEntry {
 export const PLUGIN_REGISTRY: Readonly<Record<string, PluginClientEntry | undefined>> = {
   core: {
     navItems: TABS.filter((t) => CORE_VIEWS.has(t.view)),
-    domainHookKeys: ["environments", "sessions", "workspaces", "tokens", "credentials", "codespaces", "plugins"],
+    domainHookKeys: ["environments", "sessions", "workspaces", "tokens", "credentials", "codespaces", "streams", "plugins"],
   },
   orchestration: {
     navItems: TABS.filter((t) => ORCHESTRATION_VIEWS.has(t.view)),

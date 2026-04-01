@@ -28,6 +28,8 @@ import type {
   PersonaData,
   ScheduleData,
   UsageStats,
+  StreamData,
+  StreamSubscriberData,
 } from "@grackle-ai/web-components";
 import type { GraphNode, GraphLink } from "./useKnowledge.js";
 
@@ -248,5 +250,28 @@ export function protoToGraphLink(p: grackle.KnowledgeEdgeProto): GraphLink {
     source: p.fromId,
     target: p.toId,
     type: p.type,
+  };
+}
+
+/** Convert a proto StreamSubscriberInfo to the UI StreamSubscriberData type. */
+export function protoToStreamSubscriber(p: grackle.StreamSubscriberInfo): StreamSubscriberData {
+  return {
+    subscriptionId: p.subscriptionId,
+    sessionId: p.sessionId,
+    fd: p.fd,
+    permission: p.permission,
+    deliveryMode: p.deliveryMode,
+    createdBySpawn: p.createdBySpawn,
+  };
+}
+
+/** Convert a proto StreamInfo to the UI StreamData type. */
+export function protoToStream(p: grackle.StreamInfo): StreamData {
+  return {
+    id: p.id,
+    name: p.name,
+    subscriberCount: p.subscriberCount,
+    messageBufferDepth: p.messageBufferDepth,
+    subscribers: p.subscribers.map(protoToStreamSubscriber),
   };
 }

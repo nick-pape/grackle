@@ -25,6 +25,7 @@ import { usePersonas } from "./usePersonas.js";
 import { useSchedules } from "./useSchedules.js";
 import { useKnowledge } from "./useKnowledge.js";
 import { useNotifications } from "./useNotifications.js";
+import { useStreams } from "./useStreams.js";
 import { usePlugins } from "./usePlugins.js";
 import { coreClient as grackleClient } from "./useGrackleClient.js";
 import { protoToUsageStats } from "./proto-converters.js";
@@ -100,6 +101,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   const schedulesHook = useSchedules();
   const knowledgeHook = useKnowledge();
   const notificationsHook = useNotifications();
+  const streamsHook = useStreams();
   const pluginsHook = usePlugins();
 
   // --- Domain hook registry ---
@@ -118,6 +120,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     ...(activeHookKeys.has("schedules")    ? [schedulesHook.domainHook]    : []),
     ...(activeHookKeys.has("knowledge")    ? [knowledgeHook.domainHook]    : []),
     ...(activeHookKeys.has("notifications") ? [notificationsHook.domainHook] : []),
+    ...(activeHookKeys.has("streams")       ? [streamsHook.domainHook]       : []),
     ...(activeHookKeys.has("plugins") ? [pluginsHook.domainHook] : []),
   ];
 
@@ -219,6 +222,11 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       event.type === "task.started"
     ) {
       sessionsHook.loadSessions().catch(() => {});
+    }
+
+    // Streams need reloading when sessions start/stop (subscriber counts change)
+    if (event.type === "session.started" || event.type === "session.stopped") {
+      streamsHook.loadStreams().catch(() => {});
     }
   }
 
@@ -364,6 +372,14 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       updateSchedule: schedulesHook.updateSchedule,
       deleteSchedule: schedulesHook.deleteSchedule,
       domainHook: schedulesHook.domainHook,
+    },
+    streams: {
+      streams: streamsHook.streams,
+      streamsLoading: streamsHook.streamsLoading,
+      streamsLoadedOnce: streamsHook.streamsLoadedOnce,
+      streamsLoadError: streamsHook.streamsLoadError,
+      loadStreams: streamsHook.loadStreams,
+      domainHook: streamsHook.domainHook,
     },
     knowledge: knowledgeHook,
     plugins: {

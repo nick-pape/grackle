@@ -23,6 +23,7 @@ import { useSchedules } from "./useSchedules.js";
 import { useKnowledge } from "./useKnowledge.js";
 import { useNotifications } from "./useNotifications.js";
 import { usePlugins } from "./usePlugins.js";
+import { useStreams } from "./useStreams.js";
 
 // ---------------------------------------------------------------------------
 // Mock grackleClient (all hooks import it)
@@ -78,6 +79,7 @@ const mockClient = vi.hoisted(() => ({
   streamEvents: vi.fn(),
   listPlugins: vi.fn().mockResolvedValue({ plugins: [] }),
   setPluginEnabled: vi.fn(),
+  listStreams: vi.fn().mockResolvedValue({ streams: [] }),
 }));
 
 vi.mock("./useGrackleClient.js", () => ({
@@ -102,6 +104,8 @@ vi.mock("./proto-converters.js", () => ({
   protoToGraphNode: (x: unknown) => x,
   protoToGraphLink: (x: unknown) => x,
   protoToUsageStats: (x: unknown) => x,
+  protoToStream: (x: unknown) => x,
+  protoToStreamSubscriber: (x: unknown) => x,
 }));
 
 vi.mock("@grackle-ai/web-components", async (importOriginal) => {
@@ -132,10 +136,11 @@ type _Kn = AssertHasDomainHook<ReturnType<typeof useKnowledge>>;
 type _Not = AssertHasDomainHook<ReturnType<typeof useNotifications>>;
 
 type _Plg = AssertHasDomainHook<ReturnType<typeof usePlugins>>;
+type _Str = AssertHasDomainHook<ReturnType<typeof useStreams>>;
 
 // Suppress unused-variable warnings — these exist solely for the type check
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-type _All = _Env | _Ses | _Ws | _Tsk | _Fnd | _Tok | _Crd | _Cs | _Per | _Sch | _Kn | _Not | _Plg;
+type _All = _Env | _Ses | _Ws | _Tsk | _Fnd | _Tok | _Crd | _Cs | _Per | _Sch | _Kn | _Not | _Plg | _Str;
 
 // ---------------------------------------------------------------------------
 // Runtime tests
@@ -167,10 +172,11 @@ const ALL_HOOKS = [
   { name: "useKnowledge", hook: useKnowledge },
   { name: "useNotifications", hook: useNotifications },
   { name: "usePlugins", hook: usePlugins },
+  { name: "useStreams", hook: useStreams },
 ] as const;
 
 /** Expected number of domain hooks. Bump this when adding a new hook. */
-const EXPECTED_HOOK_COUNT = 13;
+const EXPECTED_HOOK_COUNT = 14;
 
 describe("DomainHook registry", () => {
   it(`has exactly ${EXPECTED_HOOK_COUNT} registered hooks`, () => {

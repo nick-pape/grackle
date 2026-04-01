@@ -1,0 +1,206 @@
+// =============================================================================
+// StreamDetailPanel — right pull-out drawer for stream details
+// =============================================================================
+
+.panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 350px;
+  background: var(--bg-surface, #1a1a2e);
+  border-left: 1px solid var(--border-default, #333);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  z-index: 10;
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--border-default, #333);
+  flex-shrink: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: var(--text-secondary, #999);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  flex-shrink: 0;
+
+  &:hover {
+    color: var(--text-primary, #fff);
+  }
+}
+
+.body {
+  padding: 16px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.section {
+  margin-bottom: 20px;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-disabled, #666);
+  margin-bottom: 8px;
+  letter-spacing: 0.05em;
+}
+
+.metaRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.metaKey {
+  color: var(--text-secondary, #999);
+  flex-shrink: 0;
+  min-width: 100px;
+}
+
+.metaValue {
+  color: var(--text-primary, #eee);
+  font-family: monospace;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subscriberCard {
+  border: 1px solid var(--border-default, #333);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.subscriberHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.sessionLink {
+  background: none;
+  border: none;
+  color: var(--accent-blue, #4A9EFF);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: monospace;
+  padding: 0;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.badges {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--bg-inset, #222);
+  color: var(--text-secondary, #aaa);
+}
+
+.badgeRw {
+  composes: badge;
+  background: rgba(74, 158, 255, 0.15);
+  color: var(--accent-blue, #4A9EFF);
+}
+
+.badgeR {
+  composes: badge;
+  background: rgba(100, 200, 100, 0.15);
+  color: var(--accent-green, #4CAF50);
+}
+
+.badgeW {
+  composes: badge;
+  background: rgba(255, 165, 0, 0.15);
+  color: var(--accent-yellow, #FFA500);
+}
+
+.badgeAsync {
+  composes: badge;
+  background: rgba(128, 90, 213, 0.15);
+  color: #a78bfa;
+}
+
+.badgeSync {
+  composes: badge;
+}
+
+.badgeDetach {
+  composes: badge;
+  background: rgba(255, 80, 80, 0.15);
+  color: var(--accent-red, #ef4444);
+}
+
+.spawnTag {
+  composes: badge;
+  font-size: 10px;
+}
+
+.fdNumber {
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--text-disabled, #666);
+}
+
+.emptySubscribers {
+  font-size: 13px;
+  color: var(--text-disabled, #666);
+  font-style: italic;
+}

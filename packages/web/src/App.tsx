@@ -40,7 +40,7 @@ import { SettingsAboutTab } from "./pages/settings/SettingsAboutTab.js";
 import { SettingsShortcutsTab } from "./pages/settings/SettingsShortcutsTab.js";
 import { SettingsPluginsTab } from "./pages/settings/SettingsPluginsTab.js";
 import { GlobalShortcuts } from "./components/layout/GlobalShortcuts.js";
-import { WithTaskSidebar, WithEnvironmentSidebar, WithFindingsSidebar, WithSettingsSidebar, WithKnowledgeSidebar } from "./components/layout/WithSidebar.js";
+import { WithTaskSidebar, WithEnvironmentSidebar, WithFindingsSidebar, WithSettingsSidebar, WithKnowledgeSidebar, WithStreamSidebar } from "./components/layout/WithSidebar.js";
 import { FindingsListPage } from "./pages/FindingsListPage.js";
 import { FindingDetailPage } from "./pages/FindingDetailPage.js";
 import { SetupWizard } from "./pages/SetupWizard.js";
@@ -209,8 +209,13 @@ function AppRoutes(): JSX.Element {
       <Route element={<AppShell />}>
         {/* Pages without sidebar */}
         <Route index element={<EmptyPage />} />
-        <Route path="chat" element={<ChatPage />} />
         <Route path="sessions/new" element={<NewChatPage />} />
+
+        {/* Chat sidebar (streams list) */}
+        <Route element={<WithStreamSidebar />}>
+          <Route path="chat" element={<ChatPage />} />
+          <Route path="chat/:streamId" element={<ChatPage />} />
+        </Route>
         <Route path="sessions/:sessionId" element={<SessionPage />} />
 
         {/* Knowledge sidebar (knowledge plugin) */}
