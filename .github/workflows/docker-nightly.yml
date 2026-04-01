@@ -47,7 +47,7 @@ jobs:
       # about, not whatever was last published to npm.
       - name: Resolve Grackle version from repo
         id: version
-        run: echo "version=$(node -p "require('./common/config/rush/version-policies.json')[0].version")" >> "$GITHUB_OUTPUT"
+        run: echo version=$(node -p "require('./common/config/rush/version-policies.json').find(p => p.policyName === 'grackle').version") >> "$GITHUB_OUTPUT"
 
       - uses: docker/build-push-action@v6
         with:
