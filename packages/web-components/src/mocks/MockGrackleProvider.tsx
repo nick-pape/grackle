@@ -1172,6 +1172,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         streams: [],
         streamsLoading: false,
         streamsLoadedOnce: true,
+        streamsLoadError: false,
         loadStreams: async () => {},
         domainHook: NOOP_DOMAIN_HOOK,
       },

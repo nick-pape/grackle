@@ -623,6 +623,8 @@ export interface UseStreamsResult {
   streamsLoading: boolean;
   /** True after at least one loadStreams attempt has completed (success or error). */
   streamsLoadedOnce: boolean;
+  /** True if the most recent loadStreams call failed (e.g. RPC/network error). */
+  streamsLoadError: boolean;
   /** Request the current stream list from the server. */
   loadStreams: () => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */

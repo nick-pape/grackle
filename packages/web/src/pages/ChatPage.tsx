@@ -51,6 +51,20 @@ function StreamNotFoundState(): JSX.Element {
   );
 }
 
+/** Empty state when streams failed to load (network/RPC error). */
+function StreamUnavailableState(): JSX.Element {
+  return (
+    <div className={styles.emptyState} data-testid="stream-unavailable-state">
+      <div className={styles.emptyTitle}>Stream unavailable</div>
+      <div className={styles.emptyDescription}>
+        The stream could not be loaded. It may have been deleted, or there may be a temporary
+        network problem.{" "}
+        <Link to={CHAT_URL}>Back to System</Link>
+      </div>
+    </div>
+  );
+}
+
 /** Chat page — shows System session or a named IPC stream. */
 export function ChatPage(): JSX.Element {
   const { streamId } = useParams<{ streamId?: string }>();
@@ -60,7 +74,7 @@ export function ChatPage(): JSX.Element {
     sessions: { sessions, sessionsLoading, events, eventsDropped, taskSessions, loadTaskSessions, loadSessionEvents, kill, stopGraceful, sendInput, spawn },
     environments: { environments, provisionEnvironment },
     personas: { personas },
-    streams: { streams, streamsLoading, streamsLoadedOnce },
+    streams: { streams, streamsLoading, streamsLoadedOnce, streamsLoadError },
   } = useGrackle();
   const { showToast } = useToast();
 
@@ -185,7 +199,7 @@ export function ChatPage(): JSX.Element {
         <EventStream
           events={[]}
           eventsDropped={0}
-          emptyState={<StreamNotFoundState />}
+          emptyState={streamsLoadError ? <StreamUnavailableState /> : <StreamNotFoundState />}
           onShowToast={showToast}
         />
       </div>

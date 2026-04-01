@@ -377,6 +377,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       streams: streamsHook.streams,
       streamsLoading: streamsHook.streamsLoading,
       streamsLoadedOnce: streamsHook.streamsLoadedOnce,
+      streamsLoadError: streamsHook.streamsLoadError,
       loadStreams: streamsHook.loadStreams,
       domainHook: streamsHook.domainHook,
     },
