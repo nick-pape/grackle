@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.106.3",
+      "tag": "@grackle-ai/cli_v0.106.3",
+      "date": "Wed, 01 Apr 2026 00:41:45 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Show Connecting... status in StatusBar and AboutPanel during event stream reconnection attempts"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.106.2",
       "tag": "@grackle-ai/cli_v0.106.2",
       "date": "Tue, 31 Mar 2026 22:07:04 GMT",
