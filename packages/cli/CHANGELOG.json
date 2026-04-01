@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.107.1",
+      "tag": "@grackle-ai/cli_v0.107.1",
+      "date": "Wed, 01 Apr 2026 03:52:53 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Improve error handling when sending input to sessions — show an error toast instead of silently discarding failures."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.107.0",
       "tag": "@grackle-ai/cli_v0.107.0",
       "date": "Wed, 01 Apr 2026 03:01:05 GMT",
