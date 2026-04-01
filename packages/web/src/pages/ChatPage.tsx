@@ -60,7 +60,7 @@ export function ChatPage(): JSX.Element {
     sessions: { sessions, sessionsLoading, events, eventsDropped, taskSessions, loadTaskSessions, loadSessionEvents, kill, stopGraceful, sendInput, spawn },
     environments: { environments, provisionEnvironment },
     personas: { personas },
-    streams: { streams, streamsLoading },
+    streams: { streams, streamsLoading, streamsLoadedOnce },
   } = useGrackle();
   const { showToast } = useToast();
 
@@ -179,7 +179,7 @@ export function ChatPage(): JSX.Element {
 
   // ── Stream mode — not found ───────────────────────────────────────────────
 
-  if (streamId !== undefined && !streamsLoading && !selectedStream && streams.length > 0) {
+  if (streamId !== undefined && !streamsLoading && !selectedStream && streamsLoadedOnce) {
     return (
       <div className={styles.panelContainer} data-testid="chat-page">
         <EventStream

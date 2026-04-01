@@ -621,6 +621,8 @@ export interface UseStreamsResult {
   streams: StreamData[];
   /** Whether the stream list is currently being loaded. */
   streamsLoading: boolean;
+  /** True after at least one loadStreams attempt has completed (success or error). */
+  streamsLoadedOnce: boolean;
   /** Request the current stream list from the server. */
   loadStreams: () => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */

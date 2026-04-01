@@ -24,6 +24,7 @@ export type { UseStreamsResult } from "@grackle-ai/web-components";
  */
 export function useStreams(): UseStreamsResult {
   const [streams, setStreams] = useState<StreamData[]>([]);
+  const [streamsLoadedOnce, setStreamsLoadedOnce] = useState(false);
   const { loading: streamsLoading, track: trackStreams } = useLoadingState();
 
   const loadStreams = useCallback(async (): Promise<void> => {
@@ -32,6 +33,8 @@ export function useStreams(): UseStreamsResult {
       setStreams(resp.streams.map(protoToStream));
     } catch {
       // empty
+    } finally {
+      setStreamsLoadedOnce(true);
     }
   }, [trackStreams]);
 
@@ -42,13 +45,14 @@ export function useStreams(): UseStreamsResult {
 
   const domainHook: DomainHook = {
     onConnect: loadStreams,
-    onDisconnect: () => { setStreams([]); },
+    onDisconnect: () => { setStreams([]); setStreamsLoadedOnce(false); },
     handleEvent,
   };
 
   return {
     streams,
     streamsLoading,
+    streamsLoadedOnce,
     loadStreams,
     handleEvent,
     domainHook,

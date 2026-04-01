@@ -40,6 +40,11 @@ describe("useStreams initial state", () => {
     const { result } = renderHook(() => useStreams());
     expect(result.current.streamsLoading).toBe(false);
   });
+
+  it("streamsLoadedOnce starts false", () => {
+    const { result } = renderHook(() => useStreams());
+    expect(result.current.streamsLoadedOnce).toBe(false);
+  });
 });
 
 describe("useStreams.loadStreams", () => {
@@ -65,6 +70,24 @@ describe("useStreams.loadStreams", () => {
     await act(async () => { await result.current.loadStreams(); });
 
     expect(result.current.streams).toEqual([]);
+  });
+
+  it("sets streamsLoadedOnce to true after successful load", async () => {
+    mockClient.listStreams.mockResolvedValueOnce({ streams: [] });
+    const { result } = renderHook(() => useStreams());
+
+    await act(async () => { await result.current.loadStreams(); });
+
+    expect(result.current.streamsLoadedOnce).toBe(true);
+  });
+
+  it("sets streamsLoadedOnce to true even after an error", async () => {
+    mockClient.listStreams.mockRejectedValueOnce(new Error("network error"));
+    const { result } = renderHook(() => useStreams());
+
+    await act(async () => { await result.current.loadStreams(); });
+
+    expect(result.current.streamsLoadedOnce).toBe(true);
   });
 
   it("streamsLoading flips true then false", async () => {
