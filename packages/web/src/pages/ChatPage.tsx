@@ -91,7 +91,7 @@ export function ChatPage(): JSX.Element {
   // so the first user message is always a follow-up, not baked into the prompt.
   useEffect(() => {
     if (pendingMessage && latestSession && isSessionIdle) {
-      sendInput(latestSession.id, pendingMessage).catch(() => {});
+      sendInput(latestSession.id, pendingMessage).catch(() => { showToast("Failed to send message", "error"); });
       setPendingMessage(undefined);
     }
   }, [pendingMessage, isSessionIdle, latestSession?.id, sendInput]);
@@ -146,7 +146,7 @@ export function ChatPage(): JSX.Element {
           environmentId={latestSession!.environmentId}
           personas={personas}
           environments={environments}
-          onSendInput={(sid, text) => { sendInput(sid, text).catch(() => {}); }}
+          onSendInput={(sid, text) => { sendInput(sid, text).catch(() => { showToast("Failed to send message", "error"); }); }}
           onSpawn={(eid, prompt, pid) => { spawn(eid, prompt, pid).catch(() => {}); }}
           onStartTask={(tid, pid, eid) => { startTask(tid, pid, eid).catch(() => {}); }}
           onProvisionEnvironment={(eid) => { provisionEnvironment(eid).catch(() => {}); }}
@@ -160,7 +160,7 @@ export function ChatPage(): JSX.Element {
           environmentId={localEnvironment.id}
           personas={personas}
           environments={environments}
-          onSendInput={(sid, text) => { sendInput(sid, text).catch(() => {}); }}
+          onSendInput={(sid, text) => { sendInput(sid, text).catch(() => { showToast("Failed to send message", "error"); }); }}
           onSpawn={(eid, prompt, pid) => { spawn(eid, prompt, pid).catch(() => {}); }}
           onStartTask={handleStartTask}
           onProvisionEnvironment={(eid) => { provisionEnvironment(eid).catch(() => {}); }}
