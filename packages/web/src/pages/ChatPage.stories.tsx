@@ -34,3 +34,12 @@ export const EmptyState: Story = {
     await expect(canvas.getByText("Welcome to Grackle")).toBeInTheDocument();
   },
 };
+
+/** Stream-not-found state when navigating to an unknown stream ID. */
+export const StreamNotFound: Story = {
+  decorators: [withMockGrackleRoute(["/chat/unknown-stream-id"], "/chat/:streamId")],
+  play: async ({ canvas }) => {
+    await expect(canvas.getByTestId("chat-page")).toBeInTheDocument();
+    await expect(canvas.getByTestId("stream-not-found-state")).toBeInTheDocument();
+  },
+};

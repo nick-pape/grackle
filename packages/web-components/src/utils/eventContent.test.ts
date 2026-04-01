@@ -3,6 +3,7 @@ import {
   isContentBearingEvent,
   getEventCopyText,
   formatEventsAsMarkdown,
+  formatForwardEnvelope,
 } from "./eventContent.js";
 import type { SessionEvent } from "../hooks/types.js";
 import type { DisplayEvent } from "./sessionEvents.js";
@@ -270,5 +271,83 @@ describe("formatEventsAsMarkdown", () => {
     const md = formatEventsAsMarkdown([event]);
     expect(md).toContain("full diff content here");
     expect(md).not.toContain("short result");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// formatForwardEnvelope
+// ---------------------------------------------------------------------------
+
+describe("formatForwardEnvelope", () => {
+  it("wraps content in forwarding envelope markers", () => {
+    const events: DisplayEvent[] = [
+      makeDisplayEvent({ eventType: "text", content: "Hello" }),
+    ];
+    const result = formatForwardEnvelope("my-env", events);
+    expect(result).toContain("--- Forwarded from my-env ---");
+    expect(result).toContain("--- End forwarded ---");
+  });
+
+  it("includes the formatted event markdown in the body", () => {
+    const events: DisplayEvent[] = [
+      makeDisplayEvent({ eventType: "user_input", content: "Fix the bug" }),
+    ];
+    const result = formatForwardEnvelope("staging", events);
+    expect(result).toContain("**User**");
+    expect(result).toContain("Fix the bug");
+  });
+
+  it("includes the sourceLabel in the header", () => {
+    const result = formatForwardEnvelope("prod-env / main", [
+      makeDisplayEvent({ eventType: "text", content: "done" }),
+    ]);
+    expect(result).toContain("--- Forwarded from prod-env / main ---");
+  });
+
+  it("sanitizes newlines in sourceLabel to spaces", () => {
+    const result = formatForwardEnvelope("env\nwith\nnewlines", [
+      makeDisplayEvent({ eventType: "text", content: "x" }),
+    ]);
+    expect(result).toContain("--- Forwarded from env with newlines ---");
+  });
+
+  it("sanitizes --- sequences in sourceLabel to em-dashes", () => {
+    const result = formatForwardEnvelope("env---name", [
+      makeDisplayEvent({ eventType: "text", content: "x" }),
+    ]);
+    expect(result).toContain("--- Forwarded from env\u2014name ---");
+    expect(result).not.toContain("env---name");
+  });
+
+  it("envelope body starts after header and ends before footer", () => {
+    const events: DisplayEvent[] = [
+      makeDisplayEvent({ eventType: "text", content: "line one" }),
+    ];
+    const result = formatForwardEnvelope("env-1", events);
+    const headerEnd = result.indexOf("--- Forwarded from env-1 ---") + "--- Forwarded from env-1 ---".length;
+    const footerStart = result.indexOf("--- End forwarded ---");
+    const body = result.slice(headerEnd, footerStart).trim();
+    expect(body).toContain("line one");
+  });
+
+  it("skips non-content-bearing events in the body", () => {
+    const events: DisplayEvent[] = [
+      makeDisplayEvent({ eventType: "text", content: "visible" }),
+      makeDisplayEvent({ eventType: "status", content: "running" }),
+    ];
+    const result = formatForwardEnvelope("env", events);
+    expect(result).toContain("visible");
+    expect(result).not.toContain("running");
+  });
+
+  it("formats multiple events separated by blank lines within the envelope", () => {
+    const events: DisplayEvent[] = [
+      makeDisplayEvent({ eventType: "user_input", content: "first" }),
+      makeDisplayEvent({ eventType: "text", content: "second" }),
+    ];
+    const result = formatForwardEnvelope("env", events);
+    expect(result).toContain("\n\n");
+    expect(result).toContain("first");
+    expect(result).toContain("second");
   });
 });

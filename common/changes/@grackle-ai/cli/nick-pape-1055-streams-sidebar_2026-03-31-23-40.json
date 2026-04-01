@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Show Connecting... status in StatusBar and AboutPanel during event stream reconnection attempts",
+      "comment": "Add streams sidebar and detail drawer to Chat page with IPC stream listing and stream detail panel",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }

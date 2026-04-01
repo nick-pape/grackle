@@ -181,3 +181,29 @@ export function formatEventsAsMarkdown(events: DisplayEvent[]): string {
 
   return parts.join("\n\n");
 }
+
+/**
+ * Wraps formatted event markdown in a forwarding envelope.
+ *
+ * The envelope identifies the source session and delimits the forwarded
+ * content so the receiving agent can distinguish it from new input.
+ *
+ * @param sourceLabel - A human-readable label for the source (e.g. environment name).
+ * @param events - The events to format and enclose.
+ * @returns The complete envelope string ready to pass to `sendInput`.
+ */
+export function formatForwardEnvelope(sourceLabel: string, events: DisplayEvent[]): string {
+  const safeLabel = sanitizeSourceLabel(sourceLabel);
+  const body = formatEventsAsMarkdown(events);
+  return `--- Forwarded from ${safeLabel} ---\n\n${body}\n\n--- End forwarded ---`;
+}
+
+/**
+ * Ensures a source label is a single line and cannot break envelope delimiters.
+ *
+ * Strips newlines and replaces `---` sequences with an em-dash so the label
+ * cannot be confused with the envelope's own `---` markers.
+ */
+function sanitizeSourceLabel(label: string): string {
+  return label.replace(/[\r\n]+/g, " ").trim().replace(/---/g, "\u2014");
+}

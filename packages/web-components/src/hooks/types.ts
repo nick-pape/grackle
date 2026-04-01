@@ -586,6 +586,56 @@ export interface UseSchedulesResult {
   domainHook: DomainHook;
 }
 
+// ─── Streams hook result ─────────────────────────────────────────────────────
+
+/** A subscriber on an IPC stream. */
+export interface StreamSubscriberData {
+  /** Unique subscription identifier. */
+  subscriptionId: string;
+  /** ID of the session holding this subscription. */
+  sessionId: string;
+  /** File descriptor number assigned to the subscriber. */
+  fd: number;
+  /** Access permission: "r", "w", or "rw". */
+  permission: string;
+  /** Delivery mode: "sync", "async", or "detach". */
+  deliveryMode: string;
+  /** True if this subscription was created via spawn (not attachStream). */
+  createdBySpawn: boolean;
+}
+
+/** An IPC stream with subscriber details. */
+export interface StreamData {
+  /** Opaque stream identifier. */
+  id: string;
+  /** Human-readable stream name. */
+  name: string;
+  /** Number of active subscribers. */
+  subscriberCount: number;
+  /** Number of messages currently buffered. */
+  messageBufferDepth: number;
+  /** Full subscriber details. */
+  subscribers: StreamSubscriberData[];
+}
+
+/** Values returned by the streams domain hook. */
+export interface UseStreamsResult {
+  /** All known IPC streams. */
+  streams: StreamData[];
+  /** Whether the stream list is currently being loaded. */
+  streamsLoading: boolean;
+  /** True after at least one loadStreams attempt has completed (success or error). */
+  streamsLoadedOnce: boolean;
+  /** True if the most recent loadStreams call failed (e.g. RPC/network error). */
+  streamsLoadError: boolean;
+  /** Request the current stream list from the server. */
+  loadStreams: () => Promise<void>;
+  /** Handle a domain event from the event bus. Returns `true` if handled. */
+  handleEvent: (event: GrackleEvent) => boolean;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
+}
+
 // ─── Knowledge hook result ────────────────────────────────────────────────────
 
 /** Result returned by useKnowledge. */

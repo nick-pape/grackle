@@ -68,6 +68,28 @@
   }
 }
 
+.forwardButton {
+  @include btn-ghost(var(--text-primary));
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-size-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: var(--bg-overlay);
+  color: var(--text-primary);
+  white-space: nowrap;
+
+  &:hover:not([aria-disabled='true']) {
+    background: var(--bg-hover);
+  }
+
+  &[aria-disabled='true'] {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
 .cancelButton {
   @include btn-ghost(var(--text-secondary));
   display: flex;
