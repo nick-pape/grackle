@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 01 Apr 2026 00:41:45 GMT and should not be manually modified.
+This log was last generated on Wed, 01 Apr 2026 03:01:05 GMT and should not be manually modified.
+
+## 0.107.0
+Wed, 01 Apr 2026 03:01:05 GMT
+
+### Minor changes
+
+- Add forward-message feature: SessionPicker component, formatForwardEnvelope utility, and Forward button in multi-select action bar
+
+### Patches
+
+- Add streams sidebar and detail drawer to Chat page with IPC stream listing and stream detail panel
 
 ## 0.106.3
 Wed, 01 Apr 2026 00:41:45 GMT
