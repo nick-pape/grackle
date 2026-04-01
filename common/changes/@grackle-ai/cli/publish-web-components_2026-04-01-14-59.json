@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@grackle-ai/cli",
+      "comment": "Add @grackle-ai/web-components to version policy so it is published to npm",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@grackle-ai/cli"
+}
