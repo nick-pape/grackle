@@ -20,6 +20,10 @@ export interface StreamListProps {
   streams: StreamData[];
   /** Whether streams are currently loading. */
   loading: boolean;
+  /** True if the most recent load attempt failed. */
+  streamsLoadError?: boolean;
+  /** True after at least one load attempt has completed. */
+  streamsLoadedOnce?: boolean;
   /** Optional callback to trigger a stream list refresh. */
   onRefresh?: () => void;
 }
@@ -30,7 +34,7 @@ export interface StreamListProps {
  * The "System" row is always pinned at the top and links to `/chat`.
  * Named streams are listed below, sorted alphabetically.
  */
-export function StreamList({ streams, loading, onRefresh }: StreamListProps): JSX.Element {
+export function StreamList({ streams, loading, streamsLoadError = false, streamsLoadedOnce = true, onRefresh }: StreamListProps): JSX.Element {
   const navigate = useAppNavigate();
   const location = useLocation();
   const streamMatch = useMatch("/chat/:streamId");
@@ -80,7 +84,10 @@ export function StreamList({ streams, loading, onRefresh }: StreamListProps): JS
       {loading && sortedStreams.length === 0 && (
         <div className={styles.loading}>Loading...</div>
       )}
-      {!loading && sortedStreams.length === 0 && (
+      {!loading && streamsLoadError && (
+        <div className={styles.emptyState} data-testid="stream-list-error">Unable to load streams</div>
+      )}
+      {!loading && !streamsLoadError && streamsLoadedOnce && sortedStreams.length === 0 && (
         <div className={styles.emptyState}>No streams</div>
       )}
       {sortedStreams.map((stream) => {

@@ -86,11 +86,19 @@ export function WithKnowledgeSidebar(): JSX.Element {
 
 /** Layout route wrapper that shows the StreamList in the sidebar. */
 export function WithStreamSidebar(): JSX.Element {
-  const { streams: { streams, streamsLoading, loadStreams } } = useGrackle();
+  const { streams: { streams, streamsLoading, streamsLoadError, streamsLoadedOnce, loadStreams } } = useGrackle();
   const handleRefresh = useCallback(() => { loadStreams().catch(() => {}); }, [loadStreams]);
   const sidebar = useMemo(
-    () => <StreamList streams={streams} loading={streamsLoading} onRefresh={handleRefresh} />,
-    [streams, streamsLoading, handleRefresh],
+    () => (
+      <StreamList
+        streams={streams}
+        loading={streamsLoading}
+        streamsLoadError={streamsLoadError}
+        streamsLoadedOnce={streamsLoadedOnce}
+        onRefresh={handleRefresh}
+      />
+    ),
+    [streams, streamsLoading, streamsLoadError, streamsLoadedOnce, handleRefresh],
   );
   useSidebarSlot(sidebar);
   return <Outlet />;

@@ -191,6 +191,10 @@ export function ChatPage(): JSX.Element {
     return <ChatShimmer />;
   }
 
+  if (streamId !== undefined && selectedStream && sessionsLoading && !latestSession) {
+    return <ChatShimmer />;
+  }
+
   // ── Stream mode — not found ───────────────────────────────────────────────
 
   if (streamId !== undefined && !selectedStream) {
