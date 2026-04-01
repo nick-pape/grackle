@@ -42,12 +42,12 @@ jobs:
             type=raw,value=latest
             type=raw,value=nightly-{{date 'YYYYMMDD'}}
 
-      # Resolve the actual published version so the Docker layer cache
-      # busts when a new @grackle-ai/cli is published, while heavy
-      # system-dep layers (apt, Neo4j, Java, etc.) stay cached.
-      - name: Resolve latest Grackle version
+      # Resolve version from the repo's version-policies.json so we
+      # always build the Docker image for the version this commit knows
+      # about, not whatever was last published to npm.
+      - name: Resolve Grackle version from repo
         id: version
-        run: echo "version=$(npm view @grackle-ai/cli version)" >> "$GITHUB_OUTPUT"
+        run: echo version=$(node -p "require('./common/config/rush/version-policies.json').find(p => p.policyName === 'grackle').version") >> "$GITHUB_OUTPUT"
 
       - uses: docker/build-push-action@v6
         with:
