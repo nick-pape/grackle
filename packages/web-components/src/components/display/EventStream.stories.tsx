@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent } from "@storybook/test";
 import { EventStream } from "./EventStream.js";
 import type { DisplayEvent } from "../../utils/sessionEvents.js";
-import { makeEvent } from "../../test-utils/storybook-helpers.js";
+import { makeEvent, makeSession, makeEnvironment } from "../../test-utils/storybook-helpers.js";
 
 const sampleEvents: DisplayEvent[] = [
   makeEvent({ eventType: "text", content: "First message", timestamp: "2026-01-01T00:00:01Z" }),
@@ -147,6 +147,76 @@ export const SelectAll: Story = {
 
     // Button should now say "Deselect all"
     await expect(selectAllBtn).toHaveTextContent("Deselect all");
+  },
+};
+
+/** Forward button appears in floating bar when sessions + onForward are provided. */
+export const ForwardButtonVisible: Story = {
+  args: {
+    events: mixedEvents,
+    sessions: [
+      makeSession({ id: "sess-target", environmentId: "env-1", status: "running", prompt: "Another task" }),
+    ],
+    environments: [makeEnvironment({ id: "env-1", displayName: "Production" })],
+    currentSessionId: "sess-current",
+    onForward: fn(),
+  },
+  play: async ({ canvas }) => {
+    // Enter selection mode
+    const selectButtons = canvas.getAllByTestId("event-hover-select");
+    await userEvent.click(selectButtons[0]);
+
+    // Forward button should be present and enabled (there is an active target session)
+    const forwardBtn = canvas.getByTestId("floating-bar-forward");
+    await expect(forwardBtn).toBeInTheDocument();
+    await expect(forwardBtn).toBeEnabled();
+  },
+};
+
+/** Forward button is disabled when no other active sessions exist. */
+export const ForwardButtonDisabled: Story = {
+  args: {
+    events: mixedEvents,
+    sessions: [],
+    environments: [],
+    currentSessionId: "sess-current",
+    onForward: fn(),
+  },
+  play: async ({ canvas }) => {
+    const selectButtons = canvas.getAllByTestId("event-hover-select");
+    await userEvent.click(selectButtons[0]);
+
+    const forwardBtn = canvas.getByTestId("floating-bar-forward");
+    await expect(forwardBtn).toHaveAttribute("aria-disabled", "true");
+  },
+};
+
+/** Clicking Forward opens the session picker dialog. */
+export const ForwardOpensSessionPicker: Story = {
+  args: {
+    events: mixedEvents,
+    sessions: [
+      makeSession({ id: "sess-target", environmentId: "env-1", status: "idle", prompt: "Other task" }),
+    ],
+    environments: [makeEnvironment({ id: "env-1", displayName: "Dev" })],
+    currentSessionId: "sess-current",
+    onForward: fn(),
+  },
+  play: async ({ canvas }) => {
+    // Enter selection mode
+    const selectButtons = canvas.getAllByTestId("event-hover-select");
+    await userEvent.click(selectButtons[0]);
+
+    // Click Forward
+    const forwardBtn = canvas.getByTestId("floating-bar-forward");
+    await userEvent.click(forwardBtn);
+
+    // Session picker dialog should appear
+    const dialog = canvas.getByTestId("session-picker-dialog");
+    await expect(dialog).toBeInTheDocument();
+
+    // The target session should be listed
+    await expect(canvas.getByTestId("session-picker-item-sess-target")).toBeInTheDocument();
   },
 };
 

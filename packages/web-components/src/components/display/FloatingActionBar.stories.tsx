@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn } from "@storybook/test";
+import { expect, fn, userEvent } from "@storybook/test";
 import { AnimatePresence } from "motion/react";
 import { FloatingActionBar } from "./FloatingActionBar.js";
 
@@ -22,6 +22,7 @@ const meta: Meta<typeof FloatingActionBar> = {
     onSelectAll: fn(),
     onDeselectAll: fn(),
     onCopy: fn(),
+    onForward: fn(),
     onCancel: fn(),
   },
 };
@@ -71,5 +72,51 @@ export const NoneSelected: Story = {
 
     const copyBtn = canvas.getByTestId("floating-bar-copy");
     await expect(copyBtn).toBeDisabled();
+  },
+};
+
+/** Forward button is visible and enabled when active sessions exist. */
+export const WithForwardEnabled: Story = {
+  args: {
+    forwardDisabled: false,
+  },
+  play: async ({ canvas }) => {
+    const forwardBtn = canvas.getByTestId("floating-bar-forward");
+    await expect(forwardBtn).toBeInTheDocument();
+    await expect(forwardBtn).toBeEnabled();
+  },
+};
+
+/** Forward button is disabled when no active sessions are available. */
+export const ForwardDisabled: Story = {
+  args: {
+    forwardDisabled: true,
+  },
+  play: async ({ canvas }) => {
+    const forwardBtn = canvas.getByTestId("floating-bar-forward");
+    await expect(forwardBtn).toHaveAttribute("aria-disabled", "true");
+  },
+};
+
+/** Forward button is hidden when onForward is not provided. */
+export const NoForwardButton: Story = {
+  args: {
+    onForward: undefined,
+  },
+  play: async ({ canvas }) => {
+    const forwardBtn = canvas.queryByTestId("floating-bar-forward");
+    await expect(forwardBtn).not.toBeInTheDocument();
+  },
+};
+
+/** Clicking Forward calls onForward. */
+export const ForwardClick: Story = {
+  args: {
+    forwardDisabled: false,
+  },
+  play: async ({ canvas, args }) => {
+    const forwardBtn = canvas.getByTestId("floating-bar-forward");
+    await userEvent.click(forwardBtn);
+    await expect(args.onForward).toHaveBeenCalled();
   },
 };
