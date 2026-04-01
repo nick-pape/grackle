@@ -24,7 +24,7 @@ export function NewChatPage(): JSX.Element {
         showPersonaSelect
         personas={personas}
         environments={environments}
-        onSendInput={(sid, text) => { sendInput(sid, text).catch(() => {}); }}
+        onSendInput={(sid, text) => { sendInput(sid, text).catch(() => { showToast("Failed to send message", "error"); }); }}
         onSpawn={(eid, prompt, pid) => { spawn(eid, prompt, pid).catch(() => {}); }}
         onStartTask={(tid, pid, eid) => { startTask(tid, pid, eid).catch(() => {}); }}
         onProvisionEnvironment={(eid) => { provisionEnvironment(eid).catch(() => {}); }}
