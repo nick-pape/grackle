@@ -21,7 +21,7 @@ Pull and run the pre-built image from GitHub Container Registry:
 docker run -it --rm \
   -p 3000:3000 -p 7434:7434 -p 7435:7435 \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  -v ~/.grackle:/root/.grackle \
+  -v grackle-data:/data \
   ghcr.io/nick-pape/grackle:latest
 ```
 
