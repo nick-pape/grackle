@@ -14,7 +14,7 @@ export const WEB_CONTENT_SECURITY_POLICY: string = [
   "font-src 'self'",
   "connect-src 'self'",
   "object-src 'none'",
-  "form-action 'self'",
+  "form-action 'self' http://localhost:* http://127.0.0.1:*",
   "frame-ancestors 'none'",
   "base-uri 'self'",
 ].join("; ");
