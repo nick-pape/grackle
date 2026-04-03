@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix CSP form-action to allow both localhost and 127.0.0.1 for OAuth authorization flow",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
