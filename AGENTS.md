@@ -28,22 +28,21 @@ The root `.env.example` documents every supported environment variable with defa
 
 ### Worktree Workflow
 
-**All feature work must happen in a worktree**, not on the main working copy. Use Claude Code's built-in `EnterWorktree` tool to create an isolated worktree — it handles cwd, branch creation, and cleanup automatically.
+**All feature work must happen in a worktree**, not on the main working copy. Use standard git worktree commands to create an isolated worktree for each feature.
 
 **Starting work:**
-1. Call `EnterWorktree` with a descriptive name (e.g., `EnterWorktree({ name: "123-my-feature" })`)
-2. This creates `.claude/worktrees/123-my-feature/` with branch `worktree-123-my-feature` and switches your cwd there
-3. Rename the branch to match our naming convention: `git branch -m <github-username>/123-my-feature`
-4. Run `rush install && rush build`
-5. Do all your work — cwd stays in the worktree, hooks fire correctly
+1. From the repository root, create a new worktree and branch with a descriptive name, for example: `git fetch origin && git worktree add -b <github-username>/123-my-feature ../grackle-123-my-feature origin/main`
+2. Change into the new worktree directory: `cd ../grackle-123-my-feature`
+3. Run `rush install && rush build`
+4. Do all your work from that worktree so the branch, cwd, and hooks stay isolated from the main working copy
 
 **Finishing work:**
-- After the PR is merged: call `ExitWorktree({ action: "remove" })` to clean up
-- To pause and come back later: call `ExitWorktree({ action: "keep" })`
+- After the PR is merged and the worktree is no longer needed, return to the main repository checkout and remove it with `git worktree remove ../grackle-123-my-feature`
+- To pause and come back later, leave the worktree in place and return to it when needed
 
 **Rules:**
-- Never check out a feature branch on the main worktree — always use `EnterWorktree`
-- Rename the branch immediately after entering (`git branch -m <github-username>/<issue>-<feature>`) to match our branch naming convention
+- Never check out a feature branch in the main working copy — always use a separate git worktree
+- Name the branch according to our convention when creating it: `<github-username>/<issue>-<feature>` or `<github-username>/<feature>`
 - Each worktree needs its own `rush install && rush build` (node_modules are per-worktree)
 - You can't have the same branch checked out in two worktrees simultaneously
 - When syncing with main inside a worktree: `git fetch origin && git merge origin/main` (same as always, no rebase)
@@ -122,7 +121,7 @@ Storybook is integrated into the Heft build pipeline via `@grackle-ai/heft-web-t
 
 **Use `/launch-grackle` to start an isolated test server.** This finds free ports, creates a branch-specific home directory (isolated DB), launches the server, and reports back the URLs. Never use the default ports or the user's `~/.grackle` database for testing.
 
-- **Web UI changes**: Use the Playwright MCP (`mcp__playwright__*`) to launch a browser, navigate the web UI, and verify visually that the feature works as expected.
+- **Web UI changes**: Use the Playwright MCP to launch a browser, navigate the web UI, and verify visually that the feature works as expected. In Claude-style runtimes this may appear as `mcp__playwright__*`; in OpenCode or other runtimes, use the registered Playwright tool name exposed there instead.
 - **Server / adapter changes** (e.g. SSH, Codespace): Use `/launch-grackle`, add an environment (`grackle env add`), and exercise the relevant flow (provision, stop, reconnect, etc.) against a real target. Use `gh codespace list` to find an available codespace for Codespace adapter testing.
 - **CLI changes**: Run the CLI commands manually and verify the output matches expectations.
 - **Verify screenshots**: Whenever you take screenshots (for testing or for a PR), always read the PNG file back with the Read tool and visually inspect it to confirm it shows what you expect. Don't assume a screenshot is correct just because the tool reported success.
