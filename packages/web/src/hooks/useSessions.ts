@@ -108,9 +108,9 @@ export function useSessions(): UseSessionsResult {
               s.id === event.sessionId
                 ? {
                     ...s,
-                    inputTokens: (s.inputTokens ?? 0) + inputTokens,
-                    outputTokens: (s.outputTokens ?? 0) + outputTokens,
-                    costMillicents: (s.costMillicents ?? 0) + costMillicents,
+                    inputTokens: inputTokens,     // Use last reported values (cumulative counts) rather than summing
+                    outputTokens: outputTokens,    // Use last reported values (cumulative counts) rather than summing
+                    costMillicents: costMillicents,  // Use last reported value (cumulative cost) rather than summing
                   }
                 : s,
             ),
