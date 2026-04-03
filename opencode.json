@@ -10,10 +10,10 @@
   },
   "agent": {
     "build": {
-      "prompt": "{file:./CLAUDE.md}\n\n## OpenCode MCP Tool Names\n\nWhen using the qdrant semantic search MCP tools, use these exact tool names:\n- `qdrant_semantic_search` — semantic/conceptual search. Always pass `catalog: \"grackle\"`.\n- `qdrant_view_chunks` — retrieve full source content by file ID.\n\nDo NOT use `mcp__qdrant-search__*` format — that is for a different environment. Use the tool names above as regular tool calls."
+      "prompt": "{file:./CLAUDE.md}\n\n## OpenCode MCP Tool Names\n\n`CLAUDE.md` may describe the qdrant semantic search workflow using tool names from a different MCP environment. In this OpenCode config, the enabled MCP server is `qdrant`, so use these exact OpenCode tool names instead:\n- `qdrant_semantic_search` — semantic/conceptual search. Always pass `catalog: \"grackle\"`.\n- `qdrant_view_chunks` — retrieve full source content by file ID.\n\nTreat any `mcp__qdrant-search__*` names mentioned in `CLAUDE.md` as equivalent guidance for another environment only, and do not call them here."
     },
     "plan": {
-      "prompt": "{file:./CLAUDE.md}\n\n## OpenCode MCP Tool Names\n\nWhen using the qdrant semantic search MCP tools, use these exact tool names:\n- `qdrant_semantic_search` — semantic/conceptual search. Always pass `catalog: \"grackle\"`.\n- `qdrant_view_chunks` — retrieve full source content by file ID.\n\nDo NOT use `mcp__qdrant-search__*` format — that is for a different environment. Use the tool names above as regular tool calls."
+      "prompt": "{file:./CLAUDE.md}\n\n## OpenCode MCP Tool Names\n\n`CLAUDE.md` may describe the qdrant semantic search workflow using tool names from a different MCP environment. In this OpenCode config, the enabled MCP server is `qdrant`, so use these exact OpenCode tool names instead:\n- `qdrant_semantic_search` — semantic/conceptual search. Always pass `catalog: \"grackle\"`.\n- `qdrant_view_chunks` — retrieve full source content by file ID.\n\nTreat any `mcp__qdrant-search__*` names mentioned in `CLAUDE.md` as equivalent guidance for another environment only, and do not call them here."
     }
   }
 }
