@@ -7,13 +7,5 @@
       "url": "http://127.0.0.1:7436/mcp",
       "enabled": true
     }
-  },
-  "agent": {
-    "build": {
-      "prompt": "{file:./CLAUDE.md}\n\n## OpenCode MCP Tool Names\n\nWhen using the qdrant semantic search MCP tools, use these exact tool names:\n- `qdrant_semantic_search` — semantic/conceptual search. Always pass `catalog: \"grackle\"`.\n- `qdrant_view_chunks` — retrieve full source content by file ID.\n\nDo NOT use `mcp__qdrant-search__*` format — that is for a different environment. Use the tool names above as regular tool calls."
-    },
-    "plan": {
-      "prompt": "{file:./CLAUDE.md}\n\n## OpenCode MCP Tool Names\n\nWhen using the qdrant semantic search MCP tools, use these exact tool names:\n- `qdrant_semantic_search` — semantic/conceptual search. Always pass `catalog: \"grackle\"`.\n- `qdrant_view_chunks` — retrieve full source content by file ID.\n\nDo NOT use `mcp__qdrant-search__*` format — that is for a different environment. Use the tool names above as regular tool calls."
-    }
   }
 }
