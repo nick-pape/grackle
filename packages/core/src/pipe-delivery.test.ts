@@ -193,6 +193,32 @@ describe("pipe-delivery integration", () => {
     });
   });
 
+  // ─── selfEcho streams: sender must not receive sendInput (#1184) ────────────
+
+  describe("selfEcho stream: self-echo does not trigger sendInput for sender", () => {
+    it("delivers to non-sender but NOT to sender on selfEcho stream (#1184)", () => {
+      sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
+      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+
+      // selfEcho=true: chatroom mode where the sender would see its own messages
+      const stream = streamRegistry.createStream("chat:room", true);
+      streamRegistry.subscribe(stream.id, "parent", "rw", "async", true);
+      streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
+
+      pipeDelivery.ensureAsyncDeliveryListener("parent");
+      pipeDelivery.ensureAsyncDeliveryListener("child");
+
+      // Child publishes to selfEcho stream
+      streamRegistry.publish(stream.id, "child", "Hello from child");
+
+      // sendInput should be called exactly once — for parent, not child
+      expect(mockSendInput).toHaveBeenCalledOnce();
+      const call = mockSendInput.mock.calls[0][0];
+      expect(call.sessionId).toBe("parent");
+      expect(call.text).toContain("Hello from child");
+    });
+  });
+
   // ─── Sync Pipe ─────────────────────────────────────────────
 
   describe("sync pipe: child completion unblocks consumeSync", () => {

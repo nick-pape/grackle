@@ -27,7 +27,11 @@ export interface Stream {
   readonly name: string;
   readonly messages: StreamMessage[];
   readonly subscriptions: Map<string, Subscription>;
-  /** When true, publishers receive their own messages echoed back (chatroom mode). */
+  /**
+   * When true, the sender's own messages are stored in stream history and delivered to
+   * sync/detach consumers, but async listeners are NOT invoked for the sender. This prevents
+   * the sender from triggering a full agent turn on their own output (chatroom mode). (#1184)
+   */
   readonly selfEcho: boolean;
 }
 
@@ -409,6 +413,12 @@ export function publish(streamId: string, senderId: string, content: string): St
     }
 
     if (sub.deliveryMode === "async") {
+      // Self-echo: skip async listener to prevent sender from triggering a full
+      // agent turn on their own output. Mark delivered to prevent memory leak. (#1184)
+      if (stream.selfEcho && sub.sessionId === senderId) {
+        msg.deliveredTo.add(sub.id);
+        continue;
+      }
       // Only mark as delivered if the listener exists and succeeds
       const listener = asyncListeners.get(sub.sessionId);
       if (listener) {

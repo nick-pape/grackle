@@ -448,9 +448,11 @@ describe("stream-registry", () => {
       expect(registry.hasUndeliveredMessages(senderSub.id)).toBe(false);
     });
 
-    it("publish with selfEcho=true delivers to sender via async", () => {
+    it("publish with selfEcho=true does NOT call async listener for sender (#1184)", () => {
       const stream = registry.createStream("chat", true);
       const senderSub = registry.subscribe(stream.id, "sender", "rw", "async", true);
+      // Add a detach subscriber so the message is not immediately pruned after sender delivery
+      registry.subscribe(stream.id, "observer", "rw", "detach", false);
 
       const received: StreamMessage[] = [];
       registry.registerAsyncListener("sender", (_sub, msg) => {
@@ -459,9 +461,13 @@ describe("stream-registry", () => {
 
       registry.publish(stream.id, "sender", "echo me");
 
-      expect(received).toHaveLength(1);
-      expect(received[0].content).toBe("echo me");
-      expect(received[0].deliveredTo.has(senderSub.id)).toBe(true);
+      // Async listener must NOT fire for the sender — would trigger a full agent turn
+      expect(received).toHaveLength(0);
+      // Message is still in stream history (observer detach sub keeps it alive)
+      expect(stream.messages).toHaveLength(1);
+      expect(stream.messages[0].content).toBe("echo me");
+      // Marked delivered so pruning works correctly (no memory leak)
+      expect(stream.messages[0].deliveredTo.has(senderSub.id)).toBe(true);
     });
 
     it("publish with selfEcho=true delivers to sender via sync", async () => {
@@ -511,7 +517,7 @@ describe("stream-registry", () => {
       expect(stream.messages).toHaveLength(2);
     });
 
-    it("selfEcho delivers to both sender and receiver", () => {
+    it("selfEcho delivers to receiver but NOT sender via async listener (#1184)", () => {
       const stream = registry.createStream("chat", true);
       const senderSub = registry.subscribe(stream.id, "alice", "rw", "async", true);
       const receiverSub = registry.subscribe(stream.id, "bob", "rw", "async", false);
@@ -523,10 +529,38 @@ describe("stream-registry", () => {
 
       registry.publish(stream.id, "alice", "hi everyone");
 
-      expect(aliceReceived).toHaveLength(1);
+      // Bob receives via async listener; alice does NOT (would trigger agent turn)
+      expect(aliceReceived).toHaveLength(0);
       expect(bobReceived).toHaveLength(1);
-      expect(aliceReceived[0].deliveredTo.has(senderSub.id)).toBe(true);
+      // Both subs are marked delivered (alice via immediate mark, bob via listener)
+      expect(bobReceived[0].deliveredTo.has(senderSub.id)).toBe(true);
       expect(bobReceived[0].deliveredTo.has(receiverSub.id)).toBe(true);
+    });
+
+    it("selfEcho=true async sender: hasUndeliveredMessages returns false (#1184)", () => {
+      const stream = registry.createStream("chat", true);
+      const senderSub = registry.subscribe(stream.id, "sender", "rw", "async", true);
+      registry.registerAsyncListener("sender", vi.fn());
+
+      registry.publish(stream.id, "sender", "my message");
+
+      // Message should be marked delivered immediately — no stale undelivered state
+      expect(registry.hasUndeliveredMessages(senderSub.id)).toBe(false);
+    });
+
+    it("selfEcho=true async sender: pruneDeliveredMessages cleans up correctly (#1184)", () => {
+      const stream = registry.createStream("chat", true);
+      registry.subscribe(stream.id, "sender", "rw", "async", true);
+      registry.subscribe(stream.id, "other", "rw", "async", false);
+      registry.registerAsyncListener("sender", vi.fn());
+      registry.registerAsyncListener("other", vi.fn());
+
+      // Publish two messages — both fully delivered (sender via immediate mark, other via sync listener)
+      registry.publish(stream.id, "sender", "first");
+      registry.publish(stream.id, "sender", "second");
+
+      // All messages pruned — proves no unbounded accumulation (memory leak fix)
+      expect(stream.messages).toHaveLength(0);
     });
   });
 
