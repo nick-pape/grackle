@@ -15,7 +15,6 @@ Grackle can automatically create and start tasks on a schedule — cron jobs for
 ```bash
 grackle schedule create "Nightly test suite" \
   --schedule "0 2 * * *" \
-<<<<<<< HEAD
   --workspace <workspace-id> \
   --persona <persona-id> \
   --desc "Run the full test suite and post findings on any failures"

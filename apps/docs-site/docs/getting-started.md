@@ -59,7 +59,7 @@ pnpm v8+ blocks native install scripts by default. If `grackle serve` crashes wi
 git clone https://github.com/nick-pape/grackle.git
 cd grackle
 rush install && rush build
-node apps/server/lib/index.js
+node packages/server/dist/index.js
 ```
 
 ## What starts
