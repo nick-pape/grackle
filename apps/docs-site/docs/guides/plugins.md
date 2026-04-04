@@ -17,13 +17,13 @@ interface GracklePlugin {
   name: string;
   dependencies?: string[];
 
-  // Four extension points
+  // Contribution methods
   grpcHandlers?: (ctx: PluginContext) => ServiceRegistration[];
   reconciliationPhases?: (ctx: PluginContext) => ReconciliationPhase[];
   mcpTools?: (ctx: PluginContext) => PluginToolDefinition[];
   eventSubscribers?: (ctx: PluginContext) => Disposable[];
 
-  // Lifecycle hooks
+  // Lifecycle
   initialize?: (ctx: PluginContext) => Promise<void>;
   shutdown?: () => Promise<void>;
 }
@@ -103,7 +103,7 @@ Supports both standard cron syntax (`0 0 * * *`) and interval shorthand (`30s`, 
 | **Event subscribers** | `entity-sync` (syncs task and finding entities to the knowledge graph) |
 | **MCP tools** | `knowledge_search`, `knowledge_get_node`, `knowledge_create_node` |
 
-If Neo4j is unreachable at startup, the plugin logs a warning and enters degraded mode — the rest of the server continues normally.
+If Neo4j is unreachable at startup, the plugin logs an error (`Knowledge plugin initialization failed — running degraded`) and enters degraded mode — the rest of the server continues normally.
 
 ## Toggling plugins
 

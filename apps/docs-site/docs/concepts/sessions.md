@@ -76,8 +76,8 @@ grackle resume <session-id>
 
 Suspended sessions:
 - Keep their full conversation history and context on the server
-- Are resumed via `grackle resume` once the connection is re-established
-- Can be resumed on the same or a different environment
+- Are typically auto-recovered when their original environment reconnects, and can also be resumed manually with `grackle resume`
+- Resume on their original environment, not a different one
 
 ## Sending input
 

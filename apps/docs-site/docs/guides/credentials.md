@@ -134,7 +134,7 @@ grackle token set OPENAI_API_KEY --env-var OPENAI_API_KEY
 
 ## Security details
 
-- **Encryption**: AES-256-GCM with a randomly generated key stored in `~/.grackle/api-key`
+- **Encryption**: AES-256-GCM using a master key loaded from `GRACKLE_MASTER_KEY` or, if not set, a persisted key file at `~/.grackle/master-key`
 - **Transport**: Tokens are pushed over gRPC on HTTP/2; the built-in server uses plain HTTP/2 by default, so enable TLS (via a reverse proxy or terminating load balancer) to encrypt traffic in production
 - **At rest**: Never stored in plaintext on disk — always encrypted in the SQLite token store
 - **In process**: `env_var` type tokens exist only in the agent's process environment; `file` type tokens are written to disk on the environment
