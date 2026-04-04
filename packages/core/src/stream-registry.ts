@@ -515,6 +515,77 @@ export function hasUndeliveredMessages(subscriptionId: string): boolean {
   );
 }
 
+/**
+ * Replay any buffered messages that have not yet been delivered to the given subscription.
+ *
+ * Called after re-registering an async listener for a session that was suspended and
+ * reanimated. The stream buffer may hold messages that arrived during the disconnection
+ * window and were left undelivered (the listener threw because the environment was offline).
+ * Re-invoking the listener for each such message brings the subscriber up to date.
+ *
+ * No-ops if the subscription is not found, is write-only, or has no registered async listener.
+ */
+export function replayUndeliveredMessages(subscriptionId: string): void {
+  const sub = subscriptionsById.get(subscriptionId);
+  if (!sub || !canReceive(sub) || sub.deliveryMode !== "async") {
+    return;
+  }
+
+  const stream = streams.get(sub.streamId);
+  if (!stream) {
+    return;
+  }
+
+  const listener = asyncListeners.get(sub.sessionId);
+  if (!listener) {
+    return;
+  }
+
+  for (const msg of stream.messages) {
+    if (msg.deliveredTo.has(subscriptionId)) {
+      continue;
+    }
+    if (!stream.selfEcho && msg.senderId === sub.sessionId) {
+      continue;
+    }
+
+    try {
+      const result = listener(sub, msg);
+      if (result !== undefined && typeof (result as Promise<void>).then === "function") {
+        const subId = sub.id;
+        const streamId = sub.streamId;
+        const deliveryPromise = (result as Promise<void>).then(
+          () => { msg.deliveredTo.add(subId); },
+          (err: unknown) => { logger.warn({ err, subscriptionId: subId }, "replayUndeliveredMessages: async listener delivery failed"); },
+        );
+        let pending = pendingDeliveries.get(msg.id);
+        if (!pending) {
+          pending = { streamId, promises: [] };
+          pendingDeliveries.set(msg.id, pending);
+        }
+        pending.promises.push(deliveryPromise);
+        // Schedule auto-finalization so pruning runs even if no one calls awaitPendingDeliveries
+        const msgId = msg.id;
+        Promise.allSettled([deliveryPromise]).then(() => {
+          if (pendingDeliveries.has(msgId)) {
+            pendingDeliveries.delete(msgId);
+            const s = streams.get(streamId);
+            if (s) {
+              pruneDeliveredMessages(s);
+            }
+          }
+        }).catch((err: unknown) => {
+          logger.error({ err, streamId, messageId: msgId }, "replayUndeliveredMessages: error during auto-finalization");
+        });
+      } else {
+        msg.deliveredTo.add(sub.id);
+      }
+    } catch (err) {
+      logger.warn({ err, subscriptionId: sub.id }, "replayUndeliveredMessages: async listener threw — message left undelivered");
+    }
+  }
+}
+
 // ─── Notification Registration ────────────────────────────────────────────────
 
 /**

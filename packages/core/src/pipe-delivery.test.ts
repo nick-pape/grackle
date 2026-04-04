@@ -440,6 +440,80 @@ describe("pipe-delivery integration", () => {
     });
   });
 
+  // ─── ensurePipeStream (reanimate pipe recovery) ────────────
+
+  describe("ensurePipeStream", () => {
+    it("creates stream and subscriptions when none exist", () => {
+      sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
+      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+
+      pipeDelivery.ensurePipeStream("child", "parent");
+
+      const stream = streamRegistry.getStreamByName("pipe:child");
+      expect(stream).toBeDefined();
+      const subs = Array.from(stream!.subscriptions.values());
+      expect(subs.some((s) => s.sessionId === "parent" && s.deliveryMode === "async")).toBe(true);
+      expect(subs.some((s) => s.sessionId === "child" && s.deliveryMode === "async")).toBe(true);
+    });
+
+    it("is idempotent when stream already exists — does not create duplicate streams", () => {
+      sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
+      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+
+      // Pre-create the stream (simulates server staying up during suspend)
+      const existing = streamRegistry.createStream("pipe:child");
+      streamRegistry.subscribe(existing.id, "parent", "rw", "async", true);
+      streamRegistry.subscribe(existing.id, "child", "rw", "async", false);
+
+      pipeDelivery.ensurePipeStream("child", "parent");
+
+      // Should still be exactly one stream with that name
+      const stream = streamRegistry.getStreamByName("pipe:child");
+      expect(stream).toBeDefined();
+      expect(stream!.id).toBe(existing.id);
+      expect(stream!.subscriptions.size).toBe(2);
+    });
+
+    it("registers async delivery listeners for both parent and child", () => {
+      sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
+      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+
+      const spy = vi.spyOn(streamRegistry, "registerAsyncListener");
+
+      pipeDelivery.ensurePipeStream("child", "parent");
+
+      // Both parent and child listeners should be registered
+      expect(spy).toHaveBeenCalledWith("parent", expect.any(Function));
+      expect(spy).toHaveBeenCalledWith("child", expect.any(Function));
+      spy.mockRestore();
+    });
+
+    it("replays buffered undelivered messages after listener re-registration", async () => {
+      sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
+      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+
+      // Simulate: stream exists, message was published while env was offline (no listener → undelivered)
+      const stream = streamRegistry.createStream("pipe:child");
+      const parentSub = streamRegistry.subscribe(stream.id, "parent", "rw", "async", true);
+      streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
+      // Publish without any listener registered → message stays undelivered
+      streamRegistry.publish(stream.id, "child", "Buffered message from offline window");
+      expect(streamRegistry.hasUndeliveredMessages(parentSub.id)).toBe(true);
+
+      // Now reanimate: ensurePipeStream re-registers listeners and replays
+      pipeDelivery.ensurePipeStream("child", "parent");
+
+      // Wait for the async replay delivery to settle
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Parent should have received the buffered message via sendInput
+      const calls = mockSendInput.mock.calls.map((c: unknown[]) => c[0] as { sessionId: string; text: string });
+      const parentCall = calls.find((c) => c.sessionId === "parent");
+      expect(parentCall).toBeDefined();
+      expect(parentCall!.text).toContain("Buffered message from offline window");
+    });
+  });
+
   // ─── Idempotency ───────────────────────────────────────────
 
   describe("setupAsyncPipeDelivery idempotency", () => {
