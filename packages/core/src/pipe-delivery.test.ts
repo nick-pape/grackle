@@ -610,9 +610,30 @@ describe("pipe-delivery integration", () => {
       streamRegistry.subscribe(pipeStream.id, "child", "rw", "async", false);
       pipeDelivery.ensureAsyncDeliveryListener("parent");
 
-      await pipeDelivery.publishChildCompletion("child", "stopped");
+      await pipeDelivery.publishChildCompletion("child", "completed");
 
       // Lifecycle stream should be cleaned up for terminal status
+      expect(streamRegistry.getStreamByName("lifecycle:child")).toBeUndefined();
+    });
+
+    it("cleans up lifecycle stream on waiting_input for promoted sync pipe", async () => {
+      sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
+      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+
+      // Create lifecycle stream (would normally be cleaned by waitForPipe)
+      const lifecycleStream = streamRegistry.createStream("lifecycle:child");
+      streamRegistry.subscribe(lifecycleStream.id, "parent", "rw", "detach", true);
+      streamRegistry.subscribe(lifecycleStream.id, "child", "rw", "detach", false);
+
+      // Promoted pipe stream (async subs)
+      const pipeStream = streamRegistry.createStream("pipe:child");
+      streamRegistry.subscribe(pipeStream.id, "parent", "rw", "async", true);
+      streamRegistry.subscribe(pipeStream.id, "child", "rw", "async", false);
+      pipeDelivery.ensureAsyncDeliveryListener("parent");
+
+      await pipeDelivery.publishChildCompletion("child", "waiting_input");
+
+      // Lifecycle stream should be cleaned up for waiting_input in promoted sync mode
       expect(streamRegistry.getStreamByName("lifecycle:child")).toBeUndefined();
     });
   });

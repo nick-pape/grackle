@@ -91,10 +91,11 @@ export function setupAsyncPipeDelivery(parentSessionId: string): void {
  *   register listeners, and replay buffered messages (none in this case, since
  *   the in-memory buffer was also cleared).
  *
- * Also handles sync pipe promotion: when the pipe stream is gone and the DB says
- * `pipeMode === "sync"`, the stream is recreated with async subscriptions so the
- * child's completion message is delivered via sendInput instead of a blocking queue
- * that can no longer be revived. Detection is via subscription deliveryMode vs DB pipeMode.
+ * This also covers caller-driven promotion of previously sync sessions after a
+ * restart: if the caller invokes this for a session whose pipe stream is missing,
+ * the recreated stream always uses async subscriptions so the child's completion
+ * message can be delivered via sendInput instead of relying on a blocking queue
+ * that cannot be revived from in-memory state.
  */
 export function ensurePipeStream(childSessionId: string, parentSessionId: string): void {
   let pipeStream = streamRegistry.getStreamByName(`pipe:${childSessionId}`);
@@ -191,11 +192,10 @@ export async function publishChildCompletion(childSessionId: string, status: str
     const allDelivered = parentSubs.every((s) => !streamRegistry.hasUndeliveredMessages(s.id));
     if (allDelivered) {
       cleanupAsyncPipe(pipeStream.id, session.parentSessionId);
-      // Also clean up the lifecycle stream on terminal status — normally done by
-      // waitForPipe's cleanupSyncPipeAndLifecycle, which is absent after promotion.
-      if (status === "stopped" || status === "failed" || status === "error") {
-        cleanupLifecycleStream(childSessionId);
-      }
+      // Also clean up the lifecycle stream — normally done by waitForPipe's
+      // cleanupSyncPipeAndLifecycle for all delivery outcomes (terminal and idle).
+      // Since waitForPipe is absent after promotion, we replicate that behavior here.
+      cleanupLifecycleStream(childSessionId);
     }
   }
 }
