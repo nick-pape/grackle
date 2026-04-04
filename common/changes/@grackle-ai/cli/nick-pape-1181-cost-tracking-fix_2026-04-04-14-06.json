@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix cost double-counting in runtime-claude-code: convert cumulative Claude SDK usage totals to incremental deltas before emitting usage events",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
