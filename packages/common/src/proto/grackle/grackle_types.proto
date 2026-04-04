@@ -40,12 +40,10 @@ enum EventType {
 enum TaskStatus {
   TASK_STATUS_UNSPECIFIED = 0;
   TASK_STATUS_NOT_STARTED = 1;
-  reserved 2;                    // was ASSIGNED (removed)
   TASK_STATUS_WORKING = 3;
   TASK_STATUS_PAUSED = 4;
   TASK_STATUS_COMPLETE = 5;
   TASK_STATUS_FAILED = 6;
-  reserved 7;                    // was WAITING_INPUT (removed, merged into PAUSED)
 }
 
 enum WorkspaceStatus {
@@ -74,7 +72,6 @@ message Environment {
   string display_name = 2;
   string adapter_type = 3;
   string adapter_config = 4; // JSON
-  reserved 5; // was default_runtime (moved to Persona)
   bool bootstrapped = 6;
   string status = 7;
   string last_seen = 8;
@@ -91,7 +88,6 @@ message AddEnvironmentRequest {
   string display_name = 1;
   string adapter_type = 2;
   string adapter_config = 3; // JSON
-  reserved 4; // was default_runtime (moved to Persona)
   string github_account_id = 5;
 }
 
@@ -188,9 +184,7 @@ message SessionFilter {
 message SpawnRequest {
   string environment_id = 1;
   string prompt = 2;
-  reserved 3; // was model (now comes from Persona)
   int32 max_turns = 4;
-  reserved 5; // was runtime (now comes from Persona)
   string branch = 6; // Branch for worktree (empty = skip)
   string system_context = 7; // Prepended to prompt (task desc + findings)
   string persona_id = 8; // Persona to use (falls back to app default persona)
@@ -361,14 +355,12 @@ message Workspace {
   string name = 2;
   string description = 3;
   string repo_url = 4;
-  reserved 5; // was default_environment_id (replaced by environment_id)
   WorkspaceStatus status = 6;
   string created_at = 7;
   string updated_at = 8;
   bool use_worktrees = 9; // When false, agents work in the main checkout (no worktree dirs created)
   string working_directory = 10; // Working directory / repo root (e.g. /workspaces/my-repo)
   string default_persona_id = 11; // Default persona for tasks in this workspace
-  reserved 12; // was environment_id (replaced by workspace_environment_links table)
   repeated string linked_environment_ids = 13; // Linked environments (read-only, set via Link/Unlink RPCs)
   int32 token_budget = 14; // Aggregate token cap across all tasks; 0 = unlimited
   int32 cost_budget_millicents = 15; // Aggregate cost cap in millicents; 0 = unlimited
@@ -386,7 +378,6 @@ message CreateWorkspaceRequest {
   string name = 1;
   string description = 2;
   string repo_url = 3;
-  reserved 4; // was default_environment_id (replaced by environment_id)
   optional bool use_worktrees = 5; // Default true when omitted
   optional string working_directory = 6; // Working directory / repo root (e.g. /workspaces/my-repo)
   optional string default_persona_id = 7; // Default persona for tasks in this workspace
@@ -400,11 +391,9 @@ message UpdateWorkspaceRequest {
   optional string name = 2;
   optional string description = 3;
   optional string repo_url = 4;
-  reserved 5; // was default_environment_id (replaced by environment_id)
   optional bool use_worktrees = 6; // When false, disables worktree isolation for this workspace
   optional string working_directory = 7; // Working directory / repo root (e.g. /workspaces/my-repo)
   optional string default_persona_id = 8; // Default persona for tasks in this workspace
-  reserved 9; // was environment_id (reparenting removed; use Link/Unlink RPCs instead)
   optional int32 token_budget = 10; // Aggregate token cap; 0 = unlimited
   optional int32 cost_budget_millicents = 11; // Aggregate cost cap in millicents; 0 = unlimited
 }
@@ -432,13 +421,10 @@ message Task {
   string description = 4;
   TaskStatus status = 5;
   string branch = 6;
-  reserved 7; // was environment_id (now a session-start param)
   string latest_session_id = 8; // computed on read from session history
   repeated string depends_on = 9;
-  reserved 10; // was assigned_at (removed)
   string started_at = 11;
   string completed_at = 12;
-  reserved 13; // was review_notes (moved to StartTaskRequest)
   string created_at = 14;
   string updated_at = 15;
   int32 sort_order = 16;
@@ -446,7 +432,6 @@ message Task {
   int32 depth = 18; // 0 for root, parent.depth + 1
   repeated string child_task_ids = 19; // populated by server on read
   bool can_decompose = 20;
-  reserved 21; // was persona_id (moved to Session)
   string default_persona_id = 22; // Default persona for this task (overrides workspace default)
   string workpad = 23; // Persistent structured context (JSON) that survives across sessions
   string schedule_id = 24; // ID of the schedule that created this task (empty for manually-created tasks)
@@ -484,11 +469,9 @@ message CreateTaskRequest {
   optional string workspace_id = 1;
   string title = 2;
   string description = 3;
-  reserved 4; // was environment_id (now a session-start param)
   repeated string depends_on = 5;
   string parent_task_id = 6;
   optional bool can_decompose = 7;
-  reserved 8; // was persona_id (moved to StartTaskRequest/Session)
   optional string default_persona_id = 9; // Default persona for this task
   optional int32 token_budget = 10; // Total token cap (input + output); 0 = unlimited
   optional int32 cost_budget_millicents = 11; // Cost cap in millicents; 0 = unlimited
@@ -503,9 +486,7 @@ message UpdateTaskRequest {
   string title = 2;
   string description = 3;
   TaskStatus status = 4;
-  reserved 5; // was environment_id (now a session-start param)
   repeated string depends_on = 6;
-  reserved 7; // was review_notes (moved to StartTaskRequest)
   string session_id = 8; // Optional: late-bind an existing session to this task
   optional string default_persona_id = 9; // Default persona for this task
   optional int32 token_budget = 10; // Total token cap (input + output); 0 = unlimited
@@ -514,8 +495,6 @@ message UpdateTaskRequest {
 
 message StartTaskRequest {
   string task_id = 1;
-  reserved 2; // was runtime (now comes from Persona)
-  reserved 3; // was model (now comes from Persona)
   string persona_id = 4; // Persona override (falls back to task/workspace/app default)
   string environment_id = 5; // Select environment at start time
   string notes = 6; // Feedback/instructions for retry (included in system context)
@@ -680,7 +659,6 @@ message UpdatePersonaRequest {
   repeated McpServerConfig mcp_servers = 9;
   string type = 10; // "agent" or "script"
   string script = 11; // Script source code (for script personas)
-  reserved 12; // was: repeated string allowed_mcp_tools (no presence tracking)
   AllowedMcpTools allowed_mcp_tools = 13; // Presence-aware wrapper (absent = keep, empty = clear, populated = replace)
 }
 
@@ -692,7 +670,6 @@ message Schedule {
   string description = 3;
   string schedule_expression = 4; // Interval shorthand ("30s", "5m") or cron expression ("0 9 * * MON")
   string persona_id = 5;
-  reserved 6; // was: environment_id — schedules now use the workspace's linked environment pool
   string workspace_id = 7; // Empty = system-level schedule
   string parent_task_id = 8; // Empty = ROOT_TASK_ID
   bool enabled = 9;
@@ -716,7 +693,6 @@ message CreateScheduleRequest {
   string description = 2;
   string schedule_expression = 3;
   string persona_id = 4;
-  reserved 5; // was: environment_id — use the workspace's linked environment pool instead
   string workspace_id = 6; // Empty = system-level
   string parent_task_id = 7; // Empty = ROOT_TASK_ID
 }
@@ -727,7 +703,6 @@ message UpdateScheduleRequest {
   optional string description = 3;
   optional string schedule_expression = 4;
   optional string persona_id = 5;
-  reserved 6; // was: environment_id — use the workspace's linked environment pool instead
   optional bool enabled = 7;
 }
 
