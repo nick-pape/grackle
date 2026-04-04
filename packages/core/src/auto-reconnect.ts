@@ -161,6 +161,14 @@ export function resetReconnectState(environmentId: string): void {
   reconnectStates.set(environmentId, { attempts: 0, nextRetryAt: Date.now(), lastProbeAt: 0 });
 }
 
+/**
+ * Return true if an auto-reconnect attempt is currently in-flight for this environment.
+ * Used by `spawnAgent` to avoid racing with a concurrent auto-provision attempt.
+ */
+export function isReconnecting(environmentId: string): boolean {
+  return reconnecting.has(environmentId);
+}
+
 /** @internal Reset all reconnect state for testing. */
 export function _resetForTesting(): void {
   reconnectStates.clear();

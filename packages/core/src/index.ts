@@ -67,7 +67,7 @@ export * as pipeDelivery from "./pipe-delivery.js";
 export { processEventStream } from "./event-processor.js";
 export { createEventStream } from "./event-hub.js";
 export { recoverSuspendedSessions } from "./session-recovery.js";
-export { clearReconnectState } from "./auto-reconnect.js";
+export { clearReconnectState, isReconnecting } from "./auto-reconnect.js";
 export { resolveBootstrapRuntime } from "./resolve-bootstrap-runtime.js";
 export { ensureStdinStream, publishToStdin, cleanupStdinStream } from "./stdin-delivery.js";
 export { ensureLifecycleStream, cleanupLifecycleStream } from "./lifecycle-streams.js";
