@@ -178,7 +178,13 @@ async function createMcpServerInstance(
         //   - fill in their workspace if none was provided
         const boundWorkspace = authContext.workspaceId;
         if (boundWorkspace && authContext.taskId !== ROOT_TASK_ID) {
-          if (rawArgs.workspaceId !== undefined && rawArgs.workspaceId !== boundWorkspace) {
+          // Only compare when the caller supplied a valid string — non-string or empty
+          // values fall through to Zod validation which returns INVALID_ARGUMENT.
+          const requestedWorkspaceId =
+            typeof rawArgs.workspaceId === "string" && rawArgs.workspaceId
+              ? rawArgs.workspaceId
+              : undefined;
+          if (requestedWorkspaceId !== undefined && requestedWorkspaceId !== boundWorkspace) {
             return {
               content: [{ type: "text", text: JSON.stringify({ error: "workspaceId does not match the authenticated workspace", code: "PERMISSION_DENIED" }, null, 2) }],
               isError: true,
