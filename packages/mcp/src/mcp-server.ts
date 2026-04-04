@@ -248,7 +248,8 @@ export function createMcpServer(options: McpServerOptions): http.Server {
   const { bindHost, grpcPort, apiKey, authorizationServerUrl, toolGroups } = options;
   /** Port of the web/auth server, extracted from the startup URL for dynamic derivation. */
   const authServerPort = authorizationServerUrl
-    ? new URL(authorizationServerUrl).port
+    ? (new URL(authorizationServerUrl).port
+      || (new URL(authorizationServerUrl).protocol === "https:" ? "443" : "80"))
     : undefined;
   const grpcClients = createGrpcClients(bindHost, grpcPort, apiKey);
 
