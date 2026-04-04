@@ -119,37 +119,39 @@ List active sessions.
 | `--env <id>` | Filter by environment |
 | `--all` | Include completed sessions |
 
-## Projects
+## Workspaces
 
-### `grackle project list`
+### `grackle workspace list`
 
-List all active projects.
+List all active workspaces.
 
-### `grackle project create <name>`
+### `grackle workspace create <name>`
 
 | Flag | Description |
 |------|-------------|
+| `--env <id>` | Environment ID (**required**, auto-linked as the initial environment) |
 | `--repo <url>` | Repository URL |
-| `--env <id>` | Default environment |
 | `--desc <text>` | Description |
 | `--no-worktrees` | Disable worktree isolation |
 | `--working-directory <path>` | Working directory / repo root on the environment |
+| `--token-budget <n>` | Aggregate token cap across all tasks; 0 = unlimited |
+| `--cost-budget-millicents <n>` | Aggregate cost cap in millicents ($0.00001 units); 0 = unlimited |
 
-### `grackle project get <id>`
+### `grackle workspace get <id>`
 
-Show full project details.
+Show full workspace details.
 
-### `grackle project update <id>`
+### `grackle workspace update <id>`
 
-Update project properties. Same flags as `create` (all optional).
+Update workspace properties. Same flags as `create` (all optional).
 
-### `grackle project archive <id>`
+### `grackle workspace archive <id>`
 
-Archive a project.
+Archive a workspace.
 
 ## Tasks
 
-### `grackle task list [project-id]`
+### `grackle task list [workspace-id]`
 
 | Flag | Description |
 |------|-------------|
@@ -160,7 +162,7 @@ Archive a project.
 
 | Flag | Description |
 |------|-------------|
-| `--project <id>` | Project to create in |
+| `--workspace <id>` | Workspace to create in |
 | `--desc <text>` | Description |
 | `--depends-on <ids>` | Comma-separated dependency task IDs |
 
@@ -213,7 +215,7 @@ List all personas.
 | `--prompt <text>` | System prompt (inline) |
 | `--prompt-file <path>` | System prompt from file |
 | `--desc <text>` | Description |
-| `--runtime <runtime>` | Runtime (claude-code, copilot, codex) |
+| `--runtime <runtime>` | Runtime (claude-code, copilot, codex, goose, genaiscript) |
 | `--model <model>` | Model (sonnet, gpt-4o, o3, etc.) |
 | `--max-turns <n>` | Maximum turns |
 
@@ -231,7 +233,7 @@ Delete a persona.
 
 ## Findings
 
-### `grackle finding list <project-id>`
+### `grackle finding list <workspace-id>`
 
 | Flag | Description |
 |------|-------------|
@@ -239,7 +241,7 @@ Delete a persona.
 | `--tag <tag>` | Filter by tag |
 | `--limit <n>` | Max results (default: 20) |
 
-### `grackle finding post <project-id> <title>`
+### `grackle finding post <workspace-id> <title>`
 
 | Flag | Description |
 |------|-------------|

@@ -50,6 +50,9 @@ stateDiagram-v2
     running --> failed: error
     running --> interrupted: kill
     idle --> interrupted: kill
+    running --> suspended: suspend
+    idle --> suspended: suspend
+    suspended --> running: resume
     completed --> running: resume
     interrupted --> running: resume
 ```
@@ -60,6 +63,21 @@ stateDiagram-v2
 - **completed** — Agent finished successfully
 - **failed** — Agent hit an error
 - **interrupted** — Manually killed
+- **suspended** — Parked in memory, not consuming compute (see below)
+
+## Session suspension
+
+Sessions can enter a **suspended** state — a transport-level recovery state where the agent's connection drops but the server preserves the session. This happens automatically when the transport between PowerLine and the server is interrupted.
+
+```bash
+# Reconnect to a suspended session
+grackle resume <session-id>
+```
+
+Suspended sessions:
+- Keep their full conversation history and context on the server
+- Are typically auto-recovered when their original environment reconnects, and can also be resumed manually with `grackle resume`
+- Resume on their original environment, not a different one
 
 ## Sending input
 

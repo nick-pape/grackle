@@ -1,12 +1,14 @@
 ---
 id: web-ui
 title: Web UI
-sidebar_position: 4
+sidebar_position: 1
 ---
 
 # Web UI
 
-The Grackle web UI is a real-time dashboard for managing environments, projects, tasks, and agent sessions. It's served by the Grackle server at **http://localhost:3000** by default.
+The Grackle web UI is a real-time dashboard for managing environments, workspaces, tasks, and agent sessions. It's served by the Grackle server at **http://localhost:3000** by default.
+
+![Dashboard — workspaces, tasks, and session overview](/img/dashboard-projects-tasks.png)
 
 ## First-run setup
 
@@ -14,9 +16,9 @@ On first launch, a setup wizard walks you through:
 
 1. **Welcome** — Brief introduction
 2. **About** — What Grackle does
-3. **Runtime selection** — Pick your default agent runtime (Claude Code, Copilot, or Codex)
+3. **Runtime selection** — Pick your default agent runtime (Claude Code, Copilot, Codex, or Goose)
 
-This creates your default persona and marks onboarding complete. You won't see the wizard again.
+This creates your default persona and drops you into the [chat interface](./chat). You won't see the wizard again.
 
 ## Pairing
 
@@ -28,67 +30,88 @@ grackle pair
 
 Enter the 6-character code in the browser, or scan the QR code from your phone. The session lasts 24 hours.
 
+## Chat landing page
+
+The default landing page is a [chat interface](./chat) where you can type natural language commands. The agent uses Grackle's MCP tools to manage environments, tasks, sessions, and more — no CLI memorization required.
+
 ## Sidebar
 
 The left sidebar shows:
 
-- **Projects** — Click to see a project's tasks
-- **Quick actions** — Create new projects, tasks, or sessions
+- **Workspaces** — Click to see a workspace's tasks, board, and graph views
+- **Quick actions** — Create new workspaces, tasks, or sessions
 
-## Project view
+## Workspace view
 
-Each project has three tabs:
+Each workspace has three tabs:
 
 ### Tasks tab
-A flat list of all tasks in the project with status badges, branch names, and dependency info.
+A searchable list of all tasks in the workspace with status badges, branch names, and dependency info.
 
 ### Board tab
-A kanban board with columns for each status: Not Started, Working, Paused, Complete, Failed. Shows task completion progress as a percentage bar.
+A kanban board with columns for each status: Not Started, Working, Paused, Complete, Failed. Shows task completion progress.
 
 ### Graph tab
-A DAG (directed acyclic graph) visualization showing task hierarchy and dependencies. Useful for understanding the structure of complex projects.
+An interactive DAG (directed acyclic graph) visualization showing task hierarchy and dependencies. Click any node to see its stream, findings, or overview.
+
+![DAG visualization — interactive task dependency graph](/img/dag-visualization.png)
 
 ## Task view
 
-Clicking a task opens a detail view with three tabs:
+Clicking a task opens a full-page detail view with click-to-edit fields:
 
 ### Overview
 - Status badge and metadata (branch, environment, persona, timestamps)
-- Description (editable inline)
+- Description, title, and all fields are **inline editable** — click any field to edit, press Enter to save, Escape to cancel
+- Token usage tracking
 - Action buttons: Start, Complete, Resume, Delete
 
 ### Stream
 Real-time event feed from the task's latest session. Shows:
 - Agent text output
-- Tool calls (with name and input)
-- Tool results
-- Status changes
-- System messages
+- Tool calls with specialized cards (file edits show diffs, grep shows matches, bash shows output)
+- Tool results (collapsible)
+- Status changes and system messages
 
 When the session is waiting for input, an input field appears at the bottom.
 
+![Live agent stream — tool cards and real-time output](/img/task-stream-view.png)
+
 ### Findings
-All findings for the task's project, displayed as categorized cards with color coding by category (bug, architecture, decision, etc.) and tags.
+All findings for the task's workspace, displayed as categorized cards with color coding by category (bug, architecture, decision, pattern, dependency) and tags.
 
-## Session view
+![Findings panel — categorized discoveries](/img/findings-panel.png)
 
-Direct session views (outside of tasks) show the same real-time event stream. You can start a new ad-hoc session by clicking **New Chat**, selecting an environment, and typing a prompt.
+## Creating and editing entities
+
+Grackle uses a **unified create/edit pattern** across all entity types (workspaces, tasks, personas, environments):
+
+- **Edit mode**: Full-page view with click-to-edit fields. Each field auto-saves on blur or Enter. Escape cancels.
+- **Create mode**: Same page layout, but all fields start in edit mode with a "Create" button. After creation, the page transitions to the edit URL.
+
+This consistent pattern works the same whether you're creating a task, editing a persona, or configuring an environment.
 
 ## Settings
 
 The settings page has tabs for:
 
 ### Environments
-List, add, and manage environments. Shows status, adapter type, and bootstrap state for each.
+List, add, and manage environments. Shows status, adapter type, and session count. Full create/edit forms for each adapter type (Docker, SSH, Codespace, Local).
+
+![Environment detail — adapter type, sessions, and management](/img/environment-detail.png)
 
 ### Credentials
-Configure credential providers (Claude, GitHub, Copilot, Codex) and manage tokens.
+Configure [credential providers](./credentials) (Claude, GitHub, Copilot, Codex, Goose) and manage encrypted tokens.
 
 ### Personas
-Create, edit, and manage agent personas. Each shows its runtime, model, max turns, and description.
+Create, edit, and manage [agent personas](../concepts/personas). Each shows its runtime, model, max turns, system prompt, and MCP tool permissions.
+
+![Persona management — runtime, model, and MCP configuration](/img/persona-management-view.png)
 
 ### Appearance
-Theme and display preferences.
+Theme selection with 10 built-in themes.
+
+![Themes — 10 built-in color schemes](/img/theme-grid.png)
 
 ### About
 Version information and links.

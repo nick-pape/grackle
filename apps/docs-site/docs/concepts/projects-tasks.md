@@ -1,16 +1,16 @@
 ---
 id: projects-tasks
-title: Projects & Tasks
+title: Workspaces & Tasks
 sidebar_position: 4
 ---
 
-# Projects & Tasks
+# Workspaces & Tasks
 
-**Projects** group related work. **Tasks** are individual units of work within a project. Together they give you structured, trackable agent workflows — from a simple to-do list to a full dependency graph.
+**Workspaces** group related work. **Tasks** are individual units of work within a workspace. Together they give you structured, trackable agent workflows — from a simple to-do list to a full dependency graph.
 
-## Projects
+## Workspaces
 
-A project is a container for tasks. It defines defaults that all its tasks inherit:
+A workspace is a container for tasks. It defines defaults that all its tasks inherit:
 
 - **Default environment** — Where tasks run unless overridden
 - **Default persona** — Which agent configuration to use
@@ -18,9 +18,9 @@ A project is a container for tasks. It defines defaults that all its tasks inher
 - **Worktree isolation** — Whether each task gets its own git branch (enabled by default)
 
 ```bash
-grackle project create "Auth Rewrite" \
-  --repo https://github.com/org/repo \
+grackle workspace create "Auth Rewrite" \
   --env my-docker \
+  --repo https://github.com/org/repo \
   --desc "Migrate from session tokens to JWT"
 ```
 
@@ -30,7 +30,7 @@ A task represents a single piece of work. When you start a task, Grackle spawns 
 
 ```bash
 grackle task create "Implement JWT middleware" \
-  --project auth-rewrite \
+  --workspace auth-rewrite \
   --desc "Replace the existing session-based auth with JWT tokens. Use RS256 signing."
 ```
 
@@ -52,10 +52,10 @@ Tasks move through a lifecycle:
 grackle task start <task-id>
 ```
 
-This spawns an agent session in the project's default environment (or a specified one). The agent receives:
+This spawns an agent session in the workspace's default environment (or a specified one). The agent receives:
 - The task title as its prompt
 - The task description as system context
-- Recent findings from the project (so it knows what other agents discovered)
+- Recent findings from the workspace (so it knows what other agents discovered)
 
 You can also specify a persona and pass notes (useful for retries):
 
@@ -89,10 +89,10 @@ Implement Auth (root)
 Child tasks are created with the `--parent` and `--can-decompose` flags:
 
 ```bash
-grackle task create "Write JWT validator" --project auth-rewrite --parent <parent-task-id>
+grackle task create "Write JWT validator" --workspace auth-rewrite --parent <parent-task-id>
 
 # Allow a task to create its own subtasks (e.g., for orchestrator patterns)
-grackle task create "Implement auth" --project auth-rewrite --can-decompose
+grackle task create "Implement auth" --workspace auth-rewrite --can-decompose
 ```
 
 Tasks can be nested up to 8 levels deep. Use `--can-decompose` to allow a task to create children — this is off by default to prevent runaway nesting. The web UI and MCP tools also support setting this flag.
@@ -103,7 +103,7 @@ Tasks can depend on other tasks. A blocked task cannot start until all its depen
 
 ```bash
 grackle task create "Write integration tests" \
-  --project auth-rewrite \
+  --workspace auth-rewrite \
   --depends-on <middleware-task-id>
 ```
 
@@ -116,15 +116,15 @@ graph TD
     A --> C
 ```
 
-The web UI shows these dependencies as a DAG (directed acyclic graph) in the project's **Graph** tab, and as a kanban board in the **Board** tab.
+The web UI shows these dependencies as a DAG (directed acyclic graph) in the workspace's **Graph** tab, and as a kanban board in the **Board** tab.
 
 ## Branch isolation
 
 When **worktrees** are enabled (the default), each task gets its own git branch:
 
 ```
-project-slug/task-slug          # root task
-project-slug/task-slug/subtask  # child task
+workspace-slug/task-slug          # root task
+workspace-slug/task-slug/subtask  # child task
 ```
 
 Agents work in isolated [git worktrees](https://git-scm.com/docs/git-worktree), so multiple agents can work on the same repo simultaneously without conflicting. Each agent sees its own branch with its own working tree.
@@ -132,7 +132,7 @@ Agents work in isolated [git worktrees](https://git-scm.com/docs/git-worktree), 
 The working directory defaults to the repo root, but you can customize it per-workspace:
 
 ```bash
-grackle project create "My Project" --working-directory /workspaces/my-repo
+grackle workspace create "My Workspace" --env my-docker --working-directory /workspaces/my-repo
 ```
 
 ## Importing from GitHub

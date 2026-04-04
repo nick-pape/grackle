@@ -1,7 +1,7 @@
 ---
 id: mcp
 title: MCP Server
-sidebar_position: 2
+sidebar_position: 6
 ---
 
 # MCP Server
@@ -72,14 +72,14 @@ The MCP server exposes tools grouped by domain:
 | `task_resume` | Resume a paused task |
 | `task_delete` | Delete a task |
 
-### Projects
+### Workspaces
 | Tool | Description |
 |------|------------|
-| `project_list` | List all projects |
-| `project_create` | Create a new project |
-| `project_get` | Get project details |
-| `project_update` | Update project metadata |
-| `project_archive` | Archive a project |
+| `workspace_list` | List all workspaces |
+| `workspace_create` | Create a new workspace |
+| `workspace_get` | Get workspace details |
+| `workspace_update` | Update workspace metadata |
+| `workspace_archive` | Archive a workspace |
 
 ### Findings
 | Tool | Description |
@@ -95,32 +95,48 @@ The MCP server exposes tools grouped by domain:
 | `persona_edit` | Update a persona |
 | `persona_delete` | Delete a persona |
 
+### Knowledge (when enabled)
+| Tool | Description |
+|------|------------|
+| `knowledge_search` | Semantic search over the knowledge graph |
+| `knowledge_get_node` | Retrieve a knowledge node by ID |
+| `knowledge_create_node` | Create a new knowledge entry |
+
+These tools are only available when the [knowledge graph plugin](./knowledge-graph) is enabled.
+
 ### Configuration
 | Tool | Description |
 |------|------------|
 | `config_get_default_persona` | Get the default persona setting |
 | `config_set_default_persona` | Set the default persona |
 
-## Scoped vs. global auth
+## MCP broker architecture
 
-The MCP server supports two authentication modes:
+Grackle has two MCP endpoints that share the same tool codebase but differ in auth and scope:
 
-### Global auth (API key)
+### Global MCP server (port 7435)
 
-Full access to all tools and all projects. This is what you get when connecting with your API key directly.
+The standalone MCP server you connect external tools to. Authenticates via API key or OAuth. Full access to all tools and all workspaces.
 
-### Scoped auth (session token)
+### PowerLine MCP broker (per-session)
 
-When Grackle spawns an agent session for a task, it gives that agent a **scoped MCP token** that restricts access:
+When Grackle spawns an agent session, the server passes the agent a **scoped MCP URL and session token** via PowerLine. The agent connects to the central MCP server using this token rather than your API key:
 
-- The agent can only see tasks and findings within its own project
+- The agent gets a **session token** (not your API key) that identifies it
+- Tool access is filtered by the agent's **persona** — a reviewer persona might only see read-only tools
 - Task creation is automatically parented to the agent's own task
-- The `projectId` is injected automatically — the agent doesn't need to specify it
-- Cross-project access is blocked
+- `workspaceId` is injected automatically — no cross-workspace access
 
-This means orchestrator agents can create subtasks and post findings through MCP, but they're sandboxed to their own project scope.
+This is what enables the orchestrator pattern: an agent can create subtasks, post findings, and monitor progress through MCP without seeing anything outside its scope.
 
-## How agents use MCP tools
+```mermaid
+graph LR
+    A["🤖 Agent"] -->|scoped token + MCP URL| PL["PowerLine"]
+    PL -->|session token| S["Grackle MCP Server"]
+    S --> DB["📦 Database"]
+```
+
+### How agents see MCP tools
 
 When an agent runs inside Grackle, the MCP server is automatically configured as an available tool source. The agent sees tools like `mcp__grackle__task_create` and `mcp__grackle__finding_post` alongside its built-in tools.
 
