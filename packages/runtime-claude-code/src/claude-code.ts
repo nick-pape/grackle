@@ -34,6 +34,50 @@ async function getQuery(): Promise<QueryFn> {
   );
 }
 
+/** Returns true if `v` is a finite number >= 0 (guards against NaN/Infinity from untyped SDK messages). */
+function isFiniteNonNegative(v: number | undefined): v is number {
+  return typeof v === "number" && Number.isFinite(v) && v >= 0;
+}
+
+/**
+ * Extract usage values from a raw SDK `result` message for {@link ClaudeCodeSession.pushCumulativeUsage}.
+ *
+ * Returns `undefined` for any field that is absent or not a valid finite non-negative number,
+ * so the caller can skip baseline updates for missing fields.
+ *
+ * Guards against `msg.usage` being `null` or a non-object at runtime despite the TypeScript cast.
+ */
+function parseUsageFromMessage(msg: Record<string, unknown>): {
+  totalInput: number | undefined;
+  totalOutput: number | undefined;
+  totalCostMillicents: number | undefined;
+} {
+  const rawUsage = msg.usage;
+  const usage = rawUsage !== null && typeof rawUsage === "object"
+    ? rawUsage as Record<string, unknown>
+    : undefined;
+
+  const costUsd = msg.total_cost_usd;
+
+  // Sum only the input-token fields that are actually present and finite.
+  // If all are absent we pass undefined so the baseline is not reset to 0.
+  const inputParts = [
+    usage?.["input_tokens"],
+    usage?.["cache_read_input_tokens"],
+    usage?.["cache_creation_input_tokens"],
+  ].filter((v): v is number => isFiniteNonNegative(v as number | undefined));
+  const totalInput = inputParts.length > 0 ? inputParts.reduce((a, b) => a + b, 0) : undefined;
+
+  const rawOutput = usage?.["output_tokens"];
+  const totalOutput = isFiniteNonNegative(rawOutput as number | undefined) ? rawOutput as number : undefined;
+
+  const totalCostMillicents = isFiniteNonNegative(costUsd as number | undefined)
+    ? Math.round((costUsd as number) * 100_000)
+    : undefined;
+
+  return { totalInput, totalOutput, totalCostMillicents };
+}
+
 /** @internal Map a raw Claude Agent SDK message to Grackle AgentEvent(s). Exported for testing. */
 export function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
   const ts = new Date().toISOString();
@@ -112,6 +156,19 @@ class ClaudeCodeSession extends BaseAgentSession {
    */
   private pendingToolUseIds: Map<string, string> = new Map();
 
+  // ─── Cumulative usage tracking ──────────────────────────────
+  // The Claude Agent SDK's `total_cost_usd` and `usage` fields on `result`
+  // messages are **cumulative session totals**, not per-turn increments.
+  // We track the last reported values and emit only the delta so the
+  // server-side `updateSessionUsage` accumulator isn't double-counted.
+
+  /** Last cumulative cost reported by the SDK (in millicents, for delta computation). */
+  private lastReportedCostMillicents: number = 0;
+  /** Last cumulative input token count reported by the SDK. */
+  private lastReportedInputTokens: number = 0;
+  /** Last cumulative output token count reported by the SDK. */
+  private lastReportedOutputTokens: number = 0;
+
   // ─── Persistent process mode ────────────────────────────────
   // When active, ONE query() stays alive across multiple turns. The SDK's
   // AsyncIterable prompt mode keeps the process running and waiting for input.
@@ -126,6 +183,52 @@ class ClaudeCodeSession extends BaseAgentSession {
   /** System context is injected via sdkOptions.systemPrompt, not prepended to the prompt. */
   protected override buildInitialPrompt(): string {
     return this.prompt;
+  }
+
+  /**
+   * Convert cumulative SDK usage values to incremental deltas and emit a usage event.
+   *
+   * The Claude Agent SDK's `total_cost_usd` and `usage` fields on `result` messages
+   * are **cumulative session totals** (running sums across all turns), not per-turn
+   * increments. Passing them directly to {@link pushUsageEvent} would cause the
+   * server-side `updateSessionUsage` accumulator to double-count costs — O(n²)
+   * inflation for n turns.
+   *
+   * This mirrors the cumulative→delta conversion performed by the ACP runtime.
+   *
+   * Each field is optional: pass `undefined` when the SDK message does not include
+   * that value. This prevents a missing field from resetting the tracking baseline
+   * to zero and inflating subsequent deltas.
+   */
+  private pushCumulativeUsage(
+    totalInputTokens: number | undefined,
+    totalOutputTokens: number | undefined,
+    totalCostMillicents: number | undefined,
+  ): void {
+    // Normalize: treat non-finite or negative values as absent so that a bad
+    // SDK message cannot poison the lastReported* baseline with NaN/Infinity.
+    const safeInput = isFiniteNonNegative(totalInputTokens) ? totalInputTokens : undefined;
+    const safeOutput = isFiniteNonNegative(totalOutputTokens) ? totalOutputTokens : undefined;
+    const safeCost = isFiniteNonNegative(totalCostMillicents) ? totalCostMillicents : undefined;
+
+    // Only compute and update baseline for fields that are actually present.
+    const deltaInput = safeInput !== undefined ? safeInput - this.lastReportedInputTokens : 0;
+    const deltaOutput = safeOutput !== undefined ? safeOutput - this.lastReportedOutputTokens : 0;
+    const deltaCost = safeCost !== undefined ? safeCost - this.lastReportedCostMillicents : 0;
+
+    if (safeInput !== undefined) { this.lastReportedInputTokens = safeInput; }
+    if (safeOutput !== undefined) { this.lastReportedOutputTokens = safeOutput; }
+    if (safeCost !== undefined) { this.lastReportedCostMillicents = safeCost; }
+
+    // Guard against SDK reporting lower values (e.g. session reset edge cases)
+    if (deltaInput <= 0 && deltaOutput <= 0 && deltaCost <= 0) {
+      return;
+    }
+    this.pushUsageEvent(
+      Math.max(0, deltaInput),
+      Math.max(0, deltaOutput),
+      Math.max(0, deltaCost),
+    );
   }
 
   // ─── BaseAgentSession hooks ──────────────────────────────
@@ -379,18 +482,9 @@ class ClaudeCodeSession extends BaseAgentSession {
 
       // Extract usage data from successful result messages
       if (msg.type === "result" && !msg.is_error) {
-        const usage = msg.usage as {
-          input_tokens?: number;
-          output_tokens?: number;
-          cache_read_input_tokens?: number;
-          cache_creation_input_tokens?: number;
-        } | undefined;
-        const costUsd = msg.total_cost_usd as number | undefined;
-        if (usage !== undefined || costUsd !== undefined) {
-          const totalInput = (usage?.input_tokens ?? 0)
-            + (usage?.cache_read_input_tokens ?? 0)
-            + (usage?.cache_creation_input_tokens ?? 0);
-          this.pushUsageEvent(totalInput, usage?.output_tokens ?? 0, Math.round((costUsd ?? 0) * 100_000));
+        const { totalInput, totalOutput, totalCostMillicents } = parseUsageFromMessage(msg);
+        if (totalInput !== undefined || totalOutput !== undefined || totalCostMillicents !== undefined) {
+          this.pushCumulativeUsage(totalInput, totalOutput, totalCostMillicents);
         }
       }
 
@@ -495,6 +589,13 @@ class ClaudeCodeSession extends BaseAgentSession {
     const query: QueryFn = await getQuery();
     const ts: () => string = () => new Date().toISOString();
 
+    // Reset cumulative usage baseline for this query() call. In resume-per-input
+    // mode, each query() call reports usage cumulative within that call only (not
+    // the session total), so the baseline must start at zero for each invocation.
+    this.lastReportedCostMillicents = 0;
+    this.lastReportedInputTokens = 0;
+    this.lastReportedOutputTokens = 0;
+
     // Each query gets its own AbortController
     const abort = new AbortController();
     this.activeAbort = abort;
@@ -527,19 +628,9 @@ class ClaudeCodeSession extends BaseAgentSession {
       // Extract usage data from successful result messages
       if (msg.type === "result" && !msg.is_error) {
         this.flushPendingToolResults(ts);
-        const usage = msg.usage as {
-          input_tokens?: number;
-          output_tokens?: number;
-          cache_read_input_tokens?: number;
-          cache_creation_input_tokens?: number;
-        } | undefined;
-        const costUsd = msg.total_cost_usd as number | undefined;
-        if (usage !== undefined || costUsd !== undefined) {
-          // Total input includes non-cached + cache reads + cache creation
-          const totalInput = (usage?.input_tokens ?? 0)
-            + (usage?.cache_read_input_tokens ?? 0)
-            + (usage?.cache_creation_input_tokens ?? 0);
-          this.pushUsageEvent(totalInput, usage?.output_tokens ?? 0, Math.round((costUsd ?? 0) * 100_000));
+        const { totalInput, totalOutput, totalCostMillicents } = parseUsageFromMessage(msg);
+        if (totalInput !== undefined || totalOutput !== undefined || totalCostMillicents !== undefined) {
+          this.pushCumulativeUsage(totalInput, totalOutput, totalCostMillicents);
         }
       }
 
