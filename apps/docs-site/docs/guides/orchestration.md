@@ -25,7 +25,7 @@ graph LR
     E --- A["🤖 Agent"]
 ```
 
-No projects, no tasks, no orchestration. Just a session.
+No workspaces, no tasks, no orchestration. Just a session.
 
 ## Level 2: Structured tasks
 

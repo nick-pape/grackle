@@ -43,7 +43,7 @@ On the landing page, Grackle shows contextual **suggested action cards** based o
 
 - **First run** — "Add your first environment", "Set up credentials"
 - **No environments connected** — "Connect a Docker environment", "Add an SSH host"
-- **Active work** — "Check on [project name]", "Start the next task in [project]"
+- **Active work** — "Check on [workspace name]", "Start the next task in [workspace]"
 - **Recent activity** — Quick links to resume recent sessions or view findings
 
 Click any card to pre-fill the chat with that action, or just type your own request.
@@ -56,7 +56,7 @@ Anything the [MCP server](./mcp) exposes is available through chat. Common patte
 > "Add a Docker environment called build-server and provision it"
 
 **Task workflows:**
-> "Create a task to fix the flaky auth test in the API project and start it"
+> "Create a task to fix the flaky auth test in the API workspace and start it"
 
 **Status checks:**
 > "What tasks are currently running? Any failures?"

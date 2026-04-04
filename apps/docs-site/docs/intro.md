@@ -79,7 +79,7 @@ The **Grackle Server** is the control plane. It manages environments, sessions, 
 | Level | What you get | What you use |
 |-------|-------------|-------------|
 | **1. Remote control** | One agent, one environment, you watch it work | Sessions, environments |
-| **2. Structured tasks** | Break work into tasks with branches and review gates | + Projects, tasks, personas |
+| **2. Structured tasks** | Break work into tasks with branches and review gates | + Workspaces, tasks, personas |
 | **3. Parallel agents** | Multiple agents working independently, sharing findings | + Multiple environments, findings |
 | **4. Orchestrator pattern** | Parent agent decomposes work and coordinates child agents via MCP | + Task trees, MCP broker, signals |
 

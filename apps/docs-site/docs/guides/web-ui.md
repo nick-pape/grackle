@@ -6,9 +6,9 @@ sidebar_position: 1
 
 # Web UI
 
-The Grackle web UI is a real-time dashboard for managing environments, projects, tasks, and agent sessions. It's served by the Grackle server at **http://localhost:3000** by default.
+The Grackle web UI is a real-time dashboard for managing environments, workspaces, tasks, and agent sessions. It's served by the Grackle server at **http://localhost:3000** by default.
 
-![Dashboard — projects, tasks, and workspace overview](/img/dashboard-projects-tasks.png)
+![Dashboard — workspaces, tasks, and session overview](/img/dashboard-projects-tasks.png)
 
 ## First-run setup
 
