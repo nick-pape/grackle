@@ -2,12 +2,19 @@
  * Tests for MCP session lifecycle — specifically that abandoned sessions
  * are cleaned up when the SSE stream disconnects (#972).
  *
+ * Also tests scoped-token workspaceId injection behavior: workspace management
+ * tools must NOT have their workspaceId overridden by the caller's token context.
+ *
  * Uses a real http.Server from createMcpServer with API-key auth and a
  * dummy gRPC port (no backend needed — API-key auth skips gRPC calls
  * during initialization).
  */
 import { describe, it, expect, afterEach } from "vitest";
 import http from "node:http";
+import { z } from "zod";
+import { createScopedToken } from "@grackle-ai/auth";
+import { ROOT_TASK_ID } from "@grackle-ai/common";
+import type { ToolDefinition } from "./tool-registry.js";
 import { createMcpServer } from "./mcp-server.js";
 
 // API key must be exactly 64 hex characters (API_KEY_LENGTH in auth-middleware)
@@ -289,5 +296,219 @@ describe("MCP session cleanup on SSE disconnect", () => {
     // Session B should still work
     const aliveB = await postToSession(server!, sessionB);
     expect(aliveB.status).toBe(200);
+  });
+});
+
+// ─── Scoped token workspaceId injection tests ──────────────────────────────
+
+/**
+ * Send a tools/call MCP request and return the parsed JSON-RPC result body.
+ * The response arrives as SSE; this helper reads the first data event.
+ */
+function callTool(
+  server: http.Server,
+  sessionId: string,
+  toolName: string,
+  toolArgs: Record<string, unknown>,
+  authHeader: string,
+): Promise<{ status: number; result: unknown }> {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify({
+      jsonrpc: "2.0",
+      id: 42,
+      method: "tools/call",
+      params: { name: toolName, arguments: toolArgs },
+    });
+
+    const req = http.request(
+      {
+        hostname: "127.0.0.1",
+        port: port(server),
+        path: "/mcp",
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json, text/event-stream",
+          "Authorization": authHeader,
+          "mcp-session-id": sessionId,
+          "mcp-protocol-version": "2025-03-26",
+        },
+      },
+      (res) => {
+        let rawBody = "";
+        res.on("data", (chunk: Buffer) => { rawBody += chunk.toString(); });
+        res.on("end", () => {
+          // Response is SSE: parse first `data:` line
+          const dataLine = rawBody.split("\n").find((l) => l.startsWith("data:"));
+          if (!dataLine) {
+            reject(new Error(`No SSE data line in response body: ${rawBody}`));
+            return;
+          }
+          try {
+            const parsed = JSON.parse(dataLine.slice("data:".length).trim()) as unknown;
+            resolve({ status: res.statusCode!, result: parsed });
+          } catch (e) {
+            reject(new Error(`Failed to parse SSE data: ${dataLine}`));
+          }
+        });
+      },
+    );
+
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+/**
+ * Initialize an MCP session with a custom auth header, returning the session ID.
+ */
+function initializeWithAuth(server: http.Server, authHeader: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-03-26",
+        capabilities: {},
+        clientInfo: { name: "test-client", version: "1.0.0" },
+      },
+    });
+
+    const req = http.request(
+      {
+        hostname: "127.0.0.1",
+        port: port(server),
+        path: "/mcp",
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json, text/event-stream",
+          "Authorization": authHeader,
+        },
+      },
+      (res) => {
+        const sessionId = res.headers["mcp-session-id"] as string | undefined;
+        res.on("data", () => {});
+        res.on("end", () => {
+          if (!sessionId) {
+            reject(new Error("No session ID in response"));
+            return;
+          }
+          resolve(sessionId);
+        });
+      },
+    );
+
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+describe("scoped token workspaceId injection", () => {
+  let server: http.Server | undefined;
+
+  afterEach(async () => {
+    if (server) {
+      await new Promise<void>((resolve) => { server!.close(() => resolve()); });
+      server = undefined;
+    }
+  });
+
+  /**
+   * Workspace management tools (group: "workspace") must NOT have their
+   * workspaceId overridden by the scoped token's workspace context.
+   * This is the regression test for #1179.
+   */
+  it("workspace group tool receives caller-provided workspaceId, not token workspace", async () => {
+    const capturedArgs: Record<string, unknown>[] = [];
+
+    const spyTool: ToolDefinition = {
+      name: "workspace_spy",
+      group: "workspace",
+      description: "Spy tool that captures its args for testing workspace injection.",
+      inputSchema: z.object({
+        workspaceId: z.string(),
+      }),
+      rpcMethod: "getWorkspace",
+      mutating: false,
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      async handler(args) {
+        capturedArgs.push({ ...args });
+        return { content: [{ type: "text", text: JSON.stringify({ ok: true }) }] };
+      },
+    };
+
+    server = createMcpServer({
+      bindHost: "127.0.0.1",
+      mcpPort: 0,
+      grpcPort: 19999,
+      apiKey: TEST_API_KEY,
+      toolGroups: [[spyTool]],
+    });
+    await new Promise<void>((resolve) => { server!.listen(0, "127.0.0.1", () => resolve()); });
+
+    // Use ROOT_TASK_ID for full tool access; workspaceId in token is "default-ws"
+    const scopedToken = createScopedToken(
+      { sub: ROOT_TASK_ID, pid: "default-ws", per: "system", sid: "sess-1" },
+      TEST_API_KEY,
+    );
+
+    const sessionId = await initializeWithAuth(server!, `Bearer ${scopedToken}`);
+    const { result } = await callTool(server!, sessionId, "workspace_spy", { workspaceId: "target-ws" }, `Bearer ${scopedToken}`);
+
+    expect(capturedArgs).toHaveLength(1);
+    // The handler must receive the caller-provided workspace ID, not the token's "default-ws"
+    expect(capturedArgs[0]!.workspaceId).toBe("target-ws");
+    expect(result).toBeTruthy();
+  });
+
+  /**
+   * Non-workspace tools (e.g. task tools, group: "task") DO have their
+   * workspaceId overridden by the scoped token — this is the intended behavior
+   * that prevents task agents from escaping their workspace context.
+   */
+  it("non-workspace group tool has workspaceId overridden by scoped token", async () => {
+    const capturedArgs: Record<string, unknown>[] = [];
+
+    const spyTool: ToolDefinition = {
+      name: "task_spy",
+      group: "task",
+      description: "Spy tool that captures its args for testing non-workspace injection.",
+      inputSchema: z.object({
+        workspaceId: z.string().optional(),
+      }),
+      rpcMethod: "listTasks",
+      mutating: false,
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      async handler(args) {
+        capturedArgs.push({ ...args });
+        return { content: [{ type: "text", text: JSON.stringify({ ok: true }) }] };
+      },
+    };
+
+    server = createMcpServer({
+      bindHost: "127.0.0.1",
+      mcpPort: 0,
+      grpcPort: 19999,
+      apiKey: TEST_API_KEY,
+      toolGroups: [[spyTool]],
+    });
+    await new Promise<void>((resolve) => { server!.listen(0, "127.0.0.1", () => resolve()); });
+
+    const scopedToken = createScopedToken(
+      { sub: ROOT_TASK_ID, pid: "default-ws", per: "system", sid: "sess-1" },
+      TEST_API_KEY,
+    );
+
+    const sessionId = await initializeWithAuth(server!, `Bearer ${scopedToken}`);
+    // Caller passes "other-ws" but token says "default-ws" — injection should override
+    await callTool(server!, sessionId, "task_spy", { workspaceId: "other-ws" }, `Bearer ${scopedToken}`);
+
+    expect(capturedArgs).toHaveLength(1);
+    // The injection must override with the token's workspace
+    expect(capturedArgs[0]!.workspaceId).toBe("default-ws");
   });
 });

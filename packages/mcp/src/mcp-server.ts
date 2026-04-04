@@ -170,7 +170,13 @@ async function createMcpServerInstance(
     // Inject context from scoped token so callers don't need to provide it
     const rawArgs = (args ?? {}) as Record<string, unknown>;
     if (authContext.type === "scoped") {
-      rawArgs.workspaceId = authContext.workspaceId;
+      // Workspace management tools take an explicit target workspace ID — do NOT
+      // override it with the caller's workspace. Overriding would silently redirect
+      // every call (e.g. workspace_get, workspace_link_environment) to the token's
+      // workspace regardless of what the caller requested.
+      if (tool.group !== "workspace") {
+        rawArgs.workspaceId = authContext.workspaceId;
+      }
       // Auto-parent subtasks: when an agent creates a task, parent it to the agent's own task
       if (name === "task_create" && authContext.taskId) {
         rawArgs.parentTaskId = authContext.taskId;
