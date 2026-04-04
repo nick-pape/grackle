@@ -38,7 +38,7 @@ export const sessionTools: ToolDefinition[] = [
       idempotentHint: false,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, { core: client }: GrackleClients) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients, authContext?: AuthContext) {
       try {
         const session = await client.spawnAgent({
           environmentId: args.environmentId as string,
@@ -46,6 +46,7 @@ export const sessionTools: ToolDefinition[] = [
           maxTurns: args.maxTurns as number | undefined,
           personaId: args.personaId as string | undefined,
           workingDirectory: (args.workingDirectory as string | undefined) ?? "",
+          workspaceId: authContext?.type === "scoped" ? authContext.workspaceId ?? "" : "",
         });
         return jsonResult(session);
       } catch (error) {

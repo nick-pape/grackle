@@ -2066,6 +2066,7 @@ type SpawnRequest = Message<"grackle.SpawnRequest"> & {
     workingDirectory: string;
     pipe: string;
     parentSessionId: string;
+    workspaceId: string;
 };
 
 // @public

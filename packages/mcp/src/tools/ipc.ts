@@ -40,6 +40,7 @@ export const ipcTools: ToolDefinition[] = [
           parentSessionId,
           personaId: (args.personaId as string) || "",
           maxTurns: (args.maxTurns as number) || 0,
+          workspaceId: authContext?.type === "scoped" ? authContext.workspaceId ?? "" : "",
         });
 
         if (pipe === "sync") {

@@ -197,6 +197,7 @@ message SpawnRequest {
   string working_directory = 9; // Working directory / repo root (non-task spawns)
   string pipe = 10; // "sync", "async", "detach", or "" (no pipe)
   string parent_session_id = 11; // Caller's session ID (for pipe setup)
+  string workspace_id = 12; // Workspace scope for the session (used to associate MCP tool calls)
 }
 
 message ResumeRequest {

@@ -12,13 +12,15 @@ export function registerAgentCommands(program: Command): void {
     .description("Start a new agent session")
     .option("--max-turns <n>", "Maximum turns", parseInt)
     .option("--persona <id>", "Persona to use (falls back to app default)")
-    .action(async (environmentId: string, prompt: string, opts: { maxTurns?: number; persona?: string }) => {
+    .option("--workspace <id>", "Workspace to associate with this session (enables workspace-scoped MCP tools)")
+    .action(async (environmentId: string, prompt: string, opts: { maxTurns?: number; persona?: string; workspace?: string }) => {
       const { core: client } = createGrackleClients();
       const session = await client.spawnAgent({
         environmentId,
         prompt,
         maxTurns: opts.maxTurns || 0,
         personaId: opts.persona || "",
+        workspaceId: opts.workspace || "",
       });
       console.log(`Spawned session: ${session.id}`);
       console.log(`Streaming events (Ctrl+C to detach)...\n`);
