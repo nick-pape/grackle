@@ -868,6 +868,62 @@ describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
     session.kill();
   });
 
+  it("usage deltas reset per consumeQuery() call in resume-per-input mode", async () => {
+    // Simulate persistent mode failing so the session falls back to consumeQuery per turn.
+    // Each query() call reports usage cumulative within that call only (not session total).
+    // The baseline must reset to zero at the start of each consumeQuery() so deltas are correct.
+    let callCount = 0;
+    mockQuery.mockImplementation((queryInput: Record<string, unknown>) => {
+      callCount++;
+      if (callCount === 1 && typeof queryInput.prompt !== "string") {
+        // Persistent mode attempt — fail to trigger resume-per-input fallback
+        throw new Error("Persistent mode not supported");
+      }
+      // Turn 1 (call 2) and Turn 2 (call 3) each report cost/tokens for that call only.
+      // Turn 1: cost=0.01, input=100, output=10
+      // Turn 2: cost=0.015, input=150, output=15  (a separate query(), not cumulative)
+      const turnIndex = callCount - 2; // 0-based
+      const costs = [0.01, 0.015];
+      const inputs = [100, 150];
+      const outputs = [10, 15];
+      return asyncIterableFrom([
+        { type: "system", subtype: "init", session_id: `sess-resume-usage-${turnIndex}`, model: "claude-sonnet-4" },
+        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: `turn${turnIndex + 1}` }] } },
+        {
+          type: "result", subtype: "success", is_error: false, result: "ok",
+          total_cost_usd: costs[turnIndex],
+          usage: { input_tokens: inputs[turnIndex], output_tokens: outputs[turnIndex], cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+        },
+      ]);
+    });
+
+    const { session, nextEvent } = spawnSession("initial prompt");
+    const turn1Events = await drainUntilStatus(nextEvent, "waiting_input");
+
+    session.sendInput("follow-up");
+    await drainUntilStatus(nextEvent, "running");
+    const turn2Events = await drainUntilStatus(nextEvent, "waiting_input");
+
+    const allEvents = [...turn1Events, ...turn2Events];
+    const usageEvents = allEvents.filter((e) => e.type === "usage");
+    expect(usageEvents).toHaveLength(2);
+
+    // Turn 1: first consumeQuery, baseline=0 so delta == cumulative value
+    const usage1 = JSON.parse(usageEvents[0].content) as Record<string, number>;
+    expect(usage1.input_tokens).toBe(100);
+    expect(usage1.output_tokens).toBe(10);
+    expect(usage1.cost_millicents).toBe(1000);
+
+    // Turn 2: separate consumeQuery, baseline resets to 0, so delta == full per-call value
+    // (NOT 150-100=50 — that would be wrong; each call reports its own totals)
+    const usage2 = JSON.parse(usageEvents[1].content) as Record<string, number>;
+    expect(usage2.input_tokens).toBe(150);
+    expect(usage2.output_tokens).toBe(15);
+    expect(usage2.cost_millicents).toBe(1500); // Math.round(0.015 * 100_000)
+
+    session.kill();
+  });
+
   it("session recovers when persistent stream throws mid-turn", async () => {
     // Simulate: persistent mode works for turn 1, then the stream THROWS on
     // the second prompt (e.g. SDK process crash). The .catch() handler must

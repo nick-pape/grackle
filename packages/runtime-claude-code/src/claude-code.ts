@@ -39,6 +39,45 @@ function isFiniteNonNegative(v: number | undefined): v is number {
   return typeof v === "number" && Number.isFinite(v) && v >= 0;
 }
 
+/**
+ * Extract usage values from a raw SDK `result` message for {@link ClaudeCodeSession.pushCumulativeUsage}.
+ *
+ * Returns `undefined` for any field that is absent or not a valid finite non-negative number,
+ * so the caller can skip baseline updates for missing fields.
+ *
+ * Guards against `msg.usage` being `null` or a non-object at runtime despite the TypeScript cast.
+ */
+function parseUsageFromMessage(msg: Record<string, unknown>): {
+  totalInput: number | undefined;
+  totalOutput: number | undefined;
+  totalCostMillicents: number | undefined;
+} {
+  const rawUsage = msg.usage;
+  const usage = rawUsage !== null && typeof rawUsage === "object"
+    ? rawUsage as Record<string, unknown>
+    : undefined;
+
+  const costUsd = msg.total_cost_usd;
+
+  // Sum only the input-token fields that are actually present and finite.
+  // If all are absent we pass undefined so the baseline is not reset to 0.
+  const inputParts = [
+    usage?.["input_tokens"],
+    usage?.["cache_read_input_tokens"],
+    usage?.["cache_creation_input_tokens"],
+  ].filter((v): v is number => isFiniteNonNegative(v as number | undefined));
+  const totalInput = inputParts.length > 0 ? inputParts.reduce((a, b) => a + b, 0) : undefined;
+
+  const rawOutput = usage?.["output_tokens"];
+  const totalOutput = isFiniteNonNegative(rawOutput as number | undefined) ? rawOutput as number : undefined;
+
+  const totalCostMillicents = isFiniteNonNegative(costUsd as number | undefined)
+    ? Math.round((costUsd as number) * 100_000)
+    : undefined;
+
+  return { totalInput, totalOutput, totalCostMillicents };
+}
+
 /** @internal Map a raw Claude Agent SDK message to Grackle AgentEvent(s). Exported for testing. */
 export function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
   const ts = new Date().toISOString();
@@ -443,22 +482,9 @@ class ClaudeCodeSession extends BaseAgentSession {
 
       // Extract usage data from successful result messages
       if (msg.type === "result" && !msg.is_error) {
-        const usage = msg.usage as {
-          input_tokens?: number;
-          output_tokens?: number;
-          cache_read_input_tokens?: number;
-          cache_creation_input_tokens?: number;
-        } | undefined;
-        const costUsd = msg.total_cost_usd as number | undefined;
-        if (usage !== undefined || costUsd !== undefined) {
-          const totalInput = usage !== undefined
-            ? (usage.input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0)
-            : undefined;
-          this.pushCumulativeUsage(
-            totalInput,
-            usage?.output_tokens,
-            costUsd !== undefined ? Math.round(costUsd * 100_000) : undefined,
-          );
+        const { totalInput, totalOutput, totalCostMillicents } = parseUsageFromMessage(msg);
+        if (totalInput !== undefined || totalOutput !== undefined || totalCostMillicents !== undefined) {
+          this.pushCumulativeUsage(totalInput, totalOutput, totalCostMillicents);
         }
       }
 
@@ -602,23 +628,9 @@ class ClaudeCodeSession extends BaseAgentSession {
       // Extract usage data from successful result messages
       if (msg.type === "result" && !msg.is_error) {
         this.flushPendingToolResults(ts);
-        const usage = msg.usage as {
-          input_tokens?: number;
-          output_tokens?: number;
-          cache_read_input_tokens?: number;
-          cache_creation_input_tokens?: number;
-        } | undefined;
-        const costUsd = msg.total_cost_usd as number | undefined;
-        if (usage !== undefined || costUsd !== undefined) {
-          // Total input includes non-cached + cache reads + cache creation
-          const totalInput = usage !== undefined
-            ? (usage.input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0)
-            : undefined;
-          this.pushCumulativeUsage(
-            totalInput,
-            usage?.output_tokens,
-            costUsd !== undefined ? Math.round(costUsd * 100_000) : undefined,
-          );
+        const { totalInput, totalOutput, totalCostMillicents } = parseUsageFromMessage(msg);
+        if (totalInput !== undefined || totalOutput !== undefined || totalCostMillicents !== undefined) {
+          this.pushCumulativeUsage(totalInput, totalOutput, totalCostMillicents);
         }
       }
 
