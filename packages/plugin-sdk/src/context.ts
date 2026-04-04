@@ -69,7 +69,8 @@ export type GrackleEventType =
   | "schedule.deleted"
   | "schedule.fired"
   | "notification.escalated"
-  | "plugin.changed";
+  | "plugin.changed"
+  | "github_account.changed";
 
 /** A domain event from the event bus. */
 export interface GrackleEvent {

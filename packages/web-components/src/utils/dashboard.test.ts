@@ -66,6 +66,7 @@ function makeEnvironment(id: string, displayName: string, status: string): Envir
     adapterConfig: "{}",
     status,
     bootstrapped: true,
+    githubAccountId: "",
   };
 }
 

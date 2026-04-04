@@ -48,11 +48,12 @@ export function registerEnvCommands(program: Command): void {
     .option("--ssh-port <sshPort>", "SSH port (default: 22)")
     .option("--identity-file <path>", "SSH identity file (private key)")
     .option("--codespace-name <name>", "Codespace name (from `gh codespace list`)")
+    .option("--github-account <label>", "GitHub account label to use for gh CLI operations (codespace/docker adapters)")
     .action(async (name: string, opts: {
       codespace?: boolean; docker?: boolean; ssh?: boolean; local?: boolean;
       repo?: string; image?: string; host?: string; port?: string; user?: string;
       volume?: string[]; gpu?: string | boolean; sshPort?: string;
-      identityFile?: string; codespaceName?: string;
+      identityFile?: string; codespaceName?: string; githubAccount?: string;
     }) => {
       const { core: client } = createGrackleClients();
       let adapterType: AdapterType = "docker";
@@ -94,10 +95,30 @@ export function registerEnvCommands(program: Command): void {
         if (opts.gpu) config.gpus = opts.gpu === true ? "all" : opts.gpu;
       }
 
+      // Resolve --github-account label to an account ID, if provided.
+      // The flag is only meaningful for adapters that use `gh` CLI (codespace/docker).
+      let githubAccountId = "";
+      if (opts.githubAccount) {
+        if (adapterType !== "codespace" && adapterType !== "docker") {
+          console.error(chalk.yellow(`Warning: --github-account has no effect for the "${adapterType}" adapter (only applies to codespace/docker)`));
+        } else {
+          const { accounts } = await client.listGitHubAccounts({});
+          const match = accounts.find(
+            (a) => a.id === opts.githubAccount || a.label.toLowerCase() === (opts.githubAccount ?? "").toLowerCase(),
+          );
+          if (!match) {
+            console.error(chalk.red(`GitHub account not found: ${opts.githubAccount}`));
+            process.exit(1);
+          }
+          githubAccountId = match.id;
+        }
+      }
+
       const env: { id: string; adapterType: string } = await client.addEnvironment({
         displayName: name,
         adapterType,
         adapterConfig: JSON.stringify(config),
+        githubAccountId,
       });
       console.log(`Added environment: ${env.id} (${env.adapterType})`);
     });

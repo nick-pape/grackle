@@ -38,6 +38,8 @@ export type {
   DispatchQueueRow,
   NewDispatchQueueRow,
   PluginRow,
+  GitHubAccountRow,
+  NewGitHubAccount,
 } from "./schema.js";
 
 // ─── Stores ────────────────────────────────────────────────
@@ -55,11 +57,13 @@ export * as escalationStore from "./escalation-store.js";
 export * as workspaceEnvironmentLinkStore from "./workspace-environment-link-store.js";
 export * as dispatchQueueStore from "./dispatch-queue-store.js";
 export * as pluginStore from "./plugin-store.js";
+export * as githubAccountStore from "./github-account-store.js";
 
 // Re-export key store types for convenience
 export type { InsertTaskFields } from "./task-store.js";
 export type { TokenConfig } from "./token-store.js";
 export type { CredentialProviderConfig, DatabaseInstance } from "./credential-providers.js";
+export type { GitHubAccountInfo, UpdateGitHubAccountFields } from "./github-account-store.js";
 export { isAllowedSettingKey, WRITABLE_SETTING_KEYS } from "./settings-store.js";
 export {
   VALID_PROVIDERS,

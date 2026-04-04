@@ -48,6 +48,7 @@ export function makeEnvironment(overrides: Partial<Environment> = {}): Environme
     adapterConfig: "{}",
     status: "connected",
     bootstrapped: true,
+    githubAccountId: "",
     ...overrides,
   };
 }
