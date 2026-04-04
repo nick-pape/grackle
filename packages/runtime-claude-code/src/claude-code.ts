@@ -563,6 +563,13 @@ class ClaudeCodeSession extends BaseAgentSession {
     const query: QueryFn = await getQuery();
     const ts: () => string = () => new Date().toISOString();
 
+    // Reset cumulative usage baseline for this query() call. In resume-per-input
+    // mode, each query() call reports usage cumulative within that call only (not
+    // the session total), so the baseline must start at zero for each invocation.
+    this.lastReportedCostMillicents = 0;
+    this.lastReportedInputTokens = 0;
+    this.lastReportedOutputTokens = 0;
+
     // Each query gets its own AbortController
     const abort = new AbortController();
     this.activeAbort = abort;
