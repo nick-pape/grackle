@@ -555,7 +555,7 @@ describe("stream-registry", () => {
       registry.registerAsyncListener("sender", vi.fn());
       registry.registerAsyncListener("other", vi.fn());
 
-      // Publish two messages — both fully delivered (sender via immediate mark, other via sync listener)
+      // Publish two messages — both fully delivered (sender via immediate mark, other via async listener)
       registry.publish(stream.id, "sender", "first");
       registry.publish(stream.id, "sender", "second");
 

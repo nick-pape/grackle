@@ -28,9 +28,11 @@ export interface Stream {
   readonly messages: StreamMessage[];
   readonly subscriptions: Map<string, Subscription>;
   /**
-   * When true, the sender's own messages are stored in stream history and delivered to
-   * sync/detach consumers, but async listeners are NOT invoked for the sender. This prevents
-   * the sender from triggering a full agent turn on their own output (chatroom mode). (#1184)
+   * When true, a publisher's own messages are still recorded in stream history and may be
+   * consumed back by that same session through sync/detach subscription paths. Sender-owned
+   * async subscriptions are an exception: their async listeners are NOT invoked for the
+   * publisher's own messages. This prevents the sender from triggering a full agent turn on
+   * their own output (chatroom mode). (#1184)
    */
   readonly selfEcho: boolean;
 }
