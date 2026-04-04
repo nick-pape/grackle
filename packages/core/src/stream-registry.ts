@@ -554,6 +554,8 @@ export function replayUndeliveredMessages(subscriptionId: string): void {
   }
 
   let hadSyncDelivery = false;
+  /** Message IDs for which we added an async delivery promise in this call. */
+  const asyncMessageIds: string[] = [];
 
   for (const msg of stream.messages) {
     if (msg.deliveredTo.has(subscriptionId)) {
@@ -578,27 +580,34 @@ export function replayUndeliveredMessages(subscriptionId: string): void {
           pendingDeliveries.set(msg.id, pending);
         }
         pending.promises.push(deliveryPromise);
-        // Schedule auto-finalization on ALL promises for this message — matching publish() so
-        // that a single settled promise cannot delete the entry while sibling promises are
-        // still in flight (e.g. multiple subscriptions being replayed for the same message).
-        const msgId = msg.id;
-        Promise.allSettled(pending.promises).then(() => {
-          if (pendingDeliveries.has(msgId)) {
-            pendingDeliveries.delete(msgId);
-            const s = streams.get(streamId);
-            if (s) {
-              pruneDeliveredMessages(s);
-            }
-          }
-        }).catch((err: unknown) => {
-          logger.error({ err, streamId, messageId: msgId }, "replayUndeliveredMessages: error during auto-finalization");
-        });
+        asyncMessageIds.push(msg.id);
       } else {
         msg.deliveredTo.add(sub.id);
         hadSyncDelivery = true;
       }
     } catch (err) {
       logger.warn({ err, subscriptionId: sub.id }, "replayUndeliveredMessages: async listener threw — message left undelivered");
+    }
+  }
+
+  // Schedule one finalization per message after the loop — matching publish() exactly.
+  // Scheduling after the loop (rather than inside it) guarantees pending.promises is fully
+  // populated before allSettled is called, so no sibling promise can be dropped.
+  for (const msgId of asyncMessageIds) {
+    const pending = pendingDeliveries.get(msgId);
+    if (pending) {
+      const streamId = pending.streamId;
+      Promise.allSettled(pending.promises).then(() => {
+        if (pendingDeliveries.has(msgId)) {
+          pendingDeliveries.delete(msgId);
+          const s = streams.get(streamId);
+          if (s) {
+            pruneDeliveredMessages(s);
+          }
+        }
+      }).catch((err: unknown) => {
+        logger.error({ err, streamId, messageId: msgId }, "replayUndeliveredMessages: error during auto-finalization");
+      });
     }
   }
 
