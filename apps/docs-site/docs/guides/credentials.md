@@ -42,7 +42,7 @@ Or configure from the web UI under **Settings > Credentials**.
 
 ## Token management
 
-Tokens are the actual secrets — API keys, access tokens, OAuth tokens. Grackle encrypts them with AES-256-GCM at rest in `~/.grackle/grackle.db` (the main SQLite database).
+Tokens are the actual secrets — API keys, access tokens, OAuth tokens. Grackle encrypts them with AES-256-GCM at rest in the main SQLite database (by default `~/.grackle/grackle.db`).
 
 ### Setting tokens
 
@@ -135,7 +135,7 @@ grackle token set OPENAI_API_KEY --env-var OPENAI_API_KEY
 ## Security details
 
 - **Encryption**: AES-256-GCM with a randomly generated key stored in `~/.grackle/api-key`
-- **Transport**: Tokens are pushed over gRPC (plain HTTP/2 by default; TLS when configured)
+- **Transport**: Tokens are pushed over gRPC on HTTP/2; the built-in server uses plain HTTP/2 by default, so enable TLS (via a reverse proxy or terminating load balancer) to encrypt traffic in production
 - **At rest**: Never stored in plaintext on disk — always encrypted in the SQLite token store
 - **In process**: `env_var` type tokens exist only in the agent's process environment; `file` type tokens are written to disk on the environment
 - **Timing-safe comparison**: API key validation uses constant-time comparison to prevent timing attacks

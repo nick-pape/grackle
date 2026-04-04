@@ -68,8 +68,8 @@ Grackle ships with four plugins. All are enabled by default except knowledge (op
 | Contribution | Details |
 |-------------|---------|
 | **gRPC handlers** | Environments, sessions, workspaces, tokens, codespaces, settings |
-| **Reconciliation phases** | `dispatch` (assign queued tasks to environments), `lifecycle-cleanup` (clean up stale streams), `environment-status` (monitor connection status) |
-| **Event subscribers** | Session lifecycle management, root task auto-start |
+| **Reconciliation phases** | `dispatch` (assign queued tasks to environments), `lifecycle-cleanup` (clean up stale streams), `environment-status` (monitor environment connection status) |
+| **Event subscribers** | Session and environment lifecycle management, optional root task auto-start |
 
 ### Orchestration
 
