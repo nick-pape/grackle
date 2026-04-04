@@ -43,6 +43,7 @@ function makeEnvironment(id: string, displayName: string): Environment {
     adapterConfig: "",
     status: "connected",
     bootstrapped: true,
+    githubAccountId: "",
   };
 }
 

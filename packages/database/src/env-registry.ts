@@ -24,6 +24,7 @@ export function addEnvironment(
   displayName: string,
   adapterType: string,
   adapterConfig: string,
+  githubAccountId?: string,
 ): void {
   const powerlineToken = randomBytes(POWERLINE_TOKEN_BYTE_LENGTH).toString("hex");
   db.insert(environments).values({
@@ -32,6 +33,7 @@ export function addEnvironment(
     adapterType,
     adapterConfig,
     powerlineToken,
+    ...(githubAccountId !== undefined ? { githubAccountId } : {}),
   }).run();
 }
 
@@ -76,16 +78,20 @@ export function updateAdapterConfig(id: string, config: string): void {
 export interface UpdateEnvironmentFields {
   displayName?: string;
   adapterConfig?: string;
+  githubAccountId?: string;
 }
 
-/** Update mutable fields (displayName, adapterConfig) of an existing environment. */
+/** Update mutable fields (displayName, adapterConfig, githubAccountId) of an existing environment. */
 export function updateEnvironment(id: string, fields: UpdateEnvironmentFields): void {
-  const updates: Partial<Pick<EnvironmentRow, "displayName" | "adapterConfig">> = {};
+  const updates: Partial<Pick<EnvironmentRow, "displayName" | "adapterConfig" | "githubAccountId">> = {};
   if (fields.displayName !== undefined) {
     updates.displayName = fields.displayName;
   }
   if (fields.adapterConfig !== undefined) {
     updates.adapterConfig = fields.adapterConfig;
+  }
+  if (fields.githubAccountId !== undefined) {
+    updates.githubAccountId = fields.githubAccountId;
   }
   if (Object.keys(updates).length === 0) {
     return;

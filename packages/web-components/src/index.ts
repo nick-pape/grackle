@@ -63,8 +63,8 @@ export type { CalloutVariant } from "./components/notifications/index.js";
 export { UpdateBanner } from "./components/notifications/UpdateBanner.js";
 
 // Panels
-export { FindingsPanel, TokensPanel, AppearancePanel, AboutPanel, TaskEditPanel, TaskActionButtons, TaskOverviewPanel, PluginsPanel } from "./components/panels/index.js";
-export type { PluginsPanelProps } from "./components/panels/index.js";
+export { FindingsPanel, TokensPanel, AppearancePanel, AboutPanel, TaskEditPanel, TaskActionButtons, TaskOverviewPanel, PluginsPanel, GitHubAccountsPanel } from "./components/panels/index.js";
+export type { PluginsPanelProps, GitHubAccountsPanelProps } from "./components/panels/index.js";
 export type { TaskActionButtonsProps } from "./components/panels/TaskActionButtons.js";
 export type { TaskOverviewPanelProps } from "./components/panels/TaskOverviewPanel.js";
 export { EnvironmentEditPanel } from "./components/panels/EnvironmentEditPanel.js";
@@ -134,6 +134,7 @@ export type {
   UseCredentialsResult, UseCodespacesResult, UsePersonasResult,
   UsePluginsResult, PluginData,
   StreamData, StreamSubscriberData, UseStreamsResult,
+  UseGitHubAccountsResult, GitHubAccountData,
   DomainHook,
   ConnectionStatus,
 } from "./hooks/types.js";

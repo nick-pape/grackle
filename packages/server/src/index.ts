@@ -10,6 +10,7 @@ import {
   ReconciliationManager,
   logger, exec, detectLanIp,
   runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace,
+  importAccountsFromGhCli,
 } from "@grackle-ai/core";
 import { createKnowledgePlugin, getKnowledgeReadinessCheck } from "@grackle-ai/plugin-knowledge";
 import { loadPlugins, type PluginContext } from "@grackle-ai/plugin-sdk";
@@ -77,6 +78,7 @@ async function main(): Promise<void> {
   );
 
   // Non-blocking startup diagnostic: check gh CLI availability
+  // On success, also auto-import any gh-authenticated accounts into the DB.
   const GH_CHECK_TIMEOUT_MS: number = 5_000;
   exec("gh", ["version"], { timeout: GH_CHECK_TIMEOUT_MS })
     .then((result) => {
@@ -84,6 +86,15 @@ async function main(): Promise<void> {
         { version: result.stdout.split("\n")[0] },
         "GitHub CLI available",
       );
+      // Auto-import GitHub accounts from `gh auth status` (non-blocking).
+      return importAccountsFromGhCli().then((importResult) => {
+        if (importResult.imported > 0) {
+          logger.info(
+            { imported: importResult.imported, usernames: importResult.usernames },
+            "Auto-imported GitHub accounts from gh CLI",
+          );
+        }
+      });
     })
     .catch((err: unknown) => {
       const isNotFound =

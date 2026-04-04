@@ -1,9 +1,28 @@
 import { sqliteTable, text, integer, primaryKey } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
-// ─── Environments ──────────────────────────────────────────
+// ─── GitHub Accounts ─────────────────────────────────────────
 
 /* eslint-disable @rushstack/typedef-var -- Drizzle table types are inferred from sqliteTable() */
+export const githubAccounts = sqliteTable("github_accounts", {
+  id: text("id").primaryKey(),
+  label: text("label").notNull(),
+  username: text("username").notNull().default(""),
+  token: text("token").notNull(),
+  isDefault: integer("is_default", { mode: "boolean" }).notNull().default(false),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
+/** Row shape returned by a SELECT on the github_accounts table. */
+export type GitHubAccountRow = typeof githubAccounts.$inferSelect;
+
+/** Shape accepted by INSERT into the github_accounts table. */
+export type NewGitHubAccount = typeof githubAccounts.$inferInsert;
+
+// ─── Environments ──────────────────────────────────────────
+
 export const environments = sqliteTable("environments", {
   id: text("id").primaryKey(),
   displayName: text("display_name").notNull(),
@@ -21,6 +40,7 @@ export const environments = sqliteTable("environments", {
     .default(sql`(datetime('now'))`),
   powerlineToken: text("powerline_token").notNull().default(""),
   maxConcurrentSessions: integer("max_concurrent_sessions").notNull().default(0),
+  githubAccountId: text("github_account_id").notNull().default(""),
 });
 
 /** Row shape returned by a SELECT on the environments table. */

@@ -27,6 +27,7 @@ import { useKnowledge } from "./useKnowledge.js";
 import { useNotifications } from "./useNotifications.js";
 import { useStreams } from "./useStreams.js";
 import { usePlugins } from "./usePlugins.js";
+import { useGitHubAccounts } from "./useGitHubAccounts.js";
 import { coreClient as grackleClient } from "./useGrackleClient.js";
 import { protoToUsageStats } from "./proto-converters.js";
 
@@ -103,6 +104,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   const notificationsHook = useNotifications();
   const streamsHook = useStreams();
   const pluginsHook = usePlugins();
+  const githubAccountsHook = useGitHubAccounts();
 
   // --- Domain hook registry ---
   // Only hooks whose plugin is active are registered for onConnect() / handleEvent().
@@ -122,6 +124,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     ...(activeHookKeys.has("notifications") ? [notificationsHook.domainHook] : []),
     ...(activeHookKeys.has("streams")       ? [streamsHook.domainHook]       : []),
     ...(activeHookKeys.has("plugins") ? [pluginsHook.domainHook] : []),
+    githubAccountsHook.domainHook,
   ];
 
   // --- Transport (ConnectRPC server-streaming) ---
@@ -387,6 +390,15 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       pluginsLoading: pluginsHook.pluginsLoading,
       loadPlugins: pluginsHook.loadPlugins,
       setPluginEnabled: pluginsHook.setPluginEnabled,
+    },
+    githubAccounts: {
+      githubAccounts: githubAccountsHook.githubAccounts,
+      githubAccountsLoading: githubAccountsHook.githubAccountsLoading,
+      loadGitHubAccounts: githubAccountsHook.loadGitHubAccounts,
+      addGitHubAccount: githubAccountsHook.addGitHubAccount,
+      updateGitHubAccount: githubAccountsHook.updateGitHubAccount,
+      removeGitHubAccount: githubAccountsHook.removeGitHubAccount,
+      importGitHubAccounts: githubAccountsHook.importGitHubAccounts,
     },
     appDefaultPersonaId,
     setAppDefaultPersonaId,

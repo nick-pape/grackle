@@ -80,6 +80,7 @@ message Environment {
   string last_seen = 8;
   string env_info = 9; // JSON from PowerLine GetInfo
   string created_at = 10;
+  string github_account_id = 11;
 }
 
 message EnvironmentList {
@@ -91,6 +92,7 @@ message AddEnvironmentRequest {
   string adapter_type = 2;
   string adapter_config = 3; // JSON
   reserved 4; // was default_runtime (moved to Persona)
+  string github_account_id = 5;
 }
 
 message ProvisionEvent {
@@ -108,6 +110,45 @@ message UpdateEnvironmentRequest {
   string id = 1;
   optional string display_name = 2;
   optional string adapter_config = 3; // JSON
+  optional string github_account_id = 4;
+}
+
+// ─── GitHub Accounts ────────────────────────────────────────
+
+/** A GitHub account registered with Grackle (token is never returned). */
+message GitHubAccount {
+  string id = 1;
+  string label = 2;
+  string username = 3;
+  bool is_default = 4;
+  string created_at = 5;
+}
+
+message GitHubAccountList {
+  repeated GitHubAccount accounts = 1;
+}
+
+message AddGitHubAccountRequest {
+  string label = 1;
+  string token = 2;
+  string username = 3; // Optional; resolved server-side if empty
+  bool is_default = 4;
+}
+
+message UpdateGitHubAccountRequest {
+  string id = 1;
+  optional string label = 2;
+  optional string token = 3;
+  optional bool is_default = 4;
+}
+
+message RemoveGitHubAccountRequest {
+  string id = 1;
+}
+
+message ImportGitHubAccountsResponse {
+  int32 imported = 1;
+  repeated string usernames = 2;
 }
 
 // ─── Session ────────────────────────────────────────────────
@@ -705,6 +746,11 @@ message CodespaceInfo {
 message CodespaceList {
   repeated CodespaceInfo codespaces = 1;
   string error = 2; // non-fatal error (e.g. gh CLI not available)
+}
+
+/** Optional filter for ListCodespaces — leave github_account_id empty for the default account. */
+message ListCodespacesRequest {
+  string github_account_id = 1;
 }
 
 message CreateCodespaceRequest {

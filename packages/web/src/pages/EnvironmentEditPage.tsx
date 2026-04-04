@@ -9,6 +9,7 @@ export function EnvironmentEditPage(): JSX.Element {
   const {
     environments: { environments, addEnvironment, updateEnvironment },
     codespaces: { codespaces, codespaceError, codespaceListError, codespaceCreating, listCodespaces, createCodespace },
+    githubAccounts: { githubAccounts },
   } = useGrackle();
   const { showToast } = useToast();
 
@@ -17,9 +18,10 @@ export function EnvironmentEditPage(): JSX.Element {
       mode="edit"
       environmentId={environmentId!}
       environments={environments}
-      onAddEnvironment={(name, type, cfg) => { addEnvironment(name, type, cfg).catch(() => {}); }}
+      githubAccounts={githubAccounts}
+      onAddEnvironment={(name, type, cfg, accountId) => { addEnvironment(name, type, cfg, accountId).catch(() => {}); }}
       onUpdateEnvironment={(eid, fields) => { updateEnvironment(eid, fields).catch(() => {}); }}
-      onListCodespaces={() => { listCodespaces().catch(() => {}); }}
+      onListCodespaces={(accountId) => { listCodespaces(accountId).catch(() => {}); }}
       codespaces={codespaces}
       codespaceError={codespaceError}
       codespaceListError={codespaceListError}

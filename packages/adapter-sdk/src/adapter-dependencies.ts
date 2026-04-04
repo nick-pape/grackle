@@ -18,4 +18,11 @@ export interface AdapterDependencies {
   logger?: AdapterLogger;
   /** Whether the GitHub credential provider is enabled (default: false). */
   isGitHubProviderEnabled?: () => boolean;
+  /**
+   * Resolve a GitHub token for the given account ID.
+   * When no ID is provided, returns the default account's token (if any).
+   * Falls back to `GH_TOKEN` / `GITHUB_TOKEN` env vars when no accounts exist.
+   * Returns `undefined` when no token can be resolved (caller should fall back to `gh auth token`).
+   */
+  resolveGitHubToken?: (accountId?: string) => string | undefined;
 }

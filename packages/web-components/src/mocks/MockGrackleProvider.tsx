@@ -1300,6 +1300,27 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         domainHook: NOOP_DOMAIN_HOOK,
       },
 
+      // ── GitHub Accounts ──────────────────────────────
+
+      githubAccounts: {
+        githubAccounts: [],
+        githubAccountsLoading: false,
+        loadGitHubAccounts: async () => { console.log("[MockGrackle] loadGitHubAccounts"); },
+        addGitHubAccount: async (label: string, _token: string, _username: string, _isDefault: boolean) => {
+          console.log("[MockGrackle] addGitHubAccount", label);
+        },
+        updateGitHubAccount: async (id: string, fields: { label?: string; token?: string; isDefault?: boolean }) => {
+          console.log("[MockGrackle] updateGitHubAccount", id, fields);
+        },
+        removeGitHubAccount: async (id: string) => {
+          console.log("[MockGrackle] removeGitHubAccount", id);
+        },
+        importGitHubAccounts: async () => {
+          console.log("[MockGrackle] importGitHubAccounts");
+          return { imported: 0, usernames: [] };
+        },
+      },
+
       // ── Plugins ─────────────────────────────────────
 
       plugins: {
