@@ -359,6 +359,31 @@ describe("workspace_link_environment", () => {
   });
 });
 
+/**
+ * Regression tests for #1182: workspace management tools must have
+ * group === "workspace" so the MCP server's scoped-auth workspaceId injection
+ * (mcp-server.ts) skips them. These tools use workspaceId as the *target*
+ * workspace to operate on, not as the agent's own workspace context.
+ * If the group changes, the injection will overwrite the caller's workspaceId
+ * with the agent's scoped workspace (always "default" for system orchestrators).
+ */
+describe("workspace tool group for scoped auth injection bypass", () => {
+  const WORKSPACE_MANAGEMENT_TOOLS = [
+    "workspace_get",
+    "workspace_update",
+    "workspace_archive",
+    "workspace_link_environment",
+    "workspace_unlink_environment",
+  ] as const;
+
+  for (const toolName of WORKSPACE_MANAGEMENT_TOOLS) {
+    test(`${toolName} has group "workspace" (prevents workspaceId injection)`, () => {
+      const tool = getTool(toolName);
+      expect(tool.group).toBe("workspace");
+    });
+  }
+});
+
 describe("workspace_unlink_environment", () => {
   const tool = getTool("workspace_unlink_environment");
 

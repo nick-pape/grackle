@@ -170,7 +170,15 @@ async function createMcpServerInstance(
     // Inject context from scoped token so callers don't need to provide it
     const rawArgs = (args ?? {}) as Record<string, unknown>;
     if (authContext.type === "scoped") {
-      rawArgs.workspaceId = authContext.workspaceId;
+      // Only inject workspaceId for non-workspace tools. Workspace management
+      // tools (get, update, archive, link_environment, unlink_environment) use
+      // workspaceId as the *target* workspace to operate on — injecting the
+      // agent's own scoped workspace would overwrite the caller's intent (#1182).
+      // Task, finding, schedule, and escalation tools use workspaceId as a
+      // scoping/filtering context, so injection is correct for those.
+      if (tool.group !== "workspace") {
+        rawArgs.workspaceId = authContext.workspaceId;
+      }
       // Auto-parent subtasks: when an agent creates a task, parent it to the agent's own task
       if (name === "task_create" && authContext.taskId) {
         rawArgs.parentTaskId = authContext.taskId;
