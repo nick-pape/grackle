@@ -104,18 +104,20 @@ export function reanimateAgent(sessionId: string): SessionRow {
   // Re-create stdin stream if it was deleted (same lifecycle as lifecycle stream)
   ensureStdinStream(session.id);
 
-  // Re-create async pipe stream if this session is a child with an async pipe.
-  // Sync pipes are not reconstructed — the parent's blocking consumeSync() cannot
-  // be revived after a session suspension.
-  if (session.pipeMode === "async" && session.parentSessionId) {
+  // Re-create pipe stream if this session is a child with a non-detach pipe.
+  // For async pipes: reconstructs the same topology as at spawn time.
+  // For sync pipes: promotes to async delivery — the parent's blocking consumeSync()
+  // cannot be revived after suspension, but async delivery via sendInput can still
+  // deliver the child's completion message to the parent.
+  if (session.parentSessionId && session.pipeMode && session.pipeMode !== "detach") {
     ensurePipeStream(session.id, session.parentSessionId);
   }
 
-  // Re-create async pipe streams for any non-terminal child sessions so that
+  // Re-create pipe streams for any non-terminal child sessions so that
   // messages the parent writes after reanimate are delivered correctly.
   const children = sessionStore.getChildSessions(session.id);
   for (const child of children) {
-    if (child.pipeMode === "async" && child.status !== SESSION_STATUS.STOPPED) {
+    if (child.pipeMode && child.pipeMode !== "detach" && child.status !== SESSION_STATUS.STOPPED) {
       ensurePipeStream(child.id, session.id);
     }
   }

@@ -14,6 +14,7 @@ import { powerline } from "@grackle-ai/common";
 import { sessionStore } from "@grackle-ai/database";
 import * as adapterManager from "./adapter-manager.js";
 import * as streamRegistry from "./stream-registry.js";
+import { cleanupLifecycleStream } from "./lifecycle-streams.js";
 import { readLastTextEntry } from "./log-writer.js";
 import { logger } from "./logger.js";
 
@@ -90,8 +91,11 @@ export function setupAsyncPipeDelivery(parentSessionId: string): void {
  *   register listeners, and replay buffered messages (none in this case, since
  *   the in-memory buffer was also cleared).
  *
- * Only handles `pipeMode === "async"`. Sync pipes require the parent's blocking
- * `consumeSync()` call to be in-flight, which cannot be reconstructed post-reanimate.
+ * This also covers caller-driven promotion of previously sync sessions after a
+ * restart: if the caller invokes this for a session whose pipe stream is missing,
+ * the recreated stream always uses async subscriptions so the child's completion
+ * message can be delivered via sendInput instead of relying on a blocking queue
+ * that cannot be revived from in-memory state.
  */
 export function ensurePipeStream(childSessionId: string, parentSessionId: string): void {
   let pipeStream = streamRegistry.getStreamByName(`pipe:${childSessionId}`);
@@ -178,6 +182,22 @@ export async function publishChildCompletion(childSessionId: string, status: str
       cleanupAsyncPipe(pipeStream.id, session.parentSessionId);
     }
   }
+
+  // For promoted sync pipes (DB says "sync" but subscriptions are async because
+  // the server restarted and reanimate promoted them): the WaitForPipe handler
+  // is gone, so we must clean up like an async pipe.
+  if (session.pipeMode === "sync" && isPromotedSyncPipe(pipeStream, session.parentSessionId)) {
+    const parentSubs = streamRegistry.getSubscriptionsForSession(session.parentSessionId)
+      .filter((s) => s.streamId === pipeStream.id);
+    const allDelivered = parentSubs.every((s) => !streamRegistry.hasUndeliveredMessages(s.id));
+    if (allDelivered) {
+      cleanupAsyncPipe(pipeStream.id, session.parentSessionId);
+      // Also clean up the lifecycle stream — normally done by waitForPipe's
+      // cleanupSyncPipeAndLifecycle for all delivery outcomes (terminal and idle).
+      // Since waitForPipe is absent after promotion, we replicate that behavior here.
+      cleanupLifecycleStream(childSessionId);
+    }
+  }
 }
 
 /** Clean up an async pipe stream and its listener (only if no remaining async subs for parent). */
@@ -199,6 +219,18 @@ function cleanupAsyncPipe(streamId: string, parentSessionId: string): void {
   for (const sid of sessionIds) {
     cleanupAsyncListenerIfEmpty(sid);
   }
+}
+
+/**
+ * True when a sync pipe was promoted to async delivery during reanimate.
+ * Detected by checking whether the parent's subscription on this stream uses
+ * async delivery — if so, the stream was recreated by ensurePipeStream() after
+ * the server-restart cleared the original sync queue.
+ */
+function isPromotedSyncPipe(pipeStream: streamRegistry.Stream, parentSessionId: string): boolean {
+  const parentSub = Array.from(pipeStream.subscriptions.values())
+    .find((s) => s.sessionId === parentSessionId);
+  return parentSub?.deliveryMode === "async";
 }
 
 /**
