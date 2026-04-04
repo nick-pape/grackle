@@ -17,7 +17,7 @@ interface GracklePlugin {
   name: string;
   dependencies?: string[];
 
-  // Five extension points
+  // Four extension points
   grpcHandlers?: (ctx: PluginContext) => ServiceRegistration[];
   reconciliationPhases?: (ctx: PluginContext) => ReconciliationPhase[];
   mcpTools?: (ctx: PluginContext) => PluginToolDefinition[];
@@ -68,8 +68,8 @@ Grackle ships with four plugins. All are enabled by default except knowledge (op
 | Contribution | Details |
 |-------------|---------|
 | **gRPC handlers** | Environments, sessions, workspaces, tokens, codespaces, settings |
-| **Reconciliation phases** | `dispatch` (assign queued tasks to environments), `lifecycle-cleanup` (clean up stale streams), `environment-reconciliation` (monitor connection status) |
-| **Event subscribers** | Session lifecycle management, root task auto-start, escalation auto-detection |
+| **Reconciliation phases** | `dispatch` (assign queued tasks to environments), `lifecycle-cleanup` (clean up stale streams), `environment-status` (monitor connection status) |
+| **Event subscribers** | Session lifecycle management, root task auto-start |
 
 ### Orchestration
 
@@ -79,7 +79,7 @@ Grackle ships with four plugins. All are enabled by default except knowledge (op
 |-------------|---------|
 | **gRPC handlers** | Tasks (create, start, complete, resume, stop, delete), personas, findings, escalations |
 | **Reconciliation phases** | `orphan-reparent` (re-parent tasks whose parent session has ended) |
-| **Event subscribers** | SIGCHLD (child completion notification), escalation auto-routing, orphan reparenting |
+| **Event subscribers** | SIGCHLD (child completion notification), escalation auto-routing, orphan re-parenting |
 
 ### Scheduling
 

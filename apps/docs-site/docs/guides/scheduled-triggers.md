@@ -13,12 +13,11 @@ Grackle can automatically create and start tasks on a schedule — cron jobs for
 ### From the CLI
 
 ```bash
-grackle schedule create \
-  --title "Nightly test suite" \
-  --expression "0 2 * * *" \
-  --workspace my-project \
-  --persona engineer \
-  --description "Run the full test suite and post findings on any failures"
+grackle schedule create "Nightly test suite" \
+  --schedule "0 2 * * *" \
+  --workspace <workspace-id> \
+  --persona <persona-id> \
+  --desc "Run the full test suite and post findings on any failures"
 ```
 
 ### From the MCP server
@@ -93,14 +92,15 @@ Tasks created by schedules go through the same lifecycle as any other task — t
 
 ```bash
 grackle schedule list
-grackle schedule list --workspace my-project
+# Filter by workspace ID
+grackle schedule list --workspace <workspace-id>
 ```
 
-### Update a schedule
+### Enable or disable a schedule
 
 ```bash
-grackle schedule update <schedule-id> --expression "0 3 * * *"
-grackle schedule update <schedule-id> --enabled false
+grackle schedule enable <schedule-id>
+grackle schedule disable <schedule-id>
 ```
 
 ### Delete a schedule

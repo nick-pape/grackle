@@ -42,17 +42,22 @@ Or configure from the web UI under **Settings > Credentials**.
 
 ## Token management
 
-Tokens are the actual secrets — API keys, access tokens, OAuth tokens. Grackle encrypts them with AES-256-GCM at rest in `~/.grackle/tokens.db`.
+Tokens are the actual secrets — API keys, access tokens, OAuth tokens. Grackle encrypts them with AES-256-GCM at rest in `~/.grackle/grackle.db` (the main SQLite database).
 
 ### Setting tokens
 
 ```bash
 # Set your Anthropic API key (prompts for the value interactively)
-grackle token set ANTHROPIC_API_KEY
+# --env-var specifies the exact environment variable injected into the agent process
+grackle token set ANTHROPIC_API_KEY --env-var ANTHROPIC_API_KEY
 
 # Set an OpenAI API key
-grackle token set OPENAI_API_KEY
+grackle token set OPENAI_API_KEY --env-var OPENAI_API_KEY
 ```
+
+:::note Token name vs environment variable
+The first argument to `grackle token set` is the token's **name** in Grackle's store. By default the injected environment variable is `<NAME>_TOKEN` (e.g., `ANTHROPIC_API_KEY_TOKEN`). Use `--env-var` to specify the exact variable name the runtime expects.
+:::
 
 ### How tokens reach agents
 
@@ -60,10 +65,10 @@ When a session spawns, the token broker:
 
 1. Looks up which tokens the runtime needs
 2. Decrypts them from the local store
-3. Pushes them to the environment's PowerLine instance over the encrypted gRPC channel
+3. Pushes them to the environment's PowerLine instance over gRPC
 4. PowerLine injects them as environment variables for the agent process
 
-Tokens never touch disk on the remote environment — they exist only in the agent's process memory.
+For `env_var` type tokens, values exist only in the agent's process environment. For `file` type tokens, they are written to a file on the remote environment.
 
 ## Per-runtime setup
 
@@ -74,7 +79,7 @@ Claude Code uses the [Anthropic Claude Agent SDK](https://docs.anthropic.com/en/
 **Option A — API key:**
 ```bash
 grackle credential-provider set claude api_key
-grackle token set ANTHROPIC_API_KEY
+grackle token set ANTHROPIC_API_KEY --env-var ANTHROPIC_API_KEY
 ```
 
 **Option B — Subscription (Max plan):**
@@ -95,7 +100,7 @@ grackle credential-provider set copilot on
 Requires a GitHub token with Copilot access. Set it as a token if your environment doesn't have `gh` CLI auth:
 
 ```bash
-grackle token set GITHUB_TOKEN
+grackle token set GITHUB_TOKEN --env-var GITHUB_TOKEN
 ```
 
 ### OpenAI Codex
@@ -104,7 +109,7 @@ Codex uses the [OpenAI Codex SDK](https://openai.com/index/codex/).
 
 ```bash
 grackle credential-provider set codex on
-grackle token set OPENAI_API_KEY
+grackle token set OPENAI_API_KEY --env-var OPENAI_API_KEY
 ```
 
 ### Goose
@@ -121,18 +126,18 @@ Set whichever API key your chosen Goose provider requires:
 
 ```bash
 # If using Anthropic as Goose's provider
-grackle token set ANTHROPIC_API_KEY
+grackle token set ANTHROPIC_API_KEY --env-var ANTHROPIC_API_KEY
 
 # If using OpenAI
-grackle token set OPENAI_API_KEY
+grackle token set OPENAI_API_KEY --env-var OPENAI_API_KEY
 ```
 
 ## Security details
 
 - **Encryption**: AES-256-GCM with a randomly generated key stored in `~/.grackle/api-key`
-- **Transport**: Tokens are pushed over encrypted gRPC channels (TLS in production, plaintext on localhost only)
+- **Transport**: Tokens are pushed over gRPC (plain HTTP/2 by default; TLS when configured)
 - **At rest**: Never stored in plaintext on disk — always encrypted in the SQLite token store
-- **In memory**: Exist only in the agent process's environment variables — not written to disk on remote environments
+- **In process**: `env_var` type tokens exist only in the agent's process environment; `file` type tokens are written to disk on the environment
 - **Timing-safe comparison**: API key validation uses constant-time comparison to prevent timing attacks
 
 For full authentication details (API keys, pairing codes, session cookies, OAuth), see the [Authentication guide](./auth).

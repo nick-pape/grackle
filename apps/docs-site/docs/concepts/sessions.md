@@ -65,23 +65,19 @@ stateDiagram-v2
 - **interrupted** — Manually killed
 - **suspended** — Parked in memory, not consuming compute (see below)
 
-## Session parking (suspend/resume)
+## Session suspension
 
-Sessions can be **suspended** — parked with their full conversation state preserved but not consuming compute. This is Grackle's analog to SIGSTOP/SIGCONT in Unix.
+Sessions can enter a **suspended** state — a transport-level recovery state where the agent's connection drops but the server preserves the session. This happens automatically when the transport between PowerLine and the server is interrupted.
 
 ```bash
-# Suspend a running or idle session
-grackle session suspend <session-id>
-
-# Resume it later — picks up exactly where it left off
-grackle session resume <session-id>
+# Reconnect to a suspended session
+grackle resume <session-id>
 ```
 
 Suspended sessions:
-- Keep their full conversation history and context
-- Don't consume tokens or compute while parked
-- Can be resumed instantly on the same or a different environment
-- Are useful for pausing expensive agents during human review
+- Keep their full conversation history and context on the server
+- Are resumed via `grackle resume` once the connection is re-established
+- Can be resumed on the same or a different environment
 
 ## Sending input
 

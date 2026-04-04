@@ -21,9 +21,11 @@ Pull and run the pre-built image from GitHub Container Registry:
 docker run -it --rm \
   -p 3000:3000 -p 7434:7434 -p 7435:7435 \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  -v ~/.grackle:/root/.grackle \
+  -v grackle-data:/data \
   ghcr.io/nick-pape/grackle:latest
 ```
+
+The image sets `GRACKLE_HOME=/data` and runs as the `node` user, so mount the named volume at `/data` to persist your database and API key across container restarts.
 
 This gives you the full Grackle stack — server, web UI, MCP server, and a local PowerLine instance — in one container. Mount the Docker socket to let Grackle create agent environments as sibling containers.
 
@@ -127,6 +129,6 @@ You now have a working Grackle setup. From here:
 
 - **[Chat interface](./guides/chat)** — Use natural language to manage everything
 - **[Add more environments](./concepts/environments)** — SSH hosts, Codespaces, or just use the built-in local environment
-- **[Create a project](./concepts/projects-tasks)** — Organize work into tasks with dependencies and branch isolation
+- **[Create a workspace](./concepts/projects-tasks)** — Organize work into tasks with dependencies and branch isolation
 - **[Configure personas](./concepts/personas)** — Customize agent behavior with system prompts, tools, and model selection
 - **[Multi-agent orchestration](./guides/orchestration)** — Scale from one agent to coordinated teams

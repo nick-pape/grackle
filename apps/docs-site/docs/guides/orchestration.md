@@ -32,10 +32,10 @@ No projects, no tasks, no orchestration. Just a session.
 Create a workspace and break work into tasks. Each task gets its own git branch, and you review the work before marking it complete.
 
 ```bash
-grackle project create "API Redesign" --repo https://github.com/org/api --env my-env
-grackle task create "Design new endpoint schema" --project api-redesign
-grackle task create "Implement REST handlers" --project api-redesign --depends-on <schema-task-id>
-grackle task create "Write integration tests" --project api-redesign --depends-on <handlers-task-id>
+grackle workspace create "API Redesign" --repo https://github.com/org/api --env my-env
+grackle task create "Design new endpoint schema" --workspace api-redesign
+grackle task create "Implement REST handlers" --workspace api-redesign --depends-on <schema-task-id>
+grackle task create "Write integration tests" --workspace api-redesign --depends-on <handlers-task-id>
 grackle task start <schema-task-id>
 ```
 
@@ -76,7 +76,7 @@ grackle persona create "Orchestrator" \
   --prompt "You are a technical project manager. Decompose the given task into subtasks, create them using MCP tools, and start them. Monitor progress and post findings to coordinate work."
 
 # Create and start a root task
-grackle task create "Implement OAuth2 support" --project my-project
+grackle task create "Implement OAuth2 support" --workspace <workspace-id>
 grackle task start <root-task-id> --persona orchestrator
 ```
 
@@ -110,7 +110,7 @@ When a child task finishes (success or failure), the parent's agent session auto
 Requests an agent to stop gracefully. The agent has a chance to save state, post findings, and clean up before exiting.
 
 ```bash
-grackle task stop <task-id>
+grackle kill <session-id> --graceful
 ```
 
 ### Cascade kill
@@ -121,16 +121,16 @@ Kills a task and all of its descendants. The process group equivalent — when y
 
 If a parent task's session ends (crashes, times out, or is killed) while children are still running, the server re-parents the orphaned tasks to the workspace root. This is Grackle's version of init(1) adopting orphan processes.
 
-### Session parking (SIGSTOP/SIGCONT)
+### Session suspension (SIGSTOP/SIGCONT)
 
-Sessions can be **suspended** — parked in memory with their full state preserved:
+Sessions can be **suspended** — a transport-level recovery state where the agent's connection drops but the session is preserved on the server. When the connection is re-established, the agent picks up where it left off.
 
 ```bash
-grackle session suspend <session-id>
-grackle session resume <session-id>
+# Reconnect to a suspended session
+grackle resume <session-id>
 ```
 
-A suspended session stops consuming compute but can be resumed instantly with its full conversation history. This is useful for pausing expensive agents while waiting for human review.
+This is distinct from killing a session — a suspended session keeps its full conversation history and restarts from where it paused. It happens automatically on transport loss and can be triggered by the agent runtime itself.
 
 ### Escalation
 

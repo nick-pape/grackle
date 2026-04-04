@@ -72,14 +72,14 @@ The MCP server exposes tools grouped by domain:
 | `task_resume` | Resume a paused task |
 | `task_delete` | Delete a task |
 
-### Projects
+### Workspaces
 | Tool | Description |
 |------|------------|
-| `project_list` | List all projects |
-| `project_create` | Create a new project |
-| `project_get` | Get project details |
-| `project_update` | Update project metadata |
-| `project_archive` | Archive a project |
+| `workspace_list` | List all workspaces |
+| `workspace_create` | Create a new workspace |
+| `workspace_get` | Get workspace details |
+| `workspace_update` | Update workspace metadata |
+| `workspace_archive` | Archive a workspace |
 
 ### Findings
 | Tool | Description |
@@ -120,7 +120,7 @@ The standalone MCP server you connect external tools to. Authenticates via API k
 
 ### PowerLine MCP broker (per-session)
 
-When Grackle spawns an agent session, PowerLine hosts an MCP server instance **inside the environment** with session-scoped auth:
+When Grackle spawns an agent session, the server passes the agent a **scoped MCP URL and session token** via PowerLine. The agent connects to the central MCP server using this token rather than your API key:
 
 - The agent gets a **session token** (not your API key) that identifies it
 - Tool access is filtered by the agent's **persona** — a reviewer persona might only see read-only tools
@@ -131,8 +131,8 @@ This is what enables the orchestrator pattern: an agent can create subtasks, pos
 
 ```mermaid
 graph LR
-    A["🤖 Agent"] -->|session token| PL["PowerLine MCP"]
-    PL -->|gRPC| S["Grackle Server"]
+    A["🤖 Agent"] -->|scoped token + MCP URL| PL["PowerLine"]
+    PL -->|session token| S["Grackle MCP Server"]
     S --> DB["📦 Database"]
 ```
 
