@@ -150,16 +150,29 @@ class ClaudeCodeSession extends BaseAgentSession {
    * server-side `updateSessionUsage` accumulator to double-count costs — O(n²)
    * inflation for n turns.
    *
-   * This mirrors the cumulative→delta conversion that the ACP runtime performs at
-   * `acp.ts` lines 321-329.
+   * This mirrors the cumulative→delta conversion performed by the ACP runtime.
+   *
+   * Each field is optional: pass `undefined` when the SDK message does not include
+   * that value. This prevents a missing field from resetting the tracking baseline
+   * to zero and inflating subsequent deltas.
    */
-  private pushCumulativeUsage(totalInputTokens: number, totalOutputTokens: number, totalCostMillicents: number): void {
-    const deltaInput = totalInputTokens - this.lastReportedInputTokens;
-    const deltaOutput = totalOutputTokens - this.lastReportedOutputTokens;
-    const deltaCost = totalCostMillicents - this.lastReportedCostMillicents;
-    this.lastReportedInputTokens = totalInputTokens;
-    this.lastReportedOutputTokens = totalOutputTokens;
-    this.lastReportedCostMillicents = totalCostMillicents;
+  private pushCumulativeUsage(
+    totalInputTokens: number | undefined,
+    totalOutputTokens: number | undefined,
+    totalCostMillicents: number | undefined,
+  ): void {
+    // Only compute and update baseline for fields that are actually present.
+    const deltaInput = totalInputTokens !== undefined
+      ? totalInputTokens - this.lastReportedInputTokens : 0;
+    const deltaOutput = totalOutputTokens !== undefined
+      ? totalOutputTokens - this.lastReportedOutputTokens : 0;
+    const deltaCost = totalCostMillicents !== undefined
+      ? totalCostMillicents - this.lastReportedCostMillicents : 0;
+
+    if (totalInputTokens !== undefined) { this.lastReportedInputTokens = totalInputTokens; }
+    if (totalOutputTokens !== undefined) { this.lastReportedOutputTokens = totalOutputTokens; }
+    if (totalCostMillicents !== undefined) { this.lastReportedCostMillicents = totalCostMillicents; }
+
     // Guard against SDK reporting lower values (e.g. session reset edge cases)
     if (deltaInput <= 0 && deltaOutput <= 0 && deltaCost <= 0) {
       return;
@@ -430,10 +443,14 @@ class ClaudeCodeSession extends BaseAgentSession {
         } | undefined;
         const costUsd = msg.total_cost_usd as number | undefined;
         if (usage !== undefined || costUsd !== undefined) {
-          const totalInput = (usage?.input_tokens ?? 0)
-            + (usage?.cache_read_input_tokens ?? 0)
-            + (usage?.cache_creation_input_tokens ?? 0);
-          this.pushCumulativeUsage(totalInput, usage?.output_tokens ?? 0, Math.round((costUsd ?? 0) * 100_000));
+          const totalInput = usage !== undefined
+            ? (usage.input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0)
+            : undefined;
+          this.pushCumulativeUsage(
+            totalInput,
+            usage?.output_tokens,
+            costUsd !== undefined ? Math.round(costUsd * 100_000) : undefined,
+          );
         }
       }
 
@@ -579,10 +596,14 @@ class ClaudeCodeSession extends BaseAgentSession {
         const costUsd = msg.total_cost_usd as number | undefined;
         if (usage !== undefined || costUsd !== undefined) {
           // Total input includes non-cached + cache reads + cache creation
-          const totalInput = (usage?.input_tokens ?? 0)
-            + (usage?.cache_read_input_tokens ?? 0)
-            + (usage?.cache_creation_input_tokens ?? 0);
-          this.pushCumulativeUsage(totalInput, usage?.output_tokens ?? 0, Math.round((costUsd ?? 0) * 100_000));
+          const totalInput = usage !== undefined
+            ? (usage.input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0)
+            : undefined;
+          this.pushCumulativeUsage(
+            totalInput,
+            usage?.output_tokens,
+            costUsd !== undefined ? Math.round(costUsd * 100_000) : undefined,
+          );
         }
       }
 
