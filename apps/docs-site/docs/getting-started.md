@@ -91,11 +91,11 @@ Your chosen runtime needs API credentials. See the [full credential setup guide]
 ```bash
 # For Claude Code
 grackle credential-provider set claude api_key
-grackle token set ANTHROPIC_API_KEY
+grackle token set ANTHROPIC_API_KEY --env-var ANTHROPIC_API_KEY
 
 # For Codex
 grackle credential-provider set codex on
-grackle token set OPENAI_API_KEY
+grackle token set OPENAI_API_KEY --env-var OPENAI_API_KEY
 
 # For Copilot
 grackle credential-provider set github on
