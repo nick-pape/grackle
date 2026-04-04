@@ -112,6 +112,19 @@ class ClaudeCodeSession extends BaseAgentSession {
    */
   private pendingToolUseIds: Map<string, string> = new Map();
 
+  // ─── Cumulative usage tracking ──────────────────────────────
+  // The Claude Agent SDK's `total_cost_usd` and `usage` fields on `result`
+  // messages are **cumulative session totals**, not per-turn increments.
+  // We track the last reported values and emit only the delta so the
+  // server-side `updateSessionUsage` accumulator isn't double-counted.
+
+  /** Last cumulative cost reported by the SDK (in millicents, for delta computation). */
+  private lastReportedCostMillicents: number = 0;
+  /** Last cumulative input token count reported by the SDK. */
+  private lastReportedInputTokens: number = 0;
+  /** Last cumulative output token count reported by the SDK. */
+  private lastReportedOutputTokens: number = 0;
+
   // ─── Persistent process mode ────────────────────────────────
   // When active, ONE query() stays alive across multiple turns. The SDK's
   // AsyncIterable prompt mode keeps the process running and waiting for input.
@@ -126,6 +139,36 @@ class ClaudeCodeSession extends BaseAgentSession {
   /** System context is injected via sdkOptions.systemPrompt, not prepended to the prompt. */
   protected override buildInitialPrompt(): string {
     return this.prompt;
+  }
+
+  /**
+   * Convert cumulative SDK usage values to incremental deltas and emit a usage event.
+   *
+   * The Claude Agent SDK's `total_cost_usd` and `usage` fields on `result` messages
+   * are **cumulative session totals** (running sums across all turns), not per-turn
+   * increments. Passing them directly to {@link pushUsageEvent} would cause the
+   * server-side `updateSessionUsage` accumulator to double-count costs — O(n²)
+   * inflation for n turns.
+   *
+   * This mirrors the cumulative→delta conversion that the ACP runtime performs at
+   * `acp.ts` lines 321-329.
+   */
+  private pushCumulativeUsage(totalInputTokens: number, totalOutputTokens: number, totalCostMillicents: number): void {
+    const deltaInput = totalInputTokens - this.lastReportedInputTokens;
+    const deltaOutput = totalOutputTokens - this.lastReportedOutputTokens;
+    const deltaCost = totalCostMillicents - this.lastReportedCostMillicents;
+    this.lastReportedInputTokens = totalInputTokens;
+    this.lastReportedOutputTokens = totalOutputTokens;
+    this.lastReportedCostMillicents = totalCostMillicents;
+    // Guard against SDK reporting lower values (e.g. session reset edge cases)
+    if (deltaInput <= 0 && deltaOutput <= 0 && deltaCost <= 0) {
+      return;
+    }
+    this.pushUsageEvent(
+      Math.max(0, deltaInput),
+      Math.max(0, deltaOutput),
+      Math.max(0, deltaCost),
+    );
   }
 
   // ─── BaseAgentSession hooks ──────────────────────────────
@@ -390,7 +433,7 @@ class ClaudeCodeSession extends BaseAgentSession {
           const totalInput = (usage?.input_tokens ?? 0)
             + (usage?.cache_read_input_tokens ?? 0)
             + (usage?.cache_creation_input_tokens ?? 0);
-          this.pushUsageEvent(totalInput, usage?.output_tokens ?? 0, Math.round((costUsd ?? 0) * 100_000));
+          this.pushCumulativeUsage(totalInput, usage?.output_tokens ?? 0, Math.round((costUsd ?? 0) * 100_000));
         }
       }
 
@@ -539,7 +582,7 @@ class ClaudeCodeSession extends BaseAgentSession {
           const totalInput = (usage?.input_tokens ?? 0)
             + (usage?.cache_read_input_tokens ?? 0)
             + (usage?.cache_creation_input_tokens ?? 0);
-          this.pushUsageEvent(totalInput, usage?.output_tokens ?? 0, Math.round((costUsd ?? 0) * 100_000));
+          this.pushCumulativeUsage(totalInput, usage?.output_tokens ?? 0, Math.round((costUsd ?? 0) * 100_000));
         }
       }
 

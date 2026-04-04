@@ -852,15 +852,18 @@ describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
     const usageEvents = allEvents.filter((e) => e.type === "usage");
     expect(usageEvents).toHaveLength(2);
 
+    // Turn 1: first event, previous cumulative=0, so delta == cumulative.
     const usage1 = JSON.parse(usageEvents[0].content) as Record<string, number>;
     expect(usage1.input_tokens).toBe(100);
     expect(usage1.output_tokens).toBe(10);
-    expect(usage1.cost_millicents).toBe(1000); // Math.round(0.01 * 100_000)
+    expect(usage1.cost_millicents).toBe(1000); // Math.round(0.01 * 100_000) - 0 previous
 
+    // Turn 2: SDK reports cumulative totals (input=250, output=20, cost=2000).
+    // After delta conversion: 250-100=150 input, 20-10=10 output, 2000-1000=1000 cost.
     const usage2 = JSON.parse(usageEvents[1].content) as Record<string, number>;
-    expect(usage2.input_tokens).toBe(250); // 200 + 50 cached
-    expect(usage2.output_tokens).toBe(20);
-    expect(usage2.cost_millicents).toBe(2000); // Math.round(0.02 * 100_000)
+    expect(usage2.input_tokens).toBe(150); // 250 cumulative - 100 previous = 150 delta
+    expect(usage2.output_tokens).toBe(10); // 20 cumulative - 10 previous = 10 delta
+    expect(usage2.cost_millicents).toBe(1000); // 2000 cumulative - 1000 previous = 1000 delta
 
     session.kill();
   });
