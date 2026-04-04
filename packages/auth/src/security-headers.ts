@@ -1,12 +1,17 @@
 import type { ServerResponse } from "node:http";
 
 /**
- * Content Security Policy for the web handler.
+ * Base Content Security Policy directives for the web handler.
  *
  * Covers the React SPA (served from 'self') and server-rendered pages
  * (pairing/authorize) which use inline styles.
+ *
+ * Note: `form-action` is intentionally omitted here and appended dynamically
+ * by {@link setSecurityHeaders} using the request's Host header, because
+ * Chromium does not reliably match `'self'` for form submissions on
+ * non-standard ports.
  */
-export const WEB_CONTENT_SECURITY_POLICY: string = [
+const BASE_CSP_DIRECTIVES: readonly string[] = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
@@ -14,9 +19,17 @@ export const WEB_CONTENT_SECURITY_POLICY: string = [
   "font-src 'self'",
   "connect-src 'self'",
   "object-src 'none'",
-  "form-action 'self'",
   "frame-ancestors 'none'",
   "base-uri 'self'",
+];
+
+/**
+ * Full CSP string with `form-action 'self'` — used by tests and as a
+ * backwards-compatible export.
+ */
+export const WEB_CONTENT_SECURITY_POLICY: string = [
+  ...BASE_CSP_DIRECTIVES,
+  "form-action 'self'",
 ].join("; ");
 
 /**
@@ -25,9 +38,23 @@ export const WEB_CONTENT_SECURITY_POLICY: string = [
  * Called at the top of `createWebHandler`'s returned function so that all
  * response paths (static files, HTML pages, JSON APIs, redirects) are covered
  * without modifying each `writeHead` call individually.
+ *
+ * @param res - The HTTP response to set headers on.
+ * @param requestHost - The `Host` header from the incoming request. When
+ *   provided, the CSP `form-action` directive explicitly includes the
+ *   request origin to work around a Chromium bug where `'self'` does not
+ *   match form submissions on non-standard ports.
  */
-export function setSecurityHeaders(res: ServerResponse): void {
+export function setSecurityHeaders(res: ServerResponse, requestHost?: string): void {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
-  res.setHeader("Content-Security-Policy", WEB_CONTENT_SECURITY_POLICY);
+  // Chromium does not reliably match 'self' or explicit origin+port for
+  // form-action on non-standard ports. Use the request hostname with a
+  // wildcard port so the form POST is allowed regardless of port.
+  const hostname = requestHost ? requestHost.replace(/:\d+$/, "") : undefined;
+  const formAction = hostname
+    ? `form-action 'self' http://${hostname}:* https://${hostname}:*`
+    : "form-action 'self'";
+  const csp = [...BASE_CSP_DIRECTIVES, formAction].join("; ");
+  res.setHeader("Content-Security-Policy", csp);
 }

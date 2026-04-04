@@ -297,7 +297,7 @@ export function createWebServer(options: WebServerOptions): http.Server {
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   const handler = async (req: http.IncomingMessage, res: http.ServerResponse): Promise<void> => {
-    setSecurityHeaders(res);
+    setSecurityHeaders(res, req.headers.host);
 
     let rawPath: string;
     let queryString = "";
