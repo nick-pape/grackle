@@ -529,14 +529,13 @@ describe("pipe-delivery integration", () => {
       // Now reanimate: ensurePipeStream re-registers listeners and replays
       pipeDelivery.ensurePipeStream("child", "parent");
 
-      // Wait for the async replay delivery to settle
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      // Parent should have received the buffered message via sendInput
-      const calls = mockSendInput.mock.calls.map((c: unknown[]) => c[0] as { sessionId: string; text: string });
-      const parentCall = calls.find((c) => c.sessionId === "parent");
-      expect(parentCall).toBeDefined();
-      expect(parentCall!.text).toContain("Buffered message from offline window");
+      // Wait deterministically for the async replay delivery to settle
+      await vi.waitFor(() => {
+        const calls = mockSendInput.mock.calls.map((c: unknown[]) => c[0] as { sessionId: string; text: string });
+        const parentCall = calls.find((c) => c.sessionId === "parent");
+        expect(parentCall).toBeDefined();
+        expect(parentCall!.text).toContain("Buffered message from offline window");
+      });
     });
   });
 

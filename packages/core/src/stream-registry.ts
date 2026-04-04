@@ -553,6 +553,8 @@ export function replayUndeliveredMessages(subscriptionId: string): void {
     return;
   }
 
+  let hadSyncDelivery = false;
+
   for (const msg of stream.messages) {
     if (msg.deliveredTo.has(subscriptionId)) {
       continue;
@@ -576,9 +578,11 @@ export function replayUndeliveredMessages(subscriptionId: string): void {
           pendingDeliveries.set(msg.id, pending);
         }
         pending.promises.push(deliveryPromise);
-        // Schedule auto-finalization so pruning runs even if no one calls awaitPendingDeliveries
+        // Schedule auto-finalization on ALL promises for this message — matching publish() so
+        // that a single settled promise cannot delete the entry while sibling promises are
+        // still in flight (e.g. multiple subscriptions being replayed for the same message).
         const msgId = msg.id;
-        Promise.allSettled([deliveryPromise]).then(() => {
+        Promise.allSettled(pending.promises).then(() => {
           if (pendingDeliveries.has(msgId)) {
             pendingDeliveries.delete(msgId);
             const s = streams.get(streamId);
@@ -591,10 +595,16 @@ export function replayUndeliveredMessages(subscriptionId: string): void {
         });
       } else {
         msg.deliveredTo.add(sub.id);
+        hadSyncDelivery = true;
       }
     } catch (err) {
       logger.warn({ err, subscriptionId: sub.id }, "replayUndeliveredMessages: async listener threw — message left undelivered");
     }
+  }
+
+  // Prune after all sync deliveries — publish() does the same when there are no async promises.
+  if (hadSyncDelivery) {
+    pruneDeliveredMessages(stream);
   }
 }
 
