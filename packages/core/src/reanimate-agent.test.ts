@@ -218,14 +218,49 @@ describe("reanimateAgent — pipe stream reconstruction", () => {
     expect(streamRegistry.getStreamByName("pipe:child")).toBeUndefined();
   });
 
-  it("does not reconstruct pipe stream for sync-piped child sessions", () => {
+  it("reconstructs pipe stream for sync-piped child with async subscriptions (promotion)", () => {
     sessionStore.createSession("parent", "env-parent", "claude-code", "p", "sonnet", "/tmp/p");
     sessionStore.createSession("child", "env-child", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
     prepareSuspendedSession("child");
 
     reanimateAgent("child");
 
-    // Sync pipes are not reconstructable — no pipe:child stream
-    expect(streamRegistry.getStreamByName("pipe:child")).toBeUndefined();
+    // Sync pipe is promoted to async delivery on reanimate — stream should exist
+    const pipeStream = streamRegistry.getStreamByName("pipe:child");
+    expect(pipeStream).toBeDefined();
+
+    // Both subscriptions should use async delivery mode (promoted)
+    const subs = Array.from(pipeStream!.subscriptions.values());
+    expect(subs.some((s) => s.sessionId === "parent" && s.deliveryMode === "async")).toBe(true);
+    expect(subs.some((s) => s.sessionId === "child" && s.deliveryMode === "async")).toBe(true);
+  });
+
+  it("promoted sync pipe delivers completion to parent via sendInput", () => {
+    sessionStore.createSession("parent", "env-parent", "claude-code", "p", "sonnet", "/tmp/p");
+    sessionStore.createSession("child", "env-child", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+    prepareSuspendedSession("child");
+
+    reanimateAgent("child");
+
+    // Publish from child — parent should receive via sendInput (async delivery)
+    const pipeStream = streamRegistry.getStreamByName("pipe:child")!;
+    streamRegistry.publish(pipeStream.id, "child", "Sync child result after reanimate");
+
+    expect(mockSendInput).toHaveBeenCalledOnce();
+    const call = mockSendInput.mock.calls[0][0] as { sessionId: string; text: string };
+    expect(call.sessionId).toBe("parent");
+    expect(call.text).toContain("Sync child result after reanimate");
+  });
+
+  it("reconstructs pipe streams for active sync-piped children when parent is reanimated", () => {
+    // Parent on env-parent (to be reanimated); child on env-child (idle — non-terminal)
+    sessionStore.createSession("parent", "env-parent", "claude-code", "p", "sonnet", "/tmp/p");
+    sessionStore.createSession("child", "env-child", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+    sqlite.exec("UPDATE sessions SET status = 'idle' WHERE id = 'child'");
+    prepareSuspendedSession("parent");
+
+    reanimateAgent("parent");
+
+    expect(streamRegistry.getStreamByName("pipe:child")).toBeDefined();
   });
 });
