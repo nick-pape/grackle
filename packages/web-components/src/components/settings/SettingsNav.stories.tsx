@@ -63,10 +63,10 @@ export const JKNavigation: Story = {
     const credentialsTab = canvas.getByRole("tab", { name: /Credentials/ });
     credentialsTab.focus();
 
-    // J moves down to Personas
+    // J moves down to GitHub (now second tab)
     await userEvent.keyboard("j");
-    const personasTab = canvas.getByRole("tab", { name: /Personas/ });
-    await expect(personasTab).toHaveFocus();
+    const githubTab = canvas.getByRole("tab", { name: /GitHub/ });
+    await expect(githubTab).toHaveFocus();
 
     // K moves back up to Credentials
     await userEvent.keyboard("k");
