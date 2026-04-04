@@ -106,6 +106,21 @@ describe("createWebServer", () => {
     expect(metadata.token_endpoint).toContain("/token");
   });
 
+  it("derives OAuth metadata URLs from request Host header", async () => {
+    const addr = server.address() as { port: number };
+    const res = await request(
+      server,
+      "/.well-known/oauth-authorization-server",
+      { "Host": `localhost:${addr.port}` },
+    );
+
+    expect(res.status).toBe(200);
+    const metadata = JSON.parse(res.body);
+    expect(metadata.issuer).toBe(`http://localhost:${addr.port}`);
+    expect(metadata.authorization_endpoint).toBe(`http://localhost:${addr.port}/authorize`);
+    expect(metadata.token_endpoint).toBe(`http://localhost:${addr.port}/token`);
+  });
+
   it("redeems a valid pairing code and sets session cookie", async () => {
     vi.mocked(redeemPairingCode).mockReturnValueOnce(true);
     vi.mocked(createSession).mockReturnValueOnce("grackle_session=test123; HttpOnly");
