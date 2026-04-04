@@ -7,6 +7,7 @@ import type { SessionRow } from "@grackle-ai/database";
 import * as adapterManager from "./adapter-manager.js";
 import { ensureLifecycleStream } from "./lifecycle-streams.js";
 import { ensureStdinStream } from "./stdin-delivery.js";
+import { ensurePipeStream } from "./pipe-delivery.js";
 import { processEventStream } from "./event-processor.js";
 
 /**
@@ -102,6 +103,22 @@ export function reanimateAgent(sessionId: string): SessionRow {
 
   // Re-create stdin stream if it was deleted (same lifecycle as lifecycle stream)
   ensureStdinStream(session.id);
+
+  // Re-create async pipe stream if this session is a child with an async pipe.
+  // Sync pipes are not reconstructed — the parent's blocking consumeSync() cannot
+  // be revived after a session suspension.
+  if (session.pipeMode === "async" && session.parentSessionId) {
+    ensurePipeStream(session.id, session.parentSessionId);
+  }
+
+  // Re-create async pipe streams for any non-terminal child sessions so that
+  // messages the parent writes after reanimate are delivered correctly.
+  const children = sessionStore.getChildSessions(session.id);
+  for (const child of children) {
+    if (child.pipeMode === "async" && child.status !== SESSION_STATUS.STOPPED) {
+      ensurePipeStream(child.id, session.id);
+    }
+  }
 
   processEventStream(resumeStream, {
     sessionId: session.id,

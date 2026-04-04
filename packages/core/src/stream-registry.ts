@@ -127,10 +127,15 @@ const asyncListeners: Map<string, AsyncMessageListener> = new Map();
 
 /**
  * Pending async delivery Promises for messages whose listeners returned Promises.
- * Keyed by message ID. Populated by publish(); entries are cleaned up by publish()
- * auto-finalization and when streams/subscriptions are deleted or unsubscribed.
+ * Keyed by message ID. Populated by publish() and replayUndeliveredMessages().
+ * Entries are cleaned up by auto-finalization and when streams/subscriptions are
+ * deleted or unsubscribed.
+ *
+ * `inflightSubIds` tracks which subscription IDs have a delivery Promise currently
+ * in flight for this message. Used by replayUndeliveredMessages() to skip duplicate
+ * dispatch when called again before the prior delivery Promise settles.
  */
-const pendingDeliveries: Map<string, { streamId: string; promises: Array<Promise<void>> }> = new Map();
+const pendingDeliveries: Map<string, { streamId: string; promises: Array<Promise<void>>; inflightSubIds: Set<string> }> = new Map();
 
 /** Blocking queues for sync subscriptions, keyed by subscription ID. */
 const syncQueues: Map<string, AsyncQueue<StreamMessage>> = new Map();
@@ -440,7 +445,7 @@ export function publish(streamId: string, senderId: string, content: string): St
             );
             let pending = pendingDeliveries.get(msg.id);
             if (!pending) {
-              pending = { streamId, promises: [] };
+              pending = { streamId, promises: [], inflightSubIds: new Set() };
               pendingDeliveries.set(msg.id, pending);
             }
             pending.promises.push(deliveryPromise);
@@ -525,6 +530,108 @@ export function hasUndeliveredMessages(subscriptionId: string): boolean {
       !msg.deliveredTo.has(subscriptionId) &&
       (stream.selfEcho || msg.senderId !== sub.sessionId),
   );
+}
+
+/**
+ * Replay any buffered messages that have not yet been delivered to the given subscription.
+ *
+ * Called after re-registering an async listener for a session that was suspended and
+ * reanimated. The stream buffer may hold messages that arrived during the disconnection
+ * window and were left undelivered (the listener threw because the environment was offline).
+ * Re-invoking the listener for each such message brings the subscriber up to date.
+ *
+ * No-ops if the subscription is not found, is write-only, or has no registered async listener.
+ */
+export function replayUndeliveredMessages(subscriptionId: string): void {
+  const sub = subscriptionsById.get(subscriptionId);
+  if (!sub || !canReceive(sub) || sub.deliveryMode !== "async") {
+    return;
+  }
+
+  const stream = streams.get(sub.streamId);
+  if (!stream) {
+    return;
+  }
+
+  const listener = asyncListeners.get(sub.sessionId);
+  if (!listener) {
+    return;
+  }
+
+  let hadSyncDelivery = false;
+  /** Message IDs for which we added an async delivery promise in this call. */
+  const asyncMessageIds: string[] = [];
+
+  for (const msg of stream.messages) {
+    if (msg.deliveredTo.has(subscriptionId)) {
+      continue;
+    }
+    if (!stream.selfEcho && msg.senderId === sub.sessionId) {
+      continue;
+    }
+
+    // Skip if a delivery Promise for this (message, subscription) pair is already in flight.
+    // Without this guard, a second replay call before the first Promise settles would
+    // re-invoke the listener and dispatch a duplicate sendInput.
+    const existingPending = pendingDeliveries.get(msg.id);
+    if (existingPending?.inflightSubIds.has(sub.id)) {
+      continue;
+    }
+
+    try {
+      const result = listener(sub, msg);
+      if (result !== undefined && typeof (result as Promise<void>).then === "function") {
+        const subId = sub.id;
+        const streamId = sub.streamId;
+        let pending = pendingDeliveries.get(msg.id);
+        if (!pending) {
+          pending = { streamId, promises: [], inflightSubIds: new Set() };
+          pendingDeliveries.set(msg.id, pending);
+        }
+        pending.inflightSubIds.add(subId);
+        const deliveryPromise = (result as Promise<void>).then(
+          () => { msg.deliveredTo.add(subId); pending!.inflightSubIds.delete(subId); },
+          (err: unknown) => {
+            logger.warn({ err, subscriptionId: subId }, "replayUndeliveredMessages: async listener delivery failed");
+            pending!.inflightSubIds.delete(subId);
+          },
+        );
+        pending.promises.push(deliveryPromise);
+        asyncMessageIds.push(msg.id);
+      } else {
+        msg.deliveredTo.add(sub.id);
+        hadSyncDelivery = true;
+      }
+    } catch (err) {
+      logger.warn({ err, subscriptionId: sub.id }, "replayUndeliveredMessages: async listener threw — message left undelivered");
+    }
+  }
+
+  // Schedule one finalization per message after the loop — matching publish() exactly.
+  // Scheduling after the loop (rather than inside it) guarantees pending.promises is fully
+  // populated before allSettled is called, so no sibling promise can be dropped.
+  for (const msgId of asyncMessageIds) {
+    const pending = pendingDeliveries.get(msgId);
+    if (pending) {
+      const streamId = pending.streamId;
+      Promise.allSettled(pending.promises).then(() => {
+        if (pendingDeliveries.has(msgId)) {
+          pendingDeliveries.delete(msgId);
+          const s = streams.get(streamId);
+          if (s) {
+            pruneDeliveredMessages(s);
+          }
+        }
+      }).catch((err: unknown) => {
+        logger.error({ err, streamId, messageId: msgId }, "replayUndeliveredMessages: error during auto-finalization");
+      });
+    }
+  }
+
+  // Prune after all sync deliveries — publish() does the same when there are no async promises.
+  if (hadSyncDelivery) {
+    pruneDeliveredMessages(stream);
+  }
 }
 
 // ─── Notification Registration ────────────────────────────────────────────────

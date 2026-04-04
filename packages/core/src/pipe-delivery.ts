@@ -79,6 +79,43 @@ export function setupAsyncPipeDelivery(parentSessionId: string): void {
 }
 
 /**
+ * Ensure an async pipe stream exists between a parent and child session.
+ *
+ * Idempotent — safe to call on reanimate even if the stream already exists
+ * (e.g. the server stayed up but the session was suspended). Two cases:
+ *
+ * - Stream exists: re-register async delivery listeners and replay any buffered
+ *   messages that were left undelivered while the environment was offline.
+ * - Stream gone (server restart): recreate the stream, subscribe both sides,
+ *   register listeners, and replay buffered messages (none in this case, since
+ *   the in-memory buffer was also cleared).
+ *
+ * Only handles `pipeMode === "async"`. Sync pipes require the parent's blocking
+ * `consumeSync()` call to be in-flight, which cannot be reconstructed post-reanimate.
+ */
+export function ensurePipeStream(childSessionId: string, parentSessionId: string): void {
+  let pipeStream = streamRegistry.getStreamByName(`pipe:${childSessionId}`);
+
+  if (!pipeStream) {
+    // Stream was lost (server restart) — recreate it with the same subscription topology as spawnAgent
+    pipeStream = streamRegistry.createStream(`pipe:${childSessionId}`);
+    streamRegistry.subscribe(pipeStream.id, parentSessionId, "rw", "async", true);
+    streamRegistry.subscribe(pipeStream.id, childSessionId, "rw", "async", false);
+  }
+
+  // Re-register async delivery listeners (idempotent)
+  ensureAsyncDeliveryListener(parentSessionId);
+  ensureAsyncDeliveryListener(childSessionId);
+
+  // Replay any messages that were buffered while the environment was offline
+  for (const sub of pipeStream.subscriptions.values()) {
+    if (sub.deliveryMode === "async") {
+      streamRegistry.replayUndeliveredMessages(sub.id);
+    }
+  }
+}
+
+/**
  * Publish a completion message to the IPC stream when a child session with a pipe
  * reaches terminal status (or idle for sync pipes). Called from the event processor.
  *

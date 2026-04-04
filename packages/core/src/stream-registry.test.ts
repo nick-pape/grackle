@@ -826,4 +826,125 @@ describe("stream-registry", () => {
       expect(stream.messages).not.toContain(msg);
     });
   });
+
+  // ─── replayUndeliveredMessages ─────────────────────────────
+
+  describe("replayUndeliveredMessages", () => {
+    it("invokes async listener for buffered undelivered messages", async () => {
+      const stream = registry.createStream("pipe:child");
+      const parentSub = registry.subscribe(stream.id, "parent", "rw", "async", true);
+      registry.subscribe(stream.id, "child", "rw", "async", false);
+
+      // Publish without a listener registered → message stays undelivered
+      registry.publish(stream.id, "child", "offline message");
+      expect(registry.hasUndeliveredMessages(parentSub.id)).toBe(true);
+
+      // Register listener and replay
+      const deliveredTexts: string[] = [];
+      registry.registerAsyncListener("parent", (_sub, msg) => {
+        deliveredTexts.push(msg.content);
+      });
+      registry.replayUndeliveredMessages(parentSub.id);
+
+      expect(deliveredTexts).toEqual(["offline message"]);
+    });
+
+    it("skips messages already delivered to the subscription", () => {
+      const stream = registry.createStream("pipe:child");
+      const parentSub = registry.subscribe(stream.id, "parent", "rw", "async", true);
+      registry.subscribe(stream.id, "child", "rw", "async", false);
+
+      const delivered: string[] = [];
+      registry.registerAsyncListener("parent", (_sub, msg) => {
+        delivered.push(msg.content);
+      });
+
+      // Publish and deliver (listener is registered, so it fires immediately)
+      registry.publish(stream.id, "child", "already delivered");
+      expect(registry.hasUndeliveredMessages(parentSub.id)).toBe(false);
+
+      // Replay should not re-deliver
+      registry.replayUndeliveredMessages(parentSub.id);
+      expect(delivered).toHaveLength(1); // only the original delivery, not a second from replay
+    });
+
+    it("no-ops for write-only subscriptions", () => {
+      const stream = registry.createStream("pipe:child");
+      // Write-only subscriptions can only use "detach" delivery mode
+      const writeSub = registry.subscribe(stream.id, "server", "w", "detach", false);
+      registry.subscribe(stream.id, "child", "rw", "async", false);
+
+      const delivered: string[] = [];
+      registry.registerAsyncListener("server", (_sub, msg) => {
+        delivered.push(msg.content);
+      });
+
+      registry.publish(stream.id, "child", "some message");
+      registry.replayUndeliveredMessages(writeSub.id);
+
+      // Write-only subscription cannot receive — replay is a no-op
+      expect(delivered).toHaveLength(0);
+    });
+
+    it("no-ops when no async listener is registered for the session", () => {
+      const stream = registry.createStream("pipe:child");
+      const parentSub = registry.subscribe(stream.id, "parent", "rw", "async", true);
+      registry.subscribe(stream.id, "child", "rw", "async", false);
+
+      registry.publish(stream.id, "child", "buffered");
+      expect(registry.hasUndeliveredMessages(parentSub.id)).toBe(true);
+
+      // No listener registered — replay is a no-op, message stays undelivered
+      registry.replayUndeliveredMessages(parentSub.id);
+      expect(registry.hasUndeliveredMessages(parentSub.id)).toBe(true);
+    });
+
+    it("marks messages delivered after async listener promise resolves", async () => {
+      const stream = registry.createStream("pipe:child");
+      const parentSub = registry.subscribe(stream.id, "parent", "rw", "async", true);
+      registry.subscribe(stream.id, "child", "rw", "async", false);
+
+      registry.publish(stream.id, "child", "async payload");
+      expect(registry.hasUndeliveredMessages(parentSub.id)).toBe(true);
+
+      let resolveDelivery!: () => void;
+      const deliveryPromise = new Promise<void>((resolve) => {
+        resolveDelivery = resolve;
+      });
+      registry.registerAsyncListener("parent", () => deliveryPromise);
+      registry.replayUndeliveredMessages(parentSub.id);
+
+      // Still undelivered until the promise resolves
+      expect(registry.hasUndeliveredMessages(parentSub.id)).toBe(true);
+
+      resolveDelivery();
+      await Promise.resolve(); // flush microtasks
+      await Promise.resolve();
+
+      expect(registry.hasUndeliveredMessages(parentSub.id)).toBe(false);
+    });
+
+    it("does not dispatch a second sendInput when called again before the first delivery resolves", () => {
+      const stream = registry.createStream("pipe:child");
+      const parentSub = registry.subscribe(stream.id, "parent", "rw", "async", true);
+      registry.subscribe(stream.id, "child", "rw", "async", false);
+
+      registry.publish(stream.id, "child", "buffered message");
+
+      let listenerCallCount = 0;
+      // Listener returns a never-resolving Promise to keep the delivery in-flight
+      registry.registerAsyncListener("parent", () => {
+        listenerCallCount++;
+        return new Promise<void>(() => {});
+      });
+
+      // First replay — listener fires once
+      registry.replayUndeliveredMessages(parentSub.id);
+      expect(listenerCallCount).toBe(1);
+
+      // Second replay while first is still in-flight — must NOT fire listener again
+      registry.replayUndeliveredMessages(parentSub.id);
+      expect(listenerCallCount).toBe(1);
+    });
+  });
 });
