@@ -162,7 +162,7 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
   const mcpDialHost = toDialableHost(process.env.GRACKLE_HOST || "127.0.0.1");
   const mcpUrl = `http://${mcpDialHost}:${mcpPort}/mcp`;
   const mcpToken = createScopedToken(
-    { sub: sessionId, pid: "", per: resolved.personaId, sid: sessionId },
+    { sub: sessionId, pid: req.workspaceId || "", per: resolved.personaId, sid: sessionId },
     loadOrCreateApiKey(grackleHome),
   );
 

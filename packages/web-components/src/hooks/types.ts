@@ -269,6 +269,7 @@ export interface UseSessionsResult {
     prompt: string,
     personaId?: string,
     workingDirectory?: string,
+    workspaceId?: string,
   ) => Promise<void>;
   /** Send text input to a running session. */
   sendInput: (sessionId: string, text: string) => Promise<void>;
