@@ -470,7 +470,8 @@ describe("stream-registry", () => {
       expect(stream.messages[0].deliveredTo.has(senderSub.id)).toBe(true);
     });
 
-    it("publish with selfEcho=true delivers to sender via sync", async () => {
+    it("publish with selfEcho=true still delivers to sender via sync after #1184 fix", async () => {
+      // Regression guard: the async-listener suppression must not affect sync delivery
       const stream = registry.createStream("chat", true);
       const senderSub = registry.subscribe(stream.id, "sender", "rw", "sync", true);
 
