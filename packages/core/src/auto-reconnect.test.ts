@@ -534,15 +534,16 @@ describe("auto-reconnect", () => {
     resetReconnectState("env1");
     const reconnectPromise = attemptReconnects();
 
-    // Give tryReconnect a chance to add env1 to the reconnecting Set
-    await new Promise((r) => setTimeout(r, 10));
+    // Wait until adapter.connect has been called (resolveConnect is assigned).
+    // At that point env1 is in the reconnecting Set, so both assertions hold.
+    await vi.waitFor(() => expect(resolveConnect).toBeTypeOf("function"));
     expect(isReconnecting("env1")).toBe(true);
 
     // Resolve the connect call and let reconnect finish
     resolveConnect();
     await reconnectPromise;
-    await new Promise((r) => setTimeout(r, 20));
 
-    expect(isReconnecting("env1")).toBe(false);
+    // Wait until the reconnect completes and env1 is removed from the Set
+    await vi.waitFor(() => expect(isReconnecting("env1")).toBe(false));
   });
 });
