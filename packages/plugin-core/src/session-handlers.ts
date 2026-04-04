@@ -161,8 +161,18 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
   const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
   const mcpDialHost = toDialableHost(process.env.GRACKLE_HOST || "127.0.0.1");
   const mcpUrl = `http://${mcpDialHost}:${mcpPort}/mcp`;
+  // Resolve workspace scope for the token: prefer explicit workspaceId, then inherit from the
+  // parent session's task (for piped child sessions spawned from a task-based session).
+  let resolvedWorkspaceId = req.workspaceId || "";
+  if (!resolvedWorkspaceId && req.parentSessionId) {
+    const parentSession = sessionStore.getSession(req.parentSessionId);
+    if (parentSession?.taskId) {
+      const parentTask = taskStore.getTask(parentSession.taskId);
+      resolvedWorkspaceId = parentTask?.workspaceId || "";
+    }
+  }
   const mcpToken = createScopedToken(
-    { sub: sessionId, pid: req.workspaceId || "", per: resolved.personaId, sid: sessionId },
+    { sub: sessionId, pid: resolvedWorkspaceId, per: resolved.personaId, sid: sessionId },
     loadOrCreateApiKey(grackleHome),
   );
 
