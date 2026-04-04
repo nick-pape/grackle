@@ -1,5 +1,5 @@
 import { registerAdapter, exec, logger } from "@grackle-ai/core";
-import { credentialProviders } from "@grackle-ai/database";
+import { credentialProviders, githubAccountStore } from "@grackle-ai/database";
 import { DockerAdapter } from "@grackle-ai/adapter-docker";
 import { LocalAdapter } from "@grackle-ai/adapter-local";
 import { SshAdapter } from "@grackle-ai/adapter-ssh";
@@ -15,6 +15,8 @@ export function registerAllAdapters(): void {
     logger,
     isGitHubProviderEnabled: (): boolean =>
       credentialProviders.getCredentialProviders().github !== "off",
+    resolveGitHubToken: (accountId?: string): string | undefined =>
+      githubAccountStore.resolveStoredGitHubToken(accountId),
   };
 
   registerAdapter(new DockerAdapter(adapterDeps));

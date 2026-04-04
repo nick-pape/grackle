@@ -2,6 +2,7 @@ import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
 import { exec } from "@grackle-ai/core";
+import { githubAccountStore } from "@grackle-ai/database";
 import { formatGhError } from "./utils/format-gh-error.js";
 import { logger } from "@grackle-ai/core";
 
@@ -14,8 +15,12 @@ const GH_CODESPACE_CREATE_TIMEOUT_MS: number = 300_000;
 /** Maximum number of codespaces returned by `gh codespace list`. */
 const GH_CODESPACE_LIST_LIMIT: number = 50;
 
-/** List available GitHub Codespaces. */
-export async function listCodespaces(): Promise<grackle.CodespaceList> {
+/** List available GitHub Codespaces, optionally filtered to a specific GitHub account. */
+export async function listCodespaces(req: grackle.ListCodespacesRequest): Promise<grackle.CodespaceList> {
+  const ghToken = githubAccountStore.resolveStoredGitHubToken(req.githubAccountId || undefined);
+  const execEnv: NodeJS.ProcessEnv | undefined = ghToken
+    ? { ...process.env, GH_TOKEN: ghToken }
+    : undefined;
   try {
     const result = await exec(
       "gh",
@@ -27,7 +32,7 @@ export async function listCodespaces(): Promise<grackle.CodespaceList> {
         "--limit",
         String(GH_CODESPACE_LIST_LIMIT),
       ],
-      { timeout: GH_CODESPACE_LIST_TIMEOUT_MS },
+      { timeout: GH_CODESPACE_LIST_TIMEOUT_MS, env: execEnv },
     );
     const entries = JSON.parse(result.stdout || "[]") as Array<Record<string, unknown>>;
     return create(grackle.CodespaceListSchema, {

@@ -33,6 +33,7 @@ export async function addEnvironment(req: grackle.AddEnvironmentRequest): Promis
     req.displayName,
     req.adapterType,
     req.adapterConfig,
+    req.githubAccountId || undefined,
   );
   emit("environment.changed", {});
   logger.info({ environmentId: id, adapterType: req.adapterType }, "Environment added");
@@ -68,12 +69,14 @@ export async function updateEnvironment(req: grackle.UpdateEnvironmentRequest): 
     adapterConfig = raw;
   }
   const trimmedName = displayName !== undefined ? displayName.trim() : undefined;
-  if (trimmedName === undefined && adapterConfig === undefined) {
+  const githubAccountId = req.githubAccountId !== undefined ? req.githubAccountId : undefined;
+  if (trimmedName === undefined && adapterConfig === undefined && githubAccountId === undefined) {
     throw new ConnectError("No updatable fields provided", Code.InvalidArgument);
   }
   envRegistry.updateEnvironment(req.id, {
     displayName: trimmedName,
     adapterConfig,
+    githubAccountId,
   });
   logger.info({ environmentId: req.id, displayName: trimmedName }, "Environment updated");
   emit("environment.changed", {});

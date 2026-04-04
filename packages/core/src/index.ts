@@ -79,3 +79,5 @@ export { routeEscalation, deliverPendingEscalations } from "./notification-route
 export { buildMcpServersJson, personaMcpServersToJson } from "./grpc-mcp-config.js";
 export { toDialableHost, validatePipeInputs, resolveAncestorEnvironmentId, VALID_PIPE_MODES } from "./grpc-shared-utils.js";
 export { toPersonaResolveInput, buildOrchestratorContextInput } from "./persona-mapper.js";
+export { importAccountsFromGhCli } from "./github-account-import.js";
+export type { ImportAccountsResult } from "./github-account-import.js";

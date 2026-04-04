@@ -11,3 +11,5 @@ export { TaskActionButtons } from "./TaskActionButtons.js";
 export { TaskOverviewPanel } from "./TaskOverviewPanel.js";
 export { PluginsPanel } from "./PluginsPanel.js";
 export type { PluginsPanelProps } from "./PluginsPanel.js";
+export { GitHubAccountsPanel } from "./GitHubAccountsPanel.js";
+export type { GitHubAccountsPanelProps } from "./GitHubAccountsPanel.js";

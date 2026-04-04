@@ -19,6 +19,7 @@ export function envRowToProto(row: EnvironmentRow): grackle.Environment {
     lastSeen: row.lastSeen || "",
     envInfo: row.envInfo || "",
     createdAt: row.createdAt,
+    githubAccountId: row.githubAccountId || "",
   });
 }
 

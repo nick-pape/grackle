@@ -6,6 +6,7 @@ import styles from "./SettingsPage.module.scss";
 /** Maps settings URL path segments to display labels. */
 const SETTINGS_TAB_LABELS: Record<string, string> = {
   credentials: "Credentials",
+  "github-accounts": "GitHub Accounts",
   personas: "Personas",
   schedules: "Schedules",
   appearance: "Appearance",

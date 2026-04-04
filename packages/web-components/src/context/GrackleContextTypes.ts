@@ -14,6 +14,7 @@ import type {
   UsePluginsResult,
   UseSchedulesResult,
   UseStreamsResult,
+  UseGitHubAccountsResult,
   ConnectionStatus,
 } from "../hooks/types.js";
 
@@ -47,6 +48,8 @@ export interface UseGrackleSocketResult {
   knowledge: Omit<UseKnowledgeResult, "handleEvent">;
   /** Plugin state and actions. */
   plugins: Omit<UsePluginsResult, "domainHook">;
+  /** GitHub account state and actions. */
+  githubAccounts: Omit<UseGitHubAccountsResult, "domainHook">;
   /** App-level default persona ID setting. */
   appDefaultPersonaId: string;
   /** Update the app-level default persona ID. */

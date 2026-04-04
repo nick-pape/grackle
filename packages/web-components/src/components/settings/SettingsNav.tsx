@@ -1,6 +1,6 @@
 import { useCallback, useRef, type JSX, type KeyboardEvent, type ReactNode } from "react";
 import { useLocation } from "react-router";
-import { CalendarClock, Info, Key, Keyboard, Palette, Puzzle, User } from "lucide-react";
+import { CalendarClock, Github, Info, Key, Keyboard, Palette, Puzzle, User } from "lucide-react";
 import { SETTINGS_URL, useAppNavigate } from "../../utils/navigation.js";
 import { ICON_LG } from "../../utils/iconSize.js";
 import styles from "./SettingsNav.module.scss";
@@ -18,6 +18,7 @@ interface SettingsTab {
 /** Ordered list of settings tabs. */
 const TABS: SettingsTab[] = [
   { path: "credentials", label: "Credentials", icon: <Key size={ICON_LG} /> },
+  { path: "github-accounts", label: "GitHub Accounts", icon: <Github size={ICON_LG} /> },
   { path: "personas", label: "Personas", icon: <User size={ICON_LG} /> },
   { path: "schedules", label: "Schedules", icon: <CalendarClock size={ICON_LG} /> },
   { path: "appearance", label: "Appearance", icon: <Palette size={ICON_LG} /> },
