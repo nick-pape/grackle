@@ -34,6 +34,11 @@ async function getQuery(): Promise<QueryFn> {
   );
 }
 
+/** Returns true if `v` is a finite number >= 0 (guards against NaN/Infinity from untyped SDK messages). */
+function isFiniteNonNegative(v: number | undefined): v is number {
+  return typeof v === "number" && Number.isFinite(v) && v >= 0;
+}
+
 /** @internal Map a raw Claude Agent SDK message to Grackle AgentEvent(s). Exported for testing. */
 export function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
   const ts = new Date().toISOString();
@@ -161,17 +166,20 @@ class ClaudeCodeSession extends BaseAgentSession {
     totalOutputTokens: number | undefined,
     totalCostMillicents: number | undefined,
   ): void {
-    // Only compute and update baseline for fields that are actually present.
-    const deltaInput = totalInputTokens !== undefined
-      ? totalInputTokens - this.lastReportedInputTokens : 0;
-    const deltaOutput = totalOutputTokens !== undefined
-      ? totalOutputTokens - this.lastReportedOutputTokens : 0;
-    const deltaCost = totalCostMillicents !== undefined
-      ? totalCostMillicents - this.lastReportedCostMillicents : 0;
+    // Normalize: treat non-finite or negative values as absent so that a bad
+    // SDK message cannot poison the lastReported* baseline with NaN/Infinity.
+    const safeInput = isFiniteNonNegative(totalInputTokens) ? totalInputTokens : undefined;
+    const safeOutput = isFiniteNonNegative(totalOutputTokens) ? totalOutputTokens : undefined;
+    const safeCost = isFiniteNonNegative(totalCostMillicents) ? totalCostMillicents : undefined;
 
-    if (totalInputTokens !== undefined) { this.lastReportedInputTokens = totalInputTokens; }
-    if (totalOutputTokens !== undefined) { this.lastReportedOutputTokens = totalOutputTokens; }
-    if (totalCostMillicents !== undefined) { this.lastReportedCostMillicents = totalCostMillicents; }
+    // Only compute and update baseline for fields that are actually present.
+    const deltaInput = safeInput !== undefined ? safeInput - this.lastReportedInputTokens : 0;
+    const deltaOutput = safeOutput !== undefined ? safeOutput - this.lastReportedOutputTokens : 0;
+    const deltaCost = safeCost !== undefined ? safeCost - this.lastReportedCostMillicents : 0;
+
+    if (safeInput !== undefined) { this.lastReportedInputTokens = safeInput; }
+    if (safeOutput !== undefined) { this.lastReportedOutputTokens = safeOutput; }
+    if (safeCost !== undefined) { this.lastReportedCostMillicents = safeCost; }
 
     // Guard against SDK reporting lower values (e.g. session reset edge cases)
     if (deltaInput <= 0 && deltaOutput <= 0 && deltaCost <= 0) {

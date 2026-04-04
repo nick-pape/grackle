@@ -19,7 +19,7 @@ export class ClaudeCodeRuntime extends BaseAgentRuntime {
 
 // Warnings were encountered during analysis:
 //
-// src/claude-code.ts:38:1 - (ae-internal-missing-underscore) The name "mapMessage" should be prefixed with an underscore because the declaration is marked as @internal
+// src/claude-code.ts:43:1 - (ae-internal-missing-underscore) The name "mapMessage" should be prefixed with an underscore because the declaration is marked as @internal
 
 // (No @packageDocumentation comment for this package)
 
