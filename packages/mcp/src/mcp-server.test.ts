@@ -550,4 +550,31 @@ describe("scoped token workspaceId injection", () => {
     // Injection must override with the token's workspace
     expect(capturedArgs[0]!.workspaceId).toBe("default-ws");
   });
+
+  /**
+   * Finding-group tools (e.g. finding_post) must have workspaceId injected from
+   * the scoped token so agents can post findings without specifying a workspace.
+   * Regression test for #1183: standalone sessions minted tokens with pid:"" which
+   * caused injection to produce undefined, making finding_post fail.
+   */
+  it("finding group tool receives workspaceId injected from scoped token", async () => {
+    const capturedArgs: Record<string, unknown>[] = [];
+    const spyTool = makeSpyTool("finding_spy", "finding", capturedArgs, z.object({ workspaceId: z.string().optional() }));
+
+    server = await startServer([[spyTool]]);
+
+    const scopedToken = createScopedToken(
+      { sub: ROOT_TASK_ID, pid: "ws-odsp", per: "system", sid: "sess-4" },
+      TEST_API_KEY,
+    );
+    const authHeader = `Bearer ${scopedToken}`;
+
+    const sessionId = await initialize(server!, authHeader);
+    // Agent omits workspaceId — server must inject it from token
+    await callTool(server!, sessionId, "finding_spy", {}, authHeader);
+
+    expect(capturedArgs).toHaveLength(1);
+    // Handler must receive the token's workspace, not undefined
+    expect(capturedArgs[0]!.workspaceId).toBe("ws-odsp");
+  });
 });
