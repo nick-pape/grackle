@@ -246,6 +246,10 @@ const REVOCATION_PRUNE_INTERVAL_MS: number = 60 * 60 * 1000;
  */
 export function createMcpServer(options: McpServerOptions): http.Server {
   const { bindHost, grpcPort, apiKey, authorizationServerUrl, toolGroups } = options;
+  /** Port of the web/auth server, extracted from the startup URL for dynamic derivation. */
+  const authServerPort = authorizationServerUrl
+    ? new URL(authorizationServerUrl).port
+    : undefined;
   const grpcClients = createGrpcClients(bindHost, grpcPort, apiKey);
 
   /** Map of active session transports, keyed by session ID. */
@@ -266,11 +270,15 @@ export function createMcpServer(options: McpServerOptions): http.Server {
     const requestResourceUrl = `http://${req.headers.host || url.host}`;
 
     // OAuth Protected Resource Metadata (RFC 9728) — no auth required
-    if (authorizationServerUrl && url.pathname === "/.well-known/oauth-protected-resource/mcp") {
+    // Derive auth server URL from request hostname so the browser stays on the
+    // same host — avoids CSP form-action 'self' mismatch (localhost vs 127.0.0.1).
+    if (authServerPort && url.pathname === "/.well-known/oauth-protected-resource/mcp") {
+      const hostPart = url.hostname.includes(":") ? `[${url.hostname}]` : url.hostname;
+      const derivedAuthUrl = `http://${hostPart}:${authServerPort}`;
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({
         resource: requestResourceUrl,
-        authorization_servers: [authorizationServerUrl],
+        authorization_servers: [derivedAuthUrl],
       }));
       return;
     }

@@ -192,6 +192,87 @@ async function waitUntil(
   throw new Error(`waitUntil timed out after ${timeoutMs}ms`);
 }
 
+describe("OAuth Protected Resource Metadata", () => {
+  let server: http.Server | undefined;
+
+  afterEach(async () => {
+    if (server) {
+      await new Promise<void>((resolve) => { server!.close(() => resolve()); });
+      server = undefined;
+    }
+  });
+
+  /** Start an MCP server with OAuth enabled (authorizationServerUrl set). */
+  function startOAuthServer(): Promise<http.Server> {
+    const srv = createMcpServer({
+      bindHost: "127.0.0.1",
+      mcpPort: 0,
+      grpcPort: 19999,
+      apiKey: TEST_API_KEY,
+      authorizationServerUrl: "http://127.0.0.1:3000",
+    });
+    return new Promise<http.Server>((resolve) => {
+      srv.listen(0, "127.0.0.1", () => resolve(srv));
+    });
+  }
+
+  /** GET request with a custom Host header. */
+  function getMetadata(
+    srv: http.Server,
+    hostHeader: string,
+  ): Promise<{ status: number; body: string }> {
+    return new Promise((resolve, reject) => {
+      const req = http.request(
+        {
+          hostname: "127.0.0.1",
+          port: port(srv),
+          path: "/.well-known/oauth-protected-resource/mcp",
+          method: "GET",
+          headers: { "Host": hostHeader },
+        },
+        (res) => {
+          let body = "";
+          res.on("data", (chunk: Buffer) => { body += chunk.toString(); });
+          res.on("end", () => resolve({ status: res.statusCode!, body }));
+        },
+      );
+      req.on("error", reject);
+      req.end();
+    });
+  }
+
+  it("derives authorization_servers from request Host header", async () => {
+    server = await startOAuthServer();
+
+    const res = await getMetadata(server!, "localhost:7435");
+
+    expect(res.status).toBe(200);
+    const metadata = JSON.parse(res.body);
+    expect(metadata.authorization_servers).toEqual(["http://localhost:3000"]);
+    expect(metadata.resource).toBe("http://localhost:7435");
+  });
+
+  it("uses 127.0.0.1 when request arrives via 127.0.0.1", async () => {
+    server = await startOAuthServer();
+
+    const res = await getMetadata(server!, "127.0.0.1:7435");
+
+    expect(res.status).toBe(200);
+    const metadata = JSON.parse(res.body);
+    expect(metadata.authorization_servers).toEqual(["http://127.0.0.1:3000"]);
+  });
+
+  it("uses custom hostname (e.g. Docker) when request arrives via that host", async () => {
+    server = await startOAuthServer();
+
+    const res = await getMetadata(server!, "grackle:7435");
+
+    expect(res.status).toBe(200);
+    const metadata = JSON.parse(res.body);
+    expect(metadata.authorization_servers).toEqual(["http://grackle:3000"]);
+  });
+});
+
 describe("MCP session cleanup on SSE disconnect", () => {
   let server: http.Server | undefined;
 
