@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Derive OAuth metadata URLs from request Host header to fix CSP form-action mismatch between localhost and 127.0.0.1",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
