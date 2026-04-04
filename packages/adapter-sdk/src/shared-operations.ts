@@ -53,6 +53,12 @@ export async function remoteHealthCheck(connection: PowerLineConnection): Promis
   if (!state?.tunnel.isAlive()) {
     return false;
   }
+  // Also check the reverse tunnel (agent → host MCP) if one was registered.
+  // A dead reverse tunnel means spawned agents cannot make MCP tool calls even
+  // though the forward tunnel and PowerLine gRPC ping still succeed.
+  if (state.reverseTunnel && !state.reverseTunnel.isAlive()) {
+    return false;
+  }
   try {
     await connection.client.ping({});
     return true;

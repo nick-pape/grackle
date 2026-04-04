@@ -38,6 +38,7 @@ import { personaMcpServersToJson } from "@grackle-ai/core";
 import { getTraceId } from "@grackle-ai/core";
 import { resolveBootstrapRuntime } from "@grackle-ai/core";
 import { ensureStdinStream, publishToStdin } from "@grackle-ai/core";
+import { isReconnecting } from "@grackle-ai/core";
 
 /** Spawn a new agent session in the given environment. */
 export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Session> {
@@ -51,6 +52,16 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
 
   let conn = adapterManager.getConnection(req.environmentId);
   if (!conn) {
+    // If auto-reconnect is already in-flight for this environment, fail fast
+    // rather than racing with a duplicate provision attempt that could overwrite
+    // the connection, collide on session recovery, or open duplicate tunnels.
+    if (isReconnecting(req.environmentId)) {
+      throw new ConnectError(
+        `Environment ${req.environmentId} is reconnecting — retry shortly`,
+        Code.Unavailable,
+      );
+    }
+
     // Auto-provision: attempt to reconnect/provision a disconnected environment
     const adapter = adapterManager.getAdapter(env.adapterType);
     if (!adapter) {

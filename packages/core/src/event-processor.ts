@@ -474,7 +474,15 @@ export function processEventStream(
       if (current && !TERMINAL_SESSION_STATUSES.has(current.status as SessionStatus)) {
         // Transport error during active or idle session — suspend for auto-recovery
         // on reconnect. Don't publish child completion (session will resume).
-        logger.info({ sessionId, err: String(err) }, "Stream lost — suspending session for recovery");
+        logger.info(
+          {
+            sessionId,
+            err: String(err),
+            errorName: err instanceof Error ? err.name : typeof err,
+            errorCode: (err as { code?: string }).code,
+          },
+          "Stream lost — suspending session for recovery",
+        );
         sessionStore.suspendSession(sessionId);
         streamHub.publish(create(grackle.SessionEventSchema, {
           sessionId,

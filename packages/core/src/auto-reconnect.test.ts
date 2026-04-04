@@ -57,7 +57,7 @@ import * as adapterManager from "./adapter-manager.js";
 import * as tokenPush from "./token-push.js";
 import { recoverSuspendedSessions } from "./session-recovery.js";
 import { emit } from "./event-bus.js";
-import { attemptReconnects, clearReconnectState, resetReconnectState, _resetForTesting } from "./auto-reconnect.js";
+import { attemptReconnects, clearReconnectState, resetReconnectState, isReconnecting, _resetForTesting } from "./auto-reconnect.js";
 import type { EnvironmentAdapter, PowerLineConnection } from "@grackle-ai/adapter-sdk";
 
 // ── Schema ──────────────────────────────────────────────────
@@ -506,5 +506,43 @@ describe("auto-reconnect", () => {
 
     expect(adapter.connect).toHaveBeenCalledTimes(1);
     expect(envRegistry.getEnvironment("env1")?.status).toBe("connected");
+  });
+
+  // ── isReconnecting ────────────────────────────────────────
+
+  it("isReconnecting returns false when no reconnect is in flight", () => {
+    expect(isReconnecting("env-never-seen")).toBe(false);
+    expect(isReconnecting("env1")).toBe(false);
+  });
+
+  it("isReconnecting returns true while a reconnect attempt is in progress", async () => {
+    insertEnv("env1");
+    const adapter = makeAdapter();
+    let resolveConnect!: () => void;
+    (adapter.connect as ReturnType<typeof vi.fn>).mockImplementation(
+      () => new Promise<PowerLineConnection>((resolve) => {
+        resolveConnect = () => resolve({
+          client: {} as PowerLineConnection["client"],
+          environmentId: "env1",
+          port: 7433,
+        });
+      }),
+    );
+    adapterManager.registerAdapter(adapter);
+
+    // Initialize with no delay
+    resetReconnectState("env1");
+    const reconnectPromise = attemptReconnects();
+
+    // Give tryReconnect a chance to add env1 to the reconnecting Set
+    await new Promise((r) => setTimeout(r, 10));
+    expect(isReconnecting("env1")).toBe(true);
+
+    // Resolve the connect call and let reconnect finish
+    resolveConnect();
+    await reconnectPromise;
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(isReconnecting("env1")).toBe(false);
   });
 });

@@ -55,6 +55,8 @@ vi.mock("@grackle-ai/knowledge", () => ({
 
 // ── Import AFTER mocks ──
 import { initTestDatabase, getHandlers } from "./test-utils/integration-setup.js";
+import * as coreModule from "@grackle-ai/core";
+import { envRegistry } from "@grackle-ai/database";
 
 describe("gRPC error states", () => {
   let handlers: ReturnType<typeof getHandlers>;
@@ -177,6 +179,25 @@ describe("gRPC error states", () => {
 
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.message).toContain("required");
+  });
+
+  it("spawnAgent returns Unavailable when auto-reconnect is in flight for the environment", async () => {
+    // Insert the environment so spawnAgent passes the NotFound check and reaches the isReconnecting guard
+    envRegistry.addEnvironment("env-reconnecting", "Reconnecting Env", "local", "{}");
+
+    // Simulate an environment that has no active connection but is reconnecting
+    const spy = vi.spyOn(coreModule, "isReconnecting").mockReturnValueOnce(true);
+    try {
+      const err = (await handlers
+        .spawnAgent({ environmentId: "env-reconnecting", prompt: "hello" })
+        .catch((e: unknown) => e)) as ConnectError;
+
+      expect(err).toBeInstanceOf(ConnectError);
+      expect(err.code).toBe(Code.Unavailable);
+      expect(err.message).toContain("reconnecting");
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   // ─── createWorkspace errors ─────────────────────────────
