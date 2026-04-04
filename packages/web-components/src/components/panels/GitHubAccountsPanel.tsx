@@ -113,7 +113,7 @@ export function GitHubAccountsPanel({
         title="Remove GitHub Account?"
         description={
           confirmRemoveAccount
-            ? `"${confirmRemoveAccount.label}" (@${confirmRemoveAccount.username}) will be permanently removed.`
+            ? `"${confirmRemoveAccount.label}"${confirmRemoveAccount.username ? ` (@${confirmRemoveAccount.username})` : ""} will be permanently removed.`
             : undefined
         }
         onConfirm={() => { handleConfirmRemove().catch(() => {}); }}
@@ -141,7 +141,9 @@ export function GitHubAccountsPanel({
                   <span className={styles.tokenBadge} title="Default account">default</span>
                 )}
                 <span className={styles.tokenName}>{account.label}</span>
-                <span className={styles.tokenTarget}>@{account.username}</span>
+                {account.username && (
+                  <span className={styles.tokenTarget}>@{account.username}</span>
+                )}
                 {!account.isDefault && (
                   <button
                     className={styles.deleteButton}

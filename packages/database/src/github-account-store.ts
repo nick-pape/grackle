@@ -41,19 +41,22 @@ export function addGitHubAccount(
   isDefault: boolean = false,
 ): string {
   const id = randomUUID();
+  const encryptedToken = encrypt(token);
+
   if (isDefault) {
-    // Clear any existing default before setting the new one.
-    db.update(githubAccounts).set({ isDefault: false }).run();
+    // Clear the existing default and insert atomically so a failed insert cannot
+    // leave the database with no default account.
+    db.transaction((tx) => {
+      tx.update(githubAccounts).set({ isDefault: false }).run();
+      tx.insert(githubAccounts)
+        .values({ id, label, username, token: encryptedToken, isDefault })
+        .run();
+    });
+  } else {
+    db.insert(githubAccounts)
+      .values({ id, label, username, token: encryptedToken, isDefault })
+      .run();
   }
-  db.insert(githubAccounts)
-    .values({
-      id,
-      label,
-      username,
-      token: encrypt(token),
-      isDefault,
-    })
-    .run();
   return id;
 }
 
@@ -150,16 +153,21 @@ export function updateGitHubAccount(id: string, fields: UpdateGitHubAccountField
     updates.token = encrypt(fields.token);
   }
   if (fields.isDefault !== undefined) {
-    if (fields.isDefault) {
-      // Clear any existing default before setting this one.
-      db.update(githubAccounts).set({ isDefault: false }).run();
-    }
     updates.isDefault = fields.isDefault;
   }
   if (Object.keys(updates).length === 0) {
     return;
   }
-  db.update(githubAccounts).set(updates).where(eq(githubAccounts.id, id)).run();
+  if (fields.isDefault) {
+    // Clear the existing default and apply the update atomically so a failed
+    // update cannot leave the database with no default account.
+    db.transaction((tx) => {
+      tx.update(githubAccounts).set({ isDefault: false }).run();
+      tx.update(githubAccounts).set(updates).where(eq(githubAccounts.id, id)).run();
+    });
+  } else {
+    db.update(githubAccounts).set(updates).where(eq(githubAccounts.id, id)).run();
+  }
 }
 
 /** Remove a GitHub account by ID. */

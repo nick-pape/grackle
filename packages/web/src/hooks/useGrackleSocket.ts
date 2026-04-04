@@ -107,7 +107,8 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   const githubAccountsHook = useGitHubAccounts();
 
   // --- Domain hook registry ---
-  // Only hooks whose plugin is active are registered for onConnect() / handleEvent().
+  // Plugin-scoped hooks are only registered when their plugin is active.
+  // Core hooks (githubAccountsHook) are always registered unconditionally.
   // All hooks are still instantiated above (Rules of Hooks requires unconditional calls).
   const domainHooks: DomainHook[] = [
     ...(activeHookKeys.has("environments") ? [environmentsHook.domainHook] : []),
@@ -124,7 +125,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     ...(activeHookKeys.has("notifications") ? [notificationsHook.domainHook] : []),
     ...(activeHookKeys.has("streams")       ? [streamsHook.domainHook]       : []),
     ...(activeHookKeys.has("plugins") ? [pluginsHook.domainHook] : []),
-    githubAccountsHook.domainHook,
+    githubAccountsHook.domainHook, // core hook — always active
   ];
 
   // --- Transport (ConnectRPC server-streaming) ---

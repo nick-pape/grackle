@@ -6,6 +6,9 @@ import { sql } from "drizzle-orm";
 /* eslint-disable @rushstack/typedef-var -- Drizzle table types are inferred from sqliteTable() */
 export const githubAccounts = sqliteTable("github_accounts", {
   id: text("id").primaryKey(),
+  // UNIQUE constraint uses COLLATE NOCASE (enforced by the raw DDL in migration v9).
+  // Drizzle does not expose SQLite collation in its API, so uniqueness here is
+  // informational; the actual constraint is on the database side.
   label: text("label").notNull().unique(),
   username: text("username").notNull().default(""),
   token: text("token").notNull(),

@@ -13,7 +13,7 @@ type Story = StoryObj<typeof meta>;
 export const AllTabsRendered: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("tab", { name: /Credentials/ })).toBeInTheDocument();
-    await expect(canvas.getByRole("tab", { name: /GitHub/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("tab", { name: /GitHub Accounts/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Personas/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Schedules/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Appearance/ })).toBeInTheDocument();
@@ -38,7 +38,7 @@ export const KeyboardNavigation: Story = {
 
     // ArrowDown should move to GitHub (now second tab)
     await userEvent.keyboard("{ArrowDown}");
-    const githubTab = canvas.getByRole("tab", { name: /GitHub/ });
+    const githubTab = canvas.getByRole("tab", { name: /GitHub Accounts/ });
     await expect(githubTab).toHaveFocus();
 
     // ArrowDown again to Personas
@@ -65,7 +65,7 @@ export const JKNavigation: Story = {
 
     // J moves down to GitHub (now second tab)
     await userEvent.keyboard("j");
-    const githubTab = canvas.getByRole("tab", { name: /GitHub/ });
+    const githubTab = canvas.getByRole("tab", { name: /GitHub Accounts/ });
     await expect(githubTab).toHaveFocus();
 
     // K moves back up to Credentials

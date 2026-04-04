@@ -71,12 +71,21 @@ export async function addGitHubAccount(req: grackle.AddGitHubAccountRequest): Pr
     username = await resolveGitHubUsername(token);
   }
 
-  const id = githubAccountStore.addGitHubAccount(
-    req.label.trim(),
-    username,
-    token,
-    req.isDefault,
-  );
+  let id: string;
+  try {
+    id = githubAccountStore.addGitHubAccount(
+      req.label.trim(),
+      username,
+      token,
+      req.isDefault,
+    );
+  } catch (err) {
+    // Translate SQLite UNIQUE constraint violation into a user-facing gRPC error.
+    if (err instanceof Error && err.message.includes("UNIQUE constraint failed")) {
+      throw new ConnectError(`A GitHub account with label "${req.label.trim()}" already exists`, Code.AlreadyExists);
+    }
+    throw err;
+  }
 
   logger.info({ id, label: req.label, username }, "GitHub account added");
   emit("github_account.changed", {});

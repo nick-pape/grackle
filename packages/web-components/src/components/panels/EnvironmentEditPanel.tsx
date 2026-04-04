@@ -409,8 +409,10 @@ export function EnvironmentEditPanel({ mode, environmentId, environments, github
               </span>
             </div>
 
-            {/* GitHub Account (codespace and docker only) */}
-            {(existingEnv.adapterType === "codespace" || existingEnv.adapterType === "docker") && githubAccounts.length > 0 && (
+            {/* GitHub Account (codespace and docker only). Show when accounts are
+                registered OR when the env already has an account association so
+                the user can clear it even if the referenced account was removed. */}
+            {(existingEnv.adapterType === "codespace" || existingEnv.adapterType === "docker") && (githubAccounts.length > 0 || Boolean(existingEnv.githubAccountId)) && (
               <div className={styles.section}>
                 <label className={styles.label}>GitHub Account</label>
                 <select
@@ -426,7 +428,7 @@ export function EnvironmentEditPanel({ mode, environmentId, environments, github
                   <option value="">(Default)</option>
                   {githubAccounts.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.label} (@{a.username}){a.isDefault ? " — default" : ""}
+                      {a.label}{a.username ? ` (@${a.username})` : ""}{a.isDefault ? " — default" : ""}
                     </option>
                   ))}
                 </select>

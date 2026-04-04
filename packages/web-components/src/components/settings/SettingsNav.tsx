@@ -18,7 +18,7 @@ interface SettingsTab {
 /** Ordered list of settings tabs. */
 const TABS: SettingsTab[] = [
   { path: "credentials", label: "Credentials", icon: <Key size={ICON_LG} /> },
-  { path: "github-accounts", label: "GitHub", icon: <Github size={ICON_LG} /> },
+  { path: "github-accounts", label: "GitHub Accounts", icon: <Github size={ICON_LG} /> },
   { path: "personas", label: "Personas", icon: <User size={ICON_LG} /> },
   { path: "schedules", label: "Schedules", icon: <CalendarClock size={ICON_LG} /> },
   { path: "appearance", label: "Appearance", icon: <Palette size={ICON_LG} /> },

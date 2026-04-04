@@ -25,6 +25,15 @@ interface GhAuthAccount {
   tokenSource: string;
 }
 
+/**
+ * Build a human-readable label for an imported account.
+ * For github.com accounts the label is just the login. For GHES/other hosts
+ * the host is appended so labels remain unique and identifiable.
+ */
+function buildImportLabel(login: string, host: string): string {
+  return host === "github.com" ? login : `${login}@${host}`;
+}
+
 /** Shape of the `gh auth status --json hosts` output. */
 interface GhAuthStatusOutput {
   hosts: Record<string, GhAuthAccount[]>;
@@ -64,29 +73,33 @@ export async function importAccountsFromGhCli(): Promise<ImportAccountsResult> {
   // Track whether any default has been assigned — either pre-existing or during this pass.
   let defaultAssigned = githubAccountStore.getDefaultGitHubAccount() !== undefined;
 
-  for (const [, accounts] of Object.entries(statusOutput.hosts)) {
+  for (const [host, accounts] of Object.entries(statusOutput.hosts)) {
     for (const account of accounts) {
       if (!account.login) {
         continue;
       }
 
-      // Skip if already registered
-      const existing = githubAccountStore.findGitHubAccountByUsername(account.login);
+      // Use a host-qualified label to disambiguate same-login across multiple hosts.
+      const label = buildImportLabel(account.login, host);
+
+      // Skip if already registered (match by label to handle host-qualified identities).
+      const existing = githubAccountStore.findGitHubAccountByLabel(label);
       if (existing) {
         continue;
       }
 
-      // Resolve the token for this account
+      // Resolve the token for this account, passing --hostname so `gh` selects
+      // the correct credential when multiple hosts are configured.
       let token: string;
       try {
         const tokenResult = await exec(
           "gh",
-          ["auth", "token", "--user", account.login],
+          ["auth", "token", "--user", account.login, "--hostname", host],
           { timeout: GH_AUTH_TOKEN_TIMEOUT_MS },
         );
         token = tokenResult.stdout.trim();
       } catch {
-        logger.warn({ username: account.login }, "Could not resolve gh auth token for account; skipping");
+        logger.warn({ username: account.login, host }, "Could not resolve gh auth token for account; skipping");
         continue;
       }
 
@@ -96,12 +109,20 @@ export async function importAccountsFromGhCli(): Promise<ImportAccountsResult> {
 
       // Mark the first active account as default only if no default exists yet in this pass.
       const isDefault = account.active && !defaultAssigned;
-      if (isDefault) {
-        defaultAssigned = true;
+
+      try {
+        githubAccountStore.addGitHubAccount(label, account.login, token, isDefault);
+        if (isDefault) {
+          defaultAssigned = true;
+        }
+        imported.push(account.login);
+        logger.info({ username: account.login, host, label, isDefault }, "Imported GitHub account from gh CLI");
+      } catch {
+        logger.warn(
+          { username: account.login, host, label },
+          "Could not import GitHub account from gh CLI; skipping",
+        );
       }
-      githubAccountStore.addGitHubAccount(account.login, account.login, token, isDefault);
-      imported.push(account.login);
-      logger.info({ username: account.login, isDefault }, "Imported GitHub account from gh CLI");
     }
   }
 
