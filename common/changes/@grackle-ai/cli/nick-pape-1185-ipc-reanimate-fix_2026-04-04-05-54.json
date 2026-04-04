@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: reconstruct async IPC pipe streams and replay undelivered messages when a session is reanimated after suspension",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
