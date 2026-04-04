@@ -51,10 +51,18 @@ export function setSecurityHeaders(res: ServerResponse, requestHost?: string): v
   // Chromium does not reliably match 'self' or explicit origin+port for
   // form-action on non-standard ports. Use the request hostname with a
   // wildcard port so the form POST is allowed regardless of port.
-  const hostname = requestHost ? requestHost.replace(/:\d+$/, "") : undefined;
-  const formAction = hostname
-    ? `form-action 'self' http://${hostname}:* https://${hostname}:*`
-    : "form-action 'self'";
+  // Validate via URL constructor to prevent CSP header injection (e.g. Host
+  // containing ';' could splice directives).
+  let formAction = "form-action 'self'";
+  if (requestHost) {
+    try {
+      const parsed = new URL(`http://${requestHost}`);
+      const hostname = parsed.hostname;
+      formAction = `form-action 'self' http://${hostname}:* https://${hostname}:*`;
+    } catch {
+      // Malformed Host header — fall back to 'self' only
+    }
+  }
   const csp = [...BASE_CSP_DIRECTIVES, formAction].join("; ");
   res.setHeader("Content-Security-Policy", csp);
 }
