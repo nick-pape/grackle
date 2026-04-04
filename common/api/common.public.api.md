@@ -26,10 +26,22 @@ type AddEnvironmentRequest = Message<"grackle.AddEnvironmentRequest"> & {
     displayName: string;
     adapterType: string;
     adapterConfig: string;
+    githubAccountId: string;
 };
 
 // @public
 const AddEnvironmentRequestSchema: GenMessage<AddEnvironmentRequest>;
+
+// @public
+type AddGitHubAccountRequest = Message<"grackle.AddGitHubAccountRequest"> & {
+    label: string;
+    token: string;
+    username: string;
+    isDefault: boolean;
+};
+
+// @public
+const AddGitHubAccountRequestSchema: GenMessage<AddGitHubAccountRequest>;
 
 // @public
 export const ADMIN_MCP_TOOLS: readonly string[];
@@ -362,6 +374,7 @@ type Environment = Message<"grackle.Environment"> & {
     lastSeen: string;
     envInfo: string;
     createdAt: string;
+    githubAccountId: string;
 };
 
 // @public
@@ -598,6 +611,26 @@ type GetUsageRequest = Message<"grackle.GetUsageRequest"> & {
 // @public
 const GetUsageRequestSchema: GenMessage<GetUsageRequest>;
 
+// @public
+type GitHubAccount = Message<"grackle.GitHubAccount"> & {
+    id: string;
+    label: string;
+    username: string;
+    isDefault: boolean;
+    createdAt: string;
+};
+
+// @public
+type GitHubAccountList = Message<"grackle.GitHubAccountList"> & {
+    accounts: GitHubAccount[];
+};
+
+// @public
+const GitHubAccountListSchema: GenMessage<GitHubAccountList>;
+
+// @public
+const GitHubAccountSchema: GenMessage<GitHubAccount>;
+
 declare namespace grackle {
     export {
         file_grackle_grackle_types,
@@ -621,6 +654,18 @@ declare namespace grackle {
         ProvisionEnvironmentRequestSchema,
         UpdateEnvironmentRequest,
         UpdateEnvironmentRequestSchema,
+        GitHubAccount,
+        GitHubAccountSchema,
+        GitHubAccountList,
+        GitHubAccountListSchema,
+        AddGitHubAccountRequest,
+        AddGitHubAccountRequestSchema,
+        UpdateGitHubAccountRequest,
+        UpdateGitHubAccountRequestSchema,
+        RemoveGitHubAccountRequest,
+        RemoveGitHubAccountRequestSchema,
+        ImportGitHubAccountsResponse,
+        ImportGitHubAccountsResponseSchema,
         Session,
         SessionSchema,
         SessionList,
@@ -767,6 +812,8 @@ declare namespace grackle {
         CodespaceInfoSchema,
         CodespaceList,
         CodespaceListSchema,
+        ListCodespacesRequest,
+        ListCodespacesRequestSchema,
         CreateCodespaceRequest,
         CreateCodespaceRequestSchema,
         CreateCodespaceResponse,
@@ -994,7 +1041,7 @@ const GrackleCore: GenService<{
     };
     listCodespaces: {
         methodKind: "unary";
-        input: typeof EmptySchema;
+        input: typeof ListCodespacesRequestSchema;
         output: typeof CodespaceListSchema;
     };
     createCodespace: {
@@ -1071,6 +1118,31 @@ const GrackleCore: GenService<{
         methodKind: "unary";
         input: typeof SetPluginEnabledRequestSchema;
         output: typeof PluginInfoSchema;
+    };
+    listGitHubAccounts: {
+        methodKind: "unary";
+        input: typeof EmptySchema;
+        output: typeof GitHubAccountListSchema;
+    };
+    addGitHubAccount: {
+        methodKind: "unary";
+        input: typeof AddGitHubAccountRequestSchema;
+        output: typeof GitHubAccountSchema;
+    };
+    updateGitHubAccount: {
+        methodKind: "unary";
+        input: typeof UpdateGitHubAccountRequestSchema;
+        output: typeof GitHubAccountSchema;
+    };
+    removeGitHubAccount: {
+        methodKind: "unary";
+        input: typeof RemoveGitHubAccountRequestSchema;
+        output: typeof EmptySchema;
+    };
+    importGitHubAccounts: {
+        methodKind: "unary";
+        input: typeof EmptySchema;
+        output: typeof ImportGitHubAccountsResponseSchema;
     };
     streamEvents: {
         methodKind: "server_streaming";
@@ -1306,6 +1378,15 @@ const GrackleScheduling: GenService<{
 }>;
 
 // @public
+type ImportGitHubAccountsResponse = Message<"grackle.ImportGitHubAccountsResponse"> & {
+    imported: number;
+    usernames: string[];
+};
+
+// @public
+const ImportGitHubAccountsResponseSchema: GenMessage<ImportGitHubAccountsResponse>;
+
+// @public
 type InputMessage = Message<"grackle.InputMessage"> & {
     sessionId: string;
     text: string;
@@ -1380,6 +1461,14 @@ type LinkEnvironmentRequest = Message<"grackle.LinkEnvironmentRequest"> & {
 
 // @public
 const LinkEnvironmentRequestSchema: GenMessage<LinkEnvironmentRequest>;
+
+// @public
+type ListCodespacesRequest = Message<"grackle.ListCodespacesRequest"> & {
+    githubAccountId: string;
+};
+
+// @public
+const ListCodespacesRequestSchema: GenMessage<ListCodespacesRequest>;
 
 // @public
 type ListEscalationsRequest = Message<"grackle.ListEscalationsRequest"> & {
@@ -1642,6 +1731,14 @@ type QueryFindingsRequest = Message<"grackle.QueryFindingsRequest"> & {
 
 // @public
 const QueryFindingsRequestSchema: GenMessage<QueryFindingsRequest>;
+
+// @public
+type RemoveGitHubAccountRequest = Message<"grackle.RemoveGitHubAccountRequest"> & {
+    id: string;
+};
+
+// @public
+const RemoveGitHubAccountRequestSchema: GenMessage<RemoveGitHubAccountRequest>;
 
 // @public
 type ResumeRequest = Message<"grackle.ResumeRequest"> & {
@@ -2209,10 +2306,22 @@ type UpdateEnvironmentRequest = Message<"grackle.UpdateEnvironmentRequest"> & {
     id: string;
     displayName?: string;
     adapterConfig?: string;
+    githubAccountId?: string;
 };
 
 // @public
 const UpdateEnvironmentRequestSchema: GenMessage<UpdateEnvironmentRequest>;
+
+// @public
+type UpdateGitHubAccountRequest = Message<"grackle.UpdateGitHubAccountRequest"> & {
+    id: string;
+    label?: string;
+    token?: string;
+    isDefault?: boolean;
+};
+
+// @public
+const UpdateGitHubAccountRequestSchema: GenMessage<UpdateGitHubAccountRequest>;
 
 // @public
 type UpdatePersonaRequest = Message<"grackle.UpdatePersonaRequest"> & {

@@ -1,6 +1,6 @@
 import { useState, useCallback, type JSX } from "react";
 import type { ToastVariant } from "../../context/ToastContext.js";
-import type { Environment, Codespace } from "../../hooks/types.js";
+import type { Environment, Codespace, GitHubAccountData } from "../../hooks/types.js";
 import { ENVIRONMENTS_URL, environmentUrl, useAppNavigate } from "../../utils/navigation.js";
 import { EditableTextField } from "../editable/EditableTextField.js";
 import styles from "./EnvironmentEditPanel.module.scss";
@@ -17,12 +17,14 @@ interface Props {
   environmentId?: string;
   /** All environments (for lookup in edit mode). */
   environments: Environment[];
+  /** All registered GitHub accounts for the account selector. */
+  githubAccounts: GitHubAccountData[];
   /** Callback to add a new environment. */
-  onAddEnvironment: (displayName: string, adapterType: string, adapterConfig?: Record<string, unknown>) => void;
+  onAddEnvironment: (displayName: string, adapterType: string, adapterConfig?: Record<string, unknown>, githubAccountId?: string) => void;
   /** Callback to update an existing environment. */
-  onUpdateEnvironment: (environmentId: string, fields: { displayName?: string; adapterConfig?: Record<string, unknown> }) => void;
-  /** Callback to list available codespaces. */
-  onListCodespaces: () => void;
+  onUpdateEnvironment: (environmentId: string, fields: { displayName?: string; adapterConfig?: Record<string, unknown>; githubAccountId?: string }) => void;
+  /** Callback to list available codespaces, optionally filtered by GitHub account. */
+  onListCodespaces: (githubAccountId?: string) => void;
   /** Available codespaces. */
   codespaces: Codespace[];
   /** Error from codespace operations. */
@@ -200,7 +202,7 @@ function CodespacePicker({ codespaceName, onCodespaceNameChange, envName, onEnvN
  * - edit: pre-populated form; uses click-to-edit fields that auto-save via
  *         updateEnvironment.
  */
-export function EnvironmentEditPanel({ mode, environmentId, environments, onAddEnvironment, onUpdateEnvironment, onListCodespaces, codespaces, codespaceError, codespaceListError, codespaceCreating, onCreateCodespace, onShowToast }: Props): JSX.Element {
+export function EnvironmentEditPanel({ mode, environmentId, environments, githubAccounts, onAddEnvironment, onUpdateEnvironment, onListCodespaces, codespaces, codespaceError, codespaceListError, codespaceCreating, onCreateCodespace, onShowToast }: Props): JSX.Element {
   const navigate = useAppNavigate();
 
   const isEdit = mode === "edit";
@@ -219,6 +221,7 @@ export function EnvironmentEditPanel({ mode, environmentId, environments, onAddE
   const [image, setImage] = useState("");
   const [repo, setRepo] = useState("");
   const [codespaceName, setCodespaceName] = useState("");
+  const [githubAccountId, setGithubAccountId] = useState("");
 
   // ─── Edit mode state ───────────────────────────────
 
@@ -286,7 +289,7 @@ export function EnvironmentEditPanel({ mode, environmentId, environments, onAddE
     if (!isCreateValid()) {
       return;
     }
-    onAddEnvironment(envName.trim(), adapterType, buildCreateConfig());
+    onAddEnvironment(envName.trim(), adapterType, buildCreateConfig(), githubAccountId || undefined);
     onShowToast?.("Environment added successfully", "success");
     navigate(ENVIRONMENTS_URL, { replace: true });
   };
@@ -405,6 +408,32 @@ export function EnvironmentEditPanel({ mode, environmentId, environments, onAddE
                 {existingEnv.adapterType}
               </span>
             </div>
+
+            {/* GitHub Account (codespace and docker only). Show when accounts are
+                registered OR when the env already has an account association so
+                the user can clear it even if the referenced account was removed. */}
+            {(existingEnv.adapterType === "codespace" || existingEnv.adapterType === "docker") && (githubAccounts.length > 0 || Boolean(existingEnv.githubAccountId)) && (
+              <div className={styles.section}>
+                <label className={styles.label}>GitHub Account</label>
+                <select
+                  value={existingEnv.githubAccountId || ""}
+                  onChange={(e) => {
+                    if (environmentId) {
+                      onUpdateEnvironment(environmentId, { githubAccountId: e.target.value });
+                    }
+                  }}
+                  className={styles.adapterSelect}
+                  data-testid="env-edit-github-account"
+                >
+                  <option value="">(Default)</option>
+                  {githubAccounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.label}{a.username ? ` (@${a.username})` : ""}{a.isDefault ? " — default" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Adapter-specific editable fields */}
             {existingEnv.adapterType === "local" && (
@@ -620,7 +649,7 @@ export function EnvironmentEditPanel({ mode, environmentId, environments, onAddE
               onChange={(e) => {
                 setAdapterType(e.target.value);
                 if (e.target.value === "codespace") {
-                  onListCodespaces();
+                  onListCodespaces(githubAccountId || undefined);
                 }
               }}
               className={styles.adapterSelect}
@@ -632,6 +661,34 @@ export function EnvironmentEditPanel({ mode, environmentId, environments, onAddE
               <option value="codespace">codespace</option>
             </select>
           </div>
+
+          {/* GitHub Account (codespace and docker only) */}
+          {(adapterType === "codespace" || adapterType === "docker") && githubAccounts.length > 0 && (
+            <div className={styles.section}>
+              <label className={styles.label} htmlFor="env-create-github-account">
+                GitHub Account
+              </label>
+              <select
+                id="env-create-github-account"
+                value={githubAccountId}
+                onChange={(e) => {
+                  setGithubAccountId(e.target.value);
+                  if (adapterType === "codespace") {
+                    onListCodespaces(e.target.value || undefined);
+                  }
+                }}
+                className={styles.adapterSelect}
+                data-testid="env-create-github-account"
+              >
+                <option value="">(Default)</option>
+                {githubAccounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.label} (@{a.username}){a.isDefault ? " — default" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Adapter-specific fields */}
           {adapterType === "local" && (

@@ -17,6 +17,7 @@ export interface AdapterDependencies {
     exec?: ExecFunction;
     isGitHubProviderEnabled?: () => boolean;
     logger?: AdapterLogger;
+    resolveGitHubToken?: (accountId?: string) => string | undefined;
     sleep?: (ms: number) => Promise<void>;
 }
 
@@ -318,6 +319,7 @@ export abstract class ProcessTunnel implements RemoteTunnel {
         command: string;
         args: string[];
     };
+    protected spawnEnv: NodeJS.ProcessEnv | undefined;
     protected waitForReady(): Promise<void>;
 }
 

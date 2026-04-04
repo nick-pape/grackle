@@ -12,7 +12,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { create } from "@bufbuild/protobuf";
 import { powerline, type RuntimeName } from "@grackle-ai/common";
-import { credentialProviders, type CredentialProviderConfig, type DatabaseInstance } from "@grackle-ai/database";
+import { credentialProviders, githubAccountStore, type CredentialProviderConfig, type DatabaseInstance } from "@grackle-ai/database";
 import { exec } from "./utils/exec.js";
 
 /** Maps each runtime to the credential providers it needs. */
@@ -51,9 +51,11 @@ export async function resolveGitHubTokenFromCli(): Promise<string | undefined> {
  * When `runtime` is omitted, all enabled providers are included.
  * When `runtime` is provided but not a recognized {@link RuntimeName}, no providers are included
  * (fails safe rather than exposing all credentials for an unrecognized runtime).
+ * When `githubAccountId` is provided, the GitHub token is resolved from the stored account
+ * rather than from environment variables, enabling per-environment identity selection.
  * Reads values fresh from `process.env`, disk, or the `gh` CLI at call time.
  */
-export async function buildProviderTokenBundle(runtime?: string, database?: DatabaseInstance): Promise<powerline.TokenBundle> {
+export async function buildProviderTokenBundle(runtime?: string, database?: DatabaseInstance, githubAccountId?: string): Promise<powerline.TokenBundle> {
   const config = credentialProviders.getCredentialProviders(database);
   // When runtime is given, look it up in the map. Unknown runtimes get [] (empty, not all providers).
   const runtimeProviders = runtime !== undefined
@@ -107,35 +109,54 @@ export async function buildProviderTokenBundle(runtime?: string, database?: Data
 
   // GitHub provider
   if ((!allowedProviders || allowedProviders.has("github")) && config.github === "on") {
-    let hasGitHubEnvVar = false;
-    for (const varName of ["GITHUB_TOKEN", "GH_TOKEN"]) {
-      const value = process.env[varName];
-      if (value) {
-        hasGitHubEnvVar = true;
-        items.push(
-          create(powerline.TokenItemSchema, {
-            name: varName.toLowerCase().replace(/_/g, "-"),
-            type: "env_var",
-            envVar: varName,
-            value,
-          }),
-        );
+    // When a specific GitHub account is requested, resolve its token from the store.
+    // The fallback chain (default account → env vars → gh CLI) is handled by
+    // githubAccountStore.resolveStoredGitHubToken().
+    const storedToken = githubAccountId !== undefined || githubAccountStore.getDefaultGitHubAccount() !== undefined
+      ? githubAccountStore.resolveStoredGitHubToken(githubAccountId || undefined)
+      : undefined;
+
+    if (storedToken) {
+      items.push(
+        create(powerline.TokenItemSchema, {
+          name: "github-token",
+          type: "env_var",
+          envVar: "GH_TOKEN",
+          value: storedToken,
+        }),
+      );
+    } else {
+      // No stored accounts — fall back to environment variables and gh CLI.
+      let hasGitHubEnvVar = false;
+      for (const varName of ["GITHUB_TOKEN", "GH_TOKEN"]) {
+        const value = process.env[varName];
+        if (value) {
+          hasGitHubEnvVar = true;
+          items.push(
+            create(powerline.TokenItemSchema, {
+              name: varName.toLowerCase().replace(/_/g, "-"),
+              type: "env_var",
+              envVar: varName,
+              value,
+            }),
+          );
+        }
       }
-    }
-    // Fallback: resolve from `gh auth token` when no env vars are set.
-    // This covers dev workstations where `gh auth login` stores tokens in the
-    // gh CLI config rather than in GITHUB_TOKEN / GH_TOKEN env vars.
-    if (!hasGitHubEnvVar) {
-      const cliToken = await getCliToken();
-      if (cliToken) {
-        items.push(
-          create(powerline.TokenItemSchema, {
-            name: "github-token",
-            type: "env_var",
-            envVar: "GITHUB_TOKEN",
-            value: cliToken,
-          }),
-        );
+      // Fallback: resolve from `gh auth token` when no env vars are set.
+      // This covers dev workstations where `gh auth login` stores tokens in the
+      // gh CLI config rather than in GITHUB_TOKEN / GH_TOKEN env vars.
+      if (!hasGitHubEnvVar) {
+        const cliToken = await getCliToken();
+        if (cliToken) {
+          items.push(
+            create(powerline.TokenItemSchema, {
+              name: "github-token",
+              type: "env_var",
+              envVar: "GITHUB_TOKEN",
+              value: cliToken,
+            }),
+          );
+        }
       }
     }
   }

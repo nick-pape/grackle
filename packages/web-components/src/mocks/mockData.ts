@@ -29,6 +29,7 @@ export const MOCK_ENVIRONMENTS: Environment[] = [
     adapterConfig: "{}",
     status: "connected",
     bootstrapped: true,
+    githubAccountId: "",
   },
   {
     id: "env-docker-01",
@@ -37,6 +38,7 @@ export const MOCK_ENVIRONMENTS: Environment[] = [
     adapterConfig: '{"image":"node:20"}',
     status: "connected",
     bootstrapped: true,
+    githubAccountId: "",
   },
   {
     id: "env-cs-01",
@@ -45,6 +47,7 @@ export const MOCK_ENVIRONMENTS: Environment[] = [
     adapterConfig: '{"codespaceName":"my-codespace"}',
     status: "connected",
     bootstrapped: true,
+    githubAccountId: "",
   },
   {
     id: "env-remote-01",
@@ -53,6 +56,7 @@ export const MOCK_ENVIRONMENTS: Environment[] = [
     adapterConfig: '{"host":"192.168.1.10","user":"deploy","sshPort":22}',
     status: "disconnected",
     bootstrapped: false,
+    githubAccountId: "",
   },
   {
     id: "error-env",
@@ -61,6 +65,7 @@ export const MOCK_ENVIRONMENTS: Environment[] = [
     adapterConfig: "{}",
     status: "connected",
     bootstrapped: true,
+    githubAccountId: "",
   },
 ];
 

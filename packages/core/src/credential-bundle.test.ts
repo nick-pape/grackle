@@ -23,6 +23,10 @@ vi.mock("@grackle-ai/database", () => ({
   credentialProviders: {
     getCredentialProviders: (...args: unknown[]) => mockGetCredentialProviders(...args),
   },
+  githubAccountStore: {
+    getDefaultGitHubAccount: vi.fn(() => undefined),
+    resolveStoredGitHubToken: vi.fn(() => undefined),
+  },
 }));
 
 // Import AFTER mocks

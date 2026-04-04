@@ -58,6 +58,8 @@ export async function pushToAll(): Promise<void> {
 /**
  * Push enabled provider credentials to a single connected environment.
  * When `runtime` is specified, only providers relevant to that runtime are included.
+ * When the environment has a `githubAccountId`, that account's token is used
+ * instead of env vars, enabling per-environment GitHub identity selection.
  * Reads fresh values from `process.env` / disk based on the credential provider config.
  */
 export async function pushProviderCredentialsToEnv(environmentId: string, runtime?: string, options?: PushToEnvOptions): Promise<void> {
@@ -66,7 +68,9 @@ export async function pushProviderCredentialsToEnv(environmentId: string, runtim
     return;
   }
 
-  const bundle = await buildProviderTokenBundle(runtime);
+  const env = envRegistry.getEnvironment(environmentId);
+  const githubAccountId = env?.githubAccountId || undefined;
+  const bundle = await buildProviderTokenBundle(runtime, undefined, githubAccountId);
 
   if (options?.excludeFileTokens) {
     bundle.tokens = bundle.tokens.filter((t) => t.type !== "file");

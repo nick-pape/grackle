@@ -121,6 +121,7 @@ export function useEnvironments(): UseEnvironmentsResult {
       displayName: string,
       adapterType: string,
       adapterConfig?: Record<string, unknown>,
+      githubAccountId?: string,
     ) => {
       setOperationError("");
       try {
@@ -128,6 +129,7 @@ export function useEnvironments(): UseEnvironmentsResult {
           displayName,
           adapterType,
           adapterConfig: JSON.stringify(adapterConfig ?? {}),
+          githubAccountId: githubAccountId ?? "",
         });
       } catch (err) {
         setOperationError(extractErrorMessage(err));
@@ -139,7 +141,7 @@ export function useEnvironments(): UseEnvironmentsResult {
   const updateEnvironment = useCallback(
     async (
       environmentId: string,
-      fields: { displayName?: string; adapterConfig?: Record<string, unknown> },
+      fields: { displayName?: string; adapterConfig?: Record<string, unknown>; githubAccountId?: string },
     ) => {
       setOperationError("");
       try {
@@ -147,6 +149,7 @@ export function useEnvironments(): UseEnvironmentsResult {
           id: environmentId,
           displayName: fields.displayName,
           adapterConfig: fields.adapterConfig ? JSON.stringify(fields.adapterConfig) : undefined,
+          githubAccountId: fields.githubAccountId,
         });
       } catch (err) {
         setOperationError(extractErrorMessage(err));

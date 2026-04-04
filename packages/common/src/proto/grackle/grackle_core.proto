@@ -47,7 +47,7 @@ service GrackleCore {
   rpc UnlinkEnvironment(UnlinkEnvironmentRequest) returns (Workspace);
 
   // Codespaces
-  rpc ListCodespaces(Empty) returns (CodespaceList);
+  rpc ListCodespaces(ListCodespacesRequest) returns (CodespaceList);
   rpc CreateCodespace(CreateCodespaceRequest) returns (CreateCodespaceResponse);
 
   // Settings
@@ -75,6 +75,13 @@ service GrackleCore {
   // Plugins
   rpc ListPlugins(Empty) returns (PluginList);
   rpc SetPluginEnabled(SetPluginEnabledRequest) returns (PluginInfo);
+
+  // GitHub accounts
+  rpc ListGitHubAccounts(Empty) returns (GitHubAccountList);
+  rpc AddGitHubAccount(AddGitHubAccountRequest) returns (GitHubAccount);
+  rpc UpdateGitHubAccount(UpdateGitHubAccountRequest) returns (GitHubAccount);
+  rpc RemoveGitHubAccount(RemoveGitHubAccountRequest) returns (Empty);
+  rpc ImportGitHubAccounts(Empty) returns (ImportGitHubAccountsResponse);
 
   // Unified event streaming (replaces WebSocket)
   rpc StreamEvents(Empty) returns (stream ServerEvent);

@@ -86,6 +86,59 @@ grackle serve --allow-network    # bind to 0.0.0.0 for LAN access
 
 ---
 
+### GitHub Accounts
+
+Register multiple GitHub identities so Grackle can use the right token per environment. Useful when you have both a personal account and an enterprise/EMU account.
+
+#### `grackle github-account list`
+
+List all registered GitHub accounts.
+
+```bash
+grackle github-account list
+```
+
+#### `grackle github-account add <label>`
+
+Register a new GitHub account with a personal access token.
+
+```bash
+grackle github-account add personal --token ghp_xxxxx
+grackle github-account add work --token ghp_yyyyy --default
+```
+
+| Option | Description |
+|--------|-------------|
+| `--token <pat>` | Personal access token (required) |
+| `--username <user>` | GitHub username (auto-resolved from the token if omitted) |
+| `--default` | Set this account as the default |
+
+#### `grackle github-account remove <label-or-id>`
+
+Remove a GitHub account by its label or ID.
+
+```bash
+grackle github-account remove personal
+```
+
+#### `grackle github-account set-default <label-or-id>`
+
+Set an account as the default for environments that don't specify one.
+
+```bash
+grackle github-account set-default work
+```
+
+#### `grackle github-account import`
+
+Import accounts from the local `gh` CLI authentication state. Detects all accounts in `gh auth status` and registers any that are not yet stored.
+
+```bash
+grackle github-account import
+```
+
+---
+
 ### Environments
 
 Manage the compute environments where agents run.
@@ -135,6 +188,7 @@ grackle env add local --local --host 127.0.0.1 --port 7433
 | `--identity-file <path>` | SSH private key path |
 | `--codespace-name <name>` | Codespace name (from `gh codespace list`) |
 | `--port <port>` | PowerLine port (local adapter) |
+| `--github-account <label>` | GitHub account label to associate with this environment (codespace/docker) |
 
 #### `grackle env provision <id>`
 

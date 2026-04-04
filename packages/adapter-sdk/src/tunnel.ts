@@ -47,6 +47,11 @@ export abstract class ProcessTunnel implements RemoteTunnel {
   protected logger: AdapterLogger;
   protected readonly processFactory: TunnelProcessFactory;
   protected readonly portProbe: TunnelPortProbe;
+  /**
+   * Optional environment variable overrides for the spawned tunnel process.
+   * Merged on top of `process.env` when the tunnel is opened.
+   */
+  protected spawnEnv: NodeJS.ProcessEnv | undefined;
 
   public constructor(
     localPort: number,
@@ -76,9 +81,14 @@ export abstract class ProcessTunnel implements RemoteTunnel {
     const { command, args } = this.spawnArgs();
     this.logger.info({ command, args }, "Opening tunnel");
 
+    const env: NodeJS.ProcessEnv = this.spawnEnv
+      ? { ...process.env, ...this.spawnEnv }
+      : process.env;
+
     this.process = this.processFactory.spawn(command, args, {
       stdio: ["ignore", "ignore", "pipe"],
       detached: false,
+      env,
     });
 
     this.process.on("error", (err) => {

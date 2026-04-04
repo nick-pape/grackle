@@ -31,6 +31,7 @@ import { EnvironmentsPage } from "./pages/EnvironmentsPage.js";
 import { EnvironmentDetailPage } from "./pages/EnvironmentDetailPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 import { SettingsCredentialsTab } from "./pages/settings/SettingsCredentialsTab.js";
+import { SettingsGitHubAccountsTab } from "./pages/settings/SettingsGitHubAccountsTab.js";
 import { SettingsPersonasTab } from "./pages/settings/SettingsPersonasTab.js";
 import { PersonaDetailPage } from "./pages/settings/PersonaDetailPage.js";
 import { SettingsSchedulesTab } from "./pages/settings/SettingsSchedulesTab.js";
@@ -274,6 +275,7 @@ function AppRoutes(): JSX.Element {
             <Route index element={<Navigate to="credentials" replace />} />
             <Route path="environments" element={<Navigate to="/environments" replace />} />
             <Route path="credentials" element={<SettingsCredentialsTab />} />
+            <Route path="github-accounts" element={<SettingsGitHubAccountsTab />} />
             <Route path="tokens" element={<Navigate to="../credentials" replace />} />
             <Route path="personas" element={<SettingsPersonasTab />} />
             <Route path="personas/new" element={<PersonaDetailPage />} />

@@ -32,6 +32,8 @@ export interface Environment {
   adapterConfig: string;
   status: string;
   bootstrapped: boolean;
+  /** ID of the GitHub account to use for gh CLI operations, or empty string for default. */
+  githubAccountId: string;
 }
 
 
@@ -223,11 +225,12 @@ export interface UseEnvironmentsResult {
     displayName: string,
     adapterType: string,
     adapterConfig?: Record<string, unknown>,
+    githubAccountId?: string,
   ) => Promise<void>;
   /** Update an existing environment's mutable fields. */
   updateEnvironment: (
     environmentId: string,
-    fields: { displayName?: string; adapterConfig?: Record<string, unknown> },
+    fields: { displayName?: string; adapterConfig?: Record<string, unknown>; githubAccountId?: string },
   ) => Promise<void>;
   /** Provision an environment by ID. When force is true, kills active sessions and forces full provision. */
   provisionEnvironment: (environmentId: string, force?: boolean) => Promise<void>;
@@ -485,8 +488,8 @@ export interface UseCodespacesResult {
   codespaceListError: string;
   /** Whether a codespace creation is currently in progress. */
   codespaceCreating: boolean;
-  /** Request the current codespace list from the server. */
-  listCodespaces: () => Promise<void>;
+  /** Request the current codespace list from the server, optionally filtered to a GitHub account. */
+  listCodespaces: (githubAccountId?: string) => Promise<void>;
   /** Create a new codespace for the given repo. */
   createCodespace: (repo: string, machine?: string) => Promise<void>;
   /** Lifecycle hook for connect/disconnect/event routing. */
@@ -851,6 +854,35 @@ export interface UsePluginsResult {
   loadPlugins: () => Promise<void>;
   /** Enable or disable a plugin by name. */
   setPluginEnabled: (name: string, enabled: boolean) => Promise<void>;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
+}
+
+/** A registered GitHub account (token is never returned by the server). */
+export interface GitHubAccountData {
+  id: string;
+  label: string;
+  username: string;
+  isDefault: boolean;
+  createdAt: string;
+}
+
+/** Values returned by the GitHub accounts domain hook. */
+export interface UseGitHubAccountsResult {
+  /** All registered GitHub accounts. */
+  githubAccounts: GitHubAccountData[];
+  /** Whether the account list is currently loading. */
+  githubAccountsLoading: boolean;
+  /** Refresh the account list from the server. */
+  loadGitHubAccounts: () => Promise<void>;
+  /** Register a new GitHub account. */
+  addGitHubAccount: (label: string, token: string, username: string, isDefault: boolean) => Promise<void>;
+  /** Update an existing GitHub account. */
+  updateGitHubAccount: (id: string, fields: { label?: string; token?: string; isDefault?: boolean }) => Promise<void>;
+  /** Remove a GitHub account by ID. */
+  removeGitHubAccount: (id: string) => Promise<void>;
+  /** Import accounts from the local gh CLI authentication state. */
+  importGitHubAccounts: () => Promise<{ imported: number; usernames: string[] }>;
   /** Lifecycle hook for connect/disconnect/event routing. */
   domainHook: DomainHook;
 }

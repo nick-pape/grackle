@@ -26,9 +26,9 @@ export function useCodespaces(): UseCodespacesResult {
   const [codespaceListError, setCodespaceListError] = useState("");
   const [codespaceCreating, setCodespaceCreating] = useState(false);
 
-  const listCodespaces = useCallback(async () => {
+  const listCodespaces = useCallback(async (githubAccountId?: string) => {
     try {
-      const resp = await grackleClient.listCodespaces({});
+      const resp = await grackleClient.listCodespaces({ githubAccountId: githubAccountId ?? "" });
       setCodespaces(resp.codespaces.map(protoToCodespace));
       setCodespaceListError(resp.error);
     } catch {

@@ -76,7 +76,8 @@ function applySchema(): void {
       env_info TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       powerline_token TEXT NOT NULL DEFAULT '',
-      max_concurrent_sessions INTEGER NOT NULL DEFAULT 0
+      max_concurrent_sessions INTEGER NOT NULL DEFAULT 0,
+      github_account_id TEXT NOT NULL DEFAULT ''
     );
   `);
 }

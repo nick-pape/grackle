@@ -42,6 +42,7 @@ export function protoToEnvironment(p: grackle.Environment): Environment {
     adapterConfig: p.adapterConfig || "{}",
     status: p.status,
     bootstrapped: p.bootstrapped,
+    githubAccountId: p.githubAccountId || "",
   };
 }
 

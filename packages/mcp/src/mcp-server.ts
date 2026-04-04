@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
-import { grackle } from "@grackle-ai/common";
+import { grackle, ROOT_TASK_ID } from "@grackle-ai/common";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import {
@@ -170,7 +170,32 @@ async function createMcpServerInstance(
     // Inject context from scoped token so callers don't need to provide it
     const rawArgs = (args ?? {}) as Record<string, unknown>;
     if (authContext.type === "scoped") {
-      rawArgs.workspaceId = authContext.workspaceId;
+      if (tool.group === "workspace") {
+        // Workspace management tools take an explicit target workspace ID.
+        // Root task (global orchestrator) may target any workspace freely.
+        // Workspace-bound non-root agents may only manage their own workspace:
+        //   - reject cross-workspace calls with PERMISSION_DENIED
+        //   - fill in their workspace if none was provided
+        const boundWorkspace = authContext.workspaceId;
+        if (boundWorkspace && authContext.taskId !== ROOT_TASK_ID) {
+          // Only compare when the caller supplied a valid string — non-string or empty
+          // values fall through to Zod validation which returns INVALID_ARGUMENT.
+          const requestedWorkspaceId =
+            typeof rawArgs.workspaceId === "string" && rawArgs.workspaceId
+              ? rawArgs.workspaceId
+              : undefined;
+          if (requestedWorkspaceId !== undefined && requestedWorkspaceId !== boundWorkspace) {
+            return {
+              content: [{ type: "text", text: JSON.stringify({ error: "workspaceId does not match the authenticated workspace", code: "PERMISSION_DENIED" }, null, 2) }],
+              isError: true,
+            };
+          }
+          rawArgs.workspaceId = boundWorkspace;
+        }
+        // else: root task or unbound caller — leave the caller-supplied workspaceId intact
+      } else {
+        rawArgs.workspaceId = authContext.workspaceId;
+      }
       // Auto-parent subtasks: when an agent creates a task, parent it to the agent's own task
       if (name === "task_create" && authContext.taskId) {
         rawArgs.parentTaskId = authContext.taskId;
