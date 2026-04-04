@@ -297,7 +297,7 @@ export function createWebServer(options: WebServerOptions): http.Server {
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   const handler = async (req: http.IncomingMessage, res: http.ServerResponse): Promise<void> => {
-    setSecurityHeaders(res);
+    setSecurityHeaders(res, req.headers.host);
 
     let rawPath: string;
     let queryString = "";
@@ -346,13 +346,17 @@ export function createWebServer(options: WebServerOptions): http.Server {
     }
 
     // --- OAuth Authorization Server Metadata (no auth) ---
+    // Derive base URL from request Host header so URLs match the origin the
+    // browser is on — avoids CSP form-action 'self' mismatch (#1180).
     if (rawPath === "/.well-known/oauth-authorization-server") {
+      const requestHost = req.headers.host || `${urlHost}:${webPort}`;
+      const baseUrl = `http://${requestHost}`;
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({
-        issuer: webBaseUrl,
-        authorization_endpoint: `${webBaseUrl}/authorize`,
-        token_endpoint: `${webBaseUrl}/token`,
-        registration_endpoint: `${webBaseUrl}/register`,
+        issuer: baseUrl,
+        authorization_endpoint: `${baseUrl}/authorize`,
+        token_endpoint: `${baseUrl}/token`,
+        registration_endpoint: `${baseUrl}/register`,
         response_types_supported: ["code"],
         grant_types_supported: ["authorization_code", "refresh_token"],
         code_challenge_methods_supported: ["S256"],

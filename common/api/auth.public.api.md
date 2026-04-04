@@ -173,7 +173,7 @@ export const SESSION_COOKIE_NAME: string;
 export function setAuthLogger(l: AuthLogger): void;
 
 // @public
-export function setSecurityHeaders(res: ServerResponse): void;
+export function setSecurityHeaders(res: ServerResponse, requestHost?: string): void;
 
 // @public
 export function startOAuthCleanup(): void;
