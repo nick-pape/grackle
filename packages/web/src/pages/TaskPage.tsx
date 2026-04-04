@@ -363,7 +363,7 @@ export function TaskPage(): JSX.Element {
             personas={personas}
             environments={environments}
             onSendInput={(sid, text) => { sendInput(sid, text).catch(() => { showToast("Failed to send message", "error"); }); }}
-            onSpawn={(eid, prompt, pid) => { spawn(eid, prompt, pid, undefined, routeWorkspaceId).catch(() => {}); }}
+            onSpawn={(eid, prompt, pid) => { spawn(eid, prompt, pid, undefined, workspaceId).catch(() => {}); }}
             onStartTask={(tid, pid, eid) => { startTask(tid, pid, eid).catch(() => {}); }}
             onProvisionEnvironment={(eid) => { provisionEnvironment(eid).catch(() => {}); }}
             onShowToast={showToast}
