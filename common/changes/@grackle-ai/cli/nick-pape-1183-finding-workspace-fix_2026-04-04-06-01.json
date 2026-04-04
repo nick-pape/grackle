@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix workspace_id not propagated to scoped token for standalone sessions, causing finding_post and other workspace-scoped MCP tools to fail",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

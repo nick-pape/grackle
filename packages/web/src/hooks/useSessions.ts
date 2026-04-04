@@ -194,6 +194,7 @@ export function useSessions(): UseSessionsResult {
       prompt: string,
       personaId?: string,
       workingDirectory?: string,
+      workspaceId?: string,
     ) => {
       try {
         const session = await grackleClient.spawnAgent({
@@ -201,6 +202,7 @@ export function useSessions(): UseSessionsResult {
           prompt,
           personaId: personaId || "",
           workingDirectory: workingDirectory || "",
+          workspaceId: workspaceId || "",
         });
         setLastSpawnedId(session.id);
         await loadSessions();
