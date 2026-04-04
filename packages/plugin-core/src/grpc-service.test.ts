@@ -35,6 +35,7 @@ vi.mock("./persona-handlers.js", () => ({ listPersonas: vi.fn() }));
 vi.mock("./finding-handlers.js", () => ({ postFinding: vi.fn() }));
 vi.mock("./escalation-handlers.js", () => ({ createEscalation: vi.fn() }));
 vi.mock("./plugin-handlers.js", () => ({ listPlugins: vi.fn(), setPluginEnabled: vi.fn() }));
+vi.mock("./github-account-handlers.js", () => ({ listGitHubAccounts: vi.fn() }));
 
 import { createCoreCollector, createOrchestrationCollector, createDefaultCollector } from "./grpc-service.js";
 
@@ -54,6 +55,8 @@ describe("createCoreCollector", () => {
     expect(addedModules.some((m) => "getSetting" in m)).toBe(true);
     // Plugin management handlers are registered in core
     expect(addedModules.some((m) => "listPlugins" in m)).toBe(true);
+    // GitHub account handlers are registered in core
+    expect(addedModules.some((m) => "listGitHubAccounts" in m)).toBe(true);
     // Schedules are contributed by @grackle-ai/plugin-scheduling
     expect(addedModules.some((m) => "listSchedules" in m)).toBe(false);
   });
@@ -67,9 +70,9 @@ describe("createCoreCollector", () => {
     expect(addedModules.some((m) => "createEscalation" in m)).toBe(false);
   });
 
-  it("adds exactly 7 handler groups", () => {
+  it("adds exactly 8 handler groups", () => {
     createCoreCollector();
-    expect(addHandlersMock).toHaveBeenCalledTimes(7);
+    expect(addHandlersMock).toHaveBeenCalledTimes(8);
   });
 });
 
@@ -97,7 +100,7 @@ describe("createOrchestrationCollector", () => {
 });
 
 describe("createDefaultCollector (regression)", () => {
-  it("adds all 11 handler groups including orchestration and plugins (knowledge and schedules moved to plugins)", () => {
+  it("adds all 12 handler groups including orchestration, plugins, and github accounts (knowledge and schedules moved to plugins)", () => {
     createDefaultCollector();
     const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
     expect(addedModules.some((m) => "listEnvironments" in m)).toBe(true);
@@ -106,6 +109,7 @@ describe("createDefaultCollector (regression)", () => {
     expect(addedModules.some((m) => "postFinding" in m)).toBe(true);
     expect(addedModules.some((m) => "createEscalation" in m)).toBe(true);
     expect(addedModules.some((m) => "listPlugins" in m)).toBe(true);
-    expect(addHandlersMock).toHaveBeenCalledTimes(11);
+    expect(addedModules.some((m) => "listGitHubAccounts" in m)).toBe(true);
+    expect(addHandlersMock).toHaveBeenCalledTimes(12);
   });
 });

@@ -9,10 +9,11 @@ const meta: Meta<typeof SettingsNav> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** All five tabs are rendered with correct labels. */
+/** All tabs are rendered with correct labels. */
 export const AllTabsRendered: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("tab", { name: /Credentials/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("tab", { name: /GitHub Accounts/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Personas/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Schedules/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Appearance/ })).toBeInTheDocument();
@@ -35,15 +36,15 @@ export const KeyboardNavigation: Story = {
     const credentialsTab = canvas.getByRole("tab", { name: /Credentials/ });
     credentialsTab.focus();
 
-    // ArrowDown should move to Personas
+    // ArrowDown should move to GitHub (now second tab)
+    await userEvent.keyboard("{ArrowDown}");
+    const githubTab = canvas.getByRole("tab", { name: /GitHub Accounts/ });
+    await expect(githubTab).toHaveFocus();
+
+    // ArrowDown again to Personas
     await userEvent.keyboard("{ArrowDown}");
     const personasTab = canvas.getByRole("tab", { name: /Personas/ });
     await expect(personasTab).toHaveFocus();
-
-    // ArrowDown again to Schedules
-    await userEvent.keyboard("{ArrowDown}");
-    const schedulesTab = canvas.getByRole("tab", { name: /Schedules/ });
-    await expect(schedulesTab).toHaveFocus();
 
     // Home goes to first tab
     await userEvent.keyboard("{Home}");
@@ -62,10 +63,10 @@ export const JKNavigation: Story = {
     const credentialsTab = canvas.getByRole("tab", { name: /Credentials/ });
     credentialsTab.focus();
 
-    // J moves down to Personas
+    // J moves down to GitHub (now second tab)
     await userEvent.keyboard("j");
-    const personasTab = canvas.getByRole("tab", { name: /Personas/ });
-    await expect(personasTab).toHaveFocus();
+    const githubTab = canvas.getByRole("tab", { name: /GitHub Accounts/ });
+    await expect(githubTab).toHaveFocus();
 
     // K moves back up to Credentials
     await userEvent.keyboard("k");

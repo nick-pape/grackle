@@ -179,6 +179,29 @@ const MIGRATIONS: Migration[] = [
       }
     },
   },
+  {
+    version: 9,
+    name: "github-accounts",
+    up: (conn) => {
+      conn.exec(`
+        CREATE TABLE IF NOT EXISTS github_accounts (
+          id          TEXT PRIMARY KEY,
+          label       TEXT NOT NULL COLLATE NOCASE UNIQUE,
+          username    TEXT NOT NULL DEFAULT '',
+          token       TEXT NOT NULL,
+          is_default  INTEGER NOT NULL DEFAULT 0,
+          created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+      `);
+      // Guard against the column already existing on fresh installs.
+      const envCols = conn
+        .prepare("PRAGMA table_info(environments)")
+        .all() as Array<{ name: string }>;
+      if (!envCols.some((c) => c.name === "github_account_id")) {
+        conn.exec("ALTER TABLE environments ADD COLUMN github_account_id TEXT NOT NULL DEFAULT ''");
+      }
+    },
+  },
 ];
 
 /** The highest schema version defined by BASELINE + MIGRATIONS. */

@@ -122,6 +122,9 @@ export const SETTINGS_ENVIRONMENTS_URL: string = "/settings/environments";
 /** URL for the settings credentials tab. */
 export const SETTINGS_CREDENTIALS_URL: string = "/settings/credentials";
 
+/** URL for the GitHub accounts settings tab. */
+export const SETTINGS_GITHUB_ACCOUNTS_URL: string = "/settings/github-accounts";
+
 /** URL for the persona management tab. */
 export const PERSONAS_URL: string = "/settings/personas";
 

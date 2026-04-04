@@ -9,6 +9,7 @@ const meta: Meta<typeof EnvironmentEditPanel> = {
   args: {
     mode: "new",
     environments: [],
+    githubAccounts: [],
     onAddEnvironment: fn(),
     onUpdateEnvironment: fn(),
     onListCodespaces: fn(),

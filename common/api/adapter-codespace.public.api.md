@@ -28,6 +28,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
 export interface CodespaceEnvironmentConfig extends BaseEnvironmentConfig {
     codespaceName: string;
     env?: Record<string, string>;
+    githubAccountId?: string;
     localPort?: number;
 }
 
