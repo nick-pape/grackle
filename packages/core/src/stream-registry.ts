@@ -127,10 +127,15 @@ const asyncListeners: Map<string, AsyncMessageListener> = new Map();
 
 /**
  * Pending async delivery Promises for messages whose listeners returned Promises.
- * Keyed by message ID. Populated by publish(); entries are cleaned up by publish()
- * auto-finalization and when streams/subscriptions are deleted or unsubscribed.
+ * Keyed by message ID. Populated by publish() and replayUndeliveredMessages().
+ * Entries are cleaned up by auto-finalization and when streams/subscriptions are
+ * deleted or unsubscribed.
+ *
+ * `inflightSubIds` tracks which subscription IDs have a delivery Promise currently
+ * in flight for this message. Used by replayUndeliveredMessages() to skip duplicate
+ * dispatch when called again before the prior delivery Promise settles.
  */
-const pendingDeliveries: Map<string, { streamId: string; promises: Array<Promise<void>> }> = new Map();
+const pendingDeliveries: Map<string, { streamId: string; promises: Array<Promise<void>>; inflightSubIds: Set<string> }> = new Map();
 
 /** Blocking queues for sync subscriptions, keyed by subscription ID. */
 const syncQueues: Map<string, AsyncQueue<StreamMessage>> = new Map();
@@ -440,7 +445,7 @@ export function publish(streamId: string, senderId: string, content: string): St
             );
             let pending = pendingDeliveries.get(msg.id);
             if (!pending) {
-              pending = { streamId, promises: [] };
+              pending = { streamId, promises: [], inflightSubIds: new Set() };
               pendingDeliveries.set(msg.id, pending);
             }
             pending.promises.push(deliveryPromise);
@@ -565,20 +570,32 @@ export function replayUndeliveredMessages(subscriptionId: string): void {
       continue;
     }
 
+    // Skip if a delivery Promise for this (message, subscription) pair is already in flight.
+    // Without this guard, a second replay call before the first Promise settles would
+    // re-invoke the listener and dispatch a duplicate sendInput.
+    const existingPending = pendingDeliveries.get(msg.id);
+    if (existingPending?.inflightSubIds.has(sub.id)) {
+      continue;
+    }
+
     try {
       const result = listener(sub, msg);
       if (result !== undefined && typeof (result as Promise<void>).then === "function") {
         const subId = sub.id;
         const streamId = sub.streamId;
-        const deliveryPromise = (result as Promise<void>).then(
-          () => { msg.deliveredTo.add(subId); },
-          (err: unknown) => { logger.warn({ err, subscriptionId: subId }, "replayUndeliveredMessages: async listener delivery failed"); },
-        );
         let pending = pendingDeliveries.get(msg.id);
         if (!pending) {
-          pending = { streamId, promises: [] };
+          pending = { streamId, promises: [], inflightSubIds: new Set() };
           pendingDeliveries.set(msg.id, pending);
         }
+        pending.inflightSubIds.add(subId);
+        const deliveryPromise = (result as Promise<void>).then(
+          () => { msg.deliveredTo.add(subId); pending!.inflightSubIds.delete(subId); },
+          (err: unknown) => {
+            logger.warn({ err, subscriptionId: subId }, "replayUndeliveredMessages: async listener delivery failed");
+            pending!.inflightSubIds.delete(subId);
+          },
+        );
         pending.promises.push(deliveryPromise);
         asyncMessageIds.push(msg.id);
       } else {

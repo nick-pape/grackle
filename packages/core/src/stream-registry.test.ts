@@ -923,5 +923,28 @@ describe("stream-registry", () => {
 
       expect(registry.hasUndeliveredMessages(parentSub.id)).toBe(false);
     });
+
+    it("does not dispatch a second sendInput when called again before the first delivery resolves", () => {
+      const stream = registry.createStream("pipe:child");
+      const parentSub = registry.subscribe(stream.id, "parent", "rw", "async", true);
+      registry.subscribe(stream.id, "child", "rw", "async", false);
+
+      registry.publish(stream.id, "child", "buffered message");
+
+      let listenerCallCount = 0;
+      // Listener returns a never-resolving Promise to keep the delivery in-flight
+      registry.registerAsyncListener("parent", () => {
+        listenerCallCount++;
+        return new Promise<void>(() => {});
+      });
+
+      // First replay — listener fires once
+      registry.replayUndeliveredMessages(parentSub.id);
+      expect(listenerCallCount).toBe(1);
+
+      // Second replay while first is still in-flight — must NOT fire listener again
+      registry.replayUndeliveredMessages(parentSub.id);
+      expect(listenerCallCount).toBe(1);
+    });
   });
 });

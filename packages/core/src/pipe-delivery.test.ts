@@ -537,6 +537,28 @@ describe("pipe-delivery integration", () => {
         expect(parentCall!.text).toContain("Buffered message from offline window");
       });
     });
+
+    it("calling ensurePipeStream twice while first replay is still in-flight does not duplicate delivery", () => {
+      sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
+      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+
+      // Publish a message with no listener → stays undelivered
+      const stream = streamRegistry.createStream("pipe:child");
+      streamRegistry.subscribe(stream.id, "parent", "rw", "async", true);
+      streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
+      streamRegistry.publish(stream.id, "child", "Offline message");
+
+      // sendInput returns a never-resolving promise to keep delivery in-flight
+      mockSendInput.mockReturnValue(new Promise(() => {}));
+
+      // First ensurePipeStream call — triggers replay, listener fires once
+      pipeDelivery.ensurePipeStream("child", "parent");
+      expect(mockSendInput).toHaveBeenCalledTimes(1);
+
+      // Second ensurePipeStream call while first is still in-flight — must NOT re-dispatch
+      pipeDelivery.ensurePipeStream("child", "parent");
+      expect(mockSendInput).toHaveBeenCalledTimes(1);
+    });
   });
 
   // ─── Idempotency ───────────────────────────────────────────
