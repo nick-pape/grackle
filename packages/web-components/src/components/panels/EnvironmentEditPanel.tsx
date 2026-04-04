@@ -417,7 +417,7 @@ export function EnvironmentEditPanel({ mode, environmentId, environments, github
                   value={existingEnv.githubAccountId || ""}
                   onChange={(e) => {
                     if (environmentId) {
-                      onUpdateEnvironment(environmentId, { githubAccountId: e.target.value || undefined });
+                      onUpdateEnvironment(environmentId, { githubAccountId: e.target.value });
                     }
                   }}
                   className={styles.adapterSelect}

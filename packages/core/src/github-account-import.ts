@@ -61,7 +61,8 @@ export async function importAccountsFromGhCli(): Promise<ImportAccountsResult> {
   }
 
   const imported: string[] = [];
-  const hasExistingDefault = githubAccountStore.getDefaultGitHubAccount() !== undefined;
+  // Track whether any default has been assigned — either pre-existing or during this pass.
+  let defaultAssigned = githubAccountStore.getDefaultGitHubAccount() !== undefined;
 
   for (const [, accounts] of Object.entries(statusOutput.hosts)) {
     for (const account of accounts) {
@@ -93,8 +94,11 @@ export async function importAccountsFromGhCli(): Promise<ImportAccountsResult> {
         continue;
       }
 
-      // Use the login as both label and username; mark active account as default
-      const isDefault = account.active && !hasExistingDefault;
+      // Mark the first active account as default only if no default exists yet in this pass.
+      const isDefault = account.active && !defaultAssigned;
+      if (isDefault) {
+        defaultAssigned = true;
+      }
       githubAccountStore.addGitHubAccount(account.login, account.login, token, isDefault);
       imported.push(account.login);
       logger.info({ username: account.login, isDefault }, "Imported GitHub account from gh CLI");

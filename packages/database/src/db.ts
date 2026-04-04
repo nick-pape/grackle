@@ -186,7 +186,7 @@ const MIGRATIONS: Migration[] = [
       conn.exec(`
         CREATE TABLE IF NOT EXISTS github_accounts (
           id          TEXT PRIMARY KEY,
-          label       TEXT NOT NULL,
+          label       TEXT NOT NULL UNIQUE,
           username    TEXT NOT NULL DEFAULT '',
           token       TEXT NOT NULL,
           is_default  INTEGER NOT NULL DEFAULT 0,

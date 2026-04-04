@@ -56,10 +56,10 @@ export function useGitHubAccounts(): UseGitHubAccountsResult {
     isDefault: boolean,
   ): Promise<void> => {
     const resp = await grackleClient.addGitHubAccount({ label, token, username, isDefault });
-    setGitHubAccounts((prev) => [
-      ...prev,
-      { id: resp.id, label: resp.label, username: resp.username, isDefault: resp.isDefault, createdAt: resp.createdAt },
-    ]);
+    setGitHubAccounts((prev) => {
+      const cleared = resp.isDefault ? prev.map((a) => ({ ...a, isDefault: false })) : prev;
+      return [...cleared, { id: resp.id, label: resp.label, username: resp.username, isDefault: resp.isDefault, createdAt: resp.createdAt }];
+    });
   }, []);
 
   const updateGitHubAccount = useCallback(async (

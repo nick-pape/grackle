@@ -6,7 +6,7 @@ import { sql } from "drizzle-orm";
 /* eslint-disable @rushstack/typedef-var -- Drizzle table types are inferred from sqliteTable() */
 export const githubAccounts = sqliteTable("github_accounts", {
   id: text("id").primaryKey(),
-  label: text("label").notNull(),
+  label: text("label").notNull().unique(),
   username: text("username").notNull().default(""),
   token: text("token").notNull(),
   isDefault: integer("is_default", { mode: "boolean" }).notNull().default(false),

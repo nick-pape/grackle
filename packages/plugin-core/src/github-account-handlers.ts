@@ -65,15 +65,16 @@ export async function addGitHubAccount(req: grackle.AddGitHubAccountRequest): Pr
     throw new ConnectError("token is required", Code.InvalidArgument);
   }
 
+  const token = req.token.trim();
   let { username } = req;
   if (!username.trim()) {
-    username = await resolveGitHubUsername(req.token);
+    username = await resolveGitHubUsername(token);
   }
 
   const id = githubAccountStore.addGitHubAccount(
     req.label.trim(),
     username,
-    req.token,
+    token,
     req.isDefault,
   );
 
@@ -105,12 +106,13 @@ export async function updateGitHubAccount(req: grackle.UpdateGitHubAccountReques
     fields.label = req.label.trim();
   }
   if (req.token !== undefined) {
-    if (!req.token.trim()) {
+    const trimmedToken = req.token.trim();
+    if (!trimmedToken) {
       throw new ConnectError("token cannot be empty", Code.InvalidArgument);
     }
-    fields.token = req.token;
+    fields.token = trimmedToken;
     // Re-resolve username when token changes
-    fields.username = await resolveGitHubUsername(req.token);
+    fields.username = await resolveGitHubUsername(trimmedToken);
   }
   if (req.isDefault !== undefined) {
     fields.isDefault = req.isDefault;
