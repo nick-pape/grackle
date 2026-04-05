@@ -2,6 +2,47 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.108.0",
+      "tag": "@grackle-ai/cli_v0.108.0",
+      "date": "Sun, 05 Apr 2026 14:00:09 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add multi-GitHub-account support: register multiple PATs, auto-import from gh CLI, per-environment account association, new grackle github-account commands"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "fix: workspace MCP tools (workspace_get, workspace_link_environment, etc.) now correctly use the caller-supplied workspaceId instead of being silently overridden by the scoped token's workspace"
+          },
+          {
+            "comment": "Derive OAuth metadata URLs from request Host header to fix CSP form-action mismatch between localhost and 127.0.0.1"
+          },
+          {
+            "comment": "Fix cost double-counting in runtime-claude-code: convert cumulative Claude SDK usage totals to incremental deltas before emitting usage events"
+          },
+          {
+            "comment": "Fix workspace_id not propagated to scoped token for standalone sessions, causing finding_post and other workspace-scoped MCP tools to fail"
+          },
+          {
+            "comment": "Fix: suppress async self-echo on IPC streams to prevent wasteful agent turns (#1184)"
+          },
+          {
+            "comment": "fix: reconstruct async IPC pipe streams and replay undelivered messages when a session is reanimated after suspension"
+          },
+          {
+            "comment": "Fix ipc_spawn session-expired errors on healthy codespace: check reverse tunnel in remoteHealthCheck, guard spawnAgent against concurrent auto-reconnect races, enrich stream-error logging"
+          },
+          {
+            "comment": "fix: promote sync pipes to async delivery on session reanimate so child completion reaches parent after server restart"
+          },
+          {
+            "comment": "Remove all reserved field markers from proto files for clean 1.0 contract"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.107.2",
       "tag": "@grackle-ai/cli_v0.107.2",
       "date": "Wed, 01 Apr 2026 16:08:37 GMT",

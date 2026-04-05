@@ -1,6 +1,25 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 01 Apr 2026 16:08:37 GMT and should not be manually modified.
+This log was last generated on Sun, 05 Apr 2026 14:00:09 GMT and should not be manually modified.
+
+## 0.108.0
+Sun, 05 Apr 2026 14:00:09 GMT
+
+### Minor changes
+
+- Add multi-GitHub-account support: register multiple PATs, auto-import from gh CLI, per-environment account association, new grackle github-account commands
+
+### Patches
+
+- fix: workspace MCP tools (workspace_get, workspace_link_environment, etc.) now correctly use the caller-supplied workspaceId instead of being silently overridden by the scoped token's workspace
+- Derive OAuth metadata URLs from request Host header to fix CSP form-action mismatch between localhost and 127.0.0.1
+- Fix cost double-counting in runtime-claude-code: convert cumulative Claude SDK usage totals to incremental deltas before emitting usage events
+- Fix workspace_id not propagated to scoped token for standalone sessions, causing finding_post and other workspace-scoped MCP tools to fail
+- Fix: suppress async self-echo on IPC streams to prevent wasteful agent turns (#1184)
+- fix: reconstruct async IPC pipe streams and replay undelivered messages when a session is reanimated after suspension
+- Fix ipc_spawn session-expired errors on healthy codespace: check reverse tunnel in remoteHealthCheck, guard spawnAgent against concurrent auto-reconnect races, enrich stream-error logging
+- fix: promote sync pipes to async delivery on session reanimate so child completion reaches parent after server restart
+- Remove all reserved field markers from proto files for clean 1.0 contract
 
 ## 0.107.2
 Wed, 01 Apr 2026 16:08:37 GMT
