@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
+import { ConnectError, Code } from "@connectrpc/connect";
 import { useTasks } from "./useTasks.js";
 
 // ---------------------------------------------------------------------------
@@ -9,6 +10,7 @@ import { useTasks } from "./useTasks.js";
 
 const mockClient = vi.hoisted(() => ({
   listTasks: vi.fn(),
+  startTask: vi.fn(),
 }));
 
 vi.mock("./useGrackleClient.js", () => ({
@@ -71,5 +73,65 @@ describe("useTasks loading state", () => {
     await waitFor(() => {
       expect(result.current.tasksLoading).toBe(false);
     });
+  });
+});
+
+describe("useTasks startTask", () => {
+  it("sets startingId and re-throws non-ResourceExhausted errors", async () => {
+    const connectErr = new ConnectError("No environment specified", Code.FailedPrecondition);
+    mockClient.startTask.mockRejectedValue(connectErr);
+
+    const { result } = setup();
+
+    let caught: unknown;
+    act(() => {
+      caught = result.current.startTask("task-1").catch((e: unknown) => e);
+    });
+
+    expect(result.current.taskStartingId).toBe("task-1");
+
+    await waitFor(() => {
+      expect(result.current.taskStartingId).toBe(undefined);
+    });
+
+    expect(caught).toBe(connectErr);
+  });
+
+  it("does NOT re-throw ResourceExhausted (task queued)", async () => {
+    const resourceErr = new ConnectError("Environment at capacity", Code.ResourceExhausted);
+    mockClient.startTask.mockRejectedValue(resourceErr);
+
+    const { result } = setup();
+
+    let caught: unknown;
+    act(() => {
+      caught = result.current.startTask("task-1");
+    });
+
+    // StartingId should remain set (task is queued)
+    expect(result.current.taskStartingId).toBe("task-1");
+
+    // Should not throw
+    expect(caught).toBe(undefined);
+  });
+
+  it("clears startingId and re-throws on generic error", async () => {
+    const genericErr = new Error("Something went wrong");
+    mockClient.startTask.mockRejectedValue(genericErr);
+
+    const { result } = setup();
+
+    let caught: unknown;
+    act(() => {
+      caught = result.current.startTask("task-1").catch((e: unknown) => e);
+    });
+
+    expect(result.current.taskStartingId).toBe("task-1");
+
+    await waitFor(() => {
+      expect(result.current.taskStartingId).toBe(undefined);
+    });
+
+    expect(caught).toBe(genericErr);
   });
 });

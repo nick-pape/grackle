@@ -17,7 +17,7 @@ import {
   fuzzySearch,
   type FuzzyKey,
 } from "@grackle-ai/common";
-import { envRegistry, sessionStore, taskStore, workspaceStore, personaStore, settingsStore, dispatchQueueStore, grackleHome, slugify, safeParseJsonArray } from "@grackle-ai/database";
+import { envRegistry, sessionStore, taskStore, workspaceStore, personaStore, settingsStore, dispatchQueueStore, grackleHome, slugify, safeParseJsonArray, workspaceEnvironmentLinkStore } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { join } from "node:path";
 import { adapterManager } from "@grackle-ai/core";
@@ -309,6 +309,7 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
 
   const environmentId = req.environmentId
     || resolveAncestorEnvironmentId(task.parentTaskId)
+    || (task.workspaceId ? workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(task.workspaceId)[0] : "")
     || "";
   if (!environmentId) {
     throw new ConnectError("No environment specified for task, ancestor, or workspace", Code.FailedPrecondition);
