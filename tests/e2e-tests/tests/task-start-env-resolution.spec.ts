@@ -42,7 +42,7 @@ test.describe("Task start with workspace-linked environment resolution", { tag: 
   test("shows error toast when startTask fails", async ({ stubTask }) => {
     const { page, client } = stubTask;
 
-    const task = await stubTask.createTask("error-toast-test");
+    await stubTask.createTask("error-toast-test");
     await navigateToTask(page, "error-toast-test");
 
     // Stop the environment so StartTask fails with "Environment not connected".
