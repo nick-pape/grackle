@@ -11,16 +11,18 @@ test.describe("Task start with workspace-linked environment resolution", { tag: 
   test("starts task when workspace has linked env and no env passed explicitly", async ({ stubTask }) => {
     const { page } = stubTask;
 
-    // Create a task — the workspace is linked to "test-local" by the fixture,
-    // but the stub runtime patch injects the envId. We verify the task starts
-    // successfully, confirming the server-side resolution chain works.
+    // Create a task in a workspace that is linked to "test-local" by the fixture.
+    // The stub fetch patch injects personaId="stub" but does NOT inject environmentId
+    // (only injects when environmentId is null/undefined, not when it is "").
+    // So the StartTask request reaches the server with environmentId="" and the
+    // server resolves it via the workspace's linkedEnvironmentIds fallback.
     await stubTask.createAndNavigate("linked-env-start", stubScenario(
       emitText("Working on linked env task..."),
       onInputMatch({ fail: "fail", "*": "next" }),
       idle(),
     ));
 
-    // Click Start — the server should resolve environment from workspace's linked envs
+    // Click Start — server resolves environment from workspace's linked envs
     await page.getByTestId("task-header-start").click();
 
     // Wait for stub to reach waiting_input
@@ -40,19 +42,19 @@ test.describe("Task start with workspace-linked environment resolution", { tag: 
   test("shows error toast when startTask fails", async ({ stubTask }) => {
     const { page, client } = stubTask;
 
-    // Create a task via RPC (no scenario, just a plain task)
     const task = await stubTask.createTask("error-toast-test");
     await navigateToTask(page, "error-toast-test");
 
-    // Click Start — this will fail because there's no connected environment
-    // (the stub runtime patch injects envId but no persona is configured for normal tasks)
-    // The error should be surfaced as a toast, not silently swallowed.
+    // Stop the environment so StartTask fails with "Environment not connected".
+    // The server resolves environmentId via the workspace fallback ("test-local")
+    // but it is now disconnected → FailedPrecondition error.
+    // That error must surface as a toast rather than being silently swallowed.
+    await client.core.stopEnvironment({ id: "test-local" });
+
     await page.getByTestId("task-header-start").click();
 
-    // Give the toast time to appear — the error message from the server
-    // should be displayed as a toast notification
-    await expect(page.getByText(/Failed to start task|No environment|failed/i), {
-      timeout: 10_000,
-    }).toBeVisible();
+    await expect(
+      page.getByText(/not connected|Failed to start task/i),
+    ).toBeVisible({ timeout: 10_000 });
   });
 });
