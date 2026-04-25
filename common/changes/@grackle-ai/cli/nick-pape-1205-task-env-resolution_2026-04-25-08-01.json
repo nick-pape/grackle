@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix startTask to resolve environment from workspace linkedEnvironmentIds when no explicit environment or ancestor environment is specified; surface startTask errors as toasts instead of silently swallowing them",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

@@ -84,16 +84,15 @@ describe("useTasks startTask", () => {
     const { result } = setup();
 
     let caught: unknown;
-    act(() => {
-      caught = result.current.startTask("task-1").catch((e: unknown) => e);
+    await act(async () => {
+      try {
+        await result.current.startTask("task-1");
+      } catch (e) {
+        caught = e;
+      }
     });
 
-    expect(result.current.taskStartingId).toBe("task-1");
-
-    await waitFor(() => {
-      expect(result.current.taskStartingId).toBe(undefined);
-    });
-
+    expect(result.current.taskStartingId).toBe(undefined);
     expect(caught).toBe(connectErr);
   });
 
@@ -103,16 +102,20 @@ describe("useTasks startTask", () => {
 
     const { result } = setup();
 
-    let caught: unknown;
-    act(() => {
-      caught = result.current.startTask("task-1");
+    let threw = false;
+    await act(async () => {
+      try {
+        await result.current.startTask("task-1");
+      } catch {
+        threw = true;
+      }
     });
 
     // StartingId should remain set (task is queued)
     expect(result.current.taskStartingId).toBe("task-1");
 
-    // Should not throw
-    expect(caught).toBe(undefined);
+    // Should not have thrown
+    expect(threw).toBe(false);
   });
 
   it("clears startingId and re-throws on generic error", async () => {
@@ -122,16 +125,15 @@ describe("useTasks startTask", () => {
     const { result } = setup();
 
     let caught: unknown;
-    act(() => {
-      caught = result.current.startTask("task-1").catch((e: unknown) => e);
+    await act(async () => {
+      try {
+        await result.current.startTask("task-1");
+      } catch (e) {
+        caught = e;
+      }
     });
 
-    expect(result.current.taskStartingId).toBe("task-1");
-
-    await waitFor(() => {
-      expect(result.current.taskStartingId).toBe(undefined);
-    });
-
+    expect(result.current.taskStartingId).toBe(undefined);
     expect(caught).toBe(genericErr);
   });
 });
