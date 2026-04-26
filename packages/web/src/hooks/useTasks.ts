@@ -208,6 +208,7 @@ export function useTasks(): UseTasksResult {
           return;
         }
         setTaskStartingId(undefined);
+        throw err;
       }
     },
     [],

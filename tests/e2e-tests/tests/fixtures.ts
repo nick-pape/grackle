@@ -163,7 +163,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
             }
             const body = JSON.parse(bodyStr);
             body.personaId = "stub";
-            if (!body.environmentId) {
+            if (body.environmentId == null) {
               body.environmentId = envId;
             }
             const newBodyStr = JSON.stringify(body);
