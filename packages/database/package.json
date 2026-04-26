@@ -38,8 +38,8 @@
     "@bufbuild/protobuf": "^2.5.0",
     "@grackle-ai/common": "workspace:*",
     "better-sqlite3": "^11.0.0",
-    "drizzle-orm": "^0.38.0",
-    "uuid": "^11.0.0"
+    "drizzle-orm": "^0.45.2",
+    "uuid": "^14.0.0"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
