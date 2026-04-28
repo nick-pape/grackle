@@ -190,6 +190,21 @@ describe("CodespaceAdapter — CodespaceNotFoundError detection via provision()"
     expect(err).toBeInstanceOf(CodespaceNotFoundError);
   });
 
+  it("throws CodespaceNotFoundError for real gh HTTP 404 response (getting full codespace details)", async () => {
+    // This is the actual error gh codespace ssh emits when the codespace doesn't exist:
+    // "getting full codespace details: HTTP 404: Not Found"
+    const ghErr = Object.assign(new Error("Command failed: gh codespace ssh"), {
+      stderr: "getting full codespace details: HTTP 404: Not Found (https://api.github.com/user/codespaces/fake-cs)",
+    });
+    mockExec.mockRejectedValueOnce(ghErr);
+
+    const err = await collectEvents(adapter.provision(envId, config as Record<string, unknown>, token))
+      .catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(CodespaceNotFoundError);
+    expect(err).toBeInstanceOf(FatalAdapterError);
+  });
+
   it("does NOT throw CodespaceNotFoundError for generic SSH failures", async () => {
     const sshErr = Object.assign(new Error("Command failed: gh codespace ssh"), {
       stderr: "ssh: connect to host 127.0.0.1 port 22: Connection refused",

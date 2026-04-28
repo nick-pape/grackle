@@ -219,10 +219,12 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     }
 
     // Cross-concern side effects: sessions need reloading when environments
-    // or tasks change (session list includes environment/task references)
+    // are removed or tasks start (session list holds env/task references).
+    // environment.changed is intentionally excluded — env status flips do not
+    // mutate session shape, and reloading on every reconnect attempt causes
+    // the visible flash described in the deleted-codespace retry-storm bug.
     if (
       event.type === "environment.removed" ||
-      event.type === "environment.changed" ||
       event.type === "task.started"
     ) {
       sessionsHook.loadSessions().catch(() => {});
