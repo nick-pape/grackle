@@ -3,7 +3,7 @@
  * Covers: successful reconnect, backoff timing, max retries,
  * concurrent lock, clearReconnectState, session recovery trigger.
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 // ── Mock dependencies before importing ──────────────────────
 
@@ -119,6 +119,7 @@ describe("auto-reconnect", () => {
     // Spy on tokenPush
     vi.spyOn(tokenPush, "pushToEnv").mockResolvedValue();
   });
+
 
   it("reconnects a disconnected environment after initial delay", async () => {
     insertEnv("env1");
@@ -511,6 +512,14 @@ describe("auto-reconnect", () => {
 
   // ── FatalAdapterError short-circuit ─────────────────────
 
+  // ── FatalAdapterError short-circuit ─────────────────────────
+  // These tests spy on Date.now, so they need explicit cleanup to avoid
+  // leaking the frozen clock into subsequent tests.
+  describe("FatalAdapterError short-circuit", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
   it("marks environment as error (not sleeping) and stops retrying on FatalAdapterError", async () => {
     insertEnv("env1");
     const adapter = makeAdapter();
@@ -563,6 +572,8 @@ describe("auto-reconnect", () => {
     expect(fatalEmitCount).toBe(2);
     expect(envRegistry.getEnvironment("env1")?.status).toBe("error");
   });
+
+  }); // describe("FatalAdapterError short-circuit")
 
   // ── isReconnecting ────────────────────────────────────────
 
