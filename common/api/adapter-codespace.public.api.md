@@ -7,6 +7,7 @@
 import type { AdapterDependencies } from '@grackle-ai/adapter-sdk';
 import type { BaseEnvironmentConfig } from '@grackle-ai/adapter-sdk';
 import type { EnvironmentAdapter } from '@grackle-ai/adapter-sdk';
+import { FatalAdapterError } from '@grackle-ai/adapter-sdk';
 import type { PowerLineConnection } from '@grackle-ai/adapter-sdk';
 import type { ProvisionEvent } from '@grackle-ai/adapter-sdk';
 
@@ -30,6 +31,11 @@ export interface CodespaceEnvironmentConfig extends BaseEnvironmentConfig {
     env?: Record<string, string>;
     githubAccountId?: string;
     localPort?: number;
+}
+
+// @public
+export class CodespaceNotFoundError extends FatalAdapterError {
+    constructor(codespaceName: string);
 }
 
 // (No @packageDocumentation comment for this package)

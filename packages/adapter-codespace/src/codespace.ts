@@ -1,4 +1,5 @@
 import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent, AdapterDependencies, ExecFunction } from "@grackle-ai/adapter-sdk";
+import { FatalAdapterError } from "@grackle-ai/adapter-sdk";
 import { DEFAULT_POWERLINE_PORT, DEFAULT_MCP_PORT } from "@grackle-ai/common";
 import {
   type RemoteExecutor,
@@ -25,6 +26,21 @@ const REMOTE_COPY_TIMEOUT_MS: number = 120_000;
 
 /** Delay for reverse tunnels to wait for SSH to establish. */
 const REVERSE_TUNNEL_SETTLE_MS: number = 3_000;
+
+/**
+ * Thrown when the codespace no longer exists on GitHub.
+ * Extends `FatalAdapterError` so the auto-reconnect loop stops immediately
+ * and marks the environment as `error` rather than continuing to retry.
+ */
+export class CodespaceNotFoundError extends FatalAdapterError {
+  public constructor(codespaceName: string) {
+    super(`Codespace '${codespaceName}' not found — it may have been deleted`);
+    this.name = "CodespaceNotFoundError";
+  }
+}
+
+/** Patterns in gh CLI stderr that indicate the codespace no longer exists. */
+const CODESPACE_NOT_FOUND_PATTERNS: RegExp = /not found|does not exist|no such codespace/i;
 
 // ─── Config ─────────────────────────────────────────────────
 
@@ -61,11 +77,16 @@ class CodespaceExecutor implements RemoteExecutor {
   /** Execute a shell command inside the codespace and return trimmed stdout. */
   public async exec(command: string, opts?: { timeout?: number }): Promise<string> {
     const args = ["codespace", "ssh", "-c", this.codespaceName, "--", command];
-    const result = await this.execFn("gh", args, {
-      timeout: opts?.timeout ?? REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
-      env: this.ghEnv,
-    });
-    return result.stdout;
+    try {
+      const result = await this.execFn("gh", args, {
+        timeout: opts?.timeout ?? REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
+        env: this.ghEnv,
+      });
+      return result.stdout;
+    } catch (err) {
+      this.rethrowIfNotFound(err);
+      throw err;
+    }
   }
 
   /** Copy a local file or directory into the codespace via `gh codespace cp`. */
@@ -82,7 +103,21 @@ class CodespaceExecutor implements RemoteExecutor {
       localPath,
       `remote:${resolvedPath}`,
     ];
-    await this.execFn("gh", args, { timeout: REMOTE_COPY_TIMEOUT_MS, env: this.ghEnv });
+    try {
+      await this.execFn("gh", args, { timeout: REMOTE_COPY_TIMEOUT_MS, env: this.ghEnv });
+    } catch (err) {
+      this.rethrowIfNotFound(err);
+      throw err;
+    }
+  }
+
+  /** Throw {@link CodespaceNotFoundError} if the error indicates the codespace was deleted. */
+  private rethrowIfNotFound(err: unknown): void {
+    const message = err instanceof Error ? err.message : String(err);
+    const stderr = (err as { stderr?: string }).stderr ?? "";
+    if (CODESPACE_NOT_FOUND_PATTERNS.test(message) || CODESPACE_NOT_FOUND_PATTERNS.test(stderr)) {
+      throw new CodespaceNotFoundError(this.codespaceName);
+    }
   }
 }
 
@@ -205,6 +240,9 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     try {
       await executor.exec("echo ok", { timeout: SSH_CONNECTIVITY_TIMEOUT_MS });
     } catch (err) {
+      if (err instanceof FatalAdapterError) {
+        throw err;
+      }
       throw new Error(`Cannot reach codespace '${cfg.codespaceName}' via gh CLI: ${err instanceof Error ? err.message : String(err)}`);
     }
 

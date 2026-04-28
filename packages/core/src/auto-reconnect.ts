@@ -1,4 +1,4 @@
-import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
+import { reconnectOrProvision, FatalAdapterError } from "@grackle-ai/adapter-sdk";
 import { envRegistry } from "@grackle-ai/database";
 import * as adapterManager from "./adapter-manager.js";
 import * as tokenPush from "./token-push.js";
@@ -256,6 +256,18 @@ async function tryReconnect(environmentId: string): Promise<void> {
   } catch (err) {
     // Clean up any partially-established connection to avoid leaking state
     adapterManager.removeConnection(environmentId);
+
+    // Fatal errors (e.g., resource permanently gone) must not be retried.
+    if (err instanceof FatalAdapterError) {
+      logger.warn(
+        { environmentId, err: err.message },
+        "Adapter reported a fatal, non-retryable error — marking environment as error",
+      );
+      envRegistry.updateEnvironmentStatus(environmentId, "error");
+      reconnectStates.delete(environmentId);
+      emit("environment.changed", {});
+      return;
+    }
 
     const state = reconnectStates.get(environmentId) ?? { attempts: 0, nextRetryAt: 0, lastProbeAt: 0 };
     state.attempts++;

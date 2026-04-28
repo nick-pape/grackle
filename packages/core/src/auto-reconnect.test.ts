@@ -59,6 +59,7 @@ import { recoverSuspendedSessions } from "./session-recovery.js";
 import { emit } from "./event-bus.js";
 import { attemptReconnects, clearReconnectState, resetReconnectState, isReconnecting, _resetForTesting } from "./auto-reconnect.js";
 import type { EnvironmentAdapter, PowerLineConnection } from "@grackle-ai/adapter-sdk";
+import { FatalAdapterError } from "@grackle-ai/adapter-sdk";
 
 // ── Schema ──────────────────────────────────────────────────
 
@@ -506,6 +507,59 @@ describe("auto-reconnect", () => {
 
     expect(adapter.connect).toHaveBeenCalledTimes(1);
     expect(envRegistry.getEnvironment("env1")?.status).toBe("connected");
+  });
+
+  // ── FatalAdapterError short-circuit ─────────────────────
+
+  it("marks environment as error (not sleeping) and stops retrying on FatalAdapterError", async () => {
+    insertEnv("env1");
+    const adapter = makeAdapter();
+    (adapter.connect as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new FatalAdapterError("Codespace 'env1' not found — it may have been deleted"),
+    );
+    adapterManager.registerAdapter(adapter);
+
+    // Initialize state and attempt once
+    await attemptReconnects();
+    vi.spyOn(Date, "now").mockReturnValue(Date.now() + 15_000);
+    await attemptReconnects();
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(envRegistry.getEnvironment("env1")?.status).toBe("error");
+    expect(adapter.connect).toHaveBeenCalledTimes(1);
+
+    // Additional ticks must not trigger another attempt (state cleared)
+    vi.spyOn(Date, "now").mockReturnValue(Date.now() + 30_000);
+    await attemptReconnects();
+    await new Promise((r) => setTimeout(r, 50));
+
+    // State was cleared — next tick initializes fresh (initial delay), no additional connect
+    expect(adapter.connect).toHaveBeenCalledTimes(1);
+  });
+
+  it("emits environment.changed exactly once on FatalAdapterError", async () => {
+    insertEnv("env1");
+    const adapter = makeAdapter();
+    (adapter.connect as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new FatalAdapterError("resource gone"),
+    );
+    adapterManager.registerAdapter(adapter);
+
+    vi.mocked(emit).mockClear();
+
+    // Initialize + attempt
+    await attemptReconnects();
+    vi.spyOn(Date, "now").mockReturnValue(Date.now() + 15_000);
+    await attemptReconnects();
+    await new Promise((r) => setTimeout(r, 50));
+
+    // connectAndRecover emits once for "connecting", then tryReconnect emits once
+    // for the fatal error. Total = 2 (one for → connecting, one for → error).
+    const fatalEmitCount = vi.mocked(emit).mock.calls.filter(
+      ([type]) => type === "environment.changed",
+    ).length;
+    expect(fatalEmitCount).toBe(2);
+    expect(envRegistry.getEnvironment("env1")?.status).toBe("error");
   });
 
   // ── isReconnecting ────────────────────────────────────────
