@@ -260,7 +260,7 @@ async function tryReconnect(environmentId: string): Promise<void> {
     // Fatal errors (e.g., resource permanently gone) must not be retried.
     if (err instanceof FatalAdapterError) {
       logger.warn(
-        { environmentId, err: err.message },
+        { environmentId, err, errorMessage: err.message },
         "Adapter reported a fatal, non-retryable error — marking environment as error",
       );
       envRegistry.updateEnvironmentStatus(environmentId, "error");

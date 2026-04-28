@@ -153,13 +153,29 @@ describe("CodespaceAdapter — CodespaceNotFoundError detection via provision()"
     expect((err as Error).message).toContain("test-cs");
   });
 
-  it("throws CodespaceNotFoundError when gh message contains 'not found'", async () => {
-    mockExec.mockRejectedValueOnce(new Error("Codespace test-cs not found"));
+  it("throws CodespaceNotFoundError when gh stderr matches 'no such codespace'", async () => {
+    const ghErr = Object.assign(new Error("Command failed"), {
+      stderr: "no such codespace: test-cs",
+    });
+    mockExec.mockRejectedValueOnce(ghErr);
 
     const err = await collectEvents(adapter.provision(envId, config as Record<string, unknown>, token))
       .catch((e: unknown) => e);
 
     expect(err).toBeInstanceOf(CodespaceNotFoundError);
+  });
+
+  it("does NOT throw CodespaceNotFoundError for 'command not found' (false-positive guard)", async () => {
+    const bashErr = Object.assign(new Error("Command failed"), {
+      stderr: "bash: somebin: command not found",
+    });
+    mockExec.mockRejectedValueOnce(bashErr);
+
+    const err = await collectEvents(adapter.provision(envId, config as Record<string, unknown>, token))
+      .catch((e: unknown) => e);
+
+    expect(err).not.toBeInstanceOf(CodespaceNotFoundError);
+    expect(err).not.toBeInstanceOf(FatalAdapterError);
   });
 
   it("throws CodespaceNotFoundError when gh reports 'does not exist'", async () => {

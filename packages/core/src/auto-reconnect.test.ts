@@ -528,16 +528,18 @@ describe("auto-reconnect", () => {
     expect(envRegistry.getEnvironment("env1")?.status).toBe("error");
     expect(adapter.connect).toHaveBeenCalledTimes(1);
 
-    // Additional ticks must not trigger another attempt (state cleared)
+    // Additional ticks must not trigger another attempt because the env is now in "error"
+    // status, so attemptReconnects() should not select it again.
     vi.spyOn(Date, "now").mockReturnValue(Date.now() + 30_000);
     await attemptReconnects();
     await new Promise((r) => setTimeout(r, 50));
 
-    // State was cleared — next tick initializes fresh (initial delay), no additional connect
+    // Even if reconnect state was cleared, no additional connect occurs because the
+    // environment remains marked as "error".
     expect(adapter.connect).toHaveBeenCalledTimes(1);
   });
 
-  it("emits environment.changed exactly once on FatalAdapterError", async () => {
+  it("emits environment.changed twice on FatalAdapterError (connecting + error)", async () => {
     insertEnv("env1");
     const adapter = makeAdapter();
     (adapter.connect as ReturnType<typeof vi.fn>).mockRejectedValue(

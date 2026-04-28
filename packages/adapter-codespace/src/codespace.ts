@@ -39,8 +39,8 @@ export class CodespaceNotFoundError extends FatalAdapterError {
   }
 }
 
-/** Patterns in gh CLI stderr that indicate the codespace no longer exists. */
-const CODESPACE_NOT_FOUND_PATTERNS: RegExp = /not found|does not exist|no such codespace/i;
+/** Patterns in gh CLI stderr/message that specifically indicate the codespace no longer exists. */
+const CODESPACE_NOT_FOUND_PATTERNS: RegExp = /error getting codespace|codespace.*does not exist|no such codespace/i;
 
 // ─── Config ─────────────────────────────────────────────────
 
