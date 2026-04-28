@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 05 Apr 2026 14:00:09 GMT and should not be manually modified.
+This log was last generated on Sun, 26 Apr 2026 02:39:49 GMT and should not be manually modified.
+
+## 0.108.1
+Sun, 26 Apr 2026 02:39:49 GMT
+
+### Patches
+
+- Fix startTask to resolve environment from workspace linkedEnvironmentIds when no explicit environment or ancestor environment is specified; surface startTask errors as toasts instead of silently swallowing them
 
 ## 0.108.0
 Sun, 05 Apr 2026 14:00:09 GMT

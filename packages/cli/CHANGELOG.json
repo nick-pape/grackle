@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.108.1",
+      "tag": "@grackle-ai/cli_v0.108.1",
+      "date": "Sun, 26 Apr 2026 02:39:49 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix startTask to resolve environment from workspace linkedEnvironmentIds when no explicit environment or ancestor environment is specified; surface startTask errors as toasts instead of silently swallowing them"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.108.0",
       "tag": "@grackle-ai/cli_v0.108.0",
       "date": "Sun, 05 Apr 2026 14:00:09 GMT",

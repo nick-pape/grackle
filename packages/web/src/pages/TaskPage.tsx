@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { useParams, useLocation } from "react-router";
+import { ConnectError } from "@connectrpc/connect";
 import { useGrackle } from "../context/GrackleContext.js";
 import {
   Breadcrumbs, ChatInput, ConfirmDialog, EventStream, FindingsPanel,
@@ -246,7 +247,12 @@ export function TaskPage(): JSX.Element {
             task={task}
             sessionId={sessionId}
             isBlocked={isTaskBlocked}
-            onStart={() => { startTask(task.id, undefined, selectedEnvId).catch(() => {}); }}
+            onStart={() => {
+              startTask(task.id, undefined, selectedEnvId).catch((err) => {
+                const message = err instanceof ConnectError ? err.message : "Failed to start task";
+                showToast(message, "error");
+              });
+            }}
             onResume={() => { resumeTask(task.id).catch(() => {}); }}
             onStop={() => { stopTask(task.id).catch(() => {}); }}
             onPause={() => { if (sessionId) { kill(sessionId).catch(() => {}); } }}
@@ -323,7 +329,12 @@ export function TaskPage(): JSX.Element {
                     </div>
                   ) : (
                     <div className={styles.emptyCta}>
-                      <button data-testid="stream-start-cta" className={styles.ctaButton} onClick={() => { startTask(task.id, undefined, selectedEnvId).catch(() => {}); }}>Start Task</button>
+                      <button data-testid="stream-start-cta" className={styles.ctaButton} onClick={() => {
+                          startTask(task.id, undefined, selectedEnvId).catch((err) => {
+                            const message = err instanceof ConnectError ? err.message : "Failed to start task";
+                            showToast(message, "error");
+                          });
+                        }}>Start Task</button>
                       <div className={styles.ctaDescription}>Click to begin agent execution</div>
                     </div>
                   )
