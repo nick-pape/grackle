@@ -1,5 +1,8 @@
 // ─── Logger ─────────────────────────────────────────────────
 export type { AdapterLogger } from "./logger.js";
+
+// ─── Fatal Error ─────────────────────────────────────────────
+export { FatalAdapterError } from "./fatal-error.js";
 export { defaultLogger } from "./logger.js";
 
 // ─── Proto Types ──────────────────────────────────────────────

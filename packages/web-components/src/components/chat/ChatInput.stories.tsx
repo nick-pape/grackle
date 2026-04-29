@@ -1,5 +1,6 @@
+import { useState, type JSX } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn } from "@storybook/test";
+import { expect, fn, userEvent } from "@storybook/test";
 import { ChatInput } from "./ChatInput.js";
 import type { Environment } from "../../hooks/types.js";
 import { makeEnvironment, makePersona } from "../../test-utils/storybook-helpers.js";
@@ -74,6 +75,50 @@ export const StartMode: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByPlaceholderText("Type a message...")).toBeInTheDocument();
     await expect(canvas.getByRole("button", { name: "Send" })).toBeDisabled();
+  },
+};
+
+/**
+ * Regression guard: typed text must survive a mode flip.
+ * ChatPage now renders a single ChatInput instance and changes the mode prop
+ * instead of unmounting/remounting. This story verifies the local text state
+ * is preserved when mode transitions from "start" to "send".
+ */
+function ModeFlipWrapper(): JSX.Element {
+  const [mode, setMode] = useState<"start" | "send">("start");
+  return (
+    <div>
+      <ChatInput
+        mode={mode}
+        taskId="task-1"
+        sessionId="sess-1"
+        environmentId="local"
+        personas={[]}
+        environments={[connectedEnv]}
+        onSendInput={fn()}
+        onSpawn={fn()}
+        onStartTask={fn()}
+        onProvisionEnvironment={fn()}
+        onShowToast={fn()}
+      />
+      <button type="button" onClick={() => setMode("send")} data-testid="flip-mode-btn">
+        Flip to send
+      </button>
+    </div>
+  );
+}
+
+export const ModeFlipPreservesText: Story = {
+  render: () => <ModeFlipWrapper />,
+  play: async ({ canvas }) => {
+    const input = canvas.getByPlaceholderText("Type a message...");
+    await userEvent.type(input, "draft message");
+    await expect(input).toHaveValue("draft message");
+
+    await userEvent.click(canvas.getByTestId("flip-mode-btn"));
+
+    // Text must survive the mode flip (component stays mounted, state is preserved)
+    await expect(input).toHaveValue("draft message");
   },
 };
 

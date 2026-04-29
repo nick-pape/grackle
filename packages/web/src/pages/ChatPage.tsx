@@ -274,26 +274,13 @@ export function ChatPage(): JSX.Element {
         />
       )}
 
-      {/* System mode chat input */}
-      {streamId === undefined && localEnvironment && isSessionActive && (
+      {/* System mode chat input — single instance so typed text survives isSessionActive flips */}
+      {streamId === undefined && localEnvironment && (
         <ChatInput
-          mode="send"
-          sessionId={latestSession!.id}
-          environmentId={latestSession!.environmentId}
-          personas={personas}
-          environments={environments}
-          onSendInput={(sid, text) => { sendInput(sid, text).catch(() => { showToast("Failed to send message", "error"); }); }}
-          onSpawn={(eid, prompt, pid) => { spawn(eid, prompt, pid).catch(() => {}); }}
-          onStartTask={(tid, pid, eid) => { startTask(tid, pid, eid).catch(() => {}); }}
-          onProvisionEnvironment={(eid) => { provisionEnvironment(eid).catch(() => {}); }}
-          onShowToast={showToast}
-        />
-      )}
-      {streamId === undefined && localEnvironment && !isSessionActive && (
-        <ChatInput
-          mode="start"
+          mode={isSessionActive ? "send" : "start"}
+          sessionId={isSessionActive ? latestSession!.id : undefined}
           taskId={ROOT_TASK_ID}
-          environmentId={localEnvironment.id}
+          environmentId={isSessionActive ? latestSession!.environmentId : localEnvironment.id}
           personas={personas}
           environments={environments}
           onSendInput={(sid, text) => { sendInput(sid, text).catch(() => { showToast("Failed to send message", "error"); }); }}

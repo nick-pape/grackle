@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix deleted-codespace retry storm: add FatalAdapterError to stop auto-reconnect on permanent adapter failures; suppress intermediate-transition toasts; preserve ChatInput text across session-state flips",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "nickpape@outlook.com"
+}

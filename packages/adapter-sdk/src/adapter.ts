@@ -2,6 +2,7 @@ import type { Client } from "@connectrpc/connect";
 import type { powerline } from "@grackle-ai/common";
 import type { AdapterLogger } from "./logger.js";
 import { defaultLogger } from "./logger.js";
+import { FatalAdapterError } from "./fatal-error.js";
 
 /** Type-safe ConnectRPC client for the PowerLine gRPC service. */
 export type PowerLineClient = Client<typeof powerline.GracklePowerLine>;
@@ -70,6 +71,9 @@ export async function* reconnectOrProvision(
       yield* adapter.reconnect(environmentId, config, powerlineToken);
       reconnected = true;
     } catch (err) {
+      if (err instanceof FatalAdapterError) {
+        throw err;
+      }
       logger.info({ environmentId, err }, "Reconnect failed, falling back to full provision");
     }
   }
