@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { Mock } from "vitest";
 import { newTransport, withReconnect } from "./proxy.js";
 import type { ClientManager } from "./proxy.js";
@@ -22,6 +22,14 @@ describe("newTransport", () => {
 });
 
 describe("withReconnect", () => {
+  beforeEach(() => {
+    vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   function makeManager(client: Client): ClientManager & { getClient: Mock; resetClient: Mock } {
     return {
       getClient: vi.fn().mockResolvedValue(client),
