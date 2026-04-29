@@ -6,8 +6,11 @@ import type { ToastVariant } from "@grackle-ai/web-components";
  * Diffs the previous and current environment lists and fires toast
  * notifications for meaningful status transitions.
  *
- * Skips toasts on initial load (when the previous ref is null) and
- * for `sleeping` transitions (passive state with no user action needed).
+ * Skips toasts on initial load (when the previous ref is null),
+ * for `sleeping` transitions (passive state), and for `connecting`
+ * transitions (auto-reconnect cycles through this on every retry attempt —
+ * streaming provision progress provides richer feedback for user-initiated
+ * reconnects).
  */
 export function useEnvironmentToasts(
   environments: Environment[],
@@ -45,14 +48,10 @@ export function useEnvironmentToasts(
         continue;
       }
 
-      // Skip sleeping transitions — sleeping is a passive state with no user
-      // action needed.
-      if (env.status === "sleeping") {
-        continue;
-      }
-
-      if (env.status === "connecting") {
-        showToast("Provisioning environment\u2026", "info");
+      // Skip sleeping (passive state) and connecting (auto-reconnect cycles
+      // through this on every retry; streaming provision progress handles
+      // user-initiated reconnect feedback).
+      if (env.status === "sleeping" || env.status === "connecting") {
         continue;
       }
 
@@ -62,10 +61,12 @@ export function useEnvironmentToasts(
         showToast("Environment provision failed", "error");
       } else if (env.status === "disconnected") {
         if (old.status === "connected") {
+          // Genuine disconnect — was working, now gone.
           showToast("Environment disconnected", "warning");
-        } else {
-          showToast("Environment stopped", "info");
         }
+        // connecting → disconnected is a failed auto-reconnect attempt; the
+        // user was already notified on the original connected → disconnected
+        // transition, so stay silent here.
       }
     }
 

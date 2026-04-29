@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ProvisionEvent } from "@grackle-ai/adapter-sdk";
+import { FatalAdapterError } from "@grackle-ai/adapter-sdk";
+import { CodespaceNotFoundError } from "./codespace.js";
 
 // ── Mock adapter-sdk (tunnel/process functions that can't be DI'd) ──
 const mocks = vi.hoisted(() => ({
@@ -118,5 +120,101 @@ describe("CodespaceAdapter.reconnect()", () => {
   it("throws if codespaceName is missing", async () => {
     await expect(collectEvents(adapter.reconnect!(envId, {} as Record<string, unknown>, token)))
       .rejects.toThrow("codespaceName");
+  });
+
+});
+
+// ── CodespaceNotFoundError detection ────────────────────────
+// These tests go through provision() because that calls executor.exec() directly
+// (startRemotePowerLine is mocked in reconnect() tests above, bypassing the executor).
+
+describe("CodespaceAdapter — CodespaceNotFoundError detection via provision()", () => {
+  let adapter: CodespaceAdapter;
+  const config = { codespaceName: "test-cs" };
+  const token = "test-token";
+  const envId = "env-1";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    adapter = new CodespaceAdapter({ exec: mockExec, sleep: mockSleep });
+  });
+
+  it("throws CodespaceNotFoundError (FatalAdapterError) when gh stderr contains 'Not Found'", async () => {
+    const ghErr = Object.assign(new Error("Command failed: gh codespace ssh"), {
+      stderr: "error getting codespace: Not Found",
+    });
+    mockExec.mockRejectedValueOnce(ghErr);
+
+    const err = await collectEvents(adapter.provision(envId, config as Record<string, unknown>, token))
+      .catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(CodespaceNotFoundError);
+    expect(err).toBeInstanceOf(FatalAdapterError);
+    expect((err as Error).message).toContain("test-cs");
+  });
+
+  it("throws CodespaceNotFoundError when gh stderr matches 'no such codespace'", async () => {
+    const ghErr = Object.assign(new Error("Command failed"), {
+      stderr: "no such codespace: test-cs",
+    });
+    mockExec.mockRejectedValueOnce(ghErr);
+
+    const err = await collectEvents(adapter.provision(envId, config as Record<string, unknown>, token))
+      .catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(CodespaceNotFoundError);
+  });
+
+  it("does NOT throw CodespaceNotFoundError for 'command not found' (false-positive guard)", async () => {
+    const bashErr = Object.assign(new Error("Command failed"), {
+      stderr: "bash: somebin: command not found",
+    });
+    mockExec.mockRejectedValueOnce(bashErr);
+
+    const err = await collectEvents(adapter.provision(envId, config as Record<string, unknown>, token))
+      .catch((e: unknown) => e);
+
+    expect(err).not.toBeInstanceOf(CodespaceNotFoundError);
+    expect(err).not.toBeInstanceOf(FatalAdapterError);
+  });
+
+  it("throws CodespaceNotFoundError when gh reports 'does not exist'", async () => {
+    const ghErr = Object.assign(new Error("Command failed"), {
+      stderr: "The codespace 'test-cs' does not exist",
+    });
+    mockExec.mockRejectedValueOnce(ghErr);
+
+    const err = await collectEvents(adapter.provision(envId, config as Record<string, unknown>, token))
+      .catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(CodespaceNotFoundError);
+  });
+
+  it("throws CodespaceNotFoundError for real gh HTTP 404 response (getting full codespace details)", async () => {
+    // This is the actual error gh codespace ssh emits when the codespace doesn't exist:
+    // "getting full codespace details: HTTP 404: Not Found"
+    const ghErr = Object.assign(new Error("Command failed: gh codespace ssh"), {
+      stderr: "getting full codespace details: HTTP 404: Not Found (https://api.github.com/user/codespaces/fake-cs)",
+    });
+    mockExec.mockRejectedValueOnce(ghErr);
+
+    const err = await collectEvents(adapter.provision(envId, config as Record<string, unknown>, token))
+      .catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(CodespaceNotFoundError);
+    expect(err).toBeInstanceOf(FatalAdapterError);
+  });
+
+  it("does NOT throw CodespaceNotFoundError for generic SSH failures", async () => {
+    const sshErr = Object.assign(new Error("Command failed: gh codespace ssh"), {
+      stderr: "ssh: connect to host 127.0.0.1 port 22: Connection refused",
+    });
+    mockExec.mockRejectedValueOnce(sshErr);
+
+    const err = await collectEvents(adapter.provision(envId, config as Record<string, unknown>, token))
+      .catch((e: unknown) => e);
+
+    expect(err).not.toBeInstanceOf(CodespaceNotFoundError);
+    expect(err).not.toBeInstanceOf(FatalAdapterError);
   });
 });

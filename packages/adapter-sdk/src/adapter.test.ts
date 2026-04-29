@@ -4,6 +4,7 @@
 import { describe, it, expect, vi } from "vitest";
 import type { EnvironmentAdapter, ProvisionEvent } from "./adapter.js";
 import { reconnectOrProvision } from "./adapter.js";
+import { FatalAdapterError } from "./fatal-error.js";
 
 /** Collect all events from an async generator. */
 async function collect(gen: AsyncGenerator<ProvisionEvent>): Promise<ProvisionEvent[]> {
@@ -82,6 +83,21 @@ describe("reconnectOrProvision", () => {
     expect(adapter.reconnect).toHaveBeenCalledOnce();
     expect(adapter.provision).toHaveBeenCalledOnce();
     expect(events[0].stage).toBe("provision");
+  });
+
+  it("re-throws FatalAdapterError from reconnect without falling back to provision", async () => {
+    const fatalErr = new FatalAdapterError("codespace permanently gone");
+    const adapter = createMockAdapter({
+      reconnect: vi.fn(async function* () {
+        throw fatalErr;
+      }),
+    });
+
+    await expect(
+      collect(reconnectOrProvision("env-1", adapter, {}, "token", true, false, silentLogger)),
+    ).rejects.toThrow(fatalErr);
+
+    expect(adapter.provision).not.toHaveBeenCalled();
   });
 
   it("defaults force to false when omitted", async () => {

@@ -147,6 +147,11 @@ export interface ExecResult {
 }
 
 // @public
+export class FatalAdapterError extends Error {
+    constructor(message: string);
+}
+
+// @public
 const file_grackle_powerline_powerline: GenFile;
 
 // @public
