@@ -35,12 +35,12 @@ Or run directly:
 GRACKLE_URL=http://127.0.0.1:7435/mcp GRACKLE_API_KEY=<key> npx @grackle-ai/mcp-stdio
 ```
 
-Requires **Node.js >= 20**.
+Requires **Node.js >= 22**.
 
 ## Configuration
 
 | Variable | Description | Default |
-|---|---|---|
+| --- | --- | --- |
 | `GRACKLE_URL` | Full URL of the Grackle MCP HTTP endpoint | `http://127.0.0.1:7435/mcp` |
 | `GRACKLE_API_KEY` | API key for authenticating with the Grackle server. **Required** — the proxy exits with an error if not set. | *(none)* |
 

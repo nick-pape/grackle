@@ -63,7 +63,35 @@ export function createClientManager(grackleUrl: string, apiKey: string): ClientM
 }
 
 /**
- * Call `fn` with the upstream client, reconnecting once on any error.
+ * Returns true for errors that indicate a transient transport or connectivity
+ * failure and are safe to retry without risk of duplicating side effects.
+ * Application-level errors (e.g. invalid tool arguments) are not transport
+ * errors and should propagate immediately without a retry.
+ * Exported for testability.
+ */
+export function isTransportError(err: unknown): boolean {
+  if (err instanceof TypeError) {
+    return true;
+  }
+  if (err instanceof Error) {
+    const msg = err.message;
+    return (
+      msg.includes("ECONNREFUSED") ||
+      msg.includes("ECONNRESET") ||
+      msg.includes("ENOTFOUND") ||
+      msg.includes("fetch failed") ||
+      msg.includes("Failed to fetch") ||
+      msg.includes("socket hang up") ||
+      msg.includes("network")
+    );
+  }
+  return false;
+}
+
+/**
+ * Call `fn` with the upstream client, reconnecting once on transient transport
+ * errors. Non-transport errors (application errors, tool errors) propagate
+ * immediately without retry to avoid duplicating side effects.
  * Exported for testability.
  */
 export async function withReconnect<T>(
@@ -73,7 +101,11 @@ export async function withReconnect<T>(
   try {
     return await fn(await manager.getClient());
   } catch (err) {
-    process.stderr.write(`Reconnecting upstream: ${(err as Error).message}\n`);
+    if (!isTransportError(err)) {
+      throw err;
+    }
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`Reconnecting upstream: ${msg}\n`);
     manager.resetClient();
     return fn(await manager.getClient());
   }
