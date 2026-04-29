@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add @grackle-ai/mcp-stdio — an npx-able stdio-to-HTTP MCP proxy that bridges stdio-only clients (Claude Desktop, Codex CLI, Clawpilot) to Grackle's HTTP MCP server using static API-key auth",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

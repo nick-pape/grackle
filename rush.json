@@ -152,6 +152,11 @@
       "versionPolicyName": "grackle"
     },
     {
+      "packageName": "@grackle-ai/mcp-stdio",
+      "projectFolder": "packages/mcp-stdio",
+      "versionPolicyName": "grackle"
+    },
+    {
       "packageName": "@grackle-ai/knowledge-core",
       "projectFolder": "packages/knowledge-core",
       "versionPolicyName": "grackle"
