@@ -427,13 +427,32 @@ importers:
         version: link:../common
       '@modelcontextprotocol/sdk':
         specifier: ^1.27.0
-        version: 1.27.1(zod@4.3.6)
+        version: 1.27.1
       pino:
         specifier: ^10.3.1
         version: 10.3.1
       zod:
         specifier: ^4.0.0
         version: 4.3.6
+    devDependencies:
+      '@grackle-ai/heft-rig':
+        specifier: workspace:*
+        version: link:../../rigs/heft-rig
+      '@rushstack/heft':
+        specifier: 1.2.7
+        version: 1.2.7(@types/node@22.19.15)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      vitest:
+        specifier: ^3.1.1
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
+
+  ../../packages/mcp-stdio:
+    dependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.27.0
+        version: 1.27.1
     devDependencies:
       '@grackle-ai/heft-rig':
         specifier: workspace:*
@@ -691,7 +710,7 @@ importers:
         version: link:../runtime-sdk
       '@modelcontextprotocol/sdk':
         specifier: ^1.27.0
-        version: 1.27.1(zod@4.3.6)
+        version: 1.27.1
       commander:
         specifier: ^13.0.0
         version: 13.1.0
@@ -847,7 +866,7 @@ importers:
         version: link:../common
       '@modelcontextprotocol/sdk':
         specifier: ^1.27.0
-        version: 1.27.1(zod@4.3.6)
+        version: 1.27.1
       pino:
         specifier: ^10.3.1
         version: 10.3.1
@@ -3463,7 +3482,6 @@ packages:
     engines: {node: '>=18'}
     peerDependencies:
       '@cfworker/json-schema': ^4.1.1
-      zod: ^3.25 || ^4.0
     peerDependenciesMeta:
       '@cfworker/json-schema':
         optional: true
@@ -13691,7 +13709,7 @@ snapshots:
 
   '@microsoft/tsdoc@0.16.0': {}
 
-  '@modelcontextprotocol/sdk@1.27.1(zod@4.3.6)':
+  '@modelcontextprotocol/sdk@1.27.1':
     dependencies:
       '@hono/node-server': 1.19.11(hono@4.12.9)
       ajv: 8.18.0

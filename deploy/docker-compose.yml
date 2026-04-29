@@ -11,6 +11,10 @@ services:
     container_name: grackle
     ports:
       - "${GRACKLE_WEB_PORT:-3000}:3000"   # Web UI + WebSocket
+      # MCP HTTP endpoint — used by @grackle-ai/mcp-stdio and any Bearer-token MCP client.
+      # The API key gates access, but this binding exposes the port on all interfaces.
+      # On multi-tenant hosts, restrict to loopback: "127.0.0.1:${GRACKLE_MCP_PORT:-7435}:7435"
+      - "${GRACKLE_MCP_PORT:-7435}:7435"   # MCP HTTP (Streamable HTTP + API-key auth)
     volumes:
       - grackle-data:/data                                                      # Persistent DB, Neo4j, API key
 
