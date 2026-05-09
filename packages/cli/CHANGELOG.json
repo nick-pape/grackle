@@ -2,6 +2,23 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.108.2",
+      "tag": "@grackle-ai/cli_v0.108.2",
+      "date": "Sat, 09 May 2026 05:59:32 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix deleted-codespace retry storm: add FatalAdapterError to stop auto-reconnect on permanent adapter failures; suppress intermediate-transition toasts; preserve ChatInput text across session-state flips"
+          }
+        ],
+        "none": [
+          {
+            "comment": "Bump security-vulnerable transitive deps (protobufjs, axios, lodash, fast-uri) and direct dep vite to patched versions. No code changes."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.108.1",
       "tag": "@grackle-ai/cli_v0.108.1",
       "date": "Sun, 26 Apr 2026 02:39:49 GMT",

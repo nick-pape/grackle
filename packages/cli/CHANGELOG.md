@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 26 Apr 2026 02:39:49 GMT and should not be manually modified.
+This log was last generated on Sat, 09 May 2026 05:59:32 GMT and should not be manually modified.
+
+## 0.108.2
+Sat, 09 May 2026 05:59:32 GMT
+
+### Patches
+
+- Fix deleted-codespace retry storm: add FatalAdapterError to stop auto-reconnect on permanent adapter failures; suppress intermediate-transition toasts; preserve ChatInput text across session-state flips
+
+### Updates
+
+- Bump security-vulnerable transitive deps (protobufjs, axios, lodash, fast-uri) and direct dep vite to patched versions. No code changes.
 
 ## 0.108.1
 Sun, 26 Apr 2026 02:39:49 GMT
