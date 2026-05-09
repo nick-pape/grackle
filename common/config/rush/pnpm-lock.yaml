@@ -15,7 +15,6 @@ overrides:
   lodash-es: 4.18.1
   protobufjs: 7.5.5
   axios: 1.15.2
-  vite@>=6.0.0 <7.0.0: 6.4.2
   lodash: 4.18.0
   fast-uri: 3.1.2
 
@@ -1043,7 +1042,7 @@ importers:
         specifier: 8.6.18
         version: 8.6.18
       vite:
-        specifier: 6.4.2
+        specifier: ^6.4.2
         version: 6.4.2(@types/node@22.19.15)(jiti@1.21.7)(sass@1.98.0)(terser@5.46.1)
       vitest:
         specifier: ^3.1.1
@@ -1176,7 +1175,7 @@ importers:
         specifier: 8.6.18
         version: 8.6.18
       vite:
-        specifier: 6.4.2
+        specifier: ^6.4.2
         version: 6.4.2(@types/node@22.19.15)(jiti@1.21.7)(sass@1.98.0)(terser@5.46.1)
       vitest:
         specifier: ^3.1.1
@@ -1300,7 +1299,7 @@ importers:
         specifier: ~5.7.0
         version: 5.7.3
       vite:
-        specifier: 6.4.2
+        specifier: ^6.4.2
         version: 6.4.2(@types/node@22.19.15)(jiti@1.21.7)(sass@1.98.0)(terser@5.46.1)
 
   ../../scripts/github-import:
@@ -3279,7 +3278,7 @@ packages:
     resolution: {integrity: sha512-qYDdL7fPwLRI+bJNurVcis+tNgJmvWjH4YTBGXTA8xMuxFrnAz6E5o35iyzyKbq5J5Lr8mJGfrR5GXl+WGwhgQ==}
     peerDependencies:
       typescript: '>= 4.3.x'
-      vite: 6.4.2
+      vite: ^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0
     peerDependenciesMeta:
       typescript:
         optional: true
@@ -3955,7 +3954,7 @@ packages:
     resolution: {integrity: sha512-XLqnOv4C36jlTd4uC8xpWBxv+7GV4/05zWJ0wAcU4qflorropUTirt4UQPGkwIzi+BVAhs9pJj+m4k0IWJtpHg==}
     peerDependencies:
       storybook: ^8.6.18
-      vite: 6.4.2
+      vite: ^4.0.0 || ^5.0.0 || ^6.0.0
 
   '@storybook/components@8.6.18':
     resolution: {integrity: sha512-55yViiZzPS/cPBuOeW4QGxGqrusjXVyxuknmbYCIwDtFyyvI/CgbjXRHdxNBaIjz+IlftxvBmmSaOqFG5+/dkA==}
@@ -4018,7 +4017,7 @@ packages:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0-beta
       react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0-beta
       storybook: ^8.6.18
-      vite: 6.4.2
+      vite: ^4.0.0 || ^5.0.0 || ^6.0.0
     peerDependenciesMeta:
       '@storybook/test':
         optional: true
@@ -4630,7 +4629,7 @@ packages:
     resolution: {integrity: sha512-gUu9hwfWvvEDBBmgtAowQCojwZmJ5mcLn3aufeCsitijs3+f2NsrPtlAWIR6OPiqljl96GVCUbLe0HyqIpVaoA==}
     engines: {node: ^14.18.0 || >=16.0.0}
     peerDependencies:
-      vite: 6.4.2
+      vite: ^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0
 
   '@vitest/expect@2.0.5':
     resolution: {integrity: sha512-yHZtwuP7JZivj65Gxoi8upUN2OzHTi3zVfjwdpu2WrvCZPLwsJ2Ey5ILIPccoW23dd/zQBlJ4/dhi7DWNyXCpA==}
@@ -4642,7 +4641,7 @@ packages:
     resolution: {integrity: sha512-46ryTE9RZO/rfDd7pEqFl7etuyzekzEhUbTW3BvmeO/BcCMEgq59BKhek3dXDWgAj4oMK6OZi+vRr1wPW6qjEQ==}
     peerDependencies:
       msw: ^2.4.9
-      vite: 6.4.2
+      vite: ^5.0.0 || ^6.0.0 || ^7.0.0-0
     peerDependenciesMeta:
       msw:
         optional: true
