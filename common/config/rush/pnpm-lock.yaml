@@ -15,7 +15,7 @@ overrides:
   lodash-es: 4.18.1
   protobufjs: 7.5.5
   axios: 1.15.2
-  lodash: 4.18.0
+  lodash: 4.18.1
   fast-uri: 3.1.2
 
 pnpmfileChecksum: sha256-La8sfCMI7irxJPTW6u4mJb4vNiyLrXeEbKaXv5G3dL0=
@@ -7759,9 +7759,8 @@ packages:
   lodash.uniq@4.5.0:
     resolution: {integrity: sha512-xfBaXQd9ryd9dlSDvnvI0lvxfLJlYAZzXomUYzLKtUeOQvOP5piqAWuGtrhWeqaXK9hhoM/iyJc5AV+XfsX3HQ==}
 
-  lodash@4.18.0:
-    resolution: {integrity: sha512-l1mfj2atMqndAHI3ls7XqPxEjV2J9ZkcNyHpoZA3r2T1LLwDB69jgkMWh71YKwhBbK0G2f4WSn05ahmQXVxupA==}
-    deprecated: Bad release. Please use lodash@4.17.21 instead.
+  lodash@4.18.1:
+    resolution: {integrity: sha512-dMInicTPVE8d1e5otfwmmjlxkZoUpiVLwyeTdUsi/Caj/gfzzblBcCE5sRHV/AsjuCmxWrte2TNGSYuCeCq+0Q==}
 
   log-symbols@6.0.0:
     resolution: {integrity: sha512-i24m8rpwhmPIS4zscNzK6MSEhk0DUWa/8iYQWxhffV8jkI4Phvs3F+quL5xvS0gdQR0FyTCMMH33Y78dDTzzIw==}
@@ -12268,7 +12267,7 @@ snapshots:
       html-tags: 3.3.1
       html-webpack-plugin: 5.6.6(webpack@5.105.4)
       leven: 3.1.0
-      lodash: 4.18.0
+      lodash: 4.18.1
       open: 8.4.2
       p-map: 4.0.0
       prompts: 2.4.2
@@ -12385,7 +12384,7 @@ snapshots:
       cheerio: 1.0.0-rc.12
       feed: 4.2.2
       fs-extra: 11.3.4
-      lodash: 4.18.0
+      lodash: 4.18.1
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
       schema-dts: 1.1.5
@@ -12427,7 +12426,7 @@ snapshots:
       combine-promises: 1.2.0
       fs-extra: 11.3.4
       js-yaml: 4.1.1
-      lodash: 4.18.0
+      lodash: 4.18.1
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
       schema-dts: 1.1.5
@@ -12740,7 +12739,7 @@ snapshots:
       '@mdx-js/react': 3.1.1(@types/react@19.2.14)(react@18.3.1)
       clsx: 2.1.1
       infima: 0.2.0-alpha.45
-      lodash: 4.18.0
+      lodash: 4.18.1
       nprogress: 0.2.0
       postcss: 8.5.8
       prism-react-renderer: 2.4.1(react@18.3.1)
@@ -12838,7 +12837,7 @@ snapshots:
       clsx: 2.1.1
       eta: 2.2.0
       fs-extra: 11.3.4
-      lodash: 4.18.0
+      lodash: 4.18.1
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
       tslib: 2.8.1
@@ -12913,7 +12912,7 @@ snapshots:
       fs-extra: 11.3.4
       joi: 17.13.3
       js-yaml: 4.1.1
-      lodash: 4.18.0
+      lodash: 4.18.1
       tslib: 2.8.1
     transitivePeerDependencies:
       - '@swc/core'
@@ -12938,7 +12937,7 @@ snapshots:
       gray-matter: 4.0.3
       jiti: 1.21.7
       js-yaml: 4.1.1
-      lodash: 4.18.0
+      lodash: 4.18.1
       micromatch: 4.0.8
       p-queue: 6.6.2
       prompts: 2.4.2
@@ -13679,7 +13678,7 @@ snapshots:
       '@rushstack/terminal': 0.22.3(@types/node@22.19.15)
       '@rushstack/ts-command-line': 5.3.3(@types/node@22.19.15)
       diff: 8.0.4
-      lodash: 4.18.0
+      lodash: 4.18.1
       minimatch: 10.2.3
       resolve: 1.22.11
       semver: 7.5.4
@@ -14579,7 +14578,7 @@ snapshots:
       chalk: 3.0.0
       css.escape: 1.5.1
       dom-accessibility-api: 0.6.3
-      lodash: 4.18.0
+      lodash: 4.18.1
       redent: 3.0.0
 
   '@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
@@ -17780,7 +17779,7 @@ snapshots:
     dependencies:
       '@types/html-minifier-terser': 6.1.0
       html-minifier-terser: 6.1.0
-      lodash: 4.18.0
+      lodash: 4.18.1
       pretty-error: 4.0.0
       tapable: 2.3.1
     optionalDependencies:
@@ -18801,7 +18800,7 @@ snapshots:
 
   lodash.uniq@4.5.0: {}
 
-  lodash@4.18.0: {}
+  lodash@4.18.1: {}
 
   log-symbols@6.0.0:
     dependencies:
@@ -20466,7 +20465,7 @@ snapshots:
 
   pretty-error@4.0.0:
     dependencies:
-      lodash: 4.18.0
+      lodash: 4.18.1
       renderkid: 3.0.0
 
   pretty-format@27.5.1:
@@ -20945,7 +20944,7 @@ snapshots:
       css-select: 4.3.0
       dom-converter: 0.2.0
       htmlparser2: 6.1.0
-      lodash: 4.18.0
+      lodash: 4.18.1
       strip-ansi: 6.0.1
 
   repeat-string@1.6.1: {}
@@ -22164,7 +22163,7 @@ snapshots:
     dependencies:
       axios: 1.15.2
       joi: 17.13.3
-      lodash: 4.18.0
+      lodash: 4.18.1
       minimist: 1.2.8
       rxjs: 7.8.2
     transitivePeerDependencies:
@@ -22174,7 +22173,7 @@ snapshots:
     dependencies:
       axios: 1.15.2
       joi: 18.1.1
-      lodash: 4.18.0
+      lodash: 4.18.1
       minimist: 1.2.8
       rxjs: 7.8.2
     transitivePeerDependencies:
