@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Bump uuid to 11.1.1 (buffer bounds check fix) and override @babel/plugin-transform-modules-systemjs to 7.29.4 (arbitrary code generation fix).",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
