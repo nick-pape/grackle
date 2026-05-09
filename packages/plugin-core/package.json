@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/plugin-core",
-  "version": "0.108.2",
+  "version": "0.108.3",
   "description": "Core plugin for Grackle — gRPC handlers, reconciliation phases, and event subscribers",
   "license": "MIT",
   "repository": {

@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 09 May 2026 05:59:32 GMT and should not be manually modified.
+This log was last generated on Sat, 09 May 2026 07:41:00 GMT and should not be manually modified.
+
+## 0.108.3
+Sat, 09 May 2026 07:41:00 GMT
+
+### Patches
+
+- Bump drizzle-orm 0.38 -> 0.45.2 to patch SQL injection (high, alerts #49 #50).
 
 ## 0.108.2
 Sat, 09 May 2026 05:59:32 GMT

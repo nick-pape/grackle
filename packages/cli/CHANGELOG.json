@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.108.3",
+      "tag": "@grackle-ai/cli_v0.108.3",
+      "date": "Sat, 09 May 2026 07:41:00 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Bump drizzle-orm 0.38 -> 0.45.2 to patch SQL injection (high, alerts #49 #50)."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.108.2",
       "tag": "@grackle-ai/cli_v0.108.2",
       "date": "Sat, 09 May 2026 05:59:32 GMT",
