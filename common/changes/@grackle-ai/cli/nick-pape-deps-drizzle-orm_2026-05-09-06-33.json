@@ -2,7 +2,7 @@
   "changes": [
     {
       "comment": "Bump drizzle-orm 0.38 -> 0.45.2 to patch SQL injection (high, alerts #49 #50).",
-      "type": "none",
+      "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
   ],
