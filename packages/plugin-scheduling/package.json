@@ -32,7 +32,7 @@
     "@grackle-ai/plugin-sdk": "workspace:*",
     "cron-parser": "^4.9.0",
     "pino": "^10.3.1",
-    "uuid": "^11.0.0"
+    "uuid": "^14.0.0"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
