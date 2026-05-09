@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 09 May 2026 07:41:00 GMT and should not be manually modified.
+This log was last generated on Sat, 09 May 2026 08:10:31 GMT and should not be manually modified.
+
+## 0.108.4
+Sat, 09 May 2026 08:10:31 GMT
+
+### Patches
+
+- Bump uuid to 11.1.1 (buffer bounds check fix) and override @babel/plugin-transform-modules-systemjs to 7.29.4 (arbitrary code generation fix).
 
 ## 0.108.3
 Sat, 09 May 2026 07:41:00 GMT

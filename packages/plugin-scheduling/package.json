@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/plugin-scheduling",
-  "version": "0.108.3",
+  "version": "0.108.4",
   "description": "Scheduling plugin for Grackle — schedule CRUD handlers, cron reconciliation phase, and expression parsing",
   "license": "MIT",
   "repository": {
