@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.109.2",
+      "tag": "@grackle-ai/cli_v0.109.2",
+      "date": "Wed, 20 May 2026 13:14:31 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Pin the Settings tab to the right edge of the top navigation bar so it stays in a consistent position regardless of which plugins contribute tabs."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.109.1",
       "tag": "@grackle-ai/cli_v0.109.1",
       "date": "Wed, 20 May 2026 12:22:00 GMT",

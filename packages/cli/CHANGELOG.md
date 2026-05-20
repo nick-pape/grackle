@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 20 May 2026 12:22:00 GMT and should not be manually modified.
+This log was last generated on Wed, 20 May 2026 13:14:31 GMT and should not be manually modified.
+
+## 0.109.2
+Wed, 20 May 2026 13:14:31 GMT
+
+### Patches
+
+- Pin the Settings tab to the right edge of the top navigation bar so it stays in a consistent position regardless of which plugins contribute tabs.
 
 ## 0.109.1
 Wed, 20 May 2026 12:22:00 GMT
