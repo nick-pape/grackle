@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 20 May 2026 13:14:31 GMT and should not be manually modified.
+This log was last generated on Wed, 20 May 2026 13:57:19 GMT and should not be manually modified.
+
+## 0.110.0
+Wed, 20 May 2026 13:57:19 GMT
+
+### Minor changes
+
+- Docker adapter: add attach mode to drive agent sessions inside a pre-existing, externally-managed container instead of creating one. Adds the `attach` config and `grackle env add --docker --attach <container>`, a ListDockerContainers RPC + `env_list_docker_containers` MCP tool for discovery, and a web container picker. Grackle never creates, stops, or removes an attached container.
 
 ## 0.109.2
 Wed, 20 May 2026 13:14:31 GMT
