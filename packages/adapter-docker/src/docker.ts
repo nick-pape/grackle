@@ -297,12 +297,14 @@ async function buildBaseImage(execFn: LocalExecFunction, tag: string, logger: Ad
 
 // ─── Docker Executor ───────────────────────────────────────
 
-/** Remote executor that runs commands inside a Docker container. */
-class DockerExecutor implements RemoteExecutor {
+/** @internal Remote executor that runs commands inside a Docker container. */
+export class DockerExecutor implements RemoteExecutor {
   private containerName: string;
   private readonly execFn: LocalExecFunction;
   /** Cached resolved $HOME path. */
   private resolvedHome?: string;
+  /** Cached `uid:gid` of the container's default exec user. */
+  private resolvedOwner?: string;
 
   public constructor(containerName: string, execFn: LocalExecFunction) {
     this.containerName = containerName;
@@ -315,6 +317,21 @@ class DockerExecutor implements RemoteExecutor {
       "exec", this.containerName, "bash", "-c", command,
     ], { timeout: opts?.timeout || DOCKER_EXEC_TIMEOUT_MS });
     return stdout;
+  }
+
+  /**
+   * Resolve the `uid:gid` of the container's default exec user so copied files
+   * can be owned by whoever PowerLine runs as. Using the container's actual user
+   * (rather than a hardcoded `grackle`) lets attach mode target arbitrary,
+   * externally-managed containers — not just images built with a `grackle` user.
+   */
+  private async resolveOwner(): Promise<string> {
+    if (!this.resolvedOwner) {
+      const uid = (await this.exec("id -u")).trim();
+      const gid = (await this.exec("id -g")).trim();
+      this.resolvedOwner = `${uid}:${gid}`;
+    }
+    return this.resolvedOwner;
   }
 
   /** Copy a local file or directory into the container. */
@@ -330,9 +347,11 @@ class DockerExecutor implements RemoteExecutor {
     await this.execFn("docker", [
       "cp", localPath, `${this.containerName}:${resolvedPath}`,
     ], { timeout: DOCKER_EXEC_TIMEOUT_MS });
-    // docker cp creates files owned by root; fix ownership so the container user can write
+    // docker cp creates files owned by root; fix ownership so the container's
+    // default user (whoever PowerLine runs as) can write.
+    const owner = await this.resolveOwner();
     await this.execFn("docker", [
-      "exec", "-u", "root", this.containerName, "chown", "-R", "grackle:grackle", resolvedPath,
+      "exec", "-u", "root", this.containerName, "chown", "-R", owner, resolvedPath,
     ], { timeout: DOCKER_EXEC_TIMEOUT_MS });
   }
 }

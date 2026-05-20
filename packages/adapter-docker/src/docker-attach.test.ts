@@ -23,7 +23,7 @@ vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
 
 import * as sdk from "@grackle-ai/adapter-sdk";
 import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
-import { DockerAdapter, type DockerEnvironmentConfig } from "./docker.js";
+import { DockerAdapter, DockerExecutor, type DockerEnvironmentConfig } from "./docker.js";
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -251,6 +251,36 @@ describe("DockerAdapter attach mode — lifecycle safety (issue #1223)", () => {
     expect(calledDocker(execFn, (a) => a[0] === "rm" && a.includes(ATTACH))).toBe(false);
     expect(calledDocker(execFn, (a) => a[0] === "stop" && a.includes(ATTACH))).toBe(false);
     expect(calledDocker(execFn, (a) => a[0] === "rm" && a.some((x) => x.includes("grackle-attach-env-destroy")))).toBe(true);
+  });
+});
+
+describe("DockerExecutor.copyTo — ownership for arbitrary containers", () => {
+  it("chowns copied files to the container's actual default user, not a hardcoded grackle", async () => {
+    // Simulate a non-grackle container whose default user is uid/gid 1000.
+    const execFn = vi.fn(async (_command: string, args: string[]) => {
+      if (args[0] === "exec" && args.includes("id -u")) {
+        return { stdout: "1000\n", stderr: "" };
+      }
+      if (args[0] === "exec" && args.includes("id -g")) {
+        return { stdout: "1000\n", stderr: "" };
+      }
+      return { stdout: "", stderr: "" };
+    });
+    const executor = new DockerExecutor("coder-workspace", execFn);
+
+    await executor.copyTo("/local/dist", "/opt/pl/dist");
+
+    // chown targets the resolved uid:gid, never the hardcoded grackle:grackle
+    expect(execFn).toHaveBeenCalledWith(
+      "docker",
+      ["exec", "-u", "root", "coder-workspace", "chown", "-R", "1000:1000", "/opt/pl/dist"],
+      expect.anything(),
+    );
+    expect(execFn).not.toHaveBeenCalledWith(
+      "docker",
+      expect.arrayContaining(["chown", "-R", "grackle:grackle", "/opt/pl/dist"]),
+      expect.anything(),
+    );
   });
 });
 
