@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/plugin-core",
-  "version": "0.108.2",
+  "version": "0.109.0",
   "description": "Core plugin for Grackle — gRPC handlers, reconciliation phases, and event subscribers",
   "license": "MIT",
   "repository": {
@@ -37,7 +37,7 @@
     "@grackle-ai/prompt": "workspace:*",
     "pino": "^10.3.1",
     "ulid": "^2.3.0",
-    "uuid": "^11.0.0"
+    "uuid": "^11.1.1"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
