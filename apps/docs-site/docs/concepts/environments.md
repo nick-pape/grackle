@@ -27,6 +27,19 @@ Options:
 - `--repo` — Git repo to clone into the container
 - `--volume` — Mount host directories (repeatable, format: `host:container[:ro]`)
 - `--gpu` — Enable GPU passthrough
+- `--attach` — Attach to an existing container instead of creating one (see below)
+
+#### Attach to an existing container
+
+When another tool owns the container lifecycle (for example [Coder](https://github.com/coder/coder) dev-environment workspaces), use `--attach` to point Grackle at an already-running container. Grackle bootstraps PowerLine inside it and drives agent sessions there — it **never creates, stops, or removes** the container.
+
+```bash
+# Someone else created `my-workspace`; Grackle just attaches to it
+grackle env add my-box --docker --attach my-workspace
+grackle env provision my-box
+```
+
+`stop`/`destroy` only stop the in-container PowerLine and clean up Grackle's own connectivity helper; the attached container keeps running. Connectivity is automatic: Grackle reaches the container over a shared Docker network when one is configured, by its IP when the host can route to it, or via a small `socat` sidecar otherwise (so it works on Docker Desktop too). In the web UI, choose **Attach to existing container** under the Docker adapter to pick from running containers.
 
 ### SSH
 

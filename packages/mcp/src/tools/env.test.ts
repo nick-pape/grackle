@@ -19,6 +19,7 @@ function createMockClient(): GrackleClient {
     stopEnvironment: vi.fn(),
     destroyEnvironment: vi.fn(),
     removeEnvironment: vi.fn(),
+    listDockerContainers: vi.fn(),
   } as unknown as GrackleClient;
 }
 
@@ -63,6 +64,66 @@ describe("env_list", () => {
 
     expect(result.isError).toBe(true);
     expect(parsed.code).toBe("NOT_FOUND");
+  });
+});
+
+describe("env_list_docker_containers", () => {
+  /** Should map running containers from the RPC result. */
+  test("happy path returns mapped container list", async () => {
+    const mockClient = createMockClient();
+    (mockClient.listDockerContainers as ReturnType<typeof vi.fn>).mockResolvedValue({
+      containers: [
+        { id: "abc123", name: "demo-ext", image: "node:22", state: "running", status: "Up 3 minutes" },
+      ],
+      error: "",
+    });
+
+    const result = await getTool("env_list_docker_containers").handler({}, { core: mockClient });
+    const parsed = JSON.parse(result.content[0].text);
+
+    expect(parsed).toEqual({
+      containers: [
+        { id: "abc123", name: "demo-ext", image: "node:22", state: "running", status: "Up 3 minutes" },
+      ],
+      error: "",
+    });
+    expect(result.isError).toBeUndefined();
+  });
+
+  /** Should surface a non-fatal docker error from the RPC. */
+  test("non-fatal docker error is returned in the payload", async () => {
+    const mockClient = createMockClient();
+    (mockClient.listDockerContainers as ReturnType<typeof vi.fn>).mockResolvedValue({
+      containers: [],
+      error: "docker: command not found",
+    });
+
+    const result = await getTool("env_list_docker_containers").handler({}, { core: mockClient });
+    const parsed = JSON.parse(result.content[0].text);
+
+    expect(parsed.error).toContain("command not found");
+    expect(parsed.containers).toEqual([]);
+  });
+
+  /** Should return a structured error on ConnectError. */
+  test("ConnectError returns isError result", async () => {
+    const mockClient = createMockClient();
+    (mockClient.listDockerContainers as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new ConnectError("unavailable", Code.Unavailable),
+    );
+
+    const result = await getTool("env_list_docker_containers").handler({}, { core: mockClient });
+
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.code).toBe("UNAVAILABLE");
+  });
+
+  /** Tool should be read-only. */
+  test("is annotated read-only", () => {
+    const tool = getTool("env_list_docker_containers");
+    expect(tool.mutating).toBe(false);
+    expect(tool.annotations?.readOnlyHint).toBe(true);
   });
 });
 

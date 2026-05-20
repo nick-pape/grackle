@@ -18,6 +18,9 @@ const meta: Meta<typeof EnvironmentEditPanel> = {
     codespaceListError: "",
     codespaceCreating: false,
     onCreateCodespace: fn(),
+    onListDockerContainers: fn(),
+    dockerContainers: [],
+    dockerContainersError: "",
     onShowToast: fn(),
   },
 };
@@ -133,10 +136,93 @@ export const SwitchingAdapterShowsFields: Story = {
     await expect(canvas.getByTestId("env-create-port")).toBeInTheDocument();
     await expect(canvas.getByTestId("env-create-identity")).toBeInTheDocument();
 
-    // Switch to Docker — shows image and repo
+    // Switch to Docker — shows the source toggle plus image and repo (create mode default)
     await userEvent.selectOptions(adapterSelect, "docker");
+    await expect(canvas.getByTestId("env-docker-mode")).toBeInTheDocument();
     await expect(canvas.getByTestId("env-create-image")).toBeInTheDocument();
     await expect(canvas.getByTestId("env-create-repo")).toBeInTheDocument();
+  },
+};
+
+/** Docker attach mode lists running containers and requests them when selected. */
+export const DockerAttachLists: Story = {
+  args: {
+    dockerContainers: [
+      { id: "abc123", name: "demo-ext", image: "node:22", state: "running", status: "Up 3 minutes" },
+    ],
+  },
+  play: async ({ canvas, args }) => {
+    const adapterSelect = canvas.getByTestId("env-create-adapter");
+    await userEvent.selectOptions(adapterSelect, "docker");
+
+    // Switch the docker source to "attach" — the container list should be requested
+    const modeSelect = canvas.getByTestId("env-docker-mode");
+    await userEvent.selectOptions(modeSelect, "attach");
+    await expect(args.onListDockerContainers).toHaveBeenCalled();
+
+    // The picker replaces the image/repo fields
+    await expect(canvas.getByTestId("env-docker-container-select")).toBeInTheDocument();
+    await expect(canvas.queryByTestId("env-create-image")).not.toBeInTheDocument();
+  },
+};
+
+/** Selecting a container in attach mode builds an { attach } config on Create. */
+export const DockerAttachCreatesConfig: Story = {
+  args: {
+    dockerContainers: [
+      { id: "abc123", name: "demo-ext", image: "node:22", state: "running", status: "Up 3 minutes" },
+    ],
+  },
+  play: async ({ canvas, args }) => {
+    await userEvent.selectOptions(canvas.getByTestId("env-create-adapter"), "docker");
+    await userEvent.selectOptions(canvas.getByTestId("env-docker-mode"), "attach");
+
+    // Pick the running container; the env name auto-fills from it
+    await userEvent.selectOptions(canvas.getByTestId("env-docker-container-select"), "demo-ext");
+
+    const createButton = canvas.getByTestId("env-create-submit");
+    await expect(createButton).toBeEnabled();
+    await userEvent.click(createButton);
+
+    await expect(args.onAddEnvironment).toHaveBeenCalledWith(
+      "demo-ext",
+      "docker",
+      { attach: "demo-ext" },
+      undefined,
+    );
+  },
+};
+
+/** When docker container listing fails, a manual entry input appears. */
+export const DockerAttachManualEntry: Story = {
+  args: {
+    dockerContainersError: "docker: command not found",
+  },
+  play: async ({ canvas }) => {
+    await userEvent.selectOptions(canvas.getByTestId("env-create-adapter"), "docker");
+    await userEvent.selectOptions(canvas.getByTestId("env-docker-mode"), "attach");
+
+    await expect(canvas.getByTestId("env-docker-container-manual")).toBeInTheDocument();
+    await expect(canvas.queryByTestId("env-docker-container-select")).not.toBeInTheDocument();
+  },
+};
+
+/** When discovery succeeds but finds no running containers, manual entry is still offered. */
+export const DockerAttachEmptyListManualEntry: Story = {
+  args: {
+    dockerContainers: [],
+  },
+  play: async ({ canvas }) => {
+    await userEvent.selectOptions(canvas.getByTestId("env-create-adapter"), "docker");
+    await userEvent.selectOptions(canvas.getByTestId("env-docker-mode"), "attach");
+
+    // No select (nothing to pick), but a manual input is available
+    await expect(canvas.queryByTestId("env-docker-container-select")).not.toBeInTheDocument();
+    const manual = canvas.getByTestId("env-docker-container-manual");
+    await userEvent.type(manual, "demo-ext");
+
+    const createButton = canvas.getByTestId("env-create-submit");
+    await expect(createButton).toBeEnabled();
   },
 };
 

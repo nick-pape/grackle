@@ -50,6 +50,9 @@ service GrackleCore {
   rpc ListCodespaces(ListCodespacesRequest) returns (CodespaceList);
   rpc CreateCodespace(CreateCodespaceRequest) returns (CreateCodespaceResponse);
 
+  // Docker
+  rpc ListDockerContainers(ListDockerContainersRequest) returns (DockerContainerList);
+
   // Settings
   rpc GetSetting(GetSettingRequest) returns (SettingResponse);
   rpc SetSetting(SetSettingRequest) returns (SettingResponse);

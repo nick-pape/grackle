@@ -5,6 +5,42 @@ import { grpcErrorToToolResult } from "../error-handler.js";
 
 /** MCP tools for Grackle environment management (list, add, provision, stop, destroy, remove, wake). */
 export const envTools: ToolDefinition[] = [
+  // ── env_list_docker_containers ───────────────────────────────────────────
+  {
+    name: "env_list_docker_containers",
+    group: "env",
+    description:
+      "List running Docker containers that an environment can attach to (Docker adapter attach mode). "
+      + "Use the returned container name with env_add (adapterType 'docker', adapterConfig.attach).",
+    inputSchema: z.object({}),
+    rpcMethod: "listDockerContainers",
+    mutating: false,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+    async handler(_args: Record<string, unknown>, { core: client }: GrackleClients) {
+      try {
+        const response = await client.listDockerContainers({});
+        // Always return a single consistent shape: { containers, error }.
+        return jsonResult({
+          containers: response.containers.map((c) => ({
+            id: c.id,
+            name: c.name,
+            image: c.image,
+            state: c.state,
+            status: c.status,
+          })),
+          error: response.error,
+        });
+      } catch (error) {
+        return grpcErrorToToolResult(error);
+      }
+    },
+  },
+
   // ── env_list ─────────────────────────────────────────────────────────────
   {
     name: "env_list",
@@ -44,10 +80,10 @@ export const envTools: ToolDefinition[] = [
     description:
       "Register a new environment with Grackle. Choose the adapter type that matches how the " +
       "environment is reached: 'local' (a PowerLine already running on this machine), 'ssh' (any " +
-      "reachable host over SSH — this is also how you attach to an already-running container that " +
-      "exposes an SSH endpoint), 'codespace' (an existing GitHub Codespace), or 'docker' (spawn a " +
-      "new container from an image). The required and optional adapterConfig fields depend on the " +
-      "chosen adapterType, as described in this schema.",
+      "reachable host over SSH), 'codespace' (an existing GitHub Codespace), or 'docker' (spawn a " +
+      "new container from an image, or set adapterConfig.attach to attach to an existing one — use " +
+      "env_list_docker_containers to discover attachable containers). The required and optional " +
+      "adapterConfig fields depend on the chosen adapterType, as described in this schema.",
     inputSchema: z.discriminatedUnion("adapterType", [
       // local — connect to a PowerLine already running on this machine
       z.object({
@@ -145,6 +181,13 @@ export const envTools: ToolDefinition[] = [
         adapterType: z.literal("docker"),
         adapterConfig: z
           .strictObject({
+            attach: z
+              .string()
+              .optional()
+              .describe(
+                "Attach to an existing container by name/ID instead of creating one. "
+                + "When set, Grackle never creates/stops/removes the container, and image/repo/volumes are ignored.",
+              ),
             image: z
               .string()
               .optional()

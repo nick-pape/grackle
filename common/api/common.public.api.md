@@ -321,6 +321,27 @@ export const DEFAULT_WEB_PORT: number;
 export const DEFAULT_WORKSPACE_ID: string;
 
 // @public
+type DockerContainerInfo = Message<"grackle.DockerContainerInfo"> & {
+    id: string;
+    name: string;
+    image: string;
+    state: string;
+    status: string;
+};
+
+// @public
+const DockerContainerInfoSchema: GenMessage<DockerContainerInfo>;
+
+// @public
+type DockerContainerList = Message<"grackle.DockerContainerList"> & {
+    containers: DockerContainerInfo[];
+    error: string;
+};
+
+// @public
+const DockerContainerListSchema: GenMessage<DockerContainerList>;
+
+// @public
 type DomainEvent = Message<"grackle.DomainEvent"> & {
     id: string;
     type: string;
@@ -818,6 +839,12 @@ declare namespace grackle {
         CreateCodespaceRequestSchema,
         CreateCodespaceResponse,
         CreateCodespaceResponseSchema,
+        DockerContainerInfo,
+        DockerContainerInfoSchema,
+        DockerContainerList,
+        DockerContainerListSchema,
+        ListDockerContainersRequest,
+        ListDockerContainersRequestSchema,
         GetSettingRequest,
         GetSettingRequestSchema,
         SetSettingRequest,
@@ -1048,6 +1075,11 @@ const GrackleCore: GenService<{
         methodKind: "unary";
         input: typeof CreateCodespaceRequestSchema;
         output: typeof CreateCodespaceResponseSchema;
+    };
+    listDockerContainers: {
+        methodKind: "unary";
+        input: typeof ListDockerContainersRequestSchema;
+        output: typeof DockerContainerListSchema;
     };
     getSetting: {
         methodKind: "unary";
@@ -1469,6 +1501,12 @@ type ListCodespacesRequest = Message<"grackle.ListCodespacesRequest"> & {
 
 // @public
 const ListCodespacesRequestSchema: GenMessage<ListCodespacesRequest>;
+
+// @public
+type ListDockerContainersRequest = Message<"grackle.ListDockerContainersRequest"> & {};
+
+// @public
+const ListDockerContainersRequestSchema: GenMessage<ListDockerContainersRequest>;
 
 // @public
 type ListEscalationsRequest = Message<"grackle.ListEscalationsRequest"> & {

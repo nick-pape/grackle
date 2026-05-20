@@ -20,6 +20,7 @@ import * as tokens from "./token-handlers.js";
 import * as findings from "./finding-handlers.js";
 import * as escalations from "./escalation-handlers.js";
 import * as codespaces from "./codespace-handlers.js";
+import * as dockerContainers from "./docker-handlers.js";
 import * as settings from "./settings-handlers.js";
 import * as pluginHandlers from "./plugin-handlers.js";
 import * as githubAccounts from "./github-account-handlers.js";
@@ -41,6 +42,7 @@ export function createDefaultCollector(): ServiceCollector {
   collector.addHandlers(grackle.GrackleOrchestration, findings);
   collector.addHandlers(grackle.GrackleOrchestration, escalations);
   collector.addHandlers(grackle.GrackleCore, codespaces);
+  collector.addHandlers(grackle.GrackleCore, dockerContainers);
   collector.addHandlers(grackle.GrackleCore, settings);
   collector.addHandlers(grackle.GrackleCore, pluginHandlers);
   collector.addHandlers(grackle.GrackleCore, githubAccounts);
@@ -64,6 +66,7 @@ export function createCoreCollector(): ServiceCollector {
   collector.addHandlers(grackle.GrackleCore, workspaces);
   collector.addHandlers(grackle.GrackleCore, tokens);
   collector.addHandlers(grackle.GrackleCore, codespaces);
+  collector.addHandlers(grackle.GrackleCore, dockerContainers);
   collector.addHandlers(grackle.GrackleCore, settings);
   collector.addHandlers(grackle.GrackleCore, pluginHandlers);
   collector.addHandlers(grackle.GrackleCore, githubAccounts);

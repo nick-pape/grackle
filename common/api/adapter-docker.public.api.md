@@ -24,6 +24,7 @@ export class DockerAdapter implements EnvironmentAdapter {
     healthCheck(connection: PowerLineConnection): Promise<boolean>;
     // (undocumented)
     provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
+    reconnect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
     // (undocumented)
     stop(environmentId: string, config: Record<string, unknown>): Promise<void>;
     // (undocumented)
@@ -32,13 +33,13 @@ export class DockerAdapter implements EnvironmentAdapter {
 
 // @public
 export interface DockerEnvironmentConfig extends BaseEnvironmentConfig {
+    attach?: string;
     // (undocumented)
     containerName?: string;
     // (undocumented)
     env?: Record<string, string>;
     gpus?: string;
-    // (undocumented)
-    image: string;
+    image?: string;
     // (undocumented)
     localPort?: number;
     repo?: string;

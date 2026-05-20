@@ -160,6 +160,8 @@ Register a new environment. Choose an adapter type with one of the mutually excl
 grackle env add my-env --docker
 grackle env add my-env --docker --image node:22 --repo https://github.com/org/repo
 grackle env add my-env --docker --volume /host/path:/container/path --gpu
+# Docker attach mode — use an existing container (Grackle never creates/stops/removes it)
+grackle env add my-env --docker --attach my-running-container
 
 # SSH
 grackle env add staging --ssh --host 10.0.1.50 --user deploy
@@ -180,6 +182,7 @@ grackle env add local --local --host 127.0.0.1 --port 7433
 | `--local` | Local PowerLine adapter |
 | `--repo <repo>` | GitHub repo to clone (Docker) |
 | `--image <image>` | Docker image |
+| `--attach <container>` | Attach to an existing container by name/ID instead of creating one (Docker) |
 | `--volume <mounts...>` | Docker volume mounts (`host:container[:ro]`) |
 | `--gpu [gpus]` | Enable GPU passthrough (default: all) |
 | `--host <host>` | SSH host or local host |

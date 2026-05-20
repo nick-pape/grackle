@@ -81,3 +81,24 @@ describe("DockerAdapter with GRACKLE_DOCKER_NETWORK set (DooD mode)", () => {
     expect(envVars.GRACKLE_POWERLINE_TOKEN).toBe(token);
   });
 });
+
+describe("DockerAdapter attach mode with GRACKLE_DOCKER_NETWORK set", () => {
+  const adapter = new DockerAdapter({
+    exec: vi.fn(async (command: string, args: string[]) => {
+      if (command === "docker" && args[0] === "inspect" && args.some((a) => a.includes("State.Running"))) {
+        return { stdout: "true", stderr: "" };
+      }
+      return { stdout: "", stderr: "" };
+    }),
+    logger: mockLogger,
+  });
+
+  it("connects to the attached container by name on the shared network (no sidecar)", async () => {
+    const { createPowerLineClient } = await import("@grackle-ai/adapter-sdk");
+    for await (const _ of adapter.provision("env-dood", { attach: "ext-box" } as unknown as Record<string, unknown>, "tok")) {
+      /* consume */
+    }
+    await adapter.connect("env-dood", { attach: "ext-box" } as unknown as Record<string, unknown>, "tok");
+    expect(createPowerLineClient).toHaveBeenCalledWith("http://ext-box:7433", "tok");
+  });
+});

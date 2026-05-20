@@ -25,6 +25,7 @@ import type {
   TokenInfo,
   CredentialProviderConfig,
   Codespace,
+  DockerContainer,
   PersonaData,
   ScheduleData,
   UsageStats,
@@ -165,6 +166,17 @@ export function protoToCodespace(p: grackle.CodespaceInfo): Codespace {
     repository: p.repository,
     state: p.state,
     gitStatus: p.gitStatus,
+  };
+}
+
+/** Convert a proto DockerContainerInfo to the UI DockerContainer type. */
+export function protoToDockerContainer(p: grackle.DockerContainerInfo): DockerContainer {
+  return {
+    id: p.id,
+    name: p.name,
+    image: p.image,
+    state: p.state,
+    status: p.status,
   };
 }
 
