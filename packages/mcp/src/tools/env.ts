@@ -79,17 +79,158 @@ export const envTools: ToolDefinition[] = [
     name: "env_add",
     group: "env",
     description:
-      "Register a new environment with Grackle by specifying its adapter type, display name, and optional configuration. "
-      + "For the 'docker' adapter, set adapterConfig.attach to an existing container name/ID to attach to it instead of creating one; "
-      + "use env_list_docker_containers to discover attachable containers.",
-    inputSchema: z.object({
-      displayName: z.string().describe("Human-readable name for the environment"),
-      adapterType: z.string().describe("Adapter type (e.g. 'ssh', 'codespace', 'local')"),
-      adapterConfig: z
-        .record(z.string(), z.unknown())
-        .optional()
-        .describe("Adapter-specific configuration as a JSON object"),
-    }),
+      "Register a new environment with Grackle. Choose the adapter type that matches how the " +
+      "environment is reached: 'local' (a PowerLine already running on this machine), 'ssh' (any " +
+      "reachable host over SSH), 'codespace' (an existing GitHub Codespace), or 'docker' (spawn a " +
+      "new container from an image, or set adapterConfig.attach to attach to an existing one — use " +
+      "env_list_docker_containers to discover attachable containers). The required and optional " +
+      "adapterConfig fields depend on the chosen adapterType, as described in this schema.",
+    inputSchema: z.discriminatedUnion("adapterType", [
+      // local — connect to a PowerLine already running on this machine
+      z.object({
+        displayName: z.string().describe("Human-readable name for the environment"),
+        adapterType: z.literal("local"),
+        adapterConfig: z
+          .strictObject({
+            host: z
+              .string()
+              .optional()
+              .describe("Host the local PowerLine listens on (default 'localhost')"),
+            port: z
+              .number()
+              .int()
+              .min(1)
+              .max(65535)
+              .optional()
+              .describe("PowerLine port (default 7433)"),
+          })
+          .optional()
+          .describe("Optional local-adapter settings"),
+      }),
+      // ssh — connect to any reachable host over SSH (incl. a container exposing SSH)
+      z.object({
+        displayName: z.string().describe("Human-readable name for the environment"),
+        adapterType: z.literal("ssh"),
+        adapterConfig: z
+          .strictObject({
+            host: z.string().describe("Required. SSH hostname or IP address of the target"),
+            user: z
+              .string()
+              .optional()
+              .describe("SSH username (defaults to the current OS user)"),
+            sshPort: z
+              .number()
+              .int()
+              .min(1)
+              .max(65535)
+              .optional()
+              .describe("SSH port on the target (default 22)"),
+            identityFile: z
+              .string()
+              .optional()
+              .describe("Path to an SSH private key file"),
+            sshOptions: z
+              .record(z.string(), z.string())
+              .optional()
+              .describe("Extra SSH options as key/value pairs, passed as -o Key=Value"),
+            localPort: z
+              .number()
+              .int()
+              .min(1)
+              .max(65535)
+              .optional()
+              .describe("Override the local tunnel port (auto-assigned if omitted)"),
+            env: z
+              .record(z.string(), z.string())
+              .optional()
+              .describe("Environment variables forwarded to the remote PowerLine"),
+          })
+          .describe("SSH-adapter settings; 'host' is required"),
+      }),
+      // codespace — connect to an existing GitHub Codespace
+      z.object({
+        displayName: z.string().describe("Human-readable name for the environment"),
+        adapterType: z.literal("codespace"),
+        adapterConfig: z
+          .strictObject({
+            codespaceName: z
+              .string()
+              .describe("Required. Codespace name from `gh codespace list`"),
+            localPort: z
+              .number()
+              .int()
+              .min(1)
+              .max(65535)
+              .optional()
+              .describe("Override the local tunnel port (auto-assigned if omitted)"),
+            env: z
+              .record(z.string(), z.string())
+              .optional()
+              .describe("Environment variables forwarded to the remote PowerLine"),
+          })
+          .describe("Codespace-adapter settings; 'codespaceName' is required"),
+        githubAccountId: z
+          .string()
+          .optional()
+          .describe(
+            "ID of a stored GitHub account used to authenticate `gh` (from the GitHub accounts list)",
+          ),
+      }),
+      // docker — spawn a new container from an image
+      z.object({
+        displayName: z.string().describe("Human-readable name for the environment"),
+        adapterType: z.literal("docker"),
+        adapterConfig: z
+          .strictObject({
+            attach: z
+              .string()
+              .optional()
+              .describe(
+                "Attach to an existing container by name/ID instead of creating one. "
+                + "When set, Grackle never creates/stops/removes the container, and image/repo/volumes are ignored.",
+              ),
+            image: z
+              .string()
+              .optional()
+              .describe("Docker image to run (default 'grackle-powerline:latest')"),
+            containerName: z
+              .string()
+              .optional()
+              .describe("Container name (default 'grackle-{environmentId}')"),
+            repo: z
+              .string()
+              .optional()
+              .describe("Git repo to clone into the container ('owner/repo' or full HTTPS URL)"),
+            volumes: z
+              .array(z.string())
+              .optional()
+              .describe("Docker volume mounts, e.g. ['/host/path:/container/path']"),
+            gpus: z
+              .string()
+              .optional()
+              .describe("GPU passthrough, e.g. 'all' for `docker run --gpus all`"),
+            localPort: z
+              .number()
+              .int()
+              .min(1)
+              .max(65535)
+              .optional()
+              .describe("Override the published host port (auto-assigned if omitted)"),
+            env: z
+              .record(z.string(), z.string())
+              .optional()
+              .describe("Environment variables injected into the container"),
+          })
+          .optional()
+          .describe("Optional docker-adapter settings"),
+        githubAccountId: z
+          .string()
+          .optional()
+          .describe(
+            "ID of a stored GitHub account used to authenticate `gh` for private repo clones",
+          ),
+      }),
+    ]),
     rpcMethod: "addEnvironment",
     mutating: true,
     annotations: {
@@ -104,13 +245,16 @@ export const envTools: ToolDefinition[] = [
           displayName: string;
           adapterType: string;
           adapterConfig?: Record<string, unknown>;
+          githubAccountId?: string;
         };
         const response = await client.addEnvironment({
           displayName: parsed.displayName,
           adapterType: parsed.adapterType,
-          adapterConfig: parsed.adapterConfig
-            ? JSON.stringify(parsed.adapterConfig)
-            : "",
+          // Always send a valid JSON object string. The server stores this verbatim and
+          // later runs JSON.parse on it at provision time, which would throw on "" — so
+          // omitted config must serialize to "{}", not an empty string.
+          adapterConfig: JSON.stringify(parsed.adapterConfig ?? {}),
+          githubAccountId: parsed.githubAccountId ?? "",
         });
         return jsonResult(response);
       } catch (error) {

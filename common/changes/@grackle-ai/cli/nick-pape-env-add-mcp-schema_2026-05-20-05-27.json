@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "MCP: make env_add self-describing — replace the opaque adapterType/adapterConfig schema with a per-adapter discriminated union (local/ssh/codespace/docker) and forward githubAccountId for codespace/docker.",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

@@ -106,12 +106,19 @@ Manage compute environments where agents run (Docker, SSH, Codespace, local).
 |------|-------------|------------|
 | `env_list` | List all registered environments with status, adapter type, and runtime. | *(none)* |
 | `env_list_docker_containers` | List running Docker containers that can be attached to (Docker adapter attach mode). | *(none)* |
-| `env_add` | Register a new environment. For the Docker adapter, set `adapterConfig.attach` to an existing container name/ID to attach instead of creating one. | `displayName` (string), `adapterType` (string), `adapterConfig?` (object) |
+| `env_add` | Register a new environment. The `adapterConfig` fields depend on `adapterType` (see below). For the Docker adapter, set `adapterConfig.attach` to an existing container name/ID to attach instead of creating one. | `displayName` (string), `adapterType` (`local` \| `ssh` \| `codespace` \| `docker`), `adapterConfig?` (object), `githubAccountId?` (string, codespace/docker) |
 | `env_provision` | Provision an environment — start resources, install the agent, and connect. | `environmentId` (string), `force?` (boolean) |
 | `env_stop` | Stop a running environment without destroying its resources. | `environmentId` (string) |
 | `env_destroy` | Destroy an environment's backing resources (e.g., delete the container). | `environmentId` (string) |
 | `env_remove` | Remove an environment registration. Must be stopped first. | `environmentId` (string) |
 | `env_wake` | Wake a stopped environment by re-provisioning it. | `environmentId` (string) |
+
+`env_add` is a discriminated union on `adapterType` — the tool's input schema advertises the exact `adapterConfig` fields valid for each adapter, and unknown fields are rejected. Pick the adapter that matches how the environment is reached:
+
+- **`local`** — a PowerLine already running on this machine. `adapterConfig` (all optional): `host`, `port`.
+- **`ssh`** — any host reachable over SSH. This is also how you attach to an **already-running container** that exposes an SSH endpoint. `adapterConfig`: `host` (**required**), `user?`, `sshPort?` (default 22), `identityFile?`, `sshOptions?` (string map), `localPort?`, `env?` (string map).
+- **`codespace`** — an existing GitHub Codespace. `adapterConfig`: `codespaceName` (**required**, from `gh codespace list`), `localPort?`, `env?` (string map). Optional top-level `githubAccountId` selects a stored GitHub account for `gh`.
+- **`docker`** — spawn a **new** container from an image, or **attach** to an existing one. `adapterConfig` (all optional): `attach` (existing container name/ID — when set, Grackle never creates/stops/removes the container and `image`/`repo`/`volumes` are ignored; use `env_list_docker_containers` to discover candidates), `image` (default `grackle-powerline:latest`), `containerName`, `repo` (`owner/repo` or HTTPS URL), `volumes` (string array), `gpus`, `localPort`, `env` (string map). Optional top-level `githubAccountId` authenticates `gh` for private repo clones.
 
 ### Session Tools
 
