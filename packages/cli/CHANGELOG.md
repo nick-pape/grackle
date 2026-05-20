@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 20 May 2026 02:48:11 GMT and should not be manually modified.
+This log was last generated on Wed, 20 May 2026 12:22:00 GMT and should not be manually modified.
+
+## 0.109.1
+Wed, 20 May 2026 12:22:00 GMT
+
+### Patches
+
+- MCP: make env_add self-describing — replace the opaque adapterType/adapterConfig schema with a per-adapter discriminated union (local/ssh/codespace/docker) and forward githubAccountId for codespace/docker.
 
 ## 0.109.0
 Wed, 20 May 2026 02:48:11 GMT

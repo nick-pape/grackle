@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.109.1",
+      "tag": "@grackle-ai/cli_v0.109.1",
+      "date": "Wed, 20 May 2026 12:22:00 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "MCP: make env_add self-describing — replace the opaque adapterType/adapterConfig schema with a per-adapter discriminated union (local/ssh/codespace/docker) and forward githubAccountId for codespace/docker."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.109.0",
       "tag": "@grackle-ai/cli_v0.109.0",
       "date": "Wed, 20 May 2026 02:48:11 GMT",
