@@ -96,8 +96,9 @@ describe("env_add", () => {
     expect(result.isError).toBeUndefined();
   });
 
-  /** Should pass empty string for adapterConfig when not provided. */
-  test("omitted adapterConfig sends empty string", async () => {
+  /** Should pass an empty JSON object (not "") for adapterConfig when not provided, so the
+   * server's later JSON.parse at provision time does not throw. */
+  test("omitted adapterConfig sends empty JSON object", async () => {
     const mockClient = createMockClient();
     (mockClient.addEnvironment as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "env-3" });
 
@@ -109,7 +110,7 @@ describe("env_add", () => {
     expect(mockClient.addEnvironment).toHaveBeenCalledWith({
       displayName: "Plain",
       adapterType: "local",
-      adapterConfig: "",
+      adapterConfig: "{}",
       githubAccountId: "",
     });
   });

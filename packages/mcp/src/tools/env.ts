@@ -206,9 +206,10 @@ export const envTools: ToolDefinition[] = [
         const response = await client.addEnvironment({
           displayName: parsed.displayName,
           adapterType: parsed.adapterType,
-          adapterConfig: parsed.adapterConfig
-            ? JSON.stringify(parsed.adapterConfig)
-            : "",
+          // Always send a valid JSON object string. The server stores this verbatim and
+          // later runs JSON.parse on it at provision time, which would throw on "" — so
+          // omitted config must serialize to "{}", not an empty string.
+          adapterConfig: JSON.stringify(parsed.adapterConfig ?? {}),
           githubAccountId: parsed.githubAccountId ?? "",
         });
         return jsonResult(response);
