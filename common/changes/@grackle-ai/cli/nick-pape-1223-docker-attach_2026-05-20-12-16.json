@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Docker adapter: add attach mode to drive agent sessions inside a pre-existing, externally-managed container instead of creating one. Adds the `attach` config and `grackle env add --docker --attach <container>`, a ListDockerContainers RPC + `env_list_docker_containers` MCP tool for discovery, and a web container picker. Grackle never creates, stops, or removes an attached container.",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
