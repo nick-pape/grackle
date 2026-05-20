@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/database",
-  "version": "0.108.2",
+  "version": "0.109.1",
   "description": "SQLite persistence layer for Grackle — schema, stores, and migrations",
   "license": "MIT",
   "repository": {
@@ -39,7 +39,7 @@
     "@grackle-ai/common": "workspace:*",
     "better-sqlite3": "^11.0.0",
     "drizzle-orm": "^0.45.2",
-    "uuid": "^11.0.0"
+    "uuid": "^11.1.1"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",

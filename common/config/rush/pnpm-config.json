@@ -20,6 +20,7 @@
     "dompurify": "3.4.0",
     "postcss": "8.5.10",
     "ip-address": "10.1.1",
-    "follow-redirects": "1.16.0"
+    "follow-redirects": "1.16.0",
+    "@babel/plugin-transform-modules-systemjs": "7.29.4"
   }
 }

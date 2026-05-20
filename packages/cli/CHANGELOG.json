@@ -2,6 +2,54 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.109.1",
+      "tag": "@grackle-ai/cli_v0.109.1",
+      "date": "Wed, 20 May 2026 12:22:00 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "MCP: make env_add self-describing — replace the opaque adapterType/adapterConfig schema with a per-adapter discriminated union (local/ssh/codespace/docker) and forward githubAccountId for codespace/docker."
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.109.0",
+      "tag": "@grackle-ai/cli_v0.109.0",
+      "date": "Wed, 20 May 2026 02:48:11 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add @grackle-ai/mcp-stdio — an npx-able stdio-to-HTTP MCP proxy that bridges stdio-only clients (Claude Desktop, Codex CLI, Clawpilot) to Grackle's HTTP MCP server using static API-key auth"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.108.4",
+      "tag": "@grackle-ai/cli_v0.108.4",
+      "date": "Sat, 09 May 2026 08:10:31 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Bump uuid to 11.1.1 (buffer bounds check fix) and override @babel/plugin-transform-modules-systemjs to 7.29.4 (arbitrary code generation fix)."
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.108.3",
+      "tag": "@grackle-ai/cli_v0.108.3",
+      "date": "Sat, 09 May 2026 07:41:00 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Bump drizzle-orm 0.38 -> 0.45.2 to patch SQL injection (high, alerts #49 #50)."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.108.2",
       "tag": "@grackle-ai/cli_v0.108.2",
       "date": "Sat, 09 May 2026 05:59:32 GMT",

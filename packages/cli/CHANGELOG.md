@@ -1,6 +1,34 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 09 May 2026 05:59:32 GMT and should not be manually modified.
+This log was last generated on Wed, 20 May 2026 12:22:00 GMT and should not be manually modified.
+
+## 0.109.1
+Wed, 20 May 2026 12:22:00 GMT
+
+### Patches
+
+- MCP: make env_add self-describing — replace the opaque adapterType/adapterConfig schema with a per-adapter discriminated union (local/ssh/codespace/docker) and forward githubAccountId for codespace/docker.
+
+## 0.109.0
+Wed, 20 May 2026 02:48:11 GMT
+
+### Minor changes
+
+- Add @grackle-ai/mcp-stdio — an npx-able stdio-to-HTTP MCP proxy that bridges stdio-only clients (Claude Desktop, Codex CLI, Clawpilot) to Grackle's HTTP MCP server using static API-key auth
+
+## 0.108.4
+Sat, 09 May 2026 08:10:31 GMT
+
+### Patches
+
+- Bump uuid to 11.1.1 (buffer bounds check fix) and override @babel/plugin-transform-modules-systemjs to 7.29.4 (arbitrary code generation fix).
+
+## 0.108.3
+Sat, 09 May 2026 07:41:00 GMT
+
+### Patches
+
+- Bump drizzle-orm 0.38 -> 0.45.2 to patch SQL injection (high, alerts #49 #50).
 
 ## 0.108.2
 Sat, 09 May 2026 05:59:32 GMT
