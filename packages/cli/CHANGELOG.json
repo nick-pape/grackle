@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.109.0",
+      "tag": "@grackle-ai/cli_v0.109.0",
+      "date": "Wed, 20 May 2026 02:48:11 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add @grackle-ai/mcp-stdio — an npx-able stdio-to-HTTP MCP proxy that bridges stdio-only clients (Claude Desktop, Codex CLI, Clawpilot) to Grackle's HTTP MCP server using static API-key auth"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.108.4",
       "tag": "@grackle-ai/cli_v0.108.4",
       "date": "Sat, 09 May 2026 08:10:31 GMT",

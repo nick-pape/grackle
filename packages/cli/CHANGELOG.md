@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 09 May 2026 08:10:31 GMT and should not be manually modified.
+This log was last generated on Wed, 20 May 2026 02:48:11 GMT and should not be manually modified.
+
+## 0.109.0
+Wed, 20 May 2026 02:48:11 GMT
+
+### Minor changes
+
+- Add @grackle-ai/mcp-stdio — an npx-able stdio-to-HTTP MCP proxy that bridges stdio-only clients (Claude Desktop, Codex CLI, Clawpilot) to Grackle's HTTP MCP server using static API-key auth
 
 ## 0.108.4
 Sat, 09 May 2026 08:10:31 GMT
