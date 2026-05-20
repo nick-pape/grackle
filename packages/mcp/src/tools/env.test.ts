@@ -1,4 +1,5 @@
 import { describe, test, expect, vi } from "vitest";
+import { z } from "zod";
 import { ConnectError, Code } from "@connectrpc/connect";
 import type { Client } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
@@ -78,7 +79,7 @@ describe("env_add", () => {
       {
         displayName: "My Env",
         adapterType: "codespace",
-        adapterConfig: { owner: "octocat", repo: "hello" },
+        adapterConfig: { codespaceName: "fluffy-spork" },
       },
       { core: mockClient },
     );
@@ -86,7 +87,8 @@ describe("env_add", () => {
     expect(mockClient.addEnvironment).toHaveBeenCalledWith({
       displayName: "My Env",
       adapterType: "codespace",
-      adapterConfig: JSON.stringify({ owner: "octocat", repo: "hello" }),
+      adapterConfig: JSON.stringify({ codespaceName: "fluffy-spork" }),
+      githubAccountId: "",
     });
 
     const parsed = JSON.parse(result.content[0].text);
@@ -108,6 +110,30 @@ describe("env_add", () => {
       displayName: "Plain",
       adapterType: "local",
       adapterConfig: "",
+      githubAccountId: "",
+    });
+  });
+
+  /** Should forward githubAccountId as the top-level request field for codespace. */
+  test("forwards githubAccountId to the gRPC call", async () => {
+    const mockClient = createMockClient();
+    (mockClient.addEnvironment as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "env-cs" });
+
+    await getTool("env_add").handler(
+      {
+        displayName: "CS",
+        adapterType: "codespace",
+        adapterConfig: { codespaceName: "fluffy-spork" },
+        githubAccountId: "acct-123",
+      },
+      { core: mockClient },
+    );
+
+    expect(mockClient.addEnvironment).toHaveBeenCalledWith({
+      displayName: "CS",
+      adapterType: "codespace",
+      adapterConfig: JSON.stringify({ codespaceName: "fluffy-spork" }),
+      githubAccountId: "acct-123",
     });
   });
 
@@ -119,13 +145,100 @@ describe("env_add", () => {
     );
 
     const result = await getTool("env_add").handler(
-      { displayName: "Dup", adapterType: "ssh" },
+      { displayName: "Dup", adapterType: "ssh", adapterConfig: { host: "example.com" } },
       { core: mockClient },
     );
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.code).toBe("ALREADY_EXISTS");
+  });
+});
+
+describe("env_add inputSchema (discriminated union)", () => {
+  const schema = getTool("env_add").inputSchema;
+
+  /** ssh requires a host; omitting it must fail with an issue on that field. */
+  test("ssh without host fails validation", () => {
+    const result = schema.safeParse({
+      displayName: "Box",
+      adapterType: "ssh",
+      adapterConfig: {},
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.includes("host"))).toBe(true);
+    }
+  });
+
+  /** ssh with a host is valid. */
+  test("ssh with host passes validation", () => {
+    const result = schema.safeParse({
+      displayName: "Box",
+      adapterType: "ssh",
+      adapterConfig: { host: "example.com", sshPort: 2222 },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  /** codespace requires codespaceName. */
+  test("codespace without codespaceName fails validation", () => {
+    const result = schema.safeParse({
+      displayName: "CS",
+      adapterType: "codespace",
+      adapterConfig: {},
+    });
+    expect(result.success).toBe(false);
+  });
+
+  /** docker has no required config fields. */
+  test("docker without adapterConfig passes validation", () => {
+    const result = schema.safeParse({ displayName: "Box", adapterType: "docker" });
+    expect(result.success).toBe(true);
+  });
+
+  /** local has no required config fields. */
+  test("local without adapterConfig passes validation", () => {
+    const result = schema.safeParse({ displayName: "Here", adapterType: "local" });
+    expect(result.success).toBe(true);
+  });
+
+  /** Unknown adapter types are rejected by the discriminated union. */
+  test("unknown adapterType fails validation", () => {
+    const result = schema.safeParse({
+      displayName: "K8s",
+      adapterType: "kubernetes",
+      adapterConfig: {},
+    });
+    expect(result.success).toBe(false);
+  });
+
+  /** Strict config objects reject unknown/typo'd fields instead of silently dropping them. */
+  test("unknown config field fails validation (strict)", () => {
+    const result = schema.safeParse({
+      displayName: "Box",
+      adapterType: "ssh",
+      adapterConfig: { host: "example.com", bogus: true },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  /**
+   * The generated JSON Schema is what an MCP client (and the model) actually sees, and the
+   * MCP server pre-computes it for every tool at session start — so it must not throw and must
+   * expose one branch per adapter type. (Zod 4 may emit the literal as `const` or single-value
+   * `enum`, so we assert on the serialized output rather than a fixed shape.)
+   */
+  test("renders to a JSON Schema with a branch per adapter type", () => {
+    const json = z.toJSONSchema(schema) as Record<string, unknown>;
+    const branches = (json.anyOf ?? json.oneOf) as unknown[] | undefined;
+    expect(Array.isArray(branches)).toBe(true);
+    expect(branches).toHaveLength(4);
+
+    const serialized = JSON.stringify(json);
+    for (const adapterType of ["local", "ssh", "codespace", "docker"]) {
+      expect(serialized).toContain(`"${adapterType}"`);
+    }
   });
 });
 
