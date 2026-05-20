@@ -1,0 +1,52 @@
+{
+  "name": "@grackle-ai/mcp-stdio",
+  "version": "0.108.1",
+  "description": "stdio-to-HTTP MCP proxy for Grackle — bridges stdio-only MCP clients (Claude Desktop, Codex CLI, Clawpilot) to a Grackle HTTP MCP server using static API-key auth",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nick-pape/grackle.git",
+    "directory": "packages/mcp-stdio"
+  },
+  "keywords": [
+    "grackle",
+    "mcp",
+    "model-context-protocol",
+    "stdio",
+    "proxy",
+    "ai-agents"
+  ],
+  "homepage": "https://github.com/nick-pape/grackle#readme",
+  "bugs": {
+    "url": "https://github.com/nick-pape/grackle/issues"
+  },
+  "engines": {
+    "node": ">=22.0.0 <24.0.0"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "grackle-mcp-stdio": "dist/index.js"
+  },
+  "files": [
+    "dist/"
+  ],
+  "scripts": {
+    "build": "heft build --clean",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "clean": "heft clean",
+    "_phase:build": "heft run --only build -- --clean",
+    "_phase:test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.0"
+  },
+  "devDependencies": {
+    "@grackle-ai/heft-rig": "workspace:*",
+    "@rushstack/heft": "1.2.7",
+    "@types/node": "^22.0.0",
+    "vitest": "^3.1.1"
+  }
+}
