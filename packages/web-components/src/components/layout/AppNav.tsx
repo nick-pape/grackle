@@ -125,13 +125,13 @@ export function AppNav({ tabs = TABS }: { tabs?: AppTab[] }): JSX.Element {
         const isActive = tab.view === activeView;
         const isFirstEndAligned = tab.view === firstEndAlignedView;
         return (
-          <Tooltip key={tab.view} text={tab.label} placement="bottom">
+          <Tooltip key={tab.view} text={tab.label} placement="bottom" className={isFirstEndAligned ? styles.tabEnd : undefined}>
             <button
               role="tab"
               type="button"
               aria-selected={isActive}
               tabIndex={isActive ? 0 : -1}
-              className={`${styles.tab} ${isFirstEndAligned ? styles.tabEnd : ""} ${isActive ? styles.tabActive : ""}`}
+              className={`${styles.tab} ${isActive ? styles.tabActive : ""}`}
               onClick={() => handleClick(tab)}
               data-testid={tab.testId}
               aria-label={tab.label}

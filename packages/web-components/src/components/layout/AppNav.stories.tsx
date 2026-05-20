@@ -72,6 +72,9 @@ export const AllTabsExplicit: Story = {
  * orchestration and knowledge tabs). The component reorders end-aligned tabs last.
  */
 export const SettingsPinnedRight: Story = {
+  // Fullscreen so the nav fills the viewport and the auto margin has free space
+  // to absorb (otherwise margin-left: auto would resolve to 0).
+  parameters: { layout: "fullscreen" },
   args: {
     tabs: [
       { view: "dashboard", label: "Dashboard", icon: <Home size={ICON_LG} />, route: HOME_URL, testId: "sidebar-tab-dashboard" },
@@ -86,7 +89,27 @@ export const SettingsPinnedRight: Story = {
   play: async ({ canvas }) => {
     const renderedTabs = canvas.getAllByRole("tab");
     // Despite Settings being 4th in the input, it must render last (rightmost).
-    await expect(renderedTabs[renderedTabs.length - 1]).toHaveAccessibleName(/Settings/);
+    const settingsTab = renderedTabs[renderedTabs.length - 1];
+    await expect(settingsTab).toHaveAccessibleName(/Settings/);
+
+    // The end-alignment lives on the flex item (the Tooltip wrapper around the
+    // button), not the button itself. Verify margin-left: auto resolves to a
+    // positive used value there, so Settings is actually pushed to the right edge.
+    const settingsFlexItem = settingsTab.parentElement;
+    if (!settingsFlexItem) {
+      throw new Error("expected the Settings tab to have a flex-item wrapper");
+    }
+    const settingsMarginLeft = Number.parseFloat(globalThis.getComputedStyle(settingsFlexItem).marginLeft);
+    await expect(settingsMarginLeft).toBeGreaterThan(0);
+
+    // The neighbor immediately before it (Knowledge) must NOT have an auto
+    // margin, confirming the spacer is applied only to the pinned tab.
+    const neighborFlexItem = renderedTabs[renderedTabs.length - 2].parentElement;
+    if (!neighborFlexItem) {
+      throw new Error("expected the neighbor tab to have a flex-item wrapper");
+    }
+    const neighborMarginLeft = Number.parseFloat(globalThis.getComputedStyle(neighborFlexItem).marginLeft);
+    await expect(neighborMarginLeft).toBe(0);
   },
 };
 
