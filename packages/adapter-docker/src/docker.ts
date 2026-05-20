@@ -83,6 +83,8 @@ const containerPorts: Map<string, number> = new Map<string, number>();
 interface AttachConnection {
   /** Base URL the server uses to reach the attached container's PowerLine. */
   url: string;
+  /** Host-reachable port behind {@link AttachConnection.url} (the sidecar's published port, or the default). */
+  port: number;
   /** Name of the Grackle-owned socat sidecar, if one was created. */
   sidecarName?: string;
 }
@@ -491,7 +493,7 @@ export class DockerAdapter implements EnvironmentAdapter {
    */
   private async resolveAttachConnectivity(environmentId: string, target: string, powerlineToken: string): Promise<AttachConnection> {
     if (DOCKER_NETWORK) {
-      return { url: `http://${target}:${DEFAULT_POWERLINE_PORT}` };
+      return { url: `http://${target}:${DEFAULT_POWERLINE_PORT}`, port: DEFAULT_POWERLINE_PORT };
     }
 
     const ip = await inspectContainerIp(this.execFn, target);
@@ -499,7 +501,7 @@ export class DockerAdapter implements EnvironmentAdapter {
       const ipUrl = `http://${ip}:${DEFAULT_POWERLINE_PORT}`;
       if (await this.canReachPowerLine(ipUrl, powerlineToken)) {
         this.logger.info({ environmentId, target, ip }, "Attached container reachable by IP");
-        return { url: ipUrl };
+        return { url: ipUrl, port: DEFAULT_POWERLINE_PORT };
       }
     }
 
@@ -514,7 +516,7 @@ export class DockerAdapter implements EnvironmentAdapter {
     await removeSidecar(this.execFn, sidecarName, this.logger);
     await startSocatSidecar(this.execFn, sidecarName, network, ip, hostPort);
     this.logger.info({ environmentId, target, network, hostPort }, "Started socat sidecar for attach connectivity");
-    return { url: `http://127.0.0.1:${hostPort}`, sidecarName };
+    return { url: `http://127.0.0.1:${hostPort}`, port: hostPort, sidecarName };
   }
 
   /** Probe whether a PowerLine URL answers a ping (used to test direct host→container reachability). */
@@ -534,12 +536,16 @@ export class DockerAdapter implements EnvironmentAdapter {
     let connectUrl: string;
     let port: number;
     if (cfg.attach) {
-      const conn = attachConnections.get(environmentId);
+      let conn = attachConnections.get(environmentId);
       if (!conn) {
-        throw new Error(`No attach connectivity resolved for environment ${environmentId}; provision it first`);
+        // No cached connectivity (e.g. after a server restart). Re-resolve it —
+        // recreating the socat sidecar if needed — instead of failing the connect.
+        this.logger.info({ environmentId, target: cfg.attach }, "No cached attach connectivity; re-resolving");
+        conn = await this.resolveAttachConnectivity(environmentId, cfg.attach, powerlineToken);
+        attachConnections.set(environmentId, conn);
       }
       connectUrl = conn.url;
-      port = DEFAULT_POWERLINE_PORT;
+      port = conn.port;
     } else {
       const containerName = cfg.containerName || `grackle-${environmentId}`;
       const localPort = containerPorts.get(environmentId) || cfg.localPort || DEFAULT_POWERLINE_PORT;

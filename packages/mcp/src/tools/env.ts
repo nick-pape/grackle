@@ -24,18 +24,17 @@ export const envTools: ToolDefinition[] = [
     async handler(_args: Record<string, unknown>, { core: client }: GrackleClients) {
       try {
         const response = await client.listDockerContainers({});
-        if (response.error) {
-          return jsonResult({ containers: [], error: response.error });
-        }
-        return jsonResult(
-          response.containers.map((c) => ({
+        // Always return a single consistent shape: { containers, error }.
+        return jsonResult({
+          containers: response.containers.map((c) => ({
             id: c.id,
             name: c.name,
             image: c.image,
             state: c.state,
             status: c.status,
           })),
-        );
+          error: response.error,
+        });
       } catch (error) {
         return grpcErrorToToolResult(error);
       }

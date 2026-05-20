@@ -29,8 +29,11 @@ export function useDockerContainers(): UseDockerContainersResult {
       const resp = await grackleClient.listDockerContainers({});
       setDockerContainers(resp.containers.map(protoToDockerContainer));
       setDockerContainersError(resp.error);
-    } catch {
-      // empty — discovery is best-effort
+    } catch (err) {
+      // Surface the failure so the UI can fall back to manual container entry
+      // instead of leaving the user stuck with an empty picker.
+      setDockerContainers([]);
+      setDockerContainersError(err instanceof Error ? err.message : "Failed to list Docker containers");
     }
   }, []);
 

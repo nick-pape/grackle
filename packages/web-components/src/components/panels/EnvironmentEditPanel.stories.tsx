@@ -207,6 +207,25 @@ export const DockerAttachManualEntry: Story = {
   },
 };
 
+/** When discovery succeeds but finds no running containers, manual entry is still offered. */
+export const DockerAttachEmptyListManualEntry: Story = {
+  args: {
+    dockerContainers: [],
+  },
+  play: async ({ canvas }) => {
+    await userEvent.selectOptions(canvas.getByTestId("env-create-adapter"), "docker");
+    await userEvent.selectOptions(canvas.getByTestId("env-docker-mode"), "attach");
+
+    // No select (nothing to pick), but a manual input is available
+    await expect(canvas.queryByTestId("env-docker-container-select")).not.toBeInTheDocument();
+    const manual = canvas.getByTestId("env-docker-container-manual");
+    await userEvent.type(manual, "demo-ext");
+
+    const createButton = canvas.getByTestId("env-create-submit");
+    await expect(createButton).toBeEnabled();
+  },
+};
+
 /** When codespace listing fails, a manual entry input appears and the select dropdown is hidden. */
 export const CodespaceManualEntry: Story = {
   args: {

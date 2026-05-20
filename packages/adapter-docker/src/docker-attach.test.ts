@@ -204,6 +204,21 @@ describe("DockerAdapter attach mode — connectivity", () => {
     // never share the target's net namespace (that conflicts with -p)
     expect(joined).not.toContain(`container:${ATTACH}`);
   });
+
+  it("connect() re-resolves connectivity when there is no cached entry (server-restart recovery)", async () => {
+    const execFn = scriptedExec({ ip: "172.18.0.7" });
+    pingMock.mockResolvedValue({}); // reachable by IP
+    const adapter = new DockerAdapter({ exec: execFn, logger: mockLogger });
+
+    // No provision() first — simulates a server restart that lost in-memory state.
+    const conn = await adapter.connect("env-recover", { attach: ATTACH } as unknown as Record<string, unknown>, TOKEN);
+
+    expect(sdk.createPowerLineClient).toHaveBeenCalledWith(
+      `http://172.18.0.7:${DEFAULT_POWERLINE_PORT}`,
+      TOKEN,
+    );
+    expect(conn.port).toBe(DEFAULT_POWERLINE_PORT);
+  });
 });
 
 describe("DockerAdapter attach mode — lifecycle safety (issue #1223)", () => {

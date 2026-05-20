@@ -884,7 +884,7 @@ export function EnvironmentEditPanel({ mode, environmentId, environments, github
               ) : (
                 <div className={styles.section}>
                   <label className={styles.label}>Container</label>
-                  {!dockerContainersError && (
+                  {!dockerContainersError && dockerContainers.length > 0 && (
                     <select
                       value={attachContainer}
                       onChange={(e) => {
@@ -904,14 +904,23 @@ export function EnvironmentEditPanel({ mode, environmentId, environments, github
                       ))}
                     </select>
                   )}
-                  {dockerContainersError && (
+                  {/* Manual entry fallback: shown on listing error OR when no running
+                      containers were found, so the user is never stuck with an empty picker. */}
+                  {(dockerContainersError || dockerContainers.length === 0) && (
                     <>
-                      <span className={styles.errorHint}>{dockerContainersError}</span>
+                      {dockerContainersError
+                        ? <span className={styles.errorHint}>{dockerContainersError}</span>
+                        : <span className={styles.creatingHint}>No running containers found.</span>}
                       <input
                         type="text"
                         value={attachContainer}
-                        onChange={(e) => setAttachContainer(e.target.value)}
-                        placeholder="Or enter container name/ID manually..."
+                        onChange={(e) => {
+                          setAttachContainer(e.target.value);
+                          if (e.target.value && !envName.trim()) {
+                            setEnvName(e.target.value);
+                          }
+                        }}
+                        placeholder="Enter container name/ID..."
                         className={styles.fieldInput}
                         data-testid="env-docker-container-manual"
                       />

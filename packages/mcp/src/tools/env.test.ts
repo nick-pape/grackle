@@ -81,9 +81,12 @@ describe("env_list_docker_containers", () => {
     const result = await getTool("env_list_docker_containers").handler({}, { core: mockClient });
     const parsed = JSON.parse(result.content[0].text);
 
-    expect(parsed).toEqual([
-      { id: "abc123", name: "demo-ext", image: "node:22", state: "running", status: "Up 3 minutes" },
-    ]);
+    expect(parsed).toEqual({
+      containers: [
+        { id: "abc123", name: "demo-ext", image: "node:22", state: "running", status: "Up 3 minutes" },
+      ],
+      error: "",
+    });
     expect(result.isError).toBeUndefined();
   });
 

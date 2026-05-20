@@ -51,13 +51,14 @@ describe("useDockerContainers", () => {
     expect(result.current.dockerContainersError).toContain("command not found");
   });
 
-  it("swallows RPC rejections (discovery is best-effort)", async () => {
+  it("sets an error message on RPC rejection so the UI can fall back to manual entry", async () => {
     mockClient.listDockerContainers.mockRejectedValue(new Error("network down"));
 
     const { result } = renderHook(() => useDockerContainers());
     await act(async () => { await result.current.listDockerContainers(); });
 
     expect(result.current.dockerContainers).toEqual([]);
+    expect(result.current.dockerContainersError).toContain("network down");
   });
 
   it("exposes a domainHook", () => {
