@@ -49,7 +49,8 @@ const DOCKER_NETWORK: string | undefined = process.env.GRACKLE_DOCKER_NETWORK ||
 
 /** Docker-specific environment configuration. */
 export interface DockerEnvironmentConfig extends BaseEnvironmentConfig {
-  image: string;
+  /** Image to run in create mode (defaults to `grackle-powerline:latest`). Ignored in attach mode. */
+  image?: string;
   containerName?: string;
   localPort?: number;
   volumes?: string[];
@@ -609,6 +610,7 @@ export class DockerAdapter implements EnvironmentAdapter {
       await remoteStop(environmentId, new DockerExecutor(cfg.attach, this.execFn), this.logger);
       await removeSidecar(this.execFn, `${ATTACH_SIDECAR_PREFIX}${environmentId}`, this.logger);
       attachConnections.delete(environmentId);
+      containerPorts.delete(environmentId);
       return;
     }
 
@@ -630,6 +632,7 @@ export class DockerAdapter implements EnvironmentAdapter {
       await remoteDestroy(environmentId, new DockerExecutor(cfg.attach, this.execFn), this.logger);
       await removeSidecar(this.execFn, `${ATTACH_SIDECAR_PREFIX}${environmentId}`, this.logger);
       attachConnections.delete(environmentId);
+      containerPorts.delete(environmentId);
       return;
     }
 

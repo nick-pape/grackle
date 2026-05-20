@@ -49,6 +49,22 @@ describe("listDockerContainers", () => {
     expect(res.error).toContain("command not found");
   });
 
+  it("filters out Grackle's own socat sidecars (grackle-attach-*)", async () => {
+    execMock.mockResolvedValue({
+      stdout: [
+        JSON.stringify({ ID: "abc123", Names: "coder-sim", Image: "node:22", State: "running", Status: "Up 4 minutes" }),
+        JSON.stringify({ ID: "side01", Names: "grackle-attach-coder-sim", Image: "alpine/socat", State: "running", Status: "Up 1 minute" }),
+      ].join("\n"),
+      stderr: "",
+    });
+
+    const res = await listDockerContainers({} as never);
+
+    expect(res.containers).toHaveLength(1);
+    expect(res.containers[0]!.name).toBe("coder-sim");
+    expect(res.containers.some((c) => c.name.startsWith("grackle-attach-"))).toBe(false);
+  });
+
   it("ignores blank lines", async () => {
     execMock.mockResolvedValue({ stdout: "\n\n  \n", stderr: "" });
 

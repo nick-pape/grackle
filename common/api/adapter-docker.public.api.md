@@ -39,8 +39,7 @@ export interface DockerEnvironmentConfig extends BaseEnvironmentConfig {
     // (undocumented)
     env?: Record<string, string>;
     gpus?: string;
-    // (undocumented)
-    image: string;
+    image?: string;
     // (undocumented)
     localPort?: number;
     repo?: string;
