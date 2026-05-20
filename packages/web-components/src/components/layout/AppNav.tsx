@@ -1,4 +1,4 @@
-import { useCallback, useRef, type JSX, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useMemo, useRef, type JSX, type KeyboardEvent, type ReactNode } from "react";
 import { useLocation } from "react-router";
 import { Brain, ClipboardList, Home, MessageSquare, Monitor, Search, Settings } from "lucide-react";
 import { CHAT_URL, ENVIRONMENTS_URL, FINDINGS_URL, HOME_URL, KNOWLEDGE_URL, SETTINGS_URL, SETTINGS_CREDENTIALS_URL, TASKS_URL, useAppNavigate } from "../../utils/navigation.js";
@@ -21,6 +21,8 @@ export interface AppTab {
   route: string;
   /** data-testid suffix. */
   testId: string;
+  /** Horizontal alignment within the nav bar. `"end"` pins the tab to the right edge. */
+  align?: "end";
 }
 
 /** Ordered list of all app navigation tabs. Exported for plugin registry use. */
@@ -31,7 +33,7 @@ export const TABS: AppTab[] = [
   { view: "environments", label: "Environments", icon: <Monitor size={ICON_LG} />, route: ENVIRONMENTS_URL, testId: "sidebar-tab-environments" },
   { view: "knowledge", label: "Knowledge", icon: <Brain size={ICON_LG} />, route: KNOWLEDGE_URL, testId: "sidebar-tab-knowledge" },
   { view: "findings", label: "Findings", icon: <Search size={ICON_LG} />, route: FINDINGS_URL, testId: "sidebar-tab-findings" },
-  { view: "settings", label: "Settings", icon: <Settings size={ICON_LG} />, route: SETTINGS_CREDENTIALS_URL, testId: "sidebar-tab-settings" },
+  { view: "settings", label: "Settings", icon: <Settings size={ICON_LG} />, route: SETTINGS_CREDENTIALS_URL, testId: "sidebar-tab-settings", align: "end" },
 ];
 
 /** Derive the active application view from a URL pathname. */
@@ -65,6 +67,17 @@ export function AppNav({ tabs = TABS }: { tabs?: AppTab[] }): JSX.Element {
 
   const activeView = getActiveView(location.pathname);
 
+  // Render end-aligned tabs (e.g. Settings) last regardless of the incoming order,
+  // so they stay pinned to the right edge no matter which plugins contribute tabs.
+  const orderedTabs = useMemo(
+    () => [
+      ...tabs.filter((t) => t.align !== "end"),
+      ...tabs.filter((t) => t.align === "end"),
+    ],
+    [tabs],
+  );
+  const firstEndAlignedView = orderedTabs.find((t) => t.align === "end")?.view;
+
   const handleClick = useCallback((tab: AppTab) => {
     navigate(tab.route);
   }, [navigate]);
@@ -75,28 +88,28 @@ export function AppNav({ tabs = TABS }: { tabs?: AppTab[] }): JSX.Element {
       return;
     }
     const focusedIndex = Array.from(buttons).findIndex((b) => b === document.activeElement);
-    const currentIndex = focusedIndex >= 0 ? focusedIndex : tabs.findIndex((t) => t.view === activeView);
+    const currentIndex = focusedIndex >= 0 ? focusedIndex : orderedTabs.findIndex((t) => t.view === activeView);
     let nextIndex = currentIndex;
 
     if (e.key === "ArrowRight" || e.key === "j" || e.key === "J") {
       e.preventDefault();
-      nextIndex = (currentIndex + 1) % tabs.length;
+      nextIndex = (currentIndex + 1) % orderedTabs.length;
     } else if (e.key === "ArrowLeft" || e.key === "k" || e.key === "K") {
       e.preventDefault();
-      nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+      nextIndex = (currentIndex - 1 + orderedTabs.length) % orderedTabs.length;
     } else if (e.key === "Home") {
       e.preventDefault();
       nextIndex = 0;
     } else if (e.key === "End") {
       e.preventDefault();
-      nextIndex = tabs.length - 1;
+      nextIndex = orderedTabs.length - 1;
     } else {
       return;
     }
 
-    navigate(tabs[nextIndex].route);
+    navigate(orderedTabs[nextIndex].route);
     buttons[nextIndex]?.focus(); // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- index may be out of bounds
-  }, [activeView, navigate, tabs]);
+  }, [activeView, navigate, orderedTabs]);
 
   return (
     <nav
@@ -108,8 +121,9 @@ export function AppNav({ tabs = TABS }: { tabs?: AppTab[] }): JSX.Element {
       onKeyDown={handleKeyDown}
       data-testid="sidebar-nav"
     >
-      {tabs.map((tab) => {
+      {orderedTabs.map((tab) => {
         const isActive = tab.view === activeView;
+        const isFirstEndAligned = tab.view === firstEndAlignedView;
         return (
           <Tooltip key={tab.view} text={tab.label} placement="bottom">
             <button
@@ -117,7 +131,7 @@ export function AppNav({ tabs = TABS }: { tabs?: AppTab[] }): JSX.Element {
               type="button"
               aria-selected={isActive}
               tabIndex={isActive ? 0 : -1}
-              className={`${styles.tab} ${isActive ? styles.tabActive : ""}`}
+              className={`${styles.tab} ${isFirstEndAligned ? styles.tabEnd : ""} ${isActive ? styles.tabActive : ""}`}
               onClick={() => handleClick(tab)}
               data-testid={tab.testId}
               aria-label={tab.label}
