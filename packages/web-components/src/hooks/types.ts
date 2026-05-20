@@ -162,6 +162,15 @@ export interface Codespace {
   gitStatus: string;
 }
 
+/** A running Docker container an environment can attach to (`docker ps`). */
+export interface DockerContainer {
+  id: string;
+  name: string;
+  image: string;
+  state: string;
+  status: string;
+}
+
 /** An agent or script persona configuration. */
 export interface PersonaData {
   id: string;
@@ -492,6 +501,18 @@ export interface UseCodespacesResult {
   listCodespaces: (githubAccountId?: string) => Promise<void>;
   /** Create a new codespace for the given repo. */
   createCodespace: (repo: string, machine?: string) => Promise<void>;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
+}
+
+/** Values returned by the docker-containers domain hook. */
+export interface UseDockerContainersResult {
+  /** Running Docker containers available to attach to. */
+  dockerContainers: DockerContainer[];
+  /** Error message from the most recent list attempt, or empty string. */
+  dockerContainersError: string;
+  /** Request the current running-container list from the server. */
+  listDockerContainers: () => Promise<void>;
   /** Lifecycle hook for connect/disconnect/event routing. */
   domainHook: DomainHook;
 }

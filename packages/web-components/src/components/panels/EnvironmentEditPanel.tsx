@@ -1,6 +1,6 @@
 import { useState, useCallback, type JSX } from "react";
 import type { ToastVariant } from "../../context/ToastContext.js";
-import type { Environment, Codespace, GitHubAccountData } from "../../hooks/types.js";
+import type { Environment, Codespace, DockerContainer, GitHubAccountData } from "../../hooks/types.js";
 import { ENVIRONMENTS_URL, environmentUrl, useAppNavigate } from "../../utils/navigation.js";
 import { EditableTextField } from "../editable/EditableTextField.js";
 import styles from "./EnvironmentEditPanel.module.scss";
@@ -35,6 +35,12 @@ interface Props {
   codespaceCreating: boolean;
   /** Callback to create a new codespace. */
   onCreateCodespace: (repo: string, machine?: string) => void;
+  /** Callback to list running Docker containers available to attach to. */
+  onListDockerContainers: () => void;
+  /** Running Docker containers available to attach to (docker attach mode). */
+  dockerContainers: DockerContainer[];
+  /** Non-fatal error from listing Docker containers (e.g. docker CLI unavailable). */
+  dockerContainersError: string;
   /** Display a toast notification. */
   onShowToast?: (message: string, variant?: ToastVariant) => void;
 }
@@ -202,7 +208,7 @@ function CodespacePicker({ codespaceName, onCodespaceNameChange, envName, onEnvN
  * - edit: pre-populated form; uses click-to-edit fields that auto-save via
  *         updateEnvironment.
  */
-export function EnvironmentEditPanel({ mode, environmentId, environments, githubAccounts, onAddEnvironment, onUpdateEnvironment, onListCodespaces, codespaces, codespaceError, codespaceListError, codespaceCreating, onCreateCodespace, onShowToast }: Props): JSX.Element {
+export function EnvironmentEditPanel({ mode, environmentId, environments, githubAccounts, onAddEnvironment, onUpdateEnvironment, onListCodespaces, codespaces, codespaceError, codespaceListError, codespaceCreating, onCreateCodespace, onListDockerContainers, dockerContainers, dockerContainersError, onShowToast }: Props): JSX.Element {
   const navigate = useAppNavigate();
 
   const isEdit = mode === "edit";
@@ -222,6 +228,9 @@ export function EnvironmentEditPanel({ mode, environmentId, environments, github
   const [repo, setRepo] = useState("");
   const [codespaceName, setCodespaceName] = useState("");
   const [githubAccountId, setGithubAccountId] = useState("");
+  // Docker: "create" a new container vs "attach" to an existing one (issue #1223).
+  const [dockerMode, setDockerMode] = useState<"create" | "attach">("create");
+  const [attachContainer, setAttachContainer] = useState("");
 
   // ─── Edit mode state ───────────────────────────────
 
@@ -257,17 +266,24 @@ export function EnvironmentEditPanel({ mode, environmentId, environments, github
         config.identityFile = identityFile.trim();
       }
     } else if (adapterType === "docker") {
-      if (image.trim()) {
-        config.image = image.trim();
-      }
-      if (repo.trim()) {
-        config.repo = repo.trim();
+      if (dockerMode === "attach") {
+        // Attach mode: target an existing container; image/repo are ignored.
+        if (attachContainer.trim()) {
+          config.attach = attachContainer.trim();
+        }
+      } else {
+        if (image.trim()) {
+          config.image = image.trim();
+        }
+        if (repo.trim()) {
+          config.repo = repo.trim();
+        }
       }
     } else if (adapterType === "codespace") {
       config.codespaceName = codespaceName.trim();
     }
     return config;
-  }, [adapterType, host, port, user, identityFile, image, repo, codespaceName]);
+  }, [adapterType, host, port, user, identityFile, image, repo, codespaceName, dockerMode, attachContainer]);
 
   const isCreateValid = (): boolean => {
     if (!envName.trim()) {
@@ -277,6 +293,9 @@ export function EnvironmentEditPanel({ mode, environmentId, environments, github
       return false;
     }
     if (adapterType === "codespace" && !codespaceName.trim()) {
+      return false;
+    }
+    if (adapterType === "docker" && dockerMode === "attach" && !attachContainer.trim()) {
       return false;
     }
     if ((adapterType === "local" || adapterType === "ssh") && !isPortValid(port)) {
@@ -533,7 +552,25 @@ export function EnvironmentEditPanel({ mode, environmentId, environments, github
               </>
             )}
 
-            {existingEnv.adapterType === "docker" && (
+            {existingEnv.adapterType === "docker" && config.attach !== undefined && (
+              <div className={styles.section}>
+                <label className={styles.label}>Attach (container)</label>
+                <EditableTextField
+                  value={String(config.attach ?? "")}
+                  onSave={(v) => saveConfigField("attach", v)}
+                  validate={(v) => v.trim() === "" ? "Container name is required" : undefined}
+                  mode="edit"
+                  fieldId="attach"
+                  activeFieldId={activeFieldId}
+                  onActivate={setActiveFieldId}
+                  placeholder="container name or ID"
+                  ariaLabel="Attach container"
+                  data-testid="env-edit-attach"
+                />
+              </div>
+            )}
+
+            {existingEnv.adapterType === "docker" && config.attach === undefined && (
               <>
                 <div className={styles.section}>
                   <label className={styles.label}>Image</label>
@@ -792,33 +829,96 @@ export function EnvironmentEditPanel({ mode, environmentId, environments, github
           {adapterType === "docker" && (
             <>
               <div className={styles.section}>
-                <label className={styles.label} htmlFor="env-create-image">
-                  Image
+                <label className={styles.label} htmlFor="env-docker-mode">
+                  Source
                 </label>
-                <input
-                  id="env-create-image"
-                  type="text"
-                  value={image}
-                  onChange={(e) => setImage(e.target.value)}
-                  placeholder="Image (optional)..."
-                  className={styles.fieldInput}
-                  data-testid="env-create-image"
-                />
+                <select
+                  id="env-docker-mode"
+                  value={dockerMode}
+                  onChange={(e) => {
+                    const next = e.target.value as "create" | "attach";
+                    setDockerMode(next);
+                    if (next === "attach") {
+                      onListDockerContainers();
+                    }
+                  }}
+                  className={styles.adapterSelect}
+                  data-testid="env-docker-mode"
+                >
+                  <option value="create">Create new container</option>
+                  <option value="attach">Attach to existing container</option>
+                </select>
               </div>
-              <div className={styles.section}>
-                <label className={styles.label} htmlFor="env-create-repo">
-                  Repo
-                </label>
-                <input
-                  id="env-create-repo"
-                  type="text"
-                  value={repo}
-                  onChange={(e) => setRepo(e.target.value)}
-                  placeholder="Repo (optional)..."
-                  className={styles.fieldInput}
-                  data-testid="env-create-repo"
-                />
-              </div>
+
+              {dockerMode === "create" ? (
+                <>
+                  <div className={styles.section}>
+                    <label className={styles.label} htmlFor="env-create-image">
+                      Image
+                    </label>
+                    <input
+                      id="env-create-image"
+                      type="text"
+                      value={image}
+                      onChange={(e) => setImage(e.target.value)}
+                      placeholder="Image (optional)..."
+                      className={styles.fieldInput}
+                      data-testid="env-create-image"
+                    />
+                  </div>
+                  <div className={styles.section}>
+                    <label className={styles.label} htmlFor="env-create-repo">
+                      Repo
+                    </label>
+                    <input
+                      id="env-create-repo"
+                      type="text"
+                      value={repo}
+                      onChange={(e) => setRepo(e.target.value)}
+                      placeholder="Repo (optional)..."
+                      className={styles.fieldInput}
+                      data-testid="env-create-repo"
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className={styles.section}>
+                  <label className={styles.label}>Container</label>
+                  {!dockerContainersError && (
+                    <select
+                      value={attachContainer}
+                      onChange={(e) => {
+                        setAttachContainer(e.target.value);
+                        if (e.target.value && !envName.trim()) {
+                          setEnvName(e.target.value);
+                        }
+                      }}
+                      className={styles.adapterSelect}
+                      data-testid="env-docker-container-select"
+                    >
+                      <option value="">Select a container...</option>
+                      {dockerContainers.map((c) => (
+                        <option key={c.id} value={c.name}>
+                          {c.name} ({c.image}) {c.status}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {dockerContainersError && (
+                    <>
+                      <span className={styles.errorHint}>{dockerContainersError}</span>
+                      <input
+                        type="text"
+                        value={attachContainer}
+                        onChange={(e) => setAttachContainer(e.target.value)}
+                        placeholder="Or enter container name/ID manually..."
+                        className={styles.fieldInput}
+                        data-testid="env-docker-container-manual"
+                      />
+                    </>
+                  )}
+                </div>
+              )}
             </>
           )}
 

@@ -7,6 +7,7 @@ export function NewEnvironmentPage(): JSX.Element {
   const {
     environments: { environments, addEnvironment, updateEnvironment },
     codespaces: { codespaces, codespaceError, codespaceListError, codespaceCreating, listCodespaces, createCodespace },
+    dockerContainers: { dockerContainers, dockerContainersError, listDockerContainers },
     githubAccounts: { githubAccounts },
   } = useGrackle();
   const { showToast } = useToast();
@@ -24,6 +25,9 @@ export function NewEnvironmentPage(): JSX.Element {
       codespaceListError={codespaceListError}
       codespaceCreating={codespaceCreating}
       onCreateCodespace={(repo, machine) => { createCodespace(repo, machine).catch(() => {}); }}
+      onListDockerContainers={() => { listDockerContainers().catch(() => {}); }}
+      dockerContainers={dockerContainers}
+      dockerContainersError={dockerContainersError}
       onShowToast={showToast}
     />
   );

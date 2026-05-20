@@ -40,6 +40,7 @@ export function registerEnvCommands(program: Command): void {
     .option("--local", "Local PowerLine adapter")
     .option("--repo <repo>", "GitHub repo to clone (docker)")
     .option("--image <image>", "Docker image")
+    .option("--attach <container>", "Attach to an existing container by name/ID instead of creating one (docker)")
     .option("--host <host>", "SSH host / local host")
     .option("--port <port>", "PowerLine port (local adapter)")
     .option("--user <user>", "SSH user")
@@ -51,7 +52,7 @@ export function registerEnvCommands(program: Command): void {
     .option("--github-account <label>", "GitHub account label to use for gh CLI operations (codespace/docker adapters)")
     .action(async (name: string, opts: {
       codespace?: boolean; docker?: boolean; ssh?: boolean; local?: boolean;
-      repo?: string; image?: string; host?: string; port?: string; user?: string;
+      repo?: string; image?: string; attach?: string; host?: string; port?: string; user?: string;
       volume?: string[]; gpu?: string | boolean; sshPort?: string;
       identityFile?: string; codespaceName?: string; githubAccount?: string;
     }) => {
@@ -89,10 +90,16 @@ export function registerEnvCommands(program: Command): void {
         }
         if (opts.identityFile) config.identityFile = opts.identityFile;
       } else {
-        if (opts.image) config.image = opts.image;
-        if (opts.repo) config.repo = opts.repo;
-        if (opts.volume) config.volumes = opts.volume;
-        if (opts.gpu) config.gpus = opts.gpu === true ? "all" : opts.gpu;
+        if (opts.attach) {
+          // Attach mode: bootstrap PowerLine inside an existing container; Grackle
+          // never creates, stops, or removes it (issue #1223).
+          config.attach = opts.attach;
+        } else {
+          if (opts.image) config.image = opts.image;
+          if (opts.repo) config.repo = opts.repo;
+          if (opts.volume) config.volumes = opts.volume;
+          if (opts.gpu) config.gpus = opts.gpu === true ? "all" : opts.gpu;
+        }
       }
 
       // Resolve --github-account label to an account ID, if provided.

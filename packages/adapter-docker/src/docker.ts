@@ -6,6 +6,8 @@ import {
   bootstrapPowerLine,
   startRemotePowerLine,
   findFreePort,
+  remoteStop,
+  remoteDestroy,
   exec as defaultExec,
   sleep as defaultSleep,
   defaultLogger,
@@ -30,6 +32,14 @@ const DEFAULT_IMAGE: string = "grackle-powerline:latest";
 const DOCKER_EXEC_TIMEOUT_MS: number = 60_000;
 
 /**
+ * Image for the connectivity sidecar used in attach mode when the host cannot
+ * reach the attached container directly. Overridable for air-gapped registries.
+ */
+const SOCAT_IMAGE: string = process.env.GRACKLE_DOCKER_SOCAT_IMAGE || "alpine/socat";
+/** Name prefix for the Grackle-owned socat sidecar created in attach mode. */
+const ATTACH_SIDECAR_PREFIX: string = "grackle-attach-";
+
+/**
  * Docker network name for sibling containers. When set (typically via compose),
  * sibling containers join this network so the server can reach them directly
  * by container name instead of via host port mapping. Required for DooD setups
@@ -48,6 +58,14 @@ export interface DockerEnvironmentConfig extends BaseEnvironmentConfig {
   repo?: string;
   /** Enable GPU passthrough (e.g. "all" for --gpus all). */
   gpus?: string;
+  /**
+   * Attach mode: name or ID of a pre-existing, externally-managed container to
+   * attach to instead of creating one. When set, Grackle bootstraps PowerLine
+   * inside the running container via `docker exec` and never creates, stops, or
+   * removes it (see issue #1223). The `image`, `repo`, and `volumes` fields are
+   * ignored in attach mode.
+   */
+  attach?: string;
 }
 
 /** @internal Abstraction over command execution used by {@link DockerAdapter}. */
@@ -61,7 +79,85 @@ type LocalExecFunction = (command: string, args: string[], options?: { timeout?:
 
 const containerPorts: Map<string, number> = new Map<string, number>();
 
+/** Resolved connectivity to an attached container's PowerLine, keyed by environment id. */
+interface AttachConnection {
+  /** Base URL the server uses to reach the attached container's PowerLine. */
+  url: string;
+  /** Name of the Grackle-owned socat sidecar, if one was created. */
+  sidecarName?: string;
+}
+
+const attachConnections: Map<string, AttachConnection> = new Map<string, AttachConnection>();
+
 // ─── Docker CLI Helpers ────────────────────────────────────
+
+/** Return true if the named container currently exists and is running. */
+async function inspectContainerRunning(execFn: LocalExecFunction, containerName: string): Promise<boolean> {
+  try {
+    const { stdout } = await execFn("docker", ["inspect", "-f", "{{.State.Running}}", containerName]);
+    return stdout.trim() === "true";
+  } catch {
+    return false;
+  }
+}
+
+/** Discover the first network IP address of a container (empty string if none). */
+async function inspectContainerIp(execFn: LocalExecFunction, containerName: string): Promise<string> {
+  try {
+    const { stdout } = await execFn("docker", [
+      "inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}", containerName,
+    ]);
+    return stdout.trim().split(/\s+/)[0] ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/** Discover the first network name a container is attached to (empty string if none). */
+async function inspectContainerNetwork(execFn: LocalExecFunction, containerName: string): Promise<string> {
+  try {
+    const { stdout } = await execFn("docker", [
+      "inspect", "-f", "{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}", containerName,
+    ]);
+    return stdout.trim().split(/\s+/)[0] ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Start a socat sidecar that bridges a host loopback port to the attached
+ * container's PowerLine. The sidecar joins the target's network and forwards to
+ * the target IP, publishing to the host — this works on both Docker Desktop and
+ * native Linux. (Sharing the target's net namespace via `--network container:`
+ * is not used because it conflicts with `-p` port publishing.)
+ */
+async function startSocatSidecar(
+  execFn: LocalExecFunction,
+  sidecarName: string,
+  network: string,
+  targetIp: string,
+  hostPort: number,
+): Promise<void> {
+  await execFn("docker", [
+    "run", "-d", "--rm",
+    "--name", sidecarName,
+    "--network", network,
+    "-p", `127.0.0.1:${hostPort}:${DEFAULT_POWERLINE_PORT}`,
+    SOCAT_IMAGE,
+    `TCP-LISTEN:${DEFAULT_POWERLINE_PORT},fork,reuseaddr`,
+    `TCP:${targetIp}:${DEFAULT_POWERLINE_PORT}`,
+  ], { timeout: DOCKER_PULL_TIMEOUT_MS });
+}
+
+/** Remove a Grackle-owned sidecar container, ignoring errors if it is absent. */
+async function removeSidecar(execFn: LocalExecFunction, sidecarName: string, logger: AdapterLogger): Promise<void> {
+  try {
+    await execFn("docker", ["rm", "-f", sidecarName]);
+  } catch (err) {
+    logger.debug({ sidecarName, err }, "Sidecar may not exist");
+  }
+}
 
 /** Pull a Docker image, suppressing errors if the image exists locally. */
 async function pullImage(execFn: LocalExecFunction, image: string, logger: AdapterLogger): Promise<void> {
@@ -258,6 +354,14 @@ export class DockerAdapter implements EnvironmentAdapter {
 
   public async *provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
     const cfg = config as unknown as DockerEnvironmentConfig;
+
+    // Attach mode: bootstrap PowerLine inside an existing, externally-managed
+    // container. Grackle never creates the container here (issue #1223).
+    if (cfg.attach) {
+      yield* this.provisionAttach(environmentId, config, powerlineToken);
+      return;
+    }
+
     const image = cfg.image || DEFAULT_IMAGE;
     const containerName = cfg.containerName || `grackle-${environmentId}`;
     const localPort = cfg.localPort || await findFreePort();
@@ -319,23 +423,140 @@ export class DockerAdapter implements EnvironmentAdapter {
     yield { stage: "connecting", message: `Connecting on port ${actualPort}...`, progress: 0.90 };
   }
 
+  /**
+   * Attach to a pre-existing container: verify it is running, bootstrap PowerLine
+   * inside it via `docker exec`, then resolve connectivity. The container's
+   * lifecycle stays owned by whatever created it.
+   */
+  private async *provisionAttach(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
+    const cfg = config as unknown as DockerEnvironmentConfig;
+    const target = cfg.attach!;
+
+    yield { stage: "connecting", message: `Attaching to container ${target}...`, progress: 0.05 };
+    if (!(await inspectContainerRunning(this.execFn, target))) {
+      throw new Error(
+        `Cannot attach: container '${target}' is not running (or does not exist). Grackle never creates containers in attach mode.`,
+      );
+    }
+
+    const executor = new DockerExecutor(target, this.execFn);
+    yield* bootstrapPowerLine(executor, powerlineToken, {
+      extraEnv: cfg.env,
+      host: "0.0.0.0",
+      isGitHubProviderEnabled: this.isGitHubProviderEnabled,
+      defaultRuntime: (config.defaultRuntime as string) || undefined,
+    });
+
+    yield { stage: "connecting", message: "Resolving connectivity...", progress: 0.85 };
+    const conn = await this.resolveAttachConnectivity(environmentId, target, powerlineToken);
+    attachConnections.set(environmentId, conn);
+    yield { stage: "connecting", message: `Connecting via ${conn.url}...`, progress: 0.90 };
+  }
+
+  /**
+   * Fast reconnect for attach mode: restart the in-container PowerLine without a
+   * full bootstrap, then re-resolve connectivity. Throws for non-attach configs
+   * so the server's reconnect-or-provision fallback runs a full create-mode provision.
+   */
+  public async *reconnect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
+    const cfg = config as unknown as DockerEnvironmentConfig;
+    if (!cfg.attach) {
+      throw new Error("Docker reconnect is only supported in attach mode");
+    }
+    const target = cfg.attach;
+
+    yield { stage: "reconnecting", message: `Reconnecting to ${target}...`, progress: 0.10 };
+    if (!(await inspectContainerRunning(this.execFn, target))) {
+      throw new Error(`Cannot attach: container '${target}' is not running (or does not exist).`);
+    }
+
+    const executor = new DockerExecutor(target, this.execFn);
+    await startRemotePowerLine(executor, powerlineToken, {
+      extraEnv: cfg.env,
+      host: "0.0.0.0",
+      probeFirst: true,
+    });
+
+    yield { stage: "reconnecting", message: "Resolving connectivity...", progress: 0.60 };
+    const conn = await this.resolveAttachConnectivity(environmentId, target, powerlineToken);
+    attachConnections.set(environmentId, conn);
+    yield { stage: "reconnecting", message: `Reconnected via ${conn.url}`, progress: 0.90 };
+  }
+
+  /**
+   * Resolve how the server reaches an attached container's PowerLine:
+   * 1. shared Docker network (DooD/Coder) — by container name;
+   * 2. the container's bridge IP, if reachable directly from the host;
+   * 3. otherwise a Grackle-owned socat sidecar publishing a host loopback port.
+   */
+  private async resolveAttachConnectivity(environmentId: string, target: string, powerlineToken: string): Promise<AttachConnection> {
+    if (DOCKER_NETWORK) {
+      return { url: `http://${target}:${DEFAULT_POWERLINE_PORT}` };
+    }
+
+    const ip = await inspectContainerIp(this.execFn, target);
+    if (ip) {
+      const ipUrl = `http://${ip}:${DEFAULT_POWERLINE_PORT}`;
+      if (await this.canReachPowerLine(ipUrl, powerlineToken)) {
+        this.logger.info({ environmentId, target, ip }, "Attached container reachable by IP");
+        return { url: ipUrl };
+      }
+    }
+
+    if (!ip) {
+      throw new Error(`Cannot determine the IP address of container '${target}' for attach connectivity`);
+    }
+
+    const network = (await inspectContainerNetwork(this.execFn, target)) || "bridge";
+    const sidecarName = `${ATTACH_SIDECAR_PREFIX}${environmentId}`;
+    const hostPort = await findFreePort();
+    // Clear any stale sidecar from a previous attach before starting a fresh one.
+    await removeSidecar(this.execFn, sidecarName, this.logger);
+    await startSocatSidecar(this.execFn, sidecarName, network, ip, hostPort);
+    this.logger.info({ environmentId, target, network, hostPort }, "Started socat sidecar for attach connectivity");
+    return { url: `http://127.0.0.1:${hostPort}`, sidecarName };
+  }
+
+  /** Probe whether a PowerLine URL answers a ping (used to test direct host→container reachability). */
+  private async canReachPowerLine(url: string, powerlineToken: string): Promise<boolean> {
+    try {
+      const client = createPowerLineClient(url, powerlineToken);
+      await client.ping({});
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   public async connect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection> {
     const cfg = config as unknown as DockerEnvironmentConfig;
-    const containerName = cfg.containerName || `grackle-${environmentId}`;
-    const localPort = containerPorts.get(environmentId) || cfg.localPort || DEFAULT_POWERLINE_PORT;
 
-    // When on a shared Docker network, connect directly to the sibling container
-    // by name on the default PowerLine port. Otherwise, use the mapped host port.
-    const connectUrl = DOCKER_NETWORK
-      ? `http://${containerName}:${DEFAULT_POWERLINE_PORT}`
-      : `http://127.0.0.1:${localPort}`;
+    let connectUrl: string;
+    let port: number;
+    if (cfg.attach) {
+      const conn = attachConnections.get(environmentId);
+      if (!conn) {
+        throw new Error(`No attach connectivity resolved for environment ${environmentId}; provision it first`);
+      }
+      connectUrl = conn.url;
+      port = DEFAULT_POWERLINE_PORT;
+    } else {
+      const containerName = cfg.containerName || `grackle-${environmentId}`;
+      const localPort = containerPorts.get(environmentId) || cfg.localPort || DEFAULT_POWERLINE_PORT;
+      port = localPort;
+      // When on a shared Docker network, connect directly to the sibling container
+      // by name on the default PowerLine port. Otherwise, use the mapped host port.
+      connectUrl = DOCKER_NETWORK
+        ? `http://${containerName}:${DEFAULT_POWERLINE_PORT}`
+        : `http://127.0.0.1:${localPort}`;
+    }
     const client = createPowerLineClient(connectUrl, powerlineToken);
 
     let lastErr: unknown;
     for (let attempt = 0; attempt < CONNECT_MAX_RETRIES; attempt++) {
       try {
         await client.ping({});
-        return { client, environmentId, port: localPort };
+        return { client, environmentId, port };
       } catch (err) {
         lastErr = err;
         await this.sleepFn(CONNECT_RETRY_DELAY_MS);
@@ -346,11 +567,26 @@ export class DockerAdapter implements EnvironmentAdapter {
   }
 
   public async disconnect(environmentId: string): Promise<void> {
+    const conn = attachConnections.get(environmentId);
+    if (conn?.sidecarName) {
+      await removeSidecar(this.execFn, conn.sidecarName, this.logger);
+    }
+    attachConnections.delete(environmentId);
     containerPorts.delete(environmentId);
   }
 
   public async stop(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as DockerEnvironmentConfig;
+
+    // Attach mode: never stop the externally-managed container. Stop the
+    // in-container PowerLine and remove our connectivity sidecar only.
+    if (cfg.attach) {
+      await remoteStop(environmentId, new DockerExecutor(cfg.attach, this.execFn), this.logger);
+      await removeSidecar(this.execFn, `${ATTACH_SIDECAR_PREFIX}${environmentId}`, this.logger);
+      attachConnections.delete(environmentId);
+      return;
+    }
+
     const containerName = cfg.containerName || `grackle-${environmentId}`;
     try {
       await this.execFn("docker", ["stop", containerName]);
@@ -362,6 +598,16 @@ export class DockerAdapter implements EnvironmentAdapter {
 
   public async destroy(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as DockerEnvironmentConfig;
+
+    // Attach mode: never remove the externally-managed container. Stop the
+    // in-container PowerLine, clean up its artifacts, and remove our sidecar.
+    if (cfg.attach) {
+      await remoteDestroy(environmentId, new DockerExecutor(cfg.attach, this.execFn), this.logger);
+      await removeSidecar(this.execFn, `${ATTACH_SIDECAR_PREFIX}${environmentId}`, this.logger);
+      attachConnections.delete(environmentId);
+      return;
+    }
+
     const containerName = cfg.containerName || `grackle-${environmentId}`;
     try {
       await this.execFn("docker", ["rm", "-f", containerName]);

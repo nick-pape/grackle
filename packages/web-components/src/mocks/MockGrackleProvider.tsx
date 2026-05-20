@@ -1067,6 +1067,13 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         domainHook: NOOP_DOMAIN_HOOK,
       },
 
+      dockerContainers: {
+        dockerContainers: [],
+        dockerContainersError: "",
+        listDockerContainers: async () => { },
+        domainHook: NOOP_DOMAIN_HOOK,
+      },
+
       personas: {
         personas,
         personasLoading: false,

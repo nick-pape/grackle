@@ -21,6 +21,7 @@ import { useFindings } from "./useFindings.js";
 import { useTokens } from "./useTokens.js";
 import { useCredentials } from "./useCredentials.js";
 import { useCodespaces } from "./useCodespaces.js";
+import { useDockerContainers } from "./useDockerContainers.js";
 import { usePersonas } from "./usePersonas.js";
 import { useSchedules } from "./useSchedules.js";
 import { useKnowledge } from "./useKnowledge.js";
@@ -98,6 +99,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   const tokensHook = useTokens();
   const credentialsHook = useCredentials();
   const codespacesHook = useCodespaces();
+  const dockerContainersHook = useDockerContainers();
   const personasHook = usePersonas();
   const schedulesHook = useSchedules();
   const knowledgeHook = useKnowledge();
@@ -119,6 +121,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     ...(activeHookKeys.has("tokens")       ? [tokensHook.domainHook]       : []),
     ...(activeHookKeys.has("credentials")  ? [credentialsHook.domainHook]  : []),
     ...(activeHookKeys.has("codespaces")   ? [codespacesHook.domainHook]   : []),
+    ...(activeHookKeys.has("dockerContainers") ? [dockerContainersHook.domainHook] : []),
     ...(activeHookKeys.has("personas")     ? [personasHook.domainHook]     : []),
     ...(activeHookKeys.has("schedules")    ? [schedulesHook.domainHook]    : []),
     ...(activeHookKeys.has("knowledge")    ? [knowledgeHook.domainHook]    : []),
@@ -362,6 +365,12 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       listCodespaces: codespacesHook.listCodespaces,
       createCodespace: codespacesHook.createCodespace,
       domainHook: codespacesHook.domainHook,
+    },
+    dockerContainers: {
+      dockerContainers: dockerContainersHook.dockerContainers,
+      dockerContainersError: dockerContainersHook.dockerContainersError,
+      listDockerContainers: dockerContainersHook.listDockerContainers,
+      domainHook: dockerContainersHook.domainHook,
     },
     personas: {
       personas: personasHook.personas,

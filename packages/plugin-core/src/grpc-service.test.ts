@@ -28,6 +28,7 @@ vi.mock("./session-handlers.js", () => ({ spawnAgent: vi.fn() }));
 vi.mock("./workspace-handlers.js", () => ({ listWorkspaces: vi.fn() }));
 vi.mock("./token-handlers.js", () => ({ getToken: vi.fn() }));
 vi.mock("./codespace-handlers.js", () => ({ listCodespaces: vi.fn() }));
+vi.mock("./docker-handlers.js", () => ({ listDockerContainers: vi.fn() }));
 vi.mock("./settings-handlers.js", () => ({ getSetting: vi.fn() }));
 
 vi.mock("./task-handlers.js", () => ({ listTasks: vi.fn() }));
@@ -44,7 +45,7 @@ beforeEach(() => {
 });
 
 describe("createCoreCollector", () => {
-  it("adds environments, sessions, workspaces, tokens, codespaces, settings (no schedules, no knowledge)", () => {
+  it("adds environments, sessions, workspaces, tokens, codespaces, docker containers, settings (no schedules, no knowledge)", () => {
     createCoreCollector();
     const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
     expect(addedModules.some((m) => "listEnvironments" in m)).toBe(true);
@@ -52,6 +53,7 @@ describe("createCoreCollector", () => {
     expect(addedModules.some((m) => "listWorkspaces" in m)).toBe(true);
     expect(addedModules.some((m) => "getToken" in m)).toBe(true);
     expect(addedModules.some((m) => "listCodespaces" in m)).toBe(true);
+    expect(addedModules.some((m) => "listDockerContainers" in m)).toBe(true);
     expect(addedModules.some((m) => "getSetting" in m)).toBe(true);
     // Plugin management handlers are registered in core
     expect(addedModules.some((m) => "listPlugins" in m)).toBe(true);
@@ -70,9 +72,9 @@ describe("createCoreCollector", () => {
     expect(addedModules.some((m) => "createEscalation" in m)).toBe(false);
   });
 
-  it("adds exactly 8 handler groups", () => {
+  it("adds exactly 9 handler groups", () => {
     createCoreCollector();
-    expect(addHandlersMock).toHaveBeenCalledTimes(8);
+    expect(addHandlersMock).toHaveBeenCalledTimes(9);
   });
 });
 
@@ -100,7 +102,7 @@ describe("createOrchestrationCollector", () => {
 });
 
 describe("createDefaultCollector (regression)", () => {
-  it("adds all 12 handler groups including orchestration, plugins, and github accounts (knowledge and schedules moved to plugins)", () => {
+  it("adds all 13 handler groups including orchestration, plugins, and github accounts (knowledge and schedules moved to plugins)", () => {
     createDefaultCollector();
     const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
     expect(addedModules.some((m) => "listEnvironments" in m)).toBe(true);
@@ -110,6 +112,7 @@ describe("createDefaultCollector (regression)", () => {
     expect(addedModules.some((m) => "createEscalation" in m)).toBe(true);
     expect(addedModules.some((m) => "listPlugins" in m)).toBe(true);
     expect(addedModules.some((m) => "listGitHubAccounts" in m)).toBe(true);
-    expect(addHandlersMock).toHaveBeenCalledTimes(12);
+    expect(addedModules.some((m) => "listDockerContainers" in m)).toBe(true);
+    expect(addHandlersMock).toHaveBeenCalledTimes(13);
   });
 });

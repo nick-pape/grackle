@@ -739,6 +739,26 @@ message CreateCodespaceResponse {
   string repository = 2;
 }
 
+// ─── Docker ─────────────────────────────────────────────────
+
+/** A running Docker container that an environment can attach to. */
+message DockerContainerInfo {
+  string id = 1;
+  string name = 2;
+  string image = 3;
+  string state = 4;  // e.g. "running"
+  string status = 5; // human-readable status (e.g. "Up 3 minutes")
+}
+
+message DockerContainerList {
+  repeated DockerContainerInfo containers = 1;
+  string error = 2; // non-fatal error (e.g. docker CLI not available)
+}
+
+/** Request for ListDockerContainers. Empty for now; reserved for future filters. */
+message ListDockerContainersRequest {
+}
+
 // ─── Settings ───────────────────────────────────────────────
 
 message GetSettingRequest {

@@ -10,7 +10,7 @@ import type {
   UsageStats, UseKnowledgeResult,
   UseEnvironmentsResult, UseSessionsResult, UseWorkspacesResult,
   UseTasksResult, UseFindingsResult, UseTokensResult,
-  UseCredentialsResult, UseCodespacesResult, UsePersonasResult,
+  UseCredentialsResult, UseCodespacesResult, UseDockerContainersResult, UsePersonasResult,
   UsePluginsResult,
   UseSchedulesResult,
   UseStreamsResult,
@@ -38,6 +38,8 @@ export interface UseGrackleSocketResult {
   credentials: Omit<UseCredentialsResult, "handleEvent" | "loadCredentials">;
   /** GitHub Codespace state and actions. */
   codespaces: UseCodespacesResult;
+  /** Docker container discovery (attach mode) state and actions. */
+  dockerContainers: UseDockerContainersResult;
   /** Persona state and actions. */
   personas: Omit<UsePersonasResult, "handleEvent" | "loadPersonas">;
   /** Schedule state and actions. */

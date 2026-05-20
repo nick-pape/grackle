@@ -5,6 +5,43 @@ import { grpcErrorToToolResult } from "../error-handler.js";
 
 /** MCP tools for Grackle environment management (list, add, provision, stop, destroy, remove, wake). */
 export const envTools: ToolDefinition[] = [
+  // ── env_list_docker_containers ───────────────────────────────────────────
+  {
+    name: "env_list_docker_containers",
+    group: "env",
+    description:
+      "List running Docker containers that an environment can attach to (Docker adapter attach mode). "
+      + "Use the returned container name with env_add (adapterType 'docker', adapterConfig.attach).",
+    inputSchema: z.object({}),
+    rpcMethod: "listDockerContainers",
+    mutating: false,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+    async handler(_args: Record<string, unknown>, { core: client }: GrackleClients) {
+      try {
+        const response = await client.listDockerContainers({});
+        if (response.error) {
+          return jsonResult({ containers: [], error: response.error });
+        }
+        return jsonResult(
+          response.containers.map((c) => ({
+            id: c.id,
+            name: c.name,
+            image: c.image,
+            state: c.state,
+            status: c.status,
+          })),
+        );
+      } catch (error) {
+        return grpcErrorToToolResult(error);
+      }
+    },
+  },
+
   // ── env_list ─────────────────────────────────────────────────────────────
   {
     name: "env_list",
@@ -42,7 +79,9 @@ export const envTools: ToolDefinition[] = [
     name: "env_add",
     group: "env",
     description:
-      "Register a new environment with Grackle by specifying its adapter type, display name, and optional configuration.",
+      "Register a new environment with Grackle by specifying its adapter type, display name, and optional configuration. "
+      + "For the 'docker' adapter, set adapterConfig.attach to an existing container name/ID to attach to it instead of creating one; "
+      + "use env_list_docker_containers to discover attachable containers.",
     inputSchema: z.object({
       displayName: z.string().describe("Human-readable name for the environment"),
       adapterType: z.string().describe("Adapter type (e.g. 'ssh', 'codespace', 'local')"),

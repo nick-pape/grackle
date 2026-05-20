@@ -105,7 +105,8 @@ Manage compute environments where agents run (Docker, SSH, Codespace, local).
 | Tool | Description | Parameters |
 |------|-------------|------------|
 | `env_list` | List all registered environments with status, adapter type, and runtime. | *(none)* |
-| `env_add` | Register a new environment. | `displayName` (string), `adapterType` (string), `adapterConfig?` (object) |
+| `env_list_docker_containers` | List running Docker containers that can be attached to (Docker adapter attach mode). | *(none)* |
+| `env_add` | Register a new environment. For the Docker adapter, set `adapterConfig.attach` to an existing container name/ID to attach instead of creating one. | `displayName` (string), `adapterType` (string), `adapterConfig?` (object) |
 | `env_provision` | Provision an environment — start resources, install the agent, and connect. | `environmentId` (string), `force?` (boolean) |
 | `env_stop` | Stop a running environment without destroying its resources. | `environmentId` (string) |
 | `env_destroy` | Destroy an environment's backing resources (e.g., delete the container). | `environmentId` (string) |
