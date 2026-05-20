@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 20 May 2026 13:57:19 GMT and should not be manually modified.
+This log was last generated on Wed, 20 May 2026 20:50:50 GMT and should not be manually modified.
+
+## 0.110.1
+Wed, 20 May 2026 20:50:50 GMT
+
+### Patches
+
+- Add npm README files for previously undocumented published packages: runtime-sdk, runtime-claude-code, runtime-codex, runtime-copilot, runtime-genaiscript, runtime-acp, and web-components
 
 ## 0.110.0
 Wed, 20 May 2026 13:57:19 GMT
