@@ -80,3 +80,9 @@
   color: var(--text-primary);
   font-weight: var(--font-weight-medium);
 }
+
+// Pins this tab (and any after it) to the right edge by absorbing the free
+// space to its left. Inert on mobile, where the nav scrolls horizontally.
+.tabEnd {
+  margin-left: auto;
+}

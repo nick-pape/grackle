@@ -66,6 +66,53 @@ export const AllTabsExplicit: Story = {
   },
 };
 
+/**
+ * Settings is pinned to the right edge even when the incoming tab list places it
+ * mid-list (as `buildTabs` does: core tabs, including Settings, come before
+ * orchestration and knowledge tabs). The component reorders end-aligned tabs last.
+ */
+export const SettingsPinnedRight: Story = {
+  // Fullscreen so the nav fills the viewport and the auto margin has free space
+  // to absorb (otherwise margin-left: auto would resolve to 0).
+  parameters: { layout: "fullscreen" },
+  args: {
+    tabs: [
+      { view: "dashboard", label: "Dashboard", icon: <Home size={ICON_LG} />, route: HOME_URL, testId: "sidebar-tab-dashboard" },
+      { view: "chat", label: "Chat", icon: <MessageSquare size={ICON_LG} />, route: CHAT_URL, testId: "sidebar-tab-chat" },
+      { view: "environments", label: "Environments", icon: <Monitor size={ICON_LG} />, route: ENVIRONMENTS_URL, testId: "sidebar-tab-environments" },
+      { view: "settings", label: "Settings", icon: <Settings size={ICON_LG} />, route: SETTINGS_CREDENTIALS_URL, testId: "sidebar-tab-settings", align: "end" },
+      { view: "tasks", label: "Tasks", icon: <ClipboardList size={ICON_LG} />, route: TASKS_URL, testId: "sidebar-tab-tasks" },
+      { view: "findings", label: "Findings", icon: <Search size={ICON_LG} />, route: FINDINGS_URL, testId: "sidebar-tab-findings" },
+      { view: "knowledge", label: "Knowledge", icon: <Brain size={ICON_LG} />, route: KNOWLEDGE_URL, testId: "sidebar-tab-knowledge" },
+    ],
+  },
+  play: async ({ canvas }) => {
+    const renderedTabs = canvas.getAllByRole("tab");
+    // Despite Settings being 4th in the input, it must render last (rightmost).
+    const settingsTab = renderedTabs[renderedTabs.length - 1];
+    await expect(settingsTab).toHaveAccessibleName(/Settings/);
+
+    // The end-alignment lives on the flex item (the Tooltip wrapper around the
+    // button), not the button itself. Verify margin-left: auto resolves to a
+    // positive used value there, so Settings is actually pushed to the right edge.
+    const settingsFlexItem = settingsTab.parentElement;
+    if (!settingsFlexItem) {
+      throw new Error("expected the Settings tab to have a flex-item wrapper");
+    }
+    const settingsMarginLeft = Number.parseFloat(globalThis.getComputedStyle(settingsFlexItem).marginLeft);
+    await expect(settingsMarginLeft).toBeGreaterThan(0);
+
+    // The neighbor immediately before it (Knowledge) must NOT have an auto
+    // margin, confirming the spacer is applied only to the pinned tab.
+    const neighborFlexItem = renderedTabs[renderedTabs.length - 2].parentElement;
+    if (!neighborFlexItem) {
+      throw new Error("expected the neighbor tab to have a flex-item wrapper");
+    }
+    const neighborMarginLeft = Number.parseFloat(globalThis.getComputedStyle(neighborFlexItem).marginLeft);
+    await expect(neighborMarginLeft).toBe(0);
+  },
+};
+
 /** Arrow keys navigate between tabs horizontally. */
 export const KeyboardNavigation: Story = {
   play: async ({ canvas }) => {
