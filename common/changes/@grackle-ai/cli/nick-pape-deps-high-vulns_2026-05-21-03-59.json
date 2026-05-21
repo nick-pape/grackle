@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Patch high-severity vulnerabilities: bump protobufjs transitive override to 7.5.6 and raise the @github/copilot runtime floor to ^1.0.43 (Docker image pinned to 1.0.51). No behavior change.",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
