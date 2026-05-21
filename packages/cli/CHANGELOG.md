@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 20 May 2026 20:50:50 GMT and should not be manually modified.
+This log was last generated on Thu, 21 May 2026 05:30:57 GMT and should not be manually modified.
+
+## 0.110.2
+Thu, 21 May 2026 05:30:57 GMT
+
+### Patches
+
+- Patch high-severity vulnerabilities: bump protobufjs transitive override to 7.5.6 and raise the @github/copilot runtime floor to ^1.0.43 (Docker image pinned to 1.0.51). No behavior change.
 
 ## 0.110.1
 Wed, 20 May 2026 20:50:50 GMT

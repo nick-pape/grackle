@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.110.2",
+      "tag": "@grackle-ai/cli_v0.110.2",
+      "date": "Thu, 21 May 2026 05:30:57 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Patch high-severity vulnerabilities: bump protobufjs transitive override to 7.5.6 and raise the @github/copilot runtime floor to ^1.0.43 (Docker image pinned to 1.0.51). No behavior change."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.110.1",
       "tag": "@grackle-ai/cli_v0.110.1",
       "date": "Wed, 20 May 2026 20:50:50 GMT",
