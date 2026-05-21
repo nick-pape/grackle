@@ -22,7 +22,7 @@ export const RUNTIME_MANIFESTS: Readonly<Record<string, RuntimePackageManifest>>
     packages: { "@anthropic-ai/claude-agent-sdk": "^0.2.50" },
   },
   "copilot": {
-    packages: { "@github/copilot-sdk": "^0.1.29", "@github/copilot": "^1.0.7" },
+    packages: { "@github/copilot-sdk": "^0.1.29", "@github/copilot": "^1.0.43" },
     needsJsonRpcHook: true,
   },
   "codex": {
@@ -35,7 +35,7 @@ export const RUNTIME_MANIFESTS: Readonly<Record<string, RuntimePackageManifest>>
     packages: { "@agentclientprotocol/sdk": "^0.16.1", "@zed-industries/codex-acp": "^0.10.0" },
   },
   "copilot-acp": {
-    packages: { "@agentclientprotocol/sdk": "^0.16.1", "@github/copilot": "^1.0.7" },
+    packages: { "@agentclientprotocol/sdk": "^0.16.1", "@github/copilot": "^1.0.43" },
   },
   "claude-code-acp": {
     packages: { "@agentclientprotocol/sdk": "^0.16.1", "@zed-industries/claude-agent-acp": "^0.22.0" },
