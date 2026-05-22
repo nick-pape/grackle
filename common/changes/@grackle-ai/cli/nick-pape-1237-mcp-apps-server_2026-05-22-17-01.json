@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add an MCP Apps (SEP-1865) app-side layer to @grackle-ai/mcp: resources capability (resources/list + resources/read), io.modelcontextprotocol/ui negotiation, and a static ui:// widget tool. Bump @modelcontextprotocol/sdk to ^1.29 across server packages.",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
