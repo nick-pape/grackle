@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.110.3",
+      "tag": "@grackle-ai/cli_v0.110.3",
+      "date": "Fri, 22 May 2026 15:02:19 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add MCP Apps (SEP-1865) host widget render component to @grackle-ai/web-components (McpAppWidget + cross-origin sandbox proxy + host theming)."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.110.2",
       "tag": "@grackle-ai/cli_v0.110.2",
       "date": "Thu, 21 May 2026 05:30:57 GMT",

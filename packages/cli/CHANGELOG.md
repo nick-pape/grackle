@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 21 May 2026 05:30:57 GMT and should not be manually modified.
+This log was last generated on Fri, 22 May 2026 15:02:19 GMT and should not be manually modified.
+
+## 0.110.3
+Fri, 22 May 2026 15:02:19 GMT
+
+### Patches
+
+- Add MCP Apps (SEP-1865) host widget render component to @grackle-ai/web-components (McpAppWidget + cross-origin sandbox proxy + host theming).
 
 ## 0.110.2
 Thu, 21 May 2026 05:30:57 GMT
