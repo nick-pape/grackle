@@ -1,4 +1,5 @@
 import { type JSX } from "react";
+import { assetUrl } from "@grackle-ai/web-components";
 import styles from "../SetupWizard.module.scss";
 
 /** Props for the {@link WelcomeStep} component. */
@@ -11,7 +12,7 @@ export function WelcomeStep({ onNext }: WelcomeStepProps): JSX.Element {
   return (
     <div className={styles.stepContent} data-testid="setup-welcome">
       <div className={styles.logoArea}>
-        <img src="/grackle-logo.png" alt="Grackle" className={styles.logoImage} />
+        <img src={assetUrl("grackle-logo.png")} alt="Grackle" className={styles.logoImage} />
       </div>
       <h1 className={styles.heading}>Welcome to Grackle</h1>
       <p className={styles.tagline}>Multi-agent orchestration for software teams</p>
