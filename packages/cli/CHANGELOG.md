@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 22 May 2026 18:26:16 GMT and should not be manually modified.
+This log was last generated on Fri, 22 May 2026 22:14:10 GMT and should not be manually modified.
+
+## 0.112.0
+Fri, 22 May 2026 22:14:10 GMT
+
+### Minor changes
+
+- Chat: multiline auto-resizing composer (Enter for newline, Ctrl/Cmd+Enter to send) and render user messages as markdown
 
 ## 0.111.0
 Fri, 22 May 2026 18:26:16 GMT
