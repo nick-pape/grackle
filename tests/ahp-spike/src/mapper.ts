@@ -318,8 +318,10 @@ export function mapAgentEvents(events: AgentEvent[]): MapResult {
       }
 
       case "finding": {
-        // CARRY: AHP has no findings concept. Park it in _meta and (if a turn is
-        // open) surface a systemNotification so it is at least visible.
+        // NOTE: in production, findings are an MCP syscall (the agent calls the
+        // injected `post_finding` tool) — out of band from this stream. No real
+        // runtime emits `finding` AgentEvents; only the StubRuntime does. This
+        // carry-handling exists only to process those stub fixtures.
         findings.push(parseContent(event.content) ?? event.content);
         meta["findings"] = [...findings];
         flushMeta();
@@ -330,15 +332,17 @@ export function mapAgentEvents(events: AgentEvent[]): MapResult {
             part: { kind: ResponsePartKind.SystemNotification, content: `Finding recorded` },
           });
         }
-        note(index, event.type, "carried", "no native AHP action → _meta.findings[] (+ systemNotification). Orchestration concept above AHP's session scope.");
+        note(index, event.type, "carried", "stub/legacy event only — real findings ride the MCP syscall; carried to _meta.findings[] for stub fixtures.");
         break;
       }
 
       case "subtask_create": {
-        // CARRY via AHP's only sub-agent surface: a tool call whose result
-        // references a subagent session URI (ToolResultSubagentContent). AHP has
-        // no first-class "spawn subagent" action, so we must fabricate a tool-call
-        // wrapper — that fabrication IS the finding.
+        // NOTE: in production, subtasks are an MCP syscall (the agent calls the
+        // injected task tool) — out of band from this stream. No real runtime
+        // emits `subtask_create` AgentEvents; only the StubRuntime does. For those
+        // stub fixtures we carry it via AHP's only sub-agent surface: a fabricated
+        // tool call whose result references a subagent session URI
+        // (ToolResultSubagentContent).
         const turnId = ensureTurn("(synthesized)");
         const parsed = parseContent(event.content) ?? {};
         const localId = typeof parsed["local_id"] === "string" ? (parsed["local_id"] as string) : `sub-${index}`;
@@ -381,7 +385,7 @@ export function mapAgentEvents(events: AgentEvent[]): MapResult {
           index,
           event.type,
           "carried",
-          "no native action → fabricated tool call w/ ToolResultSubagentContent (AHP only models subagents as tool *results*).",
+          "stub/legacy event only — real subtasks ride the MCP syscall; carried via a fabricated subagent tool result for stub fixtures.",
         );
         break;
       }

@@ -49,17 +49,34 @@ AHP would let the two unify.
 |---|---|---|
 | `usage.cost_millicents` | `usage._meta.cost_millicents` | AHP `UsageInfo` has no cost field (only tokens/model/cacheReadTokens) |
 | `runtime_session_id` | `session/metaChanged` → `_meta.runtimeSessionId` | internal id; a host owns the native session id directly |
-| `finding` | `_meta.findings[]` + a `systemNotification` part | **orchestration concept above AHP's session scope** |
-| `subtask_create` | a **fabricated** tool call whose result is `ToolResultSubagentContent` | AHP only models subagents as tool *results*, never as a first-class "spawn" action |
 
-The `subtask_create` result is the most interesting: AHP *does* have a sub-agent
-toehold (`ToolResultSubagentContent` references a subscribable subagent session
-URI), but it only exists as the **result of a tool call**. Carrying Grackle's
-out-of-band `subtask_create` event therefore requires fabricating a synthetic
-`spawn_subtask` tool call. The real lesson is the inverse: **if subtask creation
-flowed through an actual tool call** (the agent calls a "spawn" tool, whose result
-is the child session URI), it would ride AHP natively with no fabrication. That's
-a concrete design nudge for the kernel/orchestration layer.
+Both are minor — small bits of Grackle metadata with no first-class AHP field.
+
+## Correction: orchestration (findings/subtasks) does NOT ride this channel
+
+An earlier draft listed `finding` / `subtask_create` as "carried with strain."
+**That was wrong.** In production, findings and subtasks are **MCP syscalls**, not
+events on the agent-conversation transport:
+
+- The agent records a finding by calling the injected Grackle MCP tool
+  (`packages/mcp/src/tools/finding.ts`; subtasks via `task.ts`). These flow
+  **agent → injected Grackle MCP → Server orchestration**, entirely out of band
+  from the PowerLine↔Server stream. Over the wire they appear (if at all) only as
+  ordinary `tool_use`/`tool_result`, which map cleanly.
+- **No production runtime emits `finding`/`subtask_create` AgentEvents** — only the
+  `StubRuntime` does, to exercise `event-processor.ts`'s legacy structured-event
+  path. The mapper's carry-handling for these exists *solely* to process the stub
+  fixtures; it does not reflect how real agents work.
+
+So orchestration never needs an AHP session action. This is exactly the
+**separation the kernel model already prescribes**: MCP is the syscall ABI (where
+findings/subtasks/escalations live); AHP carries only the agent conversation. The
+apparent "strain" was an artifact of feeding the spike the stub's legacy events.
+
+(The sub-agent observation still stands as a *latent* nicety: AHP's
+`ToolResultSubagentContent` references a subscribable child-session URI, so a
+subtask spawned via a real MCP tool call could surface its child session natively
+in the conversation — but that's an option, not a requirement.)
 
 ## Genuine gaps (no AHP `SessionState` representation)
 
@@ -67,8 +84,6 @@ a concrete design nudge for the kernel/orchestration layer.
   in `SessionState` — there is no active turn yet, so a `responsePart` no-ops.
   These are diagnostics; AHP's place for them is the **`ahp-otlp:` telemetry
   channel** (logs), not session state. A host should route them there.
-- **`finding`** has no home in session state at all (we park it in `_meta` only
-  so it is not lost). Findings are a Grackle-native plane concern.
 
 ## Turn-framing — the central abstraction mismatch
 
@@ -135,9 +150,12 @@ Translating the gaps into what *PowerLine-as-AHP-host* must own (beyond any mapp
 ## Bottom line
 
 The agent-conversation core maps cleanly; Grackle's abstractions are *expressible*
-in AHP. The friction is concentrated exactly where Grackle exceeds AHP's session
-scope (orchestration) or under-specifies relative to it (no turns, no user
-message, no structured input requests, no stable tool ids in the flattened
-stream). None of these are blockers for PowerLine-as-host — they are a precise
-to-do list, and several (turns, tool ids) *disappear* once the host consumes the
-runtime directly instead of through the lossy `AgentEvent` flattening.
+in AHP. Orchestration (findings, subtasks, escalations) is **not** friction for
+the session channel at all — it rides the MCP syscall plane, out of band, and
+never needed an AHP action (the apparent strain was a stub-fixture artifact). The
+real, residual friction is purely where Grackle *under-specifies* the conversation
+relative to AHP: no turns, no user message, no structured input requests, no
+stable tool ids in the flattened `AgentEvent` stream. None of these are blockers
+for PowerLine-as-host — they are a precise to-do list, and several (turns, tool
+ids) *disappear* once the host consumes the runtime directly instead of through
+the lossy flattening.
