@@ -53,7 +53,7 @@ test.describe("Chat Page (root task)", { tag: ["@session"] }, () => {
     await expect(page).toHaveURL(/\/chat/);
 
     // The UnifiedBar should show an input (since test harness has a local env)
-    const input = page.locator('input[placeholder="Type a message..."]');
+    const input = page.locator('textarea[placeholder="Type a message..."]');
     await expect(input).toBeVisible({ timeout: 5_000 });
   });
 
@@ -68,7 +68,7 @@ test.describe("Chat Page (root task)", { tag: ["@session"] }, () => {
 
     // Type a message and submit — this should start the root task with the
     // hardcoded initial prompt and queue the user's text for sendInput.
-    const input = page.locator('input[placeholder="Type a message..."]');
+    const input = page.locator('textarea[placeholder="Type a message..."]');
     await expect(input).toBeVisible({ timeout: 5_000 });
     await input.fill("Hello system");
     await page.getByRole("button", { name: "Send" }).click();

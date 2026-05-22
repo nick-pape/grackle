@@ -5,6 +5,8 @@ import type { DisplayEvent } from "../../utils/sessionEvents.js";
 import { makeEvent, makeSession, makeEnvironment } from "../../test-utils/storybook-helpers.js";
 
 const sampleEvents: DisplayEvent[] = [
+  // User messages render as markdown, same as agent output.
+  makeEvent({ eventType: "user_input", content: "Can you check **`auth.ts`**? The `refreshToken` flow looks broken:\n\n1. token isn't refreshed before expiry\n2. the retry has an off-by-one", timestamp: "2026-01-01T00:00:00Z" }),
   makeEvent({ eventType: "text", content: "First message", timestamp: "2026-01-01T00:00:01Z" }),
   makeEvent({ eventType: "text", content: "Second message", timestamp: "2026-01-01T00:00:02Z" }),
   makeEvent({ eventType: "text", content: "Third message", timestamp: "2026-01-01T00:00:03Z" }),
@@ -12,7 +14,7 @@ const sampleEvents: DisplayEvent[] = [
 
 /** A richer set of events including non-content types for selection mode tests. */
 const mixedEvents: DisplayEvent[] = [
-  makeEvent({ eventType: "user_input", content: "Fix the bug", timestamp: "2026-01-01T00:00:01Z" }),
+  makeEvent({ eventType: "user_input", content: "Fix the **login bug** in `auth.ts`:\n\n- token isn't refreshed\n- expiry check is off-by-one", timestamp: "2026-01-01T00:00:01Z" }),
   makeEvent({ eventType: "text", content: "Looking into it.", timestamp: "2026-01-01T00:00:02Z" }),
   makeEvent({ eventType: "status", content: "running", timestamp: "2026-01-01T00:00:03Z" }),
   makeEvent({ eventType: "text", content: "Found the issue in auth.ts", timestamp: "2026-01-01T00:00:04Z" }),

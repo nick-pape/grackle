@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.112.0",
+      "tag": "@grackle-ai/cli_v0.112.0",
+      "date": "Fri, 22 May 2026 22:14:10 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Chat: multiline auto-resizing composer (Enter for newline, Ctrl/Cmd+Enter to send) and render user messages as markdown"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.111.0",
       "tag": "@grackle-ai/cli_v0.111.0",
       "date": "Fri, 22 May 2026 18:26:16 GMT",

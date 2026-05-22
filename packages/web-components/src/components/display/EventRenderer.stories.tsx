@@ -170,6 +170,22 @@ export const MarkdownParagraphWrapping: Story = {
   },
 };
 
+/** User input events render as markdown (bold, lists, inline code) inside the bubble. */
+export const UserMessageMarkdown: Story = {
+  args: {
+    event: makeEvent({
+      eventType: "user_input",
+      content: "Please fix **the bug** in:\n\n- `index.ts`\n- `app.ts`",
+    }),
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByTestId("user-input-content")).toBeInTheDocument();
+    await expect(canvas.getByText("the bug").tagName).toBe("STRONG");
+    await expect(canvas.getAllByRole("listitem")).toHaveLength(2);
+    await expect(canvas.getByText("index.ts").tagName).toBe("CODE");
+  },
+};
+
 /** System context event renders as collapsible prompt. */
 export const SystemContext: Story = {
   args: {

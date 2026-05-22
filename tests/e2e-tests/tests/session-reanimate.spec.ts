@@ -38,12 +38,12 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
     await page.getByTestId("env-nav-item").first().click();
     await page.getByRole("button", { name: "New Chat" }).click();
 
-    const promptInput = page.locator('input[placeholder="Enter prompt..."]');
+    const promptInput = page.locator('textarea[placeholder="Enter prompt..."]');
     await promptInput.fill("reanimate me");
     await page.locator("button", { hasText: "Go" }).click();
 
     // ── 2. Wait for the session to reach waiting_input ──────────────────
-    const inputField = page.locator('input[placeholder="Type a message..."]');
+    const inputField = page.locator('textarea[placeholder="Type a message..."]');
     await expect(inputField).toBeVisible({ timeout: 10_000 });
     await expect(page.locator("text=Echo: reanimate me")).toBeVisible();
 
@@ -73,7 +73,7 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
     // ── 6. UI transitions: session re-enters waiting_input ────────────────
     // The stub resume emits "Echo: (resumed session)" as its first text event
     await expect(page.locator("text=Echo: (resumed session)")).toBeVisible({ timeout: 10_000 });
-    const resumedInput = page.locator('input[placeholder="Type a message..."]');
+    const resumedInput = page.locator('textarea[placeholder="Type a message..."]');
     await expect(resumedInput).toBeVisible({ timeout: 10_000 });
 
     // ── 7. Send input to the reanimated session ───────────────────────────
@@ -98,10 +98,10 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
     await page.getByTestId("env-nav-item").first().click();
     await page.getByRole("button", { name: "New Chat" }).click();
 
-    await page.locator('input[placeholder="Enter prompt..."]').fill("keep idle");
+    await page.locator('textarea[placeholder="Enter prompt..."]').fill("keep idle");
     await page.locator("button", { hasText: "Go" }).click();
 
-    const inputField = page.locator('input[placeholder="Type a message..."]');
+    const inputField = page.locator('textarea[placeholder="Type a message..."]');
     await expect(inputField).toBeVisible({ timeout: 10_000 });
 
     // Get the idle session ID
