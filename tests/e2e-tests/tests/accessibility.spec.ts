@@ -101,7 +101,7 @@ test.describe("Accessibility attributes", { tag: ["@a11y"] }, () => {
       await page.getByTestId("task-header-start").click();
 
       // Wait for input to appear
-      const input = page.locator('input[placeholder="Type a message..."]');
+      const input = page.locator('textarea[placeholder="Type a message..."]');
       await expect(input).toBeVisible({ timeout: 15_000 });
 
       // Assert aria-label
@@ -116,9 +116,9 @@ test.describe("Accessibility attributes", { tag: ["@a11y"] }, () => {
       await expect(page).toHaveURL(/\/chat/);
 
       // Wait for the spawn-mode input (uses "Enter prompt..." or "Type a message..." placeholder)
-      const input = page.locator('input[placeholder="Enter prompt..."]');
+      const input = page.locator('textarea[placeholder="Enter prompt..."]');
       // The input may not be visible if there's no environment — fall back to other placeholder
-      const altInput = page.locator('input[placeholder="Type a message..."]');
+      const altInput = page.locator('textarea[placeholder="Type a message..."]');
       const spawnInput = await input.isVisible().catch(() => false) ? input : altInput;
       await expect(spawnInput).toBeVisible({ timeout: 5_000 });
 

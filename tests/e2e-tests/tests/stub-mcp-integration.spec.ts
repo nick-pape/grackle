@@ -34,7 +34,7 @@ test.describe("Stub MCP Integration", { tag: ["@persona"] }, () => {
     expect(cardText).toBeTruthy();
 
     // Send input to complete the session
-    const inputField = page.locator('input[placeholder="Type a message..."]');
+    const inputField = page.locator('textarea[placeholder="Type a message..."]');
     await inputField.waitFor({ timeout: 15_000 });
     await inputField.fill("continue");
     await page.getByRole("button", { name: "Send", exact: true }).click();

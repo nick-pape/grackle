@@ -3,6 +3,7 @@ import { Circle, Menu } from "lucide-react";
 import type { ConnectionStatus, Environment, Session } from "../../hooks/types.js";
 import { ICON_LG, ICON_XS } from "../../utils/iconSize.js";
 import { HOME_URL, useAppNavigate } from "../../utils/navigation.js";
+import { assetUrl } from "../../utils/assetUrl.js";
 import { Tooltip } from "../display/Tooltip.js";
 import styles from "./StatusBar.module.scss";
 
@@ -51,7 +52,7 @@ export function StatusBar({ connectionStatus, environments, sessions, onToggleSi
       )}
       <Tooltip text="Home" placement="bottom">
         <button type="button" className={styles.brand} onClick={() => navigate(HOME_URL)} data-testid="statusbar-brand">
-          <img src="/icon-192x192.png" alt="" className={styles.brandLogo} aria-hidden="true" data-testid="statusbar-logo" />
+          <img src={assetUrl("icon-192x192.png")} alt="" className={styles.brandLogo} aria-hidden="true" data-testid="statusbar-logo" />
           Grackle
         </button>
       </Tooltip>

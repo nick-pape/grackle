@@ -20,7 +20,7 @@ test.describe("Session Lifecycle (stub runtime)", { tag: ["@session"] }, () => {
     await expect(goButton).toBeDisabled();
 
     // Type prompt, click Go (uses default stub persona)
-    const promptInput = page.locator('input[placeholder="Enter prompt..."]');
+    const promptInput = page.locator('textarea[placeholder="Enter prompt..."]');
     await promptInput.fill("hello world");
     await expect(goButton).toBeEnabled();
     await goButton.click();
@@ -46,7 +46,7 @@ test.describe("Session Lifecycle (stub runtime)", { tag: ["@session"] }, () => {
     await expect(page.locator('[data-testid^="tool-card-"]').first()).toBeVisible();
 
     // Session reaches waiting_input — UnifiedBar shows text input + Send + Stop
-    const inputField = page.locator('input[placeholder="Type a message..."]');
+    const inputField = page.locator('textarea[placeholder="Type a message..."]');
     await expect(inputField).toBeVisible({ timeout: 10_000 });
     await expect(page.locator("button", { hasText: "Send" })).toBeVisible();
     await expect(page.getByTestId("stop-split-button")).toBeVisible();

@@ -30,7 +30,7 @@ test.describe("Concurrent Tasks", { tag: ["@task"] }, () => {
     await page.getByTestId("task-header-start").click();
 
     // Wait for task A to reach waiting_input (scenario goes idle)
-    const inputField = page.locator('input[placeholder="Type a message..."]');
+    const inputField = page.locator('textarea[placeholder="Type a message..."]');
     await inputField.waitFor({ timeout: 15_000 });
 
     // Start task B (navigate to it while A is running)
@@ -95,7 +95,7 @@ test.describe("Concurrent Tasks", { tag: ["@task"] }, () => {
 
     // Complete task X to review: navigate, send input
     await navigateToTask(page, "status-task-x");
-    const inputField = page.locator('input[placeholder="Type a message..."]');
+    const inputField = page.locator('textarea[placeholder="Type a message..."]');
     await inputField.waitFor({ timeout: 15_000 });
     await inputField.fill("continue");
     await page.locator("button", { hasText: "Send" }).click();
