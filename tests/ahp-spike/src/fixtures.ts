@@ -86,3 +86,9 @@ export const acpToolPairing: AgentEvent[] = [
   ev("tool_result", "file-a\nfile-b", { sessionUpdate: "tool_call_update", status: "completed", rawOutput: "file-a\nfile-b" }),
   ev("status", "completed"),
 ];
+
+/**
+ * A session that fails before any turn opens (e.g. a setup/auth failure). There
+ * is no turn to error on, so this exercises the pre-turn failure path.
+ */
+export const preTurnFailure: AgentEvent[] = [ev("system", "Starting runtime…"), ev("status", "failed")];

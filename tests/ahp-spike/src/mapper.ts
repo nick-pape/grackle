@@ -246,12 +246,22 @@ export function mapAgentEvents(events: AgentEvent[]): MapResult {
           ensureTurn("(synthesized: status=running)");
           note(index, event.type, "mapped", "status=running → ensure open turn");
         } else if (s === "failed") {
-          endTurn({
-            type: ActionType.SessionError,
-            turnId: currentTurnId ?? `turn-${turnCounter}`,
-            error: { errorType: "failed", message: "session failed" },
-          });
-          note(index, event.type, "mapped", "status=failed → session/error (turn end)");
+          if (currentTurnId !== undefined) {
+            endTurn({
+              type: ActionType.SessionError,
+              turnId: currentTurnId,
+              error: { errorType: "failed", message: "session failed" },
+            });
+            note(index, event.type, "mapped", "status=failed → session/error (turn end)");
+          } else {
+            // Pre-turn failure: there is no turn to error on, so report it as a
+            // session creation failure (mirrors the pre-turn `error` event path).
+            actions.push({
+              type: ActionType.SessionCreationFailed,
+              error: { errorType: "failed", message: "session failed" },
+            });
+            note(index, event.type, "mapped", "pre-turn status=failed → session/creationFailed");
+          }
         } else if (TURN_ENDING_STATUSES.has(s)) {
           if (currentTurnId !== undefined) {
             endTurn({ type: ActionType.SessionTurnComplete, turnId: currentTurnId });

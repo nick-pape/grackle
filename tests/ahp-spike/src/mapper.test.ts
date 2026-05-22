@@ -14,9 +14,10 @@ import {
   ToolResultContentType,
   TurnState,
   SessionStatus,
+  SessionLifecycle,
 } from "./vendor/ahp/channels-session/state.js";
 import type { SessionState } from "./vendor/ahp/channels-session/state.js";
-import { makeInitialSessionState, happyPath, orchestration, errorPath, acpToolPairing } from "./fixtures.js";
+import { makeInitialSessionState, happyPath, orchestration, errorPath, acpToolPairing, preTurnFailure } from "./fixtures.js";
 import type { AgentEvent } from "@grackle-ai/runtime-sdk";
 import type { SpawnOptions } from "@grackle-ai/runtime-sdk";
 
@@ -103,6 +104,21 @@ describe("error path", () => {
     expect(state.turns[0].state).toBe(TurnState.Error);
     expect(state.turns[0].error?.message).toBe("boom: the SDK threw");
     expect(state.summary.status & SessionStatus.Error).toBe(SessionStatus.Error);
+  });
+});
+
+describe("pre-turn failure", () => {
+  it("maps a failure that arrives before any turn to session/creationFailed", () => {
+    const result = mapAgentEvents(preTurnFailure);
+    const failNote = result.notes.find((n) => n.type === "status");
+    expect(failNote?.disposition).toBe("mapped");
+    expect(failNote?.detail).toContain("creationFailed");
+
+    const state = replay(preTurnFailure);
+    expect(state.lifecycle).toBe(SessionLifecycle.CreationFailed);
+    expect(state.creationError?.message).toBe("session failed");
+    expect(state.turns).toHaveLength(0);
+    expect(state.activeTurn).toBeUndefined();
   });
 });
 
