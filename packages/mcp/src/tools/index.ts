@@ -16,6 +16,7 @@ import { scheduleTools } from "./schedule.js";
 import { versionTools } from "./version.js";
 import { escalationTools } from "./escalation.js";
 import { pluginTools } from "./plugin.js";
+import { widgetTools } from "./widget.js";
 
 /** Built-in tool groups shipped with the MCP package. */
 const builtinToolGroups: ToolDefinition[][] = [
@@ -36,6 +37,7 @@ const builtinToolGroups: ToolDefinition[][] = [
   versionTools,
   escalationTools,
   pluginTools,
+  widgetTools,
 ];
 
 /**

@@ -11,8 +11,13 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
   isInitializeRequest,
+  McpError,
+  ErrorCode,
   type CallToolResult,
+  type ReadResourceResult,
 } from "@modelcontextprotocol/sdk/types.js";
 import pino, { type Logger } from "pino";
 import { z } from "zod";
@@ -22,6 +27,9 @@ import { grpcErrorToToolResult } from "./error-handler.js";
 import type { ToolDefinition, GrackleClients } from "./tool-registry.js";
 import { createToolRegistry } from "./tools/index.js";
 import { resolveToolForAuth, listToolsForAuth } from "./tool-scoping.js";
+import { createResourceRegistry } from "./resources/index.js";
+import { hostSupportsUiApps, uiToolMeta } from "./ui-app.js";
+import { tryServeWidgetAsset } from "./widget-asset-server.js";
 
 /** Read the package version from package.json at module load time. */
 const PACKAGE_VERSION: string = (JSON.parse(
@@ -110,9 +118,11 @@ async function resolvePersonaTools(
 async function createMcpServerInstance(
   grpcClients: GrackleClients,
   authContext: AuthContext,
+  assetBaseUrl: string,
   toolGroups?: ToolDefinition[][],
 ): Promise<Server> {
   const registry = createToolRegistry(toolGroups);
+  const resourceRegistry = createResourceRegistry(assetBaseUrl);
 
   // Resolve persona-scoped tool set once at session creation (cached for session lifetime)
   const personaAllowedTools = await resolvePersonaTools(grpcClients, authContext);
@@ -126,20 +136,61 @@ async function createMcpServerInstance(
 
   const server = new Server(
     { name: "grackle-mcp", version: PACKAGE_VERSION },
-    { capabilities: { tools: {} } },
+    { capabilities: { tools: {}, resources: {} } },
   );
 
-  // Pre-compute the visible tool list and names (immutable for this session)
+  // Pre-compute the visible tool list and names (immutable for this session).
+  // UI (MCP Apps) tools carry _meta.ui.resourceUri so a host knows which ui://
+  // resource to render.
   const visibleToolDefs = visibleTools.map((t) => ({
     name: t.name,
     description: t.description,
     inputSchema: z.toJSONSchema(t.inputSchema),
     annotations: t.annotations,
+    ...(t.uiResourceUri ? { _meta: uiToolMeta(t.uiResourceUri) } : {}),
   }));
   const visibleToolNames = visibleTools.map((t) => t.name).join(", ");
+  /** Names of UI tools — only listed to hosts that can render MCP Apps widgets. */
+  const uiToolNames = new Set(visibleTools.filter((t) => t.uiResourceUri).map((t) => t.name));
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return { tools: visibleToolDefs };
+    // Gate widget tools on the host advertising the io.modelcontextprotocol/ui
+    // extension (known only after initialize). Non-UI hosts see the rest.
+    const uiOn = hostSupportsUiApps(server.getClientCapabilities());
+    const tools = uiOn ? visibleToolDefs : visibleToolDefs.filter((t) => !uiToolNames.has(t.name));
+    return { tools };
+  });
+
+  server.setRequestHandler(ListResourcesRequestSchema, async () => {
+    return {
+      resources: resourceRegistry.list().map((r) => ({
+        uri: r.uri,
+        name: r.name,
+        ...(r.description ? { description: r.description } : {}),
+        mimeType: r.mimeType,
+        ...(r.meta ? { _meta: r.meta } : {}),
+      })),
+    };
+  });
+
+  server.setRequestHandler(ReadResourceRequestSchema, async (request): Promise<ReadResourceResult> => {
+    // Resources are session-global and unscoped in #1237 (a widget shell is not
+    // sensitive). Per-session / auth-scoped resources are #1239.
+    const resource = resourceRegistry.get(request.params.uri);
+    if (!resource) {
+      throw new McpError(ErrorCode.InvalidParams, `Unknown resource: ${request.params.uri}`);
+    }
+    const { text } = resource.read();
+    return {
+      contents: [
+        {
+          uri: resource.uri,
+          mimeType: resource.mimeType,
+          text,
+          ...(resource.meta ? { _meta: resource.meta } : {}),
+        },
+      ],
+    };
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (request): Promise<CallToolResult> => {
@@ -314,6 +365,13 @@ export function createMcpServer(options: McpServerOptions): http.Server {
       return;
     }
 
+    // Serve the built-in widget's browser assets (static JS) before the /mcp
+    // routing + auth check — an MCP Apps host sandbox fetches these without the
+    // API key. They are non-sensitive (the widget shell + the ext-apps App).
+    if (req.method?.toUpperCase() === "GET" && tryServeWidgetAsset(url.pathname, res)) {
+      return;
+    }
+
     // Only serve the /mcp endpoint
     if (url.pathname !== "/mcp") {
       res.writeHead(404, { "Content-Type": "application/json" });
@@ -380,6 +438,30 @@ async function parseBody(req: http.IncomingMessage): Promise<unknown> {
   });
 }
 
+/**
+ * Resolve the public origin the client reached us on, for embedding into widget
+ * asset URLs. Honors `X-Forwarded-Proto` (reverse proxies) and TLS for the
+ * scheme, and normalizes the Host header through `URL` so a hostile value cannot
+ * inject markup when interpolated into the widget HTML's `<script src>`.
+ *
+ * @returns A clean `scheme://host[:port]` origin, or `http://localhost` if the
+ *   Host header is missing or unparseable.
+ */
+export function resolveAssetBaseUrl(
+  hostHeader: string | undefined,
+  forwardedProto: string | string[] | undefined,
+  encrypted: boolean,
+): string {
+  const rawProto: string | undefined = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+  const proto: string | undefined = rawProto?.split(",")[0]?.trim();
+  const scheme: string = proto && proto.length > 0 ? proto : encrypted ? "https" : "http";
+  try {
+    return new URL(`${scheme}://${hostHeader ?? "localhost"}`).origin;
+  } catch {
+    return "http://localhost";
+  }
+}
+
 /** Handle POST requests to /mcp — initialization or tool calls. */
 async function handlePost(
   req: http.IncomingMessage,
@@ -429,7 +511,12 @@ async function handlePost(
         }
       };
 
-      const mcpServer = await createMcpServerInstance(grpcClients, authContext, toolGroups);
+      // Asset base URL is the origin the client actually reached us on, so the
+      // widget HTML references assets correctly. Normalized via URL parsing to
+      // avoid attribute injection from a hostile Host header.
+      const encrypted = "encrypted" in req.socket && (req.socket as { encrypted?: boolean }).encrypted === true;
+      const assetBaseUrl = resolveAssetBaseUrl(req.headers.host, req.headers["x-forwarded-proto"], encrypted);
+      const mcpServer = await createMcpServerInstance(grpcClients, authContext, assetBaseUrl, toolGroups);
       await mcpServer.connect(transport);
       await transport.handleRequest(req, res, body);
       return;
