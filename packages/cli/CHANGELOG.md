@@ -1,6 +1,14 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 22 May 2026 22:14:10 GMT and should not be manually modified.
+This log was last generated on Fri, 22 May 2026 23:27:43 GMT and should not be manually modified.
+
+## 0.112.1
+Fri, 22 May 2026 23:27:43 GMT
+
+### Patches
+
+- Fix Grackle logo/icon assets 404ing on sub-path deployments (e.g. the GitHub Pages demo): resolve public asset paths against the Vite base URL via a new assetUrl() helper, and make the PWA manifest paths relative.
+- Nav: reorder so Tasks comes before Sessions, and rename the Chat tab to Sessions (route unchanged)
 
 ## 0.112.0
 Fri, 22 May 2026 22:14:10 GMT

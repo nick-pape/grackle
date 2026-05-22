@@ -2,6 +2,21 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.112.1",
+      "tag": "@grackle-ai/cli_v0.112.1",
+      "date": "Fri, 22 May 2026 23:27:43 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix Grackle logo/icon assets 404ing on sub-path deployments (e.g. the GitHub Pages demo): resolve public asset paths against the Vite base URL via a new assetUrl() helper, and make the PWA manifest paths relative."
+          },
+          {
+            "comment": "Nav: reorder so Tasks comes before Sessions, and rename the Chat tab to Sessions (route unchanged)"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.112.0",
       "tag": "@grackle-ai/cli_v0.112.0",
       "date": "Fri, 22 May 2026 22:14:10 GMT",
