@@ -107,13 +107,25 @@ const markdownComponents: Record<string, typeof CodeBlockWrapper> = {
   pre: CodeBlockWrapper,
 };
 
+/**
+ * Renders a markdown string with GFM support and syntax-highlighted code blocks.
+ *
+ * Shared by both assistant text events and user input events so the two render
+ * through an identical pipeline.
+ */
+function MarkdownContent({ content }: { content: string }): JSX.Element {
+  return (
+    <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrismPlus]} components={markdownComponents}>
+      {content}
+    </Markdown>
+  );
+}
+
 /** Renders an assistant text output event with markdown formatting. */
 function TextEvent({ content }: { content: string }): JSX.Element {
   return (
     <div className={styles.textEvent}>
-      <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrismPlus]} components={markdownComponents}>
-        {content}
-      </Markdown>
+      <MarkdownContent content={content} />
     </div>
   );
 }
@@ -140,11 +152,13 @@ function StatusEvent({ content }: { content: string }): JSX.Element {
   );
 }
 
-/** Renders a user input event, right-aligned to distinguish it from agent output. */
+/** Renders a user input event as markdown, right-aligned to distinguish it from agent output. */
 function UserInputEvent({ content }: { content: string }): JSX.Element {
   return (
     <div className={styles.userInputEvent}>
-      <span className={styles.userInputContent}>{content}</span>
+      <div className={styles.userInputContent} data-testid="user-input-content">
+        <MarkdownContent content={content} />
+      </div>
     </div>
   );
 }

@@ -134,3 +134,38 @@ export const SendModeActive: Story = {
     await expect(canvas.getByRole("button", { name: "Send" })).toBeDisabled();
   },
 };
+
+/**
+ * The composer is multiline: a plain Enter inserts a newline and does NOT submit.
+ */
+export const ComposerEnterInsertsNewline: Story = {
+  args: {
+    mode: "send",
+    sessionId: "sess-1",
+    environmentId: "local",
+  },
+  play: async ({ canvas, args }) => {
+    const input = canvas.getByPlaceholderText("Type a message...");
+    await userEvent.type(input, "line one{Enter}line two");
+    await expect(input).toHaveValue("line one\nline two");
+    await expect(args.onSendInput).not.toHaveBeenCalled();
+  },
+};
+
+/**
+ * Ctrl/Cmd+Enter submits the composer (mirrors clicking Send) and clears the box.
+ */
+export const ComposerCtrlEnterSubmits: Story = {
+  args: {
+    mode: "send",
+    sessionId: "sess-1",
+    environmentId: "local",
+  },
+  play: async ({ canvas, args }) => {
+    const input = canvas.getByPlaceholderText("Type a message...");
+    await userEvent.type(input, "hello there");
+    await userEvent.keyboard("{Control>}{Enter}{/Control}");
+    await expect(args.onSendInput).toHaveBeenCalledWith("sess-1", "hello there");
+    await expect(input).toHaveValue("");
+  },
+};
