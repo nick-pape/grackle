@@ -186,6 +186,10 @@
       "projectFolder": "tests/e2e-tests"
     },
     {
+      "packageName": "@grackle-ai/ahp-spike",
+      "projectFolder": "tests/ahp-spike"
+    },
+    {
       "packageName": "@grackle-ai/docs-site",
       "projectFolder": "apps/docs-site"
     },

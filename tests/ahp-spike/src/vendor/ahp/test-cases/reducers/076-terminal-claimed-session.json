@@ -1,0 +1,33 @@
+{
+  "description": "terminal/claimed transfers to session claim with tool call",
+  "reducer": "terminal",
+  "initial": {
+    "title": "bash",
+    "content": [],
+    "claim": {
+      "kind": "client",
+      "clientId": "c1"
+    }
+  },
+  "actions": [
+    {
+      "type": "terminal/claimed",
+      "claim": {
+        "kind": "session",
+        "session": "copilot:/session-1",
+        "turnId": "turn-1",
+        "toolCallId": "tc-1"
+      }
+    }
+  ],
+  "expected": {
+    "title": "bash",
+    "content": [],
+    "claim": {
+      "kind": "session",
+      "session": "copilot:/session-1",
+      "turnId": "turn-1",
+      "toolCallId": "tc-1"
+    }
+  }
+}

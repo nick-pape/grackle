@@ -1,0 +1,26 @@
+{
+  "description": "terminal/titleChanged updates title",
+  "reducer": "terminal",
+  "initial": {
+    "title": "bash",
+    "content": [],
+    "claim": {
+      "kind": "client",
+      "clientId": "c1"
+    }
+  },
+  "actions": [
+    {
+      "type": "terminal/titleChanged",
+      "title": "vim ~/project/main.ts"
+    }
+  ],
+  "expected": {
+    "title": "vim ~/project/main.ts",
+    "content": [],
+    "claim": {
+      "kind": "client",
+      "clientId": "c1"
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "description": "terminal/commandDetectionAvailable sets supportsCommandDetection flag",
+  "reducer": "terminal",
+  "initial": {
+    "title": "bash",
+    "content": [],
+    "claim": {
+      "kind": "client",
+      "clientId": "c1"
+    }
+  },
+  "actions": [
+    {
+      "type": "terminal/commandDetectionAvailable"
+    }
+  ],
+  "expected": {
+    "title": "bash",
+    "content": [],
+    "claim": {
+      "kind": "client",
+      "clientId": "c1"
+    },
+    "supportsCommandDetection": true
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "description": "session input upsert preserves or replaces answers and answerChanged clears last draft",
+  "reducer": "session",
+  "initial": {
+    "summary": {
+      "resource": "copilot:/test-session",
+      "provider": "copilot",
+      "title": "Test Session",
+      "status": 24,
+      "createdAt": 1000,
+      "modifiedAt": 2000
+    },
+    "lifecycle": "ready",
+    "turns": [],
+    "activeTurn": {
+      "id": "turn-1",
+      "userMessage": {
+        "text": "Hello"
+      },
+      "responseParts": [],
+      "usage": null
+    },
+    "inputRequests": [
+      {
+        "id": "input-1",
+        "message": "Old message",
+        "answers": {
+          "q1": {
+            "state": "draft",
+            "value": {
+              "kind": "text",
+              "value": "draft"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "actions": [
+    {
+      "type": "session/inputRequested",
+      "request": {
+        "id": "input-1",
+        "message": "New message"
+      }
+    },
+    {
+      "type": "session/inputRequested",
+      "request": {
+        "id": "input-1",
+        "message": "New message",
+        "answers": {
+          "q2": {
+            "state": "skipped"
+          }
+        }
+      }
+    },
+    {
+      "type": "session/inputAnswerChanged",
+      "requestId": "input-1",
+      "questionId": "q2"
+    }
+  ],
+  "expected": {
+    "summary": {
+      "resource": "copilot:/test-session",
+      "provider": "copilot",
+      "title": "Test Session",
+      "status": 24,
+      "createdAt": 1000,
+      "modifiedAt": 9999
+    },
+    "lifecycle": "ready",
+    "turns": [],
+    "activeTurn": {
+      "id": "turn-1",
+      "userMessage": {
+        "text": "Hello"
+      },
+      "responseParts": [],
+      "usage": null
+    },
+    "inputRequests": [
+      {
+        "id": "input-1",
+        "message": "New message",
+        "answers": null
+      }
+    ]
+  }
+}

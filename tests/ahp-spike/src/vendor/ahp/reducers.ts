@@ -1,0 +1,13 @@
+/* eslint-disable -- vendored third-party code, see SOURCE.md */
+/**
+ * Reducer Functions — Aggregator shim that re-exports the channel-organized
+ * pure state reducers and dispatch helpers.
+ *
+ * @module reducers
+ */
+
+export { rootReducer } from './channels-root/reducer.js';
+export { sessionReducer } from './channels-session/reducer.js';
+export { terminalReducer } from './channels-terminal/reducer.js';
+export { changesetReducer } from './channels-changeset/reducer.js';
+export { softAssertNever, isClientDispatchable } from './common/reducer-helpers.js';

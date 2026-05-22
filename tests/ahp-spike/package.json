@@ -1,0 +1,27 @@
+{
+  "name": "@grackle-ai/ahp-spike",
+  "version": "0.0.1",
+  "description": "Throwaway architecture-validation spike: maps Grackle AgentEvents onto AHP session actions to probe PowerLine-as-AHP-host gaps (#1232). Not published.",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.0.0 <24.0.0"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "heft build --clean",
+    "clean": "heft clean",
+    "test": "vitest run",
+    "_phase:build": "heft run --only build -- --clean",
+    "_phase:test": "vitest run"
+  },
+  "devDependencies": {
+    "@grackle-ai/heft-rig": "workspace:*",
+    "@grackle-ai/common": "workspace:*",
+    "@grackle-ai/runtime-sdk": "workspace:*",
+    "@grackle-ai/powerline": "workspace:*",
+    "@rushstack/heft": "1.2.7",
+    "@types/node": "^22.0.0",
+    "vitest": "^3.1.1"
+  }
+}
