@@ -202,6 +202,8 @@ export { computeKpis, getAttentionTasks, getActiveSessions, getWorkspaceSnapshot
 
 export { isNearAnchor, computeScrollCompensation, SCROLL_ANCHOR_THRESHOLD_PX } from "./utils/scrollUtils.js";
 
+export { assetUrl } from "./utils/assetUrl.js";
+
 // ─── Themes ──────────────────────────────────────────────────────────────────
 
 export { THEMES, THEME_IDS, DEFAULT_THEME_ID, getThemeById } from "./themes.js";
