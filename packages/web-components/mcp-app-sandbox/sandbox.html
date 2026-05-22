@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="light dark" />
+    <!--
+      MCP Apps outer sandbox proxy.
+
+      Double-iframe pattern per the MCP Apps spec (SEP-1865). This page is the
+      OUTER proxy and MUST be served from a different origin than the host (see
+      serve.mjs / GRACKLE_SANDBOX_PORT). It creates an INNER iframe for the
+      untrusted widget HTML and relays postMessage between host and widget.
+
+      CSP for the proxy + the inner widget is applied by serve.mjs via the HTTP
+      Content-Security-Policy header (built from the ?csp= query param) — it is
+      tamper-proof, unlike a <meta> tag. The relay is loaded as an EXTERNAL module
+      (sandbox-relay.js) from the sandbox origin so the CSP can keep
+      `script-src 'self'` (no 'unsafe-inline').
+
+      Adapted from modelcontextprotocol/ext-apps examples/basic-host/src/sandbox.ts
+      (commit 9a37ad7).
+    -->
+    <title>Grackle MCP App Sandbox</title>
+    <style>
+      html, body { margin: 0; height: 100vh; width: 100vw; background: transparent; }
+      body { display: flex; flex-direction: column; }
+      * { box-sizing: border-box; }
+      iframe {
+        background: transparent; border: 0 none transparent; padding: 0;
+        overflow: hidden; flex-grow: 1; color-scheme: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module" src="./sandbox-relay.js"></script>
+  </body>
+</html>

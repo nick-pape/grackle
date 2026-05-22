@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add MCP Apps (SEP-1865) host widget render component to @grackle-ai/web-components (McpAppWidget + cross-origin sandbox proxy + host theming).",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
