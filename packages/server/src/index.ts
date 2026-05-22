@@ -11,6 +11,7 @@ import {
   logger, exec, detectLanIp,
   runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace,
   importAccountsFromGhCli,
+  publishWidgetEvent,
 } from "@grackle-ai/core";
 import { createKnowledgePlugin, getKnowledgeReadinessCheck } from "@grackle-ai/plugin-knowledge";
 import { loadPlugins, type PluginContext } from "@grackle-ai/plugin-sdk";
@@ -27,7 +28,7 @@ import {
   startPairingCleanup,
   startOAuthCleanup,
 } from "@grackle-ai/auth";
-import { createWebServer, isWildcardAddress, type ReadinessResult } from "@grackle-ai/web-server";
+import { createWebServer, createSandboxServer, isWildcardAddress, type ReadinessResult } from "@grackle-ai/web-server";
 import { createRequire } from "node:module";
 import { initializeDatabase } from "./database-init.js";
 import { registerAllAdapters } from "./adapter-registry.js";
@@ -245,6 +246,7 @@ async function main(): Promise<void> {
     bindHost,
     connectRoutes: routes,
     pluginNames: loaded.pluginNames,
+    sandboxPort: config.sandboxPort,
     readinessCheck: (): ReadinessResult => {
       const checks: ReadinessResult["checks"] = {};
       try {
@@ -329,7 +331,7 @@ async function main(): Promise<void> {
         return t as unknown as ToolDefinition;
       })]
     : [];
-  const mcpServer = createMcpServer({ bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl: authServerUrl, toolGroups: pluginToolGroups });
+  const mcpServer = createMcpServer({ bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl: authServerUrl, toolGroups: pluginToolGroups, publishWidgetEvent });
 
   mcpServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {
@@ -345,11 +347,28 @@ async function main(): Promise<void> {
     logger.info({ port: mcpPort, host: bindHost }, "MCP server on http://%s:%d/mcp", urlHost, mcpPort);
   });
 
+  // --- MCP Apps widget sandbox server (separate origin) ---
+  const sandboxPort = config.sandboxPort;
+  const sandboxServer = createSandboxServer({ bindHost, sandboxPort });
+  sandboxServer.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+      logger.fatal({ port: sandboxPort }, "Port %d is already in use. Is another Grackle server running?", sandboxPort);
+    } else {
+      logger.fatal({ err }, "Sandbox server error");
+    }
+    process.exitCode = 1;
+    shutdown().catch(() => { process.exit(1); });
+  });
+  sandboxServer.listen(sandboxPort, bindHost, () => {
+    logger.info({ port: sandboxPort, host: bindHost }, "MCP Apps sandbox on http://%s:%d/sandbox.html", urlHost, sandboxPort);
+  });
+
   // --- Graceful shutdown ---
   shutdown = createShutdown({
     grpcServer,
     webServer,
     mcpServer,
+    sandboxServer,
     reconciliationManager,
     localPowerLineManager,
     pluginShutdown: loaded.shutdown,

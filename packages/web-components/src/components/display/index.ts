@@ -14,7 +14,9 @@ export { Spinner } from "./Spinner.js";
 export { SplashScreen } from "./SplashScreen.js";
 export { Tooltip } from "./Tooltip.js";
 export { SessionAttemptSelector } from "./SessionAttemptSelector.js";
-export { McpAppWidget } from "./McpAppWidget.js";
+// NOTE: McpAppWidget is intentionally NOT re-exported as a value — EventRenderer
+// lazy-imports it directly so the heavy ext-apps AppBridge stays code-split out of
+// the main chat bundle. Its prop types remain exported below for consumers.
 
 export type { ButtonProps, ButtonVariant, ButtonSize } from "./Button.js";
 export type { TooltipProps, TooltipPlacement } from "./Tooltip.js";

@@ -39,7 +39,8 @@
     "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-node": "^2.0.0",
     "@grackle-ai/auth": "workspace:*",
-    "@grackle-ai/web": "workspace:*"
+    "@grackle-ai/web": "workspace:*",
+    "@grackle-ai/web-components": "workspace:*"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",

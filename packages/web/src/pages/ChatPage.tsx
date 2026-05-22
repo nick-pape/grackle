@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "rea
 import { useParams, Link } from "react-router";
 import { ROOT_TASK_ID } from "@grackle-ai/common";
 import { useGrackle } from "../context/GrackleContext.js";
+import { useSandboxProxyUrl } from "../context/ManifestContext.js";
 import {
   ChatInput, EventStream, SplitButton, StreamDetailPanel,
   groupConsecutiveTextEvents, pairToolEvents, useToast, CHAT_URL,
@@ -68,6 +69,7 @@ function StreamUnavailableState(): JSX.Element {
 /** Chat page — shows System session or a named IPC stream. */
 export function ChatPage(): JSX.Element {
   const { streamId } = useParams<{ streamId?: string }>();
+  const sandboxProxyUrl = useSandboxProxyUrl();
 
   const {
     tasks: { tasks, tasksLoading, startTask },
@@ -265,6 +267,7 @@ export function ChatPage(): JSX.Element {
         <EventStream
           events={groupedEvents}
           eventsDropped={eventsDropped}
+          sandboxProxyUrl={sandboxProxyUrl}
           emptyState={
             streamId === undefined
               ? <ChatEmptyState hasLocalEnvironment={!!localEnvironment} />

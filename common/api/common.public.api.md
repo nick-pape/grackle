@@ -309,6 +309,9 @@ export const DEFAULT_PERSONA_NAME: string;
 export const DEFAULT_POWERLINE_PORT: number;
 
 // @public
+export const DEFAULT_SANDBOX_PORT: number;
+
+// @public
 export const DEFAULT_SCOPED_MCP_TOOLS: readonly string[];
 
 // @public
@@ -476,7 +479,8 @@ enum EventType_2 {
     TOOL_USE = 2,
     UNSPECIFIED = 0,
     USAGE = 11,
-    USER_INPUT = 9
+    USER_INPUT = 9,
+    WIDGET = 13
 }
 
 // @public

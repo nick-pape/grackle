@@ -19,6 +19,8 @@ export interface ShutdownContext {
   webServer: Closeable;
   /** The HTTP/1.1 MCP server. */
   mcpServer: Closeable;
+  /** The HTTP/1.1 MCP Apps widget sandbox server. */
+  sandboxServer: Closeable;
   /** The reconciliation manager (cron, orphan, lifecycle phases). */
   reconciliationManager: { stop: () => Promise<void> };
   /** The local PowerLine child-process manager, if running. */
@@ -79,6 +81,15 @@ export function createShutdown(context: ShutdownContext): () => Promise<void> {
       context.mcpServer.close((err?: Error) => {
         if (err) {
           logger.error({ err }, "Error while closing MCP server");
+        }
+        resolve();
+      });
+    });
+
+    await new Promise<void>((resolve) => {
+      context.sandboxServer.close((err?: Error) => {
+        if (err) {
+          logger.error({ err }, "Error while closing sandbox server");
         }
         resolve();
       });

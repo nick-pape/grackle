@@ -16,12 +16,15 @@ const ALL_KNOWN_PLUGINS: readonly string[] = ["core", "orchestration", "scheduli
 /** Shape of the manifest returned by `GET /api/manifest`. */
 interface ManifestResponse {
   plugins: Array<{ name: string }>;
+  sandboxPort?: number;
 }
 
 /** Value provided by ManifestContext. */
 export interface ManifestValue {
   /** Names of active plugins, in server load order. Empty while loading. */
   pluginNames: string[];
+  /** MCP Apps widget sandbox port (for deriving the sandbox origin). Undefined until loaded. */
+  sandboxPort: number | undefined;
   /** True while the manifest fetch is in flight. */
   loading: boolean;
   /** Set if the fetch failed (pluginNames will be the fail-open fallback). */
@@ -30,6 +33,7 @@ export interface ManifestValue {
 
 const ManifestContext: Context<ManifestValue> = createContext<ManifestValue>({
   pluginNames: [...ALL_KNOWN_PLUGINS],
+  sandboxPort: undefined,
   loading: false,
   error: undefined,
 });
@@ -42,6 +46,7 @@ const ManifestContext: Context<ManifestValue> = createContext<ManifestValue>({
  */
 export function ManifestProvider({ children }: { children: ReactNode }): JSX.Element {
   const [pluginNames, setPluginNames] = useState<string[]>([...ALL_KNOWN_PLUGINS]);
+  const [sandboxPort, setSandboxPort] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | undefined>(undefined);
 
@@ -58,6 +63,7 @@ export function ManifestProvider({ children }: { children: ReactNode }): JSX.Ele
       .then((data) => {
         if (!cancelled) {
           setPluginNames(data.plugins.map((p) => p.name));
+          setSandboxPort(data.sandboxPort);
           setLoading(false);
         }
       })
@@ -73,7 +79,7 @@ export function ManifestProvider({ children }: { children: ReactNode }): JSX.Ele
   }, []);
 
   return (
-    <ManifestContext.Provider value={{ pluginNames, loading, error }}>
+    <ManifestContext.Provider value={{ pluginNames, sandboxPort, loading, error }}>
       {children}
     </ManifestContext.Provider>
   );
@@ -86,4 +92,18 @@ export function ManifestProvider({ children }: { children: ReactNode }): JSX.Ele
  */
 export function useManifest(): ManifestValue {
   return useContext(ManifestContext);
+}
+
+/**
+ * Derive the MCP Apps sandbox proxy origin URL from the manifest's sandbox port.
+ * Returns `undefined` until the manifest loads (or if no sandbox port is set).
+ * The sandbox is a DIFFERENT origin (different port) than the web app, as the
+ * MCP Apps double-iframe spec requires.
+ */
+export function useSandboxProxyUrl(): string | undefined {
+  const { sandboxPort } = useManifest();
+  if (sandboxPort === undefined || typeof window === "undefined") {
+    return undefined;
+  }
+  return `${window.location.protocol}//${window.location.hostname}:${sandboxPort}/sandbox.html`;
 }

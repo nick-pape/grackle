@@ -1,4 +1,4 @@
-import { type ReactNode, useState, type JSX } from "react";
+import { type ReactNode, useState, lazy, Suspense, type LazyExoticComponent, type ComponentType, type JSX } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import Markdown from "react-markdown";
 import rehypePrismPlus from "rehype-prism-plus/common";
@@ -7,8 +7,18 @@ import type { SessionEvent } from "../../hooks/types.js";
 import { formatTokens, formatCost } from "../../utils/format.js";
 import { ICON_SM } from "../../utils/iconSize.js";
 import { ToolCard } from "../tools/ToolCard.js";
+import type { McpAppWidgetProps } from "./McpAppWidget.js";
+import type { McpUiResourceCsp } from "@modelcontextprotocol/ext-apps/app-bridge";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { CopyButton } from "./CopyButton.js";
 import styles from "./EventRenderer.module.scss";
+
+// Lazy-loaded (and intentionally NOT re-exported from the package barrel) so the
+// heavy ext-apps AppBridge is code-split into an async chunk loaded only when a
+// widget actually renders — keeps the main chat bundle under the chunk-size cap.
+const McpAppWidget: LazyExoticComponent<ComponentType<McpAppWidgetProps>> = lazy(() =>
+  import("./McpAppWidget.js").then((m) => ({ default: m.McpAppWidget })),
+);
 
 /** Props for the EventRenderer component. */
 interface Props {
@@ -17,6 +27,8 @@ interface Props {
   toolUseCtx?: { tool: string; args: unknown; detailedResult?: string };
   /** True when a tool_use completed but has no tool_result (e.g. Claude Code text-result pattern). */
   settled?: boolean;
+  /** Sandbox proxy origin URL for rendering MCP Apps widget events (different origin than the app). */
+  sandboxProxyUrl?: string;
 }
 
 // --- Individual event type renderers ---
@@ -187,10 +199,40 @@ function DefaultEvent({ content }: { content: string }): JSX.Element {
 // --- Main component ---
 
 /** Renders a single session event, dispatching to the appropriate type-specific renderer. */
-export function EventRenderer({ event, toolUseCtx, settled }: Props): JSX.Element {
+export function EventRenderer({ event, toolUseCtx, settled, sandboxProxyUrl }: Props): JSX.Element {
   const time = new Date(event.timestamp).toLocaleTimeString();
 
   switch (event.eventType) {
+    case "widget": {
+      // MCP Apps widget event (pushed by the broker). Self-contained: HTML +
+      // tool input/result. Renders in the cross-origin sandbox via McpAppWidget.
+      if (!sandboxProxyUrl) {
+        return <DefaultEvent content={event.content} />;
+      }
+      let payload: {
+        html?: string;
+        csp?: McpUiResourceCsp;
+        toolInput?: Record<string, unknown>;
+        toolResult?: CallToolResult;
+      } = {};
+      try {
+        payload = JSON.parse(event.content) as typeof payload;
+      } catch { /* malformed widget payload — fall back */ }
+      if (!payload.html) {
+        return <DefaultEvent content={event.content} />;
+      }
+      return (
+        <Suspense fallback={<DefaultEvent content="Loading widget..." />}>
+          <McpAppWidget
+            widgetHtml={payload.html}
+            sandboxProxyUrl={sandboxProxyUrl}
+            csp={payload.csp}
+            toolInput={payload.toolInput}
+            toolResult={payload.toolResult}
+          />
+        </Suspense>
+      );
+    }
     case "system": {
       // Detect system context events via the raw metadata marker
       if (event.raw) {

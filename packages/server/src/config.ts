@@ -1,4 +1,4 @@
-import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
+import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT, DEFAULT_SANDBOX_PORT } from "@grackle-ai/common";
 
 /** Validated server configuration resolved from environment variables. */
 export interface ServerConfig {
@@ -8,6 +8,8 @@ export interface ServerConfig {
   webPort: number;
   /** MCP server port (GRACKLE_MCP_PORT). */
   mcpPort: number;
+  /** MCP Apps widget sandbox port (GRACKLE_SANDBOX_PORT). */
+  sandboxPort: number;
   /** PowerLine server port (GRACKLE_POWERLINE_PORT). */
   powerlinePort: number;
   /** Bind address for all servers (GRACKLE_HOST). */
@@ -57,6 +59,7 @@ export function resolveServerConfig(): ServerConfig {
     grpcPort: parsePort("GRACKLE_PORT", DEFAULT_SERVER_PORT),
     webPort: parsePort("GRACKLE_WEB_PORT", DEFAULT_WEB_PORT),
     mcpPort: parsePort("GRACKLE_MCP_PORT", DEFAULT_MCP_PORT),
+    sandboxPort: parsePort("GRACKLE_SANDBOX_PORT", DEFAULT_SANDBOX_PORT),
     powerlinePort: parsePort("GRACKLE_POWERLINE_PORT", DEFAULT_POWERLINE_PORT),
     host: process.env.GRACKLE_HOST || "127.0.0.1",
     skipLocalPowerline: parseFlag("GRACKLE_SKIP_LOCAL_POWERLINE"),

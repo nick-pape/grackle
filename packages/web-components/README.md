@@ -34,6 +34,7 @@ Components are grouped by area under `src/components/`:
 |----------|----------|
 | **Display primitives** | `Button`, `SplitButton`, `CopyButton`, `Tooltip`, `Breadcrumbs`, `ConfirmDialog`, `Skeleton`, `Spinner`, `SplashScreen`, `FloatingActionBar` |
 | **Event stream** | `EventStream`, `EventRenderer`, `EventHoverRow`, `SessionPicker`, `SessionAttemptSelector` |
+| **MCP Apps widgets** | `McpAppWidget` (host renderer for `ui://` widgets in a sandboxed iframe), `grackleHostStyleVariables`. `EventRenderer` renders `widget` events via `McpAppWidget` (lazy-loaded; pass `sandboxProxyUrl`). |
 | **Tool cards** | `ToolCard`, `FileEditCard`, `FileReadCard`, `ShellCard`, `SearchCard`, `TodoCard`, `MetadataCard`, `AgentToolCard`, `GenericToolCard` |
 | **Layout** | `AppNav`, `Sidebar`, `StatusBar`, `BottomStatusBar` |
 | **Lists** | `TaskList`, `EnvironmentNav`, `FindingsNav` |

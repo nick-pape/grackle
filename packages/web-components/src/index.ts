@@ -19,7 +19,7 @@ export { useDagLayout } from "./components/dag/useDagLayout.js";
 export {
   Breadcrumbs, Button, CopyButton, DemoBanner, SplitButton,
   EventRenderer, ConfirmDialog, Skeleton, SkeletonText, SkeletonCard,
-  Spinner, SplashScreen, Tooltip, McpAppWidget,
+  Spinner, SplashScreen, Tooltip,
 } from "./components/display/index.js";
 export type { ButtonProps, ButtonVariant, ButtonSize } from "./components/display/index.js";
 export type { TooltipProps, TooltipPlacement } from "./components/display/index.js";

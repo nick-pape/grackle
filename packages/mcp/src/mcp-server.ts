@@ -44,6 +44,23 @@ const logger: Logger = pino({
     : undefined,
 });
 
+/**
+ * Pushes an MCP Apps widget render event into a session's stream. Injected by the
+ * server (wraps `@grackle-ai/core`'s `publishWidgetEvent`). Declared structurally
+ * to avoid widening this package's runtime dependencies onto core.
+ */
+export type PublishWidgetEvent = (
+  sessionId: string,
+  payload: {
+    resourceUri: string;
+    toolName: string;
+    html: string;
+    csp?: unknown;
+    toolInput?: Record<string, unknown>;
+    toolResult?: unknown;
+  },
+) => void;
+
 /** Options for creating an MCP server. */
 export interface McpServerOptions {
   /** Host address to bind the MCP server to. */
@@ -58,6 +75,8 @@ export interface McpServerOptions {
   authorizationServerUrl?: string;
   /** Optional plugin-contributed tool groups to register alongside built-in tools. */
   toolGroups?: ToolDefinition[][];
+  /** Push MCP Apps widget render events into session streams (in-process, from the server). */
+  publishWidgetEvent?: PublishWidgetEvent;
 }
 
 /** Create per-service ConnectRPC clients pointing at the co-located Grackle gRPC server. */
@@ -119,6 +138,7 @@ async function createMcpServerInstance(
   grpcClients: GrackleClients,
   authContext: AuthContext,
   assetBaseUrl: string,
+  publishWidgetEvent: PublishWidgetEvent | undefined,
   toolGroups?: ToolDefinition[][],
 ): Promise<Server> {
   const registry = createToolRegistry(toolGroups);
@@ -293,6 +313,26 @@ async function createMcpServerInstance(
     try {
       logger.info({ tool: name, resolved: tool.name }, "Executing MCP tool: %s", name);
       const result = await tool.handler(parsed.data as Record<string, unknown>, grpcClients, authContext);
+      // MCP Apps: when a session agent invokes a widget tool, push a self-contained
+      // widget render event into that session's stream (broker capture — does not
+      // depend on the agent SDK preserving _meta). Non-fatal.
+      if (tool.uiResourceUri && authContext.type === "scoped" && publishWidgetEvent) {
+        try {
+          const resource = resourceRegistry.get(tool.uiResourceUri);
+          if (resource) {
+            publishWidgetEvent(authContext.taskSessionId, {
+              resourceUri: tool.uiResourceUri,
+              toolName: tool.name,
+              html: resource.read().text,
+              csp: { resourceDomains: [assetBaseUrl], connectDomains: [assetBaseUrl] },
+              toolInput: parsed.data as Record<string, unknown>,
+              toolResult: result,
+            });
+          }
+        } catch (widgetErr) {
+          logger.warn({ tool: name, err: widgetErr }, "Widget event capture failed (non-fatal)");
+        }
+      }
       return result as CallToolResult;
     } catch (error: unknown) {
       logger.error({ tool: name, err: error }, "Tool execution failed: %s", name);
@@ -321,7 +361,7 @@ const REVOCATION_PRUNE_INTERVAL_MS: number = 60 * 60 * 1000;
  * and Server instance, tracked by session ID.
  */
 export function createMcpServer(options: McpServerOptions): http.Server {
-  const { bindHost, grpcPort, apiKey, authorizationServerUrl, toolGroups } = options;
+  const { bindHost, grpcPort, apiKey, authorizationServerUrl, toolGroups, publishWidgetEvent } = options;
   /** Parsed auth server URL, used for dynamic derivation of authorization_servers. */
   const parsedAuthServerUrl = authorizationServerUrl
     ? new URL(authorizationServerUrl)
@@ -395,7 +435,7 @@ export function createMcpServer(options: McpServerOptions): http.Server {
     const method = req.method?.toUpperCase();
 
     if (method === "POST") {
-      await handlePost(req, res, grpcClients, transports, authContexts, authContext, toolGroups);
+      await handlePost(req, res, grpcClients, transports, authContexts, authContext, publishWidgetEvent, toolGroups);
     } else if (method === "GET") {
       await handleGet(req, res, transports);
     } else if (method === "DELETE") {
@@ -470,6 +510,7 @@ async function handlePost(
   transports: Map<string, StreamableHTTPServerTransport>,
   authContexts: Map<string, AuthContext>,
   authContext: AuthContext,
+  publishWidgetEvent: PublishWidgetEvent | undefined,
   toolGroups?: ToolDefinition[][],
 ): Promise<void> {
   try {
@@ -516,7 +557,7 @@ async function handlePost(
       // avoid attribute injection from a hostile Host header.
       const encrypted = "encrypted" in req.socket && (req.socket as { encrypted?: boolean }).encrypted === true;
       const assetBaseUrl = resolveAssetBaseUrl(req.headers.host, req.headers["x-forwarded-proto"], encrypted);
-      const mcpServer = await createMcpServerInstance(grpcClients, authContext, assetBaseUrl, toolGroups);
+      const mcpServer = await createMcpServerInstance(grpcClients, authContext, assetBaseUrl, publishWidgetEvent, toolGroups);
       await mcpServer.connect(transport);
       await transport.handleRequest(req, res, body);
       return;
