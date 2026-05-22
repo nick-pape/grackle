@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix: creating a workspace now navigates to the new workspace's detail view instead of the home dashboard",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
