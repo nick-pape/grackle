@@ -3,6 +3,10 @@
   "version": "0.110.2",
   "description": "Presentational React component library for the Grackle web UI",
   "license": "MIT",
+  "sideEffects": [
+    "**/*.css",
+    "**/*.scss"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/nick-pape/grackle.git",

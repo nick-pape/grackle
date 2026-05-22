@@ -32,8 +32,13 @@ try {
   APP_WITH_DEPS_FILE = undefined;
 }
 
-// Static JS files served (as ES modules) to the inner sandboxed widget.
+// The externalized proxy relay (loaded by sandbox.html as `script-src 'self'`).
+const SANDBOX_RELAY_FILE = join(HERE, "sandbox-relay.js");
+
+// Static JS files served (as ES modules). The relay runs in the proxy page; the
+// widget modules run in the inner sandboxed iframe (both as same-origin 'self').
 const JS_ROUTES = {
+  "/sandbox-relay.js": () => SANDBOX_RELAY_FILE,
   "/sample-widget.js": () => SAMPLE_WIDGET_FILE,
   "/app-with-deps.js": () => APP_WITH_DEPS_FILE,
 };
@@ -51,8 +56,14 @@ function buildCspHeader(csp) {
   const frameDomains = sanitizeCspDomains(csp?.frameDomains).join(" ");
   const baseUriDomains = sanitizeCspDomains(csp?.baseUriDomains).join(" ");
   return [
-    "default-src 'self' 'unsafe-inline'",
-    `script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data: ${resourceDomains}`.trim(),
+    "default-src 'self'",
+    // Scripts: only same-origin (the relay + widget modules are served from this
+    // origin) plus blob: for widgets that spawn workers. No 'unsafe-inline' (the
+    // relay is an external module), no 'unsafe-eval' (the ext-apps App runs zod in
+    // jitless mode), no data: scripts.
+    `script-src 'self' blob: ${resourceDomains}`.trim(),
+    // Styles still allow 'unsafe-inline' — widgets routinely use <style> blocks
+    // and inline style attributes, which is far lower-risk than inline scripts.
     `style-src 'self' 'unsafe-inline' blob: data: ${resourceDomains}`.trim(),
     `img-src 'self' data: blob: ${resourceDomains}`.trim(),
     `font-src 'self' data: blob: ${resourceDomains}`.trim(),

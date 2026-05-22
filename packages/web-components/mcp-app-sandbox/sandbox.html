@@ -11,10 +11,11 @@
       serve.mjs / GRACKLE_SANDBOX_PORT). It creates an INNER iframe for the
       untrusted widget HTML and relays postMessage between host and widget.
 
-      CSP for the inner widget is applied by serve.mjs via the HTTP
+      CSP for the proxy + the inner widget is applied by serve.mjs via the HTTP
       Content-Security-Policy header (built from the ?csp= query param) — it is
-      tamper-proof, unlike a <meta> tag. The relay below is inlined (no bundler);
-      that script-src 'unsafe-inline' is intentionally permitted by serve.mjs.
+      tamper-proof, unlike a <meta> tag. The relay is loaded as an EXTERNAL module
+      (sandbox-relay.js) from the sandbox origin so the CSP can keep
+      `script-src 'self'` (no 'unsafe-inline').
 
       Adapted from modelcontextprotocol/ext-apps examples/basic-host/src/sandbox.ts
       (commit 9a37ad7).
@@ -31,88 +32,6 @@
     </style>
   </head>
   <body>
-    <script type="module">
-      const RESOURCE_READY = "ui/notifications/sandbox-resource-ready";
-      const PROXY_READY = "ui/notifications/sandbox-proxy-ready";
-
-      // Must run inside an iframe on a different origin than the host.
-      if (window.self === window.top) {
-        throw new Error("sandbox.html must be loaded inside an iframe.");
-      }
-      if (!document.referrer) {
-        throw new Error("No referrer; cannot validate the embedding host origin.");
-      }
-      const EXPECTED_HOST_ORIGIN = new URL(document.referrer).origin;
-      const OWN_ORIGIN = new URL(window.location.href).origin;
-
-      // Security self-test: confirm we cannot reach the top window. Reading a
-      // property on a cross-origin window.top throws a SecurityError without any
-      // visible side effect (unlike alert()). If it does NOT throw, isolation is
-      // broken and we must refuse to run.
-      try {
-        const probe = window.top.location.href;
-        void probe;
-        throw "FAIL";
-      } catch (e) {
-        if (e === "FAIL") {
-          throw new Error("Sandbox is not isolated (host and sandbox share an origin?).");
-        }
-      }
-
-      // Minimal copy of ext-apps buildAllowAttribute: maps requested permissions
-      // to an iframe Permissions-Policy `allow` attribute.
-      function buildAllowAttribute(permissions) {
-        if (!permissions || typeof permissions !== "object") return "";
-        const map = {
-          camera: "camera",
-          microphone: "microphone",
-          geolocation: "geolocation",
-          clipboardWrite: "clipboard-write",
-          clipboardRead: "clipboard-read",
-          displayCapture: "display-capture",
-        };
-        const out = [];
-        for (const key of Object.keys(permissions)) {
-          if (map[key]) out.push(`${map[key]} 'self'`);
-        }
-        return out.join("; ");
-      }
-
-      const inner = document.createElement("iframe");
-      inner.setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms");
-      document.body.appendChild(inner);
-
-      window.addEventListener("message", (event) => {
-        if (event.source === window.parent) {
-          if (event.origin !== EXPECTED_HOST_ORIGIN) {
-            console.error("[sandbox] dropping parent message from", event.origin);
-            return;
-          }
-          if (event.data && event.data.method === RESOURCE_READY) {
-            const { html, sandbox, permissions } = event.data.params ?? {};
-            if (typeof sandbox === "string") inner.setAttribute("sandbox", sandbox);
-            const allow = buildAllowAttribute(permissions);
-            if (allow) inner.setAttribute("allow", allow);
-            if (typeof html === "string") {
-              const doc = inner.contentDocument || inner.contentWindow?.document;
-              if (doc) { doc.open(); doc.write(html); doc.close(); }
-              else { inner.srcdoc = html; }
-            }
-            return;
-          }
-          // Relay everything else host -> inner widget.
-          inner.contentWindow?.postMessage(event.data, "*");
-        } else if (event.source === inner.contentWindow) {
-          if (event.origin !== OWN_ORIGIN && event.origin !== "null") {
-            console.error("[sandbox] dropping inner message from", event.origin);
-            return;
-          }
-          // Relay inner widget -> host.
-          window.parent.postMessage(event.data, EXPECTED_HOST_ORIGIN);
-        }
-      });
-
-      window.parent.postMessage({ jsonrpc: "2.0", method: PROXY_READY, params: {} }, EXPECTED_HOST_ORIGIN);
-    </script>
+    <script type="module" src="./sandbox-relay.js"></script>
   </body>
 </html>
