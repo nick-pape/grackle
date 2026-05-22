@@ -45,10 +45,13 @@
       const EXPECTED_HOST_ORIGIN = new URL(document.referrer).origin;
       const OWN_ORIGIN = new URL(window.location.href).origin;
 
-      // Security self-test: confirm we cannot reach the top window. If this does
-      // NOT throw, isolation is broken and we must refuse to run.
+      // Security self-test: confirm we cannot reach the top window. Reading a
+      // property on a cross-origin window.top throws a SecurityError without any
+      // visible side effect (unlike alert()). If it does NOT throw, isolation is
+      // broken and we must refuse to run.
       try {
-        window.top.alert("sandbox isolation broken");
+        const probe = window.top.location.href;
+        void probe;
         throw "FAIL";
       } catch (e) {
         if (e === "FAIL") {

@@ -29,4 +29,18 @@ describe("McpAppWidget", () => {
     const iframe = screen.getByTestId("mcp-app-widget") as HTMLIFrameElement;
     expect(iframe.getAttribute("src") ?? "").toContain("localhost:6007");
   });
+
+  it("fails fast when the sandbox proxy shares the host origin", () => {
+    // A same-origin proxy breaks the double-iframe isolation guarantee, so the
+    // component throws rather than silently rendering an insecure widget.
+    const sameOrigin = `${window.location.origin}/sandbox.html`;
+    expect(() =>
+      render(
+        <McpAppWidget
+          widgetHtml="<!doctype html><html><body>hi</body></html>"
+          sandboxProxyUrl={sameOrigin}
+        />,
+      ),
+    ).toThrow(/different origin/i);
+  });
 });

@@ -39,7 +39,7 @@
     "@bufbuild/protobuf": "^2.5.0",
     "@grackle-ai/common": "workspace:*",
     "@modelcontextprotocol/ext-apps": "1.7.2",
-    "@modelcontextprotocol/sdk": "^1.27.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@dagrejs/dagre": "^2.0.4",
     "@xyflow/react": "^12.10.0",
     "motion": "^11.18.0",
