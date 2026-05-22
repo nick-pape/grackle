@@ -15,7 +15,7 @@ import { z } from "zod";
 import { createScopedToken } from "@grackle-ai/auth";
 import { ROOT_TASK_ID } from "@grackle-ai/common";
 import type { ToolDefinition } from "./tool-registry.js";
-import { createMcpServer } from "./mcp-server.js";
+import { createMcpServer, resolveAssetBaseUrl } from "./mcp-server.js";
 
 // API key must be exactly 64 hex characters (API_KEY_LENGTH in auth-middleware)
 const TEST_API_KEY = "a".repeat(64);
@@ -747,5 +747,32 @@ describe("MCP Apps app-side (#1237)", () => {
     expect(asset.status).toBe(200);
     expect(asset.contentType).toContain("javascript");
     expect(asset.body).toContain("app-with-deps.js");
+  });
+});
+
+describe("resolveAssetBaseUrl", () => {
+  it("defaults to http for a plain host", () => {
+    expect(resolveAssetBaseUrl("127.0.0.1:7435", undefined, false)).toBe("http://127.0.0.1:7435");
+  });
+
+  it("uses https when the connection is TLS-encrypted", () => {
+    expect(resolveAssetBaseUrl("example.com", undefined, true)).toBe("https://example.com");
+  });
+
+  it("honors X-Forwarded-Proto (including comma lists and arrays)", () => {
+    expect(resolveAssetBaseUrl("example.com", "https", false)).toBe("https://example.com");
+    expect(resolveAssetBaseUrl("example.com", "https, http", false)).toBe("https://example.com");
+    expect(resolveAssetBaseUrl("example.com", ["https"], false)).toBe("https://example.com");
+  });
+
+  it("falls back to http://localhost when the host is missing", () => {
+    expect(resolveAssetBaseUrl(undefined, undefined, false)).toBe("http://localhost");
+  });
+
+  it("normalizes a hostile Host header so no markup can be injected", () => {
+    const result = resolveAssetBaseUrl('evil.com" onload="alert(1)', undefined, false);
+    expect(result).not.toContain('"');
+    expect(result).not.toContain("<");
+    expect(result).not.toContain(" ");
   });
 });

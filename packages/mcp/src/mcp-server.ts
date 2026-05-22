@@ -438,6 +438,30 @@ async function parseBody(req: http.IncomingMessage): Promise<unknown> {
   });
 }
 
+/**
+ * Resolve the public origin the client reached us on, for embedding into widget
+ * asset URLs. Honors `X-Forwarded-Proto` (reverse proxies) and TLS for the
+ * scheme, and normalizes the Host header through `URL` so a hostile value cannot
+ * inject markup when interpolated into the widget HTML's `<script src>`.
+ *
+ * @returns A clean `scheme://host[:port]` origin, or `http://localhost` if the
+ *   Host header is missing or unparseable.
+ */
+export function resolveAssetBaseUrl(
+  hostHeader: string | undefined,
+  forwardedProto: string | string[] | undefined,
+  encrypted: boolean,
+): string {
+  const rawProto: string | undefined = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+  const proto: string | undefined = rawProto?.split(",")[0]?.trim();
+  const scheme: string = proto && proto.length > 0 ? proto : encrypted ? "https" : "http";
+  try {
+    return new URL(`${scheme}://${hostHeader ?? "localhost"}`).origin;
+  } catch {
+    return "http://localhost";
+  }
+}
+
 /** Handle POST requests to /mcp — initialization or tool calls. */
 async function handlePost(
   req: http.IncomingMessage,
@@ -487,9 +511,11 @@ async function handlePost(
         }
       };
 
-      // Asset base URL is derived from the request Host header so the widget
-      // HTML references assets at the origin the client actually reached us on.
-      const assetBaseUrl = `http://${req.headers.host || "localhost"}`;
+      // Asset base URL is the origin the client actually reached us on, so the
+      // widget HTML references assets correctly. Normalized via URL parsing to
+      // avoid attribute injection from a hostile Host header.
+      const encrypted = "encrypted" in req.socket && (req.socket as { encrypted?: boolean }).encrypted === true;
+      const assetBaseUrl = resolveAssetBaseUrl(req.headers.host, req.headers["x-forwarded-proto"], encrypted);
       const mcpServer = await createMcpServerInstance(grpcClients, authContext, assetBaseUrl, toolGroups);
       await mcpServer.connect(transport);
       await transport.handleRequest(req, res, body);
