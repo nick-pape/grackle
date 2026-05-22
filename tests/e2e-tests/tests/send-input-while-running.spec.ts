@@ -26,7 +26,7 @@ test.describe("Send input while agent is running", { tag: ["@session"] }, () => 
     await expect(page.getByText("Starting work...", { exact: true })).toBeVisible({ timeout: 15_000 });
 
     // The input field should be visible and enabled — not disabled with "Agent is working..."
-    const inputField = page.locator('input[placeholder="Type a message..."]');
+    const inputField = page.locator('textarea[placeholder="Type a message..."]');
     await expect(inputField).toBeVisible({ timeout: 10_000 });
     await expect(inputField).toBeEnabled();
 

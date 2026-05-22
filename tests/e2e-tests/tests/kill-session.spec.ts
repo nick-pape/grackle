@@ -10,12 +10,12 @@ test.describe("Kill Session", { tag: ["@session"] }, () => {
     // Start a stub session (uses default stub persona)
     await page.getByTestId("env-nav-item").first().click();
     await page.getByRole("button", { name: "New Chat" }).click();
-    const promptInput = page.locator('input[placeholder="Enter prompt..."]');
+    const promptInput = page.locator('textarea[placeholder="Enter prompt..."]');
     await promptInput.fill("kill test");
     await page.locator("button", { hasText: "Go" }).click();
 
     // Wait for waiting_input state
-    const inputField = page.locator('input[placeholder="Type a message..."]');
+    const inputField = page.locator('textarea[placeholder="Type a message..."]');
     await expect(inputField).toBeVisible({ timeout: 10_000 });
 
     // Click Kill via the split button dropdown (wait for session to be active first)

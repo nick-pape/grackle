@@ -68,7 +68,7 @@ test.describe("Multi-Task", { tag: ["@task"] }, () => {
     await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, { timeout: 15_000 });
 
     // Complete to review
-    const inputField = page.locator('input[placeholder="Type a message..."]');
+    const inputField = page.locator('textarea[placeholder="Type a message..."]');
     await inputField.waitFor({ timeout: 15_000 });
     await inputField.fill("continue");
     await page.locator("button", { hasText: "Send" }).click();
