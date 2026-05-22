@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.111.0",
+      "tag": "@grackle-ai/cli_v0.111.0",
+      "date": "Fri, 22 May 2026 18:26:16 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add an MCP Apps (SEP-1865) app-side layer to @grackle-ai/mcp: resources capability (resources/list + resources/read), io.modelcontextprotocol/ui negotiation, and a static ui:// widget tool. Bump @modelcontextprotocol/sdk to ^1.29 across server packages."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.110.3",
       "tag": "@grackle-ai/cli_v0.110.3",
       "date": "Fri, 22 May 2026 15:02:19 GMT",
