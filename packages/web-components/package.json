@@ -30,12 +30,16 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test-storybook": "test-storybook",
+    "mcp-sandbox": "node mcp-app-sandbox/serve.mjs",
+    "storybook:mcp": "concurrently -k -n sandbox,storybook \"node mcp-app-sandbox/serve.mjs\" \"storybook dev -p 6006\"",
     "_phase:build": "heft run --only build -- --clean",
     "_phase:test": "heft run --only test"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.5.0",
     "@grackle-ai/common": "workspace:*",
+    "@modelcontextprotocol/ext-apps": "1.7.2",
+    "@modelcontextprotocol/sdk": "^1.27.0",
     "@dagrejs/dagre": "^2.0.4",
     "@xyflow/react": "^12.10.0",
     "motion": "^11.18.0",

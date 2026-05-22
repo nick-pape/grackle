@@ -442,7 +442,7 @@ importers:
         version: link:../common
       '@modelcontextprotocol/sdk':
         specifier: ^1.27.0
-        version: 1.27.1(zod@4.3.6)
+        version: 1.27.1
       pino:
         specifier: ^10.3.1
         version: 10.3.1
@@ -467,7 +467,7 @@ importers:
     dependencies:
       '@modelcontextprotocol/sdk':
         specifier: ^1.27.0
-        version: 1.27.1(zod@4.3.6)
+        version: 1.27.1
     devDependencies:
       '@grackle-ai/heft-rig':
         specifier: workspace:*
@@ -725,7 +725,7 @@ importers:
         version: link:../runtime-sdk
       '@modelcontextprotocol/sdk':
         specifier: ^1.27.0
-        version: 1.27.1(zod@4.3.6)
+        version: 1.27.1
       commander:
         specifier: ^13.0.0
         version: 13.1.0
@@ -881,7 +881,7 @@ importers:
         version: link:../common
       '@modelcontextprotocol/sdk':
         specifier: ^1.27.0
-        version: 1.27.1(zod@4.3.6)
+        version: 1.27.1
       pino:
         specifier: ^10.3.1
         version: 10.3.1
@@ -1092,6 +1092,12 @@ importers:
       '@grackle-ai/common':
         specifier: workspace:*
         version: link:../common
+      '@modelcontextprotocol/ext-apps':
+        specifier: 1.7.2
+        version: 1.7.2(@modelcontextprotocol/sdk@1.27.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.3.6)
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.27.0
+        version: 1.27.1
       '@xyflow/react':
         specifier: ^12.10.0
         version: 12.10.1(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -3480,12 +3486,25 @@ packages:
   '@microsoft/tsdoc@0.16.0':
     resolution: {integrity: sha512-xgAyonlVVS+q7Vc7qLW0UrJU7rSFcETRWsqdXZtjzRU8dF+6CkozTK4V4y1LwOX7j8r/vHphjDeMeGI4tNGeGA==}
 
+  '@modelcontextprotocol/ext-apps@1.7.2':
+    resolution: {integrity: sha512-OOWKDxdAjYDcgHkmzVzccyyag3FK+jBWPaWu4WvTxFsU4R/cgOX4eep66zPRA5n4v6WfxUNibPyvX4iJ7egYTg==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@modelcontextprotocol/sdk': ^1.29.0
+      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
+      zod: ^3.25.0 || ^4.0.0
+    peerDependenciesMeta:
+      react:
+        optional: true
+      react-dom:
+        optional: true
+
   '@modelcontextprotocol/sdk@1.27.1':
     resolution: {integrity: sha512-sr6GbP+4edBwFndLbM60gf07z0FQ79gaExpnsjMGePXqFcSSb7t6iscpjk9DhFhwd+mTEQrzNafGP8/iGGFYaA==}
     engines: {node: '>=18'}
     peerDependencies:
       '@cfworker/json-schema': ^4.1.1
-      zod: ^3.25 || ^4.0
     peerDependenciesMeta:
       '@cfworker/json-schema':
         optional: true
@@ -13666,7 +13685,16 @@ snapshots:
 
   '@microsoft/tsdoc@0.16.0': {}
 
-  '@modelcontextprotocol/sdk@1.27.1(zod@4.3.6)':
+  '@modelcontextprotocol/ext-apps@1.7.2(@modelcontextprotocol/sdk@1.27.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.3.6)':
+    dependencies:
+      '@modelcontextprotocol/sdk': 1.27.1
+      '@standard-schema/spec': 1.1.0
+      zod: 4.3.6
+    optionalDependencies:
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
+
+  '@modelcontextprotocol/sdk@1.27.1':
     dependencies:
       '@hono/node-server': 1.19.13(hono@4.12.18)
       ajv: 8.18.0
