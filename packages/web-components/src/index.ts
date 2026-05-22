@@ -19,12 +19,15 @@ export { useDagLayout } from "./components/dag/useDagLayout.js";
 export {
   Breadcrumbs, Button, CopyButton, DemoBanner, SplitButton,
   EventRenderer, ConfirmDialog, Skeleton, SkeletonText, SkeletonCard,
-  Spinner, SplashScreen, Tooltip, McpAppWidget,
+  Spinner, SplashScreen, Tooltip,
 } from "./components/display/index.js";
 export type { ButtonProps, ButtonVariant, ButtonSize } from "./components/display/index.js";
 export type { TooltipProps, TooltipPlacement } from "./components/display/index.js";
-export type { McpAppWidgetProps, McpAppWidgetCallToolParams } from "./components/display/index.js";
-export { grackleHostStyleVariables } from "./utils/grackleHostStyleVariables.js";
+// NOTE: McpAppWidget + grackleHostStyleVariables are intentionally NOT re-exported
+// from the package entrypoint yet. Doing so pulls @modelcontextprotocol/ext-apps
+// into @grackle-ai/web's bundle (which does not consume the widget in T1),
+// tripping the Vite chunk-size limit. The public re-export lands when the widget
+// is wired into the app with a code-split import (#1238).
 export { EventStream } from "./components/display/EventStream.js";
 export { EventHoverRow } from "./components/display/EventHoverRow.js";
 export type { EventHoverRowProps } from "./components/display/EventHoverRow.js";

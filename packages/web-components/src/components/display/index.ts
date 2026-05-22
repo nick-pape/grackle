@@ -14,9 +14,7 @@ export { Spinner } from "./Spinner.js";
 export { SplashScreen } from "./SplashScreen.js";
 export { Tooltip } from "./Tooltip.js";
 export { SessionAttemptSelector } from "./SessionAttemptSelector.js";
-export { McpAppWidget } from "./McpAppWidget.js";
 
 export type { ButtonProps, ButtonVariant, ButtonSize } from "./Button.js";
 export type { TooltipProps, TooltipPlacement } from "./Tooltip.js";
 export type { SessionAttemptSelectorProps } from "./SessionAttemptSelector.js";
-export type { McpAppWidgetProps, McpAppWidgetCallToolParams } from "./McpAppWidget.js";
