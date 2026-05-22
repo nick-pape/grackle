@@ -15,7 +15,7 @@ test.describe("Escalation auto-detection", () => {
     await page.getByTestId("task-header-start").click();
 
     // Wait for idle — input field appears
-    await page.locator('input[placeholder="Type a message..."]').waitFor({ timeout: 15_000 });
+    await page.locator('textarea[placeholder="Type a message..."]').waitFor({ timeout: 15_000 });
 
     // Poll for escalation to appear (auto-detection fires on task.updated event)
     const deadline = Date.now() + 10_000;
