@@ -578,3 +578,174 @@ describe("scoped token workspaceId injection", () => {
     expect(capturedArgs[0]!.workspaceId).toBe("ws-odsp");
   });
 });
+
+describe("MCP Apps app-side (#1237)", () => {
+  let server: http.Server | undefined;
+
+  afterEach(async () => {
+    if (server) {
+      await new Promise<void>((resolve) => { server!.close(() => resolve()); });
+      server = undefined;
+    }
+  });
+
+  /** Client capabilities advertising the io.modelcontextprotocol/ui extension. */
+  const UI_CAPABILITIES: Record<string, unknown> = {
+    extensions: { "io.modelcontextprotocol/ui": { mimeTypes: ["text/html;profile=mcp-app"] } },
+  };
+  const HELLO_URI: string = "ui://grackle/hello-widget";
+
+  interface JsonRpcResponse {
+    result?: Record<string, unknown>;
+    error?: { code: number; message: string };
+  }
+
+  /** Parse the first SSE `data:` line of an MCP response (or the raw JSON body). */
+  function parseResponse(raw: string): JsonRpcResponse {
+    const dataLine = raw.split("\n").find((l) => l.startsWith("data:"));
+    const json = dataLine ? dataLine.slice("data:".length).trim() : raw.trim();
+    return JSON.parse(json) as JsonRpcResponse;
+  }
+
+  /** Initialize with explicit capabilities; returns the session id + parsed result. */
+  function initializeWith(
+    srv: http.Server,
+    capabilities: Record<string, unknown>,
+  ): Promise<{ sessionId: string; response: JsonRpcResponse }> {
+    return new Promise((resolve, reject) => {
+      const body = JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: { protocolVersion: "2025-03-26", capabilities, clientInfo: { name: "test-client", version: "1.0.0" } },
+      });
+      const req = http.request(
+        { hostname: "127.0.0.1", port: port(srv), path: "/mcp", method: "POST", headers: postHeaders() },
+        (res) => {
+          const sessionId = res.headers["mcp-session-id"] as string | undefined;
+          let raw = "";
+          res.on("data", (chunk: Buffer) => { raw += chunk.toString(); });
+          res.on("end", () => {
+            if (!sessionId) { reject(new Error("No session ID in initialize response")); return; }
+            resolve({ sessionId, response: parseResponse(raw) });
+          });
+        },
+      );
+      req.on("error", reject);
+      req.write(body);
+      req.end();
+    });
+  }
+
+  /** Send a JSON-RPC request to an existing session and parse the SSE result. */
+  function rpc(
+    srv: http.Server,
+    sessionId: string,
+    method: string,
+    params: Record<string, unknown>,
+  ): Promise<JsonRpcResponse> {
+    return new Promise((resolve, reject) => {
+      const body = JSON.stringify({ jsonrpc: "2.0", id: 7, method, params });
+      const req = http.request(
+        { hostname: "127.0.0.1", port: port(srv), path: "/mcp", method: "POST", headers: postHeaders(sessionId) },
+        (res) => {
+          let raw = "";
+          res.on("data", (chunk: Buffer) => { raw += chunk.toString(); });
+          res.on("end", () => {
+            try { resolve(parseResponse(raw)); } catch (e) { reject(e as Error); }
+          });
+        },
+      );
+      req.on("error", reject);
+      req.write(body);
+      req.end();
+    });
+  }
+
+  /** GET a static asset (no auth). */
+  function getAsset(
+    srv: http.Server,
+    path: string,
+  ): Promise<{ status: number; contentType: string; body: string }> {
+    return new Promise((resolve, reject) => {
+      const req = http.request(
+        { hostname: "127.0.0.1", port: port(srv), path, method: "GET" },
+        (res) => {
+          let raw = "";
+          res.on("data", (chunk: Buffer) => { raw += chunk.toString(); });
+          res.on("end", () => resolve({
+            status: res.statusCode!,
+            contentType: String(res.headers["content-type"] ?? ""),
+            body: raw,
+          }));
+        },
+      );
+      req.on("error", reject);
+      req.end();
+    });
+  }
+
+  it("advertises the resources capability on initialize", async () => {
+    server = await startServer();
+    const { response } = await initializeWith(server, {});
+    const capabilities = (response.result?.capabilities ?? {}) as Record<string, unknown>;
+    expect(capabilities.resources).toBeDefined();
+  });
+
+  it("lists the hello widget resource with the MCP App MIME type", async () => {
+    server = await startServer();
+    const { sessionId } = await initializeWith(server, UI_CAPABILITIES);
+    const response = await rpc(server, sessionId, "resources/list", {});
+    const resources = (response.result?.resources ?? []) as Array<{ uri: string; mimeType: string }>;
+    const widget = resources.find((r) => r.uri === HELLO_URI);
+    expect(widget).toBeDefined();
+    expect(widget!.mimeType).toBe("text/html;profile=mcp-app");
+  });
+
+  it("reads the hello widget resource HTML", async () => {
+    server = await startServer();
+    const { sessionId } = await initializeWith(server, UI_CAPABILITIES);
+    const response = await rpc(server, sessionId, "resources/read", { uri: HELLO_URI });
+    const contents = (response.result?.contents ?? []) as Array<{ text: string; mimeType: string }>;
+    expect(contents[0]?.mimeType).toBe("text/html;profile=mcp-app");
+    expect(contents[0]?.text).toContain('id="result"');
+  });
+
+  it("returns a JSON-RPC error for an unknown resource uri", async () => {
+    server = await startServer();
+    const { sessionId } = await initializeWith(server, UI_CAPABILITIES);
+    const response = await rpc(server, sessionId, "resources/read", { uri: "ui://grackle/missing" });
+    expect(response.error).toBeDefined();
+  });
+
+  it("lists the widget tool with dual-key _meta only to UI-capable hosts", async () => {
+    server = await startServer();
+    const { sessionId } = await initializeWith(server, UI_CAPABILITIES);
+    const response = await rpc(server, sessionId, "tools/list", {});
+    const tools = (response.result?.tools ?? []) as Array<{
+      name: string;
+      _meta?: { ui?: { resourceUri?: string }; "ui/resourceUri"?: string };
+    }>;
+    const widget = tools.find((t) => t.name === "show_hello_widget");
+    expect(widget).toBeDefined();
+    expect(widget!._meta?.ui?.resourceUri).toBe(HELLO_URI);
+    expect(widget!._meta?.["ui/resourceUri"]).toBe(HELLO_URI);
+  });
+
+  it("hides the widget tool from non-UI hosts but keeps data tools", async () => {
+    server = await startServer();
+    const { sessionId } = await initializeWith(server, {});
+    const response = await rpc(server, sessionId, "tools/list", {});
+    const names = ((response.result?.tools ?? []) as Array<{ name: string }>).map((t) => t.name);
+    expect(names).not.toContain("show_hello_widget");
+    expect(names).toContain("get_version_status");
+  });
+
+  it("serves the widget JS assets without auth", async () => {
+    server = await startServer();
+    const asset = await getAsset(server, "/widgets/hello/index.js");
+    expect(asset.status).toBe(200);
+    expect(asset.contentType).toContain("javascript");
+    expect(asset.body).toContain("app-with-deps.js");
+  });
+});

@@ -52,6 +52,12 @@ export interface ToolDefinition {
   mutating: boolean;
   /** Optional behavioral hints for the client. */
   annotations?: ToolAnnotations;
+  /**
+   * Optional MCP Apps UI resource (`ui://…`) this tool renders. When set, the
+   * tool carries `_meta.ui.resourceUri` in `tools/list` and is only listed to
+   * hosts that advertise the `io.modelcontextprotocol/ui` extension.
+   */
+  uiResourceUri?: string;
   /** Execute the tool, forwarding to the ConnectRPC backend. */
   handler: (args: Record<string, unknown>, clients: GrackleClients, authContext?: AuthContext) => Promise<ToolResult>;
 }

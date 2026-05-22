@@ -254,6 +254,31 @@ Query aggregated token usage and cost data.
 |------|-------------|------------|
 | `usage_get` | Get token usage and cost for a session, task, task tree, workspace, or environment. | `scope` (`session` \| `task` \| `task_tree` \| `workspace` \| `environment`), `id` (string) |
 
+### Widget Tools
+
+[MCP Apps](#mcp-apps-ui-widgets) UI widgets. These tools return data **and** reference a `ui://` HTML resource that capable hosts render inline. They appear in `tools/list` **only** when the connected host advertises the `io.modelcontextprotocol/ui` extension.
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `show_hello_widget` | Display the Grackle hello widget — a minimal interactive MCP Apps UI that echoes the provided message. | `message` (string, optional) |
+
+---
+
+## MCP Apps (UI widgets)
+
+Grackle's MCP server is a conformant **MCP Apps** ([SEP-1865](https://modelcontextprotocol.io/)) provider. Hosts that support MCP Apps can fetch and render interactive HTML widgets inline.
+
+How it works:
+
+- **Capability negotiation** — A host advertises support during `initialize` via the `io.modelcontextprotocol/ui` extension (with `mimeTypes` including `text/html;profile=mcp-app`). The server detects this and only lists [Widget Tools](#widget-tools) to capable hosts; other clients see the data-only tools.
+- **Resources** — The server declares the `resources` capability and implements `resources/list` and `resources/read`. Widget UIs are served as `ui://…` resources with MIME `text/html;profile=mcp-app`.
+- **Tool ↔ resource link** — A widget tool carries `_meta.ui.resourceUri` (and the legacy `_meta["ui/resourceUri"]`) pointing at its `ui://` resource. The host reads the resource and renders it, passing the tool's input and result into the widget.
+- **Widget assets** — The widget's browser scripts are served (unauthenticated, since they are non-sensitive static JS) from `/widgets/<name>/…` on the MCP server's HTTP origin.
+
+> **Note:** the widget's scripts load from the MCP server's origin, so a host whose sandbox CSP forbids cross-origin scripts won't render them. Grackle's own chat-pane host handles this; that integration is tracked separately.
+
+The current built-in widget is `show_hello_widget` (resource `ui://grackle/hello-widget`). Try it with the [MCP Inspector](https://github.com/modelcontextprotocol/inspector) or Claude Desktop.
+
 ---
 
 ## Scoped Access
