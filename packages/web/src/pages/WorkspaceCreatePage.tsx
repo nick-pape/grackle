@@ -1,7 +1,7 @@
 import { useEffect, useState, type JSX } from "react";
 import { useSearchParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
-import { Breadcrumbs, HOME_URL, Spinner, WorkspaceFormFields, defaultFormValues, environmentUrl, useAppNavigate, useToast } from "@grackle-ai/web-components";
+import { Breadcrumbs, HOME_URL, Spinner, WorkspaceFormFields, defaultFormValues, environmentUrl, useAppNavigate, useToast, workspaceUrl } from "@grackle-ai/web-components";
 import type { BreadcrumbSegment, WorkspaceFormValues } from "@grackle-ai/web-components";
 import styles from "./form-layout.module.scss";
 
@@ -72,9 +72,9 @@ export function WorkspaceCreatePage(): JSX.Element {
       values.defaultPersonaId,
       values.useWorktrees,
       values.workingDirectory,
-      () => {
+      (workspace) => {
         showToast("Workspace created", "success");
-        navigate(HOME_URL, { replace: true });
+        navigate(workspaceUrl(workspace.id, workspace.linkedEnvironmentIds[0] ?? values.environmentId), { replace: true });
       },
       (message: string) => {
         setSubmitError(message);
