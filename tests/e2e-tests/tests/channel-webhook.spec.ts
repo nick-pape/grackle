@@ -40,6 +40,14 @@ test.describe("Channel webhook ingestion", { tag: ["@channel"] }, () => {
     // The stub agent echoes the injected input back into the session stream.
     await expect(page.getByText("You said: hello from webhook", { exact: true })).toBeVisible({ timeout: 10_000 });
 
+    // An oversized body (>16 KB) is rejected with a clean 413, not a connection reset.
+    const tooBig = await fetch(grant.ingressUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "x".repeat(20_000) }),
+    });
+    expect(tooBig.status).toBe(413);
+
     // Revoke the grant — the same URL must now be rejected.
     await client.core.revokeChannelGrant({ grantId: grant.grantId });
     const rejected = await fetch(grant.ingressUrl, {

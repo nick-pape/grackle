@@ -221,24 +221,50 @@ const MAX_BODY_SIZE: number = 16_384;
  * @param req - The incoming HTTP request.
  * @returns The raw body as a UTF-8 string.
  */
+/** Thrown by {@link readBody} when a request body exceeds {@link MAX_BODY_SIZE}. */
+class PayloadTooLargeError extends Error {}
+
 function readBody(req: http.IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     let totalSize: number = 0;
+    let aborted: boolean = false;
     req.on("data", (chunk: Buffer) => {
+      if (aborted) {
+        return;
+      }
       totalSize += chunk.length;
       if (totalSize > MAX_BODY_SIZE) {
-        req.destroy();
-        reject(new Error("Body too large"));
+        // Signal overflow WITHOUT destroying the socket, so the route handler can
+        // still send a 413 (with `Connection: close`) before the socket closes.
+        // Destroying here would reset the connection and the caller could never
+        // write a response.
+        aborted = true;
+        reject(new PayloadTooLargeError("Body too large"));
         return;
       }
       chunks.push(chunk);
     });
     req.on("end", () => {
-      resolve(Buffer.concat(chunks).toString("utf8"));
+      if (!aborted) {
+        resolve(Buffer.concat(chunks).toString("utf8"));
+      }
     });
+    // Once the promise has settled, a later socket-close ECONNRESET is absorbed
+    // here (a second reject is a no-op) — no unhandled error.
     req.on("error", reject);
   });
+}
+
+/**
+ * Send a `413 Payload Too Large` response and close the (half-read) connection.
+ *
+ * `Connection: close` lets Node flush the response and tear down the socket
+ * whose request body was not fully consumed, discarding the unsent upload.
+ */
+function respondPayloadTooLarge(res: http.ServerResponse): void {
+  res.writeHead(413, { "Content-Type": "application/json", "Connection": "close" });
+  res.end(JSON.stringify({ error: "payload too large" }));
 }
 
 /**
@@ -462,7 +488,11 @@ export function createWebServer(options: WebServerOptions): http.Server {
           redirect_uris: client.redirectUris,
           client_name: client.clientName,
         }));
-      } catch {
+      } catch (err) {
+        if (err instanceof PayloadTooLargeError) {
+          respondPayloadTooLarge(res);
+          return;
+        }
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "invalid_request" }));
       }
@@ -612,7 +642,11 @@ export function createWebServer(options: WebServerOptions): http.Server {
           Location: redirectUrl,
         });
         res.end();
-      } catch {
+      } catch (err) {
+        if (err instanceof PayloadTooLargeError) {
+          respondPayloadTooLarge(res);
+          return;
+        }
         res.writeHead(400);
         res.end("Bad Request");
       }
@@ -678,7 +712,11 @@ export function createWebServer(options: WebServerOptions): http.Server {
 
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "unsupported_grant_type" }));
-      } catch {
+      } catch (err) {
+        if (err instanceof PayloadTooLargeError) {
+          respondPayloadTooLarge(res);
+          return;
+        }
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "invalid_request" }));
       }
@@ -738,9 +776,13 @@ export function createWebServer(options: WebServerOptions): http.Server {
       let raw: string;
       try {
         raw = await readBody(req);
-      } catch {
-        res.writeHead(413, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "body too large" }));
+      } catch (err) {
+        if (err instanceof PayloadTooLargeError) {
+          respondPayloadTooLarge(res);
+        } else {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "could not read body" }));
+        }
         return;
       }
       let parsed: { message?: unknown; from?: unknown; idempotency_key?: unknown };
