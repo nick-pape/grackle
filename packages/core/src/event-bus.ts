@@ -1,5 +1,6 @@
 import { ulid } from "ulid";
-import { persistEvent } from "@grackle-ai/database";
+import { SequencedLog } from "@grackle-ai/common";
+import { DomainEventSink, DOMAIN_EVENT_CHANNEL, type DomainEventInput } from "@grackle-ai/database";
 import { logger } from "./logger.js";
 
 // ─── Event Types ──────────────────────────────────────────
@@ -53,6 +54,17 @@ export type Subscriber = (event: GrackleEvent) => void;
 
 const subscribers: Set<Subscriber> = new Set();
 
+/**
+ * Durable, monotonically-sequenced log backing all domain events (RFC #1264).
+ * The log assigns each event a ULID sequence key (which becomes the event id)
+ * and persists it via the SQLite-backed {@link DomainEventSink}.
+ */
+const domainEventLog: SequencedLog<DomainEventInput> = new SequencedLog<DomainEventInput>({
+  sink: new DomainEventSink(),
+  channelId: DOMAIN_EVENT_CHANNEL,
+  nextSeq: ulid,
+});
+
 // ─── Public API ───────────────────────────────────────────
 
 /**
@@ -67,23 +79,22 @@ export function emit(
   type: GrackleEventType,
   payload: Record<string, unknown>,
 ): GrackleEvent {
-  const event: GrackleEvent = {
-    id: ulid(),
-    type,
-    timestamp: new Date().toISOString(),
-    payload,
-  };
+  const timestamp: string = new Date().toISOString();
 
-  // Persist synchronously (SQLite is fast in WAL mode).
+  // Persist synchronously via the sequenced log (SQLite is fast in WAL mode).
+  // The log assigns the monotonic ULID sequence key, which becomes the event id.
   // Intentionally non-fatal: a persistence failure is logged but does not
   // prevent subscribers from receiving the event. Domain events drive live
   // UI updates which must not break if SQLite is temporarily unavailable.
-  // Replay/audit consumers should monitor logs for persistence errors.
+  let id: string;
   try {
-    persistEvent(event);
+    id = domainEventLog.append({ type, timestamp, payload }).seq;
   } catch (err) {
-    logger.error({ err, event }, "Failed to persist domain event");
+    logger.error({ err, type }, "Failed to persist domain event");
+    id = ulid();
   }
+
+  const event: GrackleEvent = { id, type, timestamp, payload };
 
   // Fan out asynchronously — subscriber errors never block the emitter
   queueMicrotask(() => {

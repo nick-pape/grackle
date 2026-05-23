@@ -6,3 +6,5 @@ export * from "./enum-converters.js";
 export * from "./search.js";
 export { RUNTIME_MANIFESTS } from "./runtime-manifest.js";
 export type { RuntimePackageManifest } from "./runtime-manifest.js";
+export { SequencedLog } from "./sequenced-log.js";
+export type { Sequenced, LogSink, SequencedLogOptions } from "./sequenced-log.js";
