@@ -17,6 +17,7 @@ import { ROOT_TASK_ID } from "@grackle-ai/common";
 import type { ToolDefinition } from "./tool-registry.js";
 import { createMcpServer, resolveAssetBaseUrl, type PublishWidgetEvent } from "./mcp-server.js";
 import { HELLO_WIDGET_URI } from "./resources/hello-widget.js";
+import { WIDGET_RENDER_META_KEY } from "./widget-render-meta.js";
 
 // API key must be exactly 64 hex characters (API_KEY_LENGTH in auth-middleware)
 const TEST_API_KEY = "a".repeat(64);
@@ -810,7 +811,8 @@ describe("MCP Apps widget capture (#1238)", () => {
       resourceUri: string;
       toolName: string;
       html: string;
-      csp?: { resourceDomains?: string[] };
+      rendererKind?: string;
+      csp?: { resourceDomains?: string[]; allowInlineScripts?: boolean };
       toolInput?: Record<string, unknown>;
       toolResult?: unknown;
     };
@@ -821,6 +823,31 @@ describe("MCP Apps widget capture (#1238)", () => {
     return {
       ...makeSpyTool("widget_spy", "widget", capturedArgs, z.object({ message: z.string().optional() })),
       uiResourceUri: HELLO_WIDGET_URI,
+    };
+  }
+
+  /** A dynamic widget tool (no static resource) that returns a render descriptor on _meta (#1239). */
+  function makeDynamicWidgetTool(): ToolDefinition {
+    return {
+      name: "widget_show_test",
+      group: "widget",
+      description: "Dynamic agent-authored widget render for capture testing (#1239).",
+      inputSchema: z.object({ body: z.string() }),
+      rpcMethod: "widgetShow",
+      mutating: false,
+      async handler(args: Record<string, unknown>) {
+        return {
+          content: [{ type: "text" as const, text: "ok" }],
+          _meta: {
+            [WIDGET_RENDER_META_KEY]: {
+              rendererKind: "mcp-app-html",
+              body: args.body as string,
+              props: { greeting: "hi" },
+              allowInlineScripts: true,
+            },
+          },
+        };
+      },
     };
   }
 
@@ -847,6 +874,29 @@ describe("MCP Apps widget capture (#1238)", () => {
     expect(payload.csp?.resourceDomains?.length).toBe(1);
     expect(payload.toolInput).toMatchObject({ message: "hi widget" });
     expect(payload.toolResult).toBeTruthy();
+  });
+
+  it("emits a dynamic widget event from a tool's _meta render descriptor (#1239)", async () => {
+    const widgetCalls: WidgetCall[] = [];
+    server = await startServer(
+      [[makeDynamicWidgetTool()]],
+      (sessionId, payload) => { widgetCalls.push({ sessionId, payload } as WidgetCall); },
+    );
+    const scopedToken = createScopedToken(
+      { sub: ROOT_TASK_ID, pid: "default-ws", per: "system", sid: "sess-dyn" },
+      TEST_API_KEY,
+    );
+    const authHeader = `Bearer ${scopedToken}`;
+    const sessionId = await initialize(server, authHeader);
+    await callTool(server, sessionId, "widget_show_test", { body: "<div>agent widget</div>" }, authHeader);
+
+    expect(widgetCalls).toHaveLength(1);
+    const payload = widgetCalls[0]!.payload;
+    expect(payload.rendererKind).toBe("mcp-app-html");
+    expect(payload.html).toBe("<div>agent widget</div>");
+    expect(payload.csp?.allowInlineScripts).toBe(true);
+    // Render-time props become the widget event's toolInput.
+    expect(payload.toolInput).toMatchObject({ greeting: "hi" });
   });
 
   it("does not emit a widget event for a non-widget tool", async () => {

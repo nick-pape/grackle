@@ -29,6 +29,7 @@ import { createToolRegistry } from "./tools/index.js";
 import { resolveToolForAuth, listToolsForAuth } from "./tool-scoping.js";
 import { createResourceRegistry } from "./resources/index.js";
 import { hostSupportsUiApps, uiToolMeta } from "./ui-app.js";
+import { WIDGET_RENDER_META_KEY, type WidgetRenderDescriptor } from "./widget-render-meta.js";
 import { tryServeWidgetAsset } from "./widget-asset-server.js";
 
 /** Read the package version from package.json at module load time. */
@@ -55,9 +56,12 @@ export type PublishWidgetEvent = (
     resourceUri: string;
     toolName: string;
     html: string;
+    rendererKind?: string;
     csp?: unknown;
     toolInput?: Record<string, unknown>;
     toolResult?: unknown;
+    widgetId?: string;
+    version?: number;
   },
 ) => void;
 
@@ -333,19 +337,42 @@ async function createMcpServerInstance(
       const result = await tool.handler(parsed.data as Record<string, unknown>, grpcClients, authContext);
       // MCP Apps: when a session agent invokes a widget tool, push a self-contained
       // widget render event into that session's stream (broker capture — does not
-      // depend on the agent SDK preserving _meta). Non-fatal.
-      if (tool.uiResourceUri && authContext.type === "scoped" && publishWidgetEvent) {
+      // depend on the agent SDK preserving _meta; this is read in-process). The
+      // CSP origin is the trusted, config-derived `widgetAssetOrigin`, never the
+      // request Host. Non-fatal.
+      if (authContext.type === "scoped" && publishWidgetEvent) {
         try {
-          const resource = resourceRegistry.get(tool.uiResourceUri);
-          if (resource) {
+          const dynamic = result._meta?.[WIDGET_RENDER_META_KEY] as WidgetRenderDescriptor | undefined;
+          if (dynamic) {
+            // Dynamic, agent-authored widget (widget_render / widget_show, #1239).
             publishWidgetEvent(authContext.taskSessionId, {
-              resourceUri: tool.uiResourceUri,
+              rendererKind: dynamic.rendererKind || "mcp-app-html",
+              resourceUri: dynamic.resourceUri ?? "",
               toolName: tool.name,
-              html: resource.read().text,
-              csp: { resourceDomains: [widgetAssetOrigin], connectDomains: [widgetAssetOrigin] },
-              toolInput: parsed.data as Record<string, unknown>,
+              html: dynamic.body,
+              csp: {
+                resourceDomains: [widgetAssetOrigin],
+                connectDomains: [widgetAssetOrigin],
+                allowInlineScripts: dynamic.allowInlineScripts === true,
+              },
+              toolInput: dynamic.props ?? (parsed.data as Record<string, unknown>),
               toolResult: result,
+              ...(dynamic.widgetId ? { widgetId: dynamic.widgetId } : {}),
+              ...(dynamic.version !== undefined ? { version: dynamic.version } : {}),
             });
+          } else if (tool.uiResourceUri) {
+            // Static Grackle-served widget (show_hello_widget, T2/T3).
+            const resource = resourceRegistry.get(tool.uiResourceUri);
+            if (resource) {
+              publishWidgetEvent(authContext.taskSessionId, {
+                resourceUri: tool.uiResourceUri,
+                toolName: tool.name,
+                html: resource.read().text,
+                csp: { resourceDomains: [widgetAssetOrigin], connectDomains: [widgetAssetOrigin] },
+                toolInput: parsed.data as Record<string, unknown>,
+                toolResult: result,
+              });
+            }
           }
         } catch (widgetErr) {
           logger.warn({ tool: name, err: widgetErr }, "Widget event capture failed (non-fatal)");
