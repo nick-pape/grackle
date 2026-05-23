@@ -225,14 +225,20 @@ export function EventRenderer({ event, toolUseCtx, settled, sandboxProxyUrl }: P
       }
       let payload: {
         html?: string;
-        csp?: McpUiResourceCsp;
+        rendererKind?: string;
+        // `allowInlineScripts` is a Grackle extension to the upstream CSP type
+        // (agent-authored widgets, #1239); it is forwarded verbatim to the sandbox.
+        csp?: McpUiResourceCsp & { allowInlineScripts?: boolean };
         toolInput?: Record<string, unknown>;
         toolResult?: CallToolResult;
       } = {};
       try {
         payload = JSON.parse(event.content) as typeof payload;
       } catch { /* malformed widget payload — fall back */ }
-      if (!payload.html) {
+      // Dispatch on rendererKind (default "mcp-app-html" for back-compat). This
+      // switch is the seam for future declarative renderers (e.g. adaptive-card).
+      const rendererKind: string = payload.rendererKind ?? "mcp-app-html";
+      if (rendererKind !== "mcp-app-html" || !payload.html) {
         return <DefaultEvent content={event.content} />;
       }
       return (
