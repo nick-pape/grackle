@@ -74,7 +74,7 @@ export function StreamDetailPanel({ stream, onClose }: StreamDetailPanelProps): 
     <div className={styles.panel} data-testid="stream-detail-panel">
       <div className={styles.header}>
         <h3 className={styles.title}>{stream.name}</h3>
-        <button className={styles.closeButton} onClick={onClose} aria-label="Close stream details">
+        <button type="button" className={styles.closeButton} onClick={onClose} aria-label="Close stream details">
           &times;
         </button>
       </div>
@@ -106,6 +106,7 @@ export function StreamDetailPanel({ stream, onClose }: StreamDetailPanelProps): 
             stream.subscribers.map((sub) => (
               <div key={sub.subscriptionId} className={styles.subscriberCard} data-testid={`subscriber-card-${sub.subscriptionId}`}>
                 <button
+                  type="button"
                   className={styles.sessionLink}
                   onClick={() => { navigate(sessionUrl(sub.sessionId)); }}
                   title={sub.sessionId}

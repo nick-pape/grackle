@@ -51,7 +51,7 @@ describe("useStreams.loadStreams", () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it("calls coreClient.listStreams and populates streams", async () => {
-    const mockStream = { id: "s1", name: "test-stream", subscriberCount: 2, messageBufferDepth: 0, subscribers: [] };
+    const mockStream = { id: "s1", name: "test-stream", subscriberCount: 2, messageBufferDepth: 0, selfEcho: false, subscribers: [] };
     mockClient.listStreams.mockResolvedValueOnce({ streams: [mockStream] });
 
     const { result } = renderHook(() => useStreams());
@@ -134,7 +134,7 @@ describe("useStreams.domainHook", () => {
   });
 
   it("onDisconnect clears streams", async () => {
-    const mockStream = { id: "s1", name: "test-stream", subscriberCount: 1, messageBufferDepth: 0, subscribers: [] };
+    const mockStream = { id: "s1", name: "test-stream", subscriberCount: 1, messageBufferDepth: 0, selfEcho: false, subscribers: [] };
     mockClient.listStreams.mockResolvedValueOnce({ streams: [mockStream] });
     const { result } = renderHook(() => useStreams());
 
