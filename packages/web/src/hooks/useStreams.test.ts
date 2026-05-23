@@ -51,16 +51,25 @@ describe("useStreams.loadStreams", () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it("calls coreClient.listStreams and populates streams", async () => {
-    const mockStream = { id: "s1", name: "test-stream", subscriberCount: 2, messageBufferDepth: 0, subscribers: [] };
+    const mockStream = { id: "s1", name: "test-stream", subscriberCount: 2, messageBufferDepth: 0, selfEcho: false, subscribers: [] };
     mockClient.listStreams.mockResolvedValueOnce({ streams: [mockStream] });
 
     const { result } = renderHook(() => useStreams());
 
     await act(async () => { await result.current.loadStreams(); });
 
-    expect(mockClient.listStreams).toHaveBeenCalledWith({});
+    expect(mockClient.listStreams).toHaveBeenCalledWith({ includeInternal: false });
     expect(result.current.streams).toHaveLength(1);
     expect(result.current.streams[0]).toEqual(mockStream);
+  });
+
+  it("passes includeInternal=true when requested", async () => {
+    mockClient.listStreams.mockResolvedValueOnce({ streams: [] });
+    const { result } = renderHook(() => useStreams());
+
+    await act(async () => { await result.current.loadStreams(true); });
+
+    expect(mockClient.listStreams).toHaveBeenCalledWith({ includeInternal: true });
   });
 
   it("silently swallows errors", async () => {
@@ -125,7 +134,7 @@ describe("useStreams.domainHook", () => {
   });
 
   it("onDisconnect clears streams", async () => {
-    const mockStream = { id: "s1", name: "test-stream", subscriberCount: 1, messageBufferDepth: 0, subscribers: [] };
+    const mockStream = { id: "s1", name: "test-stream", subscriberCount: 1, messageBufferDepth: 0, selfEcho: false, subscribers: [] };
     mockClient.listStreams.mockResolvedValueOnce({ streams: [mockStream] });
     const { result } = renderHook(() => useStreams());
 

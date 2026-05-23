@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 23 May 2026 03:18:01 GMT and should not be manually modified.
+This log was last generated on Sat, 23 May 2026 08:24:19 GMT and should not be manually modified.
+
+## 0.114.0
+Sat, 23 May 2026 08:24:19 GMT
+
+### Minor changes
+
+- Split the Sessions tab into Root (root-task chat) + a new read-only Coordination tab (task-grouped IPC stream inventory); filter internal streams via ListStreams include_internal (CLI --internal)
 
 ## 0.113.0
 Sat, 23 May 2026 03:18:01 GMT

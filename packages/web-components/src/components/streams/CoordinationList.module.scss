@@ -1,0 +1,137 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// CoordinationList — read-only IPC stream inventory (Coordination tab)
+// =============================================================================
+
+.container {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-sm) 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.internalsToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.refreshButton {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-overlay);
+  }
+}
+
+.state {
+  padding: var(--space-lg) var(--space-md);
+  font-size: var(--font-size-sm);
+  color: var(--text-disabled);
+  text-align: center;
+}
+
+.group {
+  margin-top: var(--space-sm);
+}
+
+.groupHeader {
+  @include section-label;
+  padding: var(--space-xs) var(--space-md);
+}
+
+.row {
+  @include hover-accent;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-xs) var(--space-md);
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  min-height: 34px;
+
+  &.selected {
+    background: var(--bg-overlay);
+  }
+}
+
+.kindBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+}
+
+.kindChatroom {
+  color: var(--accent-green);
+  background: var(--accent-green-dim);
+  border-color: var(--accent-green);
+}
+
+.kindPipe {
+  color: var(--accent-yellow);
+  background: var(--bg-inset);
+  border-color: var(--accent-yellow);
+}
+
+.kindChannel {
+  color: var(--accent-blue);
+  background: var(--accent-blue-dim);
+  border-color: var(--accent-blue);
+}
+
+.streamName {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
