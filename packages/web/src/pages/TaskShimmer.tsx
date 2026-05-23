@@ -18,7 +18,6 @@ export function TaskShimmer(): JSX.Element {
       <div className={styles.tabBar} role="tablist" aria-label="Task view">
         <span className={`${styles.tab} ${styles.active}`}>Overview</span>
         <span className={styles.tab}>Stream</span>
-        <span className={styles.tab}>Findings</span>
       </div>
 
       {/* Overview content */}

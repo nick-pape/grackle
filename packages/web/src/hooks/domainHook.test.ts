@@ -14,7 +14,6 @@ import { useEnvironments } from "./useEnvironments.js";
 import { useSessions } from "./useSessions.js";
 import { useWorkspaces } from "./useWorkspaces.js";
 import { useTasks } from "./useTasks.js";
-import { useFindings } from "./useFindings.js";
 import { useTokens } from "./useTokens.js";
 import { useCredentials } from "./useCredentials.js";
 import { useCodespaces } from "./useCodespaces.js";
@@ -36,7 +35,6 @@ const mockClient = vi.hoisted(() => ({
   listSessions: vi.fn().mockResolvedValue({ sessions: [] }),
   listWorkspaces: vi.fn().mockResolvedValue({ workspaces: [] }),
   listTasks: vi.fn().mockResolvedValue({ tasks: [] }),
-  queryFindings: vi.fn().mockResolvedValue({ findings: [] }),
   listTokens: vi.fn().mockResolvedValue({ tokens: [] }),
   getCredentials: vi.fn().mockResolvedValue({ providers: [] }),
   listPersonas: vi.fn().mockResolvedValue({ personas: [] }),
@@ -64,8 +62,6 @@ const mockClient = vi.hoisted(() => ({
   resumeTask: vi.fn(),
   updateTask: vi.fn(),
   deleteTask: vi.fn(),
-  postFinding: vi.fn(),
-  getFinding: vi.fn(),
   setToken: vi.fn(),
   deleteToken: vi.fn(),
   updateCredentials: vi.fn(),
@@ -103,7 +99,6 @@ vi.mock("./proto-converters.js", () => ({
   protoToSessionEvent: (x: unknown) => x,
   protoToWorkspace: (x: unknown) => x,
   protoToTask: (x: unknown) => x,
-  protoToFinding: (x: unknown) => x,
   protoToToken: (x: unknown) => x,
   protoToCredentialConfig: (x: unknown) => x,
   protoToPersona: (x: unknown) => x,
@@ -135,7 +130,6 @@ type _Env = AssertHasDomainHook<ReturnType<typeof useEnvironments>>;
 type _Ses = AssertHasDomainHook<ReturnType<typeof useSessions>>;
 type _Ws = AssertHasDomainHook<ReturnType<typeof useWorkspaces>>;
 type _Tsk = AssertHasDomainHook<ReturnType<typeof useTasks>>;
-type _Fnd = AssertHasDomainHook<ReturnType<typeof useFindings>>;
 type _Tok = AssertHasDomainHook<ReturnType<typeof useTokens>>;
 type _Crd = AssertHasDomainHook<ReturnType<typeof useCredentials>>;
 type _Cs = AssertHasDomainHook<ReturnType<typeof useCodespaces>>;
@@ -151,7 +145,7 @@ type _GhA = AssertHasDomainHook<ReturnType<typeof useGitHubAccounts>>;
 
 // Suppress unused-variable warnings — these exist solely for the type check
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-type _All = _Env | _Ses | _Ws | _Tsk | _Fnd | _Tok | _Crd | _Cs | _Dc | _Per | _Sch | _Kn | _Not | _Plg | _Str | _GhA;
+type _All = _Env | _Ses | _Ws | _Tsk | _Tok | _Crd | _Cs | _Dc | _Per | _Sch | _Kn | _Not | _Plg | _Str | _GhA;
 
 // ---------------------------------------------------------------------------
 // Runtime tests
@@ -174,7 +168,6 @@ const ALL_HOOKS = [
   { name: "useSessions", hook: useSessions },
   { name: "useWorkspaces", hook: useWorkspaces },
   { name: "useTasks", hook: useTasks },
-  { name: "useFindings", hook: useFindings },
   { name: "useTokens", hook: useTokens },
   { name: "useCredentials", hook: useCredentials },
   { name: "useCodespaces", hook: useCodespaces },
@@ -189,7 +182,7 @@ const ALL_HOOKS = [
 ] as const;
 
 /** Expected number of domain hooks. Bump this when adding a new hook. */
-const EXPECTED_HOOK_COUNT = 16;
+const EXPECTED_HOOK_COUNT = 15;
 
 describe("DomainHook registry", () => {
   it(`has exactly ${EXPECTED_HOOK_COUNT} registered hooks`, () => {

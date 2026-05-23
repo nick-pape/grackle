@@ -17,7 +17,6 @@ import { useEnvironments } from "./useEnvironments.js";
 import { useSessions } from "./useSessions.js";
 import { useWorkspaces } from "./useWorkspaces.js";
 import { useTasks } from "./useTasks.js";
-import { useFindings } from "./useFindings.js";
 import { useTokens } from "./useTokens.js";
 import { useCredentials } from "./useCredentials.js";
 import { useCodespaces } from "./useCodespaces.js";
@@ -39,7 +38,6 @@ export type {
   Codespace,
   CredentialProviderConfig,
   Environment,
-  FindingData,
   GrackleEvent,
   PersonaData,
   ProvisionStatus,
@@ -54,7 +52,6 @@ export type {
   UseSessionsResult,
   UseWorkspacesResult,
   UseTasksResult,
-  UseFindingsResult,
   UseTokensResult,
   UseCredentialsResult,
   UseCodespacesResult,
@@ -95,7 +92,6 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   const sessionsHook = useSessions();
   const workspacesHook = useWorkspaces();
   const tasksHook = useTasks();
-  const findingsHook = useFindings();
   const tokensHook = useTokens();
   const credentialsHook = useCredentials();
   const codespacesHook = useCodespaces();
@@ -117,7 +113,6 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     ...(activeHookKeys.has("sessions")     ? [sessionsHook.domainHook]     : []),
     ...(activeHookKeys.has("workspaces")   ? [workspacesHook.domainHook]   : []),
     ...(activeHookKeys.has("tasks")        ? [tasksHook.domainHook]        : []),
-    ...(activeHookKeys.has("findings")     ? [findingsHook.domainHook]     : []),
     ...(activeHookKeys.has("tokens")       ? [tokensHook.domainHook]       : []),
     ...(activeHookKeys.has("credentials")  ? [credentialsHook.domainHook]  : []),
     ...(activeHookKeys.has("codespaces")   ? [codespacesHook.domainHook]   : []),
@@ -331,17 +326,6 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       updateTask: tasksHook.updateTask,
       deleteTask: tasksHook.deleteTask,
       domainHook: tasksHook.domainHook,
-    },
-    findings: {
-      findings: findingsHook.findings,
-      selectedFinding: findingsHook.selectedFinding,
-      findingLoading: findingsHook.findingLoading,
-      findingsLoading: findingsHook.findingsLoading,
-      loadFindings: findingsHook.loadFindings,
-      loadAllFindings: findingsHook.loadAllFindings,
-      loadFinding: findingsHook.loadFinding,
-      postFinding: findingsHook.postFinding,
-      domainHook: findingsHook.domainHook,
     },
     tokens: {
       tokens: tokensHook.tokens,

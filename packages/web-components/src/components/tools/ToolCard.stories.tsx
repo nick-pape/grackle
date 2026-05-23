@@ -49,32 +49,6 @@ export const GenericTool: Story = {
   },
 };
 
-/** MCP finding tool (Claude Code format) routes to FindingCard. */
-export const McpFinding: Story = {
-  name: "MCP finding_post (Claude Code)",
-  args: {
-    tool: "mcp__grackle__finding_post",
-    args: { title: "Test finding", category: "insight" },
-    result: JSON.stringify({ id: "f1", title: "Test finding", category: "insight", tags: [] }),
-  },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByTestId("tool-card-finding")).toBeInTheDocument();
-  },
-};
-
-/** MCP finding tool (Copilot format) routes to FindingCard. */
-export const McpFindingCopilot: Story = {
-  name: "MCP finding_post (Copilot)",
-  args: {
-    tool: "grackle-finding_post",
-    args: { title: "Copilot finding", category: "bug" },
-    result: JSON.stringify({ id: "f2", title: "Copilot finding", category: "bug", tags: [] }),
-  },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByTestId("tool-card-finding")).toBeInTheDocument();
-  },
-};
-
 /** MCP task tool routes to TaskCard. */
 export const McpTask: Story = {
   name: "MCP task_list",

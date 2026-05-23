@@ -30,11 +30,9 @@ export function BottomStatusBar({ sessions, tasks, environments }: BottomStatusB
   const sessionMatch = useMatch("/sessions/:sessionId");
   const taskMatch = useMatch("/tasks/:taskId");
   const taskStreamMatch = useMatch("/tasks/:taskId/stream");
-  const taskFindingsMatch = useMatch("/tasks/:taskId/findings");
   const taskEditMatch = useMatch("/tasks/:taskId/edit");
   const wsTaskMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId/tasks/:taskId");
   const wsTaskStreamMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/stream");
-  const wsTaskFindingsMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/findings");
   const wsTaskEditMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/edit");
   const newChatMatch = useMatch("/sessions/new");
   const workspaceMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId");
@@ -45,14 +43,14 @@ export function BottomStatusBar({ sessions, tasks, environments }: BottomStatusB
 
   // Derive current page context
   const sessionId = sessionMatch?.params.sessionId;
-  const taskId = taskMatch?.params.taskId ?? taskStreamMatch?.params.taskId ?? taskFindingsMatch?.params.taskId
-    ?? wsTaskMatch?.params.taskId ?? wsTaskStreamMatch?.params.taskId ?? wsTaskFindingsMatch?.params.taskId ?? wsTaskEditMatch?.params.taskId;
-  const wsMatch = wsTaskMatch ?? wsTaskStreamMatch ?? wsTaskFindingsMatch ?? wsTaskEditMatch;
+  const taskId = taskMatch?.params.taskId ?? taskStreamMatch?.params.taskId
+    ?? wsTaskMatch?.params.taskId ?? wsTaskStreamMatch?.params.taskId ?? wsTaskEditMatch?.params.taskId;
+  const wsMatch = wsTaskMatch ?? wsTaskStreamMatch ?? wsTaskEditMatch;
   const routeEnvironmentId = wsMatch?.params.environmentId ?? workspaceMatch?.params.environmentId;
   const isEnvironments = location.pathname.startsWith("/environments") && !workspaceMatch && !wsMatch;
   const isChat = !!chatMatch;
   const isNewChat = !!newChatMatch;
-  const isWorkspace = !!workspaceMatch && !wsTaskMatch && !wsTaskStreamMatch && !wsTaskFindingsMatch && !wsTaskEditMatch;
+  const isWorkspace = !!workspaceMatch && !wsTaskMatch && !wsTaskStreamMatch && !wsTaskEditMatch;
   const isNewTask = !!newTaskMatch;
   const isTaskEdit = !!taskEditMatch || !!wsTaskEditMatch;
   const isEmpty = !!emptyMatch && !isNewChat && !isWorkspace && !isNewTask;

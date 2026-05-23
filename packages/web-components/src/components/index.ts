@@ -6,9 +6,6 @@
 // Layout components - application shell structure
 export { StatusBar, Sidebar, BottomStatusBar } from "./layout/index.js";
 
-// Panel components - main content areas
-export { FindingsPanel } from "./panels/index.js";
-
 // List components - sidebar navigation
 export { EnvironmentNav } from "./lists/index.js";
 

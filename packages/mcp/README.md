@@ -163,15 +163,6 @@ Create, manage, and run tasks within workspaces. Supports hierarchical task tree
 | `task_complete` | Mark a task as complete (sticky status). | `taskId` (string) |
 | `task_resume` | Resume the latest session for a task. | `taskId` (string) |
 
-### Finding Tools
-
-Post and query categorized discoveries shared across agents.
-
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `finding_list` | Query findings for a workspace with optional filters. | `workspaceId?` (string, auto-injected for scoped sessions; required for API key/OAuth), `category?` (string), `tag?` (string), `limit?` (int) |
-| `finding_post` | Post a new finding with title, category, content, and tags. | `workspaceId?` (string, auto-injected for scoped sessions; required for API key/OAuth), `title` (string), `category?` (string), `content?` (string), `tags?` (string[]) |
-
 ### Persona Tools
 
 Manage agent personas — reusable templates defining system prompt, runtime, and model.
@@ -186,7 +177,7 @@ Manage agent personas — reusable templates defining system prompt, runtime, an
 
 ### Knowledge Graph Tools
 
-Search and build a semantic knowledge graph across sessions, findings, and task context.
+Search a semantic knowledge graph across sessions and task context.
 
 | Tool | Description | Parameters |
 |------|-------------|------------|
@@ -294,7 +285,6 @@ Each persona can define an `allowed_mcp_tools` list that restricts which MCP too
 1. The server looks up the persona's `allowed_mcp_tools` from the token's `personaId` claim.
 2. If the persona defines a non-empty tool list, only those tools are exposed via `tools/list`.
 3. If the persona has no explicit tool list (empty `allowed_mcp_tools`), the **default scoped set** is used:
-   - `finding_post`, `finding_list`
    - `task_create`, `task_list`, `task_show`, `task_start`, `task_complete`
    - `session_attach`, `session_send_input`
    - `persona_list`, `persona_show`
@@ -315,7 +305,7 @@ Predefined presets are available for convenience (via CLI `--mcp-tools-preset` o
 | `orchestrator` | Default + task management, session spawning, persona creation, scheduling |
 | `admin` | Full access to all available tools |
 
-Scoped tokens also enforce workspace isolation — agents can only see tasks and findings within their own workspace. Subtasks created by a scoped agent are automatically parented to the agent's own task. Tool calls to non-permitted tools return an error with a descriptive message listing the available tools.
+Scoped tokens also enforce workspace isolation — agents can only see tasks within their own workspace. Subtasks created by a scoped agent are automatically parented to the agent's own task. Tool calls to non-permitted tools return an error with a descriptive message listing the available tools.
 
 ## Requirements
 

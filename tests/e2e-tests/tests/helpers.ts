@@ -391,11 +391,6 @@ export function emitToolResult(content: string, raw?: Record<string, unknown>): 
   return step;
 }
 
-/** Emit a finding event. */
-export function emitFinding(content: string): ScenarioStep {
-  return { emit: "finding", content };
-}
-
 /** Emit a subtask_create event. */
 export function emitSubtaskCreate(
   title: string,

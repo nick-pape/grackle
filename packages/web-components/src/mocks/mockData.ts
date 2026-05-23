@@ -12,7 +12,6 @@ import type {
   SessionEvent,
   Workspace,
   TaskData,
-  FindingData,
   TokenInfo,
   PersonaData,
 } from "../hooks/types.js";
@@ -1320,94 +1319,6 @@ export const MOCK_TASKS: TaskData[] = [
 
 // ─── Findings ───────────────────────────────────────
 
-/** Sample findings across every category to exercise the FindingsPanel styling. */
-export const MOCK_FINDINGS: FindingData[] = [
-  {
-    id: "find-001",
-    workspaceId: "proj-alpha",
-    taskId: "task-001",
-    sessionId: "sess-001",
-    category: "architecture",
-    title: "Auth middleware is tightly coupled to Express",
-    content:
-      "The current auth middleware directly references Express Request/Response types. Consider extracting a framework-agnostic token verification layer so we can reuse it in the WebSocket auth path.",
-    tags: ["auth", "decoupling", "middleware"],
-    createdAt: "2026-02-27T08:16:00Z",
-  },
-  {
-    id: "find-002",
-    workspaceId: "proj-alpha",
-    taskId: "task-003",
-    sessionId: "sess-002",
-    category: "api",
-    title: "Missing pagination on GET /api/users",
-    content:
-      "The users endpoint returns all rows without limit/offset. For datasets over 10k rows this will cause timeouts. Recommend cursor-based pagination with a default page size of 50.",
-    tags: ["api", "pagination", "performance"],
-    createdAt: "2026-02-27T07:31:00Z",
-  },
-  {
-    id: "find-003",
-    workspaceId: "proj-alpha",
-    taskId: "task-005",
-    sessionId: "sess-003",
-    category: "bug",
-    title: "Race condition in session cleanup",
-    content:
-      "When two requests hit /api/logout concurrently, the second call throws a 500 because the session row has already been deleted. Needs an idempotent DELETE or a conditional check.",
-    tags: ["bug", "concurrency", "sessions"],
-    createdAt: "2026-02-26T22:50:00Z",
-  },
-  {
-    id: "find-004",
-    workspaceId: "proj-alpha",
-    taskId: "task-004",
-    sessionId: "",
-    category: "decision",
-    title: "Chose pg-pool over knex connection pool",
-    content:
-      "pg-pool gives us direct control over idle timeout, max connections, and health check queries. Knex wraps pg-pool anyway and adds overhead we don't need since we write raw SQL.",
-    tags: ["database", "decision", "postgres"],
-    createdAt: "2026-02-23T11:30:00Z",
-  },
-  {
-    id: "find-005",
-    workspaceId: "proj-alpha",
-    taskId: "",
-    sessionId: "",
-    category: "dependency",
-    title: "jsonwebtoken has 3 high-severity CVEs",
-    content:
-      "The jsonwebtoken package (v8.x) has known vulnerabilities. Consider migrating to jose which is maintained, supports ESM, and covers the same JWS/JWE surface area with zero dependencies.",
-    tags: ["security", "dependency", "jwt"],
-    createdAt: "2026-02-27T08:20:00Z",
-  },
-  {
-    id: "find-006",
-    workspaceId: "proj-alpha",
-    taskId: "task-001",
-    sessionId: "sess-001",
-    category: "pattern",
-    title: "Consistent error response shape",
-    content:
-      'All error responses should follow the shape `{ error: string, code: string, details?: unknown }`. Currently some routes return `{ message: string }` and others return `{ error: string }`.',
-    tags: ["api", "consistency", "error-handling"],
-    createdAt: "2026-02-27T08:17:00Z",
-  },
-  {
-    id: "find-007",
-    workspaceId: "proj-beta",
-    taskId: "task-007",
-    sessionId: "sess-004",
-    category: "architecture",
-    title: "Watermark storage should be pluggable",
-    content:
-      "The incremental load watermarks are currently stored in a local SQLite file. For production multi-worker scenarios, this needs to be backed by a shared store (Redis or Postgres).",
-    tags: ["architecture", "pipeline", "scalability"],
-    createdAt: "2026-02-27T09:05:00Z",
-  },
-];
-
 // ─── Tokens ──────────────────────────────────────────
 
 /** Sample tokens for the settings panel. */
@@ -1453,7 +1364,7 @@ export const MOCK_PERSONAS: PersonaData[] = [
     updatedAt: "2026-02-20T10:00:00Z",
     type: "agent",
     script: "",
-    allowedMcpTools: ["task_create", "task_update", "task_list", "finding_post", "finding_list", "knowledge_search", "knowledge_create_node", "session_spawn"],
+    allowedMcpTools: ["task_create", "task_update", "task_list", "knowledge_search", "session_spawn"],
   },
   {
     id: "persona-fe",
@@ -1485,7 +1396,7 @@ export const MOCK_PERSONAS: PersonaData[] = [
     updatedAt: "2026-02-20T10:10:00Z",
     type: "agent",
     script: "",
-    allowedMcpTools: ["finding_post", "finding_list", "knowledge_search"],
+    allowedMcpTools: ["knowledge_search"],
   },
   {
     id: "persona-tester",

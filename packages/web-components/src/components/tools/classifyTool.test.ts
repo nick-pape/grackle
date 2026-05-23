@@ -33,7 +33,6 @@ describe("classifyTool", () => {
 
   it("classifies Grackle MCP tools", () => {
     expect(classifyTool("mcp__grackle__workpad_write")).toBe("workpad");
-    expect(classifyTool("mcp__grackle__finding_post")).toBe("finding");
     expect(classifyTool("mcp__grackle__task_create")).toBe("task");
   });
 
