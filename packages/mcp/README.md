@@ -275,9 +275,11 @@ How it works:
 - **Tool ↔ resource link** — A widget tool carries `_meta.ui.resourceUri` (and the legacy `_meta["ui/resourceUri"]`) pointing at its `ui://` resource. The host reads the resource and renders it, passing the tool's input and result into the widget.
 - **Widget assets** — The widget's browser scripts are served (unauthenticated, since they are non-sensitive static JS) from `/widgets/<name>/…` on the MCP server's HTTP origin.
 
-> **Note:** the widget's scripts load from the MCP server's origin, so a host whose sandbox CSP forbids cross-origin scripts won't render them. Grackle's own chat-pane host handles this; that integration is tracked separately.
+- **Grackle chat-pane capture** — When an agent in a Grackle session calls a widget tool, the MCP server also pushes a self-contained "widget" event (resource HTML + tool input/result) into that session's event stream, so the widget renders inline in Grackle's own chat UI — independent of whether the agent runtime preserves MCP `_meta`. (This in-process capture only runs when the MCP server is co-located with the Grackle server; the standalone `npx @grackle-ai/mcp` server does not emit chat widget events.)
 
-The current built-in widget is `show_hello_widget` (resource `ui://grackle/hello-widget`). Try it with the [MCP Inspector](https://github.com/modelcontextprotocol/inspector) or Claude Desktop.
+> **Note:** the widget's scripts load from the MCP server's origin, so a host whose sandbox CSP forbids cross-origin scripts won't render them. Grackle's own chat pane allows the MCP origin in its sandbox CSP, so widgets render there.
+
+The current built-in widget is `show_hello_widget` (resource `ui://grackle/hello-widget`). Try it with the [MCP Inspector](https://github.com/modelcontextprotocol/inspector), Claude Desktop, or Grackle's own chat.
 
 ---
 

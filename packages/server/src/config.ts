@@ -1,4 +1,4 @@
-import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
+import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT, DEFAULT_SANDBOX_PORT } from "@grackle-ai/common";
 
 /** Validated server configuration resolved from environment variables. */
 export interface ServerConfig {
@@ -8,6 +8,23 @@ export interface ServerConfig {
   webPort: number;
   /** MCP server port (GRACKLE_MCP_PORT). */
   mcpPort: number;
+  /**
+   * Explicit browser-facing MCP origin (GRACKLE_MCP_ORIGIN), e.g.
+   * `https://mcp.example.com`. Used as the trusted asset/CSP origin for
+   * broker-captured MCP Apps widgets (so it never depends on the request `Host`).
+   * When unset, the broker derives it from the bind host + `mcpPort`.
+   */
+  mcpOrigin?: string;
+  /** MCP Apps widget sandbox port (GRACKLE_SANDBOX_PORT). */
+  sandboxPort: number;
+  /**
+   * Explicit browser-facing sandbox origin (GRACKLE_SANDBOX_ORIGIN), e.g.
+   * `https://sandbox.example.com`. Set this when the SPA is served behind a
+   * reverse proxy / TLS, where the scheme + port the browser must use for the
+   * sandbox cannot be inferred from the page's own origin + `sandboxPort`.
+   * When unset, the SPA derives the origin from `window.location` + `sandboxPort`.
+   */
+  sandboxOrigin?: string;
   /** PowerLine server port (GRACKLE_POWERLINE_PORT). */
   powerlinePort: number;
   /** Bind address for all servers (GRACKLE_HOST). */
@@ -57,6 +74,9 @@ export function resolveServerConfig(): ServerConfig {
     grpcPort: parsePort("GRACKLE_PORT", DEFAULT_SERVER_PORT),
     webPort: parsePort("GRACKLE_WEB_PORT", DEFAULT_WEB_PORT),
     mcpPort: parsePort("GRACKLE_MCP_PORT", DEFAULT_MCP_PORT),
+    ...(process.env.GRACKLE_MCP_ORIGIN ? { mcpOrigin: process.env.GRACKLE_MCP_ORIGIN } : {}),
+    sandboxPort: parsePort("GRACKLE_SANDBOX_PORT", DEFAULT_SANDBOX_PORT),
+    ...(process.env.GRACKLE_SANDBOX_ORIGIN ? { sandboxOrigin: process.env.GRACKLE_SANDBOX_ORIGIN } : {}),
     powerlinePort: parsePort("GRACKLE_POWERLINE_PORT", DEFAULT_POWERLINE_PORT),
     host: process.env.GRACKLE_HOST || "127.0.0.1",
     skipLocalPowerline: parseFlag("GRACKLE_SKIP_LOCAL_POWERLINE"),

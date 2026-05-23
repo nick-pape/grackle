@@ -170,6 +170,28 @@ export const MarkdownParagraphWrapping: Story = {
   },
 };
 
+/** Widget event renders the lazy-loaded MCP App host iframe. */
+export const WidgetEvent: Story = {
+  args: {
+    event: makeEvent({
+      eventType: "widget",
+      content: JSON.stringify({
+        resourceUri: "ui://grackle/hello-widget",
+        toolName: "show_hello_widget",
+        html: "<!doctype html><html><body><div class=\"card\">widget</div></body></html>",
+        toolInput: { message: "hi" },
+        toolResult: { content: [{ type: "text", text: "ok" }] },
+      }),
+    }),
+    // Different origin than Storybook (6006) so McpAppWidget's same-origin guard passes.
+    sandboxProxyUrl: "http://localhost:6007/sandbox.html",
+  },
+  play: async ({ canvas }) => {
+    // McpAppWidget is lazy-loaded behind Suspense; findByTestId waits for the chunk.
+    await expect(await canvas.findByTestId("mcp-app-widget")).toBeInTheDocument();
+  },
+};
+
 /** User input events render as markdown (bold, lists, inline code) inside the bubble. */
 export const UserMessageMarkdown: Story = {
   args: {

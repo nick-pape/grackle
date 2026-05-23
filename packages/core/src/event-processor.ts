@@ -32,6 +32,55 @@ export interface EventStreamOptions {
   traceId?: string;
 }
 
+/** Payload for an MCP Apps widget render event pushed into a session stream. */
+export interface WidgetEventPayload {
+  /** The `ui://` resource the widget renders. */
+  resourceUri: string;
+  /** Name of the tool that produced the widget. */
+  toolName: string;
+  /** Widget HTML (`text/html;profile=mcp-app`). */
+  html: string;
+  /** CSP domains for the sandbox (e.g. `resourceDomains` = the MCP origin). */
+  csp?: unknown;
+  /** Tool input arguments. */
+  toolInput?: Record<string, unknown>;
+  /** Tool result (an MCP `CallToolResult`). */
+  toolResult?: unknown;
+}
+
+/** Callback that pushes a widget event into a session's stream (injected into the MCP server). */
+export type PublishWidgetEvent = (sessionId: string, payload: WidgetEventPayload) => void;
+
+/**
+ * Publish an MCP Apps widget render event into a session's event stream.
+ *
+ * Called by Grackle's MCP server (the broker) when an agent invokes a widget
+ * tool. The event is self-contained (resource HTML + tool input/result) so the
+ * web chat renders it without contacting the MCP server. Persisted to the
+ * session log (replays on reload) and broadcast live. Non-fatal on error.
+ */
+export function publishWidgetEvent(sessionId: string, payload: WidgetEventPayload): void {
+  try {
+    const event = create(grackle.SessionEventSchema, {
+      sessionId,
+      type: grackle.EventType.WIDGET,
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify(payload),
+      raw: JSON.stringify({ widget: true, toolName: payload.toolName }),
+    });
+    const session = sessionStore.getSession(sessionId);
+    if (session?.logPath) {
+      logWriter.ensureLogInitialized(session.logPath);
+      logWriter.writeEvent(session.logPath, event).catch((err: unknown) => {
+        logger.error({ err, sessionId }, "Failed to persist widget event");
+      });
+    }
+    streamHub.publish(event);
+  } catch (err) {
+    logger.error({ err, sessionId }, "Failed to publish widget event");
+  }
+}
+
 /**
  * Process a finding event, storing it in the finding store and broadcasting.
  * Shared between live event processing and replay on late-bind.

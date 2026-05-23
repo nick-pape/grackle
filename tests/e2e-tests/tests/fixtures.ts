@@ -76,7 +76,7 @@ interface TestFixtures {
 
 /** Extended Playwright test fixture that spawns a per-worker Grackle stack. */
 export const test = base.extend<TestFixtures, WorkerFixtures>({
-  // Worker-scoped: starts one Grackle stack per worker (4 ports + isolated DB).
+  // Worker-scoped: starts one Grackle stack per worker (5 ports + isolated DB).
   // Teardown kills processes and removes the temp directory when the worker exits.
   // Knowledge graph is only enabled for the "knowledge" project to avoid
   // Neo4j contention and reference-node sync overhead in other tests.

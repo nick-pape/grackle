@@ -44,6 +44,23 @@ const logger: Logger = pino({
     : undefined,
 });
 
+/**
+ * Pushes an MCP Apps widget render event into a session's stream. Injected by the
+ * server (wraps `@grackle-ai/core`'s `publishWidgetEvent`). Declared structurally
+ * to avoid widening this package's runtime dependencies onto core.
+ */
+export type PublishWidgetEvent = (
+  sessionId: string,
+  payload: {
+    resourceUri: string;
+    toolName: string;
+    html: string;
+    csp?: unknown;
+    toolInput?: Record<string, unknown>;
+    toolResult?: unknown;
+  },
+) => void;
+
 /** Options for creating an MCP server. */
 export interface McpServerOptions {
   /** Host address to bind the MCP server to. */
@@ -56,8 +73,17 @@ export interface McpServerOptions {
   apiKey: string;
   /** Base URL of the OAuth authorization server (web server). When set, enables OAuth discovery. */
   authorizationServerUrl?: string;
+  /**
+   * Explicit browser-facing MCP origin (GRACKLE_MCP_ORIGIN), e.g.
+   * `https://mcp.example.com`. Used as the trusted asset/CSP origin for
+   * broker-captured widgets so it never depends on the (spoofable) request
+   * `Host` header. When unset, the broker derives it from `bindHost` + `mcpPort`.
+   */
+  mcpOrigin?: string;
   /** Optional plugin-contributed tool groups to register alongside built-in tools. */
   toolGroups?: ToolDefinition[][];
+  /** Push MCP Apps widget render events into session streams (in-process, from the server). */
+  publishWidgetEvent?: PublishWidgetEvent;
 }
 
 /** Create per-service ConnectRPC clients pointing at the co-located Grackle gRPC server. */
@@ -119,10 +145,16 @@ async function createMcpServerInstance(
   grpcClients: GrackleClients,
   authContext: AuthContext,
   assetBaseUrl: string,
+  brokerAssetOrigin: string,
+  publishWidgetEvent: PublishWidgetEvent | undefined,
   toolGroups?: ToolDefinition[][],
 ): Promise<Server> {
   const registry = createToolRegistry(toolGroups);
-  const resourceRegistry = createResourceRegistry(assetBaseUrl);
+  // In broker mode the captured widget's asset/CSP origin must be the trusted,
+  // browser-facing MCP origin (config-derived), never the request Host. In
+  // standalone mode the direct client reached us on `assetBaseUrl`, so use that.
+  const widgetAssetOrigin: string = publishWidgetEvent !== undefined ? brokerAssetOrigin : assetBaseUrl;
+  const resourceRegistry = createResourceRegistry(widgetAssetOrigin);
 
   // Resolve persona-scoped tool set once at session creation (cached for session lifetime)
   const personaAllowedTools = await resolvePersonaTools(grpcClients, authContext);
@@ -154,9 +186,15 @@ async function createMcpServerInstance(
   const uiToolNames = new Set(visibleTools.filter((t) => t.uiResourceUri).map((t) => t.name));
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    // Gate widget tools on the host advertising the io.modelcontextprotocol/ui
-    // extension (known only after initialize). Non-UI hosts see the rest.
-    const uiOn = hostSupportsUiApps(server.getClientCapabilities());
+    // Expose widget tools when EITHER:
+    //  (a) the broker is active (publishWidgetEvent injected) — Grackle is itself
+    //      the ui-capable host. It captures the widget call and renders it in the
+    //      chat, so the agent's own MCP client (a mere conduit here) need not
+    //      advertise the io.modelcontextprotocol/ui extension; or
+    //  (b) the connecting client advertises that extension — the spec-compliant
+    //      path for the standalone MCP server, where the client renders the
+    //      widget itself.
+    const uiOn = publishWidgetEvent !== undefined || hostSupportsUiApps(server.getClientCapabilities());
     const tools = uiOn ? visibleToolDefs : visibleToolDefs.filter((t) => !uiToolNames.has(t.name));
     return { tools };
   });
@@ -293,6 +331,26 @@ async function createMcpServerInstance(
     try {
       logger.info({ tool: name, resolved: tool.name }, "Executing MCP tool: %s", name);
       const result = await tool.handler(parsed.data as Record<string, unknown>, grpcClients, authContext);
+      // MCP Apps: when a session agent invokes a widget tool, push a self-contained
+      // widget render event into that session's stream (broker capture — does not
+      // depend on the agent SDK preserving _meta). Non-fatal.
+      if (tool.uiResourceUri && authContext.type === "scoped" && publishWidgetEvent) {
+        try {
+          const resource = resourceRegistry.get(tool.uiResourceUri);
+          if (resource) {
+            publishWidgetEvent(authContext.taskSessionId, {
+              resourceUri: tool.uiResourceUri,
+              toolName: tool.name,
+              html: resource.read().text,
+              csp: { resourceDomains: [widgetAssetOrigin], connectDomains: [widgetAssetOrigin] },
+              toolInput: parsed.data as Record<string, unknown>,
+              toolResult: result,
+            });
+          }
+        } catch (widgetErr) {
+          logger.warn({ tool: name, err: widgetErr }, "Widget event capture failed (non-fatal)");
+        }
+      }
       return result as CallToolResult;
     } catch (error: unknown) {
       logger.error({ tool: name, err: error }, "Tool execution failed: %s", name);
@@ -321,7 +379,14 @@ const REVOCATION_PRUNE_INTERVAL_MS: number = 60 * 60 * 1000;
  * and Server instance, tracked by session ID.
  */
 export function createMcpServer(options: McpServerOptions): http.Server {
-  const { bindHost, grpcPort, apiKey, authorizationServerUrl, toolGroups } = options;
+  const { bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl, toolGroups, publishWidgetEvent, mcpOrigin } = options;
+  // Trusted, browser-facing MCP origin for broker-captured widgets (their
+  // `<script src>` + CSP allowlist). Derived from server config — NOT the request
+  // `Host` header, which a hostile MCP client could spoof to point widget assets
+  // / CSP at an attacker origin. Override via GRACKLE_MCP_ORIGIN for
+  // reverse-proxy / TLS deployments where loopback isn't browser-reachable.
+  const dialableMcpHost: string = bindHost === "0.0.0.0" || bindHost === "::" ? "127.0.0.1" : bindHost;
+  const brokerAssetOrigin: string = mcpOrigin ?? `http://${dialableMcpHost}:${mcpPort}`;
   /** Parsed auth server URL, used for dynamic derivation of authorization_servers. */
   const parsedAuthServerUrl = authorizationServerUrl
     ? new URL(authorizationServerUrl)
@@ -395,7 +460,7 @@ export function createMcpServer(options: McpServerOptions): http.Server {
     const method = req.method?.toUpperCase();
 
     if (method === "POST") {
-      await handlePost(req, res, grpcClients, transports, authContexts, authContext, toolGroups);
+      await handlePost(req, res, grpcClients, transports, authContexts, authContext, publishWidgetEvent, brokerAssetOrigin, toolGroups);
     } else if (method === "GET") {
       await handleGet(req, res, transports);
     } else if (method === "DELETE") {
@@ -470,6 +535,8 @@ async function handlePost(
   transports: Map<string, StreamableHTTPServerTransport>,
   authContexts: Map<string, AuthContext>,
   authContext: AuthContext,
+  publishWidgetEvent: PublishWidgetEvent | undefined,
+  brokerAssetOrigin: string,
   toolGroups?: ToolDefinition[][],
 ): Promise<void> {
   try {
@@ -516,7 +583,7 @@ async function handlePost(
       // avoid attribute injection from a hostile Host header.
       const encrypted = "encrypted" in req.socket && (req.socket as { encrypted?: boolean }).encrypted === true;
       const assetBaseUrl = resolveAssetBaseUrl(req.headers.host, req.headers["x-forwarded-proto"], encrypted);
-      const mcpServer = await createMcpServerInstance(grpcClients, authContext, assetBaseUrl, toolGroups);
+      const mcpServer = await createMcpServerInstance(grpcClients, authContext, assetBaseUrl, brokerAssetOrigin, publishWidgetEvent, toolGroups);
       await mcpServer.connect(transport);
       await transport.handleRequest(req, res, body);
       return;

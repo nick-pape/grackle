@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { useParams, useLocation } from "react-router";
 import { ConnectError } from "@connectrpc/connect";
 import { useGrackle } from "../context/GrackleContext.js";
+import { useSandboxProxyUrl } from "../context/ManifestContext.js";
 import {
   Breadcrumbs, ChatInput, ConfirmDialog, EventStream, FindingsPanel,
   SessionAttemptSelector, TaskActionButtons, TaskEditPanel, TaskOverviewPanel,
@@ -19,6 +20,7 @@ type TaskTab = "overview" | "stream" | "findings";
 /** Task detail page with overview/stream/findings tabs. */
 export function TaskPage(): JSX.Element {
   const { taskId, workspaceId: routeWorkspaceId, environmentId: routeEnvironmentId } = useParams<{ taskId: string; workspaceId?: string; environmentId?: string }>();
+  const sandboxProxyUrl = useSandboxProxyUrl();
   const location = useLocation();
   const navigate = useAppNavigate();
   const { showToast } = useToast();
@@ -321,6 +323,7 @@ export function TaskPage(): JSX.Element {
             <EventStream
               events={groupedEvents}
               eventsDropped={eventsDropped}
+              sandboxProxyUrl={sandboxProxyUrl}
               emptyState={
                 !sessionId && task ? (
                   isTaskBlocked ? (

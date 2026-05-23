@@ -8,6 +8,12 @@ import type { ConnectRouter } from '@connectrpc/connect';
 import http from 'node:http';
 
 // @public
+export function buildCspHeader(csp: SandboxCsp | undefined): string;
+
+// @public
+export function createSandboxServer(options: SandboxServerOptions): http.Server;
+
+// @public
 export function createWebServer(options: WebServerOptions): http.Server;
 
 // @public
@@ -26,12 +32,32 @@ export interface ReadinessResult {
 }
 
 // @public
+export interface SandboxCsp {
+    // (undocumented)
+    baseUriDomains?: unknown;
+    // (undocumented)
+    connectDomains?: unknown;
+    // (undocumented)
+    frameDomains?: unknown;
+    // (undocumented)
+    resourceDomains?: unknown;
+}
+
+// @public
+export interface SandboxServerOptions {
+    bindHost: string;
+    sandboxPort: number;
+}
+
+// @public
 export interface WebServerOptions {
     apiKey: string;
     bindHost: string;
     connectRoutes?: (router: ConnectRouter) => void;
     pluginNames?: string[];
     readinessCheck?: () => ReadinessResult | Promise<ReadinessResult>;
+    sandboxOrigin?: string;
+    sandboxPort?: number;
     webDistDir?: string;
     webPort: number;
 }
