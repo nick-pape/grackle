@@ -25,6 +25,11 @@ export interface ToolContent {
 export interface ToolResult {
   content: ToolContent[];
   isError?: boolean;
+  /**
+   * Standard MCP result metadata. Used internally by the widget tools to hand a
+   * render descriptor to the broker capture (see {@link WIDGET_RENDER_META_KEY}).
+   */
+  _meta?: { [key: string]: unknown };
 }
 
 /** Optional hints about a tool's behavior for the MCP client. */

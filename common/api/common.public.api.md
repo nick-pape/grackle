@@ -59,7 +59,7 @@ type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
 const AgentEventSchema: GenMessage<AgentEvent>;
 
 // @public
-export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "finding" | "subtask_create" | "runtime_session_id" | "usage";
+export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "subtask_create" | "runtime_session_id" | "usage";
 
 // @public
 export const ALL_MCP_TOOL_NAMES: ReadonlySet<string>;
@@ -584,6 +584,16 @@ type GetUsageRequest = Message<"grackle.GetUsageRequest"> & {
 const GetUsageRequestSchema: GenMessage<GetUsageRequest>;
 
 // @public
+type GetWidgetRequest = Message<"grackle.GetWidgetRequest"> & {
+    id: string;
+    name: string;
+    workspaceId: string;
+};
+
+// @public
+const GetWidgetRequestSchema: GenMessage<GetWidgetRequest>;
+
+// @public
 type GitHubAccount = Message<"grackle.GitHubAccount"> & {
     id: string;
     label: string;
@@ -676,6 +686,8 @@ declare namespace grackle {
         StreamSubscriberInfoSchema,
         StreamInfo,
         StreamInfoSchema,
+        ListStreamsRequest,
+        ListStreamsRequestSchema,
         ListStreamsResponse,
         ListStreamsResponseSchema,
         SessionEvent,
@@ -732,6 +744,18 @@ declare namespace grackle {
         StartTaskRequestSchema,
         SetWorkpadRequest,
         SetWorkpadRequestSchema,
+        Widget,
+        WidgetSchema,
+        WidgetList,
+        WidgetListSchema,
+        RegisterWidgetRequest,
+        RegisterWidgetRequestSchema,
+        UpdateWidgetRequest,
+        UpdateWidgetRequestSchema,
+        GetWidgetRequest,
+        GetWidgetRequestSchema,
+        ListWidgetsRequest,
+        ListWidgetsRequestSchema,
         Escalation,
         EscalationSchema,
         EscalationList,
@@ -1070,7 +1094,7 @@ const GrackleCore: GenService<{
     };
     listStreams: {
         methodKind: "unary";
-        input: typeof EmptySchema;
+        input: typeof ListStreamsRequestSchema;
         output: typeof ListStreamsResponseSchema;
     };
     getVersionStatus: {
@@ -1225,6 +1249,26 @@ const GrackleOrchestration: GenService<{
         methodKind: "unary";
         input: typeof PersonaIdSchema;
         output: typeof EmptySchema;
+    };
+    registerWidget: {
+        methodKind: "unary";
+        input: typeof RegisterWidgetRequestSchema;
+        output: typeof WidgetSchema;
+    };
+    updateWidget: {
+        methodKind: "unary";
+        input: typeof UpdateWidgetRequestSchema;
+        output: typeof WidgetSchema;
+    };
+    getWidget: {
+        methodKind: "unary";
+        input: typeof GetWidgetRequestSchema;
+        output: typeof WidgetSchema;
+    };
+    listWidgets: {
+        methodKind: "unary";
+        input: typeof ListWidgetsRequestSchema;
+        output: typeof WidgetListSchema;
     };
     createEscalation: {
         methodKind: "unary";
@@ -1462,6 +1506,14 @@ type ListSchedulesRequest = Message<"grackle.ListSchedulesRequest"> & {
 const ListSchedulesRequestSchema: GenMessage<ListSchedulesRequest>;
 
 // @public
+type ListStreamsRequest = Message<"grackle.ListStreamsRequest"> & {
+    includeInternal: boolean;
+};
+
+// @public
+const ListStreamsRequestSchema: GenMessage<ListStreamsRequest>;
+
+// @public
 type ListStreamsResponse = Message<"grackle.ListStreamsResponse"> & {
     streams: StreamInfo[];
 };
@@ -1478,6 +1530,14 @@ type ListTasksRequest = Message<"grackle.ListTasksRequest"> & {
 
 // @public
 const ListTasksRequestSchema: GenMessage<ListTasksRequest>;
+
+// @public
+type ListWidgetsRequest = Message<"grackle.ListWidgetsRequest"> & {
+    workspaceId: string;
+};
+
+// @public
+const ListWidgetsRequestSchema: GenMessage<ListWidgetsRequest>;
 
 // @public
 type ListWorkspacesRequest = Message<"grackle.ListWorkspacesRequest"> & {
@@ -1661,6 +1721,21 @@ type ProvisionEvent = Message<"grackle.ProvisionEvent"> & {
 
 // @public
 const ProvisionEventSchema: GenMessage<ProvisionEvent>;
+
+// @public
+type RegisterWidgetRequest = Message<"grackle.RegisterWidgetRequest"> & {
+    workspaceId: string;
+    name: string;
+    description: string;
+    rendererKind: string;
+    body: string;
+    propsSchema: string;
+    ownerTaskId: string;
+    ownerSessionId: string;
+};
+
+// @public
+const RegisterWidgetRequestSchema: GenMessage<RegisterWidgetRequest>;
 
 // @public
 type RemoveGitHubAccountRequest = Message<"grackle.RemoveGitHubAccountRequest"> & {
@@ -2302,6 +2377,19 @@ type UpdateTaskRequest = Message<"grackle.UpdateTaskRequest"> & {
 const UpdateTaskRequestSchema: GenMessage<UpdateTaskRequest>;
 
 // @public
+type UpdateWidgetRequest = Message<"grackle.UpdateWidgetRequest"> & {
+    id: string;
+    workspaceId: string;
+    name?: string;
+    description?: string;
+    body?: string;
+    propsSchema?: string;
+};
+
+// @public
+const UpdateWidgetRequestSchema: GenMessage<UpdateWidgetRequest>;
+
+// @public
 type UpdateWorkspaceRequest = Message<"grackle.UpdateWorkspaceRequest"> & {
     id: string;
     name?: string;
@@ -2356,6 +2444,33 @@ type WaitForPipeResponse = Message<"grackle.WaitForPipeResponse"> & {
 
 // @public
 const WaitForPipeResponseSchema: GenMessage<WaitForPipeResponse>;
+
+// @public
+type Widget = Message<"grackle.Widget"> & {
+    id: string;
+    workspaceId: string;
+    name: string;
+    description: string;
+    rendererKind: string;
+    body: string;
+    propsSchema: string;
+    version: number;
+    ownerTaskId: string;
+    ownerSessionId: string;
+    createdAt: string;
+    updatedAt: string;
+};
+
+// @public
+type WidgetList = Message<"grackle.WidgetList"> & {
+    widgets: Widget[];
+};
+
+// @public
+const WidgetListSchema: GenMessage<WidgetList>;
+
+// @public
+const WidgetSchema: GenMessage<Widget>;
 
 // @public
 export const WORKER_MCP_TOOLS: readonly string[];

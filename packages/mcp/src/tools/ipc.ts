@@ -239,7 +239,8 @@ export const ipcTools: ToolDefinition[] = [
       authContext?: AuthContext,
     ) {
       try {
-        const result = await client.listStreams({});
+        // The IPC inspector is a debug surface — show internal streams too.
+        const result = await client.listStreams({ includeInternal: true });
 
         // Scoped agents only see streams they participate in
         const filteredStreams = (() => {

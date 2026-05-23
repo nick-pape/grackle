@@ -34,18 +34,28 @@ export interface EventStreamOptions {
 
 /** Payload for an MCP Apps widget render event pushed into a session stream. */
 export interface WidgetEventPayload {
-  /** The `ui://` resource the widget renders. */
+  /** The `ui://` resource the widget renders (may be empty for one-off renders). */
   resourceUri: string;
   /** Name of the tool that produced the widget. */
   toolName: string;
   /** Widget HTML (`text/html;profile=mcp-app`). */
   html: string;
-  /** CSP domains for the sandbox (e.g. `resourceDomains` = the MCP origin). */
+  /**
+   * Renderer the frontend should dispatch to. `"mcp-app-html"` (default when
+   * omitted) renders `html` in the sandbox; future kinds (e.g. declarative) add
+   * cases without changing this contract.
+   */
+  rendererKind?: string;
+  /** CSP for the sandbox (`resourceDomains`/`connectDomains` + `allowInlineScripts`). */
   csp?: unknown;
-  /** Tool input arguments. */
+  /** Tool input arguments / render-time props. */
   toolInput?: Record<string, unknown>;
   /** Tool result (an MCP `CallToolResult`). */
   toolResult?: unknown;
+  /** Registry id when rendering a registered widget (#1239). */
+  widgetId?: string;
+  /** Registry version, when known. */
+  version?: number;
 }
 
 /** Callback that pushes a widget event into a session's stream (injected into the MCP server). */
@@ -227,7 +237,7 @@ export function processSubtaskEvent(
 }
 
 /**
- * Replay pre-association events from the session log through finding/subtask interceptors.
+ * Replay pre-association events from the session log through the subtask interceptor.
  * Called when a session is late-bound to a task. Does not re-publish to streamHub.
  *
  * Note: Uses synchronous readFileSync while the log is written via a buffered WriteStream.
@@ -262,7 +272,7 @@ function replayLoggedEvents(ctx: ProcessorContext, subtaskLocalIdMap: Map<string
 
 /**
  * Process an async iterable of agent events from a PowerLine spawn or resume stream.
- * Handles event transformation, logging, finding interception, status updates, and cleanup.
+ * Handles event transformation, logging, status updates, and cleanup.
  *
  * This function is fire-and-forget: it runs in the background and does not throw.
  * Callers should use `onComplete` callback for post-processing.

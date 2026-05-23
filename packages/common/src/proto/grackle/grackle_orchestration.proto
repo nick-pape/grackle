@@ -25,6 +25,12 @@ service GrackleOrchestration {
   rpc UpdatePersona(UpdatePersonaRequest) returns (Persona);
   rpc DeletePersona(PersonaId) returns (Empty);
 
+  // Widgets (agent-authored MCP Apps registry)
+  rpc RegisterWidget(RegisterWidgetRequest) returns (Widget);
+  rpc UpdateWidget(UpdateWidgetRequest) returns (Widget);
+  rpc GetWidget(GetWidgetRequest) returns (Widget);
+  rpc ListWidgets(ListWidgetsRequest) returns (WidgetList);
+
   // Escalations
   rpc CreateEscalation(CreateEscalationRequest) returns (Escalation);
   rpc ListEscalations(ListEscalationsRequest) returns (EscalationList);

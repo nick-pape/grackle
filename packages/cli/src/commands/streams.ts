@@ -9,9 +9,10 @@ export function registerStreamCommands(program: Command): void {
   streams
     .command("list")
     .description("List active IPC streams with subscriber details")
-    .action(async () => {
+    .option("--internal", "Include internal IPC streams (lifecycle/pipe/stdin)")
+    .action(async (opts: { internal?: boolean }) => {
       const { core: client } = createGrackleClients();
-      const res = await client.listStreams({});
+      const res = await client.listStreams({ includeInternal: opts.internal ?? false });
       if (res.streams.length === 0) {
         console.log("No active streams.");
         return;

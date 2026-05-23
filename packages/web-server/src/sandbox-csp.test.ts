@@ -54,6 +54,15 @@ describe("buildCspHeader", () => {
     expect(csp).not.toContain("?q=1");
   });
 
+  it("allows inline scripts only when allowInlineScripts is set (agent widgets)", () => {
+    const locked = buildCspHeader({ resourceDomains: ["https://ok.example"] });
+    expect(locked).not.toMatch(/script-src[^;]*'unsafe-inline'/);
+    const inline = buildCspHeader({ resourceDomains: ["https://ok.example"], allowInlineScripts: true });
+    expect(inline).toMatch(/script-src 'self' 'unsafe-inline' blob:/);
+    // Non-boolean / falsey values do not enable it.
+    expect(buildCspHeader({ allowInlineScripts: "yes" })).not.toMatch(/script-src[^;]*'unsafe-inline'/);
+  });
+
   it("allows inline styles (widgets use <style>) but not inline scripts", () => {
     const csp = buildCspHeader(undefined);
     expect(csp).toMatch(/style-src[^;]*'unsafe-inline'/);

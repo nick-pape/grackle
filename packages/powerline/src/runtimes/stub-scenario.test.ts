@@ -170,12 +170,12 @@ describe("buildEventFromEmitStep", () => {
     expect(id2).toBe("toolu_scenario_2");
   });
 
-  it("builds finding event", () => {
-    const step: EmitStep = { emit: "finding", content: "Found a bug in auth.ts" };
+  it("builds system event", () => {
+    const step: EmitStep = { emit: "system", content: "System notice" };
     const [event] = buildEventFromEmitStep(step, undefined);
 
-    expect(event.type).toBe("finding");
-    expect(event.content).toBe("Found a bug in auth.ts");
+    expect(event.type).toBe("system");
+    expect(event.content).toBe("System notice");
   });
 
   it("builds error event", () => {

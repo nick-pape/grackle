@@ -27,8 +27,8 @@ function makeTool(name: string): ToolDefinition {
 /** Build a registry with the standard scoped tools plus some extras. */
 function buildRegistry(): ToolRegistry {
   const registry = new ToolRegistry();
-  registry.register(makeTool("finding_post"));
-  registry.register(makeTool("finding_list"));
+  registry.register(makeTool("workpad_write"));
+  registry.register(makeTool("workpad_read"));
   registry.register(makeTool("task_create"));
   registry.register(makeTool("task_list"));
   registry.register(makeTool("task_show"));
@@ -65,7 +65,6 @@ const ROOT_TASK_AUTH: AuthContext = {
 describe("SCOPED_TOOLS", () => {
   it("contains the expected scoped tools", () => {
     expect([...SCOPED_TOOLS].sort()).toEqual([
-      "finding_list", "finding_post",
       "ipc_attach", "ipc_close", "ipc_create_stream", "ipc_list_fds", "ipc_share_stream", "ipc_spawn", "ipc_terminate", "ipc_write",
       "knowledge_get_node", "knowledge_search",
       "logs_get",
@@ -74,6 +73,7 @@ describe("SCOPED_TOOLS", () => {
       "session_attach", "session_send_input",
       "show_hello_widget",
       "task_complete", "task_create", "task_list", "task_search", "task_show", "task_start",
+      "widget_list", "widget_register", "widget_render", "widget_show", "widget_update",
       "workpad_read", "workpad_write",
     ]);
   });
@@ -91,9 +91,9 @@ describe("resolveToolForAuth", () => {
 
   it("returns scoped tool by name for scoped auth", () => {
     const registry = buildRegistry();
-    const tool = resolveToolForAuth(registry, "finding_post", SCOPED_AUTH);
+    const tool = resolveToolForAuth(registry, "workpad_write", SCOPED_AUTH);
     expect(tool).toBeDefined();
-    expect(tool!.name).toBe("finding_post");
+    expect(tool!.name).toBe("workpad_write");
   });
 
   it("rejects non-scoped tool for scoped auth", () => {
@@ -117,10 +117,11 @@ describe("listToolsForAuth", () => {
     const tools = listToolsForAuth(registry, API_KEY_AUTH);
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual([
-      "env_list", "finding_list", "finding_post",
+      "env_list",
       "persona_list", "persona_show",
       "session_list", "session_send_input",
       "task_complete", "task_create", "task_list", "task_show", "task_start",
+      "workpad_read", "workpad_write",
     ]);
   });
 
@@ -129,10 +130,10 @@ describe("listToolsForAuth", () => {
     const tools = listToolsForAuth(registry, SCOPED_AUTH);
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual([
-      "finding_list", "finding_post",
       "persona_list", "persona_show",
       "session_send_input",
       "task_complete", "task_create", "task_list", "task_show", "task_start",
+      "workpad_read", "workpad_write",
     ]);
   });
 
@@ -150,15 +151,15 @@ describe("listToolsForAuth", () => {
 describe("persona-scoped filtering", () => {
   it("restricts tools to persona's allowed set", () => {
     const registry = buildRegistry();
-    const personaTools = new Set(["finding_post"]);
+    const personaTools = new Set(["workpad_write"]);
     const tools = listToolsForAuth(registry, SCOPED_AUTH, personaTools);
-    expect(tools.map((t) => t.name)).toEqual(["finding_post"]);
+    expect(tools.map((t) => t.name)).toEqual(["workpad_write"]);
   });
 
   it("resolves only persona-allowed tools", () => {
     const registry = buildRegistry();
-    const personaTools = new Set(["finding_post"]);
-    expect(resolveToolForAuth(registry, "finding_post", SCOPED_AUTH, personaTools)).toBeDefined();
+    const personaTools = new Set(["workpad_write"]);
+    expect(resolveToolForAuth(registry, "workpad_write", SCOPED_AUTH, personaTools)).toBeDefined();
     expect(resolveToolForAuth(registry, "task_create", SCOPED_AUTH, personaTools)).toBeUndefined();
     expect(resolveToolForAuth(registry, "env_list", SCOPED_AUTH, personaTools)).toBeUndefined();
   });
@@ -174,7 +175,7 @@ describe("persona-scoped filtering", () => {
 
   it("api-key auth ignores personaAllowedTools", () => {
     const registry = buildRegistry();
-    const personaTools = new Set(["finding_post"]);
+    const personaTools = new Set(["workpad_write"]);
     const tools = listToolsForAuth(registry, API_KEY_AUTH, personaTools);
     // Full access — all 12 tools in the test registry
     expect(tools).toHaveLength(12);
@@ -182,21 +183,21 @@ describe("persona-scoped filtering", () => {
 
   it("root task gets full access even with personaAllowedTools set", () => {
     const registry = buildRegistry();
-    const personaTools = new Set(["finding_post"]);
+    const personaTools = new Set(["workpad_write"]);
     const tools = listToolsForAuth(registry, ROOT_TASK_AUTH, personaTools);
     expect(tools).toHaveLength(12);
   });
 
   it("root task can resolve any tool regardless of personaAllowedTools", () => {
     const registry = buildRegistry();
-    const personaTools = new Set(["finding_post"]);
+    const personaTools = new Set(["workpad_write"]);
     expect(resolveToolForAuth(registry, "env_list", ROOT_TASK_AUTH, personaTools)).toBeDefined();
   });
 
   it("supports multiple persona tools", () => {
     const registry = buildRegistry();
-    const personaTools = new Set(["finding_post", "task_create", "task_list"]);
+    const personaTools = new Set(["workpad_write", "task_create", "task_list"]);
     const tools = listToolsForAuth(registry, SCOPED_AUTH, personaTools);
-    expect(tools.map((t) => t.name).sort()).toEqual(["finding_post", "task_create", "task_list"]);
+    expect(tools.map((t) => t.name).sort()).toEqual(["task_create", "task_list", "workpad_write"]);
   });
 });

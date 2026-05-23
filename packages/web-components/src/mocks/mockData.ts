@@ -2,8 +2,8 @@
  * Static mock data for visual testing (`?mock` mode).
  *
  * Provides realistic sample entities that exercise every UI state:
- * multiple environments, sessions in various statuses, workspaces with
- * tasks at different lifecycle stages, and findings across all categories.
+ * multiple environments, sessions in various statuses, and workspaces with
+ * tasks at different lifecycle stages.
  */
 
 import type {
@@ -16,6 +16,7 @@ import type {
   PersonaData,
 } from "../hooks/types.js";
 export { MOCK_KNOWLEDGE_NODES, MOCK_KNOWLEDGE_LINKS, MOCK_KNOWLEDGE_DETAILS } from "./mockKnowledgeData.js";
+export { MOCK_STREAMS } from "./mockStreamsData.js";
 
 // ─── Environments ───────────────────────────────────
 
@@ -93,6 +94,7 @@ export const MOCK_SESSIONS: Session[] = [
     status: "running",
     prompt: "Refactor the authentication middleware to use JWT tokens",
     startedAt: "2026-02-27T08:15:00Z",
+    taskId: "task-001",
     inputTokens: 42_600,
     outputTokens: 8_100,
     costMillicents: 22_000,
@@ -106,6 +108,7 @@ export const MOCK_SESSIONS: Session[] = [
     prompt: "Write unit tests for the user registration endpoint",
     startedAt: "2026-02-27T07:30:00Z",
     endedAt: "2026-02-27T07:33:00Z",
+    taskId: "task-003",
     inputTokens: 31_400,
     outputTokens: 9_800,
     costMillicents: 18_000,
@@ -130,6 +133,7 @@ export const MOCK_SESSIONS: Session[] = [
     status: "running",
     prompt: "Implement rate limiting for the public API",
     startedAt: "2026-02-27T09:00:00Z",
+    taskId: "task-006c",
     inputTokens: 18_900,
     outputTokens: 4_500,
     costMillicents: 10_000,
@@ -1317,8 +1321,6 @@ export const MOCK_TASKS: TaskData[] = [
   },
 ];
 
-// ─── Findings ───────────────────────────────────────
-
 // ─── Tokens ──────────────────────────────────────────
 
 /** Sample tokens for the settings panel. */
@@ -1385,8 +1387,8 @@ export const MOCK_PERSONAS: PersonaData[] = [
   {
     id: "persona-reviewer",
     name: "Code Reviewer",
-    description: "Reviews diffs for correctness, security, and style. Posts findings for issues discovered.",
-    systemPrompt: "You are a meticulous code reviewer. Check for security vulnerabilities, performance issues, and style consistency. Post findings for anything noteworthy.",
+    description: "Reviews diffs for correctness, security, and style. Reports issues discovered.",
+    systemPrompt: "You are a meticulous code reviewer. Check for security vulnerabilities, performance issues, and style consistency. Report anything noteworthy.",
     toolConfig: JSON.stringify({ allowedTools: ["Read", "Grep", "Glob"] }),
     runtime: "claude-code",
     model: "claude-sonnet-4-6",
@@ -1417,7 +1419,7 @@ export const MOCK_PERSONAS: PersonaData[] = [
   {
     id: "persona-lint",
     name: "Lint & Format",
-    description: "Scripted persona — runs ESLint and Prettier on changed files, auto-fixes violations, and posts a findings summary.",
+    description: "Scripted persona — runs ESLint and Prettier on changed files, auto-fixes violations, and logs a summary.",
     systemPrompt: "",
     toolConfig: "{}",
     runtime: "genaiscript",
@@ -1427,7 +1429,7 @@ export const MOCK_PERSONAS: PersonaData[] = [
     createdAt: "2026-02-21T09:00:00Z",
     updatedAt: "2026-02-21T09:00:00Z",
     type: "script",
-    script: 'const files = env.files.filter(f => /\\.(ts|tsx|js)$/.test(f.filename));\nfor (const f of files) {\n  const eslintResult = await host.exec("npx", ["eslint", "--fix", f.filename]);\n  if (eslintResult.exitCode !== 0) {\n    env.findings.push({ category: "lint", title: `Lint issues in ${f.filename}`, content: eslintResult.stderr });\n  }\n  const prettierResult = await host.exec("npx", ["prettier", "--write", f.filename]);\n  if (prettierResult.exitCode !== 0) {\n    env.findings.push({ category: "format", title: `Prettier issues in ${f.filename}`, content: prettierResult.stderr });\n  }\n}\nenv.findings.push({ category: "summary", title: "Lint & format pass complete", content: `Ran ESLint and Prettier on ${files.length} files` });',
+    script: 'const files = env.files.filter(f => /\\.(ts|tsx|js)$/.test(f.filename));\nfor (const f of files) {\n  const eslintResult = await host.exec("npx", ["eslint", "--fix", f.filename]);\n  if (eslintResult.exitCode !== 0) {\n    console.log(`Lint issues in ${f.filename}: ${eslintResult.stderr}`);\n  }\n  const prettierResult = await host.exec("npx", ["prettier", "--write", f.filename]);\n  if (prettierResult.exitCode !== 0) {\n    console.log(`Prettier issues in ${f.filename}: ${prettierResult.stderr}`);\n  }\n}\nconsole.log(`Ran ESLint and Prettier on ${files.length} files`);',
     allowedMcpTools: [],
   },
 ];

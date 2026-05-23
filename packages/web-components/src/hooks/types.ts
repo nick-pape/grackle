@@ -49,6 +49,8 @@ export interface Session {
   error?: string;
   endReason?: string;
   personaId?: string;
+  /** ID of the task this session belongs to, if any (root/orchestrated work). */
+  taskId?: string;
   inputTokens?: number;
   outputTokens?: number;
   costMillicents?: number;
@@ -72,7 +74,7 @@ export interface SessionEvent {
   raw?: string;
 }
 
-/** A workspace that groups tasks and findings. */
+/** A workspace that groups tasks. */
 export interface Workspace {
   id: string;
   name: string;
@@ -598,6 +600,8 @@ export interface StreamData {
   messageBufferDepth: number;
   /** Full subscriber details. */
   subscribers: StreamSubscriberData[];
+  /** Whether publishers receive their own messages echoed back (marks a chatroom). */
+  selfEcho: boolean;
 }
 
 /** Values returned by the streams domain hook. */
@@ -610,8 +614,11 @@ export interface UseStreamsResult {
   streamsLoadedOnce: boolean;
   /** True if the most recent loadStreams call failed (e.g. RPC/network error). */
   streamsLoadError: boolean;
-  /** Request the current stream list from the server. */
-  loadStreams: () => Promise<void>;
+  /**
+   * Request the current stream list from the server. Pass `includeInternal`
+   * to surface internal IPC plumbing (lifecycle/pipe/stdin); defaults to false.
+   */
+  loadStreams: (includeInternal?: boolean) => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
   /** Lifecycle hook for connect/disconnect/event routing. */

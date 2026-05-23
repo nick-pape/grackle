@@ -34,18 +34,18 @@ Components are grouped by area under `src/components/`:
 |----------|----------|
 | **Display primitives** | `Button`, `SplitButton`, `CopyButton`, `Tooltip`, `Breadcrumbs`, `ConfirmDialog`, `Skeleton`, `Spinner`, `SplashScreen`, `FloatingActionBar` |
 | **Event stream** | `EventStream`, `EventRenderer`, `EventHoverRow`, `SessionPicker`, `SessionAttemptSelector` |
-| **MCP Apps widgets** | `widget` events render in a sandboxed iframe via `EventRenderer`/`EventStream` — pass `sandboxProxyUrl`. The host renderer `McpAppWidget` is loaded internally (lazy/code-split) and is **not** a value export; only its prop types (`McpAppWidgetProps`) and `grackleHostStyleVariables` are exported. |
+| **MCP Apps widgets** | `widget` events render in a sandboxed iframe via `EventRenderer`/`EventStream` — pass `sandboxProxyUrl`. `EventRenderer` dispatches on the event's `rendererKind` (v1: `mcp-app-html` → `McpAppWidget`; unknown kinds fall back to the default card), so declarative renderers can be added without changing the contract. The host renderer `McpAppWidget` is loaded internally (lazy/code-split) and is **not** a value export; only its prop types (`McpAppWidgetProps`) and `grackleHostStyleVariables` are exported. |
 | **Tool cards** | `ToolCard`, `FileEditCard`, `FileReadCard`, `ShellCard`, `SearchCard`, `TodoCard`, `MetadataCard`, `AgentToolCard`, `GenericToolCard` |
 | **Layout** | `AppNav`, `Sidebar`, `StatusBar`, `BottomStatusBar` |
-| **Lists** | `TaskList`, `EnvironmentNav`, `FindingsNav` |
+| **Lists** | `TaskList`, `EnvironmentNav` |
 | **DAG visualization** | `DagView`, `TaskNode`, `useDagLayout` (React Flow + dagre) |
 | **Knowledge graph** | `KnowledgeGraph`, `KnowledgeDetailPanel`, `KnowledgeNav` |
-| **Panels** | `TaskEditPanel`, `TaskOverviewPanel`, `EnvironmentEditPanel`, `FindingsPanel`, `TokensPanel`, `AppearancePanel`, `AboutPanel`, `PluginsPanel`, `GitHubAccountsPanel`, `CredentialProvidersPanel`, `KeyboardShortcutsPanel`, `WorkpadPanel` |
+| **Panels** | `TaskEditPanel`, `TaskOverviewPanel`, `EnvironmentEditPanel`, `TokensPanel`, `AppearancePanel`, `AboutPanel`, `PluginsPanel`, `GitHubAccountsPanel`, `CredentialProvidersPanel`, `KeyboardShortcutsPanel`, `WorkpadPanel` |
 | **Editable fields** | `EditableTextField`, `EditableTextArea`, `EditableSelect`, `EditableCheckbox`, `EnvironmentSelect`, `useEditableField` |
 | **Notifications** | `Toast`, `ToastContainer`, `Callout`, `UpdateBanner` |
 | **Workspace & boards** | `WorkspaceBoard`, `WorkspaceFormFields` |
 | **Personas & schedules** | `PersonaManager`, `McpToolSelector`, `ScheduleManager` |
-| **Chat & streams** | `ChatInput`, `StreamList`, `StreamDetailPanel` |
+| **Chat & coordination** | `ChatInput`, `CoordinationList`, `StreamDetailPanel` |
 | **Settings** | `SettingsNav` |
 
 Alongside the components, the package exports:

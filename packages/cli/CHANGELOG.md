@@ -1,6 +1,20 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 23 May 2026 03:18:01 GMT and should not be manually modified.
+This log was last generated on Sat, 23 May 2026 13:35:14 GMT and should not be manually modified.
+
+## 0.115.0
+Sat, 23 May 2026 13:35:14 GMT
+
+### Minor changes
+
+- Agent-authored MCP Apps widget registry (#1239): new widgets table + gRPC RPCs (RegisterWidget/UpdateWidget/GetWidget/ListWidgets) with workspace isolation; MCP tools widget_register/update/list/render/show (in the default scoped + orchestrator presets); the broker capture now emits dynamic agent-authored widgets via a result _meta descriptor; agent widget bodies render with inline scripts allowed (GRACKLE sandbox CSP allowInlineScripts) in the origin-isolated sandbox; web EventRenderer dispatches on rendererKind.
+
+## 0.114.0
+Sat, 23 May 2026 08:24:19 GMT
+
+### Minor changes
+
+- Split the Sessions tab into Root (root-task chat) + a new read-only Coordination tab (task-grouped IPC stream inventory); filter internal streams via ListStreams include_internal (CLI --internal)
 
 ## 0.113.0
 Sat, 23 May 2026 03:18:01 GMT

@@ -44,6 +44,8 @@ export const ALL_MCP_TOOL_NAMES: ReadonlySet<string> = new Set([
   "escalate_to_human", "escalation_list", "escalation_acknowledge",
   // widget (MCP Apps) — render a ui:// widget in the chat via the broker
   "show_hello_widget",
+  // widget registry (#1239) — agent-authored widgets
+  "widget_register", "widget_update", "widget_list", "widget_render", "widget_show",
 ]);
 
 // ─── Preset Tool Sets ────────────────────────────────────────
@@ -64,8 +66,10 @@ export const DEFAULT_SCOPED_MCP_TOOLS: readonly string[] = [
   "workpad_write", "workpad_read",
   "schedule_list", "schedule_show",
   // MCP Apps: agents can render a ui:// widget in the chat (Grackle's broker
-  // captures the call and renders it; SEP-1865).
+  // captures the call and renders it; SEP-1865). Includes the agent-authored
+  // widget registry (#1239) so scoped agents can author + render widgets.
   "show_hello_widget",
+  "widget_register", "widget_update", "widget_list", "widget_render", "widget_show",
 ] as const;
 
 /**
@@ -98,8 +102,9 @@ export const ORCHESTRATOR_MCP_TOOLS: readonly string[] = [
   "logs_get",
   "workpad_write", "workpad_read",
   "schedule_list", "schedule_show",
-  // MCP Apps widget (in DEFAULT_SCOPED_MCP_TOOLS — keep this a superset).
+  // MCP Apps widgets (in DEFAULT_SCOPED_MCP_TOOLS — keep this a superset).
   "show_hello_widget",
+  "widget_register", "widget_update", "widget_list", "widget_render", "widget_show",
   // Additional management tools
   "task_update", "task_delete", "task_resume",
   "session_spawn", "session_kill", "session_status",

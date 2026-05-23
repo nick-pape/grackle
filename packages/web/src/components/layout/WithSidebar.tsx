@@ -2,7 +2,7 @@ import { useCallback, useMemo, type JSX } from "react";
 import { Outlet } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useSidebarSlot } from "../../hooks/useSidebarSlot.js";
-import { TaskList, EnvironmentNav, SettingsNav, KnowledgeNav, StreamList } from "@grackle-ai/web-components";
+import { TaskList, EnvironmentNav, SettingsNav, KnowledgeNav } from "@grackle-ai/web-components";
 
 /** Layout route wrapper that shows the TaskList in the sidebar. */
 export function WithTaskSidebar(): JSX.Element {
@@ -59,26 +59,6 @@ export function WithKnowledgeSidebar(): JSX.Element {
       onWorkspaceChange={handleWorkspaceChange}
     />
   ), [knowledge, workspaces, handleSearch, handleClearSearch, handleSelectNode, handleWorkspaceChange]);
-  useSidebarSlot(sidebar);
-  return <Outlet />;
-}
-
-/** Layout route wrapper that shows the StreamList in the sidebar. */
-export function WithStreamSidebar(): JSX.Element {
-  const { streams: { streams, streamsLoading, streamsLoadError, streamsLoadedOnce, loadStreams } } = useGrackle();
-  const handleRefresh = useCallback(() => { loadStreams().catch(() => {}); }, [loadStreams]);
-  const sidebar = useMemo(
-    () => (
-      <StreamList
-        streams={streams}
-        loading={streamsLoading}
-        streamsLoadError={streamsLoadError}
-        streamsLoadedOnce={streamsLoadedOnce}
-        onRefresh={handleRefresh}
-      />
-    ),
-    [streams, streamsLoading, streamsLoadError, streamsLoadedOnce, handleRefresh],
-  );
   useSidebarSlot(sidebar);
   return <Outlet />;
 }

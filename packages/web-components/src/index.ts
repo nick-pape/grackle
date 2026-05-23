@@ -86,9 +86,9 @@ export type { ScheduleManagerProps } from "./components/schedules/ScheduleManage
 // Settings
 export { SettingsNav } from "./components/settings/SettingsNav.js";
 
-// Streams
-export { StreamList, StreamDetailPanel } from "./components/streams/index.js";
-export type { StreamListProps, StreamDetailPanelProps } from "./components/streams/index.js";
+// Streams (Coordination tab)
+export { CoordinationList, StreamDetailPanel } from "./components/streams/index.js";
+export type { CoordinationListProps, StreamDetailPanelProps } from "./components/streams/index.js";
 
 // Tools
 export { ToolCard } from "./components/tools/ToolCard.js";
@@ -164,7 +164,7 @@ export {
   SCHEDULES_URL, NEW_SCHEDULE_URL, scheduleUrl,
   SETTINGS_APPEARANCE_URL, SETTINGS_ABOUT_URL, SETTINGS_SHORTCUTS_URL,
   PAIR_PATH, NEW_WORKSPACE_URL, KNOWLEDGE_URL, HOME_URL,
-  CHAT_URL, chatStreamUrl, TASKS_URL,
+  CHAT_URL, COORDINATION_URL, TASKS_URL,
 } from "./utils/navigation.js";
 
 export {

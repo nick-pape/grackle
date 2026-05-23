@@ -11,7 +11,7 @@ export interface EmitStep {
   tool?: string;
   /** Convenience: auto-serialized into content for tool_use events. */
   args?: Record<string, unknown>;
-  /** Convenience: used as finding/subtask title. */
+  /** Convenience: used as subtask title. */
   title?: string;
   /** Convenience: used as subtask description. */
   description?: string;

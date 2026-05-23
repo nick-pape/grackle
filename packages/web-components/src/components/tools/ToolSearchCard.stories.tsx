@@ -13,7 +13,7 @@ export const InProgress: Story = {
   name: "ToolSearch - in progress",
   args: {
     tool: "ToolSearch",
-    args: { query: "select:mcp__grackle__finding_post,mcp__grackle__workpad_write", max_results: 3 },
+    args: { query: "select:mcp__grackle__task_create,mcp__grackle__workpad_write", max_results: 3 },
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("tool-card-tool-search")).toBeInTheDocument();
@@ -25,15 +25,15 @@ export const WithResults: Story = {
   name: "ToolSearch - with results",
   args: {
     tool: "ToolSearch",
-    args: { query: "select:mcp__grackle__finding_post", max_results: 3 },
+    args: { query: "select:mcp__grackle__task_create", max_results: 3 },
     result: [
-      "mcp__grackle__finding_post:",
-      "  Post a new finding to the workspace.",
+      "mcp__grackle__task_create:",
+      "  Create a new task in the workspace.",
       "  Parameters:",
-      "    title (string, required): Finding title",
-      "    category (string, optional): Category (bug, insight, decision)",
-      "    content (string, optional): Detailed content",
-      "    tags (array, optional): Tags for categorization",
+      "    title (string, required): Task title",
+      "    description (string, optional): Task description",
+      "    parentTaskId (string, optional): Parent task to nest under",
+      "    canDecompose (boolean, optional): Allow the task to create subtasks",
       "",
       "mcp__grackle__workpad_write:",
       "  Write to the task workpad.",

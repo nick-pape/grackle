@@ -37,10 +37,10 @@ export const WriteCompleted: Story = {
       taskId: "74f5b716",
       workpad: {
         status: "completed",
-        summary: "Tested Grackle MCP tools: posted a finding, wrote to workpad, and searched knowledge.",
+        summary: "Tested Grackle MCP tools: created a task, wrote to workpad, and searched knowledge.",
         extra: {
-          tools_tested: ["finding_post", "workpad_write", "knowledge_search"],
-          finding_topic: "qdrant catalog",
+          tools_tested: ["task_create", "workpad_write", "knowledge_search"],
+          search_topic: "qdrant catalog",
         },
       },
     }),
@@ -79,10 +79,10 @@ export const CopilotFormat: Story = {
   name: "workpad_write - Copilot tool name",
   args: {
     tool: "grackle-workpad_write",
-    args: { status: "in progress", summary: "Posted a finding about Rush worktrees." },
+    args: { status: "in progress", summary: "Wrote a progress note about Rush worktrees." },
     result: JSON.stringify({
       taskId: "e4366a55",
-      workpad: { status: "in progress", summary: "Posted a finding about Rush worktrees." },
+      workpad: { status: "in progress", summary: "Wrote a progress note about Rush worktrees." },
     }),
   },
   play: async ({ canvas }) => {

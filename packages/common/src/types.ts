@@ -62,7 +62,6 @@ export type AgentEventType =
   | "error"
   | "status"
   | "system"
-  | "finding"
   | "subtask_create"
   | "runtime_session_id"
   | "usage";

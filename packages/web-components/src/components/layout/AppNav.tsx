@@ -1,13 +1,13 @@
 import { useCallback, useMemo, useRef, type JSX, type KeyboardEvent, type ReactNode } from "react";
 import { useLocation } from "react-router";
-import { Brain, ClipboardList, Home, MessageSquare, Monitor, Settings } from "lucide-react";
-import { CHAT_URL, ENVIRONMENTS_URL, HOME_URL, KNOWLEDGE_URL, SETTINGS_URL, SETTINGS_CREDENTIALS_URL, TASKS_URL, useAppNavigate } from "../../utils/navigation.js";
+import { Brain, ClipboardList, Home, MessageSquare, Monitor, Network, Settings } from "lucide-react";
+import { CHAT_URL, COORDINATION_URL, ENVIRONMENTS_URL, HOME_URL, KNOWLEDGE_URL, SETTINGS_URL, SETTINGS_CREDENTIALS_URL, TASKS_URL, useAppNavigate } from "../../utils/navigation.js";
 import { ICON_LG } from "../../utils/iconSize.js";
 import { Tooltip } from "../display/Tooltip.js";
 import styles from "./AppNav.module.scss";
 
 /** Application view identifiers. */
-export type AppView = "dashboard" | "chat" | "tasks" | "environments" | "knowledge" | "settings";
+export type AppView = "dashboard" | "chat" | "tasks" | "environments" | "knowledge" | "coordination" | "settings";
 
 /** Tab definition for the application navigation bar. */
 export interface AppTab {
@@ -36,8 +36,9 @@ export const TABS: AppTab[] = [
   { view: "dashboard", label: "Dashboard", icon: <Home size={ICON_LG} />, route: HOME_URL, testId: "sidebar-tab-dashboard", order: 0 },
   { view: "tasks", label: "Tasks", icon: <ClipboardList size={ICON_LG} />, route: TASKS_URL, testId: "sidebar-tab-tasks", order: 1 },
   { view: "environments", label: "Environments", icon: <Monitor size={ICON_LG} />, route: ENVIRONMENTS_URL, testId: "sidebar-tab-environments", order: 2 },
-  { view: "chat", label: "Sessions", icon: <MessageSquare size={ICON_LG} />, route: CHAT_URL, testId: "sidebar-tab-chat", order: 3 },
+  { view: "chat", label: "Root", icon: <MessageSquare size={ICON_LG} />, route: CHAT_URL, testId: "sidebar-tab-chat", order: 3 },
   { view: "knowledge", label: "Knowledge", icon: <Brain size={ICON_LG} />, route: KNOWLEDGE_URL, testId: "sidebar-tab-knowledge", order: 5 },
+  { view: "coordination", label: "Coordination", icon: <Network size={ICON_LG} />, route: COORDINATION_URL, testId: "sidebar-tab-coordination", order: 6 },
   { view: "settings", label: "Settings", icon: <Settings size={ICON_LG} />, route: SETTINGS_CREDENTIALS_URL, testId: "sidebar-tab-settings", align: "end" },
 ];
 
@@ -45,6 +46,9 @@ export const TABS: AppTab[] = [
 export function getActiveView(pathname: string): AppView {
   if (pathname === HOME_URL || pathname === "/") {
     return "dashboard";
+  }
+  if (pathname.startsWith(COORDINATION_URL)) {
+    return "coordination";
   }
   if (pathname.startsWith("/chat") || pathname.startsWith("/sessions")) {
     return "chat";

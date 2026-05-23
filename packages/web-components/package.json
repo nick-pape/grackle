@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/web-components",
-  "version": "0.113.0",
+  "version": "0.115.0",
   "description": "Presentational React component library for the Grackle web UI",
   "license": "MIT",
   "sideEffects": [
