@@ -94,7 +94,6 @@ The MCP server exposes tools grouped by domain:
 |------|------------|
 | `knowledge_search` | Semantic search over the knowledge graph |
 | `knowledge_get_node` | Retrieve a knowledge node by ID |
-| `knowledge_create_node` | Create a new knowledge entry |
 
 These tools are only available when the [knowledge graph plugin](./knowledge-graph) is enabled.
 

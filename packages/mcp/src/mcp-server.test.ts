@@ -556,9 +556,8 @@ describe("scoped token workspaceId injection", () => {
 
   /**
    * Scoped tools must have workspaceId injected from the scoped token so agents
-   * can call them without specifying a workspace.
-   * Regression test for #1183: standalone sessions minted tokens with pid:"" which
-   * caused injection to produce undefined.
+   * can call them without specifying a workspace. When the agent omits workspaceId,
+   * the handler must receive the token's workspace (pid), not undefined.
    */
   it("scoped tool receives workspaceId injected from scoped token", async () => {
     const capturedArgs: Record<string, unknown>[] = [];
