@@ -225,6 +225,24 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 11,
+    name: "channel-grants",
+    up: (conn) => {
+      conn.exec(`
+        CREATE TABLE IF NOT EXISTS channel_grants (
+          id           TEXT PRIMARY KEY,
+          channel_uri  TEXT NOT NULL,
+          verbs        TEXT NOT NULL,
+          label        TEXT NOT NULL DEFAULT '',
+          expires_at   TEXT,
+          revoked      INTEGER NOT NULL DEFAULT 0,
+          created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_channel_grants_channel_uri ON channel_grants(channel_uri);
+      `);
+    },
+  },
 ];
 
 /** The highest schema version defined by BASELINE + MIGRATIONS. */

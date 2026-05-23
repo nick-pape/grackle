@@ -25,6 +25,7 @@ import * as dockerContainers from "./docker-handlers.js";
 import * as settings from "./settings-handlers.js";
 import * as pluginHandlers from "./plugin-handlers.js";
 import * as githubAccounts from "./github-account-handlers.js";
+import * as channels from "./channel-handlers.js";
 
 /**
  * Create a `ServiceCollector` pre-loaded with all built-in Grackle handler groups.
@@ -48,6 +49,7 @@ export function createDefaultCollector(): ServiceCollector {
   collector.addHandlers(grackle.GrackleCore, settings);
   collector.addHandlers(grackle.GrackleCore, pluginHandlers);
   collector.addHandlers(grackle.GrackleCore, githubAccounts);
+  collector.addHandlers(grackle.GrackleCore, channels);
   return collector;
 }
 
@@ -72,6 +74,7 @@ export function createCoreCollector(): ServiceCollector {
   collector.addHandlers(grackle.GrackleCore, settings);
   collector.addHandlers(grackle.GrackleCore, pluginHandlers);
   collector.addHandlers(grackle.GrackleCore, githubAccounts);
+  collector.addHandlers(grackle.GrackleCore, channels);
   return collector;
 }
 

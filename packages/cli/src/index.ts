@@ -21,6 +21,7 @@ import { registerConfigCommands } from "./commands/config.js";
 import { registerStreamCommands } from "./commands/streams.js";
 import { registerPluginCommands } from "./commands/plugin.js";
 import { registerGitHubAccountCommands } from "./commands/github-account.js";
+import { registerChannelCommands } from "./commands/channel.js";
 import { renderBanner, getHelpFooter } from "./banner.js";
 import { checkVersionStatus } from "@grackle-ai/core";
 import { formatVersionNotice } from "./version-notice.js";
@@ -70,6 +71,7 @@ registerConfigCommands(program);
 registerStreamCommands(program);
 registerPluginCommands(program);
 registerGitHubAccountCommands(program);
+registerChannelCommands(program);
 
 // Print update notice after command execution (non-blocking).
 // Skip in CI and non-interactive environments to avoid adding 5s latency

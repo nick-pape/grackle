@@ -38,6 +38,7 @@ vi.mock("./widget-handlers.js", () => ({ registerWidget: vi.fn(), updateWidget: 
 vi.mock("./escalation-handlers.js", () => ({ createEscalation: vi.fn() }));
 vi.mock("./plugin-handlers.js", () => ({ listPlugins: vi.fn(), setPluginEnabled: vi.fn() }));
 vi.mock("./github-account-handlers.js", () => ({ listGitHubAccounts: vi.fn() }));
+vi.mock("./channel-handlers.js", () => ({ exposeChannel: vi.fn(), listChannelGrants: vi.fn(), revokeChannelGrant: vi.fn() }));
 
 import { createCoreCollector, createOrchestrationCollector, createDefaultCollector } from "./grpc-service.js";
 
@@ -60,6 +61,8 @@ describe("createCoreCollector", () => {
     expect(addedModules.some((m) => "listPlugins" in m)).toBe(true);
     // GitHub account handlers are registered in core
     expect(addedModules.some((m) => "listGitHubAccounts" in m)).toBe(true);
+    // Channel handlers are registered in core
+    expect(addedModules.some((m) => "exposeChannel" in m)).toBe(true);
     // Schedules are contributed by @grackle-ai/plugin-scheduling
     expect(addedModules.some((m) => "listSchedules" in m)).toBe(false);
   });
@@ -73,9 +76,9 @@ describe("createCoreCollector", () => {
     expect(addedModules.some((m) => "createEscalation" in m)).toBe(false);
   });
 
-  it("adds exactly 9 handler groups", () => {
+  it("adds exactly 10 handler groups", () => {
     createCoreCollector();
-    expect(addHandlersMock).toHaveBeenCalledTimes(9);
+    expect(addHandlersMock).toHaveBeenCalledTimes(10);
   });
 });
 
@@ -104,7 +107,7 @@ describe("createOrchestrationCollector", () => {
 });
 
 describe("createDefaultCollector (regression)", () => {
-  it("adds all 14 handler groups including orchestration, widgets, plugins, and github accounts (knowledge and schedules moved to plugins)", () => {
+  it("adds all 15 handler groups including orchestration, widgets, plugins, github accounts, and channels (knowledge and schedules moved to plugins)", () => {
     createDefaultCollector();
     const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
     expect(addedModules.some((m) => "listEnvironments" in m)).toBe(true);
@@ -116,6 +119,7 @@ describe("createDefaultCollector (regression)", () => {
     expect(addedModules.some((m) => "listPlugins" in m)).toBe(true);
     expect(addedModules.some((m) => "listGitHubAccounts" in m)).toBe(true);
     expect(addedModules.some((m) => "listDockerContainers" in m)).toBe(true);
-    expect(addHandlersMock).toHaveBeenCalledTimes(14);
+    expect(addedModules.some((m) => "exposeChannel" in m)).toBe(true);
+    expect(addHandlersMock).toHaveBeenCalledTimes(15);
   });
 });
