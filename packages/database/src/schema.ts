@@ -247,6 +247,35 @@ export type PersonaRow = typeof personas.$inferSelect;
 /** Shape accepted by INSERT into the personas table. */
 export type NewPersona = typeof personas.$inferInsert;
 
+// ─── Widgets (agent-authored MCP Apps registry, #1239) ────
+
+export const widgets = sqliteTable("widgets", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id")
+    .notNull()
+    .references(() => workspaces.id),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  rendererKind: text("renderer_kind").notNull().default("mcp-app-html"),
+  body: text("body").notNull(),
+  propsSchema: text("props_schema").notNull().default(""),
+  version: integer("version").notNull().default(1),
+  ownerTaskId: text("owner_task_id").notNull().default(""),
+  ownerSessionId: text("owner_session_id").notNull().default(""),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
+/** Row shape returned by a SELECT on the widgets table. */
+export type WidgetRow = typeof widgets.$inferSelect;
+
+/** Shape accepted by INSERT into the widgets table. */
+export type NewWidget = typeof widgets.$inferInsert;
+
 // ─── Schedules ───────────────────────────────────────────
 
 export const schedules = sqliteTable("schedules", {

@@ -34,18 +34,28 @@ export interface EventStreamOptions {
 
 /** Payload for an MCP Apps widget render event pushed into a session stream. */
 export interface WidgetEventPayload {
-  /** The `ui://` resource the widget renders. */
+  /** The `ui://` resource the widget renders (may be empty for one-off renders). */
   resourceUri: string;
   /** Name of the tool that produced the widget. */
   toolName: string;
   /** Widget HTML (`text/html;profile=mcp-app`). */
   html: string;
-  /** CSP domains for the sandbox (e.g. `resourceDomains` = the MCP origin). */
+  /**
+   * Renderer the frontend should dispatch to. `"mcp-app-html"` (default when
+   * omitted) renders `html` in the sandbox; future kinds (e.g. declarative) add
+   * cases without changing this contract.
+   */
+  rendererKind?: string;
+  /** CSP for the sandbox (`resourceDomains`/`connectDomains` + `allowInlineScripts`). */
   csp?: unknown;
-  /** Tool input arguments. */
+  /** Tool input arguments / render-time props. */
   toolInput?: Record<string, unknown>;
   /** Tool result (an MCP `CallToolResult`). */
   toolResult?: unknown;
+  /** Registry id when rendering a registered widget (#1239). */
+  widgetId?: string;
+  /** Registry version, when known. */
+  version?: number;
 }
 
 /** Callback that pushes a widget event into a session's stream (injected into the MCP server). */

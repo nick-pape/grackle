@@ -637,6 +637,16 @@ type GetUsageRequest = Message<"grackle.GetUsageRequest"> & {
 const GetUsageRequestSchema: GenMessage<GetUsageRequest>;
 
 // @public
+type GetWidgetRequest = Message<"grackle.GetWidgetRequest"> & {
+    id: string;
+    name: string;
+    workspaceId: string;
+};
+
+// @public
+const GetWidgetRequestSchema: GenMessage<GetWidgetRequest>;
+
+// @public
 type GitHubAccount = Message<"grackle.GitHubAccount"> & {
     id: string;
     label: string;
@@ -797,6 +807,18 @@ declare namespace grackle {
         QueryFindingsRequestSchema,
         GetFindingRequest,
         GetFindingRequestSchema,
+        Widget,
+        WidgetSchema,
+        WidgetList,
+        WidgetListSchema,
+        RegisterWidgetRequest,
+        RegisterWidgetRequestSchema,
+        UpdateWidgetRequest,
+        UpdateWidgetRequestSchema,
+        GetWidgetRequest,
+        GetWidgetRequestSchema,
+        ListWidgetsRequest,
+        ListWidgetsRequestSchema,
         Escalation,
         EscalationSchema,
         EscalationList,
@@ -1315,6 +1337,26 @@ const GrackleOrchestration: GenService<{
         input: typeof GetFindingRequestSchema;
         output: typeof FindingSchema;
     };
+    registerWidget: {
+        methodKind: "unary";
+        input: typeof RegisterWidgetRequestSchema;
+        output: typeof WidgetSchema;
+    };
+    updateWidget: {
+        methodKind: "unary";
+        input: typeof UpdateWidgetRequestSchema;
+        output: typeof WidgetSchema;
+    };
+    getWidget: {
+        methodKind: "unary";
+        input: typeof GetWidgetRequestSchema;
+        output: typeof WidgetSchema;
+    };
+    listWidgets: {
+        methodKind: "unary";
+        input: typeof ListWidgetsRequestSchema;
+        output: typeof WidgetListSchema;
+    };
     createEscalation: {
         methodKind: "unary";
         input: typeof CreateEscalationRequestSchema;
@@ -1577,6 +1619,14 @@ type ListTasksRequest = Message<"grackle.ListTasksRequest"> & {
 const ListTasksRequestSchema: GenMessage<ListTasksRequest>;
 
 // @public
+type ListWidgetsRequest = Message<"grackle.ListWidgetsRequest"> & {
+    workspaceId: string;
+};
+
+// @public
+const ListWidgetsRequestSchema: GenMessage<ListWidgetsRequest>;
+
+// @public
 type ListWorkspacesRequest = Message<"grackle.ListWorkspacesRequest"> & {
     environmentId: string;
 };
@@ -1783,6 +1833,21 @@ type QueryFindingsRequest = Message<"grackle.QueryFindingsRequest"> & {
 
 // @public
 const QueryFindingsRequestSchema: GenMessage<QueryFindingsRequest>;
+
+// @public
+type RegisterWidgetRequest = Message<"grackle.RegisterWidgetRequest"> & {
+    workspaceId: string;
+    name: string;
+    description: string;
+    rendererKind: string;
+    body: string;
+    propsSchema: string;
+    ownerTaskId: string;
+    ownerSessionId: string;
+};
+
+// @public
+const RegisterWidgetRequestSchema: GenMessage<RegisterWidgetRequest>;
 
 // @public
 type RemoveGitHubAccountRequest = Message<"grackle.RemoveGitHubAccountRequest"> & {
@@ -2424,6 +2489,19 @@ type UpdateTaskRequest = Message<"grackle.UpdateTaskRequest"> & {
 const UpdateTaskRequestSchema: GenMessage<UpdateTaskRequest>;
 
 // @public
+type UpdateWidgetRequest = Message<"grackle.UpdateWidgetRequest"> & {
+    id: string;
+    workspaceId: string;
+    name?: string;
+    description?: string;
+    body?: string;
+    propsSchema?: string;
+};
+
+// @public
+const UpdateWidgetRequestSchema: GenMessage<UpdateWidgetRequest>;
+
+// @public
 type UpdateWorkspaceRequest = Message<"grackle.UpdateWorkspaceRequest"> & {
     id: string;
     name?: string;
@@ -2478,6 +2556,33 @@ type WaitForPipeResponse = Message<"grackle.WaitForPipeResponse"> & {
 
 // @public
 const WaitForPipeResponseSchema: GenMessage<WaitForPipeResponse>;
+
+// @public
+type Widget = Message<"grackle.Widget"> & {
+    id: string;
+    workspaceId: string;
+    name: string;
+    description: string;
+    rendererKind: string;
+    body: string;
+    propsSchema: string;
+    version: number;
+    ownerTaskId: string;
+    ownerSessionId: string;
+    createdAt: string;
+    updatedAt: string;
+};
+
+// @public
+type WidgetList = Message<"grackle.WidgetList"> & {
+    widgets: Widget[];
+};
+
+// @public
+const WidgetListSchema: GenMessage<WidgetList>;
+
+// @public
+const WidgetSchema: GenMessage<Widget>;
 
 // @public
 export const WORKER_MCP_TOOLS: readonly string[];

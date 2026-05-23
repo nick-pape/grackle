@@ -18,6 +18,7 @@ import * as workspaces from "./workspace-handlers.js";
 import * as personas from "./persona-handlers.js";
 import * as tokens from "./token-handlers.js";
 import * as findings from "./finding-handlers.js";
+import * as widgets from "./widget-handlers.js";
 import * as escalations from "./escalation-handlers.js";
 import * as codespaces from "./codespace-handlers.js";
 import * as dockerContainers from "./docker-handlers.js";
@@ -40,6 +41,7 @@ export function createDefaultCollector(): ServiceCollector {
   collector.addHandlers(grackle.GrackleOrchestration, personas);
   collector.addHandlers(grackle.GrackleCore, tokens);
   collector.addHandlers(grackle.GrackleOrchestration, findings);
+  collector.addHandlers(grackle.GrackleOrchestration, widgets);
   collector.addHandlers(grackle.GrackleOrchestration, escalations);
   collector.addHandlers(grackle.GrackleCore, codespaces);
   collector.addHandlers(grackle.GrackleCore, dockerContainers);
@@ -85,6 +87,7 @@ export function createOrchestrationCollector(): ServiceCollector {
   collector.addHandlers(grackle.GrackleOrchestration, tasks);
   collector.addHandlers(grackle.GrackleOrchestration, personas);
   collector.addHandlers(grackle.GrackleOrchestration, findings);
+  collector.addHandlers(grackle.GrackleOrchestration, widgets);
   collector.addHandlers(grackle.GrackleOrchestration, escalations);
   return collector;
 }

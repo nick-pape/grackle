@@ -33,6 +33,7 @@ export interface ReadinessResult {
 
 // @public
 export interface SandboxCsp {
+    allowInlineScripts?: unknown;
     // (undocumented)
     baseUriDomains?: unknown;
     // (undocumented)

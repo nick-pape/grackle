@@ -59,6 +59,7 @@ describe("DEFAULT_SCOPED_MCP_TOOLS", () => {
       "session_attach", "session_send_input",
       "show_hello_widget",
       "task_complete", "task_create", "task_list", "task_search", "task_show", "task_start",
+      "widget_list", "widget_register", "widget_render", "widget_show", "widget_update",
       "workpad_read", "workpad_write",
     ]);
   });

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Agent-authored MCP Apps widget registry (#1239): new widgets table + gRPC RPCs (RegisterWidget/UpdateWidget/GetWidget/ListWidgets) with workspace isolation; MCP tools widget_register/update/list/render/show (in the default scoped + orchestrator presets); the broker capture now emits dynamic agent-authored widgets via a result _meta descriptor; agent widget bodies render with inline scripts allowed (GRACKLE sandbox CSP allowInlineScripts) in the origin-isolated sandbox; web EventRenderer dispatches on rendererKind.",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
