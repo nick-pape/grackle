@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.115.2",
+      "tag": "@grackle-ai/cli_v0.115.2",
+      "date": "Sat, 23 May 2026 21:02:48 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix: oversized HTTP request bodies now return a clean 413 (with Connection: close) instead of a connection reset"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.115.1",
       "tag": "@grackle-ai/cli_v0.115.1",
       "date": "Sat, 23 May 2026 14:23:06 GMT",

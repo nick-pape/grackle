@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 23 May 2026 14:23:06 GMT and should not be manually modified.
+This log was last generated on Sat, 23 May 2026 21:02:48 GMT and should not be manually modified.
+
+## 0.115.2
+Sat, 23 May 2026 21:02:48 GMT
+
+### Patches
+
+- Fix: oversized HTTP request bodies now return a clean 413 (with Connection: close) instead of a connection reset
 
 ## 0.115.1
 Sat, 23 May 2026 14:23:06 GMT
