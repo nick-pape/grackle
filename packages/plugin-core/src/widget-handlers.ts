@@ -29,7 +29,10 @@ export async function registerWidget(req: grackle.RegisterWidgetRequest): Promis
   if (!req.body) {
     throw new ConnectError("body is required", Code.InvalidArgument);
   }
-  const id = uuid().slice(0, 8);
+  // Full UUID (not an 8-char slice): widgets are addressed by their agent-chosen
+  // name in practice, so a long collision-proof id avoids a UNIQUE-constraint
+  // throw being surfaced to the agent as a misleading INVALID_ARGUMENT.
+  const id = uuid();
   try {
     widgetStore.registerWidget({
       id,

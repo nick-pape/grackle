@@ -155,7 +155,7 @@ describe("createToolRegistry with plugin tools", () => {
 describe("Full tool registry", () => {
   it("contains exactly the expected number of tools", () => {
     const registry = createToolRegistry();
-    // 64 base + show_hello_widget (T3) + 5 widget registry tools (#1239) = 74.
+    // 69 before this PR + 5 widget registry tools (#1239) = 74.
     expect(registry.list()).toHaveLength(74);
   });
 
