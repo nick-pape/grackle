@@ -256,11 +256,20 @@ Query aggregated token usage and cost data.
 
 ### Widget Tools
 
-[MCP Apps](#mcp-apps-ui-widgets) UI widgets. These tools return data **and** reference a `ui://` HTML resource that capable hosts render inline. They appear in `tools/list` **only** when the connected host advertises the `io.modelcontextprotocol/ui` extension.
+[MCP Apps](#mcp-apps-ui-widgets) UI widgets — interactive HTML rendered inline by capable hosts (and always by Grackle's own chat pane via the broker).
+
+`show_hello_widget` is the Grackle-served demo widget: it references a static `ui://` resource and appears in `tools/list` **only** when the host advertises the `io.modelcontextprotocol/ui` extension. The **widget registry** tools let an agent author and render its own widgets at runtime; they are ordinary scoped tools (always listed) and the rendered widget is captured by the broker into the session's chat.
 
 | Tool | Description | Parameters |
 |------|-------------|------------|
 | `show_hello_widget` | Display the Grackle hello widget — a minimal interactive MCP Apps UI that echoes the provided message. | `message` (string, optional) |
+| `widget_register` | Register a reusable widget (HTML body) in the workspace so it can be re-rendered with different data. Returns the widget id. | `name` (string), `body` (string), `description` (string, optional), `propsSchema` (string, optional) |
+| `widget_update` | Update a registered widget's body/name/description/props schema; bumps its version. | `id` (string), `body`/`name`/`description`/`propsSchema` (optional) |
+| `widget_list` | List the reusable widgets registered in the workspace. | — |
+| `widget_render` | Render a registered widget inline (by `id` or `name`), optionally passing `props` (data). | `id` (string, optional), `name` (string, optional), `props` (object, optional) |
+| `widget_show` | Render a one-off widget inline from an inline HTML `body`, without persisting it. | `body` (string), `props` (object, optional) |
+
+Widgets are **workspace-scoped**: a session may only register/render widgets in its own workspace (the `workspaceId` is taken from the session's scoped token). Agent-authored bodies render in the cross-origin sandbox with inline scripts allowed (`script-src 'unsafe-inline'`), isolated by the iframe origin + a restricted `connect-src`.
 
 ---
 
@@ -275,7 +284,7 @@ How it works:
 - **Tool ↔ resource link** — A widget tool carries `_meta.ui.resourceUri` (and the legacy `_meta["ui/resourceUri"]`) pointing at its `ui://` resource. The host reads the resource and renders it, passing the tool's input and result into the widget.
 - **Widget assets** — The widget's browser scripts are served (unauthenticated, since they are non-sensitive static JS) from `/widgets/<name>/…` on the MCP server's HTTP origin.
 
-- **Grackle chat-pane capture** — When an agent in a Grackle session calls a widget tool, the MCP server also pushes a self-contained "widget" event (resource HTML + tool input/result) into that session's event stream, so the widget renders inline in Grackle's own chat UI — independent of whether the agent runtime preserves MCP `_meta`. (This in-process capture only runs when the MCP server is co-located with the Grackle server; the standalone `npx @grackle-ai/mcp` server does not emit chat widget events.)
+- **Grackle chat-pane capture** — When an agent in a Grackle session calls a widget tool, the MCP server also pushes a self-contained "widget" event (resource HTML + tool input/result) into that session's event stream, so the widget renders inline in Grackle's own chat UI — independent of whether the agent runtime preserves MCP `_meta`. This covers both the static `show_hello_widget` and the **agent-authored registry** (`widget_register`/`widget_render`/`widget_show`), whose render descriptor the broker reads from the tool result. (This in-process capture only runs when the MCP server is co-located with the Grackle server; the standalone `npx @grackle-ai/mcp` server does not emit chat widget events.)
 
 > **Note:** the widget's scripts load from the MCP server's origin, so a host whose sandbox CSP forbids cross-origin scripts won't render them. Grackle's own chat pane allows the MCP origin in its sandbox CSP, so widgets render there.
 
