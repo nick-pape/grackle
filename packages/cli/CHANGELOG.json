@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.112.2",
+      "tag": "@grackle-ai/cli_v0.112.2",
+      "date": "Fri, 22 May 2026 23:59:52 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix: creating a workspace now navigates to the new workspace's detail view instead of the home dashboard"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.112.1",
       "tag": "@grackle-ai/cli_v0.112.1",
       "date": "Fri, 22 May 2026 23:27:43 GMT",

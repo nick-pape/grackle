@@ -329,7 +329,7 @@ export interface UseWorkspacesResult {
     defaultPersonaId?: string,
     useWorktrees?: boolean,
     workingDirectory?: string,
-    onSuccess?: () => void,
+    onSuccess?: (workspace: Workspace) => void,
     onError?: (message: string) => void,
   ) => Promise<void>;
   /** Archive a workspace by ID. */

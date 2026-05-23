@@ -382,7 +382,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       defaultPersonaId?: string,
       useWorktrees?: boolean,
       workingDirectory?: string,
-      onSuccess?: () => void,
+      onSuccess?: (workspace: Workspace) => void,
       _onError?: (message: string) => void,
     ) => {
       console.log("[MockGrackle] createWorkspace", { name, description });
@@ -405,7 +405,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
       setWorkspaces((prev) => [...prev, newWorkspace]);
       if (onSuccess) {
-        onSuccess();
+        onSuccess(newWorkspace);
       }
     },
     [nextId],

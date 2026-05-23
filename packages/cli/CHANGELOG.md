@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 22 May 2026 23:27:43 GMT and should not be manually modified.
+This log was last generated on Fri, 22 May 2026 23:59:52 GMT and should not be manually modified.
+
+## 0.112.2
+Fri, 22 May 2026 23:59:52 GMT
+
+### Patches
+
+- Fix: creating a workspace now navigates to the new workspace's detail view instead of the home dashboard
 
 ## 0.112.1
 Fri, 22 May 2026 23:27:43 GMT
