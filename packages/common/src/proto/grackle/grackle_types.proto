@@ -287,6 +287,12 @@ message StreamInfo {
   bool self_echo = 6;             // Whether publishers receive their own messages echoed back
 }
 
+message ListStreamsRequest {
+  // When false (default), internal IPC streams (lifecycle:/pipe:/stdin:) are
+  // filtered out. Set true to include them (debug / inspection).
+  bool include_internal = 1;
+}
+
 message ListStreamsResponse {
   repeated StreamInfo streams = 1;
 }
@@ -546,6 +552,58 @@ message QueryFindingsRequest {
 
 message GetFindingRequest {
   string id = 1;
+}
+
+// ─── Widgets (agent-authored MCP Apps registry) ────────────
+
+message Widget {
+  string id = 1;
+  string workspace_id = 2;
+  string name = 3;
+  string description = 4;
+  string renderer_kind = 5;
+  string body = 6;
+  string props_schema = 7;
+  int32 version = 8;
+  string owner_task_id = 9;
+  string owner_session_id = 10;
+  string created_at = 11;
+  string updated_at = 12;
+}
+
+message WidgetList {
+  repeated Widget widgets = 1;
+}
+
+message RegisterWidgetRequest {
+  string workspace_id = 1;
+  string name = 2;
+  string description = 3;
+  string renderer_kind = 4;
+  string body = 5;
+  string props_schema = 6;
+  string owner_task_id = 7;
+  string owner_session_id = 8;
+}
+
+message UpdateWidgetRequest {
+  string id = 1;
+  string workspace_id = 2; // for cross-workspace authz validation
+  optional string name = 3;
+  optional string description = 4;
+  optional string body = 5;
+  optional string props_schema = 6;
+}
+
+message GetWidgetRequest {
+  // Resolve by id (takes precedence) or by name within workspace_id.
+  string id = 1;
+  string name = 2;
+  string workspace_id = 3;
+}
+
+message ListWidgetsRequest {
+  string workspace_id = 1;
 }
 
 // ─── Escalations ───────────────────────────────────────────

@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.114.0",
+      "tag": "@grackle-ai/cli_v0.114.0",
+      "date": "Sat, 23 May 2026 08:24:19 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Split the Sessions tab into Root (root-task chat) + a new read-only Coordination tab (task-grouped IPC stream inventory); filter internal streams via ListStreams include_internal (CLI --internal)"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.113.0",
       "tag": "@grackle-ai/cli_v0.113.0",
       "date": "Sat, 23 May 2026 03:18:01 GMT",

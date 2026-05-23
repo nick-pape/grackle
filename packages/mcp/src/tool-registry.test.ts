@@ -155,7 +155,8 @@ describe("createToolRegistry with plugin tools", () => {
 describe("Full tool registry", () => {
   it("contains exactly the expected number of tools", () => {
     const registry = createToolRegistry();
-    expect(registry.list()).toHaveLength(69);
+    // 69 before this PR + 5 widget registry tools (#1239) = 74.
+    expect(registry.list()).toHaveLength(74);
   });
 
   it("every tool name matches snake_case pattern", () => {

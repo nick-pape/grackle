@@ -14,6 +14,13 @@ export interface SandboxCsp {
   connectDomains?: unknown;
   frameDomains?: unknown;
   baseUriDomains?: unknown;
+  /**
+   * Allow inline `<script>` in the sandbox (`script-src 'unsafe-inline'`). Set for
+   * agent-authored widgets (#1239), which have no served JS origin. Safe because
+   * the sandbox is a separate origin (no `window.top`) with a restricted
+   * `connect-src`; inline scripts run only within the isolated widget origin.
+   */
+  allowInlineScripts?: unknown;
 }
 
 /**
@@ -53,9 +60,10 @@ export function buildCspHeader(csp: SandboxCsp | undefined): string {
   const connectDomains: string = sanitizeCspDomains(csp?.connectDomains).join(" ");
   const frameDomains: string = sanitizeCspDomains(csp?.frameDomains).join(" ");
   const baseUriDomains: string = sanitizeCspDomains(csp?.baseUriDomains).join(" ");
+  const inlineScripts: string = csp?.allowInlineScripts === true ? " 'unsafe-inline'" : "";
   return [
     "default-src 'self'",
-    `script-src 'self' blob: ${resourceDomains}`.trim(),
+    `script-src 'self'${inlineScripts} blob: ${resourceDomains}`.trim(),
     `style-src 'self' 'unsafe-inline' blob: data: ${resourceDomains}`.trim(),
     `img-src 'self' data: blob: ${resourceDomains}`.trim(),
     `font-src 'self' data: blob: ${resourceDomains}`.trim(),

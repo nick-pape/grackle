@@ -204,6 +204,29 @@ const MIGRATIONS: Migration[] = [
   },
   {
     version: 10,
+    name: "widgets",
+    up: (conn) => {
+      conn.exec(`
+        CREATE TABLE IF NOT EXISTS widgets (
+          id               TEXT PRIMARY KEY,
+          workspace_id     TEXT NOT NULL REFERENCES workspaces(id),
+          name             TEXT NOT NULL,
+          description      TEXT NOT NULL DEFAULT '',
+          renderer_kind    TEXT NOT NULL DEFAULT 'mcp-app-html',
+          body             TEXT NOT NULL,
+          props_schema     TEXT NOT NULL DEFAULT '',
+          version          INTEGER NOT NULL DEFAULT 1,
+          owner_task_id    TEXT NOT NULL DEFAULT '',
+          owner_session_id TEXT NOT NULL DEFAULT '',
+          created_at       TEXT NOT NULL DEFAULT (datetime('now')),
+          updated_at       TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_widgets_workspace ON widgets(workspace_id);
+      `);
+    },
+  },
+  {
+    version: 11,
     name: "channel-grants",
     up: (conn) => {
       conn.exec(`

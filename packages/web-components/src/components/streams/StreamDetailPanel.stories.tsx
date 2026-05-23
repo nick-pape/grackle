@@ -13,6 +13,7 @@ const streamWithSubscribers: StreamData = {
   name: "agent-chat",
   subscriberCount: 2,
   messageBufferDepth: 5,
+  selfEcho: true,
   subscribers: [
     {
       subscriptionId: "sub-001",
@@ -38,6 +39,7 @@ const streamNoSubscribers: StreamData = {
   name: "telemetry-feed",
   subscriberCount: 0,
   messageBufferDepth: 0,
+  selfEcho: false,
   subscribers: [],
 };
 
@@ -46,6 +48,7 @@ const streamAllModes: StreamData = {
   name: "mixed-modes",
   subscriberCount: 3,
   messageBufferDepth: 0,
+  selfEcho: false,
   subscribers: [
     {
       subscriptionId: "sub-rw-async",

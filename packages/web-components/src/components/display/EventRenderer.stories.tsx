@@ -192,6 +192,50 @@ export const WidgetEvent: Story = {
   },
 };
 
+/** Agent-authored widget (#1239): dynamic rendererKind + inline-script body + props. */
+export const AgentWidgetEvent: Story = {
+  args: {
+    event: makeEvent({
+      eventType: "widget",
+      content: JSON.stringify({
+        resourceUri: "ui://grackle/abc123",
+        toolName: "widget_render",
+        rendererKind: "mcp-app-html",
+        widgetId: "abc123",
+        version: 2,
+        html: "<!doctype html><html><body><div class=\"card\">agent widget</div><script>void 0;</script></body></html>",
+        csp: { resourceDomains: ["http://localhost:6007"], connectDomains: ["http://localhost:6007"], allowInlineScripts: true },
+        toolInput: { count: 3 },
+        toolResult: { content: [{ type: "text", text: "ok" }] },
+      }),
+    }),
+    sandboxProxyUrl: "http://localhost:6007/sandbox.html",
+  },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByTestId("mcp-app-widget")).toBeInTheDocument();
+  },
+};
+
+/** An unknown rendererKind falls back to the default event card (no crash). */
+export const UnknownRendererKindWidget: Story = {
+  args: {
+    event: makeEvent({
+      eventType: "widget",
+      content: JSON.stringify({
+        resourceUri: "",
+        toolName: "widget_show",
+        rendererKind: "adaptive-card",
+        html: "<div>future</div>",
+      }),
+    }),
+    sandboxProxyUrl: "http://localhost:6007/sandbox.html",
+  },
+  play: async ({ canvas }) => {
+    // Unsupported renderer: McpAppWidget is NOT mounted; the raw content shows instead.
+    await expect(canvas.queryByTestId("mcp-app-widget")).toBeNull();
+  },
+};
+
 /** User input events render as markdown (bold, lists, inline code) inside the bubble. */
 export const UserMessageMarkdown: Story = {
   args: {

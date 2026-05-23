@@ -25,7 +25,7 @@ export const AllCategoriesRendered: Story = {
     await expect(canvas.getByText("Workspace Page")).toBeInTheDocument();
     await expect(canvas.getByText("Navigation Lists")).toBeInTheDocument();
     await expect(canvas.getByText("Editing")).toBeInTheDocument();
-    await expect(canvas.getByText("Sessions")).toBeInTheDocument();
+    await expect(canvas.getByText("Root")).toBeInTheDocument();
   },
 };
 

@@ -44,6 +44,7 @@ const NOOP_DOMAIN_HOOK: DomainHook = {
 import {
   MOCK_ENVIRONMENTS,
   MOCK_SESSIONS,
+  MOCK_STREAMS,
   MOCK_EVENTS,
   MOCK_WORKSPACES,
   MOCK_TASKS,
@@ -57,7 +58,16 @@ import {
   MOCK_KNOWLEDGE_DETAILS,
   type MockStreamStep,
 } from "./mockData.js";
-import type { GraphNode, GraphLink, NodeDetail } from "../hooks/types.js";
+import type { GraphNode, GraphLink, NodeDetail, StreamData } from "../hooks/types.js";
+import { INTERNAL_STREAM_PREFIXES } from "../utils/streamCoordination.js";
+
+/** Filter internal IPC plumbing streams unless explicitly requested. */
+function filterMockStreams(includeInternal: boolean): StreamData[] {
+  if (includeInternal) {
+    return MOCK_STREAMS;
+  }
+  return MOCK_STREAMS.filter((s) => !INTERNAL_STREAM_PREFIXES.some((p) => s.name.startsWith(p)));
+}
 
 // ─── Constants ──────────────────────────────────────
 
@@ -81,6 +91,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   // ── State ─────────────────────────────────────────
   const [environments, setEnvironments] = useState<Environment[]>(MOCK_ENVIRONMENTS);
   const [sessions, setSessions] = useState<Session[]>(MOCK_SESSIONS);
+  const [streams, setStreams] = useState<StreamData[]>(() => filterMockStreams(false));
   const [events, setEvents] = useState<SessionEvent[]>(MOCK_EVENTS);
   const [lastSpawnedId, setLastSpawnedId] = useState<string | undefined>(undefined);
   const [workspaces, setWorkspaces] = useState<Workspace[]>(MOCK_WORKSPACES);
@@ -1176,11 +1187,11 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       },
 
       streams: {
-        streams: [],
+        streams,
         streamsLoading: false,
         streamsLoadedOnce: true,
         streamsLoadError: false,
-        loadStreams: async () => {},
+        loadStreams: async (includeInternal = false) => { setStreams(filterMockStreams(includeInternal)); },
         domainHook: NOOP_DOMAIN_HOOK,
       },
 
@@ -1371,6 +1382,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [
       environments,
       sessions,
+      streams,
       events,
       lastSpawnedId,
       taskSessions,

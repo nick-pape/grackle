@@ -13,7 +13,7 @@ describe("listStreams", () => {
   });
 
   it("returns empty list when no streams exist", async () => {
-    const res = await listStreams();
+    const res = await listStreams(create(grackle.ListStreamsRequestSchema, {}));
 
     expect(res.streams).toEqual([]);
   });
@@ -26,7 +26,7 @@ describe("listStreams", () => {
       }),
     );
 
-    const res = await listStreams();
+    const res = await listStreams(create(grackle.ListStreamsRequestSchema, {}));
 
     expect(res.streams).toHaveLength(1);
     expect(res.streams[0].name).toBe("test-channel");
@@ -40,7 +40,7 @@ describe("listStreams", () => {
       create(grackle.CreateStreamRequestSchema, { sessionId: "session-1", name: "pipe-stream" }),
     );
 
-    const res = await listStreams();
+    const res = await listStreams(create(grackle.ListStreamsRequestSchema, {}));
 
     expect(res.streams[0].selfEcho).toBe(false);
   });
@@ -54,7 +54,7 @@ describe("listStreams", () => {
       }),
     );
 
-    const res = await listStreams();
+    const res = await listStreams(create(grackle.ListStreamsRequestSchema, {}));
 
     expect(res.streams[0].selfEcho).toBe(true);
   });
@@ -67,7 +67,7 @@ describe("listStreams", () => {
       }),
     );
 
-    const res = await listStreams();
+    const res = await listStreams(create(grackle.ListStreamsRequestSchema, {}));
     const sub = res.streams[0].subscribers[0];
 
     expect(sub.sessionId).toBe("session-1");
@@ -95,7 +95,7 @@ describe("listStreams", () => {
       }),
     );
 
-    const res = await listStreams();
+    const res = await listStreams(create(grackle.ListStreamsRequestSchema, {}));
 
     expect(res.streams).toHaveLength(2);
 
@@ -107,6 +107,26 @@ describe("listStreams", () => {
     expect(channelB.subscriberCount).toBe(1);
   });
 
+  it("filters internal streams by default and includes them when requested", async () => {
+    // Internal streams must be created via the registry directly — the
+    // createStream handler rejects reserved prefixes.
+    streamRegistry.createStream("user-channel");
+    streamRegistry.createStream("lifecycle:guid-1");
+    streamRegistry.createStream("pipe:guid-2");
+    streamRegistry.createStream("stdin:guid-3");
+
+    const filtered = await listStreams(create(grackle.ListStreamsRequestSchema, {}));
+    expect(filtered.streams.map((s) => s.name)).toEqual(["user-channel"]);
+
+    const all = await listStreams(create(grackle.ListStreamsRequestSchema, { includeInternal: true }));
+    expect(all.streams.map((s) => s.name).sort()).toEqual([
+      "lifecycle:guid-1",
+      "pipe:guid-2",
+      "stdin:guid-3",
+      "user-channel",
+    ]);
+  });
+
   it("reports message buffer depth after publishing", async () => {
     // Use registry directly to create a stream with messages
     const stream = streamRegistry.createStream("depth-test");
@@ -115,7 +135,7 @@ describe("listStreams", () => {
     streamRegistry.publish(stream.id, "session-2", "message-2");
     streamRegistry.publish(stream.id, "session-2", "message-3");
 
-    const res = await listStreams();
+    const res = await listStreams(create(grackle.ListStreamsRequestSchema, {}));
 
     expect(res.streams[0].messageBufferDepth).toBe(3);
   });

@@ -204,3 +204,33 @@
   color: var(--text-disabled, #666);
   font-style: italic;
 }
+
+.metaValueMono {
+  composes: metaValue;
+  word-break: break-all;
+  white-space: normal;
+}
+
+.placeholder {
+  font-size: 13px;
+  color: var(--text-disabled, #666);
+  font-style: italic;
+  padding: 10px 12px;
+  border: 1px dashed var(--border-default, #333);
+  border-radius: 6px;
+}
+
+.advanced {
+  margin-top: 8px;
+}
+
+.advancedSummary {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-disabled, #666);
+  cursor: pointer;
+  margin-bottom: 8px;
+  user-select: none;
+}
