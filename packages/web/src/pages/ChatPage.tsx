@@ -53,15 +53,11 @@ export function ChatPage(): JSX.Element {
        (taskSessions[ROOT_TASK_ID] ?? []).find((s) => s.id === rootTask.latestSessionId))
     : undefined;
 
-  // Load root task sessions on mount and whenever the latest session changes.
+  // Load the root task's sessions on mount and whenever its latest session
+  // changes. Keyed on `latestSessionId` (single effect) so we don't double-fetch
+  // on the initial render when the root task already has a session.
   useEffect(() => {
     loadTaskSessions(ROOT_TASK_ID).catch(() => {});
-  }, [loadTaskSessions]);
-
-  useEffect(() => {
-    if (rootTask?.latestSessionId) {
-      loadTaskSessions(ROOT_TASK_ID).catch(() => {});
-    }
   }, [rootTask?.latestSessionId, loadTaskSessions]);
 
   // Load events once the session is known.
