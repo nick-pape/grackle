@@ -11,7 +11,6 @@ function makeInput(overrides: Partial<OrchestratorContextInput> = {}): Orchestra
     tasks: [],
     personas: [],
     environments: [],
-    findings: [],
     ...overrides,
   };
 }
@@ -98,53 +97,13 @@ describe("buildOrchestratorContext", () => {
     ]);
   });
 
-  it("returns findings context string", () => {
-    const result = buildOrchestratorContext(makeInput({
-      findings: [
-        { category: "decision", title: "Used React", content: "Chose React for the frontend." },
-      ],
-    }));
-
-    expect(result.findingsContext).toContain("## Workspace Findings");
-    expect(result.findingsContext).toContain("[decision] Used React");
-    expect(result.findingsContext).toContain("Chose React for the frontend.");
-  });
-
   it("handles empty inputs gracefully", () => {
     const result = buildOrchestratorContext(makeInput());
 
     expect(result.taskTree).toEqual([]);
     expect(result.availablePersonas).toEqual([]);
     expect(result.availableEnvironments).toEqual([]);
-    expect(result.findingsContext).toBe("");
     expect(result.workspace).toBeUndefined();
-  });
-
-  it("truncates individual findings content to 500 characters", () => {
-    const longContent = "A".repeat(600);
-    const result = buildOrchestratorContext(makeInput({
-      findings: [
-        { category: "bug", title: "Long Finding", content: longContent },
-      ],
-    }));
-
-    expect(result.findingsContext).toContain("A".repeat(500) + "...");
-    expect(result.findingsContext).not.toContain("A".repeat(501));
-  });
-
-  it("respects the 8K character budget for findings context", () => {
-    // Create 30 findings each ~400 chars — total would exceed 8K
-    const findings = Array.from({ length: 30 }, (_, i) => ({
-      category: "note",
-      title: `Finding ${i}`,
-      content: "B".repeat(400),
-    }));
-
-    const result = buildOrchestratorContext(makeInput({ findings }));
-
-    expect(result.findingsContext.length).toBeLessThanOrEqual(8500);
-    // Should include some but not all findings
-    expect(result.findingsContext).toContain("Finding 0");
   });
 
   it("handles tasks with multiple dependsOn entries", () => {

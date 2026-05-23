@@ -100,7 +100,6 @@ describe("ORCHESTRATOR_MCP_TOOLS", () => {
       "task_update", "task_delete", "task_resume",
       "session_spawn", "session_kill", "session_status",
       "persona_create",
-      "knowledge_create_node",
     ];
     for (const tool of extras) {
       expect(ORCHESTRATOR_MCP_TOOLS).toContain(tool);
