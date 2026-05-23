@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Introduce the SequencedLog<T> / LogSink<T> substrate in @grackle-ai/common and slide the domain_events write path under it via DomainEventSink (behavior-preserving). RFC #1264 Phase 0.",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
