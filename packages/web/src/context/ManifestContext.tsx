@@ -120,8 +120,14 @@ export function useSandboxProxyUrl(): string | undefined {
     return undefined;
   }
   // Explicit origin wins (handles HTTPS-proxy / non-derivable scheme + port).
+  // Guard against a misconfigured/invalid origin so a bad env var can't crash
+  // rendering — fall through to the port-derived path on parse failure.
   if (sandboxOrigin !== undefined && sandboxOrigin !== "") {
-    return new URL("/sandbox.html", sandboxOrigin).toString();
+    try {
+      return new URL("/sandbox.html", sandboxOrigin).toString();
+    } catch {
+      // Invalid GRACKLE_SANDBOX_ORIGIN — ignore and fall back below.
+    }
   }
   if (sandboxPort === undefined) {
     return undefined;

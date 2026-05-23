@@ -23,6 +23,8 @@ const JS_HEADERS: Readonly<Record<string, string>> = {
   "Content-Type": "text/javascript; charset=utf-8",
   "Cache-Control": "no-cache, no-store, must-revalidate",
   "Access-Control-Allow-Origin": "*",
+  // This origin serves executable JS + security-sensitive HTML; prevent MIME sniffing.
+  "X-Content-Type-Options": "nosniff",
 };
 
 /**
@@ -72,6 +74,7 @@ export function createSandboxServer(options: SandboxServerOptions): http.Server 
         "Content-Security-Policy": buildCspHeader(csp),
         "Cache-Control": "no-cache, no-store, must-revalidate",
         "Access-Control-Allow-Origin": "*",
+        "X-Content-Type-Options": "nosniff",
       });
       res.end(sandboxHtml);
       return;

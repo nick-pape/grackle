@@ -332,7 +332,7 @@ async function main(): Promise<void> {
         return t as unknown as ToolDefinition;
       })]
     : [];
-  const mcpServer = createMcpServer({ bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl: authServerUrl, toolGroups: pluginToolGroups, publishWidgetEvent });
+  const mcpServer = createMcpServer({ bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl: authServerUrl, toolGroups: pluginToolGroups, publishWidgetEvent, ...(config.mcpOrigin !== undefined ? { mcpOrigin: config.mcpOrigin } : {}) });
 
   mcpServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {

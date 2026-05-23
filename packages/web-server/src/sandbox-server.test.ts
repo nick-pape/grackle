@@ -48,6 +48,7 @@ describe("createSandboxServer", () => {
     expect(csp).toContain("default-src 'self'");
     expect(csp).toContain("script-src 'self' blob:");
     expect(csp).not.toContain("unsafe-eval");
+    expect(resp.headers["x-content-type-options"]).toBe("nosniff");
   });
 
   it("serves the same content at the root path", async () => {
@@ -79,6 +80,7 @@ describe("createSandboxServer", () => {
     const resp = await request(server, "/sandbox-relay.js");
     expect(resp.status).toBe(200);
     expect(resp.headers["content-type"]).toContain("javascript");
+    expect(resp.headers["x-content-type-options"]).toBe("nosniff");
     expect(resp.body.length).toBeGreaterThan(0);
   });
 
