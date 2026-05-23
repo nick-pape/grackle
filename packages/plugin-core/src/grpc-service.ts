@@ -17,7 +17,6 @@ import * as tasks from "./task-handlers.js";
 import * as workspaces from "./workspace-handlers.js";
 import * as personas from "./persona-handlers.js";
 import * as tokens from "./token-handlers.js";
-import * as findings from "./finding-handlers.js";
 import * as escalations from "./escalation-handlers.js";
 import * as codespaces from "./codespace-handlers.js";
 import * as dockerContainers from "./docker-handlers.js";
@@ -39,7 +38,6 @@ export function createDefaultCollector(): ServiceCollector {
   collector.addHandlers(grackle.GrackleCore, workspaces);
   collector.addHandlers(grackle.GrackleOrchestration, personas);
   collector.addHandlers(grackle.GrackleCore, tokens);
-  collector.addHandlers(grackle.GrackleOrchestration, findings);
   collector.addHandlers(grackle.GrackleOrchestration, escalations);
   collector.addHandlers(grackle.GrackleCore, codespaces);
   collector.addHandlers(grackle.GrackleCore, dockerContainers);
@@ -54,7 +52,7 @@ export function createDefaultCollector(): ServiceCollector {
  * non-scheduling) Grackle handler groups: environments, sessions, workspaces,
  * tokens, codespaces, and settings.
  *
- * Orchestration handlers (tasks, personas, findings, escalations) are contributed
+ * Orchestration handlers (tasks, personas, escalations) are contributed
  * by `@grackle-ai/plugin-orchestration` via {@link createOrchestrationCollector}.
  * Schedule handlers are contributed by `@grackle-ai/plugin-scheduling`.
  * Knowledge handlers are contributed by `@grackle-ai/plugin-knowledge`.
@@ -75,16 +73,15 @@ export function createCoreCollector(): ServiceCollector {
 
 /**
  * Create a `ServiceCollector` pre-loaded with only the orchestration handler
- * groups: tasks, personas, findings, and escalations.
+ * groups: tasks, personas, and escalations.
  *
- * Use this in `@grackle-ai/plugin-orchestration` to contribute the 21
+ * Use this in `@grackle-ai/plugin-orchestration` to contribute the
  * orchestration RPCs without duplicating the handler imports.
  */
 export function createOrchestrationCollector(): ServiceCollector {
   const collector = createServiceCollector();
   collector.addHandlers(grackle.GrackleOrchestration, tasks);
   collector.addHandlers(grackle.GrackleOrchestration, personas);
-  collector.addHandlers(grackle.GrackleOrchestration, findings);
   collector.addHandlers(grackle.GrackleOrchestration, escalations);
   return collector;
 }

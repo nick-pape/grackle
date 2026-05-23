@@ -3,7 +3,6 @@ import { envTools } from "./env.js";
 import { sessionTools } from "./session.js";
 import { workspaceTools } from "./workspace.js";
 import { taskTools } from "./task.js";
-import { findingTools } from "./finding.js";
 import { personaTools } from "./persona.js";
 import { logsTools } from "./logs.js";
 import { credentialTools } from "./credential.js";
@@ -24,7 +23,6 @@ const builtinToolGroups: ToolDefinition[][] = [
   sessionTools,
   workspaceTools,
   taskTools,
-  findingTools,
   personaTools,
   logsTools,
   credentialTools,

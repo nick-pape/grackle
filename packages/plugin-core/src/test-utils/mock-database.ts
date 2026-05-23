@@ -91,11 +91,6 @@ export function createDatabaseMock() {
       deletePersona: vi.fn(),
     },
 
-    findingStore: {
-      postFinding: vi.fn(),
-      queryFindings: vi.fn(() => []),
-    },
-
     settingsStore: {
       getSetting: vi.fn(() => undefined),
       setSetting: vi.fn(),

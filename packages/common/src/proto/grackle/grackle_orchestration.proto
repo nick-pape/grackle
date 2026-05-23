@@ -25,11 +25,6 @@ service GrackleOrchestration {
   rpc UpdatePersona(UpdatePersonaRequest) returns (Persona);
   rpc DeletePersona(PersonaId) returns (Empty);
 
-  // Findings
-  rpc PostFinding(PostFindingRequest) returns (Finding);
-  rpc QueryFindings(QueryFindingsRequest) returns (FindingList);
-  rpc GetFinding(GetFindingRequest) returns (Finding);
-
   // Escalations
   rpc CreateEscalation(CreateEscalationRequest) returns (Escalation);
   rpc ListEscalations(ListEscalationsRequest) returns (EscalationList);

@@ -3,7 +3,7 @@
  * dynamically based on the session type (task vs ad-hoc).
  *
  * Orchestrator tasks (canDecompose + depth <= 1) receive rich project
- * context (task tree, persona roster, environments, findings).
+ * context (task tree, persona roster, environments).
  * Leaf tasks receive the existing completion-contract template.
  * Task title and description are NOT included in the system prompt — they
  * belong in the user prompt (see {@link buildTaskPrompt}).
@@ -94,8 +94,6 @@ export interface SystemPromptOptions {
   availablePersonas?: PersonaSummary[];
   /** Available environments for the orchestrator to route work to. */
   availableEnvironments?: EnvironmentSummary[];
-  /** Pre-built findings context string (from buildFindingsContext). */
-  findingsContext?: string;
   /** Invocation mode: fresh (first time) or resume (re-invoked after child completion). */
   triggerMode?: "fresh" | "resume";
   /** Workpad JSON from a previous session on this task (included on retry/resume). */
@@ -136,7 +134,6 @@ export class SystemPromptBuilder {
         sections.push(this.buildTaskTree());
         sections.push(this.buildAvailablePersonas());
         sections.push(this.buildAvailableEnvironments());
-        sections.push(this.buildOrchestratorFindingsSection());
         sections.push(this.buildTriggerContext());
         sections.push(this.buildDecompositionGuidelines());
         sections.push(this.buildOrchestratorTools());
@@ -151,7 +148,6 @@ export class SystemPromptBuilder {
         sections.push(this.buildWorkpadWriteSection());
         sections.push(this.buildSubtaskSection());
         sections.push(this.buildSignalSection());
-        sections.push(this.buildFindingsSection());
       }
     }
 
@@ -307,14 +303,6 @@ export class SystemPromptBuilder {
     ].join("\n");
   }
 
-  /** Orchestrator findings section with actual findings data. */
-  private buildOrchestratorFindingsSection(): string {
-    if (!this.options.findingsContext) {
-      return "";
-    }
-    return this.options.findingsContext;
-  }
-
   /** Trigger context describing why this invocation happened. */
   private buildTriggerContext(): string {
     if (this.options.triggerMode === "resume") {
@@ -355,8 +343,6 @@ export class SystemPromptBuilder {
       `- \`task_show\` — Show details of a specific task including its sessions and output.`,
       `- \`task_start\` — Start a task (begins agent execution on the assigned environment).`,
       `- \`task_complete\` — Signal that your task is complete.`,
-      `- \`finding_post\` — Share a discovery (architecture decisions, patterns, bugs) with other agents.`,
-      `- \`finding_list\` — List recent findings from all agents in this workspace.`,
       `- \`session_attach\` — Attach to a child session and stream live events (with timeout).`,
       `- \`logs_get\` — Read a child session's transcript or raw event log (including in-progress sessions and optional live tailing).`,
     ].join("\n");
@@ -419,18 +405,10 @@ export class SystemPromptBuilder {
       ``,
       `You may receive a \`[SIGTERM]\` message requesting graceful shutdown. When you receive one:`,
       `1. Finish your current operation (do not start new work).`,
-      `2. Save any in-progress work (commit, push, or post findings).`,
+      `2. Save any in-progress work (commit, push).`,
       `3. If you have a parent pipe, write a final summary via \`ipc_write\`.`,
       `4. Close all **owned** child fds with \`ipc_close\` (do not close non-owned parent fds).`,
       `5. Stop working after completing these steps.`,
-    ].join("\n");
-  }
-
-  /** Guidance on using findings (leaf agents). */
-  private buildFindingsSection(): string {
-    return [
-      `## Findings`,
-      `Use \`finding_post\` to share discoveries (architecture decisions, bugs, patterns) with other agents. Check \`finding_list\` before posting to avoid duplicates.`,
     ].join("\n");
   }
 

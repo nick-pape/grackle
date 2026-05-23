@@ -10,5 +10,4 @@ service GrackleKnowledge {
   rpc GetKnowledgeNode(GetKnowledgeNodeRequest) returns (GetKnowledgeNodeResponse);
   rpc ExpandKnowledgeNode(ExpandKnowledgeNodeRequest) returns (ExpandKnowledgeNodeResponse);
   rpc ListRecentKnowledgeNodes(ListRecentKnowledgeNodesRequest) returns (ListRecentKnowledgeNodesResponse);
-  rpc CreateKnowledgeNode(CreateKnowledgeNodeRequest) returns (CreateKnowledgeNodeResponse);
 }

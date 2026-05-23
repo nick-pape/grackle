@@ -29,7 +29,7 @@ enum EventType {
   EVENT_TYPE_ERROR = 4;
   EVENT_TYPE_STATUS = 5;
   EVENT_TYPE_SYSTEM = 6;
-  EVENT_TYPE_FINDING = 7;
+  reserved 7; // was EVENT_TYPE_FINDING (removed)
   EVENT_TYPE_SUBTASK_CREATE = 8;
   EVENT_TYPE_USER_INPUT = 9;
   EVENT_TYPE_SIGNAL = 10;
@@ -508,46 +508,6 @@ message SetWorkpadRequest {
   string workpad = 2; // JSON string with status, summary, and extra fields
 }
 
-// ─── Findings ──────────────────────────────────────────────
-
-message Finding {
-  string id = 1;
-  string workspace_id = 2;
-  string task_id = 3;
-  string session_id = 4;
-  string category = 5;
-  string title = 6;
-  string content = 7;
-  repeated string tags = 8;
-  string created_at = 9;
-}
-
-message FindingList {
-  repeated Finding findings = 1;
-}
-
-message PostFindingRequest {
-  string workspace_id = 1;
-  string task_id = 2;
-  string session_id = 3;
-  string category = 4;
-  string title = 5;
-  string content = 6;
-  repeated string tags = 7;
-}
-
-message QueryFindingsRequest {
-  // Optional: when empty, returns findings across all workspaces.
-  string workspace_id = 1;
-  repeated string categories = 2;
-  repeated string tags = 3;
-  int32 limit = 4;
-}
-
-message GetFindingRequest {
-  string id = 1;
-}
-
 // ─── Escalations ───────────────────────────────────────────
 
 message Escalation {
@@ -868,18 +828,6 @@ message ListRecentKnowledgeNodesRequest {
 message ListRecentKnowledgeNodesResponse {
   repeated KnowledgeNodeProto nodes = 1;
   repeated KnowledgeEdgeProto edges = 2;
-}
-
-message CreateKnowledgeNodeRequest {
-  string title = 1;
-  string content = 2;
-  string category = 3;
-  repeated string tags = 4;
-  string workspace_id = 5;
-}
-
-message CreateKnowledgeNodeResponse {
-  string id = 1;
 }
 
 // ─── Version Status ─────────────────────────────────────────

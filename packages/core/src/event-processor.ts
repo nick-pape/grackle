@@ -3,7 +3,7 @@ import { grackle, powerline, eventTypeToEnum, SESSION_STATUS, TERMINAL_SESSION_S
 import type { SessionStatus } from "@grackle-ai/common";
 import { v4 as uuid } from "uuid";
 import { ulid } from "ulid";
-import { sessionStore, findingStore, escalationStore, taskStore, workspaceStore, slugify } from "@grackle-ai/database";
+import { sessionStore, escalationStore, taskStore, workspaceStore, slugify } from "@grackle-ai/database";
 import * as streamHub from "./stream-hub.js";
 import * as logWriter from "./log-writer.js";
 import * as processorRegistry from "./processor-registry.js";
@@ -78,35 +78,6 @@ export function publishWidgetEvent(sessionId: string, payload: WidgetEventPayloa
     streamHub.publish(event);
   } catch (err) {
     logger.error({ err, sessionId }, "Failed to publish widget event");
-  }
-}
-
-/**
- * Process a finding event, storing it in the finding store and broadcasting.
- * Shared between live event processing and replay on late-bind.
- */
-export function processFindingEvent(
-  ctx: ProcessorContext,
-  content: string,
-  sessionId: string,
-): void {
-  if (!ctx.workspaceId) {
-    return;
-  }
-  try {
-    const data = JSON.parse(content) as {
-      category?: string; title?: string; content?: string; tags?: string[];
-    };
-    const findingId = uuid();
-    findingStore.postFinding(
-      findingId, ctx.workspaceId, ctx.taskId || "", sessionId,
-      data.category || "general", data.title || "Untitled",
-      data.content || "", data.tags || [],
-    );
-    emit("finding.posted", { workspaceId: ctx.workspaceId, findingId });
-    logger.info({ findingId, workspaceId: ctx.workspaceId, title: data.title }, "Finding stored");
-  } catch (err) {
-    logger.error({ err, workspaceId: ctx.workspaceId, taskId: ctx.taskId }, "Failed to store finding");
   }
 }
 
@@ -267,14 +238,10 @@ export function processSubtaskEvent(
 function replayLoggedEvents(ctx: ProcessorContext, subtaskLocalIdMap: Map<string, string>): void {
   try {
     const entries = logWriter.readLog(ctx.logPath);
-    let findingsReplayed = 0;
     let subtasksReplayed = 0;
 
     for (const entry of entries) {
-      if (entry.type === "finding") {
-        processFindingEvent(ctx, entry.content, entry.session_id);
-        findingsReplayed++;
-      } else if (entry.type === "subtask_create") {
+      if (entry.type === "subtask_create") {
         processSubtaskEvent(ctx, entry.content, subtaskLocalIdMap);
         subtasksReplayed++;
       } else if (entry.type === "escalation") {
@@ -282,9 +249,9 @@ function replayLoggedEvents(ctx: ProcessorContext, subtaskLocalIdMap: Map<string
       }
     }
 
-    if (findingsReplayed > 0 || subtasksReplayed > 0) {
+    if (subtasksReplayed > 0) {
       logger.info(
-        { sessionId: ctx.sessionId, taskId: ctx.taskId, findingsReplayed, subtasksReplayed },
+        { sessionId: ctx.sessionId, taskId: ctx.taskId, subtasksReplayed },
         "Replayed pre-association events from session log",
       );
     }
@@ -379,11 +346,6 @@ export function processEventStream(
         });
         await logWriter.writeEvent(logPath, sessionEvent);
         streamHub.publish(sessionEvent);
-
-        // Intercept finding events and store + broadcast them
-        if (event.type === "finding" && ctx.workspaceId) {
-          processFindingEvent(ctx, event.content, sessionId);
-        }
 
         // Intercept subtask creation events and create child tasks
         if (event.type === "subtask_create" && ctx.taskId) {

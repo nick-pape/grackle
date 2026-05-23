@@ -3,7 +3,7 @@
  * Centralizes the DB-to-prompt mapping so callers don't duplicate it.
  */
 import type { PersonaRow } from "@grackle-ai/database";
-import { personaStore, envRegistry, findingStore, taskStore, safeParseJsonArray } from "@grackle-ai/database";
+import { personaStore, envRegistry, taskStore, safeParseJsonArray } from "@grackle-ai/database";
 import type { PersonaResolveInput, OrchestratorContextInput } from "@grackle-ai/prompt";
 
 /** Convert a database PersonaRow to a PersonaResolveInput for prompt resolution. */
@@ -60,11 +60,6 @@ export function buildOrchestratorContextInput(
       adapterType: e.adapterType,
       status: e.status,
       defaultRuntime: e.defaultRuntime,
-    })),
-    findings: findingStore.queryFindings(workspaceId, undefined, undefined, 20).map((f) => ({
-      category: f.category,
-      title: f.title,
-      content: f.content,
     })),
   };
 }
