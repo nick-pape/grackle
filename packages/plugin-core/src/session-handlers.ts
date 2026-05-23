@@ -682,11 +682,20 @@ export async function attachStream(req: grackle.AttachStreamRequest): Promise<gr
   });
 }
 
-/** List all active IPC streams with subscriber details and message buffer depth. */
-export async function listStreams(): Promise<grackle.ListStreamsResponse> {
+/**
+ * List active IPC streams with subscriber details and message buffer depth.
+ *
+ * By default, internal IPC plumbing streams (reserved `lifecycle:` / `pipe:` /
+ * `stdin:` prefixes) are filtered out — they are infrastructure, not user-facing
+ * coordination. Set `include_internal` to surface them for debugging.
+ */
+export async function listStreams(req: grackle.ListStreamsRequest): Promise<grackle.ListStreamsResponse> {
   const allStreams = streamRegistry.listStreams();
+  const visibleStreams = req.includeInternal
+    ? allStreams
+    : allStreams.filter((stream) => !RESERVED_PREFIXES.some((prefix) => stream.name.startsWith(prefix)));
   return create(grackle.ListStreamsResponseSchema, {
-    streams: allStreams.map((stream) => {
+    streams: visibleStreams.map((stream) => {
       const subscribers = Array.from(stream.subscriptions.values()).map((sub) =>
         create(grackle.StreamSubscriberInfoSchema, {
           subscriptionId: sub.id,

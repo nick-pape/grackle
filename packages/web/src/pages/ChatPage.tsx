@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
-import { useParams, Link } from "react-router";
 import { ROOT_TASK_ID } from "@grackle-ai/common";
 import { useGrackle } from "../context/GrackleContext.js";
 import {
-  ChatInput, EventStream, SplitButton, StreamDetailPanel,
-  groupConsecutiveTextEvents, pairToolEvents, useToast, CHAT_URL,
+  ChatInput, EventStream, SplitButton,
+  groupConsecutiveTextEvents, pairToolEvents, useToast,
 } from "@grackle-ai/web-components";
 import { ChatShimmer } from "./ChatShimmer.js";
 import styles from "./ChatPage.module.scss";
@@ -28,109 +27,42 @@ function ChatEmptyState({ hasLocalEnvironment }: { hasLocalEnvironment: boolean 
   );
 }
 
-/** Empty state when a stream has no active subscriber session. */
-function StreamNoSessionState({ streamName }: { streamName: string }): JSX.Element {
-  return (
-    <div className={styles.emptyState} data-testid="stream-no-session-state">
-      <div className={styles.emptyTitle}>{streamName}</div>
-      <div className={styles.emptyDescription}>No active sessions on this stream.</div>
-    </div>
-  );
-}
-
-/** Empty state when a streamId doesn't match any known stream. */
-function StreamNotFoundState(): JSX.Element {
-  return (
-    <div className={styles.emptyState} data-testid="stream-not-found-state">
-      <div className={styles.emptyTitle}>Stream not found</div>
-      <div className={styles.emptyDescription}>
-        This stream no longer exists or hasn&apos;t been created yet.{" "}
-        <Link to={CHAT_URL}>Back to System</Link>
-      </div>
-    </div>
-  );
-}
-
-/** Empty state when streams failed to load (network/RPC error). */
-function StreamUnavailableState(): JSX.Element {
-  return (
-    <div className={styles.emptyState} data-testid="stream-unavailable-state">
-      <div className={styles.emptyTitle}>Stream unavailable</div>
-      <div className={styles.emptyDescription}>
-        The stream could not be loaded. It may have been deleted, or there may be a temporary
-        network problem.{" "}
-        <Link to={CHAT_URL}>Back to System</Link>
-      </div>
-    </div>
-  );
-}
-
-/** Chat page — shows System session or a named IPC stream. */
+/**
+ * Root page — the root-task conversation with the System orchestrator agent.
+ *
+ * Strictly the `ROOT_TASK_ID` conversation: input + event stream + Stop/Kill.
+ * IPC stream browsing lives on the separate Coordination tab.
+ */
 export function ChatPage(): JSX.Element {
-  const { streamId } = useParams<{ streamId?: string }>();
-
   const {
     tasks: { tasks, tasksLoading, startTask },
     sessions: { sessions, sessionsLoading, events, eventsDropped, taskSessions, loadTaskSessions, loadSessionEvents, kill, stopGraceful, sendInput, spawn },
     environments: { environments, provisionEnvironment },
     personas: { personas },
-    streams: { streams, streamsLoading, streamsLoadedOnce, streamsLoadError },
   } = useGrackle();
   const { showToast } = useToast();
-
-  const [showDetail, setShowDetail] = useState(false);
-
-  // ── System mode (no streamId) ──────────────────────────────────────────────
 
   const loadedSessionRef = useRef<string | undefined>(undefined);
   const [pendingMessage, setPendingMessage] = useState<string | undefined>();
 
   const rootTask = tasks.find((t) => t.id === ROOT_TASK_ID);
-  const systemSession = streamId === undefined
-    ? (rootTask?.latestSessionId
-        ? (sessions.find((s) => s.id === rootTask.latestSessionId) ??
-           (taskSessions[ROOT_TASK_ID] ?? []).find((s) => s.id === rootTask.latestSessionId))
-        : undefined)
+  const latestSession = rootTask?.latestSessionId
+    ? (sessions.find((s) => s.id === rootTask.latestSessionId) ??
+       (taskSessions[ROOT_TASK_ID] ?? []).find((s) => s.id === rootTask.latestSessionId))
     : undefined;
 
-  // Load root task sessions on mount (system mode)
+  // Load root task sessions on mount and whenever the latest session changes.
   useEffect(() => {
-    if (streamId === undefined) {
-      loadTaskSessions(ROOT_TASK_ID).catch(() => {});
-    }
-  }, [streamId, loadTaskSessions]);
+    loadTaskSessions(ROOT_TASK_ID).catch(() => {});
+  }, [loadTaskSessions]);
 
   useEffect(() => {
-    if (streamId === undefined && rootTask?.latestSessionId) {
+    if (rootTask?.latestSessionId) {
       loadTaskSessions(ROOT_TASK_ID).catch(() => {});
     }
-  }, [streamId, rootTask?.latestSessionId, loadTaskSessions]);
+  }, [rootTask?.latestSessionId, loadTaskSessions]);
 
-  // ── Stream mode (streamId present) ────────────────────────────────────────
-
-  const selectedStream = streamId !== undefined
-    ? streams.find((s) => s.id === streamId)
-    : undefined;
-
-  // Pick the primary subscriber's session (first subscriber, preferring rw)
-  const streamSessionId = useMemo(() => {
-    if (!selectedStream || selectedStream.subscribers.length === 0) {
-      return undefined;
-    }
-    const rwSub = selectedStream.subscribers.find((s) => s.permission === "rw");
-    const primary = rwSub ?? selectedStream.subscribers[0];
-    return primary.sessionId;
-  }, [selectedStream]);
-
-  const streamSession = streamSessionId !== undefined
-    ? sessions.find((s) => s.id === streamSessionId)
-    : undefined;
-
-  // ── Shared session resolution ─────────────────────────────────────────────
-
-  const latestSession = streamId === undefined ? systemSession : streamSession;
-
-  // Load events when session known
+  // Load events once the session is known.
   useEffect(() => {
     if (latestSession && latestSession.id !== loadedSessionRef.current) {
       loadedSessionRef.current = latestSession.id;
@@ -138,13 +70,6 @@ export function ChatPage(): JSX.Element {
     }
   }, [latestSession?.id, loadSessionEvents]);
 
-  // Reset loaded session ref and close detail drawer when switching streams
-  useEffect(() => {
-    loadedSessionRef.current = undefined;
-    setShowDetail(false);
-  }, [streamId]);
-
-  // Filter + group events for display
   const groupedEvents = useMemo(() => {
     if (!latestSession) {
       return [];
@@ -153,15 +78,12 @@ export function ChatPage(): JSX.Element {
     return pairToolEvents(groupConsecutiveTextEvents(filtered));
   }, [events, latestSession?.id]);
 
-  // ── System mode helpers ───────────────────────────────────────────────────
-
   const localEnvironment = environments.find(
     (e) => e.adapterType === "local" && e.status === "connected",
   );
 
   const isSessionActive = latestSession !== undefined
     && latestSession.status !== "stopped" && latestSession.status !== "suspended";
-
   const isSessionIdle = latestSession?.status === "idle";
 
   useEffect(() => {
@@ -181,62 +103,18 @@ export function ChatPage(): JSX.Element {
     [startTask],
   );
 
-  // ── Loading states ────────────────────────────────────────────────────────
-
-  if (streamId === undefined && !rootTask && (sessionsLoading || tasksLoading)) {
+  if (!rootTask && (sessionsLoading || tasksLoading)) {
     return <ChatShimmer />;
   }
-
-  if (streamId !== undefined && !selectedStream && (streamsLoading || !streamsLoadedOnce)) {
-    return <ChatShimmer />;
-  }
-
-  if (streamId !== undefined && selectedStream && sessionsLoading && !latestSession) {
-    return <ChatShimmer />;
-  }
-
-  // ── Stream mode — not found ───────────────────────────────────────────────
-
-  if (streamId !== undefined && !selectedStream) {
-    return (
-      <div className={styles.panelContainer} data-testid="chat-page">
-        <EventStream
-          events={[]}
-          eventsDropped={0}
-          emptyState={streamsLoadError ? <StreamUnavailableState /> : <StreamNotFoundState />}
-          onShowToast={showToast}
-        />
-      </div>
-    );
-  }
-
-  // ── Determine page title for stream mode header ───────────────────────────
-  const headerTitle = streamId !== undefined && selectedStream
-    ? selectedStream.name
-    : undefined;
-
-  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className={styles.panelContainer} data-testid="chat-page">
       {isSessionActive && (
         <div className={styles.chatHeader}>
           <span className={styles.chatHeaderInfo}>
-            {headerTitle && <strong>{headerTitle} &mdash; </strong>}
             Session: {latestSession!.id.slice(0, 8)} | {latestSession!.runtime} | {latestSession!.status}
           </span>
           <div className={styles.chatHeaderActions}>
-            {selectedStream && (
-              <button
-                className={styles.detailButton}
-                onClick={() => setShowDetail((v) => !v)}
-                aria-label="Stream details"
-                aria-expanded={showDetail}
-                data-testid="stream-detail-toggle"
-              >
-                Info
-              </button>
-            )}
             <SplitButton
               label="Stop"
               onClick={() => { stopGraceful(latestSession!.id).catch(() => {}); }}
@@ -252,30 +130,15 @@ export function ChatPage(): JSX.Element {
         </div>
       )}
 
-      {streamId !== undefined && selectedStream && !latestSession && !sessionsLoading && (
-        <EventStream
-          events={[]}
-          eventsDropped={0}
-          emptyState={<StreamNoSessionState streamName={selectedStream.name} />}
-          onShowToast={showToast}
-        />
-      )}
+      <EventStream
+        events={groupedEvents}
+        eventsDropped={eventsDropped}
+        emptyState={<ChatEmptyState hasLocalEnvironment={!!localEnvironment} />}
+        onShowToast={showToast}
+      />
 
-      {(streamId === undefined || latestSession) && (
-        <EventStream
-          events={groupedEvents}
-          eventsDropped={eventsDropped}
-          emptyState={
-            streamId === undefined
-              ? <ChatEmptyState hasLocalEnvironment={!!localEnvironment} />
-              : undefined
-          }
-          onShowToast={showToast}
-        />
-      )}
-
-      {/* System mode chat input — single instance so typed text survives isSessionActive flips */}
-      {streamId === undefined && localEnvironment && (
+      {/* Single ChatInput instance so typed text survives isSessionActive flips */}
+      {localEnvironment && (
         <ChatInput
           mode={isSessionActive ? "send" : "start"}
           sessionId={isSessionActive ? latestSession!.id : undefined}
@@ -288,14 +151,6 @@ export function ChatPage(): JSX.Element {
           onStartTask={handleStartTask}
           onProvisionEnvironment={(eid) => { provisionEnvironment(eid).catch(() => {}); }}
           onShowToast={showToast}
-        />
-      )}
-
-      {/* Right drawer: stream details */}
-      {showDetail && selectedStream && (
-        <StreamDetailPanel
-          stream={selectedStream}
-          onClose={() => setShowDetail(false)}
         />
       )}
     </div>

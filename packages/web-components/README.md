@@ -44,7 +44,7 @@ Components are grouped by area under `src/components/`:
 | **Notifications** | `Toast`, `ToastContainer`, `Callout`, `UpdateBanner` |
 | **Workspace & boards** | `WorkspaceBoard`, `WorkspaceFormFields` |
 | **Personas & schedules** | `PersonaManager`, `McpToolSelector`, `ScheduleManager` |
-| **Chat & streams** | `ChatInput`, `StreamList`, `StreamDetailPanel` |
+| **Chat & coordination** | `ChatInput`, `CoordinationList`, `StreamDetailPanel` |
 | **Settings** | `SettingsNav` |
 
 Alongside the components, the package exports:

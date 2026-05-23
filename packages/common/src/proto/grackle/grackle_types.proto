@@ -286,6 +286,12 @@ message StreamInfo {
   bool self_echo = 6;             // Whether publishers receive their own messages echoed back
 }
 
+message ListStreamsRequest {
+  // When false (default), internal IPC streams (lifecycle:/pipe:/stdin:) are
+  // filtered out. Set true to include them (debug / inspection).
+  bool include_internal = 1;
+}
+
 message ListStreamsResponse {
   repeated StreamInfo streams = 1;
 }

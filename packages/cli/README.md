@@ -646,10 +646,13 @@ Inspect active IPC streams for debugging inter-session communication.
 
 #### `grackle streams list`
 
-List all active IPC streams with subscriber details and message buffer depth.
+List active IPC streams with subscriber details and message buffer depth.
+Internal plumbing streams (`lifecycle:` / `pipe:` / `stdin:`) are hidden by
+default; pass `--internal` to include them.
 
 ```bash
 grackle streams list
+grackle streams list --internal   # include internal IPC plumbing
 # ┌──────────┬────────────────┬─────────────────────────┬──────────────┐
 # │ ID       │ Name           │ Subscribers             │ Buffer Depth │
 # ├──────────┼────────────────┼─────────────────────────┼──────────────┤

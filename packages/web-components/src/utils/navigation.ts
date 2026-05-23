@@ -159,13 +159,11 @@ export const SETTINGS_SHORTCUTS_URL: string = "/settings/shortcuts";
 /** URL for the device pairing page. */
 export const PAIR_PATH: string = "/pair";
 
-/** URL for the root-task chat page. */
+/** URL for the root-task ("Root") chat page. */
 export const CHAT_URL: string = "/chat";
 
-/** Build URL for a specific IPC stream's chat page. */
-export function chatStreamUrl(streamId: string): string {
-  return `/chat/${encodeURIComponent(streamId)}`;
-}
+/** URL for the Coordination page (read-only IPC stream inventory). */
+export const COORDINATION_URL: string = "/coordination";
 
 /** URL for the home dashboard page. */
 export const HOME_URL: string = "/";

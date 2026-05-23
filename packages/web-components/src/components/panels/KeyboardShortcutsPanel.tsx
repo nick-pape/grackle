@@ -66,7 +66,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     ],
   },
   {
-    title: "Sessions",
+    title: "Root",
     shortcuts: [
       { keys: ["Ctrl/Cmd", "Enter"], description: "Send message (when the composer is focused)" },
       { keys: ["Enter"], description: "Insert a new line in the message composer" },
