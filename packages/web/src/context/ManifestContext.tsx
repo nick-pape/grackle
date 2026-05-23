@@ -105,5 +105,11 @@ export function useSandboxProxyUrl(): string | undefined {
   if (sandboxPort === undefined || typeof window === "undefined") {
     return undefined;
   }
-  return `${window.location.protocol}//${window.location.hostname}:${sandboxPort}/sandbox.html`;
+  // Build via URL (not string interpolation) so IPv6 hosts are bracketed
+  // correctly — `location.hostname` returns `::1`, which would otherwise yield
+  // an invalid `http://::1:PORT/...`.
+  const url = new URL(window.location.origin);
+  url.port = String(sandboxPort);
+  url.pathname = "/sandbox.html";
+  return url.toString();
 }

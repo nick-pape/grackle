@@ -38,7 +38,16 @@ export function createSandboxServer(options: SandboxServerOptions): http.Server 
   const sandboxRelay: string = readSandboxAsset("sandbox-relay.js");
 
   return http.createServer((req, res) => {
-    const url: URL = new URL(req.url ?? "/", `http://${req.headers.host ?? options.bindHost}`);
+    // A malformed request target or Host header makes `new URL` throw; never let
+    // that crash the server process — answer 400 and move on.
+    let url: URL;
+    try {
+      url = new URL(req.url ?? "/", `http://${req.headers.host ?? options.bindHost}`);
+    } catch {
+      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.end("Bad request");
+      return;
+    }
     const path: string = url.pathname;
     const isGet: boolean = req.method?.toUpperCase() === "GET";
 

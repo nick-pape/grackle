@@ -16,14 +16,32 @@ export interface SandboxCsp {
   baseUriDomains?: unknown;
 }
 
-/** Reject domain entries containing characters that could break out of a CSP directive. */
+/**
+ * Keep only entries that are bare http(s) origins (e.g. `http://127.0.0.1:7435`).
+ *
+ * The `?csp=` param is host-supplied and may be attacker-influenced, so this is
+ * a strict allowlist: it rejects anything that is not a concrete http(s) origin
+ * — `*`, scheme-only sources (`data:`/`blob:`), wildcards, paths/queries, and
+ * any entry with characters that could break out of a CSP directive. This keeps
+ * it a true per-resource *domain* allowlist that cannot widen the widget's
+ * script/connect surface beyond explicit origins.
+ */
 function sanitizeCspDomains(domains: unknown): string[] {
   if (!Array.isArray(domains)) {
     return [];
   }
-  return (domains as unknown[]).filter(
-    (d): d is string => typeof d === "string" && !/[;\r\n'" ]/.test(d),
-  );
+  return (domains as unknown[]).filter((d): d is string => {
+    if (typeof d !== "string" || /[;\r\n'"* ]/.test(d)) {
+      return false;
+    }
+    try {
+      const url = new URL(d);
+      // Must be a bare origin (no path/query/fragment) over http(s).
+      return (url.protocol === "http:" || url.protocol === "https:") && url.origin === d;
+    } catch {
+      return false;
+    }
+  });
 }
 
 /**

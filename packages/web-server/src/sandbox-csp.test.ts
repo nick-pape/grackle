@@ -33,6 +33,27 @@ describe("buildCspHeader", () => {
     expect(csp).not.toContain('has"quote');
   });
 
+  it("rejects non-origin sources (wildcards, scheme-only, paths)", () => {
+    const csp = buildCspHeader({
+      resourceDomains: [
+        "*",
+        "data:",
+        "blob:",
+        "https:",
+        "http://ok.example/some/path",
+        "http://ok.example?q=1",
+        "https://good.example",
+      ],
+    });
+    // Only the bare http(s) origin survives.
+    expect(csp).toContain("https://good.example");
+    expect(csp).not.toMatch(/script-src[^;]*\*/);
+    expect(csp).not.toMatch(/script-src[^;]*data:/);
+    expect(csp).not.toMatch(/script-src[^;]*blob: blob:/); // no duplicate scheme-only blob
+    expect(csp).not.toContain("/some/path");
+    expect(csp).not.toContain("?q=1");
+  });
+
   it("allows inline styles (widgets use <style>) but not inline scripts", () => {
     const csp = buildCspHeader(undefined);
     expect(csp).toMatch(/style-src[^;]*'unsafe-inline'/);

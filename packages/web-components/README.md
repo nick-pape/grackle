@@ -34,7 +34,7 @@ Components are grouped by area under `src/components/`:
 |----------|----------|
 | **Display primitives** | `Button`, `SplitButton`, `CopyButton`, `Tooltip`, `Breadcrumbs`, `ConfirmDialog`, `Skeleton`, `Spinner`, `SplashScreen`, `FloatingActionBar` |
 | **Event stream** | `EventStream`, `EventRenderer`, `EventHoverRow`, `SessionPicker`, `SessionAttemptSelector` |
-| **MCP Apps widgets** | `McpAppWidget` (host renderer for `ui://` widgets in a sandboxed iframe), `grackleHostStyleVariables`. `EventRenderer` renders `widget` events via `McpAppWidget` (lazy-loaded; pass `sandboxProxyUrl`). |
+| **MCP Apps widgets** | `widget` events render in a sandboxed iframe via `EventRenderer`/`EventStream` — pass `sandboxProxyUrl`. The host renderer `McpAppWidget` is loaded internally (lazy/code-split) and is **not** a value export; only its prop types (`McpAppWidgetProps`) and `grackleHostStyleVariables` are exported. |
 | **Tool cards** | `ToolCard`, `FileEditCard`, `FileReadCard`, `ShellCard`, `SearchCard`, `TodoCard`, `MetadataCard`, `AgentToolCard`, `GenericToolCard` |
 | **Layout** | `AppNav`, `Sidebar`, `StatusBar`, `BottomStatusBar` |
 | **Lists** | `TaskList`, `EnvironmentNav`, `FindingsNav` |
