@@ -2,7 +2,7 @@
  * Manages the lifecycle of an isolated Grackle server stack for E2E tests.
  *
  * Each call to {@link startGrackleStack} spawns a fully independent stack
- * (PowerLine + Server on 4 unique ports, with its own GRACKLE_HOME and SQLite DB).
+ * (PowerLine + Server on 5 unique ports, with its own GRACKLE_HOME and SQLite DB).
  * Multiple stacks can run in parallel for Playwright worker-level parallelism.
  */
 import { spawn, type ChildProcess } from "node:child_process";
@@ -28,6 +28,7 @@ export interface E2EState {
   serverPort: number;
   webPort: number;
   mcpPort: number;
+  sandboxPort: number;
 }
 
 /** Bind a TCP server to port 0 on 127.0.0.1, read the assigned port, close, and return it. */
@@ -162,7 +163,7 @@ export interface GrackleStackOptions {
 }
 
 /**
- * Start a fully isolated Grackle stack: PowerLine + Server on 4 unique ports
+ * Start a fully isolated Grackle stack: PowerLine + Server on 5 unique ports
  * with a dedicated GRACKLE_HOME and SQLite database.
  */
 export async function startGrackleStack(options: GrackleStackOptions = {}): Promise<E2EState> {
@@ -174,9 +175,11 @@ export async function startGrackleStack(options: GrackleStackOptions = {}): Prom
 
   const repoRoot = join(import.meta.dirname, "../../..");
 
-  // 2. Find available ports (guaranteed distinct)
-  const [powerlinePort, serverPort, webPort, mcpPort] = await findDistinctPorts(4);
-  console.log(`${tag} Ports: powerline=${powerlinePort}, server=${serverPort}, web=${webPort}, mcp=${mcpPort}`);
+  // 2. Find available ports (guaranteed distinct). The sandbox port must also be
+  // unique per worker — it defaults to 7436, which would collide across the
+  // parallel E2E stacks (the sandbox server is fatal on EADDRINUSE).
+  const [powerlinePort, serverPort, webPort, mcpPort, sandboxPort] = await findDistinctPorts(5);
+  console.log(`${tag} Ports: powerline=${powerlinePort}, server=${serverPort}, web=${webPort}, mcp=${mcpPort}, sandbox=${sandboxPort}`);
 
   // 3. Start PowerLine (no auth needed for E2E tests — local loopback only)
   const powerline: ChildProcess = spawn(
@@ -202,6 +205,7 @@ export async function startGrackleStack(options: GrackleStackOptions = {}): Prom
         GRACKLE_PORT: String(serverPort),
         GRACKLE_WEB_PORT: String(webPort),
         GRACKLE_MCP_PORT: String(mcpPort),
+        GRACKLE_SANDBOX_PORT: String(sandboxPort),
         GRACKLE_WEB_DIR: join(repoRoot, "packages/web/dist"),
         GRACKLE_SKIP_LOCAL_POWERLINE: "1",
         GRACKLE_SKIP_ROOT_AUTOSTART: "1",
@@ -225,6 +229,8 @@ export async function startGrackleStack(options: GrackleStackOptions = {}): Prom
   await waitForPort(webPort, POLL_TIMEOUT_MS);
   console.log(`${tag} Waiting for MCP on :${mcpPort}...`);
   await waitForPort(mcpPort, POLL_TIMEOUT_MS);
+  console.log(`${tag} Waiting for sandbox on :${sandboxPort}...`);
+  await waitForPort(sandboxPort, POLL_TIMEOUT_MS);
   console.log(`${tag} All servers ready`);
 
   // 6. Read the auto-generated API key (may not exist immediately after port opens)
@@ -258,6 +264,7 @@ export async function startGrackleStack(options: GrackleStackOptions = {}): Prom
     serverPort,
     webPort,
     mcpPort,
+    sandboxPort,
   };
 }
 
