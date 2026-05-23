@@ -6,7 +6,7 @@ sidebar_position: 8
 
 # Knowledge Graph
 
-Grackle's knowledge graph gives agents a shared semantic memory backed by [Neo4j](https://neo4j.com/). Agents write observations, decisions, and discoveries to the graph. Other agents query it by concept — not keyword — and get back connected knowledge with context.
+Grackle's knowledge graph gives agents a shared semantic memory backed by [Neo4j](https://neo4j.com/). Agents query it by concept — not keyword — and get back connected knowledge with context. As of epic #1256 the graph is a **derived projection** of Grackle's entities (agent-authored writes were removed in #1257); it exposes a read-only surface and stays unpopulated until the derived-mirror projection lands (#1258).
 
 ![Knowledge graph — semantic search with interactive graph explorer](/img/knowledge-graph.png)
 

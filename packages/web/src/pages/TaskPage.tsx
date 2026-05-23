@@ -215,7 +215,7 @@ export function TaskPage(): JSX.Element {
     navigate(taskUrl(taskId!, tab === "overview" ? undefined : tab, routeWorkspaceId, routeEnvironmentId));
   };
 
-  // Keyboard shortcuts: 1/2/3 to switch tabs
+  // Keyboard shortcuts: 1/2 to switch tabs
   useHotkey({ key: "1" }, () => handleTabChange("overview"));
   useHotkey({ key: "2" }, () => handleTabChange("stream"));
 
