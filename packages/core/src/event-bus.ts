@@ -1,4 +1,5 @@
 import { ulid } from "ulid";
+import { SequencedLog, type LogSink } from "@grackle-ai/common";
 import { persistEvent } from "@grackle-ai/database";
 import { logger } from "./logger.js";
 
@@ -49,9 +50,54 @@ export interface GrackleEvent {
 /** Callback signature for event subscribers. */
 export type Subscriber = (event: GrackleEvent) => void;
 
+/**
+ * Body of a domain event appended to the log. The `id` is omitted because the
+ * {@link SequencedLog} assigns it as the monotonic sequence key.
+ */
+interface DomainEventBody {
+  type: GrackleEventType;
+  timestamp: string;
+  payload: Record<string, unknown>;
+}
+
 // ─── Module State ─────────────────────────────────────────
 
 const subscribers: Set<Subscriber> = new Set();
+
+/** Channel id for the single global domain-event log. */
+const DOMAIN_EVENT_CHANNEL: string = "domain";
+
+/**
+ * Storage sink for the domain-event log: persists each entry to the SQLite
+ * `domain_events` table via {@link persistEvent}, using the log-assigned
+ * sequence key as the row id. (Kept inline next to the writer so `@grackle-ai/core`
+ * depends only on `persistEvent`; the database-side sink + reader arrive in
+ * RFC #1264 Phase 1.)
+ */
+const domainEventSink: LogSink<DomainEventBody> = {
+  append: (channelId, entry) => {
+    if (channelId !== DOMAIN_EVENT_CHANNEL) {
+      throw new Error(`domainEventSink received unexpected channel "${channelId}"`);
+    }
+    persistEvent({
+      id: entry.seq,
+      type: entry.payload.type,
+      timestamp: entry.payload.timestamp,
+      payload: entry.payload.payload,
+    });
+  },
+};
+
+/**
+ * Durable, monotonically-sequenced log backing all domain events (RFC #1264).
+ * The log assigns each event a ULID sequence key (which becomes the event id)
+ * and persists it via {@link domainEventSink}.
+ */
+const domainEventLog: SequencedLog<DomainEventBody> = new SequencedLog<DomainEventBody>({
+  sink: domainEventSink,
+  channelId: DOMAIN_EVENT_CHANNEL,
+  nextSeq: ulid,
+});
 
 // ─── Public API ───────────────────────────────────────────
 
@@ -67,23 +113,22 @@ export function emit(
   type: GrackleEventType,
   payload: Record<string, unknown>,
 ): GrackleEvent {
-  const event: GrackleEvent = {
-    id: ulid(),
-    type,
-    timestamp: new Date().toISOString(),
-    payload,
-  };
+  const timestamp: string = new Date().toISOString();
 
-  // Persist synchronously (SQLite is fast in WAL mode).
+  // Persist synchronously via the sequenced log (SQLite is fast in WAL mode).
+  // The log assigns the monotonic ULID sequence key, which becomes the event id.
   // Intentionally non-fatal: a persistence failure is logged but does not
   // prevent subscribers from receiving the event. Domain events drive live
   // UI updates which must not break if SQLite is temporarily unavailable.
-  // Replay/audit consumers should monitor logs for persistence errors.
+  let id: string;
   try {
-    persistEvent(event);
+    id = domainEventLog.append({ type, timestamp, payload }).seq;
   } catch (err) {
-    logger.error({ err, event }, "Failed to persist domain event");
+    logger.error({ err, type }, "Failed to persist domain event");
+    id = ulid();
   }
+
+  const event: GrackleEvent = { id, type, timestamp, payload };
 
   // Fan out asynchronously — subscriber errors never block the emitter
   queueMicrotask(() => {

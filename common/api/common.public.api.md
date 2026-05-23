@@ -1725,6 +1725,11 @@ const ListWorkspacesRequestSchema: GenMessage<ListWorkspacesRequest>;
 export const LOGS_DIR: string;
 
 // @public
+export interface LogSink<T> {
+    append(channelId: string, entry: Sequenced<T>): void;
+}
+
+// @public
 export type MatchIndex = readonly [number, number];
 
 // @public
@@ -2082,6 +2087,25 @@ const SearchTasksResponseSchema: GenMessage<SearchTasksResponse>;
 
 // @public
 export const SEED_PERSONA_ID: string;
+
+// @public
+export interface Sequenced<T> {
+    readonly payload: T;
+    readonly seq: string;
+}
+
+// @public
+export class SequencedLog<T> {
+    constructor(options: SequencedLogOptions<T>);
+    append(payload: T): Sequenced<T>;
+}
+
+// @public
+export interface SequencedLogOptions<T> {
+    readonly channelId: string;
+    readonly nextSeq: () => string;
+    readonly sink: LogSink<T>;
+}
 
 // @public
 type ServerEvent = Message<"grackle.ServerEvent"> & {
