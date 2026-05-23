@@ -107,6 +107,13 @@ export function ChatPage(): JSX.Element {
     return <ChatShimmer />;
   }
 
+  // Root task exists with a session, but its data hasn't resolved yet — show the
+  // shimmer rather than the empty/start state (which could start a duplicate
+  // root session while one is already loading).
+  if (rootTask?.latestSessionId && sessionsLoading && !latestSession) {
+    return <ChatShimmer />;
+  }
+
   return (
     <div className={styles.panelContainer} data-testid="chat-page">
       {isSessionActive && (

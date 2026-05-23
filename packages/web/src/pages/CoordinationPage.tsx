@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type JSX } from "react";
+import { useCallback, useEffect, useRef, useState, type JSX } from "react";
 import { useGrackle } from "../context/GrackleContext.js";
 import { CoordinationList, StreamDetailPanel } from "@grackle-ai/web-components";
 import styles from "./CoordinationPage.module.scss";
@@ -18,8 +18,15 @@ export function CoordinationPage(): JSX.Element {
   const [showInternals, setShowInternals] = useState(false);
   const [selectedStreamId, setSelectedStreamId] = useState<string | undefined>(undefined);
 
-  // Re-fetch whenever the internals toggle changes (server-side filtering).
+  // Re-fetch when the internals toggle changes. The initial (default-false)
+  // load is already performed by the streams domain hook's onConnect, so skip
+  // the mount run to avoid a duplicate ListStreams RPC.
+  const didMountRef = useRef(false);
   useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
     loadStreams(showInternals).catch(() => {});
   }, [showInternals, loadStreams]);
 
