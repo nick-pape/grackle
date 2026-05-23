@@ -9,13 +9,17 @@ export function registerServeCommand(program: Command): void {
     .option("--web-port <port>", "Web UI port", "3000")
     .option("--mcp-port <port>", "MCP server port", "7435")
     .option("--sandbox-port <port>", "MCP Apps widget sandbox port", "7436")
+    .option("--sandbox-origin <origin>", "Browser-facing MCP Apps sandbox origin (e.g. https://sandbox.example.com) for reverse-proxy/TLS deployments")
     .option("--powerline-port <port>", "Local PowerLine port", "7433")
     .option("--allow-network", "Bind to all interfaces (0.0.0.0) for LAN access")
-    .action(async (opts: { port: string; webPort: string; mcpPort: string; sandboxPort: string; powerlinePort: string; allowNetwork: boolean }) => {
+    .action(async (opts: { port: string; webPort: string; mcpPort: string; sandboxPort: string; sandboxOrigin?: string; powerlinePort: string; allowNetwork: boolean }) => {
       process.env.GRACKLE_PORT = opts.port;
       process.env.GRACKLE_WEB_PORT = opts.webPort;
       process.env.GRACKLE_MCP_PORT = opts.mcpPort;
       process.env.GRACKLE_SANDBOX_PORT = opts.sandboxPort;
+      if (opts.sandboxOrigin !== undefined) {
+        process.env.GRACKLE_SANDBOX_ORIGIN = opts.sandboxOrigin;
+      }
       process.env.GRACKLE_POWERLINE_PORT = opts.powerlinePort;
       process.env.GRACKLE_HOST = opts.allowNetwork ? "0.0.0.0" : "127.0.0.1";
 

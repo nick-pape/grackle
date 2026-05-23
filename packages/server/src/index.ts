@@ -247,6 +247,7 @@ async function main(): Promise<void> {
     connectRoutes: routes,
     pluginNames: loaded.pluginNames,
     sandboxPort: config.sandboxPort,
+    ...(config.sandboxOrigin !== undefined ? { sandboxOrigin: config.sandboxOrigin } : {}),
     readinessCheck: (): ReadinessResult => {
       const checks: ReadinessResult["checks"] = {};
       try {

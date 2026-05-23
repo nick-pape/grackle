@@ -17,6 +17,7 @@ const ALL_KNOWN_PLUGINS: readonly string[] = ["core", "orchestration", "scheduli
 interface ManifestResponse {
   plugins: Array<{ name: string }>;
   sandboxPort?: number;
+  sandboxOrigin?: string;
 }
 
 /** Value provided by ManifestContext. */
@@ -25,6 +26,12 @@ export interface ManifestValue {
   pluginNames: string[];
   /** MCP Apps widget sandbox port (for deriving the sandbox origin). Undefined until loaded. */
   sandboxPort: number | undefined;
+  /**
+   * Explicit browser-facing sandbox origin (e.g. `https://sandbox.example.com`),
+   * set server-side via GRACKLE_SANDBOX_ORIGIN for reverse-proxy / TLS
+   * deployments. Takes precedence over `sandboxPort`. Undefined until loaded.
+   */
+  sandboxOrigin: string | undefined;
   /** True while the manifest fetch is in flight. */
   loading: boolean;
   /** Set if the fetch failed (pluginNames will be the fail-open fallback). */
@@ -34,6 +41,7 @@ export interface ManifestValue {
 const ManifestContext: Context<ManifestValue> = createContext<ManifestValue>({
   pluginNames: [...ALL_KNOWN_PLUGINS],
   sandboxPort: undefined,
+  sandboxOrigin: undefined,
   loading: false,
   error: undefined,
 });
@@ -47,6 +55,7 @@ const ManifestContext: Context<ManifestValue> = createContext<ManifestValue>({
 export function ManifestProvider({ children }: { children: ReactNode }): JSX.Element {
   const [pluginNames, setPluginNames] = useState<string[]>([...ALL_KNOWN_PLUGINS]);
   const [sandboxPort, setSandboxPort] = useState<number | undefined>(undefined);
+  const [sandboxOrigin, setSandboxOrigin] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | undefined>(undefined);
 
@@ -64,6 +73,7 @@ export function ManifestProvider({ children }: { children: ReactNode }): JSX.Ele
         if (!cancelled) {
           setPluginNames(data.plugins.map((p) => p.name));
           setSandboxPort(data.sandboxPort);
+          setSandboxOrigin(data.sandboxOrigin);
           setLoading(false);
         }
       })
@@ -79,7 +89,7 @@ export function ManifestProvider({ children }: { children: ReactNode }): JSX.Ele
   }, []);
 
   return (
-    <ManifestContext.Provider value={{ pluginNames, sandboxPort, loading, error }}>
+    <ManifestContext.Provider value={{ pluginNames, sandboxPort, sandboxOrigin, loading, error }}>
       {children}
     </ManifestContext.Provider>
   );
@@ -95,19 +105,30 @@ export function useManifest(): ManifestValue {
 }
 
 /**
- * Derive the MCP Apps sandbox proxy origin URL from the manifest's sandbox port.
- * Returns `undefined` until the manifest loads (or if no sandbox port is set).
- * The sandbox is a DIFFERENT origin (different port) than the web app, as the
- * MCP Apps double-iframe spec requires.
+ * Derive the MCP Apps sandbox `sandbox.html` URL.
+ *
+ * Prefers an explicit server-configured `sandboxOrigin` (GRACKLE_SANDBOX_ORIGIN)
+ * for reverse-proxy / TLS deployments where the scheme + port cannot be inferred
+ * from the page's own origin. Otherwise derives the origin from
+ * `window.location` + `sandboxPort`. Returns `undefined` until the manifest
+ * loads (or if neither is set). The sandbox is a DIFFERENT origin than the web
+ * app, as the MCP Apps double-iframe spec requires.
  */
 export function useSandboxProxyUrl(): string | undefined {
-  const { sandboxPort } = useManifest();
-  if (sandboxPort === undefined || typeof window === "undefined") {
+  const { sandboxPort, sandboxOrigin } = useManifest();
+  if (typeof window === "undefined") {
     return undefined;
   }
-  // Build via URL (not string interpolation) so IPv6 hosts are bracketed
-  // correctly — `location.hostname` returns `::1`, which would otherwise yield
-  // an invalid `http://::1:PORT/...`.
+  // Explicit origin wins (handles HTTPS-proxy / non-derivable scheme + port).
+  if (sandboxOrigin !== undefined && sandboxOrigin !== "") {
+    return new URL("/sandbox.html", sandboxOrigin).toString();
+  }
+  if (sandboxPort === undefined) {
+    return undefined;
+  }
+  // Derive from the page origin + sandboxPort. Build via URL (not string
+  // interpolation) so IPv6 hosts are bracketed correctly — `location.hostname`
+  // returns `::1`, which would otherwise yield an invalid `http://::1:PORT/...`.
   const url = new URL(window.location.origin);
   url.port = String(sandboxPort);
   url.pathname = "/sandbox.html";

@@ -56,6 +56,7 @@ export interface WebServerOptions {
     connectRoutes?: (router: ConnectRouter) => void;
     pluginNames?: string[];
     readinessCheck?: () => ReadinessResult | Promise<ReadinessResult>;
+    sandboxOrigin?: string;
     sandboxPort?: number;
     webDistDir?: string;
     webPort: number;

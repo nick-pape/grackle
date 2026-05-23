@@ -50,6 +50,13 @@ export interface WebServerOptions {
   pluginNames?: string[];
   /** MCP Apps widget sandbox port, served at `GET /api/manifest` for the SPA to derive the sandbox origin. */
   sandboxPort?: number;
+  /**
+   * Explicit browser-facing sandbox origin (e.g. `https://sandbox.example.com`),
+   * served at `GET /api/manifest`. Takes precedence over `sandboxPort` on the
+   * SPA — set it when a reverse proxy / TLS makes the origin un-inferrable from
+   * `window.location` + `sandboxPort`.
+   */
+  sandboxOrigin?: string;
 }
 
 // ─── Static File Config ─────────────────────────────────────
@@ -285,7 +292,7 @@ export function isWildcardAddress(host: string): boolean {
  * @returns An `http.Server` ready to `.listen()`.
  */
 export function createWebServer(options: WebServerOptions): http.Server {
-  const { apiKey, webPort, bindHost, connectRoutes, webDistDir, readinessCheck, pluginNames, sandboxPort } = options;
+  const { apiKey, webPort, bindHost, connectRoutes, webDistDir, readinessCheck, pluginNames, sandboxPort, sandboxOrigin } = options;
   const distDir = webDistDir ?? resolveWebDistDir();
   const allowNetwork = isWildcardAddress(bindHost);
   const dialableHost = allowNetwork ? "127.0.0.1" : bindHost;
@@ -344,6 +351,7 @@ export function createWebServer(options: WebServerOptions): http.Server {
       const manifest = {
         plugins: (pluginNames ?? []).map((name) => ({ name })),
         ...(sandboxPort !== undefined ? { sandboxPort } : {}),
+        ...(sandboxOrigin !== undefined ? { sandboxOrigin } : {}),
       };
       res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
       res.end(JSON.stringify(manifest));

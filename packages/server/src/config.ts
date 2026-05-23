@@ -10,6 +10,14 @@ export interface ServerConfig {
   mcpPort: number;
   /** MCP Apps widget sandbox port (GRACKLE_SANDBOX_PORT). */
   sandboxPort: number;
+  /**
+   * Explicit browser-facing sandbox origin (GRACKLE_SANDBOX_ORIGIN), e.g.
+   * `https://sandbox.example.com`. Set this when the SPA is served behind a
+   * reverse proxy / TLS, where the scheme + port the browser must use for the
+   * sandbox cannot be inferred from the page's own origin + `sandboxPort`.
+   * When unset, the SPA derives the origin from `window.location` + `sandboxPort`.
+   */
+  sandboxOrigin?: string;
   /** PowerLine server port (GRACKLE_POWERLINE_PORT). */
   powerlinePort: number;
   /** Bind address for all servers (GRACKLE_HOST). */
@@ -60,6 +68,7 @@ export function resolveServerConfig(): ServerConfig {
     webPort: parsePort("GRACKLE_WEB_PORT", DEFAULT_WEB_PORT),
     mcpPort: parsePort("GRACKLE_MCP_PORT", DEFAULT_MCP_PORT),
     sandboxPort: parsePort("GRACKLE_SANDBOX_PORT", DEFAULT_SANDBOX_PORT),
+    ...(process.env.GRACKLE_SANDBOX_ORIGIN ? { sandboxOrigin: process.env.GRACKLE_SANDBOX_ORIGIN } : {}),
     powerlinePort: parsePort("GRACKLE_POWERLINE_PORT", DEFAULT_POWERLINE_PORT),
     host: process.env.GRACKLE_HOST || "127.0.0.1",
     skipLocalPowerline: parseFlag("GRACKLE_SKIP_LOCAL_POWERLINE"),
