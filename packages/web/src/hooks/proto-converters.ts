@@ -60,6 +60,7 @@ export function protoToSession(p: grackle.Session): Session {
     error: p.error || undefined,
     endReason: p.endReason || undefined,
     personaId: p.personaId || undefined,
+    taskId: p.taskId || undefined,
     inputTokens: p.inputTokens,
     outputTokens: p.outputTokens,
     costMillicents: p.costMillicents,
@@ -286,5 +287,6 @@ export function protoToStream(p: grackle.StreamInfo): StreamData {
     subscriberCount: p.subscriberCount,
     messageBufferDepth: p.messageBufferDepth,
     subscribers: p.subscribers.map(protoToStreamSubscriber),
+    selfEcho: p.selfEcho,
   };
 }

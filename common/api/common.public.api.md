@@ -729,6 +729,8 @@ declare namespace grackle {
         StreamSubscriberInfoSchema,
         StreamInfo,
         StreamInfoSchema,
+        ListStreamsRequest,
+        ListStreamsRequestSchema,
         ListStreamsResponse,
         ListStreamsResponseSchema,
         SessionEvent,
@@ -1137,7 +1139,7 @@ const GrackleCore: GenService<{
     };
     listStreams: {
         methodKind: "unary";
-        input: typeof EmptySchema;
+        input: typeof ListStreamsRequestSchema;
         output: typeof ListStreamsResponseSchema;
     };
     getVersionStatus: {
@@ -1547,6 +1549,14 @@ type ListSchedulesRequest = Message<"grackle.ListSchedulesRequest"> & {
 
 // @public
 const ListSchedulesRequestSchema: GenMessage<ListSchedulesRequest>;
+
+// @public
+type ListStreamsRequest = Message<"grackle.ListStreamsRequest"> & {
+    includeInternal: boolean;
+};
+
+// @public
+const ListStreamsRequestSchema: GenMessage<ListStreamsRequest>;
 
 // @public
 type ListStreamsResponse = Message<"grackle.ListStreamsResponse"> & {

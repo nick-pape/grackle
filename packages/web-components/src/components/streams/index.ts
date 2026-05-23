@@ -1,10 +1,10 @@
 /**
- * Stream sidebar and detail panel components.
+ * IPC stream inventory and detail panel components (Coordination tab).
  *
  * @module streams
  */
 
-export { StreamList } from "./StreamList.js";
-export type { StreamListProps } from "./StreamList.js";
+export { CoordinationList } from "./CoordinationList.js";
+export type { CoordinationListProps } from "./CoordinationList.js";
 export { StreamDetailPanel } from "./StreamDetailPanel.js";
 export type { StreamDetailPanelProps } from "./StreamDetailPanel.js";

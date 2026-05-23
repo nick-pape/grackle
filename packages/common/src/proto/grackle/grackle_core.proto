@@ -70,7 +70,7 @@ service GrackleCore {
   rpc GetSessionFds(SessionId) returns (SessionFds);
   rpc CreateStream(CreateStreamRequest) returns (CreateStreamResponse);
   rpc AttachStream(AttachStreamRequest) returns (AttachStreamResponse);
-  rpc ListStreams(Empty) returns (ListStreamsResponse);
+  rpc ListStreams(ListStreamsRequest) returns (ListStreamsResponse);
 
   // Version
   rpc GetVersionStatus(Empty) returns (VersionStatus);

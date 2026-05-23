@@ -30,10 +30,10 @@ export function useStreams(): UseStreamsResult {
   /** Incremented on disconnect so in-flight responses from the previous connection are discarded. */
   const epochRef = useRef(0);
 
-  const loadStreams = useCallback(async (): Promise<void> => {
+  const loadStreams = useCallback(async (includeInternal: boolean = false): Promise<void> => {
     const myEpoch = epochRef.current;
     try {
-      const resp = await trackStreams(grackleClient.listStreams({}));
+      const resp = await trackStreams(grackleClient.listStreams({ includeInternal }));
       if (epochRef.current === myEpoch) {
         setStreams(resp.streams.map(protoToStream));
         setStreamsLoadError(false);
