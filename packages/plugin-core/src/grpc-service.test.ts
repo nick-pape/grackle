@@ -34,6 +34,7 @@ vi.mock("./settings-handlers.js", () => ({ getSetting: vi.fn() }));
 vi.mock("./task-handlers.js", () => ({ listTasks: vi.fn() }));
 vi.mock("./persona-handlers.js", () => ({ listPersonas: vi.fn() }));
 vi.mock("./finding-handlers.js", () => ({ postFinding: vi.fn() }));
+vi.mock("./widget-handlers.js", () => ({ registerWidget: vi.fn(), updateWidget: vi.fn(), getWidget: vi.fn(), listWidgets: vi.fn() }));
 vi.mock("./escalation-handlers.js", () => ({ createEscalation: vi.fn() }));
 vi.mock("./plugin-handlers.js", () => ({ listPlugins: vi.fn(), setPluginEnabled: vi.fn() }));
 vi.mock("./github-account-handlers.js", () => ({ listGitHubAccounts: vi.fn() }));
@@ -79,12 +80,13 @@ describe("createCoreCollector", () => {
 });
 
 describe("createOrchestrationCollector", () => {
-  it("adds tasks, personas, findings, and escalations handlers", () => {
+  it("adds tasks, personas, findings, widgets, and escalations handlers", () => {
     createOrchestrationCollector();
     const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
     expect(addedModules.some((m) => "listTasks" in m)).toBe(true);
     expect(addedModules.some((m) => "listPersonas" in m)).toBe(true);
     expect(addedModules.some((m) => "postFinding" in m)).toBe(true);
+    expect(addedModules.some((m) => "registerWidget" in m)).toBe(true);
     expect(addedModules.some((m) => "createEscalation" in m)).toBe(true);
   });
 
@@ -95,24 +97,25 @@ describe("createOrchestrationCollector", () => {
     expect(addedModules.some((m) => "spawnAgent" in m)).toBe(false);
   });
 
-  it("adds exactly 4 handler groups", () => {
+  it("adds exactly 5 handler groups", () => {
     createOrchestrationCollector();
-    expect(addHandlersMock).toHaveBeenCalledTimes(4);
+    expect(addHandlersMock).toHaveBeenCalledTimes(5);
   });
 });
 
 describe("createDefaultCollector (regression)", () => {
-  it("adds all 13 handler groups including orchestration, plugins, and github accounts (knowledge and schedules moved to plugins)", () => {
+  it("adds all 14 handler groups including orchestration, widgets, plugins, and github accounts (knowledge and schedules moved to plugins)", () => {
     createDefaultCollector();
     const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
     expect(addedModules.some((m) => "listEnvironments" in m)).toBe(true);
     expect(addedModules.some((m) => "listTasks" in m)).toBe(true);
     expect(addedModules.some((m) => "listPersonas" in m)).toBe(true);
     expect(addedModules.some((m) => "postFinding" in m)).toBe(true);
+    expect(addedModules.some((m) => "registerWidget" in m)).toBe(true);
     expect(addedModules.some((m) => "createEscalation" in m)).toBe(true);
     expect(addedModules.some((m) => "listPlugins" in m)).toBe(true);
     expect(addedModules.some((m) => "listGitHubAccounts" in m)).toBe(true);
     expect(addedModules.some((m) => "listDockerContainers" in m)).toBe(true);
-    expect(addHandlersMock).toHaveBeenCalledTimes(13);
+    expect(addHandlersMock).toHaveBeenCalledTimes(14);
   });
 });
