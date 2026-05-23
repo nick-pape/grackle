@@ -174,9 +174,15 @@ async function createMcpServerInstance(
   const uiToolNames = new Set(visibleTools.filter((t) => t.uiResourceUri).map((t) => t.name));
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    // Gate widget tools on the host advertising the io.modelcontextprotocol/ui
-    // extension (known only after initialize). Non-UI hosts see the rest.
-    const uiOn = hostSupportsUiApps(server.getClientCapabilities());
+    // Expose widget tools when EITHER:
+    //  (a) the broker is active (publishWidgetEvent injected) — Grackle is itself
+    //      the ui-capable host. It captures the widget call and renders it in the
+    //      chat, so the agent's own MCP client (a mere conduit here) need not
+    //      advertise the io.modelcontextprotocol/ui extension; or
+    //  (b) the connecting client advertises that extension — the spec-compliant
+    //      path for the standalone MCP server, where the client renders the
+    //      widget itself.
+    const uiOn = publishWidgetEvent !== undefined || hostSupportsUiApps(server.getClientCapabilities());
     const tools = uiOn ? visibleToolDefs : visibleToolDefs.filter((t) => !uiToolNames.has(t.name));
     return { tools };
   });

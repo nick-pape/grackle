@@ -734,13 +734,28 @@ describe("MCP Apps app-side (#1237)", () => {
     expect(widget!._meta?.["ui/resourceUri"]).toBe(HELLO_URI);
   });
 
-  it("hides the widget tool from non-UI hosts but keeps data tools", async () => {
+  it("hides the widget tool from non-UI hosts in standalone mode (no broker)", async () => {
+    // No publishWidgetEvent injected → standalone MCP server → spec-compliant
+    // client-capability gating: a client that does not advertise the ui ext does
+    // not see widget tools (it could not render them).
     server = await startServer();
     const { sessionId } = await initializeWith(server, {});
     const response = await rpc(server, sessionId, "tools/list", {});
     const names = ((response.result?.tools ?? []) as Array<{ name: string }>).map((t) => t.name);
     expect(names).not.toContain("show_hello_widget");
     expect(names).toContain("get_version_status");
+  });
+
+  it("exposes the widget tool to a non-UI host when the broker is active", async () => {
+    // Grackle's broker (publishWidgetEvent injected) is itself the ui-capable
+    // host: it captures the widget call and renders it in the chat, so the
+    // agent's MCP client (e.g. the Claude Agent SDK, which does not advertise the
+    // ui ext) still gets the widget tool listed.
+    server = await startServer(undefined, () => {});
+    const { sessionId } = await initializeWith(server, {});
+    const response = await rpc(server, sessionId, "tools/list", {});
+    const names = ((response.result?.tools ?? []) as Array<{ name: string }>).map((t) => t.name);
+    expect(names).toContain("show_hello_widget");
   });
 
   it("serves the widget JS assets without auth", async () => {
