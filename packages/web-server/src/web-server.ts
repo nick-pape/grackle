@@ -756,11 +756,20 @@ export function createWebServer(options: WebServerOptions): http.Server {
         res.end(JSON.stringify({ error: "message is required" }));
         return;
       }
-      const result = await handleWebhook(token, {
-        message: parsed.message,
-        from: typeof parsed.from === "string" ? parsed.from : undefined,
-        idempotencyKey: typeof parsed.idempotency_key === "string" ? parsed.idempotency_key : undefined,
-      });
+      let result: WebhookResult;
+      try {
+        result = await handleWebhook(token, {
+          message: parsed.message,
+          from: typeof parsed.from === "string" ? parsed.from : undefined,
+          idempotencyKey: typeof parsed.idempotency_key === "string" ? parsed.idempotency_key : undefined,
+        });
+      } catch {
+        // A throwing handler must not become an unhandled rejection (which can
+        // crash the process); return a controlled 500 instead.
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "internal error" }));
+        return;
+      }
       res.writeHead(WEBHOOK_STATUS[result.outcome], { "Content-Type": "application/json" });
       res.end(JSON.stringify({ channel: result.channelUri, status: result.outcome, session_id: result.sessionId }));
       return;
