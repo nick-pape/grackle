@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 22 May 2026 23:59:52 GMT and should not be manually modified.
+This log was last generated on Sat, 23 May 2026 03:18:01 GMT and should not be manually modified.
+
+## 0.113.0
+Sat, 23 May 2026 03:18:01 GMT
+
+### Minor changes
+
+- Render MCP Apps widgets inline in chat (#1238): when a scoped agent calls a ui:// widget tool, the in-process MCP server broker captures it and pushes a self-contained widget event into the session stream (new EVENT_TYPE_WIDGET + core publishWidgetEvent), and the web chat renders it via McpAppWidget served from a new production sandbox server on GRACKLE_SANDBOX_PORT. Also wires widget tools through the tool-authz layer (broker exposes them regardless of the agent client's ui extension; show_hello_widget added to the scoped/orchestrator/all tool sets) and widens the web-app CSP frame-src so the chat can embed the sandbox origin.
 
 ## 0.112.2
 Fri, 22 May 2026 23:59:52 GMT
