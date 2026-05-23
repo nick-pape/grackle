@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
+import { useSandboxProxyUrl } from "../context/ManifestContext.js";
 import { Breadcrumbs, ChatInput, EventStream, SplitButton, buildSessionBreadcrumbs, formatCost, formatTokens, groupConsecutiveTextEvents, pairToolEvents, useToast } from "@grackle-ai/web-components";
 import type { Session } from "../hooks/useGrackleSocket.js";
 import { SessionShimmer } from "./SessionShimmer.js";
@@ -62,6 +63,7 @@ function SessionEmptyState({ session }: { session: Session | undefined }): JSX.E
 /** Page for viewing a session's event stream. */
 export function SessionPage(): JSX.Element {
   const { sessionId } = useParams<{ sessionId: string }>();
+  const sandboxProxyUrl = useSandboxProxyUrl();
   const {
     sessions: { events, eventsDropped, sessions, sessionsLoading, kill, stopGraceful, loadSessionEvents, sendInput, spawn },
     tasks: { startTask },
@@ -119,6 +121,7 @@ export function SessionPage(): JSX.Element {
         eventsDropped={eventsDropped}
         emptyState={<SessionEmptyState session={session} />}
         onShowToast={showToast}
+        sandboxProxyUrl={sandboxProxyUrl}
         sessions={sessions}
         currentSessionId={sessionId}
         environments={environments}

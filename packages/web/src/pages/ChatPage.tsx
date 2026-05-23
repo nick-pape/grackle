@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { ROOT_TASK_ID } from "@grackle-ai/common";
 import { useGrackle } from "../context/GrackleContext.js";
+import { useSandboxProxyUrl } from "../context/ManifestContext.js";
 import {
   ChatInput, EventStream, SplitButton,
   groupConsecutiveTextEvents, pairToolEvents, useToast,
@@ -34,6 +35,7 @@ function ChatEmptyState({ hasLocalEnvironment }: { hasLocalEnvironment: boolean 
  * IPC stream browsing lives on the separate Coordination tab.
  */
 export function ChatPage(): JSX.Element {
+  const sandboxProxyUrl = useSandboxProxyUrl();
   const {
     tasks: { tasks, tasksLoading, startTask },
     sessions: { sessions, sessionsLoading, events, eventsDropped, taskSessions, loadTaskSessions, loadSessionEvents, kill, stopGraceful, sendInput, spawn },
@@ -140,6 +142,7 @@ export function ChatPage(): JSX.Element {
       <EventStream
         events={groupedEvents}
         eventsDropped={eventsDropped}
+        sandboxProxyUrl={sandboxProxyUrl}
         emptyState={<ChatEmptyState hasLocalEnvironment={!!localEnvironment} />}
         onShowToast={showToast}
       />

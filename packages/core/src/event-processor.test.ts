@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { create } from "@bufbuild/protobuf";
-import { powerline } from "@grackle-ai/common";
+import { powerline, grackle } from "@grackle-ai/common";
 
 // ── Mock all heavy dependencies before importing ──────────────
 vi.mock("./trace-context.js", () => ({
@@ -14,6 +14,7 @@ vi.mock("./logger.js", () => ({
 
 vi.mock("./log-writer.js", () => ({
   initLog: vi.fn(),
+  ensureLogInitialized: vi.fn(),
   writeEvent: vi.fn(),
   endSession: vi.fn(),
   readLog: vi.fn().mockReturnValue([]),
@@ -36,7 +37,7 @@ import { openDatabase, initDatabase, sqlite as _sqlite, sessionStore, taskStore,
 openDatabase(":memory:");
 initDatabase();
 const sqlite = _sqlite!;
-import { processEventStream } from "./event-processor.js";
+import { processEventStream, publishWidgetEvent } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
 import { emit } from "./event-bus.js";
 import * as logWriter from "./log-writer.js";
@@ -1554,5 +1555,69 @@ describe("event-processor traceId propagation", () => {
     });
 
     expect(runWithTrace).not.toHaveBeenCalled();
+  });
+});
+
+describe("publishWidgetEvent (MCP Apps widget broker, #1238)", () => {
+  const widgetPayload = {
+    resourceUri: "ui://grackle/hello-widget",
+    toolName: "show_hello_widget",
+    html: "<!doctype html><html><body><div class=\"card\">Grackle</div></body></html>",
+    csp: { resourceDomains: ["http://127.0.0.1:7435"], connectDomains: ["http://127.0.0.1:7435"] },
+    toolInput: { message: "hi" },
+    toolResult: { content: [{ type: "text", text: "ok" }] },
+  };
+
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS findings");
+    sqlite.exec("DROP TABLE IF EXISTS tasks");
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    sqlite.exec("DROP TABLE IF EXISTS workspaces");
+    applySchema();
+    vi.clearAllMocks();
+    // writeEvent returns a promise (the impl chains .catch on it).
+    vi.mocked(logWriter.writeEvent).mockResolvedValue(undefined as never);
+  });
+
+  it("builds a WIDGET event, persists it to the session log, and broadcasts it", async () => {
+    sessionStore.createSession("sess-w", "env1", "claude-code", "test", "sonnet", "/tmp/widget-log");
+    const { publish } = await import("./stream-hub.js");
+
+    publishWidgetEvent("sess-w", widgetPayload);
+
+    // Persisted to the session's log (so it replays on reload).
+    expect(logWriter.ensureLogInitialized).toHaveBeenCalledWith("/tmp/widget-log");
+    expect(logWriter.writeEvent).toHaveBeenCalledTimes(1);
+    const [logPath, persisted] = vi.mocked(logWriter.writeEvent).mock.calls[0];
+    expect(logPath).toBe("/tmp/widget-log");
+    expect(persisted.type).toBe(grackle.EventType.WIDGET);
+
+    // Broadcast live with the same event.
+    expect(publish).toHaveBeenCalledTimes(1);
+    const broadcast = vi.mocked(publish).mock.calls[0][0];
+    expect(broadcast.sessionId).toBe("sess-w");
+    expect(broadcast.type).toBe(grackle.EventType.WIDGET);
+
+    // content is the payload as JSON, round-trips 1:1 to McpAppWidget props.
+    expect(JSON.parse(broadcast.content)).toEqual(widgetPayload);
+  });
+
+  it("broadcasts even when the session has no log path (skips persistence)", async () => {
+    sessionStore.createSession("sess-nolog", "env1", "claude-code", "test", "sonnet", "");
+    const { publish } = await import("./stream-hub.js");
+
+    publishWidgetEvent("sess-nolog", widgetPayload);
+
+    expect(logWriter.writeEvent).not.toHaveBeenCalled();
+    expect(publish).toHaveBeenCalledTimes(1);
+  });
+
+  it("broadcasts a self-contained event even for an unknown session", async () => {
+    const { publish } = await import("./stream-hub.js");
+
+    publishWidgetEvent("does-not-exist", widgetPayload);
+
+    expect(logWriter.writeEvent).not.toHaveBeenCalled();
+    expect(publish).toHaveBeenCalledTimes(1);
   });
 });

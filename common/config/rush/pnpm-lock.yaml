@@ -1237,6 +1237,9 @@ importers:
       '@grackle-ai/web':
         specifier: workspace:*
         version: link:../web
+      '@grackle-ai/web-components':
+        specifier: workspace:*
+        version: link:../web-components
     devDependencies:
       '@grackle-ai/heft-rig':
         specifier: workspace:*

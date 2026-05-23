@@ -81,6 +81,9 @@ grackle serve --allow-network    # bind to 0.0.0.0 for LAN access
 | `--port <port>` | Server gRPC port | `7434` |
 | `--web-port <port>` | Web UI port | `3000` |
 | `--mcp-port <port>` | MCP server port | `7435` |
+| `--mcp-origin <origin>` | Browser-facing MCP origin (e.g. `https://mcp.example.com`) for reverse-proxy/TLS deployments; trusted asset/CSP origin for widgets | (derived from host + `--mcp-port`) |
+| `--sandbox-port <port>` | MCP Apps widget sandbox port | `7436` |
+| `--sandbox-origin <origin>` | Browser-facing MCP Apps sandbox origin (e.g. `https://sandbox.example.com`) for reverse-proxy/TLS deployments | (derived from host + `--sandbox-port`) |
 | `--powerline-port <port>` | Local PowerLine port | `7433` |
 | `--allow-network` | Bind to all interfaces (0.0.0.0) | Off (127.0.0.1) |
 

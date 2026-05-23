@@ -15,19 +15,21 @@ import { z } from "zod";
 import { createScopedToken } from "@grackle-ai/auth";
 import { ROOT_TASK_ID } from "@grackle-ai/common";
 import type { ToolDefinition } from "./tool-registry.js";
-import { createMcpServer, resolveAssetBaseUrl } from "./mcp-server.js";
+import { createMcpServer, resolveAssetBaseUrl, type PublishWidgetEvent } from "./mcp-server.js";
+import { HELLO_WIDGET_URI } from "./resources/hello-widget.js";
 
 // API key must be exactly 64 hex characters (API_KEY_LENGTH in auth-middleware)
 const TEST_API_KEY = "a".repeat(64);
 
 /** Spin up a real MCP server on an ephemeral port. */
-function startServer(toolGroups?: ToolDefinition[][]): Promise<http.Server> {
+function startServer(toolGroups?: ToolDefinition[][], publishWidgetEvent?: PublishWidgetEvent): Promise<http.Server> {
   const server = createMcpServer({
     bindHost: "127.0.0.1",
     mcpPort: 0,
     grpcPort: 19999, // dummy — no gRPC backend needed for these tests
     apiKey: TEST_API_KEY,
     toolGroups,
+    publishWidgetEvent,
   });
   return new Promise<http.Server>((resolve) => {
     server.listen(0, "127.0.0.1", () => resolve(server));
@@ -732,13 +734,28 @@ describe("MCP Apps app-side (#1237)", () => {
     expect(widget!._meta?.["ui/resourceUri"]).toBe(HELLO_URI);
   });
 
-  it("hides the widget tool from non-UI hosts but keeps data tools", async () => {
+  it("hides the widget tool from non-UI hosts in standalone mode (no broker)", async () => {
+    // No publishWidgetEvent injected → standalone MCP server → spec-compliant
+    // client-capability gating: a client that does not advertise the ui ext does
+    // not see widget tools (it could not render them).
     server = await startServer();
     const { sessionId } = await initializeWith(server, {});
     const response = await rpc(server, sessionId, "tools/list", {});
     const names = ((response.result?.tools ?? []) as Array<{ name: string }>).map((t) => t.name);
     expect(names).not.toContain("show_hello_widget");
     expect(names).toContain("get_version_status");
+  });
+
+  it("exposes the widget tool to a non-UI host when the broker is active", async () => {
+    // Grackle's broker (publishWidgetEvent injected) is itself the ui-capable
+    // host: it captures the widget call and renders it in the chat, so the
+    // agent's MCP client (e.g. the Claude Agent SDK, which does not advertise the
+    // ui ext) still gets the widget tool listed.
+    server = await startServer(undefined, () => {});
+    const { sessionId } = await initializeWith(server, {});
+    const response = await rpc(server, sessionId, "tools/list", {});
+    const names = ((response.result?.tools ?? []) as Array<{ name: string }>).map((t) => t.name);
+    expect(names).toContain("show_hello_widget");
   });
 
   it("serves the widget JS assets without auth", async () => {
@@ -774,5 +791,79 @@ describe("resolveAssetBaseUrl", () => {
     expect(result).not.toContain('"');
     expect(result).not.toContain("<");
     expect(result).not.toContain(" ");
+  });
+});
+
+describe("MCP Apps widget capture (#1238)", () => {
+  let server: http.Server | undefined;
+
+  afterEach(async () => {
+    if (server) {
+      await new Promise<void>((resolve) => { server!.close(() => resolve()); });
+      server = undefined;
+    }
+  });
+
+  interface WidgetCall {
+    sessionId: string;
+    payload: {
+      resourceUri: string;
+      toolName: string;
+      html: string;
+      csp?: { resourceDomains?: string[] };
+      toolInput?: Record<string, unknown>;
+      toolResult?: unknown;
+    };
+  }
+
+  /** A widget tool (uiResourceUri set) that captures its args, for capture testing. */
+  function makeWidgetSpyTool(capturedArgs: Record<string, unknown>[]): ToolDefinition {
+    return {
+      ...makeSpyTool("widget_spy", "widget", capturedArgs, z.object({ message: z.string().optional() })),
+      uiResourceUri: HELLO_WIDGET_URI,
+    };
+  }
+
+  it("emits a widget event when a scoped agent calls a widget tool", async () => {
+    const widgetCalls: WidgetCall[] = [];
+    server = await startServer(
+      [[makeWidgetSpyTool([])]],
+      (sessionId, payload) => { widgetCalls.push({ sessionId, payload } as WidgetCall); },
+    );
+    const scopedToken = createScopedToken(
+      { sub: ROOT_TASK_ID, pid: "default-ws", per: "system", sid: "sess-widget" },
+      TEST_API_KEY,
+    );
+    const authHeader = `Bearer ${scopedToken}`;
+    const sessionId = await initialize(server, authHeader);
+    await callTool(server, sessionId, "widget_spy", { message: "hi widget" }, authHeader);
+
+    expect(widgetCalls).toHaveLength(1);
+    expect(widgetCalls[0]!.sessionId).toBe("sess-widget");
+    const payload = widgetCalls[0]!.payload;
+    expect(payload.resourceUri).toBe(HELLO_WIDGET_URI);
+    expect(payload.toolName).toBe("widget_spy");
+    expect(payload.html).toContain("Grackle");
+    expect(payload.csp?.resourceDomains?.length).toBe(1);
+    expect(payload.toolInput).toMatchObject({ message: "hi widget" });
+    expect(payload.toolResult).toBeTruthy();
+  });
+
+  it("does not emit a widget event for a non-widget tool", async () => {
+    const widgetCalls: WidgetCall[] = [];
+    const plainSpy = makeSpyTool("workspace_spy", "workspace", [], z.object({ workspaceId: z.string() }));
+    server = await startServer(
+      [[plainSpy]],
+      (sessionId, payload) => { widgetCalls.push({ sessionId, payload } as WidgetCall); },
+    );
+    const scopedToken = createScopedToken(
+      { sub: ROOT_TASK_ID, pid: "default-ws", per: "system", sid: "sess-plain" },
+      TEST_API_KEY,
+    );
+    const authHeader = `Bearer ${scopedToken}`;
+    const sessionId = await initialize(server, authHeader);
+    await callTool(server, sessionId, "workspace_spy", { workspaceId: "ws-1" }, authHeader);
+
+    expect(widgetCalls).toHaveLength(0);
   });
 });

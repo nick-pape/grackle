@@ -64,7 +64,8 @@ export * as logWriter from "./log-writer.js";
 export * as pipeDelivery from "./pipe-delivery.js";
 
 // ─── Individual Exports for Plugin-Core ──────────────────────
-export { processEventStream } from "./event-processor.js";
+export { processEventStream, publishWidgetEvent } from "./event-processor.js";
+export type { WidgetEventPayload, PublishWidgetEvent } from "./event-processor.js";
 export { createEventStream } from "./event-hub.js";
 export { recoverSuspendedSessions } from "./session-recovery.js";
 export { clearReconnectState, isReconnecting } from "./auto-reconnect.js";

@@ -54,6 +54,7 @@ function createMockContext(overrides?: Partial<ShutdownContext>): ShutdownContex
     grpcServer: { close: vi.fn((cb: (err?: Error) => void) => { cb(); }) },
     webServer: { close: vi.fn((cb: (err?: Error) => void) => { cb(); }) },
     mcpServer: { close: vi.fn((cb: (err?: Error) => void) => { cb(); }) },
+    sandboxServer: { close: vi.fn((cb: (err?: Error) => void) => { cb(); }) },
     reconciliationManager: { stop: vi.fn(async () => {}) },
     localPowerLineManager: { stop: vi.fn(async () => {}) },
     ...overrides,
@@ -145,6 +146,13 @@ describe("createShutdown", () => {
     const shutdown = createShutdown(ctx);
     await shutdown();
     expect(ctx.mcpServer.close).toHaveBeenCalledOnce();
+  });
+
+  it("closes the MCP Apps sandbox server", async () => {
+    const ctx = createMockContext();
+    const shutdown = createShutdown(ctx);
+    await shutdown();
+    expect(ctx.sandboxServer.close).toHaveBeenCalledOnce();
   });
 
   it("handles server close errors gracefully", async () => {
