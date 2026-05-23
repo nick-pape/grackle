@@ -32,13 +32,18 @@ export interface ReadinessResult {
   checks: Record<string, ReadinessCheck>;
 }
 
-/** Inbound webhook message body (parsed from a `POST /hook` JSON payload). */
+/**
+ * Inbound webhook message body, mapped from a `POST /hook` JSON payload.
+ *
+ * Note the wire payload uses snake_case (`idempotency_key`); the handler maps it
+ * to the camelCase {@link WebhookBody.idempotencyKey} field below.
+ */
 export interface WebhookBody {
-  /** The user message text to inject into the channel. */
+  /** The user message text to inject into the channel (JSON field: `message`). */
   message: string;
-  /** Optional sender attribution (e.g. `alice@teams`). */
+  /** Optional sender attribution (JSON field: `from`, e.g. `alice@teams`). */
   from?: string;
-  /** Optional idempotency key to dedupe webhook retries. */
+  /** Optional dedupe key for webhook retries (JSON field: `idempotency_key`). */
   idempotencyKey?: string;
 }
 
@@ -723,6 +728,13 @@ export function createWebServer(options: WebServerOptions): http.Server {
       // throwing on malformed percent-encoding.
       const pathToken = rawPath.startsWith("/hook/") ? rawPath.slice("/hook/".length) : "";
       const token = pathToken || req.headers.authorization?.replace(/^Bearer\s+/i, "") || "";
+      // Fail fast on a missing token before reading/parsing the body, to avoid
+      // unnecessary work on unauthenticated requests.
+      if (token.trim().length === 0) {
+        res.writeHead(403, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "missing capability token" }));
+        return;
+      }
       let raw: string;
       try {
         raw = await readBody(req);

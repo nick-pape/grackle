@@ -34,16 +34,23 @@ export interface IngestBody {
 
 const SESSION_CHANNEL_PREFIX: string = "grackle:/sessions/";
 
-/** Max recently-seen idempotency keys to retain (process-local dedupe for v0). */
+/**
+ * Best-effort, process-local idempotency dedupe. Entries expire by age so the
+ * dedupe window is bounded and predictable; cross-process/persistent dedupe
+ * (e.g. a DB-backed store) is a deliberate follow-up (#1255).
+ */
+const IDEMPOTENCY_TTL_MS: number = 10 * 60 * 1000;
 const MAX_SEEN_KEYS: number = 1000;
 const seenKeys: Map<string, number> = new Map();
 
-/** Record an idempotency key; returns true if it was already seen. */
+/** Record an idempotency key; returns true if seen within the TTL window. */
 function alreadySeen(key: string): boolean {
-  if (seenKeys.has(key)) {
+  const now = Date.now();
+  const seenAt = seenKeys.get(key);
+  if (seenAt !== undefined && now - seenAt < IDEMPOTENCY_TTL_MS) {
     return true;
   }
-  seenKeys.set(key, Date.now());
+  seenKeys.set(key, now);
   if (seenKeys.size > MAX_SEEN_KEYS) {
     const oldest = seenKeys.keys().next().value;
     if (oldest !== undefined) {
@@ -71,7 +78,14 @@ export async function ingestChannelMessage(token: string, body: IngestBody): Pro
   if (!grant || grant.revoked) {
     return { outcome: "forbidden", channelUri: claims.chan };
   }
-  if (!claims.verbs.includes("send_input")) {
+  // Defense-in-depth: the persisted grant must match the signed token claims,
+  // and both must permit send_input.
+  const grantVerbs = grant.verbs ? grant.verbs.split(",") : [];
+  if (
+    grant.channelUri !== claims.chan ||
+    !claims.verbs.includes("send_input") ||
+    !grantVerbs.includes("send_input")
+  ) {
     return { outcome: "forbidden", channelUri: claims.chan };
   }
   if (!claims.chan.startsWith(SESSION_CHANNEL_PREFIX)) {

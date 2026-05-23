@@ -241,10 +241,11 @@ async function main(): Promise<void> {
   const webPort = config.webPort;
   const mcpPort = config.mcpPort;
 
-  // Channel capability tokens are signed with the API key; ingress URLs use the
-  // dialable web host so pasted webhook URLs work from external systems.
-  const dialableWebHost = isWildcardAddress(bindHost) ? "127.0.0.1" : bindHost;
-  const ingressUrlHost = dialableWebHost.includes(":") ? `[${dialableWebHost}]` : dialableWebHost;
+  // Channel capability tokens are signed with the API key; ingress URLs must be
+  // reachable by external webhook callers. On a wildcard bind, use the detected
+  // LAN IP (same logic as the pairing URL) instead of a non-routable loopback.
+  const ingressHost = isWildcardAddress(bindHost) ? (detectLanIp() || "localhost") : bindHost;
+  const ingressUrlHost = ingressHost.includes(":") ? `[${ingressHost}]` : ingressHost;
   setChannelConfig({ signingSecret: apiKey, ingressBaseUrl: `http://${ingressUrlHost}:${webPort}` });
 
   const webServer = createWebServer({
