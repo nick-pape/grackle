@@ -605,6 +605,46 @@ message AcknowledgeEscalationRequest {
   string id = 1;
 }
 
+// ─── Channels (capability-scoped external I/O) ─────────────
+
+message ExposeChannelRequest {
+  oneof target {
+    string session_id = 1;
+    string task_id = 2;
+  }
+  repeated string verbs = 3; // Permitted verbs (empty = ["send_input"])
+  uint32 ttl_seconds = 4; // Token lifetime in seconds (0 = server default)
+  string label = 5; // Optional human-readable label for audit
+}
+
+message ExposeChannelResponse {
+  string channel_uri = 1; // e.g. "grackle:/sessions/<id>"
+  string grant_id = 2;
+  string token = 3; // The capability token (paste into the ingress URL)
+  string ingress_url = 4; // Full POST URL: "<base>/hook/<token>"
+  string expires_at = 5;
+}
+
+message ChannelGrant {
+  string grant_id = 1;
+  string channel_uri = 2;
+  repeated string verbs = 3;
+  string label = 4;
+  string created_at = 5;
+  string expires_at = 6;
+  bool revoked = 7;
+}
+
+message ChannelGrantList {
+  repeated ChannelGrant grants = 1;
+}
+
+message ListChannelGrantsRequest {}
+
+message RevokeChannelGrantRequest {
+  string grant_id = 1;
+}
+
 // ─── Personas ──────────────────────────────────────────────
 
 message McpServerConfig {

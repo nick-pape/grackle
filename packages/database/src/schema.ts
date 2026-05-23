@@ -304,6 +304,31 @@ export type ScheduleRow = typeof schedules.$inferSelect;
 /** Shape accepted by INSERT into the schedules table. */
 export type NewSchedule = typeof schedules.$inferInsert;
 
+// ─── Channel Grants ──────────────────────────────────────
+
+/**
+ * Capability grants exposing a single channel (e.g. `grackle:/sessions/<id>`)
+ * to external callers via a scoped, revocable webhook token. `id` is the
+ * grant ID embedded in the token's `jti` claim.
+ */
+export const channelGrants = sqliteTable("channel_grants", {
+  id: text("id").primaryKey(),
+  channelUri: text("channel_uri").notNull(),
+  verbs: text("verbs").notNull(),
+  label: text("label").notNull().default(""),
+  expiresAt: text("expires_at"),
+  revoked: integer("revoked", { mode: "boolean" }).notNull().default(false),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
+/** Row shape returned by a SELECT on the channel_grants table. */
+export type ChannelGrantRow = typeof channelGrants.$inferSelect;
+
+/** Shape accepted by INSERT into the channel_grants table. */
+export type NewChannelGrant = typeof channelGrants.$inferInsert;
+
 // ─── Escalations ─────────────────────────────────────────
 
 export const escalations = sqliteTable("escalations", {

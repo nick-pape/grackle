@@ -51,10 +51,25 @@ export interface SandboxServerOptions {
 }
 
 // @public
+export interface WebhookBody {
+    from?: string;
+    idempotencyKey?: string;
+    message: string;
+}
+
+// @public
+export interface WebhookResult {
+    channelUri?: string;
+    outcome: "delivered" | "buffered" | "forbidden" | "not_found" | "ended" | "bad_request";
+    sessionId?: string;
+}
+
+// @public
 export interface WebServerOptions {
     apiKey: string;
     bindHost: string;
     connectRoutes?: (router: ConnectRouter) => void;
+    handleWebhook?: (token: string, body: WebhookBody) => Promise<WebhookResult>;
     pluginNames?: string[];
     readinessCheck?: () => ReadinessResult | Promise<ReadinessResult>;
     sandboxOrigin?: string;

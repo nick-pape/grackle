@@ -32,6 +32,41 @@ export interface ReadinessResult {
   checks: Record<string, ReadinessCheck>;
 }
 
+/**
+ * Inbound webhook message body, mapped from a `POST /hook` JSON payload.
+ *
+ * Note the wire payload uses snake_case (`idempotency_key`); the handler maps it
+ * to the camelCase {@link WebhookBody.idempotencyKey} field below.
+ */
+export interface WebhookBody {
+  /** The user message text to inject into the channel (JSON field: `message`). */
+  message: string;
+  /** Optional sender attribution (JSON field: `from`, e.g. `alice@teams`). */
+  from?: string;
+  /** Optional dedupe key for webhook retries (JSON field: `idempotency_key`). */
+  idempotencyKey?: string;
+}
+
+/** Result of handling an inbound channel webhook (maps to an HTTP status). */
+export interface WebhookResult {
+  /** Outcome category determining the HTTP status code. */
+  outcome: "delivered" | "buffered" | "forbidden" | "not_found" | "ended" | "bad_request";
+  /** Resolved channel URI, when known. */
+  channelUri?: string;
+  /** Resolved session ID, when delivered. */
+  sessionId?: string;
+}
+
+/** Maps a webhook outcome to its HTTP status code. */
+const WEBHOOK_STATUS: Record<WebhookResult["outcome"], number> = {
+  delivered: 200,
+  buffered: 202,
+  bad_request: 400,
+  forbidden: 403,
+  not_found: 404,
+  ended: 410,
+};
+
 /** Options for creating a Grackle web server. */
 export interface WebServerOptions {
   /** API key for session/bearer auth. */
@@ -57,6 +92,11 @@ export interface WebServerOptions {
    * `window.location` + `sandboxPort`.
    */
   sandboxOrigin?: string;
+  /**
+   * Inbound channel webhook handler (injected). Verifies the capability token
+   * and delivers the message. When omitted, the `/hook` route is disabled.
+   */
+  handleWebhook?: (token: string, body: WebhookBody) => Promise<WebhookResult>;
 }
 
 // ─── Static File Config ─────────────────────────────────────
@@ -292,7 +332,7 @@ export function isWildcardAddress(host: string): boolean {
  * @returns An `http.Server` ready to `.listen()`.
  */
 export function createWebServer(options: WebServerOptions): http.Server {
-  const { apiKey, webPort, bindHost, connectRoutes, webDistDir, readinessCheck, pluginNames, sandboxPort, sandboxOrigin } = options;
+  const { apiKey, webPort, bindHost, connectRoutes, webDistDir, readinessCheck, pluginNames, sandboxPort, sandboxOrigin, handleWebhook } = options;
   const distDir = webDistDir ?? resolveWebDistDir();
   const allowNetwork = isWildcardAddress(bindHost);
   const dialableHost = allowNetwork ? "127.0.0.1" : bindHost;
@@ -678,6 +718,60 @@ export function createWebServer(options: WebServerOptions): http.Server {
     // --- Public static assets (favicons, manifest) — no session required ---
     if (PUBLIC_ASSETS.has(rawPath)) {
       serveStaticFile(res, rawPath, distDir);
+      return;
+    }
+
+    // --- Inbound channel webhook (capability-token auth; NO session/API key) ---
+    if (handleWebhook && req.method === "POST" && (rawPath.startsWith("/hook/") || rawPath === "/hook")) {
+      // `rawPath` is already URL-decoded above, and the token is base64url
+      // (URL-safe), so no further decoding is needed — avoids decodeURIComponent
+      // throwing on malformed percent-encoding.
+      const pathToken = rawPath.startsWith("/hook/") ? rawPath.slice("/hook/".length) : "";
+      const token = pathToken || req.headers.authorization?.replace(/^Bearer\s+/i, "") || "";
+      // Fail fast on a missing token before reading/parsing the body, to avoid
+      // unnecessary work on unauthenticated requests.
+      if (token.trim().length === 0) {
+        res.writeHead(403, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "missing capability token" }));
+        return;
+      }
+      let raw: string;
+      try {
+        raw = await readBody(req);
+      } catch {
+        res.writeHead(413, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "body too large" }));
+        return;
+      }
+      let parsed: { message?: unknown; from?: unknown; idempotency_key?: unknown };
+      try {
+        parsed = JSON.parse(raw) as typeof parsed;
+      } catch {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "invalid JSON body" }));
+        return;
+      }
+      if (typeof parsed.message !== "string" || parsed.message.length === 0) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "message is required" }));
+        return;
+      }
+      let result: WebhookResult;
+      try {
+        result = await handleWebhook(token, {
+          message: parsed.message,
+          from: typeof parsed.from === "string" ? parsed.from : undefined,
+          idempotencyKey: typeof parsed.idempotency_key === "string" ? parsed.idempotency_key : undefined,
+        });
+      } catch {
+        // A throwing handler must not become an unhandled rejection (which can
+        // crash the process); return a controlled 500 instead.
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "internal error" }));
+        return;
+      }
+      res.writeHead(WEBHOOK_STATUS[result.outcome], { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ channel: result.channelUri, status: result.outcome, session_id: result.sessionId }));
       return;
     }
 

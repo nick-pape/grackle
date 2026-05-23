@@ -23,6 +23,12 @@ import { toDialableHost } from '@grackle-ai/core';
 import { VALID_PIPE_MODES } from '@grackle-ai/core';
 import { validatePipeInputs } from '@grackle-ai/core';
 
+// @public
+export interface ChannelConfig {
+    ingressBaseUrl: string;
+    signingSecret: string;
+}
+
 export { cleanupLifecycleStream }
 
 // @public
@@ -87,6 +93,23 @@ export interface EnvironmentReconciliationDeps {
 }
 
 // @public
+export interface IngestBody {
+    from?: string;
+    idempotencyKey?: string;
+    message: string;
+}
+
+// @public
+export function ingestChannelMessage(token: string, body: IngestBody): Promise<IngestResult>;
+
+// @public
+export interface IngestResult {
+    channelUri?: string;
+    outcome: "delivered" | "buffered" | "forbidden" | "not_found" | "ended" | "bad_request";
+    sessionId?: string;
+}
+
+// @public
 export function killSessionAndCleanup(session: SessionRow): void;
 
 // @public
@@ -129,6 +152,9 @@ export interface RootTaskBootDeps {
         notes?: string;
     }) => Promise<string | undefined>;
 }
+
+// @public
+export function setChannelConfig(next: ChannelConfig): void;
 
 // @public
 export function setLoadedPluginNames(names: Set<string>): void;

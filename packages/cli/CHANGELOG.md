@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 23 May 2026 13:35:14 GMT and should not be manually modified.
+This log was last generated on Sat, 23 May 2026 14:23:06 GMT and should not be manually modified.
+
+## 0.115.1
+Sat, 23 May 2026 14:23:06 GMT
+
+### Patches
+
+- Add capability-scoped channel exposure: mint revocable webhook tokens to inject user messages into a session (ExposeChannel/ListChannelGrants/RevokeChannelGrant RPCs, POST /hook/<token>, and `grackle channel` CLI)
 
 ## 0.115.0
 Sat, 23 May 2026 13:35:14 GMT

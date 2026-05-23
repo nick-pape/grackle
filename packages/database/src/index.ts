@@ -42,6 +42,8 @@ export type {
   PluginRow,
   GitHubAccountRow,
   NewGitHubAccount,
+  ChannelGrantRow,
+  NewChannelGrant,
 } from "./schema.js";
 
 // ─── Stores ────────────────────────────────────────────────
@@ -60,6 +62,7 @@ export * as workspaceEnvironmentLinkStore from "./workspace-environment-link-sto
 export * as dispatchQueueStore from "./dispatch-queue-store.js";
 export * as pluginStore from "./plugin-store.js";
 export * as githubAccountStore from "./github-account-store.js";
+export * as channelGrantStore from "./channel-grant-store.js";
 
 // Re-export key store types for convenience
 export type { InsertTaskFields } from "./task-store.js";

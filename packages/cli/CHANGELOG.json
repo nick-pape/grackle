@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.115.1",
+      "tag": "@grackle-ai/cli_v0.115.1",
+      "date": "Sat, 23 May 2026 14:23:06 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add capability-scoped channel exposure: mint revocable webhook tokens to inject user messages into a session (ExposeChannel/ListChannelGrants/RevokeChannelGrant RPCs, POST /hook/<token>, and `grackle channel` CLI)"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.115.0",
       "tag": "@grackle-ai/cli_v0.115.0",
       "date": "Sat, 23 May 2026 13:35:14 GMT",
