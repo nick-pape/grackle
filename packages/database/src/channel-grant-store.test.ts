@@ -8,7 +8,7 @@ vi.mock("./db.js", async () => {
 import * as channelGrantStore from "./channel-grant-store.js";
 import { sqlite } from "./test-db.js";
 
-/** Apply the schema DDL to the in-memory database (mirrors migration v10). */
+/** Apply the schema DDL to the in-memory database (mirrors migration v11). */
 function applySchema(): void {
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS channel_grants (

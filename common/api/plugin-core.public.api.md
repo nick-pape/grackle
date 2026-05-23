@@ -94,11 +94,8 @@ export interface EnvironmentReconciliationDeps {
 
 // @public
 export interface IngestBody {
-    // (undocumented)
     from?: string;
-    // (undocumented)
     idempotencyKey?: string;
-    // (undocumented)
     message: string;
 }
 
@@ -108,7 +105,7 @@ export function ingestChannelMessage(token: string, body: IngestBody): Promise<I
 // @public
 export interface IngestResult {
     channelUri?: string;
-    outcome: "delivered" | "buffered" | "forbidden" | "not_found" | "unavailable" | "bad_request";
+    outcome: "delivered" | "buffered" | "forbidden" | "not_found" | "ended" | "bad_request";
     sessionId?: string;
 }
 

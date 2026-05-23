@@ -60,7 +60,7 @@ export interface WebhookBody {
 // @public
 export interface WebhookResult {
     channelUri?: string;
-    outcome: "delivered" | "buffered" | "forbidden" | "not_found" | "unavailable" | "bad_request";
+    outcome: "delivered" | "buffered" | "forbidden" | "not_found" | "ended" | "bad_request";
     sessionId?: string;
 }
 

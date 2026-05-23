@@ -7,6 +7,7 @@
  * @module
  */
 
+import { createHash } from "node:crypto";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
@@ -18,7 +19,7 @@ import { sendInput } from "./session-handlers.js";
 /** Structural result of handling an inbound webhook (mirrors web-server `WebhookResult`). */
 export interface IngestResult {
   /** Outcome category (maps to an HTTP status in the web server). */
-  outcome: "delivered" | "buffered" | "forbidden" | "not_found" | "unavailable" | "bad_request";
+  outcome: "delivered" | "buffered" | "forbidden" | "not_found" | "ended" | "bad_request";
   /** Resolved channel URI, when known. */
   channelUri?: string;
   /** Resolved session ID, when delivered. */
@@ -27,8 +28,11 @@ export interface IngestResult {
 
 /** Inbound webhook payload (mirrors web-server `WebhookBody`). */
 export interface IngestBody {
+  /** The user message text to inject into the target session. */
   message: string;
+  /** Optional sender attribution, prefixed onto the injected message. */
   from?: string;
+  /** Optional dedupe key for webhook retries (hashed before use). */
   idempotencyKey?: string;
 }
 
@@ -93,9 +97,13 @@ export async function ingestChannelMessage(token: string, body: IngestBody): Pro
   }
   const sessionId = claims.chan.slice(SESSION_CHANNEL_PREFIX.length);
 
-  // Dedupe webhook retries (scoped to the grant).
-  if (body.idempotencyKey && alreadySeen(`${claims.jti}:${body.idempotencyKey}`)) {
-    return { outcome: "delivered", channelUri: claims.chan, sessionId };
+  // Dedupe webhook retries (scoped to the grant). Hash the caller-supplied key
+  // so an arbitrarily long key can't bloat the in-memory dedupe map.
+  if (body.idempotencyKey) {
+    const dedupeKey = `${claims.jti}:${createHash("sha256").update(body.idempotencyKey).digest("base64url")}`;
+    if (alreadySeen(dedupeKey)) {
+      return { outcome: "delivered", channelUri: claims.chan, sessionId };
+    }
   }
 
   const text = body.from ? `[${body.from}] ${body.message}` : body.message;
@@ -108,7 +116,7 @@ export async function ingestChannelMessage(token: string, body: IngestBody): Pro
         return { outcome: "not_found", channelUri: claims.chan };
       }
       if (err.code === Code.FailedPrecondition) {
-        return { outcome: "unavailable", channelUri: claims.chan };
+        return { outcome: "ended", channelUri: claims.chan };
       }
     }
     throw err;

@@ -97,9 +97,9 @@ describe("ingestChannelMessage", () => {
     expect((await ingestChannelMessage("tok", { message: "x" })).outcome).toBe("not_found");
   });
 
-  it("maps an ended session (FailedPrecondition) to unavailable", async () => {
+  it("maps an ended session (FailedPrecondition) to ended (410)", async () => {
     sendInputMock.mockRejectedValue(new ConnectError("ended", Code.FailedPrecondition));
-    expect((await ingestChannelMessage("tok", { message: "x" })).outcome).toBe("unavailable");
+    expect((await ingestChannelMessage("tok", { message: "x" })).outcome).toBe("ended");
   });
 
   it("dedupes repeated idempotency keys (delivers once)", async () => {

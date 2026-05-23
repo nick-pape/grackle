@@ -50,7 +50,7 @@ export interface WebhookBody {
 /** Result of handling an inbound channel webhook (maps to an HTTP status). */
 export interface WebhookResult {
   /** Outcome category determining the HTTP status code. */
-  outcome: "delivered" | "buffered" | "forbidden" | "not_found" | "unavailable" | "bad_request";
+  outcome: "delivered" | "buffered" | "forbidden" | "not_found" | "ended" | "bad_request";
   /** Resolved channel URI, when known. */
   channelUri?: string;
   /** Resolved session ID, when delivered. */
@@ -64,7 +64,7 @@ const WEBHOOK_STATUS: Record<WebhookResult["outcome"], number> = {
   bad_request: 400,
   forbidden: 403,
   not_found: 404,
-  unavailable: 409,
+  ended: 410,
 };
 
 /** Options for creating a Grackle web server. */
