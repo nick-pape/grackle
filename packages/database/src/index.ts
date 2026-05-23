@@ -80,8 +80,8 @@ export {
 } from "./credential-providers.js";
 
 // ─── Event Store ───────────────────────────────────────────
-export { persistEvent, DomainEventSink, DOMAIN_EVENT_CHANNEL } from "./event-store.js";
-export type { DomainEvent, DomainEventInput } from "./event-store.js";
+export { persistEvent } from "./event-store.js";
+export type { DomainEvent } from "./event-store.js";
 
 // ─── Utilities ─────────────────────────────────────────────
 export { grackleHome } from "./paths.js";

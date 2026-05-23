@@ -1,6 +1,6 @@
 import { ulid } from "ulid";
-import { SequencedLog } from "@grackle-ai/common";
-import { DomainEventSink, DOMAIN_EVENT_CHANNEL, type DomainEventInput } from "@grackle-ai/database";
+import { SequencedLog, type LogSink } from "@grackle-ai/common";
+import { persistEvent } from "@grackle-ai/database";
 import { logger } from "./logger.js";
 
 // ─── Event Types ──────────────────────────────────────────
@@ -50,17 +50,51 @@ export interface GrackleEvent {
 /** Callback signature for event subscribers. */
 export type Subscriber = (event: GrackleEvent) => void;
 
+/**
+ * Body of a domain event appended to the log. The `id` is omitted because the
+ * {@link SequencedLog} assigns it as the monotonic sequence key.
+ */
+interface DomainEventBody {
+  type: GrackleEventType;
+  timestamp: string;
+  payload: Record<string, unknown>;
+}
+
 // ─── Module State ─────────────────────────────────────────
 
 const subscribers: Set<Subscriber> = new Set();
 
+/** Channel id for the single global domain-event log. */
+const DOMAIN_EVENT_CHANNEL: string = "domain";
+
+/**
+ * Storage sink for the domain-event log: persists each entry to the SQLite
+ * `domain_events` table via {@link persistEvent}, using the log-assigned
+ * sequence key as the row id. (Kept inline next to the writer so `@grackle-ai/core`
+ * depends only on `persistEvent`; the database-side sink + reader arrive in
+ * RFC #1264 Phase 1.)
+ */
+const domainEventSink: LogSink<DomainEventBody> = {
+  append: (channelId, entry) => {
+    if (channelId !== DOMAIN_EVENT_CHANNEL) {
+      throw new Error(`domainEventSink received unexpected channel "${channelId}"`);
+    }
+    persistEvent({
+      id: entry.seq,
+      type: entry.payload.type,
+      timestamp: entry.payload.timestamp,
+      payload: entry.payload.payload,
+    });
+  },
+};
+
 /**
  * Durable, monotonically-sequenced log backing all domain events (RFC #1264).
  * The log assigns each event a ULID sequence key (which becomes the event id)
- * and persists it via the SQLite-backed {@link DomainEventSink}.
+ * and persists it via {@link domainEventSink}.
  */
-const domainEventLog: SequencedLog<DomainEventInput> = new SequencedLog<DomainEventInput>({
-  sink: new DomainEventSink(),
+const domainEventLog: SequencedLog<DomainEventBody> = new SequencedLog<DomainEventBody>({
+  sink: domainEventSink,
   channelId: DOMAIN_EVENT_CHANNEL,
   nextSeq: ulid,
 });
