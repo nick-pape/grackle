@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, type JSX, type KeyboardEvent, type ReactNode } from "react";
 import { useLocation } from "react-router";
-import { Brain, ClipboardList, Home, MessageSquare, Monitor, Search, Settings } from "lucide-react";
+import { Brain, ClipboardList, Home, MessageSquare, Monitor, Settings } from "lucide-react";
 import { CHAT_URL, ENVIRONMENTS_URL, HOME_URL, KNOWLEDGE_URL, SETTINGS_URL, SETTINGS_CREDENTIALS_URL, TASKS_URL, useAppNavigate } from "../../utils/navigation.js";
 import { ICON_LG } from "../../utils/iconSize.js";
 import { Tooltip } from "../display/Tooltip.js";

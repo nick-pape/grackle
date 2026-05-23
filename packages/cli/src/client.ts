@@ -29,7 +29,7 @@ export function loadApiKey(): string {
 export interface GrackleClients {
   /** Core RPCs: environments, sessions, workspaces, tokens, settings, IPC, etc. */
   core: Client<typeof grackle.GrackleCore>;
-  /** Orchestration RPCs: tasks, personas, findings, escalations. */
+  /** Orchestration RPCs: tasks, personas, escalations. */
   orchestration: Client<typeof grackle.GrackleOrchestration>;
   /** Scheduling RPCs: schedules. */
   scheduling: Client<typeof grackle.GrackleScheduling>;

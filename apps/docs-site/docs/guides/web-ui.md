@@ -52,7 +52,7 @@ A searchable list of all tasks in the workspace with status badges, branch names
 A kanban board with columns for each status: Not Started, Working, Paused, Complete, Failed. Shows task completion progress.
 
 ### Graph tab
-An interactive DAG (directed acyclic graph) visualization showing task hierarchy and dependencies. Click any node to see its stream, findings, or overview.
+An interactive DAG (directed acyclic graph) visualization showing task hierarchy and dependencies. Click any node to see its stream or overview.
 
 ![DAG visualization — interactive task dependency graph](/img/dag-visualization.png)
 
@@ -77,10 +77,6 @@ When the session is waiting for input, an input field appears at the bottom.
 
 ![Live agent stream — tool cards and real-time output](/img/task-stream-view.png)
 
-### Findings
-All findings for the task's workspace, displayed as categorized cards with color coding by category (bug, architecture, decision, pattern, dependency) and tags.
-
-![Findings panel — categorized discoveries](/img/findings-panel.png)
 
 ## Creating and editing entities
 

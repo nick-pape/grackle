@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, type JSX } from "react";
-import { Outlet, useParams } from "react-router";
+import { useCallback, useMemo, type JSX } from "react";
+import { Outlet } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useSidebarSlot } from "../../hooks/useSidebarSlot.js";
 import { TaskList, EnvironmentNav, SettingsNav, KnowledgeNav, StreamList } from "@grackle-ai/web-components";

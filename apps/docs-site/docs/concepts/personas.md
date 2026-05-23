@@ -28,7 +28,7 @@ From the CLI:
 grackle persona create "Senior Reviewer" \
   --runtime claude-code \
   --model sonnet \
-  --prompt "You are a senior code reviewer. Focus on correctness, security, and maintainability. Do not make changes — only review and post findings." \
+  --prompt "You are a senior code reviewer. Focus on correctness, security, and maintainability. Do not make changes — only review and report issues." \
   --max-turns 5
 ```
 

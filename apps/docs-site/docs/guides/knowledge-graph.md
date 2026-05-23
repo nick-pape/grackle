@@ -12,7 +12,7 @@ Grackle's knowledge graph gives agents a shared semantic memory backed by [Neo4j
 
 ## Why a graph?
 
-Flat finding lists work for small teams, but as agents accumulate knowledge, you need **relationships**. A graph lets you ask "what do we know about the auth module?" and get back the architectural decision that changed it, the bug that was found in it, the dependency that constrains it, and the task that implemented it — all connected.
+A flat list of notes works for small teams, but as agents accumulate knowledge, you need **relationships**. A graph lets you ask "what do we know about the auth module?" and get back the architectural decision that changed it, the bug that was found in it, the dependency that constrains it, and the task that implemented it — all connected.
 
 ## Setup
 
@@ -34,9 +34,9 @@ Set these environment variables before starting the server:
 
 ```bash
 GRACKLE_KNOWLEDGE_ENABLED=true
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USERNAME=neo4j
-NEO4J_PASSWORD=grackle-dev
+GRACKLE_NEO4J_URL=bolt://localhost:7687
+GRACKLE_NEO4J_USER=neo4j
+GRACKLE_NEO4J_PASSWORD=grackle-dev
 ```
 
 ### 3. Start the server
@@ -53,9 +53,9 @@ On startup, the knowledge plugin connects to Neo4j, creates schema constraints a
 
 The graph stores two types of knowledge:
 
-**Reference nodes** point to entities in Grackle's database — tasks, findings, sessions. They don't duplicate content; their embedding is derived from the source entity. When a task is created or a finding is posted, the `entity-sync` subscriber automatically creates or updates the corresponding reference node.
+**Reference nodes** point to entities in Grackle's database — tasks and sessions. They don't duplicate content; their embedding is derived from the source entity. (As of epic #1256 the graph is being reworked into a derived projection of these entities; agent-authored writes were removed in #1257.)
 
-**Native nodes** are knowledge that only exists in the graph — insights, decisions, architectural observations. Agents create these explicitly via MCP tools when they discover something worth recording.
+**Native nodes** are knowledge that only exists in the graph — insights, decisions, architectural observations.
 
 ### Semantic search
 
