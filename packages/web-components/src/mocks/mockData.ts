@@ -17,6 +17,7 @@ import type {
   PersonaData,
 } from "../hooks/types.js";
 export { MOCK_KNOWLEDGE_NODES, MOCK_KNOWLEDGE_LINKS, MOCK_KNOWLEDGE_DETAILS } from "./mockKnowledgeData.js";
+export { MOCK_STREAMS } from "./mockStreamsData.js";
 
 // ─── Environments ───────────────────────────────────
 
@@ -94,6 +95,7 @@ export const MOCK_SESSIONS: Session[] = [
     status: "running",
     prompt: "Refactor the authentication middleware to use JWT tokens",
     startedAt: "2026-02-27T08:15:00Z",
+    taskId: "task-001",
     inputTokens: 42_600,
     outputTokens: 8_100,
     costMillicents: 22_000,
@@ -107,6 +109,7 @@ export const MOCK_SESSIONS: Session[] = [
     prompt: "Write unit tests for the user registration endpoint",
     startedAt: "2026-02-27T07:30:00Z",
     endedAt: "2026-02-27T07:33:00Z",
+    taskId: "task-003",
     inputTokens: 31_400,
     outputTokens: 9_800,
     costMillicents: 18_000,
@@ -131,6 +134,7 @@ export const MOCK_SESSIONS: Session[] = [
     status: "running",
     prompt: "Implement rate limiting for the public API",
     startedAt: "2026-02-27T09:00:00Z",
+    taskId: "task-006c",
     inputTokens: 18_900,
     outputTokens: 4_500,
     costMillicents: 10_000,
