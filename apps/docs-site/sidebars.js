@@ -12,7 +12,6 @@ const sidebars = {
         'concepts/sessions',
         'concepts/runtimes',
         'concepts/projects-tasks',
-        'concepts/findings',
         'concepts/personas',
         'concepts/powerline',
       ],

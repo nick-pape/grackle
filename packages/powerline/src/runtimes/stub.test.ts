@@ -592,19 +592,14 @@ describe("StubRuntime scenario mode", () => {
     expect(statusEvents[1].content).toBe("killed");
   });
 
-  it("finding and subtask_create emit steps produce correct event types", async () => {
+  it("subtask_create emit step produces correct event type", async () => {
     const session = spawnScenario({
       steps: [
-        { emit: "finding", content: "Found a bug in auth.ts" },
         { emit: "subtask_create", title: "Fix the bug", description: "Fix auth.ts line 42" },
       ],
     });
 
     const events = await collectEvents(session);
-
-    const findingEvent = events.find((e) => e.type === "finding")!;
-    expect(findingEvent).toBeDefined();
-    expect(findingEvent.content).toBe("Found a bug in auth.ts");
 
     const subtaskEvent = events.find((e) => e.type === "subtask_create")!;
     expect(subtaskEvent).toBeDefined();

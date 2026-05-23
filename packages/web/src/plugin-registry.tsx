@@ -15,7 +15,7 @@ import { TABS } from "@grackle-ai/web-components";
 const CORE_VIEWS: ReadonlySet<string> = new Set(["dashboard", "chat", "environments", "coordination", "settings"]);
 
 /** Views contributed by the orchestration plugin. */
-const ORCHESTRATION_VIEWS: ReadonlySet<string> = new Set(["tasks", "findings"]);
+const ORCHESTRATION_VIEWS: ReadonlySet<string> = new Set(["tasks"]);
 
 /** Views contributed by the knowledge plugin. */
 const KNOWLEDGE_VIEWS: ReadonlySet<string> = new Set(["knowledge"]);
@@ -44,7 +44,7 @@ export const PLUGIN_REGISTRY: Readonly<Record<string, PluginClientEntry | undefi
   },
   orchestration: {
     navItems: TABS.filter((t) => ORCHESTRATION_VIEWS.has(t.view)),
-    domainHookKeys: ["tasks", "findings", "personas", "notifications"],
+    domainHookKeys: ["tasks", "personas", "notifications"],
   },
   scheduling: {
     navItems: [],

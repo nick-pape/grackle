@@ -9,7 +9,7 @@
 import type {
   UsageStats, UseKnowledgeResult,
   UseEnvironmentsResult, UseSessionsResult, UseWorkspacesResult,
-  UseTasksResult, UseFindingsResult, UseTokensResult,
+  UseTasksResult, UseTokensResult,
   UseCredentialsResult, UseCodespacesResult, UseDockerContainersResult, UsePersonasResult,
   UsePluginsResult,
   UseSchedulesResult,
@@ -30,8 +30,6 @@ export interface UseGrackleSocketResult {
   workspaces: Omit<UseWorkspacesResult, "handleEvent" | "onDisconnect">;
   /** Task state and actions. */
   tasks: Omit<UseTasksResult, "handleEvent" | "onDisconnect" | "handleLegacyMessage">;
-  /** Finding state and actions. */
-  findings: Omit<UseFindingsResult, "handleEvent">;
   /** Token state and actions. */
   tokens: Omit<UseTokensResult, "handleEvent">;
   /** Credential provider state and actions. */

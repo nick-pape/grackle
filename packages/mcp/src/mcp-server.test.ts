@@ -555,14 +555,13 @@ describe("scoped token workspaceId injection", () => {
   });
 
   /**
-   * Finding-group tools (e.g. finding_post) must have workspaceId injected from
-   * the scoped token so agents can post findings without specifying a workspace.
-   * Regression test for #1183: standalone sessions minted tokens with pid:"" which
-   * caused injection to produce undefined, making finding_post fail.
+   * Scoped tools must have workspaceId injected from the scoped token so agents
+   * can call them without specifying a workspace. When the agent omits workspaceId,
+   * the handler must receive the token's workspace (pid), not undefined.
    */
-  it("finding group tool receives workspaceId injected from scoped token", async () => {
+  it("scoped tool receives workspaceId injected from scoped token", async () => {
     const capturedArgs: Record<string, unknown>[] = [];
-    const spyTool = makeSpyTool("finding_spy", "finding", capturedArgs, z.object({ workspaceId: z.string().optional() }));
+    const spyTool = makeSpyTool("inject_spy", "task", capturedArgs, z.object({ workspaceId: z.string().optional() }));
 
     server = await startServer([[spyTool]]);
 
@@ -574,7 +573,7 @@ describe("scoped token workspaceId injection", () => {
 
     const sessionId = await initialize(server!, authHeader);
     // Agent omits workspaceId — server must inject it from token
-    await callTool(server!, sessionId, "finding_spy", {}, authHeader);
+    await callTool(server!, sessionId, "inject_spy", {}, authHeader);
 
     expect(capturedArgs).toHaveLength(1);
     // Handler must receive the token's workspace, not undefined

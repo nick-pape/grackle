@@ -9,12 +9,8 @@ test.describe("Tab Auto-Switching", { tag: ["@webui"] }, () => {
   test("stream tab becomes active when task starts", async ({ stubTask }) => {
     const { page } = stubTask;
 
-    // Create task, switch to Findings tab first
+    // Create task (opens on the Overview tab by default)
     await stubTask.createAndNavigateSimple("tab-start-task");
-    await page.getByLabel("Task view").getByRole("tab", { name: "Findings" }).click();
-
-    // Verify Findings tab content is visible
-    await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 10_000 });
 
     // Start the task with stub runtime (patched by fixture)
     await page.locator("button", { hasText: "Start" }).click();
@@ -40,7 +36,7 @@ test.describe("Tab Auto-Switching", { tag: ["@webui"] }, () => {
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 10_000 });
   });
 
-  test("findings tab becomes active on done state", async ({ stubTask }) => {
+  test("overview tab becomes active on done state", async ({ stubTask }) => {
     const { page } = stubTask;
 
     await stubTask.createAndNavigateSimple("tab-done-task");
@@ -49,12 +45,9 @@ test.describe("Tab Auto-Switching", { tag: ["@webui"] }, () => {
     await runStubTaskToCompletion(page);
     await page.locator("button", { hasText: "Stop" }).click();
 
-    // Wait for task status to update in sidebar and Findings tab to become active
-    // (Status icons are now SVGs so we wait for the tab switch effect directly)
-    await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 10_000 });
-
-    // Stream content should NOT be visible
-    await expect(page.locator("text=Stub runtime initialized")).not.toBeVisible();
+    // On completion the Overview tab auto-activates
+    const overviewTab = page.locator("button", { hasText: "Overview" });
+    await expect(overviewTab).toHaveAttribute("class", /active/, { timeout: 10_000 });
   });
 
   test("clicking task in sidebar resets to overview tab for pending tasks", async ({ stubTask }) => {
@@ -65,11 +58,8 @@ test.describe("Tab Auto-Switching", { tag: ["@webui"] }, () => {
     // Create second task without navigating
     await createTask(client, workspaceName, "sidebar-task-b", "test-local");
 
-    // We're on task A — switch to Findings tab
-    await page.getByLabel("Task view").getByRole("tab", { name: "Findings" }).click();
-
-    // Verify Findings content is visible
-    await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 5_000 });
+    // We're on task A — switch to the Stream tab
+    await page.getByLabel("Task view").getByRole("tab", { name: "Stream" }).click();
 
     // Click task B in sidebar — key prop forces SessionPanel remount, resetting to overview tab
     await navigateToTask(page, "sidebar-task-b");
@@ -77,8 +67,5 @@ test.describe("Tab Auto-Switching", { tag: ["@webui"] }, () => {
     // Overview tab should be active for the pending task (not stream)
     const overviewTab = page.locator("button", { hasText: "Overview" });
     await expect(overviewTab).toHaveAttribute("class", /active/, { timeout: 10_000 });
-
-    // Findings content should NOT be visible (switched away)
-    await expect(page.getByText("No findings yet")).not.toBeVisible();
   });
 });

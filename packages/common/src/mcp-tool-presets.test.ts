@@ -27,7 +27,6 @@ describe("ALL_MCP_TOOL_NAMES", () => {
       "config_get_default_persona",
       "credential_provider_list",
       "env_list",
-      "finding_post",
       "ipc_spawn",
       "knowledge_search",
       "logs_get",
@@ -50,7 +49,6 @@ describe("ALL_MCP_TOOL_NAMES", () => {
 describe("DEFAULT_SCOPED_MCP_TOOLS", () => {
   it("contains the current default scoped tools", () => {
     expect([...DEFAULT_SCOPED_MCP_TOOLS].sort()).toEqual([
-      "finding_list", "finding_post",
       "ipc_attach", "ipc_close", "ipc_create_stream", "ipc_list_fds", "ipc_share_stream", "ipc_spawn", "ipc_terminate", "ipc_write",
       "knowledge_get_node", "knowledge_search",
       "logs_get",
@@ -103,7 +101,6 @@ describe("ORCHESTRATOR_MCP_TOOLS", () => {
       "task_update", "task_delete", "task_resume",
       "session_spawn", "session_kill", "session_status",
       "persona_create",
-      "knowledge_create_node",
     ];
     for (const tool of extras) {
       expect(ORCHESTRATOR_MCP_TOOLS).toContain(tool);

@@ -74,7 +74,7 @@ export interface SessionEvent {
   raw?: string;
 }
 
-/** A workspace that groups tasks and findings. */
+/** A workspace that groups tasks. */
 export interface Workspace {
   id: string;
   name: string;
@@ -123,19 +123,6 @@ export interface TaskData {
   tokenBudget: number;
   /** Cost cap in millicents ($0.00001 units); 0 = unlimited. */
   costBudgetMillicents: number;
-}
-
-/** A finding posted by an agent or user. */
-export interface FindingData {
-  id: string;
-  workspaceId: string;
-  taskId: string;
-  sessionId: string;
-  category: string;
-  title: string;
-  content: string;
-  tags: string[];
-  createdAt: string;
 }
 
 /** Metadata about a stored token. */
@@ -415,36 +402,6 @@ export interface UseTasksResult {
   onDisconnect: () => void;
   /** Handle legacy WS messages injected by E2E tests. */
   handleLegacyMessage?: (msg: WsMessage) => boolean;
-  /** Lifecycle hook for connect/disconnect/event routing. */
-  domainHook: DomainHook;
-}
-
-/** Values returned by the findings domain hook. */
-export interface UseFindingsResult {
-  /** All loaded findings. */
-  findings: FindingData[];
-  /** The currently selected finding (loaded by ID). */
-  selectedFinding: FindingData | undefined;
-  /** Whether a single finding is being loaded. */
-  findingLoading: boolean;
-  /** Whether a findings list fetch is in-flight. */
-  findingsLoading: boolean;
-  /** Load findings for a given workspace. */
-  loadFindings: (workspaceId: string) => Promise<void>;
-  /** Load findings across all workspaces. */
-  loadAllFindings: () => Promise<void>;
-  /** Load a single finding by ID. */
-  loadFinding: (findingId: string) => Promise<void>;
-  /** Post a new finding to a workspace. */
-  postFinding: (
-    workspaceId: string,
-    title: string,
-    content: string,
-    category?: string,
-    tags?: string[],
-  ) => Promise<void>;
-  /** Handle a domain event from the event bus. Returns `true` if handled. */
-  handleEvent: (event: GrackleEvent) => boolean;
   /** Lifecycle hook for connect/disconnect/event routing. */
   domainHook: DomainHook;
 }

@@ -21,7 +21,6 @@ import type {
   SessionEvent,
   Workspace,
   TaskData,
-  FindingData,
   TokenInfo,
   CredentialProviderConfig,
   Codespace,
@@ -123,20 +122,6 @@ export function protoToTask(p: grackle.Task): TaskData {
   };
 }
 
-/** Convert a proto Finding to the UI FindingData type. */
-export function protoToFinding(p: grackle.Finding): FindingData {
-  return {
-    id: p.id,
-    workspaceId: p.workspaceId,
-    taskId: p.taskId,
-    sessionId: p.sessionId,
-    category: p.category,
-    title: p.title,
-    content: p.content,
-    tags: [...p.tags],
-    createdAt: p.createdAt,
-  };
-}
 
 /** Convert a proto TokenInfo to the UI TokenInfo type. */
 export function protoToToken(p: grackle.TokenInfo): TokenInfo {

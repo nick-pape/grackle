@@ -151,29 +151,6 @@ describe("gRPC error states", () => {
     expect(err.message).toContain("unmet dependencies");
   });
 
-  // ─── postFinding errors ─────────────────────────────────
-
-  it("postFinding with missing title returns error", async () => {
-    // Create environment and workspace for the finding
-    const env = (await handlers.addEnvironment({
-      displayName: "err-finding-env",
-      adapterType: "local",
-      adapterConfig: "{}",
-    })) as { id: string };
-
-    const workspace = (await handlers.createWorkspace({
-      name: "err-finding",
-      environmentId: env.id,
-    })) as { id: string };
-
-    const err = (await handlers
-      .postFinding({ workspaceId: workspace.id, title: "" })
-      .catch((e: unknown) => e)) as ConnectError;
-
-    expect(err).toBeInstanceOf(ConnectError);
-    expect(err.message).toContain("required");
-  });
-
   // ─── spawnAgent errors ──────────────────────────────────
 
   it("spawnAgent with missing environmentId returns error", async () => {

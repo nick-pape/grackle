@@ -204,13 +204,13 @@ describe("gRPC persona handlers", () => {
       systemPrompt: "You have scoped tools.",
       runtime: "stub",
       mcpServers: [],
-      allowedMcpTools: ["finding_post", "task_list"],
+      allowedMcpTools: ["workpad_read", "task_list"],
     })) as PersonaInfo;
 
     const personas = await listPersonas();
     const p = personas.find((x) => x.name === "Scoped Agent");
     expect(p).toBeDefined();
-    expect(p!.allowedMcpTools).toEqual(["finding_post", "task_list"]);
+    expect(p!.allowedMcpTools).toEqual(["workpad_read", "task_list"]);
   });
 
   it("createPersona rejects unknown tool names in allowedMcpTools", async () => {
@@ -219,7 +219,7 @@ describe("gRPC persona handlers", () => {
         name: "Bad Tools",
         systemPrompt: "prompt",
         mcpServers: [],
-        allowedMcpTools: ["finding_post", "nonexistent_tool"],
+        allowedMcpTools: ["workpad_read", "nonexistent_tool"],
       })
       .catch((e: unknown) => e)) as ConnectError;
 
@@ -233,7 +233,7 @@ describe("gRPC persona handlers", () => {
       systemPrompt: "prompt",
       runtime: "stub",
       mcpServers: [],
-      allowedMcpTools: ["finding_post", "task_create"],
+      allowedMcpTools: ["workpad_read", "task_create"],
     })) as PersonaInfo;
 
     // Wrapper message absent (not provided) → server preserves existing value
@@ -246,7 +246,7 @@ describe("gRPC persona handlers", () => {
     const personas = await listPersonas();
     const p = personas.find((x) => x.name === "Preserve MCP Tools Renamed");
     expect(p).toBeDefined();
-    expect(p!.allowedMcpTools).toEqual(["finding_post", "task_create"]);
+    expect(p!.allowedMcpTools).toEqual(["workpad_read", "task_create"]);
   });
 
   it("updatePersona clears allowedMcpTools when wrapper message has empty tools", async () => {
@@ -255,7 +255,7 @@ describe("gRPC persona handlers", () => {
       systemPrompt: "prompt",
       runtime: "stub",
       mcpServers: [],
-      allowedMcpTools: ["finding_post", "task_create"],
+      allowedMcpTools: ["workpad_read", "task_create"],
     })) as PersonaInfo;
 
     // Wrapper message present with empty tools = explicitly clear to default
@@ -276,7 +276,7 @@ describe("gRPC persona handlers", () => {
       systemPrompt: "prompt",
       runtime: "stub",
       mcpServers: [],
-      allowedMcpTools: ["finding_post"],
+      allowedMcpTools: ["workpad_read"],
     })) as PersonaInfo;
 
     // Wrapper message present with tools = replace

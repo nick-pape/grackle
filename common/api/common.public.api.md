@@ -59,7 +59,7 @@ type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
 const AgentEventSchema: GenMessage<AgentEvent>;
 
 // @public
-export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "finding" | "subtask_create" | "runtime_session_id" | "usage";
+export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "subtask_create" | "runtime_session_id" | "usage";
 
 // @public
 export const ALL_MCP_TOOL_NAMES: ReadonlySet<string>;
@@ -200,26 +200,6 @@ type CreateEscalationRequest = Message<"grackle.CreateEscalationRequest"> & {
 
 // @public
 const CreateEscalationRequestSchema: GenMessage<CreateEscalationRequest>;
-
-// @public
-type CreateKnowledgeNodeRequest = Message<"grackle.CreateKnowledgeNodeRequest"> & {
-    title: string;
-    content: string;
-    category: string;
-    tags: string[];
-    workspaceId: string;
-};
-
-// @public
-const CreateKnowledgeNodeRequestSchema: GenMessage<CreateKnowledgeNodeRequest>;
-
-// @public
-type CreateKnowledgeNodeResponse = Message<"grackle.CreateKnowledgeNodeResponse"> & {
-    id: string;
-};
-
-// @public
-const CreateKnowledgeNodeResponseSchema: GenMessage<CreateKnowledgeNodeResponse>;
 
 // @public
 type CreatePersonaRequest = Message<"grackle.CreatePersonaRequest"> & {
@@ -491,7 +471,6 @@ export type EventType = AgentEventType | "user_input" | "signal";
 enum EventType_2 {
     ERROR = 4,
     ESCALATION = 12,
-    FINDING = 7,
     SIGNAL = 10,
     STATUS = 5,
     SUBTASK_CREATE = 8,
@@ -597,30 +576,6 @@ const file_grackle_grackle_types: GenFile;
 const file_grackle_powerline_powerline: GenFile;
 
 // @public
-type Finding = Message<"grackle.Finding"> & {
-    id: string;
-    workspaceId: string;
-    taskId: string;
-    sessionId: string;
-    category: string;
-    title: string;
-    content: string;
-    tags: string[];
-    createdAt: string;
-};
-
-// @public
-type FindingList = Message<"grackle.FindingList"> & {
-    findings: Finding[];
-};
-
-// @public
-const FindingListSchema: GenMessage<FindingList>;
-
-// @public
-const FindingSchema: GenMessage<Finding>;
-
-// @public
 export interface FuzzyKey {
     name: string;
     weight: number;
@@ -647,14 +602,6 @@ export interface FuzzySearchOptions {
     limit?: number;
     threshold?: number;
 }
-
-// @public
-type GetFindingRequest = Message<"grackle.GetFindingRequest"> & {
-    id: string;
-};
-
-// @public
-const GetFindingRequestSchema: GenMessage<GetFindingRequest>;
 
 // @public
 type GetKnowledgeNodeRequest = Message<"grackle.GetKnowledgeNodeRequest"> & {
@@ -851,16 +798,6 @@ declare namespace grackle {
         StartTaskRequestSchema,
         SetWorkpadRequest,
         SetWorkpadRequestSchema,
-        Finding,
-        FindingSchema,
-        FindingList,
-        FindingListSchema,
-        PostFindingRequest,
-        PostFindingRequestSchema,
-        QueryFindingsRequest,
-        QueryFindingsRequestSchema,
-        GetFindingRequest,
-        GetFindingRequestSchema,
         Widget,
         WidgetSchema,
         WidgetList,
@@ -973,10 +910,6 @@ declare namespace grackle {
         ListRecentKnowledgeNodesRequestSchema,
         ListRecentKnowledgeNodesResponse,
         ListRecentKnowledgeNodesResponseSchema,
-        CreateKnowledgeNodeRequest,
-        CreateKnowledgeNodeRequestSchema,
-        CreateKnowledgeNodeResponse,
-        CreateKnowledgeNodeResponseSchema,
         VersionStatus,
         VersionStatusSchema,
         DomainEvent,
@@ -1314,11 +1247,6 @@ const GrackleKnowledge: GenService<{
         input: typeof ListRecentKnowledgeNodesRequestSchema;
         output: typeof ListRecentKnowledgeNodesResponseSchema;
     };
-    createKnowledgeNode: {
-        methodKind: "unary";
-        input: typeof CreateKnowledgeNodeRequestSchema;
-        output: typeof CreateKnowledgeNodeResponseSchema;
-    };
 }>;
 
 // @public
@@ -1402,21 +1330,6 @@ const GrackleOrchestration: GenService<{
         methodKind: "unary";
         input: typeof PersonaIdSchema;
         output: typeof EmptySchema;
-    };
-    postFinding: {
-        methodKind: "unary";
-        input: typeof PostFindingRequestSchema;
-        output: typeof FindingSchema;
-    };
-    queryFindings: {
-        methodKind: "unary";
-        input: typeof QueryFindingsRequestSchema;
-        output: typeof FindingListSchema;
-    };
-    getFinding: {
-        methodKind: "unary";
-        input: typeof GetFindingRequestSchema;
-        output: typeof FindingSchema;
     };
     registerWidget: {
         methodKind: "unary";
@@ -1829,20 +1742,6 @@ type Pong = Message<"grackle.powerline.Pong"> & {
 // @public
 const PongSchema: GenMessage<Pong>;
 
-// @public
-type PostFindingRequest = Message<"grackle.PostFindingRequest"> & {
-    workspaceId: string;
-    taskId: string;
-    sessionId: string;
-    category: string;
-    title: string;
-    content: string;
-    tags: string[];
-};
-
-// @public
-const PostFindingRequestSchema: GenMessage<PostFindingRequest>;
-
 declare namespace powerline {
     export {
         file_grackle_powerline_powerline,
@@ -1914,17 +1813,6 @@ type ProvisionEvent = Message<"grackle.ProvisionEvent"> & {
 
 // @public
 const ProvisionEventSchema: GenMessage<ProvisionEvent>;
-
-// @public
-type QueryFindingsRequest = Message<"grackle.QueryFindingsRequest"> & {
-    workspaceId: string;
-    categories: string[];
-    tags: string[];
-    limit: number;
-};
-
-// @public
-const QueryFindingsRequestSchema: GenMessage<QueryFindingsRequest>;
 
 // @public
 type RegisterWidgetRequest = Message<"grackle.RegisterWidgetRequest"> & {

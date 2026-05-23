@@ -153,20 +153,15 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     // Task header should be visible with title and status
     await expect(page.locator('[data-testid="task-status"]')).toContainText("not_started", { timeout: 5_000 });
 
-    // Tab bar should show Overview, Stream, Findings
+    // Tab bar should show Overview, Stream
     await expect(page.getByRole("tab", { name: "Overview", exact: true })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Stream", exact: true })).toBeVisible();
-    await expect(page.getByLabel("Task view").getByRole("tab", { name: "Findings", exact: true })).toBeVisible();
 
     // Overview tab (default for pending) should be active
     await expect(page.getByRole("tab", { name: "Overview", exact: true })).toHaveAttribute("class", /active/);
 
     // Header shows "Start" button
     await expect(page.getByTestId("task-header-start")).toBeVisible();
-
-    // Click Findings tab — shows empty state
-    await page.getByLabel("Task view").getByRole("tab", { name: "Findings", exact: true }).click();
-    await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 5_000 });
   });
 
   test("environments are accessible via Environments tab", async ({ appPage }) => {

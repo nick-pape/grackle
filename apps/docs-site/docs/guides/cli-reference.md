@@ -231,24 +231,6 @@ Update persona properties. Same flags as `create` (all optional).
 
 Delete a persona.
 
-## Findings
-
-### `grackle finding list <workspace-id>`
-
-| Flag | Description |
-|------|-------------|
-| `--category <cat>` | Filter by category |
-| `--tag <tag>` | Filter by tag |
-| `--limit <n>` | Max results (default: 20) |
-
-### `grackle finding post <workspace-id> <title>`
-
-| Flag | Description |
-|------|-------------|
-| `--category <cat>` | Category (default: general) |
-| `--content <text>` | Finding content |
-| `--tags <tags>` | Comma-separated tags |
-
 ## Tokens
 
 ### `grackle token set <name>`

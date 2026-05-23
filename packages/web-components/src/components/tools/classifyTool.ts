@@ -14,7 +14,6 @@ export type ToolCategory =
   | "search"
   | "todo"
   | "metadata"
-  | "finding"
   | "task"
   | "workpad"
   | "knowledge"
@@ -29,8 +28,8 @@ const KNOWN_MCP_SERVERS: Set<string> = new Set(["grackle"]);
 /**
  * Extracts the bare tool name from runtime-specific naming conventions.
  *
- * - Claude Code / Codex: `mcp__grackle__finding_post` -> `finding_post`
- * - Copilot: `grackle-finding_post` -> `finding_post`
+ * - Claude Code / Codex: `mcp__grackle__task_create` -> `task_create`
+ * - Copilot: `grackle-task_create` -> `task_create`
  * - Built-in: `Read` -> `read` (unchanged, lowered later)
  */
 export function extractBareName(toolName: string): string {
@@ -83,10 +82,6 @@ const TOOL_MAP: Record<string, ToolCategory> = {
 
   // Metadata — Copilot: report_intent
   report_intent: "metadata",
-
-  // Finding — Grackle MCP
-  finding_post: "finding",
-  finding_list: "finding",
 
   // Task — Grackle MCP
   task_list: "task",

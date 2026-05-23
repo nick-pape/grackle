@@ -19,7 +19,6 @@ export type GrackleEventType =
   | "persona.created"
   | "persona.updated"
   | "persona.deleted"
-  | "finding.posted"
   | "environment.added"
   | "environment.removed"
   | "environment.changed"

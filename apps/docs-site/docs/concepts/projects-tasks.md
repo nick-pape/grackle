@@ -55,7 +55,6 @@ grackle task start <task-id>
 This spawns an agent session in the workspace's default environment (or a specified one). The agent receives:
 - The task title as its prompt
 - The task description as system context
-- Recent findings from the workspace (so it knows what other agents discovered)
 
 You can also specify a persona and pass notes (useful for retries):
 

@@ -27,17 +27,9 @@ export interface EnvironmentSummary {
 }
 
 // @public
-export interface FindingInput {
-    category: string;
-    content: string;
-    title: string;
-}
-
-// @public
 export interface OrchestratorContext {
     availableEnvironments: EnvironmentSummary[];
     availablePersonas: PersonaSummary[];
-    findingsContext: string;
     taskTree: TaskTreeNode[];
     workspace?: {
         name: string;
@@ -49,7 +41,6 @@ export interface OrchestratorContext {
 // @public
 export interface OrchestratorContextInput {
     environments: EnvironmentInput[];
-    findings: FindingInput[];
     personas: PersonaInput[];
     tasks: TaskInput[];
     workspace?: {
@@ -117,7 +108,6 @@ export interface SystemPromptOptions {
     availableEnvironments?: EnvironmentSummary[];
     availablePersonas?: PersonaSummary[];
     canDecompose?: boolean;
-    findingsContext?: string;
     personaPrompt?: string;
     task?: {
         title: string;

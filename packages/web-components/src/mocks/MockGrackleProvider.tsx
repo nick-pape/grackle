@@ -24,7 +24,6 @@ import type {
   Environment,
   Session,
   SessionEvent,
-  FindingData,
   TaskData,
   Workspace,
   TokenInfo,
@@ -48,7 +47,6 @@ import {
   MOCK_EVENTS,
   MOCK_WORKSPACES,
   MOCK_TASKS,
-  MOCK_FINDINGS,
   MOCK_TOKENS,
   MOCK_PERSONAS,
   MOCK_TASK_SESSIONS,
@@ -97,9 +95,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   const [workspaces, setWorkspaces] = useState<Workspace[]>(MOCK_WORKSPACES);
   const [workspaceLinkError, setWorkspaceLinkError] = useState("");
   const [tasks, setTasks] = useState<TaskData[]>(MOCK_TASKS);
-  const [findings, setFindings] = useState<FindingData[]>(MOCK_FINDINGS);
-  const [selectedFinding, setSelectedFinding] = useState<FindingData | undefined>(undefined);
-  const findingLoading = false;
   const [tokens, setTokens] = useState<TokenInfo[]>(MOCK_TOKENS);
   const [credentialProviders, setCredentialProviders] = useState<CredentialProviderConfig>({
     claude: "off",
@@ -768,59 +763,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [],
   );
 
-  /** Filters findings by workspaceId. */
-  const loadFindings: UseGrackleSocketResult["findings"]["loadFindings"] = useCallback(
-    async (workspaceId: string) => {
-      console.log("[MockGrackle] loadFindings", workspaceId);
-      setFindings(MOCK_FINDINGS.filter((f) => f.workspaceId === workspaceId));
-    },
-    [],
-  );
-
-  /** Load all findings across all workspaces. */
-  const loadAllFindings: UseGrackleSocketResult["findings"]["loadAllFindings"] = useCallback(async () => {
-    console.log("[MockGrackle] loadAllFindings");
-    setFindings([...MOCK_FINDINGS]);
-  }, []);
-
-  /** Load a single finding by ID. */
-  const loadFinding: UseGrackleSocketResult["findings"]["loadFinding"] = useCallback(
-    async (findingId: string) => {
-      console.log("[MockGrackle] loadFinding", findingId);
-      const found = MOCK_FINDINGS.find((f) => f.id === findingId);
-      setSelectedFinding(found);
-    },
-    [],
-  );
-
-  /** Adds a new finding to state. */
-  const postFinding: UseGrackleSocketResult["findings"]["postFinding"] = useCallback(
-    async (
-      workspaceId: string,
-      title: string,
-      content: string,
-      category?: string,
-      tags?: string[],
-    ) => {
-      console.log("[MockGrackle] postFinding", { workspaceId, title });
-
-      const newFinding: FindingData = {
-        id: nextId("find"),
-        workspaceId,
-        taskId: "",
-        sessionId: "",
-        category: category || "general",
-        title,
-        content,
-        tags: tags || [],
-        createdAt: new Date().toISOString(),
-      };
-
-      setFindings((prev) => [...prev, newFinding]);
-    },
-    [nextId],
-  );
-
   /** No-op in mock mode (environments are pre-seeded). */
   const loadEnvironments: UseGrackleSocketResult["environments"]["loadEnvironments"] = useCallback(async () => {
     console.log("[MockGrackle] loadEnvironments");
@@ -1040,17 +982,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         domainHook: NOOP_DOMAIN_HOOK,
       },
 
-      findings: {
-        findings,
-        selectedFinding,
-        findingLoading,
-        findingsLoading: false,
-        loadFindings,
-        loadAllFindings,
-        loadFinding,
-        postFinding,
-        domainHook: NOOP_DOMAIN_HOOK,
-      },
 
       tokens: {
         tokens,
@@ -1389,8 +1320,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       workspaces,
       workspaceLinkError,
       tasks,
-      findings,
-      selectedFinding,
       tokens,
       credentialProviders,
       personas,
@@ -1416,10 +1345,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       resumeTask,
       updateTask,
       deleteTask,
-      loadFindings,
-      loadAllFindings,
-      loadFinding,
-      postFinding,
       loadEnvironments,
       addEnvironment,
       updateEnvironment,

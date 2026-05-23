@@ -505,40 +505,6 @@ Delete a persona.
 
 ---
 
-### Findings
-
-Query and post findings — categorized discoveries shared across agents within a workspace.
-
-#### `grackle finding list <workspace-id>`
-
-List findings in a workspace.
-
-```bash
-grackle finding list ws-123
-grackle finding list ws-123 --category architecture --tag security --limit 10
-```
-
-| Option | Description |
-|--------|-------------|
-| `--category <cat>` | Filter by category |
-| `--tag <tag>` | Filter by tag |
-| `--limit <n>` | Max results (default: 20) |
-
-#### `grackle finding post <workspace-id> <title>`
-
-Post a new finding.
-
-```bash
-grackle finding post ws-123 "Auth tokens expire silently" --category bug --content "The refresh token..." --tags auth,security
-```
-
-| Option | Description |
-|--------|-------------|
-| `--category <cat>` | Finding category (default: `general`) |
-| `--content <text>` | Finding content |
-| `--tags <tags>` | Comma-separated tags |
-
----
 
 ### Tokens
 

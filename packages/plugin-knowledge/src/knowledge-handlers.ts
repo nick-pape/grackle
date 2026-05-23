@@ -5,9 +5,6 @@ import {
   knowledgeSearch,
   getNode as getKnowledgeNodeById,
   expandNode,
-  createNativeNode,
-  ingest,
-  createPassThroughChunker,
   listRecentNodes,
   type SearchResult,
   type Embedder,
@@ -139,32 +136,6 @@ export async function listRecentKnowledgeNodes(req: grackle.ListRecentKnowledgeN
       nodes: result.nodes.map(knowledgeNodeToProto),
       edges: result.edges.map(knowledgeEdgeToProto),
     });
-  } catch (err) {
-    wrapNeo4jError(err);
-  }
-}
-
-/** Create a new native knowledge node with embedding. */
-export async function createKnowledgeNode(req: grackle.CreateKnowledgeNodeRequest): Promise<grackle.CreateKnowledgeNodeResponse> {
-  const embedder: Embedder = requireEmbedder();
-
-  try {
-    const chunker = createPassThroughChunker();
-    const embedded = await ingest(req.content, chunker, embedder);
-    if (embedded.length === 0) {
-      throw new ConnectError("Content produced no embeddings", Code.InvalidArgument);
-    }
-
-    const id: string = await createNativeNode({
-      category: (req.category || "insight") as "decision" | "insight" | "concept" | "snippet",
-      title: req.title,
-      content: req.content,
-      tags: [...req.tags],
-      embedding: embedded[0].vector,
-      workspaceId: req.workspaceId || "",
-    });
-
-    return create(grackle.CreateKnowledgeNodeResponseSchema, { id });
   } catch (err) {
     wrapNeo4jError(err);
   }

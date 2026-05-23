@@ -11,9 +11,6 @@ const {
   mockKnowledgeSearch,
   mockGetNode,
   mockExpandNode,
-  mockCreateNativeNode,
-  mockIngest,
-  mockCreatePassThroughChunker,
   mockListRecentNodes,
   mockGetKnowledgeEmbedder,
   mockIsNeo4jHealthy,
@@ -21,9 +18,6 @@ const {
   mockKnowledgeSearch: vi.fn().mockResolvedValue([]),
   mockGetNode: vi.fn(),
   mockExpandNode: vi.fn().mockResolvedValue({ nodes: [], edges: [] }),
-  mockCreateNativeNode: vi.fn().mockResolvedValue("new-node-id"),
-  mockIngest: vi.fn().mockResolvedValue([{ vector: [0.1, 0.2] }]),
-  mockCreatePassThroughChunker: vi.fn().mockReturnValue({}),
   mockListRecentNodes: vi.fn().mockResolvedValue({ nodes: [], edges: [] }),
   mockGetKnowledgeEmbedder: vi.fn().mockReturnValue({ dimensions: 384, embed: vi.fn() }),
   mockIsNeo4jHealthy: vi.fn().mockReturnValue(true),
@@ -33,9 +27,6 @@ vi.mock("@grackle-ai/knowledge", () => ({
   knowledgeSearch: mockKnowledgeSearch,
   getNode: mockGetNode,
   expandNode: mockExpandNode,
-  createNativeNode: mockCreateNativeNode,
-  ingest: mockIngest,
-  createPassThroughChunker: mockCreatePassThroughChunker,
   listRecentNodes: mockListRecentNodes,
 }));
 
@@ -61,7 +52,6 @@ import {
   getKnowledgeNode,
   expandKnowledgeNode,
   listRecentKnowledgeNodes,
-  createKnowledgeNode,
 } from "./knowledge-handlers.js";
 
 // ---------------------------------------------------------------------------
@@ -82,13 +72,6 @@ function makeExpandRequest(id: string = "node-1"): grackle.ExpandKnowledgeNodeRe
 
 function makeListRecentRequest(): grackle.ListRecentKnowledgeNodesRequest {
   return create(grackle.ListRecentKnowledgeNodesRequestSchema, {});
-}
-
-function makeCreateRequest(): grackle.CreateKnowledgeNodeRequest {
-  return create(grackle.CreateKnowledgeNodeRequestSchema, {
-    title: "Test",
-    content: "Test content",
-  });
 }
 
 // ---------------------------------------------------------------------------
@@ -134,15 +117,6 @@ describe("knowledge handler health gate", () => {
     await expect(listRecentKnowledgeNodes(makeListRecentRequest())).rejects.toThrow(ConnectError);
     try {
       await listRecentKnowledgeNodes(makeListRecentRequest());
-    } catch (err) {
-      expect((err as ConnectError).code).toBe(Code.Unavailable);
-    }
-  });
-
-  it("createKnowledgeNode throws Unavailable when Neo4j is unhealthy", async () => {
-    await expect(createKnowledgeNode(makeCreateRequest())).rejects.toThrow(ConnectError);
-    try {
-      await createKnowledgeNode(makeCreateRequest());
     } catch (err) {
       expect((err as ConnectError).code).toBe(Code.Unavailable);
     }
@@ -204,18 +178,6 @@ describe("knowledge handler Neo4j error wrapping", () => {
 
     try {
       await expandKnowledgeNode(makeExpandRequest());
-      expect.fail("Should have thrown");
-    } catch (err) {
-      expect(err).toBeInstanceOf(ConnectError);
-      expect((err as ConnectError).code).toBe(Code.Unavailable);
-    }
-  });
-
-  it("wraps unexpected errors from createNativeNode as Unavailable", async () => {
-    mockCreateNativeNode.mockRejectedValueOnce(new Error("write failed"));
-
-    try {
-      await createKnowledgeNode(makeCreateRequest());
       expect.fail("Should have thrown");
     } catch (err) {
       expect(err).toBeInstanceOf(ConnectError);

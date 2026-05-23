@@ -5,7 +5,7 @@ import {
   taskStatusToEnum,
 } from "@grackle-ai/common";
 import type { EnvironmentRow, SessionRow } from "@grackle-ai/database";
-import { workspaceStore, taskStore, personaStore, findingStore, widgetStore, escalationStore, workspaceEnvironmentLinkStore, safeParseJsonArray } from "@grackle-ai/database";
+import { workspaceStore, taskStore, personaStore, widgetStore, escalationStore, workspaceEnvironmentLinkStore, safeParseJsonArray } from "@grackle-ai/database";
 
 /** Convert an environment database row to its proto representation. */
 export function envRowToProto(row: EnvironmentRow): grackle.Environment {
@@ -107,14 +107,6 @@ export function taskRowToProto(
     scheduleId: row.scheduleId,
     tokenBudget: row.tokenBudget,
     costBudgetMillicents: row.costBudgetMillicents,
-  });
-}
-
-/** Convert a finding database row to its proto representation. */
-export function findingRowToProto(row: findingStore.FindingRow): grackle.Finding {
-  return create(grackle.FindingSchema, {
-    ...row,
-    tags: safeParseJsonArray(row.tags),
   });
 }
 

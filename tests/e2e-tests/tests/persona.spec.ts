@@ -122,8 +122,6 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     await expect(selector).toContainText(`${WORKER_MCP_TOOLS.length} of`);
 
     // Verify specific worker tools are checked
-    await expect(page.getByTestId("tool-finding_post")).toBeChecked();
-    await expect(page.getByTestId("tool-finding_list")).toBeChecked();
     await expect(page.getByTestId("tool-workpad_read")).toBeChecked();
 
     // Verify non-worker tools are NOT checked

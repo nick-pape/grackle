@@ -33,7 +33,7 @@ vi.mock("./transcript.js", () => ({
 }));
 
 // Import AFTER mocks
-import { openDatabase, initDatabase, sqlite as _sqlite, sessionStore, taskStore, workspaceStore, findingStore } from "@grackle-ai/database";
+import { openDatabase, initDatabase, sqlite as _sqlite, sessionStore, taskStore, workspaceStore } from "@grackle-ai/database";
 openDatabase(":memory:");
 initDatabase();
 const sqlite = _sqlite!;
@@ -1031,48 +1031,6 @@ describe("late-binding", () => {
     });
   }
 
-  it("processes finding events after late-bind", async () => {
-    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
-
-    const { stream, push, end } = controllableStream();
-    processEventStream(stream, {
-      sessionId: "sess1",
-      logPath: "/tmp/log",
-    });
-
-    // Wait for stream to start processing
-    await new Promise((r) => setTimeout(r, 50));
-
-    // Late-bind the session to the task
-    processorRegistry.lateBind("sess1", "task1", "proj1");
-
-    // Now emit a finding event — should be processed with task context
-    push(create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "finding",
-      timestamp: new Date().toISOString(),
-      content: JSON.stringify({ title: "Test Finding", content: "Found something", category: "bug" }),
-    }));
-
-    // End the stream
-    push(create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "status",
-      timestamp: new Date().toISOString(),
-      content: "completed",
-    }));
-    end();
-
-    await waitForSessionTerminal("sess1");
-
-    // Verify finding was stored
-    const findings = findingStore.queryFindings("proj1");
-    expect(findings).toHaveLength(1);
-    expect(findings[0].title).toBe("Test Finding");
-    expect(findings[0].workspaceId).toBe("proj1");
-  });
-
   it("processes subtask events after late-bind", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
     taskStore.createTask("task1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
@@ -1142,93 +1100,6 @@ describe("late-binding", () => {
       "task.updated",
       expect.objectContaining({ taskId: "task1", workspaceId: "proj1" }),
     );
-  });
-
-  it("replays pre-association finding events from log on late-bind", async () => {
-    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
-
-    // Mock readLog to return a pre-existing finding event
-    vi.mocked(logWriter.readLog).mockReturnValue([
-      {
-        session_id: "sess1",
-        type: "finding",
-        timestamp: new Date().toISOString(),
-        content: JSON.stringify({ title: "Pre-bind Finding", content: "Found before bind", category: "info" }),
-      },
-    ]);
-
-    const { stream, push, end } = controllableStream();
-    processEventStream(stream, {
-      sessionId: "sess1",
-      logPath: "/tmp/log",
-    });
-
-    await new Promise((r) => setTimeout(r, 50));
-
-    // Late-bind — should trigger replay
-    processorRegistry.lateBind("sess1", "task1", "proj1");
-
-    // Give replay time to run
-    await new Promise((r) => setTimeout(r, 50));
-
-    // Verify the pre-bind finding was stored
-    const findings = findingStore.queryFindings("proj1");
-    expect(findings).toHaveLength(1);
-    expect(findings[0].title).toBe("Pre-bind Finding");
-
-    push(create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "status",
-      timestamp: new Date().toISOString(),
-      content: "completed",
-    }));
-    end();
-
-    await waitForSessionTerminal("sess1");
-  });
-
-  it("replay does not re-publish events to streamHub", async () => {
-    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
-
-    vi.mocked(logWriter.readLog).mockReturnValue([
-      {
-        session_id: "sess1",
-        type: "finding",
-        timestamp: new Date().toISOString(),
-        content: JSON.stringify({ title: "Replay Finding", content: "test", category: "info" }),
-      },
-    ]);
-
-    const { stream, push, end } = controllableStream();
-    processEventStream(stream, {
-      sessionId: "sess1",
-      logPath: "/tmp/log",
-    });
-
-    await new Promise((r) => setTimeout(r, 50));
-
-    // Clear publish mock to only track replay calls
-    const { publish } = await import("./stream-hub.js");
-    vi.mocked(publish).mockClear();
-
-    processorRegistry.lateBind("sess1", "task1", "proj1");
-    await new Promise((r) => setTimeout(r, 50));
-
-    // streamHub.publish should NOT have been called by replay
-    // (broadcast for finding_posted IS expected, but streamHub.publish is not)
-    expect(publish).not.toHaveBeenCalled();
-
-    push(create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "status",
-      timestamp: new Date().toISOString(),
-      content: "completed",
-    }));
-    end();
-
-    await waitForSessionTerminal("sess1");
   });
 
   it("processor is unregistered after stream ends", async () => {

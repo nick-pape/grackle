@@ -17,7 +17,7 @@ grackle schedule create "Nightly test suite" \
   --schedule "0 2 * * *" \
   --workspace <workspace-id> \
   --persona <persona-id> \
-  --desc "Run the full test suite and post findings on any failures"
+  --desc "Run the full test suite and report any failures"
 ```
 
 ### From the MCP server
@@ -84,7 +84,7 @@ The scheduling plugin contributes a **cron reconciliation phase** that runs on e
 4. Enqueue the task for dispatch
 5. Advance the schedule (update `lastRunAt`, `nextRunAt`, `runCount`)
 
-Tasks created by schedules go through the same lifecycle as any other task — they get dispatched to an available environment, run with the configured persona, and produce findings and results.
+Tasks created by schedules go through the same lifecycle as any other task — they get dispatched to an available environment, run with the configured persona, and produce results.
 
 ## Managing schedules
 

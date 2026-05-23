@@ -16,12 +16,10 @@ export const ALL_MCP_TOOL_NAMES: ReadonlySet<string> = new Set([
   "credential_provider_list", "credential_provider_set",
   // env
   "env_list", "env_add", "env_provision", "env_stop", "env_destroy", "env_remove", "env_wake",
-  // finding
-  "finding_list", "finding_post",
   // ipc
   "ipc_spawn", "ipc_write", "ipc_close", "ipc_list_fds", "ipc_list_streams", "ipc_terminate", "ipc_create_stream", "ipc_attach", "ipc_share_stream",
   // knowledge
-  "knowledge_search", "knowledge_get_node", "knowledge_create_node",
+  "knowledge_search", "knowledge_get_node",
   // logs
   "logs_get",
   // persona
@@ -58,7 +56,6 @@ export const ALL_MCP_TOOL_NAMES: ReadonlySet<string> = new Set([
  * Matches the current hardcoded `SCOPED_TOOLS` set in tool-scoping.ts.
  */
 export const DEFAULT_SCOPED_MCP_TOOLS: readonly string[] = [
-  "finding_post", "finding_list",
   "task_create", "task_list", "task_search", "task_show", "task_start", "task_complete",
   "session_attach", "session_send_input",
   "persona_list", "persona_show",
@@ -80,7 +77,6 @@ export const DEFAULT_SCOPED_MCP_TOOLS: readonly string[] = [
  * A strict subset of DEFAULT_SCOPED_MCP_TOOLS.
  */
 export const WORKER_MCP_TOOLS: readonly string[] = [
-  "finding_post", "finding_list",
   "task_show",
   "session_attach", "session_send_input",
   "persona_list", "persona_show",
@@ -97,7 +93,6 @@ export const WORKER_MCP_TOOLS: readonly string[] = [
  */
 export const ORCHESTRATOR_MCP_TOOLS: readonly string[] = [
   // All default scoped tools
-  "finding_post", "finding_list",
   "task_create", "task_list", "task_search", "task_show", "task_start", "task_complete",
   "session_attach", "session_send_input",
   "persona_list", "persona_show",
@@ -114,7 +109,6 @@ export const ORCHESTRATOR_MCP_TOOLS: readonly string[] = [
   "task_update", "task_delete", "task_resume",
   "session_spawn", "session_kill", "session_status",
   "persona_create",
-  "knowledge_create_node",
   "schedule_create", "schedule_update", "schedule_delete",
   // Escalation — orchestrators can page the human
   "escalate_to_human",

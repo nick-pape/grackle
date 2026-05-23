@@ -7,15 +7,12 @@ import {
   newTaskUrl,
   newChatUrl,
   personaUrl,
-  findingUrl,
-  findingsUrl,
   HOME_URL,
   SETTINGS_URL,
   PERSONAS_URL,
   NEW_PERSONA_URL,
   NEW_ENVIRONMENT_URL,
   NEW_WORKSPACE_URL,
-  FINDINGS_URL,
 } from "./navigation.js";
 
 describe("URL builder functions", () => {
@@ -38,10 +35,6 @@ describe("URL builder functions", () => {
     expect(taskUrl("task-1", "stream")).toBe("/tasks/task-1/stream");
   });
 
-  it("taskUrl with findings tab produces correct path", () => {
-    expect(taskUrl("task-1", "findings")).toBe("/tasks/task-1/findings");
-  });
-
   it("taskUrl encodes taskId", () => {
     expect(taskUrl("has space")).toBe("/tasks/has%20space");
     expect(taskUrl("has space", "stream")).toBe("/tasks/has%20space/stream");
@@ -50,7 +43,6 @@ describe("URL builder functions", () => {
   it("taskUrl with workspace and environment produces environment-scoped path", () => {
     expect(taskUrl("task-1", undefined, "ws-1", "env-1")).toBe("/environments/env-1/workspaces/ws-1/tasks/task-1");
     expect(taskUrl("task-1", "stream", "ws-1", "env-1")).toBe("/environments/env-1/workspaces/ws-1/tasks/task-1/stream");
-    expect(taskUrl("task-1", "findings", "ws-1", "env-1")).toBe("/environments/env-1/workspaces/ws-1/tasks/task-1/findings");
   });
 
   it("taskUrl with only workspaceId (no environmentId) falls back to legacy workspace path", () => {
@@ -102,27 +94,4 @@ describe("URL builder functions", () => {
     expect(personaUrl("has space")).toBe("/settings/personas/has%20space");
   });
 
-  it("FINDINGS_URL constant is correct", () => {
-    expect(FINDINGS_URL).toBe("/findings");
-  });
-
-  it("findingUrl produces base path without scope", () => {
-    expect(findingUrl("f1")).toBe("/findings/f1");
-  });
-
-  it("findingUrl with workspace and environment produces scoped path", () => {
-    expect(findingUrl("f1", "ws1", "env1")).toBe("/environments/env1/workspaces/ws1/findings/f1");
-  });
-
-  it("findingUrl encodes special characters", () => {
-    expect(findingUrl("has space")).toBe("/findings/has%20space");
-  });
-
-  it("findingsUrl without scope returns base findings path", () => {
-    expect(findingsUrl()).toBe("/findings");
-  });
-
-  it("findingsUrl with workspace and environment produces scoped path", () => {
-    expect(findingsUrl("ws1", "env1")).toBe("/environments/env1/workspaces/ws1/findings");
-  });
 });

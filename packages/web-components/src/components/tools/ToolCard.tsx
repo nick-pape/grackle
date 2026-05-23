@@ -7,7 +7,6 @@ import { ShellCard } from "./ShellCard.js";
 import { SearchCard } from "./SearchCard.js";
 import { TodoCard } from "./TodoCard.js";
 import { MetadataCard } from "./MetadataCard.js";
-import { FindingCard } from "./FindingCard.js";
 import { TaskCard } from "./TaskCard.js";
 import { WorkpadCard } from "./WorkpadCard.js";
 import { KnowledgeCard } from "./KnowledgeCard.js";
@@ -40,8 +39,6 @@ export function ToolCard(props: ToolCardProps): JSX.Element {
       return <TodoCard {...props} />;
     case "metadata":
       return <MetadataCard {...props} />;
-    case "finding":
-      return <FindingCard {...props} />;
     case "task":
       return <TaskCard {...props} />;
     case "workpad":

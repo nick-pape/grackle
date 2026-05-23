@@ -38,10 +38,6 @@ vi.mock("@grackle-ai/database", async (importOriginal) => {
       deleteByEnvironment: vi.fn(),
       setSessionTask: vi.fn(),
     },
-    findingStore: {
-      queryFindings: vi.fn(() => []),
-      postFinding: vi.fn(),
-    },
     personaStore: {
       listPersonas: vi.fn(() => []),
       getPersona: vi.fn(() => undefined),

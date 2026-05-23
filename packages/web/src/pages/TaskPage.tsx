@@ -4,7 +4,7 @@ import { ConnectError } from "@connectrpc/connect";
 import { useGrackle } from "../context/GrackleContext.js";
 import { useSandboxProxyUrl } from "../context/ManifestContext.js";
 import {
-  Breadcrumbs, ChatInput, ConfirmDialog, EventStream, FindingsPanel,
+  Breadcrumbs, ChatInput, ConfirmDialog, EventStream,
   SessionAttemptSelector, TaskActionButtons, TaskEditPanel, TaskOverviewPanel,
   buildTaskBreadcrumbs, groupConsecutiveTextEvents, pairToolEvents,
   taskUrl, useAppNavigate, useToast, workspaceUrl,
@@ -15,9 +15,9 @@ import { useHotkey } from "../hooks/useHotkey.js";
 import { TaskShimmer } from "./TaskShimmer.js";
 import styles from "./page-layout.module.scss";
 
-type TaskTab = "overview" | "stream" | "findings";
+type TaskTab = "overview" | "stream";
 
-/** Task detail page with overview/stream/findings tabs. */
+/** Task detail page with overview/stream tabs. */
 export function TaskPage(): JSX.Element {
   const { taskId, workspaceId: routeWorkspaceId, environmentId: routeEnvironmentId } = useParams<{ taskId: string; workspaceId?: string; environmentId?: string }>();
   const sandboxProxyUrl = useSandboxProxyUrl();
@@ -28,7 +28,6 @@ export function TaskPage(): JSX.Element {
     sessions: { events, eventsDropped, sessions, loadSessionEvents, taskSessions: taskSessionsMap, loadTaskSessions, sendInput, spawn, kill },
     tasks: { tasks, tasksLoading, startTask, stopTask, resumeTask, deleteTask, createTask, updateTask },
     environments: { environments, provisionEnvironment },
-    findings: { findings, loadFindings },
     workspaces: { workspaces },
     personas: { personas },
     usageCache, loadUsage,
@@ -43,7 +42,6 @@ export function TaskPage(): JSX.Element {
   // Derive tab from URL path
   const tabFromUrl: TaskTab =
     location.pathname.endsWith("/stream") ? "stream"
-    : location.pathname.endsWith("/findings") ? "findings"
     : "overview";
   const isEditRoute = location.pathname.endsWith("/edit");
 
@@ -153,7 +151,7 @@ export function TaskPage(): JSX.Element {
         task?.status === "not_started" ? "overview"
         : task?.status === "working" ? "stream"
         : task?.status === "paused" ? "stream"
-        : task?.status === "complete" ? "findings"
+        : task?.status === "complete" ? "overview"
         : undefined;
       if (newTab && newTab !== activeTaskTab && !(isInitialLoad && tabFromUrl !== "overview")) {
         setActiveTaskTab(newTab);
@@ -195,13 +193,6 @@ export function TaskPage(): JSX.Element {
     }
   }, [sessionId, loadSessionEvents]);
 
-  // Load findings when switching to findings tab
-  useEffect(() => {
-    if (activeTaskTab === "findings" && workspaceId) {
-      loadFindings(workspaceId).catch(() => {});
-    }
-  }, [activeTaskTab, workspaceId, loadFindings]);
-
   // Load usage stats for the overview panel (lifted from the old inline TaskOverview)
   const sessionCostSum = currentTaskSessions.reduce((s, sess) => s + (sess.costMillicents ?? 0), 0);
   useEffect(() => {
@@ -224,10 +215,9 @@ export function TaskPage(): JSX.Element {
     navigate(taskUrl(taskId!, tab === "overview" ? undefined : tab, routeWorkspaceId, routeEnvironmentId));
   };
 
-  // Keyboard shortcuts: 1/2/3 to switch tabs
+  // Keyboard shortcuts: 1/2 to switch tabs
   useHotkey({ key: "1" }, () => handleTabChange("overview"));
   useHotkey({ key: "2" }, () => handleTabChange("stream"));
-  useHotkey({ key: "3" }, () => handleTabChange("findings"));
 
   if (!task && tasksLoading) {
     return <TaskShimmer />;
@@ -271,9 +261,6 @@ export function TaskPage(): JSX.Element {
         </button>
         <button role="tab" aria-selected={activeTaskTab === "stream"} className={`${styles.tab} ${activeTaskTab === "stream" ? styles.active : ""}`} onClick={() => handleTabChange("stream")}>
           Stream
-        </button>
-        <button role="tab" aria-selected={activeTaskTab === "findings"} className={`${styles.tab} ${activeTaskTab === "findings" ? styles.active : ""}`} onClick={() => handleTabChange("findings")}>
-          Findings
         </button>
       </div>
 
@@ -347,15 +334,6 @@ export function TaskPage(): JSX.Element {
               }
               onShowToast={showToast}
             />
-          </motion.div>
-        )}
-        {activeTaskTab === "findings" && (
-          <motion.div key="findings" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }} className={styles.tabContent}>
-            {workspaceId ? (
-              <FindingsPanel findings={findings.filter((f) => f.workspaceId === workspaceId)} />
-            ) : (
-              <div className={styles.noContext}>Navigate to a task within a workspace to view findings</div>
-            )}
           </motion.div>
         )}
       </AnimatePresence>

@@ -155,8 +155,8 @@ describe("createToolRegistry with plugin tools", () => {
 describe("Full tool registry", () => {
   it("contains exactly the expected number of tools", () => {
     const registry = createToolRegistry();
-    // 69 before this PR + 5 widget registry tools (#1239) = 74.
-    expect(registry.list()).toHaveLength(74);
+    // 74 (incl. 5 widget registry tools, #1239) minus the 2 removed finding tools (#1257) = 72.
+    expect(registry.list()).toHaveLength(72);
   });
 
   it("every tool name matches snake_case pattern", () => {
@@ -189,7 +189,6 @@ describe("Full tool registry", () => {
       "workspace_get",
       "task_list",
       "task_show",
-      "finding_list",
       "persona_list",
       "persona_show",
       "logs_get",
@@ -212,7 +211,7 @@ describe("Full tool registry", () => {
   it("groups are consistent within tool files", () => {
     const registry = createToolRegistry();
     const expectedGroups = new Set([
-      "env", "session", "workspace", "task", "finding", "persona", "logs", "credential", "token", "config", "ipc", "usage", "knowledge", "workpad", "schedule", "system", "escalation", "widget",
+      "env", "session", "workspace", "task", "persona", "logs", "credential", "token", "config", "ipc", "usage", "knowledge", "workpad", "schedule", "system", "escalation", "widget",
     ]);
     for (const tool of registry.list()) {
       expect(expectedGroups.has(tool.group), `unexpected group: ${tool.group}`).toBe(true);
