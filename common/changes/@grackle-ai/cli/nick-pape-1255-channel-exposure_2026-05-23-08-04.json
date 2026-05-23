@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add capability-scoped channel exposure: mint revocable webhook tokens to inject user messages into a session (ExposeChannel/ListChannelGrants/RevokeChannelGrant RPCs, POST /hook/<token>, and `grackle channel` CLI)",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
