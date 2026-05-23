@@ -1,6 +1,6 @@
 import db from "./db.js";
 import { channelGrants, type ChannelGrantRow } from "./schema.js";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export type { ChannelGrantRow };
 
@@ -30,9 +30,9 @@ export function getGrant(id: string): ChannelGrantRow | undefined {
   return db.select().from(channelGrants).where(eq(channelGrants.id, id)).get();
 }
 
-/** List all channel grants (most recent first). */
+/** List all channel grants, most recent first. */
 export function listGrants(): ChannelGrantRow[] {
-  return db.select().from(channelGrants).all();
+  return db.select().from(channelGrants).orderBy(desc(channelGrants.createdAt)).all();
 }
 
 /** Mark a grant as revoked. Idempotent. */

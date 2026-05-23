@@ -17,11 +17,18 @@ export function registerChannelCommands(program: Command): void {
     .option("--ttl <seconds>", "Token lifetime in seconds (0 = server default)")
     .option("--label <text>", "Label for audit and revocation")
     .action(async (opts: { session: string; verb: string; ttl?: string; label?: string }) => {
+      let ttlSeconds = 0;
+      if (opts.ttl !== undefined) {
+        if (!/^\d+$/.test(opts.ttl.trim())) {
+          throw new Error(`Invalid --ttl: "${opts.ttl}" (expected a non-negative integer number of seconds)`);
+        }
+        ttlSeconds = Number.parseInt(opts.ttl.trim(), 10);
+      }
       const { core: client } = createGrackleClients();
       const res = await client.exposeChannel({
         target: { case: "sessionId", value: opts.session },
         verbs: [opts.verb],
-        ttlSeconds: opts.ttl ? Number(opts.ttl) : 0,
+        ttlSeconds,
         label: opts.label || "",
       });
       console.log(`Channel:  ${res.channelUri}`);

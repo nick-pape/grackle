@@ -50,12 +50,24 @@ export interface SandboxServerOptions {
 }
 
 // @public
+export interface WebhookBody {
+    from?: string;
+    idempotencyKey?: string;
+    message: string;
+}
+
+// @public
+export interface WebhookResult {
+    channelUri?: string;
+    outcome: "delivered" | "buffered" | "forbidden" | "not_found" | "unavailable" | "bad_request";
+    sessionId?: string;
+}
+
+// @public
 export interface WebServerOptions {
     apiKey: string;
     bindHost: string;
     connectRoutes?: (router: ConnectRouter) => void;
-    // Warning: (ae-forgotten-export) The symbol "WebhookBody" needs to be exported by the entry point index.d.ts
-    // Warning: (ae-forgotten-export) The symbol "WebhookResult" needs to be exported by the entry point index.d.ts
     handleWebhook?: (token: string, body: WebhookBody) => Promise<WebhookResult>;
     pluginNames?: string[];
     readinessCheck?: () => ReadinessResult | Promise<ReadinessResult>;

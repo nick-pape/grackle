@@ -718,9 +718,10 @@ export function createWebServer(options: WebServerOptions): http.Server {
 
     // --- Inbound channel webhook (capability-token auth; NO session/API key) ---
     if (handleWebhook && req.method === "POST" && (rawPath.startsWith("/hook/") || rawPath === "/hook")) {
-      const pathToken = rawPath.startsWith("/hook/")
-        ? decodeURIComponent(rawPath.slice("/hook/".length))
-        : "";
+      // `rawPath` is already URL-decoded above, and the token is base64url
+      // (URL-safe), so no further decoding is needed — avoids decodeURIComponent
+      // throwing on malformed percent-encoding.
+      const pathToken = rawPath.startsWith("/hook/") ? rawPath.slice("/hook/".length) : "";
       const token = pathToken || req.headers.authorization?.replace(/^Bearer\s+/i, "") || "";
       let raw: string;
       try {
