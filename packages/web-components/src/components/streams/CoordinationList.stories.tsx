@@ -54,8 +54,9 @@ export const GroupedByTask: Story = {
 /** Each stream is tagged with its kind badge. */
 export const KindBadges: Story = {
   play: async ({ canvas }) => {
-    await expect(canvas.getByText("Chatroom")).toBeInTheDocument();
-    await expect(canvas.getByText("Channel")).toBeInTheDocument();
+    // mixedStreams has one chatroom and two channels.
+    await expect(canvas.getAllByText("Chatroom")).toHaveLength(1);
+    await expect(canvas.getAllByText("Channel")).toHaveLength(2);
   },
 };
 
