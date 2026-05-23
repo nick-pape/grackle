@@ -267,6 +267,12 @@ export const MOCK_EVENTS: SessionEvent[] = [
   },
   {
     sessionId: "sess-001",
+    eventType: "user_input",
+    timestamp: "2026-02-27T08:15:03Z",
+    content: "Pick up the **JWT auth migration** from the previous session. A few requirements:\n\n- use `jsonwebtoken`, not `jose`\n- access tokens expire in `24h`\n- store refresh tokens in the DB\n\nMake sure the existing tests still pass.",
+  },
+  {
+    sessionId: "sess-001",
     eventType: "text",
     timestamp: "2026-02-27T08:15:04Z",
     content: "I'll pick up the JWT auth migration. The previous session identified 3 files that need updating. Let me verify the current state and start implementing.",
@@ -491,6 +497,12 @@ export const MOCK_EVENTS: SessionEvent[] = [
     eventType: "text",
     timestamp: "2026-02-27T08:15:42Z",
     content: "All 14 tests pass. Here's a summary of the changes:\n\n### Changes made\n\n| File | Action |\n|------|--------|\n| `src/middleware/auth.ts` | Rewrote to verify JWT Bearer tokens |\n| `src/routes/login.ts` | Now issues JWT access + refresh tokens |\n| `src/routes/protected.ts` | Updated to read `req.user` from JWT payload |\n| `src/middleware/__tests__/auth.test.ts` | Updated tests for JWT verification |\n\n### Key decisions\n- **Access token expiry**: 24 hours (configurable via `JWT_SECRET` env var)\n- **Refresh tokens**: 48-byte random hex, stored in DB\n- **Error handling**: Distinguishes expired tokens (401) from invalid tokens (403)",
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "user_input",
+    timestamp: "2026-02-27T08:15:50Z",
+    content: "Looks great! Two follow-ups:\n\n1. add a `/refresh` endpoint that swaps a refresh token for a new access token\n2. note the token flow in `README.md`",
   },
 
   // ── sess-002: completed unit test session ──

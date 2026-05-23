@@ -28,7 +28,7 @@ test.describe("Tool card rendering (#935)", { tag: ["@webui"] }, () => {
 
     // Start the task and wait for idle
     await page.getByTestId("task-header-start").click();
-    await page.locator('input[placeholder="Type a message..."]').waitFor({ timeout: 15_000 });
+    await page.locator('textarea[placeholder="Type a message..."]').waitFor({ timeout: 15_000 });
 
     // Switch to stream tab
     await page.locator("button", { hasText: "Stream" }).click();
@@ -55,7 +55,7 @@ test.describe("Tool card rendering (#935)", { tag: ["@webui"] }, () => {
     );
 
     await page.getByTestId("task-header-start").click();
-    await page.locator('input[placeholder="Type a message..."]').waitFor({ timeout: 15_000 });
+    await page.locator('textarea[placeholder="Type a message..."]').waitFor({ timeout: 15_000 });
     await page.locator("button", { hasText: "Stream" }).click();
 
     // Should render as a ShellCard with the command visible
@@ -77,7 +77,7 @@ test.describe("Tool card rendering (#935)", { tag: ["@webui"] }, () => {
     );
 
     await page.getByTestId("task-header-start").click();
-    await page.locator('input[placeholder="Type a message..."]').waitFor({ timeout: 15_000 });
+    await page.locator('textarea[placeholder="Type a message..."]').waitFor({ timeout: 15_000 });
     await page.locator("button", { hasText: "Stream" }).click();
 
     // Should render as a FileReadCard (in-progress, no result)

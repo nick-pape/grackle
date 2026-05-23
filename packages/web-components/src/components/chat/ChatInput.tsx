@@ -1,7 +1,13 @@
-import { useState, type FormEvent, type JSX } from "react";
+import { useState, useLayoutEffect, useRef, type FormEvent, type KeyboardEvent, type JSX } from "react";
 import type { ToastVariant } from "../../context/ToastContext.js";
 import type { Environment, PersonaData } from "../../hooks/types.js";
 import styles from "./ChatInput.module.scss";
+
+/**
+ * Maximum height (px) the composer grows to before scrolling internally.
+ * Must stay in sync with `max-height` on `.textarea` in ChatInput.module.scss.
+ */
+const MAX_COMPOSER_HEIGHT_PX: number = 200;
 
 // --- Helpers ---
 
@@ -38,6 +44,77 @@ function DisconnectedBanner({ environmentId, onReconnect }: DisconnectedBannerPr
         Reconnect
       </button>
     </>
+  );
+}
+
+/** Props for the auto-resizing chat composer textarea. */
+interface ComposerTextAreaProps {
+  /** Current text value. */
+  value: string;
+  /** Called on every keystroke with the new value. */
+  onChange: (value: string) => void;
+  /** Called when the user submits via Ctrl/Cmd+Enter. */
+  onSubmit: () => void;
+  /** Placeholder text shown when empty. */
+  placeholder: string;
+  /** Whether the textarea is disabled. */
+  disabled?: boolean;
+  /** Whether to auto-focus the textarea on mount. */
+  autoFocus?: boolean;
+  /** Accessible label for the textarea. */
+  ariaLabel: string;
+}
+
+/**
+ * Auto-resizing multiline chat composer.
+ *
+ * Enter inserts a newline; Ctrl/Cmd+Enter submits (the Send button submits too).
+ * The textarea grows with its content up to {@link MAX_COMPOSER_HEIGHT_PX}, then
+ * scrolls internally.
+ */
+function ComposerTextArea({
+  value,
+  onChange,
+  onSubmit,
+  placeholder,
+  disabled,
+  autoFocus,
+  ariaLabel,
+}: ComposerTextAreaProps): JSX.Element {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize: collapse to measure natural height, then grow to fit (capped).
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, MAX_COMPOSER_HEIGHT_PX)}px`;
+  }, [value]);
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>): void => {
+    // Ctrl/Cmd+Enter submits; plain Enter falls through to insert a newline.
+    // The isComposing guard avoids submitting mid-IME composition (e.g. CJK input).
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      onSubmit();
+    }
+  };
+
+  return (
+    <textarea
+      ref={ref}
+      rows={1}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={handleKeyDown}
+      placeholder={placeholder}
+      disabled={disabled}
+      autoFocus={autoFocus}
+      className={styles.textarea}
+      aria-label={ariaLabel}
+    />
   );
 }
 
@@ -92,8 +169,8 @@ export function ChatInput({
 
   const envDisconnected = isEnvDisconnected(environmentId, environments);
 
-  const handleSubmit = (e: FormEvent): void => {
-    e.preventDefault();
+  /** Performs the mode-specific submit action. Called by the form and Ctrl/Cmd+Enter. */
+  const submit = (): void => {
     if (!text.trim()) {
       return;
     }
@@ -122,6 +199,11 @@ export function ChatInput({
     }
   };
 
+  const handleSubmit = (e: FormEvent): void => {
+    e.preventDefault();
+    submit();
+  };
+
   // --- spawn mode ---
   if (mode === "spawn") {
     return (
@@ -129,7 +211,7 @@ export function ChatInput({
         <span className={styles.badge}>
           new chat
         </span>
-        <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Enter prompt..." autoFocus className={styles.input} aria-label="Enter prompt" />
+        <ComposerTextArea value={text} onChange={setText} onSubmit={submit} placeholder="Enter prompt..." autoFocus ariaLabel="Enter prompt" />
         {showPersonaSelect && (
           <select value={spawnPersonaId} onChange={(e) => setSpawnPersonaId(e.target.value)} className={styles.select} aria-label="Select persona">
             <option value="">(Default)</option>
@@ -147,7 +229,7 @@ export function ChatInput({
   if (mode === "start") {
     return (
       <form onSubmit={handleSubmit} className={styles.bar}>
-        <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message..." autoFocus className={styles.input} aria-label="Type a message" />
+        <ComposerTextArea value={text} onChange={setText} onSubmit={submit} placeholder="Type a message..." autoFocus ariaLabel="Type a message" />
         <button type="submit" disabled={!text.trim()} className={styles.btnPrimary}>Send</button>
       </form>
     );
@@ -159,7 +241,7 @@ export function ChatInput({
       {envDisconnected && environmentId && (
         <DisconnectedBanner environmentId={environmentId} onReconnect={onProvisionEnvironment} />
       )}
-      <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message..." autoFocus={!envDisconnected} disabled={envDisconnected} className={styles.input} aria-label="Type a message" />
+      <ComposerTextArea value={text} onChange={setText} onSubmit={submit} placeholder="Type a message..." autoFocus={!envDisconnected} disabled={envDisconnected} ariaLabel="Type a message" />
       <span title={envDisconnected ? "Environment is unavailable — reconnect first" : undefined}>
         <button type="submit" disabled={!text.trim() || envDisconnected} className={styles.btnPrimary}>Send</button>
       </span>

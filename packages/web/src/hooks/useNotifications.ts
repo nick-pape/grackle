@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { assetUrl } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
 
 /** Payload shape for notification.escalated domain events. */
@@ -62,7 +63,7 @@ export function useNotifications(): {
     const notification = new Notification(payload.title || "Agent needs input", {
       body: payload.message || "An agent is waiting for your input.",
       tag: payload.escalationId, // Prevents duplicate notifications for same escalation
-      icon: "/icon-192x192.png",
+      icon: assetUrl("icon-192x192.png"),
     });
 
     notification.onclick = () => {

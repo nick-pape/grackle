@@ -54,8 +54,11 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await page.locator('[data-testid="workspace-form-name"]').fill("cta-workspace");
     await page.locator('[data-testid="workspace-create-save"]').click();
 
-    // Should navigate back to home
-    await page.waitForURL("/", { timeout: 5_000 });
+    // Should navigate to the new workspace's detail view, fully populated.
+    // (The page renders the name immediately from optimistically seeded state,
+    // so this also guards against a blank-flash regression.)
+    await page.waitForURL(/\/environments\/[^/]+\/workspaces\/[^/]+/, { timeout: 5_000 });
+    await expect(page.locator('[data-testid="workspace-name"]')).toContainText("cta-workspace", { timeout: 5_000 });
 
     // Navigate to the environment detail page — workspace card should appear there
     await page.locator('[data-testid="sidebar-tab-environments"]').click();

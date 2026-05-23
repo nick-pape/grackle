@@ -21,18 +21,24 @@ export interface AppTab {
   route: string;
   /** data-testid suffix. */
   testId: string;
+  /**
+   * Display order within the nav bar (lower numbers appear first). Applied
+   * across all plugins so tab order is explicit rather than dependent on plugin
+   * load order. End-aligned tabs ignore this and are always pinned right.
+   */
+  order?: number;
   /** Horizontal alignment within the nav bar. `"end"` pins the tab to the right edge. */
   align?: "end";
 }
 
 /** Ordered list of all app navigation tabs. Exported for plugin registry use. */
 export const TABS: AppTab[] = [
-  { view: "dashboard", label: "Dashboard", icon: <Home size={ICON_LG} />, route: HOME_URL, testId: "sidebar-tab-dashboard" },
-  { view: "chat", label: "Chat", icon: <MessageSquare size={ICON_LG} />, route: CHAT_URL, testId: "sidebar-tab-chat" },
-  { view: "tasks", label: "Tasks", icon: <ClipboardList size={ICON_LG} />, route: TASKS_URL, testId: "sidebar-tab-tasks" },
-  { view: "environments", label: "Environments", icon: <Monitor size={ICON_LG} />, route: ENVIRONMENTS_URL, testId: "sidebar-tab-environments" },
-  { view: "knowledge", label: "Knowledge", icon: <Brain size={ICON_LG} />, route: KNOWLEDGE_URL, testId: "sidebar-tab-knowledge" },
-  { view: "findings", label: "Findings", icon: <Search size={ICON_LG} />, route: FINDINGS_URL, testId: "sidebar-tab-findings" },
+  { view: "dashboard", label: "Dashboard", icon: <Home size={ICON_LG} />, route: HOME_URL, testId: "sidebar-tab-dashboard", order: 0 },
+  { view: "tasks", label: "Tasks", icon: <ClipboardList size={ICON_LG} />, route: TASKS_URL, testId: "sidebar-tab-tasks", order: 1 },
+  { view: "environments", label: "Environments", icon: <Monitor size={ICON_LG} />, route: ENVIRONMENTS_URL, testId: "sidebar-tab-environments", order: 2 },
+  { view: "chat", label: "Sessions", icon: <MessageSquare size={ICON_LG} />, route: CHAT_URL, testId: "sidebar-tab-chat", order: 3 },
+  { view: "findings", label: "Findings", icon: <Search size={ICON_LG} />, route: FINDINGS_URL, testId: "sidebar-tab-findings", order: 4 },
+  { view: "knowledge", label: "Knowledge", icon: <Brain size={ICON_LG} />, route: KNOWLEDGE_URL, testId: "sidebar-tab-knowledge", order: 5 },
   { view: "settings", label: "Settings", icon: <Settings size={ICON_LG} />, route: SETTINGS_CREDENTIALS_URL, testId: "sidebar-tab-settings", align: "end" },
 ];
 
@@ -67,15 +73,18 @@ export function AppNav({ tabs = TABS }: { tabs?: AppTab[] }): JSX.Element {
 
   const activeView = getActiveView(location.pathname);
 
-  // Render end-aligned tabs (e.g. Settings) last regardless of the incoming order,
-  // so they stay pinned to the right edge no matter which plugins contribute tabs.
-  const orderedTabs = useMemo(
-    () => [
-      ...tabs.filter((t) => t.align !== "end"),
+  // Sort by explicit `order`, then render end-aligned tabs (e.g. Settings) last
+  // regardless of order, so they stay pinned to the right edge no matter which
+  // plugins contribute tabs. Tabs without an `order` keep their incoming order
+  // (stable sort) and fall after explicitly-ordered ones.
+  const orderedTabs = useMemo(() => {
+    const byOrder = (a: AppTab, b: AppTab): number =>
+      (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER);
+    return [
+      ...tabs.filter((t) => t.align !== "end").sort(byOrder),
       ...tabs.filter((t) => t.align === "end"),
-    ],
-    [tabs],
-  );
+    ];
+  }, [tabs]);
   const firstEndAlignedView = orderedTabs.find((t) => t.align === "end")?.view;
 
   const handleClick = useCallback((tab: AppTab) => {

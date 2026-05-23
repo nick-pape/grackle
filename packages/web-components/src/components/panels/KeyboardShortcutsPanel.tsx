@@ -66,9 +66,10 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     ],
   },
   {
-    title: "Chat",
+    title: "Sessions",
     shortcuts: [
-      { keys: ["Enter"], description: "Send message (when input is focused)" },
+      { keys: ["Ctrl/Cmd", "Enter"], description: "Send message (when the composer is focused)" },
+      { keys: ["Enter"], description: "Insert a new line in the message composer" },
     ],
   },
 ];

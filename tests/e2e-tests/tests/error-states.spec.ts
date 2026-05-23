@@ -20,7 +20,7 @@ test.describe("Error States — UI", { tag: ["@error"] }, () => {
     await page.locator("button", { hasText: "Start" }).click();
 
     // Wait for task to be in_progress
-    await page.locator('input[placeholder="Type a message..."]').waitFor({ timeout: 15_000 });
+    await page.locator('textarea[placeholder="Type a message..."]').waitFor({ timeout: 15_000 });
 
     // Get taskId and try to start again via RPC
     const workspaceId = await getWorkspaceId(client, workspaceName);

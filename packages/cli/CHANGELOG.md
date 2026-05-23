@@ -1,6 +1,28 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 22 May 2026 18:26:16 GMT and should not be manually modified.
+This log was last generated on Fri, 22 May 2026 23:59:52 GMT and should not be manually modified.
+
+## 0.112.2
+Fri, 22 May 2026 23:59:52 GMT
+
+### Patches
+
+- Fix: creating a workspace now navigates to the new workspace's detail view instead of the home dashboard
+
+## 0.112.1
+Fri, 22 May 2026 23:27:43 GMT
+
+### Patches
+
+- Fix Grackle logo/icon assets 404ing on sub-path deployments (e.g. the GitHub Pages demo): resolve public asset paths against the Vite base URL via a new assetUrl() helper, and make the PWA manifest paths relative.
+- Nav: reorder so Tasks comes before Sessions, and rename the Chat tab to Sessions (route unchanged)
+
+## 0.112.0
+Fri, 22 May 2026 22:14:10 GMT
+
+### Minor changes
+
+- Chat: multiline auto-resizing composer (Enter for newline, Ctrl/Cmd+Enter to send) and render user messages as markdown
 
 ## 0.111.0
 Fri, 22 May 2026 18:26:16 GMT

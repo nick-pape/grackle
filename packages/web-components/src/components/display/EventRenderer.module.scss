@@ -81,91 +81,7 @@
   padding-left: var(--space-xs);
   line-height: var(--line-height);
 
-  // --- Markdown element styles ---
-
-  h1, h2, h3, h4, h5, h6 {
-    margin: var(--space-sm) 0 var(--space-xs);
-    font-weight: var(--font-weight-bold);
-  }
-
-  h1 { font-size: 1.4em; }
-  h2 { font-size: 1.2em; }
-  h3 { font-size: 1.1em; }
-
-  p {
-    margin: var(--space-xs) 0;
-  }
-
-  pre {
-    @include surface-inset;
-    padding: var(--space-sm);
-    margin: var(--space-xs) 0;
-    overflow: auto;
-    font-size: 11px;
-    white-space: pre-wrap;
-  }
-
-  code {
-    font-family: var(--font-mono);
-    font-size: 0.9em;
-    background: var(--bg-overlay);
-    padding: 1px 4px;
-    border-radius: var(--radius-sm);
-  }
-
-  pre code {
-    background: none;
-    padding: 0;
-  }
-
-  table {
-    border-collapse: collapse;
-    margin: var(--space-xs) 0;
-    font-size: var(--font-size-sm);
-    width: 100%;
-  }
-
-  th, td {
-    border: 1px solid var(--border-subtle);
-    padding: var(--space-xs) var(--space-sm);
-    text-align: left;
-  }
-
-  th {
-    background: var(--bg-overlay);
-    font-weight: var(--font-weight-bold);
-  }
-
-  ul, ol {
-    padding-left: var(--space-lg);
-    margin: var(--space-xs) 0;
-  }
-
-  li {
-    margin: 2px 0;
-  }
-
-  strong {
-    font-weight: var(--font-weight-bold);
-  }
-
-  a {
-    color: var(--accent-blue);
-    text-decoration: underline;
-  }
-
-  hr {
-    border: none;
-    border-top: 1px solid var(--border-subtle);
-    margin: var(--space-sm) 0;
-  }
-
-  blockquote {
-    border-left: 3px solid var(--border-subtle);
-    padding-left: var(--space-sm);
-    margin: var(--space-xs) 0;
-    color: var(--text-secondary);
-  }
+  @include markdown-content;
 }
 
 // --- Copy button positioning ---
@@ -219,6 +135,23 @@
   word-break: break-word;
   font-size: var(--font-size-sm);
   line-height: var(--line-height);
+
+  @include markdown-content;
+
+  // Collapse outer block margins so the bubble hugs its markdown content.
+  & > :first-child {
+    margin-top: 0;
+  }
+
+  & > :last-child {
+    margin-bottom: 0;
+  }
+
+  // Keep wide block content (code, tables) within the bubble bounds.
+  pre,
+  table {
+    max-width: 100%;
+  }
 
   @include mobile {
     max-width: 90%;
