@@ -25,6 +25,12 @@ export type { PluginRegistryEntry } from "./plugin-registry.js";
 // ─── Handler Utilities ──────────────────────────────────────
 export { killSessionAndCleanup } from "./grpc-shared.js";
 
+// ─── Channel Capability I/O ─────────────────────────────────
+export { setChannelConfig } from "./channel-config.js";
+export type { ChannelConfig } from "./channel-config.js";
+export { ingestChannelMessage } from "./channel-ingest.js";
+export type { IngestBody, IngestResult } from "./channel-ingest.js";
+
 // ─── Re-exports from other modules ──────────────────────────
 export { cleanupLifecycleStream, ensureLifecycleStream } from "./lifecycle.js";
 export { toDialableHost, validatePipeInputs, resolveAncestorEnvironmentId, VALID_PIPE_MODES } from "./grpc-shared.js";

@@ -51,6 +51,15 @@ export interface AuthLogger {
 }
 
 // @public
+export interface ChannelTokenClaims {
+    chan: string;
+    exp: number;
+    iat: number;
+    jti: string;
+    verbs: string[];
+}
+
+// @public
 export function clearOAuthState(): void;
 
 // @public
@@ -82,6 +91,9 @@ export function consumeRefreshToken(token: string, clientId: string): RefreshTok
 
 // @public
 export function createAuthorizationCode(clientId: string, redirectUri: string, codeChallenge: string, resource: string): string;
+
+// @public
+export function createChannelToken(claims: Pick<ChannelTokenClaims, "chan" | "verbs" | "jti">, signingSecret: string, ttlMs?: number): string;
 
 // @public
 export function createOAuthAccessToken(clientId: string, resource: string, signingSecret: string, ttlMs?: number): string;
@@ -198,6 +210,9 @@ export function validateSessionCookie(cookieHeader: string, apiKey: string): boo
 
 // @public
 export function verifyApiKey(token: string): boolean;
+
+// @public
+export function verifyChannelToken(token: string, signingSecret: string): ChannelTokenClaims | undefined;
 
 // @public
 export function verifyCodeChallenge(codeVerifier: string, codeChallenge: string): boolean;

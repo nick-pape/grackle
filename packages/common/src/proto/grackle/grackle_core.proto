@@ -86,6 +86,11 @@ service GrackleCore {
   rpc RemoveGitHubAccount(RemoveGitHubAccountRequest) returns (Empty);
   rpc ImportGitHubAccounts(Empty) returns (ImportGitHubAccountsResponse);
 
+  // Channels (capability-scoped external I/O)
+  rpc ExposeChannel(ExposeChannelRequest) returns (ExposeChannelResponse);
+  rpc ListChannelGrants(ListChannelGrantsRequest) returns (ChannelGrantList);
+  rpc RevokeChannelGrant(RevokeChannelGrantRequest) returns (Empty);
+
   // Unified event streaming (replaces WebSocket)
   rpc StreamEvents(Empty) returns (stream ServerEvent);
 }

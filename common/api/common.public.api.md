@@ -96,6 +96,28 @@ type AttachStreamResponse = Message<"grackle.AttachStreamResponse"> & {
 const AttachStreamResponseSchema: GenMessage<AttachStreamResponse>;
 
 // @public
+type ChannelGrant = Message<"grackle.ChannelGrant"> & {
+    grantId: string;
+    channelUri: string;
+    verbs: string[];
+    label: string;
+    createdAt: string;
+    expiresAt: string;
+    revoked: boolean;
+};
+
+// @public
+type ChannelGrantList = Message<"grackle.ChannelGrantList"> & {
+    grants: ChannelGrant[];
+};
+
+// @public
+const ChannelGrantListSchema: GenMessage<ChannelGrantList>;
+
+// @public
+const ChannelGrantSchema: GenMessage<ChannelGrant>;
+
+// @public
 enum ClaudeProviderMode {
     API_KEY = 3,
     OFF = 1,
@@ -512,6 +534,38 @@ type ExpandKnowledgeNodeResponse = Message<"grackle.ExpandKnowledgeNodeResponse"
 const ExpandKnowledgeNodeResponseSchema: GenMessage<ExpandKnowledgeNodeResponse>;
 
 // @public
+type ExposeChannelRequest = Message<"grackle.ExposeChannelRequest"> & {
+    target: {
+        value: string;
+        case: "sessionId";
+    } | {
+        value: string;
+        case: "taskId";
+    } | {
+        case: undefined;
+        value?: undefined;
+    };
+    verbs: string[];
+    ttlSeconds: number;
+    label: string;
+};
+
+// @public
+const ExposeChannelRequestSchema: GenMessage<ExposeChannelRequest>;
+
+// @public
+type ExposeChannelResponse = Message<"grackle.ExposeChannelResponse"> & {
+    channelUri: string;
+    grantId: string;
+    token: string;
+    ingressUrl: string;
+    expiresAt: string;
+};
+
+// @public
+const ExposeChannelResponseSchema: GenMessage<ExposeChannelResponse>;
+
+// @public
 type FdInfo = Message<"grackle.FdInfo"> & {
     fd: number;
     streamName: string;
@@ -805,6 +859,18 @@ declare namespace grackle {
         ListEscalationsRequestSchema,
         AcknowledgeEscalationRequest,
         AcknowledgeEscalationRequestSchema,
+        ExposeChannelRequest,
+        ExposeChannelRequestSchema,
+        ExposeChannelResponse,
+        ExposeChannelResponseSchema,
+        ChannelGrant,
+        ChannelGrantSchema,
+        ChannelGrantList,
+        ChannelGrantListSchema,
+        ListChannelGrantsRequest,
+        ListChannelGrantsRequestSchema,
+        RevokeChannelGrantRequest,
+        RevokeChannelGrantRequestSchema,
         McpServerConfig,
         McpServerConfigSchema,
         ToolConfig,
@@ -1180,6 +1246,21 @@ const GrackleCore: GenService<{
         input: typeof EmptySchema;
         output: typeof ImportGitHubAccountsResponseSchema;
     };
+    exposeChannel: {
+        methodKind: "unary";
+        input: typeof ExposeChannelRequestSchema;
+        output: typeof ExposeChannelResponseSchema;
+    };
+    listChannelGrants: {
+        methodKind: "unary";
+        input: typeof ListChannelGrantsRequestSchema;
+        output: typeof ChannelGrantListSchema;
+    };
+    revokeChannelGrant: {
+        methodKind: "unary";
+        input: typeof RevokeChannelGrantRequestSchema;
+        output: typeof EmptySchema;
+    };
     streamEvents: {
         methodKind: "server_streaming";
         input: typeof EmptySchema;
@@ -1499,6 +1580,12 @@ type LinkEnvironmentRequest = Message<"grackle.LinkEnvironmentRequest"> & {
 const LinkEnvironmentRequestSchema: GenMessage<LinkEnvironmentRequest>;
 
 // @public
+type ListChannelGrantsRequest = Message<"grackle.ListChannelGrantsRequest"> & {};
+
+// @public
+const ListChannelGrantsRequestSchema: GenMessage<ListChannelGrantsRequest>;
+
+// @public
 type ListCodespacesRequest = Message<"grackle.ListCodespacesRequest"> & {
     githubAccountId: string;
 };
@@ -1799,6 +1886,14 @@ const ResumeRequestSchema: GenMessage<ResumeRequest>;
 
 // @public
 const ResumeRequestSchema_2: GenMessage<ResumeRequest_2>;
+
+// @public
+type RevokeChannelGrantRequest = Message<"grackle.RevokeChannelGrantRequest"> & {
+    grantId: string;
+};
+
+// @public
+const RevokeChannelGrantRequestSchema: GenMessage<RevokeChannelGrantRequest>;
 
 // @public
 export const ROOT_TASK_ID: string;

@@ -36,7 +36,7 @@ import { bootstrapLocalEnvironment } from "./local-environment.js";
 import { createCorePlugin } from "./core-plugin.js";
 import { createSchedulingPlugin } from "@grackle-ai/plugin-scheduling";
 import { createOrchestrationPlugin } from "@grackle-ai/plugin-orchestration";
-import { setLoadedPluginNames } from "@grackle-ai/plugin-core";
+import { setLoadedPluginNames, setChannelConfig, ingestChannelMessage } from "@grackle-ai/plugin-core";
 import { createShutdown } from "./shutdown.js";
 
 /** Require function for loading optional native modules (qrcode). */
@@ -240,11 +240,19 @@ async function main(): Promise<void> {
   // --- Web server (HTTP/1.1) ---
   const webPort = config.webPort;
   const mcpPort = config.mcpPort;
+
+  // Channel capability tokens are signed with the API key; ingress URLs use the
+  // dialable web host so pasted webhook URLs work from external systems.
+  const dialableWebHost = isWildcardAddress(bindHost) ? "127.0.0.1" : bindHost;
+  const ingressUrlHost = dialableWebHost.includes(":") ? `[${dialableWebHost}]` : dialableWebHost;
+  setChannelConfig({ signingSecret: apiKey, ingressBaseUrl: `http://${ingressUrlHost}:${webPort}` });
+
   const webServer = createWebServer({
     apiKey,
     webPort,
     bindHost,
     connectRoutes: routes,
+    handleWebhook: ingestChannelMessage,
     pluginNames: loaded.pluginNames,
     sandboxPort: config.sandboxPort,
     ...(config.sandboxOrigin !== undefined ? { sandboxOrigin: config.sandboxOrigin } : {}),
