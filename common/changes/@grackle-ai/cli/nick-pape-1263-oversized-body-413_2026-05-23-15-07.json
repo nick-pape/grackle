@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix: oversized HTTP request bodies now return a clean 413 (with Connection: close) instead of a connection reset",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

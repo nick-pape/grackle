@@ -221,24 +221,58 @@ const MAX_BODY_SIZE: number = 16_384;
  * @param req - The incoming HTTP request.
  * @returns The raw body as a UTF-8 string.
  */
+/** Thrown by {@link readBody} when a request body exceeds {@link MAX_BODY_SIZE}. */
+class PayloadTooLargeError extends Error {}
+
 function readBody(req: http.IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     let totalSize: number = 0;
+    let settled: boolean = false;
+    const settle = (action: () => void): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      action();
+    };
     req.on("data", (chunk: Buffer) => {
+      if (settled) {
+        return;
+      }
       totalSize += chunk.length;
       if (totalSize > MAX_BODY_SIZE) {
-        req.destroy();
-        reject(new Error("Body too large"));
+        // Apply backpressure (stop reading) and signal overflow WITHOUT destroying
+        // the socket here, so the route can still send a 413. The socket is torn
+        // down once that response flushes (see `respondPayloadTooLarge`). Pausing
+        // prevents an attacker from streaming an arbitrarily large body at speed.
+        req.pause();
+        settle(() => reject(new PayloadTooLargeError("Body too large")));
         return;
       }
       chunks.push(chunk);
     });
-    req.on("end", () => {
-      resolve(Buffer.concat(chunks).toString("utf8"));
-    });
-    req.on("error", reject);
+    req.on("end", () => settle(() => resolve(Buffer.concat(chunks).toString("utf8"))));
+    req.on("error", (err: Error) => settle(() => reject(err)));
+    // If the client disconnects mid-upload, `close` fires without `end`/`error`;
+    // reject so the awaiting handler can't hang. After a normal `end`, the promise
+    // is already settled and this is a no-op.
+    req.on("close", () => settle(() => reject(new Error("connection closed before request body was fully read"))));
   });
+}
+
+/**
+ * Send a `413 Payload Too Large` response and close the (half-read) connection.
+ *
+ * `Connection: close` lets Node flush the response and tear down the socket
+ * whose request body was not fully consumed, discarding the unsent upload.
+ */
+function respondPayloadTooLarge(req: http.IncomingMessage, res: http.ServerResponse): void {
+  // Tear down the (paused, half-read) request once the 413 has flushed, so the
+  // client can't keep streaming an oversized body after we've responded.
+  res.once("finish", () => { req.destroy(); });
+  res.writeHead(413, { "Content-Type": "application/json", "Connection": "close" });
+  res.end(JSON.stringify({ error: "payload too large" }));
 }
 
 /**
@@ -462,7 +496,11 @@ export function createWebServer(options: WebServerOptions): http.Server {
           redirect_uris: client.redirectUris,
           client_name: client.clientName,
         }));
-      } catch {
+      } catch (err) {
+        if (err instanceof PayloadTooLargeError) {
+          respondPayloadTooLarge(req, res);
+          return;
+        }
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "invalid_request" }));
       }
@@ -612,7 +650,11 @@ export function createWebServer(options: WebServerOptions): http.Server {
           Location: redirectUrl,
         });
         res.end();
-      } catch {
+      } catch (err) {
+        if (err instanceof PayloadTooLargeError) {
+          respondPayloadTooLarge(req, res);
+          return;
+        }
         res.writeHead(400);
         res.end("Bad Request");
       }
@@ -678,7 +720,11 @@ export function createWebServer(options: WebServerOptions): http.Server {
 
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "unsupported_grant_type" }));
-      } catch {
+      } catch (err) {
+        if (err instanceof PayloadTooLargeError) {
+          respondPayloadTooLarge(req, res);
+          return;
+        }
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "invalid_request" }));
       }
@@ -738,9 +784,13 @@ export function createWebServer(options: WebServerOptions): http.Server {
       let raw: string;
       try {
         raw = await readBody(req);
-      } catch {
-        res.writeHead(413, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "body too large" }));
+      } catch (err) {
+        if (err instanceof PayloadTooLargeError) {
+          respondPayloadTooLarge(req, res);
+        } else {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "could not read body" }));
+        }
         return;
       }
       let parsed: { message?: unknown; from?: unknown; idempotency_key?: unknown };
