@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import type { Page } from "@playwright/test";
-import { createWorkspace, createTaskDirect, stubScenario, emitText, runStubTaskToCompletion } from "./helpers.js";
+import { createWorkspace, createTaskDirect, stubScenario, emitText } from "./helpers.js";
 
 /**
  * Knowledge Graph E2E tests.
@@ -124,7 +124,12 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
       "kg-transcript",
       stubScenario(emitText(`The deployment pipeline uses blue-green rollouts. Reference token ${marker}.`)),
     );
-    await runStubTaskToCompletion(page); // emits the text → writes stream.jsonl → completes
+    // Just start the task — the stub emits the line into the session's
+    // stream.jsonl on spawn. (No need to drive the chat to completion; the
+    // reconciliation phase chunks the transcript regardless of session status.)
+    const startButton = page.getByTestId("task-header-start");
+    await startButton.waitFor({ timeout: 15_000 });
+    await startButton.click();
 
     // The reconciliation phase projects the session, chunks the transcript, and
     // embeds the chunks inline — so a semantic query should return the chunk
