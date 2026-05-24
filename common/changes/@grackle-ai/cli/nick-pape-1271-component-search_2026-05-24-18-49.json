@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "GenUX component search + built-in catalog (#1271): make the component registry discoverable. Adds a `component_search` MCP tool (and `SearchComponents` gRPC RPC) that keyword-matches a workspace's registered components plus a catalog of Grackle's built-in components via fuzzy search, returning a `builtin` flag and relevance scores. Built-ins are a static manifest (`BUILTIN_COMPONENTS`) of the 9 curated, context-free components the GenUX runtime renders, each with a documented JSON-Schema propsSchema, so agents discover and compose them in JSX instead of re-authoring. component_register/component_show descriptions now point agents at component_search.",
+      "comment": "GenUX component search + built-in catalog (#1271): make the component registry discoverable. Adds a `component_search` MCP tool (and `SearchComponents` gRPC RPC) that keyword-matches a workspace's registered components plus a catalog of Grackle's built-in components via fuzzy search, returning a `builtin` flag and relevance scores. Built-ins are a static manifest (`BUILTIN_COMPONENTS`) of the 9 curated, context-free components the GenUX runtime renders; their prop types and JSON-Schema propsSchema are both derived from a single source of truth — zod schemas in `@grackle-ai/common` (`BUILTIN_COMPONENT_SCHEMAS`) that the web-components consume for their prop types, so the catalog can't drift from the components. Agents discover and compose built-ins in JSX instead of re-authoring; component_register/component_show descriptions now point agents at component_search.",
       "type": "minor",
       "packageName": "@grackle-ai/cli"
     }

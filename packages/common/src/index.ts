@@ -4,6 +4,7 @@ export * from "./types.js";
 export * from "./mcp-tool-presets.js";
 export * from "./enum-converters.js";
 export * from "./search.js";
+export * from "./builtin-component-schemas.js";
 export * from "./builtin-components.js";
 export { RUNTIME_MANIFESTS } from "./runtime-manifest.js";
 export type { RuntimePackageManifest } from "./runtime-manifest.js";

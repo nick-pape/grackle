@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useRef, useState, type JSX } from "react";
 import { Check, Clipboard } from "lucide-react";
+import { type CopyButtonBuiltinProps } from "@grackle-ai/common";
 import { ICON_MD } from "../../utils/iconSize.js";
 import styles from "./CopyButton.module.scss";
 
 /** Duration in milliseconds to show the "copied" checkmark before reverting. */
 const COPIED_FEEDBACK_DURATION: number = 2000;
 
-/** Props for the CopyButton component. */
-interface CopyButtonProps {
-  /** Plain text to copy to the clipboard. */
-  text: string;
+/** Props for the CopyButton component (`text` inferred from the built-in's zod schema). */
+interface CopyButtonProps extends CopyButtonBuiltinProps {
   /** Additional CSS class name for positioning variants. */
   className?: string;
   /** Test ID for Storybook and E2E tests. */

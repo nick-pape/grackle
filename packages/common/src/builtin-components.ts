@@ -7,9 +7,12 @@
  * This is metadata only (no React). `component_search` surfaces these alongside
  * agent-authored components so agents discover an existing building block before
  * hand-rolling one. The `name`s MUST stay a subset of the runtime's component
- * scope (enforced by a web-components test); `propsSchema` documents the *data*
- * props an agent passes (callbacks are expressed in JSX, not as JSON props).
+ * scope (enforced by a web-components test); each `propsSchema` is *derived* from
+ * the component's zod schema in `builtin-component-schemas.ts` (the single source
+ * of truth shared with the component's prop types) — never hand-authored.
  */
+import { z } from "zod";
+import { BUILTIN_COMPONENT_SCHEMAS, type BuiltinComponentName } from "./builtin-component-schemas.js";
 
 /** A Grackle-provided component the GenUX runtime can render. */
 export interface BuiltinComponent {
@@ -17,142 +20,70 @@ export interface BuiltinComponent {
   name: string;
   /** One-line description of what the component is for. */
   description: string;
-  /** JSON Schema (stringified) describing the component's data props. */
+  /** JSON Schema (stringified) describing the component's data props, derived from its zod schema. */
   propsSchema: string;
   /** A short JSX usage example. */
   example: string;
 }
 
-/** Catalog of built-in components exposed to agent JSX (the runtime's curated scope). */
-export const BUILTIN_COMPONENTS: readonly BuiltinComponent[] = [
-  {
-    name: "Button",
+/** Human-facing description + usage example for each built-in (paired with its zod schema by name). */
+const BUILTIN_COMPONENT_DOCS: Record<BuiltinComponentName, { description: string; example: string }> = {
+  Button: {
     description: "Clickable action button with visual variants and sizes.",
-    propsSchema: JSON.stringify({
-      type: "object",
-      properties: {
-        variant: { type: "string", enum: ["primary", "danger", "outline", "ghost"], description: "Visual style (default primary)." },
-        size: { type: "string", enum: ["sm", "md", "lg"], description: "Button size (default md)." },
-        disabled: { type: "boolean" },
-      },
-      additionalProperties: true,
-    }),
     example: '<Button variant="primary">Deploy</Button>',
   },
-  {
-    name: "SplitButton",
+  SplitButton: {
     description: "Primary action button with a dropdown of secondary options.",
-    propsSchema: JSON.stringify({
-      type: "object",
-      properties: {
-        label: { type: "string", description: "Main action label." },
-        variant: { type: "string", enum: ["primary", "danger", "outline", "ghost"] },
-        size: { type: "string", enum: ["sm", "md", "lg"] },
-        options: {
-          type: "array",
-          description: "Secondary options.",
-          items: { type: "object", properties: { label: { type: "string" }, description: { type: "string" } }, required: ["label"] },
-        },
-      },
-      required: ["label", "options"],
-      additionalProperties: true,
-    }),
     example: '<SplitButton label="Save" onClick={() => {}} options={[{ label: "Save as draft", onClick: () => {} }]} />',
   },
-  {
-    name: "Callout",
+  Callout: {
     description: "Inline message box for info, success, warning, or error notes.",
-    propsSchema: JSON.stringify({
-      type: "object",
-      properties: {
-        variant: { type: "string", enum: ["success", "error", "warning", "info"], description: "Severity (default info)." },
-        dismissible: { type: "boolean" },
-      },
-      additionalProperties: true,
-    }),
     example: '<Callout variant="warning">Low disk space.</Callout>',
   },
-  {
-    name: "Spinner",
+  Spinner: {
     description: "Loading/progress spinner.",
-    propsSchema: JSON.stringify({
-      type: "object",
-      properties: {
-        size: { type: "string", enum: ["sm", "md", "lg", "xl"], description: "Spinner size (default md)." },
-        label: { type: "string", description: "Accessible label (default 'Loading')." },
-      },
-      additionalProperties: true,
-    }),
-    example: "<Spinner size=\"lg\" label=\"Building…\" />",
+    example: '<Spinner size="lg" label="Building…" />',
   },
-  {
-    name: "Skeleton",
+  Skeleton: {
     description: "Rectangular or circular loading placeholder block.",
-    propsSchema: JSON.stringify({
-      type: "object",
-      properties: {
-        width: { type: "string", description: "CSS width (default 100%)." },
-        height: { type: "string", description: "CSS height (default 1rem)." },
-        borderRadius: { type: "string" },
-        variant: { type: "string", enum: ["rectangular", "circular"] },
-      },
-      additionalProperties: true,
-    }),
     example: '<Skeleton width="200px" height="2rem" />',
   },
-  {
-    name: "SkeletonText",
+  SkeletonText: {
     description: "Multi-line text loading placeholder.",
-    propsSchema: JSON.stringify({
-      type: "object",
-      properties: {
-        lines: { type: "integer", minimum: 1, description: "Number of lines (default 3)." },
-        lastLineWidth: { type: "string", description: "Width of the last line (default 60%)." },
-        lineHeight: { type: "string" },
-        gap: { type: "string" },
-      },
-      additionalProperties: true,
-    }),
     example: "<SkeletonText lines={4} />",
   },
-  {
-    name: "SkeletonCard",
+  SkeletonCard: {
     description: "Card-shaped loading placeholder (title + body lines).",
-    propsSchema: JSON.stringify({
-      type: "object",
-      properties: {
-        lines: { type: "integer", minimum: 1, description: "Body text lines (default 2)." },
-      },
-      additionalProperties: true,
-    }),
     example: "<SkeletonCard lines={3} />",
   },
-  {
-    name: "Tooltip",
+  Tooltip: {
     description: "Hover tooltip wrapping its children.",
-    propsSchema: JSON.stringify({
-      type: "object",
-      properties: {
-        text: { type: "string", description: "Tooltip text." },
-        placement: { type: "string", enum: ["top", "bottom", "left", "right"], description: "Default top." },
-        delayMs: { type: "integer", minimum: 0 },
-      },
-      required: ["text"],
-      additionalProperties: true,
-    }),
     example: '<Tooltip text="Copy to clipboard"><Button>Copy</Button></Tooltip>',
   },
-  {
-    name: "CopyButton",
+  CopyButton: {
     description: "Button that copies the given text to the clipboard.",
-    propsSchema: JSON.stringify({
-      type: "object",
-      properties: {
-        text: { type: "string", description: "Text to copy." },
-      },
-      required: ["text"],
-      additionalProperties: true,
-    }),
     example: '<CopyButton text="npm install grackle" />',
   },
-];
+};
+
+/**
+ * Built-in component name → its data-props JSON Schema (an object, derived from
+ * the zod schema). Importable for callers that need the raw JSON Schema — e.g.
+ * promote-to-tool (#1272), where it becomes a render tool's `inputSchema`.
+ */
+export const BUILTIN_COMPONENT_JSON_SCHEMAS: Readonly<Record<BuiltinComponentName, object>> = Object.fromEntries(
+  (Object.entries(BUILTIN_COMPONENT_SCHEMAS) as [BuiltinComponentName, z.ZodType][]).map(([name, schema]) => [
+    name,
+    z.toJSONSchema(schema),
+  ]),
+) as Record<BuiltinComponentName, object>;
+
+/** Catalog of built-in components exposed to agent JSX (the runtime's curated scope). */
+export const BUILTIN_COMPONENTS: readonly BuiltinComponent[] = (
+  Object.keys(BUILTIN_COMPONENT_SCHEMAS) as BuiltinComponentName[]
+).map((name) => ({
+  name,
+  description: BUILTIN_COMPONENT_DOCS[name].description,
+  propsSchema: JSON.stringify(BUILTIN_COMPONENT_JSON_SCHEMAS[name]),
+  example: BUILTIN_COMPONENT_DOCS[name].example,
+}));
