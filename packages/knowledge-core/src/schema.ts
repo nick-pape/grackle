@@ -105,6 +105,22 @@ async function runStatementWithRetry(
         return;
       }
 
+      // A uniqueness constraint can fail to create if the existing graph already
+      // contains duplicate values (e.g. legacy CREATE-based reference nodes from
+      // before #1258). Tolerate it (non-fatal) so the subsystem still starts;
+      // a rebuild() prunes duplicates, after which the constraint applies on a
+      // later startup.
+      if (
+        code.includes("ConstraintCreationFailed") ||
+        code.includes("ConstraintValidationFailed")
+      ) {
+        logger.warn(
+          { statement: name },
+          "Uniqueness constraint not created — existing data violates it; run a knowledge rebuild to converge",
+        );
+        return;
+      }
+
       // Transient errors (deadlocks, lock contention) are retryable
       const retryable = (error as { retryable?: boolean }).retryable === true;
       if (retryable && attempt < SCHEMA_RETRY_LIMIT) {

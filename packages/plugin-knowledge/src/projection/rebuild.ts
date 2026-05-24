@@ -30,6 +30,7 @@ import {
   projectWorkspace,
   projectTask,
   projectSession,
+  linkSessionSpawn,
 } from "./project-entity.js";
 import { projectSessionTranscript } from "./project-transcript.js";
 
@@ -75,6 +76,10 @@ export async function rebuild(embedder: Embedder): Promise<RebuildResult> {
   for (const session of sessions) {
     const workspaceId = session.taskId ? workspaceByTask.get(session.taskId) ?? "" : "";
     await projectSession(session, workspaceId);
+  }
+  // SPAWNED edges in a second pass, once all session nodes exist (order-independent).
+  for (const session of sessions) {
+    await linkSessionSpawn(session);
   }
 
   // Transcript chunks (sessions now exist as edge endpoints).

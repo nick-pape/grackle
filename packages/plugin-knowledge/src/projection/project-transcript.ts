@@ -49,20 +49,16 @@ export async function projectSessionTranscript(
   }
   const sessionNodeId = sessionProps.id as string;
   const sessionWorkspaceId = (sessionProps.workspaceId as string | undefined) ?? "";
-  const chunkedLines =
-    typeof sessionProps.chunkedLogLines === "number" ? sessionProps.chunkedLogLines : 0;
+  const byteOffset =
+    typeof sessionProps.logByteOffset === "number" ? sessionProps.logByteOffset : 0;
   let chunkCount = typeof sessionProps.chunkCount === "number" ? sessionProps.chunkCount : 0;
 
-  const entries = logWriter.readLog(session.logPath);
-  if (entries.length <= chunkedLines) {
-    return 0; // no new log content since the last pass
+  // Read only the bytes appended since the last pass (O(new bytes), not O(log)).
+  const { content: newContent, nextOffset } = logWriter.readLogFrom(session.logPath, byteOffset);
+  if (!newContent) {
+    return 0; // no new complete log lines since the last pass
   }
 
-  // Chunk + embed only the new lines (reconstruct JSONL for the chunker).
-  const newContent = entries
-    .slice(chunkedLines)
-    .map((entry) => JSON.stringify(entry))
-    .join("\n");
   const embeddedChunks = await ingest(newContent, createTranscriptChunker(), embedder, {
     sessionId: session.id,
   });
@@ -87,7 +83,7 @@ export async function projectSessionTranscript(
     sourceId: session.id,
     label: (sessionProps.label as string | undefined) ?? "",
     workspaceId: sessionWorkspaceId,
-    extraProps: { chunkedLogLines: entries.length, chunkCount },
+    extraProps: { logByteOffset: nextOffset, chunkCount },
   });
 
   return embeddedChunks.length;

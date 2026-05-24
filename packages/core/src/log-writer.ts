@@ -147,3 +147,59 @@ export function readLog(logPath: string): LogEntry[] {
     .filter((line) => line.trim())
     .map((line) => JSON.parse(line) as LogEntry);
 }
+
+/** Result of an incremental log read: new raw JSONL + the advanced byte offset. */
+export interface IncrementalLogRead {
+  /**
+   * Raw JSONL of the complete lines appended since the given byte offset
+   * (a trailing partial line, if any, is not included).
+   */
+  content: string;
+  /** Byte offset at the last complete-line boundary; pass on the next call. */
+  nextOffset: number;
+}
+
+/**
+ * Read only the bytes appended to a session's JSONL log after `byteOffset`.
+ *
+ * O(new bytes): uses `statSync` + a positioned `readSync` from the offset
+ * rather than reading/parsing the whole file. Stops at the last complete line
+ * so a concurrently-appending writer never yields a partial JSON line; the
+ * returned `nextOffset` should be persisted and passed on the next call.
+ */
+export function readLogFrom(logPath: string, byteOffset: number): IncrementalLogRead {
+  const streamPath = join(logPath, "stream.jsonl");
+  if (!existsSync(streamPath)) {
+    return { content: "", nextOffset: byteOffset };
+  }
+
+  const size = statSync(streamPath).size;
+  // Reset to 0 if the file shrank (truncated/rewritten) so we re-read from start.
+  const start = size < byteOffset ? 0 : byteOffset;
+  if (size <= start) {
+    return { content: "", nextOffset: start };
+  }
+
+  const length = size - start;
+  const buffer = Buffer.allocUnsafe(length);
+  const fd = openSync(streamPath, "r");
+  let bytesRead: number;
+  try {
+    bytesRead = readSync(fd, buffer, 0, length, start);
+  } finally {
+    closeSync(fd);
+  }
+
+  const text = buffer.toString("utf-8", 0, bytesRead);
+  const lastNewline = text.lastIndexOf("\n");
+  if (lastNewline === -1) {
+    // No complete new line yet (partial append); consume nothing.
+    return { content: "", nextOffset: start };
+  }
+
+  const consumed = text.slice(0, lastNewline + 1);
+  return {
+    content: text.slice(0, lastNewline),
+    nextOffset: start + Buffer.byteLength(consumed, "utf-8"),
+  };
+}

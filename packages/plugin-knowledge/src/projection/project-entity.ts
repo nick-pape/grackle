@@ -96,6 +96,16 @@ export async function projectWorkspace(workspace: WorkspaceRow): Promise<void> {
 export async function projectSession(session: SessionRow, workspaceId: string): Promise<void> {
   const nodeId = await upsertReferenceNode(sessionToNodeInput(session, workspaceId));
   await reconcileEdges(nodeId, SESSION_EDGE_TYPES, sessionEdges(session));
+}
+
+/**
+ * Upsert the incoming SPAWNED edge (parent session → this session), if any.
+ *
+ * Run as a separate pass *after* all session nodes exist so that ordering
+ * (e.g. a child projected before its parent) never permanently drops the edge.
+ * Idempotent (MERGE), so it is safe to call every pass.
+ */
+export async function linkSessionSpawn(session: SessionRow): Promise<void> {
   const spawn = sessionSpawnEdge(session);
   if (spawn) {
     await applyEdge(spawn);
