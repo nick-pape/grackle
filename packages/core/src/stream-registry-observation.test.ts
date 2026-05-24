@@ -58,13 +58,14 @@ describe("publish() observation log (RFC #1264 Phase 2)", () => {
     expect([...seqs].sort()).toEqual(seqs); // already strictly ascending (monotonic)
   });
 
-  it("is non-fatal: a persistence failure does not break delivery", () => {
+  it("is non-fatal: a persistence failure breaks neither delivery nor the live feed", () => {
     persistMock.mockImplementation(() => { throw new Error("db down"); });
     const stream = registry.createStream("resilient-room");
 
     const msg = registry.publish(stream.id, "sess-1", "still delivered");
 
-    expect(msg.content).toBe("still delivered");
-    expect(emitted).toHaveLength(0); // emit is skipped because persist threw first
+    expect(msg.content).toBe("still delivered"); // delivery unaffected
+    expect(emitted).toHaveLength(1); // live emit still fires despite the persist failure
+    expect(emitted[0].content).toBe("still delivered");
   });
 });

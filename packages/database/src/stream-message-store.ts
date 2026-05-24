@@ -55,8 +55,8 @@ export function persistStreamMessage(message: StreamMessageRecord): void {
 
 /**
  * Query a stream's persisted transcript, **most recent first** (ordered by `seq`
- * descending — `seq` is a ULID, so id order is chronological). `beforeSeq` pages
- * into older history. The read side of the durable stream log (RFC #1264 Phase 2).
+ * descending — `seq` is a monotonic ULID, so seq order is chronological). `beforeSeq`
+ * pages into older history. The read side of the durable stream log (RFC #1264 Phase 2).
  *
  * @param query - Stream id, optional `beforeSeq` cursor, and limit.
  * @returns Matching rows, newest first.

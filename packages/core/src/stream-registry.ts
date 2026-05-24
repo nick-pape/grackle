@@ -420,11 +420,13 @@ export function publish(streamId: string, senderId: string, content: string): St
   stream.messages.push(msg);
 
   // Durable observation log + live observer feed, for user-facing rooms only
-  // (RFC #1264 Phase 2). Best-effort and isolated: recording must never break
-  // message delivery, and internal plumbing (pipe:/stdin:/lifecycle:) is excluded.
+  // (RFC #1264 Phase 2). Internal plumbing (pipe:/stdin:/lifecycle:) is excluded.
+  // Persist and emit are independent best-effort paths in their own try/catch:
+  // neither may break message delivery, and a DB outage must not also suppress
+  // the live feed (so the UI/CLI keep seeing messages while persistence fails).
   if (!isReservedStreamName(stream.name)) {
+    const seq: string = nextStreamSeq();
     try {
-      const seq: string = nextStreamSeq();
       persistStreamMessage({
         seq,
         streamId: stream.id,
@@ -432,6 +434,10 @@ export function publish(streamId: string, senderId: string, content: string): St
         content: msg.content,
         timestamp: msg.timestamp,
       });
+    } catch (err) {
+      logger.error({ err, streamId: stream.id }, "Failed to persist stream message");
+    }
+    try {
       emitStreamMessage({
         streamId: stream.id,
         seq,
@@ -440,7 +446,7 @@ export function publish(streamId: string, senderId: string, content: string): St
         timestamp: msg.timestamp,
       });
     } catch (err) {
-      logger.error({ err, streamId: stream.id }, "Failed to record stream message observation");
+      logger.error({ err, streamId: stream.id }, "Failed to emit stream message");
     }
   }
 
