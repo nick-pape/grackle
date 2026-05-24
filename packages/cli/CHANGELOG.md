@@ -1,6 +1,14 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 24 May 2026 18:32:19 GMT and should not be manually modified.
+This log was last generated on Sun, 24 May 2026 21:03:54 GMT and should not be manually modified.
+
+## 0.120.0
+Sun, 24 May 2026 21:03:54 GMT
+
+### Minor changes
+
+- KG Phase 2 (#1258): populate the knowledge graph as a derived ecosystem mirror. Projects Workspace/Session/Persona/Environment/Task nodes + structural edges (from SQL FKs) and transcript chunks (from session logs) into Neo4j via idempotent MERGE upserts. Adds an incremental event subscriber, a reconciliation projection phase (session sync + per-session transcript cursor + off-write-path embedding backfill), and a startup-if-empty rebuild() that deterministically re-projects from SQL + logs (recovery = re-project, never replay). knowledge-core gains MERGE upsert primitives, structural EDGE_TYPEs, and a (sourceType,sourceId) uniqueness constraint.
+- GenUX component search + built-in catalog (#1271): make the component registry discoverable. Adds a `component_search` MCP tool (and `SearchComponents` gRPC RPC) that keyword-matches a workspace's registered components plus a catalog of Grackle's built-in components via fuzzy search, returning a `builtin` flag and relevance scores. Built-ins are a static manifest (`BUILTIN_COMPONENTS`) of the 9 curated, context-free components the GenUX runtime renders; their prop types and JSON-Schema propsSchema are both derived from a single source of truth — zod schemas in `@grackle-ai/common` (`BUILTIN_COMPONENT_SCHEMAS`) that the web-components consume for their prop types, so the catalog can't drift from the components. Agents discover and compose built-ins in JSX instead of re-authoring; component_register/component_show descriptions now point agents at component_search.
 
 ## 0.119.0
 Sun, 24 May 2026 18:32:19 GMT
