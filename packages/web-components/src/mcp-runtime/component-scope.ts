@@ -8,10 +8,17 @@
  * `@grackle-ai/common` `BUILTIN_COMPONENTS` (#1271); a test asserts that catalog
  * stays a subset of these names.
  */
-import {
-  Button, SplitButton, Callout, Spinner,
-  Skeleton, SkeletonText, SkeletonCard, Tooltip, CopyButton,
-} from "../index.js";
+// Import the curated components from their direct module files (NOT the package
+// barrel `../index.js`): the barrel transitively pulls DagView -> @dagrejs/dagre,
+// whose ESM entry vitest can't resolve, which broke this module's test. Direct
+// imports keep the runtime scope (and its drift test) dependency-light.
+import { Button } from "../components/display/Button.js";
+import { SplitButton } from "../components/display/SplitButton.js";
+import { Spinner } from "../components/display/Spinner.js";
+import { Skeleton, SkeletonText, SkeletonCard } from "../components/display/Skeleton.js";
+import { Tooltip } from "../components/display/Tooltip.js";
+import { CopyButton } from "../components/display/CopyButton.js";
+import { Callout } from "../components/notifications/Callout.js";
 
 /** Component name → component, injected into the react-live evaluation scope. */
 export const COMPONENT_SCOPE: Readonly<Record<string, unknown>> = {
