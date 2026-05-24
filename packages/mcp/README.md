@@ -249,7 +249,7 @@ Query aggregated token usage and cost data.
 
 [MCP Apps](#mcp-apps-ui-widgets) UI widgets — interactive HTML rendered inline by capable hosts (and always by Grackle's own chat pane via the broker).
 
-`show_hello_widget` is the Grackle-served demo widget: it references a static `ui://` resource and appears in `tools/list` **only** when the host advertises the `io.modelcontextprotocol/ui` extension. The **widget registry** tools let an agent author and render its own widgets at runtime; they are ordinary scoped tools (always listed) and the rendered widget is captured by the broker into the session's chat.
+`show_hello_widget` is the Grackle-served demo widget: it references a static `ui://` resource and appears in `tools/list` **only** when the host advertises the `io.modelcontextprotocol/ui` extension. The **widget registry** tools let an agent author and render its own widgets at runtime; they are ordinary scoped tools (always listed) and the rendered widget is captured by the broker into the session's chat. `component_show` renders agent-authored **React/JSX** against Grackle's own component library via a sandboxed React runtime (#1268).
 
 | Tool | Description | Parameters |
 |------|-------------|------------|
@@ -259,8 +259,9 @@ Query aggregated token usage and cost data.
 | `widget_list` | List the reusable widgets registered in the workspace. | — |
 | `widget_render` | Render a registered widget inline (by `id` or `name`), optionally passing `props` (data). | `id` (string, optional), `name` (string, optional), `props` (object, optional) |
 | `widget_show` | Render a one-off widget inline from an inline HTML `body`, without persisting it. | `body` (string), `props` (object, optional) |
+| `component_show` | Render a React/JSX component inline against the Grackle component library (no persistence). `source` is JSX that calls `render(<Component {...props}/>)`; `React`, `props`, and Grackle components are in scope. | `source` (string), `props` (object, optional) |
 
-Widgets are **workspace-scoped**: a session may only register/render widgets in its own workspace (the `workspaceId` is taken from the session's scoped token). Agent-authored bodies render in the cross-origin sandbox with inline scripts allowed (`script-src 'unsafe-inline'`), isolated by the iframe origin + a restricted `connect-src`.
+Widgets are **workspace-scoped**: a session may only register/render widgets in its own workspace (the `workspaceId` is taken from the session's scoped token). Agent-authored bodies render in the cross-origin sandbox with inline scripts allowed (`script-src 'unsafe-inline'`), isolated by the iframe origin + a restricted `connect-src`. `component_show` additionally runs in a sandboxed React runtime that transpiles + evaluates the JSX (`script-src 'unsafe-eval'`), kept safe by the same origin isolation.
 
 ---
 

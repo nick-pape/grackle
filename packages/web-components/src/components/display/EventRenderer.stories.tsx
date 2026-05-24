@@ -216,6 +216,28 @@ export const AgentWidgetEvent: Story = {
   },
 };
 
+/** GenUX React runtime (#1268): rendererKind "grackle-react" — `html` is JSX source. */
+export const ReactRuntimeWidgetEvent: Story = {
+  args: {
+    event: makeEvent({
+      eventType: "widget",
+      content: JSON.stringify({
+        resourceUri: "",
+        toolName: "component_show",
+        rendererKind: "grackle-react",
+        html: "render(<Button>{props.label}</Button>)",
+        csp: { resourceDomains: ["http://localhost:6007"], connectDomains: ["http://localhost:6007"], allowUnsafeEval: true },
+        toolInput: { label: "Hi" },
+      }),
+    }),
+    sandboxProxyUrl: "http://localhost:6007/sandbox.html",
+  },
+  play: async ({ canvas }) => {
+    // The grackle-react branch builds a runtime bootstrap and mounts the host iframe.
+    await expect(await canvas.findByTestId("mcp-app-widget")).toBeInTheDocument();
+  },
+};
+
 /** An unknown rendererKind falls back to the default event card (no crash). */
 export const UnknownRendererKindWidget: Story = {
   args: {

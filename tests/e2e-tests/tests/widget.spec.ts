@@ -64,3 +64,46 @@ test.describe("Agent widget registry (#1239)", { tag: ["@persona"] }, () => {
     await expect(page.locator('[data-testid^="tool-card-"]').first()).toBeVisible({ timeout: 10_000 });
   });
 });
+
+/**
+ * GenUX React runtime (#1268) — render-by-source, end-to-end.
+ *
+ * A stub-mcp agent calls `component_show` with JSX that composes a Grackle
+ * component (`Button`) and binds a prop. This locks the full React-runtime
+ * contract: tool -> broker `grackle-react` event -> EventRenderer bootstrap ->
+ * sandbox runtime.js transpiles + evaluates the JSX (react-live, `unsafe-eval`)
+ * and renders the bundled Grackle component with the supplied props.
+ */
+const COMPONENT_SCENARIO = JSON.stringify({
+  steps: [
+    { emit: "text", content: "Rendering a React component from source:" },
+    {
+      mcp_call: "component_show",
+      args: { source: "render(<Button>{props.label}</Button>)", props: { label: "Hello from JSX" } },
+    },
+  ],
+});
+
+test.describe("GenUX React runtime (#1268)", { tag: ["@persona"] }, () => {
+  test("component_show renders agent JSX against the Grackle component library", async ({ appPage, grackle: { client } }) => {
+    const page = appPage;
+
+    const wsId = await createWorkspace(client, "component-show-e2e-proj");
+    await createTaskDirect(client, wsId, "render react component", {
+      environmentId: "test-local",
+      description: COMPONENT_SCENARIO,
+    });
+    await navigateToTask(page, "render react component");
+    await patchWsForStubMcpRuntime(page);
+
+    await page.getByTestId("task-header-start").click();
+
+    await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId("mcp-app-widget")).toBeVisible({ timeout: 15_000 });
+
+    // Strong proof: the JSX was transpiled + evaluated in the sandbox React runtime
+    // and rendered a real Grackle <Button> (role=button) with the prop-supplied label.
+    const widgetFrame = page.frameLocator('[data-testid="mcp-app-widget"]').frameLocator("iframe");
+    await expect(widgetFrame.getByRole("button", { name: "Hello from JSX" })).toBeVisible({ timeout: 25_000 });
+  });
+});

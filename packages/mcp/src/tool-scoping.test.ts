@@ -65,6 +65,7 @@ const ROOT_TASK_AUTH: AuthContext = {
 describe("SCOPED_TOOLS", () => {
   it("contains the expected scoped tools", () => {
     expect([...SCOPED_TOOLS].sort()).toEqual([
+      "component_show",
       "ipc_attach", "ipc_close", "ipc_create_stream", "ipc_list_fds", "ipc_share_stream", "ipc_spawn", "ipc_terminate", "ipc_write",
       "knowledge_get_node", "knowledge_search",
       "logs_get",

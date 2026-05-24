@@ -811,7 +811,7 @@ describe("MCP Apps widget capture (#1238)", () => {
       toolName: string;
       html: string;
       rendererKind?: string;
-      csp?: { resourceDomains?: string[]; allowInlineScripts?: boolean };
+      csp?: { resourceDomains?: string[]; allowInlineScripts?: boolean; allowUnsafeEval?: boolean };
       toolInput?: Record<string, unknown>;
       toolResult?: unknown;
     };
@@ -896,6 +896,49 @@ describe("MCP Apps widget capture (#1238)", () => {
     expect(payload.csp?.allowInlineScripts).toBe(true);
     // Render-time props become the widget event's toolInput.
     expect(payload.toolInput).toMatchObject({ greeting: "hi" });
+  });
+
+  it("emits a grackle-react widget event with unsafe-eval from a render descriptor (#1268)", async () => {
+    const widgetCalls: WidgetCall[] = [];
+    const reactTool: ToolDefinition = {
+      name: "component_show_test",
+      group: "widget",
+      description: "Dynamic React-runtime render for capture testing (#1268).",
+      inputSchema: z.object({ source: z.string() }),
+      rpcMethod: "componentShow",
+      mutating: false,
+      async handler(args: Record<string, unknown>) {
+        return {
+          content: [{ type: "text" as const, text: "ok" }],
+          _meta: {
+            [WIDGET_RENDER_META_KEY]: {
+              rendererKind: "grackle-react",
+              body: args.source as string,
+              props: { label: "Hi" },
+              allowUnsafeEval: true,
+            },
+          },
+        };
+      },
+    };
+    server = await startServer(
+      [[reactTool]],
+      (sessionId, payload) => { widgetCalls.push({ sessionId, payload } as WidgetCall); },
+    );
+    const scopedToken = createScopedToken(
+      { sub: ROOT_TASK_ID, pid: "default-ws", per: "system", sid: "sess-react" },
+      TEST_API_KEY,
+    );
+    const authHeader = `Bearer ${scopedToken}`;
+    const sessionId = await initialize(server, authHeader);
+    await callTool(server, sessionId, "component_show_test", { source: "render(<Button>{props.label}</Button>)" }, authHeader);
+
+    expect(widgetCalls).toHaveLength(1);
+    const payload = widgetCalls[0]!.payload;
+    expect(payload.rendererKind).toBe("grackle-react");
+    expect(payload.html).toBe("render(<Button>{props.label}</Button>)");
+    expect(payload.csp?.allowUnsafeEval).toBe(true);
+    expect(payload.toolInput).toMatchObject({ label: "Hi" });
   });
 
   it("does not emit a widget event for a non-widget tool", async () => {

@@ -13,10 +13,26 @@ export interface SandboxServerOptions {
   sandboxPort: number;
 }
 
-/** Read a sandbox asset from the canonical copy in @grackle-ai/web-components. */
-function readSandboxAsset(subpath: string): string {
-  const assetPath: string = nodeRequire.resolve(`@grackle-ai/web-components/mcp-app-sandbox/${subpath}`);
+/** Read an asset shipped in @grackle-ai/web-components (path relative to its package root). */
+function readWebComponentsAsset(subpath: string): string {
+  const assetPath: string = nodeRequire.resolve(`@grackle-ai/web-components/${subpath}`);
   return readFileSync(assetPath, "utf-8");
+}
+
+/** Read a sandbox proxy asset (the static double-iframe relay) from web-components. */
+function readSandboxAsset(subpath: string): string {
+  return readWebComponentsAsset(`mcp-app-sandbox/${subpath}`);
+}
+
+// The React runtime bundle (#1268) is a BUILT artifact (vite), unlike the static
+// sandbox proxy assets above. Read it lazily + cache so constructing the server
+// never throws if web-components hasn't been built yet (e.g. isolated unit tests).
+let cachedRuntimeBundle: string | undefined;
+function readRuntimeBundle(): string {
+  if (cachedRuntimeBundle === undefined) {
+    cachedRuntimeBundle = readWebComponentsAsset("mcp-app-runtime/runtime.js");
+  }
+  return cachedRuntimeBundle;
 }
 
 const JS_HEADERS: Readonly<Record<string, string>> = {
@@ -59,6 +75,20 @@ export function createSandboxServer(options: SandboxServerOptions): http.Server 
       return;
     }
 
+    // The Grackle React runtime bundle (#1268), loaded as `script-src 'self'` by
+    // the inner widget bootstrap for `grackle-react` renders.
+    if (isGet && path === "/runtime.js") {
+      try {
+        const runtime: string = readRuntimeBundle();
+        res.writeHead(200, JS_HEADERS);
+        res.end(runtime);
+      } catch {
+        res.writeHead(500, { "Content-Type": "text/plain" });
+        res.end("Runtime bundle not built.");
+      }
+      return;
+    }
+
     if (isGet && (path === "/" || path === "/sandbox.html")) {
       let csp: SandboxCsp | undefined;
       const cspParam: string | null = url.searchParams.get("csp");
@@ -81,6 +111,6 @@ export function createSandboxServer(options: SandboxServerOptions): http.Server 
     }
 
     res.writeHead(404, { "Content-Type": "text/plain" });
-    res.end("Only sandbox.html and sandbox-relay.js are served on this port.");
+    res.end("Only sandbox.html, sandbox-relay.js and runtime.js are served on this port.");
   });
 }

@@ -19,6 +19,8 @@ export interface WidgetRenderDescriptor {
   props?: Record<string, unknown>;
   /** Allow inline `<script>` in the sandbox CSP (agent-authored bodies). */
   allowInlineScripts?: boolean;
+  /** Allow `eval`/`new Function` in the sandbox CSP (the Grackle React runtime, #1268). */
+  allowUnsafeEval?: boolean;
   /** Registry id when rendering a registered widget (omitted for one-off `widget_show`). */
   widgetId?: string;
   /** Registry version, when known. */
