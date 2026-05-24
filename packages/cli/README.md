@@ -633,6 +633,31 @@ grackle streams list --internal   # include internal IPC plumbing
 
 ---
 
+### Domain Events
+
+#### `grackle events`
+
+Query the persisted domain-event log (`domain_events`) — an audit/debug view of
+state-change events (`task.created`, `workspace.updated`, `environment.changed`, …).
+Filters compose with AND; results are ordered oldest-first by id.
+
+```bash
+grackle events                              # most recent events (default limit 100)
+grackle events --type task.created          # only this event type
+grackle events --since 2026-05-23T00:00:00Z # at/after a timestamp
+grackle events --until 2026-05-23T23:59:59Z # at/before a timestamp
+grackle events --after <id> --limit 50      # offset pagination (events after an id)
+# ┌──────────────────────────┬──────────────────┬──────────────────────────┬──────────────┐
+# │ ID                       │ Type             │ Timestamp                │ Payload      │
+# ├──────────────────────────┼──────────────────┼──────────────────────────┼──────────────┤
+# │ 01JV…SEQ                 │ task.created     │ 2026-05-23T18:04:11.002Z │ {"taskId":…} │
+# └──────────────────────────┴──────────────────┴──────────────────────────┴──────────────┘
+```
+
+Options: `--type <type>`, `--since <iso>`, `--until <iso>`, `--after <id>`, `--limit <n>`.
+
+---
+
 ### Pairing
 
 #### `grackle pair`

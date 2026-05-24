@@ -355,6 +355,14 @@ type DomainEvent = Message<"grackle.DomainEvent"> & {
 };
 
 // @public
+type DomainEventList = Message<"grackle.DomainEventList"> & {
+    events: DomainEvent[];
+};
+
+// @public
+const DomainEventListSchema: GenMessage<DomainEventList>;
+
+// @public
 const DomainEventSchema: GenMessage<DomainEvent>;
 
 // @public
@@ -914,6 +922,10 @@ declare namespace grackle {
         VersionStatusSchema,
         DomainEvent,
         DomainEventSchema,
+        QueryDomainEventsRequest,
+        QueryDomainEventsRequestSchema,
+        DomainEventList,
+        DomainEventListSchema,
         ServerEvent,
         ServerEventSchema,
         PluginInfo,
@@ -1222,6 +1234,11 @@ const GrackleCore: GenService<{
         methodKind: "server_streaming";
         input: typeof EmptySchema;
         output: typeof ServerEventSchema;
+    };
+    queryDomainEvents: {
+        methodKind: "unary";
+        input: typeof QueryDomainEventsRequestSchema;
+        output: typeof DomainEventListSchema;
     };
 }>;
 
@@ -1813,6 +1830,18 @@ type ProvisionEvent = Message<"grackle.ProvisionEvent"> & {
 
 // @public
 const ProvisionEventSchema: GenMessage<ProvisionEvent>;
+
+// @public
+type QueryDomainEventsRequest = Message<"grackle.QueryDomainEventsRequest"> & {
+    afterId: string;
+    type: string;
+    since: string;
+    until: string;
+    limit: number;
+};
+
+// @public
+const QueryDomainEventsRequestSchema: GenMessage<QueryDomainEventsRequest>;
 
 // @public
 type RegisterWidgetRequest = Message<"grackle.RegisterWidgetRequest"> & {

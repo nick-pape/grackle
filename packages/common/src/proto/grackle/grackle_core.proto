@@ -93,4 +93,7 @@ service GrackleCore {
 
   // Unified event streaming (replaces WebSocket)
   rpc StreamEvents(Empty) returns (stream ServerEvent);
+
+  // Domain events (query the persisted domain_events log)
+  rpc QueryDomainEvents(QueryDomainEventsRequest) returns (DomainEventList);
 }

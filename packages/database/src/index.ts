@@ -79,8 +79,8 @@ export {
 } from "./credential-providers.js";
 
 // ─── Event Store ───────────────────────────────────────────
-export { persistEvent } from "./event-store.js";
-export type { DomainEvent } from "./event-store.js";
+export { persistEvent, queryDomainEvents } from "./event-store.js";
+export type { DomainEvent, DomainEventQuery } from "./event-store.js";
 
 // ─── Utilities ─────────────────────────────────────────────
 export { grackleHome } from "./paths.js";
