@@ -44,7 +44,7 @@ vi.mock("./projection/project-entity.js", () => ({
   projectSession: vi.fn(), linkSessionSpawn: vi.fn(),
   projectEnvironment: vi.fn(), projectPersona: vi.fn(),
   projectWorkspace: vi.fn(), projectTask: vi.fn(),
-  linkTaskRelations: vi.fn(),
+  reconcileTaskEdges: vi.fn(), reconcileWorkspaceEdges: vi.fn(), reconcileSessionEdges: vi.fn(),
 }));
 vi.mock("./projection/project-transcript.js", () => ({
   projectSessionTranscript: vi.fn().mockResolvedValue(0),

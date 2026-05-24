@@ -82,18 +82,6 @@ export function taskEdges(task: TaskRow): EdgeSpec[] {
   return edges;
 }
 
-/**
- * The task→task subset of {@link taskEdges} (PART_OF to the parent, DEPENDS_ON
- * to dependencies). These are the only task edges whose endpoint is another task
- * and so may not be projected yet when this task is first projected. Re-applied
- * in a second pass (see `linkTaskRelations`) once all task nodes exist, so an
- * out-of-order endpoint never permanently drops the edge. (IN_WORKSPACE is
- * excluded: workspaces are always projected before tasks.)
- */
-export function taskRelationEdges(task: TaskRow): EdgeSpec[] {
-  return taskEdges(task).filter((edge) => edge.to.sourceType === REFERENCE_SOURCE.TASK);
-}
-
 /** Outgoing structural edges from a Session: ATTEMPT_OF, RAN_IN, USED_PERSONA. */
 export function sessionEdges(session: SessionRow): EdgeSpec[] {
   const from = key(REFERENCE_SOURCE.SESSION, session.id);

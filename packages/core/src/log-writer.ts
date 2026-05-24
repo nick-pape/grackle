@@ -202,6 +202,13 @@ export function readLogFrom(logPath: string, byteOffset: number): IncrementalLog
     closeSync(fd);
   }
 
+  // Guard: if the file shrank between statSync and readSync, readSync can return
+  // 0 (or fewer) bytes, leaving the allocUnsafe buffer uninitialized — bail
+  // before scanning/decoding garbage.
+  if (bytesRead <= 0) {
+    return { content: "", nextOffset: start };
+  }
+
   // Locate the last newline BYTE (0x0A) directly in the buffer. Working in byte
   // indices (not decoded-string indices) keeps `nextOffset` exact regardless of
   // multi-byte UTF-8 characters, and lets us decode only the complete-line slice

@@ -24,7 +24,6 @@ import {
 } from "./node-mappers.js";
 import {
   taskEdges,
-  taskRelationEdges,
   sessionEdges,
   sessionSpawnEdge,
   workspaceLinkEdge,
@@ -146,14 +145,6 @@ describe("edge-mappers", () => {
   it("emits no edge for empty/missing soft FKs", () => {
     const edges = taskEdges(task({ workspaceId: null, parentTaskId: "", dependsOn: "[]" }));
     expect(edges).toHaveLength(0);
-  });
-
-  it("taskRelationEdges returns only the task→task subset (PART_OF/DEPENDS_ON)", () => {
-    const edges = taskRelationEdges(task({ parentTaskId: "p", dependsOn: '["d1"]' }));
-    const types = edges.map((edge) => edge.type).sort();
-    // IN_WORKSPACE (task→workspace) is excluded; only task→task edges remain.
-    expect(types).toEqual([EDGE_TYPE.DEPENDS_ON, EDGE_TYPE.PART_OF].sort());
-    expect(edges.every((edge) => edge.to.sourceType === REFERENCE_SOURCE.TASK)).toBe(true);
   });
 
   it("emits ATTEMPT_OF / RAN_IN / USED_PERSONA for a session, skipping empties", () => {

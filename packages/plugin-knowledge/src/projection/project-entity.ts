@@ -35,7 +35,6 @@ import {
 } from "./node-mappers.js";
 import {
   taskEdges,
-  taskRelationEdges,
   sessionEdges,
   sessionSpawnEdge,
   workspaceLinkEdge,
@@ -85,60 +84,92 @@ async function upsertEntityNode(input: UpsertReferenceNodeInput): Promise<string
   return nodeId;
 }
 
-/** Clear the given outgoing edge types from a node, then upsert the current set. */
+/**
+ * Reconcile a node's outgoing structural edges.
+ *
+ * Always (re-)applies the current edge set with `MERGE` (idempotent + additive),
+ * so an edge that was skipped on an earlier pass because an endpoint node did not
+ * exist yet is healed on a later pass — even when the node's projection hash is
+ * unchanged. `removeOutgoingEdges` (clearing stale edges, e.g. from a changed
+ * foreign key) runs **only** when `clearStale` is set, i.e. when the projection
+ * actually changed; an unchanged re-apply must never bulk-remove.
+ */
 async function reconcileEdges(
   nodeId: string,
   types: EdgeType[],
   specs: EdgeSpec[],
+  clearStale: boolean,
 ): Promise<void> {
-  await removeOutgoingEdges(nodeId, types);
+  if (clearStale) {
+    await removeOutgoingEdges(nodeId, types);
+  }
   for (const spec of specs) {
     await applyEdge(spec);
   }
 }
 
-/** Project a Task node + its IN_WORKSPACE / PART_OF / DEPENDS_ON edges. */
+/** Resolve a workspace's LINKED_TO edge specs from the junction table. */
+function workspaceLinkEdges(workspaceId: string): EdgeSpec[] {
+  return workspaceEnvironmentLinkStore
+    .getLinkedEnvironmentIds(workspaceId)
+    .map((environmentId) => workspaceLinkEdge(workspaceId, environmentId));
+}
+
+/** Project a Task node + reconcile its IN_WORKSPACE / PART_OF / DEPENDS_ON edges (clearing stale). */
 export async function projectTask(task: TaskRow): Promise<void> {
   const nodeId = await upsertEntityNode(taskToNodeInput(task));
-  await reconcileEdges(nodeId, TASK_EDGE_TYPES, taskEdges(task));
+  await reconcileEdges(nodeId, TASK_EDGE_TYPES, taskEdges(task), true);
 }
 
-/**
- * Re-apply a Task's task→task edges (PART_OF parent, DEPENDS_ON dependencies) as
- * a second pass *after* all task nodes exist, so an edge whose endpoint task was
- * projected later (out of list order) is never permanently dropped. Idempotent
- * (MERGE via `applyEdge`), so it is safe to call every pass. Stale task→task
- * edges (a removed dependency) are cleared separately by {@link projectTask}'s
- * `reconcileEdges` when the task's hash changes.
- */
-export async function linkTaskRelations(task: TaskRow): Promise<void> {
-  for (const spec of taskRelationEdges(task)) {
-    await applyEdge(spec);
-  }
-}
-
-/** Project a Workspace node + its LINKED_TO edges (from the junction table). */
+/** Project a Workspace node + reconcile its LINKED_TO edges (clearing stale). */
 export async function projectWorkspace(workspace: WorkspaceRow): Promise<void> {
-  const environmentIds = workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(workspace.id);
   // The link set feeds the projection hash (so link changes trigger re-project)
   // and the LINKED_TO edge reconciliation below.
-  const nodeId = await upsertEntityNode(workspaceToNodeInput(workspace, environmentIds));
-  await reconcileEdges(
-    nodeId,
-    WORKSPACE_EDGE_TYPES,
-    environmentIds.map((environmentId) => workspaceLinkEdge(workspace.id, environmentId)),
+  const nodeId = await upsertEntityNode(
+    workspaceToNodeInput(workspace, workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(workspace.id)),
   );
+  await reconcileEdges(nodeId, WORKSPACE_EDGE_TYPES, workspaceLinkEdges(workspace.id), true);
 }
 
 /**
- * Project a Session node + its ATTEMPT_OF / RAN_IN / USED_PERSONA edges and the
- * incoming SPAWNED edge from its parent.
+ * Project a Session node + reconcile its ATTEMPT_OF / RAN_IN / USED_PERSONA edges
+ * (clearing stale). The incoming SPAWNED edge is handled by {@link linkSessionSpawn}.
  *
  * @param workspaceId - Resolved from the session's task (empty if none).
  */
 export async function projectSession(session: SessionRow, workspaceId: string): Promise<void> {
   const nodeId = await upsertEntityNode(sessionToNodeInput(session, workspaceId));
-  await reconcileEdges(nodeId, SESSION_EDGE_TYPES, sessionEdges(session));
+  await reconcileEdges(nodeId, SESSION_EDGE_TYPES, sessionEdges(session), true);
+}
+
+/**
+ * Re-apply an entity's outgoing edges with `MERGE` **without** clearing stale ones
+ * (additive). Used by the reconciliation scan for rows whose hash is unchanged, so
+ * any edge previously dropped (endpoint projected later, or a transient failure) is
+ * eventually healed. A no-op if the node is not projected yet (the next pass or a
+ * rebuild closes the gap once it exists).
+ */
+export async function reconcileTaskEdges(task: TaskRow): Promise<void> {
+  const node = await findReferenceNodeBySource(REFERENCE_SOURCE.TASK, task.id);
+  if (node) {
+    await reconcileEdges(node.id, TASK_EDGE_TYPES, taskEdges(task), false);
+  }
+}
+
+/** Additive re-apply of a Workspace's LINKED_TO edges (see {@link reconcileTaskEdges}). */
+export async function reconcileWorkspaceEdges(workspace: WorkspaceRow): Promise<void> {
+  const node = await findReferenceNodeBySource(REFERENCE_SOURCE.WORKSPACE, workspace.id);
+  if (node) {
+    await reconcileEdges(node.id, WORKSPACE_EDGE_TYPES, workspaceLinkEdges(workspace.id), false);
+  }
+}
+
+/** Additive re-apply of a Session's outgoing edges (see {@link reconcileTaskEdges}). */
+export async function reconcileSessionEdges(session: SessionRow): Promise<void> {
+  const node = await findReferenceNodeBySource(REFERENCE_SOURCE.SESSION, session.id);
+  if (node) {
+    await reconcileEdges(node.id, SESSION_EDGE_TYPES, sessionEdges(session), false);
+  }
 }
 
 /**

@@ -60,7 +60,9 @@ import {
   projectPersona,
   projectWorkspace,
   projectTask,
-  linkTaskRelations,
+  reconcileTaskEdges,
+  reconcileWorkspaceEdges,
+  reconcileSessionEdges,
 } from "./projection/project-entity.js";
 import {
   projectSessionTranscript,
@@ -102,11 +104,15 @@ async function syncSessions(embedder: Embedder): Promise<void> {
     liveSessionIds.add(session.id);
     const workspaceId = resolveSessionWorkspaceId(session.taskId);
 
-    // Hash-gate: only re-project structure when the projection changed.
+    // Hash-gate the node write, but always reconcile edges: on change re-project
+    // (clears stale + re-applies); when unchanged, re-apply additively so an edge
+    // dropped on an earlier pass (endpoint missing, transient failure) still heals.
     const desired = sessionToNodeInput(session, workspaceId);
     const existing = await getReferenceNodeProps(REFERENCE_SOURCE.SESSION, session.id);
     if (existing?.projectionHash !== desired.extraProps?.projectionHash) {
       await projectSession(session, workspaceId);
+    } else {
+      await reconcileSessionEdges(session);
     }
 
     // Incremental transcript chunking (cursor-based; cheap when no new content).
@@ -135,6 +141,10 @@ async function syncSessions(embedder: Embedder): Promise<void> {
  * rows + prune of nodes whose source row no longer exists. This is the
  * correctness backbone for entities — it converges the mirror even if the
  * low-latency event subscriber missed an event (e.g. while Neo4j was down).
+ *
+ * @param reconcileEdges - When a row's hash is unchanged (node already current),
+ *   this re-applies its outgoing edges additively (no node write, no stale-clear),
+ *   so an edge dropped on an earlier pass still heals. Omit for edgeless entities.
  */
 async function syncEntity<T>(
   sourceType: ReferenceSource,
@@ -142,6 +152,7 @@ async function syncEntity<T>(
   getId: (row: T) => string,
   toInput: (row: T) => UpsertReferenceNodeInput,
   project: (row: T) => Promise<void>,
+  reconcileEdges?: (row: T) => Promise<void>,
 ): Promise<void> {
   const liveIds = new Set<string>();
   for (const row of rows) {
@@ -150,6 +161,8 @@ async function syncEntity<T>(
     const existing = await getReferenceNodeProps(sourceType, id);
     if (existing?.projectionHash !== toInput(row).extraProps?.projectionHash) {
       await project(row);
+    } else if (reconcileEdges) {
+      await reconcileEdges(row);
     }
   }
   await pruneReferenceNodesNotIn(sourceType, [...liveIds]);
@@ -188,6 +201,10 @@ export function createKnowledgeProjectionPhase(
       // Entity backbone (hash-gated): converges the mirror even if the
       // low-latency event subscriber missed events (e.g. while Neo4j was down).
       // Endpoints (env/persona/workspace) before tasks/sessions so edges resolve.
+      // Endpointless entities first (env/persona), then workspaces, then tasks/
+      // sessions — so an edge's endpoint node already exists when it is applied.
+      // The `reconcileEdges` arg re-applies edges additively for unchanged rows
+      // each tick, so a transiently-dropped edge eventually heals.
       await syncEntity(REFERENCE_SOURCE.ENVIRONMENT, envRegistry.listEnvironments(), (row) => row.id, environmentToNodeInput, projectEnvironment);
       await syncEntity(REFERENCE_SOURCE.PERSONA, personaStore.listPersonas(), (row) => row.id, personaToNodeInput, projectPersona);
       // Workspace hash folds in the linked-env set so a link/unlink re-projects
@@ -198,15 +215,16 @@ export function createKnowledgeProjectionPhase(
         (row) => row.id,
         (row) => workspaceToNodeInput(row, workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(row.id)),
         projectWorkspace,
+        reconcileWorkspaceEdges,
       );
-      const tasks = taskStore.listTasks();
-      await syncEntity(REFERENCE_SOURCE.TASK, tasks, (row) => row.id, taskToNodeInput, projectTask);
-      // Second pass: task→task edges, now that all task nodes exist. A child/
-      // dependency projected before its parent/dependency would otherwise have
-      // its hash-gated edge skipped permanently (endpoint missing at first pass).
-      for (const task of tasks) {
-        await linkTaskRelations(task);
-      }
+      await syncEntity(
+        REFERENCE_SOURCE.TASK,
+        taskStore.listTasks(),
+        (row) => row.id,
+        taskToNodeInput,
+        projectTask,
+        reconcileTaskEdges,
+      );
       await syncSessions(embedder);
       await backfillEmbeddings(embedder);
     },

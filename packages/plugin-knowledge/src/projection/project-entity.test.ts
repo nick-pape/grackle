@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { PersonaRow } from "@grackle-ai/database";
+import type { PersonaRow, TaskRow } from "@grackle-ai/database";
 
 // ── Mocks ────────────────────────────────────────────────────
 
@@ -34,7 +34,7 @@ vi.mock("@grackle-ai/database", () => ({
   workspaceEnvironmentLinkStore: { getLinkedEnvironmentIds: vi.fn(() => []) },
 }));
 
-import { projectPersona } from "./project-entity.js";
+import { projectPersona, projectTask, reconcileTaskEdges } from "./project-entity.js";
 
 function persona(overrides: Partial<PersonaRow> = {}): PersonaRow {
   return {
@@ -45,6 +45,19 @@ function persona(overrides: Partial<PersonaRow> = {}): PersonaRow {
     model: "sonnet",
     ...overrides,
   } as unknown as PersonaRow;
+}
+
+function task(overrides: Partial<TaskRow> = {}): TaskRow {
+  return {
+    id: "t1",
+    workspaceId: "w1",
+    title: "Do the thing",
+    description: "",
+    status: "working",
+    dependsOn: "[]",
+    parentTaskId: "",
+    ...overrides,
+  } as unknown as TaskRow;
 }
 
 // Exercise the shared `upsertEntityNode` path through projectPersona (the
@@ -83,5 +96,35 @@ describe("entity projection: embedding invalidation on text change", () => {
     kg.getReferenceNodeProps.mockResolvedValue({ id: "node-1", projectionHash: unchangedHash });
     await projectPersona(persona());
     expect(kg.updateNode).not.toHaveBeenCalled();
+  });
+});
+
+describe("edge reconciliation: clear-on-change (full) vs additive (unchanged)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    kg.upsertReferenceNode.mockResolvedValue("node-1");
+    kg.getReferenceNodeProps.mockResolvedValue(undefined);
+    kg.findReferenceNodeBySource.mockResolvedValue({ id: "endpoint" });
+  });
+
+  it("projectTask clears stale edges then re-applies the current set", async () => {
+    await projectTask(task({ workspaceId: "w1", parentTaskId: "p1", dependsOn: '["d1"]' }));
+    // Full reconcile: stale edges are bulk-removed before re-applying.
+    expect(kg.removeOutgoingEdges).toHaveBeenCalledOnce();
+    expect(kg.upsertEdge).toHaveBeenCalled(); // IN_WORKSPACE + PART_OF + DEPENDS_ON
+  });
+
+  it("reconcileTaskEdges re-applies additively WITHOUT clearing stale edges", async () => {
+    await reconcileTaskEdges(task({ workspaceId: "w1", parentTaskId: "p1" }));
+    // Additive heal: never bulk-removes (that would drop edges mid-converge).
+    expect(kg.removeOutgoingEdges).not.toHaveBeenCalled();
+    expect(kg.upsertEdge).toHaveBeenCalled();
+  });
+
+  it("reconcileTaskEdges is a no-op when the task node is not projected yet", async () => {
+    kg.findReferenceNodeBySource.mockResolvedValue(undefined);
+    await reconcileTaskEdges(task({ parentTaskId: "p1" }));
+    expect(kg.upsertEdge).not.toHaveBeenCalled();
+    expect(kg.removeOutgoingEdges).not.toHaveBeenCalled();
   });
 });
