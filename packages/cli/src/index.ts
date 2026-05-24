@@ -18,6 +18,7 @@ import { registerCredentialProviderCommands } from "./commands/credential-provid
 import { registerPairCommand } from "./commands/pair.js";
 import { registerConfigCommands } from "./commands/config.js";
 import { registerStreamCommands } from "./commands/streams.js";
+import { registerEventCommands } from "./commands/events.js";
 import { registerPluginCommands } from "./commands/plugin.js";
 import { registerGitHubAccountCommands } from "./commands/github-account.js";
 import { registerChannelCommands } from "./commands/channel.js";
@@ -67,6 +68,7 @@ registerCredentialProviderCommands(program);
 registerPairCommand(program);
 registerConfigCommands(program);
 registerStreamCommands(program);
+registerEventCommands(program);
 registerPluginCommands(program);
 registerGitHubAccountCommands(program);
 registerChannelCommands(program);
