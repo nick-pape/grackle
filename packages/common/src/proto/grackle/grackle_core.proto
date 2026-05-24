@@ -99,4 +99,7 @@ service GrackleCore {
 
   // IPC stream rooms (read a durable transcript)
   rpc GetStreamTranscript(GetStreamTranscriptRequest) returns (StreamTranscript);
+
+  // Session action log (read a session's durable, server-sequenced replay buffer)
+  rpc GetSessionActions(GetSessionActionsRequest) returns (SessionActionList);
 }

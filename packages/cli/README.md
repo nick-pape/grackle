@@ -678,6 +678,32 @@ Options: `--type <type>`, `--since <iso>`, `--until <iso>`, `--before <id>`, `--
 
 ---
 
+### Session Actions
+
+#### `grackle session events <sessionId>`
+
+Show a session's **durable, server-sequenced action log** (`session_actions`) —
+every agent-conversation event with a monotonic `seq` (`serverSeq`), in **replay
+order** (oldest first). This is distinct from `grackle logs`, which is the
+human-readable JSONL/transcript view of one session; `session events` is the
+seq'd, offset-queryable log that survives server restart and is the foundation
+for seq-based resume. Use `--from <seq>` to resume after a cursor.
+
+```bash
+grackle session events abc12345                       # oldest first (default limit 500)
+grackle session events abc12345 --limit 50
+grackle session events abc12345 --from <seq> --limit 50   # resume after a seq
+# ┌──────────────────────────┬───────────┬──────────────────────────┬─────────────┐
+# │ Seq                      │ Type      │ Timestamp                │ Content     │
+# ├──────────────────────────┼───────────┼──────────────────────────┼─────────────┤
+# │ 01JV…SEQ                 │ text      │ 2026-05-24T18:04:11.002Z │ Hello       │
+# └──────────────────────────┴───────────┴──────────────────────────┴─────────────┘
+```
+
+Options: `--from <seq>`, `--limit <n>`.
+
+---
+
 ### Pairing
 
 #### `grackle pair`

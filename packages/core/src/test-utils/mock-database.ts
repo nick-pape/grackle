@@ -158,6 +158,8 @@ export function createDatabaseMock() {
     queryDomainEvents: vi.fn(() => []),
     persistStreamMessage: vi.fn(),
     queryStreamMessages: vi.fn(() => []),
+    persistSessionAction: vi.fn(),
+    querySessionActions: vi.fn(() => []),
 
     // Utilities
     grackleHome: "/tmp/test-grackle",

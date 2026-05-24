@@ -1,9 +1,10 @@
 import { create } from "@bufbuild/protobuf";
-import { grackle, powerline, eventTypeToEnum, SESSION_STATUS, TERMINAL_SESSION_STATUSES, END_REASON } from "@grackle-ai/common";
+import { grackle, powerline, eventTypeToEnum, eventTypeToString, SESSION_STATUS, TERMINAL_SESSION_STATUSES, END_REASON } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 import { v4 as uuid } from "uuid";
 import { ulid } from "ulid";
-import { sessionStore, escalationStore, taskStore, workspaceStore, slugify } from "@grackle-ai/database";
+import { monotonicFactory } from "ulid";
+import { sessionStore, escalationStore, taskStore, workspaceStore, slugify, persistSessionAction } from "@grackle-ai/database";
 import * as streamHub from "./stream-hub.js";
 import * as logWriter from "./log-writer.js";
 import * as processorRegistry from "./processor-registry.js";
@@ -60,6 +61,36 @@ export interface WidgetEventPayload {
 
 /** Callback that pushes a widget event into a session's stream (injected into the MCP server). */
 export type PublishWidgetEvent = (sessionId: string, payload: WidgetEventPayload) => void;
+
+/**
+ * Monotonic ULID generator for the durable session-action log's `serverSeq`
+ * (AHP HR1a / RFC #1264). Strictly increasing even when multiple events arrive
+ * within the same millisecond, so `seq` always reflects emission order under
+ * bursty event streams — the replay-buffer ordering primitive.
+ */
+const nextServerSeq: () => string = monotonicFactory();
+
+/**
+ * Append a session event to the durable, server-sequenced action log
+ * (`session_actions`), assigning the next monotonic `serverSeq`. Best-effort:
+ * a persistence failure is logged but never interrupts event processing or live
+ * delivery. The JSONL log + stream-hub publish remain the primary paths; this
+ * durable, offset-queryable log is the foundation for seq-based resume (HR8).
+ */
+function recordSessionAction(event: grackle.SessionEvent): void {
+  try {
+    persistSessionAction({
+      seq: nextServerSeq(),
+      sessionId: event.sessionId,
+      type: eventTypeToString(event.type),
+      content: event.content,
+      raw: event.raw,
+      timestamp: event.timestamp,
+    });
+  } catch (err) {
+    logger.error({ err, sessionId: event.sessionId }, "Failed to persist session action");
+  }
+}
 
 /**
  * Publish an MCP Apps widget render event into a session's event stream.
@@ -325,6 +356,7 @@ export function processEventStream(
         });
         await logWriter.writeEvent(logPath, sysCtxEvent);
         streamHub.publish(sysCtxEvent);
+        recordSessionAction(sysCtxEvent);
       }
       if (options.prompt && options.taskId) {
         const promptEvent = create(grackle.SessionEventSchema, {
@@ -335,6 +367,7 @@ export function processEventStream(
         });
         await logWriter.writeEvent(logPath, promptEvent);
         streamHub.publish(promptEvent);
+        recordSessionAction(promptEvent);
       }
 
       for await (const event of events) {
@@ -356,6 +389,7 @@ export function processEventStream(
         });
         await logWriter.writeEvent(logPath, sessionEvent);
         streamHub.publish(sessionEvent);
+        recordSessionAction(sessionEvent);
 
         // Intercept subtask creation events and create child tasks
         if (event.type === "subtask_create" && ctx.taskId) {
