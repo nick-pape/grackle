@@ -273,15 +273,15 @@ export async function removeOutgoingEdges(
 
   const session = getSession();
   try {
+    // Count via the query summary rather than RETURN-ing the deleted variable
+    // (unambiguous; consistent with the other bulk-delete helpers).
     const result = await session.run(
       `MATCH (a:${NODE_LABEL} {id: $fromId})-[r]->(:${NODE_LABEL})
        WHERE type(r) IN $types
-       DELETE r
-       RETURN count(r) AS deleted`,
+       DELETE r`,
       { fromId, types },
     );
-    const deleted = result.records[0]?.get("deleted") as number | undefined;
-    return deleted ?? 0;
+    return result.summary.counters.updates().relationshipsDeleted;
   } finally {
     try {
       await session.close();
