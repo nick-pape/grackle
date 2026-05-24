@@ -281,6 +281,22 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 13,
+    name: "stream-messages",
+    up: (conn) => {
+      conn.exec(`
+        CREATE TABLE IF NOT EXISTS stream_messages (
+          seq        TEXT PRIMARY KEY,
+          stream_id  TEXT NOT NULL,
+          sender_id  TEXT NOT NULL,
+          content    TEXT NOT NULL,
+          timestamp  TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_stream_messages_stream ON stream_messages(stream_id, seq);
+      `);
+    },
+  },
 ];
 
 /** The highest schema version defined by BASELINE + MIGRATIONS. */
@@ -604,6 +620,14 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
       payload   TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS stream_messages (
+      seq        TEXT PRIMARY KEY,
+      stream_id  TEXT NOT NULL,
+      sender_id  TEXT NOT NULL,
+      content    TEXT NOT NULL,
+      timestamp  TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS schedules (
       id                  TEXT PRIMARY KEY,
       title               TEXT NOT NULL,
@@ -647,6 +671,7 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
     CREATE INDEX IF NOT EXISTS idx_findings_workspace ON findings(workspace_id);
     CREATE INDEX IF NOT EXISTS idx_domain_events_type ON domain_events(type);
     CREATE INDEX IF NOT EXISTS idx_domain_events_timestamp ON domain_events(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_stream_messages_stream ON stream_messages(stream_id, seq);
     CREATE INDEX IF NOT EXISTS idx_sessions_task_id ON sessions(task_id);
     CREATE TABLE IF NOT EXISTS plugins (
       name       TEXT PRIMARY KEY,

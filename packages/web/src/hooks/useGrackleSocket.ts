@@ -146,6 +146,9 @@ export function useGrackleSocket(): UseGrackleSocketResult {
         console.warn("[grackle] Failed to parse domain event payloadJson:", evt.payloadJson);
       }
     },
+    onStreamMessage: (msg) => {
+      streamsHook.handleStreamMessage(msg);
+    },
     onConnect: onStreamConnect,
     onDisconnect: onStreamDisconnect,
   });
@@ -378,6 +381,9 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       streamsLoadedOnce: streamsHook.streamsLoadedOnce,
       streamsLoadError: streamsHook.streamsLoadError,
       loadStreams: streamsHook.loadStreams,
+      liveMessages: streamsHook.liveMessages,
+      loadTranscript: streamsHook.loadTranscript,
+      handleStreamMessage: streamsHook.handleStreamMessage,
       domainHook: streamsHook.domainHook,
     },
     knowledge: knowledgeHook,

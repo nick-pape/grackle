@@ -6,21 +6,26 @@
  *
  * Read-only: participants link to their sessions; low-level wiring (fds, full
  * GUIDs, permission/delivery mode) is tucked behind an "Advanced" disclosure.
- * Live conversation content arrives in V2 (#1230).
+ * The Conversation section shows the durable room transcript (RFC #1264 Phase 2).
  *
  * @module
  */
 
 import { useEffect, type JSX } from "react";
-import type { StreamData } from "../../hooks/types.js";
+import type { StreamData, StreamMessageData } from "../../hooks/types.js";
 import { useAppNavigate, sessionUrl } from "../../utils/navigation.js";
 import { streamKind, type StreamKind } from "../../utils/streamCoordination.js";
+import { StreamTranscript } from "./StreamTranscript.js";
 import styles from "./StreamDetailPanel.module.scss";
 
 /** Props for the StreamDetailPanel component. */
 export interface StreamDetailPanelProps {
   /** The stream to display details for. */
   stream: StreamData;
+  /** The stream's transcript messages, oldest first (scrollback + live merged). */
+  messages?: StreamMessageData[];
+  /** Whether the transcript is currently loading. */
+  transcriptLoading?: boolean;
   /** Called when the user requests to close the panel. */
   onClose: () => void;
 }
@@ -56,7 +61,7 @@ function DeliveryModeBadge({ mode }: { mode: string }): JSX.Element {
  * Pull-out right drawer showing stream metadata: overview, participants, and an
  * Advanced disclosure with low-level wiring. Conversation content is V2.
  */
-export function StreamDetailPanel({ stream, onClose }: StreamDetailPanelProps): JSX.Element {
+export function StreamDetailPanel({ stream, messages, transcriptLoading, onClose }: StreamDetailPanelProps): JSX.Element {
   const navigate = useAppNavigate();
 
   // Close on Escape key
@@ -119,12 +124,10 @@ export function StreamDetailPanel({ stream, onClose }: StreamDetailPanelProps): 
           )}
         </div>
 
-        {/* Live conversation — V2 */}
+        {/* Live conversation transcript (RFC #1264 Phase 2) */}
         <div className={styles.section}>
           <div className={styles.sectionLabel}>Conversation</div>
-          <div className={styles.placeholder} data-testid="stream-conversation-placeholder">
-            Live conversation view — coming in V2.
-          </div>
+          <StreamTranscript messages={messages ?? []} loading={transcriptLoading ?? false} />
         </div>
 
         {/* Advanced wiring */}

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn } from "@storybook/test";
-import type { StreamData } from "../../hooks/types.js";
+import type { StreamData, StreamMessageData } from "../../hooks/types.js";
 import { withMockGrackleRoute } from "../../test-utils/storybook-helpers.js";
 import { StreamDetailPanel } from "./StreamDetailPanel.js";
 
@@ -122,6 +122,21 @@ export const NoSubscribers: Story = {
 export const AllPermissionModes: Story = {
   args: {
     stream: streamAllModes,
+  },
+};
+
+const sampleMessages: StreamMessageData[] = [
+  { streamId: "stream-abc123", seq: "01A", senderId: "session-aabbccdd-eeff-0011", content: "Proposing JWT with RS256.", timestamp: "2026-05-24T18:00:01.000Z" },
+  { streamId: "stream-abc123", seq: "01B", senderId: "session-11223344-5566-7788", content: "Agreed; rotate refresh tokens on use.", timestamp: "2026-05-24T18:00:07.000Z" },
+];
+
+/** Stream with a populated conversation transcript. */
+export const WithTranscript: Story = {
+  args: {
+    messages: sampleMessages,
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getAllByTestId("stream-transcript-message")).toHaveLength(2);
   },
 };
 

@@ -31,6 +31,8 @@ export interface UseEventStreamOptions {
   onSessionEvent: (event: { sessionId: string; type: number; timestamp: string; content: string; raw: string }) => void;
   /** Called for each domain event (task.created, environment.changed, etc.). */
   onDomainEvent: (event: { id: string; type: string; timestamp: string; payloadJson: string }) => void;
+  /** Called for each live IPC stream message (RFC #1264 Phase 2). */
+  onStreamMessage?: (event: { streamId: string; seq: string; senderId: string; content: string; timestamp: string }) => void;
   /** Called immediately after a new stream is created (including reconnects), before any events are received. */
   onConnect?: () => void | Promise<void>;
   /** Called when the stream disconnects. */
@@ -55,6 +57,8 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
   onSessionEventRef.current = options.onSessionEvent;
   const onDomainEventRef = useRef(options.onDomainEvent);
   onDomainEventRef.current = options.onDomainEvent;
+  const onStreamMessageRef = useRef(options.onStreamMessage);
+  onStreamMessageRef.current = options.onStreamMessage;
   const onConnectRef = useRef(options.onConnect);
   onConnectRef.current = options.onConnect;
   const onDisconnectRef = useRef(options.onDisconnect);
@@ -119,6 +123,15 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
               type: v.type,
               timestamp: v.timestamp,
               payloadJson: v.payloadJson,
+            });
+          } else if (evt.case === "streamMessageEvent") {
+            const v = evt.value;
+            onStreamMessageRef.current?.({
+              streamId: v.streamId,
+              seq: v.seq,
+              senderId: v.senderId,
+              content: v.content,
+              timestamp: v.timestamp,
             });
           }
         }

@@ -10,13 +10,29 @@ import styles from "./CoordinationPage.module.scss";
  */
 export function CoordinationPage(): JSX.Element {
   const {
-    streams: { streams, streamsLoading, streamsLoadedOnce, streamsLoadError, loadStreams },
+    streams: { streams, streamsLoading, streamsLoadedOnce, streamsLoadError, loadStreams, liveMessages, loadTranscript },
     sessions: { sessions },
     tasks: { tasks },
   } = useGrackle();
 
   const [showInternals, setShowInternals] = useState(false);
   const [selectedStreamId, setSelectedStreamId] = useState<string | undefined>(undefined);
+  const [transcriptLoading, setTranscriptLoading] = useState(false);
+
+  // Fetch the durable transcript (scrollback) when a stream is selected; live
+  // messages merge into the same buffer via the streams hook.
+  useEffect(() => {
+    if (selectedStreamId === undefined) {
+      setTranscriptLoading(false);
+      return;
+    }
+    let active = true;
+    setTranscriptLoading(true);
+    loadTranscript(selectedStreamId)
+      .then(() => { if (active) { setTranscriptLoading(false); } })
+      .catch(() => { if (active) { setTranscriptLoading(false); } });
+    return () => { active = false; };
+  }, [selectedStreamId, loadTranscript]);
 
   // Re-fetch when the internals toggle changes. The initial (default-false)
   // load is already performed by the streams domain hook's onConnect, so skip
@@ -54,7 +70,12 @@ export function CoordinationPage(): JSX.Element {
         onRefresh={handleRefresh}
       />
       {selectedStream && (
-        <StreamDetailPanel stream={selectedStream} onClose={() => setSelectedStreamId(undefined)} />
+        <StreamDetailPanel
+          stream={selectedStream}
+          messages={liveMessages[selectedStream.id] ?? []}
+          transcriptLoading={transcriptLoading}
+          onClose={() => setSelectedStreamId(undefined)}
+        />
       )}
     </div>
   );

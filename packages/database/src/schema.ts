@@ -387,6 +387,19 @@ export const domainEvents = sqliteTable("domain_events", {
 /** Row shape returned by a SELECT on the domain_events table. */
 export type DomainEventRow = typeof domainEvents.$inferSelect;
 
+// ─── Stream Messages ─────────────────────────────────────
+
+export const streamMessages = sqliteTable("stream_messages", {
+  seq: text("seq").primaryKey(),
+  streamId: text("stream_id").notNull(),
+  senderId: text("sender_id").notNull(),
+  content: text("content").notNull(),
+  timestamp: text("timestamp").notNull(),
+});
+
+/** Row shape returned by a SELECT on the stream_messages table. */
+export type StreamMessageRow = typeof streamMessages.$inferSelect;
+
 // ─── Plugins ─────────────────────────────────────────────────
 
 export const plugins = sqliteTable("plugins", {

@@ -96,4 +96,7 @@ service GrackleCore {
 
   // Domain events (query the persisted domain_events log)
   rpc QueryDomainEvents(QueryDomainEventsRequest) returns (DomainEventList);
+
+  // IPC stream rooms (read a durable transcript)
+  rpc GetStreamTranscript(GetStreamTranscriptRequest) returns (StreamTranscript);
 }

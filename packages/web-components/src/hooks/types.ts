@@ -604,6 +604,20 @@ export interface StreamData {
   selfEcho: boolean;
 }
 
+/** A single message in an IPC stream room transcript (RFC #1264 Phase 2). */
+export interface StreamMessageData {
+  /** The stream (room) this message belongs to. */
+  streamId: string;
+  /** ULID transcript sequence key (monotonic per stream, ascending = chronological). */
+  seq: string;
+  /** Session id of the sender. */
+  senderId: string;
+  /** Message content. */
+  content: string;
+  /** ISO 8601 timestamp. */
+  timestamp: string;
+}
+
 /** Values returned by the streams domain hook. */
 export interface UseStreamsResult {
   /** All known IPC streams. */
@@ -619,6 +633,12 @@ export interface UseStreamsResult {
    * to surface internal IPC plumbing (lifecycle/pipe/stdin); defaults to false.
    */
   loadStreams: (includeInternal?: boolean) => Promise<void>;
+  /** Transcript buffer keyed by stream id (scrollback + live, deduped by seq, ascending). */
+  liveMessages: Record<string, StreamMessageData[]>;
+  /** Fetch a stream's durable transcript (scrollback) and merge it into the buffer. */
+  loadTranscript: (streamId: string, beforeSeq?: string) => Promise<void>;
+  /** Append a live stream message to the per-stream buffer. */
+  handleStreamMessage: (message: StreamMessageData) => void;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
   /** Lifecycle hook for connect/disconnect/event routing. */

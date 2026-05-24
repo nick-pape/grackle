@@ -12,6 +12,7 @@ import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
 import * as streamHub from "./stream-hub.js";
 import { subscribe, type GrackleEvent } from "./event-bus.js";
+import { subscribeStreamMessages, type StreamMessageEvent } from "./stream-message-bus.js";
 
 /**
  * A cancellable event stream that yields ServerEvent proto messages.
@@ -80,6 +81,24 @@ export function createEventStream(): EventStream {
     );
   });
 
+  // Subscribe to IPC stream messages (from stream-message-bus)
+  const unsubscribeStreamMessages = subscribeStreamMessages((event: StreamMessageEvent) => {
+    enqueue(
+      create(grackle.ServerEventSchema, {
+        event: {
+          case: "streamMessageEvent",
+          value: create(grackle.StreamMessageEventSchema, {
+            streamId: event.streamId,
+            seq: event.seq,
+            senderId: event.senderId,
+            content: event.content,
+            timestamp: event.timestamp,
+          }),
+        },
+      }),
+    );
+  });
+
   return {
     async *[Symbol.asyncIterator](): AsyncGenerator<grackle.ServerEvent> {
       // eslint-disable-next-line no-unmodified-loop-condition -- cancelled is set by cancel() from outside
@@ -99,6 +118,7 @@ export function createEventStream(): EventStream {
       cancelled = true;
       sessionStream.cancel();
       unsubscribeDomain();
+      unsubscribeStreamMessages();
       // Wake any waiting consumer so the iterator exits
       if (pendingResolve) {
         pendingResolve();

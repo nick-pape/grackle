@@ -24,6 +24,7 @@ import { recoverSuspendedSessions } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
 import { reanimateAgent } from "@grackle-ai/core";
 import { streamRegistry } from "@grackle-ai/core";
+import { RESERVED_PREFIXES, isReservedStreamName } from "@grackle-ai/core";
 import { pipeDelivery } from "@grackle-ai/core";
 import { logWriter } from "@grackle-ai/core";
 import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
@@ -499,9 +500,7 @@ export async function closeFd(req: grackle.CloseFdRequest): Promise<grackle.Clos
   // Only unsubscribe other participants for internal streams (pipe/lifecycle).
   // Global streams (user-created) only unsubscribe the caller — closing your
   // fd should not disconnect other participants from the shared stream.
-  const isInternalStream = stream
-    ? (stream.name.startsWith("pipe:") || stream.name.startsWith("lifecycle:") || stream.name.startsWith("stdin:"))
-    : false;
+  const isInternalStream = stream ? isReservedStreamName(stream.name) : false;
 
   const childSubs: Array<{ sessionId: string; subId: string }> = [];
   if (isInternalStream && stream) {
@@ -569,9 +568,6 @@ const VALID_PERMISSIONS: ReadonlySet<string> = new Set(["r", "w", "rw"]);
 
 /** Valid delivery mode values for stream subscriptions. */
 const VALID_DELIVERY_MODES: ReadonlySet<string> = new Set(["sync", "async", "detach"]);
-
-/** Reserved stream name prefixes used by internal subsystems. */
-const RESERVED_PREFIXES: readonly string[] = ["lifecycle:", "pipe:", "stdin:"];
 
 /** Check if a requested permission is a subset of the caller's permission. */
 function isPermissionSubset(requested: string, callerHas: string): boolean {

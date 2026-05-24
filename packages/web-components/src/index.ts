@@ -87,8 +87,8 @@ export type { ScheduleManagerProps } from "./components/schedules/ScheduleManage
 export { SettingsNav } from "./components/settings/SettingsNav.js";
 
 // Streams (Coordination tab)
-export { CoordinationList, StreamDetailPanel } from "./components/streams/index.js";
-export type { CoordinationListProps, StreamDetailPanelProps } from "./components/streams/index.js";
+export { CoordinationList, StreamDetailPanel, StreamTranscript } from "./components/streams/index.js";
+export type { CoordinationListProps, StreamDetailPanelProps, StreamTranscriptProps } from "./components/streams/index.js";
 
 // Tools
 export { ToolCard } from "./components/tools/ToolCard.js";
@@ -135,7 +135,7 @@ export type {
   UseTasksResult, UseTokensResult,
   UseCredentialsResult, UseCodespacesResult, UseDockerContainersResult, UsePersonasResult,
   UsePluginsResult, PluginData,
-  StreamData, StreamSubscriberData, UseStreamsResult,
+  StreamData, StreamSubscriberData, StreamMessageData, UseStreamsResult,
   UseGitHubAccountsResult, GitHubAccountData,
   DomainHook,
   ConnectionStatus,

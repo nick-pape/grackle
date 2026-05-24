@@ -11,7 +11,19 @@
  */
 
 import { v4 as uuid } from "uuid";
+import { monotonicFactory } from "ulid";
+import { persistStreamMessage } from "@grackle-ai/database";
 import { logger } from "./logger.js";
+import { isReservedStreamName, LIFECYCLE_PREFIX } from "./stream-names.js";
+import { emitStreamMessage } from "./stream-message-bus.js";
+
+/**
+ * Monotonic ULID generator for transcript sequence keys. Unlike plain `ulid()`,
+ * this is strictly increasing even when multiple messages are published within
+ * the same millisecond, so transcript `seq` always reflects publish order under
+ * bursty traffic (RFC #1264 Phase 2).
+ */
+const nextStreamSeq: () => string = monotonicFactory();
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -147,9 +159,6 @@ let orphanCallback: OrphanCallback | undefined;
 /** Callback invoked when an external subscription is created on a lifecycle stream. */
 type RevivedCallback = (targetSessionId: string, subscriberSessionId: string) => void;
 let revivedCallback: RevivedCallback | undefined;
-
-/** Prefix for lifecycle stream names. */
-const LIFECYCLE_PREFIX: string = "lifecycle:";
 
 // ─── Internal Helpers ─────────────────────────────────────────────────────────
 
@@ -409,6 +418,37 @@ export function publish(streamId: string, senderId: string, content: string): St
   };
 
   stream.messages.push(msg);
+
+  // Durable observation log + live observer feed, for user-facing rooms only
+  // (RFC #1264 Phase 2). Internal plumbing (pipe:/stdin:/lifecycle:) is excluded.
+  // Persist and emit are independent best-effort paths in their own try/catch:
+  // neither may break message delivery, and a DB outage must not also suppress
+  // the live feed (so the UI/CLI keep seeing messages while persistence fails).
+  if (!isReservedStreamName(stream.name)) {
+    const seq: string = nextStreamSeq();
+    try {
+      persistStreamMessage({
+        seq,
+        streamId: stream.id,
+        senderId: msg.senderId,
+        content: msg.content,
+        timestamp: msg.timestamp,
+      });
+    } catch (err) {
+      logger.error({ err, streamId: stream.id }, "Failed to persist stream message");
+    }
+    try {
+      emitStreamMessage({
+        streamId: stream.id,
+        seq,
+        senderId: msg.senderId,
+        content: msg.content,
+        timestamp: msg.timestamp,
+      });
+    } catch (err) {
+      logger.error({ err, streamId: stream.id }, "Failed to emit stream message");
+    }
+  }
 
   // Notify subscribers (skip write-only subscriptions; skip sender unless self-echo is enabled)
   for (const sub of stream.subscriptions.values()) {
