@@ -9,11 +9,17 @@ const {
   mockInitSchema,
   mockCloseNeo4j,
   mockCreateLocalEmbedder,
+  mockListRecentNodes,
+  mockRebuild,
 } = vi.hoisted(() => ({
   mockOpenNeo4j: vi.fn().mockResolvedValue(undefined),
   mockInitSchema: vi.fn().mockResolvedValue(undefined),
   mockCloseNeo4j: vi.fn().mockResolvedValue(undefined),
   mockCreateLocalEmbedder: vi.fn().mockReturnValue({ dimensions: 384, embed: vi.fn(), embedBatch: vi.fn() }),
+  mockListRecentNodes: vi.fn().mockResolvedValue({ nodes: [{ id: "seed" }], edges: [] }),
+  mockRebuild: vi.fn().mockResolvedValue({
+    workspaces: 0, environments: 0, personas: 0, tasks: 0, sessions: 0, chunks: 0, pruned: 0,
+  }),
 }));
 
 vi.mock("@grackle-ai/knowledge", () => ({
@@ -22,17 +28,12 @@ vi.mock("@grackle-ai/knowledge", () => ({
   closeNeo4j: mockCloseNeo4j,
   createLocalEmbedder: mockCreateLocalEmbedder,
   healthCheck: vi.fn().mockResolvedValue(true),
-  // startup-if-empty check; default to "non-empty" so rebuild is not triggered.
-  listRecentNodes: vi.fn().mockResolvedValue({ nodes: [{ id: "seed" }], edges: [] }),
+  listRecentNodes: mockListRecentNodes,
 }));
 
 // Stub the projection rebuild so this unit test doesn't load the projection
 // module (which transitively imports the database + full KG SDK).
-vi.mock("./projection/rebuild.js", () => ({
-  rebuild: vi.fn().mockResolvedValue({
-    workspaces: 0, environments: 0, personas: 0, tasks: 0, sessions: 0, chunks: 0, pruned: 0,
-  }),
-}));
+vi.mock("./projection/rebuild.js", () => ({ rebuild: mockRebuild }));
 
 import { initKnowledge } from "./knowledge-init.js";
 import type { PluginContext } from "@grackle-ai/plugin-sdk";
@@ -63,6 +64,21 @@ describe("initKnowledge", () => {
     mockInitSchema.mockClear();
     mockCloseNeo4j.mockClear();
     mockCreateLocalEmbedder.mockClear();
+    mockListRecentNodes.mockClear();
+    mockListRecentNodes.mockResolvedValue({ nodes: [{ id: "seed" }], edges: [] });
+    mockRebuild.mockClear();
+  });
+
+  it("triggers a background rebuild when the graph is empty", async () => {
+    mockListRecentNodes.mockResolvedValueOnce({ nodes: [], edges: [] });
+    await initKnowledge(makeCtx());
+    expect(mockRebuild).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not rebuild when the graph is already populated", async () => {
+    mockListRecentNodes.mockResolvedValueOnce({ nodes: [{ id: "x" }], edges: [] });
+    await initKnowledge(makeCtx());
+    expect(mockRebuild).not.toHaveBeenCalled();
   });
 
   it("opens Neo4j and initializes schema", async () => {

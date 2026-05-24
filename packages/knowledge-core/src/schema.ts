@@ -105,14 +105,16 @@ async function runStatementWithRetry(
         return;
       }
 
-      // A uniqueness constraint can fail to create if the existing graph already
-      // contains duplicate values (e.g. legacy CREATE-based reference nodes from
-      // before #1258). Tolerate it (non-fatal) so the subsystem still starts;
-      // a rebuild() prunes duplicates, after which the constraint applies on a
-      // later startup.
+      // The UNIQUE_SOURCE constraint can fail to create if the existing graph
+      // already contains duplicate values (e.g. legacy CREATE-based reference
+      // nodes from before #1258). Tolerate that one statement (non-fatal) so the
+      // subsystem still starts; a rebuild() prunes duplicates, after which the
+      // constraint applies on a later startup. Other constraints (e.g.
+      // UNIQUE_NODE_ID) must still fail loudly.
       if (
-        code.includes("ConstraintCreationFailed") ||
-        code.includes("ConstraintValidationFailed")
+        name === "UNIQUE_SOURCE" &&
+        (code.includes("ConstraintCreationFailed") ||
+          code.includes("ConstraintValidationFailed"))
       ) {
         logger.warn(
           { statement: name },

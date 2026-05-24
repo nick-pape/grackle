@@ -2,11 +2,12 @@
  * Incrementally project a session's transcript log into TranscriptChunk nodes
  * (#1258).
  *
- * Uses a per-session content cursor (`chunkedLogLines`) stored on the Session
- * node so each pass chunks + embeds **only new log content** since the last
- * pass — O(new bytes), never re-chunking the whole transcript. New chunks are
- * appended as reference nodes (`transcript_chunk`) with a `PART_OF` edge to the
- * session. The chunk text is re-derivable from the log, so the keystone holds.
+ * Uses a per-session byte-offset cursor (`logByteOffset`, with `chunkCount`)
+ * stored on the Session node so each pass reads + chunks + embeds **only new
+ * log content** since the last pass — O(new bytes), never re-reading the whole
+ * transcript. New chunks are appended as reference nodes (`transcript_chunk`)
+ * with a `PART_OF` edge to the session. The chunk text is re-derivable from the
+ * log, so the keystone holds.
  *
  * @module
  */
@@ -18,8 +19,7 @@ import {
   getReferenceNodeProps,
   upsertReferenceNode,
   upsertEdge,
-  listReferenceSourceIds,
-  deleteReferenceNodeBySource,
+  deleteReferenceNodesByPrefix,
   REFERENCE_SOURCE,
   EDGE_TYPE,
   type Embedder,
@@ -96,13 +96,5 @@ export async function projectSessionTranscript(
  * @returns The number of chunk nodes removed.
  */
 export async function unprojectSessionTranscript(sessionId: string): Promise<number> {
-  const prefix = `${sessionId}#`;
-  let removed = 0;
-  for (const sourceId of await listReferenceSourceIds(REFERENCE_SOURCE.TRANSCRIPT_CHUNK)) {
-    if (sourceId.startsWith(prefix)) {
-      await deleteReferenceNodeBySource(REFERENCE_SOURCE.TRANSCRIPT_CHUNK, sourceId);
-      removed += 1;
-    }
-  }
-  return removed;
+  return deleteReferenceNodesByPrefix(REFERENCE_SOURCE.TRANSCRIPT_CHUNK, `${sessionId}#`);
 }

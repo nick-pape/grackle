@@ -554,3 +554,32 @@ export async function listReferenceSourceIds(
     }
   }
 }
+
+/**
+ * Bulk-delete reference nodes of a source type whose `sourceId` starts with a
+ * prefix, in a single Cypher `DETACH DELETE` (e.g. all transcript chunks of a
+ * session, keyed `${sessionId}#…`). O(matched), not O(total).
+ *
+ * @returns The number of nodes deleted.
+ */
+export async function deleteReferenceNodesByPrefix(
+  sourceType: ReferenceSource,
+  sourceIdPrefix: string,
+): Promise<number> {
+  const session = getSession();
+  try {
+    const result = await session.run(
+      `MATCH (n:${NODE_LABEL} {kind: 'reference', sourceType: $sourceType})
+       WHERE n.sourceId STARTS WITH $sourceIdPrefix
+       DETACH DELETE n`,
+      { sourceType, sourceIdPrefix },
+    );
+    return result.summary.counters.updates().nodesDeleted;
+  } finally {
+    try {
+      await session.close();
+    } catch (closeError) {
+      logger.warn({ err: closeError }, "Failed to close session after deleteReferenceNodesByPrefix");
+    }
+  }
+}
