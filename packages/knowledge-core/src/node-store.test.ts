@@ -30,6 +30,10 @@ import {
   getNode,
   deleteNode,
   updateNode,
+  upsertReferenceNode,
+  getReferenceNodeProps,
+  listNodesMissingEmbedding,
+  listReferenceSourceIds,
   recordToNode,
 } from "./node-store.js";
 import { NODE_KIND, REFERENCE_SOURCE, NATIVE_CATEGORY } from "./types.js";
@@ -364,5 +368,102 @@ describe("updateNode", () => {
     mockSessionRun.mockResolvedValueOnce({ records: [] });
     await updateNode("any", { title: "x" });
     expect(mockSessionClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("upsertReferenceNode", () => {
+  beforeEach(() => {
+    mockSessionRun.mockClear();
+    mockSessionClose.mockClear();
+  });
+
+  it("MERGEs on (sourceType, sourceId) and returns the id", async () => {
+    mockSessionRun.mockResolvedValueOnce({ records: [makeNeo4jRecord({ id: "n1" })] });
+    const id = await upsertReferenceNode({
+      sourceType: REFERENCE_SOURCE.WORKSPACE,
+      sourceId: "ws-1",
+      label: "[Workspace] Demo",
+      workspaceId: "ws-1",
+    });
+    expect(id).toBe("n1");
+    const [cypher, params] = mockSessionRun.mock.calls[0] as [string, Record<string, unknown>];
+    expect(cypher).toContain("MERGE");
+    expect(cypher).toContain("sourceType: $sourceType");
+    expect(params.sourceType).toBe("workspace");
+    expect(params.sourceId).toBe("ws-1");
+    expect(params.embedding).toEqual([]); // empty on create → backfilled off the write path
+  });
+
+  it("never lets extraProps overwrite managed keys", async () => {
+    mockSessionRun.mockResolvedValueOnce({ records: [makeNeo4jRecord({ id: "n1" })] });
+    await upsertReferenceNode({
+      sourceType: REFERENCE_SOURCE.TASK,
+      sourceId: "t1",
+      label: "L",
+      workspaceId: "w",
+      extraProps: { id: "HACK", sourceId: "HACK", embedding: [9], status: "working" },
+    });
+    const params = mockSessionRun.mock.calls[0][1] as { mutable: Record<string, unknown> };
+    expect(params.mutable.id).toBeUndefined();
+    expect(params.mutable.sourceId).toBeUndefined();
+    expect(params.mutable.embedding).toBeUndefined();
+    expect(params.mutable.status).toBe("working");
+  });
+
+  it("passes content through when provided", async () => {
+    mockSessionRun.mockResolvedValueOnce({ records: [makeNeo4jRecord({ id: "c1" })] });
+    await upsertReferenceNode({
+      sourceType: REFERENCE_SOURCE.TRANSCRIPT_CHUNK,
+      sourceId: "s1#0",
+      label: "chunk preview",
+      workspaceId: "w",
+      content: "hello world",
+    });
+    const params = mockSessionRun.mock.calls[0][1] as { mutable: Record<string, unknown> };
+    expect(params.mutable.content).toBe("hello world");
+  });
+});
+
+describe("listReferenceSourceIds", () => {
+  beforeEach(() => mockSessionRun.mockClear());
+
+  it("returns the sourceIds for a source type", async () => {
+    mockSessionRun.mockResolvedValueOnce({
+      records: [makeNeo4jRecord({ sourceId: "t1" }), makeNeo4jRecord({ sourceId: "t2" })],
+    });
+    const ids = await listReferenceSourceIds(REFERENCE_SOURCE.TASK);
+    expect(ids).toEqual(["t1", "t2"]);
+  });
+});
+
+describe("getReferenceNodeProps", () => {
+  beforeEach(() => mockSessionRun.mockClear());
+
+  it("returns raw props or undefined", async () => {
+    mockSessionRun.mockResolvedValueOnce({
+      records: [makeNeo4jRecord({ props: { chunkedLogLines: 5, chunkCount: 2 } })],
+    });
+    const props = await getReferenceNodeProps(REFERENCE_SOURCE.SESSION, "s1");
+    expect(props).toEqual({ chunkedLogLines: 5, chunkCount: 2 });
+
+    mockSessionRun.mockResolvedValueOnce({ records: [] });
+    expect(await getReferenceNodeProps(REFERENCE_SOURCE.SESSION, "nope")).toBeUndefined();
+  });
+});
+
+describe("listNodesMissingEmbedding", () => {
+  beforeEach(() => mockSessionRun.mockClear());
+
+  it("maps returned props to typed nodes", async () => {
+    mockSessionRun.mockResolvedValueOnce({
+      records: [
+        makeNeo4jRecord({
+          props: { id: "n1", kind: "reference", sourceType: "task", sourceId: "t1", label: "L", embedding: [] },
+        }),
+      ],
+    });
+    const nodes = await listNodesMissingEmbedding(32);
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0].id).toBe("n1");
   });
 });

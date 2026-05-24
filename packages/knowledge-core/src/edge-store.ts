@@ -169,3 +169,124 @@ export async function removeEdge(
     }
   }
 }
+
+/**
+ * Build the Cypher query for idempotently upserting an edge of a given type.
+ *
+ * Relationship types cannot be parameterized; the type is interpolated after
+ * {@link assertValidEdgeType} validation (same safety contract as create).
+ */
+function buildUpsertEdgeCypher(edgeType: EdgeType): string {
+  return [
+    `MATCH (a:${NODE_LABEL} {id: $fromId}), (b:${NODE_LABEL} {id: $toId})`,
+    `MERGE (a)-[r:${edgeType}]->(b)`,
+    `ON CREATE SET r.createdAt = $createdAt`,
+    `SET r.metadata = $metadata`,
+    `RETURN a.id AS fromId, b.id AS toId, type(r) AS type, r.metadata AS metadata, r.createdAt AS createdAt`,
+  ].join("\n");
+}
+
+/**
+ * Idempotently upsert a typed edge between two nodes (Neo4j `MERGE`).
+ *
+ * Repeated calls converge to a single relationship. `createdAt` is set only on
+ * create; `metadata` is set every call. Used by derived-mirror projection (#1258).
+ *
+ * @throws If either node does not exist, or the edge type is invalid.
+ */
+export async function upsertEdge(
+  fromId: string,
+  toId: string,
+  type: EdgeType,
+  metadata?: Record<string, unknown>,
+): Promise<KnowledgeEdge> {
+  assertValidEdgeType(type);
+
+  const createdAt = new Date().toISOString();
+  const metadataStr: string | null = metadata !== undefined ? JSON.stringify(metadata) : null;
+
+  const session = getSession();
+  try {
+    const result = await session.run(buildUpsertEdgeCypher(type), {
+      fromId,
+      toId,
+      metadata: metadataStr,
+      createdAt,
+    });
+
+    if (result.records.length === 0) {
+      throw new Error(
+        `Cannot upsert edge: one or both nodes not found (fromId=${fromId}, toId=${toId})`,
+      );
+    }
+
+    const record = result.records[0];
+
+    let parsedMetadata: Record<string, unknown> | undefined;
+    const rawMetadata = record.get("metadata") as string | null;
+    if (rawMetadata !== null) {
+      try {
+        parsedMetadata = JSON.parse(rawMetadata) as Record<string, unknown>;
+      } catch {
+        parsedMetadata = undefined;
+      }
+    }
+
+    logger.debug({ fromId, toId, type }, "Upserted edge");
+
+    return {
+      fromId: record.get("fromId") as string,
+      toId: record.get("toId") as string,
+      type: record.get("type") as EdgeType,
+      metadata: parsedMetadata,
+      createdAt: record.get("createdAt") as string,
+    };
+  } finally {
+    try {
+      await session.close();
+    } catch (closeError) {
+      logger.warn({ err: closeError }, "Failed to close session after upsertEdge");
+    }
+  }
+}
+
+/**
+ * Remove all outgoing edges of the given types from a node.
+ *
+ * Used by derived-mirror projection to reconcile structural edges: before
+ * re-adding the current edge set for an entity, stale edges (e.g. from a
+ * reparented task or a changed foreign key) are cleared so the projection
+ * stays a faithful mirror.
+ *
+ * @returns The number of edges removed.
+ */
+export async function removeOutgoingEdges(
+  fromId: string,
+  types: EdgeType[],
+): Promise<number> {
+  for (const type of types) {
+    assertValidEdgeType(type);
+  }
+  if (types.length === 0) {
+    return 0;
+  }
+
+  const session = getSession();
+  try {
+    const result = await session.run(
+      `MATCH (a:${NODE_LABEL} {id: $fromId})-[r]->(:${NODE_LABEL})
+       WHERE type(r) IN $types
+       DELETE r
+       RETURN count(r) AS deleted`,
+      { fromId, types },
+    );
+    const deleted = result.records[0]?.get("deleted") as number | undefined;
+    return deleted ?? 0;
+  } finally {
+    try {
+      await session.close();
+    } catch (closeError) {
+      logger.warn({ err: closeError }, "Failed to close session after removeOutgoingEdges");
+    }
+  }
+}

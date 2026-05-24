@@ -17,6 +17,7 @@ import {
   type ReferenceSource,
   type NativeCategory,
   type KnowledgeNode,
+  type ReferenceNode,
   type KnowledgeEdge,
   type EdgeType,
 } from "./types.js";
@@ -80,6 +81,34 @@ export interface UpdateNativeNodeInput {
 /** Union of update inputs for either node kind. */
 export type UpdateNodeInput = UpdateReferenceNodeInput | UpdateNativeNodeInput;
 
+/**
+ * Input for an idempotent MERGE upsert of a reference node, keyed on
+ * `(sourceType, sourceId)`. Used by derived-mirror projection (#1258).
+ */
+export interface UpsertReferenceNodeInput {
+  /** Which entity type this refers to. */
+  sourceType: ReferenceSource;
+  /** The ID of the entity in Grackle's relational DB. */
+  sourceId: string;
+  /** Human-readable, embeddable label derived from the source. */
+  label: string;
+  /** Workspace scope (empty string = global). */
+  workspaceId: string;
+  /**
+   * Embedding to set ON CREATE only. Omit to leave empty so it can be
+   * backfilled off the write path; never overwrites an existing embedding.
+   */
+  embedding?: number[];
+  /** Optional cached content (e.g., transcript chunk text). */
+  content?: string;
+  /**
+   * Extra node properties to set (e.g., `status`, `projectionHash`, cursor
+   * fields). Managed keys (`id`, `kind`, `sourceType`, `sourceId`,
+   * `embedding`, `createdAt`) are ignored.
+   */
+  extraProps?: Record<string, unknown>;
+}
+
 /** A node together with all its edges. */
 export interface NodeWithEdges {
   /** The knowledge graph node. */
@@ -142,13 +171,17 @@ export function recordToNode(
   };
 
   if (base.kind === NODE_KIND.REFERENCE) {
-    return {
+    const referenceNode: ReferenceNode = {
       ...base,
       kind: NODE_KIND.REFERENCE,
       sourceType: properties.sourceType as ReferenceSource,
       sourceId: properties.sourceId as string,
       label: (properties.label as string | undefined) ?? "",
     };
+    if (typeof properties.content === "string") {
+      referenceNode.content = properties.content;
+    }
+    return referenceNode;
   }
 
   return {
@@ -364,6 +397,160 @@ export async function updateNode(
       await session.close();
     } catch (closeError) {
       logger.warn({ err: closeError }, "Failed to close session after updateNode");
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Derived-mirror projection helpers (#1258)
+// ---------------------------------------------------------------------------
+
+/** Node property keys managed by the store; never overwritten via `extraProps`. */
+const MANAGED_NODE_PROP_KEYS: ReadonlySet<string> = new Set([
+  "id",
+  "kind",
+  "sourceType",
+  "sourceId",
+  "embedding",
+  "createdAt",
+]);
+
+const UPSERT_REFERENCE_NODE_CYPHER: string = `
+  MERGE (n:${NODE_LABEL} {kind: 'reference', sourceType: $sourceType, sourceId: $sourceId})
+  ON CREATE SET n.id = $id, n.createdAt = $now, n.embedding = $embedding
+  SET n += $mutable
+  RETURN n.id AS id`;
+
+/**
+ * Idempotently upsert a reference node, keyed on `(sourceType, sourceId)`.
+ *
+ * Uses Neo4j `MERGE` so repeated calls converge to a single node. The
+ * embedding is set **only on create** (omit to leave empty for off-write-path
+ * backfill); it is never overwritten here. `label`, `content`, `workspaceId`,
+ * and any `extraProps` are set on every call.
+ *
+ * @returns The (stable) node ID.
+ */
+export async function upsertReferenceNode(
+  input: UpsertReferenceNodeInput,
+): Promise<string> {
+  const now = new Date().toISOString();
+  const mutable: Record<string, unknown> = {
+    label: input.label,
+    workspaceId: input.workspaceId,
+    updatedAt: now,
+  };
+  if (input.content !== undefined) {
+    mutable.content = input.content;
+  }
+  if (input.extraProps) {
+    for (const [key, value] of Object.entries(input.extraProps)) {
+      if (!MANAGED_NODE_PROP_KEYS.has(key)) {
+        mutable[key] = value;
+      }
+    }
+  }
+
+  const session = getSession();
+  try {
+    const result = await session.run(UPSERT_REFERENCE_NODE_CYPHER, {
+      sourceType: input.sourceType,
+      sourceId: input.sourceId,
+      id: randomUUID(),
+      now,
+      embedding: input.embedding ?? [],
+      mutable,
+    });
+    return result.records[0].get("id") as string;
+  } finally {
+    try {
+      await session.close();
+    } catch (closeError) {
+      logger.warn({ err: closeError }, "Failed to close session after upsertReferenceNode");
+    }
+  }
+}
+
+/**
+ * Read the raw Neo4j properties of a reference node by source, or `undefined`.
+ *
+ * Used by projection to read back un-typed metadata (e.g., `projectionHash`,
+ * transcript cursor fields) that {@link recordToNode} does not surface.
+ */
+export async function getReferenceNodeProps(
+  sourceType: ReferenceSource,
+  sourceId: string,
+): Promise<Record<string, unknown> | undefined> {
+  const session = getSession();
+  try {
+    const result = await session.run(
+      `MATCH (n:${NODE_LABEL} {kind: 'reference', sourceType: $sourceType, sourceId: $sourceId})
+       RETURN properties(n) AS props`,
+      { sourceType, sourceId },
+    );
+    if (result.records.length === 0) {
+      return undefined;
+    }
+    return result.records[0].get("props") as Record<string, unknown>;
+  } finally {
+    try {
+      await session.close();
+    } catch (closeError) {
+      logger.warn({ err: closeError }, "Failed to close session after getReferenceNodeProps");
+    }
+  }
+}
+
+/**
+ * List nodes that have no embedding yet (for off-write-path embed backfill).
+ *
+ * @param limit - Maximum number of nodes to return (a positive integer).
+ */
+export async function listNodesMissingEmbedding(
+  limit: number,
+): Promise<KnowledgeNode[]> {
+  const safeLimit = Math.max(1, Math.floor(limit));
+  const session = getSession();
+  try {
+    const result = await session.run(
+      `MATCH (n:${NODE_LABEL})
+       WHERE n.embedding IS NULL OR size(n.embedding) = 0
+       RETURN properties(n) AS props
+       LIMIT ${safeLimit}`,
+    );
+    return result.records.map((record) =>
+      recordToNode(record.get("props") as Record<string, unknown>),
+    );
+  } finally {
+    try {
+      await session.close();
+    } catch (closeError) {
+      logger.warn({ err: closeError }, "Failed to close session after listNodesMissingEmbedding");
+    }
+  }
+}
+
+/**
+ * List the `sourceId`s of all reference nodes of a given source type.
+ *
+ * Used by `rebuild()` to prune mirror nodes whose source row no longer exists.
+ */
+export async function listReferenceSourceIds(
+  sourceType: ReferenceSource,
+): Promise<string[]> {
+  const session = getSession();
+  try {
+    const result = await session.run(
+      `MATCH (n:${NODE_LABEL} {kind: 'reference', sourceType: $sourceType})
+       RETURN n.sourceId AS sourceId`,
+      { sourceType },
+    );
+    return result.records.map((record) => record.get("sourceId") as string);
+  } finally {
+    try {
+      await session.close();
+    } catch (closeError) {
+      logger.warn({ err: closeError }, "Failed to close session after listReferenceSourceIds");
     }
   }
 }

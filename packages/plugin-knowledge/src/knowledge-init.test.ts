@@ -22,6 +22,16 @@ vi.mock("@grackle-ai/knowledge", () => ({
   closeNeo4j: mockCloseNeo4j,
   createLocalEmbedder: mockCreateLocalEmbedder,
   healthCheck: vi.fn().mockResolvedValue(true),
+  // startup-if-empty check; default to "non-empty" so rebuild is not triggered.
+  listRecentNodes: vi.fn().mockResolvedValue({ nodes: [{ id: "seed" }], edges: [] }),
+}));
+
+// Stub the projection rebuild so this unit test doesn't load the projection
+// module (which transitively imports the database + full KG SDK).
+vi.mock("./projection/rebuild.js", () => ({
+  rebuild: vi.fn().mockResolvedValue({
+    workspaces: 0, environments: 0, personas: 0, tasks: 0, sessions: 0, chunks: 0, pruned: 0,
+  }),
 }));
 
 import { initKnowledge } from "./knowledge-init.js";

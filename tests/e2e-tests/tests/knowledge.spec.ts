@@ -1,5 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import type { Page } from "@playwright/test";
+import { createWorkspace, createTaskDirect } from "./helpers.js";
 
 /**
  * Knowledge Graph E2E tests.
@@ -39,7 +40,30 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     await expect(appPage.locator('[data-testid="knowledge-nav"]')).toBeVisible({ timeout: 5_000 });
   });
 
-  // Node-seeding coverage (browse / click / search) returns in #1258, when the
-  // derived-mirror projection populates the graph. As of #1257 the graph has no
-  // agent-authored write path, so there is nothing to seed here.
+  test("derived mirror projects created entities into the graph", async ({ grackle: { client } }) => {
+    await skipIfKnowledgeUnavailable(client);
+
+    // Create a workspace + parent/child tasks. Their create events drive the
+    // entity-sync subscriber, which projects reference nodes (+ structural
+    // edges) into Neo4j — no embedding needed for structural projection.
+    const marker = `kgproj-${Date.now()}`;
+    const wsId = await createWorkspace(client, `${marker}-ws`);
+    const parent = await createTaskDirect(client, wsId, `${marker}-parent`);
+    await createTaskDirect(client, wsId, `${marker}-child`, {
+      parentTaskId: (parent as unknown as { id: string }).id,
+    });
+
+    // The mirror should contain the workspace node + both task nodes.
+    // listRecentKnowledgeNodes does not require embeddings, so this verifies
+    // structural projection deterministically (no embed-backfill wait).
+    await expect
+      .poll(
+        async () => {
+          const result = await client.knowledge.listRecentKnowledgeNodes({ limit: 200 });
+          return result.nodes.filter((node) => node.label?.includes(marker)).length;
+        },
+        { timeout: 20_000, message: "workspace + task nodes should be projected into the KG" },
+      )
+      .toBeGreaterThanOrEqual(3);
+  });
 });
