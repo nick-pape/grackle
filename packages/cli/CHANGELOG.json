@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.119.0",
+      "tag": "@grackle-ai/cli_v0.119.0",
+      "date": "Sun, 24 May 2026 18:32:19 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Durable IPC stream rooms (RFC #1264 Phase 2): persist + replay stream messages (stream_messages table, ULID seq, survive restart); live StreamMessageEvent + GetStreamTranscript RPC; `grackle streams transcript` CLI; Coordination tab transcript view. Retention/compaction deferred to a follow-up."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.118.0",
       "tag": "@grackle-ai/cli_v0.118.0",
       "date": "Sun, 24 May 2026 15:06:43 GMT",

@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 24 May 2026 15:06:43 GMT and should not be manually modified.
+This log was last generated on Sun, 24 May 2026 18:32:19 GMT and should not be manually modified.
+
+## 0.119.0
+Sun, 24 May 2026 18:32:19 GMT
+
+### Minor changes
+
+- Durable IPC stream rooms (RFC #1264 Phase 2): persist + replay stream messages (stream_messages table, ULID seq, survive restart); live StreamMessageEvent + GetStreamTranscript RPC; `grackle streams transcript` CLI; Coordination tab transcript view. Retention/compaction deferred to a follow-up.
 
 ## 0.118.0
 Sun, 24 May 2026 15:06:43 GMT
