@@ -639,14 +639,15 @@ grackle streams list --internal   # include internal IPC plumbing
 
 Query the persisted domain-event log (`domain_events`) — an audit/debug view of
 state-change events (`task.created`, `workspace.updated`, `environment.changed`, …).
-Filters compose with AND; results are ordered oldest-first by id.
+Filters compose with AND; results are **most recent first** (use `--before` to page
+into older history).
 
 ```bash
 grackle events                              # most recent events (default limit 100)
 grackle events --type task.created          # only this event type
 grackle events --since 2026-05-23T00:00:00Z # at/after a timestamp
 grackle events --until 2026-05-23T23:59:59Z # at/before a timestamp
-grackle events --after <id> --limit 50      # offset pagination (events after an id)
+grackle events --before <id> --limit 50     # page into older history (events before an id)
 # ┌──────────────────────────┬──────────────────┬──────────────────────────┬──────────────┐
 # │ ID                       │ Type             │ Timestamp                │ Payload      │
 # ├──────────────────────────┼──────────────────┼──────────────────────────┼──────────────┤
@@ -654,7 +655,7 @@ grackle events --after <id> --limit 50      # offset pagination (events after an
 # └──────────────────────────┴──────────────────┴──────────────────────────┴──────────────┘
 ```
 
-Options: `--type <type>`, `--since <iso>`, `--until <iso>`, `--after <id>`, `--limit <n>`.
+Options: `--type <type>`, `--since <iso>`, `--until <iso>`, `--before <id>`, `--limit <n>`.
 
 ---
 

@@ -17,13 +17,13 @@ describe("queryDomainEvents handler", () => {
 
   it("maps non-empty request filters to the store query", async () => {
     await handler(create(grackle.QueryDomainEventsRequestSchema, {
-      afterId: "01A",
+      beforeId: "01Z",
       type: "task.created",
       since: "2026-05-23T00:00:00.000Z",
       limit: 50,
     }));
     expect(storeMock).toHaveBeenCalledWith({
-      afterId: "01A",
+      beforeId: "01Z",
       type: "task.created",
       since: "2026-05-23T00:00:00.000Z",
       limit: 50,

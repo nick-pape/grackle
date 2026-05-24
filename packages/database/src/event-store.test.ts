@@ -31,22 +31,22 @@ describe("queryDomainEvents", () => {
     applySchema();
   });
 
-  it("returns events ordered by id ascending, regardless of insertion order", () => {
+  it("returns events most recent first (id descending), regardless of insertion order", () => {
     seed("01C", "task.updated", "2026-05-23T03:00:00.000Z");
     seed("01A", "task.created", "2026-05-23T01:00:00.000Z");
     seed("01B", "task.updated", "2026-05-23T02:00:00.000Z");
 
     const ids = queryDomainEvents().map((e) => e.id);
-    expect(ids).toEqual(["01A", "01B", "01C"]);
+    expect(ids).toEqual(["01C", "01B", "01A"]);
   });
 
-  it("afterId returns only the ascending tail (exclusive)", () => {
+  it("beforeId returns only older events (exclusive), newest first", () => {
     seed("01A", "task.created", "2026-05-23T01:00:00.000Z");
     seed("01B", "task.created", "2026-05-23T02:00:00.000Z");
     seed("01C", "task.created", "2026-05-23T03:00:00.000Z");
 
-    expect(queryDomainEvents({ afterId: "01A" }).map((e) => e.id)).toEqual(["01B", "01C"]);
-    expect(queryDomainEvents({ afterId: "01C" })).toEqual([]);
+    expect(queryDomainEvents({ beforeId: "01C" }).map((e) => e.id)).toEqual(["01B", "01A"]);
+    expect(queryDomainEvents({ beforeId: "01A" })).toEqual([]);
   });
 
   it("filters by exact type", () => {
@@ -54,7 +54,7 @@ describe("queryDomainEvents", () => {
     seed("01B", "workspace.created", "2026-05-23T02:00:00.000Z");
     seed("01C", "task.created", "2026-05-23T03:00:00.000Z");
 
-    expect(queryDomainEvents({ type: "task.created" }).map((e) => e.id)).toEqual(["01A", "01C"]);
+    expect(queryDomainEvents({ type: "task.created" }).map((e) => e.id)).toEqual(["01C", "01A"]);
   });
 
   it("filters by since/until timestamp range (inclusive)", () => {
@@ -69,11 +69,13 @@ describe("queryDomainEvents", () => {
     expect(ids).toEqual(["01B"]);
   });
 
-  it("caps results at the requested limit, oldest first", () => {
-    for (const n of ["01A", "01B", "01C", "01D"]) {
-      seed(n, "task.created", `2026-05-23T0${n[2]}:00:00.000Z`);
-    }
-    expect(queryDomainEvents({ limit: 2 }).map((e) => e.id)).toEqual(["01A", "01B"]);
+  it("caps results at the requested limit, most recent first", () => {
+    seed("01A", "task.created", "2026-05-23T01:00:00.000Z");
+    seed("01B", "task.created", "2026-05-23T02:00:00.000Z");
+    seed("01C", "task.created", "2026-05-23T03:00:00.000Z");
+    seed("01D", "task.created", "2026-05-23T04:00:00.000Z");
+
+    expect(queryDomainEvents({ limit: 2 }).map((e) => e.id)).toEqual(["01D", "01C"]);
   });
 
   it("round-trips the persisted payload as a JSON string", () => {

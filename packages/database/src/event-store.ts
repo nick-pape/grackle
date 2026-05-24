@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, gte, lte, type SQL } from "drizzle-orm";
+import { and, desc, eq, gte, lt, lte, type SQL } from "drizzle-orm";
 import db from "./db.js";
 import { domainEvents, type DomainEventRow } from "./schema.js";
 
@@ -21,8 +21,8 @@ const MAX_DOMAIN_EVENT_LIMIT: number = 1000;
 
 /** Filters for {@link queryDomainEvents}. All optional; combined with AND. */
 export interface DomainEventQuery {
-  /** Return only events whose ULID `id` sorts after this value (exclusive) — offset pagination. */
-  afterId?: string;
+  /** Return only events whose ULID `id` sorts before this value (exclusive) — page into older history. */
+  beforeId?: string;
   /** Return only events of this exact type (e.g. "task.created"). */
   type?: string;
   /** Return only events with `timestamp >=` this ISO 8601 value (inclusive). */
@@ -52,17 +52,18 @@ export function persistEvent(event: DomainEvent): void {
 }
 
 /**
- * Query persisted domain events, ordered by `id` ascending (chronological, since
- * ids are ULIDs). Filters compose with AND. This is the read side of the
+ * Query persisted domain events, **most recent first** (ordered by `id`
+ * descending — ids are ULIDs, so id order is chronological). Filters compose
+ * with AND; `beforeId` pages into older history. This is the read side of the
  * `domain_events` event store (RFC #1264 Phase 1) — see {@link persistEvent} for the write side.
  *
- * @param query - Optional offset / type / time filters and limit.
- * @returns Matching rows, oldest first.
+ * @param query - Optional `beforeId` cursor / type / time filters and limit.
+ * @returns Matching rows, newest first.
  */
 export function queryDomainEvents(query: DomainEventQuery = {}): DomainEventRow[] {
   const conditions: SQL[] = [];
-  if (query.afterId) {
-    conditions.push(gt(domainEvents.id, query.afterId));
+  if (query.beforeId) {
+    conditions.push(lt(domainEvents.id, query.beforeId));
   }
   if (query.type) {
     conditions.push(eq(domainEvents.type, query.type));
@@ -81,5 +82,5 @@ export function queryDomainEvents(query: DomainEventQuery = {}): DomainEventRow[
 
   const base = db.select().from(domainEvents);
   const filtered = conditions.length > 0 ? base.where(and(...conditions)) : base;
-  return filtered.orderBy(asc(domainEvents.id)).limit(limit).all();
+  return filtered.orderBy(desc(domainEvents.id)).limit(limit).all();
 }

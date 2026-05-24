@@ -1833,7 +1833,7 @@ const ProvisionEventSchema: GenMessage<ProvisionEvent>;
 
 // @public
 type QueryDomainEventsRequest = Message<"grackle.QueryDomainEventsRequest"> & {
-    afterId: string;
+    beforeId: string;
     type: string;
     since: string;
     until: string;

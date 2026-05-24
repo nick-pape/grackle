@@ -24,8 +24,8 @@ export async function queryDomainEvents(
   req: grackle.QueryDomainEventsRequest,
 ): Promise<grackle.DomainEventList> {
   const query: DomainEventQuery = {};
-  if (req.afterId) {
-    query.afterId = req.afterId;
+  if (req.beforeId) {
+    query.beforeId = req.beforeId;
   }
   if (req.type) {
     query.type = req.type;

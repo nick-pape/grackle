@@ -946,9 +946,9 @@ message DomainEvent {
   string payload_json = 4; // JSON-encoded payload
 }
 
-// Query the persisted domain_events log. All filters optional, combined with AND.
+// Query the persisted domain_events log (most recent first). Filters optional, combined with AND.
 message QueryDomainEventsRequest {
-  string after_id = 1;  // offset: return events whose ULID id sorts after this (exclusive)
+  string before_id = 1; // cursor: return events whose ULID id sorts before this (exclusive) — older history
   string type = 2;      // exact event type, e.g. "task.created"
   string since = 3;     // ISO 8601, inclusive lower bound on timestamp
   string until = 4;     // ISO 8601, inclusive upper bound on timestamp
