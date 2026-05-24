@@ -48,7 +48,8 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     // edges) into Neo4j — no embedding needed for structural projection.
     const marker = `kgproj-${Date.now()}`;
     const wsId = await createWorkspace(client, `${marker}-ws`);
-    const parent = await createTaskDirect(client, wsId, `${marker}-parent`);
+    // Parent needs decomposition rights to allow a child task.
+    const parent = await createTaskDirect(client, wsId, `${marker}-parent`, { canDecompose: true });
     await createTaskDirect(client, wsId, `${marker}-child`, {
       parentTaskId: (parent as unknown as { id: string }).id,
     });
