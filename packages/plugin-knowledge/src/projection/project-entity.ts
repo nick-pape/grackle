@@ -32,6 +32,7 @@ import {
 } from "./node-mappers.js";
 import {
   taskEdges,
+  taskRelationEdges,
   sessionEdges,
   sessionSpawnEdge,
   workspaceLinkEdge,
@@ -76,10 +77,26 @@ export async function projectTask(task: TaskRow): Promise<void> {
   await reconcileEdges(nodeId, TASK_EDGE_TYPES, taskEdges(task));
 }
 
+/**
+ * Re-apply a Task's task→task edges (PART_OF parent, DEPENDS_ON dependencies) as
+ * a second pass *after* all task nodes exist, so an edge whose endpoint task was
+ * projected later (out of list order) is never permanently dropped. Idempotent
+ * (MERGE via `applyEdge`), so it is safe to call every pass. Stale task→task
+ * edges (a removed dependency) are cleared separately by {@link projectTask}'s
+ * `reconcileEdges` when the task's hash changes.
+ */
+export async function linkTaskRelations(task: TaskRow): Promise<void> {
+  for (const spec of taskRelationEdges(task)) {
+    await applyEdge(spec);
+  }
+}
+
 /** Project a Workspace node + its LINKED_TO edges (from the junction table). */
 export async function projectWorkspace(workspace: WorkspaceRow): Promise<void> {
-  const nodeId = await upsertReferenceNode(workspaceToNodeInput(workspace));
   const environmentIds = workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(workspace.id);
+  // The link set feeds the projection hash (so link changes trigger re-project)
+  // and the LINKED_TO edge reconciliation below.
+  const nodeId = await upsertReferenceNode(workspaceToNodeInput(workspace, environmentIds));
   await reconcileEdges(
     nodeId,
     WORKSPACE_EDGE_TYPES,

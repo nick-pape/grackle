@@ -433,10 +433,12 @@ const UPSERT_REFERENCE_NODE_CYPHER: string = `
 /**
  * Idempotently upsert a reference node, keyed on `(sourceType, sourceId)`.
  *
- * Uses Neo4j `MERGE` so repeated calls converge to a single node. The
- * embedding is set **only on create** (omit to leave empty for off-write-path
- * backfill); it is never overwritten here. `label`, `content`, `workspaceId`,
- * and any `extraProps` are set on every call.
+ * Uses Neo4j `MERGE` so repeated calls converge to a single node. The embedding
+ * is set **only on create** and never overwritten here. When omitted it is
+ * stored as an empty array `[]` (not an absent property); the off-write-path
+ * embed backfill selects such nodes via `size(embedding) = 0` and fills them
+ * later (an empty vector is also ignored by the vector index until filled).
+ * `label`, `content`, `workspaceId`, and any `extraProps` are set on every call.
  *
  * @returns The (stable) node ID.
  */

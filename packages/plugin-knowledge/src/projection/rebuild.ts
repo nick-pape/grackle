@@ -30,6 +30,7 @@ import {
   projectPersona,
   projectWorkspace,
   projectTask,
+  linkTaskRelations,
   projectSession,
   linkSessionSpawn,
 } from "./project-entity.js";
@@ -72,6 +73,11 @@ export async function rebuild(embedder: Embedder): Promise<RebuildResult> {
   }
   for (const task of tasks) {
     await projectTask(task);
+  }
+  // Second pass: task→task edges (PART_OF/DEPENDS_ON), now that all task nodes
+  // exist, so an out-of-order parent/dependency endpoint never drops the edge.
+  for (const task of tasks) {
+    await linkTaskRelations(task);
   }
   const workspaceByTask = new Map(tasks.map((task) => [task.id, task.workspaceId ?? ""]));
   for (const session of sessions) {

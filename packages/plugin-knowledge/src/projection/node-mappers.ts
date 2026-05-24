@@ -58,8 +58,19 @@ export function taskToNodeInput(task: TaskRow): UpsertReferenceNodeInput {
   };
 }
 
-/** Map a Workspace row to its reference-node upsert input. */
-export function workspaceToNodeInput(workspace: WorkspaceRow): UpsertReferenceNodeInput {
+/**
+ * Map a Workspace row to its reference-node upsert input.
+ *
+ * @param linkedEnvironmentIds - IDs of the environments linked to this workspace
+ *   (the `LINKED_TO` edge set). Folded into the projection hash so a link/unlink
+ *   changes the hash and the reconciliation scan re-projects the workspace,
+ *   keeping `LINKED_TO` edges converged even if the change's event was missed
+ *   (e.g. while Neo4j was down).
+ */
+export function workspaceToNodeInput(
+  workspace: WorkspaceRow,
+  linkedEnvironmentIds: string[] = [],
+): UpsertReferenceNodeInput {
   const label = deriveWorkspaceText(workspace);
   return {
     sourceType: REFERENCE_SOURCE.WORKSPACE,
@@ -69,7 +80,14 @@ export function workspaceToNodeInput(workspace: WorkspaceRow): UpsertReferenceNo
     workspaceId: workspace.id,
     extraProps: {
       status: workspace.status,
-      projectionHash: computeProjectionHash("workspace", label, workspace.status),
+      // Sort so the hash is order-independent (the link store's order is not
+      // guaranteed) and only changes when the link *set* actually changes.
+      projectionHash: computeProjectionHash(
+        "workspace",
+        label,
+        workspace.status,
+        [...linkedEnvironmentIds].sort(),
+      ),
     },
   };
 }

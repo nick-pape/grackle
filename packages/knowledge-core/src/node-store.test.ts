@@ -391,7 +391,9 @@ describe("upsertReferenceNode", () => {
     expect(cypher).toContain("sourceType: $sourceType");
     expect(params.sourceType).toBe("workspace");
     expect(params.sourceId).toBe("ws-1");
-    expect(params.embedding).toEqual([]); // empty on create → backfilled off the write path
+    // Intentionally an empty array (not null/absent): the embed backfill selects
+    // these via `size(embedding) = 0`, and the vector index ignores them until filled.
+    expect(params.embedding).toEqual([]);
   });
 
   it("never lets extraProps overwrite managed keys", async () => {

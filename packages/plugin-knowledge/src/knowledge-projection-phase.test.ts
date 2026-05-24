@@ -9,6 +9,7 @@ vi.mock("@grackle-ai/database", () => ({
   workspaceStore: { listWorkspaces: vi.fn(() => []) },
   personaStore: { listPersonas: vi.fn(() => []) },
   envRegistry: { listEnvironments: vi.fn(() => []) },
+  workspaceEnvironmentLinkStore: { getLinkedEnvironmentIds: vi.fn(() => []) },
 }));
 
 const kg = vi.hoisted(() => ({
@@ -43,6 +44,7 @@ vi.mock("./projection/project-entity.js", () => ({
   projectSession: vi.fn(), linkSessionSpawn: vi.fn(),
   projectEnvironment: vi.fn(), projectPersona: vi.fn(),
   projectWorkspace: vi.fn(), projectTask: vi.fn(),
+  linkTaskRelations: vi.fn(),
 }));
 vi.mock("./projection/project-transcript.js", () => ({
   projectSessionTranscript: vi.fn().mockResolvedValue(0),

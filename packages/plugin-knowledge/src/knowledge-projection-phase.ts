@@ -25,7 +25,14 @@
  */
 
 import type { ReconciliationPhase } from "@grackle-ai/plugin-sdk";
-import { sessionStore, taskStore, workspaceStore, personaStore, envRegistry } from "@grackle-ai/database";
+import {
+  sessionStore,
+  taskStore,
+  workspaceStore,
+  personaStore,
+  envRegistry,
+  workspaceEnvironmentLinkStore,
+} from "@grackle-ai/database";
 import {
   getReferenceNodeProps,
   listReferenceSourceIds,
@@ -53,6 +60,7 @@ import {
   projectPersona,
   projectWorkspace,
   projectTask,
+  linkTaskRelations,
 } from "./projection/project-entity.js";
 import {
   projectSessionTranscript,
@@ -182,8 +190,23 @@ export function createKnowledgeProjectionPhase(
       // Endpoints (env/persona/workspace) before tasks/sessions so edges resolve.
       await syncEntity(REFERENCE_SOURCE.ENVIRONMENT, envRegistry.listEnvironments(), (row) => row.id, environmentToNodeInput, projectEnvironment);
       await syncEntity(REFERENCE_SOURCE.PERSONA, personaStore.listPersonas(), (row) => row.id, personaToNodeInput, projectPersona);
-      await syncEntity(REFERENCE_SOURCE.WORKSPACE, workspaceStore.listWorkspaces(), (row) => row.id, workspaceToNodeInput, projectWorkspace);
-      await syncEntity(REFERENCE_SOURCE.TASK, taskStore.listTasks(), (row) => row.id, taskToNodeInput, projectTask);
+      // Workspace hash folds in the linked-env set so a link/unlink re-projects
+      // (keeps LINKED_TO converged even if the change's event was missed).
+      await syncEntity(
+        REFERENCE_SOURCE.WORKSPACE,
+        workspaceStore.listWorkspaces(),
+        (row) => row.id,
+        (row) => workspaceToNodeInput(row, workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(row.id)),
+        projectWorkspace,
+      );
+      const tasks = taskStore.listTasks();
+      await syncEntity(REFERENCE_SOURCE.TASK, tasks, (row) => row.id, taskToNodeInput, projectTask);
+      // Second pass: task→task edges, now that all task nodes exist. A child/
+      // dependency projected before its parent/dependency would otherwise have
+      // its hash-gated edge skipped permanently (endpoint missing at first pass).
+      for (const task of tasks) {
+        await linkTaskRelations(task);
+      }
       await syncSessions(embedder);
       await backfillEmbeddings(embedder);
     },

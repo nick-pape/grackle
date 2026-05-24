@@ -24,6 +24,7 @@ import {
 } from "./node-mappers.js";
 import {
   taskEdges,
+  taskRelationEdges,
   sessionEdges,
   sessionSpawnEdge,
   workspaceLinkEdge,
@@ -105,6 +106,16 @@ describe("node-mappers", () => {
     expect(workspaceToNodeInput(workspace()).workspaceId).toBe("w1");
   });
 
+  it("folds the linked-env set into the workspace hash (order-independent)", () => {
+    const base = workspaceToNodeInput(workspace()).extraProps?.projectionHash;
+    const linked = workspaceToNodeInput(workspace(), ["e1", "e2"]).extraProps?.projectionHash;
+    const linkedReordered = workspaceToNodeInput(workspace(), ["e2", "e1"]).extraProps?.projectionHash;
+    // A link change must change the hash (so the scan re-projects LINKED_TO)…
+    expect(linked).not.toBe(base);
+    // …but link *order* must not (the link set is what matters).
+    expect(linkedReordered).toBe(linked);
+  });
+
   it("uses the resolved workspaceId for a session", () => {
     expect(sessionToNodeInput(session(), "w9").workspaceId).toBe("w9");
   });
@@ -135,6 +146,14 @@ describe("edge-mappers", () => {
   it("emits no edge for empty/missing soft FKs", () => {
     const edges = taskEdges(task({ workspaceId: null, parentTaskId: "", dependsOn: "[]" }));
     expect(edges).toHaveLength(0);
+  });
+
+  it("taskRelationEdges returns only the task→task subset (PART_OF/DEPENDS_ON)", () => {
+    const edges = taskRelationEdges(task({ parentTaskId: "p", dependsOn: '["d1"]' }));
+    const types = edges.map((edge) => edge.type).sort();
+    // IN_WORKSPACE (task→workspace) is excluded; only task→task edges remain.
+    expect(types).toEqual([EDGE_TYPE.DEPENDS_ON, EDGE_TYPE.PART_OF].sort());
+    expect(edges.every((edge) => edge.to.sourceType === REFERENCE_SOURCE.TASK)).toBe(true);
   });
 
   it("emits ATTEMPT_OF / RAN_IN / USED_PERSONA for a session, skipping empties", () => {
