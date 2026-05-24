@@ -514,9 +514,9 @@ message SetWorkpadRequest {
   string workpad = 2; // JSON string with status, summary, and extra fields
 }
 
-// ─── Widgets (agent-authored MCP Apps registry) ────────────
+// ─── Components (agent-authored UI registry) ────────────
 
-message Widget {
+message Component {
   string id = 1;
   string workspace_id = 2;
   string name = 3;
@@ -531,11 +531,11 @@ message Widget {
   string updated_at = 12;
 }
 
-message WidgetList {
-  repeated Widget widgets = 1;
+message ComponentList {
+  repeated Component components = 1;
 }
 
-message RegisterWidgetRequest {
+message RegisterComponentRequest {
   string workspace_id = 1;
   string name = 2;
   string description = 3;
@@ -546,7 +546,7 @@ message RegisterWidgetRequest {
   string owner_session_id = 8;
 }
 
-message UpdateWidgetRequest {
+message UpdateComponentRequest {
   string id = 1;
   string workspace_id = 2; // for cross-workspace authz validation
   optional string name = 3;
@@ -555,14 +555,14 @@ message UpdateWidgetRequest {
   optional string props_schema = 6;
 }
 
-message GetWidgetRequest {
+message GetComponentRequest {
   // Resolve by id (takes precedence) or by name within workspace_id.
   string id = 1;
   string name = 2;
   string workspace_id = 3;
 }
 
-message ListWidgetsRequest {
+message ListComponentsRequest {
   string workspace_id = 1;
 }
 

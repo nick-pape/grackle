@@ -247,16 +247,16 @@ export type PersonaRow = typeof personas.$inferSelect;
 /** Shape accepted by INSERT into the personas table. */
 export type NewPersona = typeof personas.$inferInsert;
 
-// ─── Widgets (agent-authored MCP Apps registry, #1239) ────
+// ─── Components (agent-authored UI registry, #1239/#1269) ────
 
-export const widgets = sqliteTable("widgets", {
+export const components = sqliteTable("components", {
   id: text("id").primaryKey(),
   workspaceId: text("workspace_id")
     .notNull()
     .references(() => workspaces.id),
   name: text("name").notNull(),
   description: text("description").notNull().default(""),
-  rendererKind: text("renderer_kind").notNull().default("mcp-app-html"),
+  rendererKind: text("renderer_kind").notNull().default("grackle-react"),
   body: text("body").notNull(),
   propsSchema: text("props_schema").notNull().default(""),
   version: integer("version").notNull().default(1),
@@ -270,11 +270,11 @@ export const widgets = sqliteTable("widgets", {
     .default(sql`(datetime('now'))`),
 });
 
-/** Row shape returned by a SELECT on the widgets table. */
-export type WidgetRow = typeof widgets.$inferSelect;
+/** Row shape returned by a SELECT on the components table. */
+export type ComponentRow = typeof components.$inferSelect;
 
-/** Shape accepted by INSERT into the widgets table. */
-export type NewWidget = typeof widgets.$inferInsert;
+/** Shape accepted by INSERT into the components table. */
+export type NewComponent = typeof components.$inferInsert;
 
 // ─── Schedules ───────────────────────────────────────────
 

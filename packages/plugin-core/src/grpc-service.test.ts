@@ -33,7 +33,7 @@ vi.mock("./settings-handlers.js", () => ({ getSetting: vi.fn() }));
 
 vi.mock("./task-handlers.js", () => ({ listTasks: vi.fn() }));
 vi.mock("./persona-handlers.js", () => ({ listPersonas: vi.fn() }));
-vi.mock("./widget-handlers.js", () => ({ registerWidget: vi.fn(), updateWidget: vi.fn(), getWidget: vi.fn(), listWidgets: vi.fn() }));
+vi.mock("./component-handlers.js", () => ({ registerComponent: vi.fn(), updateComponent: vi.fn(), getComponent: vi.fn(), listComponents: vi.fn() }));
 vi.mock("./escalation-handlers.js", () => ({ createEscalation: vi.fn() }));
 vi.mock("./plugin-handlers.js", () => ({ listPlugins: vi.fn(), setPluginEnabled: vi.fn() }));
 vi.mock("./github-account-handlers.js", () => ({ listGitHubAccounts: vi.fn() }));
@@ -84,12 +84,12 @@ describe("createCoreCollector", () => {
 });
 
 describe("createOrchestrationCollector", () => {
-  it("adds tasks, personas, widgets, and escalations handlers", () => {
+  it("adds tasks, personas, components, and escalations handlers", () => {
     createOrchestrationCollector();
     const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
     expect(addedModules.some((m) => "listTasks" in m)).toBe(true);
     expect(addedModules.some((m) => "listPersonas" in m)).toBe(true);
-    expect(addedModules.some((m) => "registerWidget" in m)).toBe(true);
+    expect(addedModules.some((m) => "registerComponent" in m)).toBe(true);
     expect(addedModules.some((m) => "createEscalation" in m)).toBe(true);
   });
 
@@ -107,13 +107,13 @@ describe("createOrchestrationCollector", () => {
 });
 
 describe("createDefaultCollector (regression)", () => {
-  it("adds all 15 handler groups including orchestration, widgets, plugins, github accounts, channels, and domain events (knowledge and schedules moved to plugins)", () => {
+  it("adds all 15 handler groups including orchestration, components, plugins, github accounts, channels, and domain events (knowledge and schedules moved to plugins)", () => {
     createDefaultCollector();
     const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
     expect(addedModules.some((m) => "listEnvironments" in m)).toBe(true);
     expect(addedModules.some((m) => "listTasks" in m)).toBe(true);
     expect(addedModules.some((m) => "listPersonas" in m)).toBe(true);
-    expect(addedModules.some((m) => "registerWidget" in m)).toBe(true);
+    expect(addedModules.some((m) => "registerComponent" in m)).toBe(true);
     expect(addedModules.some((m) => "createEscalation" in m)).toBe(true);
     expect(addedModules.some((m) => "listPlugins" in m)).toBe(true);
     expect(addedModules.some((m) => "listGitHubAccounts" in m)).toBe(true);
