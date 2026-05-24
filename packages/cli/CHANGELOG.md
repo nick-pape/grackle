@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 24 May 2026 02:29:04 GMT and should not be manually modified.
+This log was last generated on Sun, 24 May 2026 15:06:43 GMT and should not be manually modified.
+
+## 0.118.0
+Sun, 24 May 2026 15:06:43 GMT
+
+### Minor changes
+
+- GenUX component registry (#1269): evolve the #1239 widget registry into a generic component registry and wire render-by-reference through the #1268 React runtime. Renames the registry widget->component end-to-end (proto Component messages + RPCs, a `components` table via a guarded migration, store + plugin-core handlers, and the MCP tools component_register/update/list/render); the render-event path stays 'widget'. component_register takes an optional rendererKind (default grackle-react) that subsumes raw-HTML registration; component_render renders a stored component by id/name and sets the correct sandbox CSP per renderer kind (unsafe-eval for grackle-react, inline-scripts for mcp-app-html). propsSchema is now a validated JSON-Schema contract (well-formedness at register; render-time props validated via zod's fromJSONSchema). component_show (JSX one-off), widget_show (raw-HTML one-off), and show_hello_widget are retained.
 
 ## 0.117.0
 Sun, 24 May 2026 02:29:04 GMT
