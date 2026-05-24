@@ -1555,6 +1555,14 @@ describe("event-processor session-action log (AHP HR1a)", () => {
     expect(querySessionActions({ sessionId: "sess-y" }).map((r) => r.content)).toEqual(["y1"]);
   });
 
+  it("records widget render events (not just PowerLine-stream events)", () => {
+    sessionStore.createSession("sess-widget", "env1", "claude-code", "test", "sonnet", "/tmp/wlog");
+    publishWidgetEvent("sess-widget", { resourceUri: "ui://demo", toolName: "render", html: "<div/>" });
+    const rows = querySessionActions({ sessionId: "sess-widget" });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].type).toBe("widget");
+  });
+
   it("does not break event processing or live delivery when persisting an action fails", async () => {
     sessionStore.createSession("sess-fail", "env1", "claude-code", "test", "sonnet", "/tmp/log");
     // Simulate a DB outage for the action log: the INSERT will throw.

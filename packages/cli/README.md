@@ -683,11 +683,14 @@ Options: `--type <type>`, `--since <iso>`, `--until <iso>`, `--before <id>`, `--
 #### `grackle session events <sessionId>`
 
 Show a session's **durable, server-sequenced action log** (`session_actions`) —
-every agent-conversation event with a monotonic `seq` (`serverSeq`), in **replay
-order** (oldest first). This is distinct from `grackle logs`, which is the
-human-readable JSONL/transcript view of one session; `session events` is the
-seq'd, offset-queryable log that survives server restart and is the foundation
-for seq-based resume. Use `--from <seq>` to resume after a cursor.
+every session event the server publishes (agent output from the PowerLine
+stream, the injected system context + initial prompt, injected input/signals,
+widget renders, and lifecycle status transitions), each with a monotonic `seq`
+(`serverSeq`), in **replay order** (oldest first). This is distinct from
+`grackle logs`, which is the human-readable JSONL/transcript view of one
+session; `session events` is the seq'd, offset-queryable log that survives
+server restart and is the foundation for seq-based resume. Use `--from <seq>`
+to resume after a cursor.
 
 ```bash
 grackle session events abc12345                       # oldest first (default limit 500)
