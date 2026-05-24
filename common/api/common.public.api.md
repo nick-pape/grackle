@@ -9,6 +9,7 @@ import type { GenFile } from '@bufbuild/protobuf/codegenv2';
 import type { GenMessage } from '@bufbuild/protobuf/codegenv2';
 import type { GenService } from '@bufbuild/protobuf/codegenv2';
 import type { Message } from '@bufbuild/protobuf';
+import { z } from 'zod';
 
 // @public
 type AcknowledgeEscalationRequest = Message<"grackle.AcknowledgeEscalationRequest"> & {
@@ -94,6 +95,174 @@ type AttachStreamResponse = Message<"grackle.AttachStreamResponse"> & {
 
 // @public
 const AttachStreamResponseSchema: GenMessage<AttachStreamResponse>;
+
+// @public
+export const BUILTIN_COMPONENT_JSON_SCHEMAS: Readonly<Record<BuiltinComponentName, object>>;
+
+// @public
+export const BUILTIN_COMPONENT_SCHEMAS: {
+    readonly Button: z.ZodObject<{
+        variant: z.ZodOptional<z.ZodEnum<{
+            primary: "primary";
+            danger: "danger";
+            outline: "outline";
+            ghost: "ghost";
+        }>>;
+        size: z.ZodOptional<z.ZodEnum<{
+            sm: "sm";
+            md: "md";
+            lg: "lg";
+        }>>;
+        disabled: z.ZodOptional<z.ZodBoolean>;
+    }, z.core.$strip>;
+    readonly SplitButton: z.ZodObject<{
+        label: z.ZodString;
+        variant: z.ZodOptional<z.ZodEnum<{
+            primary: "primary";
+            danger: "danger";
+            outline: "outline";
+            ghost: "ghost";
+        }>>;
+        size: z.ZodOptional<z.ZodEnum<{
+            sm: "sm";
+            md: "md";
+            lg: "lg";
+        }>>;
+        options: z.ZodArray<z.ZodObject<{
+            label: z.ZodString;
+            description: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>;
+    readonly Callout: z.ZodObject<{
+        variant: z.ZodOptional<z.ZodEnum<{
+            success: "success";
+            error: "error";
+            warning: "warning";
+            info: "info";
+        }>>;
+        dismissible: z.ZodOptional<z.ZodBoolean>;
+    }, z.core.$strip>;
+    readonly Spinner: z.ZodObject<{
+        size: z.ZodOptional<z.ZodEnum<{
+            sm: "sm";
+            md: "md";
+            lg: "lg";
+            xl: "xl";
+        }>>;
+        label: z.ZodOptional<z.ZodString>;
+        liveRegion: z.ZodOptional<z.ZodBoolean>;
+    }, z.core.$strip>;
+    readonly Skeleton: z.ZodObject<{
+        width: z.ZodOptional<z.ZodString>;
+        height: z.ZodOptional<z.ZodString>;
+        borderRadius: z.ZodOptional<z.ZodString>;
+        variant: z.ZodOptional<z.ZodEnum<{
+            rectangular: "rectangular";
+            circular: "circular";
+        }>>;
+    }, z.core.$strip>;
+    readonly SkeletonText: z.ZodObject<{
+        lines: z.ZodOptional<z.ZodInt>;
+        lastLineWidth: z.ZodOptional<z.ZodString>;
+        lineHeight: z.ZodOptional<z.ZodString>;
+        gap: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>;
+    readonly SkeletonCard: z.ZodObject<{
+        lines: z.ZodOptional<z.ZodInt>;
+    }, z.core.$strip>;
+    readonly Tooltip: z.ZodObject<{
+        text: z.ZodString;
+        placement: z.ZodOptional<z.ZodEnum<{
+            top: "top";
+            bottom: "bottom";
+            left: "left";
+            right: "right";
+        }>>;
+        delayMs: z.ZodOptional<z.ZodInt>;
+    }, z.core.$strip>;
+    readonly CopyButton: z.ZodObject<{
+        text: z.ZodString;
+    }, z.core.$strip>;
+};
+
+// @public
+export const BUILTIN_COMPONENTS: readonly BuiltinComponent[];
+
+// @public
+export interface BuiltinComponent {
+    description: string;
+    example: string;
+    name: string;
+    propsSchema: string;
+}
+
+// @public
+export type BuiltinComponentName = keyof typeof BUILTIN_COMPONENT_SCHEMAS;
+
+// @public
+export type ButtonBuiltinProps = z.infer<typeof buttonPropsSchema>;
+
+// @public
+export const buttonPropsSchema: z.ZodObject<{
+    variant: z.ZodOptional<z.ZodEnum<{
+        primary: "primary";
+        danger: "danger";
+        outline: "outline";
+        ghost: "ghost";
+    }>>;
+    size: z.ZodOptional<z.ZodEnum<{
+        sm: "sm";
+        md: "md";
+        lg: "lg";
+    }>>;
+    disabled: z.ZodOptional<z.ZodBoolean>;
+}, z.core.$strip>;
+
+// @public
+export type ButtonSize = z.infer<typeof buttonSizeSchema>;
+
+// @public
+export const buttonSizeSchema: z.ZodEnum<{
+    sm: "sm";
+    md: "md";
+    lg: "lg";
+}>;
+
+// @public
+export type ButtonVariant = z.infer<typeof buttonVariantSchema>;
+
+// @public
+export const buttonVariantSchema: z.ZodEnum<{
+    primary: "primary";
+    danger: "danger";
+    outline: "outline";
+    ghost: "ghost";
+}>;
+
+// @public
+export type CalloutBuiltinProps = z.infer<typeof calloutPropsSchema>;
+
+// @public
+export const calloutPropsSchema: z.ZodObject<{
+    variant: z.ZodOptional<z.ZodEnum<{
+        success: "success";
+        error: "error";
+        warning: "warning";
+        info: "info";
+    }>>;
+    dismissible: z.ZodOptional<z.ZodBoolean>;
+}, z.core.$strip>;
+
+// @public
+export type CalloutVariant = z.infer<typeof calloutVariantSchema>;
+
+// @public
+export const calloutVariantSchema: z.ZodEnum<{
+    success: "success";
+    error: "error";
+    warning: "warning";
+    info: "info";
+}>;
 
 // @public
 type ChannelGrant = Message<"grackle.ChannelGrant"> & {
@@ -197,6 +366,14 @@ const ComponentListSchema: GenMessage<ComponentList>;
 
 // @public
 const ComponentSchema: GenMessage<Component>;
+
+// @public
+export type CopyButtonBuiltinProps = z.infer<typeof copyButtonPropsSchema>;
+
+// @public
+export const copyButtonPropsSchema: z.ZodObject<{
+    text: z.ZodString;
+}, z.core.$strip>;
 
 // @public
 type CreateCodespaceRequest = Message<"grackle.CreateCodespaceRequest"> & {
@@ -855,6 +1032,12 @@ declare namespace grackle {
         GetComponentRequestSchema,
         ListComponentsRequest,
         ListComponentsRequestSchema,
+        SearchComponentsRequest,
+        SearchComponentsRequestSchema,
+        SearchComponentResult,
+        SearchComponentResultSchema,
+        SearchComponentsResponse,
+        SearchComponentsResponseSchema,
         Escalation,
         EscalationSchema,
         EscalationList,
@@ -1415,6 +1598,11 @@ const GrackleOrchestration: GenService<{
         methodKind: "unary";
         input: typeof ListComponentsRequestSchema;
         output: typeof ComponentListSchema;
+    };
+    searchComponents: {
+        methodKind: "unary";
+        input: typeof SearchComponentsRequestSchema;
+        output: typeof SearchComponentsResponseSchema;
     };
     createEscalation: {
         methodKind: "unary";
@@ -1995,6 +2183,34 @@ const ScheduleListSchema: GenMessage<ScheduleList>;
 const ScheduleSchema: GenMessage<Schedule>;
 
 // @public
+type SearchComponentResult = Message<"grackle.SearchComponentResult"> & {
+    component?: Component;
+    relevanceScore: number;
+    builtin: boolean;
+};
+
+// @public
+const SearchComponentResultSchema: GenMessage<SearchComponentResult>;
+
+// @public
+type SearchComponentsRequest = Message<"grackle.SearchComponentsRequest"> & {
+    query: string;
+    workspaceId: string;
+    limit: number;
+};
+
+// @public
+const SearchComponentsRequestSchema: GenMessage<SearchComponentsRequest>;
+
+// @public
+type SearchComponentsResponse = Message<"grackle.SearchComponentsResponse"> & {
+    results: SearchComponentResult[];
+};
+
+// @public
+const SearchComponentsResponseSchema: GenMessage<SearchComponentsResponse>;
+
+// @public
 type SearchKnowledgeRequest = Message<"grackle.SearchKnowledgeRequest"> & {
     query: string;
     limit: number;
@@ -2260,6 +2476,48 @@ type SetWorkpadRequest = Message<"grackle.SetWorkpadRequest"> & {
 const SetWorkpadRequestSchema: GenMessage<SetWorkpadRequest>;
 
 // @public
+export type SkeletonBuiltinProps = z.infer<typeof skeletonPropsSchema>;
+
+// @public
+export type SkeletonCardBuiltinProps = z.infer<typeof skeletonCardPropsSchema>;
+
+// @public
+export const skeletonCardPropsSchema: z.ZodObject<{
+    lines: z.ZodOptional<z.ZodInt>;
+}, z.core.$strip>;
+
+// @public
+export const skeletonPropsSchema: z.ZodObject<{
+    width: z.ZodOptional<z.ZodString>;
+    height: z.ZodOptional<z.ZodString>;
+    borderRadius: z.ZodOptional<z.ZodString>;
+    variant: z.ZodOptional<z.ZodEnum<{
+        rectangular: "rectangular";
+        circular: "circular";
+    }>>;
+}, z.core.$strip>;
+
+// @public
+export type SkeletonTextBuiltinProps = z.infer<typeof skeletonTextPropsSchema>;
+
+// @public
+export const skeletonTextPropsSchema: z.ZodObject<{
+    lines: z.ZodOptional<z.ZodInt>;
+    lastLineWidth: z.ZodOptional<z.ZodString>;
+    lineHeight: z.ZodOptional<z.ZodString>;
+    gap: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+
+// @public
+export type SkeletonVariant = z.infer<typeof skeletonVariantSchema>;
+
+// @public
+export const skeletonVariantSchema: z.ZodEnum<{
+    rectangular: "rectangular";
+    circular: "circular";
+}>;
+
+// @public
 type SpawnRequest = Message<"grackle.SpawnRequest"> & {
     environmentId: string;
     prompt: string;
@@ -2298,6 +2556,61 @@ const SpawnRequestSchema: GenMessage<SpawnRequest>;
 
 // @public
 const SpawnRequestSchema_2: GenMessage<SpawnRequest_2>;
+
+// @public
+export type SpinnerBuiltinProps = z.infer<typeof spinnerPropsSchema>;
+
+// @public
+export const spinnerPropsSchema: z.ZodObject<{
+    size: z.ZodOptional<z.ZodEnum<{
+        sm: "sm";
+        md: "md";
+        lg: "lg";
+        xl: "xl";
+    }>>;
+    label: z.ZodOptional<z.ZodString>;
+    liveRegion: z.ZodOptional<z.ZodBoolean>;
+}, z.core.$strip>;
+
+// @public
+export type SpinnerSize = z.infer<typeof spinnerSizeSchema>;
+
+// @public
+export const spinnerSizeSchema: z.ZodEnum<{
+    sm: "sm";
+    md: "md";
+    lg: "lg";
+    xl: "xl";
+}>;
+
+// @public
+export type SplitButtonBuiltinProps = z.infer<typeof splitButtonPropsSchema>;
+
+// @public
+export const splitButtonOptionSchema: z.ZodObject<{
+    label: z.ZodString;
+    description: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+
+// @public
+export const splitButtonPropsSchema: z.ZodObject<{
+    label: z.ZodString;
+    variant: z.ZodOptional<z.ZodEnum<{
+        primary: "primary";
+        danger: "danger";
+        outline: "outline";
+        ghost: "ghost";
+    }>>;
+    size: z.ZodOptional<z.ZodEnum<{
+        sm: "sm";
+        md: "md";
+        lg: "lg";
+    }>>;
+    options: z.ZodArray<z.ZodObject<{
+        label: z.ZodString;
+        description: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public
 type StartTaskRequest = Message<"grackle.StartTaskRequest"> & {
@@ -2515,6 +2828,32 @@ type ToolConfig = Message<"grackle.ToolConfig"> & {
 
 // @public
 const ToolConfigSchema: GenMessage<ToolConfig>;
+
+// @public
+export type TooltipBuiltinProps = z.infer<typeof tooltipPropsSchema>;
+
+// @public
+export type TooltipPlacement = z.infer<typeof tooltipPlacementSchema>;
+
+// @public
+export const tooltipPlacementSchema: z.ZodEnum<{
+    top: "top";
+    bottom: "bottom";
+    left: "left";
+    right: "right";
+}>;
+
+// @public
+export const tooltipPropsSchema: z.ZodObject<{
+    text: z.ZodString;
+    placement: z.ZodOptional<z.ZodEnum<{
+        top: "top";
+        bottom: "bottom";
+        left: "left";
+        right: "right";
+    }>>;
+    delayMs: z.ZodOptional<z.ZodInt>;
+}, z.core.$strip>;
 
 // @public
 type UnlinkEnvironmentRequest = Message<"grackle.UnlinkEnvironmentRequest"> & {

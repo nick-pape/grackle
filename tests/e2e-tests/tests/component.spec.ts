@@ -52,6 +52,15 @@ const SHOW_SCENARIO = JSON.stringify({
   ],
 });
 
+// ── Test 4: register then search (#1271) ──
+const SEARCH_SCENARIO = JSON.stringify({
+  steps: [
+    { emit: "text", content: "Registering then searching components:" },
+    { mcp_call: "component_register", args: { name: "revenue-chart", source: "render(<Spinner/>)", description: "a chart of revenue over time" } },
+    { mcp_call: "component_search", args: { query: "chart" } },
+  ],
+});
+
 test.describe("Component registry (#1269)", { tag: ["@persona"] }, () => {
   test("component_register + component_render renders a React component by name", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
@@ -102,5 +111,22 @@ test.describe("Component registry (#1269)", { tag: ["@persona"] }, () => {
     await expect(page.getByTestId("mcp-app-widget")).toBeVisible({ timeout: 15_000 });
     const frame = page.frameLocator('[data-testid="mcp-app-widget"]').frameLocator("iframe");
     await expect(frame.getByRole("button", { name: "Hello from JSX" })).toBeVisible({ timeout: 25_000 });
+  });
+
+  test("component_register + component_search runs end-to-end via a scoped agent", async ({ appPage, grackle: { client } }) => {
+    const page = appPage;
+    const wsId = await createWorkspace(client, "component-search-e2e-proj");
+    await createTaskDirect(client, wsId, "search components", {
+      environmentId: "test-local",
+      description: SEARCH_SCENARIO,
+    });
+    await navigateToTask(page, "search components");
+    await patchWsForStubMcpRuntime(page);
+    await page.getByTestId("task-header-start").click();
+
+    await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });
+    // Both MCP tools were reachable + executed; the search result surfaces the registered component.
+    await expect(page.locator('[data-testid^="tool-card-"]').first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("revenue-chart").first()).toBeVisible({ timeout: 15_000 });
   });
 });

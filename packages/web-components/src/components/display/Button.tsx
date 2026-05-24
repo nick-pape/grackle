@@ -1,20 +1,20 @@
 import { forwardRef, type ButtonHTMLAttributes, type JSX } from "react";
 import type React from "react";
+import { type ButtonBuiltinProps, type ButtonVariant, type ButtonSize } from "@grackle-ai/common";
 import styles from "./Button.module.scss";
 
-/** Visual variant of the button. */
-export type ButtonVariant = "primary" | "danger" | "outline" | "ghost";
+// The variant/size unions now live in the built-in's zod schema
+// (@grackle-ai/common); re-export them so existing imports from "./Button.js"
+// (SplitButton, the package barrel) keep resolving.
+export type { ButtonVariant, ButtonSize };
 
-/** Size of the button. */
-export type ButtonSize = "sm" | "md" | "lg";
-
-/** Props for the {@link Button} component. */
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  /** Visual variant. Defaults to `"primary"`. */
-  variant?: ButtonVariant;
-  /** Size. Defaults to `"md"`. */
-  size?: ButtonSize;
-}
+/**
+ * Props for the {@link Button} component. The agent-facing data props (variant,
+ * size) are inferred from the built-in's zod schema so the GenUX catalog can't
+ * drift from the component; `disabled` and the rest come from the native button
+ * attributes.
+ */
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, Omit<ButtonBuiltinProps, "disabled"> {}
 
 /**
  * Standardized button with consistent sizing and styling across the app.

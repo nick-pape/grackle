@@ -1,21 +1,19 @@
 import type { JSX } from "react";
+import {
+  type SkeletonBuiltinProps,
+  type SkeletonTextBuiltinProps,
+  type SkeletonCardBuiltinProps,
+} from "@grackle-ai/common";
 import styles from "./Skeleton.module.scss";
 
 // ─── Skeleton (base shimmer block) ───────────────────────────────────────────
 
-/** Shape variant for the Skeleton component. */
-type SkeletonVariant = "rectangular" | "circular";
+// Data props (width/height/borderRadius/variant, line counts) are inferred from
+// the built-ins' zod schemas in @grackle-ai/common so the GenUX catalog can't
+// drift from these components; `className` is the only styling-hook extra.
 
 /** Props for the {@link Skeleton} component. */
-interface SkeletonProps {
-  /** CSS width. Defaults to `"100%"`. */
-  width?: string;
-  /** CSS height. Defaults to `"1rem"`. */
-  height?: string;
-  /** CSS border-radius override. Ignored when `variant` is `"circular"`. */
-  borderRadius?: string;
-  /** Shape variant. `"circular"` forces 50% border-radius. Defaults to `"rectangular"`. */
-  variant?: SkeletonVariant;
+interface SkeletonProps extends SkeletonBuiltinProps {
   /** Additional CSS class name. */
   className?: string;
 }
@@ -54,15 +52,7 @@ export function Skeleton({
 // ─── SkeletonText (multi-line text placeholder) ──────────────────────────────
 
 /** Props for the {@link SkeletonText} component. */
-interface SkeletonTextProps {
-  /** Number of text lines. Defaults to `3`. */
-  lines?: number;
-  /** Width of the last line. Defaults to `"60%"`. */
-  lastLineWidth?: string;
-  /** Height of each line. Defaults to `"0.75rem"`. */
-  lineHeight?: string;
-  /** Gap between lines. Defaults to `"var(--space-sm)"`. */
-  gap?: string;
+interface SkeletonTextProps extends SkeletonTextBuiltinProps {
   /** Additional CSS class name. */
   className?: string;
 }
@@ -99,9 +89,7 @@ export function SkeletonText({
 // ─── SkeletonCard (card-shaped placeholder) ──────────────────────────────────
 
 /** Props for the {@link SkeletonCard} component. */
-interface SkeletonCardProps {
-  /** Number of body text lines inside the card. Defaults to `2`. */
-  lines?: number;
+interface SkeletonCardProps extends SkeletonCardBuiltinProps {
   /** Additional CSS class name. */
   className?: string;
 }

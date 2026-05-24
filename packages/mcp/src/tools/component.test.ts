@@ -134,3 +134,27 @@ describe("component_render (#1269)", () => {
     expect(result.isError).toBe(true);
   });
 });
+
+describe("component_search (#1271)", () => {
+  const componentSearch = tool("component_search");
+
+  test("maps results, flags built-ins, and omits id for built-ins", async () => {
+    const clients = {
+      orchestration: {
+        searchComponents: async () => ({
+          results: [
+            { component: { name: "Button", description: "button", rendererKind: "grackle-react", propsSchema: "{}", id: "", version: 0 }, relevanceScore: 0.91, builtin: true },
+            { component: { name: "revenue-chart", description: "chart", rendererKind: "grackle-react", propsSchema: "", id: "c1", version: 2 }, relevanceScore: 0.5, builtin: false },
+          ],
+        }),
+      },
+    } as unknown as GrackleClients;
+    const result = await componentSearch.handler({ query: "chart" }, clients);
+    const parsed = JSON.parse(result.content[0]!.text) as Array<{ name: string; builtin: boolean; id?: string }>;
+    expect(parsed.find((p) => p.name === "Button")?.builtin).toBe(true);
+    expect(parsed.find((p) => p.name === "Button")?.id).toBeUndefined();
+    const authored = parsed.find((p) => p.name === "revenue-chart");
+    expect(authored?.builtin).toBe(false);
+    expect(authored?.id).toBe("c1");
+  });
+});
