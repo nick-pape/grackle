@@ -1,6 +1,6 @@
 /**
- * Internal `_meta` channel used by the dynamic widget tools (`widget_render`,
- * `widget_show`) to hand a render descriptor to the in-process broker capture in
+ * Internal `_meta` channel used by the dynamic render tools (`component_render`,
+ * `component_show`, `widget_show`) to hand a render descriptor to the broker capture in
  * `mcp-server.ts`. The handler runs in-process, so the capture reads the
  * descriptor off the result directly — it never depends on the agent SDK
  * round-tripping `_meta` (the T3 broker-capture principle).

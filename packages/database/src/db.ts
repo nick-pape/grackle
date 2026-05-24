@@ -243,6 +243,28 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 12,
+    name: "rename-widgets-to-components",
+    up: (conn) => {
+      // The agent-authored registry (#1239 "widgets") becomes the generic component
+      // registry (#1269). Rename widgets -> components, written defensively so it is
+      // safe to re-run: tests rewind user_version, and v10's CREATE-IF-NOT-EXISTS can
+      // recreate an empty `widgets` after a prior rename. If `components` already
+      // exists, drop any redundant `widgets` instead of colliding on the rename.
+      const componentsExists =
+        conn.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='components'").get() !== undefined;
+      if (componentsExists) {
+        conn.exec("DROP TABLE IF EXISTS widgets;");
+        return;
+      }
+      conn.exec(`
+        ALTER TABLE widgets RENAME TO components;
+        DROP INDEX IF EXISTS idx_widgets_workspace;
+        CREATE INDEX IF NOT EXISTS idx_components_workspace ON components(workspace_id);
+      `);
+    },
+  },
 ];
 
 /** The highest schema version defined by BASELINE + MIGRATIONS. */
