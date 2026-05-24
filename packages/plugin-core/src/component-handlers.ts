@@ -1,9 +1,9 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
-import { widgetStore, workspaceStore } from "@grackle-ai/database";
+import { componentStore, workspaceStore } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
-import { widgetRowToProto } from "./grpc-proto-converters.js";
+import { componentRowToProto } from "./grpc-proto-converters.js";
 
 /** Validate that a workspace id is present and refers to a real workspace. */
 function requireWorkspace(workspaceId: string): void {
@@ -20,8 +20,8 @@ function asInvalidArgument(err: unknown): never {
   throw new ConnectError(err instanceof Error ? err.message : String(err), Code.InvalidArgument);
 }
 
-/** Register a new agent-authored widget in the caller's workspace. */
-export async function registerWidget(req: grackle.RegisterWidgetRequest): Promise<grackle.Widget> {
+/** Register a new agent-authored component in the caller's workspace. */
+export async function registerComponent(req: grackle.RegisterComponentRequest): Promise<grackle.Component> {
   requireWorkspace(req.workspaceId);
   if (!req.name) {
     throw new ConnectError("name is required", Code.InvalidArgument);
@@ -29,12 +29,12 @@ export async function registerWidget(req: grackle.RegisterWidgetRequest): Promis
   if (!req.body) {
     throw new ConnectError("body is required", Code.InvalidArgument);
   }
-  // Full UUID (not an 8-char slice): widgets are addressed by their agent-chosen
+  // Full UUID (not an 8-char slice): components are addressed by their agent-chosen
   // name in practice, so a long collision-proof id avoids a UNIQUE-constraint
   // throw being surfaced to the agent as a misleading INVALID_ARGUMENT.
   const id = uuid();
   try {
-    widgetStore.registerWidget({
+    componentStore.registerComponent({
       id,
       workspaceId: req.workspaceId,
       name: req.name,
@@ -48,21 +48,21 @@ export async function registerWidget(req: grackle.RegisterWidgetRequest): Promis
   } catch (err) {
     asInvalidArgument(err);
   }
-  return widgetRowToProto(widgetStore.getWidget(id)!);
+  return componentRowToProto(componentStore.getComponent(id)!);
 }
 
-/** Update a widget's mutable fields (only set fields change); bumps version. */
-export async function updateWidget(req: grackle.UpdateWidgetRequest): Promise<grackle.Widget> {
+/** Update a component's mutable fields (only set fields change); bumps version. */
+export async function updateComponent(req: grackle.UpdateComponentRequest): Promise<grackle.Component> {
   if (!req.id) {
     throw new ConnectError("id is required", Code.InvalidArgument);
   }
-  const existing = widgetStore.getWidget(req.id);
-  // Workspace isolation: treat a widget in another workspace as not found.
+  const existing = componentStore.getComponent(req.id);
+  // Workspace isolation: treat a component in another workspace as not found.
   if (!existing || (req.workspaceId && existing.workspaceId !== req.workspaceId)) {
-    throw new ConnectError(`Widget not found: ${req.id}`, Code.NotFound);
+    throw new ConnectError(`Component not found: ${req.id}`, Code.NotFound);
   }
   try {
-    widgetStore.updateWidget(req.id, {
+    componentStore.updateComponent(req.id, {
       name: req.name,
       description: req.description,
       body: req.body,
@@ -71,36 +71,36 @@ export async function updateWidget(req: grackle.UpdateWidgetRequest): Promise<gr
   } catch (err) {
     asInvalidArgument(err);
   }
-  return widgetRowToProto(widgetStore.getWidget(req.id)!);
+  return componentRowToProto(componentStore.getComponent(req.id)!);
 }
 
-/** Resolve a widget by id (precedence) or by name within a workspace. */
-export async function getWidget(req: grackle.GetWidgetRequest): Promise<grackle.Widget> {
-  let row: widgetStore.WidgetRow | undefined;
+/** Resolve a component by id (precedence) or by name within a workspace. */
+export async function getComponent(req: grackle.GetComponentRequest): Promise<grackle.Component> {
+  let row: componentStore.ComponentRow | undefined;
   if (req.id) {
-    row = widgetStore.getWidget(req.id);
-    // Workspace isolation: hide widgets that belong to another workspace.
+    row = componentStore.getComponent(req.id);
+    // Workspace isolation: hide components that belong to another workspace.
     if (row && req.workspaceId && row.workspaceId !== req.workspaceId) {
       row = undefined;
     }
   } else if (req.name) {
     if (!req.workspaceId) {
-      throw new ConnectError("workspaceId is required to resolve a widget by name", Code.InvalidArgument);
+      throw new ConnectError("workspaceId is required to resolve a component by name", Code.InvalidArgument);
     }
-    row = widgetStore.findWidgetByName(req.workspaceId, req.name);
+    row = componentStore.findComponentByName(req.workspaceId, req.name);
   } else {
     throw new ConnectError("id or name is required", Code.InvalidArgument);
   }
   if (!row) {
-    throw new ConnectError("Widget not found", Code.NotFound);
+    throw new ConnectError("Component not found", Code.NotFound);
   }
-  return widgetRowToProto(row);
+  return componentRowToProto(row);
 }
 
-/** List all widgets registered in a workspace. */
-export async function listWidgets(req: grackle.ListWidgetsRequest): Promise<grackle.WidgetList> {
+/** List all components registered in a workspace. */
+export async function listComponents(req: grackle.ListComponentsRequest): Promise<grackle.ComponentList> {
   requireWorkspace(req.workspaceId);
-  return create(grackle.WidgetListSchema, {
-    widgets: widgetStore.listWidgets(req.workspaceId).map(widgetRowToProto),
+  return create(grackle.ComponentListSchema, {
+    components: componentStore.listComponents(req.workspaceId).map(componentRowToProto),
   });
 }

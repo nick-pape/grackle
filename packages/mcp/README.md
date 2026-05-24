@@ -245,23 +245,23 @@ Query aggregated token usage and cost data.
 |------|-------------|------------|
 | `usage_get` | Get token usage and cost for a session, task, task tree, workspace, or environment. | `scope` (`session` \| `task` \| `task_tree` \| `workspace` \| `environment`), `id` (string) |
 
-### Widget Tools
+### Component & Widget Tools
 
-[MCP Apps](#mcp-apps-ui-widgets) UI widgets — interactive HTML rendered inline by capable hosts (and always by Grackle's own chat pane via the broker).
+[MCP Apps](#mcp-apps-ui-widgets) UI rendered inline by capable hosts (and always by Grackle's own chat pane via the broker).
 
-`show_hello_widget` is the Grackle-served demo widget: it references a static `ui://` resource and appears in `tools/list` **only** when the host advertises the `io.modelcontextprotocol/ui` extension. The **widget registry** tools let an agent author and render its own widgets at runtime; they are ordinary scoped tools (always listed) and the rendered widget is captured by the broker into the session's chat. `component_show` renders agent-authored **React/JSX** against Grackle's own component library via a sandboxed React runtime (#1268).
+`show_hello_widget` is the Grackle-served demo: it references a static `ui://` resource and appears in `tools/list` **only** when the host advertises the `io.modelcontextprotocol/ui` extension. The **component registry** tools (#1269) let an agent author and reuse components at runtime; they are ordinary scoped tools (always listed) and the rendered output is captured by the broker into the session's chat.
 
 | Tool | Description | Parameters |
 |------|-------------|------------|
 | `show_hello_widget` | Display the Grackle hello widget — a minimal interactive MCP Apps UI that echoes the provided message. | `message` (string, optional) |
-| `widget_register` | Register a reusable widget (HTML body) in the workspace so it can be re-rendered with different data. Returns the widget id. | `name` (string), `body` (string), `description` (string, optional), `propsSchema` (string, optional) |
-| `widget_update` | Update a registered widget's body/name/description/props schema; bumps its version. | `id` (string), `body`/`name`/`description`/`propsSchema` (optional) |
-| `widget_list` | List the reusable widgets registered in the workspace. | — |
-| `widget_render` | Render a registered widget inline (by `id` or `name`), optionally passing `props` (data). | `id` (string, optional), `name` (string, optional), `props` (object, optional) |
-| `widget_show` | Render a one-off widget inline from an inline HTML `body`, without persisting it. | `body` (string), `props` (object, optional) |
-| `component_show` | Render a React/JSX component inline against the Grackle component library (no persistence). `source` is JSX that calls `render(<Component {...props}/>)`; `React`, `props`, and Grackle components are in scope. | `source` (string), `props` (object, optional) |
+| `component_register` | Register a reusable component in the workspace. `source` is JSX (`grackle-react`, default) or HTML (`mcp-app-html`). Returns the component id. | `name` (string), `source` (string), `rendererKind` (optional), `description` (optional), `propsSchema` (JSON Schema string, optional) |
+| `component_update` | Update a registered component's source/name/description/props schema; bumps its version. | `id` (string), `source`/`name`/`description`/`propsSchema` (optional) |
+| `component_list` | List the reusable components registered in the workspace. | — |
+| `component_render` | Render a registered component inline (by `id` or `name`), optionally passing `props`. Props are validated against the component's `propsSchema`. | `id` (optional), `name` (optional), `props` (object, optional) |
+| `component_show` | Render a one-off React/JSX component inline against the Grackle component library (no persistence). `source` calls `render(<Component {...props}/>)`; `React`, `props`, and Grackle components are in scope. | `source` (string), `props` (object, optional) |
+| `widget_show` | Render a one-off raw-HTML body inline, without persisting it. | `body` (string), `props` (object, optional) |
 
-Widgets are **workspace-scoped**: a session may only register/render widgets in its own workspace (the `workspaceId` is taken from the session's scoped token). Agent-authored bodies render in the cross-origin sandbox with inline scripts allowed (`script-src 'unsafe-inline'`), isolated by the iframe origin + a restricted `connect-src`. `component_show` additionally runs in a sandboxed React runtime that transpiles + evaluates the JSX (`script-src 'unsafe-eval'`), kept safe by the same origin isolation.
+Components are **workspace-scoped**: a session may only register/render components in its own workspace (the `workspaceId` is taken from the session's scoped token). A component's `propsSchema` (a JSON Schema) is validated at register, and render-time `props` are validated against it (via zod's `fromJSONSchema`). Renderers run in the cross-origin sandbox: `mcp-app-html` allows inline scripts (`script-src 'unsafe-inline'`); `grackle-react` runs the React runtime that transpiles + evaluates JSX (`script-src 'unsafe-eval'`) — both kept safe by the iframe origin isolation + restricted `connect-src`.
 
 ---
 

@@ -344,8 +344,8 @@ async function createMcpServerInstance(
         try {
           const dynamic = result._meta?.[WIDGET_RENDER_META_KEY] as WidgetRenderDescriptor | undefined;
           if (dynamic) {
-            // Dynamic, agent-authored widget (widget_render / widget_show #1239;
-            // component_show / grackle-react React runtime #1268).
+            // Dynamic, agent-authored render (component_render / component_show /
+            // widget_show); grackle-react React runtime (#1268/#1269).
             publishWidgetEvent(authContext.taskSessionId, {
               rendererKind: dynamic.rendererKind || "mcp-app-html",
               resourceUri: dynamic.resourceUri ?? "",

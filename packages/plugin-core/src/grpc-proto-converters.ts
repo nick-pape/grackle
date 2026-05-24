@@ -5,7 +5,7 @@ import {
   taskStatusToEnum,
 } from "@grackle-ai/common";
 import type { EnvironmentRow, SessionRow } from "@grackle-ai/database";
-import { workspaceStore, taskStore, personaStore, widgetStore, escalationStore, workspaceEnvironmentLinkStore, safeParseJsonArray } from "@grackle-ai/database";
+import { workspaceStore, taskStore, personaStore, componentStore, escalationStore, workspaceEnvironmentLinkStore, safeParseJsonArray } from "@grackle-ai/database";
 
 /** Convert an environment database row to its proto representation. */
 export function envRowToProto(row: EnvironmentRow): grackle.Environment {
@@ -110,9 +110,9 @@ export function taskRowToProto(
   });
 }
 
-/** Convert a widget database row to its proto representation. */
-export function widgetRowToProto(row: widgetStore.WidgetRow): grackle.Widget {
-  return create(grackle.WidgetSchema, { ...row });
+/** Convert a component database row to its proto representation. */
+export function componentRowToProto(row: componentStore.ComponentRow): grackle.Component {
+  return create(grackle.ComponentSchema, { ...row });
 }
 
 /** Convert an escalation database row to its proto representation. */

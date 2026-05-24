@@ -243,6 +243,44 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 12,
+    name: "rename-widgets-to-components",
+    up: (conn) => {
+      // The agent-authored registry (#1239 "widgets") becomes the generic component
+      // registry (#1269). Rebuild as `components` (copying existing rows) so the
+      // `renderer_kind` column default aligns with the new API/store default
+      // (grackle-react) rather than the legacy widgets default (mcp-app-html).
+      // Written defensively to be re-run-safe: tests rewind user_version, and v10's
+      // CREATE-IF-NOT-EXISTS can recreate an empty `widgets` after a prior rebuild —
+      // if `components` already exists, just drop the redundant `widgets`.
+      const componentsExists =
+        conn.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='components'").get() !== undefined;
+      if (componentsExists) {
+        conn.exec("DROP TABLE IF EXISTS widgets;");
+        return;
+      }
+      conn.exec(`
+        CREATE TABLE components (
+          id               TEXT PRIMARY KEY,
+          workspace_id     TEXT NOT NULL REFERENCES workspaces(id),
+          name             TEXT NOT NULL,
+          description      TEXT NOT NULL DEFAULT '',
+          renderer_kind    TEXT NOT NULL DEFAULT 'grackle-react',
+          body             TEXT NOT NULL,
+          props_schema     TEXT NOT NULL DEFAULT '',
+          version          INTEGER NOT NULL DEFAULT 1,
+          owner_task_id    TEXT NOT NULL DEFAULT '',
+          owner_session_id TEXT NOT NULL DEFAULT '',
+          created_at       TEXT NOT NULL DEFAULT (datetime('now')),
+          updated_at       TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        INSERT INTO components SELECT * FROM widgets;
+        DROP TABLE widgets;
+        CREATE INDEX IF NOT EXISTS idx_components_workspace ON components(workspace_id);
+      `);
+    },
+  },
 ];
 
 /** The highest schema version defined by BASELINE + MIGRATIONS. */

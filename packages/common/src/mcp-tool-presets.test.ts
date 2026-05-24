@@ -49,7 +49,7 @@ describe("ALL_MCP_TOOL_NAMES", () => {
 describe("DEFAULT_SCOPED_MCP_TOOLS", () => {
   it("contains the current default scoped tools", () => {
     expect([...DEFAULT_SCOPED_MCP_TOOLS].sort()).toEqual([
-      "component_show",
+      "component_list", "component_register", "component_render", "component_show", "component_update",
       "ipc_attach", "ipc_close", "ipc_create_stream", "ipc_list_fds", "ipc_share_stream", "ipc_spawn", "ipc_terminate", "ipc_write",
       "knowledge_get_node", "knowledge_search",
       "logs_get",
@@ -58,7 +58,7 @@ describe("DEFAULT_SCOPED_MCP_TOOLS", () => {
       "session_attach", "session_send_input",
       "show_hello_widget",
       "task_complete", "task_create", "task_list", "task_search", "task_show", "task_start",
-      "widget_list", "widget_register", "widget_render", "widget_show", "widget_update",
+      "widget_show",
       "workpad_read", "workpad_write",
     ]);
   });
