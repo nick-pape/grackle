@@ -68,14 +68,24 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
 
     // 2) Structural edges: expanding the child reaches its parent (PART_OF) and
     //    its workspace (IN_WORKSPACE), proving FK→edge projection + traversal.
-    const recent = await client.knowledge.listRecentKnowledgeNodes({ limit: 200 });
-    const childNode = recent.nodes.find((node) => node.sourceType === "task" && node.sourceId === childId);
-    expect(childNode, "child task should be projected as a reference node").toBeDefined();
-
-    const expanded = await client.knowledge.expandKnowledgeNode({ id: childNode!.id, depth: 1 });
-    const neighbourKeys = expanded.nodes.map((node) => `${node.sourceType}:${node.sourceId}`);
-    expect(neighbourKeys).toContain(`task:${parentId}`); // PART_OF → parent
-    expect(neighbourKeys).toContain(`workspace:${wsId}`); // IN_WORKSPACE → workspace
+    //    Edges are projected just after their nodes, so poll the traversal until
+    //    they land (avoids racing the subscriber).
+    await expect
+      .poll(
+        async () => {
+          const recent = await client.knowledge.listRecentKnowledgeNodes({ limit: 200 });
+          const childNode = recent.nodes.find(
+            (node) => node.sourceType === "task" && node.sourceId === childId,
+          );
+          if (!childNode) {
+            return [];
+          }
+          const expanded = await client.knowledge.expandKnowledgeNode({ id: childNode.id, depth: 1 });
+          return expanded.nodes.map((node) => `${node.sourceType}:${node.sourceId}`);
+        },
+        { timeout: 20_000, message: "child should reach its parent (PART_OF) and workspace (IN_WORKSPACE)" },
+      )
+      .toEqual(expect.arrayContaining([`task:${parentId}`, `workspace:${wsId}`]));
 
     // 3) Idempotency: re-projecting the parent (via an update event) updates the
     //    node in place — MERGE keyed on (sourceType, sourceId) never duplicates.
