@@ -46,6 +46,8 @@ export const ALL_MCP_TOOL_NAMES: ReadonlySet<string> = new Set([
   "show_hello_widget",
   // widget registry (#1239) — agent-authored widgets
   "widget_register", "widget_update", "widget_list", "widget_render", "widget_show",
+  // GenUX React runtime (#1268) — render-by-source JSX
+  "component_show",
 ]);
 
 // ─── Preset Tool Sets ────────────────────────────────────────
@@ -70,6 +72,8 @@ export const DEFAULT_SCOPED_MCP_TOOLS: readonly string[] = [
   // widget registry (#1239) so scoped agents can author + render widgets.
   "show_hello_widget",
   "widget_register", "widget_update", "widget_list", "widget_render", "widget_show",
+  // GenUX React runtime (#1268)
+  "component_show",
 ] as const;
 
 /**
@@ -105,6 +109,7 @@ export const ORCHESTRATOR_MCP_TOOLS: readonly string[] = [
   // MCP Apps widgets (in DEFAULT_SCOPED_MCP_TOOLS — keep this a superset).
   "show_hello_widget",
   "widget_register", "widget_update", "widget_list", "widget_render", "widget_show",
+  "component_show",
   // Additional management tools
   "task_update", "task_delete", "task_resume",
   "session_spawn", "session_kill", "session_status",

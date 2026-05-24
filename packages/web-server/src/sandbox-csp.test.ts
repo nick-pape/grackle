@@ -63,6 +63,20 @@ describe("buildCspHeader", () => {
     expect(buildCspHeader({ allowInlineScripts: "yes" })).not.toMatch(/script-src[^;]*'unsafe-inline'/);
   });
 
+  it("allows unsafe-eval only when allowUnsafeEval is set (React runtime, #1268)", () => {
+    const locked = buildCspHeader({ resourceDomains: ["https://ok.example"] });
+    expect(locked).not.toMatch(/script-src[^;]*'unsafe-eval'/);
+    const evalCsp = buildCspHeader({ resourceDomains: ["https://ok.example"], allowUnsafeEval: true });
+    expect(evalCsp).toMatch(/script-src 'self' 'unsafe-eval' blob:/);
+    // Non-boolean / falsey values do not enable it.
+    expect(buildCspHeader({ allowUnsafeEval: "yes" })).not.toMatch(/script-src[^;]*'unsafe-eval'/);
+  });
+
+  it("can enable inline scripts and unsafe-eval together", () => {
+    const both = buildCspHeader({ allowInlineScripts: true, allowUnsafeEval: true });
+    expect(both).toMatch(/script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:/);
+  });
+
   it("allows inline styles (widgets use <style>) but not inline scripts", () => {
     const csp = buildCspHeader(undefined);
     expect(csp).toMatch(/style-src[^;]*'unsafe-inline'/);

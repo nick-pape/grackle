@@ -226,9 +226,10 @@ export function EventRenderer({ event, toolUseCtx, settled, sandboxProxyUrl }: P
       let payload: {
         html?: string;
         rendererKind?: string;
-        // `allowInlineScripts` is a Grackle extension to the upstream CSP type
-        // (agent-authored widgets, #1239); it is forwarded verbatim to the sandbox.
-        csp?: McpUiResourceCsp & { allowInlineScripts?: boolean };
+        // `allowInlineScripts`/`allowUnsafeEval` are Grackle extensions to the
+        // upstream CSP type (agent-authored widgets #1239; React runtime #1268);
+        // forwarded verbatim to the sandbox.
+        csp?: McpUiResourceCsp & { allowInlineScripts?: boolean; allowUnsafeEval?: boolean };
         toolInput?: Record<string, unknown>;
         toolResult?: CallToolResult;
       } = {};
@@ -236,8 +237,31 @@ export function EventRenderer({ event, toolUseCtx, settled, sandboxProxyUrl }: P
         payload = JSON.parse(event.content) as typeof payload;
       } catch { /* malformed widget payload — fall back */ }
       // Dispatch on rendererKind (default "mcp-app-html" for back-compat). This
-      // switch is the seam for future declarative renderers (e.g. adaptive-card).
+      // switch is the seam for declarative/runtime renderers.
       const rendererKind: string = payload.rendererKind ?? "mcp-app-html";
+      // GenUX React runtime (#1268): payload.html is JSX *source* (not a full
+      // document). Render it via a bootstrap that loads the runtime bundle from the
+      // sandbox origin; the source + props are delivered as tool input. The runtime
+      // transpiles + renders the component against the Grackle component library.
+      // An absolute runtime.js URL is required — the inner iframe is written via
+      // doc.write (about:blank base), so a relative "/runtime.js" would not resolve.
+      if (rendererKind === "grackle-react" && payload.html) {
+        const sandboxOrigin: string = new URL(sandboxProxyUrl, window.location.href).origin;
+        const bootstrap: string =
+          `<!doctype html><html><head><meta charset="utf-8"></head>` +
+          `<body><div id="grackle-root"></div>` +
+          `<script type="module" src="${sandboxOrigin}/runtime.js"></script></body></html>`;
+        return (
+          <Suspense fallback={<DefaultEvent content="Loading widget..." />}>
+            <McpAppWidget
+              widgetHtml={bootstrap}
+              sandboxProxyUrl={sandboxProxyUrl}
+              csp={payload.csp}
+              toolInput={{ source: payload.html, props: payload.toolInput ?? {} }}
+            />
+          </Suspense>
+        );
+      }
       if (rendererKind !== "mcp-app-html" || !payload.html) {
         return <DefaultEvent content={event.content} />;
       }

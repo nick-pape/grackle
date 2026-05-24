@@ -4,8 +4,12 @@
  * Ported from the T1 Storybook sidecar (`@grackle-ai/web-components`
  * `mcp-app-sandbox/serve.mjs`) — kept in TS here so the production sandbox server
  * can unit-test it. The CSP locks down the inner widget: `script-src 'self' blob:`
- * (no `unsafe-inline`/`unsafe-eval`), widened only by the per-resource domain
- * allowlists supplied via the `?csp=` query param (`McpUiResourceCsp`).
+ * by default, widened only by the per-resource domain allowlists supplied via the
+ * `?csp=` query param (`McpUiResourceCsp`) and two explicit opt-in flags —
+ * `allowInlineScripts` (`'unsafe-inline'`, agent-authored HTML widgets, #1239) and
+ * `allowUnsafeEval` (`'unsafe-eval'`, the Grackle React runtime, #1268). Both are
+ * safe only because the sandbox is a separate origin (no `window.top`) with a
+ * restricted `connect-src`, so code runs isolated with no exfil path.
  */
 
 /** Subset of MCP Apps `McpUiResourceCsp` honored by the sandbox CSP. */
@@ -21,6 +25,13 @@ export interface SandboxCsp {
    * `connect-src`; inline scripts run only within the isolated widget origin.
    */
   allowInlineScripts?: unknown;
+  /**
+   * Allow `eval`/`new Function` in the sandbox (`script-src 'unsafe-eval'`). Set for
+   * the Grackle React runtime (#1268), which transpiles + executes agent JSX via
+   * react-live (`new Function`). Safe for the same reason as `allowInlineScripts`:
+   * the sandbox is a separate origin with a restricted `connect-src` (no exfil).
+   */
+  allowUnsafeEval?: unknown;
 }
 
 /**
@@ -61,9 +72,10 @@ export function buildCspHeader(csp: SandboxCsp | undefined): string {
   const frameDomains: string = sanitizeCspDomains(csp?.frameDomains).join(" ");
   const baseUriDomains: string = sanitizeCspDomains(csp?.baseUriDomains).join(" ");
   const inlineScripts: string = csp?.allowInlineScripts === true ? " 'unsafe-inline'" : "";
+  const unsafeEval: string = csp?.allowUnsafeEval === true ? " 'unsafe-eval'" : "";
   return [
     "default-src 'self'",
-    `script-src 'self'${inlineScripts} blob: ${resourceDomains}`.trim(),
+    `script-src 'self'${inlineScripts}${unsafeEval} blob: ${resourceDomains}`.trim(),
     `style-src 'self' 'unsafe-inline' blob: data: ${resourceDomains}`.trim(),
     `img-src 'self' data: blob: ${resourceDomains}`.trim(),
     `font-src 'self' data: blob: ${resourceDomains}`.trim(),

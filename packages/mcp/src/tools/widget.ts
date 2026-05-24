@@ -8,6 +8,9 @@ import { WIDGET_RENDER_META_KEY, type WidgetRenderDescriptor } from "../widget-r
 
 const DEFAULT_RENDERER_KIND: string = "mcp-app-html";
 
+/** Renderer kind for the Grackle React runtime (render-by-source JSX, #1268). */
+const REACT_RENDERER_KIND: string = "grackle-react";
+
 /** Build an INVALID_ARGUMENT tool error result. */
 function invalidArgument(message: string): ToolResult {
   return {
@@ -38,6 +41,8 @@ function owner(authContext?: AuthContext): { ownerTaskId: string; ownerSessionId
  * - `widget_render` / `widget_show` — render a widget into the chat. The broker
  *   captures the result `_meta` descriptor and emits the widget event; the
  *   frontend never contacts the MCP server.
+ * - `component_show` — render a React/JSX component (render-by-source, #1268)
+ *   against the Grackle component library in the sandbox React runtime.
  *
  * `show_hello_widget` carries a static `uiResourceUri` (gated to ui-capable
  * hosts in `mcp-server.ts`); the registry tools are plain tools (always listed
@@ -221,6 +226,30 @@ export const widgetTools: ToolDefinition[] = [
         body: args.body as string,
         props: (args.props as Record<string, unknown> | undefined) ?? {},
         allowInlineScripts: true,
+        resourceUri: "",
+      };
+      return renderResult({ rendered: true }, descriptor);
+    },
+  },
+  {
+    name: "component_show",
+    group: "widget",
+    description:
+      "Render a React/JSX component inline in the chat against the Grackle component library (no persistence). Provide `source` as JSX that calls render(<YourComponent {...props}/>) (react-live noInline); `props` supplies the data. `React`, `props`, and Grackle components (e.g. Button, Callout, Spinner) are in scope. Renders in a sandboxed iframe.",
+    inputSchema: z.object({
+      source: z.string().describe("JSX source. Must call render(<Component {...props}/>). `React`, `props`, and Grackle components are in scope."),
+      props: z.record(z.string(), z.unknown()).optional().describe("Data passed to the component as `props`."),
+      workspaceId: z.string().optional().describe("Workspace ID (auto-injected; unused for one-off renders)."),
+    }),
+    rpcMethod: "componentShow",
+    mutating: false,
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    async handler(args: Record<string, unknown>) {
+      const descriptor: WidgetRenderDescriptor = {
+        rendererKind: REACT_RENDERER_KIND,
+        body: args.source as string,
+        props: (args.props as Record<string, unknown> | undefined) ?? {},
+        allowUnsafeEval: true,
         resourceUri: "",
       };
       return renderResult({ rendered: true }, descriptor);
