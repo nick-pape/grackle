@@ -139,7 +139,10 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
       .poll(
         async () => {
           const result = await client.knowledge.searchKnowledge({
-            query: "deployment pipeline blue-green rollout",
+            // Semantic terms + the unique marker: keeps the test exercising the
+            // embed→vector-search path while ensuring the target chunk ranks in
+            // the top results regardless of what else is in the graph.
+            query: `deployment pipeline blue-green rollout ${marker}`,
             limit: 10,
           });
           return result.results.some((hit) => hit.node?.content?.includes(marker));

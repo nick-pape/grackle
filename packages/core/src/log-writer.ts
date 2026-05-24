@@ -167,6 +167,9 @@ export interface IncrementalLogRead {
  */
 const MAX_INCREMENTAL_READ_BYTES: number = 1_048_576; // 1 MiB
 
+/** The ASCII line-feed byte (`\n`), used to find complete-line boundaries. */
+const NEWLINE_BYTE: number = 0x0a;
+
 /**
  * Read only the bytes appended to a session's JSONL log after `byteOffset`.
  *
@@ -199,8 +202,12 @@ export function readLogFrom(logPath: string, byteOffset: number): IncrementalLog
     closeSync(fd);
   }
 
-  const text = buffer.toString("utf-8", 0, bytesRead);
-  const lastNewline = text.lastIndexOf("\n");
+  // Locate the last newline BYTE (0x0A) directly in the buffer. Working in byte
+  // indices (not decoded-string indices) keeps `nextOffset` exact regardless of
+  // multi-byte UTF-8 characters, and lets us decode only the complete-line slice
+  // — any partial multi-byte char in the trailing fragment is left for the next
+  // pass instead of being decoded into a replacement character.
+  const lastNewline = buffer.lastIndexOf(NEWLINE_BYTE, bytesRead - 1);
   if (lastNewline === -1) {
     // No complete line in this window. If we read the whole remaining tail, it's
     // a partial trailing append — wait for more (cursor unchanged). If the window
@@ -211,9 +218,9 @@ export function readLogFrom(logPath: string, byteOffset: number): IncrementalLog
     return { content: "", nextOffset: windowWasCapped ? start + bytesRead : start };
   }
 
-  const consumed = text.slice(0, lastNewline + 1);
+  // Decode only [0, lastNewline): complete lines, excluding the trailing newline.
   return {
-    content: text.slice(0, lastNewline),
-    nextOffset: start + Buffer.byteLength(consumed, "utf-8"),
+    content: buffer.toString("utf-8", 0, lastNewline),
+    nextOffset: start + lastNewline + 1,
   };
 }

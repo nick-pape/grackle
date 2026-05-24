@@ -59,6 +59,24 @@ describe("readLogFrom (incremental byte-offset reader)", () => {
     expect(next.content).toBe(`{"partial":true}`);
   });
 
+  it("computes byte offsets correctly across multi-byte UTF-8 content", () => {
+    // Lines with multi-byte chars (é/☕ = 2-3 bytes, 😀 = 4 bytes). The cursor
+    // must advance by BYTES, not string code units, or the next read desyncs.
+    const l1 = JSON.stringify({ c: "café ☕" });
+    const l2 = JSON.stringify({ c: "rollout 😀 done" });
+    writeFileSync(stream, `${l1}\n`);
+    const first = readLogFrom(dir, 0);
+    expect(first.content).toBe(l1);
+    expect(first.nextOffset).toBe(Buffer.byteLength(`${l1}\n`, "utf-8"));
+
+    // Reading from the byte cursor returns exactly the appended line — no
+    // leading/trailing garbage that a mis-counted (code-unit) offset would cause.
+    appendFileSync(stream, `${l2}\n`);
+    const second = readLogFrom(dir, first.nextOffset);
+    expect(second.content).toBe(l2);
+    expect(second.nextOffset).toBe(Buffer.byteLength(`${l1}\n${l2}\n`, "utf-8"));
+  });
+
   it("resets to the start if the file shrank (truncated/rewritten)", () => {
     writeFileSync(stream, `${line(1)}\n${line(2)}\n`);
     const full = readLogFrom(dir, 0);

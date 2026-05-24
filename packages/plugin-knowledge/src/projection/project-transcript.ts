@@ -55,38 +55,53 @@ export async function projectSessionTranscript(
 
   // Read only the bytes appended since the last pass (O(new bytes), not O(log)).
   const { content: newContent, nextOffset } = logWriter.readLogFrom(session.logPath, byteOffset);
-  if (!newContent) {
-    return 0; // no new complete log lines since the last pass
+
+  // Truncation/rewrite: the log shrank below our cursor, so `readLogFrom` reset
+  // to offset 0. Clear the stale chunk nodes and reset the chunk index so the
+  // re-ingestion from the start neither collides with nor strands old chunks.
+  const truncated = nextOffset < byteOffset;
+  if (truncated) {
+    await deleteReferenceNodesByPrefix(REFERENCE_SOURCE.TRANSCRIPT_CHUNK, `${session.id}#`);
+    chunkCount = 0;
   }
 
-  const embeddedChunks = await ingest(newContent, createTranscriptChunker(), embedder, {
-    sessionId: session.id,
-  });
-
-  for (const chunk of embeddedChunks) {
-    const index = chunkCount + chunk.index;
-    const chunkNodeId = await upsertReferenceNode({
-      sourceType: REFERENCE_SOURCE.TRANSCRIPT_CHUNK,
-      sourceId: `${session.id}#${index}`,
-      label: chunk.text.slice(0, CHUNK_PREVIEW_LENGTH),
-      content: chunk.text,
-      workspaceId: sessionWorkspaceId,
-      embedding: chunk.vector,
+  let created = 0;
+  if (newContent) {
+    const embeddedChunks = await ingest(newContent, createTranscriptChunker(), embedder, {
+      sessionId: session.id,
     });
-    await upsertEdge(chunkNodeId, sessionNodeId, EDGE_TYPE.PART_OF);
+
+    for (const chunk of embeddedChunks) {
+      const index = chunkCount + chunk.index;
+      const chunkNodeId = await upsertReferenceNode({
+        sourceType: REFERENCE_SOURCE.TRANSCRIPT_CHUNK,
+        sourceId: `${session.id}#${index}`,
+        label: chunk.text.slice(0, CHUNK_PREVIEW_LENGTH),
+        content: chunk.text,
+        workspaceId: sessionWorkspaceId,
+        embedding: chunk.vector,
+      });
+      await upsertEdge(chunkNodeId, sessionNodeId, EDGE_TYPE.PART_OF);
+    }
+    chunkCount += embeddedChunks.length;
+    created = embeddedChunks.length;
   }
-  chunkCount += embeddedChunks.length;
 
-  // Advance the per-session cursor (idempotent MERGE; preserves other props).
-  await upsertReferenceNode({
-    sourceType: REFERENCE_SOURCE.SESSION,
-    sourceId: session.id,
-    label: (sessionProps.label as string | undefined) ?? "",
-    workspaceId: sessionWorkspaceId,
-    extraProps: { logByteOffset: nextOffset, chunkCount },
-  });
+  // Persist the cursor whenever it moved (or a truncation reset it) — even with
+  // no new chunks. `readLogFrom` can advance past an over-long line that yielded
+  // no complete line this pass; not persisting that would stall the cursor and
+  // re-read the same bytes forever.
+  if (truncated || nextOffset !== byteOffset) {
+    await upsertReferenceNode({
+      sourceType: REFERENCE_SOURCE.SESSION,
+      sourceId: session.id,
+      label: (sessionProps.label as string | undefined) ?? "",
+      workspaceId: sessionWorkspaceId,
+      extraProps: { logByteOffset: nextOffset, chunkCount },
+    });
+  }
 
-  return embeddedChunks.length;
+  return created;
 }
 
 /**
