@@ -27,9 +27,12 @@ import {
 /**
  * Stable hash of the projected fields, stored on the node as `projectionHash`
  * so the reconciliation scan can skip rows whose projection is unchanged.
+ *
+ * Non-cryptographic use (change detection only); SHA-256 is used purely to keep
+ * static analysis happy — no weak-algorithm dependence.
  */
 export function computeProjectionHash(...parts: unknown[]): string {
-  return createHash("sha1").update(JSON.stringify(parts)).digest("hex");
+  return createHash("sha256").update(JSON.stringify(parts)).digest("hex");
 }
 
 /** Map a Task row to its reference-node upsert input. */
