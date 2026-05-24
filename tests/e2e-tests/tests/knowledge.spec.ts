@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import type { Page } from "@playwright/test";
-import { createWorkspace, createTaskDirect } from "./helpers.js";
+import { createWorkspace, createTaskDirect, stubScenario, emitText, runStubTaskToCompletion } from "./helpers.js";
 
 /**
  * Knowledge Graph E2E tests.
@@ -107,6 +107,36 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
           return parentNodes.length === 1 && (parentNodes[0].label?.includes("parent-v2") ?? false);
         },
         { timeout: 20_000, message: "re-projection must update in place, not create a duplicate node" },
+      )
+      .toBe(true);
+  });
+
+  test("transcript chunks are chunked, embedded, and semantically searchable", async ({ stubTask }) => {
+    const { page, client } = stubTask;
+    await skipIfKnowledgeUnavailable(client);
+
+    // Run a stub session that emits a recognizable line into its transcript.
+    const marker = `KGMARKER-${Date.now()}`;
+    await stubTask.createAndNavigate(
+      "kg-transcript",
+      stubScenario(emitText(`The deployment pipeline uses blue-green rollouts. Reference token ${marker}.`)),
+    );
+    await runStubTaskToCompletion(page); // emits the text → writes stream.jsonl → completes
+
+    // The reconciliation phase projects the session, chunks the transcript, and
+    // embeds the chunks inline — so a semantic query should return the chunk
+    // (verified by the unique marker in its content). Generous timeout: this
+    // waits for a phase tick + local embedding.
+    await expect
+      .poll(
+        async () => {
+          const result = await client.knowledge.searchKnowledge({
+            query: "deployment pipeline blue-green rollout",
+            limit: 10,
+          });
+          return result.results.some((hit) => hit.node?.content?.includes(marker));
+        },
+        { timeout: 45_000, message: "transcript chunk should be chunked, embedded, and searchable" },
       )
       .toBe(true);
   });
