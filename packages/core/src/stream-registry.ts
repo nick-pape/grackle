@@ -11,11 +11,19 @@
  */
 
 import { v4 as uuid } from "uuid";
-import { ulid } from "ulid";
+import { monotonicFactory } from "ulid";
 import { persistStreamMessage } from "@grackle-ai/database";
 import { logger } from "./logger.js";
 import { isReservedStreamName, LIFECYCLE_PREFIX } from "./stream-names.js";
 import { emitStreamMessage } from "./stream-message-bus.js";
+
+/**
+ * Monotonic ULID generator for transcript sequence keys. Unlike plain `ulid()`,
+ * this is strictly increasing even when multiple messages are published within
+ * the same millisecond, so transcript `seq` always reflects publish order under
+ * bursty traffic (RFC #1264 Phase 2).
+ */
+const nextStreamSeq: () => string = monotonicFactory();
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -416,7 +424,7 @@ export function publish(streamId: string, senderId: string, content: string): St
   // message delivery, and internal plumbing (pipe:/stdin:/lifecycle:) is excluded.
   if (!isReservedStreamName(stream.name)) {
     try {
-      const seq: string = ulid();
+      const seq: string = nextStreamSeq();
       persistStreamMessage({
         seq,
         streamId: stream.id,

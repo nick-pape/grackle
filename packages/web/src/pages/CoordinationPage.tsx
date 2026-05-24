@@ -23,6 +23,7 @@ export function CoordinationPage(): JSX.Element {
   // messages merge into the same buffer via the streams hook.
   useEffect(() => {
     if (selectedStreamId === undefined) {
+      setTranscriptLoading(false);
       return;
     }
     let active = true;

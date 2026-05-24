@@ -47,6 +47,17 @@ describe("publish() observation log (RFC #1264 Phase 2)", () => {
     expect(emitted).toHaveLength(0);
   });
 
+  it("assigns strictly increasing, unique seq across rapid (same-ms) publishes", () => {
+    const stream = registry.createStream("burst-room");
+    for (let i = 0; i < 50; i++) {
+      registry.publish(stream.id, "sess-1", `m${i}`);
+    }
+    const seqs = emitted.map((e) => e.seq);
+    expect(seqs).toHaveLength(50);
+    expect(new Set(seqs).size).toBe(50); // all unique
+    expect([...seqs].sort()).toEqual(seqs); // already strictly ascending (monotonic)
+  });
+
   it("is non-fatal: a persistence failure does not break delivery", () => {
     persistMock.mockImplementation(() => { throw new Error("db down"); });
     const stream = registry.createStream("resilient-room");
