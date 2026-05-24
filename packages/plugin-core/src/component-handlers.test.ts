@@ -188,4 +188,10 @@ describe("gRPC component handlers", () => {
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.InvalidArgument);
   });
+
+  it("searchComponents rejects an unknown workspaceId (fails fast, not silent built-ins)", async () => {
+    const err = (await handlers.searchComponents({ query: "button", workspaceId: "no-such-workspace" }).catch((e: unknown) => e)) as ConnectError;
+    expect(err).toBeInstanceOf(ConnectError);
+    expect(err.code).toBe(Code.NotFound);
+  });
 });

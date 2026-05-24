@@ -137,6 +137,10 @@ export async function searchComponents(req: grackle.SearchComponentsRequest): Pr
 
   const items: SearchableComponent[] = [];
   if (req.workspaceId) {
+    // Validate a supplied workspace (like listComponents) so a typo'd/unknown id
+    // fails fast instead of silently returning only built-ins. An empty workspaceId
+    // is allowed — it searches built-ins only.
+    requireWorkspace(req.workspaceId);
     for (const row of componentStore.listComponents(req.workspaceId)) {
       items.push({ name: row.name, description: row.description, builtin: false, component: componentRowToProto(row) });
     }
