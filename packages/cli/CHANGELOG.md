@@ -1,6 +1,14 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 24 May 2026 00:00:41 GMT and should not be manually modified.
+This log was last generated on Sun, 24 May 2026 02:29:04 GMT and should not be manually modified.
+
+## 0.117.0
+Sun, 24 May 2026 02:29:04 GMT
+
+### Minor changes
+
+- GenUX render-by-source React runtime (#1268): a new `component_show` MCP tool renders agent-authored React/JSX inline in the chat against the Grackle component library, via a single sandboxed runtime resource served from the sandbox origin (new `grackle-react` rendererKind). Adds an `allowUnsafeEval` sandbox-CSP flag (react-live transpile+eval, origin-isolated) and registers `component_show` in the scoped/orchestrator/all MCP tool presets.
+- Add a domain-event query reader (RFC #1264 Phase 1): queryDomainEvents in @grackle-ai/database (offset/type/time filters), a QueryDomainEvents gRPC RPC, and a `grackle events` CLI command.
 
 ## 0.116.0
 Sun, 24 May 2026 00:00:41 GMT
