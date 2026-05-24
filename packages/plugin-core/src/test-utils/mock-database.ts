@@ -157,6 +157,8 @@ export function createDatabaseMock() {
     VALID_TOGGLE_VALUES: new Set(["off", "on"]),
     persistEvent: vi.fn(),
     queryDomainEvents: vi.fn(() => []),
+    persistStreamMessage: vi.fn(),
+    queryStreamMessages: vi.fn(() => []),
 
     // Utilities
     grackleHome: "/tmp/test-grackle",

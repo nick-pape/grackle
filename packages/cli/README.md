@@ -631,6 +631,25 @@ grackle streams list --internal   # include internal IPC plumbing
 # └──────────┴────────────────┴─────────────────────────┴──────────────┘
 ```
 
+#### `grackle streams transcript <streamId>`
+
+Show a stream room's **durable transcript** (most recent first) — the persisted
+conversation that survives server restart. Internal plumbing streams are not
+recorded. Use `--before <seq>` to page into older history.
+
+```bash
+grackle streams transcript stream-abc123
+grackle streams transcript stream-abc123 --limit 20
+grackle streams transcript stream-abc123 --before <seq> --limit 20  # older history
+# ┌──────────────────────────┬──────────┬──────────────────────────┬─────────────┐
+# │ Seq                      │ Sender   │ Timestamp                │ Content     │
+# ├──────────────────────────┼──────────┼──────────────────────────┼─────────────┤
+# │ 01JV…SEQ                 │ a1b2c3d4 │ 2026-05-24T18:04:11.002Z │ ship it     │
+# └──────────────────────────┴──────────┴──────────────────────────┴─────────────┘
+```
+
+Options: `--before <seq>`, `--limit <n>`.
+
 ---
 
 ### Domain Events

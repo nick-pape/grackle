@@ -16,7 +16,7 @@ import type {
   PersonaData,
 } from "../hooks/types.js";
 export { MOCK_KNOWLEDGE_NODES, MOCK_KNOWLEDGE_LINKS, MOCK_KNOWLEDGE_DETAILS } from "./mockKnowledgeData.js";
-export { MOCK_STREAMS } from "./mockStreamsData.js";
+export { MOCK_STREAMS, MOCK_STREAM_MESSAGES } from "./mockStreamsData.js";
 
 // ─── Environments ───────────────────────────────────
 

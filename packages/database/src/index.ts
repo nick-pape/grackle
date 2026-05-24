@@ -44,6 +44,7 @@ export type {
   NewGitHubAccount,
   ChannelGrantRow,
   NewChannelGrant,
+  StreamMessageRow,
 } from "./schema.js";
 
 // ─── Stores ────────────────────────────────────────────────
@@ -81,6 +82,8 @@ export {
 // ─── Event Store ───────────────────────────────────────────
 export { persistEvent, queryDomainEvents } from "./event-store.js";
 export type { DomainEvent, DomainEventQuery } from "./event-store.js";
+export { persistStreamMessage, queryStreamMessages } from "./stream-message-store.js";
+export type { StreamMessageRecord, StreamMessageQuery } from "./stream-message-store.js";
 
 // ─── Utilities ─────────────────────────────────────────────
 export { grackleHome } from "./paths.js";

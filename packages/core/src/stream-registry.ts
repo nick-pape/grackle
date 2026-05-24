@@ -11,7 +11,11 @@
  */
 
 import { v4 as uuid } from "uuid";
+import { ulid } from "ulid";
+import { persistStreamMessage } from "@grackle-ai/database";
 import { logger } from "./logger.js";
+import { isReservedStreamName, LIFECYCLE_PREFIX } from "./stream-names.js";
+import { emitStreamMessage } from "./stream-message-bus.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -147,9 +151,6 @@ let orphanCallback: OrphanCallback | undefined;
 /** Callback invoked when an external subscription is created on a lifecycle stream. */
 type RevivedCallback = (targetSessionId: string, subscriberSessionId: string) => void;
 let revivedCallback: RevivedCallback | undefined;
-
-/** Prefix for lifecycle stream names. */
-const LIFECYCLE_PREFIX: string = "lifecycle:";
 
 // ─── Internal Helpers ─────────────────────────────────────────────────────────
 
@@ -409,6 +410,31 @@ export function publish(streamId: string, senderId: string, content: string): St
   };
 
   stream.messages.push(msg);
+
+  // Durable observation log + live observer feed, for user-facing rooms only
+  // (RFC #1264 Phase 2). Best-effort and isolated: recording must never break
+  // message delivery, and internal plumbing (pipe:/stdin:/lifecycle:) is excluded.
+  if (!isReservedStreamName(stream.name)) {
+    try {
+      const seq: string = ulid();
+      persistStreamMessage({
+        seq,
+        streamId: stream.id,
+        senderId: msg.senderId,
+        content: msg.content,
+        timestamp: msg.timestamp,
+      });
+      emitStreamMessage({
+        streamId: stream.id,
+        seq,
+        senderId: msg.senderId,
+        content: msg.content,
+        timestamp: msg.timestamp,
+      });
+    } catch (err) {
+      logger.error({ err, streamId: stream.id }, "Failed to record stream message observation");
+    }
+  }
 
   // Notify subscribers (skip write-only subscriptions; skip sender unless self-echo is enabled)
   for (const sub of stream.subscriptions.values()) {

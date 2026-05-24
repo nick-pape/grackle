@@ -44,6 +44,7 @@ import {
   MOCK_ENVIRONMENTS,
   MOCK_SESSIONS,
   MOCK_STREAMS,
+  MOCK_STREAM_MESSAGES,
   MOCK_EVENTS,
   MOCK_WORKSPACES,
   MOCK_TASKS,
@@ -1123,6 +1124,9 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         streamsLoadedOnce: true,
         streamsLoadError: false,
         loadStreams: async (includeInternal = false) => { setStreams(filterMockStreams(includeInternal)); },
+        liveMessages: MOCK_STREAM_MESSAGES,
+        loadTranscript: async () => { /* mock transcripts are static */ },
+        handleStreamMessage: () => { /* no-op in mock */ },
         domainHook: NOOP_DOMAIN_HOOK,
       },
 

@@ -959,10 +959,31 @@ message DomainEventList {
   repeated DomainEvent events = 1;
 }
 
+// A message published to an observable IPC stream room (RFC #1264 Phase 2).
+message StreamMessageEvent {
+  string stream_id = 1;
+  string seq = 2;        // ULID transcript sequence key (monotonic per stream)
+  string sender_id = 3;
+  string content = 4;
+  string timestamp = 5;  // ISO 8601
+}
+
+// Read a stream room's durable transcript (most recent first).
+message GetStreamTranscriptRequest {
+  string stream_id = 1;
+  string before_seq = 2; // cursor: messages whose seq sorts before this (exclusive) — older history
+  int32 limit = 3;       // max rows (0 = server default)
+}
+
+message StreamTranscript {
+  repeated StreamMessageEvent messages = 1;
+}
+
 message ServerEvent {
   oneof event {
     SessionEvent session_event = 1;
     DomainEvent domain_event = 2;
+    StreamMessageEvent stream_message_event = 3;
   }
 }
 

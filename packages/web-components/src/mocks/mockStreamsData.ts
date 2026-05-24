@@ -9,7 +9,7 @@
  * @module
  */
 
-import type { StreamData } from "../hooks/types.js";
+import type { StreamData, StreamMessageData } from "../hooks/types.js";
 
 /** Sample IPC streams: a chatroom + channel attributed to tasks, an unattached
  * stream, and internal plumbing streams. */
@@ -78,3 +78,12 @@ export const MOCK_STREAMS: StreamData[] = [
     ],
   },
 ];
+
+/** Sample transcript messages for the planning room, keyed by stream id (RFC #1264 Phase 2). */
+export const MOCK_STREAM_MESSAGES: Record<string, StreamMessageData[]> = {
+  "stream-planning": [
+    { streamId: "stream-planning", seq: "01J0000000000000000000MSG1", senderId: "sess-001", content: "Proposing JWT with RS256 + 15-min access tokens.", timestamp: "2026-05-24T18:00:01.000Z" },
+    { streamId: "stream-planning", seq: "01J0000000000000000000MSG2", senderId: "sess-002", content: "Agreed. Refresh tokens rotate on use; store the jti denylist in Redis.", timestamp: "2026-05-24T18:00:07.000Z" },
+    { streamId: "stream-planning", seq: "01J0000000000000000000MSG3", senderId: "sess-001", content: "Ship it. I'll wire the middleware; you take the refresh endpoint.", timestamp: "2026-05-24T18:00:14.000Z" },
+  ],
+};

@@ -637,6 +637,16 @@ type GetSettingRequest = Message<"grackle.GetSettingRequest"> & {
 const GetSettingRequestSchema: GenMessage<GetSettingRequest>;
 
 // @public
+type GetStreamTranscriptRequest = Message<"grackle.GetStreamTranscriptRequest"> & {
+    streamId: string;
+    beforeSeq: string;
+    limit: number;
+};
+
+// @public
+const GetStreamTranscriptRequestSchema: GenMessage<GetStreamTranscriptRequest>;
+
+// @public
 type GetUsageRequest = Message<"grackle.GetUsageRequest"> & {
     scope: string;
     id: string;
@@ -926,6 +936,12 @@ declare namespace grackle {
         QueryDomainEventsRequestSchema,
         DomainEventList,
         DomainEventListSchema,
+        StreamMessageEvent,
+        StreamMessageEventSchema,
+        GetStreamTranscriptRequest,
+        GetStreamTranscriptRequestSchema,
+        StreamTranscript,
+        StreamTranscriptSchema,
         ServerEvent,
         ServerEventSchema,
         PluginInfo,
@@ -1239,6 +1255,11 @@ const GrackleCore: GenService<{
         methodKind: "unary";
         input: typeof QueryDomainEventsRequestSchema;
         output: typeof DomainEventListSchema;
+    };
+    getStreamTranscript: {
+        methodKind: "unary";
+        input: typeof GetStreamTranscriptRequestSchema;
+        output: typeof StreamTranscriptSchema;
     };
 }>;
 
@@ -2033,6 +2054,9 @@ type ServerEvent = Message<"grackle.ServerEvent"> & {
         value: DomainEvent;
         case: "domainEvent";
     } | {
+        value: StreamMessageEvent;
+        case: "streamMessageEvent";
+    } | {
         case: undefined;
         value?: undefined;
     };
@@ -2275,6 +2299,18 @@ type StreamInfo = Message<"grackle.StreamInfo"> & {
 const StreamInfoSchema: GenMessage<StreamInfo>;
 
 // @public
+type StreamMessageEvent = Message<"grackle.StreamMessageEvent"> & {
+    streamId: string;
+    seq: string;
+    senderId: string;
+    content: string;
+    timestamp: string;
+};
+
+// @public
+const StreamMessageEventSchema: GenMessage<StreamMessageEvent>;
+
+// @public
 type StreamSubscriberInfo = Message<"grackle.StreamSubscriberInfo"> & {
     subscriptionId: string;
     sessionId: string;
@@ -2286,6 +2322,14 @@ type StreamSubscriberInfo = Message<"grackle.StreamSubscriberInfo"> & {
 
 // @public
 const StreamSubscriberInfoSchema: GenMessage<StreamSubscriberInfo>;
+
+// @public
+type StreamTranscript = Message<"grackle.StreamTranscript"> & {
+    messages: StreamMessageEvent[];
+};
+
+// @public
+const StreamTranscriptSchema: GenMessage<StreamTranscript>;
 
 // @public
 export const SYSTEM_PERSONA_ID: string;
