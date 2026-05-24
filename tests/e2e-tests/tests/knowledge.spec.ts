@@ -40,7 +40,7 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     await expect(appPage.locator('[data-testid="knowledge-nav"]')).toBeVisible({ timeout: 5_000 });
   });
 
-  test("derived mirror projects created entities into the graph", async ({ grackle: { client } }) => {
+  test("derived mirror projects entities, structural edges, and is idempotent", async ({ grackle: { client } }) => {
     await skipIfKnowledgeUnavailable(client);
 
     // Create a workspace + parent/child tasks. Their create events drive the
@@ -50,13 +50,12 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     const wsId = await createWorkspace(client, `${marker}-ws`);
     // Parent needs decomposition rights to allow a child task.
     const parent = await createTaskDirect(client, wsId, `${marker}-parent`, { canDecompose: true });
-    await createTaskDirect(client, wsId, `${marker}-child`, {
-      parentTaskId: (parent as unknown as { id: string }).id,
-    });
+    const parentId = (parent as unknown as { id: string }).id;
+    const child = await createTaskDirect(client, wsId, `${marker}-child`, { parentTaskId: parentId });
+    const childId = (child as unknown as { id: string }).id;
 
-    // The mirror should contain the workspace node + both task nodes.
-    // listRecentKnowledgeNodes does not require embeddings, so this verifies
-    // structural projection deterministically (no embed-backfill wait).
+    // 1) Nodes project. listRecentKnowledgeNodes needs no embeddings, so this is
+    //    deterministic (no embed-backfill wait): workspace + both task nodes.
     await expect
       .poll(
         async () => {
@@ -66,5 +65,39 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
         { timeout: 20_000, message: "workspace + task nodes should be projected into the KG" },
       )
       .toBeGreaterThanOrEqual(3);
+
+    // 2) Structural edges: expanding the child reaches its parent (PART_OF) and
+    //    its workspace (IN_WORKSPACE), proving FK→edge projection + traversal.
+    const recent = await client.knowledge.listRecentKnowledgeNodes({ limit: 200 });
+    const childNode = recent.nodes.find((node) => node.sourceType === "task" && node.sourceId === childId);
+    expect(childNode, "child task should be projected as a reference node").toBeDefined();
+
+    const expanded = await client.knowledge.expandKnowledgeNode({ id: childNode!.id, depth: 1 });
+    const neighbourKeys = expanded.nodes.map((node) => `${node.sourceType}:${node.sourceId}`);
+    expect(neighbourKeys).toContain(`task:${parentId}`); // PART_OF → parent
+    expect(neighbourKeys).toContain(`workspace:${wsId}`); // IN_WORKSPACE → workspace
+
+    // 3) Idempotency: re-projecting the parent (via an update event) updates the
+    //    node in place — MERGE keyed on (sourceType, sourceId) never duplicates.
+    const p = parent as unknown as { description: string; status: number };
+    await client.orchestration.updateTask({
+      id: parentId,
+      title: `${marker}-parent-v2`,
+      description: p.description,
+      status: p.status,
+      dependsOn: [],
+    });
+    await expect
+      .poll(
+        async () => {
+          const result = await client.knowledge.listRecentKnowledgeNodes({ limit: 200 });
+          const parentNodes = result.nodes.filter(
+            (node) => node.sourceType === "task" && node.sourceId === parentId,
+          );
+          return parentNodes.length === 1 && (parentNodes[0].label?.includes("parent-v2") ?? false);
+        },
+        { timeout: 20_000, message: "re-projection must update in place, not create a duplicate node" },
+      )
+      .toBe(true);
   });
 });
