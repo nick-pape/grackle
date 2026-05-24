@@ -112,6 +112,9 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
   });
 
   test("transcript chunks are chunked, embedded, and semantically searchable", async ({ stubTask }) => {
+    // Sessions/transcripts are reconciliation-driven (not event-driven), so this
+    // waits for a reconciliation tick + local embedding — beyond the default 30s.
+    test.setTimeout(90_000);
     const { page, client } = stubTask;
     await skipIfKnowledgeUnavailable(client);
 
