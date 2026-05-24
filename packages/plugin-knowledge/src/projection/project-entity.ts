@@ -11,8 +11,11 @@ import {
   upsertEdge,
   removeOutgoingEdges,
   findReferenceNodeBySource,
+  getReferenceNodeProps,
+  updateNode,
   deleteReferenceNodeBySource,
   REFERENCE_SOURCE,
+  type UpsertReferenceNodeInput,
   type EdgeType,
 } from "@grackle-ai/knowledge";
 import { workspaceEnvironmentLinkStore } from "@grackle-ai/database";
@@ -59,6 +62,29 @@ async function applyEdge(spec: EdgeSpec): Promise<boolean> {
   return true;
 }
 
+/**
+ * Upsert an entity reference node and, when its projected text changed, clear the
+ * stale embedding so the off-write-path backfill recomputes it.
+ *
+ * `upsertReferenceNode` sets the embedding only on create, so a re-projection
+ * (e.g. a changed task title, persona prompt/model, or workspace scope) would
+ * otherwise keep the old vector and leave semantic search stale. We detect the
+ * change via the `projectionHash` (compared to the stored one) and reset the
+ * embedding to `[]`; new nodes already start empty. Centralized here so every
+ * caller (event subscriber, reconciliation scan, rebuild) stays consistent.
+ *
+ * @returns The (stable) node ID.
+ */
+async function upsertEntityNode(input: UpsertReferenceNodeInput): Promise<string> {
+  const newHash = input.extraProps?.projectionHash;
+  const existing = await getReferenceNodeProps(input.sourceType, input.sourceId);
+  const nodeId = await upsertReferenceNode(input);
+  if (existing && newHash !== undefined && existing.projectionHash !== newHash) {
+    await updateNode(nodeId, { embedding: [] });
+  }
+  return nodeId;
+}
+
 /** Clear the given outgoing edge types from a node, then upsert the current set. */
 async function reconcileEdges(
   nodeId: string,
@@ -73,7 +99,7 @@ async function reconcileEdges(
 
 /** Project a Task node + its IN_WORKSPACE / PART_OF / DEPENDS_ON edges. */
 export async function projectTask(task: TaskRow): Promise<void> {
-  const nodeId = await upsertReferenceNode(taskToNodeInput(task));
+  const nodeId = await upsertEntityNode(taskToNodeInput(task));
   await reconcileEdges(nodeId, TASK_EDGE_TYPES, taskEdges(task));
 }
 
@@ -96,7 +122,7 @@ export async function projectWorkspace(workspace: WorkspaceRow): Promise<void> {
   const environmentIds = workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(workspace.id);
   // The link set feeds the projection hash (so link changes trigger re-project)
   // and the LINKED_TO edge reconciliation below.
-  const nodeId = await upsertReferenceNode(workspaceToNodeInput(workspace, environmentIds));
+  const nodeId = await upsertEntityNode(workspaceToNodeInput(workspace, environmentIds));
   await reconcileEdges(
     nodeId,
     WORKSPACE_EDGE_TYPES,
@@ -111,7 +137,7 @@ export async function projectWorkspace(workspace: WorkspaceRow): Promise<void> {
  * @param workspaceId - Resolved from the session's task (empty if none).
  */
 export async function projectSession(session: SessionRow, workspaceId: string): Promise<void> {
-  const nodeId = await upsertReferenceNode(sessionToNodeInput(session, workspaceId));
+  const nodeId = await upsertEntityNode(sessionToNodeInput(session, workspaceId));
   await reconcileEdges(nodeId, SESSION_EDGE_TYPES, sessionEdges(session));
 }
 
@@ -131,12 +157,12 @@ export async function linkSessionSpawn(session: SessionRow): Promise<void> {
 
 /** Project a Persona node (no outgoing structural edges). */
 export async function projectPersona(persona: PersonaRow): Promise<void> {
-  await upsertReferenceNode(personaToNodeInput(persona));
+  await upsertEntityNode(personaToNodeInput(persona));
 }
 
 /** Project an Environment node (no outgoing structural edges). */
 export async function projectEnvironment(environment: EnvironmentRow): Promise<void> {
-  await upsertReferenceNode(environmentToNodeInput(environment));
+  await upsertEntityNode(environmentToNodeInput(environment));
 }
 
 /** Remove a Task node and its edges. */
