@@ -128,8 +128,10 @@ async function pruneChunks(liveSessions: Set<string>): Promise<number> {
   for (const chunkSourceId of chunkSourceIds) {
     const sessionId = chunkSourceId.split("#")[0];
     if (!liveSessions.has(sessionId)) {
-      await deleteReferenceNodeBySource(REFERENCE_SOURCE.TRANSCRIPT_CHUNK, chunkSourceId);
-      pruned += 1;
+      const deleted = await deleteReferenceNodeBySource(REFERENCE_SOURCE.TRANSCRIPT_CHUNK, chunkSourceId);
+      if (deleted) {
+        pruned += 1;
+      }
     }
   }
   return pruned;

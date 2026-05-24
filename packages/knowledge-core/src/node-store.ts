@@ -405,7 +405,12 @@ export async function updateNode(
 // Derived-mirror projection helpers (#1258)
 // ---------------------------------------------------------------------------
 
-/** Node property keys managed by the store; never overwritten via `extraProps`. */
+/**
+ * Node property keys managed by the store; never overwritten via `extraProps`.
+ * Includes the explicit top-level inputs (`label`, `workspaceId`, `content`) and
+ * timestamps, so `extraProps` can only add auxiliary props (status, hash, cursor)
+ * — never silently corrupt scope/label/content.
+ */
 const MANAGED_NODE_PROP_KEYS: ReadonlySet<string> = new Set([
   "id",
   "kind",
@@ -413,6 +418,10 @@ const MANAGED_NODE_PROP_KEYS: ReadonlySet<string> = new Set([
   "sourceId",
   "embedding",
   "createdAt",
+  "updatedAt",
+  "label",
+  "workspaceId",
+  "content",
 ]);
 
 const UPSERT_REFERENCE_NODE_CYPHER: string = `

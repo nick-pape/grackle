@@ -47,6 +47,12 @@ export function buildSchemaStatements(dimensions: number = EMBEDDING_DIMENSIONS)
      * (the keystone: one mirror node per source entity). Composite uniqueness
      * ignores nodes lacking either property, so native nodes are unaffected.
      * The constraint provides its own backing index for fast source lookups.
+     *
+     * On a fresh graph (the post-#1258 norm) this always succeeds. If an upgrade
+     * graph somehow holds legacy duplicates, creation fails loudly and init
+     * throws (the plugin runs degraded) rather than silently allowing
+     * nondeterministic MERGEs — recover by wiping Neo4j, after which
+     * startup-if-empty re-projects from SQL + logs (recovery = re-project).
      */
     UNIQUE_SOURCE: `CREATE CONSTRAINT knowledge_node_source_unique IF NOT EXISTS
     FOR (n:${NODE_LABEL}) REQUIRE (n.sourceType, n.sourceId) IS UNIQUE`,
@@ -102,24 +108,6 @@ async function runStatementWithRetry(
       // when an equivalent index exists with a different internal name.
       if (code.includes("EquivalentSchemaRuleAlreadyExists")) {
         logger.debug({ statement: name }, "Schema element already exists, skipping");
-        return;
-      }
-
-      // The UNIQUE_SOURCE constraint can fail to create if the existing graph
-      // already contains duplicate values (e.g. legacy CREATE-based reference
-      // nodes from before #1258). Tolerate that one statement (non-fatal) so the
-      // subsystem still starts; a rebuild() prunes duplicates, after which the
-      // constraint applies on a later startup. Other constraints (e.g.
-      // UNIQUE_NODE_ID) must still fail loudly.
-      if (
-        name === "UNIQUE_SOURCE" &&
-        (code.includes("ConstraintCreationFailed") ||
-          code.includes("ConstraintValidationFailed"))
-      ) {
-        logger.warn(
-          { statement: name },
-          "Uniqueness constraint not created — existing data violates it; run a knowledge rebuild to converge",
-        );
         return;
       }
 

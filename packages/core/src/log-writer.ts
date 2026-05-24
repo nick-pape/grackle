@@ -202,10 +202,13 @@ export function readLogFrom(logPath: string, byteOffset: number): IncrementalLog
   const text = buffer.toString("utf-8", 0, bytesRead);
   const lastNewline = text.lastIndexOf("\n");
   if (lastNewline === -1) {
-    // No complete line within this window — either a partial append, or (rare) a
-    // single line longer than the cap. Consume nothing so we never emit a
-    // partial JSON line; the cursor stays put.
-    return { content: "", nextOffset: start };
+    // No complete line in this window. If we read the whole remaining tail, it's
+    // a partial trailing append — wait for more (cursor unchanged). If the window
+    // was capped (more bytes follow), a single line exceeds the cap; advance past
+    // this window so we never stall forever. The over-long line then spans
+    // windows and surfaces as an unparseable fragment that the chunker skips.
+    const windowWasCapped = bytesRead < size - start;
+    return { content: "", nextOffset: windowWasCapped ? start + bytesRead : start };
   }
 
   const consumed = text.slice(0, lastNewline + 1);
