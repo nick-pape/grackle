@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "KG Phase 2 (#1258): populate the knowledge graph as a derived ecosystem mirror. Projects Workspace/Session/Persona/Environment/Task nodes + structural edges (from SQL FKs) and transcript chunks (from session logs) into Neo4j via idempotent MERGE upserts. Adds an incremental event subscriber, a reconciliation projection phase (session sync + per-session transcript cursor + off-write-path embedding backfill), and a startup-if-empty rebuild() that deterministically re-projects from SQL + logs (recovery = re-project, never replay). knowledge-core gains MERGE upsert primitives, structural EDGE_TYPEs, and a (sourceType,sourceId) uniqueness constraint.",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
