@@ -22,7 +22,7 @@ function applySchema(): void {
       workspace_id     TEXT NOT NULL REFERENCES workspaces(id),
       name             TEXT NOT NULL,
       description      TEXT NOT NULL DEFAULT '',
-      renderer_kind    TEXT NOT NULL DEFAULT 'mcp-app-html',
+      renderer_kind    TEXT NOT NULL DEFAULT 'grackle-react',
       body             TEXT NOT NULL,
       props_schema     TEXT NOT NULL DEFAULT '',
       version          INTEGER NOT NULL DEFAULT 1,

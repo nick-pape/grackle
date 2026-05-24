@@ -256,7 +256,7 @@ export const components = sqliteTable("components", {
     .references(() => workspaces.id),
   name: text("name").notNull(),
   description: text("description").notNull().default(""),
-  rendererKind: text("renderer_kind").notNull().default("mcp-app-html"),
+  rendererKind: text("renderer_kind").notNull().default("grackle-react"),
   body: text("body").notNull(),
   propsSchema: text("props_schema").notNull().default(""),
   version: integer("version").notNull().default(1),
