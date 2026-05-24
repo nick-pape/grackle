@@ -15,21 +15,7 @@ import * as React from "react";
 import { createRoot } from "react-dom/client";
 import { LiveProvider, LivePreview, LiveError } from "react-live";
 import { useApp, useHostStyleVariables } from "@modelcontextprotocol/ext-apps/react";
-import {
-  Button, SplitButton, Callout, Spinner,
-  Skeleton, SkeletonText, SkeletonCard, Tooltip, CopyButton,
-} from "../index.js";
-
-/**
- * Curated, context-free presentational components exposed to agent JSX. Phase 0
- * keeps this a small, safe set — components that require router or `useGrackle()`
- * context are intentionally excluded. The full, discoverable catalog arrives in a
- * later phase (#1265).
- */
-const COMPONENT_SCOPE: Readonly<Record<string, unknown>> = {
-  Button, SplitButton, Callout, Spinner,
-  Skeleton, SkeletonText, SkeletonCard, Tooltip, CopyButton,
-};
+import { COMPONENT_SCOPE } from "./component-scope.js";
 
 /** Identity reported to the host during the MCP Apps guest handshake. */
 const APP_INFO: Readonly<{ name: string; version: string }> = {

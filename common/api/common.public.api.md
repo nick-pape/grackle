@@ -96,6 +96,17 @@ type AttachStreamResponse = Message<"grackle.AttachStreamResponse"> & {
 const AttachStreamResponseSchema: GenMessage<AttachStreamResponse>;
 
 // @public
+export const BUILTIN_COMPONENTS: readonly BuiltinComponent[];
+
+// @public
+export interface BuiltinComponent {
+    description: string;
+    example: string;
+    name: string;
+    propsSchema: string;
+}
+
+// @public
 type ChannelGrant = Message<"grackle.ChannelGrant"> & {
     grantId: string;
     channelUri: string;
@@ -855,6 +866,12 @@ declare namespace grackle {
         GetComponentRequestSchema,
         ListComponentsRequest,
         ListComponentsRequestSchema,
+        SearchComponentsRequest,
+        SearchComponentsRequestSchema,
+        SearchComponentResult,
+        SearchComponentResultSchema,
+        SearchComponentsResponse,
+        SearchComponentsResponseSchema,
         Escalation,
         EscalationSchema,
         EscalationList,
@@ -1415,6 +1432,11 @@ const GrackleOrchestration: GenService<{
         methodKind: "unary";
         input: typeof ListComponentsRequestSchema;
         output: typeof ComponentListSchema;
+    };
+    searchComponents: {
+        methodKind: "unary";
+        input: typeof SearchComponentsRequestSchema;
+        output: typeof SearchComponentsResponseSchema;
     };
     createEscalation: {
         methodKind: "unary";
@@ -1993,6 +2015,34 @@ const ScheduleListSchema: GenMessage<ScheduleList>;
 
 // @public
 const ScheduleSchema: GenMessage<Schedule>;
+
+// @public
+type SearchComponentResult = Message<"grackle.SearchComponentResult"> & {
+    component?: Component;
+    relevanceScore: number;
+    builtin: boolean;
+};
+
+// @public
+const SearchComponentResultSchema: GenMessage<SearchComponentResult>;
+
+// @public
+type SearchComponentsRequest = Message<"grackle.SearchComponentsRequest"> & {
+    query: string;
+    workspaceId: string;
+    limit: number;
+};
+
+// @public
+const SearchComponentsRequestSchema: GenMessage<SearchComponentsRequest>;
+
+// @public
+type SearchComponentsResponse = Message<"grackle.SearchComponentsResponse"> & {
+    results: SearchComponentResult[];
+};
+
+// @public
+const SearchComponentsResponseSchema: GenMessage<SearchComponentsResponse>;
 
 // @public
 type SearchKnowledgeRequest = Message<"grackle.SearchKnowledgeRequest"> & {

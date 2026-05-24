@@ -155,4 +155,37 @@ describe("gRPC component handlers", () => {
     const noBody = (await handlers.registerComponent({ workspaceId: WS1, name: "x", body: "" }).catch((e: unknown) => e)) as ConnectError;
     expect(noBody.code).toBe(Code.InvalidArgument);
   });
+
+  it("searchComponents finds workspace components (builtin:false)", async () => {
+    await handlers.registerComponent({ workspaceId: WS1, name: "revenue-chart", description: "a chart of revenue over time", body: "render(<i/>)" });
+    const res = (await handlers.searchComponents({ query: "chart", workspaceId: WS1, limit: 10 })) as {
+      results: { component?: ComponentInfo; builtin: boolean }[];
+    };
+    const hit = res.results.find((r) => r.component?.name === "revenue-chart");
+    expect(hit).toBeDefined();
+    expect(hit!.builtin).toBe(false);
+  });
+
+  it("searchComponents surfaces a Grackle built-in (builtin:true)", async () => {
+    const res = (await handlers.searchComponents({ query: "button", workspaceId: WS1, limit: 10 })) as {
+      results: { component?: ComponentInfo; builtin: boolean }[];
+    };
+    const btn = res.results.find((r) => r.component?.name === "Button");
+    expect(btn).toBeDefined();
+    expect(btn!.builtin).toBe(true);
+  });
+
+  it("searchComponents is workspace-scoped for authored components", async () => {
+    await handlers.registerComponent({ workspaceId: WS1, name: "ws1-private-thing", description: "scoped", body: "render(<i/>)" });
+    const res = (await handlers.searchComponents({ query: "ws1-private-thing", workspaceId: WS2, limit: 10 })) as {
+      results: { component?: ComponentInfo }[];
+    };
+    expect(res.results.some((r) => r.component?.name === "ws1-private-thing")).toBe(false);
+  });
+
+  it("searchComponents rejects an empty query", async () => {
+    const err = (await handlers.searchComponents({ query: "  ", workspaceId: WS1 }).catch((e: unknown) => e)) as ConnectError;
+    expect(err).toBeInstanceOf(ConnectError);
+    expect(err.code).toBe(Code.InvalidArgument);
+  });
 });
