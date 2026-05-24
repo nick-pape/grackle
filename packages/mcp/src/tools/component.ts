@@ -239,7 +239,7 @@ export const componentTools: ToolDefinition[] = [
       "Search the component registry by keyword (name + description) — your workspace's registered components PLUS Grackle's built-in components. Use this to find an existing component to reuse before authoring a new one. Results with builtin:true are Grackle components you compose directly in JSX (e.g. <Button/>); others you render with component_render.",
     inputSchema: z.object({
       query: z.string().describe("Keyword to match against component names and descriptions."),
-      limit: z.number().int().positive().optional().describe("Maximum number of results (default 10)."),
+      limit: z.number().int().positive().optional().describe("Maximum results to return (must be >= 1; omit for the default of 10)."),
       workspaceId: z.string().optional().describe("Workspace ID (auto-injected from session context)."),
     }),
     rpcMethod: "searchComponents",

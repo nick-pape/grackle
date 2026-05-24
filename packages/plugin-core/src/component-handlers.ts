@@ -114,6 +114,14 @@ const COMPONENT_SEARCH_KEYS: FuzzyKey[] = [
 /** Default max results when the request leaves `limit` unset. */
 const DEFAULT_COMPONENT_SEARCH_LIMIT = 10;
 
+/**
+ * Sentinel id prefix for built-in components in search results. Built-ins are not
+ * DB rows (no real id), so we stamp a stable, clearly non-routable id like
+ * `builtin:Button` to keep the `Component` shape self-describing — a `getComponent`
+ * call with such an id cleanly resolves to NotFound rather than acting on an empty id.
+ */
+const BUILTIN_COMPONENT_ID_PREFIX = "builtin:";
+
 /** A unit fed to the fuzzy matcher: a workspace component or a built-in, with its proto form. */
 interface SearchableComponent {
   name: string;
@@ -151,6 +159,7 @@ export async function searchComponents(req: grackle.SearchComponentsRequest): Pr
       description: b.description,
       builtin: true,
       component: create(grackle.ComponentSchema, {
+        id: `${BUILTIN_COMPONENT_ID_PREFIX}${b.name}`,
         name: b.name,
         description: b.description,
         rendererKind: "grackle-react",

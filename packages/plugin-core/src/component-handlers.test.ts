@@ -173,6 +173,8 @@ describe("gRPC component handlers", () => {
     const btn = res.results.find((r) => r.component?.name === "Button");
     expect(btn).toBeDefined();
     expect(btn!.builtin).toBe(true);
+    // Built-ins carry a self-describing sentinel id (not a real DB row).
+    expect(btn!.component?.id).toBe("builtin:Button");
   });
 
   it("searchComponents is workspace-scoped for authored components", async () => {
