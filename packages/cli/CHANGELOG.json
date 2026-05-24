@@ -2,6 +2,23 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.116.0",
+      "tag": "@grackle-ai/cli_v0.116.0",
+      "date": "Sun, 24 May 2026 00:00:41 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Hard-cut the authored-knowledge layer (#1257): remove findings entirely (proto RPCs/messages, gRPC handlers, MCP `finding_post`/`finding_list` tools, CLI `findings` command, web UI, orchestrator prompt snapshot, and the `EVENT_TYPE_FINDING`/`AgentEventType` 'finding' event path) and the KG authored-write surface (entity-sync + `knowledge_create_node`). The KG read surface (`knowledge_search`/`knowledge_get_node`, `/knowledge` page) is retained but unpopulated until Phase 2. The dormant `findings` table is left in place (no migration)."
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Introduce the SequencedLog<T> / LogSink<T> substrate in @grackle-ai/common and route the domain_events write path in @grackle-ai/core through it (behavior-preserving). RFC #1264 Phase 0."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.115.2",
       "tag": "@grackle-ai/cli_v0.115.2",
       "date": "Sat, 23 May 2026 21:02:48 GMT",
