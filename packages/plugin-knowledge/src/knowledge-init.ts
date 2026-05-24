@@ -15,9 +15,11 @@ import {
   closeNeo4j,
   healthCheck as neo4jHealthCheck,
   createLocalEmbedder,
+  listRecentNodes,
   type Embedder,
 } from "@grackle-ai/knowledge";
 import type { PluginContext } from "@grackle-ai/plugin-sdk";
+import { rebuild } from "./projection/rebuild.js";
 
 /** Re-export Neo4j health check for use by the reconciliation health phase. */
 export { neo4jHealthCheck };
@@ -54,6 +56,17 @@ export async function initKnowledge(ctx: PluginContext): Promise<() => Promise<v
     await initSchema(embedder.dimensions);
 
     knowledgeEmbedder = embedder;
+
+    // Startup-if-empty: a fresh or wiped graph re-projects itself from SQL +
+    // session logs (recovery = re-project, never replay). Runs in the background
+    // so a large rebuild (CPU-bound embeddings) doesn't block plugin init.
+    const recent = await listRecentNodes(1);
+    if (recent.nodes.length === 0) {
+      ctx.logger.info("Knowledge graph is empty — starting background rebuild from SQL + logs");
+      void rebuild(embedder).catch((err: unknown) => {
+        ctx.logger.error({ err }, "Knowledge graph rebuild failed");
+      });
+    }
 
     ctx.logger.info("Knowledge graph subsystem ready");
 

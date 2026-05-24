@@ -31,11 +31,21 @@ const {
 vi.mock("./knowledge-init.js", () => ({
   initKnowledge: mockInitKnowledge,
   neo4jHealthCheck: vi.fn().mockResolvedValue(true),
+  getKnowledgeEmbedder: vi.fn().mockReturnValue(undefined),
 }));
 
 vi.mock("./knowledge-health.js", () => ({
   createKnowledgeHealthPhase: mockCreateKnowledgeHealthPhase,
   markKnowledgeInitFailed: mockMarkKnowledgeInitFailed,
+  isNeo4jHealthy: vi.fn().mockReturnValue(true),
+}));
+
+vi.mock("./knowledge-projection-phase.js", () => ({
+  createKnowledgeProjectionPhase: vi.fn().mockReturnValue({ name: "knowledge-projection", execute: vi.fn() }),
+}));
+
+vi.mock("./entity-sync.js", () => ({
+  createEntitySyncSubscriber: vi.fn().mockReturnValue({ dispose: vi.fn() }),
 }));
 
 vi.mock("./knowledge-handlers.js", () => ({
@@ -158,20 +168,26 @@ describe("knowledge plugin grpcHandlers", () => {
 });
 
 describe("knowledge plugin reconciliationPhases", () => {
-  it("returns exactly 1 phase named 'knowledge-health'", () => {
+  it("returns the health and projection phases", () => {
     const plugin = createKnowledgePlugin();
     const ctx = makeCtx();
     const phases = plugin.reconciliationPhases!(ctx);
-    expect(phases).toHaveLength(1);
-    expect(phases[0].name).toBe("knowledge-health");
+    expect(phases).toHaveLength(2);
+    const names = phases.map((phase) => phase.name);
+    expect(names).toContain("knowledge-health");
+    expect(names).toContain("knowledge-projection");
     expect(mockCreateKnowledgeHealthPhase).toHaveBeenCalled();
   });
 });
 
-describe("knowledge plugin has no eventSubscribers", () => {
-  it("does not contribute event subscribers (graph is derived, not synced)", () => {
+describe("knowledge plugin eventSubscribers", () => {
+  it("contributes the entity-sync subscriber for incremental projection (#1258)", () => {
     const plugin = createKnowledgePlugin();
-    expect(plugin.eventSubscribers).toBeUndefined();
+    const ctx = makeCtx();
+    expect(plugin.eventSubscribers).toBeDefined();
+    const subscribers = plugin.eventSubscribers!(ctx);
+    expect(subscribers).toHaveLength(1);
+    expect(typeof subscribers[0].dispose).toBe("function");
   });
 });
 

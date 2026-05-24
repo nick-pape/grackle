@@ -21,7 +21,9 @@ export function knowledgeNodeToProto(node: KnowledgeNode): grackle.KnowledgeNode
     label: node.kind === "reference" ? node.label : "",
     category: node.kind === "native" ? node.category : "",
     title: node.kind === "native" ? node.title : "",
-    content: node.kind === "native" ? node.content : "",
+    // Reference nodes also carry content (e.g. transcript-chunk text added in
+    // #1258); surface it so search/get responses expose the chunk body.
+    content: node.kind === "reference" ? (node.content ?? "") : node.content,
     tags: node.kind === "native" ? node.tags : [],
   });
 }

@@ -45,8 +45,13 @@ describe("SCHEMA_STATEMENTS", () => {
     expect(keys).toContain("UNIQUE_NODE_ID");
     expect(keys).toContain("INDEX_KIND");
     expect(keys).toContain("INDEX_WORKSPACE");
-    expect(keys).toContain("INDEX_SOURCE");
+    expect(keys).toContain("UNIQUE_SOURCE");
     expect(keys).toContain("VECTOR_INDEX");
+  });
+
+  it("enforces uniqueness on reference-node source identity", () => {
+    expect(SCHEMA_STATEMENTS.UNIQUE_SOURCE).toContain("CONSTRAINT");
+    expect(SCHEMA_STATEMENTS.UNIQUE_SOURCE).toContain("(n.sourceType, n.sourceId) IS UNIQUE");
   });
 
   it("all statements use IF NOT EXISTS for idempotency", () => {

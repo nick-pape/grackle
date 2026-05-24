@@ -209,6 +209,9 @@ export async function startGrackleStack(options: GrackleStackOptions = {}): Prom
         GRACKLE_WEB_DIR: join(repoRoot, "packages/web/dist"),
         GRACKLE_SKIP_LOCAL_POWERLINE: "1",
         GRACKLE_SKIP_ROOT_AUTOSTART: "1",
+        // Fast reconciliation tick so reconciliation-driven outcomes (dispatch,
+        // KG session/transcript projection) settle quickly in tests.
+        GRACKLE_RECONCILIATION_TICK_MS: "2000",
         // Only enable knowledge for the knowledge project to avoid Neo4j
         // contention and reference-node sync overhead in other tests.
         GRACKLE_KNOWLEDGE_ENABLED: options.knowledgeEnabled ? "true" : "",

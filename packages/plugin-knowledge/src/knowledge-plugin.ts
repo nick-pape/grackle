@@ -13,8 +13,14 @@ import { logger } from "./logger.js";
 import {
   initKnowledge,
   neo4jHealthCheck,
+  getKnowledgeEmbedder,
 } from "./knowledge-init.js";
-import { createKnowledgeHealthPhase, markKnowledgeInitFailed } from "./knowledge-health.js";
+import {
+  createKnowledgeHealthPhase,
+  markKnowledgeInitFailed,
+  isNeo4jHealthy,
+} from "./knowledge-health.js";
+import { createKnowledgeProjectionPhase } from "./knowledge-projection-phase.js";
 import {
   searchKnowledge,
   getKnowledgeNode,
@@ -22,6 +28,7 @@ import {
   listRecentKnowledgeNodes,
 } from "./knowledge-handlers.js";
 import { knowledgeMcpTools } from "./mcp-tools.js";
+import { createEntitySyncSubscriber } from "./entity-sync.js";
 
 /**
  * Create the knowledge plugin that contributes Neo4j-backed knowledge graph
@@ -72,7 +79,13 @@ export function createKnowledgePlugin(): GracklePlugin {
 
     reconciliationPhases: () => [
       createKnowledgeHealthPhase({ healthCheck: neo4jHealthCheck }),
+      createKnowledgeProjectionPhase({
+        getEmbedder: getKnowledgeEmbedder,
+        isHealthy: isNeo4jHealthy,
+      }),
     ],
+
+    eventSubscribers: (ctx) => [createEntitySyncSubscriber(ctx)],
 
     mcpTools: () => knowledgeMcpTools,
   };
