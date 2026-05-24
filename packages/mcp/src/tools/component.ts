@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { Ajv } from "ajv";
 import type { GrackleClients, ToolDefinition, ToolResult } from "../tool-registry.js";
 import type { AuthContext } from "@grackle-ai/auth";
 import { jsonResult } from "../result-helpers.js";
@@ -12,11 +11,8 @@ const HTML_RENDERER_KIND: string = "mcp-app-html";
 /** Renderer kind for the Grackle React runtime (JSX via react-live, #1268). */
 const REACT_RENDERER_KIND: string = "grackle-react";
 
-/**
- * Shared JSON-Schema validator for component `propsSchema`s. `strict: false`
- * accepts any well-formed JSON Schema (we don't constrain agents to a dialect).
- */
-const ajv: Ajv = new Ajv({ strict: false, allErrors: true });
+/** A JSON Schema object (or boolean), as accepted by zod's `fromJSONSchema`. */
+type JsonSchemaInput = Parameters<typeof z.fromJSONSchema>[0];
 
 /** Build an INVALID_ARGUMENT tool error result. */
 function invalidArgument(message: string): ToolResult {
@@ -57,7 +53,7 @@ function propsSchemaError(propsSchema: string | undefined): string | undefined {
     return "propsSchema must be a JSON Schema object (e.g. {\"type\":\"object\",\"properties\":{...}})";
   }
   try {
-    ajv.compile(parsed);
+    z.fromJSONSchema(parsed as JsonSchemaInput);
   } catch (err) {
     return `propsSchema is not a valid JSON Schema: ${err instanceof Error ? err.message : String(err)}`;
   }
@@ -80,16 +76,17 @@ function propsValidationError(propsSchema: string, props: Record<string, unknown
     // A malformed stored schema is validated at register time; don't block renders on it.
     return undefined;
   }
-  let validate: ReturnType<typeof ajv.compile>;
+  let zodSchema: z.ZodType;
   try {
-    validate = ajv.compile(schema as object);
+    zodSchema = z.fromJSONSchema(schema as JsonSchemaInput);
   } catch {
     return undefined; // unusable stored schema → don't block the render
   }
-  if (validate(props)) {
+  const result = zodSchema.safeParse(props);
+  if (result.success) {
     return undefined;
   }
-  return ajv.errorsText(validate.errors, { dataVar: "props" });
+  return z.prettifyError(result.error);
 }
 
 /**

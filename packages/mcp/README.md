@@ -261,7 +261,7 @@ Query aggregated token usage and cost data.
 | `component_show` | Render a one-off React/JSX component inline against the Grackle component library (no persistence). `source` calls `render(<Component {...props}/>)`; `React`, `props`, and Grackle components are in scope. | `source` (string), `props` (object, optional) |
 | `widget_show` | Render a one-off raw-HTML body inline, without persisting it. | `body` (string), `props` (object, optional) |
 
-Components are **workspace-scoped**: a session may only register/render components in its own workspace (the `workspaceId` is taken from the session's scoped token). A component's `propsSchema` (a JSON Schema) is validated at register, and render-time `props` are validated against it (via `ajv`). Renderers run in the cross-origin sandbox: `mcp-app-html` allows inline scripts (`script-src 'unsafe-inline'`); `grackle-react` runs the React runtime that transpiles + evaluates JSX (`script-src 'unsafe-eval'`) — both kept safe by the iframe origin isolation + restricted `connect-src`.
+Components are **workspace-scoped**: a session may only register/render components in its own workspace (the `workspaceId` is taken from the session's scoped token). A component's `propsSchema` (a JSON Schema) is validated at register, and render-time `props` are validated against it (via zod's `fromJSONSchema`). Renderers run in the cross-origin sandbox: `mcp-app-html` allows inline scripts (`script-src 'unsafe-inline'`); `grackle-react` runs the React runtime that transpiles + evaluates JSX (`script-src 'unsafe-eval'`) — both kept safe by the iframe origin isolation + restricted `connect-src`.
 
 ---
 
