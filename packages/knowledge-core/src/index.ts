@@ -43,6 +43,7 @@ export {
   listNodesMissingEmbedding,
   listReferenceSourceIds,
   deleteReferenceNodesByPrefix,
+  pruneReferenceNodesNotIn,
   recordToNode,
   recordToEdge,
 } from "./node-store.js";

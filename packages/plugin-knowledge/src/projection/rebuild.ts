@@ -20,6 +20,7 @@ import {
   REFERENCE_SOURCE,
   listReferenceSourceIds,
   deleteReferenceNodeBySource,
+  pruneReferenceNodesNotIn,
   type ReferenceSource,
   type Embedder,
   logger,
@@ -115,14 +116,7 @@ export async function rebuild(embedder: Embedder): Promise<RebuildResult> {
 async function pruneOrphans(liveBySource: Record<string, string[]>): Promise<number> {
   let pruned = 0;
   for (const [sourceType, liveIds] of Object.entries(liveBySource)) {
-    const live = new Set(liveIds);
-    const existing = await listReferenceSourceIds(sourceType as ReferenceSource);
-    for (const sourceId of existing) {
-      if (!live.has(sourceId)) {
-        await deleteReferenceNodeBySource(sourceType as ReferenceSource, sourceId);
-        pruned += 1;
-      }
-    }
+    pruned += await pruneReferenceNodesNotIn(sourceType as ReferenceSource, liveIds);
   }
   return pruned;
 }

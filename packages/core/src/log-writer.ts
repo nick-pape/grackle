@@ -160,6 +160,14 @@ export interface IncrementalLogRead {
 }
 
 /**
+ * Max bytes {@link readLogFrom} reads per call. Bounds memory + blocking time
+ * even when a large tail has accumulated (e.g. first pass on a big log): each
+ * call advances `nextOffset` by at most this much, so callers make incremental
+ * progress across successive passes rather than reading the whole tail at once.
+ */
+const MAX_INCREMENTAL_READ_BYTES: number = 1_048_576; // 1 MiB
+
+/**
  * Read only the bytes appended to a session's JSONL log after `byteOffset`.
  *
  * O(new bytes): uses `statSync` + a positioned `readSync` from the offset
@@ -180,7 +188,8 @@ export function readLogFrom(logPath: string, byteOffset: number): IncrementalLog
     return { content: "", nextOffset: start };
   }
 
-  const length = size - start;
+  // Cap the read so a large accumulated tail is processed over several passes.
+  const length = Math.min(size - start, MAX_INCREMENTAL_READ_BYTES);
   const buffer = Buffer.allocUnsafe(length);
   const fd = openSync(streamPath, "r");
   let bytesRead: number;
@@ -193,7 +202,9 @@ export function readLogFrom(logPath: string, byteOffset: number): IncrementalLog
   const text = buffer.toString("utf-8", 0, bytesRead);
   const lastNewline = text.lastIndexOf("\n");
   if (lastNewline === -1) {
-    // No complete new line yet (partial append); consume nothing.
+    // No complete line within this window — either a partial append, or (rare) a
+    // single line longer than the cap. Consume nothing so we never emit a
+    // partial JSON line; the cursor stays put.
     return { content: "", nextOffset: start };
   }
 

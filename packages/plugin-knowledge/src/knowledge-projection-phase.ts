@@ -2,16 +2,24 @@
  * Reconciliation phase that keeps the derived KG mirror converged (#1258).
  *
  * The correctness backbone of the projection. Each tick (gated on Neo4j health
- * + an available embedder, bounded per pass):
- *   1. **Session sync** — project changed sessions (hash-gated) + their edges;
- *      prune sessions (and their transcript chunks) whose row vanished.
- *   2. **Transcript sync** — incrementally chunk new log content per session
- *      (via the per-session cursor).
- *   3. **Embed backfill** — embed a bounded batch of nodes that were upserted
- *      structurally with no embedding (keeps embeddings off the write path).
+ * + an available embedder):
+ *   1. **Entity sync** — re-project changed task/workspace/persona/environment
+ *      rows (hash-gated; unchanged rows are skipped) + bulk-prune vanished ones.
+ *   2. **Session sync** — the same for sessions, plus incremental transcript
+ *      chunking (the per-session byte cursor reads at most one bounded window of
+ *      new log content per pass).
+ *   3. **Embed backfill** — embed a bounded batch (`EMBED_BACKFILL_BATCH`) of
+ *      nodes upserted structurally with no embedding (keeps embedding off the
+ *      write path).
  *
- * Entity nodes (task/workspace/persona/environment) are projected low-latency by
- * the event subscriber; this phase guarantees eventual convergence for all.
+ * Entity nodes are also projected low-latency by the event subscriber; this
+ * phase guarantees eventual convergence for all (e.g. events missed while Neo4j
+ * was down).
+ *
+ * Bounding: the expensive work is bounded per tick — transcript reads are
+ * byte-capped and embedding is batch-limited. Entity/session reconciliation does
+ * a hash-gated scan of all rows each tick (cheap reads; only changed rows write),
+ * which is acceptable for current entity volumes.
  *
  * @module
  */
@@ -23,7 +31,7 @@ import {
   listReferenceSourceIds,
   listNodesMissingEmbedding,
   updateNode,
-  deleteReferenceNodeBySource,
+  pruneReferenceNodesNotIn,
   REFERENCE_SOURCE,
   type Embedder,
   type KnowledgeNode,
@@ -40,7 +48,6 @@ import {
 } from "./projection/node-mappers.js";
 import {
   projectSession,
-  unprojectSession,
   linkSessionSpawn,
   projectEnvironment,
   projectPersona,
@@ -104,11 +111,13 @@ async function syncSessions(embedder: Embedder): Promise<void> {
     await linkSessionSpawn(session);
   }
 
-  // Prune sessions (and their chunks) whose row no longer exists.
-  for (const sourceId of await listReferenceSourceIds(REFERENCE_SOURCE.SESSION)) {
-    if (!liveSessionIds.has(sourceId)) {
-      await unprojectSession(sourceId);
-      await unprojectSessionTranscript(sourceId);
+  // Prune sessions whose row no longer exists, plus their transcript chunks.
+  const existingSessionIds = await listReferenceSourceIds(REFERENCE_SOURCE.SESSION);
+  const vanished = existingSessionIds.filter((id) => !liveSessionIds.has(id));
+  if (vanished.length > 0) {
+    await pruneReferenceNodesNotIn(REFERENCE_SOURCE.SESSION, [...liveSessionIds]);
+    for (const sessionId of vanished) {
+      await unprojectSessionTranscript(sessionId);
     }
   }
 }
@@ -135,11 +144,7 @@ async function syncEntity<T>(
       await project(row);
     }
   }
-  for (const sourceId of await listReferenceSourceIds(sourceType)) {
-    if (!liveIds.has(sourceId)) {
-      await deleteReferenceNodeBySource(sourceType, sourceId);
-    }
-  }
+  await pruneReferenceNodesNotIn(sourceType, [...liveIds]);
 }
 
 async function backfillEmbeddings(embedder: Embedder): Promise<void> {

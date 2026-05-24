@@ -583,3 +583,34 @@ export async function deleteReferenceNodesByPrefix(
     }
   }
 }
+
+/**
+ * Bulk-delete reference nodes of a source type whose `sourceId` is NOT in the
+ * given live set, in a single Cypher `DETACH DELETE`.
+ *
+ * Used by rebuild/reconciliation to prune mirror nodes whose source row no
+ * longer exists — one round-trip instead of one delete per orphan.
+ *
+ * @returns The number of nodes deleted.
+ */
+export async function pruneReferenceNodesNotIn(
+  sourceType: ReferenceSource,
+  liveSourceIds: string[],
+): Promise<number> {
+  const session = getSession();
+  try {
+    const result = await session.run(
+      `MATCH (n:${NODE_LABEL} {kind: 'reference', sourceType: $sourceType})
+       WHERE NOT n.sourceId IN $liveSourceIds
+       DETACH DELETE n`,
+      { sourceType, liveSourceIds },
+    );
+    return result.summary.counters.updates().nodesDeleted;
+  } finally {
+    try {
+      await session.close();
+    } catch (closeError) {
+      logger.warn({ err: closeError }, "Failed to close session after pruneReferenceNodesNotIn");
+    }
+  }
+}
