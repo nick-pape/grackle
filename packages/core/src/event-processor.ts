@@ -57,6 +57,12 @@ export interface WidgetEventPayload {
   widgetId?: string;
   /** Registry version, when known. */
   version?: number;
+  /**
+   * Resolved registry components this render composes from, in eval order
+   * (deepest first). The grackle-react runtime evaluates each into scope before
+   * the main body so it can reference them as JSX tags (#1270 composition).
+   */
+  components?: Array<{ name: string; body: string }>;
 }
 
 /** Callback that pushes a widget event into a session's stream (injected into the MCP server). */

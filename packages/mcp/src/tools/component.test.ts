@@ -15,10 +15,12 @@ const componentRender = tool("component_render");
 const noClients = {} as GrackleClients;
 
 /** Build a mock GrackleClients whose orchestration client returns a canned component. */
-function clientsReturning(component: Record<string, unknown>): GrackleClients {
+function clientsReturning(component: Record<string, unknown>, dependencies: Record<string, unknown>[] = []): GrackleClients {
   return {
     orchestration: {
       getComponent: async () => component,
+      // component_render resolves via the graph RPC (#1270); root = the canned component.
+      resolveComponentGraph: async () => ({ root: component, dependencies }),
       registerComponent: async (req: Record<string, unknown>) => ({ id: "c-new", name: req.name, version: 1 }),
     },
   } as unknown as GrackleClients;
@@ -233,5 +235,28 @@ describe("buildComponentRenderResult (#1272 shared render helper)", () => {
     expect(d.allowInlineScripts).toBe(true);
     expect(d.allowUnsafeEval).toBe(false);
     expect(d.resourceUri).toBe("ui://grackle/c2");
+  });
+
+  test("threads resolved dependencies into the descriptor (#1270)", () => {
+    const deps = [
+      create(grackle.ComponentSchema, { name: "Child", body: "render(<Spinner/>)" }),
+    ];
+    const d = descriptorOf(buildComponentRenderResult(component({}), {}, deps));
+    expect(d.components).toEqual([{ name: "Child", body: "render(<Spinner/>)" }]);
+  });
+
+  test("omits components when there are no dependencies", () => {
+    const d = descriptorOf(buildComponentRenderResult(component({}), {}));
+    expect(d.components).toBeUndefined();
+  });
+});
+
+describe("component_render composition (#1270)", () => {
+  test("includes the resolved dependency bundle in the descriptor", async () => {
+    const root = { id: "c1", name: "Parent", rendererKind: "grackle-react", body: "render(<Child/>)", propsSchema: "", version: 1 };
+    const deps = [{ name: "Child", body: "render(<Spinner/>)" }];
+    const result = await componentRender.handler({ name: "Parent" }, clientsReturning(root, deps));
+    const d = descriptorOf(result);
+    expect(d.components).toEqual([{ name: "Child", body: "render(<Spinner/>)" }]);
   });
 });

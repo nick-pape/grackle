@@ -232,6 +232,8 @@ export function EventRenderer({ event, toolUseCtx, settled, sandboxProxyUrl }: P
         csp?: McpUiResourceCsp & { allowInlineScripts?: boolean; allowUnsafeEval?: boolean };
         toolInput?: Record<string, unknown>;
         toolResult?: CallToolResult;
+        // Resolved registry dependencies for composition (#1270), eval order.
+        components?: Array<{ name: string; body: string }>;
       } = {};
       try {
         payload = JSON.parse(event.content) as typeof payload;
@@ -257,7 +259,7 @@ export function EventRenderer({ event, toolUseCtx, settled, sandboxProxyUrl }: P
               widgetHtml={bootstrap}
               sandboxProxyUrl={sandboxProxyUrl}
               csp={payload.csp}
-              toolInput={{ source: payload.html, props: payload.toolInput ?? {} }}
+              toolInput={{ source: payload.html, props: payload.toolInput ?? {}, components: payload.components ?? [] }}
             />
           </Suspense>
         );

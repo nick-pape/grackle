@@ -241,4 +241,59 @@ describe("gRPC component handlers", () => {
     const promoted = (await handlers.setComponentPromotion({ id: created.id, workspaceId: WS1 })) as ComponentInfo;
     expect(promoted.promoted).toBe(true);
   });
+
+  // ── resolveComponentGraph (#1270 composition) ──
+  interface GraphResult { root?: ComponentInfo; dependencies: ComponentInfo[] }
+  const depNames = (r: GraphResult): string[] => r.dependencies.map((d) => d.name);
+
+  it("resolveComponentGraph resolves a one-level reference (root + deps)", async () => {
+    await handlers.registerComponent({ workspaceId: WS1, name: "Child", body: "render(<Spinner/>)" });
+    await handlers.registerComponent({ workspaceId: WS1, name: "Parent", body: "render(<Child/>)" });
+    const res = (await handlers.resolveComponentGraph({ name: "Parent", workspaceId: WS1 })) as GraphResult;
+    expect(res.root?.name).toBe("Parent");
+    expect(depNames(res)).toEqual(["Child"]);
+  });
+
+  it("resolveComponentGraph resolves transitively in post-order (deepest first)", async () => {
+    await handlers.registerComponent({ workspaceId: WS1, name: "GC", body: "render(<Spinner/>)" });
+    await handlers.registerComponent({ workspaceId: WS1, name: "GB", body: "render(<GC/>)" });
+    await handlers.registerComponent({ workspaceId: WS1, name: "GA", body: "render(<GB/>)" });
+    const res = (await handlers.resolveComponentGraph({ name: "GA", workspaceId: WS1 })) as GraphResult;
+    expect(depNames(res)).toEqual(["GC", "GB"]);
+  });
+
+  it("resolveComponentGraph excludes built-ins and unknown references", async () => {
+    await handlers.registerComponent({ workspaceId: WS1, name: "UsesBuiltins", body: "render(<div><Button/><DoesNotExist/></div>)" });
+    const res = (await handlers.resolveComponentGraph({ name: "UsesBuiltins", workspaceId: WS1 })) as GraphResult;
+    expect(res.dependencies).toHaveLength(0);
+  });
+
+  it("resolveComponentGraph skips non-grackle-react dependencies", async () => {
+    await handlers.registerComponent({ workspaceId: WS1, name: "RawDep", rendererKind: "mcp-app-html", body: "<div>raw</div>" });
+    await handlers.registerComponent({ workspaceId: WS1, name: "UsesRaw", body: "render(<RawDep/>)" });
+    const res = (await handlers.resolveComponentGraph({ name: "UsesRaw", workspaceId: WS1 })) as GraphResult;
+    expect(res.dependencies).toHaveLength(0);
+  });
+
+  it("resolveComponentGraph terminates on a cycle, each component once", async () => {
+    await handlers.registerComponent({ workspaceId: WS1, name: "CycA", body: "render(<CycB/>)" });
+    await handlers.registerComponent({ workspaceId: WS1, name: "CycB", body: "render(<CycA/>)" });
+    const res = (await handlers.resolveComponentGraph({ name: "CycA", workspaceId: WS1 })) as GraphResult;
+    // The root (CycA) isn't a dependency of itself; CycB resolves once.
+    expect(depNames(res)).toEqual(["CycB"]);
+  });
+
+  it("resolveComponentGraph is workspace-scoped (no cross-workspace references)", async () => {
+    await handlers.registerComponent({ workspaceId: WS2, name: "OtherWsChild", body: "render(<Spinner/>)" });
+    await handlers.registerComponent({ workspaceId: WS1, name: "WantsOtherWs", body: "render(<OtherWsChild/>)" });
+    const res = (await handlers.resolveComponentGraph({ name: "WantsOtherWs", workspaceId: WS1 })) as GraphResult;
+    expect(res.dependencies).toHaveLength(0);
+  });
+
+  it("resolveComponentGraph resolves from a raw source (render-by-source)", async () => {
+    await handlers.registerComponent({ workspaceId: WS1, name: "SrcChild", body: "render(<Spinner/>)" });
+    const res = (await handlers.resolveComponentGraph({ workspaceId: WS1, source: "render(<SrcChild/>)" })) as GraphResult;
+    expect(res.root?.id ?? "").toBe("");
+    expect(depNames(res)).toEqual(["SrcChild"]);
+  });
 });

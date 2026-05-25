@@ -80,6 +80,24 @@ const PROMOTE_SCENARIO = JSON.stringify({
   ],
 });
 
+// ── Test 6: cross-component composition — Parent references registered Child (#1270) ──
+const COMPOSE_SCENARIO = JSON.stringify({
+  steps: [
+    { emit: "text", content: "Registering composed components:" },
+    {
+      mcp_call: "component_register",
+      args: {
+        name: "Child",
+        source: "render(<Button>{props.label}</Button>)",
+        propsSchema: '{"type":"object","properties":{"label":{"type":"string"}}}',
+      },
+    },
+    // Parent references the registered Child by JSX tag; the server resolves + bundles it.
+    { mcp_call: "component_register", args: { name: "Parent", source: 'render(<div><Child label="Nested"/></div>)' } },
+    { mcp_call: "component_render", args: { name: "Parent" } },
+  ],
+});
+
 test.describe("Component registry (#1269)", { tag: ["@persona"] }, () => {
   test("component_register + component_render renders a React component by name", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
@@ -166,5 +184,24 @@ test.describe("Component registry (#1269)", { tag: ["@persona"] }, () => {
     await expect(page.getByTestId("mcp-app-widget")).toBeVisible({ timeout: 15_000 });
     const frame = page.frameLocator('[data-testid="mcp-app-widget"]').frameLocator("iframe");
     await expect(frame.getByRole("button", { name: "Promoted via tool" })).toBeVisible({ timeout: 25_000 });
+  });
+
+  test("component_render composes a referenced registry component (#1270)", async ({ appPage, grackle: { client } }) => {
+    const page = appPage;
+    const wsId = await createWorkspace(client, "component-compose-e2e-proj");
+    await createTaskDirect(client, wsId, "compose components", {
+      environmentId: "test-local",
+      description: COMPOSE_SCENARIO,
+    });
+    await navigateToTask(page, "compose components");
+    await patchWsForStubMcpRuntime(page);
+    await page.getByTestId("task-header-start").click();
+
+    await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });
+    // Parent's body referenced <Child/>; the server resolved + bundled Child, and the
+    // runtime composed it, so the nested Button (from Child) paints in the sandbox.
+    await expect(page.getByTestId("mcp-app-widget")).toBeVisible({ timeout: 15_000 });
+    const frame = page.frameLocator('[data-testid="mcp-app-widget"]').frameLocator("iframe");
+    await expect(frame.getByRole("button", { name: "Nested" })).toBeVisible({ timeout: 25_000 });
   });
 });

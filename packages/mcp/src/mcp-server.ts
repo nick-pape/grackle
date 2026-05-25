@@ -245,6 +245,7 @@ async function createMcpServerInstance(
           toolResult: result,
           ...(dynamic.widgetId ? { widgetId: dynamic.widgetId } : {}),
           ...(dynamic.version !== undefined ? { version: dynamic.version } : {}),
+          ...(dynamic.components ? { components: dynamic.components } : {}),
         });
       } else if (uiResourceUri) {
         // Static Grackle-served widget (show_hello_widget, T2/T3).
@@ -343,7 +344,20 @@ async function createMcpServerInstance(
       };
     }
     logger.info({ tool: name, componentId: match.id }, "Executing dynamic render tool: %s", name);
-    const result = buildComponentRenderResult(match, props);
+    // Resolve the component's transitive registry references for composition (#1270).
+    let dependencies: grackle.Component[] = [];
+    try {
+      const resolved = await grpcClients.orchestration.resolveComponentGraph({
+        id: match.id,
+        name: "",
+        workspaceId: authContext.workspaceId,
+        source: "",
+      });
+      dependencies = resolved.dependencies;
+    } catch (err) {
+      logger.warn({ tool: name, componentId: match.id, err }, "Dependency resolution failed; rendering without composition");
+    }
+    const result = buildComponentRenderResult(match, props, dependencies);
     captureWidgetRender(name, undefined, result, props);
     return result as CallToolResult;
   }

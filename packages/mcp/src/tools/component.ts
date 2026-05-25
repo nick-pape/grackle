@@ -96,7 +96,11 @@ export function propsValidationError(propsSchema: string, props: Record<string, 
  * `render_<name>` dispatcher ("many tools, one resource"). Props are NOT validated
  * here — callers validate against `propsSchema` (via {@link propsValidationError}) first.
  */
-export function buildComponentRenderResult(c: grackle.Component, props: Record<string, unknown>): ToolResult {
+export function buildComponentRenderResult(
+  c: grackle.Component,
+  props: Record<string, unknown>,
+  dependencies: readonly grackle.Component[] = [],
+): ToolResult {
   const kind: string = c.rendererKind || REACT_RENDERER_KIND;
   const descriptor: WidgetRenderDescriptor = {
     rendererKind: kind,
@@ -107,6 +111,10 @@ export function buildComponentRenderResult(c: grackle.Component, props: Record<s
     widgetId: c.id,
     version: c.version,
     resourceUri: `ui://grackle/${c.id}`,
+    // Composed registry dependencies (#1270), in eval order (deepest first).
+    ...(dependencies.length > 0
+      ? { components: dependencies.map((d) => ({ name: d.name, body: d.body })) }
+      : {}),
   };
   return renderResult({ rendered: true, id: c.id, name: c.name, version: c.version }, descriptor);
 }
@@ -333,7 +341,7 @@ export const componentTools: ToolDefinition[] = [
       props: z.record(z.string(), z.unknown()).optional().describe("Data passed to the component at render time."),
       workspaceId: z.string().optional().describe("Workspace ID (auto-injected from session context)."),
     }),
-    rpcMethod: "getComponent",
+    rpcMethod: "resolveComponentGraph",
     mutating: false,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
@@ -343,17 +351,23 @@ export const componentTools: ToolDefinition[] = [
         return invalidArgument("id or name is required");
       }
       try {
-        const c = await client.getComponent({
+        // Resolve the component AND its transitive registry references in one call (#1270).
+        const resolved = await client.resolveComponentGraph({
           id: id ?? "",
           name: name ?? "",
           workspaceId: (args.workspaceId as string | undefined) ?? "",
+          source: "",
         });
+        const c = resolved.root;
+        if (!c) {
+          return invalidArgument("Component not found");
+        }
         const props: Record<string, unknown> = (args.props as Record<string, unknown> | undefined) ?? {};
         const validationErr = propsValidationError(c.propsSchema, props);
         if (validationErr) {
           return invalidArgument(`props do not match the component's propsSchema: ${validationErr}`);
         }
-        return buildComponentRenderResult(c, props);
+        return buildComponentRenderResult(c, props, resolved.dependencies);
       } catch (error) {
         return grpcErrorToToolResult(error);
       }
@@ -369,16 +383,33 @@ export const componentTools: ToolDefinition[] = [
       props: z.record(z.string(), z.unknown()).optional().describe("Data passed to the component as `props`."),
       workspaceId: z.string().optional().describe("Workspace ID (auto-injected; unused for one-off renders)."),
     }),
-    rpcMethod: "componentShow",
+    rpcMethod: "resolveComponentGraph",
     mutating: false,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    async handler(args: Record<string, unknown>) {
+    async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
+      const source = args.source as string;
+      const props: Record<string, unknown> = (args.props as Record<string, unknown> | undefined) ?? {};
+      const workspaceId = (args.workspaceId as string | undefined) ?? "";
+      // Resolve any registry components the one-off source references (#1270). Only
+      // when scoped to a workspace — a one-off with no workspace has no registry.
+      let dependencies: readonly grackle.Component[] = [];
+      if (workspaceId) {
+        try {
+          const resolved = await client.resolveComponentGraph({ id: "", name: "", workspaceId, source });
+          dependencies = resolved.dependencies;
+        } catch (error) {
+          return grpcErrorToToolResult(error);
+        }
+      }
       const descriptor: WidgetRenderDescriptor = {
         rendererKind: REACT_RENDERER_KIND,
-        body: args.source as string,
-        props: (args.props as Record<string, unknown> | undefined) ?? {},
+        body: source,
+        props,
         allowUnsafeEval: true,
         resourceUri: "",
+        ...(dependencies.length > 0
+          ? { components: dependencies.map((d) => ({ name: d.name, body: d.body })) }
+          : {}),
       };
       return renderResult({ rendered: true }, descriptor);
     },

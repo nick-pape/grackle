@@ -27,4 +27,10 @@ export interface WidgetRenderDescriptor {
   version?: number;
   /** `ui://` resource uri, when the widget is registered. */
   resourceUri?: string;
+  /**
+   * Resolved registry components this render composes from, in eval order
+   * (deepest first). The grackle-react runtime evaluates each into scope before
+   * the main body (#1270 composition). Only meaningful for `grackle-react`.
+   */
+  components?: Array<{ name: string; body: string }>;
 }
