@@ -23,7 +23,8 @@ export { reanimateAgent } from "./reanimate-agent.js";
 
 // ─── Session / Environment ───────────────────────────────────
 export { attemptReconnects, resetReconnectState } from "./auto-reconnect.js";
-export { pushToEnv } from "./token-push.js";
+export { authenticateForRuntime } from "./token-push.js";
+export type { AuthenticateOptions } from "./token-push.js";
 export { computeTaskStatus } from "./compute-task-status.js";
 export type { TaskStatusResult } from "./compute-task-status.js";
 export { findFirstConnectedEnvironment } from "./find-connected-environment.js";

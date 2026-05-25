@@ -1,6 +1,20 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 25 May 2026 17:22:09 GMT and should not be manually modified.
+This log was last generated on Mon, 25 May 2026 19:15:09 GMT and should not be manually modified.
+
+## 0.126.1
+Mon, 25 May 2026 19:15:09 GMT
+
+### Patches
+
+- Cut over credential delivery to demand-driven Authenticate RPC (AHP HR6): supply per-runtime credentials on demand just before spawn instead of proactively pushing a blanket all-provider bundle; deprecate PushTokens.
+
+## 0.126.0
+Mon, 25 May 2026 18:55:12 GMT
+
+### Minor changes
+
+- Remove the vestigial subtask_create/escalation agent-event interception (the pre-MCP "fake MCP call" path); orchestration is MCP-only. Reserves EVENT_TYPE_SUBTASK_CREATE (8) and EVENT_TYPE_ESCALATION (12) in the proto and drops them from the AgentEventType union (AHP HR7 Part 1).
 
 ## 0.125.2
 Mon, 25 May 2026 17:22:09 GMT

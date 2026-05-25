@@ -48,6 +48,15 @@ type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
 const AgentEventSchema: GenMessage<AgentEvent>;
 
 // @public
+type AuthenticateRequest = Message<"grackle.powerline.AuthenticateRequest"> & {
+    provider: string;
+    tokens: TokenItem[];
+};
+
+// @public
+const AuthenticateRequestSchema: GenMessage<AuthenticateRequest>;
+
+// @public
 export interface BaseEnvironmentConfig {
     host?: string;
     port?: number;
@@ -207,6 +216,11 @@ const GracklePowerLine: GenService<{
         input: typeof TokenBundleSchema;
         output: typeof EmptySchema;
     };
+    authenticate: {
+        methodKind: "unary";
+        input: typeof AuthenticateRequestSchema;
+        output: typeof EmptySchema;
+    };
     cleanupWorktree: {
         methodKind: "unary";
         input: typeof WorktreeCleanupRequestSchema;
@@ -282,6 +296,8 @@ declare namespace powerline {
         TokenItemSchema,
         TokenBundle,
         TokenBundleSchema,
+        AuthenticateRequest,
+        AuthenticateRequestSchema,
         WorktreeCleanupRequest,
         WorktreeCleanupRequestSchema,
         DrainRequest,

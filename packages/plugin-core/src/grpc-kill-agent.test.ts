@@ -42,10 +42,7 @@ vi.mock("@grackle-ai/core", async (importOriginal) => {
     },
     emit: vi.fn(),
     tokenPush: {
-      pushToEnv: vi.fn(),
-      pushProviderCredentialsToEnv: vi.fn(),
-      refreshTokensForTask: vi.fn(),
-      pushToAll: vi.fn(),
+      authenticateForRuntime: vi.fn(),
     },
     adapterManager: {
       getAdapter: vi.fn(),

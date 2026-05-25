@@ -4,7 +4,6 @@ import { grackle } from "@grackle-ai/common";
 import { envRegistry, workspaceStore, workspaceEnvironmentLinkStore, sessionStore, sqlite } from "@grackle-ai/database";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { adapterManager } from "@grackle-ai/core";
-import { tokenPush } from "@grackle-ai/core";
 import { parseAdapterConfig } from "@grackle-ai/core";
 import { emit } from "@grackle-ai/core";
 import { recoverSuspendedSessions } from "@grackle-ai/core";
@@ -207,8 +206,7 @@ export async function* provisionEnvironment(req: grackle.ProvisionEnvironmentReq
   try {
     const conn = await adapter.connect(req.id, config, powerlineToken);
     adapterManager.setConnection(req.id, conn);
-    // Push stored tokens to newly connected environment
-    await tokenPush.pushToEnv(req.id);
+    // Credentials are supplied on demand at spawn (AHP HR6), not eagerly on connect.
     envRegistry.updateEnvironmentStatus(req.id, "connected");
     envRegistry.markBootstrapped(req.id);
     emit("environment.changed", {});

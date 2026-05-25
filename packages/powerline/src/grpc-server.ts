@@ -194,6 +194,19 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
       return create(powerline.EmptySchema, {});
     },
 
+    // On-demand credential supply for a runtime (AHP HR6). Supersedes pushTokens.
+    async authenticate(req: powerline.AuthenticateRequest) {
+      const tokens = req.tokens.map((t) => ({
+        name: t.name,
+        type: t.type,
+        envVar: t.envVar,
+        filePath: t.filePath,
+        value: t.value,
+      }));
+      await writeTokens(tokens);
+      return create(powerline.EmptySchema, {});
+    },
+
     async cleanupWorktree(req: powerline.WorktreeCleanupRequest) {
       if (req.branch && req.workingDirectory) {
         await removeWorktree(req.workingDirectory, req.branch);

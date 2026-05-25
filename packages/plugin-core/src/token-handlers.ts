@@ -3,7 +3,6 @@ import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
 import { claudeProviderModeToEnum, providerToggleToEnum } from "@grackle-ai/common";
 import { tokenStore, credentialProviders } from "@grackle-ai/database";
-import { tokenPush } from "@grackle-ai/core";
 import { emit } from "@grackle-ai/core";
 
 /** Store or update a token. */
@@ -23,7 +22,7 @@ export async function setToken(req: grackle.TokenEntry): Promise<grackle.Empty> 
     expiresAt: req.expiresAt,
   });
   emit("token.changed", {});
-  await tokenPush.pushToAll();
+  // Credentials are supplied on demand at the next spawn (AHP HR6); no eager broadcast.
   return create(grackle.EmptySchema, {});
 }
 
@@ -50,7 +49,6 @@ export async function deleteToken(req: grackle.TokenName): Promise<grackle.Empty
   }
   tokenStore.deleteToken(req.name);
   emit("token.changed", {});
-  await tokenPush.pushToAll();
   return create(grackle.EmptySchema, {});
 }
 

@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import {
   createServiceCollector,
   startHeartbeat, getAdapter, setConnection, removeConnection,
-  emit, subscribe, pushToEnv, attemptReconnects, resetReconnectState,
+  emit, subscribe, attemptReconnects, resetReconnectState,
   parseAdapterConfig,
   ReconciliationManager,
   logger, exec, detectLanIp,
@@ -78,7 +78,7 @@ async function main(): Promise<void> {
     },
     {
       envRegistry, settingsStore, personaStore, workspaceStore, workspaceEnvironmentLinkStore, taskStore,
-      getAdapter, parseAdapterConfig, setConnection, pushToEnv,
+      getAdapter, parseAdapterConfig, setConnection,
       reconnectOrProvision, emit, resetReconnectState, logger,
       createPowerLineManager: (opts) => new LocalPowerLineManager(opts),
     },
