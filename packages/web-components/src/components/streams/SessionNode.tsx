@@ -18,7 +18,7 @@ export function SessionNode({ data }: NodeProps): JSX.Element {
 
   return (
     <div className={className} data-testid={`coordination-node-session-${session.id}`}>
-      <Handle type="target" position={Position.Left} className={styles.handle} />
+      <Handle type="target" position={Position.Left} isConnectable={false} className={styles.handle} />
       <div className={styles.sessionAccent} style={{ backgroundColor: color }} />
       <div className={styles.nodeContent}>
         <div className={styles.nodeHeader}>
@@ -29,7 +29,7 @@ export function SessionNode({ data }: NodeProps): JSX.Element {
           {streamCount > 0 && <span className={styles.countBadge}>{streamCount}</span>}
         </div>
       </div>
-      <Handle type="source" position={Position.Right} className={styles.handle} />
+      <Handle type="source" position={Position.Right} isConnectable={false} className={styles.handle} />
     </div>
   );
 }

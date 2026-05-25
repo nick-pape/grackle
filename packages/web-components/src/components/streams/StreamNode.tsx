@@ -23,7 +23,7 @@ export function StreamNode({ data, selected }: NodeProps): JSX.Element {
 
   return (
     <div className={classNames.join(" ")} data-testid={`coordination-node-stream-${stream.id}`}>
-      <Handle type="target" position={Position.Left} className={styles.handle} />
+      <Handle type="target" position={Position.Left} isConnectable={false} className={styles.handle} />
       <div className={styles.nodeContent}>
         <div className={styles.nodeHeader}>
           <span className={styles.kindBadge}>{streamKind}</span>
@@ -33,7 +33,7 @@ export function StreamNode({ data, selected }: NodeProps): JSX.Element {
           {stream.subscriberCount} {stream.subscriberCount === 1 ? "subscriber" : "subscribers"}
         </span>
       </div>
-      <Handle type="source" position={Position.Right} className={styles.handle} />
+      <Handle type="source" position={Position.Right} isConnectable={false} className={styles.handle} />
     </div>
   );
 }

@@ -91,6 +91,9 @@ export function DagView({ workspaceId, environmentId, tasks, resolvedThemeId }: 
         edges={edges}
         nodeTypes={nodeTypes}
         onNodeClick={onNodeClick}
+        // Read-only DAG: dependencies aren't created by dragging (no onConnect),
+        // so disable the drag-to-connect affordance on node handles (#1303).
+        nodesConnectable={false}
         fitView
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.3}
