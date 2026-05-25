@@ -998,6 +998,28 @@ message StreamTranscript {
   repeated StreamMessageEvent messages = 1;
 }
 
+// A durable, server-sequenced session action — one agent-conversation event in
+// the replay-buffer log (RFC #1264 / AHP HR1a). Read in ascending seq order.
+message SessionAction {
+  string seq = 1;        // ULID monotonic serverSeq (chronological)
+  string session_id = 2;
+  string type = 3;       // event type string, e.g. "text", "tool_use", "status"
+  string content = 4;
+  string raw = 5;        // raw JSON payload ("" when absent)
+  string timestamp = 6;  // ISO 8601
+}
+
+// Read a session's durable action log (oldest first / replay order).
+message GetSessionActionsRequest {
+  string session_id = 1;
+  string from_seq = 2; // cursor: actions whose seq sorts after this (exclusive) — resume from a point
+  int32 limit = 3;     // max rows (0 = server default)
+}
+
+message SessionActionList {
+  repeated SessionAction actions = 1;
+}
+
 message ServerEvent {
   oneof event {
     SessionEvent session_event = 1;

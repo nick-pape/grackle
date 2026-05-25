@@ -404,6 +404,20 @@ export const streamMessages = sqliteTable("stream_messages", {
 /** Row shape returned by a SELECT on the stream_messages table. */
 export type StreamMessageRow = typeof streamMessages.$inferSelect;
 
+// ─── Session Actions ─────────────────────────────────────
+
+export const sessionActions = sqliteTable("session_actions", {
+  seq: text("seq").primaryKey(),
+  sessionId: text("session_id").notNull(),
+  type: text("type").notNull(),
+  content: text("content").notNull(),
+  raw: text("raw").notNull().default(""),
+  timestamp: text("timestamp").notNull(),
+});
+
+/** Row shape returned by a SELECT on the session_actions table. */
+export type SessionActionRow = typeof sessionActions.$inferSelect;
+
 // ─── Plugins ─────────────────────────────────────────────────
 
 export const plugins = sqliteTable("plugins", {

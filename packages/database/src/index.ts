@@ -45,6 +45,7 @@ export type {
   ChannelGrantRow,
   NewChannelGrant,
   StreamMessageRow,
+  SessionActionRow,
 } from "./schema.js";
 
 // ─── Stores ────────────────────────────────────────────────
@@ -84,6 +85,8 @@ export { persistEvent, queryDomainEvents } from "./event-store.js";
 export type { DomainEvent, DomainEventQuery } from "./event-store.js";
 export { persistStreamMessage, queryStreamMessages } from "./stream-message-store.js";
 export type { StreamMessageRecord, StreamMessageQuery } from "./stream-message-store.js";
+export { persistSessionAction, querySessionActions } from "./session-action-store.js";
+export type { SessionActionRecord, SessionActionQuery } from "./session-action-store.js";
 
 // ─── Utilities ─────────────────────────────────────────────
 export { grackleHome } from "./paths.js";
