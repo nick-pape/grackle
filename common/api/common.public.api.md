@@ -2749,8 +2749,8 @@ type SpawnRequest = Message<"grackle.SpawnRequest"> & {
     environmentId: string;
     prompt: string;
     provider: string;
-    model?: ModelSelection;
     config?: SessionConfig;
+    model?: ModelSelection;
 };
 
 // @public

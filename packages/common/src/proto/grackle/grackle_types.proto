@@ -203,12 +203,17 @@ message SessionConfig {
 
 // Create a session. Reshaped toward AHP createSession (HR4+5): provider/model
 // are first-class (overriding the persona); other spawn params ride `config`.
+// Ephemeral request — client+server ship lockstep, so there is no cross-version
+// wire concern — but the removed flat-field numbers/names are reserved (and the
+// old `max_turns` number 4 is NOT reused) for forward hygiene.
 message SpawnRequest {
+  reserved 4, 6, 7, 8, 9, 10, 11, 12;
+  reserved "max_turns", "branch", "system_context", "persona_id", "working_directory", "pipe", "parent_session_id", "workspace_id";
   string environment_id = 1;
   string prompt = 2;
-  string provider = 3;       // Explicit runtime; overrides the resolved persona
-  ModelSelection model = 4;  // Explicit model; overrides the resolved persona
+  string provider = 3;        // Explicit runtime; overrides the resolved persona
   SessionConfig config = 5;
+  ModelSelection model = 13;  // Explicit model; overrides the resolved persona
 }
 
 message ResumeRequest {
