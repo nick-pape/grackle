@@ -168,7 +168,7 @@ class CodexSession extends BaseAgentSession {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     this.codexInstance = new Codex(codexOptions);
 
-    this.eventQueue.push({ type: "system", timestamp: ts(), content: "Codex instance created" });
+    this.eventQueue.push({ type: "system", timestamp: ts(), content: "Codex instance created", diagnostic: true });
 
     // ── Thread options ──
     this.threadOptions = {
@@ -200,6 +200,7 @@ class CodexSession extends BaseAgentSession {
       type: "system",
       timestamp: new Date().toISOString(),
       content: `Codex thread started (model: ${this.model || "default"})`,
+      diagnostic: true,
     });
 
     return this.consumeStream(await this.thread.runStreamed(prompt));
@@ -253,6 +254,7 @@ class CodexSession extends BaseAgentSession {
             type: "system",
             timestamp: ts(),
             content: `Codex thread initialized (id: ${this.runtimeSessionId})`,
+            diagnostic: true,
           });
           break;
         }

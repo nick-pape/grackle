@@ -283,6 +283,7 @@ class AcpSession extends BaseAgentSession {
       type: "system",
       timestamp: ts(),
       content: `Spawned ${this.config.command} ${this.config.args.join(" ")} (pid: ${String(this.child.pid)}, cwd: ${spawnCwd})`,
+      diagnostic: true,
     });
 
     // Register exit/error handlers immediately to catch early termination
@@ -367,6 +368,7 @@ class AcpSession extends BaseAgentSession {
       type: "system",
       timestamp: ts(),
       content: "ACP connection initialized",
+      diagnostic: true,
     });
 
     // Some ACP bridges (e.g. @github/copilot) require an explicit authenticate()
@@ -383,6 +385,7 @@ class AcpSession extends BaseAgentSession {
           type: "system",
           timestamp: ts(),
           content: `ACP authenticated via ${envVarMethodId}`,
+          diagnostic: true,
         });
       } catch (err: unknown) {
         // Non-fatal: bridge may not require this call (claude-code-acp, codex-acp)
@@ -398,6 +401,7 @@ class AcpSession extends BaseAgentSession {
         type: "system",
         timestamp: ts(),
         content: `ACP session resuming (id: ${this.runtimeSessionId})`,
+        diagnostic: true,
       });
       return;
     }
@@ -422,6 +426,7 @@ class AcpSession extends BaseAgentSession {
       type: "system",
       timestamp: ts(),
       content: `ACP session created (id: ${this.runtimeSessionId})`,
+      diagnostic: true,
     });
 
     // Set model if specified

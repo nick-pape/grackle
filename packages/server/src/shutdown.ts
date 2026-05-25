@@ -1,10 +1,13 @@
-import { logger } from "@grackle-ai/core";
+import { logger, shutdownOtlpLogs } from "@grackle-ai/core";
 import { sqlite, stopWalCheckpointTimer } from "@grackle-ai/database";
 import { stopPairingCleanup, stopSessionCleanup, stopOAuthCleanup } from "@grackle-ai/auth";
 import { closeAllTunnels } from "@grackle-ai/adapter-sdk";
 
 /** Hard timeout (ms) so upgraded WS connections don't block exit. */
 const SHUTDOWN_TIMEOUT_MS: number = 5_000;
+
+/** Bounded flush timeout (ms) for the OTLP logs sink, kept under {@link SHUTDOWN_TIMEOUT_MS}. */
+const OTLP_FLUSH_TIMEOUT_MS: number = 4_000;
 
 /** Minimal server interface — only the `.close()` method is needed for shutdown. */
 interface Closeable {
@@ -104,6 +107,10 @@ export function createShutdown(context: ShutdownContext): () => Promise<void> {
         logger.error({ err }, "Error during plugin shutdown");
       }
     }
+
+    // AHP HR7: flush + shut down the OTLP logs sink (no-op when disabled).
+    // Bounded so a dead collector cannot hang shutdown.
+    await shutdownOtlpLogs(OTLP_FLUSH_TIMEOUT_MS);
 
     // Final WAL checkpoint (TRUNCATE) to fully flush pending writes before exit
     if (sqlite) {

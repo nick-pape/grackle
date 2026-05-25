@@ -176,6 +176,8 @@ describe("mapMessage", () => {
       expect(events).toHaveLength(1);
       expect(events[0].type).toBe("system");
       expect(events[0].content).toBe("Session initialized (claude-3)");
+      // AHP HR7: runtime lifecycle event is flagged diagnostic.
+      expect(events[0].diagnostic).toBe(true);
     });
 
     it("init subtype uses 'unknown model' when model is missing", () => {

@@ -55,6 +55,7 @@ type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
     content: string;
     raw: string;
     toolCallId: string;
+    diagnostic: boolean;
 };
 
 // @public
@@ -2449,6 +2450,7 @@ type SessionEvent = Message<"grackle.SessionEvent"> & {
     content: string;
     raw: string;
     toolCallId: string;
+    diagnostic: boolean;
 };
 
 // @public

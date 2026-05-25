@@ -112,7 +112,7 @@ class GenAIScriptSession implements AgentSession {
       const genaiscriptBin = resolveGenAIScriptBin(runtimeDir);
       logger.info({ sessionId: this.id, scriptPath, genaiscriptBin }, "genaiscript: spawning");
 
-      yield { type: "system", timestamp: ts(), content: "Starting GenAIScript..." };
+      yield { type: "system", timestamp: ts(), content: "Starting GenAIScript...", diagnostic: true };
 
       this.child = spawnProcess(process.execPath, [genaiscriptBin, ...args], {
         stdio: ["ignore", "pipe", "pipe"],
@@ -179,7 +179,7 @@ class GenAIScriptSession implements AgentSession {
         }
       }
 
-      yield { type: "system", timestamp: ts(), content: "GenAIScript finished" };
+      yield { type: "system", timestamp: ts(), content: "GenAIScript finished", diagnostic: true };
 
       // Yield the script's output text — this is the LLM response or script result
       if (result?.text) {

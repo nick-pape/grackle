@@ -12,6 +12,13 @@ export interface AgentEvent {
    * synthesized when the SDK has none); left unset for non-tool events.
    */
   toolCallId?: string;
+  /**
+   * True for runtime lifecycle/diagnostic `system` events ("Starting runtime…",
+   * "Session initialized", worktree setup) — routed to the telemetry channel
+   * rather than into authoritative `SessionState` (AHP HR7). Left unset for
+   * substantive events (agent output, the injected system context).
+   */
+  diagnostic?: boolean;
 }
 
 /** Parameters for spawning a new agent session. */

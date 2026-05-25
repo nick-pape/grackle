@@ -147,6 +147,8 @@ describe("resolveWorkingDirectory", () => {
     const event = await queue.shift();
     expect(event?.type).toBe("system");
     expect(event?.content).toContain("Worktree ready");
+    // AHP HR7: worktree setup messages are runtime diagnostics.
+    expect(event?.diagnostic).toBe(true);
     queue.close();
   });
 
@@ -169,6 +171,8 @@ describe("resolveWorkingDirectory", () => {
     const event = await queue.shift();
     expect(event?.type).toBe("system");
     expect(event?.content).toContain("Worktree setup failed");
+    // AHP HR7: worktree setup messages are runtime diagnostics.
+    expect(event?.diagnostic).toBe(true);
     queue.close();
   });
 

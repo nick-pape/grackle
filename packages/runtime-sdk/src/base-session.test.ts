@@ -579,6 +579,31 @@ describe("BaseAgentSession.setupForResume default", () => {
   });
 });
 
+describe("BaseAgentSession diagnostic flag (AHP HR7)", () => {
+  it("flags the startup 'Starting runtime' system event as diagnostic", async () => {
+    const { session, nextEvent } = spawnSession();
+
+    const startEvent = await nextEvent();
+    expect(startEvent?.type).toBe("system");
+    expect(startEvent?.content).toContain("Starting Test runtime");
+    expect(startEvent?.diagnostic).toBe(true);
+
+    session.kill();
+  });
+
+  it("flags the default setupForResume 'Session resumed' event as diagnostic", async () => {
+    const { session, nextEvent } = spawnSession({ resumeSessionId: "prev-1" });
+
+    const events = await drainUntilStatus(nextEvent, "waiting_input");
+    const resumeEvent = events.find(
+      (e) => e.type === "system" && e.content.includes("Session resumed"),
+    );
+    expect(resumeEvent?.diagnostic).toBe(true);
+
+    session.kill();
+  });
+});
+
 describe("BaseAgentSession.pushUsageEvent", () => {
   it("pushes a usage event with correct JSON shape", () => {
     const session = new TestSession({ id: "t-u1", prompt: "p", model: "m", maxTurns: 0 });
