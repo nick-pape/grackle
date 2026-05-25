@@ -60,6 +60,20 @@ export function itemType(item: Record<string, unknown>): string {
   return (item.type ?? "unknown") as string;
 }
 
+/**
+ * @internal The Codex item's native `id`, used to pair a tool's `item.started`
+ * with its `item.completed` (AHP HR3 — both events carry the same `item.id`).
+ * Warns if a tool item lacks one so a future SDK regression is observable
+ * rather than a silent pairing failure.
+ */
+function toolItemId(item: Record<string, unknown>): string | undefined {
+  if (typeof item.id === "string" && item.id.length > 0) {
+    return item.id;
+  }
+  logger.warn({ itemType: itemType(item) }, "Codex tool item has no id — tool_use/tool_result cannot be paired");
+  return undefined;
+}
+
 // ─── Session ───────────────────────────────────────────────
 
 /** An in-progress Codex agent session that streams events via the OpenAI Codex SDK. */
@@ -70,13 +84,6 @@ class CodexSession extends BaseAgentSession {
     "Codex returned no messages. Check authentication: set OPENAI_API_KEY or CODEX_API_KEY.";
 
   private turnCount: number = 0;
-  /**
-   * Session-scoped counter for synthesized tool-call ids (AHP HR3). The Codex
-   * SDK provides no native id to correlate `item.started`/`item.completed`, so we
-   * assign `codex-<n>` on each tool start and pair on completion via a stack.
-   * Instance-scoped (not per-stream) so ids stay unique across resumes.
-   */
-  private codexToolSeq: number = 0;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private codexInstance?: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -228,10 +235,6 @@ class CodexSession extends BaseAgentSession {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     this.activeStream = streamResult;
     let messageCount = 0;
-    // Open synthesized tool-call ids, paired LIFO across item.started/item.completed
-    // (AHP HR3). Codex tools complete strictly before the next starts, so a stack
-    // is safe; an empty pop (no matching start) yields undefined and falls back.
-    const openToolCallIds: string[] = [];
 
     for await (const event of streamResult.events) {
       if (this.killed) {
@@ -260,13 +263,11 @@ class CodexSession extends BaseAgentSession {
             break;
           }
           const type = itemType(item);
-          // These three item types are tool calls (emit tool_use + tool_result). The
-          // Codex SDK gives no id, so mint a synthesized one and open it for pairing.
+          // These three item types are tool calls (emit tool_use + tool_result).
+          // Pair them with the SDK's native item.id, which is shared between
+          // item.started and item.completed (AHP HR3).
           const isToolStart = type === "command_execution" || type === "file_change" || type === "mcp_tool_call";
-          const toolCallId = isToolStart ? `codex-${++this.codexToolSeq}` : undefined;
-          if (toolCallId !== undefined) {
-            openToolCallIds.push(toolCallId);
-          }
+          const toolCallId = isToolStart ? toolItemId(item) : undefined;
 
           if (type === "command_execution") {
             messageCount++;
@@ -309,9 +310,9 @@ class CodexSession extends BaseAgentSession {
             break;
           }
           const type = itemType(item);
-          // Pair the completing tool with the id minted at item.started (LIFO).
+          // Pair with the same native item.id seen at item.started (AHP HR3).
           const isToolComplete = type === "command_execution" || type === "file_change" || type === "mcp_tool_call";
-          const toolCallId = isToolComplete ? openToolCallIds.pop() : undefined;
+          const toolCallId = isToolComplete ? toolItemId(item) : undefined;
 
           if (type === "command_execution") {
             messageCount++;

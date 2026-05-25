@@ -424,14 +424,14 @@ describe("Codex streaming field extraction", () => {
     expect(resultEvents[0].content).toBe("Permission denied");
   });
 
-  // AHP HR3: Codex has no native tool-call id, so we synthesize one per tool
-  // started and pair it on completion (LIFO).
-  it("synthesizes a correlating toolCallId for each started/completed tool pair", async () => {
+  // AHP HR3: Codex items carry a native `id` shared between item.started and
+  // item.completed; we use it to pair tool_use↔tool_result (no synthesis).
+  it("uses the native item.id to correlate each tool's started/completed pair", async () => {
     mockRunStreamedEvents = [
-      { type: "item.started", item: { type: "command_execution", command: "ls" } },
-      { type: "item.completed", item: { type: "command_execution", aggregated_output: "files", exit_code: 0 } },
-      { type: "item.started", item: { type: "mcp_tool_call", server: "grackle", tool: "post_finding", arguments: {} } },
-      { type: "item.completed", item: { type: "mcp_tool_call", server: "grackle", tool: "post_finding", result: { content: "ok" } } },
+      { type: "item.started", item: { id: "item_a", type: "command_execution", command: "ls" } },
+      { type: "item.completed", item: { id: "item_a", type: "command_execution", aggregated_output: "files", exit_code: 0 } },
+      { type: "item.started", item: { id: "item_b", type: "mcp_tool_call", server: "grackle", tool: "post_finding", arguments: {} } },
+      { type: "item.completed", item: { id: "item_b", type: "mcp_tool_call", server: "grackle", tool: "post_finding", result: { content: "ok" } } },
     ];
 
     const session = runtime.spawn({ sessionId: "hr3", prompt: "go", model: "codex-mini", maxTurns: 1 });
@@ -441,13 +441,11 @@ describe("Codex streaming field extraction", () => {
     const results = events.filter((e) => e.type === "tool_result");
     expect(uses).toHaveLength(2);
     expect(results).toHaveLength(2);
-    // Every tool event carries an id; each result matches its use (sequential pairing).
-    expect(uses[0].toolCallId).toBeTruthy();
-    expect(uses[1].toolCallId).toBeTruthy();
-    expect(results[0].toolCallId).toBe(uses[0].toolCallId);
-    expect(results[1].toolCallId).toBe(uses[1].toolCallId);
-    // Distinct ids across calls.
-    expect(uses[0].toolCallId).not.toBe(uses[1].toolCallId);
+    // Each event carries its native item.id; result matches use by that id.
+    expect(uses[0].toolCallId).toBe("item_a");
+    expect(results[0].toolCallId).toBe("item_a");
+    expect(uses[1].toolCallId).toBe("item_b");
+    expect(results[1].toolCallId).toBe("item_b");
   });
 
   // UT-5: file_change uses item.changes array (not item.file/item.patch)
