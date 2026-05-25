@@ -5,11 +5,12 @@ import {
   Controls,
   MiniMap,
   ReactFlow,
+  type EdgeTypes,
   type Node,
   type NodeTypes,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import type { Session, StreamData } from "../../hooks/types.js";
+import type { Session, StreamData, StreamMessageData } from "../../hooks/types.js";
 import { SESSION_STATUS_VAR_NAMES, sessionStatusStyle } from "../../utils/sessionStatus.js";
 import {
   SESSION_NODE_TYPE,
@@ -19,6 +20,7 @@ import {
 } from "./useCoordinationLayout.js";
 import { SessionNode } from "./SessionNode.js";
 import { StreamNode } from "./StreamNode.js";
+import { MessageDotEdge } from "./MessageDotEdge.js";
 import styles from "./CoordinationGraph.module.scss";
 
 /** Fallback node color for the MiniMap when a CSS variable is unavailable. */
@@ -34,6 +36,11 @@ export interface CoordinationGraphProps {
   selectedStreamId?: string;
   /** Called with a stream id when its hub node is clicked. */
   onSelectStream: (streamId: string) => void;
+  /**
+   * Live per-stream message buffers (ascending by seq). When a stream's newest
+   * seq advances, its edges animate a message dot. Omit for a static graph.
+   */
+  recentMessages?: Record<string, StreamMessageData[]>;
   /** Resolved theme id; recomputes MiniMap colors when the theme changes. */
   resolvedThemeId: string;
 }
@@ -42,6 +49,11 @@ export interface CoordinationGraphProps {
 const nodeTypes: NodeTypes = {
   [SESSION_NODE_TYPE]: SessionNode,
   [STREAM_NODE_TYPE]: StreamNode,
+};
+
+/** Custom edge type registry — the animated message-dot edge. */
+const edgeTypes: EdgeTypes = {
+  messageDot: MessageDotEdge,
 };
 
 /**
@@ -54,9 +66,25 @@ export function CoordinationGraph({
   sessions,
   selectedStreamId,
   onSelectStream,
+  recentMessages,
   resolvedThemeId,
 }: CoordinationGraphProps): JSX.Element {
   const layout = useCoordinationLayout(streams, sessions);
+
+  // Stamp each edge with its stream's latest message seq. When that seq advances,
+  // MessageDotEdge fires a one-shot dot; stamping by streamId fans the pulse out
+  // across all of a stream's edges (writer -> hub and hub -> readers).
+  const edges = useMemo(
+    () =>
+      layout.edges.map((edge) => {
+        if (!edge.data) {
+          return edge;
+        }
+        const seq = recentMessages?.[edge.data.streamId]?.at(-1)?.seq;
+        return seq === undefined ? edge : { ...edge, data: { ...edge.data, pulseSeq: seq } };
+      }),
+    [layout.edges, recentMessages],
+  );
 
   // Mark the selected stream hub so React Flow applies node selection styling.
   const nodes = useMemo(
@@ -112,8 +140,9 @@ export function CoordinationGraph({
     <div className={styles.graphContainer} data-testid="coordination-graph">
       <ReactFlow
         nodes={nodes}
-        edges={layout.edges}
+        edges={edges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodeClick={onNodeClick}
         fitView
         fitViewOptions={{ padding: 0.2 }}
