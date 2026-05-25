@@ -89,6 +89,14 @@ export interface McpServerOptions {
   toolGroups?: ToolDefinition[][];
   /** Push MCP Apps widget render events into session streams (in-process, from the server). */
   publishWidgetEvent?: PublishWidgetEvent;
+  /**
+   * Subscribe to "a workspace's promoted-component set changed" signals so the
+   * server can push `tools/list_changed` to that workspace's sessions (#1297).
+   * Called once with a `notify(workspaceId)` callback; returns an unsubscribe.
+   * Broker-mode only (the central server wires it to the domain-event bus);
+   * standalone omits it.
+   */
+  onComponentChangeSubscribe?: (notify: (workspaceId: string) => void) => () => void;
 }
 
 /** Create per-service ConnectRPC clients pointing at the co-located Grackle gRPC server. */
@@ -193,7 +201,9 @@ async function createMcpServerInstance(
 
   const server = new Server(
     { name: "grackle-mcp", version: PACKAGE_VERSION },
-    { capabilities: { tools: {}, resources: {} } },
+    // `tools.listChanged` advertises that we push `notifications/tools/list_changed`
+    // (when a workspace's promoted render_<name> set changes, #1297).
+    { capabilities: { tools: { listChanged: true }, resources: {} } },
   );
 
   // Pre-compute the visible tool list and names (immutable for this session).
@@ -546,13 +556,31 @@ async function createMcpServerInstance(
 const REVOCATION_PRUNE_INTERVAL_MS: number = 60 * 60 * 1000;
 
 /**
+ * Session ids whose scoped auth context is bound to `workspaceId`. Pure helper so
+ * the promoted-tool `tools/list_changed` fan-out (#1297) is unit-testable without
+ * spinning an http server.
+ */
+export function sessionIdsForWorkspace(
+  authContexts: ReadonlyMap<string, AuthContext>,
+  workspaceId: string,
+): string[] {
+  const ids: string[] = [];
+  for (const [sid, ctx] of authContexts) {
+    if (ctx.type === "scoped" && ctx.workspaceId === workspaceId) {
+      ids.push(sid);
+    }
+  }
+  return ids;
+}
+
+/**
  * Create an HTTP server that serves the MCP Streamable HTTP protocol on `/mcp`.
  *
  * The server manages stateful sessions — each MCP client gets its own transport
  * and Server instance, tracked by session ID.
  */
 export function createMcpServer(options: McpServerOptions): http.Server {
-  const { bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl, toolGroups, publishWidgetEvent, mcpOrigin } = options;
+  const { bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl, toolGroups, publishWidgetEvent, mcpOrigin, onComponentChangeSubscribe } = options;
   // Trusted, browser-facing MCP origin for broker-captured widgets (their
   // `<script src>` + CSP allowlist). Derived from server config — NOT the request
   // `Host` header, which a hostile MCP client could spoof to point widget assets
@@ -577,6 +605,27 @@ export function createMcpServer(options: McpServerOptions): http.Server {
 
   /** Map of authentication contexts, keyed by MCP session ID. */
   const authContexts: Map<string, AuthContext> = new Map();
+
+  /** Map of per-session MCP `Server` instances, keyed by session ID (#1297 fan-out). */
+  const mcpServers: Map<string, Server> = new Map();
+
+  /**
+   * Push `notifications/tools/list_changed` to every live session in `workspaceId`
+   * so dynamic `render_<name>` tools refresh after a promote/demote (#1297).
+   * Best-effort + isolated: a failed/closed session never affects the others.
+   */
+  const notifyToolListChanged = (workspaceId: string): void => {
+    for (const sid of sessionIdsForWorkspace(authContexts, workspaceId)) {
+      const srv = mcpServers.get(sid);
+      if (srv) {
+        srv.sendToolListChanged().catch((err: unknown) =>
+          logger.warn({ sessionId: sid, err }, "sendToolListChanged failed (non-fatal)"),
+        );
+      }
+    }
+  };
+  // Subscribe to workspace component-change signals (broker mode only; standalone omits it).
+  const unsubscribeComponentChanges = onComponentChangeSubscribe?.(notifyToolListChanged);
 
   // Periodically prune stale revocation entries
   const pruneInterval = setInterval(() => pruneRevocations(), REVOCATION_PRUNE_INTERVAL_MS);
@@ -633,16 +682,19 @@ export function createMcpServer(options: McpServerOptions): http.Server {
     const method = req.method?.toUpperCase();
 
     if (method === "POST") {
-      await handlePost(req, res, grpcClients, transports, authContexts, authContext, publishWidgetEvent, brokerAssetOrigin, toolGroups);
+      await handlePost(req, res, grpcClients, transports, authContexts, mcpServers, authContext, publishWidgetEvent, brokerAssetOrigin, toolGroups);
     } else if (method === "GET") {
       await handleGet(req, res, transports);
     } else if (method === "DELETE") {
-      await handleDelete(req, res, transports, authContexts);
+      await handleDelete(req, res, transports, authContexts, mcpServers);
     } else {
       res.writeHead(405, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Method not allowed" }));
     }
   });
+
+  // Drop the component-change subscription when the server closes (clean teardown for tests).
+  httpServer.on("close", () => unsubscribeComponentChanges?.());
 
   return httpServer;
 }
@@ -707,6 +759,7 @@ async function handlePost(
   grpcClients: GrackleClients,
   transports: Map<string, StreamableHTTPServerTransport>,
   authContexts: Map<string, AuthContext>,
+  mcpServers: Map<string, Server>,
   authContext: AuthContext,
   publishWidgetEvent: PublishWidgetEvent | undefined,
   brokerAssetOrigin: string,
@@ -732,13 +785,22 @@ async function handlePost(
     }
 
     if (isInitializeRequest(body) && (!sessionId || !transports.has(sessionId))) {
-      // New initialization — create a new transport + server
+      // New initialization — create the per-session Server first so the transport's
+      // onsessioninitialized can register it for the tools/list_changed fan-out (#1297).
+      // Asset base URL is the origin the client actually reached us on, so the
+      // widget HTML references assets correctly. Normalized via URL parsing to
+      // avoid attribute injection from a hostile Host header.
+      const encrypted = "encrypted" in req.socket && (req.socket as { encrypted?: boolean }).encrypted === true;
+      const assetBaseUrl = resolveAssetBaseUrl(req.headers.host, req.headers["x-forwarded-proto"], encrypted);
+      const mcpServer = await createMcpServerInstance(grpcClients, authContext, assetBaseUrl, brokerAssetOrigin, publishWidgetEvent, toolGroups);
+
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (sid: string) => {
           logger.info({ sessionId: sid }, "MCP session initialized");
           transports.set(sid, transport);
           authContexts.set(sid, authContext);
+          mcpServers.set(sid, mcpServer);
         },
       });
 
@@ -748,15 +810,10 @@ async function handlePost(
           logger.info({ sessionId: sid }, "MCP session closed");
           transports.delete(sid);
           authContexts.delete(sid);
+          mcpServers.delete(sid);
         }
       };
 
-      // Asset base URL is the origin the client actually reached us on, so the
-      // widget HTML references assets correctly. Normalized via URL parsing to
-      // avoid attribute injection from a hostile Host header.
-      const encrypted = "encrypted" in req.socket && (req.socket as { encrypted?: boolean }).encrypted === true;
-      const assetBaseUrl = resolveAssetBaseUrl(req.headers.host, req.headers["x-forwarded-proto"], encrypted);
-      const mcpServer = await createMcpServerInstance(grpcClients, authContext, assetBaseUrl, brokerAssetOrigin, publishWidgetEvent, toolGroups);
       await mcpServer.connect(transport);
       await transport.handleRequest(req, res, body);
       return;
@@ -817,6 +874,7 @@ async function handleDelete(
   res: http.ServerResponse,
   transports: Map<string, StreamableHTTPServerTransport>,
   authContexts: Map<string, AuthContext>,
+  mcpServers: Map<string, Server>,
 ): Promise<void> {
   const sessionId = req.headers["mcp-session-id"] as string | undefined;
   if (!sessionId || !transports.has(sessionId)) {
@@ -829,6 +887,7 @@ async function handleDelete(
   try {
     await transport.handleRequest(req, res);
     authContexts.delete(sessionId);
+    mcpServers.delete(sessionId);
   } catch (error) {
     logger.error({ err: error }, "Error handling session termination");
     if (!res.headersSent) {

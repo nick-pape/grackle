@@ -2,6 +2,7 @@ import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle, fuzzySearch, type FuzzyKey, BUILTIN_COMPONENTS, extractComponentReferenceNames } from "@grackle-ai/common";
 import { componentStore, workspaceStore } from "@grackle-ai/database";
+import { emit } from "@grackle-ai/core";
 import { v4 as uuid } from "uuid";
 import { componentRowToProto } from "./grpc-proto-converters.js";
 
@@ -71,7 +72,13 @@ export async function updateComponent(req: grackle.UpdateComponentRequest): Prom
   } catch (err) {
     asInvalidArgument(err);
   }
-  return componentRowToProto(componentStore.getComponent(req.id)!);
+  const updated = componentStore.getComponent(req.id)!;
+  // A promoted component's edit changes its render_<name> slug/description/inputSchema,
+  // so nudge the workspace's MCP sessions to re-list (#1297). Non-promoted edits don't.
+  if (updated.promoted) {
+    emit("component.changed", { workspaceId: updated.workspaceId });
+  }
+  return componentRowToProto(updated);
 }
 
 /** Resolve a component by id (precedence) or by name within a workspace. */
@@ -207,6 +214,9 @@ export async function setComponentPromotion(req: grackle.SetComponentPromotionRe
   // `promoted` is optional on the wire so unset is distinguishable from false;
   // an unset value means "promote" (matches the component_promote tool default).
   componentStore.setPromoted(row.id, req.promoted ?? true);
+  // Promote/demote changes the workspace's dynamic render_<name> tool set; nudge
+  // its live MCP sessions to re-list via tools/list_changed (#1297).
+  emit("component.changed", { workspaceId: row.workspaceId });
   return componentRowToProto(componentStore.getComponent(row.id)!);
 }
 

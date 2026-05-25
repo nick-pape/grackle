@@ -6,6 +6,7 @@
  */
 import { describe, it, expect, beforeAll, vi } from "vitest";
 import { ConnectError, Code } from "@connectrpc/connect";
+import { subscribe } from "@grackle-ai/core";
 
 // ── Mock side-effect modules ──
 vi.mock("./logger.js");
@@ -295,5 +296,42 @@ describe("gRPC component handlers", () => {
     const res = (await handlers.resolveComponentGraph({ workspaceId: WS1, source: "render(<SrcChild/>)" })) as GraphResult;
     expect(res.root?.id ?? "").toBe("");
     expect(depNames(res)).toEqual(["SrcChild"]);
+  });
+
+  // ── component.changed domain event (#1297) ──
+  /** Collect component.changed workspaceIds emitted during `fn` (the bus notifies on a microtask). */
+  async function changedWorkspaceIds(fn: () => Promise<unknown>): Promise<string[]> {
+    const seen: string[] = [];
+    const unsub = subscribe((e) => {
+      if (e.type === "component.changed" && typeof e.payload.workspaceId === "string") {
+        seen.push(e.payload.workspaceId);
+      }
+    });
+    try {
+      await fn();
+      await new Promise((r) => setTimeout(r, 0)); // let queueMicrotask subscribers run
+    } finally {
+      unsub();
+    }
+    return seen;
+  }
+
+  it("setComponentPromotion emits component.changed for the workspace (promote + demote)", async () => {
+    const c = (await handlers.registerComponent({ workspaceId: WS1, name: "EmitPromote", body: "render(<i/>)" })) as ComponentInfo;
+    expect(await changedWorkspaceIds(() => handlers.setComponentPromotion({ id: c.id, workspaceId: WS1, promoted: true }))).toContain(WS1);
+    expect(await changedWorkspaceIds(() => handlers.setComponentPromotion({ id: c.id, workspaceId: WS1, promoted: false }))).toContain(WS1);
+  });
+
+  it("registerComponent does NOT emit component.changed (new components aren't promoted)", async () => {
+    expect(await changedWorkspaceIds(() => handlers.registerComponent({ workspaceId: WS1, name: "EmitReg", body: "render(<i/>)" }))).toEqual([]);
+  });
+
+  it("updateComponent emits only when the component is promoted", async () => {
+    const c = (await handlers.registerComponent({ workspaceId: WS1, name: "EmitUpd", body: "render(<i/>)" })) as ComponentInfo;
+    // Not promoted yet → no emit on update.
+    expect(await changedWorkspaceIds(() => handlers.updateComponent({ id: c.id, workspaceId: WS1, description: "v1" }))).toEqual([]);
+    await handlers.setComponentPromotion({ id: c.id, workspaceId: WS1, promoted: true });
+    // Now promoted → update emits.
+    expect(await changedWorkspaceIds(() => handlers.updateComponent({ id: c.id, workspaceId: WS1, description: "v2" }))).toContain(WS1);
   });
 });
