@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "KG Phase 3 (#1259): close the retrieval loop — knowledge_search guidance (pull) + a thin spawn-time \"Related prior work\" injection (push) via a new systemPromptContributors plugin hook, gated by a per-task injectKnowledge flag (default on).",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
