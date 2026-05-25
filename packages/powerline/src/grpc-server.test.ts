@@ -7,6 +7,10 @@ import { create } from "@bufbuild/protobuf";
 import { powerline } from "@grackle-ai/common";
 import { writeTokens } from "./token-writer.js";
 
+// Top-level (hoisted) mock so the statically-imported `writeTokens` above and the
+// dynamically-imported handler under test both resolve to the same spy.
+vi.mock("./token-writer.js", () => ({ writeTokens: vi.fn() }));
+
 /** Create a mock session backed by a real AsyncQueue for realistic drain testing. */
 function makeMockSessionWithQueue(id: string): AgentSession & { eventQueue: AsyncQueue<AgentEvent> } {
   const eventQueue = new AsyncQueue<AgentEvent>();
@@ -118,7 +122,6 @@ async function getHandlers(): Promise<HandlerMap> {
     getRuntime: () => undefined,
     listRuntimes: () => [],
   }));
-  vi.mock("./token-writer.js", () => ({ writeTokens: vi.fn() }));
   vi.mock("./worktree.js", () => ({ removeWorktree: vi.fn() }));
 
   const { registerPowerLineRoutes } = await import("./grpc-server.js");
