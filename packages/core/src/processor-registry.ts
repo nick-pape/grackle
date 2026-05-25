@@ -13,9 +13,6 @@ export interface ProcessorContext {
 /** Registry of active event processor contexts, keyed by sessionId. */
 const registry: Map<string, ProcessorContext> = new Map<string, ProcessorContext>();
 
-/** Callbacks invoked when a processor's task context is late-bound. */
-const bindListeners: Map<string, Array<() => void>> = new Map<string, Array<() => void>>();
-
 /** Register a processor context for a running event stream. */
 export function register(ctx: ProcessorContext): void {
   registry.set(ctx.sessionId, ctx);
@@ -24,7 +21,6 @@ export function register(ctx: ProcessorContext): void {
 /** Unregister a processor context when the event stream ends. */
 export function unregister(sessionId: string): void {
   registry.delete(sessionId);
-  bindListeners.delete(sessionId);
 }
 
 /** Retrieve the context for a running event processor, if any. */
@@ -33,8 +29,8 @@ export function get(sessionId: string): ProcessorContext | undefined {
 }
 
 /**
- * Late-bind a task to a running processor. Updates workspaceId, taskId, and onComplete,
- * then fires all registered bind listeners.
+ * Late-bind a task to a running processor. Updates workspaceId and taskId so
+ * subsequent events are attributed to the task.
  *
  * Idempotent: binding to the same task is a no-op.
  * Throws if the session is already bound to a different task (FR-6).
@@ -65,21 +61,4 @@ export function lateBind(
   ctx.taskId = taskId;
 
   logger.info({ sessionId, taskId, workspaceId }, "Late-bound session to task");
-
-  const listeners = bindListeners.get(sessionId);
-  if (listeners) {
-    for (const listener of listeners) {
-      listener();
-    }
-  }
-}
-
-/** Register a callback to be invoked when lateBind is called for this session. */
-export function onBind(sessionId: string, listener: () => void): void {
-  let listeners = bindListeners.get(sessionId);
-  if (!listeners) {
-    listeners = [];
-    bindListeners.set(sessionId, listeners);
-  }
-  listeners.push(listener);
 }

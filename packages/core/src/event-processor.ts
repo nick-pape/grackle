@@ -1,9 +1,7 @@
 import { create } from "@bufbuild/protobuf";
 import { grackle, powerline, eventTypeToEnum, SESSION_STATUS, TERMINAL_SESSION_STATUSES, END_REASON } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
-import { v4 as uuid } from "uuid";
-import { ulid } from "ulid";
-import { sessionStore, escalationStore, taskStore, workspaceStore, slugify } from "@grackle-ai/database";
+import { sessionStore, taskStore } from "@grackle-ai/database";
 import { recordSessionAction } from "./session-action-recorder.js";
 import * as streamHub from "./stream-hub.js";
 import * as logWriter from "./log-writer.js";
@@ -13,7 +11,6 @@ import { emit } from "./event-bus.js";
 import { logger } from "./logger.js";
 import { runWithTrace } from "./trace-context.js";
 import { publishChildCompletion } from "./pipe-delivery.js";
-import { routeEscalation } from "./notification-router.js";
 import { cleanupLifecycleStream } from "./lifecycle-streams.js";
 import { sendInputToSession } from "./signals/signal-delivery.js";
 import { checkBudget } from "./budget-checker.js";
@@ -100,185 +97,6 @@ export function publishWidgetEvent(sessionId: string, payload: WidgetEventPayloa
 }
 
 /**
- * Process an escalation event from an agent, creating an escalation record
- * and routing it to notification channels.
- * Shared between live event processing and replay on late-bind.
- */
-export function processEscalationEvent(
-  ctx: ProcessorContext,
-  content: string,
-  _sessionId: string,
-): void {
-  if (!ctx.workspaceId) {
-    return;
-  }
-  try {
-    const data = JSON.parse(content) as {
-      message?: string; title?: string; urgency?: string;
-    };
-    const escalationId = ulid();
-    const taskUrl = ctx.taskId ? `/tasks/${ctx.taskId}` : "";
-    escalationStore.createEscalation(
-      escalationId, ctx.workspaceId, ctx.taskId || "", data.title || "Escalation",
-      data.message || "", "explicit", data.urgency || "normal", taskUrl,
-    );
-    const row = escalationStore.getEscalation(escalationId);
-    if (row) {
-      // Fire-and-forget — do not await in the synchronous event loop
-      routeEscalation(row).catch((err) => {
-        logger.error({ err, escalationId }, "Failed to route escalation");
-      });
-    }
-    logger.info({ escalationId, workspaceId: ctx.workspaceId, title: data.title }, "Escalation stored");
-  } catch (err) {
-    logger.error({ err, workspaceId: ctx.workspaceId, taskId: ctx.taskId }, "Failed to store escalation");
-  }
-}
-
-/**
- * Process a subtask creation event, creating a child task and broadcasting.
- * Shared between live event processing and replay on late-bind.
- */
-export function processSubtaskEvent(
-  ctx: ProcessorContext,
-  content: string,
-  subtaskLocalIdMap: Map<string, string>,
-): void {
-  if (!ctx.taskId) {
-    return;
-  }
-  try {
-    const data = JSON.parse(content) as {
-      title: string;
-      description: string;
-      local_id?: string;
-      depends_on?: string[];
-      can_decompose?: boolean;
-    };
-
-    const parentTask = taskStore.getTask(ctx.taskId);
-    if (!parentTask) {
-      logger.warn({ taskId: ctx.taskId }, "Subtask creation failed: parent task not found");
-      return;
-    }
-    if (!parentTask.canDecompose) {
-      logger.warn({ taskId: ctx.taskId }, "Subtask creation failed: parent task cannot decompose");
-      return;
-    }
-
-    const workspace = parentTask.workspaceId ? workspaceStore.getWorkspace(parentTask.workspaceId) : undefined;
-    if (parentTask.workspaceId && !workspace) {
-      logger.warn({ workspaceId: parentTask.workspaceId }, "Subtask creation failed: workspace not found");
-      return;
-    }
-
-    // Validate required fields
-    const title = typeof data.title === "string" ? data.title.trim() : "";
-    const description = typeof data.description === "string" ? data.description.trim() : "";
-
-    if (!title || !description) {
-      logger.warn(
-        { taskId: ctx.taskId, rawTitle: data.title, rawDescription: data.description },
-        "Subtask creation failed: invalid title or description",
-      );
-      return;
-    }
-
-    // Normalize and validate depends_on, local_id, and can_decompose
-    const dependsOn = Array.isArray(data.depends_on)
-      ? data.depends_on.filter((d): d is string => typeof d === "string").map(d => d.trim()).filter(Boolean)
-      : [];
-    const localId = typeof data.local_id === "string" ? data.local_id.trim() : "";
-    const canDecompose = typeof data.can_decompose === "boolean" ? data.can_decompose : false;
-
-    // Resolve depends_on local IDs to real task IDs — all must exist
-    const resolvedDeps: string[] = [];
-    for (const localDep of dependsOn) {
-      const realId = subtaskLocalIdMap.get(localDep);
-      if (realId) {
-        resolvedDeps.push(realId);
-      } else {
-        const subtaskIdentifier = localId
-          ? `Subtask local_id "${localId}"`
-          : `Subtask "${title}"`;
-        throw new Error(
-          `${subtaskIdentifier} references unknown depends_on local_id "${localDep}". ` +
-          `Dependencies must be created before dependents (topological order).`,
-        );
-      }
-    }
-
-    const subtaskId = uuid().slice(0, 8);
-    taskStore.createTask(
-      subtaskId,
-      parentTask.workspaceId || undefined,
-      title,
-      description,
-      resolvedDeps,
-      workspace ? slugify(workspace.name) : "",
-      ctx.taskId,
-      canDecompose,
-    );
-
-    // Record the local_id → real ID mapping, detecting duplicates
-    if (localId) {
-      if (subtaskLocalIdMap.has(localId)) {
-        logger.warn(
-          {
-            localId,
-            existingSubtaskId: subtaskLocalIdMap.get(localId),
-            newSubtaskId: subtaskId,
-            parentTaskId: ctx.taskId,
-          },
-          "Duplicate subtask local_id encountered; keeping existing mapping",
-        );
-      } else {
-        subtaskLocalIdMap.set(localId, subtaskId);
-      }
-    }
-
-    emit("task.created", { taskId: subtaskId, workspaceId: parentTask.workspaceId ?? undefined });
-    logger.info({ subtaskId, parentTaskId: ctx.taskId, title }, "Subtask created");
-  } catch (err) {
-    logger.error({ err, taskId: ctx.taskId }, "Failed to create subtask");
-  }
-}
-
-/**
- * Replay pre-association events from the session log through the subtask interceptor.
- * Called when a session is late-bound to a task. Does not re-publish to streamHub.
- *
- * Note: Uses synchronous readFileSync while the log is written via a buffered WriteStream.
- * Events written very recently may still be in the write buffer and not yet flushed to disk.
- * In practice this is negligible since replay targets events written before the current
- * iteration of the for-await loop, which are already flushed by the time lateBind is called.
- */
-function replayLoggedEvents(ctx: ProcessorContext, subtaskLocalIdMap: Map<string, string>): void {
-  try {
-    const entries = logWriter.readLog(ctx.logPath);
-    let subtasksReplayed = 0;
-
-    for (const entry of entries) {
-      if (entry.type === "subtask_create") {
-        processSubtaskEvent(ctx, entry.content, subtaskLocalIdMap);
-        subtasksReplayed++;
-      } else if (entry.type === "escalation") {
-        processEscalationEvent(ctx, entry.content, entry.session_id);
-      }
-    }
-
-    if (subtasksReplayed > 0) {
-      logger.info(
-        { sessionId: ctx.sessionId, taskId: ctx.taskId, subtasksReplayed },
-        "Replayed pre-association events from session log",
-      );
-    }
-  } catch (err) {
-    logger.error({ err, sessionId: ctx.sessionId }, "Failed to replay logged events");
-  }
-}
-
-/**
  * Process an async iterable of agent events from a PowerLine spawn or resume stream.
  * Handles event transformation, logging, status updates, and cleanup.
  *
@@ -303,16 +121,7 @@ export function processEventStream(
     taskId: options.taskId || "",
   };
 
-  /** Maps local_id strings (assigned by the agent) to real task IDs, scoped to this stream. */
-  const subtaskLocalIdMap = new Map<string, string>();
-
   processorRegistry.register(ctx);
-
-  // Register the bind listener synchronously alongside register() to close the race
-  // window where lateBind() could fire between register and the async IIFE starting.
-  processorRegistry.onBind(sessionId, () => {
-    replayLoggedEvents(ctx, subtaskLocalIdMap);
-  });
 
   /** Inner processing logic, extracted so it can be wrapped in runWithTrace. */
   const processEvents = async (): Promise<void> => {
@@ -368,16 +177,6 @@ export function processEventStream(
         await logWriter.writeEvent(logPath, sessionEvent);
         streamHub.publish(sessionEvent);
         recordSessionAction(sessionEvent);
-
-        // Intercept subtask creation events and create child tasks
-        if (event.type === "subtask_create" && ctx.taskId) {
-          processSubtaskEvent(ctx, event.content, subtaskLocalIdMap);
-        }
-
-        // Intercept escalation events from agents
-        if (event.type === "escalation" && ctx.workspaceId) {
-          processEscalationEvent(ctx, event.content, sessionId);
-        }
 
         // Intercept usage events and accumulate token counts on the session record
         if (event.type === "usage") {
