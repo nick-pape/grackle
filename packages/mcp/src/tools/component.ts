@@ -126,7 +126,7 @@ export const componentTools: ToolDefinition[] = [
     name: "component_register",
     group: "component",
     description:
-      "Register a reusable component in this workspace so it can be rendered repeatedly with different data via component_render. `source` is the component body: JSX for the default `grackle-react` renderer (call render(<C {...props}/>); React + Grackle components are in scope), or HTML for `mcp-app-html`. Optionally provide a `propsSchema` (JSON Schema) describing the props it accepts. Returns the component id.",
+      "Register a reusable component in this workspace so it can be rendered repeatedly with different data via component_render. `source` is the component body: JSX for the default `grackle-react` renderer (call render(<C {...props}/>); React + Grackle components are in scope), or HTML for `mcp-app-html`. Optionally provide a `propsSchema` (JSON Schema) describing the props it accepts. Returns the component id. Tip: use component_search first to discover existing components (incl. Grackle built-ins like Button/Callout/Spinner) and their props.",
     inputSchema: z.object({
       name: z.string().describe("Short component name, unique within your workspace."),
       source: z.string().describe("Component body — JSX (grackle-react) or HTML (mcp-app-html)."),
@@ -226,6 +226,40 @@ export const componentTools: ToolDefinition[] = [
           propsSchema: c.propsSchema,
           version: c.version,
           updatedAt: c.updatedAt,
+        })));
+      } catch (error) {
+        return grpcErrorToToolResult(error);
+      }
+    },
+  },
+  {
+    name: "component_search",
+    group: "component",
+    description:
+      "Search the component registry by keyword (name + description) — your workspace's registered components PLUS Grackle's built-in components. Use this to find an existing component to reuse before authoring a new one. Results with builtin:true are Grackle components you compose directly in JSX (e.g. <Button/>); others you render with component_render.",
+    inputSchema: z.object({
+      query: z.string().describe("Keyword to match against component names and descriptions."),
+      limit: z.number().int().positive().optional().describe("Maximum results to return (must be >= 1; omit for the default of 10)."),
+      workspaceId: z.string().optional().describe("Workspace ID (auto-injected from session context)."),
+    }),
+    rpcMethod: "searchComponents",
+    mutating: false,
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
+      try {
+        const response = await client.searchComponents({
+          query: args.query as string,
+          workspaceId: (args.workspaceId as string | undefined) ?? "",
+          limit: (args.limit as number | undefined) ?? 0,
+        });
+        return jsonResult(response.results.map((r) => ({
+          name: r.component?.name,
+          description: r.component?.description,
+          rendererKind: r.component?.rendererKind,
+          propsSchema: r.component?.propsSchema,
+          builtin: r.builtin,
+          ...(r.builtin ? {} : { id: r.component?.id, version: r.component?.version }),
+          relevanceScore: Math.round(r.relevanceScore * 100) / 100,
         })));
       } catch (error) {
         return grpcErrorToToolResult(error);

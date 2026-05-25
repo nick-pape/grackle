@@ -24,7 +24,7 @@ vi.mock("./logger.js", () => ({
   },
 }));
 
-import { createEdge, removeEdge } from "./edge-store.js";
+import { createEdge, removeEdge, upsertEdge } from "./edge-store.js";
 import { EDGE_TYPE } from "./types.js";
 
 // ---------------------------------------------------------------------------
@@ -199,5 +199,49 @@ describe("removeEdge", () => {
 
     await removeEdge("a", "b", EDGE_TYPE.RELATES_TO);
     expect(mockSessionClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("upsertEdge", () => {
+  beforeEach(() => {
+    mockSessionRun.mockClear();
+    mockSessionClose.mockClear();
+  });
+
+  it("uses MERGE and returns the edge", async () => {
+    const record = makeNeo4jRecord({
+      fromId: "a",
+      toId: "b",
+      type: "IN_WORKSPACE",
+      metadata: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+    });
+    mockSessionRun.mockResolvedValueOnce({ records: [record] });
+
+    const edge = await upsertEdge("a", "b", EDGE_TYPE.IN_WORKSPACE);
+    expect(edge.type).toBe("IN_WORKSPACE");
+    const cypher = mockSessionRun.mock.calls[0][0] as string;
+    expect(cypher).toContain("MERGE");
+    expect(cypher).toContain(":IN_WORKSPACE");
+  });
+
+  it("accepts the new structural edge types", async () => {
+    for (const type of [EDGE_TYPE.ATTEMPT_OF, EDGE_TYPE.RAN_IN, EDGE_TYPE.USED_PERSONA, EDGE_TYPE.SPAWNED, EDGE_TYPE.LINKED_TO]) {
+      mockSessionRun.mockResolvedValueOnce({
+        records: [makeNeo4jRecord({ fromId: "a", toId: "b", type, metadata: null, createdAt: "t" })],
+      });
+      await expect(upsertEdge("a", "b", type)).resolves.toMatchObject({ type });
+    }
+  });
+
+  it("throws when an endpoint node is missing", async () => {
+    mockSessionRun.mockResolvedValueOnce({ records: [] });
+    await expect(upsertEdge("a", "b", EDGE_TYPE.RAN_IN)).rejects.toThrow("not found");
+  });
+
+  it("throws on invalid edge type", async () => {
+    await expect(
+      upsertEdge("a", "b", "BAD_TYPE" as unknown as typeof EDGE_TYPE.RELATES_TO),
+    ).rejects.toThrow("Invalid edge type");
   });
 });

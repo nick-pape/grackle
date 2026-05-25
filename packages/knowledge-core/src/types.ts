@@ -37,6 +37,9 @@ export const REFERENCE_SOURCE = {
   SESSION: "session",
   FINDING: "finding",
   WORKSPACE: "workspace",
+  PERSONA: "persona",
+  ENVIRONMENT: "environment",
+  TRANSCRIPT_CHUNK: "transcript_chunk",
 } as const;
 
 /**
@@ -83,6 +86,19 @@ export const EDGE_TYPE = {
   DERIVED_FROM: "DERIVED_FROM",
   MENTIONS: "MENTIONS",
   PART_OF: "PART_OF",
+  // Structural edges projected from Grackle's SQL foreign keys (#1258).
+  /** Task → Workspace. */
+  IN_WORKSPACE: "IN_WORKSPACE",
+  /** Session → Task (a session is an attempt of a task). */
+  ATTEMPT_OF: "ATTEMPT_OF",
+  /** Session → Environment. */
+  RAN_IN: "RAN_IN",
+  /** Session → Persona. */
+  USED_PERSONA: "USED_PERSONA",
+  /** Session → Session (a session spawned another). */
+  SPAWNED: "SPAWNED",
+  /** Workspace → Environment. */
+  LINKED_TO: "LINKED_TO",
 } as const;
 
 /** Union of all edge type values. */
@@ -117,6 +133,11 @@ export interface ReferenceNode extends KnowledgeNodeBase {
   sourceId: string;
   /** Human-readable label derived from the source (e.g., task title). */
   label: string;
+  /**
+   * Optional cached content (e.g., a transcript chunk's text). Re-derivable
+   * from the source, so the keystone (no primary data only in the graph) holds.
+   */
+  content?: string;
 }
 
 /** A native node — owns its content directly. */

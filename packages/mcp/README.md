@@ -257,11 +257,14 @@ Query aggregated token usage and cost data.
 | `component_register` | Register a reusable component in the workspace. `source` is JSX (`grackle-react`, default) or HTML (`mcp-app-html`). Returns the component id. | `name` (string), `source` (string), `rendererKind` (optional), `description` (optional), `propsSchema` (JSON Schema string, optional) |
 | `component_update` | Update a registered component's source/name/description/props schema; bumps its version. | `id` (string), `source`/`name`/`description`/`propsSchema` (optional) |
 | `component_list` | List the reusable components registered in the workspace. | — |
+| `component_search` | Keyword-search registered components **and** Grackle's built-in components by name/description. Find a component to reuse before authoring. `builtin:true` results are composed in JSX; others are rendered via `component_render`. | `query` (string), `limit` (optional), `workspaceId` (auto) |
 | `component_render` | Render a registered component inline (by `id` or `name`), optionally passing `props`. Props are validated against the component's `propsSchema`. | `id` (optional), `name` (optional), `props` (object, optional) |
 | `component_show` | Render a one-off React/JSX component inline against the Grackle component library (no persistence). `source` calls `render(<Component {...props}/>)`; `React`, `props`, and Grackle components are in scope. | `source` (string), `props` (object, optional) |
 | `widget_show` | Render a one-off raw-HTML body inline, without persisting it. | `body` (string), `props` (object, optional) |
 
 Components are **workspace-scoped**: a session may only register/render components in its own workspace (the `workspaceId` is taken from the session's scoped token). A component's `propsSchema` (a JSON Schema) is validated at register, and render-time `props` are validated against it (via zod's `fromJSONSchema`). Renderers run in the cross-origin sandbox: `mcp-app-html` allows inline scripts (`script-src 'unsafe-inline'`); `grackle-react` runs the React runtime that transpiles + evaluates JSX (`script-src 'unsafe-eval'`) — both kept safe by the iframe origin isolation + restricted `connect-src`.
+
+Grackle's own context-free components (Button, Callout, Spinner, Skeleton, Tooltip, …) are already in the runtime scope and are surfaced by `component_search` as built-ins (`builtin: true`) with their prop schemas — so agents discover and compose them in JSX rather than re-authoring them.
 
 ---
 

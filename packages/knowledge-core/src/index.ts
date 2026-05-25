@@ -38,6 +38,12 @@ export {
   getNode,
   deleteNode,
   updateNode,
+  upsertReferenceNode,
+  getReferenceNodeProps,
+  listNodesMissingEmbedding,
+  listReferenceSourceIds,
+  deleteReferenceNodesByPrefix,
+  pruneReferenceNodesNotIn,
   recordToNode,
   recordToEdge,
 } from "./node-store.js";
@@ -47,9 +53,10 @@ export type {
   UpdateReferenceNodeInput,
   UpdateNativeNodeInput,
   UpdateNodeInput,
+  UpsertReferenceNodeInput,
   NodeWithEdges,
 } from "./node-store.js";
-export { createEdge, removeEdge } from "./edge-store.js";
+export { createEdge, removeEdge, upsertEdge, removeOutgoingEdges } from "./edge-store.js";
 export type { SearchOptions, SearchResult } from "./search.js";
 export { knowledgeSearch } from "./search.js";
 export type { ExpandOptions, ExpansionResult } from "./expand.js";

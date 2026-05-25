@@ -155,9 +155,8 @@ describe("createToolRegistry with plugin tools", () => {
 describe("Full tool registry", () => {
   it("contains exactly the expected number of tools", () => {
     const registry = createToolRegistry();
-    // 74 (incl. 5 widget registry tools, #1239) minus the 2 removed finding tools
-    // (#1257) plus the 1 React runtime tool (component_show, #1268) = 73.
-    expect(registry.list()).toHaveLength(73);
+    // 73 after #1269 (the component registry) + 1 component_search tool (#1271) = 74.
+    expect(registry.list()).toHaveLength(74);
   });
 
   it("every tool name matches snake_case pattern", () => {

@@ -147,3 +147,87 @@ export function readLog(logPath: string): LogEntry[] {
     .filter((line) => line.trim())
     .map((line) => JSON.parse(line) as LogEntry);
 }
+
+/** Result of an incremental log read: new raw JSONL + the advanced byte offset. */
+export interface IncrementalLogRead {
+  /**
+   * Raw JSONL of the complete lines appended since the given byte offset
+   * (a trailing partial line, if any, is not included).
+   */
+  content: string;
+  /** Byte offset at the last complete-line boundary; pass on the next call. */
+  nextOffset: number;
+}
+
+/**
+ * Max bytes {@link readLogFrom} reads per call. Bounds memory + blocking time
+ * even when a large tail has accumulated (e.g. first pass on a big log): each
+ * call advances `nextOffset` by at most this much, so callers make incremental
+ * progress across successive passes rather than reading the whole tail at once.
+ */
+const MAX_INCREMENTAL_READ_BYTES: number = 1_048_576; // 1 MiB
+
+/** The ASCII line-feed byte (`\n`), used to find complete-line boundaries. */
+const NEWLINE_BYTE: number = 0x0a;
+
+/**
+ * Read only the bytes appended to a session's JSONL log after `byteOffset`.
+ *
+ * O(new bytes): uses `statSync` + a positioned `readSync` from the offset
+ * rather than reading/parsing the whole file. Stops at the last complete line
+ * so a concurrently-appending writer never yields a partial JSON line; the
+ * returned `nextOffset` should be persisted and passed on the next call.
+ */
+export function readLogFrom(logPath: string, byteOffset: number): IncrementalLogRead {
+  const streamPath = join(logPath, "stream.jsonl");
+  if (!existsSync(streamPath)) {
+    return { content: "", nextOffset: byteOffset };
+  }
+
+  const size = statSync(streamPath).size;
+  // Reset to 0 if the file shrank (truncated/rewritten) so we re-read from start.
+  const start = size < byteOffset ? 0 : byteOffset;
+  if (size <= start) {
+    return { content: "", nextOffset: start };
+  }
+
+  // Cap the read so a large accumulated tail is processed over several passes.
+  const length = Math.min(size - start, MAX_INCREMENTAL_READ_BYTES);
+  const buffer = Buffer.allocUnsafe(length);
+  const fd = openSync(streamPath, "r");
+  let bytesRead: number;
+  try {
+    bytesRead = readSync(fd, buffer, 0, length, start);
+  } finally {
+    closeSync(fd);
+  }
+
+  // Guard: if the file shrank between statSync and readSync, readSync can return
+  // 0 (or fewer) bytes, leaving the allocUnsafe buffer uninitialized — bail
+  // before scanning/decoding garbage.
+  if (bytesRead <= 0) {
+    return { content: "", nextOffset: start };
+  }
+
+  // Locate the last newline BYTE (0x0A) directly in the buffer. Working in byte
+  // indices (not decoded-string indices) keeps `nextOffset` exact regardless of
+  // multi-byte UTF-8 characters, and lets us decode only the complete-line slice
+  // — any partial multi-byte char in the trailing fragment is left for the next
+  // pass instead of being decoded into a replacement character.
+  const lastNewline = buffer.lastIndexOf(NEWLINE_BYTE, bytesRead - 1);
+  if (lastNewline === -1) {
+    // No complete line in this window. If we read the whole remaining tail, it's
+    // a partial trailing append — wait for more (cursor unchanged). If the window
+    // was capped (more bytes follow), a single line exceeds the cap; advance past
+    // this window so we never stall forever. The over-long line then spans
+    // windows and surfaces as an unparseable fragment that the chunker skips.
+    const windowWasCapped = bytesRead < size - start;
+    return { content: "", nextOffset: windowWasCapped ? start + bytesRead : start };
+  }
+
+  // Decode only [0, lastNewline): complete lines, excluding the trailing newline.
+  return {
+    content: buffer.toString("utf-8", 0, lastNewline),
+    nextOffset: start + lastNewline + 1,
+  };
+}

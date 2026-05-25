@@ -41,9 +41,21 @@ export function buildSchemaStatements(dimensions: number = EMBEDDING_DIMENSIONS)
     INDEX_WORKSPACE: `CREATE INDEX knowledge_node_workspace IF NOT EXISTS
     FOR (n:${NODE_LABEL}) ON (n.workspaceId)`,
 
-    /** Composite index for reference node lookups by source. */
-    INDEX_SOURCE: `CREATE INDEX knowledge_node_source IF NOT EXISTS
-    FOR (n:${NODE_LABEL}) ON (n.sourceType, n.sourceId)`,
+    /**
+     * Uniqueness constraint on reference-node identity `(sourceType, sourceId)`.
+     * Backs the idempotent MERGE upsert and prevents duplicate mirror nodes
+     * (the keystone: one mirror node per source entity). Composite uniqueness
+     * ignores nodes lacking either property, so native nodes are unaffected.
+     * The constraint provides its own backing index for fast source lookups.
+     *
+     * On a fresh graph (the post-#1258 norm) this always succeeds. If an upgrade
+     * graph somehow holds legacy duplicates, creation fails loudly and init
+     * throws (the plugin runs degraded) rather than silently allowing
+     * nondeterministic MERGEs — recover by wiping Neo4j, after which
+     * startup-if-empty re-projects from SQL + logs (recovery = re-project).
+     */
+    UNIQUE_SOURCE: `CREATE CONSTRAINT knowledge_node_source_unique IF NOT EXISTS
+    FOR (n:${NODE_LABEL}) REQUIRE (n.sourceType, n.sourceId) IS UNIQUE`,
 
     /** Vector index for embedding similarity search. */
     VECTOR_INDEX: [

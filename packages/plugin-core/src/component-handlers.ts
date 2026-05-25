@@ -1,6 +1,6 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import { grackle, fuzzySearch, type FuzzyKey, BUILTIN_COMPONENTS } from "@grackle-ai/common";
 import { componentStore, workspaceStore } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { componentRowToProto } from "./grpc-proto-converters.js";
@@ -102,5 +102,80 @@ export async function listComponents(req: grackle.ListComponentsRequest): Promis
   requireWorkspace(req.workspaceId);
   return create(grackle.ComponentListSchema, {
     components: componentStore.listComponents(req.workspaceId).map(componentRowToProto),
+  });
+}
+
+/** Weighted fuzzy-search fields: a component's name matters more than its description. */
+const COMPONENT_SEARCH_KEYS: FuzzyKey[] = [
+  { name: "name", weight: 2 },
+  { name: "description", weight: 1 },
+];
+
+/** Default max results when the request leaves `limit` unset. */
+const DEFAULT_COMPONENT_SEARCH_LIMIT = 10;
+
+/**
+ * Sentinel id prefix for built-in components in search results. Built-ins are not
+ * DB rows (no real id), so we stamp a stable, clearly non-routable id like
+ * `builtin:Button` to keep the `Component` shape self-describing — a `getComponent`
+ * call with such an id cleanly resolves to NotFound rather than acting on an empty id.
+ */
+const BUILTIN_COMPONENT_ID_PREFIX = "builtin:";
+
+/** A unit fed to the fuzzy matcher: a workspace component or a built-in, with its proto form. */
+interface SearchableComponent {
+  name: string;
+  description: string;
+  builtin: boolean;
+  component: grackle.Component;
+}
+
+/**
+ * Keyword-search the component registry: the caller's workspace-authored
+ * components plus the always-available Grackle built-ins, ranked by relevance.
+ * Built-in results carry `builtin: true` (they are composed in JSX, not rendered
+ * by reference).
+ */
+export async function searchComponents(req: grackle.SearchComponentsRequest): Promise<grackle.SearchComponentsResponse> {
+  const query = req.query.trim();
+  if (!query) {
+    throw new ConnectError("query is required", Code.InvalidArgument);
+  }
+  const limit = req.limit > 0 ? req.limit : DEFAULT_COMPONENT_SEARCH_LIMIT;
+
+  const items: SearchableComponent[] = [];
+  if (req.workspaceId) {
+    // Validate a supplied workspace (like listComponents) so a typo'd/unknown id
+    // fails fast instead of silently returning only built-ins. An empty workspaceId
+    // is allowed — it searches built-ins only.
+    requireWorkspace(req.workspaceId);
+    for (const row of componentStore.listComponents(req.workspaceId)) {
+      items.push({ name: row.name, description: row.description, builtin: false, component: componentRowToProto(row) });
+    }
+  }
+  for (const b of BUILTIN_COMPONENTS) {
+    items.push({
+      name: b.name,
+      description: b.description,
+      builtin: true,
+      component: create(grackle.ComponentSchema, {
+        id: `${BUILTIN_COMPONENT_ID_PREFIX}${b.name}`,
+        name: b.name,
+        description: b.description,
+        rendererKind: "grackle-react",
+        propsSchema: b.propsSchema,
+      }),
+    });
+  }
+
+  const results = fuzzySearch(items, query, COMPONENT_SEARCH_KEYS, { limit });
+  return create(grackle.SearchComponentsResponseSchema, {
+    results: results.map((r) =>
+      create(grackle.SearchComponentResultSchema, {
+        component: r.item.component,
+        relevanceScore: 1 - r.score,
+        builtin: r.item.builtin,
+      }),
+    ),
   });
 }

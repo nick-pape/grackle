@@ -1,18 +1,15 @@
 import { cloneElement, isValidElement, useCallback, useEffect, useId, useRef, useState, type JSX, type ReactElement, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { type TooltipBuiltinProps, type TooltipPlacement } from "@grackle-ai/common";
 import styles from "./Tooltip.module.scss";
 
-/** Placement direction for the tooltip relative to its trigger. */
-export type TooltipPlacement = "top" | "bottom" | "left" | "right";
+// `text`/`placement`/`delayMs` now live in the built-in's zod schema
+// (@grackle-ai/common); re-export TooltipPlacement so the package barrel keeps
+// exposing it.
+export type { TooltipPlacement };
 
 /** Props for the {@link Tooltip} component. */
-export interface TooltipProps {
-  /** Text content to display in the tooltip. */
-  text: string;
-  /** Placement relative to the trigger element. Defaults to `"top"`. */
-  placement?: TooltipPlacement;
-  /** Delay in milliseconds before showing. Defaults to `300`. */
-  delayMs?: number;
+export interface TooltipProps extends TooltipBuiltinProps {
   /** Whether the wrapper is inline (`span`) or block (`div`). Defaults to `true`. */
   inline?: boolean;
   /** The trigger element to wrap. */

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, type JSX } from "react";
 import { ChevronDown } from "lucide-react";
-import type { ButtonVariant, ButtonSize } from "./Button.js";
+import { type SplitButtonBuiltinProps } from "@grackle-ai/common";
 import { ICON_MD } from "../../utils/iconSize.js";
 import styles from "./SplitButton.module.scss";
 
@@ -14,18 +14,17 @@ export interface SplitButtonOption {
   onClick: () => void;
 }
 
-/** Props for the {@link SplitButton} component. */
-export interface SplitButtonProps {
-  /** Label for the main (default) action. */
-  label: string;
+/**
+ * Props for the {@link SplitButton} component. The data props (label, variant,
+ * size) are inferred from the built-in's zod schema; `options` is the richer
+ * component type (its entries carry an `onClick` callback) and the main action's
+ * `onClick` are added on top.
+ */
+export interface SplitButtonProps extends Omit<SplitButtonBuiltinProps, "options"> {
   /** Callback for the main action (clicking the label area). */
   onClick: () => void;
   /** Menu options shown when the chevron is clicked. */
   options: SplitButtonOption[];
-  /** Visual variant. Defaults to `"primary"`. */
-  variant?: ButtonVariant;
-  /** Size. Defaults to `"md"`. */
-  size?: ButtonSize;
   /** data-testid for the root element. */
   "data-testid"?: string;
 }
