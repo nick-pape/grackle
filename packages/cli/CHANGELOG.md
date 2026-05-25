@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 25 May 2026 05:24:59 GMT and should not be manually modified.
+This log was last generated on Mon, 25 May 2026 05:44:41 GMT and should not be manually modified.
+
+## 0.123.1
+Mon, 25 May 2026 05:44:41 GMT
+
+### Patches
+
+- Coordination tab: live bipartite network graph of agent sessions and IPC streams with a List/Graph toggle (web UI).
 
 ## 0.123.0
 Mon, 25 May 2026 05:24:59 GMT
