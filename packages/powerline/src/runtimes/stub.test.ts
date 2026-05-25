@@ -592,23 +592,6 @@ describe("StubRuntime scenario mode", () => {
     expect(statusEvents[1].content).toBe("killed");
   });
 
-  it("subtask_create emit step produces correct event type", async () => {
-    const session = spawnScenario({
-      steps: [
-        { emit: "subtask_create", title: "Fix the bug", description: "Fix auth.ts line 42" },
-      ],
-    });
-
-    const events = await collectEvents(session);
-
-    const subtaskEvent = events.find((e) => e.type === "subtask_create")!;
-    expect(subtaskEvent).toBeDefined();
-    expect(JSON.parse(subtaskEvent.content)).toEqual({
-      title: "Fix the bug",
-      description: "Fix auth.ts line 42",
-    });
-  });
-
   it("usage event is emitted correctly", async () => {
     const usageData = JSON.stringify({ inputTokens: 100, outputTokens: 50 });
     const session = spawnScenario({

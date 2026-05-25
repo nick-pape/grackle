@@ -146,21 +146,6 @@ describe("buildEventFromEmitStep", () => {
     expect((event.raw as Record<string, unknown>).tool_use_id).toBe("unknown");
   });
 
-  it("normalizes subtask_create with title/description", () => {
-    const step: EmitStep = { emit: "subtask_create", title: "Fix bug", description: "Fix the auth bug" };
-    const [event] = buildEventFromEmitStep(step, undefined);
-
-    expect(event.type).toBe("subtask_create");
-    expect(JSON.parse(event.content)).toEqual({ title: "Fix bug", description: "Fix the auth bug" });
-  });
-
-  it("uses explicit content over convenience fields for subtask_create", () => {
-    const step: EmitStep = { emit: "subtask_create", content: "custom content", title: "ignored" };
-    const [event] = buildEventFromEmitStep(step, undefined);
-
-    expect(event.content).toBe("custom content");
-  });
-
   it("increments tool_use IDs across calls", () => {
     const step: EmitStep = { emit: "tool_use", tool: "a" };
     const [, id1] = buildEventFromEmitStep(step, undefined);

@@ -61,7 +61,7 @@ type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
 const AgentEventSchema: GenMessage<AgentEvent>;
 
 // @public
-export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "subtask_create" | "runtime_session_id" | "usage";
+export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "runtime_session_id" | "usage";
 
 // @public
 export const ALL_MCP_TOOL_NAMES: ReadonlySet<string>;
@@ -688,10 +688,8 @@ export type EventType = AgentEventType | "user_input" | "signal";
 // @public
 enum EventType_2 {
     ERROR = 4,
-    ESCALATION = 12,
     SIGNAL = 10,
     STATUS = 5,
-    SUBTASK_CREATE = 8,
     SYSTEM = 6,
     TEXT = 1,
     TOOL_RESULT = 3,

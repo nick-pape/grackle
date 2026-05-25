@@ -30,11 +30,11 @@ enum EventType {
   EVENT_TYPE_STATUS = 5;
   EVENT_TYPE_SYSTEM = 6;
   reserved 7; // was EVENT_TYPE_FINDING (removed)
-  EVENT_TYPE_SUBTASK_CREATE = 8;
+  reserved 8; // was EVENT_TYPE_SUBTASK_CREATE (removed — orchestration is MCP-only, AHP HR7)
   EVENT_TYPE_USER_INPUT = 9;
   EVENT_TYPE_SIGNAL = 10;
   EVENT_TYPE_USAGE = 11;
-  EVENT_TYPE_ESCALATION = 12;
+  reserved 12; // was EVENT_TYPE_ESCALATION (removed — orchestration is MCP-only, AHP HR7)
   EVENT_TYPE_WIDGET = 13;
 }
 
