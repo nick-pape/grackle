@@ -13,7 +13,7 @@ export function formatRuntimesTable(runtimes: grackle.RuntimeInfo[]): string {
   for (const runtime of runtimes) {
     const models = runtime.models.map((m) => m.id).join(", ") || chalk.dim("(agent-selected)");
     const needs = runtime.protectedResources.length > 0
-      ? runtime.protectedResources.map((p) => `${p.resourceName} (${p.credentialKind})`).join("\n")
+      ? runtime.protectedResources.map((p) => `${p.resourceName} (${p.credentialKinds.join(" or ")})`).join("\n")
       : chalk.dim("none");
     table.push([chalk.cyan(runtime.provider), runtime.displayName, models, needs]);
   }

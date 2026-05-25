@@ -55,9 +55,9 @@ describe("listRuntimes", () => {
     const claude = find(res, "claude-code");
 
     const anthropic = claude?.protectedResources.find((p) => p.resource === "https://api.anthropic.com");
-    expect(anthropic?.credentialKind).toBe("oauth-subscription-file");
+    expect(anthropic?.credentialKinds).toEqual(["oauth-subscription-file"]);
     const github = claude?.protectedResources.find((p) => p.resource === "https://api.github.com");
-    expect(github?.credentialKind).toBe("env-api-key");
+    expect(github?.credentialKinds).toEqual(["env-api-key"]);
   });
 
   it("omits a disabled provider's resource (copilot off → only github)", async () => {

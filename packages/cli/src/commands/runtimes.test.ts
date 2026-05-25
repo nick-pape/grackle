@@ -28,7 +28,7 @@ describe("formatRuntimesTable", () => {
         displayName: "Claude Code",
         models: [{ id: "sonnet", name: "Claude Sonnet", provider: "claude-code" } as grackle.ModelInfo],
         protectedResources: [
-          { resourceName: "Anthropic API", credentialKind: "oauth-subscription-file" } as grackle.ProtectedResource,
+          { resourceName: "Anthropic API", credentialKinds: ["oauth-subscription-file"] } as grackle.ProtectedResource,
         ],
       }),
     ]));

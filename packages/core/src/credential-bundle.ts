@@ -53,8 +53,13 @@ export interface ProtectedResourceDescriptor {
   authorizationServers: string[];
   /** OAuth scopes (RFC 9728); empty for env/file credential kinds. */
   scopesSupported: string[];
-  /** Grackle extension: how the credential is delivered. */
-  credentialKind: CredentialKind;
+  /**
+   * Acceptable credential kinds — the need is satisfied by **any** of these (e.g.
+   * codex accepts an OAuth file *or* an API-key env var). Mirrors what
+   * {@link buildProviderTokenBundle} will actually materialize for the provider.
+   * The presence/expiry check itself is the consumer's job (#1316).
+   */
+  credentialKinds: CredentialKind[];
   /** The credential-provider key this need derives from. */
   provider: keyof CredentialProviderConfig;
 }
@@ -78,7 +83,7 @@ function describeProviderNeed(
         resourceName: "Anthropic API",
         authorizationServers: [],
         scopesSupported: [],
-        credentialKind: config.claude === "subscription" ? "oauth-subscription-file" : "env-api-key",
+        credentialKinds: [config.claude === "subscription" ? "oauth-subscription-file" : "env-api-key"],
         provider: "claude",
       };
     }
@@ -91,7 +96,7 @@ function describeProviderNeed(
         resourceName: "GitHub",
         authorizationServers: [],
         scopesSupported: [],
-        credentialKind: "env-api-key",
+        credentialKinds: ["env-api-key"],
         provider: "github",
       };
     }
@@ -104,7 +109,7 @@ function describeProviderNeed(
         resourceName: "GitHub Copilot",
         authorizationServers: [],
         scopesSupported: [],
-        credentialKind: "oauth-subscription-file",
+        credentialKinds: ["oauth-subscription-file", "env-api-key"],
         provider: "copilot",
       };
     }
@@ -117,7 +122,7 @@ function describeProviderNeed(
         resourceName: "OpenAI",
         authorizationServers: [],
         scopesSupported: [],
-        credentialKind: "oauth-subscription-file",
+        credentialKinds: ["oauth-subscription-file", "env-api-key"],
         provider: "codex",
       };
     }
@@ -130,7 +135,7 @@ function describeProviderNeed(
         resourceName: "Goose",
         authorizationServers: [],
         scopesSupported: [],
-        credentialKind: "oauth-subscription-file",
+        credentialKinds: ["oauth-subscription-file", "env-api-key"],
         provider: "goose",
       };
     }

@@ -229,9 +229,10 @@ message ProtectedResource {
   string resource_name = 2;                  // Human-readable name
   repeated string authorization_servers = 3; // OAuth authorization servers (empty for env/file kinds)
   repeated string scopes_supported = 4;      // OAuth scopes (empty for env/file kinds)
-  // How the credential is delivered: "env-api-key" | "oauth-subscription-file" | "oauth-server".
-  // Maps to AHP protectedResources._meta.credentialKind at the HR8 transport flip.
-  string credential_kind = 5;
+  // Acceptable credential kinds (satisfied by ANY): "env-api-key" |
+  // "oauth-subscription-file" | "oauth-server". e.g. codex accepts a file OR an
+  // env key. Maps to AHP protectedResources._meta.credentialKinds at the HR8 flip.
+  repeated string credential_kinds = 5;
 }
 
 // A selectable model for a runtime. Mirrors AHP SessionModelInfo.

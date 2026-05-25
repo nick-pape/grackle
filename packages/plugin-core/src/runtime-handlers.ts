@@ -36,7 +36,7 @@ export async function listRuntimes(): Promise<grackle.ListRuntimesResponse> {
           resourceName: need.resourceName,
           authorizationServers: need.authorizationServers,
           scopesSupported: need.scopesSupported,
-          credentialKind: need.credentialKind,
+          credentialKinds: need.credentialKinds,
         }),
       ),
     }),

@@ -2147,7 +2147,7 @@ type ProtectedResource = Message<"grackle.ProtectedResource"> & {
     resourceName: string;
     authorizationServers: string[];
     scopesSupported: string[];
-    credentialKind: string;
+    credentialKinds: string[];
 };
 
 // @public

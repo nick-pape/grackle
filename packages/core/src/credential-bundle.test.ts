@@ -608,18 +608,18 @@ describe("deriveCredentialNeeds()", () => {
     expect(claude).toMatchObject({
       resource: "https://api.anthropic.com",
       resourceName: "Anthropic API",
-      credentialKind: "oauth-subscription-file",
+      credentialKinds: ["oauth-subscription-file"],
     });
     expect(byProvider(needs, "github")).toMatchObject({
       resource: "https://api.github.com",
-      credentialKind: "env-api-key",
+      credentialKinds: ["env-api-key"],
     });
   });
 
   it("reflects claude=api_key as env-api-key kind", () => {
     const needs = deriveCredentialNeeds("claude-code", { ...allOff(), claude: "api_key" });
 
-    expect(byProvider(needs, "claude")).toMatchObject({ credentialKind: "env-api-key" });
+    expect(byProvider(needs, "claude")).toMatchObject({ credentialKinds: ["env-api-key"] });
   });
 
   it("omits a provider that is off (claude off → only github)", () => {
@@ -640,18 +640,18 @@ describe("deriveCredentialNeeds()", () => {
     expect(byProvider(needs, "copilot")).toMatchObject({
       resource: "https://api.githubcopilot.com",
       resourceName: "GitHub Copilot",
-      credentialKind: "oauth-subscription-file",
+      credentialKinds: ["oauth-subscription-file", "env-api-key"],
     });
     expect(byProvider(needs, "github")).toBeDefined();
   });
 
-  it("returns OpenAI (file) for codex", () => {
+  it("advertises codex as satisfiable by an OAuth file OR an env API key", () => {
     const needs = deriveCredentialNeeds("codex", { ...allOff(), codex: "on" });
 
     expect(byProvider(needs, "codex")).toMatchObject({
       resource: "https://api.openai.com",
       resourceName: "OpenAI",
-      credentialKind: "oauth-subscription-file",
+      credentialKinds: ["oauth-subscription-file", "env-api-key"],
     });
   });
 
