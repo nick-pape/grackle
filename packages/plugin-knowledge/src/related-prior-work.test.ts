@@ -18,6 +18,9 @@ const gate = vi.hoisted(() => ({ isHealthy: vi.fn(() => true), getEmbedder: vi.f
 vi.mock("./knowledge-init.js", () => ({ getKnowledgeEmbedder: gate.getEmbedder }));
 vi.mock("./knowledge-health.js", () => ({ isNeo4jHealthy: gate.isHealthy }));
 
+const log = vi.hoisted(() => ({ info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() }));
+vi.mock("./logger.js", () => ({ logger: log }));
+
 import { buildRelatedPriorWork } from "./related-prior-work.js";
 
 interface RefNodeOpts {
@@ -188,5 +191,45 @@ describe("buildRelatedPriorWork — retrieval", () => {
     expect(bulletCount).toBe(2);
     delete process.env.GRACKLE_KG_RELATED_MAX_ITEMS;
     delete process.env.GRACKLE_KG_RELATED_MAX_CHARS;
+  });
+});
+
+describe("buildRelatedPriorWork — metrics log (#1260)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    gate.isHealthy.mockReturnValue(true);
+    gate.getEmbedder.mockReturnValue({});
+    kg.expandNode.mockResolvedValue({ nodes: [], edges: [] });
+    kg.findReferenceNodeBySource.mockResolvedValue(undefined);
+    process.env.GRACKLE_KG_RELATED_EXPAND = "false";
+  });
+
+  it("emits a kg_spawn_retrieval event with metadata when a block is built", async () => {
+    kg.knowledgeSearch.mockResolvedValue([
+      result(refNode({ id: "n2", sourceType: "task", sourceId: "t2", label: "[Task] Prior auth" }), 0.72),
+    ]);
+    await buildRelatedPriorWork(input);
+    expect(log.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "kg_spawn_retrieval",
+        taskId: "t1",
+        workspaceId: "w1",
+        injected: true,
+        hits: 1,
+        candidates: 1,
+        items: 1,
+        topScore: 0.72,
+      }),
+      expect.any(String),
+    );
+  });
+
+  it("emits injected:false when the search returns nothing", async () => {
+    kg.knowledgeSearch.mockResolvedValue([]);
+    await buildRelatedPriorWork(input);
+    expect(log.info).toHaveBeenCalledWith(
+      expect.objectContaining({ event: "kg_spawn_retrieval", injected: false, hits: 0, items: 0 }),
+      expect.any(String),
+    );
   });
 });

@@ -21,6 +21,7 @@ import {
   type SearchResult,
 } from "@grackle-ai/knowledge";
 import type { SpawnContextInput } from "@grackle-ai/plugin-sdk";
+import { logger } from "./logger.js";
 import { getKnowledgeEmbedder } from "./knowledge-init.js";
 import { isNeo4jHealthy } from "./knowledge-health.js";
 import { deriveTaskTextFromParts } from "./projection/derive-text.js";
@@ -88,6 +89,22 @@ interface RelatedItem {
 }
 
 /**
+ * Emit one structured spawn-retrieval metric line for the KG Phase 4 (#1260)
+ * analysis. Logged only once the search actually ran (past the gates), so the
+ * dataset's denominator is "active spawns we queried". Aggregate by filtering
+ * `event === "kg_spawn_retrieval"`.
+ */
+function logRetrieval(
+  input: SpawnContextInput,
+  fields: { injected: boolean; hits: number; candidates: number; items: number; topScore: number; chars: number },
+): void {
+  logger.info(
+    { event: "kg_spawn_retrieval", taskId: input.taskId, workspaceId: input.workspaceId, ...fields },
+    "spawn knowledge retrieval",
+  );
+}
+
+/**
  * Build the "Related prior work" system-prompt section for a spawning task, or
  * `undefined` when there is nothing relevant / knowledge is unavailable.
  */
@@ -114,6 +131,7 @@ export async function buildRelatedPriorWork(input: SpawnContextInput): Promise<s
     limit: config.limit,
   });
   if (results.length === 0) {
+    logRetrieval(input, { injected: false, hits: 0, candidates: 0, items: 0, topScore: 0, chars: 0 });
     return undefined;
   }
 
@@ -146,11 +164,18 @@ export async function buildRelatedPriorWork(input: SpawnContextInput): Promise<s
     }
   }
 
-  if (items.length === 0) {
-    return undefined;
-  }
+  // Single outcome log (covers "block built" and "all self-excluded → empty").
+  const section: string = items.length > 0 ? formatSection(items, config) : "";
+  logRetrieval(input, {
+    injected: section.length > 0,
+    hits: results.length, // raw search hits (above the min-score floor)
+    candidates: items.length, // after self-exclusion + 1-hop expansion
+    items: section ? (section.match(/^- /gm)?.length ?? 0) : 0, // rendered after budget/cap
+    topScore: Number((ranked[0]?.score ?? 0).toFixed(3)),
+    chars: section.length,
+  });
 
-  return formatSection(items, config) || undefined;
+  return section || undefined;
 }
 
 /** One-line snippet from a node's content, collapsed + length-capped. */
