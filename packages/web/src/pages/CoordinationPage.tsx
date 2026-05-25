@@ -59,25 +59,47 @@ export function CoordinationPage(): JSX.Element {
 
   return (
     <div className={styles.container} data-testid="coordination-page">
-      <div className={styles.viewToggle} role="group" aria-label="Coordination view" data-testid="coordination-view-toggle">
-        <button
-          type="button"
-          className={viewMode === "list" ? `${styles.toggleButton} ${styles.toggleActive}` : styles.toggleButton}
-          aria-pressed={viewMode === "list"}
-          data-testid="coordination-view-list"
-          onClick={() => setViewMode("list")}
-        >
-          List
-        </button>
-        <button
-          type="button"
-          className={viewMode === "graph" ? `${styles.toggleButton} ${styles.toggleActive}` : styles.toggleButton}
-          aria-pressed={viewMode === "graph"}
-          data-testid="coordination-view-graph"
-          onClick={() => setViewMode("graph")}
-        >
-          Graph
-        </button>
+      <div className={styles.toolbar}>
+        <div className={styles.viewToggle} role="group" aria-label="Coordination view" data-testid="coordination-view-toggle">
+          <button
+            type="button"
+            className={viewMode === "list" ? `${styles.toggleButton} ${styles.toggleActive}` : styles.toggleButton}
+            aria-pressed={viewMode === "list"}
+            data-testid="coordination-view-list"
+            onClick={() => setViewMode("list")}
+          >
+            List
+          </button>
+          <button
+            type="button"
+            className={viewMode === "graph" ? `${styles.toggleButton} ${styles.toggleActive}` : styles.toggleButton}
+            aria-pressed={viewMode === "graph"}
+            data-testid="coordination-view-graph"
+            onClick={() => setViewMode("graph")}
+          >
+            Graph
+          </button>
+        </div>
+        <div className={styles.toolbarControls}>
+          <label className={styles.internalsToggle}>
+            <input
+              type="checkbox"
+              checked={showInternals}
+              onChange={(e) => setShowInternals(e.target.checked)}
+              data-testid="coordination-show-internals"
+            />
+            Show internals
+          </label>
+          <button
+            type="button"
+            className={styles.refreshButton}
+            onClick={handleRefresh}
+            aria-label="Refresh streams"
+            data-testid="coordination-refresh"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
       {viewMode === "list" ? (
         <CoordinationList
@@ -92,6 +114,7 @@ export function CoordinationPage(): JSX.Element {
           selectedStreamId={selectedStreamId}
           onSelectStream={setSelectedStreamId}
           onRefresh={handleRefresh}
+          hideHeaderControls
         />
       ) : (
         <CoordinationGraph

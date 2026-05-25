@@ -10,7 +10,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { Session, StreamData } from "../../hooks/types.js";
-import { resolveStatus, STATUS_CSS_VAR_MAP } from "../../utils/taskStatus.js";
+import { SESSION_STATUS_VAR_NAMES, sessionStatusStyle } from "../../utils/sessionStatus.js";
 import {
   SESSION_NODE_TYPE,
   STREAM_NODE_TYPE,
@@ -69,12 +69,12 @@ export function CoordinationGraph({
     [layout.nodes, selectedStreamId],
   );
 
-  /** Cached MiniMap colors, recomputed only when the theme changes. */
-  const statusColors = useMemo(() => {
+  /** Theme-resolved colors for the session-status CSS vars (MiniMap needs concrete colors). */
+  const resolvedStatusColors = useMemo(() => {
     const style = getComputedStyle(document.documentElement);
     const colors: Record<string, string> = {};
-    for (const [status, varName] of Object.entries(STATUS_CSS_VAR_MAP)) {
-      colors[status] = style.getPropertyValue(varName).trim() || MINIMAP_FALLBACK_COLOR;
+    for (const varName of SESSION_STATUS_VAR_NAMES) {
+      colors[varName] = style.getPropertyValue(varName).trim() || MINIMAP_FALLBACK_COLOR;
     }
     return colors;
   }, [resolvedThemeId]);
@@ -93,11 +93,11 @@ export function CoordinationGraph({
     (node: Node): string => {
       const data = node.data as CoordNodeData;
       if (data.kind === "session") {
-        return statusColors[resolveStatus(data.session.status)] || MINIMAP_FALLBACK_COLOR;
+        return resolvedStatusColors[sessionStatusStyle(data.session.status, data.external).varName] ?? MINIMAP_FALLBACK_COLOR;
       }
       return MINIMAP_FALLBACK_COLOR;
     },
-    [statusColors],
+    [resolvedStatusColors],
   );
 
   if (layout.nodes.length === 0) {

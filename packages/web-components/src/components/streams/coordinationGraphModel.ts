@@ -39,7 +39,11 @@ export interface SessionNodeData extends Record<string, unknown> {
 export interface StreamNodeData extends Record<string, unknown> {
   kind: "stream";
   stream: StreamData;
-  /** Display kind (`chatroom` or `channel`; pipes are collapsed and never become hubs). */
+  /**
+   * Display kind. Two-party pipes are collapsed into a direct edge and never
+   * become hubs; a `pipe` stream that cannot collapse (e.g. not exactly two
+   * distinct sessions) still renders as a hub with kind `pipe`.
+   */
   streamKind: StreamKind;
   /** Ownership classification, used to decide whether the hub renders a task halo. */
   ownership: StreamOwnership;
