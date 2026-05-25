@@ -14,8 +14,9 @@ import http from "node:http";
 import { z } from "zod";
 import { createScopedToken } from "@grackle-ai/auth";
 import { ROOT_TASK_ID } from "@grackle-ai/common";
+import type { AuthContext } from "@grackle-ai/auth";
 import type { ToolDefinition } from "./tool-registry.js";
-import { createMcpServer, resolveAssetBaseUrl, dynamicRenderInputSchema, type PublishWidgetEvent } from "./mcp-server.js";
+import { createMcpServer, resolveAssetBaseUrl, dynamicRenderInputSchema, sessionIdsForWorkspace, type PublishWidgetEvent } from "./mcp-server.js";
 import { HELLO_WIDGET_URI } from "./resources/hello-widget.js";
 import { WIDGET_RENDER_META_KEY } from "./widget-render-meta.js";
 
@@ -979,5 +980,31 @@ describe("dynamicRenderInputSchema (#1272)", () => {
       properties?: Record<string, unknown>;
     };
     expect(schema.properties?.label).toBeDefined();
+  });
+});
+
+describe("sessionIdsForWorkspace (#1297 fan-out selection)", () => {
+  const scoped = (workspaceId: string): AuthContext => ({
+    type: "scoped", taskId: "t", workspaceId, personaId: "p", taskSessionId: "s",
+  });
+
+  it("selects only scoped sessions bound to the given workspace", () => {
+    const ctxs = new Map<string, AuthContext>([
+      ["s1", scoped("wsA")],
+      ["s2", scoped("wsB")],
+      ["s3", scoped("wsA")],
+      ["s4", { type: "api-key" }],
+    ]);
+    expect(sessionIdsForWorkspace(ctxs, "wsA").sort()).toEqual(["s1", "s3"]);
+    expect(sessionIdsForWorkspace(ctxs, "wsB")).toEqual(["s2"]);
+    expect(sessionIdsForWorkspace(ctxs, "wsC")).toEqual([]);
+  });
+
+  it("ignores non-scoped (api-key/oauth) sessions", () => {
+    const ctxs = new Map<string, AuthContext>([
+      ["s1", { type: "api-key" }],
+      ["s2", { type: "oauth", clientId: "c" }],
+    ]);
+    expect(sessionIdsForWorkspace(ctxs, "wsA")).toEqual([]);
   });
 });

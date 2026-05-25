@@ -344,7 +344,20 @@ async function main(): Promise<void> {
         return t as unknown as ToolDefinition;
       })]
     : [];
-  const mcpServer = createMcpServer({ bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl: authServerUrl, toolGroups: pluginToolGroups, publishWidgetEvent, ...(config.mcpOrigin !== undefined ? { mcpOrigin: config.mcpOrigin } : {}) });
+  const mcpServer = createMcpServer({
+    bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl: authServerUrl, toolGroups: pluginToolGroups, publishWidgetEvent,
+    // Push tools/list_changed to a workspace's MCP sessions when its promoted
+    // component set changes (#1297), via the domain-event bus.
+    onComponentChangeSubscribe: (notify) => subscribe((e) => {
+      if (e.type === "component.changed") {
+        const wsId = e.payload.workspaceId;
+        if (typeof wsId === "string" && wsId) {
+          notify(wsId);
+        }
+      }
+    }),
+    ...(config.mcpOrigin !== undefined ? { mcpOrigin: config.mcpOrigin } : {}),
+  });
 
   mcpServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {

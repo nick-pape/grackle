@@ -41,11 +41,29 @@ export interface McpCallStep {
   args?: Record<string, unknown>;
 }
 
+/**
+ * A step that exercises a *conformant* MCP client which honors
+ * `notifications/tools/list_changed` (#1297). It opens a persistent session,
+ * optionally fires a `trigger` tool call, then waits for the server to push
+ * `tools/list_changed`, re-lists tools on receipt, and reports whether `expect`
+ * appeared. Requires `mcpBroker`.
+ */
+export interface AwaitToolChangeStep {
+  await_tool_change: {
+    /** Optional tool call to fire (e.g. component_promote) that should cause the change. */
+    trigger?: { tool: string; args?: Record<string, unknown> };
+    /** Tool name expected to appear in the re-listed tools after the notification. */
+    expect: string;
+    /** Max wait for the notification (default 5000ms). */
+    timeout_ms?: number;
+  };
+}
+
 /** Actions that can be taken when user input is received during an idle step. */
 export type InputAction = "echo" | "fail" | "ignore" | "next";
 
 /** A single step in a scenario. */
-export type ScenarioStep = EmitStep | WaitStep | IdleStep | OnInputStep | OnInputMatchStep | McpCallStep;
+export type ScenarioStep = EmitStep | WaitStep | IdleStep | OnInputStep | OnInputMatchStep | McpCallStep | AwaitToolChangeStep;
 
 /** A JSON scenario that defines the exact sequence of events for a stub session. */
 export interface Scenario {
@@ -82,6 +100,11 @@ export function isOnInputMatchStep(step: ScenarioStep): step is OnInputMatchStep
 /** Check if a step is an McpCallStep. */
 export function isMcpCallStep(step: ScenarioStep): step is McpCallStep {
   return "mcp_call" in step;
+}
+
+/** Check if a step is an AwaitToolChangeStep. */
+export function isAwaitToolChangeStep(step: ScenarioStep): step is AwaitToolChangeStep {
+  return "await_tool_change" in step;
 }
 
 // ─── Parser ─────────────────────────────────────────────────

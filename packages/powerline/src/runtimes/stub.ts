@@ -11,8 +11,9 @@ import {
   isOnInputStep,
   isOnInputMatchStep,
   isMcpCallStep,
+  isAwaitToolChangeStep,
 } from "./stub-scenario.js";
-import type { Scenario, InputAction } from "./stub-scenario.js";
+import type { Scenario, InputAction, AwaitToolChangeStep } from "./stub-scenario.js";
 import { logger } from "../logger.js";
 
 /** Timeout for connecting to the MCP server and completing a tool call. */
@@ -230,6 +231,14 @@ export class StubSession implements AgentSession {
             yield event;
           }
         }
+      } else if (isAwaitToolChangeStep(step)) {
+        if (!this.mcpBroker) {
+          logger.warn(`${this.runtimeName}: await_tool_change step but no MCP broker configured`);
+        } else {
+          for (const event of await this.performAwaitToolChange(ts, step.await_tool_change)) {
+            yield event;
+          }
+        }
       }
     }
 
@@ -318,6 +327,96 @@ export class StubSession implements AgentSession {
       if (mcpClient) {
         // Fire-and-forget — close() can hang on CI runners with stuck HTTP transports.
         // Since events are already collected, we don't need to wait for cleanup.
+        mcpClient.close().catch(() => {});
+      }
+    }
+    return events;
+  }
+
+  /**
+   * A conformant MCP client that honors `notifications/tools/list_changed` (#1297):
+   * connect a persistent session, register the notification handler, optionally fire a
+   * trigger call (e.g. component_promote), then wait for the server to push the
+   * notification, re-list tools on receipt, and report whether `expect` appeared.
+   * Returns events (not a live session) so the client is closed before yielding.
+   */
+  private async performAwaitToolChange(
+    ts: () => string,
+    spec: AwaitToolChangeStep["await_tool_change"],
+  ): Promise<AgentEvent[]> {
+    const toolUseId = `toolu_stub_mcp_${++mcpToolUseCounter}`;
+    const events: AgentEvent[] = [];
+    let mcpClient: InstanceType<typeof import("@modelcontextprotocol/sdk/client/index.js").Client> | undefined;
+
+    events.push({
+      type: "tool_use",
+      timestamp: ts(),
+      content: JSON.stringify({ tool: "await_tool_change", expect: spec.expect, trigger: spec.trigger?.tool }),
+      raw: { type: "tool_use", id: toolUseId, name: "await_tool_change", input: spec },
+      toolCallId: toolUseId,
+    });
+
+    try {
+      const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
+      const { StreamableHTTPClientTransport } = await import("@modelcontextprotocol/sdk/client/streamableHttp.js");
+      const { ToolListChangedNotificationSchema } = await import("@modelcontextprotocol/sdk/types.js");
+
+      const transport = new StreamableHTTPClientTransport(new URL(this.mcpBroker!.url), {
+        requestInit: { headers: { Authorization: `Bearer ${this.mcpBroker!.token}` } },
+      });
+      mcpClient = new Client({ name: "stub-mcp-runtime", version: "1.0.0" });
+
+      // Re-list tools when the server pushes tools/list_changed — the conformant behavior.
+      let refreshedTools: string[] | undefined;
+      let resolveChanged: () => void = () => { /* set below */ };
+      const changed = new Promise<void>((resolve) => { resolveChanged = resolve; });
+      mcpClient.setNotificationHandler(ToolListChangedNotificationSchema, async () => {
+        try {
+          const listed = await mcpClient!.listTools();
+          refreshedTools = listed.tools.map((t) => t.name);
+        } finally {
+          resolveChanged();
+        }
+      });
+
+      await withTimeout(mcpClient.connect(transport), MCP_CONNECT_TIMEOUT_MS, "MCP connect timeout");
+      if (spec.trigger) {
+        await withTimeout(
+          mcpClient.callTool({ name: spec.trigger.tool, arguments: spec.trigger.args ?? {} }),
+          MCP_CONNECT_TIMEOUT_MS,
+          "MCP trigger call timeout",
+        );
+      }
+      await withTimeout(changed, spec.timeout_ms ?? MCP_CONNECT_TIMEOUT_MS, "tools/list_changed not received");
+
+      const present = refreshedTools?.includes(spec.expect) ?? false;
+      events.push({
+        type: "tool_result",
+        timestamp: ts(),
+        content: JSON.stringify({ toolListChangedReceived: true, expect: spec.expect, present, tools: refreshedTools ?? [] }),
+        raw: { type: "tool_result", tool_use_id: toolUseId, is_error: !present },
+        toolCallId: toolUseId,
+      });
+      // Distinctive marker (only on the success path) so a test can assert the
+      // notification actually drove the re-list, not just that the tool name appears.
+      events.push({
+        type: "text",
+        timestamp: ts(),
+        content: present
+          ? `tools/list_changed received: ${spec.expect} is now available`
+          : `tools/list_changed NOT confirmed for ${spec.expect}`,
+      });
+    } catch (err) {
+      logger.warn({ err, runtimeName: this.runtimeName }, `${this.runtimeName}: await_tool_change failed`);
+      events.push({
+        type: "tool_result",
+        timestamp: ts(),
+        content: JSON.stringify({ toolListChangedReceived: false, error: err instanceof Error ? err.message : String(err) }),
+        raw: { type: "tool_result", tool_use_id: toolUseId, is_error: true },
+        toolCallId: toolUseId,
+      });
+    } finally {
+      if (mcpClient) {
         mcpClient.close().catch(() => {});
       }
     }
