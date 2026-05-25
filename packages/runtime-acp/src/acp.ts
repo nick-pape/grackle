@@ -279,10 +279,14 @@ class AcpSession extends BaseAgentSession {
       shell: process.platform === "win32",
     });
 
+    // Note: this is a `diagnostic` event, so its content may be exported to an
+    // OTLP collector when the sink is enabled (AHP HR7). Deliberately omit the
+    // raw CLI args — they are arbitrary user-controllable input that can carry
+    // secrets — and keep only low-sensitivity structural info (command, pid, cwd).
     this.eventQueue.push({
       type: "system",
       timestamp: ts(),
-      content: `Spawned ${this.config.command} ${this.config.args.join(" ")} (pid: ${String(this.child.pid)}, cwd: ${spawnCwd})`,
+      content: `Spawned ${this.config.command} (pid: ${String(this.child.pid)}, cwd: ${spawnCwd})`,
       diagnostic: true,
     });
 

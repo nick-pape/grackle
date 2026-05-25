@@ -64,7 +64,7 @@ message AgentEvent {
   string content = 4;
   string raw = 5; // JSON, optional
   string tool_call_id = 6; // stable runtime tool-call id (pairs tool_use↔tool_result); "" when N/A (AHP HR3)
-  bool diagnostic = 7; // true = runtime lifecycle/diagnostic (→ telemetry, not SessionState); AHP HR7
+  bool diagnostic = 7; // true = runtime lifecycle/diagnostic; tee to telemetry sinks (may be excluded from SessionState in a later HR step); AHP HR7
 }
 
 message SessionInfo {

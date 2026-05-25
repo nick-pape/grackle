@@ -14,8 +14,13 @@ import { getTraceId } from "./trace-context.js";
  * Runtime lifecycle/diagnostic events (flagged `diagnostic: true` at emission)
  * are tee'd here in addition to the existing JSONL/streamHub/session_actions
  * sinks. This sink is **opt-in**: it is a complete no-op unless
- * `OTEL_EXPORTER_OTLP_ENDPOINT` is set, and every emit path is best-effort so a
- * misconfigured or dead collector can never break the agent event loop.
+ * `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` or `OTEL_EXPORTER_OTLP_ENDPOINT` is set
+ * (the logs-specific var takes precedence), and every emit path is best-effort
+ * so a misconfigured or dead collector can never break the agent event loop.
+ *
+ * Because a diagnostic event's `content` becomes the exported OTLP log body and
+ * may reach a remote collector, secrets must be kept out of diagnostic content
+ * at the emit site (e.g. ACP omits raw CLI args) — this sink does not redact.
  *
  * This deliberately builds the real OTLP pipeline now without changing the wire
  * protocol. HR8 will add the `ahp-otlp:` channel emission on top of this.
@@ -78,6 +83,9 @@ export function initOtlpLogs(): LoggerProvider | undefined {
  * No-op when the sink is disabled (no provider) and best-effort otherwise — any
  * error is swallowed so the event-processor loop is never disrupted. Callers
  * should gate on `event.diagnostic` before calling.
+ *
+ * The event's `content` is exported verbatim as the log body (no redaction), so
+ * emit sites are responsible for keeping secrets out of diagnostic content.
  *
  * @param event - The diagnostic {@link grackle.SessionEvent} to export.
  */
