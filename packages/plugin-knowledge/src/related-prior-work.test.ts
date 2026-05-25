@@ -1,5 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { SpawnContextInput } from "@grackle-ai/plugin-sdk";
+
+// Tests set GRACKLE_KG_RELATED_* env knobs; process.env is shared across the
+// Vitest worker, so scrub them after every test to avoid order-dependent leaks
+// into other tests/files.
+afterEach(() => {
+  for (const key of Object.keys(process.env)) {
+    if (key.startsWith("GRACKLE_KG_RELATED_") || key === "GRACKLE_KG_SPAWN_CONTEXT_TIMEOUT_MS") {
+      delete process.env[key];
+    }
+  }
+});
 
 // ── Mocks ────────────────────────────────────────────────────
 const kg = vi.hoisted(() => ({
