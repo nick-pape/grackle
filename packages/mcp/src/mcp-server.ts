@@ -149,10 +149,13 @@ async function resolvePersonaTools(
 /**
  * Build the JSON Schema for a dynamic `render_<name>` tool's input from a stored
  * component `propsSchema` (#1272). Round-trips through zod so the result is always
- * a valid, normalized JSON Schema; an empty or unparseable schema falls back to a
- * permissive empty object (the props are then validated at call time anyway).
+ * a valid, normalized JSON Schema. A component with no `propsSchema` (the DB
+ * default `""`) or an unparseable one falls back to a *passthrough* object that
+ * allows arbitrary keys (`additionalProperties: true`) — the call path doesn't
+ * validate props when there's no schema, so the advertised input must be equally
+ * permissive or the tool would look uncallable.
  */
-function dynamicRenderInputSchema(propsSchema: string): ReturnType<typeof z.toJSONSchema<z.ZodType>> {
+export function dynamicRenderInputSchema(propsSchema: string): ReturnType<typeof z.toJSONSchema<z.ZodType>> {
   if (propsSchema) {
     try {
       return z.toJSONSchema(z.fromJSONSchema(JSON.parse(propsSchema) as Parameters<typeof z.fromJSONSchema>[0]));
@@ -160,7 +163,7 @@ function dynamicRenderInputSchema(propsSchema: string): ReturnType<typeof z.toJS
       // fall through to the permissive schema
     }
   }
-  return z.toJSONSchema(z.object({}));
+  return z.toJSONSchema(z.looseObject({}));
 }
 
 async function createMcpServerInstance(

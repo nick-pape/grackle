@@ -39,6 +39,15 @@ describe("ToolRegistry", () => {
       .toThrow("Duplicate tool name: duplicate");
   });
 
+  it("throws when a tool name uses the reserved render_ prefix (#1272)", () => {
+    const registry = new ToolRegistry();
+    // The render_ namespace belongs to dynamic per-workspace component tools, so
+    // no static/plugin tool may claim it — enforced at registration, not just by
+    // a built-in allowlist test.
+    expect(() => registry.register(createTestTool("render_evil")))
+      .toThrow(/reserved/);
+  });
+
   it("lists all registered tools", () => {
     const registry = new ToolRegistry();
     registry.register(createTestTool("alpha"));
