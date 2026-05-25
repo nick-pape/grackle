@@ -177,6 +177,9 @@ describe("mapSessionUpdate", () => {
     expect(events[0].content).toBe(
       "[completed] Read the file\n[in_progress] Write tests\n[pending] Deploy",
     );
+    // AHP HR7: the agent's plan is substantive output (not a runtime diagnostic),
+    // so it must NOT be flagged — it stays in the conversation/SessionState.
+    expect(events[0].diagnostic).toBeUndefined();
   });
 
   it("skips plan with empty entries", () => {

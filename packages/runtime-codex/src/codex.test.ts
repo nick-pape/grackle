@@ -311,6 +311,23 @@ describe("Codex streaming field extraction", () => {
     expect(rtIdEvent!.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
+  // AHP HR7: Codex setup/lifecycle system events are flagged diagnostic.
+  it("flags Codex lifecycle system events as diagnostic", async () => {
+    mockRunStreamedEvents = [
+      { type: "thread.started", thread_id: "thread-diag" },
+      { type: "item.completed", item: { type: "agent_message", text: "done" } },
+    ];
+
+    const session = runtime.spawn({ sessionId: "ut-diag", prompt: "hi", model: "codex-mini", maxTurns: 1 });
+    const events = await collectEvents(session);
+
+    const systemEvents = events.filter((e) => e.type === "system");
+    expect(systemEvents.length).toBeGreaterThan(0);
+    for (const event of systemEvents) {
+      expect(event.diagnostic).toBe(true);
+    }
+  });
+
   it("emits runtime_session_id only once even on follow-up thread.started", async () => {
     mockRunStreamedEvents = [
       { type: "thread.started", thread_id: "thread-first" },

@@ -10,6 +10,7 @@ import { Logger } from 'pino';
 export interface AgentEvent {
     // (undocumented)
     content: string;
+    diagnostic?: boolean;
     // (undocumented)
     raw?: unknown;
     // (undocumented)

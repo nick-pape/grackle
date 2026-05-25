@@ -32,6 +32,10 @@ vi.mock("./transcript.js", () => ({
   writeTranscript: vi.fn(),
 }));
 
+vi.mock("./telemetry.js", () => ({
+  emitDiagnostic: vi.fn(),
+}));
+
 // Import AFTER mocks
 import { openDatabase, initDatabase, sqlite as _sqlite, sessionStore, taskStore, workspaceStore, querySessionActions } from "@grackle-ai/database";
 openDatabase(":memory:");
@@ -43,6 +47,7 @@ import { emit } from "./event-bus.js";
 import * as logWriter from "./log-writer.js";
 import { logger } from "./logger.js";
 import { runWithTrace } from "./trace-context.js";
+import { emitDiagnostic } from "./telemetry.js";
 
 /** Apply the minimal schema needed for tests. */
 function applySchema(): void {
@@ -1145,5 +1150,56 @@ describe("event-processor tool_call_id (AHP HR3)", () => {
       .map((c) => c[0])
       .find((e) => e.type === grackle.EventType.TOOL_USE);
     expect(published?.toolCallId).toBe("toolu_x");
+  });
+});
+
+describe("event-processor diagnostic flag + OTLP tee (AHP HR7)", () => {
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    applySchema();
+    vi.clearAllMocks();
+  });
+
+  it("threads AgentEvent.diagnostic onto the published SessionEvent and tees it to OTLP", async () => {
+    sessionStore.createSession("sess-diag", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    const diagnosticEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess-diag",
+      type: "system",
+      timestamp: new Date().toISOString(),
+      content: "Starting claude-code runtime...",
+      diagnostic: true,
+    });
+
+    await waitForProcessing([diagnosticEvent], { sessionId: "sess-diag", logPath: "/tmp/log" });
+
+    const { publish } = await import("./stream-hub.js");
+    const published = vi.mocked(publish).mock.calls
+      .map((c) => c[0])
+      .find((e) => e.type === grackle.EventType.SYSTEM);
+    expect(published?.diagnostic).toBe(true);
+
+    // The diagnostic is tee'd to the additive OTLP sink with the same event.
+    expect(emitDiagnostic).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(emitDiagnostic).mock.calls[0][0].diagnostic).toBe(true);
+    expect(vi.mocked(emitDiagnostic).mock.calls[0][0].content).toBe("Starting claude-code runtime...");
+  });
+
+  it("does not tee a non-diagnostic event to OTLP and leaves diagnostic false", async () => {
+    sessionStore.createSession("sess-sub", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    const textEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess-sub",
+      type: "text",
+      timestamp: new Date().toISOString(),
+      content: "substantive output",
+    });
+
+    await waitForProcessing([textEvent], { sessionId: "sess-sub", logPath: "/tmp/log" });
+
+    const { publish } = await import("./stream-hub.js");
+    const published = vi.mocked(publish).mock.calls
+      .map((c) => c[0])
+      .find((e) => e.type === grackle.EventType.TEXT);
+    expect(published?.diagnostic).toBe(false);
+    expect(emitDiagnostic).not.toHaveBeenCalled();
   });
 });

@@ -124,7 +124,7 @@ export function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
   if (type === "system") {
     const subtype = msg.subtype as string | undefined;
     if (subtype === "init") {
-      return [{ type: "system", timestamp: ts, content: `Session initialized (${msg.model ? String(msg.model) : "unknown model"})`, raw: msg }];
+      return [{ type: "system", timestamp: ts, content: `Session initialized (${msg.model ? String(msg.model) : "unknown model"})`, raw: msg, diagnostic: true }];
     }
     return [];
   }

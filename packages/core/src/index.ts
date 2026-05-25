@@ -59,6 +59,9 @@ export { logger } from "./logger.js";
 // ─── Trace Context ───────────────────────────────────────────
 export { getTraceId, runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace } from "./trace-context.js";
 
+// ─── Telemetry (AHP HR7 — additive OTLP logs sink) ───────────
+export { initOtlpLogs, emitDiagnostic, shutdownOtlpLogs } from "./telemetry.js";
+
 // ─── Utilities ───────────────────────────────────────────────
 export { exec } from "./utils/exec.js";
 export { detectLanIp } from "./utils/network.js";

@@ -10,6 +10,7 @@ import {
   ReconciliationManager,
   logger, exec, detectLanIp,
   runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace,
+  initOtlpLogs,
   importAccountsFromGhCli,
   publishWidgetEvent,
   setSpawnContextProviders,
@@ -51,6 +52,10 @@ async function main(): Promise<void> {
   // Resolve and validate all server configuration from env vars (fail fast on invalid values)
   const config = resolveServerConfig();
   logger.info({ config }, "Server configuration resolved");
+
+  // AHP HR7: initialize the additive OTLP logs sink for runtime diagnostics.
+  // No-op unless OTEL_EXPORTER_OTLP_ENDPOINT is set; never breaks startup.
+  initOtlpLogs();
 
   // Open the database, verify integrity, run schema migrations, then seed defaults
   initializeDatabase();

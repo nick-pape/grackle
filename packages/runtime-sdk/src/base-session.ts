@@ -85,6 +85,7 @@ export abstract class BaseAgentSession implements AgentSession {
       type: "system",
       timestamp: new Date().toISOString(),
       content: `Session resumed (id: ${this.resumeSessionId})`,
+      diagnostic: true,
     });
   }
 
@@ -185,7 +186,7 @@ export abstract class BaseAgentSession implements AgentSession {
   public async *stream(): AsyncIterable<AgentEvent> {
     const ts: () => string = () => new Date().toISOString();
 
-    yield { type: "system", timestamp: ts(), content: `Starting ${this.runtimeDisplayName} runtime...` };
+    yield { type: "system", timestamp: ts(), content: `Starting ${this.runtimeDisplayName} runtime...`, diagnostic: true };
 
     // Drive the session in the background; events are pushed to the queue
     // and yielded from this generator.

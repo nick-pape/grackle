@@ -41,6 +41,7 @@ type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
     content: string;
     raw: string;
     toolCallId: string;
+    diagnostic: boolean;
 };
 
 // @public
