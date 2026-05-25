@@ -199,14 +199,13 @@ async function createMcpServerInstance(
     visibleTools.length,
   );
 
-  // Advertise `tools.listChanged` only in broker mode (`publishWidgetEvent` set) —
-  // the same condition under which dynamic render_<name> tools exist AND the
-  // component-change fan-out is wired (#1297). Standalone never emits the
-  // notification, so it must not claim the capability and mislead clients.
-  const toolListChangedSupported: boolean = publishWidgetEvent !== undefined;
   const server = new Server(
     { name: "grackle-mcp", version: PACKAGE_VERSION },
-    { capabilities: { tools: toolListChangedSupported ? { listChanged: true } : {}, resources: {} } },
+    // `tools.listChanged` declares we MAY push `notifications/tools/list_changed`
+    // (broker mode does, on promote/demote — #1297). It's an upper bound, so it's
+    // safe to advertise unconditionally even where we never emit; the SDK only
+    // forbids *sending* the notification without the capability, not the reverse.
+    { capabilities: { tools: { listChanged: true }, resources: {} } },
   );
 
   // Pre-compute the visible tool list and names (immutable for this session).
