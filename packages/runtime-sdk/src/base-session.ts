@@ -234,6 +234,9 @@ export abstract class BaseAgentSession implements AgentSession {
     // Drive the session in the background; events are pushed to the queue
     // and yielded from this generator.
     this.runSession().catch((err) => {
+      // A failed turn never completes — drop the turn id so terminal events are
+      // turn-less (AHP HR2), mirroring kill().
+      this.currentTurnId = undefined;
       this.emit({ type: "error", timestamp: ts(), content: String(err) });
       this.emit({ type: "status", timestamp: ts(), content: "failed" });
       this.status = SESSION_STATUS.STOPPED;
@@ -287,6 +290,9 @@ export abstract class BaseAgentSession implements AgentSession {
     } catch (err) {
       this.killed = true;
       this.status = SESSION_STATUS.STOPPED;
+      // A failed turn never completes — drop the turn id so terminal events are
+      // turn-less (AHP HR2), mirroring kill().
+      this.currentTurnId = undefined;
       this.emit({ type: "error", timestamp: ts(), content: String(err) });
       this.emit({ type: "status", timestamp: ts(), content: "failed" });
       this.inputQueue.close();
@@ -346,6 +352,9 @@ export abstract class BaseAgentSession implements AgentSession {
       const ts = new Date().toISOString();
       logger.error({ err }, `Input loop crashed in ${this.runtimeDisplayName} session`);
       this.status = SESSION_STATUS.STOPPED;
+      // A failed turn never completes — drop the turn id so terminal events are
+      // turn-less (AHP HR2), mirroring kill().
+      this.currentTurnId = undefined;
       this.emit({ type: "error", timestamp: ts, content: String(err) });
       this.emit({ type: "status", timestamp: ts, content: "failed" });
       this.inputQueue.close();
