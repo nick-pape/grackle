@@ -54,7 +54,6 @@ openDatabase(":memory:");
 initDatabase();
 const sqlite = _sqlite!;
 import * as adapterManager from "./adapter-manager.js";
-import * as tokenPush from "./token-push.js";
 import { recoverSuspendedSessions } from "./session-recovery.js";
 import { emit } from "./event-bus.js";
 import { attemptReconnects, clearReconnectState, resetReconnectState, isReconnecting, _resetForTesting } from "./auto-reconnect.js";
@@ -116,8 +115,6 @@ describe("auto-reconnect", () => {
     applySchema();
     vi.clearAllMocks();
     _resetForTesting();
-    // Spy on tokenPush
-    vi.spyOn(tokenPush, "pushToEnv").mockResolvedValue();
   });
 
 
@@ -241,21 +238,6 @@ describe("auto-reconnect", () => {
     await new Promise((r) => setTimeout(r, 50));
 
     expect(adapter.connect).not.toHaveBeenCalled();
-  });
-
-  it("pushes tokens with excludeFileTokens for local adapter", async () => {
-    sqlite.exec(`INSERT INTO environments (id, display_name, adapter_type, adapter_config, status, bootstrapped, powerline_token)
-      VALUES ('local-env', 'Local', 'local', '{}', 'disconnected', 1, 'tok-local')`);
-    const adapter = makeAdapter();
-    (adapter as unknown as { type: string }).type = "local";
-    adapterManager.registerAdapter(adapter);
-
-    await attemptReconnects();
-    vi.spyOn(Date, "now").mockReturnValue(Date.now() + 15_000);
-    await attemptReconnects();
-    await new Promise((r) => setTimeout(r, 50));
-
-    expect(tokenPush.pushToEnv).toHaveBeenCalledWith("local-env", { excludeFileTokens: true });
   });
 
   it("concurrent lock prevents overlapping reconnect attempts", async () => {

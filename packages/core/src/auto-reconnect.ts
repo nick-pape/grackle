@@ -1,7 +1,6 @@
 import { reconnectOrProvision, FatalAdapterError } from "@grackle-ai/adapter-sdk";
 import { envRegistry } from "@grackle-ai/database";
 import * as adapterManager from "./adapter-manager.js";
-import * as tokenPush from "./token-push.js";
 import { recoverSuspendedSessions } from "./session-recovery.js";
 import { parseAdapterConfig } from "./adapter-config.js";
 import { emit } from "./event-bus.js";
@@ -218,13 +217,7 @@ async function connectAndRecover(environmentId: string): Promise<boolean> {
   // Establish gRPC connection
   const conn = await adapter.connect(environmentId, config, powerlineToken);
   adapterManager.setConnection(environmentId, conn);
-
-  // Push tokens (local environments exclude file tokens)
-  if (env.adapterType === "local") {
-    await tokenPush.pushToEnv(environmentId, { excludeFileTokens: true });
-  } else {
-    await tokenPush.pushToEnv(environmentId);
-  }
+  // Credentials are supplied on demand at spawn (AHP HR6), not eagerly on reconnect.
 
   envRegistry.updateEnvironmentStatus(environmentId, "connected");
   envRegistry.markBootstrapped(environmentId);

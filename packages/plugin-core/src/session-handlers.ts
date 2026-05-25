@@ -99,7 +99,7 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
 
       conn = await adapter.connect(req.environmentId, config, powerlineToken);
       adapterManager.setConnection(req.environmentId, conn);
-      await tokenPush.pushToEnv(req.environmentId);
+      // Credentials are supplied on demand at spawn (AHP HR6), not eagerly on connect.
       envRegistry.updateEnvironmentStatus(req.environmentId, "connected");
       envRegistry.markBootstrapped(req.environmentId);
       emit("environment.changed", {});
@@ -237,9 +237,9 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
     }
   }
 
-  // Push fresh credentials before spawning (best-effort).
+  // Supply credentials on demand for this runtime, just before spawn (AHP HR6).
   // For local envs, skip file tokens — the PowerLine is on the same machine.
-  await tokenPush.refreshTokensForTask(req.environmentId, runtime,
+  await tokenPush.authenticateForRuntime(req.environmentId, runtime,
     env.adapterType === "local" ? { excludeFileTokens: true } : undefined);
 
   processEventStream(conn.client.spawn(powerlineReq), {

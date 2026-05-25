@@ -46,7 +46,6 @@ export interface LocalEnvironmentDeps {
   getAdapter: (type: string) => EnvironmentAdapter | undefined;
   parseAdapterConfig: (raw: string) => Record<string, unknown>;
   setConnection: (envId: string, conn: PowerLineConnection) => void;
-  pushToEnv: (envId: string, opts?: { excludeFileTokens: boolean }) => Promise<void>;
   reconnectOrProvision: (
     envId: string,
     adapter: EnvironmentAdapter,
@@ -185,9 +184,7 @@ export async function bootstrapLocalEnvironment(
 
     const conn = await localAdapter.connect("local", config, localEnv.powerlineToken);
     deps.setConnection("local", conn);
-    // Push env-var tokens only — file tokens would just overwrite local credential
-    // files (e.g. ~/.claude/credentials.json) with their own content.
-    await deps.pushToEnv("local", { excludeFileTokens: true });
+    // Credentials are supplied on demand at spawn (AHP HR6), not eagerly on bootstrap.
     envRegistry.updateEnvironmentStatus("local", "connected");
     envRegistry.markBootstrapped("local");
     deps.emit("environment.changed", {});
