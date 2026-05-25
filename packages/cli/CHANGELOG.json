@@ -2,6 +2,21 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.123.2",
+      "tag": "@grackle-ai/cli_v0.123.2",
+      "date": "Mon, 25 May 2026 13:18:11 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Coordination graph: animated message dots that travel along edges as IPC streams receive messages (web UI)."
+          },
+          {
+            "comment": "Emit a structured kg_spawn_retrieval metrics log at spawn-time knowledge injection (instrumentation for KG Phase 4 / #1260)."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.123.1",
       "tag": "@grackle-ai/cli_v0.123.1",
       "date": "Mon, 25 May 2026 05:44:41 GMT",

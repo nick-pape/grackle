@@ -1,6 +1,14 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 25 May 2026 05:44:41 GMT and should not be manually modified.
+This log was last generated on Mon, 25 May 2026 13:18:11 GMT and should not be manually modified.
+
+## 0.123.2
+Mon, 25 May 2026 13:18:11 GMT
+
+### Patches
+
+- Coordination graph: animated message dots that travel along edges as IPC streams receive messages (web UI).
+- Emit a structured kg_spawn_retrieval metrics log at spawn-time knowledge injection (instrumentation for KG Phase 4 / #1260).
 
 ## 0.123.1
 Mon, 25 May 2026 05:44:41 GMT
