@@ -12,7 +12,7 @@
 
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
 import type { Session, StreamData, StreamSubscriberData } from "../../hooks/types.js";
-import { attributeStream, streamKind, type StreamKind, type StreamOwnership } from "../../utils/streamCoordination.js";
+import { attributeStreamWithMap, streamKind, type StreamKind, type StreamOwnership } from "../../utils/streamCoordination.js";
 
 /** React Flow node type id for session nodes. */
 export const SESSION_NODE_TYPE: string = "session";
@@ -94,23 +94,23 @@ function deliveryStyle(deliveryMode: string, stroke: string): Record<string, str
   return { stroke, strokeWidth: 1.5 };
 }
 
-/** Resolve a collapsed pipe's direction (writer -> reader), or mark it bidirectional. */
+/** Resolve a collapsed pipe's direction (writer -> reader subscriber), or mark it bidirectional. */
 function resolvePipeDirection(
   a: StreamSubscriberData,
   b: StreamSubscriberData,
-): { source: string; target: string; bidirectional: boolean } {
+): { source: StreamSubscriberData; target: StreamSubscriberData; bidirectional: boolean } {
   const aWrites = a.permission.includes("w");
   const bWrites = b.permission.includes("w");
   const aReads = a.permission.includes("r");
   const bReads = b.permission.includes("r");
   if (aWrites && !bWrites && bReads) {
-    return { source: a.sessionId, target: b.sessionId, bidirectional: false };
+    return { source: a, target: b, bidirectional: false };
   }
   if (bWrites && !aWrites && aReads) {
-    return { source: b.sessionId, target: a.sessionId, bidirectional: false };
+    return { source: b, target: a, bidirectional: false };
   }
   // Ambiguous (both rw, both w, etc.) — pick a deterministic order, no direction.
-  const ordered = [a.sessionId, b.sessionId].sort();
+  const ordered = [a, b].sort((x, y) => x.sessionId.localeCompare(y.sessionId));
   return { source: ordered[0], target: ordered[1], bidirectional: true };
 }
 
@@ -156,15 +156,23 @@ export function buildCoordinationGraph(streams: StreamData[], sessions: Session[
       const [a, b] = stream.subscribers;
       ensureSessionNode(a.sessionId).streamCount += 1;
       ensureSessionNode(b.sessionId).streamCount += 1;
-      const { source, target, bidirectional } = resolvePipeDirection(a, b);
+      const { source: srcSub, target: tgtSub, bidirectional } = resolvePipeDirection(a, b);
       edges.push({
         id: `edge-pipe-${stream.id}`,
-        source: sessionNodeId(source),
-        target: sessionNodeId(target),
+        source: sessionNodeId(srcSub.sessionId),
+        target: sessionNodeId(tgtSub.sessionId),
         type: COORD_EDGE_TYPE,
-        data: { edgeKind: "pipe", streamId: stream.id, permission: "rw", deliveryMode: a.deliveryMode },
+        // Derive metadata from the deterministically-resolved writer so the
+        // collapsed edge does not depend on arbitrary subscriber order.
+        data: {
+          edgeKind: "pipe",
+          streamId: stream.id,
+          permission: bidirectional ? "rw" : srcSub.permission,
+          deliveryMode: srcSub.deliveryMode,
+        },
         style: { stroke: "var(--accent-yellow)", strokeWidth: 1.5, strokeDasharray: "6 3" },
-        markerEnd: bidirectional ? undefined : { type: MarkerType.ArrowClosed },
+        // Bidirectional pipes get arrowheads on both ends; directed pipes only at the reader.
+        markerEnd: { type: MarkerType.ArrowClosed },
         markerStart: bidirectional ? { type: MarkerType.ArrowClosed } : undefined,
         animated: false,
       });
@@ -172,7 +180,7 @@ export function buildCoordinationGraph(streams: StreamData[], sessions: Session[
     }
 
     // Otherwise render a hub node with one participation edge per subscriber.
-    streamNodeData.set(stream.id, { kind: "stream", stream, streamKind: kind, ownership: attributeStream(stream, sessions) });
+    streamNodeData.set(stream.id, { kind: "stream", stream, streamKind: kind, ownership: attributeStreamWithMap(stream, sessionsById) });
 
     for (const sub of stream.subscribers) {
       ensureSessionNode(sub.sessionId).streamCount += 1;

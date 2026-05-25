@@ -116,8 +116,9 @@ describe("buildCoordinationGraph", () => {
     const edge = edges[0];
     expect(edge.source).toBe("session:a");
     expect(edge.target).toBe("session:b");
+    // Bidirectional pipes carry arrowheads on both ends (no implied direction).
     expect(edge.markerStart).toBeDefined();
-    expect(edge.markerEnd).toBeUndefined();
+    expect(edge.markerEnd).toBeDefined();
   });
 
   it("does not collapse a pipe with more than two subscribers (falls back to a hub)", () => {

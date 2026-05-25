@@ -11,7 +11,7 @@ import { MOCK_SESSIONS } from "../../mocks/mockData.js";
  * ReactFlowProvider and a container with explicit dimensions. Node positions
  * are not reliably computed in the headless runner, so the play functions
  * assert on the stable container/empty test ids only; the bipartite/pipe/edge
- * logic is verified in useCoordinationLayout.test.ts.
+ * logic is verified in coordinationGraphModel.test.ts.
  */
 const meta: Meta<typeof CoordinationGraph> = {
   title: "Grackle/Streams/CoordinationGraph",
