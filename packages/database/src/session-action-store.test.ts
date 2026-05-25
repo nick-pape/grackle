@@ -80,4 +80,28 @@ describe("querySessionActions", () => {
       raw: '{"name":"bash"}',
     });
   });
+
+  it("returns [] when fromSeq is past the last action", () => {
+    seed("01A", "s1", "a");
+    seed("01B", "s1", "b");
+    // A cursor lexicographically after every stored ULID yields nothing.
+    expect(querySessionActions({ sessionId: "s1", fromSeq: "ZZZZZZZZZZZZZZZZZZZZZZZZZZ" })).toEqual([]);
+  });
+
+  it("clamps a limit above the hard cap to MAX_SESSION_ACTION_LIMIT (5000)", () => {
+    // MAX_SESSION_ACTION_LIMIT is 5000 (see session-action-store.ts). Insert one
+    // more than the cap and request far above it: the result must be capped.
+    const MAX: number = 5000;
+    const insert = sqlite.prepare(
+      "INSERT INTO session_actions (seq, session_id, type, content, raw, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+    );
+    const insertMany = sqlite.transaction((count: number) => {
+      for (let i = 0; i < count; i++) {
+        // Zero-padded so lexical ULID order matches insertion order.
+        insert.run(`SEQ${String(i).padStart(6, "0")}`, "big", "text", "x", "", "2026-05-24T00:00:00.000Z");
+      }
+    });
+    insertMany(MAX + 1);
+    expect(querySessionActions({ sessionId: "big", limit: MAX + 1000 })).toHaveLength(MAX);
+  });
 });
