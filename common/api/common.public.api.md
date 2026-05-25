@@ -466,6 +466,7 @@ type CreateTaskRequest = Message<"grackle.CreateTaskRequest"> & {
     defaultPersonaId?: string;
     tokenBudget?: number;
     costBudgetMillicents?: number;
+    injectKnowledge?: boolean;
 };
 
 // @public
@@ -2701,6 +2702,7 @@ type Task = Message<"grackle.Task"> & {
     scheduleId: string;
     tokenBudget: number;
     costBudgetMillicents: number;
+    injectKnowledge: boolean;
 };
 
 // @public
@@ -2942,6 +2944,7 @@ type UpdateTaskRequest = Message<"grackle.UpdateTaskRequest"> & {
     defaultPersonaId?: string;
     tokenBudget?: number;
     costBudgetMillicents?: number;
+    injectKnowledge?: boolean;
 };
 
 // @public

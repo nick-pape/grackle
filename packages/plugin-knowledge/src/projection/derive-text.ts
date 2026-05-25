@@ -21,9 +21,20 @@ function joinParts(parts: Array<string | undefined>): string {
   return parts.filter((part): part is string => Boolean(part && part.trim())).join(" - ");
 }
 
+/**
+ * Embeddable text for a task from its title + description.
+ *
+ * Shared by {@link deriveTaskText} (projection) and the spawn-time retrieval
+ * query (#1259), so a task's query embeds identically to how its node was
+ * embedded — keeping cosine similarity meaningful.
+ */
+export function deriveTaskTextFromParts(title: string, description: string | undefined): string {
+  return joinParts([`[Task] ${title}`, description]);
+}
+
 /** Embeddable text for a Task node. */
 export function deriveTaskText(task: TaskRow): string {
-  return joinParts([`[Task] ${task.title}`, task.description]);
+  return deriveTaskTextFromParts(task.title, task.description);
 }
 
 /** Embeddable text for a Workspace node. */

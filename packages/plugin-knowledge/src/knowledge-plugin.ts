@@ -29,6 +29,7 @@ import {
 } from "./knowledge-handlers.js";
 import { knowledgeMcpTools } from "./mcp-tools.js";
 import { createEntitySyncSubscriber } from "./entity-sync.js";
+import { buildRelatedPriorWork } from "./related-prior-work.js";
 
 /**
  * Create the knowledge plugin that contributes Neo4j-backed knowledge graph
@@ -86,6 +87,11 @@ export function createKnowledgePlugin(): GracklePlugin {
     ],
 
     eventSubscribers: (ctx) => [createEntitySyncSubscriber(ctx)],
+
+    // PUSH half of the retrieval loop (#1259): inject "Related prior work" into
+    // a spawning task's system prompt, decoupled from the spawn path via core's
+    // spawn-context registry.
+    systemPromptContributors: () => [{ contribute: buildRelatedPriorWork }],
 
     mcpTools: () => knowledgeMcpTools,
   };

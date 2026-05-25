@@ -102,8 +102,10 @@ export const knowledgeMcpTools: PluginToolDefinition[] = [
     name: "knowledge_search",
     group: "knowledge",
     description:
-      "Search the knowledge graph using natural language. Returns relevant nodes " +
-      "(decisions, insights, task references, findings) ranked by semantic similarity.",
+      "Search the knowledge graph to find how related or prior work in this workspace " +
+      "was approached before starting. Natural-language query; returns relevant nodes " +
+      "(tasks, sessions, transcript chunks) ranked by semantic similarity. Pair with " +
+      "knowledge_get_node to expand a result's neighbors.",
     inputSchema: z.object({
       query: z.string().describe("Natural language search query"),
       limit: z

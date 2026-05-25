@@ -41,6 +41,14 @@ export { sendInputToSession, deliverSignalToTask } from "./signals/signal-delive
 export { ReconciliationManager } from "./reconciliation-manager.js";
 export type { ReconciliationPhase } from "./reconciliation-manager.js";
 
+// ─── Spawn-Context Provider Registry (#1259) ─────────────────
+export {
+  setSpawnContextProviders,
+  clearSpawnContextProviders,
+  hasSpawnContextProviders,
+  runSpawnContextProviders,
+} from "./spawn-context-registry.js";
+
 // ─── Version Check ───────────────────────────────────────────
 export { checkVersionStatus, clearVersionCache, type VersionStatus } from "./version-check.js";
 

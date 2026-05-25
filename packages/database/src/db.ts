@@ -297,6 +297,21 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 14,
+    name: "task-inject-knowledge",
+    up: (conn) => {
+      // #1259: per-task opt-out of knowledge-graph context injection at spawn.
+      // Defaults ON (1). Guard against the column already existing (fresh
+      // installs include it in baseline).
+      const taskCols = conn
+        .prepare("PRAGMA table_info(tasks)")
+        .all() as Array<{ name: string }>;
+      if (!taskCols.some((c) => c.name === "inject_knowledge")) {
+        conn.exec("ALTER TABLE tasks ADD COLUMN inject_knowledge INTEGER NOT NULL DEFAULT 1");
+      }
+    },
+  },
 ];
 
 /** The highest schema version defined by BASELINE + MIGRATIONS. */
@@ -557,6 +572,7 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
       parent_task_id TEXT NOT NULL DEFAULT '',
       depth         INTEGER NOT NULL DEFAULT 0,
       can_decompose INTEGER NOT NULL DEFAULT 0,
+      inject_knowledge INTEGER NOT NULL DEFAULT 1,
       default_persona_id TEXT NOT NULL DEFAULT '',
       workpad       TEXT NOT NULL DEFAULT '',
       schedule_id   TEXT NOT NULL DEFAULT '',

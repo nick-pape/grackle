@@ -181,7 +181,7 @@ Search a semantic knowledge graph across sessions and task context.
 
 | Tool | Description | Parameters |
 |------|-------------|------------|
-| `knowledge_search` | Semantic search over the knowledge graph using natural language. | `query` (string), `limit?` (int, max 50), `workspaceId?` (string), `expand?` (boolean), `expandDepth?` (int, max 5) |
+| `knowledge_search` | Find how related/prior work in the workspace was approached. Semantic search over the knowledge graph (tasks, sessions, transcript chunks). | `query` (string), `limit?` (int, max 50), `workspaceId?` (string), `expand?` (boolean), `expandDepth?` (int, max 5) |
 | `knowledge_get_node` | Retrieve a specific node by ID with optional neighbor expansion. | `id` (string), `expand?` (boolean), `expandDepth?` (int, max 5) |
 | `knowledge_create_node` | Create a new knowledge entry (decision, insight, concept, snippet). | `title` (string), `content` (string), `category?` (string), `tags?` (string[]), `workspaceId?` (string), `edges?` (array of `{toId, type}`) |
 

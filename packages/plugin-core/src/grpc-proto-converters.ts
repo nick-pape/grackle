@@ -102,6 +102,7 @@ export function taskRowToProto(
     depth: row.depth,
     childTaskIds: childIds ?? taskStore.getChildren(row.id).map((c) => c.id),
     canDecompose: row.canDecompose,
+    injectKnowledge: row.injectKnowledge,
     defaultPersonaId: row.defaultPersonaId,
     workpad: row.workpad,
     scheduleId: row.scheduleId,

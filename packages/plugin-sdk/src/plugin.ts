@@ -60,11 +60,45 @@ export interface PluginToolDefinition {
 }
 
 /**
+ * Describes the session about to be spawned, passed to system-prompt
+ * contributors so they can produce task-relevant context (e.g. related prior
+ * work retrieved from the knowledge graph).
+ */
+export interface SpawnContextInput {
+  /** The task being started. */
+  taskId: string;
+  /** Task title. */
+  title: string;
+  /** Task description. */
+  description: string;
+  /** Workspace the task belongs to (empty string = none/global). */
+  workspaceId: string;
+  /** Whether this spawn is an orchestrator (decomposing) task. */
+  isOrchestrator: boolean;
+  /** The task's `injectKnowledge` flag — a per-task opt-out of injected context. */
+  injectKnowledge: boolean;
+}
+
+/**
+ * Contributes one additional section to a session's system prompt at spawn time.
+ *
+ * Lets a plugin (e.g. `knowledge`) inject context into the agent's prompt
+ * without the spawn path depending on that plugin. Contributors run best-effort
+ * under a timeout and must not block spawn; each returns the section's markdown,
+ * or `undefined` to contribute nothing.
+ */
+export interface SystemPromptContributor {
+  /** Produce a prompt section for the given spawn, or `undefined` for none. */
+  contribute: (input: SpawnContextInput) => Promise<string | undefined>;
+}
+
+/**
  * A Grackle plugin that contributes server capabilities.
  *
  * Plugins are loaded by {@link loadPlugins} in topological order based on
  * declared dependencies. Each plugin can contribute gRPC handlers,
- * reconciliation phases, MCP tools, and event subscribers.
+ * reconciliation phases, MCP tools, event subscribers, and system-prompt
+ * contributors.
  */
 export interface GracklePlugin {
   /** Unique identifier (e.g., "core", "orchestration", "my-linear-sync"). */
@@ -80,6 +114,8 @@ export interface GracklePlugin {
   mcpTools?: (ctx: PluginContext) => PluginToolDefinition[];
   /** Event subscribers to wire up. Returns disposables for shutdown. */
   eventSubscribers?: (ctx: PluginContext) => Disposable[];
+  /** System-prompt section contributors invoked at session spawn. */
+  systemPromptContributors?: (ctx: PluginContext) => SystemPromptContributor[];
 
   /** Called after dependency plugins are initialized, in dependency order. */
   initialize?: (ctx: PluginContext) => Promise<void>;

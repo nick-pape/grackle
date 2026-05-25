@@ -100,6 +100,7 @@ export async function createTaskDirect(
     description?: string;
     parentTaskId?: string;
     canDecompose?: boolean;
+    injectKnowledge?: boolean;
   },
 ): Promise<WsPayload> {
   const resp = await client.orchestration.createTask({
@@ -109,6 +110,7 @@ export async function createTaskDirect(
     dependsOn: options?.dependsOn || [],
     parentTaskId: options?.parentTaskId || "",
     canDecompose: options?.canDecompose,
+    injectKnowledge: options?.injectKnowledge,
   });
   return resp as unknown as WsPayload;
 }
