@@ -1,0 +1,167 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Coordination graph - React Flow theme overrides + session/stream node styles
+// =============================================================================
+
+.graphContainer {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+
+  // React Flow theme overrides (mirrors DagView)
+  --xy-background-color: transparent;
+  --xy-node-border-radius: var(--radius-lg);
+  --xy-edge-stroke: var(--text-tertiary);
+  --xy-minimap-background: var(--bg-inset);
+  --xy-minimap-mask-background: var(--bg-overlay);
+  --xy-controls-button-background-color: var(--bg-elevated);
+  --xy-controls-button-background-color-hover: var(--bg-overlay);
+  --xy-controls-button-color: var(--text-secondary);
+  --xy-controls-button-color-hover: var(--text-primary);
+  --xy-controls-button-border-color: var(--border-subtle);
+  --xy-attribution-background-color: transparent;
+}
+
+.empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+// =============================================================================
+// Shared node internals
+// =============================================================================
+
+.nodeContent {
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.nodeHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.nodeIcon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.nodeTitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nodeMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.nodeSubtle {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.countBadge {
+  @include surface-inset;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  padding: 1px var(--space-xs);
+}
+
+// =============================================================================
+// Session node
+// =============================================================================
+
+.sessionNode {
+  @include surface-card;
+  width: 200px;
+  min-height: 56px;
+  display: flex;
+  overflow: hidden;
+  cursor: default;
+  @include card-hover;
+}
+
+.sessionAccent {
+  width: 4px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+.external {
+  opacity: 0.7;
+  border-style: dashed;
+}
+
+// =============================================================================
+// Stream hub node
+// =============================================================================
+
+.streamNode {
+  @include surface-card;
+  width: 180px;
+  min-height: 52px;
+  cursor: pointer;
+  @include card-hover;
+}
+
+.chatroom {
+  border-color: var(--accent-green);
+  box-shadow: 0 0 0 1px var(--accent-green), 0 0 12px rgba(34, 197, 94, 0.25);
+}
+
+.channel {
+  border-color: var(--accent-blue);
+}
+
+.pipe {
+  border-color: var(--accent-yellow);
+}
+
+.haloless {
+  border-color: var(--border-subtle);
+  box-shadow: none;
+  opacity: 0.85;
+}
+
+.selected {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 1px;
+}
+
+.kindBadge {
+  @include surface-inset;
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  padding: 1px var(--space-xs);
+}
+
+// =============================================================================
+// Handles
+// =============================================================================
+
+.handle {
+  width: 6px !important;
+  height: 6px !important;
+  background: var(--text-tertiary) !important;
+  border: 1px solid var(--border-subtle) !important;
+}

@@ -50,11 +50,14 @@ export function isInternalStream(stream: StreamData): boolean {
  * - else (no subscriber session resolvable — e.g. CLI/MCP-created) → `external`.
  */
 export function attributeStream(stream: StreamData, sessions: readonly Session[]): StreamOwnership {
-  return attributeWithMap(stream, new Map(sessions.map((s) => [s.id, s])));
+  return attributeStreamWithMap(stream, new Map(sessions.map((s) => [s.id, s])));
 }
 
-/** Attribution against a precomputed session map — avoids rebuilding it per stream. */
-function attributeWithMap(stream: StreamData, sessionsById: ReadonlyMap<string, Session>): StreamOwnership {
+/**
+ * Attribute a stream to its owning task against a precomputed session map —
+ * avoids rebuilding the map per stream when attributing many streams at once.
+ */
+export function attributeStreamWithMap(stream: StreamData, sessionsById: ReadonlyMap<string, Session>): StreamOwnership {
   let sawKnownSession = false;
   for (const sub of stream.subscribers) {
     const session = sessionsById.get(sub.sessionId);
@@ -87,7 +90,7 @@ export function groupStreamsByTask(streams: readonly StreamData[], sessions: rea
   const orphans: StreamData[] = [];
 
   for (const stream of streams) {
-    const ownership = attributeWithMap(stream, sessionsById);
+    const ownership = attributeStreamWithMap(stream, sessionsById);
     if (ownership.kind === "task") {
       const existing = taskGroups.get(ownership.taskId);
       if (existing) {

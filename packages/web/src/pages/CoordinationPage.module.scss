@@ -9,3 +9,68 @@
   height: 100%;
   overflow: hidden;
 }
+
+// Toolbar: List/Graph toggle + shared stream controls (apply to both views)
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.viewToggle {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.toolbarControls {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.internalsToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.refreshButton {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  background: var(--bg-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-xs) var(--space-md);
+  cursor: pointer;
+}
+
+.refreshButton:hover {
+  color: var(--text-primary);
+}
+
+.toggleButton {
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  background: var(--bg-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.toggleButton:hover {
+  color: var(--text-primary);
+}
+
+.toggleActive {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border-color: var(--accent-blue);
+}
