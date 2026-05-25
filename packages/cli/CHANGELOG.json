@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.123.1",
+      "tag": "@grackle-ai/cli_v0.123.1",
+      "date": "Mon, 25 May 2026 05:44:41 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Coordination tab: live bipartite network graph of agent sessions and IPC streams with a List/Graph toggle (web UI)."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.123.0",
       "tag": "@grackle-ai/cli_v0.123.0",
       "date": "Mon, 25 May 2026 05:24:59 GMT",
