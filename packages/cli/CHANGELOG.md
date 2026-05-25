@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 25 May 2026 15:38:19 GMT and should not be manually modified.
+This log was last generated on Mon, 25 May 2026 17:22:09 GMT and should not be manually modified.
+
+## 0.125.2
+Mon, 25 May 2026 17:22:09 GMT
+
+### Patches
+
+- Make the read-only Coordination and Task DAG graphs non-connectable: disable React Flow drag-to-connect and hide the node connection handles so users can't attempt connections that can't be created (#1303).
 
 ## 0.125.1
 Mon, 25 May 2026 15:38:19 GMT
