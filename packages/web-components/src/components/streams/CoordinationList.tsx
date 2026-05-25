@@ -59,6 +59,8 @@ export interface CoordinationListProps {
   onSelectStream: (streamId: string) => void;
   /** Optional refresh callback. */
   onRefresh?: () => void;
+  /** Hide the header controls (Show internals + refresh) when the page renders them itself. */
+  hideHeaderControls?: boolean;
 }
 
 /** Read-only, task-grouped inventory of IPC streams. */
@@ -74,6 +76,7 @@ export function CoordinationList({
   selectedStreamId,
   onSelectStream,
   onRefresh,
+  hideHeaderControls = false,
 }: CoordinationListProps): JSX.Element {
   const groups = groupStreamsByTask(streams, sessions);
   const kindClass: Record<StreamKind, string> = {
@@ -87,28 +90,30 @@ export function CoordinationList({
     <div className={styles.container} data-testid="coordination-list">
       <div className={styles.header}>
         <span className={styles.title}>Coordination</span>
-        <div className={styles.headerActions}>
-          <label className={styles.internalsToggle}>
-            <input
-              type="checkbox"
-              checked={showInternals}
-              onChange={(e) => onToggleInternals(e.target.checked)}
-              data-testid="coordination-show-internals"
-            />
-            Show internals
-          </label>
-          {onRefresh && (
-            <button
-              type="button"
-              className={styles.refreshButton}
-              onClick={onRefresh}
-              aria-label="Refresh streams"
-              data-testid="coordination-refresh"
-            >
-              <RefreshCw size={ICON_SM} aria-hidden="true" />
-            </button>
-          )}
-        </div>
+        {!hideHeaderControls && (
+          <div className={styles.headerActions}>
+            <label className={styles.internalsToggle}>
+              <input
+                type="checkbox"
+                checked={showInternals}
+                onChange={(e) => onToggleInternals(e.target.checked)}
+                data-testid="coordination-show-internals"
+              />
+              Show internals
+            </label>
+            {onRefresh && (
+              <button
+                type="button"
+                className={styles.refreshButton}
+                onClick={onRefresh}
+                aria-label="Refresh streams"
+                data-testid="coordination-refresh"
+              >
+                <RefreshCw size={ICON_SM} aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {loading && streams.length === 0 && <div className={styles.state}>Loading{"…"}</div>}

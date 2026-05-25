@@ -87,8 +87,8 @@ export type { ScheduleManagerProps } from "./components/schedules/ScheduleManage
 export { SettingsNav } from "./components/settings/SettingsNav.js";
 
 // Streams (Coordination tab)
-export { CoordinationList, StreamDetailPanel, StreamTranscript } from "./components/streams/index.js";
-export type { CoordinationListProps, StreamDetailPanelProps, StreamTranscriptProps } from "./components/streams/index.js";
+export { CoordinationGraph, CoordinationList, StreamDetailPanel, StreamTranscript } from "./components/streams/index.js";
+export type { CoordinationGraphProps, CoordinationListProps, StreamDetailPanelProps, StreamTranscriptProps } from "./components/streams/index.js";
 
 // Tools
 export { ToolCard } from "./components/tools/ToolCard.js";

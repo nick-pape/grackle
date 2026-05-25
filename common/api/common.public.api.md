@@ -354,6 +354,7 @@ type Component = Message<"grackle.Component"> & {
     ownerSessionId: string;
     createdAt: string;
     updatedAt: string;
+    promoted: boolean;
 };
 
 // @public
@@ -363,6 +364,9 @@ type ComponentList = Message<"grackle.ComponentList"> & {
 
 // @public
 const ComponentListSchema: GenMessage<ComponentList>;
+
+// @public
+export function componentRenderToolName(name: string): string | undefined;
 
 // @public
 const ComponentSchema: GenMessage<Component>;
@@ -1049,6 +1053,8 @@ declare namespace grackle {
         SearchComponentResultSchema,
         SearchComponentsResponse,
         SearchComponentsResponseSchema,
+        SetComponentPromotionRequest,
+        SetComponentPromotionRequestSchema,
         Escalation,
         EscalationSchema,
         EscalationList,
@@ -1626,6 +1632,11 @@ const GrackleOrchestration: GenService<{
         input: typeof SearchComponentsRequestSchema;
         output: typeof SearchComponentsResponseSchema;
     };
+    setComponentPromotion: {
+        methodKind: "unary";
+        input: typeof SetComponentPromotionRequestSchema;
+        output: typeof ComponentSchema;
+    };
     createEscalation: {
         methodKind: "unary";
         input: typeof CreateEscalationRequestSchema;
@@ -2055,6 +2066,12 @@ declare namespace powerline {
 }
 
 // @public
+export interface PromotedRenderTool<T> {
+    component: T;
+    toolName: string;
+}
+
+// @public
 enum ProviderToggle {
     OFF = 1,
     ON = 2,
@@ -2123,6 +2140,9 @@ type RemoveGitHubAccountRequest = Message<"grackle.RemoveGitHubAccountRequest"> 
 
 // @public
 const RemoveGitHubAccountRequestSchema: GenMessage<RemoveGitHubAccountRequest>;
+
+// @public
+export const RENDER_TOOL_PREFIX: string;
 
 // @public
 type ResumeRequest = Message<"grackle.ResumeRequest"> & {
@@ -2290,6 +2310,12 @@ const SearchTasksResponseSchema: GenMessage<SearchTasksResponse>;
 
 // @public
 export const SEED_PERSONA_ID: string;
+
+// @public
+export function selectPromotedRenderTools<T extends {
+    name: string;
+    promoted: boolean;
+}>(components: readonly T[]): PromotedRenderTool<T>[];
 
 // @public
 export interface Sequenced<T> {
@@ -2469,6 +2495,17 @@ const SessionSchema: GenMessage<Session>;
 
 // @public
 export type SessionStatus = typeof SESSION_STATUS[keyof typeof SESSION_STATUS];
+
+// @public
+type SetComponentPromotionRequest = Message<"grackle.SetComponentPromotionRequest"> & {
+    id: string;
+    name: string;
+    workspaceId: string;
+    promoted?: boolean;
+};
+
+// @public
+const SetComponentPromotionRequestSchema: GenMessage<SetComponentPromotionRequest>;
 
 // @public
 type SetCredentialProviderRequest = Message<"grackle.SetCredentialProviderRequest"> & {

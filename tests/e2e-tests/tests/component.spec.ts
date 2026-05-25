@@ -61,6 +61,25 @@ const SEARCH_SCENARIO = JSON.stringify({
   ],
 });
 
+// ── Test 5: register → promote → render via the dynamic render_<name> tool (#1272) ──
+const PROMOTE_SCENARIO = JSON.stringify({
+  steps: [
+    { emit: "text", content: "Registering, promoting, and rendering via the dynamic tool:" },
+    {
+      mcp_call: "component_register",
+      args: {
+        name: "promoted-button",
+        source: "render(<Button>{props.label}</Button>)",
+        propsSchema: '{"type":"object","properties":{"label":{"type":"string"}}}',
+      },
+    },
+    { mcp_call: "component_promote", args: { name: "promoted-button" } },
+    // The promoted component is now its own tool; call it BY its render_<slug> name,
+    // passing props directly (its inputSchema is the component's propsSchema).
+    { mcp_call: "render_promoted_button", args: { label: "Promoted via tool" } },
+  ],
+});
+
 test.describe("Component registry (#1269)", { tag: ["@persona"] }, () => {
   test("component_register + component_render renders a React component by name", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
@@ -128,5 +147,24 @@ test.describe("Component registry (#1269)", { tag: ["@persona"] }, () => {
     // Both MCP tools were reachable + executed; the search result surfaces the registered component.
     await expect(page.locator('[data-testid^="tool-card-"]').first()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("revenue-chart").first()).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("component_promote exposes a render_<name> tool that renders by props (#1272)", async ({ appPage, grackle: { client } }) => {
+    const page = appPage;
+    const wsId = await createWorkspace(client, "component-promote-e2e-proj");
+    await createTaskDirect(client, wsId, "promote and render", {
+      environmentId: "test-local",
+      description: PROMOTE_SCENARIO,
+    });
+    await navigateToTask(page, "promote and render");
+    await patchWsForStubMcpRuntime(page);
+    await page.getByTestId("task-header-start").click();
+
+    await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });
+    // The dynamic render_promoted_button tool dispatched through the registry and
+    // rendered the stored JSX with the props passed straight to the tool.
+    await expect(page.getByTestId("mcp-app-widget")).toBeVisible({ timeout: 15_000 });
+    const frame = page.frameLocator('[data-testid="mcp-app-widget"]').frameLocator("iframe");
+    await expect(frame.getByRole("button", { name: "Promoted via tool" })).toBeVisible({ timeout: 25_000 });
   });
 });

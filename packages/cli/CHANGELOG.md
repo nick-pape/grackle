@@ -1,6 +1,20 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 25 May 2026 04:20:46 GMT and should not be manually modified.
+This log was last generated on Mon, 25 May 2026 05:24:59 GMT and should not be manually modified.
+
+## 0.123.0
+Mon, 25 May 2026 05:24:59 GMT
+
+### Minor changes
+
+- GenUX promote-to-tools (#1272): a registered component can be promoted to its own typed `render_<name>` MCP tool whose inputSchema is the component's propsSchema. Adds a `promoted` column + `SetComponentPromotion` gRPC RPC + `component_promote` MCP tool; the MCP server synthesizes per-workspace `render_<name>` tools in tools/list (UI-capable scoped sessions only) and dispatches their calls by workspace ownership, reusing the existing render path. Promotion is a lifecycle toggle that does not bump the component version.
+
+## 0.122.0
+Mon, 25 May 2026 04:49:44 GMT
+
+### Minor changes
+
+- KG Phase 3 (#1259): close the retrieval loop — knowledge_search guidance (pull) + a thin spawn-time "Related prior work" injection (push) via a new systemPromptContributors plugin hook, gated by a per-task injectKnowledge flag (default on).
 
 ## 0.121.0
 Mon, 25 May 2026 04:20:46 GMT

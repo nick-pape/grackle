@@ -1,5 +1,6 @@
 import type { Client } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
+import { RENDER_TOOL_PREFIX } from "@grackle-ai/common";
 import type { ZodType } from "zod";
 import type { AuthContext } from "@grackle-ai/auth";
 
@@ -74,10 +75,21 @@ export type ToolPredicate = (tool: ToolDefinition) => boolean;
 export class ToolRegistry {
   private readonly tools: Map<string, ToolDefinition> = new Map();
 
-  /** Register a tool definition. Throws if a tool with the same name already exists. */
+  /**
+   * Register a tool definition. Throws if a tool with the same name already
+   * exists, or if the name uses the reserved `render_` prefix — that namespace
+   * belongs to the dynamic per-workspace component render tools (#1272), so no
+   * static or plugin-contributed tool may claim it (otherwise it would shadow a
+   * promoted component's tool).
+   */
   public register(tool: ToolDefinition): void {
     if (this.tools.has(tool.name)) {
       throw new Error(`Duplicate tool name: ${tool.name}`);
+    }
+    if (tool.name.startsWith(RENDER_TOOL_PREFIX)) {
+      throw new Error(
+        `Tool name "${tool.name}" uses the reserved "${RENDER_TOOL_PREFIX}" prefix (reserved for dynamic component render tools, #1272)`,
+      );
     }
     this.tools.set(tool.name, tool);
   }
