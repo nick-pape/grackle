@@ -32,7 +32,7 @@ export const SESSION_STATUS_VAR_NAMES: readonly string[] = [
 /** Map a session status (and external flag) to its visual style. */
 export function sessionStatusStyle(status: string, external: boolean): SessionStatusStyle {
   if (external) {
-    return { varName: "--text-tertiary", label: "external" };
+    return { varName: "--text-tertiary", label: "External" };
   }
   switch (status) {
     case "running":

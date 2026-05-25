@@ -5,13 +5,15 @@ import type { StreamNodeData } from "./useCoordinationLayout.js";
 import styles from "./CoordinationGraph.module.scss";
 
 /**
- * Custom React Flow node rendering an IPC stream hub (chatroom or channel).
- * Chatrooms get a halo; non-task-owned hubs render dimmed/haloless. Clicking the
- * node selects the stream (opens its detail panel) via {@link CoordinationGraph}.
+ * Custom React Flow node rendering an IPC stream hub (chatroom, channel, or a
+ * non-collapsible pipe). Chatrooms get a halo; non-task-owned hubs render
+ * dimmed/haloless. Clicking the node selects the stream (opens its detail panel)
+ * via {@link CoordinationGraph}.
  */
 export function StreamNode({ data, selected }: NodeProps): JSX.Element {
   const { stream, streamKind, ownership } = data as StreamNodeData;
-  const classNames = [styles.streamNode, streamKind === "chatroom" ? styles.chatroom : styles.channel];
+  const kindClass = streamKind === "chatroom" ? styles.chatroom : streamKind === "pipe" ? styles.pipe : styles.channel;
+  const classNames = [styles.streamNode, kindClass];
   if (ownership.kind !== "task") {
     classNames.push(styles.haloless);
   }
