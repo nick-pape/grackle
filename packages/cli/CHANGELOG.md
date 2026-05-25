@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 25 May 2026 19:35:47 GMT and should not be manually modified.
+This log was last generated on Mon, 25 May 2026 21:24:16 GMT and should not be manually modified.
+
+## 0.128.0
+Mon, 25 May 2026 21:24:16 GMT
+
+### Minor changes
+
+- AHP HR7: add a `diagnostic` flag to agent/session events (set at runtime lifecycle emit sites, threaded through PowerLine, the event processor, the JSONL log, and session-event readback) and an additive, opt-in OpenTelemetry logs sink for runtime diagnostics gated on OTEL_EXPORTER_OTLP_ENDPOINT (no-op when unset).
 
 ## 0.127.0
 Mon, 25 May 2026 19:35:47 GMT

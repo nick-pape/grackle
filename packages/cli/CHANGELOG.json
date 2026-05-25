@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.128.0",
+      "tag": "@grackle-ai/cli_v0.128.0",
+      "date": "Mon, 25 May 2026 21:24:16 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "AHP HR7: add a `diagnostic` flag to agent/session events (set at runtime lifecycle emit sites, threaded through PowerLine, the event processor, the JSONL log, and session-event readback) and an additive, opt-in OpenTelemetry logs sink for runtime diagnostics gated on OTEL_EXPORTER_OTLP_ENDPOINT (no-op when unset)."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.127.0",
       "tag": "@grackle-ai/cli_v0.127.0",
       "date": "Mon, 25 May 2026 19:35:47 GMT",
