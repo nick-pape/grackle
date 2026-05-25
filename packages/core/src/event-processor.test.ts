@@ -1592,3 +1592,31 @@ describe("event-processor session-action log (AHP HR1a)", () => {
     );
   });
 });
+
+describe("event-processor tool_call_id (AHP HR3)", () => {
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    applySchema();
+    vi.clearAllMocks();
+  });
+
+  it("threads AgentEvent.toolCallId onto the published SessionEvent", async () => {
+    sessionStore.createSession("sess-tc", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    const toolUse = create(powerline.AgentEventSchema, {
+      sessionId: "sess-tc",
+      type: "tool_use",
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify({ tool: "Bash", args: {} }),
+      raw: JSON.stringify({ id: "toolu_x" }),
+      toolCallId: "toolu_x",
+    });
+
+    await waitForProcessing([toolUse], { sessionId: "sess-tc", logPath: "/tmp/log" });
+
+    const { publish } = await import("./stream-hub.js");
+    const published = vi.mocked(publish).mock.calls
+      .map((c) => c[0])
+      .find((e) => e.type === grackle.EventType.TOOL_USE);
+    expect(published?.toolCallId).toBe("toolu_x");
+  });
+});

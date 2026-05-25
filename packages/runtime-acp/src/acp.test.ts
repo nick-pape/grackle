@@ -85,6 +85,7 @@ describe("mapSessionUpdate", () => {
     const events = mapSessionUpdate(update);
     expect(events).toHaveLength(1);
     expect(events[0].type).toBe("tool_use");
+    expect(events[0].toolCallId).toBe("tc-1");
     const parsed = JSON.parse(events[0].content);
     expect(parsed.tool).toBe("read_file");
     expect(parsed.args).toEqual({ path: "/src/index.ts" });
@@ -100,6 +101,8 @@ describe("mapSessionUpdate", () => {
     const events = mapSessionUpdate(update);
     expect(events).toHaveLength(1);
     expect(events[0].type).toBe("tool_result");
+    // Shares the originating tool_call's id so it pairs (AHP HR3).
+    expect(events[0].toolCallId).toBe("tc-1");
     expect(JSON.parse(events[0].content)).toEqual({ content: "file contents here" });
   });
 

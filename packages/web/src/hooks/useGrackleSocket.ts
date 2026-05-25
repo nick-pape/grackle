@@ -136,6 +136,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
         timestamp: evt.timestamp,
         content: evt.content,
         raw: evt.raw || undefined,
+        toolCallId: evt.toolCallId || undefined,
       });
     },
     onDomainEvent: (evt) => {

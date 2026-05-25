@@ -109,12 +109,14 @@ export class StubSession implements AgentSession {
         type: "tool_use",
         timestamp: ts(),
         content: JSON.stringify({ tool: "echo", args: { message: this.prompt } }),
+        toolCallId: "stub-echo",
       };
 
       yield {
         type: "tool_result",
         timestamp: ts(),
         content: `Tool output: "${this.prompt}"`,
+        toolCallId: "stub-echo",
       };
     }
 
@@ -213,12 +215,14 @@ export class StubSession implements AgentSession {
             timestamp: ts(),
             content: JSON.stringify({ tool: step.mcp_call, args: step.args ?? {} }),
             raw: { type: "tool_use", id: toolUseId, name: step.mcp_call, input: step.args ?? {} },
+            toolCallId: toolUseId,
           };
           yield {
             type: "tool_result",
             timestamp: ts(),
             content: JSON.stringify({ error: `Cannot execute MCP tool "${step.mcp_call}": session not spawned with MCP broker` }),
             raw: { type: "tool_result", tool_use_id: toolUseId, is_error: true },
+            toolCallId: toolUseId,
           };
         } else {
           const mcpEvents = await this.performMcpToolCall(ts, step.mcp_call, step.args ?? {});
@@ -272,6 +276,7 @@ export class StubSession implements AgentSession {
         timestamp: ts(),
         content: JSON.stringify({ tool: toolName, args: toolArgs }),
         raw: { type: "tool_use", id: toolUseId, name: toolName, input: toolArgs },
+        toolCallId: toolUseId,
       });
 
       const result = await withTimeout(
@@ -285,6 +290,7 @@ export class StubSession implements AgentSession {
         timestamp: ts(),
         content: JSON.stringify(result),
         raw: { type: "tool_result", tool_use_id: toolUseId, is_error: false },
+        toolCallId: toolUseId,
       });
     } catch (err) {
       logger.warn({ err, runtimeName: this.runtimeName }, `${this.runtimeName}: MCP tool call failed`);
@@ -295,6 +301,7 @@ export class StubSession implements AgentSession {
           timestamp: ts(),
           content: JSON.stringify({ tool: toolName, args: toolArgs }),
           raw: { type: "tool_use", id: toolUseId, name: toolName, input: toolArgs },
+          toolCallId: toolUseId,
         });
       }
 
@@ -305,6 +312,7 @@ export class StubSession implements AgentSession {
           error: err instanceof Error ? err.message : String(err),
         }),
         raw: { type: "tool_result", tool_use_id: toolUseId, is_error: true },
+        toolCallId: toolUseId,
       });
     } finally {
       if (mcpClient) {

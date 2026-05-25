@@ -753,6 +753,7 @@ export async function getSessionEvents(req: grackle.SessionId): Promise<grackle.
         timestamp: e.timestamp,
         content: e.content,
         raw: e.raw || "",
+        toolCallId: e.tool_call_id || "",
       }),
     ),
   });

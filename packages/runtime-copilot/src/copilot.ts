@@ -264,6 +264,7 @@ export class CopilotSession extends BaseAgentSession {
         timestamp: ts(),
         content: JSON.stringify({ tool: toolName, args: toolArgs }),
         raw: event,
+        toolCallId: typeof data?.toolCallId === "string" ? data.toolCallId : undefined,
       });
     });
 
@@ -292,6 +293,7 @@ export class CopilotSession extends BaseAgentSession {
         timestamp: ts(),
         content: output,
         raw: event,
+        toolCallId: typeof data?.toolCallId === "string" ? data.toolCallId : undefined,
       });
     });
 

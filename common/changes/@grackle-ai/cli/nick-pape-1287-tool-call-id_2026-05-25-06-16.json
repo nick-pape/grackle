@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add a first-class tool_call_id to AgentEvent/SessionEvent so tool_result pairs to the right tool_use across all runtimes (Claude Code, Copilot, ACP, Codex via synthesized ids), retiring the fragile positional pairing heuristic (AHP HR3).",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

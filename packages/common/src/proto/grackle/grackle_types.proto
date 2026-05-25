@@ -305,6 +305,7 @@ message SessionEvent {
   string timestamp = 3;
   string content = 4;
   string raw = 5; // JSON, optional original payload
+  string tool_call_id = 6; // stable runtime tool-call id (pairs tool_use↔tool_result); "" when N/A (AHP HR3)
 }
 
 message SessionEventList {

@@ -387,6 +387,74 @@ describe("CopilotRuntime — usage event emission", () => {
   });
 });
 
+describe("CopilotRuntime — tool-call id (AHP HR3)", () => {
+  beforeEach(() => {
+    vi.stubEnv("GRACKLE_MCP_CONFIG", "");
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handlers: Record<string, (...args: any[]) => void> = {};
+    const mockCopilotSession = {
+      sessionId: "copilot-tool-session",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      on: vi.fn((event: string, fn: (...args: any[]) => void) => { handlers[event] = fn; }),
+      send: vi.fn(async () => {
+        setTimeout(() => {
+          handlers["tool.execution_start"]?.({
+            type: "tool.execution_start",
+            data: { toolCallId: "call_42", toolName: "powershell", arguments: { command: "ls" } },
+          });
+          handlers["tool.execution_complete"]?.({
+            type: "tool.execution_complete",
+            data: { toolCallId: "call_42", success: true, result: "files" },
+          });
+          handlers["session.idle"]?.();
+        }, 0);
+      }),
+      destroy: vi.fn(async () => {}),
+      abort: vi.fn(),
+    };
+    const mockCopilotClient = {
+      start: vi.fn(async () => {}),
+      stop: vi.fn(async () => []),
+      createSession: vi.fn(async () => mockCopilotSession),
+      resumeSession: vi.fn(async () => mockCopilotSession),
+    };
+
+    _setCopilotSdkForTesting({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      CopilotClient: class { constructor() { return mockCopilotClient; } } as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      defineTool: vi.fn() as any,
+      approveAll: vi.fn(),
+    });
+  });
+
+  afterEach(() => {
+    _setCopilotSdkForTesting(undefined);
+    vi.unstubAllEnvs();
+  });
+
+  it("lifts data.toolCallId onto tool_use and tool_result so they pair", async () => {
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({ sessionId: "cop-tool-test", prompt: "run", model: "gpt-4o", maxTurns: 1 });
+
+    const events: AgentEvent[] = [];
+    for await (const event of session.stream()) {
+      events.push(event);
+      if (event.type === "status" && event.content === "waiting_input") {
+        session.kill();
+        break;
+      }
+      if (event.type === "status" && event.content === "failed") break;
+    }
+
+    const toolUse = events.find((e) => e.type === "tool_use");
+    const toolResult = events.find((e) => e.type === "tool_result");
+    expect(toolUse?.toolCallId).toBe("call_42");
+    expect(toolResult?.toolCallId).toBe("call_42");
+  });
+});
+
 // ─── Multi-turn integration tests ──────────────────────────
 
 import { drainUntilStatus } from "@grackle-ai/runtime-sdk";

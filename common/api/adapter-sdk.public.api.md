@@ -40,6 +40,7 @@ type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
     timestamp: string;
     content: string;
     raw: string;
+    toolCallId: string;
 };
 
 // @public

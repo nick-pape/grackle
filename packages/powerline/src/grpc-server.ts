@@ -25,6 +25,7 @@ function toProtoEvent(sessionId: string, event: AgentEvent): powerline.AgentEven
     timestamp: event.timestamp,
     content: event.content,
     raw: event.raw ? JSON.stringify(event.raw) : "",
+    toolCallId: event.toolCallId ?? "",
   });
 }
 
