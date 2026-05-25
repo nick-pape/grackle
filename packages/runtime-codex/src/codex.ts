@@ -70,6 +70,13 @@ class CodexSession extends BaseAgentSession {
     "Codex returned no messages. Check authentication: set OPENAI_API_KEY or CODEX_API_KEY.";
 
   private turnCount: number = 0;
+  /**
+   * Session-scoped counter for synthesized tool-call ids (AHP HR3). The Codex
+   * SDK provides no native id to correlate `item.started`/`item.completed`, so we
+   * assign `codex-<n>` on each tool start and pair on completion via a stack.
+   * Instance-scoped (not per-stream) so ids stay unique across resumes.
+   */
+  private codexToolSeq: number = 0;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private codexInstance?: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -221,6 +228,10 @@ class CodexSession extends BaseAgentSession {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     this.activeStream = streamResult;
     let messageCount = 0;
+    // Open synthesized tool-call ids, paired LIFO across item.started/item.completed
+    // (AHP HR3). Codex tools complete strictly before the next starts, so a stack
+    // is safe; an empty pop (no matching start) yields undefined and falls back.
+    const openToolCallIds: string[] = [];
 
     for await (const event of streamResult.events) {
       if (this.killed) {
@@ -249,6 +260,13 @@ class CodexSession extends BaseAgentSession {
             break;
           }
           const type = itemType(item);
+          // These three item types are tool calls (emit tool_use + tool_result). The
+          // Codex SDK gives no id, so mint a synthesized one and open it for pairing.
+          const isToolStart = type === "command_execution" || type === "file_change" || type === "mcp_tool_call";
+          const toolCallId = isToolStart ? `codex-${++this.codexToolSeq}` : undefined;
+          if (toolCallId !== undefined) {
+            openToolCallIds.push(toolCallId);
+          }
 
           if (type === "command_execution") {
             messageCount++;
@@ -257,6 +275,7 @@ class CodexSession extends BaseAgentSession {
               timestamp: ts(),
               content: JSON.stringify({ tool: "command_execution", args: { command: item.command || "" } }),
               raw: event,
+              toolCallId,
             });
           } else if (type === "file_change") {
             messageCount++;
@@ -268,6 +287,7 @@ class CodexSession extends BaseAgentSession {
               timestamp: ts(),
               content: JSON.stringify({ tool: "file_change", args: { file: filePaths, changes } }),
               raw: event,
+              toolCallId,
             });
           } else if (type === "mcp_tool_call") {
             messageCount++;
@@ -277,6 +297,7 @@ class CodexSession extends BaseAgentSession {
               timestamp: ts(),
               content: JSON.stringify({ tool: `mcp__${String(item.server || "unknown")}__${String(item.tool || "unknown")}`, args: item.arguments || {} }),
               raw: event,
+              toolCallId,
             });
           }
           break;
@@ -288,6 +309,9 @@ class CodexSession extends BaseAgentSession {
             break;
           }
           const type = itemType(item);
+          // Pair the completing tool with the id minted at item.started (LIFO).
+          const isToolComplete = type === "command_execution" || type === "file_change" || type === "mcp_tool_call";
+          const toolCallId = isToolComplete ? openToolCallIds.pop() : undefined;
 
           if (type === "command_execution") {
             messageCount++;
@@ -299,6 +323,7 @@ class CodexSession extends BaseAgentSession {
               timestamp: ts(),
               content: exitCode !== undefined ? `[exit ${exitCode}] ${output}` : output,
               raw: event,
+              toolCallId,
             });
           } else if (type === "file_change") {
             messageCount++;
@@ -310,6 +335,7 @@ class CodexSession extends BaseAgentSession {
               timestamp: ts(),
               content: JSON.stringify({ file: filePaths, changes, status: item.status || "completed" }),
               raw: event,
+              toolCallId,
             });
           } else if (type === "agent_message") {
             messageCount++;
@@ -336,6 +362,7 @@ class CodexSession extends BaseAgentSession {
               timestamp: ts(),
               content: errorStr || resultStr || "",
               raw: event,
+              toolCallId,
             });
           } else if (type === "reasoning") {
             messageCount++;

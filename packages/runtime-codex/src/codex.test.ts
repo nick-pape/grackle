@@ -424,6 +424,32 @@ describe("Codex streaming field extraction", () => {
     expect(resultEvents[0].content).toBe("Permission denied");
   });
 
+  // AHP HR3: Codex has no native tool-call id, so we synthesize one per tool
+  // started and pair it on completion (LIFO).
+  it("synthesizes a correlating toolCallId for each started/completed tool pair", async () => {
+    mockRunStreamedEvents = [
+      { type: "item.started", item: { type: "command_execution", command: "ls" } },
+      { type: "item.completed", item: { type: "command_execution", aggregated_output: "files", exit_code: 0 } },
+      { type: "item.started", item: { type: "mcp_tool_call", server: "grackle", tool: "post_finding", arguments: {} } },
+      { type: "item.completed", item: { type: "mcp_tool_call", server: "grackle", tool: "post_finding", result: { content: "ok" } } },
+    ];
+
+    const session = runtime.spawn({ sessionId: "hr3", prompt: "go", model: "codex-mini", maxTurns: 1 });
+    const events = await collectEvents(session);
+
+    const uses = events.filter((e) => e.type === "tool_use");
+    const results = events.filter((e) => e.type === "tool_result");
+    expect(uses).toHaveLength(2);
+    expect(results).toHaveLength(2);
+    // Every tool event carries an id; each result matches its use (sequential pairing).
+    expect(uses[0].toolCallId).toBeTruthy();
+    expect(uses[1].toolCallId).toBeTruthy();
+    expect(results[0].toolCallId).toBe(uses[0].toolCallId);
+    expect(results[1].toolCallId).toBe(uses[1].toolCallId);
+    // Distinct ids across calls.
+    expect(uses[0].toolCallId).not.toBe(uses[1].toolCallId);
+  });
+
   // UT-5: file_change uses item.changes array (not item.file/item.patch)
   it("extracts file_change from item.changes array", async () => {
     const changes = [{ path: "src/index.ts", content: "new content" }];

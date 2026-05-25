@@ -357,6 +357,7 @@ export function processEventStream(
           timestamp: event.timestamp,
           content: event.content,
           raw: event.raw,
+          toolCallId: event.toolCallId,
         });
         await logWriter.writeEvent(logPath, sessionEvent);
         streamHub.publish(sessionEvent);

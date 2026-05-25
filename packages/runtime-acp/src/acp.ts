@@ -122,16 +122,18 @@ export function mapSessionUpdate(update: Record<string, unknown>): AgentEvent[] 
           args: update.rawInput,
         }),
         raw,
+        toolCallId: typeof update.toolCallId === "string" ? update.toolCallId : undefined,
       }];
     }
 
     case "tool_call_update": {
       const status = update.status as string | undefined;
+      const toolCallId = typeof update.toolCallId === "string" ? update.toolCallId : undefined;
       if (status === "completed") {
         const output = update.rawOutput !== null && update.rawOutput !== undefined
           ? JSON.stringify(update.rawOutput)
           : ((update.content || "") as string);
-        return [{ type: "tool_result", timestamp: ts, content: output, raw }];
+        return [{ type: "tool_result", timestamp: ts, content: output, raw, toolCallId }];
       }
       if (status === "failed") {
         const rawOutput = update.rawOutput as Record<string, unknown> | undefined;
@@ -141,6 +143,7 @@ export function mapSessionUpdate(update: Record<string, unknown>): AgentEvent[] 
           timestamp: ts,
           content: typeof errorContent === "string" ? errorContent : JSON.stringify(errorContent),
           raw,
+          toolCallId,
         }];
       }
       // Skip intermediate progress (pending, in_progress)

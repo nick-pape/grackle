@@ -224,6 +224,13 @@ export function buildEventFromEmitStep(
   if (raw !== undefined) {
     event.raw = raw;
   }
+  // Surface the synthesized id on the first-class field (AHP HR3) so fixtures
+  // exercise tool_call_id pairing, not just the legacy raw reader.
+  if (step.emit === "tool_use") {
+    event.toolCallId = newToolUseId;
+  } else if (step.emit === "tool_result" && lastToolUseId !== undefined) {
+    event.toolCallId = lastToolUseId;
+  }
 
   return [event, newToolUseId];
 }

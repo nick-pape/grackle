@@ -77,6 +77,23 @@ describe("mapMessage", () => {
       expect(events[0].content).toBe("file contents here");
     });
 
+    it("sets toolCallId on tool_use (id) and tool_result (tool_use_id) for pairing (AHP HR3)", () => {
+      const msg = {
+        type: "assistant",
+        message: {
+          role: "assistant",
+          content: [
+            { type: "tool_use", id: "toolu_abc", name: "read_file", input: {} },
+            { type: "tool_result", tool_use_id: "toolu_abc", content: "ok" },
+          ],
+        },
+      };
+      const events = mapMessage(msg);
+      expect(events).toHaveLength(2);
+      expect(events[0].toolCallId).toBe("toolu_abc");
+      expect(events[1].toolCallId).toBe("toolu_abc");
+    });
+
     it("maps tool_result with non-string content to JSON", () => {
       const msg = {
         type: "assistant",
