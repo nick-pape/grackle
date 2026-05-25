@@ -11,6 +11,20 @@
  * The mapper is deliberately NOT the production artifact. The end state for
  * #1232 is "PowerLine becomes an AHP host" (it owns AHP-native state directly);
  * this mapper merely surfaces the gaps that work will have to close.
+ *
+ * REFRESH (against `main` after HR1a/HR3/HR6/HR7 merged): several original hacks
+ * have shrunk because the production model moved toward AHP:
+ *   • HR3 (#1287) — first-class `AgentEvent.toolCallId`: the `raw`-digging
+ *     heuristic and the fragile "last-open" tool-result pairing are gone.
+ *   • HR7 (#1290) — `AgentEvent.diagnostic`: lifecycle/diagnostic `system`
+ *     events are classified at the source and routed to the `ahp-otlp:`
+ *     telemetry channel; they no longer "drop with no home."
+ *   • HR7 Part 1 (#1305) — `finding`/`subtask_create`/`escalation` removed from
+ *     `AgentEventType`: orchestration-off-the-session-channel is now enforced by
+ *     the type system, so the stub-only carry handling is deleted.
+ * Still synthesized (pending in-flight work): turn framing (HR2 #1286) and the
+ * root/session-creation channel (HR4+5 #1318). Re-run this exercise once those
+ * merge to retire the remaining synthesis. See FINDINGS.md.
  */
 
 import type { AgentEvent } from "@grackle-ai/runtime-sdk";
@@ -73,23 +87,6 @@ function parseContent(content: string): Record<string, unknown> | undefined {
   }
 }
 
-/** Best-effort extraction of a tool-call id from an `AgentEvent.raw` payload. */
-function rawToolUseId(raw: unknown): string | undefined {
-  if (typeof raw !== "object" || raw === null) {
-    return undefined;
-  }
-  const r = raw as Record<string, unknown>;
-  // Claude Code: { type: "tool_use", id, name, input }
-  if (typeof r["id"] === "string") {
-    return r["id"];
-  }
-  // Claude Code tool_result: { tool_use_id, ... }
-  if (typeof r["tool_use_id"] === "string") {
-    return r["tool_use_id"];
-  }
-  return undefined;
-}
-
 /** A status `content` string that ends the current turn. */
 const TURN_ENDING_STATUSES: ReadonlySet<string> = new Set([
   "waiting_input",
@@ -121,7 +118,6 @@ export function mapAgentEvents(events: AgentEvent[]): MapResult {
   const openToolCalls: string[] = [];
   /** Accumulated session `_meta` (full-replacement action, so we merge ourselves). */
   const meta: Record<string, unknown> = {};
-  const findings: unknown[] = [];
 
   const note = (index: number, type: AgentEventType, disposition: Disposition, detail: string): void => {
     notes.push({ index, type, disposition, detail });
@@ -172,7 +168,10 @@ export function mapAgentEvents(events: AgentEvent[]): MapResult {
         const parsed = parseContent(event.content);
         const toolName = typeof parsed?.["tool"] === "string" ? (parsed["tool"] as string) : "tool";
         const args = parsed?.["args"];
-        const toolCallId = rawToolUseId(event.raw) ?? `tc-${turnId}-${openToolCalls.length + 1}`;
+        // HR3 (#1287): every runtime now populates a stable first-class
+        // `AgentEvent.toolCallId`. The synthesized fallback survives only as
+        // defensiveness for pre-HR3 logs that lack it.
+        const toolCallId = event.toolCallId ?? `tc-${turnId}-${openToolCalls.length + 1}`;
         openToolCalls.push(toolCallId);
         actions.push({
           type: ActionType.SessionToolCallStart,
@@ -198,13 +197,17 @@ export function mapAgentEvents(events: AgentEvent[]): MapResult {
 
       case "tool_result": {
         const turnId = ensureTurn("(synthesized)");
-        const explicitId = rawToolUseId(event.raw);
+        // HR3 (#1287): pair on the first-class `AgentEvent.toolCallId`. The
+        // original spike's fragile "last-open" heuristic (which broke under
+        // concurrent/interleaved tool calls, notably for ACP) is now a defensive
+        // fallback only — with toolCallId populated, that failure mode is gone.
+        const explicitId = event.toolCallId || undefined;
         const toolCallId = explicitId ?? openToolCalls[openToolCalls.length - 1];
         if (toolCallId === undefined) {
           note(index, event.type, "dropped", "tool_result with no matching open tool call (pairing failed)");
           break;
         }
-        const pairedByRaw = explicitId !== undefined;
+        const pairedById = explicitId !== undefined;
         const idx = openToolCalls.indexOf(toolCallId);
         if (idx >= 0) {
           openToolCalls.splice(idx, 1);
@@ -221,7 +224,7 @@ export function mapAgentEvents(events: AgentEvent[]): MapResult {
           index,
           event.type,
           "mapped",
-          `→ session/toolCallComplete (paired ${pairedByRaw ? "by raw id" : "by last-open heuristic — fragile"})`,
+          `→ session/toolCallComplete (paired ${pairedById ? "by toolCallId (HR3)" : "by last-open fallback"})`,
         );
         break;
       }
@@ -295,17 +298,27 @@ export function mapAgentEvents(events: AgentEvent[]): MapResult {
       }
 
       case "system": {
-        if (currentTurnId !== undefined) {
+        if (event.diagnostic) {
+          // HR7 (#1290): runtime lifecycle/diagnostic system events ("Starting
+          // runtime…", "Session initialized", worktree setup) are now classified
+          // at the source via `AgentEvent.diagnostic`. Their home is the
+          // `ahp-otlp:` telemetry channel (logs), NOT session state — exactly the
+          // gap the original spike flagged ("pre-turn system → no home / dropped").
+          // So this is a deliberate, clean carry to telemetry, not a loss.
+          note(index, event.type, "carried", "diagnostic=true → ahp-otlp telemetry channel (HR7), out of SessionState by design");
+        } else if (currentTurnId !== undefined) {
+          // A non-diagnostic (substantive) system message inside a turn — keep it
+          // in the conversation as a system notification.
           const part: ResponsePart = {
             kind: ResponsePartKind.SystemNotification,
             content: event.content,
           };
           actions.push({ type: ActionType.SessionResponsePart, turnId: currentTurnId, part });
-          note(index, event.type, "mapped", "→ session/responsePart(systemNotification)");
+          note(index, event.type, "mapped", "substantive system → session/responsePart(systemNotification)");
         } else {
-          // Pre-turn diagnostics (e.g. "Starting runtime…") have nowhere to live
-          // in AHP SessionState — a host would log them out of band.
-          note(index, event.type, "dropped", "pre-turn system message → no AHP SessionState home (host logs it)");
+          // Substantive system message before any turn opens — rare now that
+          // lifecycle chatter is flagged diagnostic; nothing to attach it to.
+          note(index, event.type, "dropped", "pre-turn non-diagnostic system message → no open turn to attach to");
         }
         break;
       }
@@ -317,78 +330,13 @@ export function mapAgentEvents(events: AgentEvent[]): MapResult {
         break;
       }
 
-      case "finding": {
-        // NOTE: in production, findings are an MCP syscall (the agent calls the
-        // injected `post_finding` tool) — out of band from this stream. No real
-        // runtime emits `finding` AgentEvents; only the StubRuntime does. This
-        // carry-handling exists only to process those stub fixtures.
-        findings.push(parseContent(event.content) ?? event.content);
-        meta["findings"] = [...findings];
-        flushMeta();
-        if (currentTurnId !== undefined) {
-          actions.push({
-            type: ActionType.SessionResponsePart,
-            turnId: currentTurnId,
-            part: { kind: ResponsePartKind.SystemNotification, content: `Finding recorded` },
-          });
-        }
-        note(index, event.type, "carried", "stub/legacy event only — real findings ride the MCP syscall; carried to _meta.findings[] for stub fixtures.");
-        break;
-      }
-
-      case "subtask_create": {
-        // NOTE: in production, subtasks are an MCP syscall (the agent calls the
-        // injected task tool) — out of band from this stream. No real runtime
-        // emits `subtask_create` AgentEvents; only the StubRuntime does. For those
-        // stub fixtures we carry it via AHP's only sub-agent surface: a fabricated
-        // tool call whose result references a subagent session URI
-        // (ToolResultSubagentContent).
-        const turnId = ensureTurn("(synthesized)");
-        const parsed = parseContent(event.content) ?? {};
-        const localId = typeof parsed["local_id"] === "string" ? (parsed["local_id"] as string) : `sub-${index}`;
-        const title = typeof parsed["title"] === "string" ? (parsed["title"] as string) : "subtask";
-        const description = typeof parsed["description"] === "string" ? (parsed["description"] as string) : undefined;
-        const toolCallId = `subtask-${localId}`;
-        actions.push({
-          type: ActionType.SessionToolCallStart,
-          turnId,
-          toolCallId,
-          toolName: "spawn_subtask",
-          displayName: "Spawn subtask",
-        });
-        actions.push({
-          type: ActionType.SessionToolCallReady,
-          turnId,
-          toolCallId,
-          invocationMessage: title,
-          toolInput: event.content,
-          confirmed: ToolCallConfirmationReason.NotNeeded,
-        });
-        actions.push({
-          type: ActionType.SessionToolCallComplete,
-          turnId,
-          toolCallId,
-          result: {
-            success: true,
-            pastTenseMessage: `Spawned subtask: ${title}`,
-            content: [
-              {
-                type: ToolResultContentType.Subagent,
-                resource: `ahp-session:/subtask-${localId}`,
-                title,
-                description,
-              },
-            ],
-          },
-        });
-        note(
-          index,
-          event.type,
-          "carried",
-          "stub/legacy event only — real subtasks ride the MCP syscall; carried via a fabricated subagent tool result for stub fixtures.",
-        );
-        break;
-      }
+      // NOTE: there is deliberately no `finding` / `subtask_create` / `escalation`
+      // case. HR7 Part 1 (#1305) REMOVED those members from `AgentEventType`
+      // entirely, so the type system now ENFORCES what the original spike could
+      // only assert in prose: orchestration (findings, subtasks, escalations)
+      // never rides the agent-conversation channel — it is an MCP syscall, out of
+      // band. The earlier "carried via _meta / fabricated subagent tool call"
+      // handling was a stub-fixture artifact and is gone.
 
       default: {
         // Exhaustiveness guard — a new AgentEventType should surface here.

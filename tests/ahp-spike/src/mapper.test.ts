@@ -11,13 +11,12 @@ import { sessionReducer } from "./vendor/ahp/reducers.js";
 import {
   ResponsePartKind,
   ToolCallStatus,
-  ToolResultContentType,
   TurnState,
   SessionStatus,
   SessionLifecycle,
 } from "./vendor/ahp/channels-session/state.js";
 import type { SessionState } from "./vendor/ahp/channels-session/state.js";
-import { makeInitialSessionState, happyPath, orchestration, errorPath, acpToolPairing, preTurnFailure } from "./fixtures.js";
+import { makeInitialSessionState, happyPath, errorPath, missingIdFallback, preTurnFailure } from "./fixtures.js";
 import type { AgentEvent } from "@grackle-ai/runtime-sdk";
 import type { SpawnOptions } from "@grackle-ai/runtime-sdk";
 
@@ -63,38 +62,28 @@ describe("happy path", () => {
     expect(turn.usage).toEqual({ inputTokens: 150, outputTokens: 50, _meta: { cost_millicents: 12 } });
   });
 
-  it("carries runtime_session_id + usage via extension points and drops the pre-turn system message", () => {
+  it("pairs the tool_result by the first-class toolCallId (HR3), not a heuristic", () => {
     const result = mapAgentEvents(happyPath);
-    expect(result.carried.map((n) => n.type)).toEqual(expect.arrayContaining(["runtime_session_id", "usage"]));
-    expect(result.unmapped.some((n) => n.type === "system")).toBe(true);
+    const resultNote = result.notes.find((n) => n.type === "tool_result");
+    expect(resultNote?.detail).toContain("by toolCallId (HR3)");
+  });
+
+  it("carries runtime_session_id + usage via extension points and routes the diagnostic system event to telemetry (HR7)", () => {
+    const result = mapAgentEvents(happyPath);
+    // HR7: the pre-turn "Starting runtime…" diagnostic is now carried to the
+    // ahp-otlp telemetry channel, not dropped as an unrepresentable gap.
+    expect(result.carried.map((n) => n.type)).toEqual(expect.arrayContaining(["runtime_session_id", "usage", "system"]));
+    expect(result.unmapped.some((n) => n.type === "system")).toBe(false);
 
     const state = replay(happyPath);
     expect(state._meta).toEqual({ runtimeSessionId: "rt-abc-123" });
   });
 });
 
-describe("orchestration events (no native AHP action)", () => {
-  it("flags finding + subtask_create as carried", () => {
-    const result = mapAgentEvents(orchestration);
-    expect(result.carried.map((n) => n.type)).toEqual(expect.arrayContaining(["finding", "subtask_create"]));
-  });
-
-  it("parks findings in _meta and represents a subtask as a subagent tool result", () => {
-    const state = replay(orchestration);
-
-    expect((state._meta?.["findings"] as unknown[]).length).toBe(1);
-
-    const tools = state.turns[0].responseParts.filter((p) => p.kind === ResponsePartKind.ToolCall) as Array<{
-      toolCall: { toolName: string; status: ToolCallStatus; content?: Array<{ type: ToolResultContentType; resource?: string }> };
-    }>;
-    const subtask = tools.find((t) => t.toolCall.toolName === "spawn_subtask");
-    expect(subtask).toBeDefined();
-    expect(subtask!.toolCall.status).toBe(ToolCallStatus.Completed);
-    const content = subtask!.toolCall.content ?? [];
-    expect(content[0]?.type).toBe(ToolResultContentType.Subagent);
-    expect(content[0]?.resource).toContain("subtask-s1");
-  });
-});
+// NOTE: the original "orchestration events" describe block is gone. HR7 Part 1
+// (#1305) removed `finding`/`subtask_create` from `AgentEventType`, so those
+// streams are now type-impossible — the type system enforces that orchestration
+// rides the MCP syscall plane, not the session channel.
 
 describe("error path", () => {
   it("ends the turn in an error state", () => {
@@ -122,13 +111,14 @@ describe("pre-turn failure", () => {
   });
 });
 
-describe("ACP-style tool pairing (no raw id)", () => {
-  it("pairs the result by the fragile last-open heuristic and completes the tool call", () => {
-    const result = mapAgentEvents(acpToolPairing);
+describe("missing-id fallback (no toolCallId)", () => {
+  it("falls back to last-open pairing when toolCallId is absent and completes the tool call", () => {
+    const result = mapAgentEvents(missingIdFallback);
     const resultNote = result.notes.find((n) => n.type === "tool_result");
-    expect(resultNote?.detail).toContain("last-open");
+    // Post-HR3 the fragile heuristic is a defensive fallback, not the norm.
+    expect(resultNote?.detail).toContain("last-open fallback");
 
-    const state = replay(acpToolPairing);
+    const state = replay(missingIdFallback);
     const tools = state.turns[0].responseParts.filter((p) => p.kind === ResponsePartKind.ToolCall) as Array<{ toolCall: { status: ToolCallStatus } }>;
     expect(tools).toHaveLength(1);
     expect(tools[0].toolCall.status).toBe(ToolCallStatus.Completed);

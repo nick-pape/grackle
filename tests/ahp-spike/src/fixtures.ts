@@ -3,6 +3,10 @@
  * what the real runtimes emit (see the StubRuntime scenario system and the
  * Claude/ACP runtimes). A complementary stub-derived stream is captured live in
  * `mapper.test.ts`.
+ *
+ * Refreshed against `main`: tool events carry the first-class
+ * `toolCallId` (HR3 #1287) and lifecycle messages carry `diagnostic` (HR7
+ * #1290), mirroring what the production runtimes now emit.
  */
 
 import type { AgentEvent } from "@grackle-ai/runtime-sdk";
@@ -12,9 +16,26 @@ import type { SessionState } from "./vendor/ahp/channels-session/state.js";
 /** Fixed timestamp so fixtures are deterministic. */
 const TS = "2026-05-21T00:00:00.000Z";
 
+/** Optional first-class AgentEvent fields a fixture may set. */
+interface EvOpts {
+  /** Original runtime payload (still read for tool-result error detection). */
+  raw?: unknown;
+  /** Stable tool-call id (HR3) — pairs tool_use ↔ tool_result. */
+  toolCallId?: string;
+  /** Runtime lifecycle/diagnostic marker (HR7). */
+  diagnostic?: boolean;
+}
+
 /** Build an AgentEvent tersely. */
-function ev(type: AgentEvent["type"], content: string, raw?: unknown): AgentEvent {
-  return raw === undefined ? { type, timestamp: TS, content } : { type, timestamp: TS, content, raw };
+function ev(type: AgentEvent["type"], content: string, opts?: EvOpts): AgentEvent {
+  return {
+    type,
+    timestamp: TS,
+    content,
+    ...(opts?.raw !== undefined ? { raw: opts.raw } : {}),
+    ...(opts?.toolCallId !== undefined ? { toolCallId: opts.toolCallId } : {}),
+    ...(opts?.diagnostic !== undefined ? { diagnostic: opts.diagnostic } : {}),
+  };
 }
 
 /**
@@ -37,36 +58,21 @@ export function makeInitialSessionState(resource = "ahp-session:/spike"): Sessio
 }
 
 /**
- * Happy path: a single turn with assistant text, a tool call paired by an
- * explicit raw id (Claude-style), more text, usage, and a clean completion.
+ * Happy path: a pre-turn diagnostic, assistant text, a tool call paired by its
+ * first-class `toolCallId` (HR3), more text, usage, and a clean completion.
  */
 export const happyPath: AgentEvent[] = [
-  ev("system", "Stub runtime initialized"),
+  ev("system", "Starting runtime…", { diagnostic: true }),
   ev("runtime_session_id", "rt-abc-123"),
   ev("text", "Hello — I'll take a look."),
   ev(
     "tool_use",
     JSON.stringify({ tool: "read_file", args: { path: "/src/index.ts" } }),
-    { type: "tool_use", id: "toolu_1", name: "read_file", input: { path: "/src/index.ts" } },
+    { toolCallId: "toolu_1" },
   ),
-  ev("tool_result", "export const x = 1;", { type: "tool_result", tool_use_id: "toolu_1", is_error: false }),
+  ev("tool_result", "export const x = 1;", { toolCallId: "toolu_1", raw: { is_error: false } }),
   ev("text", "Done — it looks fine."),
   ev("usage", JSON.stringify({ input_tokens: 150, output_tokens: 50, cost_millicents: 12 })),
-  ev("status", "completed"),
-];
-
-/**
- * Orchestration events that have no native AHP session action: `finding` and
- * `subtask_create`. The mapper carries them via `_meta` and a fabricated
- * subagent tool call respectively.
- */
-export const orchestration: AgentEvent[] = [
-  ev("text", "Investigating the codebase."),
-  ev("finding", JSON.stringify({ title: "Unused export", category: "smell", content: "x is never used", tags: ["cleanup"] })),
-  ev(
-    "subtask_create",
-    JSON.stringify({ title: "Remove unused export", description: "Delete x", local_id: "s1", depends_on: [], can_decompose: false }),
-  ),
   ev("status", "completed"),
 ];
 
@@ -77,18 +83,23 @@ export const errorPath: AgentEvent[] = [
 ];
 
 /**
- * ACP-style tool call: the raw payload carries NO tool id (ACP uses
- * `sessionUpdate`/`status`), forcing the mapper to pair the result by the
- * last-open heuristic. Exercises the fragile pairing path.
+ * Defensive missing-id fallback: a tool stream with NO `toolCallId` (e.g. a
+ * pre-HR3 captured log, or a hypothetical id-less runtime). Post-HR3 every real
+ * runtime populates `toolCallId`, so this no longer reflects any live runtime —
+ * it exists only to exercise the mapper's last-open fallback pairing.
  */
-export const acpToolPairing: AgentEvent[] = [
-  ev("tool_use", JSON.stringify({ tool: "bash", args: { cmd: "ls" } }), { sessionUpdate: "tool_call", title: "bash", rawInput: { cmd: "ls" } }),
-  ev("tool_result", "file-a\nfile-b", { sessionUpdate: "tool_call_update", status: "completed", rawOutput: "file-a\nfile-b" }),
+export const missingIdFallback: AgentEvent[] = [
+  ev("tool_use", JSON.stringify({ tool: "bash", args: { cmd: "ls" } })),
+  ev("tool_result", "file-a\nfile-b", { raw: { status: "completed" } }),
   ev("status", "completed"),
 ];
 
 /**
  * A session that fails before any turn opens (e.g. a setup/auth failure). There
- * is no turn to error on, so this exercises the pre-turn failure path.
+ * is no turn to error on, so this exercises the pre-turn failure path. The
+ * "Starting runtime…" lifecycle message is flagged diagnostic (HR7).
  */
-export const preTurnFailure: AgentEvent[] = [ev("system", "Starting runtime…"), ev("status", "failed")];
+export const preTurnFailure: AgentEvent[] = [
+  ev("system", "Starting runtime…", { diagnostic: true }),
+  ev("status", "failed"),
+];

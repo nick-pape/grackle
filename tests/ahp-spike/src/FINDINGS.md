@@ -1,5 +1,10 @@
 # AHP architecture-validation findings
 
+> **Update:** see [`FINDINGS-REFRESH.md`](./FINDINGS-REFRESH.md) for Refresh #1,
+> which re-runs this exercise against `main` after HR1a/HR3/HR6/HR7 merged and
+> records which findings below are now **resolved** vs. **still open**. This
+> original document is kept as the historical baseline the HR tickets derive from.
+
 This is the deliverable of the spike for [#1232](https://github.com/nick-pape/grackle/issues/1232).
 It records what we learned by mapping Grackle's `AgentEvent` stream onto AHP
 session **actions** and folding them through AHP's own (vendored) `sessionReducer`
