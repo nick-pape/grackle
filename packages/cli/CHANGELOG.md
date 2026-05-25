@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 25 May 2026 04:20:46 GMT and should not be manually modified.
+This log was last generated on Mon, 25 May 2026 04:49:44 GMT and should not be manually modified.
+
+## 0.122.0
+Mon, 25 May 2026 04:49:44 GMT
+
+### Minor changes
+
+- KG Phase 3 (#1259): close the retrieval loop — knowledge_search guidance (pull) + a thin spawn-time "Related prior work" injection (push) via a new systemPromptContributors plugin hook, gated by a per-task injectKnowledge flag (default on).
 
 ## 0.121.0
 Mon, 25 May 2026 04:20:46 GMT
