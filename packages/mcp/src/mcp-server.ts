@@ -288,12 +288,15 @@ async function createMcpServerInstance(
     }
     const defs: typeof visibleToolDefs = [];
     for (const { toolName, component: c } of selectPromotedRenderTools(components)) {
+      // No `_meta.ui.resourceUri`: these render via the broker capturing the call
+      // result's widget descriptor (captureWidgetRender), not by a host doing
+      // resources/read — there is no per-component ui:// resource to read. Listing
+      // is gated to broker mode (see the ListTools handler) for the same reason.
       defs.push({
         name: toolName,
         description: `Render the "${c.name}" component (v${c.version}) inline. Promoted from this workspace's component registry; its inputSchema is the component's prop schema.`,
         inputSchema: dynamicRenderInputSchema(c.propsSchema),
         annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-        _meta: uiToolMeta(`ui://grackle/${c.id}`),
       });
     }
     return defs;
@@ -356,8 +359,11 @@ async function createMcpServerInstance(
     //      widget itself.
     const uiOn = publishWidgetEvent !== undefined || hostSupportsUiApps(server.getClientCapabilities());
     const staticTools = uiOn ? visibleToolDefs : visibleToolDefs.filter((t) => !uiToolNames.has(t.name));
-    // Dynamic render_<name> tools render UI, so only offer them when UI is on (#1272).
-    const dynamicTools = uiOn ? await dynamicRenderToolDefs() : [];
+    // Dynamic render_<name> tools render only via the in-process broker capture
+    // (they have no readable ui:// resource), so list them ONLY when the broker is
+    // active — never in standalone/ui-host mode where a host would resources/read
+    // a `ui://grackle/<id>` URI that isn't registered (#1272).
+    const dynamicTools = publishWidgetEvent !== undefined ? await dynamicRenderToolDefs() : [];
     return { tools: [...staticTools, ...dynamicTools] };
   });
 
