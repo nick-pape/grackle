@@ -24,6 +24,15 @@ test.describe("Self-hosted fonts (#1252)", { tag: ["@webui", "@smoke"] }, () => 
         cspErrors.push(msg.text());
       }
     });
+    // Network-layer guard: catches any request to an external font host even if
+    // it comes from a cross-origin stylesheet whose rules we can't read.
+    const externalFontRequests: string[] = [];
+    page.on("request", (request) => {
+      const url = request.url();
+      if (EXTERNAL_FONT_HOSTS.some((host) => url.includes(host))) {
+        externalFontRequests.push(url);
+      }
+    });
 
     // The app holds a WebSocket + streaming RPCs open, so the network never goes
     // idle — wait on the document load event, not "networkidle".
@@ -43,6 +52,7 @@ test.describe("Self-hosted fonts (#1252)", { tag: ["@webui", "@smoke"] }, () => 
 
     expect(erroredFonts, "no font face should fail to load under CSP").toEqual([]);
     expect(cspErrors, "app load should produce no CSP violations").toEqual([]);
+    expect(externalFontRequests, "no font should be requested from an external host").toEqual([]);
 
     // The primary self-hosted families must be available.
     const available = await page.evaluate(() => ({
@@ -69,6 +79,10 @@ test.describe("Self-hosted fonts (#1252)", { tag: ["@webui", "@smoke"] }, () => 
         for (const rule of rules) {
           if (rule instanceof CSSFontFaceRule) {
             sources.push(rule.style.getPropertyValue("src"));
+          } else if (rule instanceof CSSImportRule) {
+            // `@import 'https://...'` lives in our same-origin sheet, so its
+            // href is readable here even when the imported sheet is cross-origin.
+            sources.push(rule.href);
           }
         }
       }

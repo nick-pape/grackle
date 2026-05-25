@@ -22,8 +22,10 @@ describe("self-hosted fonts (#1252)", () => {
   const themeScss: string = readStyle("./theme.scss");
 
   it("does not import any external font stylesheets in global.scss", () => {
-    // No `@import url('https://...')` — these violate `style-src 'self'`.
-    expect(globalScss).not.toMatch(/@import\s+url\(\s*['"]?https?:/i);
+    // No external `@import` — these violate `style-src 'self'`. Matches both the
+    // `@import url('https://...')` form and the bare `@import 'https://...'` /
+    // `@import "https://..."` forms SCSS also allows.
+    expect(globalScss).not.toMatch(/@import\s+(?:url\(\s*)?['"]?https?:/i);
   });
 
   it("imports all three font families from @fontsource-variable", () => {
