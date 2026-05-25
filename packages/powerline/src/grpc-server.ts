@@ -27,6 +27,7 @@ function toProtoEvent(sessionId: string, event: AgentEvent): powerline.AgentEven
     raw: event.raw ? JSON.stringify(event.raw) : "",
     toolCallId: event.toolCallId ?? "",
     diagnostic: event.diagnostic ?? false,
+    turnId: event.turnId ?? "",
   });
 }
 

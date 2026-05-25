@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+import { randomUUID } from "node:crypto";
 import type { AgentRuntime, AgentSession, AgentEvent, SpawnOptions, ResumeOptions } from "@grackle-ai/runtime-sdk";
 import { SESSION_STATUS } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
@@ -94,7 +95,11 @@ export class StubSession implements AgentSession {
 
     yield { type: "system", timestamp: ts(), content: "Stub runtime initialized" };
     yield { type: "runtime_session_id", timestamp: ts(), content: this.runtimeSessionId };
-    yield { type: "text", timestamp: ts(), content: `Echo: ${this.prompt}` };
+
+    // Initial turn (AHP HR2), anchored on the prompt.
+    const initialTurnId = randomUUID();
+    yield { type: "turn_started", timestamp: ts(), content: this.prompt, turnId: initialTurnId };
+    yield { type: "text", timestamp: ts(), content: `Echo: ${this.prompt}`, turnId: initialTurnId };
 
     if (this.killed as boolean) { yield { type: "status", timestamp: ts(), content: this.killReason }; return; }
 
@@ -102,7 +107,7 @@ export class StubSession implements AgentSession {
       // Real MCP tool call when both broker and workspace context are available
       const mcpEvents = await this.performMcpToolCall(ts, "task_list", {});
       for (const event of mcpEvents) {
-        yield event;
+        yield { ...event, turnId: initialTurnId };
       }
     } else {
       // Fallback: fake echo tool events
@@ -111,6 +116,7 @@ export class StubSession implements AgentSession {
         timestamp: ts(),
         content: JSON.stringify({ tool: "echo", args: { message: this.prompt } }),
         toolCallId: "stub-echo",
+        turnId: initialTurnId,
       };
 
       yield {
@@ -118,12 +124,14 @@ export class StubSession implements AgentSession {
         timestamp: ts(),
         content: `Tool output: "${this.prompt}"`,
         toolCallId: "stub-echo",
+        turnId: initialTurnId,
       };
     }
 
     if (this.killed as boolean) { yield { type: "status", timestamp: ts(), content: this.killReason }; return; }
 
-    // Wait for user input
+    // Initial turn complete; wait for user input.
+    yield { type: "turn_complete", timestamp: ts(), content: "", turnId: initialTurnId };
     this.status = SESSION_STATUS.IDLE;
     yield { type: "status", timestamp: ts(), content: "waiting_input" };
 
@@ -141,9 +149,12 @@ export class StubSession implements AgentSession {
 
     this.status = SESSION_STATUS.RUNNING;
     yield { type: "status", timestamp: ts(), content: "running" };
-    yield { type: "text", timestamp: ts(), content: `You said: ${input}` };
+    const followUpTurnId = randomUUID();
+    yield { type: "turn_started", timestamp: ts(), content: input, turnId: followUpTurnId };
+    yield { type: "text", timestamp: ts(), content: `You said: ${input}`, turnId: followUpTurnId };
 
     // Agent finished turn — go idle, not "completed"
+    yield { type: "turn_complete", timestamp: ts(), content: "", turnId: followUpTurnId };
     this.status = SESSION_STATUS.IDLE;
     yield { type: "status", timestamp: ts(), content: "waiting_input" };
   }
