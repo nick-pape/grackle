@@ -287,4 +287,107 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
       })
       .toBe(true);
   });
+
+  // ── Retrieval loop (#1259): spawn-time "Related prior work" injection ──
+
+  type TestClient = ReturnType<typeof import("./rpc-client.js").createTestClient>;
+
+  /** Start a task with the stub runtime and return its session ID. */
+  async function startTaskStub(client: TestClient, taskId: string): Promise<string> {
+    const resp = await client.orchestration.startTask({ taskId, personaId: "stub", environmentId: "test-local" });
+    if (!resp.id) {
+      throw new Error(`No session ID from startTask for ${taskId}`);
+    }
+    return resp.id;
+  }
+
+  /** Poll a session's events for the systemContext (first SYSTEM event) and return its content. */
+  async function pollSystemContext(client: TestClient, sessionId: string, timeoutMs = 30_000): Promise<string> {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const resp = await client.core.getSessionEvents({ id: sessionId });
+      for (const event of resp.events ?? []) {
+        if (typeof event.content === "string" && event.raw) {
+          try {
+            const raw = JSON.parse(event.raw) as Record<string, unknown>;
+            if (raw.systemContext === true) {
+              return event.content;
+            }
+          } catch {
+            // not JSON — skip
+          }
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    }
+    throw new Error(`No systemContext event for session ${sessionId} within ${timeoutMs}ms`);
+  }
+
+  test("spawn injects Related prior work from the knowledge graph", async ({ grackle: { client } }) => {
+    test.setTimeout(120_000);
+    await skipIfKnowledgeUnavailable(client);
+
+    const marker = `kgloop${Date.now()}`;
+    const wsId = await createWorkspace(client, `${marker}-ws`);
+
+    // A prior task in the workspace whose label the spawn push should surface.
+    await createTaskDirect(client, wsId, `Implement OAuth2 authentication with refresh tokens ${marker}`, {
+      description: "JWT access tokens with refresh-token rotation",
+    });
+    // Wait until it is embedded + searchable (entity embeddings backfill asynchronously).
+    await expect
+      .poll(
+        async () => {
+          const r = await client.knowledge.searchKnowledge({
+            query: `OAuth2 authentication refresh tokens ${marker}`,
+            limit: 10,
+          });
+          return r.results.some((hit) => hit.node?.label?.includes(marker));
+        },
+        { timeout: 90_000, message: "prior task should become searchable" },
+      )
+      .toBe(true);
+
+    // A new, related task (injectKnowledge defaults ON). Its own unique token must be
+    // self-excluded from the injected block.
+    const newTask = await createTaskDirect(
+      client,
+      wsId,
+      `Add ratelimit${marker} guard to the OAuth2 authentication endpoints`,
+      { description: "Throttle the auth endpoints" },
+    );
+    const sessionId = await startTaskStub(client, (newTask as unknown as { id: string }).id);
+
+    const systemContext = await pollSystemContext(client, sessionId);
+    expect(systemContext).toContain("## Related prior work");
+    expect(systemContext).toContain(marker); // prior task surfaced
+    expect(systemContext).toContain("knowledge_search"); // PULL guidance present
+    expect(systemContext).not.toContain(`ratelimit${marker}`); // self-exclusion
+  });
+
+  test("a task with injectKnowledge disabled gets no Related prior work block", async ({ grackle: { client } }) => {
+    test.setTimeout(120_000);
+    await skipIfKnowledgeUnavailable(client);
+
+    const marker = `kgoff${Date.now()}`;
+    const wsId = await createWorkspace(client, `${marker}-ws`);
+    await createTaskDirect(client, wsId, `Implement OAuth2 authentication ${marker}`, {});
+    await expect
+      .poll(
+        async () => {
+          const r = await client.knowledge.searchKnowledge({ query: `OAuth2 authentication ${marker}`, limit: 10 });
+          return r.results.some((hit) => hit.node?.label?.includes(marker));
+        },
+        { timeout: 90_000, message: "prior task should become searchable" },
+      )
+      .toBe(true);
+
+    // Opted out → no injection even though relevant prior work exists.
+    const off = await createTaskDirect(client, wsId, `Refactor OAuth2 token handling ${marker}`, {
+      injectKnowledge: false,
+    });
+    const sessionId = await startTaskStub(client, (off as unknown as { id: string }).id);
+    const systemContext = await pollSystemContext(client, sessionId);
+    expect(systemContext).not.toContain("## Related prior work");
+  });
 });

@@ -60,6 +60,7 @@ function makeTask(overrides: Partial<TaskData> & { id: string; workspaceId: stri
     depth: 0,
     childTaskIds: [],
     canDecompose: false,
+    injectKnowledge: true,
     defaultPersonaId: "",
     workpad: "",
     tokenBudget: 0,

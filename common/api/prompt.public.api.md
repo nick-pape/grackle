@@ -108,7 +108,9 @@ export interface SystemPromptOptions {
     availableEnvironments?: EnvironmentSummary[];
     availablePersonas?: PersonaSummary[];
     canDecompose?: boolean;
+    knowledgeGuidance?: boolean;
     personaPrompt?: string;
+    relatedPriorWork?: string;
     task?: {
         title: string;
         description: string;

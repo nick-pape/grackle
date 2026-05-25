@@ -61,6 +61,45 @@ describe("SystemPromptBuilder", () => {
     expect(result).not.toContain("task_create");
   });
 
+  it("injects the Related prior work block for a task when provided (#1259)", () => {
+    const result = new SystemPromptBuilder({
+      task: { title: "T", description: "D", notes: "" },
+      relatedPriorWork: "## Related prior work\n- [task] prior thing",
+    }).build();
+    expect(result).toContain("## Related prior work");
+    expect(result).toContain("prior thing");
+  });
+
+  it("omits the Related prior work block when not provided (#1259)", () => {
+    const result = new SystemPromptBuilder({
+      task: { title: "T", description: "D", notes: "" },
+    }).build();
+    expect(result).not.toContain("## Related prior work");
+  });
+
+  it("includes knowledge_search guidance only when knowledgeGuidance is set (#1259)", () => {
+    const on = new SystemPromptBuilder({
+      task: { title: "T", description: "D", notes: "" },
+      knowledgeGuidance: true,
+    }).build();
+    expect(on).toContain("## Knowledge graph");
+    expect(on).toContain("knowledge_search");
+
+    const off = new SystemPromptBuilder({
+      task: { title: "T", description: "D", notes: "" },
+    }).build();
+    expect(off).not.toContain("## Knowledge graph");
+  });
+
+  it("ad-hoc session (no task) gets neither knowledge section (#1259)", () => {
+    const result = new SystemPromptBuilder({
+      relatedPriorWork: "## Related prior work\n- x",
+      knowledgeGuidance: true,
+    }).build();
+    expect(result).not.toContain("## Related prior work");
+    expect(result).not.toContain("## Knowledge graph");
+  });
+
   it("ad-hoc session (no task) includes persona prompt, IPC section, and MCP note", () => {
     const result = new SystemPromptBuilder({
       personaPrompt: "You are a helpful assistant.",

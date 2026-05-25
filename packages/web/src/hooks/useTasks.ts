@@ -167,6 +167,7 @@ export function useTasks(): UseTasksResult {
       parentTaskId?: string,
       defaultPersonaId?: string,
       canDecompose?: boolean,
+      injectKnowledge?: boolean,
       onSuccess?: () => void,
       onError?: (message: string) => void,
     ) => {
@@ -179,6 +180,7 @@ export function useTasks(): UseTasksResult {
           parentTaskId: parentTaskId || "",
           defaultPersonaId: defaultPersonaId || undefined,
           canDecompose: canDecompose ?? undefined,
+          injectKnowledge: injectKnowledge ?? undefined,
         });
         onSuccess?.();
       } catch (err) {

@@ -21,7 +21,7 @@ export function NewTaskPage(): JSX.Element {
       tasks={tasks}
       workspaces={workspaces}
       personas={personas}
-      onCreateTask={(wsId, title, desc, deps, parentId, personaId, canDecompose, onSuccess, onError) => { createTask(wsId, title, desc, deps, parentId, personaId, canDecompose, onSuccess, onError).catch(() => {}); }}
+      onCreateTask={(wsId, title, desc, deps, parentId, personaId, canDecompose, injectKnowledge, onSuccess, onError) => { createTask(wsId, title, desc, deps, parentId, personaId, canDecompose, injectKnowledge, onSuccess, onError).catch(() => {}); }}
       onUpdateTask={(tid, title, desc, deps, personaId) => { updateTask(tid, title, desc, deps, personaId).catch(() => {}); }}
       onShowToast={showToast}
     />

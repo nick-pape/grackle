@@ -171,6 +171,10 @@ export const tasks = sqliteTable("tasks", {
   canDecompose: integer("can_decompose", { mode: "boolean" })
     .notNull()
     .default(false),
+  /** Inject knowledge-graph context ("Related prior work" + search guidance) at spawn (#1259). */
+  injectKnowledge: integer("inject_knowledge", { mode: "boolean" })
+    .notNull()
+    .default(true),
   defaultPersonaId: text("default_persona_id").notNull().default(""),
   workpad: text("workpad").notNull().default(""),
   scheduleId: text("schedule_id").notNull().default(""),

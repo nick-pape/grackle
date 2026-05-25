@@ -9,6 +9,7 @@ import type {
   ReconciliationPhase,
   ServiceRegistration,
   PluginToolDefinition,
+  SystemPromptContributor,
 } from "./plugin.js";
 import type { PluginContext, Disposable } from "./context.js";
 
@@ -22,6 +23,8 @@ export interface LoadedPlugins {
   reconciliationPhases: ReconciliationPhase[];
   /** All MCP tool definitions, in plugin load order. */
   mcpTools: PluginToolDefinition[];
+  /** All system-prompt contributors, in plugin load order. */
+  systemPromptContributors: SystemPromptContributor[];
   /** All subscriber disposables (for shutdown). */
   subscriberDisposables: Disposable[];
   /** Dispose all subscribers, then shutdown plugins in reverse initialization order. */
@@ -99,6 +102,7 @@ export async function loadPlugins(
   const serviceRegistrations: ServiceRegistration[] = [];
   const reconciliationPhases: ReconciliationPhase[] = [];
   const mcpTools: PluginToolDefinition[] = [];
+  const systemPromptContributors: SystemPromptContributor[] = [];
   const subscriberDisposables: Disposable[] = [];
 
   try {
@@ -111,6 +115,9 @@ export async function loadPlugins(
       }
       if (plugin.mcpTools) {
         mcpTools.push(...plugin.mcpTools(ctx));
+      }
+      if (plugin.systemPromptContributors) {
+        systemPromptContributors.push(...plugin.systemPromptContributors(ctx));
       }
       if (plugin.eventSubscribers) {
         subscriberDisposables.push(...plugin.eventSubscribers(ctx));
@@ -167,6 +174,7 @@ export async function loadPlugins(
     serviceRegistrations,
     reconciliationPhases,
     mcpTools,
+    systemPromptContributors,
     subscriberDisposables,
     shutdown,
   };

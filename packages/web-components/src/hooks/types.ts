@@ -117,6 +117,8 @@ export interface TaskData {
   depth: number;
   childTaskIds: string[];
   canDecompose: boolean;
+  /** Inject knowledge-graph context ("Related prior work" + search guidance) at spawn (#1259). */
+  injectKnowledge: boolean;
   defaultPersonaId: string;
   workpad: string;
   /** Total token cap (input + output); 0 = unlimited. */
@@ -370,6 +372,7 @@ export interface UseTasksResult {
     parentTaskId?: string,
     defaultPersonaId?: string,
     canDecompose?: boolean,
+    injectKnowledge?: boolean,
     onSuccess?: () => void,
     onError?: (message: string) => void,
   ) => Promise<void>;

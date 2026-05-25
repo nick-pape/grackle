@@ -14,6 +14,8 @@ export type {
   ServiceRegistration,
   ReconciliationPhase,
   PluginToolDefinition,
+  SpawnContextInput,
+  SystemPromptContributor,
 } from "./plugin.js";
 
 // ─── Loader ───────────────────────────────────────────────────
