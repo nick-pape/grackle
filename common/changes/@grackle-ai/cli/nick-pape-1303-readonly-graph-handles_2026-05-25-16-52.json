@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Make the read-only Coordination and Task DAG graphs non-connectable: disable React Flow drag-to-connect and hide the node connection handles so users can't attempt connections that can't be created (#1303).",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
