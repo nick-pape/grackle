@@ -18,10 +18,9 @@ export const WorkingTaskOverview: Story = {
     await expect(canvas.getByTestId("task-title")).toBeInTheDocument();
     // Task status badge should be visible
     await expect(canvas.getByTestId("task-status")).toBeInTheDocument();
-    // Tab bar should have Overview, Stream, Findings tabs
+    // Tab bar should have Overview, Stream tabs
     await expect(canvas.getByRole("tab", { name: "Overview" })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: "Stream" })).toBeInTheDocument();
-    await expect(canvas.getByRole("tab", { name: "Findings" })).toBeInTheDocument();
   },
 };
 

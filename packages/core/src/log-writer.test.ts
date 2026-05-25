@@ -76,6 +76,46 @@ describe("log-writer", () => {
       expect(parsed.type).toBe("text");
     });
 
+    it("persists tool_call_id for tool events and omits it otherwise (AHP HR3)", async () => {
+      initLog("/tmp/tcid-log");
+      const ws = lastMockStream!;
+
+      const toolUse = create(grackle.SessionEventSchema, {
+        sessionId: "s1",
+        type: grackle.EventType.TOOL_USE,
+        timestamp: "2026-01-01T00:00:00.000Z",
+        content: "{}",
+        toolCallId: "toolu_abc",
+      });
+      await writeEvent("/tmp/tcid-log", toolUse);
+      await writeEvent("/tmp/tcid-log", makeEvent("s1", "plain text"));
+
+      const toolLine = JSON.parse((ws.write.mock.calls[0][0] as string).trim()) as { tool_call_id?: string };
+      const textLine = JSON.parse((ws.write.mock.calls[1][0] as string).trim()) as { tool_call_id?: string };
+      expect(toolLine.tool_call_id).toBe("toolu_abc");
+      expect(textLine.tool_call_id).toBeUndefined();
+    });
+
+    it("persists diagnostic for lifecycle events and omits it otherwise (AHP HR7)", async () => {
+      initLog("/tmp/diag-log");
+      const ws = lastMockStream!;
+
+      const lifecycle = create(grackle.SessionEventSchema, {
+        sessionId: "s1",
+        type: grackle.EventType.SYSTEM,
+        timestamp: "2026-01-01T00:00:00.000Z",
+        content: "Starting claude-code runtime...",
+        diagnostic: true,
+      });
+      await writeEvent("/tmp/diag-log", lifecycle);
+      await writeEvent("/tmp/diag-log", makeEvent("s1", "plain text"));
+
+      const diagLine = JSON.parse((ws.write.mock.calls[0][0] as string).trim()) as { diagnostic?: boolean };
+      const textLine = JSON.parse((ws.write.mock.calls[1][0] as string).trim()) as { diagnostic?: boolean };
+      expect(diagLine.diagnostic).toBe(true);
+      expect(textLine.diagnostic).toBeUndefined();
+    });
+
     it("resolves immediately when write() returns true", async () => {
       initLog("/tmp/fast-log");
       const ws = lastMockStream!;

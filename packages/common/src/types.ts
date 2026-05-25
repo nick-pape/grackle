@@ -62,8 +62,6 @@ export type AgentEventType =
   | "error"
   | "status"
   | "system"
-  | "finding"
-  | "subtask_create"
   | "runtime_session_id"
   | "usage";
 
@@ -89,6 +87,8 @@ export const DEFAULT_SERVER_PORT: number = 7434;
 export const DEFAULT_WEB_PORT: number = 3000;
 /** Default port for the MCP (Model Context Protocol) server. */
 export const DEFAULT_MCP_PORT: number = 7435;
+/** Default port for the MCP Apps widget sandbox (a separate origin for the double-iframe). */
+export const DEFAULT_SANDBOX_PORT: number = 7436;
 /** Name of the seed persona created on first run. */
 export const DEFAULT_PERSONA_NAME: string = "Software Engineer";
 /** ID of the seed persona created on first run. */

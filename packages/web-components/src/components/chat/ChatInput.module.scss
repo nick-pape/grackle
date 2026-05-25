@@ -7,7 +7,7 @@
 .bar {
   @include surface-panel;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
   border-top: 1px solid var(--border-subtle);
@@ -22,9 +22,17 @@
 // Form controls
 // ---------------------------------------------------------------------------
 
-.input {
+.textarea {
   @include input-field;
   flex: 1;
+  // Auto-resizing multiline composer: starts at one row and grows (JS sets the
+  // inline height); max-height must match MAX_COMPOSER_HEIGHT_PX in ChatInput.tsx.
+  box-sizing: border-box;
+  resize: none;
+  max-height: 200px;
+  overflow-y: auto;
+  line-height: var(--line-height);
+  font-family: var(--font-ui);
 
   @include mobile {
     min-width: 0;

@@ -70,12 +70,12 @@ export function useWorkspaces(): UseWorkspacesResult {
       defaultPersonaId?: string,
       useWorktrees?: boolean,
       workingDirectory?: string,
-      onSuccess?: () => void,
+      onSuccess?: (workspace: Workspace) => void,
       onError?: (message: string) => void,
     ) => {
       setWorkspaceCreating(true);
       try {
-        await grackleClient.createWorkspace({
+        const created = await grackleClient.createWorkspace({
           name,
           description: description || "",
           repoUrl: repoUrl || "",
@@ -84,8 +84,14 @@ export function useWorkspaces(): UseWorkspacesResult {
           useWorktrees: useWorktrees ?? true,
           workingDirectory: workingDirectory || undefined,
         });
+        const workspace = protoToWorkspace(created);
+        // Optimistically seed local state so the workspace detail view we navigate
+        // to renders immediately, rather than waiting for the workspace.created
+        // WebSocket event to refresh the list. The later loadWorkspaces() replaces
+        // the whole array, so the dedupe guard prevents a transient duplicate.
+        setWorkspaces((prev) => (prev.some((w) => w.id === workspace.id) ? prev : [...prev, workspace]));
         setWorkspaceCreating(false);
-        onSuccess?.();
+        onSuccess?.(workspace);
       } catch (err) {
         setWorkspaceCreating(false);
         const message = err instanceof ConnectError ? err.message : "Failed to create workspace";

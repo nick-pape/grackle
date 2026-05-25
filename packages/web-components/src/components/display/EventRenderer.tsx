@@ -1,4 +1,4 @@
-import { type ReactNode, useState, type JSX } from "react";
+import { type ReactNode, useState, lazy, Suspense, type LazyExoticComponent, type ComponentType, type JSX } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import Markdown from "react-markdown";
 import rehypePrismPlus from "rehype-prism-plus/common";
@@ -7,8 +7,18 @@ import type { SessionEvent } from "../../hooks/types.js";
 import { formatTokens, formatCost } from "../../utils/format.js";
 import { ICON_SM } from "../../utils/iconSize.js";
 import { ToolCard } from "../tools/ToolCard.js";
+import type { McpAppWidgetProps } from "./McpAppWidget.js";
+import type { McpUiResourceCsp } from "@modelcontextprotocol/ext-apps/app-bridge";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { CopyButton } from "./CopyButton.js";
 import styles from "./EventRenderer.module.scss";
+
+// Lazy-loaded (and intentionally NOT re-exported from the package barrel) so the
+// heavy ext-apps AppBridge is code-split into an async chunk loaded only when a
+// widget actually renders — keeps the main chat bundle under the chunk-size cap.
+const McpAppWidget: LazyExoticComponent<ComponentType<McpAppWidgetProps>> = lazy(() =>
+  import("./McpAppWidget.js").then((m) => ({ default: m.McpAppWidget })),
+);
 
 /** Props for the EventRenderer component. */
 interface Props {
@@ -17,6 +27,8 @@ interface Props {
   toolUseCtx?: { tool: string; args: unknown; detailedResult?: string };
   /** True when a tool_use completed but has no tool_result (e.g. Claude Code text-result pattern). */
   settled?: boolean;
+  /** Sandbox proxy origin URL for rendering MCP Apps widget events (different origin than the app). */
+  sandboxProxyUrl?: string;
 }
 
 // --- Individual event type renderers ---
@@ -107,13 +119,25 @@ const markdownComponents: Record<string, typeof CodeBlockWrapper> = {
   pre: CodeBlockWrapper,
 };
 
+/**
+ * Renders a markdown string with GFM support and syntax-highlighted code blocks.
+ *
+ * Shared by both assistant text events and user input events so the two render
+ * through an identical pipeline.
+ */
+function MarkdownContent({ content }: { content: string }): JSX.Element {
+  return (
+    <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrismPlus]} components={markdownComponents}>
+      {content}
+    </Markdown>
+  );
+}
+
 /** Renders an assistant text output event with markdown formatting. */
 function TextEvent({ content }: { content: string }): JSX.Element {
   return (
     <div className={styles.textEvent}>
-      <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrismPlus]} components={markdownComponents}>
-        {content}
-      </Markdown>
+      <MarkdownContent content={content} />
     </div>
   );
 }
@@ -140,11 +164,13 @@ function StatusEvent({ content }: { content: string }): JSX.Element {
   );
 }
 
-/** Renders a user input event, right-aligned to distinguish it from agent output. */
+/** Renders a user input event as markdown, right-aligned to distinguish it from agent output. */
 function UserInputEvent({ content }: { content: string }): JSX.Element {
   return (
     <div className={styles.userInputEvent}>
-      <span className={styles.userInputContent}>{content}</span>
+      <div className={styles.userInputContent} data-testid="user-input-content">
+        <MarkdownContent content={content} />
+      </div>
     </div>
   );
 }
@@ -187,10 +213,72 @@ function DefaultEvent({ content }: { content: string }): JSX.Element {
 // --- Main component ---
 
 /** Renders a single session event, dispatching to the appropriate type-specific renderer. */
-export function EventRenderer({ event, toolUseCtx, settled }: Props): JSX.Element {
+export function EventRenderer({ event, toolUseCtx, settled, sandboxProxyUrl }: Props): JSX.Element {
   const time = new Date(event.timestamp).toLocaleTimeString();
 
   switch (event.eventType) {
+    case "widget": {
+      // MCP Apps widget event (pushed by the broker). Self-contained: HTML +
+      // tool input/result. Renders in the cross-origin sandbox via McpAppWidget.
+      if (!sandboxProxyUrl) {
+        return <DefaultEvent content={event.content} />;
+      }
+      let payload: {
+        html?: string;
+        rendererKind?: string;
+        // `allowInlineScripts`/`allowUnsafeEval` are Grackle extensions to the
+        // upstream CSP type (agent-authored widgets #1239; React runtime #1268);
+        // forwarded verbatim to the sandbox.
+        csp?: McpUiResourceCsp & { allowInlineScripts?: boolean; allowUnsafeEval?: boolean };
+        toolInput?: Record<string, unknown>;
+        toolResult?: CallToolResult;
+        // Resolved registry dependencies for composition (#1270), eval order.
+        components?: Array<{ name: string; body: string }>;
+      } = {};
+      try {
+        payload = JSON.parse(event.content) as typeof payload;
+      } catch { /* malformed widget payload — fall back */ }
+      // Dispatch on rendererKind (default "mcp-app-html" for back-compat). This
+      // switch is the seam for declarative/runtime renderers.
+      const rendererKind: string = payload.rendererKind ?? "mcp-app-html";
+      // GenUX React runtime (#1268): payload.html is JSX *source* (not a full
+      // document). Render it via a bootstrap that loads the runtime bundle from the
+      // sandbox origin; the source + props are delivered as tool input. The runtime
+      // transpiles + renders the component against the Grackle component library.
+      // An absolute runtime.js URL is required — the inner iframe is written via
+      // doc.write (about:blank base), so a relative "/runtime.js" would not resolve.
+      if (rendererKind === "grackle-react" && payload.html) {
+        const sandboxOrigin: string = new URL(sandboxProxyUrl, window.location.href).origin;
+        const bootstrap: string =
+          `<!doctype html><html><head><meta charset="utf-8"></head>` +
+          `<body><div id="grackle-root"></div>` +
+          `<script type="module" src="${sandboxOrigin}/runtime.js"></script></body></html>`;
+        return (
+          <Suspense fallback={<DefaultEvent content="Loading widget..." />}>
+            <McpAppWidget
+              widgetHtml={bootstrap}
+              sandboxProxyUrl={sandboxProxyUrl}
+              csp={payload.csp}
+              toolInput={{ source: payload.html, props: payload.toolInput ?? {}, components: payload.components ?? [] }}
+            />
+          </Suspense>
+        );
+      }
+      if (rendererKind !== "mcp-app-html" || !payload.html) {
+        return <DefaultEvent content={event.content} />;
+      }
+      return (
+        <Suspense fallback={<DefaultEvent content="Loading widget..." />}>
+          <McpAppWidget
+            widgetHtml={payload.html}
+            sandboxProxyUrl={sandboxProxyUrl}
+            csp={payload.csp}
+            toolInput={payload.toolInput}
+            toolResult={payload.toolResult}
+          />
+        </Suspense>
+      );
+    }
     case "system": {
       // Detect system context events via the raw metadata marker
       if (event.raw) {

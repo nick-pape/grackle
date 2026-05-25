@@ -44,8 +44,6 @@ const EVENT_LABELS: Record<string, string> = {
   tool_use: "Tool",
   tool_result: "Result",
   error: "Error",
-  finding: "Finding",
-  subtask_create: "Subtask",
 };
 
 /**

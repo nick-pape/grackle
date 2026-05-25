@@ -146,7 +146,7 @@ test.describe("Task Overview Tab", { tag: ["@task"] }, () => {
     await expect(badge).toHaveAttribute("class", /blockedBadge/);
   });
 
-  test("completing paused task switches to findings tab", async ({ stubTask }) => {
+  test("completing paused task shows completion", async ({ stubTask }) => {
     const { page } = stubTask;
 
     await stubTask.createAndNavigateSimple("assigned-task");

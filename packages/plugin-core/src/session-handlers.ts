@@ -24,6 +24,7 @@ import { recoverSuspendedSessions } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
 import { reanimateAgent } from "@grackle-ai/core";
 import { streamRegistry } from "@grackle-ai/core";
+import { RESERVED_PREFIXES, isReservedStreamName } from "@grackle-ai/core";
 import { pipeDelivery } from "@grackle-ai/core";
 import { logWriter } from "@grackle-ai/core";
 import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
@@ -98,7 +99,7 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
 
       conn = await adapter.connect(req.environmentId, config, powerlineToken);
       adapterManager.setConnection(req.environmentId, conn);
-      await tokenPush.pushToEnv(req.environmentId);
+      // Credentials are supplied on demand at spawn (AHP HR6), not eagerly on connect.
       envRegistry.updateEnvironmentStatus(req.environmentId, "connected");
       envRegistry.markBootstrapped(req.environmentId);
       emit("environment.changed", {});
@@ -236,9 +237,9 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
     }
   }
 
-  // Push fresh credentials before spawning (best-effort).
+  // Supply credentials on demand for this runtime, just before spawn (AHP HR6).
   // For local envs, skip file tokens — the PowerLine is on the same machine.
-  await tokenPush.refreshTokensForTask(req.environmentId, runtime,
+  await tokenPush.authenticateForRuntime(req.environmentId, runtime,
     env.adapterType === "local" ? { excludeFileTokens: true } : undefined);
 
   processEventStream(conn.client.spawn(powerlineReq), {
@@ -499,9 +500,7 @@ export async function closeFd(req: grackle.CloseFdRequest): Promise<grackle.Clos
   // Only unsubscribe other participants for internal streams (pipe/lifecycle).
   // Global streams (user-created) only unsubscribe the caller — closing your
   // fd should not disconnect other participants from the shared stream.
-  const isInternalStream = stream
-    ? (stream.name.startsWith("pipe:") || stream.name.startsWith("lifecycle:") || stream.name.startsWith("stdin:"))
-    : false;
+  const isInternalStream = stream ? isReservedStreamName(stream.name) : false;
 
   const childSubs: Array<{ sessionId: string; subId: string }> = [];
   if (isInternalStream && stream) {
@@ -569,9 +568,6 @@ const VALID_PERMISSIONS: ReadonlySet<string> = new Set(["r", "w", "rw"]);
 
 /** Valid delivery mode values for stream subscriptions. */
 const VALID_DELIVERY_MODES: ReadonlySet<string> = new Set(["sync", "async", "detach"]);
-
-/** Reserved stream name prefixes used by internal subsystems. */
-const RESERVED_PREFIXES: readonly string[] = ["lifecycle:", "pipe:", "stdin:"];
 
 /** Check if a requested permission is a subset of the caller's permission. */
 function isPermissionSubset(requested: string, callerHas: string): boolean {
@@ -682,11 +678,20 @@ export async function attachStream(req: grackle.AttachStreamRequest): Promise<gr
   });
 }
 
-/** List all active IPC streams with subscriber details and message buffer depth. */
-export async function listStreams(): Promise<grackle.ListStreamsResponse> {
+/**
+ * List active IPC streams with subscriber details and message buffer depth.
+ *
+ * By default, internal IPC plumbing streams (reserved `lifecycle:` / `pipe:` /
+ * `stdin:` prefixes) are filtered out — they are infrastructure, not user-facing
+ * coordination. Set `include_internal` to surface them for debugging.
+ */
+export async function listStreams(req: grackle.ListStreamsRequest): Promise<grackle.ListStreamsResponse> {
   const allStreams = streamRegistry.listStreams();
+  const visibleStreams = req.includeInternal
+    ? allStreams
+    : allStreams.filter((stream) => !RESERVED_PREFIXES.some((prefix) => stream.name.startsWith(prefix)));
   return create(grackle.ListStreamsResponseSchema, {
-    streams: allStreams.map((stream) => {
+    streams: visibleStreams.map((stream) => {
       const subscribers = Array.from(stream.subscriptions.values()).map((sub) =>
         create(grackle.StreamSubscriberInfoSchema, {
           subscriptionId: sub.id,
@@ -748,6 +753,8 @@ export async function getSessionEvents(req: grackle.SessionId): Promise<grackle.
         timestamp: e.timestamp,
         content: e.content,
         raw: e.raw || "",
+        toolCallId: e.tool_call_id || "",
+        diagnostic: e.diagnostic || false,
       }),
     ),
   });

@@ -4,7 +4,7 @@ export type { SystemPromptOptions, TaskTreeNode, PersonaSummary, EnvironmentSumm
 
 // ─── Orchestrator Context ───────────────────────────────────
 export { buildOrchestratorContext } from "./orchestrator-context.js";
-export type { OrchestratorContext, OrchestratorContextInput, TaskInput, PersonaInput, EnvironmentInput, FindingInput } from "./orchestrator-context.js";
+export type { OrchestratorContext, OrchestratorContextInput, TaskInput, PersonaInput, EnvironmentInput } from "./orchestrator-context.js";
 
 // ─── Persona Resolution ────────────────────────────────────
 export { resolvePersona } from "./resolve-persona.js";

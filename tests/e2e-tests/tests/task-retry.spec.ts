@@ -22,7 +22,7 @@ test.describe("Task Resume after crash (paused → working)", { tag: ["@task"] }
     await page.getByTestId("task-header-start").click();
 
     // Wait for stub to reach waiting_input
-    const inputField = page.locator('input[placeholder="Type a message..."]');
+    const inputField = page.locator('textarea[placeholder="Type a message..."]');
     await expect(inputField).toBeVisible({ timeout: 15_000 });
 
     // --- Send "fail" to trigger scenario failure ---

@@ -11,7 +11,6 @@ import { registerLogCommands } from "./commands/logs.js";
 import { registerServeCommand } from "./commands/serve.js";
 import { registerWorkspaceCommands } from "./commands/workspace.js";
 import { registerTaskCommands } from "./commands/task.js";
-import { registerFindingCommands } from "./commands/findings.js";
 import { registerPersonaCommands } from "./commands/persona.js";
 import { registerScheduleCommands } from "./commands/schedule.js";
 import { registerNotifyCommands } from "./commands/notify.js";
@@ -19,8 +18,11 @@ import { registerCredentialProviderCommands } from "./commands/credential-provid
 import { registerPairCommand } from "./commands/pair.js";
 import { registerConfigCommands } from "./commands/config.js";
 import { registerStreamCommands } from "./commands/streams.js";
+import { registerEventCommands } from "./commands/events.js";
+import { registerSessionCommands } from "./commands/session.js";
 import { registerPluginCommands } from "./commands/plugin.js";
 import { registerGitHubAccountCommands } from "./commands/github-account.js";
+import { registerChannelCommands } from "./commands/channel.js";
 import { renderBanner, getHelpFooter } from "./banner.js";
 import { checkVersionStatus } from "@grackle-ai/core";
 import { formatVersionNotice } from "./version-notice.js";
@@ -60,7 +62,6 @@ registerLogCommands(program);
 registerServeCommand(program);
 registerWorkspaceCommands(program);
 registerTaskCommands(program);
-registerFindingCommands(program);
 registerPersonaCommands(program);
 registerScheduleCommands(program);
 registerNotifyCommands(program);
@@ -68,8 +69,11 @@ registerCredentialProviderCommands(program);
 registerPairCommand(program);
 registerConfigCommands(program);
 registerStreamCommands(program);
+registerEventCommands(program);
+registerSessionCommands(program);
 registerPluginCommands(program);
 registerGitHubAccountCommands(program);
+registerChannelCommands(program);
 
 // Print update notice after command execution (non-blocking).
 // Skip in CI and non-interactive environments to avoid adding 5s latency

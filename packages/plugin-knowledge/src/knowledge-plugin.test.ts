@@ -7,41 +7,45 @@ import type { PluginContext } from "@grackle-ai/plugin-sdk";
 
 const {
   mockInitKnowledge,
-  mockCreateEntitySyncSubscriber,
   mockCreateKnowledgeHealthPhase,
   mockMarkKnowledgeInitFailed,
   mockSearchKnowledge,
   mockGetKnowledgeNode,
   mockExpandKnowledgeNode,
   mockListRecentKnowledgeNodes,
-  mockCreateKnowledgeNode,
   mockKnowledgeMcpTools,
 } = vi.hoisted(() => ({
   mockInitKnowledge: vi.fn().mockResolvedValue(vi.fn()),
-  mockCreateEntitySyncSubscriber: vi.fn().mockReturnValue({ dispose: vi.fn() }),
   mockCreateKnowledgeHealthPhase: vi.fn().mockReturnValue({ name: "knowledge-health", execute: vi.fn() }),
   mockMarkKnowledgeInitFailed: vi.fn(),
   mockSearchKnowledge: vi.fn(),
   mockGetKnowledgeNode: vi.fn(),
   mockExpandKnowledgeNode: vi.fn(),
   mockListRecentKnowledgeNodes: vi.fn(),
-  mockCreateKnowledgeNode: vi.fn(),
   mockKnowledgeMcpTools: [
     { name: "knowledge_search", group: "knowledge", description: "Search", inputSchema: {}, rpcMethod: "searchKnowledge", mutating: false, handler: vi.fn() },
     { name: "knowledge_get_node", group: "knowledge", description: "Get", inputSchema: {}, rpcMethod: "getKnowledgeNode", mutating: false, handler: vi.fn() },
-    { name: "knowledge_create_node", group: "knowledge", description: "Create", inputSchema: {}, rpcMethod: "createKnowledgeNode", mutating: true, handler: vi.fn() },
   ],
 }));
 
 vi.mock("./knowledge-init.js", () => ({
   initKnowledge: mockInitKnowledge,
-  createEntitySyncSubscriber: mockCreateEntitySyncSubscriber,
   neo4jHealthCheck: vi.fn().mockResolvedValue(true),
+  getKnowledgeEmbedder: vi.fn().mockReturnValue(undefined),
 }));
 
 vi.mock("./knowledge-health.js", () => ({
   createKnowledgeHealthPhase: mockCreateKnowledgeHealthPhase,
   markKnowledgeInitFailed: mockMarkKnowledgeInitFailed,
+  isNeo4jHealthy: vi.fn().mockReturnValue(true),
+}));
+
+vi.mock("./knowledge-projection-phase.js", () => ({
+  createKnowledgeProjectionPhase: vi.fn().mockReturnValue({ name: "knowledge-projection", execute: vi.fn() }),
+}));
+
+vi.mock("./entity-sync.js", () => ({
+  createEntitySyncSubscriber: vi.fn().mockReturnValue({ dispose: vi.fn() }),
 }));
 
 vi.mock("./knowledge-handlers.js", () => ({
@@ -49,7 +53,6 @@ vi.mock("./knowledge-handlers.js", () => ({
   getKnowledgeNode: mockGetKnowledgeNode,
   expandKnowledgeNode: mockExpandKnowledgeNode,
   listRecentKnowledgeNodes: mockListRecentKnowledgeNodes,
-  createKnowledgeNode: mockCreateKnowledgeNode,
 }));
 
 vi.mock("./mcp-tools.js", () => ({
@@ -151,57 +154,57 @@ describe("knowledge plugin grpcHandlers", () => {
     expect(registrations).toHaveLength(1);
   });
 
-  it("ServiceRegistration has exactly 5 handlers", () => {
+  it("ServiceRegistration has exactly 4 handlers", () => {
     const plugin = createKnowledgePlugin();
     const ctx = makeCtx();
     const [reg] = plugin.grpcHandlers!(ctx);
     const handlerNames = Object.keys(reg.handlers);
-    expect(handlerNames).toHaveLength(5);
+    expect(handlerNames).toHaveLength(4);
     expect(handlerNames).toContain("searchKnowledge");
     expect(handlerNames).toContain("getKnowledgeNode");
     expect(handlerNames).toContain("expandKnowledgeNode");
     expect(handlerNames).toContain("listRecentKnowledgeNodes");
-    expect(handlerNames).toContain("createKnowledgeNode");
   });
 });
 
 describe("knowledge plugin reconciliationPhases", () => {
-  it("returns exactly 1 phase named 'knowledge-health'", () => {
+  it("returns the health and projection phases", () => {
     const plugin = createKnowledgePlugin();
     const ctx = makeCtx();
     const phases = plugin.reconciliationPhases!(ctx);
-    expect(phases).toHaveLength(1);
-    expect(phases[0].name).toBe("knowledge-health");
+    expect(phases).toHaveLength(2);
+    const names = phases.map((phase) => phase.name);
+    expect(names).toContain("knowledge-health");
+    expect(names).toContain("knowledge-projection");
     expect(mockCreateKnowledgeHealthPhase).toHaveBeenCalled();
   });
 });
 
 describe("knowledge plugin eventSubscribers", () => {
-  it("returns exactly 1 Disposable", () => {
+  it("contributes the entity-sync subscriber for incremental projection (#1258)", () => {
     const plugin = createKnowledgePlugin();
     const ctx = makeCtx();
+    expect(plugin.eventSubscribers).toBeDefined();
     const subscribers = plugin.eventSubscribers!(ctx);
     expect(subscribers).toHaveLength(1);
     expect(typeof subscribers[0].dispose).toBe("function");
-    expect(mockCreateEntitySyncSubscriber).toHaveBeenCalledWith(ctx);
   });
 });
 
 describe("knowledge plugin mcpTools", () => {
-  it("returns exactly 3 PluginToolDefinition entries", () => {
+  it("returns exactly 2 PluginToolDefinition entries", () => {
     const plugin = createKnowledgePlugin();
     const ctx = makeCtx();
     const tools = plugin.mcpTools!(ctx);
-    expect(tools).toHaveLength(3);
+    expect(tools).toHaveLength(2);
   });
 
-  it("includes knowledge_search, knowledge_get_node, knowledge_create_node", () => {
+  it("includes knowledge_search, knowledge_get_node", () => {
     const plugin = createKnowledgePlugin();
     const ctx = makeCtx();
     const tools = plugin.mcpTools!(ctx);
     const names = tools.map((t) => t.name);
     expect(names).toContain("knowledge_search");
     expect(names).toContain("knowledge_get_node");
-    expect(names).toContain("knowledge_create_node");
   });
 });

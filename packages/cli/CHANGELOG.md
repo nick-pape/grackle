@@ -1,6 +1,210 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 21 May 2026 05:30:57 GMT and should not be manually modified.
+This log was last generated on Mon, 25 May 2026 21:24:16 GMT and should not be manually modified.
+
+## 0.128.0
+Mon, 25 May 2026 21:24:16 GMT
+
+### Minor changes
+
+- AHP HR7: add a `diagnostic` flag to agent/session events (set at runtime lifecycle emit sites, threaded through PowerLine, the event processor, the JSONL log, and session-event readback) and an additive, opt-in OpenTelemetry logs sink for runtime diagnostics gated on OTEL_EXPORTER_OTLP_ENDPOINT (no-op when unset).
+
+## 0.127.0
+Mon, 25 May 2026 19:35:47 GMT
+
+### Minor changes
+
+- GenUX live tool refresh (#1297): when a workspace's promoted-component set changes (component_promote/demote, or a promoted component edited), the co-located MCP server pushes notifications/tools/list_changed to that workspace's live sessions so dynamic render_<name> tools refresh without the agent re-listing. Adds a `component.changed` domain event emitted by the registry handlers, retains per-session MCP Server instances, and declares the tools.listChanged capability. Broker-mode only.
+
+## 0.126.1
+Mon, 25 May 2026 19:15:09 GMT
+
+### Patches
+
+- Cut over credential delivery to demand-driven Authenticate RPC (AHP HR6): supply per-runtime credentials on demand just before spawn instead of proactively pushing a blanket all-provider bundle; deprecate PushTokens.
+
+## 0.126.0
+Mon, 25 May 2026 18:55:12 GMT
+
+### Minor changes
+
+- Remove the vestigial subtask_create/escalation agent-event interception (the pre-MCP "fake MCP call" path); orchestration is MCP-only. Reserves EVENT_TYPE_SUBTASK_CREATE (8) and EVENT_TYPE_ESCALATION (12) in the proto and drops them from the AgentEventType union (AHP HR7 Part 1).
+
+## 0.125.2
+Mon, 25 May 2026 17:22:09 GMT
+
+### Patches
+
+- Make the read-only Coordination and Task DAG graphs non-connectable: disable React Flow drag-to-connect and hide the node connection handles so users can't attempt connections that can't be created (#1303).
+
+## 0.125.1
+Mon, 25 May 2026 15:38:19 GMT
+
+### Patches
+
+- Self-host web fonts (Fira Code, JetBrains Mono, DM Sans) via @fontsource-variable so they load under the strict CSP instead of being blocked as external @import stylesheets (#1252).
+
+## 0.125.0
+Mon, 25 May 2026 15:13:29 GMT
+
+### Minor changes
+
+- GenUX cross-component composition (#1270): a registered grackle-react component's body can reference other registry components as JSX tags (`<RevenueChart/>`). The server resolves the transitive registry graph at render time (`ResolveComponentGraph` RPC) — scanning for capitalized tags, resolving workspace components (excluding built-ins), cycle-safe with depth/count/size caps, late-bound to current versions — and ships the dependency bundle in the render descriptor; the sandbox runtime composes them into scope. Applies to component_render, component_show, and promoted render_<name> tools.
+
+## 0.124.0
+Mon, 25 May 2026 13:49:04 GMT
+
+### Minor changes
+
+- Add a first-class tool_call_id to AgentEvent/SessionEvent so tool_result pairs to the right tool_use across all runtimes (Claude Code, Copilot, ACP, Codex via synthesized ids), retiring the fragile positional pairing heuristic (AHP HR3).
+
+## 0.123.2
+Mon, 25 May 2026 13:18:11 GMT
+
+### Patches
+
+- Coordination graph: animated message dots that travel along edges as IPC streams receive messages (web UI).
+- Emit a structured kg_spawn_retrieval metrics log at spawn-time knowledge injection (instrumentation for KG Phase 4 / #1260).
+
+## 0.123.1
+Mon, 25 May 2026 05:44:41 GMT
+
+### Patches
+
+- Coordination tab: live bipartite network graph of agent sessions and IPC streams with a List/Graph toggle (web UI).
+
+## 0.123.0
+Mon, 25 May 2026 05:24:59 GMT
+
+### Minor changes
+
+- GenUX promote-to-tools (#1272): a registered component can be promoted to its own typed `render_<name>` MCP tool whose inputSchema is the component's propsSchema. Adds a `promoted` column + `SetComponentPromotion` gRPC RPC + `component_promote` MCP tool; the MCP server synthesizes per-workspace `render_<name>` tools in tools/list (UI-capable scoped sessions only) and dispatches their calls by workspace ownership, reusing the existing render path. Promotion is a lifecycle toggle that does not bump the component version.
+
+## 0.122.0
+Mon, 25 May 2026 04:49:44 GMT
+
+### Minor changes
+
+- KG Phase 3 (#1259): close the retrieval loop — knowledge_search guidance (pull) + a thin spawn-time "Related prior work" injection (push) via a new systemPromptContributors plugin hook, gated by a per-task injectKnowledge flag (default on).
+
+## 0.121.0
+Mon, 25 May 2026 04:20:46 GMT
+
+### Minor changes
+
+- Add a durable, server-sequenced session-action log (AHP HR1a): session_actions store, monotonic serverSeq assignment in the event processor, GetSessionActions gRPC RPC + handler, and a `grackle session events` CLI reader.
+
+## 0.120.0
+Sun, 24 May 2026 21:03:54 GMT
+
+### Minor changes
+
+- KG Phase 2 (#1258): populate the knowledge graph as a derived ecosystem mirror. Projects Workspace/Session/Persona/Environment/Task nodes + structural edges (from SQL FKs) and transcript chunks (from session logs) into Neo4j via idempotent MERGE upserts. Adds an incremental event subscriber, a reconciliation projection phase (session sync + per-session transcript cursor + off-write-path embedding backfill), and a startup-if-empty rebuild() that deterministically re-projects from SQL + logs (recovery = re-project, never replay). knowledge-core gains MERGE upsert primitives, structural EDGE_TYPEs, and a (sourceType,sourceId) uniqueness constraint.
+- GenUX component search + built-in catalog (#1271): make the component registry discoverable. Adds a `component_search` MCP tool (and `SearchComponents` gRPC RPC) that keyword-matches a workspace's registered components plus a catalog of Grackle's built-in components via fuzzy search, returning a `builtin` flag and relevance scores. Built-ins are a static manifest (`BUILTIN_COMPONENTS`) of the 9 curated, context-free components the GenUX runtime renders; their prop types and JSON-Schema propsSchema are both derived from a single source of truth — zod schemas in `@grackle-ai/common` (`BUILTIN_COMPONENT_SCHEMAS`) that the web-components consume for their prop types, so the catalog can't drift from the components. Agents discover and compose built-ins in JSX instead of re-authoring; component_register/component_show descriptions now point agents at component_search.
+
+## 0.119.0
+Sun, 24 May 2026 18:32:19 GMT
+
+### Minor changes
+
+- Durable IPC stream rooms (RFC #1264 Phase 2): persist + replay stream messages (stream_messages table, ULID seq, survive restart); live StreamMessageEvent + GetStreamTranscript RPC; `grackle streams transcript` CLI; Coordination tab transcript view. Retention/compaction deferred to a follow-up.
+
+## 0.118.0
+Sun, 24 May 2026 15:06:43 GMT
+
+### Minor changes
+
+- GenUX component registry (#1269): evolve the #1239 widget registry into a generic component registry and wire render-by-reference through the #1268 React runtime. Renames the registry widget->component end-to-end (proto Component messages + RPCs, a `components` table via a guarded migration, store + plugin-core handlers, and the MCP tools component_register/update/list/render); the render-event path stays 'widget'. component_register takes an optional rendererKind (default grackle-react) that subsumes raw-HTML registration; component_render renders a stored component by id/name and sets the correct sandbox CSP per renderer kind (unsafe-eval for grackle-react, inline-scripts for mcp-app-html). propsSchema is now a validated JSON-Schema contract (well-formedness at register; render-time props validated via zod's fromJSONSchema). component_show (JSX one-off), widget_show (raw-HTML one-off), and show_hello_widget are retained.
+
+## 0.117.0
+Sun, 24 May 2026 02:29:04 GMT
+
+### Minor changes
+
+- GenUX render-by-source React runtime (#1268): a new `component_show` MCP tool renders agent-authored React/JSX inline in the chat against the Grackle component library, via a single sandboxed runtime resource served from the sandbox origin (new `grackle-react` rendererKind). Adds an `allowUnsafeEval` sandbox-CSP flag (react-live transpile+eval, origin-isolated) and registers `component_show` in the scoped/orchestrator/all MCP tool presets.
+- Add a domain-event query reader (RFC #1264 Phase 1): queryDomainEvents in @grackle-ai/database (offset/type/time filters), a QueryDomainEvents gRPC RPC, and a `grackle events` CLI command.
+
+## 0.116.0
+Sun, 24 May 2026 00:00:41 GMT
+
+### Minor changes
+
+- Hard-cut the authored-knowledge layer (#1257): remove findings entirely (proto RPCs/messages, gRPC handlers, MCP `finding_post`/`finding_list` tools, CLI `findings` command, web UI, orchestrator prompt snapshot, and the `EVENT_TYPE_FINDING`/`AgentEventType` 'finding' event path) and the KG authored-write surface (entity-sync + `knowledge_create_node`). The KG read surface (`knowledge_search`/`knowledge_get_node`, `/knowledge` page) is retained but unpopulated until Phase 2. The dormant `findings` table is left in place (no migration).
+
+### Patches
+
+- Introduce the SequencedLog<T> / LogSink<T> substrate in @grackle-ai/common and route the domain_events write path in @grackle-ai/core through it (behavior-preserving). RFC #1264 Phase 0.
+
+## 0.115.2
+Sat, 23 May 2026 21:02:48 GMT
+
+### Patches
+
+- Fix: oversized HTTP request bodies now return a clean 413 (with Connection: close) instead of a connection reset
+
+## 0.115.1
+Sat, 23 May 2026 14:23:06 GMT
+
+### Patches
+
+- Add capability-scoped channel exposure: mint revocable webhook tokens to inject user messages into a session (ExposeChannel/ListChannelGrants/RevokeChannelGrant RPCs, POST /hook/<token>, and `grackle channel` CLI)
+
+## 0.115.0
+Sat, 23 May 2026 13:35:14 GMT
+
+### Minor changes
+
+- Agent-authored MCP Apps widget registry (#1239): new widgets table + gRPC RPCs (RegisterWidget/UpdateWidget/GetWidget/ListWidgets) with workspace isolation; MCP tools widget_register/update/list/render/show (in the default scoped + orchestrator presets); the broker capture now emits dynamic agent-authored widgets via a result _meta descriptor; agent widget bodies render with inline scripts allowed (GRACKLE sandbox CSP allowInlineScripts) in the origin-isolated sandbox; web EventRenderer dispatches on rendererKind.
+
+## 0.114.0
+Sat, 23 May 2026 08:24:19 GMT
+
+### Minor changes
+
+- Split the Sessions tab into Root (root-task chat) + a new read-only Coordination tab (task-grouped IPC stream inventory); filter internal streams via ListStreams include_internal (CLI --internal)
+
+## 0.113.0
+Sat, 23 May 2026 03:18:01 GMT
+
+### Minor changes
+
+- Render MCP Apps widgets inline in chat (#1238): when a scoped agent calls a ui:// widget tool, the in-process MCP server broker captures it and pushes a self-contained widget event into the session stream (new EVENT_TYPE_WIDGET + core publishWidgetEvent), and the web chat renders it via McpAppWidget served from a new production sandbox server on GRACKLE_SANDBOX_PORT. Also wires widget tools through the tool-authz layer (broker exposes them regardless of the agent client's ui extension; show_hello_widget added to the scoped/orchestrator/all tool sets) and widens the web-app CSP frame-src so the chat can embed the sandbox origin.
+
+## 0.112.2
+Fri, 22 May 2026 23:59:52 GMT
+
+### Patches
+
+- Fix: creating a workspace now navigates to the new workspace's detail view instead of the home dashboard
+
+## 0.112.1
+Fri, 22 May 2026 23:27:43 GMT
+
+### Patches
+
+- Fix Grackle logo/icon assets 404ing on sub-path deployments (e.g. the GitHub Pages demo): resolve public asset paths against the Vite base URL via a new assetUrl() helper, and make the PWA manifest paths relative.
+- Nav: reorder so Tasks comes before Sessions, and rename the Chat tab to Sessions (route unchanged)
+
+## 0.112.0
+Fri, 22 May 2026 22:14:10 GMT
+
+### Minor changes
+
+- Chat: multiline auto-resizing composer (Enter for newline, Ctrl/Cmd+Enter to send) and render user messages as markdown
+
+## 0.111.0
+Fri, 22 May 2026 18:26:16 GMT
+
+### Minor changes
+
+- Add an MCP Apps (SEP-1865) app-side layer to @grackle-ai/mcp: resources capability (resources/list + resources/read), io.modelcontextprotocol/ui negotiation, and a static ui:// widget tool. Bump @modelcontextprotocol/sdk to ^1.29 across server packages.
+
+## 0.110.3
+Fri, 22 May 2026 15:02:19 GMT
+
+### Patches
+
+- Add MCP Apps (SEP-1865) host widget render component to @grackle-ai/web-components (McpAppWidget + cross-origin sandbox proxy + host theming).
 
 ## 0.110.2
 Thu, 21 May 2026 05:30:57 GMT

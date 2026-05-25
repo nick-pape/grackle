@@ -5,12 +5,15 @@ import { randomUUID } from "node:crypto";
 import {
   createServiceCollector,
   startHeartbeat, getAdapter, setConnection, removeConnection,
-  emit, subscribe, pushToEnv, attemptReconnects, resetReconnectState,
+  emit, subscribe, attemptReconnects, resetReconnectState,
   parseAdapterConfig,
   ReconciliationManager,
   logger, exec, detectLanIp,
   runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace,
+  initOtlpLogs,
   importAccountsFromGhCli,
+  publishWidgetEvent,
+  setSpawnContextProviders,
 } from "@grackle-ai/core";
 import { createKnowledgePlugin, getKnowledgeReadinessCheck } from "@grackle-ai/plugin-knowledge";
 import { loadPlugins, type PluginContext } from "@grackle-ai/plugin-sdk";
@@ -27,7 +30,7 @@ import {
   startPairingCleanup,
   startOAuthCleanup,
 } from "@grackle-ai/auth";
-import { createWebServer, isWildcardAddress, type ReadinessResult } from "@grackle-ai/web-server";
+import { createWebServer, createSandboxServer, isWildcardAddress, type ReadinessResult } from "@grackle-ai/web-server";
 import { createRequire } from "node:module";
 import { initializeDatabase } from "./database-init.js";
 import { registerAllAdapters } from "./adapter-registry.js";
@@ -35,7 +38,7 @@ import { bootstrapLocalEnvironment } from "./local-environment.js";
 import { createCorePlugin } from "./core-plugin.js";
 import { createSchedulingPlugin } from "@grackle-ai/plugin-scheduling";
 import { createOrchestrationPlugin } from "@grackle-ai/plugin-orchestration";
-import { setLoadedPluginNames } from "@grackle-ai/plugin-core";
+import { setLoadedPluginNames, setChannelConfig, ingestChannelMessage } from "@grackle-ai/plugin-core";
 import { createShutdown } from "./shutdown.js";
 
 /** Require function for loading optional native modules (qrcode). */
@@ -49,6 +52,10 @@ async function main(): Promise<void> {
   // Resolve and validate all server configuration from env vars (fail fast on invalid values)
   const config = resolveServerConfig();
   logger.info({ config }, "Server configuration resolved");
+
+  // AHP HR7: initialize the additive OTLP logs sink for runtime diagnostics.
+  // No-op unless OTEL_EXPORTER_OTLP_ENDPOINT is set; never breaks startup.
+  initOtlpLogs();
 
   // Open the database, verify integrity, run schema migrations, then seed defaults
   initializeDatabase();
@@ -71,7 +78,7 @@ async function main(): Promise<void> {
     },
     {
       envRegistry, settingsStore, personaStore, workspaceStore, workspaceEnvironmentLinkStore, taskStore,
-      getAdapter, parseAdapterConfig, setConnection, pushToEnv,
+      getAdapter, parseAdapterConfig, setConnection,
       reconnectOrProvision, emit, resetReconnectState, logger,
       createPowerLineManager: (opts) => new LocalPowerLineManager(opts),
     },
@@ -174,6 +181,8 @@ async function main(): Promise<void> {
   }
   const loaded = await loadPlugins(plugins, pluginContext);
   setLoadedPluginNames(new Set(loaded.pluginNames));
+  // Expose plugin-contributed system-prompt sections to the spawn paths (#1259).
+  setSpawnContextProviders(loaded.systemPromptContributors);
 
   // --- Wire gRPC handlers from plugins ---
   const collector = createServiceCollector();
@@ -239,12 +248,23 @@ async function main(): Promise<void> {
   // --- Web server (HTTP/1.1) ---
   const webPort = config.webPort;
   const mcpPort = config.mcpPort;
+
+  // Channel capability tokens are signed with the API key; ingress URLs must be
+  // reachable by external webhook callers. On a wildcard bind, use the detected
+  // LAN IP (same logic as the pairing URL) instead of a non-routable loopback.
+  const ingressHost = isWildcardAddress(bindHost) ? (detectLanIp() || "localhost") : bindHost;
+  const ingressUrlHost = ingressHost.includes(":") ? `[${ingressHost}]` : ingressHost;
+  setChannelConfig({ signingSecret: apiKey, ingressBaseUrl: `http://${ingressUrlHost}:${webPort}` });
+
   const webServer = createWebServer({
     apiKey,
     webPort,
     bindHost,
     connectRoutes: routes,
+    handleWebhook: ingestChannelMessage,
     pluginNames: loaded.pluginNames,
+    sandboxPort: config.sandboxPort,
+    ...(config.sandboxOrigin !== undefined ? { sandboxOrigin: config.sandboxOrigin } : {}),
     readinessCheck: (): ReadinessResult => {
       const checks: ReadinessResult["checks"] = {};
       try {
@@ -329,7 +349,20 @@ async function main(): Promise<void> {
         return t as unknown as ToolDefinition;
       })]
     : [];
-  const mcpServer = createMcpServer({ bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl: authServerUrl, toolGroups: pluginToolGroups });
+  const mcpServer = createMcpServer({
+    bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl: authServerUrl, toolGroups: pluginToolGroups, publishWidgetEvent,
+    // Push tools/list_changed to a workspace's MCP sessions when its promoted
+    // component set changes (#1297), via the domain-event bus.
+    onComponentChangeSubscribe: (notify) => subscribe((e) => {
+      if (e.type === "component.changed") {
+        const wsId = e.payload.workspaceId;
+        if (typeof wsId === "string" && wsId) {
+          notify(wsId);
+        }
+      }
+    }),
+    ...(config.mcpOrigin !== undefined ? { mcpOrigin: config.mcpOrigin } : {}),
+  });
 
   mcpServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {
@@ -345,11 +378,28 @@ async function main(): Promise<void> {
     logger.info({ port: mcpPort, host: bindHost }, "MCP server on http://%s:%d/mcp", urlHost, mcpPort);
   });
 
+  // --- MCP Apps widget sandbox server (separate origin) ---
+  const sandboxPort = config.sandboxPort;
+  const sandboxServer = createSandboxServer({ bindHost, sandboxPort });
+  sandboxServer.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+      logger.fatal({ port: sandboxPort }, "Port %d is already in use. Is another Grackle server running?", sandboxPort);
+    } else {
+      logger.fatal({ err }, "Sandbox server error");
+    }
+    process.exitCode = 1;
+    shutdown().catch(() => { process.exit(1); });
+  });
+  sandboxServer.listen(sandboxPort, bindHost, () => {
+    logger.info({ port: sandboxPort, host: bindHost }, "MCP Apps sandbox on http://%s:%d/sandbox.html", urlHost, sandboxPort);
+  });
+
   // --- Graceful shutdown ---
   shutdown = createShutdown({
     grpcServer,
     webServer,
     mcpServer,
+    sandboxServer,
     reconciliationManager,
     localPowerLineManager,
     pluginShutdown: loaded.shutdown,

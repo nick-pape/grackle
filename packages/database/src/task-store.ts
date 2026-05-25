@@ -20,6 +20,7 @@ export interface InsertTaskFields {
   parentTaskId: string;
   depth: number;
   canDecompose: boolean;
+  injectKnowledge: boolean;
   defaultPersonaId: string;
   tokenBudget: number;
   costBudgetMillicents: number;
@@ -55,6 +56,7 @@ export function insertTask(fields: InsertTaskFields): void {
       parentTaskId: fields.parentTaskId,
       depth: fields.depth,
       canDecompose: fields.canDecompose,
+      injectKnowledge: fields.injectKnowledge,
       defaultPersonaId: fields.defaultPersonaId,
       tokenBudget: fields.tokenBudget,
       costBudgetMillicents: fields.costBudgetMillicents,
@@ -79,6 +81,7 @@ export function createTask(
   defaultPersonaId: string = "",
   tokenBudget: number = 0,
   costBudgetMillicents: number = 0,
+  injectKnowledge: boolean = true,
 ): void {
   let depth = 0;
   let branch: string;
@@ -116,6 +119,7 @@ export function createTask(
     parentTaskId,
     depth,
     canDecompose: resolvedCanDecompose,
+    injectKnowledge,
     defaultPersonaId,
     tokenBudget,
     costBudgetMillicents,
@@ -215,6 +219,17 @@ export function updateTaskBudget(
     .set({
       tokenBudget,
       costBudgetMillicents,
+      updatedAt: sql`datetime('now')`,
+    })
+    .where(eq(tasks.id, id))
+    .run();
+}
+
+/** Update a task's knowledge-injection flag (#1259). */
+export function updateTaskInjectKnowledge(id: string, injectKnowledge: boolean): void {
+  db.update(tasks)
+    .set({
+      injectKnowledge,
       updatedAt: sql`datetime('now')`,
     })
     .where(eq(tasks.id, id))

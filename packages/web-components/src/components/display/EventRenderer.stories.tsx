@@ -170,6 +170,110 @@ export const MarkdownParagraphWrapping: Story = {
   },
 };
 
+/** Widget event renders the lazy-loaded MCP App host iframe. */
+export const WidgetEvent: Story = {
+  args: {
+    event: makeEvent({
+      eventType: "widget",
+      content: JSON.stringify({
+        resourceUri: "ui://grackle/hello-widget",
+        toolName: "show_hello_widget",
+        html: "<!doctype html><html><body><div class=\"card\">widget</div></body></html>",
+        toolInput: { message: "hi" },
+        toolResult: { content: [{ type: "text", text: "ok" }] },
+      }),
+    }),
+    // Different origin than Storybook (6006) so McpAppWidget's same-origin guard passes.
+    sandboxProxyUrl: "http://localhost:6007/sandbox.html",
+  },
+  play: async ({ canvas }) => {
+    // McpAppWidget is lazy-loaded behind Suspense; findByTestId waits for the chunk.
+    await expect(await canvas.findByTestId("mcp-app-widget")).toBeInTheDocument();
+  },
+};
+
+/** Agent-authored widget (#1239): dynamic rendererKind + inline-script body + props. */
+export const AgentWidgetEvent: Story = {
+  args: {
+    event: makeEvent({
+      eventType: "widget",
+      content: JSON.stringify({
+        resourceUri: "ui://grackle/abc123",
+        toolName: "widget_render",
+        rendererKind: "mcp-app-html",
+        widgetId: "abc123",
+        version: 2,
+        html: "<!doctype html><html><body><div class=\"card\">agent widget</div><script>void 0;</script></body></html>",
+        csp: { resourceDomains: ["http://localhost:6007"], connectDomains: ["http://localhost:6007"], allowInlineScripts: true },
+        toolInput: { count: 3 },
+        toolResult: { content: [{ type: "text", text: "ok" }] },
+      }),
+    }),
+    sandboxProxyUrl: "http://localhost:6007/sandbox.html",
+  },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByTestId("mcp-app-widget")).toBeInTheDocument();
+  },
+};
+
+/** GenUX React runtime (#1268): rendererKind "grackle-react" — `html` is JSX source. */
+export const ReactRuntimeWidgetEvent: Story = {
+  args: {
+    event: makeEvent({
+      eventType: "widget",
+      content: JSON.stringify({
+        resourceUri: "",
+        toolName: "component_show",
+        rendererKind: "grackle-react",
+        html: "render(<Button>{props.label}</Button>)",
+        csp: { resourceDomains: ["http://localhost:6007"], connectDomains: ["http://localhost:6007"], allowUnsafeEval: true },
+        toolInput: { label: "Hi" },
+      }),
+    }),
+    sandboxProxyUrl: "http://localhost:6007/sandbox.html",
+  },
+  play: async ({ canvas }) => {
+    // The grackle-react branch builds a runtime bootstrap and mounts the host iframe.
+    await expect(await canvas.findByTestId("mcp-app-widget")).toBeInTheDocument();
+  },
+};
+
+/** An unknown rendererKind falls back to the default event card (no crash). */
+export const UnknownRendererKindWidget: Story = {
+  args: {
+    event: makeEvent({
+      eventType: "widget",
+      content: JSON.stringify({
+        resourceUri: "",
+        toolName: "widget_show",
+        rendererKind: "adaptive-card",
+        html: "<div>future</div>",
+      }),
+    }),
+    sandboxProxyUrl: "http://localhost:6007/sandbox.html",
+  },
+  play: async ({ canvas }) => {
+    // Unsupported renderer: McpAppWidget is NOT mounted; the raw content shows instead.
+    await expect(canvas.queryByTestId("mcp-app-widget")).toBeNull();
+  },
+};
+
+/** User input events render as markdown (bold, lists, inline code) inside the bubble. */
+export const UserMessageMarkdown: Story = {
+  args: {
+    event: makeEvent({
+      eventType: "user_input",
+      content: "Please fix **the bug** in:\n\n- `index.ts`\n- `app.ts`",
+    }),
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByTestId("user-input-content")).toBeInTheDocument();
+    await expect(canvas.getByText("the bug").tagName).toBe("STRONG");
+    await expect(canvas.getAllByRole("listitem")).toHaveLength(2);
+    await expect(canvas.getByText("index.ts").tagName).toBe("CODE");
+  },
+};
+
 /** System context event renders as collapsible prompt. */
 export const SystemContext: Story = {
   args: {

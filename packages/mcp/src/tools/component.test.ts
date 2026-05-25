@@ -1,0 +1,262 @@
+import { describe, test, expect } from "vitest";
+import { grackle } from "@grackle-ai/common";
+import { create } from "@bufbuild/protobuf";
+import { componentTools, buildComponentRenderResult } from "./component.js";
+import { HELLO_WIDGET_URI } from "../resources/hello-widget.js";
+import { WIDGET_RENDER_META_KEY, type WidgetRenderDescriptor } from "../widget-render-meta.js";
+import type { GrackleClients } from "../tool-registry.js";
+
+const tool = (name: string) => componentTools.find((t) => t.name === name)!;
+const helloTool = tool("show_hello_widget");
+const componentShow = tool("component_show");
+const widgetShow = tool("widget_show");
+const componentRegister = tool("component_register");
+const componentRender = tool("component_render");
+const noClients = {} as GrackleClients;
+
+/** Build a mock GrackleClients whose orchestration client returns a canned component. */
+function clientsReturning(component: Record<string, unknown>, dependencies: Record<string, unknown>[] = []): GrackleClients {
+  return {
+    orchestration: {
+      getComponent: async () => component,
+      // component_render resolves via the graph RPC (#1270); root = the canned component.
+      resolveComponentGraph: async () => ({ root: component, dependencies }),
+      registerComponent: async (req: Record<string, unknown>) => ({ id: "c-new", name: req.name, version: 1 }),
+    },
+  } as unknown as GrackleClients;
+}
+
+function descriptorOf(result: { _meta?: { [k: string]: unknown } }): WidgetRenderDescriptor {
+  return result._meta?.[WIDGET_RENDER_META_KEY] as WidgetRenderDescriptor;
+}
+
+describe("show_hello_widget", () => {
+  test("definition ties to the hello widget resource and is read-only", () => {
+    expect(helloTool.uiResourceUri).toBe(HELLO_WIDGET_URI);
+    expect(helloTool.mutating).toBe(false);
+    expect(helloTool.annotations?.readOnlyHint).toBe(true);
+  });
+
+  test("defaults the message when omitted", async () => {
+    const result = await helloTool.handler({}, noClients);
+    const parsed = JSON.parse(result.content[0]!.text) as { message: string };
+    expect(parsed.message).toBe("Hello from Grackle");
+  });
+});
+
+describe("component_show (one-off JSX, #1268)", () => {
+  test("emits a grackle-react descriptor with source, props, and unsafe-eval", async () => {
+    const result = await componentShow.handler(
+      { source: "render(<Callout>{props.msg}</Callout>)", props: { msg: "hi" } },
+      noClients,
+    );
+    const d = descriptorOf(result);
+    expect(d.rendererKind).toBe("grackle-react");
+    expect(d.body).toContain("render(");
+    expect(d.props).toEqual({ msg: "hi" });
+    expect(d.allowUnsafeEval).toBe(true);
+    expect(d.resourceUri).toBe("");
+  });
+});
+
+describe("widget_show (one-off raw HTML)", () => {
+  test("emits an mcp-app-html descriptor with inline scripts allowed", async () => {
+    const result = await widgetShow.handler({ body: "<div>hi</div>" }, noClients);
+    const d = descriptorOf(result);
+    expect(d.rendererKind).toBe("mcp-app-html");
+    expect(d.allowInlineScripts).toBe(true);
+    expect(d.allowUnsafeEval).toBeUndefined();
+  });
+});
+
+describe("component_register (#1269)", () => {
+  test("rejects a malformed propsSchema before hitting the backend", async () => {
+    const result = await componentRegister.handler(
+      { workspaceId: "ws1", name: "c", source: "render(<i/>)", propsSchema: "{not json" },
+      noClients,
+    );
+    expect(result.isError).toBe(true);
+    expect(result.content[0]!.text).toContain("propsSchema");
+  });
+
+  test("rejects a propsSchema that is not an object", async () => {
+    const result = await componentRegister.handler(
+      { workspaceId: "ws1", name: "c", source: "render(<i/>)", propsSchema: "[1,2,3]" },
+      noClients,
+    );
+    expect(result.isError).toBe(true);
+  });
+
+  test("registers with a valid propsSchema, defaulting to grackle-react", async () => {
+    const calls: Record<string, unknown>[] = [];
+    const clients = {
+      orchestration: {
+        registerComponent: async (req: Record<string, unknown>) => { calls.push(req); return { id: "c1", name: req.name, version: 1 }; },
+      },
+    } as unknown as GrackleClients;
+    const result = await componentRegister.handler(
+      { workspaceId: "ws1", name: "chart", source: "render(<i/>)", propsSchema: '{"type":"object"}' },
+      clients,
+    );
+    expect(result.isError).toBeFalsy();
+    expect(calls[0]!.rendererKind).toBe("grackle-react");
+    expect(calls[0]!.body).toBe("render(<i/>)");
+  });
+});
+
+describe("component_render (#1269)", () => {
+  test("renders a grackle-react component with unsafe-eval (not inline scripts)", async () => {
+    const clients = clientsReturning({ id: "c1", name: "chart", rendererKind: "grackle-react", body: "render(<i/>)", propsSchema: "", version: 2 });
+    const result = await componentRender.handler({ name: "chart", props: { a: 1 } }, clients);
+    const d = descriptorOf(result);
+    expect(d.rendererKind).toBe("grackle-react");
+    expect(d.allowUnsafeEval).toBe(true);
+    expect(d.allowInlineScripts).toBe(false);
+    expect(d.widgetId).toBe("c1");
+  });
+
+  test("renders an mcp-app-html component with inline scripts (not unsafe-eval)", async () => {
+    const clients = clientsReturning({ id: "c2", name: "raw", rendererKind: "mcp-app-html", body: "<div/>", propsSchema: "", version: 1 });
+    const result = await componentRender.handler({ id: "c2" }, clients);
+    const d = descriptorOf(result);
+    expect(d.allowInlineScripts).toBe(true);
+    expect(d.allowUnsafeEval).toBe(false);
+  });
+
+  test("rejects props that violate the component's propsSchema", async () => {
+    const schema = '{"type":"object","properties":{"x":{"type":"number"}},"required":["x"]}';
+    const clients = clientsReturning({ id: "c3", name: "typed", rendererKind: "grackle-react", body: "render(<i/>)", propsSchema: schema, version: 1 });
+    const bad = await componentRender.handler({ name: "typed", props: { x: "not-a-number" } }, clients);
+    expect(bad.isError).toBe(true);
+    expect(bad.content[0]!.text).toContain("propsSchema");
+    const ok = await componentRender.handler({ name: "typed", props: { x: 42 } }, clients);
+    expect(ok.isError).toBeFalsy();
+  });
+
+  test("requires id or name", async () => {
+    const result = await componentRender.handler({}, clientsReturning({}));
+    expect(result.isError).toBe(true);
+  });
+});
+
+describe("component_search (#1271)", () => {
+  const componentSearch = tool("component_search");
+
+  test("maps results, flags built-ins, and omits id for built-ins", async () => {
+    const clients = {
+      orchestration: {
+        searchComponents: async () => ({
+          results: [
+            { component: { name: "Button", description: "button", rendererKind: "grackle-react", propsSchema: "{}", id: "", version: 0 }, relevanceScore: 0.91, builtin: true },
+            { component: { name: "revenue-chart", description: "chart", rendererKind: "grackle-react", propsSchema: "", id: "c1", version: 2 }, relevanceScore: 0.5, builtin: false },
+          ],
+        }),
+      },
+    } as unknown as GrackleClients;
+    const result = await componentSearch.handler({ query: "chart" }, clients);
+    const parsed = JSON.parse(result.content[0]!.text) as Array<{ name: string; builtin: boolean; id?: string }>;
+    expect(parsed.find((p) => p.name === "Button")?.builtin).toBe(true);
+    expect(parsed.find((p) => p.name === "Button")?.id).toBeUndefined();
+    const authored = parsed.find((p) => p.name === "revenue-chart");
+    expect(authored?.builtin).toBe(false);
+    expect(authored?.id).toBe("c1");
+  });
+});
+
+describe("component_list (#1272 promoted flag)", () => {
+  const componentList = tool("component_list");
+
+  test("surfaces the promoted flag", async () => {
+    const clients = {
+      orchestration: {
+        listComponents: async () => ({
+          components: [
+            { id: "c1", name: "a", description: "", rendererKind: "grackle-react", propsSchema: "", version: 1, promoted: true, updatedAt: "" },
+            { id: "c2", name: "b", description: "", rendererKind: "grackle-react", propsSchema: "", version: 1, promoted: false, updatedAt: "" },
+          ],
+        }),
+      },
+    } as unknown as GrackleClients;
+    const result = await componentList.handler({ workspaceId: "ws1" }, clients);
+    const parsed = JSON.parse(result.content[0]!.text) as Array<{ id: string; promoted: boolean }>;
+    expect(parsed.find((p) => p.id === "c1")?.promoted).toBe(true);
+    expect(parsed.find((p) => p.id === "c2")?.promoted).toBe(false);
+  });
+});
+
+describe("component_promote (#1272)", () => {
+  const componentPromote = tool("component_promote");
+
+  function promoteClients(): GrackleClients {
+    return {
+      orchestration: {
+        setComponentPromotion: async (req: Record<string, unknown>) =>
+          ({ id: "c1", name: "chart", promoted: req.promoted, version: 3 }),
+      },
+    } as unknown as GrackleClients;
+  }
+
+  test("defaults promoted to true and maps the result", async () => {
+    const result = await componentPromote.handler({ id: "c1" }, promoteClients());
+    const parsed = JSON.parse(result.content[0]!.text) as { id: string; promoted: boolean; version: number };
+    expect(parsed.promoted).toBe(true);
+    expect(parsed.id).toBe("c1");
+    expect(parsed.version).toBe(3);
+  });
+
+  test("passes promoted:false through to demote", async () => {
+    const result = await componentPromote.handler({ name: "chart", promoted: false }, promoteClients());
+    const parsed = JSON.parse(result.content[0]!.text) as { promoted: boolean };
+    expect(parsed.promoted).toBe(false);
+  });
+
+  test("requires id or name", async () => {
+    const result = await componentPromote.handler({}, promoteClients());
+    expect(result.isError).toBe(true);
+  });
+});
+
+describe("buildComponentRenderResult (#1272 shared render helper)", () => {
+  const component = (over: Partial<Record<string, unknown>>): grackle.Component =>
+    create(grackle.ComponentSchema, { id: "c1", name: "x", rendererKind: "grackle-react", body: "render(<i/>)", version: 1, ...over });
+
+  test("grackle-react → unsafe-eval, shared runtime resourceUri", () => {
+    const result = buildComponentRenderResult(component({}), { a: 1 });
+    const d = descriptorOf(result);
+    expect(d.rendererKind).toBe("grackle-react");
+    expect(d.allowUnsafeEval).toBe(true);
+    expect(d.allowInlineScripts).toBe(false);
+    expect(d.resourceUri).toBe("ui://grackle/c1");
+    expect(d.props).toEqual({ a: 1 });
+  });
+
+  test("mcp-app-html → inline scripts (not unsafe-eval)", () => {
+    const d = descriptorOf(buildComponentRenderResult(component({ id: "c2", rendererKind: "mcp-app-html", body: "<div/>" }), {}));
+    expect(d.allowInlineScripts).toBe(true);
+    expect(d.allowUnsafeEval).toBe(false);
+    expect(d.resourceUri).toBe("ui://grackle/c2");
+  });
+
+  test("threads resolved dependencies into the descriptor (#1270)", () => {
+    const deps = [
+      create(grackle.ComponentSchema, { name: "Child", body: "render(<Spinner/>)" }),
+    ];
+    const d = descriptorOf(buildComponentRenderResult(component({}), {}, deps));
+    expect(d.components).toEqual([{ name: "Child", body: "render(<Spinner/>)" }]);
+  });
+
+  test("omits components when there are no dependencies", () => {
+    const d = descriptorOf(buildComponentRenderResult(component({}), {}));
+    expect(d.components).toBeUndefined();
+  });
+});
+
+describe("component_render composition (#1270)", () => {
+  test("includes the resolved dependency bundle in the descriptor", async () => {
+    const root = { id: "c1", name: "Parent", rendererKind: "grackle-react", body: "render(<Child/>)", propsSchema: "", version: 1 };
+    const deps = [{ name: "Child", body: "render(<Spinner/>)" }];
+    const result = await componentRender.handler({ name: "Parent" }, clientsReturning(root, deps));
+    const d = descriptorOf(result);
+    expect(d.components).toEqual([{ name: "Child", body: "render(<Spinner/>)" }]);
+  });
+});

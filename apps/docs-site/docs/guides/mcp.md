@@ -6,7 +6,7 @@ sidebar_position: 6
 
 # MCP Server
 
-Grackle exposes its full API as an **MCP (Model Context Protocol) server**. This means any AI agent with MCP support — Claude Desktop, Claude Code, or anything else — can create tasks, spawn sessions, post findings, and manage environments through Grackle.
+Grackle exposes its full API as an **MCP (Model Context Protocol) server**. This means any AI agent with MCP support — Claude Desktop, Claude Code, or anything else — can create tasks, spawn sessions, and manage environments through Grackle.
 
 ## What it enables
 
@@ -81,12 +81,6 @@ The MCP server exposes tools grouped by domain:
 | `workspace_update` | Update workspace metadata |
 | `workspace_archive` | Archive a workspace |
 
-### Findings
-| Tool | Description |
-|------|------------|
-| `finding_list` | Query findings by category/tags |
-| `finding_post` | Record a finding |
-
 ### Personas
 | Tool | Description |
 |------|------------|
@@ -100,7 +94,6 @@ The MCP server exposes tools grouped by domain:
 |------|------------|
 | `knowledge_search` | Semantic search over the knowledge graph |
 | `knowledge_get_node` | Retrieve a knowledge node by ID |
-| `knowledge_create_node` | Create a new knowledge entry |
 
 These tools are only available when the [knowledge graph plugin](./knowledge-graph) is enabled.
 
@@ -127,7 +120,7 @@ When Grackle spawns an agent session, the server passes the agent a **scoped MCP
 - Task creation is automatically parented to the agent's own task
 - `workspaceId` is injected automatically — no cross-workspace access
 
-This is what enables the orchestrator pattern: an agent can create subtasks, post findings, and monitor progress through MCP without seeing anything outside its scope.
+This is what enables the orchestrator pattern: an agent can create subtasks and monitor progress through MCP without seeing anything outside its scope.
 
 ```mermaid
 graph LR
@@ -138,9 +131,9 @@ graph LR
 
 ### How agents see MCP tools
 
-When an agent runs inside Grackle, the MCP server is automatically configured as an available tool source. The agent sees tools like `mcp__grackle__task_create` and `mcp__grackle__finding_post` alongside its built-in tools.
+When an agent runs inside Grackle, the MCP server is automatically configured as an available tool source. The agent sees tools like `mcp__grackle__task_create` and `mcp__grackle__session_spawn` alongside its built-in tools.
 
 This is what enables patterns like:
 - An orchestrator agent that decomposes a task into subtasks using `task_create`
-- A researcher agent that posts findings for other agents to read
+- A researcher agent that searches the knowledge graph for prior context
 - A supervisor agent that monitors task status and provides feedback

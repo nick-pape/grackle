@@ -33,7 +33,6 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     shortcuts: [
       { keys: ["1"], description: "Switch to Overview tab" },
       { keys: ["2"], description: "Switch to Stream tab" },
-      { keys: ["3"], description: "Switch to Findings tab" },
     ],
   },
   {
@@ -66,9 +65,10 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     ],
   },
   {
-    title: "Chat",
+    title: "Root",
     shortcuts: [
-      { keys: ["Enter"], description: "Send message (when input is focused)" },
+      { keys: ["Ctrl/Cmd", "Enter"], description: "Send message (when the composer is focused)" },
+      { keys: ["Enter"], description: "Insert a new line in the message composer" },
     ],
   },
 ];

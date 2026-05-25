@@ -23,7 +23,8 @@ export { reanimateAgent } from "./reanimate-agent.js";
 
 // ─── Session / Environment ───────────────────────────────────
 export { attemptReconnects, resetReconnectState } from "./auto-reconnect.js";
-export { pushToEnv } from "./token-push.js";
+export { authenticateForRuntime } from "./token-push.js";
+export type { AuthenticateOptions } from "./token-push.js";
 export { computeTaskStatus } from "./compute-task-status.js";
 export type { TaskStatusResult } from "./compute-task-status.js";
 export { findFirstConnectedEnvironment } from "./find-connected-environment.js";
@@ -41,6 +42,14 @@ export { sendInputToSession, deliverSignalToTask } from "./signals/signal-delive
 export { ReconciliationManager } from "./reconciliation-manager.js";
 export type { ReconciliationPhase } from "./reconciliation-manager.js";
 
+// ─── Spawn-Context Provider Registry (#1259) ─────────────────
+export {
+  setSpawnContextProviders,
+  clearSpawnContextProviders,
+  hasSpawnContextProviders,
+  runSpawnContextProviders,
+} from "./spawn-context-registry.js";
+
 // ─── Version Check ───────────────────────────────────────────
 export { checkVersionStatus, clearVersionCache, type VersionStatus } from "./version-check.js";
 
@@ -49,6 +58,9 @@ export { logger } from "./logger.js";
 
 // ─── Trace Context ───────────────────────────────────────────
 export { getTraceId, runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace } from "./trace-context.js";
+
+// ─── Telemetry (AHP HR7 — additive OTLP logs sink) ───────────
+export { initOtlpLogs, emitDiagnostic, shutdownOtlpLogs } from "./telemetry.js";
 
 // ─── Utilities ───────────────────────────────────────────────
 export { exec } from "./utils/exec.js";
@@ -64,8 +76,12 @@ export * as logWriter from "./log-writer.js";
 export * as pipeDelivery from "./pipe-delivery.js";
 
 // ─── Individual Exports for Plugin-Core ──────────────────────
-export { processEventStream } from "./event-processor.js";
+export { processEventStream, publishWidgetEvent } from "./event-processor.js";
+export type { WidgetEventPayload, PublishWidgetEvent } from "./event-processor.js";
 export { createEventStream } from "./event-hub.js";
+export { RESERVED_PREFIXES, isReservedStreamName, LIFECYCLE_PREFIX } from "./stream-names.js";
+export { subscribeStreamMessages } from "./stream-message-bus.js";
+export type { StreamMessageEvent, StreamMessageObserver } from "./stream-message-bus.js";
 export { recoverSuspendedSessions } from "./session-recovery.js";
 export { clearReconnectState, isReconnecting } from "./auto-reconnect.js";
 export { resolveBootstrapRuntime } from "./resolve-bootstrap-runtime.js";

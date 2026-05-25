@@ -70,7 +70,7 @@ service GrackleCore {
   rpc GetSessionFds(SessionId) returns (SessionFds);
   rpc CreateStream(CreateStreamRequest) returns (CreateStreamResponse);
   rpc AttachStream(AttachStreamRequest) returns (AttachStreamResponse);
-  rpc ListStreams(Empty) returns (ListStreamsResponse);
+  rpc ListStreams(ListStreamsRequest) returns (ListStreamsResponse);
 
   // Version
   rpc GetVersionStatus(Empty) returns (VersionStatus);
@@ -86,6 +86,20 @@ service GrackleCore {
   rpc RemoveGitHubAccount(RemoveGitHubAccountRequest) returns (Empty);
   rpc ImportGitHubAccounts(Empty) returns (ImportGitHubAccountsResponse);
 
+  // Channels (capability-scoped external I/O)
+  rpc ExposeChannel(ExposeChannelRequest) returns (ExposeChannelResponse);
+  rpc ListChannelGrants(ListChannelGrantsRequest) returns (ChannelGrantList);
+  rpc RevokeChannelGrant(RevokeChannelGrantRequest) returns (Empty);
+
   // Unified event streaming (replaces WebSocket)
   rpc StreamEvents(Empty) returns (stream ServerEvent);
+
+  // Domain events (query the persisted domain_events log)
+  rpc QueryDomainEvents(QueryDomainEventsRequest) returns (DomainEventList);
+
+  // IPC stream rooms (read a durable transcript)
+  rpc GetStreamTranscript(GetStreamTranscriptRequest) returns (StreamTranscript);
+
+  // Session action log (read a session's durable, server-sequenced replay buffer)
+  rpc GetSessionActions(GetSessionActionsRequest) returns (SessionActionList);
 }

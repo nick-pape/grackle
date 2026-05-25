@@ -5,23 +5,33 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
-import { grackle, ROOT_TASK_ID } from "@grackle-ai/common";
+import { grackle, ROOT_TASK_ID, RENDER_TOOL_PREFIX, selectPromotedRenderTools } from "@grackle-ai/common";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
   isInitializeRequest,
+  McpError,
+  ErrorCode,
   type CallToolResult,
+  type ReadResourceResult,
 } from "@modelcontextprotocol/sdk/types.js";
 import pino, { type Logger } from "pino";
 import { z } from "zod";
 import type { AuthContext } from "@grackle-ai/auth";
 import { authenticateMcpRequest, pruneRevocations } from "@grackle-ai/auth";
 import { grpcErrorToToolResult } from "./error-handler.js";
-import type { ToolDefinition, GrackleClients } from "./tool-registry.js";
+import type { ToolDefinition, ToolResult, GrackleClients } from "./tool-registry.js";
 import { createToolRegistry } from "./tools/index.js";
+import { buildComponentRenderResult, propsValidationError } from "./tools/component.js";
 import { resolveToolForAuth, listToolsForAuth } from "./tool-scoping.js";
+import { createResourceRegistry } from "./resources/index.js";
+import { hostSupportsUiApps, uiToolMeta } from "./ui-app.js";
+import { WIDGET_RENDER_META_KEY, type WidgetRenderDescriptor } from "./widget-render-meta.js";
+import { tryServeWidgetAsset } from "./widget-asset-server.js";
 
 /** Read the package version from package.json at module load time. */
 const PACKAGE_VERSION: string = (JSON.parse(
@@ -36,6 +46,26 @@ const logger: Logger = pino({
     : undefined,
 });
 
+/**
+ * Pushes an MCP Apps widget render event into a session's stream. Injected by the
+ * server (wraps `@grackle-ai/core`'s `publishWidgetEvent`). Declared structurally
+ * to avoid widening this package's runtime dependencies onto core.
+ */
+export type PublishWidgetEvent = (
+  sessionId: string,
+  payload: {
+    resourceUri: string;
+    toolName: string;
+    html: string;
+    rendererKind?: string;
+    csp?: unknown;
+    toolInput?: Record<string, unknown>;
+    toolResult?: unknown;
+    widgetId?: string;
+    version?: number;
+  },
+) => void;
+
 /** Options for creating an MCP server. */
 export interface McpServerOptions {
   /** Host address to bind the MCP server to. */
@@ -48,8 +78,25 @@ export interface McpServerOptions {
   apiKey: string;
   /** Base URL of the OAuth authorization server (web server). When set, enables OAuth discovery. */
   authorizationServerUrl?: string;
+  /**
+   * Explicit browser-facing MCP origin (GRACKLE_MCP_ORIGIN), e.g.
+   * `https://mcp.example.com`. Used as the trusted asset/CSP origin for
+   * broker-captured widgets so it never depends on the (spoofable) request
+   * `Host` header. When unset, the broker derives it from `bindHost` + `mcpPort`.
+   */
+  mcpOrigin?: string;
   /** Optional plugin-contributed tool groups to register alongside built-in tools. */
   toolGroups?: ToolDefinition[][];
+  /** Push MCP Apps widget render events into session streams (in-process, from the server). */
+  publishWidgetEvent?: PublishWidgetEvent;
+  /**
+   * Subscribe to "a workspace's promoted-component set changed" signals so the
+   * server can push `tools/list_changed` to that workspace's sessions (#1297).
+   * Called once with a `notify(workspaceId)` callback; returns an unsubscribe.
+   * Broker-mode only (the central server wires it to the domain-event bus);
+   * standalone omits it.
+   */
+  onComponentChangeSubscribe?: (notify: (workspaceId: string) => void) => () => void;
 }
 
 /** Create per-service ConnectRPC clients pointing at the co-located Grackle gRPC server. */
@@ -107,12 +154,40 @@ async function resolvePersonaTools(
 }
 
 /** Create a low-level MCP Server instance with tool handlers wired to the ConnectRPC backend. */
+/**
+ * Build the JSON Schema for a dynamic `render_<name>` tool's input from a stored
+ * component `propsSchema` (#1272). Round-trips through zod so the result is always
+ * a valid, normalized JSON Schema. A component with no `propsSchema` (the DB
+ * default `""`) or an unparseable one falls back to a *passthrough* object that
+ * allows arbitrary keys (`additionalProperties: true`) — the call path doesn't
+ * validate props when there's no schema, so the advertised input must be equally
+ * permissive or the tool would look uncallable.
+ */
+export function dynamicRenderInputSchema(propsSchema: string): ReturnType<typeof z.toJSONSchema<z.ZodType>> {
+  if (propsSchema) {
+    try {
+      return z.toJSONSchema(z.fromJSONSchema(JSON.parse(propsSchema) as Parameters<typeof z.fromJSONSchema>[0]));
+    } catch {
+      // fall through to the permissive schema
+    }
+  }
+  return z.toJSONSchema(z.looseObject({}));
+}
+
 async function createMcpServerInstance(
   grpcClients: GrackleClients,
   authContext: AuthContext,
+  assetBaseUrl: string,
+  brokerAssetOrigin: string,
+  publishWidgetEvent: PublishWidgetEvent | undefined,
   toolGroups?: ToolDefinition[][],
 ): Promise<Server> {
   const registry = createToolRegistry(toolGroups);
+  // In broker mode the captured widget's asset/CSP origin must be the trusted,
+  // browser-facing MCP origin (config-derived), never the request Host. In
+  // standalone mode the direct client reached us on `assetBaseUrl`, so use that.
+  const widgetAssetOrigin: string = publishWidgetEvent !== undefined ? brokerAssetOrigin : assetBaseUrl;
+  const resourceRegistry = createResourceRegistry(widgetAssetOrigin);
 
   // Resolve persona-scoped tool set once at session creation (cached for session lifetime)
   const personaAllowedTools = await resolvePersonaTools(grpcClients, authContext);
@@ -126,24 +201,239 @@ async function createMcpServerInstance(
 
   const server = new Server(
     { name: "grackle-mcp", version: PACKAGE_VERSION },
-    { capabilities: { tools: {} } },
+    // `tools.listChanged` declares we MAY push `notifications/tools/list_changed`
+    // (broker mode does, on promote/demote — #1297). It's an upper bound, so it's
+    // safe to advertise unconditionally even where we never emit; the SDK only
+    // forbids *sending* the notification without the capability, not the reverse.
+    { capabilities: { tools: { listChanged: true }, resources: {} } },
   );
 
-  // Pre-compute the visible tool list and names (immutable for this session)
+  // Pre-compute the visible tool list and names (immutable for this session).
+  // UI (MCP Apps) tools carry _meta.ui.resourceUri so a host knows which ui://
+  // resource to render.
   const visibleToolDefs = visibleTools.map((t) => ({
     name: t.name,
     description: t.description,
     inputSchema: z.toJSONSchema(t.inputSchema),
     annotations: t.annotations,
+    ...(t.uiResourceUri ? { _meta: uiToolMeta(t.uiResourceUri) } : {}),
   }));
   const visibleToolNames = visibleTools.map((t) => t.name).join(", ");
+  /** Names of UI tools — only listed to hosts that can render MCP Apps widgets. */
+  const uiToolNames = new Set(visibleTools.filter((t) => t.uiResourceUri).map((t) => t.name));
+
+  /**
+   * Broker capture: push a self-contained widget render event into the scoped
+   * agent's session stream when a UI tool is invoked. Read in-process (does not
+   * rely on the agent SDK preserving `_meta`); non-fatal. Shared by the static
+   * tool path and the dynamic `render_<name>` dispatcher (#1272) so they can't drift.
+   */
+  function captureWidgetRender(
+    toolName: string,
+    uiResourceUri: string | undefined,
+    result: ToolResult,
+    toolInput: Record<string, unknown>,
+  ): void {
+    if (authContext.type !== "scoped" || !publishWidgetEvent) {
+      return;
+    }
+    try {
+      const dynamic = result._meta?.[WIDGET_RENDER_META_KEY] as WidgetRenderDescriptor | undefined;
+      if (dynamic) {
+        // Dynamic, agent-authored render (component_render / component_show /
+        // widget_show / render_<name>); grackle-react React runtime (#1268/#1269).
+        publishWidgetEvent(authContext.taskSessionId, {
+          rendererKind: dynamic.rendererKind || "mcp-app-html",
+          resourceUri: dynamic.resourceUri ?? "",
+          toolName,
+          html: dynamic.body,
+          csp: {
+            resourceDomains: [widgetAssetOrigin],
+            connectDomains: [widgetAssetOrigin],
+            allowInlineScripts: dynamic.allowInlineScripts === true,
+            allowUnsafeEval: dynamic.allowUnsafeEval === true,
+          },
+          toolInput: dynamic.props ?? toolInput,
+          toolResult: result,
+          ...(dynamic.widgetId ? { widgetId: dynamic.widgetId } : {}),
+          ...(dynamic.version !== undefined ? { version: dynamic.version } : {}),
+          ...(dynamic.components ? { components: dynamic.components } : {}),
+        });
+      } else if (uiResourceUri) {
+        // Static Grackle-served widget (show_hello_widget, T2/T3).
+        const resource = resourceRegistry.get(uiResourceUri);
+        if (resource) {
+          publishWidgetEvent(authContext.taskSessionId, {
+            resourceUri: uiResourceUri,
+            toolName,
+            html: resource.read().text,
+            csp: { resourceDomains: [widgetAssetOrigin], connectDomains: [widgetAssetOrigin] },
+            toolInput,
+            toolResult: result,
+          });
+        }
+      }
+    } catch (widgetErr) {
+      logger.warn({ tool: toolName, err: widgetErr }, "Widget event capture failed (non-fatal)");
+    }
+  }
+
+  /**
+   * Synthesize the dynamic `render_<name>` tool definitions for the caller's
+   * promoted components (#1272). Queried per `tools/list` so promote/demote is
+   * reflected on the agent's next listing. Fails open (returns []) so a registry
+   * error never breaks `tools/list`. Iterates `updatedAt DESC` (listComponents
+   * order); on a slug collision the most-recently-updated component wins — the
+   * dispatcher (handleDynamicRender) uses the identical loop so the tool shown is
+   * the tool called.
+   */
+  async function dynamicRenderToolDefs(): Promise<typeof visibleToolDefs> {
+    if (authContext.type !== "scoped" || !authContext.workspaceId) {
+      return [];
+    }
+    let components: grackle.Component[];
+    try {
+      const resp = await grpcClients.orchestration.listComponents({ workspaceId: authContext.workspaceId });
+      components = resp.components;
+    } catch (err) {
+      logger.warn({ workspaceId: authContext.workspaceId, err }, "Failed to list components for dynamic render tools (omitting)");
+      return [];
+    }
+    const defs: typeof visibleToolDefs = [];
+    for (const { toolName, component: c } of selectPromotedRenderTools(components)) {
+      // No `_meta.ui.resourceUri`: these render via the broker capturing the call
+      // result's widget descriptor (captureWidgetRender), not by a host doing
+      // resources/read — there is no per-component ui:// resource to read. Listing
+      // is gated to broker mode (see the ListTools handler) for the same reason.
+      defs.push({
+        name: toolName,
+        description: `Render the "${c.name}" component (v${c.version}) inline. Promoted from this workspace's component registry; its inputSchema is the component's prop schema.`,
+        inputSchema: dynamicRenderInputSchema(c.propsSchema),
+        annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      });
+    }
+    return defs;
+  }
+
+  /**
+   * Dispatch a dynamic `render_<name>` call (#1272). Resolves the promoted
+   * component in the caller's workspace (the ownership boundary — only the
+   * caller's own workspace is searched, identical to `component_render`), validates
+   * props against its prop schema, and renders via the shared helper. Authorized
+   * by registry ownership, NOT the static/persona allowlist.
+   */
+  async function handleDynamicRender(name: string, rawArgs: unknown): Promise<CallToolResult> {
+    const unknownTool: CallToolResult = { content: [{ type: "text", text: `Unknown tool: ${name}` }], isError: true };
+    if (authContext.type !== "scoped" || !authContext.workspaceId) {
+      return unknownTool;
+    }
+    let components: grackle.Component[];
+    try {
+      const resp = await grpcClients.orchestration.listComponents({ workspaceId: authContext.workspaceId });
+      components = resp.components;
+    } catch (error) {
+      return grpcErrorToToolResult(error) as CallToolResult;
+    }
+    const match = selectPromotedRenderTools(components).find((e) => e.toolName === name)?.component;
+    if (!match) {
+      return unknownTool;
+    }
+    // Props must be a plain object. The static tool path is guarded by zod
+    // safeParse; here a component with an empty propsSchema has no validation, so
+    // reject a non-object payload (array/string/null) before it reaches the render.
+    if (typeof rawArgs !== "object" || rawArgs === null || Array.isArray(rawArgs)) {
+      return {
+        content: [{ type: "text", text: JSON.stringify({ error: "arguments must be an object of props", code: "INVALID_ARGUMENT" }, null, 2) }],
+        isError: true,
+      };
+    }
+    const props = rawArgs as Record<string, unknown>;
+    const validationErr = propsValidationError(match.propsSchema, props);
+    if (validationErr) {
+      return {
+        content: [{ type: "text", text: JSON.stringify({ error: `props do not match the component's propsSchema: ${validationErr}`, code: "INVALID_ARGUMENT" }, null, 2) }],
+        isError: true,
+      };
+    }
+    logger.info({ tool: name, componentId: match.id }, "Executing dynamic render tool: %s", name);
+    // Resolve the component's transitive registry references for composition (#1270).
+    let dependencies: grackle.Component[] = [];
+    try {
+      const resolved = await grpcClients.orchestration.resolveComponentGraph({
+        id: match.id,
+        name: "",
+        workspaceId: authContext.workspaceId,
+        source: "",
+      });
+      dependencies = resolved.dependencies;
+    } catch (err) {
+      logger.warn({ tool: name, componentId: match.id, err }, "Dependency resolution failed; rendering without composition");
+    }
+    const result = buildComponentRenderResult(match, props, dependencies);
+    captureWidgetRender(name, undefined, result, props);
+    return result as CallToolResult;
+  }
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return { tools: visibleToolDefs };
+    // Expose widget tools when EITHER:
+    //  (a) the broker is active (publishWidgetEvent injected) — Grackle is itself
+    //      the ui-capable host. It captures the widget call and renders it in the
+    //      chat, so the agent's own MCP client (a mere conduit here) need not
+    //      advertise the io.modelcontextprotocol/ui extension; or
+    //  (b) the connecting client advertises that extension — the spec-compliant
+    //      path for the standalone MCP server, where the client renders the
+    //      widget itself.
+    const uiOn = publishWidgetEvent !== undefined || hostSupportsUiApps(server.getClientCapabilities());
+    const staticTools = uiOn ? visibleToolDefs : visibleToolDefs.filter((t) => !uiToolNames.has(t.name));
+    // Dynamic render_<name> tools render only via the in-process broker capture
+    // (they have no readable ui:// resource), so list them ONLY when the broker is
+    // active — never in standalone/ui-host mode where a host would resources/read
+    // a `ui://grackle/<id>` URI that isn't registered (#1272).
+    const dynamicTools = publishWidgetEvent !== undefined ? await dynamicRenderToolDefs() : [];
+    return { tools: [...staticTools, ...dynamicTools] };
+  });
+
+  server.setRequestHandler(ListResourcesRequestSchema, async () => {
+    return {
+      resources: resourceRegistry.list().map((r) => ({
+        uri: r.uri,
+        name: r.name,
+        ...(r.description ? { description: r.description } : {}),
+        mimeType: r.mimeType,
+        ...(r.meta ? { _meta: r.meta } : {}),
+      })),
+    };
+  });
+
+  server.setRequestHandler(ReadResourceRequestSchema, async (request): Promise<ReadResourceResult> => {
+    // Resources are session-global and unscoped in #1237 (a widget shell is not
+    // sensitive). Per-session / auth-scoped resources are #1239.
+    const resource = resourceRegistry.get(request.params.uri);
+    if (!resource) {
+      throw new McpError(ErrorCode.InvalidParams, `Unknown resource: ${request.params.uri}`);
+    }
+    const { text } = resource.read();
+    return {
+      contents: [
+        {
+          uri: resource.uri,
+          mimeType: resource.mimeType,
+          text,
+          ...(resource.meta ? { _meta: resource.meta } : {}),
+        },
+      ],
+    };
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (request): Promise<CallToolResult> => {
     const { name, arguments: args } = request.params;
+    // Dynamic render_<name> tools (#1272) are synthesized per workspace and aren't
+    // in the registry; dispatch them by registry ownership (NOT the static/persona
+    // allowlist) before the normal resolve. The registry.get guard keeps any real
+    // static tool taking precedence over the dynamic prefix.
+    if (name.startsWith(RENDER_TOOL_PREFIX) && registry.get(name) === undefined) {
+      return await handleDynamicRender(name, args ?? {});
+    }
     const tool = resolveToolForAuth(registry, name, authContext, personaAllowedTools);
     if (!tool) {
       // Distinguish "unknown tool" from "not permitted by persona/scope"
@@ -242,6 +532,10 @@ async function createMcpServerInstance(
     try {
       logger.info({ tool: name, resolved: tool.name }, "Executing MCP tool: %s", name);
       const result = await tool.handler(parsed.data as Record<string, unknown>, grpcClients, authContext);
+      // MCP Apps: when a session agent invokes a widget tool, push a self-contained
+      // widget render event into that session's stream (broker capture — read
+      // in-process, does not depend on the agent SDK preserving _meta). Non-fatal.
+      captureWidgetRender(tool.name, tool.uiResourceUri, result, parsed.data as Record<string, unknown>);
       return result as CallToolResult;
     } catch (error: unknown) {
       logger.error({ tool: name, err: error }, "Tool execution failed: %s", name);
@@ -264,13 +558,38 @@ async function createMcpServerInstance(
 const REVOCATION_PRUNE_INTERVAL_MS: number = 60 * 60 * 1000;
 
 /**
+ * Session ids whose scoped auth context is bound to `workspaceId`. Pure helper so
+ * the promoted-tool `tools/list_changed` fan-out (#1297) is unit-testable without
+ * spinning an http server.
+ */
+export function sessionIdsForWorkspace(
+  authContexts: ReadonlyMap<string, AuthContext>,
+  workspaceId: string,
+): string[] {
+  const ids: string[] = [];
+  for (const [sid, ctx] of authContexts) {
+    if (ctx.type === "scoped" && ctx.workspaceId === workspaceId) {
+      ids.push(sid);
+    }
+  }
+  return ids;
+}
+
+/**
  * Create an HTTP server that serves the MCP Streamable HTTP protocol on `/mcp`.
  *
  * The server manages stateful sessions — each MCP client gets its own transport
  * and Server instance, tracked by session ID.
  */
 export function createMcpServer(options: McpServerOptions): http.Server {
-  const { bindHost, grpcPort, apiKey, authorizationServerUrl, toolGroups } = options;
+  const { bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl, toolGroups, publishWidgetEvent, mcpOrigin, onComponentChangeSubscribe } = options;
+  // Trusted, browser-facing MCP origin for broker-captured widgets (their
+  // `<script src>` + CSP allowlist). Derived from server config — NOT the request
+  // `Host` header, which a hostile MCP client could spoof to point widget assets
+  // / CSP at an attacker origin. Override via GRACKLE_MCP_ORIGIN for
+  // reverse-proxy / TLS deployments where loopback isn't browser-reachable.
+  const dialableMcpHost: string = bindHost === "0.0.0.0" || bindHost === "::" ? "127.0.0.1" : bindHost;
+  const brokerAssetOrigin: string = mcpOrigin ?? `http://${dialableMcpHost}:${mcpPort}`;
   /** Parsed auth server URL, used for dynamic derivation of authorization_servers. */
   const parsedAuthServerUrl = authorizationServerUrl
     ? new URL(authorizationServerUrl)
@@ -288,6 +607,27 @@ export function createMcpServer(options: McpServerOptions): http.Server {
 
   /** Map of authentication contexts, keyed by MCP session ID. */
   const authContexts: Map<string, AuthContext> = new Map();
+
+  /** Map of per-session MCP `Server` instances, keyed by session ID (#1297 fan-out). */
+  const mcpServers: Map<string, Server> = new Map();
+
+  /**
+   * Push `notifications/tools/list_changed` to every live session in `workspaceId`
+   * so dynamic `render_<name>` tools refresh after a promote/demote (#1297).
+   * Best-effort + isolated: a failed/closed session never affects the others.
+   */
+  const notifyToolListChanged = (workspaceId: string): void => {
+    for (const sid of sessionIdsForWorkspace(authContexts, workspaceId)) {
+      const srv = mcpServers.get(sid);
+      if (srv) {
+        srv.sendToolListChanged().catch((err: unknown) =>
+          logger.warn({ sessionId: sid, err }, "sendToolListChanged failed (non-fatal)"),
+        );
+      }
+    }
+  };
+  // Subscribe to workspace component-change signals (broker mode only; standalone omits it).
+  const unsubscribeComponentChanges = onComponentChangeSubscribe?.(notifyToolListChanged);
 
   // Periodically prune stale revocation entries
   const pruneInterval = setInterval(() => pruneRevocations(), REVOCATION_PRUNE_INTERVAL_MS);
@@ -314,6 +654,13 @@ export function createMcpServer(options: McpServerOptions): http.Server {
       return;
     }
 
+    // Serve the built-in widget's browser assets (static JS) before the /mcp
+    // routing + auth check — an MCP Apps host sandbox fetches these without the
+    // API key. They are non-sensitive (the widget shell + the ext-apps App).
+    if (req.method?.toUpperCase() === "GET" && tryServeWidgetAsset(url.pathname, res)) {
+      return;
+    }
+
     // Only serve the /mcp endpoint
     if (url.pathname !== "/mcp") {
       res.writeHead(404, { "Content-Type": "application/json" });
@@ -337,16 +684,19 @@ export function createMcpServer(options: McpServerOptions): http.Server {
     const method = req.method?.toUpperCase();
 
     if (method === "POST") {
-      await handlePost(req, res, grpcClients, transports, authContexts, authContext, toolGroups);
+      await handlePost(req, res, grpcClients, transports, authContexts, mcpServers, authContext, publishWidgetEvent, brokerAssetOrigin, toolGroups);
     } else if (method === "GET") {
       await handleGet(req, res, transports);
     } else if (method === "DELETE") {
-      await handleDelete(req, res, transports, authContexts);
+      await handleDelete(req, res, transports, authContexts, mcpServers);
     } else {
       res.writeHead(405, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Method not allowed" }));
     }
   });
+
+  // Drop the component-change subscription when the server closes (clean teardown for tests).
+  httpServer.on("close", () => unsubscribeComponentChanges?.());
 
   return httpServer;
 }
@@ -380,6 +730,30 @@ async function parseBody(req: http.IncomingMessage): Promise<unknown> {
   });
 }
 
+/**
+ * Resolve the public origin the client reached us on, for embedding into widget
+ * asset URLs. Honors `X-Forwarded-Proto` (reverse proxies) and TLS for the
+ * scheme, and normalizes the Host header through `URL` so a hostile value cannot
+ * inject markup when interpolated into the widget HTML's `<script src>`.
+ *
+ * @returns A clean `scheme://host[:port]` origin, or `http://localhost` if the
+ *   Host header is missing or unparseable.
+ */
+export function resolveAssetBaseUrl(
+  hostHeader: string | undefined,
+  forwardedProto: string | string[] | undefined,
+  encrypted: boolean,
+): string {
+  const rawProto: string | undefined = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+  const proto: string | undefined = rawProto?.split(",")[0]?.trim();
+  const scheme: string = proto && proto.length > 0 ? proto : encrypted ? "https" : "http";
+  try {
+    return new URL(`${scheme}://${hostHeader ?? "localhost"}`).origin;
+  } catch {
+    return "http://localhost";
+  }
+}
+
 /** Handle POST requests to /mcp — initialization or tool calls. */
 async function handlePost(
   req: http.IncomingMessage,
@@ -387,7 +761,10 @@ async function handlePost(
   grpcClients: GrackleClients,
   transports: Map<string, StreamableHTTPServerTransport>,
   authContexts: Map<string, AuthContext>,
+  mcpServers: Map<string, Server>,
   authContext: AuthContext,
+  publishWidgetEvent: PublishWidgetEvent | undefined,
+  brokerAssetOrigin: string,
   toolGroups?: ToolDefinition[][],
 ): Promise<void> {
   try {
@@ -410,13 +787,22 @@ async function handlePost(
     }
 
     if (isInitializeRequest(body) && (!sessionId || !transports.has(sessionId))) {
-      // New initialization — create a new transport + server
+      // New initialization — create the per-session Server first so the transport's
+      // onsessioninitialized can register it for the tools/list_changed fan-out (#1297).
+      // Asset base URL is the origin the client actually reached us on, so the
+      // widget HTML references assets correctly. Normalized via URL parsing to
+      // avoid attribute injection from a hostile Host header.
+      const encrypted = "encrypted" in req.socket && (req.socket as { encrypted?: boolean }).encrypted === true;
+      const assetBaseUrl = resolveAssetBaseUrl(req.headers.host, req.headers["x-forwarded-proto"], encrypted);
+      const mcpServer = await createMcpServerInstance(grpcClients, authContext, assetBaseUrl, brokerAssetOrigin, publishWidgetEvent, toolGroups);
+
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (sid: string) => {
           logger.info({ sessionId: sid }, "MCP session initialized");
           transports.set(sid, transport);
           authContexts.set(sid, authContext);
+          mcpServers.set(sid, mcpServer);
         },
       });
 
@@ -426,10 +812,10 @@ async function handlePost(
           logger.info({ sessionId: sid }, "MCP session closed");
           transports.delete(sid);
           authContexts.delete(sid);
+          mcpServers.delete(sid);
         }
       };
 
-      const mcpServer = await createMcpServerInstance(grpcClients, authContext, toolGroups);
       await mcpServer.connect(transport);
       await transport.handleRequest(req, res, body);
       return;
@@ -490,6 +876,7 @@ async function handleDelete(
   res: http.ServerResponse,
   transports: Map<string, StreamableHTTPServerTransport>,
   authContexts: Map<string, AuthContext>,
+  mcpServers: Map<string, Server>,
 ): Promise<void> {
   const sessionId = req.headers["mcp-session-id"] as string | undefined;
   if (!sessionId || !transports.has(sessionId)) {
@@ -502,6 +889,7 @@ async function handleDelete(
   try {
     await transport.handleRequest(req, res);
     authContexts.delete(sessionId);
+    mcpServers.delete(sessionId);
   } catch (error) {
     logger.error({ err: error }, "Error handling session termination");
     if (!res.headersSent) {

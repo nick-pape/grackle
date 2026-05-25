@@ -14,20 +14,24 @@ import http from "node:http";
 import { z } from "zod";
 import { createScopedToken } from "@grackle-ai/auth";
 import { ROOT_TASK_ID } from "@grackle-ai/common";
+import type { AuthContext } from "@grackle-ai/auth";
 import type { ToolDefinition } from "./tool-registry.js";
-import { createMcpServer } from "./mcp-server.js";
+import { createMcpServer, resolveAssetBaseUrl, dynamicRenderInputSchema, sessionIdsForWorkspace, type PublishWidgetEvent } from "./mcp-server.js";
+import { HELLO_WIDGET_URI } from "./resources/hello-widget.js";
+import { WIDGET_RENDER_META_KEY } from "./widget-render-meta.js";
 
 // API key must be exactly 64 hex characters (API_KEY_LENGTH in auth-middleware)
 const TEST_API_KEY = "a".repeat(64);
 
 /** Spin up a real MCP server on an ephemeral port. */
-function startServer(toolGroups?: ToolDefinition[][]): Promise<http.Server> {
+function startServer(toolGroups?: ToolDefinition[][], publishWidgetEvent?: PublishWidgetEvent): Promise<http.Server> {
   const server = createMcpServer({
     bindHost: "127.0.0.1",
     mcpPort: 0,
     grpcPort: 19999, // dummy — no gRPC backend needed for these tests
     apiKey: TEST_API_KEY,
     toolGroups,
+    publishWidgetEvent,
   });
   return new Promise<http.Server>((resolve) => {
     server.listen(0, "127.0.0.1", () => resolve(server));
@@ -552,14 +556,13 @@ describe("scoped token workspaceId injection", () => {
   });
 
   /**
-   * Finding-group tools (e.g. finding_post) must have workspaceId injected from
-   * the scoped token so agents can post findings without specifying a workspace.
-   * Regression test for #1183: standalone sessions minted tokens with pid:"" which
-   * caused injection to produce undefined, making finding_post fail.
+   * Scoped tools must have workspaceId injected from the scoped token so agents
+   * can call them without specifying a workspace. When the agent omits workspaceId,
+   * the handler must receive the token's workspace (pid), not undefined.
    */
-  it("finding group tool receives workspaceId injected from scoped token", async () => {
+  it("scoped tool receives workspaceId injected from scoped token", async () => {
     const capturedArgs: Record<string, unknown>[] = [];
-    const spyTool = makeSpyTool("finding_spy", "finding", capturedArgs, z.object({ workspaceId: z.string().optional() }));
+    const spyTool = makeSpyTool("inject_spy", "task", capturedArgs, z.object({ workspaceId: z.string().optional() }));
 
     server = await startServer([[spyTool]]);
 
@@ -571,10 +574,437 @@ describe("scoped token workspaceId injection", () => {
 
     const sessionId = await initialize(server!, authHeader);
     // Agent omits workspaceId — server must inject it from token
-    await callTool(server!, sessionId, "finding_spy", {}, authHeader);
+    await callTool(server!, sessionId, "inject_spy", {}, authHeader);
 
     expect(capturedArgs).toHaveLength(1);
     // Handler must receive the token's workspace, not undefined
     expect(capturedArgs[0]!.workspaceId).toBe("ws-odsp");
+  });
+});
+
+describe("MCP Apps app-side (#1237)", () => {
+  let server: http.Server | undefined;
+
+  afterEach(async () => {
+    if (server) {
+      await new Promise<void>((resolve) => { server!.close(() => resolve()); });
+      server = undefined;
+    }
+  });
+
+  /** Client capabilities advertising the io.modelcontextprotocol/ui extension. */
+  const UI_CAPABILITIES: Record<string, unknown> = {
+    extensions: { "io.modelcontextprotocol/ui": { mimeTypes: ["text/html;profile=mcp-app"] } },
+  };
+  const HELLO_URI: string = "ui://grackle/hello-widget";
+
+  interface JsonRpcResponse {
+    result?: Record<string, unknown>;
+    error?: { code: number; message: string };
+  }
+
+  /** Parse the first SSE `data:` line of an MCP response (or the raw JSON body). */
+  function parseResponse(raw: string): JsonRpcResponse {
+    const dataLine = raw.split("\n").find((l) => l.startsWith("data:"));
+    const json = dataLine ? dataLine.slice("data:".length).trim() : raw.trim();
+    return JSON.parse(json) as JsonRpcResponse;
+  }
+
+  /** Initialize with explicit capabilities; returns the session id + parsed result. */
+  function initializeWith(
+    srv: http.Server,
+    capabilities: Record<string, unknown>,
+  ): Promise<{ sessionId: string; response: JsonRpcResponse }> {
+    return new Promise((resolve, reject) => {
+      const body = JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: { protocolVersion: "2025-03-26", capabilities, clientInfo: { name: "test-client", version: "1.0.0" } },
+      });
+      const req = http.request(
+        { hostname: "127.0.0.1", port: port(srv), path: "/mcp", method: "POST", headers: postHeaders() },
+        (res) => {
+          const sessionId = res.headers["mcp-session-id"] as string | undefined;
+          let raw = "";
+          res.on("data", (chunk: Buffer) => { raw += chunk.toString(); });
+          res.on("end", () => {
+            if (!sessionId) { reject(new Error("No session ID in initialize response")); return; }
+            resolve({ sessionId, response: parseResponse(raw) });
+          });
+        },
+      );
+      req.on("error", reject);
+      req.write(body);
+      req.end();
+    });
+  }
+
+  /** Send a JSON-RPC request to an existing session and parse the SSE result. */
+  function rpc(
+    srv: http.Server,
+    sessionId: string,
+    method: string,
+    params: Record<string, unknown>,
+  ): Promise<JsonRpcResponse> {
+    return new Promise((resolve, reject) => {
+      const body = JSON.stringify({ jsonrpc: "2.0", id: 7, method, params });
+      const req = http.request(
+        { hostname: "127.0.0.1", port: port(srv), path: "/mcp", method: "POST", headers: postHeaders(sessionId) },
+        (res) => {
+          let raw = "";
+          res.on("data", (chunk: Buffer) => { raw += chunk.toString(); });
+          res.on("end", () => {
+            try { resolve(parseResponse(raw)); } catch (e) { reject(e as Error); }
+          });
+        },
+      );
+      req.on("error", reject);
+      req.write(body);
+      req.end();
+    });
+  }
+
+  /** GET a static asset (no auth). */
+  function getAsset(
+    srv: http.Server,
+    path: string,
+  ): Promise<{ status: number; contentType: string; body: string }> {
+    return new Promise((resolve, reject) => {
+      const req = http.request(
+        { hostname: "127.0.0.1", port: port(srv), path, method: "GET" },
+        (res) => {
+          let raw = "";
+          res.on("data", (chunk: Buffer) => { raw += chunk.toString(); });
+          res.on("end", () => resolve({
+            status: res.statusCode!,
+            contentType: String(res.headers["content-type"] ?? ""),
+            body: raw,
+          }));
+        },
+      );
+      req.on("error", reject);
+      req.end();
+    });
+  }
+
+  it("advertises the resources capability on initialize", async () => {
+    server = await startServer();
+    const { response } = await initializeWith(server, {});
+    const capabilities = (response.result?.capabilities ?? {}) as Record<string, unknown>;
+    expect(capabilities.resources).toBeDefined();
+  });
+
+  it("lists the hello widget resource with the MCP App MIME type", async () => {
+    server = await startServer();
+    const { sessionId } = await initializeWith(server, UI_CAPABILITIES);
+    const response = await rpc(server, sessionId, "resources/list", {});
+    const resources = (response.result?.resources ?? []) as Array<{ uri: string; mimeType: string }>;
+    const widget = resources.find((r) => r.uri === HELLO_URI);
+    expect(widget).toBeDefined();
+    expect(widget!.mimeType).toBe("text/html;profile=mcp-app");
+  });
+
+  it("reads the hello widget resource HTML", async () => {
+    server = await startServer();
+    const { sessionId } = await initializeWith(server, UI_CAPABILITIES);
+    const response = await rpc(server, sessionId, "resources/read", { uri: HELLO_URI });
+    const contents = (response.result?.contents ?? []) as Array<{ text: string; mimeType: string }>;
+    expect(contents[0]?.mimeType).toBe("text/html;profile=mcp-app");
+    expect(contents[0]?.text).toContain('id="result"');
+  });
+
+  it("returns a JSON-RPC error for an unknown resource uri", async () => {
+    server = await startServer();
+    const { sessionId } = await initializeWith(server, UI_CAPABILITIES);
+    const response = await rpc(server, sessionId, "resources/read", { uri: "ui://grackle/missing" });
+    expect(response.error).toBeDefined();
+  });
+
+  it("lists the widget tool with dual-key _meta only to UI-capable hosts", async () => {
+    server = await startServer();
+    const { sessionId } = await initializeWith(server, UI_CAPABILITIES);
+    const response = await rpc(server, sessionId, "tools/list", {});
+    const tools = (response.result?.tools ?? []) as Array<{
+      name: string;
+      _meta?: { ui?: { resourceUri?: string }; "ui/resourceUri"?: string };
+    }>;
+    const widget = tools.find((t) => t.name === "show_hello_widget");
+    expect(widget).toBeDefined();
+    expect(widget!._meta?.ui?.resourceUri).toBe(HELLO_URI);
+    expect(widget!._meta?.["ui/resourceUri"]).toBe(HELLO_URI);
+  });
+
+  it("hides the widget tool from non-UI hosts in standalone mode (no broker)", async () => {
+    // No publishWidgetEvent injected → standalone MCP server → spec-compliant
+    // client-capability gating: a client that does not advertise the ui ext does
+    // not see widget tools (it could not render them).
+    server = await startServer();
+    const { sessionId } = await initializeWith(server, {});
+    const response = await rpc(server, sessionId, "tools/list", {});
+    const names = ((response.result?.tools ?? []) as Array<{ name: string }>).map((t) => t.name);
+    expect(names).not.toContain("show_hello_widget");
+    expect(names).toContain("get_version_status");
+  });
+
+  it("exposes the widget tool to a non-UI host when the broker is active", async () => {
+    // Grackle's broker (publishWidgetEvent injected) is itself the ui-capable
+    // host: it captures the widget call and renders it in the chat, so the
+    // agent's MCP client (e.g. the Claude Agent SDK, which does not advertise the
+    // ui ext) still gets the widget tool listed.
+    server = await startServer(undefined, () => {});
+    const { sessionId } = await initializeWith(server, {});
+    const response = await rpc(server, sessionId, "tools/list", {});
+    const names = ((response.result?.tools ?? []) as Array<{ name: string }>).map((t) => t.name);
+    expect(names).toContain("show_hello_widget");
+  });
+
+  it("serves the widget JS assets without auth", async () => {
+    server = await startServer();
+    const asset = await getAsset(server, "/widgets/hello/index.js");
+    expect(asset.status).toBe(200);
+    expect(asset.contentType).toContain("javascript");
+    expect(asset.body).toContain("app-with-deps.js");
+  });
+});
+
+describe("resolveAssetBaseUrl", () => {
+  it("defaults to http for a plain host", () => {
+    expect(resolveAssetBaseUrl("127.0.0.1:7435", undefined, false)).toBe("http://127.0.0.1:7435");
+  });
+
+  it("uses https when the connection is TLS-encrypted", () => {
+    expect(resolveAssetBaseUrl("example.com", undefined, true)).toBe("https://example.com");
+  });
+
+  it("honors X-Forwarded-Proto (including comma lists and arrays)", () => {
+    expect(resolveAssetBaseUrl("example.com", "https", false)).toBe("https://example.com");
+    expect(resolveAssetBaseUrl("example.com", "https, http", false)).toBe("https://example.com");
+    expect(resolveAssetBaseUrl("example.com", ["https"], false)).toBe("https://example.com");
+  });
+
+  it("falls back to http://localhost when the host is missing", () => {
+    expect(resolveAssetBaseUrl(undefined, undefined, false)).toBe("http://localhost");
+  });
+
+  it("normalizes a hostile Host header so no markup can be injected", () => {
+    const result = resolveAssetBaseUrl('evil.com" onload="alert(1)', undefined, false);
+    expect(result).not.toContain('"');
+    expect(result).not.toContain("<");
+    expect(result).not.toContain(" ");
+  });
+});
+
+describe("MCP Apps widget capture (#1238)", () => {
+  let server: http.Server | undefined;
+
+  afterEach(async () => {
+    if (server) {
+      await new Promise<void>((resolve) => { server!.close(() => resolve()); });
+      server = undefined;
+    }
+  });
+
+  interface WidgetCall {
+    sessionId: string;
+    payload: {
+      resourceUri: string;
+      toolName: string;
+      html: string;
+      rendererKind?: string;
+      csp?: { resourceDomains?: string[]; allowInlineScripts?: boolean; allowUnsafeEval?: boolean };
+      toolInput?: Record<string, unknown>;
+      toolResult?: unknown;
+    };
+  }
+
+  /** A widget tool (uiResourceUri set) that captures its args, for capture testing. */
+  function makeWidgetSpyTool(capturedArgs: Record<string, unknown>[]): ToolDefinition {
+    return {
+      ...makeSpyTool("widget_spy", "widget", capturedArgs, z.object({ message: z.string().optional() })),
+      uiResourceUri: HELLO_WIDGET_URI,
+    };
+  }
+
+  /** A dynamic widget tool (no static resource) that returns a render descriptor on _meta (#1239). */
+  function makeDynamicWidgetTool(): ToolDefinition {
+    return {
+      name: "widget_show_test",
+      group: "widget",
+      description: "Dynamic agent-authored widget render for capture testing (#1239).",
+      inputSchema: z.object({ body: z.string() }),
+      rpcMethod: "widgetShow",
+      mutating: false,
+      async handler(args: Record<string, unknown>) {
+        return {
+          content: [{ type: "text" as const, text: "ok" }],
+          _meta: {
+            [WIDGET_RENDER_META_KEY]: {
+              rendererKind: "mcp-app-html",
+              body: args.body as string,
+              props: { greeting: "hi" },
+              allowInlineScripts: true,
+            },
+          },
+        };
+      },
+    };
+  }
+
+  it("emits a widget event when a scoped agent calls a widget tool", async () => {
+    const widgetCalls: WidgetCall[] = [];
+    server = await startServer(
+      [[makeWidgetSpyTool([])]],
+      (sessionId, payload) => { widgetCalls.push({ sessionId, payload } as WidgetCall); },
+    );
+    const scopedToken = createScopedToken(
+      { sub: ROOT_TASK_ID, pid: "default-ws", per: "system", sid: "sess-widget" },
+      TEST_API_KEY,
+    );
+    const authHeader = `Bearer ${scopedToken}`;
+    const sessionId = await initialize(server, authHeader);
+    await callTool(server, sessionId, "widget_spy", { message: "hi widget" }, authHeader);
+
+    expect(widgetCalls).toHaveLength(1);
+    expect(widgetCalls[0]!.sessionId).toBe("sess-widget");
+    const payload = widgetCalls[0]!.payload;
+    expect(payload.resourceUri).toBe(HELLO_WIDGET_URI);
+    expect(payload.toolName).toBe("widget_spy");
+    expect(payload.html).toContain("Grackle");
+    expect(payload.csp?.resourceDomains?.length).toBe(1);
+    expect(payload.toolInput).toMatchObject({ message: "hi widget" });
+    expect(payload.toolResult).toBeTruthy();
+  });
+
+  it("emits a dynamic widget event from a tool's _meta render descriptor (#1239)", async () => {
+    const widgetCalls: WidgetCall[] = [];
+    server = await startServer(
+      [[makeDynamicWidgetTool()]],
+      (sessionId, payload) => { widgetCalls.push({ sessionId, payload } as WidgetCall); },
+    );
+    const scopedToken = createScopedToken(
+      { sub: ROOT_TASK_ID, pid: "default-ws", per: "system", sid: "sess-dyn" },
+      TEST_API_KEY,
+    );
+    const authHeader = `Bearer ${scopedToken}`;
+    const sessionId = await initialize(server, authHeader);
+    await callTool(server, sessionId, "widget_show_test", { body: "<div>agent widget</div>" }, authHeader);
+
+    expect(widgetCalls).toHaveLength(1);
+    const payload = widgetCalls[0]!.payload;
+    expect(payload.rendererKind).toBe("mcp-app-html");
+    expect(payload.html).toBe("<div>agent widget</div>");
+    expect(payload.csp?.allowInlineScripts).toBe(true);
+    // Render-time props become the widget event's toolInput.
+    expect(payload.toolInput).toMatchObject({ greeting: "hi" });
+  });
+
+  it("emits a grackle-react widget event with unsafe-eval from a render descriptor (#1268)", async () => {
+    const widgetCalls: WidgetCall[] = [];
+    const reactTool: ToolDefinition = {
+      name: "component_show_test",
+      group: "widget",
+      description: "Dynamic React-runtime render for capture testing (#1268).",
+      inputSchema: z.object({ source: z.string() }),
+      rpcMethod: "componentShow",
+      mutating: false,
+      async handler(args: Record<string, unknown>) {
+        return {
+          content: [{ type: "text" as const, text: "ok" }],
+          _meta: {
+            [WIDGET_RENDER_META_KEY]: {
+              rendererKind: "grackle-react",
+              body: args.source as string,
+              props: { label: "Hi" },
+              allowUnsafeEval: true,
+            },
+          },
+        };
+      },
+    };
+    server = await startServer(
+      [[reactTool]],
+      (sessionId, payload) => { widgetCalls.push({ sessionId, payload } as WidgetCall); },
+    );
+    const scopedToken = createScopedToken(
+      { sub: ROOT_TASK_ID, pid: "default-ws", per: "system", sid: "sess-react" },
+      TEST_API_KEY,
+    );
+    const authHeader = `Bearer ${scopedToken}`;
+    const sessionId = await initialize(server, authHeader);
+    await callTool(server, sessionId, "component_show_test", { source: "render(<Button>{props.label}</Button>)" }, authHeader);
+
+    expect(widgetCalls).toHaveLength(1);
+    const payload = widgetCalls[0]!.payload;
+    expect(payload.rendererKind).toBe("grackle-react");
+    expect(payload.html).toBe("render(<Button>{props.label}</Button>)");
+    expect(payload.csp?.allowUnsafeEval).toBe(true);
+    expect(payload.toolInput).toMatchObject({ label: "Hi" });
+  });
+
+  it("does not emit a widget event for a non-widget tool", async () => {
+    const widgetCalls: WidgetCall[] = [];
+    const plainSpy = makeSpyTool("workspace_spy", "workspace", [], z.object({ workspaceId: z.string() }));
+    server = await startServer(
+      [[plainSpy]],
+      (sessionId, payload) => { widgetCalls.push({ sessionId, payload } as WidgetCall); },
+    );
+    const scopedToken = createScopedToken(
+      { sub: ROOT_TASK_ID, pid: "default-ws", per: "system", sid: "sess-plain" },
+      TEST_API_KEY,
+    );
+    const authHeader = `Bearer ${scopedToken}`;
+    const sessionId = await initialize(server, authHeader);
+    await callTool(server, sessionId, "workspace_spy", { workspaceId: "ws-1" }, authHeader);
+
+    expect(widgetCalls).toHaveLength(0);
+  });
+});
+
+describe("dynamicRenderInputSchema (#1272)", () => {
+  it("falls back to a passthrough object for an empty propsSchema (the DB default)", () => {
+    const schema = dynamicRenderInputSchema("") as { type?: string; additionalProperties?: unknown };
+    expect(schema.type).toBe("object");
+    // Must allow arbitrary props — the call path doesn't validate when there's no
+    // schema, so a closed object would make the promoted tool look uncallable.
+    expect(schema.additionalProperties).not.toBe(false);
+  });
+
+  it("falls back to a passthrough object for an unparseable propsSchema", () => {
+    const schema = dynamicRenderInputSchema("{ not json") as { additionalProperties?: unknown };
+    expect(schema.additionalProperties).not.toBe(false);
+  });
+
+  it("derives the input schema from a valid propsSchema", () => {
+    const schema = dynamicRenderInputSchema('{"type":"object","properties":{"label":{"type":"string"}}}') as {
+      properties?: Record<string, unknown>;
+    };
+    expect(schema.properties?.label).toBeDefined();
+  });
+});
+
+describe("sessionIdsForWorkspace (#1297 fan-out selection)", () => {
+  const scoped = (workspaceId: string): AuthContext => ({
+    type: "scoped", taskId: "t", workspaceId, personaId: "p", taskSessionId: "s",
+  });
+
+  it("selects only scoped sessions bound to the given workspace", () => {
+    const ctxs = new Map<string, AuthContext>([
+      ["s1", scoped("wsA")],
+      ["s2", scoped("wsB")],
+      ["s3", scoped("wsA")],
+      ["s4", { type: "api-key" }],
+    ]);
+    expect(sessionIdsForWorkspace(ctxs, "wsA").sort()).toEqual(["s1", "s3"]);
+    expect(sessionIdsForWorkspace(ctxs, "wsB")).toEqual(["s2"]);
+    expect(sessionIdsForWorkspace(ctxs, "wsC")).toEqual([]);
+  });
+
+  it("ignores non-scoped (api-key/oauth) sessions", () => {
+    const ctxs = new Map<string, AuthContext>([
+      ["s1", { type: "api-key" }],
+      ["s2", { type: "oauth", clientId: "c" }],
+    ]);
+    expect(sessionIdsForWorkspace(ctxs, "wsA")).toEqual([]);
   });
 });

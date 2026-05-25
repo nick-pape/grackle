@@ -2,8 +2,8 @@
  * Static mock data for visual testing (`?mock` mode).
  *
  * Provides realistic sample entities that exercise every UI state:
- * multiple environments, sessions in various statuses, workspaces with
- * tasks at different lifecycle stages, and findings across all categories.
+ * multiple environments, sessions in various statuses, and workspaces with
+ * tasks at different lifecycle stages.
  */
 
 import type {
@@ -12,11 +12,11 @@ import type {
   SessionEvent,
   Workspace,
   TaskData,
-  FindingData,
   TokenInfo,
   PersonaData,
 } from "../hooks/types.js";
 export { MOCK_KNOWLEDGE_NODES, MOCK_KNOWLEDGE_LINKS, MOCK_KNOWLEDGE_DETAILS } from "./mockKnowledgeData.js";
+export { MOCK_STREAMS, MOCK_STREAM_MESSAGES } from "./mockStreamsData.js";
 
 // ─── Environments ───────────────────────────────────
 
@@ -94,6 +94,7 @@ export const MOCK_SESSIONS: Session[] = [
     status: "running",
     prompt: "Refactor the authentication middleware to use JWT tokens",
     startedAt: "2026-02-27T08:15:00Z",
+    taskId: "task-001",
     inputTokens: 42_600,
     outputTokens: 8_100,
     costMillicents: 22_000,
@@ -107,6 +108,7 @@ export const MOCK_SESSIONS: Session[] = [
     prompt: "Write unit tests for the user registration endpoint",
     startedAt: "2026-02-27T07:30:00Z",
     endedAt: "2026-02-27T07:33:00Z",
+    taskId: "task-003",
     inputTokens: 31_400,
     outputTokens: 9_800,
     costMillicents: 18_000,
@@ -131,6 +133,7 @@ export const MOCK_SESSIONS: Session[] = [
     status: "running",
     prompt: "Implement rate limiting for the public API",
     startedAt: "2026-02-27T09:00:00Z",
+    taskId: "task-006c",
     inputTokens: 18_900,
     outputTokens: 4_500,
     costMillicents: 10_000,
@@ -264,6 +267,12 @@ export const MOCK_EVENTS: SessionEvent[] = [
     timestamp: "2026-02-27T08:15:02Z",
     content: "You are a senior backend engineer. Focus on security best practices and thorough testing.\nProject: acme/alpha — Node.js + Express REST API\nTask: Implement auth middleware using JWT tokens\n\nNote: A previous session attempted this task but was interrupted. Pick up where it left off.",
     raw: JSON.stringify({ systemContext: true }),
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "user_input",
+    timestamp: "2026-02-27T08:15:03Z",
+    content: "Pick up the **JWT auth migration** from the previous session. A few requirements:\n\n- use `jsonwebtoken`, not `jose`\n- access tokens expire in `24h`\n- store refresh tokens in the DB\n\nMake sure the existing tests still pass.",
   },
   {
     sessionId: "sess-001",
@@ -491,6 +500,12 @@ export const MOCK_EVENTS: SessionEvent[] = [
     eventType: "text",
     timestamp: "2026-02-27T08:15:42Z",
     content: "All 14 tests pass. Here's a summary of the changes:\n\n### Changes made\n\n| File | Action |\n|------|--------|\n| `src/middleware/auth.ts` | Rewrote to verify JWT Bearer tokens |\n| `src/routes/login.ts` | Now issues JWT access + refresh tokens |\n| `src/routes/protected.ts` | Updated to read `req.user` from JWT payload |\n| `src/middleware/__tests__/auth.test.ts` | Updated tests for JWT verification |\n\n### Key decisions\n- **Access token expiry**: 24 hours (configurable via `JWT_SECRET` env var)\n- **Refresh tokens**: 48-byte random hex, stored in DB\n- **Error handling**: Distinguishes expired tokens (401) from invalid tokens (403)",
+  },
+  {
+    sessionId: "sess-001",
+    eventType: "user_input",
+    timestamp: "2026-02-27T08:15:50Z",
+    content: "Looks great! Two follow-ups:\n\n1. add a `/refresh` endpoint that swaps a refresh token for a new access token\n2. note the token flow in `README.md`",
   },
 
   // ── sess-002: completed unit test session ──
@@ -936,6 +951,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 0,
     childTaskIds: ["task-001a", "task-001b", "task-001c"],
     canDecompose: true,
+    injectKnowledge: true,
     defaultPersonaId: "",
     workpad: JSON.stringify({
       status: "in_progress",
@@ -971,6 +987,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 1,
     childTaskIds: [],
     canDecompose: false,
+    injectKnowledge: true,
     defaultPersonaId: "",
     workpad: "",
     tokenBudget: 0,
@@ -992,6 +1009,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 1,
     childTaskIds: [],
     canDecompose: false,
+    injectKnowledge: true,
     defaultPersonaId: "",
     workpad: "",
     tokenBudget: 0,
@@ -1013,6 +1031,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 1,
     childTaskIds: [],
     canDecompose: false,
+    injectKnowledge: true,
     defaultPersonaId: "",
     workpad: "",
     tokenBudget: 0,
@@ -1035,6 +1054,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 0,
     childTaskIds: [],
     canDecompose: false,
+    injectKnowledge: true,
     defaultPersonaId: "",
     workpad: "",
     tokenBudget: 0,
@@ -1056,6 +1076,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 0,
     childTaskIds: [],
     canDecompose: false,
+    injectKnowledge: true,
     defaultPersonaId: "",
     workpad: "",
     tokenBudget: 0,
@@ -1077,6 +1098,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 0,
     childTaskIds: [],
     canDecompose: false,
+    injectKnowledge: true,
     defaultPersonaId: "",
     workpad: "",
     tokenBudget: 0,
@@ -1098,6 +1120,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 0,
     childTaskIds: [],
     canDecompose: false,
+    injectKnowledge: true,
     defaultPersonaId: "",
     workpad: "",
     tokenBudget: 0,
@@ -1120,6 +1143,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 0,
     childTaskIds: ["task-006a", "task-006b", "task-006c", "task-006d"],
     canDecompose: true,
+    injectKnowledge: true,
     defaultPersonaId: "",
     workpad: JSON.stringify({
       status: "in_progress",
@@ -1150,6 +1174,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 1,
     childTaskIds: [],
     canDecompose: false,
+    injectKnowledge: true,
     defaultPersonaId: "",
     workpad: "",
     tokenBudget: 0,
@@ -1171,6 +1196,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 1,
     childTaskIds: [],
     canDecompose: false,
+    injectKnowledge: true,
     defaultPersonaId: "",
     workpad: "",
     tokenBudget: 0,
@@ -1192,6 +1218,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 1,
     childTaskIds: [],
     canDecompose: false,
+    injectKnowledge: true,
     defaultPersonaId: "",
     workpad: "",
     tokenBudget: 0,
@@ -1213,6 +1240,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 1,
     childTaskIds: [],
     canDecompose: false,
+    injectKnowledge: true,
     defaultPersonaId: "",
     workpad: "",
     tokenBudget: 0,
@@ -1235,6 +1263,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 0,
     childTaskIds: ["task-007a", "task-007b"],
     canDecompose: true,
+    injectKnowledge: true,
     defaultPersonaId: "",
     workpad: "",
     tokenBudget: 0,
@@ -1257,6 +1286,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 1,
     childTaskIds: [],
     canDecompose: false,
+    injectKnowledge: true,
     defaultPersonaId: "",
     workpad: "",
     tokenBudget: 0,
@@ -1278,6 +1308,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 1,
     childTaskIds: [],
     canDecompose: false,
+    injectKnowledge: true,
     defaultPersonaId: "",
     workpad: "",
     tokenBudget: 0,
@@ -1299,100 +1330,11 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 0,
     childTaskIds: [],
     canDecompose: false,
+    injectKnowledge: true,
     defaultPersonaId: "",
     workpad: "",
     tokenBudget: 0,
     costBudgetMillicents: 0,
-  },
-];
-
-// ─── Findings ───────────────────────────────────────
-
-/** Sample findings across every category to exercise the FindingsPanel styling. */
-export const MOCK_FINDINGS: FindingData[] = [
-  {
-    id: "find-001",
-    workspaceId: "proj-alpha",
-    taskId: "task-001",
-    sessionId: "sess-001",
-    category: "architecture",
-    title: "Auth middleware is tightly coupled to Express",
-    content:
-      "The current auth middleware directly references Express Request/Response types. Consider extracting a framework-agnostic token verification layer so we can reuse it in the WebSocket auth path.",
-    tags: ["auth", "decoupling", "middleware"],
-    createdAt: "2026-02-27T08:16:00Z",
-  },
-  {
-    id: "find-002",
-    workspaceId: "proj-alpha",
-    taskId: "task-003",
-    sessionId: "sess-002",
-    category: "api",
-    title: "Missing pagination on GET /api/users",
-    content:
-      "The users endpoint returns all rows without limit/offset. For datasets over 10k rows this will cause timeouts. Recommend cursor-based pagination with a default page size of 50.",
-    tags: ["api", "pagination", "performance"],
-    createdAt: "2026-02-27T07:31:00Z",
-  },
-  {
-    id: "find-003",
-    workspaceId: "proj-alpha",
-    taskId: "task-005",
-    sessionId: "sess-003",
-    category: "bug",
-    title: "Race condition in session cleanup",
-    content:
-      "When two requests hit /api/logout concurrently, the second call throws a 500 because the session row has already been deleted. Needs an idempotent DELETE or a conditional check.",
-    tags: ["bug", "concurrency", "sessions"],
-    createdAt: "2026-02-26T22:50:00Z",
-  },
-  {
-    id: "find-004",
-    workspaceId: "proj-alpha",
-    taskId: "task-004",
-    sessionId: "",
-    category: "decision",
-    title: "Chose pg-pool over knex connection pool",
-    content:
-      "pg-pool gives us direct control over idle timeout, max connections, and health check queries. Knex wraps pg-pool anyway and adds overhead we don't need since we write raw SQL.",
-    tags: ["database", "decision", "postgres"],
-    createdAt: "2026-02-23T11:30:00Z",
-  },
-  {
-    id: "find-005",
-    workspaceId: "proj-alpha",
-    taskId: "",
-    sessionId: "",
-    category: "dependency",
-    title: "jsonwebtoken has 3 high-severity CVEs",
-    content:
-      "The jsonwebtoken package (v8.x) has known vulnerabilities. Consider migrating to jose which is maintained, supports ESM, and covers the same JWS/JWE surface area with zero dependencies.",
-    tags: ["security", "dependency", "jwt"],
-    createdAt: "2026-02-27T08:20:00Z",
-  },
-  {
-    id: "find-006",
-    workspaceId: "proj-alpha",
-    taskId: "task-001",
-    sessionId: "sess-001",
-    category: "pattern",
-    title: "Consistent error response shape",
-    content:
-      'All error responses should follow the shape `{ error: string, code: string, details?: unknown }`. Currently some routes return `{ message: string }` and others return `{ error: string }`.',
-    tags: ["api", "consistency", "error-handling"],
-    createdAt: "2026-02-27T08:17:00Z",
-  },
-  {
-    id: "find-007",
-    workspaceId: "proj-beta",
-    taskId: "task-007",
-    sessionId: "sess-004",
-    category: "architecture",
-    title: "Watermark storage should be pluggable",
-    content:
-      "The incremental load watermarks are currently stored in a local SQLite file. For production multi-worker scenarios, this needs to be backed by a shared store (Redis or Postgres).",
-    tags: ["architecture", "pipeline", "scalability"],
-    createdAt: "2026-02-27T09:05:00Z",
   },
 ];
 
@@ -1441,7 +1383,7 @@ export const MOCK_PERSONAS: PersonaData[] = [
     updatedAt: "2026-02-20T10:00:00Z",
     type: "agent",
     script: "",
-    allowedMcpTools: ["task_create", "task_update", "task_list", "finding_post", "finding_list", "knowledge_search", "knowledge_create_node", "session_spawn"],
+    allowedMcpTools: ["task_create", "task_update", "task_list", "knowledge_search", "session_spawn"],
   },
   {
     id: "persona-fe",
@@ -1462,8 +1404,8 @@ export const MOCK_PERSONAS: PersonaData[] = [
   {
     id: "persona-reviewer",
     name: "Code Reviewer",
-    description: "Reviews diffs for correctness, security, and style. Posts findings for issues discovered.",
-    systemPrompt: "You are a meticulous code reviewer. Check for security vulnerabilities, performance issues, and style consistency. Post findings for anything noteworthy.",
+    description: "Reviews diffs for correctness, security, and style. Reports issues discovered.",
+    systemPrompt: "You are a meticulous code reviewer. Check for security vulnerabilities, performance issues, and style consistency. Report anything noteworthy.",
     toolConfig: JSON.stringify({ allowedTools: ["Read", "Grep", "Glob"] }),
     runtime: "claude-code",
     model: "claude-sonnet-4-6",
@@ -1473,7 +1415,7 @@ export const MOCK_PERSONAS: PersonaData[] = [
     updatedAt: "2026-02-20T10:10:00Z",
     type: "agent",
     script: "",
-    allowedMcpTools: ["finding_post", "finding_list", "knowledge_search"],
+    allowedMcpTools: ["knowledge_search"],
   },
   {
     id: "persona-tester",
@@ -1494,7 +1436,7 @@ export const MOCK_PERSONAS: PersonaData[] = [
   {
     id: "persona-lint",
     name: "Lint & Format",
-    description: "Scripted persona — runs ESLint and Prettier on changed files, auto-fixes violations, and posts a findings summary.",
+    description: "Scripted persona — runs ESLint and Prettier on changed files, auto-fixes violations, and logs a summary.",
     systemPrompt: "",
     toolConfig: "{}",
     runtime: "genaiscript",
@@ -1504,7 +1446,7 @@ export const MOCK_PERSONAS: PersonaData[] = [
     createdAt: "2026-02-21T09:00:00Z",
     updatedAt: "2026-02-21T09:00:00Z",
     type: "script",
-    script: 'const files = env.files.filter(f => /\\.(ts|tsx|js)$/.test(f.filename));\nfor (const f of files) {\n  const eslintResult = await host.exec("npx", ["eslint", "--fix", f.filename]);\n  if (eslintResult.exitCode !== 0) {\n    env.findings.push({ category: "lint", title: `Lint issues in ${f.filename}`, content: eslintResult.stderr });\n  }\n  const prettierResult = await host.exec("npx", ["prettier", "--write", f.filename]);\n  if (prettierResult.exitCode !== 0) {\n    env.findings.push({ category: "format", title: `Prettier issues in ${f.filename}`, content: prettierResult.stderr });\n  }\n}\nenv.findings.push({ category: "summary", title: "Lint & format pass complete", content: `Ran ESLint and Prettier on ${files.length} files` });',
+    script: 'const files = env.files.filter(f => /\\.(ts|tsx|js)$/.test(f.filename));\nfor (const f of files) {\n  const eslintResult = await host.exec("npx", ["eslint", "--fix", f.filename]);\n  if (eslintResult.exitCode !== 0) {\n    console.log(`Lint issues in ${f.filename}: ${eslintResult.stderr}`);\n  }\n  const prettierResult = await host.exec("npx", ["prettier", "--write", f.filename]);\n  if (prettierResult.exitCode !== 0) {\n    console.log(`Prettier issues in ${f.filename}: ${prettierResult.stderr}`);\n  }\n}\nconsole.log(`Ran ESLint and Prettier on ${files.length} files`);',
     allowedMcpTools: [],
   },
 ];

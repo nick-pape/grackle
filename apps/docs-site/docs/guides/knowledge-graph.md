@@ -6,13 +6,13 @@ sidebar_position: 8
 
 # Knowledge Graph
 
-Grackle's knowledge graph gives agents a shared semantic memory backed by [Neo4j](https://neo4j.com/). Agents write observations, decisions, and discoveries to the graph. Other agents query it by concept — not keyword — and get back connected knowledge with context.
+Grackle's knowledge graph gives agents a shared semantic memory backed by [Neo4j](https://neo4j.com/). Agents query it by concept — not keyword — and get back connected knowledge with context. As of epic #1256 the graph is a **derived projection** of Grackle's entities (agent-authored writes were removed in #1257); it exposes a read-only surface and stays unpopulated until the derived-mirror projection lands (#1258).
 
 ![Knowledge graph — semantic search with interactive graph explorer](/img/knowledge-graph.png)
 
 ## Why a graph?
 
-Flat finding lists work for small teams, but as agents accumulate knowledge, you need **relationships**. A graph lets you ask "what do we know about the auth module?" and get back the architectural decision that changed it, the bug that was found in it, the dependency that constrains it, and the task that implemented it — all connected.
+A flat list of notes works for small teams, but as agents accumulate knowledge, you need **relationships**. A graph lets you ask "what do we know about the auth module?" and get back the architectural decision that changed it, the bug that was found in it, the dependency that constrains it, and the task that implemented it — all connected.
 
 ## Setup
 
@@ -34,9 +34,9 @@ Set these environment variables before starting the server:
 
 ```bash
 GRACKLE_KNOWLEDGE_ENABLED=true
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USERNAME=neo4j
-NEO4J_PASSWORD=grackle-dev
+GRACKLE_NEO4J_URL=bolt://localhost:7687
+GRACKLE_NEO4J_USER=neo4j
+GRACKLE_NEO4J_PASSWORD=grackle-dev
 ```
 
 ### 3. Start the server
@@ -49,13 +49,11 @@ On startup, the knowledge plugin connects to Neo4j, creates schema constraints a
 
 ## How it works
 
-### Two kinds of nodes
+### Derived projection
 
-The graph stores two types of knowledge:
+The graph is a **derived projection** of Grackle's primary data, not a separate store. **Reference nodes** point to entities in Grackle's database — tasks and sessions — without duplicating content; their embedding is derived from the source entity.
 
-**Reference nodes** point to entities in Grackle's database — tasks, findings, sessions. They don't duplicate content; their embedding is derived from the source entity. When a task is created or a finding is posted, the `entity-sync` subscriber automatically creates or updates the corresponding reference node.
-
-**Native nodes** are knowledge that only exists in the graph — insights, decisions, architectural observations. Agents create these explicitly via MCP tools when they discover something worth recording.
+As of epic #1256 the graph is being reworked into a purely derived mirror of these entities. Agent-authored ("native") writes were **removed in #1257**, so the graph exposes only a read surface — and stays **unpopulated until the derived-mirror projection lands** (#1258).
 
 ### Semantic search
 
@@ -67,13 +65,12 @@ Once you find a relevant node, you can **expand** it to see connected nodes — 
 
 ## Agent MCP tools
 
-When the knowledge plugin is enabled, agents get three additional MCP tools:
+When the knowledge plugin is enabled, agents get two additional MCP tools (read-only):
 
 | Tool | Description |
 |------|------------|
 | `knowledge_search` | Search the graph by natural language query. Returns nodes ranked by semantic similarity. |
 | `knowledge_get_node` | Retrieve a specific node by ID, including its properties and relationships. |
-| `knowledge_create_node` | Create a native knowledge node with content, category, and optional edges to existing nodes. |
 
 ### Example: agent workflow
 
@@ -81,10 +78,9 @@ An agent working on a task might:
 
 1. **Search** for existing knowledge about the area it's working on
 2. **Expand** a relevant node to understand the broader context
-3. Do its work
-4. **Create** a knowledge node recording an architectural decision it made
+3. Use that context to inform its work
 
-That decision is then available to every future agent via semantic search.
+> **Note:** agent-authored knowledge writes were removed in #1257. Until the derived-mirror projection (#1258) populates the graph from Grackle's entities and session transcripts, these read tools return empty results.
 
 ## Web UI
 

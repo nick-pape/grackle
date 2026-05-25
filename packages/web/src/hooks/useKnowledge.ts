@@ -2,7 +2,7 @@
  * Data hook for the Knowledge Graph explorer.
  *
  * Uses ConnectRPC for all operations, following the same pattern as
- * other domain hooks (useFindings, useTasks, etc.).
+ * other domain hooks (useTasks, useWorkspaces, etc.).
  *
  * @module
  */

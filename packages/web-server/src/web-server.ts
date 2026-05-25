@@ -32,6 +32,41 @@ export interface ReadinessResult {
   checks: Record<string, ReadinessCheck>;
 }
 
+/**
+ * Inbound webhook message body, mapped from a `POST /hook` JSON payload.
+ *
+ * Note the wire payload uses snake_case (`idempotency_key`); the handler maps it
+ * to the camelCase {@link WebhookBody.idempotencyKey} field below.
+ */
+export interface WebhookBody {
+  /** The user message text to inject into the channel (JSON field: `message`). */
+  message: string;
+  /** Optional sender attribution (JSON field: `from`, e.g. `alice@teams`). */
+  from?: string;
+  /** Optional dedupe key for webhook retries (JSON field: `idempotency_key`). */
+  idempotencyKey?: string;
+}
+
+/** Result of handling an inbound channel webhook (maps to an HTTP status). */
+export interface WebhookResult {
+  /** Outcome category determining the HTTP status code. */
+  outcome: "delivered" | "buffered" | "forbidden" | "not_found" | "ended" | "bad_request";
+  /** Resolved channel URI, when known. */
+  channelUri?: string;
+  /** Resolved session ID, when delivered. */
+  sessionId?: string;
+}
+
+/** Maps a webhook outcome to its HTTP status code. */
+const WEBHOOK_STATUS: Record<WebhookResult["outcome"], number> = {
+  delivered: 200,
+  buffered: 202,
+  bad_request: 400,
+  forbidden: 403,
+  not_found: 404,
+  ended: 410,
+};
+
 /** Options for creating a Grackle web server. */
 export interface WebServerOptions {
   /** API key for session/bearer auth. */
@@ -48,6 +83,20 @@ export interface WebServerOptions {
   readinessCheck?: () => ReadinessResult | Promise<ReadinessResult>;
   /** Names of loaded plugins, served at `GET /api/manifest`. */
   pluginNames?: string[];
+  /** MCP Apps widget sandbox port, served at `GET /api/manifest` for the SPA to derive the sandbox origin. */
+  sandboxPort?: number;
+  /**
+   * Explicit browser-facing sandbox origin (e.g. `https://sandbox.example.com`),
+   * served at `GET /api/manifest`. Takes precedence over `sandboxPort` on the
+   * SPA — set it when a reverse proxy / TLS makes the origin un-inferrable from
+   * `window.location` + `sandboxPort`.
+   */
+  sandboxOrigin?: string;
+  /**
+   * Inbound channel webhook handler (injected). Verifies the capability token
+   * and delivers the message. When omitted, the `/hook` route is disabled.
+   */
+  handleWebhook?: (token: string, body: WebhookBody) => Promise<WebhookResult>;
 }
 
 // ─── Static File Config ─────────────────────────────────────
@@ -172,24 +221,58 @@ const MAX_BODY_SIZE: number = 16_384;
  * @param req - The incoming HTTP request.
  * @returns The raw body as a UTF-8 string.
  */
+/** Thrown by {@link readBody} when a request body exceeds {@link MAX_BODY_SIZE}. */
+class PayloadTooLargeError extends Error {}
+
 function readBody(req: http.IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     let totalSize: number = 0;
+    let settled: boolean = false;
+    const settle = (action: () => void): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      action();
+    };
     req.on("data", (chunk: Buffer) => {
+      if (settled) {
+        return;
+      }
       totalSize += chunk.length;
       if (totalSize > MAX_BODY_SIZE) {
-        req.destroy();
-        reject(new Error("Body too large"));
+        // Apply backpressure (stop reading) and signal overflow WITHOUT destroying
+        // the socket here, so the route can still send a 413. The socket is torn
+        // down once that response flushes (see `respondPayloadTooLarge`). Pausing
+        // prevents an attacker from streaming an arbitrarily large body at speed.
+        req.pause();
+        settle(() => reject(new PayloadTooLargeError("Body too large")));
         return;
       }
       chunks.push(chunk);
     });
-    req.on("end", () => {
-      resolve(Buffer.concat(chunks).toString("utf8"));
-    });
-    req.on("error", reject);
+    req.on("end", () => settle(() => resolve(Buffer.concat(chunks).toString("utf8"))));
+    req.on("error", (err: Error) => settle(() => reject(err)));
+    // If the client disconnects mid-upload, `close` fires without `end`/`error`;
+    // reject so the awaiting handler can't hang. After a normal `end`, the promise
+    // is already settled and this is a no-op.
+    req.on("close", () => settle(() => reject(new Error("connection closed before request body was fully read"))));
   });
+}
+
+/**
+ * Send a `413 Payload Too Large` response and close the (half-read) connection.
+ *
+ * `Connection: close` lets Node flush the response and tear down the socket
+ * whose request body was not fully consumed, discarding the unsent upload.
+ */
+function respondPayloadTooLarge(req: http.IncomingMessage, res: http.ServerResponse): void {
+  // Tear down the (paused, half-read) request once the 413 has flushed, so the
+  // client can't keep streaming an oversized body after we've responded.
+  res.once("finish", () => { req.destroy(); });
+  res.writeHead(413, { "Content-Type": "application/json", "Connection": "close" });
+  res.end(JSON.stringify({ error: "payload too large" }));
 }
 
 /**
@@ -283,7 +366,7 @@ export function isWildcardAddress(host: string): boolean {
  * @returns An `http.Server` ready to `.listen()`.
  */
 export function createWebServer(options: WebServerOptions): http.Server {
-  const { apiKey, webPort, bindHost, connectRoutes, webDistDir, readinessCheck, pluginNames } = options;
+  const { apiKey, webPort, bindHost, connectRoutes, webDistDir, readinessCheck, pluginNames, sandboxPort, sandboxOrigin, handleWebhook } = options;
   const distDir = webDistDir ?? resolveWebDistDir();
   const allowNetwork = isWildcardAddress(bindHost);
   const dialableHost = allowNetwork ? "127.0.0.1" : bindHost;
@@ -339,7 +422,11 @@ export function createWebServer(options: WebServerOptions): http.Server {
 
     // --- Plugin manifest (no auth) ---
     if (rawPath === "/api/manifest") {
-      const manifest = { plugins: (pluginNames ?? []).map((name) => ({ name })) };
+      const manifest = {
+        plugins: (pluginNames ?? []).map((name) => ({ name })),
+        ...(sandboxPort !== undefined ? { sandboxPort } : {}),
+        ...(sandboxOrigin !== undefined ? { sandboxOrigin } : {}),
+      };
       res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
       res.end(JSON.stringify(manifest));
       return;
@@ -409,7 +496,11 @@ export function createWebServer(options: WebServerOptions): http.Server {
           redirect_uris: client.redirectUris,
           client_name: client.clientName,
         }));
-      } catch {
+      } catch (err) {
+        if (err instanceof PayloadTooLargeError) {
+          respondPayloadTooLarge(req, res);
+          return;
+        }
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "invalid_request" }));
       }
@@ -559,7 +650,11 @@ export function createWebServer(options: WebServerOptions): http.Server {
           Location: redirectUrl,
         });
         res.end();
-      } catch {
+      } catch (err) {
+        if (err instanceof PayloadTooLargeError) {
+          respondPayloadTooLarge(req, res);
+          return;
+        }
         res.writeHead(400);
         res.end("Bad Request");
       }
@@ -625,7 +720,11 @@ export function createWebServer(options: WebServerOptions): http.Server {
 
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "unsupported_grant_type" }));
-      } catch {
+      } catch (err) {
+        if (err instanceof PayloadTooLargeError) {
+          respondPayloadTooLarge(req, res);
+          return;
+        }
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "invalid_request" }));
       }
@@ -665,6 +764,64 @@ export function createWebServer(options: WebServerOptions): http.Server {
     // --- Public static assets (favicons, manifest) — no session required ---
     if (PUBLIC_ASSETS.has(rawPath)) {
       serveStaticFile(res, rawPath, distDir);
+      return;
+    }
+
+    // --- Inbound channel webhook (capability-token auth; NO session/API key) ---
+    if (handleWebhook && req.method === "POST" && (rawPath.startsWith("/hook/") || rawPath === "/hook")) {
+      // `rawPath` is already URL-decoded above, and the token is base64url
+      // (URL-safe), so no further decoding is needed — avoids decodeURIComponent
+      // throwing on malformed percent-encoding.
+      const pathToken = rawPath.startsWith("/hook/") ? rawPath.slice("/hook/".length) : "";
+      const token = pathToken || req.headers.authorization?.replace(/^Bearer\s+/i, "") || "";
+      // Fail fast on a missing token before reading/parsing the body, to avoid
+      // unnecessary work on unauthenticated requests.
+      if (token.trim().length === 0) {
+        res.writeHead(403, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "missing capability token" }));
+        return;
+      }
+      let raw: string;
+      try {
+        raw = await readBody(req);
+      } catch (err) {
+        if (err instanceof PayloadTooLargeError) {
+          respondPayloadTooLarge(req, res);
+        } else {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "could not read body" }));
+        }
+        return;
+      }
+      let parsed: { message?: unknown; from?: unknown; idempotency_key?: unknown };
+      try {
+        parsed = JSON.parse(raw) as typeof parsed;
+      } catch {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "invalid JSON body" }));
+        return;
+      }
+      if (typeof parsed.message !== "string" || parsed.message.length === 0) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "message is required" }));
+        return;
+      }
+      let result: WebhookResult;
+      try {
+        result = await handleWebhook(token, {
+          message: parsed.message,
+          from: typeof parsed.from === "string" ? parsed.from : undefined,
+          idempotencyKey: typeof parsed.idempotency_key === "string" ? parsed.idempotency_key : undefined,
+        });
+      } catch {
+        // A throwing handler must not become an unhandled rejection (which can
+        // crash the process); return a controlled 500 instead.
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "internal error" }));
+        return;
+      }
+      res.writeHead(WEBHOOK_STATUS[result.outcome], { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ channel: result.channelUri, status: result.outcome, session_id: result.sessionId }));
       return;
     }
 

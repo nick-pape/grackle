@@ -1,6 +1,7 @@
 /**
- * Unit tests verifying that token + credential push happens before each task
- * spawn, and that failures are non-blocking.
+ * Unit tests verifying that credentials are authenticated (on demand) before
+ * each task spawn (AHP HR6), and that the deprecated proactive PushTokens path
+ * is never used.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
@@ -44,10 +45,6 @@ vi.mock("@grackle-ai/database", async (importOriginal) => {
       updateTask: vi.fn(),
       deleteTask: vi.fn(),
       getChildren: vi.fn(() => []),
-    },
-    findingStore: {
-      queryFindings: vi.fn(() => []),
-      postFinding: vi.fn(),
     },
     personaStore: {
       listPersonas: vi.fn(() => []),
@@ -108,9 +105,7 @@ vi.mock("@grackle-ai/core", async (importOriginal) => {
     emit: vi.fn(),
     processEventStream: vi.fn(),
     tokenPush: {
-      pushToEnv: vi.fn().mockResolvedValue(undefined),
-      pushProviderCredentialsToEnv: vi.fn().mockResolvedValue(undefined),
-      refreshTokensForTask: vi.fn().mockResolvedValue(undefined),
+      authenticateForRuntime: vi.fn().mockResolvedValue(undefined),
     },
     adapterManager: {
       getAdapter: vi.fn(),
@@ -154,9 +149,7 @@ vi.mock("./credential-bundle.js", () => ({
 // Import AFTER mocks
 import { sqlite as _sqlite, taskStore } from "@grackle-ai/database";
 const sqlite = _sqlite!;
-import { tokenPush as tokenBroker, adapterManager, logger } from "@grackle-ai/core";
-import { create } from "@bufbuild/protobuf";
-import { powerline } from "@grackle-ai/common";
+import { tokenPush as tokenBroker, adapterManager } from "@grackle-ai/core";
 
 /** Apply the minimal SQLite schema needed for tests. */
 function applySchema(): void {
@@ -198,6 +191,7 @@ function makeMockConnection() {
   return {
     client: {
       spawn: vi.fn(() => spawnStream),
+      authenticate: vi.fn().mockResolvedValue({}),
       pushTokens: vi.fn().mockResolvedValue({}),
       sendInput: vi.fn().mockResolvedValue({}),
     },
@@ -231,22 +225,8 @@ describe("task-start token push", () => {
     vi.clearAllMocks();
   });
 
-  describe("pushProviderCredentialsToEnv()", () => {
-    it("is callable as a mock", async () => {
-      await tokenBroker.pushProviderCredentialsToEnv("env-1");
-      expect(tokenBroker.pushProviderCredentialsToEnv).toHaveBeenCalledWith("env-1");
-    });
-  });
-
-  describe("refreshTokensForTask()", () => {
-    it("is callable as a mock", async () => {
-      await tokenBroker.refreshTokensForTask("env-1");
-      expect(tokenBroker.refreshTokensForTask).toHaveBeenCalledWith("env-1");
-    });
-  });
-
   describe("grpc-service startTask()", () => {
-    it("calls refreshTokensForTask before spawn", async () => {
+    it("authenticates the runtime before spawn, and never uses the deprecated PushTokens", async () => {
       const { registerGrackleRoutes } = await import("./grpc-service.js");
 
       const mockConn = makeMockConnection();
@@ -254,14 +234,13 @@ describe("task-start token push", () => {
         mockConn as unknown as ReturnType<typeof adapterManager.getConnection>,
       );
 
-      const refreshSpy = vi.spyOn(tokenBroker, "refreshTokensForTask").mockResolvedValue();
+      const authSpy = vi.spyOn(tokenBroker, "authenticateForRuntime").mockResolvedValue();
 
       vi.mocked(taskStore.getTask).mockReturnValue(
         makeMockTask() as ReturnType<typeof taskStore.getTask>,
       );
       vi.mocked(taskStore.areDependenciesMet).mockReturnValue(true);
 
-      // Build a mock router to extract our handler
       const handlers = new Map<string, Function>();
       const fakeRouter = {
         service: (_svc: unknown, impl: Record<string, Function>) => {
@@ -277,49 +256,15 @@ describe("task-start token push", () => {
 
       await startTask!({ taskId: "task-1", environmentId: "env-1" });
 
-      expect(refreshSpy).toHaveBeenCalledWith("env-1", "claude-code", { excludeFileTokens: true });
+      // Demand-driven authenticate is used, scoped to the runtime.
+      expect(authSpy).toHaveBeenCalledWith("env-1", "claude-code", { excludeFileTokens: true });
+      // Cutover proof: the deprecated proactive push is never called.
+      expect(mockConn.client.pushTokens).not.toHaveBeenCalled();
 
-      // Verify refresh happened before spawn
-      const refreshOrder = refreshSpy.mock.invocationCallOrder[0];
+      // Authenticate happens before spawn.
+      const authOrder = authSpy.mock.invocationCallOrder[0];
       const spawnOrder = mockConn.client.spawn.mock.invocationCallOrder[0];
-      expect(refreshOrder).toBeLessThan(spawnOrder);
-    });
-
-    it("proceeds with spawn even if refreshTokensForTask rejects", async () => {
-      const { registerGrackleRoutes } = await import("./grpc-service.js");
-
-      const mockConn = makeMockConnection();
-      vi.spyOn(adapterManager, "getConnection").mockReturnValue(
-        mockConn as unknown as ReturnType<typeof adapterManager.getConnection>,
-      );
-
-      // refreshTokensForTask itself never throws (it uses allSettled internally),
-      // but verify the call site is resilient even if it did
-      vi.spyOn(tokenBroker, "pushToEnv").mockRejectedValue(new Error("push failed"));
-      vi.spyOn(tokenBroker, "pushProviderCredentialsToEnv").mockRejectedValue(new Error("creds failed"));
-
-      vi.mocked(taskStore.getTask).mockReturnValue(
-        makeMockTask({ id: "task-2" }) as ReturnType<typeof taskStore.getTask>,
-      );
-      vi.mocked(taskStore.areDependenciesMet).mockReturnValue(true);
-
-      const handlers = new Map<string, Function>();
-      const fakeRouter = {
-        service: (_svc: unknown, impl: Record<string, Function>) => {
-          for (const [name, fn] of Object.entries(impl)) {
-            handlers.set(name, fn);
-          }
-        },
-      };
-      registerGrackleRoutes(fakeRouter as never);
-
-      const startTask = handlers.get("startTask");
-
-      // Should not throw despite push failures
-      await startTask!({ taskId: "task-2", environmentId: "env-1" });
-
-      // Spawn should still have been called
-      expect(mockConn.client.spawn).toHaveBeenCalled();
+      expect(authOrder).toBeLessThan(spawnOrder);
     });
   });
 });

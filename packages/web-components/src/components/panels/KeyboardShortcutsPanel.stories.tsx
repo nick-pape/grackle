@@ -25,7 +25,7 @@ export const AllCategoriesRendered: Story = {
     await expect(canvas.getByText("Workspace Page")).toBeInTheDocument();
     await expect(canvas.getByText("Navigation Lists")).toBeInTheDocument();
     await expect(canvas.getByText("Editing")).toBeInTheDocument();
-    await expect(canvas.getByText("Chat")).toBeInTheDocument();
+    await expect(canvas.getByText("Root")).toBeInTheDocument();
   },
 };
 
@@ -35,6 +35,6 @@ export const ShortcutDescriptions: Story = {
     await expect(canvas.getByText("Open keyboard shortcuts reference")).toBeInTheDocument();
     await expect(canvas.getByText("Create a new task")).toBeInTheDocument();
     await expect(canvas.getByText("Switch to Overview tab")).toBeInTheDocument();
-    await expect(canvas.getByText("Send message (when input is focused)")).toBeInTheDocument();
+    await expect(canvas.getByText("Send message (when the composer is focused)")).toBeInTheDocument();
   },
 };

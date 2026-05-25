@@ -16,12 +16,10 @@ export const ALL_MCP_TOOL_NAMES: ReadonlySet<string> = new Set([
   "credential_provider_list", "credential_provider_set",
   // env
   "env_list", "env_add", "env_provision", "env_stop", "env_destroy", "env_remove", "env_wake",
-  // finding
-  "finding_list", "finding_post",
   // ipc
   "ipc_spawn", "ipc_write", "ipc_close", "ipc_list_fds", "ipc_list_streams", "ipc_terminate", "ipc_create_stream", "ipc_attach", "ipc_share_stream",
   // knowledge
-  "knowledge_search", "knowledge_get_node", "knowledge_create_node",
+  "knowledge_search", "knowledge_get_node",
   // logs
   "logs_get",
   // persona
@@ -44,6 +42,12 @@ export const ALL_MCP_TOOL_NAMES: ReadonlySet<string> = new Set([
   "workspace_list", "workspace_create", "workspace_get", "workspace_update", "workspace_archive",
   // escalation
   "escalate_to_human", "escalation_list", "escalation_acknowledge",
+  // widget (MCP Apps) — render a ui:// widget in the chat via the broker
+  "show_hello_widget",
+  // component registry (#1239 widgets → #1269 components) — agent-authored
+  "component_register", "component_update", "component_list", "component_render", "component_search", "component_promote", "widget_show",
+  // GenUX React runtime (#1268) — render-by-source JSX
+  "component_show",
 ]);
 
 // ─── Preset Tool Sets ────────────────────────────────────────
@@ -54,7 +58,6 @@ export const ALL_MCP_TOOL_NAMES: ReadonlySet<string> = new Set([
  * Matches the current hardcoded `SCOPED_TOOLS` set in tool-scoping.ts.
  */
 export const DEFAULT_SCOPED_MCP_TOOLS: readonly string[] = [
-  "finding_post", "finding_list",
   "task_create", "task_list", "task_search", "task_show", "task_start", "task_complete",
   "session_attach", "session_send_input",
   "persona_list", "persona_show",
@@ -64,6 +67,13 @@ export const DEFAULT_SCOPED_MCP_TOOLS: readonly string[] = [
   "logs_get",
   "workpad_write", "workpad_read",
   "schedule_list", "schedule_show",
+  // MCP Apps: agents can render a ui:// widget in the chat (Grackle's broker
+  // captures the call and renders it; SEP-1865). Includes the agent-authored
+  // widget registry (#1239) so scoped agents can author + render widgets.
+  "show_hello_widget",
+  "component_register", "component_update", "component_list", "component_render", "component_search", "component_promote", "widget_show",
+  // GenUX React runtime (#1268)
+  "component_show",
 ] as const;
 
 /**
@@ -71,7 +81,6 @@ export const DEFAULT_SCOPED_MCP_TOOLS: readonly string[] = [
  * A strict subset of DEFAULT_SCOPED_MCP_TOOLS.
  */
 export const WORKER_MCP_TOOLS: readonly string[] = [
-  "finding_post", "finding_list",
   "task_show",
   "session_attach", "session_send_input",
   "persona_list", "persona_show",
@@ -88,7 +97,6 @@ export const WORKER_MCP_TOOLS: readonly string[] = [
  */
 export const ORCHESTRATOR_MCP_TOOLS: readonly string[] = [
   // All default scoped tools
-  "finding_post", "finding_list",
   "task_create", "task_list", "task_search", "task_show", "task_start", "task_complete",
   "session_attach", "session_send_input",
   "persona_list", "persona_show",
@@ -98,11 +106,14 @@ export const ORCHESTRATOR_MCP_TOOLS: readonly string[] = [
   "logs_get",
   "workpad_write", "workpad_read",
   "schedule_list", "schedule_show",
+  // MCP Apps widgets (in DEFAULT_SCOPED_MCP_TOOLS — keep this a superset).
+  "show_hello_widget",
+  "component_register", "component_update", "component_list", "component_render", "component_search", "component_promote", "widget_show",
+  "component_show",
   // Additional management tools
   "task_update", "task_delete", "task_resume",
   "session_spawn", "session_kill", "session_status",
   "persona_create",
-  "knowledge_create_node",
   "schedule_create", "schedule_update", "schedule_delete",
   // Escalation — orchestrators can page the human
   "escalate_to_human",

@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/common",
-  "version": "0.110.2",
+  "version": "0.128.0",
   "description": "Proto definitions, generated code, and shared types for Grackle",
   "license": "MIT",
   "repository": {
@@ -37,7 +37,8 @@
   "dependencies": {
     "@bufbuild/protobuf": "^2.5.0",
     "@connectrpc/connect": "^2.0.0",
-    "fuse.js": "^7.0.0"
+    "fuse.js": "^7.0.0",
+    "zod": "^4.3.0"
   },
   "devDependencies": {
     "@bufbuild/buf": "^1.50.0",

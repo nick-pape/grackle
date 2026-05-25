@@ -25,7 +25,8 @@ interface Props {
   onCreateTask: (
     workspaceId: string, title: string, description?: string,
     dependsOn?: string[], parentTaskId?: string, defaultPersonaId?: string,
-    canDecompose?: boolean, onSuccess?: () => void, onError?: (message: string) => void,
+    canDecompose?: boolean, injectKnowledge?: boolean,
+    onSuccess?: () => void, onError?: (message: string) => void,
   ) => void;
   /** Callback to update an existing task. */
   onUpdateTask: (
@@ -77,6 +78,7 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
   const [selectedDeps, setSelectedDeps] = useState<string[]>(existingTask?.dependsOn ?? []);
   const [defaultPersonaId, setDefaultPersonaId] = useState(existingTask?.defaultPersonaId ?? "");
   const [canDecompose, setCanDecompose] = useState(existingTask?.canDecompose ?? false);
+  const [injectKnowledge, setInjectKnowledge] = useState(existingTask?.injectKnowledge ?? true);
   const [creating, setCreating] = useState(false);
 
   // In edit mode, tasks may not have loaded yet at mount time. Sync form state
@@ -92,6 +94,7 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
       setSelectedDeps(existingTask.dependsOn);
       setDefaultPersonaId(existingTask.defaultPersonaId);
       setCanDecompose(existingTask.canDecompose);
+      setInjectKnowledge(existingTask.injectKnowledge);
     }
   }, [isEdit, existingTask]);
 
@@ -142,6 +145,7 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
         parentTaskId || undefined,
         defaultPersonaId,
         canDecompose,
+        injectKnowledge,
         () => {
           onShowToast?.("Task created", "success");
           navigate(workspaceIdProp ? workspaceUrl(workspaceIdProp, environmentId) : "/tasks", { replace: true });
@@ -287,6 +291,20 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
                   onChange={(e) => setCanDecompose(e.target.checked)}
                 />
                 Can spawn subtasks
+              </label>
+            </div>
+          )}
+
+          {/* Inject Knowledge (#1259) */}
+          {!isEdit && (
+            <div className={styles.section}>
+              <label className={styles.depItem} data-testid="task-edit-inject-knowledge">
+                <input
+                  type="checkbox"
+                  checked={injectKnowledge}
+                  onChange={(e) => setInjectKnowledge(e.target.checked)}
+                />
+                Inject related prior work from the knowledge graph
               </label>
             </div>
           )}

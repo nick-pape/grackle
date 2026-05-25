@@ -10,10 +10,12 @@ import { Logger } from 'pino';
 export interface AgentEvent {
     // (undocumented)
     content: string;
+    diagnostic?: boolean;
     // (undocumented)
     raw?: unknown;
     // (undocumented)
     timestamp: string;
+    toolCallId?: string;
     // Warning: (ae-forgotten-export) The symbol "AgentEventType" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)

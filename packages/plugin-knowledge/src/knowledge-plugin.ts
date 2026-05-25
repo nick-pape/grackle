@@ -12,28 +12,34 @@ import { grackle } from "@grackle-ai/common";
 import { logger } from "./logger.js";
 import {
   initKnowledge,
-  createEntitySyncSubscriber,
   neo4jHealthCheck,
+  getKnowledgeEmbedder,
 } from "./knowledge-init.js";
-import { createKnowledgeHealthPhase, markKnowledgeInitFailed } from "./knowledge-health.js";
+import {
+  createKnowledgeHealthPhase,
+  markKnowledgeInitFailed,
+  isNeo4jHealthy,
+} from "./knowledge-health.js";
+import { createKnowledgeProjectionPhase } from "./knowledge-projection-phase.js";
 import {
   searchKnowledge,
   getKnowledgeNode,
   expandKnowledgeNode,
   listRecentKnowledgeNodes,
-  createKnowledgeNode,
 } from "./knowledge-handlers.js";
 import { knowledgeMcpTools } from "./mcp-tools.js";
+import { createEntitySyncSubscriber } from "./entity-sync.js";
+import { buildRelatedPriorWork } from "./related-prior-work.js";
 
 /**
  * Create the knowledge plugin that contributes Neo4j-backed knowledge graph
- * capabilities to the Grackle server.
+ * read capabilities to the Grackle server. The graph is populated by the
+ * derived-mirror projection (see epic #1256), not by agent-authored writes.
  *
  * - **gRPC handlers**: searchKnowledge, getKnowledgeNode, expandKnowledgeNode,
- *   listRecentKnowledgeNodes, createKnowledgeNode
+ *   listRecentKnowledgeNodes
  * - **Reconciliation phases**: knowledge-health (Neo4j connectivity check)
- * - **Event subscribers**: entity sync (task/finding → knowledge graph)
- * - **MCP tools**: knowledge_search, knowledge_get_node, knowledge_create_node
+ * - **MCP tools**: knowledge_search, knowledge_get_node
  *
  * Depends on the "core" plugin.
  *
@@ -69,15 +75,23 @@ export function createKnowledgePlugin(): GracklePlugin {
         getKnowledgeNode,
         expandKnowledgeNode,
         listRecentKnowledgeNodes,
-        createKnowledgeNode,
       },
     }],
 
     reconciliationPhases: () => [
       createKnowledgeHealthPhase({ healthCheck: neo4jHealthCheck }),
+      createKnowledgeProjectionPhase({
+        getEmbedder: getKnowledgeEmbedder,
+        isHealthy: isNeo4jHealthy,
+      }),
     ],
 
-    eventSubscribers: (ctx: PluginContext) => [createEntitySyncSubscriber(ctx)],
+    eventSubscribers: (ctx) => [createEntitySyncSubscriber(ctx)],
+
+    // PUSH half of the retrieval loop (#1259): inject "Related prior work" into
+    // a spawning task's system prompt, decoupled from the spawn path via core's
+    // spawn-context registry.
+    systemPromptContributors: () => [{ contribute: buildRelatedPriorWork }],
 
     mcpTools: () => knowledgeMcpTools,
   };

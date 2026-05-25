@@ -171,6 +171,10 @@ export const tasks = sqliteTable("tasks", {
   canDecompose: integer("can_decompose", { mode: "boolean" })
     .notNull()
     .default(false),
+  /** Inject knowledge-graph context ("Related prior work" + search guidance) at spawn (#1259). */
+  injectKnowledge: integer("inject_knowledge", { mode: "boolean" })
+    .notNull()
+    .default(true),
   defaultPersonaId: text("default_persona_id").notNull().default(""),
   workpad: text("workpad").notNull().default(""),
   scheduleId: text("schedule_id").notNull().default(""),
@@ -247,6 +251,37 @@ export type PersonaRow = typeof personas.$inferSelect;
 /** Shape accepted by INSERT into the personas table. */
 export type NewPersona = typeof personas.$inferInsert;
 
+// ─── Components (agent-authored UI registry, #1239/#1269) ────
+
+export const components = sqliteTable("components", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id")
+    .notNull()
+    .references(() => workspaces.id),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  rendererKind: text("renderer_kind").notNull().default("grackle-react"),
+  body: text("body").notNull(),
+  propsSchema: text("props_schema").notNull().default(""),
+  version: integer("version").notNull().default(1),
+  /** Whether this component is promoted to a dynamic `render_<name>` MCP tool (#1272). */
+  promoted: integer("promoted", { mode: "boolean" }).notNull().default(false),
+  ownerTaskId: text("owner_task_id").notNull().default(""),
+  ownerSessionId: text("owner_session_id").notNull().default(""),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
+/** Row shape returned by a SELECT on the components table. */
+export type ComponentRow = typeof components.$inferSelect;
+
+/** Shape accepted by INSERT into the components table. */
+export type NewComponent = typeof components.$inferInsert;
+
 // ─── Schedules ───────────────────────────────────────────
 
 export const schedules = sqliteTable("schedules", {
@@ -274,6 +309,31 @@ export type ScheduleRow = typeof schedules.$inferSelect;
 
 /** Shape accepted by INSERT into the schedules table. */
 export type NewSchedule = typeof schedules.$inferInsert;
+
+// ─── Channel Grants ──────────────────────────────────────
+
+/**
+ * Capability grants exposing a single channel (e.g. `grackle:/sessions/<id>`)
+ * to external callers via a scoped, revocable webhook token. `id` is the
+ * grant ID embedded in the token's `jti` claim.
+ */
+export const channelGrants = sqliteTable("channel_grants", {
+  id: text("id").primaryKey(),
+  channelUri: text("channel_uri").notNull(),
+  verbs: text("verbs").notNull(),
+  label: text("label").notNull().default(""),
+  expiresAt: text("expires_at"),
+  revoked: integer("revoked", { mode: "boolean" }).notNull().default(false),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
+/** Row shape returned by a SELECT on the channel_grants table. */
+export type ChannelGrantRow = typeof channelGrants.$inferSelect;
+
+/** Shape accepted by INSERT into the channel_grants table. */
+export type NewChannelGrant = typeof channelGrants.$inferInsert;
 
 // ─── Escalations ─────────────────────────────────────────
 
@@ -332,6 +392,33 @@ export const domainEvents = sqliteTable("domain_events", {
 
 /** Row shape returned by a SELECT on the domain_events table. */
 export type DomainEventRow = typeof domainEvents.$inferSelect;
+
+// ─── Stream Messages ─────────────────────────────────────
+
+export const streamMessages = sqliteTable("stream_messages", {
+  seq: text("seq").primaryKey(),
+  streamId: text("stream_id").notNull(),
+  senderId: text("sender_id").notNull(),
+  content: text("content").notNull(),
+  timestamp: text("timestamp").notNull(),
+});
+
+/** Row shape returned by a SELECT on the stream_messages table. */
+export type StreamMessageRow = typeof streamMessages.$inferSelect;
+
+// ─── Session Actions ─────────────────────────────────────
+
+export const sessionActions = sqliteTable("session_actions", {
+  seq: text("seq").primaryKey(),
+  sessionId: text("session_id").notNull(),
+  type: text("type").notNull(),
+  content: text("content").notNull(),
+  raw: text("raw").notNull().default(""),
+  timestamp: text("timestamp").notNull(),
+});
+
+/** Row shape returned by a SELECT on the session_actions table. */
+export type SessionActionRow = typeof sessionActions.$inferSelect;
 
 // ─── Plugins ─────────────────────────────────────────────────
 

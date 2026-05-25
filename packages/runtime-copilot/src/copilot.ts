@@ -167,7 +167,7 @@ export class CopilotSession extends BaseAgentSession {
     this.copilotClient = new copilotSdk.CopilotClient(clientOptions);
     await this.copilotClient.start();
 
-    this.eventQueue.push({ type: "system", timestamp: ts(), content: "Copilot CLI server connected" });
+    this.eventQueue.push({ type: "system", timestamp: ts(), content: "Copilot CLI server connected", diagnostic: true });
 
     // ── Build session config ──
     // onPermissionRequest is REQUIRED by the SDK — use approveAll for headless operation
@@ -220,6 +220,7 @@ export class CopilotSession extends BaseAgentSession {
       type: "system",
       timestamp: ts(),
       content: `Copilot session created (model: ${this.model}, session: ${this.runtimeSessionId})`,
+      diagnostic: true,
     });
 
     // ── Subscribe to events (once; persist for the session lifetime) ──
@@ -264,6 +265,7 @@ export class CopilotSession extends BaseAgentSession {
         timestamp: ts(),
         content: JSON.stringify({ tool: toolName, args: toolArgs }),
         raw: event,
+        toolCallId: typeof data?.toolCallId === "string" ? data.toolCallId : undefined,
       });
     });
 
@@ -292,6 +294,7 @@ export class CopilotSession extends BaseAgentSession {
         timestamp: ts(),
         content: output,
         raw: event,
+        toolCallId: typeof data?.toolCallId === "string" ? data.toolCallId : undefined,
       });
     });
 

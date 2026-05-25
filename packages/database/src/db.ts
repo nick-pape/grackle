@@ -202,6 +202,148 @@ const MIGRATIONS: Migration[] = [
       }
     },
   },
+  {
+    version: 10,
+    name: "widgets",
+    up: (conn) => {
+      conn.exec(`
+        CREATE TABLE IF NOT EXISTS widgets (
+          id               TEXT PRIMARY KEY,
+          workspace_id     TEXT NOT NULL REFERENCES workspaces(id),
+          name             TEXT NOT NULL,
+          description      TEXT NOT NULL DEFAULT '',
+          renderer_kind    TEXT NOT NULL DEFAULT 'mcp-app-html',
+          body             TEXT NOT NULL,
+          props_schema     TEXT NOT NULL DEFAULT '',
+          version          INTEGER NOT NULL DEFAULT 1,
+          owner_task_id    TEXT NOT NULL DEFAULT '',
+          owner_session_id TEXT NOT NULL DEFAULT '',
+          created_at       TEXT NOT NULL DEFAULT (datetime('now')),
+          updated_at       TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_widgets_workspace ON widgets(workspace_id);
+      `);
+    },
+  },
+  {
+    version: 11,
+    name: "channel-grants",
+    up: (conn) => {
+      conn.exec(`
+        CREATE TABLE IF NOT EXISTS channel_grants (
+          id           TEXT PRIMARY KEY,
+          channel_uri  TEXT NOT NULL,
+          verbs        TEXT NOT NULL,
+          label        TEXT NOT NULL DEFAULT '',
+          expires_at   TEXT,
+          revoked      INTEGER NOT NULL DEFAULT 0,
+          created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_channel_grants_channel_uri ON channel_grants(channel_uri);
+      `);
+    },
+  },
+  {
+    version: 12,
+    name: "rename-widgets-to-components",
+    up: (conn) => {
+      // The agent-authored registry (#1239 "widgets") becomes the generic component
+      // registry (#1269). Rebuild as `components` (copying existing rows) so the
+      // `renderer_kind` column default aligns with the new API/store default
+      // (grackle-react) rather than the legacy widgets default (mcp-app-html).
+      // Written defensively to be re-run-safe: tests rewind user_version, and v10's
+      // CREATE-IF-NOT-EXISTS can recreate an empty `widgets` after a prior rebuild —
+      // if `components` already exists, just drop the redundant `widgets`.
+      const componentsExists =
+        conn.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='components'").get() !== undefined;
+      if (componentsExists) {
+        conn.exec("DROP TABLE IF EXISTS widgets;");
+        return;
+      }
+      conn.exec(`
+        CREATE TABLE components (
+          id               TEXT PRIMARY KEY,
+          workspace_id     TEXT NOT NULL REFERENCES workspaces(id),
+          name             TEXT NOT NULL,
+          description      TEXT NOT NULL DEFAULT '',
+          renderer_kind    TEXT NOT NULL DEFAULT 'grackle-react',
+          body             TEXT NOT NULL,
+          props_schema     TEXT NOT NULL DEFAULT '',
+          version          INTEGER NOT NULL DEFAULT 1,
+          owner_task_id    TEXT NOT NULL DEFAULT '',
+          owner_session_id TEXT NOT NULL DEFAULT '',
+          created_at       TEXT NOT NULL DEFAULT (datetime('now')),
+          updated_at       TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        INSERT INTO components SELECT * FROM widgets;
+        DROP TABLE widgets;
+        CREATE INDEX IF NOT EXISTS idx_components_workspace ON components(workspace_id);
+      `);
+    },
+  },
+  {
+    version: 13,
+    name: "stream-messages",
+    up: (conn) => {
+      conn.exec(`
+        CREATE TABLE IF NOT EXISTS stream_messages (
+          seq        TEXT PRIMARY KEY,
+          stream_id  TEXT NOT NULL,
+          sender_id  TEXT NOT NULL,
+          content    TEXT NOT NULL,
+          timestamp  TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_stream_messages_stream ON stream_messages(stream_id, seq);
+      `);
+    },
+  },
+  {
+    version: 14,
+    name: "session-actions",
+    up: (conn) => {
+      conn.exec(`
+        CREATE TABLE IF NOT EXISTS session_actions (
+          seq         TEXT PRIMARY KEY,
+          session_id  TEXT NOT NULL,
+          type        TEXT NOT NULL,
+          content     TEXT NOT NULL,
+          raw         TEXT NOT NULL DEFAULT '',
+          timestamp   TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_session_actions_session ON session_actions(session_id, seq);
+      `);
+    },
+  },
+  {
+    version: 15,
+    name: "task-inject-knowledge",
+    up: (conn) => {
+      // #1259: per-task opt-out of knowledge-graph context injection at spawn.
+      // Defaults ON (1). Guard against the column already existing (fresh
+      // installs include it in baseline).
+      const taskCols = conn
+        .prepare("PRAGMA table_info(tasks)")
+        .all() as Array<{ name: string }>;
+      if (!taskCols.some((c) => c.name === "inject_knowledge")) {
+        conn.exec("ALTER TABLE tasks ADD COLUMN inject_knowledge INTEGER NOT NULL DEFAULT 1");
+      }
+    },
+  },
+  {
+    version: 16,
+    name: "component-promotion",
+    up: (conn) => {
+      // Adds the `promoted` flag used to surface a component as a dynamic
+      // render_<name> MCP tool (#1272). Guard the ALTER so re-runs (tests rewind
+      // user_version) and fresh installs that already have the column don't fail.
+      const cols = conn
+        .prepare("PRAGMA table_info(components)")
+        .all() as Array<{ name: string }>;
+      if (!cols.some((c) => c.name === "promoted")) {
+        conn.exec("ALTER TABLE components ADD COLUMN promoted INTEGER NOT NULL DEFAULT 0");
+      }
+    },
+  },
 ];
 
 /** The highest schema version defined by BASELINE + MIGRATIONS. */
@@ -462,6 +604,7 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
       parent_task_id TEXT NOT NULL DEFAULT '',
       depth         INTEGER NOT NULL DEFAULT 0,
       can_decompose INTEGER NOT NULL DEFAULT 0,
+      inject_knowledge INTEGER NOT NULL DEFAULT 1,
       default_persona_id TEXT NOT NULL DEFAULT '',
       workpad       TEXT NOT NULL DEFAULT '',
       schedule_id   TEXT NOT NULL DEFAULT '',
@@ -525,6 +668,23 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
       payload   TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS stream_messages (
+      seq        TEXT PRIMARY KEY,
+      stream_id  TEXT NOT NULL,
+      sender_id  TEXT NOT NULL,
+      content    TEXT NOT NULL,
+      timestamp  TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS session_actions (
+      seq         TEXT PRIMARY KEY,
+      session_id  TEXT NOT NULL,
+      type        TEXT NOT NULL,
+      content     TEXT NOT NULL,
+      raw         TEXT NOT NULL DEFAULT '',
+      timestamp   TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS schedules (
       id                  TEXT PRIMARY KEY,
       title               TEXT NOT NULL,
@@ -568,6 +728,8 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
     CREATE INDEX IF NOT EXISTS idx_findings_workspace ON findings(workspace_id);
     CREATE INDEX IF NOT EXISTS idx_domain_events_type ON domain_events(type);
     CREATE INDEX IF NOT EXISTS idx_domain_events_timestamp ON domain_events(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_stream_messages_stream ON stream_messages(stream_id, seq);
+    CREATE INDEX IF NOT EXISTS idx_session_actions_session ON session_actions(session_id, seq);
     CREATE INDEX IF NOT EXISTS idx_sessions_task_id ON sessions(task_id);
     CREATE TABLE IF NOT EXISTS plugins (
       name       TEXT PRIMARY KEY,

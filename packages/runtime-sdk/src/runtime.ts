@@ -6,6 +6,20 @@ export interface AgentEvent {
   timestamp: string;
   content: string;
   raw?: unknown;
+  /**
+   * Stable tool-call id correlating a `tool_use` with its `tool_result` (AHP HR3).
+   * Set by the runtime on tool events (lifted from the SDK's native id, or
+   * synthesized when the SDK has none); left unset for non-tool events.
+   */
+  toolCallId?: string;
+  /**
+   * True for runtime lifecycle/diagnostic `system` events ("Starting runtime…",
+   * "Session initialized", worktree setup) — used to tee these to telemetry
+   * sinks (the additive OTLP logs sink today) and, in a later step, to filter
+   * them out of authoritative `SessionState` (AHP HR7). Left unset for
+   * substantive events (agent output, the injected system context).
+   */
+  diagnostic?: boolean;
 }
 
 /** Parameters for spawning a new agent session. */

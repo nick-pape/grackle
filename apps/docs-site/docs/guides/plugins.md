@@ -73,11 +73,11 @@ Grackle ships with four plugins. All are enabled by default except knowledge (op
 
 ### Orchestration
 
-**Enabled by default.** Adds the task DAG, personas, findings, and escalation system. Without this plugin, Grackle runs as a pure session + environment manager — no tasks, no orchestration.
+**Enabled by default.** Adds the task DAG, personas, and escalation system. Without this plugin, Grackle runs as a pure session + environment manager — no tasks, no orchestration.
 
 | Contribution | Details |
 |-------------|---------|
-| **gRPC handlers** | Tasks (create, start, complete, resume, stop, delete), personas, findings, escalations |
+| **gRPC handlers** | Tasks (create, start, complete, resume, stop, delete), personas, escalations |
 | **Reconciliation phases** | `orphan-reparent` (re-parent tasks whose parent session has ended) |
 | **Event subscribers** | SIGCHLD (child completion notification), escalation auto-routing, orphan re-parenting |
 
@@ -98,10 +98,9 @@ Supports both standard cron syntax (`0 0 * * *`) and interval shorthand (`30s`, 
 
 | Contribution | Details |
 |-------------|---------|
-| **gRPC handlers** | `searchKnowledge`, `getKnowledgeNode`, `expandKnowledgeNode`, `listRecentKnowledgeNodes`, `createKnowledgeNode` |
+| **gRPC handlers** | `searchKnowledge`, `getKnowledgeNode`, `expandKnowledgeNode`, `listRecentKnowledgeNodes` |
 | **Reconciliation phases** | `knowledge-health` (monitors Neo4j connectivity) |
-| **Event subscribers** | `entity-sync` (syncs task and finding entities to the knowledge graph) |
-| **MCP tools** | `knowledge_search`, `knowledge_get_node`, `knowledge_create_node` |
+| **MCP tools** | `knowledge_search`, `knowledge_get_node` |
 
 If Neo4j is unreachable at startup, the plugin logs an error (`Knowledge plugin initialization failed — running degraded`) and enters degraded mode — the rest of the server continues normally.
 
@@ -111,7 +110,7 @@ Control which plugins load via environment variables:
 
 | Variable | Default | Effect |
 |----------|---------|--------|
-| `GRACKLE_SKIP_ORCHESTRATION` | unset | Set to `1` to disable orchestration (no tasks, personas, findings) |
+| `GRACKLE_SKIP_ORCHESTRATION` | unset | Set to `1` to disable orchestration (no tasks, personas) |
 | `GRACKLE_SKIP_SCHEDULING` | unset | Set to `1` to disable scheduled triggers |
 | `GRACKLE_KNOWLEDGE_ENABLED` | unset | Set to `true` to enable the knowledge graph plugin |
 
@@ -130,7 +129,6 @@ Plugins can subscribe to these system events:
 | `task.created`, `task.updated`, `task.started`, `task.completed`, `task.deleted`, `task.reparented` | Task lifecycle changes |
 | `workspace.created`, `workspace.archived`, `workspace.updated` | Workspace changes |
 | `persona.created`, `persona.updated`, `persona.deleted` | Persona changes |
-| `finding.posted` | New finding posted |
 | `environment.added`, `environment.removed`, `environment.changed`, `environment.provision_progress` | Environment lifecycle |
 | `token.changed`, `credential.providers_changed` | Credential changes |
 | `schedule.created`, `schedule.updated`, `schedule.deleted`, `schedule.fired` | Schedule lifecycle |

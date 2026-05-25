@@ -24,7 +24,6 @@ import type {
   Environment,
   Session,
   SessionEvent,
-  FindingData,
   TaskData,
   Workspace,
   TokenInfo,
@@ -44,10 +43,11 @@ const NOOP_DOMAIN_HOOK: DomainHook = {
 import {
   MOCK_ENVIRONMENTS,
   MOCK_SESSIONS,
+  MOCK_STREAMS,
+  MOCK_STREAM_MESSAGES,
   MOCK_EVENTS,
   MOCK_WORKSPACES,
   MOCK_TASKS,
-  MOCK_FINDINGS,
   MOCK_TOKENS,
   MOCK_PERSONAS,
   MOCK_TASK_SESSIONS,
@@ -57,7 +57,16 @@ import {
   MOCK_KNOWLEDGE_DETAILS,
   type MockStreamStep,
 } from "./mockData.js";
-import type { GraphNode, GraphLink, NodeDetail } from "../hooks/types.js";
+import type { GraphNode, GraphLink, NodeDetail, StreamData } from "../hooks/types.js";
+import { INTERNAL_STREAM_PREFIXES } from "../utils/streamCoordination.js";
+
+/** Filter internal IPC plumbing streams unless explicitly requested. */
+function filterMockStreams(includeInternal: boolean): StreamData[] {
+  if (includeInternal) {
+    return MOCK_STREAMS;
+  }
+  return MOCK_STREAMS.filter((s) => !INTERNAL_STREAM_PREFIXES.some((p) => s.name.startsWith(p)));
+}
 
 // ─── Constants ──────────────────────────────────────
 
@@ -81,14 +90,12 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   // ── State ─────────────────────────────────────────
   const [environments, setEnvironments] = useState<Environment[]>(MOCK_ENVIRONMENTS);
   const [sessions, setSessions] = useState<Session[]>(MOCK_SESSIONS);
+  const [streams, setStreams] = useState<StreamData[]>(() => filterMockStreams(false));
   const [events, setEvents] = useState<SessionEvent[]>(MOCK_EVENTS);
   const [lastSpawnedId, setLastSpawnedId] = useState<string | undefined>(undefined);
   const [workspaces, setWorkspaces] = useState<Workspace[]>(MOCK_WORKSPACES);
   const [workspaceLinkError, setWorkspaceLinkError] = useState("");
   const [tasks, setTasks] = useState<TaskData[]>(MOCK_TASKS);
-  const [findings, setFindings] = useState<FindingData[]>(MOCK_FINDINGS);
-  const [selectedFinding, setSelectedFinding] = useState<FindingData | undefined>(undefined);
-  const findingLoading = false;
   const [tokens, setTokens] = useState<TokenInfo[]>(MOCK_TOKENS);
   const [credentialProviders, setCredentialProviders] = useState<CredentialProviderConfig>({
     claude: "off",
@@ -382,7 +389,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       defaultPersonaId?: string,
       useWorktrees?: boolean,
       workingDirectory?: string,
-      onSuccess?: () => void,
+      onSuccess?: (workspace: Workspace) => void,
       _onError?: (message: string) => void,
     ) => {
       console.log("[MockGrackle] createWorkspace", { name, description });
@@ -405,7 +412,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
       setWorkspaces((prev) => [...prev, newWorkspace]);
       if (onSuccess) {
-        onSuccess();
+        onSuccess(newWorkspace);
       }
     },
     [nextId],
@@ -440,6 +447,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       parentTaskId?: string,
       defaultPersonaId?: string,
       canDecompose?: boolean,
+      injectKnowledge?: boolean,
       onSuccess?: () => void,
       _onError?: (message: string) => void,
     ) => {
@@ -475,6 +483,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           depth,
           childTaskIds: [],
           canDecompose: canDecompose ?? !parentTaskId,
+          injectKnowledge: injectKnowledge ?? true,
           defaultPersonaId: defaultPersonaId || "",
           workpad: "",
           tokenBudget: 0,
@@ -757,59 +766,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [],
   );
 
-  /** Filters findings by workspaceId. */
-  const loadFindings: UseGrackleSocketResult["findings"]["loadFindings"] = useCallback(
-    async (workspaceId: string) => {
-      console.log("[MockGrackle] loadFindings", workspaceId);
-      setFindings(MOCK_FINDINGS.filter((f) => f.workspaceId === workspaceId));
-    },
-    [],
-  );
-
-  /** Load all findings across all workspaces. */
-  const loadAllFindings: UseGrackleSocketResult["findings"]["loadAllFindings"] = useCallback(async () => {
-    console.log("[MockGrackle] loadAllFindings");
-    setFindings([...MOCK_FINDINGS]);
-  }, []);
-
-  /** Load a single finding by ID. */
-  const loadFinding: UseGrackleSocketResult["findings"]["loadFinding"] = useCallback(
-    async (findingId: string) => {
-      console.log("[MockGrackle] loadFinding", findingId);
-      const found = MOCK_FINDINGS.find((f) => f.id === findingId);
-      setSelectedFinding(found);
-    },
-    [],
-  );
-
-  /** Adds a new finding to state. */
-  const postFinding: UseGrackleSocketResult["findings"]["postFinding"] = useCallback(
-    async (
-      workspaceId: string,
-      title: string,
-      content: string,
-      category?: string,
-      tags?: string[],
-    ) => {
-      console.log("[MockGrackle] postFinding", { workspaceId, title });
-
-      const newFinding: FindingData = {
-        id: nextId("find"),
-        workspaceId,
-        taskId: "",
-        sessionId: "",
-        category: category || "general",
-        title,
-        content,
-        tags: tags || [],
-        createdAt: new Date().toISOString(),
-      };
-
-      setFindings((prev) => [...prev, newFinding]);
-    },
-    [nextId],
-  );
-
   /** No-op in mock mode (environments are pre-seeded). */
   const loadEnvironments: UseGrackleSocketResult["environments"]["loadEnvironments"] = useCallback(async () => {
     console.log("[MockGrackle] loadEnvironments");
@@ -1029,17 +985,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         domainHook: NOOP_DOMAIN_HOOK,
       },
 
-      findings: {
-        findings,
-        selectedFinding,
-        findingLoading,
-        findingsLoading: false,
-        loadFindings,
-        loadAllFindings,
-        loadFinding,
-        postFinding,
-        domainHook: NOOP_DOMAIN_HOOK,
-      },
 
       tokens: {
         tokens,
@@ -1176,11 +1121,14 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       },
 
       streams: {
-        streams: [],
+        streams,
         streamsLoading: false,
         streamsLoadedOnce: true,
         streamsLoadError: false,
-        loadStreams: async () => {},
+        loadStreams: async (includeInternal = false) => { setStreams(filterMockStreams(includeInternal)); },
+        liveMessages: MOCK_STREAM_MESSAGES,
+        loadTranscript: async () => { /* mock transcripts are static */ },
+        handleStreamMessage: () => { /* no-op in mock */ },
         domainHook: NOOP_DOMAIN_HOOK,
       },
 
@@ -1371,14 +1319,13 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [
       environments,
       sessions,
+      streams,
       events,
       lastSpawnedId,
       taskSessions,
       workspaces,
       workspaceLinkError,
       tasks,
-      findings,
-      selectedFinding,
       tokens,
       credentialProviders,
       personas,
@@ -1404,10 +1351,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       resumeTask,
       updateTask,
       deleteTask,
-      loadFindings,
-      loadAllFindings,
-      loadFinding,
-      postFinding,
       loadEnvironments,
       addEnvironment,
       updateEnvironment,

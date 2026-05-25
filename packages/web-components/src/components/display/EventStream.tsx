@@ -88,6 +88,8 @@ interface EventStreamProps {
    * Receives the target session ID and the formatted envelope text.
    */
   onForward?: (sessionId: string, text: string) => Promise<void>;
+  /** Sandbox proxy origin URL for rendering MCP Apps widget events. */
+  sandboxProxyUrl?: string;
 }
 
 /**
@@ -104,6 +106,7 @@ export function EventStream({
   environments,
   personas,
   onForward,
+  sandboxProxyUrl,
 }: EventStreamProps): JSX.Element {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isReversed, setIsReversed] = useState(readStoredDirection);
@@ -303,7 +306,7 @@ export function EventStream({
                   onToggle={(shiftKey) => { selection.toggleEvent(originalIndex, shiftKey); }}
                   onCopied={() => { onShowToast?.("Copied to clipboard", "success"); }}
                 >
-                  <EventRenderer event={event} toolUseCtx={event.toolUseCtx} settled={event.settled} />
+                  <EventRenderer event={event} toolUseCtx={event.toolUseCtx} settled={event.settled} sandboxProxyUrl={sandboxProxyUrl} />
                 </EventHoverRow>
               </motion.div>
             );

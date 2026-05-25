@@ -21,7 +21,6 @@ import type {
   SessionEvent,
   Workspace,
   TaskData,
-  FindingData,
   TokenInfo,
   CredentialProviderConfig,
   Codespace,
@@ -60,6 +59,7 @@ export function protoToSession(p: grackle.Session): Session {
     error: p.error || undefined,
     endReason: p.endReason || undefined,
     personaId: p.personaId || undefined,
+    taskId: p.taskId || undefined,
     inputTokens: p.inputTokens,
     outputTokens: p.outputTokens,
     costMillicents: p.costMillicents,
@@ -74,6 +74,7 @@ export function protoToSessionEvent(p: grackle.SessionEvent): SessionEvent {
     timestamp: p.timestamp,
     content: p.content,
     raw: p.raw || undefined,
+    toolCallId: p.toolCallId || undefined,
   };
 }
 
@@ -115,6 +116,7 @@ export function protoToTask(p: grackle.Task): TaskData {
     depth: p.depth,
     childTaskIds: [...p.childTaskIds],
     canDecompose: p.canDecompose,
+    injectKnowledge: p.injectKnowledge,
     defaultPersonaId: p.defaultPersonaId,
     workpad: p.workpad,
     tokenBudget: p.tokenBudget,
@@ -122,20 +124,6 @@ export function protoToTask(p: grackle.Task): TaskData {
   };
 }
 
-/** Convert a proto Finding to the UI FindingData type. */
-export function protoToFinding(p: grackle.Finding): FindingData {
-  return {
-    id: p.id,
-    workspaceId: p.workspaceId,
-    taskId: p.taskId,
-    sessionId: p.sessionId,
-    category: p.category,
-    title: p.title,
-    content: p.content,
-    tags: [...p.tags],
-    createdAt: p.createdAt,
-  };
-}
 
 /** Convert a proto TokenInfo to the UI TokenInfo type. */
 export function protoToToken(p: grackle.TokenInfo): TokenInfo {
@@ -286,5 +274,6 @@ export function protoToStream(p: grackle.StreamInfo): StreamData {
     subscriberCount: p.subscriberCount,
     messageBufferDepth: p.messageBufferDepth,
     subscribers: p.subscribers.map(protoToStreamSubscriber),
+    selfEcho: p.selfEcho,
   };
 }

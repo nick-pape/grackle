@@ -58,13 +58,13 @@ export const WithPresetWorker: Story = {
 
 export const CustomSelection: Story = {
   args: {
-    selectedTools: ["finding_post", "task_list", "workpad_read"],
+    selectedTools: ["task_show", "task_list", "workpad_read"],
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     // Verify selected tools are checked
-    const findingPost = canvas.getByTestId("tool-finding_post") as HTMLInputElement;
-    await expect(findingPost.checked).toBe(true);
+    const taskShow = canvas.getByTestId("tool-task_show") as HTMLInputElement;
+    await expect(taskShow.checked).toBe(true);
     const taskList = canvas.getByTestId("tool-task_list") as HTMLInputElement;
     await expect(taskList.checked).toBe(true);
     // Verify unselected tool is not checked
@@ -78,8 +78,8 @@ export const CustomSelection: Story = {
 export const ToggleIndividualTool: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByTestId("tool-finding_post"));
-    await expect(args.onChange).toHaveBeenCalledWith(["finding_post"]);
+    await userEvent.click(canvas.getByTestId("tool-task_show"));
+    await expect(args.onChange).toHaveBeenCalledWith(["task_show"]);
   },
 };
 
@@ -87,11 +87,11 @@ export const SearchFilter: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const filterInput = canvas.getByTestId("mcp-tool-filter");
-    await userEvent.type(filterInput, "finding");
-    // finding group should be visible with its tools
-    await expect(canvas.getByTestId("tool-group-finding")).toBeInTheDocument();
-    await expect(canvas.getByTestId("tool-finding_post")).toBeInTheDocument();
-    await expect(canvas.getByTestId("tool-finding_list")).toBeInTheDocument();
+    await userEvent.type(filterInput, "workpad");
+    // workpad group should be visible with its tools
+    await expect(canvas.getByTestId("tool-group-workpad")).toBeInTheDocument();
+    await expect(canvas.getByTestId("tool-workpad_write")).toBeInTheDocument();
+    await expect(canvas.getByTestId("tool-workpad_read")).toBeInTheDocument();
     // env group should be hidden (no match)
     await expect(canvas.queryByTestId("tool-group-env")).not.toBeInTheDocument();
   },
@@ -115,7 +115,7 @@ export const GroupSelectAll: Story = {
 export const DisabledState: Story = {
   args: {
     disabled: true,
-    selectedTools: ["finding_post"],
+    selectedTools: ["task_show"],
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -124,6 +124,6 @@ export const DisabledState: Story = {
     // Filter input should be disabled
     await expect(canvas.getByTestId("mcp-tool-filter")).toBeDisabled();
     // Tool checkboxes should be disabled
-    await expect(canvas.getByTestId("tool-finding_post")).toBeDisabled();
+    await expect(canvas.getByTestId("tool-task_show")).toBeDisabled();
   },
 };

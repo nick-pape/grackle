@@ -284,11 +284,11 @@ describe("persona-store", () => {
   it("creates persona with allowedMcpTools and retrieves it", () => {
     personaStore.createPersona(
       "mcp-1", "MCP Test", "", "prompt", "{}", "", "", 0, "[]",
-      "agent", "", '["finding_post","task_list"]',
+      "agent", "", '["workpad_read","task_list"]',
     );
     const p = personaStore.getPersona("mcp-1");
     expect(p).toBeDefined();
-    expect(p!.allowedMcpTools).toBe('["finding_post","task_list"]');
+    expect(p!.allowedMcpTools).toBe('["workpad_read","task_list"]');
   });
 
   it("defaults allowedMcpTools to empty array JSON when not provided", () => {
@@ -301,7 +301,7 @@ describe("persona-store", () => {
   it("updates allowedMcpTools", () => {
     personaStore.createPersona(
       "mcp-3", "Update MCP", "", "prompt", "{}", "", "", 0, "[]",
-      "agent", "", '["finding_post"]',
+      "agent", "", '["workpad_read"]',
     );
     personaStore.updatePersona(
       "mcp-3", "Update MCP", "", "prompt", "{}", "", "", 0, "[]",

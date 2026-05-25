@@ -49,6 +49,8 @@ export interface Session {
   error?: string;
   endReason?: string;
   personaId?: string;
+  /** ID of the task this session belongs to, if any (root/orchestrated work). */
+  taskId?: string;
   inputTokens?: number;
   outputTokens?: number;
   costMillicents?: number;
@@ -70,9 +72,15 @@ export interface SessionEvent {
   content: string;
   /** Raw JSON payload from the agent runtime (e.g. tool block with is_error flag). Optional. */
   raw?: string;
+  /**
+   * Stable tool-call id pairing `tool_use` with its `tool_result` (AHP HR3).
+   * Preferred over the legacy per-runtime `raw` id parsing. Absent on
+   * non-tool events and on events logged before HR3.
+   */
+  toolCallId?: string;
 }
 
-/** A workspace that groups tasks and findings. */
+/** A workspace that groups tasks. */
 export interface Workspace {
   id: string;
   name: string;
@@ -115,25 +123,14 @@ export interface TaskData {
   depth: number;
   childTaskIds: string[];
   canDecompose: boolean;
+  /** Inject knowledge-graph context ("Related prior work" + search guidance) at spawn (#1259). */
+  injectKnowledge: boolean;
   defaultPersonaId: string;
   workpad: string;
   /** Total token cap (input + output); 0 = unlimited. */
   tokenBudget: number;
   /** Cost cap in millicents ($0.00001 units); 0 = unlimited. */
   costBudgetMillicents: number;
-}
-
-/** A finding posted by an agent or user. */
-export interface FindingData {
-  id: string;
-  workspaceId: string;
-  taskId: string;
-  sessionId: string;
-  category: string;
-  title: string;
-  content: string;
-  tags: string[];
-  createdAt: string;
 }
 
 /** Metadata about a stored token. */
@@ -327,7 +324,7 @@ export interface UseWorkspacesResult {
     defaultPersonaId?: string,
     useWorktrees?: boolean,
     workingDirectory?: string,
-    onSuccess?: () => void,
+    onSuccess?: (workspace: Workspace) => void,
     onError?: (message: string) => void,
   ) => Promise<void>;
   /** Archive a workspace by ID. */
@@ -381,6 +378,7 @@ export interface UseTasksResult {
     parentTaskId?: string,
     defaultPersonaId?: string,
     canDecompose?: boolean,
+    injectKnowledge?: boolean,
     onSuccess?: () => void,
     onError?: (message: string) => void,
   ) => Promise<void>;
@@ -413,36 +411,6 @@ export interface UseTasksResult {
   onDisconnect: () => void;
   /** Handle legacy WS messages injected by E2E tests. */
   handleLegacyMessage?: (msg: WsMessage) => boolean;
-  /** Lifecycle hook for connect/disconnect/event routing. */
-  domainHook: DomainHook;
-}
-
-/** Values returned by the findings domain hook. */
-export interface UseFindingsResult {
-  /** All loaded findings. */
-  findings: FindingData[];
-  /** The currently selected finding (loaded by ID). */
-  selectedFinding: FindingData | undefined;
-  /** Whether a single finding is being loaded. */
-  findingLoading: boolean;
-  /** Whether a findings list fetch is in-flight. */
-  findingsLoading: boolean;
-  /** Load findings for a given workspace. */
-  loadFindings: (workspaceId: string) => Promise<void>;
-  /** Load findings across all workspaces. */
-  loadAllFindings: () => Promise<void>;
-  /** Load a single finding by ID. */
-  loadFinding: (findingId: string) => Promise<void>;
-  /** Post a new finding to a workspace. */
-  postFinding: (
-    workspaceId: string,
-    title: string,
-    content: string,
-    category?: string,
-    tags?: string[],
-  ) => Promise<void>;
-  /** Handle a domain event from the event bus. Returns `true` if handled. */
-  handleEvent: (event: GrackleEvent) => boolean;
   /** Lifecycle hook for connect/disconnect/event routing. */
   domainHook: DomainHook;
 }
@@ -641,6 +609,22 @@ export interface StreamData {
   messageBufferDepth: number;
   /** Full subscriber details. */
   subscribers: StreamSubscriberData[];
+  /** Whether publishers receive their own messages echoed back (marks a chatroom). */
+  selfEcho: boolean;
+}
+
+/** A single message in an IPC stream room transcript (RFC #1264 Phase 2). */
+export interface StreamMessageData {
+  /** The stream (room) this message belongs to. */
+  streamId: string;
+  /** ULID transcript sequence key (monotonic per stream, ascending = chronological). */
+  seq: string;
+  /** Session id of the sender. */
+  senderId: string;
+  /** Message content. */
+  content: string;
+  /** ISO 8601 timestamp. */
+  timestamp: string;
 }
 
 /** Values returned by the streams domain hook. */
@@ -653,8 +637,17 @@ export interface UseStreamsResult {
   streamsLoadedOnce: boolean;
   /** True if the most recent loadStreams call failed (e.g. RPC/network error). */
   streamsLoadError: boolean;
-  /** Request the current stream list from the server. */
-  loadStreams: () => Promise<void>;
+  /**
+   * Request the current stream list from the server. Pass `includeInternal`
+   * to surface internal IPC plumbing (lifecycle/pipe/stdin); defaults to false.
+   */
+  loadStreams: (includeInternal?: boolean) => Promise<void>;
+  /** Transcript buffer keyed by stream id (scrollback + live, deduped by seq, ascending). */
+  liveMessages: Record<string, StreamMessageData[]>;
+  /** Fetch a stream's durable transcript (scrollback) and merge it into the buffer. */
+  loadTranscript: (streamId: string, beforeSeq?: string) => Promise<void>;
+  /** Append a live stream message to the per-stream buffer. */
+  handleStreamMessage: (message: StreamMessageData) => void;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
   /** Lifecycle hook for connect/disconnect/event routing. */
@@ -719,7 +712,8 @@ export function isSessionEvent(v: unknown): v is SessionEvent {
     typeof v.eventType === "string" &&
     typeof v.timestamp === "string" &&
     typeof v.content === "string" &&
-    (v.raw === undefined || typeof v.raw === "string")
+    (v.raw === undefined || typeof v.raw === "string") &&
+    (v.toolCallId === undefined || typeof v.toolCallId === "string")
   );
 }
 

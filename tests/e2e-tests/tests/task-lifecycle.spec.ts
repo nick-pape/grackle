@@ -38,7 +38,7 @@ test.describe("Task Lifecycle (stub runtime)", { tag: ["@task", "@smoke"] }, () 
     await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, { timeout: 5_000 });
 
     // --- Step 6: Session reaches idle — send input ---
-    const inputField = page.locator('input[placeholder="Type a message..."]');
+    const inputField = page.locator('textarea[placeholder="Type a message..."]');
     await expect(inputField).toBeVisible({ timeout: 15_000 });
     await inputField.fill("continue work");
     await page.getByRole("button", { name: "Send", exact: true }).click();
@@ -71,7 +71,7 @@ test.describe("Task Lifecycle (stub runtime)", { tag: ["@task", "@smoke"] }, () 
     await page.getByTestId("task-header-start").click();
 
     // Wait for idle state, send input to advance to completed
-    const inputField = page.locator('input[placeholder="Type a message..."]');
+    const inputField = page.locator('textarea[placeholder="Type a message..."]');
     await inputField.waitFor({ timeout: 15_000 });
     await inputField.fill("continue");
     await page.getByRole("button", { name: "Send", exact: true }).click();

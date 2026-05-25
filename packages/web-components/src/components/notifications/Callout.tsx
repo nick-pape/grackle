@@ -1,17 +1,15 @@
 import { useState, type ReactNode, type JSX } from "react";
 import { AlertTriangle, Check, Info, X } from "lucide-react";
+import { type CalloutBuiltinProps, type CalloutVariant } from "@grackle-ai/common";
 import styles from "./Callout.module.scss";
 import { ICON_LG, ICON_MD } from "../../utils/iconSize.js";
 
-/** Visual style variant for a callout. */
-export type CalloutVariant = "success" | "error" | "warning" | "info";
+// `variant` now lives in the built-in's zod schema (@grackle-ai/common);
+// re-export the union so the package barrel keeps exposing CalloutVariant.
+export type { CalloutVariant };
 
-interface CalloutProps {
-  /** Controls color scheme and icon. Defaults to "info". */
-  variant?: CalloutVariant;
+interface CalloutProps extends CalloutBuiltinProps {
   children: ReactNode;
-  /** Show a dismiss button. Defaults to false. */
-  dismissible?: boolean;
   /** Optional extra class name for layout overrides. */
   className?: string;
 }

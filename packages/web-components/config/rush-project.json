@@ -2,7 +2,7 @@
   "operationSettings": [
     {
       "operationName": "_phase:build",
-      "outputFolderNames": ["dist", "storybook-static"]
+      "outputFolderNames": ["dist", "storybook-static", "mcp-app-runtime"]
     },
     {
       "operationName": "_phase:test",

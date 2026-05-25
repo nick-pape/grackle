@@ -19,6 +19,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { BrowserRouter, HashRouter, Routes, Route, Navigate, Outlet, useLocation, useParams } from "react-router";
 import { EmptyPage, TasksEmptyPage, EnvironmentsEmptyPage } from "./pages/EmptyPage.js";
 import { ChatPage } from "./pages/ChatPage.js";
+import { CoordinationPage } from "./pages/CoordinationPage.js";
 import { NewChatPage } from "./pages/NewChatPage.js";
 import { SessionPage } from "./pages/SessionPage.js";
 import { WorkspacePage } from "./pages/WorkspacePage.js";
@@ -41,9 +42,7 @@ import { SettingsAboutTab } from "./pages/settings/SettingsAboutTab.js";
 import { SettingsShortcutsTab } from "./pages/settings/SettingsShortcutsTab.js";
 import { SettingsPluginsTab } from "./pages/settings/SettingsPluginsTab.js";
 import { GlobalShortcuts } from "./components/layout/GlobalShortcuts.js";
-import { WithTaskSidebar, WithEnvironmentSidebar, WithFindingsSidebar, WithSettingsSidebar, WithKnowledgeSidebar, WithStreamSidebar } from "./components/layout/WithSidebar.js";
-import { FindingsListPage } from "./pages/FindingsListPage.js";
-import { FindingDetailPage } from "./pages/FindingDetailPage.js";
+import { WithTaskSidebar, WithEnvironmentSidebar, WithSettingsSidebar, WithKnowledgeSidebar } from "./components/layout/WithSidebar.js";
 import { SetupWizard } from "./pages/SetupWizard.js";
 import styles from "./App.module.scss";
 
@@ -212,11 +211,14 @@ function AppRoutes(): JSX.Element {
         <Route index element={<EmptyPage />} />
         <Route path="sessions/new" element={<NewChatPage />} />
 
-        {/* Chat sidebar (streams list) */}
-        <Route element={<WithStreamSidebar />}>
-          <Route path="chat" element={<ChatPage />} />
-          <Route path="chat/:streamId" element={<ChatPage />} />
-        </Route>
+        {/* Root: the root-task conversation (no sidebar) */}
+        <Route path="chat" element={<ChatPage />} />
+        {/* Legacy per-stream chat URLs now live on Coordination */}
+        <Route path="chat/:streamId" element={<Navigate to="/coordination" replace />} />
+
+        {/* Coordination: read-only IPC stream inventory (no sidebar) */}
+        <Route path="coordination" element={<CoordinationPage />} />
+
         <Route path="sessions/:sessionId" element={<SessionPage />} />
 
         {/* Knowledge sidebar (knowledge plugin) */}
@@ -234,17 +236,6 @@ function AppRoutes(): JSX.Element {
             <Route path="tasks/:taskId" element={<TaskPage />} />
             <Route path="tasks/:taskId/edit" element={<TaskPage />} />
             <Route path="tasks/:taskId/stream" element={<TaskPage />} />
-            <Route path="tasks/:taskId/findings" element={<TaskPage />} />
-          </Route>
-        )}
-
-        {/* Findings sidebar (orchestration plugin) */}
-        {hasOrchestration && (
-          <Route element={<WithFindingsSidebar />}>
-            <Route path="findings" element={<FindingsListPage />} />
-            <Route path="findings/:findingId" element={<FindingDetailPage />} />
-            <Route path="environments/:environmentId/workspaces/:workspaceId/findings" element={<FindingsListPage />} />
-            <Route path="environments/:environmentId/workspaces/:workspaceId/findings/:findingId" element={<FindingDetailPage />} />
           </Route>
         )}
 
@@ -260,7 +251,6 @@ function AppRoutes(): JSX.Element {
           <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId" element={<TaskPage />} />
           <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/edit" element={<TaskPage />} />
           <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/stream" element={<TaskPage />} />
-          <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/findings" element={<TaskPage />} />
           <Route path="environments" element={<EnvironmentsPage />}>
             <Route index element={<EnvironmentsEmptyPage />} />
             <Route path="new" element={<NewEnvironmentPage />} />

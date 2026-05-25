@@ -29,6 +29,7 @@ const BASE_CSP_DIRECTIVES: readonly string[] = [
  */
 export const WEB_CONTENT_SECURITY_POLICY: string = [
   ...BASE_CSP_DIRECTIVES,
+  "frame-src 'self'",
   "form-action 'self'",
 ].join("; ");
 
@@ -54,15 +55,23 @@ export function setSecurityHeaders(res: ServerResponse, requestHost?: string): v
   // Validate via URL constructor to prevent CSP header injection (e.g. Host
   // containing ';' could splice directives).
   let formAction = "form-action 'self'";
+  // The chat embeds the MCP Apps widget sandbox in an iframe. The sandbox runs
+  // on the same hostname but a different port (GRACKLE_SANDBOX_PORT), and
+  // Chromium does not reliably match 'self' across ports — so allow the request
+  // hostname on any port (same workaround as form-action). The framed sandbox
+  // is itself origin-isolated with its own locked-down CSP, so this only widens
+  // which origins the app may *embed*, not what runs inside them.
+  let frameSrc = "frame-src 'self'";
   if (requestHost) {
     try {
       const parsed = new URL(`http://${requestHost}`);
       const hostname = parsed.hostname;
       formAction = `form-action 'self' http://${hostname}:* https://${hostname}:*`;
+      frameSrc = `frame-src 'self' http://${hostname}:* https://${hostname}:*`;
     } catch {
       // Malformed Host header — fall back to 'self' only
     }
   }
-  const csp = [...BASE_CSP_DIRECTIVES, formAction].join("; ");
+  const csp = [...BASE_CSP_DIRECTIVES, frameSrc, formAction].join("; ");
   res.setHeader("Content-Security-Policy", csp);
 }

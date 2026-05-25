@@ -11,16 +11,6 @@ export interface EmitStep {
   tool?: string;
   /** Convenience: auto-serialized into content for tool_use events. */
   args?: Record<string, unknown>;
-  /** Convenience: used as finding/subtask title. */
-  title?: string;
-  /** Convenience: used as subtask description. */
-  description?: string;
-  /** Convenience: subtask local_id for dependency resolution. */
-  local_id?: string;
-  /** Convenience: subtask depends_on local_ids. */
-  depends_on?: string[];
-  /** Convenience: whether the subtask can decompose further. */
-  can_decompose?: boolean;
   /** Forwarded verbatim to AgentEvent.raw. */
   raw?: unknown;
 }
@@ -51,11 +41,29 @@ export interface McpCallStep {
   args?: Record<string, unknown>;
 }
 
+/**
+ * A step that exercises a *conformant* MCP client which honors
+ * `notifications/tools/list_changed` (#1297). It opens a persistent session,
+ * optionally fires a `trigger` tool call, then waits for the server to push
+ * `tools/list_changed`, re-lists tools on receipt, and reports whether `expect`
+ * appeared. Requires `mcpBroker`.
+ */
+export interface AwaitToolChangeStep {
+  await_tool_change: {
+    /** Optional tool call to fire (e.g. component_promote) that should cause the change. */
+    trigger?: { tool: string; args?: Record<string, unknown> };
+    /** Tool name expected to appear in the re-listed tools after the notification. */
+    expect: string;
+    /** Max wait for the notification (default 5000ms). */
+    timeout_ms?: number;
+  };
+}
+
 /** Actions that can be taken when user input is received during an idle step. */
 export type InputAction = "echo" | "fail" | "ignore" | "next";
 
 /** A single step in a scenario. */
-export type ScenarioStep = EmitStep | WaitStep | IdleStep | OnInputStep | OnInputMatchStep | McpCallStep;
+export type ScenarioStep = EmitStep | WaitStep | IdleStep | OnInputStep | OnInputMatchStep | McpCallStep | AwaitToolChangeStep;
 
 /** A JSON scenario that defines the exact sequence of events for a stub session. */
 export interface Scenario {
@@ -92,6 +100,11 @@ export function isOnInputMatchStep(step: ScenarioStep): step is OnInputMatchStep
 /** Check if a step is an McpCallStep. */
 export function isMcpCallStep(step: ScenarioStep): step is McpCallStep {
   return "mcp_call" in step;
+}
+
+/** Check if a step is an AwaitToolChangeStep. */
+export function isAwaitToolChangeStep(step: ScenarioStep): step is AwaitToolChangeStep {
+  return "await_tool_change" in step;
 }
 
 // ─── Parser ─────────────────────────────────────────────────
@@ -171,7 +184,6 @@ export function resetToolUseCounter(): void {
  *
  * - `tool_use` with `tool`/`args` → auto-generates content and raw
  * - `tool_result` without raw → auto-generates raw with `tool_use_id` from the last tool_use
- * - `subtask_create` with `title`/`description` → builds content JSON
  *
  * @param step The emit step to normalize.
  * @param lastToolUseId The ID of the most recent tool_use event, for pairing tool_results.
@@ -203,26 +215,16 @@ export function buildEventFromEmitStep(
     };
   }
 
-  if (step.emit === "subtask_create" && !content && (step.title || step.description)) {
-    const subtaskPayload: Record<string, unknown> = {
-      title: step.title ?? "",
-      description: step.description ?? "",
-    };
-    if (step.local_id) {
-      subtaskPayload.local_id = step.local_id;
-    }
-    if (step.depends_on) {
-      subtaskPayload.depends_on = step.depends_on;
-    }
-    if (step.can_decompose !== undefined) {
-      subtaskPayload.can_decompose = step.can_decompose;
-    }
-    content = JSON.stringify(subtaskPayload);
-  }
-
   const event: AgentEvent = { type: step.emit, timestamp, content };
   if (raw !== undefined) {
     event.raw = raw;
+  }
+  // Surface the synthesized id on the first-class field (AHP HR3) so fixtures
+  // exercise tool_call_id pairing, not just the legacy raw reader.
+  if (step.emit === "tool_use") {
+    event.toolCallId = newToolUseId;
+  } else if (step.emit === "tool_result" && lastToolUseId !== undefined) {
+    event.toolCallId = lastToolUseId;
   }
 
   return [event, newToolUseId];

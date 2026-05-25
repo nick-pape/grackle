@@ -4,21 +4,38 @@
  * Renders as an absolutely-positioned overlay anchored to the right of its
  * containing block (which must have `position: relative`).
  *
+ * Read-only: participants link to their sessions; low-level wiring (fds, full
+ * GUIDs, permission/delivery mode) is tucked behind an "Advanced" disclosure.
+ * The Conversation section shows the durable room transcript (RFC #1264 Phase 2).
+ *
  * @module
  */
 
 import { useEffect, type JSX } from "react";
-import type { StreamData } from "../../hooks/types.js";
+import type { StreamData, StreamMessageData } from "../../hooks/types.js";
 import { useAppNavigate, sessionUrl } from "../../utils/navigation.js";
+import { streamKind, type StreamKind } from "../../utils/streamCoordination.js";
+import { StreamTranscript } from "./StreamTranscript.js";
 import styles from "./StreamDetailPanel.module.scss";
 
 /** Props for the StreamDetailPanel component. */
 export interface StreamDetailPanelProps {
   /** The stream to display details for. */
   stream: StreamData;
+  /** The stream's transcript messages, oldest first (scrollback + live merged). */
+  messages?: StreamMessageData[];
+  /** Whether the transcript is currently loading. */
+  transcriptLoading?: boolean;
   /** Called when the user requests to close the panel. */
   onClose: () => void;
 }
+
+/** Human-readable kind label. */
+const KIND_LABEL: Record<StreamKind, string> = {
+  chatroom: "Chatroom",
+  pipe: "Pipe",
+  channel: "Channel",
+};
 
 /** Render a permission badge with appropriate color. */
 function PermissionBadge({ permission }: { permission: string }): JSX.Element {
@@ -41,9 +58,10 @@ function DeliveryModeBadge({ mode }: { mode: string }): JSX.Element {
 }
 
 /**
- * Pull-out right drawer showing stream metadata: overview, subscribers, fds.
+ * Pull-out right drawer showing stream metadata: overview, participants, and an
+ * Advanced disclosure with low-level wiring. Conversation content is V2.
  */
-export function StreamDetailPanel({ stream, onClose }: StreamDetailPanelProps): JSX.Element {
+export function StreamDetailPanel({ stream, messages, transcriptLoading, onClose }: StreamDetailPanelProps): JSX.Element {
   const navigate = useAppNavigate();
 
   // Close on Escape key
@@ -61,7 +79,7 @@ export function StreamDetailPanel({ stream, onClose }: StreamDetailPanelProps): 
     <div className={styles.panel} data-testid="stream-detail-panel">
       <div className={styles.header}>
         <h3 className={styles.title}>{stream.name}</h3>
-        <button className={styles.closeButton} onClick={onClose} aria-label="Close stream details">
+        <button type="button" className={styles.closeButton} onClick={onClose} aria-label="Close stream details">
           &times;
         </button>
       </div>
@@ -71,11 +89,11 @@ export function StreamDetailPanel({ stream, onClose }: StreamDetailPanelProps): 
         <div className={styles.section}>
           <div className={styles.sectionLabel}>Overview</div>
           <div className={styles.metaRow}>
-            <span className={styles.metaKey}>Stream ID</span>
-            <span className={styles.metaValue}>{stream.id}</span>
+            <span className={styles.metaKey}>Kind</span>
+            <span className={styles.metaValue}>{KIND_LABEL[streamKind(stream)]}</span>
           </div>
           <div className={styles.metaRow}>
-            <span className={styles.metaKey}>Subscribers</span>
+            <span className={styles.metaKey}>Participants</span>
             <span className={styles.metaValue}>{stream.subscriberCount}</span>
           </div>
           <div className={styles.metaRow}>
@@ -84,35 +102,54 @@ export function StreamDetailPanel({ stream, onClose }: StreamDetailPanelProps): 
           </div>
         </div>
 
-        {/* Subscribers */}
+        {/* Participants */}
         <div className={styles.section}>
-          <div className={styles.sectionLabel}>Subscribers</div>
+          <div className={styles.sectionLabel}>Participants</div>
           {stream.subscribers.length === 0 ? (
             <div className={styles.emptySubscribers}>No active subscribers</div>
           ) : (
             stream.subscribers.map((sub) => (
               <div key={sub.subscriptionId} className={styles.subscriberCard} data-testid={`subscriber-card-${sub.subscriptionId}`}>
-                <div className={styles.subscriberHeader}>
-                  <span className={styles.fdNumber}>fd {sub.fd}</span>
-                  <button
-                    className={styles.sessionLink}
-                    onClick={() => { navigate(sessionUrl(sub.sessionId)); }}
-                    title={sub.sessionId}
-                  >
-                    {sub.sessionId.slice(0, 12)}…
-                  </button>
-                </div>
-                <div className={styles.badges}>
-                  <PermissionBadge permission={sub.permission} />
-                  <DeliveryModeBadge mode={sub.deliveryMode} />
-                  {sub.createdBySpawn && (
-                    <span className={styles.spawnTag}>spawn</span>
-                  )}
-                </div>
+                <button
+                  type="button"
+                  className={styles.sessionLink}
+                  onClick={() => { navigate(sessionUrl(sub.sessionId)); }}
+                  title={sub.sessionId}
+                >
+                  {sub.sessionId.slice(0, 12)}…
+                </button>
+                {sub.createdBySpawn && <span className={styles.spawnTag}>spawn</span>}
               </div>
             ))
           )}
         </div>
+
+        {/* Live conversation transcript (RFC #1264 Phase 2) */}
+        <div className={styles.section}>
+          <div className={styles.sectionLabel}>Conversation</div>
+          <StreamTranscript messages={messages ?? []} loading={transcriptLoading ?? false} />
+        </div>
+
+        {/* Advanced wiring */}
+        <details className={styles.advanced} data-testid="stream-advanced">
+          <summary className={styles.advancedSummary}>Advanced</summary>
+          <div className={styles.metaRow}>
+            <span className={styles.metaKey}>Stream ID</span>
+            <span className={styles.metaValueMono}>{stream.id}</span>
+          </div>
+          {stream.subscribers.map((sub) => (
+            <div key={sub.subscriptionId} className={styles.subscriberCard}>
+              <div className={styles.subscriberHeader}>
+                <span className={styles.fdNumber}>fd {sub.fd}</span>
+                <span className={styles.metaValueMono} title={sub.subscriptionId}>{sub.subscriptionId.slice(0, 12)}…</span>
+              </div>
+              <div className={styles.badges}>
+                <PermissionBadge permission={sub.permission} />
+                <DeliveryModeBadge mode={sub.deliveryMode} />
+              </div>
+            </div>
+          ))}
+        </details>
       </div>
     </div>
   );

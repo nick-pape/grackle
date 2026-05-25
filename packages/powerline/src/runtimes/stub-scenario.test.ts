@@ -5,8 +5,9 @@ import {
   resetToolUseCounter,
   isMcpCallStep,
   isEmitStep,
+  isAwaitToolChangeStep,
 } from "./stub-scenario.js";
-import type { EmitStep, McpCallStep, ScenarioStep } from "./stub-scenario.js";
+import type { EmitStep, McpCallStep, ScenarioStep, AwaitToolChangeStep } from "./stub-scenario.js";
 
 describe("parseScenario", () => {
   it("parses raw JSON prompt", () => {
@@ -146,21 +147,6 @@ describe("buildEventFromEmitStep", () => {
     expect((event.raw as Record<string, unknown>).tool_use_id).toBe("unknown");
   });
 
-  it("normalizes subtask_create with title/description", () => {
-    const step: EmitStep = { emit: "subtask_create", title: "Fix bug", description: "Fix the auth bug" };
-    const [event] = buildEventFromEmitStep(step, undefined);
-
-    expect(event.type).toBe("subtask_create");
-    expect(JSON.parse(event.content)).toEqual({ title: "Fix bug", description: "Fix the auth bug" });
-  });
-
-  it("uses explicit content over convenience fields for subtask_create", () => {
-    const step: EmitStep = { emit: "subtask_create", content: "custom content", title: "ignored" };
-    const [event] = buildEventFromEmitStep(step, undefined);
-
-    expect(event.content).toBe("custom content");
-  });
-
   it("increments tool_use IDs across calls", () => {
     const step: EmitStep = { emit: "tool_use", tool: "a" };
     const [, id1] = buildEventFromEmitStep(step, undefined);
@@ -170,12 +156,12 @@ describe("buildEventFromEmitStep", () => {
     expect(id2).toBe("toolu_scenario_2");
   });
 
-  it("builds finding event", () => {
-    const step: EmitStep = { emit: "finding", content: "Found a bug in auth.ts" };
+  it("builds system event", () => {
+    const step: EmitStep = { emit: "system", content: "System notice" };
     const [event] = buildEventFromEmitStep(step, undefined);
 
-    expect(event.type).toBe("finding");
-    expect(event.content).toBe("Found a bug in auth.ts");
+    expect(event.type).toBe("system");
+    expect(event.content).toBe("System notice");
   });
 
   it("builds error event", () => {
@@ -236,5 +222,25 @@ describe("McpCallStep", () => {
     const step = scenario!.steps[0] as McpCallStep;
     expect(step.mcp_call).toBe("task_list");
     expect(step.args).toBeUndefined();
+  });
+});
+
+describe("AwaitToolChangeStep (#1297)", () => {
+  it("isAwaitToolChangeStep identifies await_tool_change steps", () => {
+    const step: AwaitToolChangeStep = { await_tool_change: { expect: "render_X" } };
+    expect(isAwaitToolChangeStep(step)).toBe(true);
+    expect(isAwaitToolChangeStep({ mcp_call: "task_list" } as ScenarioStep)).toBe(false);
+    expect(isMcpCallStep(step)).toBe(false);
+  });
+
+  it("parseScenario parses an await_tool_change step with a trigger", () => {
+    const scenario = parseScenario(JSON.stringify({
+      steps: [{ await_tool_change: { trigger: { tool: "component_promote", args: { name: "X" } }, expect: "render_X" } }],
+    }));
+    expect(scenario).toBeDefined();
+    expect(isAwaitToolChangeStep(scenario!.steps[0])).toBe(true);
+    const step = scenario!.steps[0] as AwaitToolChangeStep;
+    expect(step.await_tool_change.expect).toBe("render_X");
+    expect(step.await_tool_change.trigger?.tool).toBe("component_promote");
   });
 });

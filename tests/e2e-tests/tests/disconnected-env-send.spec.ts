@@ -34,7 +34,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     await page.getByTestId("task-header-start").click();
 
     // Wait for idle — input field appears
-    await page.locator('input[placeholder="Type a message..."]').waitFor({ timeout: 15_000 });
+    await page.locator('textarea[placeholder="Type a message..."]').waitFor({ timeout: 15_000 });
 
     // Stop the environment via RPC — triggers domain event
     await client.core.stopEnvironment({ id: "test-local" });
@@ -52,7 +52,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     const sendBtn = page.locator("button", { hasText: "Send" });
     await expect(sendBtn).toBeDisabled({ timeout: 5_000 });
 
-    const inputField = page.locator('input[placeholder="Type a message..."]');
+    const inputField = page.locator('textarea[placeholder="Type a message..."]');
     await expect(inputField).toBeDisabled({ timeout: 5_000 });
   });
 
@@ -133,7 +133,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     await provisionEnvironmentDirect("test-local", stubTask.client);
 
     // Input should be re-enabled — fill it so Send can be checked
-    const inputField = page.locator('input[placeholder="Type a message..."]');
+    const inputField = page.locator('textarea[placeholder="Type a message..."]');
     await expect(inputField).toBeEnabled({ timeout: 10_000 });
     await inputField.fill("hello");
 
@@ -160,13 +160,13 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     await page.getByTestId("env-nav-item").first().click();
     await page.getByRole("button", { name: "New Chat" }).click();
 
-    const promptInput = page.locator('input[placeholder="Enter prompt..."]');
+    const promptInput = page.locator('textarea[placeholder="Enter prompt..."]');
     await promptInput.fill("hello stub");
     await page.locator("button", { hasText: "Go" }).click();
 
     // Wait for the session to reach idle state
     await page
-      .locator('input[placeholder="Type a message..."]')
+      .locator('textarea[placeholder="Type a message..."]')
       .waitFor({ state: "visible", timeout: 15_000 });
 
     // Stop the environment to simulate a connectivity drop
@@ -180,7 +180,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     const sendBtn = page.locator("button", { hasText: "Send" });
     await expect(sendBtn).toBeDisabled({ timeout: 5_000 });
 
-    const inputField = page.locator('input[placeholder="Type a message..."]');
+    const inputField = page.locator('textarea[placeholder="Type a message..."]');
     await expect(inputField).toBeDisabled({ timeout: 5_000 });
 
     await expect(

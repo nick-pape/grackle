@@ -100,6 +100,7 @@ export async function createTaskDirect(
     description?: string;
     parentTaskId?: string;
     canDecompose?: boolean;
+    injectKnowledge?: boolean;
   },
 ): Promise<WsPayload> {
   const resp = await client.orchestration.createTask({
@@ -109,6 +110,7 @@ export async function createTaskDirect(
     dependsOn: options?.dependsOn || [],
     parentTaskId: options?.parentTaskId || "",
     canDecompose: options?.canDecompose,
+    injectKnowledge: options?.injectKnowledge,
   });
   return resp as unknown as WsPayload;
 }
@@ -291,7 +293,7 @@ export async function patchWsForStubMcpRuntime(page: Page, environmentId: string
 export async function runStubTaskToCompletion(page: Page): Promise<void> {
   await page.getByTestId("task-header-start").click();
 
-  const inputField = page.locator('input[placeholder="Type a message..."]');
+  const inputField = page.locator('textarea[placeholder="Type a message..."]');
   await inputField.waitFor({ timeout: 15_000 });
   await inputField.fill("continue");
   await page.getByRole("button", { name: "Send", exact: true }).click();
@@ -308,7 +310,7 @@ export async function runStubTaskToCompletion(page: Page): Promise<void> {
 export async function runStubMcpTaskToCompletion(page: Page): Promise<void> {
   await page.getByTestId("task-header-start").click();
 
-  const inputField = page.locator('input[placeholder="Type a message..."]');
+  const inputField = page.locator('textarea[placeholder="Type a message..."]');
   await inputField.waitFor({ timeout: 15_000 });
   await inputField.fill("continue");
   await page.getByRole("button", { name: "Send", exact: true }).click();
@@ -387,30 +389,6 @@ export function emitToolResult(content: string, raw?: Record<string, unknown>): 
   const step: ScenarioStep = { emit: "tool_result", content };
   if (raw) {
     step.raw = raw;
-  }
-  return step;
-}
-
-/** Emit a finding event. */
-export function emitFinding(content: string): ScenarioStep {
-  return { emit: "finding", content };
-}
-
-/** Emit a subtask_create event. */
-export function emitSubtaskCreate(
-  title: string,
-  description: string,
-  options?: { localId?: string; dependsOn?: string[]; canDecompose?: boolean },
-): ScenarioStep {
-  const step: ScenarioStep = { emit: "subtask_create", title, description };
-  if (options?.localId) {
-    step.local_id = options.localId;
-  }
-  if (options?.dependsOn) {
-    step.depends_on = options.dependsOn;
-  }
-  if (options?.canDecompose !== undefined) {
-    step.can_decompose = options.canDecompose;
   }
   return step;
 }

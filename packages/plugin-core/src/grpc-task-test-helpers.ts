@@ -52,6 +52,7 @@ export function resetSchema(): void {
       parent_task_id TEXT NOT NULL DEFAULT '',
       depth         INTEGER NOT NULL DEFAULT 0,
       can_decompose INTEGER NOT NULL DEFAULT 0,
+      inject_knowledge INTEGER NOT NULL DEFAULT 1,
       default_persona_id TEXT NOT NULL DEFAULT '',
       workpad   TEXT NOT NULL DEFAULT '',
       schedule_id TEXT NOT NULL DEFAULT '',

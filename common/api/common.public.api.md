@@ -9,6 +9,7 @@ import type { GenFile } from '@bufbuild/protobuf/codegenv2';
 import type { GenMessage } from '@bufbuild/protobuf/codegenv2';
 import type { GenService } from '@bufbuild/protobuf/codegenv2';
 import type { Message } from '@bufbuild/protobuf';
+import { z } from 'zod';
 
 // @public
 type AcknowledgeEscalationRequest = Message<"grackle.AcknowledgeEscalationRequest"> & {
@@ -53,13 +54,15 @@ type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
     timestamp: string;
     content: string;
     raw: string;
+    toolCallId: string;
+    diagnostic: boolean;
 };
 
 // @public
 const AgentEventSchema: GenMessage<AgentEvent>;
 
 // @public
-export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "finding" | "subtask_create" | "runtime_session_id" | "usage";
+export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "runtime_session_id" | "usage";
 
 // @public
 export const ALL_MCP_TOOL_NAMES: ReadonlySet<string>;
@@ -94,6 +97,205 @@ type AttachStreamResponse = Message<"grackle.AttachStreamResponse"> & {
 
 // @public
 const AttachStreamResponseSchema: GenMessage<AttachStreamResponse>;
+
+// @public
+type AuthenticateRequest = Message<"grackle.powerline.AuthenticateRequest"> & {
+    provider: string;
+    tokens: TokenItem[];
+};
+
+// @public
+const AuthenticateRequestSchema: GenMessage<AuthenticateRequest>;
+
+// @public
+export const BUILTIN_COMPONENT_JSON_SCHEMAS: Readonly<Record<BuiltinComponentName, object>>;
+
+// @public
+export const BUILTIN_COMPONENT_SCHEMAS: {
+    readonly Button: z.ZodObject<{
+        variant: z.ZodOptional<z.ZodEnum<{
+            primary: "primary";
+            danger: "danger";
+            outline: "outline";
+            ghost: "ghost";
+        }>>;
+        size: z.ZodOptional<z.ZodEnum<{
+            sm: "sm";
+            md: "md";
+            lg: "lg";
+        }>>;
+        disabled: z.ZodOptional<z.ZodBoolean>;
+    }, z.core.$strip>;
+    readonly SplitButton: z.ZodObject<{
+        label: z.ZodString;
+        variant: z.ZodOptional<z.ZodEnum<{
+            primary: "primary";
+            danger: "danger";
+            outline: "outline";
+            ghost: "ghost";
+        }>>;
+        size: z.ZodOptional<z.ZodEnum<{
+            sm: "sm";
+            md: "md";
+            lg: "lg";
+        }>>;
+        options: z.ZodArray<z.ZodObject<{
+            label: z.ZodString;
+            description: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>;
+    readonly Callout: z.ZodObject<{
+        variant: z.ZodOptional<z.ZodEnum<{
+            success: "success";
+            error: "error";
+            warning: "warning";
+            info: "info";
+        }>>;
+        dismissible: z.ZodOptional<z.ZodBoolean>;
+    }, z.core.$strip>;
+    readonly Spinner: z.ZodObject<{
+        size: z.ZodOptional<z.ZodEnum<{
+            sm: "sm";
+            md: "md";
+            lg: "lg";
+            xl: "xl";
+        }>>;
+        label: z.ZodOptional<z.ZodString>;
+        liveRegion: z.ZodOptional<z.ZodBoolean>;
+    }, z.core.$strip>;
+    readonly Skeleton: z.ZodObject<{
+        width: z.ZodOptional<z.ZodString>;
+        height: z.ZodOptional<z.ZodString>;
+        borderRadius: z.ZodOptional<z.ZodString>;
+        variant: z.ZodOptional<z.ZodEnum<{
+            rectangular: "rectangular";
+            circular: "circular";
+        }>>;
+    }, z.core.$strip>;
+    readonly SkeletonText: z.ZodObject<{
+        lines: z.ZodOptional<z.ZodInt>;
+        lastLineWidth: z.ZodOptional<z.ZodString>;
+        lineHeight: z.ZodOptional<z.ZodString>;
+        gap: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>;
+    readonly SkeletonCard: z.ZodObject<{
+        lines: z.ZodOptional<z.ZodInt>;
+    }, z.core.$strip>;
+    readonly Tooltip: z.ZodObject<{
+        text: z.ZodString;
+        placement: z.ZodOptional<z.ZodEnum<{
+            top: "top";
+            bottom: "bottom";
+            left: "left";
+            right: "right";
+        }>>;
+        delayMs: z.ZodOptional<z.ZodInt>;
+    }, z.core.$strip>;
+    readonly CopyButton: z.ZodObject<{
+        text: z.ZodString;
+    }, z.core.$strip>;
+};
+
+// @public
+export const BUILTIN_COMPONENTS: readonly BuiltinComponent[];
+
+// @public
+export interface BuiltinComponent {
+    description: string;
+    example: string;
+    name: string;
+    propsSchema: string;
+}
+
+// @public
+export type BuiltinComponentName = keyof typeof BUILTIN_COMPONENT_SCHEMAS;
+
+// @public
+export type ButtonBuiltinProps = z.infer<typeof buttonPropsSchema>;
+
+// @public
+export const buttonPropsSchema: z.ZodObject<{
+    variant: z.ZodOptional<z.ZodEnum<{
+        primary: "primary";
+        danger: "danger";
+        outline: "outline";
+        ghost: "ghost";
+    }>>;
+    size: z.ZodOptional<z.ZodEnum<{
+        sm: "sm";
+        md: "md";
+        lg: "lg";
+    }>>;
+    disabled: z.ZodOptional<z.ZodBoolean>;
+}, z.core.$strip>;
+
+// @public
+export type ButtonSize = z.infer<typeof buttonSizeSchema>;
+
+// @public
+export const buttonSizeSchema: z.ZodEnum<{
+    sm: "sm";
+    md: "md";
+    lg: "lg";
+}>;
+
+// @public
+export type ButtonVariant = z.infer<typeof buttonVariantSchema>;
+
+// @public
+export const buttonVariantSchema: z.ZodEnum<{
+    primary: "primary";
+    danger: "danger";
+    outline: "outline";
+    ghost: "ghost";
+}>;
+
+// @public
+export type CalloutBuiltinProps = z.infer<typeof calloutPropsSchema>;
+
+// @public
+export const calloutPropsSchema: z.ZodObject<{
+    variant: z.ZodOptional<z.ZodEnum<{
+        success: "success";
+        error: "error";
+        warning: "warning";
+        info: "info";
+    }>>;
+    dismissible: z.ZodOptional<z.ZodBoolean>;
+}, z.core.$strip>;
+
+// @public
+export type CalloutVariant = z.infer<typeof calloutVariantSchema>;
+
+// @public
+export const calloutVariantSchema: z.ZodEnum<{
+    success: "success";
+    error: "error";
+    warning: "warning";
+    info: "info";
+}>;
+
+// @public
+type ChannelGrant = Message<"grackle.ChannelGrant"> & {
+    grantId: string;
+    channelUri: string;
+    verbs: string[];
+    label: string;
+    createdAt: string;
+    expiresAt: string;
+    revoked: boolean;
+};
+
+// @public
+type ChannelGrantList = Message<"grackle.ChannelGrantList"> & {
+    grants: ChannelGrant[];
+};
+
+// @public
+const ChannelGrantListSchema: GenMessage<ChannelGrantList>;
+
+// @public
+const ChannelGrantSchema: GenMessage<ChannelGrant>;
 
 // @public
 enum ClaudeProviderMode {
@@ -150,6 +352,45 @@ type CodespaceList = Message<"grackle.CodespaceList"> & {
 const CodespaceListSchema: GenMessage<CodespaceList>;
 
 // @public
+type Component = Message<"grackle.Component"> & {
+    id: string;
+    workspaceId: string;
+    name: string;
+    description: string;
+    rendererKind: string;
+    body: string;
+    propsSchema: string;
+    version: number;
+    ownerTaskId: string;
+    ownerSessionId: string;
+    createdAt: string;
+    updatedAt: string;
+    promoted: boolean;
+};
+
+// @public
+type ComponentList = Message<"grackle.ComponentList"> & {
+    components: Component[];
+};
+
+// @public
+const ComponentListSchema: GenMessage<ComponentList>;
+
+// @public
+export function componentRenderToolName(name: string): string | undefined;
+
+// @public
+const ComponentSchema: GenMessage<Component>;
+
+// @public
+export type CopyButtonBuiltinProps = z.infer<typeof copyButtonPropsSchema>;
+
+// @public
+export const copyButtonPropsSchema: z.ZodObject<{
+    text: z.ZodString;
+}, z.core.$strip>;
+
+// @public
 type CreateCodespaceRequest = Message<"grackle.CreateCodespaceRequest"> & {
     repo: string;
     machine: string;
@@ -178,26 +419,6 @@ type CreateEscalationRequest = Message<"grackle.CreateEscalationRequest"> & {
 
 // @public
 const CreateEscalationRequestSchema: GenMessage<CreateEscalationRequest>;
-
-// @public
-type CreateKnowledgeNodeRequest = Message<"grackle.CreateKnowledgeNodeRequest"> & {
-    title: string;
-    content: string;
-    category: string;
-    tags: string[];
-    workspaceId: string;
-};
-
-// @public
-const CreateKnowledgeNodeRequestSchema: GenMessage<CreateKnowledgeNodeRequest>;
-
-// @public
-type CreateKnowledgeNodeResponse = Message<"grackle.CreateKnowledgeNodeResponse"> & {
-    id: string;
-};
-
-// @public
-const CreateKnowledgeNodeResponseSchema: GenMessage<CreateKnowledgeNodeResponse>;
 
 // @public
 type CreatePersonaRequest = Message<"grackle.CreatePersonaRequest"> & {
@@ -260,6 +481,7 @@ type CreateTaskRequest = Message<"grackle.CreateTaskRequest"> & {
     defaultPersonaId?: string;
     tokenBudget?: number;
     costBudgetMillicents?: number;
+    injectKnowledge?: boolean;
 };
 
 // @public
@@ -309,6 +531,9 @@ export const DEFAULT_PERSONA_NAME: string;
 export const DEFAULT_POWERLINE_PORT: number;
 
 // @public
+export const DEFAULT_SANDBOX_PORT: number;
+
+// @public
 export const DEFAULT_SCOPED_MCP_TOOLS: readonly string[];
 
 // @public
@@ -348,6 +573,14 @@ type DomainEvent = Message<"grackle.DomainEvent"> & {
     timestamp: string;
     payloadJson: string;
 };
+
+// @public
+type DomainEventList = Message<"grackle.DomainEventList"> & {
+    events: DomainEvent[];
+};
+
+// @public
+const DomainEventListSchema: GenMessage<DomainEventList>;
 
 // @public
 const DomainEventSchema: GenMessage<DomainEvent>;
@@ -465,18 +698,16 @@ export type EventType = AgentEventType | "user_input" | "signal";
 // @public
 enum EventType_2 {
     ERROR = 4,
-    ESCALATION = 12,
-    FINDING = 7,
     SIGNAL = 10,
     STATUS = 5,
-    SUBTASK_CREATE = 8,
     SYSTEM = 6,
     TEXT = 1,
     TOOL_RESULT = 3,
     TOOL_USE = 2,
     UNSPECIFIED = 0,
     USAGE = 11,
-    USER_INPUT = 9
+    USER_INPUT = 9,
+    WIDGET = 13
 }
 
 // @public
@@ -506,6 +737,41 @@ type ExpandKnowledgeNodeResponse = Message<"grackle.ExpandKnowledgeNodeResponse"
 
 // @public
 const ExpandKnowledgeNodeResponseSchema: GenMessage<ExpandKnowledgeNodeResponse>;
+
+// @public
+type ExposeChannelRequest = Message<"grackle.ExposeChannelRequest"> & {
+    target: {
+        value: string;
+        case: "sessionId";
+    } | {
+        value: string;
+        case: "taskId";
+    } | {
+        case: undefined;
+        value?: undefined;
+    };
+    verbs: string[];
+    ttlSeconds: number;
+    label: string;
+};
+
+// @public
+const ExposeChannelRequestSchema: GenMessage<ExposeChannelRequest>;
+
+// @public
+type ExposeChannelResponse = Message<"grackle.ExposeChannelResponse"> & {
+    channelUri: string;
+    grantId: string;
+    token: string;
+    ingressUrl: string;
+    expiresAt: string;
+};
+
+// @public
+const ExposeChannelResponseSchema: GenMessage<ExposeChannelResponse>;
+
+// @public
+export function extractComponentReferenceNames(source: string): string[];
 
 // @public
 type FdInfo = Message<"grackle.FdInfo"> & {
@@ -539,30 +805,6 @@ const file_grackle_grackle_types: GenFile;
 const file_grackle_powerline_powerline: GenFile;
 
 // @public
-type Finding = Message<"grackle.Finding"> & {
-    id: string;
-    workspaceId: string;
-    taskId: string;
-    sessionId: string;
-    category: string;
-    title: string;
-    content: string;
-    tags: string[];
-    createdAt: string;
-};
-
-// @public
-type FindingList = Message<"grackle.FindingList"> & {
-    findings: Finding[];
-};
-
-// @public
-const FindingListSchema: GenMessage<FindingList>;
-
-// @public
-const FindingSchema: GenMessage<Finding>;
-
-// @public
 export interface FuzzyKey {
     name: string;
     weight: number;
@@ -591,12 +833,14 @@ export interface FuzzySearchOptions {
 }
 
 // @public
-type GetFindingRequest = Message<"grackle.GetFindingRequest"> & {
+type GetComponentRequest = Message<"grackle.GetComponentRequest"> & {
     id: string;
+    name: string;
+    workspaceId: string;
 };
 
 // @public
-const GetFindingRequestSchema: GenMessage<GetFindingRequest>;
+const GetComponentRequestSchema: GenMessage<GetComponentRequest>;
 
 // @public
 type GetKnowledgeNodeRequest = Message<"grackle.GetKnowledgeNodeRequest"> & {
@@ -616,12 +860,32 @@ type GetKnowledgeNodeResponse = Message<"grackle.GetKnowledgeNodeResponse"> & {
 const GetKnowledgeNodeResponseSchema: GenMessage<GetKnowledgeNodeResponse>;
 
 // @public
+type GetSessionActionsRequest = Message<"grackle.GetSessionActionsRequest"> & {
+    sessionId: string;
+    fromSeq: string;
+    limit: number;
+};
+
+// @public
+const GetSessionActionsRequestSchema: GenMessage<GetSessionActionsRequest>;
+
+// @public
 type GetSettingRequest = Message<"grackle.GetSettingRequest"> & {
     key: string;
 };
 
 // @public
 const GetSettingRequestSchema: GenMessage<GetSettingRequest>;
+
+// @public
+type GetStreamTranscriptRequest = Message<"grackle.GetStreamTranscriptRequest"> & {
+    streamId: string;
+    beforeSeq: string;
+    limit: number;
+};
+
+// @public
+const GetStreamTranscriptRequestSchema: GenMessage<GetStreamTranscriptRequest>;
 
 // @public
 type GetUsageRequest = Message<"grackle.GetUsageRequest"> & {
@@ -725,6 +989,8 @@ declare namespace grackle {
         StreamSubscriberInfoSchema,
         StreamInfo,
         StreamInfoSchema,
+        ListStreamsRequest,
+        ListStreamsRequestSchema,
         ListStreamsResponse,
         ListStreamsResponseSchema,
         SessionEvent,
@@ -781,16 +1047,30 @@ declare namespace grackle {
         StartTaskRequestSchema,
         SetWorkpadRequest,
         SetWorkpadRequestSchema,
-        Finding,
-        FindingSchema,
-        FindingList,
-        FindingListSchema,
-        PostFindingRequest,
-        PostFindingRequestSchema,
-        QueryFindingsRequest,
-        QueryFindingsRequestSchema,
-        GetFindingRequest,
-        GetFindingRequestSchema,
+        Component,
+        ComponentSchema,
+        ComponentList,
+        ComponentListSchema,
+        RegisterComponentRequest,
+        RegisterComponentRequestSchema,
+        UpdateComponentRequest,
+        UpdateComponentRequestSchema,
+        GetComponentRequest,
+        GetComponentRequestSchema,
+        ListComponentsRequest,
+        ListComponentsRequestSchema,
+        SearchComponentsRequest,
+        SearchComponentsRequestSchema,
+        SearchComponentResult,
+        SearchComponentResultSchema,
+        SearchComponentsResponse,
+        SearchComponentsResponseSchema,
+        SetComponentPromotionRequest,
+        SetComponentPromotionRequestSchema,
+        ResolveComponentGraphRequest,
+        ResolveComponentGraphRequestSchema,
+        ResolveComponentGraphResponse,
+        ResolveComponentGraphResponseSchema,
         Escalation,
         EscalationSchema,
         EscalationList,
@@ -801,6 +1081,18 @@ declare namespace grackle {
         ListEscalationsRequestSchema,
         AcknowledgeEscalationRequest,
         AcknowledgeEscalationRequestSchema,
+        ExposeChannelRequest,
+        ExposeChannelRequestSchema,
+        ExposeChannelResponse,
+        ExposeChannelResponseSchema,
+        ChannelGrant,
+        ChannelGrantSchema,
+        ChannelGrantList,
+        ChannelGrantListSchema,
+        ListChannelGrantsRequest,
+        ListChannelGrantsRequestSchema,
+        RevokeChannelGrantRequest,
+        RevokeChannelGrantRequestSchema,
         McpServerConfig,
         McpServerConfigSchema,
         ToolConfig,
@@ -879,14 +1171,26 @@ declare namespace grackle {
         ListRecentKnowledgeNodesRequestSchema,
         ListRecentKnowledgeNodesResponse,
         ListRecentKnowledgeNodesResponseSchema,
-        CreateKnowledgeNodeRequest,
-        CreateKnowledgeNodeRequestSchema,
-        CreateKnowledgeNodeResponse,
-        CreateKnowledgeNodeResponseSchema,
         VersionStatus,
         VersionStatusSchema,
         DomainEvent,
         DomainEventSchema,
+        QueryDomainEventsRequest,
+        QueryDomainEventsRequestSchema,
+        DomainEventList,
+        DomainEventListSchema,
+        StreamMessageEvent,
+        StreamMessageEventSchema,
+        GetStreamTranscriptRequest,
+        GetStreamTranscriptRequestSchema,
+        StreamTranscript,
+        StreamTranscriptSchema,
+        SessionAction,
+        SessionActionSchema,
+        GetSessionActionsRequest,
+        GetSessionActionsRequestSchema,
+        SessionActionList,
+        SessionActionListSchema,
         ServerEvent,
         ServerEventSchema,
         PluginInfo,
@@ -1133,7 +1437,7 @@ const GrackleCore: GenService<{
     };
     listStreams: {
         methodKind: "unary";
-        input: typeof EmptySchema;
+        input: typeof ListStreamsRequestSchema;
         output: typeof ListStreamsResponseSchema;
     };
     getVersionStatus: {
@@ -1176,10 +1480,40 @@ const GrackleCore: GenService<{
         input: typeof EmptySchema;
         output: typeof ImportGitHubAccountsResponseSchema;
     };
+    exposeChannel: {
+        methodKind: "unary";
+        input: typeof ExposeChannelRequestSchema;
+        output: typeof ExposeChannelResponseSchema;
+    };
+    listChannelGrants: {
+        methodKind: "unary";
+        input: typeof ListChannelGrantsRequestSchema;
+        output: typeof ChannelGrantListSchema;
+    };
+    revokeChannelGrant: {
+        methodKind: "unary";
+        input: typeof RevokeChannelGrantRequestSchema;
+        output: typeof EmptySchema;
+    };
     streamEvents: {
         methodKind: "server_streaming";
         input: typeof EmptySchema;
         output: typeof ServerEventSchema;
+    };
+    queryDomainEvents: {
+        methodKind: "unary";
+        input: typeof QueryDomainEventsRequestSchema;
+        output: typeof DomainEventListSchema;
+    };
+    getStreamTranscript: {
+        methodKind: "unary";
+        input: typeof GetStreamTranscriptRequestSchema;
+        output: typeof StreamTranscriptSchema;
+    };
+    getSessionActions: {
+        methodKind: "unary";
+        input: typeof GetSessionActionsRequestSchema;
+        output: typeof SessionActionListSchema;
     };
 }>;
 
@@ -1204,11 +1538,6 @@ const GrackleKnowledge: GenService<{
         methodKind: "unary";
         input: typeof ListRecentKnowledgeNodesRequestSchema;
         output: typeof ListRecentKnowledgeNodesResponseSchema;
-    };
-    createKnowledgeNode: {
-        methodKind: "unary";
-        input: typeof CreateKnowledgeNodeRequestSchema;
-        output: typeof CreateKnowledgeNodeResponseSchema;
     };
 }>;
 
@@ -1294,20 +1623,40 @@ const GrackleOrchestration: GenService<{
         input: typeof PersonaIdSchema;
         output: typeof EmptySchema;
     };
-    postFinding: {
+    registerComponent: {
         methodKind: "unary";
-        input: typeof PostFindingRequestSchema;
-        output: typeof FindingSchema;
+        input: typeof RegisterComponentRequestSchema;
+        output: typeof ComponentSchema;
     };
-    queryFindings: {
+    updateComponent: {
         methodKind: "unary";
-        input: typeof QueryFindingsRequestSchema;
-        output: typeof FindingListSchema;
+        input: typeof UpdateComponentRequestSchema;
+        output: typeof ComponentSchema;
     };
-    getFinding: {
+    getComponent: {
         methodKind: "unary";
-        input: typeof GetFindingRequestSchema;
-        output: typeof FindingSchema;
+        input: typeof GetComponentRequestSchema;
+        output: typeof ComponentSchema;
+    };
+    listComponents: {
+        methodKind: "unary";
+        input: typeof ListComponentsRequestSchema;
+        output: typeof ComponentListSchema;
+    };
+    searchComponents: {
+        methodKind: "unary";
+        input: typeof SearchComponentsRequestSchema;
+        output: typeof SearchComponentsResponseSchema;
+    };
+    setComponentPromotion: {
+        methodKind: "unary";
+        input: typeof SetComponentPromotionRequestSchema;
+        output: typeof ComponentSchema;
+    };
+    resolveComponentGraph: {
+        methodKind: "unary";
+        input: typeof ResolveComponentGraphRequestSchema;
+        output: typeof ResolveComponentGraphResponseSchema;
     };
     createEscalation: {
         methodKind: "unary";
@@ -1366,6 +1715,11 @@ const GracklePowerLine: GenService<{
     pushTokens: {
         methodKind: "unary";
         input: typeof TokenBundleSchema;
+        output: typeof EmptySchema_2;
+    };
+    authenticate: {
+        methodKind: "unary";
+        input: typeof AuthenticateRequestSchema;
         output: typeof EmptySchema_2;
     };
     cleanupWorktree: {
@@ -1495,12 +1849,26 @@ type LinkEnvironmentRequest = Message<"grackle.LinkEnvironmentRequest"> & {
 const LinkEnvironmentRequestSchema: GenMessage<LinkEnvironmentRequest>;
 
 // @public
+type ListChannelGrantsRequest = Message<"grackle.ListChannelGrantsRequest"> & {};
+
+// @public
+const ListChannelGrantsRequestSchema: GenMessage<ListChannelGrantsRequest>;
+
+// @public
 type ListCodespacesRequest = Message<"grackle.ListCodespacesRequest"> & {
     githubAccountId: string;
 };
 
 // @public
 const ListCodespacesRequestSchema: GenMessage<ListCodespacesRequest>;
+
+// @public
+type ListComponentsRequest = Message<"grackle.ListComponentsRequest"> & {
+    workspaceId: string;
+};
+
+// @public
+const ListComponentsRequestSchema: GenMessage<ListComponentsRequest>;
 
 // @public
 type ListDockerContainersRequest = Message<"grackle.ListDockerContainersRequest"> & {};
@@ -1545,6 +1913,14 @@ type ListSchedulesRequest = Message<"grackle.ListSchedulesRequest"> & {
 const ListSchedulesRequestSchema: GenMessage<ListSchedulesRequest>;
 
 // @public
+type ListStreamsRequest = Message<"grackle.ListStreamsRequest"> & {
+    includeInternal: boolean;
+};
+
+// @public
+const ListStreamsRequestSchema: GenMessage<ListStreamsRequest>;
+
+// @public
 type ListStreamsResponse = Message<"grackle.ListStreamsResponse"> & {
     streams: StreamInfo[];
 };
@@ -1572,6 +1948,11 @@ const ListWorkspacesRequestSchema: GenMessage<ListWorkspacesRequest>;
 
 // @public
 export const LOGS_DIR: string;
+
+// @public
+export interface LogSink<T> {
+    append(channelId: string, entry: Sequenced<T>): void;
+}
 
 // @public
 export type MatchIndex = readonly [number, number];
@@ -1673,20 +2054,6 @@ type Pong = Message<"grackle.powerline.Pong"> & {
 // @public
 const PongSchema: GenMessage<Pong>;
 
-// @public
-type PostFindingRequest = Message<"grackle.PostFindingRequest"> & {
-    workspaceId: string;
-    taskId: string;
-    sessionId: string;
-    category: string;
-    title: string;
-    content: string;
-    tags: string[];
-};
-
-// @public
-const PostFindingRequestSchema: GenMessage<PostFindingRequest>;
-
 declare namespace powerline {
     export {
         file_grackle_powerline_powerline,
@@ -1716,12 +2083,20 @@ declare namespace powerline {
         TokenItemSchema,
         TokenBundle,
         TokenBundleSchema,
+        AuthenticateRequest,
+        AuthenticateRequestSchema,
         WorktreeCleanupRequest,
         WorktreeCleanupRequestSchema,
         DrainRequest,
         DrainRequestSchema,
         GracklePowerLine
     }
+}
+
+// @public
+export interface PromotedRenderTool<T> {
+    component: T;
+    toolName: string;
 }
 
 // @public
@@ -1760,15 +2135,31 @@ type ProvisionEvent = Message<"grackle.ProvisionEvent"> & {
 const ProvisionEventSchema: GenMessage<ProvisionEvent>;
 
 // @public
-type QueryFindingsRequest = Message<"grackle.QueryFindingsRequest"> & {
-    workspaceId: string;
-    categories: string[];
-    tags: string[];
+type QueryDomainEventsRequest = Message<"grackle.QueryDomainEventsRequest"> & {
+    beforeId: string;
+    type: string;
+    since: string;
+    until: string;
     limit: number;
 };
 
 // @public
-const QueryFindingsRequestSchema: GenMessage<QueryFindingsRequest>;
+const QueryDomainEventsRequestSchema: GenMessage<QueryDomainEventsRequest>;
+
+// @public
+type RegisterComponentRequest = Message<"grackle.RegisterComponentRequest"> & {
+    workspaceId: string;
+    name: string;
+    description: string;
+    rendererKind: string;
+    body: string;
+    propsSchema: string;
+    ownerTaskId: string;
+    ownerSessionId: string;
+};
+
+// @public
+const RegisterComponentRequestSchema: GenMessage<RegisterComponentRequest>;
 
 // @public
 type RemoveGitHubAccountRequest = Message<"grackle.RemoveGitHubAccountRequest"> & {
@@ -1777,6 +2168,29 @@ type RemoveGitHubAccountRequest = Message<"grackle.RemoveGitHubAccountRequest"> 
 
 // @public
 const RemoveGitHubAccountRequestSchema: GenMessage<RemoveGitHubAccountRequest>;
+
+// @public
+export const RENDER_TOOL_PREFIX: string;
+
+// @public
+type ResolveComponentGraphRequest = Message<"grackle.ResolveComponentGraphRequest"> & {
+    id: string;
+    name: string;
+    workspaceId: string;
+    source: string;
+};
+
+// @public
+const ResolveComponentGraphRequestSchema: GenMessage<ResolveComponentGraphRequest>;
+
+// @public
+type ResolveComponentGraphResponse = Message<"grackle.ResolveComponentGraphResponse"> & {
+    root?: Component;
+    dependencies: Component[];
+};
+
+// @public
+const ResolveComponentGraphResponseSchema: GenMessage<ResolveComponentGraphResponse>;
 
 // @public
 type ResumeRequest = Message<"grackle.ResumeRequest"> & {
@@ -1795,6 +2209,14 @@ const ResumeRequestSchema: GenMessage<ResumeRequest>;
 
 // @public
 const ResumeRequestSchema_2: GenMessage<ResumeRequest_2>;
+
+// @public
+type RevokeChannelGrantRequest = Message<"grackle.RevokeChannelGrantRequest"> & {
+    grantId: string;
+};
+
+// @public
+const RevokeChannelGrantRequestSchema: GenMessage<RevokeChannelGrantRequest>;
 
 // @public
 export const ROOT_TASK_ID: string;
@@ -1849,6 +2271,34 @@ const ScheduleListSchema: GenMessage<ScheduleList>;
 
 // @public
 const ScheduleSchema: GenMessage<Schedule>;
+
+// @public
+type SearchComponentResult = Message<"grackle.SearchComponentResult"> & {
+    component?: Component;
+    relevanceScore: number;
+    builtin: boolean;
+};
+
+// @public
+const SearchComponentResultSchema: GenMessage<SearchComponentResult>;
+
+// @public
+type SearchComponentsRequest = Message<"grackle.SearchComponentsRequest"> & {
+    query: string;
+    workspaceId: string;
+    limit: number;
+};
+
+// @public
+const SearchComponentsRequestSchema: GenMessage<SearchComponentsRequest>;
+
+// @public
+type SearchComponentsResponse = Message<"grackle.SearchComponentsResponse"> & {
+    results: SearchComponentResult[];
+};
+
+// @public
+const SearchComponentsResponseSchema: GenMessage<SearchComponentsResponse>;
 
 // @public
 type SearchKnowledgeRequest = Message<"grackle.SearchKnowledgeRequest"> & {
@@ -1910,6 +2360,31 @@ const SearchTasksResponseSchema: GenMessage<SearchTasksResponse>;
 export const SEED_PERSONA_ID: string;
 
 // @public
+export function selectPromotedRenderTools<T extends {
+    name: string;
+    promoted: boolean;
+}>(components: readonly T[]): PromotedRenderTool<T>[];
+
+// @public
+export interface Sequenced<T> {
+    readonly payload: T;
+    readonly seq: string;
+}
+
+// @public
+export class SequencedLog<T> {
+    constructor(options: SequencedLogOptions<T>);
+    append(payload: T): Sequenced<T>;
+}
+
+// @public
+export interface SequencedLogOptions<T> {
+    readonly channelId: string;
+    readonly nextSeq: () => string;
+    readonly sink: LogSink<T>;
+}
+
+// @public
 type ServerEvent = Message<"grackle.ServerEvent"> & {
     event: {
         value: SessionEvent;
@@ -1917,6 +2392,9 @@ type ServerEvent = Message<"grackle.ServerEvent"> & {
     } | {
         value: DomainEvent;
         case: "domainEvent";
+    } | {
+        value: StreamMessageEvent;
+        case: "streamMessageEvent";
     } | {
         case: undefined;
         value?: undefined;
@@ -1960,12 +2438,35 @@ export const SESSION_STATUS: {
 };
 
 // @public
+type SessionAction = Message<"grackle.SessionAction"> & {
+    seq: string;
+    sessionId: string;
+    type: string;
+    content: string;
+    raw: string;
+    timestamp: string;
+};
+
+// @public
+type SessionActionList = Message<"grackle.SessionActionList"> & {
+    actions: SessionAction[];
+};
+
+// @public
+const SessionActionListSchema: GenMessage<SessionActionList>;
+
+// @public
+const SessionActionSchema: GenMessage<SessionAction>;
+
+// @public
 type SessionEvent = Message<"grackle.SessionEvent"> & {
     sessionId: string;
     type: EventType_2;
     timestamp: string;
     content: string;
     raw: string;
+    toolCallId: string;
+    diagnostic: boolean;
 };
 
 // @public
@@ -2046,6 +2547,17 @@ const SessionSchema: GenMessage<Session>;
 export type SessionStatus = typeof SESSION_STATUS[keyof typeof SESSION_STATUS];
 
 // @public
+type SetComponentPromotionRequest = Message<"grackle.SetComponentPromotionRequest"> & {
+    id: string;
+    name: string;
+    workspaceId: string;
+    promoted?: boolean;
+};
+
+// @public
+const SetComponentPromotionRequestSchema: GenMessage<SetComponentPromotionRequest>;
+
+// @public
 type SetCredentialProviderRequest = Message<"grackle.SetCredentialProviderRequest"> & {
     provider: string;
     value: string;
@@ -2094,6 +2606,48 @@ type SetWorkpadRequest = Message<"grackle.SetWorkpadRequest"> & {
 const SetWorkpadRequestSchema: GenMessage<SetWorkpadRequest>;
 
 // @public
+export type SkeletonBuiltinProps = z.infer<typeof skeletonPropsSchema>;
+
+// @public
+export type SkeletonCardBuiltinProps = z.infer<typeof skeletonCardPropsSchema>;
+
+// @public
+export const skeletonCardPropsSchema: z.ZodObject<{
+    lines: z.ZodOptional<z.ZodInt>;
+}, z.core.$strip>;
+
+// @public
+export const skeletonPropsSchema: z.ZodObject<{
+    width: z.ZodOptional<z.ZodString>;
+    height: z.ZodOptional<z.ZodString>;
+    borderRadius: z.ZodOptional<z.ZodString>;
+    variant: z.ZodOptional<z.ZodEnum<{
+        rectangular: "rectangular";
+        circular: "circular";
+    }>>;
+}, z.core.$strip>;
+
+// @public
+export type SkeletonTextBuiltinProps = z.infer<typeof skeletonTextPropsSchema>;
+
+// @public
+export const skeletonTextPropsSchema: z.ZodObject<{
+    lines: z.ZodOptional<z.ZodInt>;
+    lastLineWidth: z.ZodOptional<z.ZodString>;
+    lineHeight: z.ZodOptional<z.ZodString>;
+    gap: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+
+// @public
+export type SkeletonVariant = z.infer<typeof skeletonVariantSchema>;
+
+// @public
+export const skeletonVariantSchema: z.ZodEnum<{
+    rectangular: "rectangular";
+    circular: "circular";
+}>;
+
+// @public
 type SpawnRequest = Message<"grackle.SpawnRequest"> & {
     environmentId: string;
     prompt: string;
@@ -2134,6 +2688,61 @@ const SpawnRequestSchema: GenMessage<SpawnRequest>;
 const SpawnRequestSchema_2: GenMessage<SpawnRequest_2>;
 
 // @public
+export type SpinnerBuiltinProps = z.infer<typeof spinnerPropsSchema>;
+
+// @public
+export const spinnerPropsSchema: z.ZodObject<{
+    size: z.ZodOptional<z.ZodEnum<{
+        sm: "sm";
+        md: "md";
+        lg: "lg";
+        xl: "xl";
+    }>>;
+    label: z.ZodOptional<z.ZodString>;
+    liveRegion: z.ZodOptional<z.ZodBoolean>;
+}, z.core.$strip>;
+
+// @public
+export type SpinnerSize = z.infer<typeof spinnerSizeSchema>;
+
+// @public
+export const spinnerSizeSchema: z.ZodEnum<{
+    sm: "sm";
+    md: "md";
+    lg: "lg";
+    xl: "xl";
+}>;
+
+// @public
+export type SplitButtonBuiltinProps = z.infer<typeof splitButtonPropsSchema>;
+
+// @public
+export const splitButtonOptionSchema: z.ZodObject<{
+    label: z.ZodString;
+    description: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+
+// @public
+export const splitButtonPropsSchema: z.ZodObject<{
+    label: z.ZodString;
+    variant: z.ZodOptional<z.ZodEnum<{
+        primary: "primary";
+        danger: "danger";
+        outline: "outline";
+        ghost: "ghost";
+    }>>;
+    size: z.ZodOptional<z.ZodEnum<{
+        sm: "sm";
+        md: "md";
+        lg: "lg";
+    }>>;
+    options: z.ZodArray<z.ZodObject<{
+        label: z.ZodString;
+        description: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+
+// @public
 type StartTaskRequest = Message<"grackle.StartTaskRequest"> & {
     taskId: string;
     personaId: string;
@@ -2160,6 +2769,18 @@ type StreamInfo = Message<"grackle.StreamInfo"> & {
 const StreamInfoSchema: GenMessage<StreamInfo>;
 
 // @public
+type StreamMessageEvent = Message<"grackle.StreamMessageEvent"> & {
+    streamId: string;
+    seq: string;
+    senderId: string;
+    content: string;
+    timestamp: string;
+};
+
+// @public
+const StreamMessageEventSchema: GenMessage<StreamMessageEvent>;
+
+// @public
 type StreamSubscriberInfo = Message<"grackle.StreamSubscriberInfo"> & {
     subscriptionId: string;
     sessionId: string;
@@ -2171,6 +2792,14 @@ type StreamSubscriberInfo = Message<"grackle.StreamSubscriberInfo"> & {
 
 // @public
 const StreamSubscriberInfoSchema: GenMessage<StreamSubscriberInfo>;
+
+// @public
+type StreamTranscript = Message<"grackle.StreamTranscript"> & {
+    messages: StreamMessageEvent[];
+};
+
+// @public
+const StreamTranscriptSchema: GenMessage<StreamTranscript>;
 
 // @public
 export const SYSTEM_PERSONA_ID: string;
@@ -2202,6 +2831,7 @@ type Task = Message<"grackle.Task"> & {
     scheduleId: string;
     tokenBudget: number;
     costBudgetMillicents: number;
+    injectKnowledge: boolean;
 };
 
 // @public
@@ -2331,6 +2961,32 @@ type ToolConfig = Message<"grackle.ToolConfig"> & {
 const ToolConfigSchema: GenMessage<ToolConfig>;
 
 // @public
+export type TooltipBuiltinProps = z.infer<typeof tooltipPropsSchema>;
+
+// @public
+export type TooltipPlacement = z.infer<typeof tooltipPlacementSchema>;
+
+// @public
+export const tooltipPlacementSchema: z.ZodEnum<{
+    top: "top";
+    bottom: "bottom";
+    left: "left";
+    right: "right";
+}>;
+
+// @public
+export const tooltipPropsSchema: z.ZodObject<{
+    text: z.ZodString;
+    placement: z.ZodOptional<z.ZodEnum<{
+        top: "top";
+        bottom: "bottom";
+        left: "left";
+        right: "right";
+    }>>;
+    delayMs: z.ZodOptional<z.ZodInt>;
+}, z.core.$strip>;
+
+// @public
 type UnlinkEnvironmentRequest = Message<"grackle.UnlinkEnvironmentRequest"> & {
     workspaceId: string;
     environmentId: string;
@@ -2338,6 +2994,19 @@ type UnlinkEnvironmentRequest = Message<"grackle.UnlinkEnvironmentRequest"> & {
 
 // @public
 const UnlinkEnvironmentRequestSchema: GenMessage<UnlinkEnvironmentRequest>;
+
+// @public
+type UpdateComponentRequest = Message<"grackle.UpdateComponentRequest"> & {
+    id: string;
+    workspaceId: string;
+    name?: string;
+    description?: string;
+    body?: string;
+    propsSchema?: string;
+};
+
+// @public
+const UpdateComponentRequestSchema: GenMessage<UpdateComponentRequest>;
 
 // @public
 type UpdateEnvironmentRequest = Message<"grackle.UpdateEnvironmentRequest"> & {
@@ -2404,6 +3073,7 @@ type UpdateTaskRequest = Message<"grackle.UpdateTaskRequest"> & {
     defaultPersonaId?: string;
     tokenBudget?: number;
     costBudgetMillicents?: number;
+    injectKnowledge?: boolean;
 };
 
 // @public

@@ -137,6 +137,28 @@ describe("security headers", () => {
         await new Promise<void>((resolve) => { server.close(() => resolve()); });
       }
     });
+
+    it("widens frame-src to the request hostname so the chat can embed the widget sandbox", async () => {
+      // The MCP Apps widget sandbox runs on the same hostname, different port
+      // (GRACKLE_SANDBOX_PORT); frame-src must allow it across ports.
+      const server = http.createServer((req, res) => {
+        setSecurityHeaders(res, "localhost:3000");
+        res.writeHead(200, { "Content-Type": "text/html" });
+        res.end("<html></html>");
+      });
+
+      await new Promise<void>((resolve) => {
+        server.listen(0, "127.0.0.1", resolve);
+      });
+
+      try {
+        const resp = await request(server, "/");
+        const csp = resp.headers["content-security-policy"] as string;
+        expect(csp).toContain("frame-src 'self' http://localhost:* https://localhost:*");
+      } finally {
+        await new Promise<void>((resolve) => { server.close(() => resolve()); });
+      }
+    });
   });
 
   describe("WEB_CONTENT_SECURITY_POLICY", () => {
@@ -149,6 +171,7 @@ describe("security headers", () => {
       expect(WEB_CONTENT_SECURITY_POLICY).toContain("connect-src 'self'");
       expect(WEB_CONTENT_SECURITY_POLICY).toContain("object-src 'none'");
       expect(WEB_CONTENT_SECURITY_POLICY).toContain("form-action 'self'");
+      expect(WEB_CONTENT_SECURITY_POLICY).toContain("frame-src 'self'");
       expect(WEB_CONTENT_SECURITY_POLICY).toContain("frame-ancestors 'none'");
       expect(WEB_CONTENT_SECURITY_POLICY).toContain("base-uri 'self'");
     });

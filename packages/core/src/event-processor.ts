@@ -1,9 +1,8 @@
 import { create } from "@bufbuild/protobuf";
 import { grackle, powerline, eventTypeToEnum, SESSION_STATUS, TERMINAL_SESSION_STATUSES, END_REASON } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
-import { v4 as uuid } from "uuid";
-import { ulid } from "ulid";
-import { sessionStore, findingStore, escalationStore, taskStore, workspaceStore, slugify } from "@grackle-ai/database";
+import { sessionStore, taskStore } from "@grackle-ai/database";
+import { recordSessionAction } from "./session-action-recorder.js";
 import * as streamHub from "./stream-hub.js";
 import * as logWriter from "./log-writer.js";
 import * as processorRegistry from "./processor-registry.js";
@@ -11,8 +10,8 @@ import { writeTranscript } from "./transcript.js";
 import { emit } from "./event-bus.js";
 import { logger } from "./logger.js";
 import { runWithTrace } from "./trace-context.js";
+import { emitDiagnostic } from "./telemetry.js";
 import { publishChildCompletion } from "./pipe-delivery.js";
-import { routeEscalation } from "./notification-router.js";
 import { cleanupLifecycleStream } from "./lifecycle-streams.js";
 import { sendInputToSession } from "./signals/signal-delivery.js";
 import { checkBudget } from "./budget-checker.js";
@@ -32,221 +31,75 @@ export interface EventStreamOptions {
   traceId?: string;
 }
 
-/**
- * Process a finding event, storing it in the finding store and broadcasting.
- * Shared between live event processing and replay on late-bind.
- */
-export function processFindingEvent(
-  ctx: ProcessorContext,
-  content: string,
-  sessionId: string,
-): void {
-  if (!ctx.workspaceId) {
-    return;
-  }
-  try {
-    const data = JSON.parse(content) as {
-      category?: string; title?: string; content?: string; tags?: string[];
-    };
-    const findingId = uuid();
-    findingStore.postFinding(
-      findingId, ctx.workspaceId, ctx.taskId || "", sessionId,
-      data.category || "general", data.title || "Untitled",
-      data.content || "", data.tags || [],
-    );
-    emit("finding.posted", { workspaceId: ctx.workspaceId, findingId });
-    logger.info({ findingId, workspaceId: ctx.workspaceId, title: data.title }, "Finding stored");
-  } catch (err) {
-    logger.error({ err, workspaceId: ctx.workspaceId, taskId: ctx.taskId }, "Failed to store finding");
-  }
+/** Payload for an MCP Apps widget render event pushed into a session stream. */
+export interface WidgetEventPayload {
+  /** The `ui://` resource the widget renders (may be empty for one-off renders). */
+  resourceUri: string;
+  /** Name of the tool that produced the widget. */
+  toolName: string;
+  /** Widget HTML (`text/html;profile=mcp-app`). */
+  html: string;
+  /**
+   * Renderer the frontend should dispatch to. `"mcp-app-html"` (default when
+   * omitted) renders `html` in the sandbox; future kinds (e.g. declarative) add
+   * cases without changing this contract.
+   */
+  rendererKind?: string;
+  /** CSP for the sandbox (`resourceDomains`/`connectDomains` + `allowInlineScripts`). */
+  csp?: unknown;
+  /** Tool input arguments / render-time props. */
+  toolInput?: Record<string, unknown>;
+  /** Tool result (an MCP `CallToolResult`). */
+  toolResult?: unknown;
+  /** Registry id when rendering a registered widget (#1239). */
+  widgetId?: string;
+  /** Registry version, when known. */
+  version?: number;
+  /**
+   * Resolved registry components this render composes from, in eval order
+   * (deepest first). The grackle-react runtime evaluates each into scope before
+   * the main body so it can reference them as JSX tags (#1270 composition).
+   */
+  components?: Array<{ name: string; body: string }>;
 }
 
+/** Callback that pushes a widget event into a session's stream (injected into the MCP server). */
+export type PublishWidgetEvent = (sessionId: string, payload: WidgetEventPayload) => void;
+
 /**
- * Process an escalation event from an agent, creating an escalation record
- * and routing it to notification channels.
- * Shared between live event processing and replay on late-bind.
+ * Publish an MCP Apps widget render event into a session's event stream.
+ *
+ * Called by Grackle's MCP server (the broker) when an agent invokes a widget
+ * tool. The event is self-contained (resource HTML + tool input/result) so the
+ * web chat renders it without contacting the MCP server. Persisted to the
+ * session log (replays on reload) and broadcast live. Non-fatal on error.
  */
-export function processEscalationEvent(
-  ctx: ProcessorContext,
-  content: string,
-  _sessionId: string,
-): void {
-  if (!ctx.workspaceId) {
-    return;
-  }
+export function publishWidgetEvent(sessionId: string, payload: WidgetEventPayload): void {
   try {
-    const data = JSON.parse(content) as {
-      message?: string; title?: string; urgency?: string;
-    };
-    const escalationId = ulid();
-    const taskUrl = ctx.taskId ? `/tasks/${ctx.taskId}` : "";
-    escalationStore.createEscalation(
-      escalationId, ctx.workspaceId, ctx.taskId || "", data.title || "Escalation",
-      data.message || "", "explicit", data.urgency || "normal", taskUrl,
-    );
-    const row = escalationStore.getEscalation(escalationId);
-    if (row) {
-      // Fire-and-forget — do not await in the synchronous event loop
-      routeEscalation(row).catch((err) => {
-        logger.error({ err, escalationId }, "Failed to route escalation");
+    const event = create(grackle.SessionEventSchema, {
+      sessionId,
+      type: grackle.EventType.WIDGET,
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify(payload),
+      raw: JSON.stringify({ widget: true, toolName: payload.toolName }),
+    });
+    const session = sessionStore.getSession(sessionId);
+    if (session?.logPath) {
+      logWriter.ensureLogInitialized(session.logPath);
+      logWriter.writeEvent(session.logPath, event).catch((err: unknown) => {
+        logger.error({ err, sessionId }, "Failed to persist widget event");
       });
     }
-    logger.info({ escalationId, workspaceId: ctx.workspaceId, title: data.title }, "Escalation stored");
+    streamHub.publish(event);
+    recordSessionAction(event);
   } catch (err) {
-    logger.error({ err, workspaceId: ctx.workspaceId, taskId: ctx.taskId }, "Failed to store escalation");
-  }
-}
-
-/**
- * Process a subtask creation event, creating a child task and broadcasting.
- * Shared between live event processing and replay on late-bind.
- */
-export function processSubtaskEvent(
-  ctx: ProcessorContext,
-  content: string,
-  subtaskLocalIdMap: Map<string, string>,
-): void {
-  if (!ctx.taskId) {
-    return;
-  }
-  try {
-    const data = JSON.parse(content) as {
-      title: string;
-      description: string;
-      local_id?: string;
-      depends_on?: string[];
-      can_decompose?: boolean;
-    };
-
-    const parentTask = taskStore.getTask(ctx.taskId);
-    if (!parentTask) {
-      logger.warn({ taskId: ctx.taskId }, "Subtask creation failed: parent task not found");
-      return;
-    }
-    if (!parentTask.canDecompose) {
-      logger.warn({ taskId: ctx.taskId }, "Subtask creation failed: parent task cannot decompose");
-      return;
-    }
-
-    const workspace = parentTask.workspaceId ? workspaceStore.getWorkspace(parentTask.workspaceId) : undefined;
-    if (parentTask.workspaceId && !workspace) {
-      logger.warn({ workspaceId: parentTask.workspaceId }, "Subtask creation failed: workspace not found");
-      return;
-    }
-
-    // Validate required fields
-    const title = typeof data.title === "string" ? data.title.trim() : "";
-    const description = typeof data.description === "string" ? data.description.trim() : "";
-
-    if (!title || !description) {
-      logger.warn(
-        { taskId: ctx.taskId, rawTitle: data.title, rawDescription: data.description },
-        "Subtask creation failed: invalid title or description",
-      );
-      return;
-    }
-
-    // Normalize and validate depends_on, local_id, and can_decompose
-    const dependsOn = Array.isArray(data.depends_on)
-      ? data.depends_on.filter((d): d is string => typeof d === "string").map(d => d.trim()).filter(Boolean)
-      : [];
-    const localId = typeof data.local_id === "string" ? data.local_id.trim() : "";
-    const canDecompose = typeof data.can_decompose === "boolean" ? data.can_decompose : false;
-
-    // Resolve depends_on local IDs to real task IDs — all must exist
-    const resolvedDeps: string[] = [];
-    for (const localDep of dependsOn) {
-      const realId = subtaskLocalIdMap.get(localDep);
-      if (realId) {
-        resolvedDeps.push(realId);
-      } else {
-        const subtaskIdentifier = localId
-          ? `Subtask local_id "${localId}"`
-          : `Subtask "${title}"`;
-        throw new Error(
-          `${subtaskIdentifier} references unknown depends_on local_id "${localDep}". ` +
-          `Dependencies must be created before dependents (topological order).`,
-        );
-      }
-    }
-
-    const subtaskId = uuid().slice(0, 8);
-    taskStore.createTask(
-      subtaskId,
-      parentTask.workspaceId || undefined,
-      title,
-      description,
-      resolvedDeps,
-      workspace ? slugify(workspace.name) : "",
-      ctx.taskId,
-      canDecompose,
-    );
-
-    // Record the local_id → real ID mapping, detecting duplicates
-    if (localId) {
-      if (subtaskLocalIdMap.has(localId)) {
-        logger.warn(
-          {
-            localId,
-            existingSubtaskId: subtaskLocalIdMap.get(localId),
-            newSubtaskId: subtaskId,
-            parentTaskId: ctx.taskId,
-          },
-          "Duplicate subtask local_id encountered; keeping existing mapping",
-        );
-      } else {
-        subtaskLocalIdMap.set(localId, subtaskId);
-      }
-    }
-
-    emit("task.created", { taskId: subtaskId, workspaceId: parentTask.workspaceId ?? undefined });
-    logger.info({ subtaskId, parentTaskId: ctx.taskId, title }, "Subtask created");
-  } catch (err) {
-    logger.error({ err, taskId: ctx.taskId }, "Failed to create subtask");
-  }
-}
-
-/**
- * Replay pre-association events from the session log through finding/subtask interceptors.
- * Called when a session is late-bound to a task. Does not re-publish to streamHub.
- *
- * Note: Uses synchronous readFileSync while the log is written via a buffered WriteStream.
- * Events written very recently may still be in the write buffer and not yet flushed to disk.
- * In practice this is negligible since replay targets events written before the current
- * iteration of the for-await loop, which are already flushed by the time lateBind is called.
- */
-function replayLoggedEvents(ctx: ProcessorContext, subtaskLocalIdMap: Map<string, string>): void {
-  try {
-    const entries = logWriter.readLog(ctx.logPath);
-    let findingsReplayed = 0;
-    let subtasksReplayed = 0;
-
-    for (const entry of entries) {
-      if (entry.type === "finding") {
-        processFindingEvent(ctx, entry.content, entry.session_id);
-        findingsReplayed++;
-      } else if (entry.type === "subtask_create") {
-        processSubtaskEvent(ctx, entry.content, subtaskLocalIdMap);
-        subtasksReplayed++;
-      } else if (entry.type === "escalation") {
-        processEscalationEvent(ctx, entry.content, entry.session_id);
-      }
-    }
-
-    if (findingsReplayed > 0 || subtasksReplayed > 0) {
-      logger.info(
-        { sessionId: ctx.sessionId, taskId: ctx.taskId, findingsReplayed, subtasksReplayed },
-        "Replayed pre-association events from session log",
-      );
-    }
-  } catch (err) {
-    logger.error({ err, sessionId: ctx.sessionId }, "Failed to replay logged events");
+    logger.error({ err, sessionId }, "Failed to publish widget event");
   }
 }
 
 /**
  * Process an async iterable of agent events from a PowerLine spawn or resume stream.
- * Handles event transformation, logging, finding interception, status updates, and cleanup.
+ * Handles event transformation, logging, status updates, and cleanup.
  *
  * This function is fire-and-forget: it runs in the background and does not throw.
  * Callers should use `onComplete` callback for post-processing.
@@ -269,16 +122,7 @@ export function processEventStream(
     taskId: options.taskId || "",
   };
 
-  /** Maps local_id strings (assigned by the agent) to real task IDs, scoped to this stream. */
-  const subtaskLocalIdMap = new Map<string, string>();
-
   processorRegistry.register(ctx);
-
-  // Register the bind listener synchronously alongside register() to close the race
-  // window where lateBind() could fire between register and the async IIFE starting.
-  processorRegistry.onBind(sessionId, () => {
-    replayLoggedEvents(ctx, subtaskLocalIdMap);
-  });
 
   /** Inner processing logic, extracted so it can be wrapped in runWithTrace. */
   const processEvents = async (): Promise<void> => {
@@ -299,6 +143,7 @@ export function processEventStream(
         });
         await logWriter.writeEvent(logPath, sysCtxEvent);
         streamHub.publish(sysCtxEvent);
+        recordSessionAction(sysCtxEvent);
       }
       if (options.prompt && options.taskId) {
         const promptEvent = create(grackle.SessionEventSchema, {
@@ -309,6 +154,7 @@ export function processEventStream(
         });
         await logWriter.writeEvent(logPath, promptEvent);
         streamHub.publish(promptEvent);
+        recordSessionAction(promptEvent);
       }
 
       for await (const event of events) {
@@ -327,23 +173,18 @@ export function processEventStream(
           timestamp: event.timestamp,
           content: event.content,
           raw: event.raw,
+          toolCallId: event.toolCallId,
+          diagnostic: event.diagnostic,
         });
         await logWriter.writeEvent(logPath, sessionEvent);
         streamHub.publish(sessionEvent);
+        recordSessionAction(sessionEvent);
 
-        // Intercept finding events and store + broadcast them
-        if (event.type === "finding" && ctx.workspaceId) {
-          processFindingEvent(ctx, event.content, sessionId);
-        }
-
-        // Intercept subtask creation events and create child tasks
-        if (event.type === "subtask_create" && ctx.taskId) {
-          processSubtaskEvent(ctx, event.content, subtaskLocalIdMap);
-        }
-
-        // Intercept escalation events from agents
-        if (event.type === "escalation" && ctx.workspaceId) {
-          processEscalationEvent(ctx, event.content, sessionId);
+        // HR7: tee runtime diagnostics to the additive OTLP logs sink (no-op
+        // unless OTEL_EXPORTER_OTLP_ENDPOINT is set). Existing sinks above are
+        // unchanged — diagnostics still flow to JSONL/streamHub/session_actions.
+        if (sessionEvent.diagnostic) {
+          emitDiagnostic(sessionEvent);
         }
 
         // Intercept usage events and accumulate token counts on the session record
@@ -484,12 +325,14 @@ export function processEventStream(
           "Stream lost — suspending session for recovery",
         );
         sessionStore.suspendSession(sessionId);
-        streamHub.publish(create(grackle.SessionEventSchema, {
+        const suspendedEvent = create(grackle.SessionEventSchema, {
           sessionId,
           type: grackle.EventType.STATUS,
           timestamp: new Date().toISOString(),
           content: SESSION_STATUS.SUSPENDED,
-        }));
+        });
+        streamHub.publish(suspendedEvent);
+        recordSessionAction(suspendedEvent);
         if (ctx.taskId) {
           emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
         }

@@ -29,7 +29,7 @@ vi.mock("@grackle-ai/core", async (importOriginal) => {
       }),
     },
     streamRegistry: { register: vi.fn() },
-    tokenPush: { refreshTokensForTask: vi.fn().mockResolvedValue(undefined) },
+    tokenPush: { authenticateForRuntime: vi.fn().mockResolvedValue(undefined) },
     adapterManager: { getConnection: vi.fn(() => ({ id: "mock-conn" })) },
     personasStore: {
       getPersona: vi.fn(() => ({

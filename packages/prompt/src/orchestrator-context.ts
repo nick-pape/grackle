@@ -54,16 +54,6 @@ export interface EnvironmentInput {
   defaultRuntime: string;
 }
 
-/** Finding data for building orchestrator context. */
-export interface FindingInput {
-  /** Finding category (decision, bug, pattern, etc.). */
-  category: string;
-  /** Finding title. */
-  title: string;
-  /** Finding content. */
-  content: string;
-}
-
 /** All input data needed to build orchestrator context. */
 export interface OrchestratorContextInput {
   /** Workspace metadata (undefined when workspace not found). */
@@ -74,8 +64,6 @@ export interface OrchestratorContextInput {
   personas: PersonaInput[];
   /** All available environments. */
   environments: EnvironmentInput[];
-  /** Recent findings for the workspace. */
-  findings: FindingInput[];
 }
 
 /** Pre-built orchestrator data matching SystemPromptOptions fields. */
@@ -88,14 +76,12 @@ export interface OrchestratorContext {
   availablePersonas: PersonaSummary[];
   /** All available environments. */
   availableEnvironments: EnvironmentSummary[];
-  /** Pre-built findings context string. */
-  findingsContext: string;
 }
 
 /**
  * Build orchestrator context from pre-fetched data.
  *
- * @param input - Pre-fetched workspace, task, persona, environment, and finding data.
+ * @param input - Pre-fetched workspace, task, persona, and environment data.
  * @returns Data ready to spread into SystemPromptOptions.
  */
 export function buildOrchestratorContext(input: OrchestratorContextInput): OrchestratorContext {
@@ -134,46 +120,10 @@ export function buildOrchestratorContext(input: OrchestratorContextInput): Orche
     defaultRuntime: e.defaultRuntime,
   }));
 
-  // Build findings context (pre-formatted markdown with 8K char budget)
-  const findingsContext = buildFindingsContext(input.findings);
-
   return {
     workspace: input.workspace,
     taskTree,
     availablePersonas,
     availableEnvironments,
-    findingsContext,
   };
-}
-
-// ─── Findings Context Builder ──────────────────────────────
-
-/** Maximum total characters for the findings context block. */
-const FINDINGS_MAX_CHARS: number = 8000;
-
-/** Maximum characters per individual finding's content. */
-const FINDINGS_MAX_PER_FINDING: number = 500;
-
-/** Build a summarized text context of recent findings. */
-function buildFindingsContext(findings: FindingInput[]): string {
-  if (findings.length === 0) {
-    return "";
-  }
-
-  const lines = ["## Workspace Findings (shared knowledge from other agents)\n"];
-  let totalChars = lines[0].length;
-
-  for (const f of findings) {
-    const content = f.content.length > FINDINGS_MAX_PER_FINDING
-      ? f.content.slice(0, FINDINGS_MAX_PER_FINDING) + "..."
-      : f.content;
-    const entry = `### [${f.category}] ${f.title}\n${content}\n`;
-    if (totalChars + entry.length > FINDINGS_MAX_CHARS) {
-      break;
-    }
-    lines.push(entry);
-    totalChars += entry.length;
-  }
-
-  return lines.join("\n");
 }

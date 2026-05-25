@@ -29,12 +29,13 @@ enum EventType {
   EVENT_TYPE_ERROR = 4;
   EVENT_TYPE_STATUS = 5;
   EVENT_TYPE_SYSTEM = 6;
-  EVENT_TYPE_FINDING = 7;
-  EVENT_TYPE_SUBTASK_CREATE = 8;
+  reserved 7; // was EVENT_TYPE_FINDING (removed)
+  reserved 8; // was EVENT_TYPE_SUBTASK_CREATE (removed — orchestration is MCP-only, AHP HR7)
   EVENT_TYPE_USER_INPUT = 9;
   EVENT_TYPE_SIGNAL = 10;
   EVENT_TYPE_USAGE = 11;
-  EVENT_TYPE_ESCALATION = 12;
+  reserved 12; // was EVENT_TYPE_ESCALATION (removed — orchestration is MCP-only, AHP HR7)
+  EVENT_TYPE_WIDGET = 13;
 }
 
 enum TaskStatus {
@@ -286,6 +287,12 @@ message StreamInfo {
   bool self_echo = 6;             // Whether publishers receive their own messages echoed back
 }
 
+message ListStreamsRequest {
+  // When false (default), internal IPC streams (lifecycle:/pipe:/stdin:) are
+  // filtered out. Set true to include them (debug / inspection).
+  bool include_internal = 1;
+}
+
 message ListStreamsResponse {
   repeated StreamInfo streams = 1;
 }
@@ -298,6 +305,8 @@ message SessionEvent {
   string timestamp = 3;
   string content = 4;
   string raw = 5; // JSON, optional original payload
+  string tool_call_id = 6; // stable runtime tool-call id (pairs tool_use↔tool_result); "" when N/A (AHP HR3)
+  bool diagnostic = 7; // true = runtime lifecycle/diagnostic; tee to telemetry sinks (may be excluded from SessionState in a later HR step); AHP HR7
 }
 
 message SessionEventList {
@@ -437,6 +446,7 @@ message Task {
   string schedule_id = 24; // ID of the schedule that created this task (empty for manually-created tasks)
   int32 token_budget = 25; // Total token cap (input + output); 0 = unlimited
   int32 cost_budget_millicents = 26; // Cost cap in millicents ($0.00001 units); 0 = unlimited
+  bool inject_knowledge = 27; // Inject knowledge-graph context at spawn (#1259); defaults true
 }
 
 message TaskList {
@@ -475,6 +485,7 @@ message CreateTaskRequest {
   optional string default_persona_id = 9; // Default persona for this task
   optional int32 token_budget = 10; // Total token cap (input + output); 0 = unlimited
   optional int32 cost_budget_millicents = 11; // Cost cap in millicents; 0 = unlimited
+  optional bool inject_knowledge = 12; // Inject KG context at spawn (#1259); unset defaults to true
 }
 
 message TaskId {
@@ -491,6 +502,7 @@ message UpdateTaskRequest {
   optional string default_persona_id = 9; // Default persona for this task
   optional int32 token_budget = 10; // Total token cap (input + output); 0 = unlimited
   optional int32 cost_budget_millicents = 11; // Cost cap in millicents; 0 = unlimited
+  optional bool inject_knowledge = 12; // Inject KG context at spawn (#1259); unset leaves unchanged
 }
 
 message StartTaskRequest {
@@ -507,44 +519,99 @@ message SetWorkpadRequest {
   string workpad = 2; // JSON string with status, summary, and extra fields
 }
 
-// ─── Findings ──────────────────────────────────────────────
+// ─── Components (agent-authored UI registry) ────────────
 
-message Finding {
+message Component {
   string id = 1;
   string workspace_id = 2;
-  string task_id = 3;
-  string session_id = 4;
-  string category = 5;
-  string title = 6;
-  string content = 7;
-  repeated string tags = 8;
-  string created_at = 9;
+  string name = 3;
+  string description = 4;
+  string renderer_kind = 5;
+  string body = 6;
+  string props_schema = 7;
+  int32 version = 8;
+  string owner_task_id = 9;
+  string owner_session_id = 10;
+  string created_at = 11;
+  string updated_at = 12;
+  bool promoted = 13; // promoted to a dynamic render_<name> MCP tool (#1272)
 }
 
-message FindingList {
-  repeated Finding findings = 1;
+message ComponentList {
+  repeated Component components = 1;
 }
 
-message PostFindingRequest {
+message RegisterComponentRequest {
   string workspace_id = 1;
-  string task_id = 2;
-  string session_id = 3;
-  string category = 4;
-  string title = 5;
-  string content = 6;
-  repeated string tags = 7;
+  string name = 2;
+  string description = 3;
+  string renderer_kind = 4;
+  string body = 5;
+  string props_schema = 6;
+  string owner_task_id = 7;
+  string owner_session_id = 8;
 }
 
-message QueryFindingsRequest {
-  // Optional: when empty, returns findings across all workspaces.
-  string workspace_id = 1;
-  repeated string categories = 2;
-  repeated string tags = 3;
-  int32 limit = 4;
-}
-
-message GetFindingRequest {
+message UpdateComponentRequest {
   string id = 1;
+  string workspace_id = 2; // for cross-workspace authz validation
+  optional string name = 3;
+  optional string description = 4;
+  optional string body = 5;
+  optional string props_schema = 6;
+}
+
+message GetComponentRequest {
+  // Resolve by id (takes precedence) or by name within workspace_id.
+  string id = 1;
+  string name = 2;
+  string workspace_id = 3;
+}
+
+message ListComponentsRequest {
+  string workspace_id = 1;
+}
+
+message SearchComponentsRequest {
+  string query = 1;        // keyword query (required)
+  string workspace_id = 2; // optional workspace scope; built-ins are always included
+  int32 limit = 3;         // max results; 0 means use default
+}
+
+message SearchComponentResult {
+  Component component = 1;
+  double relevance_score = 2; // 0.0–1.0, higher is more relevant
+  bool builtin = 3;           // true for Grackle-provided built-in components (compose in JSX)
+}
+
+message SearchComponentsResponse {
+  repeated SearchComponentResult results = 1;
+}
+
+message SetComponentPromotionRequest {
+  // Resolve by id (takes precedence) or by name within workspace_id.
+  string id = 1;
+  string name = 2;
+  string workspace_id = 3;
+  // true promotes to a render_<name> tool; false demotes. Optional so "unset" is
+  // distinguishable from false — the server defaults an unset value to true.
+  optional bool promoted = 4;
+}
+
+// Resolve a component's transitive registry references for composition (#1270).
+// Provide a registry id/name (render-by-reference) OR a raw source (render-by-source).
+message ResolveComponentGraphRequest {
+  string id = 1;            // resolve the root by id (takes precedence)
+  string name = 2;          // or by name within workspace_id
+  string workspace_id = 3;  // required: resolution is workspace-scoped
+  string source = 4;        // raw body to scan instead of a registry root (render-by-source)
+}
+
+message ResolveComponentGraphResponse {
+  // The resolved root component (empty when resolving from a raw `source`).
+  Component root = 1;
+  // Transitive referenced components in eval order (deepest first); excludes the root.
+  repeated Component dependencies = 2;
 }
 
 // ─── Escalations ───────────────────────────────────────────
@@ -584,6 +651,46 @@ message ListEscalationsRequest {
 
 message AcknowledgeEscalationRequest {
   string id = 1;
+}
+
+// ─── Channels (capability-scoped external I/O) ─────────────
+
+message ExposeChannelRequest {
+  oneof target {
+    string session_id = 1;
+    string task_id = 2;
+  }
+  repeated string verbs = 3; // Permitted verbs (empty = ["send_input"])
+  uint32 ttl_seconds = 4; // Token lifetime in seconds (0 = server default)
+  string label = 5; // Optional human-readable label for audit
+}
+
+message ExposeChannelResponse {
+  string channel_uri = 1; // e.g. "grackle:/sessions/<id>"
+  string grant_id = 2;
+  string token = 3; // The capability token (paste into the ingress URL)
+  string ingress_url = 4; // Full POST URL: "<base>/hook/<token>"
+  string expires_at = 5;
+}
+
+message ChannelGrant {
+  string grant_id = 1;
+  string channel_uri = 2;
+  repeated string verbs = 3;
+  string label = 4;
+  string created_at = 5;
+  string expires_at = 6;
+  bool revoked = 7;
+}
+
+message ChannelGrantList {
+  repeated ChannelGrant grants = 1;
+}
+
+message ListChannelGrantsRequest {}
+
+message RevokeChannelGrantRequest {
+  string grant_id = 1;
 }
 
 // ─── Personas ──────────────────────────────────────────────
@@ -869,18 +976,6 @@ message ListRecentKnowledgeNodesResponse {
   repeated KnowledgeEdgeProto edges = 2;
 }
 
-message CreateKnowledgeNodeRequest {
-  string title = 1;
-  string content = 2;
-  string category = 3;
-  repeated string tags = 4;
-  string workspace_id = 5;
-}
-
-message CreateKnowledgeNodeResponse {
-  string id = 1;
-}
-
 // ─── Version Status ─────────────────────────────────────────
 
 message VersionStatus {
@@ -899,10 +994,66 @@ message DomainEvent {
   string payload_json = 4; // JSON-encoded payload
 }
 
+// Query the persisted domain_events log (most recent first). Filters optional, combined with AND.
+message QueryDomainEventsRequest {
+  string before_id = 1; // cursor: return events whose ULID id sorts before this (exclusive) — older history
+  string type = 2;      // exact event type, e.g. "task.created"
+  string since = 3;     // ISO 8601, inclusive lower bound on timestamp
+  string until = 4;     // ISO 8601, inclusive upper bound on timestamp
+  int32 limit = 5;      // max rows (0 = server default)
+}
+
+message DomainEventList {
+  repeated DomainEvent events = 1;
+}
+
+// A message published to an observable IPC stream room (RFC #1264 Phase 2).
+message StreamMessageEvent {
+  string stream_id = 1;
+  string seq = 2;        // ULID transcript sequence key (monotonic per stream)
+  string sender_id = 3;
+  string content = 4;
+  string timestamp = 5;  // ISO 8601
+}
+
+// Read a stream room's durable transcript (most recent first).
+message GetStreamTranscriptRequest {
+  string stream_id = 1;
+  string before_seq = 2; // cursor: messages whose seq sorts before this (exclusive) — older history
+  int32 limit = 3;       // max rows (0 = server default)
+}
+
+message StreamTranscript {
+  repeated StreamMessageEvent messages = 1;
+}
+
+// A durable, server-sequenced session action — one agent-conversation event in
+// the replay-buffer log (RFC #1264 / AHP HR1a). Read in ascending seq order.
+message SessionAction {
+  string seq = 1;        // ULID monotonic serverSeq (chronological)
+  string session_id = 2;
+  string type = 3;       // event type string, e.g. "text", "tool_use", "status"
+  string content = 4;
+  string raw = 5;        // raw JSON payload ("" when absent)
+  string timestamp = 6;  // ISO 8601
+}
+
+// Read a session's durable action log (oldest first / replay order).
+message GetSessionActionsRequest {
+  string session_id = 1;
+  string from_seq = 2; // cursor: actions whose seq sorts after this (exclusive) — resume from a point
+  int32 limit = 3;     // max rows (0 = server default)
+}
+
+message SessionActionList {
+  repeated SessionAction actions = 1;
+}
+
 message ServerEvent {
   oneof event {
     SessionEvent session_event = 1;
     DomainEvent domain_event = 2;
+    StreamMessageEvent stream_message_event = 3;
   }
 }
 

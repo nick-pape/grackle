@@ -72,6 +72,22 @@ function extractToolResultId(raw: Record<string, unknown>): string | undefined {
   return undefined;
 }
 
+/**
+ * Resolve a tool event's correlation id: prefer the first-class `toolCallId`
+ * (AHP HR3), falling back to the legacy per-runtime `raw` parsing for events
+ * logged before HR3. `extractId` is the legacy reader for the event's role.
+ */
+function toolIdOf(
+  e: SessionEvent,
+  raw: Record<string, unknown> | undefined,
+  extractId: (raw: Record<string, unknown>) => string | undefined,
+): string | undefined {
+  if (e.toolCallId) {
+    return e.toolCallId;
+  }
+  return raw ? extractId(raw) : undefined;
+}
+
 /** Pairs tool_use events with their tool_result counterparts. */
 export function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
   const parsedRaw = new Map<SessionEvent, Record<string, unknown>>();
@@ -82,12 +98,11 @@ export function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
     } catch { /* skip unparseable events */ }
   }
 
-  // Build a map of tool_use IDs → context, supporting all runtime ID formats.
+  // Build a map of tool_use IDs → context (first-class toolCallId, else legacy raw).
   const toolUseById = new Map<string, { tool: string; args: unknown }>();
   for (const e of events) {
     if (e.eventType !== "tool_use") continue;
-    const raw = parsedRaw.get(e);
-    const id = raw ? extractToolUseId(raw) : undefined;
+    const id = toolIdOf(e, parsedRaw.get(e), extractToolUseId);
     if (!id) continue;
     try {
       const content = JSON.parse(e.content) as { tool: string; args: unknown };
@@ -95,18 +110,17 @@ export function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
     } catch { /* skip unparseable events */ }
   }
 
-  // Phase 1: ID-based pairing — match tool_result events to tool_use by ID.
+  // ID-based pairing — match tool_result events to their tool_use by id. Every
+  // runtime now emits a stable `toolCallId`, so there is no positional fallback
+  // (which mispaired under concurrent/interleaved tool calls — AHP HR3).
   const consumedIds = new Set<string>();
-  const pairedResultIndices = new Set<number>();
-  const display: DisplayEvent[] = events.map((e, index) => {
+  const display: DisplayEvent[] = events.map((e) => {
     if (e.eventType !== "tool_result") return e;
-    const raw = parsedRaw.get(e);
-    const resultId = raw ? extractToolResultId(raw) : undefined;
+    const resultId = toolIdOf(e, parsedRaw.get(e), extractToolResultId);
     if (!resultId) return e;
     const ctx = toolUseById.get(resultId);
     if (!ctx) return e;
     consumedIds.add(resultId);
-    pairedResultIndices.add(index);
 
     // Extract detailedResult from content when it's a JSON object with detailedContent
     // (Copilot emits tool results in this format with embedded diffs).
@@ -125,87 +139,11 @@ export function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
     return { ...e, toolUseCtx: { ...ctx, detailedResult } };
   });
 
-  // Phase 2: Adjacent fallback — pair remaining unpaired tool_use with an immediately
-  // adjacent unpaired tool_result. Only pairs when the tool_result directly follows
-  // the tool_use (no events between them) to avoid mis-pairing in async scenarios.
-  const unpairedToolUseIndices: number[] = [];
-  for (let i = 0; i < display.length; i++) {
-    if (display[i].eventType !== "tool_use") continue;
-    const raw = parsedRaw.get(display[i]);
-    const id = raw ? extractToolUseId(raw) : undefined;
-    if (id && consumedIds.has(id)) continue;
-    unpairedToolUseIndices.push(i);
-  }
-
-  const unpairedResultIndices: number[] = [];
-  for (let i = 0; i < display.length; i++) {
-    if (display[i].eventType !== "tool_result" || pairedResultIndices.has(i)) continue;
-    unpairedResultIndices.push(i);
-  }
-
-  // Match unpaired tool_use to an immediately adjacent unpaired tool_result.
-  let resultCursor = 0;
-  for (const useIdx of unpairedToolUseIndices) {
-    // Advance cursor past results that appear before this tool_use
-    while (resultCursor < unpairedResultIndices.length && unpairedResultIndices[resultCursor] < useIdx) {
-      resultCursor++;
-    }
-    if (resultCursor >= unpairedResultIndices.length) break;
-
-    const resultIdx = unpairedResultIndices[resultCursor];
-    // Only pair if the tool_result is the immediately next event (adjacent)
-    if (resultIdx !== useIdx + 1) continue;
-    const useEvent = display[useIdx];
-    const resultEvent = display[resultIdx];
-
-    let ctx: { tool: string; args: unknown } | undefined;
-    try {
-      const content = JSON.parse(useEvent.content) as { tool: string; args: unknown };
-      ctx = { tool: content.tool, args: content.args };
-    } catch { /* skip */ }
-
-    if (ctx) {
-      // Extract detailedResult
-      let detailedResult: string | undefined;
-      const contentStr: string = resultEvent.content.trim();
-      if (contentStr.startsWith("{")) {
-        try {
-          const parsed = JSON.parse(contentStr) as Record<string, unknown>;
-          if (typeof parsed.detailedContent === "string") {
-            detailedResult = parsed.detailedContent;
-          }
-        } catch { /* skip */ }
-      }
-
-      display[resultIdx] = { ...resultEvent, toolUseCtx: { ...ctx, detailedResult } };
-      pairedResultIndices.add(resultIdx);
-
-      // Mark the tool_use as consumed so it's filtered out below
-      const raw = parsedRaw.get(useEvent);
-      const id = raw ? extractToolUseId(raw) : undefined;
-      if (id) {
-        consumedIds.add(id);
-      } else {
-        // No ID available — use a synthetic marker to track consumption
-        consumedIds.add(`__seq_${useIdx}`);
-        // Store the synthetic ID so the filter below can find it
-        parsedRaw.set(useEvent, { ...(raw ?? {}), __seqId: `__seq_${useIdx}` });
-      }
-      resultCursor++;
-    }
-  }
-
   // Filter out consumed tool_use events (their info is now embedded in tool_result).
   const filtered = display.filter((e) => {
     if (e.eventType !== "tool_use") return true;
-    const raw = parsedRaw.get(e);
-    if (!raw) return true;
-    const id = extractToolUseId(raw);
-    if (id && consumedIds.has(id)) return false;
-    // Check synthetic sequential marker
-    const seqId = raw.__seqId as string | undefined;
-    if (seqId && consumedIds.has(seqId)) return false;
-    return true;
+    const id = toolIdOf(e, parsedRaw.get(e), extractToolUseId);
+    return !(id && consumedIds.has(id));
   });
 
   // Phase 3: Mark remaining unpaired tool_use events as "settled" if subsequent

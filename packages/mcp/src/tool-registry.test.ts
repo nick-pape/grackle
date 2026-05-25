@@ -39,6 +39,15 @@ describe("ToolRegistry", () => {
       .toThrow("Duplicate tool name: duplicate");
   });
 
+  it("throws when a tool name uses the reserved render_ prefix (#1272)", () => {
+    const registry = new ToolRegistry();
+    // The render_ namespace belongs to dynamic per-workspace component tools, so
+    // no static/plugin tool may claim it — enforced at registration, not just by
+    // a built-in allowlist test.
+    expect(() => registry.register(createTestTool("render_evil")))
+      .toThrow(/reserved/);
+  });
+
   it("lists all registered tools", () => {
     const registry = new ToolRegistry();
     registry.register(createTestTool("alpha"));
@@ -155,7 +164,9 @@ describe("createToolRegistry with plugin tools", () => {
 describe("Full tool registry", () => {
   it("contains exactly the expected number of tools", () => {
     const registry = createToolRegistry();
-    expect(registry.list()).toHaveLength(68);
+    // 74 after #1271 (component_search) + 1 component_promote tool (#1272) = 75.
+    // (Dynamic render_<name> tools are synthesized per workspace and not registered here.)
+    expect(registry.list()).toHaveLength(75);
   });
 
   it("every tool name matches snake_case pattern", () => {
@@ -188,7 +199,6 @@ describe("Full tool registry", () => {
       "workspace_get",
       "task_list",
       "task_show",
-      "finding_list",
       "persona_list",
       "persona_show",
       "logs_get",
@@ -211,7 +221,7 @@ describe("Full tool registry", () => {
   it("groups are consistent within tool files", () => {
     const registry = createToolRegistry();
     const expectedGroups = new Set([
-      "env", "session", "workspace", "task", "finding", "persona", "logs", "credential", "token", "config", "ipc", "usage", "knowledge", "workpad", "schedule", "system", "escalation",
+      "env", "session", "workspace", "task", "persona", "logs", "credential", "token", "config", "ipc", "usage", "knowledge", "workpad", "schedule", "system", "escalation", "widget", "component",
     ]);
     for (const tool of registry.list()) {
       expect(expectedGroups.has(tool.group), `unexpected group: ${tool.group}`).toBe(true);

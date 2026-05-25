@@ -30,6 +30,8 @@ export type {
   NewFinding,
   PersonaRow,
   NewPersona,
+  ComponentRow,
+  NewComponent,
   ScheduleRow,
   NewSchedule,
   EscalationRow,
@@ -40,6 +42,10 @@ export type {
   PluginRow,
   GitHubAccountRow,
   NewGitHubAccount,
+  ChannelGrantRow,
+  NewChannelGrant,
+  StreamMessageRow,
+  SessionActionRow,
 } from "./schema.js";
 
 // ─── Stores ────────────────────────────────────────────────
@@ -47,7 +53,7 @@ export * as sessionStore from "./session-store.js";
 export * as taskStore from "./task-store.js";
 export * as workspaceStore from "./workspace-store.js";
 export * as personaStore from "./persona-store.js";
-export * as findingStore from "./finding-store.js";
+export * as componentStore from "./component-store.js";
 export * as settingsStore from "./settings-store.js";
 export * as envRegistry from "./env-registry.js";
 export * as tokenStore from "./token-store.js";
@@ -58,6 +64,7 @@ export * as workspaceEnvironmentLinkStore from "./workspace-environment-link-sto
 export * as dispatchQueueStore from "./dispatch-queue-store.js";
 export * as pluginStore from "./plugin-store.js";
 export * as githubAccountStore from "./github-account-store.js";
+export * as channelGrantStore from "./channel-grant-store.js";
 
 // Re-export key store types for convenience
 export type { InsertTaskFields } from "./task-store.js";
@@ -74,8 +81,12 @@ export {
 } from "./credential-providers.js";
 
 // ─── Event Store ───────────────────────────────────────────
-export { persistEvent } from "./event-store.js";
-export type { DomainEvent } from "./event-store.js";
+export { persistEvent, queryDomainEvents } from "./event-store.js";
+export type { DomainEvent, DomainEventQuery } from "./event-store.js";
+export { persistStreamMessage, queryStreamMessages } from "./stream-message-store.js";
+export type { StreamMessageRecord, StreamMessageQuery } from "./stream-message-store.js";
+export { persistSessionAction, querySessionActions } from "./session-action-store.js";
+export type { SessionActionRecord, SessionActionQuery } from "./session-action-store.js";
 
 // ─── Utilities ─────────────────────────────────────────────
 export { grackleHome } from "./paths.js";

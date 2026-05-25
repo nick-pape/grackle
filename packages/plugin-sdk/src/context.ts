@@ -56,7 +56,6 @@ export type GrackleEventType =
   | "persona.created"
   | "persona.updated"
   | "persona.deleted"
-  | "finding.posted"
   | "environment.added"
   | "environment.removed"
   | "environment.changed"
@@ -70,7 +69,9 @@ export type GrackleEventType =
   | "schedule.fired"
   | "notification.escalated"
   | "plugin.changed"
-  | "github_account.changed";
+  | "github_account.changed"
+  // Keep in sync with the same union in @grackle-ai/core event-bus.ts.
+  | "component.changed";
 
 /** A domain event from the event bus. */
 export interface GrackleEvent {

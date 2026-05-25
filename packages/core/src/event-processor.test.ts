@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { create } from "@bufbuild/protobuf";
-import { powerline } from "@grackle-ai/common";
+import { powerline, grackle } from "@grackle-ai/common";
 
 // ── Mock all heavy dependencies before importing ──────────────
 vi.mock("./trace-context.js", () => ({
@@ -14,6 +14,7 @@ vi.mock("./logger.js", () => ({
 
 vi.mock("./log-writer.js", () => ({
   initLog: vi.fn(),
+  ensureLogInitialized: vi.fn(),
   writeEvent: vi.fn(),
   endSession: vi.fn(),
   readLog: vi.fn().mockReturnValue([]),
@@ -31,17 +32,22 @@ vi.mock("./transcript.js", () => ({
   writeTranscript: vi.fn(),
 }));
 
+vi.mock("./telemetry.js", () => ({
+  emitDiagnostic: vi.fn(),
+}));
+
 // Import AFTER mocks
-import { openDatabase, initDatabase, sqlite as _sqlite, sessionStore, taskStore, workspaceStore, findingStore } from "@grackle-ai/database";
+import { openDatabase, initDatabase, sqlite as _sqlite, sessionStore, taskStore, workspaceStore, querySessionActions } from "@grackle-ai/database";
 openDatabase(":memory:");
 initDatabase();
 const sqlite = _sqlite!;
-import { processEventStream } from "./event-processor.js";
+import { processEventStream, publishWidgetEvent } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
 import { emit } from "./event-bus.js";
 import * as logWriter from "./log-writer.js";
 import { logger } from "./logger.js";
 import { runWithTrace } from "./trace-context.js";
+import { emitDiagnostic } from "./telemetry.js";
 
 /** Apply the minimal schema needed for tests. */
 function applySchema(): void {
@@ -80,6 +86,7 @@ function applySchema(): void {
       parent_task_id TEXT NOT NULL DEFAULT '',
       depth         INTEGER NOT NULL DEFAULT 0,
       can_decompose INTEGER NOT NULL DEFAULT 0,
+      inject_knowledge INTEGER NOT NULL DEFAULT 1,
       default_persona_id TEXT NOT NULL DEFAULT '',
       workpad   TEXT NOT NULL DEFAULT '',
       schedule_id TEXT NOT NULL DEFAULT '',
@@ -161,441 +168,6 @@ function waitForProcessing(
     });
   });
 }
-
-describe("event-processor SUBTASK_CREATE handling", () => {
-  beforeEach(() => {
-    sqlite.exec("DROP TABLE IF EXISTS findings");
-    sqlite.exec("DROP TABLE IF EXISTS tasks");
-    sqlite.exec("DROP TABLE IF EXISTS sessions");
-    sqlite.exec("DROP TABLE IF EXISTS workspaces");
-    applySchema();
-    vi.clearAllMocks();
-
-    workspaceStore.createWorkspace("proj1", "Test Project", "desc", "", "env1");
-  });
-
-  it("creates a subtask when SUBTASK_CREATE event is received", async () => {
-    // Create a decomposable parent task
-    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
-    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-
-    const subtaskEvent = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "subtask_create",
-      timestamp: new Date().toISOString(),
-      content: JSON.stringify({
-        title: "Design API",
-        description: "Design REST endpoints",
-        local_id: "design",
-        depends_on: [],
-        can_decompose: false,
-      }),
-    });
-
-    await waitForProcessing([subtaskEvent], {
-      sessionId: "sess1",
-      logPath: "/tmp/log",
-      workspaceId: "proj1",
-      taskId: "parent1",
-    });
-
-    // Verify subtask was created
-    const children = taskStore.getChildren("parent1");
-    expect(children).toHaveLength(1);
-    expect(children[0].title).toBe("Design API");
-    expect(children[0].description).toBe("Design REST endpoints");
-    expect(children[0].parentTaskId).toBe("parent1");
-    expect(children[0].depth).toBe(1);
-    expect(children[0].canDecompose).toBe(false);
-
-    // Verify emit was called with task.created
-    expect(emit).toHaveBeenCalledWith(
-      "task.created",
-      expect.objectContaining({ taskId: expect.any(String), workspaceId: "proj1" }),
-    );
-  });
-
-  it("resolves local_id dependencies between sibling subtasks", async () => {
-    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
-    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-
-    const event1 = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "subtask_create",
-      timestamp: new Date().toISOString(),
-      content: JSON.stringify({
-        title: "Research",
-        description: "Do research",
-        local_id: "research",
-        depends_on: [],
-      }),
-    });
-
-    const event2 = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "subtask_create",
-      timestamp: new Date().toISOString(),
-      content: JSON.stringify({
-        title: "Implement",
-        description: "Do implementation",
-        local_id: "impl",
-        depends_on: ["research"],
-      }),
-    });
-
-    await waitForProcessing([event1, event2], {
-      sessionId: "sess1",
-      logPath: "/tmp/log",
-      workspaceId: "proj1",
-      taskId: "parent1",
-    });
-
-    const children = taskStore.getChildren("parent1");
-    expect(children).toHaveLength(2);
-
-    const research = children.find(c => c.title === "Research")!;
-    const impl = children.find(c => c.title === "Implement")!;
-
-    // The impl task should depend on the real ID of the research task
-    const implDeps = JSON.parse(impl.dependsOn);
-    expect(implDeps).toContain(research.id);
-  });
-
-  it("skips subtask creation when parent task cannot decompose", async () => {
-    taskStore.createTask("parent1", "proj1", "Leaf Task", "desc", [], "test-workspace", "", false);
-    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-
-    const subtaskEvent = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "subtask_create",
-      timestamp: new Date().toISOString(),
-      content: JSON.stringify({
-        title: "Should Not Create",
-        description: "This should be rejected",
-      }),
-    });
-
-    await waitForProcessing([subtaskEvent], {
-      sessionId: "sess1",
-      logPath: "/tmp/log",
-      workspaceId: "proj1",
-      taskId: "parent1",
-    });
-
-    const children = taskStore.getChildren("parent1");
-    expect(children).toHaveLength(0);
-    expect(logger.warn).toHaveBeenCalledWith(
-      expect.objectContaining({ taskId: "parent1" }),
-      "Subtask creation failed: parent task cannot decompose",
-    );
-  });
-
-  it("skips subtask creation when taskId is not provided", async () => {
-    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-
-    const subtaskEvent = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "subtask_create",
-      timestamp: new Date().toISOString(),
-      content: JSON.stringify({
-        title: "No Parent",
-        description: "Should be ignored",
-      }),
-    });
-
-    await waitForProcessing([subtaskEvent], {
-      sessionId: "sess1",
-      logPath: "/tmp/log",
-      workspaceId: "proj1",
-      // no taskId
-    });
-
-    // No tasks should be created (only the parent we never made)
-    const allTasks = taskStore.listTasks("proj1");
-    expect(allTasks).toHaveLength(0);
-  });
-
-  it("rejects subtask with unresolvable depends_on local_id", async () => {
-    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
-    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-
-    const subtaskEvent = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "subtask_create",
-      timestamp: new Date().toISOString(),
-      content: JSON.stringify({
-        title: "Has Bad Dep",
-        description: "Depends on nonexistent",
-        depends_on: ["nonexistent_id"],
-      }),
-    });
-
-    await waitForProcessing([subtaskEvent], {
-      sessionId: "sess1",
-      logPath: "/tmp/log",
-      workspaceId: "proj1",
-      taskId: "parent1",
-    });
-
-    // Subtask should NOT be created
-    const children = taskStore.getChildren("parent1");
-    expect(children).toHaveLength(0);
-
-    // Should log error (caught by the internal catch block)
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.objectContaining({ taskId: "parent1" }),
-      "Failed to create subtask",
-    );
-  });
-
-  it("rejects subtask when any depends_on local_id is unresolvable, even if others resolve", async () => {
-    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
-    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-
-    const event1 = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "subtask_create",
-      timestamp: new Date().toISOString(),
-      content: JSON.stringify({
-        title: "Research",
-        description: "Do research",
-        local_id: "research",
-        depends_on: [],
-      }),
-    });
-
-    const event2 = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "subtask_create",
-      timestamp: new Date().toISOString(),
-      content: JSON.stringify({
-        title: "Implement",
-        description: "Do implementation",
-        local_id: "impl",
-        depends_on: ["research", "nonexistent"],
-      }),
-    });
-
-    await waitForProcessing([event1, event2], {
-      sessionId: "sess1",
-      logPath: "/tmp/log",
-      workspaceId: "proj1",
-      taskId: "parent1",
-    });
-
-    // Only the first subtask should be created; the second is rejected
-    const children = taskStore.getChildren("parent1");
-    expect(children).toHaveLength(1);
-    expect(children[0].title).toBe("Research");
-  });
-
-  it("continues processing events after a subtask is rejected for unresolvable depends_on", async () => {
-    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
-    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-
-    const badEvent = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "subtask_create",
-      timestamp: new Date().toISOString(),
-      content: JSON.stringify({
-        title: "Bad Subtask",
-        description: "Has unresolvable dep",
-        local_id: "bad",
-        depends_on: ["nonexistent"],
-      }),
-    });
-
-    const goodEvent = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "subtask_create",
-      timestamp: new Date().toISOString(),
-      content: JSON.stringify({
-        title: "Good Subtask",
-        description: "No deps",
-        local_id: "good",
-        depends_on: [],
-      }),
-    });
-
-    await waitForProcessing([badEvent, goodEvent], {
-      sessionId: "sess1",
-      logPath: "/tmp/log",
-      workspaceId: "proj1",
-      taskId: "parent1",
-    });
-
-    // Only the good subtask should be created
-    const children = taskStore.getChildren("parent1");
-    expect(children).toHaveLength(1);
-    expect(children[0].title).toBe("Good Subtask");
-  });
-
-  it("does not register local_id for a rejected subtask, causing dependents to also fail", async () => {
-    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
-    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-
-    // First subtask has unresolvable dep — rejected, its local_id "a" is never registered
-    const event1 = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "subtask_create",
-      timestamp: new Date().toISOString(),
-      content: JSON.stringify({
-        title: "First",
-        description: "Depends on ghost",
-        local_id: "a",
-        depends_on: ["ghost"],
-      }),
-    });
-
-    // Second subtask depends on "a" which was never registered — also rejected
-    const event2 = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "subtask_create",
-      timestamp: new Date().toISOString(),
-      content: JSON.stringify({
-        title: "Second",
-        description: "Depends on first",
-        local_id: "b",
-        depends_on: ["a"],
-      }),
-    });
-
-    await waitForProcessing([event1, event2], {
-      sessionId: "sess1",
-      logPath: "/tmp/log",
-      workspaceId: "proj1",
-      taskId: "parent1",
-    });
-
-    // Neither subtask should be created
-    const children = taskStore.getChildren("parent1");
-    expect(children).toHaveLength(0);
-  });
-
-  it("rejects subtask with empty title or description", async () => {
-    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
-    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-
-    const subtaskEvent = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "subtask_create",
-      timestamp: new Date().toISOString(),
-      content: JSON.stringify({
-        title: "",
-        description: "Has no title",
-      }),
-    });
-
-    await waitForProcessing([subtaskEvent], {
-      sessionId: "sess1",
-      logPath: "/tmp/log",
-      workspaceId: "proj1",
-      taskId: "parent1",
-    });
-
-    const children = taskStore.getChildren("parent1");
-    expect(children).toHaveLength(0);
-    expect(logger.warn).toHaveBeenCalledWith(
-      expect.objectContaining({ taskId: "parent1" }),
-      "Subtask creation failed: invalid title or description",
-    );
-  });
-
-  it("detects duplicate local_id and keeps existing mapping", async () => {
-    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
-    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-
-    const event1 = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "subtask_create",
-      timestamp: new Date().toISOString(),
-      content: JSON.stringify({
-        title: "First",
-        description: "First subtask",
-        local_id: "dupe",
-      }),
-    });
-
-    const event2 = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "subtask_create",
-      timestamp: new Date().toISOString(),
-      content: JSON.stringify({
-        title: "Second",
-        description: "Second subtask with same local_id",
-        local_id: "dupe",
-      }),
-    });
-
-    const event3 = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "subtask_create",
-      timestamp: new Date().toISOString(),
-      content: JSON.stringify({
-        title: "Third",
-        description: "Depends on dupe",
-        depends_on: ["dupe"],
-      }),
-    });
-
-    await waitForProcessing([event1, event2, event3], {
-      sessionId: "sess1",
-      logPath: "/tmp/log",
-      workspaceId: "proj1",
-      taskId: "parent1",
-    });
-
-    const children = taskStore.getChildren("parent1");
-    expect(children).toHaveLength(3);
-
-    // The third task should depend on the FIRST task (existing mapping kept)
-    const first = children.find(c => c.title === "First")!;
-    const third = children.find(c => c.title === "Third")!;
-    const thirdDeps = JSON.parse(third.dependsOn);
-    expect(thirdDeps).toContain(first.id);
-
-    expect(logger.warn).toHaveBeenCalledWith(
-      expect.objectContaining({ localId: "dupe" }),
-      "Duplicate subtask local_id encountered; keeping existing mapping",
-    );
-  });
-
-  it("does not crash the stream on malformed SUBTASK_CREATE content", async () => {
-    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
-    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-
-    const badEvent = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "subtask_create",
-      timestamp: new Date().toISOString(),
-      content: "not valid json",
-    });
-
-    const goodEvent = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "status",
-      timestamp: new Date().toISOString(),
-      content: "completed",
-    });
-
-    // Should not throw — bad event is caught, good event still processed
-    await waitForProcessing([badEvent, goodEvent], {
-      sessionId: "sess1",
-      logPath: "/tmp/log",
-      workspaceId: "proj1",
-      taskId: "parent1",
-    });
-
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.objectContaining({ taskId: "parent1" }),
-      "Failed to create subtask",
-    );
-
-    // Session should still complete normally (mapped to stopped + completed end reason)
-    const session = sessionStore.getSession("sess1");
-    expect(session?.status).toBe("stopped");
-  });
-});
 
 describe("stream error handling", () => {
   beforeEach(() => {
@@ -1030,86 +602,6 @@ describe("late-binding", () => {
     });
   }
 
-  it("processes finding events after late-bind", async () => {
-    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
-
-    const { stream, push, end } = controllableStream();
-    processEventStream(stream, {
-      sessionId: "sess1",
-      logPath: "/tmp/log",
-    });
-
-    // Wait for stream to start processing
-    await new Promise((r) => setTimeout(r, 50));
-
-    // Late-bind the session to the task
-    processorRegistry.lateBind("sess1", "task1", "proj1");
-
-    // Now emit a finding event — should be processed with task context
-    push(create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "finding",
-      timestamp: new Date().toISOString(),
-      content: JSON.stringify({ title: "Test Finding", content: "Found something", category: "bug" }),
-    }));
-
-    // End the stream
-    push(create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "status",
-      timestamp: new Date().toISOString(),
-      content: "completed",
-    }));
-    end();
-
-    await waitForSessionTerminal("sess1");
-
-    // Verify finding was stored
-    const findings = findingStore.queryFindings("proj1");
-    expect(findings).toHaveLength(1);
-    expect(findings[0].title).toBe("Test Finding");
-    expect(findings[0].workspaceId).toBe("proj1");
-  });
-
-  it("processes subtask events after late-bind", async () => {
-    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
-
-    const { stream, push, end } = controllableStream();
-    processEventStream(stream, {
-      sessionId: "sess1",
-      logPath: "/tmp/log",
-    });
-
-    await new Promise((r) => setTimeout(r, 50));
-
-    // Late-bind
-    processorRegistry.lateBind("sess1", "task1", "proj1");
-
-    // Emit subtask creation event
-    push(create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "subtask_create",
-      timestamp: new Date().toISOString(),
-      content: JSON.stringify({ title: "Sub Task", description: "A subtask" }),
-    }));
-
-    push(create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "status",
-      timestamp: new Date().toISOString(),
-      content: "completed",
-    }));
-    end();
-
-    await waitForSessionTerminal("sess1");
-
-    const children = taskStore.getChildren("task1");
-    expect(children).toHaveLength(1);
-    expect(children[0].title).toBe("Sub Task");
-  });
-
   it("broadcasts task_updated after late-bind on terminal events", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
     taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
@@ -1141,93 +633,6 @@ describe("late-binding", () => {
       "task.updated",
       expect.objectContaining({ taskId: "task1", workspaceId: "proj1" }),
     );
-  });
-
-  it("replays pre-association finding events from log on late-bind", async () => {
-    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
-
-    // Mock readLog to return a pre-existing finding event
-    vi.mocked(logWriter.readLog).mockReturnValue([
-      {
-        session_id: "sess1",
-        type: "finding",
-        timestamp: new Date().toISOString(),
-        content: JSON.stringify({ title: "Pre-bind Finding", content: "Found before bind", category: "info" }),
-      },
-    ]);
-
-    const { stream, push, end } = controllableStream();
-    processEventStream(stream, {
-      sessionId: "sess1",
-      logPath: "/tmp/log",
-    });
-
-    await new Promise((r) => setTimeout(r, 50));
-
-    // Late-bind — should trigger replay
-    processorRegistry.lateBind("sess1", "task1", "proj1");
-
-    // Give replay time to run
-    await new Promise((r) => setTimeout(r, 50));
-
-    // Verify the pre-bind finding was stored
-    const findings = findingStore.queryFindings("proj1");
-    expect(findings).toHaveLength(1);
-    expect(findings[0].title).toBe("Pre-bind Finding");
-
-    push(create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "status",
-      timestamp: new Date().toISOString(),
-      content: "completed",
-    }));
-    end();
-
-    await waitForSessionTerminal("sess1");
-  });
-
-  it("replay does not re-publish events to streamHub", async () => {
-    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
-
-    vi.mocked(logWriter.readLog).mockReturnValue([
-      {
-        session_id: "sess1",
-        type: "finding",
-        timestamp: new Date().toISOString(),
-        content: JSON.stringify({ title: "Replay Finding", content: "test", category: "info" }),
-      },
-    ]);
-
-    const { stream, push, end } = controllableStream();
-    processEventStream(stream, {
-      sessionId: "sess1",
-      logPath: "/tmp/log",
-    });
-
-    await new Promise((r) => setTimeout(r, 50));
-
-    // Clear publish mock to only track replay calls
-    const { publish } = await import("./stream-hub.js");
-    vi.mocked(publish).mockClear();
-
-    processorRegistry.lateBind("sess1", "task1", "proj1");
-    await new Promise((r) => setTimeout(r, 50));
-
-    // streamHub.publish should NOT have been called by replay
-    // (broadcast for finding_posted IS expected, but streamHub.publish is not)
-    expect(publish).not.toHaveBeenCalled();
-
-    push(create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "status",
-      timestamp: new Date().toISOString(),
-      content: "completed",
-    }));
-    end();
-
-    await waitForSessionTerminal("sess1");
   });
 
   it("processor is unregistered after stream ends", async () => {
@@ -1554,5 +959,247 @@ describe("event-processor traceId propagation", () => {
     });
 
     expect(runWithTrace).not.toHaveBeenCalled();
+  });
+});
+
+describe("publishWidgetEvent (MCP Apps widget broker, #1238)", () => {
+  const widgetPayload = {
+    resourceUri: "ui://grackle/hello-widget",
+    toolName: "show_hello_widget",
+    html: "<!doctype html><html><body><div class=\"card\">Grackle</div></body></html>",
+    csp: { resourceDomains: ["http://127.0.0.1:7435"], connectDomains: ["http://127.0.0.1:7435"] },
+    toolInput: { message: "hi" },
+    toolResult: { content: [{ type: "text", text: "ok" }] },
+  };
+
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS findings");
+    sqlite.exec("DROP TABLE IF EXISTS tasks");
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    sqlite.exec("DROP TABLE IF EXISTS workspaces");
+    applySchema();
+    vi.clearAllMocks();
+    // writeEvent returns a promise (the impl chains .catch on it).
+    vi.mocked(logWriter.writeEvent).mockResolvedValue(undefined as never);
+  });
+
+  it("builds a WIDGET event, persists it to the session log, and broadcasts it", async () => {
+    sessionStore.createSession("sess-w", "env1", "claude-code", "test", "sonnet", "/tmp/widget-log");
+    const { publish } = await import("./stream-hub.js");
+
+    publishWidgetEvent("sess-w", widgetPayload);
+
+    // Persisted to the session's log (so it replays on reload).
+    expect(logWriter.ensureLogInitialized).toHaveBeenCalledWith("/tmp/widget-log");
+    expect(logWriter.writeEvent).toHaveBeenCalledTimes(1);
+    const [logPath, persisted] = vi.mocked(logWriter.writeEvent).mock.calls[0];
+    expect(logPath).toBe("/tmp/widget-log");
+    expect(persisted.type).toBe(grackle.EventType.WIDGET);
+
+    // Broadcast live with the same event.
+    expect(publish).toHaveBeenCalledTimes(1);
+    const broadcast = vi.mocked(publish).mock.calls[0][0];
+    expect(broadcast.sessionId).toBe("sess-w");
+    expect(broadcast.type).toBe(grackle.EventType.WIDGET);
+
+    // content is the payload as JSON, round-trips 1:1 to McpAppWidget props.
+    expect(JSON.parse(broadcast.content)).toEqual(widgetPayload);
+  });
+
+  it("broadcasts even when the session has no log path (skips persistence)", async () => {
+    sessionStore.createSession("sess-nolog", "env1", "claude-code", "test", "sonnet", "");
+    const { publish } = await import("./stream-hub.js");
+
+    publishWidgetEvent("sess-nolog", widgetPayload);
+
+    expect(logWriter.writeEvent).not.toHaveBeenCalled();
+    expect(publish).toHaveBeenCalledTimes(1);
+  });
+
+  it("broadcasts a self-contained event even for an unknown session", async () => {
+    const { publish } = await import("./stream-hub.js");
+
+    publishWidgetEvent("does-not-exist", widgetPayload);
+
+    expect(logWriter.writeEvent).not.toHaveBeenCalled();
+    expect(publish).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("event-processor session-action log (AHP HR1a)", () => {
+  /** Recreate the session_actions table (baseline-equivalent) for this block. */
+  function applySessionActionsSchema(): void {
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS session_actions (
+        seq         TEXT PRIMARY KEY,
+        session_id  TEXT NOT NULL,
+        type        TEXT NOT NULL,
+        content     TEXT NOT NULL,
+        raw         TEXT NOT NULL DEFAULT '',
+        timestamp   TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_session_actions_session ON session_actions(session_id, seq);
+    `);
+  }
+
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    applySchema();
+    applySessionActionsSchema();
+    sqlite.exec("DELETE FROM session_actions");
+    vi.clearAllMocks();
+  });
+
+  it("persists each event to the durable log with a monotonic, ascending serverSeq (replay order)", async () => {
+    sessionStore.createSession("sess-actions", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    const mk = (content: string): powerline.AgentEvent =>
+      create(powerline.AgentEventSchema, {
+        sessionId: "sess-actions",
+        type: "text",
+        timestamp: new Date().toISOString(),
+        content,
+        raw: "",
+      });
+
+    await waitForProcessing([mk("a"), mk("b"), mk("c")], { sessionId: "sess-actions", logPath: "/tmp/log" });
+
+    const rows = querySessionActions({ sessionId: "sess-actions" });
+    expect(rows.map((r) => r.content)).toEqual(["a", "b", "c"]);
+    expect(rows.map((r) => r.type)).toEqual(["text", "text", "text"]);
+
+    const seqs = rows.map((r) => r.seq);
+    expect(new Set(seqs).size).toBe(3);
+    // ULIDs sort lexicographically; persistence order must be strictly increasing.
+    for (let i = 0; i < seqs.length - 1; i++) {
+      expect(seqs[i] < seqs[i + 1]).toBe(true);
+    }
+  });
+
+  it("scopes the log per session", async () => {
+    sessionStore.createSession("sess-x", "env1", "claude-code", "test", "sonnet", "/tmp/x");
+    sessionStore.createSession("sess-y", "env1", "claude-code", "test", "sonnet", "/tmp/y");
+    const mk = (sessionId: string, content: string): powerline.AgentEvent =>
+      create(powerline.AgentEventSchema, { sessionId, type: "text", timestamp: new Date().toISOString(), content, raw: "" });
+
+    await waitForProcessing([mk("sess-x", "x1")], { sessionId: "sess-x", logPath: "/tmp/x" });
+    await waitForProcessing([mk("sess-y", "y1")], { sessionId: "sess-y", logPath: "/tmp/y" });
+
+    expect(querySessionActions({ sessionId: "sess-x" }).map((r) => r.content)).toEqual(["x1"]);
+    expect(querySessionActions({ sessionId: "sess-y" }).map((r) => r.content)).toEqual(["y1"]);
+  });
+
+  it("records widget render events (not just PowerLine-stream events)", () => {
+    sessionStore.createSession("sess-widget", "env1", "claude-code", "test", "sonnet", "/tmp/wlog");
+    publishWidgetEvent("sess-widget", { resourceUri: "ui://demo", toolName: "render", html: "<div/>" });
+    const rows = querySessionActions({ sessionId: "sess-widget" });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].type).toBe("widget");
+  });
+
+  it("does not break event processing or live delivery when persisting an action fails", async () => {
+    sessionStore.createSession("sess-fail", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    // Simulate a DB outage for the action log: the INSERT will throw.
+    sqlite.exec("DROP TABLE session_actions");
+
+    const completedEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess-fail",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+      raw: "",
+    });
+
+    await waitForProcessing([completedEvent], { sessionId: "sess-fail", logPath: "/tmp/log" });
+
+    // Processing still reached a terminal state despite the persist failure.
+    expect(sessionStore.getSession("sess-fail")!.status).toBe("stopped");
+    // Live delivery (log + stream-hub) was unaffected.
+    expect(logWriter.writeEvent).toHaveBeenCalled();
+    const { publish } = await import("./stream-hub.js");
+    expect(publish).toHaveBeenCalled();
+    // The failure was logged, not thrown.
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionId: "sess-fail" }),
+      "Failed to persist session action",
+    );
+  });
+});
+
+describe("event-processor tool_call_id (AHP HR3)", () => {
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    applySchema();
+    vi.clearAllMocks();
+  });
+
+  it("threads AgentEvent.toolCallId onto the published SessionEvent", async () => {
+    sessionStore.createSession("sess-tc", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    const toolUse = create(powerline.AgentEventSchema, {
+      sessionId: "sess-tc",
+      type: "tool_use",
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify({ tool: "Bash", args: {} }),
+      raw: JSON.stringify({ id: "toolu_x" }),
+      toolCallId: "toolu_x",
+    });
+
+    await waitForProcessing([toolUse], { sessionId: "sess-tc", logPath: "/tmp/log" });
+
+    const { publish } = await import("./stream-hub.js");
+    const published = vi.mocked(publish).mock.calls
+      .map((c) => c[0])
+      .find((e) => e.type === grackle.EventType.TOOL_USE);
+    expect(published?.toolCallId).toBe("toolu_x");
+  });
+});
+
+describe("event-processor diagnostic flag + OTLP tee (AHP HR7)", () => {
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    applySchema();
+    vi.clearAllMocks();
+  });
+
+  it("threads AgentEvent.diagnostic onto the published SessionEvent and tees it to OTLP", async () => {
+    sessionStore.createSession("sess-diag", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    const diagnosticEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess-diag",
+      type: "system",
+      timestamp: new Date().toISOString(),
+      content: "Starting claude-code runtime...",
+      diagnostic: true,
+    });
+
+    await waitForProcessing([diagnosticEvent], { sessionId: "sess-diag", logPath: "/tmp/log" });
+
+    const { publish } = await import("./stream-hub.js");
+    const published = vi.mocked(publish).mock.calls
+      .map((c) => c[0])
+      .find((e) => e.type === grackle.EventType.SYSTEM);
+    expect(published?.diagnostic).toBe(true);
+
+    // The diagnostic is tee'd to the additive OTLP sink with the same event.
+    expect(emitDiagnostic).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(emitDiagnostic).mock.calls[0][0].diagnostic).toBe(true);
+    expect(vi.mocked(emitDiagnostic).mock.calls[0][0].content).toBe("Starting claude-code runtime...");
+  });
+
+  it("does not tee a non-diagnostic event to OTLP and leaves diagnostic false", async () => {
+    sessionStore.createSession("sess-sub", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    const textEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess-sub",
+      type: "text",
+      timestamp: new Date().toISOString(),
+      content: "substantive output",
+    });
+
+    await waitForProcessing([textEvent], { sessionId: "sess-sub", logPath: "/tmp/log" });
+
+    const { publish } = await import("./stream-hub.js");
+    const published = vi.mocked(publish).mock.calls
+      .map((c) => c[0])
+      .find((e) => e.type === grackle.EventType.TEXT);
+    expect(published?.diagnostic).toBe(false);
+    expect(emitDiagnostic).not.toHaveBeenCalled();
   });
 });

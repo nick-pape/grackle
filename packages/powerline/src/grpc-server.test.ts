@@ -3,7 +3,13 @@ import { removeSession, listAllSessions, parkSession, drainParkedSession, isPark
 import type { AgentEvent, AgentSession } from "@grackle-ai/runtime-sdk";
 import { AsyncQueue } from "@grackle-ai/runtime-sdk";
 import type { ConnectRouter } from "@connectrpc/connect";
+import { create } from "@bufbuild/protobuf";
 import { powerline } from "@grackle-ai/common";
+import { writeTokens } from "./token-writer.js";
+
+// Top-level (hoisted) mock so the statically-imported `writeTokens` above and the
+// dynamically-imported handler under test both resolve to the same spy.
+vi.mock("./token-writer.js", () => ({ writeTokens: vi.fn() }));
 
 /** Create a mock session backed by a real AsyncQueue for realistic drain testing. */
 function makeMockSessionWithQueue(id: string): AgentSession & { eventQueue: AsyncQueue<AgentEvent> } {
@@ -116,7 +122,6 @@ async function getHandlers(): Promise<HandlerMap> {
     getRuntime: () => undefined,
     listRuntimes: () => [],
   }));
-  vi.mock("./token-writer.js", () => ({ writeTokens: vi.fn() }));
   vi.mock("./worktree.js", () => ({ removeWorktree: vi.fn() }));
 
   const { registerPowerLineRoutes } = await import("./grpc-server.js");
@@ -172,5 +177,27 @@ describe("DrainBufferedEvents RPC handler", () => {
     }
 
     expect(results).toHaveLength(0);
+  });
+});
+
+describe("Authenticate RPC handler", () => {
+  it("writes the supplied credentials via the token writer", async () => {
+    const handlers = await getHandlers();
+    vi.mocked(writeTokens).mockClear();
+
+    await handlers.authenticate(
+      create(powerline.AuthenticateRequestSchema, {
+        provider: "claude-code",
+        tokens: [
+          { name: "anthropic", type: "env_var", envVar: "ANTHROPIC_API_KEY", filePath: "", value: "sk-test" },
+          { name: "claude-creds", type: "file", envVar: "", filePath: "~/.claude/.credentials.json", value: "{}" },
+        ],
+      }),
+    );
+
+    expect(vi.mocked(writeTokens)).toHaveBeenCalledWith([
+      { name: "anthropic", type: "env_var", envVar: "ANTHROPIC_API_KEY", filePath: "", value: "sk-test" },
+      { name: "claude-creds", type: "file", envVar: "", filePath: "~/.claude/.credentials.json", value: "{}" },
+    ]);
   });
 });

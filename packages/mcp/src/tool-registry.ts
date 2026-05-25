@@ -1,5 +1,6 @@
 import type { Client } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
+import { RENDER_TOOL_PREFIX } from "@grackle-ai/common";
 import type { ZodType } from "zod";
 import type { AuthContext } from "@grackle-ai/auth";
 
@@ -7,7 +8,7 @@ import type { AuthContext } from "@grackle-ai/auth";
 export interface GrackleClients {
   /** Core RPCs: environments, sessions, workspaces, tokens, settings, etc. */
   core: Client<typeof grackle.GrackleCore>;
-  /** Orchestration RPCs: tasks, personas, findings, escalations. */
+  /** Orchestration RPCs: tasks, personas, escalations. */
   orchestration: Client<typeof grackle.GrackleOrchestration>;
   /** Scheduling RPCs: schedules. */
   scheduling: Client<typeof grackle.GrackleScheduling>;
@@ -25,6 +26,11 @@ export interface ToolContent {
 export interface ToolResult {
   content: ToolContent[];
   isError?: boolean;
+  /**
+   * Standard MCP result metadata. Used internally by the widget tools to hand a
+   * render descriptor to the broker capture (see {@link WIDGET_RENDER_META_KEY}).
+   */
+  _meta?: { [key: string]: unknown };
 }
 
 /** Optional hints about a tool's behavior for the MCP client. */
@@ -52,6 +58,12 @@ export interface ToolDefinition {
   mutating: boolean;
   /** Optional behavioral hints for the client. */
   annotations?: ToolAnnotations;
+  /**
+   * Optional MCP Apps UI resource (`ui://…`) this tool renders. When set, the
+   * tool carries `_meta.ui.resourceUri` in `tools/list` and is only listed to
+   * hosts that advertise the `io.modelcontextprotocol/ui` extension.
+   */
+  uiResourceUri?: string;
   /** Execute the tool, forwarding to the ConnectRPC backend. */
   handler: (args: Record<string, unknown>, clients: GrackleClients, authContext?: AuthContext) => Promise<ToolResult>;
 }
@@ -63,10 +75,21 @@ export type ToolPredicate = (tool: ToolDefinition) => boolean;
 export class ToolRegistry {
   private readonly tools: Map<string, ToolDefinition> = new Map();
 
-  /** Register a tool definition. Throws if a tool with the same name already exists. */
+  /**
+   * Register a tool definition. Throws if a tool with the same name already
+   * exists, or if the name uses the reserved `render_` prefix — that namespace
+   * belongs to the dynamic per-workspace component render tools (#1272), so no
+   * static or plugin-contributed tool may claim it (otherwise it would shadow a
+   * promoted component's tool).
+   */
   public register(tool: ToolDefinition): void {
     if (this.tools.has(tool.name)) {
       throw new Error(`Duplicate tool name: ${tool.name}`);
+    }
+    if (tool.name.startsWith(RENDER_TOOL_PREFIX)) {
+      throw new Error(
+        `Tool name "${tool.name}" uses the reserved "${RENDER_TOOL_PREFIX}" prefix (reserved for dynamic component render tools, #1272)`,
+      );
     }
     this.tools.set(tool.name, tool);
   }

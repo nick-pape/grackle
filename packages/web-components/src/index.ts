@@ -23,6 +23,8 @@ export {
 } from "./components/display/index.js";
 export type { ButtonProps, ButtonVariant, ButtonSize } from "./components/display/index.js";
 export type { TooltipProps, TooltipPlacement } from "./components/display/index.js";
+export type { McpAppWidgetProps, McpAppWidgetCallToolParams } from "./components/display/index.js";
+export { grackleHostStyleVariables } from "./utils/grackleHostStyleVariables.js";
 export { EventStream } from "./components/display/EventStream.js";
 export { EventHoverRow } from "./components/display/EventHoverRow.js";
 export type { EventHoverRowProps } from "./components/display/EventHoverRow.js";
@@ -53,7 +55,7 @@ export { StatusBar, AppNav, Sidebar, BottomStatusBar, TABS } from "./components/
 export type { AppTab } from "./components/layout/index.js";
 
 // Lists
-export { EnvironmentNav, FindingsNav } from "./components/lists/index.js";
+export { EnvironmentNav } from "./components/lists/index.js";
 export { TaskList } from "./components/lists/TaskList.js";
 export { HighlightedText, buildTaskTree, groupTasksByStatus } from "./components/lists/listHelpers.js";
 
@@ -63,7 +65,7 @@ export type { CalloutVariant } from "./components/notifications/index.js";
 export { UpdateBanner } from "./components/notifications/UpdateBanner.js";
 
 // Panels
-export { FindingsPanel, TokensPanel, AppearancePanel, AboutPanel, TaskEditPanel, TaskActionButtons, TaskOverviewPanel, PluginsPanel, GitHubAccountsPanel } from "./components/panels/index.js";
+export { TokensPanel, AppearancePanel, AboutPanel, TaskEditPanel, TaskActionButtons, TaskOverviewPanel, PluginsPanel, GitHubAccountsPanel } from "./components/panels/index.js";
 export type { PluginsPanelProps, GitHubAccountsPanelProps } from "./components/panels/index.js";
 export type { TaskActionButtonsProps } from "./components/panels/TaskActionButtons.js";
 export type { TaskOverviewPanelProps } from "./components/panels/TaskOverviewPanel.js";
@@ -84,9 +86,9 @@ export type { ScheduleManagerProps } from "./components/schedules/ScheduleManage
 // Settings
 export { SettingsNav } from "./components/settings/SettingsNav.js";
 
-// Streams
-export { StreamList, StreamDetailPanel } from "./components/streams/index.js";
-export type { StreamListProps, StreamDetailPanelProps } from "./components/streams/index.js";
+// Streams (Coordination tab)
+export { CoordinationGraph, CoordinationList, StreamDetailPanel, StreamTranscript } from "./components/streams/index.js";
+export type { CoordinationGraphProps, CoordinationListProps, StreamDetailPanelProps, StreamTranscriptProps } from "./components/streams/index.js";
 
 // Tools
 export { ToolCard } from "./components/tools/ToolCard.js";
@@ -124,16 +126,16 @@ export type { UseGrackleSocketResult, GrackleContextType } from "./context/Grack
 
 export type {
   Environment, Session, UsageStats, SessionEvent,
-  Workspace, TaskData, FindingData, TokenInfo,
+  Workspace, TaskData, TokenInfo,
   CredentialProviderConfig, Codespace, DockerContainer, PersonaData,
   ScheduleData, ScheduleUpdate, UseSchedulesResult,
   ProvisionStatus, GrackleEvent, WsMessage, SendFunction,
   GraphNode, GraphLink, NodeDetail, UseKnowledgeResult,
   UseEnvironmentsResult, UseSessionsResult, UseWorkspacesResult,
-  UseTasksResult, UseFindingsResult, UseTokensResult,
+  UseTasksResult, UseTokensResult,
   UseCredentialsResult, UseCodespacesResult, UseDockerContainersResult, UsePersonasResult,
   UsePluginsResult, PluginData,
-  StreamData, StreamSubscriberData, UseStreamsResult,
+  StreamData, StreamSubscriberData, StreamMessageData, UseStreamsResult,
   UseGitHubAccountsResult, GitHubAccountData,
   DomainHook,
   ConnectionStatus,
@@ -162,8 +164,7 @@ export {
   SCHEDULES_URL, NEW_SCHEDULE_URL, scheduleUrl,
   SETTINGS_APPEARANCE_URL, SETTINGS_ABOUT_URL, SETTINGS_SHORTCUTS_URL,
   PAIR_PATH, NEW_WORKSPACE_URL, KNOWLEDGE_URL, HOME_URL,
-  FINDINGS_URL, findingsUrl, findingUrl,
-  CHAT_URL, chatStreamUrl, TASKS_URL,
+  CHAT_URL, COORDINATION_URL, TASKS_URL,
 } from "./utils/navigation.js";
 
 export {
@@ -175,8 +176,6 @@ export type { TaskStatusKey, VirtualStatus, DisplayStatus, TaskStatusStyle } fro
 
 export { formatTokens, formatCost } from "./utils/format.js";
 export { formatRelativeTime, formatCountdown } from "./utils/time.js";
-export { CATEGORY_COLORS, getCategoryColor } from "./utils/findingCategory.js";
-export type { CategoryColor } from "./utils/findingCategory.js";
 
 export type { BreadcrumbSegment } from "./utils/breadcrumbs.js";
 export {
@@ -184,7 +183,6 @@ export {
   buildEnvironmentsBreadcrumbs, buildNewEnvironmentBreadcrumbs,
   buildNewChatBreadcrumbs, buildSessionBreadcrumbs,
   buildWorkspaceBreadcrumbs, buildTaskBreadcrumbs, buildNewTaskBreadcrumbs,
-  buildFindingsBreadcrumbs, buildFindingBreadcrumbs,
 } from "./utils/breadcrumbs.js";
 
 export { groupConsecutiveTextEvents, pairToolEvents } from "./utils/sessionEvents.js";
@@ -199,6 +197,8 @@ export type { DashboardKpis, AttentionTask, ActiveSession, WorkspaceSnapshot } f
 export { computeKpis, getAttentionTasks, getActiveSessions, getWorkspaceSnapshots } from "./utils/dashboard.js";
 
 export { isNearAnchor, computeScrollCompensation, SCROLL_ANCHOR_THRESHOLD_PX } from "./utils/scrollUtils.js";
+
+export { assetUrl } from "./utils/assetUrl.js";
 
 // ─── Themes ──────────────────────────────────────────────────────────────────
 

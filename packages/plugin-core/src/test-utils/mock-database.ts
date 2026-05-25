@@ -91,11 +91,6 @@ export function createDatabaseMock() {
       deletePersona: vi.fn(),
     },
 
-    findingStore: {
-      postFinding: vi.fn(),
-      queryFindings: vi.fn(() => []),
-    },
-
     settingsStore: {
       getSetting: vi.fn(() => undefined),
       setSetting: vi.fn(),
@@ -161,6 +156,11 @@ export function createDatabaseMock() {
     VALID_CLAUDE_VALUES: new Set(["off", "subscription", "api_key"]),
     VALID_TOGGLE_VALUES: new Set(["off", "on"]),
     persistEvent: vi.fn(),
+    queryDomainEvents: vi.fn(() => []),
+    persistStreamMessage: vi.fn(),
+    queryStreamMessages: vi.fn(() => []),
+    persistSessionAction: vi.fn(),
+    querySessionActions: vi.fn(() => []),
 
     // Utilities
     grackleHome: "/tmp/test-grackle",

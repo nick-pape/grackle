@@ -81,6 +81,9 @@ grackle serve --allow-network    # bind to 0.0.0.0 for LAN access
 | `--port <port>` | Server gRPC port | `7434` |
 | `--web-port <port>` | Web UI port | `3000` |
 | `--mcp-port <port>` | MCP server port | `7435` |
+| `--mcp-origin <origin>` | Browser-facing MCP origin (e.g. `https://mcp.example.com`) for reverse-proxy/TLS deployments; trusted asset/CSP origin for widgets | (derived from host + `--mcp-port`) |
+| `--sandbox-port <port>` | MCP Apps widget sandbox port | `7436` |
+| `--sandbox-origin <origin>` | Browser-facing MCP Apps sandbox origin (e.g. `https://sandbox.example.com`) for reverse-proxy/TLS deployments | (derived from host + `--sandbox-port`) |
 | `--powerline-port <port>` | Local PowerLine port | `7433` |
 | `--allow-network` | Bind to all interfaces (0.0.0.0) | Off (127.0.0.1) |
 
@@ -403,6 +406,7 @@ grackle task create "Design API" --workspace ws-123 --can-decompose
 | `--depends-on <ids>` | Comma-separated dependency task IDs |
 | `--parent <task-id>` | Parent task ID (creates a subtask) |
 | `--can-decompose` | Allow this task to create subtasks |
+| `--no-inject-knowledge` | Disable injecting "Related prior work" from the knowledge graph at spawn (on by default) |
 
 #### `grackle task show <task-id>`
 
@@ -420,6 +424,7 @@ Update task properties.
 | `--depends-on <ids>` | New dependency list |
 | `--session <session-id>` | Bind an existing session |
 | `--persona <id>` | Default persona ID |
+| `--inject-knowledge` / `--no-inject-knowledge` | Enable/disable knowledge-graph context injection at spawn |
 
 #### `grackle task start <task-id>`
 
@@ -502,40 +507,6 @@ Delete a persona.
 
 ---
 
-### Findings
-
-Query and post findings — categorized discoveries shared across agents within a workspace.
-
-#### `grackle finding list <workspace-id>`
-
-List findings in a workspace.
-
-```bash
-grackle finding list ws-123
-grackle finding list ws-123 --category architecture --tag security --limit 10
-```
-
-| Option | Description |
-|--------|-------------|
-| `--category <cat>` | Filter by category |
-| `--tag <tag>` | Filter by tag |
-| `--limit <n>` | Max results (default: 20) |
-
-#### `grackle finding post <workspace-id> <title>`
-
-Post a new finding.
-
-```bash
-grackle finding post ws-123 "Auth tokens expire silently" --category bug --content "The refresh token..." --tags auth,security
-```
-
-| Option | Description |
-|--------|-------------|
-| `--category <cat>` | Finding category (default: `general`) |
-| `--content <text>` | Finding content |
-| `--tags <tags>` | Comma-separated tags |
-
----
 
 ### Tokens
 
@@ -646,10 +617,13 @@ Inspect active IPC streams for debugging inter-session communication.
 
 #### `grackle streams list`
 
-List all active IPC streams with subscriber details and message buffer depth.
+List active IPC streams with subscriber details and message buffer depth.
+Internal plumbing streams (`lifecycle:` / `pipe:` / `stdin:`) are hidden by
+default; pass `--internal` to include them.
 
 ```bash
 grackle streams list
+grackle streams list --internal   # include internal IPC plumbing
 # ┌──────────┬────────────────┬─────────────────────────┬──────────────┐
 # │ ID       │ Name           │ Subscribers             │ Buffer Depth │
 # ├──────────┼────────────────┼─────────────────────────┼──────────────┤
@@ -658,6 +632,80 @@ grackle streams list
 # │          │   i9j0k1l2     │   fd=4 r/sync           │              │
 # └──────────┴────────────────┴─────────────────────────┴──────────────┘
 ```
+
+#### `grackle streams transcript <streamId>`
+
+Show a stream room's **durable transcript** (most recent first) — the persisted
+conversation that survives server restart. Internal plumbing streams are not
+recorded. Use `--before <seq>` to page into older history.
+
+```bash
+grackle streams transcript stream-abc123
+grackle streams transcript stream-abc123 --limit 20
+grackle streams transcript stream-abc123 --before <seq> --limit 20  # older history
+# ┌──────────────────────────┬──────────┬──────────────────────────┬─────────────┐
+# │ Seq                      │ Sender   │ Timestamp                │ Content     │
+# ├──────────────────────────┼──────────┼──────────────────────────┼─────────────┤
+# │ 01JV…SEQ                 │ a1b2c3d4 │ 2026-05-24T18:04:11.002Z │ ship it     │
+# └──────────────────────────┴──────────┴──────────────────────────┴─────────────┘
+```
+
+Options: `--before <seq>`, `--limit <n>`.
+
+---
+
+### Domain Events
+
+#### `grackle events`
+
+Query the persisted domain-event log (`domain_events`) — an audit/debug view of
+state-change events (`task.created`, `workspace.updated`, `environment.changed`, …).
+Filters compose with AND; results are **most recent first** (use `--before` to page
+into older history).
+
+```bash
+grackle events                              # most recent events (default limit 100)
+grackle events --type task.created          # only this event type
+grackle events --since 2026-05-23T00:00:00Z # at/after a timestamp
+grackle events --until 2026-05-23T23:59:59Z # at/before a timestamp
+grackle events --before <id> --limit 50     # page into older history (events before an id)
+# ┌──────────────────────────┬──────────────────┬──────────────────────────┬──────────────┐
+# │ ID                       │ Type             │ Timestamp                │ Payload      │
+# ├──────────────────────────┼──────────────────┼──────────────────────────┼──────────────┤
+# │ 01JV…SEQ                 │ task.created     │ 2026-05-23T18:04:11.002Z │ {"taskId":…} │
+# └──────────────────────────┴──────────────────┴──────────────────────────┴──────────────┘
+```
+
+Options: `--type <type>`, `--since <iso>`, `--until <iso>`, `--before <id>`, `--limit <n>`.
+
+---
+
+### Session Actions
+
+#### `grackle session events <sessionId>`
+
+Show a session's **durable, server-sequenced action log** (`session_actions`) —
+every session event the server publishes (agent output from the PowerLine
+stream, the injected system context + initial prompt, injected input/signals,
+widget renders, and lifecycle status transitions), each with a monotonic `seq`
+(`serverSeq`), in **replay order** (oldest first). This is distinct from
+`grackle logs`, which is the human-readable JSONL/transcript view of one
+session; `session events` is the seq'd, offset-queryable log that survives
+server restart and is the foundation for seq-based resume. Use `--from <seq>`
+to resume after a cursor.
+
+```bash
+grackle session events abc12345                       # oldest first (default limit 500)
+grackle session events abc12345 --limit 50
+grackle session events abc12345 --from <seq> --limit 50   # resume after a seq
+# ┌──────────────────────────┬───────────┬──────────────────────────┬─────────────┐
+# │ Seq                      │ Type      │ Timestamp                │ Content     │
+# ├──────────────────────────┼───────────┼──────────────────────────┼─────────────┤
+# │ 01JV…SEQ                 │ text      │ 2026-05-24T18:04:11.002Z │ Hello       │
+# └──────────────────────────┴───────────┴──────────────────────────┴─────────────┘
+```
+
+Options: `--from <seq>`, `--limit <n>`.
 
 ---
 

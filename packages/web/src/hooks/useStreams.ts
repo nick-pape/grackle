@@ -9,13 +9,16 @@
  */
 
 import { useState, useCallback, useRef } from "react";
-import type { StreamData, GrackleEvent, UseStreamsResult } from "@grackle-ai/web-components";
+import type { StreamData, StreamMessageData, GrackleEvent, UseStreamsResult } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
 import { coreClient as grackleClient } from "./useGrackleClient.js";
 import { protoToStream } from "./proto-converters.js";
 import { useLoadingState } from "./useLoadingState.js";
 
 export type { UseStreamsResult } from "@grackle-ai/web-components";
+
+/** Max live messages retained per stream in the in-memory buffer. */
+const MAX_LIVE_MESSAGES_PER_STREAM: number = 500;
 
 /**
  * Hook that manages IPC stream state via ConnectRPC.
@@ -24,16 +27,17 @@ export type { UseStreamsResult } from "@grackle-ai/web-components";
  */
 export function useStreams(): UseStreamsResult {
   const [streams, setStreams] = useState<StreamData[]>([]);
+  const [liveMessages, setLiveMessages] = useState<Record<string, StreamMessageData[]>>({});
   const [streamsLoadedOnce, setStreamsLoadedOnce] = useState(false);
   const [streamsLoadError, setStreamsLoadError] = useState(false);
   const { loading: streamsLoading, track: trackStreams } = useLoadingState();
   /** Incremented on disconnect so in-flight responses from the previous connection are discarded. */
   const epochRef = useRef(0);
 
-  const loadStreams = useCallback(async (): Promise<void> => {
+  const loadStreams = useCallback(async (includeInternal: boolean = false): Promise<void> => {
     const myEpoch = epochRef.current;
     try {
-      const resp = await trackStreams(grackleClient.listStreams({}));
+      const resp = await trackStreams(grackleClient.listStreams({ includeInternal }));
       if (epochRef.current === myEpoch) {
         setStreams(resp.streams.map(protoToStream));
         setStreamsLoadError(false);
@@ -49,6 +53,52 @@ export function useStreams(): UseStreamsResult {
     }
   }, [trackStreams]);
 
+  /** Fetch a stream's durable transcript (scrollback) and merge it into the buffer. */
+  const loadTranscript = useCallback(async (streamId: string, beforeSeq?: string): Promise<void> => {
+    let fetched: StreamMessageData[];
+    try {
+      const resp = await grackleClient.getStreamTranscript({ streamId, beforeSeq: beforeSeq ?? "", limit: 0 });
+      fetched = resp.messages.map((m) => ({
+        streamId: m.streamId,
+        seq: m.seq,
+        senderId: m.senderId,
+        content: m.content,
+        timestamp: m.timestamp,
+      }));
+    } catch {
+      return; // best-effort; leave the buffer as-is
+    }
+    setLiveMessages((prev) => {
+      const bySeq = new Map<string, StreamMessageData>();
+      for (const m of prev[streamId] ?? []) {
+        bySeq.set(m.seq, m);
+      }
+      for (const m of fetched) {
+        bySeq.set(m.seq, m);
+      }
+      const merged = Array.from(bySeq.values()).sort((a, b) => a.seq.localeCompare(b.seq));
+      const capped = merged.length > MAX_LIVE_MESSAGES_PER_STREAM
+        ? merged.slice(merged.length - MAX_LIVE_MESSAGES_PER_STREAM)
+        : merged;
+      return { ...prev, [streamId]: capped };
+    });
+  }, []);
+
+  /** Append a live stream message to the per-stream buffer (deduped by seq, capped). */
+  const handleStreamMessage = useCallback((message: StreamMessageData): void => {
+    setLiveMessages((prev) => {
+      const existing = prev[message.streamId] ?? [];
+      if (existing.some((m) => m.seq === message.seq)) {
+        return prev;
+      }
+      const next = [...existing, message];
+      const capped = next.length > MAX_LIVE_MESSAGES_PER_STREAM
+        ? next.slice(next.length - MAX_LIVE_MESSAGES_PER_STREAM)
+        : next;
+      return { ...prev, [message.streamId]: capped };
+    });
+  }, []);
+
   const handleEvent = useCallback((_event: GrackleEvent): boolean => {
     // No stream domain events exist yet — nothing to consume.
     return false;
@@ -56,7 +106,13 @@ export function useStreams(): UseStreamsResult {
 
   const domainHook: DomainHook = {
     onConnect: loadStreams,
-    onDisconnect: () => { epochRef.current += 1; setStreams([]); setStreamsLoadedOnce(false); setStreamsLoadError(false); },
+    onDisconnect: () => {
+      epochRef.current += 1;
+      setStreams([]);
+      setLiveMessages({});
+      setStreamsLoadedOnce(false);
+      setStreamsLoadError(false);
+    },
     handleEvent,
   };
 
@@ -66,6 +122,9 @@ export function useStreams(): UseStreamsResult {
     streamsLoadedOnce,
     streamsLoadError,
     loadStreams,
+    liveMessages,
+    loadTranscript,
+    handleStreamMessage,
     handleEvent,
     domainHook,
   };

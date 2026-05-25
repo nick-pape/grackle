@@ -35,6 +35,7 @@ describe("loadPlugins — topological sort", () => {
     expect(result.serviceRegistrations).toEqual([]);
     expect(result.reconciliationPhases).toEqual([]);
     expect(result.mcpTools).toEqual([]);
+    expect(result.systemPromptContributors).toEqual([]);
     expect(result.subscriberDisposables).toEqual([]);
     expect(result.pluginNames).toEqual([]);
   });
@@ -183,6 +184,19 @@ describe("loadPlugins — contribution collection", () => {
 
     expect(result.mcpTools).toHaveLength(1);
     expect(result.mcpTools[0]).toBe(tool);
+  });
+
+  it("collects system-prompt contributors", async () => {
+    const contributor = { contribute: vi.fn(async () => undefined) };
+    const plugin = createPlugin({
+      name: "test",
+      systemPromptContributors: () => [contributor],
+    });
+
+    const result = await loadPlugins([plugin], createMockContext());
+
+    expect(result.systemPromptContributors).toHaveLength(1);
+    expect(result.systemPromptContributors[0]).toBe(contributor);
   });
 
   it("collects event subscriber disposables", async () => {

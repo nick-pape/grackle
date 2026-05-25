@@ -42,6 +42,34 @@ function request(
   });
 }
 
+/** POST a raw body to the test server. */
+function postBody(
+  server: http.Server,
+  path: string,
+  body: string,
+  headers: Record<string, string> = {},
+): Promise<{ status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    const addr = server.address() as { port: number };
+    const req = http.request(
+      {
+        hostname: "127.0.0.1",
+        port: addr.port,
+        path,
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...headers },
+      },
+      (res) => {
+        let b = "";
+        res.on("data", (chunk: Buffer) => { b += chunk.toString(); });
+        res.on("end", () => resolve({ status: res.statusCode!, body: b }));
+      },
+    );
+    req.on("error", reject);
+    req.end(body);
+  });
+}
+
 describe("createWebServer", () => {
   let server: http.Server;
 
@@ -68,6 +96,19 @@ describe("createWebServer", () => {
 
     expect(res.status).toBe(200);
     expect(JSON.parse(res.body)).toEqual({ status: "ok" });
+  });
+
+  it("returns 413 for an oversized request body (not a connection reset)", async () => {
+    const oversized = JSON.stringify({ client_name: "x".repeat(20_000) });
+    const res = await postBody(server, "/register", oversized);
+    expect(res.status).toBe(413);
+  });
+
+  it("reads a normal-size body (small POST reaches the route)", async () => {
+    // A small but invalid body proves readBody resolved and the route ran
+    // (redirect_uris missing -> 400 invalid_request, not a body-size failure).
+    const res = await postBody(server, "/register", JSON.stringify({}));
+    expect(res.status).toBe(400);
   });
 
   it("returns 200 with default readiness at /readyz when no check provided", async () => {

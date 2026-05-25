@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/web-server",
-  "version": "0.110.2",
+  "version": "0.128.0",
   "description": "HTTP web server for Grackle — static file serving, pairing, OAuth, and ConnectRPC proxy",
   "license": "MIT",
   "repository": {
@@ -39,7 +39,8 @@
     "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-node": "^2.0.0",
     "@grackle-ai/auth": "workspace:*",
-    "@grackle-ai/web": "workspace:*"
+    "@grackle-ai/web": "workspace:*",
+    "@grackle-ai/web-components": "workspace:*"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",

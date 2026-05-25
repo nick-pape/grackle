@@ -25,6 +25,8 @@ function toProtoEvent(sessionId: string, event: AgentEvent): powerline.AgentEven
     timestamp: event.timestamp,
     content: event.content,
     raw: event.raw ? JSON.stringify(event.raw) : "",
+    toolCallId: event.toolCallId ?? "",
+    diagnostic: event.diagnostic ?? false,
   });
 }
 
@@ -181,6 +183,19 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
     },
 
     async pushTokens(req: powerline.TokenBundle) {
+      const tokens = req.tokens.map((t) => ({
+        name: t.name,
+        type: t.type,
+        envVar: t.envVar,
+        filePath: t.filePath,
+        value: t.value,
+      }));
+      await writeTokens(tokens);
+      return create(powerline.EmptySchema, {});
+    },
+
+    // On-demand credential supply for a runtime (AHP HR6). Supersedes pushTokens.
+    async authenticate(req: powerline.AuthenticateRequest) {
       const tokens = req.tokens.map((t) => ({
         name: t.name,
         type: t.type,

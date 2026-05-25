@@ -29,6 +29,7 @@ import { toDialableHost } from "./grpc-shared-utils.js";
 import { emit } from "./event-bus.js";
 import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
 import { toPersonaResolveInput, buildOrchestratorContextInput } from "./persona-mapper.js";
+import { hasSpawnContextProviders, runSpawnContextProviders } from "./spawn-context-registry.js";
 
 /**
  * Start a new agent session for a task.
@@ -100,17 +101,39 @@ export async function startTaskSession(
     ? (options.notes || "")
     : buildTaskPrompt(freshTask.title, freshTask.description, options.notes);
 
-  const orchestratorCtx = freshTask.canDecompose && freshTask.depth <= 1 && !!freshTask.workspaceId
+  const isOrchestrator = freshTask.canDecompose && freshTask.depth <= 1 && !!freshTask.workspaceId;
+  const orchestratorCtx = isOrchestrator
     ? buildOrchestratorContext(buildOrchestratorContextInput(
       freshTask.workspaceId!,
       workspace ? { name: workspace.name, description: workspace.description, repoUrl: workspace.repoUrl } : undefined,
     ))
     : undefined;
+
+  // Knowledge retrieval loop (#1259): when the knowledge plugin is active and
+  // this task opted in, gather the "Related prior work" PUSH block + enable the
+  // PULL search guidance. Best-effort (never blocks spawn); skips root/no-workspace.
+  const knowledgeOn = hasSpawnContextProviders()
+    && freshTask.injectKnowledge
+    && !!freshTask.workspaceId
+    && freshTask.id !== ROOT_TASK_ID;
+  const relatedPriorWork = knowledgeOn
+    ? (await runSpawnContextProviders({
+        taskId: freshTask.id,
+        title: freshTask.title,
+        description: freshTask.description,
+        workspaceId: freshTask.workspaceId ?? "",
+        isOrchestrator,
+        injectKnowledge: freshTask.injectKnowledge,
+      })).join("\n\n") || undefined
+    : undefined;
+
   const systemContext = new SystemPromptBuilder({
     task: { title: freshTask.title, description: freshTask.description, notes: freshTask.id === ROOT_TASK_ID ? "" : (options.notes || "") },
     taskId: freshTask.id, canDecompose: freshTask.canDecompose, personaPrompt: systemPrompt,
     taskDepth: freshTask.depth, ...orchestratorCtx,
     ...(orchestratorCtx && { triggerMode: "fresh" as const }),
+    relatedPriorWork,
+    knowledgeGuidance: knowledgeOn,
   }).build();
 
   sessionStore.createSession(
@@ -130,9 +153,9 @@ export async function startTaskSession(
     workspaceId: freshTask.workspaceId || "",
   });
 
-  // Re-push stored tokens + provider credentials (scoped to runtime) so they're fresh for this session.
+  // Supply credentials on demand for this runtime, just before spawn (AHP HR6).
   // For local envs, skip file tokens — the PowerLine is on the same machine.
-  await tokenPush.refreshTokensForTask(environmentId, runtime,
+  await tokenPush.authenticateForRuntime(environmentId, runtime,
     env.adapterType === "local" ? { excludeFileTokens: true } : undefined);
 
   const mcpServersJson = personaMcpServersToJson(resolved.mcpServers, resolved.personaId);

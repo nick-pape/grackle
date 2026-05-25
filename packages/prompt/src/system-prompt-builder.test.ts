@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { SystemPromptBuilder, buildTaskPrompt, type SystemPromptOptions, type TaskTreeNode } from "./system-prompt-builder.js";
 
 describe("SystemPromptBuilder", () => {
-  it("includes completion contract, signals, findings, and MCP note for task sessions", () => {
+  it("includes completion contract, signals, and MCP note for task sessions", () => {
     const result = new SystemPromptBuilder({
       task: { title: "My Task", description: "Do the thing", notes: "" },
     }).build();
@@ -12,8 +12,6 @@ describe("SystemPromptBuilder", () => {
     expect(result).toContain("[SIGCHLD]");
     expect(result).toContain("[SIGTERM]");
     expect(result).toContain("ipc_close");
-    expect(result).toContain("## Findings");
-    expect(result).toContain("finding_post");
     expect(result).toContain("grackle");
   });
 
@@ -61,6 +59,45 @@ describe("SystemPromptBuilder", () => {
     expect(result).toContain("## Subtasks");
     expect(result).toContain("Subtask creation is disabled");
     expect(result).not.toContain("task_create");
+  });
+
+  it("injects the Related prior work block for a task when provided (#1259)", () => {
+    const result = new SystemPromptBuilder({
+      task: { title: "T", description: "D", notes: "" },
+      relatedPriorWork: "## Related prior work\n- [task] prior thing",
+    }).build();
+    expect(result).toContain("## Related prior work");
+    expect(result).toContain("prior thing");
+  });
+
+  it("omits the Related prior work block when not provided (#1259)", () => {
+    const result = new SystemPromptBuilder({
+      task: { title: "T", description: "D", notes: "" },
+    }).build();
+    expect(result).not.toContain("## Related prior work");
+  });
+
+  it("includes knowledge_search guidance only when knowledgeGuidance is set (#1259)", () => {
+    const on = new SystemPromptBuilder({
+      task: { title: "T", description: "D", notes: "" },
+      knowledgeGuidance: true,
+    }).build();
+    expect(on).toContain("## Knowledge graph");
+    expect(on).toContain("knowledge_search");
+
+    const off = new SystemPromptBuilder({
+      task: { title: "T", description: "D", notes: "" },
+    }).build();
+    expect(off).not.toContain("## Knowledge graph");
+  });
+
+  it("ad-hoc session (no task) gets neither knowledge section (#1259)", () => {
+    const result = new SystemPromptBuilder({
+      relatedPriorWork: "## Related prior work\n- x",
+      knowledgeGuidance: true,
+    }).build();
+    expect(result).not.toContain("## Related prior work");
+    expect(result).not.toContain("## Knowledge graph");
   });
 
   it("ad-hoc session (no task) includes persona prompt, IPC section, and MCP note", () => {
@@ -113,8 +150,6 @@ describe("SystemPromptBuilder", () => {
     expect(result).not.toContain("mcp__grackle__");
     expect(result).toContain("task_complete");
     expect(result).toContain("task_create");
-    expect(result).toContain("finding_post");
-    expect(result).toContain("finding_list");
   });
 });
 
@@ -164,7 +199,6 @@ function orchestratorOptions(overrides?: Partial<SystemPromptOptions>): SystemPr
       { displayName: "Local", adapterType: "local", status: "connected", defaultRuntime: "claude-code" },
       { displayName: "Dev SSH", adapterType: "ssh", status: "disconnected", defaultRuntime: "codex" },
     ],
-    findingsContext: "## Workspace Findings (shared knowledge from other agents)\n\n### [architecture] Use event sourcing\nDecided to use event sourcing for audit trail.\n",
     triggerMode: "fresh",
     ...overrides,
   };
@@ -180,7 +214,6 @@ describe("SystemPromptBuilder (orchestrator)", () => {
     expect(result).toContain("## Task Tree");
     expect(result).toContain("## Available Personas");
     expect(result).toContain("## Available Environments");
-    expect(result).toContain("## Workspace Findings");
     expect(result).toContain("## Trigger Context");
     expect(result).toContain("## Decomposition Guidelines");
     expect(result).toContain("## Completion");
@@ -273,18 +306,6 @@ describe("SystemPromptBuilder (orchestrator)", () => {
     expect(result).not.toContain("## Available Environments");
   });
 
-  it("includes findings context when non-empty", () => {
-    const result = new SystemPromptBuilder(orchestratorOptions()).build();
-
-    expect(result).toContain("Use event sourcing");
-  });
-
-  it("omits findings section when findingsContext is empty", () => {
-    const result = new SystemPromptBuilder(orchestratorOptions({ findingsContext: "" })).build();
-
-    expect(result).not.toContain("## Workspace Findings");
-  });
-
   it("shows fresh trigger context", () => {
     const result = new SystemPromptBuilder(orchestratorOptions()).build();
 
@@ -320,8 +341,6 @@ describe("SystemPromptBuilder (orchestrator)", () => {
     expect(result).toContain("task_create");
     expect(result).toContain("task_list");
     expect(result).toContain("task_start");
-    expect(result).toContain("finding_post");
-    expect(result).toContain("finding_list");
     expect(result).toContain("session_attach");
     expect(result).toContain("logs_get");
   });

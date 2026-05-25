@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 import { Spinner } from "./Spinner.js";
+import { assetUrl } from "../../utils/assetUrl.js";
 import styles from "./SplashScreen.module.scss";
 
 /**
@@ -9,7 +10,7 @@ import styles from "./SplashScreen.module.scss";
 export function SplashScreen(): JSX.Element {
   return (
     <div className={styles.splash} data-testid="splash-screen">
-      <img src="/grackle-logo.png" alt="Grackle" className={styles.logo} />
+      <img src={assetUrl("grackle-logo.png")} alt="Grackle" className={styles.logo} />
       <Spinner size="xl" label="Loading Grackle" liveRegion />
     </div>
   );

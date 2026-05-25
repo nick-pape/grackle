@@ -1,0 +1,36 @@
+/**
+ * Internal `_meta` channel used by the dynamic render tools (`component_render`,
+ * `component_show`, `widget_show`) to hand a render descriptor to the broker capture in
+ * `mcp-server.ts`. The handler runs in-process, so the capture reads the
+ * descriptor off the result directly — it never depends on the agent SDK
+ * round-tripping `_meta` (the T3 broker-capture principle).
+ */
+
+/** `_meta` key carrying a {@link WidgetRenderDescriptor}. */
+export const WIDGET_RENDER_META_KEY: string = "io.grackle/widget-render";
+
+/** Self-contained description of a widget to render into the session stream. */
+export interface WidgetRenderDescriptor {
+  /** Renderer to use (v1: `"mcp-app-html"`). */
+  rendererKind: string;
+  /** Widget body (HTML for `mcp-app-html`). */
+  body: string;
+  /** Render-time data passed to the widget via the AppBridge. */
+  props?: Record<string, unknown>;
+  /** Allow inline `<script>` in the sandbox CSP (agent-authored bodies). */
+  allowInlineScripts?: boolean;
+  /** Allow `eval`/`new Function` in the sandbox CSP (the Grackle React runtime, #1268). */
+  allowUnsafeEval?: boolean;
+  /** Registry id when rendering a registered widget (omitted for one-off `widget_show`). */
+  widgetId?: string;
+  /** Registry version, when known. */
+  version?: number;
+  /** `ui://` resource uri, when the widget is registered. */
+  resourceUri?: string;
+  /**
+   * Resolved registry components this render composes from, in eval order
+   * (deepest first). The grackle-react runtime evaluates each into scope before
+   * the main body (#1270 composition). Only meaningful for `grackle-react`.
+   */
+  components?: Array<{ name: string; body: string }>;
+}

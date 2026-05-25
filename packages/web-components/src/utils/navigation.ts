@@ -45,7 +45,7 @@ export function workspaceUrl(workspaceId: string, environmentId?: string): strin
 }
 
 /** Build URL for a task detail page, optionally targeting a specific tab and workspace/environment scope. */
-export function taskUrl(taskId: string, tab?: "stream" | "findings", workspaceId?: string, environmentId?: string): string {
+export function taskUrl(taskId: string, tab?: "stream", workspaceId?: string, environmentId?: string): string {
   const encodedTaskId = encodeURIComponent(taskId);
   let base: string;
   if (workspaceId && environmentId) {
@@ -159,13 +159,11 @@ export const SETTINGS_SHORTCUTS_URL: string = "/settings/shortcuts";
 /** URL for the device pairing page. */
 export const PAIR_PATH: string = "/pair";
 
-/** URL for the root-task chat page. */
+/** URL for the root-task ("Root") chat page. */
 export const CHAT_URL: string = "/chat";
 
-/** Build URL for a specific IPC stream's chat page. */
-export function chatStreamUrl(streamId: string): string {
-  return `/chat/${encodeURIComponent(streamId)}`;
-}
+/** URL for the Coordination page (read-only IPC stream inventory). */
+export const COORDINATION_URL: string = "/coordination";
 
 /** URL for the home dashboard page. */
 export const HOME_URL: string = "/";
@@ -182,25 +180,6 @@ export const NEW_WORKSPACE_URL: string = "/workspaces/new";
 /** URL for the knowledge graph explorer page. */
 export const KNOWLEDGE_URL: string = "/knowledge";
 
-/** URL for the findings landing page. */
-export const FINDINGS_URL: string = "/findings";
-
-/** Build URL for the findings list page, optionally scoped to a workspace. */
-export function findingsUrl(workspaceId?: string, environmentId?: string): string {
-  if (workspaceId && environmentId) {
-    return `/environments/${encodeURIComponent(environmentId)}/workspaces/${encodeURIComponent(workspaceId)}/findings`;
-  }
-  return FINDINGS_URL;
-}
-
-/** Build URL for a finding detail page, optionally scoped to a workspace. */
-export function findingUrl(findingId: string, workspaceId?: string, environmentId?: string): string {
-  const encodedFindingId = encodeURIComponent(findingId);
-  if (workspaceId && environmentId) {
-    return `/environments/${encodeURIComponent(environmentId)}/workspaces/${encodeURIComponent(workspaceId)}/findings/${encodedFindingId}`;
-  }
-  return `/findings/${encodedFindingId}`;
-}
 
 /** Build URL for the root-task chat page. */
 export function chatUrl(): string {

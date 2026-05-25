@@ -3,7 +3,6 @@ import { envTools } from "./env.js";
 import { sessionTools } from "./session.js";
 import { workspaceTools } from "./workspace.js";
 import { taskTools } from "./task.js";
-import { findingTools } from "./finding.js";
 import { personaTools } from "./persona.js";
 import { logsTools } from "./logs.js";
 import { credentialTools } from "./credential.js";
@@ -16,6 +15,7 @@ import { scheduleTools } from "./schedule.js";
 import { versionTools } from "./version.js";
 import { escalationTools } from "./escalation.js";
 import { pluginTools } from "./plugin.js";
+import { componentTools } from "./component.js";
 
 /** Built-in tool groups shipped with the MCP package. */
 const builtinToolGroups: ToolDefinition[][] = [
@@ -23,7 +23,6 @@ const builtinToolGroups: ToolDefinition[][] = [
   sessionTools,
   workspaceTools,
   taskTools,
-  findingTools,
   personaTools,
   logsTools,
   credentialTools,
@@ -36,6 +35,7 @@ const builtinToolGroups: ToolDefinition[][] = [
   versionTools,
   escalationTools,
   pluginTools,
+  componentTools,
 ];
 
 /**

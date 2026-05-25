@@ -39,10 +39,6 @@ vi.mock("@grackle-ai/database", async (importOriginal) => {
       deleteByEnvironment: vi.fn(),
       setSessionTask: vi.fn(),
     },
-    findingStore: {
-      queryFindings: vi.fn(() => []),
-      postFinding: vi.fn(),
-    },
     personaStore: {
       listPersonas: vi.fn(() => []),
       getPersona: vi.fn(() => undefined),
@@ -82,9 +78,7 @@ vi.mock("./event-bus.js", () => ({
 }));
 
 vi.mock("./token-push.js", () => ({
-  pushToEnv: vi.fn(),
-  pushProviderCredentialsToEnv: vi.fn(),
-  refreshTokensForTask: vi.fn(),
+  authenticateForRuntime: vi.fn(),
 }));
 
 vi.mock("./adapter-manager.js", () => ({

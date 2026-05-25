@@ -163,15 +163,6 @@ Create, manage, and run tasks within workspaces. Supports hierarchical task tree
 | `task_complete` | Mark a task as complete (sticky status). | `taskId` (string) |
 | `task_resume` | Resume the latest session for a task. | `taskId` (string) |
 
-### Finding Tools
-
-Post and query categorized discoveries shared across agents.
-
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `finding_list` | Query findings for a workspace with optional filters. | `workspaceId?` (string, auto-injected for scoped sessions; required for API key/OAuth), `category?` (string), `tag?` (string), `limit?` (int) |
-| `finding_post` | Post a new finding with title, category, content, and tags. | `workspaceId?` (string, auto-injected for scoped sessions; required for API key/OAuth), `title` (string), `category?` (string), `content?` (string), `tags?` (string[]) |
-
 ### Persona Tools
 
 Manage agent personas — reusable templates defining system prompt, runtime, and model.
@@ -186,11 +177,11 @@ Manage agent personas — reusable templates defining system prompt, runtime, an
 
 ### Knowledge Graph Tools
 
-Search and build a semantic knowledge graph across sessions, findings, and task context.
+Search a semantic knowledge graph across sessions and task context.
 
 | Tool | Description | Parameters |
 |------|-------------|------------|
-| `knowledge_search` | Semantic search over the knowledge graph using natural language. | `query` (string), `limit?` (int, max 50), `workspaceId?` (string), `expand?` (boolean), `expandDepth?` (int, max 5) |
+| `knowledge_search` | Find how related/prior work in the workspace was approached. Semantic search over the knowledge graph (tasks, sessions, transcript chunks). | `query` (string), `limit?` (int, max 50), `workspaceId?` (string), `expand?` (boolean), `expandDepth?` (int, max 5) |
 | `knowledge_get_node` | Retrieve a specific node by ID with optional neighbor expansion. | `id` (string), `expand?` (boolean), `expandDepth?` (int, max 5) |
 | `knowledge_create_node` | Create a new knowledge entry (decision, insight, concept, snippet). | `title` (string), `content` (string), `category?` (string), `tags?` (string[]), `workspaceId?` (string), `edges?` (array of `{toId, type}`) |
 
@@ -254,6 +245,51 @@ Query aggregated token usage and cost data.
 |------|-------------|------------|
 | `usage_get` | Get token usage and cost for a session, task, task tree, workspace, or environment. | `scope` (`session` \| `task` \| `task_tree` \| `workspace` \| `environment`), `id` (string) |
 
+### Component & Widget Tools
+
+[MCP Apps](#mcp-apps-ui-widgets) UI rendered inline by capable hosts (and always by Grackle's own chat pane via the broker).
+
+`show_hello_widget` is the Grackle-served demo: it references a static `ui://` resource and appears in `tools/list` **only** when the host advertises the `io.modelcontextprotocol/ui` extension. The **component registry** tools (#1269) let an agent author and reuse components at runtime; they are ordinary scoped tools (always listed) and the rendered output is captured by the broker into the session's chat.
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `show_hello_widget` | Display the Grackle hello widget — a minimal interactive MCP Apps UI that echoes the provided message. | `message` (string, optional) |
+| `component_register` | Register a reusable component in the workspace. `source` is JSX (`grackle-react`, default) or HTML (`mcp-app-html`). Returns the component id. | `name` (string), `source` (string), `rendererKind` (optional), `description` (optional), `propsSchema` (JSON Schema string, optional) |
+| `component_update` | Update a registered component's source/name/description/props schema; bumps its version. | `id` (string), `source`/`name`/`description`/`propsSchema` (optional) |
+| `component_list` | List the reusable components registered in the workspace. | — |
+| `component_search` | Keyword-search registered components **and** Grackle's built-in components by name/description. Find a component to reuse before authoring. `builtin:true` results are composed in JSX; others are rendered via `component_render`. | `query` (string), `limit` (optional), `workspaceId` (auto) |
+| `component_promote` | Promote a registered component to its own `render_<name>` MCP tool (or demote with `promoted:false`). Resolve by `id` or `name`. | `id` (optional), `name` (optional), `promoted` (optional, default `true`) |
+| `component_render` | Render a registered component inline (by `id` or `name`), optionally passing `props`. Props are validated against the component's `propsSchema`. | `id` (optional), `name` (optional), `props` (object, optional) |
+| `component_show` | Render a one-off React/JSX component inline against the Grackle component library (no persistence). `source` calls `render(<Component {...props}/>)`; `React`, `props`, and Grackle components are in scope. | `source` (string), `props` (object, optional) |
+| `widget_show` | Render a one-off raw-HTML body inline, without persisting it. | `body` (string), `props` (object, optional) |
+
+Components are **workspace-scoped**: a session may only register/render components in its own workspace (the `workspaceId` is taken from the session's scoped token). A component's `propsSchema` (a JSON Schema) is validated at register, and render-time `props` are validated against it (via zod's `fromJSONSchema`). Renderers run in the cross-origin sandbox: `mcp-app-html` allows inline scripts (`script-src 'unsafe-inline'`); `grackle-react` runs the React runtime that transpiles + evaluates JSX (`script-src 'unsafe-eval'`) — both kept safe by the iframe origin isolation + restricted `connect-src`.
+
+Grackle's own context-free components (Button, Callout, Spinner, Skeleton, Tooltip, …) are already in the runtime scope and are surfaced by `component_search` as built-ins (`builtin: true`) with their prop schemas — so agents discover and compose them in JSX rather than re-authoring them.
+
+**Composition — components reference each other.** A `grackle-react` component's body can use another registered component as a JSX tag (`<RevenueChart period="Q1"/>`). At render time the server scans the body for capitalized tags, resolves the ones matching a workspace component (built-ins excluded), and recurses — a mini-bundler over the registry graph — shipping the resolved dependency sources to the runtime, which composes them into scope. References are **late-bound**: a reference resolves to the dependency's current version, so updating a shared component updates every consumer. Resolution is workspace-scoped, cycle-safe, and bounded (depth/count/size); only `grackle-react` components compose (raw-HTML can't). Applies to `component_render`, `component_show`, and promoted `render_<name>` tools alike.
+
+**Promoted components → dynamic `render_<name>` tools.** Calling `component_promote` on a registered component surfaces it as its own MCP tool named `render_<name>` (the name is slugged to `[A-Za-z0-9_]`), whose `inputSchema` is the component's `propsSchema` — so it's natively discoverable in `tools/list` and its props are typed and validated. These tools are synthesized **per workspace** for scoped sessions and reflect the current promoted set on each `tools/list`; they render identically to `component_render` ("many tools, one resource"). When a workspace's promoted set changes (promote/demote, or a promoted component edited), the server pushes **`notifications/tools/list_changed`** to that workspace's live sessions so conformant clients re-list automatically (the server advertises the `tools.listChanged` capability). Like the other registry render tools they rely on the in-process broker, so they're listed **only when the MCP server is co-located with the Grackle server** (not on the standalone `npx @grackle-ai/mcp` server). They're authorized by **registry ownership** (the caller's workspace must own the component), not the static tool allowlist. On a name collision the most-recently-updated component wins.
+
+---
+
+## MCP Apps (UI widgets)
+
+Grackle's MCP server is a conformant **MCP Apps** ([SEP-1865](https://modelcontextprotocol.io/)) provider. Hosts that support MCP Apps can fetch and render interactive HTML widgets inline.
+
+How it works:
+
+- **Capability negotiation** — A host advertises support during `initialize` via the `io.modelcontextprotocol/ui` extension (with `mimeTypes` including `text/html;profile=mcp-app`). The server detects this and only lists [Widget Tools](#widget-tools) to capable hosts; other clients see the data-only tools.
+- **Resources** — The server declares the `resources` capability and implements `resources/list` and `resources/read`. Widget UIs are served as `ui://…` resources with MIME `text/html;profile=mcp-app`.
+- **Tool ↔ resource link** — A widget tool carries `_meta.ui.resourceUri` (and the legacy `_meta["ui/resourceUri"]`) pointing at its `ui://` resource. The host reads the resource and renders it, passing the tool's input and result into the widget.
+- **Widget assets** — The widget's browser scripts are served (unauthenticated, since they are non-sensitive static JS) from `/widgets/<name>/…` on the MCP server's HTTP origin.
+
+- **Grackle chat-pane capture** — When an agent in a Grackle session calls a widget tool, the MCP server also pushes a self-contained "widget" event (resource HTML + tool input/result) into that session's event stream, so the widget renders inline in Grackle's own chat UI — independent of whether the agent runtime preserves MCP `_meta`. This covers both the static `show_hello_widget` and the **agent-authored registry** (`widget_register`/`widget_render`/`widget_show`), whose render descriptor the broker reads from the tool result. (This in-process capture only runs when the MCP server is co-located with the Grackle server; the standalone `npx @grackle-ai/mcp` server does not emit chat widget events.)
+
+> **Note:** the widget's scripts load from the MCP server's origin, so a host whose sandbox CSP forbids cross-origin scripts won't render them. Grackle's own chat pane allows the MCP origin in its sandbox CSP, so widgets render there.
+
+The current built-in widget is `show_hello_widget` (resource `ui://grackle/hello-widget`). Try it with the [MCP Inspector](https://github.com/modelcontextprotocol/inspector), Claude Desktop, or Grackle's own chat.
+
 ---
 
 ## Scoped Access
@@ -267,7 +303,6 @@ Each persona can define an `allowed_mcp_tools` list that restricts which MCP too
 1. The server looks up the persona's `allowed_mcp_tools` from the token's `personaId` claim.
 2. If the persona defines a non-empty tool list, only those tools are exposed via `tools/list`.
 3. If the persona has no explicit tool list (empty `allowed_mcp_tools`), the **default scoped set** is used:
-   - `finding_post`, `finding_list`
    - `task_create`, `task_list`, `task_show`, `task_start`, `task_complete`
    - `session_attach`, `session_send_input`
    - `persona_list`, `persona_show`
@@ -288,7 +323,7 @@ Predefined presets are available for convenience (via CLI `--mcp-tools-preset` o
 | `orchestrator` | Default + task management, session spawning, persona creation, scheduling |
 | `admin` | Full access to all available tools |
 
-Scoped tokens also enforce workspace isolation — agents can only see tasks and findings within their own workspace. Subtasks created by a scoped agent are automatically parented to the agent's own task. Tool calls to non-permitted tools return an error with a descriptive message listing the available tools.
+Scoped tokens also enforce workspace isolation — agents can only see tasks within their own workspace. Subtasks created by a scoped agent are automatically parented to the agent's own task. Tool calls to non-permitted tools return an error with a descriptive message listing the available tools.
 
 ## Requirements
 

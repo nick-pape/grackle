@@ -122,16 +122,18 @@ export function mapSessionUpdate(update: Record<string, unknown>): AgentEvent[] 
           args: update.rawInput,
         }),
         raw,
+        toolCallId: typeof update.toolCallId === "string" ? update.toolCallId : undefined,
       }];
     }
 
     case "tool_call_update": {
       const status = update.status as string | undefined;
+      const toolCallId = typeof update.toolCallId === "string" ? update.toolCallId : undefined;
       if (status === "completed") {
         const output = update.rawOutput !== null && update.rawOutput !== undefined
           ? JSON.stringify(update.rawOutput)
           : ((update.content || "") as string);
-        return [{ type: "tool_result", timestamp: ts, content: output, raw }];
+        return [{ type: "tool_result", timestamp: ts, content: output, raw, toolCallId }];
       }
       if (status === "failed") {
         const rawOutput = update.rawOutput as Record<string, unknown> | undefined;
@@ -141,6 +143,7 @@ export function mapSessionUpdate(update: Record<string, unknown>): AgentEvent[] 
           timestamp: ts,
           content: typeof errorContent === "string" ? errorContent : JSON.stringify(errorContent),
           raw,
+          toolCallId,
         }];
       }
       // Skip intermediate progress (pending, in_progress)
@@ -276,10 +279,15 @@ class AcpSession extends BaseAgentSession {
       shell: process.platform === "win32",
     });
 
+    // Note: this is a `diagnostic` event, so its content may be exported to an
+    // OTLP collector when the sink is enabled (AHP HR7). Deliberately omit the
+    // raw CLI args — they are arbitrary user-controllable input that can carry
+    // secrets — and keep only low-sensitivity structural info (command, pid, cwd).
     this.eventQueue.push({
       type: "system",
       timestamp: ts(),
-      content: `Spawned ${this.config.command} ${this.config.args.join(" ")} (pid: ${String(this.child.pid)}, cwd: ${spawnCwd})`,
+      content: `Spawned ${this.config.command} (pid: ${String(this.child.pid)}, cwd: ${spawnCwd})`,
+      diagnostic: true,
     });
 
     // Register exit/error handlers immediately to catch early termination
@@ -364,6 +372,7 @@ class AcpSession extends BaseAgentSession {
       type: "system",
       timestamp: ts(),
       content: "ACP connection initialized",
+      diagnostic: true,
     });
 
     // Some ACP bridges (e.g. @github/copilot) require an explicit authenticate()
@@ -380,6 +389,7 @@ class AcpSession extends BaseAgentSession {
           type: "system",
           timestamp: ts(),
           content: `ACP authenticated via ${envVarMethodId}`,
+          diagnostic: true,
         });
       } catch (err: unknown) {
         // Non-fatal: bridge may not require this call (claude-code-acp, codex-acp)
@@ -395,6 +405,7 @@ class AcpSession extends BaseAgentSession {
         type: "system",
         timestamp: ts(),
         content: `ACP session resuming (id: ${this.runtimeSessionId})`,
+        diagnostic: true,
       });
       return;
     }
@@ -419,6 +430,7 @@ class AcpSession extends BaseAgentSession {
       type: "system",
       timestamp: ts(),
       content: `ACP session created (id: ${this.runtimeSessionId})`,
+      diagnostic: true,
     });
 
     // Set model if specified

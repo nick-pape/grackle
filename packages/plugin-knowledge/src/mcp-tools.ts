@@ -23,15 +23,6 @@ const MAX_SEARCH_LIMIT: number = 50;
 /** Maximum allowed expansion depth. */
 const MAX_EXPAND_DEPTH: number = 5;
 
-/** Valid edge type values. */
-const EDGE_TYPES = [
-  "RELATES_TO",
-  "DEPENDS_ON",
-  "DERIVED_FROM",
-  "MENTIONS",
-  "PART_OF",
-] as const;
-
 // ---------------------------------------------------------------------------
 // Response formatting — hide internal details from agents
 // ---------------------------------------------------------------------------
@@ -111,8 +102,10 @@ export const knowledgeMcpTools: PluginToolDefinition[] = [
     name: "knowledge_search",
     group: "knowledge",
     description:
-      "Search the knowledge graph using natural language. Returns relevant nodes " +
-      "(decisions, insights, task references, findings) ranked by semantic similarity.",
+      "Search the knowledge graph to find how related or prior work in this workspace " +
+      "was approached before starting. Natural-language query; returns relevant nodes " +
+      "(tasks, sessions, transcript chunks) ranked by semantic similarity. Pair with " +
+      "knowledge_get_node to expand a result's neighbors.",
     inputSchema: z.object({
       query: z.string().describe("Natural language search query"),
       limit: z
@@ -347,98 +340,6 @@ export const knowledgeMcpTools: PluginToolDefinition[] = [
       }
 
       return jsonResult(result);
-    },
-  },
-
-  {
-    name: "knowledge_create_node",
-    group: "knowledge",
-    description:
-      "Create a new knowledge entry (decision, insight, concept, or snippet). " +
-      "The content is automatically embedded for future semantic search. " +
-      "Optionally link it to existing nodes.",
-    inputSchema: z.object({
-      title: z.string().describe("Title or summary of the knowledge entry"),
-      content: z
-        .string()
-        .describe("Full content to store and embed for search"),
-      category: z
-        .string()
-        .optional()
-        .describe(
-          "Category: decision, insight, concept, snippet (default: insight)",
-        ),
-      tags: z
-        .array(z.string())
-        .optional()
-        .describe("Tags for categorization"),
-      workspaceId: z
-        .string()
-        .optional()
-        .describe("Workspace to scope this entry to"),
-      edges: z
-        .array(
-          z.object({
-            toId: z.string().describe("ID of the node to link to"),
-            type: z
-              .enum(EDGE_TYPES)
-              .describe(
-                "Relationship type: RELATES_TO, DEPENDS_ON, DERIVED_FROM, MENTIONS, PART_OF",
-              ),
-          }),
-        )
-        .optional()
-        .describe("Edges to create from this node to existing nodes"),
-    }),
-    rpcMethod: "knowledgeCreateNode",
-    mutating: true,
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: false,
-      openWorldHint: false,
-    },
-    async handler(
-      args: unknown,
-      client: unknown,
-      authContext?: unknown,
-    ): Promise<unknown> {
-      const typedClient = (client as { knowledge: Client<typeof grackle.GrackleKnowledge> }).knowledge;
-      const typedAuth = authContext as AuthContext | undefined;
-      const {
-        title,
-        content,
-        category,
-        tags,
-        workspaceId,
-      } = args as {
-        title: string;
-        content: string;
-        category?: string;
-        tags?: string[];
-        workspaceId?: string;
-      };
-
-      // For scoped callers, always use the auth context workspace.
-      const resolvedWorkspaceId: string =
-        typedAuth?.type === "scoped"
-          ? typedAuth.workspaceId ?? ""
-          : workspaceId ?? "";
-
-      const response: grackle.CreateKnowledgeNodeResponse =
-        await typedClient.createKnowledgeNode({
-          title,
-          content,
-          category: category ?? "insight",
-          tags: tags ?? [],
-          workspaceId: resolvedWorkspaceId,
-        });
-
-      return jsonResult({
-        id: response.id,
-        title,
-        category: category ?? "insight",
-      });
     },
   },
 ];

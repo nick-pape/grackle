@@ -11,7 +11,6 @@ import type {
   SessionEvent,
   Workspace,
   TaskData,
-  FindingData,
   TokenInfo,
   PersonaData,
   ScheduleData,
@@ -25,7 +24,6 @@ export {
   MOCK_SESSIONS,
   MOCK_WORKSPACES,
   MOCK_TASKS,
-  MOCK_FINDINGS,
   MOCK_TOKENS,
   MOCK_PERSONAS,
 } from "../mocks/mockData.js";
@@ -103,26 +101,11 @@ export function makeTask(overrides: Partial<TaskData> = {}): TaskData {
     depth: 0,
     childTaskIds: [],
     canDecompose: false,
+    injectKnowledge: true,
     defaultPersonaId: "",
     workpad: "",
     tokenBudget: 0,
     costBudgetMillicents: 0,
-    ...overrides,
-  };
-}
-
-/** Create a FindingData with sensible defaults. */
-export function makeFinding(overrides: Partial<FindingData> = {}): FindingData {
-  return {
-    id: nextId("finding"),
-    workspaceId: "ws-1",
-    taskId: "task-1",
-    sessionId: "sess-1",
-    category: "general",
-    title: "Test Finding",
-    content: "Finding content",
-    tags: [],
-    createdAt: "2026-01-01T00:00:00Z",
     ...overrides,
   };
 }
@@ -253,7 +236,6 @@ export const buildEnvironment: typeof makeEnvironment = makeEnvironment;
 export const buildSession: typeof makeSession = makeSession;
 export const buildWorkspace: typeof makeWorkspace = makeWorkspace;
 export const buildTask: typeof makeTask = makeTask;
-export const buildFinding: typeof makeFinding = makeFinding;
 export const buildToken: typeof makeToken = makeToken;
 export const buildPersona: typeof makePersona = makePersona;
 export const buildEvent: typeof makeEvent = makeEvent;

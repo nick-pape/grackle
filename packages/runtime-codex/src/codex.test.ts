@@ -311,6 +311,23 @@ describe("Codex streaming field extraction", () => {
     expect(rtIdEvent!.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
+  // AHP HR7: Codex setup/lifecycle system events are flagged diagnostic.
+  it("flags Codex lifecycle system events as diagnostic", async () => {
+    mockRunStreamedEvents = [
+      { type: "thread.started", thread_id: "thread-diag" },
+      { type: "item.completed", item: { type: "agent_message", text: "done" } },
+    ];
+
+    const session = runtime.spawn({ sessionId: "ut-diag", prompt: "hi", model: "codex-mini", maxTurns: 1 });
+    const events = await collectEvents(session);
+
+    const systemEvents = events.filter((e) => e.type === "system");
+    expect(systemEvents.length).toBeGreaterThan(0);
+    for (const event of systemEvents) {
+      expect(event.diagnostic).toBe(true);
+    }
+  });
+
   it("emits runtime_session_id only once even on follow-up thread.started", async () => {
     mockRunStreamedEvents = [
       { type: "thread.started", thread_id: "thread-first" },
@@ -422,6 +439,30 @@ describe("Codex streaming field extraction", () => {
     const resultEvents = events.filter((e) => e.type === "tool_result");
     expect(resultEvents).toHaveLength(1);
     expect(resultEvents[0].content).toBe("Permission denied");
+  });
+
+  // AHP HR3: Codex items carry a native `id` shared between item.started and
+  // item.completed; we use it to pair tool_use↔tool_result (no synthesis).
+  it("uses the native item.id to correlate each tool's started/completed pair", async () => {
+    mockRunStreamedEvents = [
+      { type: "item.started", item: { id: "item_a", type: "command_execution", command: "ls" } },
+      { type: "item.completed", item: { id: "item_a", type: "command_execution", aggregated_output: "files", exit_code: 0 } },
+      { type: "item.started", item: { id: "item_b", type: "mcp_tool_call", server: "grackle", tool: "post_finding", arguments: {} } },
+      { type: "item.completed", item: { id: "item_b", type: "mcp_tool_call", server: "grackle", tool: "post_finding", result: { content: "ok" } } },
+    ];
+
+    const session = runtime.spawn({ sessionId: "hr3", prompt: "go", model: "codex-mini", maxTurns: 1 });
+    const events = await collectEvents(session);
+
+    const uses = events.filter((e) => e.type === "tool_use");
+    const results = events.filter((e) => e.type === "tool_result");
+    expect(uses).toHaveLength(2);
+    expect(results).toHaveLength(2);
+    // Each event carries its native item.id; result matches use by that id.
+    expect(uses[0].toolCallId).toBe("item_a");
+    expect(results[0].toolCallId).toBe("item_a");
+    expect(uses[1].toolCallId).toBe("item_b");
+    expect(results[1].toolCallId).toBe("item_b");
   });
 
   // UT-5: file_change uses item.changes array (not item.file/item.patch)
