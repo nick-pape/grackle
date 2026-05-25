@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.121.0",
+      "tag": "@grackle-ai/cli_v0.121.0",
+      "date": "Mon, 25 May 2026 04:20:46 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add a durable, server-sequenced session-action log (AHP HR1a): session_actions store, monotonic serverSeq assignment in the event processor, GetSessionActions gRPC RPC + handler, and a `grackle session events` CLI reader."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.120.0",
       "tag": "@grackle-ai/cli_v0.120.0",
       "date": "Sun, 24 May 2026 21:03:54 GMT",

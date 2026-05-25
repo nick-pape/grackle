@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 24 May 2026 21:03:54 GMT and should not be manually modified.
+This log was last generated on Mon, 25 May 2026 04:20:46 GMT and should not be manually modified.
+
+## 0.121.0
+Mon, 25 May 2026 04:20:46 GMT
+
+### Minor changes
+
+- Add a durable, server-sequenced session-action log (AHP HR1a): session_actions store, monotonic serverSeq assignment in the event processor, GetSessionActions gRPC RPC + handler, and a `grackle session events` CLI reader.
 
 ## 0.120.0
 Sun, 24 May 2026 21:03:54 GMT
