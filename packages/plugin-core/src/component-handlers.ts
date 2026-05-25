@@ -179,3 +179,31 @@ export async function searchComponents(req: grackle.SearchComponentsRequest): Pr
     ),
   });
 }
+
+/**
+ * Promote (or demote) a component, controlling whether it surfaces as a dynamic
+ * `render_<name>` MCP tool (#1272). Resolves by id (precedence) or by name within
+ * the caller's workspace; the workspace-ownership check (a component in another
+ * workspace is treated as not found) is the authorization boundary for the
+ * dynamic tool. Promotion does not bump the component's version.
+ */
+export async function setComponentPromotion(req: grackle.SetComponentPromotionRequest): Promise<grackle.Component> {
+  requireWorkspace(req.workspaceId);
+  let row: componentStore.ComponentRow | undefined;
+  if (req.id) {
+    row = componentStore.getComponent(req.id);
+    // Workspace isolation: a component in another workspace is not found.
+    if (row && row.workspaceId !== req.workspaceId) {
+      row = undefined;
+    }
+  } else if (req.name) {
+    row = componentStore.findComponentByName(req.workspaceId, req.name);
+  } else {
+    throw new ConnectError("id or name is required", Code.InvalidArgument);
+  }
+  if (!row) {
+    throw new ConnectError("Component not found", Code.NotFound);
+  }
+  componentStore.setPromoted(row.id, req.promoted);
+  return componentRowToProto(componentStore.getComponent(row.id)!);
+}

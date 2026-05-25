@@ -155,8 +155,9 @@ describe("createToolRegistry with plugin tools", () => {
 describe("Full tool registry", () => {
   it("contains exactly the expected number of tools", () => {
     const registry = createToolRegistry();
-    // 73 after #1269 (the component registry) + 1 component_search tool (#1271) = 74.
-    expect(registry.list()).toHaveLength(74);
+    // 74 after #1271 (component_search) + 1 component_promote tool (#1272) = 75.
+    // (Dynamic render_<name> tools are synthesized per workspace and not registered here.)
+    expect(registry.list()).toHaveLength(75);
   });
 
   it("every tool name matches snake_case pattern", () => {

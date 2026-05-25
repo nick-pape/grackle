@@ -26,6 +26,7 @@ function applySchema(): void {
       body             TEXT NOT NULL,
       props_schema     TEXT NOT NULL DEFAULT '',
       version          INTEGER NOT NULL DEFAULT 1,
+      promoted         INTEGER NOT NULL DEFAULT 0,
       owner_task_id    TEXT NOT NULL DEFAULT '',
       owner_session_id TEXT NOT NULL DEFAULT '',
       created_at       TEXT NOT NULL DEFAULT (datetime('now')),
@@ -121,5 +122,28 @@ describe("component-store", () => {
   it("rejects a body larger than the size cap", () => {
     const huge = "x".repeat(componentStore.MAX_COMPONENT_BODY_CHARS + 1);
     expect(() => componentStore.registerComponent({ id: "c1", workspaceId: "ws1", name: "a", body: huge })).toThrow(/exceeds/);
+  });
+
+  it("registerComponent defaults promoted to false", () => {
+    componentStore.registerComponent({ id: "c1", workspaceId: "ws1", name: "a", body: "x" });
+    expect(componentStore.getComponent("c1")!.promoted).toBe(false);
+  });
+
+  it("setPromoted flips the flag without bumping version or updated_at", () => {
+    componentStore.registerComponent({ id: "c1", workspaceId: "ws1", name: "a", body: "x" });
+    const before = componentStore.getComponent("c1")!;
+    expect(componentStore.setPromoted("c1", true)).toBe(true);
+    const after = componentStore.getComponent("c1")!;
+    expect(after.promoted).toBe(true);
+    // Promotion is a lifecycle toggle, not an edit: version + updatedAt are untouched.
+    expect(after.version).toBe(before.version);
+    expect(after.updatedAt).toBe(before.updatedAt);
+    // And it can be toggled back off.
+    expect(componentStore.setPromoted("c1", false)).toBe(true);
+    expect(componentStore.getComponent("c1")!.promoted).toBe(false);
+  });
+
+  it("setPromoted returns false for an unknown id", () => {
+    expect(componentStore.setPromoted("ghost", true)).toBe(false);
   });
 });

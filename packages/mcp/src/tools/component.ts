@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { grackle } from "@grackle-ai/common";
 import type { GrackleClients, ToolDefinition, ToolResult } from "../tool-registry.js";
 import type { AuthContext } from "@grackle-ai/auth";
 import { jsonResult } from "../result-helpers.js";
@@ -65,7 +66,7 @@ function propsSchemaError(propsSchema: string | undefined): string | undefined {
  * `propsSchema` by converting it to a zod schema and parsing. Returns an error
  * message on mismatch, or `undefined` when valid (or when there is no schema).
  */
-function propsValidationError(propsSchema: string, props: Record<string, unknown>): string | undefined {
+export function propsValidationError(propsSchema: string, props: Record<string, unknown>): string | undefined {
   if (!propsSchema) {
     return undefined;
   }
@@ -87,6 +88,27 @@ function propsValidationError(propsSchema: string, props: Record<string, unknown
     return undefined;
   }
   return z.prettifyError(result.error);
+}
+
+/**
+ * Build the render result for a stored component: the SAME `WidgetRenderDescriptor`
+ * the broker captures, reused by both `component_render` and the dynamic
+ * `render_<name>` dispatcher ("many tools, one resource"). Props are NOT validated
+ * here — callers validate against `propsSchema` (via {@link propsValidationError}) first.
+ */
+export function buildComponentRenderResult(c: grackle.Component, props: Record<string, unknown>): ToolResult {
+  const kind: string = c.rendererKind || REACT_RENDERER_KIND;
+  const descriptor: WidgetRenderDescriptor = {
+    rendererKind: kind,
+    body: c.body,
+    props,
+    allowInlineScripts: kind === HTML_RENDERER_KIND,
+    allowUnsafeEval: kind === REACT_RENDERER_KIND,
+    widgetId: c.id,
+    version: c.version,
+    resourceUri: `ui://grackle/${c.id}`,
+  };
+  return renderResult({ rendered: true, id: c.id, name: c.name, version: c.version }, descriptor);
 }
 
 /**
@@ -225,6 +247,7 @@ export const componentTools: ToolDefinition[] = [
           rendererKind: c.rendererKind,
           propsSchema: c.propsSchema,
           version: c.version,
+          promoted: c.promoted,
           updatedAt: c.updatedAt,
         })));
       } catch (error) {
@@ -267,6 +290,39 @@ export const componentTools: ToolDefinition[] = [
     },
   },
   {
+    name: "component_promote",
+    group: "component",
+    description:
+      "Promote a registered component to its own typed `render_<name>` MCP tool (its inputSchema is the component's propsSchema), or demote it with promoted:false. Promoted components appear in tools/list for this workspace so any agent can render them by name with validated props. Resolve by id (preferred) or by name within your workspace.",
+    inputSchema: z.object({
+      id: z.string().optional().describe("Component id (takes precedence over name)."),
+      name: z.string().optional().describe("Component name, resolved within your workspace."),
+      promoted: z.boolean().optional().describe("true to promote (default), false to demote."),
+      workspaceId: z.string().optional().describe("Workspace ID (auto-injected from session context)."),
+    }),
+    rpcMethod: "setComponentPromotion",
+    mutating: true,
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
+      const id = args.id as string | undefined;
+      const name = args.name as string | undefined;
+      if (!id && !name) {
+        return invalidArgument("id or name is required");
+      }
+      try {
+        const c = await client.setComponentPromotion({
+          id: id ?? "",
+          name: name ?? "",
+          workspaceId: (args.workspaceId as string | undefined) ?? "",
+          promoted: (args.promoted as boolean | undefined) ?? true,
+        });
+        return jsonResult({ id: c.id, name: c.name, promoted: c.promoted, version: c.version });
+      } catch (error) {
+        return grpcErrorToToolResult(error);
+      }
+    },
+  },
+  {
     name: "component_render",
     group: "component",
     description:
@@ -297,18 +353,7 @@ export const componentTools: ToolDefinition[] = [
         if (validationErr) {
           return invalidArgument(`props do not match the component's propsSchema: ${validationErr}`);
         }
-        const kind: string = c.rendererKind || REACT_RENDERER_KIND;
-        const descriptor: WidgetRenderDescriptor = {
-          rendererKind: kind,
-          body: c.body,
-          props,
-          allowInlineScripts: kind === HTML_RENDERER_KIND,
-          allowUnsafeEval: kind === REACT_RENDERER_KIND,
-          widgetId: c.id,
-          version: c.version,
-          resourceUri: `ui://grackle/${c.id}`,
-        };
-        return renderResult({ rendered: true, id: c.id, name: c.name, version: c.version }, descriptor);
+        return buildComponentRenderResult(c, props);
       } catch (error) {
         return grpcErrorToToolResult(error);
       }

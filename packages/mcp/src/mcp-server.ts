@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
-import { grackle, ROOT_TASK_ID } from "@grackle-ai/common";
+import { grackle, ROOT_TASK_ID, RENDER_TOOL_PREFIX, selectPromotedRenderTools } from "@grackle-ai/common";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import {
@@ -24,8 +24,9 @@ import { z } from "zod";
 import type { AuthContext } from "@grackle-ai/auth";
 import { authenticateMcpRequest, pruneRevocations } from "@grackle-ai/auth";
 import { grpcErrorToToolResult } from "./error-handler.js";
-import type { ToolDefinition, GrackleClients } from "./tool-registry.js";
+import type { ToolDefinition, ToolResult, GrackleClients } from "./tool-registry.js";
 import { createToolRegistry } from "./tools/index.js";
+import { buildComponentRenderResult, propsValidationError } from "./tools/component.js";
 import { resolveToolForAuth, listToolsForAuth } from "./tool-scoping.js";
 import { createResourceRegistry } from "./resources/index.js";
 import { hostSupportsUiApps, uiToolMeta } from "./ui-app.js";
@@ -145,6 +146,23 @@ async function resolvePersonaTools(
 }
 
 /** Create a low-level MCP Server instance with tool handlers wired to the ConnectRPC backend. */
+/**
+ * Build the JSON Schema for a dynamic `render_<name>` tool's input from a stored
+ * component `propsSchema` (#1272). Round-trips through zod so the result is always
+ * a valid, normalized JSON Schema; an empty or unparseable schema falls back to a
+ * permissive empty object (the props are then validated at call time anyway).
+ */
+function dynamicRenderInputSchema(propsSchema: string): ReturnType<typeof z.toJSONSchema<z.ZodType>> {
+  if (propsSchema) {
+    try {
+      return z.toJSONSchema(z.fromJSONSchema(JSON.parse(propsSchema) as Parameters<typeof z.fromJSONSchema>[0]));
+    } catch {
+      // fall through to the permissive schema
+    }
+  }
+  return z.toJSONSchema(z.object({}));
+}
+
 async function createMcpServerInstance(
   grpcClients: GrackleClients,
   authContext: AuthContext,
@@ -189,6 +207,132 @@ async function createMcpServerInstance(
   /** Names of UI tools — only listed to hosts that can render MCP Apps widgets. */
   const uiToolNames = new Set(visibleTools.filter((t) => t.uiResourceUri).map((t) => t.name));
 
+  /**
+   * Broker capture: push a self-contained widget render event into the scoped
+   * agent's session stream when a UI tool is invoked. Read in-process (does not
+   * rely on the agent SDK preserving `_meta`); non-fatal. Shared by the static
+   * tool path and the dynamic `render_<name>` dispatcher (#1272) so they can't drift.
+   */
+  function captureWidgetRender(
+    toolName: string,
+    uiResourceUri: string | undefined,
+    result: ToolResult,
+    toolInput: Record<string, unknown>,
+  ): void {
+    if (authContext.type !== "scoped" || !publishWidgetEvent) {
+      return;
+    }
+    try {
+      const dynamic = result._meta?.[WIDGET_RENDER_META_KEY] as WidgetRenderDescriptor | undefined;
+      if (dynamic) {
+        // Dynamic, agent-authored render (component_render / component_show /
+        // widget_show / render_<name>); grackle-react React runtime (#1268/#1269).
+        publishWidgetEvent(authContext.taskSessionId, {
+          rendererKind: dynamic.rendererKind || "mcp-app-html",
+          resourceUri: dynamic.resourceUri ?? "",
+          toolName,
+          html: dynamic.body,
+          csp: {
+            resourceDomains: [widgetAssetOrigin],
+            connectDomains: [widgetAssetOrigin],
+            allowInlineScripts: dynamic.allowInlineScripts === true,
+            allowUnsafeEval: dynamic.allowUnsafeEval === true,
+          },
+          toolInput: dynamic.props ?? toolInput,
+          toolResult: result,
+          ...(dynamic.widgetId ? { widgetId: dynamic.widgetId } : {}),
+          ...(dynamic.version !== undefined ? { version: dynamic.version } : {}),
+        });
+      } else if (uiResourceUri) {
+        // Static Grackle-served widget (show_hello_widget, T2/T3).
+        const resource = resourceRegistry.get(uiResourceUri);
+        if (resource) {
+          publishWidgetEvent(authContext.taskSessionId, {
+            resourceUri: uiResourceUri,
+            toolName,
+            html: resource.read().text,
+            csp: { resourceDomains: [widgetAssetOrigin], connectDomains: [widgetAssetOrigin] },
+            toolInput,
+            toolResult: result,
+          });
+        }
+      }
+    } catch (widgetErr) {
+      logger.warn({ tool: toolName, err: widgetErr }, "Widget event capture failed (non-fatal)");
+    }
+  }
+
+  /**
+   * Synthesize the dynamic `render_<name>` tool definitions for the caller's
+   * promoted components (#1272). Queried per `tools/list` so promote/demote is
+   * reflected on the agent's next listing. Fails open (returns []) so a registry
+   * error never breaks `tools/list`. Iterates `updatedAt DESC` (listComponents
+   * order); on a slug collision the most-recently-updated component wins — the
+   * dispatcher (handleDynamicRender) uses the identical loop so the tool shown is
+   * the tool called.
+   */
+  async function dynamicRenderToolDefs(): Promise<typeof visibleToolDefs> {
+    if (authContext.type !== "scoped" || !authContext.workspaceId) {
+      return [];
+    }
+    let components: grackle.Component[];
+    try {
+      const resp = await grpcClients.orchestration.listComponents({ workspaceId: authContext.workspaceId });
+      components = resp.components;
+    } catch (err) {
+      logger.warn({ workspaceId: authContext.workspaceId, err }, "Failed to list components for dynamic render tools (omitting)");
+      return [];
+    }
+    const defs: typeof visibleToolDefs = [];
+    for (const { toolName, component: c } of selectPromotedRenderTools(components)) {
+      defs.push({
+        name: toolName,
+        description: `Render the "${c.name}" component (v${c.version}) inline. Promoted from this workspace's component registry; its inputSchema is the component's prop schema.`,
+        inputSchema: dynamicRenderInputSchema(c.propsSchema),
+        annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+        _meta: uiToolMeta(`ui://grackle/${c.id}`),
+      });
+    }
+    return defs;
+  }
+
+  /**
+   * Dispatch a dynamic `render_<name>` call (#1272). Resolves the promoted
+   * component in the caller's workspace (the ownership boundary — only the
+   * caller's own workspace is searched, identical to `component_render`), validates
+   * props against its prop schema, and renders via the shared helper. Authorized
+   * by registry ownership, NOT the static/persona allowlist.
+   */
+  async function handleDynamicRender(name: string, rawArgs: Record<string, unknown>): Promise<CallToolResult> {
+    const unknownTool: CallToolResult = { content: [{ type: "text", text: `Unknown tool: ${name}` }], isError: true };
+    if (authContext.type !== "scoped" || !authContext.workspaceId) {
+      return unknownTool;
+    }
+    let components: grackle.Component[];
+    try {
+      const resp = await grpcClients.orchestration.listComponents({ workspaceId: authContext.workspaceId });
+      components = resp.components;
+    } catch (error) {
+      return grpcErrorToToolResult(error) as CallToolResult;
+    }
+    const match = selectPromotedRenderTools(components).find((e) => e.toolName === name)?.component;
+    if (!match) {
+      return unknownTool;
+    }
+    const props = rawArgs;
+    const validationErr = propsValidationError(match.propsSchema, props);
+    if (validationErr) {
+      return {
+        content: [{ type: "text", text: JSON.stringify({ error: `props do not match the component's propsSchema: ${validationErr}`, code: "INVALID_ARGUMENT" }, null, 2) }],
+        isError: true,
+      };
+    }
+    logger.info({ tool: name, componentId: match.id }, "Executing dynamic render tool: %s", name);
+    const result = buildComponentRenderResult(match, props);
+    captureWidgetRender(name, undefined, result, props);
+    return result as CallToolResult;
+  }
+
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     // Expose widget tools when EITHER:
     //  (a) the broker is active (publishWidgetEvent injected) — Grackle is itself
@@ -199,8 +343,10 @@ async function createMcpServerInstance(
     //      path for the standalone MCP server, where the client renders the
     //      widget itself.
     const uiOn = publishWidgetEvent !== undefined || hostSupportsUiApps(server.getClientCapabilities());
-    const tools = uiOn ? visibleToolDefs : visibleToolDefs.filter((t) => !uiToolNames.has(t.name));
-    return { tools };
+    const staticTools = uiOn ? visibleToolDefs : visibleToolDefs.filter((t) => !uiToolNames.has(t.name));
+    // Dynamic render_<name> tools render UI, so only offer them when UI is on (#1272).
+    const dynamicTools = uiOn ? await dynamicRenderToolDefs() : [];
+    return { tools: [...staticTools, ...dynamicTools] };
   });
 
   server.setRequestHandler(ListResourcesRequestSchema, async () => {
@@ -237,6 +383,13 @@ async function createMcpServerInstance(
 
   server.setRequestHandler(CallToolRequestSchema, async (request): Promise<CallToolResult> => {
     const { name, arguments: args } = request.params;
+    // Dynamic render_<name> tools (#1272) are synthesized per workspace and aren't
+    // in the registry; dispatch them by registry ownership (NOT the static/persona
+    // allowlist) before the normal resolve. The registry.get guard keeps any real
+    // static tool taking precedence over the dynamic prefix.
+    if (name.startsWith(RENDER_TOOL_PREFIX) && registry.get(name) === undefined) {
+      return await handleDynamicRender(name, (args ?? {}) as Record<string, unknown>);
+    }
     const tool = resolveToolForAuth(registry, name, authContext, personaAllowedTools);
     if (!tool) {
       // Distinguish "unknown tool" from "not permitted by persona/scope"
@@ -336,50 +489,9 @@ async function createMcpServerInstance(
       logger.info({ tool: name, resolved: tool.name }, "Executing MCP tool: %s", name);
       const result = await tool.handler(parsed.data as Record<string, unknown>, grpcClients, authContext);
       // MCP Apps: when a session agent invokes a widget tool, push a self-contained
-      // widget render event into that session's stream (broker capture — does not
-      // depend on the agent SDK preserving _meta; this is read in-process). The
-      // CSP origin is the trusted, config-derived `widgetAssetOrigin`, never the
-      // request Host. Non-fatal.
-      if (authContext.type === "scoped" && publishWidgetEvent) {
-        try {
-          const dynamic = result._meta?.[WIDGET_RENDER_META_KEY] as WidgetRenderDescriptor | undefined;
-          if (dynamic) {
-            // Dynamic, agent-authored render (component_render / component_show /
-            // widget_show); grackle-react React runtime (#1268/#1269).
-            publishWidgetEvent(authContext.taskSessionId, {
-              rendererKind: dynamic.rendererKind || "mcp-app-html",
-              resourceUri: dynamic.resourceUri ?? "",
-              toolName: tool.name,
-              html: dynamic.body,
-              csp: {
-                resourceDomains: [widgetAssetOrigin],
-                connectDomains: [widgetAssetOrigin],
-                allowInlineScripts: dynamic.allowInlineScripts === true,
-                allowUnsafeEval: dynamic.allowUnsafeEval === true,
-              },
-              toolInput: dynamic.props ?? (parsed.data as Record<string, unknown>),
-              toolResult: result,
-              ...(dynamic.widgetId ? { widgetId: dynamic.widgetId } : {}),
-              ...(dynamic.version !== undefined ? { version: dynamic.version } : {}),
-            });
-          } else if (tool.uiResourceUri) {
-            // Static Grackle-served widget (show_hello_widget, T2/T3).
-            const resource = resourceRegistry.get(tool.uiResourceUri);
-            if (resource) {
-              publishWidgetEvent(authContext.taskSessionId, {
-                resourceUri: tool.uiResourceUri,
-                toolName: tool.name,
-                html: resource.read().text,
-                csp: { resourceDomains: [widgetAssetOrigin], connectDomains: [widgetAssetOrigin] },
-                toolInput: parsed.data as Record<string, unknown>,
-                toolResult: result,
-              });
-            }
-          }
-        } catch (widgetErr) {
-          logger.warn({ tool: name, err: widgetErr }, "Widget event capture failed (non-fatal)");
-        }
-      }
+      // widget render event into that session's stream (broker capture — read
+      // in-process, does not depend on the agent SDK preserving _meta). Non-fatal.
+      captureWidgetRender(tool.name, tool.uiResourceUri, result, parsed.data as Record<string, unknown>);
       return result as CallToolResult;
     } catch (error: unknown) {
       logger.error({ tool: name, err: error }, "Tool execution failed: %s", name);

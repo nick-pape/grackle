@@ -65,6 +65,7 @@ interface ComponentInfo {
   rendererKind: string;
   body: string;
   version: number;
+  promoted: boolean;
 }
 
 const ENV_ID = "test-env-components";
@@ -195,5 +196,42 @@ describe("gRPC component handlers", () => {
     const err = (await handlers.searchComponents({ query: "button", workspaceId: "no-such-workspace" }).catch((e: unknown) => e)) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
+  });
+
+  it("setComponentPromotion promotes by id and does not bump version", async () => {
+    const created = (await handlers.registerComponent({ workspaceId: WS1, name: "promo-by-id", body: "render(<i/>)" })) as ComponentInfo;
+    expect(created.promoted).toBe(false);
+    const promoted = (await handlers.setComponentPromotion({ id: created.id, workspaceId: WS1, promoted: true })) as ComponentInfo;
+    expect(promoted.promoted).toBe(true);
+    expect(promoted.version).toBe(created.version);
+    // Demote round-trip.
+    const demoted = (await handlers.setComponentPromotion({ id: created.id, workspaceId: WS1, promoted: false })) as ComponentInfo;
+    expect(demoted.promoted).toBe(false);
+  });
+
+  it("setComponentPromotion resolves by name within the workspace", async () => {
+    await handlers.registerComponent({ workspaceId: WS1, name: "promo-by-name", body: "render(<i/>)" });
+    const promoted = (await handlers.setComponentPromotion({ name: "promo-by-name", workspaceId: WS1, promoted: true })) as ComponentInfo;
+    expect(promoted.name).toBe("promo-by-name");
+    expect(promoted.promoted).toBe(true);
+  });
+
+  it("setComponentPromotion denies cross-workspace promotion (NotFound)", async () => {
+    const created = (await handlers.registerComponent({ workspaceId: WS1, name: "promo-guarded", body: "render(<i/>)" })) as ComponentInfo;
+    const err = (await handlers.setComponentPromotion({ id: created.id, workspaceId: WS2, promoted: true }).catch((e: unknown) => e)) as ConnectError;
+    expect(err).toBeInstanceOf(ConnectError);
+    expect(err.code).toBe(Code.NotFound);
+  });
+
+  it("setComponentPromotion is NotFound for an unknown id", async () => {
+    const err = (await handlers.setComponentPromotion({ id: "no-such-id", workspaceId: WS1, promoted: true }).catch((e: unknown) => e)) as ConnectError;
+    expect(err).toBeInstanceOf(ConnectError);
+    expect(err.code).toBe(Code.NotFound);
+  });
+
+  it("setComponentPromotion requires id or name", async () => {
+    const err = (await handlers.setComponentPromotion({ workspaceId: WS1, promoted: true }).catch((e: unknown) => e)) as ConnectError;
+    expect(err).toBeInstanceOf(ConnectError);
+    expect(err.code).toBe(Code.InvalidArgument);
   });
 });

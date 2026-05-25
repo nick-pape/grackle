@@ -297,6 +297,21 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 14,
+    name: "component-promotion",
+    up: (conn) => {
+      // Adds the `promoted` flag used to surface a component as a dynamic
+      // render_<name> MCP tool (#1272). Guard the ALTER so re-runs (tests rewind
+      // user_version) and fresh installs that already have the column don't fail.
+      const cols = conn
+        .prepare("PRAGMA table_info(components)")
+        .all() as Array<{ name: string }>;
+      if (!cols.some((c) => c.name === "promoted")) {
+        conn.exec("ALTER TABLE components ADD COLUMN promoted INTEGER NOT NULL DEFAULT 0");
+      }
+    },
+  },
 ];
 
 /** The highest schema version defined by BASELINE + MIGRATIONS. */
