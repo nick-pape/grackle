@@ -20,6 +20,28 @@ test.describe("Coordination tab", { tag: ["@session"] }, () => {
     await expect(toggle).not.toBeChecked();
   });
 
+  test("List/Graph toggle switches the Coordination view", async ({ appPage }) => {
+    const page = appPage;
+
+    await page.getByTestId("sidebar-tab-coordination").click();
+    await expect(page.getByTestId("coordination-page")).toBeVisible();
+
+    // Defaults to the list view.
+    await expect(page.getByTestId("coordination-list")).toBeVisible();
+    await expect(page.getByTestId("coordination-view-graph")).toBeVisible();
+
+    // Switching to Graph hides the list and shows the graph (or its empty state).
+    await page.getByTestId("coordination-view-graph").click();
+    await expect(page.getByTestId("coordination-list")).toHaveCount(0);
+    await expect(
+      page.getByTestId("coordination-graph").or(page.getByTestId("coordination-graph-empty")),
+    ).toBeVisible();
+
+    // Switching back restores the list.
+    await page.getByTestId("coordination-view-list").click();
+    await expect(page.getByTestId("coordination-list")).toBeVisible();
+  });
+
   test("Root has no stream inventory (that lives on Coordination)", async ({ appPage }) => {
     const page = appPage;
 

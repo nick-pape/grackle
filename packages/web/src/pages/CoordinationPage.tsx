@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type JSX } from "react";
 import { useGrackle } from "../context/GrackleContext.js";
-import { CoordinationList, StreamDetailPanel } from "@grackle-ai/web-components";
+import { CoordinationGraph, CoordinationList, StreamDetailPanel, useThemeContext } from "@grackle-ai/web-components";
 import styles from "./CoordinationPage.module.scss";
 
 /**
  * Coordination page — a read-only inventory of IPC streams, grouped by the task
  * that owns them. Internal plumbing (lifecycle/pipe/stdin) is hidden behind a
- * "Show internals" toggle. Selecting a stream opens its detail drawer.
+ * "Show internals" toggle. Selecting a stream opens its detail drawer. A
+ * List/Graph toggle switches between the inventory and a live network graph.
  */
 export function CoordinationPage(): JSX.Element {
   const {
@@ -14,7 +15,9 @@ export function CoordinationPage(): JSX.Element {
     sessions: { sessions },
     tasks: { tasks },
   } = useGrackle();
+  const { resolvedThemeId } = useThemeContext();
 
+  const [viewMode, setViewMode] = useState<"list" | "graph">("list");
   const [showInternals, setShowInternals] = useState(false);
   const [selectedStreamId, setSelectedStreamId] = useState<string | undefined>(undefined);
   const [transcriptLoading, setTranscriptLoading] = useState(false);
@@ -56,19 +59,49 @@ export function CoordinationPage(): JSX.Element {
 
   return (
     <div className={styles.container} data-testid="coordination-page">
-      <CoordinationList
-        streams={streams}
-        sessions={sessions}
-        tasks={tasks}
-        loading={streamsLoading}
-        loadError={streamsLoadError}
-        loadedOnce={streamsLoadedOnce}
-        showInternals={showInternals}
-        onToggleInternals={setShowInternals}
-        selectedStreamId={selectedStreamId}
-        onSelectStream={setSelectedStreamId}
-        onRefresh={handleRefresh}
-      />
+      <div className={styles.viewToggle} role="group" aria-label="Coordination view" data-testid="coordination-view-toggle">
+        <button
+          type="button"
+          className={viewMode === "list" ? `${styles.toggleButton} ${styles.toggleActive}` : styles.toggleButton}
+          aria-pressed={viewMode === "list"}
+          data-testid="coordination-view-list"
+          onClick={() => setViewMode("list")}
+        >
+          List
+        </button>
+        <button
+          type="button"
+          className={viewMode === "graph" ? `${styles.toggleButton} ${styles.toggleActive}` : styles.toggleButton}
+          aria-pressed={viewMode === "graph"}
+          data-testid="coordination-view-graph"
+          onClick={() => setViewMode("graph")}
+        >
+          Graph
+        </button>
+      </div>
+      {viewMode === "list" ? (
+        <CoordinationList
+          streams={streams}
+          sessions={sessions}
+          tasks={tasks}
+          loading={streamsLoading}
+          loadError={streamsLoadError}
+          loadedOnce={streamsLoadedOnce}
+          showInternals={showInternals}
+          onToggleInternals={setShowInternals}
+          selectedStreamId={selectedStreamId}
+          onSelectStream={setSelectedStreamId}
+          onRefresh={handleRefresh}
+        />
+      ) : (
+        <CoordinationGraph
+          streams={streams}
+          sessions={sessions}
+          selectedStreamId={selectedStreamId}
+          onSelectStream={setSelectedStreamId}
+          resolvedThemeId={resolvedThemeId}
+        />
+      )}
       {selectedStream && (
         <StreamDetailPanel
           stream={selectedStream}

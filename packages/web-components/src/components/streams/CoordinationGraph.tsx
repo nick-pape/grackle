@@ -1,0 +1,133 @@
+import { useCallback, useMemo, type JSX, type MouseEvent } from "react";
+import {
+  Background,
+  BackgroundVariant,
+  Controls,
+  MiniMap,
+  ReactFlow,
+  type Node,
+  type NodeTypes,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import type { Session, StreamData } from "../../hooks/types.js";
+import { resolveStatus, STATUS_CSS_VAR_MAP } from "../../utils/taskStatus.js";
+import {
+  SESSION_NODE_TYPE,
+  STREAM_NODE_TYPE,
+  useCoordinationLayout,
+  type CoordNodeData,
+} from "./useCoordinationLayout.js";
+import { SessionNode } from "./SessionNode.js";
+import { StreamNode } from "./StreamNode.js";
+import styles from "./CoordinationGraph.module.scss";
+
+/** Fallback node color for the MiniMap when a CSS variable is unavailable. */
+const MINIMAP_FALLBACK_COLOR: string = "#6b7a8d";
+
+/** Props for {@link CoordinationGraph}. */
+export interface CoordinationGraphProps {
+  /** Streams to visualize (already filtered for internals by the caller). */
+  streams: StreamData[];
+  /** All known sessions, used to resolve subscribers into nodes and colors. */
+  sessions: Session[];
+  /** Currently selected stream id (its hub node is highlighted). */
+  selectedStreamId?: string;
+  /** Called with a stream id when its hub node is clicked. */
+  onSelectStream: (streamId: string) => void;
+  /** Resolved theme id; recomputes MiniMap colors when the theme changes. */
+  resolvedThemeId: string;
+}
+
+/** Custom node type registry for the coordination graph. */
+const nodeTypes: NodeTypes = {
+  [SESSION_NODE_TYPE]: SessionNode,
+  [STREAM_NODE_TYPE]: StreamNode,
+};
+
+/**
+ * Live bipartite network graph of agent sessions and IPC streams. Sessions and
+ * stream "hubs" are dagre-laid-out (deterministic); two-party pipes collapse to
+ * direct edges. Read-only ("watch") - clicking a hub selects its stream.
+ */
+export function CoordinationGraph({
+  streams,
+  sessions,
+  selectedStreamId,
+  onSelectStream,
+  resolvedThemeId,
+}: CoordinationGraphProps): JSX.Element {
+  const layout = useCoordinationLayout(streams, sessions);
+
+  // Mark the selected stream hub so React Flow applies node selection styling.
+  const nodes = useMemo(
+    () =>
+      layout.nodes.map((node) => {
+        const data = node.data as CoordNodeData;
+        const selected = data.kind === "stream" && data.stream.id === selectedStreamId;
+        return selected ? { ...node, selected: true } : node;
+      }),
+    [layout.nodes, selectedStreamId],
+  );
+
+  /** Cached MiniMap colors, recomputed only when the theme changes. */
+  const statusColors = useMemo(() => {
+    const style = getComputedStyle(document.documentElement);
+    const colors: Record<string, string> = {};
+    for (const [status, varName] of Object.entries(STATUS_CSS_VAR_MAP)) {
+      colors[status] = style.getPropertyValue(varName).trim() || MINIMAP_FALLBACK_COLOR;
+    }
+    return colors;
+  }, [resolvedThemeId]);
+
+  const onNodeClick = useCallback(
+    (_event: MouseEvent, node: Node) => {
+      const data = node.data as CoordNodeData;
+      if (data.kind === "stream") {
+        onSelectStream(data.stream.id);
+      }
+    },
+    [onSelectStream],
+  );
+
+  const minimapNodeColor = useCallback(
+    (node: Node): string => {
+      const data = node.data as CoordNodeData;
+      if (data.kind === "session") {
+        return statusColors[resolveStatus(data.session.status)] || MINIMAP_FALLBACK_COLOR;
+      }
+      return MINIMAP_FALLBACK_COLOR;
+    },
+    [statusColors],
+  );
+
+  if (layout.nodes.length === 0) {
+    return (
+      <div className={styles.empty} data-testid="coordination-graph-empty">
+        No active streams to visualize
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.graphContainer} data-testid="coordination-graph">
+      <ReactFlow
+        nodes={nodes}
+        edges={layout.edges}
+        nodeTypes={nodeTypes}
+        onNodeClick={onNodeClick}
+        fitView
+        fitViewOptions={{ padding: 0.2 }}
+        minZoom={0.3}
+        maxZoom={2}
+      >
+        <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="var(--text-disabled)" />
+        <Controls showInteractive={false} />
+        <MiniMap
+          nodeColor={minimapNodeColor}
+          maskColor="var(--bg-overlay)"
+          style={{ background: "var(--bg-inset)" }}
+        />
+      </ReactFlow>
+    </div>
+  );
+}
