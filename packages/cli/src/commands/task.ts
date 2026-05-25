@@ -127,10 +127,11 @@ export function registerTaskCommands(program: Command): void {
     .option("--desc <text>", "Task description")
     .option("--depends-on <ids>", "Comma-separated dependency task IDs")
     .option("--can-decompose", "Allow this task to create subtasks")
+    .option("--no-inject-knowledge", "Disable knowledge-graph context injection at spawn (on by default)")
     .option("--parent <task-id>", "Parent task ID (creates a subtask)")
     .option("--token-budget <n>", "Total token cap (input + output); 0 = unlimited", parseInt)
     .option("--cost-budget-millicents <n>", "Cost cap in millicents ($0.00001 units); 0 = unlimited", parseInt)
-    .action(async (title: string, opts: { workspace?: string; dependsOn?: string; desc?: string; canDecompose?: boolean; parent?: string; tokenBudget?: number; costBudgetMillicents?: number }) => {
+    .action(async (title: string, opts: { workspace?: string; dependsOn?: string; desc?: string; canDecompose?: boolean; injectKnowledge?: boolean; parent?: string; tokenBudget?: number; costBudgetMillicents?: number }) => {
       const { orchestration: client } = createGrackleClients();
       const dependsOn: string[] = opts.dependsOn
         ? opts.dependsOn.split(",").map((s: string) => s.trim()).filter(Boolean)
@@ -141,6 +142,8 @@ export function registerTaskCommands(program: Command): void {
         description: opts.desc || "",
         dependsOn,
         canDecompose: opts.canDecompose || false,
+        // Commander sets injectKnowledge=false only when --no-inject-knowledge is passed.
+        injectKnowledge: opts.injectKnowledge ?? true,
         parentTaskId: opts.parent || "",
         tokenBudget: opts.tokenBudget,
         costBudgetMillicents: opts.costBudgetMillicents,
@@ -163,6 +166,7 @@ export function registerTaskCommands(program: Command): void {
         `Depends On:  ${t.dependsOn.length > 0 ? t.dependsOn.join(", ") : "none"}`,
       );
       console.log(`Decompose:   ${t.canDecompose ? "yes" : "no"}`);
+      console.log(`Knowledge:   ${t.injectKnowledge ? "yes" : "no"}`);
       if (t.description) {
         console.log(`Description: ${t.description}`);
       }
@@ -224,9 +228,11 @@ export function registerTaskCommands(program: Command): void {
     .option("--depends-on <ids>", "Comma-separated dependency task IDs")
     .option("--session <session-id>", "Bind an existing session to this task")
     .option("--persona <id>", "Default persona ID for this task")
+    .option("--inject-knowledge", "Enable knowledge-graph context injection at spawn")
+    .option("--no-inject-knowledge", "Disable knowledge-graph context injection at spawn")
     .option("--token-budget <n>", "Total token cap (input + output); 0 = unlimited", parseInt)
     .option("--cost-budget-millicents <n>", "Cost cap in millicents ($0.00001 units); 0 = unlimited", parseInt)
-    .action(async (taskId: string, opts: { status?: string; dependsOn?: string; title?: string; desc?: string; session?: string; persona?: string; tokenBudget?: number; costBudgetMillicents?: number }) => {
+    .action(async (taskId: string, opts: { status?: string; dependsOn?: string; title?: string; desc?: string; session?: string; persona?: string; injectKnowledge?: boolean; tokenBudget?: number; costBudgetMillicents?: number }) => {
       if (taskId === ROOT_TASK_ID && opts.status) {
         console.error(chalk.red("Cannot change the status of the system task"));
         process.exitCode = 1;
@@ -266,6 +272,8 @@ export function registerTaskCommands(program: Command): void {
         dependsOn,
         sessionId: opts.session || "",
         defaultPersonaId: opts.persona,
+        // undefined unless --inject-knowledge / --no-inject-knowledge passed (leave unchanged).
+        injectKnowledge: opts.injectKnowledge,
         tokenBudget: opts.tokenBudget,
         costBudgetMillicents: opts.costBudgetMillicents,
       });

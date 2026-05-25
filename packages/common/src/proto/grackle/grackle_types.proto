@@ -444,6 +444,7 @@ message Task {
   string schedule_id = 24; // ID of the schedule that created this task (empty for manually-created tasks)
   int32 token_budget = 25; // Total token cap (input + output); 0 = unlimited
   int32 cost_budget_millicents = 26; // Cost cap in millicents ($0.00001 units); 0 = unlimited
+  bool inject_knowledge = 27; // Inject knowledge-graph context at spawn (#1259); defaults true
 }
 
 message TaskList {
@@ -482,6 +483,7 @@ message CreateTaskRequest {
   optional string default_persona_id = 9; // Default persona for this task
   optional int32 token_budget = 10; // Total token cap (input + output); 0 = unlimited
   optional int32 cost_budget_millicents = 11; // Cost cap in millicents; 0 = unlimited
+  optional bool inject_knowledge = 12; // Inject KG context at spawn (#1259); unset defaults to true
 }
 
 message TaskId {
@@ -498,6 +500,7 @@ message UpdateTaskRequest {
   optional string default_persona_id = 9; // Default persona for this task
   optional int32 token_budget = 10; // Total token cap (input + output); 0 = unlimited
   optional int32 cost_budget_millicents = 11; // Cost cap in millicents; 0 = unlimited
+  optional bool inject_knowledge = 12; // Inject KG context at spawn (#1259); unset leaves unchanged
 }
 
 message StartTaskRequest {

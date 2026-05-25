@@ -41,6 +41,7 @@ import { taskRowToProto, sessionRowToProto } from "./grpc-proto-converters.js";
 import { validatePipeInputs, toDialableHost, resolveAncestorEnvironmentId } from "./grpc-shared.js";
 import { personaMcpServersToJson } from "@grackle-ai/core";
 import { hasCapacity, type ConcurrencyDeps, checkBudget } from "@grackle-ai/core";
+import { hasSpawnContextProviders, runSpawnContextProviders } from "@grackle-ai/core";
 
 /** Weighted fields for fuzzy task search: title is twice as important as description. */
 const TASK_SEARCH_KEYS: FuzzyKey[] = [
@@ -173,6 +174,8 @@ export async function createTask(req: grackle.CreateTaskRequest): Promise<grackl
     req.defaultPersonaId ?? "",
     req.tokenBudget ?? 0,
     req.costBudgetMillicents ?? 0,
+    // Knowledge context injection at spawn (#1259) defaults ON; opt out per task.
+    req.injectKnowledge ?? true,
   );
   const row = taskStore.getTask(id);
   emit("task.created", { taskId: id, workspaceId: req.workspaceId });
@@ -231,6 +234,11 @@ export async function updateTask(req: grackle.UpdateTaskRequest): Promise<grackl
       req.tokenBudget ?? existing.tokenBudget,
       req.costBudgetMillicents ?? existing.costBudgetMillicents,
     );
+  }
+
+  // Update the knowledge-injection flag when explicitly provided (#1259).
+  if (req.injectKnowledge !== undefined) {
+    taskStore.updateTaskInjectKnowledge(req.id, req.injectKnowledge);
   }
 
   // Late-bind: associate an existing session with this task
@@ -382,6 +390,24 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
     ))
     : undefined;
 
+  // Knowledge retrieval loop (#1259): gather "Related prior work" (PUSH) + enable
+  // search guidance (PULL) when the knowledge plugin is active and the task opted
+  // in. Best-effort (timeout-bounded); skips root/no-workspace tasks.
+  const knowledgeOn = hasSpawnContextProviders()
+    && task.injectKnowledge
+    && !!task.workspaceId
+    && task.id !== ROOT_TASK_ID;
+  const relatedPriorWork = knowledgeOn
+    ? (await runSpawnContextProviders({
+        taskId: task.id,
+        title: task.title,
+        description: task.description,
+        workspaceId: task.workspaceId ?? "",
+        isOrchestrator,
+        injectKnowledge: task.injectKnowledge,
+      })).join("\n\n") || undefined
+    : undefined;
+
   const systemContext = new SystemPromptBuilder({
     task: { title: task.title, description: task.description, notes: task.id === ROOT_TASK_ID ? "" : (req.notes || "") },
     taskId: task.id,
@@ -391,6 +417,8 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
     workpad: task.workpad || undefined,
     ...orchestratorCtx,
     ...(orchestratorCtx && { triggerMode: "fresh" as const }),
+    relatedPriorWork,
+    knowledgeGuidance: knowledgeOn,
   }).build();
 
   sessionStore.createSession(

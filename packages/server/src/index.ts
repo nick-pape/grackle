@@ -12,6 +12,7 @@ import {
   runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace,
   importAccountsFromGhCli,
   publishWidgetEvent,
+  setSpawnContextProviders,
 } from "@grackle-ai/core";
 import { createKnowledgePlugin, getKnowledgeReadinessCheck } from "@grackle-ai/plugin-knowledge";
 import { loadPlugins, type PluginContext } from "@grackle-ai/plugin-sdk";
@@ -175,6 +176,8 @@ async function main(): Promise<void> {
   }
   const loaded = await loadPlugins(plugins, pluginContext);
   setLoadedPluginNames(new Set(loaded.pluginNames));
+  // Expose plugin-contributed system-prompt sections to the spawn paths (#1259).
+  setSpawnContextProviders(loaded.systemPromptContributors);
 
   // --- Wire gRPC handlers from plugins ---
   const collector = createServiceCollector();

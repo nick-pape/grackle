@@ -115,6 +115,7 @@ export function protoToTask(p: grackle.Task): TaskData {
     depth: p.depth,
     childTaskIds: [...p.childTaskIds],
     canDecompose: p.canDecompose,
+    injectKnowledge: p.injectKnowledge,
     defaultPersonaId: p.defaultPersonaId,
     workpad: p.workpad,
     tokenBudget: p.tokenBudget,

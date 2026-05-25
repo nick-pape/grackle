@@ -447,6 +447,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       parentTaskId?: string,
       defaultPersonaId?: string,
       canDecompose?: boolean,
+      injectKnowledge?: boolean,
       onSuccess?: () => void,
       _onError?: (message: string) => void,
     ) => {
@@ -482,6 +483,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           depth,
           childTaskIds: [],
           canDecompose: canDecompose ?? !parentTaskId,
+          injectKnowledge: injectKnowledge ?? true,
           defaultPersonaId: defaultPersonaId || "",
           workpad: "",
           tokenBudget: 0,

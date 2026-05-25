@@ -101,6 +101,7 @@ export function makeTask(overrides: Partial<TaskData> = {}): TaskData {
     depth: 0,
     childTaskIds: [],
     canDecompose: false,
+    injectKnowledge: true,
     defaultPersonaId: "",
     workpad: "",
     tokenBudget: 0,

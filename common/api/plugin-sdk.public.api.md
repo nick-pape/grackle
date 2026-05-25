@@ -34,6 +34,7 @@ export interface GracklePlugin {
     name: string;
     reconciliationPhases?: (ctx: PluginContext) => ReconciliationPhase[];
     shutdown?: () => Promise<void>;
+    systemPromptContributors?: (ctx: PluginContext) => SystemPromptContributor[];
 }
 
 // @public
@@ -44,6 +45,7 @@ export interface LoadedPlugins {
     serviceRegistrations: ServiceRegistration[];
     shutdown: () => Promise<void>;
     subscriberDisposables: Disposable_2[];
+    systemPromptContributors: SystemPromptContributor[];
 }
 
 // @public
@@ -97,7 +99,22 @@ export interface ServiceRegistration {
 }
 
 // @public
+export interface SpawnContextInput {
+    description: string;
+    injectKnowledge: boolean;
+    isOrchestrator: boolean;
+    taskId: string;
+    title: string;
+    workspaceId: string;
+}
+
+// @public
 export type SubscriberFactory = (ctx: PluginContext) => Disposable_2;
+
+// @public
+export interface SystemPromptContributor {
+    contribute: (input: SpawnContextInput) => Promise<string | undefined>;
+}
 
 // (No @packageDocumentation comment for this package)
 

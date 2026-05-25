@@ -98,6 +98,21 @@ export interface SystemPromptOptions {
   triggerMode?: "fresh" | "resume";
   /** Workpad JSON from a previous session on this task (included on retry/resume). */
   workpad?: string;
+
+  // ── Knowledge retrieval loop (#1259) ──
+
+  /**
+   * Pre-built "## Related prior work" markdown (the PUSH half) injected at spawn.
+   * Built by the knowledge plugin's spawn-context contributor; the prompt package
+   * stays dependency-free and only renders the string.
+   */
+  relatedPriorWork?: string;
+  /**
+   * When true, include guidance telling the agent to use `knowledge_search`
+   * (the PULL half). Set only when the knowledge plugin is active and the task
+   * opted in (`injectKnowledge`).
+   */
+  knowledgeGuidance?: boolean;
 }
 
 // ─── Builder ─────────────────────────────────────────────────
@@ -134,6 +149,8 @@ export class SystemPromptBuilder {
         sections.push(this.buildTaskTree());
         sections.push(this.buildAvailablePersonas());
         sections.push(this.buildAvailableEnvironments());
+        sections.push(this.buildRelatedPriorWorkSection());
+        sections.push(this.buildKnowledgeSearchGuidanceSection());
         sections.push(this.buildTriggerContext());
         sections.push(this.buildDecompositionGuidelines());
         sections.push(this.buildOrchestratorTools());
@@ -148,6 +165,8 @@ export class SystemPromptBuilder {
         sections.push(this.buildWorkpadWriteSection());
         sections.push(this.buildSubtaskSection());
         sections.push(this.buildSignalSection());
+        sections.push(this.buildRelatedPriorWorkSection());
+        sections.push(this.buildKnowledgeSearchGuidanceSection());
       }
     }
 
@@ -452,5 +471,27 @@ export class SystemPromptBuilder {
   /** MCP note (always included). */
   private buildMcpNote(): string {
     return `You have tools on your \`grackle\` MCP server.`;
+  }
+
+  /**
+   * PUSH (#1259): the pre-built "## Related prior work" block, if the knowledge
+   * plugin contributed one for this spawn. Empty string ⇒ filtered out.
+   */
+  private buildRelatedPriorWorkSection(): string {
+    return this.options.relatedPriorWork ?? "";
+  }
+
+  /**
+   * PULL (#1259): guidance to query the knowledge graph before starting. Only
+   * rendered when `knowledgeGuidance` is set (knowledge plugin active + task opted in).
+   */
+  private buildKnowledgeSearchGuidanceSection(): string {
+    if (!this.options.knowledgeGuidance) {
+      return "";
+    }
+    return [
+      `## Knowledge graph`,
+      `Before starting, use the \`knowledge_search\` tool to find how related or prior work in this workspace was approached, then \`knowledge_get_node\` to expand promising results. Build on existing decisions, patterns, and prior attempts instead of starting from scratch.`,
+    ].join("\n");
   }
 }

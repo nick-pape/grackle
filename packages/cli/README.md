@@ -406,6 +406,7 @@ grackle task create "Design API" --workspace ws-123 --can-decompose
 | `--depends-on <ids>` | Comma-separated dependency task IDs |
 | `--parent <task-id>` | Parent task ID (creates a subtask) |
 | `--can-decompose` | Allow this task to create subtasks |
+| `--no-inject-knowledge` | Disable injecting "Related prior work" from the knowledge graph at spawn (on by default) |
 
 #### `grackle task show <task-id>`
 
@@ -423,6 +424,7 @@ Update task properties.
 | `--depends-on <ids>` | New dependency list |
 | `--session <session-id>` | Bind an existing session |
 | `--persona <id>` | Default persona ID |
+| `--inject-knowledge` / `--no-inject-knowledge` | Enable/disable knowledge-graph context injection at spawn |
 
 #### `grackle task start <task-id>`
 
