@@ -204,6 +204,8 @@ export async function setComponentPromotion(req: grackle.SetComponentPromotionRe
   if (!row) {
     throw new ConnectError("Component not found", Code.NotFound);
   }
-  componentStore.setPromoted(row.id, req.promoted);
+  // `promoted` is optional on the wire so unset is distinguishable from false;
+  // an unset value means "promote" (matches the component_promote tool default).
+  componentStore.setPromoted(row.id, req.promoted ?? true);
   return componentRowToProto(componentStore.getComponent(row.id)!);
 }

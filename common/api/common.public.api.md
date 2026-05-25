@@ -2500,7 +2500,7 @@ type SetComponentPromotionRequest = Message<"grackle.SetComponentPromotionReques
     id: string;
     name: string;
     workspaceId: string;
-    promoted: boolean;
+    promoted?: boolean;
 };
 
 // @public

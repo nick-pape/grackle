@@ -306,7 +306,7 @@ async function createMcpServerInstance(
    * props against its prop schema, and renders via the shared helper. Authorized
    * by registry ownership, NOT the static/persona allowlist.
    */
-  async function handleDynamicRender(name: string, rawArgs: Record<string, unknown>): Promise<CallToolResult> {
+  async function handleDynamicRender(name: string, rawArgs: unknown): Promise<CallToolResult> {
     const unknownTool: CallToolResult = { content: [{ type: "text", text: `Unknown tool: ${name}` }], isError: true };
     if (authContext.type !== "scoped" || !authContext.workspaceId) {
       return unknownTool;
@@ -322,7 +322,16 @@ async function createMcpServerInstance(
     if (!match) {
       return unknownTool;
     }
-    const props = rawArgs;
+    // Props must be a plain object. The static tool path is guarded by zod
+    // safeParse; here a component with an empty propsSchema has no validation, so
+    // reject a non-object payload (array/string/null) before it reaches the render.
+    if (typeof rawArgs !== "object" || rawArgs === null || Array.isArray(rawArgs)) {
+      return {
+        content: [{ type: "text", text: JSON.stringify({ error: "arguments must be an object of props", code: "INVALID_ARGUMENT" }, null, 2) }],
+        isError: true,
+      };
+    }
+    const props = rawArgs as Record<string, unknown>;
     const validationErr = propsValidationError(match.propsSchema, props);
     if (validationErr) {
       return {
@@ -391,7 +400,7 @@ async function createMcpServerInstance(
     // allowlist) before the normal resolve. The registry.get guard keeps any real
     // static tool taking precedence over the dynamic prefix.
     if (name.startsWith(RENDER_TOOL_PREFIX) && registry.get(name) === undefined) {
-      return await handleDynamicRender(name, (args ?? {}) as Record<string, unknown>);
+      return await handleDynamicRender(name, args ?? {});
     }
     const tool = resolveToolForAuth(registry, name, authContext, personaAllowedTools);
     if (!tool) {

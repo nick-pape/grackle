@@ -234,4 +234,11 @@ describe("gRPC component handlers", () => {
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.InvalidArgument);
   });
+
+  it("setComponentPromotion defaults to promote when `promoted` is unset", async () => {
+    const created = (await handlers.registerComponent({ workspaceId: WS1, name: "promo-default", body: "render(<i/>)" })) as ComponentInfo;
+    // Omit `promoted` (optional on the wire) — the server defaults it to true.
+    const promoted = (await handlers.setComponentPromotion({ id: created.id, workspaceId: WS1 })) as ComponentInfo;
+    expect(promoted.promoted).toBe(true);
+  });
 });
