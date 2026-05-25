@@ -98,6 +98,16 @@ const COMPOSE_SCENARIO = JSON.stringify({
   ],
 });
 
+// ── Test 7: promote pushes tools/list_changed to a connected conformant client (#1297) ──
+const NOTIFY_SCENARIO = JSON.stringify({
+  steps: [
+    { emit: "text", content: "Promote then await tools/list_changed:" },
+    { mcp_call: "component_register", args: { name: "NotifyChild", source: "render(<Spinner/>)" } },
+    // A conformant client: promote, then wait for the server-pushed tools/list_changed and re-list.
+    { await_tool_change: { trigger: { tool: "component_promote", args: { name: "NotifyChild" } }, expect: "render_NotifyChild" } },
+  ],
+});
+
 test.describe("Component registry (#1269)", { tag: ["@persona"] }, () => {
   test("component_register + component_render renders a React component by name", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
@@ -203,5 +213,23 @@ test.describe("Component registry (#1269)", { tag: ["@persona"] }, () => {
     await expect(page.getByTestId("mcp-app-widget")).toBeVisible({ timeout: 15_000 });
     const frame = page.frameLocator('[data-testid="mcp-app-widget"]').frameLocator("iframe");
     await expect(frame.getByRole("button", { name: "Nested" })).toBeVisible({ timeout: 25_000 });
+  });
+
+  test("promoting a component pushes tools/list_changed to a connected client (#1297)", async ({ appPage, grackle: { client } }) => {
+    const page = appPage;
+    const wsId = await createWorkspace(client, "component-notify-e2e-proj");
+    await createTaskDirect(client, wsId, "notify on promote", {
+      environmentId: "test-local",
+      description: NOTIFY_SCENARIO,
+    });
+    await navigateToTask(page, "notify on promote");
+    await patchWsForStubMcpRuntime(page);
+    await page.getByTestId("task-header-start").click();
+
+    await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });
+    // The conformant client promoted NotifyChild, received the server-pushed
+    // tools/list_changed, re-listed, and saw render_NotifyChild — the success marker
+    // is emitted only on that path.
+    await expect(page.getByText("tools/list_changed received: render_NotifyChild is now available")).toBeVisible({ timeout: 25_000 });
   });
 });
