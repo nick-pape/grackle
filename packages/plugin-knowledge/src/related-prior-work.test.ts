@@ -1,5 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { SpawnContextInput } from "@grackle-ai/plugin-sdk";
+
+// Tests set GRACKLE_KG_RELATED_* env knobs; process.env is shared across the
+// Vitest worker, so scrub them after every test to avoid order-dependent leaks
+// into other tests/files.
+afterEach(() => {
+  for (const key of Object.keys(process.env)) {
+    if (key.startsWith("GRACKLE_KG_RELATED_") || key === "GRACKLE_KG_SPAWN_CONTEXT_TIMEOUT_MS") {
+      delete process.env[key];
+    }
+  }
+});
 
 // ── Mocks ────────────────────────────────────────────────────
 const kg = vi.hoisted(() => ({
@@ -17,6 +28,9 @@ vi.mock("@grackle-ai/knowledge", () => ({
 const gate = vi.hoisted(() => ({ isHealthy: vi.fn(() => true), getEmbedder: vi.fn(() => ({})) }));
 vi.mock("./knowledge-init.js", () => ({ getKnowledgeEmbedder: gate.getEmbedder }));
 vi.mock("./knowledge-health.js", () => ({ isNeo4jHealthy: gate.isHealthy }));
+
+const log = vi.hoisted(() => ({ info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() }));
+vi.mock("./logger.js", () => ({ logger: log }));
 
 import { buildRelatedPriorWork } from "./related-prior-work.js";
 
@@ -188,5 +202,45 @@ describe("buildRelatedPriorWork — retrieval", () => {
     expect(bulletCount).toBe(2);
     delete process.env.GRACKLE_KG_RELATED_MAX_ITEMS;
     delete process.env.GRACKLE_KG_RELATED_MAX_CHARS;
+  });
+});
+
+describe("buildRelatedPriorWork — metrics log (#1260)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    gate.isHealthy.mockReturnValue(true);
+    gate.getEmbedder.mockReturnValue({});
+    kg.expandNode.mockResolvedValue({ nodes: [], edges: [] });
+    kg.findReferenceNodeBySource.mockResolvedValue(undefined);
+    process.env.GRACKLE_KG_RELATED_EXPAND = "false";
+  });
+
+  it("emits a kg_spawn_retrieval event with metadata when a block is built", async () => {
+    kg.knowledgeSearch.mockResolvedValue([
+      result(refNode({ id: "n2", sourceType: "task", sourceId: "t2", label: "[Task] Prior auth" }), 0.72),
+    ]);
+    await buildRelatedPriorWork(input);
+    expect(log.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "kg_spawn_retrieval",
+        taskId: "t1",
+        workspaceId: "w1",
+        injected: true,
+        hits: 1,
+        candidates: 1,
+        items: 1,
+        topScore: 0.72,
+      }),
+      expect.any(String),
+    );
+  });
+
+  it("emits injected:false when the search returns nothing", async () => {
+    kg.knowledgeSearch.mockResolvedValue([]);
+    await buildRelatedPriorWork(input);
+    expect(log.info).toHaveBeenCalledWith(
+      expect.objectContaining({ event: "kg_spawn_retrieval", injected: false, hits: 0, items: 0 }),
+      expect.any(String),
+    );
   });
 });

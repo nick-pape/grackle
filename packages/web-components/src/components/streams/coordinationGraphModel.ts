@@ -19,10 +19,11 @@ export const SESSION_NODE_TYPE: string = "session";
 /** React Flow node type id for stream hub nodes. */
 export const STREAM_NODE_TYPE: string = "stream";
 /**
- * React Flow edge type id used for all coordination edges. In Phase A this is
- * the built-in `smoothstep`; Phase B swaps it for the animated `messageDot`.
+ * React Flow edge type id used for all coordination edges. The custom
+ * `messageDot` edge (see `MessageDotEdge.tsx`) draws the smoothstep path and
+ * animates a dot along it when the edge's stream receives a new message.
  */
-export const COORD_EDGE_TYPE: string = "smoothstep";
+export const COORD_EDGE_TYPE: string = "messageDot";
 
 /** Data attached to a session node. */
 export interface SessionNodeData extends Record<string, unknown> {

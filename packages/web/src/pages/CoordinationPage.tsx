@@ -122,6 +122,7 @@ export function CoordinationPage(): JSX.Element {
           sessions={sessions}
           selectedStreamId={selectedStreamId}
           onSelectStream={setSelectedStreamId}
+          recentMessages={liveMessages}
           resolvedThemeId={resolvedThemeId}
         />
       )}
