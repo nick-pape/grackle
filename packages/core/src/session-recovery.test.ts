@@ -55,7 +55,7 @@ import { reanimateAgent } from "./reanimate-agent.js";
 import { emit } from "./event-bus.js";
 import { recoverSuspendedSessions, _resetForTesting } from "./session-recovery.js";
 import { ConnectError, Code } from "@connectrpc/connect";
-import { SESSION_STATUS } from "@grackle-ai/common";
+import { SESSION_STATUS, grackle } from "@grackle-ai/common";
 import type { PowerLineConnection } from "@grackle-ai/adapter-sdk";
 
 // ── Schema ──────────────────────────────────────────────────
@@ -142,12 +142,12 @@ function applySchema(): void {
 // ── Helpers ─────────────────────────────────────────────────
 
 /** Create a mock PowerLine connection with controllable drain stream. */
-function makeConnection(drainEvents: Array<{ type: string; timestamp: string; content: string }> = []): PowerLineConnection {
+function makeConnection(drainEvents: Array<{ type: string; timestamp: string; content: string; toolCallId?: string }> = []): PowerLineConnection {
   return {
     client: {
       drainBufferedEvents: vi.fn(() => (async function* () {
         for (const event of drainEvents) {
-          yield { sessionId: "", type: event.type, timestamp: event.timestamp, content: event.content, raw: "" };
+          yield { sessionId: "", type: event.type, timestamp: event.timestamp, content: event.content, raw: "", toolCallId: event.toolCallId ?? "" };
         }
       })()),
       resume: vi.fn(() => (async function* () {})()),
@@ -189,6 +189,23 @@ describe("session recovery", () => {
     expect(logWriter.endSession).toHaveBeenCalled();
     // Session should have been reanimated
     expect(reanimateAgent).toHaveBeenCalledWith("sess1");
+  });
+
+  it("preserves toolCallId on drained tool events (AHP HR3)", async () => {
+    sessionStore.createSession("sess-tc", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    sessionStore.suspendSession("sess-tc");
+
+    const conn = makeConnection([
+      { type: "tool_use", timestamp: "t1", content: "{}", toolCallId: "codex-1" },
+    ]);
+
+    await recoverSuspendedSessions("env1", conn);
+
+    // The drained tool event must carry its toolCallId into the persisted SessionEvent —
+    // critical for Codex, whose synthesized id lives only on the field (not in raw).
+    const written = vi.mocked(logWriter.writeEvent).mock.calls.map((c) => c[1]);
+    const toolEvent = written.find((e) => e.type === grackle.EventType.TOOL_USE);
+    expect(toolEvent?.toolCallId).toBe("codex-1");
   });
 
   it("handles empty drain (PowerLine restarted, no buffered events)", async () => {
