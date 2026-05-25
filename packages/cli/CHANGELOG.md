@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 25 May 2026 13:49:04 GMT and should not be manually modified.
+This log was last generated on Mon, 25 May 2026 15:13:29 GMT and should not be manually modified.
+
+## 0.125.0
+Mon, 25 May 2026 15:13:29 GMT
+
+### Minor changes
+
+- GenUX cross-component composition (#1270): a registered grackle-react component's body can reference other registry components as JSX tags (`<RevenueChart/>`). The server resolves the transitive registry graph at render time (`ResolveComponentGraph` RPC) — scanning for capitalized tags, resolving workspace components (excluding built-ins), cycle-safe with depth/count/size caps, late-bound to current versions — and ships the dependency bundle in the render descriptor; the sandbox runtime composes them into scope. Applies to component_render, component_show, and promoted render_<name> tools.
 
 ## 0.124.0
 Mon, 25 May 2026 13:49:04 GMT
