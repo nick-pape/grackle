@@ -50,6 +50,7 @@ export async function writeEvent(logPath: string, event: grackle.SessionEvent): 
     timestamp: event.timestamp,
     content: event.content,
     raw: event.raw || undefined,
+    tool_call_id: event.toolCallId || undefined,
   });
 
   const ok = ws.write(line + "\n");
@@ -83,6 +84,8 @@ export interface LogEntry {
   timestamp: string;
   content: string;
   raw?: string;
+  /** Stable tool-call id pairing tool_use↔tool_result (AHP HR3). Absent on non-tool events. */
+  tool_call_id?: string;
 }
 
 /** Number of bytes to read from the tail of a log file when searching for the last text entry. */

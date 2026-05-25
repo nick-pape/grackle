@@ -6,6 +6,12 @@ export interface AgentEvent {
   timestamp: string;
   content: string;
   raw?: unknown;
+  /**
+   * Stable tool-call id correlating a `tool_use` with its `tool_result` (AHP HR3).
+   * Set by the runtime on tool events (lifted from the SDK's native id, or
+   * synthesized when the SDK has none); left unset for non-tool events.
+   */
+  toolCallId?: string;
 }
 
 /** Parameters for spawning a new agent session. */

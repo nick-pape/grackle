@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 25 May 2026 13:18:11 GMT and should not be manually modified.
+This log was last generated on Mon, 25 May 2026 13:49:04 GMT and should not be manually modified.
+
+## 0.124.0
+Mon, 25 May 2026 13:49:04 GMT
+
+### Minor changes
+
+- Add a first-class tool_call_id to AgentEvent/SessionEvent so tool_result pairs to the right tool_use across all runtimes (Claude Code, Copilot, ACP, Codex via synthesized ids), retiring the fragile positional pairing heuristic (AHP HR3).
 
 ## 0.123.2
 Mon, 25 May 2026 13:18:11 GMT

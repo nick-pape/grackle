@@ -116,25 +116,26 @@ describe("pairToolEvents", () => {
     });
   });
 
-  describe("adjacent fallback pairing", () => {
-    it("pairs unpaired tool_use with immediately adjacent tool_result", () => {
+  describe("no positional fallback (AHP HR3)", () => {
+    it("does NOT pair tool events that lack any id (the removed adjacent heuristic)", () => {
       const events = [
         makeEvent({
           eventType: "tool_use",
           content: JSON.stringify({ tool: "Bash", args: { command: "echo hi" } }),
-          // No raw metadata — cannot pair by ID
+          // No raw, no toolCallId — nothing to correlate on. The old adjacent-position
+          // heuristic would have paired these; HR3 removed it (it mispaired interleaved calls).
         }),
         makeEvent({
           eventType: "tool_result",
           content: "hi",
-          // No raw metadata — cannot pair by ID
         }),
       ];
       const result = pairToolEvents(events);
-      expect(result).toHaveLength(1);
-      expect(result[0].eventType).toBe("tool_result");
-      expect(result[0].toolUseCtx).toBeDefined();
-      expect(result[0].toolUseCtx!.tool).toBe("Bash");
+      // Both remain unpaired — no positional guessing.
+      expect(result).toHaveLength(2);
+      expect(result[0].eventType).toBe("tool_use");
+      expect(result[1].eventType).toBe("tool_result");
+      expect(result[1].toolUseCtx).toBeUndefined();
     });
 
     it("does not pair tool_result that appears before tool_use", () => {
@@ -208,6 +209,62 @@ describe("pairToolEvents", () => {
       expect(result).toHaveLength(2);
       expect(result[0].toolUseCtx!.tool).toBe("command_execution");
       expect(result[1].toolUseCtx!.tool).toBe("mcp__grackle__workpad_write");
+    });
+  });
+
+  describe("first-class toolCallId (AHP HR3)", () => {
+    it("pairs by the toolCallId field (no raw needed)", () => {
+      const events = [
+        makeEvent({
+          eventType: "tool_use",
+          content: JSON.stringify({ tool: "Bash", args: { command: "ls" } }),
+          toolCallId: "tc-1",
+        }),
+        makeEvent({ eventType: "tool_result", content: "files", toolCallId: "tc-1" }),
+      ];
+      const result = pairToolEvents(events);
+      expect(result).toHaveLength(1);
+      expect(result[0].eventType).toBe("tool_result");
+      expect(result[0].toolUseCtx!.tool).toBe("Bash");
+    });
+
+    it("pairs interleaved/concurrent calls correctly by id (would mispair positionally)", () => {
+      // A_use, B_use, B_result, A_result — the removed adjacent heuristic would never
+      // have paired A, and a naive order match would pair A_use→B_result. The id is exact.
+      const events = [
+        makeEvent({ eventType: "tool_use", content: JSON.stringify({ tool: "toolA", args: {} }), toolCallId: "A" }),
+        makeEvent({ eventType: "tool_use", content: JSON.stringify({ tool: "toolB", args: {} }), toolCallId: "B" }),
+        makeEvent({ eventType: "tool_result", content: "resultB", toolCallId: "B" }),
+        makeEvent({ eventType: "tool_result", content: "resultA", toolCallId: "A" }),
+      ];
+      const result = pairToolEvents(events);
+      // Both tool_use consumed; two tool_results remain with correct context.
+      const results = result.filter((e) => e.eventType === "tool_result");
+      expect(results).toHaveLength(2);
+      const byContent = new Map(results.map((r) => [r.content, r.toolUseCtx!.tool]));
+      expect(byContent.get("resultB")).toBe("toolB");
+      expect(byContent.get("resultA")).toBe("toolA");
+    });
+
+    it("prefers the toolCallId field over legacy raw ids", () => {
+      const events = [
+        makeEvent({
+          eventType: "tool_use",
+          content: JSON.stringify({ tool: "Bash", args: {} }),
+          toolCallId: "field-id",
+          raw: JSON.stringify({ id: "raw-id" }),
+        }),
+        makeEvent({
+          eventType: "tool_result",
+          content: "out",
+          toolCallId: "field-id",
+          raw: JSON.stringify({ tool_use_id: "different-raw-id" }),
+        }),
+      ];
+      const result = pairToolEvents(events);
+      // Paired by the matching field id despite mismatched raw ids.
+      expect(result).toHaveLength(1);
+      expect(result[0].toolUseCtx!.tool).toBe("Bash");
     });
   });
 

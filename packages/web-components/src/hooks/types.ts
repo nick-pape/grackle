@@ -72,6 +72,12 @@ export interface SessionEvent {
   content: string;
   /** Raw JSON payload from the agent runtime (e.g. tool block with is_error flag). Optional. */
   raw?: string;
+  /**
+   * Stable tool-call id pairing `tool_use` with its `tool_result` (AHP HR3).
+   * Preferred over the legacy per-runtime `raw` id parsing. Absent on
+   * non-tool events and on events logged before HR3.
+   */
+  toolCallId?: string;
 }
 
 /** A workspace that groups tasks. */
@@ -706,7 +712,8 @@ export function isSessionEvent(v: unknown): v is SessionEvent {
     typeof v.eventType === "string" &&
     typeof v.timestamp === "string" &&
     typeof v.content === "string" &&
-    (v.raw === undefined || typeof v.raw === "string")
+    (v.raw === undefined || typeof v.raw === "string") &&
+    (v.toolCallId === undefined || typeof v.toolCallId === "string")
   );
 }
 

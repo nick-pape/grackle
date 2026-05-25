@@ -424,6 +424,30 @@ describe("Codex streaming field extraction", () => {
     expect(resultEvents[0].content).toBe("Permission denied");
   });
 
+  // AHP HR3: Codex items carry a native `id` shared between item.started and
+  // item.completed; we use it to pair tool_use↔tool_result (no synthesis).
+  it("uses the native item.id to correlate each tool's started/completed pair", async () => {
+    mockRunStreamedEvents = [
+      { type: "item.started", item: { id: "item_a", type: "command_execution", command: "ls" } },
+      { type: "item.completed", item: { id: "item_a", type: "command_execution", aggregated_output: "files", exit_code: 0 } },
+      { type: "item.started", item: { id: "item_b", type: "mcp_tool_call", server: "grackle", tool: "post_finding", arguments: {} } },
+      { type: "item.completed", item: { id: "item_b", type: "mcp_tool_call", server: "grackle", tool: "post_finding", result: { content: "ok" } } },
+    ];
+
+    const session = runtime.spawn({ sessionId: "hr3", prompt: "go", model: "codex-mini", maxTurns: 1 });
+    const events = await collectEvents(session);
+
+    const uses = events.filter((e) => e.type === "tool_use");
+    const results = events.filter((e) => e.type === "tool_result");
+    expect(uses).toHaveLength(2);
+    expect(results).toHaveLength(2);
+    // Each event carries its native item.id; result matches use by that id.
+    expect(uses[0].toolCallId).toBe("item_a");
+    expect(results[0].toolCallId).toBe("item_a");
+    expect(uses[1].toolCallId).toBe("item_b");
+    expect(results[1].toolCallId).toBe("item_b");
+  });
+
   // UT-5: file_change uses item.changes array (not item.file/item.patch)
   it("extracts file_change from item.changes array", async () => {
     const changes = [{ path: "src/index.ts", content: "new content" }];

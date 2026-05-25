@@ -99,6 +99,7 @@ export function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
             timestamp: ts,
             content: JSON.stringify({ tool: b.name, args: b.input }),
             raw: b,
+            toolCallId: typeof b.id === "string" ? b.id : undefined,
           });
         } else if (b.type === "tool_result") {
           events.push({
@@ -106,6 +107,7 @@ export function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
             timestamp: ts,
             content: typeof b.content === "string" ? b.content : JSON.stringify(b.content),
             raw: b,
+            toolCallId: typeof b.tool_use_id === "string" ? b.tool_use_id : undefined,
           });
         }
       }
@@ -573,6 +575,7 @@ class ClaudeCodeSession extends BaseAgentSession {
         timestamp: ts(),
         content: "",
         raw: { tool_use_id: id, is_error: false, synthetic: true },
+        toolCallId: id,
       });
     }
     this.pendingToolUseIds.clear();
