@@ -6,6 +6,7 @@ export * from "./enum-converters.js";
 export * from "./search.js";
 export * from "./builtin-component-schemas.js";
 export * from "./builtin-components.js";
+export * from "./component-render-tool.js";
 export { RUNTIME_MANIFESTS } from "./runtime-manifest.js";
 export type { RuntimePackageManifest } from "./runtime-manifest.js";
 export { SequencedLog } from "./sequenced-log.js";

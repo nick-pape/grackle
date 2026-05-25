@@ -2,6 +2,42 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.123.1",
+      "tag": "@grackle-ai/cli_v0.123.1",
+      "date": "Mon, 25 May 2026 05:44:41 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Coordination tab: live bipartite network graph of agent sessions and IPC streams with a List/Graph toggle (web UI)."
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.123.0",
+      "tag": "@grackle-ai/cli_v0.123.0",
+      "date": "Mon, 25 May 2026 05:24:59 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "GenUX promote-to-tools (#1272): a registered component can be promoted to its own typed `render_<name>` MCP tool whose inputSchema is the component's propsSchema. Adds a `promoted` column + `SetComponentPromotion` gRPC RPC + `component_promote` MCP tool; the MCP server synthesizes per-workspace `render_<name>` tools in tools/list (UI-capable scoped sessions only) and dispatches their calls by workspace ownership, reusing the existing render path. Promotion is a lifecycle toggle that does not bump the component version."
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.122.0",
+      "tag": "@grackle-ai/cli_v0.122.0",
+      "date": "Mon, 25 May 2026 04:49:44 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "KG Phase 3 (#1259): close the retrieval loop — knowledge_search guidance (pull) + a thin spawn-time \"Related prior work\" injection (push) via a new systemPromptContributors plugin hook, gated by a per-task injectKnowledge flag (default on)."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.121.0",
       "tag": "@grackle-ai/cli_v0.121.0",
       "date": "Mon, 25 May 2026 04:20:46 GMT",
