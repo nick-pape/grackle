@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn } from "@storybook/test";
 import { ReactFlowProvider } from "@xyflow/react";
 import { CoordinationGraph } from "./CoordinationGraph.js";
-import { MOCK_STREAMS } from "../../mocks/mockStreamsData.js";
+import { MOCK_STREAMS, MOCK_STREAM_MESSAGES } from "../../mocks/mockStreamsData.js";
 import { MOCK_SESSIONS } from "../../mocks/mockData.js";
 
 /**
@@ -111,5 +111,23 @@ export const FullTopology: Story = {
   args: { streams: MOCK_STREAMS },
   play: async ({ canvas }) => {
     await expect(await canvas.findByTestId("coordination-graph")).toBeInTheDocument();
+  },
+};
+
+/**
+ * A stream with recent messages animates a dot along its edges. The dot element
+ * is present whenever a stream's latest seq is stamped on its edges; we assert
+ * presence (not animation timing) for determinism.
+ */
+export const MessageInFlight: Story = {
+  name: "Message in flight",
+  args: {
+    streams: pick(["stream-planning"]),
+    recentMessages: MOCK_STREAM_MESSAGES,
+  },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByTestId("coordination-graph")).toBeInTheDocument();
+    const dots = await canvas.findAllByTestId("coordination-message-dot");
+    await expect(dots.length).toBeGreaterThanOrEqual(1);
   },
 };

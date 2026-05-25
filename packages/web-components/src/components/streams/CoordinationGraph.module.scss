@@ -165,3 +165,11 @@
   background: var(--text-tertiary) !important;
   border: 1px solid var(--border-subtle) !important;
 }
+
+// =============================================================================
+// Animated message dot (Phase B)
+// =============================================================================
+
+.messageDot {
+  fill: var(--accent-blue);
+}
