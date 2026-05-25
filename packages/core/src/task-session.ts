@@ -123,7 +123,7 @@ export async function startTaskSession(
         description: freshTask.description,
         workspaceId: freshTask.workspaceId ?? "",
         isOrchestrator,
-        injectKnowledge: true,
+        injectKnowledge: freshTask.injectKnowledge,
       })).join("\n\n") || undefined
     : undefined;
 

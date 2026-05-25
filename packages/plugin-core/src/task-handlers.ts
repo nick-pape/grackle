@@ -404,7 +404,7 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
         description: task.description,
         workspaceId: task.workspaceId ?? "",
         isOrchestrator,
-        injectKnowledge: true,
+        injectKnowledge: task.injectKnowledge,
       })).join("\n\n") || undefined
     : undefined;
 

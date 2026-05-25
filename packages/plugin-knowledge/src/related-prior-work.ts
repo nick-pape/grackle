@@ -37,10 +37,23 @@ interface RelatedWorkConfig {
   expandDepth: number;
 }
 
-/** Read a non-negative numeric env override, falling back to the default. */
+/** Read a non-negative numeric (float) env override, falling back to the default. */
 function envNum(name: string, fallback: number): number {
   const value: number = Number(process.env[name]);
   return Number.isFinite(value) && value >= 0 ? value : fallback;
+}
+
+/**
+ * Read an integer env override, floored + clamped to `min`. Integer knobs feed
+ * Cypher (`LIMIT $n`) which requires an integer literal, so a misconfigured
+ * non-integer value (e.g. "5.5") must not reach the query.
+ */
+function envInt(name: string, fallback: number, min: number): number {
+  const value: number = Number(process.env[name]);
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+  return Math.max(min, Math.floor(value));
 }
 
 /** Read a boolean env override ("1"/"true" = true), falling back to the default. */
@@ -55,15 +68,16 @@ function envBool(name: string, fallback: boolean): boolean {
 /** Resolve the conservative defaults, each overridable via `GRACKLE_KG_RELATED_*`. */
 function resolveConfig(): RelatedWorkConfig {
   return {
-    // Conservative floor: prefer no block over marginal matches (esp. on a sparse graph).
+    // Conservative floor (float): prefer no block over marginal matches (esp. on a sparse graph).
     minScore: envNum("GRACKLE_KG_RELATED_MIN_SCORE", 0.35),
-    limit: envNum("GRACKLE_KG_RELATED_LIMIT", 5),
-    maxItems: envNum("GRACKLE_KG_RELATED_MAX_ITEMS", 6),
-    maxChars: envNum("GRACKLE_KG_RELATED_MAX_CHARS", 2000),
-    perItemChars: envNum("GRACKLE_KG_RELATED_PER_ITEM_CHARS", 300),
+    // Integer knobs are floored + clamped so a bad env value can't break Cypher.
+    limit: envInt("GRACKLE_KG_RELATED_LIMIT", 5, 1),
+    maxItems: envInt("GRACKLE_KG_RELATED_MAX_ITEMS", 6, 1),
+    maxChars: envInt("GRACKLE_KG_RELATED_MAX_CHARS", 2000, 1),
+    perItemChars: envInt("GRACKLE_KG_RELATED_PER_ITEM_CHARS", 300, 1),
     expand: envBool("GRACKLE_KG_RELATED_EXPAND", true),
-    expandTopK: envNum("GRACKLE_KG_RELATED_EXPAND_TOPK", 1),
-    expandDepth: envNum("GRACKLE_KG_RELATED_EXPAND_DEPTH", 1),
+    expandTopK: envInt("GRACKLE_KG_RELATED_EXPAND_TOPK", 1, 0),
+    expandDepth: envInt("GRACKLE_KG_RELATED_EXPAND_DEPTH", 1, 1),
   };
 }
 
@@ -121,7 +135,9 @@ export async function buildRelatedPriorWork(input: SpawnContextInput): Promise<s
         () => ({ nodes: [] as KnowledgeNode[], edges: [] }),
       );
       for (const neighbor of expansion.nodes) {
-        const inScope: boolean = neighbor.workspaceId === input.workspaceId || neighbor.workspaceId === "";
+        // Workspace-scoped, like the search: exclude global ("") nodes — "related
+        // prior work" means work in this workspace, not shared infra (personas/envs).
+        const inScope: boolean = neighbor.workspaceId === input.workspaceId;
         if (!seen.has(neighbor.id) && !isSelf(neighbor) && inScope) {
           seen.add(neighbor.id);
           items.push({ node: neighbor, score: 0 });
