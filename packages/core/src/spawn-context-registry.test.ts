@@ -61,6 +61,15 @@ describe("spawn-context-registry", () => {
     expect(await runSpawnContextProviders(input)).toEqual(["ok"]);
   });
 
+  it("isolates a provider that throws SYNCHRONOUSLY (never rejects)", async () => {
+    setSpawnContextProviders([
+      // contribute throws before returning a promise — must not reject Promise.all.
+      { contribute: (): Promise<string | undefined> => { throw new Error("sync boom"); } },
+      provider(async () => "ok"),
+    ]);
+    await expect(runSpawnContextProviders(input)).resolves.toEqual(["ok"]);
+  });
+
   it("skips a provider that exceeds the timeout", async () => {
     setSpawnContextProviders([
       provider(() => new Promise((resolve) => setTimeout(() => resolve("late"), 1000))),

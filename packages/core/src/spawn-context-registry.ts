@@ -79,12 +79,17 @@ async function runOne(
   timeoutMs: number,
 ): Promise<string | undefined> {
   let timer: ReturnType<typeof setTimeout> | undefined;
-  // Attach the catch to the work promise itself so a late rejection (after the
-  // timeout already won the race) is still handled rather than going unhandled.
-  const work: Promise<string | undefined> = provider.contribute(input).catch((err: unknown) => {
-    logger.debug({ err }, "Spawn-context provider failed; skipping");
-    return undefined;
-  });
+  // `Promise.resolve().then(...)` so a *synchronous* throw inside contribute() is
+  // turned into a rejection (and caught) just like an async rejection — otherwise
+  // a sync throw would bypass .catch and reject Promise.all, breaking the
+  // "never rejects" contract. The catch is on the work promise itself so a late
+  // rejection (after the timeout won the race) is still handled, not unhandled.
+  const work: Promise<string | undefined> = Promise.resolve()
+    .then(() => provider.contribute(input))
+    .catch((err: unknown) => {
+      logger.debug({ err }, "Spawn-context provider failed; skipping");
+      return undefined;
+    });
   const timeout: Promise<undefined> = new Promise((resolve) => {
     timer = setTimeout(() => resolve(undefined), timeoutMs);
   });
