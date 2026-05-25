@@ -38,6 +38,8 @@ export interface PowerlineSpawnInputs {
   mcpToken: string;
   scriptContent: string;
   workingDirectory: string;
+  /** Already-resolved workspace id (incl. parent-session/task inheritance); "" = none. */
+  workspaceId: string;
 }
 
 /**
@@ -57,6 +59,7 @@ export function buildPowerlineSpawnRequest(args: PowerlineSpawnInputs): powerlin
     branch: cfg?.branch ?? "",
     workingDirectory: args.workingDirectory,
     systemContext: args.systemContext,
+    workspaceId: args.workspaceId || undefined,
     taskId: cfg?.taskId ?? "",
     mcpServersJson: args.mcpServersJson,
     mcpUrl: args.mcpUrl,

@@ -22,6 +22,7 @@ const serverInputs = {
   mcpToken: "tok",
   scriptContent: "",
   workingDirectory: "",
+  workspaceId: "",
 };
 
 describe("resolveSpawnSelection", () => {
@@ -84,5 +85,10 @@ describe("buildPowerlineSpawnRequest", () => {
     expect(req.model).toBe("sonnet");
     expect(req.mcpToken).toBe("tok");
     expect(req.systemContext).toBe("ctx");
+  });
+
+  it("forwards a resolved workspaceId, leaving it unset when empty", () => {
+    expect(buildPowerlineSpawnRequest({ ...serverInputs, workspaceId: "ws-1", config: undefined }).workspaceId).toBe("ws-1");
+    expect(buildPowerlineSpawnRequest({ ...serverInputs, workspaceId: "", config: undefined }).workspaceId).toBeUndefined();
   });
 });

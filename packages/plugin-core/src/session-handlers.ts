@@ -210,6 +210,7 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
     mcpToken,
     scriptContent: resolved.type === "script" ? resolved.script : "",
     workingDirectory,
+    workspaceId: resolvedWorkspaceId,
   });
 
   // Create lifecycle stream — every session gets one. The spawner holds
