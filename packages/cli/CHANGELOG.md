@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 25 May 2026 15:13:29 GMT and should not be manually modified.
+This log was last generated on Mon, 25 May 2026 15:38:19 GMT and should not be manually modified.
+
+## 0.125.1
+Mon, 25 May 2026 15:38:19 GMT
+
+### Patches
+
+- Self-host web fonts (Fira Code, JetBrains Mono, DM Sans) via @fontsource-variable so they load under the strict CSP instead of being blocked as external @import stylesheets (#1252).
 
 ## 0.125.0
 Mon, 25 May 2026 15:13:29 GMT
