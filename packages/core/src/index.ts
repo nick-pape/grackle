@@ -25,6 +25,8 @@ export { reanimateAgent } from "./reanimate-agent.js";
 export { attemptReconnects, resetReconnectState } from "./auto-reconnect.js";
 export { authenticateForRuntime } from "./token-push.js";
 export type { AuthenticateOptions } from "./token-push.js";
+export { buildProviderTokenBundle, deriveCredentialNeeds } from "./credential-bundle.js";
+export type { ProtectedResourceDescriptor, CredentialKind } from "./credential-bundle.js";
 export { computeTaskStatus } from "./compute-task-status.js";
 export type { TaskStatusResult } from "./compute-task-status.js";
 export { findFirstConnectedEnvironment } from "./find-connected-environment.js";

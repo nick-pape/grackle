@@ -182,17 +182,33 @@ message SessionFilter {
   string status = 2;             // empty = all
 }
 
+// A chosen model. Mirrors AHP ModelSelection (config deferred).
+message ModelSelection {
+  string id = 1; // Model identifier (e.g. "sonnet"); empty = use persona default
+}
+
+// Spawn parameters carried as a config bag, mirroring AHP createSession.config.
+message SessionConfig {
+  string branch = 1;             // Worktree branch (empty = skip)
+  string task_id = 2;            // Owning task (empty = ad-hoc session)
+  string workspace_id = 3;       // Workspace scope (associates MCP tool calls)
+  string persona_id = 4;         // Persona to use (falls back to app default)
+  optional bool use_worktrees = 5; // Unset = host default (true)
+  string system_context = 6;     // Prepended to prompt (task desc + findings)
+  string pipe = 7;               // "sync" | "async" | "detach" | "" (no pipe)
+  string working_directory = 8;  // Working directory / repo root
+  int32 max_turns = 9;           // 0 = persona default
+  string parent_session_id = 10; // Caller's session ID (for pipe setup)
+}
+
+// Create a session. Reshaped toward AHP createSession (HR4+5): provider/model
+// are first-class (overriding the persona); other spawn params ride `config`.
 message SpawnRequest {
   string environment_id = 1;
   string prompt = 2;
-  int32 max_turns = 4;
-  string branch = 6; // Branch for worktree (empty = skip)
-  string system_context = 7; // Prepended to prompt (task desc + findings)
-  string persona_id = 8; // Persona to use (falls back to app default persona)
-  string working_directory = 9; // Working directory / repo root (non-task spawns)
-  string pipe = 10; // "sync", "async", "detach", or "" (no pipe)
-  string parent_session_id = 11; // Caller's session ID (for pipe setup)
-  string workspace_id = 12; // Workspace scope for the session (used to associate MCP tool calls)
+  string provider = 3;       // Explicit runtime; overrides the resolved persona
+  ModelSelection model = 4;  // Explicit model; overrides the resolved persona
+  SessionConfig config = 5;
 }
 
 message ResumeRequest {
@@ -202,6 +218,40 @@ message ResumeRequest {
 message InputMessage {
   string session_id = 1;
   string text = 2;
+}
+
+// ─── Runtime Catalog (AHP root channel: RootState.agents) ───
+
+// A protected resource a runtime requires authentication for.
+// Mirrors AHP ProtectedResourceMetadata (RFC 9728).
+message ProtectedResource {
+  string resource = 1;                       // RFC 9728 resource identifier (https URL)
+  string resource_name = 2;                  // Human-readable name
+  repeated string authorization_servers = 3; // OAuth authorization servers (empty for env/file kinds)
+  repeated string scopes_supported = 4;      // OAuth scopes (empty for env/file kinds)
+  // How the credential is delivered: "env-api-key" | "oauth-subscription-file" | "oauth-server".
+  // Maps to AHP protectedResources._meta.credentialKind at the HR8 transport flip.
+  string credential_kind = 5;
+}
+
+// A selectable model for a runtime. Mirrors AHP SessionModelInfo.
+message ModelInfo {
+  string id = 1;
+  string name = 2;
+  string provider = 3; // The runtime this model belongs to
+}
+
+// A runtime in the catalog. Mirrors AHP AgentInfo.
+message RuntimeInfo {
+  string provider = 1;     // Runtime name (e.g. "claude-code")
+  string display_name = 2;
+  string description = 3;
+  repeated ModelInfo models = 4;
+  repeated ProtectedResource protected_resources = 5; // Server-derived from credential config
+}
+
+message ListRuntimesResponse {
+  repeated RuntimeInfo runtimes = 1;
 }
 
 // ─── IPC ────────────────────────────────────────────────────

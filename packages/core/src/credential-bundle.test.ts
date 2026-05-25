@@ -30,7 +30,9 @@ vi.mock("@grackle-ai/database", () => ({
 }));
 
 // Import AFTER mocks
-import { buildProviderTokenBundle, resolveGitHubTokenFromCli } from "./credential-bundle.js";
+import { buildProviderTokenBundle, resolveGitHubTokenFromCli, deriveCredentialNeeds, RUNTIME_PROVIDERS } from "./credential-bundle.js";
+import type { ProtectedResourceDescriptor } from "./credential-bundle.js";
+import { RUNTIME_CATALOG } from "@grackle-ai/common";
 import { existsSync, readFileSync } from "node:fs";
 import type { CredentialProviderConfig } from "@grackle-ai/database";
 
@@ -579,5 +581,114 @@ describe("buildProviderTokenBundle() — edge cases", () => {
     expect(item!.value).toBe("gho_priority");
     // GITHUB_TOKEN should NOT also be pushed (it's a fallback, not both)
     expect(findByEnvVar(bundle, "GITHUB_TOKEN")).toBeUndefined();
+  });
+});
+
+// ─── deriveCredentialNeeds() — advertise-needs descriptor (#1288) ─────
+
+describe("deriveCredentialNeeds()", () => {
+  /** All providers fully enabled (claude in subscription mode). */
+  function allOn(): CredentialProviderConfig {
+    return { claude: "subscription", github: "on", copilot: "on", codex: "on", goose: "on" };
+  }
+
+  /** Find a descriptor by its provider key. */
+  function byProvider(
+    needs: ProtectedResourceDescriptor[],
+    provider: keyof CredentialProviderConfig,
+  ): ProtectedResourceDescriptor | undefined {
+    return needs.find((n) => n.provider === provider);
+  }
+
+  it("returns Anthropic (subscription→file) + GitHub for claude-code", () => {
+    const needs = deriveCredentialNeeds("claude-code", { ...allOff(), claude: "subscription", github: "on" });
+
+    expect(needs).toHaveLength(2);
+    const claude = byProvider(needs, "claude");
+    expect(claude).toMatchObject({
+      resource: "https://api.anthropic.com",
+      resourceName: "Anthropic API",
+      credentialKind: "oauth-subscription-file",
+    });
+    expect(byProvider(needs, "github")).toMatchObject({
+      resource: "https://api.github.com",
+      credentialKind: "env-api-key",
+    });
+  });
+
+  it("reflects claude=api_key as env-api-key kind", () => {
+    const needs = deriveCredentialNeeds("claude-code", { ...allOff(), claude: "api_key" });
+
+    expect(byProvider(needs, "claude")).toMatchObject({ credentialKind: "env-api-key" });
+  });
+
+  it("omits a provider that is off (claude off → only github)", () => {
+    const needs = deriveCredentialNeeds("claude-code", { ...allOff(), claude: "off", github: "on" });
+
+    expect(byProvider(needs, "claude")).toBeUndefined();
+    expect(byProvider(needs, "github")).toBeDefined();
+    expect(needs).toHaveLength(1);
+  });
+
+  it("returns [] for a runtime when every mapped provider is off", () => {
+    expect(deriveCredentialNeeds("claude-code", allOff())).toEqual([]);
+  });
+
+  it("returns Copilot (githubcopilot→file) + GitHub for copilot", () => {
+    const needs = deriveCredentialNeeds("copilot", { ...allOff(), copilot: "on", github: "on" });
+
+    expect(byProvider(needs, "copilot")).toMatchObject({
+      resource: "https://api.githubcopilot.com",
+      resourceName: "GitHub Copilot",
+      credentialKind: "oauth-subscription-file",
+    });
+    expect(byProvider(needs, "github")).toBeDefined();
+  });
+
+  it("returns OpenAI (file) for codex", () => {
+    const needs = deriveCredentialNeeds("codex", { ...allOff(), codex: "on" });
+
+    expect(byProvider(needs, "codex")).toMatchObject({
+      resource: "https://api.openai.com",
+      resourceName: "OpenAI",
+      credentialKind: "oauth-subscription-file",
+    });
+  });
+
+  it("returns Goose descriptor for goose", () => {
+    const needs = deriveCredentialNeeds("goose", { ...allOff(), goose: "on" });
+
+    expect(byProvider(needs, "goose")).toMatchObject({ resourceName: "Goose" });
+  });
+
+  it("treats ACP variants like their base runtime (claude-code-acp)", () => {
+    const needs = deriveCredentialNeeds("claude-code-acp", { ...allOff(), claude: "subscription", github: "on" });
+
+    expect(byProvider(needs, "claude")).toBeDefined();
+    expect(byProvider(needs, "github")).toBeDefined();
+  });
+
+  it("returns [] for stub runtime", () => {
+    expect(deriveCredentialNeeds("stub", allOn())).toEqual([]);
+  });
+
+  it("returns [] for an unknown runtime (fails safe)", () => {
+    expect(deriveCredentialNeeds("totally-unknown", allOn())).toEqual([]);
+  });
+
+  it("is pure — reads no fs, env, or credential store", () => {
+    deriveCredentialNeeds("claude-code", allOn());
+
+    expect(existsSync).not.toHaveBeenCalled();
+    expect(readFileSync).not.toHaveBeenCalled();
+    expect(mockExec).not.toHaveBeenCalled();
+    expect(mockGetCredentialProviders).not.toHaveBeenCalled();
+  });
+
+  // ── Coherence (Decision R): RUNTIME_PROVIDERS keys ⊆ RUNTIME_CATALOG ──
+  it("every RUNTIME_PROVIDERS runtime has a catalog entry", () => {
+    for (const runtime of Object.keys(RUNTIME_PROVIDERS)) {
+      expect(RUNTIME_CATALOG[runtime], `Runtime "${runtime}" missing from RUNTIME_CATALOG`).toBeDefined();
+    }
   });
 });

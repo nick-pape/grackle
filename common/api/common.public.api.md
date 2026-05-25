@@ -956,12 +956,24 @@ declare namespace grackle {
         SessionListSchema,
         SessionFilter,
         SessionFilterSchema,
+        ModelSelection,
+        ModelSelectionSchema,
+        SessionConfig,
+        SessionConfigSchema,
         SpawnRequest,
         SpawnRequestSchema,
         ResumeRequest,
         ResumeRequestSchema,
         InputMessage,
         InputMessageSchema,
+        ProtectedResource,
+        ProtectedResourceSchema,
+        ModelInfo,
+        ModelInfoSchema,
+        RuntimeInfo,
+        RuntimeInfoSchema,
+        ListRuntimesResponse,
+        ListRuntimesResponseSchema,
         WaitForPipeRequest,
         WaitForPipeRequestSchema,
         WaitForPipeResponse,
@@ -1298,6 +1310,11 @@ const GrackleCore: GenService<{
         methodKind: "unary";
         input: typeof TaskIdSchema;
         output: typeof SessionListSchema;
+    };
+    listRuntimes: {
+        methodKind: "unary";
+        input: typeof EmptySchema;
+        output: typeof ListRuntimesResponseSchema;
     };
     streamSession: {
         methodKind: "server_streaming";
@@ -1904,6 +1921,14 @@ type ListRecentKnowledgeNodesResponse = Message<"grackle.ListRecentKnowledgeNode
 const ListRecentKnowledgeNodesResponseSchema: GenMessage<ListRecentKnowledgeNodesResponse>;
 
 // @public
+type ListRuntimesResponse = Message<"grackle.ListRuntimesResponse"> & {
+    runtimes: RuntimeInfo[];
+};
+
+// @public
+const ListRuntimesResponseSchema: GenMessage<ListRuntimesResponse>;
+
+// @public
 type ListSchedulesRequest = Message<"grackle.ListSchedulesRequest"> & {
     workspaceId: string;
 };
@@ -1972,6 +1997,24 @@ type McpServerConfig = Message<"grackle.McpServerConfig"> & {
 
 // @public
 const McpServerConfigSchema: GenMessage<McpServerConfig>;
+
+// @public
+type ModelInfo = Message<"grackle.ModelInfo"> & {
+    id: string;
+    name: string;
+    provider: string;
+};
+
+// @public
+const ModelInfoSchema: GenMessage<ModelInfo>;
+
+// @public
+type ModelSelection = Message<"grackle.ModelSelection"> & {
+    id: string;
+};
+
+// @public
+const ModelSelectionSchema: GenMessage<ModelSelection>;
 
 // @public
 export const ORCHESTRATOR_MCP_TOOLS: readonly string[];
@@ -2099,6 +2142,18 @@ export interface PromotedRenderTool<T> {
 }
 
 // @public
+type ProtectedResource = Message<"grackle.ProtectedResource"> & {
+    resource: string;
+    resourceName: string;
+    authorizationServers: string[];
+    scopesSupported: string[];
+    credentialKind: string;
+};
+
+// @public
+const ProtectedResourceSchema: GenMessage<ProtectedResource>;
+
+// @public
 enum ProviderToggle {
     OFF = 1,
     ON = 2,
@@ -2224,7 +2279,34 @@ export const ROOT_TASK_ID: string;
 export const ROOT_TASK_INITIAL_PROMPT: string;
 
 // @public
-export const RUNTIME_MANIFESTS: Readonly<Record<string, RuntimePackageManifest>>;
+export const RUNTIME_CATALOG: Readonly<Record<string, RuntimeCatalogEntry>>;
+
+// @public
+export interface RuntimeCatalogEntry {
+    description: string;
+    displayName: string;
+    install?: RuntimePackageManifest;
+    models: RuntimeModelInfo[];
+}
+
+// @public
+type RuntimeInfo = Message<"grackle.RuntimeInfo"> & {
+    provider: string;
+    displayName: string;
+    description: string;
+    models: ModelInfo[];
+    protectedResources: ProtectedResource[];
+};
+
+// @public
+const RuntimeInfoSchema: GenMessage<RuntimeInfo>;
+
+// @public
+export interface RuntimeModelInfo {
+    id: string;
+    name: string;
+    provider: string;
+}
 
 // @public
 export type RuntimeName = "claude-code" | "copilot" | "codex" | "goose" | "stub";
@@ -2458,6 +2540,23 @@ const SessionActionListSchema: GenMessage<SessionActionList>;
 const SessionActionSchema: GenMessage<SessionAction>;
 
 // @public
+type SessionConfig = Message<"grackle.SessionConfig"> & {
+    branch: string;
+    taskId: string;
+    workspaceId: string;
+    personaId: string;
+    useWorktrees?: boolean;
+    systemContext: string;
+    pipe: string;
+    workingDirectory: string;
+    maxTurns: number;
+    parentSessionId: string;
+};
+
+// @public
+const SessionConfigSchema: GenMessage<SessionConfig>;
+
+// @public
 type SessionEvent = Message<"grackle.SessionEvent"> & {
     sessionId: string;
     type: EventType_2;
@@ -2649,14 +2748,9 @@ export const skeletonVariantSchema: z.ZodEnum<{
 type SpawnRequest = Message<"grackle.SpawnRequest"> & {
     environmentId: string;
     prompt: string;
-    maxTurns: number;
-    branch: string;
-    systemContext: string;
-    personaId: string;
-    workingDirectory: string;
-    pipe: string;
-    parentSessionId: string;
-    workspaceId: string;
+    provider: string;
+    model?: ModelSelection;
+    config?: SessionConfig;
 };
 
 // @public

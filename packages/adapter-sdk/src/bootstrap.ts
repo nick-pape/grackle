@@ -1,4 +1,4 @@
-import { DEFAULT_POWERLINE_PORT, RUNTIME_MANIFESTS } from "@grackle-ai/common";
+import { DEFAULT_POWERLINE_PORT, RUNTIME_CATALOG } from "@grackle-ai/common";
 import type { ProvisionEvent } from "./adapter.js";
 import type { RemoteExecutor } from "./remote-executor.js";
 import type { AdapterLogger } from "./logger.js";
@@ -515,7 +515,7 @@ export async function* bootstrapPowerLine(
   // 4.5. Eagerly install the default runtime's packages on the remote host
   //       so the first spawn doesn't need a cold install.
   if (defaultRuntime) {
-    const runtimeManifest = RUNTIME_MANIFESTS[defaultRuntime];
+    const runtimeManifest = RUNTIME_CATALOG[defaultRuntime]?.install;
     if (runtimeManifest) {
       const runtimeDir = `$HOME/.grackle/runtimes/${defaultRuntime}`;
       const runtimePackageJson = JSON.stringify({
