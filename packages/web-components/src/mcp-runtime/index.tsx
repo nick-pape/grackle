@@ -16,6 +16,7 @@ import { createRoot } from "react-dom/client";
 import { LiveProvider, LivePreview, LiveError } from "react-live";
 import { useApp, useHostStyleVariables } from "@modelcontextprotocol/ext-apps/react";
 import { COMPONENT_SCOPE } from "./component-scope.js";
+import { composeSource, type RenderDependency } from "./compose-source.js";
 
 /** Identity reported to the host during the MCP Apps guest handshake. */
 const APP_INFO: Readonly<{ name: string; version: string }> = {
@@ -29,6 +30,8 @@ interface RenderInput {
   source: string;
   /** Data bound into the component, available as `props` in the JSX scope. */
   props: Record<string, unknown>;
+  /** Resolved registry dependencies in eval order (deepest first), for composition (#1270). */
+  components: RenderDependency[];
 }
 
 /** Connects the guest bridge, receives the JSX + props, and renders via react-live. */
@@ -40,13 +43,22 @@ function Runtime(): JSX.Element {
     capabilities: {},
     onAppCreated: (createdApp): void => {
       createdApp.ontoolinput = (params): void => {
-        const args = (params.arguments ?? {}) as { source?: unknown; props?: unknown };
+        const args = (params.arguments ?? {}) as { source?: unknown; props?: unknown; components?: unknown };
+        const components: RenderDependency[] = Array.isArray(args.components)
+          ? (args.components as unknown[]).filter(
+              (d): d is RenderDependency =>
+                d !== null && typeof d === "object" &&
+                typeof (d as RenderDependency).name === "string" &&
+                typeof (d as RenderDependency).body === "string",
+            )
+          : [];
         setInput({
           source: typeof args.source === "string" ? args.source : "",
           props:
             args.props !== null && typeof args.props === "object"
               ? (args.props as Record<string, unknown>)
               : {},
+          components,
         });
       };
     },
@@ -67,7 +79,7 @@ function Runtime(): JSX.Element {
   // origin-isolated sandbox + restricted connect-src keep that safe (#1268).
   const scope: Record<string, unknown> = { React, props: input.props, ...COMPONENT_SCOPE };
   return (
-    <LiveProvider code={input.source} noInline scope={scope}>
+    <LiveProvider code={composeSource(input.source, input.components)} noInline scope={scope}>
       <LivePreview />
       <LiveError />
     </LiveProvider>

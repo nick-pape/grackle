@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "GenUX cross-component composition (#1270): a registered grackle-react component's body can reference other registry components as JSX tags (`<RevenueChart/>`). The server resolves the transitive registry graph at render time (`ResolveComponentGraph` RPC) — scanning for capitalized tags, resolving workspace components (excluding built-ins), cycle-safe with depth/count/size caps, late-bound to current versions — and ships the dependency bundle in the render descriptor; the sandbox runtime composes them into scope. Applies to component_render, component_show, and promoted render_<name> tools.",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

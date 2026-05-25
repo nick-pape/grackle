@@ -597,6 +597,22 @@ message SetComponentPromotionRequest {
   optional bool promoted = 4;
 }
 
+// Resolve a component's transitive registry references for composition (#1270).
+// Provide a registry id/name (render-by-reference) OR a raw source (render-by-source).
+message ResolveComponentGraphRequest {
+  string id = 1;            // resolve the root by id (takes precedence)
+  string name = 2;          // or by name within workspace_id
+  string workspace_id = 3;  // required: resolution is workspace-scoped
+  string source = 4;        // raw body to scan instead of a registry root (render-by-source)
+}
+
+message ResolveComponentGraphResponse {
+  // The resolved root component (empty when resolving from a raw `source`).
+  Component root = 1;
+  // Transitive referenced components in eval order (deepest first); excludes the root.
+  repeated Component dependencies = 2;
+}
+
 // ─── Escalations ───────────────────────────────────────────
 
 message Escalation {

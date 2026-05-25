@@ -1,6 +1,6 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle, fuzzySearch, type FuzzyKey, BUILTIN_COMPONENTS } from "@grackle-ai/common";
+import { grackle, fuzzySearch, type FuzzyKey, BUILTIN_COMPONENTS, extractComponentReferenceNames } from "@grackle-ai/common";
 import { componentStore, workspaceStore } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { componentRowToProto } from "./grpc-proto-converters.js";
@@ -208,4 +208,90 @@ export async function setComponentPromotion(req: grackle.SetComponentPromotionRe
   // an unset value means "promote" (matches the component_promote tool default).
   componentStore.setPromoted(row.id, req.promoted ?? true);
   return componentRowToProto(componentStore.getComponent(row.id)!);
+}
+
+/** Renderer kind eligible for composition (raw HTML can't compose into a React scope). */
+const COMPOSABLE_RENDERER_KIND: string = "grackle-react";
+/** Caps bounding the composition graph walk against pathological/huge graphs (#1270). */
+const MAX_COMPOSITION_DEPTH: number = 32;
+const MAX_COMPOSITION_COMPONENTS: number = 64;
+const MAX_COMPOSITION_BYTES: number = 256 * 1024;
+/** Built-in component names are always in the runtime scope — never resolved as registry refs. */
+const BUILTIN_COMPONENT_NAMES: ReadonlySet<string> = new Set(BUILTIN_COMPONENTS.map((c) => c.name));
+
+/**
+ * Resolve a component's transitive registry references for composition (#1270).
+ * Scans the root body (a registry component by id/name, or a raw `source`) for
+ * capitalized JSX tags, resolves each to a workspace component (excluding
+ * built-ins), and recurses — a mini-bundler over the registry graph. Late-bound:
+ * references resolve to each component's CURRENT version. Returns dependencies in
+ * post-order (deepest first) so the runtime evals them into scope in array order.
+ *
+ * Cycle-safe: a `visited` set (by id) resolves each component once, so a cyclic
+ * reference terminates the walk. Caps bound depth, count, and total bytes; only
+ * `grackle-react` components compose (raw-HTML references are skipped).
+ */
+export async function resolveComponentGraph(
+  req: grackle.ResolveComponentGraphRequest,
+): Promise<grackle.ResolveComponentGraphResponse> {
+  requireWorkspace(req.workspaceId);
+
+  let root: componentStore.ComponentRow | undefined;
+  let rootBody: string;
+  if (req.source) {
+    rootBody = req.source;
+  } else if (req.id || req.name) {
+    root = req.id
+      ? componentStore.getComponent(req.id)
+      : componentStore.findComponentByName(req.workspaceId, req.name);
+    if (root && root.workspaceId !== req.workspaceId) {
+      root = undefined; // workspace isolation
+    }
+    if (!root) {
+      throw new ConnectError("Component not found", Code.NotFound);
+    }
+    rootBody = root.body;
+  } else {
+    throw new ConnectError("id, name, or source is required", Code.InvalidArgument);
+  }
+
+  const ordered: componentStore.ComponentRow[] = [];
+  const visited = new Set<string>(); // component ids already resolved (cycle-safe + dedupe)
+  let totalBytes = 0;
+
+  const walk = (body: string, depth: number): void => {
+    if (depth > MAX_COMPOSITION_DEPTH || ordered.length >= MAX_COMPOSITION_COMPONENTS) {
+      return;
+    }
+    for (const name of extractComponentReferenceNames(body)) {
+      // Stop scanning once the cap is hit — avoids further findComponentByName lookups.
+      if (ordered.length >= MAX_COMPOSITION_COMPONENTS || totalBytes >= MAX_COMPOSITION_BYTES) {
+        break;
+      }
+      if (BUILTIN_COMPONENT_NAMES.has(name)) {
+        continue; // built-ins are already in the runtime scope
+      }
+      const dep = componentStore.findComponentByName(req.workspaceId, name);
+      if (!dep || visited.has(dep.id) || dep.rendererKind !== COMPOSABLE_RENDERER_KIND) {
+        continue;
+      }
+      visited.add(dep.id);
+      walk(dep.body, depth + 1); // recurse first → post-order (deepest dependency first)
+      if (ordered.length >= MAX_COMPOSITION_COMPONENTS || totalBytes + dep.body.length > MAX_COMPOSITION_BYTES) {
+        continue;
+      }
+      totalBytes += dep.body.length;
+      ordered.push(dep);
+    }
+  };
+
+  if (root) {
+    visited.add(root.id); // a root referencing itself is not a dependency
+  }
+  walk(rootBody, 0);
+
+  return create(grackle.ResolveComponentGraphResponseSchema, {
+    root: root ? componentRowToProto(root) : undefined,
+    dependencies: ordered.map(componentRowToProto),
+  });
 }

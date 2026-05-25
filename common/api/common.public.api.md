@@ -763,6 +763,9 @@ type ExposeChannelResponse = Message<"grackle.ExposeChannelResponse"> & {
 const ExposeChannelResponseSchema: GenMessage<ExposeChannelResponse>;
 
 // @public
+export function extractComponentReferenceNames(source: string): string[];
+
+// @public
 type FdInfo = Message<"grackle.FdInfo"> & {
     fd: number;
     streamName: string;
@@ -1056,6 +1059,10 @@ declare namespace grackle {
         SearchComponentsResponseSchema,
         SetComponentPromotionRequest,
         SetComponentPromotionRequestSchema,
+        ResolveComponentGraphRequest,
+        ResolveComponentGraphRequestSchema,
+        ResolveComponentGraphResponse,
+        ResolveComponentGraphResponseSchema,
         Escalation,
         EscalationSchema,
         EscalationList,
@@ -1638,6 +1645,11 @@ const GrackleOrchestration: GenService<{
         input: typeof SetComponentPromotionRequestSchema;
         output: typeof ComponentSchema;
     };
+    resolveComponentGraph: {
+        methodKind: "unary";
+        input: typeof ResolveComponentGraphRequestSchema;
+        output: typeof ResolveComponentGraphResponseSchema;
+    };
     createEscalation: {
         methodKind: "unary";
         input: typeof CreateEscalationRequestSchema;
@@ -2144,6 +2156,26 @@ const RemoveGitHubAccountRequestSchema: GenMessage<RemoveGitHubAccountRequest>;
 
 // @public
 export const RENDER_TOOL_PREFIX: string;
+
+// @public
+type ResolveComponentGraphRequest = Message<"grackle.ResolveComponentGraphRequest"> & {
+    id: string;
+    name: string;
+    workspaceId: string;
+    source: string;
+};
+
+// @public
+const ResolveComponentGraphRequestSchema: GenMessage<ResolveComponentGraphRequest>;
+
+// @public
+type ResolveComponentGraphResponse = Message<"grackle.ResolveComponentGraphResponse"> & {
+    root?: Component;
+    dependencies: Component[];
+};
+
+// @public
+const ResolveComponentGraphResponseSchema: GenMessage<ResolveComponentGraphResponse>;
 
 // @public
 type ResumeRequest = Message<"grackle.ResumeRequest"> & {
