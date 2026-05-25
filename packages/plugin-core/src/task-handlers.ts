@@ -435,9 +435,9 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
   );
   emit("task.started", { taskId: task.id, sessionId, workspaceId: task.workspaceId || "" });
 
-  // Re-push stored tokens + provider credentials (scoped to runtime) so they're fresh for this session.
+  // Supply credentials on demand for this runtime, just before spawn (AHP HR6).
   // For local envs, skip file tokens — the PowerLine is on the same machine.
-  await tokenPush.refreshTokensForTask(environmentId, runtime,
+  await tokenPush.authenticateForRuntime(environmentId, runtime,
     env?.adapterType === "local" ? { excludeFileTokens: true } : undefined);
 
   const mcpServersJson = personaMcpServersToJson(resolved.mcpServers, resolved.personaId);

@@ -40,9 +40,7 @@ vi.mock("./event-bus.js", () => ({
 }));
 
 vi.mock("./token-push.js", () => ({
-  pushToEnv: vi.fn(),
-  pushProviderCredentialsToEnv: vi.fn(),
-  refreshTokensForTask: vi.fn(),
+  authenticateForRuntime: vi.fn(),
 }));
 
 vi.mock("./adapter-manager.js", () => ({

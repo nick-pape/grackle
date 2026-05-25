@@ -3,7 +3,9 @@ import { removeSession, listAllSessions, parkSession, drainParkedSession, isPark
 import type { AgentEvent, AgentSession } from "@grackle-ai/runtime-sdk";
 import { AsyncQueue } from "@grackle-ai/runtime-sdk";
 import type { ConnectRouter } from "@connectrpc/connect";
+import { create } from "@bufbuild/protobuf";
 import { powerline } from "@grackle-ai/common";
+import { writeTokens } from "./token-writer.js";
 
 /** Create a mock session backed by a real AsyncQueue for realistic drain testing. */
 function makeMockSessionWithQueue(id: string): AgentSession & { eventQueue: AsyncQueue<AgentEvent> } {
@@ -172,5 +174,27 @@ describe("DrainBufferedEvents RPC handler", () => {
     }
 
     expect(results).toHaveLength(0);
+  });
+});
+
+describe("Authenticate RPC handler", () => {
+  it("writes the supplied credentials via the token writer", async () => {
+    const handlers = await getHandlers();
+    vi.mocked(writeTokens).mockClear();
+
+    await handlers.authenticate(
+      create(powerline.AuthenticateRequestSchema, {
+        provider: "claude-code",
+        tokens: [
+          { name: "anthropic", type: "env_var", envVar: "ANTHROPIC_API_KEY", filePath: "", value: "sk-test" },
+          { name: "claude-creds", type: "file", envVar: "", filePath: "~/.claude/.credentials.json", value: "{}" },
+        ],
+      }),
+    );
+
+    expect(vi.mocked(writeTokens)).toHaveBeenCalledWith([
+      { name: "anthropic", type: "env_var", envVar: "ANTHROPIC_API_KEY", filePath: "", value: "sk-test" },
+      { name: "claude-creds", type: "file", envVar: "", filePath: "~/.claude/.credentials.json", value: "{}" },
+    ]);
   });
 });

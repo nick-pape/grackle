@@ -98,6 +98,15 @@ type AttachStreamResponse = Message<"grackle.AttachStreamResponse"> & {
 const AttachStreamResponseSchema: GenMessage<AttachStreamResponse>;
 
 // @public
+type AuthenticateRequest = Message<"grackle.powerline.AuthenticateRequest"> & {
+    provider: string;
+    tokens: TokenItem[];
+};
+
+// @public
+const AuthenticateRequestSchema: GenMessage<AuthenticateRequest>;
+
+// @public
 export const BUILTIN_COMPONENT_JSON_SCHEMAS: Readonly<Record<BuiltinComponentName, object>>;
 
 // @public
@@ -1709,6 +1718,11 @@ const GracklePowerLine: GenService<{
         input: typeof TokenBundleSchema;
         output: typeof EmptySchema_2;
     };
+    authenticate: {
+        methodKind: "unary";
+        input: typeof AuthenticateRequestSchema;
+        output: typeof EmptySchema_2;
+    };
     cleanupWorktree: {
         methodKind: "unary";
         input: typeof WorktreeCleanupRequestSchema;
@@ -2070,6 +2084,8 @@ declare namespace powerline {
         TokenItemSchema,
         TokenBundle,
         TokenBundleSchema,
+        AuthenticateRequest,
+        AuthenticateRequestSchema,
         WorktreeCleanupRequest,
         WorktreeCleanupRequestSchema,
         DrainRequest,

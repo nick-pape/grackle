@@ -90,6 +90,15 @@ message TokenBundle {
   repeated TokenItem tokens = 1;
 }
 
+// On-demand credential supply for one provider/runtime (AHP HR6 `authenticate`).
+// Supersedes the proactive PushTokens injection. Carries Grackle's richer token
+// shape (env vars + file blobs) rather than AHP's bearer-only token, because
+// subscription credentials are files on disk.
+message AuthenticateRequest {
+  string provider = 1; // runtime/provider these credentials are for
+  repeated TokenItem tokens = 2;
+}
+
 // ─── Worktree ──────────────────────────────────────────────
 
 message WorktreeCleanupRequest {
@@ -113,7 +122,8 @@ service GracklePowerLine {
   rpc Kill(KillRequest) returns (Empty);
   rpc ListSessions(Empty) returns (SessionList);
   rpc Ping(Empty) returns (Pong);
-  rpc PushTokens(TokenBundle) returns (Empty);
+  rpc PushTokens(TokenBundle) returns (Empty); // DEPRECATED (AHP HR6): superseded by Authenticate; removed at HR8.
+  rpc Authenticate(AuthenticateRequest) returns (Empty); // On-demand per-runtime credential supply (AHP HR6).
   rpc CleanupWorktree(WorktreeCleanupRequest) returns (Empty);
   rpc DrainBufferedEvents(DrainRequest) returns (stream AgentEvent);
 }
