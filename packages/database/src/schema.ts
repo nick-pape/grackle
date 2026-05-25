@@ -264,6 +264,8 @@ export const components = sqliteTable("components", {
   body: text("body").notNull(),
   propsSchema: text("props_schema").notNull().default(""),
   version: integer("version").notNull().default(1),
+  /** Whether this component is promoted to a dynamic `render_<name>` MCP tool (#1272). */
+  promoted: integer("promoted", { mode: "boolean" }).notNull().default(false),
   ownerTaskId: text("owner_task_id").notNull().default(""),
   ownerSessionId: text("owner_session_id").notNull().default(""),
   createdAt: text("created_at")

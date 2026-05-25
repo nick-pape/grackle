@@ -532,6 +532,7 @@ message Component {
   string owner_session_id = 10;
   string created_at = 11;
   string updated_at = 12;
+  bool promoted = 13; // promoted to a dynamic render_<name> MCP tool (#1272)
 }
 
 message ComponentList {
@@ -583,6 +584,16 @@ message SearchComponentResult {
 
 message SearchComponentsResponse {
   repeated SearchComponentResult results = 1;
+}
+
+message SetComponentPromotionRequest {
+  // Resolve by id (takes precedence) or by name within workspace_id.
+  string id = 1;
+  string name = 2;
+  string workspace_id = 3;
+  // true promotes to a render_<name> tool; false demotes. Optional so "unset" is
+  // distinguishable from false — the server defaults an unset value to true.
+  optional bool promoted = 4;
 }
 
 // ─── Escalations ───────────────────────────────────────────

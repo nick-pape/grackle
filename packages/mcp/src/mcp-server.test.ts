@@ -15,7 +15,7 @@ import { z } from "zod";
 import { createScopedToken } from "@grackle-ai/auth";
 import { ROOT_TASK_ID } from "@grackle-ai/common";
 import type { ToolDefinition } from "./tool-registry.js";
-import { createMcpServer, resolveAssetBaseUrl, type PublishWidgetEvent } from "./mcp-server.js";
+import { createMcpServer, resolveAssetBaseUrl, dynamicRenderInputSchema, type PublishWidgetEvent } from "./mcp-server.js";
 import { HELLO_WIDGET_URI } from "./resources/hello-widget.js";
 import { WIDGET_RENDER_META_KEY } from "./widget-render-meta.js";
 
@@ -957,5 +957,27 @@ describe("MCP Apps widget capture (#1238)", () => {
     await callTool(server, sessionId, "workspace_spy", { workspaceId: "ws-1" }, authHeader);
 
     expect(widgetCalls).toHaveLength(0);
+  });
+});
+
+describe("dynamicRenderInputSchema (#1272)", () => {
+  it("falls back to a passthrough object for an empty propsSchema (the DB default)", () => {
+    const schema = dynamicRenderInputSchema("") as { type?: string; additionalProperties?: unknown };
+    expect(schema.type).toBe("object");
+    // Must allow arbitrary props — the call path doesn't validate when there's no
+    // schema, so a closed object would make the promoted tool look uncallable.
+    expect(schema.additionalProperties).not.toBe(false);
+  });
+
+  it("falls back to a passthrough object for an unparseable propsSchema", () => {
+    const schema = dynamicRenderInputSchema("{ not json") as { additionalProperties?: unknown };
+    expect(schema.additionalProperties).not.toBe(false);
+  });
+
+  it("derives the input schema from a valid propsSchema", () => {
+    const schema = dynamicRenderInputSchema('{"type":"object","properties":{"label":{"type":"string"}}}') as {
+      properties?: Record<string, unknown>;
+    };
+    expect(schema.properties?.label).toBeDefined();
   });
 });

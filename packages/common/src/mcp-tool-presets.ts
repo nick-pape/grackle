@@ -45,7 +45,7 @@ export const ALL_MCP_TOOL_NAMES: ReadonlySet<string> = new Set([
   // widget (MCP Apps) — render a ui:// widget in the chat via the broker
   "show_hello_widget",
   // component registry (#1239 widgets → #1269 components) — agent-authored
-  "component_register", "component_update", "component_list", "component_render", "component_search", "widget_show",
+  "component_register", "component_update", "component_list", "component_render", "component_search", "component_promote", "widget_show",
   // GenUX React runtime (#1268) — render-by-source JSX
   "component_show",
 ]);
@@ -71,7 +71,7 @@ export const DEFAULT_SCOPED_MCP_TOOLS: readonly string[] = [
   // captures the call and renders it; SEP-1865). Includes the agent-authored
   // widget registry (#1239) so scoped agents can author + render widgets.
   "show_hello_widget",
-  "component_register", "component_update", "component_list", "component_render", "component_search", "widget_show",
+  "component_register", "component_update", "component_list", "component_render", "component_search", "component_promote", "widget_show",
   // GenUX React runtime (#1268)
   "component_show",
 ] as const;
@@ -108,7 +108,7 @@ export const ORCHESTRATOR_MCP_TOOLS: readonly string[] = [
   "schedule_list", "schedule_show",
   // MCP Apps widgets (in DEFAULT_SCOPED_MCP_TOOLS — keep this a superset).
   "show_hello_widget",
-  "component_register", "component_update", "component_list", "component_render", "component_search", "widget_show",
+  "component_register", "component_update", "component_list", "component_render", "component_search", "component_promote", "widget_show",
   "component_show",
   // Additional management tools
   "task_update", "task_delete", "task_resume",

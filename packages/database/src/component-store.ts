@@ -110,3 +110,15 @@ export function deleteComponent(id: string): boolean {
   const result = db.delete(components).where(eq(components.id, id)).run();
   return result.changes > 0;
 }
+
+/**
+ * Set a component's promotion flag (#1272). Promotion is a lifecycle toggle, not
+ * an edit, so this touches ONLY the `promoted` column — it deliberately does NOT
+ * bump `version` or `updated_at` (the tool surface keeps its stable handle and
+ * the `updatedAt DESC` ordering used for render_<name> collision tie-breaks).
+ * Returns `true` when a row was updated, `false` when no component has that id.
+ */
+export function setPromoted(id: string, promoted: boolean): boolean {
+  const result = db.update(components).set({ promoted }).where(eq(components.id, id)).run();
+  return result.changes > 0;
+}

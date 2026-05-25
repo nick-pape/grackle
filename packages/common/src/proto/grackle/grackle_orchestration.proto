@@ -31,6 +31,7 @@ service GrackleOrchestration {
   rpc GetComponent(GetComponentRequest) returns (Component);
   rpc ListComponents(ListComponentsRequest) returns (ComponentList);
   rpc SearchComponents(SearchComponentsRequest) returns (SearchComponentsResponse);
+  rpc SetComponentPromotion(SetComponentPromotionRequest) returns (Component);
 
   // Escalations
   rpc CreateEscalation(CreateEscalationRequest) returns (Escalation);
