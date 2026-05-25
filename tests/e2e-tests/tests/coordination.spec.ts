@@ -37,6 +37,9 @@ test.describe("Coordination tab", { tag: ["@session"] }, () => {
       page.getByTestId("coordination-graph").or(page.getByTestId("coordination-graph-empty")),
     ).toBeVisible();
 
+    // Stream controls are page-level, so they remain available in Graph mode.
+    await expect(page.getByTestId("coordination-show-internals")).toBeVisible();
+
     // Switching back restores the list.
     await page.getByTestId("coordination-view-list").click();
     await expect(page.getByTestId("coordination-list")).toBeVisible();
