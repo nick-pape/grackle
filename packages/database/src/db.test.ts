@@ -18,6 +18,7 @@ const EXPECTED_TABLES: string[] = [
   "findings",
   "personas",
   "schedules",
+  "session_actions",
   "sessions",
   "settings",
   "tasks",
@@ -273,6 +274,42 @@ describe("initDatabase", () => {
 
     // Assert: schema version advanced to current.
     expect(mem.pragma("user_version", { simple: true })).toBe(CURRENT_VERSION);
+  });
+
+  it("migration v14 — creates session_actions + index and advances version on upgrade from v13", () => {
+    const mem = new Database(":memory:");
+    mem.pragma("foreign_keys = ON");
+
+    // Step 1: create the current (post-v14) schema so all tables exist.
+    initDatabase(mem);
+
+    // Step 2: simulate a pre-v14 database — drop the table and rewind user_version
+    // to 13 so initDatabase re-runs migration v14 (its CREATE … IF NOT EXISTS body
+    // executes, proving the migration SQL is valid; baseline also recreates it).
+    mem.exec("DROP TABLE session_actions");
+    mem.pragma("user_version = 13");
+
+    // Step 3: run migration.
+    initDatabase(mem);
+
+    // Assert: table and its index exist.
+    expect(listTables(mem)).toContain("session_actions");
+    const idx = mem
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_session_actions_session'")
+      .get() as { name: string } | undefined;
+    expect(idx?.name).toBe("idx_session_actions_session");
+
+    // Assert: schema version advanced to current.
+    expect(getUserVersion(mem)).toBe(CURRENT_VERSION);
+
+    // Assert: a row round-trips through the upgraded table.
+    mem.prepare(
+      "INSERT INTO session_actions (seq, session_id, type, content, raw, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+    ).run("01A", "s1", "text", "hi", "", "2026-05-24T00:00:00.000Z");
+    const row = mem
+      .prepare("SELECT seq, session_id, type, content FROM session_actions WHERE session_id = 's1'")
+      .get() as Record<string, unknown> | undefined;
+    expect(row).toMatchObject({ seq: "01A", session_id: "s1", type: "text", content: "hi" });
   });
 });
 

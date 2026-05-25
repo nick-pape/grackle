@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add a durable, server-sequenced session-action log (AHP HR1a): session_actions store, monotonic serverSeq assignment in the event processor, GetSessionActions gRPC RPC + handler, and a `grackle session events` CLI reader.",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

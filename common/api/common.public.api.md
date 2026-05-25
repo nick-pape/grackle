@@ -847,6 +847,16 @@ type GetKnowledgeNodeResponse = Message<"grackle.GetKnowledgeNodeResponse"> & {
 const GetKnowledgeNodeResponseSchema: GenMessage<GetKnowledgeNodeResponse>;
 
 // @public
+type GetSessionActionsRequest = Message<"grackle.GetSessionActionsRequest"> & {
+    sessionId: string;
+    fromSeq: string;
+    limit: number;
+};
+
+// @public
+const GetSessionActionsRequestSchema: GenMessage<GetSessionActionsRequest>;
+
+// @public
 type GetSettingRequest = Message<"grackle.GetSettingRequest"> & {
     key: string;
 };
@@ -1158,6 +1168,12 @@ declare namespace grackle {
         GetStreamTranscriptRequestSchema,
         StreamTranscript,
         StreamTranscriptSchema,
+        SessionAction,
+        SessionActionSchema,
+        GetSessionActionsRequest,
+        GetSessionActionsRequestSchema,
+        SessionActionList,
+        SessionActionListSchema,
         ServerEvent,
         ServerEventSchema,
         PluginInfo,
@@ -1476,6 +1492,11 @@ const GrackleCore: GenService<{
         methodKind: "unary";
         input: typeof GetStreamTranscriptRequestSchema;
         output: typeof StreamTranscriptSchema;
+    };
+    getSessionActions: {
+        methodKind: "unary";
+        input: typeof GetSessionActionsRequestSchema;
+        output: typeof SessionActionListSchema;
     };
 }>;
 
@@ -2366,6 +2387,27 @@ export const SESSION_STATUS: {
     readonly STOPPED: "stopped";
     readonly SUSPENDED: "suspended";
 };
+
+// @public
+type SessionAction = Message<"grackle.SessionAction"> & {
+    seq: string;
+    sessionId: string;
+    type: string;
+    content: string;
+    raw: string;
+    timestamp: string;
+};
+
+// @public
+type SessionActionList = Message<"grackle.SessionActionList"> & {
+    actions: SessionAction[];
+};
+
+// @public
+const SessionActionListSchema: GenMessage<SessionActionList>;
+
+// @public
+const SessionActionSchema: GenMessage<SessionAction>;
 
 // @public
 type SessionEvent = Message<"grackle.SessionEvent"> & {

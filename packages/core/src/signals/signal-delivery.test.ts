@@ -35,7 +35,7 @@ vi.mock("../reanimate-agent.js", () => ({
   reanimateAgent: vi.fn(),
 }));
 
-import { sessionStore } from "@grackle-ai/database";
+import { sessionStore, persistSessionAction } from "@grackle-ai/database";
 import * as adapterManager from "../adapter-manager.js";
 import * as streamHub from "../stream-hub.js";
 import { reanimateAgent } from "../reanimate-agent.js";
@@ -309,6 +309,11 @@ describe("sendInputToSession", () => {
         type: grackle.EventType.SIGNAL,
         content: "[SIGTERM] stop",
       }),
+    );
+    // The injected signal is also recorded to the durable session-action log
+    // (the "exhaustive log" contract — not just PowerLine-stream events).
+    expect(persistSessionAction).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionId: "sess-1", type: "signal", content: "[SIGTERM] stop" }),
     );
   });
 

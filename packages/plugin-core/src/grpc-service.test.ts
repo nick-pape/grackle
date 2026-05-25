@@ -38,7 +38,7 @@ vi.mock("./escalation-handlers.js", () => ({ createEscalation: vi.fn() }));
 vi.mock("./plugin-handlers.js", () => ({ listPlugins: vi.fn(), setPluginEnabled: vi.fn() }));
 vi.mock("./github-account-handlers.js", () => ({ listGitHubAccounts: vi.fn() }));
 vi.mock("./channel-handlers.js", () => ({ exposeChannel: vi.fn(), listChannelGrants: vi.fn(), revokeChannelGrant: vi.fn() }));
-vi.mock("./event-handlers.js", () => ({ queryDomainEvents: vi.fn() }));
+vi.mock("./event-handlers.js", () => ({ queryDomainEvents: vi.fn(), getStreamTranscript: vi.fn(), getSessionActions: vi.fn() }));
 
 import { createCoreCollector, createOrchestrationCollector, createDefaultCollector } from "./grpc-service.js";
 
@@ -65,6 +65,8 @@ describe("createCoreCollector", () => {
     expect(addedModules.some((m) => "exposeChannel" in m)).toBe(true);
     // Domain-event query handler is registered in core
     expect(addedModules.some((m) => "queryDomainEvents" in m)).toBe(true);
+    // Session-action log reader is registered in core (RFC #1264 / AHP HR1a)
+    expect(addedModules.some((m) => "getSessionActions" in m)).toBe(true);
     // Schedules are contributed by @grackle-ai/plugin-scheduling
     expect(addedModules.some((m) => "listSchedules" in m)).toBe(false);
   });
@@ -120,6 +122,7 @@ describe("createDefaultCollector (regression)", () => {
     expect(addedModules.some((m) => "listDockerContainers" in m)).toBe(true);
     expect(addedModules.some((m) => "exposeChannel" in m)).toBe(true);
     expect(addedModules.some((m) => "queryDomainEvents" in m)).toBe(true);
+    expect(addedModules.some((m) => "getSessionActions" in m)).toBe(true);
     expect(addHandlersMock).toHaveBeenCalledTimes(15);
   });
 });

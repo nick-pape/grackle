@@ -299,6 +299,23 @@ const MIGRATIONS: Migration[] = [
   },
   {
     version: 14,
+    name: "session-actions",
+    up: (conn) => {
+      conn.exec(`
+        CREATE TABLE IF NOT EXISTS session_actions (
+          seq         TEXT PRIMARY KEY,
+          session_id  TEXT NOT NULL,
+          type        TEXT NOT NULL,
+          content     TEXT NOT NULL,
+          raw         TEXT NOT NULL DEFAULT '',
+          timestamp   TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_session_actions_session ON session_actions(session_id, seq);
+      `);
+    },
+  },
+  {
+    version: 15,
     name: "component-promotion",
     up: (conn) => {
       // Adds the `promoted` flag used to surface a component as a dynamic
@@ -643,6 +660,15 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
       timestamp  TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS session_actions (
+      seq         TEXT PRIMARY KEY,
+      session_id  TEXT NOT NULL,
+      type        TEXT NOT NULL,
+      content     TEXT NOT NULL,
+      raw         TEXT NOT NULL DEFAULT '',
+      timestamp   TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS schedules (
       id                  TEXT PRIMARY KEY,
       title               TEXT NOT NULL,
@@ -687,6 +713,7 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
     CREATE INDEX IF NOT EXISTS idx_domain_events_type ON domain_events(type);
     CREATE INDEX IF NOT EXISTS idx_domain_events_timestamp ON domain_events(timestamp);
     CREATE INDEX IF NOT EXISTS idx_stream_messages_stream ON stream_messages(stream_id, seq);
+    CREATE INDEX IF NOT EXISTS idx_session_actions_session ON session_actions(session_id, seq);
     CREATE INDEX IF NOT EXISTS idx_sessions_task_id ON sessions(task_id);
     CREATE TABLE IF NOT EXISTS plugins (
       name       TEXT PRIMARY KEY,
