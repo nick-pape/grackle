@@ -8,8 +8,14 @@
  * (built-ins and unknown names are filtered by the resolver, not here).
  */
 
-/** Matches the start of a JSX element with a capitalized tag name (a component, not an HTML element). */
-const COMPONENT_TAG_RE: RegExp = /<\s*([A-Z][A-Za-z0-9_]*)/g;
+/**
+ * Matches the start of a JSX element with a capitalized, plain-identifier tag (a
+ * component, not an HTML element). The trailing negative lookahead rejects
+ * member/namespaced forms like `<Foo.Bar/>` or `<Foo:Bar/>` — the captured name
+ * must be followed by a non-identifier, non-`.`, non-`:` character (e.g. space,
+ * `/`, `>`), so `Foo` in `<Foo.Bar/>` is not treated as a reference.
+ */
+const COMPONENT_TAG_RE: RegExp = /<\s*([A-Z][A-Za-z0-9_]*)(?![A-Za-z0-9_.:])/g;
 
 /**
  * Extract the unique capitalized JSX tag names used as elements in `source`, in

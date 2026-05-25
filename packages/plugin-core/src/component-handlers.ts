@@ -264,6 +264,10 @@ export async function resolveComponentGraph(
       return;
     }
     for (const name of extractComponentReferenceNames(body)) {
+      // Stop scanning once the cap is hit — avoids further findComponentByName lookups.
+      if (ordered.length >= MAX_COMPOSITION_COMPONENTS || totalBytes >= MAX_COMPOSITION_BYTES) {
+        break;
+      }
       if (BUILTIN_COMPONENT_NAMES.has(name)) {
         continue; // built-ins are already in the runtime scope
       }

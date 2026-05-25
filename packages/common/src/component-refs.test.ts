@@ -23,4 +23,11 @@ describe("extractComponentReferenceNames", () => {
     expect(extractComponentReferenceNames("render(<div>hello</div>)")).toEqual([]);
     expect(extractComponentReferenceNames("")).toEqual([]);
   });
+
+  it("ignores member-expression and namespaced tags (<Foo.Bar/>, <Foo:Bar/>)", () => {
+    expect(extractComponentReferenceNames("render(<Foo.Bar/>)")).toEqual([]);
+    expect(extractComponentReferenceNames("render(<Ns:Tag/>)")).toEqual([]);
+    // A plain tag alongside a member tag: only the plain one is a reference.
+    expect(extractComponentReferenceNames("<Chart/><Foo.Bar/>")).toEqual(["Chart"]);
+  });
 });
