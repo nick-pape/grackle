@@ -160,10 +160,14 @@
 // =============================================================================
 
 .handle {
+  // Read-only graph: handles stay in the DOM as edge anchor points only, not
+  // connectors. Keep their geometry (so edges anchor unchanged) but hide the dot
+  // and disable interaction so users can't attempt to drag connections that
+  // can't be created (#1303).
   width: 6px !important;
   height: 6px !important;
-  background: var(--text-tertiary) !important;
-  border: 1px solid var(--border-subtle) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 // =============================================================================

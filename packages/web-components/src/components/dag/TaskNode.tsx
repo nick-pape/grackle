@@ -12,7 +12,7 @@ export function TaskNode({ data }: NodeProps): JSX.Element {
 
   return (
     <div className={styles.taskNode} data-task-id={task.id} data-task-title={task.title}>
-      <Handle type="target" position={Position.Top} className={styles.handle} />
+      <Handle type="target" position={Position.Top} isConnectable={false} className={styles.handle} />
       <div className={styles.taskNodeBorder} style={{ backgroundColor: statusStyle.color }} />
       <div className={styles.taskNodeContent}>
         <div className={styles.taskNodeHeader}>
@@ -34,7 +34,7 @@ export function TaskNode({ data }: NodeProps): JSX.Element {
           )}
         </div>
       </div>
-      <Handle type="source" position={Position.Bottom} className={styles.handle} />
+      <Handle type="source" position={Position.Bottom} isConnectable={false} className={styles.handle} />
     </div>
   );
 }
