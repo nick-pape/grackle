@@ -394,7 +394,7 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
   // search guidance (PULL) when the knowledge plugin is active and the task opted
   // in. Best-effort (timeout-bounded); skips root/no-workspace tasks.
   const knowledgeOn = hasSpawnContextProviders()
-    && (task.injectKnowledge ?? true)
+    && task.injectKnowledge
     && !!task.workspaceId
     && task.id !== ROOT_TASK_ID;
   const relatedPriorWork = knowledgeOn

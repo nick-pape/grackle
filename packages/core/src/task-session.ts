@@ -113,7 +113,7 @@ export async function startTaskSession(
   // this task opted in, gather the "Related prior work" PUSH block + enable the
   // PULL search guidance. Best-effort (never blocks spawn); skips root/no-workspace.
   const knowledgeOn = hasSpawnContextProviders()
-    && (freshTask.injectKnowledge ?? true)
+    && freshTask.injectKnowledge
     && !!freshTask.workspaceId
     && freshTask.id !== ROOT_TASK_ID;
   const relatedPriorWork = knowledgeOn
