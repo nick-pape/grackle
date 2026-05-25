@@ -27,11 +27,21 @@ const MAX_RENDER_TOOL_SLUG_CHARS: number = 64;
  * @example componentRenderToolName("Revenue Chart") // "render_Revenue_Chart"
  */
 export function componentRenderToolName(name: string): string | undefined {
-  const slug = name
-    .replace(/[^A-Za-z0-9_]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .slice(0, MAX_RENDER_TOOL_SLUG_CHARS)
-    .replace(/_+$/g, "");
+  // Replace every run of disallowed characters with a single underscore. This is
+  // a single quantified class (linear), then cap the length.
+  const collapsed = name.replace(/[^A-Za-z0-9_]+/g, "_").slice(0, MAX_RENDER_TOOL_SLUG_CHARS);
+  // Trim leading/trailing underscores with index walks rather than an anchored
+  // `_+` regex — the latter is a polynomial-ReDoS vector on uncontrolled,
+  // underscore-heavy names (CodeQL js/polynomial-redos).
+  let start = 0;
+  let end = collapsed.length;
+  while (start < end && collapsed[start] === "_") {
+    start += 1;
+  }
+  while (end > start && collapsed[end - 1] === "_") {
+    end -= 1;
+  }
+  const slug = collapsed.slice(start, end);
   if (!slug) {
     return undefined;
   }

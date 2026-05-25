@@ -49,13 +49,13 @@ describe("selectPromotedRenderTools", () => {
   });
 
   it("resolves tool-name collisions to the first (most-recently-updated) component", () => {
-    // Caller supplies updatedAt DESC order, so the first wins.
+    // Both names slug to render_revenue_chart; caller supplies updatedAt DESC, so the first wins.
     const out = selectPromotedRenderTools([
-      comp("Revenue Chart", true, "newer"),
+      comp("revenue chart", true, "newer"),
       comp("revenue/chart", true, "older"),
     ]);
     expect(out).toHaveLength(1);
-    expect(out[0]!.toolName).toBe("render_Revenue_Chart");
+    expect(out[0]!.toolName).toBe("render_revenue_chart");
     expect(out[0]!.component.id).toBe("newer");
   });
 });
