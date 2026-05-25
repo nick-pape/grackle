@@ -33,7 +33,7 @@ vi.mock("./transcript.js", () => ({
 }));
 
 // Import AFTER mocks
-import { openDatabase, initDatabase, sqlite as _sqlite, sessionStore, taskStore, workspaceStore } from "@grackle-ai/database";
+import { openDatabase, initDatabase, sqlite as _sqlite, sessionStore, taskStore, workspaceStore, querySessionActions } from "@grackle-ai/database";
 openDatabase(":memory:");
 initDatabase();
 const sqlite = _sqlite!;
@@ -1490,5 +1490,104 @@ describe("publishWidgetEvent (MCP Apps widget broker, #1238)", () => {
 
     expect(logWriter.writeEvent).not.toHaveBeenCalled();
     expect(publish).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("event-processor session-action log (AHP HR1a)", () => {
+  /** Recreate the session_actions table (baseline-equivalent) for this block. */
+  function applySessionActionsSchema(): void {
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS session_actions (
+        seq         TEXT PRIMARY KEY,
+        session_id  TEXT NOT NULL,
+        type        TEXT NOT NULL,
+        content     TEXT NOT NULL,
+        raw         TEXT NOT NULL DEFAULT '',
+        timestamp   TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_session_actions_session ON session_actions(session_id, seq);
+    `);
+  }
+
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    applySchema();
+    applySessionActionsSchema();
+    sqlite.exec("DELETE FROM session_actions");
+    vi.clearAllMocks();
+  });
+
+  it("persists each event to the durable log with a monotonic, ascending serverSeq (replay order)", async () => {
+    sessionStore.createSession("sess-actions", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    const mk = (content: string): powerline.AgentEvent =>
+      create(powerline.AgentEventSchema, {
+        sessionId: "sess-actions",
+        type: "text",
+        timestamp: new Date().toISOString(),
+        content,
+        raw: "",
+      });
+
+    await waitForProcessing([mk("a"), mk("b"), mk("c")], { sessionId: "sess-actions", logPath: "/tmp/log" });
+
+    const rows = querySessionActions({ sessionId: "sess-actions" });
+    expect(rows.map((r) => r.content)).toEqual(["a", "b", "c"]);
+    expect(rows.map((r) => r.type)).toEqual(["text", "text", "text"]);
+
+    const seqs = rows.map((r) => r.seq);
+    expect(new Set(seqs).size).toBe(3);
+    // ULIDs sort lexicographically; persistence order must be strictly increasing.
+    for (let i = 0; i < seqs.length - 1; i++) {
+      expect(seqs[i] < seqs[i + 1]).toBe(true);
+    }
+  });
+
+  it("scopes the log per session", async () => {
+    sessionStore.createSession("sess-x", "env1", "claude-code", "test", "sonnet", "/tmp/x");
+    sessionStore.createSession("sess-y", "env1", "claude-code", "test", "sonnet", "/tmp/y");
+    const mk = (sessionId: string, content: string): powerline.AgentEvent =>
+      create(powerline.AgentEventSchema, { sessionId, type: "text", timestamp: new Date().toISOString(), content, raw: "" });
+
+    await waitForProcessing([mk("sess-x", "x1")], { sessionId: "sess-x", logPath: "/tmp/x" });
+    await waitForProcessing([mk("sess-y", "y1")], { sessionId: "sess-y", logPath: "/tmp/y" });
+
+    expect(querySessionActions({ sessionId: "sess-x" }).map((r) => r.content)).toEqual(["x1"]);
+    expect(querySessionActions({ sessionId: "sess-y" }).map((r) => r.content)).toEqual(["y1"]);
+  });
+
+  it("records widget render events (not just PowerLine-stream events)", () => {
+    sessionStore.createSession("sess-widget", "env1", "claude-code", "test", "sonnet", "/tmp/wlog");
+    publishWidgetEvent("sess-widget", { resourceUri: "ui://demo", toolName: "render", html: "<div/>" });
+    const rows = querySessionActions({ sessionId: "sess-widget" });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].type).toBe("widget");
+  });
+
+  it("does not break event processing or live delivery when persisting an action fails", async () => {
+    sessionStore.createSession("sess-fail", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    // Simulate a DB outage for the action log: the INSERT will throw.
+    sqlite.exec("DROP TABLE session_actions");
+
+    const completedEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess-fail",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+      raw: "",
+    });
+
+    await waitForProcessing([completedEvent], { sessionId: "sess-fail", logPath: "/tmp/log" });
+
+    // Processing still reached a terminal state despite the persist failure.
+    expect(sessionStore.getSession("sess-fail")!.status).toBe("stopped");
+    // Live delivery (log + stream-hub) was unaffected.
+    expect(logWriter.writeEvent).toHaveBeenCalled();
+    const { publish } = await import("./stream-hub.js");
+    expect(publish).toHaveBeenCalled();
+    // The failure was logged, not thrown.
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionId: "sess-fail" }),
+      "Failed to persist session action",
+    );
   });
 });

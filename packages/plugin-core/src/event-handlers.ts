@@ -5,6 +5,8 @@ import {
   type DomainEventQuery,
   queryStreamMessages as queryStreamMessagesStore,
   type StreamMessageQuery,
+  querySessionActions as querySessionActionsStore,
+  type SessionActionQuery,
 } from "@grackle-ai/database";
 
 /** Map a `domain_events` row to the proto {@link grackle.DomainEvent} message. */
@@ -82,4 +84,41 @@ export async function getStreamTranscript(
 
   const rows = queryStreamMessagesStore(query);
   return create(grackle.StreamTranscriptSchema, { messages: rows.map(streamRowToProto) });
+}
+
+/** Map a `session_actions` row to the proto {@link grackle.SessionAction} message. */
+function sessionActionRowToProto(
+  row: { seq: string; sessionId: string; type: string; content: string; raw: string; timestamp: string },
+): grackle.SessionAction {
+  return create(grackle.SessionActionSchema, {
+    seq: row.seq,
+    sessionId: row.sessionId,
+    type: row.type,
+    content: row.content,
+    raw: row.raw,
+    timestamp: row.timestamp,
+  });
+}
+
+/**
+ * Read a session's durable, server-sequenced action log (RFC #1264 / AHP HR1a —
+ * the gRPC read side of the `session_actions` replay buffer). Oldest first
+ * (ascending `seq` = replay order); `from_seq` resumes after a cursor.
+ *
+ * @param req - Session id, optional `from_seq` cursor, and limit.
+ * @returns The matching session actions, oldest first.
+ */
+export async function getSessionActions(
+  req: grackle.GetSessionActionsRequest,
+): Promise<grackle.SessionActionList> {
+  const query: SessionActionQuery = { sessionId: req.sessionId };
+  if (req.fromSeq) {
+    query.fromSeq = req.fromSeq;
+  }
+  if (req.limit > 0) {
+    query.limit = req.limit;
+  }
+
+  const rows = querySessionActionsStore(query);
+  return create(grackle.SessionActionListSchema, { actions: rows.map(sessionActionRowToProto) });
 }

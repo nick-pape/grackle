@@ -4,6 +4,7 @@ import type { SessionStatus } from "@grackle-ai/common";
 import { v4 as uuid } from "uuid";
 import { ulid } from "ulid";
 import { sessionStore, escalationStore, taskStore, workspaceStore, slugify } from "@grackle-ai/database";
+import { recordSessionAction } from "./session-action-recorder.js";
 import * as streamHub from "./stream-hub.js";
 import * as logWriter from "./log-writer.js";
 import * as processorRegistry from "./processor-registry.js";
@@ -86,6 +87,7 @@ export function publishWidgetEvent(sessionId: string, payload: WidgetEventPayloa
       });
     }
     streamHub.publish(event);
+    recordSessionAction(event);
   } catch (err) {
     logger.error({ err, sessionId }, "Failed to publish widget event");
   }
@@ -325,6 +327,7 @@ export function processEventStream(
         });
         await logWriter.writeEvent(logPath, sysCtxEvent);
         streamHub.publish(sysCtxEvent);
+        recordSessionAction(sysCtxEvent);
       }
       if (options.prompt && options.taskId) {
         const promptEvent = create(grackle.SessionEventSchema, {
@@ -335,6 +338,7 @@ export function processEventStream(
         });
         await logWriter.writeEvent(logPath, promptEvent);
         streamHub.publish(promptEvent);
+        recordSessionAction(promptEvent);
       }
 
       for await (const event of events) {
@@ -356,6 +360,7 @@ export function processEventStream(
         });
         await logWriter.writeEvent(logPath, sessionEvent);
         streamHub.publish(sessionEvent);
+        recordSessionAction(sessionEvent);
 
         // Intercept subtask creation events and create child tasks
         if (event.type === "subtask_create" && ctx.taskId) {
@@ -505,12 +510,14 @@ export function processEventStream(
           "Stream lost — suspending session for recovery",
         );
         sessionStore.suspendSession(sessionId);
-        streamHub.publish(create(grackle.SessionEventSchema, {
+        const suspendedEvent = create(grackle.SessionEventSchema, {
           sessionId,
           type: grackle.EventType.STATUS,
           timestamp: new Date().toISOString(),
           content: SESSION_STATUS.SUSPENDED,
-        }));
+        });
+        streamHub.publish(suspendedEvent);
+        recordSessionAction(suspendedEvent);
         if (ctx.taskId) {
           emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
         }

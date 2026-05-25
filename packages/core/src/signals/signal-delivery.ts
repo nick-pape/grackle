@@ -5,6 +5,7 @@ import * as adapterManager from "../adapter-manager.js";
 import { reanimateAgent } from "../reanimate-agent.js";
 import * as streamHub from "../stream-hub.js";
 import * as logWriter from "../log-writer.js";
+import { recordSessionAction } from "../session-action-recorder.js";
 import { logger } from "../logger.js";
 
 /** Timeout (ms) to wait for a reanimated session to reach IDLE. */
@@ -137,6 +138,7 @@ export async function sendInputToSession(
       await logWriter.writeEvent(session.logPath, signalEvent);
     }
     streamHub.publish(signalEvent);
+    recordSessionAction(signalEvent);
 
     await conn.client.sendInput(
       create(powerline.InputMessageSchema, { sessionId, text }),
