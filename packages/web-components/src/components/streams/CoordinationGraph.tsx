@@ -144,6 +144,9 @@ export function CoordinationGraph({
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodeClick={onNodeClick}
+        // Read-only "watch" graph: there is no edit mode and no onConnect, so
+        // disable the drag-to-connect affordance on node handles (#1303).
+        nodesConnectable={false}
         fitView
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.3}

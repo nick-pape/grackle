@@ -1,6 +1,20 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 25 May 2026 15:13:29 GMT and should not be manually modified.
+This log was last generated on Mon, 25 May 2026 17:22:09 GMT and should not be manually modified.
+
+## 0.125.2
+Mon, 25 May 2026 17:22:09 GMT
+
+### Patches
+
+- Make the read-only Coordination and Task DAG graphs non-connectable: disable React Flow drag-to-connect and hide the node connection handles so users can't attempt connections that can't be created (#1303).
+
+## 0.125.1
+Mon, 25 May 2026 15:38:19 GMT
+
+### Patches
+
+- Self-host web fonts (Fira Code, JetBrains Mono, DM Sans) via @fontsource-variable so they load under the strict CSP instead of being blocked as external @import stylesheets (#1252).
 
 ## 0.125.0
 Mon, 25 May 2026 15:13:29 GMT
