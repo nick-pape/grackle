@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 25 May 2026 19:15:09 GMT and should not be manually modified.
+This log was last generated on Mon, 25 May 2026 19:35:47 GMT and should not be manually modified.
+
+## 0.127.0
+Mon, 25 May 2026 19:35:47 GMT
+
+### Minor changes
+
+- GenUX live tool refresh (#1297): when a workspace's promoted-component set changes (component_promote/demote, or a promoted component edited), the co-located MCP server pushes notifications/tools/list_changed to that workspace's live sessions so dynamic render_<name> tools refresh without the agent re-listing. Adds a `component.changed` domain event emitted by the registry handlers, retains per-session MCP Server instances, and declares the tools.listChanged capability. Broker-mode only.
 
 ## 0.126.1
 Mon, 25 May 2026 19:15:09 GMT

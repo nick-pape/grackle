@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/mcp-stdio",
-  "version": "0.126.1",
+  "version": "0.127.0",
   "description": "stdio-to-HTTP MCP proxy for Grackle — bridges stdio-only MCP clients (Claude Desktop, Codex CLI, Clawpilot) to a Grackle HTTP MCP server using static API-key auth",
   "license": "MIT",
   "repository": {
