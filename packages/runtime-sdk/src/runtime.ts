@@ -14,8 +14,9 @@ export interface AgentEvent {
   toolCallId?: string;
   /**
    * True for runtime lifecycle/diagnostic `system` events ("Starting runtime…",
-   * "Session initialized", worktree setup) — routed to the telemetry channel
-   * rather than into authoritative `SessionState` (AHP HR7). Left unset for
+   * "Session initialized", worktree setup) — used to tee these to telemetry
+   * sinks (the additive OTLP logs sink today) and, in a later step, to filter
+   * them out of authoritative `SessionState` (AHP HR7). Left unset for
    * substantive events (agent output, the injected system context).
    */
   diagnostic?: boolean;

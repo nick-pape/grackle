@@ -80,6 +80,7 @@ afterEach(() => {
   } else {
     process.env.OTEL_EXPORTER_OTLP_ENDPOINT = ORIGINAL_ENDPOINT;
   }
+  delete process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT;
 });
 
 describe("telemetry — sink disabled (no endpoint)", () => {
@@ -122,6 +123,17 @@ describe("telemetry — sink enabled (endpoint set)", () => {
     expect(record.attributes["session.id"]).toBe("sess-1");
     expect(record.attributes["grackle.event_type"]).toBe("system");
     expect(record.attributes["trace.id"]).toBe("trace-abc");
+  });
+
+  it("enables the sink from the logs-specific OTEL_EXPORTER_OTLP_LOGS_ENDPOINT alone", async () => {
+    delete process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+    process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT = "http://localhost:4318/v1/logs";
+    const t = await import("./telemetry.js");
+
+    expect(t.initOtlpLogs()).toBeDefined();
+    t.emitDiagnostic(makeDiagnostic("via logs endpoint"));
+
+    expect(h.emitSpy).toHaveBeenCalledTimes(1);
   });
 
   it("shutdownOtlpLogs flushes then shuts down the provider", async () => {
