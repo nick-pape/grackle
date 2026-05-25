@@ -256,8 +256,11 @@
   // ---------------------------------------------------------------------------
   // Typography
   // ---------------------------------------------------------------------------
-  --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
+  // Self-hosted via @fontsource-variable (see global.scss). The variable
+  // packages register family names suffixed with " Variable", so those must come
+  // first in each stack; the unsuffixed names remain as fallbacks.
+  --font-sans: 'DM Sans Variable', 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Fira Code Variable', 'JetBrains Mono Variable', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
   --font-ui: var(--font-mono);
   --font-size-xs: 11px;
   --font-size-sm: 12px;

@@ -7,9 +7,15 @@
 
 @use './theme.scss';
 @use './prism-theme.scss';
-@import url('https://cdn.jsdelivr.net/npm/firacode@6.2.0/distr/fira_code.css');
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700;800&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&display=swap');
+// Self-hosted fonts (#1252): bundled via @fontsource-variable so they load from
+// 'self' under the app's strict CSP (style-src/font-src 'self') instead of the
+// external Google Fonts / jsDelivr stylesheets the CSP blocked. Each package's
+// @font-face set is split by unicode-range, so the browser only downloads the
+// subset(s) it actually renders (latin for the English UI).
+@use '@fontsource-variable/fira-code';
+@use '@fontsource-variable/jetbrains-mono';
+@use '@fontsource-variable/dm-sans';
+@use '@fontsource-variable/dm-sans/wght-italic';
 
 // =============================================================================
 // Suppress transitions during theme changes (T3 pattern)

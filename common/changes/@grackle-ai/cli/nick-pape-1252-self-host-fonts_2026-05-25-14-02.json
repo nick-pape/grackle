@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Self-host web fonts (Fira Code, JetBrains Mono, DM Sans) via @fontsource-variable so they load under the strict CSP instead of being blocked as external @import stylesheets (#1252).",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
