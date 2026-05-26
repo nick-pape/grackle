@@ -1,9 +1,6 @@
 # Prebuild output (generated from upstream AHP repo)
 src/vendor/
 
-# Prebuild clone temp dir (created by scripts/prebuild.mjs)
-.tmp-ahp-clone/
-
 # Build output
 dist/
 

@@ -30,6 +30,7 @@
   "scripts": {
     "build": "node scripts/prebuild.mjs && heft build --clean",
     "test": "vitest run",
+    "pretest": "node scripts/prebuild.mjs",
     "clean": "heft clean",
     "prebuild": "node scripts/prebuild.mjs",
     "_phase:build": "node scripts/prebuild.mjs && heft run --only build -- --clean",

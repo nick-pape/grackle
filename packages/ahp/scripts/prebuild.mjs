@@ -138,25 +138,10 @@ async function main() {
   // Read the pinned commit from the git dependency's package.json for SOURCE.md
   const depPackageJson = join(NODE_MODULES_DIR, "agent-host-protocol", "package.json");
   const depPkg = JSON.parse(await readFile(depPackageJson, "utf-8"));
+  // Derive pinned commit from this package's devDependencies git: spec
+  const depSpec = depPkg.dependencies?.["agent-host-protocol"] || "";
+  const ahpCommit = depSpec.replace(/^git\+.*#/, "").replace(/\.git$/, "");
   const ahpRepoUrl = depPkg.repository?.url?.replace(/^git\+/, "").replace(/\.git$/, "") || "https://github.com/microsoft/agent-host-protocol";
-
-  // Determine commit from the git dependency installation metadata
-  // npm stores the resolved commit in the package.json's "resolved" or "commit" field
-  // for git: dependencies. Fall back to git rev-parse on the node_modules dir.
-  let ahpCommit = depPkg.commit || depPkg.resolved?.split("#")[1];
-  if (!ahpCommit) {
-    // Read from npm's metadata: node_modules/.package-lock.json or similar
-    // For git: deps, the commit hash is in the "resolved" field of the lock file
-    try {
-      const lockPath = join(NODE_MODULES_DIR, "..", ".package-lock.json");
-      const lock = JSON.parse(await readFile(lockPath, "utf-8"));
-      const ahpEntry = lock.packages?.[`node_modules/agent-host-protocol`];
-      ahpCommit = ahpEntry?.commit || ahpEntry?.resolved?.split("#")[1];
-    } catch {
-      // Will fall through to a placeholder below
-    }
-  }
-
   const sourceMd = `# Vendored: Agent Host Protocol types
 
 This directory is the \`types/\` tree from Microsoft's Agent Host
@@ -167,7 +152,7 @@ in \`scripts/prebuild.mjs\` if upstream changes are needed.
 
 - **Source:** ${ahpRepoUrl}
 - **Path:** \`types/\`
-- **Pinned commit:** \`${ahpCommit || "see package.json git dependency"}\`
+- **Pinned commit:** \`${ahpCommit}\`
   (\`Add ahp-otlp: telemetry channel for OpenTelemetry pass-through (#140)\`)
 - **License:** MIT (C) Microsoft Corporation
 
