@@ -65,6 +65,7 @@ message AgentEvent {
   string raw = 5; // JSON, optional
   string tool_call_id = 6; // stable runtime tool-call id (pairs tool_use↔tool_result); "" when N/A (AHP HR3)
   bool diagnostic = 7; // true = runtime lifecycle/diagnostic; tee to telemetry sinks (may be excluded from SessionState in a later HR step); AHP HR7
+  string turn_id = 8; // turn this event belongs to; "" for out-of-band/liveness events (startup, status, worktree setup, kill); set by host turn framing (AHP HR2)
 }
 
 message SessionInfo {

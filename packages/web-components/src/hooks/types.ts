@@ -78,6 +78,11 @@ export interface SessionEvent {
    * non-tool events and on events logged before HR3.
    */
   toolCallId?: string;
+  /**
+   * Turn this event belongs to (AHP HR2). Available for future turn-grouped
+   * rendering; absent on out-of-band/liveness events and pre-HR2 logs.
+   */
+  turnId?: string;
 }
 
 /** A workspace that groups tasks. */
@@ -713,7 +718,8 @@ export function isSessionEvent(v: unknown): v is SessionEvent {
     typeof v.timestamp === "string" &&
     typeof v.content === "string" &&
     (v.raw === undefined || typeof v.raw === "string") &&
-    (v.toolCallId === undefined || typeof v.toolCallId === "string")
+    (v.toolCallId === undefined || typeof v.toolCallId === "string") &&
+    (v.turnId === undefined || typeof v.turnId === "string")
   );
 }
 

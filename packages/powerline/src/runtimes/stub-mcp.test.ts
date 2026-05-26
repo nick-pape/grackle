@@ -72,28 +72,34 @@ describe("StubMcpRuntime", () => {
     expect(types).toEqual([
       "system",
       "runtime_session_id",
+      "turn_started",   // initial turn (AHP HR2)
       "text",
       "tool_use",
       "tool_result",
+      "turn_complete",  // initial turn (AHP HR2)
       "status",     // waiting_input
       "status",     // running
+      "turn_started",   // follow-up turn (AHP HR2)
       "text",       // user reply echo
+      "turn_complete",  // follow-up turn (AHP HR2)
       "status",     // waiting_input (idle after processing input)
     ]);
 
     // Verify content
     expect(events[0].content).toBe("Stub runtime initialized");
     expect(events[1].content).toBe("stub-mcp-lifecycle-1");
-    expect(events[2].content).toBe("Echo: test prompt");
-    expect(JSON.parse(events[3].content)).toEqual({
+    expect(events[2].type).toBe("turn_started");
+    expect(events[3].content).toBe("Echo: test prompt");
+    expect(JSON.parse(events[4].content)).toEqual({
       tool: "echo",
       args: { message: "test prompt" },
     });
-    expect(events[4].content).toBe('Tool output: "test prompt"');
-    expect(events[5].content).toBe("waiting_input");
-    expect(events[6].content).toBe("running");
-    expect(events[7].content).toBe("You said: user reply");
-    expect(events[8].content).toBe("waiting_input");
+    expect(events[5].content).toBe('Tool output: "test prompt"');
+    expect(events[6].type).toBe("turn_complete");
+    expect(events[7].content).toBe("waiting_input");
+    expect(events[8].content).toBe("running");
+    expect(events[10].content).toBe("You said: user reply");
+    expect(events[12].content).toBe("waiting_input");
 
     // Verify timestamps are ISO strings
     for (const event of events) {

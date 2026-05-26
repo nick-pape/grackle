@@ -175,6 +175,7 @@ export function processEventStream(
           raw: event.raw,
           toolCallId: event.toolCallId,
           diagnostic: event.diagnostic,
+          turnId: event.turnId,
         });
         await logWriter.writeEvent(logPath, sessionEvent);
         streamHub.publish(sessionEvent);

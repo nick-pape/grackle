@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 25 May 2026 21:24:16 GMT and should not be manually modified.
+This log was last generated on Tue, 26 May 2026 01:34:17 GMT and should not be manually modified.
+
+## 0.129.0
+Tue, 26 May 2026 01:34:17 GMT
+
+### Minor changes
+
+- AHP HR4+5: add a runtime catalog (RUNTIME_CATALOG) and ListRuntimes RPC surfacing RootState.agents with per-runtime credential needs (protectedResources via deriveCredentialNeeds); reshape SpawnRequest toward AHP createSession with first-class provider/model and a typed SessionConfig (plumbing task_id + use_worktrees); add the `grackle runtimes` CLI command.
 
 ## 0.128.0
 Mon, 25 May 2026 21:24:16 GMT

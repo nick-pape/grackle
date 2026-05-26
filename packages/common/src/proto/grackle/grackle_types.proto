@@ -36,6 +36,9 @@ enum EventType {
   EVENT_TYPE_USAGE = 11;
   reserved 12; // was EVENT_TYPE_ESCALATION (removed — orchestration is MCP-only, AHP HR7)
   EVENT_TYPE_WIDGET = 13;
+  EVENT_TYPE_TURN_STARTED = 14;  // AHP HR2: a turn opened (content = the user message)
+  EVENT_TYPE_TURN_COMPLETE = 15; // AHP HR2: a turn finished (session idle)
+  EVENT_TYPE_INPUT_NEEDED = 16;  // AHP HR2: turn blocked awaiting user input (plumb-only; no producer yet)
 }
 
 enum TaskStatus {
@@ -363,6 +366,7 @@ message SessionEvent {
   string raw = 5; // JSON, optional original payload
   string tool_call_id = 6; // stable runtime tool-call id (pairs tool_use↔tool_result); "" when N/A (AHP HR3)
   bool diagnostic = 7; // true = runtime lifecycle/diagnostic; tee to telemetry sinks (may be excluded from SessionState in a later HR step); AHP HR7
+  string turn_id = 8; // turn this event belongs to; "" for out-of-band/liveness events (startup, status, worktree setup, kill); set by host turn framing (AHP HR2)
 }
 
 message SessionEventList {

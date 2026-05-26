@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.129.0",
+      "tag": "@grackle-ai/cli_v0.129.0",
+      "date": "Tue, 26 May 2026 01:34:17 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "AHP HR4+5: add a runtime catalog (RUNTIME_CATALOG) and ListRuntimes RPC surfacing RootState.agents with per-runtime credential needs (protectedResources via deriveCredentialNeeds); reshape SpawnRequest toward AHP createSession with first-class provider/model and a typed SessionConfig (plumbing task_id + use_worktrees); add the `grackle runtimes` CLI command."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.128.0",
       "tag": "@grackle-ai/cli_v0.128.0",
       "date": "Mon, 25 May 2026 21:24:16 GMT",
