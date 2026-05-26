@@ -63,7 +63,10 @@ export type AgentEventType =
   | "status"
   | "system"
   | "runtime_session_id"
-  | "usage";
+  | "usage"
+  | "turn_started"
+  | "turn_complete"
+  | "input_needed";
 
 /** Discriminator for all session events, including user input and signals. */
 export type EventType = AgentEventType | "user_input" | "signal";

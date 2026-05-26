@@ -283,7 +283,7 @@ class AcpSession extends BaseAgentSession {
     // OTLP collector when the sink is enabled (AHP HR7). Deliberately omit the
     // raw CLI args — they are arbitrary user-controllable input that can carry
     // secrets — and keep only low-sensitivity structural info (command, pid, cwd).
-    this.eventQueue.push({
+    this.emit({
       type: "system",
       timestamp: ts(),
       content: `Spawned ${this.config.command} (pid: ${String(this.child.pid)}, cwd: ${spawnCwd})`,
@@ -293,7 +293,7 @@ class AcpSession extends BaseAgentSession {
     // Register exit/error handlers immediately to catch early termination
     this.child.on("error", (err: Error) => {
       if (!this.killed) {
-        this.eventQueue.push({
+        this.emit({
           type: "error",
           timestamp: ts(),
           content: `Failed to spawn ${this.config.command}: ${err.message}`,
@@ -303,7 +303,7 @@ class AcpSession extends BaseAgentSession {
 
     this.child.on("exit", (code: number | null, signal: string | null) => {
       if (!this.killed) {
-        this.eventQueue.push({
+        this.emit({
           type: "error",
           timestamp: ts(),
           content: `Agent process exited unexpectedly (code: ${String(code)}, signal: ${String(signal)})`,
@@ -334,13 +334,13 @@ class AcpSession extends BaseAgentSession {
                   const delta = data.cost_millicents - this.lastReportedCost;
                   this.lastReportedCost = data.cost_millicents;
                   if (delta <= 0) { continue; }
-                  this.eventQueue.push({ ...event, content: JSON.stringify({ ...data, cost_millicents: delta }) });
+                  this.emit({ ...event, content: JSON.stringify({ ...data, cost_millicents: delta }) });
                   this.messageCount++;
                   continue;
                 }
               } catch { /* fall through to normal push */ }
             }
-            this.eventQueue.push(event);
+            this.emit(event);
             this.messageCount++;
           }
         },
@@ -368,7 +368,7 @@ class AcpSession extends BaseAgentSession {
       throw new Error(`ACP initialize failed: ${message}`);
     }
 
-    this.eventQueue.push({
+    this.emit({
       type: "system",
       timestamp: ts(),
       content: "ACP connection initialized",
@@ -385,7 +385,7 @@ class AcpSession extends BaseAgentSession {
     if (envVarMethodId) {
       try {
         await this.connection.authenticate({ methodId: envVarMethodId });
-        this.eventQueue.push({
+        this.emit({
           type: "system",
           timestamp: ts(),
           content: `ACP authenticated via ${envVarMethodId}`,
@@ -401,7 +401,7 @@ class AcpSession extends BaseAgentSession {
     if (this.resumeSessionId) {
       this.acpSessionId = this.resumeSessionId;
       this.setRuntimeSessionId(this.resumeSessionId);
-      this.eventQueue.push({
+      this.emit({
         type: "system",
         timestamp: ts(),
         content: `ACP session resuming (id: ${this.runtimeSessionId})`,
@@ -426,7 +426,7 @@ class AcpSession extends BaseAgentSession {
     this.acpSessionId = sessionResult.sessionId as string;
     this.setRuntimeSessionId(this.acpSessionId || "");
 
-    this.eventQueue.push({
+    this.emit({
       type: "system",
       timestamp: ts(),
       content: `ACP session created (id: ${this.runtimeSessionId})`,

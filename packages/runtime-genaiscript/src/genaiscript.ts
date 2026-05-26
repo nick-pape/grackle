@@ -5,6 +5,7 @@ import { join, dirname } from "node:path";
 import { tmpdir, homedir } from "node:os";
 import { createInterface } from "node:readline";
 import { createRequire } from "node:module";
+import { randomUUID } from "node:crypto";
 import type { AgentRuntime, AgentSession, AgentEvent, SpawnOptions, ResumeOptions } from "@grackle-ai/runtime-sdk";
 import { logger, ensureRuntimeInstalled } from "@grackle-ai/runtime-sdk";
 import { SESSION_STATUS } from "@grackle-ai/common";
@@ -67,6 +68,7 @@ class GenAIScriptSession implements AgentSession {
   public status: SessionStatus = SESSION_STATUS.RUNNING;
 
   private scriptContent: string;
+  private prompt: string;
   private mcpBroker: { url: string; token: string } | undefined;
   private child: ChildProcess | null = null;
   private killed: boolean = false;
@@ -77,6 +79,7 @@ class GenAIScriptSession implements AgentSession {
     this.id = opts.sessionId;
     this.runtimeSessionId = `genaiscript-${opts.sessionId}`;
     this.scriptContent = opts.scriptContent || "";
+    this.prompt = opts.prompt;
     this.mcpBroker = opts.mcpBroker;
   }
 
@@ -113,6 +116,10 @@ class GenAIScriptSession implements AgentSession {
       logger.info({ sessionId: this.id, scriptPath, genaiscriptBin }, "genaiscript: spawning");
 
       yield { type: "system", timestamp: ts(), content: "Starting GenAIScript...", diagnostic: true };
+
+      // GenAIScript is one-shot: wrap the whole run in a single turn (AHP HR2).
+      const turnId = randomUUID();
+      yield { type: "turn_started", timestamp: ts(), content: this.prompt, turnId };
 
       this.child = spawnProcess(process.execPath, [genaiscriptBin, ...args], {
         stdio: ["ignore", "pipe", "pipe"],
@@ -173,7 +180,7 @@ class GenAIScriptSession implements AgentSession {
         const outputTokens = result.usage.completion;
         const costMillicents = Math.round((result.usage.cost ?? 0) * 100_000);
         if (inputTokens > 0 || outputTokens > 0 || costMillicents > 0) {
-          yield { type: "usage", timestamp: ts(), content: JSON.stringify({
+          yield { type: "usage", timestamp: ts(), turnId, content: JSON.stringify({
             input_tokens: inputTokens, output_tokens: outputTokens, cost_millicents: costMillicents,
           }) };
         }
@@ -183,7 +190,7 @@ class GenAIScriptSession implements AgentSession {
 
       // Yield the script's output text — this is the LLM response or script result
       if (result?.text) {
-        yield { type: "text", timestamp: ts(), content: result.text };
+        yield { type: "text", timestamp: ts(), content: result.text, turnId };
       }
 
       // Yield any annotations (warnings/errors from the script)
@@ -195,12 +202,14 @@ class GenAIScriptSession implements AgentSession {
             type: severity === "error" ? "error" : "text",
             timestamp: ts(),
             content: `[${severity}] ${message}`,
+            turnId,
           };
         }
       }
 
       // Final status — GenAIScript is a one-shot runtime, so it goes IDLE when done
       if (exitCode === 0 || result?.status === "success") {
+        yield { type: "turn_complete", timestamp: ts(), content: "", turnId };
         this.status = SESSION_STATUS.IDLE;
         yield { type: "status", timestamp: ts(), content: "waiting_input" };
       } else {

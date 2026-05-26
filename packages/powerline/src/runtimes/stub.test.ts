@@ -85,28 +85,46 @@ describe("StubRuntime", () => {
     expect(types).toEqual([
       "system",
       "runtime_session_id",
+      "turn_started",   // initial turn (AHP HR2)
       "text",
       "tool_use",
       "tool_result",
+      "turn_complete",  // initial turn (AHP HR2)
       "status",     // waiting_input
       "status",     // running
+      "turn_started",   // follow-up turn (AHP HR2)
       "text",       // user reply echo
+      "turn_complete",  // follow-up turn (AHP HR2)
       "status",     // waiting_input (stub goes idle, not completed)
     ]);
 
     // Verify content
     expect(events[0].content).toBe("Stub runtime initialized");
     expect(events[1].content).toBe("stub-lifecycle-1");
-    expect(events[2].content).toBe("Echo: test prompt");
-    expect(JSON.parse(events[3].content)).toEqual({
+    expect(events[2].type).toBe("turn_started");
+    expect(events[2].content).toBe("test prompt");
+    expect(events[3].content).toBe("Echo: test prompt");
+    expect(JSON.parse(events[4].content)).toEqual({
       tool: "echo",
       args: { message: "test prompt" },
     });
-    expect(events[4].content).toBe('Tool output: "test prompt"');
-    expect(events[5].content).toBe("waiting_input");
-    expect(events[6].content).toBe("running");
-    expect(events[7].content).toBe("You said: user reply");
-    expect(events[8].content).toBe("waiting_input");
+    expect(events[5].content).toBe('Tool output: "test prompt"');
+    expect(events[6].type).toBe("turn_complete");
+    expect(events[7].content).toBe("waiting_input");
+    expect(events[8].content).toBe("running");
+    expect(events[9].type).toBe("turn_started");
+    expect(events[9].content).toBe("user reply");
+    expect(events[10].content).toBe("You said: user reply");
+    expect(events[11].type).toBe("turn_complete");
+    expect(events[12].content).toBe("waiting_input");
+
+    // Turn framing (AHP HR2): content shares its turn's id; the two turns differ.
+    expect(events[2].turnId).toBeTruthy();
+    expect(events[3].turnId).toBe(events[2].turnId);
+    expect(events[6].turnId).toBe(events[2].turnId);
+    expect(events[9].turnId).toBeTruthy();
+    expect(events[9].turnId).not.toBe(events[2].turnId);
+    expect(events[10].turnId).toBe(events[9].turnId);
 
     // Verify timestamps are ISO strings
     for (const event of events) {

@@ -81,6 +81,7 @@ export async function recoverSuspendedSessions(
             content: event.content,
             raw: event.raw,
             toolCallId: event.toolCallId,
+            turnId: event.turnId,
           });
           await logWriter.writeEvent(logPath, sessionEvent);
           drainedCount++;

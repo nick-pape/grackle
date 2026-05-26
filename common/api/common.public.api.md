@@ -56,13 +56,14 @@ type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
     raw: string;
     toolCallId: string;
     diagnostic: boolean;
+    turnId: string;
 };
 
 // @public
 const AgentEventSchema: GenMessage<AgentEvent>;
 
 // @public
-export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "runtime_session_id" | "usage";
+export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "runtime_session_id" | "usage" | "turn_started" | "turn_complete" | "input_needed";
 
 // @public
 export const ALL_MCP_TOOL_NAMES: ReadonlySet<string>;
@@ -698,12 +699,15 @@ export type EventType = AgentEventType | "user_input" | "signal";
 // @public
 enum EventType_2 {
     ERROR = 4,
+    INPUT_NEEDED = 16,
     SIGNAL = 10,
     STATUS = 5,
     SYSTEM = 6,
     TEXT = 1,
     TOOL_RESULT = 3,
     TOOL_USE = 2,
+    TURN_COMPLETE = 15,
+    TURN_STARTED = 14,
     UNSPECIFIED = 0,
     USAGE = 11,
     USER_INPUT = 9,
@@ -2566,6 +2570,7 @@ type SessionEvent = Message<"grackle.SessionEvent"> & {
     raw: string;
     toolCallId: string;
     diagnostic: boolean;
+    turnId: string;
 };
 
 // @public

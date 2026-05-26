@@ -20,6 +20,13 @@ export interface AgentEvent {
    * substantive events (agent output, the injected system context).
    */
   diagnostic?: boolean;
+  /**
+   * Identifier of the turn this event belongs to (AHP HR2). Set by base-session
+   * turn framing on `turn_started`/`turn_complete` and stamped on every content
+   * event within a turn; left unset for out-of-band/liveness events (startup,
+   * status, worktree setup, kill). Process-scoped — a resume starts a new turn.
+   */
+  turnId?: string;
 }
 
 /** Parameters for spawning a new agent session. */
