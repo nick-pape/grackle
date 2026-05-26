@@ -48,6 +48,12 @@ class TestSession extends BaseAgentSession {
   /** Track executeFollowUp calls for assertions. */
   public followUpCalls: string[] = [];
 
+  /** When true, emit a `text` content event per turn (to exercise turn_id stamping). */
+  public emitContentPerTurn: boolean = false;
+
+  /** When true, runInitialQuery throws — simulates a mid-turn failure after beginTurn. */
+  public throwOnInitialQuery: boolean = false;
+
   /** If set, executeFollowUp will throw on calls matching this predicate. */
   public throwOnInput?: (text: string) => boolean;
 
@@ -74,6 +80,12 @@ class TestSession extends BaseAgentSession {
   // setupForResume uses the base class default implementation
 
   protected async runInitialQuery(_prompt: string): Promise<number> {
+    if (this.throwOnInitialQuery) {
+      throw new Error("simulated initial-query failure");
+    }
+    if (this.emitContentPerTurn) {
+      this.emit({ type: "text", timestamp: new Date().toISOString(), content: "initial-response" });
+    }
     return 1;
   }
 
@@ -86,6 +98,9 @@ class TestSession extends BaseAgentSession {
       throw new Error(`Simulated error for: ${text}`);
     }
     this.followUpCalls.push(text);
+    if (this.emitContentPerTurn) {
+      this.emit({ type: "text", timestamp: new Date().toISOString(), content: `response-to-${text}` });
+    }
     const gate = this.gates.shift();
     if (gate) {
       await gate.promise;
@@ -149,6 +164,153 @@ function spawnSession(opts?: Partial<CreateSessionOptions>): {
 
   return { session, nextEvent };
 }
+
+// ─── Turn framing (AHP HR2) ──────────────────────────────────────
+
+describe("BaseAgentSession turn framing (AHP HR2)", () => {
+  it("initial turn: turn_started carries the raw prompt and brackets content; turn_complete on idle", async () => {
+    const { session, nextEvent } = spawnSession({ prompt: "do the thing" });
+    session.emitContentPerTurn = true;
+
+    const events = await drainUntilStatus(nextEvent, "waiting_input");
+    const started = events.find((e) => e.type === "turn_started");
+    const text = events.find((e) => e.type === "text");
+    const complete = events.find((e) => e.type === "turn_complete");
+
+    expect(started).toBeDefined();
+    expect(started!.content).toBe("do the thing");
+    expect(started!.turnId).toBeTruthy();
+    expect(text!.turnId).toBe(started!.turnId);
+    expect(complete!.turnId).toBe(started!.turnId);
+    // Ordering: turn_started → content → turn_complete.
+    expect(events.indexOf(started!)).toBeLessThan(events.indexOf(text!));
+    expect(events.indexOf(text!)).toBeLessThan(events.indexOf(complete!));
+    // Liveness / out-of-band events are turn-less.
+    const startup = events.find((e) => e.type === "system");
+    const waiting = events.find((e) => e.type === "status" && e.content === "waiting_input");
+    expect(startup!.turnId).toBeFalsy();
+    expect(waiting!.turnId).toBeFalsy();
+
+    session.kill();
+  });
+
+  it("follow-up turn: turn_started carries the input text with a distinct turn id", async () => {
+    const { session, nextEvent } = spawnSession();
+    session.emitContentPerTurn = true;
+    const initial = await drainUntilStatus(nextEvent, "waiting_input");
+    const initialTurnId = initial.find((e) => e.type === "turn_started")!.turnId;
+
+    session.sendInput("follow up");
+    await drainUntilStatus(nextEvent, "running");
+    const after = await drainUntilStatus(nextEvent, "waiting_input");
+
+    const started = after.find((e) => e.type === "turn_started")!;
+    const text = after.find((e) => e.type === "text")!;
+    const complete = after.find((e) => e.type === "turn_complete")!;
+    expect(started.content).toBe("follow up");
+    expect(started.turnId).toBeTruthy();
+    expect(started.turnId).not.toBe(initialTurnId);
+    expect(text.turnId).toBe(started.turnId);
+    expect(complete.turnId).toBe(started.turnId);
+
+    session.kill();
+  });
+
+  it("kill mid-turn emits no turn_complete and a turn-less final status", async () => {
+    const { session, nextEvent } = spawnSession();
+    session.emitContentPerTurn = true;
+    const gate = session.addGate();
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    session.sendInput("blocked");
+    await drainUntilStatus(nextEvent, "running");
+    // executeFollowUp has emitted turn_started + text and is now awaiting the gate.
+    session.kill("killed");
+
+    const rest: AgentEvent[] = [];
+    let e: AgentEvent | undefined;
+    while ((e = await nextEvent()) !== undefined) {
+      rest.push(e);
+    }
+    expect(rest.some((x) => x.type === "turn_complete")).toBe(false);
+    const killStatus = rest.find((x) => x.type === "status" && x.content === "killed");
+    expect(killStatus).toBeDefined();
+    expect(killStatus!.turnId).toBeFalsy();
+
+    gate.resolve();
+  });
+
+  it("drainBufferedEvents preserves turn_id on un-consumed events", async () => {
+    const { session, nextEvent } = spawnSession();
+    await drainUntilStatus(nextEvent, "waiting_input");
+    session.emitContentPerTurn = true;
+
+    const gate = session.addGate();
+    session.sendInput("buffered");
+
+    // Draining to "running" is deterministic: processInputLoop pushes running,
+    // then beginTurn (turn_started), then the text event synchronously in the
+    // same microtask — all before the generator can yield "running". So by the
+    // time drainUntilStatus returns, turn_started and text are buffered in the
+    // queue, waiting behind the suspended generator.
+    await drainUntilStatus(nextEvent, "running");
+
+    const drained = session.drainBufferedEvents();
+
+    const started = drained.find((x) => x.type === "turn_started" && x.content === "buffered");
+    expect(started?.turnId).toBeTruthy();
+    expect(drained.find((x) => x.type === "text")?.turnId).toBe(started?.turnId);
+    // turn_complete is not yet emitted (executeFollowUp is gated).
+    expect(drained.some((x) => x.type === "turn_complete")).toBe(false);
+
+    gate.resolve();
+    session.kill();
+  });
+
+  it("resumed sessions open no initial turn; the first input is turn 1", async () => {
+    const { session, nextEvent } = spawnSession({ resumeSessionId: "prev-session" });
+    const events = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(events.some((e) => e.type === "turn_started")).toBe(false);
+
+    session.emitContentPerTurn = true;
+    session.sendInput("first after resume");
+    await drainUntilStatus(nextEvent, "running");
+    const after = await drainUntilStatus(nextEvent, "waiting_input");
+    const started = after.find((e) => e.type === "turn_started")!;
+    expect(started.content).toBe("first after resume");
+    expect(started.turnId).toBeTruthy();
+
+    session.kill();
+  });
+
+  it("terminal failure mid-turn emits turn-less error and failed status (AHP HR2)", async () => {
+    // throwOnInitialQuery causes the runSession() internal catch to fire while a
+    // turn is open (beginTurn fires before runInitialQuery throws).
+    const { session, nextEvent } = spawnSession({ prompt: "fail-early" });
+    session.throwOnInitialQuery = true;
+
+    const events: AgentEvent[] = [];
+    let e: AgentEvent | undefined;
+    while ((e = await nextEvent()) !== undefined) {
+      events.push(e);
+    }
+
+    const turnStarted = events.find((ev) => ev.type === "turn_started");
+    const error = events.find((ev) => ev.type === "error");
+    const failed = events.find((ev) => ev.type === "status" && ev.content === "failed");
+
+    // The turn WAS opened (beginTurn fires before the failing query).
+    expect(turnStarted).toBeDefined();
+    expect(turnStarted!.turnId).toBeTruthy();
+
+    // Terminal events are turn-less — currentTurnId is cleared in the catch,
+    // mirroring kill() (AHP HR2).
+    expect(error).toBeDefined();
+    expect(error!.turnId).toBeFalsy();
+    expect(failed).toBeDefined();
+    expect(failed!.turnId).toBeFalsy();
+  });
+});
 
 // ─── Existing tests: input serialization ─────────────────────────
 
@@ -260,7 +422,10 @@ describe("BaseAgentSession input serialization", () => {
 
     expect(session.status).toBe("stopped");
 
-    // kill() emits a final "killed" status event before closing the stream
+    // The in-flight turn's turn_started is buffered before kill (AHP HR2); a
+    // killed turn emits no turn_complete. Then the final "killed" status.
+    const turnStarted = await nextEvent();
+    expect(turnStarted!.type).toBe("turn_started");
     const killedEvent = await nextEvent();
     expect(killedEvent).toBeDefined();
     expect(killedEvent!.type).toBe("status");
@@ -397,10 +562,11 @@ describe("sendInput before SDK ready", () => {
     // Now resolve setup so the session can proceed
     session.resolveSetup();
 
-    // The pending nextEvent resolves with the waiting_input status
+    // The pending nextEvent resolves with the initial turn_started (AHP HR2);
+    // the session then goes idle.
     const waitingEvent = await pendingFirstEvent;
-    expect(waitingEvent?.type).toBe("status");
-    expect(waitingEvent?.content).toBe("waiting_input");
+    expect(waitingEvent?.type).toBe("turn_started");
+    await drainUntilStatus(nextEvent, "waiting_input");
 
     // The early message should be queued and processed as the first follow-up
     await drainUntilStatus(nextEvent, "running");
@@ -435,10 +601,11 @@ describe("sendInput before SDK ready", () => {
     // Resolve setup
     session.resolveSetup();
 
-    // The pending nextEvent resolves with waiting_input
+    // The pending nextEvent resolves with the initial turn_started (AHP HR2);
+    // the session then goes idle.
     const waitingEvent = await pendingFirstEvent;
-    expect(waitingEvent?.type).toBe("status");
-    expect(waitingEvent?.content).toBe("waiting_input");
+    expect(waitingEvent?.type).toBe("turn_started");
+    await drainUntilStatus(nextEvent, "waiting_input");
 
     // All 3 should be processed in FIFO order
     for (const _expected of ["alpha", "bravo", "charlie"]) {
@@ -574,6 +741,31 @@ describe("BaseAgentSession.setupForResume default", () => {
     const customEvent = events.find((e) => e.type === "system" && e.content === "custom-resume-action");
     expect(baseEvent).toBeDefined();
     expect(customEvent).toBeDefined();
+
+    session.kill();
+  });
+});
+
+describe("BaseAgentSession diagnostic flag (AHP HR7)", () => {
+  it("flags the startup 'Starting runtime' system event as diagnostic", async () => {
+    const { session, nextEvent } = spawnSession();
+
+    const startEvent = await nextEvent();
+    expect(startEvent?.type).toBe("system");
+    expect(startEvent?.content).toContain("Starting Test runtime");
+    expect(startEvent?.diagnostic).toBe(true);
+
+    session.kill();
+  });
+
+  it("flags the default setupForResume 'Session resumed' event as diagnostic", async () => {
+    const { session, nextEvent } = spawnSession({ resumeSessionId: "prev-1" });
+
+    const events = await drainUntilStatus(nextEvent, "waiting_input");
+    const resumeEvent = events.find(
+      (e) => e.type === "system" && e.content.includes("Session resumed"),
+    );
+    expect(resumeEvent?.diagnostic).toBe(true);
 
     session.kill();
   });

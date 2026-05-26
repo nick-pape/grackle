@@ -1,68 +1,36 @@
 /**
- * Token push orchestration — distributes stored tokens and credential
- * provider bundles to connected PowerLine environments.
+ * On-demand credential supply (AHP HR6).
  *
- * This is service-level logic that depends on adapter-manager (network) and
- * env-registry (lookup). The pure persistence layer lives in
- * `@grackle-ai/database` (tokenStore), and credential bundle building lives in
- * {@link ./credential-bundle.ts}.
+ * Builds the combined credential bundle for a runtime (stored user tokens +
+ * provider credentials read fresh from env/disk) and authenticates it to the
+ * connected PowerLine just-in-time, immediately before a spawn. This replaces
+ * the proactive `PushTokens` injection (eager push before every spawn / on
+ * token change / on reconnect): credentials are now supplied on demand, scoped
+ * to the runtime being spawned.
+ *
+ * Pure persistence lives in `@grackle-ai/database` (tokenStore); credential
+ * bundle building lives in {@link ./credential-bundle.ts}.
  */
+import { create } from "@bufbuild/protobuf";
+import { powerline } from "@grackle-ai/common";
 import * as adapterManager from "./adapter-manager.js";
 import { envRegistry, tokenStore } from "@grackle-ai/database";
 import { buildProviderTokenBundle } from "./credential-bundle.js";
 import { logger } from "./logger.js";
 
-/** Options for {@link pushToEnv}. */
-export interface PushToEnvOptions {
-  /** When true, filter out file-type tokens (only push env vars). */
+/** Options for {@link authenticateForRuntime}. */
+export interface AuthenticateOptions {
+  /** When true, filter out file-type tokens (only supply env vars) — used for local envs. */
   excludeFileTokens?: boolean;
 }
 
-/** Push the current token bundle to a single connected environment. */
-export async function pushToEnv(environmentId: string, options?: PushToEnvOptions): Promise<void> {
-  const conn = adapterManager.getConnection(environmentId);
-  if (!conn) {
-    return;
-  }
-
-  const bundle = tokenStore.getBundle();
-
-  if (options?.excludeFileTokens) {
-    bundle.tokens = bundle.tokens.filter((t) => t.type !== "file");
-  }
-
-  if (bundle.tokens.length === 0) {
-    return;
-  }
-
-  await conn.client.pushTokens(bundle);
-}
-
-/** Push the current token bundle to all connected environments in parallel. */
-export async function pushToAll(): Promise<void> {
-  const connections = adapterManager.listConnections();
-  const promises: Promise<void>[] = [];
-
-  for (const [environmentId] of connections) {
-    const env = envRegistry.getEnvironment(environmentId);
-    const opts: PushToEnvOptions | undefined =
-      env?.adapterType === "local" ? { excludeFileTokens: true } : undefined;
-    promises.push(pushToEnv(environmentId, opts).catch((err) => {
-      logger.error({ environmentId, err }, "Failed to push tokens");
-    }));
-  }
-
-  await Promise.all(promises);
-}
-
 /**
- * Push enabled provider credentials to a single connected environment.
- * When `runtime` is specified, only providers relevant to that runtime are included.
- * When the environment has a `githubAccountId`, that account's token is used
- * instead of env vars, enabling per-environment GitHub identity selection.
- * Reads fresh values from `process.env` / disk based on the credential provider config.
+ * Supply credentials for a runtime to its environment on demand, just before a
+ * spawn. Combines stored user tokens with the runtime-scoped provider bundle
+ * (read fresh from env/disk) and delivers them via the PowerLine `authenticate`
+ * RPC. Best-effort: failures are logged and do not block the spawn.
  */
-export async function pushProviderCredentialsToEnv(environmentId: string, runtime?: string, options?: PushToEnvOptions): Promise<void> {
+export async function authenticateForRuntime(environmentId: string, runtime: string, options?: AuthenticateOptions): Promise<void> {
   const conn = adapterManager.getConnection(environmentId);
   if (!conn) {
     return;
@@ -70,34 +38,21 @@ export async function pushProviderCredentialsToEnv(environmentId: string, runtim
 
   const env = envRegistry.getEnvironment(environmentId);
   const githubAccountId = env?.githubAccountId || undefined;
-  const bundle = await buildProviderTokenBundle(runtime, undefined, githubAccountId);
 
+  const stored = tokenStore.getBundle();
+  const provider = await buildProviderTokenBundle(runtime, undefined, githubAccountId);
+  // Provider credentials come last so they win over any same-target stored token.
+  let tokens = [...stored.tokens, ...provider.tokens];
   if (options?.excludeFileTokens) {
-    bundle.tokens = bundle.tokens.filter((t) => t.type !== "file");
+    tokens = tokens.filter((t) => t.type !== "file");
   }
-
-  if (bundle.tokens.length === 0) {
+  if (tokens.length === 0) {
     return;
   }
 
-  await conn.client.pushTokens(bundle);
-}
-
-/**
- * Best-effort push of stored tokens and provider credentials before a task spawn.
- * When `runtime` is specified, only providers relevant to that runtime are pushed.
- * Both pushes run concurrently; failures are logged as warnings and do not block.
- */
-export async function refreshTokensForTask(environmentId: string, runtime?: string, options?: PushToEnvOptions): Promise<void> {
-  const results = await Promise.allSettled([
-    pushToEnv(environmentId, options),
-    pushProviderCredentialsToEnv(environmentId, runtime, options),
-  ]);
-
-  if (results[0].status === "rejected") {
-    logger.warn({ environmentId, err: results[0].reason }, "Failed to push tokens before task start");
-  }
-  if (results[1].status === "rejected") {
-    logger.warn({ environmentId, err: results[1].reason }, "Failed to push provider credentials before task start");
+  try {
+    await conn.client.authenticate(create(powerline.AuthenticateRequestSchema, { provider: runtime, tokens }));
+  } catch (err) {
+    logger.warn({ environmentId, runtime, err }, "Failed to authenticate credentials before spawn");
   }
 }

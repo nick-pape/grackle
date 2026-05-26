@@ -51,6 +51,8 @@ export async function writeEvent(logPath: string, event: grackle.SessionEvent): 
     content: event.content,
     raw: event.raw || undefined,
     tool_call_id: event.toolCallId || undefined,
+    diagnostic: event.diagnostic || undefined,
+    turn_id: event.turnId || undefined,
   });
 
   const ok = ws.write(line + "\n");
@@ -86,6 +88,10 @@ export interface LogEntry {
   raw?: string;
   /** Stable tool-call id pairing tool_use↔tool_result (AHP HR3). Absent on non-tool events. */
   tool_call_id?: string;
+  /** True for runtime lifecycle/diagnostic events (AHP HR7). Absent on substantive events. */
+  diagnostic?: boolean;
+  /** Turn this event belongs to (AHP HR2). Absent for out-of-band/liveness events. */
+  turn_id?: string;
 }
 
 /** Number of bytes to read from the tail of a log file when searching for the last text entry. */

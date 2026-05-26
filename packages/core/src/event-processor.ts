@@ -10,6 +10,7 @@ import { writeTranscript } from "./transcript.js";
 import { emit } from "./event-bus.js";
 import { logger } from "./logger.js";
 import { runWithTrace } from "./trace-context.js";
+import { emitDiagnostic } from "./telemetry.js";
 import { publishChildCompletion } from "./pipe-delivery.js";
 import { cleanupLifecycleStream } from "./lifecycle-streams.js";
 import { sendInputToSession } from "./signals/signal-delivery.js";
@@ -173,10 +174,19 @@ export function processEventStream(
           content: event.content,
           raw: event.raw,
           toolCallId: event.toolCallId,
+          diagnostic: event.diagnostic,
+          turnId: event.turnId,
         });
         await logWriter.writeEvent(logPath, sessionEvent);
         streamHub.publish(sessionEvent);
         recordSessionAction(sessionEvent);
+
+        // HR7: tee runtime diagnostics to the additive OTLP logs sink (no-op
+        // unless OTEL_EXPORTER_OTLP_ENDPOINT is set). Existing sinks above are
+        // unchanged — diagnostics still flow to JSONL/streamHub/session_actions.
+        if (sessionEvent.diagnostic) {
+          emitDiagnostic(sessionEvent);
+        }
 
         // Intercept usage events and accumulate token counts on the session record
         if (event.type === "usage") {

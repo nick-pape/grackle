@@ -57,7 +57,6 @@ function createMockDeps(overrides?: Partial<LocalEnvironmentDeps>): LocalEnviron
     })),
     parseAdapterConfig: vi.fn(() => ({ port: 7433, host: "127.0.0.1" })),
     setConnection: vi.fn(),
-    pushToEnv: vi.fn(async () => {}),
     reconnectOrProvision: vi.fn(async function* () {}),
     emit: vi.fn(),
     resetReconnectState: vi.fn(),
@@ -304,15 +303,6 @@ describe("bootstrapLocalEnvironment", () => {
         "Local env: %s",
         "Done",
       );
-    });
-
-    it("pushes to env excluding file tokens", async () => {
-      const deps = createMockDeps();
-      await bootstrapLocalEnvironment(
-        { powerlinePort: 7433, bindHost: "127.0.0.1", skipLocalPowerline: false },
-        deps,
-      );
-      expect(deps.pushToEnv).toHaveBeenCalledWith("local", { excludeFileTokens: true });
     });
 
     it("sets status to connecting before provision", async () => {

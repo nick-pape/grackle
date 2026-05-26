@@ -167,7 +167,7 @@ export class CopilotSession extends BaseAgentSession {
     this.copilotClient = new copilotSdk.CopilotClient(clientOptions);
     await this.copilotClient.start();
 
-    this.eventQueue.push({ type: "system", timestamp: ts(), content: "Copilot CLI server connected" });
+    this.emit({ type: "system", timestamp: ts(), content: "Copilot CLI server connected", diagnostic: true });
 
     // ── Build session config ──
     // onPermissionRequest is REQUIRED by the SDK — use approveAll for headless operation
@@ -216,10 +216,11 @@ export class CopilotSession extends BaseAgentSession {
 
     this.setRuntimeSessionId((this.copilotSession.sessionId as string | undefined) || this.id);
 
-    this.eventQueue.push({
+    this.emit({
       type: "system",
       timestamp: ts(),
       content: `Copilot session created (model: ${this.model}, session: ${this.runtimeSessionId})`,
+      diagnostic: true,
     });
 
     // ── Subscribe to events (once; persist for the session lifetime) ──
@@ -232,7 +233,7 @@ export class CopilotSession extends BaseAgentSession {
       const deltaContent = (data?.deltaContent ?? "") as string;
       if (deltaContent) {
         this.currentMessageCount++;
-        this.eventQueue.push({
+        this.emit({
           type: "text",
           timestamp: ts(),
           content: deltaContent,
@@ -259,7 +260,7 @@ export class CopilotSession extends BaseAgentSession {
       const toolName = (data?.toolName ?? "unknown") as string;
       const toolArgs = data?.arguments ?? {};
       this.currentMessageCount++;
-      this.eventQueue.push({
+      this.emit({
         type: "tool_use",
         timestamp: ts(),
         content: JSON.stringify({ tool: toolName, args: toolArgs }),
@@ -288,7 +289,7 @@ export class CopilotSession extends BaseAgentSession {
         output = JSON.stringify(result);
       }
       this.currentMessageCount++;
-      this.eventQueue.push({
+      this.emit({
         type: "tool_result",
         timestamp: ts(),
         content: output,
@@ -319,7 +320,7 @@ export class CopilotSession extends BaseAgentSession {
     this.copilotSession.on("session.error", (event: Record<string, unknown>) => {
       const data = event.data as Record<string, unknown> | undefined;
       const message = (data?.message ?? String(event)) as string;
-      this.eventQueue.push({ type: "error", timestamp: ts(), content: message, raw: event });
+      this.emit({ type: "error", timestamp: ts(), content: message, raw: event });
       this.idleReject?.(new Error(message));
     });
   }

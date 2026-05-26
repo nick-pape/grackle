@@ -23,7 +23,10 @@ export { reanimateAgent } from "./reanimate-agent.js";
 
 // ─── Session / Environment ───────────────────────────────────
 export { attemptReconnects, resetReconnectState } from "./auto-reconnect.js";
-export { pushToEnv } from "./token-push.js";
+export { authenticateForRuntime } from "./token-push.js";
+export type { AuthenticateOptions } from "./token-push.js";
+export { buildProviderTokenBundle, deriveCredentialNeeds } from "./credential-bundle.js";
+export type { ProtectedResourceDescriptor, CredentialKind } from "./credential-bundle.js";
 export { computeTaskStatus } from "./compute-task-status.js";
 export type { TaskStatusResult } from "./compute-task-status.js";
 export { findFirstConnectedEnvironment } from "./find-connected-environment.js";
@@ -57,6 +60,9 @@ export { logger } from "./logger.js";
 
 // ─── Trace Context ───────────────────────────────────────────
 export { getTraceId, runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace } from "./trace-context.js";
+
+// ─── Telemetry (AHP HR7 — additive OTLP logs sink) ───────────
+export { initOtlpLogs, emitDiagnostic, shutdownOtlpLogs } from "./telemetry.js";
 
 // ─── Utilities ───────────────────────────────────────────────
 export { exec } from "./utils/exec.js";

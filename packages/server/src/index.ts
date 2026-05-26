@@ -5,11 +5,12 @@ import { randomUUID } from "node:crypto";
 import {
   createServiceCollector,
   startHeartbeat, getAdapter, setConnection, removeConnection,
-  emit, subscribe, pushToEnv, attemptReconnects, resetReconnectState,
+  emit, subscribe, attemptReconnects, resetReconnectState,
   parseAdapterConfig,
   ReconciliationManager,
   logger, exec, detectLanIp,
   runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace,
+  initOtlpLogs,
   importAccountsFromGhCli,
   publishWidgetEvent,
   setSpawnContextProviders,
@@ -52,6 +53,10 @@ async function main(): Promise<void> {
   const config = resolveServerConfig();
   logger.info({ config }, "Server configuration resolved");
 
+  // AHP HR7: initialize the additive OTLP logs sink for runtime diagnostics.
+  // No-op unless OTEL_EXPORTER_OTLP_ENDPOINT is set; never breaks startup.
+  initOtlpLogs();
+
   // Open the database, verify integrity, run schema migrations, then seed defaults
   initializeDatabase();
 
@@ -73,7 +78,7 @@ async function main(): Promise<void> {
     },
     {
       envRegistry, settingsStore, personaStore, workspaceStore, workspaceEnvironmentLinkStore, taskStore,
-      getAdapter, parseAdapterConfig, setConnection, pushToEnv,
+      getAdapter, parseAdapterConfig, setConnection,
       reconnectOrProvision, emit, resetReconnectState, logger,
       createPowerLineManager: (opts) => new LocalPowerLineManager(opts),
     },
@@ -344,7 +349,20 @@ async function main(): Promise<void> {
         return t as unknown as ToolDefinition;
       })]
     : [];
-  const mcpServer = createMcpServer({ bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl: authServerUrl, toolGroups: pluginToolGroups, publishWidgetEvent, ...(config.mcpOrigin !== undefined ? { mcpOrigin: config.mcpOrigin } : {}) });
+  const mcpServer = createMcpServer({
+    bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl: authServerUrl, toolGroups: pluginToolGroups, publishWidgetEvent,
+    // Push tools/list_changed to a workspace's MCP sessions when its promoted
+    // component set changes (#1297), via the domain-event bus.
+    onComponentChangeSubscribe: (notify) => subscribe((e) => {
+      if (e.type === "component.changed") {
+        const wsId = e.payload.workspaceId;
+        if (typeof wsId === "string" && wsId) {
+          notify(wsId);
+        }
+      }
+    }),
+    ...(config.mcpOrigin !== undefined ? { mcpOrigin: config.mcpOrigin } : {}),
+  });
 
   mcpServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {

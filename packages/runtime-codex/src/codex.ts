@@ -168,7 +168,7 @@ class CodexSession extends BaseAgentSession {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     this.codexInstance = new Codex(codexOptions);
 
-    this.eventQueue.push({ type: "system", timestamp: ts(), content: "Codex instance created" });
+    this.emit({ type: "system", timestamp: ts(), content: "Codex instance created", diagnostic: true });
 
     // ── Thread options ──
     this.threadOptions = {
@@ -196,10 +196,11 @@ class CodexSession extends BaseAgentSession {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     this.thread = this.codexInstance.startThread(this.threadOptions);
 
-    this.eventQueue.push({
+    this.emit({
       type: "system",
       timestamp: new Date().toISOString(),
       content: `Codex thread started (model: ${this.model || "default"})`,
+      diagnostic: true,
     });
 
     return this.consumeStream(await this.thread.runStreamed(prompt));
@@ -249,10 +250,11 @@ class CodexSession extends BaseAgentSession {
           if (threadId) {
             this.setRuntimeSessionId(threadId);
           }
-          this.eventQueue.push({
+          this.emit({
             type: "system",
             timestamp: ts(),
             content: `Codex thread initialized (id: ${this.runtimeSessionId})`,
+            diagnostic: true,
           });
           break;
         }
@@ -271,7 +273,7 @@ class CodexSession extends BaseAgentSession {
 
           if (type === "command_execution") {
             messageCount++;
-            this.eventQueue.push({
+            this.emit({
               type: "tool_use",
               timestamp: ts(),
               content: JSON.stringify({ tool: "command_execution", args: { command: item.command || "" } }),
@@ -283,7 +285,7 @@ class CodexSession extends BaseAgentSession {
             // Codex SDK: file_change has `changes` array with `{path, ...}` entries (no top-level `file`)
             const changes = (item.changes ?? []) as Array<Record<string, unknown>>;
             const filePaths = changes.map((c) => c.path ?? "").join(", ");
-            this.eventQueue.push({
+            this.emit({
               type: "tool_use",
               timestamp: ts(),
               content: JSON.stringify({ tool: "file_change", args: { file: filePaths, changes } }),
@@ -293,7 +295,7 @@ class CodexSession extends BaseAgentSession {
           } else if (type === "mcp_tool_call") {
             messageCount++;
             // Codex SDK: uses `server` and `tool` (not `serverName`/`toolName`)
-            this.eventQueue.push({
+            this.emit({
               type: "tool_use",
               timestamp: ts(),
               content: JSON.stringify({ tool: `mcp__${String(item.server || "unknown")}__${String(item.tool || "unknown")}`, args: item.arguments || {} }),
@@ -319,7 +321,7 @@ class CodexSession extends BaseAgentSession {
             // Codex SDK: `aggregated_output` (not `output`), `exit_code` (not `exitCode`)
             const output = (item.aggregated_output ?? "") as string;
             const exitCode = item.exit_code as number | undefined;
-            this.eventQueue.push({
+            this.emit({
               type: "tool_result",
               timestamp: ts(),
               content: exitCode !== undefined ? `[exit ${exitCode}] ${output}` : output,
@@ -331,7 +333,7 @@ class CodexSession extends BaseAgentSession {
             // Codex SDK: file_change completed has `changes` array and `status` (no `file`/`patch`)
             const changes = (item.changes ?? []) as Array<Record<string, unknown>>;
             const filePaths = changes.map((c) => c.path ?? "").join(", ");
-            this.eventQueue.push({
+            this.emit({
               type: "tool_result",
               timestamp: ts(),
               content: JSON.stringify({ file: filePaths, changes, status: item.status || "completed" }),
@@ -342,7 +344,7 @@ class CodexSession extends BaseAgentSession {
             messageCount++;
             // Codex SDK: `text` (not `content`) for the message body
             const content = (item.text ?? "") as string;
-            this.eventQueue.push({
+            this.emit({
               type: "text",
               timestamp: ts(),
               content,
@@ -358,7 +360,7 @@ class CodexSession extends BaseAgentSession {
             const errorStr = errorObj
               ? (typeof errorObj.message === "string" ? errorObj.message : JSON.stringify(errorObj))
               : "";
-            this.eventQueue.push({
+            this.emit({
               type: "tool_result",
               timestamp: ts(),
               content: errorStr || resultStr || "",
@@ -369,7 +371,7 @@ class CodexSession extends BaseAgentSession {
             messageCount++;
             // Codex SDK: only `text` exists (no `summary` field)
             const text = (item.text ?? "") as string;
-            this.eventQueue.push({
+            this.emit({
               type: "text",
               timestamp: ts(),
               content: `[reasoning] ${text}`,
@@ -395,7 +397,7 @@ class CodexSession extends BaseAgentSession {
           if (this.maxTurns > 0 && this.turnCount >= this.maxTurns) {
             logger.info({ turnCount: this.turnCount, maxTurns: this.maxTurns }, "Codex max turns reached — going idle");
             this.status = SESSION_STATUS.IDLE;
-            this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
+            this.emit({ type: "status", timestamp: ts(), content: "waiting_input" });
             if (this.activeStream && typeof this.activeStream.abort === "function") {
               this.activeStream.abort();
             }
@@ -406,13 +408,13 @@ class CodexSession extends BaseAgentSession {
         case "turn.failed": {
           const error = (event as Record<string, unknown>).error as Record<string, unknown> | undefined;
           const message = (error?.message ?? "Turn failed") as string;
-          this.eventQueue.push({ type: "error", timestamp: ts(), content: message, raw: event });
+          this.emit({ type: "error", timestamp: ts(), content: message, raw: event });
           break;
         }
 
         case "error": {
           const message = ((event as Record<string, unknown>).message ?? "Unknown error") as string;
-          this.eventQueue.push({ type: "error", timestamp: ts(), content: message, raw: event });
+          this.emit({ type: "error", timestamp: ts(), content: message, raw: event });
           break;
         }
 

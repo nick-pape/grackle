@@ -10,11 +10,13 @@ import { Logger } from 'pino';
 export interface AgentEvent {
     // (undocumented)
     content: string;
+    diagnostic?: boolean;
     // (undocumented)
     raw?: unknown;
     // (undocumented)
     timestamp: string;
     toolCallId?: string;
+    turnId?: string;
     // Warning: (ae-forgotten-export) The symbol "AgentEventType" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -78,6 +80,7 @@ export abstract class BaseAgentSession implements AgentSession {
     protected readonly branch?: string;
     protected buildInitialPrompt(): string;
     drainBufferedEvents(): AgentEvent[];
+    protected emit(event: AgentEvent): void;
     // (undocumented)
     protected readonly eventQueue: AsyncQueue<AgentEvent>;
     protected abstract executeFollowUp(text: string): Promise<void>;

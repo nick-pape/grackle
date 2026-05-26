@@ -27,6 +27,9 @@ const eventTypeToEnumMap: Record<string, EventType> = Object.assign(Object.creat
   "signal": EventType.SIGNAL,
   "usage": EventType.USAGE,
   "widget": EventType.WIDGET,
+  "turn_started": EventType.TURN_STARTED,
+  "turn_complete": EventType.TURN_COMPLETE,
+  "input_needed": EventType.INPUT_NEEDED,
 });
 
 const eventTypeToStringMap: Record<number, string> = {
@@ -41,6 +44,9 @@ const eventTypeToStringMap: Record<number, string> = {
   [EventType.SIGNAL]: "signal",
   [EventType.USAGE]: "usage",
   [EventType.WIDGET]: "widget",
+  [EventType.TURN_STARTED]: "turn_started",
+  [EventType.TURN_COMPLETE]: "turn_complete",
+  [EventType.INPUT_NEEDED]: "input_needed",
 };
 
 /** Convert a string event type to its proto enum value. */

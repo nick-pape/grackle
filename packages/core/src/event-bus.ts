@@ -32,7 +32,11 @@ export type GrackleEventType =
   | "schedule.fired"
   | "notification.escalated"
   | "plugin.changed"
-  | "github_account.changed";
+  | "github_account.changed"
+  // A workspace's promoted-component set changed (promote/demote, or a promoted
+  // component edited) — the MCP server pushes tools/list_changed to that
+  // workspace's sessions so dynamic render_<name> tools refresh (#1297). payload: { workspaceId }
+  | "component.changed";
 
 /** A domain event emitted by the event bus. */
 export interface GrackleEvent {

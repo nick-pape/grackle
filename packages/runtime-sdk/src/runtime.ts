@@ -12,6 +12,21 @@ export interface AgentEvent {
    * synthesized when the SDK has none); left unset for non-tool events.
    */
   toolCallId?: string;
+  /**
+   * True for runtime lifecycle/diagnostic `system` events ("Starting runtime…",
+   * "Session initialized", worktree setup) — used to tee these to telemetry
+   * sinks (the additive OTLP logs sink today) and, in a later step, to filter
+   * them out of authoritative `SessionState` (AHP HR7). Left unset for
+   * substantive events (agent output, the injected system context).
+   */
+  diagnostic?: boolean;
+  /**
+   * Identifier of the turn this event belongs to (AHP HR2). Set by base-session
+   * turn framing on `turn_started`/`turn_complete` and stamped on every content
+   * event within a turn; left unset for out-of-band/liveness events (startup,
+   * status, worktree setup, kill). Process-scoped — a resume starts a new turn.
+   */
+  turnId?: string;
 }
 
 /** Parameters for spawning a new agent session. */

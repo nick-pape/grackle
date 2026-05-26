@@ -549,6 +549,25 @@ Delete a token.
 
 ---
 
+### Runtimes
+
+#### `grackle runtimes`
+
+List the available agent runtimes (the runtime catalog), showing each runtime's
+display name, selectable models, and the credentials it requires given the
+current credential-provider configuration.
+
+```bash
+grackle runtimes
+```
+
+Output columns: **Provider** (runtime id), **Name**, **Models**, and
+**Credential needs** (resource + how the credential is delivered, e.g.
+`Anthropic API (oauth-subscription-file)`). Runtimes with no configured
+credential needs show `none`.
+
+---
+
 ### Credential Providers
 
 Configure automatic credential forwarding from your machine to environments.

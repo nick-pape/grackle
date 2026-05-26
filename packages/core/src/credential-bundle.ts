@@ -15,8 +15,11 @@ import { powerline, type RuntimeName } from "@grackle-ai/common";
 import { credentialProviders, githubAccountStore, type CredentialProviderConfig, type DatabaseInstance } from "@grackle-ai/database";
 import { exec } from "./utils/exec.js";
 
-/** Maps each runtime to the credential providers it needs. */
-const RUNTIME_PROVIDERS: Record<string, (keyof CredentialProviderConfig)[]> = {
+/**
+ * Maps each runtime to the credential providers it needs.
+ * @internal Exported for catalog-coherence testing (every key must be a {@link RUNTIME_CATALOG} entry).
+ */
+export const RUNTIME_PROVIDERS: Record<string, (keyof CredentialProviderConfig)[]> = {
   "claude-code": ["claude", "github"],
   "copilot": ["copilot", "github"],
   "codex": ["codex", "github"],
@@ -27,6 +30,147 @@ const RUNTIME_PROVIDERS: Record<string, (keyof CredentialProviderConfig)[]> = {
   "codex-acp": ["codex", "github"],
   "copilot-acp": ["copilot", "github"],
 };
+
+/**
+ * How a credential is delivered to a runtime. Grackle extension carried in the
+ * AHP `protectedResources._meta` field (RFC 9728 alone cannot express a local
+ * credential file vs. an env API key vs. a true OAuth-server flow).
+ */
+export type CredentialKind = "env-api-key" | "oauth-subscription-file" | "oauth-server";
+
+/**
+ * A declarative description of a credential a runtime requires — the
+ * advertise-needs half of {@link buildProviderTokenBundle}, with **no secrets
+ * read**. Maps onto AHP `ProtectedResourceMetadata` (RFC 9728) for a runtime's
+ * `AgentInfo.protectedResources`.
+ */
+export interface ProtectedResourceDescriptor {
+  /** RFC 9728 resource identifier (an `https` URL). */
+  resource: string;
+  /** Human-readable resource name. */
+  resourceName: string;
+  /** OAuth authorization servers (RFC 9728); empty for env/file credential kinds. */
+  authorizationServers: string[];
+  /** OAuth scopes (RFC 9728); empty for env/file credential kinds. */
+  scopesSupported: string[];
+  /**
+   * Acceptable credential kinds — the need is satisfied by **any** of these (e.g.
+   * codex accepts an OAuth file *or* an API-key env var). Mirrors what
+   * {@link buildProviderTokenBundle} will actually materialize for the provider.
+   * The presence/expiry check itself is the consumer's job (#1316).
+   */
+  credentialKinds: CredentialKind[];
+  /** The credential-provider key this need derives from. */
+  provider: keyof CredentialProviderConfig;
+}
+
+/**
+ * Describe the credential a single provider requires given the current config,
+ * or `undefined` when that provider is disabled. Pure — derived from config
+ * only, reads no secrets.
+ */
+function describeProviderNeed(
+  provider: keyof CredentialProviderConfig,
+  config: CredentialProviderConfig,
+): ProtectedResourceDescriptor | undefined {
+  switch (provider) {
+    case "claude": {
+      if (config.claude === "off") {
+        return undefined;
+      }
+      return {
+        resource: "https://api.anthropic.com",
+        resourceName: "Anthropic API",
+        authorizationServers: [],
+        scopesSupported: [],
+        credentialKinds: [config.claude === "subscription" ? "oauth-subscription-file" : "env-api-key"],
+        provider: "claude",
+      };
+    }
+    case "github": {
+      if (config.github !== "on") {
+        return undefined;
+      }
+      return {
+        resource: "https://api.github.com",
+        resourceName: "GitHub",
+        authorizationServers: [],
+        scopesSupported: [],
+        credentialKinds: ["env-api-key"],
+        provider: "github",
+      };
+    }
+    case "copilot": {
+      if (config.copilot !== "on") {
+        return undefined;
+      }
+      return {
+        resource: "https://api.githubcopilot.com",
+        resourceName: "GitHub Copilot",
+        authorizationServers: [],
+        scopesSupported: [],
+        credentialKinds: ["oauth-subscription-file", "env-api-key"],
+        provider: "copilot",
+      };
+    }
+    case "codex": {
+      if (config.codex !== "on") {
+        return undefined;
+      }
+      return {
+        resource: "https://api.openai.com",
+        resourceName: "OpenAI",
+        authorizationServers: [],
+        scopesSupported: [],
+        credentialKinds: ["oauth-subscription-file", "env-api-key"],
+        provider: "codex",
+      };
+    }
+    case "goose": {
+      if (config.goose !== "on") {
+        return undefined;
+      }
+      return {
+        resource: "https://block.github.io/goose",
+        resourceName: "Goose",
+        authorizationServers: [],
+        scopesSupported: [],
+        credentialKinds: ["oauth-subscription-file", "env-api-key"],
+        provider: "goose",
+      };
+    }
+    default: {
+      return undefined;
+    }
+  }
+}
+
+/**
+ * Derive the credential needs a runtime advertises, given the credential-provider
+ * config — the AHP `protectedResources` for a runtime's `AgentInfo`. Emits a
+ * descriptor for each **enabled** provider mapped to the runtime (matching #1316's
+ * "provider enabled" pre-flight trigger). Unknown/stub runtimes return `[]`.
+ *
+ * **Pure**: derived from `config` only — reads no env vars, files, or the
+ * credential store. Contrast with {@link buildProviderTokenBundle}, which
+ * materializes the actual secret values.
+ */
+export function deriveCredentialNeeds(
+  runtime: string,
+  config: CredentialProviderConfig,
+): ProtectedResourceDescriptor[] {
+  const providers = Object.hasOwn(RUNTIME_PROVIDERS, runtime)
+    ? RUNTIME_PROVIDERS[runtime as RuntimeName]
+    : [];
+  const needs: ProtectedResourceDescriptor[] = [];
+  for (const provider of providers) {
+    const descriptor = describeProviderNeed(provider, config);
+    if (descriptor !== undefined) {
+      needs.push(descriptor);
+    }
+  }
+  return needs;
+}
 
 /** Timeout for the `gh auth token` subprocess call. */
 const GH_AUTH_TOKEN_TIMEOUT_MS: number = 5_000;

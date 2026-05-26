@@ -2,6 +2,78 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.130.0",
+      "tag": "@grackle-ai/cli_v0.130.0",
+      "date": "Tue, 26 May 2026 02:14:36 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Native turn framing (AHP HR2): session events now carry a turn_id and explicit turn_started/turn_complete/input_needed event types, anchored on the real prompt/sendInput, replacing the overloaded waiting_input signal. Producer-side, behind the existing wire; behavior-preserving."
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.129.0",
+      "tag": "@grackle-ai/cli_v0.129.0",
+      "date": "Tue, 26 May 2026 01:34:17 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "AHP HR4+5: add a runtime catalog (RUNTIME_CATALOG) and ListRuntimes RPC surfacing RootState.agents with per-runtime credential needs (protectedResources via deriveCredentialNeeds); reshape SpawnRequest toward AHP createSession with first-class provider/model and a typed SessionConfig (plumbing task_id + use_worktrees); add the `grackle runtimes` CLI command."
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.128.0",
+      "tag": "@grackle-ai/cli_v0.128.0",
+      "date": "Mon, 25 May 2026 21:24:16 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "AHP HR7: add a `diagnostic` flag to agent/session events (set at runtime lifecycle emit sites, threaded through PowerLine, the event processor, the JSONL log, and session-event readback) and an additive, opt-in OpenTelemetry logs sink for runtime diagnostics gated on OTEL_EXPORTER_OTLP_ENDPOINT (no-op when unset)."
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.127.0",
+      "tag": "@grackle-ai/cli_v0.127.0",
+      "date": "Mon, 25 May 2026 19:35:47 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "GenUX live tool refresh (#1297): when a workspace's promoted-component set changes (component_promote/demote, or a promoted component edited), the co-located MCP server pushes notifications/tools/list_changed to that workspace's live sessions so dynamic render_<name> tools refresh without the agent re-listing. Adds a `component.changed` domain event emitted by the registry handlers, retains per-session MCP Server instances, and declares the tools.listChanged capability. Broker-mode only."
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.126.1",
+      "tag": "@grackle-ai/cli_v0.126.1",
+      "date": "Mon, 25 May 2026 19:15:09 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Cut over credential delivery to demand-driven Authenticate RPC (AHP HR6): supply per-runtime credentials on demand just before spawn instead of proactively pushing a blanket all-provider bundle; deprecate PushTokens."
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.126.0",
+      "tag": "@grackle-ai/cli_v0.126.0",
+      "date": "Mon, 25 May 2026 18:55:12 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Remove the vestigial subtask_create/escalation agent-event interception (the pre-MCP \"fake MCP call\" path); orchestration is MCP-only. Reserves EVENT_TYPE_SUBTASK_CREATE (8) and EVENT_TYPE_ESCALATION (12) in the proto and drops them from the AgentEventType union (AHP HR7 Part 1)."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.125.2",
       "tag": "@grackle-ai/cli_v0.125.2",
       "date": "Mon, 25 May 2026 17:22:09 GMT",

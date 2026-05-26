@@ -55,13 +55,15 @@ type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
     content: string;
     raw: string;
     toolCallId: string;
+    diagnostic: boolean;
+    turnId: string;
 };
 
 // @public
 const AgentEventSchema: GenMessage<AgentEvent>;
 
 // @public
-export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "runtime_session_id" | "usage";
+export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "runtime_session_id" | "usage" | "turn_started" | "turn_complete" | "input_needed";
 
 // @public
 export const ALL_MCP_TOOL_NAMES: ReadonlySet<string>;
@@ -96,6 +98,15 @@ type AttachStreamResponse = Message<"grackle.AttachStreamResponse"> & {
 
 // @public
 const AttachStreamResponseSchema: GenMessage<AttachStreamResponse>;
+
+// @public
+type AuthenticateRequest = Message<"grackle.powerline.AuthenticateRequest"> & {
+    provider: string;
+    tokens: TokenItem[];
+};
+
+// @public
+const AuthenticateRequestSchema: GenMessage<AuthenticateRequest>;
 
 // @public
 export const BUILTIN_COMPONENT_JSON_SCHEMAS: Readonly<Record<BuiltinComponentName, object>>;
@@ -688,12 +699,15 @@ export type EventType = AgentEventType | "user_input" | "signal";
 // @public
 enum EventType_2 {
     ERROR = 4,
+    INPUT_NEEDED = 16,
     SIGNAL = 10,
     STATUS = 5,
     SYSTEM = 6,
     TEXT = 1,
     TOOL_RESULT = 3,
     TOOL_USE = 2,
+    TURN_COMPLETE = 15,
+    TURN_STARTED = 14,
     UNSPECIFIED = 0,
     USAGE = 11,
     USER_INPUT = 9,
@@ -947,12 +961,24 @@ declare namespace grackle {
         SessionListSchema,
         SessionFilter,
         SessionFilterSchema,
+        ModelSelection,
+        ModelSelectionSchema,
+        SessionConfig,
+        SessionConfigSchema,
         SpawnRequest,
         SpawnRequestSchema,
         ResumeRequest,
         ResumeRequestSchema,
         InputMessage,
         InputMessageSchema,
+        ProtectedResource,
+        ProtectedResourceSchema,
+        ModelInfo,
+        ModelInfoSchema,
+        RuntimeInfo,
+        RuntimeInfoSchema,
+        ListRuntimesResponse,
+        ListRuntimesResponseSchema,
         WaitForPipeRequest,
         WaitForPipeRequestSchema,
         WaitForPipeResponse,
@@ -1289,6 +1315,11 @@ const GrackleCore: GenService<{
         methodKind: "unary";
         input: typeof TaskIdSchema;
         output: typeof SessionListSchema;
+    };
+    listRuntimes: {
+        methodKind: "unary";
+        input: typeof EmptySchema;
+        output: typeof ListRuntimesResponseSchema;
     };
     streamSession: {
         methodKind: "server_streaming";
@@ -1707,6 +1738,11 @@ const GracklePowerLine: GenService<{
         input: typeof TokenBundleSchema;
         output: typeof EmptySchema_2;
     };
+    authenticate: {
+        methodKind: "unary";
+        input: typeof AuthenticateRequestSchema;
+        output: typeof EmptySchema_2;
+    };
     cleanupWorktree: {
         methodKind: "unary";
         input: typeof WorktreeCleanupRequestSchema;
@@ -1890,6 +1926,14 @@ type ListRecentKnowledgeNodesResponse = Message<"grackle.ListRecentKnowledgeNode
 const ListRecentKnowledgeNodesResponseSchema: GenMessage<ListRecentKnowledgeNodesResponse>;
 
 // @public
+type ListRuntimesResponse = Message<"grackle.ListRuntimesResponse"> & {
+    runtimes: RuntimeInfo[];
+};
+
+// @public
+const ListRuntimesResponseSchema: GenMessage<ListRuntimesResponse>;
+
+// @public
 type ListSchedulesRequest = Message<"grackle.ListSchedulesRequest"> & {
     workspaceId: string;
 };
@@ -1958,6 +2002,24 @@ type McpServerConfig = Message<"grackle.McpServerConfig"> & {
 
 // @public
 const McpServerConfigSchema: GenMessage<McpServerConfig>;
+
+// @public
+type ModelInfo = Message<"grackle.ModelInfo"> & {
+    id: string;
+    name: string;
+    provider: string;
+};
+
+// @public
+const ModelInfoSchema: GenMessage<ModelInfo>;
+
+// @public
+type ModelSelection = Message<"grackle.ModelSelection"> & {
+    id: string;
+};
+
+// @public
+const ModelSelectionSchema: GenMessage<ModelSelection>;
 
 // @public
 export const ORCHESTRATOR_MCP_TOOLS: readonly string[];
@@ -2068,6 +2130,8 @@ declare namespace powerline {
         TokenItemSchema,
         TokenBundle,
         TokenBundleSchema,
+        AuthenticateRequest,
+        AuthenticateRequestSchema,
         WorktreeCleanupRequest,
         WorktreeCleanupRequestSchema,
         DrainRequest,
@@ -2081,6 +2145,18 @@ export interface PromotedRenderTool<T> {
     component: T;
     toolName: string;
 }
+
+// @public
+type ProtectedResource = Message<"grackle.ProtectedResource"> & {
+    resource: string;
+    resourceName: string;
+    authorizationServers: string[];
+    scopesSupported: string[];
+    credentialKinds: string[];
+};
+
+// @public
+const ProtectedResourceSchema: GenMessage<ProtectedResource>;
 
 // @public
 enum ProviderToggle {
@@ -2208,7 +2284,34 @@ export const ROOT_TASK_ID: string;
 export const ROOT_TASK_INITIAL_PROMPT: string;
 
 // @public
-export const RUNTIME_MANIFESTS: Readonly<Record<string, RuntimePackageManifest>>;
+export const RUNTIME_CATALOG: Readonly<Record<string, RuntimeCatalogEntry>>;
+
+// @public
+export interface RuntimeCatalogEntry {
+    description: string;
+    displayName: string;
+    install?: RuntimePackageManifest;
+    models: RuntimeModelInfo[];
+}
+
+// @public
+type RuntimeInfo = Message<"grackle.RuntimeInfo"> & {
+    provider: string;
+    displayName: string;
+    description: string;
+    models: ModelInfo[];
+    protectedResources: ProtectedResource[];
+};
+
+// @public
+const RuntimeInfoSchema: GenMessage<RuntimeInfo>;
+
+// @public
+export interface RuntimeModelInfo {
+    id: string;
+    name: string;
+    provider: string;
+}
 
 // @public
 export type RuntimeName = "claude-code" | "copilot" | "codex" | "goose" | "stub";
@@ -2442,6 +2545,23 @@ const SessionActionListSchema: GenMessage<SessionActionList>;
 const SessionActionSchema: GenMessage<SessionAction>;
 
 // @public
+type SessionConfig = Message<"grackle.SessionConfig"> & {
+    branch: string;
+    taskId: string;
+    workspaceId: string;
+    personaId: string;
+    useWorktrees?: boolean;
+    systemContext: string;
+    pipe: string;
+    workingDirectory: string;
+    maxTurns: number;
+    parentSessionId: string;
+};
+
+// @public
+const SessionConfigSchema: GenMessage<SessionConfig>;
+
+// @public
 type SessionEvent = Message<"grackle.SessionEvent"> & {
     sessionId: string;
     type: EventType_2;
@@ -2449,6 +2569,8 @@ type SessionEvent = Message<"grackle.SessionEvent"> & {
     content: string;
     raw: string;
     toolCallId: string;
+    diagnostic: boolean;
+    turnId: string;
 };
 
 // @public
@@ -2633,14 +2755,9 @@ export const skeletonVariantSchema: z.ZodEnum<{
 type SpawnRequest = Message<"grackle.SpawnRequest"> & {
     environmentId: string;
     prompt: string;
-    maxTurns: number;
-    branch: string;
-    systemContext: string;
-    personaId: string;
-    workingDirectory: string;
-    pipe: string;
-    parentSessionId: string;
-    workspaceId: string;
+    provider: string;
+    config?: SessionConfig;
+    model?: ModelSelection;
 };
 
 // @public

@@ -18,9 +18,11 @@ export function registerAgentCommands(program: Command): void {
       const session = await client.spawnAgent({
         environmentId,
         prompt,
-        maxTurns: opts.maxTurns || 0,
-        personaId: opts.persona || "",
-        workspaceId: opts.workspace || "",
+        config: {
+          maxTurns: opts.maxTurns || 0,
+          personaId: opts.persona || "",
+          workspaceId: opts.workspace || "",
+        },
       });
       console.log(`Spawned session: ${session.id}`);
       console.log(`Streaming events (Ctrl+C to detach)...\n`);

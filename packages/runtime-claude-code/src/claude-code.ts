@@ -124,7 +124,7 @@ export function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
   if (type === "system") {
     const subtype = msg.subtype as string | undefined;
     if (subtype === "init") {
-      return [{ type: "system", timestamp: ts, content: `Session initialized (${msg.model ? String(msg.model) : "unknown model"})`, raw: msg }];
+      return [{ type: "system", timestamp: ts, content: `Session initialized (${msg.model ? String(msg.model) : "unknown model"})`, raw: msg, diagnostic: true }];
     }
     return [];
   }
@@ -479,7 +479,7 @@ class ClaudeCodeSession extends BaseAgentSession {
       // Check for result errors
       if (msg.type === "result" && msg.is_error) {
         const errorMsg = (msg.result as string) || "Claude Code returned an error";
-        this.eventQueue.push({ type: "error", timestamp: ts(), content: errorMsg, raw: msg });
+        this.emit({ type: "error", timestamp: ts(), content: errorMsg, raw: msg });
       }
 
       // Extract usage data from successful result messages
@@ -563,14 +563,14 @@ class ClaudeCodeSession extends BaseAgentSession {
           this.pendingToolUseIds.set(raw.id, raw.name as string || "");
         }
       }
-      this.eventQueue.push(event);
+      this.emit(event);
     }
   }
 
   /** Emit synthetic tool_result events for all pending tool_use IDs and clear the map. */
   private flushPendingToolResults(ts: () => string): void {
     for (const [id] of this.pendingToolUseIds) {
-      this.eventQueue.push({
+      this.emit({
         type: "tool_result",
         timestamp: ts(),
         content: "",
@@ -624,7 +624,7 @@ class ClaudeCodeSession extends BaseAgentSession {
       if (msg.type === "result" && msg.is_error) {
         this.flushPendingToolResults(ts);
         const errorMsg = (msg.result as string) || "Claude Code returned an error";
-        this.eventQueue.push({ type: "error", timestamp: ts(), content: errorMsg, raw: msg });
+        this.emit({ type: "error", timestamp: ts(), content: errorMsg, raw: msg });
         continue;
       }
 

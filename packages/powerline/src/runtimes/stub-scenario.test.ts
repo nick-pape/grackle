@@ -5,8 +5,9 @@ import {
   resetToolUseCounter,
   isMcpCallStep,
   isEmitStep,
+  isAwaitToolChangeStep,
 } from "./stub-scenario.js";
-import type { EmitStep, McpCallStep, ScenarioStep } from "./stub-scenario.js";
+import type { EmitStep, McpCallStep, ScenarioStep, AwaitToolChangeStep } from "./stub-scenario.js";
 
 describe("parseScenario", () => {
   it("parses raw JSON prompt", () => {
@@ -221,5 +222,25 @@ describe("McpCallStep", () => {
     const step = scenario!.steps[0] as McpCallStep;
     expect(step.mcp_call).toBe("task_list");
     expect(step.args).toBeUndefined();
+  });
+});
+
+describe("AwaitToolChangeStep (#1297)", () => {
+  it("isAwaitToolChangeStep identifies await_tool_change steps", () => {
+    const step: AwaitToolChangeStep = { await_tool_change: { expect: "render_X" } };
+    expect(isAwaitToolChangeStep(step)).toBe(true);
+    expect(isAwaitToolChangeStep({ mcp_call: "task_list" } as ScenarioStep)).toBe(false);
+    expect(isMcpCallStep(step)).toBe(false);
+  });
+
+  it("parseScenario parses an await_tool_change step with a trigger", () => {
+    const scenario = parseScenario(JSON.stringify({
+      steps: [{ await_tool_change: { trigger: { tool: "component_promote", args: { name: "X" } }, expect: "render_X" } }],
+    }));
+    expect(scenario).toBeDefined();
+    expect(isAwaitToolChangeStep(scenario!.steps[0])).toBe(true);
+    const step = scenario!.steps[0] as AwaitToolChangeStep;
+    expect(step.await_tool_change.expect).toBe("render_X");
+    expect(step.await_tool_change.trigger?.tool).toBe("component_promote");
   });
 });

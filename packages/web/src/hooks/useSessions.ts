@@ -200,9 +200,11 @@ export function useSessions(): UseSessionsResult {
         const session = await grackleClient.spawnAgent({
           environmentId,
           prompt,
-          personaId: personaId || "",
-          workingDirectory: workingDirectory || "",
-          workspaceId: workspaceId || "",
+          config: {
+            personaId: personaId || "",
+            workingDirectory: workingDirectory || "",
+            workspaceId: workspaceId || "",
+          },
         });
         setLastSpawnedId(session.id);
         await loadSessions();

@@ -8,6 +8,7 @@ vi.mock("@grackle-ai/core", () => ({
     warn: vi.fn(),
     error: vi.fn(),
   },
+  shutdownOtlpLogs: vi.fn(async () => {}),
 }));
 
 const mockPragma = vi.fn();
