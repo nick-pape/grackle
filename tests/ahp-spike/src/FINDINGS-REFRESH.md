@@ -32,6 +32,7 @@ tests, incl. the live StubRuntime stream) stays green.
 | **Host requirement #1: authoritative state + sequencing** (replay buffer / monotonic seq, subsuming `parkSession`) | **HR1a** ([#1276](https://github.com/nick-pape/grackle/issues/1276)) — durable `session_actions` log + monotonic `serverSeq` at every publish site | The *substrate* is in production. (Reducing it into AHP `SessionState` + snapshots is HR1b — still open; see below.) |
 | **Host requirement #6: credentials via `authenticate` (pull, on demand)** replacing proactive `PushTokens` | **HR6** ([#1289](https://github.com/nick-pape/grackle/issues/1289)) — `Authenticate` RPC, all eager pushes removed | Done in production; `PushTokens` deprecated with zero call sites. Out of the session-event mapper's scope, but the host requirement is met. |
 | **Host requirements #4+5: root channel = runtime registry + spawn parameters via `createSession.config`** | **HR4+5** ([#1318](https://github.com/nick-pape/grackle/issues/1318)) — `RUNTIME_CATALOG` in `@grackle-ai/common` (replaces `RUNTIME_MANIFESTS`); new `ListRuntimes` RPC → `RootState.agents`; `deriveCredentialNeeds` → `protectedResources`; `SpawnRequest` reshaped with first-class `provider`/`ModelSelection`/typed `SessionConfig` | **No change to `mapper.ts`** — the root channel is separate from the session-event mapper. But the host requirement is now met in production: the runtime registry and session-creation shape are AHP-aligned. |
+| **Turn framing — the central abstraction mismatch** (lazy synthesis, placeholder `userMessage`, `TURN_ENDING_STATUSES` heuristic, `waiting_input` overload) | **HR2** ([#1286](https://github.com/nick-pape/grackle/issues/1286)) — first-class `turn_started`/`turn_complete`/`input_needed` events + `AgentEvent.turnId` | Deleted `TURN_ENDING_STATUSES` and `ensureTurn` synthesis; added real `case "turn_started"` (emit `session/turnStarted` with the actual `userMessage`), `case "turn_complete"` (emit `session/turnComplete`), `case "input_needed"` (advisory drop — no structured elicitation yet). `status: waiting_input/completed/running` become redundant drops. `ensureTurn` survives as a named **defensive fallback** for pre-HR2 logs only. **The turn-framing gap is closed.** |
 
 The agent-conversation core (text + tool calls + usage + errors, turn-shaped)
 still maps cleanly — that part of the original "Maps cleanly" table is unchanged.
@@ -40,27 +41,19 @@ still maps cleanly — that part of the original "Maps cleanly" table is unchang
 
 ## Still-unresolved gaps (the deliverable)
 
-### 1. Turn framing — the central abstraction mismatch (in-flight: HR2 #1286)
+### 1. ~~Turn framing — the central abstraction mismatch~~ → **RESOLVED (HR2 #1286, merged)**
 
-Still the largest residual hack. AHP is turn-structured (`session/turnStarted`
-MUST precede any `delta`/`responsePart`/`toolCall*` or the reducer no-ops);
-`main` today still has only a `status` flag oscillating `running ↔
-waiting_input`, so the mapper **synthesizes** turn boundaries (open lazily on
-first content / `status: running`, close on a turn-ending status) and **fabricates
-a placeholder `userMessage`**. The lossy edges remain exactly as first reported:
+The lazy-turn synthesis (`ensureTurn`, `TURN_ENDING_STATUSES`, placeholder
+`userMessage`), which was the largest remaining hack, is **gone**. Real
+`turn_started`/`turn_complete`/`input_needed` events carry actual turn boundaries
+with the real user-message text. See the "Resolved" table above.
 
-- **No user message** — turns are anchored on a synthesized placeholder, not the
-  real prompt / `sendInput`.
-- **`waiting_input` is overloaded** — it means both "turn done, idle" *and*
-  "blocked awaiting input"; AHP separates these (`Idle` vs `InputNeeded` +
-  structured `inputRequests`). The mapper collapses them.
-- **Resume / multi-turn** boundaries are ambiguous from the flattened stream.
-
-**Status:** [HR2 #1286](https://github.com/nick-pape/grackle/issues/1286) is
-in-flight (first-class `turn_id` + `TURN_STARTED`/`TURN_COMPLETE`/`INPUT_NEEDED`
-events). Once it merges, the synthesis (`ensureTurn`, `TURN_ENDING_STATUSES`,
-placeholder user message) can be replaced with reads of real turn events — this
-is the single biggest remaining shrink. **Deferred to the re-run.**
+**Residual nuance — `input_needed` (plumb-only):** AHP's `InputNeeded` state
+models structured elicitation (e.g. credential prompts), which Grackle has no
+mid-turn-blocking producer for today. `input_needed` is currently just advisory
+and is dropped as redundant with `turn_complete`. This is the *last narrow gap*
+between Grackle's turn model and AHP's: the plumbing is there; the semantic
+content (structured `inputRequests`) is not populated yet.
 
 ### 2. PowerLine doesn't own AHP `SessionState` yet (in-flight: HR1b #1292)
 
@@ -110,21 +103,31 @@ disappears entirely. Blocked on the remaining HRs.
 Working backwards from shipped AHP changes, the adapter's residual complexity now
 maps almost 1:1 onto the **unfinished** HRs:
 
-- ~~**Root/createSession shape**~~ ✅ **RESOLVED** (HR4+5 #1318, now merged)
-- **Turn synthesis** ⇒ HR2 (#1286, in-flight — the last significant mapper.ts shrink)
+- ~~**Root/createSession shape**~~ ✅ **RESOLVED** (HR4+5 #1318)
+- ~~**Turn framing synthesis**~~ ✅ **RESOLVED** (HR2 #1286)
 - **Offline mapper vs host-owned state** ⇒ HR1b (#1292, open)
 - **Transport / multi-host** ⇒ HR8 (#1291)
 
-Everything the *merged* HRs addressed (tool ids, diagnostic routing,
-orchestration-off-channel, demand-driven creds, durable log substrate,
-runtime registry + session-creation shape) has **left the adapter** — deleted,
-enforced by the type system, or resolved out-of-scope. The two AHP-upstream
-metadata carries are the only friction not attributable to unfinished Grackle work.
+**All groundwork HRs have merged.** Everything that could be addressed without
+touching the wire (tool ids, diagnostic routing, orchestration-off-channel,
+demand-driven creds, durable log substrate, runtime registry + session-creation
+shape, turn framing) has **left the adapter** — deleted, enforced by the type
+system, or resolved out-of-scope. The mapper is now near-nothing for the
+conversation core, holding only:
 
-**Re-run trigger:** repeat this exercise after **HR2 (#1286)** merges. That is
-now the sole remaining trigger: the turn-framing synthesis (`ensureTurn`,
-`TURN_ENDING_STATUSES`, placeholder `userMessage`) should collapse into reads of
-real `TURN_STARTED`/`TURN_COMPLETE`/`INPUT_NEEDED` events, leaving only HR1b
-(host-owned state), the AHP-upstream metadata carries, and HR8 (the wire flip).
-At that point the mapper should be near-nothing — the signal that PowerLine is
-ready to *be* the host rather than be mapped into one.
+1. The two **AHP-upstream metadata carries** (`cost_millicents`, `runtimeSessionId`)
+   — no first-class AHP field; not Grackle's to fix.
+2. A **defensive `ensureTurn` fallback** for pre-HR2 logs — correct and labeled,
+   not a hack.
+3. The `input_needed` advisory drop — plumbing is in production; structured
+   `inputRequests` content is the last narrow turn-model gap.
+
+**`mapper.ts`: 408 → 384 lines** (raw shrink of 24 lines, but the meaningful
+hacks — `rawToolUseId` heuristic, `TURN_ENDING_STATUSES`, turn synthesis,
+two stub-only cases — are all gone, replaced by reads of real first-class fields).
+167 tests green: 157-case vendored AHP conformance corpus + 10 mapper replay
+tests including the live StubRuntime stream.
+
+**No more re-run triggers.** The next milestone for the adapter is HR1b (#1292,
+host-owned `SessionState`) and HR8 (#1291, the wire flip) — at which point the
+mapper disappears entirely and PowerLine *is* the AHP host.

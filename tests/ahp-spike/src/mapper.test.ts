@@ -68,6 +68,19 @@ describe("happy path", () => {
     expect(resultNote?.detail).toContain("by toolCallId (HR3)");
   });
 
+  it("maps turn_started to session/turnStarted with the real prompt as userMessage (HR2)", () => {
+    const result = mapAgentEvents(happyPath);
+    const turnNote = result.notes.find((n) => n.type === "turn_started");
+    expect(turnNote?.disposition).toBe("mapped");
+    expect(turnNote?.detail).toContain("HR2");
+    // The turn was closed by the real turn_complete (not by a status heuristic).
+    const completeNote = result.notes.find((n) => n.type === "turn_complete");
+    expect(completeNote?.disposition).toBe("mapped");
+    // status=completed is now dropped (redundant with turn events).
+    const statusNote = result.notes.find((n) => n.type === "status" && n.detail.includes("redundant"));
+    expect(statusNote?.disposition).toBe("dropped");
+  });
+
   it("carries runtime_session_id + usage via extension points and routes the diagnostic system event to telemetry (HR7)", () => {
     const result = mapAgentEvents(happyPath);
     // HR7: the pre-turn "Starting runtime…" diagnostic is now carried to the
@@ -111,6 +124,31 @@ describe("pre-turn failure", () => {
   });
 });
 
+describe("HR2 turn events", () => {
+  it("drops input_needed as advisory (plumb-only; no structured input requests)", () => {
+    const result = mapAgentEvents([
+      { type: "turn_started" as const, timestamp: "2026-01-01T00:00:00.000Z", content: "prompt", turnId: "t-1" },
+      { type: "turn_complete" as const, timestamp: "2026-01-01T00:00:00.000Z", content: "", turnId: "t-1" },
+      { type: "input_needed" as const, timestamp: "2026-01-01T00:00:00.000Z", content: "" },
+    ]);
+    const inputNote = result.notes.find((n) => n.type === "input_needed");
+    expect(inputNote?.disposition).toBe("dropped");
+    expect(inputNote?.detail).toContain("advisory");
+  });
+
+  it("drops status=waiting_input as redundant with turn_complete (HR2 takes over)", () => {
+    const result = mapAgentEvents([
+      { type: "turn_started" as const, timestamp: "2026-01-01T00:00:00.000Z", content: "hi", turnId: "t-1" },
+      { type: "text" as const, timestamp: "2026-01-01T00:00:00.000Z", content: "response" },
+      { type: "turn_complete" as const, timestamp: "2026-01-01T00:00:00.000Z", content: "", turnId: "t-1" },
+      { type: "status" as const, timestamp: "2026-01-01T00:00:00.000Z", content: "waiting_input" },
+    ]);
+    const statusNote = result.notes.find((n) => n.type === "status");
+    expect(statusNote?.disposition).toBe("dropped");
+    expect(statusNote?.detail).toContain("redundant");
+  });
+});
+
 describe("missing-id fallback (no toolCallId)", () => {
   it("falls back to last-open pairing when toolCallId is absent and completes the tool call", () => {
     const result = mapAgentEvents(missingIdFallback);
@@ -140,12 +178,15 @@ describe("realism: a live StubRuntime scenario", () => {
       return;
     }
     const runtime = new mod.StubRuntime();
+    // Include real HR2 turn events so the scenario reflects production emission.
     const scenario = {
       steps: [
+        { emit: "turn_started", content: "do the task" },
         { emit: "text", content: "hi" },
         { emit: "tool_use", tool: "read", args: { p: 1 } },
         { emit: "tool_result", content: "ok" },
         { emit: "usage", content: JSON.stringify({ input_tokens: 5, output_tokens: 5 }) },
+        { emit: "turn_complete", content: "" },
       ],
     };
     const session = runtime.spawn({ sessionId: "stub-1", prompt: JSON.stringify(scenario), model: "m", maxTurns: 1 });
