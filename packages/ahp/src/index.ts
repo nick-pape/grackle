@@ -11,7 +11,7 @@
  * @module agent-host-protocol
  */
 
-// ─── State shapes ───────────────────────────────────────────────
+// ─── State types ───────────────────────────────────────────────
 
 export type {
   URI,
@@ -81,9 +81,9 @@ export type {
   TelemetryCapabilities,
 } from "./vendor/ahp/state.js";
 
-// ─── Enum types ─────────────────────────────────────────────────
+// ─── Enum values (runtime constants) ───────────────────────────
 
-export type {
+export {
   PolicyState,
   SessionLifecycle,
   SessionStatus,
@@ -111,7 +111,6 @@ export type {
 export type {
   ActionEnvelope,
   ActionOrigin,
-  ActionType,
   StateAction,
   // Root actions
   RootAgentsChangedAction,
@@ -179,6 +178,10 @@ export type {
   ChangesetClearedAction,
 } from "./vendor/ahp/actions.js";
 
+// ─── Action enum values (runtime constant) ──────────────────────
+
+export { ActionType } from "./vendor/ahp/actions.js";
+
 // ─── Command types ──────────────────────────────────────────────
 
 export type {
@@ -231,19 +234,18 @@ export type {
   ChangesetOperationFollowUp,
 } from "./vendor/ahp/commands.js";
 
-// ─── Enum types (commands) ──────────────────────────────────────
+// ─── Command enum values ────────────────────────────────────────
 
-export type {
+export {
   ReconnectResultType,
   ContentEncoding,
   CompletionItemKind,
   ChangesetOperationTargetKind,
 } from "./vendor/ahp/commands.js";
 
-// ─── Notifications ──────────────────────────────────────────────
+// ─── Notification types ─────────────────────────────────────────
 
 export type {
-  AuthRequiredReason,
   AuthRequiredParams,
   SessionAddedParams,
   SessionRemovedParams,
@@ -253,7 +255,11 @@ export type {
   OtlpExportMetricsParams,
 } from "./vendor/ahp/notifications.js";
 
-// ─── Messages ───────────────────────────────────────────────────
+// ─── Notification enum values ───────────────────────────────────
+
+export { AuthRequiredReason } from "./vendor/ahp/notifications.js";
+
+// ─── Message types ──────────────────────────────────────────────
 
 export type {
   JsonRpcRequest,

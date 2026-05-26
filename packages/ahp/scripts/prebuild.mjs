@@ -53,8 +53,8 @@ async function copyDir(src, dest) {
       continue;
     }
 
-    // Skip excluded top-level items
-    if (entry.parentName === TYPES_SUBDIR && SKIP_ITEMS.includes(entry.name)) {
+    // Skip excluded top-level items (when at the root of the types/ directory)
+    if (entry.parentName === undefined && SKIP_ITEMS.includes(entry.name)) {
       continue;
     }
 

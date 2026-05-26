@@ -1,4 +1,4 @@
-# Prebuild clone temp dir (created by scripts/prebuild.js)
+# Prebuild clone temp dir (created by scripts/prebuild.mjs)
 .tmp-ahp-clone/
 
 # Build output
