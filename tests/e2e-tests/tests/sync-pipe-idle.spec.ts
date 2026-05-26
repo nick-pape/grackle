@@ -62,7 +62,7 @@ test.describe("sync pipe idle delivery (#824)", { tag: ["@session"] }, () => {
     const parentSession = await client.core.spawnAgent({
       environmentId: "test-local",
       prompt: JSON.stringify(parentScenario),
-      personaId: "stub",
+      config: { personaId: "stub" },
     });
     const parentSessionId = parentSession.id;
     await waitForSessionStatus(client, parentSessionId, "idle");
@@ -76,9 +76,7 @@ test.describe("sync pipe idle delivery (#824)", { tag: ["@session"] }, () => {
     const childSession = await client.core.spawnAgent({
       environmentId: "test-local",
       prompt: JSON.stringify(childScenario),
-      personaId: "stub",
-      pipe: "sync",
-      parentSessionId,
+      config: { personaId: "stub", pipe: "sync", parentSessionId },
     });
     const childSessionId = childSession.id;
     const pipeFd = childSession.pipeFd;
@@ -112,7 +110,7 @@ test.describe("sync pipe idle delivery (#824)", { tag: ["@session"] }, () => {
     const parentSession = await client.core.spawnAgent({
       environmentId: "test-local",
       prompt: JSON.stringify(stubScenario(idle())),
-      personaId: "stub",
+      config: { personaId: "stub" },
     });
     const parentSessionId = parentSession.id;
     await waitForSessionStatus(client, parentSessionId, "idle");
@@ -121,9 +119,7 @@ test.describe("sync pipe idle delivery (#824)", { tag: ["@session"] }, () => {
     const childSession = await client.core.spawnAgent({
       environmentId: "test-local",
       prompt: JSON.stringify(stubScenario(emitText("Done!"))),
-      personaId: "stub",
-      pipe: "sync",
-      parentSessionId,
+      config: { personaId: "stub", pipe: "sync", parentSessionId },
     });
     const pipeFd = childSession.pipeFd;
     expect(pipeFd).toBeGreaterThan(0);

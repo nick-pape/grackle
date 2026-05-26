@@ -1,6 +1,6 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle, powerline } from "@grackle-ai/common";
+import { grackle } from "@grackle-ai/common";
 import type { PipeMode } from "@grackle-ai/common";
 import {
   DEFAULT_MCP_PORT,
@@ -35,6 +35,7 @@ import { deliverPendingEscalations } from "@grackle-ai/core";
 import { createEventStream } from "@grackle-ai/core";
 import { sessionRowToProto } from "./grpc-proto-converters.js";
 import { validatePipeInputs, toDialableHost, killSessionAndCleanup } from "./grpc-shared.js";
+import { resolveSpawnSelection, buildPowerlineSpawnRequest } from "./spawn-request.js";
 import { personaMcpServersToJson } from "@grackle-ai/core";
 import { getTraceId } from "@grackle-ai/core";
 import { resolveBootstrapRuntime } from "@grackle-ai/core";
@@ -129,7 +130,7 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
   let resolved: ReturnType<typeof resolvePersona>;
   try {
     resolved = resolvePersona(
-      req.personaId,
+      req.config?.personaId ?? "",
       undefined,
       undefined,
       settingsStore.getSetting("default_persona_id") || undefined,
@@ -140,20 +141,25 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
   }
 
   const sessionId = uuid();
-  const { runtime, model, systemPrompt } = resolved;
-  const maxTurns = req.maxTurns || resolved.maxTurns;
+  const cfg = req.config;
+  const parentSessionId = cfg?.parentSessionId ?? "";
+  const { runtime, model } = resolveSpawnSelection(req.provider, req.model?.id ?? "", {
+    runtime: resolved.runtime,
+    model: resolved.model,
+  });
+  const maxTurns = cfg?.maxTurns || resolved.maxTurns;
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
   const builderPrompt = new SystemPromptBuilder({
-    personaPrompt: systemPrompt,
+    personaPrompt: resolved.systemPrompt,
   }).build();
-  const systemContext = req.systemContext
-    ? builderPrompt + "\n\n" + req.systemContext
+  const systemContext = cfg?.systemContext
+    ? builderPrompt + "\n\n" + cfg.systemContext
     : builderPrompt;
 
   // Validate pipe inputs before creating the session or spawning the child
-  validatePipeInputs(req.pipe, req.parentSessionId);
-  const pipeMode = req.pipe as PipeMode;
+  validatePipeInputs(cfg?.pipe ?? "", parentSessionId);
+  const pipeMode = (cfg?.pipe ?? "") as PipeMode;
 
   sessionStore.createSession(
     sessionId,
@@ -162,9 +168,9 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
     req.prompt,
     model,
     logPath,
-    "",                      // taskId
+    cfg?.taskId || "",       // taskId
     resolved.personaId,      // personaId
-    req.parentSessionId || "",  // parentSessionId
+    parentSessionId,         // parentSessionId
     pipeMode || "",          // pipeMode
   );
 
@@ -175,9 +181,9 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
   const mcpUrl = `http://${mcpDialHost}:${mcpPort}/mcp`;
   // Resolve workspace scope for the token: prefer explicit workspaceId, then inherit from the
   // parent session's task (for piped child sessions spawned from a task-based session).
-  let resolvedWorkspaceId = req.workspaceId || "";
-  if (!resolvedWorkspaceId && req.parentSessionId) {
-    const parentSession = sessionStore.getSession(req.parentSessionId);
+  let resolvedWorkspaceId = cfg?.workspaceId || "";
+  if (!resolvedWorkspaceId && parentSessionId) {
+    const parentSession = sessionStore.getSession(parentSessionId);
     if (parentSession?.taskId) {
       const parentTask = taskStore.getTask(parentSession.taskId);
       resolvedWorkspaceId = parentTask?.workspaceId || "";
@@ -188,28 +194,29 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
     loadOrCreateApiKey(grackleHome),
   );
 
-  const powerlineReq = create(powerline.SpawnRequestSchema, {
+  const workingDirectory = cfg?.branch
+    ? ((cfg?.workingDirectory ?? "").trim() || process.env.GRACKLE_WORKING_DIRECTORY || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
+    : "";
+  const powerlineReq = buildPowerlineSpawnRequest({
     sessionId,
     runtime,
-    prompt: req.prompt,
     model,
+    prompt: req.prompt,
     maxTurns,
-    branch: req.branch,
-    workingDirectory: req.branch
-      ? (req.workingDirectory.trim() || process.env.GRACKLE_WORKING_DIRECTORY || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
-      : "",
+    config: cfg,
     systemContext,
     mcpServersJson,
     mcpUrl,
     mcpToken,
     scriptContent: resolved.type === "script" ? resolved.script : "",
-    pipe: req.pipe,
+    workingDirectory,
+    workspaceId: resolvedWorkspaceId,
   });
 
   // Create lifecycle stream — every session gets one. The spawner holds
   // a lifecycle fd; when it's closed, the session auto-stops.
   const lifecycleStream = streamRegistry.createStream(`lifecycle:${sessionId}`);
-  const spawnerId = req.parentSessionId || "__server__";
+  const spawnerId = parentSessionId || "__server__";
   streamRegistry.subscribe(lifecycleStream.id, spawnerId, "rw", "detach", true);
   streamRegistry.subscribe(lifecycleStream.id, sessionId, "rw", "detach", false);
 
@@ -218,10 +225,10 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
 
   // Set up IPC pipe stream (optional, on top of lifecycle stream)
   let pipeFd = 0;
-  if (pipeMode && pipeMode !== "detach" && req.parentSessionId) {
+  if (pipeMode && pipeMode !== "detach" && parentSessionId) {
     const ipcStream = streamRegistry.createStream(`pipe:${sessionId}`);
     const parentSub = streamRegistry.subscribe(
-      ipcStream.id, req.parentSessionId, "rw",
+      ipcStream.id, parentSessionId, "rw",
       pipeMode === "sync" ? "sync" : "async",
       true,  // parent opened this via spawn
     );
@@ -232,7 +239,7 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
     pipeFd = parentSub.fd;
 
     if (pipeMode === "async") {
-      pipeDelivery.ensureAsyncDeliveryListener(req.parentSessionId);  // parent receives child messages
+      pipeDelivery.ensureAsyncDeliveryListener(parentSessionId);  // parent receives child messages
       pipeDelivery.ensureAsyncDeliveryListener(sessionId);             // child receives parent messages
     }
   }

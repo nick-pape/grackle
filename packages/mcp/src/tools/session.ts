@@ -43,10 +43,12 @@ export const sessionTools: ToolDefinition[] = [
         const session = await client.spawnAgent({
           environmentId: args.environmentId as string,
           prompt: args.prompt as string,
-          maxTurns: args.maxTurns as number | undefined,
-          personaId: args.personaId as string | undefined,
-          workingDirectory: (args.workingDirectory as string | undefined) ?? "",
-          workspaceId: authContext?.type === "scoped" ? authContext.workspaceId ?? "" : "",
+          config: {
+            maxTurns: (args.maxTurns as number | undefined) ?? 0,
+            personaId: (args.personaId as string | undefined) ?? "",
+            workingDirectory: (args.workingDirectory as string | undefined) ?? "",
+            workspaceId: authContext?.type === "scoped" ? authContext.workspaceId ?? "" : "",
+          },
         });
         return jsonResult(session);
       } catch (error) {

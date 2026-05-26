@@ -36,11 +36,13 @@ export const ipcTools: ToolDefinition[] = [
         const session = await client.spawnAgent({
           environmentId: args.environmentId as string,
           prompt: args.prompt as string,
-          pipe,
-          parentSessionId,
-          personaId: (args.personaId as string) || "",
-          maxTurns: (args.maxTurns as number) || 0,
-          workspaceId: authContext?.type === "scoped" ? authContext.workspaceId ?? "" : "",
+          config: {
+            pipe,
+            parentSessionId,
+            personaId: (args.personaId as string) || "",
+            maxTurns: (args.maxTurns as number) || 0,
+            workspaceId: authContext?.type === "scoped" ? authContext.workspaceId ?? "" : "",
+          },
         });
 
         if (pipe === "sync") {

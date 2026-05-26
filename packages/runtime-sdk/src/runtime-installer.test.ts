@@ -49,7 +49,7 @@ describe("importFromRuntime", () => {
 
   it("throws actionable error when package cannot be resolved from runtime directory", async () => {
     const { importFromRuntime } = await import("./runtime-installer.js");
-    // Use a runtime name that is NOT in RUNTIME_MANIFESTS so the dev-mode
+    // Use a runtime name that is NOT in RUNTIME_CATALOG so the dev-mode
     // catch block rethrows MODULE_NOT_FOUND without attempting doInstall().
     // The error then falls through to the resolve-from-runtime-dir path
     // which wraps the failure with actionable context.
