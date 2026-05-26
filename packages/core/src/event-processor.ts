@@ -16,6 +16,7 @@ import { cleanupLifecycleStream } from "./lifecycle-streams.js";
 import { sendInputToSession } from "./signals/signal-delivery.js";
 import { checkBudget } from "./budget-checker.js";
 import type { ProcessorContext } from "./processor-registry.js";
+import { SessionStateManager } from "./ahp-session-state.js";
 
 /** Options for processing an agent event stream. */
 export interface EventStreamOptions {
@@ -124,8 +125,12 @@ export function processEventStream(
 
   processorRegistry.register(ctx);
 
+  // AHP HR1b: session state manager — mapper + reducer + snapshots
+  const stateManager = new SessionStateManager(sessionId);
+
   /** Inner processing logic, extracted so it can be wrapped in runWithTrace. */
   const processEvents = async (): Promise<void> => {
+    let eventIndex = 0;
     try {
       logWriter.initLog(logPath);
       sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.RUNNING);
@@ -158,6 +163,9 @@ export function processEventStream(
       }
 
       for await (const event of events) {
+        // AHP HR1b: process event through state manager (mapper + reducer + snapshot)
+        stateManager.processEvent(event, eventIndex++);
+
         // runtime_session_id is an internal control event: persist it then skip
         // logging/publishing — it has no proto enum value and is not client-visible.
         if (event.type === "runtime_session_id") {
@@ -294,6 +302,11 @@ export function processEventStream(
             }
           }
 
+          // AHP HR1b: flush snapshot on terminal status for clean state capture
+          if (["completed", "killed", "failed", "terminated"].includes(event.content)) {
+            try { stateManager.snapshot(`status-${event.content}`); } catch { /* non-critical */ }
+          }
+
           // Broadcast task_updated on status changes so frontend re-fetches computed status.
           // This covers both terminal events (completed/killed/failed) and non-terminal
           // transitions (running, waiting_input) that affect the computed task status.
@@ -342,6 +355,10 @@ export function processEventStream(
       // died), the session is in its correct final state and task.updated was already
       // emitted — skip the duplicate to avoid interfering with SIGCHLD delivery.
     } finally {
+      // AHP HR1b: flush final snapshot on stream completion
+      try { stateManager.snapshot(`final-${eventIndex}`); } catch { /* non-critical */ }
+      stateManager.clear();
+
       processorRegistry.unregister(sessionId);
       logWriter.endSession(logPath);
       try { writeTranscript(logPath); } catch { /* non-critical */ }
