@@ -1203,3 +1203,51 @@ describe("event-processor diagnostic flag + OTLP tee (AHP HR7)", () => {
     expect(emitDiagnostic).not.toHaveBeenCalled();
   });
 });
+
+describe("turn_id threading (AHP HR2)", () => {
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS findings");
+    sqlite.exec("DROP TABLE IF EXISTS tasks");
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    sqlite.exec("DROP TABLE IF EXISTS workspaces");
+    applySchema();
+    vi.clearAllMocks();
+  });
+
+  it("threads turn_id from AgentEvent through to the SessionEvent written to the log", async () => {
+    sessionStore.createSession("sess-turn", "env1", "stub", "test prompt", "stub-model", "/tmp/turn-log");
+
+    const turnStartedEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess-turn",
+      type: "turn_started",
+      timestamp: new Date().toISOString(),
+      content: "test prompt",
+      turnId: "test-turn-id-abc",
+    });
+
+    // A liveness status event with no turnId should be written with empty turn_id.
+    const doneEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess-turn",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "waiting_input",
+    });
+
+    await waitForProcessing([turnStartedEvent, doneEvent], {
+      sessionId: "sess-turn",
+      logPath: "/tmp/turn-log",
+    });
+
+    const writeEventCalls = vi.mocked(logWriter.writeEvent).mock.calls;
+
+    const turnStartedSessionEvent = writeEventCalls.find(
+      ([, ev]) => ev.type === grackle.EventType.TURN_STARTED,
+    )?.[1];
+    expect(turnStartedSessionEvent?.turnId).toBe("test-turn-id-abc");
+
+    const statusSessionEvent = writeEventCalls.find(
+      ([, ev]) => ev.type === grackle.EventType.STATUS,
+    )?.[1];
+    expect(statusSessionEvent?.turnId).toBeFalsy();
+  });
+});

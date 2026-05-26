@@ -51,6 +51,9 @@ class TestSession extends BaseAgentSession {
   /** When true, emit a `text` content event per turn (to exercise turn_id stamping). */
   public emitContentPerTurn: boolean = false;
 
+  /** When true, runInitialQuery throws — simulates a mid-turn failure after beginTurn. */
+  public throwOnInitialQuery: boolean = false;
+
   /** If set, executeFollowUp will throw on calls matching this predicate. */
   public throwOnInput?: (text: string) => boolean;
 
@@ -77,6 +80,9 @@ class TestSession extends BaseAgentSession {
   // setupForResume uses the base class default implementation
 
   protected async runInitialQuery(_prompt: string): Promise<number> {
+    if (this.throwOnInitialQuery) {
+      throw new Error("simulated initial-query failure");
+    }
     if (this.emitContentPerTurn) {
       this.emit({ type: "text", timestamp: new Date().toISOString(), content: "initial-response" });
     }
@@ -266,6 +272,34 @@ describe("BaseAgentSession turn framing (AHP HR2)", () => {
     expect(started.turnId).toBeTruthy();
 
     session.kill();
+  });
+
+  it("terminal failure mid-turn emits turn-less error and failed status (AHP HR2)", async () => {
+    // throwOnInitialQuery causes the runSession() internal catch to fire while a
+    // turn is open (beginTurn fires before runInitialQuery throws).
+    const { session, nextEvent } = spawnSession({ prompt: "fail-early" });
+    session.throwOnInitialQuery = true;
+
+    const events: AgentEvent[] = [];
+    let e: AgentEvent | undefined;
+    while ((e = await nextEvent()) !== undefined) {
+      events.push(e);
+    }
+
+    const turnStarted = events.find((ev) => ev.type === "turn_started");
+    const error = events.find((ev) => ev.type === "error");
+    const failed = events.find((ev) => ev.type === "status" && ev.content === "failed");
+
+    // The turn WAS opened (beginTurn fires before the failing query).
+    expect(turnStarted).toBeDefined();
+    expect(turnStarted!.turnId).toBeTruthy();
+
+    // Terminal events are turn-less — currentTurnId is cleared in the catch,
+    // mirroring kill() (AHP HR2).
+    expect(error).toBeDefined();
+    expect(error!.turnId).toBeFalsy();
+    expect(failed).toBeDefined();
+    expect(failed!.turnId).toBeFalsy();
   });
 });
 
