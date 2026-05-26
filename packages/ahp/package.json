@@ -1,0 +1,50 @@
+{
+  "name": "@grackle-ai/ahp",
+  "version": "0.125.2",
+  "description": "Agent Host Protocol (AHP) type definitions and reducers — vendored from Microsoft's open-source AHP repo, built via prebuild transform step.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nick-pape/grackle.git",
+    "directory": "packages/ahp"
+  },
+  "keywords": [
+    "grackle",
+    "ahp",
+    "agent-host-protocol",
+    "microsoft"
+  ],
+  "homepage": "https://github.com/nick-pape/grackle#readme",
+  "bugs": {
+    "url": "https://github.com/nick-pape/grackle/issues"
+  },
+  "engines": {
+    "node": ">=22.0.0 <24.0.0"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/"
+  ],
+  "scripts": {
+    "build": "heft build --clean",
+    "test": "vitest run",
+    "clean": "heft clean",
+    "prebuild": "node scripts/prebuild.mjs",
+    "_phase:build": "heft run --only build -- --clean",
+    "_phase:test": "vitest run"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.5.0"
+  },
+  "devDependencies": {
+    "@grackle-ai/heft-rig": "workspace:*",
+    "@rushstack/heft": "1.2.7",
+    "@types/node": "^22.0.0",
+    "vitest": "^3.1.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": []
+  }
+}

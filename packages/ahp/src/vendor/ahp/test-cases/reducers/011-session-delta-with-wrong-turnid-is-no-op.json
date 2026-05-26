@@ -1,0 +1,64 @@
+{
+  "description": "session/delta with wrong turnId is no-op",
+  "reducer": "session",
+  "initial": {
+    "summary": {
+      "resource": "copilot:/test-session",
+      "provider": "copilot",
+      "title": "Test Session",
+      "status": 8,
+      "createdAt": 1000,
+      "modifiedAt": 2000
+    },
+    "lifecycle": "ready",
+    "turns": [],
+    "activeTurn": {
+      "id": "turn-1",
+      "userMessage": {
+        "text": "Hello"
+      },
+      "responseParts": [
+        {
+          "kind": "markdown",
+          "id": "md-1",
+          "content": ""
+        }
+      ],
+      "usage": null
+    }
+  },
+  "actions": [
+    {
+      "type": "session/delta",
+      "turnId": "wrong-turn",
+      "partId": "md-1",
+      "content": "orphan"
+    }
+  ],
+  "expected": {
+    "summary": {
+      "resource": "copilot:/test-session",
+      "provider": "copilot",
+      "title": "Test Session",
+      "status": 8,
+      "createdAt": 1000,
+      "modifiedAt": 2000
+    },
+    "lifecycle": "ready",
+    "turns": [],
+    "activeTurn": {
+      "id": "turn-1",
+      "userMessage": {
+        "text": "Hello"
+      },
+      "responseParts": [
+        {
+          "kind": "markdown",
+          "id": "md-1",
+          "content": ""
+        }
+      ],
+      "usage": null
+    }
+  }
+}

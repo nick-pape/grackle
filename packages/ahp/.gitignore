@@ -1,0 +1,8 @@
+# Prebuild clone temp dir (created by scripts/prebuild.js)
+.tmp-ahp-clone/
+
+# Build output
+dist/
+
+# Test coverage
+coverage/

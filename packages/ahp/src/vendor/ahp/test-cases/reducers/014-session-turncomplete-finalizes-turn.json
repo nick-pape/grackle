@@ -1,0 +1,75 @@
+{
+  "description": "session/turnComplete finalizes turn",
+  "reducer": "session",
+  "initial": {
+    "summary": {
+      "resource": "copilot:/test-session",
+      "provider": "copilot",
+      "title": "Test Session",
+      "status": 8,
+      "createdAt": 1000,
+      "modifiedAt": 2000
+    },
+    "lifecycle": "ready",
+    "turns": [],
+    "activeTurn": {
+      "id": "turn-1",
+      "userMessage": {
+        "text": "Hello"
+      },
+      "responseParts": [],
+      "usage": null
+    }
+  },
+  "actions": [
+    {
+      "type": "session/responsePart",
+      "turnId": "turn-1",
+      "part": {
+        "kind": "markdown",
+        "id": "md-1",
+        "content": ""
+      }
+    },
+    {
+      "type": "session/delta",
+      "turnId": "turn-1",
+      "partId": "md-1",
+      "content": "Response text"
+    },
+    {
+      "type": "session/turnComplete",
+      "turnId": "turn-1"
+    }
+  ],
+  "expected": {
+    "summary": {
+      "resource": "copilot:/test-session",
+      "provider": "copilot",
+      "title": "Test Session",
+      "status": 1,
+      "createdAt": 1000,
+      "modifiedAt": 9999
+    },
+    "lifecycle": "ready",
+    "turns": [
+      {
+        "id": "turn-1",
+        "userMessage": {
+          "text": "Hello"
+        },
+        "responseParts": [
+          {
+            "kind": "markdown",
+            "id": "md-1",
+            "content": "Response text"
+          }
+        ],
+        "usage": null,
+        "state": "complete",
+        "error": null
+      }
+    ],
+    "activeTurn": null
+  }
+}

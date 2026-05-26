@@ -1,0 +1,60 @@
+{
+  "description": "steering and queued messages are independent",
+  "reducer": "session",
+  "initial": {
+    "summary": {
+      "resource": "copilot:/test-session",
+      "provider": "copilot",
+      "title": "Test Session",
+      "status": 1,
+      "createdAt": 1000,
+      "modifiedAt": 1000
+    },
+    "lifecycle": "creating",
+    "turns": []
+  },
+  "actions": [
+    {
+      "type": "session/pendingMessageSet",
+      "kind": "steering",
+      "id": "s-1",
+      "userMessage": {
+        "text": "Steer"
+      }
+    },
+    {
+      "type": "session/pendingMessageSet",
+      "kind": "queued",
+      "id": "q-1",
+      "userMessage": {
+        "text": "Queue"
+      }
+    }
+  ],
+  "expected": {
+    "summary": {
+      "resource": "copilot:/test-session",
+      "provider": "copilot",
+      "title": "Test Session",
+      "status": 1,
+      "createdAt": 1000,
+      "modifiedAt": 1000
+    },
+    "lifecycle": "creating",
+    "turns": [],
+    "steeringMessage": {
+      "id": "s-1",
+      "userMessage": {
+        "text": "Steer"
+      }
+    },
+    "queuedMessages": [
+      {
+        "id": "q-1",
+        "userMessage": {
+          "text": "Queue"
+        }
+      }
+    ]
+  }
+}

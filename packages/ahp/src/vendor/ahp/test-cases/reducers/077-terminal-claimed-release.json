@@ -1,0 +1,31 @@
+{
+  "description": "terminal/claimed narrows session claim (detach from tool call)",
+  "reducer": "terminal",
+  "initial": {
+    "title": "bash",
+    "content": [],
+    "claim": {
+      "kind": "session",
+      "session": "copilot:/s1",
+      "turnId": "t1",
+      "toolCallId": "tc1"
+    }
+  },
+  "actions": [
+    {
+      "type": "terminal/claimed",
+      "claim": {
+        "kind": "session",
+        "session": "copilot:/s1"
+      }
+    }
+  ],
+  "expected": {
+    "title": "bash",
+    "content": [],
+    "claim": {
+      "kind": "session",
+      "session": "copilot:/s1"
+    }
+  }
+}

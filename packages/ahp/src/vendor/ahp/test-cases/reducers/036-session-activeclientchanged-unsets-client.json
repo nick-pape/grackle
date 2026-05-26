@@ -1,0 +1,39 @@
+{
+  "description": "session/activeClientChanged unsets client",
+  "reducer": "session",
+  "initial": {
+    "summary": {
+      "resource": "copilot:/test-session",
+      "provider": "copilot",
+      "title": "Test Session",
+      "status": 1,
+      "createdAt": 1000,
+      "modifiedAt": 1000
+    },
+    "lifecycle": "creating",
+    "turns": [],
+    "activeClient": {
+      "clientId": "vscode-1",
+      "tools": []
+    }
+  },
+  "actions": [
+    {
+      "type": "session/activeClientChanged",
+      "activeClient": null
+    }
+  ],
+  "expected": {
+    "summary": {
+      "resource": "copilot:/test-session",
+      "provider": "copilot",
+      "title": "Test Session",
+      "status": 1,
+      "createdAt": 1000,
+      "modifiedAt": 1000
+    },
+    "lifecycle": "creating",
+    "turns": [],
+    "activeClient": null
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "description": "toolCallReady with options preserves them in pending-confirmation state",
+  "reducer": "session",
+  "initial": {
+    "summary": {
+      "resource": "copilot:/test-session",
+      "provider": "copilot",
+      "title": "Test Session",
+      "status": 8,
+      "createdAt": 1000,
+      "modifiedAt": 2000
+    },
+    "lifecycle": "ready",
+    "turns": [],
+    "activeTurn": {
+      "id": "turn-1",
+      "userMessage": {
+        "text": "Hello"
+      },
+      "responseParts": [],
+      "usage": null
+    }
+  },
+  "actions": [
+    {
+      "type": "session/toolCallStart",
+      "turnId": "turn-1",
+      "toolCallId": "tc-1",
+      "toolName": "bash",
+      "displayName": "Run Command"
+    },
+    {
+      "type": "session/toolCallReady",
+      "turnId": "turn-1",
+      "toolCallId": "tc-1",
+      "invocationMessage": "Run: echo hello",
+      "options": [
+        {
+          "id": "approve-once",
+          "label": "Approve",
+          "kind": "approve",
+          "group": 1
+        },
+        {
+          "id": "approve-session",
+          "label": "Approve in this Session",
+          "kind": "approve",
+          "group": 1
+        },
+        {
+          "id": "deny",
+          "label": "Deny",
+          "kind": "deny",
+          "group": 2
+        },
+        {
+          "id": "deny-reason",
+          "label": "Deny with reason",
+          "kind": "deny",
+          "group": 2
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "summary": {
+      "resource": "copilot:/test-session",
+      "provider": "copilot",
+      "title": "Test Session",
+      "status": 24,
+      "createdAt": 1000,
+      "modifiedAt": 2000
+    },
+    "lifecycle": "ready",
+    "turns": [],
+    "activeTurn": {
+      "id": "turn-1",
+      "userMessage": {
+        "text": "Hello"
+      },
+      "responseParts": [
+        {
+          "kind": "toolCall",
+          "toolCall": {
+            "status": "pending-confirmation",
+            "toolCallId": "tc-1",
+            "toolName": "bash",
+            "displayName": "Run Command",
+            "toolClientId": null,
+            "_meta": null,
+            "invocationMessage": "Run: echo hello",
+            "toolInput": null,
+            "confirmationTitle": null,
+            "edits": null,
+            "editable": null,
+            "options": [
+              {
+                "id": "approve-once",
+                "label": "Approve",
+                "kind": "approve",
+                "group": 1
+              },
+              {
+                "id": "approve-session",
+                "label": "Approve in this Session",
+                "kind": "approve",
+                "group": 1
+              },
+              {
+                "id": "deny",
+                "label": "Deny",
+                "kind": "deny",
+                "group": 2
+              },
+              {
+                "id": "deny-reason",
+                "label": "Deny with reason",
+                "kind": "deny",
+                "group": 2
+              }
+            ]
+          }
+        }
+      ],
+      "usage": null
+    }
+  }
+}

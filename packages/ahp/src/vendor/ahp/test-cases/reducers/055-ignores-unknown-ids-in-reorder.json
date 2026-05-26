@@ -1,0 +1,67 @@
+{
+  "description": "ignores unknown IDs in reorder",
+  "reducer": "session",
+  "initial": {
+    "summary": {
+      "resource": "copilot:/test-session",
+      "provider": "copilot",
+      "title": "Test Session",
+      "status": 1,
+      "createdAt": 1000,
+      "modifiedAt": 1000
+    },
+    "lifecycle": "creating",
+    "turns": [],
+    "queuedMessages": [
+      {
+        "id": "a",
+        "userMessage": {
+          "text": "A"
+        }
+      },
+      {
+        "id": "b",
+        "userMessage": {
+          "text": "B"
+        }
+      }
+    ]
+  },
+  "actions": [
+    {
+      "type": "session/queuedMessagesReordered",
+      "order": [
+        "unknown",
+        "b",
+        "a",
+        "also-unknown"
+      ]
+    }
+  ],
+  "expected": {
+    "summary": {
+      "resource": "copilot:/test-session",
+      "provider": "copilot",
+      "title": "Test Session",
+      "status": 1,
+      "createdAt": 1000,
+      "modifiedAt": 1000
+    },
+    "lifecycle": "creating",
+    "turns": [],
+    "queuedMessages": [
+      {
+        "id": "b",
+        "userMessage": {
+          "text": "B"
+        }
+      },
+      {
+        "id": "a",
+        "userMessage": {
+          "text": "A"
+        }
+      }
+    ]
+  }
+}

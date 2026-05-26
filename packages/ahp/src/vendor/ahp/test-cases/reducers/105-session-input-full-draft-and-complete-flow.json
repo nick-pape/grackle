@@ -1,0 +1,103 @@
+{
+  "description": "session input requests sync drafts and restore in-progress status after completion",
+  "reducer": "session",
+  "initial": {
+    "summary": {
+      "resource": "copilot:/test-session",
+      "provider": "copilot",
+      "title": "Test Session",
+      "status": 1,
+      "createdAt": 1000,
+      "modifiedAt": 1000
+    },
+    "lifecycle": "ready",
+    "turns": []
+  },
+  "actions": [
+    {
+      "type": "session/turnStarted",
+      "turnId": "turn-1",
+      "userMessage": {
+        "text": "Hello"
+      }
+    },
+    {
+      "type": "session/inputRequested",
+      "request": {
+        "id": "input-1",
+        "message": "Clarify requirements",
+        "questions": [
+          {
+            "id": "q1",
+            "kind": "single-select",
+            "message": "Which runtime?",
+            "options": [
+              {
+                "id": "node",
+                "label": "Node.js"
+              },
+              {
+                "id": "deno",
+                "label": "Deno"
+              }
+            ]
+          },
+          {
+            "id": "q2",
+            "kind": "text",
+            "message": "Anything else?"
+          }
+        ]
+      }
+    },
+    {
+      "type": "session/inputAnswerChanged",
+      "requestId": "input-1",
+      "questionId": "q1",
+      "answer": {
+        "state": "draft",
+        "value": {
+          "kind": "selected",
+          "value": "node"
+        }
+      }
+    },
+    {
+      "type": "session/inputAnswerChanged",
+      "requestId": "input-1",
+      "questionId": "q2",
+      "answer": {
+        "state": "draft",
+        "value": {
+          "kind": "text",
+          "value": "Keep it small."
+        }
+      }
+    },
+    {
+      "type": "session/inputCompleted",
+      "requestId": "input-1",
+      "response": "accept"
+    }
+  ],
+  "expected": {
+    "summary": {
+      "resource": "copilot:/test-session",
+      "provider": "copilot",
+      "title": "Test Session",
+      "status": 8,
+      "createdAt": 1000,
+      "modifiedAt": 9999
+    },
+    "lifecycle": "ready",
+    "turns": [],
+    "activeTurn": {
+      "id": "turn-1",
+      "userMessage": {
+        "text": "Hello"
+      },
+      "responseParts": [],
+      "usage": null
+    }
+  }
+}
