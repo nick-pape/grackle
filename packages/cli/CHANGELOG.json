@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.130.0",
+      "tag": "@grackle-ai/cli_v0.130.0",
+      "date": "Tue, 26 May 2026 02:14:36 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Native turn framing (AHP HR2): session events now carry a turn_id and explicit turn_started/turn_complete/input_needed event types, anchored on the real prompt/sendInput, replacing the overloaded waiting_input signal. Producer-side, behind the existing wire; behavior-preserving."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.129.0",
       "tag": "@grackle-ai/cli_v0.129.0",
       "date": "Tue, 26 May 2026 01:34:17 GMT",

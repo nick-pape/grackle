@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 26 May 2026 01:34:17 GMT and should not be manually modified.
+This log was last generated on Tue, 26 May 2026 02:14:36 GMT and should not be manually modified.
+
+## 0.130.0
+Tue, 26 May 2026 02:14:36 GMT
+
+### Minor changes
+
+- Native turn framing (AHP HR2): session events now carry a turn_id and explicit turn_started/turn_complete/input_needed event types, anchored on the real prompt/sendInput, replacing the overloaded waiting_input signal. Producer-side, behind the existing wire; behavior-preserving.
 
 ## 0.129.0
 Tue, 26 May 2026 01:34:17 GMT
