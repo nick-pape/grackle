@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.131.0",
+      "tag": "@grackle-ai/cli_v0.131.0",
+      "date": "Tue, 26 May 2026 16:32:59 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "AHP package (Phase A): publishable @grackle-ai/ahp with build-time prebuild vendoring of Microsoft's Agent Host Protocol types"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.130.0",
       "tag": "@grackle-ai/cli_v0.130.0",
       "date": "Tue, 26 May 2026 02:14:36 GMT",

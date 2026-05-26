@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 26 May 2026 02:14:36 GMT and should not be manually modified.
+This log was last generated on Tue, 26 May 2026 16:32:59 GMT and should not be manually modified.
+
+## 0.131.0
+Tue, 26 May 2026 16:32:59 GMT
+
+### Minor changes
+
+- AHP package (Phase A): publishable @grackle-ai/ahp with build-time prebuild vendoring of Microsoft's Agent Host Protocol types
 
 ## 0.130.0
 Tue, 26 May 2026 02:14:36 GMT
