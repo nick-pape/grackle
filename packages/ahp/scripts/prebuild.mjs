@@ -8,7 +8,7 @@
  * 3. Remove upstream `tsconfig.json` (we compile under our own).
  * 4. Convert `const enum` to plain `enum` (esbuild compatibility).
  *
- * The 149-fixture conformance corpus under `test-cases/reducers/*.json`
+ * The upstream conformance corpus under `test-cases/reducers/*.json`
  * is kept for `reducer-conformance.test.ts`.
  *
  * This script runs from a temporary clone directory; nothing is left behind

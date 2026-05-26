@@ -3,7 +3,7 @@
  * correctly process a subset of the upstream test-cases/reducers fixtures.
  *
  * The full conformance corpus lives under src/vendor/ahp/test-cases/reducers/
- * and is used here as a smoke-check: a single fixture exercises the session
+ * and is used here as a smoke-check: multiple representative fixtures exercise the session
  * reducer pipeline end-to-end.
  *
  * @module reducer-conformance

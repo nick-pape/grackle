@@ -2,7 +2,7 @@
   "operationSettings": [
     {
       "operationName": "_phase:build",
-      "outputFolderNames": ["dist"]
+      "outputFolderNames": ["dist", "src/vendor"]
     },
     {
       "operationName": "_phase:test",
