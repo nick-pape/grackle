@@ -193,7 +193,12 @@ export abstract class BaseAgentSession implements AgentSession {
    * the base class push through this single chokepoint.
    */
   protected emit(event: AgentEvent): void {
-    if (this.currentTurnId !== undefined && event.turnId === undefined) {
+    if (
+      this.currentTurnId !== undefined &&
+      event.turnId === undefined &&
+      event.type !== "status" &&  // liveness: never turn-stamped
+      !event.diagnostic           // lifecycle/diagnostic: out-of-band
+    ) {
       event.turnId = this.currentTurnId;
     }
     this.eventQueue.push(event);

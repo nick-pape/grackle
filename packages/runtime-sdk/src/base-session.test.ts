@@ -245,16 +245,25 @@ describe("BaseAgentSession turn framing (AHP HR2)", () => {
     await drainUntilStatus(nextEvent, "waiting_input");
     session.emitContentPerTurn = true;
 
+    const gate = session.addGate();
     session.sendInput("buffered");
-    // Let the follow-up turn run and buffer (we stop consuming the stream).
-    await new Promise((r) => setTimeout(r, 30));
+
+    // Draining to "running" is deterministic: processInputLoop pushes running,
+    // then beginTurn (turn_started), then the text event synchronously in the
+    // same microtask — all before the generator can yield "running". So by the
+    // time drainUntilStatus returns, turn_started and text are buffered in the
+    // queue, waiting behind the suspended generator.
+    await drainUntilStatus(nextEvent, "running");
+
     const drained = session.drainBufferedEvents();
 
     const started = drained.find((x) => x.type === "turn_started" && x.content === "buffered");
     expect(started?.turnId).toBeTruthy();
     expect(drained.find((x) => x.type === "text")?.turnId).toBe(started?.turnId);
-    expect(drained.find((x) => x.type === "turn_complete")?.turnId).toBe(started?.turnId);
+    // turn_complete is not yet emitted (executeFollowUp is gated).
+    expect(drained.some((x) => x.type === "turn_complete")).toBe(false);
 
+    gate.resolve();
     session.kill();
   });
 
