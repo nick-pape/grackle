@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { execFile } from "node:child_process";
 import { createRequire, register } from "node:module";
 import { pathToFileURL } from "node:url";
-import { RUNTIME_MANIFESTS } from "@grackle-ai/common";
+import { RUNTIME_CATALOG } from "@grackle-ai/common";
 import type { RuntimePackageManifest } from "@grackle-ai/common";
 import { logger } from "./logger.js";
 
@@ -112,7 +112,7 @@ export function ensureRuntimeInstalled(
   // Register module hooks regardless of install path — the hook must be
   // active before the first SDK import, even when packages are already
   // installed or resolved via Rush in dev mode.
-  if (runtimeName in RUNTIME_MANIFESTS && RUNTIME_MANIFESTS[runtimeName]!.needsJsonRpcHook) {
+  if (RUNTIME_CATALOG[runtimeName]?.install?.needsJsonRpcHook) {
     registerJsonRpcHook();
   }
 
@@ -123,10 +123,15 @@ export function ensureRuntimeInstalled(
     return Promise.resolve("");
   }
 
-  if (!(runtimeName in RUNTIME_MANIFESTS)) {
-    return Promise.reject(new Error(`Unknown runtime: ${runtimeName}. No manifest entry found.`));
+  const catalogEntry = RUNTIME_CATALOG[runtimeName];
+  if (catalogEntry === undefined) {
+    return Promise.reject(new Error(`Unknown runtime: ${runtimeName}. No catalog entry found.`));
   }
-  const manifest = RUNTIME_MANIFESTS[runtimeName]!;
+  // Built-in runtimes (e.g. stub) ship in-process and need no npm packages.
+  if (catalogEntry.install === undefined) {
+    return Promise.resolve("");
+  }
+  const manifest = catalogEntry.install;
 
   const runtimeDir = join(RUNTIMES_BASE_DIR, runtimeName);
 
@@ -177,10 +182,11 @@ export async function importFromRuntime<T>(runtimeName: string, packageName: str
       }
       // Package not in monorepo devDependencies — install on demand and
       // resolve from the isolated runtime directory below.
-      if (!(runtimeName in RUNTIME_MANIFESTS)) {
+      const lazyEntry = RUNTIME_CATALOG[runtimeName];
+      if (lazyEntry?.install === undefined) {
         throw err;
       }
-      const manifest = RUNTIME_MANIFESTS[runtimeName]!;
+      const manifest = lazyEntry.install;
       const runtimeDir = join(RUNTIMES_BASE_DIR, runtimeName);
       if (!isManifestCurrent(runtimeDir, manifest)) {
         logger.info(

@@ -24,6 +24,9 @@ service GrackleCore {
   rpc GetSessionEvents(SessionId) returns (SessionEventList);
   rpc GetTaskSessions(TaskId) returns (SessionList);
 
+  // Runtime catalog (AHP root channel: RootState.agents)
+  rpc ListRuntimes(Empty) returns (ListRuntimesResponse);
+
   // Streaming
   rpc StreamSession(SessionId) returns (stream SessionEvent);
   rpc StreamAll(Empty) returns (stream SessionEvent);

@@ -174,7 +174,7 @@ test.describe("Environment Lifecycle — Server Events", { tag: ["@environment"]
     const response = await client.core.spawnAgent({
       environmentId: "test-local",
       prompt: "auto-provision test",
-      personaId: "stub",
+      config: { personaId: "stub" },
     });
 
     // The server auto-provisioned and returned a session with an ID

@@ -39,6 +39,7 @@ vi.mock("./plugin-handlers.js", () => ({ listPlugins: vi.fn(), setPluginEnabled:
 vi.mock("./github-account-handlers.js", () => ({ listGitHubAccounts: vi.fn() }));
 vi.mock("./channel-handlers.js", () => ({ exposeChannel: vi.fn(), listChannelGrants: vi.fn(), revokeChannelGrant: vi.fn() }));
 vi.mock("./event-handlers.js", () => ({ queryDomainEvents: vi.fn(), getStreamTranscript: vi.fn(), getSessionActions: vi.fn() }));
+vi.mock("./runtime-handlers.js", () => ({ listRuntimes: vi.fn() }));
 
 import { createCoreCollector, createOrchestrationCollector, createDefaultCollector } from "./grpc-service.js";
 
@@ -67,6 +68,8 @@ describe("createCoreCollector", () => {
     expect(addedModules.some((m) => "queryDomainEvents" in m)).toBe(true);
     // Session-action log reader is registered in core (RFC #1264 / AHP HR1a)
     expect(addedModules.some((m) => "getSessionActions" in m)).toBe(true);
+    // Runtime catalog (AHP RootState.agents) is registered in core (#1288)
+    expect(addedModules.some((m) => "listRuntimes" in m)).toBe(true);
     // Schedules are contributed by @grackle-ai/plugin-scheduling
     expect(addedModules.some((m) => "listSchedules" in m)).toBe(false);
   });
@@ -79,9 +82,9 @@ describe("createCoreCollector", () => {
     expect(addedModules.some((m) => "createEscalation" in m)).toBe(false);
   });
 
-  it("adds exactly 11 handler groups", () => {
+  it("adds exactly 12 handler groups", () => {
     createCoreCollector();
-    expect(addHandlersMock).toHaveBeenCalledTimes(11);
+    expect(addHandlersMock).toHaveBeenCalledTimes(12);
   });
 });
 
@@ -109,7 +112,7 @@ describe("createOrchestrationCollector", () => {
 });
 
 describe("createDefaultCollector (regression)", () => {
-  it("adds all 15 handler groups including orchestration, components, plugins, github accounts, channels, and domain events (knowledge and schedules moved to plugins)", () => {
+  it("adds all 16 handler groups including orchestration, components, plugins, github accounts, channels, domain events, and runtime catalog (knowledge and schedules moved to plugins)", () => {
     createDefaultCollector();
     const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
     expect(addedModules.some((m) => "listEnvironments" in m)).toBe(true);
@@ -123,6 +126,7 @@ describe("createDefaultCollector (regression)", () => {
     expect(addedModules.some((m) => "exposeChannel" in m)).toBe(true);
     expect(addedModules.some((m) => "queryDomainEvents" in m)).toBe(true);
     expect(addedModules.some((m) => "getSessionActions" in m)).toBe(true);
-    expect(addHandlersMock).toHaveBeenCalledTimes(15);
+    expect(addedModules.some((m) => "listRuntimes" in m)).toBe(true);
+    expect(addHandlersMock).toHaveBeenCalledTimes(16);
   });
 });
