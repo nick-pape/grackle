@@ -2,7 +2,7 @@
  * AHP reducer conformance test — verifies that the vendored AHP reducers
  * correctly process a subset of the upstream test-cases/reducers fixtures.
  *
- * The full 156-fixture corpus lives under src/vendor/ahp/test-cases/reducers/
+ * The full conformance corpus lives under src/vendor/ahp/test-cases/reducers/
  * and is used here as a smoke-check: a single fixture exercises the session
  * reducer pipeline end-to-end.
  *

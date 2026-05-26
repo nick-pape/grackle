@@ -41,7 +41,7 @@ async function copyFile(src, dest) {
   await cp(src, dest);
 }
 
-async function copyDir(src, dest) {
+async function copyDir(src, dest, isRoot = false) {
   await mkdir(dirname(dest), { recursive: true });
   const entries = await readdir(src, { withFileTypes: true });
   for (const entry of entries) {
@@ -53,13 +53,13 @@ async function copyDir(src, dest) {
       continue;
     }
 
-    // Skip excluded top-level items (when at the root of the types/ directory)
-    if (entry.parentName === undefined && SKIP_ITEMS.includes(entry.name)) {
+    // Skip excluded top-level items only at the root of the types/ directory
+    if (isRoot && SKIP_ITEMS.includes(entry.name)) {
       continue;
     }
 
     if (entry.isDirectory()) {
-      await copyDir(srcPath, destPath);
+      await copyDir(srcPath, destPath, false);
     } else {
       await copyFile(srcPath, destPath);
     }
@@ -130,7 +130,7 @@ async function main() {
   // Copy the types/ directory with transforms
   const srcTypesDir = join(TMP_DIR, TYPES_SUBDIR);
   console.log(`Copying ${TYPES_SUBDIR}/ -> ${OUTPUT_DIR} with transforms...`);
-  await copyDir(srcTypesDir, OUTPUT_DIR);
+  await copyDir(srcTypesDir, OUTPUT_DIR, true);
 
   // Apply eslint-disable headers + const enum -> enum to all .ts files
   console.log("Applying eslint-disable headers and const enum transforms...");
