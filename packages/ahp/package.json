@@ -37,6 +37,7 @@
   },
   "dependencies": {},
   "devDependencies": {
+    "agent-host-protocol": "git+https://github.com/microsoft/agent-host-protocol.git#7c6b727bde61bc2c490201fb0e47a86759172782",
     "@grackle-ai/heft-rig": "workspace:*",
     "@rushstack/heft": "1.2.7",
     "@types/node": "^22.0.0",

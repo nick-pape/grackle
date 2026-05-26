@@ -1,6 +1,7 @@
 /**
- * Prebuild script: clones Microsoft's Agent Host Protocol `types/` directory,
- * applies transforms, and writes clean `.ts` files into `src/vendor/ahp/`.
+ * Prebuild script: reads Microsoft's Agent Host Protocol `types/` directory
+ * from the `agent-host-protocol` git dependency in node_modules, applies
+ * transforms, and writes clean `.ts` files into `src/vendor/ahp/`.
  *
  * Transforms applied (per the spike's requirements):
  * 1. Prepend eslint-disable header to every `.ts` file.
@@ -11,25 +12,21 @@
  * The upstream conformance corpus under `test-cases/reducers/*.json`
  * is kept for `reducer-conformance.test.ts`.
  *
- * This script runs from a temporary clone directory; nothing is left behind
- * after the build. The output lives in `src/vendor/ahp/` alongside our
- * hand-written `src/index.ts` and other sources.
+ * The `agent-host-protocol` git dependency in package.json handles cloning;
+ * this script only reads, transforms, and writes the output.
  */
 
-import { cp, mkdir, rm, readFile, writeFile, readdir } from "node:fs/promises";
+import { cp, mkdir, rm, readFile, writeFile, readdir, stat } from "node:fs/promises";
 import { join, dirname, extname } from "node:path";
-import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { existsSync } from "node:fs";
 
 // ─── Config ────────────────────────────────────────────────────────────
 
-const AHP_REPO_URL = "https://github.com/microsoft/agent-host-protocol.git";
-const AHP_COMMIT = "7c6b727bde61bc2c490201fb0e47a86759172782";
 const TYPES_SUBDIR = "types";
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
+const NODE_MODULES_DIR = join(SCRIPT_DIR, "..", "node_modules");
 const OUTPUT_DIR = join(SCRIPT_DIR, "..", "src", "vendor", "ahp");
-const TMP_DIR = join(SCRIPT_DIR, "..", ".tmp-ahp-clone");
+const SRC_TYPES_DIR = join(NODE_MODULES_DIR, "agent-host-protocol", TYPES_SUBDIR);
 
 // Files/dirs in types/ to skip entirely
 const SKIP_ITEMS = ["scripts", "plugins", "docs"];
@@ -88,49 +85,24 @@ async function transformFile(filePath) {
 // ─── Main ──────────────────────────────────────────────────────────────
 
 async function main() {
-  // Clean up any previous clone
-  if (existsSync(TMP_DIR)) {
-    await rm(TMP_DIR, { recursive: true, force: true });
+  // Verify the git dependency is installed
+  if (!(await stat(SRC_TYPES_DIR).then(() => true).catch(() => false))) {
+    console.error(
+      `Prebuild failed: "${TYPES_SUBDIR}/" not found at ${SRC_TYPES_DIR}. ` +
+        "Run \`rush install\` to install the agent-host-protocol git dependency.",
+    );
+    process.exit(1);
   }
 
-  // Clone the AHP repo at the pinned commit (shallow clone directly to the commit)
-  console.log(`Cloning ${AHP_REPO_URL} @ ${AHP_COMMIT} into ${TMP_DIR}...`);
-  execFileSync(
-    "git",
-    [
-      "clone",
-      "--depth", "1",
-      "--single-branch",
-      AHP_REPO_URL,
-      TMP_DIR,
-    ],
-    { stdio: "inherit" },
-  );
-
-  // Fetch and checkout the specific commit (shallow clone may not have it)
-  console.log(`Fetching commit ${AHP_COMMIT}...`);
-  execFileSync(
-    "git",
-    ["fetch", "--depth", "1", "origin", AHP_COMMIT],
-    { cwd: TMP_DIR, stdio: "inherit" },
-  );
-  console.log(`Checking out ${AHP_COMMIT}...`);
-  execFileSync(
-    "git",
-    ["checkout", AHP_COMMIT],
-    { cwd: TMP_DIR, stdio: "inherit" },
-  );
-
   // Clean up output dir
-  if (existsSync(OUTPUT_DIR)) {
+  if (dirname(OUTPUT_DIR) !== NODE_MODULES_DIR) {
     await rm(OUTPUT_DIR, { recursive: true, force: true });
   }
   await mkdir(OUTPUT_DIR, { recursive: true });
 
   // Copy the types/ directory with transforms
-  const srcTypesDir = join(TMP_DIR, TYPES_SUBDIR);
   console.log(`Copying ${TYPES_SUBDIR}/ -> ${OUTPUT_DIR} with transforms...`);
-  await copyDir(srcTypesDir, OUTPUT_DIR, true);
+  await copyDir(SRC_TYPES_DIR, OUTPUT_DIR, true);
 
   // Apply eslint-disable headers + const enum -> enum to all .ts files
   console.log("Applying eslint-disable headers and const enum transforms...");
@@ -152,26 +124,50 @@ async function main() {
 
   // Skip tsconfig.json if it exists (we don't compile vendored tsconfig)
   const tsconfigPath = join(OUTPUT_DIR, "tsconfig.json");
-  if (existsSync(tsconfigPath)) {
+  try {
+    await stat(tsconfigPath);
     await rm(tsconfigPath);
+  } catch {
+    // not present — nothing to remove
   }
 
   for (const file of tsFiles) {
     await transformFile(file);
   }
 
-  // Write SOURCE.md with metadata
+  // Read the pinned commit from the git dependency's package.json for SOURCE.md
+  const depPackageJson = join(NODE_MODULES_DIR, "agent-host-protocol", "package.json");
+  const depPkg = JSON.parse(await readFile(depPackageJson, "utf-8"));
+  const ahpRepoUrl = depPkg.repository?.url?.replace(/^git\+/, "").replace(/\.git$/, "") || "https://github.com/microsoft/agent-host-protocol";
+
+  // Determine commit from the git dependency installation metadata
+  // npm stores the resolved commit in the package.json's "resolved" or "commit" field
+  // for git: dependencies. Fall back to git rev-parse on the node_modules dir.
+  let ahpCommit = depPkg.commit || depPkg.resolved?.split("#")[1];
+  if (!ahpCommit) {
+    // Read from npm's metadata: node_modules/.package-lock.json or similar
+    // For git: deps, the commit hash is in the "resolved" field of the lock file
+    try {
+      const lockPath = join(NODE_MODULES_DIR, "..", ".package-lock.json");
+      const lock = JSON.parse(await readFile(lockPath, "utf-8"));
+      const ahpEntry = lock.packages?.[`node_modules/agent-host-protocol`];
+      ahpCommit = ahpEntry?.commit || ahpEntry?.resolved?.split("#")[1];
+    } catch {
+      // Will fall through to a placeholder below
+    }
+  }
+
   const sourceMd = `# Vendored: Agent Host Protocol types
 
-This directory is the \`types/\` tree cloned from Microsoft's Agent Host
+This directory is the \`types/\` tree from Microsoft's Agent Host
 Protocol repository, used by \`@grackle-ai/ahp\` - a publishable npm package
 that builds from upstream via a prebuild transform step. It is third-party
 code - **do not edit it directly**; update the pinned commit or transforms
 in \`scripts/prebuild.mjs\` if upstream changes are needed.
 
-- **Source:** https://github.com/microsoft/agent-host-protocol
+- **Source:** ${ahpRepoUrl}
 - **Path:** \`types/\`
-- **Pinned commit:** \`${AHP_COMMIT}\`
+- **Pinned commit:** \`${ahpCommit || "see package.json git dependency"}\`
   (\`Add ahp-otlp: telemetry channel for OpenTelemetry pass-through (#140)\`)
 - **License:** MIT (C) Microsoft Corporation
 
@@ -197,9 +193,6 @@ pure channel reducers), \`channels-session/{state,actions,reducer}.ts\`,
 \`common/*\`, and \`action-origin.generated.ts\`.
 `;
   await writeFile(join(OUTPUT_DIR, "SOURCE.md"), sourceMd);
-
-  // Cleanup clone
-  await rm(TMP_DIR, { recursive: true, force: true });
 
   console.log(`Done. Vendored AHP types written to ${OUTPUT_DIR}`);
 }
