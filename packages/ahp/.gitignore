@@ -1,0 +1,8 @@
+# Prebuild output (generated from upstream AHP repo)
+src/vendor/
+
+# Build output
+dist/
+
+# Test coverage
+coverage/
