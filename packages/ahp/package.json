@@ -28,11 +28,11 @@
     "dist/"
   ],
   "scripts": {
-    "build": "heft build --clean",
+    "build": "node scripts/prebuild.mjs && heft build --clean",
     "test": "vitest run",
     "clean": "heft clean",
     "prebuild": "node scripts/prebuild.mjs",
-    "_phase:build": "heft run --only build -- --clean",
+    "_phase:build": "node scripts/prebuild.mjs && heft run --only build -- --clean",
     "_phase:test": "vitest run"
   },
   "dependencies": {},
