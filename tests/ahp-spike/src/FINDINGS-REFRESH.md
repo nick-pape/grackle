@@ -1,4 +1,4 @@
-# AHP adapter findings — Refresh #1 (post HR1a / HR3 / HR6 / HR7)
+# AHP adapter findings — Refresh #1 (post HR1a / HR3 / HR4+5 / HR6 / HR7)
 
 This refreshes the original [`FINDINGS.md`](./FINDINGS.md) by **working backwards
 from the AHP changes we've actually shipped**. Since the original spike, several
@@ -31,6 +31,7 @@ tests, incl. the live StubRuntime stream) stays green.
 | **"Orchestration rides MCP, not the session channel"** — asserted in prose; the mapper still carried stub `finding`/`subtask_create` via `_meta` + a fabricated subagent tool call | **HR7 Part 1** ([#1305](https://github.com/nick-pape/grackle/issues/1305)) — removed `finding`/`subtask_create`/`escalation` from `AgentEventType` | Deleted both `case` blocks (they no longer type-check). **The separation is now enforced by the type system**, not documentation: orchestration events cannot exist on this channel. |
 | **Host requirement #1: authoritative state + sequencing** (replay buffer / monotonic seq, subsuming `parkSession`) | **HR1a** ([#1276](https://github.com/nick-pape/grackle/issues/1276)) — durable `session_actions` log + monotonic `serverSeq` at every publish site | The *substrate* is in production. (Reducing it into AHP `SessionState` + snapshots is HR1b — still open; see below.) |
 | **Host requirement #6: credentials via `authenticate` (pull, on demand)** replacing proactive `PushTokens` | **HR6** ([#1289](https://github.com/nick-pape/grackle/issues/1289)) — `Authenticate` RPC, all eager pushes removed | Done in production; `PushTokens` deprecated with zero call sites. Out of the session-event mapper's scope, but the host requirement is met. |
+| **Host requirements #4+5: root channel = runtime registry + spawn parameters via `createSession.config`** | **HR4+5** ([#1318](https://github.com/nick-pape/grackle/issues/1318)) — `RUNTIME_CATALOG` in `@grackle-ai/common` (replaces `RUNTIME_MANIFESTS`); new `ListRuntimes` RPC → `RootState.agents`; `deriveCredentialNeeds` → `protectedResources`; `SpawnRequest` reshaped with first-class `provider`/`ModelSelection`/typed `SessionConfig` | **No change to `mapper.ts`** — the root channel is separate from the session-event mapper. But the host requirement is now met in production: the runtime registry and session-creation shape are AHP-aligned. |
 
 The agent-conversation core (text + tool calls + usage + errors, turn-shaped)
 still maps cleanly — that part of the original "Maps cleanly" table is unchanged.
@@ -71,13 +72,14 @@ log + `serverSeq`; **HR1b [#1292](https://github.com/nick-pape/grackle/issues/12
 lands, "PowerLine is an AHP host that owns state" is unrealized and the mapper
 remains a probe, not a component.
 
-### 3. Root / session-creation channel (in-flight: HR4+5 #1318)
+### 3. ~~Root / session-creation channel~~ → **RESOLVED (HR4+5 #1318, merged)**
 
-Out of the session-event mapper's scope, but a standing host requirement: the
-root channel as runtime registry (`RootState.agents` from `listRuntimes()`),
-`createSession.provider`/typed `config`, and `protectedResources` advertising
-credential needs. **HR4+5 [#1318](https://github.com/nick-pape/grackle/issues/1318)**
-is in-flight. **Deferred to the re-run.**
+PR [#1318](https://github.com/nick-pape/grackle/issues/1318) merged after the
+initial refresh commit. No change to `mapper.ts` was needed (the root channel is
+separate from session-event mapping), but the host requirement is now met:
+`RUNTIME_CATALOG` is the canonical runtime registry; `ListRuntimes` populates
+`RootState.agents`; `SpawnRequest` carries first-class `provider`/`SessionConfig`;
+`protectedResources` advertises credential needs. See the "Resolved" table above.
 
 ### 4. AHP-upstream metadata gaps (genuine; not Grackle's to close)
 
@@ -108,20 +110,21 @@ disappears entirely. Blocked on the remaining HRs.
 Working backwards from shipped AHP changes, the adapter's residual complexity now
 maps almost 1:1 onto the **unfinished** HRs:
 
-- **Turn synthesis** ⇒ HR2 (#1286, in-flight)
+- ~~**Root/createSession shape**~~ ✅ **RESOLVED** (HR4+5 #1318, now merged)
+- **Turn synthesis** ⇒ HR2 (#1286, in-flight — the last significant mapper.ts shrink)
 - **Offline mapper vs host-owned state** ⇒ HR1b (#1292, open)
-- **Root/createSession shape** ⇒ HR4+5 (#1318, in-flight)
 - **Transport / multi-host** ⇒ HR8 (#1291)
 
 Everything the *merged* HRs addressed (tool ids, diagnostic routing,
-orchestration-off-channel, demand-driven creds, the durable log substrate) has
-**left the adapter** — either deleted outright or enforced by the type system.
-The two AHP-upstream metadata carries are the only friction not attributable to
-unfinished Grackle work.
+orchestration-off-channel, demand-driven creds, durable log substrate,
+runtime registry + session-creation shape) has **left the adapter** — deleted,
+enforced by the type system, or resolved out-of-scope. The two AHP-upstream
+metadata carries are the only friction not attributable to unfinished Grackle work.
 
-**Re-run trigger:** repeat this exercise after **HR2 (#1286)** and **HR4+5
-(#1318)** merge. At that point the turn-framing synthesis and the root-channel
-gaps should both collapse, leaving only HR1b (host-owned state), the
-AHP-upstream metadata carries, and HR8 (the wire flip) — i.e. the mapper should
-shrink to near-nothing, which is the signal that PowerLine is ready to *be* the
-host rather than be mapped into one.
+**Re-run trigger:** repeat this exercise after **HR2 (#1286)** merges. That is
+now the sole remaining trigger: the turn-framing synthesis (`ensureTurn`,
+`TURN_ENDING_STATUSES`, placeholder `userMessage`) should collapse into reads of
+real `TURN_STARTED`/`TURN_COMPLETE`/`INPUT_NEEDED` events, leaving only HR1b
+(host-owned state), the AHP-upstream metadata carries, and HR8 (the wire flip).
+At that point the mapper should be near-nothing — the signal that PowerLine is
+ready to *be* the host rather than be mapped into one.
