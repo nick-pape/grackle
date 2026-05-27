@@ -92,9 +92,10 @@ npx buf generate
 
 `rush test` collects unit-test coverage via Vitest's v8 provider. Reports land in each package's `coverage/` directory (`lcov.info`, `coverage-summary.json`, and an `index.html` for browser viewing). CI uploads them as a single `coverage` artifact on the `build` job. The shared config lives at `rigs/heft-rig/vitest-base.mjs` — per-package `vitest.config.ts` files just call `createVitestConfig()` and add overrides if needed.
 
-- **No threshold enforcement yet** ([#1326](https://github.com/nick-pape/grackle/issues/1326)) — the floor is set in a follow-up once we have baseline data.
+- **Per-package thresholds enforced** ([#1326](https://github.com/nick-pape/grackle/issues/1326)). Floors for each metric (branches/lines/functions/statements) live in `rigs/heft-rig/coverage-thresholds.json`. CI fails if any package drops below its floor. Frozen — no auto-ratchet; bump by hand when a package's real coverage climbs and you want to lock the new floor in.
 - **Unit tests only** ([#1327](https://github.com/nick-pape/grackle/issues/1327)) — Storybook interaction tests and Playwright E2E aren't yet instrumented.
 - Excluded by default: `src/gen/**` (proto), `src/vendor/**` (vendored AHP), `src/mocks/**`, `*.stories.tsx`, `*.test.{ts,tsx}`.
+- New packages without a thresholds entry log a one-line warning and run unenforced. Add an entry once the package has a stable baseline.
 
 ### Storybook Component Tests
 
