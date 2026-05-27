@@ -467,6 +467,29 @@ export class SessionStateManager {
     );
   }
 
+  /**
+   * Event types that correspond to rows fed through `SessionStateManager.processEvent()`
+   * in the live pipeline. Rows with other types (e.g. `signal`, `widget`) are recorded in
+   * `session_actions` by other code paths but were never processed by the state manager,
+   * so replaying them would incorrectly advance `context.eventIndex`.
+   *
+   * "user_input" is intentionally absent — it is handled separately by remapping it to
+   * "turn_started" before calling `mapAgentEvent`.
+   */
+  private static readonly AGENT_EVENT_TYPES: ReadonlySet<string> = new Set([
+    "turn_started",
+    "turn_complete",
+    "input_needed",
+    "text",
+    "tool_use",
+    "tool_result",
+    "usage",
+    "error",
+    "status",
+    "system",
+    "runtime_session_id",
+  ]);
+
   private static replayRows(
     baseState: SessionState,
     context: MapperContext,
@@ -496,6 +519,11 @@ export class SessionStateManager {
         // Do NOT advance eventIndex — the live pipeline skipped this event before the
         // eventIndex increment.
         skipNextTurnStarted = false;
+        continue;
+      } else if (!SessionStateManager.AGENT_EVENT_TYPES.has(row.type)) {
+        // Skip rows recorded by other code paths (signal, widget, etc.) that were
+        // never fed through processEvent() in the live pipeline. Do NOT advance
+        // eventIndex so it stays aligned with the live run.
         continue;
       }
 
