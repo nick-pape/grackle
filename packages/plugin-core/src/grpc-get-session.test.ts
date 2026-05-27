@@ -13,7 +13,7 @@ vi.mock("@grackle-ai/database", async () => {
 });
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {
-  const actual = await importOriginal() as Record<string, unknown>;
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -116,7 +116,7 @@ describe("gRPC getSession", () => {
       personaId: "",
     });
 
-    const result = await handlers.getSession({ id: "sess-abc" }) as grackle.Session;
+    const result = (await handlers.getSession({ id: "sess-abc" })) as grackle.Session;
 
     expect(sessionStore.getSession).toHaveBeenCalledWith("sess-abc");
     expect(result.id).toBe("sess-abc");
@@ -130,7 +130,9 @@ describe("gRPC getSession", () => {
   it("throws ConnectError with NOT_FOUND when session does not exist", async () => {
     vi.mocked(sessionStore.getSession).mockReturnValue(undefined);
 
-    const err = await handlers.getSession({ id: "nonexistent" }).catch((e: unknown) => e) as ConnectError;
+    const err = (await handlers
+      .getSession({ id: "nonexistent" })
+      .catch((e: unknown) => e)) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
     expect(err.message).toContain("nonexistent");

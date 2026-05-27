@@ -23,12 +23,17 @@ export interface ScheduleManagerProps {
 
 /** Schedule list view — shows cards and navigates to detail pages for create/edit. */
 export function ScheduleManager({
-  schedules, personas,
-  onDeleteSchedule, onToggleEnabled,
-  onNavigateToNew, onNavigateToSchedule,
+  schedules,
+  personas,
+  onDeleteSchedule,
+  onToggleEnabled,
+  onNavigateToNew,
+  onNavigateToSchedule,
 }: ScheduleManagerProps): JSX.Element {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const scheduleToDelete = confirmDelete ? schedules.find((s) => s.id === confirmDelete) : undefined;
+  const scheduleToDelete = confirmDelete
+    ? schedules.find((s) => s.id === confirmDelete)
+    : undefined;
 
   const handleDelete = async (id: string): Promise<void> => {
     await onDeleteSchedule(id);
@@ -43,13 +48,19 @@ export function ScheduleManager({
     return map;
   }, [personas]);
 
-  const resolvePersonaName = (personaId: string): string => personaNameMap.get(personaId) ?? personaId;
+  const resolvePersonaName = (personaId: string): string =>
+    personaNameMap.get(personaId) ?? personaId;
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <h2>Schedules</h2>
-        <Button variant="primary" size="md" onClick={onNavigateToNew} data-testid="schedule-new-button">
+        <Button
+          variant="primary"
+          size="md"
+          onClick={onNavigateToNew}
+          data-testid="schedule-new-button"
+        >
           + New Schedule
         </Button>
       </div>
@@ -90,7 +101,9 @@ export function ScheduleManager({
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      const toggle = async (): Promise<void> => { await onToggleEnabled(s.id, { enabled: !s.enabled }); };
+                      const toggle = async (): Promise<void> => {
+                        await onToggleEnabled(s.id, { enabled: !s.enabled });
+                      };
                       toggle().catch(() => undefined);
                     }}
                     data-testid={`schedule-toggle-${s.id}`}
@@ -133,9 +146,7 @@ export function ScheduleManager({
                   </span>
                 ) : null}
                 {s.runCount > 0 && (
-                  <span data-testid={`schedule-run-count-${s.id}`}>
-                    Runs: {s.runCount}
-                  </span>
+                  <span data-testid={`schedule-run-count-${s.id}`}>Runs: {s.runCount}</span>
                 )}
               </div>
             </div>

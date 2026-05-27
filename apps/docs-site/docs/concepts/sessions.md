@@ -19,6 +19,7 @@ grackle spawn my-env "Refactor the auth module to use JWT"
 From the web UI, click **New Chat**, pick an environment, and type your prompt.
 
 Options:
+
 - `--max-turns` — Limit how many turns the agent can take
 - `--persona` — Use a specific [persona](./personas) (otherwise uses the default)
 
@@ -26,15 +27,15 @@ Options:
 
 Once spawned, Grackle streams the session's events in real time. Each event has a type:
 
-| Event | Description |
-|-------|------------|
-| `text` | Agent response text |
-| `tool_use` | Agent invoked a tool (shows tool name and input) |
-| `tool_result` | Tool execution result |
-| `status` | Status change (running, idle, completed, failed) |
-| `error` | Error message |
-| `system` | Internal messages (setup info, worktree creation, etc.) |
-| `user_input` | Input sent by a user or parent task |
+| Event         | Description                                             |
+| ------------- | ------------------------------------------------------- |
+| `text`        | Agent response text                                     |
+| `tool_use`    | Agent invoked a tool (shows tool name and input)        |
+| `tool_result` | Tool execution result                                   |
+| `status`      | Status change (running, idle, completed, failed)        |
+| `error`       | Error message                                           |
+| `system`      | Internal messages (setup info, worktree creation, etc.) |
+| `user_input`  | Input sent by a user or parent task                     |
 
 The CLI renders these with color coding. The web UI shows them in a chat-style transcript.
 
@@ -75,6 +76,7 @@ grackle resume <session-id>
 ```
 
 Suspended sessions:
+
 - Keep their full conversation history and context on the server
 - Are typically auto-recovered when their original environment reconnects, and can also be resumed manually with `grackle resume`
 - Resume on their original environment, not a different one

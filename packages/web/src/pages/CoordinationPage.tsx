@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type JSX } from "react";
 import { useGrackle } from "../context/GrackleContext.js";
-import { CoordinationGraph, CoordinationList, StreamDetailPanel, useThemeContext } from "@grackle-ai/web-components";
+import {
+  CoordinationGraph,
+  CoordinationList,
+  StreamDetailPanel,
+  useThemeContext,
+} from "@grackle-ai/web-components";
 import styles from "./CoordinationPage.module.scss";
 
 /**
@@ -11,7 +16,15 @@ import styles from "./CoordinationPage.module.scss";
  */
 export function CoordinationPage(): JSX.Element {
   const {
-    streams: { streams, streamsLoading, streamsLoadedOnce, streamsLoadError, loadStreams, liveMessages, loadTranscript },
+    streams: {
+      streams,
+      streamsLoading,
+      streamsLoadedOnce,
+      streamsLoadError,
+      loadStreams,
+      liveMessages,
+      loadTranscript,
+    },
     sessions: { sessions },
     tasks: { tasks },
   } = useGrackle();
@@ -32,9 +45,19 @@ export function CoordinationPage(): JSX.Element {
     let active = true;
     setTranscriptLoading(true);
     loadTranscript(selectedStreamId)
-      .then(() => { if (active) { setTranscriptLoading(false); } })
-      .catch(() => { if (active) { setTranscriptLoading(false); } });
-    return () => { active = false; };
+      .then(() => {
+        if (active) {
+          setTranscriptLoading(false);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setTranscriptLoading(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
   }, [selectedStreamId, loadTranscript]);
 
   // Re-fetch when the internals toggle changes. The initial (default-false)
@@ -53,17 +76,25 @@ export function CoordinationPage(): JSX.Element {
     loadStreams(showInternals).catch(() => {});
   }, [loadStreams, showInternals]);
 
-  const selectedStream = selectedStreamId !== undefined
-    ? streams.find((s) => s.id === selectedStreamId)
-    : undefined;
+  const selectedStream =
+    selectedStreamId !== undefined ? streams.find((s) => s.id === selectedStreamId) : undefined;
 
   return (
     <div className={styles.container} data-testid="coordination-page">
       <div className={styles.toolbar}>
-        <div className={styles.viewToggle} role="group" aria-label="Coordination view" data-testid="coordination-view-toggle">
+        <div
+          className={styles.viewToggle}
+          role="group"
+          aria-label="Coordination view"
+          data-testid="coordination-view-toggle"
+        >
           <button
             type="button"
-            className={viewMode === "list" ? `${styles.toggleButton} ${styles.toggleActive}` : styles.toggleButton}
+            className={
+              viewMode === "list"
+                ? `${styles.toggleButton} ${styles.toggleActive}`
+                : styles.toggleButton
+            }
             aria-pressed={viewMode === "list"}
             data-testid="coordination-view-list"
             onClick={() => setViewMode("list")}
@@ -72,7 +103,11 @@ export function CoordinationPage(): JSX.Element {
           </button>
           <button
             type="button"
-            className={viewMode === "graph" ? `${styles.toggleButton} ${styles.toggleActive}` : styles.toggleButton}
+            className={
+              viewMode === "graph"
+                ? `${styles.toggleButton} ${styles.toggleActive}`
+                : styles.toggleButton
+            }
             aria-pressed={viewMode === "graph"}
             data-testid="coordination-view-graph"
             onClick={() => setViewMode("graph")}

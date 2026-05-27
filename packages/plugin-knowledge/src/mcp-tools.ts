@@ -78,7 +78,12 @@ function formatSearchResult(result: grackle.SearchKnowledgeResult): Record<strin
 }
 
 /** Clamp a numeric input to a safe integer range. */
-function clampInt(value: number | undefined, min: number, max: number, defaultValue: number): number {
+function clampInt(
+  value: number | undefined,
+  min: number,
+  max: number,
+  defaultValue: number,
+): number {
   if (value === undefined) {
     return defaultValue;
   }
@@ -115,16 +120,11 @@ export const knowledgeMcpTools: PluginToolDefinition[] = [
         .max(MAX_SEARCH_LIMIT)
         .optional()
         .describe(`Maximum number of results to return (default 10, max ${MAX_SEARCH_LIMIT})`),
-      workspaceId: z
-        .string()
-        .optional()
-        .describe("Filter results to a specific workspace"),
+      workspaceId: z.string().optional().describe("Filter results to a specific workspace"),
       expand: z
         .boolean()
         .optional()
-        .describe(
-          "If true, also return nodes connected to the search results (default false)",
-        ),
+        .describe("If true, also return nodes connected to the search results (default false)"),
       expandDepth: z
         .number()
         .int()
@@ -141,20 +141,11 @@ export const knowledgeMcpTools: PluginToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(
-      args: unknown,
-      client: unknown,
-      authContext?: unknown,
-    ): Promise<unknown> {
-      const typedClient = (client as { knowledge: Client<typeof grackle.GrackleKnowledge> }).knowledge;
+    async handler(args: unknown, client: unknown, authContext?: unknown): Promise<unknown> {
+      const typedClient = (client as { knowledge: Client<typeof grackle.GrackleKnowledge> })
+        .knowledge;
       const typedAuth = authContext as AuthContext | undefined;
-      const {
-        query,
-        limit,
-        workspaceId,
-        expand,
-        expandDepth,
-      } = args as {
+      const { query, limit, workspaceId, expand, expandDepth } = args as {
         query: string;
         limit?: number;
         workspaceId?: string;
@@ -164,9 +155,7 @@ export const knowledgeMcpTools: PluginToolDefinition[] = [
 
       // For scoped callers, always use the auth context workspace.
       const resolvedWorkspaceId: string =
-        typedAuth?.type === "scoped"
-          ? typedAuth.workspaceId ?? ""
-          : workspaceId ?? "";
+        typedAuth?.type === "scoped" ? (typedAuth.workspaceId ?? "") : (workspaceId ?? "");
 
       const safeLimit: number = clampInt(limit, 1, MAX_SEARCH_LIMIT, 10);
       const response: grackle.SearchKnowledgeResponse = await typedClient.searchKnowledge({
@@ -219,12 +208,11 @@ export const knowledgeMcpTools: PluginToolDefinition[] = [
             }
             return allowed;
           });
-          const allowedEdgeNodeIds: Set<string> = new Set<string>([
-            ...startIds,
-            ...allowedIds,
-          ]);
+          const allowedEdgeNodeIds: Set<string> = new Set<string>([...startIds, ...allowedIds]);
           neighborEdges = neighborEdges.filter(
-            (e) => allowedEdgeNodeIds.has(e.fromId as string) && allowedEdgeNodeIds.has(e.toId as string),
+            (e) =>
+              allowedEdgeNodeIds.has(e.fromId as string) &&
+              allowedEdgeNodeIds.has(e.toId as string),
           );
         }
       }
@@ -247,9 +235,7 @@ export const knowledgeMcpTools: PluginToolDefinition[] = [
       expand: z
         .boolean()
         .optional()
-        .describe(
-          "If true, also return neighbor nodes within expandDepth hops (default false)",
-        ),
+        .describe("If true, also return neighbor nodes within expandDepth hops (default false)"),
       expandDepth: z
         .number()
         .int()
@@ -266,12 +252,9 @@ export const knowledgeMcpTools: PluginToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(
-      args: unknown,
-      client: unknown,
-      authContext?: unknown,
-    ): Promise<unknown> {
-      const typedClient = (client as { knowledge: Client<typeof grackle.GrackleKnowledge> }).knowledge;
+    async handler(args: unknown, client: unknown, authContext?: unknown): Promise<unknown> {
+      const typedClient = (client as { knowledge: Client<typeof grackle.GrackleKnowledge> })
+        .knowledge;
       const typedAuth = authContext as AuthContext | undefined;
       const { id, expand, expandDepth } = args as {
         id: string;
@@ -279,8 +262,7 @@ export const knowledgeMcpTools: PluginToolDefinition[] = [
         expandDepth?: number;
       };
 
-      const response: grackle.GetKnowledgeNodeResponse =
-        await typedClient.getKnowledgeNode({ id });
+      const response: grackle.GetKnowledgeNodeResponse = await typedClient.getKnowledgeNode({ id });
 
       if (!response.node) {
         return {

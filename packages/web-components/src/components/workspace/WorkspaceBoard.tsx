@@ -21,7 +21,14 @@ interface WorkspaceBoardProps {
 }
 
 /** Kanban-style board view with fixed columns for each task status. */
-export function WorkspaceBoard({ workspaceId, environmentId, tasks, sessions, personas, environments }: WorkspaceBoardProps): JSX.Element {
+export function WorkspaceBoard({
+  workspaceId,
+  environmentId,
+  tasks,
+  sessions,
+  personas,
+  environments,
+}: WorkspaceBoardProps): JSX.Element {
   const navigate = useAppNavigate();
 
   const workspaceTasks = useMemo(
@@ -29,15 +36,9 @@ export function WorkspaceBoard({ workspaceId, environmentId, tasks, sessions, pe
     [tasks, workspaceId],
   );
 
-  const taskStatusById = useMemo(
-    () => new Map(tasks.map((t) => [t.id, t.status])),
-    [tasks],
-  );
+  const taskStatusById = useMemo(() => new Map(tasks.map((t) => [t.id, t.status])), [tasks]);
 
-  const tasksById = useMemo(
-    () => new Map(workspaceTasks.map((t) => [t.id, t])),
-    [workspaceTasks],
-  );
+  const tasksById = useMemo(() => new Map(workspaceTasks.map((t) => [t.id, t])), [workspaceTasks]);
 
   const boardMetadataByTaskId = useMemo(() => {
     const sessionById = new Map(sessions.map((s) => [s.id, s]));
@@ -78,11 +79,12 @@ export function WorkspaceBoard({ workspaceId, environmentId, tasks, sessions, pe
   }, [workspaceTasks, sessions, personas, environments]);
 
   const columns = useMemo(
-    () => buildBoardColumns({
-      tasks: workspaceTasks,
-      taskStatusById,
-      sessionStatusByTaskId: boardMetadataByTaskId.sessionStatusByTaskId,
-    }),
+    () =>
+      buildBoardColumns({
+        tasks: workspaceTasks,
+        taskStatusById,
+        sessionStatusByTaskId: boardMetadataByTaskId.sessionStatusByTaskId,
+      }),
     [workspaceTasks, taskStatusById, boardMetadataByTaskId],
   );
 
@@ -139,7 +141,9 @@ export function WorkspaceBoard({ workspaceId, environmentId, tasks, sessions, pe
                       tasksById={tasksById}
                       personaName={boardMetadataByTaskId.personaNameByTaskId.get(bt.task.id)}
                       envName={boardMetadataByTaskId.environmentNameByTaskId.get(bt.task.id)}
-                      onClick={() => navigate(taskUrl(bt.task.id, undefined, workspaceId, environmentId))}
+                      onClick={() =>
+                        navigate(taskUrl(bt.task.id, undefined, workspaceId, environmentId))
+                      }
                     />
                   </motion.div>
                 ))}
@@ -165,7 +169,13 @@ interface BoardCardProps {
 }
 
 /** Individual card rendered inside a board column. */
-function BoardCard({ boardTask, tasksById, personaName, envName, onClick }: BoardCardProps): JSX.Element {
+function BoardCard({
+  boardTask,
+  tasksById,
+  personaName,
+  envName,
+  onClick,
+}: BoardCardProps): JSX.Element {
   const { task, isBlocked, childCount, doneChildCount, pausedSubBadge } = boardTask;
   const statusStyle = getStatusStyle(task.status);
   const parentTask = task.parentTaskId ? tasksById.get(task.parentTaskId) : undefined;
@@ -201,31 +211,17 @@ function BoardCard({ boardTask, tasksById, personaName, envName, onClick }: Boar
             {doneChildCount}/{childCount}
           </span>
         )}
-        {isBlocked && (
-          <span className={`${styles.badge} ${styles.blockedBadge}`}>
-            blocked
-          </span>
-        )}
+        {isBlocked && <span className={`${styles.badge} ${styles.blockedBadge}`}>blocked</span>}
         {task.dependsOn.length > 0 && !isBlocked && (
-          <span className={`${styles.badge} ${styles.depBadge}`}>
-            dep
-          </span>
+          <span className={`${styles.badge} ${styles.depBadge}`}>dep</span>
         )}
         {pausedSubBadge && (
-          <span className={`${styles.badge} ${styles.pausedSubBadge}`}>
-            {pausedSubBadge}
-          </span>
+          <span className={`${styles.badge} ${styles.pausedSubBadge}`}>{pausedSubBadge}</span>
         )}
         {personaName && (
-          <span className={`${styles.badge} ${styles.personaBadge}`}>
-            {personaName}
-          </span>
+          <span className={`${styles.badge} ${styles.personaBadge}`}>{personaName}</span>
         )}
-        {envName && (
-          <span className={`${styles.badge} ${styles.envBadge}`}>
-            {envName}
-          </span>
-        )}
+        {envName && <span className={`${styles.badge} ${styles.envBadge}`}>{envName}</span>}
       </div>
     </div>
   );

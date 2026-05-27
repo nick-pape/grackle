@@ -616,7 +616,7 @@ export const END_REASON: {
 };
 
 // @public
-export type EndReason = typeof END_REASON[keyof typeof END_REASON];
+export type EndReason = (typeof END_REASON)[keyof typeof END_REASON];
 
 // @public
 type Environment = Message<"grackle.Environment"> & {
@@ -2648,7 +2648,7 @@ const SessionListSchema_2: GenMessage<SessionList_2>;
 const SessionSchema: GenMessage<Session>;
 
 // @public
-export type SessionStatus = typeof SESSION_STATUS[keyof typeof SESSION_STATUS];
+export type SessionStatus = (typeof SESSION_STATUS)[keyof typeof SESSION_STATUS];
 
 // @public
 type SetComponentPromotionRequest = Message<"grackle.SetComponentPromotionRequest"> & {
@@ -2962,7 +2962,7 @@ const TaskListSchema: GenMessage<TaskList>;
 const TaskSchema: GenMessage<Task>;
 
 // @public
-export type TaskStatus = typeof TASK_STATUS[keyof typeof TASK_STATUS];
+export type TaskStatus = (typeof TASK_STATUS)[keyof typeof TASK_STATUS];
 
 // @public
 enum TaskStatus_2 {

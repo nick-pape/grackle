@@ -55,11 +55,15 @@ export type DatabaseInstance = BetterSQLite3Database<typeof schema>;
  */
 export function parseCredentialProviderConfig(rawJson: string): CredentialProviderConfig {
   const raw = JSON.parse(rawJson) as unknown;
-  const parsed = (typeof raw === "object" && raw !== null ? raw : {}) as Partial<CredentialProviderConfig>;
+  const parsed = (
+    typeof raw === "object" && raw !== null ? raw : {}
+  ) as Partial<CredentialProviderConfig>;
   return {
     claude: VALID_CLAUDE_VALUES.has(parsed.claude ?? "") ? parsed.claude! : DEFAULT_CONFIG.claude,
     github: VALID_TOGGLE_VALUES.has(parsed.github ?? "") ? parsed.github! : DEFAULT_CONFIG.github,
-    copilot: VALID_TOGGLE_VALUES.has(parsed.copilot ?? "") ? parsed.copilot! : DEFAULT_CONFIG.copilot,
+    copilot: VALID_TOGGLE_VALUES.has(parsed.copilot ?? "")
+      ? parsed.copilot!
+      : DEFAULT_CONFIG.copilot,
     codex: VALID_TOGGLE_VALUES.has(parsed.codex ?? "") ? parsed.codex! : DEFAULT_CONFIG.codex,
     goose: VALID_TOGGLE_VALUES.has(parsed.goose ?? "") ? parsed.goose! : DEFAULT_CONFIG.goose,
   };
@@ -111,10 +115,14 @@ export function isValidCredentialProviderConfig(value: unknown): value is Creden
  * Persist credential provider configuration to the database.
  * @param database - Optional Drizzle instance; defaults to the module-level db.
  */
-export function setCredentialProviders(config: CredentialProviderConfig, database?: DatabaseInstance): void {
+export function setCredentialProviders(
+  config: CredentialProviderConfig,
+  database?: DatabaseInstance,
+): void {
   const conn = database ?? db;
   const value = JSON.stringify(config);
-  conn.insert(schema.settings)
+  conn
+    .insert(schema.settings)
     .values({ key: SETTINGS_KEY, value })
     .onConflictDoUpdate({
       target: schema.settings.key,
@@ -122,5 +130,3 @@ export function setCredentialProviders(config: CredentialProviderConfig, databas
     })
     .run();
 }
-
-

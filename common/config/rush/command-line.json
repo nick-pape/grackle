@@ -24,6 +24,22 @@
       "phases": ["_phase:build", "_phase:test", "_phase:e2e"],
       "enableParallelism": true,
       "incremental": true
+    },
+    {
+      "commandKind": "global",
+      "name": "format",
+      "summary": "Format changed files with Prettier (pass --all to format the whole repo).",
+      "safeForSimultaneousRushProcesses": true,
+      "autoinstallerName": "format",
+      "shellCommand": "node common/autoinstallers/format/format.js write --changed origin/main"
+    },
+    {
+      "commandKind": "global",
+      "name": "format:check",
+      "summary": "Check formatting with Prettier (pass --all to check the whole repo).",
+      "safeForSimultaneousRushProcesses": true,
+      "autoinstallerName": "format",
+      "shellCommand": "node common/autoinstallers/format/format.js check --changed origin/main"
     }
   ],
   "phases": [
@@ -48,6 +64,21 @@
         "upstream": ["_phase:build"]
       },
       "missingScriptBehavior": "silent"
+    }
+  ],
+  "parameters": [
+    {
+      "parameterKind": "flag",
+      "longName": "--all",
+      "description": "Operate on the whole repo instead of just files changed vs origin/main.",
+      "associatedCommands": ["format", "format:check"]
+    },
+    {
+      "parameterKind": "string",
+      "longName": "--changed",
+      "argumentName": "BASE_REF",
+      "description": "Operate on files changed vs BASE_REF (e.g. origin/main). Overrides the default base ref.",
+      "associatedCommands": ["format", "format:check"]
     }
   ]
 }

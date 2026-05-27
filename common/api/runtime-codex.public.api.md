@@ -18,7 +18,7 @@ export class CodexRuntime extends BaseAgentRuntime {
 
 // Warnings were encountered during analysis:
 //
-// src/codex.ts:59:1 - (ae-internal-missing-underscore) The name "itemType" should be prefixed with an underscore because the declaration is marked as @internal
+// src/codex.ts:65:1 - (ae-internal-missing-underscore) The name "itemType" should be prefixed with an underscore because the declaration is marked as @internal
 
 // (No @packageDocumentation comment for this package)
 

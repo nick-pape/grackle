@@ -33,11 +33,7 @@ function main(): void {
     .name("grackle-powerline")
     .description("Grackle PowerLine agent runtime")
     .version(version)
-    .option(
-      "--port <port>",
-      "Port to listen on",
-      String(DEFAULT_POWERLINE_PORT),
-    )
+    .option("--port <port>", "Port to listen on", String(DEFAULT_POWERLINE_PORT))
     .option("--token <token>", "Authentication token")
     .option("--no-auth", "Run without authentication (development only)")
     .option("--host <host>", "Host to bind to", "127.0.0.1")
@@ -45,7 +41,7 @@ function main(): void {
       const port = parseInt(opts.port, 10);
       const host = opts.host;
       const powerlineToken = opts.auth
-        ? (opts.token || process.env.GRACKLE_POWERLINE_TOKEN || "")
+        ? opts.token || process.env.GRACKLE_POWERLINE_TOKEN || ""
         : "";
 
       if (!powerlineToken && opts.auth) {
@@ -65,8 +61,12 @@ function main(): void {
       registerRuntime(new CodexRuntime());
       registerRuntime(new AcpRuntime({ name: "goose", command: "goose", args: ["acp"] }));
       registerRuntime(new AcpRuntime({ name: "codex-acp", command: "codex-acp", args: [] }));
-      registerRuntime(new AcpRuntime({ name: "copilot-acp", command: "copilot", args: ["--acp", "--stdio"] }));
-      registerRuntime(new AcpRuntime({ name: "claude-code-acp", command: "claude-agent-acp", args: [] }));
+      registerRuntime(
+        new AcpRuntime({ name: "copilot-acp", command: "copilot", args: ["--acp", "--stdio"] }),
+      );
+      registerRuntime(
+        new AcpRuntime({ name: "claude-code-acp", command: "claude-agent-acp", args: [] }),
+      );
 
       // Start HTTP/2 server with optional auth
       const interceptors: Interceptor[] = [
@@ -78,7 +78,10 @@ function main(): void {
           const traceId = isValidTraceId(rawTraceId) ? rawTraceId! : randomUUID();
           const response = await runWithTrace(traceId, () => next(req));
           if ("stream" in response && response.stream) {
-            const wrapped = wrapAsyncIterableWithTrace(traceId, response.message as AsyncIterable<unknown>);
+            const wrapped = wrapAsyncIterableWithTrace(
+              traceId,
+              response.message as AsyncIterable<unknown>,
+            );
             (response as { message: AsyncIterable<unknown> }).message = wrapped;
           }
           return response;
@@ -86,18 +89,16 @@ function main(): void {
       ];
 
       if (powerlineToken) {
-        interceptors.push(
-          (next) => async (req) => {
-            const authHeader = req.header.get("authorization") || "";
-            const token = authHeader.replace(/^Bearer\s+/i, "");
-            const a = Buffer.from(token);
-            const b = Buffer.from(powerlineToken);
-            if (a.length !== b.length || !timingSafeEqual(a, b)) {
-              throw new ConnectError("Unauthorized", Code.Unauthenticated);
-            }
-            return next(req);
-          },
-        );
+        interceptors.push((next) => async (req) => {
+          const authHeader = req.header.get("authorization") || "";
+          const token = authHeader.replace(/^Bearer\s+/i, "");
+          const a = Buffer.from(token);
+          const b = Buffer.from(powerlineToken);
+          if (a.length !== b.length || !timingSafeEqual(a, b)) {
+            throw new ConnectError("Unauthorized", Code.Unauthenticated);
+          }
+          return next(req);
+        });
       }
 
       const handler = connectNodeAdapter({
@@ -118,11 +119,7 @@ function main(): void {
 
       server.on("error", (err: NodeJS.ErrnoException) => {
         if (err.code === "EADDRINUSE") {
-          logger.fatal(
-            { port },
-            "Port %d is already in use. Is another PowerLine running?",
-            port,
-          );
+          logger.fatal({ port }, "Port %d is already in use. Is another PowerLine running?", port);
         } else {
           logger.fatal({ err }, "PowerLine server error");
         }
@@ -131,9 +128,7 @@ function main(): void {
       });
 
       server.listen(port, host, () => {
-        const authStatus = powerlineToken
-          ? "authenticated"
-          : "NO AUTH (development only)";
+        const authStatus = powerlineToken ? "authenticated" : "NO AUTH (development only)";
         logger.info(
           { port, host, authStatus },
           "PowerLine listening on http://%s:%d [%s]",

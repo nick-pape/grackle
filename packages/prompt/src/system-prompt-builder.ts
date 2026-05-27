@@ -188,10 +188,12 @@ export class SystemPromptBuilder {
    * the new fields still get the leaf template.
    */
   private isOrchestrator(): boolean {
-    return this.options.canDecompose === true
-      && this.options.taskDepth !== undefined
-      && this.options.taskDepth <= 1
-      && this.options.taskTree !== undefined;
+    return (
+      this.options.canDecompose === true &&
+      this.options.taskDepth !== undefined &&
+      this.options.taskDepth <= 1 &&
+      this.options.taskTree !== undefined
+    );
   }
 
   // ─── Orchestrator Sections ───────────────────────────────
@@ -253,18 +255,14 @@ export class SystemPromptBuilder {
     for (const node of nodes) {
       counts.set(node.status, (counts.get(node.status) || 0) + 1);
     }
-    const summary = [...counts.entries()]
-      .map(([status, count]) => `${count} ${status}`)
-      .join(", ");
+    const summary = [...counts.entries()].map(([status, count]) => `${count} ${status}`).join(", ");
 
     // Recursive render
     const lines: string[] = [];
     const renderNode = (node: TaskTreeNode, indent: number): void => {
       const pad = "  ".repeat(indent);
       const persona = node.personaName ? ` (persona: ${node.personaName})` : "";
-      const deps = node.dependsOn.length > 0
-        ? ` [depends on: ${node.dependsOn.join(", ")}]`
-        : "";
+      const deps = node.dependsOn.length > 0 ? ` [depends on: ${node.dependsOn.join(", ")}]` : "";
       const branch = node.branch ? ` [branch: ${node.branch}]` : "";
       const marker = node.id === this.options.taskId ? " <-- YOU" : "";
       lines.push(`${pad}- [${node.status}] ${node.title}${persona}${deps}${branch}${marker}`);
@@ -380,10 +378,7 @@ export class SystemPromptBuilder {
   /** Task title, description, and notes. */
   private buildTaskContext(): string {
     const { title, description, notes } = this.options.task!;
-    const parts = [
-      `## Task: ${title}`,
-      description,
-    ];
+    const parts = [`## Task: ${title}`, description];
     if (notes) {
       parts.push(`## Notes (from previous attempt or user feedback)\n${notes}`);
     }

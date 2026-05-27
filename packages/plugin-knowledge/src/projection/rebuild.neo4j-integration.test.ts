@@ -11,7 +11,13 @@ import {
   workspaceStore,
   taskStore,
 } from "@grackle-ai/database";
-import { openNeo4j, closeNeo4j, getSession, initSchema, type Embedder } from "@grackle-ai/knowledge";
+import {
+  openNeo4j,
+  closeNeo4j,
+  getSession,
+  initSchema,
+  type Embedder,
+} from "@grackle-ai/knowledge";
 import { rebuild } from "./rebuild.js";
 
 /**
@@ -76,8 +82,29 @@ describe.skipIf(!RUN)("rebuild() against real Neo4j: idempotency + keystone reco
     // Seed a connected slice of the ecosystem: env ← workspace, a persona, and
     // parent/child tasks (PART_OF) plus a dependency (DEPENDS_ON).
     envRegistry.addEnvironment("env-int", "Int Env", "local", "{}");
-    personaStore.createPersona("persona-int", "Int Persona", "", "prompt", "{}", "stub", "sonnet", 0, "[]");
-    workspaceStore.createWorkspaceAndLink("ws-int", "Int WS", "", "", true, "", "", 0, 0, "env-int");
+    personaStore.createPersona(
+      "persona-int",
+      "Int Persona",
+      "",
+      "prompt",
+      "{}",
+      "stub",
+      "sonnet",
+      0,
+      "[]",
+    );
+    workspaceStore.createWorkspaceAndLink(
+      "ws-int",
+      "Int WS",
+      "",
+      "",
+      true,
+      "",
+      "",
+      0,
+      0,
+      "env-int",
+    );
     taskStore.createTask("t-parent", "ws-int", "Parent", "", [], "int-parent", "", true);
     taskStore.createTask("t-child", "ws-int", "Child", "", [], "int-child", "t-parent");
     taskStore.createTask("t-dep", "ws-int", "Dependent", "", ["t-parent"], "int-dep", "");

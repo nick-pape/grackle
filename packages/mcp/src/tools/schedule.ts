@@ -67,14 +67,22 @@ export const scheduleTools: ToolDefinition[] = [
   {
     name: "schedule_create",
     group: "schedule",
-    description: "Create a new scheduled trigger that fires a persona on a cadence. Use interval shorthand (e.g. '30s', '5m', '1h') or cron expressions (e.g. '0 9 * * MON').",
+    description:
+      "Create a new scheduled trigger that fires a persona on a cadence. Use interval shorthand (e.g. '30s', '5m', '1h') or cron expressions (e.g. '0 9 * * MON').",
     inputSchema: z.object({
       title: z.string().describe("Human-readable title for the schedule"),
-      scheduleExpression: z.string().describe("Interval shorthand (e.g. '30s', '5m') or 5-field cron expression (e.g. '0 9 * * MON')"),
+      scheduleExpression: z
+        .string()
+        .describe(
+          "Interval shorthand (e.g. '30s', '5m') or 5-field cron expression (e.g. '0 9 * * MON')",
+        ),
       personaId: z.string().describe("Persona ID to use when firing"),
       description: z.string().optional().describe("Optional description"),
       workspaceId: z.string().optional().describe("Workspace scope (empty = system-level)"),
-      parentTaskId: z.string().optional().describe("Parent task for spawned children (empty = root task)"),
+      parentTaskId: z
+        .string()
+        .optional()
+        .describe("Parent task for spawned children (empty = root task)"),
     }),
     rpcMethod: "createSchedule",
     mutating: true,

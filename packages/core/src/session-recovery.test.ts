@@ -142,14 +142,30 @@ function applySchema(): void {
 // ── Helpers ─────────────────────────────────────────────────
 
 /** Create a mock PowerLine connection with controllable drain stream. */
-function makeConnection(drainEvents: Array<{ type: string; timestamp: string; content: string; toolCallId?: string }> = []): PowerLineConnection {
+function makeConnection(
+  drainEvents: Array<{
+    type: string;
+    timestamp: string;
+    content: string;
+    toolCallId?: string;
+  }> = [],
+): PowerLineConnection {
   return {
     client: {
-      drainBufferedEvents: vi.fn(() => (async function* () {
-        for (const event of drainEvents) {
-          yield { sessionId: "", type: event.type, timestamp: event.timestamp, content: event.content, raw: "", toolCallId: event.toolCallId ?? "" };
-        }
-      })()),
+      drainBufferedEvents: vi.fn(() =>
+        (async function* () {
+          for (const event of drainEvents) {
+            yield {
+              sessionId: "",
+              type: event.type,
+              timestamp: event.timestamp,
+              content: event.content,
+              raw: "",
+              toolCallId: event.toolCallId ?? "",
+            };
+          }
+        })(),
+      ),
       resume: vi.fn(() => (async function* () {})()),
     },
     environmentId: "env1",
@@ -175,9 +191,7 @@ describe("session recovery", () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
     sessionStore.suspendSession("sess1");
 
-    const conn = makeConnection([
-      { type: "text", timestamp: "t1", content: "buffered event" },
-    ]);
+    const conn = makeConnection([{ type: "text", timestamp: "t1", content: "buffered event" }]);
 
     await recoverSuspendedSessions("env1", conn);
 
@@ -271,7 +285,9 @@ describe("session recovery", () => {
     // Simulate: server died while session was RUNNING, never got suspended
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
     // Session is in RUNNING state (default after create + processEventStream sets it)
-    sqlite.exec("UPDATE sessions SET status = 'running', runtime_session_id = 'rt-abc' WHERE id = 'sess1'");
+    sqlite.exec(
+      "UPDATE sessions SET status = 'running', runtime_session_id = 'rt-abc' WHERE id = 'sess1'",
+    );
 
     const conn = makeConnection([]);
     await recoverSuspendedSessions("env1", conn);
@@ -288,11 +304,20 @@ describe("session recovery", () => {
     // Simulate: another session is spawned on env1 during the async drain window
     const conn = {
       client: {
-        drainBufferedEvents: vi.fn(() => (async function* () {
-          // Mid-drain, a new session appears on the same environment
-          sessionStore.createSession("sess-new", "env1", "claude-code", "test2", "sonnet", "/tmp/log2");
-          sessionStore.updateSessionStatus("sess-new", SESSION_STATUS.RUNNING);
-        })()),
+        drainBufferedEvents: vi.fn(() =>
+          (async function* () {
+            // Mid-drain, a new session appears on the same environment
+            sessionStore.createSession(
+              "sess-new",
+              "env1",
+              "claude-code",
+              "test2",
+              "sonnet",
+              "/tmp/log2",
+            );
+            sessionStore.updateSessionStatus("sess-new", SESSION_STATUS.RUNNING);
+          })(),
+        ),
       },
       environmentId: "env1",
       port: 7433,
@@ -335,9 +360,11 @@ describe("session recovery", () => {
 
     const conn = {
       client: {
-        drainBufferedEvents: vi.fn(() => (async function* () {
-          throw new Error("transport error mid-drain");
-        })()),
+        drainBufferedEvents: vi.fn(() =>
+          (async function* () {
+            throw new Error("transport error mid-drain");
+          })(),
+        ),
       },
       environmentId: "env1",
       port: 7433,

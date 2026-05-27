@@ -17,7 +17,9 @@ export const ReportIntent: Story = {
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("tool-card-metadata")).toBeInTheDocument();
-    await expect(canvas.getByTestId("tool-card-metadata")).toHaveTextContent("Updating README getting started");
+    await expect(canvas.getByTestId("tool-card-metadata")).toHaveTextContent(
+      "Updating README getting started",
+    );
   },
 };
 
@@ -27,6 +29,8 @@ export const UnknownMetadata: Story = {
     args: { description: "Planning implementation" },
   },
   play: async ({ canvas }) => {
-    await expect(canvas.getByTestId("tool-card-metadata")).toHaveTextContent("Planning implementation");
+    await expect(canvas.getByTestId("tool-card-metadata")).toHaveTextContent(
+      "Planning implementation",
+    );
   },
 };

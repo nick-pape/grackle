@@ -23,18 +23,23 @@ function makePersona(overrides: Partial<PersonaResolveInput> = {}): PersonaResol
 }
 
 /** Simple lookup function for tests. */
-function lookupFrom(personas: PersonaResolveInput[]): (id: string) => PersonaResolveInput | undefined {
+function lookupFrom(
+  personas: PersonaResolveInput[],
+): (id: string) => PersonaResolveInput | undefined {
   return (id: string) => personas.find((p) => p.id === id);
 }
 
 describe("resolvePersona", () => {
   it("request persona ID takes priority over all others", () => {
-    const personas = [
-      makePersona({ id: "req-persona" }),
-      makePersona({ id: "task-default" }),
-    ];
+    const personas = [makePersona({ id: "req-persona" }), makePersona({ id: "task-default" })];
 
-    const result = resolvePersona("req-persona", "task-default", "workspace-default", "app-default", lookupFrom(personas));
+    const result = resolvePersona(
+      "req-persona",
+      "task-default",
+      "workspace-default",
+      "app-default",
+      lookupFrom(personas),
+    );
 
     expect(result.personaId).toBe("req-persona");
   });
@@ -42,7 +47,13 @@ describe("resolvePersona", () => {
   it("falls back to task default persona when request persona is empty", () => {
     const personas = [makePersona({ id: "task-default" })];
 
-    const result = resolvePersona("", "task-default", "workspace-default", undefined, lookupFrom(personas));
+    const result = resolvePersona(
+      "",
+      "task-default",
+      "workspace-default",
+      undefined,
+      lookupFrom(personas),
+    );
 
     expect(result.personaId).toBe("task-default");
   });
@@ -76,9 +87,9 @@ describe("resolvePersona", () => {
   });
 
   it("throws error when persona ID is found but lookup returns undefined", () => {
-    expect(() => resolvePersona("missing-persona", undefined, undefined, undefined, lookupFrom([]))).toThrow(
-      "Persona not found: missing-persona",
-    );
+    expect(() =>
+      resolvePersona("missing-persona", undefined, undefined, undefined, lookupFrom([])),
+    ).toThrow("Persona not found: missing-persona");
   });
 
   it("returns correct fields from the resolved persona", () => {
@@ -118,17 +129,17 @@ describe("resolvePersona", () => {
   it("throws error when persona has no runtime configured", () => {
     const persona = makePersona({ id: "bare", runtime: "" });
 
-    expect(() => resolvePersona("bare", undefined, undefined, undefined, lookupFrom([persona]))).toThrow(
-      'Persona "Test Persona" has no runtime configured',
-    );
+    expect(() =>
+      resolvePersona("bare", undefined, undefined, undefined, lookupFrom([persona])),
+    ).toThrow('Persona "Test Persona" has no runtime configured');
   });
 
   it("throws error when agent persona has no model configured", () => {
     const persona = makePersona({ id: "bare", runtime: "claude-code", model: "", type: "agent" });
 
-    expect(() => resolvePersona("bare", undefined, undefined, undefined, lookupFrom([persona]))).toThrow(
-      'Persona "Test Persona" has no model configured',
-    );
+    expect(() =>
+      resolvePersona("bare", undefined, undefined, undefined, lookupFrom([persona])),
+    ).toThrow('Persona "Test Persona" has no model configured');
   });
 
   it("script persona resolves OK with empty model", () => {
@@ -140,7 +151,13 @@ describe("resolvePersona", () => {
       script: 'script({ model: "none" }); $`Hello`;',
     });
 
-    const result = resolvePersona("script-1", undefined, undefined, undefined, lookupFrom([persona]));
+    const result = resolvePersona(
+      "script-1",
+      undefined,
+      undefined,
+      undefined,
+      lookupFrom([persona]),
+    );
 
     expect(result.personaId).toBe("script-1");
     expect(result.type).toBe("script");
@@ -156,8 +173,8 @@ describe("resolvePersona", () => {
       script: 'script({ model: "none" });',
     });
 
-    expect(() => resolvePersona("script-no-rt", undefined, undefined, undefined, lookupFrom([persona]))).toThrow(
-      'Persona "Test Persona" has no runtime configured',
-    );
+    expect(() =>
+      resolvePersona("script-no-rt", undefined, undefined, undefined, lookupFrom([persona])),
+    ).toThrow('Persona "Test Persona" has no runtime configured');
   });
 });

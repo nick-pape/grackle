@@ -35,13 +35,23 @@ interface FileReadCardProps extends ToolCardProps {
 }
 
 /** Renders a file read/write tool call with syntax-highlighted content preview. */
-export function FileReadCard({ tool, args, result, isError, writeVariant }: FileReadCardProps): JSX.Element {
+export function FileReadCard({
+  tool,
+  args,
+  result,
+  isError,
+  writeVariant,
+}: FileReadCardProps): JSX.Element {
   const [expanded, setExpanded] = useState(false);
   const filePath = getFilePath(args);
   const name = basename(filePath);
   const inProgress = result === undefined;
 
-  const accentClass: string = isError ? styles.cardRed : (writeVariant ? styles.cardGreen : styles.cardBlue);
+  const accentClass: string = isError
+    ? styles.cardRed
+    : writeVariant
+      ? styles.cardGreen
+      : styles.cardBlue;
   const accentColor: string = writeVariant ? "var(--accent-green)" : "var(--accent-blue)";
   const icon: ReactNode = writeVariant ? <FilePen size={ICON_MD} /> : <FileText size={ICON_MD} />;
   const testId: string = writeVariant ? "tool-card-file-write" : "tool-card-file-read";
@@ -57,9 +67,13 @@ export function FileReadCard({ tool, args, result, isError, writeVariant }: File
     >
       <div className={styles.header}>
         <span className={styles.icon}>{icon}</span>
-        <span className={styles.toolName} style={{ color: accentColor }}>{tool}</span>
+        <span className={styles.toolName} style={{ color: accentColor }}>
+          {tool}
+        </span>
         {name && (
-          <span className={styles.fileName} title={filePath}>{name}</span>
+          <span className={styles.fileName} title={filePath}>
+            {name}
+          </span>
         )}
         {!inProgress && lines.length > 0 && (
           <>
@@ -80,7 +94,16 @@ export function FileReadCard({ tool, args, result, isError, writeVariant }: File
           <pre className={styles.pre} data-testid="tool-card-content">
             {displayLines.map((line, i) => (
               <span key={i} className={styles.diffLine}>
-                <span style={{ color: "var(--text-tertiary)", userSelect: "none", marginRight: "var(--space-sm)", display: "inline-block", width: "3ch", textAlign: "right" }}>
+                <span
+                  style={{
+                    color: "var(--text-tertiary)",
+                    userSelect: "none",
+                    marginRight: "var(--space-sm)",
+                    display: "inline-block",
+                    width: "3ch",
+                    textAlign: "right",
+                  }}
+                >
                   {i + 1}
                 </span>
                 {line}
@@ -91,11 +114,18 @@ export function FileReadCard({ tool, args, result, isError, writeVariant }: File
             <button
               type="button"
               className={styles.bodyToggle}
-              onClick={() => { setExpanded((v) => !v); }}
+              onClick={() => {
+                setExpanded((v) => !v);
+              }}
               aria-expanded={expanded}
               data-testid="tool-card-toggle"
             >
-              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`} aria-hidden="true"><ChevronRight size={ICON_SM} /></span>
+              <span
+                className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}
+                aria-hidden="true"
+              >
+                <ChevronRight size={ICON_SM} />
+              </span>
               {expanded ? "collapse" : `${lines.length - PREVIEW_LINES} more lines`}
             </button>
           )}

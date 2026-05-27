@@ -52,7 +52,11 @@ describe("projectSessionTranscript", () => {
   });
 
   it("returns 0 when there is no new log content", async () => {
-    kg.getReferenceNodeProps.mockResolvedValue({ id: "sess-node", workspaceId: "w", logByteOffset: 10 });
+    kg.getReferenceNodeProps.mockResolvedValue({
+      id: "sess-node",
+      workspaceId: "w",
+      logByteOffset: 10,
+    });
     core.readLogFrom.mockReturnValue({ content: "", nextOffset: 10 });
     expect(await projectSessionTranscript(session(), embedder)).toBe(0);
     expect(kg.ingest).not.toHaveBeenCalled();
@@ -79,7 +83,10 @@ describe("projectSessionTranscript", () => {
     const chunkUpserts = kg.upsertReferenceNode.mock.calls.filter(
       ([input]) => (input as { sourceType: string }).sourceType === "transcript_chunk",
     );
-    expect(chunkUpserts.map(([i]) => (i as { sourceId: string }).sourceId)).toEqual(["s1#5", "s1#6"]);
+    expect(chunkUpserts.map(([i]) => (i as { sourceId: string }).sourceId)).toEqual([
+      "s1#5",
+      "s1#6",
+    ]);
     expect((chunkUpserts[0][0] as { content: string }).content).toBe("chunk A");
     expect((chunkUpserts[0][0] as { embedding: number[] }).embedding).toEqual([0.1]);
 

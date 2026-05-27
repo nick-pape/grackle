@@ -13,9 +13,17 @@ export interface GitHubAccountsPanelProps {
   /** Whether the account list is loading. */
   githubAccountsLoading: boolean;
   /** Register a new GitHub account. Username will be resolved server-side if empty. */
-  onAddGitHubAccount: (label: string, token: string, username: string, isDefault: boolean) => Promise<void>;
+  onAddGitHubAccount: (
+    label: string,
+    token: string,
+    username: string,
+    isDefault: boolean,
+  ) => Promise<void>;
   /** Update an existing GitHub account. */
-  onUpdateGitHubAccount: (id: string, fields: { label?: string; token?: string; isDefault?: boolean }) => Promise<void>;
+  onUpdateGitHubAccount: (
+    id: string,
+    fields: { label?: string; token?: string; isDefault?: boolean },
+  ) => Promise<void>;
   /** Remove a GitHub account by ID. */
   onRemoveGitHubAccount: (id: string) => Promise<void>;
   /** Import accounts from the local gh CLI authentication state. */
@@ -34,7 +42,6 @@ export function GitHubAccountsPanel({
   onImportGitHubAccounts,
   onShowToast,
 }: GitHubAccountsPanelProps): JSX.Element {
-
   const [label, setLabel] = useState("");
   const [token, setToken] = useState("");
   const [isDefault, setIsDefault] = useState(false);
@@ -94,7 +101,10 @@ export function GitHubAccountsPanel({
     try {
       const result = await onImportGitHubAccounts();
       if (result.imported > 0) {
-        onShowToast?.(`Imported ${result.imported} account(s): ${result.usernames.join(", ")}`, "success");
+        onShowToast?.(
+          `Imported ${result.imported} account(s): ${result.usernames.join(", ")}`,
+          "success",
+        );
       } else {
         onShowToast?.("No new accounts to import", "info");
       }
@@ -116,15 +126,17 @@ export function GitHubAccountsPanel({
             ? `"${confirmRemoveAccount.label}"${confirmRemoveAccount.username ? ` (@${confirmRemoveAccount.username})` : ""} will be permanently removed.`
             : undefined
         }
-        onConfirm={() => { handleConfirmRemove().catch(() => {}); }}
+        onConfirm={() => {
+          handleConfirmRemove().catch(() => {});
+        }}
         onCancel={() => setConfirmRemoveId(null)}
       />
 
       <section className={styles.section} data-testid="github-accounts-panel">
         <h3 className={styles.sectionTitle}>GitHub Accounts</h3>
         <p className={styles.sectionDescription}>
-          Register multiple GitHub accounts to use different identities per environment.
-          The default account is used when no specific account is assigned.
+          Register multiple GitHub accounts to use different identities per environment. The default
+          account is used when no specific account is assigned.
         </p>
 
         {githubAccountsLoading && githubAccounts.length === 0 ? (
@@ -136,9 +148,15 @@ export function GitHubAccountsPanel({
         ) : (
           <div className={styles.tokenList}>
             {githubAccounts.map((account) => (
-              <div key={account.id} className={styles.tokenRow} data-testid={`github-account-row-${account.id}`}>
+              <div
+                key={account.id}
+                className={styles.tokenRow}
+                data-testid={`github-account-row-${account.id}`}
+              >
                 {account.isDefault && (
-                  <span className={styles.tokenBadge} title="Default account">default</span>
+                  <span className={styles.tokenBadge} title="Default account">
+                    default
+                  </span>
                 )}
                 <span className={styles.tokenName}>{account.label}</span>
                 {account.username && (
@@ -147,7 +165,9 @@ export function GitHubAccountsPanel({
                 {!account.isDefault && (
                   <button
                     className={styles.deleteButton}
-                    onClick={() => { handleSetDefault(account.id).catch(() => {}); }}
+                    onClick={() => {
+                      handleSetDefault(account.id).catch(() => {});
+                    }}
                     title="Set as default"
                     aria-label={`Set ${account.label} as default`}
                     data-testid={`github-account-set-default-${account.id}`}
@@ -169,7 +189,12 @@ export function GitHubAccountsPanel({
           </div>
         )}
 
-        <form className={styles.addForm} onSubmit={(e) => { handleSubmit(e).catch(() => {}); }}>
+        <form
+          className={styles.addForm}
+          onSubmit={(e) => {
+            handleSubmit(e).catch(() => {});
+          }}
+        >
           <div className={styles.formRow}>
             <input
               className={styles.input}
@@ -189,7 +214,10 @@ export function GitHubAccountsPanel({
             />
           </div>
           <div className={styles.formRow}>
-            <label className={styles.tokenTarget} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+            <label
+              className={styles.tokenTarget}
+              style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}
+            >
               <input
                 type="checkbox"
                 checked={isDefault}
@@ -209,7 +237,9 @@ export function GitHubAccountsPanel({
             <button
               className={styles.addButton}
               type="button"
-              onClick={() => { handleImport().catch(() => {}); }}
+              onClick={() => {
+                handleImport().catch(() => {});
+              }}
               disabled={importing}
               data-testid="github-account-import-button"
             >

@@ -71,7 +71,9 @@ describe("event-bus", () => {
   describe("subscribe()", () => {
     it("receives emitted events asynchronously", async () => {
       const received: GrackleEvent[] = [];
-      subscribe((event) => { received.push(event); });
+      subscribe((event) => {
+        received.push(event);
+      });
 
       emit("task.updated", { taskId: "t1", workspaceId: "p1" });
 
@@ -84,8 +86,12 @@ describe("event-bus", () => {
     it("delivers to multiple subscribers", async () => {
       const received1: GrackleEvent[] = [];
       const received2: GrackleEvent[] = [];
-      subscribe((e) => { received1.push(e); });
-      subscribe((e) => { received2.push(e); });
+      subscribe((e) => {
+        received1.push(e);
+      });
+      subscribe((e) => {
+        received2.push(e);
+      });
 
       emit("workspace.archived", { workspaceId: "p1" });
 
@@ -96,7 +102,9 @@ describe("event-bus", () => {
 
     it("returns an unsubscribe function that stops delivery", async () => {
       const received: GrackleEvent[] = [];
-      const unsub = subscribe((e) => { received.push(e); });
+      const unsub = subscribe((e) => {
+        received.push(e);
+      });
 
       emit("task.created", { taskId: "t1", workspaceId: "p1" });
       await new Promise((r) => setTimeout(r, 10));
@@ -110,8 +118,12 @@ describe("event-bus", () => {
 
     it("subscriber that throws does not affect other subscribers", async () => {
       const received: GrackleEvent[] = [];
-      subscribe(() => { throw new Error("boom"); });
-      subscribe((e) => { received.push(e); });
+      subscribe(() => {
+        throw new Error("boom");
+      });
+      subscribe((e) => {
+        received.push(e);
+      });
 
       emit("finding.posted", { workspaceId: "p1", findingId: "f1" });
 
@@ -123,7 +135,9 @@ describe("event-bus", () => {
   describe("_resetForTesting()", () => {
     it("clears all subscribers", async () => {
       const received: GrackleEvent[] = [];
-      subscribe((e) => { received.push(e); });
+      subscribe((e) => {
+        received.push(e);
+      });
 
       _resetForTesting();
 

@@ -12,7 +12,12 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { create } from "@bufbuild/protobuf";
 import { powerline, type RuntimeName } from "@grackle-ai/common";
-import { credentialProviders, githubAccountStore, type CredentialProviderConfig, type DatabaseInstance } from "@grackle-ai/database";
+import {
+  credentialProviders,
+  githubAccountStore,
+  type CredentialProviderConfig,
+  type DatabaseInstance,
+} from "@grackle-ai/database";
 import { exec } from "./utils/exec.js";
 
 /**
@@ -21,10 +26,10 @@ import { exec } from "./utils/exec.js";
  */
 export const RUNTIME_PROVIDERS: Record<string, (keyof CredentialProviderConfig)[]> = {
   "claude-code": ["claude", "github"],
-  "copilot": ["copilot", "github"],
-  "codex": ["codex", "github"],
-  "goose": ["goose", "github"],
-  "stub": [],
+  copilot: ["copilot", "github"],
+  codex: ["codex", "github"],
+  goose: ["goose", "github"],
+  stub: [],
   // ACP runtimes (experimental) — auth via ACP authenticate method, not credential files
   "claude-code-acp": ["claude", "github"],
   "codex-acp": ["codex", "github"],
@@ -83,7 +88,9 @@ function describeProviderNeed(
         resourceName: "Anthropic API",
         authorizationServers: [],
         scopesSupported: [],
-        credentialKinds: [config.claude === "subscription" ? "oauth-subscription-file" : "env-api-key"],
+        credentialKinds: [
+          config.claude === "subscription" ? "oauth-subscription-file" : "env-api-key",
+        ],
         provider: "claude",
       };
     }
@@ -199,15 +206,20 @@ export async function resolveGitHubTokenFromCli(): Promise<string | undefined> {
  * rather than from environment variables, enabling per-environment identity selection.
  * Reads values fresh from `process.env`, disk, or the `gh` CLI at call time.
  */
-export async function buildProviderTokenBundle(runtime?: string, database?: DatabaseInstance, githubAccountId?: string): Promise<powerline.TokenBundle> {
+export async function buildProviderTokenBundle(
+  runtime?: string,
+  database?: DatabaseInstance,
+  githubAccountId?: string,
+): Promise<powerline.TokenBundle> {
   const config = credentialProviders.getCredentialProviders(database);
   // When runtime is given, look it up in the map. Unknown runtimes get [] (empty, not all providers).
-  const runtimeProviders = runtime !== undefined
-    ? (Object.hasOwn(RUNTIME_PROVIDERS, runtime) ? RUNTIME_PROVIDERS[runtime as RuntimeName] : [])
-    : undefined;
-  const allowedProviders = runtimeProviders !== undefined
-    ? new Set(runtimeProviders)
-    : undefined;
+  const runtimeProviders =
+    runtime !== undefined
+      ? Object.hasOwn(RUNTIME_PROVIDERS, runtime)
+        ? RUNTIME_PROVIDERS[runtime as RuntimeName]
+        : []
+      : undefined;
+  const allowedProviders = runtimeProviders !== undefined ? new Set(runtimeProviders) : undefined;
   const items: powerline.TokenItem[] = [];
 
   // Lazily resolved GitHub token from the `gh` CLI — shared across provider blocks
@@ -256,9 +268,10 @@ export async function buildProviderTokenBundle(runtime?: string, database?: Data
     // When a specific GitHub account is requested, resolve its token from the store.
     // The fallback chain (default account → env vars → gh CLI) is handled by
     // githubAccountStore.resolveStoredGitHubToken().
-    const storedToken = githubAccountId !== undefined || githubAccountStore.getDefaultGitHubAccount() !== undefined
-      ? githubAccountStore.resolveStoredGitHubToken(githubAccountId || undefined)
-      : undefined;
+    const storedToken =
+      githubAccountId !== undefined || githubAccountStore.getDefaultGitHubAccount() !== undefined
+        ? githubAccountStore.resolveStoredGitHubToken(githubAccountId || undefined)
+        : undefined;
 
     if (storedToken) {
       items.push(
@@ -418,7 +431,13 @@ export async function buildProviderTokenBundle(runtime?: string, database?: Data
   if ((!allowedProviders || allowedProviders.has("goose")) && config.goose === "on") {
     const isWindows = process.platform === "win32";
     const gooseConfigPath = isWindows
-      ? join(process.env.APPDATA || join(homedir(), "AppData", "Roaming"), "Block", "goose", "config", "config.yaml")
+      ? join(
+          process.env.APPDATA || join(homedir(), "AppData", "Roaming"),
+          "Block",
+          "goose",
+          "config",
+          "config.yaml",
+        )
       : join(homedir(), ".config", "goose", "config.yaml");
     const gooseConfigFilePath = isWindows
       ? "%APPDATA%/Block/goose/config/config.yaml"

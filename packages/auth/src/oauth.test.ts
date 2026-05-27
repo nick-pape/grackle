@@ -85,7 +85,13 @@ describe("oauth", () => {
       const challenge = computeCodeChallenge(CODE_VERIFIER);
       const code = createAuthorizationCode(client.clientId, REDIRECT_URI, challenge, RESOURCE);
 
-      const record = consumeAuthorizationCode(code, client.clientId, REDIRECT_URI, CODE_VERIFIER, RESOURCE);
+      const record = consumeAuthorizationCode(
+        code,
+        client.clientId,
+        REDIRECT_URI,
+        CODE_VERIFIER,
+        RESOURCE,
+      );
       expect(record).toBeDefined();
       expect(record!.clientId).toBe(client.clientId);
       expect(record!.resource).toBe(RESOURCE);
@@ -96,10 +102,22 @@ describe("oauth", () => {
       const challenge = computeCodeChallenge(CODE_VERIFIER);
       const code = createAuthorizationCode(client.clientId, REDIRECT_URI, challenge, RESOURCE);
 
-      const first = consumeAuthorizationCode(code, client.clientId, REDIRECT_URI, CODE_VERIFIER, RESOURCE);
+      const first = consumeAuthorizationCode(
+        code,
+        client.clientId,
+        REDIRECT_URI,
+        CODE_VERIFIER,
+        RESOURCE,
+      );
       expect(first).toBeDefined();
 
-      const second = consumeAuthorizationCode(code, client.clientId, REDIRECT_URI, CODE_VERIFIER, RESOURCE);
+      const second = consumeAuthorizationCode(
+        code,
+        client.clientId,
+        REDIRECT_URI,
+        CODE_VERIFIER,
+        RESOURCE,
+      );
       expect(second).toBeUndefined();
     });
 
@@ -108,7 +126,13 @@ describe("oauth", () => {
       const challenge = computeCodeChallenge(CODE_VERIFIER);
       const code = createAuthorizationCode(client.clientId, REDIRECT_URI, challenge, RESOURCE);
 
-      const result = consumeAuthorizationCode(code, "wrong-client", REDIRECT_URI, CODE_VERIFIER, RESOURCE);
+      const result = consumeAuthorizationCode(
+        code,
+        "wrong-client",
+        REDIRECT_URI,
+        CODE_VERIFIER,
+        RESOURCE,
+      );
       expect(result).toBeUndefined();
     });
 
@@ -117,7 +141,13 @@ describe("oauth", () => {
       const challenge = computeCodeChallenge(CODE_VERIFIER);
       const code = createAuthorizationCode(client.clientId, REDIRECT_URI, challenge, RESOURCE);
 
-      const result = consumeAuthorizationCode(code, client.clientId, "http://evil.com/cb", CODE_VERIFIER, RESOURCE);
+      const result = consumeAuthorizationCode(
+        code,
+        client.clientId,
+        "http://evil.com/cb",
+        CODE_VERIFIER,
+        RESOURCE,
+      );
       expect(result).toBeUndefined();
     });
 
@@ -126,7 +156,13 @@ describe("oauth", () => {
       const challenge = computeCodeChallenge(CODE_VERIFIER);
       const code = createAuthorizationCode(client.clientId, REDIRECT_URI, challenge, RESOURCE);
 
-      const result = consumeAuthorizationCode(code, client.clientId, REDIRECT_URI, "bad-verifier", RESOURCE);
+      const result = consumeAuthorizationCode(
+        code,
+        client.clientId,
+        REDIRECT_URI,
+        "bad-verifier",
+        RESOURCE,
+      );
       expect(result).toBeUndefined();
     });
 
@@ -135,7 +171,13 @@ describe("oauth", () => {
       const challenge = computeCodeChallenge(CODE_VERIFIER);
       const code = createAuthorizationCode(client.clientId, REDIRECT_URI, challenge, RESOURCE);
 
-      const result = consumeAuthorizationCode(code, client.clientId, REDIRECT_URI, CODE_VERIFIER, "http://wrong");
+      const result = consumeAuthorizationCode(
+        code,
+        client.clientId,
+        REDIRECT_URI,
+        CODE_VERIFIER,
+        "http://wrong",
+      );
       expect(result).toBeUndefined();
     });
 
@@ -146,12 +188,24 @@ describe("oauth", () => {
 
       // Advance time by 60 seconds (beyond 30s TTL)
       vi.spyOn(Date, "now").mockReturnValue(Date.now() + 60_000);
-      const result = consumeAuthorizationCode(code, client.clientId, REDIRECT_URI, CODE_VERIFIER, RESOURCE);
+      const result = consumeAuthorizationCode(
+        code,
+        client.clientId,
+        REDIRECT_URI,
+        CODE_VERIFIER,
+        RESOURCE,
+      );
       expect(result).toBeUndefined();
     });
 
     test("nonexistent code returns undefined", () => {
-      const result = consumeAuthorizationCode("nonexistent", "client", REDIRECT_URI, CODE_VERIFIER, RESOURCE);
+      const result = consumeAuthorizationCode(
+        "nonexistent",
+        "client",
+        REDIRECT_URI,
+        CODE_VERIFIER,
+        RESOURCE,
+      );
       expect(result).toBeUndefined();
     });
   });

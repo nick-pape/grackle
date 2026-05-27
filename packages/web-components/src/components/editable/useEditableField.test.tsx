@@ -3,7 +3,9 @@ import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useEditableField } from "./useEditableField.js";
 
-function makeOptions(overrides: Partial<Parameters<typeof useEditableField>[0]> = {}): Parameters<typeof useEditableField>[0] {
+function makeOptions(
+  overrides: Partial<Parameters<typeof useEditableField>[0]> = {},
+): Parameters<typeof useEditableField>[0] {
   return {
     value: "hello",
     onSave: vi.fn(),

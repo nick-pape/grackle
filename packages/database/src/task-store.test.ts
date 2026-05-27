@@ -86,7 +86,16 @@ describe("task-store tree operations", () => {
     });
 
     it("generates branch name from parent branch when parent exists", () => {
-      taskStore.createTask("t1", "test-proj", "Parent Task", "desc", [], "test-workspace", "", true);
+      taskStore.createTask(
+        "t1",
+        "test-proj",
+        "Parent Task",
+        "desc",
+        [],
+        "test-workspace",
+        "",
+        true,
+      );
       const parent = taskStore.getTask("t1");
       taskStore.createTask("t2", "test-proj", "Child Task", "desc", [], "test-workspace", "t1");
       const child = taskStore.getTask("t2");
@@ -95,13 +104,30 @@ describe("task-store tree operations", () => {
 
     it("rejects creation when parent does not exist", () => {
       expect(() => {
-        taskStore.createTask("t1", "test-proj", "Orphan", "desc", [], "test-workspace", "nonexistent");
+        taskStore.createTask(
+          "t1",
+          "test-proj",
+          "Orphan",
+          "desc",
+          [],
+          "test-workspace",
+          "nonexistent",
+        );
       }).toThrow("Parent task not found");
     });
 
     it("rejects creation when depth would exceed MAX_TASK_DEPTH", () => {
       for (let i = 0; i <= 8; i++) {
-        taskStore.createTask(`t${i}`, "test-proj", `Level ${i}`, "desc", [], "proj", i === 0 ? "" : `t${i - 1}`, true);
+        taskStore.createTask(
+          `t${i}`,
+          "test-proj",
+          `Level ${i}`,
+          "desc",
+          [],
+          "proj",
+          i === 0 ? "" : `t${i - 1}`,
+          true,
+        );
       }
 
       expect(() => {
@@ -146,7 +172,7 @@ describe("task-store tree operations", () => {
 
       const descendants = taskStore.getDescendants("t1");
       expect(descendants).toHaveLength(2);
-      const ids = descendants.map(d => d.id);
+      const ids = descendants.map((d) => d.id);
       expect(ids).toContain("t2");
       expect(ids).toContain("t3");
     });
@@ -198,9 +224,30 @@ describe("task-store tree operations", () => {
 
   describe("listTasks filtering", () => {
     beforeEach(() => {
-      taskStore.createTask("t1", "test-proj", "Fix login bug", "User cannot login with SSO", [], "test-workspace");
-      taskStore.createTask("t2", "test-proj", "Add dashboard", "Create analytics dashboard", [], "test-workspace");
-      taskStore.createTask("t3", "test-proj", "Update auth middleware", "Refactor authentication layer", [], "test-workspace");
+      taskStore.createTask(
+        "t1",
+        "test-proj",
+        "Fix login bug",
+        "User cannot login with SSO",
+        [],
+        "test-workspace",
+      );
+      taskStore.createTask(
+        "t2",
+        "test-proj",
+        "Add dashboard",
+        "Create analytics dashboard",
+        [],
+        "test-workspace",
+      );
+      taskStore.createTask(
+        "t3",
+        "test-proj",
+        "Update auth middleware",
+        "Refactor authentication layer",
+        [],
+        "test-workspace",
+      );
       taskStore.updateTaskStatus("t2", "working");
       taskStore.updateTaskStatus("t3", "complete");
     });
@@ -258,7 +305,14 @@ describe("task-store tree operations", () => {
     });
 
     it("preserves sort order in filtered results", () => {
-      taskStore.createTask("t4", "test-proj", "Another login fix", "Second login issue", [], "test-workspace");
+      taskStore.createTask(
+        "t4",
+        "test-proj",
+        "Another login fix",
+        "Second login issue",
+        [],
+        "test-workspace",
+      );
       const results = taskStore.listTasks("test-proj", { search: "login" });
       expect(results).toHaveLength(2);
       expect(results[0].id).toBe("t1");
@@ -347,7 +401,16 @@ describe("task-store tree operations", () => {
 
     it("depth limit still enforced even when canDecompose=true", () => {
       for (let i = 0; i <= 8; i++) {
-        taskStore.createTask(`t${i}`, "test-proj", `Level ${i}`, "desc", [], "proj", i === 0 ? "" : `t${i - 1}`, true);
+        taskStore.createTask(
+          `t${i}`,
+          "test-proj",
+          `Level ${i}`,
+          "desc",
+          [],
+          "proj",
+          i === 0 ? "" : `t${i - 1}`,
+          true,
+        );
       }
 
       expect(() => {
@@ -516,7 +579,19 @@ describe("task-store tree operations", () => {
     });
 
     it("stores budget values via createTask", () => {
-      taskStore.createTask("t1", "test-proj", "Task", "desc", [], "proj", "", false, "", 50000, 100000);
+      taskStore.createTask(
+        "t1",
+        "test-proj",
+        "Task",
+        "desc",
+        [],
+        "proj",
+        "",
+        false,
+        "",
+        50000,
+        100000,
+      );
       const task = taskStore.getTask("t1");
       expect(task!.tokenBudget).toBe(50000);
       expect(task!.costBudgetMillicents).toBe(100000);
@@ -538,5 +613,4 @@ describe("task-store tree operations", () => {
       expect(after >= before).toBe(true);
     });
   });
-
 });

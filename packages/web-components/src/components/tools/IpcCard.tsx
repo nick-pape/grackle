@@ -14,7 +14,13 @@ interface FdEntry {
 }
 
 /** Extracts IPC-relevant fields from tool args. */
-function getArgs(args: unknown): { fd?: number; pipe?: string; prompt?: string; name?: string; message?: string } {
+function getArgs(args: unknown): {
+  fd?: number;
+  pipe?: string;
+  prompt?: string;
+  name?: string;
+  message?: string;
+} {
   if (args === null || args === undefined || typeof args !== "object") {
     return {};
   }
@@ -29,7 +35,13 @@ function getArgs(args: unknown): { fd?: number; pipe?: string; prompt?: string; 
 }
 
 /** Parses IPC result JSON. */
-function parseResult(result: string | undefined): { sessionId?: string; fd?: number; fds?: FdEntry[]; success?: boolean; output?: string } {
+function parseResult(result: string | undefined): {
+  sessionId?: string;
+  fd?: number;
+  fds?: FdEntry[];
+  success?: boolean;
+  output?: string;
+} {
   if (!result) {
     return {};
   }
@@ -42,11 +54,15 @@ function parseResult(result: string | undefined): { sessionId?: string; fd?: num
     return {
       sessionId: typeof obj.sessionId === "string" ? obj.sessionId : undefined,
       fd: typeof obj.fd === "number" ? obj.fd : undefined,
-      fds: Array.isArray(obj.fds) ? (obj.fds as unknown[]).filter((v): v is FdEntry => v !== null && typeof v === "object") : undefined,
+      fds: Array.isArray(obj.fds)
+        ? (obj.fds as unknown[]).filter((v): v is FdEntry => v !== null && typeof v === "object")
+        : undefined,
       success: typeof obj.success === "boolean" ? obj.success : undefined,
       output: typeof obj.output === "string" ? obj.output : undefined,
     };
-  } catch { /* fall through */ }
+  } catch {
+    /* fall through */
+  }
   return {};
 }
 
@@ -70,7 +86,9 @@ export function IpcCard({ tool, args, result, isError }: ToolCardProps): JSX.Ele
 
   // Prompt snippet for ipc_spawn
   const promptSnippet = argData.prompt
-    ? (argData.prompt.length > 60 ? `${argData.prompt.slice(0, 60)}...` : argData.prompt)
+    ? argData.prompt.length > 60
+      ? `${argData.prompt.slice(0, 60)}...`
+      : argData.prompt
     : undefined;
 
   return (
@@ -79,7 +97,9 @@ export function IpcCard({ tool, args, result, isError }: ToolCardProps): JSX.Ele
       data-testid="tool-card-ipc"
     >
       <div className={styles.header}>
-        <span className={styles.icon} aria-hidden="true">&#x1F500;</span>
+        <span className={styles.icon} aria-hidden="true">
+          &#x1F500;
+        </span>
         <span className={styles.toolName} style={{ color: "var(--accent-yellow, #fbbf24)" }}>
           {bareName}
         </span>
@@ -89,7 +109,11 @@ export function IpcCard({ tool, args, result, isError }: ToolCardProps): JSX.Ele
           </span>
         )}
         {promptSnippet && (
-          <span className={styles.fileName} title={argData.prompt} data-testid="tool-card-ipc-prompt">
+          <span
+            className={styles.fileName}
+            title={argData.prompt}
+            data-testid="tool-card-ipc-prompt"
+          >
             {promptSnippet}
           </span>
         )}
@@ -106,7 +130,11 @@ export function IpcCard({ tool, args, result, isError }: ToolCardProps): JSX.Ele
             <span className={styles.spacer} />
             <span
               className={styles.badge}
-              style={{ color: resultData.success ? "var(--accent-green, #4ade80)" : "var(--accent-red, #f87171)" }}
+              style={{
+                color: resultData.success
+                  ? "var(--accent-green, #4ade80)"
+                  : "var(--accent-red, #f87171)",
+              }}
               data-testid="tool-card-ipc-success"
             >
               {resultData.success ? "\u2713 ok" : "\u2717 failed"}
@@ -131,7 +159,11 @@ export function IpcCard({ tool, args, result, isError }: ToolCardProps): JSX.Ele
 
       {/* Session ID from ipc_spawn */}
       {!isError && resultData.sessionId && (
-        <div className={styles.pre} style={{ padding: "4px 8px", fontSize: "0.85em" }} data-testid="tool-card-ipc-session">
+        <div
+          className={styles.pre}
+          style={{ padding: "4px 8px", fontSize: "0.85em" }}
+          data-testid="tool-card-ipc-session"
+        >
           session: {resultData.sessionId}
           {resultData.fd !== undefined && ` | fd: ${resultData.fd}`}
         </div>
@@ -148,26 +180,32 @@ export function IpcCard({ tool, args, result, isError }: ToolCardProps): JSX.Ele
       {!isError && resultData.fds && resultData.fds.length > 0 && (
         <>
           <pre className={styles.pre} data-testid="tool-card-ipc-fds">
-            {(expanded ? resultData.fds : resultData.fds.slice(0, 5)).map((f) => {
-              const parts = [`fd:${f.fd ?? "?"}`, f.permission ?? "", f.deliveryMode ?? ""];
-              if (f.streamName) {
-                parts.push(f.streamName);
-              }
-              if (f.owned) {
-                parts.push("(owned)");
-              }
-              return parts.filter(Boolean).join(" ");
-            }).join("\n")}
+            {(expanded ? resultData.fds : resultData.fds.slice(0, 5))
+              .map((f) => {
+                const parts = [`fd:${f.fd ?? "?"}`, f.permission ?? "", f.deliveryMode ?? ""];
+                if (f.streamName) {
+                  parts.push(f.streamName);
+                }
+                if (f.owned) {
+                  parts.push("(owned)");
+                }
+                return parts.filter(Boolean).join(" ");
+              })
+              .join("\n")}
           </pre>
           {resultData.fds.length > 5 && (
             <button
               type="button"
               className={styles.bodyToggle}
-              onClick={() => { setExpanded((v) => !v); }}
+              onClick={() => {
+                setExpanded((v) => !v);
+              }}
               aria-expanded={expanded}
               data-testid="tool-card-toggle"
             >
-              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}>&#x25B8;</span>
+              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}>
+                &#x25B8;
+              </span>
               {expanded ? "collapse" : `${resultData.fds.length - 5} more fds`}
             </button>
           )}

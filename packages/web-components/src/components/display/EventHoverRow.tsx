@@ -7,7 +7,15 @@
  * side effects via navigator.clipboard when the user clicks Copy.
  */
 
-import { useState, useCallback, useEffect, useRef, type JSX, type ReactNode, type MouseEvent } from "react";
+import {
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  type JSX,
+  type ReactNode,
+  type MouseEvent,
+} from "react";
 import { Clipboard, Check, CheckSquare } from "lucide-react";
 import { ICON_SM } from "../../utils/iconSize.js";
 import styles from "./EventHoverRow.module.scss";
@@ -69,7 +77,9 @@ export function EventHoverRow({
       if (copiedTimerRef.current !== undefined) {
         clearTimeout(copiedTimerRef.current);
       }
-      copiedTimerRef.current = setTimeout(() => { setCopied(false); }, 2000);
+      copiedTimerRef.current = setTimeout(() => {
+        setCopied(false);
+      }, 2000);
     } catch {
       // Clipboard write failed silently
     }
@@ -108,8 +118,12 @@ export function EventHoverRow({
           <input
             type="checkbox"
             checked={isSelected}
-            onChange={(e) => { onToggle((e.nativeEvent as globalThis.MouseEvent).shiftKey); }}
-            onClick={(e) => { e.stopPropagation(); }}
+            onChange={(e) => {
+              onToggle((e.nativeEvent as globalThis.MouseEvent).shiftKey);
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
             className={styles.checkbox}
             aria-label={checkboxLabel ?? "Select this event"}
             data-testid="event-select-checkbox"
@@ -122,21 +136,22 @@ export function EventHoverRow({
 
   // Normal mode: hover action row
   return (
-    <div
-      className={styles.row}
-      data-testid="event-hover-row"
-    >
+    <div className={styles.row} data-testid="event-hover-row">
       <div className={styles.hoverActions} data-testid="event-hover-actions">
         <button
           type="button"
           className={styles.hoverButton}
-          onClick={() => { handleCopy().catch(() => {}); }}
+          onClick={() => {
+            handleCopy().catch(() => {});
+          }}
           aria-label="Copy event content"
           data-testid="event-hover-copy"
         >
-          {copied
-            ? <Check size={ICON_SM} aria-hidden="true" />
-            : <Clipboard size={ICON_SM} aria-hidden="true" />}
+          {copied ? (
+            <Check size={ICON_SM} aria-hidden="true" />
+          ) : (
+            <Clipboard size={ICON_SM} aria-hidden="true" />
+          )}
         </button>
         <button
           type="button"

@@ -22,7 +22,13 @@ function applySchema(): void {
 
 /** Seed a stream message with explicit seq/stream. */
 function seed(seq: string, streamId: string, content: string): void {
-  persistStreamMessage({ seq, streamId, senderId: "sess-1", content, timestamp: "2026-05-24T00:00:00.000Z" });
+  persistStreamMessage({
+    seq,
+    streamId,
+    senderId: "sess-1",
+    content,
+    timestamp: "2026-05-24T00:00:00.000Z",
+  });
 }
 
 describe("queryStreamMessages", () => {
@@ -35,7 +41,11 @@ describe("queryStreamMessages", () => {
     seed("01C", "s1", "c");
     seed("01A", "s1", "a");
     seed("01B", "s1", "b");
-    expect(queryStreamMessages({ streamId: "s1" }).map((m) => m.seq)).toEqual(["01C", "01B", "01A"]);
+    expect(queryStreamMessages({ streamId: "s1" }).map((m) => m.seq)).toEqual([
+      "01C",
+      "01B",
+      "01A",
+    ]);
   });
 
   it("scopes results to the requested stream", () => {
@@ -49,7 +59,10 @@ describe("queryStreamMessages", () => {
     seed("01A", "s1", "a");
     seed("01B", "s1", "b");
     seed("01C", "s1", "c");
-    expect(queryStreamMessages({ streamId: "s1", beforeSeq: "01C" }).map((m) => m.seq)).toEqual(["01B", "01A"]);
+    expect(queryStreamMessages({ streamId: "s1", beforeSeq: "01C" }).map((m) => m.seq)).toEqual([
+      "01B",
+      "01A",
+    ]);
     expect(queryStreamMessages({ streamId: "s1", beforeSeq: "01A" })).toEqual([]);
   });
 
@@ -58,12 +71,20 @@ describe("queryStreamMessages", () => {
     seed("01B", "s1", "b");
     seed("01C", "s1", "c");
     seed("01D", "s1", "d");
-    expect(queryStreamMessages({ streamId: "s1", limit: 2 }).map((m) => m.seq)).toEqual(["01D", "01C"]);
+    expect(queryStreamMessages({ streamId: "s1", limit: 2 }).map((m) => m.seq)).toEqual([
+      "01D",
+      "01C",
+    ]);
   });
 
   it("round-trips message fields", () => {
     seed("01A", "s1", "hello world");
     const [row] = queryStreamMessages({ streamId: "s1" });
-    expect(row).toMatchObject({ seq: "01A", streamId: "s1", senderId: "sess-1", content: "hello world" });
+    expect(row).toMatchObject({
+      seq: "01A",
+      streamId: "s1",
+      senderId: "sess-1",
+      content: "hello world",
+    });
   });
 });

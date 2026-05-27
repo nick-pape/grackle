@@ -10,10 +10,12 @@ export function linkEnvironment(workspaceId: string, environmentId: string): voi
 /** Remove a link between a workspace and an environment. No-op if not linked. */
 export function unlinkEnvironment(workspaceId: string, environmentId: string): void {
   db.delete(workspaceEnvironmentLinks)
-    .where(and(
-      eq(workspaceEnvironmentLinks.workspaceId, workspaceId),
-      eq(workspaceEnvironmentLinks.environmentId, environmentId),
-    ))
+    .where(
+      and(
+        eq(workspaceEnvironmentLinks.workspaceId, workspaceId),
+        eq(workspaceEnvironmentLinks.environmentId, environmentId),
+      ),
+    )
     .run();
 }
 
@@ -25,7 +27,8 @@ export function unlinkEnvironment(workspaceId: string, environmentId: string): v
  */
 export function unlinkEnvironmentIfNotLast(workspaceId: string, environmentId: string): void {
   db.transaction(() => {
-    const countRow = db.select({ count: sql<number>`count(*)` })
+    const countRow = db
+      .select({ count: sql<number>`count(*)` })
       .from(workspaceEnvironmentLinks)
       .where(eq(workspaceEnvironmentLinks.workspaceId, workspaceId))
       .get();
@@ -33,17 +36,20 @@ export function unlinkEnvironmentIfNotLast(workspaceId: string, environmentId: s
       throw new Error(`Cannot unlink the last environment from workspace ${workspaceId}`);
     }
     db.delete(workspaceEnvironmentLinks)
-      .where(and(
-        eq(workspaceEnvironmentLinks.workspaceId, workspaceId),
-        eq(workspaceEnvironmentLinks.environmentId, environmentId),
-      ))
+      .where(
+        and(
+          eq(workspaceEnvironmentLinks.workspaceId, workspaceId),
+          eq(workspaceEnvironmentLinks.environmentId, environmentId),
+        ),
+      )
       .run();
   });
 }
 
 /** Return all linked environment IDs for a workspace, ordered deterministically by ID. */
 export function getLinkedEnvironmentIds(workspaceId: string): string[] {
-  const rows = db.select({ environmentId: workspaceEnvironmentLinks.environmentId })
+  const rows = db
+    .select({ environmentId: workspaceEnvironmentLinks.environmentId })
     .from(workspaceEnvironmentLinks)
     .where(eq(workspaceEnvironmentLinks.workspaceId, workspaceId))
     .orderBy(asc(workspaceEnvironmentLinks.environmentId))
@@ -53,7 +59,8 @@ export function getLinkedEnvironmentIds(workspaceId: string): string[] {
 
 /** Return all workspace IDs linked to an environment. */
 export function getWorkspaceIdsLinkedToEnvironment(environmentId: string): string[] {
-  const rows = db.select({ workspaceId: workspaceEnvironmentLinks.workspaceId })
+  const rows = db
+    .select({ workspaceId: workspaceEnvironmentLinks.workspaceId })
     .from(workspaceEnvironmentLinks)
     .where(eq(workspaceEnvironmentLinks.environmentId, environmentId))
     .all();
@@ -69,10 +76,11 @@ export function getLinkedEnvironmentIdsByWorkspaces(workspaceIds: string[]): Map
   if (workspaceIds.length === 0) {
     return result;
   }
-  const rows = db.select({
-    workspaceId: workspaceEnvironmentLinks.workspaceId,
-    environmentId: workspaceEnvironmentLinks.environmentId,
-  })
+  const rows = db
+    .select({
+      workspaceId: workspaceEnvironmentLinks.workspaceId,
+      environmentId: workspaceEnvironmentLinks.environmentId,
+    })
     .from(workspaceEnvironmentLinks)
     .where(inArray(workspaceEnvironmentLinks.workspaceId, workspaceIds))
     .orderBy(asc(workspaceEnvironmentLinks.environmentId))
@@ -90,19 +98,23 @@ export function getLinkedEnvironmentIdsByWorkspaces(workspaceIds: string[]): Map
 
 /** Check whether a specific link exists. */
 export function isLinked(workspaceId: string, environmentId: string): boolean {
-  const row = db.select({ workspaceId: workspaceEnvironmentLinks.workspaceId })
+  const row = db
+    .select({ workspaceId: workspaceEnvironmentLinks.workspaceId })
     .from(workspaceEnvironmentLinks)
-    .where(and(
-      eq(workspaceEnvironmentLinks.workspaceId, workspaceId),
-      eq(workspaceEnvironmentLinks.environmentId, environmentId),
-    ))
+    .where(
+      and(
+        eq(workspaceEnvironmentLinks.workspaceId, workspaceId),
+        eq(workspaceEnvironmentLinks.environmentId, environmentId),
+      ),
+    )
     .get();
   return row !== undefined;
 }
 
 /** Count how many workspaces are linked to an environment. */
 export function countLinksForEnvironment(environmentId: string): number {
-  const row = db.select({ count: sql<number>`count(*)` })
+  const row = db
+    .select({ count: sql<number>`count(*)` })
     .from(workspaceEnvironmentLinks)
     .where(eq(workspaceEnvironmentLinks.environmentId, environmentId))
     .get();

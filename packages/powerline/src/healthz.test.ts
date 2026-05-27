@@ -28,8 +28,14 @@ function waitForPort(port: number, timeoutMs: number = 10_000): Promise<void> {
         return;
       }
       const sock = net.createConnection({ host: "127.0.0.1", port });
-      sock.once("connect", () => { sock.destroy(); resolve(); });
-      sock.once("error", () => { sock.destroy(); setTimeout(tryConnect, 200); });
+      sock.once("connect", () => {
+        sock.destroy();
+        resolve();
+      });
+      sock.once("error", () => {
+        sock.destroy();
+        setTimeout(tryConnect, 200);
+      });
     }
     tryConnect();
   });
@@ -42,7 +48,10 @@ function request(
 ): Promise<{ status: number; headers: Record<string, string>; body: string }> {
   return new Promise((resolve, reject) => {
     const client = http2.connect(`http://127.0.0.1:${port}`);
-    client.on("error", (err) => { client.destroy(); reject(err); });
+    client.on("error", (err) => {
+      client.destroy();
+      reject(err);
+    });
 
     const req = client.request({ ":method": "GET", ":path": path });
     let body = "";
@@ -57,12 +66,17 @@ function request(
         }
       }
     });
-    req.on("data", (chunk: Buffer) => { body += chunk.toString(); });
+    req.on("data", (chunk: Buffer) => {
+      body += chunk.toString();
+    });
     req.on("end", () => {
       client.close();
       resolve({ status, headers, body });
     });
-    req.on("error", (err) => { client.destroy(); reject(err); });
+    req.on("error", (err) => {
+      client.destroy();
+      reject(err);
+    });
     req.end();
   });
 }
@@ -80,12 +94,20 @@ describe("PowerLine /healthz endpoint", () => {
     // Wait for port, but fail fast if child exits early
     await new Promise<void>((resolve, reject) => {
       const onExit = (code: number | null, signal: NodeJS.Signals | null): void => {
-        reject(new Error(`PowerLine exited before ready (code=${code}, signal=${signal ?? "null"})`));
+        reject(
+          new Error(`PowerLine exited before ready (code=${code}, signal=${signal ?? "null"})`),
+        );
       };
       child!.once("exit", onExit);
       waitForPort(port).then(
-        () => { child!.removeListener("exit", onExit); resolve(); },
-        (err) => { child!.removeListener("exit", onExit); reject(err); },
+        () => {
+          child!.removeListener("exit", onExit);
+          resolve();
+        },
+        (err) => {
+          child!.removeListener("exit", onExit);
+          reject(err);
+        },
       );
     });
   }, 15_000);

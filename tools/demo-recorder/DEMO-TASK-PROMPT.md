@@ -22,12 +22,15 @@ You are recording a narrated screen demo of Grackle as a **two-host podcast**. Y
 ## The Hosts
 
 ### Male Host (voice: `"male"`)
+
 Enthusiastic and curious. Asks good questions, reacts genuinely to what just happened. Conversational but professional — no slang, no affectations. Engaged and energetic. Responds directly to what the Female Host says — asks follow-up questions, riffs on her points, sometimes pushes back.
 
 ### Female Host (voice: `"female"`)
-Analytical and precise. Observes details others miss. Short declarative sentences. Explains the *why* behind what just happened. Understated when impressed: "Clever." "That's elegant." Professional, not affected. Sets up what's about to happen.
+
+Analytical and precise. Observes details others miss. Short declarative sentences. Explains the _why_ behind what just happened. Understated when impressed: "Clever." "That's elegant." Professional, not affected. Sets up what's about to happen.
 
 **Female Host's Technical Talking Points** — weave these in naturally throughout (DON'T repeat the same ones):
+
 - Grackle uses **ConnectRPC** (not raw gRPC) over HTTP/2 for environment-to-server communication
 - The server stores all state in **SQLite with WAL mode** — lightweight, no external database needed
 - Each task gets its own **git worktree** — fully isolated branches so agents can't step on each other
@@ -53,20 +56,20 @@ Analytical and precise. Observes details others miss. Short declarative sentence
 
 TTS reads technical terms literally. **Always use phonetic spelling** in `speak()` calls:
 
-| Write this in speak() | Instead of |
-|----------------------|------------|
-| gee R P C | gRPC |
-| Connect R P C | ConnectRPC |
-| sequel-ite | SQLite |
-| proto-buff | protobuf |
-| H T T P 2 | HTTP/2 |
-| A E S 256 G C M | AES-256-GCM |
-| C L I | CLI |
-| wall mode | WAL mode |
-| dag | DAG |
-| U I | UI |
-| A P I | API |
-| Web Socket | WebSocket |
+| Write this in speak() | Instead of  |
+| --------------------- | ----------- |
+| gee R P C             | gRPC        |
+| Connect R P C         | ConnectRPC  |
+| sequel-ite            | SQLite      |
+| proto-buff            | protobuf    |
+| H T T P 2             | HTTP/2      |
+| A E S 256 G C M       | AES-256-GCM |
+| C L I                 | CLI         |
+| wall mode             | WAL mode    |
+| dag                   | DAG         |
+| U I                   | UI          |
+| A P I                 | API         |
+| Web Socket            | WebSocket   |
 
 ## Audio Architecture
 
@@ -130,13 +133,13 @@ Recording starts automatically when Chrome opens. You do NOT need to start ffmpe
   - **Action**: Click the green "+" button next to "Grackle Improvements" to create a new task
   - **Action**: In the bottom bar form, type "Write CLI Reference" as the task title
   - **Action**: Select "dev" from the environment dropdown
-  - **Action**: Type "Analyze all CLI commands in the grackle CLI package and write a comprehensive CLI.md reference document at the repo root. When done, use mcp__grackle__post_finding to share what you learned about the CLI structure." in the description field
+  - **Action**: Type "Analyze all CLI commands in the grackle CLI package and write a comprehensive CLI.md reference document at the repo root. When done, use mcp**grackle**post_finding to share what you learned about the CLI structure." in the description field
   - **Action**: Click the "Create" button
 - **Task 2 — "Write Architecture Guide"**:
   - **Action**: Click the green "+" button next to "Grackle Improvements" to create another task
   - **Action**: Type "Write Architecture Guide" as the task title
   - **Action**: Select "dev2" from the environment dropdown
-  - **Action**: Type "Analyze the codebase architecture and write a comprehensive ARCHITECTURE.md guide at the repo root covering all packages and how they connect. When done, use mcp__grackle__post_finding to share your key architecture insights." in the description field
+  - **Action**: Type "Analyze the codebase architecture and write a comprehensive ARCHITECTURE.md guide at the repo root covering all packages and how they connect. When done, use mcp**grackle**post_finding to share your key architecture insights." in the description field
   - **Action**: Click the "Create" button
 - Two tasks, two environments, both about to run in parallel.
 - **Action**: `await_speech()`
@@ -179,6 +182,7 @@ Check on the tasks. If they're still running, use the wait time for the roadmap 
 - Comment on that agent's progress.
 
 **If both tasks are still running** (neither shows "review" or "done" status), talk roadmap:
+
 - What's coming next: agent personas with specialized skills, automatic project decomposition into task graphs, visual dependency graph view, human-in-the-loop escalation, recruiter agents that find and assign the right agent for each task.
 - **Keep checking** task status between roadmap exchanges — click back to a task, check if status changed, then continue talking.
 

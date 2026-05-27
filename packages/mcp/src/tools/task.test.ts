@@ -45,7 +45,8 @@ describe("task_list", () => {
     });
 
     const result = await getTool("task_list").handler(
-      { workspaceId: "proj-1" }, { orchestration: mockClient },
+      { workspaceId: "proj-1" },
+      { orchestration: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -105,9 +106,7 @@ describe("task_list", () => {
       tasks: [],
     });
 
-    await getTool("task_list").handler(
-      { workspaceId: "proj-1" }, { orchestration: mockClient },
-    );
+    await getTool("task_list").handler({ workspaceId: "proj-1" }, { orchestration: mockClient });
 
     expect(mockClient.listTasks).toHaveBeenCalledWith({
       workspaceId: "proj-1",
@@ -124,7 +123,8 @@ describe("task_list", () => {
     );
 
     const result = await getTool("task_list").handler(
-      { workspaceId: "no-such" }, { orchestration: mockClient },
+      { workspaceId: "no-such" },
+      { orchestration: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -255,7 +255,8 @@ describe("task_show", () => {
     });
 
     const result = await getTool("task_show").handler(
-      { taskId: "t1" }, { orchestration: mockClient },
+      { taskId: "t1" },
+      { orchestration: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -273,7 +274,8 @@ describe("task_show", () => {
     );
 
     const result = await getTool("task_show").handler(
-      { taskId: "no-such" }, { orchestration: mockClient },
+      { taskId: "no-such" },
+      { orchestration: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -348,7 +350,8 @@ describe("task_update", () => {
     );
 
     const result = await getTool("task_update").handler(
-      { taskId: "no-such" }, { orchestration: mockClient },
+      { taskId: "no-such" },
+      { orchestration: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -365,7 +368,8 @@ describe("task_start", () => {
     });
 
     const result = await getTool("task_start").handler(
-      { taskId: "t1" }, { orchestration: mockClient },
+      { taskId: "t1" },
+      { orchestration: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -389,7 +393,8 @@ describe("task_start", () => {
     );
 
     const result = await getTool("task_start").handler(
-      { taskId: "t1" }, { orchestration: mockClient },
+      { taskId: "t1" },
+      { orchestration: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -411,7 +416,8 @@ describe("task_start", () => {
     });
 
     const result = await getTool("task_start").handler(
-      { taskId: "unrelated-task" }, { orchestration: mockClient },
+      { taskId: "unrelated-task" },
+      { orchestration: mockClient },
       scopedAuth,
     );
 
@@ -440,7 +446,8 @@ describe("task_start", () => {
     });
 
     const result = await getTool("task_start").handler(
-      { taskId: "child-task" }, { orchestration: mockClient },
+      { taskId: "child-task" },
+      { orchestration: mockClient },
       scopedAuth,
     );
 
@@ -457,7 +464,8 @@ describe("task_delete", () => {
     (mockClient.deleteTask as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     const result = await getTool("task_delete").handler(
-      { taskId: "t1" }, { orchestration: mockClient },
+      { taskId: "t1" },
+      { orchestration: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -473,7 +481,8 @@ describe("task_delete", () => {
     );
 
     const result = await getTool("task_delete").handler(
-      { taskId: "no-such" }, { orchestration: mockClient },
+      { taskId: "no-such" },
+      { orchestration: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -491,7 +500,8 @@ describe("task_complete", () => {
     });
 
     const result = await getTool("task_complete").handler(
-      { taskId: "t1" }, { orchestration: mockClient },
+      { taskId: "t1" },
+      { orchestration: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -508,7 +518,8 @@ describe("task_complete", () => {
     );
 
     const result = await getTool("task_complete").handler(
-      { taskId: "no-such" }, { orchestration: mockClient },
+      { taskId: "no-such" },
+      { orchestration: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -530,7 +541,8 @@ describe("task_complete", () => {
     });
 
     const result = await getTool("task_complete").handler(
-      { taskId: "unrelated-task" }, { orchestration: mockClient },
+      { taskId: "unrelated-task" },
+      { orchestration: mockClient },
       scopedAuth,
     );
 
@@ -560,7 +572,8 @@ describe("task_complete", () => {
     });
 
     const result = await getTool("task_complete").handler(
-      { taskId: "child-task" }, { orchestration: mockClient },
+      { taskId: "child-task" },
+      { orchestration: mockClient },
       scopedAuth,
     );
 
@@ -580,7 +593,8 @@ describe("task_resume", () => {
     });
 
     const result = await getTool("task_resume").handler(
-      { taskId: "t1" }, { orchestration: mockClient },
+      { taskId: "t1" },
+      { orchestration: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -596,10 +610,10 @@ describe("task_resume", () => {
     );
 
     const result = await getTool("task_resume").handler(
-      { taskId: "no-such" }, { orchestration: mockClient },
+      { taskId: "no-such" },
+      { orchestration: mockClient },
     );
 
     expect(result.isError).toBe(true);
   });
 });
-

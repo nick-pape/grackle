@@ -23,15 +23,10 @@ import type { ReconciliationPhase } from "@grackle-ai/core";
  * it would incorrectly flip environments back to "disconnected" during
  * normal provisioning flows.
  */
-const ACTIVE_STATUSES: ReadonlySet<EnvironmentStatus> = new Set([
-  "connected",
-]);
+const ACTIVE_STATUSES: ReadonlySet<EnvironmentStatus> = new Set(["connected"]);
 
 /** Statuses that indicate the environment should NOT have an in-memory connection. */
-const INACTIVE_STATUSES: ReadonlySet<EnvironmentStatus> = new Set([
-  "disconnected",
-  "sleeping",
-]);
+const INACTIVE_STATUSES: ReadonlySet<EnvironmentStatus> = new Set(["disconnected", "sleeping"]);
 
 /** Dependencies injected into the environment reconciliation phase for testability. */
 export interface EnvironmentReconciliationDeps {

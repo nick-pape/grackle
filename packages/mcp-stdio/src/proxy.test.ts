@@ -73,7 +73,8 @@ describe("withReconnect", () => {
   it("resets and retries once on transport error", async () => {
     const client = {} as Client;
     const manager = makeManager(client);
-    const fn: Mock = vi.fn()
+    const fn: Mock = vi
+      .fn()
       .mockRejectedValueOnce(new Error("connect ECONNREFUSED 127.0.0.1:7435"))
       .mockResolvedValue("recovered");
 

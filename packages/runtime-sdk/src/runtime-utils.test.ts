@@ -13,11 +13,7 @@ vi.mock("./worktree.js", () => ({
   ensureWorktree: vi.fn(),
 }));
 
-import {
-  resolveWorkingDirectory,
-  findGitRepoPath,
-  resolveMcpServers,
-} from "./runtime-utils.js";
+import { resolveWorkingDirectory, findGitRepoPath, resolveMcpServers } from "./runtime-utils.js";
 import type { GitRepository, WorkspaceLocator } from "./runtime-utils.js";
 import { AsyncQueue } from "./async-queue.js";
 import type { AgentEvent } from "./runtime.js";
@@ -27,10 +23,12 @@ import { ensureWorktree } from "./worktree.js";
 // ─── Fake helpers ──────────────────────────────────────────────────────────
 
 /** Create a fake GitRepository that returns canned responses. */
-function createFakeGitRepository(options: {
-  repos?: Record<string, string | undefined>;
-  checkoutError?: Error;
-} = {}): GitRepository & { calls: Array<{ method: string; args: unknown[] }> } {
+function createFakeGitRepository(
+  options: {
+    repos?: Record<string, string | undefined>;
+    checkoutError?: Error;
+  } = {},
+): GitRepository & { calls: Array<{ method: string; args: unknown[] }> } {
   const { repos = {}, checkoutError } = options;
   const calls: Array<{ method: string; args: unknown[] }> = [];
   return {
@@ -85,11 +83,12 @@ describe("findGitRepoPath", () => {
   });
 
   it("finds repo under /workspaces/ (Codespaces convention)", async () => {
-    const git = createFakeGitRepository({ repos: { "/workspaces/grackle": "/workspaces/grackle" } });
-    const locator = createFakeWorkspaceLocator(
-      new Set(["/workspaces", "/workspaces/grackle"]),
-      { "/workspaces": ["grackle"] },
-    );
+    const git = createFakeGitRepository({
+      repos: { "/workspaces/grackle": "/workspaces/grackle" },
+    });
+    const locator = createFakeWorkspaceLocator(new Set(["/workspaces", "/workspaces/grackle"]), {
+      "/workspaces": ["grackle"],
+    });
 
     expect(await findGitRepoPath("/workspace", git, locator)).toBe("/workspaces/grackle");
   });
@@ -243,7 +242,9 @@ describe("resolveWorkingDirectory", () => {
 
   it("returns /workspace when requireNonEmpty is true and /workspace has files", async () => {
     const git = createFakeGitRepository();
-    const locator = createFakeWorkspaceLocator(new Set(["/workspace"]), { "/workspace": ["README.md"] });
+    const locator = createFakeWorkspaceLocator(new Set(["/workspace"]), {
+      "/workspace": ["README.md"],
+    });
     const queue = new AsyncQueue<AgentEvent>();
 
     const result = await resolveWorkingDirectory({
@@ -293,7 +294,10 @@ describe("resolveWorkingDirectory", () => {
     expect(event?.content).toContain("Checked out branch");
     expect(event?.content).toContain("feature/my-branch");
     expect(ensureWorktree).not.toHaveBeenCalled();
-    expect(git.calls).toContainEqual({ method: "checkoutBranch", args: ["/workspace", "feature/my-branch"] });
+    expect(git.calls).toContainEqual({
+      method: "checkoutBranch",
+      args: ["/workspace", "feature/my-branch"],
+    });
     queue.close();
   });
 

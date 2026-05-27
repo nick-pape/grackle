@@ -1,7 +1,8 @@
 node_modules/
 dist/
 common/temp/
-common/autoinstallers/
+# Autoinstaller source (package.json, pnpm-lock.yaml, scripts) IS tracked;
+# only the provisioned node_modules is ignored (covered by node_modules/ above).
 packages/*/pnpm-lock.yaml
 .rush/
 .grackle/

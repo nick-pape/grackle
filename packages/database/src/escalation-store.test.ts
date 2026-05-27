@@ -61,7 +61,14 @@ describe("escalation-store", () => {
 
   it("createEscalation inserts a row retrievable by getEscalation", () => {
     escalationStore.createEscalation(
-      "esc1", "ws1", "task1", "Need help", "What auth method?", "explicit", "normal", "http://localhost:3000/tasks/task1",
+      "esc1",
+      "ws1",
+      "task1",
+      "Need help",
+      "What auth method?",
+      "explicit",
+      "normal",
+      "http://localhost:3000/tasks/task1",
     );
     const row = escalationStore.getEscalation("esc1");
     expect(row).toBeDefined();
@@ -100,7 +107,16 @@ describe("escalation-store", () => {
 
   it("listEscalations filters by status when provided", () => {
     escalationStore.createEscalation("esc1", "ws1", "t1", "Pending one", "", "auto", "normal", "");
-    escalationStore.createEscalation("esc2", "ws1", "t2", "Delivered one", "", "auto", "normal", "");
+    escalationStore.createEscalation(
+      "esc2",
+      "ws1",
+      "t2",
+      "Delivered one",
+      "",
+      "auto",
+      "normal",
+      "",
+    );
     escalationStore.updateEscalationStatus("esc2", "delivered");
 
     const pending = escalationStore.listEscalations("ws1", "pending");
@@ -153,7 +169,16 @@ describe("escalation-store", () => {
   });
 
   it("createEscalation defaults status to pending and urgency to normal", () => {
-    escalationStore.createEscalation("esc1", "ws1", "t1", "Defaults test", "", "explicit", "normal", "");
+    escalationStore.createEscalation(
+      "esc1",
+      "ws1",
+      "t1",
+      "Defaults test",
+      "",
+      "explicit",
+      "normal",
+      "",
+    );
     const row = escalationStore.getEscalation("esc1");
     expect(row!.status).toBe("pending");
     expect(row!.urgency).toBe("normal");
@@ -161,7 +186,16 @@ describe("escalation-store", () => {
 
   it("listEscalations respects limit", () => {
     for (let i = 0; i < 5; i++) {
-      escalationStore.createEscalation(`esc${i}`, "ws1", `t${i}`, `Esc ${i}`, "", "auto", "normal", "");
+      escalationStore.createEscalation(
+        `esc${i}`,
+        "ws1",
+        `t${i}`,
+        `Esc ${i}`,
+        "",
+        "auto",
+        "normal",
+        "",
+      );
     }
     const results = escalationStore.listEscalations("ws1", undefined, 2);
     expect(results).toHaveLength(2);

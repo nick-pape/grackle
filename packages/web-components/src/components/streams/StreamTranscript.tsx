@@ -27,7 +27,10 @@ function formatTime(iso: string): string {
 }
 
 /** Read-only, ordered transcript of an IPC stream room's messages. */
-export function StreamTranscript({ messages, loading = false }: StreamTranscriptProps): JSX.Element {
+export function StreamTranscript({
+  messages,
+  loading = false,
+}: StreamTranscriptProps): JSX.Element {
   if (loading) {
     return (
       <div className={styles.state} data-testid="stream-transcript-loading">
@@ -47,7 +50,9 @@ export function StreamTranscript({ messages, loading = false }: StreamTranscript
       {messages.map((m) => (
         <div key={m.seq} className={styles.message} data-testid="stream-transcript-message">
           <div className={styles.meta}>
-            <span className={styles.sender} title={m.senderId}>{m.senderId.slice(0, 12)}</span>
+            <span className={styles.sender} title={m.senderId}>
+              {m.senderId.slice(0, 12)}
+            </span>
             <span className={styles.time}>{formatTime(m.timestamp)}</span>
           </div>
           <div className={styles.content}>{m.content}</div>

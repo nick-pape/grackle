@@ -55,7 +55,14 @@ export function persistSessionAction(action: SessionActionRecord): void {
       "INSERT INTO session_actions (seq, session_id, type, content, raw, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
     );
   }
-  insertStmt.run([action.seq, action.sessionId, action.type, action.content, action.raw, action.timestamp]);
+  insertStmt.run([
+    action.seq,
+    action.sessionId,
+    action.type,
+    action.content,
+    action.raw,
+    action.timestamp,
+  ]);
 }
 
 /**

@@ -38,13 +38,13 @@ grackle task create "Implement JWT middleware" \
 
 Tasks move through a lifecycle:
 
-| Status | Meaning |
-|--------|---------|
-| `not_started` | Created but not yet started |
-| `working` | An agent session is actively running |
-| `paused` | Work is paused (session interrupted or idle) |
-| `complete` | Marked complete (ready for review or done) |
-| `failed` | Agent session failed |
+| Status        | Meaning                                      |
+| ------------- | -------------------------------------------- |
+| `not_started` | Created but not yet started                  |
+| `working`     | An agent session is actively running         |
+| `paused`      | Work is paused (session interrupted or idle) |
+| `complete`    | Marked complete (ready for review or done)   |
+| `failed`      | Agent session failed                         |
 
 ### Starting a task
 
@@ -53,6 +53,7 @@ grackle task start <task-id>
 ```
 
 This spawns an agent session in the workspace's default environment (or a specified one). The agent receives:
+
 - The task title as its prompt
 - The task description as system context
 

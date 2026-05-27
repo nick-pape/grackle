@@ -1,8 +1,26 @@
 import { useState, useEffect, type JSX, type FormEvent } from "react";
 import { useParams, Navigate } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
-import { Breadcrumbs, Button, ConfirmDialog, EditableSelect, EditableTextField, SCHEDULES_URL, SETTINGS_URL, scheduleUrl, useAppNavigate, useToast, formatRelativeTime, formatCountdown } from "@grackle-ai/web-components";
-import type { BreadcrumbSegment, ScheduleData, ScheduleUpdate, SelectOption } from "@grackle-ai/web-components";
+import {
+  Breadcrumbs,
+  Button,
+  ConfirmDialog,
+  EditableSelect,
+  EditableTextField,
+  SCHEDULES_URL,
+  SETTINGS_URL,
+  scheduleUrl,
+  useAppNavigate,
+  useToast,
+  formatRelativeTime,
+  formatCountdown,
+} from "@grackle-ai/web-components";
+import type {
+  BreadcrumbSegment,
+  ScheduleData,
+  ScheduleUpdate,
+  SelectOption,
+} from "@grackle-ai/web-components";
 import styles from "./ScheduleDetail.module.scss";
 
 /** ScheduleDetailPage handles both create (/settings/schedules/new) and edit (/settings/schedules/:scheduleId). */
@@ -17,7 +35,9 @@ export function ScheduleDetailPage(): JSX.Element {
   } = useGrackle();
 
   const isNew = scheduleId === undefined;
-  const existing: ScheduleData | undefined = isNew ? undefined : schedules.find((s) => s.id === scheduleId);
+  const existing: ScheduleData | undefined = isNew
+    ? undefined
+    : schedules.find((s) => s.id === scheduleId);
 
   // Redirect to list if schedule not found, but only after at least one schedule has been loaded
   if (!isNew && !schedulesLoading && schedules.length > 0 && !existing) {
@@ -41,7 +61,9 @@ export function ScheduleDetailPage(): JSX.Element {
         onCreateSchedule={createSchedule}
         onUpdateSchedule={updateSchedule}
         onDeleteSchedule={deleteSchedule}
-        onDone={() => { navigate(SCHEDULES_URL); }}
+        onDone={() => {
+          navigate(SCHEDULES_URL);
+        }}
         showToast={showToast}
       />
     </div>
@@ -58,8 +80,12 @@ interface ScheduleFormProps {
   personas: Array<{ id: string; name: string }>;
   workspaces: Array<{ id: string; name: string }>;
   onCreateSchedule: (
-    title: string, description: string, scheduleExpression: string,
-    personaId: string, workspaceId?: string, parentTaskId?: string,
+    title: string,
+    description: string,
+    scheduleExpression: string,
+    personaId: string,
+    workspaceId?: string,
+    parentTaskId?: string,
   ) => Promise<ScheduleData>;
   onUpdateSchedule: (scheduleId: string, fields: ScheduleUpdate) => Promise<ScheduleData>;
   onDeleteSchedule: (scheduleId: string) => Promise<void>;
@@ -68,10 +94,15 @@ interface ScheduleFormProps {
 }
 
 function ScheduleForm({
-  existing, isNew,
-  personas, workspaces,
-  onCreateSchedule, onUpdateSchedule, onDeleteSchedule,
-  onDone, showToast,
+  existing,
+  isNew,
+  personas,
+  workspaces,
+  onCreateSchedule,
+  onUpdateSchedule,
+  onDeleteSchedule,
+  onDone,
+  showToast,
 }: ScheduleFormProps): JSX.Element {
   const navigate = useAppNavigate();
   const [title, setTitle] = useState(existing?.title ?? "");
@@ -84,9 +115,15 @@ function ScheduleForm({
 
   // Sync form state from existing schedule when it changes, as long as user isn't actively editing.
   useEffect(() => {
-    if (isNew) { return; }
-    if (!existing) { return; }
-    if (activeFieldId !== null) { return; }
+    if (isNew) {
+      return;
+    }
+    if (!existing) {
+      return;
+    }
+    if (activeFieldId !== null) {
+      return;
+    }
     setTitle(existing.title);
     setDescription(existing.description);
     setScheduleExpression(existing.scheduleExpression);
@@ -95,7 +132,11 @@ function ScheduleForm({
   }, [isNew, existing, activeFieldId]);
 
   const isLoadingExisting = !isNew && existing === undefined;
-  const canCreate = isNew && title.trim().length > 0 && scheduleExpression.trim().length > 0 && personaId.length > 0;
+  const canCreate =
+    isNew &&
+    title.trim().length > 0 &&
+    scheduleExpression.trim().length > 0 &&
+    personaId.length > 0;
 
   const personaOptions: SelectOption[] = personas.map((p) => ({ value: p.id, label: p.name }));
   const workspaceOptions: SelectOption[] = [
@@ -108,7 +149,13 @@ function ScheduleForm({
     if (!canCreate) {
       return;
     }
-    onCreateSchedule(title, description, scheduleExpression, personaId, workspaceId || undefined).then(
+    onCreateSchedule(
+      title,
+      description,
+      scheduleExpression,
+      personaId,
+      workspaceId || undefined,
+    ).then(
       (created) => {
         showToast("Schedule created", "success");
         navigate(scheduleUrl(created.id), { replace: true });
@@ -126,10 +173,18 @@ function ScheduleForm({
     onUpdateSchedule(existing.id, { [field]: value }).then(
       () => {
         showToast("Schedule updated", "success");
-        if (field === "title") { setTitle(String(value)); }
-        if (field === "description") { setDescription(String(value)); }
-        if (field === "scheduleExpression") { setScheduleExpression(String(value)); }
-        if (field === "personaId") { setPersonaId(String(value)); }
+        if (field === "title") {
+          setTitle(String(value));
+        }
+        if (field === "description") {
+          setDescription(String(value));
+        }
+        if (field === "scheduleExpression") {
+          setScheduleExpression(String(value));
+        }
+        if (field === "personaId") {
+          setPersonaId(String(value));
+        }
       },
       () => {
         showToast("Failed to update schedule", "error");
@@ -209,8 +264,8 @@ function ScheduleForm({
               data-testid="schedule-detail-expression"
             />
             <p className={styles.helperText}>
-              Interval: <code>30s</code>, <code>5m</code>, <code>1h</code>, <code>1d</code> (min 10s) &nbsp;|&nbsp;
-              Cron: <code>0 9 * * MON</code> (standard 5-field cron syntax)
+              Interval: <code>30s</code>, <code>5m</code>, <code>1h</code>, <code>1d</code> (min
+              10s) &nbsp;|&nbsp; Cron: <code>0 9 * * MON</code> (standard 5-field cron syntax)
             </p>
           </label>
           <label>
@@ -223,23 +278,43 @@ function ScheduleForm({
             >
               <option value="">Select a persona...</option>
               {personaOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
               ))}
             </select>
           </label>
           <label>
             Workspace <span className={styles.optional}>(optional)</span>
-            <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} data-testid="schedule-detail-workspace">
+            <select
+              value={workspaceId}
+              onChange={(e) => setWorkspaceId(e.target.value)}
+              data-testid="schedule-detail-workspace"
+            >
               {workspaceOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
               ))}
             </select>
           </label>
           <div className={styles.formActions}>
-            <Button type="submit" variant="primary" size="md" disabled={!canCreate} data-testid="schedule-detail-save">
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              disabled={!canCreate}
+              data-testid="schedule-detail-save"
+            >
               Create
             </Button>
-            <Button type="button" variant="outline" size="md" onClick={onDone} data-testid="schedule-detail-cancel">
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={onDone}
+              data-testid="schedule-detail-cancel"
+            >
               Cancel
             </Button>
           </div>
@@ -248,7 +323,13 @@ function ScheduleForm({
         <div className={styles.form}>
           <h3>Edit Schedule</h3>
           <div className={styles.formActions}>
-            <Button type="button" variant="outline" size="md" onClick={onDone} data-testid="schedule-detail-cancel">
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={onDone}
+              data-testid="schedule-detail-cancel"
+            >
               Back to Schedules
             </Button>
             <Button
@@ -276,7 +357,9 @@ function ScheduleForm({
               Title
               <EditableTextField
                 value={title}
-                onSave={(value) => { handleFieldSave("title", value); }}
+                onSave={(value) => {
+                  handleFieldSave("title", value);
+                }}
                 validate={(value) => (value.trim() ? undefined : "Title is required")}
                 fieldId="schedule-title"
                 activeFieldId={activeFieldId}
@@ -289,7 +372,9 @@ function ScheduleForm({
               Description
               <EditableTextField
                 value={description}
-                onSave={(value) => { handleFieldSave("description", value); }}
+                onSave={(value) => {
+                  handleFieldSave("description", value);
+                }}
                 fieldId="schedule-description"
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}
@@ -302,7 +387,9 @@ function ScheduleForm({
               Schedule Expression
               <EditableTextField
                 value={scheduleExpression}
-                onSave={(value) => { handleFieldSave("scheduleExpression", value); }}
+                onSave={(value) => {
+                  handleFieldSave("scheduleExpression", value);
+                }}
                 validate={(value) => (value.trim() ? undefined : "Schedule expression is required")}
                 fieldId="schedule-expression"
                 activeFieldId={activeFieldId}
@@ -316,7 +403,9 @@ function ScheduleForm({
               Persona
               <EditableSelect
                 value={personaId}
-                onSave={(value) => { handleFieldSave("personaId", value); }}
+                onSave={(value) => {
+                  handleFieldSave("personaId", value);
+                }}
                 options={personaOptions}
                 fieldId="schedule-persona"
                 activeFieldId={activeFieldId}
@@ -328,7 +417,8 @@ function ScheduleForm({
             <label>
               Workspace <span className={styles.optional}>(optional — set at creation)</span>
               <span className={styles.readonlyValue} data-testid="schedule-detail-workspace">
-                {workspaces.find((w) => w.id === existing.workspaceId)?.name ?? "System-level (no workspace)"}
+                {workspaces.find((w) => w.id === existing.workspaceId)?.name ??
+                  "System-level (no workspace)"}
               </span>
             </label>
           </div>

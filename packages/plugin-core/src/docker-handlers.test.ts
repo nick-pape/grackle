@@ -16,8 +16,20 @@ describe("listDockerContainers", () => {
   it("parses `docker ps` JSON-per-line output", async () => {
     execMock.mockResolvedValue({
       stdout: [
-        JSON.stringify({ ID: "abc123", Names: "demo-ext", Image: "node:22", State: "running", Status: "Up 3 minutes" }),
-        JSON.stringify({ ID: "def456", Names: "other", Image: "alpine", State: "running", Status: "Up 1 hour" }),
+        JSON.stringify({
+          ID: "abc123",
+          Names: "demo-ext",
+          Image: "node:22",
+          State: "running",
+          Status: "Up 3 minutes",
+        }),
+        JSON.stringify({
+          ID: "def456",
+          Names: "other",
+          Image: "alpine",
+          State: "running",
+          Status: "Up 1 hour",
+        }),
       ].join("\n"),
       stderr: "",
     });
@@ -52,8 +64,20 @@ describe("listDockerContainers", () => {
   it("filters out Grackle's own socat sidecars (grackle-attach-*)", async () => {
     execMock.mockResolvedValue({
       stdout: [
-        JSON.stringify({ ID: "abc123", Names: "coder-sim", Image: "node:22", State: "running", Status: "Up 4 minutes" }),
-        JSON.stringify({ ID: "side01", Names: "grackle-attach-coder-sim", Image: "alpine/socat", State: "running", Status: "Up 1 minute" }),
+        JSON.stringify({
+          ID: "abc123",
+          Names: "coder-sim",
+          Image: "node:22",
+          State: "running",
+          Status: "Up 4 minutes",
+        }),
+        JSON.stringify({
+          ID: "side01",
+          Names: "grackle-attach-coder-sim",
+          Image: "alpine/socat",
+          State: "running",
+          Status: "Up 1 minute",
+        }),
       ].join("\n"),
       stderr: "",
     });

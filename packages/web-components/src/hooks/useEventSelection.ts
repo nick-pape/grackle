@@ -129,9 +129,7 @@ export function useEventSelection({
 
   const copySelected = useCallback(async (): Promise<boolean> => {
     const sorted = [...selectedIndices].sort((a, b) => a - b);
-    const selectedEvents = sorted
-      .filter((i) => i < events.length)
-      .map((i) => events[i]);
+    const selectedEvents = sorted.filter((i) => i < events.length).map((i) => events[i]);
     if (selectedEvents.length === 0) {
       return false;
     }

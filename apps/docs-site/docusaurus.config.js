@@ -1,27 +1,27 @@
-const { themes } = require('prism-react-renderer');
+const { themes } = require("prism-react-renderer");
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'Grackle',
-  tagline: 'Run any AI coding agent on any remote environment',
-  url: 'https://nick-pape.github.io',
-  baseUrl: '/grackle/',
-  organizationName: 'nick-pape',
-  projectName: 'grackle',
-  onBrokenLinks: 'throw',
+  title: "Grackle",
+  tagline: "Run any AI coding agent on any remote environment",
+  url: "https://nick-pape.github.io",
+  baseUrl: "/grackle/",
+  organizationName: "nick-pape",
+  projectName: "grackle",
+  onBrokenLinks: "throw",
   markdown: {
     mermaid: true,
     hooks: {
-      onBrokenMarkdownLinks: 'warn',
+      onBrokenMarkdownLinks: "warn",
     },
   },
-  themes: ['@docusaurus/theme-mermaid'],
-  favicon: 'img/favicon.ico',
+  themes: ["@docusaurus/theme-mermaid"],
+  favicon: "img/favicon.ico",
 
   plugins: [
     function suppressMermaidWarning() {
       return {
-        name: 'suppress-mermaid-warning',
+        name: "suppress-mermaid-warning",
         configureWebpack() {
           return {
             ignoreWarnings: [
@@ -38,37 +38,37 @@ const config = {
 
   presets: [
     [
-      'classic',
+      "classic",
       {
         docs: {
-          path: 'docs',
-          routeBasePath: '/',
-          sidebarPath: './sidebars.js',
-          editUrl: 'https://github.com/nick-pape/grackle/edit/main/apps/docs-site/',
+          path: "docs",
+          routeBasePath: "/",
+          sidebarPath: "./sidebars.js",
+          editUrl: "https://github.com/nick-pape/grackle/edit/main/apps/docs-site/",
         },
         blog: false,
-        theme: { customCss: './src/css/custom.css' },
+        theme: { customCss: "./src/css/custom.css" },
       },
     ],
   ],
 
   themeConfig: {
     navbar: {
-      title: 'Grackle',
+      title: "Grackle",
       logo: {
-        alt: 'Grackle',
-        src: 'img/grackle-logo.png',
+        alt: "Grackle",
+        src: "img/grackle-logo.png",
       },
       items: [
-        { to: '/', label: 'Docs', position: 'left' },
-        { href: 'https://nick-pape.github.io/grackle/demo/', label: 'Try Demo', position: 'left' },
-        { href: 'https://github.com/nick-pape/grackle', label: 'GitHub', position: 'right' },
+        { to: "/", label: "Docs", position: "left" },
+        { href: "https://nick-pape.github.io/grackle/demo/", label: "Try Demo", position: "left" },
+        { href: "https://github.com/nick-pape/grackle", label: "GitHub", position: "right" },
       ],
     },
     prism: {
       theme: themes.github,
       darkTheme: themes.dracula,
-      additionalLanguages: ['bash', 'json'],
+      additionalLanguages: ["bash", "json"],
     },
   },
 };

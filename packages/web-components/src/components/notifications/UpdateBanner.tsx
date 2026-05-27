@@ -36,8 +36,8 @@ export function UpdateBanner({
   return (
     <div data-testid="update-banner">
       <Callout variant="info" dismissible>
-        <strong>Grackle v{latestVersion}</strong> is available (you have v{currentVersion}).
-        {" "}Run: <code>{command}</code>
+        <strong>Grackle v{latestVersion}</strong> is available (you have v{currentVersion}). Run:{" "}
+        <code>{command}</code>
       </Callout>
     </div>
   );

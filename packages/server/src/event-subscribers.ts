@@ -1,13 +1,13 @@
 import {
-  subscribe, emit,
-  computeTaskStatus, findFirstConnectedEnvironment,
-  startTaskSession, reanimateAgent,
+  subscribe,
+  emit,
+  computeTaskStatus,
+  findFirstConnectedEnvironment,
+  startTaskSession,
+  reanimateAgent,
 } from "@grackle-ai/core";
 import type { Disposable, PluginContext, SubscriberFactory } from "@grackle-ai/core";
-import {
-  createLifecycleSubscriber,
-  createRootTaskBootSubscriber,
-} from "@grackle-ai/plugin-core";
+import { createLifecycleSubscriber, createRootTaskBootSubscriber } from "@grackle-ai/plugin-core";
 import { taskStore, sessionStore, settingsStore } from "@grackle-ai/database";
 
 /**
@@ -31,21 +31,21 @@ interface SubscriberContext extends PluginContext {
  * @returns Array of disposables.
  */
 export function createEventSubscribers(ctx: SubscriberContext): Disposable[] {
-  const factories: SubscriberFactory[] = [
-    createLifecycleSubscriber,
-  ];
+  const factories: SubscriberFactory[] = [createLifecycleSubscriber];
 
   if (!ctx.config?.skipRootAutostart) {
-    factories.push((pluginCtx) => createRootTaskBootSubscriber(pluginCtx, {
-      getTask: taskStore.getTask,
-      listSessionsForTask: sessionStore.listSessionsForTask,
-      getLatestSessionForTask: sessionStore.getLatestSessionForTask,
-      computeTaskStatus,
-      findFirstConnectedEnvironment,
-      startTaskSession,
-      reanimateAgent,
-      isOnboarded: () => settingsStore.getSetting("onboarding_completed") === "true",
-    }));
+    factories.push((pluginCtx) =>
+      createRootTaskBootSubscriber(pluginCtx, {
+        getTask: taskStore.getTask,
+        listSessionsForTask: sessionStore.listSessionsForTask,
+        getLatestSessionForTask: sessionStore.getLatestSessionForTask,
+        computeTaskStatus,
+        findFirstConnectedEnvironment,
+        startTaskSession,
+        reanimateAgent,
+        isOnboarded: () => settingsStore.getSetting("onboarding_completed") === "true",
+      }),
+    );
   }
 
   return factories.map((factory) => factory(ctx));
@@ -56,9 +56,7 @@ export function createEventSubscribers(ctx: SubscriberContext): Disposable[] {
  *
  * @deprecated Use `createEventSubscribers(ctx)` with a PluginContext instead.
  */
-export function wireEventSubscribers(options: {
-  skipRootAutostart: boolean;
-}): Disposable[] {
+export function wireEventSubscribers(options: { skipRootAutostart: boolean }): Disposable[] {
   return createEventSubscribers({
     subscribe,
     emit,

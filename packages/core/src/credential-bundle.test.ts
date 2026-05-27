@@ -30,7 +30,12 @@ vi.mock("@grackle-ai/database", () => ({
 }));
 
 // Import AFTER mocks
-import { buildProviderTokenBundle, resolveGitHubTokenFromCli, deriveCredentialNeeds, RUNTIME_PROVIDERS } from "./credential-bundle.js";
+import {
+  buildProviderTokenBundle,
+  resolveGitHubTokenFromCli,
+  deriveCredentialNeeds,
+  RUNTIME_PROVIDERS,
+} from "./credential-bundle.js";
 import type { ProtectedResourceDescriptor } from "./credential-bundle.js";
 import { RUNTIME_CATALOG } from "@grackle-ai/common";
 import { existsSync, readFileSync } from "node:fs";
@@ -44,12 +49,18 @@ function allOff(): CredentialProviderConfig {
 }
 
 /** Find a token item in a bundle by envVar name. */
-function findByEnvVar(bundle: powerline.TokenBundle, envVar: string): powerline.TokenItem | undefined {
+function findByEnvVar(
+  bundle: powerline.TokenBundle,
+  envVar: string,
+): powerline.TokenItem | undefined {
   return bundle.tokens.find((t) => t.envVar === envVar);
 }
 
 /** Find a token item in a bundle by filePath. */
-function findByFilePath(bundle: powerline.TokenBundle, filePath: string): powerline.TokenItem | undefined {
+function findByFilePath(
+  bundle: powerline.TokenBundle,
+  filePath: string,
+): powerline.TokenItem | undefined {
   return bundle.tokens.find((t) => t.filePath === filePath);
 }
 
@@ -380,7 +391,11 @@ describe("buildProviderTokenBundle() — gh auth token caching", () => {
 describe("buildProviderTokenBundle() — runtime scoping", () => {
   it("returns only copilot + github providers for runtime='copilot'", async () => {
     mockGetCredentialProviders.mockReturnValue({
-      claude: "subscription", github: "on", copilot: "on", codex: "on", goose: "on",
+      claude: "subscription",
+      github: "on",
+      copilot: "on",
+      codex: "on",
+      goose: "on",
     });
     vi.stubEnv("GITHUB_TOKEN", "ghp_test");
     vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
@@ -396,7 +411,11 @@ describe("buildProviderTokenBundle() — runtime scoping", () => {
 
   it("returns only claude + github providers for runtime='claude-code'", async () => {
     mockGetCredentialProviders.mockReturnValue({
-      claude: "api_key", github: "on", copilot: "on", codex: "on", goose: "on",
+      claude: "api_key",
+      github: "on",
+      copilot: "on",
+      codex: "on",
+      goose: "on",
     });
     vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
     vi.stubEnv("GITHUB_TOKEN", "ghp_test");
@@ -411,7 +430,11 @@ describe("buildProviderTokenBundle() — runtime scoping", () => {
 
   it("returns empty bundle for unknown runtime", async () => {
     mockGetCredentialProviders.mockReturnValue({
-      claude: "subscription", github: "on", copilot: "on", codex: "on", goose: "on",
+      claude: "subscription",
+      github: "on",
+      copilot: "on",
+      codex: "on",
+      goose: "on",
     });
     vi.stubEnv("GITHUB_TOKEN", "ghp_test");
 
@@ -422,7 +445,11 @@ describe("buildProviderTokenBundle() — runtime scoping", () => {
 
   it("returns all enabled providers when runtime is omitted", async () => {
     mockGetCredentialProviders.mockReturnValue({
-      claude: "api_key", github: "on", copilot: "off", codex: "off", goose: "off",
+      claude: "api_key",
+      github: "on",
+      copilot: "off",
+      codex: "off",
+      goose: "off",
     });
     vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test");
     vi.stubEnv("GITHUB_TOKEN", "ghp_test");
@@ -435,7 +462,11 @@ describe("buildProviderTokenBundle() — runtime scoping", () => {
 
   it("returns empty bundle for stub runtime", async () => {
     mockGetCredentialProviders.mockReturnValue({
-      claude: "subscription", github: "on", copilot: "on", codex: "on", goose: "on",
+      claude: "subscription",
+      github: "on",
+      copilot: "on",
+      codex: "on",
+      goose: "on",
     });
 
     const bundle = await buildProviderTokenBundle("stub");
@@ -601,7 +632,11 @@ describe("deriveCredentialNeeds()", () => {
   }
 
   it("returns Anthropic (subscription→file) + GitHub for claude-code", () => {
-    const needs = deriveCredentialNeeds("claude-code", { ...allOff(), claude: "subscription", github: "on" });
+    const needs = deriveCredentialNeeds("claude-code", {
+      ...allOff(),
+      claude: "subscription",
+      github: "on",
+    });
 
     expect(needs).toHaveLength(2);
     const claude = byProvider(needs, "claude");
@@ -623,7 +658,11 @@ describe("deriveCredentialNeeds()", () => {
   });
 
   it("omits a provider that is off (claude off → only github)", () => {
-    const needs = deriveCredentialNeeds("claude-code", { ...allOff(), claude: "off", github: "on" });
+    const needs = deriveCredentialNeeds("claude-code", {
+      ...allOff(),
+      claude: "off",
+      github: "on",
+    });
 
     expect(byProvider(needs, "claude")).toBeUndefined();
     expect(byProvider(needs, "github")).toBeDefined();
@@ -662,7 +701,11 @@ describe("deriveCredentialNeeds()", () => {
   });
 
   it("treats ACP variants like their base runtime (claude-code-acp)", () => {
-    const needs = deriveCredentialNeeds("claude-code-acp", { ...allOff(), claude: "subscription", github: "on" });
+    const needs = deriveCredentialNeeds("claude-code-acp", {
+      ...allOff(),
+      claude: "subscription",
+      github: "on",
+    });
 
     expect(byProvider(needs, "claude")).toBeDefined();
     expect(byProvider(needs, "github")).toBeDefined();
@@ -688,7 +731,10 @@ describe("deriveCredentialNeeds()", () => {
   // ── Coherence (Decision R): RUNTIME_PROVIDERS keys ⊆ RUNTIME_CATALOG ──
   it("every RUNTIME_PROVIDERS runtime has a catalog entry", () => {
     for (const runtime of Object.keys(RUNTIME_PROVIDERS)) {
-      expect(RUNTIME_CATALOG[runtime], `Runtime "${runtime}" missing from RUNTIME_CATALOG`).toBeDefined();
+      expect(
+        RUNTIME_CATALOG[runtime],
+        `Runtime "${runtime}" missing from RUNTIME_CATALOG`,
+      ).toBeDefined();
     }
   });
 });

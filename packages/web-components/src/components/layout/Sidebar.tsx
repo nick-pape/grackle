@@ -67,7 +67,9 @@ export function Sidebar({ content }: SidebarProps): JSX.Element | undefined {
     });
 
     observer.observe(element);
-    return () => { observer.disconnect(); };
+    return () => {
+      observer.disconnect();
+    };
   }, []);
 
   if (content === undefined) {
@@ -76,9 +78,7 @@ export function Sidebar({ content }: SidebarProps): JSX.Element | undefined {
 
   return (
     <div className={styles.container} ref={containerRef} data-testid="sidebar" style={{ width }}>
-      <div className={styles.content}>
-        {content}
-      </div>
+      <div className={styles.content}>{content}</div>
     </div>
   );
 }

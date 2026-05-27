@@ -1,4 +1,8 @@
-import { writeFile as writeFileNode, mkdir as mkdirNode, realpath as realpathNode } from "node:fs/promises";
+import {
+  writeFile as writeFileNode,
+  mkdir as mkdirNode,
+  realpath as realpathNode,
+} from "node:fs/promises";
 import { dirname, resolve, normalize } from "node:path";
 import { homedir as homedirNode } from "node:os";
 import { realpathSync as realpathSyncNode, existsSync as existsSyncNode } from "node:fs";
@@ -36,9 +40,7 @@ export function isUnderHome(resolvedPath: string, home: string): boolean {
   const normalizedHome = home.toLowerCase().replace(/\\/g, "/");
   // Ensure the home prefix is followed by a separator (or is an exact match)
   // to prevent prefix-collision (e.g. /home/user vs /home/username)
-  const homeWithSep = normalizedHome.endsWith("/")
-    ? normalizedHome
-    : normalizedHome + "/";
+  const homeWithSep = normalizedHome.endsWith("/") ? normalizedHome : normalizedHome + "/";
   return normalizedPath.startsWith(homeWithSep) || normalizedPath === normalizedHome;
 }
 
@@ -77,7 +79,10 @@ export async function writeTokens(
         }
         const realAncestor = await fileSystem.realpath(checkPath);
         if (!isUnderHome(realAncestor, home)) {
-          logger.warn({ filePath: resolvedPath, realAncestor }, "Parent directory resolves outside home via symlink");
+          logger.warn(
+            { filePath: resolvedPath, realAncestor },
+            "Parent directory resolves outside home via symlink",
+          );
           continue;
         }
       } catch {
@@ -90,7 +95,11 @@ export async function writeTokens(
         await fileSystem.writeFile(resolvedPath, token.value, { mode: 0o600 });
         logger.info({ filePath: resolvedPath }, "Wrote file %s", resolvedPath);
       } catch (err) {
-        logger.warn({ filePath: resolvedPath, err }, "Failed to write token file %s, continuing", resolvedPath);
+        logger.warn(
+          { filePath: resolvedPath, err },
+          "Failed to write token file %s, continuing",
+          resolvedPath,
+        );
       }
     }
   }

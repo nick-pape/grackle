@@ -17,31 +17,39 @@ export function registerEventCommands(program: Command): void {
     .option("--until <iso>", "Only events at/before this ISO 8601 timestamp")
     .option("--before <id>", "Only events older than this id (page into history)")
     .option("--limit <n>", "Max rows to return", DEFAULT_LIMIT)
-    .action(async (opts: { type?: string; since?: string; until?: string; before?: string; limit?: string }) => {
-      const limitArg: string = (opts.limit ?? DEFAULT_LIMIT).trim();
-      if (!/^\d+$/.test(limitArg)) {
-        throw new Error(`Invalid --limit: "${opts.limit}" (expected a non-negative integer)`);
-      }
-      const { core: client } = createGrackleClients();
-      const res = await client.queryDomainEvents({
-        type: opts.type ?? "",
-        since: opts.since ?? "",
-        until: opts.until ?? "",
-        beforeId: opts.before ?? "",
-        limit: Number.parseInt(limitArg, 10),
-      });
-      if (res.events.length === 0) {
-        console.log("No domain events.");
-        return;
-      }
-      const table = new Table({ head: ["ID", "Type", "Timestamp", "Payload"] });
-      for (const e of res.events) {
-        const preview: string =
-          e.payloadJson.length > PAYLOAD_PREVIEW_LEN
-            ? `${e.payloadJson.slice(0, PAYLOAD_PREVIEW_LEN)}...`
-            : e.payloadJson;
-        table.push([e.id, e.type, e.timestamp, preview]);
-      }
-      console.log(table.toString());
-    });
+    .action(
+      async (opts: {
+        type?: string;
+        since?: string;
+        until?: string;
+        before?: string;
+        limit?: string;
+      }) => {
+        const limitArg: string = (opts.limit ?? DEFAULT_LIMIT).trim();
+        if (!/^\d+$/.test(limitArg)) {
+          throw new Error(`Invalid --limit: "${opts.limit}" (expected a non-negative integer)`);
+        }
+        const { core: client } = createGrackleClients();
+        const res = await client.queryDomainEvents({
+          type: opts.type ?? "",
+          since: opts.since ?? "",
+          until: opts.until ?? "",
+          beforeId: opts.before ?? "",
+          limit: Number.parseInt(limitArg, 10),
+        });
+        if (res.events.length === 0) {
+          console.log("No domain events.");
+          return;
+        }
+        const table = new Table({ head: ["ID", "Type", "Timestamp", "Payload"] });
+        for (const e of res.events) {
+          const preview: string =
+            e.payloadJson.length > PAYLOAD_PREVIEW_LEN
+              ? `${e.payloadJson.slice(0, PAYLOAD_PREVIEW_LEN)}...`
+              : e.payloadJson;
+          table.push([e.id, e.type, e.timestamp, preview]);
+        }
+        console.log(table.toString());
+      },
+    );
 }

@@ -32,9 +32,7 @@ export const environments = sqliteTable("environments", {
   adapterType: text("adapter_type").notNull(),
   adapterConfig: text("adapter_config").notNull(),
   defaultRuntime: text("default_runtime").notNull().default("claude-code"),
-  bootstrapped: integer("bootstrapped", { mode: "boolean" })
-    .notNull()
-    .default(false),
+  bootstrapped: integer("bootstrapped", { mode: "boolean" }).notNull().default(false),
   status: text("status").notNull().default("disconnected"),
   lastSeen: text("last_seen"),
   envInfo: text("env_info"),
@@ -110,9 +108,7 @@ export const workspaces = sqliteTable("workspaces", {
   description: text("description").notNull().default(""),
   repoUrl: text("repo_url").notNull().default(""),
   status: text("status").notNull().default("active"),
-  useWorktrees: integer("use_worktrees", { mode: "boolean" })
-    .notNull()
-    .default(true),
+  useWorktrees: integer("use_worktrees", { mode: "boolean" }).notNull().default(true),
   workingDirectory: text("working_directory").notNull().default(""),
   defaultPersonaId: text("default_persona_id").notNull().default(""),
   tokenBudget: integer("token_budget").notNull().default(0),
@@ -133,15 +129,21 @@ export type NewWorkspace = typeof workspaces.$inferInsert;
 
 // ─── Workspace–Environment Links ─────────────────────────
 
-export const workspaceEnvironmentLinks = sqliteTable("workspace_environment_links", {
-  workspaceId: text("workspace_id").notNull().references(() => workspaces.id),
-  environmentId: text("environment_id").notNull().references(() => environments.id),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(datetime('now'))`),
-}, (table) => [
-  primaryKey({ columns: [table.workspaceId, table.environmentId] }),
-]);
+export const workspaceEnvironmentLinks = sqliteTable(
+  "workspace_environment_links",
+  {
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    environmentId: text("environment_id")
+      .notNull()
+      .references(() => environments.id),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
+  },
+  (table) => [primaryKey({ columns: [table.workspaceId, table.environmentId] })],
+);
 
 /** Row shape returned by a SELECT on the workspace_environment_links table. */
 export type WorkspaceEnvironmentLinkRow = typeof workspaceEnvironmentLinks.$inferSelect;
@@ -150,8 +152,7 @@ export type WorkspaceEnvironmentLinkRow = typeof workspaceEnvironmentLinks.$infe
 
 export const tasks = sqliteTable("tasks", {
   id: text("id").primaryKey(),
-  workspaceId: text("workspace_id")
-    .references(() => workspaces.id),
+  workspaceId: text("workspace_id").references(() => workspaces.id),
   title: text("title").notNull(),
   description: text("description").notNull().default(""),
   status: text("status").notNull().default("not_started"),
@@ -168,13 +169,9 @@ export const tasks = sqliteTable("tasks", {
   sortOrder: integer("sort_order").notNull().default(0),
   parentTaskId: text("parent_task_id").notNull().default(""),
   depth: integer("depth").notNull().default(0),
-  canDecompose: integer("can_decompose", { mode: "boolean" })
-    .notNull()
-    .default(false),
+  canDecompose: integer("can_decompose", { mode: "boolean" }).notNull().default(false),
   /** Inject knowledge-graph context ("Related prior work" + search guidance) at spawn (#1259). */
-  injectKnowledge: integer("inject_knowledge", { mode: "boolean" })
-    .notNull()
-    .default(true),
+  injectKnowledge: integer("inject_knowledge", { mode: "boolean" }).notNull().default(true),
   defaultPersonaId: text("default_persona_id").notNull().default(""),
   workpad: text("workpad").notNull().default(""),
   scheduleId: text("schedule_id").notNull().default(""),

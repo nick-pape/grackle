@@ -30,13 +30,16 @@ export interface StubTaskContext {
   /** Create a task (no scenario) and navigate to it. */
   createAndNavigateSimple(title: string, environmentId?: string): Promise<void>;
   /** Create a task via RPC (for tests needing task IDs or custom options). */
-  createTask(title: string, options?: {
-    environmentId?: string;
-    dependsOn?: string[];
-    description?: string;
-    parentTaskId?: string;
-    canDecompose?: boolean;
-  }): Promise<WsPayload>;
+  createTask(
+    title: string,
+    options?: {
+      environmentId?: string;
+      dependsOn?: string[];
+      description?: string;
+      parentTaskId?: string;
+      canDecompose?: boolean;
+    },
+  ): Promise<WsPayload>;
 }
 
 /** Simple deterministic hash to avoid workspace name collisions. */
@@ -69,7 +72,14 @@ interface WorkerFixtures {
 }
 
 interface TestFixtures {
-  grackle: { client: GrackleClient; apiKey: string; baseURL: string; wsUrl: string; mcpPort: number; grpcPort: number };
+  grackle: {
+    client: GrackleClient;
+    apiKey: string;
+    baseURL: string;
+    wsUrl: string;
+    mcpPort: number;
+    grpcPort: number;
+  };
   appPage: Page;
   stubTask: StubTaskContext;
 }
@@ -80,12 +90,15 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   // Teardown kills processes and removes the temp directory when the worker exits.
   // Knowledge graph is only enabled for the "knowledge" project to avoid
   // Neo4j contention and reference-node sync overhead in other tests.
-  workerServer: [async ({}, use, workerInfo) => {
-    const knowledgeEnabled = workerInfo.project.name === "knowledge";
-    const state = await startGrackleStack({ knowledgeEnabled });
-    await use(state);
-    await stopGrackleStack(state);
-  }, { scope: "worker" }],
+  workerServer: [
+    async ({}, use, workerInfo) => {
+      const knowledgeEnabled = workerInfo.project.name === "knowledge";
+      const state = await startGrackleStack({ knowledgeEnabled });
+      await use(state);
+      await stopGrackleStack(state);
+    },
+    { scope: "worker" },
+  ],
 
   // Override Playwright's built-in baseURL so page.goto("/") resolves to the dynamic port
   baseURL: async ({ workerServer }, use) => {
@@ -97,18 +110,27 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     const eqIdx = workerServer.pairingCookie.indexOf("=");
     const cookieName = workerServer.pairingCookie.slice(0, eqIdx);
     const cookieValue = workerServer.pairingCookie.slice(eqIdx + 1);
-    await page.context().addCookies([{
-      name: cookieName,
-      value: cookieValue,
-      url: baseURL!,
-    }]);
+    await page.context().addCookies([
+      {
+        name: cookieName,
+        value: cookieValue,
+        url: baseURL!,
+      },
+    ]);
     await use(page);
   },
 
   grackle: async ({ baseURL, workerServer }, use) => {
     const client = createTestClient(workerServer.serverPort, workerServer.apiKey);
     const wsUrl = `ws://127.0.0.1:${workerServer.webPort}`;
-    await use({ client, apiKey: workerServer.apiKey, baseURL: baseURL!, wsUrl, mcpPort: workerServer.mcpPort, grpcPort: workerServer.serverPort });
+    await use({
+      client,
+      apiKey: workerServer.apiKey,
+      baseURL: baseURL!,
+      wsUrl,
+      mcpPort: workerServer.mcpPort,
+      grpcPort: workerServer.serverPort,
+    });
   },
 
   appPage: async ({ page, workerServer, grackle }, use) => {
@@ -128,8 +150,9 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     // "Connected" appears when WS connects; the env count appears once
     // ListEnvironments completes via ConnectRPC.
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") &&
-            /\d+\/\d+ env/.test(document.body.innerText),
+      () =>
+        document.body.innerText.includes("Connected") &&
+        /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
     await use(page);
@@ -151,9 +174,17 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       const origFetch = (window as any).__origFetch__ || window.fetch;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).__origFetch__ = origFetch;
-      window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-        const url = typeof input === "string" ? input : (input instanceof URL ? input.toString() : input.url);
-        if ((url.includes("/grackle.GrackleOrchestration/StartTask") || url.includes("/grackle.GrackleCore/SpawnAgent")) && init?.body) {
+      window.fetch = async function (
+        input: RequestInfo | URL,
+        init?: RequestInit,
+      ): Promise<Response> {
+        const url =
+          typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+        if (
+          (url.includes("/grackle.GrackleOrchestration/StartTask") ||
+            url.includes("/grackle.GrackleCore/SpawnAgent")) &&
+          init?.body
+        ) {
           try {
             let bodyStr: string;
             if (init.body instanceof Uint8Array) {
@@ -193,13 +224,16 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         await navigateToTask(page, title);
       },
 
-      async createTask(title: string, options?: {
-        environmentId?: string;
-        dependsOn?: string[];
-        description?: string;
-        parentTaskId?: string;
-        canDecompose?: boolean;
-      }): Promise<WsPayload> {
+      async createTask(
+        title: string,
+        options?: {
+          environmentId?: string;
+          dependsOn?: string[];
+          description?: string;
+          parentTaskId?: string;
+          canDecompose?: boolean;
+        },
+      ): Promise<WsPayload> {
         const wsId = await getWorkspaceId(client, workspaceName);
         return createTaskDirect(client, wsId, title, options);
       },

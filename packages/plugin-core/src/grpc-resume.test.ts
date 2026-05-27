@@ -13,7 +13,7 @@ vi.mock("@grackle-ai/database", async () => {
 });
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {
-  const actual = await importOriginal() as Record<string, unknown>;
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -73,7 +73,12 @@ vi.mock("./compute-task-status.js", () => ({
 
 import { registerGrackleRoutes } from "./grpc-service.js";
 import { sessionStore, taskStore } from "@grackle-ai/database";
-import { adapterManager, processEventStream, ensureLifecycleStream, reanimateAgent } from "@grackle-ai/core";
+import {
+  adapterManager,
+  processEventStream,
+  ensureLifecycleStream,
+  reanimateAgent,
+} from "@grackle-ai/core";
 import type { ConnectRouter } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
 
@@ -93,29 +98,31 @@ function getHandlers(): Record<string, (...args: unknown[]) => unknown> {
 }
 
 /** Build a minimal session row for testing. */
-function makeSession(overrides: Partial<{
-  id: string;
-  environmentId: string;
-  runtime: string;
-  runtimeSessionId: string | null;
-  prompt: string;
-  model: string;
-  status: string;
-  logPath: string | null;
-  turns: number;
-  startedAt: string;
-  suspendedAt: string | null;
-  endedAt: string | null;
-  error: string | null;
-  taskId: string;
-  personaId: string;
-  parentSessionId: string;
-  pipeMode: string;
-  endReason: string | null;
-  inputTokens: number;
-  outputTokens: number;
-  costMillicents: number;
-}> = {}) {
+function makeSession(
+  overrides: Partial<{
+    id: string;
+    environmentId: string;
+    runtime: string;
+    runtimeSessionId: string | null;
+    prompt: string;
+    model: string;
+    status: string;
+    logPath: string | null;
+    turns: number;
+    startedAt: string;
+    suspendedAt: string | null;
+    endedAt: string | null;
+    error: string | null;
+    taskId: string;
+    personaId: string;
+    parentSessionId: string;
+    pipeMode: string;
+    endReason: string | null;
+    inputTokens: number;
+    outputTokens: number;
+    costMillicents: number;
+  }> = {},
+) {
   return {
     id: "sess-1",
     environmentId: "env-1",
@@ -164,7 +171,9 @@ describe("gRPC resumeAgent", () => {
       throw new ConnectError("Session not found: no-such", Code.NotFound);
     });
 
-    const err = await handlers.resumeAgent({ sessionId: "no-such" }).catch((e: unknown) => e) as ConnectError;
+    const err = (await handlers
+      .resumeAgent({ sessionId: "no-such" })
+      .catch((e: unknown) => e)) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
     expect(err.message).toContain("no-such");
@@ -172,10 +181,15 @@ describe("gRPC resumeAgent", () => {
 
   it("throws FailedPrecondition when session is already active", async () => {
     vi.mocked(reanimateAgent).mockImplementation(() => {
-      throw new ConnectError("Session sess-1 is already active (status: idle)", Code.FailedPrecondition);
+      throw new ConnectError(
+        "Session sess-1 is already active (status: idle)",
+        Code.FailedPrecondition,
+      );
     });
 
-    const err = await handlers.resumeAgent({ sessionId: "sess-1" }).catch((e: unknown) => e) as ConnectError;
+    const err = (await handlers
+      .resumeAgent({ sessionId: "sess-1" })
+      .catch((e: unknown) => e)) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("already active");
@@ -186,7 +200,9 @@ describe("gRPC resumeAgent", () => {
       throw new ConnectError("Session sess-1 has no runtime session ID", Code.FailedPrecondition);
     });
 
-    const err = await handlers.resumeAgent({ sessionId: "sess-1" }).catch((e: unknown) => e) as ConnectError;
+    const err = (await handlers
+      .resumeAgent({ sessionId: "sess-1" })
+      .catch((e: unknown) => e)) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("no runtime session ID");
@@ -194,10 +210,15 @@ describe("gRPC resumeAgent", () => {
 
   it("throws FailedPrecondition when another active session exists on the environment", async () => {
     vi.mocked(reanimateAgent).mockImplementation(() => {
-      throw new ConnectError("Environment already has active session sess-other", Code.FailedPrecondition);
+      throw new ConnectError(
+        "Environment already has active session sess-other",
+        Code.FailedPrecondition,
+      );
     });
 
-    const err = await handlers.resumeAgent({ sessionId: "sess-1" }).catch((e: unknown) => e) as ConnectError;
+    const err = (await handlers
+      .resumeAgent({ sessionId: "sess-1" })
+      .catch((e: unknown) => e)) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("already has active session");
@@ -208,7 +229,9 @@ describe("gRPC resumeAgent", () => {
       throw new ConnectError("Environment env-1 not connected", Code.FailedPrecondition);
     });
 
-    const err = await handlers.resumeAgent({ sessionId: "sess-1" }).catch((e: unknown) => e) as ConnectError;
+    const err = (await handlers
+      .resumeAgent({ sessionId: "sess-1" })
+      .catch((e: unknown) => e)) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("not connected");
@@ -218,7 +241,7 @@ describe("gRPC resumeAgent", () => {
     const runningSession = makeSession({ status: "running", endedAt: null });
     vi.mocked(reanimateAgent).mockReturnValue(runningSession);
 
-    const result = await handlers.resumeAgent({ sessionId: "sess-1" }) as grackle.Session;
+    const result = (await handlers.resumeAgent({ sessionId: "sess-1" })) as grackle.Session;
 
     expect(reanimateAgent).toHaveBeenCalledWith("sess-1");
     expect(result.id).toBe("sess-1");
@@ -229,7 +252,7 @@ describe("gRPC resumeAgent", () => {
     const runningSession = makeSession({ status: "running", error: null });
     vi.mocked(reanimateAgent).mockReturnValue(runningSession);
 
-    const result = await handlers.resumeAgent({ sessionId: "sess-1" }) as grackle.Session;
+    const result = (await handlers.resumeAgent({ sessionId: "sess-1" })) as grackle.Session;
 
     expect(reanimateAgent).toHaveBeenCalledWith("sess-1");
     expect(result.id).toBe("sess-1");
@@ -240,7 +263,9 @@ describe("gRPC resumeAgent", () => {
       throw new ConnectError("Environment env-1 not connected", Code.FailedPrecondition);
     });
 
-    const err = await handlers.resumeAgent({ sessionId: "sess-1" }).catch((e: unknown) => e) as ConnectError;
+    const err = (await handlers
+      .resumeAgent({ sessionId: "sess-1" })
+      .catch((e: unknown) => e)) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("not connected");
@@ -268,7 +293,9 @@ describe("gRPC resumeTask", () => {
   it("throws NotFound when task does not exist", async () => {
     vi.mocked(taskStore.getTask).mockReturnValue(undefined);
 
-    const err = await handlers.resumeTask({ id: "task-1" }).catch((e: unknown) => e) as ConnectError;
+    const err = (await handlers
+      .resumeTask({ id: "task-1" })
+      .catch((e: unknown) => e)) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
   });
@@ -277,7 +304,9 @@ describe("gRPC resumeTask", () => {
     vi.mocked(taskStore.getTask).mockReturnValue({ id: "task-1", workspaceId: "proj-1" } as never);
     vi.mocked(sessionStore.getLatestSessionForTask).mockReturnValue(undefined);
 
-    const err = await handlers.resumeTask({ id: "task-1" }).catch((e: unknown) => e) as ConnectError;
+    const err = (await handlers
+      .resumeTask({ id: "task-1" })
+      .catch((e: unknown) => e)) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
   });
@@ -288,7 +317,9 @@ describe("gRPC resumeTask", () => {
       makeSession({ status: "stopped", runtimeSessionId: null }),
     );
 
-    const err = await handlers.resumeTask({ id: "task-1" }).catch((e: unknown) => e) as ConnectError;
+    const err = (await handlers
+      .resumeTask({ id: "task-1" })
+      .catch((e: unknown) => e)) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("no runtime session ID");
@@ -303,7 +334,7 @@ describe("gRPC resumeTask", () => {
     vi.mocked(sessionStore.getSession).mockReturnValue(runningSession);
     vi.mocked(adapterManager.getConnection).mockReturnValue(makeConnection() as never);
 
-    const result = await handlers.resumeTask({ id: "task-1" }) as grackle.Session;
+    const result = (await handlers.resumeTask({ id: "task-1" })) as grackle.Session;
 
     expect(sessionStore.reanimateSession).toHaveBeenCalledWith("sess-1");
     expect(ensureLifecycleStream).toHaveBeenCalledWith("sess-1", "__server__");

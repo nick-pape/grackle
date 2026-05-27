@@ -16,7 +16,9 @@ const GH_CODESPACE_CREATE_TIMEOUT_MS: number = 300_000;
 const GH_CODESPACE_LIST_LIMIT: number = 50;
 
 /** List available GitHub Codespaces, optionally filtered to a specific GitHub account. */
-export async function listCodespaces(req: grackle.ListCodespacesRequest): Promise<grackle.CodespaceList> {
+export async function listCodespaces(
+  req: grackle.ListCodespacesRequest,
+): Promise<grackle.CodespaceList> {
   const ghToken = githubAccountStore.resolveStoredGitHubToken(req.githubAccountId || undefined);
   const execEnv: NodeJS.ProcessEnv | undefined = ghToken
     ? { ...process.env, GH_TOKEN: ghToken }
@@ -55,7 +57,9 @@ export async function listCodespaces(req: grackle.ListCodespacesRequest): Promis
 }
 
 /** Create a new GitHub Codespace. */
-export async function createCodespace(req: grackle.CreateCodespaceRequest): Promise<grackle.CreateCodespaceResponse> {
+export async function createCodespace(
+  req: grackle.CreateCodespaceRequest,
+): Promise<grackle.CreateCodespaceResponse> {
   if (!req.repo.trim()) {
     throw new ConnectError("repo is required", Code.InvalidArgument);
   }
@@ -74,9 +78,6 @@ export async function createCodespace(req: grackle.CreateCodespaceRequest): Prom
     });
   } catch (err) {
     logger.error({ err, repo: trimmedRepo }, "Failed to create codespace");
-    throw new ConnectError(
-      formatGhError(err, "create codespace"),
-      Code.Internal,
-    );
+    throw new ConnectError(formatGhError(err, "create codespace"), Code.Internal);
   }
 }

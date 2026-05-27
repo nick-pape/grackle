@@ -18,14 +18,13 @@ function request(
 ): Promise<{ status: number; headers: http.IncomingHttpHeaders; body: string }> {
   return new Promise((resolve, reject) => {
     const addr = server.address() as { port: number };
-    const req = http.request(
-      { hostname: "127.0.0.1", port: addr.port, path },
-      (res) => {
-        let body = "";
-        res.on("data", (chunk: Buffer) => { body += chunk.toString(); });
-        res.on("end", () => resolve({ status: res.statusCode!, headers: res.headers, body }));
-      },
-    );
+    const req = http.request({ hostname: "127.0.0.1", port: addr.port, path }, (res) => {
+      let body = "";
+      res.on("data", (chunk: Buffer) => {
+        body += chunk.toString();
+      });
+      res.on("end", () => resolve({ status: res.statusCode!, headers: res.headers, body }));
+    });
     req.on("error", reject);
     req.end();
   });
@@ -50,7 +49,9 @@ describe("security headers", () => {
         expect(resp.headers["x-frame-options"]).toBe("DENY");
         expect(resp.headers["x-content-type-options"]).toBe("nosniff");
       } finally {
-        await new Promise<void>((resolve) => { server.close(() => resolve()); });
+        await new Promise<void>((resolve) => {
+          server.close(() => resolve());
+        });
       }
     });
 
@@ -71,7 +72,9 @@ describe("security headers", () => {
         expect(resp.headers["x-frame-options"]).toBe("DENY");
         expect(resp.headers["x-content-type-options"]).toBe("nosniff");
       } finally {
-        await new Promise<void>((resolve) => { server.close(() => resolve()); });
+        await new Promise<void>((resolve) => {
+          server.close(() => resolve());
+        });
       }
     });
 
@@ -93,7 +96,9 @@ describe("security headers", () => {
         expect(resp.headers["x-frame-options"]).toBe("DENY");
         expect(resp.headers["x-content-type-options"]).toBe("nosniff");
       } finally {
-        await new Promise<void>((resolve) => { server.close(() => resolve()); });
+        await new Promise<void>((resolve) => {
+          server.close(() => resolve());
+        });
       }
     });
 
@@ -114,7 +119,9 @@ describe("security headers", () => {
         expect(resp.headers["x-frame-options"]).toBe("DENY");
         expect(resp.headers["content-security-policy"]).toBe(WEB_CONTENT_SECURITY_POLICY);
       } finally {
-        await new Promise<void>((resolve) => { server.close(() => resolve()); });
+        await new Promise<void>((resolve) => {
+          server.close(() => resolve());
+        });
       }
     });
 
@@ -134,7 +141,9 @@ describe("security headers", () => {
         const csp = resp.headers["content-security-policy"] as string;
         expect(csp).toContain("form-action 'self' http://localhost:* https://localhost:*");
       } finally {
-        await new Promise<void>((resolve) => { server.close(() => resolve()); });
+        await new Promise<void>((resolve) => {
+          server.close(() => resolve());
+        });
       }
     });
 
@@ -156,7 +165,9 @@ describe("security headers", () => {
         const csp = resp.headers["content-security-policy"] as string;
         expect(csp).toContain("frame-src 'self' http://localhost:* https://localhost:*");
       } finally {
-        await new Promise<void>((resolve) => { server.close(() => resolve()); });
+        await new Promise<void>((resolve) => {
+          server.close(() => resolve());
+        });
       }
     });
   });
@@ -178,8 +189,7 @@ describe("security headers", () => {
 
     it("does not allow unsafe-inline for scripts", () => {
       // script-src should NOT include unsafe-inline
-      const scriptDirective = WEB_CONTENT_SECURITY_POLICY
-        .split(";")
+      const scriptDirective = WEB_CONTENT_SECURITY_POLICY.split(";")
         .map((d) => d.trim())
         .find((d) => d.startsWith("script-src"));
       expect(scriptDirective).toBe("script-src 'self'");

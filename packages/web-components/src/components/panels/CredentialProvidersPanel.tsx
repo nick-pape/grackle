@@ -69,8 +69,10 @@ interface CredentialProvidersPanelProps {
 }
 
 /** Panel for configuring which credential providers are auto-forwarded to environments. */
-export function CredentialProvidersPanel({ credentialProviders, onUpdateCredentialProviders }: CredentialProvidersPanelProps): JSX.Element {
-
+export function CredentialProvidersPanel({
+  credentialProviders,
+  onUpdateCredentialProviders,
+}: CredentialProvidersPanelProps): JSX.Element {
   const handleChange = (key: keyof CredentialProviderConfig, value: string): void => {
     const updated: CredentialProviderConfig = { ...credentialProviders };
     if (key === "claude") {
@@ -100,7 +102,9 @@ export function CredentialProvidersPanel({ credentialProviders, onUpdateCredenti
               onChange={(e) => handleChange(provider.key, e.target.value)}
             >
               {provider.options.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
               ))}
             </select>
           </div>

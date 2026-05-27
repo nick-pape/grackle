@@ -1,10 +1,19 @@
 import type { JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
-import { NEW_SCHEDULE_URL, ScheduleManager, scheduleUrl, useAppNavigate, useToast } from "@grackle-ai/web-components";
+import {
+  NEW_SCHEDULE_URL,
+  ScheduleManager,
+  scheduleUrl,
+  useAppNavigate,
+  useToast,
+} from "@grackle-ai/web-components";
 
 /** Settings tab wrapping the schedule list. */
 export function SettingsSchedulesTab(): JSX.Element {
-  const { schedules: { schedules, deleteSchedule, updateSchedule }, personas: { personas } } = useGrackle();
+  const {
+    schedules: { schedules, deleteSchedule, updateSchedule },
+    personas: { personas },
+  } = useGrackle();
   const { showToast } = useToast();
   const navigate = useAppNavigate();
 

@@ -51,7 +51,11 @@ export function SplitButton({
       return;
     }
     function handleClickOutside(e: MouseEvent): void {
-      if (containerRef.current && e.target instanceof Node && !containerRef.current.contains(e.target)) {
+      if (
+        containerRef.current &&
+        e.target instanceof Node &&
+        !containerRef.current.contains(e.target)
+      ) {
         setOpen(false);
       }
     }

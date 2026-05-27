@@ -1,12 +1,5 @@
 import { test, expect } from "./fixtures.js";
-import {
-  stubScenario,
-  emitText,
-  emitToolUse,
-  emitToolResult,
-  idle,
-  onInput,
-} from "./helpers.js";
+import { stubScenario, emitText, emitToolUse, emitToolResult, idle, onInput } from "./helpers.js";
 
 /** Scenario with enough events to produce scrollable content. */
 function scrollableScenario(): { steps: ReturnType<typeof emitText>[] } {
@@ -47,12 +40,17 @@ test.describe("Stream smart scroll", { tag: ["@webui"] }, () => {
     const scrollContainer = page.getByTestId("event-stream-scroll");
     await expect(scrollContainer).toBeVisible();
 
-    await expect.poll(async () => {
-      return scrollContainer.evaluate((el) => {
-        const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-        return distanceFromBottom < 60;
-      });
-    }, { timeout: 5_000 }).toBe(true);
+    await expect
+      .poll(
+        async () => {
+          return scrollContainer.evaluate((el) => {
+            const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+            return distanceFromBottom < 60;
+          });
+        },
+        { timeout: 5_000 },
+      )
+      .toBe(true);
   });
 
   test("direction toggle reverses event order", async ({ stubTask }) => {
@@ -108,9 +106,7 @@ test.describe("Stream smart scroll", { tag: ["@webui"] }, () => {
       await expect
         .poll(
           async () =>
-            scrollContainer.evaluate(
-              (el) => el.scrollHeight - el.scrollTop - el.clientHeight,
-            ),
+            scrollContainer.evaluate((el) => el.scrollHeight - el.scrollTop - el.clientHeight),
           { timeout: 2_000 },
         )
         .toBeLessThan(60);

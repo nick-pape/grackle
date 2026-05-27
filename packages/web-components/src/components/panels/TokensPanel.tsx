@@ -17,7 +17,13 @@ interface TokensPanelProps {
   /** List of stored token metadata. */
   tokens: TokenInfo[];
   /** Stores or updates a token. */
-  onSetToken: (name: string, value: string, tokenType: string, envVar: string, filePath: string) => void;
+  onSetToken: (
+    name: string,
+    value: string,
+    tokenType: string,
+    envVar: string,
+    filePath: string,
+  ) => void;
   /** Deletes a token by name. */
   onDeleteToken: (name: string) => void;
   /** Display a toast notification. */
@@ -25,8 +31,12 @@ interface TokensPanelProps {
 }
 
 /** Token management panel with list, add form, and delete confirmation. */
-export function TokensPanel({ tokens, onSetToken, onDeleteToken, onShowToast }: TokensPanelProps): JSX.Element {
-
+export function TokensPanel({
+  tokens,
+  onSetToken,
+  onDeleteToken,
+  onShowToast,
+}: TokensPanelProps): JSX.Element {
   const [name, setName] = useState("");
   const [value, setValue] = useState("");
   const [tokenType, setTokenType] = useState("env_var");
@@ -38,7 +48,7 @@ export function TokensPanel({ tokens, onSetToken, onDeleteToken, onShowToast }: 
     if (!name || !value) {
       return;
     }
-    const envVar = tokenType === "env_var" ? (target || name.toUpperCase() + "_TOKEN") : "";
+    const envVar = tokenType === "env_var" ? target || name.toUpperCase() + "_TOKEN" : "";
     const filePath = tokenType === "file" ? target : "";
     onSetToken(name, value, tokenType, envVar, filePath);
     onShowToast?.("Token saved successfully", "success");
@@ -64,7 +74,9 @@ export function TokensPanel({ tokens, onSetToken, onDeleteToken, onShowToast }: 
       <ConfirmDialog
         isOpen={confirmDeleteToken !== null}
         title="Delete Token?"
-        description={confirmDeleteToken ? `"${confirmDeleteToken}" will be permanently removed.` : undefined}
+        description={
+          confirmDeleteToken ? `"${confirmDeleteToken}" will be permanently removed.` : undefined
+        }
         onConfirm={handleConfirmDelete}
         onCancel={() => setConfirmDeleteToken(null)}
       />
@@ -75,7 +87,9 @@ export function TokensPanel({ tokens, onSetToken, onDeleteToken, onShowToast }: 
         </p>
 
         {tokens.length === 0 ? (
-          <div className={styles.emptyStateInfo}>Add your first API token to enable service integrations.</div>
+          <div className={styles.emptyStateInfo}>
+            Add your first API token to enable service integrations.
+          </div>
         ) : (
           <div className={styles.tokenList}>
             {tokens.map((t) => (
@@ -122,13 +136,19 @@ export function TokensPanel({ tokens, onSetToken, onDeleteToken, onShowToast }: 
               onChange={(e) => setTokenType(e.target.value)}
             >
               {TOKEN_TYPES.map((tt) => (
-                <option key={tt.value} value={tt.value}>{tt.label}</option>
+                <option key={tt.value} value={tt.value}>
+                  {tt.label}
+                </option>
               ))}
             </select>
             <input
               className={styles.input}
               type="text"
-              placeholder={tokenType === "env_var" ? "Env var name (e.g. API_TOKEN)" : "File path (e.g. /home/user/.token)"}
+              placeholder={
+                tokenType === "env_var"
+                  ? "Env var name (e.g. API_TOKEN)"
+                  : "File path (e.g. /home/user/.token)"
+              }
               value={target}
               onChange={(e) => setTarget(e.target.value)}
             />

@@ -10,15 +10,15 @@ A **persona** is a reusable agent configuration. It defines how an agent behaves
 
 ## What a persona defines
 
-| Field | Description |
-|-------|------------|
-| **Name** | Display name (e.g., "Senior Engineer") |
-| **Runtime** | Which agent engine to use (`claude-code`, `copilot`, `codex`) |
-| **Model** | Which AI model (e.g., `sonnet`, `gpt-4o`, `o3`) |
-| **System prompt** | Instructions prepended to every session |
-| **Max turns** | Turn limit (0 = unlimited) |
-| **Tool config** | Allowed and disallowed tool lists |
-| **MCP servers** | Additional MCP servers the agent can access |
+| Field             | Description                                                   |
+| ----------------- | ------------------------------------------------------------- |
+| **Name**          | Display name (e.g., "Senior Engineer")                        |
+| **Runtime**       | Which agent engine to use (`claude-code`, `copilot`, `codex`) |
+| **Model**         | Which AI model (e.g., `sonnet`, `gpt-4o`, `o3`)               |
+| **System prompt** | Instructions prepended to every session                       |
+| **Max turns**     | Turn limit (0 = unlimited)                                    |
+| **Tool config**   | Allowed and disallowed tool lists                             |
+| **MCP servers**   | Additional MCP servers the agent can access                   |
 
 ## Creating a persona
 

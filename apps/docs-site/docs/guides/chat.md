@@ -28,12 +28,12 @@ This means you don't need to memorize CLI commands or navigate the UI. Just desc
 
 The chat runtime is configured during the first-run setup wizard. You can change it later under **Settings > Personas** by editing the default persona's runtime.
 
-| Runtime | Best for |
-|---------|---------|
+| Runtime         | Best for                                                |
+| --------------- | ------------------------------------------------------- |
 | **Claude Code** | General purpose, strong at orchestration and code tasks |
-| **Codex** | OpenAI model access, reasoning-heavy tasks |
-| **Copilot** | GitHub-integrated workflows |
-| **Goose** | Provider-agnostic, bring your own LLM |
+| **Codex**       | OpenAI model access, reasoning-heavy tasks              |
+| **Copilot**     | GitHub-integrated workflows                             |
+| **Goose**       | Provider-agnostic, bring your own LLM                   |
 
 The chat interface uses whichever runtime your default persona specifies.
 
@@ -53,18 +53,23 @@ Click any card to pre-fill the chat with that action, or just type your own requ
 Anything the [MCP server](./mcp) exposes is available through chat. Common patterns:
 
 **Environment management:**
+
 > "Add a Docker environment called build-server and provision it"
 
 **Task workflows:**
+
 > "Create a task to fix the flaky auth test in the API workspace and start it"
 
 **Status checks:**
+
 > "What tasks are currently running? Any failures?"
 
 **Knowledge queries (with knowledge graph enabled):**
+
 > "What do we know about the payment module architecture?"
 
 **Multi-step orchestration:**
+
 > "Set up three Docker environments and start the top three priority tasks in parallel"
 
 ## Ephemeral conversations

@@ -4,7 +4,11 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@grackle-ai/adapter-sdk")>()),
   isDevMode: vi.fn().mockReturnValue(false),
-  bootstrapPowerLine: vi.fn().mockReturnValue((async function* () { /* no-op */ })()),
+  bootstrapPowerLine: vi.fn().mockReturnValue(
+    (async function* () {
+      /* no-op */
+    })(),
+  ),
   startRemotePowerLine: vi.fn().mockResolvedValue({ alreadyRunning: false }),
   buildRemoteKillCommand: vi.fn().mockReturnValue("true"),
 }));
@@ -114,7 +118,13 @@ describe("DockerAdapter.buildRunArgs() — credential handling", () => {
   });
 
   it("includes GPU passthrough when configured", () => {
-    const args = adapter.buildRunArgs(containerName, localPort, image, baseCfg({ gpus: "all" }), token);
+    const args = adapter.buildRunArgs(
+      containerName,
+      localPort,
+      image,
+      baseCfg({ gpus: "all" }),
+      token,
+    );
     const gpusIdx = args.indexOf("--gpus");
     expect(gpusIdx).toBeGreaterThan(-1);
     expect(args[gpusIdx + 1]).toBe("all");
@@ -143,10 +153,7 @@ describe("DockerAdapter — DI exec for stop/destroy", () => {
 
     await adapter.stop("env-1", { containerName: "test-container" });
 
-    expect(execFn).toHaveBeenCalledWith(
-      "docker",
-      ["stop", "test-container"],
-    );
+    expect(execFn).toHaveBeenCalledWith("docker", ["stop", "test-container"]);
   });
 
   it("calls injected exec for destroy()", async () => {
@@ -155,10 +162,7 @@ describe("DockerAdapter — DI exec for stop/destroy", () => {
 
     await adapter.destroy("env-1", { containerName: "test-container" });
 
-    expect(execFn).toHaveBeenCalledWith(
-      "docker",
-      ["rm", "-f", "test-container"],
-    );
+    expect(execFn).toHaveBeenCalledWith("docker", ["rm", "-f", "test-container"]);
   });
 
   it("uses default container name derived from environmentId", async () => {
@@ -167,10 +171,7 @@ describe("DockerAdapter — DI exec for stop/destroy", () => {
 
     await adapter.stop("env-42", {});
 
-    expect(execFn).toHaveBeenCalledWith(
-      "docker",
-      ["stop", "grackle-env-42"],
-    );
+    expect(execFn).toHaveBeenCalledWith("docker", ["stop", "grackle-env-42"]);
   });
 
   it("does not throw when stop fails (container already stopped)", async () => {

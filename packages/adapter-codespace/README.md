@@ -18,11 +18,11 @@ The Codespace adapter provisions PowerLine inside a GitHub Codespace, opens a po
 
 ## Configuration
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `codespaceName` | `string` | *required* | Codespace name from `gh codespace list` |
-| `localPort` | `number` | auto | Override local tunnel port |
-| `env` | `Record<string, string>` | — | Extra env vars for remote PowerLine |
+| Field           | Type                     | Default    | Description                             |
+| --------------- | ------------------------ | ---------- | --------------------------------------- |
+| `codespaceName` | `string`                 | _required_ | Codespace name from `gh codespace list` |
+| `localPort`     | `number`                 | auto       | Override local tunnel port              |
+| `env`           | `Record<string, string>` | —          | Extra env vars for remote PowerLine     |
 
 ## Prerequisites
 

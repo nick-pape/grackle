@@ -7,7 +7,6 @@ import { GRACKLE_DIR } from "@grackle-ai/common";
  * otherwise falls back to `~/.grackle`. This allows test isolation by pointing
  * to a temp directory.
  */
-export const grackleHome: string =
-  process.env.GRACKLE_HOME
-    ? join(process.env.GRACKLE_HOME, GRACKLE_DIR)
-    : join(homedir(), GRACKLE_DIR);
+export const grackleHome: string = process.env.GRACKLE_HOME
+  ? join(process.env.GRACKLE_HOME, GRACKLE_DIR)
+  : join(homedir(), GRACKLE_DIR);

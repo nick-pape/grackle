@@ -36,9 +36,33 @@ export const Empty: Story = {
 export const WithSchedules: Story = {
   args: {
     schedules: [
-      makeSchedule({ id: "s1", title: "Nightly Review", scheduleExpression: "0 21 * * *", personaId: "persona-1", enabled: true, runCount: 42, lastRunAt: new Date(Date.now() - 3600_000).toISOString() }),
-      makeSchedule({ id: "s2", title: "CI Monitor", scheduleExpression: "5m", personaId: "persona-2", enabled: true, runCount: 8, lastRunAt: new Date(Date.now() - 300_000).toISOString() }),
-      makeSchedule({ id: "s3", title: "Stale PR Cleanup", scheduleExpression: "1d", personaId: "persona-1", enabled: false, runCount: 0, lastRunAt: "" }),
+      makeSchedule({
+        id: "s1",
+        title: "Nightly Review",
+        scheduleExpression: "0 21 * * *",
+        personaId: "persona-1",
+        enabled: true,
+        runCount: 42,
+        lastRunAt: new Date(Date.now() - 3600_000).toISOString(),
+      }),
+      makeSchedule({
+        id: "s2",
+        title: "CI Monitor",
+        scheduleExpression: "5m",
+        personaId: "persona-2",
+        enabled: true,
+        runCount: 8,
+        lastRunAt: new Date(Date.now() - 300_000).toISOString(),
+      }),
+      makeSchedule({
+        id: "s3",
+        title: "Stale PR Cleanup",
+        scheduleExpression: "1d",
+        personaId: "persona-1",
+        enabled: false,
+        runCount: 0,
+        lastRunAt: "",
+      }),
     ],
   },
   play: async ({ canvasElement }) => {

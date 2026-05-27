@@ -14,10 +14,7 @@ import {
   type EdgeType,
   type ReferenceSource,
 } from "@grackle-ai/knowledge";
-import type {
-  TaskRow,
-  SessionRow,
-} from "@grackle-ai/database";
+import type { TaskRow, SessionRow } from "@grackle-ai/database";
 
 /** Identifies a reference node by its source identity. */
 export interface SourceKey {
@@ -71,10 +68,18 @@ export function taskEdges(task: TaskRow): EdgeSpec[] {
   const from = key(REFERENCE_SOURCE.TASK, task.id);
   const edges: EdgeSpec[] = [];
   if (task.workspaceId) {
-    edges.push({ from, to: key(REFERENCE_SOURCE.WORKSPACE, task.workspaceId), type: EDGE_TYPE.IN_WORKSPACE });
+    edges.push({
+      from,
+      to: key(REFERENCE_SOURCE.WORKSPACE, task.workspaceId),
+      type: EDGE_TYPE.IN_WORKSPACE,
+    });
   }
   if (task.parentTaskId) {
-    edges.push({ from, to: key(REFERENCE_SOURCE.TASK, task.parentTaskId), type: EDGE_TYPE.PART_OF });
+    edges.push({
+      from,
+      to: key(REFERENCE_SOURCE.TASK, task.parentTaskId),
+      type: EDGE_TYPE.PART_OF,
+    });
   }
   for (const dependencyId of parseDependsOn(task.dependsOn)) {
     edges.push({ from, to: key(REFERENCE_SOURCE.TASK, dependencyId), type: EDGE_TYPE.DEPENDS_ON });
@@ -87,13 +92,25 @@ export function sessionEdges(session: SessionRow): EdgeSpec[] {
   const from = key(REFERENCE_SOURCE.SESSION, session.id);
   const edges: EdgeSpec[] = [];
   if (session.taskId) {
-    edges.push({ from, to: key(REFERENCE_SOURCE.TASK, session.taskId), type: EDGE_TYPE.ATTEMPT_OF });
+    edges.push({
+      from,
+      to: key(REFERENCE_SOURCE.TASK, session.taskId),
+      type: EDGE_TYPE.ATTEMPT_OF,
+    });
   }
   if (session.environmentId) {
-    edges.push({ from, to: key(REFERENCE_SOURCE.ENVIRONMENT, session.environmentId), type: EDGE_TYPE.RAN_IN });
+    edges.push({
+      from,
+      to: key(REFERENCE_SOURCE.ENVIRONMENT, session.environmentId),
+      type: EDGE_TYPE.RAN_IN,
+    });
   }
   if (session.personaId) {
-    edges.push({ from, to: key(REFERENCE_SOURCE.PERSONA, session.personaId), type: EDGE_TYPE.USED_PERSONA });
+    edges.push({
+      from,
+      to: key(REFERENCE_SOURCE.PERSONA, session.personaId),
+      type: EDGE_TYPE.USED_PERSONA,
+    });
   }
   return edges;
 }

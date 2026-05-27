@@ -1,11 +1,16 @@
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
-import {
-  workspaceStatusToEnum,
-  taskStatusToEnum,
-} from "@grackle-ai/common";
+import { workspaceStatusToEnum, taskStatusToEnum } from "@grackle-ai/common";
 import type { EnvironmentRow, SessionRow } from "@grackle-ai/database";
-import { workspaceStore, taskStore, personaStore, componentStore, escalationStore, workspaceEnvironmentLinkStore, safeParseJsonArray } from "@grackle-ai/database";
+import {
+  workspaceStore,
+  taskStore,
+  personaStore,
+  componentStore,
+  escalationStore,
+  workspaceEnvironmentLinkStore,
+  safeParseJsonArray,
+} from "@grackle-ai/database";
 
 /** Convert an environment database row to its proto representation. */
 export function envRowToProto(row: EnvironmentRow): grackle.Environment {
@@ -162,14 +167,10 @@ export function personaRowToProto(row: personaStore.PersonaRow): grackle.Persona
     systemPrompt: row.systemPrompt,
     toolConfig: create(grackle.ToolConfigSchema, {
       allowedTools: Array.isArray(toolConfig.allowedTools)
-        ? toolConfig.allowedTools.filter(
-            (t): t is string => typeof t === "string",
-          )
+        ? toolConfig.allowedTools.filter((t): t is string => typeof t === "string")
         : [],
       disallowedTools: Array.isArray(toolConfig.disallowedTools)
-        ? toolConfig.disallowedTools.filter(
-            (t): t is string => typeof t === "string",
-          )
+        ? toolConfig.disallowedTools.filter((t): t is string => typeof t === "string")
         : [],
     }),
     runtime: row.runtime,
@@ -212,5 +213,3 @@ export function personaRowToProto(row: personaStore.PersonaRow): grackle.Persona
     ),
   });
 }
-
-

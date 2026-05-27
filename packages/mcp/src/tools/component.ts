@@ -18,13 +18,21 @@ type JsonSchemaInput = Parameters<typeof z.fromJSONSchema>[0];
 /** Build an INVALID_ARGUMENT tool error result. */
 function invalidArgument(message: string): ToolResult {
   return {
-    content: [{ type: "text" as const, text: JSON.stringify({ error: message, code: "INVALID_ARGUMENT" }, null, 2) }],
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify({ error: message, code: "INVALID_ARGUMENT" }, null, 2),
+      },
+    ],
     isError: true,
   };
 }
 
 /** Wrap a render descriptor in a tool result whose `_meta` the broker capture reads. */
-function renderResult(summary: Record<string, unknown>, descriptor: WidgetRenderDescriptor): ToolResult {
+function renderResult(
+  summary: Record<string, unknown>,
+  descriptor: WidgetRenderDescriptor,
+): ToolResult {
   return { ...jsonResult(summary), _meta: { [WIDGET_RENDER_META_KEY]: descriptor } };
 }
 
@@ -51,7 +59,7 @@ function propsSchemaError(propsSchema: string | undefined): string | undefined {
     return "propsSchema must be valid JSON (a JSON Schema object)";
   }
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    return "propsSchema must be a JSON Schema object (e.g. {\"type\":\"object\",\"properties\":{...}})";
+    return 'propsSchema must be a JSON Schema object (e.g. {"type":"object","properties":{...}})';
   }
   try {
     z.fromJSONSchema(parsed as JsonSchemaInput);
@@ -66,7 +74,10 @@ function propsSchemaError(propsSchema: string | undefined): string | undefined {
  * `propsSchema` by converting it to a zod schema and parsing. Returns an error
  * message on mismatch, or `undefined` when valid (or when there is no schema).
  */
-export function propsValidationError(propsSchema: string, props: Record<string, unknown>): string | undefined {
+export function propsValidationError(
+  propsSchema: string,
+  props: Record<string, unknown>,
+): string | undefined {
   if (!propsSchema) {
     return undefined;
   }
@@ -145,10 +156,16 @@ export const componentTools: ToolDefinition[] = [
     }),
     rpcMethod: "showHelloWidget",
     mutating: false,
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
     uiResourceUri: HELLO_WIDGET_URI,
     async handler(args: Record<string, unknown>) {
-      const message: string = typeof args.message === "string" ? args.message : "Hello from Grackle";
+      const message: string =
+        typeof args.message === "string" ? args.message : "Hello from Grackle";
       return jsonResult({ message, renderedAt: new Date().toISOString() });
     },
   },
@@ -160,18 +177,38 @@ export const componentTools: ToolDefinition[] = [
     inputSchema: z.object({
       name: z.string().describe("Short component name, unique within your workspace."),
       source: z.string().describe("Component body — JSX (grackle-react) or HTML (mcp-app-html)."),
-      rendererKind: z.enum([REACT_RENDERER_KIND, HTML_RENDERER_KIND]).optional().describe("Renderer (default grackle-react)."),
+      rendererKind: z
+        .enum([REACT_RENDERER_KIND, HTML_RENDERER_KIND])
+        .optional()
+        .describe("Renderer (default grackle-react)."),
       description: z.string().optional().describe("Human-readable description of the component."),
-      propsSchema: z.string().optional().describe("JSON Schema (as a string) describing the props component_render accepts."),
-      workspaceId: z.string().optional().describe("Workspace ID (auto-injected from session context when omitted)."),
+      propsSchema: z
+        .string()
+        .optional()
+        .describe("JSON Schema (as a string) describing the props component_render accepts."),
+      workspaceId: z
+        .string()
+        .optional()
+        .describe("Workspace ID (auto-injected from session context when omitted)."),
     }),
     rpcMethod: "registerComponent",
     mutating: true,
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients, authContext?: AuthContext) {
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false,
+    },
+    async handler(
+      args: Record<string, unknown>,
+      { orchestration: client }: GrackleClients,
+      authContext?: AuthContext,
+    ) {
       const workspaceId = args.workspaceId as string | undefined;
       if (!workspaceId) {
-        return invalidArgument("workspaceId is required but was not provided or auto-injected. This session may not be associated with a workspace.");
+        return invalidArgument(
+          "workspaceId is required but was not provided or auto-injected. This session may not be associated with a workspace.",
+        );
       }
       const schemaErr = propsSchemaError(args.propsSchema as string | undefined);
       if (schemaErr) {
@@ -196,18 +233,27 @@ export const componentTools: ToolDefinition[] = [
   {
     name: "component_update",
     group: "component",
-    description: "Update a registered component's source (body), name, description, or props schema. Only provided fields change; the version is bumped.",
+    description:
+      "Update a registered component's source (body), name, description, or props schema. Only provided fields change; the version is bumped.",
     inputSchema: z.object({
       id: z.string().describe("Component id to update."),
       source: z.string().optional().describe("New component body (JSX or HTML)."),
       name: z.string().optional().describe("New component name."),
       description: z.string().optional().describe("New description."),
       propsSchema: z.string().optional().describe("New props JSON Schema (as a string)."),
-      workspaceId: z.string().optional().describe("Workspace ID (auto-injected from session context)."),
+      workspaceId: z
+        .string()
+        .optional()
+        .describe("Workspace ID (auto-injected from session context)."),
     }),
     rpcMethod: "updateComponent",
     mutating: true,
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false,
+    },
     async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
       if (!args.id) {
         return invalidArgument("id is required");
@@ -236,11 +282,19 @@ export const componentTools: ToolDefinition[] = [
     group: "component",
     description: "List the reusable components registered in this workspace.",
     inputSchema: z.object({
-      workspaceId: z.string().optional().describe("Workspace ID (auto-injected from session context when omitted)."),
+      workspaceId: z
+        .string()
+        .optional()
+        .describe("Workspace ID (auto-injected from session context when omitted)."),
     }),
     rpcMethod: "listComponents",
     mutating: false,
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
     async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
       const workspaceId = args.workspaceId as string | undefined;
       if (!workspaceId) {
@@ -248,16 +302,18 @@ export const componentTools: ToolDefinition[] = [
       }
       try {
         const response = await client.listComponents({ workspaceId });
-        return jsonResult(response.components.map((c) => ({
-          id: c.id,
-          name: c.name,
-          description: c.description,
-          rendererKind: c.rendererKind,
-          propsSchema: c.propsSchema,
-          version: c.version,
-          promoted: c.promoted,
-          updatedAt: c.updatedAt,
-        })));
+        return jsonResult(
+          response.components.map((c) => ({
+            id: c.id,
+            name: c.name,
+            description: c.description,
+            rendererKind: c.rendererKind,
+            propsSchema: c.propsSchema,
+            version: c.version,
+            promoted: c.promoted,
+            updatedAt: c.updatedAt,
+          })),
+        );
       } catch (error) {
         return grpcErrorToToolResult(error);
       }
@@ -270,12 +326,25 @@ export const componentTools: ToolDefinition[] = [
       "Search the component registry by keyword (name + description) — your workspace's registered components PLUS Grackle's built-in components. Use this to find an existing component to reuse before authoring a new one. Results with builtin:true are Grackle components you compose directly in JSX (e.g. <Button/>); others you render with component_render.",
     inputSchema: z.object({
       query: z.string().describe("Keyword to match against component names and descriptions."),
-      limit: z.number().int().positive().optional().describe("Maximum results to return (must be >= 1; omit for the default of 10)."),
-      workspaceId: z.string().optional().describe("Workspace ID (auto-injected from session context)."),
+      limit: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Maximum results to return (must be >= 1; omit for the default of 10)."),
+      workspaceId: z
+        .string()
+        .optional()
+        .describe("Workspace ID (auto-injected from session context)."),
     }),
     rpcMethod: "searchComponents",
     mutating: false,
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
     async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
       try {
         const response = await client.searchComponents({
@@ -283,15 +352,17 @@ export const componentTools: ToolDefinition[] = [
           workspaceId: (args.workspaceId as string | undefined) ?? "",
           limit: (args.limit as number | undefined) ?? 0,
         });
-        return jsonResult(response.results.map((r) => ({
-          name: r.component?.name,
-          description: r.component?.description,
-          rendererKind: r.component?.rendererKind,
-          propsSchema: r.component?.propsSchema,
-          builtin: r.builtin,
-          ...(r.builtin ? {} : { id: r.component?.id, version: r.component?.version }),
-          relevanceScore: Math.round(r.relevanceScore * 100) / 100,
-        })));
+        return jsonResult(
+          response.results.map((r) => ({
+            name: r.component?.name,
+            description: r.component?.description,
+            rendererKind: r.component?.rendererKind,
+            propsSchema: r.component?.propsSchema,
+            builtin: r.builtin,
+            ...(r.builtin ? {} : { id: r.component?.id, version: r.component?.version }),
+            relevanceScore: Math.round(r.relevanceScore * 100) / 100,
+          })),
+        );
       } catch (error) {
         return grpcErrorToToolResult(error);
       }
@@ -306,11 +377,19 @@ export const componentTools: ToolDefinition[] = [
       id: z.string().optional().describe("Component id (takes precedence over name)."),
       name: z.string().optional().describe("Component name, resolved within your workspace."),
       promoted: z.boolean().optional().describe("true to promote (default), false to demote."),
-      workspaceId: z.string().optional().describe("Workspace ID (auto-injected from session context)."),
+      workspaceId: z
+        .string()
+        .optional()
+        .describe("Workspace ID (auto-injected from session context)."),
     }),
     rpcMethod: "setComponentPromotion",
     mutating: true,
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
     async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
       const id = args.id as string | undefined;
       const name = args.name as string | undefined;
@@ -338,12 +417,23 @@ export const componentTools: ToolDefinition[] = [
     inputSchema: z.object({
       id: z.string().optional().describe("Component id (takes precedence over name)."),
       name: z.string().optional().describe("Component name, resolved within your workspace."),
-      props: z.record(z.string(), z.unknown()).optional().describe("Data passed to the component at render time."),
-      workspaceId: z.string().optional().describe("Workspace ID (auto-injected from session context)."),
+      props: z
+        .record(z.string(), z.unknown())
+        .optional()
+        .describe("Data passed to the component at render time."),
+      workspaceId: z
+        .string()
+        .optional()
+        .describe("Workspace ID (auto-injected from session context)."),
     }),
     rpcMethod: "resolveComponentGraph",
     mutating: false,
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
     async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
       const id = args.id as string | undefined;
       const name = args.name as string | undefined;
@@ -362,10 +452,13 @@ export const componentTools: ToolDefinition[] = [
         if (!c) {
           return invalidArgument("Component not found");
         }
-        const props: Record<string, unknown> = (args.props as Record<string, unknown> | undefined) ?? {};
+        const props: Record<string, unknown> =
+          (args.props as Record<string, unknown> | undefined) ?? {};
         const validationErr = propsValidationError(c.propsSchema, props);
         if (validationErr) {
-          return invalidArgument(`props do not match the component's propsSchema: ${validationErr}`);
+          return invalidArgument(
+            `props do not match the component's propsSchema: ${validationErr}`,
+          );
         }
         return buildComponentRenderResult(c, props, resolved.dependencies);
       } catch (error) {
@@ -379,23 +472,44 @@ export const componentTools: ToolDefinition[] = [
     description:
       "Render a one-off React/JSX component inline in the chat against the Grackle component library (no persistence). Provide `source` as JSX that calls render(<YourComponent {...props}/>) (react-live noInline); `props` supplies the data. `React`, `props`, and Grackle components (e.g. Button, Callout, Spinner) are in scope. Use component_register + component_render to reuse a component across renders.",
     inputSchema: z.object({
-      source: z.string().describe("JSX source. Must call render(<Component {...props}/>). `React`, `props`, and Grackle components are in scope."),
-      props: z.record(z.string(), z.unknown()).optional().describe("Data passed to the component as `props`."),
-      workspaceId: z.string().optional().describe("Workspace ID (auto-injected; unused for one-off renders)."),
+      source: z
+        .string()
+        .describe(
+          "JSX source. Must call render(<Component {...props}/>). `React`, `props`, and Grackle components are in scope.",
+        ),
+      props: z
+        .record(z.string(), z.unknown())
+        .optional()
+        .describe("Data passed to the component as `props`."),
+      workspaceId: z
+        .string()
+        .optional()
+        .describe("Workspace ID (auto-injected; unused for one-off renders)."),
     }),
     rpcMethod: "resolveComponentGraph",
     mutating: false,
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
     async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
       const source = args.source as string;
-      const props: Record<string, unknown> = (args.props as Record<string, unknown> | undefined) ?? {};
+      const props: Record<string, unknown> =
+        (args.props as Record<string, unknown> | undefined) ?? {};
       const workspaceId = (args.workspaceId as string | undefined) ?? "";
       // Resolve any registry components the one-off source references (#1270). Only
       // when scoped to a workspace — a one-off with no workspace has no registry.
       let dependencies: readonly grackle.Component[] = [];
       if (workspaceId) {
         try {
-          const resolved = await client.resolveComponentGraph({ id: "", name: "", workspaceId, source });
+          const resolved = await client.resolveComponentGraph({
+            id: "",
+            name: "",
+            workspaceId,
+            source,
+          });
           dependencies = resolved.dependencies;
         } catch (error) {
           return grpcErrorToToolResult(error);
@@ -421,12 +535,23 @@ export const componentTools: ToolDefinition[] = [
       "Render a one-off raw-HTML widget inline in the chat from an inline HTML body, without persisting it. For React/JSX use component_show; for reuse use component_register + component_render.",
     inputSchema: z.object({
       body: z.string().describe("Widget HTML body. May include inline <script>/<style>."),
-      props: z.record(z.string(), z.unknown()).optional().describe("Data passed to the widget at render time."),
-      workspaceId: z.string().optional().describe("Workspace ID (auto-injected; unused for one-off renders)."),
+      props: z
+        .record(z.string(), z.unknown())
+        .optional()
+        .describe("Data passed to the widget at render time."),
+      workspaceId: z
+        .string()
+        .optional()
+        .describe("Workspace ID (auto-injected; unused for one-off renders)."),
     }),
     rpcMethod: "widgetShow",
     mutating: false,
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
     async handler(args: Record<string, unknown>) {
       const descriptor: WidgetRenderDescriptor = {
         rendererKind: HTML_RENDERER_KIND,

@@ -125,7 +125,9 @@ export async function expandNode(
   options?: ExpandOptions,
 ): Promise<ExpansionResult> {
   const rawDepth: number = options?.depth ?? DEFAULT_DEPTH;
-  const depth: number = Number.isFinite(rawDepth) ? Math.max(1, Math.floor(rawDepth)) : DEFAULT_DEPTH;
+  const depth: number = Number.isFinite(rawDepth)
+    ? Math.max(1, Math.floor(rawDepth))
+    : DEFAULT_DEPTH;
   const cypher: string = buildExpandCypher(depth, options?.edgeTypes);
 
   const session = getSession();
@@ -141,8 +143,7 @@ export async function expandNode(
       const node: KnowledgeNode = recordToNode(neo4jNode.properties);
       nodeMap.set(node.id, node);
 
-      const rawEdges: Record<string, unknown>[] =
-        record.get("rels") as Record<string, unknown>[];
+      const rawEdges: Record<string, unknown>[] = record.get("rels") as Record<string, unknown>[];
       for (const raw of rawEdges) {
         if (raw.fromId === null || raw.toId === null) {
           continue;

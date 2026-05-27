@@ -16,7 +16,11 @@ const ORIGINAL_NETWORK = vi.hoisted(() => {
 vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@grackle-ai/adapter-sdk")>()),
   isDevMode: vi.fn().mockReturnValue(false),
-  bootstrapPowerLine: vi.fn().mockReturnValue((async function* () { /* no-op */ })()),
+  bootstrapPowerLine: vi.fn().mockReturnValue(
+    (async function* () {
+      /* no-op */
+    })(),
+  ),
   startRemotePowerLine: vi.fn().mockResolvedValue({ alreadyRunning: false }),
   buildRemoteKillCommand: vi.fn().mockReturnValue("true"),
   createPowerLineClient: vi.fn().mockReturnValue({
@@ -85,7 +89,11 @@ describe("DockerAdapter with GRACKLE_DOCKER_NETWORK set (DooD mode)", () => {
 describe("DockerAdapter attach mode with GRACKLE_DOCKER_NETWORK set", () => {
   const adapter = new DockerAdapter({
     exec: vi.fn(async (command: string, args: string[]) => {
-      if (command === "docker" && args[0] === "inspect" && args.some((a) => a.includes("State.Running"))) {
+      if (
+        command === "docker" &&
+        args[0] === "inspect" &&
+        args.some((a) => a.includes("State.Running"))
+      ) {
         return { stdout: "true", stderr: "" };
       }
       return { stdout: "", stderr: "" };
@@ -95,10 +103,18 @@ describe("DockerAdapter attach mode with GRACKLE_DOCKER_NETWORK set", () => {
 
   it("connects to the attached container by name on the shared network (no sidecar)", async () => {
     const { createPowerLineClient } = await import("@grackle-ai/adapter-sdk");
-    for await (const _ of adapter.provision("env-dood", { attach: "ext-box" } as unknown as Record<string, unknown>, "tok")) {
+    for await (const _ of adapter.provision(
+      "env-dood",
+      { attach: "ext-box" } as unknown as Record<string, unknown>,
+      "tok",
+    )) {
       /* consume */
     }
-    await adapter.connect("env-dood", { attach: "ext-box" } as unknown as Record<string, unknown>, "tok");
+    await adapter.connect(
+      "env-dood",
+      { attach: "ext-box" } as unknown as Record<string, unknown>,
+      "tok",
+    );
     expect(createPowerLineClient).toHaveBeenCalledWith("http://ext-box:7433", "tok");
   });
 });

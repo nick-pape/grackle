@@ -2,7 +2,10 @@ import { test, expect } from "./fixtures.js";
 import { stubScenario, emitText, idle } from "./helpers.js";
 
 test.describe("Escalation auto-detection", () => {
-  test("creates escalation when standalone task goes idle", async ({ stubTask, grackle: { client } }) => {
+  test("creates escalation when standalone task goes idle", async ({
+    stubTask,
+    grackle: { client },
+  }) => {
     const { page } = stubTask;
 
     // Create a standalone task (no parent) with a stub scenario that goes idle
@@ -21,9 +24,13 @@ test.describe("Escalation auto-detection", () => {
     const deadline = Date.now() + 10_000;
     let found = false;
     while (Date.now() < deadline) {
-      const resp = await client.orchestration.listEscalations({ workspaceId: "", status: "", limit: 50 });
-      const match = resp.escalations.find((e) =>
-        e.title === "escalation-auto-test" && e.source === "auto",
+      const resp = await client.orchestration.listEscalations({
+        workspaceId: "",
+        status: "",
+        limit: 50,
+      });
+      const match = resp.escalations.find(
+        (e) => e.title === "escalation-auto-test" && e.source === "auto",
       );
       if (match) {
         expect(match.status).toBe("delivered");
@@ -32,7 +39,9 @@ test.describe("Escalation auto-detection", () => {
         found = true;
         break;
       }
-      await new Promise((r) => { setTimeout(r, 500); });
+      await new Promise((r) => {
+        setTimeout(r, 500);
+      });
     }
     expect(found, "Auto-escalation should be created when standalone task goes idle").toBe(true);
   });
@@ -40,24 +49,36 @@ test.describe("Escalation auto-detection", () => {
   test("escalation list filters by status", async ({ stubTask, grackle: { client } }) => {
     // Create two escalations
     const esc1 = await client.orchestration.createEscalation({
-      workspaceId: "", taskId: "", title: "Pending one",
-      message: "First", urgency: "normal",
+      workspaceId: "",
+      taskId: "",
+      title: "Pending one",
+      message: "First",
+      urgency: "normal",
     });
     const esc2 = await client.orchestration.createEscalation({
-      workspaceId: "", taskId: "", title: "To acknowledge",
-      message: "Second", urgency: "normal",
+      workspaceId: "",
+      taskId: "",
+      title: "To acknowledge",
+      message: "Second",
+      urgency: "normal",
     });
 
     // Acknowledge the second one
     await client.orchestration.acknowledgeEscalation({ id: esc2.id });
 
     // Filter by delivered — only esc1 should match
-    const delivered = await client.orchestration.listEscalations({ workspaceId: "", status: "delivered" });
+    const delivered = await client.orchestration.listEscalations({
+      workspaceId: "",
+      status: "delivered",
+    });
     expect(delivered.escalations.some((e) => e.id === esc1.id)).toBe(true);
     expect(delivered.escalations.some((e) => e.id === esc2.id)).toBe(false);
 
     // Filter by acknowledged — only esc2 should match
-    const acknowledged = await client.orchestration.listEscalations({ workspaceId: "", status: "acknowledged" });
+    const acknowledged = await client.orchestration.listEscalations({
+      workspaceId: "",
+      status: "acknowledged",
+    });
     expect(acknowledged.escalations.some((e) => e.id === esc2.id)).toBe(true);
   });
 
@@ -82,7 +103,10 @@ test.describe("Escalation auto-detection", () => {
     expect(acked.acknowledgedAt).toBeTruthy();
 
     // List and verify
-    const list = await client.orchestration.listEscalations({ workspaceId: "", status: "acknowledged" });
+    const list = await client.orchestration.listEscalations({
+      workspaceId: "",
+      status: "acknowledged",
+    });
     const found = list.escalations.find((e) => e.id === esc.id);
     expect(found).toBeDefined();
     expect(found!.status).toBe("acknowledged");

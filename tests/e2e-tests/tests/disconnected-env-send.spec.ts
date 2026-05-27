@@ -45,7 +45,9 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
       .waitFor({ state: "visible", timeout: 10_000 });
   }
 
-  test("Send button and input are disabled when task environment is disconnected", async ({ stubTask }) => {
+  test("Send button and input are disabled when task environment is disconnected", async ({
+    stubTask,
+  }) => {
     await startTaskAndDisconnectEnv(stubTask, "disc-task-1");
     const { page } = stubTask;
 
@@ -56,30 +58,26 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     await expect(inputField).toBeDisabled({ timeout: 5_000 });
   });
 
-  test("Send button wrapper has explanatory title when environment is disconnected", async ({ stubTask }) => {
+  test("Send button wrapper has explanatory title when environment is disconnected", async ({
+    stubTask,
+  }) => {
     await startTaskAndDisconnectEnv(stubTask, "disc-task-2");
     const { page } = stubTask;
 
     // The disabled Send button is wrapped in a <span title="...">
     const sendBtn = page.locator("button", { hasText: "Send" });
     const sendBtnWrapper = sendBtn.locator("xpath=..");
-    await expect(sendBtnWrapper).toHaveAttribute(
-      "title",
-      /unavailable/i,
-      { timeout: 5_000 },
-    );
+    await expect(sendBtnWrapper).toHaveAttribute("title", /unavailable/i, { timeout: 5_000 });
   });
 
   test("disconnect hint text is visible when environment is disconnected", async ({ stubTask }) => {
     await startTaskAndDisconnectEnv(stubTask, "disc-task-3");
     const { page } = stubTask;
 
-    await expect(
-      page.locator('[data-testid="env-disconnect-hint"]'),
-    ).toBeVisible({ timeout: 5_000 });
-    await expect(
-      page.locator('[data-testid="env-disconnect-hint"]'),
-    ).toContainText(/unavailable/i);
+    await expect(page.locator('[data-testid="env-disconnect-hint"]')).toBeVisible({
+      timeout: 5_000,
+    });
+    await expect(page.locator('[data-testid="env-disconnect-hint"]')).toContainText(/unavailable/i);
   });
 
   test("Reconnect button is visible when environment is disconnected", async ({ stubTask }) => {
@@ -141,15 +139,16 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     await expect(sendBtn).toBeEnabled({ timeout: 5_000 });
 
     // Reconnect button and disconnect hint should be gone
-    await expect(
-      page.locator('[data-testid="reconnect-btn"]'),
-    ).not.toBeVisible({ timeout: 5_000 });
-    await expect(
-      page.locator('[data-testid="env-disconnect-hint"]'),
-    ).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="reconnect-btn"]')).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="env-disconnect-hint"]')).not.toBeVisible({
+      timeout: 5_000,
+    });
   });
 
-  test("Send button is disabled in session mode when environment is disconnected", async ({ appPage, grackle: { client } }) => {
+  test("Send button is disabled in session mode when environment is disconnected", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     // Apply stub runtime fetch patch for the session spawn
@@ -183,8 +182,8 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     const inputField = page.locator('textarea[placeholder="Type a message..."]');
     await expect(inputField).toBeDisabled({ timeout: 5_000 });
 
-    await expect(
-      page.locator('[data-testid="env-disconnect-hint"]'),
-    ).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="env-disconnect-hint"]')).toBeVisible({
+      timeout: 5_000,
+    });
   });
 });

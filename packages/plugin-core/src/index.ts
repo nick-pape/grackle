@@ -1,11 +1,19 @@
 // ─── gRPC Handler Aggregator ─────────────────────────────────
-export { createCoreCollector, createOrchestrationCollector, createDefaultCollector, registerGrackleRoutes } from "./grpc-service.js";
+export {
+  createCoreCollector,
+  createOrchestrationCollector,
+  createDefaultCollector,
+  registerGrackleRoutes,
+} from "./grpc-service.js";
 
 // ─── Subscriber Factories ───────────────────────────────────
 export { createLifecycleSubscriber } from "./lifecycle.js";
 export { createSigchldSubscriber } from "./signals/sigchld.js";
 export { createEscalationAutoSubscriber } from "./signals/escalation-auto.js";
-export { createOrphanReparentSubscriber, transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
+export {
+  createOrphanReparentSubscriber,
+  transferAllPipeSubscriptions,
+} from "./signals/orphan-reparent.js";
 export { createRootTaskBootSubscriber } from "./root-task-boot.js";
 export type { RootTaskBootDeps } from "./root-task-boot.js";
 
@@ -33,4 +41,9 @@ export type { IngestBody, IngestResult } from "./channel-ingest.js";
 
 // ─── Re-exports from other modules ──────────────────────────
 export { cleanupLifecycleStream, ensureLifecycleStream } from "./lifecycle.js";
-export { toDialableHost, validatePipeInputs, resolveAncestorEnvironmentId, VALID_PIPE_MODES } from "./grpc-shared.js";
+export {
+  toDialableHost,
+  validatePipeInputs,
+  resolveAncestorEnvironmentId,
+  VALID_PIPE_MODES,
+} from "./grpc-shared.js";

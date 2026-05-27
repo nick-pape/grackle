@@ -7,9 +7,15 @@
 
 // ─── Database Lifecycle ────────────────────────────────────
 export {
-  openDatabase, initDatabase, sqlite, CURRENT_VERSION,
-  checkDatabaseIntegrity, backupDatabase,
-  walCheckpoint, startWalCheckpointTimer, stopWalCheckpointTimer,
+  openDatabase,
+  initDatabase,
+  sqlite,
+  CURRENT_VERSION,
+  checkDatabaseIntegrity,
+  backupDatabase,
+  walCheckpoint,
+  startWalCheckpointTimer,
+  stopWalCheckpointTimer,
   default as db,
 } from "./db.js";
 export { seedDatabase } from "./db-seed.js";

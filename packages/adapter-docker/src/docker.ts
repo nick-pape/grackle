@@ -1,5 +1,14 @@
 import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
-import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent, AdapterDependencies, AdapterLogger, ExecFunction, ExecResult } from "@grackle-ai/adapter-sdk";
+import type {
+  EnvironmentAdapter,
+  BaseEnvironmentConfig,
+  PowerLineConnection,
+  ProvisionEvent,
+  AdapterDependencies,
+  AdapterLogger,
+  ExecFunction,
+  ExecResult,
+} from "@grackle-ai/adapter-sdk";
 import {
   createPowerLineClient,
   isDevMode,
@@ -72,11 +81,19 @@ export interface DockerEnvironmentConfig extends BaseEnvironmentConfig {
 /** @internal Abstraction over command execution used by {@link DockerAdapter}. */
 export interface DockerExecFactory {
   /** Execute a command and return its trimmed output. */
-  exec(command: string, args: string[], options?: { timeout?: number }): Promise<{ stdout: string; stderr: string }>;
+  exec(
+    command: string,
+    args: string[],
+    options?: { timeout?: number },
+  ): Promise<{ stdout: string; stderr: string }>;
 }
 
 /** Callable exec function type extracted from the factory. */
-type LocalExecFunction = (command: string, args: string[], options?: { timeout?: number }) => Promise<ExecResult>;
+type LocalExecFunction = (
+  command: string,
+  args: string[],
+  options?: { timeout?: number },
+) => Promise<ExecResult>;
 
 const containerPorts: Map<string, number> = new Map<string, number>();
 
@@ -95,9 +112,17 @@ const attachConnections: Map<string, AttachConnection> = new Map<string, AttachC
 // ─── Docker CLI Helpers ────────────────────────────────────
 
 /** Return true if the named container currently exists and is running. */
-async function inspectContainerRunning(execFn: LocalExecFunction, containerName: string): Promise<boolean> {
+async function inspectContainerRunning(
+  execFn: LocalExecFunction,
+  containerName: string,
+): Promise<boolean> {
   try {
-    const { stdout } = await execFn("docker", ["inspect", "-f", "{{.State.Running}}", containerName]);
+    const { stdout } = await execFn("docker", [
+      "inspect",
+      "-f",
+      "{{.State.Running}}",
+      containerName,
+    ]);
     return stdout.trim() === "true";
   } catch {
     return false;
@@ -105,10 +130,16 @@ async function inspectContainerRunning(execFn: LocalExecFunction, containerName:
 }
 
 /** Discover the first network IP address of a container (empty string if none). */
-async function inspectContainerIp(execFn: LocalExecFunction, containerName: string): Promise<string> {
+async function inspectContainerIp(
+  execFn: LocalExecFunction,
+  containerName: string,
+): Promise<string> {
   try {
     const { stdout } = await execFn("docker", [
-      "inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}", containerName,
+      "inspect",
+      "-f",
+      "{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}",
+      containerName,
     ]);
     return stdout.trim().split(/\s+/)[0] ?? "";
   } catch {
@@ -117,10 +148,16 @@ async function inspectContainerIp(execFn: LocalExecFunction, containerName: stri
 }
 
 /** Discover the first network name a container is attached to (empty string if none). */
-async function inspectContainerNetwork(execFn: LocalExecFunction, containerName: string): Promise<string> {
+async function inspectContainerNetwork(
+  execFn: LocalExecFunction,
+  containerName: string,
+): Promise<string> {
   try {
     const { stdout } = await execFn("docker", [
-      "inspect", "-f", "{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}", containerName,
+      "inspect",
+      "-f",
+      "{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}",
+      containerName,
     ]);
     return stdout.trim().split(/\s+/)[0] ?? "";
   } catch {
@@ -142,19 +179,32 @@ async function startSocatSidecar(
   targetIp: string,
   hostPort: number,
 ): Promise<void> {
-  await execFn("docker", [
-    "run", "-d", "--rm",
-    "--name", sidecarName,
-    "--network", network,
-    "-p", `127.0.0.1:${hostPort}:${DEFAULT_POWERLINE_PORT}`,
-    SOCAT_IMAGE,
-    `TCP-LISTEN:${DEFAULT_POWERLINE_PORT},fork,reuseaddr`,
-    `TCP:${targetIp}:${DEFAULT_POWERLINE_PORT}`,
-  ], { timeout: DOCKER_PULL_TIMEOUT_MS });
+  await execFn(
+    "docker",
+    [
+      "run",
+      "-d",
+      "--rm",
+      "--name",
+      sidecarName,
+      "--network",
+      network,
+      "-p",
+      `127.0.0.1:${hostPort}:${DEFAULT_POWERLINE_PORT}`,
+      SOCAT_IMAGE,
+      `TCP-LISTEN:${DEFAULT_POWERLINE_PORT},fork,reuseaddr`,
+      `TCP:${targetIp}:${DEFAULT_POWERLINE_PORT}`,
+    ],
+    { timeout: DOCKER_PULL_TIMEOUT_MS },
+  );
 }
 
 /** Remove a Grackle-owned sidecar container, ignoring errors if it is absent. */
-async function removeSidecar(execFn: LocalExecFunction, sidecarName: string, logger: AdapterLogger): Promise<void> {
+async function removeSidecar(
+  execFn: LocalExecFunction,
+  sidecarName: string,
+  logger: AdapterLogger,
+): Promise<void> {
   try {
     await execFn("docker", ["rm", "-f", sidecarName]);
   } catch (err) {
@@ -163,7 +213,11 @@ async function removeSidecar(execFn: LocalExecFunction, sidecarName: string, log
 }
 
 /** Pull a Docker image, suppressing errors if the image exists locally. */
-async function pullImage(execFn: LocalExecFunction, image: string, logger: AdapterLogger): Promise<void> {
+async function pullImage(
+  execFn: LocalExecFunction,
+  image: string,
+  logger: AdapterLogger,
+): Promise<void> {
   try {
     await execFn("docker", ["pull", image], { timeout: DOCKER_PULL_TIMEOUT_MS });
   } catch {
@@ -172,7 +226,11 @@ async function pullImage(execFn: LocalExecFunction, image: string, logger: Adapt
 }
 
 /** Start a new Docker container with the given arguments. Returns true if created; false if it already existed. */
-async function createOrStartContainer(execFn: LocalExecFunction, containerName: string, runArgs: string[]): Promise<boolean> {
+async function createOrStartContainer(
+  execFn: LocalExecFunction,
+  containerName: string,
+  runArgs: string[],
+): Promise<boolean> {
   try {
     await execFn("docker", ["inspect", containerName]);
     // Container exists — just start it
@@ -186,10 +244,17 @@ async function createOrStartContainer(execFn: LocalExecFunction, containerName: 
 }
 
 /** Discover the host-mapped port of an existing container. */
-async function discoverHostPort(execFn: LocalExecFunction, containerName: string, containerPort: number, fallback: number, logger: AdapterLogger): Promise<number> {
+async function discoverHostPort(
+  execFn: LocalExecFunction,
+  containerName: string,
+  containerPort: number,
+  fallback: number,
+  logger: AdapterLogger,
+): Promise<number> {
   try {
     const { stdout } = await execFn("docker", [
-      "inspect", "-f",
+      "inspect",
+      "-f",
       `{{(index (index .NetworkSettings.Ports "${containerPort}/tcp") 0).HostPort}}`,
       containerName,
     ]);
@@ -204,10 +269,20 @@ async function discoverHostPort(execFn: LocalExecFunction, containerName: string
 }
 
 /** Poll until a Docker container reaches the Running state. */
-async function waitForContainerRunning(execFn: LocalExecFunction, sleepFn: (ms: number) => Promise<void>, containerName: string, logger: AdapterLogger): Promise<void> {
+async function waitForContainerRunning(
+  execFn: LocalExecFunction,
+  sleepFn: (ms: number) => Promise<void>,
+  containerName: string,
+  logger: AdapterLogger,
+): Promise<void> {
   for (let i = 0; i < CONTAINER_POLL_MAX_ATTEMPTS; i++) {
     try {
-      const { stdout } = await execFn("docker", ["inspect", "-f", "{{.State.Running}}", containerName]);
+      const { stdout } = await execFn("docker", [
+        "inspect",
+        "-f",
+        "{{.State.Running}}",
+        containerName,
+      ]);
       if (stdout === "true") {
         return;
       }
@@ -216,20 +291,33 @@ async function waitForContainerRunning(execFn: LocalExecFunction, sleepFn: (ms: 
     }
     await sleepFn(CONTAINER_POLL_DELAY_MS);
   }
-  throw new Error(`Container ${containerName} did not reach Running state after ${CONTAINER_POLL_MAX_ATTEMPTS} attempts`);
+  throw new Error(
+    `Container ${containerName} did not reach Running state after ${CONTAINER_POLL_MAX_ATTEMPTS} attempts`,
+  );
 }
 
 /** Clone or pull a git repo inside a container's workspace. */
-async function ensureRepoInContainer(execFn: LocalExecFunction, containerName: string, repo: string, logger: AdapterLogger): Promise<void> {
+async function ensureRepoInContainer(
+  execFn: LocalExecFunction,
+  containerName: string,
+  repo: string,
+  logger: AdapterLogger,
+): Promise<void> {
   // Check if already cloned
   try {
     const { stdout } = await execFn("docker", [
-      "exec", containerName, "bash", "-c", `ls ${WORKSPACE_PATH}/.git 2>/dev/null && echo exists`,
+      "exec",
+      containerName,
+      "bash",
+      "-c",
+      `ls ${WORKSPACE_PATH}/.git 2>/dev/null && echo exists`,
     ]);
     if (stdout.includes("exists")) {
-      await execFn("docker", [
-        "exec", "-w", WORKSPACE_PATH, containerName, "git", "pull", "--ff-only",
-      ], { timeout: GIT_PULL_TIMEOUT_MS }).catch((err) => {
+      await execFn(
+        "docker",
+        ["exec", "-w", WORKSPACE_PATH, containerName, "git", "pull", "--ff-only"],
+        { timeout: GIT_PULL_TIMEOUT_MS },
+      ).catch((err) => {
         logger.warn({ containerName, err }, "Git pull failed (may be detached HEAD)");
       });
       return;
@@ -243,21 +331,32 @@ async function ensureRepoInContainer(execFn: LocalExecFunction, containerName: s
 
   if (ghToken) {
     await execFn("docker", [
-      "exec", containerName, "git", "config", "--global",
-      "credential.helper", `!f() { echo "username=x-access-token"; echo "password=${ghToken}"; }; f`,
+      "exec",
+      containerName,
+      "git",
+      "config",
+      "--global",
+      "credential.helper",
+      `!f() { echo "username=x-access-token"; echo "password=${ghToken}"; }; f`,
     ]);
+    await execFn("docker", ["exec", containerName, "git", "clone", cloneUrl, WORKSPACE_PATH], {
+      timeout: GIT_CLONE_TIMEOUT_MS,
+    });
     await execFn("docker", [
-      "exec", containerName, "git", "clone", cloneUrl, WORKSPACE_PATH,
-    ], { timeout: GIT_CLONE_TIMEOUT_MS });
-    await execFn("docker", [
-      "exec", containerName, "git", "config", "--global", "--unset", "credential.helper",
+      "exec",
+      containerName,
+      "git",
+      "config",
+      "--global",
+      "--unset",
+      "credential.helper",
     ]).catch((err) => {
       logger.warn({ err }, "Failed to unset credential helper");
     });
   } else {
-    await execFn("docker", [
-      "exec", containerName, "git", "clone", cloneUrl, WORKSPACE_PATH,
-    ], { timeout: GIT_CLONE_TIMEOUT_MS });
+    await execFn("docker", ["exec", containerName, "git", "clone", cloneUrl, WORKSPACE_PATH], {
+      timeout: GIT_CLONE_TIMEOUT_MS,
+    });
   }
 }
 
@@ -265,7 +364,10 @@ async function ensureRepoInContainer(execFn: LocalExecFunction, containerName: s
 const SAFE_TOKEN_PATTERN: RegExp = /^[a-zA-Z0-9_\-]+$/;
 
 /** Get a GitHub token from the local `gh` CLI for private repo cloning. */
-async function getGitHubToken(execFn: LocalExecFunction, logger: AdapterLogger): Promise<string | undefined> {
+async function getGitHubToken(
+  execFn: LocalExecFunction,
+  logger: AdapterLogger,
+): Promise<string | undefined> {
   try {
     const { stdout } = await execFn("gh", ["auth", "token"]);
     if (!stdout) {
@@ -285,15 +387,18 @@ async function getGitHubToken(execFn: LocalExecFunction, logger: AdapterLogger):
  * Build the base Docker image from the docker/Dockerfile.powerline.
  * Resolves the monorepo root from import.meta.dirname (dist/adapters → 4 levels up).
  */
-async function buildBaseImage(execFn: LocalExecFunction, tag: string, logger: AdapterLogger): Promise<void> {
+async function buildBaseImage(
+  execFn: LocalExecFunction,
+  tag: string,
+  logger: AdapterLogger,
+): Promise<void> {
   const monorepoRoot = resolve(import.meta.dirname, "../../../../");
   logger.info({ tag, monorepoRoot }, "Building base PowerLine image");
-  await execFn("docker", [
-    "build",
-    "-f", resolve(monorepoRoot, "docker/Dockerfile.powerline"),
-    "-t", tag,
-    monorepoRoot,
-  ], { timeout: DOCKER_BUILD_TIMEOUT_MS });
+  await execFn(
+    "docker",
+    ["build", "-f", resolve(monorepoRoot, "docker/Dockerfile.powerline"), "-t", tag, monorepoRoot],
+    { timeout: DOCKER_BUILD_TIMEOUT_MS },
+  );
 }
 
 // ─── Docker Executor ───────────────────────────────────────
@@ -314,9 +419,11 @@ export class DockerExecutor implements RemoteExecutor {
 
   /** Execute a shell command inside the container and return stdout. */
   public async exec(command: string, opts?: { timeout?: number }): Promise<string> {
-    const { stdout } = await this.execFn("docker", [
-      "exec", this.containerName, "bash", "-c", command,
-    ], { timeout: opts?.timeout || DOCKER_EXEC_TIMEOUT_MS });
+    const { stdout } = await this.execFn(
+      "docker",
+      ["exec", this.containerName, "bash", "-c", command],
+      { timeout: opts?.timeout || DOCKER_EXEC_TIMEOUT_MS },
+    );
     return stdout;
   }
 
@@ -345,15 +452,17 @@ export class DockerExecutor implements RemoteExecutor {
       }
       resolvedPath = resolvedPath.replace(/\$HOME/g, this.resolvedHome);
     }
-    await this.execFn("docker", [
-      "cp", localPath, `${this.containerName}:${resolvedPath}`,
-    ], { timeout: DOCKER_EXEC_TIMEOUT_MS });
+    await this.execFn("docker", ["cp", localPath, `${this.containerName}:${resolvedPath}`], {
+      timeout: DOCKER_EXEC_TIMEOUT_MS,
+    });
     // docker cp creates files owned by root; fix ownership so the container's
     // default user (whoever PowerLine runs as) can write.
     const owner = await this.resolveOwner();
-    await this.execFn("docker", [
-      "exec", "-u", "root", this.containerName, "chown", "-R", owner, resolvedPath,
-    ], { timeout: DOCKER_EXEC_TIMEOUT_MS });
+    await this.execFn(
+      "docker",
+      ["exec", "-u", "root", this.containerName, "chown", "-R", owner, resolvedPath],
+      { timeout: DOCKER_EXEC_TIMEOUT_MS },
+    );
   }
 }
 
@@ -374,7 +483,11 @@ export class DockerAdapter implements EnvironmentAdapter {
     this.isGitHubProviderEnabled = deps.isGitHubProviderEnabled ?? (() => false);
   }
 
-  public async *provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
+  public async *provision(
+    environmentId: string,
+    config: Record<string, unknown>,
+    powerlineToken: string,
+  ): AsyncGenerator<ProvisionEvent> {
     const cfg = config as unknown as DockerEnvironmentConfig;
 
     // Attach mode: bootstrap PowerLine inside an existing, externally-managed
@@ -386,7 +499,7 @@ export class DockerAdapter implements EnvironmentAdapter {
 
     const image = cfg.image || DEFAULT_IMAGE;
     const containerName = cfg.containerName || `grackle-${environmentId}`;
-    const localPort = cfg.localPort || await findFreePort();
+    const localPort = cfg.localPort || (await findFreePort());
 
     // Build or pull the base image
     const isDefault = image === DEFAULT_IMAGE;
@@ -399,7 +512,7 @@ export class DockerAdapter implements EnvironmentAdapter {
       await pullImage(this.execFn, image, this.logger);
     }
 
-    yield { stage: "creating", message: `Creating container ${containerName}...`, progress: 0.10 };
+    yield { stage: "creating", message: `Creating container ${containerName}...`, progress: 0.1 };
 
     const runArgs = this.buildRunArgs(containerName, localPort, image, cfg, powerlineToken);
 
@@ -407,7 +520,13 @@ export class DockerAdapter implements EnvironmentAdapter {
     let actualPort = localPort;
     if (!isNew) {
       yield { stage: "starting", message: "Container exists, starting...", progress: 0.12 };
-      actualPort = await discoverHostPort(this.execFn, containerName, DEFAULT_POWERLINE_PORT, localPort, this.logger);
+      actualPort = await discoverHostPort(
+        this.execFn,
+        containerName,
+        DEFAULT_POWERLINE_PORT,
+        localPort,
+        this.logger,
+      );
     }
 
     containerPorts.set(environmentId, actualPort);
@@ -428,7 +547,7 @@ export class DockerAdapter implements EnvironmentAdapter {
       });
     } else {
       // Container already exists — just restart PowerLine with fresh token
-      yield { stage: "reconnecting", message: "Restarting PowerLine...", progress: 0.60 };
+      yield { stage: "reconnecting", message: "Restarting PowerLine...", progress: 0.6 };
       await startRemotePowerLine(executor, powerlineToken, {
         extraEnv: cfg.env,
         host: "0.0.0.0",
@@ -437,12 +556,12 @@ export class DockerAdapter implements EnvironmentAdapter {
     }
 
     if (cfg.repo) {
-      yield { stage: "cloning", message: `Cloning ${cfg.repo}...`, progress: 0.80 };
+      yield { stage: "cloning", message: `Cloning ${cfg.repo}...`, progress: 0.8 };
       await ensureRepoInContainer(this.execFn, containerName, cfg.repo, this.logger);
       yield { stage: "cloning", message: "Repo ready", progress: 0.85 };
     }
 
-    yield { stage: "connecting", message: `Connecting on port ${actualPort}...`, progress: 0.90 };
+    yield { stage: "connecting", message: `Connecting on port ${actualPort}...`, progress: 0.9 };
   }
 
   /**
@@ -450,7 +569,11 @@ export class DockerAdapter implements EnvironmentAdapter {
    * inside it via `docker exec`, then resolve connectivity. The container's
    * lifecycle stays owned by whatever created it.
    */
-  private async *provisionAttach(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
+  private async *provisionAttach(
+    environmentId: string,
+    config: Record<string, unknown>,
+    powerlineToken: string,
+  ): AsyncGenerator<ProvisionEvent> {
     const cfg = config as unknown as DockerEnvironmentConfig;
     const target = cfg.attach!;
 
@@ -472,7 +595,7 @@ export class DockerAdapter implements EnvironmentAdapter {
     yield { stage: "connecting", message: "Resolving connectivity...", progress: 0.85 };
     const conn = await this.resolveAttachConnectivity(environmentId, target, powerlineToken);
     attachConnections.set(environmentId, conn);
-    yield { stage: "connecting", message: `Connecting via ${conn.url}...`, progress: 0.90 };
+    yield { stage: "connecting", message: `Connecting via ${conn.url}...`, progress: 0.9 };
   }
 
   /**
@@ -480,14 +603,18 @@ export class DockerAdapter implements EnvironmentAdapter {
    * full bootstrap, then re-resolve connectivity. Throws for non-attach configs
    * so the server's reconnect-or-provision fallback runs a full create-mode provision.
    */
-  public async *reconnect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
+  public async *reconnect(
+    environmentId: string,
+    config: Record<string, unknown>,
+    powerlineToken: string,
+  ): AsyncGenerator<ProvisionEvent> {
     const cfg = config as unknown as DockerEnvironmentConfig;
     if (!cfg.attach) {
       throw new Error("Docker reconnect is only supported in attach mode");
     }
     const target = cfg.attach;
 
-    yield { stage: "reconnecting", message: `Reconnecting to ${target}...`, progress: 0.10 };
+    yield { stage: "reconnecting", message: `Reconnecting to ${target}...`, progress: 0.1 };
     if (!(await inspectContainerRunning(this.execFn, target))) {
       throw new Error(`Cannot attach: container '${target}' is not running (or does not exist).`);
     }
@@ -499,10 +626,10 @@ export class DockerAdapter implements EnvironmentAdapter {
       probeFirst: true,
     });
 
-    yield { stage: "reconnecting", message: "Resolving connectivity...", progress: 0.60 };
+    yield { stage: "reconnecting", message: "Resolving connectivity...", progress: 0.6 };
     const conn = await this.resolveAttachConnectivity(environmentId, target, powerlineToken);
     attachConnections.set(environmentId, conn);
-    yield { stage: "reconnecting", message: `Reconnected via ${conn.url}`, progress: 0.90 };
+    yield { stage: "reconnecting", message: `Reconnected via ${conn.url}`, progress: 0.9 };
   }
 
   /**
@@ -511,7 +638,11 @@ export class DockerAdapter implements EnvironmentAdapter {
    * 2. the container's bridge IP, if reachable directly from the host;
    * 3. otherwise a Grackle-owned socat sidecar publishing a host loopback port.
    */
-  private async resolveAttachConnectivity(environmentId: string, target: string, powerlineToken: string): Promise<AttachConnection> {
+  private async resolveAttachConnectivity(
+    environmentId: string,
+    target: string,
+    powerlineToken: string,
+  ): Promise<AttachConnection> {
     if (DOCKER_NETWORK) {
       return { url: `http://${target}:${DEFAULT_POWERLINE_PORT}`, port: DEFAULT_POWERLINE_PORT };
     }
@@ -526,7 +657,9 @@ export class DockerAdapter implements EnvironmentAdapter {
     }
 
     if (!ip) {
-      throw new Error(`Cannot determine the IP address of container '${target}' for attach connectivity`);
+      throw new Error(
+        `Cannot determine the IP address of container '${target}' for attach connectivity`,
+      );
     }
 
     const network = (await inspectContainerNetwork(this.execFn, target)) || "bridge";
@@ -535,7 +668,10 @@ export class DockerAdapter implements EnvironmentAdapter {
     // Clear any stale sidecar from a previous attach before starting a fresh one.
     await removeSidecar(this.execFn, sidecarName, this.logger);
     await startSocatSidecar(this.execFn, sidecarName, network, ip, hostPort);
-    this.logger.info({ environmentId, target, network, hostPort }, "Started socat sidecar for attach connectivity");
+    this.logger.info(
+      { environmentId, target, network, hostPort },
+      "Started socat sidecar for attach connectivity",
+    );
     return { url: `http://127.0.0.1:${hostPort}`, port: hostPort, sidecarName };
   }
 
@@ -550,7 +686,11 @@ export class DockerAdapter implements EnvironmentAdapter {
     }
   }
 
-  public async connect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection> {
+  public async connect(
+    environmentId: string,
+    config: Record<string, unknown>,
+    powerlineToken: string,
+  ): Promise<PowerLineConnection> {
     const cfg = config as unknown as DockerEnvironmentConfig;
 
     let connectUrl: string;
@@ -560,7 +700,10 @@ export class DockerAdapter implements EnvironmentAdapter {
       if (!conn) {
         // No cached connectivity (e.g. after a server restart). Re-resolve it —
         // recreating the socat sidecar if needed — instead of failing the connect.
-        this.logger.info({ environmentId, target: cfg.attach }, "No cached attach connectivity; re-resolving");
+        this.logger.info(
+          { environmentId, target: cfg.attach },
+          "No cached attach connectivity; re-resolving",
+        );
         conn = await this.resolveAttachConnectivity(environmentId, cfg.attach, powerlineToken);
         attachConnections.set(environmentId, conn);
       }
@@ -568,7 +711,8 @@ export class DockerAdapter implements EnvironmentAdapter {
       port = conn.port;
     } else {
       const containerName = cfg.containerName || `grackle-${environmentId}`;
-      const localPort = containerPorts.get(environmentId) || cfg.localPort || DEFAULT_POWERLINE_PORT;
+      const localPort =
+        containerPorts.get(environmentId) || cfg.localPort || DEFAULT_POWERLINE_PORT;
       port = localPort;
       // When on a shared Docker network, connect directly to the sibling container
       // by name on the default PowerLine port. Otherwise, use the mapped host port.
@@ -589,7 +733,9 @@ export class DockerAdapter implements EnvironmentAdapter {
       }
     }
 
-    throw new Error(`Could not reach PowerLine after ${CONNECT_MAX_RETRIES} attempts: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`);
+    throw new Error(
+      `Could not reach PowerLine after ${CONNECT_MAX_RETRIES} attempts: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`,
+    );
   }
 
   public async disconnect(environmentId: string): Promise<void> {
@@ -662,10 +808,7 @@ export class DockerAdapter implements EnvironmentAdapter {
     cfg: DockerEnvironmentConfig,
     powerlineToken: string,
   ): string[] {
-    const args = [
-      "run", "-d",
-      "--name", containerName,
-    ];
+    const args = ["run", "-d", "--name", containerName];
 
     // When running inside a container (DooD), join the shared network so the
     // server can reach the sibling by container name. Otherwise, map the port

@@ -118,10 +118,14 @@ export function CoordinationList({
 
       {loading && streams.length === 0 && <div className={styles.state}>Loading{"…"}</div>}
       {!loading && loadError && (
-        <div className={styles.state} data-testid="coordination-error">Unable to load streams</div>
+        <div className={styles.state} data-testid="coordination-error">
+          Unable to load streams
+        </div>
       )}
       {!loading && !loadError && loadedOnce && streams.length === 0 && (
-        <div className={styles.state} data-testid="coordination-empty">No active streams</div>
+        <div className={styles.state} data-testid="coordination-empty">
+          No active streams
+        </div>
       )}
 
       {groups.map((group) => (
@@ -146,7 +150,8 @@ export function CoordinationList({
                 </span>
                 <span className={styles.streamName}>{stream.name}</span>
                 <span className={styles.meta}>
-                  {stream.subscriberCount} {stream.subscriberCount === 1 ? "sub" : "subs"} {"·"} {stream.messageBufferDepth} buffered
+                  {stream.subscriberCount} {stream.subscriberCount === 1 ? "sub" : "subs"} {"·"}{" "}
+                  {stream.messageBufferDepth} buffered
                 </span>
               </button>
             );

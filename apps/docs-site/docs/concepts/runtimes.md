@@ -10,12 +10,12 @@ A **runtime** is the AI agent engine that actually does the work inside a sessio
 
 ## Supported runtimes
 
-| Runtime | ID | Default Model | SDK |
-|---------|-----|--------------|-----|
-| **Claude Code** | `claude-code` | `sonnet` | Anthropic Claude Agent SDK |
-| **GitHub Copilot** | `copilot` | `gpt-4o` | GitHub Copilot SDK |
-| **OpenAI Codex** | `codex` | `o3` | OpenAI Codex SDK |
-| **Goose** | `goose` | *(provider-dependent)* | ACP (native) |
+| Runtime            | ID            | Default Model          | SDK                        |
+| ------------------ | ------------- | ---------------------- | -------------------------- |
+| **Claude Code**    | `claude-code` | `sonnet`               | Anthropic Claude Agent SDK |
+| **GitHub Copilot** | `copilot`     | `gpt-4o`               | GitHub Copilot SDK         |
+| **OpenAI Codex**   | `codex`       | `o3`                   | OpenAI Codex SDK           |
+| **Goose**          | `goose`       | _(provider-dependent)_ | ACP (native)               |
 
 All four runtimes support the same Grackle features: streaming, tool use, session resume, MCP integration, and worktree isolation.
 
@@ -25,12 +25,12 @@ Goose is provider-agnostic — it can use Anthropic, OpenAI, Google, and many ot
 
 All runtimes are tested across all environment types. Here's the current support matrix:
 
-| Runtime | Local | Docker | SSH | Codespace |
-|---------|:-----:|:------:|:---:|:---------:|
-| **Claude Code** | ✅ | ✅ | ✅ | ✅ |
-| **Copilot** | ✅ | ✅ | ✅ | ✅ |
-| **Codex** | ✅ | ✅ | ✅ | ✅ |
-| **Goose** | ✅ | ✅ | ✅ | ✅ |
+| Runtime         | Local | Docker | SSH | Codespace |
+| --------------- | :---: | :----: | :-: | :-------: |
+| **Claude Code** |  ✅   |   ✅   | ✅  |    ✅     |
+| **Copilot**     |  ✅   |   ✅   | ✅  |    ✅     |
+| **Codex**       |  ✅   |   ✅   | ✅  |    ✅     |
+| **Goose**       |  ✅   |   ✅   | ✅  |    ✅     |
 
 Grackle handles credential injection, git repo setup, and agent bootstrapping for each combination. If a runtime needs a specific token on a remote environment (e.g., `GITHUB_TOKEN` for Copilot on Docker), the [token broker](../guides/credentials) pushes it automatically.
 
@@ -52,6 +52,7 @@ graph LR
 ```
 
 The runtime determines:
+
 - Which AI model provider is called
 - How the conversation is managed
 - What tools the agent has access to
@@ -74,13 +75,13 @@ Or change the default persona's runtime in the web UI under **Settings > Persona
 
 Each runtime needs credentials to authenticate with its AI provider. Grackle manages this through **credential providers**:
 
-| Provider | Modes | What it does |
-|----------|-------|-------------|
-| **Claude** | `off`, `subscription`, `api_key` | Anthropic API access |
-| **GitHub** | `off`, `on` | GitHub token for Copilot and Codespace access |
-| **Copilot** | `off`, `on` | GitHub Copilot authentication |
-| **Codex** | `off`, `on` | OpenAI API access |
-| **Goose** | `off`, `on` | Goose config and provider API keys |
+| Provider    | Modes                            | What it does                                  |
+| ----------- | -------------------------------- | --------------------------------------------- |
+| **Claude**  | `off`, `subscription`, `api_key` | Anthropic API access                          |
+| **GitHub**  | `off`, `on`                      | GitHub token for Copilot and Codespace access |
+| **Copilot** | `off`, `on`                      | GitHub Copilot authentication                 |
+| **Codex**   | `off`, `on`                      | OpenAI API access                             |
+| **Goose**   | `off`, `on`                      | Goose config and provider API keys            |
 
 Configure them from the CLI:
 

@@ -21,10 +21,10 @@ export class CopilotRuntime extends BaseAgentRuntime {
 
 // Warnings were encountered during analysis:
 //
-// src/copilot.ts:36:1 - (ae-forgotten-export) The symbol "CopilotSdkModule" needs to be exported by the entry point index.d.ts
-// src/copilot.ts:74:1 - (ae-internal-missing-underscore) The name "resolveGithubToken" should be prefixed with an underscore because the declaration is marked as @internal
-// src/copilot.ts:85:1 - (ae-internal-missing-underscore) The name "resolveProviderConfig" should be prefixed with an underscore because the declaration is marked as @internal
-// src/copilot.ts:109:1 - (ae-internal-missing-underscore) The name "CopilotSession" should be prefixed with an underscore because the declaration is marked as @internal
+// src/copilot.ts:46:1 - (ae-forgotten-export) The symbol "CopilotSdkModule" needs to be exported by the entry point index.d.ts
+// src/copilot.ts:87:1 - (ae-internal-missing-underscore) The name "resolveGithubToken" should be prefixed with an underscore because the declaration is marked as @internal
+// src/copilot.ts:98:1 - (ae-internal-missing-underscore) The name "resolveProviderConfig" should be prefixed with an underscore because the declaration is marked as @internal
+// src/copilot.ts:122:1 - (ae-internal-missing-underscore) The name "CopilotSession" should be prefixed with an underscore because the declaration is marked as @internal
 
 // (No @packageDocumentation comment for this package)
 

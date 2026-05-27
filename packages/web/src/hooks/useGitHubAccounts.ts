@@ -8,7 +8,11 @@
  */
 
 import { useState, useCallback } from "react";
-import type { GitHubAccountData, UseGitHubAccountsResult, GrackleEvent } from "@grackle-ai/web-components";
+import type {
+  GitHubAccountData,
+  UseGitHubAccountsResult,
+  GrackleEvent,
+} from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
 import { coreClient as grackleClient } from "./useGrackleClient.js";
 import { useLoadingState } from "./useLoadingState.js";
@@ -41,47 +45,65 @@ export function useGitHubAccounts(): UseGitHubAccountsResult {
     }
   }, [trackAccounts]);
 
-  const handleEvent = useCallback((event: GrackleEvent): boolean => {
-    if (event.type === "github_account.changed") {
-      loadGitHubAccounts().catch(() => {});
-      return true;
-    }
-    return false;
-  }, [loadGitHubAccounts]);
+  const handleEvent = useCallback(
+    (event: GrackleEvent): boolean => {
+      if (event.type === "github_account.changed") {
+        loadGitHubAccounts().catch(() => {});
+        return true;
+      }
+      return false;
+    },
+    [loadGitHubAccounts],
+  );
 
-  const addGitHubAccount = useCallback(async (
-    label: string,
-    token: string,
-    username: string,
-    isDefault: boolean,
-  ): Promise<void> => {
-    const resp = await grackleClient.addGitHubAccount({ label, token, username, isDefault });
-    setGitHubAccounts((prev) => {
-      const cleared = resp.isDefault ? prev.map((a) => ({ ...a, isDefault: false })) : prev;
-      return [...cleared, { id: resp.id, label: resp.label, username: resp.username, isDefault: resp.isDefault, createdAt: resp.createdAt }];
-    });
-  }, []);
+  const addGitHubAccount = useCallback(
+    async (label: string, token: string, username: string, isDefault: boolean): Promise<void> => {
+      const resp = await grackleClient.addGitHubAccount({ label, token, username, isDefault });
+      setGitHubAccounts((prev) => {
+        const cleared = resp.isDefault ? prev.map((a) => ({ ...a, isDefault: false })) : prev;
+        return [
+          ...cleared,
+          {
+            id: resp.id,
+            label: resp.label,
+            username: resp.username,
+            isDefault: resp.isDefault,
+            createdAt: resp.createdAt,
+          },
+        ];
+      });
+    },
+    [],
+  );
 
-  const updateGitHubAccount = useCallback(async (
-    id: string,
-    fields: { label?: string; token?: string; isDefault?: boolean },
-  ): Promise<void> => {
-    const resp = await grackleClient.updateGitHubAccount({ id, ...fields });
-    setGitHubAccounts((prev) =>
-      prev.map((a) =>
-        a.id === resp.id
-          ? { ...a, label: resp.label, username: resp.username, isDefault: resp.isDefault }
-          : fields.isDefault ? { ...a, isDefault: false } : a,
-      ),
-    );
-  }, []);
+  const updateGitHubAccount = useCallback(
+    async (
+      id: string,
+      fields: { label?: string; token?: string; isDefault?: boolean },
+    ): Promise<void> => {
+      const resp = await grackleClient.updateGitHubAccount({ id, ...fields });
+      setGitHubAccounts((prev) =>
+        prev.map((a) =>
+          a.id === resp.id
+            ? { ...a, label: resp.label, username: resp.username, isDefault: resp.isDefault }
+            : fields.isDefault
+              ? { ...a, isDefault: false }
+              : a,
+        ),
+      );
+    },
+    [],
+  );
 
   const removeGitHubAccount = useCallback(async (id: string): Promise<void> => {
     await grackleClient.removeGitHubAccount({ id });
     setGitHubAccounts((prev) => prev.filter((a) => a.id !== id));
   }, []);
 
-  const importGitHubAccounts = useCallback(async (): Promise<{ imported: number; usernames: string[] }> => {
+  const importGitHubAccounts = useCallback(async (): Promise<{
+    imported: number;
+    usernames: string[];
+  }> => {
     const resp = await grackleClient.importGitHubAccounts({});
     if (resp.imported > 0) {
       await loadGitHubAccounts();

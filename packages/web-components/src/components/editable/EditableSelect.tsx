@@ -76,29 +76,35 @@ export function EditableSelect(props: EditableSelectProps): JSX.Element {
   }, [field.isEditing]);
 
   /** Select saves immediately on change and exits edit mode. */
-  const handleSelectChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newValue = e.target.value;
-    field.ignoreInitialBlurRef.current = false;
-    if (newValue !== value) {
-      onSave(newValue);
-    }
-    field.cancelEdit();
-  }, [value, onSave, field]);
+  const handleSelectChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const newValue = e.target.value;
+      field.ignoreInitialBlurRef.current = false;
+      if (newValue !== value) {
+        onSave(newValue);
+      }
+      field.cancelEdit();
+    },
+    [value, onSave, field],
+  );
 
   /** Blur just cancels (no auto-save for selects). */
-  const handleSelectBlur = useCallback((event: React.FocusEvent) => {
-    if (field.ignoreInitialBlurRef.current) {
-      field.ignoreInitialBlurRef.current = false;
-      return;
-    }
-    if (
-      event.relatedTarget instanceof HTMLElement &&
-      event.relatedTarget.dataset.editAction === fieldId
-    ) {
-      return;
-    }
-    field.cancelEdit();
-  }, [fieldId, field]);
+  const handleSelectBlur = useCallback(
+    (event: React.FocusEvent) => {
+      if (field.ignoreInitialBlurRef.current) {
+        field.ignoreInitialBlurRef.current = false;
+        return;
+      }
+      if (
+        event.relatedTarget instanceof HTMLElement &&
+        event.relatedTarget.dataset.editAction === fieldId
+      ) {
+        return;
+      }
+      field.cancelEdit();
+    },
+    [fieldId, field],
+  );
 
   // Create mode: always show select
   if (mode === "create") {
@@ -111,7 +117,9 @@ export function EditableSelect(props: EditableSelectProps): JSX.Element {
         data-testid={testId ? `${testId}-select` : undefined}
       >
         {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
         ))}
       </select>
     );
@@ -131,7 +139,9 @@ export function EditableSelect(props: EditableSelectProps): JSX.Element {
         data-testid={testId ? `${testId}-select` : undefined}
       >
         {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
         ))}
       </select>
     );
@@ -149,12 +159,12 @@ export function EditableSelect(props: EditableSelectProps): JSX.Element {
       aria-label={ariaLabel}
       data-testid={testId ? `${testId}-button` : undefined}
     >
-      {displayContent !== undefined ? displayContent : (
-        selectedLabel ? (
-          <span>{selectedLabel}</span>
-        ) : (
-          <span className={styles.metaPlaceholder}>{placeholder || "None"}</span>
-        )
+      {displayContent !== undefined ? (
+        displayContent
+      ) : selectedLabel ? (
+        <span>{selectedLabel}</span>
+      ) : (
+        <span className={styles.metaPlaceholder}>{placeholder || "None"}</span>
       )}
       <span className={styles.editButton} aria-hidden="true">
         &#x270F;&#xFE0F;

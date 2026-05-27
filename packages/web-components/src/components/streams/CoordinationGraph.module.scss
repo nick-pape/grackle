@@ -1,4 +1,4 @@
-@use '../../styles/mixins' as *;
+@use "../../styles/mixins" as *;
 
 // =============================================================================
 // Coordination graph - React Flow theme overrides + session/stream node styles
@@ -124,7 +124,9 @@
 
 .chatroom {
   border-color: var(--accent-green);
-  box-shadow: 0 0 0 1px var(--accent-green), 0 0 12px rgba(34, 197, 94, 0.25);
+  box-shadow:
+    0 0 0 1px var(--accent-green),
+    0 0 12px rgba(34, 197, 94, 0.25);
 }
 
 .channel {

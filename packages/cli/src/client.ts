@@ -16,11 +16,15 @@ export function loadApiKey(): string {
   try {
     raw = readFileSync(keyPath, "utf8");
   } catch {
-    throw new Error(`Could not read API key from ${keyPath}\nRun "grackle serve" first to generate a key, or set GRACKLE_API_KEY.`);
+    throw new Error(
+      `Could not read API key from ${keyPath}\nRun "grackle serve" first to generate a key, or set GRACKLE_API_KEY.`,
+    );
   }
   const key = raw.trim();
   if (!key) {
-    throw new Error(`API key file is empty: ${keyPath}\nRun "grackle serve" first to generate a key.`);
+    throw new Error(
+      `API key file is empty: ${keyPath}\nRun "grackle serve" first to generate a key.`,
+    );
   }
   return key;
 }

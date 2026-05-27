@@ -131,7 +131,14 @@ describe("stdin-delivery", () => {
     });
 
     it("registers async delivery listener on session", () => {
-      sessionStore.createSession("session-1", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+      sessionStore.createSession(
+        "session-1",
+        "test-env",
+        "claude-code",
+        "test",
+        "sonnet",
+        "/tmp/log",
+      );
       ensureStdinStream("session-1");
 
       // Publish a message — if listener is registered, sendInput should be called
@@ -163,7 +170,14 @@ describe("stdin-delivery", () => {
     });
 
     it("delivers message to session via async listener as plain text", () => {
-      sessionStore.createSession("session-1", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+      sessionStore.createSession(
+        "session-1",
+        "test-env",
+        "claude-code",
+        "test",
+        "sonnet",
+        "/tmp/log",
+      );
       ensureStdinStream("session-1");
 
       publishToStdin("session-1", "hello from user");
@@ -181,7 +195,14 @@ describe("stdin-delivery", () => {
 
   describe("stdin vs pipe message formatting", () => {
     it("stdin messages arrive as plain text", () => {
-      sessionStore.createSession("session-1", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+      sessionStore.createSession(
+        "session-1",
+        "test-env",
+        "claude-code",
+        "test",
+        "sonnet",
+        "/tmp/log",
+      );
       ensureStdinStream("session-1");
 
       publishToStdin("session-1", "user input");
@@ -192,7 +213,18 @@ describe("stdin-delivery", () => {
 
     it("pipe messages still arrive with [fd:N] prefix", () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "async",
+      );
 
       const pipeStream = streamRegistry.createStream("pipe:child");
       streamRegistry.subscribe(pipeStream.id, "parent", "rw", "async", true);
@@ -211,7 +243,18 @@ describe("stdin-delivery", () => {
 
     it("both stdin and pipe can coexist on the same session", () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "async",
+      );
 
       // Create stdin for child
       ensureStdinStream("child");
@@ -243,7 +286,14 @@ describe("stdin-delivery", () => {
 
   describe("error handling", () => {
     it("delivery fails when environment is disconnected", () => {
-      sessionStore.createSession("session-1", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+      sessionStore.createSession(
+        "session-1",
+        "test-env",
+        "claude-code",
+        "test",
+        "sonnet",
+        "/tmp/log",
+      );
       ensureStdinStream("session-1");
 
       // Disconnect environment
@@ -270,7 +320,8 @@ describe("stdin-delivery", () => {
       cleanupStdinStream("session-1");
 
       expect(streamRegistry.getStreamByName("stdin:session-1")).toBeUndefined();
-      const sessionSubs = streamRegistry.getSubscriptionsForSession("session-1")
+      const sessionSubs = streamRegistry
+        .getSubscriptionsForSession("session-1")
         .filter((s) => streamRegistry.getStream(s.streamId)?.name.startsWith("stdin:"));
       expect(sessionSubs).toHaveLength(0);
     });

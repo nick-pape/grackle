@@ -59,27 +59,27 @@ The **Grackle Server** is the control plane. It manages environments, sessions, 
 
 ## Features
 
-| Feature | Description |
-|---|---|
-| **[Chat interface](./guides/chat)** | Natural language command interface — just describe what you want |
-| **Real-time streaming** | Watch agent tool calls and output as they happen |
-| **Git worktree isolation** | Every task gets its own branch — zero interference between agents |
-| **[Knowledge graph](./guides/knowledge-graph)** | Semantic memory backed by Neo4j — agents share knowledge automatically |
-| **Multi-runtime** | Claude Code, Copilot, Codex, and Goose — swap freely |
-| **[Task trees](./concepts/projects-tasks)** | Decompose work into parent/child subtasks up to 8 levels deep |
-| **[Signals](./guides/orchestration#signals)** | SIGTERM, SIGCHLD, cascade kill, orphan adoption — kernel-style process control |
-| **[Personas](./concepts/personas)** | Specialized agent configs with system prompts, tools, and model selection |
-| **[Scheduled triggers](./guides/scheduled-triggers)** | Cron-style automated task creation |
-| **[Plugin system](./guides/plugins)** | Compose server capabilities — orchestration, scheduling, knowledge graph |
-| **[MCP server](./guides/mcp)** | Expose Grackle's full API as MCP tools for any AI agent |
+| Feature                                               | Description                                                                    |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------ |
+| **[Chat interface](./guides/chat)**                   | Natural language command interface — just describe what you want               |
+| **Real-time streaming**                               | Watch agent tool calls and output as they happen                               |
+| **Git worktree isolation**                            | Every task gets its own branch — zero interference between agents              |
+| **[Knowledge graph](./guides/knowledge-graph)**       | Semantic memory backed by Neo4j — agents share knowledge automatically         |
+| **Multi-runtime**                                     | Claude Code, Copilot, Codex, and Goose — swap freely                           |
+| **[Task trees](./concepts/projects-tasks)**           | Decompose work into parent/child subtasks up to 8 levels deep                  |
+| **[Signals](./guides/orchestration#signals)**         | SIGTERM, SIGCHLD, cascade kill, orphan adoption — kernel-style process control |
+| **[Personas](./concepts/personas)**                   | Specialized agent configs with system prompts, tools, and model selection      |
+| **[Scheduled triggers](./guides/scheduled-triggers)** | Cron-style automated task creation                                             |
+| **[Plugin system](./guides/plugins)**                 | Compose server capabilities — orchestration, scheduling, knowledge graph       |
+| **[MCP server](./guides/mcp)**                        | Expose Grackle's full API as MCP tools for any AI agent                        |
 
 ## Scales from remote control to swarms
 
-| Level | What you get | What you use |
-|-------|-------------|-------------|
-| **1. Remote control** | One agent, one environment, you watch it work | Sessions, environments |
-| **2. Structured tasks** | Break work into tasks with branches and review gates | + Workspaces, tasks, personas |
-| **3. Parallel agents** | Multiple agents working independently across environments | + Multiple environments |
+| Level                       | What you get                                                      | What you use                      |
+| --------------------------- | ----------------------------------------------------------------- | --------------------------------- |
+| **1. Remote control**       | One agent, one environment, you watch it work                     | Sessions, environments            |
+| **2. Structured tasks**     | Break work into tasks with branches and review gates              | + Workspaces, tasks, personas     |
+| **3. Parallel agents**      | Multiple agents working independently across environments         | + Multiple environments           |
 | **4. Orchestrator pattern** | Parent agent decomposes work and coordinates child agents via MCP | + Task trees, MCP broker, signals |
 
 You don't need to adopt everything at once. Each level builds on the last — see the [orchestration guide](./guides/orchestration) for details.

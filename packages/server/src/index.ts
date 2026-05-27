@@ -4,12 +4,22 @@ import http2 from "node:http2";
 import { randomUUID } from "node:crypto";
 import {
   createServiceCollector,
-  startHeartbeat, getAdapter, setConnection, removeConnection,
-  emit, subscribe, attemptReconnects, resetReconnectState,
+  startHeartbeat,
+  getAdapter,
+  setConnection,
+  removeConnection,
+  emit,
+  subscribe,
+  attemptReconnects,
+  resetReconnectState,
   parseAdapterConfig,
   ReconciliationManager,
-  logger, exec, detectLanIp,
-  runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace,
+  logger,
+  exec,
+  detectLanIp,
+  runWithTrace,
+  isValidTraceId,
+  wrapAsyncIterableWithTrace,
   initOtlpLogs,
   importAccountsFromGhCli,
   publishWidgetEvent,
@@ -17,20 +27,38 @@ import {
 } from "@grackle-ai/core";
 import { createKnowledgePlugin, getKnowledgeReadinessCheck } from "@grackle-ai/plugin-knowledge";
 import { loadPlugins, type PluginContext } from "@grackle-ai/plugin-sdk";
-import { envRegistry, sessionStore, settingsStore, personaStore, workspaceStore, workspaceEnvironmentLinkStore, taskStore, sqlite, grackleHome, pluginStore } from "@grackle-ai/database";
+import {
+  envRegistry,
+  sessionStore,
+  settingsStore,
+  personaStore,
+  workspaceStore,
+  workspaceEnvironmentLinkStore,
+  taskStore,
+  sqlite,
+  grackleHome,
+  pluginStore,
+} from "@grackle-ai/database";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { LocalPowerLineManager } from "./local-powerline-manager.js";
 import { registerCrashHandlers } from "./crash-handler.js";
 import { resolveServerConfig } from "./config.js";
 import { createMcpServer, type ToolDefinition } from "@grackle-ai/mcp";
 import {
-  loadOrCreateApiKey, verifyApiKey, setAuthLogger,
+  loadOrCreateApiKey,
+  verifyApiKey,
+  setAuthLogger,
   generatePairingCode,
   startSessionCleanup,
   startPairingCleanup,
   startOAuthCleanup,
 } from "@grackle-ai/auth";
-import { createWebServer, createSandboxServer, isWildcardAddress, type ReadinessResult } from "@grackle-ai/web-server";
+import {
+  createWebServer,
+  createSandboxServer,
+  isWildcardAddress,
+  type ReadinessResult,
+} from "@grackle-ai/web-server";
 import { createRequire } from "node:module";
 import { initializeDatabase } from "./database-init.js";
 import { registerAllAdapters } from "./adapter-registry.js";
@@ -38,7 +66,11 @@ import { bootstrapLocalEnvironment } from "./local-environment.js";
 import { createCorePlugin } from "./core-plugin.js";
 import { createSchedulingPlugin } from "@grackle-ai/plugin-scheduling";
 import { createOrchestrationPlugin } from "@grackle-ai/plugin-orchestration";
-import { setLoadedPluginNames, setChannelConfig, ingestChannelMessage } from "@grackle-ai/plugin-core";
+import {
+  setLoadedPluginNames,
+  setChannelConfig,
+  ingestChannelMessage,
+} from "@grackle-ai/plugin-core";
 import { createShutdown } from "./shutdown.js";
 
 /** Require function for loading optional native modules (qrcode). */
@@ -77,9 +109,19 @@ async function main(): Promise<void> {
       skipLocalPowerline: config.skipLocalPowerline,
     },
     {
-      envRegistry, settingsStore, personaStore, workspaceStore, workspaceEnvironmentLinkStore, taskStore,
-      getAdapter, parseAdapterConfig, setConnection,
-      reconnectOrProvision, emit, resetReconnectState, logger,
+      envRegistry,
+      settingsStore,
+      personaStore,
+      workspaceStore,
+      workspaceEnvironmentLinkStore,
+      taskStore,
+      getAdapter,
+      parseAdapterConfig,
+      setConnection,
+      reconnectOrProvision,
+      emit,
+      resetReconnectState,
+      logger,
       createPowerLineManager: (opts) => new LocalPowerLineManager(opts),
     },
   );
@@ -89,10 +131,7 @@ async function main(): Promise<void> {
   const GH_CHECK_TIMEOUT_MS: number = 5_000;
   exec("gh", ["version"], { timeout: GH_CHECK_TIMEOUT_MS })
     .then((result) => {
-      logger.info(
-        { version: result.stdout.split("\n")[0] },
-        "GitHub CLI available",
-      );
+      logger.info({ version: result.stdout.split("\n")[0] }, "GitHub CLI available");
       // Auto-import GitHub accounts from `gh auth status` (non-blocking).
       return importAccountsFromGhCli().then((importResult) => {
         if (importResult.imported > 0) {
@@ -213,7 +252,10 @@ async function main(): Promise<void> {
         const traceId = isValidTraceId(rawTraceId) ? rawTraceId! : randomUUID();
         const response = await runWithTrace(traceId, () => next(req));
         if ("stream" in response && response.stream) {
-          const wrapped = wrapAsyncIterableWithTrace(traceId, response.message as AsyncIterable<unknown>);
+          const wrapped = wrapAsyncIterableWithTrace(
+            traceId,
+            response.message as AsyncIterable<unknown>,
+          );
           (response as { message: AsyncIterable<unknown> }).message = wrapped;
         }
         return response;
@@ -233,16 +275,27 @@ async function main(): Promise<void> {
 
   grpcServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {
-      logger.fatal({ port: grpcPort }, "Port %d is already in use. Is another Grackle server running?", grpcPort);
+      logger.fatal(
+        { port: grpcPort },
+        "Port %d is already in use. Is another Grackle server running?",
+        grpcPort,
+      );
     } else {
       logger.fatal({ err }, "gRPC server error");
     }
     process.exitCode = 1;
-    shutdown().catch(() => { process.exit(1); });
+    shutdown().catch(() => {
+      process.exit(1);
+    });
   });
 
   grpcServer.listen(grpcPort, bindHost, () => {
-    logger.info({ port: grpcPort, host: bindHost }, "gRPC server listening on http://%s:%d", urlHost, grpcPort);
+    logger.info(
+      { port: grpcPort, host: bindHost },
+      "gRPC server listening on http://%s:%d",
+      urlHost,
+      grpcPort,
+    );
   });
 
   // --- Web server (HTTP/1.1) ---
@@ -252,9 +305,12 @@ async function main(): Promise<void> {
   // Channel capability tokens are signed with the API key; ingress URLs must be
   // reachable by external webhook callers. On a wildcard bind, use the detected
   // LAN IP (same logic as the pairing URL) instead of a non-routable loopback.
-  const ingressHost = isWildcardAddress(bindHost) ? (detectLanIp() || "localhost") : bindHost;
+  const ingressHost = isWildcardAddress(bindHost) ? detectLanIp() || "localhost" : bindHost;
   const ingressUrlHost = ingressHost.includes(":") ? `[${ingressHost}]` : ingressHost;
-  setChannelConfig({ signingSecret: apiKey, ingressBaseUrl: `http://${ingressUrlHost}:${webPort}` });
+  setChannelConfig({
+    signingSecret: apiKey,
+    ingressBaseUrl: `http://${ingressUrlHost}:${webPort}`,
+  });
 
   const webServer = createWebServer({
     apiKey,
@@ -271,7 +327,10 @@ async function main(): Promise<void> {
         sqlite!.prepare("SELECT 1").get();
         checks.database = { ok: true };
       } catch (err) {
-        checks.database = { ok: false, message: err instanceof Error ? err.message : "unknown error" };
+        checks.database = {
+          ok: false,
+          message: err instanceof Error ? err.message : "unknown error",
+        };
       }
       // Neo4j/knowledge is optional — exposed for operator visibility but does
       // not gate overall readiness. Only the database check is required.
@@ -287,12 +346,18 @@ async function main(): Promise<void> {
 
   webServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {
-      logger.fatal({ port: webPort }, "Port %d is already in use. Is another Grackle server running?", webPort);
+      logger.fatal(
+        { port: webPort },
+        "Port %d is already in use. Is another Grackle server running?",
+        webPort,
+      );
     } else {
       logger.fatal({ err }, "Web server error");
     }
     process.exitCode = 1;
-    shutdown().catch(() => { process.exit(1); });
+    shutdown().catch(() => {
+      process.exit(1);
+    });
   });
 
   webServer.listen(webPort, bindHost, () => {
@@ -301,9 +366,7 @@ async function main(): Promise<void> {
     // Generate initial pairing code and print to terminal
     const code = generatePairingCode();
     if (code) {
-      const pairingHost = isWildcardAddress(bindHost)
-        ? (detectLanIp() || "localhost")
-        : bindHost;
+      const pairingHost = isWildcardAddress(bindHost) ? detectLanIp() || "localhost" : bindHost;
       const pairingUrl = `http://${pairingHost}:${webPort}/pair?code=${code}`;
 
       process.stdout.write("\n");
@@ -314,10 +377,17 @@ async function main(): Promise<void> {
       // Print QR code only when network-accessible (useful for phone scanning)
       if (allowNetwork) {
         try {
-          const qrcode = esmRequire("qrcode") as { toString(text: string, opts: { type: string; small: boolean }): Promise<string> };
-          qrcode.toString(pairingUrl, { type: "terminal", small: true })
-            .then((qr: string) => { process.stdout.write(qr); })
-            .catch(() => { /* QR rendering failed — not critical */ });
+          const qrcode = esmRequire("qrcode") as {
+            toString(text: string, opts: { type: string; small: boolean }): Promise<string>;
+          };
+          qrcode
+            .toString(pairingUrl, { type: "terminal", small: true })
+            .then((qr: string) => {
+              process.stdout.write(qr);
+            })
+            .catch(() => {
+              /* QR rendering failed — not critical */
+            });
         } catch {
           // qrcode not installed — skip QR
         }
@@ -338,44 +408,67 @@ async function main(): Promise<void> {
   const authServerUrl = `http://${dialableUrlHost}:${webPort}`;
   // Adapt plugin-contributed tools to the concrete ToolDefinition type expected by MCP.
   // Validates shape at startup so runtime failures surface immediately with a clear message.
-  const pluginToolGroups: ToolDefinition[][] = loaded.mcpTools.length > 0
-    ? [loaded.mcpTools.map((t) => {
-        if (typeof (t.inputSchema as { safeParse?: unknown }).safeParse !== "function") {
-          throw new Error(`Plugin tool "${t.name}": inputSchema must be a Zod schema (missing safeParse)`);
-        }
-        if (typeof t.handler !== "function") {
-          throw new Error(`Plugin tool "${t.name}": handler must be a function`);
-        }
-        return t as unknown as ToolDefinition;
-      })]
-    : [];
+  const pluginToolGroups: ToolDefinition[][] =
+    loaded.mcpTools.length > 0
+      ? [
+          loaded.mcpTools.map((t) => {
+            if (typeof (t.inputSchema as { safeParse?: unknown }).safeParse !== "function") {
+              throw new Error(
+                `Plugin tool "${t.name}": inputSchema must be a Zod schema (missing safeParse)`,
+              );
+            }
+            if (typeof t.handler !== "function") {
+              throw new Error(`Plugin tool "${t.name}": handler must be a function`);
+            }
+            return t as unknown as ToolDefinition;
+          }),
+        ]
+      : [];
   const mcpServer = createMcpServer({
-    bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl: authServerUrl, toolGroups: pluginToolGroups, publishWidgetEvent,
+    bindHost,
+    mcpPort,
+    grpcPort,
+    apiKey,
+    authorizationServerUrl: authServerUrl,
+    toolGroups: pluginToolGroups,
+    publishWidgetEvent,
     // Push tools/list_changed to a workspace's MCP sessions when its promoted
     // component set changes (#1297), via the domain-event bus.
-    onComponentChangeSubscribe: (notify) => subscribe((e) => {
-      if (e.type === "component.changed") {
-        const wsId = e.payload.workspaceId;
-        if (typeof wsId === "string" && wsId) {
-          notify(wsId);
+    onComponentChangeSubscribe: (notify) =>
+      subscribe((e) => {
+        if (e.type === "component.changed") {
+          const wsId = e.payload.workspaceId;
+          if (typeof wsId === "string" && wsId) {
+            notify(wsId);
+          }
         }
-      }
-    }),
+      }),
     ...(config.mcpOrigin !== undefined ? { mcpOrigin: config.mcpOrigin } : {}),
   });
 
   mcpServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {
-      logger.fatal({ port: mcpPort }, "Port %d is already in use. Is another Grackle server running?", mcpPort);
+      logger.fatal(
+        { port: mcpPort },
+        "Port %d is already in use. Is another Grackle server running?",
+        mcpPort,
+      );
     } else {
       logger.fatal({ err }, "MCP server error");
     }
     process.exitCode = 1;
-    shutdown().catch(() => { process.exit(1); });
+    shutdown().catch(() => {
+      process.exit(1);
+    });
   });
 
   mcpServer.listen(mcpPort, bindHost, () => {
-    logger.info({ port: mcpPort, host: bindHost }, "MCP server on http://%s:%d/mcp", urlHost, mcpPort);
+    logger.info(
+      { port: mcpPort, host: bindHost },
+      "MCP server on http://%s:%d/mcp",
+      urlHost,
+      mcpPort,
+    );
   });
 
   // --- MCP Apps widget sandbox server (separate origin) ---
@@ -383,15 +476,26 @@ async function main(): Promise<void> {
   const sandboxServer = createSandboxServer({ bindHost, sandboxPort });
   sandboxServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {
-      logger.fatal({ port: sandboxPort }, "Port %d is already in use. Is another Grackle server running?", sandboxPort);
+      logger.fatal(
+        { port: sandboxPort },
+        "Port %d is already in use. Is another Grackle server running?",
+        sandboxPort,
+      );
     } else {
       logger.fatal({ err }, "Sandbox server error");
     }
     process.exitCode = 1;
-    shutdown().catch(() => { process.exit(1); });
+    shutdown().catch(() => {
+      process.exit(1);
+    });
   });
   sandboxServer.listen(sandboxPort, bindHost, () => {
-    logger.info({ port: sandboxPort, host: bindHost }, "MCP Apps sandbox on http://%s:%d/sandbox.html", urlHost, sandboxPort);
+    logger.info(
+      { port: sandboxPort, host: bindHost },
+      "MCP Apps sandbox on http://%s:%d/sandbox.html",
+      urlHost,
+      sandboxPort,
+    );
   });
 
   // --- Graceful shutdown ---

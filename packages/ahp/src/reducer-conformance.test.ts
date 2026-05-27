@@ -26,9 +26,7 @@ const fixturesDir = join(
 
 describe("AHP reducer conformance", () => {
   it("003-session-ready: initial state becomes ready", () => {
-    const fixture = JSON.parse(
-      readFileSync(join(fixturesDir, "003-session-ready.json"), "utf-8"),
-    );
+    const fixture = JSON.parse(readFileSync(join(fixturesDir, "003-session-ready.json"), "utf-8"));
     const initialState = {
       summary: fixture.initial.summary,
       lifecycle: fixture.initial.lifecycle,
@@ -43,10 +41,7 @@ describe("AHP reducer conformance", () => {
   it("006-turnstarted-with-queuedmessageid: removes queued msg and sets activeTurn", () => {
     const fixture = JSON.parse(
       readFileSync(
-        join(
-          fixturesDir,
-          "006-turnstarted-with-queuedmessageid-removes-from-queuedmessages.json",
-        ),
+        join(fixturesDir, "006-turnstarted-with-queuedmessageid-removes-from-queuedmessages.json"),
         "utf-8",
       ),
     );

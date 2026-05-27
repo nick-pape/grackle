@@ -72,7 +72,6 @@ vi.mock("./stream-hub.js", () => ({
   }),
 }));
 
-
 vi.mock("./event-bus.js", () => ({
   emit: vi.fn(),
 }));
@@ -137,9 +136,30 @@ describe("gRPC listTasks handler", () => {
 
     // Seed workspace and tasks using real stores
     workspaceStore.createWorkspace(WORKSPACE_ID, "Test Project", "desc", "", "");
-    taskStore.createTask("t1", WORKSPACE_ID, "Fix login bug", "User cannot login with SSO", [], "test-workspace");
-    taskStore.createTask("t2", WORKSPACE_ID, "Add dashboard", "Create analytics dashboard", [], "test-workspace");
-    taskStore.createTask("t3", WORKSPACE_ID, "Update auth middleware", "Refactor authentication layer", [], "test-workspace");
+    taskStore.createTask(
+      "t1",
+      WORKSPACE_ID,
+      "Fix login bug",
+      "User cannot login with SSO",
+      [],
+      "test-workspace",
+    );
+    taskStore.createTask(
+      "t2",
+      WORKSPACE_ID,
+      "Add dashboard",
+      "Create analytics dashboard",
+      [],
+      "test-workspace",
+    );
+    taskStore.createTask(
+      "t3",
+      WORKSPACE_ID,
+      "Update auth middleware",
+      "Refactor authentication layer",
+      [],
+      "test-workspace",
+    );
     taskStore.updateTaskStatus("t2", "working");
     taskStore.updateTaskStatus("t3", "complete");
 
@@ -155,43 +175,43 @@ describe("gRPC listTasks handler", () => {
   });
 
   it("filters by search term", async () => {
-    const result = await handlers.listTasks({
+    const result = (await handlers.listTasks({
       workspaceId: WORKSPACE_ID,
       search: "login",
       status: "",
-    }) as grackle.TaskList;
+    })) as grackle.TaskList;
 
     expect(result.tasks).toHaveLength(1);
     expect(result.tasks[0].title).toBe("Fix login bug");
   });
 
   it("filters by status", async () => {
-    const result = await handlers.listTasks({
+    const result = (await handlers.listTasks({
       workspaceId: WORKSPACE_ID,
       search: "",
       status: "working",
-    }) as grackle.TaskList;
+    })) as grackle.TaskList;
 
     expect(result.tasks).toHaveLength(1);
     expect(result.tasks[0].title).toBe("Add dashboard");
   });
 
   it("returns all tasks when no filters", async () => {
-    const result = await handlers.listTasks({
+    const result = (await handlers.listTasks({
       workspaceId: WORKSPACE_ID,
       search: "",
       status: "",
-    }) as grackle.TaskList;
+    })) as grackle.TaskList;
 
     expect(result.tasks).toHaveLength(3);
   });
 
   it("combines search and status filters", async () => {
-    const result = await handlers.listTasks({
+    const result = (await handlers.listTasks({
       workspaceId: WORKSPACE_ID,
       search: "auth",
       status: "complete",
-    }) as grackle.TaskList;
+    })) as grackle.TaskList;
 
     expect(result.tasks).toHaveLength(1);
     expect(result.tasks[0].title).toBe("Update auth middleware");
@@ -214,11 +234,11 @@ describe("gRPC listTasks handler", () => {
       return { status: storedStatus, latestSessionId: "" };
     });
 
-    const result = await handlers.listTasks({
+    const result = (await handlers.listTasks({
       workspaceId: WORKSPACE_ID,
       search: "",
       status: "",
-    }) as grackle.TaskList;
+    })) as grackle.TaskList;
 
     const parent = result.tasks.find((t) => t.id === "tp");
     expect(parent).toBeDefined();

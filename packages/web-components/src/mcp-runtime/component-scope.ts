@@ -22,8 +22,15 @@ import { Callout } from "../components/notifications/Callout.js";
 
 /** Component name → component, injected into the react-live evaluation scope. */
 export const COMPONENT_SCOPE: Readonly<Record<string, unknown>> = {
-  Button, SplitButton, Callout, Spinner,
-  Skeleton, SkeletonText, SkeletonCard, Tooltip, CopyButton,
+  Button,
+  SplitButton,
+  Callout,
+  Spinner,
+  Skeleton,
+  SkeletonText,
+  SkeletonCard,
+  Tooltip,
+  CopyButton,
 };
 
 /** Names of the curated components available to agent JSX (the catalog must stay a subset). */

@@ -17,9 +17,9 @@ import { SYSTEM_PERSONA_ID, ROOT_TASK_ID } from "@grackle-ai/common";
 export function seedDatabase(conn: InstanceType<typeof Database>): void {
   // Capture persona count BEFORE any seed inserts so we can distinguish
   // fresh installs from upgrades in the onboarding backfill below.
-  const personaCount = conn
-    .prepare("SELECT COUNT(*) as cnt FROM personas")
-    .get() as { cnt: number };
+  const personaCount = conn.prepare("SELECT COUNT(*) as cnt FROM personas").get() as {
+    cnt: number;
+  };
 
   // Seed: create default "Claude Code" persona if no personas exist
   if (personaCount.cnt === 0) {
@@ -109,18 +109,28 @@ IMPORTANT: The PR is the deliverable, but a PR with failing CI or unresolved rev
         // all stored references atomically so a crash can't leave dangling refs.
         const reassignSystemPersona = conn.transaction((oldId: string) => {
           conn.prepare("UPDATE personas SET id = ? WHERE id = ?").run(SYSTEM_PERSONA_ID, oldId);
-          conn.prepare("UPDATE settings SET value = ? WHERE key = 'default_persona_id' AND value = ?").run(SYSTEM_PERSONA_ID, oldId);
-          conn.prepare("UPDATE sessions SET persona_id = ? WHERE persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
-          conn.prepare("UPDATE tasks SET default_persona_id = ? WHERE default_persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
-          conn.prepare("UPDATE workspaces SET default_persona_id = ? WHERE default_persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
+          conn
+            .prepare("UPDATE settings SET value = ? WHERE key = 'default_persona_id' AND value = ?")
+            .run(SYSTEM_PERSONA_ID, oldId);
+          conn
+            .prepare("UPDATE sessions SET persona_id = ? WHERE persona_id = ?")
+            .run(SYSTEM_PERSONA_ID, oldId);
+          conn
+            .prepare("UPDATE tasks SET default_persona_id = ? WHERE default_persona_id = ?")
+            .run(SYSTEM_PERSONA_ID, oldId);
+          conn
+            .prepare("UPDATE workspaces SET default_persona_id = ? WHERE default_persona_id = ?")
+            .run(SYSTEM_PERSONA_ID, oldId);
         });
         reassignSystemPersona(existingSystemByName.id);
       } else if (!existingSystemByName) {
         conn
-          .prepare(`
+          .prepare(
+            `
             INSERT INTO personas (id, name, description, system_prompt, runtime, model, max_turns, type)
             VALUES (?, 'System', 'Central orchestrator persona', ?, ?, ?, 0, 'agent')
-          `)
+          `,
+          )
           .run(
             SYSTEM_PERSONA_ID,
             [
@@ -152,10 +162,12 @@ IMPORTANT: The PR is the deliverable, but a PR with failing CI or unresolved rev
 
   // Seed: create root task (well-known "system" task) if it doesn't exist.
   conn
-    .prepare(`
+    .prepare(
+      `
       INSERT OR IGNORE INTO tasks (id, workspace_id, title, description, status, branch, parent_task_id, depth, can_decompose, default_persona_id)
       VALUES (?, NULL, 'System', '', 'not_started', 'system', '', 0, 1, ?)
-    `)
+    `,
+    )
     .run(ROOT_TASK_ID, SYSTEM_PERSONA_ID);
 
   // Backfill: ensure default_persona_id setting exists for upgrades.
@@ -167,10 +179,10 @@ IMPORTANT: The PR is the deliverable, but a PR with failing CI or unresolved rev
   if (!existingDefault) {
     // Prefer the seed persona 'claude-code' if it exists; otherwise fall back
     // to the first persona alphabetically.
-    const fallback = (
-      conn.prepare("SELECT id FROM personas WHERE id = 'claude-code'").get() ??
-      conn.prepare("SELECT id FROM personas ORDER BY name LIMIT 1").get()
-    ) as { id: string } | undefined;
+    const fallback = (conn.prepare("SELECT id FROM personas WHERE id = 'claude-code'").get() ??
+      conn.prepare("SELECT id FROM personas ORDER BY name LIMIT 1").get()) as
+      | { id: string }
+      | undefined;
     if (fallback) {
       conn
         .prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('default_persona_id', ?)")
@@ -212,9 +224,9 @@ IMPORTANT: The PR is the deliverable, but a PR with failing CI or unresolved rev
     .prepare("SELECT value FROM settings WHERE key = 'onboarding_completed'")
     .get() as { value: string } | undefined;
   if (!existingOnboarding) {
-    const environmentCount = conn
-      .prepare("SELECT COUNT(*) as cnt FROM environments")
-      .get() as { cnt: number };
+    const environmentCount = conn.prepare("SELECT COUNT(*) as cnt FROM environments").get() as {
+      cnt: number;
+    };
     const isFreshInstall = environmentCount.cnt === 0 && personaCount.cnt === 0;
     conn
       .prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('onboarding_completed', ?)")

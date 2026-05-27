@@ -44,12 +44,12 @@ Grackle supports two formats:
 
 Simple repeating intervals:
 
-| Expression | Meaning |
-|-----------|---------|
-| `30s` | Every 30 seconds |
-| `5m` | Every 5 minutes |
-| `1h` | Every hour |
-| `1d` | Every day |
+| Expression | Meaning          |
+| ---------- | ---------------- |
+| `30s`      | Every 30 seconds |
+| `5m`       | Every 5 minutes  |
+| `1h`       | Every hour       |
+| `1d`       | Every day        |
 
 ### Standard cron syntax
 
@@ -67,12 +67,12 @@ Five-field cron expressions for precise scheduling:
 
 **Examples:**
 
-| Expression | Meaning |
-|-----------|---------|
-| `0 2 * * *` | Daily at 2:00 AM |
-| `0 9 * * 1-5` | Weekdays at 9:00 AM |
-| `*/15 * * * *` | Every 15 minutes |
-| `0 0 1 * *` | First day of every month at midnight |
+| Expression     | Meaning                              |
+| -------------- | ------------------------------------ |
+| `0 2 * * *`    | Daily at 2:00 AM                     |
+| `0 9 * * 1-5`  | Weekdays at 9:00 AM                  |
+| `*/15 * * * *` | Every 15 minutes                     |
+| `0 0 1 * *`    | First day of every month at midnight |
 
 ## How it works
 

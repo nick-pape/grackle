@@ -1,18 +1,11 @@
 import { test, expect } from "./fixtures.js";
 import type { GrackleClient } from "./rpc-client.js";
-import {
-  createWorkspace,
-  createTaskDirect,
-  getWorkspaceId,
-} from "./helpers.js";
+import { createWorkspace, createTaskDirect, getWorkspaceId } from "./helpers.js";
 
 /**
  * Helper: start a task via RPC and return its session ID from the response.
  */
-async function startTaskAndGetSessionId(
-  client: GrackleClient,
-  taskId: string,
-): Promise<string> {
+async function startTaskAndGetSessionId(client: GrackleClient, taskId: string): Promise<string> {
   const resp = await client.orchestration.startTask({
     taskId,
     personaId: "stub",
@@ -44,7 +37,9 @@ async function waitForSessionStatus(
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  throw new Error(`Session ${sessionId} did not reach status "${targetStatus}" within ${timeoutMs}ms`);
+  throw new Error(
+    `Session ${sessionId} did not reach status "${targetStatus}" within ${timeoutMs}ms`,
+  );
 }
 
 /**
@@ -79,7 +74,9 @@ async function waitForSessionText(
             if (raw.systemContext === true) {
               return false;
             }
-          } catch { /* not JSON, include it */ }
+          } catch {
+            /* not JSON, include it */
+          }
         }
         return true;
       },
@@ -97,7 +94,9 @@ test.describe("SIGCHLD — child completion notification", { tag: ["@error"] }, 
   test.beforeEach(async ({ grackle: { client } }) => {
     const sessionsResp = await client.core.listSessions({});
     const all = sessionsResp.sessions as Array<{ id: string; status: string }>;
-    const active = all.filter((s) => s.status === "idle" || s.status === "running" || s.status === "pending");
+    const active = all.filter(
+      (s) => s.status === "idle" || s.status === "running" || s.status === "pending",
+    );
     for (const s of active) {
       await client.core.killAgent({ id: s.id });
     }
@@ -106,7 +105,11 @@ test.describe("SIGCHLD — child completion notification", { tag: ["@error"] }, 
       while (Date.now() < deadline) {
         const recheck = await client.core.listSessions({});
         const remaining = recheck.sessions as Array<{ status: string }>;
-        if (!remaining.some((s) => s.status === "idle" || s.status === "running" || s.status === "pending")) {
+        if (
+          !remaining.some(
+            (s) => s.status === "idle" || s.status === "running" || s.status === "pending",
+          )
+        ) {
           break;
         }
         await new Promise((resolve) => setTimeout(resolve, 250));
@@ -143,12 +146,7 @@ test.describe("SIGCHLD — child completion notification", { tag: ["@error"] }, 
 
     // 6. SIGCHLD is delivered to parent when child goes idle.
     //    Stub runtime echoes the signal as "You said: [SIGCHLD] ..."
-    const sigchldContent = await waitForSessionText(
-      client,
-      parentSessionId,
-      "[SIGCHLD]",
-      30_000,
-    );
+    const sigchldContent = await waitForSessionText(client, parentSessionId, "[SIGCHLD]", 30_000);
     expect(sigchldContent).toContain("Child Worker");
     expect(sigchldContent).toContain("finished working");
 
@@ -198,12 +196,7 @@ test.describe("SIGCHLD — child completion notification", { tag: ["@error"] }, 
     // 6. SIGCHLD triggers reanimate of parent session.
     //    The reanimated session echoes "[SIGCHLD]..." in its text events.
     //    Allow extra time for the async reanimate chain to complete.
-    const sigchldContent = await waitForSessionText(
-      client,
-      parentSessionId,
-      "[SIGCHLD]",
-      60_000,
-    );
+    const sigchldContent = await waitForSessionText(client, parentSessionId, "[SIGCHLD]", 60_000);
     expect(sigchldContent).toContain("Child For Reanimate");
     // The child's status label may vary (killed, finished working, etc.)
     // depending on session lifecycle timing. The key assertion is that

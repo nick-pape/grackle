@@ -65,11 +65,11 @@ const MIGRATIONS: Migration[] = [
         CREATE INDEX IF NOT EXISTS idx_dispatch_queue_enqueued ON dispatch_queue(enqueued_at);
       `);
       // ALTER TABLE fails if column already exists (fresh installs include it in baseline).
-      const cols = conn
-        .prepare("PRAGMA table_info(environments)")
-        .all() as Array<{ name: string }>;
+      const cols = conn.prepare("PRAGMA table_info(environments)").all() as Array<{ name: string }>;
       if (!cols.some((c) => c.name === "max_concurrent_sessions")) {
-        conn.exec("ALTER TABLE environments ADD COLUMN max_concurrent_sessions INTEGER NOT NULL DEFAULT 0");
+        conn.exec(
+          "ALTER TABLE environments ADD COLUMN max_concurrent_sessions INTEGER NOT NULL DEFAULT 0",
+        );
       }
     },
   },
@@ -78,23 +78,21 @@ const MIGRATIONS: Migration[] = [
     name: "add-budget-columns",
     up: (conn) => {
       // Guard against columns already existing (fresh installs include them in baseline).
-      const taskCols = conn
-        .prepare("PRAGMA table_info(tasks)")
-        .all() as Array<{ name: string }>;
+      const taskCols = conn.prepare("PRAGMA table_info(tasks)").all() as Array<{ name: string }>;
       if (!taskCols.some((c) => c.name === "token_budget")) {
         conn.exec("ALTER TABLE tasks ADD COLUMN token_budget INTEGER NOT NULL DEFAULT 0");
       }
       if (!taskCols.some((c) => c.name === "cost_budget_millicents")) {
         conn.exec("ALTER TABLE tasks ADD COLUMN cost_budget_millicents INTEGER NOT NULL DEFAULT 0");
       }
-      const wsCols = conn
-        .prepare("PRAGMA table_info(workspaces)")
-        .all() as Array<{ name: string }>;
+      const wsCols = conn.prepare("PRAGMA table_info(workspaces)").all() as Array<{ name: string }>;
       if (!wsCols.some((c) => c.name === "token_budget")) {
         conn.exec("ALTER TABLE workspaces ADD COLUMN token_budget INTEGER NOT NULL DEFAULT 0");
       }
       if (!wsCols.some((c) => c.name === "cost_budget_millicents")) {
-        conn.exec("ALTER TABLE workspaces ADD COLUMN cost_budget_millicents INTEGER NOT NULL DEFAULT 0");
+        conn.exec(
+          "ALTER TABLE workspaces ADD COLUMN cost_budget_millicents INTEGER NOT NULL DEFAULT 0",
+        );
       }
     },
   },
@@ -102,9 +100,9 @@ const MIGRATIONS: Migration[] = [
     version: 5,
     name: "cost-usd-to-millicents",
     up: (conn) => {
-      const sessionCols = conn
-        .prepare("PRAGMA table_info(sessions)")
-        .all() as Array<{ name: string }>;
+      const sessionCols = conn.prepare("PRAGMA table_info(sessions)").all() as Array<{
+        name: string;
+      }>;
       const hasCostMillicents = sessionCols.some((c) => c.name === "cost_millicents");
       const hasCostUsd = sessionCols.some((c) => c.name === "cost_usd");
 
@@ -118,8 +116,8 @@ const MIGRATIONS: Migration[] = [
       if (hasCostUsd) {
         conn.exec(
           "UPDATE sessions " +
-          "SET cost_millicents = CAST(ROUND(cost_usd * 100000) AS INTEGER) " +
-          "WHERE cost_usd IS NOT NULL AND cost_millicents = 0"
+            "SET cost_millicents = CAST(ROUND(cost_usd * 100000) AS INTEGER) " +
+            "WHERE cost_usd IS NOT NULL AND cost_millicents = 0",
         );
       }
 
@@ -147,9 +145,7 @@ const MIGRATIONS: Migration[] = [
     name: "remove-workspace-environment-id",
     up: (conn) => {
       // Check whether the legacy column exists (won't be present on fresh installs).
-      const wsCols = conn
-        .prepare("PRAGMA table_info(workspaces)")
-        .all() as Array<{ name: string }>;
+      const wsCols = conn.prepare("PRAGMA table_info(workspaces)").all() as Array<{ name: string }>;
       if (wsCols.some((c) => c.name === "environment_id")) {
         // Migrate legacy FK values into the links table before dropping the column.
         // INSERT OR IGNORE is idempotent — safe to run on databases that already have links.
@@ -169,9 +165,7 @@ const MIGRATIONS: Migration[] = [
     name: "remove-schedule-environment-id",
     up: (conn) => {
       // Check whether the legacy column exists (won't be present on fresh installs).
-      const cols = conn
-        .prepare("PRAGMA table_info(schedules)")
-        .all() as Array<{ name: string }>;
+      const cols = conn.prepare("PRAGMA table_info(schedules)").all() as Array<{ name: string }>;
       if (cols.some((c) => c.name === "environment_id")) {
         // No backfill needed — scheduled tasks now resolve their environment at dispatch
         // time via the workspace's linked environment pool (workspace_environment_links).
@@ -194,9 +188,9 @@ const MIGRATIONS: Migration[] = [
         );
       `);
       // Guard against the column already existing on fresh installs.
-      const envCols = conn
-        .prepare("PRAGMA table_info(environments)")
-        .all() as Array<{ name: string }>;
+      const envCols = conn.prepare("PRAGMA table_info(environments)").all() as Array<{
+        name: string;
+      }>;
       if (!envCols.some((c) => c.name === "github_account_id")) {
         conn.exec("ALTER TABLE environments ADD COLUMN github_account_id TEXT NOT NULL DEFAULT ''");
       }
@@ -255,7 +249,9 @@ const MIGRATIONS: Migration[] = [
       // CREATE-IF-NOT-EXISTS can recreate an empty `widgets` after a prior rebuild —
       // if `components` already exists, just drop the redundant `widgets`.
       const componentsExists =
-        conn.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='components'").get() !== undefined;
+        conn
+          .prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='components'")
+          .get() !== undefined;
       if (componentsExists) {
         conn.exec("DROP TABLE IF EXISTS widgets;");
         return;
@@ -321,9 +317,7 @@ const MIGRATIONS: Migration[] = [
       // #1259: per-task opt-out of knowledge-graph context injection at spawn.
       // Defaults ON (1). Guard against the column already existing (fresh
       // installs include it in baseline).
-      const taskCols = conn
-        .prepare("PRAGMA table_info(tasks)")
-        .all() as Array<{ name: string }>;
+      const taskCols = conn.prepare("PRAGMA table_info(tasks)").all() as Array<{ name: string }>;
       if (!taskCols.some((c) => c.name === "inject_knowledge")) {
         conn.exec("ALTER TABLE tasks ADD COLUMN inject_knowledge INTEGER NOT NULL DEFAULT 1");
       }
@@ -336,9 +330,7 @@ const MIGRATIONS: Migration[] = [
       // Adds the `promoted` flag used to surface a component as a dynamic
       // render_<name> MCP tool (#1272). Guard the ALTER so re-runs (tests rewind
       // user_version) and fresh installs that already have the column don't fail.
-      const cols = conn
-        .prepare("PRAGMA table_info(components)")
-        .all() as Array<{ name: string }>;
+      const cols = conn.prepare("PRAGMA table_info(components)").all() as Array<{ name: string }>;
       if (!cols.some((c) => c.name === "promoted")) {
         conn.exec("ALTER TABLE components ADD COLUMN promoted INTEGER NOT NULL DEFAULT 0");
       }
@@ -364,9 +356,8 @@ const MIGRATIONS: Migration[] = [
 ];
 
 /** The highest schema version defined by BASELINE + MIGRATIONS. */
-const CURRENT_VERSION: number = MIGRATIONS.length > 0
-  ? MIGRATIONS[MIGRATIONS.length - 1]!.version
-  : BASELINE_VERSION;
+const CURRENT_VERSION: number =
+  MIGRATIONS.length > 0 ? MIGRATIONS[MIGRATIONS.length - 1]!.version : BASELINE_VERSION;
 
 // ─── Legacy Schema Validation ───────────────────────────────
 
@@ -396,15 +387,13 @@ function validateBaselineSchema(conn: InstanceType<typeof Database>): void {
   }
 
   for (const { table, column } of BASELINE_SCHEMA_CHECKS) {
-    const cols = conn
-      .prepare(`PRAGMA table_info(${table})`)
-      .all() as Array<{ name: string }>;
+    const cols = conn.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
 
     // Table exists but is missing a required column
     if (cols.length > 0 && !cols.some((c) => c.name === column)) {
       throw new Error(
         `Database schema is too old: table "${table}" is missing column "${column}". ` +
-        `Delete your database file and restart to create a fresh one.`,
+          `Delete your database file and restart to create a fresh one.`,
       );
     }
   }
@@ -533,7 +522,7 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
   if (currentVersion > CURRENT_VERSION) {
     throw new Error(
       `Database schema version (${currentVersion}) is newer than this application supports (${CURRENT_VERSION}). ` +
-      "Please upgrade the application or use a compatible database file.",
+        "Please upgrade the application or use a compatible database file.",
     );
   }
 
@@ -810,8 +799,8 @@ export function checkDatabaseIntegrity(conn?: InstanceType<typeof Database>): vo
   if (result !== "ok") {
     throw new Error(
       `Database integrity check failed: ${result}. ` +
-      "The database file may be corrupt. " +
-      "Restore from a backup or delete the database file and restart.",
+        "The database file may be corrupt. " +
+        "Restore from a backup or delete the database file and restart.",
     );
   }
 }
@@ -825,7 +814,10 @@ export function checkDatabaseIntegrity(conn?: InstanceType<typeof Database>): vo
  * @param targetPath - Path to write the backup file.
  * @param conn - Optional SQLite instance. Defaults to the module-level singleton.
  */
-export async function backupDatabase(targetPath: string, conn?: InstanceType<typeof Database>): Promise<void> {
+export async function backupDatabase(
+  targetPath: string,
+  conn?: InstanceType<typeof Database>,
+): Promise<void> {
   const c = conn ?? sqlite;
   if (!c) {
     return;

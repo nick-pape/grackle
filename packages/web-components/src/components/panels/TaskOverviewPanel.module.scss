@@ -1,4 +1,4 @@
-@use '../../styles/mixins' as *;
+@use "../../styles/mixins" as *;
 
 .overviewDashboard {
   display: flex;
@@ -115,10 +115,20 @@
   color: var(--text-secondary);
   line-height: 1.6;
 
-  p { margin: 0 0 var(--space-sm) 0; }
-  p:last-child { margin-bottom: 0; }
-  ul, ol { margin: 0 0 var(--space-sm) var(--space-lg); padding: 0; }
-  li { margin-bottom: var(--space-xs); }
+  p {
+    margin: 0 0 var(--space-sm) 0;
+  }
+  p:last-child {
+    margin-bottom: 0;
+  }
+  ul,
+  ol {
+    margin: 0 0 var(--space-sm) var(--space-lg);
+    padding: 0;
+  }
+  li {
+    margin-bottom: var(--space-xs);
+  }
   code {
     @include surface-inset;
     padding: 1px var(--space-xs);
@@ -131,7 +141,12 @@
     padding: var(--space-sm) var(--space-md);
     overflow: auto;
     margin: var(--space-xs) 0;
-    code { background: none; border: none; padding: 0; color: inherit; }
+    code {
+      background: none;
+      border: none;
+      padding: 0;
+      color: inherit;
+    }
   }
   blockquote {
     border-left: 3px solid var(--border-primary);
@@ -139,14 +154,25 @@
     padding-left: var(--space-md);
     color: var(--text-tertiary);
   }
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     color: var(--text-primary);
     margin: var(--space-sm) 0 var(--space-xs) 0;
     font-size: var(--font-size-sm);
   }
-  strong { color: var(--text-primary); }
-  a { color: var(--accent-blue); text-decoration: none;
-    &:hover { text-decoration: underline; }
+  strong {
+    color: var(--text-primary);
+  }
+  a {
+    color: var(--accent-blue);
+    text-decoration: none;
+    &:hover {
+      text-decoration: underline;
+    }
   }
 }
 
@@ -164,10 +190,18 @@
   flex-shrink: 0;
 }
 
-.envDotGreen  { background: var(--accent-green); }
-.envDotYellow { background: var(--accent-yellow); }
-.envDotRed    { background: var(--accent-red); }
-.envDotGray   { background: var(--text-disabled); }
+.envDotGreen {
+  background: var(--accent-green);
+}
+.envDotYellow {
+  background: var(--accent-yellow);
+}
+.envDotRed {
+  background: var(--accent-red);
+}
+.envDotGray {
+  background: var(--text-disabled);
+}
 
 // Dependencies
 .depList {
@@ -219,8 +253,12 @@
   color: var(--text-tertiary);
   font-size: 11px;
 
-  &::before { content: "("; }
-  &::after  { content: ")"; }
+  &::before {
+    content: "(";
+  }
+  &::after {
+    content: ")";
+  }
 }
 
 // Review notes

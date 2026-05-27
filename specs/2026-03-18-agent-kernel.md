@@ -32,32 +32,32 @@ Grackle borrows these primitives because they answer the right questions:
 
 ## 2. Subsystem Map
 
-| Kernel Subsystem | Grackle Equivalent | Status |
-|---|---|---|
-| Process (fork/exec/wait) | Session (spawn/resume/kill) | **Exists** |
-| Durable job / batch | Task (with DAG dependencies) | **Exists** |
-| Program image (exec) | Persona (system prompt + tools + runtime) | **Exists** (#146) |
-| Threads | Multiple sessions per task | **Speculative** (#545) |
-| Process groups / job control | Task trees with fg/bg | **Speculative** (#545) |
-| Scheduler | Reconciliation loop + environment dispatch | **In progress** (#152, #158, #471) |
-| Signals (SIGTERM, SIGCHLD, etc.) | Graceful shutdown, child notification, cascade kill | **In progress** (#468, #494–#497) |
-| Exit status | Structured session result | **Planned** (#498) |
-| Resource limits (cgroups) | Per-task token budgets | **Planned** (#499, #500) |
-| Orphan adoption (init) | Orphan task policy | **Planned** (#496) |
-| Shared memory / IPC | Findings system | **Exists** (#160) |
-| Pipes | Session output → session input | **Speculative** (#545) |
-| Message queues | Typed inter-task signals | **Planned** (#480) |
-| Syscalls | MCP broker (tool access) | **In progress** (#420) |
-| HAL (hardware abstraction) | PowerLine | **Exists** |
-| Device drivers | Environment adapters (Docker, SSH, Codespace, Local) | **Exists** |
-| File descriptors | Typed resource handles (env, widget, A2A conn) | **Speculative** (#545) |
-| Network stack (TCP/IP) | A2A protocol for inter-agent networking | **Speculative** (#544) |
-| Display server (Wayland) | Widget compositor for task UI output | **Speculative** (#542) |
-| DNS / service discovery | Agent Card registry | **Speculative** (#544) |
-| Filesystem | Artifact storage and handoff | **Planned** (#162) |
-| Swap | Checkpoint-to-workpad for long contexts | **Speculative** (#480) |
-| Multi-user / permissions | Multi-tenancy / RBAC | **Speculative** |
-| init (PID 1) | Chat landing page / orchestrator | **Exists** |
+| Kernel Subsystem                 | Grackle Equivalent                                   | Status                             |
+| -------------------------------- | ---------------------------------------------------- | ---------------------------------- |
+| Process (fork/exec/wait)         | Session (spawn/resume/kill)                          | **Exists**                         |
+| Durable job / batch              | Task (with DAG dependencies)                         | **Exists**                         |
+| Program image (exec)             | Persona (system prompt + tools + runtime)            | **Exists** (#146)                  |
+| Threads                          | Multiple sessions per task                           | **Speculative** (#545)             |
+| Process groups / job control     | Task trees with fg/bg                                | **Speculative** (#545)             |
+| Scheduler                        | Reconciliation loop + environment dispatch           | **In progress** (#152, #158, #471) |
+| Signals (SIGTERM, SIGCHLD, etc.) | Graceful shutdown, child notification, cascade kill  | **In progress** (#468, #494–#497)  |
+| Exit status                      | Structured session result                            | **Planned** (#498)                 |
+| Resource limits (cgroups)        | Per-task token budgets                               | **Planned** (#499, #500)           |
+| Orphan adoption (init)           | Orphan task policy                                   | **Planned** (#496)                 |
+| Shared memory / IPC              | Findings system                                      | **Exists** (#160)                  |
+| Pipes                            | Session output → session input                       | **Speculative** (#545)             |
+| Message queues                   | Typed inter-task signals                             | **Planned** (#480)                 |
+| Syscalls                         | MCP broker (tool access)                             | **In progress** (#420)             |
+| HAL (hardware abstraction)       | PowerLine                                            | **Exists**                         |
+| Device drivers                   | Environment adapters (Docker, SSH, Codespace, Local) | **Exists**                         |
+| File descriptors                 | Typed resource handles (env, widget, A2A conn)       | **Speculative** (#545)             |
+| Network stack (TCP/IP)           | A2A protocol for inter-agent networking              | **Speculative** (#544)             |
+| Display server (Wayland)         | Widget compositor for task UI output                 | **Speculative** (#542)             |
+| DNS / service discovery          | Agent Card registry                                  | **Speculative** (#544)             |
+| Filesystem                       | Artifact storage and handoff                         | **Planned** (#162)                 |
+| Swap                             | Checkpoint-to-workpad for long contexts              | **Speculative** (#480)             |
+| Multi-user / permissions         | Multi-tenancy / RBAC                                 | **Speculative**                    |
+| init (PID 1)                     | Chat landing page / orchestrator                     | **Exists**                         |
 
 ---
 
@@ -90,15 +90,15 @@ pending → assigned → in_progress → review → done
                    → waiting (children executing)
 ```
 
-| State | Meaning | Transitions to |
-|---|---|---|
-| `pending` | Created, may be blocked by dependencies | `assigned` (deps met + scheduled) |
-| `assigned` | Ready to run, environment selected | `in_progress` (agent spawned) |
-| `in_progress` | Agent actively executing | `review`, `failed`, `waiting` |
-| `waiting` | Parent parked while children execute (#150, #191, #192) | `in_progress` (children done → parent resumed) |
-| `review` | Agent finished, awaiting human approval | `done` (approved), `assigned` (rejected) |
-| `done` | Approved and complete | terminal; auto-unblocks dependents |
-| `failed` | Agent or environment error | `assigned` (retry) |
+| State         | Meaning                                                 | Transitions to                                 |
+| ------------- | ------------------------------------------------------- | ---------------------------------------------- |
+| `pending`     | Created, may be blocked by dependencies                 | `assigned` (deps met + scheduled)              |
+| `assigned`    | Ready to run, environment selected                      | `in_progress` (agent spawned)                  |
+| `in_progress` | Agent actively executing                                | `review`, `failed`, `waiting`                  |
+| `waiting`     | Parent parked while children execute (#150, #191, #192) | `in_progress` (children done → parent resumed) |
+| `review`      | Agent finished, awaiting human approval                 | `done` (approved), `assigned` (rejected)       |
+| `done`        | Approved and complete                                   | terminal; auto-unblocks dependents             |
+| `failed`      | Agent or environment error                              | `assigned` (retry)                             |
 
 The `paused` state (#230) is a future addition for tasks that release their environment while preserving the ability to resume on the same or compatible environment (environment affinity / warm environments, #229).
 
@@ -158,13 +158,13 @@ The scheduler (#471) answers: given N pending tasks and M available environments
 
 Triggers are entry points that create or resume tasks:
 
-| Trigger | Example | Issue |
-|---|---|---|
-| Human | User creates a task in the UI/CLI | exists |
-| Child completion | Child task finishes → parent resumed | #495 |
-| Scheduled (cron) | Poll ADO/Linear/GitHub for new work items every 15 min | #154 |
-| Webhook | GitHub push, Slack message, Teams notification, CI failure | #346, #246 |
-| Human notification | Agent needs input → alert via webhook | #509 |
+| Trigger            | Example                                                    | Issue      |
+| ------------------ | ---------------------------------------------------------- | ---------- |
+| Human              | User creates a task in the UI/CLI                          | exists     |
+| Child completion   | Child task finishes → parent resumed                       | #495       |
+| Scheduled (cron)   | Poll ADO/Linear/GitHub for new work items every 15 min     | #154       |
+| Webhook            | GitHub push, Slack message, Teams notification, CI failure | #346, #246 |
+| Human notification | Agent needs input → alert via webhook                      | #509       |
 
 All triggers flow through the same system. A scheduled poll creates a task with the "ADO Watcher" persona, which checks for new items and creates root tasks for the orchestrator. The orchestrator decomposes those just like human-initiated work.
 
@@ -176,12 +176,12 @@ The #468 epic covers the signal taxonomy. Signals are **not** a new primitive �
 
 ### 5.1 Signal Taxonomy
 
-| Signal | OS Equivalent | Behavior | Issue |
-|---|---|---|---|
-| Graceful shutdown | SIGTERM | Ask agent to finish current tool call, save state, exit cleanly | #494 |
-| Child completion | SIGCHLD | Notify parent that a child task reached terminal state (done/failed) | #495 |
-| Cascade kill | SIGKILL to process group | Kill a task and all its descendants | #497 |
-| Orphan adoption | init reparenting | When a parent task fails, adopt its children to a policy (cancel, reparent to grandparent, or continue headless) | #496 |
+| Signal            | OS Equivalent            | Behavior                                                                                                         | Issue |
+| ----------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------- | ----- |
+| Graceful shutdown | SIGTERM                  | Ask agent to finish current tool call, save state, exit cleanly                                                  | #494  |
+| Child completion  | SIGCHLD                  | Notify parent that a child task reached terminal state (done/failed)                                             | #495  |
+| Cascade kill      | SIGKILL to process group | Kill a task and all its descendants                                                                              | #497  |
+| Orphan adoption   | init reparenting         | When a parent task fails, adopt its children to a policy (cancel, reparent to grandparent, or continue headless) | #496  |
 
 ### 5.2 Structured Session Results (Exit Status)
 
@@ -241,6 +241,7 @@ The existing findings system is IPC — agents post structured observations that
 3. Other agents receive findings in their system context at spawn time
 
 Future refinements:
+
 - **Finding scoping** (#160) — task-level, project-level, and global findings
 - **Knowledge graph** (#13) — eventually replace flat findings with a graph for richer querying
 - **Split findings into IPC vs. knowledge** (#480 comment) — transient signals (IPC) vs. durable knowledge (shared memory / graph)
@@ -259,12 +260,12 @@ A research session's output becomes the input context for a summarization sessio
 
 Google's Agent-to-Agent protocol (#544) maps to the networking layer:
 
-| Kernel Concept | A2A Equivalent |
-|---|---|
-| TCP/IP + sockets | A2A HTTP + JSON-RPC transport |
+| Kernel Concept          | A2A Equivalent                                  |
+| ----------------------- | ----------------------------------------------- |
+| TCP/IP + sockets        | A2A HTTP + JSON-RPC transport                   |
 | DNS / service discovery | Agent Card registry (`/.well-known/agent.json`) |
-| Ports / listeners | Agent skills |
-| Connect/accept | Task submission + streaming response |
+| Ports / listeners       | Agent skills                                    |
+| Connect/accept          | Task submission + streaming response            |
 
 Three roles for Grackle:
 
@@ -278,12 +279,12 @@ Three roles for Grackle:
 
 Beyond findings and pipes, the system needs lightweight typed signals between tasks (#480 comment):
 
-| Signal Type | Example | Direction |
-|---|---|---|
-| Notification | "I found a relevant pattern" | Child → parent |
-| Control | "Pause and wait for further instructions" | Parent → child |
-| Input | "Here's the answer to your question" | Parent → child |
-| Request | "I need clarification on X" | Child → parent (escalation) |
+| Signal Type  | Example                                   | Direction                   |
+| ------------ | ----------------------------------------- | --------------------------- |
+| Notification | "I found a relevant pattern"              | Child → parent              |
+| Control      | "Pause and wait for further instructions" | Parent → child              |
+| Input        | "Here's the answer to your question"      | Parent → child              |
+| Request      | "I need clarification on X"               | Child → parent (escalation) |
 
 ---
 
@@ -316,15 +317,15 @@ Four adapters exist today: Docker, SSH, Codespace, Local. Each implements `provi
 
 The #545 proposal introduces typed file descriptors as a uniform resource abstraction:
 
-| fd | Resource | Example |
-|---|---|---|
-| 0 | stdin | User/parent input |
-| 1 | stdout | Event stream |
-| 2 | stderr | Error stream |
-| 3+ | Environment | Docker container, SSH host |
-| 3+ | Widget | UI render target (#542) |
-| 3+ | A2A connection | External agent handle (#544) |
-| 3+ | Artifact | File/document produced by the task |
+| fd  | Resource       | Example                            |
+| --- | -------------- | ---------------------------------- |
+| 0   | stdin          | User/parent input                  |
+| 1   | stdout         | Event stream                       |
+| 2   | stderr         | Error stream                       |
+| 3+  | Environment    | Docker container, SSH host         |
+| 3+  | Widget         | UI render target (#542)            |
+| 3+  | A2A connection | External agent handle (#544)       |
+| 3+  | Artifact       | File/document produced by the task |
 
 Uniform API: `open()`, `read()`, `write()`, `close()`. Handles are passable between sessions. Clean lifecycle — when a session dies, its open handles are closed (environments released, widgets torn down).
 
@@ -334,15 +335,15 @@ Uniform API: `open()`, `read()`, `write()`, `close()`. Handles are passable betw
 
 Research from #480 (comment 2) surveyed existing systems. Highest-priority borrowings:
 
-| System | What to Borrow | What to Avoid |
-|---|---|---|
-| **Orleans** (virtual actors) | Virtual actor model for environment lifecycle — environments as logical entities, runtime handles activation/deactivation transparently | Actor discovery complexity |
-| **Erlang/OTP** (supervision trees) | Supervision tree patterns for fault tolerance — restart strategies (one-for-one, one-for-all, rest-for-one) map to task failure policies | Full-mesh clustering, unbounded mailboxes |
-| **Temporal** (durable execution) | Durable execution model for long-running tasks — survive process crashes, replay from event history | Determinism constraints (agents are inherently non-deterministic) |
-| **Plan 9** (per-process namespaces) | Composable resource namespaces — each task sees a custom "filesystem" of available tools, credentials, and context | Radical departure from POSIX compatibility |
-| **Mach** (capabilities) | Capability-based access tokens — delegatable, revocable, fine-grained permissions for tool access | Kernel complexity |
-| **Kubernetes** (controllers) | Reconciliation loop — desired state vs. actual state, converge periodically | Operational complexity, YAML |
-| **Ray** (resource scheduling) | Resource-aware scheduling — match task resource requirements to available environments | Cluster management overhead |
+| System                              | What to Borrow                                                                                                                           | What to Avoid                                                     |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| **Orleans** (virtual actors)        | Virtual actor model for environment lifecycle — environments as logical entities, runtime handles activation/deactivation transparently  | Actor discovery complexity                                        |
+| **Erlang/OTP** (supervision trees)  | Supervision tree patterns for fault tolerance — restart strategies (one-for-one, one-for-all, rest-for-one) map to task failure policies | Full-mesh clustering, unbounded mailboxes                         |
+| **Temporal** (durable execution)    | Durable execution model for long-running tasks — survive process crashes, replay from event history                                      | Determinism constraints (agents are inherently non-deterministic) |
+| **Plan 9** (per-process namespaces) | Composable resource namespaces — each task sees a custom "filesystem" of available tools, credentials, and context                       | Radical departure from POSIX compatibility                        |
+| **Mach** (capabilities)             | Capability-based access tokens — delegatable, revocable, fine-grained permissions for tool access                                        | Kernel complexity                                                 |
+| **Kubernetes** (controllers)        | Reconciliation loop — desired state vs. actual state, converge periodically                                                              | Operational complexity, YAML                                      |
+| **Ray** (resource scheduling)       | Resource-aware scheduling — match task resource requirements to available environments                                                   | Cluster management overhead                                       |
 
 Also considered: Symphony (validated parallel task running, limited by no inter-agent coordination), Claude Agent Teams (validated context-centric decomposition, limited to single machine).
 
@@ -354,84 +355,84 @@ Also considered: Symphony (validated parallel task running, limited by no inter-
 
 Complete the core task state machine and orchestration primitives.
 
-| Issue | What | Priority |
-|---|---|---|
-| #150 | Task `waiting` state — park parent while children execute | High |
-| #191 | Proto — add WAITING to TaskStatus enum | High |
-| #192 | Server — waiting state transitions and session suspension | High |
-| #498 | Structured session result (exit status) | High |
-| #495 | Child completion notification (SIGCHLD) | High |
-| #494 | Graceful shutdown signal (SIGTERM) | High |
-| #497 | Cascade kill (process group termination) | Medium |
-| #496 | Orphan task policy | Medium |
-| #431 | Bug: agent-created subtask dependency ordering | High |
-| #430 | Bug: Copilot tasks don't self-complete | High |
-| #162 | Artifacts and handoff between parent/child | Medium |
-| #161 | Conversation history management / windowing | Medium |
-| #156 | Hierarchical context scoping | Medium |
+| Issue | What                                                      | Priority |
+| ----- | --------------------------------------------------------- | -------- |
+| #150  | Task `waiting` state — park parent while children execute | High     |
+| #191  | Proto — add WAITING to TaskStatus enum                    | High     |
+| #192  | Server — waiting state transitions and session suspension | High     |
+| #498  | Structured session result (exit status)                   | High     |
+| #495  | Child completion notification (SIGCHLD)                   | High     |
+| #494  | Graceful shutdown signal (SIGTERM)                        | High     |
+| #497  | Cascade kill (process group termination)                  | Medium   |
+| #496  | Orphan task policy                                        | Medium   |
+| #431  | Bug: agent-created subtask dependency ordering            | High     |
+| #430  | Bug: Copilot tasks don't self-complete                    | High     |
+| #162  | Artifacts and handoff between parent/child                | Medium   |
+| #161  | Conversation history management / windowing               | Medium   |
+| #156  | Hierarchical context scoping                              | Medium   |
 
 ### Phase 2: Scheduling & Automation (Medium-term)
 
 Automatic task dispatch, environment management, and external triggers.
 
-| Issue | What | Priority |
-|---|---|---|
-| #152, #203 | Reconciliation loop core | High |
-| #204, #205 | Stall detection + state consistency | High |
-| #207, #208, #209 | Reconciliation config, UI, tests | Medium |
-| #158 | Environment scheduling and dispatch | High |
-| #383 | Concurrency limit enforcement | High |
-| #471 | Epic: Environment Scheduling | High |
-| #229, #231, #232, #233 | Environment affinity, leases, inheritance | Medium |
-| #230 | Paused task state with environment hint | Medium |
-| #499, #500 | Token accounting and per-task budgets | Medium |
-| #154 | Scheduled triggers (cron) | Medium |
-| #346 | External trigger ingestion (webhooks) | Medium |
-| #509 | Human notification webhook | Medium |
-| #246 | CI failure auto-trigger | Low |
-| #261 | Workspace hygiene between assignments | Medium |
+| Issue                  | What                                      | Priority |
+| ---------------------- | ----------------------------------------- | -------- |
+| #152, #203             | Reconciliation loop core                  | High     |
+| #204, #205             | Stall detection + state consistency       | High     |
+| #207, #208, #209       | Reconciliation config, UI, tests          | Medium   |
+| #158                   | Environment scheduling and dispatch       | High     |
+| #383                   | Concurrency limit enforcement             | High     |
+| #471                   | Epic: Environment Scheduling              | High     |
+| #229, #231, #232, #233 | Environment affinity, leases, inheritance | Medium   |
+| #230                   | Paused task state with environment hint   | Medium   |
+| #499, #500             | Token accounting and per-task budgets     | Medium   |
+| #154                   | Scheduled triggers (cron)                 | Medium   |
+| #346                   | External trigger ingestion (webhooks)     | Medium   |
+| #509                   | Human notification webhook                | Medium   |
+| #246                   | CI failure auto-trigger                   | Low      |
+| #261                   | Workspace hygiene between assignments     | Medium   |
 
 ### Phase 3: Agent Intelligence (Medium-term)
 
 Make the orchestrator smarter and personas more capable.
 
-| Issue | What | Priority |
-|---|---|---|
-| #381 | Orchestrator system prompt template | High |
-| #343 | MCP tools for orchestrator agents | High |
-| #420 | MCP broker — unified syscall interface | High |
-| #424 | Persona-scoped tool exposure | High |
-| #384 | Persona auto-selection based on task context | Medium |
-| #344 | Long-lived event-driven orchestrator sessions | Medium |
-| #386 | Swarm dry-run — preview decomposition | Medium |
-| #385 | Decomposition budget controls | Medium |
-| #163 | Decomposition heuristics | Medium |
-| #387 | Agent heartbeat and health monitoring | Medium |
-| #466 | Epic: Agent Intelligence | — |
+| Issue | What                                          | Priority |
+| ----- | --------------------------------------------- | -------- |
+| #381  | Orchestrator system prompt template           | High     |
+| #343  | MCP tools for orchestrator agents             | High     |
+| #420  | MCP broker — unified syscall interface        | High     |
+| #424  | Persona-scoped tool exposure                  | High     |
+| #384  | Persona auto-selection based on task context  | Medium   |
+| #344  | Long-lived event-driven orchestrator sessions | Medium   |
+| #386  | Swarm dry-run — preview decomposition         | Medium   |
+| #385  | Decomposition budget controls                 | Medium   |
+| #163  | Decomposition heuristics                      | Medium   |
+| #387  | Agent heartbeat and health monitoring         | Medium   |
+| #466  | Epic: Agent Intelligence                      | —        |
 
 ### Phase 4: Advanced IPC & Networking (Longer-term)
 
 Deepen the kernel model with richer inter-agent communication.
 
-| Issue | What | Priority |
-|---|---|---|
-| #545 | Process model — threads, IPC, file descriptors | Speculative |
-| #544 | A2A protocol for inter-agent networking | Speculative |
-| #542 | Widget compositor for task UI output | Speculative |
-| #164 | Cross-branch task dependencies | Medium |
-| #160 | Finding scoping (task-level, global) | Medium |
-| #13 | Knowledge graph to replace findings | Speculative |
+| Issue | What                                           | Priority    |
+| ----- | ---------------------------------------------- | ----------- |
+| #545  | Process model — threads, IPC, file descriptors | Speculative |
+| #544  | A2A protocol for inter-agent networking        | Speculative |
+| #542  | Widget compositor for task UI output           | Speculative |
+| #164  | Cross-branch task dependencies                 | Medium      |
+| #160  | Finding scoping (task-level, global)           | Medium      |
+| #13   | Knowledge graph to replace findings            | Speculative |
 
 ### Phase 5: Autonomy & Self-Improvement (Long-term)
 
 Features that increase agent autonomy and reduce human involvement.
 
-| Issue | What | Priority |
-|---|---|---|
-| #166 | Recruiter persona — dynamic persona creation | Speculative |
-| #165 | Style mimic — learn human decision patterns | Speculative |
-| #167 | Self-improvement loop | Speculative |
-| #28, #29 | New runtimes (Crush, Goose) | Speculative |
+| Issue    | What                                         | Priority    |
+| -------- | -------------------------------------------- | ----------- |
+| #166     | Recruiter persona — dynamic persona creation | Speculative |
+| #165     | Style mimic — learn human decision patterns  | Speculative |
+| #167     | Self-improvement loop                        | Speculative |
+| #28, #29 | New runtimes (Crush, Goose)                  | Speculative |
 
 ---
 
@@ -439,16 +440,16 @@ Features that increase agent autonomy and reduce human involvement.
 
 Several backlog issues are UX implementations of kernel concepts:
 
-| Issue | What |
-|---|---|
-| #593 | Unify create/edit task UX |
-| #594 | Unify create/edit persona UX |
-| #297 | Dependency management during task creation |
-| #284 | Task & project workflow UX |
-| #245 | Review queue — batch approval UX |
-| #159 | Task tree visualization in web UI |
-| #437 | Toast notifications on task state changes |
-| #447 | Task search (fuzzy search for CLI and MCP) |
+| Issue | What                                       |
+| ----- | ------------------------------------------ |
+| #593  | Unify create/edit task UX                  |
+| #594  | Unify create/edit persona UX               |
+| #297  | Dependency management during task creation |
+| #284  | Task & project workflow UX                 |
+| #245  | Review queue — batch approval UX           |
+| #159  | Task tree visualization in web UI          |
+| #437  | Toast notifications on task state changes  |
+| #447  | Task search (fuzzy search for CLI and MCP) |
 
 See [2026-03-12-ux-audit.md](2026-03-12-ux-audit.md) for the full UX improvement backlog.
 

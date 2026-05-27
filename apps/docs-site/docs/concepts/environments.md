@@ -23,6 +23,7 @@ grackle env add my-docker --docker --volume /host/path:/container/path --gpu
 ```
 
 Options:
+
 - `--image` — Docker image (default: auto-built `grackle-powerline` image)
 - `--repo` — Git repo to clone into the container
 - `--volume` — Mount host directories (repeatable, format: `host:container[:ro]`)
@@ -51,6 +52,7 @@ grackle env add my-server --ssh --host dev.example.com --user deploy --identity-
 ```
 
 Options:
+
 - `--host` — Hostname or IP (required)
 - `--user` — SSH user
 - `--ssh-port` — SSH port (default: 22)
@@ -91,14 +93,14 @@ stateDiagram-v2
     disconnected --> [*]: remove
 ```
 
-| Command | What it does |
-|---------|-------------|
-| `env add` | Registers the environment (no connection yet) |
+| Command         | What it does                                                                |
+| --------------- | --------------------------------------------------------------------------- |
+| `env add`       | Registers the environment (no connection yet)                               |
 | `env provision` | Bootstraps and connects (installs PowerLine, starts it, establishes tunnel) |
-| `env wake` | Same as provision — reconnects a stopped environment |
-| `env stop` | Gracefully disconnects |
-| `env destroy` | Stops and tears down resources (deletes Docker container, etc.) |
-| `env remove` | Unregisters the environment from Grackle |
+| `env wake`      | Same as provision — reconnects a stopped environment                        |
+| `env stop`      | Gracefully disconnects                                                      |
+| `env destroy`   | Stops and tears down resources (deletes Docker container, etc.)             |
+| `env remove`    | Unregisters the environment from Grackle                                    |
 
 ## Provisioning
 

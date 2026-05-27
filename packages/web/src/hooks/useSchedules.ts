@@ -8,7 +8,12 @@
  */
 
 import { useState, useCallback, useRef } from "react";
-import type { ScheduleData, GrackleEvent, UseSchedulesResult, ScheduleUpdate } from "@grackle-ai/web-components";
+import type {
+  ScheduleData,
+  GrackleEvent,
+  UseSchedulesResult,
+  ScheduleUpdate,
+} from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
 import { schedulingClient as grackleClient } from "./useGrackleClient.js";
 import { protoToSchedule } from "./proto-converters.js";
@@ -36,22 +41,27 @@ export function useSchedules(): UseSchedulesResult {
     }
   }, [trackSchedules]);
 
-  const handleEvent = useCallback((event: GrackleEvent): boolean => {
-    switch (event.type) {
-      case "schedule.created":
-      case "schedule.updated":
-      case "schedule.deleted":
-        loadSchedules().catch(() => {});
-        return true;
-      case "schedule.fired":
-        // Debounce reloads for fired events — schedules can fire rapidly at short intervals.
-        clearTimeout(firedDebounceRef.current);
-        firedDebounceRef.current = setTimeout(() => { loadSchedules().catch(() => {}); }, 500);
-        return true;
-      default:
-        return false;
-    }
-  }, [loadSchedules]);
+  const handleEvent = useCallback(
+    (event: GrackleEvent): boolean => {
+      switch (event.type) {
+        case "schedule.created":
+        case "schedule.updated":
+        case "schedule.deleted":
+          loadSchedules().catch(() => {});
+          return true;
+        case "schedule.fired":
+          // Debounce reloads for fired events — schedules can fire rapidly at short intervals.
+          clearTimeout(firedDebounceRef.current);
+          firedDebounceRef.current = setTimeout(() => {
+            loadSchedules().catch(() => {});
+          }, 500);
+          return true;
+        default:
+          return false;
+      }
+    },
+    [loadSchedules],
+  );
 
   const createSchedule = useCallback(
     async (
@@ -80,11 +90,21 @@ export function useSchedules(): UseSchedulesResult {
   const updateSchedule = useCallback(
     async (scheduleId: string, fields: ScheduleUpdate): Promise<ScheduleData> => {
       const request: Record<string, unknown> = { id: scheduleId };
-      if (fields.title !== undefined) { request.title = fields.title; }
-      if (fields.description !== undefined) { request.description = fields.description; }
-      if (fields.scheduleExpression !== undefined) { request.scheduleExpression = fields.scheduleExpression; }
-      if (fields.personaId !== undefined) { request.personaId = fields.personaId; }
-      if (fields.enabled !== undefined) { request.enabled = fields.enabled; }
+      if (fields.title !== undefined) {
+        request.title = fields.title;
+      }
+      if (fields.description !== undefined) {
+        request.description = fields.description;
+      }
+      if (fields.scheduleExpression !== undefined) {
+        request.scheduleExpression = fields.scheduleExpression;
+      }
+      if (fields.personaId !== undefined) {
+        request.personaId = fields.personaId;
+      }
+      if (fields.enabled !== undefined) {
+        request.enabled = fields.enabled;
+      }
       const resp = await grackleClient.updateSchedule(request);
       const updated = protoToSchedule(resp);
       setSchedules((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
@@ -93,19 +113,27 @@ export function useSchedules(): UseSchedulesResult {
     [],
   );
 
-  const deleteSchedule = useCallback(
-    async (scheduleId: string): Promise<void> => {
-      await grackleClient.deleteSchedule({ id: scheduleId });
-      setSchedules((prev) => prev.filter((s) => s.id !== scheduleId));
-    },
-    [],
-  );
+  const deleteSchedule = useCallback(async (scheduleId: string): Promise<void> => {
+    await grackleClient.deleteSchedule({ id: scheduleId });
+    setSchedules((prev) => prev.filter((s) => s.id !== scheduleId));
+  }, []);
 
   const domainHook: DomainHook = {
     onConnect: () => loadSchedules(),
-    onDisconnect: () => { clearTimeout(firedDebounceRef.current); },
+    onDisconnect: () => {
+      clearTimeout(firedDebounceRef.current);
+    },
     handleEvent,
   };
 
-  return { schedules, schedulesLoading, loadSchedules, createSchedule, updateSchedule, deleteSchedule, handleEvent, domainHook };
+  return {
+    schedules,
+    schedulesLoading,
+    loadSchedules,
+    createSchedule,
+    updateSchedule,
+    deleteSchedule,
+    handleEvent,
+    domainHook,
+  };
 }

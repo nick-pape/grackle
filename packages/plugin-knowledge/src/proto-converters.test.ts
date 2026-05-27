@@ -80,7 +80,12 @@ describe("knowledgeEdgeToProto", () => {
   });
 
   it("emits empty metadataJson when no metadata is present", () => {
-    const proto = knowledgeEdgeToProto({ fromId: "a", toId: "b", type: "PART_OF", createdAt: "t0" });
+    const proto = knowledgeEdgeToProto({
+      fromId: "a",
+      toId: "b",
+      type: "PART_OF",
+      createdAt: "t0",
+    });
     expect(proto.metadataJson).toBe("");
   });
 });

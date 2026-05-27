@@ -3,8 +3,12 @@ import { ROOT_TASK_ID } from "@grackle-ai/common";
 import { useGrackle } from "../context/GrackleContext.js";
 import { useSandboxProxyUrl } from "../context/ManifestContext.js";
 import {
-  ChatInput, EventStream, SplitButton,
-  groupConsecutiveTextEvents, pairToolEvents, useToast,
+  ChatInput,
+  EventStream,
+  SplitButton,
+  groupConsecutiveTextEvents,
+  pairToolEvents,
+  useToast,
 } from "@grackle-ai/web-components";
 import { ChatShimmer } from "./ChatShimmer.js";
 import styles from "./ChatPage.module.scss";
@@ -20,9 +24,7 @@ function ChatEmptyState({ hasLocalEnvironment }: { hasLocalEnvironment: boolean 
           : "Add a local environment in Settings to start chatting."}
       </div>
       {!hasLocalEnvironment && (
-        <div className={styles.emptyHint}>
-          Go to Settings &rarr; Environments to add one.
-        </div>
+        <div className={styles.emptyHint}>Go to Settings &rarr; Environments to add one.</div>
       )}
     </div>
   );
@@ -38,7 +40,19 @@ export function ChatPage(): JSX.Element {
   const sandboxProxyUrl = useSandboxProxyUrl();
   const {
     tasks: { tasks, tasksLoading, startTask },
-    sessions: { sessions, sessionsLoading, events, eventsDropped, taskSessions, loadTaskSessions, loadSessionEvents, kill, stopGraceful, sendInput, spawn },
+    sessions: {
+      sessions,
+      sessionsLoading,
+      events,
+      eventsDropped,
+      taskSessions,
+      loadTaskSessions,
+      loadSessionEvents,
+      kill,
+      stopGraceful,
+      sendInput,
+      spawn,
+    },
     environments: { environments, provisionEnvironment },
     personas: { personas },
   } = useGrackle();
@@ -50,7 +64,7 @@ export function ChatPage(): JSX.Element {
   const rootTask = tasks.find((t) => t.id === ROOT_TASK_ID);
   const latestSession = rootTask?.latestSessionId
     ? (sessions.find((s) => s.id === rootTask.latestSessionId) ??
-       (taskSessions[ROOT_TASK_ID] ?? []).find((s) => s.id === rootTask.latestSessionId))
+      (taskSessions[ROOT_TASK_ID] ?? []).find((s) => s.id === rootTask.latestSessionId))
     : undefined;
 
   // Load the root task's sessions on mount and whenever its latest session
@@ -80,13 +94,17 @@ export function ChatPage(): JSX.Element {
     (e) => e.adapterType === "local" && e.status === "connected",
   );
 
-  const isSessionActive = latestSession !== undefined
-    && latestSession.status !== "stopped" && latestSession.status !== "suspended";
+  const isSessionActive =
+    latestSession !== undefined &&
+    latestSession.status !== "stopped" &&
+    latestSession.status !== "suspended";
   const isSessionIdle = latestSession?.status === "idle";
 
   useEffect(() => {
     if (pendingMessage && latestSession && isSessionIdle) {
-      sendInput(latestSession.id, pendingMessage).catch(() => { showToast("Failed to send message", "error"); });
+      sendInput(latestSession.id, pendingMessage).catch(() => {
+        showToast("Failed to send message", "error");
+      });
       setPendingMessage(undefined);
     }
   }, [pendingMessage, isSessionIdle, latestSession?.id, sendInput, showToast]);
@@ -118,18 +136,33 @@ export function ChatPage(): JSX.Element {
       {isSessionActive && (
         <div className={styles.chatHeader}>
           <span className={styles.chatHeaderInfo}>
-            Session: {latestSession!.id.slice(0, 8)} | {latestSession!.runtime} | {latestSession!.status}
+            Session: {latestSession!.id.slice(0, 8)} | {latestSession!.runtime} |{" "}
+            {latestSession!.status}
           </span>
           <div className={styles.chatHeaderActions}>
             <SplitButton
               label="Stop"
-              onClick={() => { stopGraceful(latestSession!.id).catch(() => {}); }}
+              onClick={() => {
+                stopGraceful(latestSession!.id).catch(() => {});
+              }}
               variant="danger"
               size="sm"
               data-testid="stop-split-button"
               options={[
-                { label: "Stop", description: "Graceful shutdown", onClick: () => { stopGraceful(latestSession!.id).catch(() => {}); } },
-                { label: "Kill", description: "Force kill", onClick: () => { kill(latestSession!.id).catch(() => {}); } },
+                {
+                  label: "Stop",
+                  description: "Graceful shutdown",
+                  onClick: () => {
+                    stopGraceful(latestSession!.id).catch(() => {});
+                  },
+                },
+                {
+                  label: "Kill",
+                  description: "Force kill",
+                  onClick: () => {
+                    kill(latestSession!.id).catch(() => {});
+                  },
+                },
               ]}
             />
           </div>
@@ -153,10 +186,18 @@ export function ChatPage(): JSX.Element {
           environmentId={isSessionActive ? latestSession!.environmentId : localEnvironment.id}
           personas={personas}
           environments={environments}
-          onSendInput={(sid, text) => { sendInput(sid, text).catch(() => { showToast("Failed to send message", "error"); }); }}
-          onSpawn={(eid, prompt, pid) => { spawn(eid, prompt, pid).catch(() => {}); }}
+          onSendInput={(sid, text) => {
+            sendInput(sid, text).catch(() => {
+              showToast("Failed to send message", "error");
+            });
+          }}
+          onSpawn={(eid, prompt, pid) => {
+            spawn(eid, prompt, pid).catch(() => {});
+          }}
           onStartTask={handleStartTask}
-          onProvisionEnvironment={(eid) => { provisionEnvironment(eid).catch(() => {}); }}
+          onProvisionEnvironment={(eid) => {
+            provisionEnvironment(eid).catch(() => {});
+          }}
           onShowToast={showToast}
         />
       )}

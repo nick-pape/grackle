@@ -53,9 +53,12 @@ export function initOtlpLogs(): LoggerProvider | undefined {
   // Honor the logs-specific endpoint first, then the general one, matching the
   // OTLP exporter's own precedence so any standard OTel env-var combination
   // enables the sink (not just the general var).
-  const endpoint = process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT ?? process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+  const endpoint =
+    process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT ?? process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
   if (!endpoint) {
-    logger.debug("OTLP logs sink disabled (OTEL_EXPORTER_OTLP_LOGS_ENDPOINT / OTEL_EXPORTER_OTLP_ENDPOINT unset)");
+    logger.debug(
+      "OTLP logs sink disabled (OTEL_EXPORTER_OTLP_LOGS_ENDPOINT / OTEL_EXPORTER_OTLP_ENDPOINT unset)",
+    );
     return undefined;
   }
   try {

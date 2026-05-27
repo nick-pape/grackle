@@ -29,7 +29,9 @@ function createApiKey(homePath: string, keyPath: string): string {
   // Ensure permissions on Windows (best-effort)
   try {
     chmodSync(keyPath, 0o600);
-  } catch { /* Windows may not support this */ }
+  } catch {
+    /* Windows may not support this */
+  }
 
   getAuthLogger().info({ keyPath }, "Generated new API key");
   return key;

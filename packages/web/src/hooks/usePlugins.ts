@@ -41,21 +41,22 @@ export function usePlugins(): UsePluginsResult {
     }
   }, [trackPlugins]);
 
-  const handleEvent = useCallback((event: GrackleEvent): boolean => {
-    if (event.type === "plugin.changed") {
-      loadPlugins().catch(() => {});
-      return true;
-    }
-    return false;
-  }, [loadPlugins]);
+  const handleEvent = useCallback(
+    (event: GrackleEvent): boolean => {
+      if (event.type === "plugin.changed") {
+        loadPlugins().catch(() => {});
+        return true;
+      }
+      return false;
+    },
+    [loadPlugins],
+  );
 
   const setPluginEnabled = useCallback(async (name: string, enabled: boolean): Promise<void> => {
     try {
       const resp = await grackleClient.setPluginEnabled({ name, enabled });
       setPlugins((prev) =>
-        prev.map((p) =>
-          p.name === resp.name ? { ...p, enabled: resp.enabled } : p,
-        ),
+        prev.map((p) => (p.name === resp.name ? { ...p, enabled: resp.enabled } : p)),
       );
     } catch {
       // empty

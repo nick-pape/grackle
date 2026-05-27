@@ -35,7 +35,12 @@ export interface CronPhaseDeps {
   /** Set the schedule_id FK on a task. */
   setTaskScheduleId: (taskId: string, scheduleId: string) => void;
   /** Enqueue a task for the dispatch phase to start. */
-  enqueueForDispatch: (entry: { id: string; taskId: string; environmentId?: string; personaId?: string }) => void;
+  enqueueForDispatch: (entry: {
+    id: string;
+    taskId: string;
+    environmentId?: string;
+    personaId?: string;
+  }) => void;
   /** Emit a domain event. */
   emit: (type: GrackleEventType, payload: Record<string, unknown>) => void;
   /** Look up a persona by ID. */
@@ -134,15 +139,9 @@ function fireSchedule(deps: CronPhaseDeps, schedule: ScheduleRow): void {
       firedAt: now,
     });
 
-    deps.logger.info(
-      { scheduleId: schedule.id, taskId, title: schedule.title },
-      "Schedule fired",
-    );
+    deps.logger.info({ scheduleId: schedule.id, taskId, title: schedule.title }, "Schedule fired");
   } catch (err) {
-    deps.logger.error(
-      { scheduleId: schedule.id, err },
-      "Schedule fire failed with exception",
-    );
+    deps.logger.error({ scheduleId: schedule.id, err }, "Schedule fire failed with exception");
     // Still advance to prevent retry storms
     deps.advanceSchedule(schedule.id, now, nextRunAt);
   }

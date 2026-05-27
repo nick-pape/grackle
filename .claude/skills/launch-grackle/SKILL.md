@@ -39,6 +39,7 @@ source "/tmp/grackle-${SAFE_BRANCH}/env.sh"
 The web UI uses pairing-code authentication — it does NOT accept the API key directly. You must complete pairing before the browser can access the UI.
 
 **How pairing works:**
+
 1. The server generates a 6-character pairing code
 2. A browser hits `/pair?code=XXXXXX` — this redeems the code and sets a session cookie
 3. All subsequent web requests use the session cookie (valid for 24 hours)
@@ -46,6 +47,7 @@ The web UI uses pairing-code authentication — it does NOT accept the API key d
 5. Pairing codes expire after 5 minutes. Run `grackle pair` to generate a new one.
 
 **For Playwright MCP testing:**
+
 - You MUST navigate to the **pairing URL** first before testing the web UI
 - Navigate to `$PAIRING_URL` — this will set the session cookie and redirect to `/`
 - After that, the browser has a valid session and you can navigate freely
@@ -55,6 +57,7 @@ The web UI uses pairing-code authentication — it does NOT accept the API key d
   ```
 
 **For CLI / gRPC usage:**
+
 - CLI uses the API key (Bearer token), not pairing codes
 - Set `GRACKLE_URL` and `GRACKLE_API_KEY` as env vars
 

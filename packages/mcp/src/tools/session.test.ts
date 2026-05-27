@@ -77,7 +77,8 @@ describe("session_resume", () => {
     });
 
     const result = await getTool("session_resume").handler(
-      { sessionId: "session-2" }, { core: mockClient },
+      { sessionId: "session-2" },
+      { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -93,7 +94,8 @@ describe("session_resume", () => {
     );
 
     const result = await getTool("session_resume").handler(
-      { sessionId: "no-such" }, { core: mockClient },
+      { sessionId: "no-such" },
+      { core: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -102,12 +104,72 @@ describe("session_resume", () => {
 
 describe("session_status", () => {
   const allSessions = [
-    { id: "s1", environmentId: "env-1", runtime: "cc", status: "pending", prompt: "p1", model: "m1", turns: 0, startedAt: "t1", taskId: "" },
-    { id: "s2", environmentId: "env-1", runtime: "cc", status: "running", prompt: "p2", model: "m1", turns: 3, startedAt: "t2", taskId: "" },
-    { id: "s3", environmentId: "env-1", runtime: "cc", status: "idle", prompt: "p3", model: "m1", turns: 1, startedAt: "t3", taskId: "" },
-    { id: "s4", environmentId: "env-1", runtime: "cc", status: "stopped", prompt: "p4", model: "m1", turns: 5, startedAt: "t4", taskId: "" },
-    { id: "s5", environmentId: "env-1", runtime: "cc", status: "stopped", prompt: "p5", model: "m1", turns: 2, startedAt: "t5", taskId: "" },
-    { id: "s6", environmentId: "env-1", runtime: "cc", status: "stopped", prompt: "p6", model: "m1", turns: 1, startedAt: "t6", taskId: "" },
+    {
+      id: "s1",
+      environmentId: "env-1",
+      runtime: "cc",
+      status: "pending",
+      prompt: "p1",
+      model: "m1",
+      turns: 0,
+      startedAt: "t1",
+      taskId: "",
+    },
+    {
+      id: "s2",
+      environmentId: "env-1",
+      runtime: "cc",
+      status: "running",
+      prompt: "p2",
+      model: "m1",
+      turns: 3,
+      startedAt: "t2",
+      taskId: "",
+    },
+    {
+      id: "s3",
+      environmentId: "env-1",
+      runtime: "cc",
+      status: "idle",
+      prompt: "p3",
+      model: "m1",
+      turns: 1,
+      startedAt: "t3",
+      taskId: "",
+    },
+    {
+      id: "s4",
+      environmentId: "env-1",
+      runtime: "cc",
+      status: "stopped",
+      prompt: "p4",
+      model: "m1",
+      turns: 5,
+      startedAt: "t4",
+      taskId: "",
+    },
+    {
+      id: "s5",
+      environmentId: "env-1",
+      runtime: "cc",
+      status: "stopped",
+      prompt: "p5",
+      model: "m1",
+      turns: 2,
+      startedAt: "t5",
+      taskId: "",
+    },
+    {
+      id: "s6",
+      environmentId: "env-1",
+      runtime: "cc",
+      status: "stopped",
+      prompt: "p6",
+      model: "m1",
+      turns: 1,
+      startedAt: "t6",
+      taskId: "",
+    },
   ];
 
   /** Should filter to only active sessions when all=false (default). */
@@ -117,9 +179,7 @@ describe("session_status", () => {
       sessions: allSessions,
     });
 
-    const result = await getTool("session_status").handler(
-      { all: false }, { core: mockClient },
-    );
+    const result = await getTool("session_status").handler({ all: false }, { core: mockClient });
     const parsed = JSON.parse(result.content[0].text);
 
     expect(parsed).toHaveLength(3);
@@ -134,9 +194,7 @@ describe("session_status", () => {
       sessions: allSessions,
     });
 
-    const result = await getTool("session_status").handler(
-      { all: true }, { core: mockClient },
-    );
+    const result = await getTool("session_status").handler({ all: true }, { core: mockClient });
     const parsed = JSON.parse(result.content[0].text);
 
     expect(parsed).toHaveLength(6);
@@ -164,7 +222,8 @@ describe("session_kill", () => {
     (mockClient.killAgent as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     const result = await getTool("session_kill").handler(
-      { sessionId: "session-99" }, { core: mockClient },
+      { sessionId: "session-99" },
+      { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -198,7 +257,8 @@ describe("session_kill", () => {
     );
 
     const result = await getTool("session_kill").handler(
-      { sessionId: "no-such" }, { core: mockClient },
+      { sessionId: "no-such" },
+      { core: mockClient },
     );
 
     expect(result.isError).toBe(true);
@@ -280,10 +340,12 @@ describe("session_attach", () => {
       id: "s1",
       taskId: "unrelated-task",
     });
-    (mockClient as unknown as { getTask: ReturnType<typeof vi.fn> }).getTask = vi.fn().mockResolvedValue({
-      id: "unrelated-task",
-      parentTaskId: "",
-    });
+    (mockClient as unknown as { getTask: ReturnType<typeof vi.fn> }).getTask = vi
+      .fn()
+      .mockResolvedValue({
+        id: "unrelated-task",
+        parentTaskId: "",
+      });
 
     const result = await getTool("session_attach").handler(
       { sessionId: "s1", timeoutSeconds: 5 },
@@ -310,10 +372,12 @@ describe("session_attach", () => {
       id: "s1",
       taskId: "child-task",
     });
-    (mockClient as unknown as { getTask: ReturnType<typeof vi.fn> }).getTask = vi.fn().mockResolvedValue({
-      id: "child-task",
-      parentTaskId: "parent-task",
-    });
+    (mockClient as unknown as { getTask: ReturnType<typeof vi.fn> }).getTask = vi
+      .fn()
+      .mockResolvedValue({
+        id: "child-task",
+        parentTaskId: "parent-task",
+      });
     const mockStream = (async function* () {
       yield { type: 1, timestamp: "2026-01-01T00:00:00Z", content: "hello" };
     })();
@@ -432,10 +496,12 @@ describe("session_send_input", () => {
       id: "s1",
       taskId: "unrelated-task",
     });
-    (mockClient as unknown as { getTask: ReturnType<typeof vi.fn> }).getTask = vi.fn().mockResolvedValue({
-      id: "unrelated-task",
-      parentTaskId: "",
-    });
+    (mockClient as unknown as { getTask: ReturnType<typeof vi.fn> }).getTask = vi
+      .fn()
+      .mockResolvedValue({
+        id: "unrelated-task",
+        parentTaskId: "",
+      });
 
     const result = await getTool("session_send_input").handler(
       { sessionId: "s1", text: "yes" },
@@ -462,10 +528,12 @@ describe("session_send_input", () => {
       id: "s1",
       taskId: "child-task",
     });
-    (mockClient as unknown as { getTask: ReturnType<typeof vi.fn> }).getTask = vi.fn().mockResolvedValue({
-      id: "child-task",
-      parentTaskId: "parent-task",
-    });
+    (mockClient as unknown as { getTask: ReturnType<typeof vi.fn> }).getTask = vi
+      .fn()
+      .mockResolvedValue({
+        id: "child-task",
+        parentTaskId: "parent-task",
+      });
     (mockClient.sendInput as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     const result = await getTool("session_send_input").handler(

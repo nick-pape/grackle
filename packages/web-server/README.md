@@ -43,23 +43,23 @@ webServer.listen(3000, "127.0.0.1");
 
 ### `createWebServer(options: WebServerOptions): http.Server`
 
-| Option | Type | Required | Description |
-|--------|------|----------|-------------|
-| `apiKey` | `string` | yes | API key for session/bearer auth |
-| `webPort` | `number` | yes | Port (used for OAuth URL generation) |
-| `bindHost` | `string` | yes | Bind host (`127.0.0.1` or `0.0.0.0`) |
-| `connectRoutes` | `(router) => void` | no | ConnectRPC route registration function |
-| `webDistDir` | `string` | no | Override web UI dist directory |
-| `readinessCheck` | `() => ReadinessResult \| Promise<ReadinessResult>` | no | Callback for `/readyz` probe (checks database, etc.) |
+| Option           | Type                                                | Required | Description                                          |
+| ---------------- | --------------------------------------------------- | -------- | ---------------------------------------------------- |
+| `apiKey`         | `string`                                            | yes      | API key for session/bearer auth                      |
+| `webPort`        | `number`                                            | yes      | Port (used for OAuth URL generation)                 |
+| `bindHost`       | `string`                                            | yes      | Bind host (`127.0.0.1` or `0.0.0.0`)                 |
+| `connectRoutes`  | `(router) => void`                                  | no       | ConnectRPC route registration function               |
+| `webDistDir`     | `string`                                            | no       | Override web UI dist directory                       |
+| `readinessCheck` | `() => ReadinessResult \| Promise<ReadinessResult>` | no       | Callback for `/readyz` probe (checks database, etc.) |
 
 ### Health Endpoints
 
 Both endpoints require no authentication and return JSON.
 
-| Endpoint | Purpose | Success | Failure |
-|----------|---------|---------|---------|
-| `GET /healthz` | Liveness — process is running, event loop responsive | `200 {"status":"ok"}` | N/A (if unreachable, process is dead) |
-| `GET /readyz` | Readiness — dependencies (database, etc.) are healthy | `200 {"ready":true,"checks":{...}}` | `503 {"ready":false,"checks":{...}}` |
+| Endpoint       | Purpose                                               | Success                             | Failure                               |
+| -------------- | ----------------------------------------------------- | ----------------------------------- | ------------------------------------- |
+| `GET /healthz` | Liveness — process is running, event loop responsive  | `200 {"status":"ok"}`               | N/A (if unreachable, process is dead) |
+| `GET /readyz`  | Readiness — dependencies (database, etc.) are healthy | `200 {"ready":true,"checks":{...}}` | `503 {"ready":false,"checks":{...}}`  |
 
 ### `isWildcardAddress(host: string): boolean`
 

@@ -1,4 +1,11 @@
-import React, { createContext, useCallback, useContext, useState, type JSX, type ReactNode } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useState,
+  type JSX,
+  type ReactNode,
+} from "react";
 
 /** Setter function for updating sidebar content. */
 type SidebarSetter = (content: ReactNode | undefined) => void;
@@ -7,13 +14,17 @@ type SidebarSetter = (content: ReactNode | undefined) => void;
  * Context that holds the current sidebar content node.
  * Consumed by the Sidebar component to render slot content.
  */
-const SidebarContentContext: React.Context<ReactNode | undefined> = createContext<ReactNode | undefined>(undefined);
+const SidebarContentContext: React.Context<ReactNode | undefined> = createContext<
+  ReactNode | undefined
+>(undefined);
 
 /**
  * Context that holds a stable setter for updating sidebar content.
  * Consumed by layout route wrappers to declare their sidebar content.
  */
-const SidebarSetterContext: React.Context<SidebarSetter | undefined> = createContext<SidebarSetter | undefined>(undefined);
+const SidebarSetterContext: React.Context<SidebarSetter | undefined> = createContext<
+  SidebarSetter | undefined
+>(undefined);
 
 /** Props for the SidebarProvider component. */
 interface SidebarProviderProps {
@@ -31,9 +42,7 @@ export function SidebarProvider({ children }: SidebarProviderProps): JSX.Element
 
   return (
     <SidebarSetterContext.Provider value={stableSetContent}>
-      <SidebarContentContext.Provider value={content}>
-        {children}
-      </SidebarContentContext.Provider>
+      <SidebarContentContext.Provider value={content}>{children}</SidebarContentContext.Provider>
     </SidebarSetterContext.Provider>
   );
 }

@@ -29,7 +29,9 @@ vi.mock("@grackle-ai/web-components", async (importOriginal) => {
 // ---------------------------------------------------------------------------
 
 describe("useStreams initial state", () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it("starts with empty streams array", () => {
     const { result } = renderHook(() => useStreams());
@@ -48,15 +50,26 @@ describe("useStreams initial state", () => {
 });
 
 describe("useStreams.loadStreams", () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it("calls coreClient.listStreams and populates streams", async () => {
-    const mockStream = { id: "s1", name: "test-stream", subscriberCount: 2, messageBufferDepth: 0, selfEcho: false, subscribers: [] };
+    const mockStream = {
+      id: "s1",
+      name: "test-stream",
+      subscriberCount: 2,
+      messageBufferDepth: 0,
+      selfEcho: false,
+      subscribers: [],
+    };
     mockClient.listStreams.mockResolvedValueOnce({ streams: [mockStream] });
 
     const { result } = renderHook(() => useStreams());
 
-    await act(async () => { await result.current.loadStreams(); });
+    await act(async () => {
+      await result.current.loadStreams();
+    });
 
     expect(mockClient.listStreams).toHaveBeenCalledWith({ includeInternal: false });
     expect(result.current.streams).toHaveLength(1);
@@ -67,7 +80,9 @@ describe("useStreams.loadStreams", () => {
     mockClient.listStreams.mockResolvedValueOnce({ streams: [] });
     const { result } = renderHook(() => useStreams());
 
-    await act(async () => { await result.current.loadStreams(true); });
+    await act(async () => {
+      await result.current.loadStreams(true);
+    });
 
     expect(mockClient.listStreams).toHaveBeenCalledWith({ includeInternal: true });
   });
@@ -76,7 +91,9 @@ describe("useStreams.loadStreams", () => {
     mockClient.listStreams.mockRejectedValueOnce(new Error("network error"));
     const { result } = renderHook(() => useStreams());
 
-    await act(async () => { await result.current.loadStreams(); });
+    await act(async () => {
+      await result.current.loadStreams();
+    });
 
     expect(result.current.streams).toEqual([]);
   });
@@ -85,7 +102,9 @@ describe("useStreams.loadStreams", () => {
     mockClient.listStreams.mockResolvedValueOnce({ streams: [] });
     const { result } = renderHook(() => useStreams());
 
-    await act(async () => { await result.current.loadStreams(); });
+    await act(async () => {
+      await result.current.loadStreams();
+    });
 
     expect(result.current.streamsLoadedOnce).toBe(true);
   });
@@ -94,60 +113,97 @@ describe("useStreams.loadStreams", () => {
     mockClient.listStreams.mockRejectedValueOnce(new Error("network error"));
     const { result } = renderHook(() => useStreams());
 
-    await act(async () => { await result.current.loadStreams(); });
+    await act(async () => {
+      await result.current.loadStreams();
+    });
 
     expect(result.current.streamsLoadedOnce).toBe(true);
   });
 
   it("streamsLoading flips true then false", async () => {
     let resolvePromise!: (v: unknown) => void;
-    mockClient.listStreams.mockReturnValueOnce(new Promise((resolve) => { resolvePromise = resolve; }));
+    mockClient.listStreams.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolvePromise = resolve;
+      }),
+    );
 
     const { result } = renderHook(() => useStreams());
 
-    act(() => { result.current.loadStreams().catch(() => {}); });
+    act(() => {
+      result.current.loadStreams().catch(() => {});
+    });
     expect(result.current.streamsLoading).toBe(true);
 
-    await act(async () => { resolvePromise({ streams: [] }); });
-    await waitFor(() => { expect(result.current.streamsLoading).toBe(false); });
+    await act(async () => {
+      resolvePromise({ streams: [] });
+    });
+    await waitFor(() => {
+      expect(result.current.streamsLoading).toBe(false);
+    });
   });
 });
 
 describe("useStreams.handleEvent", () => {
   it("returns false for all events (no stream domain events exist)", () => {
     const { result } = renderHook(() => useStreams());
-    const event = { id: "e1", type: "stream.created", timestamp: "2026-01-01T00:00:00Z", payload: {} };
+    const event = {
+      id: "e1",
+      type: "stream.created",
+      timestamp: "2026-01-01T00:00:00Z",
+      payload: {},
+    };
     expect(result.current.handleEvent(event)).toBe(false);
   });
 });
 
 describe("useStreams.domainHook", () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it("onConnect calls loadStreams", async () => {
     mockClient.listStreams.mockResolvedValueOnce({ streams: [] });
     const { result } = renderHook(() => useStreams());
 
-    await act(async () => { await result.current.domainHook.onConnect(); });
+    await act(async () => {
+      await result.current.domainHook.onConnect();
+    });
 
     expect(mockClient.listStreams).toHaveBeenCalledTimes(1);
   });
 
   it("onDisconnect clears streams", async () => {
-    const mockStream = { id: "s1", name: "test-stream", subscriberCount: 1, messageBufferDepth: 0, selfEcho: false, subscribers: [] };
+    const mockStream = {
+      id: "s1",
+      name: "test-stream",
+      subscriberCount: 1,
+      messageBufferDepth: 0,
+      selfEcho: false,
+      subscribers: [],
+    };
     mockClient.listStreams.mockResolvedValueOnce({ streams: [mockStream] });
     const { result } = renderHook(() => useStreams());
 
-    await act(async () => { await result.current.loadStreams(); });
+    await act(async () => {
+      await result.current.loadStreams();
+    });
     expect(result.current.streams).toHaveLength(1);
 
-    act(() => { result.current.domainHook.onDisconnect(); });
+    act(() => {
+      result.current.domainHook.onDisconnect();
+    });
     expect(result.current.streams).toEqual([]);
   });
 
   it("handleEvent returns false for unknown events", () => {
     const { result } = renderHook(() => useStreams());
-    const event = { id: "e1", type: "unknown.noop", timestamp: "2026-01-01T00:00:00Z", payload: {} };
+    const event = {
+      id: "e1",
+      type: "unknown.noop",
+      timestamp: "2026-01-01T00:00:00Z",
+      payload: {},
+    };
     expect(result.current.domainHook.handleEvent(event)).toBe(false);
   });
 });

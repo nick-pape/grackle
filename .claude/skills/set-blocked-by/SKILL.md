@@ -57,6 +57,7 @@ gh api graphql -f query='mutation {
 ```
 
 **Field names** (easy to mix up):
+
 - `issueId` = the issue that **is blocked**
 - `blockingIssueId` = the issue that **is blocking** it
 

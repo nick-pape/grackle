@@ -24,7 +24,10 @@ async function navigateToKnowledge(page: Page): Promise<void> {
 
 test.describe("Accessibility attributes", { tag: ["@a11y"] }, () => {
   test.describe("TaskList row accessibility", () => {
-    test("task rows in tree view have role=button, tabIndex, and keyboard support", async ({ appPage, grackle: { client } }) => {
+    test("task rows in tree view have role=button, tabIndex, and keyboard support", async ({
+      appPage,
+      grackle: { client },
+    }) => {
       const page = appPage;
 
       // Create workspace with parent + child tasks
@@ -59,7 +62,10 @@ test.describe("Accessibility attributes", { tag: ["@a11y"] }, () => {
       await expect(page).toHaveURL(new RegExp(`/tasks/${childId}`), { timeout: 5_000 });
     });
 
-    test("task rows in status-group view have role=button, tabIndex, and keyboard support", async ({ appPage, grackle: { client } }) => {
+    test("task rows in status-group view have role=button, tabIndex, and keyboard support", async ({
+      appPage,
+      grackle: { client },
+    }) => {
       const page = appPage;
 
       await createWorkspace(client, "a11y-status");
@@ -119,7 +125,7 @@ test.describe("Accessibility attributes", { tag: ["@a11y"] }, () => {
       const input = page.locator('textarea[placeholder="Enter prompt..."]');
       // The input may not be visible if there's no environment — fall back to other placeholder
       const altInput = page.locator('textarea[placeholder="Type a message..."]');
-      const spawnInput = await input.isVisible().catch(() => false) ? input : altInput;
+      const spawnInput = (await input.isVisible().catch(() => false)) ? input : altInput;
       await expect(spawnInput).toBeVisible({ timeout: 5_000 });
 
       // Assert aria-label on input
@@ -143,14 +149,22 @@ test.describe("Accessibility attributes", { tag: ["@a11y"] }, () => {
         await client.knowledge.searchKnowledge({ query: "probe", limit: 1 });
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
-        if (message.includes("not available") || message.includes("Unavailable") || message.includes("unavailable") || message.includes("unimplemented")) {
+        if (
+          message.includes("not available") ||
+          message.includes("Unavailable") ||
+          message.includes("unavailable") ||
+          message.includes("unimplemented")
+        ) {
           test.skip(true, "Knowledge graph not available in this environment");
         }
         throw error;
       }
     }
 
-    test("knowledge search input and workspace filter have aria-labels", async ({ appPage, grackle: { client } }) => {
+    test("knowledge search input and workspace filter have aria-labels", async ({
+      appPage,
+      grackle: { client },
+    }) => {
       await skipIfKnowledgeUnavailable(client);
       await navigateToKnowledge(appPage);
 

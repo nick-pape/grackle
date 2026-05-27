@@ -59,10 +59,10 @@ docker run -d \
 
 This starts Neo4j with:
 
-| Port | Protocol | Purpose |
-|------|----------|---------|
-| 7474 | HTTP | Neo4j Browser UI (visit `http://localhost:7474`) |
-| 7687 | Bolt | Driver protocol (what this library connects to) |
+| Port | Protocol | Purpose                                          |
+| ---- | -------- | ------------------------------------------------ |
+| 7474 | HTTP     | Neo4j Browser UI (visit `http://localhost:7474`) |
+| 7687 | Bolt     | Driver protocol (what this library connects to)  |
 
 The default credentials used by the library in development are `neo4j` / `grackle-dev`. In production, you **must** set the password via the `GRACKLE_NEO4J_PASSWORD` environment variable -- the library refuses to use the default password when `NODE_ENV=production`.
 
@@ -206,28 +206,28 @@ A **reference node** points to an entity that lives elsewhere (e.g., a task in a
 import { NODE_KIND, REFERENCE_SOURCE } from "@grackle-ai/knowledge-core";
 
 // Built-in reference source types (you can use any string):
-REFERENCE_SOURCE.TASK      // "task"
-REFERENCE_SOURCE.SESSION   // "session"
-REFERENCE_SOURCE.FINDING   // "finding"
-REFERENCE_SOURCE.WORKSPACE // "workspace"
+REFERENCE_SOURCE.TASK; // "task"
+REFERENCE_SOURCE.SESSION; // "session"
+REFERENCE_SOURCE.FINDING; // "finding"
+REFERENCE_SOURCE.WORKSPACE; // "workspace"
 
 // Custom source types are fully supported:
-const sourceType: string = "ado-work-item";  // any string works
+const sourceType: string = "ado-work-item"; // any string works
 ```
 
 **`ReferenceNode` properties:**
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `id` | `string` | UUID, auto-generated |
-| `kind` | `"reference"` | Discriminator |
-| `sourceType` | `string` | Entity type (e.g., `"task"`, `"finding"`, or any custom string) |
-| `sourceId` | `string` | ID of the entity in the external system |
-| `label` | `string` | Human-readable label (e.g., task title) |
-| `embedding` | `number[]` | Dense vector for similarity search |
-| `workspaceId` | `string` | Workspace scope (empty string = global) |
-| `createdAt` | `string` | ISO 8601 timestamp, auto-generated |
-| `updatedAt` | `string` | ISO 8601 timestamp, auto-maintained |
+| Property      | Type          | Description                                                     |
+| ------------- | ------------- | --------------------------------------------------------------- |
+| `id`          | `string`      | UUID, auto-generated                                            |
+| `kind`        | `"reference"` | Discriminator                                                   |
+| `sourceType`  | `string`      | Entity type (e.g., `"task"`, `"finding"`, or any custom string) |
+| `sourceId`    | `string`      | ID of the entity in the external system                         |
+| `label`       | `string`      | Human-readable label (e.g., task title)                         |
+| `embedding`   | `number[]`    | Dense vector for similarity search                              |
+| `workspaceId` | `string`      | Workspace scope (empty string = global)                         |
+| `createdAt`   | `string`      | ISO 8601 timestamp, auto-generated                              |
+| `updatedAt`   | `string`      | ISO 8601 timestamp, auto-maintained                             |
 
 #### Native Nodes
 
@@ -237,10 +237,10 @@ A **native node** owns its content directly. It exists only in the knowledge gra
 import { NATIVE_CATEGORY } from "@grackle-ai/knowledge-core";
 
 // Built-in native categories (you can use any string):
-NATIVE_CATEGORY.DECISION  // "decision"
-NATIVE_CATEGORY.INSIGHT   // "insight"
-NATIVE_CATEGORY.CONCEPT   // "concept"
-NATIVE_CATEGORY.SNIPPET   // "snippet"
+NATIVE_CATEGORY.DECISION; // "decision"
+NATIVE_CATEGORY.INSIGHT; // "insight"
+NATIVE_CATEGORY.CONCEPT; // "concept"
+NATIVE_CATEGORY.SNIPPET; // "snippet"
 
 // Custom categories are fully supported:
 const category: string = "research-note";
@@ -248,30 +248,30 @@ const category: string = "research-note";
 
 **`NativeNode` properties:**
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `id` | `string` | UUID, auto-generated |
-| `kind` | `"native"` | Discriminator |
-| `category` | `string` | Subcategory (e.g., `"decision"`, `"insight"`, or any custom string) |
-| `title` | `string` | Title or summary |
-| `content` | `string` | Full content owned by this node |
-| `tags` | `string[]` | Free-form tags for categorization |
-| `embedding` | `number[]` | Dense vector for similarity search |
-| `workspaceId` | `string` | Workspace scope (empty string = global) |
-| `createdAt` | `string` | ISO 8601 timestamp, auto-generated |
-| `updatedAt` | `string` | ISO 8601 timestamp, auto-maintained |
+| Property      | Type       | Description                                                         |
+| ------------- | ---------- | ------------------------------------------------------------------- |
+| `id`          | `string`   | UUID, auto-generated                                                |
+| `kind`        | `"native"` | Discriminator                                                       |
+| `category`    | `string`   | Subcategory (e.g., `"decision"`, `"insight"`, or any custom string) |
+| `title`       | `string`   | Title or summary                                                    |
+| `content`     | `string`   | Full content owned by this node                                     |
+| `tags`        | `string[]` | Free-form tags for categorization                                   |
+| `embedding`   | `number[]` | Dense vector for similarity search                                  |
+| `workspaceId` | `string`   | Workspace scope (empty string = global)                             |
+| `createdAt`   | `string`   | ISO 8601 timestamp, auto-generated                                  |
+| `updatedAt`   | `string`   | ISO 8601 timestamp, auto-maintained                                 |
 
 ### Edge Types
 
 Edges are directional typed relationships between nodes. Five relationship types are supported:
 
-| Edge Type | Value | Semantics |
-|-----------|-------|-----------|
-| `EDGE_TYPE.RELATES_TO` | `"RELATES_TO"` | General association |
-| `EDGE_TYPE.DEPENDS_ON` | `"DEPENDS_ON"` | Dependency relationship |
+| Edge Type                | Value            | Semantics                         |
+| ------------------------ | ---------------- | --------------------------------- |
+| `EDGE_TYPE.RELATES_TO`   | `"RELATES_TO"`   | General association               |
+| `EDGE_TYPE.DEPENDS_ON`   | `"DEPENDS_ON"`   | Dependency relationship           |
 | `EDGE_TYPE.DERIVED_FROM` | `"DERIVED_FROM"` | One node was derived from another |
-| `EDGE_TYPE.MENTIONS` | `"MENTIONS"` | One node references another |
-| `EDGE_TYPE.PART_OF` | `"PART_OF"` | Containment / composition |
+| `EDGE_TYPE.MENTIONS`     | `"MENTIONS"`     | One node references another       |
+| `EDGE_TYPE.PART_OF`      | `"PART_OF"`      | Containment / composition         |
 
 Edges can carry optional JSON metadata (e.g., a confidence score or a context snippet):
 
@@ -286,13 +286,13 @@ await createEdge(nodeA, nodeB, EDGE_TYPE.DEPENDS_ON, {
 
 **`KnowledgeEdge` properties:**
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `fromId` | `string` | Source node ID |
-| `toId` | `string` | Target node ID |
-| `type` | `EdgeType` | Relationship type |
-| `metadata` | `Record<string, unknown> \| undefined` | Optional JSON metadata |
-| `createdAt` | `string` | ISO 8601 timestamp |
+| Property    | Type                                   | Description            |
+| ----------- | -------------------------------------- | ---------------------- |
+| `fromId`    | `string`                               | Source node ID         |
+| `toId`      | `string`                               | Target node ID         |
+| `type`      | `EdgeType`                             | Relationship type      |
+| `metadata`  | `Record<string, unknown> \| undefined` | Optional JSON metadata |
+| `createdAt` | `string`                               | ISO 8601 timestamp     |
 
 ### Workspace Scoping
 
@@ -323,12 +323,12 @@ interface Neo4jClientConfig {
 
 Resolution order for each field: **environment variable > config parameter > default constant**.
 
-| Field | Environment Variable | Default |
-|-------|---------------------|---------|
-| `url` | `GRACKLE_NEO4J_URL` | `bolt://127.0.0.1:7687` |
-| `username` | `GRACKLE_NEO4J_USER` | `neo4j` |
+| Field      | Environment Variable     | Default                  |
+| ---------- | ------------------------ | ------------------------ |
+| `url`      | `GRACKLE_NEO4J_URL`      | `bolt://127.0.0.1:7687`  |
+| `username` | `GRACKLE_NEO4J_USER`     | `neo4j`                  |
 | `password` | `GRACKLE_NEO4J_PASSWORD` | `grackle-dev` (dev only) |
-| `database` | `GRACKLE_NEO4J_DATABASE` | `neo4j` |
+| `database` | `GRACKLE_NEO4J_DATABASE` | `neo4j`                  |
 
 **Production safety:** When `NODE_ENV=production`, the library throws if no explicit password is provided (via env var or config). The default development password is never used in production.
 
@@ -387,13 +387,13 @@ Initialize the Neo4j schema: constraints, property indexes, and the vector index
 
 The following schema objects are created:
 
-| Statement | Purpose |
-|-----------|---------|
-| `UNIQUE_NODE_ID` | Uniqueness constraint on `KnowledgeNode.id` |
-| `INDEX_KIND` | Index on `kind` for efficient filtering by node type |
-| `INDEX_WORKSPACE` | Index on `workspaceId` for scoped queries |
-| `INDEX_SOURCE` | Composite index on `(sourceType, sourceId)` for reference lookups |
-| `VECTOR_INDEX` | Vector index on `embedding` for cosine similarity search (dimensions configurable) |
+| Statement         | Purpose                                                                            |
+| ----------------- | ---------------------------------------------------------------------------------- |
+| `UNIQUE_NODE_ID`  | Uniqueness constraint on `KnowledgeNode.id`                                        |
+| `INDEX_KIND`      | Index on `kind` for efficient filtering by node type                               |
+| `INDEX_WORKSPACE` | Index on `workspaceId` for scoped queries                                          |
+| `INDEX_SOURCE`    | Composite index on `(sourceType, sourceId)` for reference lookups                  |
+| `VECTOR_INDEX`    | Vector index on `embedding` for cosine similarity search (dimensions configurable) |
 
 ```typescript
 const embedder = createLocalEmbedder();
@@ -520,12 +520,12 @@ interface TranscriptChunkerOptions {
 
 Each chunk's `metadata` includes:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `turnIndex` | `number` | Zero-based turn number |
-| `timestampStart` | `string` | ISO 8601 timestamp of the first event in the turn |
-| `timestampEnd` | `string` | ISO 8601 timestamp of the last event in the turn |
-| `eventTypes` | `string[]` | Distinct event types present in the turn |
+| Field            | Type       | Description                                       |
+| ---------------- | ---------- | ------------------------------------------------- |
+| `turnIndex`      | `number`   | Zero-based turn number                            |
+| `timestampStart` | `string`   | ISO 8601 timestamp of the first event in the turn |
+| `timestampEnd`   | `string`   | ISO 8601 timestamp of the last event in the turn  |
+| `eventTypes`     | `string[]` | Distinct event types present in the turn          |
 
 Events are rendered with human-readable labels: `user_input` becomes `"User:"`, `text` becomes `"Assistant:"`, `tool_use` becomes `"Tool:"`, `tool_result` becomes `"Result:"`, `error` becomes `"Error:"`, `finding` becomes `"Finding:"`, and `subtask_create` becomes `"Subtask:"`.
 
@@ -556,11 +556,11 @@ interface EmbeddedChunk extends Chunk {
 }
 ```
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `content` | `string` | Raw text content to ingest |
-| `chunker` | `Chunker` | Splits content into chunks |
-| `embedder` | `Embedder` | Produces embedding vectors |
+| Parameter  | Type                      | Description                             |
+| ---------- | ------------------------- | --------------------------------------- |
+| `content`  | `string`                  | Raw text content to ingest              |
+| `chunker`  | `Chunker`                 | Splits content into chunks              |
+| `embedder` | `Embedder`                | Produces embedding vectors              |
 | `metadata` | `Record<string, unknown>` | Optional metadata passed to the chunker |
 
 Returns an array of chunks, each augmented with its embedding vector. Returns an empty array if the chunker produces no chunks.
@@ -599,11 +599,11 @@ Create a reference node. Generates a UUID and timestamps automatically. Returns 
 
 ```typescript
 interface CreateReferenceNodeInput {
-  sourceType: string;   // e.g., "task", "finding", or any custom type
-  sourceId: string;     // ID in the external system
-  label: string;        // Human-readable label
-  embedding: number[];  // Vector embedding
-  workspaceId: string;  // Workspace scope ("" = global)
+  sourceType: string; // e.g., "task", "finding", or any custom type
+  sourceId: string; // ID in the external system
+  label: string; // Human-readable label
+  embedding: number[]; // Vector embedding
+  workspaceId: string; // Workspace scope ("" = global)
 }
 ```
 
@@ -623,12 +623,12 @@ Create a native node. Generates a UUID and timestamps automatically. Returns the
 
 ```typescript
 interface CreateNativeNodeInput {
-  category: string;     // e.g., "decision", "insight", or any custom category
-  title: string;        // Title or summary
-  content: string;      // Full content
-  tags: string[];       // Free-form tags
-  embedding: number[];  // Vector embedding
-  workspaceId: string;  // Workspace scope ("" = global)
+  category: string; // e.g., "decision", "insight", or any custom category
+  title: string; // Title or summary
+  content: string; // Full content
+  tags: string[]; // Free-form tags
+  embedding: number[]; // Vector embedding
+  workspaceId: string; // Workspace scope ("" = global)
 }
 ```
 
@@ -649,15 +649,15 @@ Get a node by ID, including all its edges (both incoming and outgoing). Returns 
 
 ```typescript
 interface NodeWithEdges {
-  node: KnowledgeNode;      // The node (ReferenceNode | NativeNode)
-  edges: KnowledgeEdge[];   // All connected edges
+  node: KnowledgeNode; // The node (ReferenceNode | NativeNode)
+  edges: KnowledgeEdge[]; // All connected edges
 }
 ```
 
 ```typescript
 const result = await getNode("some-uuid");
 if (result) {
-  console.log(result.node.kind);  // "reference" or "native"
+  console.log(result.node.kind); // "reference" or "native"
   console.log(result.edges.length);
 }
 ```
@@ -712,22 +712,17 @@ Convert a raw edge object from Cypher results to a typed `KnowledgeEdge`. Parses
 
 Create a directed, typed edge between two nodes.
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `fromId` | `string` | Source node ID |
-| `toId` | `string` | Target node ID |
-| `type` | `EdgeType` | One of `RELATES_TO`, `DEPENDS_ON`, `DERIVED_FROM`, `MENTIONS`, `PART_OF` |
-| `metadata` | `Record<string, unknown>` | Optional metadata stored as JSON on the relationship |
+| Parameter  | Type                      | Description                                                              |
+| ---------- | ------------------------- | ------------------------------------------------------------------------ |
+| `fromId`   | `string`                  | Source node ID                                                           |
+| `toId`     | `string`                  | Target node ID                                                           |
+| `type`     | `EdgeType`                | One of `RELATES_TO`, `DEPENDS_ON`, `DERIVED_FROM`, `MENTIONS`, `PART_OF` |
+| `metadata` | `Record<string, unknown>` | Optional metadata stored as JSON on the relationship                     |
 
 Throws if either node does not exist or if the edge type is invalid.
 
 ```typescript
-const edge = await createEdge(
-  nodeIdA,
-  nodeIdB,
-  EDGE_TYPE.DERIVED_FROM,
-  { confidence: 0.95 },
-);
+const edge = await createEdge(nodeIdA, nodeIdB, EDGE_TYPE.DERIVED_FROM, { confidence: 0.95 });
 ```
 
 #### `removeEdge(fromId, toId, type): Promise<boolean>`
@@ -850,10 +845,10 @@ interface RecentNodesResult {
 }
 ```
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `limit` | `number` | `20` | Maximum number of nodes to return |
-| `workspaceId` | `string` | `undefined` | Optional workspace filter |
+| Parameter     | Type     | Default     | Description                       |
+| ------------- | -------- | ----------- | --------------------------------- |
+| `limit`       | `number` | `20`        | Maximum number of nodes to return |
+| `workspaceId` | `string` | `undefined` | Optional workspace filter         |
 
 ```typescript
 // Global recent nodes
@@ -902,30 +897,30 @@ import { logger } from "@grackle-ai/knowledge-core";
 
 ### Environment Variables
 
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `GRACKLE_NEO4J_URL` | Neo4j Bolt connection URL | `bolt://127.0.0.1:7687` |
-| `GRACKLE_NEO4J_USER` | Neo4j username | `neo4j` |
-| `GRACKLE_NEO4J_PASSWORD` | Neo4j password (**required** in production) | `grackle-dev` |
-| `GRACKLE_NEO4J_DATABASE` | Neo4j database name | `neo4j` |
-| `NODE_ENV` | When `"production"`, requires explicit password | -- |
-| `LOG_LEVEL` | Pino log level (`trace`, `debug`, `info`, `warn`, `error`, `fatal`) | `info` |
+| Variable                 | Purpose                                                             | Default                 |
+| ------------------------ | ------------------------------------------------------------------- | ----------------------- |
+| `GRACKLE_NEO4J_URL`      | Neo4j Bolt connection URL                                           | `bolt://127.0.0.1:7687` |
+| `GRACKLE_NEO4J_USER`     | Neo4j username                                                      | `neo4j`                 |
+| `GRACKLE_NEO4J_PASSWORD` | Neo4j password (**required** in production)                         | `grackle-dev`           |
+| `GRACKLE_NEO4J_DATABASE` | Neo4j database name                                                 | `neo4j`                 |
+| `NODE_ENV`               | When `"production"`, requires explicit password                     | --                      |
+| `LOG_LEVEL`              | Pino log level (`trace`, `debug`, `info`, `warn`, `error`, `fatal`) | `info`                  |
 
 ### Constants
 
 These are exported for reference and customization. They control the Neo4j connection pool and the vector index configuration.
 
-| Constant | Value | Description |
-|----------|-------|-------------|
-| `DEFAULT_NEO4J_URL` | `"bolt://127.0.0.1:7687"` | Default Bolt URL |
-| `DEFAULT_NEO4J_USER` | `"neo4j"` | Default username |
-| `DEFAULT_NEO4J_DATABASE` | `"neo4j"` | Default database name |
-| `NEO4J_MAX_POOL_SIZE` | `50` | Max connections in the Neo4j driver pool |
-| `NEO4J_CONNECTION_ACQUISITION_TIMEOUT` | `30000` | Timeout (ms) for acquiring a pool connection |
-| `NODE_LABEL` | `"KnowledgeNode"` | Neo4j label applied to all knowledge graph nodes |
-| `VECTOR_INDEX_NAME` | `"knowledge_embedding_index"` | Name of the vector index |
-| `EMBEDDING_DIMENSIONS` | `1536` | Dimensionality of the vector index |
-| `VECTOR_SIMILARITY_FUNCTION` | `"cosine"` | Similarity function used by the vector index |
+| Constant                               | Value                         | Description                                      |
+| -------------------------------------- | ----------------------------- | ------------------------------------------------ |
+| `DEFAULT_NEO4J_URL`                    | `"bolt://127.0.0.1:7687"`     | Default Bolt URL                                 |
+| `DEFAULT_NEO4J_USER`                   | `"neo4j"`                     | Default username                                 |
+| `DEFAULT_NEO4J_DATABASE`               | `"neo4j"`                     | Default database name                            |
+| `NEO4J_MAX_POOL_SIZE`                  | `50`                          | Max connections in the Neo4j driver pool         |
+| `NEO4J_CONNECTION_ACQUISITION_TIMEOUT` | `30000`                       | Timeout (ms) for acquiring a pool connection     |
+| `NODE_LABEL`                           | `"KnowledgeNode"`             | Neo4j label applied to all knowledge graph nodes |
+| `VECTOR_INDEX_NAME`                    | `"knowledge_embedding_index"` | Name of the vector index                         |
+| `EMBEDDING_DIMENSIONS`                 | `1536`                        | Dimensionality of the vector index               |
+| `VECTOR_SIMILARITY_FUNCTION`           | `"cosine"`                    | Similarity function used by the vector index     |
 
 ## Custom Embedders and Chunkers
 

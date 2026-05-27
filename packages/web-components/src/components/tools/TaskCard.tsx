@@ -28,14 +28,22 @@ function getArgs(args: unknown): { taskId?: string; title?: string; status?: str
 }
 
 /** Parses MCP result JSON into a task or array of tasks. */
-function parseResult(result: string | undefined): { single?: TaskSummary; list?: TaskSummary[]; sessionId?: string } {
+function parseResult(result: string | undefined): {
+  single?: TaskSummary;
+  list?: TaskSummary[];
+  sessionId?: string;
+} {
   if (!result) {
     return {};
   }
   try {
     const parsed: unknown = JSON.parse(result);
     if (Array.isArray(parsed)) {
-      return { list: (parsed as unknown[]).filter((v): v is TaskSummary => v !== null && typeof v === "object") };
+      return {
+        list: (parsed as unknown[]).filter(
+          (v): v is TaskSummary => v !== null && typeof v === "object",
+        ),
+      };
     }
     if (typeof parsed === "object" && parsed !== null) {
       const obj = parsed as Record<string, unknown>;
@@ -45,7 +53,9 @@ function parseResult(result: string | undefined): { single?: TaskSummary; list?:
       }
       return { single: obj as TaskSummary };
     }
-  } catch { /* fall through */ }
+  } catch {
+    /* fall through */
+  }
   return {};
 }
 
@@ -105,7 +115,9 @@ export function TaskCard({ tool, args, result, isError }: ToolCardProps): JSX.El
       data-testid="tool-card-task"
     >
       <div className={styles.header}>
-        <span className={styles.icon} aria-hidden="true">&#x1F4CB;</span>
+        <span className={styles.icon} aria-hidden="true">
+          &#x1F4CB;
+        </span>
         <span className={styles.toolName} style={{ color: "var(--accent-blue)" }}>
           {bareName}
         </span>
@@ -157,7 +169,11 @@ export function TaskCard({ tool, args, result, isError }: ToolCardProps): JSX.El
 
       {/* Session ID from task_start */}
       {!isError && sessionId && (
-        <div className={styles.pre} style={{ padding: "4px 8px", fontSize: "0.85em" }} data-testid="tool-card-task-session">
+        <div
+          className={styles.pre}
+          style={{ padding: "4px 8px", fontSize: "0.85em" }}
+          data-testid="tool-card-task-session"
+        >
           session: {sessionId}
         </div>
       )}
@@ -170,7 +186,9 @@ export function TaskCard({ tool, args, result, isError }: ToolCardProps): JSX.El
             single.status ? `status: ${single.status}` : null,
             single.branch ? `branch: ${single.branch}` : null,
             single.latestSessionId ? `session: ${single.latestSessionId}` : null,
-          ].filter(Boolean).join("\n")}
+          ]
+            .filter(Boolean)
+            .join("\n")}
         </pre>
       )}
 
@@ -178,21 +196,27 @@ export function TaskCard({ tool, args, result, isError }: ToolCardProps): JSX.El
       {!isError && list && list.length > 0 && (
         <>
           <pre className={styles.pre} data-testid="tool-card-task-list">
-            {(expanded ? list : list.slice(0, PREVIEW_COUNT)).map((t) => {
-              const icon = statusIcon(t.status);
-              const title = t.title ?? t.id ?? "untitled";
-              return `${icon} ${title}`;
-            }).join("\n")}
+            {(expanded ? list : list.slice(0, PREVIEW_COUNT))
+              .map((t) => {
+                const icon = statusIcon(t.status);
+                const title = t.title ?? t.id ?? "untitled";
+                return `${icon} ${title}`;
+              })
+              .join("\n")}
           </pre>
           {list.length > PREVIEW_COUNT && (
             <button
               type="button"
               className={styles.bodyToggle}
-              onClick={() => { setExpanded((v) => !v); }}
+              onClick={() => {
+                setExpanded((v) => !v);
+              }}
               aria-expanded={expanded}
               data-testid="tool-card-toggle"
             >
-              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}>&#x25B8;</span>
+              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}>
+                &#x25B8;
+              </span>
               {expanded ? "collapse" : `${list.length - PREVIEW_COUNT} more tasks`}
             </button>
           )}

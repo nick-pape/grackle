@@ -1,4 +1,11 @@
-import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent, AdapterDependencies, ExecFunction } from "@grackle-ai/adapter-sdk";
+import type {
+  EnvironmentAdapter,
+  BaseEnvironmentConfig,
+  PowerLineConnection,
+  ProvisionEvent,
+  AdapterDependencies,
+  ExecFunction,
+} from "@grackle-ai/adapter-sdk";
 import { DEFAULT_POWERLINE_PORT, DEFAULT_MCP_PORT } from "@grackle-ai/common";
 import {
   type RemoteExecutor,
@@ -85,7 +92,9 @@ class SshExecutor implements RemoteExecutor {
   /** Execute a shell command on the remote host and return trimmed stdout. */
   public async exec(command: string, opts?: { timeout?: number }): Promise<string> {
     const args = [...buildSshFlags(this.cfg), buildDestination(this.cfg), command];
-    const result = await this.execFn("ssh", args, { timeout: opts?.timeout ?? REMOTE_EXEC_DEFAULT_TIMEOUT_MS });
+    const result = await this.execFn("ssh", args, {
+      timeout: opts?.timeout ?? REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
+    });
     return result.stdout;
   }
 
@@ -93,7 +102,7 @@ class SshExecutor implements RemoteExecutor {
   public async copyTo(localPath: string, remotePath: string): Promise<void> {
     const flags = buildSshFlags(this.cfg);
     // scp uses -P (uppercase) instead of -p for port
-    const scpFlags = flags.map((f, i) => (f === "-p" && i > 0 && flags[i - 1] !== "-o") ? "-P" : f);
+    const scpFlags = flags.map((f, i) => (f === "-p" && i > 0 && flags[i - 1] !== "-o" ? "-P" : f));
     const args = ["-r", ...scpFlags, localPath, `${buildDestination(this.cfg)}:${remotePath}`];
     await this.execFn("scp", args, { timeout: REMOTE_COPY_TIMEOUT_MS });
   }
@@ -120,10 +129,14 @@ class SshTunnel extends ProcessTunnel {
     const flags = buildSshFlags(this.cfg);
     const args = [
       "-N",
-      "-L", `${this.localPort}:127.0.0.1:${DEFAULT_POWERLINE_PORT}`,
-      "-o", "ExitOnForwardFailure=yes",
-      "-o", "ServerAliveInterval=15",
-      "-o", "ServerAliveCountMax=3",
+      "-L",
+      `${this.localPort}:127.0.0.1:${DEFAULT_POWERLINE_PORT}`,
+      "-o",
+      "ExitOnForwardFailure=yes",
+      "-o",
+      "ServerAliveInterval=15",
+      "-o",
+      "ServerAliveCountMax=3",
       ...flags,
       buildDestination(this.cfg),
     ];
@@ -159,10 +172,14 @@ class SshReverseTunnel extends ProcessTunnel {
     const flags = buildSshFlags(this.cfg);
     const args = [
       "-N",
-      "-R", `${this.remotePort}:127.0.0.1:${this.localPort}`,
-      "-o", "ExitOnForwardFailure=yes",
-      "-o", "ServerAliveInterval=15",
-      "-o", "ServerAliveCountMax=3",
+      "-R",
+      `${this.remotePort}:127.0.0.1:${this.localPort}`,
+      "-o",
+      "ExitOnForwardFailure=yes",
+      "-o",
+      "ServerAliveInterval=15",
+      "-o",
+      "ServerAliveCountMax=3",
       ...flags,
       buildDestination(this.cfg),
     ];
@@ -210,11 +227,17 @@ export class SshAdapter implements EnvironmentAdapter {
     const executor = new SshExecutor(cfg, this.execFn);
 
     // Test SSH connectivity
-    yield { stage: "connecting", message: `Testing SSH connectivity to ${cfg.host}...`, progress: 0.05 };
+    yield {
+      stage: "connecting",
+      message: `Testing SSH connectivity to ${cfg.host}...`,
+      progress: 0.05,
+    };
     try {
       await executor.exec("echo ok", { timeout: SSH_CONNECTIVITY_TIMEOUT_MS });
     } catch (err) {
-      throw new Error(`Cannot reach ${cfg.host} via SSH: ${err instanceof Error ? err.message : String(err)}`);
+      throw new Error(
+        `Cannot reach ${cfg.host} via SSH: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
 
     // Bootstrap PowerLine on the remote host
@@ -225,8 +248,12 @@ export class SshAdapter implements EnvironmentAdapter {
     });
 
     // Open SSH tunnel
-    const localPort = cfg.localPort || await findFreePort();
-    yield { stage: "tunneling", message: `Opening SSH tunnel on local port ${localPort}...`, progress: 0.80 };
+    const localPort = cfg.localPort || (await findFreePort());
+    yield {
+      stage: "tunneling",
+      message: `Opening SSH tunnel on local port ${localPort}...`,
+      progress: 0.8,
+    };
 
     const tunnel = new SshTunnel(localPort, cfg);
     await tunnel.open();
@@ -238,7 +265,11 @@ export class SshAdapter implements EnvironmentAdapter {
 
     registerTunnel(environmentId, { tunnel, reverseTunnel });
 
-    yield { stage: "connecting", message: `Tunnel open, connecting on port ${localPort}...`, progress: 0.90 };
+    yield {
+      stage: "connecting",
+      message: `Tunnel open, connecting on port ${localPort}...`,
+      progress: 0.9,
+    };
   }
 
   /**
@@ -263,22 +294,26 @@ export class SshAdapter implements EnvironmentAdapter {
     const executor = new SshExecutor(cfg, this.execFn);
 
     // 1. Close any stale tunnel
-    yield { stage: "reconnecting", message: "Closing stale tunnel...", progress: 0.10 };
+    yield { stage: "reconnecting", message: "Closing stale tunnel...", progress: 0.1 };
     await closeTunnel(environmentId);
 
     // 2. Probe + conditional restart in a single SSH call.
-    yield { stage: "reconnecting", message: `Checking PowerLine on ${cfg.host}...`, progress: 0.30 };
+    yield { stage: "reconnecting", message: `Checking PowerLine on ${cfg.host}...`, progress: 0.3 };
     const { alreadyRunning } = await startRemotePowerLine(executor, powerlineToken, {
       extraEnv: cfg.env,
       probeFirst: true,
     });
     if (!alreadyRunning) {
-      yield { stage: "reconnecting", message: "PowerLine restarted", progress: 0.50 };
+      yield { stage: "reconnecting", message: "PowerLine restarted", progress: 0.5 };
     }
 
     // 3. Open new SSH tunnel + reverse tunnel for MCP
-    const localPort = cfg.localPort || await findFreePort();
-    yield { stage: "reconnecting", message: `Opening SSH tunnel on local port ${localPort}...`, progress: 0.70 };
+    const localPort = cfg.localPort || (await findFreePort());
+    yield {
+      stage: "reconnecting",
+      message: `Opening SSH tunnel on local port ${localPort}...`,
+      progress: 0.7,
+    };
     const tunnel = new SshTunnel(localPort, cfg);
     await tunnel.open();
 
@@ -288,7 +323,7 @@ export class SshAdapter implements EnvironmentAdapter {
 
     registerTunnel(environmentId, { tunnel, reverseTunnel });
 
-    yield { stage: "reconnecting", message: "Reconnected via SSH", progress: 0.90 };
+    yield { stage: "reconnecting", message: "Reconnected via SSH", progress: 0.9 };
   }
 
   /** Connect to the PowerLine through the SSH tunnel. */

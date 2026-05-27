@@ -29,25 +29,25 @@ const TUNNEL_PORT_POLL_MAX_ATTEMPTS: number = 20;
  * The PowerLine token is sent as a Bearer token on every request.
  * When `traceId` is provided, it is forwarded as the `x-trace-id` header for request correlation.
  */
-export function createPowerLineClient(baseUrl: string, powerlineToken: string, traceId?: string): PowerLineClient {
+export function createPowerLineClient(
+  baseUrl: string,
+  powerlineToken: string,
+  traceId?: string,
+): PowerLineClient {
   const interceptors: Interceptor[] = [];
 
   if (powerlineToken) {
-    interceptors.push(
-      (next) => async (req) => {
-        req.header.set("Authorization", `Bearer ${powerlineToken}`);
-        return next(req);
-      },
-    );
+    interceptors.push((next) => async (req) => {
+      req.header.set("Authorization", `Bearer ${powerlineToken}`);
+      return next(req);
+    });
   }
 
   if (traceId) {
-    interceptors.push(
-      (next) => async (req) => {
-        req.header.set("x-trace-id", traceId);
-        return next(req);
-      },
-    );
+    interceptors.push((next) => async (req) => {
+      req.header.set("x-trace-id", traceId);
+      return next(req);
+    });
   }
 
   const transport = createGrpcTransport({
@@ -90,7 +90,9 @@ export async function connectThroughTunnel(
     logger.error({ environmentId, err }, "Failed to close tunnel after connect failure");
   }
 
-  throw new Error(`Could not reach PowerLine after ${CONNECT_MAX_RETRIES} attempts: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
+  throw new Error(
+    `Could not reach PowerLine after ${CONNECT_MAX_RETRIES} attempts: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
+  );
 }
 
 // ─── Wait for Local Port ────────────────────────────────────
@@ -130,7 +132,10 @@ export interface WaitForLocalPortOptions {
  * Poll until a TCP connection can be established on localhost at the given port.
  * Used to wait for a tunnel process to begin accepting connections.
  */
-export async function waitForLocalPort(port: number, options?: WaitForLocalPortOptions): Promise<void> {
+export async function waitForLocalPort(
+  port: number,
+  options?: WaitForLocalPortOptions,
+): Promise<void> {
   const prober = options?.portProber ?? TCP_PORT_PROBER;
   const sleepFn = options?.sleep ?? sleep;
 
@@ -143,5 +148,7 @@ export async function waitForLocalPort(port: number, options?: WaitForLocalPortO
     await sleepFn(TUNNEL_PORT_POLL_DELAY_MS);
   }
 
-  throw new Error(`Local port ${port} did not become reachable after ${TUNNEL_PORT_POLL_MAX_ATTEMPTS} attempts`);
+  throw new Error(
+    `Local port ${port} did not become reachable after ${TUNNEL_PORT_POLL_MAX_ATTEMPTS} attempts`,
+  );
 }

@@ -69,7 +69,9 @@ export async function runSpawnContextProviders(
   const sections = await Promise.all(
     providers.map((provider) => runOne(provider, input, timeoutMs)),
   );
-  return sections.filter((section): section is string => typeof section === "string" && section.length > 0);
+  return sections.filter(
+    (section): section is string => typeof section === "string" && section.length > 0,
+  );
 }
 
 /** Run a single provider, bounded by `timeoutMs`; never throws. */

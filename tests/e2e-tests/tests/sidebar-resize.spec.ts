@@ -57,10 +57,9 @@ test.describe("Sidebar Resize", { tag: ["@webui"] }, () => {
 
     // Reload the page and navigate to a sidebar page
     await page.reload();
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
+    await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
     await page.locator('[data-testid="sidebar-tab-tasks"]').click();
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: 5_000 });
 
@@ -82,10 +81,9 @@ test.describe("Sidebar Resize", { tag: ["@webui"] }, () => {
 
     // Reload the page and navigate to a sidebar page
     await page.reload();
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
+    await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
     await page.locator('[data-testid="sidebar-tab-tasks"]').click();
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: 5_000 });
 
@@ -108,10 +106,9 @@ test.describe("Sidebar Resize", { tag: ["@webui"] }, () => {
 
     // Reload the page and navigate to a sidebar page
     await page.reload();
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
+    await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
     await page.locator('[data-testid="sidebar-tab-tasks"]').click();
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: 5_000 });
 

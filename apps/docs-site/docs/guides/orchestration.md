@@ -81,6 +81,7 @@ grackle task start <root-task-id> --persona orchestrator
 ```
 
 The orchestrator agent can:
+
 1. Analyze the work and break it into subtasks using `task_create`
 2. Order subtasks with dependencies so they run in the right sequence
 3. Receive child completion notifications automatically (see [signals](#signals) below)
@@ -157,12 +158,12 @@ This means at Level 3+, you can just create and start tasks without worrying abo
 
 Different tasks benefit from different agent configurations. Use personas to specialize:
 
-| Persona | Purpose |
-|---------|---------|
-| **Orchestrator** | Decomposes work, coordinates agents |
-| **Engineer** | Implements features, writes code |
-| **Reviewer** | Reviews code, doesn't modify files |
-| **Researcher** | Explores codebase, documents patterns, reads only |
+| Persona          | Purpose                                           |
+| ---------------- | ------------------------------------------------- |
+| **Orchestrator** | Decomposes work, coordinates agents               |
+| **Engineer**     | Implements features, writes code                  |
+| **Reviewer**     | Reviews code, doesn't modify files                |
+| **Researcher**   | Explores codebase, documents patterns, reads only |
 
 Each persona can have different runtimes, models, system prompts, and tool access. A reviewer persona might use `disallowedTools` to block write operations, while an engineer gets full access.
 

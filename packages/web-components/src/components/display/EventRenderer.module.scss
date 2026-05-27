@@ -1,4 +1,4 @@
-@use '../../styles/mixins' as *;
+@use "../../styles/mixins" as *;
 
 // =============================================================================
 // Event Renderer — individual session event styles
@@ -25,8 +25,9 @@
   text-align: left;
   cursor: pointer;
   border-radius: var(--radius-sm);
-  transition: color var(--transition-fast),
-              background var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast);
 
   &:hover {
     color: var(--text-primary);

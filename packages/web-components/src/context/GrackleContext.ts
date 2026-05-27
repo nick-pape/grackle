@@ -16,7 +16,9 @@ export type { UseGrackleSocketResult };
 export type GrackleContextType = UseGrackleSocketResult;
 
 /** The raw React context for Grackle state. */
-export const GrackleContext: React.Context<GrackleContextType | undefined> = createContext<GrackleContextType | undefined>(undefined);
+export const GrackleContext: React.Context<GrackleContextType | undefined> = createContext<
+  GrackleContextType | undefined
+>(undefined);
 
 /** Consumes the Grackle context; must be called within a GrackleProvider or MockGrackleProvider. */
 export function useGrackle(): GrackleContextType {

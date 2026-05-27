@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useRef, type JSX } from "react";
 import { motion, type Variants } from "motion/react";
 import { useGrackle } from "../context/GrackleContext.js";
-import { computeKpis, getActiveSessions, getAttentionTasks, getWorkspaceSnapshots, sessionUrl, taskUrl, useAppNavigate, workspaceUrl } from "@grackle-ai/web-components";
+import {
+  computeKpis,
+  getActiveSessions,
+  getAttentionTasks,
+  getWorkspaceSnapshots,
+  sessionUrl,
+  taskUrl,
+  useAppNavigate,
+  workspaceUrl,
+} from "@grackle-ai/web-components";
 import { DashboardShimmer } from "./DashboardShimmer.js";
 import styles from "./DashboardPage.module.scss";
 
@@ -72,7 +81,12 @@ function KpiCard({ value, label, accent, index, testId }: KpiCardProps): JSX.Ele
 
 /** Operations dashboard showing KPIs, active sessions, attention items, and health. */
 export function DashboardPage(): JSX.Element {
-  const { workspaces: { workspaces, workspacesLoading }, tasks: { tasks, tasksLoading, loadTasks }, sessions: { sessions, sessionsLoading }, environments: { environments, environmentsLoading } } = useGrackle();
+  const {
+    workspaces: { workspaces, workspacesLoading },
+    tasks: { tasks, tasksLoading, loadTasks },
+    sessions: { sessions, sessionsLoading },
+    environments: { environments, environmentsLoading },
+  } = useGrackle();
   const navigate = useAppNavigate();
   const loadedWorkspaceIdsRef = useRef<Set<string>>(new Set());
 
@@ -96,17 +110,18 @@ export function DashboardPage(): JSX.Element {
     [sessions, environments],
   );
 
-  const attentionTasks = useMemo(
-    () => getAttentionTasks(tasks, workspaces),
-    [tasks, workspaces],
-  );
+  const attentionTasks = useMemo(() => getAttentionTasks(tasks, workspaces), [tasks, workspaces]);
 
   const workspaceSnapshots = useMemo(
     () => getWorkspaceSnapshots(workspaces, tasks, environments),
     [workspaces, tasks, environments],
   );
 
-  const hasNoData = sessions.length === 0 && tasks.length === 0 && environments.length === 0 && workspaces.length === 0;
+  const hasNoData =
+    sessions.length === 0 &&
+    tasks.length === 0 &&
+    environments.length === 0 &&
+    workspaces.length === 0;
   if (hasNoData && (sessionsLoading || tasksLoading || environmentsLoading || workspacesLoading)) {
     return <DashboardShimmer />;
   }
@@ -115,10 +130,34 @@ export function DashboardPage(): JSX.Element {
     <div className={styles.dashboard} data-testid="dashboard">
       {/* ── KPI Strip ── */}
       <div className={styles.kpiStrip} data-testid="dashboard-kpi-strip">
-        <KpiCard value={kpis.activeSessions} label="Active Sessions" accent="green" index={0} testId="kpi-active-sessions" />
-        <KpiCard value={kpis.blockedTasks} label="Blocked Tasks" accent="yellow" index={1} testId="kpi-blocked-tasks" />
-        <KpiCard value={kpis.attentionTasks} label="Needs Attention" accent="red" index={2} testId="kpi-attention-tasks" />
-        <KpiCard value={kpis.unhealthyEnvironments} label="Unhealthy Envs" accent="blue" index={3} testId="kpi-unhealthy-envs" />
+        <KpiCard
+          value={kpis.activeSessions}
+          label="Active Sessions"
+          accent="green"
+          index={0}
+          testId="kpi-active-sessions"
+        />
+        <KpiCard
+          value={kpis.blockedTasks}
+          label="Blocked Tasks"
+          accent="yellow"
+          index={1}
+          testId="kpi-blocked-tasks"
+        />
+        <KpiCard
+          value={kpis.attentionTasks}
+          label="Needs Attention"
+          accent="red"
+          index={2}
+          testId="kpi-attention-tasks"
+        />
+        <KpiCard
+          value={kpis.unhealthyEnvironments}
+          label="Unhealthy Envs"
+          accent="blue"
+          index={3}
+          testId="kpi-unhealthy-envs"
+        />
       </div>
 
       {/* ── Main body ── */}
@@ -133,7 +172,9 @@ export function DashboardPage(): JSX.Element {
           data-testid="dashboard-active-sessions"
         >
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionIcon} aria-hidden="true">●</span>
+            <span className={styles.sectionIcon} aria-hidden="true">
+              ●
+            </span>
             <span className={styles.sectionTitle}>Active Sessions</span>
             <span className={styles.sectionCount}>{activeSessions.length}</span>
           </div>
@@ -174,7 +215,9 @@ export function DashboardPage(): JSX.Element {
           data-testid="dashboard-needs-attention"
         >
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionIcon} aria-hidden="true">⚑</span>
+            <span className={styles.sectionIcon} aria-hidden="true">
+              ⚑
+            </span>
             <span className={styles.sectionTitle}>Needs Attention</span>
             <span className={styles.sectionCount}>{attentionTasks.length}</span>
           </div>
@@ -218,7 +261,9 @@ export function DashboardPage(): JSX.Element {
           data-testid="dashboard-env-health"
         >
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionIcon} aria-hidden="true">◈</span>
+            <span className={styles.sectionIcon} aria-hidden="true">
+              ◈
+            </span>
             <span className={styles.sectionTitle}>Environment Health</span>
             <span className={styles.sectionCount}>{environments.length}</span>
           </div>
@@ -248,7 +293,9 @@ export function DashboardPage(): JSX.Element {
           data-testid="dashboard-workspace-snapshot"
         >
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionIcon} aria-hidden="true">▦</span>
+            <span className={styles.sectionIcon} aria-hidden="true">
+              ▦
+            </span>
             <span className={styles.sectionTitle}>Workspaces</span>
             <span className={styles.sectionCount}>{workspaces.length}</span>
           </div>
@@ -256,40 +303,52 @@ export function DashboardPage(): JSX.Element {
             {workspaceSnapshots.length === 0 ? (
               <div className={styles.emptyHint}>No workspaces yet</div>
             ) : (
-              workspaceSnapshots.map(({ workspace, totalTasks, completedTasks, workingTasks, failedTasks }) => {
-                const pct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-                return (
-                  <button
-                    key={workspace.id}
-                    type="button"
-                    className={styles.workspaceRow}
-                    onClick={() => navigate(workspaceUrl(workspace.id, workspace.linkedEnvironmentIds[0]))}
-                    data-testid="workspace-row"
-                  >
-                    <div className={styles.workspaceTop}>
-                      <span className={styles.workspaceName}>{workspace.name}</span>
-                      <span
-                        className={styles.workspaceCounts}
-                        aria-label={formatWorkspaceCountsLabel(
-                          completedTasks,
-                          totalTasks,
-                          workingTasks,
-                          failedTasks,
-                        )}
-                      >
-                        {completedTasks}/{totalTasks}
-                        {workingTasks > 0 && <span style={{ color: "var(--accent-green)" }} aria-hidden="true">▸{workingTasks}</span>}
-                        {failedTasks > 0 && <span style={{ color: "var(--accent-red)" }} aria-hidden="true">✗{failedTasks}</span>}
-                      </span>
-                    </div>
-                    {totalTasks > 0 && (
-                      <div className={styles.progressBar}>
-                        <div className={styles.progressFill} style={{ width: `${pct}%` }} />
+              workspaceSnapshots.map(
+                ({ workspace, totalTasks, completedTasks, workingTasks, failedTasks }) => {
+                  const pct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+                  return (
+                    <button
+                      key={workspace.id}
+                      type="button"
+                      className={styles.workspaceRow}
+                      onClick={() =>
+                        navigate(workspaceUrl(workspace.id, workspace.linkedEnvironmentIds[0]))
+                      }
+                      data-testid="workspace-row"
+                    >
+                      <div className={styles.workspaceTop}>
+                        <span className={styles.workspaceName}>{workspace.name}</span>
+                        <span
+                          className={styles.workspaceCounts}
+                          aria-label={formatWorkspaceCountsLabel(
+                            completedTasks,
+                            totalTasks,
+                            workingTasks,
+                            failedTasks,
+                          )}
+                        >
+                          {completedTasks}/{totalTasks}
+                          {workingTasks > 0 && (
+                            <span style={{ color: "var(--accent-green)" }} aria-hidden="true">
+                              ▸{workingTasks}
+                            </span>
+                          )}
+                          {failedTasks > 0 && (
+                            <span style={{ color: "var(--accent-red)" }} aria-hidden="true">
+                              ✗{failedTasks}
+                            </span>
+                          )}
+                        </span>
                       </div>
-                    )}
-                  </button>
-                );
-              })
+                      {totalTasks > 0 && (
+                        <div className={styles.progressBar}>
+                          <div className={styles.progressFill} style={{ width: `${pct}%` }} />
+                        </div>
+                      )}
+                    </button>
+                  );
+                },
+              )
             )}
           </div>
         </motion.div>

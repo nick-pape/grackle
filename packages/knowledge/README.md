@@ -20,10 +20,10 @@ The package also includes pure text-derivation helpers that produce consistent, 
 
 ## Relationship to `@grackle-ai/knowledge-core`
 
-| Package | Role |
-|---------|------|
+| Package                      | Role                                                                                                                 |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | `@grackle-ai/knowledge-core` | Domain-agnostic graph SDK — Neo4j client, embedders, chunkers, search, traversal. Standalone, no Grackle dependency. |
-| `@grackle-ai/knowledge` | Grackle integration layer — re-exports the core SDK and adds entity-aware sync, lookup, and text derivation. |
+| `@grackle-ai/knowledge`      | Grackle integration layer — re-exports the core SDK and adds entity-aware sync, lookup, and text derivation.         |
 
 If you are building on Grackle, use `@grackle-ai/knowledge` — it gives you the full core API plus Grackle-specific helpers in a single import. If you want a standalone knowledge graph library with no Grackle coupling, use `@grackle-ai/knowledge-core` directly.
 

@@ -10,6 +10,7 @@ This skill creates a pull request for the current branch: syncs with main, build
 ## Step 0: Detect Context
 
 Determine the issue number using this priority:
+
 1. If an argument was provided, use it as `ISSUE_NUMBER`
 2. Otherwise, extract from the branch name (pattern: `<user>/<issue>-<feature>`, e.g., `nick-pape/149-agent-subtask-creation` → `ISSUE_NUMBER=149`)
 3. If neither yields a number, set `ISSUE_NUMBER=""` (no issue linked — the PR will be created without a `Closes` reference)
@@ -47,6 +48,7 @@ git merge origin/main
 ```
 
 If merge conflicts arise:
+
 1. List conflicted files with `git diff --name-only --diff-filter=U`
 2. Read each conflicted file and resolve the conflicts intelligently
 3. Stage the resolved files and commit the merge
@@ -78,6 +80,7 @@ Only if the diff touches `packages/web/`.
 Here is a quick summary of the key steps:
 
 **Quick summary:**
+
 1. Start an isolated Grackle stack on non-default ports (see the doc for port setup)
 2. Use Playwright MCP to drive the app into the relevant states and capture PNGs
 3. Wrap each PNG in an SVG (base64 embed) — `gh gist create` rejects binary files
@@ -113,6 +116,7 @@ EOF
 ## Step 8: Report
 
 Summarize:
+
 - PR URL
 - Change file generated (yes/no, bump type)
 - Screenshots included (yes/no)

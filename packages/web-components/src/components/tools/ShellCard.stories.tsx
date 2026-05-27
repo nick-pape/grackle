@@ -15,11 +15,14 @@ export const SuccessWithOutput: Story = {
   args: {
     tool: "Bash",
     args: { command: "npm test -- --grep auth" },
-    result: "[exit 0] > jest --grep auth\n\n PASS  src/auth.test.ts\n  ✓ validates JWT token (12ms)\n  ✓ rejects expired token (3ms)\n  ✓ handles missing header (1ms)\n\nTests: 3 passed, 3 total\nTime:  1.234s",
+    result:
+      "[exit 0] > jest --grep auth\n\n PASS  src/auth.test.ts\n  ✓ validates JWT token (12ms)\n  ✓ rejects expired token (3ms)\n  ✓ handles missing header (1ms)\n\nTests: 3 passed, 3 total\nTime:  1.234s",
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("tool-card-shell")).toBeInTheDocument();
-    await expect(canvas.getByTestId("tool-card-command")).toHaveTextContent("npm test -- --grep auth");
+    await expect(canvas.getByTestId("tool-card-command")).toHaveTextContent(
+      "npm test -- --grep auth",
+    );
     await expect(canvas.getByTestId("tool-card-exit-code")).toHaveTextContent("exit 0");
     // Should have toggle (>3 lines)
     await expect(canvas.getByTestId("tool-card-toggle")).toBeInTheDocument();
@@ -45,12 +48,17 @@ export const PowerShellWrapper: Story = {
   name: "Codex - PowerShell wrapper simplified",
   args: {
     tool: "command_execution",
-    args: { command: '"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe" -Command \'Get-Content -Path README.md\'' },
+    args: {
+      command:
+        "\"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -Command 'Get-Content -Path README.md'",
+    },
     result: "[exit 0] # Grackle\n\nRun any AI coding agent...",
   },
   play: async ({ canvas }) => {
     // Should strip the PowerShell wrapper
-    await expect(canvas.getByTestId("tool-card-command")).toHaveTextContent("Get-Content -Path README.md");
+    await expect(canvas.getByTestId("tool-card-command")).toHaveTextContent(
+      "Get-Content -Path README.md",
+    );
   },
 };
 
@@ -59,7 +67,8 @@ export const LongOutput: Story = {
   args: {
     tool: "Bash",
     args: { command: "git log --oneline -10" },
-    result: "abc1234 feat: add auth\ndef5678 fix: typo\nghi9012 chore: deps\njkl3456 docs: readme\nmno7890 test: add coverage\npqr1234 refactor: cleanup",
+    result:
+      "abc1234 feat: add auth\ndef5678 fix: typo\nghi9012 chore: deps\njkl3456 docs: readme\nmno7890 test: add coverage\npqr1234 refactor: cleanup",
   },
   play: async ({ canvas }) => {
     const toggle = canvas.getByTestId("tool-card-toggle");

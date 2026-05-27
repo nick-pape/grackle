@@ -96,10 +96,22 @@ interface RelatedItem {
  */
 function logRetrieval(
   input: SpawnContextInput,
-  fields: { injected: boolean; hits: number; candidates: number; items: number; topScore: number; chars: number },
+  fields: {
+    injected: boolean;
+    hits: number;
+    candidates: number;
+    items: number;
+    topScore: number;
+    chars: number;
+  },
 ): void {
   logger.info(
-    { event: "kg_spawn_retrieval", taskId: input.taskId, workspaceId: input.workspaceId, ...fields },
+    {
+      event: "kg_spawn_retrieval",
+      taskId: input.taskId,
+      workspaceId: input.workspaceId,
+      ...fields,
+    },
     "spawn knowledge retrieval",
   );
 }
@@ -131,27 +143,39 @@ export async function buildRelatedPriorWork(input: SpawnContextInput): Promise<s
     limit: config.limit,
   });
   if (results.length === 0) {
-    logRetrieval(input, { injected: false, hits: 0, candidates: 0, items: 0, topScore: 0, chars: 0 });
+    logRetrieval(input, {
+      injected: false,
+      hits: 0,
+      candidates: 0,
+      items: 0,
+      topScore: 0,
+      chars: 0,
+    });
     return undefined;
   }
 
   // Self-exclusion, two layers: by resolved node id, AND defensively by sourceId
   // (covers the race where the task's own node is not projected yet at spawn).
-  const selfNode = await findReferenceNodeBySource(REFERENCE_SOURCE.TASK, input.taskId).catch(() => undefined);
+  const selfNode = await findReferenceNodeBySource(REFERENCE_SOURCE.TASK, input.taskId).catch(
+    () => undefined,
+  );
   const selfNodeId: string | undefined = selfNode?.id;
   const isSelf = (node: KnowledgeNode): boolean =>
     node.id === selfNodeId || (node.kind === "reference" && node.sourceId === input.taskId);
 
-  const ranked: SearchResult[] = [...results].sort((a, b) => b.score - a.score).filter((r) => !isSelf(r.node));
+  const ranked: SearchResult[] = [...results]
+    .sort((a, b) => b.score - a.score)
+    .filter((r) => !isSelf(r.node));
   const items: RelatedItem[] = ranked.map((r) => ({ node: r.node, score: r.score }));
   const seen: Set<string> = new Set(items.map((item) => item.node.id));
 
   // Optional 1-hop expansion from the top hit(s) to surface connected prior work.
   if (config.expand && ranked.length > 0) {
     for (const top of ranked.slice(0, config.expandTopK)) {
-      const expansion = await expandNode(top.node.id, { depth: config.expandDepth }).catch(
-        () => ({ nodes: [] as KnowledgeNode[], edges: [] }),
-      );
+      const expansion = await expandNode(top.node.id, { depth: config.expandDepth }).catch(() => ({
+        nodes: [] as KnowledgeNode[],
+        edges: [],
+      }));
       for (const neighbor of expansion.nodes) {
         // Workspace-scoped, like the search: exclude global ("") nodes — "related
         // prior work" means work in this workspace, not shared infra (personas/envs).
@@ -180,7 +204,10 @@ export async function buildRelatedPriorWork(input: SpawnContextInput): Promise<s
 
 /** One-line snippet from a node's content, collapsed + length-capped. */
 function snippet(text: string, maxChars: number): string {
-  const collapsed: string = text.replace(/[`\r\n]+/g, " ").replace(/\s+/g, " ").trim();
+  const collapsed: string = text
+    .replace(/[`\r\n]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   return collapsed.length > maxChars ? `${collapsed.slice(0, maxChars)}…` : collapsed;
 }
 
@@ -201,7 +228,8 @@ function formatItem(item: RelatedItem, perItemChars: number): string {
 /** Assemble the budgeted markdown block (accumulate-then-stop; never slices mid-line). */
 function formatSection(items: RelatedItem[], config: RelatedWorkConfig): string {
   const header = "## Related prior work";
-  const intro = "Relevant earlier work in this workspace (from the knowledge graph). Use `knowledge_search` to dig deeper before starting.";
+  const intro =
+    "Relevant earlier work in this workspace (from the knowledge graph). Use `knowledge_search` to dig deeper before starting.";
   const lines: string[] = [header, intro];
   let total: number = header.length + intro.length + 2;
 

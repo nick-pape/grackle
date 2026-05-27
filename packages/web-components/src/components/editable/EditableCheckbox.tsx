@@ -17,13 +17,7 @@ export interface EditableCheckboxProps {
 
 /** Simple checkbox toggle — no edit/display mode, always interactive. */
 export function EditableCheckbox(props: EditableCheckboxProps): JSX.Element {
-  const {
-    checked,
-    onChange,
-    label,
-    ariaLabel,
-    "data-testid": testId,
-  } = props;
+  const { checked, onChange, label, ariaLabel, "data-testid": testId } = props;
 
   return (
     <label className={styles.worktreeToggle} data-testid={testId}>

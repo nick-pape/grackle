@@ -28,6 +28,7 @@ grackle serve
 ```
 
 The orchestrator handles:
+
 - Database initialization and seeding
 - Adapter registration (Docker, SSH, Codespace, Local)
 - Local PowerLine auto-start with crash recovery

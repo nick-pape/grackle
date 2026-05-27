@@ -228,7 +228,7 @@ export const WEB_CONTENT_SECURITY_POLICY: string;
 
 // Warnings were encountered during analysis:
 //
-// src/scoped-token.ts:168:1 - (ae-internal-missing-underscore) The name "clearRevocations" should be prefixed with an underscore because the declaration is marked as @internal
+// src/scoped-token.ts:171:1 - (ae-internal-missing-underscore) The name "clearRevocations" should be prefixed with an underscore because the declaration is marked as @internal
 
 // (No @packageDocumentation comment for this package)
 

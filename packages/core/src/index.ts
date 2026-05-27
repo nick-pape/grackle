@@ -4,9 +4,14 @@ export type { ServiceCollector, HandlerGroup } from "./service-collector.js";
 
 // ─── Adapter Management ──────────────────────────────────────
 export {
-  registerAdapter, getAdapter,
-  setConnection, getConnection, removeConnection, listConnections,
-  startHeartbeat, stopHeartbeat,
+  registerAdapter,
+  getAdapter,
+  setConnection,
+  getConnection,
+  removeConnection,
+  listConnections,
+  startHeartbeat,
+  stopHeartbeat,
 } from "./adapter-manager.js";
 export { parseAdapterConfig } from "./adapter-config.js";
 
@@ -59,7 +64,12 @@ export { checkVersionStatus, clearVersionCache, type VersionStatus } from "./ver
 export { logger } from "./logger.js";
 
 // ─── Trace Context ───────────────────────────────────────────
-export { getTraceId, runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace } from "./trace-context.js";
+export {
+  getTraceId,
+  runWithTrace,
+  isValidTraceId,
+  wrapAsyncIterableWithTrace,
+} from "./trace-context.js";
 
 // ─── Telemetry (AHP HR7 — additive OTLP logs sink) ───────────
 export { initOtlpLogs, emitDiagnostic, shutdownOtlpLogs } from "./telemetry.js";
@@ -95,7 +105,12 @@ export { readLastTextEntry } from "./log-writer.js";
 // ─── Shared Utilities (used by both core and plugin-core) ────
 export { routeEscalation, deliverPendingEscalations } from "./notification-router.js";
 export { buildMcpServersJson, personaMcpServersToJson } from "./grpc-mcp-config.js";
-export { toDialableHost, validatePipeInputs, resolveAncestorEnvironmentId, VALID_PIPE_MODES } from "./grpc-shared-utils.js";
+export {
+  toDialableHost,
+  validatePipeInputs,
+  resolveAncestorEnvironmentId,
+  VALID_PIPE_MODES,
+} from "./grpc-shared-utils.js";
 export { toPersonaResolveInput, buildOrchestratorContextInput } from "./persona-mapper.js";
 export { importAccountsFromGhCli } from "./github-account-import.js";
 export type { ImportAccountsResult } from "./github-account-import.js";

@@ -22,16 +22,23 @@ function runtimeInfo(partial: Partial<grackle.RuntimeInfo>): grackle.RuntimeInfo
 
 describe("formatRuntimesTable", () => {
   it("renders provider, name, models, and credential needs", () => {
-    const out = stripAnsi(formatRuntimesTable([
-      runtimeInfo({
-        provider: "claude-code",
-        displayName: "Claude Code",
-        models: [{ id: "sonnet", name: "Claude Sonnet", provider: "claude-code" } as grackle.ModelInfo],
-        protectedResources: [
-          { resourceName: "Anthropic API", credentialKinds: ["oauth-subscription-file"] } as grackle.ProtectedResource,
-        ],
-      }),
-    ]));
+    const out = stripAnsi(
+      formatRuntimesTable([
+        runtimeInfo({
+          provider: "claude-code",
+          displayName: "Claude Code",
+          models: [
+            { id: "sonnet", name: "Claude Sonnet", provider: "claude-code" } as grackle.ModelInfo,
+          ],
+          protectedResources: [
+            {
+              resourceName: "Anthropic API",
+              credentialKinds: ["oauth-subscription-file"],
+            } as grackle.ProtectedResource,
+          ],
+        }),
+      ]),
+    );
 
     expect(out).toContain("claude-code");
     expect(out).toContain("Claude Code");
@@ -40,9 +47,9 @@ describe("formatRuntimesTable", () => {
   });
 
   it("shows 'none' when a runtime advertises no credential needs", () => {
-    const out = stripAnsi(formatRuntimesTable([
-      runtimeInfo({ provider: "stub", displayName: "Stub" }),
-    ]));
+    const out = stripAnsi(
+      formatRuntimesTable([runtimeInfo({ provider: "stub", displayName: "Stub" })]),
+    );
 
     expect(out).toContain("stub");
     expect(out).toContain("none");

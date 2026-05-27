@@ -148,7 +148,13 @@ export const SwitchingAdapterShowsFields: Story = {
 export const DockerAttachLists: Story = {
   args: {
     dockerContainers: [
-      { id: "abc123", name: "demo-ext", image: "node:22", state: "running", status: "Up 3 minutes" },
+      {
+        id: "abc123",
+        name: "demo-ext",
+        image: "node:22",
+        state: "running",
+        status: "Up 3 minutes",
+      },
     ],
   },
   play: async ({ canvas, args }) => {
@@ -170,7 +176,13 @@ export const DockerAttachLists: Story = {
 export const DockerAttachCreatesConfig: Story = {
   args: {
     dockerContainers: [
-      { id: "abc123", name: "demo-ext", image: "node:22", state: "running", status: "Up 3 minutes" },
+      {
+        id: "abc123",
+        name: "demo-ext",
+        image: "node:22",
+        state: "running",
+        status: "Up 3 minutes",
+      },
     ],
   },
   play: async ({ canvas, args }) => {

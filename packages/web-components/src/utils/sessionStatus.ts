@@ -46,6 +46,9 @@ export function sessionStatusStyle(status: string, external: boolean): SessionSt
       return { varName: "--accent-red", label: capitalize(status) };
     default:
       // stopped, completed, unknown, etc.
-      return { varName: "--text-tertiary", label: status.length > 0 ? capitalize(status) : "Unknown" };
+      return {
+        varName: "--text-tertiary",
+        label: status.length > 0 ? capitalize(status) : "Unknown",
+      };
   }
 }

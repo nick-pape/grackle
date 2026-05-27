@@ -12,16 +12,19 @@ export function TaskNode({ data }: NodeProps): JSX.Element {
 
   return (
     <div className={styles.taskNode} data-task-id={task.id} data-task-title={task.title}>
-      <Handle type="target" position={Position.Top} isConnectable={false} className={styles.handle} />
+      <Handle
+        type="target"
+        position={Position.Top}
+        isConnectable={false}
+        className={styles.handle}
+      />
       <div className={styles.taskNodeBorder} style={{ backgroundColor: statusStyle.color }} />
       <div className={styles.taskNodeContent}>
         <div className={styles.taskNodeHeader}>
           <span className={styles.taskNodeIcon} style={{ color: statusStyle.color }}>
             {statusStyle.icon}
           </span>
-          <span className={styles.taskNodeTitle}>
-            {task.title}
-          </span>
+          <span className={styles.taskNodeTitle}>{task.title}</span>
         </div>
         <div className={styles.taskNodeBadges}>
           {childCount > 0 && (
@@ -29,12 +32,15 @@ export function TaskNode({ data }: NodeProps): JSX.Element {
               {doneChildCount}/{childCount}
             </span>
           )}
-          {hasDependencies && (
-            <span className={styles.depBadge}>dep</span>
-          )}
+          {hasDependencies && <span className={styles.depBadge}>dep</span>}
         </div>
       </div>
-      <Handle type="source" position={Position.Bottom} isConnectable={false} className={styles.handle} />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        isConnectable={false}
+        className={styles.handle}
+      />
     </div>
   );
 }

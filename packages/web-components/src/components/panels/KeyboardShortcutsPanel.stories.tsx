@@ -35,6 +35,8 @@ export const ShortcutDescriptions: Story = {
     await expect(canvas.getByText("Open keyboard shortcuts reference")).toBeInTheDocument();
     await expect(canvas.getByText("Create a new task")).toBeInTheDocument();
     await expect(canvas.getByText("Switch to Overview tab")).toBeInTheDocument();
-    await expect(canvas.getByText("Send message (when the composer is focused)")).toBeInTheDocument();
+    await expect(
+      canvas.getByText("Send message (when the composer is focused)"),
+    ).toBeInTheDocument();
   },
 };

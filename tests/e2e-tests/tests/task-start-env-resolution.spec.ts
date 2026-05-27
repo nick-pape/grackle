@@ -1,14 +1,10 @@
 import { test, expect } from "./fixtures.js";
-import {
-  stubScenario,
-  emitText,
-  idle,
-  onInputMatch,
-  navigateToTask,
-} from "./helpers.js";
+import { stubScenario, emitText, idle, onInputMatch, navigateToTask } from "./helpers.js";
 
 test.describe("Task start with workspace-linked environment resolution", { tag: ["@task"] }, () => {
-  test("starts task when workspace has linked env and no env passed explicitly", async ({ stubTask }) => {
+  test("starts task when workspace has linked env and no env passed explicitly", async ({
+    stubTask,
+  }) => {
     const { page } = stubTask;
 
     // Create a task in a workspace that is linked to "test-local" by the fixture.
@@ -16,11 +12,14 @@ test.describe("Task start with workspace-linked environment resolution", { tag: 
     // (only injects when environmentId is null/undefined, not when it is "").
     // So the StartTask request reaches the server with environmentId="" and the
     // server resolves it via the workspace's linkedEnvironmentIds fallback.
-    await stubTask.createAndNavigate("linked-env-start", stubScenario(
-      emitText("Working on linked env task..."),
-      onInputMatch({ fail: "fail", "*": "next" }),
-      idle(),
-    ));
+    await stubTask.createAndNavigate(
+      "linked-env-start",
+      stubScenario(
+        emitText("Working on linked env task..."),
+        onInputMatch({ fail: "fail", "*": "next" }),
+        idle(),
+      ),
+    );
 
     // Click Start — server resolves environment from workspace's linked envs
     await page.getByTestId("task-header-start").click();
@@ -53,8 +52,8 @@ test.describe("Task start with workspace-linked environment resolution", { tag: 
 
     await page.getByTestId("task-header-start").click();
 
-    await expect(
-      page.getByText(/not connected|Failed to start task/i),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/not connected|Failed to start task/i)).toBeVisible({
+      timeout: 10_000,
+    });
   });
 });

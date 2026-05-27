@@ -20,7 +20,9 @@ export function registerChannelCommands(program: Command): void {
       let ttlSeconds = 0;
       if (opts.ttl !== undefined) {
         if (!/^\d+$/.test(opts.ttl.trim())) {
-          throw new Error(`Invalid --ttl: "${opts.ttl}" (expected a non-negative integer number of seconds)`);
+          throw new Error(
+            `Invalid --ttl: "${opts.ttl}" (expected a non-negative integer number of seconds)`,
+          );
         }
         ttlSeconds = Number.parseInt(opts.ttl.trim(), 10);
       }

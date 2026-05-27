@@ -121,7 +121,10 @@ export function CoordinationGraph({
     (node: Node): string => {
       const data = node.data as CoordNodeData;
       if (data.kind === "session") {
-        return resolvedStatusColors[sessionStatusStyle(data.session.status, data.external).varName] ?? MINIMAP_FALLBACK_COLOR;
+        return (
+          resolvedStatusColors[sessionStatusStyle(data.session.status, data.external).varName] ??
+          MINIMAP_FALLBACK_COLOR
+        );
       }
       return MINIMAP_FALLBACK_COLOR;
     },
@@ -152,7 +155,12 @@ export function CoordinationGraph({
         minZoom={0.3}
         maxZoom={2}
       >
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="var(--text-disabled)" />
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={24}
+          size={1}
+          color="var(--text-disabled)"
+        />
         <Controls showInteractive={false} />
         <MiniMap
           nodeColor={minimapNodeColor}

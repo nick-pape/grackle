@@ -28,7 +28,9 @@ async function waitForSessionStatus(
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  throw new Error(`Session ${sessionId} did not reach status "${targetStatus}" within ${timeoutMs}ms`);
+  throw new Error(
+    `Session ${sessionId} did not reach status "${targetStatus}" within ${timeoutMs}ms`,
+  );
 }
 
 test.describe("sync pipe idle delivery (#824)", { tag: ["@session"] }, () => {
@@ -53,7 +55,9 @@ test.describe("sync pipe idle delivery (#824)", { tag: ["@session"] }, () => {
     }
   });
 
-  test("waitForPipe unblocks when child goes idle instead of terminal", async ({ grackle: { client } }) => {
+  test("waitForPipe unblocks when child goes idle instead of terminal", async ({
+    grackle: { client },
+  }) => {
     // 1. Create workspace
     await createWorkspace(client, "sync-pipe-test");
 
@@ -69,10 +73,7 @@ test.describe("sync pipe idle delivery (#824)", { tag: ["@session"] }, () => {
 
     // 3. Spawn a child with pipe:"sync" — child emits text then goes idle
     //    (simulating an agent that finishes work but doesn't call task_complete)
-    const childScenario = stubScenario(
-      emitText("Here is the result of my work."),
-      idle(),
-    );
+    const childScenario = stubScenario(emitText("Here is the result of my work."), idle());
     const childSession = await client.core.spawnAgent({
       environmentId: "test-local",
       prompt: JSON.stringify(childScenario),
@@ -102,7 +103,9 @@ test.describe("sync pipe idle delivery (#824)", { tag: ["@session"] }, () => {
     await waitForSessionStatus(client, parentSessionId, "stopped");
   });
 
-  test("waitForPipe still works for normal terminal status (completed)", async ({ grackle: { client } }) => {
+  test("waitForPipe still works for normal terminal status (completed)", async ({
+    grackle: { client },
+  }) => {
     // Ensure the existing behavior (child completes normally) still works.
     await createWorkspace(client, "sync-pipe-test-complete");
 

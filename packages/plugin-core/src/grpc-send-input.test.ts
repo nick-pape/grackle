@@ -14,7 +14,7 @@ vi.mock("@grackle-ai/database", async () => {
 });
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {
-  const actual = await importOriginal() as Record<string, unknown>;
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -108,10 +108,12 @@ describe("gRPC sendInput", () => {
   it("throws NOT_FOUND when session does not exist", async () => {
     vi.mocked(sessionStore.getSession).mockReturnValue(undefined);
 
-    const err = await handlers.sendInput({
-      sessionId: "nonexistent",
-      text: "hello",
-    }).catch((e: unknown) => e) as ConnectError;
+    const err = (await handlers
+      .sendInput({
+        sessionId: "nonexistent",
+        text: "hello",
+      })
+      .catch((e: unknown) => e)) as ConnectError;
 
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
@@ -137,10 +139,12 @@ describe("gRPC sendInput", () => {
       personaId: "",
     });
 
-    const err = await handlers.sendInput({
-      sessionId: "sess-1",
-      text: "hello",
-    }).catch((e: unknown) => e) as ConnectError;
+    const err = (await handlers
+      .sendInput({
+        sessionId: "sess-1",
+        text: "hello",
+      })
+      .catch((e: unknown) => e)) as ConnectError;
 
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
@@ -167,10 +171,12 @@ describe("gRPC sendInput", () => {
     });
     vi.mocked(adapterManager.getConnection).mockReturnValue(undefined);
 
-    const err = await handlers.sendInput({
-      sessionId: "sess-1",
-      text: "hello",
-    }).catch((e: unknown) => e) as ConnectError;
+    const err = (await handlers
+      .sendInput({
+        sessionId: "sess-1",
+        text: "hello",
+      })
+      .catch((e: unknown) => e)) as ConnectError;
 
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);

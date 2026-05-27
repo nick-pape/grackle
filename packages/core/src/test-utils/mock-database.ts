@@ -47,7 +47,12 @@ export function createDatabaseMock() {
       clearSigtermSentAt: vi.fn(),
       setSessionTask: vi.fn(),
       deleteByEnvironment: vi.fn(),
-      aggregateUsage: vi.fn(() => ({ inputTokens: 0, outputTokens: 0, costMillicents: 0, sessionCount: 0 })),
+      aggregateUsage: vi.fn(() => ({
+        inputTokens: 0,
+        outputTokens: 0,
+        costMillicents: 0,
+        sessionCount: 0,
+      })),
     },
 
     taskStore: {
@@ -139,7 +144,13 @@ export function createDatabaseMock() {
     },
 
     credentialProviders: {
-      getCredentialProviders: vi.fn(() => ({ claude: "off", github: "off", copilot: "off", codex: "off", goose: "off" })),
+      getCredentialProviders: vi.fn(() => ({
+        claude: "off",
+        github: "off",
+        copilot: "off",
+        codex: "off",
+        goose: "off",
+      })),
       setCredentialProviders: vi.fn(),
       parseCredentialProviderConfig: vi.fn(),
       isValidCredentialProviderConfig: vi.fn(() => true),
@@ -164,7 +175,9 @@ export function createDatabaseMock() {
     // Utilities
     grackleHome: "/tmp/test-grackle",
     safeParseJsonArray: (value: unknown): string[] => {
-      if (!value) { return []; }
+      if (!value) {
+        return [];
+      }
       try {
         const p: unknown = JSON.parse(value as string);
         return Array.isArray(p) ? p.filter((i: unknown): i is string => typeof i === "string") : [];
@@ -172,7 +185,12 @@ export function createDatabaseMock() {
         return [];
       }
     },
-    slugify: (text: string): string => text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40),
+    slugify: (text: string): string =>
+      text
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 40),
     encrypt: vi.fn((x: unknown) => x),
     decrypt: vi.fn((x: unknown) => x),
   };

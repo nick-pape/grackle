@@ -15,22 +15,25 @@ import {
 
 // ─── EventType ──────────────────────────────────────────────
 
-const eventTypeToEnumMap: Record<string, EventType> = Object.assign(Object.create(null) as Record<string, EventType>, {
-  "": EventType.UNSPECIFIED,
-  "text": EventType.TEXT,
-  "tool_use": EventType.TOOL_USE,
-  "tool_result": EventType.TOOL_RESULT,
-  "error": EventType.ERROR,
-  "status": EventType.STATUS,
-  "system": EventType.SYSTEM,
-  "user_input": EventType.USER_INPUT,
-  "signal": EventType.SIGNAL,
-  "usage": EventType.USAGE,
-  "widget": EventType.WIDGET,
-  "turn_started": EventType.TURN_STARTED,
-  "turn_complete": EventType.TURN_COMPLETE,
-  "input_needed": EventType.INPUT_NEEDED,
-});
+const eventTypeToEnumMap: Record<string, EventType> = Object.assign(
+  Object.create(null) as Record<string, EventType>,
+  {
+    "": EventType.UNSPECIFIED,
+    text: EventType.TEXT,
+    tool_use: EventType.TOOL_USE,
+    tool_result: EventType.TOOL_RESULT,
+    error: EventType.ERROR,
+    status: EventType.STATUS,
+    system: EventType.SYSTEM,
+    user_input: EventType.USER_INPUT,
+    signal: EventType.SIGNAL,
+    usage: EventType.USAGE,
+    widget: EventType.WIDGET,
+    turn_started: EventType.TURN_STARTED,
+    turn_complete: EventType.TURN_COMPLETE,
+    input_needed: EventType.INPUT_NEEDED,
+  },
+);
 
 const eventTypeToStringMap: Record<number, string> = {
   [EventType.UNSPECIFIED]: "",
@@ -61,22 +64,25 @@ export function eventTypeToString(e: EventType): string {
 
 // ─── TaskStatus ─────────────────────────────────────────────
 
-const taskStatusToEnumMap: Record<string, TaskStatus> = Object.assign(Object.create(null) as Record<string, TaskStatus>, {
-  "": TaskStatus.UNSPECIFIED,
-  // Canonical mappings
-  "not_started": TaskStatus.NOT_STARTED,
-  "working": TaskStatus.WORKING,
-  "paused": TaskStatus.PAUSED,
-  "complete": TaskStatus.COMPLETE,
-  "failed": TaskStatus.FAILED,
-  // Backwards-compatible read mappings (old DB strings → new enums)
-  "pending": TaskStatus.NOT_STARTED,
-  "assigned": TaskStatus.NOT_STARTED,
-  "in_progress": TaskStatus.WORKING,
-  "waiting_input": TaskStatus.PAUSED,
-  "review": TaskStatus.PAUSED,
-  "done": TaskStatus.COMPLETE,
-});
+const taskStatusToEnumMap: Record<string, TaskStatus> = Object.assign(
+  Object.create(null) as Record<string, TaskStatus>,
+  {
+    "": TaskStatus.UNSPECIFIED,
+    // Canonical mappings
+    not_started: TaskStatus.NOT_STARTED,
+    working: TaskStatus.WORKING,
+    paused: TaskStatus.PAUSED,
+    complete: TaskStatus.COMPLETE,
+    failed: TaskStatus.FAILED,
+    // Backwards-compatible read mappings (old DB strings → new enums)
+    pending: TaskStatus.NOT_STARTED,
+    assigned: TaskStatus.NOT_STARTED,
+    in_progress: TaskStatus.WORKING,
+    waiting_input: TaskStatus.PAUSED,
+    review: TaskStatus.PAUSED,
+    done: TaskStatus.COMPLETE,
+  },
+);
 
 const taskStatusToStringMap: Record<number, string> = {
   [TaskStatus.UNSPECIFIED]: "",
@@ -99,11 +105,14 @@ export function taskStatusToString(e: TaskStatus): string {
 
 // ─── WorkspaceStatus ────────────────────────────────────────
 
-const workspaceStatusToEnumMap: Record<string, WorkspaceStatus> = Object.assign(Object.create(null) as Record<string, WorkspaceStatus>, {
-  "": WorkspaceStatus.UNSPECIFIED,
-  "active": WorkspaceStatus.ACTIVE,
-  "archived": WorkspaceStatus.ARCHIVED,
-});
+const workspaceStatusToEnumMap: Record<string, WorkspaceStatus> = Object.assign(
+  Object.create(null) as Record<string, WorkspaceStatus>,
+  {
+    "": WorkspaceStatus.UNSPECIFIED,
+    active: WorkspaceStatus.ACTIVE,
+    archived: WorkspaceStatus.ARCHIVED,
+  },
+);
 
 const workspaceStatusToStringMap: Record<number, string> = {
   [WorkspaceStatus.UNSPECIFIED]: "",
@@ -123,12 +132,15 @@ export function workspaceStatusToString(e: WorkspaceStatus): string {
 
 // ─── ClaudeProviderMode ─────────────────────────────────────
 
-const claudeProviderModeToEnumMap: Record<string, ClaudeProviderMode> = Object.assign(Object.create(null) as Record<string, ClaudeProviderMode>, {
-  "": ClaudeProviderMode.UNSPECIFIED,
-  "off": ClaudeProviderMode.OFF,
-  "subscription": ClaudeProviderMode.SUBSCRIPTION,
-  "api_key": ClaudeProviderMode.API_KEY,
-});
+const claudeProviderModeToEnumMap: Record<string, ClaudeProviderMode> = Object.assign(
+  Object.create(null) as Record<string, ClaudeProviderMode>,
+  {
+    "": ClaudeProviderMode.UNSPECIFIED,
+    off: ClaudeProviderMode.OFF,
+    subscription: ClaudeProviderMode.SUBSCRIPTION,
+    api_key: ClaudeProviderMode.API_KEY,
+  },
+);
 
 const claudeProviderModeToStringMap: Record<number, string> = {
   [ClaudeProviderMode.UNSPECIFIED]: "",
@@ -149,11 +161,14 @@ export function claudeProviderModeToString(e: ClaudeProviderMode): string {
 
 // ─── ProviderToggle ─────────────────────────────────────────
 
-const providerToggleToEnumMap: Record<string, ProviderToggle> = Object.assign(Object.create(null) as Record<string, ProviderToggle>, {
-  "": ProviderToggle.UNSPECIFIED,
-  "off": ProviderToggle.OFF,
-  "on": ProviderToggle.ON,
-});
+const providerToggleToEnumMap: Record<string, ProviderToggle> = Object.assign(
+  Object.create(null) as Record<string, ProviderToggle>,
+  {
+    "": ProviderToggle.UNSPECIFIED,
+    off: ProviderToggle.OFF,
+    on: ProviderToggle.ON,
+  },
+);
 
 const providerToggleToStringMap: Record<number, string> = {
   [ProviderToggle.UNSPECIFIED]: "",

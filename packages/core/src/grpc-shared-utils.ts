@@ -20,10 +20,7 @@ export function validatePipeInputs(pipe: string, parentSessionId: string): void 
     );
   }
   if (pipe && pipe !== "detach" && !parentSessionId) {
-    throw new ConnectError(
-      `Pipe mode "${pipe}" requires parent_session_id`,
-      Code.InvalidArgument,
-    );
+    throw new ConnectError(`Pipe mode "${pipe}" requires parent_session_id`, Code.InvalidArgument);
   }
 }
 

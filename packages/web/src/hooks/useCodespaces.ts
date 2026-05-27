@@ -46,9 +46,7 @@ export function useCodespaces(): UseCodespacesResult {
         await listCodespaces();
       } catch (err) {
         setCodespaceCreating(false);
-        const message = err instanceof ConnectError
-          ? err.message
-          : "Failed to create codespace";
+        const message = err instanceof ConnectError ? err.message : "Failed to create codespace";
         setCodespaceError(message);
       }
     },

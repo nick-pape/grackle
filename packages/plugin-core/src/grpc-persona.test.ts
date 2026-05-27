@@ -30,7 +30,9 @@ vi.mock("./utils/format-gh-error.js");
 
 // ── Mock external packages ──
 vi.mock("@grackle-ai/adapter-sdk", () => ({
-  reconnectOrProvision: vi.fn(async function* () { /* empty */ }),
+  reconnectOrProvision: vi.fn(async function* () {
+    /* empty */
+  }),
 }));
 vi.mock("@grackle-ai/prompt", () => ({
   resolvePersona: vi.fn(),

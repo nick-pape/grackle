@@ -18,7 +18,10 @@ const BLOCKED_BY_PER_ISSUE: number = 25;
 /** Wraps `gh` CLI execution for testability. */
 export interface GitHubClient {
   /** Execute a `gh` CLI command and return stdout. */
-  exec(args: string[], options: { encoding: BufferEncoding; maxBuffer: number; timeout?: number }): Promise<string>;
+  exec(
+    args: string[],
+    options: { encoding: BufferEncoding; maxBuffer: number; timeout?: number },
+  ): Promise<string>;
 }
 
 /** Default {@link GitHubClient} that shells out to the `gh` CLI. */
@@ -29,19 +32,14 @@ export const DEFAULT_GITHUB_CLIENT: GitHubClient = {
   ): Promise<string> {
     const timeout = options.timeout ?? GH_CLI_TIMEOUT_MS;
     return new Promise((resolve, reject) => {
-      execFile(
-        "gh",
-        args,
-        { ...options, timeout },
-        (err, stdout, stderr) => {
-          if (err) {
-            (err as NodeJS.ErrnoException & { stderr?: string }).stderr = String(stderr);
-            reject(err);
-          } else {
-            resolve(String(stdout));
-          }
-        },
-      );
+      execFile("gh", args, { ...options, timeout }, (err, stdout, stderr) => {
+        if (err) {
+          (err as NodeJS.ErrnoException & { stderr?: string }).stderr = String(stderr);
+          reject(err);
+        } else {
+          resolve(String(stdout));
+        }
+      });
     });
   },
 };
@@ -126,10 +124,14 @@ export async function fetchGitHubIssues(
       }`;
 
     const ghArgs = [
-      "api", "graphql",
-      "-f", `query=${query}`,
-      "-f", `owner=${owner}`,
-      "-f", `repo=${repoName}`,
+      "api",
+      "graphql",
+      "-f",
+      `query=${query}`,
+      "-f",
+      `owner=${owner}`,
+      "-f",
+      `repo=${repoName}`,
     ];
     if (cursor !== undefined) {
       ghArgs.push("-f", `cursor=${cursor}`);
@@ -142,7 +144,9 @@ export async function fetchGitHubIssues(
         maxBuffer: MAX_BUFFER_BYTES,
       });
     } catch (err) {
-      throw new Error(`Failed to fetch issues via GraphQL for ${repo} (state=${state}): ${formatError(err)}`);
+      throw new Error(
+        `Failed to fetch issues via GraphQL for ${repo} (state=${state}): ${formatError(err)}`,
+      );
     }
 
     let parsed: {

@@ -99,7 +99,11 @@ class TestSession extends BaseAgentSession {
     }
     this.followUpCalls.push(text);
     if (this.emitContentPerTurn) {
-      this.emit({ type: "text", timestamp: new Date().toISOString(), content: `response-to-${text}` });
+      this.emit({
+        type: "text",
+        timestamp: new Date().toISOString(),
+        content: `response-to-${text}`,
+      });
     }
     const gate = this.gates.shift();
     if (gate) {
@@ -117,7 +121,11 @@ class TestSession extends BaseAgentSession {
     return this.resolveMcp();
   }
 
-  public testPushUsageEvent(inputTokens: number, outputTokens: number, costMillicents: number): void {
+  public testPushUsageEvent(
+    inputTokens: number,
+    outputTokens: number,
+    costMillicents: number,
+  ): void {
     this.pushUsageEvent(inputTokens, outputTokens, costMillicents);
   }
 
@@ -737,8 +745,12 @@ describe("BaseAgentSession.setupForResume default", () => {
     const events = await drainUntilStatus(nextEvent, "waiting_input");
 
     // Both base and custom events should be present
-    const baseEvent = events.find((e) => e.type === "system" && e.content.includes("Session resumed"));
-    const customEvent = events.find((e) => e.type === "system" && e.content === "custom-resume-action");
+    const baseEvent = events.find(
+      (e) => e.type === "system" && e.content.includes("Session resumed"),
+    );
+    const customEvent = events.find(
+      (e) => e.type === "system" && e.content === "custom-resume-action",
+    );
     expect(baseEvent).toBeDefined();
     expect(customEvent).toBeDefined();
 

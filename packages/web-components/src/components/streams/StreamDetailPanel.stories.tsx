@@ -126,8 +126,20 @@ export const AllPermissionModes: Story = {
 };
 
 const sampleMessages: StreamMessageData[] = [
-  { streamId: "stream-abc123", seq: "01A", senderId: "session-aabbccdd-eeff-0011", content: "Proposing JWT with RS256.", timestamp: "2026-05-24T18:00:01.000Z" },
-  { streamId: "stream-abc123", seq: "01B", senderId: "session-11223344-5566-7788", content: "Agreed; rotate refresh tokens on use.", timestamp: "2026-05-24T18:00:07.000Z" },
+  {
+    streamId: "stream-abc123",
+    seq: "01A",
+    senderId: "session-aabbccdd-eeff-0011",
+    content: "Proposing JWT with RS256.",
+    timestamp: "2026-05-24T18:00:01.000Z",
+  },
+  {
+    streamId: "stream-abc123",
+    seq: "01B",
+    senderId: "session-11223344-5566-7788",
+    content: "Agreed; rotate refresh tokens on use.",
+    timestamp: "2026-05-24T18:00:07.000Z",
+  },
 ];
 
 /** Stream with a populated conversation transcript. */

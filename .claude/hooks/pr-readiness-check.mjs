@@ -38,13 +38,16 @@ const COPILOT_GRACE_MS = 3 * 60 * 1000;
 const COPILOT_LOGIN = "copilot-pull-request-reviewer";
 
 const FAILING_CONCLUSIONS = new Set([
-  "FAILURE", "ERROR", "TIMED_OUT", "CANCELLED",
-  "ACTION_REQUIRED", "STALE", "STARTUP_FAILURE",
+  "FAILURE",
+  "ERROR",
+  "TIMED_OUT",
+  "CANCELLED",
+  "ACTION_REQUIRED",
+  "STALE",
+  "STARTUP_FAILURE",
 ]);
 
-const PENDING_STATUSES = new Set([
-  "PENDING", "QUEUED", "IN_PROGRESS", "EXPECTED", "",
-]);
+const PENDING_STATUSES = new Set(["PENDING", "QUEUED", "IN_PROGRESS", "EXPECTED", ""]);
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -195,7 +198,8 @@ function queryPrState(owner, repo, branch) {
   }
 
   if (data.errors?.length > 0 || !data.data?.repository?.pullRequests) {
-    const errorMessage = data.errors?.map((e) => e.message).join(", ") || "unexpected response shape";
+    const errorMessage =
+      data.errors?.map((e) => e.message).join(", ") || "unexpected response shape";
     block(`GitHub API error: ${errorMessage}. Check gh auth and retry.`);
   }
 
@@ -253,7 +257,9 @@ function queryPrState(owner, repo, branch) {
     }
     if (failingChecks.length > 0) {
       ciState = "FAILING";
-    } else if (checkContexts.some((c) => PENDING_STATUSES.has(c.conclusion || c.status || c.state || ""))) {
+    } else if (
+      checkContexts.some((c) => PENDING_STATUSES.has(c.conclusion || c.status || c.state || ""))
+    ) {
       ciState = "PENDING";
     } else if (checksHasNextPage) {
       // >100 checks and all visible ones passed — assume passing.
@@ -272,9 +278,7 @@ function queryPrState(owner, repo, branch) {
 
   // ── Copilot review state (for polling: wait for Copilot auto-review) ──
   const reviewRequests = pr.reviewRequests?.nodes || [];
-  const copilotRequested = reviewRequests.some(
-    (r) => r.requestedReviewer?.login === COPILOT_LOGIN
-  );
+  const copilotRequested = reviewRequests.some((r) => r.requestedReviewer?.login === COPILOT_LOGIN);
 
   // reviewState: tracks unresolved comments from ANY reviewer
   // copilotState: tracks whether Copilot is expected to review (based on reviewRequests)
@@ -324,13 +328,24 @@ function evaluate(state) {
     return { action: "allow" };
   }
 
-  const { prNumber, prState, mergeable, ciState, failingChecks, reviewState, copilotState, unresolvedCount, threadsHasNextPage } = state;
+  const {
+    prNumber,
+    prState,
+    mergeable,
+    ciState,
+    failingChecks,
+    reviewState,
+    copilotState,
+    unresolvedCount,
+    threadsHasNextPage,
+  } = state;
 
   // PR already merged or closed → tell agent to clean up
   if (prState === "MERGED" || prState === "CLOSED") {
     const worktreeCheck = run("git rev-parse --git-common-dir");
     const gitDir = run("git rev-parse --git-dir");
-    const isWorktree = worktreeCheck.stdout && gitDir.stdout && worktreeCheck.stdout !== gitDir.stdout;
+    const isWorktree =
+      worktreeCheck.stdout && gitDir.stdout && worktreeCheck.stdout !== gitDir.stdout;
 
     if (isWorktree) {
       return {
@@ -372,7 +387,9 @@ function evaluate(state) {
       message:
         `PR #${prNumber} has ${countNote} unresolved review comment(s). Address each one and push.\n` +
         `CI will restart after your push — don't wait for the current run.\n` +
-        (threadsHasNextPage ? `(PR has >100 review threads; check GitHub for the full list.)\n` : ""),
+        (threadsHasNextPage
+          ? `(PR has >100 review threads; check GitHub for the full list.)\n`
+          : ""),
     };
   }
 
@@ -464,7 +481,11 @@ function main() {
     }
 
     // Still polling — check Copilot grace period
-    if (state.ciState === "PASSING" && state.reviewState === "CLEAN" && state.copilotState === "PENDING") {
+    if (
+      state.ciState === "PASSING" &&
+      state.reviewState === "CLEAN" &&
+      state.copilotState === "PENDING"
+    ) {
       if (!ciPassedAt) {
         ciPassedAt = Date.now();
       }
@@ -493,8 +514,8 @@ function main() {
   const copilotLabel = finalState.copilotState || "UNKNOWN";
   block(
     `PR #${finalState.prNumber} — still waiting after ${Math.round((Date.now() - pollStart) / 60000)} min ` +
-    `(CI: ${ciLabel}, Reviews: ${reviewLabel}, Copilot: ${copilotLabel}).\n` +
-    `The hook will resume checking on your next stop attempt.`
+      `(CI: ${ciLabel}, Reviews: ${reviewLabel}, Copilot: ${copilotLabel}).\n` +
+      `The hook will resume checking on your next stop attempt.`,
   );
 }
 

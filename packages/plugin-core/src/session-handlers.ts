@@ -10,7 +10,14 @@ import {
   LOGS_DIR,
   eventTypeToEnum,
 } from "@grackle-ai/common";
-import { envRegistry, sessionStore, taskStore, personaStore, settingsStore, grackleHome } from "@grackle-ai/database";
+import {
+  envRegistry,
+  sessionStore,
+  taskStore,
+  personaStore,
+  settingsStore,
+  grackleHome,
+} from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { join } from "node:path";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
@@ -70,7 +77,10 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
       throw new ConnectError(`No adapter for type: ${env.adapterType}`, Code.FailedPrecondition);
     }
 
-    logger.info({ environmentId: req.environmentId }, "Auto-provisioning environment for SpawnAgent");
+    logger.info(
+      { environmentId: req.environmentId },
+      "Auto-provisioning environment for SpawnAgent",
+    );
     envRegistry.updateEnvironmentStatus(req.environmentId, "connecting");
     emit("environment.changed", {});
 
@@ -168,10 +178,10 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
     req.prompt,
     model,
     logPath,
-    cfg?.taskId || "",       // taskId
-    resolved.personaId,      // personaId
-    parentSessionId,         // parentSessionId
-    pipeMode || "",          // pipeMode
+    cfg?.taskId || "", // taskId
+    resolved.personaId, // personaId
+    parentSessionId, // parentSessionId
+    pipeMode || "", // pipeMode
   );
 
   const mcpServersJson = personaMcpServersToJson(resolved.mcpServers, resolved.personaId);
@@ -195,7 +205,10 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
   );
 
   const workingDirectory = cfg?.branch
-    ? ((cfg?.workingDirectory ?? "").trim() || process.env.GRACKLE_WORKING_DIRECTORY || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
+    ? (cfg?.workingDirectory ?? "").trim() ||
+      process.env.GRACKLE_WORKING_DIRECTORY ||
+      process.env.GRACKLE_WORKTREE_BASE ||
+      "/workspace"
     : "";
   const powerlineReq = buildPowerlineSpawnRequest({
     sessionId,
@@ -228,26 +241,34 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
   if (pipeMode && pipeMode !== "detach" && parentSessionId) {
     const ipcStream = streamRegistry.createStream(`pipe:${sessionId}`);
     const parentSub = streamRegistry.subscribe(
-      ipcStream.id, parentSessionId, "rw",
+      ipcStream.id,
+      parentSessionId,
+      "rw",
       pipeMode === "sync" ? "sync" : "async",
-      true,  // parent opened this via spawn
+      true, // parent opened this via spawn
     );
     streamRegistry.subscribe(
-      ipcStream.id, sessionId, "rw", "async",
+      ipcStream.id,
+      sessionId,
+      "rw",
+      "async",
       false, // child inherits
     );
     pipeFd = parentSub.fd;
 
     if (pipeMode === "async") {
-      pipeDelivery.ensureAsyncDeliveryListener(parentSessionId);  // parent receives child messages
-      pipeDelivery.ensureAsyncDeliveryListener(sessionId);             // child receives parent messages
+      pipeDelivery.ensureAsyncDeliveryListener(parentSessionId); // parent receives child messages
+      pipeDelivery.ensureAsyncDeliveryListener(sessionId); // child receives parent messages
     }
   }
 
   // Supply credentials on demand for this runtime, just before spawn (AHP HR6).
   // For local envs, skip file tokens — the PowerLine is on the same machine.
-  await tokenPush.authenticateForRuntime(req.environmentId, runtime,
-    env.adapterType === "local" ? { excludeFileTokens: true } : undefined);
+  await tokenPush.authenticateForRuntime(
+    req.environmentId,
+    runtime,
+    env.adapterType === "local" ? { excludeFileTokens: true } : undefined,
+  );
 
   processEventStream(conn.client.spawn(powerlineReq), {
     sessionId,
@@ -287,7 +308,10 @@ export async function sendInput(req: grackle.InputMessage): Promise<grackle.Empt
 
   const conn = adapterManager.getConnection(session.environmentId);
   if (!conn) {
-    throw new ConnectError(`Environment ${session.environmentId} not connected`, Code.FailedPrecondition);
+    throw new ConnectError(
+      `Environment ${session.environmentId} not connected`,
+      Code.FailedPrecondition,
+    );
   }
 
   // Persist and publish user input event so subscribers see the text in the event stream
@@ -328,7 +352,12 @@ export async function killAgent(req: grackle.KillAgentRequest): Promise<grackle.
       // Set sigtermSentAt BEFORE delivering so that if the session
       // completes instantly (race), the event-processor sees the flag.
       sessionStore.setSigtermSentAt(session.id);
-      const delivered = await sendInputToSession(session.id, session.environmentId, message, "sigterm");
+      const delivered = await sendInputToSession(
+        session.id,
+        session.environmentId,
+        message,
+        "sigterm",
+      );
       if (delivered) {
         return create(grackle.EmptySchema, {});
       }
@@ -381,9 +410,10 @@ export async function getUsage(req: grackle.GetUsageRequest): Promise<grackle.Us
     case "workspace": {
       const tasks = taskStore.listTasks(req.id);
       const taskIds = tasks.map((t) => t.id);
-      const usage = taskIds.length > 0
-        ? sessionStore.aggregateUsage({ taskIds })
-        : { inputTokens: 0, outputTokens: 0, costMillicents: 0, sessionCount: 0 };
+      const usage =
+        taskIds.length > 0
+          ? sessionStore.aggregateUsage({ taskIds })
+          : { inputTokens: 0, outputTokens: 0, costMillicents: 0, sessionCount: 0 };
       return create(grackle.UsageStatsSchema, usage);
     }
     case "environment": {
@@ -396,7 +426,9 @@ export async function getUsage(req: grackle.GetUsageRequest): Promise<grackle.Us
 }
 
 /** Wait for a message on a synchronous pipe subscription. */
-export async function waitForPipe(req: grackle.WaitForPipeRequest): Promise<grackle.WaitForPipeResponse> {
+export async function waitForPipe(
+  req: grackle.WaitForPipeRequest,
+): Promise<grackle.WaitForPipeResponse> {
   const sub = streamRegistry.getSubscription(req.sessionId, req.fd);
   if (!sub) {
     throw new ConnectError(
@@ -609,7 +641,9 @@ function validateSubscriptionParams(permission: string, deliveryMode: string): v
 // ─── Global Stream Handlers ────────────────────────────────────────────────────
 
 /** Create a new named stream. Creator gets an rw/async subscription. */
-export async function createStream(req: grackle.CreateStreamRequest): Promise<grackle.CreateStreamResponse> {
+export async function createStream(
+  req: grackle.CreateStreamRequest,
+): Promise<grackle.CreateStreamResponse> {
   if (!req.sessionId) {
     throw new ConnectError("session_id is required", Code.InvalidArgument);
   }
@@ -640,7 +674,9 @@ export async function createStream(req: grackle.CreateStreamRequest): Promise<gr
 }
 
 /** Attach another session to a stream the caller holds an fd on. */
-export async function attachStream(req: grackle.AttachStreamRequest): Promise<grackle.AttachStreamResponse> {
+export async function attachStream(
+  req: grackle.AttachStreamRequest,
+): Promise<grackle.AttachStreamResponse> {
   if (!req.sessionId) {
     throw new ConnectError("session_id is required", Code.InvalidArgument);
   }
@@ -692,11 +728,15 @@ export async function attachStream(req: grackle.AttachStreamRequest): Promise<gr
  * `stdin:` prefixes) are filtered out — they are infrastructure, not user-facing
  * coordination. Set `include_internal` to surface them for debugging.
  */
-export async function listStreams(req: grackle.ListStreamsRequest): Promise<grackle.ListStreamsResponse> {
+export async function listStreams(
+  req: grackle.ListStreamsRequest,
+): Promise<grackle.ListStreamsResponse> {
   const allStreams = streamRegistry.listStreams();
   const visibleStreams = req.includeInternal
     ? allStreams
-    : allStreams.filter((stream) => !RESERVED_PREFIXES.some((prefix) => stream.name.startsWith(prefix)));
+    : allStreams.filter(
+        (stream) => !RESERVED_PREFIXES.some((prefix) => stream.name.startsWith(prefix)),
+      );
   return create(grackle.ListStreamsResponseSchema, {
     streams: visibleStreams.map((stream) => {
       const subscribers = Array.from(stream.subscriptions.values()).map((sub) =>

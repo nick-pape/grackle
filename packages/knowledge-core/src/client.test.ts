@@ -59,13 +59,7 @@ vi.mock("./logger.js", () => ({
   },
 }));
 
-import {
-  openNeo4j,
-  closeNeo4j,
-  healthCheck,
-  getDriver,
-  getSession,
-} from "./client.js";
+import { openNeo4j, closeNeo4j, healthCheck, getDriver, getSession } from "./client.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -157,9 +151,7 @@ describe("openNeo4j", () => {
   });
 
   it("cleans up and throws when connectivity check fails", async () => {
-    mockVerifyConnectivity.mockRejectedValueOnce(
-      new Error("connection refused"),
-    );
+    mockVerifyConnectivity.mockRejectedValueOnce(new Error("connection refused"));
 
     await expect(openNeo4j()).rejects.toThrow("Failed to connect to Neo4j");
     expect(mockClose).toHaveBeenCalled();

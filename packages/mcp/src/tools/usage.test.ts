@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { usageTools } from "./usage.js";
 
 const mockGetUsage = vi.fn();
-const mockClient = { core: { getUsage: mockGetUsage } } as unknown as Parameters<(typeof usageTools)[0]["handler"]>[1];
+const mockClient = { core: { getUsage: mockGetUsage } } as unknown as Parameters<
+  (typeof usageTools)[0]["handler"]
+>[1];
 
 describe("usage_get", () => {
   const tool = usageTools.find((t) => t.name === "usage_get")!;
@@ -25,10 +27,7 @@ describe("usage_get", () => {
       sessionCount: 2,
     });
 
-    const result = await tool.handler(
-      { scope: "task", id: "task-123" },
-      mockClient,
-    );
+    const result = await tool.handler({ scope: "task", id: "task-123" }, mockClient);
 
     expect(mockGetUsage).toHaveBeenCalledWith({ scope: "task", id: "task-123" });
     expect(result.content[0].type).toBe("text");
@@ -43,10 +42,7 @@ describe("usage_get", () => {
     const { ConnectError, Code } = await import("@connectrpc/connect");
     mockGetUsage.mockRejectedValue(new ConnectError("Not found", Code.NotFound));
 
-    const result = await tool.handler(
-      { scope: "session", id: "nonexistent" },
-      mockClient,
-    );
+    const result = await tool.handler({ scope: "session", id: "nonexistent" }, mockClient);
 
     expect(result.isError).toBe(true);
   });

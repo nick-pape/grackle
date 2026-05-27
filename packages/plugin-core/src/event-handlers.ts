@@ -10,7 +10,12 @@ import {
 } from "@grackle-ai/database";
 
 /** Map a `domain_events` row to the proto {@link grackle.DomainEvent} message. */
-function rowToProto(row: { id: string; type: string; timestamp: string; payload: string }): grackle.DomainEvent {
+function rowToProto(row: {
+  id: string;
+  type: string;
+  timestamp: string;
+  payload: string;
+}): grackle.DomainEvent {
   return create(grackle.DomainEventSchema, {
     id: row.id,
     type: row.type,
@@ -52,9 +57,13 @@ export async function queryDomainEvents(
 }
 
 /** Map a `stream_messages` row to the proto {@link grackle.StreamMessageEvent} message. */
-function streamRowToProto(
-  row: { seq: string; streamId: string; senderId: string; content: string; timestamp: string },
-): grackle.StreamMessageEvent {
+function streamRowToProto(row: {
+  seq: string;
+  streamId: string;
+  senderId: string;
+  content: string;
+  timestamp: string;
+}): grackle.StreamMessageEvent {
   return create(grackle.StreamMessageEventSchema, {
     streamId: row.streamId,
     seq: row.seq,
@@ -87,9 +96,14 @@ export async function getStreamTranscript(
 }
 
 /** Map a `session_actions` row to the proto {@link grackle.SessionAction} message. */
-function sessionActionRowToProto(
-  row: { seq: string; sessionId: string; type: string; content: string; raw: string; timestamp: string },
-): grackle.SessionAction {
+function sessionActionRowToProto(row: {
+  seq: string;
+  sessionId: string;
+  type: string;
+  content: string;
+  raw: string;
+  timestamp: string;
+}): grackle.SessionAction {
   return create(grackle.SessionActionSchema, {
     seq: row.seq,
     sessionId: row.sessionId,

@@ -54,11 +54,13 @@ If the diff touches publishable package directories, this is a **real** change t
 2. Write a concise comment describing the change (what it does, not what files changed).
 
 3. Get the commit email for the change file:
+
    ```bash
    git config user.email
    ```
 
 4. Generate the change file:
+
    ```bash
    node common/scripts/install-run-rush.js change --bulk \
      --message "placeholder" \
@@ -104,6 +106,7 @@ If it still fails, read the error output and generate additional change files as
 ## Step 4: Report
 
 Summarize:
+
 - Whether this was a real change or a merge-commit false positive
 - The bump type and comment used
 - The path of the generated change file

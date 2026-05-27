@@ -42,7 +42,12 @@ export const WithNodes: Story = {
   args: {
     nodes: [
       makeGraphNode({ id: "n-1", label: "Auth Flow", kind: "knowledge", category: "concept" }),
-      makeGraphNode({ id: "n-2", label: "DB Schema Choice", kind: "knowledge", category: "decision" }),
+      makeGraphNode({
+        id: "n-2",
+        label: "DB Schema Choice",
+        kind: "knowledge",
+        category: "decision",
+      }),
       makeGraphNode({ id: "n-3", label: "Perf Insight", kind: "knowledge", category: "insight" }),
       makeGraphNode({ id: "n-4", label: "Login Bug", kind: "reference", sourceType: "task" }),
     ],
@@ -97,9 +102,7 @@ export const WorkspaceFilterChange: Story = {
 /** Clicking a node in the list calls onSelectNode with the correct ID. */
 export const NodeClickCallsOnSelectNode: Story = {
   args: {
-    nodes: [
-      makeGraphNode({ id: "node-xyz", label: "Click Me" }),
-    ],
+    nodes: [makeGraphNode({ id: "node-xyz", label: "Click Me" })],
   },
   play: async ({ canvas, args }) => {
     await userEvent.click(canvas.getByText("Click Me"));

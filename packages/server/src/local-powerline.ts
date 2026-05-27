@@ -94,7 +94,9 @@ async function waitForPort(port: number, host: string, timeoutMs: number): Promi
  * @param options - Configuration for the PowerLine child process.
  * @returns A handle to manage the child process lifecycle.
  */
-export async function startLocalPowerLine(options: StartLocalPowerLineOptions): Promise<LocalPowerLineHandle> {
+export async function startLocalPowerLine(
+  options: StartLocalPowerLineOptions,
+): Promise<LocalPowerLineHandle> {
   const {
     port,
     host,
@@ -147,7 +149,11 @@ export async function startLocalPowerLine(options: StartLocalPowerLineOptions): 
 
   // Wait for the port to accept connections
   try {
-    await portProbe.waitForPort(port, host === "0.0.0.0" ? "127.0.0.1" : host, PORT_PROBE_TIMEOUT_MS);
+    await portProbe.waitForPort(
+      port,
+      host === "0.0.0.0" ? "127.0.0.1" : host,
+      PORT_PROBE_TIMEOUT_MS,
+    );
   } catch (err) {
     // If the child already exited, include that in the error
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- exited may flip during async waitForPort

@@ -2,7 +2,12 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { expect } from "@storybook/test";
 import { TaskOverviewPanel } from "./TaskOverviewPanel.js";
 import type { TaskData, Workspace, Environment, Session } from "../../hooks/types.js";
-import { makeTask, makeEnvironment, makeSession, makeWorkspace } from "../../test-utils/storybook-helpers.js";
+import {
+  makeTask,
+  makeEnvironment,
+  makeSession,
+  makeWorkspace,
+} from "../../test-utils/storybook-helpers.js";
 
 const defaultTask: TaskData = makeTask({
   id: "t-1",
@@ -19,7 +24,11 @@ const workspace: Workspace = makeWorkspace({
   repoUrl: "https://github.com/example/repo",
 });
 
-const env: Environment = makeEnvironment({ id: "env-1", displayName: "Local Dev", status: "connected" });
+const env: Environment = makeEnvironment({
+  id: "env-1",
+  displayName: "Local Dev",
+  status: "connected",
+});
 const session: Session = makeSession({ id: "sess-1", environmentId: "env-1" });
 
 const meta: Meta<typeof TaskOverviewPanel> = {

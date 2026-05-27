@@ -17,9 +17,15 @@ function makeInput(overrides: Partial<OrchestratorContextInput> = {}): Orchestra
 
 describe("buildOrchestratorContext", () => {
   it("returns workspace metadata when provided", () => {
-    const result = buildOrchestratorContext(makeInput({
-      workspace: { name: "My Project", description: "A cool project", repoUrl: "https://github.com/test/repo" },
-    }));
+    const result = buildOrchestratorContext(
+      makeInput({
+        workspace: {
+          name: "My Project",
+          description: "A cool project",
+          repoUrl: "https://github.com/test/repo",
+        },
+      }),
+    );
 
     expect(result.workspace).toEqual({
       name: "My Project",
@@ -35,14 +41,32 @@ describe("buildOrchestratorContext", () => {
   });
 
   it("maps tasks to TaskTreeNode with resolved persona names", () => {
-    const result = buildOrchestratorContext(makeInput({
-      personas: [
-        { id: "eng", name: "Engineer", description: "Writes code", runtime: "claude-code", model: "" },
-      ],
-      tasks: [
-        { id: "t1", title: "Task 1", status: "working", depth: 0, parentTaskId: "", dependsOn: ["t0"], defaultPersonaId: "eng", branch: "feat-1", canDecompose: true },
-      ],
-    }));
+    const result = buildOrchestratorContext(
+      makeInput({
+        personas: [
+          {
+            id: "eng",
+            name: "Engineer",
+            description: "Writes code",
+            runtime: "claude-code",
+            model: "",
+          },
+        ],
+        tasks: [
+          {
+            id: "t1",
+            title: "Task 1",
+            status: "working",
+            depth: 0,
+            parentTaskId: "",
+            dependsOn: ["t0"],
+            defaultPersonaId: "eng",
+            branch: "feat-1",
+            canDecompose: true,
+          },
+        ],
+      }),
+    );
 
     expect(result.taskTree).toHaveLength(1);
     expect(result.taskTree[0]).toEqual({
@@ -59,23 +83,49 @@ describe("buildOrchestratorContext", () => {
   });
 
   it("resolves persona name to empty string when persona not found", () => {
-    const result = buildOrchestratorContext(makeInput({
-      personas: [],
-      tasks: [
-        { id: "t1", title: "Task 1", status: "not_started", depth: 0, parentTaskId: "", dependsOn: [], defaultPersonaId: "unknown-persona", branch: "", canDecompose: false },
-      ],
-    }));
+    const result = buildOrchestratorContext(
+      makeInput({
+        personas: [],
+        tasks: [
+          {
+            id: "t1",
+            title: "Task 1",
+            status: "not_started",
+            depth: 0,
+            parentTaskId: "",
+            dependsOn: [],
+            defaultPersonaId: "unknown-persona",
+            branch: "",
+            canDecompose: false,
+          },
+        ],
+      }),
+    );
 
     expect(result.taskTree[0].personaName).toBe("");
   });
 
   it("returns all personas as PersonaSummary", () => {
-    const result = buildOrchestratorContext(makeInput({
-      personas: [
-        { id: "eng", name: "Engineer", description: "Writes code", runtime: "claude-code", model: "" },
-        { id: "rev", name: "Reviewer", description: "Reviews PRs", runtime: "copilot", model: "" },
-      ],
-    }));
+    const result = buildOrchestratorContext(
+      makeInput({
+        personas: [
+          {
+            id: "eng",
+            name: "Engineer",
+            description: "Writes code",
+            runtime: "claude-code",
+            model: "",
+          },
+          {
+            id: "rev",
+            name: "Reviewer",
+            description: "Reviews PRs",
+            runtime: "copilot",
+            model: "",
+          },
+        ],
+      }),
+    );
 
     expect(result.availablePersonas).toEqual([
       { name: "Engineer", description: "Writes code", runtime: "claude-code", model: "" },
@@ -84,16 +134,38 @@ describe("buildOrchestratorContext", () => {
   });
 
   it("returns all environments as EnvironmentSummary", () => {
-    const result = buildOrchestratorContext(makeInput({
-      environments: [
-        { displayName: "Local Dev", adapterType: "local", status: "connected", defaultRuntime: "claude-code" },
-        { displayName: "SSH Box", adapterType: "ssh", status: "disconnected", defaultRuntime: "claude-code" },
-      ],
-    }));
+    const result = buildOrchestratorContext(
+      makeInput({
+        environments: [
+          {
+            displayName: "Local Dev",
+            adapterType: "local",
+            status: "connected",
+            defaultRuntime: "claude-code",
+          },
+          {
+            displayName: "SSH Box",
+            adapterType: "ssh",
+            status: "disconnected",
+            defaultRuntime: "claude-code",
+          },
+        ],
+      }),
+    );
 
     expect(result.availableEnvironments).toEqual([
-      { displayName: "Local Dev", adapterType: "local", status: "connected", defaultRuntime: "claude-code" },
-      { displayName: "SSH Box", adapterType: "ssh", status: "disconnected", defaultRuntime: "claude-code" },
+      {
+        displayName: "Local Dev",
+        adapterType: "local",
+        status: "connected",
+        defaultRuntime: "claude-code",
+      },
+      {
+        displayName: "SSH Box",
+        adapterType: "ssh",
+        status: "disconnected",
+        defaultRuntime: "claude-code",
+      },
     ]);
   });
 
@@ -107,21 +179,45 @@ describe("buildOrchestratorContext", () => {
   });
 
   it("handles tasks with multiple dependsOn entries", () => {
-    const result = buildOrchestratorContext(makeInput({
-      tasks: [
-        { id: "t3", title: "Final Task", status: "not_started", depth: 1, parentTaskId: "t0", dependsOn: ["t1", "t2"], defaultPersonaId: "", branch: "", canDecompose: false },
-      ],
-    }));
+    const result = buildOrchestratorContext(
+      makeInput({
+        tasks: [
+          {
+            id: "t3",
+            title: "Final Task",
+            status: "not_started",
+            depth: 1,
+            parentTaskId: "t0",
+            dependsOn: ["t1", "t2"],
+            defaultPersonaId: "",
+            branch: "",
+            canDecompose: false,
+          },
+        ],
+      }),
+    );
 
     expect(result.taskTree[0].dependsOn).toEqual(["t1", "t2"]);
   });
 
   it("handles tasks with empty dependsOn", () => {
-    const result = buildOrchestratorContext(makeInput({
-      tasks: [
-        { id: "t1", title: "Solo Task", status: "not_started", depth: 0, parentTaskId: "", dependsOn: [], defaultPersonaId: "", branch: "", canDecompose: false },
-      ],
-    }));
+    const result = buildOrchestratorContext(
+      makeInput({
+        tasks: [
+          {
+            id: "t1",
+            title: "Solo Task",
+            status: "not_started",
+            depth: 0,
+            parentTaskId: "",
+            dependsOn: [],
+            defaultPersonaId: "",
+            branch: "",
+            canDecompose: false,
+          },
+        ],
+      }),
+    );
 
     expect(result.taskTree[0].dependsOn).toEqual([]);
   });

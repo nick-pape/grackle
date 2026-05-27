@@ -37,7 +37,9 @@ export const NODE_GIT_REPOSITORY: GitRepository = (() => {
     },
     async toplevel(dir: string): Promise<string | undefined> {
       try {
-        const { stdout } = await execFileAsync("git", ["rev-parse", "--show-toplevel"], { cwd: dir });
+        const { stdout } = await execFileAsync("git", ["rev-parse", "--show-toplevel"], {
+          cwd: dir,
+        });
         return stdout.trim();
       } catch {
         return undefined;
@@ -114,12 +116,12 @@ export async function findGitRepoPath(
   locator: WorkspaceLocator = NODE_WORKSPACE_LOCATOR,
 ): Promise<string | undefined> {
   // Try the explicitly provided path first, resolving to the actual repo root
-  if (basePath && locator.exists(basePath) && await git.isRepo(basePath)) {
+  if (basePath && locator.exists(basePath) && (await git.isRepo(basePath))) {
     return (await git.toplevel(basePath)) ?? basePath;
   }
 
   // Docker convention
-  if (locator.exists("/workspace") && await git.isRepo("/workspace")) {
+  if (locator.exists("/workspace") && (await git.isRepo("/workspace"))) {
     return (await git.toplevel("/workspace")) ?? "/workspace";
   }
 
@@ -128,7 +130,7 @@ export async function findGitRepoPath(
     const entries = locator.readDirectory("/workspaces");
     for (const entry of entries) {
       const candidate = `/workspaces/${entry}`;
-      if (locator.exists(candidate) && await git.isRepo(candidate)) {
+      if (locator.exists(candidate) && (await git.isRepo(candidate))) {
         return (await git.toplevel(candidate)) ?? candidate;
       }
     }
@@ -179,7 +181,9 @@ function findWorkspaceDir(
  * main working tree instead of creating a worktree. When useWorktrees is
  * undefined (proto3 unset), it defaults to true.
  */
-export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOptions): Promise<string | undefined> {
+export async function resolveWorkingDirectory(
+  options: ResolveWorkingDirectoryOptions,
+): Promise<string | undefined> {
   const {
     branch,
     workingDirectory,
@@ -201,13 +205,28 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
     if (repoPath) {
       try {
         const wt = await ensureWorktree(repoPath, branch);
-        eventQueue.push({ type: "system", diagnostic: true, timestamp: ts(), content: `Worktree ready: ${wt.worktreePath} (branch: ${branch}, created: ${String(wt.created)}, synced: ${String(wt.synced)})` });
+        eventQueue.push({
+          type: "system",
+          diagnostic: true,
+          timestamp: ts(),
+          content: `Worktree ready: ${wt.worktreePath} (branch: ${branch}, created: ${String(wt.created)}, synced: ${String(wt.synced)})`,
+        });
         return wt.worktreePath;
       } catch (wtErr) {
-        eventQueue.push({ type: "system", diagnostic: true, timestamp: ts(), content: `Worktree setup failed (${wtErr instanceof Error ? wtErr.message : String(wtErr)}), falling back to workspace` });
+        eventQueue.push({
+          type: "system",
+          diagnostic: true,
+          timestamp: ts(),
+          content: `Worktree setup failed (${wtErr instanceof Error ? wtErr.message : String(wtErr)}), falling back to workspace`,
+        });
       }
     } else {
-      eventQueue.push({ type: "system", diagnostic: true, timestamp: ts(), content: `No git repo found at ${workingDirectory} or well-known paths, falling back to workspace` });
+      eventQueue.push({
+        type: "system",
+        diagnostic: true,
+        timestamp: ts(),
+        content: `No git repo found at ${workingDirectory} or well-known paths, falling back to workspace`,
+      });
     }
 
     // Worktree failed — fall back to best available workspace
@@ -226,13 +245,28 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
     if (repoPath) {
       try {
         await git.checkoutBranch(repoPath, branch);
-        eventQueue.push({ type: "system", diagnostic: true, timestamp: ts(), content: `Checked out branch '${branch}' in main working tree: ${repoPath}` });
+        eventQueue.push({
+          type: "system",
+          diagnostic: true,
+          timestamp: ts(),
+          content: `Checked out branch '${branch}' in main working tree: ${repoPath}`,
+        });
         return repoPath;
       } catch (checkoutErr) {
-        eventQueue.push({ type: "system", diagnostic: true, timestamp: ts(), content: `Branch checkout failed (${checkoutErr instanceof Error ? checkoutErr.message : String(checkoutErr)}), falling back to workspace` });
+        eventQueue.push({
+          type: "system",
+          diagnostic: true,
+          timestamp: ts(),
+          content: `Branch checkout failed (${checkoutErr instanceof Error ? checkoutErr.message : String(checkoutErr)}), falling back to workspace`,
+        });
       }
     } else {
-      eventQueue.push({ type: "system", diagnostic: true, timestamp: ts(), content: `No git repo found${workingDirectory ? ` at ${workingDirectory}` : ""} for branch checkout, falling back to workspace` });
+      eventQueue.push({
+        type: "system",
+        diagnostic: true,
+        timestamp: ts(),
+        content: `No git repo found${workingDirectory ? ` at ${workingDirectory}` : ""} for branch checkout, falling back to workspace`,
+      });
     }
 
     // Checkout failed — fall back to best available workspace
@@ -255,7 +289,9 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
  * Grackle format: `{ "name": { command, args, env, ... } }`
  * ACP format:     `[{ name, type: "stdio"|"http", command, args, env, ... }]`
  */
-export function convertMcpServers(servers: Record<string, unknown> | undefined): Record<string, unknown>[] {
+export function convertMcpServers(
+  servers: Record<string, unknown> | undefined,
+): Record<string, unknown>[] {
   if (!servers) {
     return [];
   }
@@ -274,8 +310,10 @@ export function convertMcpServers(servers: Record<string, unknown> | undefined):
         // HTTP transport: url is required, headers must be array of {name, value}
         result.url = cfg.url;
         if (cfg.headers && typeof cfg.headers === "object" && !Array.isArray(cfg.headers)) {
-          result.headers = Object.entries(cfg.headers as Record<string, string>)
-            .map(([k, v]) => ({ name: k, value: v }));
+          result.headers = Object.entries(cfg.headers as Record<string, string>).map(([k, v]) => ({
+            name: k,
+            value: v,
+          }));
         } else if (Array.isArray(cfg.headers)) {
           result.headers = cfg.headers;
         }
@@ -285,8 +323,10 @@ export function convertMcpServers(servers: Record<string, unknown> | undefined):
         result.args = Array.isArray(cfg.args) ? cfg.args : [];
         // env must be array of {name, value} — convert from object if needed
         if (cfg.env && typeof cfg.env === "object" && !Array.isArray(cfg.env)) {
-          result.env = Object.entries(cfg.env as Record<string, string>)
-            .map(([k, v]) => ({ name: k, value: v }));
+          result.env = Object.entries(cfg.env as Record<string, string>).map(([k, v]) => ({
+            name: k,
+            value: v,
+          }));
         } else if (Array.isArray(cfg.env)) {
           result.env = cfg.env;
         } else {
@@ -314,7 +354,6 @@ export interface BrokerConfig {
   token: string;
 }
 
-
 /**
  * Load MCP server configurations from the shared GRACKLE_MCP_CONFIG file and spawn options.
  *
@@ -340,7 +379,9 @@ export function resolveMcpServers(
           (t): t is string => typeof t === "string",
         );
       }
-    } catch { /* ignore malformed config */ }
+    } catch {
+      /* ignore malformed config */
+    }
   }
 
   if (spawnMcpServers) {
@@ -378,9 +419,15 @@ export function resolveMcpServers(
         cfg.tools = (cfg.tools as string[]).filter((t) => !blocked.has(t));
         if ((cfg.tools as string[]).length === 0) {
           delete servers[serverName];
-          logger.info({ serverName, blocked: [...blocked] }, "Removed MCP server (all tools disallowed)");
+          logger.info(
+            { serverName, blocked: [...blocked] },
+            "Removed MCP server (all tools disallowed)",
+          );
         } else {
-          logger.info({ serverName, blocked: [...blocked] }, "Filtered disallowed tools from MCP server");
+          logger.info(
+            { serverName, blocked: [...blocked] },
+            "Filtered disallowed tools from MCP server",
+          );
         }
       }
     }

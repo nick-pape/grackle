@@ -72,11 +72,15 @@ describe("loadPlugins — topological sort", () => {
     const pluginA = createPlugin({
       name: "a",
       dependencies: ["b"],
-      initialize: async () => { order.push("a"); },
+      initialize: async () => {
+        order.push("a");
+      },
     });
     const pluginB = createPlugin({
       name: "b",
-      initialize: async () => { order.push("b"); },
+      initialize: async () => {
+        order.push("b");
+      },
     });
 
     await loadPlugins([pluginA, pluginB], createMockContext());
@@ -86,11 +90,14 @@ describe("loadPlugins — topological sort", () => {
 
   it("handles diamond dependencies correctly", async () => {
     const order: string[] = [];
-    const make = (name: string, deps?: string[]): GracklePlugin => createPlugin({
-      name,
-      dependencies: deps,
-      initialize: async () => { order.push(name); },
-    });
+    const make = (name: string, deps?: string[]): GracklePlugin =>
+      createPlugin({
+        name,
+        dependencies: deps,
+        initialize: async () => {
+          order.push(name);
+        },
+      });
 
     // A depends on B and C; both B and C depend on D
     const plugins = [make("a", ["b", "c"]), make("b", ["d"]), make("c", ["d"]), make("d")];
@@ -107,23 +114,22 @@ describe("loadPlugins — topological sort", () => {
     const pluginA = createPlugin({ name: "a", dependencies: ["b"] });
     const pluginB = createPlugin({ name: "b", dependencies: ["a"] });
 
-    await expect(loadPlugins([pluginA, pluginB], createMockContext()))
-      .rejects.toThrow(/cycle/i);
+    await expect(loadPlugins([pluginA, pluginB], createMockContext())).rejects.toThrow(/cycle/i);
   });
 
   it("throws on missing dependency", async () => {
     const plugin = createPlugin({ name: "a", dependencies: ["nonexistent"] });
 
-    await expect(loadPlugins([plugin], createMockContext()))
-      .rejects.toThrow(/nonexistent/i);
+    await expect(loadPlugins([plugin], createMockContext())).rejects.toThrow(/nonexistent/i);
   });
 
   it("throws on duplicate plugin names", async () => {
     const pluginA = createPlugin({ name: "dup" });
     const pluginB = createPlugin({ name: "dup" });
 
-    await expect(loadPlugins([pluginA, pluginB], createMockContext()))
-      .rejects.toThrow(/duplicate/i);
+    await expect(loadPlugins([pluginA, pluginB], createMockContext())).rejects.toThrow(
+      /duplicate/i,
+    );
   });
 
   it("handles duplicate entries in a plugin's dependencies array", async () => {
@@ -131,11 +137,15 @@ describe("loadPlugins — topological sort", () => {
     const pluginA = createPlugin({
       name: "a",
       dependencies: ["b", "b", "b"], // duplicated
-      initialize: async () => { order.push("a"); },
+      initialize: async () => {
+        order.push("a");
+      },
     });
     const pluginB = createPlugin({
       name: "b",
-      initialize: async () => { order.push("b"); },
+      initialize: async () => {
+        order.push("b");
+      },
     });
 
     // Should not throw — duplicates are deduplicated
@@ -148,7 +158,9 @@ describe("loadPlugins — topological sort", () => {
 
 describe("loadPlugins — contribution collection", () => {
   it("collects gRPC handler registrations", async () => {
-    const fakeService = { typeName: "FakeService" } as unknown as import("@bufbuild/protobuf").DescService;
+    const fakeService = {
+      typeName: "FakeService",
+    } as unknown as import("@bufbuild/protobuf").DescService;
     const registration = { service: fakeService, handlers: { list: vi.fn() } };
     const plugin = createPlugin({
       name: "test",
@@ -268,11 +280,15 @@ describe("loadPlugins — lifecycle", () => {
     const pluginA = createPlugin({
       name: "a",
       dependencies: ["b"],
-      initialize: async () => { order.push("a"); },
+      initialize: async () => {
+        order.push("a");
+      },
     });
     const pluginB = createPlugin({
       name: "b",
-      initialize: async () => { order.push("b"); },
+      initialize: async () => {
+        order.push("b");
+      },
     });
 
     await loadPlugins([pluginA, pluginB], createMockContext());
@@ -292,7 +308,9 @@ describe("loadPlugins — lifecycle", () => {
     const initB = vi.fn();
     const pluginA = createPlugin({
       name: "a",
-      initialize: async () => { throw new Error("init failed"); },
+      initialize: async () => {
+        throw new Error("init failed");
+      },
     });
     const pluginB = createPlugin({
       name: "b",
@@ -300,8 +318,9 @@ describe("loadPlugins — lifecycle", () => {
       initialize: initB,
     });
 
-    await expect(loadPlugins([pluginA, pluginB], createMockContext()))
-      .rejects.toThrow("init failed");
+    await expect(loadPlugins([pluginA, pluginB], createMockContext())).rejects.toThrow(
+      "init failed",
+    );
     expect(initB).not.toHaveBeenCalled();
   });
 
@@ -309,17 +328,22 @@ describe("loadPlugins — lifecycle", () => {
     const shutdownA = vi.fn();
     const pluginA = createPlugin({
       name: "a",
-      initialize: async () => { /* succeeds */ },
+      initialize: async () => {
+        /* succeeds */
+      },
       shutdown: shutdownA,
     });
     const pluginB = createPlugin({
       name: "b",
       dependencies: ["a"],
-      initialize: async () => { throw new Error("b init failed"); },
+      initialize: async () => {
+        throw new Error("b init failed");
+      },
     });
 
-    await expect(loadPlugins([pluginA, pluginB], createMockContext()))
-      .rejects.toThrow("b init failed");
+    await expect(loadPlugins([pluginA, pluginB], createMockContext())).rejects.toThrow(
+      "b init failed",
+    );
     // A was initialized before B failed, so A's shutdown should be called
     expect(shutdownA).toHaveBeenCalledTimes(1);
   });
@@ -335,11 +359,14 @@ describe("loadPlugins — lifecycle", () => {
     const pluginB = createPlugin({
       name: "b",
       dependencies: ["a"],
-      grpcHandlers: () => { throw new Error("handler registration failed"); },
+      grpcHandlers: () => {
+        throw new Error("handler registration failed");
+      },
     });
 
-    await expect(loadPlugins([pluginA, pluginB], createMockContext()))
-      .rejects.toThrow("handler registration failed");
+    await expect(loadPlugins([pluginA, pluginB], createMockContext())).rejects.toThrow(
+      "handler registration failed",
+    );
     // A's subscriber should be disposed and A should be shut down
     expect(dispose).toHaveBeenCalledTimes(1);
     expect(shutdownA).toHaveBeenCalledTimes(1);
@@ -350,11 +377,15 @@ describe("loadPlugins — lifecycle", () => {
     const pluginA = createPlugin({
       name: "a",
       dependencies: ["b"],
-      shutdown: async () => { order.push("a"); },
+      shutdown: async () => {
+        order.push("a");
+      },
     });
     const pluginB = createPlugin({
       name: "b",
-      shutdown: async () => { order.push("b"); },
+      shutdown: async () => {
+        order.push("b");
+      },
     });
 
     const result = await loadPlugins([pluginA, pluginB], createMockContext());
@@ -381,7 +412,9 @@ describe("loadPlugins — lifecycle", () => {
     const pluginA = createPlugin({
       name: "a",
       dependencies: ["b"],
-      shutdown: async () => { throw new Error("shutdown failed"); },
+      shutdown: async () => {
+        throw new Error("shutdown failed");
+      },
     });
     const pluginB = createPlugin({
       name: "b",

@@ -19,22 +19,24 @@ export function createSession(
   parentSessionId: string = "",
   pipeMode: PipeMode = "",
 ): void {
-  db.insert(sessions).values({
-    id,
-    environmentId,
-    runtime,
-    prompt,
-    model,
-    logPath,
-    taskId,
-    personaId,
-    parentSessionId,
-    pipeMode,
-    // We always set startedAt explicitly (ISO 8601 format with milliseconds).
-    // The schema default also produces ISO format via strftime, but we set it
-    // here for consistency. ISO format sorts lexicographically correctly.
-    startedAt: new Date().toISOString(),
-  }).run();
+  db.insert(sessions)
+    .values({
+      id,
+      environmentId,
+      runtime,
+      prompt,
+      model,
+      logPath,
+      taskId,
+      personaId,
+      parentSessionId,
+      pipeMode,
+      // We always set startedAt explicitly (ISO 8601 format with milliseconds).
+      // The schema default also produces ISO format via strftime, but we set it
+      // here for consistency. ISO format sorts lexicographically correctly.
+      startedAt: new Date().toISOString(),
+    })
+    .run();
 }
 
 /** Retrieve a single session by ID. */
@@ -54,14 +56,19 @@ export function listSessions(environmentId?: string, status?: string): SessionRo
 
   const query = db.select().from(sessions);
   if (conditions.length > 0) {
-    return query.where(and(...conditions)).orderBy(desc(sessions.startedAt)).all();
+    return query
+      .where(and(...conditions))
+      .orderBy(desc(sessions.startedAt))
+      .all();
   }
   return query.orderBy(desc(sessions.startedAt)).all();
 }
 
 /** List all sessions belonging to a specific environment. */
 export function listByEnv(environmentId: string): SessionRow[] {
-  return db.select().from(sessions)
+  return db
+    .select()
+    .from(sessions)
     .where(eq(sessions.environmentId, environmentId))
     .orderBy(desc(sessions.startedAt))
     .all();
@@ -77,9 +84,7 @@ export function updateSession(
   error?: string,
   endReason?: EndReason,
 ): void {
-  const endedAt = status === SESSION_STATUS.STOPPED
-    ? new Date().toISOString()
-    : null;
+  const endedAt = status === SESSION_STATUS.STOPPED ? new Date().toISOString() : null;
   const patch: Partial<typeof sessions.$inferInsert> = {
     status,
     endedAt,
@@ -89,10 +94,7 @@ export function updateSession(
   if (runtimeSessionId !== undefined) {
     patch.runtimeSessionId = runtimeSessionId;
   }
-  db.update(sessions)
-    .set(patch)
-    .where(eq(sessions.id, id))
-    .run();
+  db.update(sessions).set(patch).where(eq(sessions.id, id)).run();
 }
 
 /** Record that a SIGTERM signal was sent to a session. */
@@ -105,27 +107,27 @@ export function setSigtermSentAt(id: string): void {
 
 /** Clear the SIGTERM sent flag (e.g. when delivery fails after optimistic set). */
 export function clearSigtermSentAt(id: string): void {
-  db.update(sessions)
-    .set({ sigtermSentAt: null })
-    .where(eq(sessions.id, id))
-    .run();
+  db.update(sessions).set({ sigtermSentAt: null }).where(eq(sessions.id, id)).run();
 }
 
 /** Update only the status column of a session. */
 export function updateSessionStatus(id: string, status: SessionStatus): void {
-  db.update(sessions)
-    .set({ status })
-    .where(eq(sessions.id, id))
-    .run();
+  db.update(sessions).set({ status }).where(eq(sessions.id, id)).run();
 }
 
 /** Get the currently active (pending/running/waiting_input) session for an environment, if any. */
 export function getActiveForEnv(environmentId: string): SessionRow | undefined {
-  return db.select().from(sessions)
+  return db
+    .select()
+    .from(sessions)
     .where(
       and(
         eq(sessions.environmentId, environmentId),
-        inArray(sessions.status, [SESSION_STATUS.PENDING, SESSION_STATUS.RUNNING, SESSION_STATUS.IDLE]),
+        inArray(sessions.status, [
+          SESSION_STATUS.PENDING,
+          SESSION_STATUS.RUNNING,
+          SESSION_STATUS.IDLE,
+        ]),
       ),
     )
     .get();
@@ -157,9 +159,11 @@ export function updateSessionUsage(
 }
 
 /** Aggregate usage stats across sessions matching the given filter. */
-export function aggregateUsage(
-  filter: { taskId?: string; taskIds?: string[]; environmentId?: string },
-): { inputTokens: number; outputTokens: number; costMillicents: number; sessionCount: number } {
+export function aggregateUsage(filter: {
+  taskId?: string;
+  taskIds?: string[];
+  environmentId?: string;
+}): { inputTokens: number; outputTokens: number; costMillicents: number; sessionCount: number } {
   const conditions = [];
   if (filter.taskId) {
     conditions.push(eq(sessions.taskId, filter.taskId));
@@ -171,12 +175,16 @@ export function aggregateUsage(
     conditions.push(eq(sessions.environmentId, filter.environmentId));
   }
   const where = conditions.length > 0 ? and(...conditions) : undefined;
-  const result = db.select({
-    inputTokens: sql<number>`COALESCE(SUM(${sessions.inputTokens}), 0)`,
-    outputTokens: sql<number>`COALESCE(SUM(${sessions.outputTokens}), 0)`,
-    costMillicents: sql<number>`COALESCE(SUM(${sessions.costMillicents}), 0)`,
-    sessionCount: sql<number>`COUNT(*)`,
-  }).from(sessions).where(where).get();
+  const result = db
+    .select({
+      inputTokens: sql<number>`COALESCE(SUM(${sessions.inputTokens}), 0)`,
+      outputTokens: sql<number>`COALESCE(SUM(${sessions.outputTokens}), 0)`,
+      costMillicents: sql<number>`COALESCE(SUM(${sessions.costMillicents}), 0)`,
+      sessionCount: sql<number>`COUNT(*)`,
+    })
+    .from(sessions)
+    .where(where)
+    .get();
   return result ?? { inputTokens: 0, outputTokens: 0, costMillicents: 0, sessionCount: 0 };
 }
 
@@ -187,18 +195,12 @@ export function deleteByEnvironment(environmentId: string): void {
 
 /** Update the taskId for an existing session (late-bind). */
 export function setSessionTask(id: string, taskId: string): void {
-  db.update(sessions)
-    .set({ taskId })
-    .where(eq(sessions.id, id))
-    .run();
+  db.update(sessions).set({ taskId }).where(eq(sessions.id, id)).run();
 }
 
 /** Persist the runtime-native session ID returned by the PowerLine. */
 export function updateRuntimeSessionId(id: string, runtimeSessionId: string): void {
-  db.update(sessions)
-    .set({ runtimeSessionId })
-    .where(eq(sessions.id, id))
-    .run();
+  db.update(sessions).set({ runtimeSessionId }).where(eq(sessions.id, id)).run();
 }
 
 /** Transition a session to SUSPENDED — transport lost, pending auto-recovery on reconnect. */
@@ -215,12 +217,11 @@ export function suspendSession(id: string): void {
 
 /** Get all SUSPENDED sessions for an environment, ordered by startedAt (oldest first). */
 export function getSuspendedForEnv(environmentId: string): SessionRow[] {
-  return db.select().from(sessions)
+  return db
+    .select()
+    .from(sessions)
     .where(
-      and(
-        eq(sessions.environmentId, environmentId),
-        eq(sessions.status, SESSION_STATUS.SUSPENDED),
-      ),
+      and(eq(sessions.environmentId, environmentId), eq(sessions.status, SESSION_STATUS.SUSPENDED)),
     )
     .orderBy(asc(sessions.startedAt))
     .all();
@@ -229,14 +230,22 @@ export function getSuspendedForEnv(environmentId: string): SessionRow[] {
 /** Clear terminal state for reanimate — reset status to running, clear endedAt/endReason/error/suspendedAt. */
 export function reanimateSession(id: string): void {
   db.update(sessions)
-    .set({ status: SESSION_STATUS.RUNNING, endedAt: null, endReason: null, error: null, suspendedAt: null })
+    .set({
+      status: SESSION_STATUS.RUNNING,
+      endedAt: null,
+      endReason: null,
+      error: null,
+      suspendedAt: null,
+    })
     .where(eq(sessions.id, id))
     .run();
 }
 
 /** List all sessions for a specific task, ordered chronologically (oldest first). */
 export function listSessionsForTask(taskId: string): SessionRow[] {
-  return db.select().from(sessions)
+  return db
+    .select()
+    .from(sessions)
     .where(eq(sessions.taskId, taskId))
     .orderBy(asc(sessions.startedAt), asc(sessions.id))
     .all();
@@ -244,7 +253,9 @@ export function listSessionsForTask(taskId: string): SessionRow[] {
 
 /** Get the most recent session for a task (by startedAt DESC, id DESC). */
 export function getLatestSessionForTask(taskId: string): SessionRow | undefined {
-  return db.select().from(sessions)
+  return db
+    .select()
+    .from(sessions)
     .where(eq(sessions.taskId, taskId))
     .orderBy(desc(sessions.startedAt), desc(sessions.id))
     .limit(1)
@@ -253,11 +264,17 @@ export function getLatestSessionForTask(taskId: string): SessionRow | undefined 
 
 /** Get all active (non-terminal) sessions for a task. */
 export function getActiveSessionsForTask(taskId: string): SessionRow[] {
-  return db.select().from(sessions)
+  return db
+    .select()
+    .from(sessions)
     .where(
       and(
         eq(sessions.taskId, taskId),
-        inArray(sessions.status, [SESSION_STATUS.PENDING, SESSION_STATUS.RUNNING, SESSION_STATUS.IDLE]),
+        inArray(sessions.status, [
+          SESSION_STATUS.PENDING,
+          SESSION_STATUS.RUNNING,
+          SESSION_STATUS.IDLE,
+        ]),
       ),
     )
     .all();
@@ -268,7 +285,9 @@ export function listSessionsByTaskIds(taskIds: string[]): SessionRow[] {
   if (taskIds.length === 0) {
     return [];
   }
-  return db.select().from(sessions)
+  return db
+    .select()
+    .from(sessions)
     .where(inArray(sessions.taskId, taskIds))
     .orderBy(asc(sessions.startedAt), asc(sessions.id))
     .all();
@@ -276,7 +295,9 @@ export function listSessionsByTaskIds(taskIds: string[]): SessionRow[] {
 
 /** List all child sessions spawned by a parent session. */
 export function getChildSessions(parentSessionId: string): SessionRow[] {
-  return db.select().from(sessions)
+  return db
+    .select()
+    .from(sessions)
     .where(eq(sessions.parentSessionId, parentSessionId))
     .orderBy(asc(sessions.startedAt), asc(sessions.id))
     .all();
@@ -284,12 +305,17 @@ export function getChildSessions(parentSessionId: string): SessionRow[] {
 
 /** Count active (pending/running/idle) sessions for a specific environment. */
 export function countActiveForEnvironment(environmentId: string): number {
-  const result = db.select({ count: sql<number>`COUNT(*)` })
+  const result = db
+    .select({ count: sql<number>`COUNT(*)` })
     .from(sessions)
     .where(
       and(
         eq(sessions.environmentId, environmentId),
-        inArray(sessions.status, [SESSION_STATUS.PENDING, SESSION_STATUS.RUNNING, SESSION_STATUS.IDLE]),
+        inArray(sessions.status, [
+          SESSION_STATUS.PENDING,
+          SESSION_STATUS.RUNNING,
+          SESSION_STATUS.IDLE,
+        ]),
       ),
     )
     .get();
@@ -298,10 +324,15 @@ export function countActiveForEnvironment(environmentId: string): number {
 
 /** Count all active (pending/running/idle) sessions across the entire server. */
 export function countActiveGlobal(): number {
-  const result = db.select({ count: sql<number>`COUNT(*)` })
+  const result = db
+    .select({ count: sql<number>`COUNT(*)` })
     .from(sessions)
     .where(
-      inArray(sessions.status, [SESSION_STATUS.PENDING, SESSION_STATUS.RUNNING, SESSION_STATUS.IDLE]),
+      inArray(sessions.status, [
+        SESSION_STATUS.PENDING,
+        SESSION_STATUS.RUNNING,
+        SESSION_STATUS.IDLE,
+      ]),
     )
     .get();
   return result?.count ?? 0;

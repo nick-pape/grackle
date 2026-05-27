@@ -65,7 +65,9 @@ test.describe("Multi-Task", { tag: ["@task"] }, () => {
     await page.locator("button", { hasText: "Start" }).click();
 
     // Wait for active state — task status should change to working or paused
-    await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, { timeout: 15_000 });
+    await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, {
+      timeout: 15_000,
+    });
 
     // Complete to review
     const inputField = page.locator('textarea[placeholder="Type a message..."]');

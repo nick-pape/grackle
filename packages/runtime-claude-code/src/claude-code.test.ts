@@ -50,9 +50,7 @@ describe("mapMessage", () => {
         type: "assistant",
         message: {
           role: "assistant",
-          content: [
-            { type: "tool_use", name: "read_file", input: { path: "/tmp/test" } },
-          ],
+          content: [{ type: "tool_use", name: "read_file", input: { path: "/tmp/test" } }],
         },
       };
       const events = mapMessage(msg);
@@ -166,7 +164,6 @@ describe("mapMessage", () => {
       expect(events).toHaveLength(1); // only tool_use, no finding event
       expect(events[0].type).toBe("tool_use");
     });
-
   });
 
   describe("system messages", () => {
@@ -304,7 +301,10 @@ describe("ClaudeCodeRuntime structural", () => {
     });
     await (session as any).setupSdk();
     const opts = (session as any).cachedSdkOptions;
-    expect(opts.systemPrompt).toEqual({ preset: "claude_code", append: "You are a helpful assistant." });
+    expect(opts.systemPrompt).toEqual({
+      preset: "claude_code",
+      append: "You are a helpful assistant.",
+    });
   });
 
   it("setupSdk omits systemPrompt when systemContext is not provided", async () => {
@@ -372,7 +372,10 @@ function asyncIterableFrom<T>(items: T[]): AsyncIterable<T> {
 }
 
 /** Collect events from a session stream, stopping after the first waiting_input. */
-async function collectUntilIdle(session: { stream(): AsyncIterable<AgentEvent>; kill(): void }): Promise<AgentEvent[]> {
+async function collectUntilIdle(session: {
+  stream(): AsyncIterable<AgentEvent>;
+  kill(): void;
+}): Promise<AgentEvent[]> {
   const events: AgentEvent[] = [];
   for await (const event of session.stream()) {
     events.push(event);
@@ -400,13 +403,28 @@ describe("ClaudeCodeRuntime — runtime_session_id emission", () => {
 
   it("emits runtime_session_id event when SDK returns a system message with session_id", async () => {
     // The SDK returns a system/init message with session_id, followed by an assistant message
-    mockQuery.mockReturnValue(asyncIterableFrom([
-      { type: "system", subtype: "init", session_id: "sdk-session-abc", model: "claude-sonnet-4" },
-      { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "Hello" }] } },
-    ]));
+    mockQuery.mockReturnValue(
+      asyncIterableFrom([
+        {
+          type: "system",
+          subtype: "init",
+          session_id: "sdk-session-abc",
+          model: "claude-sonnet-4",
+        },
+        {
+          type: "assistant",
+          message: { role: "assistant", content: [{ type: "text", text: "Hello" }] },
+        },
+      ]),
+    );
 
     const runtime = new ClaudeCodeRuntime();
-    const session = runtime.spawn({ sessionId: "cc-emit-test", prompt: "hi", model: "claude-sonnet-4", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "cc-emit-test",
+      prompt: "hi",
+      model: "claude-sonnet-4",
+      maxTurns: 1,
+    });
     const events = await collectUntilIdle(session);
 
     const rtIdEvent = events.find((e) => e.type === "runtime_session_id");
@@ -416,14 +434,34 @@ describe("ClaudeCodeRuntime — runtime_session_id emission", () => {
   });
 
   it("emits runtime_session_id only once even if SDK sends multiple system messages", async () => {
-    mockQuery.mockReturnValue(asyncIterableFrom([
-      { type: "system", subtype: "init", session_id: "sdk-session-first", model: "claude-sonnet-4" },
-      { type: "system", subtype: "init", session_id: "sdk-session-second", model: "claude-sonnet-4" },
-      { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "Hi" }] } },
-    ]));
+    mockQuery.mockReturnValue(
+      asyncIterableFrom([
+        {
+          type: "system",
+          subtype: "init",
+          session_id: "sdk-session-first",
+          model: "claude-sonnet-4",
+        },
+        {
+          type: "system",
+          subtype: "init",
+          session_id: "sdk-session-second",
+          model: "claude-sonnet-4",
+        },
+        {
+          type: "assistant",
+          message: { role: "assistant", content: [{ type: "text", text: "Hi" }] },
+        },
+      ]),
+    );
 
     const runtime = new ClaudeCodeRuntime();
-    const session = runtime.spawn({ sessionId: "cc-once-test", prompt: "hi", model: "claude-sonnet-4", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "cc-once-test",
+      prompt: "hi",
+      model: "claude-sonnet-4",
+      maxTurns: 1,
+    });
     const events = await collectUntilIdle(session);
 
     const rtIdEvents = events.filter((e) => e.type === "runtime_session_id");
@@ -443,21 +481,36 @@ describe("ClaudeCodeRuntime — usage event emission", () => {
   });
 
   it("emits usage event from result message with token counts and cost", async () => {
-    mockQuery.mockReturnValue(asyncIterableFrom([
-      { type: "system", subtype: "init", session_id: "sdk-usage-test", model: "claude-sonnet-4" },
-      { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "Hello" }] } },
-      {
-        type: "result",
-        subtype: "success",
-        is_error: false,
-        result: "Hello",
-        total_cost_usd: 0.005916,
-        usage: { input_tokens: 1952, output_tokens: 4, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
-      },
-    ]));
+    mockQuery.mockReturnValue(
+      asyncIterableFrom([
+        { type: "system", subtype: "init", session_id: "sdk-usage-test", model: "claude-sonnet-4" },
+        {
+          type: "assistant",
+          message: { role: "assistant", content: [{ type: "text", text: "Hello" }] },
+        },
+        {
+          type: "result",
+          subtype: "success",
+          is_error: false,
+          result: "Hello",
+          total_cost_usd: 0.005916,
+          usage: {
+            input_tokens: 1952,
+            output_tokens: 4,
+            cache_creation_input_tokens: 0,
+            cache_read_input_tokens: 0,
+          },
+        },
+      ]),
+    );
 
     const runtime = new ClaudeCodeRuntime();
-    const session = runtime.spawn({ sessionId: "cc-usage-test", prompt: "hi", model: "claude-sonnet-4", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "cc-usage-test",
+      prompt: "hi",
+      model: "claude-sonnet-4",
+      maxTurns: 1,
+    });
     const events = await collectUntilIdle(session);
 
     const usageEvents = events.filter((e) => e.type === "usage");
@@ -469,21 +522,36 @@ describe("ClaudeCodeRuntime — usage event emission", () => {
   });
 
   it("includes cache tokens in total input count", async () => {
-    mockQuery.mockReturnValue(asyncIterableFrom([
-      { type: "system", subtype: "init", session_id: "sdk-cache-test", model: "claude-sonnet-4" },
-      { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "hello" }] } },
-      {
-        type: "result",
-        subtype: "success",
-        is_error: false,
-        result: "hello",
-        total_cost_usd: 0.048,
-        usage: { input_tokens: 3, output_tokens: 4, cache_creation_input_tokens: 5000, cache_read_input_tokens: 10000 },
-      },
-    ]));
+    mockQuery.mockReturnValue(
+      asyncIterableFrom([
+        { type: "system", subtype: "init", session_id: "sdk-cache-test", model: "claude-sonnet-4" },
+        {
+          type: "assistant",
+          message: { role: "assistant", content: [{ type: "text", text: "hello" }] },
+        },
+        {
+          type: "result",
+          subtype: "success",
+          is_error: false,
+          result: "hello",
+          total_cost_usd: 0.048,
+          usage: {
+            input_tokens: 3,
+            output_tokens: 4,
+            cache_creation_input_tokens: 5000,
+            cache_read_input_tokens: 10000,
+          },
+        },
+      ]),
+    );
 
     const runtime = new ClaudeCodeRuntime();
-    const session = runtime.spawn({ sessionId: "cc-cache-test", prompt: "hi", model: "claude-sonnet-4", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "cc-cache-test",
+      prompt: "hi",
+      model: "claude-sonnet-4",
+      maxTurns: 1,
+    });
     const events = await collectUntilIdle(session);
 
     const usageEvents = events.filter((e) => e.type === "usage");
@@ -496,13 +564,20 @@ describe("ClaudeCodeRuntime — usage event emission", () => {
   });
 
   it("does not emit usage event for error results", async () => {
-    mockQuery.mockReturnValue(asyncIterableFrom([
-      { type: "system", subtype: "init", session_id: "sdk-err-test", model: "claude-sonnet-4" },
-      { type: "result", is_error: true, result: "Invalid API key" },
-    ]));
+    mockQuery.mockReturnValue(
+      asyncIterableFrom([
+        { type: "system", subtype: "init", session_id: "sdk-err-test", model: "claude-sonnet-4" },
+        { type: "result", is_error: true, result: "Invalid API key" },
+      ]),
+    );
 
     const runtime = new ClaudeCodeRuntime();
-    const session = runtime.spawn({ sessionId: "cc-err-usage", prompt: "hi", model: "claude-sonnet-4", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "cc-err-usage",
+      prompt: "hi",
+      model: "claude-sonnet-4",
+      maxTurns: 1,
+    });
     const events = await collectUntilIdle(session);
 
     const usageEvents = events.filter((e) => e.type === "usage");
@@ -510,13 +585,20 @@ describe("ClaudeCodeRuntime — usage event emission", () => {
   });
 
   it("handles result message without usage field gracefully", async () => {
-    mockQuery.mockReturnValue(asyncIterableFrom([
-      { type: "system", subtype: "init", session_id: "sdk-no-usage", model: "claude-sonnet-4" },
-      { type: "result", subtype: "success", is_error: false, result: "done" },
-    ]));
+    mockQuery.mockReturnValue(
+      asyncIterableFrom([
+        { type: "system", subtype: "init", session_id: "sdk-no-usage", model: "claude-sonnet-4" },
+        { type: "result", subtype: "success", is_error: false, result: "done" },
+      ]),
+    );
 
     const runtime = new ClaudeCodeRuntime();
-    const session = runtime.spawn({ sessionId: "cc-no-usage", prompt: "hi", model: "claude-sonnet-4", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "cc-no-usage",
+      prompt: "hi",
+      model: "claude-sonnet-4",
+      maxTurns: 1,
+    });
     const events = await collectUntilIdle(session);
 
     const usageEvents = events.filter((e) => e.type === "usage");
@@ -536,27 +618,36 @@ describe("ClaudeCodeRuntime — synthetic tool_result emission", () => {
 
   it("emits synthetic tool_result when tool_use is followed by text in next message", async () => {
     // Simulates the real SDK flow: tool_use in one message, text response in the next
-    mockQuery.mockReturnValue(asyncIterableFrom([
-      { type: "system", subtype: "init", session_id: "sdk-synth-1", model: "claude-sonnet-4" },
-      {
-        type: "assistant",
-        message: {
-          role: "assistant",
-          content: [{ type: "tool_use", id: "toolu_abc123", name: "Bash", input: { command: "ls" } }],
+    mockQuery.mockReturnValue(
+      asyncIterableFrom([
+        { type: "system", subtype: "init", session_id: "sdk-synth-1", model: "claude-sonnet-4" },
+        {
+          type: "assistant",
+          message: {
+            role: "assistant",
+            content: [
+              { type: "tool_use", id: "toolu_abc123", name: "Bash", input: { command: "ls" } },
+            ],
+          },
         },
-      },
-      {
-        type: "assistant",
-        message: {
-          role: "assistant",
-          content: [{ type: "text", text: "Here are the files..." }],
+        {
+          type: "assistant",
+          message: {
+            role: "assistant",
+            content: [{ type: "text", text: "Here are the files..." }],
+          },
         },
-      },
-      { type: "result", subtype: "success", is_error: false, result: "done" },
-    ]));
+        { type: "result", subtype: "success", is_error: false, result: "done" },
+      ]),
+    );
 
     const runtime = new ClaudeCodeRuntime();
-    const session = runtime.spawn({ sessionId: "cc-synth-1", prompt: "ls", model: "claude-sonnet-4", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "cc-synth-1",
+      prompt: "ls",
+      model: "claude-sonnet-4",
+      maxTurns: 1,
+    });
     const events = await collectUntilIdle(session);
 
     // Should have: system, runtime_session_id, tool_use, tool_result (synthetic), text, usage
@@ -573,30 +664,37 @@ describe("ClaudeCodeRuntime — synthetic tool_result emission", () => {
   });
 
   it("emits synthetic tool_result for multiple tool_use blocks before text", async () => {
-    mockQuery.mockReturnValue(asyncIterableFrom([
-      { type: "system", subtype: "init", session_id: "sdk-synth-2", model: "claude-sonnet-4" },
-      {
-        type: "assistant",
-        message: {
-          role: "assistant",
-          content: [
-            { type: "tool_use", id: "toolu_1", name: "Bash", input: { command: "ls" } },
-            { type: "tool_use", id: "toolu_2", name: "Read", input: { path: "/tmp/test" } },
-          ],
+    mockQuery.mockReturnValue(
+      asyncIterableFrom([
+        { type: "system", subtype: "init", session_id: "sdk-synth-2", model: "claude-sonnet-4" },
+        {
+          type: "assistant",
+          message: {
+            role: "assistant",
+            content: [
+              { type: "tool_use", id: "toolu_1", name: "Bash", input: { command: "ls" } },
+              { type: "tool_use", id: "toolu_2", name: "Read", input: { path: "/tmp/test" } },
+            ],
+          },
         },
-      },
-      {
-        type: "assistant",
-        message: {
-          role: "assistant",
-          content: [{ type: "text", text: "Done with both tools" }],
+        {
+          type: "assistant",
+          message: {
+            role: "assistant",
+            content: [{ type: "text", text: "Done with both tools" }],
+          },
         },
-      },
-      { type: "result", subtype: "success", is_error: false, result: "done" },
-    ]));
+        { type: "result", subtype: "success", is_error: false, result: "done" },
+      ]),
+    );
 
     const runtime = new ClaudeCodeRuntime();
-    const session = runtime.spawn({ sessionId: "cc-synth-2", prompt: "test", model: "claude-sonnet-4", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "cc-synth-2",
+      prompt: "test",
+      model: "claude-sonnet-4",
+      maxTurns: 1,
+    });
     const events = await collectUntilIdle(session);
 
     const toolResultEvents = events.filter((e) => e.type === "tool_result");
@@ -609,23 +707,30 @@ describe("ClaudeCodeRuntime — synthetic tool_result emission", () => {
 
   it("does not emit synthetic tool_result when SDK provides real tool_result", async () => {
     // If the SDK includes tool_result in the same message, no synthetic needed
-    mockQuery.mockReturnValue(asyncIterableFrom([
-      { type: "system", subtype: "init", session_id: "sdk-synth-3", model: "claude-sonnet-4" },
-      {
-        type: "assistant",
-        message: {
-          role: "assistant",
-          content: [
-            { type: "tool_use", id: "toolu_real", name: "Bash", input: { command: "echo hi" } },
-            { type: "tool_result", content: "hi" },
-          ],
+    mockQuery.mockReturnValue(
+      asyncIterableFrom([
+        { type: "system", subtype: "init", session_id: "sdk-synth-3", model: "claude-sonnet-4" },
+        {
+          type: "assistant",
+          message: {
+            role: "assistant",
+            content: [
+              { type: "tool_use", id: "toolu_real", name: "Bash", input: { command: "echo hi" } },
+              { type: "tool_result", content: "hi" },
+            ],
+          },
         },
-      },
-      { type: "result", subtype: "success", is_error: false, result: "done" },
-    ]));
+        { type: "result", subtype: "success", is_error: false, result: "done" },
+      ]),
+    );
 
     const runtime = new ClaudeCodeRuntime();
-    const session = runtime.spawn({ sessionId: "cc-synth-3", prompt: "test", model: "claude-sonnet-4", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "cc-synth-3",
+      prompt: "test",
+      model: "claude-sonnet-4",
+      maxTurns: 1,
+    });
     const events = await collectUntilIdle(session);
 
     const toolResultEvents = events.filter((e) => e.type === "tool_result");
@@ -702,11 +807,17 @@ describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
       // Turn 1: system init + assistant text
       [
         { type: "system", subtype: "init", session_id: "sess-mt", model: "claude-sonnet-4" },
-        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "turn1 response" }] } },
+        {
+          type: "assistant",
+          message: { role: "assistant", content: [{ type: "text", text: "turn1 response" }] },
+        },
       ],
       // Turn 2: assistant text only
       [
-        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "turn2 response" }] } },
+        {
+          type: "assistant",
+          message: { role: "assistant", content: [{ type: "text", text: "turn2 response" }] },
+        },
       ],
     ]);
 
@@ -729,13 +840,22 @@ describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
     mockQueryPersistent([
       [
         { type: "system", subtype: "init", session_id: "sess-once", model: "claude-sonnet-4" },
-        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "t1" }] } },
+        {
+          type: "assistant",
+          message: { role: "assistant", content: [{ type: "text", text: "t1" }] },
+        },
       ],
       [
-        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "t2" }] } },
+        {
+          type: "assistant",
+          message: { role: "assistant", content: [{ type: "text", text: "t2" }] },
+        },
       ],
       [
-        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "t3" }] } },
+        {
+          type: "assistant",
+          message: { role: "assistant", content: [{ type: "text", text: "t3" }] },
+        },
       ],
     ]);
 
@@ -775,7 +895,13 @@ describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
       // Fallback calls use string prompt — return a simple async iterable
       return asyncIterableFrom([
         { type: "system", subtype: "init", session_id: "sess-fallback", model: "claude-sonnet-4" },
-        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: `call${callCount} response` }] } },
+        {
+          type: "assistant",
+          message: {
+            role: "assistant",
+            content: [{ type: "text", text: `call${callCount} response` }],
+          },
+        },
         { type: "result", subtype: "success", is_error: false, result: "ok" },
       ]);
     });
@@ -823,11 +949,17 @@ describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
     mockQueryPersistent([
       [
         { type: "system", subtype: "init", session_id: "sess-usage", model: "claude-sonnet-4" },
-        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "t1" }] } },
+        {
+          type: "assistant",
+          message: { role: "assistant", content: [{ type: "text", text: "t1" }] },
+        },
         // Note: usage is extracted from result messages; add usage to the result
       ],
       [
-        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "t2" }] } },
+        {
+          type: "assistant",
+          message: { role: "assistant", content: [{ type: "text", text: "t2" }] },
+        },
       ],
     ]);
 
@@ -839,19 +971,46 @@ describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
           let turnIndex = 0;
           for await (const _userMessage of promptIterable) {
             if (turnIndex === 0) {
-              yield { type: "system", subtype: "init", session_id: "sess-usage-mt", model: "claude-sonnet-4" };
-              yield { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "t1" }] } };
               yield {
-                type: "result", subtype: "success", is_error: false, result: "ok",
+                type: "system",
+                subtype: "init",
+                session_id: "sess-usage-mt",
+                model: "claude-sonnet-4",
+              };
+              yield {
+                type: "assistant",
+                message: { role: "assistant", content: [{ type: "text", text: "t1" }] },
+              };
+              yield {
+                type: "result",
+                subtype: "success",
+                is_error: false,
+                result: "ok",
                 total_cost_usd: 0.01,
-                usage: { input_tokens: 100, output_tokens: 10, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+                usage: {
+                  input_tokens: 100,
+                  output_tokens: 10,
+                  cache_read_input_tokens: 0,
+                  cache_creation_input_tokens: 0,
+                },
               };
             } else {
-              yield { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "t2" }] } };
               yield {
-                type: "result", subtype: "success", is_error: false, result: "ok",
+                type: "assistant",
+                message: { role: "assistant", content: [{ type: "text", text: "t2" }] },
+              };
+              yield {
+                type: "result",
+                subtype: "success",
+                is_error: false,
+                result: "ok",
                 total_cost_usd: 0.02,
-                usage: { input_tokens: 200, output_tokens: 20, cache_read_input_tokens: 50, cache_creation_input_tokens: 0 },
+                usage: {
+                  input_tokens: 200,
+                  output_tokens: 20,
+                  cache_read_input_tokens: 50,
+                  cache_creation_input_tokens: 0,
+                },
               };
             }
             turnIndex++;
@@ -906,12 +1065,28 @@ describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
       const inputs = [100, 150];
       const outputs = [10, 15];
       return asyncIterableFrom([
-        { type: "system", subtype: "init", session_id: `sess-resume-usage-${turnIndex}`, model: "claude-sonnet-4" },
-        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: `turn${turnIndex + 1}` }] } },
         {
-          type: "result", subtype: "success", is_error: false, result: "ok",
+          type: "system",
+          subtype: "init",
+          session_id: `sess-resume-usage-${turnIndex}`,
+          model: "claude-sonnet-4",
+        },
+        {
+          type: "assistant",
+          message: { role: "assistant", content: [{ type: "text", text: `turn${turnIndex + 1}` }] },
+        },
+        {
+          type: "result",
+          subtype: "success",
+          is_error: false,
+          result: "ok",
           total_cost_usd: costs[turnIndex],
-          usage: { input_tokens: inputs[turnIndex], output_tokens: outputs[turnIndex], cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+          usage: {
+            input_tokens: inputs[turnIndex],
+            output_tokens: outputs[turnIndex],
+            cache_read_input_tokens: 0,
+            cache_creation_input_tokens: 0,
+          },
         },
       ]);
     });
@@ -957,8 +1132,16 @@ describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
             let first = true;
             for await (const _msg of promptIterable) {
               if (first) {
-                yield { type: "system", subtype: "init", session_id: "sess-throw", model: "claude-sonnet-4" };
-                yield { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "turn1" }] } };
+                yield {
+                  type: "system",
+                  subtype: "init",
+                  session_id: "sess-throw",
+                  model: "claude-sonnet-4",
+                };
+                yield {
+                  type: "assistant",
+                  message: { role: "assistant", content: [{ type: "text", text: "turn1" }] },
+                };
                 yield { type: "result", subtype: "success", is_error: false, result: "ok" };
                 first = false;
               } else {
@@ -971,7 +1154,13 @@ describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
       }
       // Resume-per-input fallback
       return asyncIterableFrom([
-        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: `resumed-call${callCount}` }] } },
+        {
+          type: "assistant",
+          message: {
+            role: "assistant",
+            content: [{ type: "text", text: `resumed-call${callCount}` }],
+          },
+        },
         { type: "result", subtype: "success", is_error: false, result: "ok" },
       ]);
     });
@@ -994,7 +1183,9 @@ describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
     session.sendInput("retry");
     await drainUntilStatus(nextEvent, "running");
     const recoveryEvents = await drainUntilStatus(nextEvent, "waiting_input");
-    expect(recoveryEvents.some((e) => e.type === "text" && e.content.includes("resumed"))).toBe(true);
+    expect(recoveryEvents.some((e) => e.type === "text" && e.content.includes("resumed"))).toBe(
+      true,
+    );
 
     // Verify: query() was called again for retry (persistent crashed, fell back to resume-per-input)
     expect(mockQuery).toHaveBeenCalledTimes(2);
@@ -1023,8 +1214,16 @@ describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
             // Consume only the first prompt, yield response, then exit
             const iter = promptIterable[Symbol.asyncIterator]();
             await iter.next(); // consume initial prompt
-            yield { type: "system", subtype: "init", session_id: "sess-degrade", model: "claude-sonnet-4" };
-            yield { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "turn1" }] } };
+            yield {
+              type: "system",
+              subtype: "init",
+              session_id: "sess-degrade",
+              model: "claude-sonnet-4",
+            };
+            yield {
+              type: "assistant",
+              message: { role: "assistant", content: [{ type: "text", text: "turn1" }] },
+            };
             yield { type: "result", subtype: "success", is_error: false, result: "ok" };
             // Stream ends here — consumePersistentStream cleanup fires
           },
@@ -1032,7 +1231,13 @@ describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
       }
       // Resume-per-input fallback
       return asyncIterableFrom([
-        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: `resumed-call${callCount}` }] } },
+        {
+          type: "assistant",
+          message: {
+            role: "assistant",
+            content: [{ type: "text", text: `resumed-call${callCount}` }],
+          },
+        },
         { type: "result", subtype: "success", is_error: false, result: "ok" },
       ]);
     });

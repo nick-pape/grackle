@@ -6,4 +6,9 @@ export { createCronPhase } from "./cron-phase.js";
 export type { CronPhaseDeps } from "./cron-phase.js";
 
 // ─── Expression Utilities ────────────────────────────────────
-export { validateExpression, computeNextRunAt, parseDuration, isIntervalExpression } from "./schedule-expression.js";
+export {
+  validateExpression,
+  computeNextRunAt,
+  parseDuration,
+  isIntervalExpression,
+} from "./schedule-expression.js";

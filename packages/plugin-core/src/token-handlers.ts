@@ -65,7 +65,9 @@ export async function getCredentialProviders(): Promise<grackle.CredentialProvid
 }
 
 /** Set a specific credential provider value. */
-export async function setCredentialProvider(req: grackle.SetCredentialProviderRequest): Promise<grackle.CredentialProviderConfig> {
+export async function setCredentialProvider(
+  req: grackle.SetCredentialProviderRequest,
+): Promise<grackle.CredentialProviderConfig> {
   if (!credentialProviders.VALID_PROVIDERS.includes(req.provider)) {
     throw new ConnectError(
       `Invalid provider: ${req.provider}. Must be one of: ${credentialProviders.VALID_PROVIDERS.join(", ")}`,
@@ -73,9 +75,10 @@ export async function setCredentialProvider(req: grackle.SetCredentialProviderRe
     );
   }
 
-  const allowed = req.provider === "claude"
-    ? credentialProviders.VALID_CLAUDE_VALUES
-    : credentialProviders.VALID_TOGGLE_VALUES;
+  const allowed =
+    req.provider === "claude"
+      ? credentialProviders.VALID_CLAUDE_VALUES
+      : credentialProviders.VALID_TOGGLE_VALUES;
 
   if (!allowed.has(req.value)) {
     throw new ConnectError(

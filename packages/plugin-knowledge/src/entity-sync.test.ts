@@ -102,7 +102,11 @@ describe("createEntitySyncSubscriber", () => {
     createEntitySyncSubscriber(ctx);
     fire(evt("workspace.archived", { workspaceId: "w1" }));
     await flush();
-    expect(project.projectWorkspace).toHaveBeenCalledWith({ id: "w1", name: "W", status: "archived" });
+    expect(project.projectWorkspace).toHaveBeenCalledWith({
+      id: "w1",
+      name: "W",
+      status: "archived",
+    });
   });
 
   it("skips projection when Neo4j is unhealthy", async () => {

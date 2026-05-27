@@ -1,5 +1,12 @@
 import type { AgentEvent, AgentSession, CreateSessionOptions } from "@grackle-ai/runtime-sdk";
-import { BaseAgentSession, BaseAgentRuntime, AsyncQueue, logger, ensureRuntimeInstalled, importFromRuntime } from "@grackle-ai/runtime-sdk";
+import {
+  BaseAgentSession,
+  BaseAgentRuntime,
+  AsyncQueue,
+  logger,
+  ensureRuntimeInstalled,
+  importFromRuntime,
+} from "@grackle-ai/runtime-sdk";
 import { accessSync, mkdirSync, copyFileSync, chmodSync, constants as fsConstants } from "node:fs";
 import { join } from "node:path";
 import { homedir, tmpdir } from "node:os";
@@ -29,8 +36,8 @@ async function getQuery(): Promise<QueryFn> {
     .map((e) => `  ${e.package}: ${e.error instanceof Error ? e.error.message : String(e.error)}`)
     .join("\n");
   throw new Error(
-    `Claude Agent SDK not installed or failed to load.\n${details}\n`
-    + `Run: npm install @anthropic-ai/claude-agent-sdk`,
+    `Claude Agent SDK not installed or failed to load.\n${details}\n` +
+      `Run: npm install @anthropic-ai/claude-agent-sdk`,
   );
 }
 
@@ -53,9 +60,10 @@ function parseUsageFromMessage(msg: Record<string, unknown>): {
   totalCostMillicents: number | undefined;
 } {
   const rawUsage = msg.usage;
-  const usage = rawUsage !== null && typeof rawUsage === "object"
-    ? rawUsage as Record<string, unknown>
-    : undefined;
+  const usage =
+    rawUsage !== null && typeof rawUsage === "object"
+      ? (rawUsage as Record<string, unknown>)
+      : undefined;
 
   const costUsd = msg.total_cost_usd;
 
@@ -69,7 +77,9 @@ function parseUsageFromMessage(msg: Record<string, unknown>): {
   const totalInput = inputParts.length > 0 ? inputParts.reduce((a, b) => a + b, 0) : undefined;
 
   const rawOutput = usage?.["output_tokens"];
-  const totalOutput = isFiniteNonNegative(rawOutput as number | undefined) ? rawOutput as number : undefined;
+  const totalOutput = isFiniteNonNegative(rawOutput as number | undefined)
+    ? (rawOutput as number)
+    : undefined;
 
   const totalCostMillicents = isFiniteNonNegative(costUsd as number | undefined)
     ? Math.round((costUsd as number) * 100_000)
@@ -124,7 +134,15 @@ export function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
   if (type === "system") {
     const subtype = msg.subtype as string | undefined;
     if (subtype === "init") {
-      return [{ type: "system", timestamp: ts, content: `Session initialized (${msg.model ? String(msg.model) : "unknown model"})`, raw: msg, diagnostic: true }];
+      return [
+        {
+          type: "system",
+          timestamp: ts,
+          content: `Session initialized (${msg.model ? String(msg.model) : "unknown model"})`,
+          raw: msg,
+          diagnostic: true,
+        },
+      ];
     }
     return [];
   }
@@ -134,8 +152,17 @@ export function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
 
 /** Built-in Claude Code tools that must be explicitly listed in allowedTools. */
 const BUILTIN_TOOLS: string[] = [
-  "Bash", "Read", "Write", "Edit", "Glob", "Grep",
-  "WebSearch", "WebFetch", "Task", "Agent", "NotebookEdit",
+  "Bash",
+  "Read",
+  "Write",
+  "Edit",
+  "Glob",
+  "Grep",
+  "WebSearch",
+  "WebFetch",
+  "Task",
+  "Agent",
+  "NotebookEdit",
 ];
 
 /** Agent session backed by the Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`). */
@@ -218,19 +245,21 @@ class ClaudeCodeSession extends BaseAgentSession {
     const deltaOutput = safeOutput !== undefined ? safeOutput - this.lastReportedOutputTokens : 0;
     const deltaCost = safeCost !== undefined ? safeCost - this.lastReportedCostMillicents : 0;
 
-    if (safeInput !== undefined) { this.lastReportedInputTokens = safeInput; }
-    if (safeOutput !== undefined) { this.lastReportedOutputTokens = safeOutput; }
-    if (safeCost !== undefined) { this.lastReportedCostMillicents = safeCost; }
+    if (safeInput !== undefined) {
+      this.lastReportedInputTokens = safeInput;
+    }
+    if (safeOutput !== undefined) {
+      this.lastReportedOutputTokens = safeOutput;
+    }
+    if (safeCost !== undefined) {
+      this.lastReportedCostMillicents = safeCost;
+    }
 
     // Guard against SDK reporting lower values (e.g. session reset edge cases)
     if (deltaInput <= 0 && deltaOutput <= 0 && deltaCost <= 0) {
       return;
     }
-    this.pushUsageEvent(
-      Math.max(0, deltaInput),
-      Math.max(0, deltaOutput),
-      Math.max(0, deltaCost),
-    );
+    this.pushUsageEvent(Math.max(0, deltaInput), Math.max(0, deltaOutput), Math.max(0, deltaCost));
   }
 
   // ─── BaseAgentSession hooks ──────────────────────────────
@@ -267,7 +296,7 @@ class ClaudeCodeSession extends BaseAgentSession {
     // Add MCP tool patterns to allowedTools
     if (sdkOptions.mcpServers) {
       const mcpServerNames = Object.keys(sdkOptions.mcpServers as Record<string, unknown>);
-      const mcpTools = mcpServerNames.map(name => `mcp__${name}__*`);
+      const mcpTools = mcpServerNames.map((name) => `mcp__${name}__*`);
       (sdkOptions.allowedTools as string[]).push(...mcpTools);
     }
 
@@ -294,7 +323,11 @@ class ClaudeCodeSession extends BaseAgentSession {
     const projectsDir = join(configDir, "projects");
     // Attempt to create the projects directory if it does not exist yet so
     // that a missing dir (ENOENT) is not mistaken for a read-only filesystem.
-    try { mkdirSync(projectsDir, { recursive: true }); } catch { /* handled below */ }
+    try {
+      mkdirSync(projectsDir, { recursive: true });
+    } catch {
+      /* handled below */
+    }
     if (!isDirectoryWritable(projectsDir)) {
       const fallbackRoot = join(tmpdir(), ".claude-sdk");
       const fallbackProjects = join(fallbackRoot, "projects");
@@ -309,7 +342,9 @@ class ClaudeCodeSession extends BaseAgentSession {
               if (file === ".credentials.json") {
                 chmodSync(join(fallbackRoot, file), 0o600);
               }
-            } catch { /* missing is fine */ }
+            } catch {
+              /* missing is fine */
+            }
           }
           sdkOptions.env = { ...process.env, CLAUDE_CONFIG_DIR: fallbackRoot };
           logger.warn(
@@ -407,7 +442,9 @@ class ClaudeCodeSession extends BaseAgentSession {
         prompt: this.promptQueue,
         options: { ...this.cachedSdkOptions!, abortController: abort },
       };
-      const conversation = query(queryInput) as unknown as AsyncIterable<Record<string, unknown>> & {
+      const conversation = query(queryInput) as unknown as AsyncIterable<
+        Record<string, unknown>
+      > & {
         close?: () => void;
       };
 
@@ -485,7 +522,11 @@ class ClaudeCodeSession extends BaseAgentSession {
       // Extract usage data from successful result messages
       if (msg.type === "result" && !msg.is_error) {
         const { totalInput, totalOutput, totalCostMillicents } = parseUsageFromMessage(msg);
-        if (totalInput !== undefined || totalOutput !== undefined || totalCostMillicents !== undefined) {
+        if (
+          totalInput !== undefined ||
+          totalOutput !== undefined ||
+          totalCostMillicents !== undefined
+        ) {
           this.pushCumulativeUsage(totalInput, totalOutput, totalCostMillicents);
         }
       }
@@ -560,7 +601,7 @@ class ClaudeCodeSession extends BaseAgentSession {
       if (event.type === "tool_use") {
         const raw = event.raw as Record<string, unknown> | undefined;
         if (raw && typeof raw.id === "string") {
-          this.pendingToolUseIds.set(raw.id, raw.name as string || "");
+          this.pendingToolUseIds.set(raw.id, (raw.name as string) || "");
         }
       }
       this.emit(event);
@@ -632,7 +673,11 @@ class ClaudeCodeSession extends BaseAgentSession {
       if (msg.type === "result" && !msg.is_error) {
         this.flushPendingToolResults(ts);
         const { totalInput, totalOutput, totalCostMillicents } = parseUsageFromMessage(msg);
-        if (totalInput !== undefined || totalOutput !== undefined || totalCostMillicents !== undefined) {
+        if (
+          totalInput !== undefined ||
+          totalOutput !== undefined ||
+          totalCostMillicents !== undefined
+        ) {
           this.pushCumulativeUsage(totalInput, totalOutput, totalCostMillicents);
         }
       }

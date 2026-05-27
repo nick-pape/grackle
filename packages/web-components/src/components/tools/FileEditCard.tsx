@@ -11,9 +11,9 @@ function getFilePath(args: unknown): string {
     return "";
   }
   const a = args as Record<string, unknown>;
-  return (typeof a.file_path === "string" && a.file_path)
-    || (typeof a.path === "string" && a.path)
-    || "";
+  return (
+    (typeof a.file_path === "string" && a.file_path) || (typeof a.path === "string" && a.path) || ""
+  );
 }
 
 /** Extracts old/new string pair from args (handles Claude Code and Copilot field names). */
@@ -22,10 +22,12 @@ function getOldNew(args: unknown): { oldStr: string; newStr: string } | undefine
     return undefined;
   }
   const a = args as Record<string, unknown>;
-  const oldStr: string | undefined = (typeof a.old_string === "string" ? a.old_string : undefined)
-    ?? (typeof a.old_str === "string" ? a.old_str : undefined);
-  const newStr: string | undefined = (typeof a.new_string === "string" ? a.new_string : undefined)
-    ?? (typeof a.new_str === "string" ? a.new_str : undefined);
+  const oldStr: string | undefined =
+    (typeof a.old_string === "string" ? a.old_string : undefined) ??
+    (typeof a.old_str === "string" ? a.old_str : undefined);
+  const newStr: string | undefined =
+    (typeof a.new_string === "string" ? a.new_string : undefined) ??
+    (typeof a.new_str === "string" ? a.new_str : undefined);
   if (oldStr !== undefined && newStr !== undefined) {
     return { oldStr, newStr };
   }
@@ -56,7 +58,9 @@ function resolveDiff(args: unknown, detailedResult?: string): DiffLine[] | undef
         if (typeof parsed.detailedContent === "string") {
           diffText = parsed.detailedContent;
         }
-      } catch { /* not valid JSON despite looking like one — use as-is */ }
+      } catch {
+        /* not valid JSON despite looking like one — use as-is */
+      }
     }
 
     if (diffText.includes("@@") || diffText.startsWith("diff ")) {
@@ -80,7 +84,13 @@ function resolveDiff(args: unknown, detailedResult?: string): DiffLine[] | undef
 const PREVIEW_LINES: number = 5;
 
 /** Renders a file edit tool call with a unified diff view. */
-export function FileEditCard({ tool, args, result, isError, detailedResult }: ToolCardProps): JSX.Element {
+export function FileEditCard({
+  tool,
+  args,
+  result,
+  isError,
+  detailedResult,
+}: ToolCardProps): JSX.Element {
   const [expanded, setExpanded] = useState(false);
   const filePath = getFilePath(args);
   const name = basename(filePath);
@@ -97,17 +107,22 @@ export function FileEditCard({ tool, args, result, isError, detailedResult }: To
       data-testid="tool-card-file-edit"
     >
       <div className={styles.header}>
-        <span className={styles.icon}><Pencil size={ICON_MD} /></span>
-        <span className={styles.toolName} style={{ color: "var(--accent-yellow)" }}>{tool}</span>
+        <span className={styles.icon}>
+          <Pencil size={ICON_MD} />
+        </span>
+        <span className={styles.toolName} style={{ color: "var(--accent-yellow)" }}>
+          {tool}
+        </span>
         {name && (
-          <span className={styles.fileName} title={filePath}>{name}</span>
+          <span className={styles.fileName} title={filePath}>
+            {name}
+          </span>
         )}
         {stats && (
           <>
             <span className={styles.spacer} />
             <span className={styles.badge} data-testid="tool-card-diff-stats">
-              <span style={{ color: "var(--accent-green)" }}>+{stats.added}</span>
-              {" "}
+              <span style={{ color: "var(--accent-green)" }}>+{stats.added}</span>{" "}
               <span style={{ color: "var(--accent-red)" }}>−{stats.removed}</span>
             </span>
           </>
@@ -125,9 +140,15 @@ export function FileEditCard({ tool, args, result, isError, detailedResult }: To
           <pre className={styles.pre} data-testid="tool-card-diff">
             {displayLines.map((line, i) => {
               let lineClass = styles.diffContext;
-              if (line.type === "add") { lineClass = styles.diffAdd; }
-              if (line.type === "remove") { lineClass = styles.diffRemove; }
-              if (line.type === "header") { lineClass = styles.diffHeader; }
+              if (line.type === "add") {
+                lineClass = styles.diffAdd;
+              }
+              if (line.type === "remove") {
+                lineClass = styles.diffRemove;
+              }
+              if (line.type === "header") {
+                lineClass = styles.diffHeader;
+              }
               return (
                 <span key={i} className={`${styles.diffLine} ${lineClass}`}>
                   {line.content}
@@ -139,11 +160,18 @@ export function FileEditCard({ tool, args, result, isError, detailedResult }: To
             <button
               type="button"
               className={styles.bodyToggle}
-              onClick={() => { setExpanded((v) => !v); }}
+              onClick={() => {
+                setExpanded((v) => !v);
+              }}
               aria-expanded={expanded}
               data-testid="tool-card-toggle"
             >
-              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`} aria-hidden="true"><ChevronRight size={ICON_SM} /></span>
+              <span
+                className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}
+                aria-hidden="true"
+              >
+                <ChevronRight size={ICON_SM} />
+              </span>
               {expanded ? "collapse" : `${(diffLines?.length ?? 0) - PREVIEW_LINES} more lines`}
             </button>
           )}

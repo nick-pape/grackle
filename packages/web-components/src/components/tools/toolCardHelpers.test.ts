@@ -5,17 +5,32 @@ import { simplifyCommand } from "./ShellCard.js";
 describe("formatToolName", () => {
   it("parses standard MCP tool names", () => {
     expect(formatToolName("mcp__server__tool")).toEqual({ display: "server / tool", isMcp: true });
-    expect(formatToolName("mcp__my-server__my-tool")).toEqual({ display: "my-server / my-tool", isMcp: true });
+    expect(formatToolName("mcp__my-server__my-tool")).toEqual({
+      display: "my-server / my-tool",
+      isMcp: true,
+    });
   });
 
   it("preserves underscores within server and tool segments", () => {
-    expect(formatToolName("mcp__qdrant-search__semantic_search")).toEqual({ display: "qdrant-search / semantic_search", isMcp: true });
-    expect(formatToolName("mcp__grackle__env_add")).toEqual({ display: "grackle / env_add", isMcp: true });
-    expect(formatToolName("mcp__playwright__browser_navigate")).toEqual({ display: "playwright / browser_navigate", isMcp: true });
+    expect(formatToolName("mcp__qdrant-search__semantic_search")).toEqual({
+      display: "qdrant-search / semantic_search",
+      isMcp: true,
+    });
+    expect(formatToolName("mcp__grackle__env_add")).toEqual({
+      display: "grackle / env_add",
+      isMcp: true,
+    });
+    expect(formatToolName("mcp__playwright__browser_navigate")).toEqual({
+      display: "playwright / browser_navigate",
+      isMcp: true,
+    });
   });
 
   it("splits only at the first double-underscore boundary", () => {
-    expect(formatToolName("mcp__server__some__deep__tool")).toEqual({ display: "server / some__deep__tool", isMcp: true });
+    expect(formatToolName("mcp__server__some__deep__tool")).toEqual({
+      display: "server / some__deep__tool",
+      isMcp: true,
+    });
   });
 
   it("returns non-MCP tools unchanged", () => {
@@ -35,7 +50,7 @@ describe("simplifyCommand", () => {
   });
 
   it("strips double-quoted pwsh wrapper", () => {
-    expect(simplifyCommand("pwsh -Command \"Get-Process\"")).toBe("Get-Process");
+    expect(simplifyCommand('pwsh -Command "Get-Process"')).toBe("Get-Process");
   });
 
   it("handles pwsh.exe with path prefix", () => {

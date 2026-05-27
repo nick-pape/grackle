@@ -37,7 +37,15 @@ vi.mock("./telemetry.js", () => ({
 }));
 
 // Import AFTER mocks
-import { openDatabase, initDatabase, sqlite as _sqlite, sessionStore, taskStore, workspaceStore, querySessionActions } from "@grackle-ai/database";
+import {
+  openDatabase,
+  initDatabase,
+  sqlite as _sqlite,
+  sessionStore,
+  taskStore,
+  workspaceStore,
+  querySessionActions,
+} from "@grackle-ai/database";
 openDatabase(":memory:");
 initDatabase();
 const sqlite = _sqlite!;
@@ -144,7 +152,13 @@ async function* eventStream(events: powerline.AgentEvent[]): AsyncIterable<power
  *  or detecting the finally block has run (endSession called). */
 function waitForProcessing(
   events: powerline.AgentEvent[],
-  options: { sessionId: string; logPath: string; workspaceId?: string; taskId?: string; traceId?: string },
+  options: {
+    sessionId: string;
+    logPath: string;
+    workspaceId?: string;
+    taskId?: string;
+    traceId?: string;
+  },
 ): Promise<void> {
   const endSessionCallsBefore = vi.mocked(logWriter.endSession).mock.calls.length;
   return new Promise<void>((resolve, reject) => {
@@ -203,10 +217,10 @@ describe("stream error handling", () => {
     });
 
     await new Promise<void>((resolve) => {
-      processEventStream(
-        throwingStream([waitingEvent], new Error("transport closed")),
-        { sessionId: "sess1", logPath: "/tmp/log" },
-      );
+      processEventStream(throwingStream([waitingEvent], new Error("transport closed")), {
+        sessionId: "sess1",
+        logPath: "/tmp/log",
+      });
       const interval = setInterval(() => {
         const s = sessionStore.getSession("sess1");
         if (s && ["stopped", "suspended"].includes(s.status)) {
@@ -237,10 +251,10 @@ describe("stream error handling", () => {
     });
 
     await new Promise<void>((resolve) => {
-      processEventStream(
-        throwingStream([textEvent], new Error("connection reset")),
-        { sessionId: "sess1", logPath: "/tmp/log" },
-      );
+      processEventStream(throwingStream([textEvent], new Error("connection reset")), {
+        sessionId: "sess1",
+        logPath: "/tmp/log",
+      });
       const interval = setInterval(() => {
         const s = sessionStore.getSession("sess1");
         if (s && ["stopped", "suspended"].includes(s.status)) {
@@ -271,15 +285,12 @@ describe("stream error handling", () => {
     });
 
     await new Promise<void>((resolve) => {
-      processEventStream(
-        throwingStream([waitingEvent], new Error("transport closed")),
-        {
-          sessionId: "sess1",
-          logPath: "/tmp/log",
-          workspaceId: "proj1",
-          taskId: "task1",
-        },
-      );
+      processEventStream(throwingStream([waitingEvent], new Error("transport closed")), {
+        sessionId: "sess1",
+        logPath: "/tmp/log",
+        workspaceId: "proj1",
+        taskId: "task1",
+      });
       // Poll for session to reach terminal status
       const interval = setInterval(() => {
         const s = sessionStore.getSession("sess1");
@@ -439,8 +450,9 @@ describe("task status broadcast on terminal events", () => {
 
     // All status changes (waiting_input, running, completed) should broadcast
     // so the frontend re-fetches and gets the computed task status
-    const taskUpdatedCalls = (emit as ReturnType<typeof vi.fn>).mock.calls
-      .filter((c: unknown[]) => c[0] === "task.updated");
+    const taskUpdatedCalls = (emit as ReturnType<typeof vi.fn>).mock.calls.filter(
+      (c: unknown[]) => c[0] === "task.updated",
+    );
     expect(taskUpdatedCalls.length).toBe(3);
   });
 
@@ -461,8 +473,9 @@ describe("task status broadcast on terminal events", () => {
     });
 
     // No task_updated broadcasts should have been made
-    const taskUpdatedCalls = (emit as ReturnType<typeof vi.fn>).mock.calls
-      .filter((c: unknown[]) => c[0] === "task.updated");
+    const taskUpdatedCalls = (emit as ReturnType<typeof vi.fn>).mock.calls.filter(
+      (c: unknown[]) => c[0] === "task.updated",
+    );
     expect(taskUpdatedCalls.length).toBe(0);
   });
 
@@ -497,7 +510,10 @@ describe("task status broadcast on terminal events", () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
     taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
     taskStore.updateTaskStatus("task1", "working");
-    taskStore.setWorkpad("task1", JSON.stringify({ status: "in progress", summary: "Already working" }));
+    taskStore.setWorkpad(
+      "task1",
+      JSON.stringify({ status: "in progress", summary: "Already working" }),
+    );
 
     const failedEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
@@ -553,7 +569,9 @@ describe("late-binding", () => {
         return {
           async next(): Promise<IteratorResult<powerline.AgentEvent>> {
             while (queue.length === 0 && !done) {
-              await new Promise<void>((resolve) => { waiting = resolve; });
+              await new Promise<void>((resolve) => {
+                waiting = resolve;
+              });
             }
             if (queue.length > 0) {
               return { value: queue.shift()!, done: false };
@@ -619,12 +637,14 @@ describe("late-binding", () => {
     processorRegistry.lateBind("sess1", "task1", "proj1");
 
     // Emit completed — should trigger task_updated broadcast
-    push(create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "status",
-      timestamp: new Date().toISOString(),
-      content: "completed",
-    }));
+    push(
+      create(powerline.AgentEventSchema, {
+        sessionId: "sess1",
+        type: "status",
+        timestamp: new Date().toISOString(),
+        content: "completed",
+      }),
+    );
     end();
 
     await waitForSessionTerminal("sess1");
@@ -661,12 +681,14 @@ describe("late-binding", () => {
     expect(processorRegistry.get("sess1")).toBeDefined();
     expect(processorRegistry.get("sess1")?.sessionId).toBe("sess1");
 
-    push(create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "status",
-      timestamp: new Date().toISOString(),
-      content: "completed",
-    }));
+    push(
+      create(powerline.AgentEventSchema, {
+        sessionId: "sess1",
+        type: "status",
+        timestamp: new Date().toISOString(),
+        content: "completed",
+      }),
+    );
     end();
 
     // Wait for cleanup
@@ -966,7 +988,7 @@ describe("publishWidgetEvent (MCP Apps widget broker, #1238)", () => {
   const widgetPayload = {
     resourceUri: "ui://grackle/hello-widget",
     toolName: "show_hello_widget",
-    html: "<!doctype html><html><body><div class=\"card\">Grackle</div></body></html>",
+    html: '<!doctype html><html><body><div class="card">Grackle</div></body></html>',
     csp: { resourceDomains: ["http://127.0.0.1:7435"], connectDomains: ["http://127.0.0.1:7435"] },
     toolInput: { message: "hi" },
     toolResult: { content: [{ type: "text", text: "ok" }] },
@@ -984,7 +1006,14 @@ describe("publishWidgetEvent (MCP Apps widget broker, #1238)", () => {
   });
 
   it("builds a WIDGET event, persists it to the session log, and broadcasts it", async () => {
-    sessionStore.createSession("sess-w", "env1", "claude-code", "test", "sonnet", "/tmp/widget-log");
+    sessionStore.createSession(
+      "sess-w",
+      "env1",
+      "claude-code",
+      "test",
+      "sonnet",
+      "/tmp/widget-log",
+    );
     const { publish } = await import("./stream-hub.js");
 
     publishWidgetEvent("sess-w", widgetPayload);
@@ -1061,7 +1090,10 @@ describe("event-processor session-action log (AHP HR1a)", () => {
         raw: "",
       });
 
-    await waitForProcessing([mk("a"), mk("b"), mk("c")], { sessionId: "sess-actions", logPath: "/tmp/log" });
+    await waitForProcessing([mk("a"), mk("b"), mk("c")], {
+      sessionId: "sess-actions",
+      logPath: "/tmp/log",
+    });
 
     const rows = querySessionActions({ sessionId: "sess-actions" });
     expect(rows.map((r) => r.content)).toEqual(["a", "b", "c"]);
@@ -1079,7 +1111,13 @@ describe("event-processor session-action log (AHP HR1a)", () => {
     sessionStore.createSession("sess-x", "env1", "claude-code", "test", "sonnet", "/tmp/x");
     sessionStore.createSession("sess-y", "env1", "claude-code", "test", "sonnet", "/tmp/y");
     const mk = (sessionId: string, content: string): powerline.AgentEvent =>
-      create(powerline.AgentEventSchema, { sessionId, type: "text", timestamp: new Date().toISOString(), content, raw: "" });
+      create(powerline.AgentEventSchema, {
+        sessionId,
+        type: "text",
+        timestamp: new Date().toISOString(),
+        content,
+        raw: "",
+      });
 
     await waitForProcessing([mk("sess-x", "x1")], { sessionId: "sess-x", logPath: "/tmp/x" });
     await waitForProcessing([mk("sess-y", "y1")], { sessionId: "sess-y", logPath: "/tmp/y" });
@@ -1090,7 +1128,11 @@ describe("event-processor session-action log (AHP HR1a)", () => {
 
   it("records widget render events (not just PowerLine-stream events)", () => {
     sessionStore.createSession("sess-widget", "env1", "claude-code", "test", "sonnet", "/tmp/wlog");
-    publishWidgetEvent("sess-widget", { resourceUri: "ui://demo", toolName: "render", html: "<div/>" });
+    publishWidgetEvent("sess-widget", {
+      resourceUri: "ui://demo",
+      toolName: "render",
+      html: "<div/>",
+    });
     const rows = querySessionActions({ sessionId: "sess-widget" });
     expect(rows).toHaveLength(1);
     expect(rows[0].type).toBe("widget");
@@ -1146,8 +1188,9 @@ describe("event-processor tool_call_id (AHP HR3)", () => {
     await waitForProcessing([toolUse], { sessionId: "sess-tc", logPath: "/tmp/log" });
 
     const { publish } = await import("./stream-hub.js");
-    const published = vi.mocked(publish).mock.calls
-      .map((c) => c[0])
+    const published = vi
+      .mocked(publish)
+      .mock.calls.map((c) => c[0])
       .find((e) => e.type === grackle.EventType.TOOL_USE);
     expect(published?.toolCallId).toBe("toolu_x");
   });
@@ -1173,15 +1216,18 @@ describe("event-processor diagnostic flag + OTLP tee (AHP HR7)", () => {
     await waitForProcessing([diagnosticEvent], { sessionId: "sess-diag", logPath: "/tmp/log" });
 
     const { publish } = await import("./stream-hub.js");
-    const published = vi.mocked(publish).mock.calls
-      .map((c) => c[0])
+    const published = vi
+      .mocked(publish)
+      .mock.calls.map((c) => c[0])
       .find((e) => e.type === grackle.EventType.SYSTEM);
     expect(published?.diagnostic).toBe(true);
 
     // The diagnostic is tee'd to the additive OTLP sink with the same event.
     expect(emitDiagnostic).toHaveBeenCalledTimes(1);
     expect(vi.mocked(emitDiagnostic).mock.calls[0][0].diagnostic).toBe(true);
-    expect(vi.mocked(emitDiagnostic).mock.calls[0][0].content).toBe("Starting claude-code runtime...");
+    expect(vi.mocked(emitDiagnostic).mock.calls[0][0].content).toBe(
+      "Starting claude-code runtime...",
+    );
   });
 
   it("does not tee a non-diagnostic event to OTLP and leaves diagnostic false", async () => {
@@ -1196,8 +1242,9 @@ describe("event-processor diagnostic flag + OTLP tee (AHP HR7)", () => {
     await waitForProcessing([textEvent], { sessionId: "sess-sub", logPath: "/tmp/log" });
 
     const { publish } = await import("./stream-hub.js");
-    const published = vi.mocked(publish).mock.calls
-      .map((c) => c[0])
+    const published = vi
+      .mocked(publish)
+      .mock.calls.map((c) => c[0])
       .find((e) => e.type === grackle.EventType.TEXT);
     expect(published?.diagnostic).toBe(false);
     expect(emitDiagnostic).not.toHaveBeenCalled();
@@ -1215,7 +1262,14 @@ describe("turn_id threading (AHP HR2)", () => {
   });
 
   it("threads turn_id from AgentEvent through to the SessionEvent written to the log", async () => {
-    sessionStore.createSession("sess-turn", "env1", "stub", "test prompt", "stub-model", "/tmp/turn-log");
+    sessionStore.createSession(
+      "sess-turn",
+      "env1",
+      "stub",
+      "test prompt",
+      "stub-model",
+      "/tmp/turn-log",
+    );
 
     const turnStartedEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess-turn",

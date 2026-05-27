@@ -82,9 +82,10 @@ describe("writeTokens", () => {
   it("sets env var for env_var type tokens", async () => {
     const fs = createFakeFileSystem();
 
-    await writeTokens([
-      { name: "test", type: "env_var", envVar: "MY_TOKEN", filePath: "", value: "secret123" },
-    ], fs);
+    await writeTokens(
+      [{ name: "test", type: "env_var", envVar: "MY_TOKEN", filePath: "", value: "secret123" }],
+      fs,
+    );
 
     expect(process.env.MY_TOKEN).toBe("secret123");
     // Clean up
@@ -97,9 +98,10 @@ describe("writeTokens", () => {
     const writeFileSpy = vi.fn(async () => {});
     const fs = createFakeFileSystem({ mkdir: mkdirSpy, writeFile: writeFileSpy });
 
-    await writeTokens([
-      { name: "test", type: "file", envVar: "", filePath, value: "filedata" },
-    ], fs);
+    await writeTokens(
+      [{ name: "test", type: "file", envVar: "", filePath, value: "filedata" }],
+      fs,
+    );
 
     expect(mkdirSpy).toHaveBeenCalledWith(dirname(filePath), { recursive: true });
     expect(writeFileSpy).toHaveBeenCalledWith(filePath, "filedata", { mode: 0o600 });
@@ -111,9 +113,10 @@ describe("writeTokens", () => {
     const writeFileSpy = vi.fn(async () => {});
     const fs = createFakeFileSystem({ writeFile: writeFileSpy });
 
-    await writeTokens([
-      { name: "test", type: "file", envVar: "", filePath: outsidePath, value: "bad" },
-    ], fs);
+    await writeTokens(
+      [{ name: "test", type: "file", envVar: "", filePath: outsidePath, value: "bad" }],
+      fs,
+    );
 
     expect(writeFileSpy).not.toHaveBeenCalled();
     expect(logger.warn).toHaveBeenCalled();
@@ -124,9 +127,7 @@ describe("writeTokens", () => {
     const mkdirSpy = vi.fn(async () => {});
     const fs = createFakeFileSystem({ mkdir: mkdirSpy });
 
-    await writeTokens([
-      { name: "test", type: "file", envVar: "", filePath, value: "data" },
-    ], fs);
+    await writeTokens([{ name: "test", type: "file", envVar: "", filePath, value: "data" }], fs);
 
     expect(mkdirSpy).toHaveBeenCalledWith(dirname(filePath), { recursive: true });
   });
@@ -135,9 +136,10 @@ describe("writeTokens", () => {
     const writeFileSpy = vi.fn(async () => {});
     const fs = createFakeFileSystem({ writeFile: writeFileSpy });
 
-    await writeTokens([
-      { name: "test", type: "file", envVar: "", filePath: "~/.config/token", value: "data" },
-    ], fs);
+    await writeTokens(
+      [{ name: "test", type: "file", envVar: "", filePath: "~/.config/token", value: "data" }],
+      fs,
+    );
 
     expect(writeFileSpy).toHaveBeenCalled();
     // The resolved path should contain the fake home directory
@@ -156,9 +158,7 @@ describe("writeTokens", () => {
       realpath: async () => resolve("/etc/evil"),
     });
 
-    await writeTokens([
-      { name: "test", type: "file", envVar: "", filePath, value: "data" },
-    ], fs);
+    await writeTokens([{ name: "test", type: "file", envVar: "", filePath, value: "data" }], fs);
 
     // When symlink traversal is detected, no directories should be created and no file written
     expect(mkdirSpy).not.toHaveBeenCalled();
@@ -171,9 +171,7 @@ describe("writeTokens", () => {
     const writeFileSpy = vi.fn(async () => {});
     const fs = createFakeFileSystem({ writeFile: writeFileSpy });
 
-    await writeTokens([
-      { name: "test", type: "file", envVar: "", filePath, value: "secret" },
-    ], fs);
+    await writeTokens([{ name: "test", type: "file", envVar: "", filePath, value: "secret" }], fs);
 
     expect(writeFileSpy).toHaveBeenCalledWith(filePath, "secret", { mode: 0o600 });
   });
@@ -185,10 +183,13 @@ describe("writeTokens", () => {
     writeFileSpy.mockRejectedValueOnce(new Error("EROFS: read-only file system"));
     const fs = createFakeFileSystem({ writeFile: writeFileSpy });
 
-    await writeTokens([
-      { name: "fail", type: "file", envVar: "", filePath: failPath, value: "data1" },
-      { name: "success", type: "file", envVar: "", filePath: successPath, value: "data2" },
-    ], fs);
+    await writeTokens(
+      [
+        { name: "fail", type: "file", envVar: "", filePath: failPath, value: "data1" },
+        { name: "success", type: "file", envVar: "", filePath: successPath, value: "data2" },
+      ],
+      fs,
+    );
 
     expect(logger.warn).toHaveBeenCalled();
     expect(writeFileSpy).toHaveBeenCalledTimes(2);
@@ -203,10 +204,13 @@ describe("writeTokens", () => {
     const writeFileSpy = vi.fn(async () => {});
     const fs = createFakeFileSystem({ mkdir: mkdirSpy, writeFile: writeFileSpy });
 
-    await writeTokens([
-      { name: "fail", type: "file", envVar: "", filePath: failPath, value: "data1" },
-      { name: "success", type: "file", envVar: "", filePath: successPath, value: "data2" },
-    ], fs);
+    await writeTokens(
+      [
+        { name: "fail", type: "file", envVar: "", filePath: failPath, value: "data1" },
+        { name: "success", type: "file", envVar: "", filePath: successPath, value: "data2" },
+      ],
+      fs,
+    );
 
     expect(logger.warn).toHaveBeenCalled();
     // The second token should still be processed
@@ -219,10 +223,19 @@ describe("writeTokens", () => {
     writeFileSpy.mockRejectedValueOnce(new Error("EROFS"));
     const fs = createFakeFileSystem({ writeFile: writeFileSpy });
 
-    await writeTokens([
-      { name: "file-token", type: "file", envVar: "", filePath, value: "data" },
-      { name: "env-token", type: "env_var", envVar: "MY_RESILIENT_VAR", filePath: "", value: "works" },
-    ], fs);
+    await writeTokens(
+      [
+        { name: "file-token", type: "file", envVar: "", filePath, value: "data" },
+        {
+          name: "env-token",
+          type: "env_var",
+          envVar: "MY_RESILIENT_VAR",
+          filePath: "",
+          value: "works",
+        },
+      ],
+      fs,
+    );
 
     expect(process.env.MY_RESILIENT_VAR).toBe("works");
     delete process.env.MY_RESILIENT_VAR;

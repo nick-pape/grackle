@@ -21,7 +21,9 @@ export const WriteInProgress: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("tool-card-workpad")).toBeInTheDocument();
     await expect(canvas.getByTestId("tool-card-workpad-status")).toHaveTextContent("in_progress");
-    await expect(canvas.getByTestId("tool-card-workpad-summary")).toHaveTextContent("Working on authentication");
+    await expect(canvas.getByTestId("tool-card-workpad-summary")).toHaveTextContent(
+      "Working on authentication",
+    );
   },
 };
 
@@ -37,7 +39,8 @@ export const WriteCompleted: Story = {
       taskId: "74f5b716",
       workpad: {
         status: "completed",
-        summary: "Tested Grackle MCP tools: created a task, wrote to workpad, and searched knowledge.",
+        summary:
+          "Tested Grackle MCP tools: created a task, wrote to workpad, and searched knowledge.",
         extra: {
           tools_tested: ["task_create", "workpad_write", "knowledge_search"],
           search_topic: "qdrant catalog",

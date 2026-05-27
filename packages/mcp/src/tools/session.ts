@@ -14,21 +14,36 @@ const DEFAULT_TIMEOUT_SECONDS: number = 30;
 const MAX_TIMEOUT_SECONDS: number = 300;
 
 /** Session statuses considered "active" for filtering purposes. */
-const ACTIVE_STATUSES: string[] = [SESSION_STATUS.PENDING, SESSION_STATUS.RUNNING, SESSION_STATUS.IDLE];
-
+const ACTIVE_STATUSES: string[] = [
+  SESSION_STATUS.PENDING,
+  SESSION_STATUS.RUNNING,
+  SESSION_STATUS.IDLE,
+];
 
 /** MCP tools for managing Grackle agent sessions. */
 export const sessionTools: ToolDefinition[] = [
   {
     name: "session_spawn",
     group: "session",
-    description: "Spawn a new AI agent session in a Grackle environment with a given prompt and optional model configuration.",
+    description:
+      "Spawn a new AI agent session in a Grackle environment with a given prompt and optional model configuration.",
     inputSchema: z.object({
       environmentId: z.string().describe("The environment ID to spawn the agent in"),
       prompt: z.string().describe("The prompt or task description for the agent"),
-      maxTurns: z.number().int().positive().optional().describe("Maximum number of turns the agent may take"),
-      personaId: z.string().optional().describe("Persona ID to configure agent behavior (falls back to app default)"),
-      workingDirectory: z.string().optional().describe("Working directory / repo root hint for the agent (e.g. /workspaces/my-repo)"),
+      maxTurns: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Maximum number of turns the agent may take"),
+      personaId: z
+        .string()
+        .optional()
+        .describe("Persona ID to configure agent behavior (falls back to app default)"),
+      workingDirectory: z
+        .string()
+        .optional()
+        .describe("Working directory / repo root hint for the agent (e.g. /workspaces/my-repo)"),
     }),
     rpcMethod: "spawnAgent",
     mutating: true,
@@ -38,7 +53,11 @@ export const sessionTools: ToolDefinition[] = [
       idempotentHint: false,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, { core: client }: GrackleClients, authContext?: AuthContext) {
+    async handler(
+      args: Record<string, unknown>,
+      { core: client }: GrackleClients,
+      authContext?: AuthContext,
+    ) {
       try {
         const session = await client.spawnAgent({
           environmentId: args.environmentId as string,
@@ -47,7 +66,7 @@ export const sessionTools: ToolDefinition[] = [
             maxTurns: (args.maxTurns as number | undefined) ?? 0,
             personaId: (args.personaId as string | undefined) ?? "",
             workingDirectory: (args.workingDirectory as string | undefined) ?? "",
-            workspaceId: authContext?.type === "scoped" ? authContext.workspaceId ?? "" : "",
+            workspaceId: authContext?.type === "scoped" ? (authContext.workspaceId ?? "") : "",
           },
         });
         return jsonResult(session);
@@ -60,7 +79,8 @@ export const sessionTools: ToolDefinition[] = [
   {
     name: "session_resume",
     group: "session",
-    description: "Resume a stopped agent session. Starts a new runtime process that loads the existing conversation via the runtime's native resume mechanism, returning the session in running state. Errors if the session is still active (idle, running, or pending).",
+    description:
+      "Resume a stopped agent session. Starts a new runtime process that loads the existing conversation via the runtime's native resume mechanism, returning the session in running state. Errors if the session is still active (idle, running, or pending).",
     inputSchema: z.object({
       sessionId: z.string().describe("The ID of the session to resume"),
     }),
@@ -87,10 +107,16 @@ export const sessionTools: ToolDefinition[] = [
   {
     name: "session_status",
     group: "session",
-    description: "List agent sessions with optional filtering by environment and status. By default shows only active sessions.",
+    description:
+      "List agent sessions with optional filtering by environment and status. By default shows only active sessions.",
     inputSchema: z.object({
       environmentId: z.string().optional().describe("Filter sessions by environment ID"),
-      all: z.boolean().default(false).describe("When true, include sessions in all statuses; when false, show only active sessions"),
+      all: z
+        .boolean()
+        .default(false)
+        .describe(
+          "When true, include sessions in all statuses; when false, show only active sessions",
+        ),
     }),
     rpcMethod: "listSessions",
     mutating: false,
@@ -108,9 +134,7 @@ export const sessionTools: ToolDefinition[] = [
         });
         let sessions = response.sessions;
         if (!args.all) {
-          sessions = sessions.filter((session) =>
-            ACTIVE_STATUSES.includes(session.status),
-          );
+          sessions = sessions.filter((session) => ACTIVE_STATUSES.includes(session.status));
         }
         const summaries = sessions.map((session) => ({
           id: session.id,
@@ -134,10 +158,14 @@ export const sessionTools: ToolDefinition[] = [
   {
     name: "session_kill",
     group: "session",
-    description: "Terminate a running agent session. By default, kills immediately (SIGKILL). With graceful=true, sends a SIGTERM signal giving the agent a chance to clean up.",
+    description:
+      "Terminate a running agent session. By default, kills immediately (SIGKILL). With graceful=true, sends a SIGTERM signal giving the agent a chance to clean up.",
     inputSchema: z.object({
       sessionId: z.string().describe("The ID of the session to kill"),
-      graceful: z.boolean().default(false).describe("When true, send SIGTERM for graceful shutdown instead of killing immediately"),
+      graceful: z
+        .boolean()
+        .default(false)
+        .describe("When true, send SIGTERM for graceful shutdown instead of killing immediately"),
     }),
     rpcMethod: "killAgent",
     mutating: true,
@@ -163,12 +191,23 @@ export const sessionTools: ToolDefinition[] = [
   {
     name: "session_attach",
     group: "session",
-    description: "Attach to a running session and stream events for a limited duration. Returns collected events and whether the stream timed out.",
+    description:
+      "Attach to a running session and stream events for a limited duration. Returns collected events and whether the stream timed out.",
     inputSchema: z.object({
       sessionId: z.string().describe("The ID of the session to stream events from"),
-      timeoutSeconds: z.number().int().positive().max(MAX_TIMEOUT_SECONDS).default(DEFAULT_TIMEOUT_SECONDS)
+      timeoutSeconds: z
+        .number()
+        .int()
+        .positive()
+        .max(MAX_TIMEOUT_SECONDS)
+        .default(DEFAULT_TIMEOUT_SECONDS)
         .describe("Maximum seconds to wait for events before returning (default 30, max 300)"),
-      maxEvents: z.number().int().positive().optional().describe("Maximum number of events to collect before returning"),
+      maxEvents: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Maximum number of events to collect before returning"),
     }),
     rpcMethod: "streamSession",
     mutating: false,
@@ -178,12 +217,19 @@ export const sessionTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, { core: client, orchestration }: GrackleClients, authContext?: AuthContext) {
+    async handler(
+      args: Record<string, unknown>,
+      { core: client, orchestration }: GrackleClients,
+      authContext?: AuthContext,
+    ) {
       try {
         if (authContext?.type === "scoped") {
           const session = await client.getSession({ id: args.sessionId as string });
           if (!session.taskId) {
-            throw new ConnectError("Cannot attach to a taskless session via scoped auth", Code.PermissionDenied);
+            throw new ConnectError(
+              "Cannot attach to a taskless session via scoped auth",
+              Code.PermissionDenied,
+            );
           }
           await assertCallerIsAncestor(orchestration, authContext, session.taskId);
         }
@@ -211,7 +257,10 @@ export const sessionTools: ToolDefinition[] = [
             if (maxEvents && events.length >= maxEvents) {
               break;
             }
-            if (event.type === grackle.EventType.STATUS && ["completed", "killed", "failed", "terminated"].includes(event.content)) {
+            if (
+              event.type === grackle.EventType.STATUS &&
+              ["completed", "killed", "failed", "terminated"].includes(event.content)
+            ) {
               break;
             }
           }
@@ -248,12 +297,19 @@ export const sessionTools: ToolDefinition[] = [
       idempotentHint: false,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, { core: client, orchestration }: GrackleClients, authContext?: AuthContext) {
+    async handler(
+      args: Record<string, unknown>,
+      { core: client, orchestration }: GrackleClients,
+      authContext?: AuthContext,
+    ) {
       try {
         if (authContext?.type === "scoped") {
           const session = await client.getSession({ id: args.sessionId as string });
           if (!session.taskId) {
-            throw new ConnectError("Cannot send input to a taskless session via scoped auth", Code.PermissionDenied);
+            throw new ConnectError(
+              "Cannot send input to a taskless session via scoped auth",
+              Code.PermissionDenied,
+            );
           }
           await assertCallerIsAncestor(orchestration, authContext, session.taskId);
         }

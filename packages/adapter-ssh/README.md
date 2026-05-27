@@ -18,15 +18,15 @@ The SSH adapter provisions PowerLine on a remote host, opens an SSH tunnel for g
 
 ## Configuration
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `host` | `string` | *required* | Remote hostname or IP |
-| `user` | `string` | current OS user | SSH username |
-| `sshPort` | `number` | `22` | SSH port |
-| `identityFile` | `string` | — | Path to SSH private key |
-| `sshOptions` | `Record<string, string>` | — | Extra SSH `-o Key=Value` options |
-| `localPort` | `number` | auto | Override local tunnel port |
-| `env` | `Record<string, string>` | — | Extra env vars for remote PowerLine |
+| Field          | Type                     | Default         | Description                         |
+| -------------- | ------------------------ | --------------- | ----------------------------------- |
+| `host`         | `string`                 | _required_      | Remote hostname or IP               |
+| `user`         | `string`                 | current OS user | SSH username                        |
+| `sshPort`      | `number`                 | `22`            | SSH port                            |
+| `identityFile` | `string`                 | —               | Path to SSH private key             |
+| `sshOptions`   | `Record<string, string>` | —               | Extra SSH `-o Key=Value` options    |
+| `localPort`    | `number`                 | auto            | Override local tunnel port          |
+| `env`          | `Record<string, string>` | —               | Extra env vars for remote PowerLine |
 
 ## Prerequisites
 

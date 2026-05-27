@@ -34,7 +34,9 @@ describe("BUILTIN_COMPONENTS", () => {
   });
 
   it("the catalog matches the zod schema source of truth (name-for-name)", () => {
-    expect(BUILTIN_COMPONENTS.map((c) => c.name).sort()).toEqual(Object.keys(BUILTIN_COMPONENT_SCHEMAS).sort());
+    expect(BUILTIN_COMPONENTS.map((c) => c.name).sort()).toEqual(
+      Object.keys(BUILTIN_COMPONENT_SCHEMAS).sort(),
+    );
   });
 
   it("derives correct JSON Schema from the zod schemas (enums, required, integers)", () => {

@@ -33,7 +33,11 @@ function getArgs(args: unknown): { query?: string; id?: string } {
 }
 
 /** Parses knowledge result. Could be search results or a single node. */
-function parseResult(result: string | undefined): { results?: KnowledgeResult[]; node?: KnowledgeNode; edgeCount?: number } {
+function parseResult(result: string | undefined): {
+  results?: KnowledgeResult[];
+  node?: KnowledgeNode;
+  edgeCount?: number;
+} {
   if (!result) {
     return {};
   }
@@ -45,7 +49,11 @@ function parseResult(result: string | undefined): { results?: KnowledgeResult[];
     const obj = parsed as Record<string, unknown>;
     // knowledge_search returns { results: [...], neighbors, neighborEdges }
     if (Array.isArray(obj.results)) {
-      return { results: (obj.results as unknown[]).filter((v): v is KnowledgeResult => v !== null && typeof v === "object") };
+      return {
+        results: (obj.results as unknown[]).filter(
+          (v): v is KnowledgeResult => v !== null && typeof v === "object",
+        ),
+      };
     }
     // knowledge_get_node returns { node, edges, neighbors }
     if (typeof obj.node === "object" && obj.node !== null) {
@@ -56,7 +64,9 @@ function parseResult(result: string | undefined): { results?: KnowledgeResult[];
     if (typeof obj.id === "string") {
       return { node: obj as KnowledgeNode };
     }
-  } catch { /* fall through */ }
+  } catch {
+    /* fall through */
+  }
   return {};
 }
 
@@ -77,7 +87,9 @@ export function KnowledgeCard({ tool, args, result, isError }: ToolCardProps): J
       data-testid="tool-card-knowledge"
     >
       <div className={styles.header}>
-        <span className={styles.icon} aria-hidden="true">&#x1F9E0;</span>
+        <span className={styles.icon} aria-hidden="true">
+          &#x1F9E0;
+        </span>
         <span className={styles.toolName} style={{ color: "var(--accent-purple, #a78bfa)" }}>
           {bareName}
         </span>
@@ -127,21 +139,27 @@ export function KnowledgeCard({ tool, args, result, isError }: ToolCardProps): J
       {!isError && resultData.results && resultData.results.length > 0 && (
         <>
           <pre className={styles.pre} data-testid="tool-card-knowledge-results">
-            {(expanded ? resultData.results : resultData.results.slice(0, PREVIEW_COUNT)).map((r) => {
-              const label = r.node?.title ?? r.node?.label ?? r.node?.id ?? "node";
-              const score = r.score !== undefined ? ` (${(r.score * 100).toFixed(0)}%)` : "";
-              return `${label}${score}`;
-            }).join("\n")}
+            {(expanded ? resultData.results : resultData.results.slice(0, PREVIEW_COUNT))
+              .map((r) => {
+                const label = r.node?.title ?? r.node?.label ?? r.node?.id ?? "node";
+                const score = r.score !== undefined ? ` (${(r.score * 100).toFixed(0)}%)` : "";
+                return `${label}${score}`;
+              })
+              .join("\n")}
           </pre>
           {resultData.results.length > PREVIEW_COUNT && (
             <button
               type="button"
               className={styles.bodyToggle}
-              onClick={() => { setExpanded((v) => !v); }}
+              onClick={() => {
+                setExpanded((v) => !v);
+              }}
               aria-expanded={expanded}
               data-testid="tool-card-toggle"
             >
-              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}>&#x25B8;</span>
+              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}>
+                &#x25B8;
+              </span>
               {expanded ? "collapse" : `${resultData.results.length - PREVIEW_COUNT} more results`}
             </button>
           )}
@@ -156,8 +174,12 @@ export function KnowledgeCard({ tool, args, result, isError }: ToolCardProps): J
             resultData.node.title ? `title: ${resultData.node.title}` : null,
             resultData.node.category ? `category: ${resultData.node.category}` : null,
             resultData.node.kind ? `kind: ${resultData.node.kind}` : null,
-            resultData.node.content ? `content: ${resultData.node.content.length > 100 ? resultData.node.content.slice(0, 100) + "..." : resultData.node.content}` : null,
-          ].filter(Boolean).join("\n")}
+            resultData.node.content
+              ? `content: ${resultData.node.content.length > 100 ? resultData.node.content.slice(0, 100) + "..." : resultData.node.content}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join("\n")}
         </pre>
       )}
     </div>

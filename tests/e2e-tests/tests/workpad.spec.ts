@@ -1,19 +1,11 @@
 import { test, expect } from "./fixtures.js";
 import type { GrackleClient } from "./rpc-client.js";
-import {
-  createWorkspace,
-  createTaskDirect,
-  stubScenario,
-  emitMcpCall,
-} from "./helpers.js";
+import { createWorkspace, createTaskDirect, stubScenario, emitMcpCall } from "./helpers.js";
 
 /**
  * Helper: start a task via RPC with stub-mcp persona and return the session ID.
  */
-async function startTaskStubMcp(
-  client: GrackleClient,
-  taskId: string,
-): Promise<string> {
+async function startTaskStubMcp(client: GrackleClient, taskId: string): Promise<string> {
   const resp = await client.orchestration.startTask({
     taskId,
     personaId: "stub-mcp",
@@ -45,7 +37,9 @@ async function waitForSessionStatus(
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  throw new Error(`Session ${sessionId} did not reach status "${targetStatus}" within ${timeoutMs}ms`);
+  throw new Error(
+    `Session ${sessionId} did not reach status "${targetStatus}" within ${timeoutMs}ms`,
+  );
 }
 
 test.describe("Workpad E2E", { tag: ["@task"] }, () => {
@@ -53,7 +47,9 @@ test.describe("Workpad E2E", { tag: ["@task"] }, () => {
   test.beforeEach(async ({ grackle: { client } }) => {
     const sessionsResp = await client.core.listSessions({});
     const all = sessionsResp.sessions as Array<{ id: string; status: string }>;
-    const active = all.filter((s) => s.status === "idle" || s.status === "running" || s.status === "pending");
+    const active = all.filter(
+      (s) => s.status === "idle" || s.status === "running" || s.status === "pending",
+    );
     for (const s of active) {
       await client.core.killAgent({ id: s.id });
     }
@@ -62,7 +58,11 @@ test.describe("Workpad E2E", { tag: ["@task"] }, () => {
       while (Date.now() < deadline) {
         const recheck = await client.core.listSessions({});
         const remaining = recheck.sessions as Array<{ status: string }>;
-        if (!remaining.some((s) => s.status === "idle" || s.status === "running" || s.status === "pending")) {
+        if (
+          !remaining.some(
+            (s) => s.status === "idle" || s.status === "running" || s.status === "pending",
+          )
+        ) {
           break;
         }
         await new Promise((resolve) => setTimeout(resolve, 250));
@@ -107,9 +107,7 @@ test.describe("Workpad E2E", { tag: ["@task"] }, () => {
 
     // 1. Create workspace + task
     const workspaceId = await createWorkspace(client, "Workpad Context");
-    const scenario = stubScenario(
-      emitMcpCall("workpad_read", {}),
-    );
+    const scenario = stubScenario(emitMcpCall("workpad_read", {}));
     const task = await createTaskDirect(client, workspaceId, "workpad-context-test", {
       description: JSON.stringify(scenario),
     });
@@ -138,7 +136,9 @@ test.describe("Workpad E2E", { tag: ["@task"] }, () => {
             if (raw.systemContext === true) {
               return true;
             }
-          } catch { /* not JSON */ }
+          } catch {
+            /* not JSON */
+          }
         }
         return false;
       },

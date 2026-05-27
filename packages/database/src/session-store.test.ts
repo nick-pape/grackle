@@ -101,7 +101,17 @@ describe("session-store", () => {
 
   describe("createSession with parentSessionId", () => {
     it("persists parentSessionId", () => {
-      sessionStore.createSession("child-1", "test-env", "claude-code", "test", "model", "/tmp/log", "", "", "parent-1");
+      sessionStore.createSession(
+        "child-1",
+        "test-env",
+        "claude-code",
+        "test",
+        "model",
+        "/tmp/log",
+        "",
+        "",
+        "parent-1",
+      );
       const session = sessionStore.getSession("child-1");
       expect(session?.parentSessionId).toBe("parent-1");
     });
@@ -115,7 +125,18 @@ describe("session-store", () => {
 
   describe("createSession with pipeMode", () => {
     it("persists pipeMode", () => {
-      sessionStore.createSession("piped", "test-env", "claude-code", "test", "model", "/tmp/log", "", "", "", "async");
+      sessionStore.createSession(
+        "piped",
+        "test-env",
+        "claude-code",
+        "test",
+        "model",
+        "/tmp/log",
+        "",
+        "",
+        "",
+        "async",
+      );
       const session = sessionStore.getSession("piped");
       expect(session?.pipeMode).toBe("async");
     });
@@ -183,8 +204,24 @@ describe("session-store", () => {
 
   describe("aggregateUsage", () => {
     it("aggregates by taskId", () => {
-      sessionStore.createSession("agg-1", "test-env", "claude-code", "test", "model", "/tmp/log", "task-a");
-      sessionStore.createSession("agg-2", "test-env", "claude-code", "test", "model", "/tmp/log", "task-a");
+      sessionStore.createSession(
+        "agg-1",
+        "test-env",
+        "claude-code",
+        "test",
+        "model",
+        "/tmp/log",
+        "task-a",
+      );
+      sessionStore.createSession(
+        "agg-2",
+        "test-env",
+        "claude-code",
+        "test",
+        "model",
+        "/tmp/log",
+        "task-a",
+      );
       sessionStore.updateSessionUsage("agg-1", 100, 10, 1000);
       sessionStore.updateSessionUsage("agg-2", 200, 20, 2000);
       const result = sessionStore.aggregateUsage({ taskId: "task-a" });
@@ -195,8 +232,24 @@ describe("session-store", () => {
     });
 
     it("aggregates by taskIds", () => {
-      sessionStore.createSession("agg-3", "test-env", "claude-code", "test", "model", "/tmp/log", "task-b");
-      sessionStore.createSession("agg-4", "test-env", "claude-code", "test", "model", "/tmp/log", "task-c");
+      sessionStore.createSession(
+        "agg-3",
+        "test-env",
+        "claude-code",
+        "test",
+        "model",
+        "/tmp/log",
+        "task-b",
+      );
+      sessionStore.createSession(
+        "agg-4",
+        "test-env",
+        "claude-code",
+        "test",
+        "model",
+        "/tmp/log",
+        "task-c",
+      );
       sessionStore.updateSessionUsage("agg-3", 50, 5, 500);
       sessionStore.updateSessionUsage("agg-4", 75, 8, 800);
       const result = sessionStore.aggregateUsage({ taskIds: ["task-b", "task-c"] });

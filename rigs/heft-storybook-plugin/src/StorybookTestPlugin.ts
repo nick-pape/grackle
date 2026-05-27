@@ -5,7 +5,7 @@ import type {
   HeftConfiguration,
   IHeftTaskPlugin,
   IHeftTaskSession,
-  IHeftTaskRunHookOptions
+  IHeftTaskRunHookOptions,
 } from "@rushstack/heft";
 
 const PLUGIN_NAME: string = "storybook-test-plugin";
@@ -33,8 +33,14 @@ async function waitForPort(port: number, timeoutMs: number): Promise<void> {
     try {
       await new Promise<void>((resolve, reject) => {
         const sock: net.Socket = net.createConnection({ host: "127.0.0.1", port });
-        sock.once("connect", () => { sock.destroy(); resolve(); });
-        sock.once("error", () => { sock.destroy(); reject(); });
+        sock.once("connect", () => {
+          sock.destroy();
+          resolve();
+        });
+        sock.once("error", () => {
+          sock.destroy();
+          reject();
+        });
       });
       return;
     } catch {
@@ -54,8 +60,18 @@ class StorybookTestPlugin implements IHeftTaskPlugin {
       const buildFolder: string = heftConfiguration.buildFolderPath;
       const staticDir: string = path.join(buildFolder, "storybook-static");
       const isWindows: boolean = process.platform === "win32";
-      const httpServerBin: string = path.join(buildFolder, "node_modules", ".bin", isWindows ? "http-server.cmd" : "http-server");
-      const testStorybookBin: string = path.join(buildFolder, "node_modules", ".bin", isWindows ? "test-storybook.cmd" : "test-storybook");
+      const httpServerBin: string = path.join(
+        buildFolder,
+        "node_modules",
+        ".bin",
+        isWindows ? "http-server.cmd" : "http-server",
+      );
+      const testStorybookBin: string = path.join(
+        buildFolder,
+        "node_modules",
+        ".bin",
+        isWindows ? "test-storybook.cmd" : "test-storybook",
+      );
 
       const suppressWarningsEnv: NodeJS.ProcessEnv = {
         ...process.env,
@@ -75,7 +91,9 @@ class StorybookTestPlugin implements IHeftTaskPlugin {
 
       // Collect stderr for diagnostics
       let serverStderr: string = "";
-      server.stderr?.on("data", (chunk: Buffer) => { serverStderr += chunk.toString(); });
+      server.stderr?.on("data", (chunk: Buffer) => {
+        serverStderr += chunk.toString();
+      });
 
       // Promise that rejects if server exits or errors before tests start
       const serverFailure: Promise<never> = new Promise<never>((_resolve, reject) => {
@@ -89,10 +107,7 @@ class StorybookTestPlugin implements IHeftTaskPlugin {
 
       try {
         // Race: wait for port OR server crash — whichever comes first
-        await Promise.race([
-          waitForPort(port, SERVER_READY_TIMEOUT_MS),
-          serverFailure,
-        ]);
+        await Promise.race([waitForPort(port, SERVER_READY_TIMEOUT_MS), serverFailure]);
 
         session.logger.terminal.writeLine("Storybook server ready. Running interaction tests...");
 

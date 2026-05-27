@@ -1,5 +1,11 @@
 import type { AgentSession, CreateSessionOptions } from "@grackle-ai/runtime-sdk";
-import { BaseAgentSession, BaseAgentRuntime, logger, ensureRuntimeInstalled, importFromRuntime } from "@grackle-ai/runtime-sdk";
+import {
+  BaseAgentSession,
+  BaseAgentRuntime,
+  logger,
+  ensureRuntimeInstalled,
+  importFromRuntime,
+} from "@grackle-ai/runtime-sdk";
 
 // ─── Environment variable names ────────────────────────────
 // All configuration is driven by environment variables so the
@@ -12,7 +18,11 @@ const ENV_COPILOT_CLI_URL: string = "COPILOT_CLI_URL";
 /** JSON-encoded provider config for BYOK scenarios (type, baseUrl, apiKey, etc.). */
 const ENV_COPILOT_PROVIDER_CONFIG: string = "COPILOT_PROVIDER_CONFIG";
 /** GitHub token environment variables checked in priority order. */
-const GITHUB_TOKEN_ENV_VARS: readonly string[] = ["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"];
+const GITHUB_TOKEN_ENV_VARS: readonly string[] = [
+  "COPILOT_GITHUB_TOKEN",
+  "GH_TOKEN",
+  "GITHUB_TOKEN",
+];
 
 // ─── Dynamic import ────────────────────────────────────────
 
@@ -43,7 +53,10 @@ function getCopilotSdk(): Promise<CopilotSdkModule> {
     sdkPromise = (async (): Promise<CopilotSdkModule> => {
       try {
         await ensureRuntimeInstalled("copilot");
-        const mod = await importFromRuntime<Record<string, unknown>>("copilot", "@github/copilot-sdk");
+        const mod = await importFromRuntime<Record<string, unknown>>(
+          "copilot",
+          "@github/copilot-sdk",
+        );
         if (typeof mod.CopilotClient !== "function") {
           throw new Error("CopilotClient not found in @github/copilot-sdk");
         }
@@ -59,8 +72,8 @@ function getCopilotSdk(): Promise<CopilotSdkModule> {
         const detail = err instanceof Error ? err.message : String(err);
         throw new Error(
           `Copilot SDK failed to load: ${detail}\n` +
-          "Runtime packages are installed in ~/.grackle/runtimes/copilot/.\n" +
-          "The Copilot CLI must also be installed and available in PATH (or set COPILOT_CLI_URL for an external server)."
+            "Runtime packages are installed in ~/.grackle/runtimes/copilot/.\n" +
+            "The Copilot CLI must also be installed and available in PATH (or set COPILOT_CLI_URL for an external server).",
         );
       }
     })();
@@ -167,7 +180,12 @@ export class CopilotSession extends BaseAgentSession {
     this.copilotClient = new copilotSdk.CopilotClient(clientOptions);
     await this.copilotClient.start();
 
-    this.emit({ type: "system", timestamp: ts(), content: "Copilot CLI server connected", diagnostic: true });
+    this.emit({
+      type: "system",
+      timestamp: ts(),
+      content: "Copilot CLI server connected",
+      diagnostic: true,
+    });
 
     // ── Build session config ──
     // onPermissionRequest is REQUIRED by the SDK — use approveAll for headless operation
@@ -197,7 +215,10 @@ export class CopilotSession extends BaseAgentSession {
     // Note: Copilot SDK does not have a maxTurns config option.
     // The session runs until idle. Log if the caller requested a limit.
     if (this.maxTurns > 0) {
-      logger.info({ maxTurns: this.maxTurns }, "maxTurns requested but Copilot SDK does not support turn limits — session will run until idle");
+      logger.info(
+        { maxTurns: this.maxTurns },
+        "maxTurns requested but Copilot SDK does not support turn limits — session will run until idle",
+      );
     }
 
     // Working directory (SDK uses "workingDirectory", not "cwd")
@@ -208,7 +229,10 @@ export class CopilotSession extends BaseAgentSession {
     // ── Create or resume session ──
     if (this.resumeSessionId) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      this.copilotSession = await this.copilotClient.resumeSession(this.resumeSessionId, sessionConfig);
+      this.copilotSession = await this.copilotClient.resumeSession(
+        this.resumeSessionId,
+        sessionConfig,
+      );
     } else {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       this.copilotSession = await this.copilotClient.createSession(sessionConfig);
@@ -228,7 +252,9 @@ export class CopilotSession extends BaseAgentSession {
 
     // Stream text deltas — data: { messageId, deltaContent, parentToolCallId? }
     this.copilotSession.on("assistant.message_delta", (event: Record<string, unknown>) => {
-      if (this.killed) { return; }
+      if (this.killed) {
+        return;
+      }
       const data = event.data as Record<string, unknown> | undefined;
       const deltaContent = (data?.deltaContent ?? "") as string;
       if (deltaContent) {
@@ -245,7 +271,9 @@ export class CopilotSession extends BaseAgentSession {
     // Final assistant message — data: { messageId, content, toolRequests?, ... }
     // We stream via deltas above, so this is mainly for bookkeeping.
     this.copilotSession.on("assistant.message", (event: Record<string, unknown>) => {
-      if (this.killed) { return; }
+      if (this.killed) {
+        return;
+      }
       const data = event.data as Record<string, unknown> | undefined;
       if (data?.content) {
         this.currentMessageCount++;
@@ -255,7 +283,9 @@ export class CopilotSession extends BaseAgentSession {
 
     // Tool execution start — data: { toolCallId, toolName, arguments?, mcpServerName?, ... }
     this.copilotSession.on("tool.execution_start", (event: Record<string, unknown>) => {
-      if (this.killed) { return; }
+      if (this.killed) {
+        return;
+      }
       const data = event.data as Record<string, unknown> | undefined;
       const toolName = (data?.toolName ?? "unknown") as string;
       const toolArgs = data?.arguments ?? {};
@@ -271,7 +301,9 @@ export class CopilotSession extends BaseAgentSession {
 
     // Tool execution complete — data: { toolCallId, success, result?, error?, ... }
     this.copilotSession.on("tool.execution_complete", (event: Record<string, unknown>) => {
-      if (this.killed) { return; }
+      if (this.killed) {
+        return;
+      }
       const data = event.data as Record<string, unknown> | undefined;
       // result is a ToolResultObject { textResultForLlm, resultType, ... } or undefined
       const result = data?.result as Record<string, unknown> | string | undefined;
@@ -307,11 +339,14 @@ export class CopilotSession extends BaseAgentSession {
     // Note: Copilot SDK's `cost` field is in nano-AIU (GitHub billing units), not USD.
     // We emit tokens only; cost_millicents is 0 until a conversion rate is available.
     this.copilotSession.on("assistant.usage", (event: Record<string, unknown>) => {
-      if (this.killed) { return; }
+      if (this.killed) {
+        return;
+      }
       const data = event.data as Record<string, unknown> | undefined;
-      const inputTokens = (Number(data?.inputTokens) || 0)
-        + (Number(data?.cacheReadTokens) || 0)
-        + (Number(data?.cacheWriteTokens) || 0);
+      const inputTokens =
+        (Number(data?.inputTokens) || 0) +
+        (Number(data?.cacheReadTokens) || 0) +
+        (Number(data?.cacheWriteTokens) || 0);
       const outputTokens = Number(data?.outputTokens) || 0;
       this.pushUsageEvent(inputTokens, outputTokens, 0);
     });
@@ -377,16 +412,20 @@ export class CopilotSession extends BaseAgentSession {
       if (this.copilotSession) {
         await this.copilotSession.destroy();
       }
-    } catch { /* best-effort */ }
+    } catch {
+      /* best-effort */
+    }
     try {
       if (this.copilotClient) {
         // stop() returns Promise<Error[]> — log any errors but don't throw
-        const errors = await this.copilotClient.stop() as unknown[];
+        const errors = (await this.copilotClient.stop()) as unknown[];
         if (Array.isArray(errors) && errors.length > 0) {
           logger.warn({ errors: errors.map(String) }, "Errors during Copilot client shutdown");
         }
       }
-    } catch { /* best-effort */ }
+    } catch {
+      /* best-effort */
+    }
   }
 }
 

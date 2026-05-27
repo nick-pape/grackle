@@ -5,7 +5,12 @@
  * so that both "stub" and "stub-mcp" runtime names continue to work, preserving
  * backward compatibility with existing personas and E2E tests.
  */
-import type { AgentRuntime, AgentSession, SpawnOptions, ResumeOptions } from "@grackle-ai/runtime-sdk";
+import type {
+  AgentRuntime,
+  AgentSession,
+  SpawnOptions,
+  ResumeOptions,
+} from "@grackle-ai/runtime-sdk";
 import { StubSession } from "./stub.js";
 
 /**
@@ -17,7 +22,13 @@ export class StubMcpRuntime implements AgentRuntime {
   public name: string = "stub-mcp";
 
   public spawn(opts: SpawnOptions): AgentSession {
-    return new StubSession(opts.sessionId, opts.prompt, "stub-mcp", opts.mcpBroker, opts.workspaceId);
+    return new StubSession(
+      opts.sessionId,
+      opts.prompt,
+      "stub-mcp",
+      opts.mcpBroker,
+      opts.workspaceId,
+    );
   }
 
   public resume(opts: ResumeOptions): AgentSession {

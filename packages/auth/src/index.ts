@@ -63,10 +63,7 @@ export {
 
 // ─── Channel Tokens (HMAC-signed capability tokens) ─────────
 export type { ChannelTokenClaims } from "./channel-token.js";
-export {
-  createChannelToken,
-  verifyChannelToken,
-} from "./channel-token.js";
+export { createChannelToken, verifyChannelToken } from "./channel-token.js";
 
 // ─── Auth Context ───────────────────────────────────────────
 export type { AuthContext } from "./auth-context.js";

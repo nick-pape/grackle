@@ -23,11 +23,9 @@ export async function listDockerContainers(
   _req: grackle.ListDockerContainersRequest,
 ): Promise<grackle.DockerContainerList> {
   try {
-    const result = await exec(
-      "docker",
-      ["ps", "--no-trunc", "--format", "{{json .}}"],
-      { timeout: DOCKER_PS_TIMEOUT_MS },
-    );
+    const result = await exec("docker", ["ps", "--no-trunc", "--format", "{{json .}}"], {
+      timeout: DOCKER_PS_TIMEOUT_MS,
+    });
     const lines = (result.stdout || "")
       .split("\n")
       .map((line) => line.trim())

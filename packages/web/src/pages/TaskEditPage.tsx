@@ -5,8 +5,16 @@ import { TaskEditPanel, useToast } from "@grackle-ai/web-components";
 
 /** Page for editing an existing task, reading taskId from route params. */
 export function TaskEditPage(): JSX.Element {
-  const { taskId, workspaceId, environmentId } = useParams<{ taskId: string; workspaceId?: string; environmentId?: string }>();
-  const { tasks: { tasks, createTask, updateTask }, workspaces: { workspaces }, personas: { personas } } = useGrackle();
+  const { taskId, workspaceId, environmentId } = useParams<{
+    taskId: string;
+    workspaceId?: string;
+    environmentId?: string;
+  }>();
+  const {
+    tasks: { tasks, createTask, updateTask },
+    workspaces: { workspaces },
+    personas: { personas },
+  } = useGrackle();
   const { showToast } = useToast();
 
   return (
@@ -18,8 +26,34 @@ export function TaskEditPage(): JSX.Element {
       tasks={tasks}
       workspaces={workspaces}
       personas={personas}
-      onCreateTask={(wsId, title, desc, deps, parentId, personaId, canDecompose, injectKnowledge, onSuccess, onError) => { createTask(wsId, title, desc, deps, parentId, personaId, canDecompose, injectKnowledge, onSuccess, onError).catch(() => {}); }}
-      onUpdateTask={(tid, title, desc, deps, personaId) => { updateTask(tid, title, desc, deps, personaId).catch(() => {}); }}
+      onCreateTask={(
+        wsId,
+        title,
+        desc,
+        deps,
+        parentId,
+        personaId,
+        canDecompose,
+        injectKnowledge,
+        onSuccess,
+        onError,
+      ) => {
+        createTask(
+          wsId,
+          title,
+          desc,
+          deps,
+          parentId,
+          personaId,
+          canDecompose,
+          injectKnowledge,
+          onSuccess,
+          onError,
+        ).catch(() => {});
+      }}
+      onUpdateTask={(tid, title, desc, deps, personaId) => {
+        updateTask(tid, title, desc, deps, personaId).catch(() => {});
+      }}
       onShowToast={showToast}
     />
   );

@@ -60,7 +60,16 @@ export function ShellCard({ tool, args, result, isError }: ToolCardProps): JSX.E
       data-testid="tool-card-shell"
     >
       <div className={styles.header}>
-        <span className={styles.icon} style={{ color: "var(--text-secondary)", fontFamily: "var(--font-mono)", fontWeight: "bold" }}>$</span>
+        <span
+          className={styles.icon}
+          style={{
+            color: "var(--text-secondary)",
+            fontFamily: "var(--font-mono)",
+            fontWeight: "bold",
+          }}
+        >
+          $
+        </span>
         <span
           className={styles.fileName}
           style={{ flex: 1, color: "var(--text-primary)" }}
@@ -74,11 +83,18 @@ export function ShellCard({ tool, args, result, isError }: ToolCardProps): JSX.E
             className={exitCode === 0 ? styles.exitOk : styles.exitError}
             data-testid="tool-card-exit-code"
           >
-            {exitCode === 0 ? <Check size={ICON_SM} aria-hidden="true" /> : <X size={ICON_SM} aria-hidden="true" />}{" "}exit {exitCode}
+            {exitCode === 0 ? (
+              <Check size={ICON_SM} aria-hidden="true" />
+            ) : (
+              <X size={ICON_SM} aria-hidden="true" />
+            )}{" "}
+            exit {exitCode}
           </span>
         )}
         {inProgress && (
-          <span className={styles.exitPending} data-testid="tool-card-pending"><Loader size={ICON_SM} aria-hidden="true" /></span>
+          <span className={styles.exitPending} data-testid="tool-card-pending">
+            <Loader size={ICON_SM} aria-hidden="true" />
+          </span>
         )}
       </div>
 
@@ -91,11 +107,18 @@ export function ShellCard({ tool, args, result, isError }: ToolCardProps): JSX.E
             <button
               type="button"
               className={styles.bodyToggle}
-              onClick={() => { setExpanded((v) => !v); }}
+              onClick={() => {
+                setExpanded((v) => !v);
+              }}
               aria-expanded={expanded}
               data-testid="tool-card-toggle"
             >
-              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`} aria-hidden="true"><ChevronRight size={ICON_SM} /></span>
+              <span
+                className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}
+                aria-hidden="true"
+              >
+                <ChevronRight size={ICON_SM} />
+              </span>
               {expanded ? "collapse" : `${outputLines.length - PREVIEW_LINES} more lines`}
             </button>
           )}

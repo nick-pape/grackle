@@ -84,9 +84,7 @@ describe("createGrackleClients", () => {
     });
     const { createGrackleClients } = await import("./client.js");
 
-    expect(() => createGrackleClients()).toThrow(
-      "Could not read API key from",
-    );
+    expect(() => createGrackleClients()).toThrow("Could not read API key from");
   });
 
   it("UT-4: throws when API key file is empty", async () => {
@@ -94,9 +92,7 @@ describe("createGrackleClients", () => {
     vi.mocked(fs.readFileSync).mockReturnValue("");
     const { createGrackleClients } = await import("./client.js");
 
-    expect(() => createGrackleClients()).toThrow(
-      "API key file is empty",
-    );
+    expect(() => createGrackleClients()).toThrow("API key file is empty");
   });
 
   it("UT-5: uses explicit apiKey argument when provided", async () => {

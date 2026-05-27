@@ -31,7 +31,9 @@ vi.mock("./utils/format-gh-error.js");
 
 // ── Mock external packages ──
 vi.mock("@grackle-ai/adapter-sdk", () => ({
-  reconnectOrProvision: vi.fn(async function* () { /* empty */ }),
+  reconnectOrProvision: vi.fn(async function* () {
+    /* empty */
+  }),
 }));
 vi.mock("@grackle-ai/prompt", () => ({
   resolvePersona: vi.fn(),
@@ -116,51 +118,90 @@ describe("gRPC component handlers", () => {
 
   it("getComponent resolves by name within a workspace", async () => {
     await handlers.registerComponent({ workspaceId: WS1, name: "burndown", body: "render(<a/>)" });
-    const byName = (await handlers.getComponent({ name: "burndown", workspaceId: WS1 })) as ComponentInfo;
+    const byName = (await handlers.getComponent({
+      name: "burndown",
+      workspaceId: WS1,
+    })) as ComponentInfo;
     expect(byName.name).toBe("burndown");
     expect(byName.workspaceId).toBe(WS1);
   });
 
   it("listComponents is scoped to the workspace", async () => {
     await handlers.registerComponent({ workspaceId: WS2, name: "ws2-only", body: "render(<x/>)" });
-    const ws2 = (await handlers.listComponents({ workspaceId: WS2 })) as { components: ComponentInfo[] };
+    const ws2 = (await handlers.listComponents({ workspaceId: WS2 })) as {
+      components: ComponentInfo[];
+    };
     expect(ws2.components.every((c) => c.workspaceId === WS2)).toBe(true);
     expect(ws2.components.some((c) => c.name === "ws2-only")).toBe(true);
     expect(ws2.components.some((c) => c.name === "cost-summary")).toBe(false);
   });
 
   it("updateComponent bumps version and updates only provided fields", async () => {
-    const created = (await handlers.registerComponent({ workspaceId: WS1, name: "editme", description: "orig", body: "old" })) as ComponentInfo;
-    const updated = (await handlers.updateComponent({ id: created.id, workspaceId: WS1, body: "new" })) as ComponentInfo;
+    const created = (await handlers.registerComponent({
+      workspaceId: WS1,
+      name: "editme",
+      description: "orig",
+      body: "old",
+    })) as ComponentInfo;
+    const updated = (await handlers.updateComponent({
+      id: created.id,
+      workspaceId: WS1,
+      body: "new",
+    })) as ComponentInfo;
     expect(updated.body).toBe("new");
     expect(updated.description).toBe("orig");
     expect(updated.version).toBe(2);
   });
 
   it("getComponent hides components from another workspace (isolation)", async () => {
-    const created = (await handlers.registerComponent({ workspaceId: WS1, name: "secret", body: "render(<s/>)" })) as ComponentInfo;
-    const err = (await handlers.getComponent({ id: created.id, workspaceId: WS2 }).catch((e: unknown) => e)) as ConnectError;
+    const created = (await handlers.registerComponent({
+      workspaceId: WS1,
+      name: "secret",
+      body: "render(<s/>)",
+    })) as ComponentInfo;
+    const err = (await handlers
+      .getComponent({ id: created.id, workspaceId: WS2 })
+      .catch((e: unknown) => e)) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
   });
 
   it("updateComponent denies cross-workspace edits", async () => {
-    const created = (await handlers.registerComponent({ workspaceId: WS1, name: "guarded", body: "render(<g/>)" })) as ComponentInfo;
-    const err = (await handlers.updateComponent({ id: created.id, workspaceId: WS2, body: "hijacked" }).catch((e: unknown) => e)) as ConnectError;
+    const created = (await handlers.registerComponent({
+      workspaceId: WS1,
+      name: "guarded",
+      body: "render(<g/>)",
+    })) as ComponentInfo;
+    const err = (await handlers
+      .updateComponent({ id: created.id, workspaceId: WS2, body: "hijacked" })
+      .catch((e: unknown) => e)) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
   });
 
   it("registerComponent requires name and body", async () => {
-    const noName = (await handlers.registerComponent({ workspaceId: WS1, name: "", body: "render(<x/>)" }).catch((e: unknown) => e)) as ConnectError;
+    const noName = (await handlers
+      .registerComponent({ workspaceId: WS1, name: "", body: "render(<x/>)" })
+      .catch((e: unknown) => e)) as ConnectError;
     expect(noName.code).toBe(Code.InvalidArgument);
-    const noBody = (await handlers.registerComponent({ workspaceId: WS1, name: "x", body: "" }).catch((e: unknown) => e)) as ConnectError;
+    const noBody = (await handlers
+      .registerComponent({ workspaceId: WS1, name: "x", body: "" })
+      .catch((e: unknown) => e)) as ConnectError;
     expect(noBody.code).toBe(Code.InvalidArgument);
   });
 
   it("searchComponents finds workspace components (builtin:false)", async () => {
-    await handlers.registerComponent({ workspaceId: WS1, name: "revenue-chart", description: "a chart of revenue over time", body: "render(<i/>)" });
-    const res = (await handlers.searchComponents({ query: "chart", workspaceId: WS1, limit: 10 })) as {
+    await handlers.registerComponent({
+      workspaceId: WS1,
+      name: "revenue-chart",
+      description: "a chart of revenue over time",
+      body: "render(<i/>)",
+    });
+    const res = (await handlers.searchComponents({
+      query: "chart",
+      workspaceId: WS1,
+      limit: 10,
+    })) as {
       results: { component?: ComponentInfo; builtin: boolean }[];
     };
     const hit = res.results.find((r) => r.component?.name === "revenue-chart");
@@ -169,7 +210,11 @@ describe("gRPC component handlers", () => {
   });
 
   it("searchComponents surfaces a Grackle built-in (builtin:true)", async () => {
-    const res = (await handlers.searchComponents({ query: "button", workspaceId: WS1, limit: 10 })) as {
+    const res = (await handlers.searchComponents({
+      query: "button",
+      workspaceId: WS1,
+      limit: 10,
+    })) as {
       results: { component?: ComponentInfo; builtin: boolean }[];
     };
     const btn = res.results.find((r) => r.component?.name === "Button");
@@ -180,77 +225,141 @@ describe("gRPC component handlers", () => {
   });
 
   it("searchComponents is workspace-scoped for authored components", async () => {
-    await handlers.registerComponent({ workspaceId: WS1, name: "ws1-private-thing", description: "scoped", body: "render(<i/>)" });
-    const res = (await handlers.searchComponents({ query: "ws1-private-thing", workspaceId: WS2, limit: 10 })) as {
+    await handlers.registerComponent({
+      workspaceId: WS1,
+      name: "ws1-private-thing",
+      description: "scoped",
+      body: "render(<i/>)",
+    });
+    const res = (await handlers.searchComponents({
+      query: "ws1-private-thing",
+      workspaceId: WS2,
+      limit: 10,
+    })) as {
       results: { component?: ComponentInfo }[];
     };
     expect(res.results.some((r) => r.component?.name === "ws1-private-thing")).toBe(false);
   });
 
   it("searchComponents rejects an empty query", async () => {
-    const err = (await handlers.searchComponents({ query: "  ", workspaceId: WS1 }).catch((e: unknown) => e)) as ConnectError;
+    const err = (await handlers
+      .searchComponents({ query: "  ", workspaceId: WS1 })
+      .catch((e: unknown) => e)) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.InvalidArgument);
   });
 
   it("searchComponents rejects an unknown workspaceId (fails fast, not silent built-ins)", async () => {
-    const err = (await handlers.searchComponents({ query: "button", workspaceId: "no-such-workspace" }).catch((e: unknown) => e)) as ConnectError;
+    const err = (await handlers
+      .searchComponents({ query: "button", workspaceId: "no-such-workspace" })
+      .catch((e: unknown) => e)) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
   });
 
   it("setComponentPromotion promotes by id and does not bump version", async () => {
-    const created = (await handlers.registerComponent({ workspaceId: WS1, name: "promo-by-id", body: "render(<i/>)" })) as ComponentInfo;
+    const created = (await handlers.registerComponent({
+      workspaceId: WS1,
+      name: "promo-by-id",
+      body: "render(<i/>)",
+    })) as ComponentInfo;
     expect(created.promoted).toBe(false);
-    const promoted = (await handlers.setComponentPromotion({ id: created.id, workspaceId: WS1, promoted: true })) as ComponentInfo;
+    const promoted = (await handlers.setComponentPromotion({
+      id: created.id,
+      workspaceId: WS1,
+      promoted: true,
+    })) as ComponentInfo;
     expect(promoted.promoted).toBe(true);
     expect(promoted.version).toBe(created.version);
     // Demote round-trip.
-    const demoted = (await handlers.setComponentPromotion({ id: created.id, workspaceId: WS1, promoted: false })) as ComponentInfo;
+    const demoted = (await handlers.setComponentPromotion({
+      id: created.id,
+      workspaceId: WS1,
+      promoted: false,
+    })) as ComponentInfo;
     expect(demoted.promoted).toBe(false);
   });
 
   it("setComponentPromotion resolves by name within the workspace", async () => {
-    await handlers.registerComponent({ workspaceId: WS1, name: "promo-by-name", body: "render(<i/>)" });
-    const promoted = (await handlers.setComponentPromotion({ name: "promo-by-name", workspaceId: WS1, promoted: true })) as ComponentInfo;
+    await handlers.registerComponent({
+      workspaceId: WS1,
+      name: "promo-by-name",
+      body: "render(<i/>)",
+    });
+    const promoted = (await handlers.setComponentPromotion({
+      name: "promo-by-name",
+      workspaceId: WS1,
+      promoted: true,
+    })) as ComponentInfo;
     expect(promoted.name).toBe("promo-by-name");
     expect(promoted.promoted).toBe(true);
   });
 
   it("setComponentPromotion denies cross-workspace promotion (NotFound)", async () => {
-    const created = (await handlers.registerComponent({ workspaceId: WS1, name: "promo-guarded", body: "render(<i/>)" })) as ComponentInfo;
-    const err = (await handlers.setComponentPromotion({ id: created.id, workspaceId: WS2, promoted: true }).catch((e: unknown) => e)) as ConnectError;
+    const created = (await handlers.registerComponent({
+      workspaceId: WS1,
+      name: "promo-guarded",
+      body: "render(<i/>)",
+    })) as ComponentInfo;
+    const err = (await handlers
+      .setComponentPromotion({ id: created.id, workspaceId: WS2, promoted: true })
+      .catch((e: unknown) => e)) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
   });
 
   it("setComponentPromotion is NotFound for an unknown id", async () => {
-    const err = (await handlers.setComponentPromotion({ id: "no-such-id", workspaceId: WS1, promoted: true }).catch((e: unknown) => e)) as ConnectError;
+    const err = (await handlers
+      .setComponentPromotion({ id: "no-such-id", workspaceId: WS1, promoted: true })
+      .catch((e: unknown) => e)) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
   });
 
   it("setComponentPromotion requires id or name", async () => {
-    const err = (await handlers.setComponentPromotion({ workspaceId: WS1, promoted: true }).catch((e: unknown) => e)) as ConnectError;
+    const err = (await handlers
+      .setComponentPromotion({ workspaceId: WS1, promoted: true })
+      .catch((e: unknown) => e)) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.InvalidArgument);
   });
 
   it("setComponentPromotion defaults to promote when `promoted` is unset", async () => {
-    const created = (await handlers.registerComponent({ workspaceId: WS1, name: "promo-default", body: "render(<i/>)" })) as ComponentInfo;
+    const created = (await handlers.registerComponent({
+      workspaceId: WS1,
+      name: "promo-default",
+      body: "render(<i/>)",
+    })) as ComponentInfo;
     // Omit `promoted` (optional on the wire) — the server defaults it to true.
-    const promoted = (await handlers.setComponentPromotion({ id: created.id, workspaceId: WS1 })) as ComponentInfo;
+    const promoted = (await handlers.setComponentPromotion({
+      id: created.id,
+      workspaceId: WS1,
+    })) as ComponentInfo;
     expect(promoted.promoted).toBe(true);
   });
 
   // ── resolveComponentGraph (#1270 composition) ──
-  interface GraphResult { root?: ComponentInfo; dependencies: ComponentInfo[] }
+  interface GraphResult {
+    root?: ComponentInfo;
+    dependencies: ComponentInfo[];
+  }
   const depNames = (r: GraphResult): string[] => r.dependencies.map((d) => d.name);
 
   it("resolveComponentGraph resolves a one-level reference (root + deps)", async () => {
-    await handlers.registerComponent({ workspaceId: WS1, name: "Child", body: "render(<Spinner/>)" });
-    await handlers.registerComponent({ workspaceId: WS1, name: "Parent", body: "render(<Child/>)" });
-    const res = (await handlers.resolveComponentGraph({ name: "Parent", workspaceId: WS1 })) as GraphResult;
+    await handlers.registerComponent({
+      workspaceId: WS1,
+      name: "Child",
+      body: "render(<Spinner/>)",
+    });
+    await handlers.registerComponent({
+      workspaceId: WS1,
+      name: "Parent",
+      body: "render(<Child/>)",
+    });
+    const res = (await handlers.resolveComponentGraph({
+      name: "Parent",
+      workspaceId: WS1,
+    })) as GraphResult;
     expect(res.root?.name).toBe("Parent");
     expect(depNames(res)).toEqual(["Child"]);
   });
@@ -259,41 +368,84 @@ describe("gRPC component handlers", () => {
     await handlers.registerComponent({ workspaceId: WS1, name: "GC", body: "render(<Spinner/>)" });
     await handlers.registerComponent({ workspaceId: WS1, name: "GB", body: "render(<GC/>)" });
     await handlers.registerComponent({ workspaceId: WS1, name: "GA", body: "render(<GB/>)" });
-    const res = (await handlers.resolveComponentGraph({ name: "GA", workspaceId: WS1 })) as GraphResult;
+    const res = (await handlers.resolveComponentGraph({
+      name: "GA",
+      workspaceId: WS1,
+    })) as GraphResult;
     expect(depNames(res)).toEqual(["GC", "GB"]);
   });
 
   it("resolveComponentGraph excludes built-ins and unknown references", async () => {
-    await handlers.registerComponent({ workspaceId: WS1, name: "UsesBuiltins", body: "render(<div><Button/><DoesNotExist/></div>)" });
-    const res = (await handlers.resolveComponentGraph({ name: "UsesBuiltins", workspaceId: WS1 })) as GraphResult;
+    await handlers.registerComponent({
+      workspaceId: WS1,
+      name: "UsesBuiltins",
+      body: "render(<div><Button/><DoesNotExist/></div>)",
+    });
+    const res = (await handlers.resolveComponentGraph({
+      name: "UsesBuiltins",
+      workspaceId: WS1,
+    })) as GraphResult;
     expect(res.dependencies).toHaveLength(0);
   });
 
   it("resolveComponentGraph skips non-grackle-react dependencies", async () => {
-    await handlers.registerComponent({ workspaceId: WS1, name: "RawDep", rendererKind: "mcp-app-html", body: "<div>raw</div>" });
-    await handlers.registerComponent({ workspaceId: WS1, name: "UsesRaw", body: "render(<RawDep/>)" });
-    const res = (await handlers.resolveComponentGraph({ name: "UsesRaw", workspaceId: WS1 })) as GraphResult;
+    await handlers.registerComponent({
+      workspaceId: WS1,
+      name: "RawDep",
+      rendererKind: "mcp-app-html",
+      body: "<div>raw</div>",
+    });
+    await handlers.registerComponent({
+      workspaceId: WS1,
+      name: "UsesRaw",
+      body: "render(<RawDep/>)",
+    });
+    const res = (await handlers.resolveComponentGraph({
+      name: "UsesRaw",
+      workspaceId: WS1,
+    })) as GraphResult;
     expect(res.dependencies).toHaveLength(0);
   });
 
   it("resolveComponentGraph terminates on a cycle, each component once", async () => {
     await handlers.registerComponent({ workspaceId: WS1, name: "CycA", body: "render(<CycB/>)" });
     await handlers.registerComponent({ workspaceId: WS1, name: "CycB", body: "render(<CycA/>)" });
-    const res = (await handlers.resolveComponentGraph({ name: "CycA", workspaceId: WS1 })) as GraphResult;
+    const res = (await handlers.resolveComponentGraph({
+      name: "CycA",
+      workspaceId: WS1,
+    })) as GraphResult;
     // The root (CycA) isn't a dependency of itself; CycB resolves once.
     expect(depNames(res)).toEqual(["CycB"]);
   });
 
   it("resolveComponentGraph is workspace-scoped (no cross-workspace references)", async () => {
-    await handlers.registerComponent({ workspaceId: WS2, name: "OtherWsChild", body: "render(<Spinner/>)" });
-    await handlers.registerComponent({ workspaceId: WS1, name: "WantsOtherWs", body: "render(<OtherWsChild/>)" });
-    const res = (await handlers.resolveComponentGraph({ name: "WantsOtherWs", workspaceId: WS1 })) as GraphResult;
+    await handlers.registerComponent({
+      workspaceId: WS2,
+      name: "OtherWsChild",
+      body: "render(<Spinner/>)",
+    });
+    await handlers.registerComponent({
+      workspaceId: WS1,
+      name: "WantsOtherWs",
+      body: "render(<OtherWsChild/>)",
+    });
+    const res = (await handlers.resolveComponentGraph({
+      name: "WantsOtherWs",
+      workspaceId: WS1,
+    })) as GraphResult;
     expect(res.dependencies).toHaveLength(0);
   });
 
   it("resolveComponentGraph resolves from a raw source (render-by-source)", async () => {
-    await handlers.registerComponent({ workspaceId: WS1, name: "SrcChild", body: "render(<Spinner/>)" });
-    const res = (await handlers.resolveComponentGraph({ workspaceId: WS1, source: "render(<SrcChild/>)" })) as GraphResult;
+    await handlers.registerComponent({
+      workspaceId: WS1,
+      name: "SrcChild",
+      body: "render(<Spinner/>)",
+    });
+    const res = (await handlers.resolveComponentGraph({
+      workspaceId: WS1,
+      source: "render(<SrcChild/>)",
+    })) as GraphResult;
     expect(res.root?.id ?? "").toBe("");
     expect(depNames(res)).toEqual(["SrcChild"]);
   });
@@ -317,21 +469,49 @@ describe("gRPC component handlers", () => {
   }
 
   it("setComponentPromotion emits component.changed for the workspace (promote + demote)", async () => {
-    const c = (await handlers.registerComponent({ workspaceId: WS1, name: "EmitPromote", body: "render(<i/>)" })) as ComponentInfo;
-    expect(await changedWorkspaceIds(() => handlers.setComponentPromotion({ id: c.id, workspaceId: WS1, promoted: true }))).toContain(WS1);
-    expect(await changedWorkspaceIds(() => handlers.setComponentPromotion({ id: c.id, workspaceId: WS1, promoted: false }))).toContain(WS1);
+    const c = (await handlers.registerComponent({
+      workspaceId: WS1,
+      name: "EmitPromote",
+      body: "render(<i/>)",
+    })) as ComponentInfo;
+    expect(
+      await changedWorkspaceIds(() =>
+        handlers.setComponentPromotion({ id: c.id, workspaceId: WS1, promoted: true }),
+      ),
+    ).toContain(WS1);
+    expect(
+      await changedWorkspaceIds(() =>
+        handlers.setComponentPromotion({ id: c.id, workspaceId: WS1, promoted: false }),
+      ),
+    ).toContain(WS1);
   });
 
   it("registerComponent does NOT emit component.changed (new components aren't promoted)", async () => {
-    expect(await changedWorkspaceIds(() => handlers.registerComponent({ workspaceId: WS1, name: "EmitReg", body: "render(<i/>)" }))).toEqual([]);
+    expect(
+      await changedWorkspaceIds(() =>
+        handlers.registerComponent({ workspaceId: WS1, name: "EmitReg", body: "render(<i/>)" }),
+      ),
+    ).toEqual([]);
   });
 
   it("updateComponent emits only when the component is promoted", async () => {
-    const c = (await handlers.registerComponent({ workspaceId: WS1, name: "EmitUpd", body: "render(<i/>)" })) as ComponentInfo;
+    const c = (await handlers.registerComponent({
+      workspaceId: WS1,
+      name: "EmitUpd",
+      body: "render(<i/>)",
+    })) as ComponentInfo;
     // Not promoted yet → no emit on update.
-    expect(await changedWorkspaceIds(() => handlers.updateComponent({ id: c.id, workspaceId: WS1, description: "v1" }))).toEqual([]);
+    expect(
+      await changedWorkspaceIds(() =>
+        handlers.updateComponent({ id: c.id, workspaceId: WS1, description: "v1" }),
+      ),
+    ).toEqual([]);
     await handlers.setComponentPromotion({ id: c.id, workspaceId: WS1, promoted: true });
     // Now promoted → update emits.
-    expect(await changedWorkspaceIds(() => handlers.updateComponent({ id: c.id, workspaceId: WS1, description: "v2" }))).toContain(WS1);
+    expect(
+      await changedWorkspaceIds(() =>
+        handlers.updateComponent({ id: c.id, workspaceId: WS1, description: "v2" }),
+      ),
+    ).toContain(WS1);
   });
 });
