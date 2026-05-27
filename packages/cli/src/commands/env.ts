@@ -22,10 +22,14 @@ export function registerEnvCommands(program: Command): void {
         head: ["ID", "Type", "Status", "Bootstrapped"],
       });
       for (const e of res.environments) {
-        const status = e.status === "connected" ? chalk.green("●") + " " + e.status :
-                       e.status === "sleeping" ? chalk.yellow("●") + " " + e.status :
-                       e.status === "error" ? chalk.red("●") + " " + e.status :
-                       chalk.gray("●") + " " + e.status;
+        const status =
+          e.status === "connected"
+            ? chalk.green("●") + " " + e.status
+            : e.status === "sleeping"
+              ? chalk.yellow("●") + " " + e.status
+              : e.status === "error"
+                ? chalk.red("●") + " " + e.status
+                : chalk.gray("●") + " " + e.status;
         table.push([e.id, e.adapterType, status, e.bootstrapped ? "yes" : "no"]);
       }
       console.log(table.toString());
@@ -40,7 +44,10 @@ export function registerEnvCommands(program: Command): void {
     .option("--local", "Local PowerLine adapter")
     .option("--repo <repo>", "GitHub repo to clone (docker)")
     .option("--image <image>", "Docker image")
-    .option("--attach <container>", "Attach to an existing container by name/ID instead of creating one (docker)")
+    .option(
+      "--attach <container>",
+      "Attach to an existing container by name/ID instead of creating one (docker)",
+    )
     .option("--host <host>", "SSH host / local host")
     .option("--port <port>", "PowerLine port (local adapter)")
     .option("--user <user>", "SSH user")
@@ -49,86 +56,112 @@ export function registerEnvCommands(program: Command): void {
     .option("--ssh-port <sshPort>", "SSH port (default: 22)")
     .option("--identity-file <path>", "SSH identity file (private key)")
     .option("--codespace-name <name>", "Codespace name (from `gh codespace list`)")
-    .option("--github-account <label>", "GitHub account label to use for gh CLI operations (codespace/docker adapters)")
-    .action(async (name: string, opts: {
-      codespace?: boolean; docker?: boolean; ssh?: boolean; local?: boolean;
-      repo?: string; image?: string; attach?: string; host?: string; port?: string; user?: string;
-      volume?: string[]; gpu?: string | boolean; sshPort?: string;
-      identityFile?: string; codespaceName?: string; githubAccount?: string;
-    }) => {
-      const { core: client } = createGrackleClients();
-      let adapterType: AdapterType = "docker";
-      const config: Record<string, unknown> = {};
+    .option(
+      "--github-account <label>",
+      "GitHub account label to use for gh CLI operations (codespace/docker adapters)",
+    )
+    .action(
+      async (
+        name: string,
+        opts: {
+          codespace?: boolean;
+          docker?: boolean;
+          ssh?: boolean;
+          local?: boolean;
+          repo?: string;
+          image?: string;
+          attach?: string;
+          host?: string;
+          port?: string;
+          user?: string;
+          volume?: string[];
+          gpu?: string | boolean;
+          sshPort?: string;
+          identityFile?: string;
+          codespaceName?: string;
+          githubAccount?: string;
+        },
+      ) => {
+        const { core: client } = createGrackleClients();
+        let adapterType: AdapterType = "docker";
+        const config: Record<string, unknown> = {};
 
-      if (opts.local) {
-        adapterType = "local";
-        if (opts.host) config.host = opts.host;
-        if (opts.port) config.port = parseInt(opts.port, 10);
-      } else if (opts.codespace) {
-        adapterType = "codespace";
-        if (opts.codespaceName) {
-          config.codespaceName = opts.codespaceName;
-        } else {
-          console.error("Error: --codespace requires --codespace-name <name>");
-          process.exit(1);
-        }
-      } else if (opts.ssh) {
-        adapterType = "ssh";
-        if (!opts.host) {
-          console.error("Error: --ssh requires --host <host>");
-          process.exit(1);
-        }
-        config.host = opts.host;
-        if (opts.user) config.user = opts.user;
-        if (opts.sshPort) {
-          const port = parseInt(opts.sshPort, 10);
-          if (isNaN(port) || port < 1 || port > 65535) {
-            console.error("Error: --ssh-port must be a number between 1 and 65535");
+        if (opts.local) {
+          adapterType = "local";
+          if (opts.host) config.host = opts.host;
+          if (opts.port) config.port = parseInt(opts.port, 10);
+        } else if (opts.codespace) {
+          adapterType = "codespace";
+          if (opts.codespaceName) {
+            config.codespaceName = opts.codespaceName;
+          } else {
+            console.error("Error: --codespace requires --codespace-name <name>");
             process.exit(1);
           }
-          config.sshPort = port;
-        }
-        if (opts.identityFile) config.identityFile = opts.identityFile;
-      } else {
-        if (opts.attach) {
-          // Attach mode: bootstrap PowerLine inside an existing container; Grackle
-          // never creates, stops, or removes it (issue #1223).
-          config.attach = opts.attach;
-        } else {
-          if (opts.image) config.image = opts.image;
-          if (opts.repo) config.repo = opts.repo;
-          if (opts.volume) config.volumes = opts.volume;
-          if (opts.gpu) config.gpus = opts.gpu === true ? "all" : opts.gpu;
-        }
-      }
-
-      // Resolve --github-account label to an account ID, if provided.
-      // The flag is only meaningful for adapters that use `gh` CLI (codespace/docker).
-      let githubAccountId = "";
-      if (opts.githubAccount) {
-        if (adapterType !== "codespace" && adapterType !== "docker") {
-          console.error(chalk.yellow(`Warning: --github-account has no effect for the "${adapterType}" adapter (only applies to codespace/docker)`));
-        } else {
-          const { accounts } = await client.listGitHubAccounts({});
-          const match = accounts.find(
-            (a) => a.id === opts.githubAccount || a.label.toLowerCase() === (opts.githubAccount ?? "").toLowerCase(),
-          );
-          if (!match) {
-            console.error(chalk.red(`GitHub account not found: ${opts.githubAccount}`));
+        } else if (opts.ssh) {
+          adapterType = "ssh";
+          if (!opts.host) {
+            console.error("Error: --ssh requires --host <host>");
             process.exit(1);
           }
-          githubAccountId = match.id;
+          config.host = opts.host;
+          if (opts.user) config.user = opts.user;
+          if (opts.sshPort) {
+            const port = parseInt(opts.sshPort, 10);
+            if (isNaN(port) || port < 1 || port > 65535) {
+              console.error("Error: --ssh-port must be a number between 1 and 65535");
+              process.exit(1);
+            }
+            config.sshPort = port;
+          }
+          if (opts.identityFile) config.identityFile = opts.identityFile;
+        } else {
+          if (opts.attach) {
+            // Attach mode: bootstrap PowerLine inside an existing container; Grackle
+            // never creates, stops, or removes it (issue #1223).
+            config.attach = opts.attach;
+          } else {
+            if (opts.image) config.image = opts.image;
+            if (opts.repo) config.repo = opts.repo;
+            if (opts.volume) config.volumes = opts.volume;
+            if (opts.gpu) config.gpus = opts.gpu === true ? "all" : opts.gpu;
+          }
         }
-      }
 
-      const env: { id: string; adapterType: string } = await client.addEnvironment({
-        displayName: name,
-        adapterType,
-        adapterConfig: JSON.stringify(config),
-        githubAccountId,
-      });
-      console.log(`Added environment: ${env.id} (${env.adapterType})`);
-    });
+        // Resolve --github-account label to an account ID, if provided.
+        // The flag is only meaningful for adapters that use `gh` CLI (codespace/docker).
+        let githubAccountId = "";
+        if (opts.githubAccount) {
+          if (adapterType !== "codespace" && adapterType !== "docker") {
+            console.error(
+              chalk.yellow(
+                `Warning: --github-account has no effect for the "${adapterType}" adapter (only applies to codespace/docker)`,
+              ),
+            );
+          } else {
+            const { accounts } = await client.listGitHubAccounts({});
+            const match = accounts.find(
+              (a) =>
+                a.id === opts.githubAccount ||
+                a.label.toLowerCase() === (opts.githubAccount ?? "").toLowerCase(),
+            );
+            if (!match) {
+              console.error(chalk.red(`GitHub account not found: ${opts.githubAccount}`));
+              process.exit(1);
+            }
+            githubAccountId = match.id;
+          }
+        }
+
+        const env: { id: string; adapterType: string } = await client.addEnvironment({
+          displayName: name,
+          adapterType,
+          adapterConfig: JSON.stringify(config),
+          githubAccountId,
+        });
+        console.log(`Added environment: ${env.id} (${env.adapterType})`);
+      },
+    );
 
   env
     .command("provision <id>")
@@ -172,8 +205,5 @@ export function registerEnvCommands(program: Command): void {
     }
   }
 
-  env
-    .command("wake <id>")
-    .description("Wake a sleeping environment")
-    .action(provisionAction);
+  env.command("wake <id>").description("Wake a sleeping environment").action(provisionAction);
 }

@@ -11,10 +11,18 @@ import {
 describe("ALL_MCP_TOOL_NAMES", () => {
   it("contains at least all tools from the known presets", () => {
     const union = new Set<string>();
-    for (const tool of DEFAULT_SCOPED_MCP_TOOLS) { union.add(tool); }
-    for (const tool of WORKER_MCP_TOOLS) { union.add(tool); }
-    for (const tool of ORCHESTRATOR_MCP_TOOLS) { union.add(tool); }
-    for (const tool of ADMIN_MCP_TOOLS) { union.add(tool); }
+    for (const tool of DEFAULT_SCOPED_MCP_TOOLS) {
+      union.add(tool);
+    }
+    for (const tool of WORKER_MCP_TOOLS) {
+      union.add(tool);
+    }
+    for (const tool of ORCHESTRATOR_MCP_TOOLS) {
+      union.add(tool);
+    }
+    for (const tool of ADMIN_MCP_TOOLS) {
+      union.add(tool);
+    }
 
     expect(ALL_MCP_TOOL_NAMES.size).toBeGreaterThanOrEqual(union.size);
     for (const tool of union) {
@@ -49,17 +57,40 @@ describe("ALL_MCP_TOOL_NAMES", () => {
 describe("DEFAULT_SCOPED_MCP_TOOLS", () => {
   it("contains the current default scoped tools", () => {
     expect([...DEFAULT_SCOPED_MCP_TOOLS].sort()).toEqual([
-      "component_list", "component_promote", "component_register", "component_render", "component_search", "component_show", "component_update",
-      "ipc_attach", "ipc_close", "ipc_create_stream", "ipc_list_fds", "ipc_share_stream", "ipc_spawn", "ipc_terminate", "ipc_write",
-      "knowledge_get_node", "knowledge_search",
+      "component_list",
+      "component_promote",
+      "component_register",
+      "component_render",
+      "component_search",
+      "component_show",
+      "component_update",
+      "ipc_attach",
+      "ipc_close",
+      "ipc_create_stream",
+      "ipc_list_fds",
+      "ipc_share_stream",
+      "ipc_spawn",
+      "ipc_terminate",
+      "ipc_write",
+      "knowledge_get_node",
+      "knowledge_search",
       "logs_get",
-      "persona_list", "persona_show",
-      "schedule_list", "schedule_show",
-      "session_attach", "session_send_input",
+      "persona_list",
+      "persona_show",
+      "schedule_list",
+      "schedule_show",
+      "session_attach",
+      "session_send_input",
       "show_hello_widget",
-      "task_complete", "task_create", "task_list", "task_search", "task_show", "task_start",
+      "task_complete",
+      "task_create",
+      "task_list",
+      "task_search",
+      "task_show",
+      "task_start",
       "widget_show",
-      "workpad_read", "workpad_write",
+      "workpad_read",
+      "workpad_write",
     ]);
   });
 
@@ -99,8 +130,12 @@ describe("ORCHESTRATOR_MCP_TOOLS", () => {
 
   it("includes additional management tools beyond default", () => {
     const extras = [
-      "task_update", "task_delete", "task_resume",
-      "session_spawn", "session_kill", "session_status",
+      "task_update",
+      "task_delete",
+      "task_resume",
+      "session_spawn",
+      "session_kill",
+      "session_status",
       "persona_create",
     ];
     for (const tool of extras) {
@@ -151,7 +186,10 @@ describe("escalate_to_human scoping", () => {
 describe("MCP_TOOL_PRESETS", () => {
   it("has the expected preset keys", () => {
     expect(Object.keys(MCP_TOOL_PRESETS).sort()).toEqual([
-      "admin", "default", "orchestrator", "worker",
+      "admin",
+      "default",
+      "orchestrator",
+      "worker",
     ]);
   });
 

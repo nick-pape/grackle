@@ -21,12 +21,12 @@ node dist/import-github-issues.js --workspace <id> --repo owner/repo --no-includ
 
 ## Options
 
-| Option | Description |
-|--------|-------------|
-| `--workspace <id>` | Grackle workspace ID (required) |
-| `--repo <owner/repo>` | GitHub repository (required) |
-| `--label <label>` | Filter issues by label |
-| `--state <state>` | Issue state: `open` (default) or `closed` |
+| Option                  | Description                                   |
+| ----------------------- | --------------------------------------------- |
+| `--workspace <id>`      | Grackle workspace ID (required)               |
+| `--repo <owner/repo>`   | GitHub repository (required)                  |
+| `--label <label>`       | Filter issues by label                        |
+| `--state <state>`       | Issue state: `open` (default) or `closed`     |
 | `--no-include-comments` | Exclude issue comments from task descriptions |
 
 ## Prerequisites

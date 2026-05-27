@@ -67,10 +67,10 @@ Once you find a relevant node, you can **expand** it to see connected nodes — 
 
 When the knowledge plugin is enabled, agents get two additional MCP tools (read-only):
 
-| Tool | Description |
-|------|------------|
-| `knowledge_search` | Search the graph by natural language query. Returns nodes ranked by semantic similarity. |
-| `knowledge_get_node` | Retrieve a specific node by ID, including its properties and relationships. |
+| Tool                 | Description                                                                              |
+| -------------------- | ---------------------------------------------------------------------------------------- |
+| `knowledge_search`   | Search the graph by natural language query. Returns nodes ranked by semantic similarity. |
+| `knowledge_get_node` | Retrieve a specific node by ID, including its properties and relationships.              |
 
 ### Example: agent workflow
 

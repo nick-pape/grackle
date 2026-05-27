@@ -25,7 +25,9 @@ async function waitForSessionStatus(
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  throw new Error(`Session ${sessionId} did not reach status "${targetStatus}" within ${timeoutMs}ms`);
+  throw new Error(
+    `Session ${sessionId} did not reach status "${targetStatus}" within ${timeoutMs}ms`,
+  );
 }
 
 /** Poll getSessionEvents until content matching pattern appears. */
@@ -51,7 +53,9 @@ async function waitForSessionText(
           if (raw.systemContext === true) {
             return false;
           }
-        } catch { /* not JSON */ }
+        } catch {
+          /* not JSON */
+        }
       }
       return true;
     });
@@ -60,7 +64,9 @@ async function waitForSessionText(
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  throw new Error(`Session ${sessionId} did not emit text matching "${pattern}" within ${timeoutMs}ms`);
+  throw new Error(
+    `Session ${sessionId} did not emit text matching "${pattern}" within ${timeoutMs}ms`,
+  );
 }
 
 /** Poll getSessionFds until a fd with the given streamName appears. */
@@ -69,12 +75,12 @@ async function waitForStreamFd(
   sessionId: string,
   streamName: string,
   timeoutMs: number = 20_000,
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const resp = await client.core.getSessionFds({ id: sessionId }) as any;
+    const resp = (await client.core.getSessionFds({ id: sessionId })) as any;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const fd = (resp.fds || []).find((f: any) => f.streamName === streamName);
     if (fd) {
@@ -82,7 +88,9 @@ async function waitForStreamFd(
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  throw new Error(`Session ${sessionId} did not get a fd for stream "${streamName}" within ${timeoutMs}ms`);
+  throw new Error(
+    `Session ${sessionId} did not get a fd for stream "${streamName}" within ${timeoutMs}ms`,
+  );
 }
 
 test.describe("ipc_share_stream", () => {
@@ -147,7 +155,9 @@ test.describe("ipc_share_stream", () => {
     // Cleanup — parent may already be stopped (scenario ended after echoing the pipe message).
     try {
       await client.core.killAgent({ id: parentSessionId });
-    } catch { /* already stopped */ }
+    } catch {
+      /* already stopped */
+    }
     await waitForSessionStatus(client, parentSessionId, "stopped");
   });
 });

@@ -8,7 +8,13 @@
  */
 
 import { useState, useCallback, useRef } from "react";
-import type { GrackleEvent, GraphNode, GraphLink, NodeDetail, UseKnowledgeResult } from "@grackle-ai/web-components";
+import type {
+  GrackleEvent,
+  GraphNode,
+  GraphLink,
+  NodeDetail,
+  UseKnowledgeResult,
+} from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
 import { knowledgeClient as grackleClient } from "./useGrackleClient.js";
 import { protoToGraphNode, protoToGraphLink } from "./proto-converters.js";
@@ -17,7 +23,12 @@ import { protoToGraphNode, protoToGraphLink } from "./proto-converters.js";
 // Types (re-exported from shared types module)
 // ---------------------------------------------------------------------------
 
-export type { GraphNode, GraphLink, NodeDetail, UseKnowledgeResult } from "@grackle-ai/web-components";
+export type {
+  GraphNode,
+  GraphLink,
+  NodeDetail,
+  UseKnowledgeResult,
+} from "@grackle-ai/web-components";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -74,9 +85,13 @@ export function useKnowledge(): UseKnowledgeResult {
       // Update edge counts
       for (const link of linkList) {
         const src = nodeMap.get(link.source);
-        if (src) { src.val += 1; }
+        if (src) {
+          src.val += 1;
+        }
         const tgt = nodeMap.get(link.target);
-        if (tgt) { tgt.val += 1; }
+        if (tgt) {
+          tgt.val += 1;
+        }
       }
 
       setNodes(nodeMap);
@@ -97,7 +112,11 @@ export function useKnowledge(): UseKnowledgeResult {
     setSelectedNode(undefined);
     setLoading(true);
     try {
-      const resp = await grackleClient.searchKnowledge({ query, limit: 20, workspaceId: workspaceIdRef.current });
+      const resp = await grackleClient.searchKnowledge({
+        query,
+        limit: 20,
+        workspaceId: workspaceIdRef.current,
+      });
       const nodeMap = new Map<string, GraphNode>();
       const linkList: GraphLink[] = [];
 

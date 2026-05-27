@@ -35,9 +35,9 @@ describe("get_version_status", () => {
 
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
-      getVersionStatus: vi.fn().mockRejectedValue(
-        new ConnectError("unavailable", Code.Unavailable),
-      ),
+      getVersionStatus: vi
+        .fn()
+        .mockRejectedValue(new ConnectError("unavailable", Code.Unavailable)),
     } as unknown as GrackleClient;
 
     const result = await tool.handler({}, { core: mockClient });

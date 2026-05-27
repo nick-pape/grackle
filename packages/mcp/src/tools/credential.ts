@@ -1,7 +1,4 @@
-import {
-  claudeProviderModeToString,
-  providerToggleToString,
-} from "@grackle-ai/common";
+import { claudeProviderModeToString, providerToggleToString } from "@grackle-ai/common";
 import { z } from "zod";
 import type { GrackleClients, ToolDefinition } from "../tool-registry.js";
 import { jsonResult } from "../result-helpers.js";
@@ -27,7 +24,8 @@ export const credentialTools: ToolDefinition[] = [
   {
     name: "credential_provider_list",
     group: "credential",
-    description: "List current credential provider configuration showing which providers are enabled for auto-forwarding.",
+    description:
+      "List current credential provider configuration showing which providers are enabled for auto-forwarding.",
     inputSchema: z.object({}),
     rpcMethod: "getCredentialProviders",
     mutating: false,
@@ -49,10 +47,15 @@ export const credentialTools: ToolDefinition[] = [
   {
     name: "credential_provider_set",
     group: "credential",
-    description: "Set a credential provider mode. Provider must be one of: claude, github, copilot, codex. Claude accepts: off, subscription, api_key. Others accept: off, on.",
+    description:
+      "Set a credential provider mode. Provider must be one of: claude, github, copilot, codex. Claude accepts: off, subscription, api_key. Others accept: off, on.",
     inputSchema: z.object({
-      provider: z.enum(["claude", "github", "copilot", "codex"]).describe("The credential provider to configure"),
-      value: z.enum(["off", "on", "subscription", "api_key"]).describe("The mode to set (claude: off/subscription/api_key, others: off/on)"),
+      provider: z
+        .enum(["claude", "github", "copilot", "codex"])
+        .describe("The credential provider to configure"),
+      value: z
+        .enum(["off", "on", "subscription", "api_key"])
+        .describe("The mode to set (claude: off/subscription/api_key, others: off/on)"),
     }),
     rpcMethod: "setCredentialProvider",
     mutating: true,

@@ -17,7 +17,9 @@ export const SearchInProgress: Story = {
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("tool-card-knowledge")).toBeInTheDocument();
-    await expect(canvas.getByTestId("tool-card-knowledge-query")).toHaveTextContent("authentication");
+    await expect(canvas.getByTestId("tool-card-knowledge-query")).toHaveTextContent(
+      "authentication",
+    );
   },
 };
 

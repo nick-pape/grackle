@@ -24,10 +24,7 @@ export async function assertCallerIsAncestor(
   const callerTaskId = authContext.taskId;
 
   if (targetTaskId === callerTaskId) {
-    throw new ConnectError(
-      "Cannot operate on your own task",
-      Code.PermissionDenied,
-    );
+    throw new ConnectError("Cannot operate on your own task", Code.PermissionDenied);
   }
 
   let currentId = targetTaskId;

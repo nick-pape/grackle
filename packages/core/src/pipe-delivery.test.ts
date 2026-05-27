@@ -88,8 +88,26 @@ describe("pipe-delivery integration", () => {
   describe("async pipe: child completion delivers to parent", () => {
     it("calls sendInput on parent with rich message content", async () => {
       // Create parent + child sessions
-      sessionStore.createSession("parent", "test-env", "claude-code", "parent prompt", "sonnet", "/tmp/parent");
-      sessionStore.createSession("child", "test-env", "claude-code", "child prompt", "sonnet", "/tmp/child", "", "", "parent", "async");
+      sessionStore.createSession(
+        "parent",
+        "test-env",
+        "claude-code",
+        "parent prompt",
+        "sonnet",
+        "/tmp/parent",
+      );
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "child prompt",
+        "sonnet",
+        "/tmp/child",
+        "",
+        "",
+        "parent",
+        "async",
+      );
 
       // Set up pipe stream (mimics spawnAgent)
       const stream = streamRegistry.createStream("pipe:child");
@@ -114,7 +132,18 @@ describe("pipe-delivery integration", () => {
   describe("async pipe: stream cleanup", () => {
     it("deletes stream after successful delivery", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "async",
+      );
 
       const stream = streamRegistry.createStream("pipe:child");
       streamRegistry.subscribe(stream.id, "parent", "rw", "async", true);
@@ -129,14 +158,27 @@ describe("pipe-delivery integration", () => {
 
     it("keeps stream when delivery fails (listener throws)", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "async",
+      );
 
       const stream = streamRegistry.createStream("pipe:child");
       streamRegistry.subscribe(stream.id, "parent", "rw", "async", true);
       streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
 
       // Mock: parent env not connected → listener throws
-      vi.spyOn(adapterManager, "getConnection").mockReturnValue(undefined as unknown as ReturnType<typeof adapterManager.getConnection>);
+      vi.spyOn(adapterManager, "getConnection").mockReturnValue(
+        undefined as unknown as ReturnType<typeof adapterManager.getConnection>,
+      );
       pipeDelivery.setupAsyncPipeDelivery("parent");
 
       await pipeDelivery.publishChildCompletion("child", "completed");
@@ -151,7 +193,18 @@ describe("pipe-delivery integration", () => {
   describe("parent→child delivery via ensureAsyncDeliveryListener", () => {
     it("delivers parent write to child via async listener", () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "async",
+      );
 
       const stream = streamRegistry.createStream("pipe:child");
       streamRegistry.subscribe(stream.id, "parent", "rw", "async", true);
@@ -173,7 +226,18 @@ describe("pipe-delivery integration", () => {
 
     it("delivers child publish to parent via async listener", () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "async",
+      );
 
       const stream = streamRegistry.createStream("pipe:child");
       streamRegistry.subscribe(stream.id, "parent", "rw", "async", true);
@@ -198,7 +262,18 @@ describe("pipe-delivery integration", () => {
   describe("selfEcho stream: self-echo does not trigger sendInput for sender", () => {
     it("delivers to non-sender but NOT to sender on selfEcho stream (#1184)", () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "async",
+      );
 
       // selfEcho=true: chatroom mode where the sender would see its own messages
       const stream = streamRegistry.createStream("chat:room", true);
@@ -224,7 +299,18 @@ describe("pipe-delivery integration", () => {
   describe("sync pipe: child completion unblocks consumeSync", () => {
     it("resolves consumeSync with completion message", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "sync",
+      );
 
       const stream = streamRegistry.createStream("pipe:child");
       const parentSub = streamRegistry.subscribe(stream.id, "parent", "rw", "sync", true);
@@ -243,7 +329,18 @@ describe("pipe-delivery integration", () => {
 
     it("does NOT clean up stream (waitForPipe handles that)", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "sync",
+      );
 
       const stream = streamRegistry.createStream("pipe:child");
       streamRegistry.subscribe(stream.id, "parent", "rw", "sync", true);
@@ -261,7 +358,18 @@ describe("pipe-delivery integration", () => {
   describe("sync pipe: waiting_input triggers delivery", () => {
     it("unblocks consumeSync with idle completion message", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "sync",
+      );
 
       const stream = streamRegistry.createStream("pipe:child");
       const parentSub = streamRegistry.subscribe(stream.id, "parent", "rw", "sync", true);
@@ -280,7 +388,18 @@ describe("pipe-delivery integration", () => {
 
     it("does NOT clean up stream (waitForPipe handles that)", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "sync",
+      );
 
       const stream = streamRegistry.createStream("pipe:child");
       streamRegistry.subscribe(stream.id, "parent", "rw", "sync", true);
@@ -296,7 +415,18 @@ describe("pipe-delivery integration", () => {
   describe("async pipe: waiting_input is a no-op", () => {
     it("does not deliver or clean up on waiting_input", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "async",
+      );
 
       const stream = streamRegistry.createStream("pipe:child");
       streamRegistry.subscribe(stream.id, "parent", "rw", "async", true);
@@ -316,7 +446,18 @@ describe("pipe-delivery integration", () => {
   describe("cleanupSyncPipeAndLifecycle", () => {
     it("deletes both pipe and lifecycle streams", () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "sync",
+      );
 
       // Create both streams (mimics spawnAgent)
       const lifecycleStream = streamRegistry.createStream("lifecycle:child");
@@ -335,7 +476,18 @@ describe("pipe-delivery integration", () => {
 
     it("handles missing lifecycle stream gracefully", () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "sync",
+      );
 
       // Only pipe stream, no lifecycle stream
       const pipeStream = streamRegistry.createStream("pipe:child");
@@ -355,7 +507,18 @@ describe("pipe-delivery integration", () => {
 
     it("cleans up lifecycle stream even when pipe stream is already gone", () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "sync",
+      );
 
       // Create both streams
       const lifecycleStream = streamRegistry.createStream("lifecycle:child");
@@ -382,7 +545,18 @@ describe("pipe-delivery integration", () => {
   describe("no-op cases", () => {
     it("does nothing for detach pipe even with stream set up", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "detach");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "detach",
+      );
 
       // Set up stream + listener (to prove publishChildCompletion doesn't use them)
       const stream = streamRegistry.createStream("pipe:child");
@@ -425,7 +599,18 @@ describe("pipe-delivery integration", () => {
   describe("async pipe: post-dispatch gRPC failure tracking", () => {
     it("leaves message undelivered and keeps stream when sendInput rejects", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "async",
+      );
 
       const stream = streamRegistry.createStream("pipe:child");
       const parentSub = streamRegistry.subscribe(stream.id, "parent", "rw", "async", true);
@@ -446,7 +631,18 @@ describe("pipe-delivery integration", () => {
 
     it("marks message delivered and cleans up stream when sendInput resolves", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "async",
+      );
 
       const stream = streamRegistry.createStream("pipe:child");
       const parentSub = streamRegistry.subscribe(stream.id, "parent", "rw", "async", true);
@@ -471,7 +667,18 @@ describe("pipe-delivery integration", () => {
   describe("ensurePipeStream", () => {
     it("creates stream and subscriptions when none exist", () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "async",
+      );
 
       pipeDelivery.ensurePipeStream("child", "parent");
 
@@ -484,7 +691,18 @@ describe("pipe-delivery integration", () => {
 
     it("is idempotent when stream already exists — does not create duplicate streams", () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "async",
+      );
 
       // Pre-create the stream (simulates server staying up during suspend)
       const existing = streamRegistry.createStream("pipe:child");
@@ -502,7 +720,18 @@ describe("pipe-delivery integration", () => {
 
     it("registers async delivery listeners for both parent and child", () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "async",
+      );
 
       const spy = vi.spyOn(streamRegistry, "registerAsyncListener");
 
@@ -516,7 +745,18 @@ describe("pipe-delivery integration", () => {
 
     it("replays buffered undelivered messages after listener re-registration", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "async",
+      );
 
       // Simulate: stream exists, message was published while env was offline (no listener → undelivered)
       const stream = streamRegistry.createStream("pipe:child");
@@ -531,7 +771,9 @@ describe("pipe-delivery integration", () => {
 
       // Wait deterministically for the async replay delivery to settle
       await vi.waitFor(() => {
-        const calls = mockSendInput.mock.calls.map((c: unknown[]) => c[0] as { sessionId: string; text: string });
+        const calls = mockSendInput.mock.calls.map(
+          (c: unknown[]) => c[0] as { sessionId: string; text: string },
+        );
         const parentCall = calls.find((c) => c.sessionId === "parent");
         expect(parentCall).toBeDefined();
         expect(parentCall!.text).toContain("Buffered message from offline window");
@@ -540,7 +782,18 @@ describe("pipe-delivery integration", () => {
 
     it("calling ensurePipeStream twice while first replay is still in-flight does not duplicate delivery", () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "async",
+      );
 
       // Publish a message with no listener → stays undelivered
       const stream = streamRegistry.createStream("pipe:child");
@@ -566,7 +819,18 @@ describe("pipe-delivery integration", () => {
   describe("promoted sync pipe: publishChildCompletion cleanup", () => {
     it("cleans up promoted sync pipe after delivery (stream uses async subs)", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "sync",
+      );
 
       // Simulate post-reanimate state: DB says "sync" but stream has async subscriptions
       const stream = streamRegistry.createStream("pipe:child");
@@ -582,7 +846,18 @@ describe("pipe-delivery integration", () => {
 
     it("does NOT clean up non-promoted sync pipe (sync parent subscription)", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "sync",
+      );
 
       // Original (non-promoted) sync pipe: parent sub uses sync delivery mode
       const stream = streamRegistry.createStream("pipe:child");
@@ -597,7 +872,18 @@ describe("pipe-delivery integration", () => {
 
     it("cleans up lifecycle stream on terminal status for promoted sync pipe", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "sync",
+      );
 
       // Create lifecycle stream (would normally be cleaned by waitForPipe)
       const lifecycleStream = streamRegistry.createStream("lifecycle:child");
@@ -618,7 +904,18 @@ describe("pipe-delivery integration", () => {
 
     it("cleans up lifecycle stream on waiting_input for promoted sync pipe", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "sync",
+      );
 
       // Create lifecycle stream (would normally be cleaned by waitForPipe)
       const lifecycleStream = streamRegistry.createStream("lifecycle:child");
@@ -643,7 +940,18 @@ describe("pipe-delivery integration", () => {
   describe("setupAsyncPipeDelivery idempotency", () => {
     it("only calls registerAsyncListener once when invoked twice", async () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+      sessionStore.createSession(
+        "child",
+        "test-env",
+        "claude-code",
+        "c",
+        "sonnet",
+        "/tmp/c",
+        "",
+        "",
+        "parent",
+        "async",
+      );
 
       const stream = streamRegistry.createStream("pipe:child");
       streamRegistry.subscribe(stream.id, "parent", "rw", "async", true);

@@ -1,2 +1,18 @@
-# Ensure shell scripts keep LF line endings (critical for Docker)
+# Default: let Git auto-detect text vs binary, but normalize to LF on commit
+# and check out as LF (matches Prettier's `endOfLine: "lf"` setting; prevents
+# CRLF round-trip loops on Windows).
+* text=auto eol=lf
+
+# Shell scripts must stay LF (critical for Docker).
 *.sh text eol=lf
+
+# Explicitly mark common binary types so Git never tries to normalize them.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.tar binary

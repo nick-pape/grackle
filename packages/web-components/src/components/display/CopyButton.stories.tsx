@@ -62,7 +62,9 @@ export const CheckmarkReverts: Story = {
     await userEvent.click(button);
     await waitFor(() => expect(button).toHaveAttribute("aria-label", "Copied"));
     // Wait for the checkmark to revert after COPIED_FEEDBACK_DURATION (2s)
-    await waitFor(() => expect(button).toHaveAttribute("aria-label", "Copy to clipboard"), { timeout: 3000 });
+    await waitFor(() => expect(button).toHaveAttribute("aria-label", "Copy to clipboard"), {
+      timeout: 3000,
+    });
   },
 };
 

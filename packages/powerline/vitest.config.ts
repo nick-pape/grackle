@@ -1,10 +1,3 @@
-import { defineConfig } from "vitest/config";
+import { createVitestConfig } from "@grackle-ai/heft-rig/vitest-base.mjs";
 
-export default defineConfig({
-  test: {
-    include: ["src/**/*.test.ts"],
-    environment: "node",
-    testTimeout: 10_000,
-    isolate: true,
-  },
-});
+export default createVitestConfig();

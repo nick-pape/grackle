@@ -1,7 +1,9 @@
 import { test, expect } from "./fixtures.js";
 
 test.describe("Coordination tab", { tag: ["@session"] }, () => {
-  test("nav shows Root + Coordination, and Coordination opens the inventory", async ({ appPage }) => {
+  test("nav shows Root + Coordination, and Coordination opens the inventory", async ({
+    appPage,
+  }) => {
     const page = appPage;
 
     // Both halves of the split are present in the nav.

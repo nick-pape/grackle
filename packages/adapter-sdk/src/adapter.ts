@@ -34,9 +34,17 @@ export interface EnvironmentAdapter {
   type: string;
 
   /** Provision infrastructure and yield progress events. */
-  provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
+  provision(
+    environmentId: string,
+    config: Record<string, unknown>,
+    powerlineToken: string,
+  ): AsyncGenerator<ProvisionEvent>;
   /** Establish a gRPC connection to the PowerLine running in the environment. */
-  connect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection>;
+  connect(
+    environmentId: string,
+    config: Record<string, unknown>,
+    powerlineToken: string,
+  ): Promise<PowerLineConnection>;
   /** Release resources associated with a connection without stopping the environment. */
   disconnect(environmentId: string): Promise<void>;
   /** Stop the environment's underlying compute (e.g. stop a Docker container). */
@@ -46,7 +54,11 @@ export interface EnvironmentAdapter {
   /** Return true if the PowerLine is reachable via ping. */
   healthCheck(connection: PowerLineConnection): Promise<boolean>;
   /** Attempt fast reconnect without re-bootstrapping. Throws if PowerLine cannot be restarted. */
-  reconnect?(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
+  reconnect?(
+    environmentId: string,
+    config: Record<string, unknown>,
+    powerlineToken: string,
+  ): AsyncGenerator<ProvisionEvent>;
 }
 
 /**

@@ -17,7 +17,9 @@ export const CreateInProgress: Story = {
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("tool-card-task")).toBeInTheDocument();
-    await expect(canvas.getByTestId("tool-card-task-title")).toHaveTextContent("Fix authentication bug");
+    await expect(canvas.getByTestId("tool-card-task-title")).toHaveTextContent(
+      "Fix authentication bug",
+    );
   },
 };
 
@@ -98,9 +100,7 @@ export const CopilotFormat: Story = {
   args: {
     tool: "grackle-task_list",
     args: {},
-    result: JSON.stringify([
-      { id: "t1", title: "Test task", status: "working" },
-    ]),
+    result: JSON.stringify([{ id: "t1", title: "Test task", status: "working" }]),
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("tool-card-task")).toBeInTheDocument();

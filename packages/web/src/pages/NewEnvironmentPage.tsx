@@ -6,7 +6,14 @@ import { EnvironmentEditPanel, useToast } from "@grackle-ai/web-components";
 export function NewEnvironmentPage(): JSX.Element {
   const {
     environments: { environments, addEnvironment, updateEnvironment },
-    codespaces: { codespaces, codespaceError, codespaceListError, codespaceCreating, listCodespaces, createCodespace },
+    codespaces: {
+      codespaces,
+      codespaceError,
+      codespaceListError,
+      codespaceCreating,
+      listCodespaces,
+      createCodespace,
+    },
     dockerContainers: { dockerContainers, dockerContainersError, listDockerContainers },
     githubAccounts: { githubAccounts },
   } = useGrackle();
@@ -17,15 +24,25 @@ export function NewEnvironmentPage(): JSX.Element {
       mode="new"
       environments={environments}
       githubAccounts={githubAccounts}
-      onAddEnvironment={(name, type, cfg, accountId) => { addEnvironment(name, type, cfg, accountId).catch(() => {}); }}
-      onUpdateEnvironment={(eid, fields) => { updateEnvironment(eid, fields).catch(() => {}); }}
-      onListCodespaces={(accountId) => { listCodespaces(accountId).catch(() => {}); }}
+      onAddEnvironment={(name, type, cfg, accountId) => {
+        addEnvironment(name, type, cfg, accountId).catch(() => {});
+      }}
+      onUpdateEnvironment={(eid, fields) => {
+        updateEnvironment(eid, fields).catch(() => {});
+      }}
+      onListCodespaces={(accountId) => {
+        listCodespaces(accountId).catch(() => {});
+      }}
       codespaces={codespaces}
       codespaceError={codespaceError}
       codespaceListError={codespaceListError}
       codespaceCreating={codespaceCreating}
-      onCreateCodespace={(repo, machine) => { createCodespace(repo, machine).catch(() => {}); }}
-      onListDockerContainers={() => { listDockerContainers().catch(() => {}); }}
+      onCreateCodespace={(repo, machine) => {
+        createCodespace(repo, machine).catch(() => {});
+      }}
+      onListDockerContainers={() => {
+        listDockerContainers().catch(() => {});
+      }}
       dockerContainers={dockerContainers}
       dockerContainersError={dockerContainersError}
       onShowToast={showToast}

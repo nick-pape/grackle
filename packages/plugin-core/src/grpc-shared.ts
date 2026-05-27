@@ -22,9 +22,16 @@ import { transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
 import type { SessionRow } from "@grackle-ai/database";
 import { sessionStore, taskStore } from "@grackle-ai/database";
 import {
-  adapterManager, streamHub, streamRegistry,
-  cleanupLifecycleStream, logger, emit,
-  toDialableHost, validatePipeInputs, resolveAncestorEnvironmentId, VALID_PIPE_MODES,
+  adapterManager,
+  streamHub,
+  streamRegistry,
+  cleanupLifecycleStream,
+  logger,
+  emit,
+  toDialableHost,
+  validatePipeInputs,
+  resolveAncestorEnvironmentId,
+  VALID_PIPE_MODES,
 } from "@grackle-ai/core";
 
 // Re-export shared utilities from core so existing consumers don't break.
@@ -39,7 +46,13 @@ export { toDialableHost, validatePipeInputs, resolveAncestorEnvironmentId, VALID
  */
 export function killSessionAndCleanup(session: SessionRow): void {
   if (!TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
-    sessionStore.updateSession(session.id, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.KILLED);
+    sessionStore.updateSession(
+      session.id,
+      SESSION_STATUS.STOPPED,
+      undefined,
+      undefined,
+      END_REASON.KILLED,
+    );
     streamHub.publish(
       create(grackle.SessionEventSchema, {
         sessionId: session.id,
@@ -62,11 +75,14 @@ export function killSessionAndCleanup(session: SessionRow): void {
   // after subscription cleanup — this ensures immediate process termination.
   const conn = adapterManager.getConnection(session.environmentId);
   if (conn) {
-    conn.client.kill(
-      create(powerline.KillRequestSchema, { id: session.id, reason: END_REASON.KILLED }),
-    ).catch((err: unknown) => {
-      logger.debug({ err, sessionId: session.id }, "PowerLine kill failed (process may have already exited)");
-    });
+    conn.client
+      .kill(create(powerline.KillRequestSchema, { id: session.id, reason: END_REASON.KILLED }))
+      .catch((err: unknown) => {
+        logger.debug(
+          { err, sessionId: session.id },
+          "PowerLine kill failed (process may have already exited)",
+        );
+      });
   }
 
   // Transfer ALL pipe fds to grandparent BEFORE cleaning up subscriptions.

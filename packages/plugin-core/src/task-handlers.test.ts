@@ -12,7 +12,7 @@ vi.mock("@grackle-ai/database", async () => {
 // ── Mock @grackle-ai/core ────────────────────────────────────────────
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {
-  const actual = await importOriginal() as Record<string, unknown>;
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -77,7 +77,7 @@ vi.mock("@grackle-ai/prompt", () => ({
 }));
 
 vi.mock("node:path", async () => {
-  const actual = await vi.importActual("node:path") as Record<string, unknown>;
+  const actual = (await vi.importActual("node:path")) as Record<string, unknown>;
   return { ...actual, join: (...parts: string[]) => parts.join("/") };
 });
 
@@ -157,18 +157,22 @@ describe("startTask environment resolution", () => {
     vi.mocked(taskStore.areDependenciesMet).mockReturnValue(true);
     vi.mocked(sessionStore.listSessionsForTask).mockReturnValue([]);
     vi.mocked(workspaceStore.getWorkspace).mockReturnValue(makeWorkspaceRow() as never);
-    vi.mocked(workspaceEnvironmentLinkStore.getLinkedEnvironmentIds).mockReturnValue(["env-linked-1"]);
+    vi.mocked(workspaceEnvironmentLinkStore.getLinkedEnvironmentIds).mockReturnValue([
+      "env-linked-1",
+    ]);
   });
 
   it("throws FailedPrecondition when workspace has no linked envs", async () => {
     vi.mocked(workspaceEnvironmentLinkStore.getLinkedEnvironmentIds).mockReturnValue([]);
 
-    const err = await handlers.startTask({
-      taskId: "task-1",
-      personaId: "",
-      environmentId: "",
-      notes: "",
-    }).catch((e: unknown) => e) as ConnectError;
+    const err = (await handlers
+      .startTask({
+        taskId: "task-1",
+        personaId: "",
+        environmentId: "",
+        notes: "",
+      })
+      .catch((e: unknown) => e)) as ConnectError;
 
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
@@ -176,17 +180,17 @@ describe("startTask environment resolution", () => {
   });
 
   it("throws FailedPrecondition when task has no workspace and no env passed", async () => {
-    vi.mocked(taskStore.getTask).mockReturnValue(
-      makeTaskRow({ workspaceId: null }) as never,
-    );
+    vi.mocked(taskStore.getTask).mockReturnValue(makeTaskRow({ workspaceId: null }) as never);
     vi.mocked(workspaceEnvironmentLinkStore.getLinkedEnvironmentIds).mockReturnValue([]);
 
-    const err = await handlers.startTask({
-      taskId: "task-1",
-      personaId: "",
-      environmentId: "",
-      notes: "",
-    }).catch((e: unknown) => e) as ConnectError;
+    const err = (await handlers
+      .startTask({
+        taskId: "task-1",
+        personaId: "",
+        environmentId: "",
+        notes: "",
+      })
+      .catch((e: unknown) => e)) as ConnectError;
 
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);

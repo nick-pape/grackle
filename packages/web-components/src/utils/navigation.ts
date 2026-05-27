@@ -45,7 +45,12 @@ export function workspaceUrl(workspaceId: string, environmentId?: string): strin
 }
 
 /** Build URL for a task detail page, optionally targeting a specific tab and workspace/environment scope. */
-export function taskUrl(taskId: string, tab?: "stream", workspaceId?: string, environmentId?: string): string {
+export function taskUrl(
+  taskId: string,
+  tab?: "stream",
+  workspaceId?: string,
+  environmentId?: string,
+): string {
   const encodedTaskId = encodeURIComponent(taskId);
   let base: string;
   if (workspaceId && environmentId) {
@@ -75,7 +80,11 @@ export function taskEditUrl(taskId: string, workspaceId?: string, environmentId?
 }
 
 /** Build URL for the new task form. */
-export function newTaskUrl(workspaceId?: string, parentTaskId?: string, environmentId?: string): string {
+export function newTaskUrl(
+  workspaceId?: string,
+  parentTaskId?: string,
+  environmentId?: string,
+): string {
   const params = new URLSearchParams();
   if (workspaceId) {
     params.set("workspace", workspaceId);
@@ -179,7 +188,6 @@ export const NEW_WORKSPACE_URL: string = "/workspaces/new";
 
 /** URL for the knowledge graph explorer page. */
 export const KNOWLEDGE_URL: string = "/knowledge";
-
 
 /** Build URL for the root-task chat page. */
 export function chatUrl(): string {

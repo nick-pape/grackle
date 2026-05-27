@@ -55,10 +55,7 @@ export default defineConfig({
       fileName: "index",
     },
     rollupOptions: {
-      external: [
-        "react", "react-dom", "react-router", "react/jsx-runtime",
-        /^@grackle-ai\//,
-      ],
+      external: ["react", "react-dom", "react-router", "react/jsx-runtime", /^@grackle-ai\//],
     },
   },
 });

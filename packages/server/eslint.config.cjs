@@ -12,16 +12,12 @@ module.exports = [
       "no-restricted-syntax": [
         "warn",
         {
-          selector:
-            "MemberExpression[object.object.name='process'][object.property.name='env']",
-          message:
-            "Use ServerConfig from ./config.ts instead of reading process.env directly.",
+          selector: "MemberExpression[object.object.name='process'][object.property.name='env']",
+          message: "Use ServerConfig from ./config.ts instead of reading process.env directly.",
         },
         {
-          selector:
-            "MemberExpression[object.name='process'][property.name='env']",
-          message:
-            "Use ServerConfig from ./config.ts instead of reading process.env directly.",
+          selector: "MemberExpression[object.name='process'][property.name='env']",
+          message: "Use ServerConfig from ./config.ts instead of reading process.env directly.",
         },
       ],
     },

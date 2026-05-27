@@ -90,12 +90,9 @@ export function openNeo4j(config?: Neo4jClientConfig): Promise<void> {
  * with a shared promise.
  */
 async function doOpen(config?: Neo4jClientConfig): Promise<void> {
-  const url =
-    process.env.GRACKLE_NEO4J_URL || config?.url || DEFAULT_NEO4J_URL;
-  const username =
-    process.env.GRACKLE_NEO4J_USER || config?.username || DEFAULT_NEO4J_USER;
-  const explicitPassword =
-    process.env.GRACKLE_NEO4J_PASSWORD || config?.password;
+  const url = process.env.GRACKLE_NEO4J_URL || config?.url || DEFAULT_NEO4J_URL;
+  const username = process.env.GRACKLE_NEO4J_USER || config?.username || DEFAULT_NEO4J_USER;
+  const explicitPassword = process.env.GRACKLE_NEO4J_PASSWORD || config?.password;
   if (!explicitPassword && process.env.NODE_ENV === "production") {
     throw new Error(
       "GRACKLE_NEO4J_PASSWORD must be set in production. " +
@@ -103,10 +100,7 @@ async function doOpen(config?: Neo4jClientConfig): Promise<void> {
     );
   }
   const password = explicitPassword || DEFAULT_NEO4J_PASSWORD;
-  databaseName =
-    process.env.GRACKLE_NEO4J_DATABASE ||
-    config?.database ||
-    DEFAULT_NEO4J_DATABASE;
+  databaseName = process.env.GRACKLE_NEO4J_DATABASE || config?.database || DEFAULT_NEO4J_DATABASE;
 
   logger.info({ url, database: databaseName }, "Connecting to Neo4j");
 

@@ -1,18 +1,29 @@
 import {
-  listConnections, removeConnection,
-  startTaskSession, emit, logger,
-  hasCapacity, computeTaskStatus,
-  resolveDispatchEnvironment, resolveAncestorEnvironmentId, findFirstConnectedEnvironment,
+  listConnections,
+  removeConnection,
+  startTaskSession,
+  emit,
+  logger,
+  hasCapacity,
+  computeTaskStatus,
+  resolveDispatchEnvironment,
+  resolveAncestorEnvironmentId,
+  findFirstConnectedEnvironment,
 } from "@grackle-ai/core";
 import type { ReconciliationPhase } from "@grackle-ai/core";
 import {
-  createDispatchPhase, lifecycleCleanupPhase,
+  createDispatchPhase,
+  lifecycleCleanupPhase,
   createEnvironmentReconciliationPhase,
 } from "@grackle-ai/plugin-core";
 import { TASK_STATUS, ROOT_TASK_ID } from "@grackle-ai/common";
 import {
-  taskStore, envRegistry,
-  sessionStore, settingsStore, dispatchQueueStore, workspaceEnvironmentLinkStore,
+  taskStore,
+  envRegistry,
+  sessionStore,
+  settingsStore,
+  dispatchQueueStore,
+  workspaceEnvironmentLinkStore,
 } from "@grackle-ai/database";
 
 /**
@@ -38,11 +49,12 @@ export function createCoreReconciliationPhases(): ReconciliationPhase[] {
     listPendingEntries: dispatchQueueStore.listPending,
     dequeueEntry: dispatchQueueStore.dequeue,
     getTask: taskStore.getTask,
-    hasCapacity: (environmentId: string): boolean => hasCapacity(environmentId, {
-      countActiveForEnvironment: sessionStore.countActiveForEnvironment,
-      getEnvironment: (id) => envRegistry.getEnvironment(id),
-      getSetting: settingsStore.getSetting,
-    }),
+    hasCapacity: (environmentId: string): boolean =>
+      hasCapacity(environmentId, {
+        countActiveForEnvironment: sessionStore.countActiveForEnvironment,
+        getEnvironment: (id) => envRegistry.getEnvironment(id),
+        getSetting: settingsStore.getSetting,
+      }),
     environmentExists: (id: string): boolean => envRegistry.getEnvironment(id) !== undefined,
     isTaskEligible: (taskId: string): boolean => {
       if (!taskStore.areDependenciesMet(taskId)) {
@@ -76,13 +88,20 @@ export function createCoreReconciliationPhases(): ReconciliationPhase[] {
         findFirstConnectedEnvironment,
       });
       if (resolved) {
-        logger.debug({ workspaceId: task.workspaceId, environmentId: resolved }, "Dispatch resolved environment");
+        logger.debug(
+          { workspaceId: task.workspaceId, environmentId: resolved },
+          "Dispatch resolved environment",
+        );
       }
       return resolved;
     },
   });
 
-  const phases: ReconciliationPhase[] = [dispatchPhase, lifecycleCleanupPhase, environmentReconciliationPhase];
+  const phases: ReconciliationPhase[] = [
+    dispatchPhase,
+    lifecycleCleanupPhase,
+    environmentReconciliationPhase,
+  ];
 
   return phases;
 }

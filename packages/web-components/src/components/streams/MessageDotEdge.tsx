@@ -19,8 +19,26 @@ const DOT_RADIUS: number = 3;
  * once the traversal completes.
  */
 export function MessageDotEdge(props: EdgeProps): JSX.Element {
-  const { sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, markerStart, markerEnd, style, data } = props;
-  const [edgePath] = getSmoothStepPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition });
+  const {
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
+    markerStart,
+    markerEnd,
+    style,
+    data,
+  } = props;
+  const [edgePath] = getSmoothStepPath({
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
+  });
   const pulseSeq = (data as CoordEdgeData | undefined)?.pulseSeq;
 
   return (

@@ -140,16 +140,11 @@ export async function sendInputToSession(
     streamHub.publish(signalEvent);
     recordSessionAction(signalEvent);
 
-    await conn.client.sendInput(
-      create(powerline.InputMessageSchema, { sessionId, text }),
-    );
+    await conn.client.sendInput(create(powerline.InputMessageSchema, { sessionId, text }));
     logger.info({ sessionId, signalType }, "Signal delivered to session");
     return true;
   } catch (err) {
-    logger.error(
-      { err, sessionId, signalType },
-      "sendInput failed during signal delivery",
-    );
+    logger.error({ err, sessionId, signalType }, "sendInput failed during signal delivery");
     return false;
   }
 }
@@ -167,10 +162,7 @@ interface IdleWaiter {
  * Subscribes immediately so events are captured even before the caller starts
  * the session (e.g. via reanimateAgent).
  */
-function waitForSessionIdle(
-  sessionId: string,
-  timeoutMs: number,
-): IdleWaiter {
+function waitForSessionIdle(sessionId: string, timeoutMs: number): IdleWaiter {
   const stream = streamHub.createStream(sessionId);
   let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -196,7 +188,9 @@ function waitForSessionIdle(
               return true;
             }
             // If the session hit a terminal state, stop waiting
-            if (["completed", "failed", "killed", "interrupted", "terminated"].includes(event.content)) {
+            if (
+              ["completed", "failed", "killed", "interrupted", "terminated"].includes(event.content)
+            ) {
               return false;
             }
           }

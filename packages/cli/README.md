@@ -54,11 +54,11 @@ grackle status
 
 The CLI connects to a running Grackle server over gRPC. Connection is configured via environment variables:
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GRACKLE_URL` | Server gRPC address | `http://127.0.0.1:7434` |
-| `GRACKLE_API_KEY` | API key for authentication | Read from `${GRACKLE_HOME:-~}/.grackle/api-key` |
-| `GRACKLE_HOME` | Override the Grackle home directory | `~` |
+| Variable          | Description                         | Default                                         |
+| ----------------- | ----------------------------------- | ----------------------------------------------- |
+| `GRACKLE_URL`     | Server gRPC address                 | `http://127.0.0.1:7434`                         |
+| `GRACKLE_API_KEY` | API key for authentication          | Read from `${GRACKLE_HOME:-~}/.grackle/api-key` |
+| `GRACKLE_HOME`    | Override the Grackle home directory | `~`                                             |
 
 The API key is generated automatically when the server starts for the first time. If `GRACKLE_API_KEY` is not set, the CLI reads the key from `${GRACKLE_HOME:-~}/.grackle/api-key`.
 
@@ -76,16 +76,16 @@ grackle serve --port 8000 --web-port 4000
 grackle serve --allow-network    # bind to 0.0.0.0 for LAN access
 ```
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--port <port>` | Server gRPC port | `7434` |
-| `--web-port <port>` | Web UI port | `3000` |
-| `--mcp-port <port>` | MCP server port | `7435` |
-| `--mcp-origin <origin>` | Browser-facing MCP origin (e.g. `https://mcp.example.com`) for reverse-proxy/TLS deployments; trusted asset/CSP origin for widgets | (derived from host + `--mcp-port`) |
-| `--sandbox-port <port>` | MCP Apps widget sandbox port | `7436` |
-| `--sandbox-origin <origin>` | Browser-facing MCP Apps sandbox origin (e.g. `https://sandbox.example.com`) for reverse-proxy/TLS deployments | (derived from host + `--sandbox-port`) |
-| `--powerline-port <port>` | Local PowerLine port | `7433` |
-| `--allow-network` | Bind to all interfaces (0.0.0.0) | Off (127.0.0.1) |
+| Option                      | Description                                                                                                                        | Default                                |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| `--port <port>`             | Server gRPC port                                                                                                                   | `7434`                                 |
+| `--web-port <port>`         | Web UI port                                                                                                                        | `3000`                                 |
+| `--mcp-port <port>`         | MCP server port                                                                                                                    | `7435`                                 |
+| `--mcp-origin <origin>`     | Browser-facing MCP origin (e.g. `https://mcp.example.com`) for reverse-proxy/TLS deployments; trusted asset/CSP origin for widgets | (derived from host + `--mcp-port`)     |
+| `--sandbox-port <port>`     | MCP Apps widget sandbox port                                                                                                       | `7436`                                 |
+| `--sandbox-origin <origin>` | Browser-facing MCP Apps sandbox origin (e.g. `https://sandbox.example.com`) for reverse-proxy/TLS deployments                      | (derived from host + `--sandbox-port`) |
+| `--powerline-port <port>`   | Local PowerLine port                                                                                                               | `7433`                                 |
+| `--allow-network`           | Bind to all interfaces (0.0.0.0)                                                                                                   | Off (127.0.0.1)                        |
 
 ---
 
@@ -110,11 +110,11 @@ grackle github-account add personal --token ghp_xxxxx
 grackle github-account add work --token ghp_yyyyy --default
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--token <pat>` | Personal access token (required) |
+| Option              | Description                                               |
+| ------------------- | --------------------------------------------------------- |
+| `--token <pat>`     | Personal access token (required)                          |
 | `--username <user>` | GitHub username (auto-resolved from the token if omitted) |
-| `--default` | Set this account as the default |
+| `--default`         | Set this account as the default                           |
 
 #### `grackle github-account remove <label-or-id>`
 
@@ -177,31 +177,31 @@ grackle env add cs --codespace --codespace-name my-codespace-abc123
 grackle env add local --local --host 127.0.0.1 --port 7433
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--docker` | Docker adapter (default) |
-| `--ssh` | SSH adapter |
-| `--codespace` | GitHub Codespace adapter |
-| `--local` | Local PowerLine adapter |
-| `--repo <repo>` | GitHub repo to clone (Docker) |
-| `--image <image>` | Docker image |
-| `--attach <container>` | Attach to an existing container by name/ID instead of creating one (Docker) |
-| `--volume <mounts...>` | Docker volume mounts (`host:container[:ro]`) |
-| `--gpu [gpus]` | Enable GPU passthrough (default: all) |
-| `--host <host>` | SSH host or local host |
-| `--user <user>` | SSH user |
-| `--ssh-port <port>` | SSH port (default: 22) |
-| `--identity-file <path>` | SSH private key path |
-| `--codespace-name <name>` | Codespace name (from `gh codespace list`) |
-| `--port <port>` | PowerLine port (local adapter) |
-| `--github-account <label>` | GitHub account label to associate with this environment (codespace/docker) |
+| Option                     | Description                                                                 |
+| -------------------------- | --------------------------------------------------------------------------- |
+| `--docker`                 | Docker adapter (default)                                                    |
+| `--ssh`                    | SSH adapter                                                                 |
+| `--codespace`              | GitHub Codespace adapter                                                    |
+| `--local`                  | Local PowerLine adapter                                                     |
+| `--repo <repo>`            | GitHub repo to clone (Docker)                                               |
+| `--image <image>`          | Docker image                                                                |
+| `--attach <container>`     | Attach to an existing container by name/ID instead of creating one (Docker) |
+| `--volume <mounts...>`     | Docker volume mounts (`host:container[:ro]`)                                |
+| `--gpu [gpus]`             | Enable GPU passthrough (default: all)                                       |
+| `--host <host>`            | SSH host or local host                                                      |
+| `--user <user>`            | SSH user                                                                    |
+| `--ssh-port <port>`        | SSH port (default: 22)                                                      |
+| `--identity-file <path>`   | SSH private key path                                                        |
+| `--codespace-name <name>`  | Codespace name (from `gh codespace list`)                                   |
+| `--port <port>`            | PowerLine port (local adapter)                                              |
+| `--github-account <label>` | GitHub account label to associate with this environment (codespace/docker)  |
 
 #### `grackle env provision <id>`
 
 Provision and connect an environment. Streams progress events.
 
-| Option | Description |
-|--------|-------------|
+| Option    | Description                                                                                                     |
+| --------- | --------------------------------------------------------------------------------------------------------------- |
 | `--force` | Force full reprovision, killing active sessions and tearing down the existing connection. Skips fast reconnect. |
 
 ```bash
@@ -246,10 +246,10 @@ grackle spawn my-env "Fix the failing test" --max-turns 5
 grackle spawn my-env "Review this PR" --persona code-reviewer
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--max-turns <n>` | Maximum conversation turns |
-| `--persona <id>` | Persona to use (falls back to app default) |
+| Option            | Description                                |
+| ----------------- | ------------------------------------------ |
+| `--max-turns <n>` | Maximum conversation turns                 |
+| `--persona <id>`  | Persona to use (falls back to app default) |
 
 #### `grackle status`
 
@@ -309,12 +309,12 @@ grackle workspace create "Auth Rewrite" --env my-env --repo https://github.com/o
 grackle workspace create "Quick Fix" --env my-env --no-worktrees
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--env <env-id>` | Environment ID (required) |
-| `--repo <url>` | Repository URL |
-| `--desc <description>` | Workspace description |
-| `--no-worktrees` | Disable git worktree isolation |
+| Option                       | Description                                      |
+| ---------------------------- | ------------------------------------------------ |
+| `--env <env-id>`             | Environment ID (required)                        |
+| `--repo <url>`               | Repository URL                                   |
+| `--desc <description>`       | Workspace description                            |
+| `--no-worktrees`             | Disable git worktree isolation                   |
 | `--working-directory <path>` | Working directory / repo root on the environment |
 
 #### `grackle workspace get <id>`
@@ -330,14 +330,14 @@ grackle workspace update ws-123 --name "Auth Rewrite v2" --desc "Updated scope"
 grackle workspace update ws-123 --env other-env    # reparent to different environment
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--name <name>` | New name |
-| `--desc <description>` | New description |
-| `--repo <url>` | New repository URL |
-| `--env <env-id>` | Reparent to a different environment |
-| `--worktrees` / `--no-worktrees` | Toggle worktree isolation |
-| `--working-directory <path>` | New working directory / repo root |
+| Option                           | Description                         |
+| -------------------------------- | ----------------------------------- |
+| `--name <name>`                  | New name                            |
+| `--desc <description>`           | New description                     |
+| `--repo <url>`                   | New repository URL                  |
+| `--env <env-id>`                 | Reparent to a different environment |
+| `--worktrees` / `--no-worktrees` | Toggle worktree isolation           |
+| `--working-directory <path>`     | New working directory / repo root   |
 
 #### `grackle workspace archive <id>`
 
@@ -367,9 +367,9 @@ grackle task list ws-123 --status working
 grackle task list ws-123 --search "auth"
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--search <query>` | Filter by title/description substring |
+| Option              | Description                                                                |
+| ------------------- | -------------------------------------------------------------------------- |
+| `--search <query>`  | Filter by title/description substring                                      |
 | `--status <status>` | Filter by status: `not_started`, `working`, `paused`, `complete`, `failed` |
 
 #### `grackle task search <query>`
@@ -382,11 +382,11 @@ grackle task search "authentication" --workspace ws-123
 grackle task search "payment" --status working --limit 5
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--workspace <workspace-id>` | Scope to a specific workspace |
-| `--limit <n>` | Maximum results to return (default 10) |
-| `--status <status>` | Filter by status before searching |
+| Option                       | Description                            |
+| ---------------------------- | -------------------------------------- |
+| `--workspace <workspace-id>` | Scope to a specific workspace          |
+| `--limit <n>`                | Maximum results to return (default 10) |
+| `--status <status>`          | Filter by status before searching      |
 
 #### `grackle task create <title>`
 
@@ -399,13 +399,13 @@ grackle task create "Fix edge case" --parent task-1    # create a subtask
 grackle task create "Design API" --workspace ws-123 --can-decompose
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--workspace <id>` | Workspace to create the task in |
-| `--desc <text>` | Task description |
-| `--depends-on <ids>` | Comma-separated dependency task IDs |
-| `--parent <task-id>` | Parent task ID (creates a subtask) |
-| `--can-decompose` | Allow this task to create subtasks |
+| Option                  | Description                                                                              |
+| ----------------------- | ---------------------------------------------------------------------------------------- |
+| `--workspace <id>`      | Workspace to create the task in                                                          |
+| `--desc <text>`         | Task description                                                                         |
+| `--depends-on <ids>`    | Comma-separated dependency task IDs                                                      |
+| `--parent <task-id>`    | Parent task ID (creates a subtask)                                                       |
+| `--can-decompose`       | Allow this task to create subtasks                                                       |
 | `--no-inject-knowledge` | Disable injecting "Related prior work" from the knowledge graph at spawn (on by default) |
 
 #### `grackle task show <task-id>`
@@ -416,14 +416,14 @@ Show full task details including status, branch, dependencies, and token usage.
 
 Update task properties.
 
-| Option | Description |
-|--------|-------------|
-| `--title <text>` | New title |
-| `--desc <text>` | New description |
-| `--status <status>` | `not_started`, `working`, `paused`, `complete`, `failed` |
-| `--depends-on <ids>` | New dependency list |
-| `--session <session-id>` | Bind an existing session |
-| `--persona <id>` | Default persona ID |
+| Option                                         | Description                                               |
+| ---------------------------------------------- | --------------------------------------------------------- |
+| `--title <text>`                               | New title                                                 |
+| `--desc <text>`                                | New description                                           |
+| `--status <status>`                            | `not_started`, `working`, `paused`, `complete`, `failed`  |
+| `--depends-on <ids>`                           | New dependency list                                       |
+| `--session <session-id>`                       | Bind an existing session                                  |
+| `--persona <id>`                               | Default persona ID                                        |
 | `--inject-knowledge` / `--no-inject-knowledge` | Enable/disable knowledge-graph context injection at spawn |
 
 #### `grackle task start <task-id>`
@@ -436,11 +436,11 @@ grackle task start task-1 --persona security-reviewer --env my-env
 grackle task start task-1 --notes "Focus on error handling this time"
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--persona <id-or-name>` | Persona override |
-| `--env <env-id>` | Environment to run on |
-| `--notes <text>` | Feedback/instructions for retry |
+| Option                   | Description                     |
+| ------------------------ | ------------------------------- |
+| `--persona <id-or-name>` | Persona override                |
+| `--env <env-id>`         | Environment to run on           |
+| `--notes <text>`         | Feedback/instructions for retry |
 
 #### `grackle task complete <task-id>`
 
@@ -479,19 +479,19 @@ grackle persona create "Security Reviewer" --prompt-file ./prompts/security.md -
 grackle persona create "Nightly Report" --type script --script-file ./scripts/report.genai.mjs --runtime genaiscript
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--type <type>` | `agent` (default) or `script` |
-| `--prompt <text>` | System prompt text |
-| `--prompt-file <path>` | Read system prompt from a file |
-| `--script <code>` | Script source code (for script personas) |
-| `--script-file <path>` | Read script from a file |
-| `--desc <text>` | Description |
-| `--runtime <runtime>` | `claude-code`, `copilot`, `codex`, `goose`, or `genaiscript` |
-| `--model <model>` | Default model |
-| `--max-turns <n>` | Maximum turns |
-| `--mcp-tools <tools>` | Comma-separated list of allowed MCP tool names |
-| `--mcp-tools-preset <preset>` | Use a preset: `default`, `worker`, `orchestrator`, `admin` |
+| Option                        | Description                                                  |
+| ----------------------------- | ------------------------------------------------------------ |
+| `--type <type>`               | `agent` (default) or `script`                                |
+| `--prompt <text>`             | System prompt text                                           |
+| `--prompt-file <path>`        | Read system prompt from a file                               |
+| `--script <code>`             | Script source code (for script personas)                     |
+| `--script-file <path>`        | Read script from a file                                      |
+| `--desc <text>`               | Description                                                  |
+| `--runtime <runtime>`         | `claude-code`, `copilot`, `codex`, `goose`, or `genaiscript` |
+| `--model <model>`             | Default model                                                |
+| `--max-turns <n>`             | Maximum turns                                                |
+| `--mcp-tools <tools>`         | Comma-separated list of allowed MCP tool names               |
+| `--mcp-tools-preset <preset>` | Use a preset: `default`, `worker`, `orchestrator`, `admin`   |
 
 #### `grackle persona show <id>`
 
@@ -506,7 +506,6 @@ Edit an existing persona. Accepts the same options as `create`.
 Delete a persona.
 
 ---
-
 
 ### Tokens
 
@@ -535,13 +534,13 @@ grackle token set github --env GITHUB_TOKEN --type env_var --env-var GITHUB_TOKE
 grackle token set ssh-key --file ~/.ssh/id_rsa --type file --file-path /home/agent/.ssh/id_rsa
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--file <path>` | Read value from a file |
-| `--env <var>` | Read value from an environment variable |
-| `--type <type>` | Delivery type: `env_var` (default) or `file` |
-| `--env-var <name>` | Environment variable name on the remote environment |
-| `--file-path <path>` | File path to write on the remote environment |
+| Option               | Description                                         |
+| -------------------- | --------------------------------------------------- |
+| `--file <path>`      | Read value from a file                              |
+| `--env <var>`        | Read value from an environment variable             |
+| `--type <type>`      | Delivery type: `env_var` (default) or `file`        |
+| `--env-var <name>`   | Environment variable name on the remote environment |
+| `--file-path <path>` | File path to write on the remote environment        |
 
 #### `grackle token delete <name>`
 
@@ -599,13 +598,13 @@ grackle credential-provider set github on
 grackle credential-provider set copilot off
 ```
 
-| Provider | Valid values |
-|----------|-------------|
-| `claude` | `off`, `subscription`, `api_key` |
-| `github` | `off`, `on` |
-| `copilot` | `off`, `on` |
-| `codex` | `off`, `on` |
-| `goose` | `off`, `on` |
+| Provider  | Valid values                     |
+| --------- | -------------------------------- |
+| `claude`  | `off`, `subscription`, `api_key` |
+| `github`  | `off`, `on`                      |
+| `copilot` | `off`, `on`                      |
+| `codex`   | `off`, `on`                      |
+| `goose`   | `off`, `on`                      |
 
 ---
 
@@ -623,10 +622,10 @@ grackle logs abc12345 --transcript   # view markdown transcript
 grackle logs abc12345 --tail         # stream live events
 ```
 
-| Option | Description |
-|--------|-------------|
+| Option         | Description                                        |
+| -------------- | -------------------------------------------------- |
 | `--transcript` | Show the markdown transcript instead of raw events |
-| `--tail` | Follow live events (like `tail -f`) |
+| `--tail`       | Follow live events (like `tail -f`)                |
 
 ---
 

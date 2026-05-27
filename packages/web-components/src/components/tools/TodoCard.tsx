@@ -131,12 +131,11 @@ export function TodoCard({ args }: ToolCardProps): JSX.Element {
   const isEmpty: boolean = todos.length === 0;
 
   return (
-    <div
-      className={`${styles.card} ${styles.cardBlue}`}
-      data-testid="tool-card-todo"
-    >
+    <div className={`${styles.card} ${styles.cardBlue}`} data-testid="tool-card-todo">
       <div className={styles.header}>
-        <span className={styles.icon}><ListChecks size={ICON_MD} /></span>
+        <span className={styles.icon}>
+          <ListChecks size={ICON_MD} />
+        </span>
         <span className={styles.toolName} style={{ color: "var(--accent-blue)" }}>
           {isEmpty ? "Todos cleared" : "Todos"}
         </span>
@@ -163,7 +162,9 @@ export function TodoCard({ args }: ToolCardProps): JSX.Element {
       {/* Active task callout */}
       {inProgress && (
         <div className={todoStyles.activeTask} data-testid="tool-card-todo-active">
-          <span className={todoStyles.activeIcon}><Circle size={ICON_SM} fill="currentColor" /></span>
+          <span className={todoStyles.activeIcon}>
+            <Circle size={ICON_SM} fill="currentColor" />
+          </span>
           <span className={todoStyles.activeText}>
             {inProgress.activeForm || inProgress.content}
           </span>
@@ -179,22 +180,14 @@ export function TodoCard({ args }: ToolCardProps): JSX.Element {
               className={`${todoStyles.item} ${todoStyles[todo.status]}`}
               data-testid="tool-card-todo-item"
             >
-              <span className={todoStyles.itemIcon}>
-                {statusIcon(todo.status)}
-              </span>
-              <span className={todoStyles.itemText}>
-                {todo.content}
-              </span>
+              <span className={todoStyles.itemIcon}>{statusIcon(todo.status)}</span>
+              <span className={todoStyles.itemText}>{todo.content}</span>
             </div>
           ))}
         </div>
       )}
 
-      {isEmpty && (
-        <div className={todoStyles.emptyMessage}>
-          All items completed and cleared.
-        </div>
-      )}
+      {isEmpty && <div className={todoStyles.emptyMessage}>All items completed and cleared.</div>}
     </div>
   );
 }

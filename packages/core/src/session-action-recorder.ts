@@ -34,18 +34,25 @@ const nextServerSeq: () => string = monotonicFactory();
  * delivery. The JSONL log + stream-hub publish remain the primary live paths.
  *
  * @param event - The session event to record.
+ * @returns The monotonic ULID assigned to this action, or `undefined` on failure.
  */
-export function recordSessionAction(event: grackle.SessionEvent): void {
+export function recordSessionAction(event: grackle.SessionEvent): string | undefined {
+  const seq = nextServerSeq();
   try {
     persistSessionAction({
-      seq: nextServerSeq(),
+      seq,
       sessionId: event.sessionId,
       type: eventTypeToString(event.type),
       content: event.content,
       raw: event.raw,
       timestamp: event.timestamp,
+      toolCallId: event.toolCallId,
+      turnId: event.turnId,
+      diagnostic: event.diagnostic,
     });
+    return seq;
   } catch (err) {
     logger.error({ err, sessionId: event.sessionId }, "Failed to persist session action");
+    return undefined;
   }
 }

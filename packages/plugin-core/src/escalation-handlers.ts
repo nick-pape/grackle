@@ -10,7 +10,9 @@ import { escalationRowToProto } from "./grpc-proto-converters.js";
 const VALID_URGENCY: ReadonlySet<string> = new Set(["low", "normal", "high"]);
 
 /** Create a new escalation and route it to notification channels. */
-export async function createEscalation(req: grackle.CreateEscalationRequest): Promise<grackle.Escalation> {
+export async function createEscalation(
+  req: grackle.CreateEscalationRequest,
+): Promise<grackle.Escalation> {
   if (!req.message) {
     throw new ConnectError("message is required", Code.InvalidArgument);
   }
@@ -35,24 +37,29 @@ export async function createEscalation(req: grackle.CreateEscalationRequest): Pr
 
   // Re-read after routing to get updated status
   const updated = escalationStore.getEscalation(id);
-  return escalationRowToProto(updated ?? row ?? {
-    id,
-    workspaceId: req.workspaceId,
-    taskId: req.taskId,
-    title: req.title || "Escalation",
-    message: req.message,
-    source: "explicit",
-    urgency: req.urgency || "normal",
-    status: "pending",
-    createdAt: new Date().toISOString(),
-    deliveredAt: null,
-    acknowledgedAt: null,
-    taskUrl,
-  });
+  return escalationRowToProto(
+    updated ??
+      row ?? {
+        id,
+        workspaceId: req.workspaceId,
+        taskId: req.taskId,
+        title: req.title || "Escalation",
+        message: req.message,
+        source: "explicit",
+        urgency: req.urgency || "normal",
+        status: "pending",
+        createdAt: new Date().toISOString(),
+        deliveredAt: null,
+        acknowledgedAt: null,
+        taskUrl,
+      },
+  );
 }
 
 /** List escalations with optional workspace and status filters. */
-export async function listEscalations(req: grackle.ListEscalationsRequest): Promise<grackle.EscalationList> {
+export async function listEscalations(
+  req: grackle.ListEscalationsRequest,
+): Promise<grackle.EscalationList> {
   const rows = escalationStore.listEscalations(
     req.workspaceId || undefined,
     req.status || undefined,
@@ -64,7 +71,9 @@ export async function listEscalations(req: grackle.ListEscalationsRequest): Prom
 }
 
 /** Acknowledge an escalation (mark as seen by the human). */
-export async function acknowledgeEscalation(req: grackle.AcknowledgeEscalationRequest): Promise<grackle.Escalation> {
+export async function acknowledgeEscalation(
+  req: grackle.AcknowledgeEscalationRequest,
+): Promise<grackle.Escalation> {
   if (!req.id) {
     throw new ConnectError("id is required", Code.InvalidArgument);
   }

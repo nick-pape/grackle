@@ -41,8 +41,9 @@ describe("self-hosted fonts (#1252)", () => {
   it("wires the variable family names into the font-family stacks", () => {
     // @fontsource-variable registers families suffixed with " Variable"; the
     // CSS vars must list those names first or the fonts load but never apply.
-    expect(themeScss).toContain("'DM Sans Variable'");
-    expect(themeScss).toContain("'Fira Code Variable'");
-    expect(themeScss).toContain("'JetBrains Mono Variable'");
+    // Match on the bare family name — quote style (single vs double) is CSS-equivalent.
+    expect(themeScss).toContain("DM Sans Variable");
+    expect(themeScss).toContain("Fira Code Variable");
+    expect(themeScss).toContain("JetBrains Mono Variable");
   });
 });

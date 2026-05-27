@@ -26,8 +26,11 @@ vi.mock("@grackle-ai/knowledge", () => ({
   updateNode: kg.updateNode,
   pruneReferenceNodesNotIn: kg.pruneReferenceNodesNotIn,
   REFERENCE_SOURCE: {
-    SESSION: "session", TASK: "task", WORKSPACE: "workspace",
-    PERSONA: "persona", ENVIRONMENT: "environment",
+    SESSION: "session",
+    TASK: "task",
+    WORKSPACE: "workspace",
+    PERSONA: "persona",
+    ENVIRONMENT: "environment",
   },
 }));
 vi.mock("./logger.js", () => ({
@@ -41,10 +44,15 @@ vi.mock("./projection/node-mappers.js", () => ({
   taskToNodeInput: vi.fn(() => ({ extraProps: {} })),
 }));
 vi.mock("./projection/project-entity.js", () => ({
-  projectSession: vi.fn(), linkSessionSpawn: vi.fn(),
-  projectEnvironment: vi.fn(), projectPersona: vi.fn(),
-  projectWorkspace: vi.fn(), projectTask: vi.fn(),
-  reconcileTaskEdges: vi.fn(), reconcileWorkspaceEdges: vi.fn(), reconcileSessionEdges: vi.fn(),
+  projectSession: vi.fn(),
+  linkSessionSpawn: vi.fn(),
+  projectEnvironment: vi.fn(),
+  projectPersona: vi.fn(),
+  projectWorkspace: vi.fn(),
+  projectTask: vi.fn(),
+  reconcileTaskEdges: vi.fn(),
+  reconcileWorkspaceEdges: vi.fn(),
+  reconcileSessionEdges: vi.fn(),
 }));
 vi.mock("./projection/project-transcript.js", () => ({
   projectSessionTranscript: vi.fn().mockResolvedValue(0),
@@ -65,26 +73,40 @@ describe("knowledge-projection phase", () => {
   });
 
   it("is named knowledge-projection", () => {
-    const phase = createKnowledgeProjectionPhase({ getEmbedder: () => fakeEmbedder(), isHealthy: () => true });
+    const phase = createKnowledgeProjectionPhase({
+      getEmbedder: () => fakeEmbedder(),
+      isHealthy: () => true,
+    });
     expect(phase.name).toBe("knowledge-projection");
   });
 
   it("no-ops when the embedder is unavailable", async () => {
-    const phase = createKnowledgeProjectionPhase({ getEmbedder: () => undefined, isHealthy: () => true });
+    const phase = createKnowledgeProjectionPhase({
+      getEmbedder: () => undefined,
+      isHealthy: () => true,
+    });
     await phase.execute();
     expect(kg.listNodesMissingEmbedding).not.toHaveBeenCalled();
   });
 
   it("no-ops when Neo4j is unhealthy", async () => {
-    const phase = createKnowledgeProjectionPhase({ getEmbedder: () => fakeEmbedder(), isHealthy: () => false });
+    const phase = createKnowledgeProjectionPhase({
+      getEmbedder: () => fakeEmbedder(),
+      isHealthy: () => false,
+    });
     await phase.execute();
     expect(kg.listNodesMissingEmbedding).not.toHaveBeenCalled();
   });
 
   it("backfills embeddings for nodes that have none (makes them searchable)", async () => {
     const embed = vi.fn().mockResolvedValue({ vector: [0.5, 0.6] });
-    kg.listNodesMissingEmbedding.mockResolvedValueOnce([{ id: "n1", kind: "reference", label: "Task X" }]);
-    const phase = createKnowledgeProjectionPhase({ getEmbedder: () => fakeEmbedder(embed), isHealthy: () => true });
+    kg.listNodesMissingEmbedding.mockResolvedValueOnce([
+      { id: "n1", kind: "reference", label: "Task X" },
+    ]);
+    const phase = createKnowledgeProjectionPhase({
+      getEmbedder: () => fakeEmbedder(embed),
+      isHealthy: () => true,
+    });
     await phase.execute();
     expect(embed).toHaveBeenCalledWith("Task X");
     expect(kg.updateNode).toHaveBeenCalledWith("n1", { embedding: [0.5, 0.6] });
@@ -92,8 +114,13 @@ describe("knowledge-projection phase", () => {
 
   it("treats embedding failures as non-fatal (retried next tick)", async () => {
     const embed = vi.fn().mockRejectedValue(new Error("model busy"));
-    kg.listNodesMissingEmbedding.mockResolvedValueOnce([{ id: "n1", kind: "reference", label: "X" }]);
-    const phase = createKnowledgeProjectionPhase({ getEmbedder: () => fakeEmbedder(embed), isHealthy: () => true });
+    kg.listNodesMissingEmbedding.mockResolvedValueOnce([
+      { id: "n1", kind: "reference", label: "X" },
+    ]);
+    const phase = createKnowledgeProjectionPhase({
+      getEmbedder: () => fakeEmbedder(embed),
+      isHealthy: () => true,
+    });
     await expect(phase.execute()).resolves.toBeUndefined();
     expect(kg.updateNode).not.toHaveBeenCalled();
   });

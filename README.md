@@ -79,11 +79,11 @@ Named agent configurations that bundle a system prompt, runtime, model, tool all
 
 Each agent runs inside an isolated environment. Connect one or many:
 
-| Adapter | Command |
-|---------|---------|
-| 🐳 **Docker** | `grackle env add my-env --docker` |
-| 💻 **Local** | `grackle env add my-env --local` |
-| 🔒 **SSH** | `grackle env add my-env --ssh --host ...` |
+| Adapter          | Command                                                      |
+| ---------------- | ------------------------------------------------------------ |
+| 🐳 **Docker**    | `grackle env add my-env --docker`                            |
+| 💻 **Local**     | `grackle env add my-env --local`                             |
+| 🔒 **SSH**       | `grackle env add my-env --ssh --host ...`                    |
 | ☁️ **Codespace** | `grackle env add my-env --codespace --codespace-name <name>` |
 
 ![Environment detail — adapter type, session count, cost, workspaces, and management actions](screenshots/agent-session-stream.png)
@@ -96,24 +96,24 @@ Each agent runs inside an isolated environment. Connect one or many:
 
 ## Features
 
-| | Feature | Description |
-|---|---|---|
-| 📡 | **Real-time streaming** | Watch agent tool calls and output as they happen — specialized cards for each tool type |
-| 🌳 | **Git worktree isolation** | Every task gets its own branch in its own worktree — zero interference between agents |
-| 🧠 | **Knowledge graph** | Semantic search over findings and task context — agents build shared understanding across sessions |
-| 🔄 | **Multi-runtime support** | Claude Code, Copilot, Codex, Goose, and GenAIScript — swap runtimes per persona or per task |
-| 🌲 | **Task tree hierarchy** | Parent/child subtrees with recursive tree view, expand/collapse, and progress badges |
-| 🔗 | **Task dependencies** | Dependency gating — blocked tasks wait for their dependencies to complete |
-| 🎭 | **Personas** | Named agent configs with system prompts, runtime/model, and scoped MCP tool allowlists |
-| 🔁 | **Session history** | Every task tracks its full session history — retry failed runs and compare attempts |
-| ✅ | **Task review & approval** | Approve or reject completed tasks with feedback that feeds into the next attempt |
-| 🔌 | **MCP server** | 50+ tools — any agent with MCP connected can create tasks, spawn sessions, query knowledge, and orchestrate work |
-| 💬 | **Chat** | Talk to the orchestrator directly — it has access to every MCP tool in Grackle |
-| 💰 | **Usage tracking** | Token counts and cost per session, task, or workspace |
-| 🔄 | **Session recovery** | Environments auto-reconnect. Suspended sessions resume where they left off |
-| 🔀 | **IPC pipes** | Parent sessions spawn children with bidirectional pipes for structured communication |
-| ⏰ | **Scheduled triggers** | Cron expressions and interval shortcuts for recurring task creation |
-| ⌨️ | **Keyboard shortcuts** | Global shortcuts for navigation and common actions |
+|     | Feature                    | Description                                                                                                      |
+| --- | -------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| 📡  | **Real-time streaming**    | Watch agent tool calls and output as they happen — specialized cards for each tool type                          |
+| 🌳  | **Git worktree isolation** | Every task gets its own branch in its own worktree — zero interference between agents                            |
+| 🧠  | **Knowledge graph**        | Semantic search over findings and task context — agents build shared understanding across sessions               |
+| 🔄  | **Multi-runtime support**  | Claude Code, Copilot, Codex, Goose, and GenAIScript — swap runtimes per persona or per task                      |
+| 🌲  | **Task tree hierarchy**    | Parent/child subtrees with recursive tree view, expand/collapse, and progress badges                             |
+| 🔗  | **Task dependencies**      | Dependency gating — blocked tasks wait for their dependencies to complete                                        |
+| 🎭  | **Personas**               | Named agent configs with system prompts, runtime/model, and scoped MCP tool allowlists                           |
+| 🔁  | **Session history**        | Every task tracks its full session history — retry failed runs and compare attempts                              |
+| ✅  | **Task review & approval** | Approve or reject completed tasks with feedback that feeds into the next attempt                                 |
+| 🔌  | **MCP server**             | 50+ tools — any agent with MCP connected can create tasks, spawn sessions, query knowledge, and orchestrate work |
+| 💬  | **Chat**                   | Talk to the orchestrator directly — it has access to every MCP tool in Grackle                                   |
+| 💰  | **Usage tracking**         | Token counts and cost per session, task, or workspace                                                            |
+| 🔄  | **Session recovery**       | Environments auto-reconnect. Suspended sessions resume where they left off                                       |
+| 🔀  | **IPC pipes**              | Parent sessions spawn children with bidirectional pipes for structured communication                             |
+| ⏰  | **Scheduled triggers**     | Cron expressions and interval shortcuts for recurring task creation                                              |
+| ⌨️  | **Keyboard shortcuts**     | Global shortcuts for navigation and common actions                                                               |
 
 ## Quick Start
 
@@ -207,6 +207,7 @@ npm install -g @microsoft/rush
 rush update && rush build
 node packages/cli/dist/index.js serve
 ```
+
 </details>
 
 ## Progressive complexity

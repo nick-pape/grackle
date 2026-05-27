@@ -6,7 +6,10 @@ import { grpcErrorToToolResult } from "../error-handler.js";
 import { assertCallerIsSelfOrAncestor } from "../scope-enforcement.js";
 
 /** Resolve the effective taskId from explicit args or scoped auth context. */
-function resolveTaskId(args: Record<string, unknown>, authContext?: AuthContext): string | undefined {
+function resolveTaskId(
+  args: Record<string, unknown>,
+  authContext?: AuthContext,
+): string | undefined {
   if (args.taskId) {
     return args.taskId as string;
   }
@@ -21,12 +24,25 @@ export const workpadTools: ToolDefinition[] = [
   {
     name: "workpad_write",
     group: "workpad",
-    description: "Write persistent structured context (workpad) to a task. Call before completing your work to record what was accomplished.",
+    description:
+      "Write persistent structured context (workpad) to a task. Call before completing your work to record what was accomplished.",
     inputSchema: z.object({
-      taskId: z.string().optional().describe("Task ID to write workpad for (defaults to current task)"),
-      status: z.string().optional().describe("Agent-reported status (e.g. 'in progress', 'completed', 'blocked')"),
-      summary: z.string().optional().describe("Human-readable summary of what has been accomplished"),
-      extra: z.record(z.string(), z.unknown()).optional().describe("Freeform structured data (branch, PR, files, blockers, etc.)"),
+      taskId: z
+        .string()
+        .optional()
+        .describe("Task ID to write workpad for (defaults to current task)"),
+      status: z
+        .string()
+        .optional()
+        .describe("Agent-reported status (e.g. 'in progress', 'completed', 'blocked')"),
+      summary: z
+        .string()
+        .optional()
+        .describe("Human-readable summary of what has been accomplished"),
+      extra: z
+        .record(z.string(), z.unknown())
+        .optional()
+        .describe("Freeform structured data (branch, PR, files, blockers, etc.)"),
     }),
     rpcMethod: "setWorkpad",
     mutating: true,
@@ -36,11 +52,20 @@ export const workpadTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients, authContext?: AuthContext) {
+    async handler(
+      args: Record<string, unknown>,
+      { orchestration: client }: GrackleClients,
+      authContext?: AuthContext,
+    ) {
       const taskId = resolveTaskId(args, authContext);
       if (!taskId) {
         return {
-          content: [{ type: "text" as const, text: "No task context. Provide taskId explicitly or run from a task session." }],
+          content: [
+            {
+              type: "text" as const,
+              text: "No task context. Provide taskId explicitly or run from a task session.",
+            },
+          ],
           isError: true,
         };
       }
@@ -74,9 +99,13 @@ export const workpadTools: ToolDefinition[] = [
   {
     name: "workpad_read",
     group: "workpad",
-    description: "Read a task's workpad (persistent structured context). Defaults to the current task; can read child tasks by passing taskId.",
+    description:
+      "Read a task's workpad (persistent structured context). Defaults to the current task; can read child tasks by passing taskId.",
     inputSchema: z.object({
-      taskId: z.string().optional().describe("Task ID to read workpad from (defaults to current task)"),
+      taskId: z
+        .string()
+        .optional()
+        .describe("Task ID to read workpad from (defaults to current task)"),
     }),
     rpcMethod: "getTask",
     mutating: false,
@@ -86,11 +115,20 @@ export const workpadTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients, authContext?: AuthContext) {
+    async handler(
+      args: Record<string, unknown>,
+      { orchestration: client }: GrackleClients,
+      authContext?: AuthContext,
+    ) {
       const taskId = resolveTaskId(args, authContext);
       if (!taskId) {
         return {
-          content: [{ type: "text" as const, text: "No task context. Provide taskId explicitly or run from a task session." }],
+          content: [
+            {
+              type: "text" as const,
+              text: "No task context. Provide taskId explicitly or run from a task session.",
+            },
+          ],
           isError: true,
         };
       }
@@ -105,7 +143,12 @@ export const workpadTools: ToolDefinition[] = [
             workpad = JSON.parse(task.workpad) as Record<string, unknown>;
           } catch {
             return {
-              content: [{ type: "text" as const, text: "Task workpad contains invalid JSON and could not be parsed." }],
+              content: [
+                {
+                  type: "text" as const,
+                  text: "Task workpad contains invalid JSON and could not be parsed.",
+                },
+              ],
               isError: true,
             };
           }

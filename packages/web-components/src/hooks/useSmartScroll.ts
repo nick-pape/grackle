@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
-import { isNearAnchor, computeScrollCompensation, SCROLL_ANCHOR_THRESHOLD_PX } from "../utils/scrollUtils.js";
+import {
+  isNearAnchor,
+  computeScrollCompensation,
+  SCROLL_ANCHOR_THRESHOLD_PX,
+} from "../utils/scrollUtils.js";
 
 /** Options for the useSmartScroll hook. */
 interface UseSmartScrollOptions {

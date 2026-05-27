@@ -11,22 +11,19 @@ import { createCorePlugin } from "@grackle-ai/server/core-plugin";
 import { createOrchestrationPlugin } from "@grackle-ai/plugin-orchestration";
 import { loadPlugins } from "@grackle-ai/plugin-sdk";
 
-const loaded = await loadPlugins(
-  [createCorePlugin(), createOrchestrationPlugin()],
-  pluginContext,
-);
+const loaded = await loadPlugins([createCorePlugin(), createOrchestrationPlugin()], pluginContext);
 ```
 
 ## What This Plugin Contributes
 
 ### gRPC Handlers (21 RPCs)
 
-| Group | Methods |
-|---|---|
-| Tasks | `listTasks`, `createTask`, `getTask`, `updateTask`, `startTask`, `completeTask`, `setWorkpad`, `resumeTask`, `stopTask`, `deleteTask` |
-| Personas | `listPersonas`, `createPersona`, `getPersona`, `updatePersona`, `deletePersona` |
-| Findings | `postFinding`, `queryFindings`, `getFinding` |
-| Escalations | `createEscalation`, `listEscalations`, `acknowledgeEscalation` |
+| Group       | Methods                                                                                                                               |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Tasks       | `listTasks`, `createTask`, `getTask`, `updateTask`, `startTask`, `completeTask`, `setWorkpad`, `resumeTask`, `stopTask`, `deleteTask` |
+| Personas    | `listPersonas`, `createPersona`, `getPersona`, `updatePersona`, `deletePersona`                                                       |
+| Findings    | `postFinding`, `queryFindings`, `getFinding`                                                                                          |
+| Escalations | `createEscalation`, `listEscalations`, `acknowledgeEscalation`                                                                        |
 
 ### Reconciliation Phases
 

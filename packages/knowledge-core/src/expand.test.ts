@@ -184,9 +184,9 @@ describe("expandNode", () => {
   });
 
   it("should throw on invalid edge type", async () => {
-    await expect(
-      expandNode("node-a", { edgeTypes: ["INVALID_TYPE" as never] }),
-    ).rejects.toThrow("Invalid edge type");
+    await expect(expandNode("node-a", { edgeTypes: ["INVALID_TYPE" as never] })).rejects.toThrow(
+      "Invalid edge type",
+    );
   });
 });
 
@@ -201,19 +201,45 @@ describe("expandResults", () => {
     // Second call: expand node-c → finds node-b (duplicate)
     mockSessionRun
       .mockResolvedValueOnce({
-        records: [
-          makeNeo4jRecord({ neighbor: makeNeo4jNode(NODE_B), rels: [EDGE_AB] }),
-        ],
+        records: [makeNeo4jRecord({ neighbor: makeNeo4jNode(NODE_B), rels: [EDGE_AB] })],
       })
       .mockResolvedValueOnce({
-        records: [
-          makeNeo4jRecord({ neighbor: makeNeo4jNode(NODE_B), rels: [EDGE_BC] }),
-        ],
+        records: [makeNeo4jRecord({ neighbor: makeNeo4jNode(NODE_B), rels: [EDGE_BC] })],
       });
 
     const searchResults: SearchResult[] = [
-      { node: { id: "node-a", kind: "native", category: "insight", title: "", content: "", tags: [], embedding: [], createdAt: "", updatedAt: "", workspaceId: "" }, score: 0.9, edges: [] },
-      { node: { id: "node-c", kind: "native", category: "decision", title: "", content: "", tags: [], embedding: [], createdAt: "", updatedAt: "", workspaceId: "" }, score: 0.8, edges: [] },
+      {
+        node: {
+          id: "node-a",
+          kind: "native",
+          category: "insight",
+          title: "",
+          content: "",
+          tags: [],
+          embedding: [],
+          createdAt: "",
+          updatedAt: "",
+          workspaceId: "",
+        },
+        score: 0.9,
+        edges: [],
+      },
+      {
+        node: {
+          id: "node-c",
+          kind: "native",
+          category: "decision",
+          title: "",
+          content: "",
+          tags: [],
+          embedding: [],
+          createdAt: "",
+          updatedAt: "",
+          workspaceId: "",
+        },
+        score: 0.8,
+        edges: [],
+      },
     ];
 
     const result = await expandResults(searchResults);
@@ -234,7 +260,22 @@ describe("expandResults", () => {
     });
 
     const searchResults: SearchResult[] = [
-      { node: { id: "node-a", kind: "native", category: "insight", title: "", content: "", tags: [], embedding: [], createdAt: "", updatedAt: "", workspaceId: "" }, score: 0.9, edges: [] },
+      {
+        node: {
+          id: "node-a",
+          kind: "native",
+          category: "insight",
+          title: "",
+          content: "",
+          tags: [],
+          embedding: [],
+          createdAt: "",
+          updatedAt: "",
+          workspaceId: "",
+        },
+        score: 0.9,
+        edges: [],
+      },
     ];
 
     const result = await expandResults(searchResults);

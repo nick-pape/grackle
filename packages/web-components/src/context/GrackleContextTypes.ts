@@ -7,10 +7,17 @@
  */
 
 import type {
-  UsageStats, UseKnowledgeResult,
-  UseEnvironmentsResult, UseSessionsResult, UseWorkspacesResult,
-  UseTasksResult, UseTokensResult,
-  UseCredentialsResult, UseCodespacesResult, UseDockerContainersResult, UsePersonasResult,
+  UsageStats,
+  UseKnowledgeResult,
+  UseEnvironmentsResult,
+  UseSessionsResult,
+  UseWorkspacesResult,
+  UseTasksResult,
+  UseTokensResult,
+  UseCredentialsResult,
+  UseCodespacesResult,
+  UseDockerContainersResult,
+  UsePersonasResult,
   UsePluginsResult,
   UseSchedulesResult,
   UseStreamsResult,
@@ -25,7 +32,10 @@ export interface UseGrackleSocketResult {
   /** Environment state and actions. */
   environments: Omit<UseEnvironmentsResult, "handleEvent" | "handleLegacyMessage">;
   /** Session state and actions. */
-  sessions: Omit<UseSessionsResult, "handleMessage" | "handleSessionEvent" | "handleLegacyMessage" | "loadSessions">;
+  sessions: Omit<
+    UseSessionsResult,
+    "handleMessage" | "handleSessionEvent" | "handleLegacyMessage" | "loadSessions"
+  >;
   /** Workspace state and actions. */
   workspaces: Omit<UseWorkspacesResult, "handleEvent" | "onDisconnect">;
   /** Task state and actions. */

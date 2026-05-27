@@ -37,12 +37,11 @@ export function insertTask(fields: InsertTaskFields): void {
   if (fields.workspaceId) {
     sortOrderConditions.push(eq(tasks.workspaceId, fields.workspaceId));
   }
-  const maxRowQuery = db
-    .select({ maxOrder: sql<number>`max(sort_order)` })
-    .from(tasks);
-  const maxRow = sortOrderConditions.length > 0
-    ? maxRowQuery.where(and(...sortOrderConditions)).get()
-    : maxRowQuery.get();
+  const maxRowQuery = db.select({ maxOrder: sql<number>`max(sort_order)` }).from(tasks);
+  const maxRow =
+    sortOrderConditions.length > 0
+      ? maxRowQuery.where(and(...sortOrderConditions)).get()
+      : maxRowQuery.get();
   const sortOrder = (maxRow?.maxOrder ?? -1) + 1;
   db.insert(tasks)
     .values({
@@ -173,15 +172,9 @@ export function listTasks(workspaceId?: string, options?: ListTasksOptions): Tas
     );
   }
 
-  const query = db
-    .select()
-    .from(tasks);
-  const filtered = conditions.length > 0
-    ? query.where(and(...conditions))
-    : query;
-  return filtered
-    .orderBy(asc(tasks.sortOrder), asc(tasks.createdAt))
-    .all();
+  const query = db.select().from(tasks);
+  const filtered = conditions.length > 0 ? query.where(and(...conditions)) : query;
+  return filtered.orderBy(asc(tasks.sortOrder), asc(tasks.createdAt)).all();
 }
 
 /** Update multiple task fields at once. */
@@ -203,10 +196,7 @@ export function updateTask(
   if (defaultPersonaId !== undefined) {
     sets.defaultPersonaId = defaultPersonaId;
   }
-  db.update(tasks)
-    .set(sets)
-    .where(eq(tasks.id, id))
-    .run();
+  db.update(tasks).set(sets).where(eq(tasks.id, id)).run();
 }
 
 /** Update the token and cost budget for a task. */
@@ -295,10 +285,7 @@ export function updateTaskStatus(id: string, status: TaskStatus): void {
  * Mark a task as complete with a completed_at timestamp.
  * Used only for human-authoritative status transitions (complete).
  */
-export function markTaskComplete(
-  id: string,
-  status: "complete" | "failed" = "complete",
-): void {
+export function markTaskComplete(id: string, status: "complete" | "failed" = "complete"): void {
   db.update(tasks)
     .set({
       status,
@@ -489,7 +476,5 @@ export function reparentTask(taskId: string, newParentTaskId: string): void {
  * Returns children whose status is not complete or failed.
  */
 export function getOrphanedTasks(parentTaskId: string): TaskRow[] {
-  return getChildren(parentTaskId).filter(
-    (child) => !TERMINAL_TASK_STATUSES.has(child.status),
-  );
+  return getChildren(parentTaskId).filter((child) => !TERMINAL_TASK_STATUSES.has(child.status));
 }

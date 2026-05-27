@@ -33,7 +33,15 @@ export function mergeRanges(ranges: readonly MatchIndex[]): MatchIndex[] {
 }
 
 /** Render text with highlighted match ranges. Unmatched portions are plain, matched portions are bold. */
-export function HighlightedText({ text, indices, highlightClass }: { text: string; indices?: readonly MatchIndex[]; highlightClass?: string }): JSX.Element {
+export function HighlightedText({
+  text,
+  indices,
+  highlightClass,
+}: {
+  text: string;
+  indices?: readonly MatchIndex[];
+  highlightClass?: string;
+}): JSX.Element {
   if (!indices || indices.length === 0) {
     return <>{text}</>;
   }
@@ -44,7 +52,11 @@ export function HighlightedText({ text, indices, highlightClass }: { text: strin
     if (start > cursor) {
       parts.push(<span key={`p${cursor}`}>{text.slice(cursor, start)}</span>);
     }
-    parts.push(<mark key={`m${start}`} className={highlightClass}>{text.slice(start, end + 1)}</mark>);
+    parts.push(
+      <mark key={`m${start}`} className={highlightClass}>
+        {text.slice(start, end + 1)}
+      </mark>,
+    );
     cursor = end + 1;
   }
   if (cursor < text.length) {
@@ -64,9 +76,7 @@ export interface TaskNode extends TaskData {
 
 /** Assemble flat TaskData[] into a tree. */
 export function buildTaskTree(taskList: TaskData[]): TaskNode[] {
-  const byId = new Map<string, TaskNode>(
-    taskList.map(t => [t.id, { ...t, children: [] }]),
-  );
+  const byId = new Map<string, TaskNode>(taskList.map((t) => [t.id, { ...t, children: [] }]));
   const roots: TaskNode[] = [];
   for (const node of byId.values()) {
     if (node.parentTaskId && byId.has(node.parentTaskId)) {
@@ -94,10 +104,14 @@ export interface StatusGroup {
 }
 
 /** Group a flat list of tasks by status, ordered by urgency. Blocked tasks are separated into their own group. */
-export function groupTasksByStatus(taskList: TaskData[], taskStatusById: Map<string, string>): StatusGroup[] {
+export function groupTasksByStatus(
+  taskList: TaskData[],
+  taskStatusById: Map<string, string>,
+): StatusGroup[] {
   const byStatus = new Map<string, TaskData[]>();
   for (const task of taskList) {
-    const isBlocked = task.dependsOn.length > 0 &&
+    const isBlocked =
+      task.dependsOn.length > 0 &&
       task.dependsOn.some((depId) => taskStatusById.get(depId) !== "complete");
     const groupKey = isBlocked ? "blocked" : task.status;
     const list = byStatus.get(groupKey);

@@ -40,7 +40,10 @@ export function registerScheduleCommands(program: Command): void {
   schedule
     .command("create <title>")
     .description("Create a scheduled trigger")
-    .requiredOption("--schedule <expression>", "Interval (e.g. '30s', '5m') or cron expression (e.g. '0 9 * * MON')")
+    .requiredOption(
+      "--schedule <expression>",
+      "Interval (e.g. '30s', '5m') or cron expression (e.g. '0 9 * * MON')",
+    )
     .requiredOption("--persona <id>", "Persona ID to use when firing")
     .option("--desc <text>", "Description")
     .option("--workspace <id>", "Workspace scope")

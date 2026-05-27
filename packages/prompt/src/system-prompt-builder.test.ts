@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { SystemPromptBuilder, buildTaskPrompt, type SystemPromptOptions, type TaskTreeNode } from "./system-prompt-builder.js";
+import {
+  SystemPromptBuilder,
+  buildTaskPrompt,
+  type SystemPromptOptions,
+  type TaskTreeNode,
+} from "./system-prompt-builder.js";
 
 describe("SystemPromptBuilder", () => {
   it("includes completion contract, signals, and MCP note for task sessions", () => {
@@ -178,9 +183,39 @@ describe("buildTaskPrompt", () => {
 /** Helper: build a full orchestrator options object. */
 function orchestratorOptions(overrides?: Partial<SystemPromptOptions>): SystemPromptOptions {
   const taskTree: TaskTreeNode[] = [
-    { id: "root", title: "Root Task", status: "working", depth: 0, parentTaskId: "", dependsOn: [], personaName: "Orchestrator", branch: "", canDecompose: true },
-    { id: "child-a", title: "Implement feature", status: "not_started", depth: 1, parentTaskId: "root", dependsOn: [], personaName: "Engineer", branch: "feat-a", canDecompose: false },
-    { id: "child-b", title: "Write tests", status: "not_started", depth: 1, parentTaskId: "root", dependsOn: ["child-a"], personaName: "Engineer", branch: "feat-b", canDecompose: false },
+    {
+      id: "root",
+      title: "Root Task",
+      status: "working",
+      depth: 0,
+      parentTaskId: "",
+      dependsOn: [],
+      personaName: "Orchestrator",
+      branch: "",
+      canDecompose: true,
+    },
+    {
+      id: "child-a",
+      title: "Implement feature",
+      status: "not_started",
+      depth: 1,
+      parentTaskId: "root",
+      dependsOn: [],
+      personaName: "Engineer",
+      branch: "feat-a",
+      canDecompose: false,
+    },
+    {
+      id: "child-b",
+      title: "Write tests",
+      status: "not_started",
+      depth: 1,
+      parentTaskId: "root",
+      dependsOn: ["child-a"],
+      personaName: "Engineer",
+      branch: "feat-b",
+      canDecompose: false,
+    },
   ];
 
   return {
@@ -189,15 +224,29 @@ function orchestratorOptions(overrides?: Partial<SystemPromptOptions>): SystemPr
     canDecompose: true,
     personaPrompt: "You are a senior architect.",
     taskDepth: 0,
-    workspace: { name: "my-project", description: "A test project", repoUrl: "https://github.com/test/repo" },
+    workspace: {
+      name: "my-project",
+      description: "A test project",
+      repoUrl: "https://github.com/test/repo",
+    },
     taskTree,
     availablePersonas: [
       { name: "Engineer", description: "Writes code", runtime: "claude-code", model: "sonnet" },
       { name: "Reviewer", description: "Reviews PRs", runtime: "copilot", model: "" },
     ],
     availableEnvironments: [
-      { displayName: "Local", adapterType: "local", status: "connected", defaultRuntime: "claude-code" },
-      { displayName: "Dev SSH", adapterType: "ssh", status: "disconnected", defaultRuntime: "codex" },
+      {
+        displayName: "Local",
+        adapterType: "local",
+        status: "connected",
+        defaultRuntime: "claude-code",
+      },
+      {
+        displayName: "Dev SSH",
+        adapterType: "ssh",
+        status: "disconnected",
+        defaultRuntime: "codex",
+      },
     ],
     triggerMode: "fresh",
     ...overrides,
@@ -242,8 +291,12 @@ describe("SystemPromptBuilder (orchestrator)", () => {
     const result = new SystemPromptBuilder(orchestratorOptions()).build();
 
     expect(result).toContain("- [working] Root Task (persona: Orchestrator) <-- YOU");
-    expect(result).toContain("  - [not_started] Implement feature (persona: Engineer) [branch: feat-a]");
-    expect(result).toContain("  - [not_started] Write tests (persona: Engineer) [depends on: child-a] [branch: feat-b]");
+    expect(result).toContain(
+      "  - [not_started] Implement feature (persona: Engineer) [branch: feat-a]",
+    );
+    expect(result).toContain(
+      "  - [not_started] Write tests (persona: Engineer) [depends on: child-a] [branch: feat-b]",
+    );
   });
 
   it("renders task tree status summary", () => {
@@ -301,7 +354,9 @@ describe("SystemPromptBuilder (orchestrator)", () => {
   });
 
   it("omits environments section when list is empty", () => {
-    const result = new SystemPromptBuilder(orchestratorOptions({ availableEnvironments: [] })).build();
+    const result = new SystemPromptBuilder(
+      orchestratorOptions({ availableEnvironments: [] }),
+    ).build();
 
     expect(result).not.toContain("## Available Environments");
   });
@@ -355,7 +410,9 @@ describe("SystemPromptBuilder (orchestrator)", () => {
   });
 
   it("uses leaf template when canDecompose is false even at depth 0", () => {
-    const result = new SystemPromptBuilder(orchestratorOptions({ canDecompose: false, taskDepth: 0 })).build();
+    const result = new SystemPromptBuilder(
+      orchestratorOptions({ canDecompose: false, taskDepth: 0 }),
+    ).build();
 
     expect(result).not.toContain("## Task: Orchestrate project");
     expect(result).toContain("Subtask creation is disabled");
@@ -384,7 +441,9 @@ describe("SystemPromptBuilder (orchestrator)", () => {
 
   it("includes notes in orchestrator template when provided", () => {
     const result = new SystemPromptBuilder(
-      orchestratorOptions({ task: { title: "Task", description: "desc", notes: "Retry after auth fix" } }),
+      orchestratorOptions({
+        task: { title: "Task", description: "desc", notes: "Retry after auth fix" },
+      }),
     ).build();
 
     expect(result).toContain("### Notes");
@@ -413,9 +472,7 @@ describe("SystemPromptBuilder (orchestrator)", () => {
 
   it("includes workpad section in orchestrator prompt when non-empty", () => {
     const workpad = JSON.stringify({ status: "blocked", summary: "Waiting on auth" });
-    const result = new SystemPromptBuilder(
-      orchestratorOptions({ workpad }),
-    ).build();
+    const result = new SystemPromptBuilder(orchestratorOptions({ workpad })).build();
 
     expect(result).toContain("## Previous Session Workpad");
     expect(result).toContain("Waiting on auth");

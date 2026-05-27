@@ -56,9 +56,18 @@ describe("channel-token", () => {
 
   /** A correctly-signed payload whose `verbs` is not a string[] is rejected. */
   test("payload with non-array verbs is rejected", () => {
-    const bad = { chan: GRANT.chan, verbs: "send_input", jti: GRANT.jti, iat: 1, exp: 9_999_999_999 };
+    const bad = {
+      chan: GRANT.chan,
+      verbs: "send_input",
+      jti: GRANT.jti,
+      iat: 1,
+      exp: 9_999_999_999,
+    };
     const payloadEncoded = Buffer.from(JSON.stringify(bad), "utf8").toString("base64url");
-    const sig = createHmac("sha256", SIGNING_SECRET).update(payloadEncoded).digest().toString("base64url");
+    const sig = createHmac("sha256", SIGNING_SECRET)
+      .update(payloadEncoded)
+      .digest()
+      .toString("base64url");
     expect(verifyChannelToken(`${payloadEncoded}.${sig}`, SIGNING_SECRET)).toBeUndefined();
   });
 });

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "AHP HR1b Fold read path: store toolCallId/turnId in session_actions, store MapperContext in session_snapshots, implement delta replay in SessionStateManager.reconstruct() — closes #1292 step 3",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

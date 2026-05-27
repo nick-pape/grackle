@@ -35,6 +35,7 @@ git merge origin/main
 ```
 
 If merge conflicts arise:
+
 1. List the conflicted files with `git diff --name-only --diff-filter=U`
 2. Read each conflicted file and resolve the conflicts intelligently
 3. Stage the resolved files and commit the merge
@@ -93,6 +94,7 @@ console.log(execSync('gh api -X POST /graphql --input -', {input: body, encoding
 ### 4c: Filter to Actionable Comments
 
 From the response, select threads where ALL of:
+
 - `isResolved` is `false` (do NOT filter on `isOutdated` — outdated but unresolved threads still block the merge button)
 - The last comment (from the `comments(last: 1)` query) has `author.login` equal to `"copilot-pull-request-reviewer"`
 
@@ -149,17 +151,20 @@ If no code changes were made (all comments were dismissed), go to step 4f.
 After making code changes (whether from Copilot fixes or CI fixes), manually test the affected functionality before pushing. This catches real-world issues that unit tests miss.
 
 **Preferred: Web UI via Playwright MCP**
+
 1. Start the Grackle server if not already running (check ports first per CLAUDE.md multi-session safety)
 2. Use `mcp__playwright__browser_navigate` to open the web UI
 3. Exercise the affected feature — create/edit entities, trigger the changed flow, verify the UI behaves correctly
 4. Take a screenshot if the change is visual
 
 **Fallback: CLI**
+
 1. Start the Grackle server if not already running
 2. Run the relevant `grackle` CLI commands to exercise the changed functionality
 3. Verify the output matches expectations
 
 **Skip conditions** (state explicitly if skipping):
+
 - The change is purely internal refactoring with no observable behavior
 - The change only affects codespace/remote environments that can't be tested locally
 - The change is documentation or config only
@@ -198,6 +203,7 @@ CI is done when all required checks show a conclusion (pass or fail). If any che
 ## Step 6: Report
 
 When everything is green, summarize:
+
 - How many Copilot review rounds were needed
 - How many comments were fixed vs dismissed
 - CI status (pass/fail)

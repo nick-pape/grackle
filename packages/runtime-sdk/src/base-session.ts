@@ -123,9 +123,7 @@ export abstract class BaseAgentSession implements AgentSession {
    * override this to return just `this.prompt`.
    */
   protected buildInitialPrompt(): string {
-    return this.systemContext
-      ? `${this.systemContext}\n\n---\n\n${this.prompt}`
-      : this.prompt;
+    return this.systemContext ? `${this.systemContext}\n\n---\n\n${this.prompt}` : this.prompt;
   }
 
   // ─── Shared convenience helpers ─────────────────────────
@@ -153,7 +151,11 @@ export abstract class BaseAgentSession implements AgentSession {
    * Push a usage event with a standardized JSON shape.
    * Skips the push when all values are zero (no meaningful usage to report).
    */
-  protected pushUsageEvent(inputTokens: number, outputTokens: number, costMillicents: number): void {
+  protected pushUsageEvent(
+    inputTokens: number,
+    outputTokens: number,
+    costMillicents: number,
+  ): void {
     if (inputTokens === 0 && outputTokens === 0 && costMillicents === 0) {
       return;
     }
@@ -196,8 +198,8 @@ export abstract class BaseAgentSession implements AgentSession {
     if (
       this.currentTurnId !== undefined &&
       event.turnId === undefined &&
-      event.type !== "status" &&  // liveness: never turn-stamped
-      !event.diagnostic           // lifecycle/diagnostic: out-of-band
+      event.type !== "status" && // liveness: never turn-stamped
+      !event.diagnostic // lifecycle/diagnostic: out-of-band
     ) {
       event.turnId = this.currentTurnId;
     }
@@ -234,7 +236,12 @@ export abstract class BaseAgentSession implements AgentSession {
   public async *stream(): AsyncIterable<AgentEvent> {
     const ts: () => string = () => new Date().toISOString();
 
-    yield { type: "system", timestamp: ts(), content: `Starting ${this.runtimeDisplayName} runtime...`, diagnostic: true };
+    yield {
+      type: "system",
+      timestamp: ts(),
+      content: `Starting ${this.runtimeDisplayName} runtime...`,
+      diagnostic: true,
+    };
 
     // Drive the session in the background; events are pushed to the queue
     // and yielded from this generator.
@@ -333,7 +340,10 @@ export abstract class BaseAgentSession implements AgentSession {
       try {
         await this.executeFollowUp(text);
       } catch (err: unknown) {
-        logger.warn({ err }, `Failed to process follow-up input in ${this.runtimeDisplayName} session`);
+        logger.warn(
+          { err },
+          `Failed to process follow-up input in ${this.runtimeDisplayName} session`,
+        );
         this.emit({ type: "error", timestamp: ts(), content: String(err) });
       }
 

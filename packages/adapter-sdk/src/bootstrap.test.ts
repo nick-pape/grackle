@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { RemoteExecutor } from "./remote-executor.js";
-import { buildEnvFileContent, probeRemotePowerLine, writeRemoteEnvFile, startRemotePowerLine } from "./bootstrap.js";
+import {
+  buildEnvFileContent,
+  probeRemotePowerLine,
+  writeRemoteEnvFile,
+  startRemotePowerLine,
+} from "./bootstrap.js";
 
 // ── Helper ──────────────────────────────────────────────────
 
@@ -31,7 +36,9 @@ describe("probeRemotePowerLine", () => {
     const executor = createMockExecutor();
     await expect(probeRemotePowerLine(executor)).resolves.toBeUndefined();
     expect(executor.exec).toHaveBeenCalledOnce();
-    expect((executor.exec as ReturnType<typeof vi.fn>).mock.calls[0][0]).toContain("createConnection");
+    expect((executor.exec as ReturnType<typeof vi.fn>).mock.calls[0][0]).toContain(
+      "createConnection",
+    );
   });
 
   it("throws when the remote port check fails", async () => {
@@ -63,14 +70,18 @@ describe("buildEnvFileContent", () => {
   });
 
   it("skips invalid env var names and logs a warning", () => {
-    const content = buildEnvFileContent("tok", { "invalid-name!": "bad", VALID_NAME: "good" }, silentLogger);
+    const content = buildEnvFileContent(
+      "tok",
+      { "invalid-name!": "bad", VALID_NAME: "good" },
+      silentLogger,
+    );
     expect(content).toContain("VALID_NAME");
     expect(content).not.toContain("invalid-name!");
     expect(silentLogger.warn).toHaveBeenCalled();
   });
 
   it("escapes shell-special characters in values", () => {
-    const content = buildEnvFileContent("tok", { SPECIAL: "it's a \"test\" $VAR" }, silentLogger);
+    const content = buildEnvFileContent("tok", { SPECIAL: 'it\'s a "test" $VAR' }, silentLogger);
     // shellEscape replaces ' with '\'' — verify the actual escaped output
     expect(content).toContain("export SPECIAL='it'\\''s a \"test\" $VAR'");
   });
@@ -121,7 +132,12 @@ describe("writeRemoteEnvFile", () => {
 
   it("skips env var names that fail validation", async () => {
     const executor = createMockExecutor();
-    await writeRemoteEnvFile(executor, "tok", { "invalid-name!": "bad", VALID_NAME: "good" }, silentLogger);
+    await writeRemoteEnvFile(
+      executor,
+      "tok",
+      { "invalid-name!": "bad", VALID_NAME: "good" },
+      silentLogger,
+    );
 
     const writeCall = (executor.exec as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
     const allQuoted = [...writeCall.matchAll(/'([^']+)'/g)];
@@ -160,8 +176,9 @@ describe("startRemotePowerLine", () => {
       exec: vi.fn().mockRejectedValue(new Error("port not listening")),
     });
 
-    await expect(startRemotePowerLine(executor, "test-token", { logger: silentLogger }))
-      .rejects.toThrow("PowerLine process died immediately after starting");
+    await expect(
+      startRemotePowerLine(executor, "test-token", { logger: silentLogger }),
+    ).rejects.toThrow("PowerLine process died immediately after starting");
 
     const calls = (executor.exec as ReturnType<typeof vi.fn>).mock.calls;
     expect(calls).toHaveLength(1);
@@ -170,7 +187,10 @@ describe("startRemotePowerLine", () => {
 
   it("uses workingDirectory when provided", async () => {
     const executor = createMockExecutor();
-    await startRemotePowerLine(executor, "tok", { workingDirectory: "/workspaces/myrepo", logger: silentLogger });
+    await startRemotePowerLine(executor, "tok", {
+      workingDirectory: "/workspaces/myrepo",
+      logger: silentLogger,
+    });
 
     const calls = (executor.exec as ReturnType<typeof vi.fn>).mock.calls;
     expect(calls).toHaveLength(1);
@@ -179,7 +199,10 @@ describe("startRemotePowerLine", () => {
 
   it("auto-detects workspace directory when autoDetectWorkspace is true", async () => {
     const executor = createMockExecutor();
-    await startRemotePowerLine(executor, "tok", { autoDetectWorkspace: true, logger: silentLogger });
+    await startRemotePowerLine(executor, "tok", {
+      autoDetectWorkspace: true,
+      logger: silentLogger,
+    });
 
     const calls = (executor.exec as ReturnType<typeof vi.fn>).mock.calls;
     expect(calls).toHaveLength(1);
@@ -193,7 +216,10 @@ describe("startRemotePowerLine", () => {
       exec: vi.fn().mockResolvedValue("__PL_ALIVE__"),
     });
 
-    const result = await startRemotePowerLine(executor, "tok", { probeFirst: true, logger: silentLogger });
+    const result = await startRemotePowerLine(executor, "tok", {
+      probeFirst: true,
+      logger: silentLogger,
+    });
     expect(result.alreadyRunning).toBe(true);
 
     const calls = (executor.exec as ReturnType<typeof vi.fn>).mock.calls;

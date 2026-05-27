@@ -36,7 +36,6 @@ export interface Environment {
   githubAccountId: string;
 }
 
-
 /** An agent session running inside an environment. */
 export interface Session {
   id: string;
@@ -241,7 +240,11 @@ export interface UseEnvironmentsResult {
   /** Update an existing environment's mutable fields. */
   updateEnvironment: (
     environmentId: string,
-    fields: { displayName?: string; adapterConfig?: Record<string, unknown>; githubAccountId?: string },
+    fields: {
+      displayName?: string;
+      adapterConfig?: Record<string, unknown>;
+      githubAccountId?: string;
+    },
   ) => Promise<void>;
   /** Provision an environment by ID. When force is true, kills active sessions and forces full provision. */
   provisionEnvironment: (environmentId: string, force?: boolean) => Promise<void>;
@@ -758,10 +761,7 @@ export function parseWsMessage(data: string): WsMessage | GrackleEvent | undefin
     return undefined;
   }
   if (!isObject(parsed) || typeof parsed.type !== "string") {
-    console.warn(
-      "[ws] Received WebSocket message without a string 'type' field:",
-      parsed,
-    );
+    console.warn("[ws] Received WebSocket message without a string 'type' field:", parsed);
     return undefined;
   }
   // When both id and timestamp are present, return a full GrackleEvent
@@ -788,13 +788,20 @@ export function parseWsMessage(data: string): WsMessage | GrackleEvent | undefin
  */
 export function mapSessionStatus(rawStatus: string): string {
   switch (rawStatus) {
-    case "waiting_input": return "idle";
-    case "completed": return "stopped";
-    case "killed": return "stopped";
-    case "failed": return "stopped";
-    case "interrupted": return "stopped";
-    case "terminated": return "stopped";
-    default: return rawStatus;
+    case "waiting_input":
+      return "idle";
+    case "completed":
+      return "stopped";
+    case "killed":
+      return "stopped";
+    case "failed":
+      return "stopped";
+    case "interrupted":
+      return "stopped";
+    case "terminated":
+      return "stopped";
+    default:
+      return rawStatus;
   }
 }
 
@@ -804,12 +811,18 @@ export function mapSessionStatus(rawStatus: string): string {
  */
 export function mapEndReason(rawContent: string): string | undefined {
   switch (rawContent) {
-    case "completed": return "completed";
-    case "killed": return "killed";
-    case "failed": return "interrupted";
-    case "interrupted": return "interrupted";
-    case "terminated": return "terminated";
-    default: return undefined;
+    case "completed":
+      return "completed";
+    case "killed":
+      return "killed";
+    case "failed":
+      return "interrupted";
+    case "interrupted":
+      return "interrupted";
+    case "terminated":
+      return "terminated";
+    default:
+      return undefined;
   }
 }
 
@@ -897,9 +910,17 @@ export interface UseGitHubAccountsResult {
   /** Refresh the account list from the server. */
   loadGitHubAccounts: () => Promise<void>;
   /** Register a new GitHub account. */
-  addGitHubAccount: (label: string, token: string, username: string, isDefault: boolean) => Promise<void>;
+  addGitHubAccount: (
+    label: string,
+    token: string,
+    username: string,
+    isDefault: boolean,
+  ) => Promise<void>;
   /** Update an existing GitHub account. */
-  updateGitHubAccount: (id: string, fields: { label?: string; token?: string; isDefault?: boolean }) => Promise<void>;
+  updateGitHubAccount: (
+    id: string,
+    fields: { label?: string; token?: string; isDefault?: boolean },
+  ) => Promise<void>;
   /** Remove a GitHub account by ID. */
   removeGitHubAccount: (id: string) => Promise<void>;
   /** Import accounts from the local gh CLI authentication state. */

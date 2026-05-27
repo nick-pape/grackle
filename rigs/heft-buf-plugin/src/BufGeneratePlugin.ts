@@ -4,7 +4,7 @@ import type {
   HeftConfiguration,
   IHeftTaskPlugin,
   IHeftTaskSession,
-  IHeftTaskRunHookOptions
+  IHeftTaskRunHookOptions,
 } from "@rushstack/heft";
 
 const PLUGIN_NAME: string = "buf-generate-plugin";
@@ -22,7 +22,7 @@ class BufGeneratePlugin implements IHeftTaskPlugin {
       execFileSync(bufBin, ["generate"], {
         cwd: buildFolder,
         stdio: "inherit",
-        shell: isWindows
+        shell: isWindows,
       });
       session.logger.terminal.writeLine("buf generate completed.");
     });

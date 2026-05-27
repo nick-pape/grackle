@@ -1,7 +1,22 @@
 import { useEffect, useRef, useState, type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
-import { Breadcrumbs, ConfirmDialog, DagView, EditableCheckbox, EditableSelect, EditableTextArea, EditableTextField, WorkspaceBoard, buildWorkspaceBreadcrumbs, formatCost, formatTokens, newTaskUrl, useAppNavigate, useThemeContext } from "@grackle-ai/web-components";
+import {
+  Breadcrumbs,
+  ConfirmDialog,
+  DagView,
+  EditableCheckbox,
+  EditableSelect,
+  EditableTextArea,
+  EditableTextField,
+  WorkspaceBoard,
+  buildWorkspaceBreadcrumbs,
+  formatCost,
+  formatTokens,
+  newTaskUrl,
+  useAppNavigate,
+  useThemeContext,
+} from "@grackle-ai/web-components";
 import { useHotkey } from "../hooks/useHotkey.js";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -45,12 +60,28 @@ function toSafeRepositoryUrl(value: string): string | undefined {
 
 /** Workspace overview page with inline editing, progress bar, and DAG/task views. */
 export function WorkspacePage(): JSX.Element {
-  const { workspaceId, environmentId: routeEnvironmentId } = useParams<{ workspaceId: string; environmentId: string }>();
+  const { workspaceId, environmentId: routeEnvironmentId } = useParams<{
+    workspaceId: string;
+    environmentId: string;
+  }>();
   const navigate = useAppNavigate();
   const {
-    tasks: { tasks }, environments: { environments }, workspaces: { workspaces, workspacesLoading, archiveWorkspace, updateWorkspace, linkEnvironment, unlinkEnvironment, linkOperationError, clearLinkOperationError },
-    personas: { personas }, sessions: { sessions },
-    usageCache, loadUsage,
+    tasks: { tasks },
+    environments: { environments },
+    workspaces: {
+      workspaces,
+      workspacesLoading,
+      archiveWorkspace,
+      updateWorkspace,
+      linkEnvironment,
+      unlinkEnvironment,
+      linkOperationError,
+      clearLinkOperationError,
+    },
+    personas: { personas },
+    sessions: { sessions },
+    usageCache,
+    loadUsage,
   } = useGrackle();
   const { resolvedThemeId } = useThemeContext();
 
@@ -63,7 +94,12 @@ export function WorkspacePage(): JSX.Element {
   const workspace = workspaces.find((p) => p.id === workspaceId);
 
   const environmentId = routeEnvironmentId ?? workspace?.linkedEnvironmentIds[0] ?? "";
-  const breadcrumbs = buildWorkspaceBreadcrumbs(workspaceId!, environmentId, workspaces, environments);
+  const breadcrumbs = buildWorkspaceBreadcrumbs(
+    workspaceId!,
+    environmentId,
+    workspaces,
+    environments,
+  );
 
   // Keyboard shortcuts: 1/2/3 to switch views
   useHotkey({ key: "1" }, () => setWorkspaceTab("graph"));
@@ -110,7 +146,11 @@ export function WorkspacePage(): JSX.Element {
         <span className={styles.workspaceName} data-testid="workspace-name">
           <EditableTextField
             value={workspace?.name || ""}
-            onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { name: v }).catch(() => {}); } }}
+            onSave={(v) => {
+              if (workspace) {
+                updateWorkspace(workspace.id, { name: v }).catch(() => {});
+              }
+            }}
             validate={(v) => {
               const trimmed = v.trim();
               if (!trimmed) return "Name is required";
@@ -144,28 +184,42 @@ export function WorkspacePage(): JSX.Element {
         aria-controls="workspace-meta-panel"
         data-testid="meta-toggle"
       >
-        <span className={`${styles.metaToggleArrow} ${!metaCollapsed ? styles.metaToggleArrowOpen : ""}`}>&#x25B6;</span>
+        <span
+          className={`${styles.metaToggleArrow} ${!metaCollapsed ? styles.metaToggleArrowOpen : ""}`}
+        >
+          &#x25B6;
+        </span>
         Details
       </button>
 
       {/* Workspace metadata (collapsible) */}
       {!metaCollapsed && (
-        <div className={styles.workspaceMeta} data-testid="workspace-meta" id="workspace-meta-panel">
+        <div
+          className={styles.workspaceMeta}
+          data-testid="workspace-meta"
+          id="workspace-meta-panel"
+        >
           {/* Description */}
           <div className={styles.metaRow}>
             <span className={styles.metaLabel}>Description</span>
             <div className={styles.metaValue}>
               <EditableTextArea
                 value={workspace?.description || ""}
-                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { description: v }).catch(() => {}); } }}
+                onSave={(v) => {
+                  if (workspace) {
+                    updateWorkspace(workspace.id, { description: v }).catch(() => {});
+                  }
+                }}
                 fieldId="description"
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}
-                renderDisplay={(v) => v ? (
-                  <span className={styles.overviewMarkdown}>
-                    <Markdown remarkPlugins={[remarkGfm]}>{v}</Markdown>
-                  </span>
-                ) : undefined}
+                renderDisplay={(v) =>
+                  v ? (
+                    <span className={styles.overviewMarkdown}>
+                      <Markdown remarkPlugins={[remarkGfm]}>{v}</Markdown>
+                    </span>
+                  ) : undefined
+                }
                 placeholder="No description"
                 ariaLabel="Workspace description"
                 data-testid="edit-description"
@@ -179,10 +233,15 @@ export function WorkspacePage(): JSX.Element {
             <div className={styles.metaValue}>
               <EditableTextField
                 value={workspace?.repoUrl || ""}
-                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { repoUrl: v }).catch(() => {}); } }}
+                onSave={(v) => {
+                  if (workspace) {
+                    updateWorkspace(workspace.id, { repoUrl: v }).catch(() => {});
+                  }
+                }}
                 validate={(v) => {
                   const trimmed = v.trim();
-                  if (trimmed && !/^https?:\/\/.+/.test(trimmed)) return "Must be a valid http(s) URL";
+                  if (trimmed && !/^https?:\/\/.+/.test(trimmed))
+                    return "Must be a valid http(s) URL";
                   return undefined;
                 }}
                 fieldId="repoUrl"
@@ -226,11 +285,17 @@ export function WorkspacePage(): JSX.Element {
                     return filtered.map((envId) => {
                       const env = environments.find((e) => e.id === envId);
                       return (
-                        <span key={envId} className={styles.linkedEnvChip} data-testid={`linked-env-${envId}`}>
+                        <span
+                          key={envId}
+                          className={styles.linkedEnvChip}
+                          data-testid={`linked-env-${envId}`}
+                        >
                           {env?.displayName || envId}
                           <button
                             className={styles.chipDismiss}
-                            onClick={() => { unlinkEnvironment(workspace.id, envId).catch(() => {}); }}
+                            onClick={() => {
+                              unlinkEnvironment(workspace.id, envId).catch(() => {});
+                            }}
                             title={`Unlink ${env?.displayName || envId}`}
                             aria-label={`Unlink ${env?.displayName || envId}`}
                             data-testid={`unlink-env-${envId}`}
@@ -244,9 +309,7 @@ export function WorkspacePage(): JSX.Element {
                   })()}
                   {(() => {
                     const linkedSet = new Set(workspace.linkedEnvironmentIds);
-                    const available = environments.filter(
-                      (e) => !linkedSet.has(e.id),
-                    );
+                    const available = environments.filter((e) => !linkedSet.has(e.id));
                     if (available.length === 0) {
                       return null;
                     }
@@ -264,7 +327,9 @@ export function WorkspacePage(): JSX.Element {
                       >
                         <option value="">+ Link</option>
                         {available.map((e) => (
-                          <option key={e.id} value={e.id}>{e.displayName || e.id}</option>
+                          <option key={e.id} value={e.id}>
+                            {e.displayName || e.id}
+                          </option>
                         ))}
                       </select>
                     );
@@ -299,7 +364,11 @@ export function WorkspacePage(): JSX.Element {
             <div className={styles.metaValue}>
               <EditableSelect
                 value={workspace?.defaultPersonaId || ""}
-                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { defaultPersonaId: v }).catch(() => {}); } }}
+                onSave={(v) => {
+                  if (workspace) {
+                    updateWorkspace(workspace.id, { defaultPersonaId: v }).catch(() => {});
+                  }
+                }}
                 options={[
                   { value: "", label: "(Inherit)" },
                   ...personas.map((p) => ({ value: p.id, label: p.name })),
@@ -342,7 +411,11 @@ export function WorkspacePage(): JSX.Element {
             <div className={styles.metaValue}>
               <EditableTextField
                 value={workspace?.workingDirectory || ""}
-                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { workingDirectory: v }).catch(() => {}); } }}
+                onSave={(v) => {
+                  if (workspace) {
+                    updateWorkspace(workspace.id, { workingDirectory: v }).catch(() => {});
+                  }
+                }}
                 fieldId="workingDirectory"
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}
@@ -375,7 +448,9 @@ export function WorkspacePage(): JSX.Element {
           <div className={styles.progressBar}>
             <div className={styles.progressFill} style={{ width: `${progressPct}%` }} />
           </div>
-          <span className={styles.progressLabel}>{done}/{total}</span>
+          <span className={styles.progressLabel}>
+            {done}/{total}
+          </span>
         </div>
       )}
 
@@ -383,7 +458,8 @@ export function WorkspacePage(): JSX.Element {
       {wsUsage && wsUsage.costMillicents > 0 && (
         <div className={styles.progressBarContainer}>
           <span className={styles.progressLabel}>
-            Usage: {formatCost(wsUsage.costMillicents)} ({wsUsage.sessionCount} session{wsUsage.sessionCount !== 1 ? "s" : ""})
+            Usage: {formatCost(wsUsage.costMillicents)} ({wsUsage.sessionCount} session
+            {wsUsage.sessionCount !== 1 ? "s" : ""})
           </span>
         </div>
       )}
@@ -394,11 +470,17 @@ export function WorkspacePage(): JSX.Element {
           <span className={styles.progressLabel}>
             Budget:{" "}
             {workspace.tokenBudget > 0 && (
-              <>Tokens: {formatTokens((wsUsage?.inputTokens ?? 0) + (wsUsage?.outputTokens ?? 0))} / {formatTokens(workspace.tokenBudget)}</>
+              <>
+                Tokens: {formatTokens((wsUsage?.inputTokens ?? 0) + (wsUsage?.outputTokens ?? 0))} /{" "}
+                {formatTokens(workspace.tokenBudget)}
+              </>
             )}
             {workspace.tokenBudget > 0 && workspace.costBudgetMillicents > 0 && " | "}
             {workspace.costBudgetMillicents > 0 && (
-              <>Cost: {formatCost(wsUsage?.costMillicents ?? 0)} / {formatCost(workspace.costBudgetMillicents)}</>
+              <>
+                Cost: {formatCost(wsUsage?.costMillicents ?? 0)} /{" "}
+                {formatCost(workspace.costBudgetMillicents)}
+              </>
             )}
           </span>
         </div>
@@ -434,10 +516,10 @@ export function WorkspacePage(): JSX.Element {
       </div>
       {workspaceTab === "tasks" && total > 0 && (
         <div className={styles.workspaceSummary}>
-          <span className={styles.workspaceSummaryTitle}>
-            {`${done}/${total} tasks complete`}
+          <span className={styles.workspaceSummaryTitle}>{`${done}/${total} tasks complete`}</span>
+          <span className={styles.workspaceSummarySubtitle}>
+            Select a task or click + to create one
           </span>
-          <span className={styles.workspaceSummarySubtitle}>Select a task or click + to create one</span>
         </div>
       )}
       {workspaceTab === "tasks" && total === 0 && (
@@ -454,10 +536,22 @@ export function WorkspacePage(): JSX.Element {
         </div>
       )}
       {workspaceTab === "board" && (
-        <WorkspaceBoard workspaceId={workspaceId!} environmentId={environmentId} tasks={tasks} sessions={sessions} personas={personas} environments={environments} />
+        <WorkspaceBoard
+          workspaceId={workspaceId!}
+          environmentId={environmentId}
+          tasks={tasks}
+          sessions={sessions}
+          personas={personas}
+          environments={environments}
+        />
       )}
       {workspaceTab === "graph" && (
-        <DagView workspaceId={workspaceId!} environmentId={environmentId} tasks={tasks} resolvedThemeId={resolvedThemeId} />
+        <DagView
+          workspaceId={workspaceId!}
+          environmentId={environmentId}
+          tasks={tasks}
+          resolvedThemeId={resolvedThemeId}
+        />
       )}
 
       {/* Archive confirmation dialog */}

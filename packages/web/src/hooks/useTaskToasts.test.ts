@@ -44,10 +44,9 @@ describe("useTaskToasts", () => {
     const initial = [makeTask({ id: "t1", status: "not_started" })];
     const updated = [makeTask({ id: "t1", status: "working" })];
 
-    const { rerender } = renderHook(
-      ({ tasks }) => useTaskToasts(tasks, showToast),
-      { initialProps: { tasks: initial } },
-    );
+    const { rerender } = renderHook(({ tasks }) => useTaskToasts(tasks, showToast), {
+      initialProps: { tasks: initial },
+    });
 
     expect(showToast).not.toHaveBeenCalled();
 
@@ -61,10 +60,9 @@ describe("useTaskToasts", () => {
     const initial = [makeTask({ id: "t1", status: "working" })];
     const updated = [makeTask({ id: "t1", status: "complete" })];
 
-    const { rerender } = renderHook(
-      ({ tasks }) => useTaskToasts(tasks, showToast),
-      { initialProps: { tasks: initial } },
-    );
+    const { rerender } = renderHook(({ tasks }) => useTaskToasts(tasks, showToast), {
+      initialProps: { tasks: initial },
+    });
 
     rerender({ tasks: updated });
 
@@ -76,10 +74,9 @@ describe("useTaskToasts", () => {
     const initial = [makeTask({ id: "t1", status: "working" })];
     const updated = [makeTask({ id: "t1", status: "failed" })];
 
-    const { rerender } = renderHook(
-      ({ tasks }) => useTaskToasts(tasks, showToast),
-      { initialProps: { tasks: initial } },
-    );
+    const { rerender } = renderHook(({ tasks }) => useTaskToasts(tasks, showToast), {
+      initialProps: { tasks: initial },
+    });
 
     rerender({ tasks: updated });
 
@@ -91,10 +88,9 @@ describe("useTaskToasts", () => {
     const initial = [makeTask({ id: "t1", status: "working" })];
     const updated: TaskData[] = [];
 
-    const { rerender } = renderHook(
-      ({ tasks }) => useTaskToasts(tasks, showToast),
-      { initialProps: { tasks: initial } },
-    );
+    const { rerender } = renderHook(({ tasks }) => useTaskToasts(tasks, showToast), {
+      initialProps: { tasks: initial },
+    });
 
     rerender({ tasks: updated });
 
@@ -106,10 +102,9 @@ describe("useTaskToasts", () => {
     const initial: TaskData[] = [];
     const updated = [makeTask({ id: "t1", status: "working" })];
 
-    const { rerender } = renderHook(
-      ({ tasks }) => useTaskToasts(tasks, showToast),
-      { initialProps: { tasks: initial } },
-    );
+    const { rerender } = renderHook(({ tasks }) => useTaskToasts(tasks, showToast), {
+      initialProps: { tasks: initial },
+    });
 
     rerender({ tasks: updated });
 
@@ -127,10 +122,9 @@ describe("useTaskToasts", () => {
       makeTask({ id: "t2", status: "complete" }),
     ];
 
-    const { rerender } = renderHook(
-      ({ tasks }) => useTaskToasts(tasks, showToast),
-      { initialProps: { tasks: initial } },
-    );
+    const { rerender } = renderHook(({ tasks }) => useTaskToasts(tasks, showToast), {
+      initialProps: { tasks: initial },
+    });
 
     rerender({ tasks: updated });
 

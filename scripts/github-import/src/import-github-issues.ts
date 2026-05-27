@@ -123,44 +123,48 @@ async function main(): Promise<void> {
     .option("--label <label>", "Filter issues by label")
     .option("--state <state>", "Issue state: open or closed", "open")
     .option("--no-include-comments", "Skip fetching issue comments")
-    .action(async (options: {
-      workspace: string;
-      repo: string;
-      label?: string;
-      state: string;
-      includeComments: boolean;
-    }) => {
-      const serverUrl = process.env.GRACKLE_URL ?? `http://127.0.0.1:${DEFAULT_SERVER_PORT}`;
-      const apiKey = process.env.GRACKLE_API_KEY;
-      if (!apiKey) {
-        console.error("Error: GRACKLE_API_KEY environment variable is required.");
-        process.exit(1);
-      }
+    .action(
+      async (options: {
+        workspace: string;
+        repo: string;
+        label?: string;
+        state: string;
+        includeComments: boolean;
+      }) => {
+        const serverUrl = process.env.GRACKLE_URL ?? `http://127.0.0.1:${DEFAULT_SERVER_PORT}`;
+        const apiKey = process.env.GRACKLE_API_KEY;
+        if (!apiKey) {
+          console.error("Error: GRACKLE_API_KEY environment variable is required.");
+          process.exit(1);
+        }
 
-      const normalizedState = options.state.trim().toLowerCase();
-      if (normalizedState !== "open" && normalizedState !== "closed") {
-        console.error(`Error: --state must be "open" or "closed" (received: "${options.state}")`);
-        process.exit(1);
-      }
+        const normalizedState = options.state.trim().toLowerCase();
+        if (normalizedState !== "open" && normalizedState !== "closed") {
+          console.error(`Error: --state must be "open" or "closed" (received: "${options.state}")`);
+          process.exit(1);
+        }
 
-      const client = createGrackleClients(serverUrl, apiKey);
+        const client = createGrackleClients(serverUrl, apiKey);
 
-      try {
-        const result = await runImport(
-          client,
-          options.workspace,
-          options.repo,
-          normalizedState,
-          options.label,
-          options.includeComments,
-        );
+        try {
+          const result = await runImport(
+            client,
+            options.workspace,
+            options.repo,
+            normalizedState,
+            options.label,
+            options.includeComments,
+          );
 
-        console.log(`Import complete: ${result.imported} imported, ${result.linked} linked, ${result.skipped} skipped, ${result.dependencies} dependencies`);
-      } catch (err) {
-        console.error(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
-        process.exit(1);
-      }
-    });
+          console.log(
+            `Import complete: ${result.imported} imported, ${result.linked} linked, ${result.skipped} skipped, ${result.dependencies} dependencies`,
+          );
+        } catch (err) {
+          console.error(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
+          process.exit(1);
+        }
+      },
+    );
 
   await program.parseAsync(process.argv);
 }

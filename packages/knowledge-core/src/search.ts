@@ -76,9 +76,7 @@ function buildSearchCypher(options: {
     filters.push("node.workspaceId = $workspaceId");
   }
 
-  const whereClause: string = filters.length > 0
-    ? `WHERE ${filters.join(" AND ")}`
-    : "";
+  const whereClause: string = filters.length > 0 ? `WHERE ${filters.join(" AND ")}` : "";
 
   // Neo4j requires integer literals for LIMIT and the vector query count.
   return `
@@ -152,8 +150,7 @@ export async function knowledgeSearch(
       const neo4jNode = record.get("node") as { properties: Record<string, unknown> };
       const nodeProps: Record<string, unknown> = neo4jNode.properties;
       const score: number = record.get("score") as number;
-      const rawEdges: Record<string, unknown>[] =
-        record.get("edges") as Record<string, unknown>[];
+      const rawEdges: Record<string, unknown>[] = record.get("edges") as Record<string, unknown>[];
 
       // Filter out null edges (from OPTIONAL MATCH with no relationships)
       const edges: KnowledgeEdge[] = rawEdges

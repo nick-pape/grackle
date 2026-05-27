@@ -5,17 +5,17 @@
 // overrides. Imported once in main.tsx; theme tokens come from theme.scss.
 // ============================================================================
 
-@use './theme.scss';
-@use './prism-theme.scss';
+@use "./theme.scss";
+@use "./prism-theme.scss";
 // Self-hosted fonts (#1252): bundled via @fontsource-variable so they load from
 // 'self' under the app's strict CSP (style-src/font-src 'self') instead of the
 // external Google Fonts / jsDelivr stylesheets the CSP blocked. Each package's
 // @font-face set is split by unicode-range, so the browser only downloads the
 // subset(s) it actually renders (latin for the English UI).
-@use '@fontsource-variable/fira-code';
-@use '@fontsource-variable/jetbrains-mono';
-@use '@fontsource-variable/dm-sans';
-@use '@fontsource-variable/dm-sans/wght-italic';
+@use "@fontsource-variable/fira-code";
+@use "@fontsource-variable/jetbrains-mono";
+@use "@fontsource-variable/dm-sans";
+@use "@fontsource-variable/dm-sans/wght-italic";
 
 // =============================================================================
 // Suppress transitions during theme changes (T3 pattern)
@@ -61,7 +61,7 @@ body {
 
 // Subtle noise texture overlay (T3-inspired tactile feel)
 body::after {
-  content: '';
+  content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
@@ -120,7 +120,9 @@ body::after {
 
 // Enable OpenType ligatures and contextual alternates globally
 :root {
-  font-feature-settings: 'liga' 1, 'calt' 1;
+  font-feature-settings:
+    "liga" 1,
+    "calt" 1;
 }
 
 // =============================================================================
@@ -214,8 +216,8 @@ body::after {
     --text-secondary: #4b5563;
     --text-tertiary: #6b7280;
     --text-disabled: #9ca3af;
-    --border-subtle: rgba(0, 0, 0, 0.20);
-    --border-input: rgba(0, 0, 0, 0.30);
+    --border-subtle: rgba(0, 0, 0, 0.2);
+    --border-input: rgba(0, 0, 0, 0.3);
   }
 
   [data-theme="grackle-dark"],

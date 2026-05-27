@@ -42,7 +42,10 @@ export function createStream(sessionId: string): AsyncIterable<SessionEvent> & {
       queue.shift();
       droppedCount++;
       if (droppedCount === 1 || droppedCount % OVERFLOW_WARN_INTERVAL === 0) {
-        logger.warn({ sessionId, queueDepth: MAX_SUBSCRIBER_QUEUE_DEPTH, droppedCount }, "Stream subscriber queue overflow — dropping oldest events");
+        logger.warn(
+          { sessionId, queueDepth: MAX_SUBSCRIBER_QUEUE_DEPTH, droppedCount },
+          "Stream subscriber queue overflow — dropping oldest events",
+        );
       }
     }
     queue.push(event);
@@ -71,7 +74,9 @@ export function createStream(sessionId: string): AsyncIterable<SessionEvent> & {
       return {
         async next(): Promise<IteratorResult<SessionEvent>> {
           while (queue.length === 0 && !state.done) {
-            await new Promise<void>((resolve: () => void) => { waiting = resolve; });
+            await new Promise<void>((resolve: () => void) => {
+              waiting = resolve;
+            });
           }
           if (queue.length > 0) {
             return { value: queue.shift()!, done: false };
@@ -97,7 +102,10 @@ export function createGlobalStream(): AsyncIterable<SessionEvent> & { cancel(): 
       queue.shift();
       droppedCount++;
       if (droppedCount === 1 || droppedCount % OVERFLOW_WARN_INTERVAL === 0) {
-        logger.warn({ queueDepth: MAX_SUBSCRIBER_QUEUE_DEPTH, droppedCount }, "Global stream subscriber queue overflow — dropping oldest events");
+        logger.warn(
+          { queueDepth: MAX_SUBSCRIBER_QUEUE_DEPTH, droppedCount },
+          "Global stream subscriber queue overflow — dropping oldest events",
+        );
       }
     }
     queue.push(event);
@@ -119,7 +127,9 @@ export function createGlobalStream(): AsyncIterable<SessionEvent> & { cancel(): 
       return {
         async next(): Promise<IteratorResult<SessionEvent>> {
           while (queue.length === 0 && !state.done) {
-            await new Promise<void>((resolve: () => void) => { waiting = resolve; });
+            await new Promise<void>((resolve: () => void) => {
+              waiting = resolve;
+            });
           }
           if (queue.length > 0) {
             return { value: queue.shift()!, done: false };

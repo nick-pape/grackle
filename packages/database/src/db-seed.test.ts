@@ -114,25 +114,40 @@ function runSeedLogic(db: InstanceType<typeof Database>): void {
     if (existingSystemByName && existingSystemByName.id !== SYSTEM_PERSONA_ID) {
       const reassign = db.transaction((oldId: string) => {
         db.prepare("UPDATE personas SET id = ? WHERE id = ?").run(SYSTEM_PERSONA_ID, oldId);
-        db.prepare("UPDATE settings SET value = ? WHERE key = 'default_persona_id' AND value = ?").run(SYSTEM_PERSONA_ID, oldId);
-        db.prepare("UPDATE sessions SET persona_id = ? WHERE persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
-        db.prepare("UPDATE tasks SET default_persona_id = ? WHERE default_persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
-        db.prepare("UPDATE workspaces SET default_persona_id = ? WHERE default_persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
+        db.prepare(
+          "UPDATE settings SET value = ? WHERE key = 'default_persona_id' AND value = ?",
+        ).run(SYSTEM_PERSONA_ID, oldId);
+        db.prepare("UPDATE sessions SET persona_id = ? WHERE persona_id = ?").run(
+          SYSTEM_PERSONA_ID,
+          oldId,
+        );
+        db.prepare("UPDATE tasks SET default_persona_id = ? WHERE default_persona_id = ?").run(
+          SYSTEM_PERSONA_ID,
+          oldId,
+        );
+        db.prepare("UPDATE workspaces SET default_persona_id = ? WHERE default_persona_id = ?").run(
+          SYSTEM_PERSONA_ID,
+          oldId,
+        );
       });
       reassign(existingSystemByName.id);
     } else if (!existingSystemByName) {
-      db.prepare(`
+      db.prepare(
+        `
         INSERT INTO personas (id, name, description, system_prompt, runtime, model, max_turns, type)
         VALUES (?, 'System', 'Central orchestrator persona', 'system prompt', ?, ?, 0, 'agent')
-      `).run(SYSTEM_PERSONA_ID, systemRuntime, systemModel);
+      `,
+      ).run(SYSTEM_PERSONA_ID, systemRuntime, systemModel);
     }
   }
 
   // Seed root task logic
-  db.prepare(`
+  db.prepare(
+    `
     INSERT OR IGNORE INTO tasks (id, workspace_id, title, description, status, branch, parent_task_id, depth, can_decompose, default_persona_id)
     VALUES (?, NULL, 'System', '', 'not_started', 'system', '', 0, 1, ?)
-  `).run(ROOT_TASK_ID, SYSTEM_PERSONA_ID);
+  `,
+  ).run(ROOT_TASK_ID, SYSTEM_PERSONA_ID);
 }
 
 describe("DB seed: System persona + root task", () => {
@@ -146,14 +161,18 @@ describe("DB seed: System persona + root task", () => {
 
   it("seeds System persona on fresh install", () => {
     // Simulate seed persona existing first
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO personas (id, name, system_prompt, runtime, model)
       VALUES ('claude-code', 'Claude Code', '', 'claude-code', 'sonnet')
-    `).run();
+    `,
+    ).run();
 
     runSeedLogic(db);
 
-    const persona = db.prepare("SELECT * FROM personas WHERE id = ?").get(SYSTEM_PERSONA_ID) as Record<string, unknown>;
+    const persona = db
+      .prepare("SELECT * FROM personas WHERE id = ?")
+      .get(SYSTEM_PERSONA_ID) as Record<string, unknown>;
     expect(persona).toBeDefined();
     expect(persona.name).toBe("System");
     expect(persona.runtime).toBe("claude-code");
@@ -162,14 +181,19 @@ describe("DB seed: System persona + root task", () => {
   });
 
   it("seeds root task on fresh install", () => {
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO personas (id, name, system_prompt, runtime, model)
       VALUES ('claude-code', 'Claude Code', '', 'claude-code', 'sonnet')
-    `).run();
+    `,
+    ).run();
 
     runSeedLogic(db);
 
-    const task = db.prepare("SELECT * FROM tasks WHERE id = ?").get(ROOT_TASK_ID) as Record<string, unknown>;
+    const task = db.prepare("SELECT * FROM tasks WHERE id = ?").get(ROOT_TASK_ID) as Record<
+      string,
+      unknown
+    >;
     expect(task).toBeDefined();
     expect(task.title).toBe("System");
     expect(task.workspace_id).toBeNull();
@@ -179,49 +203,65 @@ describe("DB seed: System persona + root task", () => {
   });
 
   it("copies runtime/model from seed persona", () => {
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO personas (id, name, system_prompt, runtime, model)
       VALUES ('claude-code', 'Claude Code', '', 'copilot', 'gpt-4o')
-    `).run();
+    `,
+    ).run();
 
     runSeedLogic(db);
 
-    const persona = db.prepare("SELECT runtime, model FROM personas WHERE id = ?").get(SYSTEM_PERSONA_ID) as Record<string, unknown>;
+    const persona = db
+      .prepare("SELECT runtime, model FROM personas WHERE id = ?")
+      .get(SYSTEM_PERSONA_ID) as Record<string, unknown>;
     expect(persona.runtime).toBe("copilot");
     expect(persona.model).toBe("gpt-4o");
   });
 
   it("is idempotent — running twice does not duplicate", () => {
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO personas (id, name, system_prompt, runtime, model)
       VALUES ('claude-code', 'Claude Code', '', 'claude-code', 'sonnet')
-    `).run();
+    `,
+    ).run();
 
     runSeedLogic(db);
     runSeedLogic(db);
 
-    const personaCount = db.prepare("SELECT COUNT(*) as cnt FROM personas WHERE id = ?").get(SYSTEM_PERSONA_ID) as { cnt: number };
-    const taskCount = db.prepare("SELECT COUNT(*) as cnt FROM tasks WHERE id = ?").get(ROOT_TASK_ID) as { cnt: number };
+    const personaCount = db
+      .prepare("SELECT COUNT(*) as cnt FROM personas WHERE id = ?")
+      .get(SYSTEM_PERSONA_ID) as { cnt: number };
+    const taskCount = db
+      .prepare("SELECT COUNT(*) as cnt FROM tasks WHERE id = ?")
+      .get(ROOT_TASK_ID) as { cnt: number };
     expect(personaCount.cnt).toBe(1);
     expect(taskCount.cnt).toBe(1);
   });
 
   it("handles name collision — reassigns existing 'System' persona to canonical id", () => {
     // Pre-existing "System" persona with a different id
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO personas (id, name, system_prompt, runtime, model)
       VALUES ('custom-system', 'System', 'custom prompt', 'codex', 'o3')
-    `).run();
+    `,
+    ).run();
     // A task referencing the old id
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO tasks (id, title, default_persona_id)
       VALUES ('t1', 'Test task', 'custom-system')
-    `).run();
+    `,
+    ).run();
 
     runSeedLogic(db);
 
     // The persona should now have the canonical id
-    const persona = db.prepare("SELECT * FROM personas WHERE id = ?").get(SYSTEM_PERSONA_ID) as Record<string, unknown>;
+    const persona = db
+      .prepare("SELECT * FROM personas WHERE id = ?")
+      .get(SYSTEM_PERSONA_ID) as Record<string, unknown>;
     expect(persona).toBeDefined();
     expect(persona.name).toBe("System");
 
@@ -230,22 +270,31 @@ describe("DB seed: System persona + root task", () => {
     expect(oldPersona).toBeUndefined();
 
     // References should be updated
-    const task = db.prepare("SELECT default_persona_id FROM tasks WHERE id = 't1'").get() as Record<string, unknown>;
+    const task = db.prepare("SELECT default_persona_id FROM tasks WHERE id = 't1'").get() as Record<
+      string,
+      unknown
+    >;
     expect(task.default_persona_id).toBe(SYSTEM_PERSONA_ID);
   });
 
   it("updates settings references on persona id reassignment", () => {
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO personas (id, name, system_prompt, runtime, model)
       VALUES ('old-sys', 'System', 'prompt', 'claude-code', 'sonnet')
-    `).run();
-    db.prepare(`
+    `,
+    ).run();
+    db.prepare(
+      `
       INSERT INTO settings (key, value) VALUES ('default_persona_id', 'old-sys')
-    `).run();
+    `,
+    ).run();
 
     runSeedLogic(db);
 
-    const setting = db.prepare("SELECT value FROM settings WHERE key = 'default_persona_id'").get() as { value: string };
+    const setting = db
+      .prepare("SELECT value FROM settings WHERE key = 'default_persona_id'")
+      .get() as { value: string };
     expect(setting.value).toBe(SYSTEM_PERSONA_ID);
   });
 
@@ -253,7 +302,9 @@ describe("DB seed: System persona + root task", () => {
     // No seed persona at all
     runSeedLogic(db);
 
-    const persona = db.prepare("SELECT runtime, model FROM personas WHERE id = ?").get(SYSTEM_PERSONA_ID) as Record<string, unknown>;
+    const persona = db
+      .prepare("SELECT runtime, model FROM personas WHERE id = ?")
+      .get(SYSTEM_PERSONA_ID) as Record<string, unknown>;
     expect(persona.runtime).toBe("claude-code");
     expect(persona.model).toBe("sonnet");
   });

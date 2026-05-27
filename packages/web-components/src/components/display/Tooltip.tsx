@@ -1,4 +1,15 @@
-import { cloneElement, isValidElement, useCallback, useEffect, useId, useRef, useState, type JSX, type ReactElement, type ReactNode } from "react";
+import {
+  cloneElement,
+  isValidElement,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type JSX,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { type TooltipBuiltinProps, type TooltipPlacement } from "@grackle-ai/common";
 import styles from "./Tooltip.module.scss";
@@ -80,19 +91,26 @@ export function Tooltip({
     setCoords({ top, left });
   }, [placement]);
 
-  const showWithDelay = useCallback((delay: number): void => {
-    if (timerRef.current !== undefined) {
-      clearTimeout(timerRef.current);
-    }
-    timerRef.current = setTimeout(() => {
-      computePosition();
-      setVisible(true);
-      timerRef.current = undefined;
-    }, delay);
-  }, [computePosition]);
+  const showWithDelay = useCallback(
+    (delay: number): void => {
+      if (timerRef.current !== undefined) {
+        clearTimeout(timerRef.current);
+      }
+      timerRef.current = setTimeout(() => {
+        computePosition();
+        setVisible(true);
+        timerRef.current = undefined;
+      }, delay);
+    },
+    [computePosition],
+  );
 
-  const showHover = useCallback((): void => { showWithDelay(delayMs); }, [delayMs, showWithDelay]);
-  const showFocus = useCallback((): void => { showWithDelay(0); }, [showWithDelay]);
+  const showHover = useCallback((): void => {
+    showWithDelay(delayMs);
+  }, [delayMs, showWithDelay]);
+  const showFocus = useCallback((): void => {
+    showWithDelay(0);
+  }, [showWithDelay]);
 
   const hide = useCallback((): void => {
     if (timerRef.current !== undefined) {
@@ -132,10 +150,9 @@ export function Tooltip({
   }, []);
 
   const Tag = inline ? "span" : "div";
-  const wrapperClass = [
-    inline ? styles.wrapper : styles.wrapperBlock,
-    className,
-  ].filter(Boolean).join(" ");
+  const wrapperClass = [inline ? styles.wrapper : styles.wrapperBlock, className]
+    .filter(Boolean)
+    .join(" ");
 
   // Inject aria-describedby onto the child element when it is a single
   // ReactElement so screen readers announce the tooltip from the focused node.
@@ -145,7 +162,9 @@ export function Tooltip({
     const child = children as ReactElement<{ "aria-describedby"?: string }>;
     const existing = child.props["aria-describedby"];
     const mergedDescribedBy = visible
-      ? (existing ? `${existing} ${tooltipId}` : tooltipId)
+      ? existing
+        ? `${existing} ${tooltipId}`
+        : tooltipId
       : existing;
     renderedChildren = cloneElement(child, {
       "aria-describedby": mergedDescribedBy,

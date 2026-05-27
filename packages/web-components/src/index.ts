@@ -17,9 +17,19 @@ export { useDagLayout } from "./components/dag/useDagLayout.js";
 
 // Display primitives
 export {
-  Breadcrumbs, Button, CopyButton, DemoBanner, SplitButton,
-  EventRenderer, ConfirmDialog, Skeleton, SkeletonText, SkeletonCard,
-  Spinner, SplashScreen, Tooltip,
+  Breadcrumbs,
+  Button,
+  CopyButton,
+  DemoBanner,
+  SplitButton,
+  EventRenderer,
+  ConfirmDialog,
+  Skeleton,
+  SkeletonText,
+  SkeletonCard,
+  Spinner,
+  SplashScreen,
+  Tooltip,
 } from "./components/display/index.js";
 export type { ButtonProps, ButtonVariant, ButtonSize } from "./components/display/index.js";
 export type { TooltipProps, TooltipPlacement } from "./components/display/index.js";
@@ -37,18 +47,30 @@ export type { SessionPickerProps, SessionPickerEntry } from "./components/displa
 
 // Editable fields
 export {
-  EditableTextField, EditableTextArea, EditableSelect,
-  EditableCheckbox, EnvironmentSelect, useEditableField,
+  EditableTextField,
+  EditableTextArea,
+  EditableSelect,
+  EditableCheckbox,
+  EnvironmentSelect,
+  useEditableField,
 } from "./components/editable/index.js";
 export type {
-  EditableTextFieldProps, EditableTextAreaProps,
-  EditableSelectProps, SelectOption,
-  EditableCheckboxProps, EnvironmentSelectProps,
-  UseEditableFieldOptions, UseEditableFieldReturn,
+  EditableTextFieldProps,
+  EditableTextAreaProps,
+  EditableSelectProps,
+  SelectOption,
+  EditableCheckboxProps,
+  EnvironmentSelectProps,
+  UseEditableFieldOptions,
+  UseEditableFieldReturn,
 } from "./components/editable/index.js";
 
 // Knowledge graph
-export { KnowledgeGraph, KnowledgeDetailPanel, KnowledgeNav } from "./components/knowledge/index.js";
+export {
+  KnowledgeGraph,
+  KnowledgeDetailPanel,
+  KnowledgeNav,
+} from "./components/knowledge/index.js";
 
 // Layout
 export { StatusBar, AppNav, Sidebar, BottomStatusBar, TABS } from "./components/layout/index.js";
@@ -57,7 +79,11 @@ export type { AppTab } from "./components/layout/index.js";
 // Lists
 export { EnvironmentNav } from "./components/lists/index.js";
 export { TaskList } from "./components/lists/TaskList.js";
-export { HighlightedText, buildTaskTree, groupTasksByStatus } from "./components/lists/listHelpers.js";
+export {
+  HighlightedText,
+  buildTaskTree,
+  groupTasksByStatus,
+} from "./components/lists/listHelpers.js";
 
 // Notifications
 export { Toast, ToastContainer, Callout } from "./components/notifications/index.js";
@@ -65,7 +91,16 @@ export type { CalloutVariant } from "./components/notifications/index.js";
 export { UpdateBanner } from "./components/notifications/UpdateBanner.js";
 
 // Panels
-export { TokensPanel, AppearancePanel, AboutPanel, TaskEditPanel, TaskActionButtons, TaskOverviewPanel, PluginsPanel, GitHubAccountsPanel } from "./components/panels/index.js";
+export {
+  TokensPanel,
+  AppearancePanel,
+  AboutPanel,
+  TaskEditPanel,
+  TaskActionButtons,
+  TaskOverviewPanel,
+  PluginsPanel,
+  GitHubAccountsPanel,
+} from "./components/panels/index.js";
 export type { PluginsPanelProps, GitHubAccountsPanelProps } from "./components/panels/index.js";
 export type { TaskActionButtonsProps } from "./components/panels/TaskActionButtons.js";
 export type { TaskOverviewPanelProps } from "./components/panels/TaskOverviewPanel.js";
@@ -87,8 +122,18 @@ export type { ScheduleManagerProps } from "./components/schedules/ScheduleManage
 export { SettingsNav } from "./components/settings/SettingsNav.js";
 
 // Streams (Coordination tab)
-export { CoordinationGraph, CoordinationList, StreamDetailPanel, StreamTranscript } from "./components/streams/index.js";
-export type { CoordinationGraphProps, CoordinationListProps, StreamDetailPanelProps, StreamTranscriptProps } from "./components/streams/index.js";
+export {
+  CoordinationGraph,
+  CoordinationList,
+  StreamDetailPanel,
+  StreamTranscript,
+} from "./components/streams/index.js";
+export type {
+  CoordinationGraphProps,
+  CoordinationListProps,
+  StreamDetailPanelProps,
+  StreamTranscriptProps,
+} from "./components/streams/index.js";
 
 // Tools
 export { ToolCard } from "./components/tools/ToolCard.js";
@@ -107,7 +152,10 @@ export { parseShellOutput } from "./components/tools/parseShellOutput.js";
 
 // Workspace
 export { WorkspaceBoard } from "./components/workspace/WorkspaceBoard.js";
-export { WorkspaceFormFields, defaultFormValues } from "./components/workspace/WorkspaceFormFields.js";
+export {
+  WorkspaceFormFields,
+  defaultFormValues,
+} from "./components/workspace/WorkspaceFormFields.js";
 export type { WorkspaceFormValues } from "./components/workspace/WorkspaceFormFields.js";
 
 // ─── Contexts ────────────────────────────────────────────────────────────────
@@ -125,78 +173,172 @@ export type { UseGrackleSocketResult, GrackleContextType } from "./context/Grack
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type {
-  Environment, Session, UsageStats, SessionEvent,
-  Workspace, TaskData, TokenInfo,
-  CredentialProviderConfig, Codespace, DockerContainer, PersonaData,
-  ScheduleData, ScheduleUpdate, UseSchedulesResult,
-  ProvisionStatus, GrackleEvent, WsMessage, SendFunction,
-  GraphNode, GraphLink, NodeDetail, UseKnowledgeResult,
-  UseEnvironmentsResult, UseSessionsResult, UseWorkspacesResult,
-  UseTasksResult, UseTokensResult,
-  UseCredentialsResult, UseCodespacesResult, UseDockerContainersResult, UsePersonasResult,
-  UsePluginsResult, PluginData,
-  StreamData, StreamSubscriberData, StreamMessageData, UseStreamsResult,
-  UseGitHubAccountsResult, GitHubAccountData,
+  Environment,
+  Session,
+  UsageStats,
+  SessionEvent,
+  Workspace,
+  TaskData,
+  TokenInfo,
+  CredentialProviderConfig,
+  Codespace,
+  DockerContainer,
+  PersonaData,
+  ScheduleData,
+  ScheduleUpdate,
+  UseSchedulesResult,
+  ProvisionStatus,
+  GrackleEvent,
+  WsMessage,
+  SendFunction,
+  GraphNode,
+  GraphLink,
+  NodeDetail,
+  UseKnowledgeResult,
+  UseEnvironmentsResult,
+  UseSessionsResult,
+  UseWorkspacesResult,
+  UseTasksResult,
+  UseTokensResult,
+  UseCredentialsResult,
+  UseCodespacesResult,
+  UseDockerContainersResult,
+  UsePersonasResult,
+  UsePluginsResult,
+  PluginData,
+  StreamData,
+  StreamSubscriberData,
+  StreamMessageData,
+  UseStreamsResult,
+  UseGitHubAccountsResult,
+  GitHubAccountData,
   DomainHook,
   ConnectionStatus,
 } from "./hooks/types.js";
 export {
-  isObject, warnBadPayload, isGrackleEvent, isSessionEvent,
-  isCredentialProviderConfig, parseWsMessage,
-  mapSessionStatus, mapEndReason,
-  WS_RECONNECT_DELAY_MS, MAX_EVENTS, WS_CLOSE_UNAUTHORIZED,
+  isObject,
+  warnBadPayload,
+  isGrackleEvent,
+  isSessionEvent,
+  isCredentialProviderConfig,
+  parseWsMessage,
+  mapSessionStatus,
+  mapEndReason,
+  WS_RECONNECT_DELAY_MS,
+  MAX_EVENTS,
+  WS_CLOSE_UNAUTHORIZED,
 } from "./hooks/types.js";
 
 // ─── Hooks ───────────────────────────────────────────────────────────────────
 
 export { useSmartScroll } from "./hooks/useSmartScroll.js";
 export { useEventSelection } from "./hooks/useEventSelection.js";
-export type { UseEventSelectionOptions, UseEventSelectionReturn } from "./hooks/useEventSelection.js";
+export type {
+  UseEventSelectionOptions,
+  UseEventSelectionReturn,
+} from "./hooks/useEventSelection.js";
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
 export {
-  useAppNavigate, sessionUrl, workspaceUrl, taskUrl, taskEditUrl,
-  newTaskUrl, newChatUrl, ENVIRONMENTS_URL, NEW_ENVIRONMENT_URL,
-  environmentUrl, environmentEditUrl, SETTINGS_URL,
-  SETTINGS_ENVIRONMENTS_URL, SETTINGS_CREDENTIALS_URL, SETTINGS_GITHUB_ACCOUNTS_URL,
-  PERSONAS_URL, NEW_PERSONA_URL, personaUrl,
-  SCHEDULES_URL, NEW_SCHEDULE_URL, scheduleUrl,
-  SETTINGS_APPEARANCE_URL, SETTINGS_ABOUT_URL, SETTINGS_SHORTCUTS_URL,
-  PAIR_PATH, NEW_WORKSPACE_URL, KNOWLEDGE_URL, HOME_URL,
-  CHAT_URL, COORDINATION_URL, TASKS_URL,
+  useAppNavigate,
+  sessionUrl,
+  workspaceUrl,
+  taskUrl,
+  taskEditUrl,
+  newTaskUrl,
+  newChatUrl,
+  ENVIRONMENTS_URL,
+  NEW_ENVIRONMENT_URL,
+  environmentUrl,
+  environmentEditUrl,
+  SETTINGS_URL,
+  SETTINGS_ENVIRONMENTS_URL,
+  SETTINGS_CREDENTIALS_URL,
+  SETTINGS_GITHUB_ACCOUNTS_URL,
+  PERSONAS_URL,
+  NEW_PERSONA_URL,
+  personaUrl,
+  SCHEDULES_URL,
+  NEW_SCHEDULE_URL,
+  scheduleUrl,
+  SETTINGS_APPEARANCE_URL,
+  SETTINGS_ABOUT_URL,
+  SETTINGS_SHORTCUTS_URL,
+  PAIR_PATH,
+  NEW_WORKSPACE_URL,
+  KNOWLEDGE_URL,
+  HOME_URL,
+  CHAT_URL,
+  COORDINATION_URL,
+  TASKS_URL,
 } from "./utils/navigation.js";
 
 export {
-  TASK_STATUS_STYLES, getStatusStyle, STATUS_BADGE_CLASS_MAP,
-  getStatusBadgeClassKey, SIDEBAR_STATUS_ORDER, BOARD_COLUMN_ORDER,
-  resolveStatus, STATUS_CSS_VAR_MAP,
+  TASK_STATUS_STYLES,
+  getStatusStyle,
+  STATUS_BADGE_CLASS_MAP,
+  getStatusBadgeClassKey,
+  SIDEBAR_STATUS_ORDER,
+  BOARD_COLUMN_ORDER,
+  resolveStatus,
+  STATUS_CSS_VAR_MAP,
 } from "./utils/taskStatus.js";
-export type { TaskStatusKey, VirtualStatus, DisplayStatus, TaskStatusStyle } from "./utils/taskStatus.js";
+export type {
+  TaskStatusKey,
+  VirtualStatus,
+  DisplayStatus,
+  TaskStatusStyle,
+} from "./utils/taskStatus.js";
 
 export { formatTokens, formatCost } from "./utils/format.js";
 export { formatRelativeTime, formatCountdown } from "./utils/time.js";
 
 export type { BreadcrumbSegment } from "./utils/breadcrumbs.js";
 export {
-  buildTaskAncestorChain, buildHomeBreadcrumbs, buildSettingsBreadcrumbs,
-  buildEnvironmentsBreadcrumbs, buildNewEnvironmentBreadcrumbs,
-  buildNewChatBreadcrumbs, buildSessionBreadcrumbs,
-  buildWorkspaceBreadcrumbs, buildTaskBreadcrumbs, buildNewTaskBreadcrumbs,
+  buildTaskAncestorChain,
+  buildHomeBreadcrumbs,
+  buildSettingsBreadcrumbs,
+  buildEnvironmentsBreadcrumbs,
+  buildNewEnvironmentBreadcrumbs,
+  buildNewChatBreadcrumbs,
+  buildSessionBreadcrumbs,
+  buildWorkspaceBreadcrumbs,
+  buildTaskBreadcrumbs,
+  buildNewTaskBreadcrumbs,
 } from "./utils/breadcrumbs.js";
 
 export { groupConsecutiveTextEvents, pairToolEvents } from "./utils/sessionEvents.js";
 export type { DisplayEvent } from "./utils/sessionEvents.js";
 
-export { isContentBearingEvent, getEventCopyText, formatEventsAsMarkdown, formatForwardEnvelope } from "./utils/eventContent.js";
+export {
+  isContentBearingEvent,
+  getEventCopyText,
+  formatEventsAsMarkdown,
+  formatForwardEnvelope,
+} from "./utils/eventContent.js";
 
 export type { BoardColumn, BoardTask } from "./utils/boardColumns.js";
 export { buildBoardColumns } from "./utils/boardColumns.js";
 
-export type { DashboardKpis, AttentionTask, ActiveSession, WorkspaceSnapshot } from "./utils/dashboard.js";
-export { computeKpis, getAttentionTasks, getActiveSessions, getWorkspaceSnapshots } from "./utils/dashboard.js";
+export type {
+  DashboardKpis,
+  AttentionTask,
+  ActiveSession,
+  WorkspaceSnapshot,
+} from "./utils/dashboard.js";
+export {
+  computeKpis,
+  getAttentionTasks,
+  getActiveSessions,
+  getWorkspaceSnapshots,
+} from "./utils/dashboard.js";
 
-export { isNearAnchor, computeScrollCompensation, SCROLL_ANCHOR_THRESHOLD_PX } from "./utils/scrollUtils.js";
+export {
+  isNearAnchor,
+  computeScrollCompensation,
+  SCROLL_ANCHOR_THRESHOLD_PX,
+} from "./utils/scrollUtils.js";
 
 export { assetUrl } from "./utils/assetUrl.js";
 
@@ -208,4 +350,9 @@ export type { ThemeDefinition } from "./themes.js";
 // ─── Mocks & Test Utilities ─────────────────────────────────────────────────
 
 export { MockGrackleProvider } from "./mocks/MockGrackleProvider.js";
-export { withMockGrackle, withMockGrackleRoute, makePersona, makeSchedule } from "./test-utils/storybook-helpers.js";
+export {
+  withMockGrackle,
+  withMockGrackleRoute,
+  makePersona,
+  makeSchedule,
+} from "./test-utils/storybook-helpers.js";

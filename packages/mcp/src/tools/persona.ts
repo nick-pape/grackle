@@ -59,15 +59,22 @@ export const personaTools: ToolDefinition[] = [
   {
     name: "persona_create",
     group: "persona",
-    description: "Create a new persona template. Use type 'agent' for interactive LLM sessions or 'script' for run-to-completion GenAIScript programs.",
+    description:
+      "Create a new persona template. Use type 'agent' for interactive LLM sessions or 'script' for run-to-completion GenAIScript programs.",
     inputSchema: z.object({
       name: z.string().describe("Persona name"),
-      systemPrompt: z.string().optional().describe("System prompt for the persona (required for agent type)"),
+      systemPrompt: z
+        .string()
+        .optional()
+        .describe("System prompt for the persona (required for agent type)"),
       description: z.string().optional().describe("Human-readable description"),
       runtime: z.string().optional().describe("Agent runtime (e.g. 'claude-code', 'genaiscript')"),
       model: z.string().optional().describe("Model to use"),
       maxTurns: z.number().int().positive().optional().describe("Maximum turns for sessions"),
-      type: z.enum(["agent", "script"]).optional().describe("Persona type: 'agent' (default) or 'script'"),
+      type: z
+        .enum(["agent", "script"])
+        .optional()
+        .describe("Persona type: 'agent' (default) or 'script'"),
       script: z.string().optional().describe("Script source code (required for script type)"),
     }),
     rpcMethod: "createPersona",
@@ -100,7 +107,8 @@ export const personaTools: ToolDefinition[] = [
   {
     name: "persona_show",
     group: "persona",
-    description: "Get full details of a persona including its system prompt, script, and configuration.",
+    description:
+      "Get full details of a persona including its system prompt, script, and configuration.",
     inputSchema: z.object({
       personaId: z.string().describe("Persona ID"),
     }),
@@ -124,7 +132,8 @@ export const personaTools: ToolDefinition[] = [
   {
     name: "persona_edit",
     group: "persona",
-    description: "Update an existing persona's name, system prompt, script, description, or runtime settings.",
+    description:
+      "Update an existing persona's name, system prompt, script, description, or runtime settings.",
     inputSchema: z.object({
       personaId: z.string().describe("Persona ID to update"),
       name: z.string().optional().describe("New persona name"),

@@ -14,7 +14,7 @@ vi.mock("@grackle-ai/database", async () => {
 });
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {
-  const actual = await importOriginal() as Record<string, unknown>;
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -105,7 +105,12 @@ vi.mock("./utils/format-gh-error.js", () => ({
 // Import AFTER mocks — use the mocked versions
 import { registerGrackleRoutes } from "./grpc-service.js";
 import { envRegistry, sessionStore, taskStore } from "@grackle-ai/database";
-import { adapterManager, streamHub, streamRegistry, cleanupLifecycleStream } from "@grackle-ai/core";
+import {
+  adapterManager,
+  streamHub,
+  streamRegistry,
+  cleanupLifecycleStream,
+} from "@grackle-ai/core";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import type { ConnectRouter } from "@connectrpc/connect";
 
@@ -177,7 +182,11 @@ describe("gRPC provisionEnvironment with force", () => {
 
     // Session should be killed
     expect(sessionStore.updateSession).toHaveBeenCalledWith(
-      "session-1", "stopped", undefined, undefined, "killed",
+      "session-1",
+      "stopped",
+      undefined,
+      undefined,
+      "killed",
     );
     // STATUS event should be published
     expect(streamHub.publish).toHaveBeenCalled();

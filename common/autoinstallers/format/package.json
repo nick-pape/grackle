@@ -1,0 +1,9 @@
+{
+  "name": "format",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Autoinstaller for Prettier-based code formatting. Provisioned by Rush; not published.",
+  "dependencies": {
+    "prettier": "3.6.2"
+  }
+}

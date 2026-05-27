@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {
-  const actual = await importOriginal() as Record<string, unknown>;
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -76,7 +76,14 @@ describe("lifecycleCleanupPhase", () => {
   });
 
   it("does NOT remove lifecycle streams for existing sessions", async () => {
-    sessionStore.createSession("alive-sess", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+    sessionStore.createSession(
+      "alive-sess",
+      "test-env",
+      "claude-code",
+      "test",
+      "sonnet",
+      "/tmp/log",
+    );
 
     const stream = streamRegistry.createStream("lifecycle:alive-sess");
     streamRegistry.subscribe(stream.id, "alive-sess", "rw", "detach", false);

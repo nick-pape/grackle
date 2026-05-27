@@ -13,7 +13,9 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
   test.beforeEach(async ({ appPage, grackle: { client } }) => {
     const sessionsResp = await client.core.listSessions({});
     const all = sessionsResp.sessions as Array<{ id: string; status: string }>;
-    const active = all.filter((s) => s.status === "idle" || s.status === "running" || s.status === "pending");
+    const active = all.filter(
+      (s) => s.status === "idle" || s.status === "running" || s.status === "pending",
+    );
     for (const s of active) {
       await client.core.killAgent({ id: s.id });
     }
@@ -30,7 +32,10 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
     }
   });
 
-  test("resume a killed session reanimates it to idle, accepts input, and can be killed again", async ({ appPage, grackle: { client } }) => {
+  test("resume a killed session reanimates it to idle, accepts input, and can be killed again", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     // ── 1. Spawn a stub session from the UI (uses default stub persona) ──
@@ -50,7 +55,9 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
     // ── 3. Session is idle — kill it to move to STOPPED ──────────────────
     await page.getByTestId("stop-split-button").waitFor({ state: "visible", timeout: 15_000 });
     await page.getByTestId("stop-split-button-chevron").click();
-    await page.locator("[data-testid='stop-split-button-menu'] button", { hasText: "Kill" }).click();
+    await page
+      .locator("[data-testid='stop-split-button-menu'] button", { hasText: "Kill" })
+      .click();
     await expect(page.locator("text=Session killed")).toBeVisible({ timeout: 10_000 });
 
     // ── 4. Find the killed session ID via RPC ────────────────────────────
@@ -58,7 +65,11 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
     // have also left stopped stub sessions in the DB).
     const sessionsResp = await client.core.listSessions({ status: "stopped" });
     const sessions = sessionsResp.sessions as Array<{
-      id: string; status: string; endReason: string; runtime: string; startedAt: string;
+      id: string;
+      status: string;
+      endReason: string;
+      runtime: string;
+      startedAt: string;
     }>;
     const killed = sessions
       .filter((s) => s.status === "stopped" && s.endReason === "killed" && s.runtime === "stub")
@@ -80,17 +91,24 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
     await resumedInput.fill("hello after resume");
     await page.locator("button", { hasText: "Send" }).click();
 
-    await expect(page.locator("text=You said: hello after resume")).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator("text=You said: hello after resume")).toBeVisible({
+      timeout: 10_000,
+    });
 
     // ── 8. Session returns to idle — kill it to stop ─────────────────────
     await expect(resumedInput).toBeVisible({ timeout: 10_000 });
     await page.getByTestId("stop-split-button").waitFor({ state: "visible", timeout: 15_000 });
     await page.getByTestId("stop-split-button-chevron").click();
-    await page.locator("[data-testid='stop-split-button-menu'] button", { hasText: "Kill" }).click();
+    await page
+      .locator("[data-testid='stop-split-button-menu'] button", { hasText: "Kill" })
+      .click();
     await expect(page.locator("text=Session killed")).toBeVisible({ timeout: 10_000 });
   });
 
-  test("resume an idle (active) session returns an error", async ({ appPage, grackle: { client } }) => {
+  test("resume an idle (active) session returns an error", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     // Spawn and wait for the stub session to reach waiting_input (idle)
@@ -106,7 +124,11 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
 
     // Get the idle session ID
     const sessionsResp = await client.core.listSessions({ status: "idle" });
-    const sessions = sessionsResp.sessions as Array<{ id: string; status: string; runtime: string }>;
+    const sessions = sessionsResp.sessions as Array<{
+      id: string;
+      status: string;
+      runtime: string;
+    }>;
     const idleSession = sessions.find((s) => s.status === "idle" && s.runtime === "stub");
     expect(idleSession, "Expected an idle stub session").toBeTruthy();
 
@@ -126,11 +148,15 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
     // Cleanup
     await page.getByTestId("stop-split-button").waitFor({ state: "visible", timeout: 15_000 });
     await page.getByTestId("stop-split-button-chevron").click();
-    await page.locator("[data-testid='stop-split-button-menu'] button", { hasText: "Kill" }).click();
+    await page
+      .locator("[data-testid='stop-split-button-menu'] button", { hasText: "Kill" })
+      .click();
     await expect(page.locator("text=Session killed")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("resume a non-existent session returns an error via RPC", async ({ grackle: { client } }) => {
+  test("resume a non-existent session returns an error via RPC", async ({
+    grackle: { client },
+  }) => {
     let error: Error | undefined;
     try {
       await client.core.resumeAgent({ sessionId: "no-such-session-id" });

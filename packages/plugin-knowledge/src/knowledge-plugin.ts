@@ -10,11 +10,7 @@
 import type { GracklePlugin, PluginContext } from "@grackle-ai/plugin-sdk";
 import { grackle } from "@grackle-ai/common";
 import { logger } from "./logger.js";
-import {
-  initKnowledge,
-  neo4jHealthCheck,
-  getKnowledgeEmbedder,
-} from "./knowledge-init.js";
+import { initKnowledge, neo4jHealthCheck, getKnowledgeEmbedder } from "./knowledge-init.js";
 import {
   createKnowledgeHealthPhase,
   markKnowledgeInitFailed,
@@ -68,15 +64,17 @@ export function createKnowledgePlugin(): GracklePlugin {
       cleanup = undefined;
     },
 
-    grpcHandlers: () => [{
-      service: grackle.GrackleKnowledge,
-      handlers: {
-        searchKnowledge,
-        getKnowledgeNode,
-        expandKnowledgeNode,
-        listRecentKnowledgeNodes,
+    grpcHandlers: () => [
+      {
+        service: grackle.GrackleKnowledge,
+        handlers: {
+          searchKnowledge,
+          getKnowledgeNode,
+          expandKnowledgeNode,
+          listRecentKnowledgeNodes,
+        },
       },
-    }],
+    ],
 
     reconciliationPhases: () => [
       createKnowledgeHealthPhase({ healthCheck: neo4jHealthCheck }),

@@ -4,26 +4,21 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Mocks
 // ---------------------------------------------------------------------------
 
-const {
-  mockSessionRun,
-  mockSessionClose,
-  mockSession,
-  mockCreateReferenceNode,
-  mockUpdateNode,
-} = vi.hoisted(() => {
-  const mockSessionRun = vi.fn().mockResolvedValue({ records: [] });
-  const mockSessionClose = vi.fn().mockResolvedValue(undefined);
-  const mockSession = { run: mockSessionRun, close: mockSessionClose };
-  const mockCreateReferenceNode = vi.fn().mockResolvedValue("new-id");
-  const mockUpdateNode = vi.fn().mockResolvedValue(undefined);
-  return {
-    mockSessionRun,
-    mockSessionClose,
-    mockSession,
-    mockCreateReferenceNode,
-    mockUpdateNode,
-  };
-});
+const { mockSessionRun, mockSessionClose, mockSession, mockCreateReferenceNode, mockUpdateNode } =
+  vi.hoisted(() => {
+    const mockSessionRun = vi.fn().mockResolvedValue({ records: [] });
+    const mockSessionClose = vi.fn().mockResolvedValue(undefined);
+    const mockSession = { run: mockSessionRun, close: mockSessionClose };
+    const mockCreateReferenceNode = vi.fn().mockResolvedValue("new-id");
+    const mockUpdateNode = vi.fn().mockResolvedValue(undefined);
+    return {
+      mockSessionRun,
+      mockSessionClose,
+      mockSession,
+      mockCreateReferenceNode,
+      mockUpdateNode,
+    };
+  });
 
 vi.mock("@grackle-ai/knowledge-core", async () => {
   const actual = await vi.importActual<Record<string, unknown>>("@grackle-ai/knowledge-core");
@@ -100,9 +95,7 @@ describe("deriveTaskText", () => {
   });
 
   it("handles empty title", () => {
-    expect(deriveTaskText("", "Some description")).toBe(
-      "[Task]  - Some description",
-    );
+    expect(deriveTaskText("", "Some description")).toBe("[Task]  - Some description");
   });
 });
 
@@ -114,9 +107,7 @@ describe("deriveFindingText", () => {
   });
 
   it("omits content when empty", () => {
-    expect(deriveFindingText("Auth issue", "", ["auth"])).toBe(
-      "[Finding] Auth issue - tags:auth",
-    );
+    expect(deriveFindingText("Auth issue", "", ["auth"])).toBe("[Finding] Auth issue - tags:auth");
   });
 
   it("omits tags when empty", () => {
@@ -142,10 +133,7 @@ describe("findReferenceNodeBySource", () => {
 
   it("returns undefined when no record found", async () => {
     mockSessionRun.mockResolvedValueOnce({ records: [] });
-    const result = await findReferenceNodeBySource(
-      REFERENCE_SOURCE.TASK,
-      "task-99",
-    );
+    const result = await findReferenceNodeBySource(REFERENCE_SOURCE.TASK, "task-99");
     expect(result).toBeUndefined();
   });
 
@@ -155,10 +143,7 @@ describe("findReferenceNodeBySource", () => {
     });
     mockSessionRun.mockResolvedValueOnce({ records: [record] });
 
-    const result = await findReferenceNodeBySource(
-      REFERENCE_SOURCE.TASK,
-      "task-42",
-    );
+    const result = await findReferenceNodeBySource(REFERENCE_SOURCE.TASK, "task-42");
 
     expect(result).toBeDefined();
     expect(result!.id).toBe("ref-123");
@@ -183,9 +168,9 @@ describe("findReferenceNodeBySource", () => {
 
   it("closes the session after failure", async () => {
     mockSessionRun.mockRejectedValueOnce(new Error("neo4j error"));
-    await expect(
-      findReferenceNodeBySource(REFERENCE_SOURCE.TASK, "t"),
-    ).rejects.toThrow("neo4j error");
+    await expect(findReferenceNodeBySource(REFERENCE_SOURCE.TASK, "t")).rejects.toThrow(
+      "neo4j error",
+    );
     expect(mockSessionClose).toHaveBeenCalledTimes(1);
   });
 });
@@ -204,18 +189,14 @@ describe("deleteReferenceNodeBySource", () => {
     const record = makeNeo4jRecord({ deleted: 1 });
     mockSessionRun.mockResolvedValueOnce({ records: [record] });
 
-    expect(
-      await deleteReferenceNodeBySource(REFERENCE_SOURCE.TASK, "task-42"),
-    ).toBe(true);
+    expect(await deleteReferenceNodeBySource(REFERENCE_SOURCE.TASK, "task-42")).toBe(true);
   });
 
   it("returns false when no matching node", async () => {
     const record = makeNeo4jRecord({ deleted: 0 });
     mockSessionRun.mockResolvedValueOnce({ records: [record] });
 
-    expect(
-      await deleteReferenceNodeBySource(REFERENCE_SOURCE.TASK, "nonexistent"),
-    ).toBe(false);
+    expect(await deleteReferenceNodeBySource(REFERENCE_SOURCE.TASK, "nonexistent")).toBe(false);
   });
 
   it("uses DETACH DELETE in Cypher", async () => {
@@ -311,9 +292,7 @@ describe("syncReferenceNode", () => {
       workspaceId: "",
     });
 
-    expect(embedder.embed).toHaveBeenCalledWith(
-      "Some important finding content",
-    );
+    expect(embedder.embed).toHaveBeenCalledWith("Some important finding content");
   });
 
   it("propagates embedder errors", async () => {

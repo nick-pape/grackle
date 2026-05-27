@@ -4,7 +4,7 @@ import type {
   HeftConfiguration,
   IHeftTaskPlugin,
   IHeftTaskSession,
-  IHeftTaskRunHookOptions
+  IHeftTaskRunHookOptions,
 } from "@rushstack/heft";
 
 const PLUGIN_NAME: string = "vitest-plugin";
@@ -19,7 +19,10 @@ class VitestPlugin implements IHeftTaskPlugin {
       const vitestBin: string = path.join(buildFolder, "node_modules", ".bin", executableName);
 
       session.logger.terminal.writeLine("Running vitest...");
-      execFileSync(vitestBin, ["run"], {
+      // --coverage is passed here (not in vitest.config.ts) so `vitest watch`
+      // and other direct vitest invocations stay fast for local TDD; only the
+      // heft-orchestrated `rush test` path collects coverage.
+      execFileSync(vitestBin, ["run", "--coverage"], {
         cwd: buildFolder,
         stdio: "inherit",
         shell: isWindows,

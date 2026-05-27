@@ -413,7 +413,7 @@ These are general-purpose multi-agent orchestration frameworks that could be use
 - **Architecture:** Separates deterministic orchestration (Workflows) from non-deterministic execution (Activities). Guarantees all executions run to completion despite failures.
 - **Agent runtime:** N/A — infrastructure layer, not an agent.
 - **Key differentiator:** Durable execution guarantees. Used by OpenAI Codex and Replit in production. Handles process crashes, network failures, and retries automatically.
-- **How it compares to Grackle:** Temporal could be infrastructure *under* Grackle. Grackle's reconciliation loop and state management address some of the same concerns that Temporal solves (stall detection, state consistency, crash recovery), but Temporal would provide stronger guarantees. Worth considering as a foundation for Grackle's server.
+- **How it compares to Grackle:** Temporal could be infrastructure _under_ Grackle. Grackle's reconciliation loop and state management address some of the same concerns that Temporal solves (stall detection, state consistency, crash recovery), but Temporal would provide stronger guarantees. Worth considering as a foundation for Grackle's server.
 - **Status:** Commercial + open source, production. Well-funded.
 
 ---
@@ -508,23 +508,23 @@ These are general-purpose multi-agent orchestration frameworks that could be use
 
 ## Summary Comparison Matrix
 
-| Product | Multi-Agent | Hierarchical Decomposition | Runtime-Agnostic | Persistent State | Distributed | Persona/Role System | Human-in-Loop | Task Trees |
-|---|---|---|---|---|---|---|---|---|
-| **Grackle** | Yes | Arbitrary depth | Yes (PowerLine) | SQLite + gRPC | Yes | Personas | Escalation chain | Yes |
-| DevSwarm | Yes | No (human orchestrates) | Yes | Git worktrees | No | No | Always | No |
-| Composio Orchestrator | Yes | Planner/Executor | Partial | Git-based | No | No | Minimal | Limited |
-| Augment Intent | Yes | Coordinator/Specialist | No (proprietary) | Yes | Unknown | Fixed specialists | Spec review | Limited |
-| Gas Town | Yes | Mayor hierarchy | No (Claude Code) | Git-backed | No | Agent identities | Yes | Partial |
-| Overstory | Yes | Coordinator + workers | Yes (adapters) | SQLite | No | No | Yes | No |
-| Metaswarm | Yes | 9-phase workflow | Yes (multi-model) | JSONL | No | 18 agents | Yes | Partial |
-| Devin | Parallel instances | No | No (proprietary) | Cloud | Yes (cloud) | No | Interactive | No |
-| OpenHands | Single (scalable) | No | Yes | SDK | Yes (cloud) | No | Yes | No |
-| Claude Agent Teams | Yes | One level | No (Claude) | File-based JSON | No | Per-teammate | Yes | One level |
-| OpenAI Codex | Parallel instances | No | No (proprietary) | Cloud sandbox | Yes (cloud) | No | Review | No |
-| Factory | Droids (parallel) | Unknown | Partial | Yes | Yes | Droid types | Yes | Unknown |
-| CrewAI | Yes | Crews/Flows | Yes | In-memory | No | Role-based | Yes | No |
-| LangGraph | Yes | Graph-based | Yes | State graph | No | Node-based | Yes | Graph |
-| Temporal | N/A (infrastructure) | Workflow steps | N/A | Durable | Yes | N/A | Yes | Workflow |
+| Product               | Multi-Agent          | Hierarchical Decomposition | Runtime-Agnostic  | Persistent State | Distributed | Persona/Role System | Human-in-Loop    | Task Trees |
+| --------------------- | -------------------- | -------------------------- | ----------------- | ---------------- | ----------- | ------------------- | ---------------- | ---------- |
+| **Grackle**           | Yes                  | Arbitrary depth            | Yes (PowerLine)   | SQLite + gRPC    | Yes         | Personas            | Escalation chain | Yes        |
+| DevSwarm              | Yes                  | No (human orchestrates)    | Yes               | Git worktrees    | No          | No                  | Always           | No         |
+| Composio Orchestrator | Yes                  | Planner/Executor           | Partial           | Git-based        | No          | No                  | Minimal          | Limited    |
+| Augment Intent        | Yes                  | Coordinator/Specialist     | No (proprietary)  | Yes              | Unknown     | Fixed specialists   | Spec review      | Limited    |
+| Gas Town              | Yes                  | Mayor hierarchy            | No (Claude Code)  | Git-backed       | No          | Agent identities    | Yes              | Partial    |
+| Overstory             | Yes                  | Coordinator + workers      | Yes (adapters)    | SQLite           | No          | No                  | Yes              | No         |
+| Metaswarm             | Yes                  | 9-phase workflow           | Yes (multi-model) | JSONL            | No          | 18 agents           | Yes              | Partial    |
+| Devin                 | Parallel instances   | No                         | No (proprietary)  | Cloud            | Yes (cloud) | No                  | Interactive      | No         |
+| OpenHands             | Single (scalable)    | No                         | Yes               | SDK              | Yes (cloud) | No                  | Yes              | No         |
+| Claude Agent Teams    | Yes                  | One level                  | No (Claude)       | File-based JSON  | No          | Per-teammate        | Yes              | One level  |
+| OpenAI Codex          | Parallel instances   | No                         | No (proprietary)  | Cloud sandbox    | Yes (cloud) | No                  | Review           | No         |
+| Factory               | Droids (parallel)    | Unknown                    | Partial           | Yes              | Yes         | Droid types         | Yes              | Unknown    |
+| CrewAI                | Yes                  | Crews/Flows                | Yes               | In-memory        | No          | Role-based          | Yes              | No         |
+| LangGraph             | Yes                  | Graph-based                | Yes               | State graph      | No          | Node-based          | Yes              | Graph      |
+| Temporal              | N/A (infrastructure) | Workflow steps             | N/A               | Durable          | Yes         | N/A                 | Yes              | Workflow   |
 
 ---
 

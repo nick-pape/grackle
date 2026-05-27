@@ -29,12 +29,12 @@ When you add an environment to Grackle, the server connects to that environment'
 
 PowerLine uses a pluggable runtime architecture. Each runtime implements a common interface for spawning and streaming agent sessions.
 
-| Runtime | Description |
-|---------|-------------|
-| **Claude Code** | Anthropic's Claude via the Agent SDK |
-| **Copilot** | GitHub Copilot CLI agent |
-| **Codex** | OpenAI Codex CLI agent |
-| **Goose** | Goose agent (via ACP) |
+| Runtime         | Description                                   |
+| --------------- | --------------------------------------------- |
+| **Claude Code** | Anthropic's Claude via the Agent SDK          |
+| **Copilot**     | GitHub Copilot CLI agent                      |
+| **Codex**       | OpenAI Codex CLI agent                        |
+| **Goose**       | Goose agent (via ACP)                         |
 | **GenAIScript** | Script-based agent for single-turn automation |
 
 Additional runtimes can be added by implementing the `AgentRuntime` interface.

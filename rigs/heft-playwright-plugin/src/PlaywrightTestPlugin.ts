@@ -3,7 +3,7 @@ import type {
   HeftConfiguration,
   IHeftTaskPlugin,
   IHeftTaskSession,
-  IHeftTaskRunHookOptions
+  IHeftTaskRunHookOptions,
 } from "@rushstack/heft";
 
 const PLUGIN_NAME: string = "playwright-test-plugin";
@@ -17,7 +17,9 @@ class PlaywrightTestPlugin implements IHeftTaskPlugin {
       // Do NOT use node_modules/.bin/playwright — pnpm may hoist the base
       // `playwright` package there instead of `@playwright/test`, and the base
       // package exits 1 for flaky tests while @playwright/test exits 0.
-      const playwrightCliPath: string = require.resolve("@playwright/test/cli", { paths: [buildFolder] });
+      const playwrightCliPath: string = require.resolve("@playwright/test/cli", {
+        paths: [buildFolder],
+      });
 
       session.logger.terminal.writeLine("Running Playwright tests...");
       execFileSync(process.execPath, [playwrightCliPath, "test"], {

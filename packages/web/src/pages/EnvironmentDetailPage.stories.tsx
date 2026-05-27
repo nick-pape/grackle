@@ -81,7 +81,9 @@ export const LinkErrorShowsMessage: Story = {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       expect(canvas.getByTestId("link-operation-error")).toBeInTheDocument();
     });
-    await expect(canvas.getByTestId("link-operation-error")).toHaveTextContent("Failed to link environment");
+    await expect(canvas.getByTestId("link-operation-error")).toHaveTextContent(
+      "Failed to link environment",
+    );
   },
 };
 

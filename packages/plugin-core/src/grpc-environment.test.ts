@@ -30,7 +30,9 @@ vi.mock("./utils/format-gh-error.js");
 
 // ── Mock external packages ──
 vi.mock("@grackle-ai/adapter-sdk", () => ({
-  reconnectOrProvision: vi.fn(async function* () { /* empty */ }),
+  reconnectOrProvision: vi.fn(async function* () {
+    /* empty */
+  }),
 }));
 vi.mock("@grackle-ai/prompt", () => ({
   resolvePersona: vi.fn(),
@@ -75,7 +77,6 @@ beforeAll(() => {
 });
 
 describe("gRPC addEnvironment handlers", () => {
-
   /** Helper to list all environments. */
   async function listEnvironments(): Promise<EnvironmentInfo[]> {
     const result = (await handlers.listEnvironments()) as {
@@ -135,7 +136,6 @@ describe("gRPC addEnvironment handlers", () => {
 });
 
 describe("gRPC updateEnvironment handlers", () => {
-
   /** Helper to create an environment and return its ID. */
   async function createEnv(displayName: string): Promise<string> {
     const response = (await handlers.addEnvironment({

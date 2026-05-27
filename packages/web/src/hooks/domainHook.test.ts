@@ -145,7 +145,22 @@ type _GhA = AssertHasDomainHook<ReturnType<typeof useGitHubAccounts>>;
 
 // Suppress unused-variable warnings — these exist solely for the type check
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-type _All = _Env | _Ses | _Ws | _Tsk | _Tok | _Crd | _Cs | _Dc | _Per | _Sch | _Kn | _Not | _Plg | _Str | _GhA;
+type _All =
+  | _Env
+  | _Ses
+  | _Ws
+  | _Tsk
+  | _Tok
+  | _Crd
+  | _Cs
+  | _Dc
+  | _Per
+  | _Sch
+  | _Kn
+  | _Not
+  | _Plg
+  | _Str
+  | _GhA;
 
 // ---------------------------------------------------------------------------
 // Runtime tests

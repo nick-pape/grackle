@@ -15,9 +15,7 @@ export function formatGhError(err: unknown, operation: string): string {
         ? rawStderr.toString()
         : "";
   const code =
-    err instanceof Error && "code" in err
-      ? String((err as Error & { code: unknown }).code)
-      : "";
+    err instanceof Error && "code" in err ? String((err as Error & { code: unknown }).code) : "";
 
   if (code === "ENOENT" || message.includes("ENOENT")) {
     return "Could not find the `gh` CLI. Ensure GitHub CLI is installed and available on your system PATH, then restart the Grackle server.";

@@ -30,7 +30,9 @@ vi.mock("./utils/format-gh-error.js");
 
 // ── Mock external packages (inline factories — can't use __mocks__ in Rush monorepo) ──
 vi.mock("@grackle-ai/adapter-sdk", () => ({
-  reconnectOrProvision: vi.fn(async function* () { /* empty */ }),
+  reconnectOrProvision: vi.fn(async function* () {
+    /* empty */
+  }),
 }));
 vi.mock("@grackle-ai/prompt", () => ({
   resolvePersona: vi.fn(),
@@ -156,9 +158,7 @@ describe("gRPC token handlers", () => {
   });
 
   it("deleteToken without name returns error", async () => {
-    const err = (await handlers
-      .deleteToken({ name: "" })
-      .catch((e: unknown) => e)) as ConnectError;
+    const err = (await handlers.deleteToken({ name: "" }).catch((e: unknown) => e)) as ConnectError;
 
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.InvalidArgument);

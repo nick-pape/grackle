@@ -1,4 +1,10 @@
-import type { AgentRuntime, AgentSession, SpawnOptions, ResumeOptions, CreateSessionOptions } from "./runtime.js";
+import type {
+  AgentRuntime,
+  AgentSession,
+  SpawnOptions,
+  ResumeOptions,
+  CreateSessionOptions,
+} from "./runtime.js";
 
 /**
  * Abstract base class for agent runtimes that share the spawn/resume pattern.

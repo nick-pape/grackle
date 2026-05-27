@@ -88,6 +88,9 @@ function layoutGraph(model: CoordinationLayoutResult): CoordinationLayoutResult 
  * with no visible streams are intentionally omitted — the graph shows
  * coordination, not the full session inventory.
  */
-export function useCoordinationLayout(streams: StreamData[], sessions: Session[]): CoordinationLayoutResult {
+export function useCoordinationLayout(
+  streams: StreamData[],
+  sessions: Session[],
+): CoordinationLayoutResult {
   return useMemo(() => layoutGraph(buildCoordinationGraph(streams, sessions)), [streams, sessions]);
 }

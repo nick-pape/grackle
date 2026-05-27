@@ -118,7 +118,11 @@ async function obtainSessionCookie(client: GrackleClient, webPort: number): Prom
 }
 
 /** Seed the test environment, personas, and settings via gRPC. */
-async function seedTestData(client: GrackleClient, powerlinePort: number, tag: string): Promise<void> {
+async function seedTestData(
+  client: GrackleClient,
+  powerlinePort: number,
+  tag: string,
+): Promise<void> {
   // Add local PowerLine environment
   await client.core.addEnvironment({
     displayName: "test-local",
@@ -144,11 +148,16 @@ async function seedTestData(client: GrackleClient, powerlinePort: number, tag: s
     model: "sonnet",
   });
   await client.core.setSetting({ key: "onboarding_completed", value: "true" });
-  console.log(`${tag} Stub and Stub MCP personas created; Stub set as default; onboarding completed`);
+  console.log(
+    `${tag} Stub and Stub MCP personas created; Stub set as default; onboarding completed`,
+  );
 
   // Provision the environment (server-streaming RPC — drain and check for errors)
   const provisionAbort = AbortSignal.timeout(POLL_TIMEOUT_MS);
-  for await (const event of client.core.provisionEnvironment({ id: "test-local" }, { signal: provisionAbort })) {
+  for await (const event of client.core.provisionEnvironment(
+    { id: "test-local" },
+    { signal: provisionAbort },
+  )) {
     if (event.stage === "error") {
       throw new Error(`Provisioning failed: ${event.message}`);
     }
@@ -179,12 +188,19 @@ export async function startGrackleStack(options: GrackleStackOptions = {}): Prom
   // unique per worker — it defaults to 7436, which would collide across the
   // parallel E2E stacks (the sandbox server is fatal on EADDRINUSE).
   const [powerlinePort, serverPort, webPort, mcpPort, sandboxPort] = await findDistinctPorts(5);
-  console.log(`${tag} Ports: powerline=${powerlinePort}, server=${serverPort}, web=${webPort}, mcp=${mcpPort}, sandbox=${sandboxPort}`);
+  console.log(
+    `${tag} Ports: powerline=${powerlinePort}, server=${serverPort}, web=${webPort}, mcp=${mcpPort}, sandbox=${sandboxPort}`,
+  );
 
   // 3. Start PowerLine (no auth needed for E2E tests — local loopback only)
   const powerline: ChildProcess = spawn(
     process.execPath,
-    [join(repoRoot, "packages/powerline/dist/index.js"), "--port", String(powerlinePort), "--no-auth"],
+    [
+      join(repoRoot, "packages/powerline/dist/index.js"),
+      "--port",
+      String(powerlinePort),
+      "--no-auth",
+    ],
     {
       env: { ...process.env, GRACKLE_HOME: grackleHome },
       stdio: "pipe",

@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
+import {
+  DEFAULT_SERVER_PORT,
+  DEFAULT_WEB_PORT,
+  DEFAULT_MCP_PORT,
+  DEFAULT_POWERLINE_PORT,
+} from "@grackle-ai/common";
 
 import { resolveServerConfig } from "./config.js";
 

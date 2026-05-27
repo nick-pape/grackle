@@ -8,7 +8,7 @@ vi.mock("@grackle-ai/database", async () => {
 });
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {
-  const actual = await importOriginal() as Record<string, unknown>;
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -60,7 +60,9 @@ function makeSession(overrides: Partial<MockSession> = {}): MockSession {
 
 /** Wait for queued microtasks to flush. */
 async function flush(): Promise<void> {
-  await new Promise<void>((r) => { setTimeout(r, 10); });
+  await new Promise<void>((r) => {
+    setTimeout(r, 10);
+  });
 }
 
 // ── Tests ───────────────────────────────────────────────────
@@ -185,7 +187,9 @@ describe("createEscalationAutoSubscriber", () => {
     const session = makeSession();
     vi.mocked(taskStore.getTask).mockReturnValue(task as never);
     vi.mocked(sessionStore.getLatestSessionForTask).mockReturnValue(session as never);
-    vi.mocked(readLastTextEntry).mockReturnValue({ content: "Should I use JWT or cookies?" } as never);
+    vi.mocked(readLastTextEntry).mockReturnValue({
+      content: "Should I use JWT or cookies?",
+    } as never);
 
     fireTaskUpdated("task-001");
     await flush();

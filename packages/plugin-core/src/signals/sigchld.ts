@@ -66,7 +66,9 @@ export function createSigchldSubscriber(ctx: PluginContext): Disposable {
       } catch (err) {
         logger.error({ err, childTaskId }, "SIGCHLD handler error");
       }
-    })().catch(() => { /* swallowed — logged above */ });
+    })().catch(() => {
+      /* swallowed — logged above */
+    });
   });
 
   logger.info("SIGCHLD subscriber initialized");
@@ -84,7 +86,10 @@ export function createSigchldSubscriber(ctx: PluginContext): Disposable {
  * session has reached a SIGCHLD-triggering status (idle or terminal),
  * and if so, deliver a SIGCHLD notification to the parent.
  */
-async function handleTaskUpdated(delivered: Map<string, number>, childTaskId: string): Promise<void> {
+async function handleTaskUpdated(
+  delivered: Map<string, number>,
+  childTaskId: string,
+): Promise<void> {
   const childTask = taskStore.getTask(childTaskId);
   if (!childTask) {
     return;
@@ -125,29 +130,36 @@ async function handleTaskUpdated(delivered: Map<string, number>, childTaskId: st
   // Format the notification with actionable instructions for the parent
   let statusLabel: string;
   if (latestSession.status === SESSION_STATUS.STOPPED) {
-    statusLabel = latestSession.endReason === "completed"
-      ? "completed successfully"
-      : latestSession.endReason === "killed"
-        ? "was killed"
-        : "crashed unexpectedly";
+    statusLabel =
+      latestSession.endReason === "completed"
+        ? "completed successfully"
+        : latestSession.endReason === "killed"
+          ? "was killed"
+          : "crashed unexpectedly";
   } else {
     statusLabel = STATUS_LABELS[latestSession.status] || latestSession.status;
   }
   let message = `[SIGCHLD] Child task "${childTask.title}" (${childTaskId}) ${statusLabel}.`;
 
   if (lastTextMessage) {
-    const truncated = lastTextMessage.length > MAX_LAST_MESSAGE_LENGTH
-      ? lastTextMessage.slice(0, MAX_LAST_MESSAGE_LENGTH) + "..."
-      : lastTextMessage;
+    const truncated =
+      lastTextMessage.length > MAX_LAST_MESSAGE_LENGTH
+        ? lastTextMessage.slice(0, MAX_LAST_MESSAGE_LENGTH) + "..."
+        : lastTextMessage;
     message += `\n\nLast message from child:\n> ${truncated}`;
   }
 
   if (latestSession.status === SESSION_STATUS.IDLE) {
-    message += "\n\nReview the child's work. If satisfactory, mark it complete with "
-      + `task_complete({ taskId: "${childTaskId}" }). `
-      + "If more work is needed, send additional input to the child's session.";
-  } else if (latestSession.status === SESSION_STATUS.STOPPED && latestSession.endReason === "interrupted") {
-    message += "\n\nThe child task crashed unexpectedly. Review the error and decide whether to retry or reassign the work.";
+    message +=
+      "\n\nReview the child's work. If satisfactory, mark it complete with " +
+      `task_complete({ taskId: "${childTaskId}" }). ` +
+      "If more work is needed, send additional input to the child's session.";
+  } else if (
+    latestSession.status === SESSION_STATUS.STOPPED &&
+    latestSession.endReason === "interrupted"
+  ) {
+    message +=
+      "\n\nThe child task crashed unexpectedly. Review the error and decide whether to retry or reassign the work.";
   }
 
   logger.info(

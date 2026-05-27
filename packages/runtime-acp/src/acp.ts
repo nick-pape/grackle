@@ -2,7 +2,15 @@ import { spawn } from "node:child_process";
 import { Readable, Writable } from "node:stream";
 import type { ChildProcess } from "node:child_process";
 import type { AgentSession, AgentEvent, CreateSessionOptions } from "@grackle-ai/runtime-sdk";
-import { BaseAgentSession, BaseAgentRuntime, convertMcpServers, logger, ensureRuntimeInstalled, importFromRuntime, getRuntimeBinDirectory } from "@grackle-ai/runtime-sdk";
+import {
+  BaseAgentSession,
+  BaseAgentRuntime,
+  convertMcpServers,
+  logger,
+  ensureRuntimeInstalled,
+  importFromRuntime,
+  getRuntimeBinDirectory,
+} from "@grackle-ai/runtime-sdk";
 
 // ─── Configuration ──────────────────────────────────────────
 
@@ -59,7 +67,10 @@ function getAcpSdk(runtimeName: string): Promise<AcpSdkModule> {
   const promise = (async (): Promise<AcpSdkModule> => {
     try {
       await ensureRuntimeInstalled(runtimeName);
-      const mod = await importFromRuntime<Record<string, unknown>>(runtimeName, "@agentclientprotocol/sdk");
+      const mod = await importFromRuntime<Record<string, unknown>>(
+        runtimeName,
+        "@agentclientprotocol/sdk",
+      );
       if (typeof mod.ClientSideConnection !== "function") {
         throw new Error("ClientSideConnection not found in @agentclientprotocol/sdk");
       }
@@ -73,8 +84,8 @@ function getAcpSdk(runtimeName: string): Promise<AcpSdkModule> {
       const detail = importErr instanceof Error ? importErr.message : String(importErr);
       throw new Error(
         `ACP SDK not installed or failed to load for runtime "${runtimeName}": ${detail}\n` +
-        `ACP runtimes are installed in isolated directories (e.g. ~/.grackle/runtimes/${runtimeName}/).\n` +
-        "Please check that directory or rerun/repair the runtime installation for this ACP runtime.",
+          `ACP runtimes are installed in isolated directories (e.g. ~/.grackle/runtimes/${runtimeName}/).\n` +
+          "Please check that directory or rerun/repair the runtime installation for this ACP runtime.",
       );
     }
   })();
@@ -108,43 +119,55 @@ export function mapSessionUpdate(update: Record<string, unknown>): AgentEvent[] 
     case "agent_thought_chunk": {
       const content = update.content as Record<string, unknown> | undefined;
       if (content?.type === "text") {
-        return [{ type: "text", timestamp: ts, content: `[thinking] ${(content.text || "") as string}`, raw }];
+        return [
+          {
+            type: "text",
+            timestamp: ts,
+            content: `[thinking] ${(content.text || "") as string}`,
+            raw,
+          },
+        ];
       }
       return [];
     }
 
     case "tool_call": {
-      return [{
-        type: "tool_use",
-        timestamp: ts,
-        content: JSON.stringify({
-          tool: (update.title || "unknown") as string,
-          args: update.rawInput,
-        }),
-        raw,
-        toolCallId: typeof update.toolCallId === "string" ? update.toolCallId : undefined,
-      }];
+      return [
+        {
+          type: "tool_use",
+          timestamp: ts,
+          content: JSON.stringify({
+            tool: (update.title || "unknown") as string,
+            args: update.rawInput,
+          }),
+          raw,
+          toolCallId: typeof update.toolCallId === "string" ? update.toolCallId : undefined,
+        },
+      ];
     }
 
     case "tool_call_update": {
       const status = update.status as string | undefined;
       const toolCallId = typeof update.toolCallId === "string" ? update.toolCallId : undefined;
       if (status === "completed") {
-        const output = update.rawOutput !== null && update.rawOutput !== undefined
-          ? JSON.stringify(update.rawOutput)
-          : ((update.content || "") as string);
+        const output =
+          update.rawOutput !== null && update.rawOutput !== undefined
+            ? JSON.stringify(update.rawOutput)
+            : ((update.content || "") as string);
         return [{ type: "tool_result", timestamp: ts, content: output, raw, toolCallId }];
       }
       if (status === "failed") {
         const rawOutput = update.rawOutput as Record<string, unknown> | undefined;
         const errorContent = rawOutput?.error ?? update.content ?? "Tool call failed";
-        return [{
-          type: "tool_result",
-          timestamp: ts,
-          content: typeof errorContent === "string" ? errorContent : JSON.stringify(errorContent),
-          raw,
-          toolCallId,
-        }];
+        return [
+          {
+            type: "tool_result",
+            timestamp: ts,
+            content: typeof errorContent === "string" ? errorContent : JSON.stringify(errorContent),
+            raw,
+            toolCallId,
+          },
+        ];
       }
       // Skip intermediate progress (pending, in_progress)
       return [];
@@ -166,9 +189,18 @@ export function mapSessionUpdate(update: Record<string, unknown>): AgentEvent[] 
       const rawAmount = cost?.currency === "USD" ? Number(cost.amount) : 0;
       const costUsd = Number.isFinite(rawAmount) ? rawAmount : 0;
       if (costUsd > 0) {
-        return [{ type: "usage", timestamp: ts, content: JSON.stringify({
-          input_tokens: 0, output_tokens: 0, cost_millicents: Math.round(costUsd * 100_000),
-        }), raw }];
+        return [
+          {
+            type: "usage",
+            timestamp: ts,
+            content: JSON.stringify({
+              input_tokens: 0,
+              output_tokens: 0,
+              cost_millicents: Math.round(costUsd * 100_000),
+            }),
+            raw,
+          },
+        ];
       }
       return [];
     }
@@ -185,9 +217,9 @@ export function mapSessionUpdate(update: Record<string, unknown>): AgentEvent[] 
  * Prefers `allow_once` or `allow_always` options, falling back to the first option
  * if no allow option is available.
  */
-export function autoApprovePermission(
-  params: { options: Array<{ optionId: string; kind: string }> },
-): { outcome: { outcome: string; optionId: string } } {
+export function autoApprovePermission(params: {
+  options: Array<{ optionId: string; kind: string }>;
+}): { outcome: { outcome: string; optionId: string } } {
   const allowOption = params.options.find(
     (opt) => opt.kind === "allow_once" || opt.kind === "allow_always",
   );
@@ -247,8 +279,7 @@ class AcpSession extends BaseAgentSession {
     this.runtimeName = config.name;
     this.runtimeDisplayName = config.name;
     const fullCommand = [config.command, ...config.args].join(" ");
-    this.noMessagesError =
-      `${config.name} returned no messages. Check that '${fullCommand}' is installed and supports ACP.`;
+    this.noMessagesError = `${config.name} returned no messages. Check that '${fullCommand}' is installed and supports ACP.`;
   }
 
   // ─── BaseAgentSession hooks ──────────────────────────────
@@ -329,16 +360,27 @@ class AcpSession extends BaseAgentSession {
             // Apply cumulative→delta conversion for ACP usage_update cost
             if (event.type === "usage") {
               try {
-                const data = JSON.parse(event.content) as { input_tokens: number; output_tokens: number; cost_millicents: number };
+                const data = JSON.parse(event.content) as {
+                  input_tokens: number;
+                  output_tokens: number;
+                  cost_millicents: number;
+                };
                 if (data.cost_millicents > 0) {
                   const delta = data.cost_millicents - this.lastReportedCost;
                   this.lastReportedCost = data.cost_millicents;
-                  if (delta <= 0) { continue; }
-                  this.emit({ ...event, content: JSON.stringify({ ...data, cost_millicents: delta }) });
+                  if (delta <= 0) {
+                    continue;
+                  }
+                  this.emit({
+                    ...event,
+                    content: JSON.stringify({ ...data, cost_millicents: delta }),
+                  });
                   this.messageCount++;
                   continue;
                 }
-              } catch { /* fall through to normal push */ }
+              } catch {
+                /* fall through to normal push */
+              }
             }
             this.emit(event);
             this.messageCount++;
@@ -452,7 +494,6 @@ class AcpSession extends BaseAgentSession {
         }
       }
     }
-
   }
 
   protected async setupForResume(): Promise<void> {

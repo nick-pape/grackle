@@ -13,7 +13,7 @@ vi.mock("@grackle-ai/database", async () => {
 });
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {
-  const actual = await importOriginal() as Record<string, unknown>;
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -123,7 +123,9 @@ describe("gRPC environment broadcast", () => {
 
       const gen = handlers.provisionEnvironment({ id: "test-env" }) as AsyncGenerator;
       // Drain the generator
-      for await (const _event of gen) { /* drain */ }
+      for await (const _event of gen) {
+        /* drain */
+      }
 
       // Should have broadcast after "connecting" and after "error"
       expect(emit).toHaveBeenCalledWith("environment.changed", {});
@@ -141,7 +143,9 @@ describe("gRPC environment broadcast", () => {
 
       const gen = handlers.provisionEnvironment({ id: "test-env" }) as AsyncGenerator;
       // Drain the generator
-      for await (const _event of gen) { /* drain */ }
+      for await (const _event of gen) {
+        /* drain */
+      }
 
       // "connecting" + "connected"
       expect(emit).toHaveBeenCalledWith("environment.changed", {});
@@ -161,7 +165,9 @@ describe("gRPC environment broadcast", () => {
 
       const gen = handlers.provisionEnvironment({ id: "test-env" }) as AsyncGenerator;
       // Drain the generator
-      for await (const _event of gen) { /* drain */ }
+      for await (const _event of gen) {
+        /* drain */
+      }
 
       expect(envRegistry.updateEnvironmentStatus).toHaveBeenCalledWith("test-env", "error");
       expect(emit).toHaveBeenCalledWith("environment.changed", {});
@@ -202,7 +208,6 @@ describe("gRPC environment broadcast", () => {
         displayName: "Test Env",
         adapterType: "local",
         adapterConfig: "{}",
-
       });
 
       expect(envRegistry.addEnvironment).toHaveBeenCalled();

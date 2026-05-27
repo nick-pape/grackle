@@ -41,16 +41,20 @@ grackle serve
 
 :::tip Skip the global install
 You can prefix every command with `npx` instead:
+
 ```bash
 npx @grackle-ai/cli serve
 ```
+
 :::
 
 :::note pnpm users
 pnpm v8+ blocks native install scripts by default. If `grackle serve` crashes with a `Could not locate the bindings file` error, run `pnpm approve-builds` after installing, or add this to your `package.json`:
+
 ```json
 { "pnpm": { "onlyBuiltDependencies": ["better-sqlite3"] } }
 ```
+
 :::
 
 ## Option 3: From source
@@ -66,11 +70,11 @@ node packages/server/dist/index.js
 
 However you install, the server starts three services on localhost:
 
-| Service | Port | Purpose |
-|---------|------|---------|
-| **Web UI** | 3000 | Dashboard, chat interface, real-time streaming |
-| **gRPC server** | 7434 | CLI and PowerLine communication |
-| **MCP server** | 7435 | AI agent tool access |
+| Service         | Port | Purpose                                        |
+| --------------- | ---- | ---------------------------------------------- |
+| **Web UI**      | 3000 | Dashboard, chat interface, real-time streaming |
+| **gRPC server** | 7434 | CLI and PowerLine communication                |
+| **MCP server**  | 7435 | AI agent tool access                           |
 
 A local PowerLine instance also starts automatically — you can run agents on your own machine right away.
 

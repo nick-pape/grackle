@@ -10,7 +10,5 @@ export { GrackleContext, useGrackle };
 /** Provides live ConnectRPC-backed Grackle state to the component tree. */
 export function GrackleProvider({ children }: { children: ReactNode }): JSX.Element {
   const socket = useGrackleSocket();
-  return (
-    <GrackleContext.Provider value={socket}>{children}</GrackleContext.Provider>
-  );
+  return <GrackleContext.Provider value={socket}>{children}</GrackleContext.Provider>;
 }

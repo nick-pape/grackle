@@ -185,7 +185,13 @@ export function McpAppWidget(props: McpAppWidgetProps): JSX.Element {
 
   // Keep the latest callbacks in a ref so the setup effect can be keyed only on
   // the widget identity (re-running it would reload the iframe).
-  const handlers = useRef({ onCallTool, onOpenLink, onSendMessage, onUpdateModelContext, onSizeChange });
+  const handlers = useRef({
+    onCallTool,
+    onOpenLink,
+    onSendMessage,
+    onUpdateModelContext,
+    onSizeChange,
+  });
   handlers.current = { onCallTool, onOpenLink, onSendMessage, onUpdateModelContext, onSizeChange };
 
   // csp/permissions are part of the widget identity (they affect the proxy URL
@@ -244,7 +250,10 @@ export function McpAppWidget(props: McpAppWidgetProps): JSX.Element {
         if (handler) {
           return handler({ name: params.name, arguments: params.arguments });
         }
-        return { isError: true, content: [{ type: "text", text: "No MCP client is connected to this host." }] };
+        return {
+          isError: true,
+          content: [{ type: "text", text: "No MCP client is connected to this host." }],
+        };
       };
       bridge.onopenlink = async ({ url }): Promise<Record<string, never>> => {
         const handler = handlers.current.onOpenLink;
@@ -279,7 +288,9 @@ export function McpAppWidget(props: McpAppWidgetProps): JSX.Element {
         bridge.oninitialized = (): void => resolve();
       });
 
-      await bridge.connect(new PostMessageTransport(iframe.contentWindow as Window, iframe.contentWindow as Window));
+      await bridge.connect(
+        new PostMessageTransport(iframe.contentWindow as Window, iframe.contentWindow as Window),
+      );
       if (isAborted()) {
         return;
       }
@@ -295,7 +306,9 @@ export function McpAppWidget(props: McpAppWidgetProps): JSX.Element {
       resizeObserver = new ResizeObserver(([entry]) => {
         const width: number = Math.round(entry.contentRect.width);
         if (width > 0) {
-          ignoreRejection(bridge.sendHostContextChange({ containerDimensions: { width, maxHeight: 6000 } }));
+          ignoreRejection(
+            bridge.sendHostContextChange({ containerDimensions: { width, maxHeight: 6000 } }),
+          );
         }
       });
       resizeObserver.observe(iframe);

@@ -46,12 +46,15 @@ The left sidebar shows:
 Each workspace has three tabs:
 
 ### Tasks tab
+
 A searchable list of all tasks in the workspace with status badges, branch names, and dependency info.
 
 ### Board tab
+
 A kanban board with columns for each status: Not Started, Working, Paused, Complete, Failed. Shows task completion progress.
 
 ### Graph tab
+
 An interactive DAG (directed acyclic graph) visualization showing task hierarchy and dependencies. Click any node to see its stream or overview.
 
 ![DAG visualization — interactive task dependency graph](/img/dag-visualization.png)
@@ -61,13 +64,16 @@ An interactive DAG (directed acyclic graph) visualization showing task hierarchy
 Clicking a task opens a full-page detail view with click-to-edit fields:
 
 ### Overview
+
 - Status badge and metadata (branch, environment, persona, timestamps)
 - Description, title, and all fields are **inline editable** — click any field to edit, press Enter to save, Escape to cancel
 - Token usage tracking
 - Action buttons: Start, Complete, Resume, Delete
 
 ### Stream
+
 Real-time event feed from the task's latest session. Shows:
+
 - Agent text output
 - Tool calls with specialized cards (file edits show diffs, grep shows matches, bash shows output)
 - Tool results (collapsible)
@@ -76,7 +82,6 @@ Real-time event feed from the task's latest session. Shows:
 When the session is waiting for input, an input field appears at the bottom.
 
 ![Live agent stream — tool cards and real-time output](/img/task-stream-view.png)
-
 
 ## Creating and editing entities
 
@@ -92,22 +97,27 @@ This consistent pattern works the same whether you're creating a task, editing a
 The settings page has tabs for:
 
 ### Environments
+
 List, add, and manage environments. Shows status, adapter type, and session count. Full create/edit forms for each adapter type (Docker, SSH, Codespace, Local).
 
 ![Environment detail — adapter type, sessions, and management](/img/environment-detail.png)
 
 ### Credentials
+
 Configure [credential providers](./credentials) (Claude, GitHub, Copilot, Codex, Goose) and manage encrypted tokens.
 
 ### Personas
+
 Create, edit, and manage [agent personas](../concepts/personas). Each shows its runtime, model, max turns, system prompt, and MCP tool permissions.
 
 ![Persona management — runtime, model, and MCP configuration](/img/persona-management-view.png)
 
 ### Appearance
+
 Theme selection with 10 built-in themes.
 
 ![Themes — 10 built-in color schemes](/img/theme-grid.png)
 
 ### About
+
 Version information and links.

@@ -1,7 +1,16 @@
 import { useState, type JSX } from "react";
 import { useParams, Navigate } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
-import { ConfirmDialog, ENVIRONMENTS_URL, NEW_WORKSPACE_URL, environmentEditUrl, formatCost, newChatUrl, useAppNavigate, workspaceUrl } from "@grackle-ai/web-components";
+import {
+  ConfirmDialog,
+  ENVIRONMENTS_URL,
+  NEW_WORKSPACE_URL,
+  environmentEditUrl,
+  formatCost,
+  newChatUrl,
+  useAppNavigate,
+  workspaceUrl,
+} from "@grackle-ai/web-components";
 import type { Workspace } from "../hooks/useGrackleSocket.js";
 import { EnvironmentDetailShimmer } from "./EnvironmentDetailShimmer.js";
 import styles from "./EnvironmentDetailPage.module.scss";
@@ -20,8 +29,22 @@ export function EnvironmentDetailPage(): JSX.Element {
   const { environmentId } = useParams<{ environmentId: string }>();
   const navigate = useAppNavigate();
   const {
-    environments: { environments, environmentsLoading, provisionStatus, provisionEnvironment, stopEnvironment, removeEnvironment },
-    workspaces: { workspaces, archiveWorkspace, linkEnvironment, unlinkEnvironment, linkOperationError, clearLinkOperationError },
+    environments: {
+      environments,
+      environmentsLoading,
+      provisionStatus,
+      provisionEnvironment,
+      stopEnvironment,
+      removeEnvironment,
+    },
+    workspaces: {
+      workspaces,
+      archiveWorkspace,
+      linkEnvironment,
+      unlinkEnvironment,
+      linkOperationError,
+      clearLinkOperationError,
+    },
     sessions: { sessions },
   } = useGrackle();
 
@@ -45,7 +68,8 @@ export function EnvironmentDetailPage(): JSX.Element {
   const statusColor = STATUS_COLORS[env.status] || "var(--text-tertiary)";
   const isConnected = env.status === "connected";
   const isConnecting = env.status === "connecting";
-  const isDisconnected = env.status === "disconnected" || env.status === "error" || env.status === "sleeping";
+  const isDisconnected =
+    env.status === "disconnected" || env.status === "error" || env.status === "sleeping";
   const progress = env.id in provisionStatus ? provisionStatus[env.id] : undefined;
 
   const handleDeleteEnv = (): void => {
@@ -85,18 +109,22 @@ export function EnvironmentDetailPage(): JSX.Element {
       {/* Environment header */}
       <div className={styles.envHeader}>
         <div className={styles.envTitleRow}>
-          <span className={styles.statusDot} style={{ color: statusColor }}>{"\u25CF"}</span>
+          <span className={styles.statusDot} style={{ color: statusColor }}>
+            {"\u25CF"}
+          </span>
           <h2 className={styles.envName}>{env.displayName || env.id}</h2>
-          <span className={styles.statusBadge} style={{ color: statusColor }}>{env.status}</span>
+          <span className={styles.statusBadge} style={{ color: statusColor }}>
+            {env.status}
+          </span>
         </div>
         <div className={styles.envMeta}>
           <span className={styles.metaTag}>Adapter: {env.adapterType}</span>
           {envSessions.length > 0 && (
-            <span className={styles.metaTag}>{envSessions.length} session{envSessions.length !== 1 ? "s" : ""}</span>
+            <span className={styles.metaTag}>
+              {envSessions.length} session{envSessions.length !== 1 ? "s" : ""}
+            </span>
           )}
-          {envCost > 0 && (
-            <span className={styles.metaTag}>Cost: {formatCost(envCost)}</span>
-          )}
+          {envCost > 0 && <span className={styles.metaTag}>Cost: {formatCost(envCost)}</span>}
         </div>
       </div>
 
@@ -104,15 +132,14 @@ export function EnvironmentDetailPage(): JSX.Element {
       <div className={styles.actions}>
         {isConnected && (
           <>
-            <button
-              className={styles.btnPrimary}
-              onClick={() => navigate(newChatUrl(env.id))}
-            >
+            <button className={styles.btnPrimary} onClick={() => navigate(newChatUrl(env.id))}>
               New Chat
             </button>
             <button
               className={styles.btnOutline}
-              onClick={() => { stopEnvironment(env.id).catch(() => {}); }}
+              onClick={() => {
+                stopEnvironment(env.id).catch(() => {});
+              }}
             >
               Stop
             </button>
@@ -129,7 +156,9 @@ export function EnvironmentDetailPage(): JSX.Element {
         {isDisconnected && (
           <button
             className={styles.btnPrimary}
-            onClick={() => { provisionEnvironment(env.id).catch(() => {}); }}
+            onClick={() => {
+              provisionEnvironment(env.id).catch(() => {});
+            }}
           >
             {env.status === "error" ? "Retry" : env.status === "sleeping" ? "Wake" : "Connect"}
           </button>
@@ -147,10 +176,7 @@ export function EnvironmentDetailPage(): JSX.Element {
         >
           Edit Config
         </button>
-        <button
-          className={styles.btnDanger}
-          onClick={() => setShowDeleteEnv(true)}
-        >
+        <button className={styles.btnDanger} onClick={() => setShowDeleteEnv(true)}>
           Delete
         </button>
       </div>
@@ -161,7 +187,9 @@ export function EnvironmentDetailPage(): JSX.Element {
           <h3>Workspaces</h3>
           <button
             className={styles.btnPrimary}
-            onClick={() => navigate(`${NEW_WORKSPACE_URL}?environment=${encodeURIComponent(env.id)}`)}
+            onClick={() =>
+              navigate(`${NEW_WORKSPACE_URL}?environment=${encodeURIComponent(env.id)}`)
+            }
             data-testid="workspace-create-button"
           >
             + New Workspace
@@ -187,7 +215,9 @@ export function EnvironmentDetailPage(): JSX.Element {
               >
                 <option value="">+ Link Workspace</option>
                 {linkable.map((w) => (
-                  <option key={w.id} value={w.id}>{w.name}</option>
+                  <option key={w.id} value={w.id}>
+                    {w.name}
+                  </option>
                 ))}
               </select>
             );
@@ -209,7 +239,9 @@ export function EnvironmentDetailPage(): JSX.Element {
         )}
 
         {envWorkspaces.length === 0 && (
-          <p className={styles.empty} data-testid="linked-workspaces-empty">No workspaces yet. Create one to get started.</p>
+          <p className={styles.empty} data-testid="linked-workspaces-empty">
+            No workspaces yet. Create one to get started.
+          </p>
         )}
 
         <div className={styles.cardList} data-testid="linked-workspaces-list">
@@ -222,7 +254,9 @@ export function EnvironmentDetailPage(): JSX.Element {
               onArchive={() => setConfirmArchiveId(ws.id)}
               onConfirmArchive={() => handleArchive(ws.id)}
               onCancelArchive={() => setConfirmArchiveId(undefined)}
-              onUnlink={() => { unlinkEnvironment(ws.id, env.id).catch(() => {}); }}
+              onUnlink={() => {
+                unlinkEnvironment(ws.id, env.id).catch(() => {});
+              }}
             />
           ))}
         </div>
@@ -267,7 +301,9 @@ function WorkspaceCard({
       <div className={styles.cardHeader}>
         <strong className={styles.cardName}>{workspace.name}</strong>
         <div className={styles.cardActions}>
-          <button className={styles.btnSmall} onClick={onOpen}>Open</button>
+          <button className={styles.btnSmall} onClick={onOpen}>
+            Open
+          </button>
           <button
             className={styles.btnSmall}
             onClick={onUnlink}
@@ -278,21 +314,30 @@ function WorkspaceCard({
           </button>
           {isConfirming ? (
             <>
-              <button className={styles.btnDanger} onClick={onConfirmArchive}>Confirm</button>
-              <button className={styles.btnSmall} onClick={onCancelArchive}>Cancel</button>
+              <button className={styles.btnDanger} onClick={onConfirmArchive}>
+                Confirm
+              </button>
+              <button className={styles.btnSmall} onClick={onCancelArchive}>
+                Cancel
+              </button>
             </>
           ) : (
-            <button className={styles.btnSmall} onClick={onArchive}>Archive</button>
+            <button className={styles.btnSmall} onClick={onArchive}>
+              Archive
+            </button>
           )}
         </div>
       </div>
-      {workspace.description && (
-        <p className={styles.cardDescription}>{workspace.description}</p>
-      )}
+      {workspace.description && <p className={styles.cardDescription}>{workspace.description}</p>}
       {workspace.repoUrl && (
         <div className={styles.cardMeta}>
           {isValidUrl ? (
-            <a href={workspace.repoUrl} target="_blank" rel="noopener noreferrer" className={styles.repoLink}>
+            <a
+              href={workspace.repoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.repoLink}
+            >
               {workspace.repoUrl}
             </a>
           ) : (

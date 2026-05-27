@@ -18,8 +18,11 @@ function formatDate(iso: string | undefined): string {
     return "\u2014";
   }
   return d.toLocaleString(undefined, {
-    month: "short", day: "numeric", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -100,17 +103,24 @@ export interface TaskOverviewPanelProps {
  * dependencies, timeline, usage/cost, and review notes.
  */
 export function TaskOverviewPanel({
-  task, tasksById, environments, workspaces, taskSessions,
-  selectedEnvId, taskUsage, treeUsage,
+  task,
+  tasksById,
+  environments,
+  workspaces,
+  taskSessions,
+  selectedEnvId,
+  taskUsage,
+  treeUsage,
 }: TaskOverviewPanelProps): JSX.Element {
   const latestSession = taskSessions.length > 0 ? taskSessions[taskSessions.length - 1] : undefined;
   const envId = latestSession?.environmentId ?? "";
   const env = envId ? environments.find((e) => e.id === envId) : undefined;
   const workspace = workspaces.find((p) => p.id === task.workspaceId);
   const selectedEnv = environments.find((e) => e.id === selectedEnvId);
-  const branchUrl = task.branch && workspace?.repoUrl
-    ? `${workspace.repoUrl.replace(/\/$/, "")}/tree/${encodeURIComponent(task.branch)}`
-    : undefined;
+  const branchUrl =
+    task.branch && workspace?.repoUrl
+      ? `${workspace.repoUrl.replace(/\/$/, "")}/tree/${encodeURIComponent(task.branch)}`
+      : undefined;
 
   return (
     <div className={styles.overviewDashboard} data-testid="task-overview-panel">
@@ -119,11 +129,18 @@ export function TaskOverviewPanel({
         {task.branch && (
           <span className={styles.overviewBranchPill} data-testid="task-overview-branch">
             {branchUrl ? (
-              <a href={branchUrl} target="_blank" rel="noreferrer noopener" className={styles.branchLink}>
+              <a
+                href={branchUrl}
+                target="_blank"
+                rel="noreferrer noopener"
+                className={styles.branchLink}
+              >
                 {"\u{1F517}"} {task.branch}
               </a>
             ) : (
-              <span>{"\u{1F517}"} {task.branch}</span>
+              <span>
+                {"\u{1F517}"} {task.branch}
+              </span>
             )}
           </span>
         )}
@@ -141,12 +158,22 @@ export function TaskOverviewPanel({
         <div className={styles.overviewLabel}>Environment</div>
         {envId && env ? (
           <div className={styles.envRow} data-testid="task-overview-environment">
-            <span className={`${styles.envDot} ${envStatusClass(env.status)}`} title={env.status} aria-label={`Status: ${env.status}`} role="img" />
+            <span
+              className={`${styles.envDot} ${envStatusClass(env.status)}`}
+              title={env.status}
+              aria-label={`Status: ${env.status}`}
+              role="img"
+            />
             <span className={styles.overviewValue}>{env.displayName}</span>
           </div>
         ) : selectedEnv ? (
           <div className={styles.envRow} data-testid="task-overview-environment">
-            <span className={`${styles.envDot} ${envStatusClass(selectedEnv.status)}`} title={selectedEnv.status} aria-label={`Status: ${selectedEnv.status}`} role="img" />
+            <span
+              className={`${styles.envDot} ${envStatusClass(selectedEnv.status)}`}
+              title={selectedEnv.status}
+              aria-label={`Status: ${selectedEnv.status}`}
+              role="img"
+            />
             <span className={styles.overviewValue}>{selectedEnv.displayName}</span>
             <span className={styles.overviewMuted}>(workspace default)</span>
           </div>
@@ -164,7 +191,10 @@ export function TaskOverviewPanel({
               const dep = tasksById.get(depId);
               const isDone = dep?.status === "complete";
               return (
-                <div key={depId} className={`${styles.depItem} ${isDone ? styles.depDone : styles.depBlocked}`}>
+                <div
+                  key={depId}
+                  className={`${styles.depItem} ${isDone ? styles.depDone : styles.depBlocked}`}
+                >
                   <span>{isDone ? "\u2713" : "\u25CB"}</span>
                   <span>{dep?.title ?? depId}</span>
                 </div>
@@ -182,36 +212,39 @@ export function TaskOverviewPanel({
               <span className={styles.timelineValue}>{formatDate(task.createdAt)}</span>
             </div>
           )}
-          {task.assignedAt && (() => {
-            const delta = formatDuration(task.createdAt, task.assignedAt);
-            return (
-              <div className={styles.timelineRow}>
-                <span className={styles.timelineKey}>Assigned</span>
-                <span className={styles.timelineValue}>{formatDate(task.assignedAt)}</span>
-                {delta !== undefined && <span className={styles.timelineDelta}>{delta}</span>}
-              </div>
-            );
-          })()}
-          {task.startedAt && (() => {
-            const delta = formatDuration(task.assignedAt ?? task.createdAt, task.startedAt);
-            return (
-              <div className={styles.timelineRow}>
-                <span className={styles.timelineKey}>Started</span>
-                <span className={styles.timelineValue}>{formatDate(task.startedAt)}</span>
-                {delta !== undefined && <span className={styles.timelineDelta}>{delta}</span>}
-              </div>
-            );
-          })()}
-          {task.completedAt && (() => {
-            const delta = formatDuration(task.startedAt, task.completedAt);
-            return (
-              <div className={styles.timelineRow}>
-                <span className={styles.timelineKey}>Completed</span>
-                <span className={styles.timelineValue}>{formatDate(task.completedAt)}</span>
-                {delta !== undefined && <span className={styles.timelineDelta}>{delta}</span>}
-              </div>
-            );
-          })()}
+          {task.assignedAt &&
+            (() => {
+              const delta = formatDuration(task.createdAt, task.assignedAt);
+              return (
+                <div className={styles.timelineRow}>
+                  <span className={styles.timelineKey}>Assigned</span>
+                  <span className={styles.timelineValue}>{formatDate(task.assignedAt)}</span>
+                  {delta !== undefined && <span className={styles.timelineDelta}>{delta}</span>}
+                </div>
+              );
+            })()}
+          {task.startedAt &&
+            (() => {
+              const delta = formatDuration(task.assignedAt ?? task.createdAt, task.startedAt);
+              return (
+                <div className={styles.timelineRow}>
+                  <span className={styles.timelineKey}>Started</span>
+                  <span className={styles.timelineValue}>{formatDate(task.startedAt)}</span>
+                  {delta !== undefined && <span className={styles.timelineDelta}>{delta}</span>}
+                </div>
+              );
+            })()}
+          {task.completedAt &&
+            (() => {
+              const delta = formatDuration(task.startedAt, task.completedAt);
+              return (
+                <div className={styles.timelineRow}>
+                  <span className={styles.timelineKey}>Completed</span>
+                  <span className={styles.timelineValue}>{formatDate(task.completedAt)}</span>
+                  {delta !== undefined && <span className={styles.timelineDelta}>{delta}</span>}
+                </div>
+              );
+            })()}
           {!task.createdAt && !task.assignedAt && !task.startedAt && !task.completedAt && (
             <div className={styles.overviewMuted}>No timing data</div>
           )}
@@ -224,13 +257,17 @@ export function TaskOverviewPanel({
             <div className={styles.timelineRow}>
               <span className={styles.timelineKey}>Cost</span>
               <span className={styles.timelineValue}>{formatCost(taskUsage.costMillicents)}</span>
-              <span className={styles.timelineDelta}>{taskUsage.sessionCount} session{taskUsage.sessionCount !== 1 ? "s" : ""}</span>
+              <span className={styles.timelineDelta}>
+                {taskUsage.sessionCount} session{taskUsage.sessionCount !== 1 ? "s" : ""}
+              </span>
             </div>
             {treeUsage && treeUsage.costMillicents > taskUsage.costMillicents && (
               <div className={styles.timelineRow}>
                 <span className={styles.timelineKey}>Total (incl. subtasks)</span>
                 <span className={styles.timelineValue}>{formatCost(treeUsage.costMillicents)}</span>
-                <span className={styles.timelineDelta}>{treeUsage.sessionCount} session{treeUsage.sessionCount !== 1 ? "s" : ""}</span>
+                <span className={styles.timelineDelta}>
+                  {treeUsage.sessionCount} session{treeUsage.sessionCount !== 1 ? "s" : ""}
+                </span>
               </div>
             )}
           </div>
@@ -244,7 +281,8 @@ export function TaskOverviewPanel({
               <div className={styles.timelineRow}>
                 <span className={styles.timelineKey}>Tokens</span>
                 <span className={styles.timelineValue}>
-                  {formatTokens((taskUsage?.inputTokens ?? 0) + (taskUsage?.outputTokens ?? 0))} / {formatTokens(task.tokenBudget)}
+                  {formatTokens((taskUsage?.inputTokens ?? 0) + (taskUsage?.outputTokens ?? 0))} /{" "}
+                  {formatTokens(task.tokenBudget)}
                 </span>
               </div>
             )}
@@ -252,7 +290,8 @@ export function TaskOverviewPanel({
               <div className={styles.timelineRow}>
                 <span className={styles.timelineKey}>Cost</span>
                 <span className={styles.timelineValue}>
-                  {formatCost(taskUsage?.costMillicents ?? 0)} / {formatCost(task.costBudgetMillicents)}
+                  {formatCost(taskUsage?.costMillicents ?? 0)} /{" "}
+                  {formatCost(task.costBudgetMillicents)}
                 </span>
               </div>
             )}

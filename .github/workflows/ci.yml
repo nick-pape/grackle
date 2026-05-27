@@ -33,10 +33,31 @@ jobs:
             exit 1
           fi
 
+      - name: Prettier check
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            node common/scripts/install-run-rush.js format:check --changed "origin/${{ github.base_ref }}"
+          else
+            node common/scripts/install-run-rush.js format:check --all
+          fi
+
       - name: Build and test
         uses: ./.github/actions/build-and-test
         with:
           skip-e2e: "true"
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            packages/*/coverage/lcov.info
+            packages/*/coverage/coverage-summary.json
+            scripts/*/coverage/lcov.info
+            scripts/*/coverage/coverage-summary.json
+          if-no-files-found: warn
+          retention-days: 14
 
   e2e-chromium:
     runs-on: ubuntu-latest

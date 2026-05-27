@@ -13,7 +13,9 @@ export function registerSessionCommands(program: Command): void {
 
   session
     .command("events <sessionId>")
-    .description("Show a session's durable, server-sequenced action log (oldest first / replay order)")
+    .description(
+      "Show a session's durable, server-sequenced action log (oldest first / replay order)",
+    )
     .option("--from <seq>", "Only actions after this seq (resume from a cursor)")
     .option("--limit <n>", "Max actions to return", DEFAULT_LIMIT)
     .action(async (sessionId: string, opts: { from?: string; limit?: string }) => {
@@ -34,7 +36,9 @@ export function registerSessionCommands(program: Command): void {
       const table = new Table({ head: ["Seq", "Type", "Timestamp", "Content"] });
       for (const a of res.actions) {
         const preview: string =
-          a.content.length > CONTENT_PREVIEW_LEN ? `${a.content.slice(0, CONTENT_PREVIEW_LEN)}...` : a.content;
+          a.content.length > CONTENT_PREVIEW_LEN
+            ? `${a.content.slice(0, CONTENT_PREVIEW_LEN)}...`
+            : a.content;
         table.push([a.seq, a.type, a.timestamp, preview]);
       }
       console.log(table.toString());

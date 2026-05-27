@@ -9,23 +9,32 @@ import { MCP_TOOL_PRESETS, DEFAULT_SCOPED_MCP_TOOLS } from "@grackle-ai/common";
  * Resolve `--mcp-tools` and `--mcp-tools-preset` options into a tool name array.
  * Returns undefined if neither flag was provided.
  */
-function resolveMcpTools(opts: { mcpTools?: string; mcpToolsPreset?: string }): string[] | undefined {
+function resolveMcpTools(opts: {
+  mcpTools?: string;
+  mcpToolsPreset?: string;
+}): string[] | undefined {
   if (opts.mcpTools && opts.mcpToolsPreset) {
     console.error(chalk.red("Cannot specify both --mcp-tools and --mcp-tools-preset."));
     process.exit(1);
   }
   if (opts.mcpToolsPreset) {
-    const preset: readonly string[] | undefined =
-      (MCP_TOOL_PRESETS as Record<string, readonly string[] | undefined>)[opts.mcpToolsPreset];
+    const preset: readonly string[] | undefined = (
+      MCP_TOOL_PRESETS as Record<string, readonly string[] | undefined>
+    )[opts.mcpToolsPreset];
     if (!preset) {
       const validPresets = Object.keys(MCP_TOOL_PRESETS).join(", ");
-      console.error(chalk.red(`Unknown preset "${opts.mcpToolsPreset}". Valid presets: ${validPresets}`));
+      console.error(
+        chalk.red(`Unknown preset "${opts.mcpToolsPreset}". Valid presets: ${validPresets}`),
+      );
       process.exit(1);
     }
     return [...preset];
   }
   if (opts.mcpTools) {
-    return opts.mcpTools.split(",").map((t) => t.trim()).filter(Boolean);
+    return opts.mcpTools
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
   }
   return undefined;
 }
@@ -79,61 +88,72 @@ export function registerPersonaCommands(program: Command): void {
     .option("--max-turns <n>", "Maximum turns", parseInt)
     .option("--mcp-tools <tools>", "Comma-separated list of allowed MCP tool names")
     .option("--mcp-tools-preset <preset>", "Use a preset: default, worker, orchestrator, admin")
-    .addHelpText("after", `\nExamples:\n  $ grackle persona create "Frontend Engineer" --prompt "You are a React specialist." --runtime claude-code\n  $ grackle persona create "Security Reviewer" --prompt-file ./prompts/security.md --model opus\n  $ grackle persona create "Nightly Report" --type script --script-file ./scripts/report.genai.mjs --runtime genaiscript\n  $ grackle persona create "Worker" --prompt "You are a worker." --mcp-tools-preset worker`)
-    .action(async (name: string, opts: {
-      type?: string; prompt?: string; promptFile?: string; desc?: string;
-      runtime?: string; model?: string; maxTurns?: number;
-      script?: string; scriptFile?: string;
-      mcpTools?: string; mcpToolsPreset?: string;
-    }) => {
-      const personaType = opts.type || "agent";
+    .addHelpText(
+      "after",
+      `\nExamples:\n  $ grackle persona create "Frontend Engineer" --prompt "You are a React specialist." --runtime claude-code\n  $ grackle persona create "Security Reviewer" --prompt-file ./prompts/security.md --model opus\n  $ grackle persona create "Nightly Report" --type script --script-file ./scripts/report.genai.mjs --runtime genaiscript\n  $ grackle persona create "Worker" --prompt "You are a worker." --mcp-tools-preset worker`,
+    )
+    .action(
+      async (
+        name: string,
+        opts: {
+          type?: string;
+          prompt?: string;
+          promptFile?: string;
+          desc?: string;
+          runtime?: string;
+          model?: string;
+          maxTurns?: number;
+          script?: string;
+          scriptFile?: string;
+          mcpTools?: string;
+          mcpToolsPreset?: string;
+        },
+      ) => {
+        const personaType = opts.type || "agent";
 
-      let systemPrompt = opts.prompt || "";
-      if (opts.promptFile) {
-        systemPrompt = readFileSync(opts.promptFile, "utf8");
-      }
-
-      let scriptContent = opts.script || "";
-      if (opts.scriptFile) {
-        scriptContent = readFileSync(opts.scriptFile, "utf8");
-      }
-
-      if (personaType === "script") {
-        if (!scriptContent) {
-          console.error(
-            chalk.red(
-              "Script content is required for script personas. Use --script or --script-file.",
-            ),
-          );
-          process.exit(1);
+        let systemPrompt = opts.prompt || "";
+        if (opts.promptFile) {
+          systemPrompt = readFileSync(opts.promptFile, "utf8");
         }
-      } else {
-        if (!systemPrompt) {
-          console.error(
-            chalk.red(
-              "System prompt is required. Use --prompt or --prompt-file.",
-            ),
-          );
-          process.exit(1);
+
+        let scriptContent = opts.script || "";
+        if (opts.scriptFile) {
+          scriptContent = readFileSync(opts.scriptFile, "utf8");
         }
-      }
 
-      const allowedMcpTools = resolveMcpTools(opts);
+        if (personaType === "script") {
+          if (!scriptContent) {
+            console.error(
+              chalk.red(
+                "Script content is required for script personas. Use --script or --script-file.",
+              ),
+            );
+            process.exit(1);
+          }
+        } else {
+          if (!systemPrompt) {
+            console.error(chalk.red("System prompt is required. Use --prompt or --prompt-file."));
+            process.exit(1);
+          }
+        }
 
-      const { orchestration: client } = createGrackleClients();
-      const p = await client.createPersona({
-        name,
-        description: opts.desc || "",
-        systemPrompt,
-        runtime: opts.runtime || (personaType === "script" ? "genaiscript" : ""),
-        model: opts.model || "",
-        maxTurns: opts.maxTurns || 0,
-        type: personaType,
-        script: scriptContent,
-        allowedMcpTools: allowedMcpTools || [],
-      });
-      console.log(`Created persona: ${p.id} (${p.name})`);
-    });
+        const allowedMcpTools = resolveMcpTools(opts);
+
+        const { orchestration: client } = createGrackleClients();
+        const p = await client.createPersona({
+          name,
+          description: opts.desc || "",
+          systemPrompt,
+          runtime: opts.runtime || (personaType === "script" ? "genaiscript" : ""),
+          model: opts.model || "",
+          maxTurns: opts.maxTurns || 0,
+          type: personaType,
+          script: scriptContent,
+          allowedMcpTools: allowedMcpTools || [],
+        });
+        console.log(`Created persona: ${p.id} (${p.name})`);
+      },
+    );
 
   persona
     .command("show <id>")
@@ -153,15 +173,15 @@ export function registerPersonaCommands(program: Command): void {
           console.log(`Allowed Tools: ${p.toolConfig.allowedTools.join(", ")}`);
         }
         if (p.toolConfig.disallowedTools.length > 0) {
-          console.log(
-            `Blocked Tools: ${p.toolConfig.disallowedTools.join(", ")}`,
-          );
+          console.log(`Blocked Tools: ${p.toolConfig.disallowedTools.join(", ")}`);
         }
       }
       if (p.allowedMcpTools.length > 0) {
         console.log(`MCP Tools:     ${p.allowedMcpTools.join(", ")}`);
       } else {
-        console.log(`MCP Tools:     ${chalk.dim(`default (${DEFAULT_SCOPED_MCP_TOOLS.length} tools)`)}`);
+        console.log(
+          `MCP Tools:     ${chalk.dim(`default (${DEFAULT_SCOPED_MCP_TOOLS.length} tools)`)}`,
+        );
       }
       if (p.mcpServers.length > 0) {
         console.log(`MCP Servers:`);
@@ -193,38 +213,51 @@ export function registerPersonaCommands(program: Command): void {
     .option("--max-turns <n>", "New max turns", parseInt)
     .option("--mcp-tools <tools>", "Comma-separated list of allowed MCP tool names")
     .option("--mcp-tools-preset <preset>", "Use a preset: default, worker, orchestrator, admin")
-    .action(async (id: string, opts: {
-      name?: string; type?: string; prompt?: string; promptFile?: string;
-      desc?: string; runtime?: string; model?: string; maxTurns?: number;
-      script?: string; scriptFile?: string;
-      mcpTools?: string; mcpToolsPreset?: string;
-    }) => {
-      let systemPrompt = opts.prompt || "";
-      if (opts.promptFile) {
-        systemPrompt = readFileSync(opts.promptFile, "utf8");
-      }
-      let scriptContent = opts.script || "";
-      if (opts.scriptFile) {
-        scriptContent = readFileSync(opts.scriptFile, "utf8");
-      }
-      const allowedMcpTools = resolveMcpTools(opts);
+    .action(
+      async (
+        id: string,
+        opts: {
+          name?: string;
+          type?: string;
+          prompt?: string;
+          promptFile?: string;
+          desc?: string;
+          runtime?: string;
+          model?: string;
+          maxTurns?: number;
+          script?: string;
+          scriptFile?: string;
+          mcpTools?: string;
+          mcpToolsPreset?: string;
+        },
+      ) => {
+        let systemPrompt = opts.prompt || "";
+        if (opts.promptFile) {
+          systemPrompt = readFileSync(opts.promptFile, "utf8");
+        }
+        let scriptContent = opts.script || "";
+        if (opts.scriptFile) {
+          scriptContent = readFileSync(opts.scriptFile, "utf8");
+        }
+        const allowedMcpTools = resolveMcpTools(opts);
 
-      const { orchestration: client } = createGrackleClients();
-      const p = await client.updatePersona({
-        id,
-        name: opts.name || "",
-        description: opts.desc || "",
-        systemPrompt,
-        runtime: opts.runtime || "",
-        model: opts.model || "",
-        maxTurns: opts.maxTurns || 0,
-        type: opts.type || "",
-        script: scriptContent,
-        // Wrapper message with presence: undefined = keep existing, present = replace/clear.
-        allowedMcpTools: allowedMcpTools !== undefined ? { tools: allowedMcpTools } : undefined,
-      });
-      console.log(`Updated persona: ${p.id} (${p.name})`);
-    });
+        const { orchestration: client } = createGrackleClients();
+        const p = await client.updatePersona({
+          id,
+          name: opts.name || "",
+          description: opts.desc || "",
+          systemPrompt,
+          runtime: opts.runtime || "",
+          model: opts.model || "",
+          maxTurns: opts.maxTurns || 0,
+          type: opts.type || "",
+          script: scriptContent,
+          // Wrapper message with presence: undefined = keep existing, present = replace/clear.
+          allowedMcpTools: allowedMcpTools !== undefined ? { tools: allowedMcpTools } : undefined,
+        });
+        console.log(`Updated persona: ${p.id} (${p.name})`);
+      },
+    );
 
   persona
     .command("delete <id>")

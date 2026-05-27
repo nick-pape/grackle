@@ -67,9 +67,9 @@ describe("waitForLocalPort", () => {
     const alwaysFalse = Array.from<boolean>({ length: 20 }).fill(false);
     const prober = createMockProber(alwaysFalse);
 
-    await expect(
-      waitForLocalPort(7000, { portProber: prober, sleep: noopSleep }),
-    ).rejects.toThrow("Local port 7000 did not become reachable after 20 attempts");
+    await expect(waitForLocalPort(7000, { portProber: prober, sleep: noopSleep })).rejects.toThrow(
+      "Local port 7000 did not become reachable after 20 attempts",
+    );
 
     expect(prober.probe).toHaveBeenCalledTimes(20);
     expect(noopSleep).toHaveBeenCalledTimes(20);
@@ -78,7 +78,9 @@ describe("waitForLocalPort", () => {
 
 /** Compose interceptors into a single handler using reduceRight (same as ConnectRPC). */
 function composeInterceptors(
-  interceptors: Array<(next: (req: unknown) => Promise<unknown>) => (req: unknown) => Promise<unknown>>,
+  interceptors: Array<
+    (next: (req: unknown) => Promise<unknown>) => (req: unknown) => Promise<unknown>
+  >,
   terminal: (req: unknown) => Promise<unknown>,
 ): (req: unknown) => Promise<unknown> {
   return interceptors.reduceRight<(req: unknown) => Promise<unknown>>(
@@ -94,7 +96,9 @@ describe("createPowerLineClient x-trace-id header", () => {
     const args = capturedTransportArgs[0];
     expect(args.interceptors).toBeDefined();
 
-    const interceptors = args.interceptors as Array<(next: (req: unknown) => Promise<unknown>) => (req: unknown) => Promise<unknown>>;
+    const interceptors = args.interceptors as Array<
+      (next: (req: unknown) => Promise<unknown>) => (req: unknown) => Promise<unknown>
+    >;
     const headers = new Map<string, string>();
     const mockReq = {
       header: {
@@ -117,7 +121,9 @@ describe("createPowerLineClient x-trace-id header", () => {
     createPowerLineClient("http://127.0.0.1:7433", "test-token");
 
     const args = capturedTransportArgs[0];
-    const interceptors = (args.interceptors || []) as Array<(next: (req: unknown) => Promise<unknown>) => (req: unknown) => Promise<unknown>>;
+    const interceptors = (args.interceptors || []) as Array<
+      (next: (req: unknown) => Promise<unknown>) => (req: unknown) => Promise<unknown>
+    >;
     const headers = new Map<string, string>();
     const mockReq = {
       header: {

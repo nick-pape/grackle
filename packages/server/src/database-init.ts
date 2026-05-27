@@ -1,6 +1,11 @@
 import {
-  openDatabase, checkDatabaseIntegrity, initDatabase,
-  seedDatabase, sqlite, startWalCheckpointTimer, envRegistry,
+  openDatabase,
+  checkDatabaseIntegrity,
+  initDatabase,
+  seedDatabase,
+  sqlite,
+  startWalCheckpointTimer,
+  envRegistry,
 } from "@grackle-ai/database";
 
 /**

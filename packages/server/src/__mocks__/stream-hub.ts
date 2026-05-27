@@ -2,7 +2,9 @@ import { vi } from "vitest";
 
 /** Create a no-op async iterator with a cancel method. */
 function emptyStream(): AsyncGenerator & { cancel: ReturnType<typeof vi.fn> } {
-  const iter = (async function* (): AsyncGenerator { /* empty */ })();
+  const iter = (async function* (): AsyncGenerator {
+    /* empty */
+  })();
   return Object.assign(iter, { cancel: vi.fn() });
 }
 

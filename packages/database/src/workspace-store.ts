@@ -21,17 +21,19 @@ export function createWorkspace(
   tokenBudget: number = 0,
   costBudgetMillicents: number = 0,
 ): void {
-  db.insert(workspaces).values({
-    id,
-    name,
-    description,
-    repoUrl,
-    useWorktrees,
-    workingDirectory: workingDirectory.trim(),
-    defaultPersonaId,
-    tokenBudget,
-    costBudgetMillicents,
-  }).run();
+  db.insert(workspaces)
+    .values({
+      id,
+      name,
+      description,
+      repoUrl,
+      useWorktrees,
+      workingDirectory: workingDirectory.trim(),
+      defaultPersonaId,
+      tokenBudget,
+      costBudgetMillicents,
+    })
+    .run();
 }
 
 /**
@@ -52,17 +54,19 @@ export function createWorkspaceAndLink(
   environmentId: string,
 ): void {
   db.transaction((tx) => {
-    tx.insert(workspaces).values({
-      id,
-      name,
-      description,
-      repoUrl,
-      useWorktrees,
-      workingDirectory: workingDirectory.trim(),
-      defaultPersonaId,
-      tokenBudget,
-      costBudgetMillicents,
-    }).run();
+    tx.insert(workspaces)
+      .values({
+        id,
+        name,
+        description,
+        repoUrl,
+        useWorktrees,
+        workingDirectory: workingDirectory.trim(),
+        defaultPersonaId,
+        tokenBudget,
+        costBudgetMillicents,
+      })
+      .run();
     tx.insert(workspaceEnvironmentLinks).values({ workspaceId: id, environmentId }).run();
   });
 }
@@ -78,7 +82,9 @@ export function getWorkspace(id: string): WorkspaceRow | undefined {
  */
 export function listWorkspaces(environmentId?: string): WorkspaceRow[] {
   if (environmentId) {
-    return db.select().from(workspaces)
+    return db
+      .select()
+      .from(workspaces)
       .where(
         and(
           eq(workspaces.status, "active"),
@@ -93,7 +99,9 @@ export function listWorkspaces(environmentId?: string): WorkspaceRow[] {
       .orderBy(desc(workspaces.createdAt))
       .all();
   }
-  return db.select().from(workspaces)
+  return db
+    .select()
+    .from(workspaces)
     .where(eq(workspaces.status, "active"))
     .orderBy(desc(workspaces.createdAt))
     .all();
@@ -101,7 +109,8 @@ export function listWorkspaces(environmentId?: string): WorkspaceRow[] {
 
 /** Count all workspaces (active and archived) linked to an environment. */
 export function countWorkspacesByEnvironment(environmentId: string): number {
-  const row = db.select({ count: sql<number>`count(*)` })
+  const row = db
+    .select({ count: sql<number>`count(*)` })
     .from(workspaceEnvironmentLinks)
     .where(eq(workspaceEnvironmentLinks.environmentId, environmentId))
     .get();
@@ -134,7 +143,10 @@ export interface UpdateWorkspaceFields {
 }
 
 /** Update one or more fields on an existing workspace. Returns the updated row, or undefined if not found. */
-export function updateWorkspace(id: string, fields: UpdateWorkspaceFields): WorkspaceRow | undefined {
+export function updateWorkspace(
+  id: string,
+  fields: UpdateWorkspaceFields,
+): WorkspaceRow | undefined {
   const sets: Record<string, unknown> = { updatedAt: sql`datetime('now')` };
   if (fields.name !== undefined) {
     sets.name = fields.name;

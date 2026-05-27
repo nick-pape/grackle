@@ -120,7 +120,7 @@
 .sessionLink {
   background: none;
   border: none;
-  color: var(--accent-blue, #4A9EFF);
+  color: var(--accent-blue, #4a9eff);
   cursor: pointer;
   font-size: 12px;
   font-family: monospace;
@@ -157,19 +157,19 @@
 .badgeRw {
   composes: badge;
   background: rgba(74, 158, 255, 0.15);
-  color: var(--accent-blue, #4A9EFF);
+  color: var(--accent-blue, #4a9eff);
 }
 
 .badgeR {
   composes: badge;
   background: rgba(100, 200, 100, 0.15);
-  color: var(--accent-green, #4CAF50);
+  color: var(--accent-green, #4caf50);
 }
 
 .badgeW {
   composes: badge;
   background: rgba(255, 165, 0, 0.15);
-  color: var(--accent-yellow, #FFA500);
+  color: var(--accent-yellow, #ffa500);
 }
 
 .badgeAsync {

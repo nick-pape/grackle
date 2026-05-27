@@ -24,10 +24,7 @@ export function newTransport(grackleUrl: string, apiKey: string): StreamableHTTP
 
 /** Create and connect a new upstream MCP client. */
 function connect(grackleUrl: string, apiKey: string): Promise<Client> {
-  const c = new Client(
-    { name: "grackle-mcp-stdio", version },
-    { capabilities: {} },
-  );
+  const c = new Client({ name: "grackle-mcp-stdio", version }, { capabilities: {} });
   return c.connect(newTransport(grackleUrl, apiKey)).then(() => c);
 }
 
@@ -56,7 +53,11 @@ export function createClientManager(grackleUrl: string, apiKey: string): ClientM
   function resetClient(): void {
     const old = upstreamPromise;
     upstreamPromise = undefined;
-    old?.then((c) => c.close()).catch(() => { /* ignore close errors */ });
+    old
+      ?.then((c) => c.close())
+      .catch(() => {
+        /* ignore close errors */
+      });
   }
 
   return { getClient, resetClient };
@@ -127,9 +128,8 @@ export function createProxyServer(grackleUrl: string, apiKey: string): Server {
 
   server.setRequestHandler(CallToolRequestSchema, async (req): Promise<CallToolResult> => {
     const { name, arguments: args } = req.params;
-    return withReconnect(
-      manager,
-      (c) => c.callTool({ name, arguments: args }),
+    return withReconnect(manager, (c) =>
+      c.callTool({ name, arguments: args }),
     ) as Promise<CallToolResult>;
   });
 

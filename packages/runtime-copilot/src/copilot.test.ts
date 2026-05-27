@@ -19,7 +19,13 @@ vi.mock("node:fs", () => ({
   readFileSync: vi.fn(() => "{}"),
 }));
 
-import { resolveGithubToken, resolveProviderConfig, CopilotRuntime, CopilotSession, _setCopilotSdkForTesting } from "./copilot.js";
+import {
+  resolveGithubToken,
+  resolveProviderConfig,
+  CopilotRuntime,
+  CopilotSession,
+  _setCopilotSdkForTesting,
+} from "./copilot.js";
 
 describe("resolveGithubToken", () => {
   beforeEach(() => {
@@ -112,14 +118,25 @@ describe("CopilotRuntime structural", () => {
 
 describe("CopilotSession — native system prompt injection", () => {
   it("buildInitialPrompt returns only the prompt (excludes systemContext)", () => {
-    const session = new CopilotSession({ id: "cop-prompt", prompt: "user task here", model: "gpt-4", maxTurns: 0, systemContext: "system instructions" });
+    const session = new CopilotSession({
+      id: "cop-prompt",
+      prompt: "user task here",
+      model: "gpt-4",
+      maxTurns: 0,
+      systemContext: "system instructions",
+    });
     const result = (session as any).buildInitialPrompt();
     expect(result).toBe("user task here");
     expect(result).not.toContain("system instructions");
   });
 
   it("buildInitialPrompt returns prompt unchanged when no systemContext", () => {
-    const session = new CopilotSession({ id: "cop-no-ctx", prompt: "just the prompt", model: "gpt-4", maxTurns: 0 });
+    const session = new CopilotSession({
+      id: "cop-no-ctx",
+      prompt: "just the prompt",
+      model: "gpt-4",
+      maxTurns: 0,
+    });
     const result = (session as any).buildInitialPrompt();
     expect(result).toBe("just the prompt");
   });
@@ -152,7 +169,9 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
   it("UT-1: kill() does not throw when abort() is synchronous (returns void)", () => {
     const session = new CopilotSession({ id: "s1", prompt: "prompt", model: "model", maxTurns: 0 });
     const mockSdkSession = {
-      abort: vi.fn(() => { /* synchronous, returns undefined (void) */ }),
+      abort: vi.fn(() => {
+        /* synchronous, returns undefined (void) */
+      }),
       destroy: vi.fn(() => Promise.resolve()),
     };
     injectMockCopilotSession(session, mockSdkSession);
@@ -187,7 +206,9 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
     const session = new CopilotSession({ id: "s3", prompt: "prompt", model: "model", maxTurns: 0 });
     const destroyFn = vi.fn(() => Promise.resolve());
     const mockSdkSession = {
-      abort: vi.fn(() => { throw new Error("SDK exploded"); }),
+      abort: vi.fn(() => {
+        throw new Error("SDK exploded");
+      }),
       destroy: destroyFn,
     };
     injectMockCopilotSession(session, mockSdkSession);
@@ -203,7 +224,12 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
   });
 
   it("UT-3b: kill() completes and cleanup (destroy) runs even when abort() returns a rejected Promise", async () => {
-    const session = new CopilotSession({ id: "s3b", prompt: "prompt", model: "model", maxTurns: 0 });
+    const session = new CopilotSession({
+      id: "s3b",
+      prompt: "prompt",
+      model: "model",
+      maxTurns: 0,
+    });
     const destroyFn = vi.fn(() => Promise.resolve());
     const mockSdkSession = {
       abort: vi.fn(() => Promise.reject(new Error("async abort failure"))),
@@ -272,8 +298,12 @@ describe("CopilotRuntime — runtime_session_id emission", () => {
     const idleHandlers: Record<string, () => void> = {};
     const mockCopilotSession = {
       sessionId: "copilot-sdk-session-xyz",
-      on: vi.fn((event: string, fn: () => void) => { idleHandlers[event] = fn; }),
-      send: vi.fn(async () => { setTimeout(() => idleHandlers["session.idle"]?.(), 0); }),
+      on: vi.fn((event: string, fn: () => void) => {
+        idleHandlers[event] = fn;
+      }),
+      send: vi.fn(async () => {
+        setTimeout(() => idleHandlers["session.idle"]?.(), 0);
+      }),
       destroy: vi.fn(async () => {}),
       abort: vi.fn(),
     };
@@ -286,7 +316,11 @@ describe("CopilotRuntime — runtime_session_id emission", () => {
 
     _setCopilotSdkForTesting({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      CopilotClient: class { constructor() { return mockCopilotClient; } } as any,
+      CopilotClient: class {
+        constructor() {
+          return mockCopilotClient;
+        }
+      } as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
@@ -300,7 +334,12 @@ describe("CopilotRuntime — runtime_session_id emission", () => {
 
   it("real setupSdk() emits runtime_session_id event with the Copilot session ID", async () => {
     const runtime = new CopilotRuntime();
-    const session = runtime.spawn({ sessionId: "cop-emit-real", prompt: "hi", model: "gpt-4o", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "cop-emit-real",
+      prompt: "hi",
+      model: "gpt-4o",
+      maxTurns: 1,
+    });
 
     const events: AgentEvent[] = [];
     for await (const event of session.stream()) {
@@ -313,7 +352,10 @@ describe("CopilotRuntime — runtime_session_id emission", () => {
     }
 
     const rtIdEvent = events.find((e) => e.type === "runtime_session_id");
-    expect(rtIdEvent, `Expected runtime_session_id event. Got: ${JSON.stringify(events.map(e => e.type))}`).toBeDefined();
+    expect(
+      rtIdEvent,
+      `Expected runtime_session_id event. Got: ${JSON.stringify(events.map((e) => e.type))}`,
+    ).toBeDefined();
     expect(rtIdEvent!.content).toBe("copilot-sdk-session-xyz");
     expect(rtIdEvent!.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
@@ -328,12 +370,21 @@ describe("CopilotRuntime — usage event emission", () => {
     const mockCopilotSession = {
       sessionId: "copilot-usage-session",
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      on: vi.fn((event: string, fn: (...args: any[]) => void) => { handlers[event] = fn; }),
+      on: vi.fn((event: string, fn: (...args: any[]) => void) => {
+        handlers[event] = fn;
+      }),
       send: vi.fn(async () => {
         // Simulate: usage event fires before idle
         setTimeout(() => {
           handlers["assistant.usage"]?.({
-            data: { inputTokens: 100, outputTokens: 20, cacheReadTokens: 500, cacheWriteTokens: 0, cost: 0.003, model: "gpt-4o" },
+            data: {
+              inputTokens: 100,
+              outputTokens: 20,
+              cacheReadTokens: 500,
+              cacheWriteTokens: 0,
+              cost: 0.003,
+              model: "gpt-4o",
+            },
           });
           handlers["session.idle"]?.();
         }, 0);
@@ -350,7 +401,11 @@ describe("CopilotRuntime — usage event emission", () => {
 
     _setCopilotSdkForTesting({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      CopilotClient: class { constructor() { return mockCopilotClient; } } as any,
+      CopilotClient: class {
+        constructor() {
+          return mockCopilotClient;
+        }
+      } as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
@@ -364,7 +419,12 @@ describe("CopilotRuntime — usage event emission", () => {
 
   it("emits usage event from assistant.usage with cache tokens included", async () => {
     const runtime = new CopilotRuntime();
-    const session = runtime.spawn({ sessionId: "cop-usage-test", prompt: "hi", model: "gpt-4o", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "cop-usage-test",
+      prompt: "hi",
+      model: "gpt-4o",
+      maxTurns: 1,
+    });
 
     const events: AgentEvent[] = [];
     for await (const event of session.stream()) {
@@ -396,7 +456,9 @@ describe("CopilotRuntime — tool-call id (AHP HR3)", () => {
     const mockCopilotSession = {
       sessionId: "copilot-tool-session",
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      on: vi.fn((event: string, fn: (...args: any[]) => void) => { handlers[event] = fn; }),
+      on: vi.fn((event: string, fn: (...args: any[]) => void) => {
+        handlers[event] = fn;
+      }),
       send: vi.fn(async () => {
         setTimeout(() => {
           handlers["tool.execution_start"]?.({
@@ -422,7 +484,11 @@ describe("CopilotRuntime — tool-call id (AHP HR3)", () => {
 
     _setCopilotSdkForTesting({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      CopilotClient: class { constructor() { return mockCopilotClient; } } as any,
+      CopilotClient: class {
+        constructor() {
+          return mockCopilotClient;
+        }
+      } as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
@@ -436,7 +502,12 @@ describe("CopilotRuntime — tool-call id (AHP HR3)", () => {
 
   it("lifts data.toolCallId onto tool_use and tool_result so they pair", async () => {
     const runtime = new CopilotRuntime();
-    const session = runtime.spawn({ sessionId: "cop-tool-test", prompt: "run", model: "gpt-4o", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "cop-tool-test",
+      prompt: "run",
+      model: "gpt-4o",
+      maxTurns: 1,
+    });
 
     const events: AgentEvent[] = [];
     for await (const event of session.stream()) {
@@ -474,7 +545,9 @@ describe("CopilotRuntime — multi-turn", () => {
     const mockCopilotSession = {
       sessionId: "copilot-mt-session",
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      on: vi.fn((event: string, fn: (...args: any[]) => void) => { handlers[event] = fn; }),
+      on: vi.fn((event: string, fn: (...args: any[]) => void) => {
+        handlers[event] = fn;
+      }),
       send: vi.fn(async () => {
         sendCallCount++;
         const turn = sendCallCount;
@@ -498,7 +571,11 @@ describe("CopilotRuntime — multi-turn", () => {
 
     _setCopilotSdkForTesting({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      CopilotClient: class { constructor() { return mockCopilotClient; } } as any,
+      CopilotClient: class {
+        constructor() {
+          return mockCopilotClient;
+        }
+      } as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
@@ -563,7 +640,9 @@ describe("CopilotRuntime — multi-turn", () => {
     const mockCopilotSession = {
       sessionId: "copilot-err-session",
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      on: vi.fn((event: string, fn: (...args: any[]) => void) => { handlers[event] = fn; }),
+      on: vi.fn((event: string, fn: (...args: any[]) => void) => {
+        handlers[event] = fn;
+      }),
       send: vi.fn(async () => {
         localSendCount++;
         const turn = localSendCount;
@@ -588,7 +667,11 @@ describe("CopilotRuntime — multi-turn", () => {
     };
     _setCopilotSdkForTesting({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      CopilotClient: class { constructor() { return mockCopilotClient; } } as any,
+      CopilotClient: class {
+        constructor() {
+          return mockCopilotClient;
+        }
+      } as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
@@ -620,7 +703,9 @@ describe("CopilotRuntime — multi-turn", () => {
     const usageMockSession = {
       sessionId: "copilot-usage-mt",
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      on: vi.fn((event: string, fn: (...args: any[]) => void) => { usageHandlers[event] = fn; }),
+      on: vi.fn((event: string, fn: (...args: any[]) => void) => {
+        usageHandlers[event] = fn;
+      }),
       send: vi.fn(async () => {
         usageSendCount++;
         const turn = usageSendCount;
@@ -629,7 +714,14 @@ describe("CopilotRuntime — multi-turn", () => {
             data: { messageId: `m${turn}`, deltaContent: `t${turn}` },
           });
           usageHandlers["assistant.usage"]?.({
-            data: { inputTokens: turn * 100, outputTokens: turn * 10, cacheReadTokens: 0, cacheWriteTokens: 0, cost: 0, model: "gpt-4o" },
+            data: {
+              inputTokens: turn * 100,
+              outputTokens: turn * 10,
+              cacheReadTokens: 0,
+              cacheWriteTokens: 0,
+              cost: 0,
+              model: "gpt-4o",
+            },
           });
           usageHandlers["session.idle"]?.();
         }, 0);
@@ -646,7 +738,11 @@ describe("CopilotRuntime — multi-turn", () => {
     };
     _setCopilotSdkForTesting({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      CopilotClient: class { constructor() { return usageMockClient; } } as any,
+      CopilotClient: class {
+        constructor() {
+          return usageMockClient;
+        }
+      } as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),

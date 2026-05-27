@@ -12,26 +12,35 @@ export function registerAgentCommands(program: Command): void {
     .description("Start a new agent session")
     .option("--max-turns <n>", "Maximum turns", parseInt)
     .option("--persona <id>", "Persona to use (falls back to app default)")
-    .option("--workspace <id>", "Workspace to associate with this session (enables workspace-scoped MCP tools)")
-    .action(async (environmentId: string, prompt: string, opts: { maxTurns?: number; persona?: string; workspace?: string }) => {
-      const { core: client } = createGrackleClients();
-      const session = await client.spawnAgent({
-        environmentId,
-        prompt,
-        config: {
-          maxTurns: opts.maxTurns || 0,
-          personaId: opts.persona || "",
-          workspaceId: opts.workspace || "",
-        },
-      });
-      console.log(`Spawned session: ${session.id}`);
-      console.log(`Streaming events (Ctrl+C to detach)...\n`);
+    .option(
+      "--workspace <id>",
+      "Workspace to associate with this session (enables workspace-scoped MCP tools)",
+    )
+    .action(
+      async (
+        environmentId: string,
+        prompt: string,
+        opts: { maxTurns?: number; persona?: string; workspace?: string },
+      ) => {
+        const { core: client } = createGrackleClients();
+        const session = await client.spawnAgent({
+          environmentId,
+          prompt,
+          config: {
+            maxTurns: opts.maxTurns || 0,
+            personaId: opts.persona || "",
+            workspaceId: opts.workspace || "",
+          },
+        });
+        console.log(`Spawned session: ${session.id}`);
+        console.log(`Streaming events (Ctrl+C to detach)...\n`);
 
-      // Auto-attach to stream
-      for await (const event of client.streamSession({ id: session.id })) {
-        printEvent(event);
-      }
-    });
+        // Auto-attach to stream
+        for await (const event of client.streamSession({ id: session.id })) {
+          printEvent(event);
+        }
+      },
+    );
 
   program
     .command("resume <session-id>")
@@ -69,12 +78,13 @@ export function registerAgentCommands(program: Command): void {
         head: ["ID", "Env", "Runtime", "Status", "Tokens", "Cost", "Prompt", "Started"],
       });
       for (const s of sessions) {
-        const prompt =
-          s.prompt.length > 40 ? s.prompt.slice(0, 40) + "..." : s.prompt;
-        const tokens = (s.inputTokens || s.outputTokens)
-          ? `${formatTokens(s.inputTokens)}→${formatTokens(s.outputTokens)}`
-          : "-";
-        const statusDisplay = s.status === "stopped" && s.endReason ? `${s.status} (${s.endReason})` : s.status;
+        const prompt = s.prompt.length > 40 ? s.prompt.slice(0, 40) + "..." : s.prompt;
+        const tokens =
+          s.inputTokens || s.outputTokens
+            ? `${formatTokens(s.inputTokens)}→${formatTokens(s.outputTokens)}`
+            : "-";
+        const statusDisplay =
+          s.status === "stopped" && s.endReason ? `${s.status} (${s.endReason})` : s.status;
         table.push([
           s.id.slice(0, 8),
           s.environmentId,
@@ -131,23 +141,16 @@ export function registerAgentCommands(program: Command): void {
         prompting = true;
         rl.question("> ", (answer) => {
           prompting = false;
-          client
-            .sendInput({ sessionId, text: answer })
-            .catch((err: unknown) => {
-              const message = err instanceof Error ? err.message : String(err);
-              console.error(
-                `Failed to send input for session ${sessionId}: ${message}`,
-              );
-            });
+          client.sendInput({ sessionId, text: answer }).catch((err: unknown) => {
+            const message = err instanceof Error ? err.message : String(err);
+            console.error(`Failed to send input for session ${sessionId}: ${message}`);
+          });
         });
       }
 
       for await (const event of client.streamSession({ id: sessionId })) {
         printEvent(event);
-        if (
-          event.type === grackle.EventType.STATUS &&
-          event.content === "waiting_input"
-        ) {
+        if (event.type === grackle.EventType.STATUS && event.content === "waiting_input") {
           promptForInput();
         }
       }
@@ -156,11 +159,7 @@ export function registerAgentCommands(program: Command): void {
     });
 }
 
-function printEvent(event: {
-  type: grackle.EventType;
-  content: string;
-  timestamp: string;
-}): void {
+function printEvent(event: { type: grackle.EventType; content: string; timestamp: string }): void {
   const time = new Date(event.timestamp).toLocaleTimeString();
   switch (event.type) {
     case grackle.EventType.SYSTEM:

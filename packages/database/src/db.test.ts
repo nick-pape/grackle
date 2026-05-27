@@ -5,9 +5,13 @@ import { join } from "node:path";
 import { openSync, writeSync, closeSync, unlinkSync, mkdtempSync, rmSync } from "node:fs";
 import { SYSTEM_PERSONA_ID, ROOT_TASK_ID } from "@grackle-ai/common";
 import {
-  initDatabase, CURRENT_VERSION,
-  checkDatabaseIntegrity, backupDatabase,
-  walCheckpoint, startWalCheckpointTimer, stopWalCheckpointTimer,
+  initDatabase,
+  CURRENT_VERSION,
+  checkDatabaseIntegrity,
+  backupDatabase,
+  walCheckpoint,
+  startWalCheckpointTimer,
+  stopWalCheckpointTimer,
 } from "./db.js";
 import { seedDatabase } from "./db-seed.js";
 
@@ -29,7 +33,9 @@ const EXPECTED_TABLES: string[] = [
 /** Helper: list all user tables in a SQLite database. */
 function listTables(db: InstanceType<typeof Database>): string[] {
   const rows = db
-    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+    )
     .all() as Array<{ name: string }>;
   return rows.map((r) => r.name);
 }
@@ -120,9 +126,9 @@ describe("initDatabase", () => {
     initDatabase(mem);
     seedDatabase(mem);
 
-    const persona = mem
-      .prepare("SELECT * FROM personas WHERE id = 'claude-code'")
-      .get() as Record<string, unknown> | undefined;
+    const persona = mem.prepare("SELECT * FROM personas WHERE id = 'claude-code'").get() as
+      | Record<string, unknown>
+      | undefined;
     expect(persona).toBeDefined();
     expect(persona!.name).toBe("Software Engineer");
     expect(persona!.runtime).toBe("claude-code");
@@ -136,9 +142,9 @@ describe("initDatabase", () => {
     initDatabase(mem);
     seedDatabase(mem);
 
-    const persona = mem
-      .prepare("SELECT * FROM personas WHERE id = ?")
-      .get(SYSTEM_PERSONA_ID) as Record<string, unknown> | undefined;
+    const persona = mem.prepare("SELECT * FROM personas WHERE id = ?").get(SYSTEM_PERSONA_ID) as
+      | Record<string, unknown>
+      | undefined;
     expect(persona).toBeDefined();
     expect(persona!.name).toBe("System");
     expect(persona!.type).toBe("agent");
@@ -151,9 +157,9 @@ describe("initDatabase", () => {
     initDatabase(mem);
     seedDatabase(mem);
 
-    const task = mem
-      .prepare("SELECT * FROM tasks WHERE id = ?")
-      .get(ROOT_TASK_ID) as Record<string, unknown> | undefined;
+    const task = mem.prepare("SELECT * FROM tasks WHERE id = ?").get(ROOT_TASK_ID) as
+      | Record<string, unknown>
+      | undefined;
     expect(task).toBeDefined();
     expect(task!.title).toBe("System");
     expect(task!.workspace_id).toBeNull();
@@ -211,14 +217,16 @@ describe("initDatabase", () => {
     mem.exec("ALTER TABLE workspaces ADD COLUMN environment_id TEXT NOT NULL DEFAULT ''");
 
     // Insert the environment row first so the FK is satisfiable once FK is re-enabled.
-    mem.prepare(
-      "INSERT INTO environments (id, display_name, adapter_type, adapter_config, status) VALUES (?, ?, ?, ?, ?)",
-    ).run("env-migrate-test", "Migrate Env", "local", "{}", "disconnected");
+    mem
+      .prepare(
+        "INSERT INTO environments (id, display_name, adapter_type, adapter_config, status) VALUES (?, ?, ?, ?, ?)",
+      )
+      .run("env-migrate-test", "Migrate Env", "local", "{}", "disconnected");
 
     // Insert a workspace that references the environment via the legacy column.
-    mem.prepare(
-      "INSERT INTO workspaces (id, name, environment_id) VALUES (?, ?, ?)",
-    ).run("ws-migrate-test", "Migrate WS", "env-migrate-test");
+    mem
+      .prepare("INSERT INTO workspaces (id, name, environment_id) VALUES (?, ?, ?)")
+      .run("ws-migrate-test", "Migrate WS", "env-migrate-test");
 
     // Ensure no pre-existing link exists for this workspace (backfill not yet done).
     mem.exec("DELETE FROM workspace_environment_links WHERE workspace_id = 'ws-migrate-test'");
@@ -238,9 +246,7 @@ describe("initDatabase", () => {
     expect(link!.environment_id).toBe("env-migrate-test");
 
     // Assert: environment_id column was dropped.
-    const cols = mem
-      .prepare("PRAGMA table_info(workspaces)")
-      .all() as Array<{ name: string }>;
+    const cols = mem.prepare("PRAGMA table_info(workspaces)").all() as Array<{ name: string }>;
     expect(cols.some((c) => c.name === "environment_id")).toBe(false);
 
     // Assert: schema version advanced to current.
@@ -267,9 +273,7 @@ describe("initDatabase", () => {
     initDatabase(mem);
 
     // Assert: environment_id column was dropped.
-    const cols = mem
-      .prepare("PRAGMA table_info(schedules)")
-      .all() as Array<{ name: string }>;
+    const cols = mem.prepare("PRAGMA table_info(schedules)").all() as Array<{ name: string }>;
     expect(cols.some((c) => c.name === "environment_id")).toBe(false);
 
     // Assert: schema version advanced to current.
@@ -295,7 +299,9 @@ describe("initDatabase", () => {
     // Assert: table and its index exist.
     expect(listTables(mem)).toContain("session_actions");
     const idx = mem
-      .prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_session_actions_session'")
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_session_actions_session'",
+      )
       .get() as { name: string } | undefined;
     expect(idx?.name).toBe("idx_session_actions_session");
 
@@ -303,9 +309,11 @@ describe("initDatabase", () => {
     expect(getUserVersion(mem)).toBe(CURRENT_VERSION);
 
     // Assert: a row round-trips through the upgraded table.
-    mem.prepare(
-      "INSERT INTO session_actions (seq, session_id, type, content, raw, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
-    ).run("01A", "s1", "text", "hi", "", "2026-05-24T00:00:00.000Z");
+    mem
+      .prepare(
+        "INSERT INTO session_actions (seq, session_id, type, content, raw, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+      )
+      .run("01A", "s1", "text", "hi", "", "2026-05-24T00:00:00.000Z");
     const row = mem
       .prepare("SELECT seq, session_id, type, content FROM session_actions WHERE session_id = 's1'")
       .get() as Record<string, unknown> | undefined;
@@ -344,7 +352,11 @@ describe("checkDatabaseIntegrity", () => {
       expect(() => checkDatabaseIntegrity(db2)).toThrow("integrity check failed");
     } finally {
       db2.close();
-      try { unlinkSync(tmpPath); } catch { /* Windows EBUSY — OS will clean up temp */ }
+      try {
+        unlinkSync(tmpPath);
+      } catch {
+        /* Windows EBUSY — OS will clean up temp */
+      }
     }
   });
 });
@@ -353,7 +365,11 @@ describe("backupDatabase", () => {
   const tmpDirs: string[] = [];
   afterEach(() => {
     for (const dir of tmpDirs) {
-      try { rmSync(dir, { recursive: true, force: true }); } catch { /* Windows EBUSY */ }
+      try {
+        rmSync(dir, { recursive: true, force: true });
+      } catch {
+        /* Windows EBUSY */
+      }
     }
     tmpDirs.length = 0;
   });

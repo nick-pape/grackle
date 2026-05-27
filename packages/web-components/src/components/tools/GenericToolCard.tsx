@@ -23,11 +23,21 @@ function argsPreview(args: unknown): string {
   }
   const a = args as Record<string, unknown>;
   // Common patterns
-  if (typeof a.command === "string") { return a.command; }
-  if (typeof a.file_path === "string") { return a.file_path; }
-  if (typeof a.path === "string") { return a.path; }
-  if (typeof a.query === "string") { return a.query; }
-  if (typeof a.url === "string") { return a.url; }
+  if (typeof a.command === "string") {
+    return a.command;
+  }
+  if (typeof a.file_path === "string") {
+    return a.file_path;
+  }
+  if (typeof a.path === "string") {
+    return a.path;
+  }
+  if (typeof a.query === "string") {
+    return a.query;
+  }
+  if (typeof a.url === "string") {
+    return a.url;
+  }
   // Fallback
   try {
     const json = JSON.stringify(args);
@@ -67,11 +77,13 @@ export function GenericToolCard({ tool, args, result, isError }: ToolCardProps):
       data-testid="tool-card-generic"
     >
       <div className={styles.header}>
-        <span className={styles.icon}><Cog size={ICON_MD} aria-hidden="true" /></span>
-        <span className={styles.toolName} style={{ color: "var(--accent-blue)" }}>{display}</span>
-        {preview && (
-          <span className={styles.fileName}>{preview}</span>
-        )}
+        <span className={styles.icon}>
+          <Cog size={ICON_MD} aria-hidden="true" />
+        </span>
+        <span className={styles.toolName} style={{ color: "var(--accent-blue)" }}>
+          {display}
+        </span>
+        {preview && <span className={styles.fileName}>{preview}</span>}
       </div>
 
       {/* Show formatted args when no result yet */}
@@ -96,11 +108,18 @@ export function GenericToolCard({ tool, args, result, isError }: ToolCardProps):
             <button
               type="button"
               className={styles.bodyToggle}
-              onClick={() => { setExpanded((v) => !v); }}
+              onClick={() => {
+                setExpanded((v) => !v);
+              }}
               aria-expanded={expanded}
               data-testid="tool-card-toggle"
             >
-              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`} aria-hidden="true"><ChevronRight size={ICON_SM} /></span>
+              <span
+                className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}
+                aria-hidden="true"
+              >
+                <ChevronRight size={ICON_SM} />
+              </span>
               {expanded ? "collapse" : `${resultLines.length - PREVIEW_LINES} more lines`}
             </button>
           )}

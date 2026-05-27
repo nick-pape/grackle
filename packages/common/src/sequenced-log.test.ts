@@ -5,7 +5,9 @@ describe("SequencedLog", () => {
   it("assigns the next sequence key from nextSeq and returns the entry", () => {
     const calls: Array<[string, Sequenced<string>]> = [];
     const sink: LogSink<string> = {
-      append: (channelId, entry) => { calls.push([channelId, entry]); },
+      append: (channelId, entry) => {
+        calls.push([channelId, entry]);
+      },
     };
     let n = 0;
     const log = new SequencedLog<string>({
@@ -35,12 +37,17 @@ describe("SequencedLog", () => {
   it("preserves monotonic, ascending-sortable ordering across appends", () => {
     const recorded: Array<Sequenced<number>> = [];
     const sink: LogSink<number> = {
-      append: (channelId, entry) => { expect(channelId).toBe("c"); recorded.push(entry); },
+      append: (channelId, entry) => {
+        expect(channelId).toBe("c");
+        recorded.push(entry);
+      },
     };
     let n = 100;
     const log = new SequencedLog<number>({ sink, channelId: "c", nextSeq: () => String(++n) });
 
-    for (let i = 0; i < 5; i++) { log.append(i); }
+    for (let i = 0; i < 5; i++) {
+      log.append(i);
+    }
 
     const seqs = recorded.map((e) => e.seq);
     expect(seqs).toEqual(["101", "102", "103", "104", "105"]);

@@ -78,7 +78,10 @@ export function createChannelToken(
  * @param signingSecret - The secret used to verify the HMAC signature.
  * @returns The decoded claims if valid, or `undefined` if verification fails.
  */
-export function verifyChannelToken(token: string, signingSecret: string): ChannelTokenClaims | undefined {
+export function verifyChannelToken(
+  token: string,
+  signingSecret: string,
+): ChannelTokenClaims | undefined {
   const dotIndex = token.indexOf(".");
   if (dotIndex === -1 || dotIndex === 0 || dotIndex === token.length - 1) {
     return undefined;

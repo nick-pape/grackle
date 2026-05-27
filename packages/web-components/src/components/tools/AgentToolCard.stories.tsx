@@ -20,16 +20,20 @@ export const ClaudeCodeForeground: Story = {
     args: {
       subagent_type: "Explore",
       description: "Find all TypeScript files with runtime",
-      prompt: "Search for all TypeScript (.ts and .tsx) files under any src directory that contain the word runtime. List the matching file paths.",
+      prompt:
+        "Search for all TypeScript (.ts and .tsx) files under any src directory that contain the word runtime. List the matching file paths.",
       model: "sonnet",
     },
-    result: "Found 23 matching files:\n- packages/runtime-sdk/src/runtime.ts\n- packages/runtime-claude-code/src/claude-code.ts\n- packages/runtime-copilot/src/copilot.ts\n- packages/server/src/runtime-manager.ts",
+    result:
+      "Found 23 matching files:\n- packages/runtime-sdk/src/runtime.ts\n- packages/runtime-claude-code/src/claude-code.ts\n- packages/runtime-copilot/src/copilot.ts\n- packages/server/src/runtime-manager.ts",
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("tool-card-agent")).toBeInTheDocument();
     await expect(canvas.getByTestId("tool-card-agent-type")).toHaveTextContent("Explore");
     await expect(canvas.getByTestId("tool-card-agent-model")).toHaveTextContent("sonnet");
-    await expect(canvas.getByTestId("tool-card-agent-description")).toHaveTextContent("Find all TypeScript files with runtime");
+    await expect(canvas.getByTestId("tool-card-agent-description")).toHaveTextContent(
+      "Find all TypeScript files with runtime",
+    );
     await expect(canvas.getByTestId("tool-card-result")).toBeInTheDocument();
     // Should NOT have background indicator
     await expect(canvas.queryByTestId("tool-card-agent-background")).not.toBeInTheDocument();
@@ -47,7 +51,8 @@ export const ClaudeCodeBackground: Story = {
       run_in_background: true,
       model: "opus",
     },
-    result: "GitHub API supports three auth methods:\n1. Personal access tokens (PAT)\n2. GitHub App installation tokens\n3. OAuth app tokens",
+    result:
+      "GitHub API supports three auth methods:\n1. Personal access tokens (PAT)\n2. GitHub App installation tokens\n3. OAuth app tokens",
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("tool-card-agent-type")).toHaveTextContent("general-purpose");
@@ -64,7 +69,8 @@ export const ClaudeCodeInProgress: Story = {
     args: {
       subagent_type: "Explore",
       description: "Count .ts files in the project",
-      prompt: "Count the total number of .ts files (not .tsx) in this project. Return just the count.",
+      prompt:
+        "Count the total number of .ts files (not .tsx) in this project. Return just the count.",
     },
     // No result -- still running
   },
@@ -124,7 +130,8 @@ export const ClaudeCodeLongResult: Story = {
       description: "List all package.json files",
       prompt: "Find every package.json in the repo.",
     },
-    result: "packages/cli/package.json\npackages/common/package.json\npackages/core/package.json\npackages/mcp/package.json\npackages/server/package.json\npackages/web/package.json\npackages/web-components/package.json\npackages/runtime-sdk/package.json\npackages/runtime-claude-code/package.json\npackages/runtime-copilot/package.json",
+    result:
+      "packages/cli/package.json\npackages/common/package.json\npackages/core/package.json\npackages/mcp/package.json\npackages/server/package.json\npackages/web/package.json\npackages/web-components/package.json\npackages/runtime-sdk/package.json\npackages/runtime-claude-code/package.json\npackages/runtime-copilot/package.json",
   },
   play: async ({ canvas }) => {
     const toggle = canvas.getByTestId("tool-card-toggle");
@@ -152,7 +159,9 @@ export const ClaudeCodeResume: Story = {
     result: "Resumed analysis. The root cause is a missing token refresh in the middleware.",
   },
   play: async ({ canvas }) => {
-    await expect(canvas.getByTestId("tool-card-agent-description")).toHaveTextContent("Resuming: Continue the auth investigation");
+    await expect(canvas.getByTestId("tool-card-agent-description")).toHaveTextContent(
+      "Resuming: Continue the auth investigation",
+    );
   },
 };
 
@@ -163,7 +172,8 @@ export const ClaudeCodePromptToggle: Story = {
     args: {
       subagent_type: "Explore",
       description: "Search for patterns",
-      prompt: "This is a detailed prompt that describes exactly what the subagent should do. It includes multiple sentences and specific instructions.",
+      prompt:
+        "This is a detailed prompt that describes exactly what the subagent should do. It includes multiple sentences and specific instructions.",
     },
     result: "Done.",
   },
@@ -195,15 +205,19 @@ export const CopilotTask: Story = {
       description: "Searching for grackle in files",
       mode: "background",
       name: "find-grackle-files",
-      prompt: "Search all files in the current directory and subdirectories for the word grackle. List the file paths containing matches.",
+      prompt:
+        "Search all files in the current directory and subdirectories for the word grackle. List the file paths containing matches.",
     },
-    result: "Agent started in background with agent_id: find-grackle-files. You can use read_agent tool with this agent_id to check status and retrieve results.",
+    result:
+      "Agent started in background with agent_id: find-grackle-files. You can use read_agent tool with this agent_id to check status and retrieve results.",
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("tool-card-agent")).toBeInTheDocument();
     await expect(canvas.getByTestId("tool-card-agent-type")).toHaveTextContent("explore");
     await expect(canvas.getByTestId("tool-card-agent-background")).toBeInTheDocument();
-    await expect(canvas.getByTestId("tool-card-agent-name")).toHaveTextContent("find-grackle-files");
+    await expect(canvas.getByTestId("tool-card-agent-name")).toHaveTextContent(
+      "find-grackle-files",
+    );
   },
 };
 
@@ -236,7 +250,8 @@ export const CopilotReadAgentCompleted: Story = {
   args: {
     tool: "read_agent",
     args: { agent_id: "find-grackle-files" },
-    result: "Agent completed. agent_id: find-grackle-files, agent_type: explore, status: completed, elapsed: 6s, total_turns: 0, duration: 4s\n\nFound 12 matching files:\npackages/cli/src/index.ts\npackages/server/src/index.ts\npackages/common/src/types.ts",
+    result:
+      "Agent completed. agent_id: find-grackle-files, agent_type: explore, status: completed, elapsed: 6s, total_turns: 0, duration: 4s\n\nFound 12 matching files:\npackages/cli/src/index.ts\npackages/server/src/index.ts\npackages/common/src/types.ts",
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("tool-card-agent")).toBeInTheDocument();
@@ -247,7 +262,9 @@ export const CopilotReadAgentCompleted: Story = {
     // Agent ID should be displayed in header
     await expect(canvas.getByTestId("tool-card-agent-id")).toHaveTextContent("find-grackle-files");
     // Result content should be the part after the prefix
-    await expect(canvas.getByTestId("tool-card-result")).toHaveTextContent(/Found 12 matching files/);
+    await expect(canvas.getByTestId("tool-card-result")).toHaveTextContent(
+      /Found 12 matching files/,
+    );
   },
 };
 
@@ -256,7 +273,8 @@ export const CopilotReadAgentError: Story = {
   args: {
     tool: "read_agent",
     args: { agent_id: "failed-task" },
-    result: "Agent failed. agent_id: failed-task, agent_type: worker, status: failed, elapsed: 30s\n\nThe agent encountered an unrecoverable error during execution.",
+    result:
+      "Agent failed. agent_id: failed-task, agent_type: worker, status: failed, elapsed: 30s\n\nThe agent encountered an unrecoverable error during execution.",
     isError: true,
   },
   play: async ({ canvas }) => {
@@ -275,7 +293,9 @@ export const CopilotReadAgentUnparseable: Story = {
   },
   play: async ({ canvas }) => {
     // Should gracefully fall back to showing raw result
-    await expect(canvas.getByTestId("tool-card-result")).toHaveTextContent("The agent returned some plain text result");
+    await expect(canvas.getByTestId("tool-card-result")).toHaveTextContent(
+      "The agent returned some plain text result",
+    );
     // No status line since it couldn't be parsed
     await expect(canvas.queryByTestId("tool-card-agent-status")).not.toBeInTheDocument();
   },

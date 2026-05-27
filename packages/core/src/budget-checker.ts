@@ -67,9 +67,10 @@ export function checkBudget(taskId: string, workspaceId?: string): BudgetExceede
   // Aggregate usage across all tasks in the workspace
   const allTasks = taskStore.listTasks(workspaceId);
   const taskIds = allTasks.map((t) => t.id);
-  const wsUsage = taskIds.length > 0
-    ? sessionStore.aggregateUsage({ taskIds })
-    : { inputTokens: 0, outputTokens: 0, costMillicents: 0, sessionCount: 0 };
+  const wsUsage =
+    taskIds.length > 0
+      ? sessionStore.aggregateUsage({ taskIds })
+      : { inputTokens: 0, outputTokens: 0, costMillicents: 0, sessionCount: 0 };
   const wsTotalTokens = wsUsage.inputTokens + wsUsage.outputTokens;
 
   if (workspace.tokenBudget > 0 && wsTotalTokens >= workspace.tokenBudget) {
@@ -80,7 +81,10 @@ export function checkBudget(taskId: string, workspaceId?: string): BudgetExceede
     };
   }
 
-  if (workspace.costBudgetMillicents > 0 && wsUsage.costMillicents >= workspace.costBudgetMillicents) {
+  if (
+    workspace.costBudgetMillicents > 0 &&
+    wsUsage.costMillicents >= workspace.costBudgetMillicents
+  ) {
     return {
       scope: "workspace",
       reason: "cost",

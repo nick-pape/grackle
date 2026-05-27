@@ -1,6 +1,10 @@
 import { ROOT_TASK_ID, DEFAULT_WORKSPACE_ID } from "@grackle-ai/common";
 import type { EnvironmentStatus } from "@grackle-ai/common";
-import type { EnvironmentAdapter, PowerLineConnection, ProvisionEvent } from "@grackle-ai/adapter-sdk";
+import type {
+  EnvironmentAdapter,
+  PowerLineConnection,
+  ProvisionEvent,
+} from "@grackle-ai/adapter-sdk";
 import type {
   EnvironmentRow,
   envRegistry as envRegistryModule,
@@ -27,9 +31,14 @@ interface Logger {
 /** Injected dependencies for the local environment bootstrap. */
 export interface LocalEnvironmentDeps {
   /** Environment registry (database module namespace). */
-  envRegistry: Pick<typeof envRegistryModule,
-    "getEnvironment" | "updateAdapterConfig" | "addEnvironment" |
-    "updateEnvironmentStatus" | "markBootstrapped" | "updateDefaultRuntime"
+  envRegistry: Pick<
+    typeof envRegistryModule,
+    | "getEnvironment"
+    | "updateAdapterConfig"
+    | "addEnvironment"
+    | "updateEnvironmentStatus"
+    | "markBootstrapped"
+    | "updateDefaultRuntime"
   >;
   settingsStore: {
     getSetting: (key: string) => string | undefined;
@@ -40,7 +49,10 @@ export interface LocalEnvironmentDeps {
   /** Workspace store (database module namespace). */
   workspaceStore: Pick<typeof workspaceStoreModule, "getWorkspace" | "createWorkspaceAndLink">;
   /** Workspace-environment link store (database module namespace). */
-  workspaceEnvironmentLinkStore: Pick<typeof workspaceEnvironmentLinkStoreModule, "linkEnvironment" | "isLinked">;
+  workspaceEnvironmentLinkStore: Pick<
+    typeof workspaceEnvironmentLinkStoreModule,
+    "linkEnvironment" | "isLinked"
+  >;
   /** Task store (database module namespace). */
   taskStore: Pick<typeof taskStoreModule, "getTask" | "setTaskWorkspace">;
   getAdapter: (type: string) => EnvironmentAdapter | undefined;
@@ -92,7 +104,15 @@ export async function bootstrapLocalEnvironment(
   deps: LocalEnvironmentDeps,
 ): Promise<LocalEnvironmentResult> {
   const { powerlinePort, bindHost, skipLocalPowerline } = options;
-  const { envRegistry, settingsStore, personaStore, workspaceStore, workspaceEnvironmentLinkStore, taskStore, logger } = deps;
+  const {
+    envRegistry,
+    settingsStore,
+    personaStore,
+    workspaceStore,
+    workspaceEnvironmentLinkStore,
+    taskStore,
+    logger,
+  } = deps;
 
   if (skipLocalPowerline) {
     logger.info("Skipping local PowerLine auto-start (GRACKLE_SKIP_LOCAL_POWERLINE=1)");
@@ -134,7 +154,18 @@ export async function bootstrapLocalEnvironment(
     // Seed: ensure the default workspace exists (tied to the local environment).
     const defaultWorkspace = workspaceStore.getWorkspace(DEFAULT_WORKSPACE_ID);
     if (!defaultWorkspace) {
-      workspaceStore.createWorkspaceAndLink(DEFAULT_WORKSPACE_ID, "Default", "", "", false, "", "", 0, 0, "local");
+      workspaceStore.createWorkspaceAndLink(
+        DEFAULT_WORKSPACE_ID,
+        "Default",
+        "",
+        "",
+        false,
+        "",
+        "",
+        0,
+        0,
+        "local",
+      );
       logger.info("Created default workspace for local environment");
     } else if (!workspaceEnvironmentLinkStore.isLinked(DEFAULT_WORKSPACE_ID, "local")) {
       logger.warn(
@@ -145,7 +176,11 @@ export async function bootstrapLocalEnvironment(
 
     // Backfill: assign the default workspace to the system task if it has none.
     const systemTask = taskStore.getTask(ROOT_TASK_ID);
-    if (systemTask && !systemTask.workspaceId && workspaceEnvironmentLinkStore.isLinked(DEFAULT_WORKSPACE_ID, "local")) {
+    if (
+      systemTask &&
+      !systemTask.workspaceId &&
+      workspaceEnvironmentLinkStore.isLinked(DEFAULT_WORKSPACE_ID, "local")
+    ) {
       taskStore.setTaskWorkspace(ROOT_TASK_ID, DEFAULT_WORKSPACE_ID);
       logger.info("Assigned default workspace to system task");
     }

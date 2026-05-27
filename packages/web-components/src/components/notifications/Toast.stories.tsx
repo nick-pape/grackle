@@ -19,7 +19,12 @@ type Story = StoryObj<typeof meta>;
 /** Info toast notification. */
 export const Info: Story = {
   args: {
-    toast: { id: "t-info", message: "Something happened", variant: "info", duration: TEST_DURATION },
+    toast: {
+      id: "t-info",
+      message: "Something happened",
+      variant: "info",
+      duration: TEST_DURATION,
+    },
   },
   play: async ({ canvas }) => {
     const toast = canvas.getByRole("status");
@@ -34,7 +39,12 @@ export const Info: Story = {
 /** Success toast notification. */
 export const Success: Story = {
   args: {
-    toast: { id: "t-success", message: "Changes saved", variant: "success", duration: TEST_DURATION },
+    toast: {
+      id: "t-success",
+      message: "Changes saved",
+      variant: "success",
+      duration: TEST_DURATION,
+    },
   },
   play: async ({ canvas }) => {
     const toast = canvas.getByRole("status");
@@ -60,7 +70,12 @@ export const Error: Story = {
 /** Warning toast notification. */
 export const Warning: Story = {
   args: {
-    toast: { id: "t-warn", message: "Connection unstable", variant: "warning", duration: TEST_DURATION },
+    toast: {
+      id: "t-warn",
+      message: "Connection unstable",
+      variant: "warning",
+      duration: TEST_DURATION,
+    },
   },
   play: async ({ canvas }) => {
     const toast = canvas.getByRole("status");

@@ -1,4 +1,4 @@
-@use '../styles/mixins' as *;
+@use "../styles/mixins" as *;
 
 // =============================================================================
 // Session Panel — main content area (session stream, task tabs, empty states)
@@ -164,8 +164,9 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   border-bottom: 2px solid transparent;
-  transition: color var(--transition-fast),
-              background var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast);
 
   &:hover {
     color: var(--text-secondary);
@@ -576,4 +577,3 @@
     color: var(--accent-blue);
   }
 }
-

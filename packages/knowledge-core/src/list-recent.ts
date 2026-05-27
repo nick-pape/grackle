@@ -44,9 +44,7 @@ export async function listRecentNodes(
     filters.push("n.workspaceId = $workspaceId");
   }
 
-  const whereClause: string = filters.length > 0
-    ? `WHERE ${filters.join(" AND ")}`
-    : "";
+  const whereClause: string = filters.length > 0 ? `WHERE ${filters.join(" AND ")}` : "";
 
   // Fetch recent nodes, then find edges between them
   const cypher: string = `
@@ -83,8 +81,7 @@ export async function listRecentNodes(
       const node: KnowledgeNode = recordToNode(neo4jNode.properties);
       nodeMap.set(node.id, node);
 
-      const rawEdges: Record<string, unknown>[] =
-        record.get("edges") as Record<string, unknown>[];
+      const rawEdges: Record<string, unknown>[] = record.get("edges") as Record<string, unknown>[];
       for (const raw of rawEdges) {
         if (raw.fromId === null || raw.toId === null) {
           continue;

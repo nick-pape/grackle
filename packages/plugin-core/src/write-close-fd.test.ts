@@ -49,8 +49,8 @@ describe("writeToFd + closeFd — async delivery integration", () => {
     } as unknown as ReturnType<typeof adapterManager.getConnection>);
 
     // Make sessionStore.getSession return a valid session so the listener doesn't throw.
-    vi.mocked(sessionStore.getSession).mockImplementation((id: string) =>
-      makeSession(id) as unknown as ReturnType<typeof sessionStore.getSession>,
+    vi.mocked(sessionStore.getSession).mockImplementation(
+      (id: string) => makeSession(id) as unknown as ReturnType<typeof sessionStore.getSession>,
     );
   });
 

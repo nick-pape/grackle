@@ -33,7 +33,9 @@ export function Skeleton({
     styles.skeleton,
     variant === "circular" ? styles.circular : "",
     className ?? "",
-  ].filter(Boolean).join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div
@@ -98,10 +100,7 @@ interface SkeletonCardProps extends SkeletonCardBuiltinProps {
  * Card-shaped skeleton placeholder matching the standard card layout.
  * Contains a title-width shimmer block and body text lines.
  */
-export function SkeletonCard({
-  lines = 2,
-  className,
-}: SkeletonCardProps): JSX.Element {
+export function SkeletonCard({ lines = 2, className }: SkeletonCardProps): JSX.Element {
   return (
     <div
       className={`${styles.card} ${className ?? ""}`}

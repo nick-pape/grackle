@@ -5,14 +5,16 @@ import {
 } from "./environment-reconciliation.js";
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {
-  const actual = await importOriginal() as Record<string, unknown>;
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
   };
 });
 
-function makeDeps(overrides?: Partial<EnvironmentReconciliationDeps>): EnvironmentReconciliationDeps {
+function makeDeps(
+  overrides?: Partial<EnvironmentReconciliationDeps>,
+): EnvironmentReconciliationDeps {
   return {
     listEnvironments: vi.fn(() => []),
     listConnectionIds: vi.fn(() => new Set<string>()),
@@ -151,11 +153,14 @@ describe("environment status reconciliation phase", () => {
 
   it("handles mixed drift across multiple environments", async () => {
     const deps = makeDeps({
-      listEnvironments: vi.fn(() => [
-        makeEnv({ id: "env-1", status: "connected" }),  // forward drift: no connection
-        makeEnv({ id: "env-2", status: "disconnected" }), // reverse drift: has connection
-        makeEnv({ id: "env-3", status: "connected" }),  // in sync: has connection
-      ] as never),
+      listEnvironments: vi.fn(
+        () =>
+          [
+            makeEnv({ id: "env-1", status: "connected" }), // forward drift: no connection
+            makeEnv({ id: "env-2", status: "disconnected" }), // reverse drift: has connection
+            makeEnv({ id: "env-3", status: "connected" }), // in sync: has connection
+          ] as never,
+      ),
       listConnectionIds: vi.fn(() => new Set(["env-2", "env-3"])),
     });
 
@@ -183,13 +188,19 @@ describe("environment status reconciliation phase", () => {
 
   it("continues after individual forward drift failure", async () => {
     const deps = makeDeps({
-      listEnvironments: vi.fn(() => [
-        makeEnv({ id: "env-1", status: "connected" }),
-        makeEnv({ id: "env-2", status: "connected" }),
-      ] as never),
+      listEnvironments: vi.fn(
+        () =>
+          [
+            makeEnv({ id: "env-1", status: "connected" }),
+            makeEnv({ id: "env-2", status: "connected" }),
+          ] as never,
+      ),
       listConnectionIds: vi.fn(() => new Set()),
-      updateEnvironmentStatus: vi.fn()
-        .mockImplementationOnce(() => { throw new Error("DB locked"); })
+      updateEnvironmentStatus: vi
+        .fn()
+        .mockImplementationOnce(() => {
+          throw new Error("DB locked");
+        })
         .mockImplementationOnce(() => {}),
     });
 
@@ -201,13 +212,19 @@ describe("environment status reconciliation phase", () => {
 
   it("continues after individual reverse drift failure", async () => {
     const deps = makeDeps({
-      listEnvironments: vi.fn(() => [
-        makeEnv({ id: "env-1", status: "disconnected" }),
-        makeEnv({ id: "env-2", status: "disconnected" }),
-      ] as never),
+      listEnvironments: vi.fn(
+        () =>
+          [
+            makeEnv({ id: "env-1", status: "disconnected" }),
+            makeEnv({ id: "env-2", status: "disconnected" }),
+          ] as never,
+      ),
       listConnectionIds: vi.fn(() => new Set(["env-1", "env-2"])),
-      removeConnection: vi.fn()
-        .mockImplementationOnce(() => { throw new Error("unexpected"); })
+      removeConnection: vi
+        .fn()
+        .mockImplementationOnce(() => {
+          throw new Error("unexpected");
+        })
         .mockImplementationOnce(() => {}),
     });
 

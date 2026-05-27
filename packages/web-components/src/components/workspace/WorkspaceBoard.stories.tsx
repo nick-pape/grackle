@@ -50,7 +50,13 @@ export const AllFiveColumns: Story = {
   name: "All five columns are rendered",
   args: {
     tasks: [
-      buildTask({ id: "t1", workspaceId: WORKSPACE_ID, title: "Only task", status: "not_started", sortOrder: 1 }),
+      buildTask({
+        id: "t1",
+        workspaceId: WORKSPACE_ID,
+        title: "Only task",
+        status: "not_started",
+        sortOrder: 1,
+      }),
     ],
   },
   play: async ({ canvas }) => {
@@ -70,8 +76,20 @@ export const TasksInCorrectColumns: Story = {
   name: "Tasks in correct columns by status",
   args: {
     tasks: [
-      buildTask({ id: "t1", workspaceId: WORKSPACE_ID, title: "col-task-a", status: "not_started", sortOrder: 1 }),
-      buildTask({ id: "t2", workspaceId: WORKSPACE_ID, title: "col-task-b", status: "not_started", sortOrder: 2 }),
+      buildTask({
+        id: "t1",
+        workspaceId: WORKSPACE_ID,
+        title: "col-task-a",
+        status: "not_started",
+        sortOrder: 1,
+      }),
+      buildTask({
+        id: "t2",
+        workspaceId: WORKSPACE_ID,
+        title: "col-task-b",
+        status: "not_started",
+        sortOrder: 2,
+      }),
     ],
   },
   play: async ({ canvas }) => {
@@ -96,7 +114,13 @@ export const CardClick: Story = {
   name: "Card click triggers navigation",
   args: {
     tasks: [
-      buildTask({ id: "t-nav", workspaceId: WORKSPACE_ID, title: "board-nav-task", status: "not_started", sortOrder: 1 }),
+      buildTask({
+        id: "t-nav",
+        workspaceId: WORKSPACE_ID,
+        title: "board-nav-task",
+        status: "not_started",
+        sortOrder: 1,
+      }),
     ],
   },
   play: async ({ canvas }) => {
@@ -118,7 +142,13 @@ export const KeyboardFocus: Story = {
   name: "Card is focusable via keyboard",
   args: {
     tasks: [
-      buildTask({ id: "t-focus", workspaceId: WORKSPACE_ID, title: "focus-task", status: "not_started", sortOrder: 1 }),
+      buildTask({
+        id: "t-focus",
+        workspaceId: WORKSPACE_ID,
+        title: "focus-task",
+        status: "not_started",
+        sortOrder: 1,
+      }),
     ],
   },
   play: async ({ canvas }) => {
@@ -141,7 +171,13 @@ export const KeyboardActivation: Story = {
   name: "Enter/Space activates focused card",
   args: {
     tasks: [
-      buildTask({ id: "t-kb", workspaceId: WORKSPACE_ID, title: "kb-task", status: "not_started", sortOrder: 1 }),
+      buildTask({
+        id: "t-kb",
+        workspaceId: WORKSPACE_ID,
+        title: "kb-task",
+        status: "not_started",
+        sortOrder: 1,
+      }),
     ],
   },
   play: async ({ canvas }) => {

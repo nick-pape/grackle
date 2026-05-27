@@ -1,5 +1,11 @@
 import type { AgentSession, CreateSessionOptions } from "@grackle-ai/runtime-sdk";
-import { BaseAgentSession, BaseAgentRuntime, logger, ensureRuntimeInstalled, importFromRuntime } from "@grackle-ai/runtime-sdk";
+import {
+  BaseAgentSession,
+  BaseAgentRuntime,
+  logger,
+  ensureRuntimeInstalled,
+  importFromRuntime,
+} from "@grackle-ai/runtime-sdk";
 import { SESSION_STATUS } from "@grackle-ai/common";
 
 // ─── Environment variable names ────────────────────────────
@@ -35,9 +41,9 @@ function getCodexSdk(): Promise<CodexSdkModule> {
         logger.warn({ err }, "Failed to import Codex SDK");
         const detail = err instanceof Error ? err.message : String(err);
         throw new Error(
-          `Codex SDK not installed or failed to load: ${detail}\n`
-          + "Run: npm install @openai/codex-sdk\n"
-          + "The Codex CLI must also be installed and available in PATH (or set CODEX_CLI_PATH).",
+          `Codex SDK not installed or failed to load: ${detail}\n` +
+            "Run: npm install @openai/codex-sdk\n" +
+            "The Codex CLI must also be installed and available in PATH (or set CODEX_CLI_PATH).",
         );
       }
     })();
@@ -70,7 +76,10 @@ function toolItemId(item: Record<string, unknown>): string | undefined {
   if (typeof item.id === "string" && item.id.length > 0) {
     return item.id;
   }
-  logger.warn({ itemType: itemType(item) }, "Codex tool item has no id — tool_use/tool_result cannot be paired");
+  logger.warn(
+    { itemType: itemType(item) },
+    "Codex tool item has no id — tool_use/tool_result cannot be paired",
+  );
   return undefined;
 }
 
@@ -168,7 +177,12 @@ class CodexSession extends BaseAgentSession {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     this.codexInstance = new Codex(codexOptions);
 
-    this.emit({ type: "system", timestamp: ts(), content: "Codex instance created", diagnostic: true });
+    this.emit({
+      type: "system",
+      timestamp: ts(),
+      content: "Codex instance created",
+      diagnostic: true,
+    });
 
     // ── Thread options ──
     this.threadOptions = {
@@ -260,7 +274,9 @@ class CodexSession extends BaseAgentSession {
         }
 
         case "item.started": {
-          const item = (event as Record<string, unknown>).item as Record<string, unknown> | undefined;
+          const item = (event as Record<string, unknown>).item as
+            | Record<string, unknown>
+            | undefined;
           if (!item) {
             break;
           }
@@ -268,7 +284,8 @@ class CodexSession extends BaseAgentSession {
           // These three item types are tool calls (emit tool_use + tool_result).
           // Pair them with the SDK's native item.id, which is shared between
           // item.started and item.completed (AHP HR3).
-          const isToolStart = type === "command_execution" || type === "file_change" || type === "mcp_tool_call";
+          const isToolStart =
+            type === "command_execution" || type === "file_change" || type === "mcp_tool_call";
           const toolCallId = isToolStart ? toolItemId(item) : undefined;
 
           if (type === "command_execution") {
@@ -276,7 +293,10 @@ class CodexSession extends BaseAgentSession {
             this.emit({
               type: "tool_use",
               timestamp: ts(),
-              content: JSON.stringify({ tool: "command_execution", args: { command: item.command || "" } }),
+              content: JSON.stringify({
+                tool: "command_execution",
+                args: { command: item.command || "" },
+              }),
               raw: event,
               toolCallId,
             });
@@ -298,7 +318,10 @@ class CodexSession extends BaseAgentSession {
             this.emit({
               type: "tool_use",
               timestamp: ts(),
-              content: JSON.stringify({ tool: `mcp__${String(item.server || "unknown")}__${String(item.tool || "unknown")}`, args: item.arguments || {} }),
+              content: JSON.stringify({
+                tool: `mcp__${String(item.server || "unknown")}__${String(item.tool || "unknown")}`,
+                args: item.arguments || {},
+              }),
               raw: event,
               toolCallId,
             });
@@ -307,13 +330,16 @@ class CodexSession extends BaseAgentSession {
         }
 
         case "item.completed": {
-          const item = (event as Record<string, unknown>).item as Record<string, unknown> | undefined;
+          const item = (event as Record<string, unknown>).item as
+            | Record<string, unknown>
+            | undefined;
           if (!item) {
             break;
           }
           const type = itemType(item);
           // Pair with the same native item.id seen at item.started (AHP HR3).
-          const isToolComplete = type === "command_execution" || type === "file_change" || type === "mcp_tool_call";
+          const isToolComplete =
+            type === "command_execution" || type === "file_change" || type === "mcp_tool_call";
           const toolCallId = isToolComplete ? toolItemId(item) : undefined;
 
           if (type === "command_execution") {
@@ -336,7 +362,11 @@ class CodexSession extends BaseAgentSession {
             this.emit({
               type: "tool_result",
               timestamp: ts(),
-              content: JSON.stringify({ file: filePaths, changes, status: item.status || "completed" }),
+              content: JSON.stringify({
+                file: filePaths,
+                changes,
+                status: item.status || "completed",
+              }),
               raw: event,
               toolCallId,
             });
@@ -358,7 +388,9 @@ class CodexSession extends BaseAgentSession {
             const errorObj = item.error as Record<string, unknown> | undefined;
             const resultStr = resultObj ? JSON.stringify(resultObj.content ?? resultObj) : "";
             const errorStr = errorObj
-              ? (typeof errorObj.message === "string" ? errorObj.message : JSON.stringify(errorObj))
+              ? typeof errorObj.message === "string"
+                ? errorObj.message
+                : JSON.stringify(errorObj)
               : "";
             this.emit({
               type: "tool_result",
@@ -383,11 +415,13 @@ class CodexSession extends BaseAgentSession {
 
         case "turn.completed": {
           // Extract usage from turn.completed event (per-turn, incremental)
-          const usage = (event as Record<string, unknown>).usage as {
-            input_tokens?: number;
-            cached_input_tokens?: number;
-            output_tokens?: number;
-          } | undefined;
+          const usage = (event as Record<string, unknown>).usage as
+            | {
+                input_tokens?: number;
+                cached_input_tokens?: number;
+                output_tokens?: number;
+              }
+            | undefined;
           if (usage) {
             const inputTokens = (usage.input_tokens ?? 0) + (usage.cached_input_tokens ?? 0);
             const outputTokens = usage.output_tokens ?? 0;
@@ -395,7 +429,10 @@ class CodexSession extends BaseAgentSession {
           }
           this.turnCount++;
           if (this.maxTurns > 0 && this.turnCount >= this.maxTurns) {
-            logger.info({ turnCount: this.turnCount, maxTurns: this.maxTurns }, "Codex max turns reached — going idle");
+            logger.info(
+              { turnCount: this.turnCount, maxTurns: this.maxTurns },
+              "Codex max turns reached — going idle",
+            );
             this.status = SESSION_STATUS.IDLE;
             this.emit({ type: "status", timestamp: ts(), content: "waiting_input" });
             if (this.activeStream && typeof this.activeStream.abort === "function") {
@@ -406,7 +443,9 @@ class CodexSession extends BaseAgentSession {
         }
 
         case "turn.failed": {
-          const error = (event as Record<string, unknown>).error as Record<string, unknown> | undefined;
+          const error = (event as Record<string, unknown>).error as
+            | Record<string, unknown>
+            | undefined;
           const message = (error?.message ?? "Turn failed") as string;
           this.emit({ type: "error", timestamp: ts(), content: message, raw: event });
           break;

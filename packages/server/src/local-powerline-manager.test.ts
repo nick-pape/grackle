@@ -19,7 +19,10 @@ vi.mock("@grackle-ai/core", () => ({
   },
 }));
 
-import { LocalPowerLineManager, type LocalPowerLineManagerOptions } from "./local-powerline-manager.js";
+import {
+  LocalPowerLineManager,
+  type LocalPowerLineManagerOptions,
+} from "./local-powerline-manager.js";
 import type { ProcessFactory, PortProbe } from "./local-powerline.js";
 
 /** Create a minimal mock ChildProcess backed by an EventEmitter. */
@@ -34,7 +37,9 @@ function createMockProcess(): ChildProcess {
 }
 
 /** Build default test options with injected mocks. */
-function createOptions(overrides?: Partial<LocalPowerLineManagerOptions>): LocalPowerLineManagerOptions & {
+function createOptions(
+  overrides?: Partial<LocalPowerLineManagerOptions>,
+): LocalPowerLineManagerOptions & {
   processFactory: ProcessFactory;
   portProbe: PortProbe;
   mockProcesses: ChildProcess[];
@@ -153,7 +158,9 @@ describe("LocalPowerLineManager", () => {
       waitForPort: vi.fn(async () => {
         probeCallCount++;
         if (probeCallCount > 1) {
-          await new Promise<void>((r) => { resolveProbe = r; });
+          await new Promise<void>((r) => {
+            resolveProbe = r;
+          });
         }
       }),
     };
@@ -178,7 +185,9 @@ describe("LocalPowerLineManager", () => {
 
     // stop() will call handle.stop() → SIGTERM on the new process
     await vi.waitFor(() => {
-      expect((opts.mockProcesses[1].kill as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith("SIGTERM");
+      expect(opts.mockProcesses[1].kill as ReturnType<typeof vi.fn>).toHaveBeenCalledWith(
+        "SIGTERM",
+      );
     });
 
     // Simulate the new process exiting so stop() can complete
@@ -191,7 +200,12 @@ describe("LocalPowerLineManager", () => {
   it("trips circuit breaker after max restarts in window", async () => {
     const onStatusChange = vi.fn();
     const onRestarted = vi.fn();
-    const opts = createOptions({ onStatusChange, onRestarted, maxRestarts: 2, restartWindowMs: 60_000 });
+    const opts = createOptions({
+      onStatusChange,
+      onRestarted,
+      maxRestarts: 2,
+      restartWindowMs: 60_000,
+    });
     const manager = new LocalPowerLineManager(opts);
 
     await manager.start();
@@ -258,7 +272,9 @@ describe("LocalPowerLineManager", () => {
         probeCallCount++;
         if (probeCallCount > 1) {
           // Second+ calls: slow to simulate in-progress restart
-          await new Promise<void>((r) => { probeResolvers.push(r); });
+          await new Promise<void>((r) => {
+            probeResolvers.push(r);
+          });
         }
       }),
     };

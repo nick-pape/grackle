@@ -6,12 +6,18 @@ import { connectNodeAdapter } from "@connectrpc/connect-node";
 import type { ConnectRouter } from "@connectrpc/connect";
 import {
   setSecurityHeaders,
-  createSession, validateSessionCookie, verifyApiKey,
+  createSession,
+  validateSessionCookie,
+  verifyApiKey,
   redeemPairingCode,
-  registerClient, getClient,
-  createAuthorizationCode, consumeAuthorizationCode,
-  createRefreshToken, consumeRefreshToken,
-  createOAuthAccessToken, OAUTH_ACCESS_TOKEN_TTL_MS,
+  registerClient,
+  getClient,
+  createAuthorizationCode,
+  consumeAuthorizationCode,
+  createRefreshToken,
+  consumeRefreshToken,
+  createOAuthAccessToken,
+  OAUTH_ACCESS_TOKEN_TTL_MS,
 } from "@grackle-ai/auth";
 
 // ─── Options ────────────────────────────────────────────────
@@ -115,8 +121,8 @@ const MIME_TYPES: Record<string, string> = {
 function resolveWebDistDir(): string {
   const esmRequire: NodeRequire = createRequire(import.meta.url);
   return resolve(
-    process.env.GRACKLE_WEB_DIR
-      || join(dirname(esmRequire.resolve("@grackle-ai/web/package.json")), "dist"),
+    process.env.GRACKLE_WEB_DIR ||
+      join(dirname(esmRequire.resolve("@grackle-ai/web/package.json")), "dist"),
   );
 }
 
@@ -134,7 +140,9 @@ function escapeHtml(str: string): string {
 
 /** Minimal HTML page shown when the user needs to enter a pairing code. */
 function renderPairingPage(error?: string): string {
-  const errorHtml = error ? `<p style="color:#e74c3c;margin-bottom:1rem">${escapeHtml(error)}</p>` : "";
+  const errorHtml = error
+    ? `<p style="color:#e74c3c;margin-bottom:1rem">${escapeHtml(error)}</p>`
+    : "";
   return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Grackle — Pair Device</title>
@@ -186,7 +194,9 @@ function renderAuthorizePage(
   hasPairedSession: boolean,
   error?: string,
 ): string {
-  const errorHtml = error ? `<p style="color:#e74c3c;margin-bottom:1rem">${escapeHtml(error)}</p>` : "";
+  const errorHtml = error
+    ? `<p style="color:#e74c3c;margin-bottom:1rem">${escapeHtml(error)}</p>`
+    : "";
   const pairingField = hasPairedSession
     ? ""
     : `<p>Enter the pairing code shown in your terminal to pair and authorize.</p>
@@ -257,7 +267,9 @@ function readBody(req: http.IncomingMessage): Promise<string> {
     // If the client disconnects mid-upload, `close` fires without `end`/`error`;
     // reject so the awaiting handler can't hang. After a normal `end`, the promise
     // is already settled and this is a no-op.
-    req.on("close", () => settle(() => reject(new Error("connection closed before request body was fully read"))));
+    req.on("close", () =>
+      settle(() => reject(new Error("connection closed before request body was fully read"))),
+    );
   });
 }
 
@@ -270,8 +282,10 @@ function readBody(req: http.IncomingMessage): Promise<string> {
 function respondPayloadTooLarge(req: http.IncomingMessage, res: http.ServerResponse): void {
   // Tear down the (paused, half-read) request once the 413 has flushed, so the
   // client can't keep streaming an oversized body after we've responded.
-  res.once("finish", () => { req.destroy(); });
-  res.writeHead(413, { "Content-Type": "application/json", "Connection": "close" });
+  res.once("finish", () => {
+    req.destroy();
+  });
+  res.writeHead(413, { "Content-Type": "application/json", Connection: "close" });
   res.end(JSON.stringify({ error: "payload too large" }));
 }
 
@@ -290,15 +304,9 @@ async function parseFormBody(req: http.IncomingMessage): Promise<URLSearchParams
  * Serve a static file from the web dist directory.
  * Always writes a response (200, 403, 404, or 500).
  */
-function serveStaticFile(
-  res: http.ServerResponse,
-  rawPath: string,
-  distDir: string,
-): void {
+function serveStaticFile(res: http.ServerResponse, rawPath: string, distDir: string): void {
   const isRoot = rawPath === "/" || rawPath === "";
-  let filePath = isRoot
-    ? join(distDir, "index.html")
-    : resolve(distDir, normalize(`.${rawPath}`));
+  let filePath = isRoot ? join(distDir, "index.html") : resolve(distDir, normalize(`.${rawPath}`));
 
   // Prevent path traversal — resolved path must stay within the dist directory
   const rel = relative(distDir, filePath);
@@ -366,7 +374,18 @@ export function isWildcardAddress(host: string): boolean {
  * @returns An `http.Server` ready to `.listen()`.
  */
 export function createWebServer(options: WebServerOptions): http.Server {
-  const { apiKey, webPort, bindHost, connectRoutes, webDistDir, readinessCheck, pluginNames, sandboxPort, sandboxOrigin, handleWebhook } = options;
+  const {
+    apiKey,
+    webPort,
+    bindHost,
+    connectRoutes,
+    webDistDir,
+    readinessCheck,
+    pluginNames,
+    sandboxPort,
+    sandboxOrigin,
+    handleWebhook,
+  } = options;
   const distDir = webDistDir ?? resolveWebDistDir();
   const allowNetwork = isWildcardAddress(bindHost);
   const dialableHost = allowNetwork ? "127.0.0.1" : bindHost;
@@ -407,7 +426,10 @@ export function createWebServer(options: WebServerOptions): http.Server {
           ? await Promise.resolve(readinessCheck())
           : { ready: true, checks: {} };
         const statusCode = result.ready ? 200 : 503;
-        res.writeHead(statusCode, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+        res.writeHead(statusCode, {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        });
         res.end(JSON.stringify(result));
       } catch {
         const result: ReadinessResult = {
@@ -439,16 +461,18 @@ export function createWebServer(options: WebServerOptions): http.Server {
       const requestHost = req.headers.host || `${urlHost}:${webPort}`;
       const baseUrl = `http://${requestHost}`;
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({
-        issuer: baseUrl,
-        authorization_endpoint: `${baseUrl}/authorize`,
-        token_endpoint: `${baseUrl}/token`,
-        registration_endpoint: `${baseUrl}/register`,
-        response_types_supported: ["code"],
-        grant_types_supported: ["authorization_code", "refresh_token"],
-        code_challenge_methods_supported: ["S256"],
-        token_endpoint_auth_methods_supported: ["none"],
-      }));
+      res.end(
+        JSON.stringify({
+          issuer: baseUrl,
+          authorization_endpoint: `${baseUrl}/authorize`,
+          token_endpoint: `${baseUrl}/token`,
+          registration_endpoint: `${baseUrl}/register`,
+          response_types_supported: ["code"],
+          grant_types_supported: ["authorization_code", "refresh_token"],
+          code_challenge_methods_supported: ["S256"],
+          token_endpoint_auth_methods_supported: ["none"],
+        }),
+      );
       return;
     }
 
@@ -462,7 +486,12 @@ export function createWebServer(options: WebServerOptions): http.Server {
 
         if (!Array.isArray(redirectUris) || redirectUris.length === 0) {
           res.writeHead(400, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: "invalid_request", error_description: "redirect_uris is required" }));
+          res.end(
+            JSON.stringify({
+              error: "invalid_request",
+              error_description: "redirect_uris is required",
+            }),
+          );
           return;
         }
 
@@ -470,16 +499,30 @@ export function createWebServer(options: WebServerOptions): http.Server {
         for (const uri of redirectUris) {
           try {
             const parsed = new URL(uri);
-            const isLoopback = parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost" || parsed.hostname === "::1";
+            const isLoopback =
+              parsed.hostname === "127.0.0.1" ||
+              parsed.hostname === "localhost" ||
+              parsed.hostname === "::1";
             const isHttpOrHttps = parsed.protocol === "http:" || parsed.protocol === "https:";
             if (!isLoopback || !isHttpOrHttps) {
               res.writeHead(400, { "Content-Type": "application/json" });
-              res.end(JSON.stringify({ error: "invalid_client_metadata", error_description: "redirect_uris must use http(s) on loopback (127.0.0.1, localhost, or ::1)" }));
+              res.end(
+                JSON.stringify({
+                  error: "invalid_client_metadata",
+                  error_description:
+                    "redirect_uris must use http(s) on loopback (127.0.0.1, localhost, or ::1)",
+                }),
+              );
               return;
             }
           } catch {
             res.writeHead(400, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ error: "invalid_client_metadata", error_description: "Invalid redirect_uri" }));
+            res.end(
+              JSON.stringify({
+                error: "invalid_client_metadata",
+                error_description: "Invalid redirect_uri",
+              }),
+            );
             return;
           }
         }
@@ -487,15 +530,22 @@ export function createWebServer(options: WebServerOptions): http.Server {
         const client = registerClient(redirectUris, clientName);
         if (!client) {
           res.writeHead(503, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: "temporarily_unavailable", error_description: "Too many registered clients" }));
+          res.end(
+            JSON.stringify({
+              error: "temporarily_unavailable",
+              error_description: "Too many registered clients",
+            }),
+          );
           return;
         }
         res.writeHead(201, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({
-          client_id: client.clientId,
-          redirect_uris: client.redirectUris,
-          client_name: client.clientName,
-        }));
+        res.end(
+          JSON.stringify({
+            client_id: client.clientId,
+            redirect_uris: client.redirectUris,
+            client_name: client.clientName,
+          }),
+        );
       } catch (err) {
         if (err instanceof PayloadTooLargeError) {
           respondPayloadTooLarge(req, res);
@@ -527,26 +577,43 @@ export function createWebServer(options: WebServerOptions): http.Server {
 
       if (!clientId || !redirectUri || !codeChallenge) {
         res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "invalid_request", error_description: "Missing required parameters" }));
+        res.end(
+          JSON.stringify({
+            error: "invalid_request",
+            error_description: "Missing required parameters",
+          }),
+        );
         return;
       }
 
       if (codeChallengeMethod && codeChallengeMethod !== "S256") {
         res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "invalid_request", error_description: "Only S256 code challenge method is supported" }));
+        res.end(
+          JSON.stringify({
+            error: "invalid_request",
+            error_description: "Only S256 code challenge method is supported",
+          }),
+        );
         return;
       }
 
       const client = getClient(clientId);
       if (!client) {
         res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "invalid_request", error_description: "Unknown client_id" }));
+        res.end(
+          JSON.stringify({ error: "invalid_request", error_description: "Unknown client_id" }),
+        );
         return;
       }
 
       if (!client.redirectUris.includes(redirectUri)) {
         res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "invalid_request", error_description: "redirect_uri not registered" }));
+        res.end(
+          JSON.stringify({
+            error: "invalid_request",
+            error_description: "redirect_uri not registered",
+          }),
+        );
         return;
       }
 
@@ -618,7 +685,10 @@ export function createWebServer(options: WebServerOptions): http.Server {
         if (!hasPairedSession) {
           if (!pairingCode) {
             const html = renderAuthorizePage(
-              client.clientName, oauthParamsStr, false, "Pairing code is required.",
+              client.clientName,
+              oauthParamsStr,
+              false,
+              "Pairing code is required.",
             );
             res.writeHead(200, { "Content-Type": "text/html" });
             res.end(html);
@@ -628,7 +698,10 @@ export function createWebServer(options: WebServerOptions): http.Server {
           const remoteIp = getRemoteIp(req);
           if (!redeemPairingCode(pairingCode, remoteIp)) {
             const html = renderAuthorizePage(
-              client.clientName, oauthParamsStr, false, "Invalid or expired pairing code.",
+              client.clientName,
+              oauthParamsStr,
+              false,
+              "Invalid or expired pairing code.",
             );
             res.writeHead(200, { "Content-Type": "text/html" });
             res.end(html);
@@ -674,7 +747,13 @@ export function createWebServer(options: WebServerOptions): http.Server {
           const codeVerifier = formData.get("code_verifier") || "";
           const resource = formData.get("resource") || "";
 
-          const authCodeRecord = consumeAuthorizationCode(code, clientId, redirectUri, codeVerifier, resource);
+          const authCodeRecord = consumeAuthorizationCode(
+            code,
+            clientId,
+            redirectUri,
+            codeVerifier,
+            resource,
+          );
           if (!authCodeRecord) {
             res.writeHead(400, { "Content-Type": "application/json" });
             res.end(JSON.stringify({ error: "invalid_grant" }));
@@ -685,12 +764,14 @@ export function createWebServer(options: WebServerOptions): http.Server {
           const refreshToken = createRefreshToken(clientId, resource);
 
           res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
-          res.end(JSON.stringify({
-            access_token: accessToken,
-            token_type: "Bearer",
-            expires_in: Math.floor(OAUTH_ACCESS_TOKEN_TTL_MS / 1000),
-            refresh_token: refreshToken,
-          }));
+          res.end(
+            JSON.stringify({
+              access_token: accessToken,
+              token_type: "Bearer",
+              expires_in: Math.floor(OAUTH_ACCESS_TOKEN_TTL_MS / 1000),
+              refresh_token: refreshToken,
+            }),
+          );
           return;
         }
 
@@ -709,12 +790,14 @@ export function createWebServer(options: WebServerOptions): http.Server {
           const newRefreshToken = createRefreshToken(clientId, refreshRecord.resource);
 
           res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
-          res.end(JSON.stringify({
-            access_token: accessToken,
-            token_type: "Bearer",
-            expires_in: Math.floor(OAUTH_ACCESS_TOKEN_TTL_MS / 1000),
-            refresh_token: newRefreshToken,
-          }));
+          res.end(
+            JSON.stringify({
+              access_token: accessToken,
+              token_type: "Bearer",
+              expires_in: Math.floor(OAUTH_ACCESS_TOKEN_TTL_MS / 1000),
+              refresh_token: newRefreshToken,
+            }),
+          );
           return;
         }
 
@@ -768,7 +851,11 @@ export function createWebServer(options: WebServerOptions): http.Server {
     }
 
     // --- Inbound channel webhook (capability-token auth; NO session/API key) ---
-    if (handleWebhook && req.method === "POST" && (rawPath.startsWith("/hook/") || rawPath === "/hook")) {
+    if (
+      handleWebhook &&
+      req.method === "POST" &&
+      (rawPath.startsWith("/hook/") || rawPath === "/hook")
+    ) {
       // `rawPath` is already URL-decoded above, and the token is base64url
       // (URL-safe), so no further decoding is needed — avoids decodeURIComponent
       // throwing on malformed percent-encoding.
@@ -811,7 +898,8 @@ export function createWebServer(options: WebServerOptions): http.Server {
         result = await handleWebhook(token, {
           message: parsed.message,
           from: typeof parsed.from === "string" ? parsed.from : undefined,
-          idempotencyKey: typeof parsed.idempotency_key === "string" ? parsed.idempotency_key : undefined,
+          idempotencyKey:
+            typeof parsed.idempotency_key === "string" ? parsed.idempotency_key : undefined,
         });
       } catch {
         // A throwing handler must not become an unhandled rejection (which can
@@ -821,7 +909,13 @@ export function createWebServer(options: WebServerOptions): http.Server {
         return;
       }
       res.writeHead(WEBHOOK_STATUS[result.outcome], { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ channel: result.channelUri, status: result.outcome, session_id: result.sessionId }));
+      res.end(
+        JSON.stringify({
+          channel: result.channelUri,
+          status: result.outcome,
+          session_id: result.sessionId,
+        }),
+      );
       return;
     }
 
@@ -834,12 +928,12 @@ export function createWebServer(options: WebServerOptions): http.Server {
 
     // --- ConnectRPC routes (Connect protocol over HTTP/1.1) ---
     if (
-      (
-        rawPath.startsWith("/grackle.GrackleCore/") ||
+      (rawPath.startsWith("/grackle.GrackleCore/") ||
         rawPath.startsWith("/grackle.GrackleOrchestration/") ||
         rawPath.startsWith("/grackle.GrackleScheduling/") ||
-        rawPath.startsWith("/grackle.GrackleKnowledge/")
-      ) && webConnectHandler) {
+        rawPath.startsWith("/grackle.GrackleKnowledge/")) &&
+      webConnectHandler
+    ) {
       if (!hasValidSession && !hasValidBearer) {
         res.writeHead(401, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Unauthorized" }));

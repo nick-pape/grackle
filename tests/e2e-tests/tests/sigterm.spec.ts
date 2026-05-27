@@ -13,10 +13,7 @@ import {
 /**
  * Helper: start a task via RPC and return its session ID from the response.
  */
-async function startTaskAndGetSessionId(
-  client: GrackleClient,
-  taskId: string,
-): Promise<string> {
+async function startTaskAndGetSessionId(client: GrackleClient, taskId: string): Promise<string> {
   const resp = await client.orchestration.startTask({
     taskId,
     personaId: "stub",
@@ -47,7 +44,9 @@ async function waitForSessionStatus(
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  throw new Error(`Session ${sessionId} did not reach status "${targetStatus}" within ${timeoutMs}ms`);
+  throw new Error(
+    `Session ${sessionId} did not reach status "${targetStatus}" within ${timeoutMs}ms`,
+  );
 }
 
 /**
@@ -79,7 +78,9 @@ async function waitForSessionText(
             if (raw.systemContext === true) {
               return false;
             }
-          } catch { /* not JSON, include it */ }
+          } catch {
+            /* not JSON, include it */
+          }
         }
         return true;
       },
@@ -108,7 +109,9 @@ test.describe("SIGTERM — graceful shutdown signal", { tag: ["@session"] }, () 
   test.beforeEach(async ({ grackle: { client } }) => {
     const sessionsResp = await client.core.listSessions({});
     const all = sessionsResp.sessions as Array<{ id: string; status: string }>;
-    const active = all.filter((s) => s.status === "idle" || s.status === "running" || s.status === "pending");
+    const active = all.filter(
+      (s) => s.status === "idle" || s.status === "running" || s.status === "pending",
+    );
     for (const s of active) {
       await client.core.killAgent({ id: s.id });
     }
@@ -117,7 +120,11 @@ test.describe("SIGTERM — graceful shutdown signal", { tag: ["@session"] }, () 
       while (Date.now() < deadline) {
         const recheck = await client.core.listSessions({});
         const remaining = recheck.sessions as Array<{ status: string }>;
-        if (!remaining.some((s) => s.status === "idle" || s.status === "running" || s.status === "pending")) {
+        if (
+          !remaining.some(
+            (s) => s.status === "idle" || s.status === "running" || s.status === "pending",
+          )
+        ) {
           break;
         }
         await new Promise((resolve) => setTimeout(resolve, 250));
@@ -125,7 +132,9 @@ test.describe("SIGTERM — graceful shutdown signal", { tag: ["@session"] }, () 
     }
   });
 
-  test("graceful kill delivers SIGTERM and session ends with terminated", async ({ grackle: { client } }) => {
+  test("graceful kill delivers SIGTERM and session ends with terminated", async ({
+    grackle: { client },
+  }) => {
     // 1. Create workspace + task with a scenario that goes idle once
     //    (after receiving SIGTERM input, the stub echoes it and completes)
     await createWorkspace(client, "SIGTERM Test");
@@ -156,7 +165,9 @@ test.describe("SIGTERM — graceful shutdown signal", { tag: ["@session"] }, () 
     expect(session.endReason).toBe("terminated");
   });
 
-  test("hard kill (graceful=false) stops session immediately with killed", async ({ grackle: { client } }) => {
+  test("hard kill (graceful=false) stops session immediately with killed", async ({
+    grackle: { client },
+  }) => {
     // 1. Create workspace + task
     await createWorkspace(client, "SIGKILL Test");
     const workspaceId = await getWorkspaceId(client, "SIGKILL Test");

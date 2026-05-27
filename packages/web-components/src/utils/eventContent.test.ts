@@ -19,9 +19,7 @@ function makeEvent(overrides: Partial<SessionEvent> & { eventType: string }): Se
 }
 
 /** Helper to build a DisplayEvent with optional toolUseCtx. */
-function makeDisplayEvent(
-  overrides: Partial<DisplayEvent> & { eventType: string },
-): DisplayEvent {
+function makeDisplayEvent(overrides: Partial<DisplayEvent> & { eventType: string }): DisplayEvent {
   return {
     sessionId: "sess-1",
     timestamp: "2026-01-15T14:34:00Z",
@@ -257,7 +255,11 @@ describe("formatEventsAsMarkdown", () => {
     const event = makeDisplayEvent({
       eventType: "tool_result",
       content: "short result",
-      toolUseCtx: { tool: "Edit", args: {}, detailedResult: "--- a/file\n+++ b/file\n@@ -1 +1 @@\n-old\n+new" },
+      toolUseCtx: {
+        tool: "Edit",
+        args: {},
+        detailedResult: "--- a/file\n+++ b/file\n@@ -1 +1 @@\n-old\n+new",
+      },
     });
     expect(getEventCopyText(event)).toContain("--- a/file");
   });
@@ -280,9 +282,7 @@ describe("formatEventsAsMarkdown", () => {
 
 describe("formatForwardEnvelope", () => {
   it("wraps content in forwarding envelope markers", () => {
-    const events: DisplayEvent[] = [
-      makeDisplayEvent({ eventType: "text", content: "Hello" }),
-    ];
+    const events: DisplayEvent[] = [makeDisplayEvent({ eventType: "text", content: "Hello" })];
     const result = formatForwardEnvelope("my-env", events);
     expect(result).toContain("--- Forwarded from my-env ---");
     expect(result).toContain("--- End forwarded ---");
@@ -320,11 +320,10 @@ describe("formatForwardEnvelope", () => {
   });
 
   it("envelope body starts after header and ends before footer", () => {
-    const events: DisplayEvent[] = [
-      makeDisplayEvent({ eventType: "text", content: "line one" }),
-    ];
+    const events: DisplayEvent[] = [makeDisplayEvent({ eventType: "text", content: "line one" })];
     const result = formatForwardEnvelope("env-1", events);
-    const headerEnd = result.indexOf("--- Forwarded from env-1 ---") + "--- Forwarded from env-1 ---".length;
+    const headerEnd =
+      result.indexOf("--- Forwarded from env-1 ---") + "--- Forwarded from env-1 ---".length;
     const footerStart = result.indexOf("--- End forwarded ---");
     const body = result.slice(headerEnd, footerStart).trim();
     expect(body).toContain("line one");

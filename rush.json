@@ -32,6 +32,11 @@
       "versionPolicyName": "grackle"
     },
     {
+      "packageName": "@grackle-ai/ahp",
+      "projectFolder": "packages/ahp",
+      "versionPolicyName": "grackle"
+    },
+    {
       "packageName": "@grackle-ai/powerline",
       "projectFolder": "packages/powerline",
       "versionPolicyName": "grackle"

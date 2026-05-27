@@ -11,14 +11,16 @@ async function archiveAllWorkspaces(client: GrackleClient): Promise<void> {
 }
 
 test.describe("Dashboard", { tag: ["@webui", "@smoke"] }, () => {
-  test("shows onboarding CTA when no workspaces exist", async ({ appPage, grackle: { client } }) => {
+  test("shows onboarding CTA when no workspaces exist", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
     await archiveAllWorkspaces(client);
     await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
+    await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
 
     // Welcome CTA should be visible, dashboard should not
     await expect(page.locator('[data-testid="welcome-cta"]')).toBeVisible({ timeout: 5_000 });
@@ -31,10 +33,9 @@ test.describe("Dashboard", { tag: ["@webui", "@smoke"] }, () => {
     // Create a workspace so dashboard appears
     await createWorkspace(client, "dashboard-test");
     await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
+    await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
 
     // Dashboard should be visible
     await expect(page.locator('[data-testid="dashboard"]')).toBeVisible({ timeout: 5_000 });
@@ -52,10 +53,9 @@ test.describe("Dashboard", { tag: ["@webui", "@smoke"] }, () => {
 
     await createWorkspace(client, "sections-test");
     await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
+    await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
 
     await expect(page.locator('[data-testid="dashboard"]')).toBeVisible({ timeout: 5_000 });
 
@@ -67,7 +67,9 @@ test.describe("Dashboard", { tag: ["@webui", "@smoke"] }, () => {
 
     // Environment health should show at least one environment row
     await expect(
-      page.locator('[data-testid="dashboard-env-health"] [data-testid="dashboard-env-row"]').first(),
+      page
+        .locator('[data-testid="dashboard-env-health"] [data-testid="dashboard-env-row"]')
+        .first(),
     ).toBeVisible();
 
     // Workspace snapshot should show the workspace we created
@@ -81,10 +83,9 @@ test.describe("Dashboard", { tag: ["@webui", "@smoke"] }, () => {
 
     // Navigate away from root
     await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
+    await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
     await page.locator('[data-testid="workspace-row"]').first().click();
 
     // Now click the Dashboard tab in the sidebar
@@ -100,10 +101,9 @@ test.describe("Dashboard", { tag: ["@webui", "@smoke"] }, () => {
 
     await createWorkspace(client, "click-nav-test");
     await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
+    await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
 
     await expect(page.locator('[data-testid="dashboard"]')).toBeVisible({ timeout: 5_000 });
 

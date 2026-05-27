@@ -205,15 +205,28 @@ export function createKnowledgeProjectionPhase(
       // sessions — so an edge's endpoint node already exists when it is applied.
       // The `reconcileEdges` arg re-applies edges additively for unchanged rows
       // each tick, so a transiently-dropped edge eventually heals.
-      await syncEntity(REFERENCE_SOURCE.ENVIRONMENT, envRegistry.listEnvironments(), (row) => row.id, environmentToNodeInput, projectEnvironment);
-      await syncEntity(REFERENCE_SOURCE.PERSONA, personaStore.listPersonas(), (row) => row.id, personaToNodeInput, projectPersona);
+      await syncEntity(
+        REFERENCE_SOURCE.ENVIRONMENT,
+        envRegistry.listEnvironments(),
+        (row) => row.id,
+        environmentToNodeInput,
+        projectEnvironment,
+      );
+      await syncEntity(
+        REFERENCE_SOURCE.PERSONA,
+        personaStore.listPersonas(),
+        (row) => row.id,
+        personaToNodeInput,
+        projectPersona,
+      );
       // Workspace hash folds in the linked-env set so a link/unlink re-projects
       // (keeps LINKED_TO converged even if the change's event was missed).
       await syncEntity(
         REFERENCE_SOURCE.WORKSPACE,
         workspaceStore.listWorkspaces(),
         (row) => row.id,
-        (row) => workspaceToNodeInput(row, workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(row.id)),
+        (row) =>
+          workspaceToNodeInput(row, workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(row.id)),
         projectWorkspace,
         reconcileWorkspaceEdges,
       );

@@ -47,7 +47,7 @@ export function selectEnvVarAuthMethod(authMethods: Array<Record<string, unknown
 
 // Warnings were encountered during analysis:
 //
-// src/acp.ts:24:1 - (ae-internal-missing-underscore) The name "AcpSdkModule" should be prefixed with an underscore because the declaration is marked as @internal
+// src/acp.ts:32:1 - (ae-internal-missing-underscore) The name "AcpSdkModule" should be prefixed with an underscore because the declaration is marked as @internal
 
 // (No @packageDocumentation comment for this package)
 

@@ -1,4 +1,4 @@
-@use '../../styles/mixins' as *;
+@use "../../styles/mixins" as *;
 
 // =============================================================================
 // CopyButton — clipboard copy with visual feedback
@@ -20,8 +20,9 @@
   cursor: pointer;
   border-radius: var(--radius-sm);
   opacity: 0;
-  transition: opacity var(--transition-fast),
-              background var(--transition-fast);
+  transition:
+    opacity var(--transition-fast),
+    background var(--transition-fast);
 
   &:hover {
     opacity: 1 !important;

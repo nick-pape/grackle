@@ -22,21 +22,21 @@ The [Agent Client Protocol (ACP)](https://agentclientprotocol.com) is a JSON-RPC
 
 `AcpRuntime` is constructed with an `AcpAgentConfig`, which names the runtime and describes the agent CLI to spawn:
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `name` | `string` | — | Runtime name used for registry lookup and the isolated install directory (e.g. `"codex-acp"`) |
-| `command` | `string` | — | Agent command to spawn (e.g. `"codex-acp"`, `"copilot"`, `"goose"`) |
-| `args` | `string[]` | — | CLI arguments passed to the command (e.g. `["--acp", "--stdio"]`) |
-| `env` | `Record<string, string>` | — | Additional environment variables for the subprocess |
+| Field     | Type                     | Default | Description                                                                                   |
+| --------- | ------------------------ | ------- | --------------------------------------------------------------------------------------------- |
+| `name`    | `string`                 | —       | Runtime name used for registry lookup and the isolated install directory (e.g. `"codex-acp"`) |
+| `command` | `string`                 | —       | Agent command to spawn (e.g. `"codex-acp"`, `"copilot"`, `"goose"`)                           |
+| `args`    | `string[]`               | —       | CLI arguments passed to the command (e.g. `["--acp", "--stdio"]`)                             |
+| `env`     | `Record<string, string>` | —       | Additional environment variables for the subprocess                                           |
 
 The Grackle PowerLine registers several ACP agents out of the box:
 
-| Runtime name | Command | Args |
-|--------------|---------|------|
-| `goose` | `goose` | `acp` |
-| `codex-acp` | `codex-acp` | — |
-| `copilot-acp` | `copilot` | `--acp --stdio` |
-| `claude-code-acp` | `claude-agent-acp` | — |
+| Runtime name      | Command            | Args            |
+| ----------------- | ------------------ | --------------- |
+| `goose`           | `goose`            | `acp`           |
+| `codex-acp`       | `codex-acp`        | —               |
+| `copilot-acp`     | `copilot`          | `--acp --stdio` |
+| `claude-code-acp` | `claude-agent-acp` | —               |
 
 The ACP SDK (`@agentclientprotocol/sdk`) is installed lazily into an isolated per-runtime directory (`~/.grackle/runtimes/<name>/`) the first time a session starts; that directory's `.bin` is prepended to the subprocess `PATH`.
 

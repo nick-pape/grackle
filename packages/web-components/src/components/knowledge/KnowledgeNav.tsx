@@ -44,26 +44,35 @@ export function KnowledgeNav({
 }: KnowledgeNavProps): JSX.Element {
   const [searchInput, setSearchInput] = useState("");
 
-  const handleSearch = useCallback((e: FormEvent) => {
-    e.preventDefault();
-    if (searchInput.trim()) {
-      onSearch(searchInput.trim());
-    }
-  }, [searchInput, onSearch]);
+  const handleSearch = useCallback(
+    (e: FormEvent) => {
+      e.preventDefault();
+      if (searchInput.trim()) {
+        onSearch(searchInput.trim());
+      }
+    },
+    [searchInput, onSearch],
+  );
 
   const handleClear = useCallback(() => {
     setSearchInput("");
     onClearSearch();
   }, [onClearSearch]);
 
-  const handleNodeClick = useCallback((nodeId: string) => {
-    onSelectNode(nodeId);
-  }, [onSelectNode]);
+  const handleNodeClick = useCallback(
+    (nodeId: string) => {
+      onSelectNode(nodeId);
+    },
+    [onSelectNode],
+  );
 
-  const handleWorkspaceChange = useCallback((wsId: string) => {
-    setSearchInput("");
-    onWorkspaceChange(wsId);
-  }, [onWorkspaceChange]);
+  const handleWorkspaceChange = useCallback(
+    (wsId: string) => {
+      setSearchInput("");
+      onWorkspaceChange(wsId);
+    },
+    [onWorkspaceChange],
+  );
 
   return (
     <div className={styles.nav} data-testid="knowledge-nav">
@@ -74,7 +83,9 @@ export function KnowledgeNav({
           type="text"
           placeholder="Search..."
           value={searchInput}
-          onChange={(e) => { setSearchInput(e.target.value); }}
+          onChange={(e) => {
+            setSearchInput(e.target.value);
+          }}
           data-testid="knowledge-search-input"
           aria-label="Search knowledge nodes"
         />
@@ -91,27 +102,36 @@ export function KnowledgeNav({
       {/* Workspace filter */}
       <select
         className={styles.workspaceSelect}
-        onChange={(e) => { handleWorkspaceChange(e.target.value); }}
+        onChange={(e) => {
+          handleWorkspaceChange(e.target.value);
+        }}
         data-testid="knowledge-workspace-filter"
         aria-label="Filter by workspace"
       >
         <option value="">All workspaces</option>
         {workspaces.map((ws) => (
-          <option key={ws.id} value={ws.id}>{ws.name}</option>
+          <option key={ws.id} value={ws.id}>
+            {ws.name}
+          </option>
         ))}
       </select>
 
       {/* Node list */}
-      <div className={styles.listHeader}>
-        Nodes ({nodes.length})
-      </div>
+      <div className={styles.listHeader}>Nodes ({nodes.length})</div>
       <ul className={styles.nodeList}>
         {nodes.map((node: GraphNode) => (
           <li
             key={node.id}
             className={styles.nodeItem}
-            onClick={() => { handleNodeClick(node.id); }}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleNodeClick(node.id); } }}
+            onClick={() => {
+              handleNodeClick(node.id);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleNodeClick(node.id);
+              }
+            }}
             role="button"
             tabIndex={0}
           >
@@ -119,11 +139,15 @@ export function KnowledgeNav({
               className={styles.indicator}
               style={{
                 backgroundColor:
-                  node.kind === "reference" ? "#4A9EFF"
-                  : node.category === "decision" ? "#22C55E"
-                  : node.category === "concept" ? "#A855F7"
-                  : node.category === "snippet" ? "#6B7280"
-                  : "#EAB308",
+                  node.kind === "reference"
+                    ? "#4A9EFF"
+                    : node.category === "decision"
+                      ? "#22C55E"
+                      : node.category === "concept"
+                        ? "#A855F7"
+                        : node.category === "snippet"
+                          ? "#6B7280"
+                          : "#EAB308",
               }}
             />
             <span className={styles.label}>{node.label}</span>

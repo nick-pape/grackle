@@ -178,7 +178,7 @@ export const WidgetEvent: Story = {
       content: JSON.stringify({
         resourceUri: "ui://grackle/hello-widget",
         toolName: "show_hello_widget",
-        html: "<!doctype html><html><body><div class=\"card\">widget</div></body></html>",
+        html: '<!doctype html><html><body><div class="card">widget</div></body></html>',
         toolInput: { message: "hi" },
         toolResult: { content: [{ type: "text", text: "ok" }] },
       }),
@@ -203,8 +203,12 @@ export const AgentWidgetEvent: Story = {
         rendererKind: "mcp-app-html",
         widgetId: "abc123",
         version: 2,
-        html: "<!doctype html><html><body><div class=\"card\">agent widget</div><script>void 0;</script></body></html>",
-        csp: { resourceDomains: ["http://localhost:6007"], connectDomains: ["http://localhost:6007"], allowInlineScripts: true },
+        html: '<!doctype html><html><body><div class="card">agent widget</div><script>void 0;</script></body></html>',
+        csp: {
+          resourceDomains: ["http://localhost:6007"],
+          connectDomains: ["http://localhost:6007"],
+          allowInlineScripts: true,
+        },
         toolInput: { count: 3 },
         toolResult: { content: [{ type: "text", text: "ok" }] },
       }),
@@ -226,7 +230,11 @@ export const ReactRuntimeWidgetEvent: Story = {
         toolName: "component_show",
         rendererKind: "grackle-react",
         html: "render(<Button>{props.label}</Button>)",
-        csp: { resourceDomains: ["http://localhost:6007"], connectDomains: ["http://localhost:6007"], allowUnsafeEval: true },
+        csp: {
+          resourceDomains: ["http://localhost:6007"],
+          connectDomains: ["http://localhost:6007"],
+          allowUnsafeEval: true,
+        },
         toolInput: { label: "Hi" },
       }),
     }),
@@ -279,7 +287,8 @@ export const SystemContext: Story = {
   args: {
     event: makeEvent({
       eventType: "system",
-      content: "You are a helpful assistant.\nYou write clean code.\nYou follow best practices.\nLine 4.\nLine 5.\nLine 6.",
+      content:
+        "You are a helpful assistant.\nYou write clean code.\nYou follow best practices.\nLine 4.\nLine 5.\nLine 6.",
       raw: JSON.stringify({ systemContext: true }),
     }),
   },

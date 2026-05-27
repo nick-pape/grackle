@@ -6,11 +6,7 @@ import styles from "./page-layout.module.scss";
 
 /** Empty page shown at /tasks when no task is selected. */
 export function TasksEmptyPage(): JSX.Element {
-  return (
-    <div className={styles.emptyState}>
-      Select a task or click + to create one
-    </div>
-  );
+  return <div className={styles.emptyState}>Select a task or click + to create one</div>;
 }
 
 /** Empty page shown at /environments when no environment is selected. */
@@ -24,7 +20,10 @@ export function EnvironmentsEmptyPage(): JSX.Element {
 
 /** Home page — shows the operations dashboard when workspaces exist, or the welcome CTA for first-time users. */
 export function EmptyPage(): JSX.Element {
-  const { workspaces: { workspaces }, environments: { environments } } = useGrackle();
+  const {
+    workspaces: { workspaces },
+    environments: { environments },
+  } = useGrackle();
   const navigate = useAppNavigate();
 
   const hasEnvironments = environments.length > 0;

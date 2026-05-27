@@ -85,7 +85,11 @@ function resolveDataTheme(themeId: string, preferSystem: boolean): string {
 }
 
 /** Apply the resolved theme to the document root element. */
-function applyTheme(themeId: string, preferSystem: boolean, suppressTransitions: boolean = false): void {
+function applyTheme(
+  themeId: string,
+  preferSystem: boolean,
+  suppressTransitions: boolean = false,
+): void {
   if (suppressTransitions) {
     document.documentElement.classList.add("no-transitions");
   }

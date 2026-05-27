@@ -35,7 +35,9 @@ vi.mock("./utils/format-gh-error.js");
 
 // ── Mock external packages (inline factories — can't use __mocks__ in Rush monorepo) ──
 vi.mock("@grackle-ai/adapter-sdk", () => ({
-  reconnectOrProvision: vi.fn(async function* () { /* empty */ }),
+  reconnectOrProvision: vi.fn(async function* () {
+    /* empty */
+  }),
 }));
 vi.mock("@grackle-ai/prompt", () => ({
   resolvePersona: vi.fn(),
@@ -66,7 +68,14 @@ import { createDefaultCollector } from "./grpc-service.js";
 
 /** Seed one session action with an explicit seq. */
 function seed(seq: string, sessionId: string, content: string): void {
-  persistSessionAction({ seq, sessionId, type: "text", content, raw: "", timestamp: "2026-05-24T00:00:00.000Z" });
+  persistSessionAction({
+    seq,
+    sessionId,
+    type: "text",
+    content,
+    raw: "",
+    timestamp: "2026-05-24T00:00:00.000Z",
+  });
 }
 
 describe("GetSessionActions (in-process integration)", () => {

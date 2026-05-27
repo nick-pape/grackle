@@ -15,7 +15,11 @@ const pingMock = vi.hoisted(() => vi.fn().mockResolvedValue({}));
 vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@grackle-ai/adapter-sdk")>()),
   isDevMode: vi.fn().mockReturnValue(false),
-  bootstrapPowerLine: vi.fn().mockReturnValue((async function* () { /* no-op */ })()),
+  bootstrapPowerLine: vi.fn().mockReturnValue(
+    (async function* () {
+      /* no-op */
+    })(),
+  ),
   startRemotePowerLine: vi.fn().mockResolvedValue({ alreadyRunning: false }),
   buildRemoteKillCommand: vi.fn().mockReturnValue("KILL_PL"),
   createPowerLineClient: vi.fn().mockReturnValue({ ping: pingMock }),
@@ -52,7 +56,7 @@ function scriptedExec(opts: ScriptedExecOptions = {}): ReturnType<typeof vi.fn> 
         throw new Error("No such object");
       }
       const fmtIdx = args.indexOf("-f");
-      const fmt = fmtIdx >= 0 ? args[fmtIdx + 1] ?? "" : "";
+      const fmt = fmtIdx >= 0 ? (args[fmtIdx + 1] ?? "") : "";
       if (fmt.includes("State.Running")) {
         return { stdout: running, stderr: "" };
       }
@@ -87,7 +91,10 @@ function findDockerRun(execFn: ReturnType<typeof vi.fn>): string[] | undefined {
 }
 
 /** Return true if any exec call matched `docker <args...>`. */
-function calledDocker(execFn: ReturnType<typeof vi.fn>, predicate: (args: string[]) => boolean): boolean {
+function calledDocker(
+  execFn: ReturnType<typeof vi.fn>,
+  predicate: (args: string[]) => boolean,
+): boolean {
   return execFn.mock.calls.some((call) => {
     const [command, args] = call as [string, string[]];
     return command === "docker" && predicate(args);
@@ -95,7 +102,9 @@ function calledDocker(execFn: ReturnType<typeof vi.fn>, predicate: (args: string
 }
 
 async function drain(gen: AsyncGenerator<unknown>): Promise<void> {
-  for await (const _ of gen) { /* consume */ }
+  for await (const _ of gen) {
+    /* consume */
+  }
 }
 
 const TOKEN = "pl-token";
@@ -113,7 +122,9 @@ describe("DockerAdapter attach mode — provisioning", () => {
     const execFn = scriptedExec();
     const adapter = new DockerAdapter({ exec: execFn, logger: mockLogger });
 
-    await drain(adapter.provision("env-a", { attach: ATTACH } as unknown as Record<string, unknown>, TOKEN));
+    await drain(
+      adapter.provision("env-a", { attach: ATTACH } as unknown as Record<string, unknown>, TOKEN),
+    );
 
     expect(calledDocker(execFn, (a) => a[0] === "pull")).toBe(false);
     expect(calledDocker(execFn, (a) => a[0] === "build")).toBe(false);
@@ -129,18 +140,28 @@ describe("DockerAdapter attach mode — provisioning", () => {
     const execFn = scriptedExec({ running: "true" });
     const adapter = new DockerAdapter({ exec: execFn, logger: mockLogger });
 
-    await drain(adapter.provision("env-b", { attach: ATTACH } as unknown as Record<string, unknown>, TOKEN));
+    await drain(
+      adapter.provision("env-b", { attach: ATTACH } as unknown as Record<string, unknown>, TOKEN),
+    );
 
-    expect(calledDocker(execFn, (a) => a[0] === "inspect" && a.includes(ATTACH)
-      && a.some((x) => x.includes("State.Running")))).toBe(true);
+    expect(
+      calledDocker(
+        execFn,
+        (a) =>
+          a[0] === "inspect" && a.includes(ATTACH) && a.some((x) => x.includes("State.Running")),
+      ),
+    ).toBe(true);
   });
 
   it("throws a clear error when the target container is not running (never falls back to create)", async () => {
     const execFn = scriptedExec({ running: "false" });
     const adapter = new DockerAdapter({ exec: execFn, logger: mockLogger });
 
-    await expect(drain(adapter.provision("env-c", { attach: ATTACH } as unknown as Record<string, unknown>, TOKEN)))
-      .rejects.toThrow(/not running|running/i);
+    await expect(
+      drain(
+        adapter.provision("env-c", { attach: ATTACH } as unknown as Record<string, unknown>, TOKEN),
+      ),
+    ).rejects.toThrow(/not running|running/i);
     expect(findDockerRun(execFn)).toBeUndefined();
   });
 
@@ -148,8 +169,11 @@ describe("DockerAdapter attach mode — provisioning", () => {
     const execFn = scriptedExec({ inspectThrows: true });
     const adapter = new DockerAdapter({ exec: execFn, logger: mockLogger });
 
-    await expect(drain(adapter.provision("env-d", { attach: ATTACH } as unknown as Record<string, unknown>, TOKEN)))
-      .rejects.toThrow();
+    await expect(
+      drain(
+        adapter.provision("env-d", { attach: ATTACH } as unknown as Record<string, unknown>, TOKEN),
+      ),
+    ).rejects.toThrow();
     expect(findDockerRun(execFn)).toBeUndefined();
   });
 
@@ -157,7 +181,9 @@ describe("DockerAdapter attach mode — provisioning", () => {
     const execFn = scriptedExec();
     const adapter = new DockerAdapter({ exec: execFn, logger: mockLogger });
 
-    await drain(adapter.provision("env-e", { attach: ATTACH } as unknown as Record<string, unknown>, TOKEN));
+    await drain(
+      adapter.provision("env-e", { attach: ATTACH } as unknown as Record<string, unknown>, TOKEN),
+    );
 
     expect(sdk.bootstrapPowerLine).toHaveBeenCalledTimes(1);
     // Docker containers must bind 0.0.0.0 so the IP/sidecar paths can reach PowerLine.
@@ -172,12 +198,18 @@ describe("DockerAdapter attach mode — connectivity", () => {
     pingMock.mockResolvedValue({}); // IP probe succeeds
     const adapter = new DockerAdapter({ exec: execFn, logger: mockLogger });
 
-    await drain(adapter.provision("env-ip", { attach: ATTACH } as unknown as Record<string, unknown>, TOKEN));
+    await drain(
+      adapter.provision("env-ip", { attach: ATTACH } as unknown as Record<string, unknown>, TOKEN),
+    );
 
     // Reachable IP → no socat sidecar needed
     expect(findDockerRun(execFn)).toBeUndefined();
 
-    await adapter.connect("env-ip", { attach: ATTACH } as unknown as Record<string, unknown>, TOKEN);
+    await adapter.connect(
+      "env-ip",
+      { attach: ATTACH } as unknown as Record<string, unknown>,
+      TOKEN,
+    );
     expect(sdk.createPowerLineClient).toHaveBeenCalledWith(
       `http://172.18.0.7:${DEFAULT_POWERLINE_PORT}`,
       TOKEN,
@@ -189,7 +221,9 @@ describe("DockerAdapter attach mode — connectivity", () => {
     pingMock.mockRejectedValue(new Error("unreachable")); // host cannot reach container IP (Docker Desktop)
     const adapter = new DockerAdapter({ exec: execFn, logger: mockLogger });
 
-    await drain(adapter.provision("env-sc", { attach: ATTACH } as unknown as Record<string, unknown>, TOKEN));
+    await drain(
+      adapter.provision("env-sc", { attach: ATTACH } as unknown as Record<string, unknown>, TOKEN),
+    );
 
     const run = findDockerRun(execFn);
     expect(run).toBeDefined();
@@ -211,7 +245,11 @@ describe("DockerAdapter attach mode — connectivity", () => {
     const adapter = new DockerAdapter({ exec: execFn, logger: mockLogger });
 
     // No provision() first — simulates a server restart that lost in-memory state.
-    const conn = await adapter.connect("env-recover", { attach: ATTACH } as unknown as Record<string, unknown>, TOKEN);
+    const conn = await adapter.connect(
+      "env-recover",
+      { attach: ATTACH } as unknown as Record<string, unknown>,
+      TOKEN,
+    );
 
     expect(sdk.createPowerLineClient).toHaveBeenCalledWith(
       `http://172.18.0.7:${DEFAULT_POWERLINE_PORT}`,
@@ -227,7 +265,13 @@ describe("DockerAdapter attach mode — lifecycle safety (issue #1223)", () => {
     pingMock.mockRejectedValue(new Error("unreachable")); // force sidecar
     const adapter = new DockerAdapter({ exec: execFn, logger: mockLogger });
 
-    await drain(adapter.provision("env-stop", { attach: ATTACH } as unknown as Record<string, unknown>, TOKEN));
+    await drain(
+      adapter.provision(
+        "env-stop",
+        { attach: ATTACH } as unknown as Record<string, unknown>,
+        TOKEN,
+      ),
+    );
     execFn.mockClear();
 
     await adapter.stop("env-stop", { attach: ATTACH });
@@ -235,7 +279,12 @@ describe("DockerAdapter attach mode — lifecycle safety (issue #1223)", () => {
     expect(calledDocker(execFn, (a) => a[0] === "stop" && a.includes(ATTACH))).toBe(false);
     expect(calledDocker(execFn, (a) => a[0] === "rm" && a.includes(ATTACH))).toBe(false);
     // sidecar is Grackle-owned → may be removed
-    expect(calledDocker(execFn, (a) => a[0] === "rm" && a.some((x) => x.includes("grackle-attach-env-stop")))).toBe(true);
+    expect(
+      calledDocker(
+        execFn,
+        (a) => a[0] === "rm" && a.some((x) => x.includes("grackle-attach-env-stop")),
+      ),
+    ).toBe(true);
   });
 
   it("destroy() never removes the target container; removes the sidecar only", async () => {
@@ -243,14 +292,25 @@ describe("DockerAdapter attach mode — lifecycle safety (issue #1223)", () => {
     pingMock.mockRejectedValue(new Error("unreachable")); // force sidecar
     const adapter = new DockerAdapter({ exec: execFn, logger: mockLogger });
 
-    await drain(adapter.provision("env-destroy", { attach: ATTACH } as unknown as Record<string, unknown>, TOKEN));
+    await drain(
+      adapter.provision(
+        "env-destroy",
+        { attach: ATTACH } as unknown as Record<string, unknown>,
+        TOKEN,
+      ),
+    );
     execFn.mockClear();
 
     await adapter.destroy("env-destroy", { attach: ATTACH });
 
     expect(calledDocker(execFn, (a) => a[0] === "rm" && a.includes(ATTACH))).toBe(false);
     expect(calledDocker(execFn, (a) => a[0] === "stop" && a.includes(ATTACH))).toBe(false);
-    expect(calledDocker(execFn, (a) => a[0] === "rm" && a.some((x) => x.includes("grackle-attach-env-destroy")))).toBe(true);
+    expect(
+      calledDocker(
+        execFn,
+        (a) => a[0] === "rm" && a.some((x) => x.includes("grackle-attach-env-destroy")),
+      ),
+    ).toBe(true);
   });
 });
 
@@ -289,7 +349,9 @@ describe("DockerAdapter attach mode — reconnect", () => {
     const execFn = scriptedExec();
     const adapter = new DockerAdapter({ exec: execFn, logger: mockLogger });
 
-    await drain(adapter.reconnect!("env-rc", { attach: ATTACH } as unknown as Record<string, unknown>, TOKEN));
+    await drain(
+      adapter.reconnect!("env-rc", { attach: ATTACH } as unknown as Record<string, unknown>, TOKEN),
+    );
 
     expect(sdk.startRemotePowerLine).toHaveBeenCalled();
     expect(sdk.bootstrapPowerLine).not.toHaveBeenCalled();
@@ -299,7 +361,14 @@ describe("DockerAdapter attach mode — reconnect", () => {
     const execFn = scriptedExec();
     const adapter = new DockerAdapter({ exec: execFn, logger: mockLogger });
 
-    await expect(drain(adapter.reconnect!("env-rc2", { image: "x:latest" } as unknown as Record<string, unknown>, TOKEN)))
-      .rejects.toThrow();
+    await expect(
+      drain(
+        adapter.reconnect!(
+          "env-rc2",
+          { image: "x:latest" } as unknown as Record<string, unknown>,
+          TOKEN,
+        ),
+      ),
+    ).rejects.toThrow();
   });
 });

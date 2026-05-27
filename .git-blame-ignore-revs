@@ -1,0 +1,6 @@
+# Revisions listed here are skipped by `git blame` (and GitHub's blame view).
+# Add the SHA of large mechanical-formatting commits so reviewers see the real authors.
+#
+# Format: one SHA per line, optional trailing `# comment`.
+
+79c5cf10de71f2ffe560919725d7ffe954399204 # Set up Prettier as PR gate and pre-commit hook (#1324)

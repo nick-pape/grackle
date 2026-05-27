@@ -80,7 +80,10 @@ async function dispatchEntry(deps: DispatchPhaseDeps, entry: DispatchQueueRow): 
     const task = deps.getTask(entry.taskId);
     if (!task) {
       deps.dequeueEntry(entry.taskId);
-      logger.debug({ taskId: entry.taskId }, "Dispatch: dequeued stale entry (task deleted, pre-resolve)");
+      logger.debug(
+        { taskId: entry.taskId },
+        "Dispatch: dequeued stale entry (task deleted, pre-resolve)",
+      );
       return;
     }
     environmentId = deps.resolveEnvironment(task) || "";
@@ -93,7 +96,10 @@ async function dispatchEntry(deps: DispatchPhaseDeps, entry: DispatchQueueRow): 
   // Dequeue entries whose environment has been removed entirely (not just disconnected)
   if (!deps.environmentExists(environmentId)) {
     deps.dequeueEntry(entry.taskId);
-    logger.debug({ taskId: entry.taskId, environmentId }, "Dispatch: dequeued orphan (environment removed)");
+    logger.debug(
+      { taskId: entry.taskId, environmentId },
+      "Dispatch: dequeued orphan (environment removed)",
+    );
     return;
   }
 
@@ -136,9 +142,6 @@ async function dispatchEntry(deps: DispatchPhaseDeps, entry: DispatchQueueRow): 
     // Dequeue only after successful start to avoid losing tasks on transient failures.
     // startTaskSession already emits "task.started" so we don't emit it here.
     deps.dequeueEntry(entry.taskId);
-    logger.info(
-      { taskId: entry.taskId, environmentId },
-      "Dispatch: task started",
-    );
+    logger.info({ taskId: entry.taskId, environmentId }, "Dispatch: task started");
   }
 }

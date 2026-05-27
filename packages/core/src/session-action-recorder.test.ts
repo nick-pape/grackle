@@ -34,7 +34,9 @@ describe("recordSessionAction", () => {
   });
 
   it("persists the event with the enum mapped to its string type and a serverSeq", () => {
-    recordSessionAction(makeEvent({ type: grackle.EventType.TOOL_USE, content: "ran", raw: '{"n":1}' }));
+    recordSessionAction(
+      makeEvent({ type: grackle.EventType.TOOL_USE, content: "ran", raw: '{"n":1}' }),
+    );
 
     expect(persistMock).toHaveBeenCalledTimes(1);
     const record = persistMock.mock.calls[0][0];

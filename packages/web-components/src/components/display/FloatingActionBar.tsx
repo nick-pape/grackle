@@ -86,7 +86,9 @@ export function FloatingActionBar({
         </button>
         {onForward !== undefined && (
           <Tooltip
-            text={forwardDisabled ? "No active sessions to forward to" : "Forward to another session"}
+            text={
+              forwardDisabled ? "No active sessions to forward to" : "Forward to another session"
+            }
           >
             <button
               type="button"

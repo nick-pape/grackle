@@ -96,10 +96,18 @@ function computeZoomToFit(
   for (const n of nodes) {
     const nx: number = n.x ?? 0;
     const ny: number = n.y ?? 0;
-    if (nx < minX) { minX = nx; }
-    if (nx > maxX) { maxX = nx; }
-    if (ny < minY) { minY = ny; }
-    if (ny > maxY) { maxY = ny; }
+    if (nx < minX) {
+      minX = nx;
+    }
+    if (nx > maxX) {
+      maxX = nx;
+    }
+    if (ny < minY) {
+      minY = ny;
+    }
+    if (ny > maxY) {
+      maxY = ny;
+    }
   }
 
   const x0: number = minX - NODE_WIDTH / 2 - FIT_PADDING;
@@ -110,11 +118,7 @@ function computeZoomToFit(
   const bboxWidth: number = x1 - x0;
   const bboxHeight: number = y1 - y0;
 
-  const scale: number = Math.min(
-    viewport.width / bboxWidth,
-    viewport.height / bboxHeight,
-    1.0,
-  );
+  const scale: number = Math.min(viewport.width / bboxWidth, viewport.height / bboxHeight, 1.0);
 
   const bboxCenterX: number = (x0 + x1) / 2;
   const bboxCenterY: number = (y0 + y1) / 2;
@@ -147,8 +151,12 @@ export function KnowledgeGraph({
   const gRef = useRef<SVGGElement>(null);
   const simRef = useRef<Simulation<SimNode, SimLink> | undefined>(undefined);
   const zoomRef = useRef<ZoomBehavior<SVGSVGElement, unknown> | undefined>(undefined);
-  const linkElsRef = useRef<Selection<SVGLineElement, SimLink, SVGGElement, unknown> | undefined>(undefined);
-  const nodeElsRef = useRef<Selection<SVGGElement, SimNode, SVGGElement, unknown> | undefined>(undefined);
+  const linkElsRef = useRef<Selection<SVGLineElement, SimLink, SVGGElement, unknown> | undefined>(
+    undefined,
+  );
+  const nodeElsRef = useRef<Selection<SVGGElement, SimNode, SVGGElement, unknown> | undefined>(
+    undefined,
+  );
   const selectedNodeIdRef = useRef(selectedNodeId);
   selectedNodeIdRef.current = selectedNodeId;
   const didAutoFitRef = useRef(false);
@@ -168,7 +176,9 @@ export function KnowledgeGraph({
     });
     observer.observe(container);
     setDimensions({ width: container.clientWidth, height: container.clientHeight });
-    return () => { observer.disconnect(); };
+    return () => {
+      observer.disconnect();
+    };
   }, []);
 
   // Setup zoom
@@ -194,7 +204,9 @@ export function KnowledgeGraph({
 
     select(svgEl).call(zoomBehavior);
     zoomRef.current = zoomBehavior;
-    return () => { select(svgEl).on(".zoom", null); };
+    return () => {
+      select(svgEl).on(".zoom", null);
+    };
   }, []);
 
   // Stable callback refs so d3 event handlers don't go stale
@@ -243,8 +255,7 @@ export function KnowledgeGraph({
       .attr("class", styles.link);
 
     // Edge type tooltip on hover
-    linkEls.append("title")
-      .text((d: SimLink) => d.type);
+    linkEls.append("title").text((d: SimLink) => d.type);
 
     linkElsRef.current = linkEls;
 
@@ -269,7 +280,8 @@ export function KnowledgeGraph({
     nodeElsRef.current = nodeEls;
 
     // Node card background
-    nodeEls.append("rect")
+    nodeEls
+      .append("rect")
       .attr("class", styles.nodeCard)
       .attr("width", NODE_WIDTH)
       .attr("height", NODE_HEIGHT)
@@ -278,7 +290,8 @@ export function KnowledgeGraph({
       .style("--node-color", (d: SimNode) => getNodeColor(d));
 
     // Category indicator bar
-    nodeEls.append("rect")
+    nodeEls
+      .append("rect")
       .attr("class", styles.nodeIndicator)
       .attr("width", 4)
       .attr("height", NODE_HEIGHT)
@@ -286,25 +299,34 @@ export function KnowledgeGraph({
       .attr("fill", (d: SimNode) => getNodeColor(d));
 
     // Node label
-    nodeEls.append("text")
+    nodeEls
+      .append("text")
       .attr("class", styles.nodeLabel)
       .attr("x", NODE_WIDTH / 2)
       .attr("y", NODE_HEIGHT / 2 - 4)
       .attr("text-anchor", "middle")
       .attr("dominant-baseline", "central")
-      .text((d: SimNode) => d.label.length > 26 ? d.label.substring(0, 24) + "..." : d.label);
+      .text((d: SimNode) => (d.label.length > 26 ? d.label.substring(0, 24) + "..." : d.label));
 
     // Category badge
-    nodeEls.append("text")
+    nodeEls
+      .append("text")
       .attr("class", styles.nodeBadge)
       .attr("x", NODE_WIDTH / 2)
       .attr("y", NODE_HEIGHT - 8)
       .attr("text-anchor", "middle")
-      .text((d: SimNode) => (d.kind === "reference" ? d.sourceType ?? "ref" : d.category ?? "").toUpperCase());
+      .text((d: SimNode) =>
+        (d.kind === "reference" ? (d.sourceType ?? "ref") : (d.category ?? "")).toUpperCase(),
+      );
 
     // Simulation
     const sim: Simulation<SimNode, SimLink> = forceSimulation(simNodes)
-      .force("link", forceLink<SimNode, SimLink>(simLinks).id((d) => d.id).distance(140))
+      .force(
+        "link",
+        forceLink<SimNode, SimLink>(simLinks)
+          .id((d) => d.id)
+          .distance(140),
+      )
       .force("charge", forceManyBody().strength(-400))
       .force("center", forceCenter(dimensions.width / 2, dimensions.height / 2))
       .force("collide", forceCollide<SimNode>(NODE_WIDTH / 2 + 16))
@@ -315,10 +337,11 @@ export function KnowledgeGraph({
           .attr("x2", (d: SimLink) => (d.target as SimNode).x ?? 0)
           .attr("y2", (d: SimLink) => (d.target as SimNode).y ?? 0);
 
-        nodeEls
-          .attr("transform", (d: SimNode) =>
-            `translate(${(d.x ?? 0) - NODE_WIDTH / 2},${(d.y ?? 0) - NODE_HEIGHT / 2})`
-          );
+        nodeEls.attr(
+          "transform",
+          (d: SimNode) =>
+            `translate(${(d.x ?? 0) - NODE_WIDTH / 2},${(d.y ?? 0) - NODE_HEIGHT / 2})`,
+        );
       });
 
     simRef.current = sim;
@@ -352,8 +375,13 @@ export function KnowledgeGraph({
     // Zoom to fit all nodes once the force simulation has fully converged.
     // One-shot: skip if already fitted (drag reheat would re-trigger), or if a node is selected.
     sim.on("end", () => {
-      if (svgRef.current && zoomRef.current && simNodes.length > 0
-        && !didAutoFitRef.current && !selectedNodeIdRef.current) {
+      if (
+        svgRef.current &&
+        zoomRef.current &&
+        simNodes.length > 0 &&
+        !didAutoFitRef.current &&
+        !selectedNodeIdRef.current
+      ) {
         didAutoFitRef.current = true;
         const fit: ZoomToFitResult | undefined = computeZoomToFit(simNodes, dimensions);
         if (!fit) {
@@ -402,12 +430,11 @@ export function KnowledgeGraph({
       .classed(styles.dimmed, (d: SimNode) => !connectedIds.has(d.id));
 
     // Dim unconnected links
-    linkElsRef.current
-      .classed(styles.dimmedLink, (d: SimLink) => {
-        const srcId: string = (d.source as SimNode).id;
-        const tgtId: string = (d.target as SimNode).id;
-        return !connectedIds.has(srcId) || !connectedIds.has(tgtId);
-      });
+    linkElsRef.current.classed(styles.dimmedLink, (d: SimLink) => {
+      const srcId: string = (d.source as SimNode).id;
+      const tgtId: string = (d.target as SimNode).id;
+      return !connectedIds.has(srcId) || !connectedIds.has(tgtId);
+    });
   }, [selectedNodeId, graphData]);
 
   // Center on selected node
@@ -415,7 +442,9 @@ export function KnowledgeGraph({
     if (!selectedNodeId || !simRef.current || !svgRef.current || !zoomRef.current) {
       return;
     }
-    const node: SimNode | undefined = simRef.current.nodes().find((n: SimNode) => n.id === selectedNodeId);
+    const node: SimNode | undefined = simRef.current
+      .nodes()
+      .find((n: SimNode) => n.id === selectedNodeId);
     if (node && Number.isFinite(node.x) && Number.isFinite(node.y)) {
       const zb: ZoomBehavior<SVGSVGElement, unknown> = zoomRef.current;
       const t = zoomIdentity
@@ -433,12 +462,7 @@ export function KnowledgeGraph({
 
   return (
     <div className={styles.graphContainer} data-testid="knowledge-graph">
-      <svg
-        ref={svgRef}
-        width={dimensions.width}
-        height={dimensions.height}
-        className={styles.svg}
-      >
+      <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className={styles.svg}>
         <defs>
           <filter id="glow">
             <feGaussianBlur stdDeviation="3" result="coloredBlur" />

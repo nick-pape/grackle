@@ -35,8 +35,9 @@ describe("stream-registry", () => {
 
     it("enforces unique stream names", () => {
       registry.createStream("unique-name");
-      expect(() => registry.createStream("unique-name"))
-        .toThrow('Stream with name "unique-name" already exists');
+      expect(() => registry.createStream("unique-name")).toThrow(
+        'Stream with name "unique-name" already exists',
+      );
     });
 
     it("getStreamByName retrieves by name", () => {
@@ -97,8 +98,9 @@ describe("stream-registry", () => {
     });
 
     it("throws for unknown stream", () => {
-      expect(() => registry.subscribe("bad-id", "sess-1", "rw", "async", true))
-        .toThrow("Stream not found");
+      expect(() => registry.subscribe("bad-id", "sess-1", "rw", "async", true)).toThrow(
+        "Stream not found",
+      );
     });
 
     it("adds subscription to stream's subscription map", () => {
@@ -110,14 +112,16 @@ describe("stream-registry", () => {
 
     it("rejects w-only with sync delivery mode", () => {
       const stream = registry.createStream("pipe");
-      expect(() => registry.subscribe(stream.id, "sess-1", "w", "sync", true))
-        .toThrow('Write-only subscription cannot use "sync" delivery mode');
+      expect(() => registry.subscribe(stream.id, "sess-1", "w", "sync", true)).toThrow(
+        'Write-only subscription cannot use "sync" delivery mode',
+      );
     });
 
     it("rejects w-only with async delivery mode", () => {
       const stream = registry.createStream("pipe");
-      expect(() => registry.subscribe(stream.id, "sess-1", "w", "async", true))
-        .toThrow('Write-only subscription cannot use "async" delivery mode');
+      expect(() => registry.subscribe(stream.id, "sess-1", "w", "async", true)).toThrow(
+        'Write-only subscription cannot use "async" delivery mode',
+      );
     });
 
     it("allows w-only with detach delivery mode", () => {
@@ -242,8 +246,7 @@ describe("stream-registry", () => {
     });
 
     it("throws for unknown stream", () => {
-      expect(() => registry.publish("bad-id", "sess-1", "hello"))
-        .toThrow("Stream not found");
+      expect(() => registry.publish("bad-id", "sess-1", "hello")).toThrow("Stream not found");
     });
 
     it("invokes async listener for async subscribers (not sender)", () => {
@@ -353,16 +356,14 @@ describe("stream-registry", () => {
     });
 
     it("throws for nonexistent subscription", async () => {
-      await expect(registry.consumeSync("nonexistent"))
-        .rejects.toThrow("No sync queue");
+      await expect(registry.consumeSync("nonexistent")).rejects.toThrow("No sync queue");
     });
 
     it("throws for an existing async subscription", async () => {
       const stream = registry.createStream("pipe");
       const asyncSub = registry.subscribe(stream.id, "sess-1", "rw", "async", true);
 
-      await expect(registry.consumeSync(asyncSub.id))
-        .rejects.toThrow("No sync queue");
+      await expect(registry.consumeSync(asyncSub.id)).rejects.toThrow("No sync queue");
     });
   });
 
@@ -508,7 +509,9 @@ describe("stream-registry", () => {
 
       // Sender publishes; mark "other" as delivered — sender still hasn't read it
       const msg = registry.publish(stream.id, "sender", "hello");
-      const otherSub = Array.from(stream.subscriptions.values()).find((s) => s.sessionId === "other")!;
+      const otherSub = Array.from(stream.subscriptions.values()).find(
+        (s) => s.sessionId === "other",
+      )!;
       msg.deliveredTo.add(otherSub.id);
 
       // Trigger a second publish, which calls pruneDeliveredMessages again
@@ -525,8 +528,12 @@ describe("stream-registry", () => {
 
       const aliceReceived: StreamMessage[] = [];
       const bobReceived: StreamMessage[] = [];
-      registry.registerAsyncListener("alice", (_sub, msg) => { aliceReceived.push(msg); });
-      registry.registerAsyncListener("bob", (_sub, msg) => { bobReceived.push(msg); });
+      registry.registerAsyncListener("alice", (_sub, msg) => {
+        aliceReceived.push(msg);
+      });
+      registry.registerAsyncListener("bob", (_sub, msg) => {
+        bobReceived.push(msg);
+      });
 
       registry.publish(stream.id, "alice", "hi everyone");
 

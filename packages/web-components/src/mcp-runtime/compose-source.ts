@@ -23,7 +23,10 @@ export interface RenderDependency {
  */
 export function composeSource(source: string, components: readonly RenderDependency[]): string {
   const defs = components
-    .map((d) => `const ${d.name} = (props) => { let __el; const render = (el) => { __el = el; };\n${d.body}\n; return __el; };`)
+    .map(
+      (d) =>
+        `const ${d.name} = (props) => { let __el; const render = (el) => { __el = el; };\n${d.body}\n; return __el; };`,
+    )
     .join("\n");
   return defs ? `${defs}\n${source}` : source;
 }

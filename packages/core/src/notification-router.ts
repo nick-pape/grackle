@@ -41,7 +41,9 @@ export async function routeEscalation(escalation: EscalationRow): Promise<void> 
   if (webhookUrl) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => { controller.abort(); }, WEBHOOK_TIMEOUT_MS);
+      const timeout = setTimeout(() => {
+        controller.abort();
+      }, WEBHOOK_TIMEOUT_MS);
       try {
         const response = await fetch(webhookUrl, {
           method: "POST",

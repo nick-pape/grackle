@@ -132,7 +132,9 @@ describe("createCronPhase", () => {
       if (id === "missing-persona") {
         return undefined;
       }
-      return { id: "persona-1", name: "Test", runtime: "stub" } as ReturnType<CronPhaseDeps["getPersona"]>;
+      return { id: "persona-1", name: "Test", runtime: "stub" } as ReturnType<
+        CronPhaseDeps["getPersona"]
+      >;
     });
 
     const phase = createCronPhase(deps);

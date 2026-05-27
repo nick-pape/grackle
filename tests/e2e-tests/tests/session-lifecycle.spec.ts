@@ -39,7 +39,10 @@ test.describe("Session Lifecycle (stub runtime)", { tag: ["@session"] }, () => {
     await expect(page.locator("text=Echo: hello world")).toBeVisible();
 
     // Tool use event renders (blue-bordered box with monospace font)
-    const toolUseBox = page.locator("div").filter({ hasText: '"message"' }).filter({ hasText: "echo:" });
+    const toolUseBox = page
+      .locator("div")
+      .filter({ hasText: '"message"' })
+      .filter({ hasText: "echo:" });
     await expect(toolUseBox.first()).toBeVisible();
 
     // Tool result renders inside a tool card (paired with tool_use "echo")
@@ -63,7 +66,9 @@ test.describe("Session Lifecycle (stub runtime)", { tag: ["@session"] }, () => {
     await expect(inputField).toBeVisible({ timeout: 10_000 });
     await page.getByTestId("stop-split-button").waitFor({ state: "visible", timeout: 15_000 });
     await page.getByTestId("stop-split-button-chevron").click();
-    await page.locator("[data-testid='stop-split-button-menu'] button", { hasText: "Kill" }).click();
+    await page
+      .locator("[data-testid='stop-split-button-menu'] button", { hasText: "Kill" })
+      .click();
 
     // Session killed — UnifiedBar shows "Session killed" + "+ New Chat"
     await expect(page.locator("text=Session killed")).toBeVisible({ timeout: 10_000 });

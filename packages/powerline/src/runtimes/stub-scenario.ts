@@ -63,7 +63,14 @@ export interface AwaitToolChangeStep {
 export type InputAction = "echo" | "fail" | "ignore" | "next";
 
 /** A single step in a scenario. */
-export type ScenarioStep = EmitStep | WaitStep | IdleStep | OnInputStep | OnInputMatchStep | McpCallStep | AwaitToolChangeStep;
+export type ScenarioStep =
+  | EmitStep
+  | WaitStep
+  | IdleStep
+  | OnInputStep
+  | OnInputMatchStep
+  | McpCallStep
+  | AwaitToolChangeStep;
 
 /** A JSON scenario that defines the exact sequence of events for a stub session. */
 export interface Scenario {

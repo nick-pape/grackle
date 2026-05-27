@@ -1,4 +1,4 @@
-@use '../../styles/mixins' as *;
+@use "../../styles/mixins" as *;
 
 // =============================================================================
 // Shared Tool Card Styles
@@ -20,13 +20,27 @@
   }
 }
 
-.cardBlue    { border-left: 3px solid var(--accent-blue); }
-.cardOrange  { border-left: 3px solid var(--accent-yellow); }
-.cardGreen   { border-left: 3px solid var(--accent-green); }
-.cardPurple  { border-left: 3px solid var(--accent-purple, #a78bfa); }
-.cardNeutral { border-left: 3px solid var(--border-subtle); }
-.cardRed     { border-left: 3px solid var(--accent-red); }
-.cardTeal    { border-left: 3px solid var(--accent-teal, #2dd4bf); }
+.cardBlue {
+  border-left: 3px solid var(--accent-blue);
+}
+.cardOrange {
+  border-left: 3px solid var(--accent-yellow);
+}
+.cardGreen {
+  border-left: 3px solid var(--accent-green);
+}
+.cardPurple {
+  border-left: 3px solid var(--accent-purple, #a78bfa);
+}
+.cardNeutral {
+  border-left: 3px solid var(--border-subtle);
+}
+.cardRed {
+  border-left: 3px solid var(--accent-red);
+}
+.cardTeal {
+  border-left: 3px solid var(--accent-teal, #2dd4bf);
+}
 
 // --- Header row ---
 
@@ -129,7 +143,7 @@
   color: var(--accent-green);
 
   &::before {
-    content: '+';
+    content: "+";
     display: inline-block;
     width: 14px;
     color: var(--accent-green);
@@ -142,7 +156,7 @@
   color: var(--accent-red);
 
   &::before {
-    content: '−';
+    content: "−";
     display: inline-block;
     width: 14px;
     color: var(--accent-red);
@@ -154,7 +168,7 @@
   color: var(--text-secondary);
 
   &::before {
-    content: ' ';
+    content: " ";
     display: inline-block;
     width: 14px;
   }
@@ -193,8 +207,13 @@
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 // --- Copy button (inline in header row) ---

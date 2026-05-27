@@ -24,7 +24,11 @@ function notificationsSupported(): boolean {
  * to wait for the answer since useNotifications already checks permission state
  * when escalation events arrive.
  */
-export function NotificationStep({ onFinish, onBack, finishDisabled }: NotificationStepProps): JSX.Element {
+export function NotificationStep({
+  onFinish,
+  onBack,
+  finishDisabled,
+}: NotificationStepProps): JSX.Element {
   const supported = notificationsSupported();
   const alreadyDecided = supported && Notification.permission !== "default";
 
@@ -40,8 +44,8 @@ export function NotificationStep({ onFinish, onBack, finishDisabled }: Notificat
     <div className={styles.stepContent} data-testid="setup-notifications">
       <h2 className={styles.heading}>Stay in the Loop</h2>
       <p className={styles.subtitle}>
-        Grackle can send you a browser notification when an agent needs your input,
-        so you never miss an important moment.
+        Grackle can send you a browser notification when an agent needs your input, so you never
+        miss an important moment.
       </p>
 
       {alreadyDecided ? (

@@ -65,7 +65,11 @@ export interface ToolDefinition {
    */
   uiResourceUri?: string;
   /** Execute the tool, forwarding to the ConnectRPC backend. */
-  handler: (args: Record<string, unknown>, clients: GrackleClients, authContext?: AuthContext) => Promise<ToolResult>;
+  handler: (
+    args: Record<string, unknown>,
+    clients: GrackleClients,
+    authContext?: AuthContext,
+  ) => Promise<ToolResult>;
 }
 
 /** Predicate function for filtering tools (used by persona-scoped filtering). */

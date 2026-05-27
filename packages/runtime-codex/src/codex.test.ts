@@ -20,7 +20,9 @@ vi.mock("node:fs", () => ({
   readdirSync: vi.fn(() => []),
 }));
 vi.mock("node:child_process", () => ({
-  execFileSync: vi.fn(() => { throw new Error("no git"); }),
+  execFileSync: vi.fn(() => {
+    throw new Error("no git");
+  }),
   execFile: vi.fn(),
 }));
 vi.mock("node:util", () => ({
@@ -70,11 +72,17 @@ import { existsSync, readFileSync } from "node:fs";
 // ─── Helpers ────────────────────────────────────────────────
 
 /** Collect events from a session stream until it reaches a terminal status (waiting_input or failed). */
-async function collectEvents(session: { stream(): AsyncIterable<AgentEvent>; kill(): void }): Promise<AgentEvent[]> {
+async function collectEvents(session: {
+  stream(): AsyncIterable<AgentEvent>;
+  kill(): void;
+}): Promise<AgentEvent[]> {
   const events: AgentEvent[] = [];
   for await (const event of session.stream()) {
     events.push(event);
-    if (event.type === "status" && (event.content === "waiting_input" || event.content === "failed")) {
+    if (
+      event.type === "status" &&
+      (event.content === "waiting_input" || event.content === "failed")
+    ) {
       session.kill();
       break;
     }
@@ -302,7 +310,12 @@ describe("Codex streaming field extraction", () => {
       { type: "item.completed", item: { type: "agent_message", text: "done" } },
     ];
 
-    const session = runtime.spawn({ sessionId: "ut0", prompt: "hi", model: "codex-mini", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "ut0",
+      prompt: "hi",
+      model: "codex-mini",
+      maxTurns: 1,
+    });
     const events = await collectEvents(session);
 
     const rtIdEvent = events.find((e) => e.type === "runtime_session_id");
@@ -318,7 +331,12 @@ describe("Codex streaming field extraction", () => {
       { type: "item.completed", item: { type: "agent_message", text: "done" } },
     ];
 
-    const session = runtime.spawn({ sessionId: "ut-diag", prompt: "hi", model: "codex-mini", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "ut-diag",
+      prompt: "hi",
+      model: "codex-mini",
+      maxTurns: 1,
+    });
     const events = await collectEvents(session);
 
     const systemEvents = events.filter((e) => e.type === "system");
@@ -335,7 +353,12 @@ describe("Codex streaming field extraction", () => {
       { type: "item.completed", item: { type: "agent_message", text: "done" } },
     ];
 
-    const session = runtime.spawn({ sessionId: "ut0b", prompt: "hi", model: "codex-mini", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "ut0b",
+      prompt: "hi",
+      model: "codex-mini",
+      maxTurns: 1,
+    });
     const events = await collectEvents(session);
 
     const rtIdEvents = events.filter((e) => e.type === "runtime_session_id");
@@ -352,7 +375,12 @@ describe("Codex streaming field extraction", () => {
       },
     ];
 
-    const session = runtime.spawn({ sessionId: "ut1", prompt: "hi", model: "codex-mini", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "ut1",
+      prompt: "hi",
+      model: "codex-mini",
+      maxTurns: 1,
+    });
     const events = await collectEvents(session);
 
     const textEvents = events.filter((e) => e.type === "text");
@@ -369,7 +397,12 @@ describe("Codex streaming field extraction", () => {
       },
     ];
 
-    const session = runtime.spawn({ sessionId: "ut2", prompt: "ls", model: "codex-mini", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "ut2",
+      prompt: "ls",
+      model: "codex-mini",
+      maxTurns: 1,
+    });
     const events = await collectEvents(session);
 
     const resultEvents = events.filter((e) => e.type === "tool_result");
@@ -382,11 +415,21 @@ describe("Codex streaming field extraction", () => {
     mockRunStreamedEvents = [
       {
         type: "item.started",
-        item: { type: "mcp_tool_call", server: "grackle", tool: "post_finding", arguments: { text: "found it" } },
+        item: {
+          type: "mcp_tool_call",
+          server: "grackle",
+          tool: "post_finding",
+          arguments: { text: "found it" },
+        },
       },
     ];
 
-    const session = runtime.spawn({ sessionId: "ut3", prompt: "find", model: "codex-mini", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "ut3",
+      prompt: "find",
+      model: "codex-mini",
+      maxTurns: 1,
+    });
     const events = await collectEvents(session);
 
     const toolUseEvents = events.filter((e) => e.type === "tool_use");
@@ -410,7 +453,12 @@ describe("Codex streaming field extraction", () => {
       },
     ];
 
-    const session = runtime.spawn({ sessionId: "ut4a", prompt: "post", model: "codex-mini", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "ut4a",
+      prompt: "post",
+      model: "codex-mini",
+      maxTurns: 1,
+    });
     const events = await collectEvents(session);
 
     const resultEvents = events.filter((e) => e.type === "tool_result");
@@ -433,7 +481,12 @@ describe("Codex streaming field extraction", () => {
       },
     ];
 
-    const session = runtime.spawn({ sessionId: "ut4b", prompt: "post", model: "codex-mini", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "ut4b",
+      prompt: "post",
+      model: "codex-mini",
+      maxTurns: 1,
+    });
     const events = await collectEvents(session);
 
     const resultEvents = events.filter((e) => e.type === "tool_result");
@@ -446,12 +499,38 @@ describe("Codex streaming field extraction", () => {
   it("uses the native item.id to correlate each tool's started/completed pair", async () => {
     mockRunStreamedEvents = [
       { type: "item.started", item: { id: "item_a", type: "command_execution", command: "ls" } },
-      { type: "item.completed", item: { id: "item_a", type: "command_execution", aggregated_output: "files", exit_code: 0 } },
-      { type: "item.started", item: { id: "item_b", type: "mcp_tool_call", server: "grackle", tool: "post_finding", arguments: {} } },
-      { type: "item.completed", item: { id: "item_b", type: "mcp_tool_call", server: "grackle", tool: "post_finding", result: { content: "ok" } } },
+      {
+        type: "item.completed",
+        item: { id: "item_a", type: "command_execution", aggregated_output: "files", exit_code: 0 },
+      },
+      {
+        type: "item.started",
+        item: {
+          id: "item_b",
+          type: "mcp_tool_call",
+          server: "grackle",
+          tool: "post_finding",
+          arguments: {},
+        },
+      },
+      {
+        type: "item.completed",
+        item: {
+          id: "item_b",
+          type: "mcp_tool_call",
+          server: "grackle",
+          tool: "post_finding",
+          result: { content: "ok" },
+        },
+      },
     ];
 
-    const session = runtime.spawn({ sessionId: "hr3", prompt: "go", model: "codex-mini", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "hr3",
+      prompt: "go",
+      model: "codex-mini",
+      maxTurns: 1,
+    });
     const events = await collectEvents(session);
 
     const uses = events.filter((e) => e.type === "tool_use");
@@ -479,7 +558,12 @@ describe("Codex streaming field extraction", () => {
       },
     ];
 
-    const session = runtime.spawn({ sessionId: "ut5", prompt: "edit", model: "codex-mini", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "ut5",
+      prompt: "edit",
+      model: "codex-mini",
+      maxTurns: 1,
+    });
     const events = await collectEvents(session);
 
     const toolUseEvents = events.filter((e) => e.type === "tool_use");
@@ -505,7 +589,12 @@ describe("Codex streaming field extraction", () => {
       },
     ];
 
-    const session = runtime.spawn({ sessionId: "ut6", prompt: "think", model: "codex-mini", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "ut6",
+      prompt: "think",
+      model: "codex-mini",
+      maxTurns: 1,
+    });
     const events = await collectEvents(session);
 
     const textEvents = events.filter((e) => e.type === "text");
@@ -534,7 +623,12 @@ describe("Codex streaming field extraction", () => {
       { type: "item.completed", item: { type: "agent_message", text: "done" } },
     ];
 
-    const session = runtime.spawn({ sessionId: "mcp-cfg", prompt: "test", model: "codex-mini", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "mcp-cfg",
+      prompt: "test",
+      model: "codex-mini",
+      maxTurns: 1,
+    });
     await collectEvents(session);
 
     // Inspect the config passed to the Codex constructor
@@ -548,7 +642,10 @@ describe("Codex streaming field extraction", () => {
     expect(config.mcpServers).toBeUndefined();
 
     // Server entry should use http_headers (not headers) and have no type field
-    const grackle = (config.mcp_servers as Record<string, unknown>).grackle as Record<string, unknown>;
+    const grackle = (config.mcp_servers as Record<string, unknown>).grackle as Record<
+      string,
+      unknown
+    >;
     expect(grackle.url).toBe("http://localhost:7435/mcp");
     expect(grackle.http_headers).toEqual({ Authorization: "Bearer tok123" });
     expect(grackle.type).toBeUndefined();
@@ -572,12 +669,20 @@ describe("Codex streaming field extraction", () => {
       { type: "item.completed", item: { type: "agent_message", text: "ok" } },
     ];
 
-    const session = runtime.spawn({ sessionId: "mcp-stdio", prompt: "test", model: "codex-mini", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "mcp-stdio",
+      prompt: "test",
+      model: "codex-mini",
+      maxTurns: 1,
+    });
     await collectEvents(session);
 
     const codexOpts = MockCodex.mock.calls[0][0] as Record<string, unknown>;
     const config = codexOpts.config as Record<string, unknown>;
-    const myStdio = (config.mcp_servers as Record<string, unknown>).myStdio as Record<string, unknown>;
+    const myStdio = (config.mcp_servers as Record<string, unknown>).myStdio as Record<
+      string,
+      unknown
+    >;
     expect(myStdio.command).toBe("node");
     expect(myStdio.args).toEqual(["server.js"]);
     expect(myStdio.env).toEqual({ FOO: "bar" });
@@ -588,7 +693,12 @@ describe("Codex streaming field extraction", () => {
       { type: "item.completed", item: { type: "agent_message", text: "done" } },
     ];
 
-    const session = runtime.spawn({ sessionId: "cdx-skip-git", prompt: "test", model: "codex-mini", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "cdx-skip-git",
+      prompt: "test",
+      model: "codex-mini",
+      maxTurns: 1,
+    });
     await collectEvents(session);
 
     expect(mockStartThread).toHaveBeenCalledTimes(1);
@@ -602,11 +712,19 @@ describe("Codex streaming field extraction", () => {
     // Note: this test uses the shared mockRunStreamedEvents pattern (single turn only)
     mockRunStreamedEvents = [
       { type: "thread.started", thread_id: "t1" },
-      { type: "turn.completed", usage: { input_tokens: 500, cached_input_tokens: 200, output_tokens: 30 } },
+      {
+        type: "turn.completed",
+        usage: { input_tokens: 500, cached_input_tokens: 200, output_tokens: 30 },
+      },
     ];
 
     const runtime = new CodexRuntime();
-    const session = runtime.spawn({ sessionId: "codex-usage", prompt: "hi", model: "o3-mini", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "codex-usage",
+      prompt: "hi",
+      model: "o3-mini",
+      maxTurns: 1,
+    });
     const events = await collectEvents(session);
 
     const usageEvents = events.filter((e) => e.type === "usage");
@@ -719,14 +837,20 @@ describe("CodexRuntime — multi-turn", () => {
       events: asyncIterableFrom([
         { type: "thread.started", thread_id: "thread-usage" },
         { type: "item.completed", item: { type: "agent_message", text: "t1" } },
-        { type: "turn.completed", usage: { input_tokens: 100, cached_input_tokens: 0, output_tokens: 10 } },
+        {
+          type: "turn.completed",
+          usage: { input_tokens: 100, cached_input_tokens: 0, output_tokens: 10 },
+        },
       ]),
       abort: vi.fn(),
     });
     mockRunStreamed.mockResolvedValueOnce({
       events: asyncIterableFrom([
         { type: "item.completed", item: { type: "agent_message", text: "t2" } },
-        { type: "turn.completed", usage: { input_tokens: 200, cached_input_tokens: 50, output_tokens: 20 } },
+        {
+          type: "turn.completed",
+          usage: { input_tokens: 200, cached_input_tokens: 50, output_tokens: 20 },
+        },
       ]),
       abort: vi.fn(),
     });

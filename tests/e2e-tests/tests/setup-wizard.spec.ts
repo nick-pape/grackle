@@ -21,7 +21,10 @@ test.describe("Setup Wizard (FRE)", { tag: ["@settings"] }, () => {
     await setOnboardingCompleted(client, "true");
   });
 
-  test("redirects to /setup when onboarding is incomplete", async ({ page, grackle: { client } }) => {
+  test("redirects to /setup when onboarding is incomplete", async ({
+    page,
+    grackle: { client },
+  }) => {
     await setOnboardingCompleted(client, "false");
 
     await page.goto("/");
@@ -76,7 +79,10 @@ test.describe("Setup Wizard (FRE)", { tag: ["@settings"] }, () => {
 
     // Step 2: Runtime — claude-code should be pre-selected
     await expect(page.getByTestId("setup-runtime")).toBeVisible();
-    await expect(page.getByTestId("runtime-card-claude-code")).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByTestId("runtime-card-claude-code")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     await expect(page.getByTestId("runtime-card-copilot")).toHaveAttribute("aria-pressed", "false");
 
     // Select a different runtime
@@ -97,30 +103,26 @@ test.describe("Setup Wizard (FRE)", { tag: ["@settings"] }, () => {
       await finishButton.click();
     }
 
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
+    await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
   });
 
   test("does not show wizard after onboarding is complete", async ({ page }) => {
     // Onboarding was just completed by the previous test
     await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
+    await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
     await expect(page.getByTestId("setup-wizard")).not.toBeVisible();
   });
 
   test("/setup redirects to / when onboarding is already complete", async ({ page }) => {
     // Onboarding is still complete
     await page.goto("/setup");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
+    await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
     await expect(page.getByTestId("setup-wizard")).not.toBeVisible();
   });
-
 });

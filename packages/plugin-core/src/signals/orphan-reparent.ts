@@ -60,7 +60,9 @@ export function createOrphanReparentSubscriber(ctx: PluginContext): Disposable {
       } catch (err) {
         logger.error({ err, parentTaskId }, "Orphan reparenting failed for parent task");
       }
-    })().catch(() => { /* swallowed — logged above */ });
+    })().catch(() => {
+      /* swallowed — logged above */
+    });
   });
 
   return {
@@ -216,10 +218,7 @@ export function transferAllPipeSubscriptions(
 
         transferred++;
       } catch (err) {
-        logger.warn(
-          { err, stream: stream.name, deadParentTaskId },
-          "Failed to transfer pipe fd",
-        );
+        logger.warn({ err, stream: stream.name, deadParentTaskId }, "Failed to transfer pipe fd");
       }
     }
   }

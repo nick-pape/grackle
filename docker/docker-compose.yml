@@ -10,12 +10,12 @@ services:
         GRACKLE_VERSION: ${GRACKLE_VERSION:-latest}
     container_name: grackle
     ports:
-      - "7434:7434"   # gRPC
-      - "3000:3000"   # Web UI + WebSocket
-      - "7435:7435"   # MCP
-      - "7433:7433"   # Local PowerLine
+      - "7434:7434" # gRPC
+      - "3000:3000" # Web UI + WebSocket
+      - "7435:7435" # MCP
+      - "7433:7433" # Local PowerLine
     volumes:
-      - grackle-data:/data                                               # Persistent DB, Neo4j, API key
+      - grackle-data:/data # Persistent DB, Neo4j, API key
       # WARNING: Grants the container root-equivalent access to the host Docker daemon.
       # Required for the Docker adapter (DooD pattern). Remove if not using Docker environments.
       - /var/run/docker.sock:/var/run/docker.sock
@@ -25,9 +25,9 @@ services:
       # As an alternative, you can configure auth via env vars (e.g. ANTHROPIC_API_KEY,
       # OPENAI_API_KEY, COPILOT_GITHUB_TOKEN/GH_TOKEN/GITHUB_TOKEN). Omit any mount you
       # don't need (e.g. skip .copilot if not using Copilot).
-      - "${HOME}/.claude:/home/node/.claude:ro"                          # Claude auth + config (RO — redirected via CLAUDE_CONFIG_DIR)
-      - "${HOME}/.copilot:/home/node/.copilot"                           # Copilot auth + session state (writable — no config dir override)
-      - "${HOME}/.codex:/home/node/.codex"                               # Codex auth + skills cache (writable — no config dir override)
+      - "${HOME}/.claude:/home/node/.claude:ro" # Claude auth + config (RO — redirected via CLAUDE_CONFIG_DIR)
+      - "${HOME}/.copilot:/home/node/.copilot" # Copilot auth + session state (writable — no config dir override)
+      - "${HOME}/.codex:/home/node/.codex" # Codex auth + skills cache (writable — no config dir override)
       # - "${HOME}/.config/goose:/home/node/.config/goose:ro"            # Goose auth (uncomment if using Goose)
     extra_hosts:
       - "host.docker.internal:host-gateway"

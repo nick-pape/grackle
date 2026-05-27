@@ -8,7 +8,12 @@
  */
 
 import { useCallback, useEffect, type JSX } from "react";
-import { Breadcrumbs, KNOWLEDGE_URL, KnowledgeDetailPanel, KnowledgeGraph } from "@grackle-ai/web-components";
+import {
+  Breadcrumbs,
+  KNOWLEDGE_URL,
+  KnowledgeDetailPanel,
+  KnowledgeGraph,
+} from "@grackle-ai/web-components";
 import { useGrackle } from "../context/GrackleContext.js";
 import styles from "./KnowledgePage.module.scss";
 
@@ -21,13 +26,19 @@ export function KnowledgePage(): JSX.Element {
     knowledge.loadRecent().catch(() => {});
   }, [knowledge]);
 
-  const handleNodeClick = useCallback((nodeId: string) => {
-    knowledge.selectNode(nodeId).catch(() => {});
-  }, [knowledge]);
+  const handleNodeClick = useCallback(
+    (nodeId: string) => {
+      knowledge.selectNode(nodeId).catch(() => {});
+    },
+    [knowledge],
+  );
 
-  const handleNodeDoubleClick = useCallback((nodeId: string) => {
-    knowledge.expandNode(nodeId).catch(() => {});
-  }, [knowledge]);
+  const handleNodeDoubleClick = useCallback(
+    (nodeId: string) => {
+      knowledge.expandNode(nodeId).catch(() => {});
+    },
+    [knowledge],
+  );
 
   const handleCloseDetail = useCallback(() => {
     knowledge.clearSelection();

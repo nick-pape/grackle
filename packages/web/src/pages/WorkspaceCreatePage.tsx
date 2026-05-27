@@ -1,12 +1,24 @@
 import { useEffect, useState, type JSX } from "react";
 import { useSearchParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
-import { Breadcrumbs, HOME_URL, Spinner, WorkspaceFormFields, defaultFormValues, environmentUrl, useAppNavigate, useToast, workspaceUrl } from "@grackle-ai/web-components";
+import {
+  Breadcrumbs,
+  HOME_URL,
+  Spinner,
+  WorkspaceFormFields,
+  defaultFormValues,
+  environmentUrl,
+  useAppNavigate,
+  useToast,
+  workspaceUrl,
+} from "@grackle-ai/web-components";
 import type { BreadcrumbSegment, WorkspaceFormValues } from "@grackle-ai/web-components";
 import styles from "./form-layout.module.scss";
 
 /** Validate workspace form values and return field errors (if any). */
-function validate(v: WorkspaceFormValues): Partial<Record<keyof WorkspaceFormValues, string>> | undefined {
+function validate(
+  v: WorkspaceFormValues,
+): Partial<Record<keyof WorkspaceFormValues, string>> | undefined {
   const errs: Partial<Record<keyof WorkspaceFormValues, string>> = {};
   if (!v.name.trim()) {
     errs.name = "Name is required";
@@ -30,14 +42,20 @@ export function WorkspaceCreatePage(): JSX.Element {
   const [searchParams] = useSearchParams();
   const presetEnvironmentId = searchParams.get("environment") ?? undefined;
 
-  const { environments: { environments }, personas: { personas }, workspaces: { createWorkspace, workspaceCreating } } = useGrackle();
+  const {
+    environments: { environments },
+    personas: { personas },
+    workspaces: { createWorkspace, workspaceCreating },
+  } = useGrackle();
   const { showToast } = useToast();
   const navigate = useAppNavigate();
 
   const [values, setValues] = useState<WorkspaceFormValues>(() =>
     defaultFormValues(undefined, presetEnvironmentId || environments[0]?.id),
   );
-  const [errors, setErrors] = useState<Partial<Record<keyof WorkspaceFormValues, string>> | undefined>();
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof WorkspaceFormValues, string>> | undefined
+  >();
   const [submitError, setSubmitError] = useState<string | undefined>();
 
   useEffect(() => {
@@ -74,7 +92,10 @@ export function WorkspaceCreatePage(): JSX.Element {
       values.workingDirectory,
       (workspace) => {
         showToast("Workspace created", "success");
-        navigate(workspaceUrl(workspace.id, workspace.linkedEnvironmentIds[0] ?? values.environmentId), { replace: true });
+        navigate(
+          workspaceUrl(workspace.id, workspace.linkedEnvironmentIds[0] ?? values.environmentId),
+          { replace: true },
+        );
       },
       (message: string) => {
         setSubmitError(message);
@@ -83,7 +104,9 @@ export function WorkspaceCreatePage(): JSX.Element {
   };
 
   const handleCancel = (): void => {
-    navigate(presetEnvironmentId ? environmentUrl(presetEnvironmentId) : HOME_URL, { replace: true });
+    navigate(presetEnvironmentId ? environmentUrl(presetEnvironmentId) : HOME_URL, {
+      replace: true,
+    });
   };
 
   return (
@@ -117,14 +140,22 @@ export function WorkspaceCreatePage(): JSX.Element {
       <div className={styles.body}>
         <WorkspaceFormFields
           values={values}
-          onChange={(v) => { setValues(v); setErrors(undefined); setSubmitError(undefined); }}
+          onChange={(v) => {
+            setValues(v);
+            setErrors(undefined);
+            setSubmitError(undefined);
+          }}
           environments={environments}
           personas={personas}
           errors={errors}
           disabled={workspaceCreating}
           autoFocusName
         />
-        {submitError && <div className={styles.error} data-testid="workspace-create-submit-error">{submitError}</div>}
+        {submitError && (
+          <div className={styles.error} data-testid="workspace-create-submit-error">
+            {submitError}
+          </div>
+        )}
       </div>
     </div>
   );

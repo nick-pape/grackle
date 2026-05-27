@@ -1,4 +1,12 @@
-import { type ReactNode, useState, lazy, Suspense, type LazyExoticComponent, type ComponentType, type JSX } from "react";
+import {
+  type ReactNode,
+  useState,
+  lazy,
+  Suspense,
+  type LazyExoticComponent,
+  type ComponentType,
+  type JSX,
+} from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import Markdown from "react-markdown";
 import rehypePrismPlus from "rehype-prism-plus/common";
@@ -41,14 +49,18 @@ function SystemContextEvent({ content }: { content: string }): JSX.Element {
   const [expanded, setExpanded] = useState(false);
   const lines = content.split("\n");
   const hasMore = lines.length > SYSTEM_CONTEXT_PREVIEW_LINES;
-  const displayContent = expanded ? content : lines.slice(0, SYSTEM_CONTEXT_PREVIEW_LINES).join("\n");
+  const displayContent = expanded
+    ? content
+    : lines.slice(0, SYSTEM_CONTEXT_PREVIEW_LINES).join("\n");
 
   return (
     <div className={styles.systemContextEvent} data-testid="system-context-event">
       <button
         type="button"
         className={styles.systemContextHeader}
-        onClick={() => { setExpanded((v) => !v); }}
+        onClick={() => {
+          setExpanded((v) => !v);
+        }}
         aria-expanded={expanded}
       >
         <span className={styles.systemContextBadge}>SYSTEM PROMPT</span>
@@ -60,9 +72,7 @@ function SystemContextEvent({ content }: { content: string }): JSX.Element {
       </button>
       <pre className={styles.systemContextPre}>
         {displayContent}
-        {!expanded && hasMore && (
-          <span className={styles.systemContextEllipsis}>{"\u2026"}</span>
-        )}
+        {!expanded && hasMore && <span className={styles.systemContextEllipsis}>{"\u2026"}</span>}
       </pre>
     </div>
   );
@@ -104,12 +114,18 @@ interface PreProps extends React.HTMLAttributes<HTMLPreElement> {
 /** Wraps markdown `<pre>` blocks with a CopyButton for code-only copy. */
 function CodeBlockWrapper({ children, node, ...preProps }: PreProps): JSX.Element {
   // node is destructured solely to exclude it from the DOM spread
-  if (node === undefined) { /* intentionally unused */ }
+  if (node === undefined) {
+    /* intentionally unused */
+  }
   const rawText = extractText(children);
   return (
     <div className={styles.codeBlockWrapper}>
       <pre {...preProps}>{children}</pre>
-      <CopyButton text={rawText} data-testid="copy-code-block" className={styles.codeBlockCopyButton} />
+      <CopyButton
+        text={rawText}
+        data-testid="copy-code-block"
+        className={styles.codeBlockCopyButton}
+      />
     </div>
   );
 }
@@ -127,7 +143,11 @@ const markdownComponents: Record<string, typeof CodeBlockWrapper> = {
  */
 function MarkdownContent({ content }: { content: string }): JSX.Element {
   return (
-    <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrismPlus]} components={markdownComponents}>
+    <Markdown
+      remarkPlugins={[remarkGfm]}
+      rehypePlugins={[rehypePrismPlus]}
+      components={markdownComponents}
+    >
       {content}
     </Markdown>
   );
@@ -148,20 +168,12 @@ function TextEvent({ content }: { content: string }): JSX.Element {
 
 /** Renders an error event with red styling. */
 function ErrorEvent({ content }: { content: string }): JSX.Element {
-  return (
-    <div className={styles.errorEvent}>
-      Error: {content}
-    </div>
-  );
+  return <div className={styles.errorEvent}>Error: {content}</div>;
 }
 
 /** Renders a status change event with separator lines. */
 function StatusEvent({ content }: { content: string }): JSX.Element {
-  return (
-    <div className={styles.statusEvent}>
-      --- {content} ---
-    </div>
-  );
+  return <div className={styles.statusEvent}>--- {content} ---</div>;
 }
 
 /** Renders a user input event as markdown, right-aligned to distinguish it from agent output. */
@@ -195,7 +207,9 @@ function UsageEvent({ content }: { content: string }): JSX.Element {
     const tokens = formatTokens(inTok + outTok);
     const cost = formatCost(Number(data.cost_millicents) || 0);
     label = `${tokens} tokens \u00b7 ${cost}`;
-  } catch { /* show raw content if JSON fails */ }
+  } catch {
+    /* show raw content if JSON fails */
+  }
   return (
     <div className={styles.usageEvent} data-testid="usage-event">
       <span className={styles.usageBadge}>{label}</span>
@@ -205,9 +219,7 @@ function UsageEvent({ content }: { content: string }): JSX.Element {
 
 /** Renders an unrecognized event type. */
 function DefaultEvent({ content }: { content: string }): JSX.Element {
-  return (
-    <div className={styles.defaultEvent}>{content}</div>
-  );
+  return <div className={styles.defaultEvent}>{content}</div>;
 }
 
 // --- Main component ---
@@ -237,7 +249,9 @@ export function EventRenderer({ event, toolUseCtx, settled, sandboxProxyUrl }: P
       } = {};
       try {
         payload = JSON.parse(event.content) as typeof payload;
-      } catch { /* malformed widget payload — fall back */ }
+      } catch {
+        /* malformed widget payload — fall back */
+      }
       // Dispatch on rendererKind (default "mcp-app-html" for back-compat). This
       // switch is the seam for declarative/runtime renderers.
       const rendererKind: string = payload.rendererKind ?? "mcp-app-html";
@@ -259,7 +273,11 @@ export function EventRenderer({ event, toolUseCtx, settled, sandboxProxyUrl }: P
               widgetHtml={bootstrap}
               sandboxProxyUrl={sandboxProxyUrl}
               csp={payload.csp}
-              toolInput={{ source: payload.html, props: payload.toolInput ?? {}, components: payload.components ?? [] }}
+              toolInput={{
+                source: payload.html,
+                props: payload.toolInput ?? {},
+                components: payload.components ?? [],
+              }}
             />
           </Suspense>
         );
@@ -287,7 +305,9 @@ export function EventRenderer({ event, toolUseCtx, settled, sandboxProxyUrl }: P
           if (rawData.systemContext === true) {
             return <SystemContextEvent content={event.content} />;
           }
-        } catch { /* not JSON, render as normal system event */ }
+        } catch {
+          /* not JSON, render as normal system event */
+        }
       }
       return <SystemEvent time={time} content={event.content} />;
     }
@@ -301,7 +321,9 @@ export function EventRenderer({ event, toolUseCtx, settled, sandboxProxyUrl }: P
         const parsed = JSON.parse(event.content) as { tool?: string; args?: unknown };
         tool = parsed.tool || "";
         args = parsed.args;
-      } catch { /* fallback to empty */ }
+      } catch {
+        /* fallback to empty */
+      }
       // When settled, pass empty result so the card shows as completed (no spinner)
       // rather than in-progress. This handles Claude Code which emits results as text.
       return <ToolCard tool={tool} args={args} result={settled ? "" : undefined} />;
@@ -314,7 +336,9 @@ export function EventRenderer({ event, toolUseCtx, settled, sandboxProxyUrl }: P
         try {
           const rawData = JSON.parse(event.raw) as Record<string, unknown>;
           isError = rawData.is_error === true;
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
 
       // Try to extract displayable content from JSON-wrapped results.
@@ -326,7 +350,9 @@ export function EventRenderer({ event, toolUseCtx, settled, sandboxProxyUrl }: P
           if (typeof parsed.content === "string") {
             resultContent = parsed.content;
           }
-        } catch { /* content looks like JSON but isn't — use as-is */ }
+        } catch {
+          /* content looks like JSON but isn't — use as-is */
+        }
       }
 
       if (toolUseCtx) {
@@ -341,7 +367,9 @@ export function EventRenderer({ event, toolUseCtx, settled, sandboxProxyUrl }: P
         );
       }
       // Unpaired tool_result — use generic card with fallback label
-      return <ToolCard tool="Tool output" args={undefined} result={resultContent} isError={isError} />;
+      return (
+        <ToolCard tool="Tool output" args={undefined} result={resultContent} isError={isError} />
+      );
     }
     case "error":
       return <ErrorEvent content={event.content} />;

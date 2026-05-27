@@ -1,5 +1,12 @@
 import { create } from "@bufbuild/protobuf";
-import { grackle, powerline, eventTypeToEnum, SESSION_STATUS, TERMINAL_SESSION_STATUSES, END_REASON } from "@grackle-ai/common";
+import {
+  grackle,
+  powerline,
+  eventTypeToEnum,
+  SESSION_STATUS,
+  TERMINAL_SESSION_STATUSES,
+  END_REASON,
+} from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 import { sessionStore, taskStore } from "@grackle-ai/database";
 import { recordSessionAction } from "./session-action-recorder.js";
@@ -16,6 +23,31 @@ import { cleanupLifecycleStream } from "./lifecycle-streams.js";
 import { sendInputToSession } from "./signals/signal-delivery.js";
 import { checkBudget } from "./budget-checker.js";
 import type { ProcessorContext } from "./processor-registry.js";
+import { SessionStateManager } from "./ahp-session-state.js";
+
+/**
+ * Construct a minimal AgentEvent for injected events (system context, initial prompt).
+ * Uses the protobuf `create()` helper so the result satisfies the `AgentEvent`
+ * type contract without unsafe casts.
+ */
+function makeAgentEvent(
+  sessionId: string,
+  type: string,
+  content: string,
+  raw?: string,
+  turnId?: string,
+): powerline.AgentEvent {
+  return create(powerline.AgentEventSchema, {
+    sessionId,
+    type,
+    timestamp: new Date().toISOString(),
+    content,
+    raw: raw ?? "",
+    toolCallId: "",
+    diagnostic: false,
+    turnId: turnId ?? "",
+  });
+}
 
 /** Options for processing an agent event stream. */
 export interface EventStreamOptions {
@@ -124,8 +156,13 @@ export function processEventStream(
 
   processorRegistry.register(ctx);
 
+  // AHP HR1b: session state manager — mapper + reducer + snapshots
+  const stateManager = new SessionStateManager(sessionId);
+
   /** Inner processing logic, extracted so it can be wrapped in runWithTrace. */
   const processEvents = async (): Promise<void> => {
+    let lastServerSeq: string | undefined;
+    let terminalSnapshotFlushed: boolean = false;
     try {
       logWriter.initLog(logPath);
       sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.RUNNING);
@@ -143,7 +180,16 @@ export function processEventStream(
         });
         await logWriter.writeEvent(logPath, sysCtxEvent);
         streamHub.publish(sysCtxEvent);
-        recordSessionAction(sysCtxEvent);
+        const sysSeq = recordSessionAction(sysCtxEvent);
+        if (sysSeq) {
+          lastServerSeq = sysSeq;
+          // System events are dropped by the mapper when there's no active turn (no turn_started yet).
+          // The mapper only processes system events within an active turn context.
+          stateManager.processEvent(
+            makeAgentEvent(sessionId, "system", options.systemContext),
+            sysSeq,
+          );
+        }
       }
       if (options.prompt && options.taskId) {
         const promptEvent = create(grackle.SessionEventSchema, {
@@ -154,7 +200,20 @@ export function processEventStream(
         });
         await logWriter.writeEvent(logPath, promptEvent);
         streamHub.publish(promptEvent);
-        recordSessionAction(promptEvent);
+        const promptSeq = recordSessionAction(promptEvent);
+        if (promptSeq) {
+          lastServerSeq = promptSeq;
+          stateManager.processEvent(
+            makeAgentEvent(
+              sessionId,
+              "turn_started",
+              JSON.stringify({ user_message: options.prompt }),
+            ),
+            promptSeq,
+          );
+          // Mark so the runtime's first turn_started is deduplicated.
+          stateManager.markInjectedInitialTurn();
+        }
       }
 
       for await (const event of events) {
@@ -179,7 +238,13 @@ export function processEventStream(
         });
         await logWriter.writeEvent(logPath, sessionEvent);
         streamHub.publish(sessionEvent);
-        recordSessionAction(sessionEvent);
+        const serverSeq = recordSessionAction(sessionEvent);
+        if (serverSeq) {
+          lastServerSeq = serverSeq;
+          // AHP HR1b: process event through state manager (mapper + reducer + snapshot)
+          // Pass serverSeq so snapshots are anchored to real action ULIDs for reconstruction.
+          stateManager.processEvent(event, serverSeq);
+        }
 
         // HR7: tee runtime diagnostics to the additive OTLP logs sink (no-op
         // unless OTEL_EXPORTER_OTLP_ENDPOINT is set). Existing sinks above are
@@ -213,26 +278,48 @@ export function processEventStream(
                 const budgetResult = checkBudget(ctx.taskId, ctx.workspaceId);
                 if (budgetResult) {
                   const session = sessionStore.getSession(sessionId);
-                  if (session && !session.sigtermSentAt && !TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
+                  if (
+                    session &&
+                    !session.sigtermSentAt &&
+                    !TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)
+                  ) {
                     const sigMessage =
                       `[SIGTERM] Budget exceeded (${budgetResult.scope} ${budgetResult.reason}): ${budgetResult.message}. ` +
                       "Finish your current operation, save your work, close any open IPC fds, " +
                       "then call task_complete and stop.";
                     sessionStore.setSigtermSentAt(sessionId);
                     ctx.budgetSigtermSent = true;
-                    sendInputToSession(sessionId, session.environmentId, sigMessage, "budget_exceeded").then((delivered: boolean) => {
-                      if (!delivered) {
-                        logger.error({ sessionId }, "Budget-exceeded SIGTERM delivery failed (env not connected)");
+                    sendInputToSession(
+                      sessionId,
+                      session.environmentId,
+                      sigMessage,
+                      "budget_exceeded",
+                    )
+                      .then((delivered: boolean) => {
+                        if (!delivered) {
+                          logger.error(
+                            { sessionId },
+                            "Budget-exceeded SIGTERM delivery failed (env not connected)",
+                          );
+                          sessionStore.clearSigtermSentAt(sessionId);
+                          ctx.budgetSigtermSent = false;
+                        }
+                      })
+                      .catch((err: unknown) => {
+                        logger.error(
+                          { err, sessionId },
+                          "Failed to deliver budget-exceeded SIGTERM",
+                        );
                         sessionStore.clearSigtermSentAt(sessionId);
                         ctx.budgetSigtermSent = false;
-                      }
-                    }).catch((err: unknown) => {
-                      logger.error({ err, sessionId }, "Failed to deliver budget-exceeded SIGTERM");
-                      sessionStore.clearSigtermSentAt(sessionId);
-                      ctx.budgetSigtermSent = false;
-                    });
+                      });
                     logger.info(
-                      { sessionId, taskId: ctx.taskId, scope: budgetResult.scope, reason: budgetResult.reason },
+                      {
+                        sessionId,
+                        taskId: ctx.taskId,
+                        scope: budgetResult.scope,
+                        reason: budgetResult.reason,
+                      },
                       "Budget exceeded - SIGTERM sent",
                     );
                   }
@@ -255,24 +342,56 @@ export function processEventStream(
             const session = sessionStore.getSession(sessionId);
             const endReason = ctx.budgetSigtermSent
               ? END_REASON.BUDGET_EXCEEDED
-              : session?.sigtermSentAt ? END_REASON.TERMINATED : END_REASON.COMPLETED;
-            sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, endReason);
+              : session?.sigtermSentAt
+                ? END_REASON.TERMINATED
+                : END_REASON.COMPLETED;
+            sessionStore.updateSession(
+              sessionId,
+              SESSION_STATUS.STOPPED,
+              undefined,
+              undefined,
+              endReason,
+            );
           } else if (event.content === "killed") {
-            const killedEndReason = ctx.budgetSigtermSent ? END_REASON.BUDGET_EXCEEDED : END_REASON.KILLED;
-            sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, killedEndReason);
+            const killedEndReason = ctx.budgetSigtermSent
+              ? END_REASON.BUDGET_EXCEEDED
+              : END_REASON.KILLED;
+            sessionStore.updateSession(
+              sessionId,
+              SESSION_STATUS.STOPPED,
+              undefined,
+              undefined,
+              killedEndReason,
+            );
           } else if (event.content === "failed") {
-            sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.INTERRUPTED);
+            sessionStore.updateSession(
+              sessionId,
+              SESSION_STATUS.STOPPED,
+              undefined,
+              undefined,
+              END_REASON.INTERRUPTED,
+            );
             cleanupLifecycleStream(sessionId);
           } else if (event.content === "terminated") {
-            const terminatedEndReason = ctx.budgetSigtermSent ? END_REASON.BUDGET_EXCEEDED : END_REASON.TERMINATED;
-            sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, terminatedEndReason);
+            const terminatedEndReason = ctx.budgetSigtermSent
+              ? END_REASON.BUDGET_EXCEEDED
+              : END_REASON.TERMINATED;
+            sessionStore.updateSession(
+              sessionId,
+              SESSION_STATUS.STOPPED,
+              undefined,
+              undefined,
+              terminatedEndReason,
+            );
           }
 
           // On terminal status (or idle for sync pipes): publish child completion
           // to IPC pipe stream. `waiting_input` is included so that sync pipes
           // unblock when a child goes idle without calling task_complete (#824).
           // publishChildCompletion internally skips waiting_input for async pipes.
-          if (["completed", "killed", "failed", "terminated", "waiting_input"].includes(event.content)) {
+          if (
+            ["completed", "killed", "failed", "terminated", "waiting_input"].includes(event.content)
+          ) {
             await publishChildCompletion(sessionId, event.content);
           }
 
@@ -294,10 +413,31 @@ export function processEventStream(
             }
           }
 
+          // AHP HR1b: flush snapshot on terminal status for clean state capture
+          // Guard: serverSeq is undefined when recordSessionAction() silently fails.
+          if (
+            ["completed", "killed", "failed", "terminated"].includes(event.content) &&
+            serverSeq
+          ) {
+            try {
+              const result = stateManager.snapshot(serverSeq);
+              if (result.persisted) {
+                terminalSnapshotFlushed = true;
+              }
+            } catch {
+              /* non-critical */
+            }
+          }
+
           // Broadcast task_updated on status changes so frontend re-fetches computed status.
           // This covers both terminal events (completed/killed/failed) and non-terminal
           // transitions (running, waiting_input) that affect the computed task status.
-          if (ctx.taskId && ["completed", "killed", "failed", "terminated", "running", "waiting_input"].includes(event.content)) {
+          if (
+            ctx.taskId &&
+            ["completed", "killed", "failed", "terminated", "running", "waiting_input"].includes(
+              event.content,
+            )
+          ) {
             emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
           }
         }
@@ -306,12 +446,17 @@ export function processEventStream(
       // Fallback: if stream ended without a terminal status event, emit a UI refresh
       // without changing status. Guard against overwriting terminal or SUSPENDED states.
       const current = sessionStore.getSession(sessionId);
-      if (current && !TERMINAL_SESSION_STATUSES.has(current.status as SessionStatus) && current.status !== SESSION_STATUS.SUSPENDED) {
+      if (
+        current &&
+        !TERMINAL_SESSION_STATUSES.has(current.status as SessionStatus) &&
+        current.status !== SESSION_STATUS.SUSPENDED
+      ) {
         if (ctx.taskId) {
           emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
         }
       }
     } catch (err) {
+      // Track the serverSeq from the suspended event for the final snapshot below
       const current = sessionStore.getSession(sessionId);
       if (current && !TERMINAL_SESSION_STATUSES.has(current.status as SessionStatus)) {
         // Transport error during active or idle session — suspend for auto-recovery
@@ -333,7 +478,14 @@ export function processEventStream(
           content: SESSION_STATUS.SUSPENDED,
         });
         streamHub.publish(suspendedEvent);
-        recordSessionAction(suspendedEvent);
+        const suspSeq = recordSessionAction(suspendedEvent);
+        if (suspSeq) {
+          lastServerSeq = suspSeq;
+          stateManager.processEvent(
+            makeAgentEvent(sessionId, "status", SESSION_STATUS.SUSPENDED),
+            suspSeq,
+          );
+        }
         if (ctx.taskId) {
           emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
         }
@@ -342,9 +494,24 @@ export function processEventStream(
       // died), the session is in its correct final state and task.updated was already
       // emitted — skip the duplicate to avoid interfering with SIGCHLD delivery.
     } finally {
+      // AHP HR1b: flush final snapshot on stream completion.
+      // Skip if terminal status already flushed a snapshot (avoids duplicates with same serverSeq).
+      if (lastServerSeq && !terminalSnapshotFlushed) {
+        try {
+          stateManager.snapshot(lastServerSeq);
+        } catch {
+          /* non-critical */
+        }
+      }
+      stateManager.clear();
+
       processorRegistry.unregister(sessionId);
       logWriter.endSession(logPath);
-      try { writeTranscript(logPath); } catch { /* non-critical */ }
+      try {
+        writeTranscript(logPath);
+      } catch {
+        /* non-critical */
+      }
     }
   };
 

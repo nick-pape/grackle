@@ -105,7 +105,13 @@ describe("knowledgeSearch", () => {
           node: makeNeo4jNode(NATIVE_NODE_PROPS),
           score: 0.95,
           edges: [
-            { fromId: "node-1", toId: "node-2", type: "RELATES_TO", metadata: null, createdAt: "2026-01-01T00:00:00.000Z" },
+            {
+              fromId: "node-1",
+              toId: "node-2",
+              type: "RELATES_TO",
+              metadata: null,
+              createdAt: "2026-01-01T00:00:00.000Z",
+            },
           ],
         }),
         makeNeo4jRecord({
@@ -189,9 +195,7 @@ describe("knowledgeSearch", () => {
         makeNeo4jRecord({
           node: makeNeo4jNode(NATIVE_NODE_PROPS),
           score: 0.9,
-          edges: [
-            { fromId: null, toId: null, type: null, metadata: null, createdAt: null },
-          ],
+          edges: [{ fromId: null, toId: null, type: null, metadata: null, createdAt: null }],
         }),
       ],
     });

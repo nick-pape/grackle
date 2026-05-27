@@ -13,12 +13,23 @@
  */
 
 import { create } from "@bufbuild/protobuf";
-import { grackle, SESSION_STATUS, TERMINAL_SESSION_STATUSES, END_REASON, powerline } from "@grackle-ai/common";
+import {
+  grackle,
+  SESSION_STATUS,
+  TERMINAL_SESSION_STATUSES,
+  END_REASON,
+  powerline,
+} from "@grackle-ai/common";
 import type { SessionStatus, EndReason } from "@grackle-ai/common";
 import { sessionStore, taskStore } from "@grackle-ai/database";
 import {
-  streamRegistry, adapterManager, streamHub, reanimateAgent, logger,
-  cleanupLifecycleStream, ensureLifecycleStream,
+  streamRegistry,
+  adapterManager,
+  streamHub,
+  reanimateAgent,
+  logger,
+  cleanupLifecycleStream,
+  ensureLifecycleStream,
 } from "@grackle-ai/core";
 import type { Disposable, PluginContext } from "@grackle-ai/core";
 
@@ -60,11 +71,14 @@ export function createLifecycleSubscriber(ctx: PluginContext): Disposable {
       } else {
         reason = END_REASON.KILLED;
       }
-      conn.client.kill(
-        create(powerline.KillRequestSchema, { id: sessionId, reason }),
-      ).catch((err: unknown) => {
-        logger.debug({ err, sessionId }, "Lifecycle: PowerLine kill failed (process may have already exited)");
-      });
+      conn.client
+        .kill(create(powerline.KillRequestSchema, { id: sessionId, reason }))
+        .catch((err: unknown) => {
+          logger.debug(
+            { err, sessionId },
+            "Lifecycle: PowerLine kill failed (process may have already exited)",
+          );
+        });
     }
 
     // Skip status change and broadcast if already terminal (killAgent already handled it)
@@ -75,11 +89,17 @@ export function createLifecycleSubscriber(ctx: PluginContext): Disposable {
     // Determine reason: IDLE sessions completed naturally; others were killed.
     // If SIGTERM was sent and the session reached IDLE before being orphaned,
     // use TERMINATED instead of COMPLETED to distinguish graceful shutdowns.
-    const reason: EndReason = session.status === SESSION_STATUS.IDLE
-      ? (session.sigtermSentAt ? END_REASON.TERMINATED : END_REASON.COMPLETED)
-      : END_REASON.KILLED;
+    const reason: EndReason =
+      session.status === SESSION_STATUS.IDLE
+        ? session.sigtermSentAt
+          ? END_REASON.TERMINATED
+          : END_REASON.COMPLETED
+        : END_REASON.KILLED;
 
-    logger.info({ sessionId, previousStatus: session.status, reason }, "Session orphaned (no remaining fds) — stopping");
+    logger.info(
+      { sessionId, previousStatus: session.status, reason },
+      "Session orphaned (no remaining fds) — stopping",
+    );
 
     sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, reason);
 
@@ -106,44 +126,52 @@ export function createLifecycleSubscriber(ctx: PluginContext): Disposable {
   // ── Auto-reanimate: when an external session subscribes to a lifecycle
   // stream whose session is stopped, automatically restart it. This is the
   // "open() IS reanimate" model from the streams IPC spec.
-  const unsubRevived = streamRegistry.onSessionRevived((targetSessionId: string, _subscriberSessionId: string) => {
-    const session = sessionStore.getSession(targetSessionId);
-    if (!session) {
-      return;
-    }
+  const unsubRevived = streamRegistry.onSessionRevived(
+    (targetSessionId: string, _subscriberSessionId: string) => {
+      const session = sessionStore.getSession(targetSessionId);
+      if (!session) {
+        return;
+      }
 
-    // Only reanimate stopped or suspended sessions
-    if (!TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus) && session.status !== SESSION_STATUS.SUSPENDED) {
-      return;
-    }
+      // Only reanimate stopped or suspended sessions
+      if (
+        !TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus) &&
+        session.status !== SESSION_STATUS.SUSPENDED
+      ) {
+        return;
+      }
 
-    // Must have a runtimeSessionId to resume from JSONL
-    if (!session.runtimeSessionId) {
-      logger.debug({ targetSessionId }, "Auto-reanimate skipped: no runtimeSessionId");
-      return;
-    }
+      // Must have a runtimeSessionId to resume from JSONL
+      if (!session.runtimeSessionId) {
+        logger.debug({ targetSessionId }, "Auto-reanimate skipped: no runtimeSessionId");
+        return;
+      }
 
-    // Environment must not have another active session
-    const existingActive = sessionStore.getActiveForEnv(session.environmentId);
-    if (existingActive) {
-      logger.debug({ targetSessionId, existingActive: existingActive.id }, "Auto-reanimate skipped: environment busy");
-      return;
-    }
+      // Environment must not have another active session
+      const existingActive = sessionStore.getActiveForEnv(session.environmentId);
+      if (existingActive) {
+        logger.debug(
+          { targetSessionId, existingActive: existingActive.id },
+          "Auto-reanimate skipped: environment busy",
+        );
+        return;
+      }
 
-    // Environment must be connected
-    const conn = adapterManager.getConnection(session.environmentId);
-    if (!conn) {
-      logger.debug({ targetSessionId }, "Auto-reanimate skipped: environment disconnected");
-      return;
-    }
+      // Environment must be connected
+      const conn = adapterManager.getConnection(session.environmentId);
+      if (!conn) {
+        logger.debug({ targetSessionId }, "Auto-reanimate skipped: environment disconnected");
+        return;
+      }
 
-    logger.info({ targetSessionId }, "Auto-reanimating session on new lifecycle subscription");
-    try {
-      reanimateAgent(targetSessionId);
-    } catch (err) {
-      logger.debug({ err, targetSessionId }, "Auto-reanimate failed (non-fatal)");
-    }
-  });
+      logger.info({ targetSessionId }, "Auto-reanimating session on new lifecycle subscription");
+      try {
+        reanimateAgent(targetSessionId);
+      } catch (err) {
+        logger.debug({ err, targetSessionId }, "Auto-reanimate failed (non-fatal)");
+      }
+    },
+  );
 
   logger.info("Lifecycle manager initialized");
 
@@ -154,4 +182,3 @@ export function createLifecycleSubscriber(ctx: PluginContext): Disposable {
     },
   };
 }
-

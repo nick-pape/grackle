@@ -20,7 +20,7 @@ HAgent Resources can create new personas at runtime and fire unused ones, so thi
 
 ## Always Active
 
-**Product Manager** — Owns the big picture. Understands product direction, user needs, and priorities. Decides *what* to build and *why*. Doesn't write specs — delegates that down.
+**Product Manager** — Owns the big picture. Understands product direction, user needs, and priorities. Decides _what_ to build and _why_. Doesn't write specs — delegates that down.
 
 **Technical Program Manager** — Takes a specific feature and writes the detailed spec. Breaks it into tasks, defines acceptance criteria, sequences the work. The plan-maker.
 

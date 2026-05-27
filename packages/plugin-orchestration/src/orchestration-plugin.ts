@@ -11,7 +11,9 @@ import { grackle } from "@grackle-ai/common";
 import {
   createOrchestrationCollector,
   createOrphanPhase,
-  createSigchldSubscriber, createEscalationAutoSubscriber, createOrphanReparentSubscriber,
+  createSigchldSubscriber,
+  createEscalationAutoSubscriber,
+  createOrphanReparentSubscriber,
 } from "@grackle-ai/plugin-core";
 import { taskStore } from "@grackle-ai/database";
 
@@ -32,10 +34,12 @@ export function createOrchestrationPlugin(): GracklePlugin {
     name: "orchestration",
     dependencies: ["core"],
 
-    grpcHandlers: () => [{
-      service: grackle.GrackleOrchestration,
-      handlers: createOrchestrationCollector().getHandlers(grackle.GrackleOrchestration),
-    }],
+    grpcHandlers: () => [
+      {
+        service: grackle.GrackleOrchestration,
+        handlers: createOrchestrationCollector().getHandlers(grackle.GrackleOrchestration),
+      },
+    ],
 
     reconciliationPhases: (ctx) => [
       createOrphanPhase({

@@ -106,9 +106,7 @@ export const EdgeLinksFallbackToTruncatedId: Story = {
   args: {
     detail: {
       node: defaultNode,
-      edges: [
-        { fromId: "node-001", toId: unknownNodeId, type: "mentions" },
-      ],
+      edges: [{ fromId: "node-001", toId: unknownNodeId, type: "mentions" }],
     },
     nodes: [defaultNode],
   },

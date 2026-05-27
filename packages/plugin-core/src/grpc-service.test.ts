@@ -33,15 +33,32 @@ vi.mock("./settings-handlers.js", () => ({ getSetting: vi.fn() }));
 
 vi.mock("./task-handlers.js", () => ({ listTasks: vi.fn() }));
 vi.mock("./persona-handlers.js", () => ({ listPersonas: vi.fn() }));
-vi.mock("./component-handlers.js", () => ({ registerComponent: vi.fn(), updateComponent: vi.fn(), getComponent: vi.fn(), listComponents: vi.fn() }));
+vi.mock("./component-handlers.js", () => ({
+  registerComponent: vi.fn(),
+  updateComponent: vi.fn(),
+  getComponent: vi.fn(),
+  listComponents: vi.fn(),
+}));
 vi.mock("./escalation-handlers.js", () => ({ createEscalation: vi.fn() }));
 vi.mock("./plugin-handlers.js", () => ({ listPlugins: vi.fn(), setPluginEnabled: vi.fn() }));
 vi.mock("./github-account-handlers.js", () => ({ listGitHubAccounts: vi.fn() }));
-vi.mock("./channel-handlers.js", () => ({ exposeChannel: vi.fn(), listChannelGrants: vi.fn(), revokeChannelGrant: vi.fn() }));
-vi.mock("./event-handlers.js", () => ({ queryDomainEvents: vi.fn(), getStreamTranscript: vi.fn(), getSessionActions: vi.fn() }));
+vi.mock("./channel-handlers.js", () => ({
+  exposeChannel: vi.fn(),
+  listChannelGrants: vi.fn(),
+  revokeChannelGrant: vi.fn(),
+}));
+vi.mock("./event-handlers.js", () => ({
+  queryDomainEvents: vi.fn(),
+  getStreamTranscript: vi.fn(),
+  getSessionActions: vi.fn(),
+}));
 vi.mock("./runtime-handlers.js", () => ({ listRuntimes: vi.fn() }));
 
-import { createCoreCollector, createOrchestrationCollector, createDefaultCollector } from "./grpc-service.js";
+import {
+  createCoreCollector,
+  createOrchestrationCollector,
+  createDefaultCollector,
+} from "./grpc-service.js";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -50,7 +67,9 @@ beforeEach(() => {
 describe("createCoreCollector", () => {
   it("adds environments, sessions, workspaces, tokens, codespaces, docker containers, settings (no schedules, no knowledge)", () => {
     createCoreCollector();
-    const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
+    const addedModules = addHandlersMock.mock.calls.map(
+      ([, module]: [unknown, Record<string, unknown>]) => module,
+    );
     expect(addedModules.some((m) => "listEnvironments" in m)).toBe(true);
     expect(addedModules.some((m) => "spawnAgent" in m)).toBe(true);
     expect(addedModules.some((m) => "listWorkspaces" in m)).toBe(true);
@@ -76,7 +95,9 @@ describe("createCoreCollector", () => {
 
   it("does NOT add task, persona, escalation, or knowledge handlers", () => {
     createCoreCollector();
-    const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
+    const addedModules = addHandlersMock.mock.calls.map(
+      ([, module]: [unknown, Record<string, unknown>]) => module,
+    );
     expect(addedModules.some((m) => "listTasks" in m)).toBe(false);
     expect(addedModules.some((m) => "listPersonas" in m)).toBe(false);
     expect(addedModules.some((m) => "createEscalation" in m)).toBe(false);
@@ -91,7 +112,9 @@ describe("createCoreCollector", () => {
 describe("createOrchestrationCollector", () => {
   it("adds tasks, personas, components, and escalations handlers", () => {
     createOrchestrationCollector();
-    const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
+    const addedModules = addHandlersMock.mock.calls.map(
+      ([, module]: [unknown, Record<string, unknown>]) => module,
+    );
     expect(addedModules.some((m) => "listTasks" in m)).toBe(true);
     expect(addedModules.some((m) => "listPersonas" in m)).toBe(true);
     expect(addedModules.some((m) => "registerComponent" in m)).toBe(true);
@@ -100,7 +123,9 @@ describe("createOrchestrationCollector", () => {
 
   it("does NOT add core handler groups", () => {
     createOrchestrationCollector();
-    const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
+    const addedModules = addHandlersMock.mock.calls.map(
+      ([, module]: [unknown, Record<string, unknown>]) => module,
+    );
     expect(addedModules.some((m) => "listEnvironments" in m)).toBe(false);
     expect(addedModules.some((m) => "spawnAgent" in m)).toBe(false);
   });
@@ -114,7 +139,9 @@ describe("createOrchestrationCollector", () => {
 describe("createDefaultCollector (regression)", () => {
   it("adds all 16 handler groups including orchestration, components, plugins, github accounts, channels, domain events, and runtime catalog (knowledge and schedules moved to plugins)", () => {
     createDefaultCollector();
-    const addedModules = addHandlersMock.mock.calls.map(([, module]: [unknown, Record<string, unknown>]) => module);
+    const addedModules = addHandlersMock.mock.calls.map(
+      ([, module]: [unknown, Record<string, unknown>]) => module,
+    );
     expect(addedModules.some((m) => "listEnvironments" in m)).toBe(true);
     expect(addedModules.some((m) => "listTasks" in m)).toBe(true);
     expect(addedModules.some((m) => "listPersonas" in m)).toBe(true);

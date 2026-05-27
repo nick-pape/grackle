@@ -27,7 +27,9 @@ import {
  *   embedder being used (e.g., 384 for the default local embedder). Defaults
  *   to {@link EMBEDDING_DIMENSIONS} (1536).
  */
-export function buildSchemaStatements(dimensions: number = EMBEDDING_DIMENSIONS): Record<string, string> {
+export function buildSchemaStatements(
+  dimensions: number = EMBEDDING_DIMENSIONS,
+): Record<string, string> {
   return {
     /** Uniqueness constraint on node ID. */
     UNIQUE_NODE_ID: `CREATE CONSTRAINT knowledge_node_id_unique IF NOT EXISTS
@@ -145,9 +147,8 @@ async function runStatementWithRetry(
  *   {@link EMBEDDING_DIMENSIONS} (1536).
  */
 export async function initSchema(dimensions?: number): Promise<void> {
-  const statements = dimensions !== undefined
-    ? buildSchemaStatements(dimensions)
-    : SCHEMA_STATEMENTS;
+  const statements =
+    dimensions !== undefined ? buildSchemaStatements(dimensions) : SCHEMA_STATEMENTS;
   const session = getSession();
   try {
     for (const [name, cypher] of Object.entries(statements)) {

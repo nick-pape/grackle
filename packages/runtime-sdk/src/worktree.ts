@@ -12,7 +12,10 @@ const FETCH_TIMEOUT_MS: number = 30_000;
 /** Abstraction over git command execution used by worktree operations. */
 export interface GitExecutor {
   /** Run a git command and return stdout/stderr. */
-  exec(args: string[], options: { cwd: string; timeout?: number }): Promise<{ stdout: string; stderr: string }>;
+  exec(
+    args: string[],
+    options: { cwd: string; timeout?: number },
+  ): Promise<{ stdout: string; stderr: string }>;
 }
 
 /** Default implementation that shells out to the real git binary. */
@@ -82,7 +85,9 @@ async function fetchAndDetectDefault(
   // Detect the remote's default branch (e.g. refs/remotes/origin/main)
   let defaultBranch = "origin/main";
   try {
-    const { stdout } = await git.exec(["symbolic-ref", "refs/remotes/origin/HEAD"], { cwd: basePath });
+    const { stdout } = await git.exec(["symbolic-ref", "refs/remotes/origin/HEAD"], {
+      cwd: basePath,
+    });
     const trimmed = stdout.trim(); // e.g. "refs/remotes/origin/main"
     if (trimmed.startsWith("refs/remotes/")) {
       defaultBranch = trimmed.slice("refs/remotes/".length); // "origin/main"
@@ -111,7 +116,9 @@ export async function ensureWorktree(
   try {
     await git.exec(["status", "--porcelain"], { cwd: basePath });
   } catch (err) {
-    throw new Error(`Git repo not writable: ${basePath} (${err instanceof Error ? err.message : String(err)})`);
+    throw new Error(
+      `Git repo not writable: ${basePath} (${err instanceof Error ? err.message : String(err)})`,
+    );
   }
 
   const wtPath = worktreeDir(basePath, branch);
@@ -136,7 +143,9 @@ export async function ensureWorktree(
       await git.exec(["worktree", "add", wtPath, branch], { cwd: basePath });
       return { worktreePath: wtPath, branch, created: true, synced };
     } catch (err) {
-      throw new Error(`Failed to create worktree for branch ${branch}: ${err instanceof Error ? err.message : String(err)}`);
+      throw new Error(
+        `Failed to create worktree for branch ${branch}: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
   }
 }
@@ -153,4 +162,3 @@ export async function removeWorktree(
     // Already removed or doesn't exist — that's fine
   }
 }
-

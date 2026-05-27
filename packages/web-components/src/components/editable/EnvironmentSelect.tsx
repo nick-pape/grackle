@@ -30,8 +30,10 @@ export interface EnvironmentSelectProps {
 /** Map environment status to a CSS class for the status dot. */
 function envStatusClass(status: string): string {
   const s = status.toLowerCase();
-  if (s === "ready" || s === "running" || s === "available" || s === "connected") return styles.envDotGreen;
-  if (s === "provisioning" || s === "starting" || s === "pending" || s === "connecting") return styles.envDotYellow;
+  if (s === "ready" || s === "running" || s === "available" || s === "connected")
+    return styles.envDotGreen;
+  if (s === "provisioning" || s === "starting" || s === "pending" || s === "connecting")
+    return styles.envDotYellow;
   if (s === "error" || s === "failed" || s === "disconnected") return styles.envDotRed;
   return styles.envDotGray;
 }

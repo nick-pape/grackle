@@ -29,10 +29,12 @@ export function createCorePlugin(): GracklePlugin {
   return {
     name: "core",
 
-    grpcHandlers: () => [{
-      service: grackle.GrackleCore,
-      handlers: createCoreCollector().getHandlers(grackle.GrackleCore),
-    }],
+    grpcHandlers: () => [
+      {
+        service: grackle.GrackleCore,
+        handlers: createCoreCollector().getHandlers(grackle.GrackleCore),
+      },
+    ],
 
     reconciliationPhases: () => createCoreReconciliationPhases(),
 

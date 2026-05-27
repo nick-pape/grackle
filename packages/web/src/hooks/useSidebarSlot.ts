@@ -16,6 +16,8 @@ export function useSidebarSlot(content: ReactNode): void {
 
   useLayoutEffect(() => {
     setContent(content);
-    return () => { setContent(undefined); };
+    return () => {
+      setContent(undefined);
+    };
   }, [content, setContent]);
 }

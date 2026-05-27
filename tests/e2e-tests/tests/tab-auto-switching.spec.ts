@@ -1,9 +1,5 @@
 import { test, expect } from "./fixtures.js";
-import {
-  createTask,
-  navigateToTask,
-  runStubTaskToCompletion,
-} from "./helpers.js";
+import { createTask, navigateToTask, runStubTaskToCompletion } from "./helpers.js";
 
 test.describe("Tab Auto-Switching", { tag: ["@webui"] }, () => {
   test("stream tab becomes active when task starts", async ({ stubTask }) => {
@@ -50,7 +46,9 @@ test.describe("Tab Auto-Switching", { tag: ["@webui"] }, () => {
     await expect(overviewTab).toHaveAttribute("class", /active/, { timeout: 10_000 });
   });
 
-  test("clicking task in sidebar resets to overview tab for pending tasks", async ({ stubTask }) => {
+  test("clicking task in sidebar resets to overview tab for pending tasks", async ({
+    stubTask,
+  }) => {
     const { page, client, workspaceName } = stubTask;
 
     // Create two tasks — first one navigates to it

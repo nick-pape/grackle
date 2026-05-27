@@ -5,7 +5,10 @@ import { join } from "node:path";
 const ENTRY_POINT = join(import.meta.dirname, "..", "dist", "index.js");
 
 /** Run the PowerLine CLI with the given args and env, returning exit code and combined output. */
-function runPowerLine(args: string[], env?: Record<string, string>): { exitCode: number; output: string } {
+function runPowerLine(
+  args: string[],
+  env?: Record<string, string>,
+): { exitCode: number; output: string } {
   try {
     const stdout = execFileSync(process.execPath, [ENTRY_POINT, ...args], {
       env: { ...process.env, ...env, GRACKLE_POWERLINE_TOKEN: undefined },

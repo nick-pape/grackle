@@ -67,7 +67,9 @@ export function registerStreamCommands(program: Command): void {
       const table = new Table({ head: ["Seq", "Sender", "Timestamp", "Content"] });
       for (const m of res.messages) {
         const preview: string =
-          m.content.length > CONTENT_PREVIEW_LEN ? `${m.content.slice(0, CONTENT_PREVIEW_LEN)}...` : m.content;
+          m.content.length > CONTENT_PREVIEW_LEN
+            ? `${m.content.slice(0, CONTENT_PREVIEW_LEN)}...`
+            : m.content;
         table.push([m.seq, m.senderId.slice(0, 8), m.timestamp, preview]);
       }
       console.log(table.toString());

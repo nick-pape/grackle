@@ -98,9 +98,7 @@ describe.skipIf(!RUN)("knowledge-core Neo4j integration (raw Cypher primitives)"
     expect(props?.content).toBe("the deployment pipeline uses blue-green rollouts");
 
     const missing = await listNodesMissingEmbedding(200);
-    expect(
-      missing.some((n) => n.kind === "reference" && n.sourceId === sourceId),
-    ).toBe(true);
+    expect(missing.some((n) => n.kind === "reference" && n.sourceId === sourceId)).toBe(true);
   });
 
   it("upsertEdge is idempotent; removeOutgoingEdges clears exactly one edge per type", async () => {

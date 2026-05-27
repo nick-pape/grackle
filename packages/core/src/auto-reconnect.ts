@@ -192,7 +192,10 @@ async function connectAndRecover(environmentId: string): Promise<boolean> {
 
   const adapter = adapterManager.getAdapter(env.adapterType);
   if (!adapter) {
-    logger.warn({ environmentId, adapterType: env.adapterType }, "No adapter registered — skipping reconnect");
+    logger.warn(
+      { environmentId, adapterType: env.adapterType },
+      "No adapter registered — skipping reconnect",
+    );
     return false;
   }
 
@@ -211,7 +214,10 @@ async function connectAndRecover(environmentId: string): Promise<boolean> {
     powerlineToken,
     !!env.bootstrapped,
   )) {
-    logger.debug({ environmentId, stage: event.stage, message: event.message }, "Reconnect progress");
+    logger.debug(
+      { environmentId, stage: event.stage, message: event.message },
+      "Reconnect progress",
+    );
   }
 
   // Establish gRPC connection
@@ -225,7 +231,10 @@ async function connectAndRecover(environmentId: string): Promise<boolean> {
 
   // Auto-recover suspended sessions (fire-and-forget)
   recoverSuspendedSessions(environmentId, conn).catch((recoverErr) => {
-    logger.error({ environmentId, err: recoverErr }, "Session recovery failed after auto-reconnect");
+    logger.error(
+      { environmentId, err: recoverErr },
+      "Session recovery failed after auto-reconnect",
+    );
   });
 
   reconnectStates.delete(environmentId);
@@ -245,7 +254,6 @@ async function tryReconnect(environmentId: string): Promise<void> {
     if (connected) {
       logger.info({ environmentId }, "Auto-reconnect successful");
     }
-
   } catch (err) {
     // Clean up any partially-established connection to avoid leaking state
     adapterManager.removeConnection(environmentId);
@@ -262,7 +270,11 @@ async function tryReconnect(environmentId: string): Promise<void> {
       return;
     }
 
-    const state = reconnectStates.get(environmentId) ?? { attempts: 0, nextRetryAt: 0, lastProbeAt: 0 };
+    const state = reconnectStates.get(environmentId) ?? {
+      attempts: 0,
+      nextRetryAt: 0,
+      lastProbeAt: 0,
+    };
     state.attempts++;
 
     if (state.attempts >= RECONNECT_MAX_RETRIES) {
@@ -308,7 +320,6 @@ async function tryProbe(environmentId: string): Promise<void> {
     if (recovered) {
       logger.info({ environmentId }, "Sleeping environment recovered — now connected");
     }
-
   } catch (err) {
     // Clean up any partially-established connection
     adapterManager.removeConnection(environmentId);

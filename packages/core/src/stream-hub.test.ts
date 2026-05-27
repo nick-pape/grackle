@@ -6,7 +6,13 @@ vi.mock("./logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-import { publish, createStream, createGlobalStream, MAX_SUBSCRIBER_QUEUE_DEPTH, _resetForTesting } from "./stream-hub.js";
+import {
+  publish,
+  createStream,
+  createGlobalStream,
+  MAX_SUBSCRIBER_QUEUE_DEPTH,
+  _resetForTesting,
+} from "./stream-hub.js";
 import { logger } from "./logger.js";
 
 function makeEvent(sessionId: string, content: string): grackle.SessionEvent {

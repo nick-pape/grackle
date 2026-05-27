@@ -22,7 +22,11 @@ interface BottomStatusBarProps {
   environments: Environment[];
 }
 
-export function BottomStatusBar({ sessions, tasks, environments }: BottomStatusBarProps): JSX.Element {
+export function BottomStatusBar({
+  sessions,
+  tasks,
+  environments,
+}: BottomStatusBarProps): JSX.Element {
   const navigate = useAppNavigate();
   const location = useLocation();
 
@@ -31,9 +35,15 @@ export function BottomStatusBar({ sessions, tasks, environments }: BottomStatusB
   const taskMatch = useMatch("/tasks/:taskId");
   const taskStreamMatch = useMatch("/tasks/:taskId/stream");
   const taskEditMatch = useMatch("/tasks/:taskId/edit");
-  const wsTaskMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId/tasks/:taskId");
-  const wsTaskStreamMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/stream");
-  const wsTaskEditMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/edit");
+  const wsTaskMatch = useMatch(
+    "/environments/:environmentId/workspaces/:workspaceId/tasks/:taskId",
+  );
+  const wsTaskStreamMatch = useMatch(
+    "/environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/stream",
+  );
+  const wsTaskEditMatch = useMatch(
+    "/environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/edit",
+  );
   const newChatMatch = useMatch("/sessions/new");
   const workspaceMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId");
   const newTaskMatch = useMatch("/tasks/new");
@@ -43,11 +53,16 @@ export function BottomStatusBar({ sessions, tasks, environments }: BottomStatusB
 
   // Derive current page context
   const sessionId = sessionMatch?.params.sessionId;
-  const taskId = taskMatch?.params.taskId ?? taskStreamMatch?.params.taskId
-    ?? wsTaskMatch?.params.taskId ?? wsTaskStreamMatch?.params.taskId ?? wsTaskEditMatch?.params.taskId;
+  const taskId =
+    taskMatch?.params.taskId ??
+    taskStreamMatch?.params.taskId ??
+    wsTaskMatch?.params.taskId ??
+    wsTaskStreamMatch?.params.taskId ??
+    wsTaskEditMatch?.params.taskId;
   const wsMatch = wsTaskMatch ?? wsTaskStreamMatch ?? wsTaskEditMatch;
   const routeEnvironmentId = wsMatch?.params.environmentId ?? workspaceMatch?.params.environmentId;
-  const isEnvironments = location.pathname.startsWith("/environments") && !workspaceMatch && !wsMatch;
+  const isEnvironments =
+    location.pathname.startsWith("/environments") && !workspaceMatch && !wsMatch;
   const isChat = !!chatMatch;
   const isNewChat = !!newChatMatch;
   const isWorkspace = !!workspaceMatch && !wsTaskMatch && !wsTaskStreamMatch && !wsTaskEditMatch;
@@ -63,7 +78,9 @@ export function BottomStatusBar({ sessions, tasks, environments }: BottomStatusB
 
   // --- /chat route — ChatInput handles input on the page; only show hint if no local env ---
   if (isChat) {
-    const localEnv = environments.find((e) => e.adapterType === "local" && e.status === "connected");
+    const localEnv = environments.find(
+      (e) => e.adapterType === "local" && e.status === "connected",
+    );
     if (!localEnv) {
       return (
         <div className={styles.bar}>
@@ -78,9 +95,7 @@ export function BottomStatusBar({ sessions, tasks, environments }: BottomStatusB
   if (isWorkspace) {
     return (
       <div className={styles.bar}>
-        <span className={styles.hintText}>
-          Select a task or click + to create one
-        </span>
+        <span className={styles.hintText}>Select a task or click + to create one</span>
       </div>
     );
   }
@@ -106,18 +121,18 @@ export function BottomStatusBar({ sessions, tasks, environments }: BottomStatusB
     if (task.status === "not_started") {
       const blockerNames = isTaskBlocked
         ? task.dependsOn
-          .map((depId) => tasksById.get(depId))
-          .filter((t) => t && t.status !== "complete")
-          .map((t) => t!.title)
+            .map((depId) => tasksById.get(depId))
+            .filter((t) => t && t.status !== "complete")
+            .map((t) => t!.title)
         : [];
       return (
         <div className={styles.bar}>
           {isTaskBlocked ? (
-            <span className={styles.statusBlocked}>
-              Blocked by: {blockerNames.join(", ")}
-            </span>
+            <span className={styles.statusBlocked}>Blocked by: {blockerNames.join(", ")}</span>
           ) : (
-            <span className={styles.hintText}>Use the buttons above to start or manage this task</span>
+            <span className={styles.hintText}>
+              Use the buttons above to start or manage this task
+            </span>
           )}
         </div>
       );
@@ -126,9 +141,7 @@ export function BottomStatusBar({ sessions, tasks, environments }: BottomStatusB
     // Working / paused — check if session is active
     if (task.status === "working" || task.status === "paused") {
       const taskSessionId = task.latestSessionId || undefined;
-      const taskSession = taskSessionId
-        ? sessions.find((s) => s.id === taskSessionId)
-        : undefined;
+      const taskSession = taskSessionId ? sessions.find((s) => s.id === taskSessionId) : undefined;
       const isActive = taskSession && taskSession.status !== "stopped";
 
       // Active session — ChatInput on the page handles this; return empty
@@ -147,9 +160,7 @@ export function BottomStatusBar({ sessions, tasks, environments }: BottomStatusB
     if (task.status === "complete") {
       return (
         <div className={styles.bar}>
-          <span className={`${styles.statusText} ${styles.statusCompleted}`}>
-            Task completed
-          </span>
+          <span className={`${styles.statusText} ${styles.statusCompleted}`}>Task completed</span>
           <button
             onClick={() => navigate(newTaskUrl(task.workspaceId, undefined, routeEnvironmentId))}
             className={styles.btnPrimary}
@@ -164,9 +175,7 @@ export function BottomStatusBar({ sessions, tasks, environments }: BottomStatusB
     if (task.status === "failed") {
       return (
         <div className={styles.bar}>
-          <span className={`${styles.statusText} ${styles.statusFailed}`}>
-            Task failed
-          </span>
+          <span className={`${styles.statusText} ${styles.statusFailed}`}>Task failed</span>
         </div>
       );
     }
@@ -186,8 +195,13 @@ export function BottomStatusBar({ sessions, tasks, environments }: BottomStatusB
     if (isEnded) {
       return (
         <div className={styles.bar}>
-          <span className={`${styles.statusText} ${styles.hintText}`}>Session {session.endReason || session.status}</span>
-          <button onClick={() => navigate(newChatUrl(session.environmentId))} className={styles.btnPrimary}>
+          <span className={`${styles.statusText} ${styles.hintText}`}>
+            Session {session.endReason || session.status}
+          </span>
+          <button
+            onClick={() => navigate(newChatUrl(session.environmentId))}
+            className={styles.btnPrimary}
+          >
             + New Chat
           </button>
         </div>

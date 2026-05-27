@@ -29,7 +29,12 @@ export { registerTunnel, getTunnel, closeTunnel, closeAllTunnels } from "./tunne
 
 // ─── Connect ────────────────────────────────────────────────
 export type { PortProber, WaitForLocalPortOptions } from "./connect.js";
-export { createPowerLineClient, connectThroughTunnel, waitForLocalPort, TCP_PORT_PROBER } from "./connect.js";
+export {
+  createPowerLineClient,
+  connectThroughTunnel,
+  waitForLocalPort,
+  TCP_PORT_PROBER,
+} from "./connect.js";
 
 // ─── Bootstrap ──────────────────────────────────────────────
 export type { BootstrapOptions, StartRemotePowerLineOptions } from "./bootstrap.js";

@@ -1,9 +1,21 @@
 import { describe, it, expect } from "vitest";
 import type { Session, StreamData, StreamSubscriberData } from "../hooks/types.js";
-import { attributeStream, groupStreamsByTask, isInternalStream, streamKind } from "./streamCoordination.js";
+import {
+  attributeStream,
+  groupStreamsByTask,
+  isInternalStream,
+  streamKind,
+} from "./streamCoordination.js";
 
 function makeSub(sessionId: string): StreamSubscriberData {
-  return { subscriptionId: `sub-${sessionId}`, sessionId, fd: 3, permission: "rw", deliveryMode: "async", createdBySpawn: false };
+  return {
+    subscriptionId: `sub-${sessionId}`,
+    sessionId,
+    fd: 3,
+    permission: "rw",
+    deliveryMode: "async",
+    createdBySpawn: false,
+  };
 }
 
 function makeStream(over: Partial<StreamData> & { id: string; name: string }): StreamData {
@@ -17,7 +29,15 @@ function makeStream(over: Partial<StreamData> & { id: string; name: string }): S
 }
 
 function makeSession(id: string, taskId?: string): Session {
-  return { id, environmentId: "env-1", runtime: "claude-code", status: "running", prompt: "", startedAt: "2026-01-01T00:00:00Z", taskId };
+  return {
+    id,
+    environmentId: "env-1",
+    runtime: "claude-code",
+    status: "running",
+    prompt: "",
+    startedAt: "2026-01-01T00:00:00Z",
+    taskId,
+  };
 }
 
 describe("streamKind", () => {

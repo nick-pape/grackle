@@ -61,8 +61,12 @@ describe("parseWsMessage", () => {
   // Suppress console.warn output — parseWsMessage warns on invalid input and we
   // keep test output clean and focused by silencing this noise during tests.
   let warnSpy: ReturnType<typeof vi.spyOn>;
-  beforeEach(() => { warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {}); });
-  afterEach(() => { warnSpy.mockRestore(); });
+  beforeEach(() => {
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
 
   it("returns a GrackleEvent when id and timestamp are present", () => {
     const json = JSON.stringify({

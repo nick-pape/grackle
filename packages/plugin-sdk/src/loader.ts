@@ -60,9 +60,7 @@ export async function loadPlugins(
   for (const plugin of plugins) {
     for (const dep of plugin.dependencies ?? []) {
       if (!byName.has(dep)) {
-        throw new Error(
-          `Plugin "${plugin.name}" depends on "${dep}" which was not provided`,
-        );
+        throw new Error(`Plugin "${plugin.name}" depends on "${dep}" which was not provided`);
       }
     }
   }
@@ -126,7 +124,11 @@ export async function loadPlugins(
   } catch (err) {
     // Dispose any subscribers already collected, then shutdown initialized plugins
     for (const disposable of subscriberDisposables) {
-      try { disposable.dispose(); } catch { /* best-effort */ }
+      try {
+        disposable.dispose();
+      } catch {
+        /* best-effort */
+      }
     }
     for (let i = initialized.length - 1; i >= 0; i--) {
       const plugin = initialized[i];
@@ -163,7 +165,11 @@ export async function loadPlugins(
         try {
           await plugin.shutdown();
         } catch (err) {
-          ctx.logger.error({ err, plugin: plugin.name }, "Plugin '%s' shutdown failed", plugin.name);
+          ctx.logger.error(
+            { err, plugin: plugin.name },
+            "Plugin '%s' shutdown failed",
+            plugin.name,
+          );
         }
       }
     }
@@ -236,9 +242,7 @@ function topologicalSort(plugins: GracklePlugin[]): GracklePlugin[] {
     const remaining = plugins
       .filter((p) => !sorted.some((s) => s.name === p.name))
       .map((p) => p.name);
-    throw new Error(
-      `Dependency cycle detected among plugins: ${remaining.join(", ")}`,
-    );
+    throw new Error(`Dependency cycle detected among plugins: ${remaining.join(", ")}`);
   }
 
   return sorted;

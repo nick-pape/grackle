@@ -84,9 +84,7 @@ export const NonContentBearing: Story = {
   args: {
     isContentBearing: false,
     children: (
-      <div style={{ padding: "4px", color: "gray", fontSize: "12px" }}>
-        --- status: running ---
-      </div>
+      <div style={{ padding: "4px", color: "gray", fontSize: "12px" }}>--- status: running ---</div>
     ),
   },
   play: async ({ canvasElement }) => {

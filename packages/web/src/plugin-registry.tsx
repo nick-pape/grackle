@@ -12,7 +12,13 @@ import type { AppTab } from "@grackle-ai/web-components";
 import { TABS } from "@grackle-ai/web-components";
 
 /** Views contributed by the core plugin. */
-const CORE_VIEWS: ReadonlySet<string> = new Set(["dashboard", "chat", "environments", "coordination", "settings"]);
+const CORE_VIEWS: ReadonlySet<string> = new Set([
+  "dashboard",
+  "chat",
+  "environments",
+  "coordination",
+  "settings",
+]);
 
 /** Views contributed by the orchestration plugin. */
 const ORCHESTRATION_VIEWS: ReadonlySet<string> = new Set(["tasks"]);
@@ -40,7 +46,17 @@ export interface PluginClientEntry {
 export const PLUGIN_REGISTRY: Readonly<Record<string, PluginClientEntry | undefined>> = {
   core: {
     navItems: TABS.filter((t) => CORE_VIEWS.has(t.view)),
-    domainHookKeys: ["environments", "sessions", "workspaces", "tokens", "credentials", "codespaces", "dockerContainers", "streams", "plugins"],
+    domainHookKeys: [
+      "environments",
+      "sessions",
+      "workspaces",
+      "tokens",
+      "credentials",
+      "codespaces",
+      "dockerContainers",
+      "streams",
+      "plugins",
+    ],
   },
   orchestration: {
     navItems: TABS.filter((t) => ORCHESTRATION_VIEWS.has(t.view)),
