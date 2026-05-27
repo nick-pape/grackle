@@ -473,9 +473,33 @@ export class SessionStateManager {
     rows: SessionActionRow[],
   ): SessionState {
     let state = baseState;
+    // Mirrors the live pipeline's markInjectedInitialTurn dedup: when a "user_input"
+    // row is remapped to "turn_started", the runtime's subsequent real turn_started is
+    // skipped (without advancing eventIndex) to avoid a duplicate SessionTurnStarted.
+    let skipNextTurnStarted = false;
 
     for (const row of rows) {
-      const event = SessionStateManager.reconstructAgentEvent(row);
+      // "user_input" rows are stored in session_actions for the injected prompt, but
+      // the live pipeline processed them as synthetic "turn_started" events via
+      // makeAgentEvent(..., "turn_started", JSON.stringify({user_message: content})).
+      // Replicate that here to keep eventIndex and state consistent with the live run.
+      let eventRow = row;
+      if (row.type === "user_input") {
+        eventRow = {
+          ...row,
+          type: "turn_started",
+          content: JSON.stringify({ user_message: row.content }),
+        };
+        skipNextTurnStarted = true;
+      } else if (skipNextTurnStarted && row.type === "turn_started") {
+        // Skip the runtime's real turn_started (mirrors markInjectedInitialTurn dedup).
+        // Do NOT advance eventIndex — the live pipeline skipped this event before the
+        // eventIndex increment.
+        skipNextTurnStarted = false;
+        continue;
+      }
+
+      const event = SessionStateManager.reconstructAgentEvent(eventRow);
       // Use context.eventIndex so delta replay starts from the correct offset,
       // keeping synthetic turn/tool IDs consistent with the live processing run.
       const { actions } = mapAgentEvent(event, context.eventIndex++, context);
