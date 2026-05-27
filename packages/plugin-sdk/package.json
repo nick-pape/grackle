@@ -1,7 +1,7 @@
 {
   "name": "@grackle-ai/plugin-sdk",
   "version": "0.131.0",
-  "description": "Plugin contract and loader for Grackle — defines GracklePlugin, PluginContext, and loadPlugins()",
+  "description": "Plugin contract and loader for Grackle \u2014 defines GracklePlugin, PluginContext, and loadPlugins()",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -41,6 +41,7 @@
     "@grackle-ai/heft-rig": "workspace:*",
     "@rushstack/heft": "1.2.7",
     "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^3.1.1",
     "vitest": "^3.2.1"
   }
 }

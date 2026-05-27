@@ -3,6 +3,7 @@
 **/lib/
 **/build/
 **/temp/
+**/coverage/
 common/temp/
 **/*.tsbuildinfo
 

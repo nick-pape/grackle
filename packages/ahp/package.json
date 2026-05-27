@@ -1,7 +1,7 @@
 {
   "name": "@grackle-ai/ahp",
   "version": "0.131.0",
-  "description": "Agent Host Protocol (AHP) type definitions and reducers — vendored from Microsoft's open-source AHP repo, built via prebuild transform step.",
+  "description": "Agent Host Protocol (AHP) type definitions and reducers \u2014 vendored from Microsoft's open-source AHP repo, built via prebuild transform step.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -38,10 +38,11 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "agent-host-protocol": "git+https://github.com/microsoft/agent-host-protocol.git#7c6b727bde61bc2c490201fb0e47a86759172782",
     "@grackle-ai/heft-rig": "workspace:*",
     "@rushstack/heft": "1.2.7",
     "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^3.1.1",
+    "agent-host-protocol": "git+https://github.com/microsoft/agent-host-protocol.git#7c6b727bde61bc2c490201fb0e47a86759172782",
     "vitest": "^3.1.1"
   }
 }

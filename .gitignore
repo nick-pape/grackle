@@ -1,5 +1,6 @@
 node_modules/
 dist/
+coverage/
 common/temp/
 # Autoinstaller source (package.json, pnpm-lock.yaml, scripts) IS tracked;
 # only the provisioned node_modules is ignored (covered by node_modules/ above).

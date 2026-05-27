@@ -88,6 +88,14 @@ npx buf generate
 - **CLI uses `GRACKLE_URL`, not `GRACKLE_PORT`**: The CLI client reads `GRACKLE_URL` (e.g., `http://127.0.0.1:7500`) to find the gRPC server. Setting `GRACKLE_PORT` only affects the server's listen port, not the CLI's connection target.
 - **Playwright runs in parallel**: Each worker spawns its own isolated Grackle stack (4 ports + GRACKLE_HOME). Worker count defaults to `min(4, cpuCount/2)` locally, 2 in CI. Override via `E2E_WORKERS` env var.
 
+### Coverage
+
+`rush test` collects unit-test coverage via Vitest's v8 provider. Reports land in each package's `coverage/` directory (`lcov.info`, `coverage-summary.json`, and an `index.html` for browser viewing). CI uploads them as a single `coverage` artifact on the `build` job. The shared config lives at `rigs/heft-rig/vitest-base.mjs` — per-package `vitest.config.ts` files just call `createVitestConfig()` and add overrides if needed.
+
+- **No threshold enforcement yet** ([#1326](https://github.com/nick-pape/grackle/issues/1326)) — the floor is set in a follow-up once we have baseline data.
+- **Unit tests only** ([#1327](https://github.com/nick-pape/grackle/issues/1327)) — Storybook interaction tests and Playwright E2E aren't yet instrumented.
+- Excluded by default: `src/gen/**` (proto), `src/vendor/**` (vendored AHP), `src/mocks/**`, `*.stories.tsx`, `*.test.{ts,tsx}`.
+
 ### Storybook Component Tests
 
 Components in `packages/web/src/components/` have Storybook stories (`.stories.tsx` files) with interaction tests (`play` functions). These test UI behavior in a real browser without the server stack.
