@@ -436,7 +436,7 @@ describe("SessionStateManager", () => {
 
   // ─── Distinct turn IDs across turns ─────────────────────────────
 
-  it("two sequential turns without turnId get distinct IDs (turn-0, turn-1)", () => {
+  it("two sequential turns without turnId get distinct IDs (turn-0, turn-3)", () => {
     const manager = new SessionStateManager("session-001");
 
     // First turn — no turnId on event, should generate turn-0

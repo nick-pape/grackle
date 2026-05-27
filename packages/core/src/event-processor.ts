@@ -347,8 +347,13 @@ export function processEventStream(
           // AHP HR1b: flush snapshot on terminal status for clean state capture
           // Guard: serverSeq is undefined when recordSessionAction() silently fails.
           if (["completed", "killed", "failed", "terminated"].includes(event.content) && serverSeq) {
-            try { stateManager.snapshot(serverSeq); terminalSnapshotFlushed = true; } catch { /* non-critical */ }
-          }
+             try {
+               const result = stateManager.snapshot(serverSeq);
+               if (result.persisted) {
+                 terminalSnapshotFlushed = true;
+               }
+             } catch { /* non-critical */ }
+           }
 
           // Broadcast task_updated on status changes so frontend re-fetches computed status.
           // This covers both terminal events (completed/killed/failed) and non-terminal
