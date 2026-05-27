@@ -11,9 +11,19 @@ import type { PersonaData } from "@grackle-ai/web-components";
 import { SetupWizard } from "./SetupWizard.js";
 
 /** Seed persona required by SetupWizard (looks up id "claude-code"). */
-const SEED_PERSONA: PersonaData = makePersona({ id: "claude-code", name: "Software Engineer", runtime: "claude-code", model: "sonnet" });
+const SEED_PERSONA: PersonaData = makePersona({
+  id: "claude-code",
+  name: "Software Engineer",
+  runtime: "claude-code",
+  model: "sonnet",
+});
 /** System persona synced during onboarding. */
-const SYSTEM_PERSONA: PersonaData = makePersona({ id: SYSTEM_PERSONA_ID, name: "System", runtime: "claude-code", model: "sonnet" });
+const SYSTEM_PERSONA: PersonaData = makePersona({
+  id: SYSTEM_PERSONA_ID,
+  name: "System",
+  runtime: "claude-code",
+  model: "sonnet",
+});
 
 /**
  * Wrapper that reads the MockGrackleProvider context and re-provides it
@@ -51,11 +61,7 @@ function OnboardingOverride({ children }: { children: ReactNode }): JSX.Element 
     onboardingCompleted: false,
     personas: { ...ctx.personas, personas: personasList, updatePersona: wrappedUpdatePersona },
   };
-  return (
-    <GrackleContext.Provider value={overridden}>
-      {children}
-    </GrackleContext.Provider>
-  );
+  return <GrackleContext.Provider value={overridden}>{children}</GrackleContext.Provider>;
 }
 
 /** Decorator that provides mock data with onboarding incomplete + MemoryRouter at /setup. */
@@ -161,7 +167,9 @@ export const FinishWithCopilot: Story = {
 
     // In Storybook, Notification API may not be available, so the component
     // renders "Finish" directly. Find whichever action button is present.
-    const finishButton = notifStep.querySelector("[data-testid='setup-finish'], [data-testid='setup-notifications-skip']") as HTMLElement | null;
+    const finishButton = notifStep.querySelector(
+      "[data-testid='setup-finish'], [data-testid='setup-notifications-skip']",
+    ) as HTMLElement | null;
     if (finishButton) {
       await userEvent.click(finishButton);
     }

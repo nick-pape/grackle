@@ -56,7 +56,9 @@ describe("plugin-store", () => {
 
     it("sets updated_at to a non-empty string", () => {
       pluginStore.setPluginEnabled("orchestration", true);
-      const row = sqlite.prepare("SELECT updated_at FROM plugins WHERE name = 'orchestration'").get() as { updated_at: string };
+      const row = sqlite
+        .prepare("SELECT updated_at FROM plugins WHERE name = 'orchestration'")
+        .get() as { updated_at: string };
       expect(row.updated_at).toBeTruthy();
     });
   });

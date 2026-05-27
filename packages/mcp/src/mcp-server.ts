@@ -5,7 +5,12 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
-import { grackle, ROOT_TASK_ID, RENDER_TOOL_PREFIX, selectPromotedRenderTools } from "@grackle-ai/common";
+import {
+  grackle,
+  ROOT_TASK_ID,
+  RENDER_TOOL_PREFIX,
+  selectPromotedRenderTools,
+} from "@grackle-ai/common";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import {
@@ -34,16 +39,19 @@ import { WIDGET_RENDER_META_KEY, type WidgetRenderDescriptor } from "./widget-re
 import { tryServeWidgetAsset } from "./widget-asset-server.js";
 
 /** Read the package version from package.json at module load time. */
-const PACKAGE_VERSION: string = (JSON.parse(
-  readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "package.json"), "utf8"),
-) as { version: string }).version;
+const PACKAGE_VERSION: string = (
+  JSON.parse(
+    readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "package.json"), "utf8"),
+  ) as { version: string }
+).version;
 
 const logger: Logger = pino({
   name: "grackle-mcp",
   level: process.env.LOG_LEVEL || "info",
-  transport: process.env.NODE_ENV !== "production"
-    ? { target: "pino/file", options: { destination: 1 } }
-    : undefined,
+  transport:
+    process.env.NODE_ENV !== "production"
+      ? { target: "pino/file", options: { destination: 1 } }
+      : undefined,
 });
 
 /**
@@ -163,10 +171,14 @@ async function resolvePersonaTools(
  * validate props when there's no schema, so the advertised input must be equally
  * permissive or the tool would look uncallable.
  */
-export function dynamicRenderInputSchema(propsSchema: string): ReturnType<typeof z.toJSONSchema<z.ZodType>> {
+export function dynamicRenderInputSchema(
+  propsSchema: string,
+): ReturnType<typeof z.toJSONSchema<z.ZodType>> {
   if (propsSchema) {
     try {
-      return z.toJSONSchema(z.fromJSONSchema(JSON.parse(propsSchema) as Parameters<typeof z.fromJSONSchema>[0]));
+      return z.toJSONSchema(
+        z.fromJSONSchema(JSON.parse(propsSchema) as Parameters<typeof z.fromJSONSchema>[0]),
+      );
     } catch {
       // fall through to the permissive schema
     }
@@ -186,7 +198,8 @@ async function createMcpServerInstance(
   // In broker mode the captured widget's asset/CSP origin must be the trusted,
   // browser-facing MCP origin (config-derived), never the request Host. In
   // standalone mode the direct client reached us on `assetBaseUrl`, so use that.
-  const widgetAssetOrigin: string = publishWidgetEvent !== undefined ? brokerAssetOrigin : assetBaseUrl;
+  const widgetAssetOrigin: string =
+    publishWidgetEvent !== undefined ? brokerAssetOrigin : assetBaseUrl;
   const resourceRegistry = createResourceRegistry(widgetAssetOrigin);
 
   // Resolve persona-scoped tool set once at session creation (cached for session lifetime)
@@ -293,10 +306,15 @@ async function createMcpServerInstance(
     }
     let components: grackle.Component[];
     try {
-      const resp = await grpcClients.orchestration.listComponents({ workspaceId: authContext.workspaceId });
+      const resp = await grpcClients.orchestration.listComponents({
+        workspaceId: authContext.workspaceId,
+      });
       components = resp.components;
     } catch (err) {
-      logger.warn({ workspaceId: authContext.workspaceId, err }, "Failed to list components for dynamic render tools (omitting)");
+      logger.warn(
+        { workspaceId: authContext.workspaceId, err },
+        "Failed to list components for dynamic render tools (omitting)",
+      );
       return [];
     }
     const defs: typeof visibleToolDefs = [];
@@ -309,7 +327,12 @@ async function createMcpServerInstance(
         name: toolName,
         description: `Render the "${c.name}" component (v${c.version}) inline. Promoted from this workspace's component registry; its inputSchema is the component's prop schema.`,
         inputSchema: dynamicRenderInputSchema(c.propsSchema),
-        annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       });
     }
     return defs;
@@ -323,13 +346,18 @@ async function createMcpServerInstance(
    * by registry ownership, NOT the static/persona allowlist.
    */
   async function handleDynamicRender(name: string, rawArgs: unknown): Promise<CallToolResult> {
-    const unknownTool: CallToolResult = { content: [{ type: "text", text: `Unknown tool: ${name}` }], isError: true };
+    const unknownTool: CallToolResult = {
+      content: [{ type: "text", text: `Unknown tool: ${name}` }],
+      isError: true,
+    };
     if (authContext.type !== "scoped" || !authContext.workspaceId) {
       return unknownTool;
     }
     let components: grackle.Component[];
     try {
-      const resp = await grpcClients.orchestration.listComponents({ workspaceId: authContext.workspaceId });
+      const resp = await grpcClients.orchestration.listComponents({
+        workspaceId: authContext.workspaceId,
+      });
       components = resp.components;
     } catch (error) {
       return grpcErrorToToolResult(error) as CallToolResult;
@@ -343,7 +371,16 @@ async function createMcpServerInstance(
     // reject a non-object payload (array/string/null) before it reaches the render.
     if (typeof rawArgs !== "object" || rawArgs === null || Array.isArray(rawArgs)) {
       return {
-        content: [{ type: "text", text: JSON.stringify({ error: "arguments must be an object of props", code: "INVALID_ARGUMENT" }, null, 2) }],
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              { error: "arguments must be an object of props", code: "INVALID_ARGUMENT" },
+              null,
+              2,
+            ),
+          },
+        ],
         isError: true,
       };
     }
@@ -351,7 +388,19 @@ async function createMcpServerInstance(
     const validationErr = propsValidationError(match.propsSchema, props);
     if (validationErr) {
       return {
-        content: [{ type: "text", text: JSON.stringify({ error: `props do not match the component's propsSchema: ${validationErr}`, code: "INVALID_ARGUMENT" }, null, 2) }],
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                error: `props do not match the component's propsSchema: ${validationErr}`,
+                code: "INVALID_ARGUMENT",
+              },
+              null,
+              2,
+            ),
+          },
+        ],
         isError: true,
       };
     }
@@ -367,7 +416,10 @@ async function createMcpServerInstance(
       });
       dependencies = resolved.dependencies;
     } catch (err) {
-      logger.warn({ tool: name, componentId: match.id, err }, "Dependency resolution failed; rendering without composition");
+      logger.warn(
+        { tool: name, componentId: match.id, err },
+        "Dependency resolution failed; rendering without composition",
+      );
     }
     const result = buildComponentRenderResult(match, props, dependencies);
     captureWidgetRender(name, undefined, result, props);
@@ -383,8 +435,11 @@ async function createMcpServerInstance(
     //  (b) the connecting client advertises that extension — the spec-compliant
     //      path for the standalone MCP server, where the client renders the
     //      widget itself.
-    const uiOn = publishWidgetEvent !== undefined || hostSupportsUiApps(server.getClientCapabilities());
-    const staticTools = uiOn ? visibleToolDefs : visibleToolDefs.filter((t) => !uiToolNames.has(t.name));
+    const uiOn =
+      publishWidgetEvent !== undefined || hostSupportsUiApps(server.getClientCapabilities());
+    const staticTools = uiOn
+      ? visibleToolDefs
+      : visibleToolDefs.filter((t) => !uiToolNames.has(t.name));
     // Dynamic render_<name> tools render only via the in-process broker capture
     // (they have no readable ui:// resource), so list them ONLY when the broker is
     // active — never in standalone/ui-host mode where a host would resources/read
@@ -405,25 +460,28 @@ async function createMcpServerInstance(
     };
   });
 
-  server.setRequestHandler(ReadResourceRequestSchema, async (request): Promise<ReadResourceResult> => {
-    // Resources are session-global and unscoped in #1237 (a widget shell is not
-    // sensitive). Per-session / auth-scoped resources are #1239.
-    const resource = resourceRegistry.get(request.params.uri);
-    if (!resource) {
-      throw new McpError(ErrorCode.InvalidParams, `Unknown resource: ${request.params.uri}`);
-    }
-    const { text } = resource.read();
-    return {
-      contents: [
-        {
-          uri: resource.uri,
-          mimeType: resource.mimeType,
-          text,
-          ...(resource.meta ? { _meta: resource.meta } : {}),
-        },
-      ],
-    };
-  });
+  server.setRequestHandler(
+    ReadResourceRequestSchema,
+    async (request): Promise<ReadResourceResult> => {
+      // Resources are session-global and unscoped in #1237 (a widget shell is not
+      // sensitive). Per-session / auth-scoped resources are #1239.
+      const resource = resourceRegistry.get(request.params.uri);
+      if (!resource) {
+        throw new McpError(ErrorCode.InvalidParams, `Unknown resource: ${request.params.uri}`);
+      }
+      const { text } = resource.read();
+      return {
+        contents: [
+          {
+            uri: resource.uri,
+            mimeType: resource.mimeType,
+            text,
+            ...(resource.meta ? { _meta: resource.meta } : {}),
+          },
+        ],
+      };
+    },
+  );
 
   server.setRequestHandler(CallToolRequestSchema, async (request): Promise<CallToolResult> => {
     const { name, arguments: args } = request.params;
@@ -447,12 +505,21 @@ async function createMcpServerInstance(
       }
       const available = visibleToolNames;
       logger.warn(
-        { tool: name, authType: authContext.type, personaId: authContext.type === "scoped" ? authContext.personaId : undefined },
+        {
+          tool: name,
+          authType: authContext.type,
+          personaId: authContext.type === "scoped" ? authContext.personaId : undefined,
+        },
         "Tool call rejected by scope: %s",
         name,
       );
       return {
-        content: [{ type: "text", text: `Tool "${name}" is not permitted for this session. Available tools: ${available}` }],
+        content: [
+          {
+            type: "text",
+            text: `Tool "${name}" is not permitted for this session. Available tools: ${available}`,
+          },
+        ],
         isError: true,
       };
     }
@@ -476,7 +543,19 @@ async function createMcpServerInstance(
               : undefined;
           if (requestedWorkspaceId !== undefined && requestedWorkspaceId !== boundWorkspace) {
             return {
-              content: [{ type: "text", text: JSON.stringify({ error: "workspaceId does not match the authenticated workspace", code: "PERMISSION_DENIED" }, null, 2) }],
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(
+                    {
+                      error: "workspaceId does not match the authenticated workspace",
+                      code: "PERMISSION_DENIED",
+                    },
+                    null,
+                    2,
+                  ),
+                },
+              ],
               isError: true,
             };
           }
@@ -492,12 +571,26 @@ async function createMcpServerInstance(
       }
       // Enforce workspace scoping: verify task belongs to the caller's workspace.
       // Skip check when caller has no workspace (root task agents can see any task).
-      if (name === "task_show" && authContext.workspaceId && typeof rawArgs.taskId === "string" && rawArgs.taskId) {
+      if (
+        name === "task_show" &&
+        authContext.workspaceId &&
+        typeof rawArgs.taskId === "string" &&
+        rawArgs.taskId
+      ) {
         try {
           const task = await grpcClients.orchestration.getTask({ id: rawArgs.taskId as string });
           if ((task.workspaceId || undefined) !== authContext.workspaceId) {
             return {
-              content: [{ type: "text", text: JSON.stringify({ error: "Task belongs to a different workspace", code: "PERMISSION_DENIED" }, null, 2) }],
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(
+                    { error: "Task belongs to a different workspace", code: "PERMISSION_DENIED" },
+                    null,
+                    2,
+                  ),
+                },
+              ],
               isError: true,
             };
           }
@@ -510,9 +603,7 @@ async function createMcpServerInstance(
     // Validate inputs against Zod schema
     const parsed = tool.inputSchema.safeParse(rawArgs);
     if (!parsed.success) {
-      const issues = parsed.error.issues.map(
-        (i) => `${i.path.join(".")}: ${i.message}`,
-      );
+      const issues = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`);
       logger.warn({ tool: name, issues }, "Input validation failed: %s", name);
       return {
         content: [
@@ -531,11 +622,20 @@ async function createMcpServerInstance(
 
     try {
       logger.info({ tool: name, resolved: tool.name }, "Executing MCP tool: %s", name);
-      const result = await tool.handler(parsed.data as Record<string, unknown>, grpcClients, authContext);
+      const result = await tool.handler(
+        parsed.data as Record<string, unknown>,
+        grpcClients,
+        authContext,
+      );
       // MCP Apps: when a session agent invokes a widget tool, push a self-contained
       // widget render event into that session's stream (broker capture — read
       // in-process, does not depend on the agent SDK preserving _meta). Non-fatal.
-      captureWidgetRender(tool.name, tool.uiResourceUri, result, parsed.data as Record<string, unknown>);
+      captureWidgetRender(
+        tool.name,
+        tool.uiResourceUri,
+        result,
+        parsed.data as Record<string, unknown>,
+      );
       return result as CallToolResult;
     } catch (error: unknown) {
       logger.error({ tool: name, err: error }, "Tool execution failed: %s", name);
@@ -582,21 +682,30 @@ export function sessionIdsForWorkspace(
  * and Server instance, tracked by session ID.
  */
 export function createMcpServer(options: McpServerOptions): http.Server {
-  const { bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl, toolGroups, publishWidgetEvent, mcpOrigin, onComponentChangeSubscribe } = options;
+  const {
+    bindHost,
+    mcpPort,
+    grpcPort,
+    apiKey,
+    authorizationServerUrl,
+    toolGroups,
+    publishWidgetEvent,
+    mcpOrigin,
+    onComponentChangeSubscribe,
+  } = options;
   // Trusted, browser-facing MCP origin for broker-captured widgets (their
   // `<script src>` + CSP allowlist). Derived from server config — NOT the request
   // `Host` header, which a hostile MCP client could spoof to point widget assets
   // / CSP at an attacker origin. Override via GRACKLE_MCP_ORIGIN for
   // reverse-proxy / TLS deployments where loopback isn't browser-reachable.
-  const dialableMcpHost: string = bindHost === "0.0.0.0" || bindHost === "::" ? "127.0.0.1" : bindHost;
+  const dialableMcpHost: string =
+    bindHost === "0.0.0.0" || bindHost === "::" ? "127.0.0.1" : bindHost;
   const brokerAssetOrigin: string = mcpOrigin ?? `http://${dialableMcpHost}:${mcpPort}`;
   /** Parsed auth server URL, used for dynamic derivation of authorization_servers. */
-  const parsedAuthServerUrl = authorizationServerUrl
-    ? new URL(authorizationServerUrl)
-    : undefined;
+  const parsedAuthServerUrl = authorizationServerUrl ? new URL(authorizationServerUrl) : undefined;
   /** Effective port (explicit or protocol default). */
   const authServerPort = parsedAuthServerUrl
-    ? (parsedAuthServerUrl.port || (parsedAuthServerUrl.protocol === "https:" ? "443" : "80"))
+    ? parsedAuthServerUrl.port || (parsedAuthServerUrl.protocol === "https:" ? "443" : "80")
     : undefined;
   /** Scheme to use for derived auth URLs (preserves https when configured). */
   const authServerScheme = parsedAuthServerUrl?.protocol ?? "http:";
@@ -620,9 +729,11 @@ export function createMcpServer(options: McpServerOptions): http.Server {
     for (const sid of sessionIdsForWorkspace(authContexts, workspaceId)) {
       const srv = mcpServers.get(sid);
       if (srv) {
-        srv.sendToolListChanged().catch((err: unknown) =>
-          logger.warn({ sessionId: sid, err }, "sendToolListChanged failed (non-fatal)"),
-        );
+        srv
+          .sendToolListChanged()
+          .catch((err: unknown) =>
+            logger.warn({ sessionId: sid, err }, "sendToolListChanged failed (non-fatal)"),
+          );
       }
     }
   };
@@ -647,10 +758,12 @@ export function createMcpServer(options: McpServerOptions): http.Server {
       const hostPart = url.hostname.includes(":") ? `[${url.hostname}]` : url.hostname;
       const derivedAuthUrl = `${authServerScheme}//${hostPart}:${authServerPort}`;
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({
-        resource: requestResourceUrl,
-        authorization_servers: [derivedAuthUrl],
-      }));
+      res.end(
+        JSON.stringify({
+          resource: requestResourceUrl,
+          authorization_servers: [derivedAuthUrl],
+        }),
+      );
       return;
     }
 
@@ -684,7 +797,18 @@ export function createMcpServer(options: McpServerOptions): http.Server {
     const method = req.method?.toUpperCase();
 
     if (method === "POST") {
-      await handlePost(req, res, grpcClients, transports, authContexts, mcpServers, authContext, publishWidgetEvent, brokerAssetOrigin, toolGroups);
+      await handlePost(
+        req,
+        res,
+        grpcClients,
+        transports,
+        authContexts,
+        mcpServers,
+        authContext,
+        publishWidgetEvent,
+        brokerAssetOrigin,
+        toolGroups,
+      );
     } else if (method === "GET") {
       await handleGet(req, res, transports);
     } else if (method === "DELETE") {
@@ -744,7 +868,9 @@ export function resolveAssetBaseUrl(
   forwardedProto: string | string[] | undefined,
   encrypted: boolean,
 ): string {
-  const rawProto: string | undefined = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+  const rawProto: string | undefined = Array.isArray(forwardedProto)
+    ? forwardedProto[0]
+    : forwardedProto;
   const proto: string | undefined = rawProto?.split(",")[0]?.trim();
   const scheme: string = proto && proto.length > 0 ? proto : encrypted ? "https" : "http";
   try {
@@ -792,9 +918,21 @@ async function handlePost(
       // Asset base URL is the origin the client actually reached us on, so the
       // widget HTML references assets correctly. Normalized via URL parsing to
       // avoid attribute injection from a hostile Host header.
-      const encrypted = "encrypted" in req.socket && (req.socket as { encrypted?: boolean }).encrypted === true;
-      const assetBaseUrl = resolveAssetBaseUrl(req.headers.host, req.headers["x-forwarded-proto"], encrypted);
-      const mcpServer = await createMcpServerInstance(grpcClients, authContext, assetBaseUrl, brokerAssetOrigin, publishWidgetEvent, toolGroups);
+      const encrypted =
+        "encrypted" in req.socket && (req.socket as { encrypted?: boolean }).encrypted === true;
+      const assetBaseUrl = resolveAssetBaseUrl(
+        req.headers.host,
+        req.headers["x-forwarded-proto"],
+        encrypted,
+      );
+      const mcpServer = await createMcpServerInstance(
+        grpcClients,
+        authContext,
+        assetBaseUrl,
+        brokerAssetOrigin,
+        publishWidgetEvent,
+        toolGroups,
+      );
 
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
@@ -823,20 +961,24 @@ async function handlePost(
 
     // Invalid request — no session or not an init request
     res.writeHead(400, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({
-      jsonrpc: "2.0",
-      error: { code: -32000, message: "Bad Request: No valid session ID provided" },
-      id: null,
-    }));
+    res.end(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        error: { code: -32000, message: "Bad Request: No valid session ID provided" },
+        id: null,
+      }),
+    );
   } catch (error) {
     logger.error({ err: error }, "Error handling MCP POST request");
     if (!res.headersSent) {
       res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({
-        jsonrpc: "2.0",
-        error: { code: -32603, message: "Internal server error" },
-        id: null,
-      }));
+      res.end(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          error: { code: -32603, message: "Internal server error" },
+          id: null,
+        }),
+      );
     }
   }
 }

@@ -15,10 +15,18 @@ const {
   mockOpenNeo4j: vi.fn().mockResolvedValue(undefined),
   mockInitSchema: vi.fn().mockResolvedValue(undefined),
   mockCloseNeo4j: vi.fn().mockResolvedValue(undefined),
-  mockCreateLocalEmbedder: vi.fn().mockReturnValue({ dimensions: 384, embed: vi.fn(), embedBatch: vi.fn() }),
+  mockCreateLocalEmbedder: vi
+    .fn()
+    .mockReturnValue({ dimensions: 384, embed: vi.fn(), embedBatch: vi.fn() }),
   mockListRecentNodes: vi.fn().mockResolvedValue({ nodes: [{ id: "seed" }], edges: [] }),
   mockRebuild: vi.fn().mockResolvedValue({
-    workspaces: 0, environments: 0, personas: 0, tasks: 0, sessions: 0, chunks: 0, pruned: 0,
+    workspaces: 0,
+    environments: 0,
+    personas: 0,
+    tasks: 0,
+    sessions: 0,
+    chunks: 0,
+    pruned: 0,
   }),
 }));
 
@@ -46,10 +54,20 @@ function makeCtx(): PluginContext {
   return {
     subscribe: vi.fn().mockReturnValue(vi.fn()),
     emit: vi.fn(),
-    logger: { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() } as unknown as PluginContext["logger"],
+    logger: {
+      info: vi.fn(),
+      debug: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    } as unknown as PluginContext["logger"],
     config: {
-      grpcPort: 7434, webPort: 3000, mcpPort: 7435, powerlinePort: 7433,
-      host: "127.0.0.1", grackleHome: "/tmp/.grackle", apiKey: "test-key",
+      grpcPort: 7434,
+      webPort: 3000,
+      mcpPort: 7435,
+      powerlinePort: 7433,
+      host: "127.0.0.1",
+      grackleHome: "/tmp/.grackle",
+      apiKey: "test-key",
     },
   };
 }

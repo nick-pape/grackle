@@ -1,6 +1,12 @@
 import { EventEmitter } from "node:events";
 import { randomUUID } from "node:crypto";
-import type { AgentRuntime, AgentSession, AgentEvent, SpawnOptions, ResumeOptions } from "@grackle-ai/runtime-sdk";
+import type {
+  AgentRuntime,
+  AgentSession,
+  AgentEvent,
+  SpawnOptions,
+  ResumeOptions,
+} from "@grackle-ai/runtime-sdk";
 import { SESSION_STATUS } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 import {
@@ -101,7 +107,10 @@ export class StubSession implements AgentSession {
     yield { type: "turn_started", timestamp: ts(), content: this.prompt, turnId: initialTurnId };
     yield { type: "text", timestamp: ts(), content: `Echo: ${this.prompt}`, turnId: initialTurnId };
 
-    if (this.killed as boolean) { yield { type: "status", timestamp: ts(), content: this.killReason }; return; }
+    if (this.killed as boolean) {
+      yield { type: "status", timestamp: ts(), content: this.killReason };
+      return;
+    }
 
     if (this.mcpBroker && this.workspaceId) {
       // Real MCP tool call when both broker and workspace context are available
@@ -128,17 +137,26 @@ export class StubSession implements AgentSession {
       };
     }
 
-    if (this.killed as boolean) { yield { type: "status", timestamp: ts(), content: this.killReason }; return; }
+    if (this.killed as boolean) {
+      yield { type: "status", timestamp: ts(), content: this.killReason };
+      return;
+    }
 
     // Initial turn complete; wait for user input.
     yield { type: "turn_complete", timestamp: ts(), content: "", turnId: initialTurnId };
     this.status = SESSION_STATUS.IDLE;
     yield { type: "status", timestamp: ts(), content: "waiting_input" };
 
-    if (this.killed as boolean) { yield { type: "status", timestamp: ts(), content: this.killReason }; return; }
+    if (this.killed as boolean) {
+      yield { type: "status", timestamp: ts(), content: this.killReason };
+      return;
+    }
 
     const input = await this.waitForInput();
-    if (this.killed) { yield { type: "status", timestamp: ts(), content: this.killReason }; return; }
+    if (this.killed) {
+      yield { type: "status", timestamp: ts(), content: this.killReason };
+      return;
+    }
 
     // Simulate failure when input is "fail"
     if (input === "fail") {
@@ -221,7 +239,9 @@ export class StubSession implements AgentSession {
       } else if (isMcpCallStep(step)) {
         if (!this.mcpBroker) {
           const toolUseId = `toolu_stub_mcp_${++mcpToolUseCounter}`;
-          logger.warn(`${this.runtimeName}: mcp_call step "${step.mcp_call}" but no MCP broker configured`);
+          logger.warn(
+            `${this.runtimeName}: mcp_call step "${step.mcp_call}" but no MCP broker configured`,
+          );
           yield {
             type: "tool_use",
             timestamp: ts(),
@@ -232,7 +252,9 @@ export class StubSession implements AgentSession {
           yield {
             type: "tool_result",
             timestamp: ts(),
-            content: JSON.stringify({ error: `Cannot execute MCP tool "${step.mcp_call}": session not spawned with MCP broker` }),
+            content: JSON.stringify({
+              error: `Cannot execute MCP tool "${step.mcp_call}": session not spawned with MCP broker`,
+            }),
             raw: { type: "tool_result", tool_use_id: toolUseId, is_error: true },
             toolCallId: toolUseId,
           };
@@ -270,26 +292,31 @@ export class StubSession implements AgentSession {
     toolArgs: Record<string, unknown>,
   ): Promise<AgentEvent[]> {
     const toolUseId = `toolu_stub_mcp_${++mcpToolUseCounter}`;
-    let mcpClient: InstanceType<typeof import("@modelcontextprotocol/sdk/client/index.js").Client> | undefined;
+    let mcpClient:
+      | InstanceType<typeof import("@modelcontextprotocol/sdk/client/index.js").Client>
+      | undefined;
     const events: AgentEvent[] = [];
 
     try {
       const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
-      const { StreamableHTTPClientTransport } = await import("@modelcontextprotocol/sdk/client/streamableHttp.js");
-
-      const transport = new StreamableHTTPClientTransport(
-        new URL(this.mcpBroker!.url),
-        {
-          requestInit: {
-            headers: {
-              Authorization: `Bearer ${this.mcpBroker!.token}`,
-            },
-          },
-        },
+      const { StreamableHTTPClientTransport } = await import(
+        "@modelcontextprotocol/sdk/client/streamableHttp.js"
       );
 
+      const transport = new StreamableHTTPClientTransport(new URL(this.mcpBroker!.url), {
+        requestInit: {
+          headers: {
+            Authorization: `Bearer ${this.mcpBroker!.token}`,
+          },
+        },
+      });
+
       mcpClient = new Client({ name: "stub-mcp-runtime", version: "1.0.0" });
-      await withTimeout(mcpClient.connect(transport), MCP_CONNECT_TIMEOUT_MS, "MCP connect timeout");
+      await withTimeout(
+        mcpClient.connect(transport),
+        MCP_CONNECT_TIMEOUT_MS,
+        "MCP connect timeout",
+      );
 
       events.push({
         type: "tool_use",
@@ -313,7 +340,10 @@ export class StubSession implements AgentSession {
         toolCallId: toolUseId,
       });
     } catch (err) {
-      logger.warn({ err, runtimeName: this.runtimeName }, `${this.runtimeName}: MCP tool call failed`);
+      logger.warn(
+        { err, runtimeName: this.runtimeName },
+        `${this.runtimeName}: MCP tool call failed`,
+      );
 
       if (events.length === 0) {
         events.push({
@@ -357,20 +387,30 @@ export class StubSession implements AgentSession {
   ): Promise<AgentEvent[]> {
     const toolUseId = `toolu_stub_mcp_${++mcpToolUseCounter}`;
     const events: AgentEvent[] = [];
-    let mcpClient: InstanceType<typeof import("@modelcontextprotocol/sdk/client/index.js").Client> | undefined;
+    let mcpClient:
+      | InstanceType<typeof import("@modelcontextprotocol/sdk/client/index.js").Client>
+      | undefined;
 
     events.push({
       type: "tool_use",
       timestamp: ts(),
-      content: JSON.stringify({ tool: "await_tool_change", expect: spec.expect, trigger: spec.trigger?.tool }),
+      content: JSON.stringify({
+        tool: "await_tool_change",
+        expect: spec.expect,
+        trigger: spec.trigger?.tool,
+      }),
       raw: { type: "tool_use", id: toolUseId, name: "await_tool_change", input: spec },
       toolCallId: toolUseId,
     });
 
     try {
       const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
-      const { StreamableHTTPClientTransport } = await import("@modelcontextprotocol/sdk/client/streamableHttp.js");
-      const { ToolListChangedNotificationSchema } = await import("@modelcontextprotocol/sdk/types.js");
+      const { StreamableHTTPClientTransport } = await import(
+        "@modelcontextprotocol/sdk/client/streamableHttp.js"
+      );
+      const { ToolListChangedNotificationSchema } = await import(
+        "@modelcontextprotocol/sdk/types.js"
+      );
 
       const transport = new StreamableHTTPClientTransport(new URL(this.mcpBroker!.url), {
         requestInit: { headers: { Authorization: `Bearer ${this.mcpBroker!.token}` } },
@@ -379,8 +419,12 @@ export class StubSession implements AgentSession {
 
       // Re-list tools when the server pushes tools/list_changed — the conformant behavior.
       let refreshedTools: string[] | undefined;
-      let resolveChanged: () => void = () => { /* set below */ };
-      const changed = new Promise<void>((resolve) => { resolveChanged = resolve; });
+      let resolveChanged: () => void = () => {
+        /* set below */
+      };
+      const changed = new Promise<void>((resolve) => {
+        resolveChanged = resolve;
+      });
       mcpClient.setNotificationHandler(ToolListChangedNotificationSchema, async () => {
         try {
           const listed = await mcpClient!.listTools();
@@ -390,7 +434,11 @@ export class StubSession implements AgentSession {
         }
       });
 
-      await withTimeout(mcpClient.connect(transport), MCP_CONNECT_TIMEOUT_MS, "MCP connect timeout");
+      await withTimeout(
+        mcpClient.connect(transport),
+        MCP_CONNECT_TIMEOUT_MS,
+        "MCP connect timeout",
+      );
       if (spec.trigger) {
         await withTimeout(
           mcpClient.callTool({ name: spec.trigger.tool, arguments: spec.trigger.args ?? {} }),
@@ -398,13 +446,22 @@ export class StubSession implements AgentSession {
           "MCP trigger call timeout",
         );
       }
-      await withTimeout(changed, spec.timeout_ms ?? MCP_CONNECT_TIMEOUT_MS, "tools/list_changed not received");
+      await withTimeout(
+        changed,
+        spec.timeout_ms ?? MCP_CONNECT_TIMEOUT_MS,
+        "tools/list_changed not received",
+      );
 
       const present = refreshedTools?.includes(spec.expect) ?? false;
       events.push({
         type: "tool_result",
         timestamp: ts(),
-        content: JSON.stringify({ toolListChangedReceived: true, expect: spec.expect, present, tools: refreshedTools ?? [] }),
+        content: JSON.stringify({
+          toolListChangedReceived: true,
+          expect: spec.expect,
+          present,
+          tools: refreshedTools ?? [],
+        }),
         raw: { type: "tool_result", tool_use_id: toolUseId, is_error: !present },
         toolCallId: toolUseId,
       });
@@ -418,11 +475,17 @@ export class StubSession implements AgentSession {
           : `tools/list_changed NOT confirmed for ${spec.expect}`,
       });
     } catch (err) {
-      logger.warn({ err, runtimeName: this.runtimeName }, `${this.runtimeName}: await_tool_change failed`);
+      logger.warn(
+        { err, runtimeName: this.runtimeName },
+        `${this.runtimeName}: await_tool_change failed`,
+      );
       events.push({
         type: "tool_result",
         timestamp: ts(),
-        content: JSON.stringify({ toolListChangedReceived: false, error: err instanceof Error ? err.message : String(err) }),
+        content: JSON.stringify({
+          toolListChangedReceived: false,
+          error: err instanceof Error ? err.message : String(err),
+        }),
         raw: { type: "tool_result", tool_use_id: toolUseId, is_error: true },
         toolCallId: toolUseId,
       });

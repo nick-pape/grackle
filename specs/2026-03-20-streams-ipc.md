@@ -44,13 +44,14 @@ Subscriptions can be **passed between sessions** — a child can pass a stream r
 
 ### 2.3 Permissions
 
-| Permission | Can publish? | Can receive? | Use case |
-|---|---|---|---|
-| `rw` | yes | yes | Full participant in a stream |
-| `r` | no | yes | Observer / monitor (watch a child's stream without injecting messages) |
-| `w` | yes | no | Log sink / event emitter (publish findings, never read back) |
+| Permission | Can publish? | Can receive? | Use case                                                               |
+| ---------- | ------------ | ------------ | ---------------------------------------------------------------------- |
+| `rw`       | yes          | yes          | Full participant in a stream                                           |
+| `r`        | no           | yes          | Observer / monitor (watch a child's stream without injecting messages) |
+| `w`        | yes          | no           | Log sink / event emitter (publish findings, never read back)           |
 
 Permission rules:
+
 - The **creator** of a stream gets `rw` by default.
 - When **passing a reference** to another session, you can downgrade: give `r` from your `rw`. You cannot upgrade: if you have `r`, you cannot grant `rw`.
 - When a parent **attaches a child** to a stream, the parent specifies the permission level (up to the parent's own level).
@@ -74,11 +75,11 @@ Child A creates stream "team-a-internal" (owns rw)
 
 Delivery mode is orthogonal to permission. It determines how a subscriber **receives** messages (only relevant for `r` and `rw` subscriptions):
 
-| Mode | Behavior | Use Case |
-|---|---|---|
-| **sync** | Blocking tool call. Agent is suspended until a message arrives on the stream. Returns the message directly. | Sequential orchestration: "spawn subtask, wait for result, continue" |
-| **async** | Non-blocking. Messages are injected into the agent's conversation between turns (between tool calls). Agent opted into notifications. | Parallel orchestration: "spawn 3 children, keep working, handle results as they come" |
-| **detach** | No notifications. Messages buffer silently. Session auto-hibernates on idle. No fd management required. | Fire-and-forget: "spawn this, I don't care about the result" |
+| Mode       | Behavior                                                                                                                              | Use Case                                                                              |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **sync**   | Blocking tool call. Agent is suspended until a message arrives on the stream. Returns the message directly.                           | Sequential orchestration: "spawn subtask, wait for result, continue"                  |
+| **async**  | Non-blocking. Messages are injected into the agent's conversation between turns (between tool calls). Agent opted into notifications. | Parallel orchestration: "spawn 3 children, keep working, handle results as they come" |
+| **detach** | No notifications. Messages buffer silently. Session auto-hibernates on idle. No fd management required.                               | Fire-and-forget: "spawn this, I don't care about the result"                          |
 
 A `w`-only subscription has no delivery mode (it never receives).
 
@@ -86,21 +87,21 @@ A `w`-only subscription has no delivery mode (it never receives).
 
 ## 3. How Everything Maps
 
-| Existing Concept | Stream Equivalent |
-|---|---|
-| `sendInput` (human → agent) | Publish to the session's stream; child receives via injection |
-| SIGCHLD (child → parent) | Child publishes result to parent's stream; parent subscribed sync or async |
-| Parent → child message | Publish to child's stream via `write(fd)`; always injected on child side |
-| Chatroom | Global stream with N subscribers (created via `createStream` + `attach`) |
-| Pipe (parent↔child) | Auto-created stream at spawn time, both sides subscribed |
-| `wait(fd)` | Sync delivery mode (blocking subscribe) |
-| `watch(fd)` | Async delivery mode (injected subscribe) |
-| Fire-and-forget subtask | Detach delivery mode |
-| Monitoring / tailing | `r`-only subscription (observe without ability to publish) |
-| Sibling coordination | Parent creates stream, attaches multiple children |
-| Upward reference passing | Child calls `passStream(fd, { permission: "r" })` to parent |
-| Hibernation | Last subscription to a session's stream is closed |
-| Reanimate | New subscription opened to a hibernating session |
+| Existing Concept            | Stream Equivalent                                                          |
+| --------------------------- | -------------------------------------------------------------------------- |
+| `sendInput` (human → agent) | Publish to the session's stream; child receives via injection              |
+| SIGCHLD (child → parent)    | Child publishes result to parent's stream; parent subscribed sync or async |
+| Parent → child message      | Publish to child's stream via `write(fd)`; always injected on child side   |
+| Chatroom                    | Global stream with N subscribers (created via `createStream` + `attach`)   |
+| Pipe (parent↔child)        | Auto-created stream at spawn time, both sides subscribed                   |
+| `wait(fd)`                  | Sync delivery mode (blocking subscribe)                                    |
+| `watch(fd)`                 | Async delivery mode (injected subscribe)                                   |
+| Fire-and-forget subtask     | Detach delivery mode                                                       |
+| Monitoring / tailing        | `r`-only subscription (observe without ability to publish)                 |
+| Sibling coordination        | Parent creates stream, attaches multiple children                          |
+| Upward reference passing    | Child calls `passStream(fd, { permission: "r" })` to parent                |
+| Hibernation                 | Last subscription to a session's stream is closed                          |
+| Reanimate                   | New subscription opened to a hibernating session                           |
 
 ---
 
@@ -131,11 +132,11 @@ When `pipe` is `"detach"`:
 
 Messages flow both directions on the stream, but delivery is asymmetric:
 
-| Direction | Delivery Mechanism | Why |
-|---|---|---|
-| Parent → child | Always injected (between child's turns) | Child didn't open the fd. It's inherited. |
+| Direction      | Delivery Mechanism                             | Why                                                    |
+| -------------- | ---------------------------------------------- | ------------------------------------------------------ |
+| Parent → child | Always injected (between child's turns)        | Child didn't open the fd. It's inherited.              |
 | Child → parent | Depends on parent's delivery mode (sync/async) | Parent opened the fd via spawn. Parent chose the mode. |
-| Human → agent | Always injected | Same as parent → child. The UI is another parent. |
+| Human → agent  | Always injected                                | Same as parent → child. The UI is another parent.      |
 
 The child never calls `read()`. Incoming messages just appear in its conversation context. This is how `sendInput` works today — the change is that it now works **regardless of session status** (running, idle, doesn't matter). All four runtimes (Claude, Codex, Copilot, ACP) support mid-turn message delivery.
 
@@ -145,12 +146,12 @@ The child never calls `read()`. Incoming messages just appear in its conversatio
 
 Session status is **derived from stream/subscription state**, not explicitly managed:
 
-| State | Condition | Process? | Subscriptions? | JSONL? |
-|---|---|---|---|---|
-| **RUNNING** | Has subscribers + actively generating | Alive | Open | Growing |
-| **IDLE** | Has subscribers + not generating | Alive | Open | Stable |
-| **HIBERNATING** | No subscribers + JSONL exists | Dead | None | Persisted |
-| **COMPLETE** | Resources reclaimed (TTL, worktree cleanup, JSONL pruned) | Dead | None | Gone |
+| State           | Condition                                                 | Process? | Subscriptions? | JSONL?    |
+| --------------- | --------------------------------------------------------- | -------- | -------------- | --------- |
+| **RUNNING**     | Has subscribers + actively generating                     | Alive    | Open           | Growing   |
+| **IDLE**        | Has subscribers + not generating                          | Alive    | Open           | Stable    |
+| **HIBERNATING** | No subscribers + JSONL exists                             | Dead     | None           | Persisted |
+| **COMPLETE**    | Resources reclaimed (TTL, worktree cleanup, JSONL pruned) | Dead     | None           | Gone      |
 
 Key transitions:
 
@@ -203,23 +204,24 @@ For detached children: no fd exists, so the stop hook doesn't track them. They a
 
 ### 7.1 Core Tools (Available to Agents)
 
-| Tool | Signature | Description |
-|---|---|---|
+| Tool    | Signature                                              | Description                                                                               |
+| ------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
 | `spawn` | `spawn(task, { pipe: "sync" \| "async" \| "detach" })` | Create child session. Pipe mode determines IPC. Returns fd (sync/async) or void (detach). |
-| `write` | `write(fd, message)` | Send message to the stream behind this fd. Requires `w` or `rw` permission. |
-| `close` | `close(fd)` | Drop subscription. Fails if undelivered messages. Last fd → child hibernates. |
+| `write` | `write(fd, message)`                                   | Send message to the stream behind this fd. Requires `w` or `rw` permission.               |
+| `close` | `close(fd)`                                            | Drop subscription. Fails if undelivered messages. Last fd → child hibernates.             |
 
 Three tools for the basic parent↔child model.
 
 ### 7.2 Stream Management Tools
 
-| Tool | Signature | Description |
-|---|---|---|
-| `createStream` | `createStream(name)` | Create a global named stream. Creator gets `rw`. |
-| `attach` | `attach(sessionId, streamName, { permission, deliveryMode })` | Give another session a subscription to an existing stream. Permission ≤ caller's own. |
-| `passStream` | `passStream(fd, { permission })` | Pass a stream reference to the session's parent (writes a stream-ref message to the parent's pipe). Permission ≤ caller's own. |
+| Tool           | Signature                                                     | Description                                                                                                                    |
+| -------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `createStream` | `createStream(name)`                                          | Create a global named stream. Creator gets `rw`.                                                                               |
+| `attach`       | `attach(sessionId, streamName, { permission, deliveryMode })` | Give another session a subscription to an existing stream. Permission ≤ caller's own.                                          |
+| `passStream`   | `passStream(fd, { permission })`                              | Pass a stream reference to the session's parent (writes a stream-ref message to the parent's pipe). Permission ≤ caller's own. |
 
 These enable:
+
 - **Chatrooms**: `createStream("design-review")` + `attach` N children
 - **Upward references**: child calls `passStream(fd, { permission: "r" })` to let parent observe
 - **Sibling communication**: parent creates stream, attaches two children to it
@@ -295,12 +297,12 @@ Once that queuing/serialization layer is in place, all three IDLE gates (gRPC, W
 
 All four runtimes already support persistent sessions. The mechanism varies but the abstraction is the same:
 
-| Runtime | Keep-Alive Mechanism | Mid-Turn Input |
-|---|---|---|
-| Claude Agent SDK | `AsyncIterable<SDKUserMessage>` as prompt (generator stays open) | Yes — yield into generator |
-| Codex SDK | `thread.runStreamed()` repeated calls (thread persists) | Yes — call `run()` anytime |
-| Copilot SDK | `session.send()` repeated calls (session persists) | Yes — `send()` works anytime |
-| ACP | `connection.prompt()` repeated calls (subprocess persists) | Yes — `prompt()` is fire-and-forget |
+| Runtime          | Keep-Alive Mechanism                                             | Mid-Turn Input                      |
+| ---------------- | ---------------------------------------------------------------- | ----------------------------------- |
+| Claude Agent SDK | `AsyncIterable<SDKUserMessage>` as prompt (generator stays open) | Yes — yield into generator          |
+| Codex SDK        | `thread.runStreamed()` repeated calls (thread persists)          | Yes — call `run()` anytime          |
+| Copilot SDK      | `session.send()` repeated calls (session persists)               | Yes — `send()` works anytime        |
+| ACP              | `connection.prompt()` repeated calls (subprocess persists)       | Yes — `prompt()` is fire-and-forget |
 
 The `BaseAgentSession` abstraction already unifies these via `runInitialQuery()` and `executeFollowUp()`. The change is:
 
@@ -314,14 +316,14 @@ The `BaseAgentSession` abstraction already unifies these via `runInitialQuery()`
 
 This spec refines and replaces several sections of [2026-03-18-agent-kernel.md](2026-03-18-agent-kernel.md):
 
-| Kernel Spec Section | Disposition |
-|---|---|
-| §7.2 Pipes and Composition | **Replaced** by streams (§2-4 of this spec) |
-| §7.4 Typed Signals | **Replaced** by stream messages (signals are just messages on a stream) |
-| §9.3 File Descriptors | **Replaced** by subscriptions/fds (§2.2 of this spec) |
-| §5.1 SIGCHLD | **Reframed** as child publishing to parent's stream |
-| §5.2 Exit Status | **Unchanged** — structured result is the final message on the stream |
-| §5.3 Escalation | **Reframed** — `needs_input` result published to parent's stream |
+| Kernel Spec Section        | Disposition                                                             |
+| -------------------------- | ----------------------------------------------------------------------- |
+| §7.2 Pipes and Composition | **Replaced** by streams (§2-4 of this spec)                             |
+| §7.4 Typed Signals         | **Replaced** by stream messages (signals are just messages on a stream) |
+| §9.3 File Descriptors      | **Replaced** by subscriptions/fds (§2.2 of this spec)                   |
+| §5.1 SIGCHLD               | **Reframed** as child publishing to parent's stream                     |
+| §5.2 Exit Status           | **Unchanged** — structured result is the final message on the stream    |
+| §5.3 Escalation            | **Reframed** — `needs_input` result published to parent's stream        |
 
 ---
 

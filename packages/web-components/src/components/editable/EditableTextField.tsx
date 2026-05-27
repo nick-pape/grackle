@@ -93,7 +93,9 @@ export function EditableTextField(props: EditableTextFieldProps): JSX.Element {
           data-testid={testId ? `${testId}-input` : undefined}
         />
         {validationError && (
-          <span className={styles.editError} data-testid="edit-error">{validationError}</span>
+          <span className={styles.editError} data-testid="edit-error">
+            {validationError}
+          </span>
         )}
       </div>
     );
@@ -117,7 +119,9 @@ export function EditableTextField(props: EditableTextFieldProps): JSX.Element {
         />
         {field.isDirty && <span className={styles.unsavedDot} title="Unsaved changes" />}
         {field.error && (
-          <span className={styles.editError} data-testid="edit-error">{field.error}</span>
+          <span className={styles.editError} data-testid="edit-error">
+            {field.error}
+          </span>
         )}
         <span className={styles.editHint}>Enter to save &middot; Esc to cancel</span>
       </div>
@@ -133,17 +137,22 @@ export function EditableTextField(props: EditableTextFieldProps): JSX.Element {
       tabIndex={0}
       className={styles.metaValueClickable}
       onClick={() => field.startEdit()}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); field.startEdit(); } }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          field.startEdit();
+        }
+      }}
       title="Click to edit"
       aria-label={ariaLabel}
       data-testid={testId ? `${testId}-button` : undefined}
     >
-      {displayContent !== undefined ? displayContent : (
-        value ? (
-          <span>{value}</span>
-        ) : (
-          <span className={styles.metaPlaceholder}>{placeholder || "None"}</span>
-        )
+      {displayContent !== undefined ? (
+        displayContent
+      ) : value ? (
+        <span>{value}</span>
+      ) : (
+        <span className={styles.metaPlaceholder}>{placeholder || "None"}</span>
       )}
       <span className={styles.editButton} aria-hidden="true">
         &#x270F;&#xFE0F;

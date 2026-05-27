@@ -128,7 +128,10 @@ describe("useEventStream", () => {
     // Emitting an event triggers markConnected immediately
     act(() => {
       stream.emit({
-        event: { case: "sessionEvent", value: { sessionId: "", type: 0, timestamp: "", content: "", raw: "" } },
+        event: {
+          case: "sessionEvent",
+          value: { sessionId: "", type: 0, timestamp: "", content: "", raw: "" },
+        },
       });
     });
 
@@ -148,8 +151,12 @@ describe("useEventStream", () => {
       );
 
       // Flush microtasks so connectStream runs and the for-await begins
-      await act(async () => { await Promise.resolve(); });
-      await act(async () => { await Promise.resolve(); });
+      await act(async () => {
+        await Promise.resolve();
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
 
       // Immediately error the stream — simulates ECONNREFUSED
       act(() => {
@@ -157,8 +164,12 @@ describe("useEventStream", () => {
       });
 
       // Flush microtasks for the catch block to run (clears the connect timer)
-      await act(async () => { await Promise.resolve(); });
-      await act(async () => { await Promise.resolve(); });
+      await act(async () => {
+        await Promise.resolve();
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
 
       // Advance past the grace period — the timer was cancelled, so "connected" must NOT fire
       await act(async () => {
@@ -183,7 +194,10 @@ describe("useEventStream", () => {
     // Emit an event to mark the stream as "connected"
     act(() => {
       stream.emit({
-        event: { case: "sessionEvent", value: { sessionId: "", type: 0, timestamp: "", content: "", raw: "" } },
+        event: {
+          case: "sessionEvent",
+          value: { sessionId: "", type: 0, timestamp: "", content: "", raw: "" },
+        },
       });
     });
 
@@ -240,13 +254,15 @@ describe("useEventStream", () => {
   it("reconnects after RECONNECT_DELAY_MS when stream ends", async () => {
     vi.useFakeTimers();
     try {
-      renderHook(() =>
-        useEventStream({ onSessionEvent: vi.fn(), onDomainEvent: vi.fn() }),
-      );
+      renderHook(() => useEventStream({ onSessionEvent: vi.fn(), onDomainEvent: vi.fn() }));
 
       // Flush microtasks to let connectStream run and set up the stream
-      await act(async () => { await Promise.resolve(); });
-      await act(async () => { await Promise.resolve(); });
+      await act(async () => {
+        await Promise.resolve();
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
 
       expect(mockClient.streamEvents).toHaveBeenCalledTimes(1);
 
@@ -260,8 +276,12 @@ describe("useEventStream", () => {
       });
 
       // Flush microtasks for stream end handling
-      await act(async () => { await Promise.resolve(); });
-      await act(async () => { await Promise.resolve(); });
+      await act(async () => {
+        await Promise.resolve();
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
 
       // Advance past the reconnect delay
       await act(async () => {
@@ -269,7 +289,9 @@ describe("useEventStream", () => {
       });
 
       // Flush microtasks for the reconnect attempt
-      await act(async () => { await Promise.resolve(); });
+      await act(async () => {
+        await Promise.resolve();
+      });
 
       expect(mockClient.streamEvents).toHaveBeenCalledTimes(2);
     } finally {
@@ -281,9 +303,7 @@ describe("useEventStream", () => {
     const authStream = createMockStream();
     mockClient.streamEvents.mockReturnValue(authStream.iterable);
 
-    renderHook(() =>
-      useEventStream({ onSessionEvent: vi.fn(), onDomainEvent: vi.fn() }),
-    );
+    renderHook(() => useEventStream({ onSessionEvent: vi.fn(), onDomainEvent: vi.fn() }));
 
     await waitFor(() => {
       expect(mockClient.streamEvents).toHaveBeenCalledTimes(1);
@@ -300,9 +320,7 @@ describe("useEventStream", () => {
 
   it("routes session events to onSessionEvent callback", async () => {
     const onSessionEvent = vi.fn();
-    renderHook(() =>
-      useEventStream({ onSessionEvent, onDomainEvent: vi.fn() }),
-    );
+    renderHook(() => useEventStream({ onSessionEvent, onDomainEvent: vi.fn() }));
 
     await waitFor(() => {
       expect(mockClient.streamEvents).toHaveBeenCalledTimes(1);
@@ -332,9 +350,7 @@ describe("useEventStream", () => {
 
   it("routes domain events to onDomainEvent callback", async () => {
     const onDomainEvent = vi.fn();
-    renderHook(() =>
-      useEventStream({ onSessionEvent: vi.fn(), onDomainEvent }),
-    );
+    renderHook(() => useEventStream({ onSessionEvent: vi.fn(), onDomainEvent }));
 
     await waitFor(() => {
       expect(mockClient.streamEvents).toHaveBeenCalledTimes(1);
@@ -361,4 +377,3 @@ describe("useEventStream", () => {
     });
   });
 });
-

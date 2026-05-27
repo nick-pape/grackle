@@ -71,7 +71,12 @@ describe("component-store", () => {
   });
 
   it("defaults rendererKind to grackle-react when omitted", () => {
-    componentStore.registerComponent({ id: "c1", workspaceId: "ws1", name: "a", body: "render(<i/>)" });
+    componentStore.registerComponent({
+      id: "c1",
+      workspaceId: "ws1",
+      name: "a",
+      body: "render(<i/>)",
+    });
     expect(componentStore.getComponent("c1")!.rendererKind).toBe("grackle-react");
   });
 
@@ -80,8 +85,18 @@ describe("component-store", () => {
   });
 
   it("findComponentByName resolves within a workspace", () => {
-    componentStore.registerComponent({ id: "c1", workspaceId: "ws1", name: "burndown", body: "<a/>" });
-    componentStore.registerComponent({ id: "c2", workspaceId: "ws2", name: "burndown", body: "<b/>" });
+    componentStore.registerComponent({
+      id: "c1",
+      workspaceId: "ws1",
+      name: "burndown",
+      body: "<a/>",
+    });
+    componentStore.registerComponent({
+      id: "c2",
+      workspaceId: "ws2",
+      name: "burndown",
+      body: "<b/>",
+    });
     const found = componentStore.findComponentByName("ws1", "burndown");
     expect(found?.id).toBe("c1");
     // Same name in a different workspace is isolated.
@@ -99,7 +114,13 @@ describe("component-store", () => {
   });
 
   it("updateComponent bumps version and replaces provided fields only", () => {
-    componentStore.registerComponent({ id: "c1", workspaceId: "ws1", name: "a", description: "orig", body: "old" });
+    componentStore.registerComponent({
+      id: "c1",
+      workspaceId: "ws1",
+      name: "a",
+      description: "orig",
+      body: "old",
+    });
     const ok = componentStore.updateComponent("c1", { body: "new" });
     expect(ok).toBe(true);
     const row = componentStore.getComponent("c1");
@@ -121,7 +142,9 @@ describe("component-store", () => {
 
   it("rejects a body larger than the size cap", () => {
     const huge = "x".repeat(componentStore.MAX_COMPONENT_BODY_CHARS + 1);
-    expect(() => componentStore.registerComponent({ id: "c1", workspaceId: "ws1", name: "a", body: huge })).toThrow(/exceeds/);
+    expect(() =>
+      componentStore.registerComponent({ id: "c1", workspaceId: "ws1", name: "a", body: huge }),
+    ).toThrow(/exceeds/);
   });
 
   it("registerComponent defaults promoted to false", () => {

@@ -22,19 +22,21 @@ const meta: Meta<typeof DagView> = {
     (Story) => (
       <ReactFlowProvider>
         <div
-          style={{
-            width: "800px",
-            height: "600px",
-            // Set CSS custom properties that DagView references
-            // so getComputedStyle calls don't return empty strings.
-            "--text-tertiary": "#6b7a8d",
-            "--accent-green": "#22c55e",
-            "--accent-yellow": "#eab308",
-            "--accent-red": "#ef4444",
-            "--bg-overlay": "rgba(0,0,0,0.4)",
-            "--bg-inset": "#1e1e2e",
-            "--text-disabled": "#444",
-          } as CSSProperties}
+          style={
+            {
+              width: "800px",
+              height: "600px",
+              // Set CSS custom properties that DagView references
+              // so getComputedStyle calls don't return empty strings.
+              "--text-tertiary": "#6b7a8d",
+              "--accent-green": "#22c55e",
+              "--accent-yellow": "#eab308",
+              "--accent-red": "#ef4444",
+              "--bg-overlay": "rgba(0,0,0,0.4)",
+              "--bg-inset": "#1e1e2e",
+              "--text-disabled": "#444",
+            } as CSSProperties
+          }
         >
           <Story />
         </div>

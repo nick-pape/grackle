@@ -95,7 +95,9 @@ export function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
     if (!e.raw) continue;
     try {
       parsedRaw.set(e, JSON.parse(e.raw) as Record<string, unknown>);
-    } catch { /* skip unparseable events */ }
+    } catch {
+      /* skip unparseable events */
+    }
   }
 
   // Build a map of tool_use IDs → context (first-class toolCallId, else legacy raw).
@@ -107,7 +109,9 @@ export function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
     try {
       const content = JSON.parse(e.content) as { tool: string; args: unknown };
       toolUseById.set(id, { tool: content.tool, args: content.args });
-    } catch { /* skip unparseable events */ }
+    } catch {
+      /* skip unparseable events */
+    }
   }
 
   // ID-based pairing — match tool_result events to their tool_use by id. Every
@@ -133,7 +137,9 @@ export function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
         if (typeof parsed.detailedContent === "string") {
           detailedResult = parsed.detailedContent;
         }
-      } catch { /* content looks like JSON but isn't — skip */ }
+      } catch {
+        /* content looks like JSON but isn't — skip */
+      }
     }
 
     return { ...e, toolUseCtx: { ...ctx, detailedResult } };

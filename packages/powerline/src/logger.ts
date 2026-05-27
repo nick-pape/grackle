@@ -12,7 +12,8 @@ export const logger: Logger = pino({
   name: "grackle-powerline",
   level: process.env.LOG_LEVEL || "info",
   mixin: createLoggerMixin,
-  transport: process.env.NODE_ENV !== "production"
-    ? { target: "pino/file", options: { destination: 1 } }
-    : undefined,
+  transport:
+    process.env.NODE_ENV !== "production"
+      ? { target: "pino/file", options: { destination: 1 } }
+      : undefined,
 });

@@ -39,7 +39,10 @@ const clients: Map<string, ClientRecord> = new Map();
  * @param clientName - Human-readable name for the client (optional).
  * @returns The newly registered client record.
  */
-export function registerClient(redirectUris: string[], clientName?: string): ClientRecord | undefined {
+export function registerClient(
+  redirectUris: string[],
+  clientName?: string,
+): ClientRecord | undefined {
   // Evict expired clients before checking capacity
   const now = Date.now();
   for (const [id, rec] of clients) {
@@ -237,7 +240,10 @@ export function createRefreshToken(clientId: string, resource: string): string {
  * @param clientId - The client ID making the refresh request.
  * @returns The refresh token record if valid, or undefined.
  */
-export function consumeRefreshToken(token: string, clientId: string): RefreshTokenRecord | undefined {
+export function consumeRefreshToken(
+  token: string,
+  clientId: string,
+): RefreshTokenRecord | undefined {
   const record = refreshTokens.get(token);
   // Always delete to enforce rotation
   refreshTokens.delete(token);

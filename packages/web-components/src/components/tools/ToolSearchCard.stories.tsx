@@ -54,7 +54,9 @@ export const LongResultExpandable: Story = {
   args: {
     tool: "ToolSearch",
     args: { query: "grackle tools", max_results: 10 },
-    result: Array.from({ length: 20 }, (_, i) => `Line ${i + 1}: tool_${i + 1} definition`).join("\n"),
+    result: Array.from({ length: 20 }, (_, i) => `Line ${i + 1}: tool_${i + 1} definition`).join(
+      "\n",
+    ),
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("tool-card-tool-search")).toBeInTheDocument();

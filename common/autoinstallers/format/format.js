@@ -105,12 +105,7 @@ function collectFiles({ scope, baseRef, files }) {
     case "changed": {
       // Resolve baseRef to a SHA so the ...HEAD diff is stable even after rebases.
       const tripleDot = `${baseRef}...HEAD`;
-      const changed = gitFiles([
-        "diff",
-        "--name-only",
-        "--diff-filter=ACMR",
-        tripleDot,
-      ]);
+      const changed = gitFiles(["diff", "--name-only", "--diff-filter=ACMR", tripleDot]);
       return changed.filter((f) => FORMATTABLE_EXT.test(f));
     }
     case "files":

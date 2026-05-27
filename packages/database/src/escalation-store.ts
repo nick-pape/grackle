@@ -15,23 +15,23 @@ export function createEscalation(
   urgency: string,
   taskUrl: string,
 ): void {
-  db.insert(escalations).values({
-    id,
-    workspaceId,
-    taskId,
-    title,
-    message,
-    source,
-    urgency,
-    taskUrl,
-  }).run();
+  db.insert(escalations)
+    .values({
+      id,
+      workspaceId,
+      taskId,
+      title,
+      message,
+      source,
+      urgency,
+      taskUrl,
+    })
+    .run();
 }
 
 /** Retrieve a single escalation by ID. */
 export function getEscalation(id: string): EscalationRow | undefined {
-  return db.select().from(escalations)
-    .where(eq(escalations.id, id))
-    .get();
+  return db.select().from(escalations).where(eq(escalations.id, id)).get();
 }
 
 /**
@@ -49,28 +49,33 @@ export function listEscalations(
   const hasStatusFilter = status !== undefined && status.length > 0;
 
   if (hasWorkspaceFilter && hasStatusFilter) {
-    return db.select().from(escalations)
-      .where(and(
-        eq(escalations.workspaceId, workspaceId),
-        eq(escalations.status, status),
-      ))
+    return db
+      .select()
+      .from(escalations)
+      .where(and(eq(escalations.workspaceId, workspaceId), eq(escalations.status, status)))
       .orderBy(desc(escalations.createdAt))
       .limit(maxResults)
       .all();
   } else if (hasWorkspaceFilter) {
-    return db.select().from(escalations)
+    return db
+      .select()
+      .from(escalations)
       .where(eq(escalations.workspaceId, workspaceId))
       .orderBy(desc(escalations.createdAt))
       .limit(maxResults)
       .all();
   } else if (hasStatusFilter) {
-    return db.select().from(escalations)
+    return db
+      .select()
+      .from(escalations)
       .where(eq(escalations.status, status))
       .orderBy(desc(escalations.createdAt))
       .limit(maxResults)
       .all();
   } else {
-    return db.select().from(escalations)
+    return db
+      .select()
+      .from(escalations)
       .orderBy(desc(escalations.createdAt))
       .limit(maxResults)
       .all();
@@ -82,7 +87,9 @@ export function listEscalations(
  * Used by the notification router to drain the outbox in order.
  */
 export function listPendingEscalations(): EscalationRow[] {
-  return db.select().from(escalations)
+  return db
+    .select()
+    .from(escalations)
     .where(eq(escalations.status, "pending"))
     .orderBy(asc(escalations.createdAt))
     .all();

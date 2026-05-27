@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { removeSession, listAllSessions, parkSession, drainParkedSession, isParked } from "./session-mgr.js";
+import {
+  removeSession,
+  listAllSessions,
+  parkSession,
+  drainParkedSession,
+  isParked,
+} from "./session-mgr.js";
 import type { AgentEvent, AgentSession } from "@grackle-ai/runtime-sdk";
 import { AsyncQueue } from "@grackle-ai/runtime-sdk";
 import type { ConnectRouter } from "@connectrpc/connect";
@@ -12,7 +18,9 @@ import { writeTokens } from "./token-writer.js";
 vi.mock("./token-writer.js", () => ({ writeTokens: vi.fn() }));
 
 /** Create a mock session backed by a real AsyncQueue for realistic drain testing. */
-function makeMockSessionWithQueue(id: string): AgentSession & { eventQueue: AsyncQueue<AgentEvent> } {
+function makeMockSessionWithQueue(
+  id: string,
+): AgentSession & { eventQueue: AsyncQueue<AgentEvent> } {
   const eventQueue = new AsyncQueue<AgentEvent>();
   let killed = false;
   return {
@@ -189,15 +197,39 @@ describe("Authenticate RPC handler", () => {
       create(powerline.AuthenticateRequestSchema, {
         provider: "claude-code",
         tokens: [
-          { name: "anthropic", type: "env_var", envVar: "ANTHROPIC_API_KEY", filePath: "", value: "sk-test" },
-          { name: "claude-creds", type: "file", envVar: "", filePath: "~/.claude/.credentials.json", value: "{}" },
+          {
+            name: "anthropic",
+            type: "env_var",
+            envVar: "ANTHROPIC_API_KEY",
+            filePath: "",
+            value: "sk-test",
+          },
+          {
+            name: "claude-creds",
+            type: "file",
+            envVar: "",
+            filePath: "~/.claude/.credentials.json",
+            value: "{}",
+          },
         ],
       }),
     );
 
     expect(vi.mocked(writeTokens)).toHaveBeenCalledWith([
-      { name: "anthropic", type: "env_var", envVar: "ANTHROPIC_API_KEY", filePath: "", value: "sk-test" },
-      { name: "claude-creds", type: "file", envVar: "", filePath: "~/.claude/.credentials.json", value: "{}" },
+      {
+        name: "anthropic",
+        type: "env_var",
+        envVar: "ANTHROPIC_API_KEY",
+        filePath: "",
+        value: "sk-test",
+      },
+      {
+        name: "claude-creds",
+        type: "file",
+        envVar: "",
+        filePath: "~/.claude/.credentials.json",
+        value: "{}",
+      },
     ]);
   });
 });

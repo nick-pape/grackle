@@ -1,14 +1,21 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
-import { workspaceStore, envRegistry, workspaceEnvironmentLinkStore, slugify } from "@grackle-ai/database";
+import {
+  workspaceStore,
+  envRegistry,
+  workspaceEnvironmentLinkStore,
+  slugify,
+} from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { emit } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
 import { workspaceRowToProto } from "./grpc-proto-converters.js";
 
 /** List all workspaces, optionally filtered by environment. */
-export async function listWorkspaces(req: grackle.ListWorkspacesRequest): Promise<grackle.WorkspaceList> {
+export async function listWorkspaces(
+  req: grackle.ListWorkspacesRequest,
+): Promise<grackle.WorkspaceList> {
   const rows = workspaceStore.listWorkspaces(req.environmentId || undefined);
   // Batch-fetch linked environment IDs to avoid N+1 queries
   const linkedEnvMap = workspaceEnvironmentLinkStore.getLinkedEnvironmentIdsByWorkspaces(
@@ -20,7 +27,9 @@ export async function listWorkspaces(req: grackle.ListWorkspacesRequest): Promis
 }
 
 /** Create a new workspace and auto-link the initial environment. */
-export async function createWorkspace(req: grackle.CreateWorkspaceRequest): Promise<grackle.Workspace> {
+export async function createWorkspace(
+  req: grackle.CreateWorkspaceRequest,
+): Promise<grackle.Workspace> {
   if (!req.name) {
     throw new ConnectError("name is required", Code.InvalidArgument);
   }
@@ -79,7 +88,9 @@ export async function archiveWorkspace(req: grackle.WorkspaceId): Promise<grackl
 }
 
 /** Update workspace properties. */
-export async function updateWorkspace(req: grackle.UpdateWorkspaceRequest): Promise<grackle.Workspace> {
+export async function updateWorkspace(
+  req: grackle.UpdateWorkspaceRequest,
+): Promise<grackle.Workspace> {
   const existing = workspaceStore.getWorkspace(req.id);
   if (!existing) {
     throw new ConnectError(`Workspace not found: ${req.id}`, Code.NotFound);
@@ -90,7 +101,10 @@ export async function updateWorkspace(req: grackle.UpdateWorkspaceRequest): Prom
   if (req.repoUrl !== undefined && req.repoUrl !== "" && !/^https?:\/\//i.test(req.repoUrl)) {
     throw new ConnectError("Repository URL must use http or https scheme", Code.InvalidArgument);
   }
-  if ((req.tokenBudget !== undefined && req.tokenBudget < 0) || (req.costBudgetMillicents !== undefined && req.costBudgetMillicents < 0)) {
+  if (
+    (req.tokenBudget !== undefined && req.tokenBudget < 0) ||
+    (req.costBudgetMillicents !== undefined && req.costBudgetMillicents < 0)
+  ) {
     throw new ConnectError("Budget values must be >= 0", Code.InvalidArgument);
   }
   const row = workspaceStore.updateWorkspace(req.id, {
@@ -111,7 +125,9 @@ export async function updateWorkspace(req: grackle.UpdateWorkspaceRequest): Prom
 }
 
 /** Link an additional environment to a workspace's pool. */
-export async function linkEnvironment(req: grackle.LinkEnvironmentRequest): Promise<grackle.Workspace> {
+export async function linkEnvironment(
+  req: grackle.LinkEnvironmentRequest,
+): Promise<grackle.Workspace> {
   const workspace = workspaceStore.getWorkspace(req.workspaceId);
   if (!workspace) {
     throw new ConnectError(`Workspace not found: ${req.workspaceId}`, Code.NotFound);
@@ -142,12 +158,17 @@ export async function linkEnvironment(req: grackle.LinkEnvironmentRequest): Prom
     throw err;
   }
   emit("workspace.updated", { workspaceId: req.workspaceId });
-  logger.info({ workspaceId: req.workspaceId, environmentId: req.environmentId }, "Environment linked to workspace");
+  logger.info(
+    { workspaceId: req.workspaceId, environmentId: req.environmentId },
+    "Environment linked to workspace",
+  );
   return workspaceRowToProto(workspace);
 }
 
 /** Remove a linked environment from a workspace's pool. */
-export async function unlinkEnvironment(req: grackle.UnlinkEnvironmentRequest): Promise<grackle.Workspace> {
+export async function unlinkEnvironment(
+  req: grackle.UnlinkEnvironmentRequest,
+): Promise<grackle.Workspace> {
   const workspace = workspaceStore.getWorkspace(req.workspaceId);
   if (!workspace) {
     throw new ConnectError(`Workspace not found: ${req.workspaceId}`, Code.NotFound);
@@ -168,6 +189,9 @@ export async function unlinkEnvironment(req: grackle.UnlinkEnvironmentRequest): 
     throw err;
   }
   emit("workspace.updated", { workspaceId: req.workspaceId });
-  logger.info({ workspaceId: req.workspaceId, environmentId: req.environmentId }, "Environment unlinked from workspace");
+  logger.info(
+    { workspaceId: req.workspaceId, environmentId: req.environmentId },
+    "Environment unlinked from workspace",
+  );
   return workspaceRowToProto(workspace);
 }

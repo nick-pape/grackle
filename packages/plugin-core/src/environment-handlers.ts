@@ -1,7 +1,13 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
-import { envRegistry, workspaceStore, workspaceEnvironmentLinkStore, sessionStore, sqlite } from "@grackle-ai/database";
+import {
+  envRegistry,
+  workspaceStore,
+  workspaceEnvironmentLinkStore,
+  sessionStore,
+  sqlite,
+} from "@grackle-ai/database";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { adapterManager } from "@grackle-ai/core";
 import { parseAdapterConfig } from "@grackle-ai/core";
@@ -22,7 +28,9 @@ export async function listEnvironments(): Promise<grackle.EnvironmentList> {
 }
 
 /** Register a new environment. */
-export async function addEnvironment(req: grackle.AddEnvironmentRequest): Promise<grackle.Environment> {
+export async function addEnvironment(
+  req: grackle.AddEnvironmentRequest,
+): Promise<grackle.Environment> {
   if (!req.displayName || !req.adapterType) {
     throw new ConnectError("displayName and adapterType required", Code.InvalidArgument);
   }
@@ -41,7 +49,9 @@ export async function addEnvironment(req: grackle.AddEnvironmentRequest): Promis
 }
 
 /** Update an existing environment's display name and/or adapter config. */
-export async function updateEnvironment(req: grackle.UpdateEnvironmentRequest): Promise<grackle.Environment> {
+export async function updateEnvironment(
+  req: grackle.UpdateEnvironmentRequest,
+): Promise<grackle.Environment> {
   if (!req.id) {
     throw new ConnectError("id is required", Code.InvalidArgument);
   }
@@ -129,7 +139,9 @@ export async function removeEnvironment(req: grackle.EnvironmentId): Promise<gra
 }
 
 /** Provision (bootstrap + connect) an environment, streaming progress events. */
-export async function* provisionEnvironment(req: grackle.ProvisionEnvironmentRequest): AsyncGenerator<grackle.ProvisionEvent> {
+export async function* provisionEnvironment(
+  req: grackle.ProvisionEnvironmentRequest,
+): AsyncGenerator<grackle.ProvisionEvent> {
   // Manual provision overrides auto-reconnect
   clearReconnectState(req.id);
   const env = envRegistry.getEnvironment(req.id);

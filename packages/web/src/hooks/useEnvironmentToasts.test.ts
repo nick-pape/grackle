@@ -31,43 +31,39 @@ describe("useEnvironmentToasts", () => {
 
   it("toasts warning on connected → disconnected (genuine disconnect)", () => {
     const showToast = vi.fn();
-    const { rerender } = renderHook(
-      ({ envs }) => useEnvironmentToasts(envs, showToast),
-      { initialProps: { envs: [makeEnv("e1", "connected")] } },
-    );
+    const { rerender } = renderHook(({ envs }) => useEnvironmentToasts(envs, showToast), {
+      initialProps: { envs: [makeEnv("e1", "connected")] },
+    });
     rerender({ envs: [makeEnv("e1", "disconnected")] });
     expect(showToast).toHaveBeenCalledWith("Environment disconnected", "warning");
   });
 
   it("does NOT toast on connecting → disconnected (failed auto-reconnect attempt)", () => {
     const showToast = vi.fn();
-    const { rerender } = renderHook(
-      ({ envs }) => useEnvironmentToasts(envs, showToast),
-      { initialProps: { envs: [makeEnv("e1", "connecting")] } },
-    );
+    const { rerender } = renderHook(({ envs }) => useEnvironmentToasts(envs, showToast), {
+      initialProps: { envs: [makeEnv("e1", "connecting")] },
+    });
     rerender({ envs: [makeEnv("e1", "disconnected")] });
     expect(showToast).not.toHaveBeenCalled();
   });
 
   it("does NOT toast on disconnected → connecting (auto-reconnect in flight)", () => {
     const showToast = vi.fn();
-    const { rerender } = renderHook(
-      ({ envs }) => useEnvironmentToasts(envs, showToast),
-      { initialProps: { envs: [makeEnv("e1", "disconnected")] } },
-    );
+    const { rerender } = renderHook(({ envs }) => useEnvironmentToasts(envs, showToast), {
+      initialProps: { envs: [makeEnv("e1", "disconnected")] },
+    });
     rerender({ envs: [makeEnv("e1", "connecting")] });
     expect(showToast).not.toHaveBeenCalled();
   });
 
   it("produces exactly one warning toast over a full retry cycle (connected→disconnected→connecting→disconnected)", () => {
     const showToast = vi.fn();
-    const { rerender } = renderHook(
-      ({ envs }) => useEnvironmentToasts(envs, showToast),
-      { initialProps: { envs: [makeEnv("e1", "connected")] } },
-    );
+    const { rerender } = renderHook(({ envs }) => useEnvironmentToasts(envs, showToast), {
+      initialProps: { envs: [makeEnv("e1", "connected")] },
+    });
 
     rerender({ envs: [makeEnv("e1", "disconnected")] }); // genuine disconnect
-    rerender({ envs: [makeEnv("e1", "connecting")] });    // auto-reconnect start
+    rerender({ envs: [makeEnv("e1", "connecting")] }); // auto-reconnect start
     rerender({ envs: [makeEnv("e1", "disconnected")] }); // retry failed
 
     const warningCalls = showToast.mock.calls.filter(([, variant]) => variant === "warning");
@@ -77,40 +73,36 @@ describe("useEnvironmentToasts", () => {
 
   it("toasts success on → connected (recovered)", () => {
     const showToast = vi.fn();
-    const { rerender } = renderHook(
-      ({ envs }) => useEnvironmentToasts(envs, showToast),
-      { initialProps: { envs: [makeEnv("e1", "disconnected")] } },
-    );
+    const { rerender } = renderHook(({ envs }) => useEnvironmentToasts(envs, showToast), {
+      initialProps: { envs: [makeEnv("e1", "disconnected")] },
+    });
     rerender({ envs: [makeEnv("e1", "connected")] });
     expect(showToast).toHaveBeenCalledWith("Environment connected", "success");
   });
 
   it("toasts error on → error", () => {
     const showToast = vi.fn();
-    const { rerender } = renderHook(
-      ({ envs }) => useEnvironmentToasts(envs, showToast),
-      { initialProps: { envs: [makeEnv("e1", "disconnected")] } },
-    );
+    const { rerender } = renderHook(({ envs }) => useEnvironmentToasts(envs, showToast), {
+      initialProps: { envs: [makeEnv("e1", "disconnected")] },
+    });
     rerender({ envs: [makeEnv("e1", "error")] });
     expect(showToast).toHaveBeenCalledWith("Environment provision failed", "error");
   });
 
   it("does not toast on → sleeping", () => {
     const showToast = vi.fn();
-    const { rerender } = renderHook(
-      ({ envs }) => useEnvironmentToasts(envs, showToast),
-      { initialProps: { envs: [makeEnv("e1", "disconnected")] } },
-    );
+    const { rerender } = renderHook(({ envs }) => useEnvironmentToasts(envs, showToast), {
+      initialProps: { envs: [makeEnv("e1", "disconnected")] },
+    });
     rerender({ envs: [makeEnv("e1", "sleeping")] });
     expect(showToast).not.toHaveBeenCalled();
   });
 
   it("toasts info on environment removed", () => {
     const showToast = vi.fn();
-    const { rerender } = renderHook(
-      ({ envs }) => useEnvironmentToasts(envs, showToast),
-      { initialProps: { envs: [makeEnv("e1", "connected")] } },
-    );
+    const { rerender } = renderHook(({ envs }) => useEnvironmentToasts(envs, showToast), {
+      initialProps: { envs: [makeEnv("e1", "connected")] },
+    });
     rerender({ envs: [] });
     expect(showToast).toHaveBeenCalledWith("Environment removed", "info");
   });

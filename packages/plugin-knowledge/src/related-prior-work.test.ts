@@ -120,7 +120,10 @@ describe("buildRelatedPriorWork — retrieval", () => {
 
   it("scopes to the workspace and passes the conservative min-score floor", async () => {
     kg.knowledgeSearch.mockResolvedValue([
-      result(refNode({ id: "n2", sourceType: "task", sourceId: "t2", label: "[Task] Prior auth work" }), 0.72),
+      result(
+        refNode({ id: "n2", sourceType: "task", sourceId: "t2", label: "[Task] Prior auth work" }),
+        0.72,
+      ),
     ]);
     await buildRelatedPriorWork(input);
     expect(kg.knowledgeSearch).toHaveBeenCalledWith(
@@ -145,8 +148,14 @@ describe("buildRelatedPriorWork — retrieval", () => {
 
   it("excludes the task's own node by sourceId even when findReferenceNodeBySource misses", async () => {
     kg.knowledgeSearch.mockResolvedValue([
-      result(refNode({ id: "self", sourceType: "task", sourceId: "t1", label: "[Task] self" }), 0.99),
-      result(refNode({ id: "n2", sourceType: "task", sourceId: "t2", label: "[Task] other" }), 0.71),
+      result(
+        refNode({ id: "self", sourceType: "task", sourceId: "t1", label: "[Task] self" }),
+        0.99,
+      ),
+      result(
+        refNode({ id: "n2", sourceType: "task", sourceId: "t2", label: "[Task] other" }),
+        0.71,
+      ),
     ]);
     const out = await buildRelatedPriorWork(input);
     expect(out).toContain("other");
@@ -156,8 +165,14 @@ describe("buildRelatedPriorWork — retrieval", () => {
   it("excludes the task's own node by resolved node id", async () => {
     kg.findReferenceNodeBySource.mockResolvedValue({ id: "selfid" });
     kg.knowledgeSearch.mockResolvedValue([
-      result(refNode({ id: "selfid", sourceType: "task", sourceId: "weird", label: "[Task] self" }), 0.99),
-      result(refNode({ id: "n2", sourceType: "task", sourceId: "t2", label: "[Task] other" }), 0.71),
+      result(
+        refNode({ id: "selfid", sourceType: "task", sourceId: "weird", label: "[Task] self" }),
+        0.99,
+      ),
+      result(
+        refNode({ id: "n2", sourceType: "task", sourceId: "t2", label: "[Task] other" }),
+        0.71,
+      ),
     ]);
     const out = await buildRelatedPriorWork(input);
     expect(out).toContain("other");
@@ -166,8 +181,20 @@ describe("buildRelatedPriorWork — retrieval", () => {
 
   it("formats a header, reference label+similarity, and chunk content snippet", async () => {
     kg.knowledgeSearch.mockResolvedValue([
-      result(refNode({ id: "n2", sourceType: "task", sourceId: "t2", label: "[Task] Prior auth" }), 0.72),
-      result(refNode({ id: "n3", sourceType: "transcript_chunk", sourceId: "s1#0", label: "chunk", content: "We chose blue-green rollouts." }), 0.61),
+      result(
+        refNode({ id: "n2", sourceType: "task", sourceId: "t2", label: "[Task] Prior auth" }),
+        0.72,
+      ),
+      result(
+        refNode({
+          id: "n3",
+          sourceType: "transcript_chunk",
+          sourceId: "s1#0",
+          label: "chunk",
+          content: "We chose blue-green rollouts.",
+        }),
+        0.61,
+      ),
     ]);
     const out = await buildRelatedPriorWork(input);
     expect(out).toContain("## Related prior work");
@@ -178,7 +205,15 @@ describe("buildRelatedPriorWork — retrieval", () => {
   it("honors the char budget (stops before overflow)", async () => {
     process.env.GRACKLE_KG_RELATED_MAX_CHARS = "400";
     const many = Array.from({ length: 20 }, (_, i) =>
-      result(refNode({ id: `n${i}`, sourceType: "task", sourceId: `t${i + 10}`, label: `[Task] item ${i} with a fairly long title to consume budget` }), 0.6),
+      result(
+        refNode({
+          id: `n${i}`,
+          sourceType: "task",
+          sourceId: `t${i + 10}`,
+          label: `[Task] item ${i} with a fairly long title to consume budget`,
+        }),
+        0.6,
+      ),
     );
     kg.knowledgeSearch.mockResolvedValue(many);
     const out = await buildRelatedPriorWork(input);
@@ -194,7 +229,15 @@ describe("buildRelatedPriorWork — retrieval", () => {
     process.env.GRACKLE_KG_RELATED_MAX_ITEMS = "2";
     process.env.GRACKLE_KG_RELATED_MAX_CHARS = "5000";
     const many = Array.from({ length: 10 }, (_, i) =>
-      result(refNode({ id: `n${i}`, sourceType: "task", sourceId: `t${i + 10}`, label: `[Task] item ${i}` }), 0.6),
+      result(
+        refNode({
+          id: `n${i}`,
+          sourceType: "task",
+          sourceId: `t${i + 10}`,
+          label: `[Task] item ${i}`,
+        }),
+        0.6,
+      ),
     );
     kg.knowledgeSearch.mockResolvedValue(many);
     const out = await buildRelatedPriorWork(input);
@@ -217,7 +260,10 @@ describe("buildRelatedPriorWork — metrics log (#1260)", () => {
 
   it("emits a kg_spawn_retrieval event with metadata when a block is built", async () => {
     kg.knowledgeSearch.mockResolvedValue([
-      result(refNode({ id: "n2", sourceType: "task", sourceId: "t2", label: "[Task] Prior auth" }), 0.72),
+      result(
+        refNode({ id: "n2", sourceType: "task", sourceId: "t2", label: "[Task] Prior auth" }),
+        0.72,
+      ),
     ]);
     await buildRelatedPriorWork(input);
     expect(log.info).toHaveBeenCalledWith(

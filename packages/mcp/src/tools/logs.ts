@@ -20,13 +20,28 @@ export const logsTools: ToolDefinition[] = [
   {
     name: "logs_get",
     group: "logs",
-    description: "Retrieve session logs — raw stream events, formatted transcript, or live tail with timeout.",
+    description:
+      "Retrieve session logs — raw stream events, formatted transcript, or live tail with timeout.",
     inputSchema: z.object({
       sessionId: z.string().describe("Session ID to retrieve logs for"),
-      transcript: z.boolean().optional().describe("Return formatted transcript instead of raw events"),
+      transcript: z
+        .boolean()
+        .optional()
+        .describe("Return formatted transcript instead of raw events"),
       tail: z.boolean().optional().describe("Live-tail the session stream with a timeout"),
-      timeoutSeconds: z.number().int().positive().max(MAX_TAIL_TIMEOUT_SECONDS).default(DEFAULT_TAIL_TIMEOUT_SECONDS).describe("Timeout in seconds for tail mode (default 10, max 60)"),
-      maxEvents: z.number().int().positive().optional().describe("Maximum events to return in tail mode"),
+      timeoutSeconds: z
+        .number()
+        .int()
+        .positive()
+        .max(MAX_TAIL_TIMEOUT_SECONDS)
+        .default(DEFAULT_TAIL_TIMEOUT_SECONDS)
+        .describe("Timeout in seconds for tail mode (default 10, max 60)"),
+      maxEvents: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Maximum events to return in tail mode"),
     }),
     rpcMethod: "getSession",
     mutating: false,
@@ -36,7 +51,11 @@ export const logsTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, { core: client, orchestration }: GrackleClients, authContext?: AuthContext) {
+    async handler(
+      args: Record<string, unknown>,
+      { core: client, orchestration }: GrackleClients,
+      authContext?: AuthContext,
+    ) {
       try {
         // Fetch the session directly by ID
         let session: Awaited<ReturnType<typeof client.getSession>> | undefined;
@@ -48,11 +67,7 @@ export const logsTools: ToolDefinition[] = [
               content: [
                 {
                   type: "text" as const,
-                  text: JSON.stringify(
-                    { error: "Session not found", code: "NOT_FOUND" },
-                    null,
-                    2,
-                  ),
+                  text: JSON.stringify({ error: "Session not found", code: "NOT_FOUND" }, null, 2),
                 },
               ],
               isError: true,
@@ -64,7 +79,10 @@ export const logsTools: ToolDefinition[] = [
         // Scope enforcement: scoped agents can only read logs of descendant sessions
         if (authContext?.type === "scoped") {
           if (!session.taskId) {
-            throw new ConnectError("Cannot read logs for a taskless session via scoped auth", Code.PermissionDenied);
+            throw new ConnectError(
+              "Cannot read logs for a taskless session via scoped auth",
+              Code.PermissionDenied,
+            );
           }
           await assertCallerIsAncestor(orchestration, authContext, session.taskId);
         }
@@ -161,18 +179,19 @@ export const logsTools: ToolDefinition[] = [
             .map((line) => JSON.parse(line) as unknown);
           return jsonResult({ sessionId: session.id, events });
         } catch (err: unknown) {
-          const isNotFound = err instanceof Error && "code" in err && (err as NodeJS.ErrnoException).code === "ENOENT";
-          const errorMessage = isNotFound ? "Log file not found" : `Failed to read log file: ${err instanceof Error ? err.message : String(err)}`;
+          const isNotFound =
+            err instanceof Error &&
+            "code" in err &&
+            (err as NodeJS.ErrnoException).code === "ENOENT";
+          const errorMessage = isNotFound
+            ? "Log file not found"
+            : `Failed to read log file: ${err instanceof Error ? err.message : String(err)}`;
           const errorCode = isNotFound ? "NOT_FOUND" : "INTERNAL";
           return {
             content: [
               {
                 type: "text" as const,
-                text: JSON.stringify(
-                  { error: errorMessage, code: errorCode },
-                  null,
-                  2,
-                ),
+                text: JSON.stringify({ error: errorMessage, code: errorCode }, null, 2),
               },
             ],
             isError: true,

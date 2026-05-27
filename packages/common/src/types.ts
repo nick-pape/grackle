@@ -12,7 +12,7 @@ export const SESSION_STATUS = {
 } as const;
 
 /** Lifecycle status of an agent session. */
-export type SessionStatus = typeof SESSION_STATUS[keyof typeof SESSION_STATUS];
+export type SessionStatus = (typeof SESSION_STATUS)[keyof typeof SESSION_STATUS];
 
 /** Session statuses that represent a terminal (ended) state. */
 export const TERMINAL_SESSION_STATUSES: ReadonlySet<SessionStatus> = new Set([
@@ -29,7 +29,7 @@ export const END_REASON = {
 } as const;
 
 /** The reason a session transitioned to STOPPED. */
-export type EndReason = typeof END_REASON[keyof typeof END_REASON];
+export type EndReason = (typeof END_REASON)[keyof typeof END_REASON];
 
 /** Pipe mode for parent↔child IPC on spawn. */
 export type PipeMode = "sync" | "async" | "detach" | "";
@@ -44,15 +44,10 @@ export const TASK_STATUS = {
 } as const;
 
 /** Lifecycle status of a task, derived from session history. */
-export type TaskStatus = typeof TASK_STATUS[keyof typeof TASK_STATUS];
+export type TaskStatus = (typeof TASK_STATUS)[keyof typeof TASK_STATUS];
 
 /** Connection status of a remote environment. */
-export type EnvironmentStatus =
-  | "disconnected"
-  | "connecting"
-  | "connected"
-  | "sleeping"
-  | "error";
+export type EnvironmentStatus = "disconnected" | "connecting" | "connected" | "sleeping" | "error";
 
 /** Discriminator for events emitted by an agent runtime. */
 export type AgentEventType =

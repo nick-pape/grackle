@@ -9,10 +9,14 @@ export const escalationTools: ToolDefinition[] = [
   {
     name: "escalate_to_human",
     group: "escalation",
-    description: "Escalate a question or decision to the human. Use when you cannot proceed without human input. The message is delivered via configured notification channels (browser notification, webhook, etc.).",
+    description:
+      "Escalate a question or decision to the human. Use when you cannot proceed without human input. The message is delivered via configured notification channels (browser notification, webhook, etc.).",
     inputSchema: z.object({
       message: z.string().describe("The question or context the human needs to address"),
-      urgency: z.enum(["low", "normal", "high"]).optional().describe("Urgency hint for notification routing (default: normal)"),
+      urgency: z
+        .enum(["low", "normal", "high"])
+        .optional()
+        .describe("Urgency hint for notification routing (default: normal)"),
     }),
     rpcMethod: "createEscalation",
     mutating: true,
@@ -22,17 +26,30 @@ export const escalationTools: ToolDefinition[] = [
       idempotentHint: false,
       openWorldHint: true,
     },
-    async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients, authContext?: AuthContext) {
+    async handler(
+      args: Record<string, unknown>,
+      { orchestration: client }: GrackleClients,
+      authContext?: AuthContext,
+    ) {
       const message = args.message as string;
       if (!message) {
         return {
-          content: [{ type: "text" as const, text: JSON.stringify({ error: "message is required", code: "INVALID_ARGUMENT" }, null, 2) }],
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(
+                { error: "message is required", code: "INVALID_ARGUMENT" },
+                null,
+                2,
+              ),
+            },
+          ],
           isError: true,
         };
       }
       try {
         const escalation = await client.createEscalation({
-          workspaceId: authContext?.type === "scoped" ? authContext.workspaceId ?? "" : "",
+          workspaceId: authContext?.type === "scoped" ? (authContext.workspaceId ?? "") : "",
           taskId: authContext?.type === "scoped" ? authContext.taskId : "",
           title: "Human escalation",
           message,
@@ -54,7 +71,10 @@ export const escalationTools: ToolDefinition[] = [
     description: "List recent escalations and their delivery status.",
     inputSchema: z.object({
       workspaceId: z.string().optional().describe("Filter by workspace ID"),
-      status: z.enum(["pending", "delivered", "acknowledged"]).optional().describe("Filter by status"),
+      status: z
+        .enum(["pending", "delivered", "acknowledged"])
+        .optional()
+        .describe("Filter by status"),
       limit: z.number().int().positive().optional().describe("Maximum number of results"),
     }),
     rpcMethod: "listEscalations",

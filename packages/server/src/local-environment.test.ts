@@ -98,14 +98,16 @@ describe("bootstrapLocalEnvironment", () => {
       const deps = createMockDeps();
       (deps.envRegistry.getEnvironment as ReturnType<typeof vi.fn>)
         .mockReturnValueOnce(undefined) // first call: doesn't exist
-        .mockReturnValue(makeEnvRow());  // subsequent calls: exists after creation
+        .mockReturnValue(makeEnvRow()); // subsequent calls: exists after creation
 
       await bootstrapLocalEnvironment(
         { powerlinePort: 7433, bindHost: "127.0.0.1", skipLocalPowerline: false },
         deps,
       );
       expect(deps.envRegistry.addEnvironment).toHaveBeenCalledWith(
-        "local", "Local", "local",
+        "local",
+        "Local",
+        "local",
         JSON.stringify({ port: 7433, host: "127.0.0.1" }),
       );
     });
@@ -141,7 +143,9 @@ describe("bootstrapLocalEnvironment", () => {
     it("syncs runtime when persona has different runtime", async () => {
       const deps = createMockDeps();
       (deps.settingsStore.getSetting as ReturnType<typeof vi.fn>).mockReturnValue("persona-1");
-      (deps.personaStore.getPersona as ReturnType<typeof vi.fn>).mockReturnValue({ runtime: "copilot" });
+      (deps.personaStore.getPersona as ReturnType<typeof vi.fn>).mockReturnValue({
+        runtime: "copilot",
+      });
 
       await bootstrapLocalEnvironment(
         { powerlinePort: 7433, bindHost: "127.0.0.1", skipLocalPowerline: false },
@@ -153,7 +157,9 @@ describe("bootstrapLocalEnvironment", () => {
     it("does not sync runtime when runtimes already match", async () => {
       const deps = createMockDeps();
       (deps.settingsStore.getSetting as ReturnType<typeof vi.fn>).mockReturnValue("persona-1");
-      (deps.personaStore.getPersona as ReturnType<typeof vi.fn>).mockReturnValue({ runtime: "claude-code" });
+      (deps.personaStore.getPersona as ReturnType<typeof vi.fn>).mockReturnValue({
+        runtime: "claude-code",
+      });
 
       await bootstrapLocalEnvironment(
         { powerlinePort: 7433, bindHost: "127.0.0.1", skipLocalPowerline: false },
@@ -186,7 +192,16 @@ describe("bootstrapLocalEnvironment", () => {
         deps,
       );
       expect(deps.workspaceStore.createWorkspaceAndLink).toHaveBeenCalledWith(
-        DEFAULT_WORKSPACE_ID, "Default", "", "", false, "", "", 0, 0, "local",
+        DEFAULT_WORKSPACE_ID,
+        "Default",
+        "",
+        "",
+        false,
+        "",
+        "",
+        0,
+        0,
+        "local",
       );
     });
 
@@ -202,7 +217,9 @@ describe("bootstrapLocalEnvironment", () => {
 
     it("warns if default workspace is not linked to local env", async () => {
       const deps = createMockDeps();
-      (deps.workspaceEnvironmentLinkStore.isLinked as ReturnType<typeof vi.fn>).mockReturnValue(false);
+      (deps.workspaceEnvironmentLinkStore.isLinked as ReturnType<typeof vi.fn>).mockReturnValue(
+        false,
+      );
 
       await bootstrapLocalEnvironment(
         { powerlinePort: 7433, bindHost: "127.0.0.1", skipLocalPowerline: false },
@@ -229,7 +246,10 @@ describe("bootstrapLocalEnvironment", () => {
         { powerlinePort: 7433, bindHost: "127.0.0.1", skipLocalPowerline: false },
         deps,
       );
-      expect(deps.taskStore.setTaskWorkspace).toHaveBeenCalledWith(ROOT_TASK_ID, DEFAULT_WORKSPACE_ID);
+      expect(deps.taskStore.setTaskWorkspace).toHaveBeenCalledWith(
+        ROOT_TASK_ID,
+        DEFAULT_WORKSPACE_ID,
+      );
     });
 
     it("does not backfill if system task already has a workspace", async () => {
@@ -248,7 +268,9 @@ describe("bootstrapLocalEnvironment", () => {
         id: ROOT_TASK_ID,
         workspaceId: undefined,
       });
-      (deps.workspaceEnvironmentLinkStore.isLinked as ReturnType<typeof vi.fn>).mockReturnValue(false);
+      (deps.workspaceEnvironmentLinkStore.isLinked as ReturnType<typeof vi.fn>).mockReturnValue(
+        false,
+      );
 
       await bootstrapLocalEnvironment(
         { powerlinePort: 7433, bindHost: "127.0.0.1", skipLocalPowerline: false },
@@ -312,7 +334,8 @@ describe("bootstrapLocalEnvironment", () => {
         deps,
       );
 
-      const statusCalls = (deps.envRegistry.updateEnvironmentStatus as ReturnType<typeof vi.fn>).mock.calls;
+      const statusCalls = (deps.envRegistry.updateEnvironmentStatus as ReturnType<typeof vi.fn>)
+        .mock.calls;
       const connectingIdx = statusCalls.findIndex(
         (c: string[]) => c[0] === "local" && c[1] === "connecting",
       );
@@ -353,7 +376,9 @@ describe("bootstrapLocalEnvironment", () => {
     it("logs warning and continues if manager.stop() throws during cleanup", async () => {
       const mockManager = {
         start: vi.fn(async () => {}),
-        stop: vi.fn(async () => { throw new Error("stop failed"); }),
+        stop: vi.fn(async () => {
+          throw new Error("stop failed");
+        }),
       };
       const deps = createMockDeps({
         createPowerLineManager: vi.fn(() => mockManager),
@@ -394,7 +419,9 @@ describe("bootstrapLocalEnvironment", () => {
 
     it("logs the error with port information", async () => {
       const deps = createMockDeps({
-        getAdapter: vi.fn(() => { throw new Error("boom"); }),
+        getAdapter: vi.fn(() => {
+          throw new Error("boom");
+        }),
       });
 
       await bootstrapLocalEnvironment(

@@ -1,4 +1,4 @@
-@use '../../styles/mixins' as *;
+@use "../../styles/mixins" as *;
 
 // =============================================================================
 // Button — shared component with variant × size matrix
@@ -15,10 +15,11 @@
   cursor: pointer;
   font-family: var(--font-ui);
   border-radius: var(--radius-md);
-  transition: background var(--transition-fast),
-              box-shadow var(--transition-fast),
-              transform var(--transition-fast),
-              border-color var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast),
+    border-color var(--transition-fast);
 
   &:focus-visible {
     outline: 2px solid var(--ring);

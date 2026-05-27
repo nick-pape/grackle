@@ -19,7 +19,9 @@ describe("AsyncQueue", () => {
     const shiftPromise = queue.shift();
     // Should not have resolved yet
     let resolved = false;
-    shiftPromise.then(() => { resolved = true; });
+    shiftPromise.then(() => {
+      resolved = true;
+    });
     await Promise.resolve(); // flush microtasks
     expect(resolved).toBe(false);
 

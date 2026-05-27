@@ -72,29 +72,47 @@ export async function checkVersionStatus(ttlMs: number = DEFAULT_TTL_MS): Promis
   const isDocker = existsSync("/.dockerenv");
 
   const controller = new AbortController();
-  const timeout: ReturnType<typeof setTimeout> = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const timeout: ReturnType<typeof setTimeout> = setTimeout(
+    () => controller.abort(),
+    FETCH_TIMEOUT_MS,
+  );
 
   try {
     const response = await fetch(REGISTRY_URL, { signal: controller.signal });
 
     if (!response.ok) {
       logger.debug({ status: response.status }, "npm registry returned non-OK status");
-      return cacheAndReturn({ currentVersion, latestVersion: currentVersion, updateAvailable: false, isDocker });
+      return cacheAndReturn({
+        currentVersion,
+        latestVersion: currentVersion,
+        updateAvailable: false,
+        isDocker,
+      });
     }
 
-    const data = await response.json() as Record<string, unknown>;
+    const data = (await response.json()) as Record<string, unknown>;
     const latestVersion = typeof data.version === "string" ? data.version : "";
 
     if (!latestVersion) {
       logger.debug("npm registry response missing version field");
-      return cacheAndReturn({ currentVersion, latestVersion: currentVersion, updateAvailable: false, isDocker });
+      return cacheAndReturn({
+        currentVersion,
+        latestVersion: currentVersion,
+        updateAvailable: false,
+        isDocker,
+      });
     }
 
     const updateAvailable = latestVersion !== currentVersion;
     return cacheAndReturn({ currentVersion, latestVersion, updateAvailable, isDocker });
   } catch (error) {
     logger.debug({ err: error }, "Failed to check npm registry for updates");
-    return cacheAndReturn({ currentVersion, latestVersion: currentVersion, updateAvailable: false, isDocker });
+    return cacheAndReturn({
+      currentVersion,
+      latestVersion: currentVersion,
+      updateAvailable: false,
+      isDocker,
+    });
   } finally {
     clearTimeout(timeout);
   }

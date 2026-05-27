@@ -29,14 +29,13 @@ function request(
 ): Promise<{ status: number; headers: http.IncomingHttpHeaders; body: string }> {
   return new Promise((resolve, reject) => {
     const addr = server.address() as { port: number };
-    const req = http.request(
-      { hostname: "127.0.0.1", port: addr.port, path, headers },
-      (res) => {
-        let body = "";
-        res.on("data", (chunk: Buffer) => { body += chunk.toString(); });
-        res.on("end", () => resolve({ status: res.statusCode!, headers: res.headers, body }));
-      },
-    );
+    const req = http.request({ hostname: "127.0.0.1", port: addr.port, path, headers }, (res) => {
+      let body = "";
+      res.on("data", (chunk: Buffer) => {
+        body += chunk.toString();
+      });
+      res.on("end", () => resolve({ status: res.statusCode!, headers: res.headers, body }));
+    });
     req.on("error", reject);
     req.end();
   });
@@ -61,7 +60,9 @@ function postBody(
       },
       (res) => {
         let b = "";
-        res.on("data", (chunk: Buffer) => { b += chunk.toString(); });
+        res.on("data", (chunk: Buffer) => {
+          b += chunk.toString();
+        });
         res.on("end", () => resolve({ status: res.statusCode!, body: b }));
       },
     );
@@ -121,7 +122,6 @@ describe("createWebServer", () => {
   });
 
   it("shows pairing page at /pair when no code provided", async () => {
-
     const res = await request(server, "/pair");
 
     expect(res.status).toBe(200);
@@ -130,7 +130,6 @@ describe("createWebServer", () => {
   });
 
   it("redirects to /pair when unauthenticated", async () => {
-
     const res = await request(server, "/");
 
     expect(res.status).toBe(302);
@@ -138,7 +137,6 @@ describe("createWebServer", () => {
   });
 
   it("serves OAuth metadata at /.well-known/oauth-authorization-server", async () => {
-
     const res = await request(server, "/.well-known/oauth-authorization-server");
 
     expect(res.status).toBe(200);
@@ -149,11 +147,9 @@ describe("createWebServer", () => {
 
   it("derives OAuth metadata URLs from request Host header", async () => {
     const addr = server.address() as { port: number };
-    const res = await request(
-      server,
-      "/.well-known/oauth-authorization-server",
-      { "Host": `localhost:${addr.port}` },
-    );
+    const res = await request(server, "/.well-known/oauth-authorization-server", {
+      Host: `localhost:${addr.port}`,
+    });
 
     expect(res.status).toBe(200);
     const metadata = JSON.parse(res.body);
@@ -165,7 +161,6 @@ describe("createWebServer", () => {
   it("redeems a valid pairing code and sets session cookie", async () => {
     vi.mocked(redeemPairingCode).mockReturnValueOnce(true);
     vi.mocked(createSession).mockReturnValueOnce("grackle_session=test123; HttpOnly");
-
 
     const res = await request(server, "/pair?code=ABC123");
 

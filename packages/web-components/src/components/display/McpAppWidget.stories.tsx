@@ -13,18 +13,18 @@ const SANDBOX_URL: string = SANDBOX_ORIGIN + "/sandbox.html";
 // the DOM skeleton plus the module script tag. ASCII-only (the Storybook acorn
 // indexer breaks on non-ASCII in .stories.tsx).
 const SAMPLE_WIDGET_HTML: string = [
-  "<!doctype html><html><head><meta charset=\"utf-8\"><style>",
+  '<!doctype html><html><head><meta charset="utf-8"><style>',
   "body{margin:0;font-family:var(--font-sans,sans-serif);color:var(--color-text-primary,#111);",
   "background:var(--color-background-secondary,#f5f5f5);padding:16px}",
   ".card{background:var(--color-background-primary,#fff);border:1px solid var(--color-border-primary,#ddd);",
   "border-radius:var(--border-radius-md,6px);padding:16px}",
   "code{font-family:var(--font-mono,monospace)} button{margin-top:12px}",
-  "</style></head><body><div class=\"card\">",
-  "<h2 id=\"title\">Weather</h2>",
-  "<div>Input: <code id=\"in\">(none)</code></div>",
-  "<div>Result: <code id=\"out\">(pending)</code></div>",
-  "<button id=\"call\">Refresh</button></div>",
-  "<script type=\"module\" src=\"" + SANDBOX_ORIGIN + "/sample-widget.js\"></script>",
+  '</style></head><body><div class="card">',
+  '<h2 id="title">Weather</h2>',
+  '<div>Input: <code id="in">(none)</code></div>',
+  '<div>Result: <code id="out">(pending)</code></div>',
+  '<button id="call">Refresh</button></div>',
+  '<script type="module" src="' + SANDBOX_ORIGIN + '/sample-widget.js"></script>',
   "</body></html>",
 ].join("");
 

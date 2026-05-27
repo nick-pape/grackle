@@ -23,7 +23,14 @@ function applySchema(): void {
 
 /** Seed a session action with explicit seq/session. */
 function seed(seq: string, sessionId: string, content: string): void {
-  persistSessionAction({ seq, sessionId, type: "text", content, raw: "", timestamp: "2026-05-24T00:00:00.000Z" });
+  persistSessionAction({
+    seq,
+    sessionId,
+    type: "text",
+    content,
+    raw: "",
+    timestamp: "2026-05-24T00:00:00.000Z",
+  });
 }
 
 describe("querySessionActions", () => {
@@ -36,7 +43,11 @@ describe("querySessionActions", () => {
     seed("01C", "s1", "c");
     seed("01A", "s1", "a");
     seed("01B", "s1", "b");
-    expect(querySessionActions({ sessionId: "s1" }).map((a) => a.seq)).toEqual(["01A", "01B", "01C"]);
+    expect(querySessionActions({ sessionId: "s1" }).map((a) => a.seq)).toEqual([
+      "01A",
+      "01B",
+      "01C",
+    ]);
   });
 
   it("scopes results to the requested session", () => {
@@ -50,7 +61,10 @@ describe("querySessionActions", () => {
     seed("01A", "s1", "a");
     seed("01B", "s1", "b");
     seed("01C", "s1", "c");
-    expect(querySessionActions({ sessionId: "s1", fromSeq: "01A" }).map((a) => a.seq)).toEqual(["01B", "01C"]);
+    expect(querySessionActions({ sessionId: "s1", fromSeq: "01A" }).map((a) => a.seq)).toEqual([
+      "01B",
+      "01C",
+    ]);
     expect(querySessionActions({ sessionId: "s1", fromSeq: "01C" })).toEqual([]);
   });
 
@@ -59,7 +73,10 @@ describe("querySessionActions", () => {
     seed("01B", "s1", "b");
     seed("01C", "s1", "c");
     seed("01D", "s1", "d");
-    expect(querySessionActions({ sessionId: "s1", limit: 2 }).map((a) => a.seq)).toEqual(["01A", "01B"]);
+    expect(querySessionActions({ sessionId: "s1", limit: 2 }).map((a) => a.seq)).toEqual([
+      "01A",
+      "01B",
+    ]);
   });
 
   it("round-trips action fields including raw", () => {
@@ -85,7 +102,9 @@ describe("querySessionActions", () => {
     seed("01A", "s1", "a");
     seed("01B", "s1", "b");
     // A cursor lexicographically after every stored ULID yields nothing.
-    expect(querySessionActions({ sessionId: "s1", fromSeq: "ZZZZZZZZZZZZZZZZZZZZZZZZZZ" })).toEqual([]);
+    expect(querySessionActions({ sessionId: "s1", fromSeq: "ZZZZZZZZZZZZZZZZZZZZZZZZZZ" })).toEqual(
+      [],
+    );
   });
 
   it("clamps a limit above the hard cap to MAX_SESSION_ACTION_LIMIT (5000)", () => {
@@ -98,7 +117,14 @@ describe("querySessionActions", () => {
     const insertMany = sqlite.transaction((count: number) => {
       for (let i = 0; i < count; i++) {
         // Zero-padded so lexical ULID order matches insertion order.
-        insert.run(`SEQ${String(i).padStart(6, "0")}`, "big", "text", "x", "", "2026-05-24T00:00:00.000Z");
+        insert.run(
+          `SEQ${String(i).padStart(6, "0")}`,
+          "big",
+          "text",
+          "x",
+          "",
+          "2026-05-24T00:00:00.000Z",
+        );
       }
     });
     insertMany(MAX + 1);

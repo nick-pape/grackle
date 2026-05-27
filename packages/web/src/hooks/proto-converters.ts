@@ -125,7 +125,6 @@ export function protoToTask(p: grackle.Task): TaskData {
   };
 }
 
-
 /** Convert a proto TokenInfo to the UI TokenInfo type. */
 export function protoToToken(p: grackle.TokenInfo): TokenInfo {
   return {
@@ -138,7 +137,9 @@ export function protoToToken(p: grackle.TokenInfo): TokenInfo {
 }
 
 /** Convert a proto CredentialProviderConfig to the UI type. */
-export function protoToCredentialConfig(p: grackle.CredentialProviderConfig): CredentialProviderConfig {
+export function protoToCredentialConfig(
+  p: grackle.CredentialProviderConfig,
+): CredentialProviderConfig {
   return {
     claude: claudeProviderModeToString(p.claude) as CredentialProviderConfig["claude"],
     github: providerToggleToString(p.github) as CredentialProviderConfig["github"],
@@ -176,19 +177,23 @@ export function protoToPersona(p: grackle.Persona): PersonaData {
     name: p.name,
     description: p.description,
     systemPrompt: p.systemPrompt,
-    toolConfig: p.toolConfig ? JSON.stringify({
-      allowedTools: [...p.toolConfig.allowedTools],
-      disallowedTools: [...p.toolConfig.disallowedTools],
-    }) : "{}",
+    toolConfig: p.toolConfig
+      ? JSON.stringify({
+          allowedTools: [...p.toolConfig.allowedTools],
+          disallowedTools: [...p.toolConfig.disallowedTools],
+        })
+      : "{}",
     runtime: p.runtime,
     model: p.model,
     maxTurns: p.maxTurns,
-    mcpServers: JSON.stringify(p.mcpServers.map((s) => ({
-      name: s.name,
-      command: s.command,
-      args: [...s.args],
-      tools: [...s.tools],
-    }))),
+    mcpServers: JSON.stringify(
+      p.mcpServers.map((s) => ({
+        name: s.name,
+        command: s.command,
+        args: [...s.args],
+        tools: [...s.tools],
+      })),
+    ),
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
     type: p.type || "agent",

@@ -40,9 +40,7 @@ export function computeTaskStatus(
 ): TaskStatusResult {
   // "complete" and "failed" are sticky — human-authoritative when no sessions contradict
   if (storedStatus === TASK_STATUS.COMPLETE || storedStatus === TASK_STATUS.FAILED) {
-    const latestSessionId = sessions.length > 0
-      ? getLatestSession(sessions).id
-      : "";
+    const latestSessionId = sessions.length > 0 ? getLatestSession(sessions).id : "";
     // If there are active sessions, they take precedence over failed (but not complete)
     if (storedStatus === TASK_STATUS.COMPLETE) {
       return { status: TASK_STATUS.COMPLETE, latestSessionId };
@@ -59,9 +57,7 @@ export function computeTaskStatus(
   }
 
   // Check for any active sessions
-  const activeSessions = sessions.filter((s) =>
-    ACTIVE_SESSION_STATUSES.has(s.status),
-  );
+  const activeSessions = sessions.filter((s) => ACTIVE_SESSION_STATUSES.has(s.status));
 
   if (activeSessions.length > 0) {
     const hasIdle = activeSessions.some((s) => s.status === SESSION_STATUS.IDLE);

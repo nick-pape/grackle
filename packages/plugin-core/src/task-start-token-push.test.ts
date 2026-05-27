@@ -64,7 +64,9 @@ vi.mock("@grackle-ai/database", async (importOriginal) => {
       deletePersona: vi.fn(),
     },
     settingsStore: {
-      getSetting: vi.fn((key: string) => key === "default_persona_id" ? "claude-code" : undefined),
+      getSetting: vi.fn((key: string) =>
+        key === "default_persona_id" ? "claude-code" : undefined,
+      ),
       setSetting: vi.fn(),
     },
     credentialProviders: {
@@ -81,7 +83,7 @@ vi.mock("@grackle-ai/database", async (importOriginal) => {
 });
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {
-  const actual = await importOriginal() as Record<string, unknown>;
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -126,7 +128,17 @@ vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
 vi.mock("@grackle-ai/prompt", () => ({
   SystemPromptBuilder: vi.fn().mockImplementation(() => ({ build: () => "" })),
   buildTaskPrompt: vi.fn((title: string) => title),
-  resolvePersona: vi.fn(() => ({ personaId: "p1", runtime: "claude-code", model: "sonnet", maxTurns: 0, systemPrompt: "", toolConfig: "{}", mcpServers: "[]", type: "agent", script: "" })),
+  resolvePersona: vi.fn(() => ({
+    personaId: "p1",
+    runtime: "claude-code",
+    model: "sonnet",
+    maxTurns: 0,
+    systemPrompt: "",
+    toolConfig: "{}",
+    mcpServers: "[]",
+    type: "agent",
+    script: "",
+  })),
   buildOrchestratorContext: vi.fn(() => undefined),
 }));
 

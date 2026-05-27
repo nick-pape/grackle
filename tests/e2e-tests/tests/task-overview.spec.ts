@@ -47,7 +47,9 @@ test.describe("Task Overview Tab", { tag: ["@task"] }, () => {
     await navigateToTask(page, "desc-task");
 
     // Overview tab should show the description
-    await expect(page.getByText("This is a detailed task description for testing")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("This is a detailed task description for testing")).toBeVisible({
+      timeout: 5_000,
+    });
   });
 
   test("overview shows environment name", async ({ stubTask }) => {
@@ -63,7 +65,9 @@ test.describe("Task Overview Tab", { tag: ["@task"] }, () => {
     await page.getByRole("tab", { name: "Overview", exact: true }).click();
 
     // Overview should display the environment display name
-    await expect(page.getByTestId("task-overview-environment").getByText("test-local", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(
+      page.getByTestId("task-overview-environment").getByText("test-local", { exact: true }),
+    ).toBeVisible({ timeout: 5_000 });
   });
 
   test("overview shows blocked dependencies in yellow", async ({ stubTask }) => {
@@ -123,7 +127,9 @@ test.describe("Task Overview Tab", { tag: ["@task"] }, () => {
     await expect(depItem).toContainText("done-blocker");
   });
 
-  test("sidebar shows blocked badge for tasks with incomplete dependencies", async ({ stubTask }) => {
+  test("sidebar shows blocked badge for tasks with incomplete dependencies", async ({
+    stubTask,
+  }) => {
     const { page, client, workspaceName } = stubTask;
 
     await createTask(client, workspaceName, "badge-blocker", "test-local");

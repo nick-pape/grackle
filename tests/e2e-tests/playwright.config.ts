@@ -24,10 +24,7 @@ export default defineConfig({
   timeout: 30_000,
   retries: process.env.CI ? 1 : 0,
   fullyParallel: true,
-  reporter: [
-    ["list"],
-    ["junit", { outputFile: "test-results/e2e-results.xml" }],
-  ],
+  reporter: [["list"], ["junit", { outputFile: "test-results/e2e-results.xml" }]],
   projects: [
     {
       name: "chromium",

@@ -25,10 +25,7 @@ describe("pnpm onlyBuiltDependencies policy", () => {
     expect(pnpmConfig, "pnpm section must exist in package.json").toBeDefined();
 
     const onlyBuilt = pnpmConfig?.onlyBuiltDependencies as string[] | undefined;
-    expect(
-      Array.isArray(onlyBuilt),
-      "pnpm.onlyBuiltDependencies must be an array",
-    ).toBe(true);
+    expect(Array.isArray(onlyBuilt), "pnpm.onlyBuiltDependencies must be an array").toBe(true);
     expect(onlyBuilt).toContain("better-sqlite3");
   });
 
@@ -41,10 +38,7 @@ describe("pnpm onlyBuiltDependencies policy", () => {
     expect(pnpmConfig, "pnpm section must exist in package.json").toBeDefined();
 
     const onlyBuilt = pnpmConfig?.onlyBuiltDependencies as string[] | undefined;
-    expect(
-      Array.isArray(onlyBuilt),
-      "pnpm.onlyBuiltDependencies must be an array",
-    ).toBe(true);
+    expect(Array.isArray(onlyBuilt), "pnpm.onlyBuiltDependencies must be an array").toBe(true);
     expect(onlyBuilt).toContain("better-sqlite3");
   });
 });

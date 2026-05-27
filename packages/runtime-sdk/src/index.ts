@@ -1,4 +1,11 @@
-export type { AgentEvent, SpawnOptions, ResumeOptions, CreateSessionOptions, AgentSession, AgentRuntime } from "./runtime.js";
+export type {
+  AgentEvent,
+  SpawnOptions,
+  ResumeOptions,
+  CreateSessionOptions,
+  AgentSession,
+  AgentRuntime,
+} from "./runtime.js";
 export { BaseAgentRuntime } from "./base-runtime.js";
 export { BaseAgentSession } from "./base-session.js";
 export {
@@ -17,12 +24,7 @@ export type {
   BrokerConfig,
 } from "./runtime-utils.js";
 export { AsyncQueue } from "./async-queue.js";
-export {
-  ensureWorktree,
-  removeWorktree,
-  worktreeDir,
-  sanitizeBranch,
-} from "./worktree.js";
+export { ensureWorktree, removeWorktree, worktreeDir, sanitizeBranch } from "./worktree.js";
 export type { GitExecutor, WorktreeFileSystem, WorktreeResult } from "./worktree.js";
 export {
   ensureRuntimeInstalled,

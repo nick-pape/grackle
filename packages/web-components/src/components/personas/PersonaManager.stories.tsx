@@ -26,9 +26,7 @@ export const EmptyState: Story = {
     await expect(
       canvas.getByText("No personas yet. Create one to get started."),
     ).toBeInTheDocument();
-    await expect(
-      canvas.getByRole("button", { name: "+ New Persona" }),
-    ).toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "+ New Persona" })).toBeInTheDocument();
   },
 };
 
@@ -101,9 +99,7 @@ export const ClickPersonaCard: Story = {
 /** Delete flow: clicking "Delete" shows a confirmation dialog. */
 export const DeletePersonaFlow: Story = {
   args: {
-    personas: [
-      buildPersona({ id: "p-del", name: "Disposable Persona" }),
-    ],
+    personas: [buildPersona({ id: "p-del", name: "Disposable Persona" })],
   },
   play: async ({ canvas, args }) => {
     // Click Delete within the card actions

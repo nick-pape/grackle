@@ -32,8 +32,10 @@ This package is consumed by `@grackle-ai/server` (the orchestrator) which wires 
 ```typescript
 import {
   registerGrackleRoutes,
-  registerAdapter, startHeartbeat,
-  emit, subscribe,
+  registerAdapter,
+  startHeartbeat,
+  emit,
+  subscribe,
   createWsBridge,
   logger,
 } from "@grackle-ai/core";

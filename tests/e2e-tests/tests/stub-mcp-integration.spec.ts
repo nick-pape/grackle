@@ -8,7 +8,10 @@ import {
 } from "./helpers.js";
 
 test.describe("Stub MCP Integration", { tag: ["@persona"] }, () => {
-  test("real MCP tool_use and tool_result rendered in UI", async ({ appPage, grackle: { client } }) => {
+  test("real MCP tool_use and tool_result rendered in UI", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     // Create workspace + task (task gives the spawn a real workspaceId for the scoped MCP token)
@@ -40,12 +43,13 @@ test.describe("Stub MCP Integration", { tag: ["@persona"] }, () => {
     await page.getByRole("button", { name: "Send", exact: true }).click();
 
     // Verify full lifecycle completes
-    await page
-      .getByRole("button", { name: "Resume", exact: true })
-      .waitFor({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Resume", exact: true }).waitFor({ timeout: 15_000 });
   });
 
-  test("stub-mcp renders paired tool_use + tool_result correctly", async ({ appPage, grackle: { client } }) => {
+  test("stub-mcp renders paired tool_use + tool_result correctly", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     await createWorkspace(client, "mcp-pair-proj");

@@ -5,7 +5,11 @@ import { useVersionStatus } from "../../hooks/useVersionStatus.js";
 
 /** Settings tab wrapping the about panel. */
 export function SettingsAboutTab(): JSX.Element {
-  const { connectionStatus, environments: { environments }, sessions: { sessions } } = useGrackle();
+  const {
+    connectionStatus,
+    environments: { environments },
+    sessions: { sessions },
+  } = useGrackle();
   const versionStatus = useVersionStatus();
 
   return (
@@ -18,7 +22,11 @@ export function SettingsAboutTab(): JSX.Element {
           isDocker={versionStatus.isDocker}
         />
       )}
-      <AboutPanel connectionStatus={connectionStatus} environments={environments} sessions={sessions} />
+      <AboutPanel
+        connectionStatus={connectionStatus}
+        environments={environments}
+        sessions={sessions}
+      />
     </>
   );
 }

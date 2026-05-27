@@ -18,7 +18,7 @@ vi.mock("@grackle-ai/database", async () => {
 });
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {
-  const actual = await importOriginal() as Record<string, unknown>;
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -108,7 +108,12 @@ vi.mock("./utils/slugify.js", () => ({
 
 import { registerGrackleRoutes } from "./grpc-service.js";
 import { sessionStore } from "@grackle-ai/database";
-import { adapterManager, streamRegistry, cleanupLifecycleStream, ensureLifecycleStream } from "@grackle-ai/core";
+import {
+  adapterManager,
+  streamRegistry,
+  cleanupLifecycleStream,
+  ensureLifecycleStream,
+} from "@grackle-ai/core";
 const lifecycle = { cleanupLifecycleStream, ensureLifecycleStream };
 import type { ConnectRouter } from "@connectrpc/connect";
 

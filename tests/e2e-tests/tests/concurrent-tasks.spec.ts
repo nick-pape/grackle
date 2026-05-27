@@ -10,11 +10,7 @@ import {
 
 /** Scenario that emits text, goes idle, then completes on any input. */
 function idleScenario(label: string): { steps: ReturnType<typeof emitText>[] } {
-  return stubScenario(
-    emitText(`Working on ${label}...`),
-    onInput("next"),
-    idle(),
-  );
+  return stubScenario(emitText(`Working on ${label}...`), onInput("next"), idle());
 }
 
 test.describe("Concurrent Tasks", { tag: ["@task"] }, () => {
@@ -83,15 +79,21 @@ test.describe("Concurrent Tasks", { tag: ["@task"] }, () => {
     const taskYRow = page.getByText("status-task-y", { exact: true }).locator("..");
 
     // Wait for task X to be active (working or paused)
-    await expect(taskXRow.locator('[data-testid="task-status-working"], [data-testid="task-status-paused"]')).toBeVisible({ timeout: 15_000 });
+    await expect(
+      taskXRow.locator('[data-testid="task-status-working"], [data-testid="task-status-paused"]'),
+    ).toBeVisible({ timeout: 15_000 });
 
     // Start task Y
     await navigateToTask(page, "status-task-y");
     await page.getByTestId("task-header-start").click();
 
     // Wait for task Y to also be active — both tasks should show active icon in sidebar
-    await expect(taskYRow.locator('[data-testid="task-status-working"], [data-testid="task-status-paused"]')).toBeVisible({ timeout: 15_000 });
-    await expect(taskXRow.locator('[data-testid="task-status-working"], [data-testid="task-status-paused"]')).toBeVisible();
+    await expect(
+      taskYRow.locator('[data-testid="task-status-working"], [data-testid="task-status-paused"]'),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      taskXRow.locator('[data-testid="task-status-working"], [data-testid="task-status-paused"]'),
+    ).toBeVisible();
 
     // Complete task X to review: navigate, send input
     await navigateToTask(page, "status-task-x");
@@ -101,7 +103,11 @@ test.describe("Concurrent Tasks", { tag: ["@task"] }, () => {
     await page.locator("button", { hasText: "Send" }).click();
 
     // Wait for task X to reach review (paused) while task Y stays active (working or paused)
-    await expect(taskXRow.locator('[data-testid="task-status-paused"]')).toBeVisible({ timeout: 15_000 });
-    await expect(taskYRow.locator('[data-testid="task-status-working"], [data-testid="task-status-paused"]')).toBeVisible();
+    await expect(taskXRow.locator('[data-testid="task-status-paused"]')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(
+      taskYRow.locator('[data-testid="task-status-working"], [data-testid="task-status-paused"]'),
+    ).toBeVisible();
   });
 });

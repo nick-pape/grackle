@@ -30,45 +30,55 @@ export function EnvironmentNav({ environments }: EnvironmentNavProps): JSX.Eleme
   const editMatch = useMatch("/environments/:environmentId/edit");
   const workspaceMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId");
   const workspaceSubMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId/*");
-  const rawId = envMatch?.params.environmentId ?? editMatch?.params.environmentId
-    ?? workspaceMatch?.params.environmentId ?? workspaceSubMatch?.params.environmentId;
+  const rawId =
+    envMatch?.params.environmentId ??
+    editMatch?.params.environmentId ??
+    workspaceMatch?.params.environmentId ??
+    workspaceSubMatch?.params.environmentId;
   /** Filter out the "new" pseudo-ID so /environments/new doesn't highlight a real tab. */
   const activeId = rawId === "new" ? undefined : rawId;
 
-  const handleClick = useCallback((envId: string) => {
-    navigate(environmentUrl(envId));
-  }, [navigate]);
+  const handleClick = useCallback(
+    (envId: string) => {
+      navigate(environmentUrl(envId));
+    },
+    [navigate],
+  );
 
-  const handleKeyDown = useCallback((e: KeyboardEvent<HTMLElement>) => {
-    const buttons = tabListRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
-    if (!buttons || buttons.length === 0) {
-      return;
-    }
-    const focusedIndex = Array.from(buttons).findIndex((b) => b === document.activeElement);
-    const currentIndex = focusedIndex >= 0 ? focusedIndex : environments.findIndex((env) => env.id === activeId);
-    let nextIndex = currentIndex;
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLElement>) => {
+      const buttons = tabListRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+      if (!buttons || buttons.length === 0) {
+        return;
+      }
+      const focusedIndex = Array.from(buttons).findIndex((b) => b === document.activeElement);
+      const currentIndex =
+        focusedIndex >= 0 ? focusedIndex : environments.findIndex((env) => env.id === activeId);
+      let nextIndex = currentIndex;
 
-    if (e.key === "ArrowDown" || e.key === "j" || e.key === "J") {
-      e.preventDefault();
-      nextIndex = (currentIndex + 1) % buttons.length;
-    } else if (e.key === "ArrowUp" || e.key === "k" || e.key === "K") {
-      e.preventDefault();
-      nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
-    } else if (e.key === "Home") {
-      e.preventDefault();
-      nextIndex = 0;
-    } else if (e.key === "End") {
-      e.preventDefault();
-      nextIndex = buttons.length - 1;
-    } else {
-      return;
-    }
+      if (e.key === "ArrowDown" || e.key === "j" || e.key === "J") {
+        e.preventDefault();
+        nextIndex = (currentIndex + 1) % buttons.length;
+      } else if (e.key === "ArrowUp" || e.key === "k" || e.key === "K") {
+        e.preventDefault();
+        nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        nextIndex = 0;
+      } else if (e.key === "End") {
+        e.preventDefault();
+        nextIndex = buttons.length - 1;
+      } else {
+        return;
+      }
 
-    if (nextIndex < environments.length) {
-      navigate(environmentUrl(environments[nextIndex].id));
-    }
-    buttons[nextIndex].focus();
-  }, [activeId, environments, navigate]);
+      if (nextIndex < environments.length) {
+        navigate(environmentUrl(environments[nextIndex].id));
+      }
+      buttons[nextIndex].focus();
+    },
+    [activeId, environments, navigate],
+  );
 
   /** When no environment is selected, the first tab should be focusable. */
   const focusableId = activeId ?? (environments.length > 0 ? environments[0].id : undefined);
@@ -123,11 +133,7 @@ export function EnvironmentNav({ environments }: EnvironmentNavProps): JSX.Eleme
         + Add Environment
       </button>
 
-      {environments.length === 0 && (
-        <div className={styles.empty}>
-          No environments yet.
-        </div>
-      )}
+      {environments.length === 0 && <div className={styles.empty}>No environments yet.</div>}
     </div>
   );
 }

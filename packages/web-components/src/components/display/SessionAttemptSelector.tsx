@@ -16,7 +16,11 @@ export interface SessionAttemptSelectorProps {
  * Displays a row of numbered attempt buttons when a task has multiple sessions.
  * Returns `undefined` when fewer than two sessions exist.
  */
-export function SessionAttemptSelector({ taskSessions, selectedSessionId, onSelect }: SessionAttemptSelectorProps): JSX.Element | undefined {
+export function SessionAttemptSelector({
+  taskSessions,
+  selectedSessionId,
+  onSelect,
+}: SessionAttemptSelectorProps): JSX.Element | undefined {
   if (taskSessions.length < 2) {
     return undefined;
   }
@@ -25,10 +29,14 @@ export function SessionAttemptSelector({ taskSessions, selectedSessionId, onSele
       <span className={styles.attemptLabel}>Attempts:</span>
       {taskSessions.map((s, i) => {
         const isActive = s.id === selectedSessionId;
-        const statusIcon = s.status === "stopped" && s.endReason === "completed" ? "\u2713"
-          : s.status === "stopped" ? "\u2717"
-          : s.status === "running" || s.status === "idle" ? "\u25CF"
-          : "";
+        const statusIcon =
+          s.status === "stopped" && s.endReason === "completed"
+            ? "\u2713"
+            : s.status === "stopped"
+              ? "\u2717"
+              : s.status === "running" || s.status === "idle"
+                ? "\u25CF"
+                : "";
         return (
           <button
             key={s.id}

@@ -16,8 +16,12 @@ const mockPragma = vi.fn();
 vi.mock("@grackle-ai/database", () => {
   let sqliteInstance: { pragma: ReturnType<typeof vi.fn> } | undefined;
   return {
-    get sqlite() { return sqliteInstance; },
-    __setSqlite(val: { pragma: ReturnType<typeof vi.fn> } | undefined): void { sqliteInstance = val; },
+    get sqlite() {
+      return sqliteInstance;
+    },
+    __setSqlite(val: { pragma: ReturnType<typeof vi.fn> } | undefined): void {
+      sqliteInstance = val;
+    },
     stopWalCheckpointTimer: vi.fn(),
   };
 });
@@ -39,7 +43,7 @@ import { stopPairingCleanup, stopSessionCleanup, stopOAuthCleanup } from "@grack
 import { closeAllTunnels } from "@grackle-ai/adapter-sdk";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const { __setSqlite } = await import("@grackle-ai/database") as unknown as {
+const { __setSqlite } = (await import("@grackle-ai/database")) as unknown as {
   __setSqlite: (val: { pragma: ReturnType<typeof vi.fn> } | undefined) => void;
 };
 
@@ -52,10 +56,26 @@ afterAll(() => {
 /** Build a mock ShutdownContext with all fields. */
 function createMockContext(overrides?: Partial<ShutdownContext>): ShutdownContext {
   return {
-    grpcServer: { close: vi.fn((cb: (err?: Error) => void) => { cb(); }) },
-    webServer: { close: vi.fn((cb: (err?: Error) => void) => { cb(); }) },
-    mcpServer: { close: vi.fn((cb: (err?: Error) => void) => { cb(); }) },
-    sandboxServer: { close: vi.fn((cb: (err?: Error) => void) => { cb(); }) },
+    grpcServer: {
+      close: vi.fn((cb: (err?: Error) => void) => {
+        cb();
+      }),
+    },
+    webServer: {
+      close: vi.fn((cb: (err?: Error) => void) => {
+        cb();
+      }),
+    },
+    mcpServer: {
+      close: vi.fn((cb: (err?: Error) => void) => {
+        cb();
+      }),
+    },
+    sandboxServer: {
+      close: vi.fn((cb: (err?: Error) => void) => {
+        cb();
+      }),
+    },
     reconciliationManager: { stop: vi.fn(async () => {}) },
     localPowerLineManager: { stop: vi.fn(async () => {}) },
     ...overrides,
@@ -158,7 +178,11 @@ describe("createShutdown", () => {
 
   it("handles server close errors gracefully", async () => {
     const ctx = createMockContext({
-      grpcServer: { close: vi.fn((cb: (err?: Error) => void) => { cb(new Error("close error")); }) },
+      grpcServer: {
+        close: vi.fn((cb: (err?: Error) => void) => {
+          cb(new Error("close error"));
+        }),
+      },
     });
     const shutdown = createShutdown(ctx);
     await shutdown();
@@ -175,7 +199,9 @@ describe("createShutdown", () => {
   });
 
   it("logs error and continues if WAL checkpoint throws", async () => {
-    mockPragma.mockImplementation(() => { throw new Error("WAL error"); });
+    mockPragma.mockImplementation(() => {
+      throw new Error("WAL error");
+    });
     const shutdown = createShutdown(createMockContext());
     await shutdown();
     expect(logger.error).toHaveBeenCalledWith(
@@ -204,7 +230,11 @@ describe("createShutdown", () => {
 
     // Make one server hang so shutdown doesn't complete
     const ctx = createMockContext({
-      grpcServer: { close: vi.fn(() => { /* never calls callback */ }) },
+      grpcServer: {
+        close: vi.fn(() => {
+          /* never calls callback */
+        }),
+      },
     });
     const shutdown = createShutdown(ctx);
     const shutdownPromise = shutdown();

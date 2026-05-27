@@ -21,13 +21,21 @@ vi.mock("@grackle-ai/knowledge", () => ({
   findReferenceNodeBySource: kg.findReferenceNodeBySource,
   deleteReferenceNodeBySource: kg.deleteReferenceNodeBySource,
   REFERENCE_SOURCE: {
-    TASK: "task", WORKSPACE: "workspace", SESSION: "session",
-    PERSONA: "persona", ENVIRONMENT: "environment",
+    TASK: "task",
+    WORKSPACE: "workspace",
+    SESSION: "session",
+    PERSONA: "persona",
+    ENVIRONMENT: "environment",
   },
   EDGE_TYPE: {
-    IN_WORKSPACE: "IN_WORKSPACE", PART_OF: "PART_OF", DEPENDS_ON: "DEPENDS_ON",
-    ATTEMPT_OF: "ATTEMPT_OF", RAN_IN: "RAN_IN", USED_PERSONA: "USED_PERSONA",
-    LINKED_TO: "LINKED_TO", SPAWNED: "SPAWNED",
+    IN_WORKSPACE: "IN_WORKSPACE",
+    PART_OF: "PART_OF",
+    DEPENDS_ON: "DEPENDS_ON",
+    ATTEMPT_OF: "ATTEMPT_OF",
+    RAN_IN: "RAN_IN",
+    USED_PERSONA: "USED_PERSONA",
+    LINKED_TO: "LINKED_TO",
+    SPAWNED: "SPAWNED",
   },
 }));
 vi.mock("@grackle-ai/database", () => ({

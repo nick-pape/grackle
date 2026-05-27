@@ -137,9 +137,7 @@ export function personaToNodeInput(persona: PersonaRow): UpsertReferenceNodeInpu
 }
 
 /** Map an Environment row to its reference-node upsert input (global scope). */
-export function environmentToNodeInput(
-  environment: EnvironmentRow,
-): UpsertReferenceNodeInput {
+export function environmentToNodeInput(environment: EnvironmentRow): UpsertReferenceNodeInput {
   const label = deriveEnvironmentText(environment);
   return {
     sourceType: REFERENCE_SOURCE.ENVIRONMENT,

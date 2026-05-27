@@ -71,7 +71,9 @@ export function KnowledgeDetailPanel({
             <div className={styles.sectionLabel}>Tags</div>
             <div className={styles.tags}>
               {node.tags.map((tag) => (
-                <span key={tag} className={styles.tag}>{tag}</span>
+                <span key={tag} className={styles.tag}>
+                  {tag}
+                </span>
               ))}
             </div>
           </div>
@@ -94,11 +96,15 @@ export function KnowledgeDetailPanel({
                 const edgeKey: string = `${edge.fromId}:${edge.toId}:${edge.type}`;
                 return (
                   <li key={edgeKey} className={styles.edgeItem} data-testid="edge-item">
-                    <span className={styles.edgeType} data-testid="edge-type">{edge.type}</span>
+                    <span className={styles.edgeType} data-testid="edge-type">
+                      {edge.type}
+                    </span>
                     <button
                       className={styles.edgeNodeLink}
                       data-testid="edge-node-link"
-                      onClick={() => { onSelectNode(otherId); }}
+                      onClick={() => {
+                        onSelectNode(otherId);
+                      }}
                     >
                       {nodeById.get(otherId)?.label ?? `${otherId.substring(0, 8)}...`}
                     </button>

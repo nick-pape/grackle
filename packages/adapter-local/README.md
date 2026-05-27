@@ -18,9 +18,9 @@ The local adapter connects to a PowerLine gRPC server on the same machine. It is
 
 ## Configuration
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `port` | `number` | `7433` | PowerLine port |
+| Field  | Type     | Default       | Description    |
+| ------ | -------- | ------------- | -------------- |
+| `port` | `number` | `7433`        | PowerLine port |
 | `host` | `string` | `"localhost"` | PowerLine host |
 
 ## Prerequisites

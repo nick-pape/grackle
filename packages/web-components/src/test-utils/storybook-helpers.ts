@@ -186,7 +186,9 @@ export function makeCodespace(overrides: Partial<Codespace> = {}): Codespace {
 }
 
 /** Default credential provider config (all off). */
-export function makeCredentialProviders(overrides: Partial<CredentialProviderConfig> = {}): CredentialProviderConfig {
+export function makeCredentialProviders(
+  overrides: Partial<CredentialProviderConfig> = {},
+): CredentialProviderConfig {
   return {
     claude: "off",
     github: "off",
@@ -240,6 +242,7 @@ export const buildToken: typeof makeToken = makeToken;
 export const buildPersona: typeof makePersona = makePersona;
 export const buildEvent: typeof makeEvent = makeEvent;
 export const buildCodespace: typeof makeCodespace = makeCodespace;
-export const buildCredentialProviderConfig: typeof makeCredentialProviders = makeCredentialProviders;
+export const buildCredentialProviderConfig: typeof makeCredentialProviders =
+  makeCredentialProviders;
 export const buildGraphNode: typeof makeGraphNode = makeGraphNode;
 export const buildGraphLink: typeof makeGraphLink = makeGraphLink;

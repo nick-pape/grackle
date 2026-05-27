@@ -22,30 +22,30 @@ Each session writes the persona's script to a temporary `.genai.mjs` file and in
 
 The runtime takes no static configuration of its own. Behavior is driven by the per-session `SpawnOptions` supplied by Grackle:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `sessionId` | `string` | Identifies the session and the temporary script file |
-| `scriptContent` | `string` | The GenAIScript program executed as a `.genai.mjs` file |
-| `mcpBroker` | `{ url, token }` | Optional MCP broker; injected into the script (see below) |
+| Field           | Type             | Description                                               |
+| --------------- | ---------------- | --------------------------------------------------------- |
+| `sessionId`     | `string`         | Identifies the session and the temporary script file      |
+| `scriptContent` | `string`         | The GenAIScript program executed as a `.genai.mjs` file   |
+| `mcpBroker`     | `{ url, token }` | Optional MCP broker; injected into the script (see below) |
 
 When an MCP broker is present, its URL and token are passed to the script as GenAIScript variables via environment variables, readable inside the script as `env.vars.GRACKLE_MCP_URL` and `env.vars.GRACKLE_MCP_TOKEN`:
 
-| Environment variable | Script accessor |
-|----------------------|-----------------|
-| `GENAISCRIPT_VAR_GRACKLE_MCP_URL` | `env.vars.GRACKLE_MCP_URL` |
+| Environment variable                | Script accessor              |
+| ----------------------------------- | ---------------------------- |
+| `GENAISCRIPT_VAR_GRACKLE_MCP_URL`   | `env.vars.GRACKLE_MCP_URL`   |
 | `GENAISCRIPT_VAR_GRACKLE_MCP_TOKEN` | `env.vars.GRACKLE_MCP_TOKEN` |
 
 ## Events
 
 The session streams `AgentEvent`s as the CLI runs:
 
-| Event | Source |
-|-------|--------|
+| Event    | Source                                                                            |
+| -------- | --------------------------------------------------------------------------------- |
 | `system` | Stderr lines from the CLI (progress, `console.log` output) and lifecycle messages |
-| `text` | The script's output text and any annotations, parsed from the CLI's `res.json` |
-| `usage` | Token counts and cost, parsed from `res.json` when reported |
-| `error` | Script annotations marked as errors, non-zero exit, or spawn failures |
-| `status` | Final session status — `waiting_input` on success, `failed` otherwise |
+| `text`   | The script's output text and any annotations, parsed from the CLI's `res.json`    |
+| `usage`  | Token counts and cost, parsed from `res.json` when reported                       |
+| `error`  | Script annotations marked as errors, non-zero exit, or spawn failures             |
+| `status` | Final session status — `waiting_input` on success, `failed` otherwise             |
 
 ## Models & Credentials
 

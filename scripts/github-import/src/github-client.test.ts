@@ -57,9 +57,7 @@ describe("fetchGitHubIssues", () => {
         cb(ghError, "", "gh: not found");
       },
     );
-    await expect(fetchGitHubIssues("owner/repo", "open")).rejects.toThrow(
-      "Command failed",
-    );
+    await expect(fetchGitHubIssues("owner/repo", "open")).rejects.toThrow("Command failed");
   });
 
   it("throws when gh returns invalid JSON", async () => {
@@ -82,9 +80,7 @@ describe("fetchGitHubIssues", () => {
     mockGhResponse({
       errors: [{ message: "Could not resolve to a Repository" }],
     });
-    await expect(fetchGitHubIssues("owner/repo", "open")).rejects.toThrow(
-      "GraphQL errors",
-    );
+    await expect(fetchGitHubIssues("owner/repo", "open")).rejects.toThrow("GraphQL errors");
   });
 
   it("throws when repository is not found", async () => {

@@ -21,7 +21,9 @@ export function registerGitHubAccountCommands(program: Command): void {
       const { core: client } = createGrackleClients();
       const { accounts } = await client.listGitHubAccounts({});
       if (accounts.length === 0) {
-        console.log(chalk.dim("No GitHub accounts registered. Use `grackle github-account add` to add one."));
+        console.log(
+          chalk.dim("No GitHub accounts registered. Use `grackle github-account add` to add one."),
+        );
         return;
       }
       const table = new Table({
@@ -43,24 +45,26 @@ export function registerGitHubAccountCommands(program: Command): void {
     .requiredOption("--token <token>", "GitHub personal access token (PAT)")
     .option("--username <username>", "GitHub username (resolved automatically if omitted)")
     .option("--default", "Set as the default account")
-    .action(async (label: string, opts: { token: string; username?: string; default?: boolean }) => {
-      if (!label.trim()) {
-        console.error(chalk.red("Label cannot be empty"));
-        process.exit(1);
-      }
-      const { core: client } = createGrackleClients();
-      const account = await client.addGitHubAccount({
-        label: label.trim(),
-        token: opts.token,
-        username: opts.username || "",
-        isDefault: opts.default ?? false,
-      });
-      console.log(
-        chalk.green(`✓ Added GitHub account '${account.label}'`) +
-        (account.username ? ` (${account.username})` : "") +
-        (account.isDefault ? chalk.dim(" [default]") : ""),
-      );
-    });
+    .action(
+      async (label: string, opts: { token: string; username?: string; default?: boolean }) => {
+        if (!label.trim()) {
+          console.error(chalk.red("Label cannot be empty"));
+          process.exit(1);
+        }
+        const { core: client } = createGrackleClients();
+        const account = await client.addGitHubAccount({
+          label: label.trim(),
+          token: opts.token,
+          username: opts.username || "",
+          isDefault: opts.default ?? false,
+        });
+        console.log(
+          chalk.green(`✓ Added GitHub account '${account.label}'`) +
+            (account.username ? ` (${account.username})` : "") +
+            (account.isDefault ? chalk.dim(" [default]") : ""),
+        );
+      },
+    );
 
   ga.command("remove <label-or-id>")
     .description("Remove a registered GitHub account")
@@ -101,9 +105,15 @@ export function registerGitHubAccountCommands(program: Command): void {
       const { core: client } = createGrackleClients();
       const result = await client.importGitHubAccounts({});
       if (result.imported === 0) {
-        console.log(chalk.dim("No new accounts to import (all accounts already registered, or gh CLI not available)."));
+        console.log(
+          chalk.dim(
+            "No new accounts to import (all accounts already registered, or gh CLI not available).",
+          ),
+        );
       } else {
-        console.log(chalk.green(`✓ Imported ${result.imported} account(s): ${result.usernames.join(", ")}`));
+        console.log(
+          chalk.green(`✓ Imported ${result.imported} account(s): ${result.usernames.join(", ")}`),
+        );
       }
     });
 }

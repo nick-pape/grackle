@@ -114,16 +114,19 @@ Grackle is a Rush monorepo with pnpm, containing 5 main packages:
 The contract layer. Everything starts here.
 
 **Proto services defined:**
+
 - `Grackle` — 31 RPCs for the central server (environments, sessions, projects, tasks, findings, tokens)
 - `GracklePowerLine` — 10 RPCs for the remote environment agent host
 
 **Shared exports:**
+
 - Generated TypeScript from protobuf via `protoc-gen-es` (ConnectRPC v2)
 - String union types: `SessionStatus`, `EnvironmentStatus`, `TaskStatus`, `ProjectStatus`, `AdapterType`, `RuntimeName`, `TokenType`, `AgentEventType`
 - Bidirectional enum converters (proto enum ↔ string) with null-prototype maps to prevent prototype pollution
 - Constants: port defaults (7433, 7434, 3000), file paths, limits (`MAX_TASK_DEPTH = 8`)
 
 **Namespace convention:**
+
 ```typescript
 import { grackle, powerline } from "@grackle-ai/common";
 // grackle.Environment, grackle.Task, grackle.SessionEvent, etc.
@@ -136,28 +139,29 @@ The brain. Manages all state, coordinates environments, and bridges the user-fac
 
 **Components:**
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| gRPC Service | `grpc-service.ts` | 26 RPC handlers for the `Grackle` service |
-| WebSocket Bridge | `ws-bridge.ts` | Bidirectional WS for the web UI |
-| WS Broadcast | `ws-broadcast.ts` | Fan-out events to all connected WS clients |
-| Environment Registry | `env-registry.ts` | CRUD for environments with status tracking |
-| Adapter Manager | `adapter-manager.ts` | Adapter registration, connection tracking, heartbeat |
-| Session Store | `session-store.ts` | CRUD for agent sessions |
-| Project Store | `project-store.ts` | CRUD for projects |
-| Task Store | `task-store.ts` | Full DAG operations: create, update, dependency resolution, tree traversal |
-| Finding Store | `finding-store.ts` | Structured finding storage and query |
-| Token Broker | `token-broker.ts` | Encrypted token storage and push to environments |
-| Event Processor | `event-processor.ts` | Background event stream consumption, finding interception, log writing |
-| Stream Hub | `stream-hub.ts` | In-memory pub/sub for real-time event delivery |
-| Crypto | `crypto.ts` | AES-256-GCM encryption for token values |
-| API Key | `api-key.ts` | 256-bit key generation and constant-time verification |
-| Log Writer | `log-writer.ts` | JSONL event persistence |
-| Schema | `schema.ts` | SQLite DDL + migrations |
+| Component            | File                 | Purpose                                                                    |
+| -------------------- | -------------------- | -------------------------------------------------------------------------- |
+| gRPC Service         | `grpc-service.ts`    | 26 RPC handlers for the `Grackle` service                                  |
+| WebSocket Bridge     | `ws-bridge.ts`       | Bidirectional WS for the web UI                                            |
+| WS Broadcast         | `ws-broadcast.ts`    | Fan-out events to all connected WS clients                                 |
+| Environment Registry | `env-registry.ts`    | CRUD for environments with status tracking                                 |
+| Adapter Manager      | `adapter-manager.ts` | Adapter registration, connection tracking, heartbeat                       |
+| Session Store        | `session-store.ts`   | CRUD for agent sessions                                                    |
+| Project Store        | `project-store.ts`   | CRUD for projects                                                          |
+| Task Store           | `task-store.ts`      | Full DAG operations: create, update, dependency resolution, tree traversal |
+| Finding Store        | `finding-store.ts`   | Structured finding storage and query                                       |
+| Token Broker         | `token-broker.ts`    | Encrypted token storage and push to environments                           |
+| Event Processor      | `event-processor.ts` | Background event stream consumption, finding interception, log writing     |
+| Stream Hub           | `stream-hub.ts`      | In-memory pub/sub for real-time event delivery                             |
+| Crypto               | `crypto.ts`          | AES-256-GCM encryption for token values                                    |
+| API Key              | `api-key.ts`         | 256-bit key generation and constant-time verification                      |
+| Log Writer           | `log-writer.ts`      | JSONL event persistence                                                    |
+| Schema               | `schema.ts`          | SQLite DDL + migrations                                                    |
 
 **Database tables:** `environments`, `sessions`, `projects`, `tasks`, `tokens`, `findings`
 
 **Two HTTP servers:**
+
 - Port 7434: HTTP/2 gRPC (ConnectRPC) for CLI and programmatic access
 - Port 3000: HTTP/1.1 serving the React web UI + WebSocket bridge
 
@@ -166,6 +170,7 @@ The brain. Manages all state, coordinates environments, and bridges the user-fac
 The workhorse. Runs inside each compute environment (Docker container, SSH remote, local, Codespace) and actually spawns and manages AI agents.
 
 **Key responsibilities:**
+
 - Receive `Spawn`/`Resume` RPCs from the server
 - Delegate to the appropriate agent runtime (Claude Code, Copilot, Codex, Stub)
 - Stream `AgentEvent` messages back over gRPC
@@ -174,6 +179,7 @@ The workhorse. Runs inside each compute environment (Docker container, SSH remot
 - Auto-inject the Grackle MCP server for agent coordination
 
 **Runtime architecture:**
+
 ```
 PowerLine HTTP/2 Server (port 7433)
     ↓
@@ -187,6 +193,7 @@ SDK-specific: consumeQuery() / consumeStream()
 ```
 
 **Bundled MCP server** (`mcp-grackle/index.js`):
+
 - `post_finding` — Agents call this to share discoveries with other agents
 - `query_findings` — Stub (real data is injected into the agent's system prompt)
 - Auto-injected when the script exists at `/app/mcp-grackle/index.js`
@@ -197,18 +204,19 @@ A thin, stateless gRPC client built on Commander.js.
 
 **Command tree (30+ operations across 8 groups):**
 
-| Group | Commands |
-|-------|----------|
-| `grackle serve` | Start server + web UI |
-| `grackle env` | `list`, `add`, `provision`, `stop`, `destroy`, `remove`, `wake` |
-| `grackle spawn/resume/status/kill/attach` | Agent session management with interactive REPL |
-| `grackle project` | `list`, `create`, `archive` |
-| `grackle task` | `list`, `create`, `show`, `start`, `delete`, `approve`, `reject` |
-| `grackle token` | `set`, `delete`, `list` |
-| `grackle logs` | View session logs (`--tail`, `--transcript`) |
-| `grackle finding` | `list`, `post` |
+| Group                                     | Commands                                                         |
+| ----------------------------------------- | ---------------------------------------------------------------- |
+| `grackle serve`                           | Start server + web UI                                            |
+| `grackle env`                             | `list`, `add`, `provision`, `stop`, `destroy`, `remove`, `wake`  |
+| `grackle spawn/resume/status/kill/attach` | Agent session management with interactive REPL                   |
+| `grackle project`                         | `list`, `create`, `archive`                                      |
+| `grackle task`                            | `list`, `create`, `show`, `start`, `delete`, `approve`, `reject` |
+| `grackle token`                           | `set`, `delete`, `list`                                          |
+| `grackle logs`                            | View session logs (`--tail`, `--transcript`)                     |
+| `grackle finding`                         | `list`, `post`                                                   |
 
 **Features:**
+
 - Colored terminal output via chalk (status dots, event type coloring)
 - Table formatting via cli-table3
 - Real-time event streaming with timestamps
@@ -223,17 +231,18 @@ A real-time dashboard for monitoring and controlling agents.
 
 **Views:**
 
-| View | Features |
-|------|----------|
-| **Projects** | Hierarchical task tree with expand/collapse, depth indentation, child completion badges |
-| **Task Stream** | Live session event log with markdown rendering, auto-scroll |
-| **Task Diff** | Unified diff viewer with stats, file list, colored additions/deletions |
-| **Task Findings** | Categorized finding cards with staggered animations, tag support |
-| **Task Graph** | Interactive DAG via React Flow + Dagre layout, two edge types (hierarchy + dependency) |
-| **Environments** | Status cards with lifecycle buttons (connect, stop, remove), session list |
-| **Settings** | Token management (add, delete, list) |
+| View              | Features                                                                                |
+| ----------------- | --------------------------------------------------------------------------------------- |
+| **Projects**      | Hierarchical task tree with expand/collapse, depth indentation, child completion badges |
+| **Task Stream**   | Live session event log with markdown rendering, auto-scroll                             |
+| **Task Diff**     | Unified diff viewer with stats, file list, colored additions/deletions                  |
+| **Task Findings** | Categorized finding cards with staggered animations, tag support                        |
+| **Task Graph**    | Interactive DAG via React Flow + Dagre layout, two edge types (hierarchy + dependency)  |
+| **Environments**  | Status cards with lifecycle buttons (connect, stop, remove), session list               |
+| **Settings**      | Token management (add, delete, list)                                                    |
 
 **Real-time architecture:**
+
 - Single WebSocket connection to server (auto-reconnect every 3s)
 - API key injected into HTML by server (`window.__GRACKLE_API_KEY__`)
 - State managed via `useGrackleSocket` custom hook (not Redux/Zustand — pure React context)
@@ -241,6 +250,7 @@ A real-time dashboard for monitoring and controlling agents.
 - Events capped at 5,000 per session; consecutive text events merged for performance
 
 **Design system:**
+
 - Glass-morphism aesthetic: layered blur (16px panels > 8px cards > 4px insets)
 - Dark theme with green accent (#4ecca3)
 - CSS custom properties for design tokens
@@ -253,78 +263,85 @@ A real-time dashboard for monitoring and controlling agents.
 ### Central Server — `Grackle` Service (31 RPCs)
 
 #### Environment Management
-| RPC | Type | Description |
-|-----|------|-------------|
-| `ListEnvironments` | Unary | Get all registered environments |
-| `AddEnvironment` | Unary | Register a new environment (auto-generates PowerLine token) |
-| `RemoveEnvironment` | Unary | Delete environment and its sessions |
-| `ProvisionEnvironment` | Server-stream | Provision compute + connect (yields progress events) |
-| `StopEnvironment` | Unary | Stop environment (non-destructive) |
-| `DestroyEnvironment` | Unary | Permanently destroy compute resources |
+
+| RPC                    | Type          | Description                                                 |
+| ---------------------- | ------------- | ----------------------------------------------------------- |
+| `ListEnvironments`     | Unary         | Get all registered environments                             |
+| `AddEnvironment`       | Unary         | Register a new environment (auto-generates PowerLine token) |
+| `RemoveEnvironment`    | Unary         | Delete environment and its sessions                         |
+| `ProvisionEnvironment` | Server-stream | Provision compute + connect (yields progress events)        |
+| `StopEnvironment`      | Unary         | Stop environment (non-destructive)                          |
+| `DestroyEnvironment`   | Unary         | Permanently destroy compute resources                       |
 
 #### Agent Sessions
-| RPC | Type | Description |
-|-----|------|-------------|
-| `SpawnAgent` | Unary | Create session + spawn agent in environment |
-| `ResumeAgent` | Unary | Resume a suspended session |
-| `SendInput` | Unary | Send text to a waiting agent |
-| `KillAgent` | Unary | Terminate a running agent |
-| `ListSessions` | Unary | Filter sessions by environment/status |
-| `StreamSession` | Server-stream | Real-time events for one session |
-| `StreamAll` | Server-stream | Real-time events from all sessions |
+
+| RPC             | Type          | Description                                 |
+| --------------- | ------------- | ------------------------------------------- |
+| `SpawnAgent`    | Unary         | Create session + spawn agent in environment |
+| `ResumeAgent`   | Unary         | Resume a suspended session                  |
+| `SendInput`     | Unary         | Send text to a waiting agent                |
+| `KillAgent`     | Unary         | Terminate a running agent                   |
+| `ListSessions`  | Unary         | Filter sessions by environment/status       |
+| `StreamSession` | Server-stream | Real-time events for one session            |
+| `StreamAll`     | Server-stream | Real-time events from all sessions          |
 
 #### Projects
-| RPC | Type | Description |
-|-----|------|-------------|
-| `ListProjects` | Unary | Active projects (newest first) |
-| `CreateProject` | Unary | Create with auto-generated slug ID |
-| `GetProject` | Unary | Single project lookup |
-| `ArchiveProject` | Unary | Soft-delete |
+
+| RPC              | Type  | Description                        |
+| ---------------- | ----- | ---------------------------------- |
+| `ListProjects`   | Unary | Active projects (newest first)     |
+| `CreateProject`  | Unary | Create with auto-generated slug ID |
+| `GetProject`     | Unary | Single project lookup              |
+| `ArchiveProject` | Unary | Soft-delete                        |
 
 #### Tasks
-| RPC | Type | Description |
-|-----|------|-------------|
-| `ListTasks` | Unary | Tasks for project with child ID map |
-| `CreateTask` | Unary | Create with branch auto-generation, optional parent/dependencies |
-| `GetTask` | Unary | Single task with full metadata |
-| `UpdateTask` | Unary | Atomic multi-field update |
-| `StartTask` | Unary | Spawn agent for task (with system context) |
-| `ApproveTask` | Unary | Move to "done", auto-unblock dependents |
-| `RejectTask` | Unary | Revert to "assigned" with review notes |
-| `DeleteTask` | Unary | Delete (only if no children) |
+
+| RPC           | Type  | Description                                                      |
+| ------------- | ----- | ---------------------------------------------------------------- |
+| `ListTasks`   | Unary | Tasks for project with child ID map                              |
+| `CreateTask`  | Unary | Create with branch auto-generation, optional parent/dependencies |
+| `GetTask`     | Unary | Single task with full metadata                                   |
+| `UpdateTask`  | Unary | Atomic multi-field update                                        |
+| `StartTask`   | Unary | Spawn agent for task (with system context)                       |
+| `ApproveTask` | Unary | Move to "done", auto-unblock dependents                          |
+| `RejectTask`  | Unary | Revert to "assigned" with review notes                           |
+| `DeleteTask`  | Unary | Delete (only if no children)                                     |
 
 #### Findings & Diff
-| RPC | Type | Description |
-|-----|------|-------------|
-| `PostFinding` | Unary | Store structured finding |
-| `QueryFindings` | Unary | Filter by categories/tags |
-| `GetTaskDiff` | Unary | Git diff for task branch vs main |
+
+| RPC             | Type  | Description                      |
+| --------------- | ----- | -------------------------------- |
+| `PostFinding`   | Unary | Store structured finding         |
+| `QueryFindings` | Unary | Filter by categories/tags        |
+| `GetTaskDiff`   | Unary | Git diff for task branch vs main |
 
 #### Tokens
-| RPC | Type | Description |
-|-----|------|-------------|
-| `SetToken` | Unary | Encrypt and store, push to all connected environments |
-| `ListTokens` | Unary | Metadata only (values never exposed) |
-| `DeleteToken` | Unary | Remove and re-push to all environments |
+
+| RPC           | Type  | Description                                           |
+| ------------- | ----- | ----------------------------------------------------- |
+| `SetToken`    | Unary | Encrypt and store, push to all connected environments |
+| `ListTokens`  | Unary | Metadata only (values never exposed)                  |
+| `DeleteToken` | Unary | Remove and re-push to all environments                |
 
 ### PowerLine — `GracklePowerLine` Service (10 RPCs)
 
-| RPC | Type | Description |
-|-----|------|-------------|
-| `GetInfo` | Unary | Host info (OS, Node version, available runtimes, uptime) |
-| `Spawn` | Server-stream | Create agent session, stream events |
-| `Resume` | Server-stream | Resume session, stream events |
-| `SendInput` | Unary | Send text to waiting agent |
-| `Kill` | Unary | Terminate session |
-| `ListSessions` | Unary | Active sessions on this environment |
-| `Ping` | Unary | Health check |
-| `PushTokens` | Unary | Inject credentials bundle |
-| `CleanupWorktree` | Unary | Remove git worktree |
-| `GetDiff` | Unary | Git diff between branches |
+| RPC               | Type          | Description                                              |
+| ----------------- | ------------- | -------------------------------------------------------- |
+| `GetInfo`         | Unary         | Host info (OS, Node version, available runtimes, uptime) |
+| `Spawn`           | Server-stream | Create agent session, stream events                      |
+| `Resume`          | Server-stream | Resume session, stream events                            |
+| `SendInput`       | Unary         | Send text to waiting agent                               |
+| `Kill`            | Unary         | Terminate session                                        |
+| `ListSessions`    | Unary         | Active sessions on this environment                      |
+| `Ping`            | Unary         | Health check                                             |
+| `PushTokens`      | Unary         | Inject credentials bundle                                |
+| `CleanupWorktree` | Unary         | Remove git worktree                                      |
+| `GetDiff`         | Unary         | Git diff between branches                                |
 
 ### Key Message Types
 
 **Task** — Supports hierarchical structure:
+
 ```
 id, project_id, title, description, status, branch,
 environment_id, session_id, depends_on[],
@@ -333,12 +350,14 @@ sort_order, review_notes, timestamps...
 ```
 
 **SessionEvent / AgentEvent** — Unified event type:
+
 ```
 session_id, type (text|tool_use|tool_result|error|status|system|finding),
 timestamp, content, raw (optional JSON)
 ```
 
 **SpawnRequest** (PowerLine variant includes extra fields):
+
 ```
 session_id, runtime, prompt, model, max_turns,
 branch, working_directory, system_context,
@@ -368,6 +387,7 @@ interface EnvironmentAdapter {
 The most feature-rich adapter. Full container lifecycle management.
 
 **Provisioning flow:**
+
 1. **Image acquisition**: Build from local `docker/Dockerfile.powerline` (dev mode) or pull from registry
 2. **Container lifecycle**: Create, start, or reuse existing container
 3. **Port discovery**: `docker inspect` to find mapped host port
@@ -376,6 +396,7 @@ The most feature-rich adapter. Full container lifecycle management.
 6. **Connection**: Retry ping up to 10x with 1.5s delay
 
 **Configuration:**
+
 ```typescript
 {
   image: "grackle-powerline:latest",  // or custom image
@@ -390,6 +411,7 @@ The most feature-rich adapter. Full container lifecycle management.
 **Dev mode detection:** If `rush.json` exists in the monorepo root, builds the Docker image locally from `docker/Dockerfile.powerline` instead of pulling from registry. PowerLine is installed at provision time via `bootstrapPowerLine()`, not baked into the image.
 
 **docker/Dockerfile.powerline** — Minimal base image:
+
 - `node:22-slim` with git, non-root `grackle` user, `/workspace` directory
 - Sleeps on startup, waiting for the adapter to bootstrap PowerLine into the container
 
@@ -398,11 +420,13 @@ The most feature-rich adapter. Full container lifecycle management.
 Connects to remote machines via SSH tunneling.
 
 **Components:**
+
 - **SshExecutor** — Runs remote commands via `ssh -o BatchMode=yes`
 - **SshTunnel** — Persistent `ssh -N -L localPort:127.0.0.1:7433` port forward
 - **Bootstrap** — Installs PowerLine on remote, starts it, verifies port listening
 
 **Provisioning flow:**
+
 1. Test SSH connectivity (15s timeout)
 2. Check Node.js >= 22 and git on remote
 3. Install PowerLine (dev: copy local artifacts; prod: `npm install @grackle-ai/powerline`)
@@ -420,6 +444,7 @@ Connects to remote machines via SSH tunneling.
 GitHub Codespaces support via the `gh` CLI.
 
 **Components:**
+
 - **CodespaceExecutor** — Commands via `gh codespace ssh -c <name>`
 - **CodespaceTunnel** — Port forwarding via `gh codespace ports forward`
 
@@ -436,6 +461,7 @@ Simplest adapter. Assumes PowerLine is already running locally.
 ### Adapter Manager
 
 Global adapter registry with:
+
 - `registerAdapter(adapter)` — Register by type
 - `getAdapter(type)` — Lookup by type string
 - Connection storage: `setConnection()`, `getConnection()`, `removeConnection()`
@@ -444,9 +470,11 @@ Global adapter registry with:
 ### PowerLine Transport
 
 All adapters create gRPC clients via:
+
 ```typescript
-function createPowerLineClient(baseUrl: string, powerlineToken: string): PowerLineClient
+function createPowerLineClient(baseUrl: string, powerlineToken: string): PowerLineClient;
 ```
+
 Uses ConnectRPC v2 on HTTP/2 with Bearer token interceptor.
 
 ---
@@ -458,10 +486,12 @@ PowerLine supports 4 pluggable agent runtimes, all registered at startup:
 ### 6.1 Architecture Patterns
 
 **BaseAgentRuntime** — Template method pattern:
+
 - `spawn(opts)` → `createSession()` with prompt
 - `resume(opts)` → `createSession()` with runtime session ID
 
 **BaseAgentSession** — Shared lifecycle:
+
 ```
 stream() → setupSdk() → runInitialQuery(prompt) → waiting_input
               ↕                                         ↕
@@ -477,6 +507,7 @@ Events pushed to `AsyncQueue<AgentEvent>`, yielded by `stream()` async generator
 **SDK:** `@anthropic-ai/claude-agent-sdk` (or legacy `@anthropic-ai/claude-code`)
 
 **Key setup:**
+
 ```typescript
 {
   permissionMode: "bypassPermissions",
@@ -489,6 +520,7 @@ Events pushed to `AsyncQueue<AgentEvent>`, yielded by `stream()` async generator
 ```
 
 **Message mapping:**
+
 - Assistant text blocks → `type: "text"`
 - Tool use blocks → `type: "tool_use"` with `{tool, args}` JSON
 - Tool result blocks → `type: "tool_result"`
@@ -501,6 +533,7 @@ Events pushed to `AsyncQueue<AgentEvent>`, yielded by `stream()` async generator
 **SDK:** `@github/copilot-sdk`
 
 **Key differences from Claude Code:**
+
 - Custom session pattern (doesn't extend BaseAgentSession)
 - Streaming text deltas
 - System message via `{ mode: "append", content }`
@@ -515,6 +548,7 @@ Events pushed to `AsyncQueue<AgentEvent>`, yielded by `stream()` async generator
 **SDK:** `@openai/codex-sdk`
 
 **Key differences:**
+
 - Thread-based model: `startThread()` / `resumeThread()` / `runStreamed()`
 - Event types: `thread.started`, `item.started`, `item.completed`
 - Item types: `command_execution`, `file_change`, `mcp_tool_call`, `agent_message`
@@ -528,11 +562,13 @@ Mock runtime for testing. Echoes prompt, waits for input, echoes response. Demon
 ### 6.6 Runtime Utilities
 
 **Working directory resolution priority:**
+
 1. Git worktree (if branch + base path provided) — `git worktree add -b branch path`
 2. `/workspace` directory (if it exists and is non-empty)
 3. `undefined` (use default)
 
 **MCP server resolution:**
+
 1. Load from `GRACKLE_MCP_CONFIG` env var (JSON file)
 2. Merge spawn-provided servers
 3. Auto-inject Grackle MCP server (`/app/mcp-grackle/index.js`)
@@ -551,6 +587,7 @@ Tasks form a directed acyclic graph with two relationship types:
 2. **Dependencies** — A task can `depend_on` other tasks. A dependent task can only start when all its dependencies have status `done`.
 
 **Task lifecycle:**
+
 ```
 pending → assigned → in_progress → review → done
                                       ↓
@@ -566,6 +603,7 @@ pending → assigned → in_progress → review → done
 Findings are the structured knowledge-sharing mechanism between agents.
 
 **How it works:**
+
 1. An agent discovers something useful (architecture pattern, bug, API design decision, dependency note).
 2. The agent calls the `post_finding` MCP tool with `{title, content, category, tags}`.
 3. The runtime intercepts this tool call and emits a `finding` event in the event stream.
@@ -579,6 +617,7 @@ Findings are the structured knowledge-sharing mechanism between agents.
 ### 7.3 System Context Injection
 
 When a task is started, the server builds a `systemContext` string containing:
+
 - Task title and description
 - Review notes (if previously rejected)
 - This context is prepended to the agent's prompt, giving it full awareness of its assignment.
@@ -586,6 +625,7 @@ When a task is started, the server builds a `systemContext` string containing:
 ### 7.4 Diff Tracking
 
 Each task's work is tracked via git diffs:
+
 - `GetTaskDiff` queries PowerLine's `GetDiff` RPC
 - PowerLine runs `git merge-base` + `git diff` (including `git add -N .` for untracked files)
 - Returns unified diff, changed file list, addition/deletion counts
@@ -599,16 +639,17 @@ Each task's work is tracked via git diffs:
 
 **Algorithm:** AES-256-GCM with PBKDF2 key derivation
 
-| Parameter | Value |
-|-----------|-------|
-| Cipher | AES-256-GCM (authenticated) |
-| Key derivation | PBKDF2-SHA256, 100,000 iterations |
-| Salt | 16 random bytes per encryption |
-| IV | 12 random bytes per encryption |
-| Auth tag | 16 bytes (tamper detection) |
-| Format | `base64(salt):base64(iv):base64(tag):base64(ciphertext)` |
+| Parameter      | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Cipher         | AES-256-GCM (authenticated)                              |
+| Key derivation | PBKDF2-SHA256, 100,000 iterations                        |
+| Salt           | 16 random bytes per encryption                           |
+| IV             | 12 random bytes per encryption                           |
+| Auth tag       | 16 bytes (tamper detection)                              |
+| Format         | `base64(salt):base64(iv):base64(tag):base64(ciphertext)` |
 
 **Master key priority:**
+
 1. `GRACKLE_MASTER_KEY` environment variable
 2. Persisted random key at `~/.grackle/master-key` (0600 permissions)
 3. Auto-generate and persist new 256-bit random key
@@ -637,18 +678,21 @@ Each task's work is tracked via git diffs:
 ### 8.4 Token Broker
 
 Centralized credential management:
+
 1. User sets token via CLI: `grackle token set ANTHROPIC_KEY`
 2. Server encrypts value with AES-256-GCM, stores in SQLite
 3. Server builds token bundle (decrypted), pushes to all connected PowerLine instances via gRPC
 4. PowerLine's token writer injects as env var or file
 
 **Token types:**
+
 - `env_var` — Set as environment variable in the agent process
 - `file` — Written to file path under `$HOME` with 0600 permissions
 
 ### 8.5 Path Traversal Prevention
 
 Token writer validates all file paths:
+
 - `isUnderHome()` — Case-insensitive path normalization, separator normalization, prefix collision prevention
 - **Symlink detection** — Walks directory ancestry, calls `realpath()` on nearest existing ancestor, verifies resolved path is still under `$HOME`
 - Refuses to write if any validation fails
@@ -656,6 +700,7 @@ Token writer validates all file paths:
 ### 8.6 Shell Injection Prevention
 
 Remote adapter credential injection:
+
 - Environment variable names validated with `/^[A-Za-z_][A-Za-z0-9_]*$/`
 - All values escaped with `shellEscape()` (replaces `'` with `'\''`)
 - `.env.sh` content base64-encoded and written via Node.js (not shell)
@@ -670,12 +715,12 @@ Remote adapter credential injection:
 
 ### 8.8 Auth Interceptors
 
-| Interface | Mechanism |
-|-----------|-----------|
-| Server gRPC | ConnectRPC interceptor: Bearer token → `verifyApiKey()` |
-| Server WebSocket | Query param `?token=` → `verifyApiKey()`, close with 4001 on failure |
-| PowerLine gRPC | ConnectRPC interceptor: Bearer token → `timingSafeEqual()` |
-| Web UI | API key injected into HTML as `window.__GRACKLE_API_KEY__` (safe because localhost-only) |
+| Interface        | Mechanism                                                                                |
+| ---------------- | ---------------------------------------------------------------------------------------- |
+| Server gRPC      | ConnectRPC interceptor: Bearer token → `verifyApiKey()`                                  |
+| Server WebSocket | Query param `?token=` → `verifyApiKey()`, close with 4001 on failure                     |
+| PowerLine gRPC   | ConnectRPC interceptor: Bearer token → `timingSafeEqual()`                               |
+| Web UI           | API key injected into HTML as `window.__GRACKLE_API_KEY__` (safe because localhost-only) |
 
 ---
 
@@ -704,6 +749,7 @@ sequenceDiagram
 ### 9.2 WebSocket Message Types
 
 **Client → Server (20+ message types):**
+
 - Session: `spawn`, `send_input`, `kill`, `subscribe`, `subscribe_all`
 - Environment: `list_environments`, `add_environment`, `provision_environment`, `stop_environment`, `remove_environment`
 - Project: `list_projects`, `create_project`, `archive_project`
@@ -712,6 +758,7 @@ sequenceDiagram
 - Token: `list_tokens`, `set_token`, `delete_token`
 
 **Server → Client (25+ broadcast types):**
+
 - Data sync: `environments`, `sessions`, `projects`, `tasks`, `findings`, `tokens`
 - Events: `session_event`, `session_events` (bulk replay)
 - Lifecycle: `spawned`, `project_created`, `task_created`, `task_started`, `task_approved`, `task_rejected`, `task_deleted`, `task_updated`, `finding_posted`, `token_changed`, `environment_added`, `environment_removed`
@@ -721,6 +768,7 @@ sequenceDiagram
 ### 9.3 Stream Hub (gRPC Streaming)
 
 In-memory pub/sub for gRPC `StreamSession` and `StreamAll` RPCs:
+
 - Per-session queues (async iterables)
 - Global stream for all events
 - Automatic cleanup when subscribers disconnect
@@ -742,11 +790,13 @@ In-memory pub/sub for gRPC `StreamSession` and `StreamAll` RPCs:
 **Rush 5.158.1 + pnpm 10.11.0 + Heft**
 
 Custom Heft plugins for the build pipeline:
+
 - **heft-buf-plugin** — Runs `buf lint` + `buf generate` for proto codegen
 - **heft-vite-plugin** — Runs Vite build for the web UI
 - **heft-playwright-plugin** — Runs Playwright e2e tests
 
 **Heft profiles:**
+
 - `default` — TypeScript compilation + linting
 - `protobuf` — Buf codegen → TypeScript → lint (for `@grackle-ai/common`)
 - `web` — Build phase (TypeScript + Vite) + Test phase (Playwright)
@@ -754,6 +804,7 @@ Custom Heft plugins for the build pipeline:
 ### 10.2 CI Pipeline (`.github/workflows/ci.yml`)
 
 Triggered on pull requests:
+
 1. Checkout with full history
 2. Node.js 22
 3. `rush install`
@@ -766,6 +817,7 @@ Triggered on pull requests:
 ### 10.3 CD Pipeline (`.github/workflows/cd.yml`)
 
 Triggered on push to `main`:
+
 1. Same build + test as CI
 2. **Lockstep version bumping:**
    - Consolidate change files from non-mainProject packages
@@ -779,6 +831,7 @@ Triggered on push to `main`:
 ### 10.4 Distribution
 
 **npm packages (public):**
+
 - `@grackle-ai/common` — Proto types + shared utilities
 - `@grackle-ai/powerline` — Remote agent host (binary: `grackle-powerline`)
 - `@grackle-ai/server` — Central server
@@ -796,6 +849,7 @@ Triggered on push to `main`:
 ### 11.1 Runtime Agnosticism
 
 Grackle is the only orchestration platform that treats AI coding agents as interchangeable runtimes. Claude Code, GitHub Copilot, and OpenAI Codex are plugged in through a common `AgentRuntime` interface. You can:
+
 - Use different runtimes for different tasks in the same project
 - Switch runtimes without changing anything else
 - Add new runtimes by implementing ~5 methods
@@ -805,6 +859,7 @@ This is not a wrapper around one vendor's API — it's a runtime abstraction lay
 ### 11.2 Environment Abstraction
 
 Most AI agent tools are "run in your terminal." Grackle separates the control plane (where you manage) from the compute plane (where agents run). The adapter system means:
+
 - **Docker**: Reproducible, isolated, disposable environments with GPU support
 - **SSH**: Use existing cloud VMs, on-prem servers, or beefy machines
 - **Codespaces**: Leverage GitHub's infrastructure
@@ -815,6 +870,7 @@ Environments are provisioned on demand, with progress streaming, and health-chec
 ### 11.3 Structured Multi-Agent Coordination
 
 Not just "run N agents in parallel" — Grackle provides:
+
 - **Task DAG**: Dependencies ensure correct ordering. Hierarchical tasks support decomposition.
 - **Findings**: Structured inter-agent communication with categories and tags. Agents share architectural decisions, bug reports, patterns, and dependency notes.
 - **Branch isolation**: Each task gets its own git worktree. Agents never conflict.
@@ -823,6 +879,7 @@ Not just "run N agents in parallel" — Grackle provides:
 ### 11.4 Full Observability
 
 Every agent event is:
+
 - **Streamed in real-time** to the web UI and gRPC subscribers
 - **Persisted to JSONL** logs for replay
 - **Typed** (text, tool_use, tool_result, error, status, system, finding)
@@ -833,6 +890,7 @@ You're not flying blind. You can watch, intervene (send input), kill, or inspect
 ### 11.5 Security-First Design
 
 Not an afterthought:
+
 - **Encrypted token storage** (AES-256-GCM, PBKDF2, per-encryption random salt/IV)
 - **Constant-time auth verification** (timing attack prevention)
 - **Path traversal prevention** (symlink-aware, multi-layer validation)
@@ -844,6 +902,7 @@ Not an afterthought:
 ### 11.6 ConnectRPC / Protobuf API
 
 Not REST, not GraphQL — proper gRPC with:
+
 - **Strong typing** from protobuf definitions through to TypeScript
 - **Server streaming** for real-time event delivery
 - **Efficient binary protocol** on HTTP/2
@@ -854,6 +913,7 @@ The WebSocket bridge exists for the web UI (browsers can't do HTTP/2 gRPC native
 ### 11.7 Professional Engineering
 
 This isn't a weekend project:
+
 - **Rush monorepo** with lockstep versioning and change file enforcement
 - **Custom Heft plugins** for buf codegen, Vite builds, and Playwright tests
 - **Automated CI/CD** with npm publishing and GitHub Releases
@@ -864,18 +924,18 @@ This isn't a weekend project:
 
 ### 11.8 Summary: What Makes Grackle Unique
 
-| Capability | Grackle | Typical AI Agent Tool |
-|------------|---------|----------------------|
-| Multiple AI runtimes | Claude Code + Copilot + Codex | Single vendor |
-| Multiple environments | Docker, SSH, Codespace, Local | Local terminal only |
-| Task DAG with dependencies | Full hierarchical DAG | None |
-| Inter-agent communication | Structured findings system | None |
-| Branch isolation | Git worktree per task | Shared workspace |
-| Encrypted credential management | AES-256-GCM + push model | Manual env vars |
-| Real-time web dashboard | React UI with DAG visualization | Terminal output |
-| gRPC API | 36 typed RPCs with streaming | None / HTTP REST |
-| Human review workflow | Approve/reject with notes | None |
-| Auto-provisioning | On-demand with progress streaming | Manual setup |
-| Multi-machine orchestration | Centralized control plane | Single machine |
+| Capability                      | Grackle                           | Typical AI Agent Tool |
+| ------------------------------- | --------------------------------- | --------------------- |
+| Multiple AI runtimes            | Claude Code + Copilot + Codex     | Single vendor         |
+| Multiple environments           | Docker, SSH, Codespace, Local     | Local terminal only   |
+| Task DAG with dependencies      | Full hierarchical DAG             | None                  |
+| Inter-agent communication       | Structured findings system        | None                  |
+| Branch isolation                | Git worktree per task             | Shared workspace      |
+| Encrypted credential management | AES-256-GCM + push model          | Manual env vars       |
+| Real-time web dashboard         | React UI with DAG visualization   | Terminal output       |
+| gRPC API                        | 36 typed RPCs with streaming      | None / HTTP REST      |
+| Human review workflow           | Approve/reject with notes         | None                  |
+| Auto-provisioning               | On-demand with progress streaming | Manual setup          |
+| Multi-machine orchestration     | Centralized control plane         | Single machine        |
 
 Grackle transforms AI coding agents from "one developer's assistant" into a managed, observable, secure fleet of autonomous workers that coordinate on complex projects.

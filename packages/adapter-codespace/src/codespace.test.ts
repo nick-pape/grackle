@@ -22,10 +22,18 @@ vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => {
     // Stub ProcessTunnel so CodespaceTunnel doesn't spawn real processes (tested in tunnel.test.ts)
     ProcessTunnel: class {
       public localPort: number;
-      public constructor(localPort: number) { this.localPort = localPort; }
-      public async open(): Promise<void> { /* no-op */ }
-      public async close(): Promise<void> { /* no-op */ }
-      public isAlive(): boolean { return true; }
+      public constructor(localPort: number) {
+        this.localPort = localPort;
+      }
+      public async open(): Promise<void> {
+        /* no-op */
+      }
+      public async close(): Promise<void> {
+        /* no-op */
+      }
+      public isAlive(): boolean {
+        return true;
+      }
     },
   };
 });
@@ -64,7 +72,9 @@ describe("CodespaceAdapter.reconnect()", () => {
   });
 
   it("yields reconnecting progress events on happy path", async () => {
-    const events = await collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token));
+    const events = await collectEvents(
+      adapter.reconnect!(envId, config as Record<string, unknown>, token),
+    );
 
     expect(events.length).toBeGreaterThanOrEqual(3);
     expect(events.every((e) => e.stage === "reconnecting")).toBe(true);
@@ -79,15 +89,20 @@ describe("CodespaceAdapter.reconnect()", () => {
     // Verify probeFirst and autoDetectWorkspace options
     const options = mocks.startRemotePowerLine.mock.calls[0][2];
     expect(options).toMatchObject({ probeFirst: true, autoDetectWorkspace: true });
-    expect(mocks.registerTunnel).toHaveBeenCalledWith(envId, expect.objectContaining({
-      tunnel: expect.objectContaining({ localPort: 9999 }),
-    }));
+    expect(mocks.registerTunnel).toHaveBeenCalledWith(
+      envId,
+      expect.objectContaining({
+        tunnel: expect.objectContaining({ localPort: 9999 }),
+      }),
+    );
   });
 
   it("yields 'restarted' event when PowerLine was not already running", async () => {
     mocks.startRemotePowerLine.mockResolvedValueOnce({ alreadyRunning: false });
 
-    const events = await collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token));
+    const events = await collectEvents(
+      adapter.reconnect!(envId, config as Record<string, unknown>, token),
+    );
 
     expect(events.some((e) => e.message.includes("restarted"))).toBe(true);
     expect(events[events.length - 1].message).toContain("Reconnected");
@@ -96,7 +111,9 @@ describe("CodespaceAdapter.reconnect()", () => {
   it("does not yield 'restarted' event when PowerLine was already running", async () => {
     mocks.startRemotePowerLine.mockResolvedValueOnce({ alreadyRunning: true });
 
-    const events = await collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token));
+    const events = await collectEvents(
+      adapter.reconnect!(envId, config as Record<string, unknown>, token),
+    );
 
     expect(events.some((e) => e.message.includes("restarted"))).toBe(false);
   });
@@ -106,22 +123,24 @@ describe("CodespaceAdapter.reconnect()", () => {
       new Error("PowerLine process died immediately after starting"),
     );
 
-    await expect(collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token)))
-      .rejects.toThrow("PowerLine process died immediately after starting");
+    await expect(
+      collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token)),
+    ).rejects.toThrow("PowerLine process died immediately after starting");
   });
 
   it("propagates error when SSH is unreachable", async () => {
     mocks.startRemotePowerLine.mockRejectedValueOnce(new Error("ssh connection refused"));
 
-    await expect(collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token)))
-      .rejects.toThrow("ssh connection refused");
+    await expect(
+      collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token)),
+    ).rejects.toThrow("ssh connection refused");
   });
 
   it("throws if codespaceName is missing", async () => {
-    await expect(collectEvents(adapter.reconnect!(envId, {} as Record<string, unknown>, token)))
-      .rejects.toThrow("codespaceName");
+    await expect(
+      collectEvents(adapter.reconnect!(envId, {} as Record<string, unknown>, token)),
+    ).rejects.toThrow("codespaceName");
   });
-
 });
 
 // ── CodespaceNotFoundError detection ────────────────────────
@@ -145,8 +164,9 @@ describe("CodespaceAdapter — CodespaceNotFoundError detection via provision()"
     });
     mockExec.mockRejectedValueOnce(ghErr);
 
-    const err = await collectEvents(adapter.provision(envId, config as Record<string, unknown>, token))
-      .catch((e: unknown) => e);
+    const err = await collectEvents(
+      adapter.provision(envId, config as Record<string, unknown>, token),
+    ).catch((e: unknown) => e);
 
     expect(err).toBeInstanceOf(CodespaceNotFoundError);
     expect(err).toBeInstanceOf(FatalAdapterError);
@@ -159,8 +179,9 @@ describe("CodespaceAdapter — CodespaceNotFoundError detection via provision()"
     });
     mockExec.mockRejectedValueOnce(ghErr);
 
-    const err = await collectEvents(adapter.provision(envId, config as Record<string, unknown>, token))
-      .catch((e: unknown) => e);
+    const err = await collectEvents(
+      adapter.provision(envId, config as Record<string, unknown>, token),
+    ).catch((e: unknown) => e);
 
     expect(err).toBeInstanceOf(CodespaceNotFoundError);
   });
@@ -171,8 +192,9 @@ describe("CodespaceAdapter — CodespaceNotFoundError detection via provision()"
     });
     mockExec.mockRejectedValueOnce(bashErr);
 
-    const err = await collectEvents(adapter.provision(envId, config as Record<string, unknown>, token))
-      .catch((e: unknown) => e);
+    const err = await collectEvents(
+      adapter.provision(envId, config as Record<string, unknown>, token),
+    ).catch((e: unknown) => e);
 
     expect(err).not.toBeInstanceOf(CodespaceNotFoundError);
     expect(err).not.toBeInstanceOf(FatalAdapterError);
@@ -184,8 +206,9 @@ describe("CodespaceAdapter — CodespaceNotFoundError detection via provision()"
     });
     mockExec.mockRejectedValueOnce(ghErr);
 
-    const err = await collectEvents(adapter.provision(envId, config as Record<string, unknown>, token))
-      .catch((e: unknown) => e);
+    const err = await collectEvents(
+      adapter.provision(envId, config as Record<string, unknown>, token),
+    ).catch((e: unknown) => e);
 
     expect(err).toBeInstanceOf(CodespaceNotFoundError);
   });
@@ -194,12 +217,14 @@ describe("CodespaceAdapter — CodespaceNotFoundError detection via provision()"
     // This is the actual error gh codespace ssh emits when the codespace doesn't exist:
     // "getting full codespace details: HTTP 404: Not Found"
     const ghErr = Object.assign(new Error("Command failed: gh codespace ssh"), {
-      stderr: "getting full codespace details: HTTP 404: Not Found (https://api.github.com/user/codespaces/fake-cs)",
+      stderr:
+        "getting full codespace details: HTTP 404: Not Found (https://api.github.com/user/codespaces/fake-cs)",
     });
     mockExec.mockRejectedValueOnce(ghErr);
 
-    const err = await collectEvents(adapter.provision(envId, config as Record<string, unknown>, token))
-      .catch((e: unknown) => e);
+    const err = await collectEvents(
+      adapter.provision(envId, config as Record<string, unknown>, token),
+    ).catch((e: unknown) => e);
 
     expect(err).toBeInstanceOf(CodespaceNotFoundError);
     expect(err).toBeInstanceOf(FatalAdapterError);
@@ -211,8 +236,9 @@ describe("CodespaceAdapter — CodespaceNotFoundError detection via provision()"
     });
     mockExec.mockRejectedValueOnce(sshErr);
 
-    const err = await collectEvents(adapter.provision(envId, config as Record<string, unknown>, token))
-      .catch((e: unknown) => e);
+    const err = await collectEvents(
+      adapter.provision(envId, config as Record<string, unknown>, token),
+    ).catch((e: unknown) => e);
 
     expect(err).not.toBeInstanceOf(CodespaceNotFoundError);
     expect(err).not.toBeInstanceOf(FatalAdapterError);

@@ -57,7 +57,9 @@ test.describe("Chat Page (root task)", { tag: ["@session"] }, () => {
     await expect(input).toBeVisible({ timeout: 5_000 });
   });
 
-  test("can start root task via chat input and queues first message as sendInput", async ({ appPage }) => {
+  test("can start root task via chat input and queues first message as sendInput", async ({
+    appPage,
+  }) => {
     const page = appPage;
 
     await page.getByTestId("sidebar-tab-chat").click();
@@ -75,7 +77,9 @@ test.describe("Chat Page (root task)", { tag: ["@session"] }, () => {
 
     // Stub runtime starts with the hardcoded initial prompt (not user text)
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator("text=Echo: Introduce yourself and Grackle!")).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("text=Echo: Introduce yourself and Grackle!")).toBeVisible({
+      timeout: 5_000,
+    });
 
     // User's message is auto-sent via sendInput after session goes idle
     await expect(page.locator("text=You said: Hello system")).toBeVisible({ timeout: 15_000 });

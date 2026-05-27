@@ -17,7 +17,19 @@ import {
   fuzzySearch,
   type FuzzyKey,
 } from "@grackle-ai/common";
-import { envRegistry, sessionStore, taskStore, workspaceStore, personaStore, settingsStore, dispatchQueueStore, grackleHome, slugify, safeParseJsonArray, workspaceEnvironmentLinkStore } from "@grackle-ai/database";
+import {
+  envRegistry,
+  sessionStore,
+  taskStore,
+  workspaceStore,
+  personaStore,
+  settingsStore,
+  dispatchQueueStore,
+  grackleHome,
+  slugify,
+  safeParseJsonArray,
+  workspaceEnvironmentLinkStore,
+} from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { join } from "node:path";
 import { adapterManager } from "@grackle-ai/core";
@@ -29,7 +41,12 @@ import { processEventStream } from "@grackle-ai/core";
 import { processorRegistry } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
 import { getTraceId } from "@grackle-ai/core";
-import { resolvePersona, buildOrchestratorContext, SystemPromptBuilder, buildTaskPrompt } from "@grackle-ai/prompt";
+import {
+  resolvePersona,
+  buildOrchestratorContext,
+  SystemPromptBuilder,
+  buildTaskPrompt,
+} from "@grackle-ai/prompt";
 import { toPersonaResolveInput, buildOrchestratorContextInput } from "@grackle-ai/core";
 import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
 import { cleanupLifecycleStream, ensureLifecycleStream } from "./lifecycle.js";
@@ -80,7 +97,9 @@ export async function listTasks(req: grackle.ListTasksRequest): Promise<grackle.
 }
 
 /** Fuzzy search tasks by title and description, returning results ranked by relevance. */
-export async function searchTasks(req: grackle.SearchTasksRequest): Promise<grackle.SearchTasksResponse> {
+export async function searchTasks(
+  req: grackle.SearchTasksRequest,
+): Promise<grackle.SearchTasksResponse> {
   const query = req.query.trim();
   if (!query) {
     throw new ConnectError("query is required", Code.InvalidArgument);
@@ -218,14 +237,15 @@ export async function updateTask(req: grackle.UpdateTaskRequest): Promise<grackl
     req.title !== "" ? req.title : existing.title,
     req.description !== "" ? req.description : existing.description,
     reqStatus,
-    req.dependsOn.length > 0
-      ? [...req.dependsOn]
-      : safeParseJsonArray(existing.dependsOn),
+    req.dependsOn.length > 0 ? [...req.dependsOn] : safeParseJsonArray(existing.dependsOn),
     req.defaultPersonaId,
   );
 
   // Update budget fields if explicitly set in the request (proto3 optional presence)
-  if ((req.tokenBudget !== undefined && req.tokenBudget < 0) || (req.costBudgetMillicents !== undefined && req.costBudgetMillicents < 0)) {
+  if (
+    (req.tokenBudget !== undefined && req.tokenBudget < 0) ||
+    (req.costBudgetMillicents !== undefined && req.costBudgetMillicents < 0)
+  ) {
     throw new ConnectError("Budget values must be >= 0", Code.InvalidArgument);
   }
   if (req.tokenBudget !== undefined || req.costBudgetMillicents !== undefined) {
@@ -264,7 +284,11 @@ export async function updateTask(req: grackle.UpdateTaskRequest): Promise<grackl
 
     sessionStore.setSessionTask(req.sessionId, req.id);
     processorRegistry.lateBind(req.sessionId, req.id, existing.workspaceId || undefined);
-    emit("task.started", { taskId: req.id, sessionId: req.sessionId, workspaceId: existing.workspaceId || "" });
+    emit("task.started", {
+      taskId: req.id,
+      sessionId: req.sessionId,
+      workspaceId: existing.workspaceId || "",
+    });
   }
 
   emit("task.updated", { taskId: req.id, workspaceId: existing.workspaceId || "" });
@@ -290,7 +314,9 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
       if (effectiveStatus === TASK_STATUS.WORKING) {
         throw new ConnectError("System is already running", Code.FailedPrecondition);
       }
-    } else if (!([TASK_STATUS.NOT_STARTED, TASK_STATUS.FAILED] as string[]).includes(effectiveStatus)) {
+    } else if (
+      !([TASK_STATUS.NOT_STARTED, TASK_STATUS.FAILED] as string[]).includes(effectiveStatus)
+    ) {
       throw new ConnectError(
         `Task ${req.taskId} cannot be started (status: ${effectiveStatus})`,
         Code.FailedPrecondition,
@@ -315,12 +341,18 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
     throw new ConnectError(`Workspace not found: ${task.workspaceId}`, Code.NotFound);
   }
 
-  const environmentId = req.environmentId
-    || resolveAncestorEnvironmentId(task.parentTaskId)
-    || (task.workspaceId ? workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(task.workspaceId)[0] : "")
-    || "";
+  const environmentId =
+    req.environmentId ||
+    resolveAncestorEnvironmentId(task.parentTaskId) ||
+    (task.workspaceId
+      ? workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(task.workspaceId)[0]
+      : "") ||
+    "";
   if (!environmentId) {
-    throw new ConnectError("No environment specified for task, ancestor, or workspace", Code.FailedPrecondition);
+    throw new ConnectError(
+      "No environment specified for task, ancestor, or workspace",
+      Code.FailedPrecondition,
+    );
   }
 
   const conn = adapterManager.getConnection(environmentId);
@@ -364,7 +396,10 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
         notes: req.notes || "",
       });
       logger.info({ taskId: task.id, environmentId }, "Task queued (environment at capacity)");
-      throw new ConnectError("Environment at capacity; task queued for dispatch", Code.ResourceExhausted);
+      throw new ConnectError(
+        "Environment at capacity; task queued for dispatch",
+        Code.ResourceExhausted,
+      );
     }
 
     // If this task was previously enqueued but we now have capacity,
@@ -379,37 +414,53 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
 
   // Root task always starts with the hardcoded greeting prompt; user messages
   // are sent as follow-ups via sendInput.  Other tasks use buildTaskPrompt.
-  const taskPrompt = task.id === ROOT_TASK_ID
-    ? ROOT_TASK_INITIAL_PROMPT
-    : buildTaskPrompt(task.title, task.description, req.notes);
+  const taskPrompt =
+    task.id === ROOT_TASK_ID
+      ? ROOT_TASK_INITIAL_PROMPT
+      : buildTaskPrompt(task.title, task.description, req.notes);
   const isOrchestrator = task.canDecompose && task.depth <= 1 && !!task.workspaceId;
   const orchestratorCtx = isOrchestrator
-    ? buildOrchestratorContext(buildOrchestratorContextInput(
-      task.workspaceId!,
-      workspace ? { name: workspace.name, description: workspace.description, repoUrl: workspace.repoUrl } : undefined,
-    ))
+    ? buildOrchestratorContext(
+        buildOrchestratorContextInput(
+          task.workspaceId!,
+          workspace
+            ? {
+                name: workspace.name,
+                description: workspace.description,
+                repoUrl: workspace.repoUrl,
+              }
+            : undefined,
+        ),
+      )
     : undefined;
 
   // Knowledge retrieval loop (#1259): gather "Related prior work" (PUSH) + enable
   // search guidance (PULL) when the knowledge plugin is active and the task opted
   // in. Best-effort (timeout-bounded); skips root/no-workspace tasks.
-  const knowledgeOn = hasSpawnContextProviders()
-    && task.injectKnowledge
-    && !!task.workspaceId
-    && task.id !== ROOT_TASK_ID;
+  const knowledgeOn =
+    hasSpawnContextProviders() &&
+    task.injectKnowledge &&
+    !!task.workspaceId &&
+    task.id !== ROOT_TASK_ID;
   const relatedPriorWork = knowledgeOn
-    ? (await runSpawnContextProviders({
-        taskId: task.id,
-        title: task.title,
-        description: task.description,
-        workspaceId: task.workspaceId ?? "",
-        isOrchestrator,
-        injectKnowledge: task.injectKnowledge,
-      })).join("\n\n") || undefined
+    ? (
+        await runSpawnContextProviders({
+          taskId: task.id,
+          title: task.title,
+          description: task.description,
+          workspaceId: task.workspaceId ?? "",
+          isOrchestrator,
+          injectKnowledge: task.injectKnowledge,
+        })
+      ).join("\n\n") || undefined
     : undefined;
 
   const systemContext = new SystemPromptBuilder({
-    task: { title: task.title, description: task.description, notes: task.id === ROOT_TASK_ID ? "" : (req.notes || "") },
+    task: {
+      title: task.title,
+      description: task.description,
+      notes: task.id === ROOT_TASK_ID ? "" : req.notes || "",
+    },
     taskId: task.id,
     canDecompose: task.canDecompose,
     personaPrompt: systemPrompt,
@@ -430,15 +481,18 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
     logPath,
     task.id,
     resolved.personaId,
-    req.parentSessionId || "",  // parentSessionId
-    taskPipeMode || "",         // pipeMode
+    req.parentSessionId || "", // parentSessionId
+    taskPipeMode || "", // pipeMode
   );
   emit("task.started", { taskId: task.id, sessionId, workspaceId: task.workspaceId || "" });
 
   // Supply credentials on demand for this runtime, just before spawn (AHP HR6).
   // For local envs, skip file tokens — the PowerLine is on the same machine.
-  await tokenPush.authenticateForRuntime(environmentId, runtime,
-    env?.adapterType === "local" ? { excludeFileTokens: true } : undefined);
+  await tokenPush.authenticateForRuntime(
+    environmentId,
+    runtime,
+    env?.adapterType === "local" ? { excludeFileTokens: true } : undefined,
+  );
 
   const mcpServersJson = personaMcpServersToJson(resolved.mcpServers, resolved.personaId);
 
@@ -466,7 +520,7 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
     maxTurns,
     branch: task.branch,
     workingDirectory: task.branch
-      ? (workspace?.workingDirectory || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
+      ? workspace?.workingDirectory || process.env.GRACKLE_WORKTREE_BASE || "/workspace"
       : "",
     useWorktrees,
     systemContext,
@@ -493,19 +547,18 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
   if (taskPipeMode && taskPipeMode !== "detach" && req.parentSessionId) {
     const ipcStream = streamRegistry.createStream(`pipe:${sessionId}`);
     const parentSub = streamRegistry.subscribe(
-      ipcStream.id, req.parentSessionId, "rw",
+      ipcStream.id,
+      req.parentSessionId,
+      "rw",
       taskPipeMode === "sync" ? "sync" : "async",
       true,
     );
-    streamRegistry.subscribe(
-      ipcStream.id, sessionId, "rw", "async",
-      false,
-    );
+    streamRegistry.subscribe(ipcStream.id, sessionId, "rw", "async", false);
     taskPipeFd = parentSub.fd;
 
     if (taskPipeMode === "async") {
-      ensureAsyncDeliveryListener(req.parentSessionId);  // parent receives child messages
-      ensureAsyncDeliveryListener(sessionId);             // child receives parent messages
+      ensureAsyncDeliveryListener(req.parentSessionId); // parent receives child messages
+      ensureAsyncDeliveryListener(sessionId); // child receives parent messages
     }
   }
 
@@ -605,7 +658,10 @@ export async function setWorkpad(req: grackle.SetWorkpadRequest): Promise<grackl
   const MAX_WORKPAD_BYTES = 64 * 1024; // 64 KB
   const workpadBytes = Buffer.byteLength(req.workpad, "utf8");
   if (workpadBytes > MAX_WORKPAD_BYTES) {
-    throw new ConnectError(`Workpad exceeds maximum size of ${MAX_WORKPAD_BYTES} bytes`, Code.InvalidArgument);
+    throw new ConnectError(
+      `Workpad exceeds maximum size of ${MAX_WORKPAD_BYTES} bytes`,
+      Code.InvalidArgument,
+    );
   }
   taskStore.setWorkpad(req.taskId, req.workpad);
   const row = taskStore.getTask(req.taskId)!;
@@ -625,7 +681,9 @@ export async function resumeTask(req: grackle.TaskId): Promise<grackle.Session> 
   if (!latestSession) {
     throw new ConnectError(`Task ${req.id} has no sessions to resume`, Code.FailedPrecondition);
   }
-  if (!([SESSION_STATUS.STOPPED, SESSION_STATUS.SUSPENDED] as string[]).includes(latestSession.status)) {
+  if (
+    !([SESSION_STATUS.STOPPED, SESSION_STATUS.SUSPENDED] as string[]).includes(latestSession.status)
+  ) {
     throw new ConnectError(
       `Latest session ${latestSession.id} is not resumable (status: ${latestSession.status})`,
       Code.FailedPrecondition,
@@ -640,7 +698,10 @@ export async function resumeTask(req: grackle.TaskId): Promise<grackle.Session> 
 
   const conn = adapterManager.getConnection(latestSession.environmentId);
   if (!conn) {
-    throw new ConnectError(`Environment ${latestSession.environmentId} not connected`, Code.FailedPrecondition);
+    throw new ConnectError(
+      `Environment ${latestSession.environmentId} not connected`,
+      Code.FailedPrecondition,
+    );
   }
 
   const powerlineReq = create(powerline.ResumeRequestSchema, {
@@ -649,8 +710,7 @@ export async function resumeTask(req: grackle.TaskId): Promise<grackle.Session> 
     runtime: latestSession.runtime,
   });
 
-  const logPath =
-    latestSession.logPath || join(grackleHome, LOGS_DIR, latestSession.id);
+  const logPath = latestSession.logPath || join(grackleHome, LOGS_DIR, latestSession.id);
 
   // Initiate the stream before mutating the DB. If resume() throws
   // synchronously the DB is never touched, so no rollback is needed.
@@ -671,7 +731,11 @@ export async function resumeTask(req: grackle.TaskId): Promise<grackle.Session> 
     traceId: getTraceId(),
   });
 
-  emit("task.started", { taskId: task.id, sessionId: latestSession.id, workspaceId: task.workspaceId || "" });
+  emit("task.started", {
+    taskId: task.id,
+    sessionId: latestSession.id,
+    workspaceId: task.workspaceId || "",
+  });
   logger.info({ taskId: task.id, sessionId: latestSession.id }, "Task resumed");
 
   const row = sessionStore.getSession(latestSession.id);
@@ -695,7 +759,13 @@ export async function stopTask(req: grackle.TaskId): Promise<grackle.Task> {
     }
     const current = sessionStore.getSession(activeSession.id);
     if (current && !TERMINAL_SESSION_STATUSES.has(current.status as SessionStatus)) {
-      sessionStore.updateSession(activeSession.id, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.INTERRUPTED);
+      sessionStore.updateSession(
+        activeSession.id,
+        SESSION_STATUS.STOPPED,
+        undefined,
+        undefined,
+        END_REASON.INTERRUPTED,
+      );
       streamHub.publish(
         create(grackle.SessionEventSchema, {
           sessionId: activeSession.id,
@@ -754,10 +824,7 @@ export async function deleteTask(req: grackle.TaskId): Promise<grackle.Empty> {
   const changes = taskStore.deleteTask(req.id);
   if (changes === 0) {
     logger.error({ taskId: req.id }, "deleteTask returned 0 changes despite task existing");
-    throw new ConnectError(
-      `Failed to delete task ${req.id}: no rows affected`,
-      Code.Internal,
-    );
+    throw new ConnectError(`Failed to delete task ${req.id}: no rows affected`, Code.Internal);
   }
   emit("task.deleted", { taskId: req.id, workspaceId: task.workspaceId || "" });
   logger.info({ taskId: req.id }, "Task deleted");

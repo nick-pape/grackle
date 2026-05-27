@@ -1,12 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import { grackle } from "@grackle-ai/common";
-import {
-  stubScenario,
-  emitText,
-  idle,
-  waitMs,
-  navigateToTask,
-} from "./helpers.js";
+import { stubScenario, emitText, idle, waitMs, navigateToTask } from "./helpers.js";
 
 /**
  * Tests that task state changes trigger toast notifications in the web UI.
@@ -27,7 +21,10 @@ test.describe("Task State Toast Notifications", { tag: ["@task"] }, () => {
     // the delay, the stub runtime can reach idle before the first loadTasks
     // completes, causing the client to see not_started→paused and skip the
     // "Task is now running" toast entirely.
-    await stubTask.createAndNavigate("toast-start", stubScenario(emitText("working"), waitMs(3000), idle()));
+    await stubTask.createAndNavigate(
+      "toast-start",
+      stubScenario(emitText("working"), waitMs(3000), idle()),
+    );
 
     // Start the task — transitions from not_started → working
     await page.getByTestId("task-header-start").click();

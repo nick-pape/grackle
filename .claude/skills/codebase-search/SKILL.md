@@ -32,21 +32,25 @@ Review the results — they're ranked by relevance with breadcrumbs showing the 
 #### Examples
 
 **Conceptual question** — "how does the pairing flow work?"
+
 ```
 mcp__qdrant-search__semantic_search(query: "pairing code generation and redemption flow", catalog: "grackle")
 ```
 
 **Tracing behavior** — "what happens when an agent session completes?"
+
 ```
 mcp__qdrant-search__semantic_search(query: "session completion event processing status transition", catalog: "grackle")
 ```
 
 **Finding related code** — "where are tokens injected into sessions?"
+
 ```
 mcp__qdrant-search__semantic_search(query: "token injection push credentials to PowerLine before spawn", catalog: "grackle")
 ```
 
 **Cross-cutting concern** — "how does error handling work across the WebSocket bridge?"
+
 ```
 mcp__qdrant-search__semantic_search(query: "WebSocket error handling disconnect reconnection", catalog: "grackle")
 ```
@@ -71,7 +75,7 @@ mcp__qdrant-search__view_chunks(ids: ["f7a2b3c1:2-3"])
 
 ### Step 3: Follow references with Grep/Read
 
-Once you've identified the key files from semantic search, use Grep to find exact symbol references and Read to examine specific implementations. Semantic search finds the *area*, Grep/Read finds the *details*.
+Once you've identified the key files from semantic search, use Grep to find exact symbol references and Read to examine specific implementations. Semantic search finds the _area_, Grep/Read finds the _details_.
 
 #### Example
 
@@ -89,6 +93,7 @@ Report findings with specific file paths and line numbers. Connect the dots betw
 ## When NOT to Use This
 
 Use Grep/Glob directly when you:
+
 - Know the exact symbol name: `Grep: pattern="class SessionStore"`
 - Need a regex pattern: `Grep: pattern="status.*=.*completed"`
 - Are looking for a specific file: `Glob: pattern="**/pairing.ts"`

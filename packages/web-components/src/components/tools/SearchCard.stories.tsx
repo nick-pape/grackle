@@ -15,7 +15,8 @@ export const GrepWithMatches: Story = {
   args: {
     tool: "Grep",
     args: { pattern: "verifyToken", path: "src/" },
-    result: "src/middleware/auth.ts:14:  export function verifyToken(req: Request) {\nsrc/routes/protected.ts:8:  const user = verifyToken(req);\nsrc/tests/auth.test.ts:22:  describe('verifyToken', () => {",
+    result:
+      "src/middleware/auth.ts:14:  export function verifyToken(req: Request) {\nsrc/routes/protected.ts:8:  const user = verifyToken(req);\nsrc/tests/auth.test.ts:22:  describe('verifyToken', () => {",
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("tool-card-search")).toBeInTheDocument();

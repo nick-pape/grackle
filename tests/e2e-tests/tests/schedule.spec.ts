@@ -75,10 +75,7 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     await expect(page.getByText("Soon Deleted Schedule")).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("create, edit, and delete schedule via UI", async ({
-    appPage,
-    grackle: { client },
-  }) => {
+  test("create, edit, and delete schedule via UI", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
     // Need a persona to select in the create form
@@ -109,13 +106,20 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
 
     // Verify schedule was created in the backend
     let createdSchedule: { id: string; title: string } | undefined;
-    await expect.poll(async () => {
-      const listResp = await client.scheduling.listSchedules({});
-      createdSchedule = listResp.schedules.find((s) => s.title === "UI Created Schedule");
-      return createdSchedule;
-    }, { timeout: 5_000 }).toBeDefined();
+    await expect
+      .poll(
+        async () => {
+          const listResp = await client.scheduling.listSchedules({});
+          createdSchedule = listResp.schedules.find((s) => s.title === "UI Created Schedule");
+          return createdSchedule;
+        },
+        { timeout: 5_000 },
+      )
+      .toBeDefined();
 
-    await expect(page.getByRole("heading", { name: "Edit Schedule" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("heading", { name: "Edit Schedule" })).toBeVisible({
+      timeout: 5_000,
+    });
 
     // Edit the title via inline editing
     await page.getByTestId("schedule-detail-title-button").click();
@@ -127,13 +131,21 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     await expect(page).toHaveURL(/\/settings\/schedules$/, { timeout: 5_000 });
 
     let updatedSchedule: { id: string; title: string } | undefined;
-    await expect.poll(async () => {
-      const listResp = await client.scheduling.listSchedules({});
-      updatedSchedule = listResp.schedules.find((s) => s.title === "UI Updated Schedule");
-      return updatedSchedule;
-    }, { timeout: 5_000 }).toBeDefined();
+    await expect
+      .poll(
+        async () => {
+          const listResp = await client.scheduling.listSchedules({});
+          updatedSchedule = listResp.schedules.find((s) => s.title === "UI Updated Schedule");
+          return updatedSchedule;
+        },
+        { timeout: 5_000 },
+      )
+      .toBeDefined();
 
-    await expect(page.getByTestId(`schedule-card-${updatedSchedule!.id}`)).toContainText("UI Updated Schedule", { timeout: 5_000 });
+    await expect(page.getByTestId(`schedule-card-${updatedSchedule!.id}`)).toContainText(
+      "UI Updated Schedule",
+      { timeout: 5_000 },
+    );
 
     // Delete via UI
     await page.getByTestId(`schedule-card-${updatedSchedule!.id}`).click();

@@ -158,9 +158,7 @@ const UPDATE_NODE_CYPHER: string = `
  *
  * Handles the discriminated union based on the `kind` property.
  */
-export function recordToNode(
-  properties: Record<string, unknown>,
-): KnowledgeNode {
+export function recordToNode(properties: Record<string, unknown>): KnowledgeNode {
   const base = {
     id: properties.id as string,
     kind: properties.kind as NodeKind,
@@ -229,9 +227,7 @@ export function recordToEdge(raw: Record<string, unknown>): KnowledgeEdge {
  *
  * @returns The ID of the created node.
  */
-export async function createReferenceNode(
-  input: CreateReferenceNodeInput,
-): Promise<string> {
+export async function createReferenceNode(input: CreateReferenceNodeInput): Promise<string> {
   const id = randomUUID();
   const now = new Date().toISOString();
   const props = {
@@ -267,9 +263,7 @@ export async function createReferenceNode(
  *
  * @returns The ID of the created node.
  */
-export async function createNativeNode(
-  input: CreateNativeNodeInput,
-): Promise<string> {
+export async function createNativeNode(input: CreateNativeNodeInput): Promise<string> {
   const id = randomUUID();
   const now = new Date().toISOString();
   const props = {
@@ -442,9 +436,7 @@ const UPSERT_REFERENCE_NODE_CYPHER: string = `
  *
  * @returns The (stable) node ID.
  */
-export async function upsertReferenceNode(
-  input: UpsertReferenceNodeInput,
-): Promise<string> {
+export async function upsertReferenceNode(input: UpsertReferenceNodeInput): Promise<string> {
   const now = new Date().toISOString();
   const mutable: Record<string, unknown> = {
     label: input.label,
@@ -517,9 +509,7 @@ export async function getReferenceNodeProps(
  *
  * @param limit - Maximum number of nodes to return (a positive integer).
  */
-export async function listNodesMissingEmbedding(
-  limit: number,
-): Promise<KnowledgeNode[]> {
+export async function listNodesMissingEmbedding(limit: number): Promise<KnowledgeNode[]> {
   const safeLimit = Math.max(1, Math.floor(limit));
   const session = getSession();
   try {
@@ -546,9 +536,7 @@ export async function listNodesMissingEmbedding(
  *
  * Used by `rebuild()` to prune mirror nodes whose source row no longer exists.
  */
-export async function listReferenceSourceIds(
-  sourceType: ReferenceSource,
-): Promise<string[]> {
+export async function listReferenceSourceIds(sourceType: ReferenceSource): Promise<string[]> {
   const session = getSession();
   try {
     const result = await session.run(
@@ -590,7 +578,10 @@ export async function deleteReferenceNodesByPrefix(
     try {
       await session.close();
     } catch (closeError) {
-      logger.warn({ err: closeError }, "Failed to close session after deleteReferenceNodesByPrefix");
+      logger.warn(
+        { err: closeError },
+        "Failed to close session after deleteReferenceNodesByPrefix",
+      );
     }
   }
 }

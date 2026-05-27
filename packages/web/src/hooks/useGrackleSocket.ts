@@ -110,18 +110,18 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   // All hooks are still instantiated above (Rules of Hooks requires unconditional calls).
   const domainHooks: DomainHook[] = [
     ...(activeHookKeys.has("environments") ? [environmentsHook.domainHook] : []),
-    ...(activeHookKeys.has("sessions")     ? [sessionsHook.domainHook]     : []),
-    ...(activeHookKeys.has("workspaces")   ? [workspacesHook.domainHook]   : []),
-    ...(activeHookKeys.has("tasks")        ? [tasksHook.domainHook]        : []),
-    ...(activeHookKeys.has("tokens")       ? [tokensHook.domainHook]       : []),
-    ...(activeHookKeys.has("credentials")  ? [credentialsHook.domainHook]  : []),
-    ...(activeHookKeys.has("codespaces")   ? [codespacesHook.domainHook]   : []),
+    ...(activeHookKeys.has("sessions") ? [sessionsHook.domainHook] : []),
+    ...(activeHookKeys.has("workspaces") ? [workspacesHook.domainHook] : []),
+    ...(activeHookKeys.has("tasks") ? [tasksHook.domainHook] : []),
+    ...(activeHookKeys.has("tokens") ? [tokensHook.domainHook] : []),
+    ...(activeHookKeys.has("credentials") ? [credentialsHook.domainHook] : []),
+    ...(activeHookKeys.has("codespaces") ? [codespacesHook.domainHook] : []),
     ...(activeHookKeys.has("dockerContainers") ? [dockerContainersHook.domainHook] : []),
-    ...(activeHookKeys.has("personas")     ? [personasHook.domainHook]     : []),
-    ...(activeHookKeys.has("schedules")    ? [schedulesHook.domainHook]    : []),
-    ...(activeHookKeys.has("knowledge")    ? [knowledgeHook.domainHook]    : []),
+    ...(activeHookKeys.has("personas") ? [personasHook.domainHook] : []),
+    ...(activeHookKeys.has("schedules") ? [schedulesHook.domainHook] : []),
+    ...(activeHookKeys.has("knowledge") ? [knowledgeHook.domainHook] : []),
     ...(activeHookKeys.has("notifications") ? [notificationsHook.domainHook] : []),
-    ...(activeHookKeys.has("streams")       ? [streamsHook.domainHook]       : []),
+    ...(activeHookKeys.has("streams") ? [streamsHook.domainHook] : []),
     ...(activeHookKeys.has("plugins") ? [pluginsHook.domainHook] : []),
     githubAccountsHook.domainHook, // core hook — always active
   ];
@@ -162,13 +162,13 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   /** Key used for the onboarding completed setting. */
   const SETTING_KEY_ONBOARDING_COMPLETED = "onboarding_completed";
 
-  const setAppDefaultPersonaId = useCallback(
-    async (personaId: string): Promise<void> => {
-      const response = await grackleClient.setSetting({ key: SETTING_KEY_DEFAULT_PERSONA, value: personaId });
-      setAppDefaultPersonaIdState(response.value);
-    },
-    [],
-  );
+  const setAppDefaultPersonaId = useCallback(async (personaId: string): Promise<void> => {
+    const response = await grackleClient.setSetting({
+      key: SETTING_KEY_DEFAULT_PERSONA,
+      value: personaId,
+    });
+    setAppDefaultPersonaIdState(response.value);
+  }, []);
 
   const completeOnboarding = useCallback(async () => {
     setOnboardingCompleted(true);
@@ -179,21 +179,18 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     }
   }, []);
 
-  const loadUsage = useCallback(
-    async (scope: string, id: string) => {
-      try {
-        const resp = await grackleClient.getUsage({ scope, id });
-        const key = `${scope}:${id}`;
-        setUsageCache((prev) => ({
-          ...prev,
-          [key]: protoToUsageStats(resp),
-        }));
-      } catch {
-        // empty
-      }
-    },
-    [],
-  );
+  const loadUsage = useCallback(async (scope: string, id: string) => {
+    try {
+      const resp = await grackleClient.getUsage({ scope, id });
+      const key = `${scope}:${id}`;
+      setUsageCache((prev) => ({
+        ...prev,
+        [key]: protoToUsageStats(resp),
+      }));
+    } catch {
+      // empty
+    }
+  }, []);
 
   // --- Message routing ---
 
@@ -225,10 +222,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     // environment.changed is intentionally excluded — env status flips do not
     // mutate session shape, and reloading on every reconnect attempt causes
     // the visible flash described in the deleted-codespace retry-storm bug.
-    if (
-      event.type === "environment.removed" ||
-      event.type === "task.started"
-    ) {
+    if (event.type === "environment.removed" || event.type === "task.started") {
       sessionsHook.loadSessions().catch(() => {});
     }
 
@@ -252,7 +246,9 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       // empty
     }
     try {
-      const onboardingResp = await grackleClient.getSetting({ key: SETTING_KEY_ONBOARDING_COMPLETED });
+      const onboardingResp = await grackleClient.getSetting({
+        key: SETTING_KEY_ONBOARDING_COMPLETED,
+      });
       setOnboardingCompleted(onboardingResp.value === "true");
     } catch {
       // empty
@@ -268,7 +264,12 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     sessionsHook.loadSessions().catch(() => {});
     workspacesHook.loadWorkspaces().catch(() => {});
     tokensHook.loadTokens().catch(() => {});
-  }, [environmentsHook.loadEnvironments, sessionsHook.loadSessions, workspacesHook.loadWorkspaces, tokensHook.loadTokens]);
+  }, [
+    environmentsHook.loadEnvironments,
+    sessionsHook.loadSessions,
+    workspacesHook.loadWorkspaces,
+    tokensHook.loadTokens,
+  ]);
 
   return {
     connectionStatus,

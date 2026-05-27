@@ -35,7 +35,10 @@ function normalizeLoopback(url: string): string {
  * @param apiKey - The server's API key (used for both direct comparison and as the HMAC signing secret).
  * @returns An {@link AuthContext} if authentication succeeds, or `undefined` for a 401.
  */
-export function authenticateMcpRequest(req: http.IncomingMessage, apiKey: string): AuthContext | undefined {
+export function authenticateMcpRequest(
+  req: http.IncomingMessage,
+  apiKey: string,
+): AuthContext | undefined {
   const authHeader = req.headers.authorization || "";
   const match = /^Bearer\s+(\S+)$/i.exec(authHeader);
   if (!match) {

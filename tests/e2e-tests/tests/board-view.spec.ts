@@ -1,9 +1,5 @@
 import { test, expect } from "./fixtures.js";
-import {
-  navigateToWorkspace,
-  createTask,
-  navigateToTask,
-} from "./helpers.js";
+import { navigateToWorkspace, createTask, navigateToTask } from "./helpers.js";
 
 test.describe("Board View", { tag: ["@workspace"] }, () => {
   test("Board tab is visible after selecting a workspace", async ({ stubTask }) => {
@@ -74,12 +70,16 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
 
     // Navigate to the task to start it (stub runtime patched by fixture)
     await navigateToTask(page, "rt-task");
-    await expect(page.locator('[data-testid="task-status"]')).toContainText("not_started", { timeout: 5_000 });
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("not_started", {
+      timeout: 5_000,
+    });
 
     await page.getByTestId("task-header-start").click();
 
     // Wait for task to transition to working
-    await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, { timeout: 15_000 });
+    await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, {
+      timeout: 15_000,
+    });
 
     // Navigate back to the workspace and switch to board
     await navigateToWorkspace(page, workspaceName);
@@ -87,7 +87,9 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
     await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
 
     // The card should have moved out of Not Started
-    await expect(page.getByTestId("board-count-not_started")).toContainText("0", { timeout: 5_000 });
+    await expect(page.getByTestId("board-count-not_started")).toContainText("0", {
+      timeout: 5_000,
+    });
 
     // And into Working or Paused (stub runtime may transition quickly)
     const workingCount = await page.getByTestId("board-count-working").textContent();

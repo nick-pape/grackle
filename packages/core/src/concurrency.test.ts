@@ -1,7 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
 
 import { getEffectiveLimit, hasCapacity, type ConcurrencyDeps } from "./concurrency.js";
-import { DEFAULT_MAX_CONCURRENT_SESSIONS, SETTINGS_KEY_MAX_CONCURRENT_SESSIONS } from "@grackle-ai/common";
+import {
+  DEFAULT_MAX_CONCURRENT_SESSIONS,
+  SETTINGS_KEY_MAX_CONCURRENT_SESSIONS,
+} from "@grackle-ai/common";
 
 function createMockDeps(overrides: Partial<ConcurrencyDeps> = {}): ConcurrencyDeps {
   return {

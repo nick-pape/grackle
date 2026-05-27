@@ -137,10 +137,38 @@ describe("gRPC searchTasks handler", () => {
 
     workspaceStore.createWorkspace(WORKSPACE_ID, "Search Test Workspace", "desc", "", "");
     // Tasks with varied titles and descriptions for fuzzy matching
-    taskStore.createTask("t1", WORKSPACE_ID, "Fix login authentication bug", "User cannot login with SSO provider", [], "");
-    taskStore.createTask("t2", WORKSPACE_ID, "Add analytics dashboard", "Create charts for user activity", [], "");
-    taskStore.createTask("t3", WORKSPACE_ID, "Update payment processing", "Integrate Stripe for subscriptions", [], "");
-    taskStore.createTask("t4", WORKSPACE_ID, "Refactor database layer", "Login info stored in auth module", [], "");
+    taskStore.createTask(
+      "t1",
+      WORKSPACE_ID,
+      "Fix login authentication bug",
+      "User cannot login with SSO provider",
+      [],
+      "",
+    );
+    taskStore.createTask(
+      "t2",
+      WORKSPACE_ID,
+      "Add analytics dashboard",
+      "Create charts for user activity",
+      [],
+      "",
+    );
+    taskStore.createTask(
+      "t3",
+      WORKSPACE_ID,
+      "Update payment processing",
+      "Integrate Stripe for subscriptions",
+      [],
+      "",
+    );
+    taskStore.createTask(
+      "t4",
+      WORKSPACE_ID,
+      "Refactor database layer",
+      "Login info stored in auth module",
+      [],
+      "",
+    );
     taskStore.updateTaskStatus("t3", "working");
     taskStore.updateTaskStatus("t4", "complete");
 
@@ -164,12 +192,12 @@ describe("gRPC searchTasks handler", () => {
   });
 
   it("returns results for an exact title match with high relevance", async () => {
-    const result = await handlers.searchTasks({
+    const result = (await handlers.searchTasks({
       query: "Fix login authentication bug",
       workspaceId: WORKSPACE_ID,
       limit: 0,
       status: "",
-    }) as grackle.SearchTasksResponse;
+    })) as grackle.SearchTasksResponse;
 
     expect(result.results.length).toBeGreaterThan(0);
     const top = result.results[0];
@@ -178,12 +206,12 @@ describe("gRPC searchTasks handler", () => {
   });
 
   it("returns results for a partial query (fuzzy match)", async () => {
-    const result = await handlers.searchTasks({
+    const result = (await handlers.searchTasks({
       query: "login bug",
       workspaceId: WORKSPACE_ID,
       limit: 0,
       status: "",
-    }) as grackle.SearchTasksResponse;
+    })) as grackle.SearchTasksResponse;
 
     expect(result.results.length).toBeGreaterThan(0);
     const titles = result.results.map((r) => r.task!.title);
@@ -191,57 +219,73 @@ describe("gRPC searchTasks handler", () => {
   });
 
   it("returns results sorted by relevance (best match first)", async () => {
-    const result = await handlers.searchTasks({
+    const result = (await handlers.searchTasks({
       query: "login",
       workspaceId: WORKSPACE_ID,
       limit: 10,
       status: "",
-    }) as grackle.SearchTasksResponse;
+    })) as grackle.SearchTasksResponse;
 
     expect(result.results.length).toBeGreaterThan(0);
     for (let i = 1; i < result.results.length; i++) {
-      expect(result.results[i - 1].relevanceScore).toBeGreaterThanOrEqual(result.results[i].relevanceScore);
+      expect(result.results[i - 1].relevanceScore).toBeGreaterThanOrEqual(
+        result.results[i].relevanceScore,
+      );
     }
   });
 
   it("limits results to the specified limit", async () => {
     // Seed enough tasks to exceed the limit
     for (let i = 5; i <= 15; i++) {
-      taskStore.createTask(`t${i}`, WORKSPACE_ID, `Login related task ${i}`, "login auth description", [], "");
+      taskStore.createTask(
+        `t${i}`,
+        WORKSPACE_ID,
+        `Login related task ${i}`,
+        "login auth description",
+        [],
+        "",
+      );
     }
 
-    const result = await handlers.searchTasks({
+    const result = (await handlers.searchTasks({
       query: "login",
       workspaceId: WORKSPACE_ID,
       limit: 3,
       status: "",
-    }) as grackle.SearchTasksResponse;
+    })) as grackle.SearchTasksResponse;
 
     expect(result.results.length).toBeLessThanOrEqual(3);
   });
 
   it("defaults to limit 10 when limit is 0", async () => {
     for (let i = 5; i <= 20; i++) {
-      taskStore.createTask(`tlim${i}`, WORKSPACE_ID, `Login task ${i}`, "login auth description", [], "");
+      taskStore.createTask(
+        `tlim${i}`,
+        WORKSPACE_ID,
+        `Login task ${i}`,
+        "login auth description",
+        [],
+        "",
+      );
     }
 
-    const result = await handlers.searchTasks({
+    const result = (await handlers.searchTasks({
       query: "login",
       workspaceId: WORKSPACE_ID,
       limit: 0,
       status: "",
-    }) as grackle.SearchTasksResponse;
+    })) as grackle.SearchTasksResponse;
 
     expect(result.results.length).toBeLessThanOrEqual(10);
   });
 
   it("filters by status before fuzzy matching", async () => {
-    const result = await handlers.searchTasks({
+    const result = (await handlers.searchTasks({
       query: "login",
       workspaceId: WORKSPACE_ID,
       limit: 0,
       status: "complete",
-    }) as grackle.SearchTasksResponse;
+    })) as grackle.SearchTasksResponse;
 
     // Only t4 has status=complete and contains "login" in its description
     const titles = result.results.map((r) => r.task!.title);
@@ -251,23 +295,23 @@ describe("gRPC searchTasks handler", () => {
   });
 
   it("returns empty results for a completely unrelated query", async () => {
-    const result = await handlers.searchTasks({
+    const result = (await handlers.searchTasks({
       query: "xqzjkwp",
       workspaceId: WORKSPACE_ID,
       limit: 0,
       status: "",
-    }) as grackle.SearchTasksResponse;
+    })) as grackle.SearchTasksResponse;
 
     expect(result.results).toHaveLength(0);
   });
 
   it("includes relevance scores between 0 and 1", async () => {
-    const result = await handlers.searchTasks({
+    const result = (await handlers.searchTasks({
       query: "dashboard",
       workspaceId: WORKSPACE_ID,
       limit: 0,
       status: "",
-    }) as grackle.SearchTasksResponse;
+    })) as grackle.SearchTasksResponse;
 
     expect(result.results.length).toBeGreaterThan(0);
     for (const r of result.results) {
@@ -281,7 +325,12 @@ describe("gRPC searchTasks handler", () => {
     taskStore.createTask("child1", WORKSPACE_ID, "Child 1", "desc", [], "", "parent");
 
     vi.mocked(sessionStore.listSessionsByTaskIds).mockReturnValue([
-      { id: "sess-1", taskId: "parent", status: "running", startedAt: "2025-01-01T00:00:00" } as never,
+      {
+        id: "sess-1",
+        taskId: "parent",
+        status: "running",
+        startedAt: "2025-01-01T00:00:00",
+      } as never,
     ]);
     vi.mocked(computeTaskStatus).mockImplementation((storedStatus: string, sessions: unknown[]) => {
       if (sessions && sessions.length > 0) {
@@ -290,12 +339,12 @@ describe("gRPC searchTasks handler", () => {
       return { status: storedStatus, latestSessionId: "" };
     });
 
-    const result = await handlers.searchTasks({
+    const result = (await handlers.searchTasks({
       query: "Parent login task",
       workspaceId: WORKSPACE_ID,
       limit: 0,
       status: "",
-    }) as grackle.SearchTasksResponse;
+    })) as grackle.SearchTasksResponse;
 
     const parentResult = result.results.find((r) => r.task!.id === "parent");
     expect(parentResult).toBeDefined();

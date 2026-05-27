@@ -63,12 +63,17 @@ export function getByTaskId(taskId: string): DispatchQueueRow | undefined {
 
 /** List all pending dispatch entries in FIFO order (oldest first, deterministic). */
 export function listPending(): DispatchQueueRow[] {
-  return db.select().from(dispatchQueue).orderBy(asc(dispatchQueue.enqueuedAt), asc(dispatchQueue.id)).all();
+  return db
+    .select()
+    .from(dispatchQueue)
+    .orderBy(asc(dispatchQueue.enqueuedAt), asc(dispatchQueue.id))
+    .all();
 }
 
 /** List pending dispatch entries for a specific environment in FIFO order. */
 export function listPendingForEnvironment(environmentId: string): DispatchQueueRow[] {
-  return db.select()
+  return db
+    .select()
     .from(dispatchQueue)
     .where(eq(dispatchQueue.environmentId, environmentId))
     .orderBy(asc(dispatchQueue.enqueuedAt), asc(dispatchQueue.id))

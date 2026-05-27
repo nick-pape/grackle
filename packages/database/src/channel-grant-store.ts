@@ -20,9 +20,7 @@ export function createGrant(
   label: string,
   expiresAt: string | null,
 ): void {
-  db.insert(channelGrants)
-    .values({ id, channelUri, verbs, label, expiresAt })
-    .run();
+  db.insert(channelGrants).values({ id, channelUri, verbs, label, expiresAt }).run();
 }
 
 /** Retrieve a grant by ID, or `undefined` if it does not exist. */

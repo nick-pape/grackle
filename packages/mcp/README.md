@@ -34,13 +34,13 @@ The MCP server listens on `http://127.0.0.1:7435/mcp` by default.
 
 All configuration is via environment variables:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `GRACKLE_MCP_PORT` | `7435` | Port the MCP server listens on |
-| `GRACKLE_HOST` | `127.0.0.1` | Bind address (must be a loopback address) |
-| `GRACKLE_URL` | `http://127.0.0.1:7434` | URL of the Grackle gRPC server to connect to |
-| `GRACKLE_API_KEY` | *(auto-loaded)* | API key for authenticating with the gRPC server. If not set, reads from `~/.grackle/api-key` |
-| `LOG_LEVEL` | `info` | Logging level (`debug`, `info`, `warn`, `error`) |
+| Variable           | Default                 | Description                                                                                  |
+| ------------------ | ----------------------- | -------------------------------------------------------------------------------------------- |
+| `GRACKLE_MCP_PORT` | `7435`                  | Port the MCP server listens on                                                               |
+| `GRACKLE_HOST`     | `127.0.0.1`             | Bind address (must be a loopback address)                                                    |
+| `GRACKLE_URL`      | `http://127.0.0.1:7434` | URL of the Grackle gRPC server to connect to                                                 |
+| `GRACKLE_API_KEY`  | _(auto-loaded)_         | API key for authenticating with the gRPC server. If not set, reads from `~/.grackle/api-key` |
+| `LOG_LEVEL`        | `info`                  | Logging level (`debug`, `info`, `warn`, `error`)                                             |
 
 ## Programmatic Usage
 
@@ -102,16 +102,16 @@ The MCP server exposes a rich set of tools organized into groups. Each tool vali
 
 Manage compute environments where agents run (Docker, SSH, Codespace, local).
 
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `env_list` | List all registered environments with status, adapter type, and runtime. | *(none)* |
-| `env_list_docker_containers` | List running Docker containers that can be attached to (Docker adapter attach mode). | *(none)* |
-| `env_add` | Register a new environment. The `adapterConfig` fields depend on `adapterType` (see below). For the Docker adapter, set `adapterConfig.attach` to an existing container name/ID to attach instead of creating one. | `displayName` (string), `adapterType` (`local` \| `ssh` \| `codespace` \| `docker`), `adapterConfig?` (object), `githubAccountId?` (string, codespace/docker) |
-| `env_provision` | Provision an environment — start resources, install the agent, and connect. | `environmentId` (string), `force?` (boolean) |
-| `env_stop` | Stop a running environment without destroying its resources. | `environmentId` (string) |
-| `env_destroy` | Destroy an environment's backing resources (e.g., delete the container). | `environmentId` (string) |
-| `env_remove` | Remove an environment registration. Must be stopped first. | `environmentId` (string) |
-| `env_wake` | Wake a stopped environment by re-provisioning it. | `environmentId` (string) |
+| Tool                         | Description                                                                                                                                                                                                        | Parameters                                                                                                                                                    |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `env_list`                   | List all registered environments with status, adapter type, and runtime.                                                                                                                                           | _(none)_                                                                                                                                                      |
+| `env_list_docker_containers` | List running Docker containers that can be attached to (Docker adapter attach mode).                                                                                                                               | _(none)_                                                                                                                                                      |
+| `env_add`                    | Register a new environment. The `adapterConfig` fields depend on `adapterType` (see below). For the Docker adapter, set `adapterConfig.attach` to an existing container name/ID to attach instead of creating one. | `displayName` (string), `adapterType` (`local` \| `ssh` \| `codespace` \| `docker`), `adapterConfig?` (object), `githubAccountId?` (string, codespace/docker) |
+| `env_provision`              | Provision an environment — start resources, install the agent, and connect.                                                                                                                                        | `environmentId` (string), `force?` (boolean)                                                                                                                  |
+| `env_stop`                   | Stop a running environment without destroying its resources.                                                                                                                                                       | `environmentId` (string)                                                                                                                                      |
+| `env_destroy`                | Destroy an environment's backing resources (e.g., delete the container).                                                                                                                                           | `environmentId` (string)                                                                                                                                      |
+| `env_remove`                 | Remove an environment registration. Must be stopped first.                                                                                                                                                         | `environmentId` (string)                                                                                                                                      |
+| `env_wake`                   | Wake a stopped environment by re-provisioning it.                                                                                                                                                                  | `environmentId` (string)                                                                                                                                      |
 
 `env_add` is a discriminated union on `adapterType` — the tool's input schema advertises the exact `adapterConfig` fields valid for each adapter, and unknown fields are rejected. Pick the adapter that matches how the environment is reached:
 
@@ -124,125 +124,125 @@ Manage compute environments where agents run (Docker, SSH, Codespace, local).
 
 Manage AI agent sessions — spawn, monitor, interact, and terminate.
 
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `session_spawn` | Spawn a new agent session with a prompt and optional model config. | `environmentId` (string), `prompt` (string), `maxTurns?` (int), `personaId?` (string), `workingDirectory?` (string) |
-| `session_resume` | Resume a stopped agent session. | `sessionId` (string) |
-| `session_status` | List sessions with optional filtering by environment and status. | `environmentId?` (string), `all?` (boolean, default false) |
-| `session_kill` | Terminate a running session. Hard kill by default; graceful=true sends SIGTERM. | `sessionId` (string), `graceful?` (boolean, default false) |
-| `session_attach` | Stream events from a running session for a limited duration. | `sessionId` (string), `timeoutSeconds?` (int, default 30, max 300), `maxEvents?` (int) |
-| `session_send_input` | Send a text message to a session waiting for user input. | `sessionId` (string), `text` (string) |
+| Tool                 | Description                                                                     | Parameters                                                                                                          |
+| -------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `session_spawn`      | Spawn a new agent session with a prompt and optional model config.              | `environmentId` (string), `prompt` (string), `maxTurns?` (int), `personaId?` (string), `workingDirectory?` (string) |
+| `session_resume`     | Resume a stopped agent session.                                                 | `sessionId` (string)                                                                                                |
+| `session_status`     | List sessions with optional filtering by environment and status.                | `environmentId?` (string), `all?` (boolean, default false)                                                          |
+| `session_kill`       | Terminate a running session. Hard kill by default; graceful=true sends SIGTERM. | `sessionId` (string), `graceful?` (boolean, default false)                                                          |
+| `session_attach`     | Stream events from a running session for a limited duration.                    | `sessionId` (string), `timeoutSeconds?` (int, default 30, max 300), `maxEvents?` (int)                              |
+| `session_send_input` | Send a text message to a session waiting for user input.                        | `sessionId` (string), `text` (string)                                                                               |
 
 ### Workspace Tools
 
 Manage workspaces that group tasks, agents, and repositories.
 
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `workspace_list` | List all workspaces with names, descriptions, repos, and status. | `environmentId?` (string) |
-| `workspace_create` | Create a new workspace. | `name` (string), `environmentId` (string), `description?` (string), `repoUrl?` (string), `workingDirectory?` (string), `useWorktrees?` (boolean), `defaultPersonaId?` (string) |
-| `workspace_get` | Get full details of a workspace by ID. | `workspaceId` (string) |
-| `workspace_update` | Update a workspace's name, description, repo, or settings. | `workspaceId` (string), `name?`, `description?`, `repoUrl?`, `environmentId?`, `workingDirectory?`, `useWorktrees?`, `defaultPersonaId?` |
-| `workspace_archive` | Archive a workspace, marking it as inactive. | `workspaceId` (string) |
-| `workspace_link_environment` | Link an additional environment to a workspace's pool. | `workspaceId` (string), `environmentId` (string) |
-| `workspace_unlink_environment` | Remove a linked environment from a workspace's pool. | `workspaceId` (string), `environmentId` (string) |
+| Tool                           | Description                                                      | Parameters                                                                                                                                                                     |
+| ------------------------------ | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `workspace_list`               | List all workspaces with names, descriptions, repos, and status. | `environmentId?` (string)                                                                                                                                                      |
+| `workspace_create`             | Create a new workspace.                                          | `name` (string), `environmentId` (string), `description?` (string), `repoUrl?` (string), `workingDirectory?` (string), `useWorktrees?` (boolean), `defaultPersonaId?` (string) |
+| `workspace_get`                | Get full details of a workspace by ID.                           | `workspaceId` (string)                                                                                                                                                         |
+| `workspace_update`             | Update a workspace's name, description, repo, or settings.       | `workspaceId` (string), `name?`, `description?`, `repoUrl?`, `environmentId?`, `workingDirectory?`, `useWorktrees?`, `defaultPersonaId?`                                       |
+| `workspace_archive`            | Archive a workspace, marking it as inactive.                     | `workspaceId` (string)                                                                                                                                                         |
+| `workspace_link_environment`   | Link an additional environment to a workspace's pool.            | `workspaceId` (string), `environmentId` (string)                                                                                                                               |
+| `workspace_unlink_environment` | Remove a linked environment from a workspace's pool.             | `workspaceId` (string), `environmentId` (string)                                                                                                                               |
 
 ### Task Tools
 
 Create, manage, and run tasks within workspaces. Supports hierarchical task trees and dependency gating.
 
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `task_list` | List tasks with optional search and status filters. | `workspaceId?` (string), `search?` (string), `status?` (string: `not_started`, `working`, `paused`, `complete`, `failed`) |
-| `task_search` | Fuzzy search tasks by title or description, ranked by relevance. Returns results with a `relevanceScore` (0.0–1.0, higher = better match). Prefer this over `task_list` when matching approximate descriptions. | `query` (string), `workspaceId?` (string), `limit?` (number, default 10), `status?` (string) |
-| `task_create` | Create a new task with dependencies and parent hierarchy. | `workspaceId?` (string), `title` (string), `description?` (string), `dependsOn?` (string[]), `parentTaskId?` (string), `canDecompose?` (boolean), `defaultPersonaId?` (string) |
-| `task_show` | Get full details of a task. | `taskId` (string) |
-| `task_update` | Update a task's title, description, status, or dependencies. | `taskId` (string), `title?`, `description?`, `status?` (enum), `dependsOn?` (string[]), `sessionId?` (string) |
-| `task_start` | Start a task by spawning an agent session. Supports IPC pipe modes. | `taskId` (string), `personaId?` (string), `environmentId?` (string), `notes?` (string), `pipe?` (`sync` \| `async` \| `detach`) |
-| `task_delete` | Permanently delete a task. | `taskId` (string) |
-| `task_complete` | Mark a task as complete (sticky status). | `taskId` (string) |
-| `task_resume` | Resume the latest session for a task. | `taskId` (string) |
+| Tool            | Description                                                                                                                                                                                                     | Parameters                                                                                                                                                                     |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `task_list`     | List tasks with optional search and status filters.                                                                                                                                                             | `workspaceId?` (string), `search?` (string), `status?` (string: `not_started`, `working`, `paused`, `complete`, `failed`)                                                      |
+| `task_search`   | Fuzzy search tasks by title or description, ranked by relevance. Returns results with a `relevanceScore` (0.0–1.0, higher = better match). Prefer this over `task_list` when matching approximate descriptions. | `query` (string), `workspaceId?` (string), `limit?` (number, default 10), `status?` (string)                                                                                   |
+| `task_create`   | Create a new task with dependencies and parent hierarchy.                                                                                                                                                       | `workspaceId?` (string), `title` (string), `description?` (string), `dependsOn?` (string[]), `parentTaskId?` (string), `canDecompose?` (boolean), `defaultPersonaId?` (string) |
+| `task_show`     | Get full details of a task.                                                                                                                                                                                     | `taskId` (string)                                                                                                                                                              |
+| `task_update`   | Update a task's title, description, status, or dependencies.                                                                                                                                                    | `taskId` (string), `title?`, `description?`, `status?` (enum), `dependsOn?` (string[]), `sessionId?` (string)                                                                  |
+| `task_start`    | Start a task by spawning an agent session. Supports IPC pipe modes.                                                                                                                                             | `taskId` (string), `personaId?` (string), `environmentId?` (string), `notes?` (string), `pipe?` (`sync` \| `async` \| `detach`)                                                |
+| `task_delete`   | Permanently delete a task.                                                                                                                                                                                      | `taskId` (string)                                                                                                                                                              |
+| `task_complete` | Mark a task as complete (sticky status).                                                                                                                                                                        | `taskId` (string)                                                                                                                                                              |
+| `task_resume`   | Resume the latest session for a task.                                                                                                                                                                           | `taskId` (string)                                                                                                                                                              |
 
 ### Persona Tools
 
 Manage agent personas — reusable templates defining system prompt, runtime, and model.
 
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `persona_list` | List all available personas. | *(none)* |
+| Tool             | Description                                               | Parameters                                                                                                                                                                       |
+| ---------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `persona_list`   | List all available personas.                              | _(none)_                                                                                                                                                                         |
 | `persona_create` | Create a new persona template (`agent` or `script` type). | `name` (string), `systemPrompt?` (string), `description?` (string), `runtime?` (string), `model?` (string), `maxTurns?` (int), `type?` (`agent` \| `script`), `script?` (string) |
-| `persona_show` | Get full details of a persona. | `personaId` (string) |
-| `persona_edit` | Update an existing persona. | `personaId` (string), `name?`, `systemPrompt?`, `description?`, `runtime?`, `model?`, `maxTurns?`, `type?`, `script?` |
-| `persona_delete` | Delete a persona permanently. | `personaId` (string) |
+| `persona_show`   | Get full details of a persona.                            | `personaId` (string)                                                                                                                                                             |
+| `persona_edit`   | Update an existing persona.                               | `personaId` (string), `name?`, `systemPrompt?`, `description?`, `runtime?`, `model?`, `maxTurns?`, `type?`, `script?`                                                            |
+| `persona_delete` | Delete a persona permanently.                             | `personaId` (string)                                                                                                                                                             |
 
 ### Knowledge Graph Tools
 
 Search a semantic knowledge graph across sessions and task context.
 
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `knowledge_search` | Find how related/prior work in the workspace was approached. Semantic search over the knowledge graph (tasks, sessions, transcript chunks). | `query` (string), `limit?` (int, max 50), `workspaceId?` (string), `expand?` (boolean), `expandDepth?` (int, max 5) |
-| `knowledge_get_node` | Retrieve a specific node by ID with optional neighbor expansion. | `id` (string), `expand?` (boolean), `expandDepth?` (int, max 5) |
-| `knowledge_create_node` | Create a new knowledge entry (decision, insight, concept, snippet). | `title` (string), `content` (string), `category?` (string), `tags?` (string[]), `workspaceId?` (string), `edges?` (array of `{toId, type}`) |
+| Tool                    | Description                                                                                                                                 | Parameters                                                                                                                                  |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `knowledge_search`      | Find how related/prior work in the workspace was approached. Semantic search over the knowledge graph (tasks, sessions, transcript chunks). | `query` (string), `limit?` (int, max 50), `workspaceId?` (string), `expand?` (boolean), `expandDepth?` (int, max 5)                         |
+| `knowledge_get_node`    | Retrieve a specific node by ID with optional neighbor expansion.                                                                            | `id` (string), `expand?` (boolean), `expandDepth?` (int, max 5)                                                                             |
+| `knowledge_create_node` | Create a new knowledge entry (decision, insight, concept, snippet).                                                                         | `title` (string), `content` (string), `category?` (string), `tags?` (string[]), `workspaceId?` (string), `edges?` (array of `{toId, type}`) |
 
 ### IPC Tools
 
 Inter-process communication between parent and child agent sessions.
 
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `ipc_spawn` | Spawn a child agent session with an IPC pipe. | `prompt` (string), `pipe` (`sync` \| `async` \| `detach`), `environmentId` (string), `personaId?` (string), `maxTurns?` (int) |
-| `ipc_write` | Write a message to a child session via a file descriptor. | `fd` (int), `message` (string) |
-| `ipc_close` | Close a file descriptor, optionally stopping the child. | `fd` (int) |
-| `ipc_terminate` | Send SIGTERM to a child session via its fd for graceful shutdown. | `fd` (int) |
-| `ipc_list_fds` | List your open file descriptors (IPC connections). | *(none)* |
-| `ipc_list_streams` | List all active IPC streams with subscriber details and buffer depth. | *(none)* |
-| `ipc_create_stream` | Create a named stream for inter-session communication. Returns an rw fd. | `name` (string), `selfEcho?` (boolean, default `false`) |
-| `ipc_attach` | Grant another session access to a stream you hold an fd on. | `fd` (int), `targetSessionId` (string), `permission?` (`r` \| `w` \| `rw`), `deliveryMode?` (`sync` \| `async` \| `detach`) |
-| `ipc_share_stream` | Share a stream with your parent session. Auto-discovers the parent via the inherited pipe fd, grants access, and sends a `[stream-ref]` notification through the pipe. | `fd?` (int) or `streamName?` (string; exactly one required), `permission?` (`r` \| `w` \| `rw`), `deliveryMode?` (`sync` \| `async` \| `detach`) |
+| Tool                | Description                                                                                                                                                            | Parameters                                                                                                                                       |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ipc_spawn`         | Spawn a child agent session with an IPC pipe.                                                                                                                          | `prompt` (string), `pipe` (`sync` \| `async` \| `detach`), `environmentId` (string), `personaId?` (string), `maxTurns?` (int)                    |
+| `ipc_write`         | Write a message to a child session via a file descriptor.                                                                                                              | `fd` (int), `message` (string)                                                                                                                   |
+| `ipc_close`         | Close a file descriptor, optionally stopping the child.                                                                                                                | `fd` (int)                                                                                                                                       |
+| `ipc_terminate`     | Send SIGTERM to a child session via its fd for graceful shutdown.                                                                                                      | `fd` (int)                                                                                                                                       |
+| `ipc_list_fds`      | List your open file descriptors (IPC connections).                                                                                                                     | _(none)_                                                                                                                                         |
+| `ipc_list_streams`  | List all active IPC streams with subscriber details and buffer depth.                                                                                                  | _(none)_                                                                                                                                         |
+| `ipc_create_stream` | Create a named stream for inter-session communication. Returns an rw fd.                                                                                               | `name` (string), `selfEcho?` (boolean, default `false`)                                                                                          |
+| `ipc_attach`        | Grant another session access to a stream you hold an fd on.                                                                                                            | `fd` (int), `targetSessionId` (string), `permission?` (`r` \| `w` \| `rw`), `deliveryMode?` (`sync` \| `async` \| `detach`)                      |
+| `ipc_share_stream`  | Share a stream with your parent session. Auto-discovers the parent via the inherited pipe fd, grants access, and sends a `[stream-ref]` notification through the pipe. | `fd?` (int) or `streamName?` (string; exactly one required), `permission?` (`r` \| `w` \| `rw`), `deliveryMode?` (`sync` \| `async` \| `detach`) |
 
 ### Log Tools
 
 Retrieve session logs — raw events, formatted transcripts, or live tails.
 
-| Tool | Description | Parameters |
-|------|-------------|------------|
+| Tool       | Description                                                  | Parameters                                                                                                                        |
+| ---------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
 | `logs_get` | Retrieve session logs in raw, transcript, or live-tail mode. | `sessionId` (string), `transcript?` (boolean), `tail?` (boolean), `timeoutSeconds?` (int, default 10, max 60), `maxEvents?` (int) |
 
 ### Token Tools
 
 Manage secrets that are auto-forwarded to environments.
 
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `token_list` | List configured tokens (values are never returned). | *(none)* |
-| `token_set` | Set a token for auto-forwarding to environments. | `name` (string), `value` (string), `type?` (`env_var` \| `file`), `envVar?` (string), `filePath?` (string) |
-| `token_delete` | Delete a configured token. | `name` (string) |
+| Tool           | Description                                         | Parameters                                                                                                 |
+| -------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `token_list`   | List configured tokens (values are never returned). | _(none)_                                                                                                   |
+| `token_set`    | Set a token for auto-forwarding to environments.    | `name` (string), `value` (string), `type?` (`env_var` \| `file`), `envVar?` (string), `filePath?` (string) |
+| `token_delete` | Delete a configured token.                          | `name` (string)                                                                                            |
 
 ### Credential Provider Tools
 
 Configure which credential providers (Claude, GitHub, Copilot, Codex) are auto-forwarded.
 
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `credential_provider_list` | List current provider configuration. | *(none)* |
-| `credential_provider_set` | Set a provider mode. | `provider` (`claude` \| `github` \| `copilot` \| `codex`), `value` (`off` \| `on` \| `subscription` \| `api_key`) |
+| Tool                       | Description                          | Parameters                                                                                                        |
+| -------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `credential_provider_list` | List current provider configuration. | _(none)_                                                                                                          |
+| `credential_provider_set`  | Set a provider mode.                 | `provider` (`claude` \| `github` \| `copilot` \| `codex`), `value` (`off` \| `on` \| `subscription` \| `api_key`) |
 
 ### Config Tools
 
 Read and write global configuration settings.
 
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `config_get_default_persona` | Get the default persona for new sessions. | *(none)* |
+| Tool                         | Description                               | Parameters           |
+| ---------------------------- | ----------------------------------------- | -------------------- |
+| `config_get_default_persona` | Get the default persona for new sessions. | _(none)_             |
 | `config_set_default_persona` | Set the default persona for new sessions. | `personaId` (string) |
 
 ### Usage Tools
 
 Query aggregated token usage and cost data.
 
-| Tool | Description | Parameters |
-|------|-------------|------------|
+| Tool        | Description                                                                         | Parameters                                                                                  |
+| ----------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `usage_get` | Get token usage and cost for a session, task, task tree, workspace, or environment. | `scope` (`session` \| `task` \| `task_tree` \| `workspace` \| `environment`), `id` (string) |
 
 ### Component & Widget Tools
@@ -251,17 +251,17 @@ Query aggregated token usage and cost data.
 
 `show_hello_widget` is the Grackle-served demo: it references a static `ui://` resource and appears in `tools/list` **only** when the host advertises the `io.modelcontextprotocol/ui` extension. The **component registry** tools (#1269) let an agent author and reuse components at runtime; they are ordinary scoped tools (always listed) and the rendered output is captured by the broker into the session's chat.
 
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `show_hello_widget` | Display the Grackle hello widget — a minimal interactive MCP Apps UI that echoes the provided message. | `message` (string, optional) |
-| `component_register` | Register a reusable component in the workspace. `source` is JSX (`grackle-react`, default) or HTML (`mcp-app-html`). Returns the component id. | `name` (string), `source` (string), `rendererKind` (optional), `description` (optional), `propsSchema` (JSON Schema string, optional) |
-| `component_update` | Update a registered component's source/name/description/props schema; bumps its version. | `id` (string), `source`/`name`/`description`/`propsSchema` (optional) |
-| `component_list` | List the reusable components registered in the workspace. | — |
-| `component_search` | Keyword-search registered components **and** Grackle's built-in components by name/description. Find a component to reuse before authoring. `builtin:true` results are composed in JSX; others are rendered via `component_render`. | `query` (string), `limit` (optional), `workspaceId` (auto) |
-| `component_promote` | Promote a registered component to its own `render_<name>` MCP tool (or demote with `promoted:false`). Resolve by `id` or `name`. | `id` (optional), `name` (optional), `promoted` (optional, default `true`) |
-| `component_render` | Render a registered component inline (by `id` or `name`), optionally passing `props`. Props are validated against the component's `propsSchema`. | `id` (optional), `name` (optional), `props` (object, optional) |
-| `component_show` | Render a one-off React/JSX component inline against the Grackle component library (no persistence). `source` calls `render(<Component {...props}/>)`; `React`, `props`, and Grackle components are in scope. | `source` (string), `props` (object, optional) |
-| `widget_show` | Render a one-off raw-HTML body inline, without persisting it. | `body` (string), `props` (object, optional) |
+| Tool                 | Description                                                                                                                                                                                                                         | Parameters                                                                                                                            |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `show_hello_widget`  | Display the Grackle hello widget — a minimal interactive MCP Apps UI that echoes the provided message.                                                                                                                              | `message` (string, optional)                                                                                                          |
+| `component_register` | Register a reusable component in the workspace. `source` is JSX (`grackle-react`, default) or HTML (`mcp-app-html`). Returns the component id.                                                                                      | `name` (string), `source` (string), `rendererKind` (optional), `description` (optional), `propsSchema` (JSON Schema string, optional) |
+| `component_update`   | Update a registered component's source/name/description/props schema; bumps its version.                                                                                                                                            | `id` (string), `source`/`name`/`description`/`propsSchema` (optional)                                                                 |
+| `component_list`     | List the reusable components registered in the workspace.                                                                                                                                                                           | —                                                                                                                                     |
+| `component_search`   | Keyword-search registered components **and** Grackle's built-in components by name/description. Find a component to reuse before authoring. `builtin:true` results are composed in JSX; others are rendered via `component_render`. | `query` (string), `limit` (optional), `workspaceId` (auto)                                                                            |
+| `component_promote`  | Promote a registered component to its own `render_<name>` MCP tool (or demote with `promoted:false`). Resolve by `id` or `name`.                                                                                                    | `id` (optional), `name` (optional), `promoted` (optional, default `true`)                                                             |
+| `component_render`   | Render a registered component inline (by `id` or `name`), optionally passing `props`. Props are validated against the component's `propsSchema`.                                                                                    | `id` (optional), `name` (optional), `props` (object, optional)                                                                        |
+| `component_show`     | Render a one-off React/JSX component inline against the Grackle component library (no persistence). `source` calls `render(<Component {...props}/>)`; `React`, `props`, and Grackle components are in scope.                        | `source` (string), `props` (object, optional)                                                                                         |
+| `widget_show`        | Render a one-off raw-HTML body inline, without persisting it.                                                                                                                                                                       | `body` (string), `props` (object, optional)                                                                                           |
 
 Components are **workspace-scoped**: a session may only register/render components in its own workspace (the `workspaceId` is taken from the session's scoped token). A component's `propsSchema` (a JSON Schema) is validated at register, and render-time `props` are validated against it (via zod's `fromJSONSchema`). Renderers run in the cross-origin sandbox: `mcp-app-html` allows inline scripts (`script-src 'unsafe-inline'`); `grackle-react` runs the React runtime that transpiles + evaluates JSX (`script-src 'unsafe-eval'`) — both kept safe by the iframe origin isolation + restricted `connect-src`.
 
@@ -316,12 +316,12 @@ Each persona can define an `allowed_mcp_tools` list that restricts which MCP too
 
 Predefined presets are available for convenience (via CLI `--mcp-tools-preset` or the web UI):
 
-| Preset | Description |
-|--------|-------------|
-| `default` | The 25-tool default scoped set (backward compatible) |
-| `worker` | Subset of default — no task creation capabilities |
+| Preset         | Description                                                               |
+| -------------- | ------------------------------------------------------------------------- |
+| `default`      | The 25-tool default scoped set (backward compatible)                      |
+| `worker`       | Subset of default — no task creation capabilities                         |
 | `orchestrator` | Default + task management, session spawning, persona creation, scheduling |
-| `admin` | Full access to all available tools |
+| `admin`        | Full access to all available tools                                        |
 
 Scoped tokens also enforce workspace isolation — agents can only see tasks within their own workspace. Subtasks created by a scoped agent are automatically parented to the agent's own task. Tool calls to non-permitted tools return an error with a descriptive message listing the available tools.
 

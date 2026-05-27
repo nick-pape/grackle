@@ -2,16 +2,16 @@ import { describe, it, expect } from "vitest";
 import { createTranscriptChunker } from "./transcript-chunker.js";
 
 /** Build a JSONL string from an array of partial log entries. */
-function toJsonl(
-  entries: Array<{ type: string; content: string; timestamp?: string }>,
-): string {
+function toJsonl(entries: Array<{ type: string; content: string; timestamp?: string }>): string {
   return entries
-    .map((e, i) => JSON.stringify({
-      session_id: "test-session",
-      type: e.type,
-      timestamp: e.timestamp ?? `2026-03-21T10:00:0${i}Z`,
-      content: e.content,
-    }))
+    .map((e, i) =>
+      JSON.stringify({
+        session_id: "test-session",
+        type: e.type,
+        timestamp: e.timestamp ?? `2026-03-21T10:00:0${i}Z`,
+        content: e.content,
+      }),
+    )
     .join("\n");
 }
 
@@ -131,7 +131,8 @@ describe("createTranscriptChunker", () => {
   });
 
   it("should skip malformed JSONL lines gracefully", () => {
-    const jsonl: string = '{"type":"user_input","content":"Hi","session_id":"s","timestamp":"t"}\nnot-json\n{"type":"text","content":"Hello","session_id":"s","timestamp":"t"}';
+    const jsonl: string =
+      '{"type":"user_input","content":"Hi","session_id":"s","timestamp":"t"}\nnot-json\n{"type":"text","content":"Hello","session_id":"s","timestamp":"t"}';
     const chunks = chunker.chunk(jsonl);
     expect(chunks).toHaveLength(1);
     expect(chunks[0].text).toContain("User: Hi");

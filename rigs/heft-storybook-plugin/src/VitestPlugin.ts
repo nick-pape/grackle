@@ -4,7 +4,7 @@ import type {
   HeftConfiguration,
   IHeftTaskPlugin,
   IHeftTaskSession,
-  IHeftTaskRunHookOptions
+  IHeftTaskRunHookOptions,
 } from "@rushstack/heft";
 
 const PLUGIN_NAME: string = "vitest-plugin";

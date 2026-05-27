@@ -106,7 +106,9 @@ describe("ProcessTunnel", () => {
     });
 
     it("closes and rethrows when waitForPort fails", async () => {
-      (probe.waitForPort as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("port unreachable"));
+      (probe.waitForPort as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+        new Error("port unreachable"),
+      );
 
       await expect(tunnel.open()).rejects.toThrow("port unreachable");
       // Process should have been cleaned up

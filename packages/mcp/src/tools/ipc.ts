@@ -9,7 +9,8 @@ export const ipcTools: ToolDefinition[] = [
   {
     name: "ipc_spawn",
     group: "ipc",
-    description: "Spawn a child agent session with optional IPC pipe. Use pipe:'sync' to block until the child completes, 'async' to receive results between your turns, or 'detach' for fire-and-forget.",
+    description:
+      "Spawn a child agent session with optional IPC pipe. Use pipe:'sync' to block until the child completes, 'async' to receive results between your turns, or 'detach' for fire-and-forget.",
     inputSchema: z.object({
       prompt: z.string().describe("The task/prompt for the child agent"),
       pipe: z.enum(["sync", "async", "detach"]).default("detach").describe("IPC pipe mode"),
@@ -20,7 +21,11 @@ export const ipcTools: ToolDefinition[] = [
     rpcMethod: "spawnAgent",
     mutating: true,
     annotations: { openWorldHint: true },
-    async handler(args: Record<string, unknown>, { core: client }: GrackleClients, authContext?: AuthContext) {
+    async handler(
+      args: Record<string, unknown>,
+      { core: client }: GrackleClients,
+      authContext?: AuthContext,
+    ) {
       try {
         const pipe = (args.pipe as string) || "detach";
         const parentSessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
@@ -28,7 +33,12 @@ export const ipcTools: ToolDefinition[] = [
         // sync/async pipe modes require scoped auth (need parent session ID)
         if (pipe !== "detach" && !parentSessionId) {
           return {
-            content: [{ type: "text" as const, text: "Error: sync and async pipe modes require scoped auth (agent context)" }],
+            content: [
+              {
+                type: "text" as const,
+                text: "Error: sync and async pipe modes require scoped auth (agent context)",
+              },
+            ],
             isError: true,
           };
         }
@@ -41,7 +51,7 @@ export const ipcTools: ToolDefinition[] = [
             parentSessionId,
             personaId: (args.personaId as string) || "",
             maxTurns: (args.maxTurns as number) || 0,
-            workspaceId: authContext?.type === "scoped" ? authContext.workspaceId ?? "" : "",
+            workspaceId: authContext?.type === "scoped" ? (authContext.workspaceId ?? "") : "",
           },
         });
 
@@ -75,19 +85,29 @@ export const ipcTools: ToolDefinition[] = [
   {
     name: "ipc_write",
     group: "ipc",
-    description: "Write a message to a child session via an open file descriptor. The message is delivered to the child via sendInput.",
+    description:
+      "Write a message to a child session via an open file descriptor. The message is delivered to the child via sendInput.",
     inputSchema: z.object({
       fd: z.number().int().describe("File descriptor (from ipc_spawn)"),
       message: z.string().describe("Message content to send"),
     }),
     rpcMethod: "writeToFd",
     mutating: true,
-    async handler(args: Record<string, unknown>, { core: client }: GrackleClients, authContext?: AuthContext) {
+    async handler(
+      args: Record<string, unknown>,
+      { core: client }: GrackleClients,
+      authContext?: AuthContext,
+    ) {
       try {
         const sessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
         if (!sessionId) {
           return {
-            content: [{ type: "text" as const, text: "Error: ipc_write requires scoped auth (agent context)" }],
+            content: [
+              {
+                type: "text" as const,
+                text: "Error: ipc_write requires scoped auth (agent context)",
+              },
+            ],
             isError: true,
           };
         }
@@ -106,18 +126,28 @@ export const ipcTools: ToolDefinition[] = [
   {
     name: "ipc_close",
     group: "ipc",
-    description: "Close a file descriptor, dropping the connection to the child session. If this is the last fd to the child, the child is stopped. Fails if there are undelivered messages — process them first.",
+    description:
+      "Close a file descriptor, dropping the connection to the child session. If this is the last fd to the child, the child is stopped. Fails if there are undelivered messages — process them first.",
     inputSchema: z.object({
       fd: z.number().int().describe("File descriptor to close"),
     }),
     rpcMethod: "closeFd",
     mutating: true,
-    async handler(args: Record<string, unknown>, { core: client }: GrackleClients, authContext?: AuthContext) {
+    async handler(
+      args: Record<string, unknown>,
+      { core: client }: GrackleClients,
+      authContext?: AuthContext,
+    ) {
       try {
         const sessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
         if (!sessionId) {
           return {
-            content: [{ type: "text" as const, text: "Error: ipc_close requires scoped auth (agent context)" }],
+            content: [
+              {
+                type: "text" as const,
+                text: "Error: ipc_close requires scoped auth (agent context)",
+              },
+            ],
             isError: true,
           };
         }
@@ -135,16 +165,26 @@ export const ipcTools: ToolDefinition[] = [
   {
     name: "ipc_list_fds",
     group: "ipc",
-    description: "List your open file descriptors (IPC pipe connections). Check this before exiting to ensure all owned child fds are closed. Owned fds (owned=true) must be closed with ipc_close before you stop working.",
+    description:
+      "List your open file descriptors (IPC pipe connections). Check this before exiting to ensure all owned child fds are closed. Owned fds (owned=true) must be closed with ipc_close before you stop working.",
     inputSchema: z.object({}),
     rpcMethod: "getSessionFds",
     mutating: false,
-    async handler(args: Record<string, unknown>, { core: client }: GrackleClients, authContext?: AuthContext) {
+    async handler(
+      args: Record<string, unknown>,
+      { core: client }: GrackleClients,
+      authContext?: AuthContext,
+    ) {
       try {
         const sessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
         if (!sessionId) {
           return {
-            content: [{ type: "text" as const, text: "Error: ipc_list_fds requires scoped auth (agent context)" }],
+            content: [
+              {
+                type: "text" as const,
+                text: "Error: ipc_list_fds requires scoped auth (agent context)",
+              },
+            ],
             isError: true,
           };
         }
@@ -168,7 +208,8 @@ export const ipcTools: ToolDefinition[] = [
   {
     name: "ipc_terminate",
     group: "ipc",
-    description: "Send a graceful termination signal (SIGTERM) to a child session via its file descriptor. The child receives a [SIGTERM] message and is expected to wrap up, save work, and stop. The fd stays open — use ipc_close to close it after.",
+    description:
+      "Send a graceful termination signal (SIGTERM) to a child session via its file descriptor. The child receives a [SIGTERM] message and is expected to wrap up, save work, and stop. The fd stays open — use ipc_close to close it after.",
     inputSchema: z.object({
       fd: z.number().int().describe("File descriptor of the child session to terminate"),
     }),
@@ -180,12 +221,21 @@ export const ipcTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, { core: client }: GrackleClients, authContext?: AuthContext) {
+    async handler(
+      args: Record<string, unknown>,
+      { core: client }: GrackleClients,
+      authContext?: AuthContext,
+    ) {
       try {
         const sessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
         if (!sessionId) {
           return {
-            content: [{ type: "text" as const, text: "Error: ipc_terminate requires scoped auth (agent context)" }],
+            content: [
+              {
+                type: "text" as const,
+                text: "Error: ipc_terminate requires scoped auth (agent context)",
+              },
+            ],
             isError: true,
           };
         }
@@ -202,13 +252,20 @@ export const ipcTools: ToolDefinition[] = [
         }
         if (!fdInfo.targetSessionId) {
           return {
-            content: [{ type: "text" as const, text: `Error: fd ${String(fd)} has no target session` }],
+            content: [
+              { type: "text" as const, text: `Error: fd ${String(fd)} has no target session` },
+            ],
             isError: true,
           };
         }
         if (!fdInfo.owned) {
           return {
-            content: [{ type: "text" as const, text: `Error: fd ${String(fd)} is not an owned child fd — only owned fds from ipc_spawn can be terminated` }],
+            content: [
+              {
+                type: "text" as const,
+                text: `Error: fd ${String(fd)} is not an owned child fd — only owned fds from ipc_spawn can be terminated`,
+              },
+            ],
             isError: true,
           };
         }
@@ -291,19 +348,35 @@ export const ipcTools: ToolDefinition[] = [
   {
     name: "ipc_create_stream",
     group: "ipc",
-    description: "Create a new named stream for inter-session communication. You get an rw file descriptor on the stream. Use ipc_attach to grant other sessions access, and ipc_write/ipc_close to send messages and close the fd.",
+    description:
+      "Create a new named stream for inter-session communication. You get an rw file descriptor on the stream. Use ipc_attach to grant other sessions access, and ipc_write/ipc_close to send messages and close the fd.",
     inputSchema: z.object({
       name: z.string().describe("Human-readable name for the stream (must be unique)"),
-      selfEcho: z.boolean().optional().default(false).describe("Whether participants receive their own messages echoed back (for chatroom scenarios)"),
+      selfEcho: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe(
+          "Whether participants receive their own messages echoed back (for chatroom scenarios)",
+        ),
     }),
     rpcMethod: "createStream",
     mutating: true,
-    async handler(args: Record<string, unknown>, { core: client }: GrackleClients, authContext?: AuthContext) {
+    async handler(
+      args: Record<string, unknown>,
+      { core: client }: GrackleClients,
+      authContext?: AuthContext,
+    ) {
       try {
         const sessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
         if (!sessionId) {
           return {
-            content: [{ type: "text" as const, text: "Error: ipc_create_stream requires scoped auth (agent context)" }],
+            content: [
+              {
+                type: "text" as const,
+                text: "Error: ipc_create_stream requires scoped auth (agent context)",
+              },
+            ],
             isError: true,
           };
         }
@@ -322,21 +395,37 @@ export const ipcTools: ToolDefinition[] = [
   {
     name: "ipc_attach",
     group: "ipc",
-    description: "Grant another session access to a stream you hold an fd on. The target session receives a new fd with the specified permission and delivery mode. Permission must be equal to or less than your own (e.g., you can grant 'r' if you have 'rw', but not 'rw' if you only have 'r'). Write-only permission ('w') requires deliveryMode 'detach'.",
+    description:
+      "Grant another session access to a stream you hold an fd on. The target session receives a new fd with the specified permission and delivery mode. Permission must be equal to or less than your own (e.g., you can grant 'r' if you have 'rw', but not 'rw' if you only have 'r'). Write-only permission ('w') requires deliveryMode 'detach'.",
     inputSchema: z.object({
       fd: z.number().int().describe("Your file descriptor on the stream"),
       targetSessionId: z.string().describe("Session ID to grant access to"),
-      permission: z.enum(["r", "w", "rw"]).default("rw").describe("Permission level for the target"),
-      deliveryMode: z.enum(["sync", "async", "detach"]).default("async").describe("How the target receives messages"),
+      permission: z
+        .enum(["r", "w", "rw"])
+        .default("rw")
+        .describe("Permission level for the target"),
+      deliveryMode: z
+        .enum(["sync", "async", "detach"])
+        .default("async")
+        .describe("How the target receives messages"),
     }),
     rpcMethod: "attachStream",
     mutating: true,
-    async handler(args: Record<string, unknown>, { core: client }: GrackleClients, authContext?: AuthContext) {
+    async handler(
+      args: Record<string, unknown>,
+      { core: client }: GrackleClients,
+      authContext?: AuthContext,
+    ) {
       try {
         const sessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
         if (!sessionId) {
           return {
-            content: [{ type: "text" as const, text: "Error: ipc_attach requires scoped auth (agent context)" }],
+            content: [
+              {
+                type: "text" as const,
+                text: "Error: ipc_attach requires scoped auth (agent context)",
+              },
+            ],
             isError: true,
           };
         }
@@ -361,29 +450,53 @@ export const ipcTools: ToolDefinition[] = [
       "Share a stream you hold with your parent session. Auto-discovers the parent via the inherited pipe fd and grants access using the attachStream RPC (with permission defaulting to your own permission on the fd if omitted), then sends a [stream-ref] notification through the pipe so the parent knows the new fd. For sibling-to-sibling sharing: share with parent, parent can use ipc_attach to forward to the sibling.",
     inputSchema: z
       .object({
-        fd: z.number().int().optional().describe("Your file descriptor on the stream to share (mutually exclusive with streamName)"),
-        streamName: z.string().optional().describe("Name of the stream to share — the fd is looked up via getSessionFds (mutually exclusive with fd)"),
+        fd: z
+          .number()
+          .int()
+          .optional()
+          .describe(
+            "Your file descriptor on the stream to share (mutually exclusive with streamName)",
+          ),
+        streamName: z
+          .string()
+          .optional()
+          .describe(
+            "Name of the stream to share — the fd is looked up via getSessionFds (mutually exclusive with fd)",
+          ),
         permission: z
           .enum(["r", "w", "rw"])
           .optional()
-          .describe("Permission to grant the parent; if omitted, defaults to your own permission on the fd"),
+          .describe(
+            "Permission to grant the parent; if omitted, defaults to your own permission on the fd",
+          ),
         deliveryMode: z
           .enum(["sync", "async", "detach"])
           .optional()
-          .describe("How the parent receives messages from the stream; defaults to \"detach\" for write-only (\"w\") permission and \"async\" otherwise"),
+          .describe(
+            'How the parent receives messages from the stream; defaults to "detach" for write-only ("w") permission and "async" otherwise',
+          ),
       })
-      .refine(
-        (data) => (data.fd === undefined) !== (data.streamName === undefined),
-        { message: "Exactly one of `fd` or `streamName` must be provided", path: ["fd"] },
-      ),
+      .refine((data) => (data.fd === undefined) !== (data.streamName === undefined), {
+        message: "Exactly one of `fd` or `streamName` must be provided",
+        path: ["fd"],
+      }),
     rpcMethod: "attachStream",
     mutating: true,
-    async handler(args: Record<string, unknown>, { core: client }: GrackleClients, authContext?: AuthContext) {
+    async handler(
+      args: Record<string, unknown>,
+      { core: client }: GrackleClients,
+      authContext?: AuthContext,
+    ) {
       try {
         const sessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
         if (!sessionId) {
           return {
-            content: [{ type: "text" as const, text: "Error: ipc_share_stream requires scoped auth (agent context)" }],
+            content: [
+              {
+                type: "text" as const,
+                text: "Error: ipc_share_stream requires scoped auth (agent context)",
+              },
+            ],
             isError: true,
           };
         }
@@ -407,7 +520,9 @@ export const ipcTools: ToolDefinition[] = [
         const parentSessionId = pipeFdInfo.targetSessionId;
         if (!parentSessionId) {
           return {
-            content: [{ type: "text" as const, text: "Error: parent has disconnected from the pipe" }],
+            content: [
+              { type: "text" as const, text: "Error: parent has disconnected from the pipe" },
+            ],
             isError: true,
           };
         }
@@ -428,13 +543,20 @@ export const ipcTools: ToolDefinition[] = [
           streamFdInfo = fdsResult.fds.find((f) => f.streamName === streamNameArg);
           if (!streamFdInfo) {
             return {
-              content: [{ type: "text" as const, text: `Error: stream "${streamNameArg}" not found in your open fds` }],
+              content: [
+                {
+                  type: "text" as const,
+                  text: `Error: stream "${streamNameArg}" not found in your open fds`,
+                },
+              ],
               isError: true,
             };
           }
         } else {
           return {
-            content: [{ type: "text" as const, text: "Error: either fd or streamName must be provided" }],
+            content: [
+              { type: "text" as const, text: "Error: either fd or streamName must be provided" },
+            ],
             isError: true,
           };
         }
@@ -444,7 +566,12 @@ export const ipcTools: ToolDefinition[] = [
         const RESERVED_STREAM_PREFIXES: readonly string[] = ["pipe:", "lifecycle:", "stdin:"];
         if (RESERVED_STREAM_PREFIXES.some((prefix) => streamFdInfo.streamName.startsWith(prefix))) {
           return {
-            content: [{ type: "text" as const, text: `Error: fd ${String(fd)} is an internal stream and cannot be shared — only user-created streams can be shared` }],
+            content: [
+              {
+                type: "text" as const,
+                text: `Error: fd ${String(fd)} is an internal stream and cannot be shared — only user-created streams can be shared`,
+              },
+            ],
             isError: true,
           };
         }
@@ -453,12 +580,18 @@ export const ipcTools: ToolDefinition[] = [
         const permission = (args.permission as string | undefined) ?? streamFdInfo.permission;
 
         // Default deliveryMode: write-only streams require "detach"; otherwise "async"
-        const deliveryMode = (args.deliveryMode as string | undefined) ?? (permission === "w" ? "detach" : "async");
+        const deliveryMode =
+          (args.deliveryMode as string | undefined) ?? (permission === "w" ? "detach" : "async");
 
         // Pre-validate: server rejects write-only + non-detach, give a clearer error upfront
         if (permission === "w" && deliveryMode !== "detach") {
           return {
-            content: [{ type: "text" as const, text: `Error: write-only streams (permission "w") can only be shared with deliveryMode "detach", but "${deliveryMode}" was requested` }],
+            content: [
+              {
+                type: "text" as const,
+                text: `Error: write-only streams (permission "w") can only be shared with deliveryMode "detach", but "${deliveryMode}" was requested`,
+              },
+            ],
             isError: true,
           };
         }

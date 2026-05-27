@@ -11,7 +11,15 @@
   flex-shrink: 0;
 }
 
-.envDotGreen  { background: var(--accent-green); }
-.envDotYellow { background: var(--accent-yellow); }
-.envDotRed    { background: var(--accent-red); }
-.envDotGray   { background: var(--text-disabled); }
+.envDotGreen {
+  background: var(--accent-green);
+}
+.envDotYellow {
+  background: var(--accent-yellow);
+}
+.envDotRed {
+  background: var(--accent-red);
+}
+.envDotGray {
+  background: var(--text-disabled);
+}

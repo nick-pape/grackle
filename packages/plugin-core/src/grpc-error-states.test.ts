@@ -30,7 +30,9 @@ vi.mock("./utils/format-gh-error.js");
 
 // ── Mock external packages ──
 vi.mock("@grackle-ai/adapter-sdk", () => ({
-  reconnectOrProvision: vi.fn(async function* () { /* empty */ }),
+  reconnectOrProvision: vi.fn(async function* () {
+    /* empty */
+  }),
 }));
 vi.mock("@grackle-ai/prompt", () => ({
   resolvePersona: vi.fn(),
@@ -82,9 +84,7 @@ describe("gRPC error states", () => {
   });
 
   it("createTask with missing title returns error", async () => {
-    const err = (await handlers
-      .createTask({ title: "" })
-      .catch((e: unknown) => e)) as ConnectError;
+    const err = (await handlers.createTask({ title: "" }).catch((e: unknown) => e)) as ConnectError;
 
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.InvalidArgument);

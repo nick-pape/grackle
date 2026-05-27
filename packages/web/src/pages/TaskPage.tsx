@@ -4,10 +4,21 @@ import { ConnectError } from "@connectrpc/connect";
 import { useGrackle } from "../context/GrackleContext.js";
 import { useSandboxProxyUrl } from "../context/ManifestContext.js";
 import {
-  Breadcrumbs, ChatInput, ConfirmDialog, EventStream,
-  SessionAttemptSelector, TaskActionButtons, TaskEditPanel, TaskOverviewPanel,
-  buildTaskBreadcrumbs, groupConsecutiveTextEvents, pairToolEvents,
-  taskUrl, useAppNavigate, useToast, workspaceUrl,
+  Breadcrumbs,
+  ChatInput,
+  ConfirmDialog,
+  EventStream,
+  SessionAttemptSelector,
+  TaskActionButtons,
+  TaskEditPanel,
+  TaskOverviewPanel,
+  buildTaskBreadcrumbs,
+  groupConsecutiveTextEvents,
+  pairToolEvents,
+  taskUrl,
+  useAppNavigate,
+  useToast,
+  workspaceUrl,
 } from "@grackle-ai/web-components";
 import type { UsageStats } from "@grackle-ai/web-components";
 import { AnimatePresence, motion } from "motion/react";
@@ -19,18 +30,42 @@ type TaskTab = "overview" | "stream";
 
 /** Task detail page with overview/stream tabs. */
 export function TaskPage(): JSX.Element {
-  const { taskId, workspaceId: routeWorkspaceId, environmentId: routeEnvironmentId } = useParams<{ taskId: string; workspaceId?: string; environmentId?: string }>();
+  const {
+    taskId,
+    workspaceId: routeWorkspaceId,
+    environmentId: routeEnvironmentId,
+  } = useParams<{ taskId: string; workspaceId?: string; environmentId?: string }>();
   const sandboxProxyUrl = useSandboxProxyUrl();
   const location = useLocation();
   const navigate = useAppNavigate();
   const { showToast } = useToast();
   const {
-    sessions: { events, eventsDropped, sessions, loadSessionEvents, taskSessions: taskSessionsMap, loadTaskSessions, sendInput, spawn, kill },
-    tasks: { tasks, tasksLoading, startTask, stopTask, resumeTask, deleteTask, createTask, updateTask },
+    sessions: {
+      events,
+      eventsDropped,
+      sessions,
+      loadSessionEvents,
+      taskSessions: taskSessionsMap,
+      loadTaskSessions,
+      sendInput,
+      spawn,
+      kill,
+    },
+    tasks: {
+      tasks,
+      tasksLoading,
+      startTask,
+      stopTask,
+      resumeTask,
+      deleteTask,
+      createTask,
+      updateTask,
+    },
     environments: { environments, provisionEnvironment },
     workspaces: { workspaces },
     personas: { personas },
-    usageCache, loadUsage,
+    usageCache,
+    loadUsage,
   } = useGrackle();
 
   const loadedRef = useRef<string | undefined>(undefined);
@@ -40,9 +75,7 @@ export function TaskPage(): JSX.Element {
   const prevTaskSessionIdRef = useRef<string | undefined>(undefined);
 
   // Derive tab from URL path
-  const tabFromUrl: TaskTab =
-    location.pathname.endsWith("/stream") ? "stream"
-    : "overview";
+  const tabFromUrl: TaskTab = location.pathname.endsWith("/stream") ? "stream" : "overview";
   const isEditRoute = location.pathname.endsWith("/edit");
 
   const [activeTaskTab, setActiveTaskTab] = useState<TaskTab>(tabFromUrl);
@@ -112,7 +145,9 @@ export function TaskPage(): JSX.Element {
     deleteTask(task.id).catch(() => {});
     setShowDeleteConfirm(false);
     const envId = routeEnvironmentId ?? workspace?.linkedEnvironmentIds[0];
-    navigate(task.workspaceId && envId ? workspaceUrl(task.workspaceId, envId) : "/", { replace: true });
+    navigate(task.workspaceId && envId ? workspaceUrl(task.workspaceId, envId) : "/", {
+      replace: true,
+    });
   };
 
   // Reset state when switching tasks
@@ -148,26 +183,25 @@ export function TaskPage(): JSX.Element {
       const isInitialLoad = prevTaskStatusRef.current === undefined;
       prevTaskStatusRef.current = task?.status;
       const newTab: TaskTab | undefined =
-        task?.status === "not_started" ? "overview"
-        : task?.status === "working" ? "stream"
-        : task?.status === "paused" ? "stream"
-        : task?.status === "complete" ? "overview"
-        : undefined;
+        task?.status === "not_started"
+          ? "overview"
+          : task?.status === "working"
+            ? "stream"
+            : task?.status === "paused"
+              ? "stream"
+              : task?.status === "complete"
+                ? "overview"
+                : undefined;
       if (newTab && newTab !== activeTaskTab && !(isInitialLoad && tabFromUrl !== "overview")) {
         setActiveTaskTab(newTab);
       }
     }
   }, [task?.status, activeTaskTab, tabFromUrl]);
 
-  const tasksById = useMemo(
-    () => new Map(tasks.map((t) => [t.id, t])),
-    [tasks],
-  );
+  const tasksById = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
 
   const groupedEvents = useMemo(() => {
-    const filtered = sessionId
-      ? events.filter((e) => e.sessionId === sessionId)
-      : [];
+    const filtered = sessionId ? events.filter((e) => e.sessionId === sessionId) : [];
     return pairToolEvents(groupConsecutiveTextEvents(filtered));
   }, [events, sessionId]);
 
@@ -206,13 +240,19 @@ export function TaskPage(): JSX.Element {
   }, [task?.id, task?.childTaskIds.length, loadUsage, sessionCostSum]);
 
   const taskUsageKey = task ? `task:${task.id}` : "";
-  const taskUsage: UsageStats | undefined = taskUsageKey in usageCache ? usageCache[taskUsageKey] : undefined;
+  const taskUsage: UsageStats | undefined =
+    taskUsageKey in usageCache ? usageCache[taskUsageKey] : undefined;
   const treeUsageKey = task ? `task_tree:${task.id}` : "";
-  const treeUsage: UsageStats | undefined = task && task.childTaskIds.length > 0 && treeUsageKey in usageCache ? usageCache[treeUsageKey] : undefined;
+  const treeUsage: UsageStats | undefined =
+    task && task.childTaskIds.length > 0 && treeUsageKey in usageCache
+      ? usageCache[treeUsageKey]
+      : undefined;
 
   const handleTabChange = (tab: TaskTab): void => {
     setActiveTaskTab(tab);
-    navigate(taskUrl(taskId!, tab === "overview" ? undefined : tab, routeWorkspaceId, routeEnvironmentId));
+    navigate(
+      taskUrl(taskId!, tab === "overview" ? undefined : tab, routeWorkspaceId, routeEnvironmentId),
+    );
   };
 
   // Keyboard shortcuts: 1/2 to switch tabs
@@ -230,7 +270,11 @@ export function TaskPage(): JSX.Element {
       <div className={styles.header}>
         <span className={styles.headerTitle}>
           <span data-testid="task-title">{task?.title || taskId}</span>
-          {task && <span className={styles.taskStatusBadge} data-testid="task-status">{task.status}</span>}
+          {task && (
+            <span className={styles.taskStatusBadge} data-testid="task-status">
+              {task.status}
+            </span>
+          )}
           {task?.branch && <span className={styles.taskBranch}>{task.branch}</span>}
           {isTaskBlocked && <span className={styles.taskBlockedBadge}>blocked</span>}
         </span>
@@ -245,9 +289,17 @@ export function TaskPage(): JSX.Element {
                 showToast(message, "error");
               });
             }}
-            onResume={() => { resumeTask(task.id).catch(() => {}); }}
-            onStop={() => { stopTask(task.id).catch(() => {}); }}
-            onPause={() => { if (sessionId) { kill(sessionId).catch(() => {}); } }}
+            onResume={() => {
+              resumeTask(task.id).catch(() => {});
+            }}
+            onStop={() => {
+              stopTask(task.id).catch(() => {});
+            }}
+            onPause={() => {
+              if (sessionId) {
+                kill(sessionId).catch(() => {});
+              }
+            }}
             onDelete={handleDeleteTask}
             onEdit={() => setIsEditing(true)}
           />
@@ -256,10 +308,20 @@ export function TaskPage(): JSX.Element {
 
       {/* Tab bar */}
       <div className={styles.tabBar} role="tablist" aria-label="Task view">
-        <button role="tab" aria-selected={activeTaskTab === "overview"} className={`${styles.tab} ${activeTaskTab === "overview" ? styles.active : ""}`} onClick={() => handleTabChange("overview")}>
+        <button
+          role="tab"
+          aria-selected={activeTaskTab === "overview"}
+          className={`${styles.tab} ${activeTaskTab === "overview" ? styles.active : ""}`}
+          onClick={() => handleTabChange("overview")}
+        >
           Overview
         </button>
-        <button role="tab" aria-selected={activeTaskTab === "stream"} className={`${styles.tab} ${activeTaskTab === "stream" ? styles.active : ""}`} onClick={() => handleTabChange("stream")}>
+        <button
+          role="tab"
+          aria-selected={activeTaskTab === "stream"}
+          className={`${styles.tab} ${activeTaskTab === "stream" ? styles.active : ""}`}
+          onClick={() => handleTabChange("stream")}
+        >
           Stream
         </button>
       </div>
@@ -267,7 +329,15 @@ export function TaskPage(): JSX.Element {
       {/* Tab content */}
       <AnimatePresence mode="wait">
         {activeTaskTab === "overview" && (
-          <motion.div key="overview" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }} className={styles.overviewContent} data-testid="task-overview">
+          <motion.div
+            key="overview"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+            className={styles.overviewContent}
+            data-testid="task-overview"
+          >
             {isEditing && task ? (
               <TaskEditPanel
                 mode="edit"
@@ -277,11 +347,39 @@ export function TaskPage(): JSX.Element {
                 tasks={tasks}
                 workspaces={workspaces}
                 personas={personas}
-                onCreateTask={(wsId, title, desc, deps, parentId, personaId, canDecompose, injectKnowledge, onSuccess, onError) => { createTask(wsId, title, desc, deps, parentId, personaId, canDecompose, injectKnowledge, onSuccess, onError).catch(() => {}); }}
-                onUpdateTask={(tid, title, desc, deps, personaId) => { updateTask(tid, title, desc, deps, personaId).catch(() => {}); }}
+                onCreateTask={(
+                  wsId,
+                  title,
+                  desc,
+                  deps,
+                  parentId,
+                  personaId,
+                  canDecompose,
+                  injectKnowledge,
+                  onSuccess,
+                  onError,
+                ) => {
+                  createTask(
+                    wsId,
+                    title,
+                    desc,
+                    deps,
+                    parentId,
+                    personaId,
+                    canDecompose,
+                    injectKnowledge,
+                    onSuccess,
+                    onError,
+                  ).catch(() => {});
+                }}
+                onUpdateTask={(tid, title, desc, deps, personaId) => {
+                  updateTask(tid, title, desc, deps, personaId).catch(() => {});
+                }}
                 onEditDone={() => {
                   if (isEditRoute) {
-                    navigate(taskUrl(task.id, undefined, routeWorkspaceId, routeEnvironmentId), { replace: true });
+                    navigate(taskUrl(task.id, undefined, routeWorkspaceId, routeEnvironmentId), {
+                      replace: true,
+                    });
                   } else {
                     setIsEditing(false);
                   }
@@ -305,8 +403,19 @@ export function TaskPage(): JSX.Element {
           </motion.div>
         )}
         {activeTaskTab === "stream" && (
-          <motion.div key="stream" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }} style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
-            <SessionAttemptSelector taskSessions={currentTaskSessions} selectedSessionId={sessionId} onSelect={(id) => setSelectedSessionId(id)} />
+          <motion.div
+            key="stream"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+            style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}
+          >
+            <SessionAttemptSelector
+              taskSessions={currentTaskSessions}
+              selectedSessionId={sessionId}
+              onSelect={(id) => setSelectedSessionId(id)}
+            />
             <EventStream
               events={groupedEvents}
               eventsDropped={eventsDropped}
@@ -315,16 +424,25 @@ export function TaskPage(): JSX.Element {
                 !sessionId && task ? (
                   isTaskBlocked ? (
                     <div className={styles.emptyCta} data-testid="stream-blocked-message">
-                      <div className={styles.ctaDescription}>This task is blocked by incomplete dependencies</div>
+                      <div className={styles.ctaDescription}>
+                        This task is blocked by incomplete dependencies
+                      </div>
                     </div>
                   ) : (
                     <div className={styles.emptyCta}>
-                      <button data-testid="stream-start-cta" className={styles.ctaButton} onClick={() => {
+                      <button
+                        data-testid="stream-start-cta"
+                        className={styles.ctaButton}
+                        onClick={() => {
                           startTask(task.id, undefined, selectedEnvId).catch((err) => {
-                            const message = err instanceof ConnectError ? err.message : "Failed to start task";
+                            const message =
+                              err instanceof ConnectError ? err.message : "Failed to start task";
                             showToast(message, "error");
                           });
-                        }}>Start Task</button>
+                        }}
+                      >
+                        Start Task
+                      </button>
                       <div className={styles.ctaDescription}>Click to begin agent execution</div>
                     </div>
                   )
@@ -341,9 +459,7 @@ export function TaskPage(): JSX.Element {
         if (!task || (task.status !== "working" && task.status !== "paused")) {
           return undefined;
         }
-        const taskSessionForChat = sessionId
-          ? sessions.find((s) => s.id === sessionId)
-          : undefined;
+        const taskSessionForChat = sessionId ? sessions.find((s) => s.id === sessionId) : undefined;
         if (!taskSessionForChat || taskSessionForChat.status === "stopped") {
           return undefined;
         }
@@ -354,10 +470,20 @@ export function TaskPage(): JSX.Element {
             environmentId={taskSessionForChat.environmentId}
             personas={personas}
             environments={environments}
-            onSendInput={(sid, text) => { sendInput(sid, text).catch(() => { showToast("Failed to send message", "error"); }); }}
-            onSpawn={(eid, prompt, pid) => { spawn(eid, prompt, pid, undefined, workspaceId).catch(() => {}); }}
-            onStartTask={(tid, pid, eid) => { startTask(tid, pid, eid).catch(() => {}); }}
-            onProvisionEnvironment={(eid) => { provisionEnvironment(eid).catch(() => {}); }}
+            onSendInput={(sid, text) => {
+              sendInput(sid, text).catch(() => {
+                showToast("Failed to send message", "error");
+              });
+            }}
+            onSpawn={(eid, prompt, pid) => {
+              spawn(eid, prompt, pid, undefined, workspaceId).catch(() => {});
+            }}
+            onStartTask={(tid, pid, eid) => {
+              startTask(tid, pid, eid).catch(() => {});
+            }}
+            onProvisionEnvironment={(eid) => {
+              provisionEnvironment(eid).catch(() => {});
+            }}
             onShowToast={showToast}
           />
         );

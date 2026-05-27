@@ -49,7 +49,10 @@ describe("registerServeCommand", () => {
     program.exitOverride();
     registerServeCommand(program);
 
-    await program.parseAsync(["serve", "--port", "8000", "--web-port", "8001", "--mcp-port", "8002"], { from: "user" });
+    await program.parseAsync(
+      ["serve", "--port", "8000", "--web-port", "8001", "--mcp-port", "8002"],
+      { from: "user" },
+    );
 
     expect(process.env.GRACKLE_PORT).toBe("8000");
     expect(process.env.GRACKLE_WEB_PORT).toBe("8001");

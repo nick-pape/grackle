@@ -18,7 +18,12 @@ describe("useManifest", () => {
   });
 
   it("starts in loading state with fail-open plugin names", () => {
-    global.fetch = vi.fn(() => new Promise(() => { /* never resolves */ })) as typeof fetch;
+    global.fetch = vi.fn(
+      () =>
+        new Promise(() => {
+          /* never resolves */
+        }),
+    ) as typeof fetch;
 
     const { result } = renderHook(() => useManifest(), { wrapper });
 

@@ -349,31 +349,41 @@ describe("createStream + attachStream integration", () => {
   });
 
   it("attach two targets — message delivered to both", async () => {
-    const createRes = await createStream(create(grackle.CreateStreamRequestSchema, {
-      sessionId: "alice",
-      name: "broadcast",
-    }));
+    const createRes = await createStream(
+      create(grackle.CreateStreamRequestSchema, {
+        sessionId: "alice",
+        name: "broadcast",
+      }),
+    );
 
-    await attachStream(create(grackle.AttachStreamRequestSchema, {
-      sessionId: "alice",
-      fd: createRes.fd,
-      targetSessionId: "bob",
-      permission: "r",
-      deliveryMode: "async",
-    }));
+    await attachStream(
+      create(grackle.AttachStreamRequestSchema, {
+        sessionId: "alice",
+        fd: createRes.fd,
+        targetSessionId: "bob",
+        permission: "r",
+        deliveryMode: "async",
+      }),
+    );
 
-    await attachStream(create(grackle.AttachStreamRequestSchema, {
-      sessionId: "alice",
-      fd: createRes.fd,
-      targetSessionId: "charlie",
-      permission: "r",
-      deliveryMode: "async",
-    }));
+    await attachStream(
+      create(grackle.AttachStreamRequestSchema, {
+        sessionId: "alice",
+        fd: createRes.fd,
+        targetSessionId: "charlie",
+        permission: "r",
+        deliveryMode: "async",
+      }),
+    );
 
     const bobReceived: string[] = [];
     const charlieReceived: string[] = [];
-    streamRegistry.registerAsyncListener("bob", (_sub, msg) => { bobReceived.push(msg.content); });
-    streamRegistry.registerAsyncListener("charlie", (_sub, msg) => { charlieReceived.push(msg.content); });
+    streamRegistry.registerAsyncListener("bob", (_sub, msg) => {
+      bobReceived.push(msg.content);
+    });
+    streamRegistry.registerAsyncListener("charlie", (_sub, msg) => {
+      charlieReceived.push(msg.content);
+    });
 
     streamRegistry.publish(createRes.streamId, "alice", "hello everyone");
 
@@ -382,10 +392,12 @@ describe("createStream + attachStream integration", () => {
   });
 
   it("stream auto-deletes when last subscriber leaves", async () => {
-    const createRes = await createStream(create(grackle.CreateStreamRequestSchema, {
-      sessionId: "alice",
-      name: "ephemeral",
-    }));
+    const createRes = await createStream(
+      create(grackle.CreateStreamRequestSchema, {
+        sessionId: "alice",
+        name: "ephemeral",
+      }),
+    );
 
     // Alice is the only subscriber — unsubscribe her
     const sub = streamRegistry.getSubscription("alice", createRes.fd)!;

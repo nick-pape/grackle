@@ -23,11 +23,17 @@ export async function createPersona(req: grackle.CreatePersonaRequest): Promise<
   }
   const personaType = req.type || "agent";
   if (personaType !== "agent" && personaType !== "script") {
-    throw new ConnectError(`Invalid persona type: "${personaType}". Must be "agent" or "script".`, Code.InvalidArgument);
+    throw new ConnectError(
+      `Invalid persona type: "${personaType}". Must be "agent" or "script".`,
+      Code.InvalidArgument,
+    );
   }
   if (personaType === "script") {
     if (!req.script) {
-      throw new ConnectError("Script content is required for script personas", Code.InvalidArgument);
+      throw new ConnectError(
+        "Script content is required for script personas",
+        Code.InvalidArgument,
+      );
     }
   } else {
     if (!req.systemPrompt) {
@@ -109,8 +115,7 @@ export async function updatePersona(req: grackle.UpdatePersonaRequest): Promise<
   // otherwise keep the existing stored value.
   const hasNewToolConfig =
     !!req.toolConfig &&
-    (req.toolConfig.allowedTools.length > 0 ||
-      req.toolConfig.disallowedTools.length > 0);
+    (req.toolConfig.allowedTools.length > 0 || req.toolConfig.disallowedTools.length > 0);
   const toolConfigJson = hasNewToolConfig
     ? JSON.stringify({
         allowedTools: [...(req.toolConfig?.allowedTools || [])],
@@ -118,8 +123,7 @@ export async function updatePersona(req: grackle.UpdatePersonaRequest): Promise<
       })
     : existing.toolConfig;
 
-  const hasNewMcpServers =
-    Array.isArray(req.mcpServers) && req.mcpServers.length > 0;
+  const hasNewMcpServers = Array.isArray(req.mcpServers) && req.mcpServers.length > 0;
   const mcpServersJson = hasNewMcpServers
     ? JSON.stringify(
         req.mcpServers.map((s) => ({

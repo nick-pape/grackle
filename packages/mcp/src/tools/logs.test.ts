@@ -25,7 +25,11 @@ function createMockClient(): GrackleClient {
 }
 
 /** Helper to configure getSession to return a session with the given logPath. */
-function mockSessionWithLogPath(mockClient: GrackleClient, sessionId: string, logPath: string): void {
+function mockSessionWithLogPath(
+  mockClient: GrackleClient,
+  sessionId: string,
+  logPath: string,
+): void {
   (mockClient.getSession as ReturnType<typeof vi.fn>).mockResolvedValue({
     id: sessionId,
     logPath,
@@ -45,7 +49,8 @@ describe("logs_get", () => {
     );
 
     const result = await getTool("logs_get").handler(
-      { sessionId: "no-such" }, { core: mockClient },
+      { sessionId: "no-such" },
+      { core: mockClient },
     );
     const parsed = JSON.parse(result.content[0].text);
 
@@ -62,9 +67,7 @@ describe("logs_get", () => {
       logPath: "",
     });
 
-    const result = await getTool("logs_get").handler(
-      { sessionId: "s1" }, { core: mockClient },
-    );
+    const result = await getTool("logs_get").handler({ sessionId: "s1" }, { core: mockClient });
     const parsed = JSON.parse(result.content[0].text);
 
     expect(result.isError).toBe(true);
@@ -153,9 +156,7 @@ describe("logs_get", () => {
     ].join("\n");
     mockReadFile.mockResolvedValue(jsonlContent);
 
-    const result = await getTool("logs_get").handler(
-      { sessionId: "s1" }, { core: mockClient },
-    );
+    const result = await getTool("logs_get").handler({ sessionId: "s1" }, { core: mockClient });
     const parsed = JSON.parse(result.content[0].text);
 
     expect(result.isError).toBeUndefined();
@@ -174,9 +175,7 @@ describe("logs_get", () => {
     (enoent as NodeJS.ErrnoException).code = "ENOENT";
     mockReadFile.mockRejectedValue(enoent);
 
-    const result = await getTool("logs_get").handler(
-      { sessionId: "s1" }, { core: mockClient },
-    );
+    const result = await getTool("logs_get").handler({ sessionId: "s1" }, { core: mockClient });
     const parsed = JSON.parse(result.content[0].text);
 
     expect(result.isError).toBe(true);
@@ -194,9 +193,7 @@ describe("logs_get", () => {
     (permError as NodeJS.ErrnoException).code = "EACCES";
     mockReadFile.mockRejectedValue(permError);
 
-    const result = await getTool("logs_get").handler(
-      { sessionId: "s1" }, { core: mockClient },
-    );
+    const result = await getTool("logs_get").handler({ sessionId: "s1" }, { core: mockClient });
     const parsed = JSON.parse(result.content[0].text);
 
     expect(result.isError).toBe(true);
@@ -221,13 +218,16 @@ describe("logs_get", () => {
       taskId: "unrelated-task",
       logPath: "/logs/s1",
     });
-    (mockClient as unknown as { getTask: ReturnType<typeof vi.fn> }).getTask = vi.fn().mockResolvedValue({
-      id: "unrelated-task",
-      parentTaskId: "",
-    });
+    (mockClient as unknown as { getTask: ReturnType<typeof vi.fn> }).getTask = vi
+      .fn()
+      .mockResolvedValue({
+        id: "unrelated-task",
+        parentTaskId: "",
+      });
 
     const result = await getTool("logs_get").handler(
-      { sessionId: "s1" }, { core: mockClient, orchestration: mockClient },
+      { sessionId: "s1" },
+      { core: mockClient, orchestration: mockClient },
       scopedAuth,
     );
 
@@ -251,17 +251,20 @@ describe("logs_get", () => {
       taskId: "child-task",
       logPath: "/logs/s1",
     });
-    (mockClient as unknown as { getTask: ReturnType<typeof vi.fn> }).getTask = vi.fn().mockResolvedValue({
-      id: "child-task",
-      parentTaskId: "parent-task",
-    });
+    (mockClient as unknown as { getTask: ReturnType<typeof vi.fn> }).getTask = vi
+      .fn()
+      .mockResolvedValue({
+        id: "child-task",
+        parentTaskId: "parent-task",
+      });
 
     const mockReadFile = readFile as ReturnType<typeof vi.fn>;
     const jsonlContent = JSON.stringify({ type: "output", content: "line 1" });
     mockReadFile.mockResolvedValue(jsonlContent);
 
     const result = await getTool("logs_get").handler(
-      { sessionId: "s1" }, { core: mockClient, orchestration: mockClient },
+      { sessionId: "s1" },
+      { core: mockClient, orchestration: mockClient },
       scopedAuth,
     );
 
@@ -287,7 +290,8 @@ describe("logs_get", () => {
     });
 
     const result = await getTool("logs_get").handler(
-      { sessionId: "s1" }, { core: mockClient },
+      { sessionId: "s1" },
+      { core: mockClient },
       scopedAuth,
     );
 
@@ -307,12 +311,15 @@ describe("logs_get", () => {
     mockReadFile.mockResolvedValue(jsonlContent);
 
     const result = await getTool("logs_get").handler(
-      { sessionId: "s1" }, { core: mockClient },
+      { sessionId: "s1" },
+      { core: mockClient },
       apiKeyAuth,
     );
 
     expect(result.isError).toBeUndefined();
     // getTask should never have been called — no ancestry check for full-access auth
-    expect((mockClient as unknown as { getTask: ReturnType<typeof vi.fn> }).getTask).toBeUndefined();
+    expect(
+      (mockClient as unknown as { getTask: ReturnType<typeof vi.fn> }).getTask,
+    ).toBeUndefined();
   });
 });

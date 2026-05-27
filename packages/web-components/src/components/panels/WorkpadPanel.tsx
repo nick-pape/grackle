@@ -48,10 +48,14 @@ export function WorkpadPanel({ workpad }: WorkpadPanelProps): JSX.Element | unde
     <div className={styles.workpadSection} data-testid="workpad-panel">
       <div className={styles.workpadLabel}>Workpad</div>
       {parsed.status && (
-        <div className={styles.workpadStatus} data-testid="workpad-status">{parsed.status}</div>
+        <div className={styles.workpadStatus} data-testid="workpad-status">
+          {parsed.status}
+        </div>
       )}
       {parsed.summary && (
-        <div className={styles.workpadSummary} data-testid="workpad-summary">{parsed.summary}</div>
+        <div className={styles.workpadSummary} data-testid="workpad-summary">
+          {parsed.summary}
+        </div>
       )}
       {parsed.extra && Object.keys(parsed.extra).length > 0 && (
         <div className={styles.workpadExtra} data-testid="workpad-extra">

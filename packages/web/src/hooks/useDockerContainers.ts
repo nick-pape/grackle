@@ -33,7 +33,9 @@ export function useDockerContainers(): UseDockerContainersResult {
       // Surface the failure so the UI can fall back to manual container entry
       // instead of leaving the user stuck with an empty picker.
       setDockerContainers([]);
-      setDockerContainersError(err instanceof Error ? err.message : "Failed to list Docker containers");
+      setDockerContainersError(
+        err instanceof Error ? err.message : "Failed to list Docker containers",
+      );
     }
   }, []);
 

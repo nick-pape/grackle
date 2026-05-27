@@ -65,15 +65,11 @@ describe("SCHEMA_STATEMENTS", () => {
   });
 
   it("vector index specifies the configured dimensions", () => {
-    expect(SCHEMA_STATEMENTS.VECTOR_INDEX).toContain(
-      String(EMBEDDING_DIMENSIONS),
-    );
+    expect(SCHEMA_STATEMENTS.VECTOR_INDEX).toContain(String(EMBEDDING_DIMENSIONS));
   });
 
   it("vector index uses the configured similarity function", () => {
-    expect(SCHEMA_STATEMENTS.VECTOR_INDEX).toContain(
-      VECTOR_SIMILARITY_FUNCTION,
-    );
+    expect(SCHEMA_STATEMENTS.VECTOR_INDEX).toContain(VECTOR_SIMILARITY_FUNCTION);
   });
 });
 
@@ -90,9 +86,7 @@ describe("initSchema", () => {
     expect(mockSessionRun).toHaveBeenCalledTimes(statementCount);
 
     // Verify each Cypher string was passed to session.run()
-    const executedStatements = mockSessionRun.mock.calls.map(
-      (call: unknown[]) => call[0],
-    );
+    const executedStatements = mockSessionRun.mock.calls.map((call: unknown[]) => call[0]);
     for (const cypher of Object.values(SCHEMA_STATEMENTS)) {
       expect(executedStatements).toContain(cypher);
     }

@@ -34,7 +34,6 @@ vi.mock("./stream-hub.js", () => ({
   }),
 }));
 
-
 vi.mock("./event-bus.js", () => ({
   emit: vi.fn(),
 }));
@@ -156,9 +155,7 @@ describe("resolveAncestorEnvironmentId", () => {
   });
 
   it("returns environmentId when the parent has a session", () => {
-    vi.mocked(sessionStore.getLatestSessionForTask).mockReturnValue(
-      makeSession("env-1"),
-    );
+    vi.mocked(sessionStore.getLatestSessionForTask).mockReturnValue(makeSession("env-1"));
 
     expect(resolveAncestorEnvironmentId("parent-1")).toBe("env-1");
     expect(sessionStore.getLatestSessionForTask).toHaveBeenCalledWith("parent-1");

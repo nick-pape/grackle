@@ -77,14 +77,10 @@ export function SessionPicker({
   }, [isOpen, sessions.length]);
 
   // Build lookup for environment names
-  const envNameById = new Map<string, string>(
-    environments.map((e) => [e.id, e.displayName]),
-  );
+  const envNameById = new Map<string, string>(environments.map((e) => [e.id, e.displayName]));
 
   // Build lookup for persona names
-  const personaNameById = new Map<string, string>(
-    (personas ?? []).map((p) => [p.id, p.name]),
-  );
+  const personaNameById = new Map<string, string>((personas ?? []).map((p) => [p.id, p.name]));
 
   const entries: SessionPickerEntry[] = sessions.map((s) => ({
     session: s,
@@ -111,7 +107,11 @@ export function SessionPicker({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
           onClick={onCancel}
-          onKeyDown={(e) => { if (e.key === "Escape") { onCancel(); } }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              onCancel();
+            }
+          }}
           role="dialog"
           aria-modal="true"
           aria-label="Forward to session"
@@ -124,7 +124,9 @@ export function SessionPicker({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.93, y: -10 }}
             transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
-            onClick={(e) => { e.stopPropagation(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
             data-testid="session-picker-dialog"
           >
             <div className={styles.header}>
@@ -149,7 +151,9 @@ export function SessionPicker({
                   className={styles.filterInput}
                   placeholder="Filter sessions..."
                   value={filter}
-                  onChange={(e) => { setFilter(e.target.value); }}
+                  onChange={(e) => {
+                    setFilter(e.target.value);
+                  }}
                   data-testid="session-picker-filter"
                   autoFocus
                 />
@@ -177,13 +181,18 @@ export function SessionPicker({
                         <button
                           type="button"
                           className={styles.sessionRow}
-                          onClick={() => { onSelect(session.id); }}
+                          onClick={() => {
+                            onSelect(session.id);
+                          }}
                           data-testid={`session-picker-item-${session.id}`}
                         >
                           <div className={styles.sessionMain}>
                             <span className={styles.envName}>{environmentName}</span>
                             {personaName !== undefined && (
-                              <span className={styles.personaName} data-testid={`session-picker-persona-${session.id}`}>
+                              <span
+                                className={styles.personaName}
+                                data-testid={`session-picker-persona-${session.id}`}
+                              >
                                 {personaName}
                               </span>
                             )}

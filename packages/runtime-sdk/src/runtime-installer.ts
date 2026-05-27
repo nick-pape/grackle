@@ -207,7 +207,12 @@ export async function importFromRuntime<T>(runtimeName: string, packageName: str
     } catch {
       // CJS resolve fails for ESM-only packages (exports map without "require" condition).
       // Fall back to reading the package's main/exports field directly.
-      const pkgJsonPath = join(runtimeDir, "node_modules", ...packageName.split("/"), "package.json");
+      const pkgJsonPath = join(
+        runtimeDir,
+        "node_modules",
+        ...packageName.split("/"),
+        "package.json",
+      );
       const pkg = JSON.parse(readFileSync(pkgJsonPath, "utf8")) as {
         main?: string;
         exports?: Record<string, unknown>;
@@ -226,9 +231,9 @@ export async function importFromRuntime<T>(runtimeName: string, packageName: str
     return import(pathToFileURL(resolved).href) as Promise<T>;
   } catch (resolveErr: unknown) {
     throw new Error(
-      `Failed to resolve "${packageName}" from runtime directory ${runtimeDir}. `
-      + `The lazy installer may have failed — check the logs above for details. `
-      + `Manual fix: cd ${runtimeDir} && npm install`,
+      `Failed to resolve "${packageName}" from runtime directory ${runtimeDir}. ` +
+        `The lazy installer may have failed — check the logs above for details. ` +
+        `Manual fix: cd ${runtimeDir} && npm install`,
       { cause: resolveErr },
     );
   }
@@ -327,12 +332,14 @@ async function doInstall(
             { runtimeName, runtimeDir, err, stderrSnippet },
             "npm install failed for runtime packages",
           );
-          reject(new Error(
-            `Failed to install ${runtimeName} runtime packages. Run manually:\n`
-            + `  cd ${runtimeDir} && npm install\n`
-            + `Cause: ${detail}`
-            + (stderrSnippet ? `\nStderr: ${stderrSnippet}` : ""),
-          ));
+          reject(
+            new Error(
+              `Failed to install ${runtimeName} runtime packages. Run manually:\n` +
+                `  cd ${runtimeDir} && npm install\n` +
+                `Cause: ${detail}` +
+                (stderrSnippet ? `\nStderr: ${stderrSnippet}` : ""),
+            ),
+          );
         } else {
           resolve();
         }

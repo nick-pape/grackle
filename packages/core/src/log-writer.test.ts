@@ -70,7 +70,11 @@ describe("log-writer", () => {
       expect(ws.write).toHaveBeenCalledTimes(1);
       const written = ws.write.mock.calls[0][0] as string;
       expect(written).toMatch(/\n$/);
-      const parsed = JSON.parse(written.trim()) as { session_id: string; content: string; type: string };
+      const parsed = JSON.parse(written.trim()) as {
+        session_id: string;
+        content: string;
+        type: string;
+      };
       expect(parsed.session_id).toBe("s1");
       expect(parsed.content).toBe("hello");
       expect(parsed.type).toBe("text");
@@ -90,8 +94,12 @@ describe("log-writer", () => {
       await writeEvent("/tmp/tcid-log", toolUse);
       await writeEvent("/tmp/tcid-log", makeEvent("s1", "plain text"));
 
-      const toolLine = JSON.parse((ws.write.mock.calls[0][0] as string).trim()) as { tool_call_id?: string };
-      const textLine = JSON.parse((ws.write.mock.calls[1][0] as string).trim()) as { tool_call_id?: string };
+      const toolLine = JSON.parse((ws.write.mock.calls[0][0] as string).trim()) as {
+        tool_call_id?: string;
+      };
+      const textLine = JSON.parse((ws.write.mock.calls[1][0] as string).trim()) as {
+        tool_call_id?: string;
+      };
       expect(toolLine.tool_call_id).toBe("toolu_abc");
       expect(textLine.tool_call_id).toBeUndefined();
     });
@@ -110,8 +118,12 @@ describe("log-writer", () => {
       await writeEvent("/tmp/diag-log", lifecycle);
       await writeEvent("/tmp/diag-log", makeEvent("s1", "plain text"));
 
-      const diagLine = JSON.parse((ws.write.mock.calls[0][0] as string).trim()) as { diagnostic?: boolean };
-      const textLine = JSON.parse((ws.write.mock.calls[1][0] as string).trim()) as { diagnostic?: boolean };
+      const diagLine = JSON.parse((ws.write.mock.calls[0][0] as string).trim()) as {
+        diagnostic?: boolean;
+      };
+      const textLine = JSON.parse((ws.write.mock.calls[1][0] as string).trim()) as {
+        diagnostic?: boolean;
+      };
       expect(diagLine.diagnostic).toBe(true);
       expect(textLine.diagnostic).toBeUndefined();
     });

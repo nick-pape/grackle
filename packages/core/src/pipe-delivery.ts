@@ -63,12 +63,16 @@ export function ensureAsyncDeliveryListener(sessionId: string): void {
     const stream = streamRegistry.getStream(sub.streamId);
     const isStdin = stream?.name.startsWith("stdin:");
     const text = isStdin ? msg.content : `[fd:${sub.fd}] ${msg.content}`;
-    return conn.client.sendInput(
-      create(powerline.InputMessageSchema, { sessionId, text }),
-    ).then(() => {}).catch((err: unknown) => {
-      logger.warn({ err, sessionId }, "Async pipe delivery: sendInput failed — message left undelivered");
-      throw err;
-    });
+    return conn.client
+      .sendInput(create(powerline.InputMessageSchema, { sessionId, text }))
+      .then(() => {})
+      .catch((err: unknown) => {
+        logger.warn(
+          { err, sessionId },
+          "Async pipe delivery: sendInput failed — message left undelivered",
+        );
+        throw err;
+      });
   });
 
   asyncListenerCleanups.set(sessionId, unsubscribe);
@@ -131,7 +135,10 @@ export function ensurePipeStream(childSessionId: string, parentSessionId: string
  * For sync pipes: does NOT clean up — the WaitForPipe consumer handles cleanup
  * after it reads the message (avoids race where cleanup runs before consumer reads).
  */
-export async function publishChildCompletion(childSessionId: string, status: string): Promise<void> {
+export async function publishChildCompletion(
+  childSessionId: string,
+  status: string,
+): Promise<void> {
   const session = sessionStore.getSession(childSessionId);
   if (!session) {
     return;
@@ -175,7 +182,8 @@ export async function publishChildCompletion(childSessionId: string, status: str
   // For sync pipes, the WaitForPipe handler cleans up after consumeSync returns.
   if (session.pipeMode === "async") {
     // Check all parent subscriptions — if any have undelivered messages, keep the stream
-    const parentSubs = streamRegistry.getSubscriptionsForSession(session.parentSessionId)
+    const parentSubs = streamRegistry
+      .getSubscriptionsForSession(session.parentSessionId)
       .filter((s) => s.streamId === pipeStream.id);
     const allDelivered = parentSubs.every((s) => !streamRegistry.hasUndeliveredMessages(s.id));
     if (allDelivered) {
@@ -187,7 +195,8 @@ export async function publishChildCompletion(childSessionId: string, status: str
   // the server restarted and reanimate promoted them): the WaitForPipe handler
   // is gone, so we must clean up like an async pipe.
   if (session.pipeMode === "sync" && isPromotedSyncPipe(pipeStream, session.parentSessionId)) {
-    const parentSubs = streamRegistry.getSubscriptionsForSession(session.parentSessionId)
+    const parentSubs = streamRegistry
+      .getSubscriptionsForSession(session.parentSessionId)
       .filter((s) => s.streamId === pipeStream.id);
     const allDelivered = parentSubs.every((s) => !streamRegistry.hasUndeliveredMessages(s.id));
     if (allDelivered) {
@@ -228,8 +237,9 @@ function cleanupAsyncPipe(streamId: string, parentSessionId: string): void {
  * the server-restart cleared the original sync queue.
  */
 function isPromotedSyncPipe(pipeStream: streamRegistry.Stream, parentSessionId: string): boolean {
-  const parentSub = Array.from(pipeStream.subscriptions.values())
-    .find((s) => s.sessionId === parentSessionId);
+  const parentSub = Array.from(pipeStream.subscriptions.values()).find(
+    (s) => s.sessionId === parentSessionId,
+  );
   return parentSub?.deliveryMode === "async";
 }
 
@@ -238,16 +248,20 @@ function isPromotedSyncPipe(pipeStream: streamRegistry.Stream, parentSessionId: 
  * including the status and the child's last text output.
  */
 // eslint-disable-next-line @rushstack/no-new-null -- matches DB schema types
-function buildCompletionMessage(session: { logPath: string | null; error: string | null }, status: string): string {
+function buildCompletionMessage(
+  session: { logPath: string | null; error: string | null },
+  status: string,
+): string {
   const statusLabel = STATUS_LABELS[status] || status;
   let message = `Child session ${statusLabel}.`;
 
   // Extract the last text message from the child's session log
   const lastText = extractLastTextMessage(session.logPath || undefined);
   if (lastText) {
-    const truncated = lastText.length > MAX_LAST_MESSAGE_LENGTH
-      ? lastText.slice(0, MAX_LAST_MESSAGE_LENGTH) + "..."
-      : lastText;
+    const truncated =
+      lastText.length > MAX_LAST_MESSAGE_LENGTH
+        ? lastText.slice(0, MAX_LAST_MESSAGE_LENGTH) + "..."
+        : lastText;
     message += `\n\nChild's last message:\n${truncated}`;
   }
 
@@ -282,7 +296,8 @@ function extractLastTextMessage(logPath: string | undefined): string {
  * Called from closeFd when closing a pipe fd.
  */
 export function cleanupAsyncListenerIfEmpty(sessionId: string): void {
-  const remainingAsyncSubs = streamRegistry.getSubscriptionsForSession(sessionId)
+  const remainingAsyncSubs = streamRegistry
+    .getSubscriptionsForSession(sessionId)
     .filter((s) => s.deliveryMode === "async");
   if (remainingAsyncSubs.length === 0) {
     const cleanup = asyncListenerCleanups.get(sessionId);
@@ -303,10 +318,7 @@ export function cleanupAsyncListenerIfEmpty(sessionId: string): void {
  * subscriptions), which triggers auto-stop via the lifecycle manager.
  * This prevents idle children from lingering after sync pipe delivery.
  */
-export function cleanupSyncPipeAndLifecycle(
-  pipeStreamId: string,
-  childSessionId?: string,
-): void {
+export function cleanupSyncPipeAndLifecycle(pipeStreamId: string, childSessionId?: string): void {
   const stream = streamRegistry.getStream(pipeStreamId);
 
   // Prefer explicitly provided childSessionId; fall back to extracting from

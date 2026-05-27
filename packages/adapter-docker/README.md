@@ -18,16 +18,16 @@ The Docker adapter creates and manages Docker containers running PowerLine. It h
 
 ## Configuration
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `image` | `string` | `"grackle-powerline:latest"` | Docker image (ignored in attach mode) |
-| `containerName` | `string` | `"grackle-<envId>"` | Container name |
-| `localPort` | `number` | auto | Host port mapping |
-| `volumes` | `string[]` | — | Volume mounts (ignored in attach mode) |
-| `env` | `Record<string, string>` | — | Extra env vars |
-| `repo` | `string` | — | Git repo to clone into `/workspace` (ignored in attach mode) |
-| `gpus` | `string` | — | GPU passthrough (e.g. `"all"`) |
-| `attach` | `string` | — | Name/ID of an existing container to attach to (enables attach mode) |
+| Field           | Type                     | Default                      | Description                                                         |
+| --------------- | ------------------------ | ---------------------------- | ------------------------------------------------------------------- |
+| `image`         | `string`                 | `"grackle-powerline:latest"` | Docker image (ignored in attach mode)                               |
+| `containerName` | `string`                 | `"grackle-<envId>"`          | Container name                                                      |
+| `localPort`     | `number`                 | auto                         | Host port mapping                                                   |
+| `volumes`       | `string[]`               | —                            | Volume mounts (ignored in attach mode)                              |
+| `env`           | `Record<string, string>` | —                            | Extra env vars                                                      |
+| `repo`          | `string`                 | —                            | Git repo to clone into `/workspace` (ignored in attach mode)        |
+| `gpus`          | `string`                 | —                            | GPU passthrough (e.g. `"all"`)                                      |
+| `attach`        | `string`                 | —                            | Name/ID of an existing container to attach to (enables attach mode) |
 
 ## Attach mode
 

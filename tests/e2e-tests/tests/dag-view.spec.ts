@@ -10,7 +10,10 @@ import {
 import type { GrackleClient } from "./rpc-client.js";
 
 test.describe("DAG View", { tag: ["@workspace"] }, () => {
-  test("Graph tab renders task nodes after switching from default Tasks tab", async ({ appPage, grackle: { client } }) => {
+  test("Graph tab renders task nodes after switching from default Tasks tab", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     // Create workspace with two tasks
@@ -39,7 +42,10 @@ test.describe("DAG View", { tag: ["@workspace"] }, () => {
     await expect(page.getByRole("tab", { name: "Graph" })).not.toBeVisible();
   });
 
-  test("clicking a graph node navigates to task detail", async ({ appPage, grackle: { client } }) => {
+  test("clicking a graph node navigates to task detail", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     await createWorkspace(client, "dag-nav");
@@ -60,7 +66,10 @@ test.describe("DAG View", { tag: ["@workspace"] }, () => {
     await expect(page.locator('[data-testid="task-status"]')).toBeVisible({ timeout: 5_000 });
   });
 
-  test("dependency edges render for tasks with dependsOn", async ({ appPage, grackle: { client } }) => {
+  test("dependency edges render for tasks with dependsOn", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     await createWorkspace(client, "dag-deps");

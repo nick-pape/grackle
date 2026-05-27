@@ -9,9 +9,7 @@
 
 import type { GracklePlugin, PluginContext } from "@grackle-ai/plugin-sdk";
 import { grackle } from "@grackle-ai/common";
-import {
-  scheduleStore, taskStore, personaStore, dispatchQueueStore,
-} from "@grackle-ai/database";
+import { scheduleStore, taskStore, personaStore, dispatchQueueStore } from "@grackle-ai/database";
 import { createScheduleHandlers } from "./schedule-handlers.js";
 import { createCronPhase } from "./cron-phase.js";
 
@@ -25,10 +23,12 @@ export function createSchedulingPlugin(): GracklePlugin {
     name: "scheduling",
     dependencies: ["core"],
 
-    grpcHandlers: (ctx: PluginContext) => [{
-      service: grackle.GrackleScheduling,
-      handlers: createScheduleHandlers(ctx.emit),
-    }],
+    grpcHandlers: (ctx: PluginContext) => [
+      {
+        service: grackle.GrackleScheduling,
+        handlers: createScheduleHandlers(ctx.emit),
+      },
+    ],
 
     reconciliationPhases: (ctx: PluginContext) => [
       createCronPhase({

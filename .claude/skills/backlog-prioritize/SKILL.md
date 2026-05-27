@@ -30,12 +30,14 @@ Cross-reference: if a PR's body contains `Closes #<N>` / `Fixes #<N>`, or its br
 ## Step 3: Classify and Sort
 
 For each remaining issue, extract:
+
 - **Priority label**: `priority:critical` > `priority:high` > (unlabeled) > `priority:low`
 - **Type**: `bug` > `feature` > `refactor` (bugs first — they degrade existing functionality)
 - **Domain labels**: `orchestration`, `web`, `server`, `powerline`, `cli`
 - **Dependencies**: Read each issue body for references to other issues. If issue A mentions "depends on #B" or "requires #B first" or "after #B", A should come after B.
 
 Sort by:
+
 1. Priority label (critical first)
 2. Type (bugs before features before refactors)
 3. Dependency ordering (blockers before dependents)

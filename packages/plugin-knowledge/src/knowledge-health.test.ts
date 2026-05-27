@@ -64,12 +64,12 @@ describe("createKnowledgeHealthPhase", () => {
     mockHealthCheck.mockResolvedValue(false);
     await phase.execute();
 
-    expect(logger.warn).toHaveBeenCalledWith(
-      expect.any(String),
-    );
-    expect(vi.mocked(logger.warn).mock.calls.some(
-      (call) => typeof call[0] === "string" && call[0].includes("Neo4j"),
-    )).toBe(true);
+    expect(logger.warn).toHaveBeenCalledWith(expect.any(String));
+    expect(
+      vi
+        .mocked(logger.warn)
+        .mock.calls.some((call) => typeof call[0] === "string" && call[0].includes("Neo4j")),
+    ).toBe(true);
   });
 
   it("logs warning on first check when Neo4j is unreachable", async () => {
@@ -79,9 +79,11 @@ describe("createKnowledgeHealthPhase", () => {
     // First tick: unhealthy (default was optimistic true → transition to false)
     await phase.execute();
 
-    expect(vi.mocked(logger.warn).mock.calls.some(
-      (call) => typeof call[0] === "string" && call[0].includes("Neo4j"),
-    )).toBe(true);
+    expect(
+      vi
+        .mocked(logger.warn)
+        .mock.calls.some((call) => typeof call[0] === "string" && call[0].includes("Neo4j")),
+    ).toBe(true);
   });
 
   it("logs when Neo4j transitions from unhealthy to healthy", async () => {
@@ -96,9 +98,14 @@ describe("createKnowledgeHealthPhase", () => {
     mockHealthCheck.mockResolvedValue(true);
     await phase.execute();
 
-    expect(vi.mocked(logger.info).mock.calls.some(
-      (call) => typeof call[0] === "string" && call[0].includes("Neo4j") && call[0].includes("recover"),
-    )).toBe(true);
+    expect(
+      vi
+        .mocked(logger.info)
+        .mock.calls.some(
+          (call) =>
+            typeof call[0] === "string" && call[0].includes("Neo4j") && call[0].includes("recover"),
+        ),
+    ).toBe(true);
   });
 
   it("does NOT log on repeated healthy ticks", async () => {

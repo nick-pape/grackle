@@ -112,10 +112,7 @@ const domainEventLog: SequencedLog<DomainEventBody> = new SequencedLog<DomainEve
  * @param payload - Domain-specific data.
  * @returns The created GrackleEvent.
  */
-export function emit(
-  type: GrackleEventType,
-  payload: Record<string, unknown>,
-): GrackleEvent {
+export function emit(type: GrackleEventType, payload: Record<string, unknown>): GrackleEvent {
   const timestamp: string = new Date().toISOString();
 
   // Persist synchronously via the sequenced log (SQLite is fast in WAL mode).

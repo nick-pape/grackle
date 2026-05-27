@@ -142,11 +142,7 @@ export async function createEdge(
  * @returns `true` if an edge was removed, `false` if no matching edge existed.
  * @throws If the edge type is invalid.
  */
-export async function removeEdge(
-  fromId: string,
-  toId: string,
-  type: EdgeType,
-): Promise<boolean> {
+export async function removeEdge(fromId: string, toId: string, type: EdgeType): Promise<boolean> {
   assertValidEdgeType(type);
 
   const session = getSession();
@@ -260,10 +256,7 @@ export async function upsertEdge(
  *
  * @returns The number of edges removed.
  */
-export async function removeOutgoingEdges(
-  fromId: string,
-  types: EdgeType[],
-): Promise<number> {
+export async function removeOutgoingEdges(fromId: string, types: EdgeType[]): Promise<number> {
   for (const type of types) {
     assertValidEdgeType(type);
   }

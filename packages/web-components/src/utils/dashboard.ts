@@ -30,10 +30,7 @@ export function computeKpis(
   const blockedTasks = tasks.filter((t) => isTaskBlocked(t, taskStatusById)).length;
 
   const attentionTasks = tasks.filter(
-    (t) =>
-      t.status === "paused" ||
-      t.status === "failed" ||
-      isTaskBlocked(t, taskStatusById),
+    (t) => t.status === "paused" || t.status === "failed" || isTaskBlocked(t, taskStatusById),
   ).length;
 
   const unhealthyEnvironments = environments.filter(
@@ -67,10 +64,7 @@ export interface AttentionTask {
 }
 
 /** Collect tasks requiring attention, ordered: failed → blocked → paused. */
-export function getAttentionTasks(
-  tasks: TaskData[],
-  workspaces: Workspace[],
-): AttentionTask[] {
+export function getAttentionTasks(tasks: TaskData[], workspaces: Workspace[]): AttentionTask[] {
   const wsMap = new Map<string, Workspace>();
   for (const ws of workspaces) {
     wsMap.set(ws.id, ws);
@@ -143,12 +137,15 @@ export function getWorkspaceSnapshots(
   tasks: TaskData[],
   _environments: Environment[],
 ): WorkspaceSnapshot[] {
-  const statsByWorkspace = new Map<string, {
-    totalTasks: number;
-    completedTasks: number;
-    workingTasks: number;
-    failedTasks: number;
-  }>();
+  const statsByWorkspace = new Map<
+    string,
+    {
+      totalTasks: number;
+      completedTasks: number;
+      workingTasks: number;
+      failedTasks: number;
+    }
+  >();
 
   for (const task of tasks) {
     if (!task.workspaceId) {

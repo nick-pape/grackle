@@ -29,7 +29,9 @@ export async function listPlugins(): Promise<grackle.PluginList> {
 }
 
 /** Enable or disable a plugin. Core (required) plugins cannot be disabled. */
-export async function setPluginEnabled(req: grackle.SetPluginEnabledRequest): Promise<grackle.PluginInfo> {
+export async function setPluginEnabled(
+  req: grackle.SetPluginEnabledRequest,
+): Promise<grackle.PluginInfo> {
   const entry = PLUGIN_REGISTRY.find((p) => p.name === req.name);
   if (!entry) {
     throw new ConnectError(`Unknown plugin: ${req.name}`, Code.NotFound);

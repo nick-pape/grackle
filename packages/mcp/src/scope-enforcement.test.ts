@@ -37,7 +37,9 @@ describe("assertCallerIsAncestor", () => {
 
   test("no-op for api-key auth", async () => {
     const client = createMockClient({});
-    await expect(assertCallerIsAncestor(client, { type: "api-key" }, "any-task")).resolves.toBeUndefined();
+    await expect(
+      assertCallerIsAncestor(client, { type: "api-key" }, "any-task"),
+    ).resolves.toBeUndefined();
     expect(client.getTask).not.toHaveBeenCalled();
   });
 
@@ -53,25 +55,29 @@ describe("assertCallerIsAncestor", () => {
     const client = createMockClient({
       "child-task": { parentTaskId: "parent-task" },
     });
-    await expect(assertCallerIsAncestor(client, SCOPED_AUTH, "child-task")).resolves.toBeUndefined();
+    await expect(
+      assertCallerIsAncestor(client, SCOPED_AUTH, "child-task"),
+    ).resolves.toBeUndefined();
   });
 
   test("passes when target's grandparent is the caller", async () => {
     const client = createMockClient({
-      "grandchild": { parentTaskId: "child-task" },
+      grandchild: { parentTaskId: "child-task" },
       "child-task": { parentTaskId: "parent-task" },
     });
-    await expect(assertCallerIsAncestor(client, SCOPED_AUTH, "grandchild")).resolves.toBeUndefined();
+    await expect(
+      assertCallerIsAncestor(client, SCOPED_AUTH, "grandchild"),
+    ).resolves.toBeUndefined();
   });
 
   test("rejects when target is the caller's own task", async () => {
     const client = createMockClient({});
-    await expect(
-      assertCallerIsAncestor(client, SCOPED_AUTH, "parent-task"),
-    ).rejects.toThrow(ConnectError);
-    await expect(
-      assertCallerIsAncestor(client, SCOPED_AUTH, "parent-task"),
-    ).rejects.toThrow("Cannot operate on your own task");
+    await expect(assertCallerIsAncestor(client, SCOPED_AUTH, "parent-task")).rejects.toThrow(
+      ConnectError,
+    );
+    await expect(assertCallerIsAncestor(client, SCOPED_AUTH, "parent-task")).rejects.toThrow(
+      "Cannot operate on your own task",
+    );
   });
 
   test("rejects when target is not a descendant", async () => {
@@ -79,34 +85,40 @@ describe("assertCallerIsAncestor", () => {
       "unrelated-task": { parentTaskId: "other-root" },
       "other-root": { parentTaskId: "" },
     });
-    await expect(
-      assertCallerIsAncestor(client, SCOPED_AUTH, "unrelated-task"),
-    ).rejects.toThrow(ConnectError);
-    await expect(
-      assertCallerIsAncestor(client, SCOPED_AUTH, "unrelated-task"),
-    ).rejects.toThrow("not a descendant");
+    await expect(assertCallerIsAncestor(client, SCOPED_AUTH, "unrelated-task")).rejects.toThrow(
+      ConnectError,
+    );
+    await expect(assertCallerIsAncestor(client, SCOPED_AUTH, "unrelated-task")).rejects.toThrow(
+      "not a descendant",
+    );
   });
 
   test("rejects when target is a root task (no parent)", async () => {
     const client = createMockClient({
       "root-task": { parentTaskId: "" },
     });
-    await expect(
-      assertCallerIsAncestor(client, SCOPED_AUTH, "root-task"),
-    ).rejects.toThrow(ConnectError);
+    await expect(assertCallerIsAncestor(client, SCOPED_AUTH, "root-task")).rejects.toThrow(
+      ConnectError,
+    );
   });
 });
 
 describe("assertCallerIsSelfOrAncestor", () => {
   test("no-op for non-scoped auth", async () => {
     const client = createMockClient({});
-    await expect(assertCallerIsSelfOrAncestor(client, undefined, "any-task")).resolves.toBeUndefined();
-    await expect(assertCallerIsSelfOrAncestor(client, { type: "api-key" }, "any-task")).resolves.toBeUndefined();
+    await expect(
+      assertCallerIsSelfOrAncestor(client, undefined, "any-task"),
+    ).resolves.toBeUndefined();
+    await expect(
+      assertCallerIsSelfOrAncestor(client, { type: "api-key" }, "any-task"),
+    ).resolves.toBeUndefined();
   });
 
   test("allows self-access (target === caller task)", async () => {
     const client = createMockClient({});
-    await expect(assertCallerIsSelfOrAncestor(client, SCOPED_AUTH, "parent-task")).resolves.toBeUndefined();
+    await expect(
+      assertCallerIsSelfOrAncestor(client, SCOPED_AUTH, "parent-task"),
+    ).resolves.toBeUndefined();
     expect(client.getTask).not.toHaveBeenCalled();
   });
 
@@ -114,7 +126,9 @@ describe("assertCallerIsSelfOrAncestor", () => {
     const client = createMockClient({
       "child-task": { parentTaskId: "parent-task" },
     });
-    await expect(assertCallerIsSelfOrAncestor(client, SCOPED_AUTH, "child-task")).resolves.toBeUndefined();
+    await expect(
+      assertCallerIsSelfOrAncestor(client, SCOPED_AUTH, "child-task"),
+    ).resolves.toBeUndefined();
   });
 
   test("rejects unrelated task", async () => {

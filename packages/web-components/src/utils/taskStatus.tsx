@@ -38,12 +38,20 @@ export interface TaskStatusStyle {
 
 /** Complete style map for every displayable status (canonical + virtual). */
 export const TASK_STATUS_STYLES: Record<DisplayStatus, TaskStatusStyle> = {
-  not_started: { color: "var(--text-tertiary)", icon: <Circle size={ICON_SM} />,                     label: "Not Started" },
-  working:     { color: "var(--accent-green)",  icon: <Circle size={ICON_SM} fill="currentColor" />, label: "Working" },
-  paused:      { color: "var(--accent-yellow)", icon: <Pause size={ICON_SM} />,                      label: "Paused" },
-  complete:    { color: "var(--accent-green)",  icon: <Check size={ICON_SM} />,                      label: "Complete" },
-  failed:      { color: "var(--accent-red)",    icon: <X size={ICON_SM} />,                          label: "Failed" },
-  blocked:     { color: "var(--accent-yellow)", icon: <Ban size={ICON_SM} />,                        label: "Blocked" },
+  not_started: {
+    color: "var(--text-tertiary)",
+    icon: <Circle size={ICON_SM} />,
+    label: "Not Started",
+  },
+  working: {
+    color: "var(--accent-green)",
+    icon: <Circle size={ICON_SM} fill="currentColor" />,
+    label: "Working",
+  },
+  paused: { color: "var(--accent-yellow)", icon: <Pause size={ICON_SM} />, label: "Paused" },
+  complete: { color: "var(--accent-green)", icon: <Check size={ICON_SM} />, label: "Complete" },
+  failed: { color: "var(--accent-red)", icon: <X size={ICON_SM} />, label: "Failed" },
+  blocked: { color: "var(--accent-yellow)", icon: <Ban size={ICON_SM} />, label: "Blocked" },
 };
 
 /** Safe accessor — returns a style for any status string, falling back to `not_started`. */
@@ -82,7 +90,12 @@ export function getStatusBadgeClassKey(status: string): string {
  * This is the urgency-first ordering used by the sidebar grouped view.
  */
 export const SIDEBAR_STATUS_ORDER: DisplayStatus[] = [
-  "working", "paused", "failed", "not_started", "blocked", "complete",
+  "working",
+  "paused",
+  "failed",
+  "not_started",
+  "blocked",
+  "complete",
 ];
 
 /**
@@ -91,7 +104,11 @@ export const SIDEBAR_STATUS_ORDER: DisplayStatus[] = [
  * with a badge overlay.
  */
 export const BOARD_COLUMN_ORDER: TaskStatusKey[] = [
-  "not_started", "working", "paused", "complete", "failed",
+  "not_started",
+  "working",
+  "paused",
+  "complete",
+  "failed",
 ];
 
 // ---------------------------------------------------------------------------

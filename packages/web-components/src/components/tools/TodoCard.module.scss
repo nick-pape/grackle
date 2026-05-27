@@ -1,4 +1,4 @@
-@use '../../styles/mixins' as *;
+@use "../../styles/mixins" as *;
 
 // =============================================================================
 // TodoCard — checklist with progress bar and active task highlight
@@ -48,8 +48,13 @@
 }
 
 @keyframes todoPulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 // --- Checklist ---

@@ -1,6 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 
-import { resolveDispatchEnvironment, type ResolveEnvironmentDeps } from "./resolve-dispatch-environment.js";
+import {
+  resolveDispatchEnvironment,
+  type ResolveEnvironmentDeps,
+} from "./resolve-dispatch-environment.js";
 
 function createMockDeps(overrides: Partial<ResolveEnvironmentDeps> = {}): ResolveEnvironmentDeps {
   return {
@@ -65,9 +68,15 @@ describe("resolveDispatchEnvironment", () => {
       getLinkedEnvironmentIds: vi.fn().mockReturnValue(["env-a", "env-b", "env-c"]),
       isEnvironmentConnected: vi.fn().mockReturnValue(true),
       countActiveForEnvironment: vi.fn((id: string) => {
-        if (id === "env-a") { return 3; }
-        if (id === "env-b") { return 0; }
-        if (id === "env-c") { return 1; }
+        if (id === "env-a") {
+          return 3;
+        }
+        if (id === "env-b") {
+          return 0;
+        }
+        if (id === "env-c") {
+          return 1;
+        }
         return 0;
       }),
     });

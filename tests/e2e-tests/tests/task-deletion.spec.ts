@@ -1,10 +1,5 @@
 import { test, expect } from "./fixtures.js";
-import {
-  createTask,
-  navigateToTask,
-  getWorkspaceId,
-  getTaskId,
-} from "./helpers.js";
+import { createTask, navigateToTask, getWorkspaceId, getTaskId } from "./helpers.js";
 
 /** Navigate to the Tasks sidebar tab so the TaskList is visible. */
 async function goToTasksTab(page: import("@playwright/test").Page): Promise<void> {
@@ -45,7 +40,9 @@ test.describe("Task Deletion", { tag: ["@task"] }, () => {
     await page.locator("button", { hasText: "Start" }).click();
 
     // Wait for active state (task may be working or paused depending on stub timing)
-    await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, { timeout: 15_000 });
+    await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, {
+      timeout: 15_000,
+    });
 
     // Delete the task via RPC while it's running
     const workspaceId = await getWorkspaceId(client, workspaceName);

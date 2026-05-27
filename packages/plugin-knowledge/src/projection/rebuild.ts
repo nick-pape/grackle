@@ -81,7 +81,7 @@ export async function rebuild(embedder: Embedder): Promise<RebuildResult> {
   }
   const workspaceByTask = new Map(tasks.map((task) => [task.id, task.workspaceId ?? ""]));
   for (const session of sessions) {
-    const workspaceId = session.taskId ? workspaceByTask.get(session.taskId) ?? "" : "";
+    const workspaceId = session.taskId ? (workspaceByTask.get(session.taskId) ?? "") : "";
     await projectSession(session, workspaceId);
   }
   // SPAWNED edges in a second pass, once all session nodes exist (order-independent).
@@ -134,7 +134,10 @@ async function pruneChunks(liveSessions: Set<string>): Promise<number> {
   for (const chunkSourceId of chunkSourceIds) {
     const sessionId = chunkSourceId.split("#")[0];
     if (!liveSessions.has(sessionId)) {
-      const deleted = await deleteReferenceNodeBySource(REFERENCE_SOURCE.TRANSCRIPT_CHUNK, chunkSourceId);
+      const deleted = await deleteReferenceNodeBySource(
+        REFERENCE_SOURCE.TRANSCRIPT_CHUNK,
+        chunkSourceId,
+      );
       if (deleted) {
         pruned += 1;
       }

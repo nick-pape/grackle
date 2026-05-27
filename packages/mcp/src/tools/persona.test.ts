@@ -48,9 +48,7 @@ describe("persona_list", () => {
   /** Verify gRPC ConnectError is surfaced as an error result. */
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
-      listPersonas: vi.fn().mockRejectedValue(
-        new ConnectError("unavailable", Code.Unavailable),
-      ),
+      listPersonas: vi.fn().mockRejectedValue(new ConnectError("unavailable", Code.Unavailable)),
     } as unknown as GrackleClient;
 
     const result = await tool.handler({}, { orchestration: mockClient });
@@ -139,9 +137,9 @@ describe("persona_create", () => {
   /** Verify gRPC ConnectError is surfaced as an error result. */
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
-      createPersona: vi.fn().mockRejectedValue(
-        new ConnectError("already exists", Code.AlreadyExists),
-      ),
+      createPersona: vi
+        .fn()
+        .mockRejectedValue(new ConnectError("already exists", Code.AlreadyExists)),
     } as unknown as GrackleClient;
 
     const result = await tool.handler(
@@ -177,9 +175,7 @@ describe("persona_show", () => {
   /** Verify gRPC ConnectError is surfaced as an error result. */
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
-      getPersona: vi.fn().mockRejectedValue(
-        new ConnectError("persona not found", Code.NotFound),
-      ),
+      getPersona: vi.fn().mockRejectedValue(new ConnectError("persona not found", Code.NotFound)),
     } as unknown as GrackleClient;
 
     const result = await tool.handler({ personaId: "per-missing" }, { orchestration: mockClient });
@@ -227,9 +223,9 @@ describe("persona_edit", () => {
   /** Verify gRPC ConnectError is surfaced as an error result. */
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
-      updatePersona: vi.fn().mockRejectedValue(
-        new ConnectError("persona not found", Code.NotFound),
-      ),
+      updatePersona: vi
+        .fn()
+        .mockRejectedValue(new ConnectError("persona not found", Code.NotFound)),
     } as unknown as GrackleClient;
 
     const result = await tool.handler(
@@ -264,9 +260,9 @@ describe("persona_delete", () => {
   /** Verify gRPC ConnectError is surfaced as an error result. */
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
-      deletePersona: vi.fn().mockRejectedValue(
-        new ConnectError("persona not found", Code.NotFound),
-      ),
+      deletePersona: vi
+        .fn()
+        .mockRejectedValue(new ConnectError("persona not found", Code.NotFound)),
     } as unknown as GrackleClient;
 
     const result = await tool.handler({ personaId: "per-missing" }, { orchestration: mockClient });

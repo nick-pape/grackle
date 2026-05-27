@@ -4,11 +4,7 @@ import { ROOT_TASK_ID } from "@grackle-ai/common";
 import { ToolRegistry } from "./tool-registry.js";
 import type { ToolDefinition } from "./tool-registry.js";
 import type { AuthContext } from "@grackle-ai/auth";
-import {
-  SCOPED_TOOLS,
-  resolveToolForAuth,
-  listToolsForAuth,
-} from "./tool-scoping.js";
+import { SCOPED_TOOLS, resolveToolForAuth, listToolsForAuth } from "./tool-scoping.js";
 
 // ─── Helpers ────────────────────────────────────────────────
 
@@ -65,17 +61,40 @@ const ROOT_TASK_AUTH: AuthContext = {
 describe("SCOPED_TOOLS", () => {
   it("contains the expected scoped tools", () => {
     expect([...SCOPED_TOOLS].sort()).toEqual([
-      "component_list", "component_promote", "component_register", "component_render", "component_search", "component_show", "component_update",
-      "ipc_attach", "ipc_close", "ipc_create_stream", "ipc_list_fds", "ipc_share_stream", "ipc_spawn", "ipc_terminate", "ipc_write",
-      "knowledge_get_node", "knowledge_search",
+      "component_list",
+      "component_promote",
+      "component_register",
+      "component_render",
+      "component_search",
+      "component_show",
+      "component_update",
+      "ipc_attach",
+      "ipc_close",
+      "ipc_create_stream",
+      "ipc_list_fds",
+      "ipc_share_stream",
+      "ipc_spawn",
+      "ipc_terminate",
+      "ipc_write",
+      "knowledge_get_node",
+      "knowledge_search",
       "logs_get",
-      "persona_list", "persona_show",
-      "schedule_list", "schedule_show",
-      "session_attach", "session_send_input",
+      "persona_list",
+      "persona_show",
+      "schedule_list",
+      "schedule_show",
+      "session_attach",
+      "session_send_input",
       "show_hello_widget",
-      "task_complete", "task_create", "task_list", "task_search", "task_show", "task_start",
+      "task_complete",
+      "task_create",
+      "task_list",
+      "task_search",
+      "task_show",
+      "task_start",
       "widget_show",
-      "workpad_read", "workpad_write",
+      "workpad_read",
+      "workpad_write",
     ]);
   });
 });
@@ -119,10 +138,17 @@ describe("listToolsForAuth", () => {
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual([
       "env_list",
-      "persona_list", "persona_show",
-      "session_list", "session_send_input",
-      "task_complete", "task_create", "task_list", "task_show", "task_start",
-      "workpad_read", "workpad_write",
+      "persona_list",
+      "persona_show",
+      "session_list",
+      "session_send_input",
+      "task_complete",
+      "task_create",
+      "task_list",
+      "task_show",
+      "task_start",
+      "workpad_read",
+      "workpad_write",
     ]);
   });
 
@@ -131,10 +157,16 @@ describe("listToolsForAuth", () => {
     const tools = listToolsForAuth(registry, SCOPED_AUTH);
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual([
-      "persona_list", "persona_show",
+      "persona_list",
+      "persona_show",
       "session_send_input",
-      "task_complete", "task_create", "task_list", "task_show", "task_start",
-      "workpad_read", "workpad_write",
+      "task_complete",
+      "task_create",
+      "task_list",
+      "task_show",
+      "task_start",
+      "workpad_read",
+      "workpad_write",
     ]);
   });
 

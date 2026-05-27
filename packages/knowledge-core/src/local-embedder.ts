@@ -62,7 +62,7 @@ export function createLocalEmbedder(options?: EmbedderOptions): Embedder {
     } else if (vector.length !== resolvedDimensions) {
       throw new Error(
         `Dimension mismatch: expected ${resolvedDimensions}, got ${vector.length}. ` +
-        `Check that the model "${modelId}" produces ${resolvedDimensions}-dim vectors.`
+          `Check that the model "${modelId}" produces ${resolvedDimensions}-dim vectors.`,
       );
     }
 

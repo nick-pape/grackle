@@ -1,10 +1,5 @@
 import { test, expect } from "./fixtures.js";
-import {
-  stubScenario,
-  emitToolUse,
-  emitToolResult,
-  idle,
-} from "./helpers.js";
+import { stubScenario, emitToolUse, emitToolResult, idle } from "./helpers.js";
 
 /**
  * Tests for tool card rendering in the session event stream (#303, #935).
@@ -41,7 +36,9 @@ test.describe("Tool card rendering (#935)", { tag: ["@webui"] }, () => {
     await expect(page.getByTestId("tool-card-result")).toContainText("hello world");
   });
 
-  test("paired tool_use+tool_result renders as specialized card and hides standalone tool_use", async ({ stubTask }) => {
+  test("paired tool_use+tool_result renders as specialized card and hides standalone tool_use", async ({
+    stubTask,
+  }) => {
     const { page } = stubTask;
 
     // Scenario: tool_use followed by tool_result (stub runtime auto-generates matching IDs)

@@ -121,7 +121,9 @@ export type SkeletonCardBuiltinProps = z.infer<typeof skeletonCardPropsSchema>;
 /** Data props for the `Tooltip` built-in. */
 export const tooltipPropsSchema = z.object({
   text: z.string().describe("Tooltip text."),
-  placement: tooltipPlacementSchema.optional().describe("Placement relative to the anchor (default top)."),
+  placement: tooltipPlacementSchema
+    .optional()
+    .describe("Placement relative to the anchor (default top)."),
   delayMs: z.int().min(0).optional(),
 });
 /** Data props for the `Tooltip` built-in. */

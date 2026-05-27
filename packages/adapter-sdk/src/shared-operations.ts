@@ -18,7 +18,10 @@ export async function remoteStop(
   try {
     await executor.exec(buildRemoteKillCommand());
   } catch (err) {
-    logger.debug({ environmentId, err }, "Failed to kill remote PowerLine (may already be stopped)");
+    logger.debug(
+      { environmentId, err },
+      "Failed to kill remote PowerLine (may already be stopped)",
+    );
   }
   await closeTunnel(environmentId);
 }
@@ -34,12 +37,12 @@ export async function remoteDestroy(
 ): Promise<void> {
   try {
     await executor.exec(
-      `${buildRemoteKillCommand()}; `
-      + 'CRED="$HOME/.claude/.credentials.json"; '
-      + `if [ -L "$CRED" ]; then case "$(readlink "$CRED" 2>/dev/null)" in ${REMOTE_POWERLINE_DIRECTORY}/*) rm -f "$CRED";; esac; fi; `
-      + `HELPER="$(git config --global credential.helper 2>/dev/null || true)"; `
-      + `case "$HELPER" in ${REMOTE_POWERLINE_DIRECTORY}/*) git config --global --unset credential.helper 2>/dev/null || true;; esac; `
-      + `rm -rf ${REMOTE_POWERLINE_DIRECTORY}`,
+      `${buildRemoteKillCommand()}; ` +
+        'CRED="$HOME/.claude/.credentials.json"; ' +
+        `if [ -L "$CRED" ]; then case "$(readlink "$CRED" 2>/dev/null)" in ${REMOTE_POWERLINE_DIRECTORY}/*) rm -f "$CRED";; esac; fi; ` +
+        `HELPER="$(git config --global credential.helper 2>/dev/null || true)"; ` +
+        `case "$HELPER" in ${REMOTE_POWERLINE_DIRECTORY}/*) git config --global --unset credential.helper 2>/dev/null || true;; esac; ` +
+        `rm -rf ${REMOTE_POWERLINE_DIRECTORY}`,
     );
   } catch (err) {
     logger.debug({ environmentId, err }, "Failed to clean up remote PowerLine artifacts");

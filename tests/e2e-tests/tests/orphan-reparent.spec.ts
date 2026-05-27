@@ -13,10 +13,7 @@ import {
 /**
  * Helper: start a task via RPC and return its session ID.
  */
-async function startTaskAndGetSessionId(
-  client: GrackleClient,
-  taskId: string,
-): Promise<string> {
+async function startTaskAndGetSessionId(client: GrackleClient, taskId: string): Promise<string> {
   const resp = await client.orchestration.startTask({
     taskId,
     personaId: "stub",
@@ -46,7 +43,9 @@ async function waitForSessionStatus(
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  throw new Error(`Session ${sessionId} did not reach status "${targetStatus}" within ${timeoutMs}ms`);
+  throw new Error(
+    `Session ${sessionId} did not reach status "${targetStatus}" within ${timeoutMs}ms`,
+  );
 }
 
 /**
@@ -61,13 +60,15 @@ async function waitForTaskParent(
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const task = await client.orchestration.getTask({ id: taskId }) as any;
+    const task = (await client.orchestration.getTask({ id: taskId })) as any;
     if (task.parentTaskId === expectedParentId) {
       return;
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  throw new Error(`Task ${taskId} parentTaskId did not change to "${expectedParentId}" within ${timeoutMs}ms`);
+  throw new Error(
+    `Task ${taskId} parentTaskId did not change to "${expectedParentId}" within ${timeoutMs}ms`,
+  );
 }
 
 /**
@@ -96,7 +97,9 @@ async function waitForSessionText(
             if (raw.systemContext === true) {
               return false;
             }
-          } catch { /* not JSON */ }
+          } catch {
+            /* not JSON */
+          }
         }
         return true;
       },
@@ -112,7 +115,9 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
   test.beforeEach(async ({ grackle: { client } }) => {
     const sessionsResp = await client.core.listSessions({});
     const all = sessionsResp.sessions as Array<{ id: string; status: string }>;
-    const active = all.filter((s) => s.status === "idle" || s.status === "running" || s.status === "pending");
+    const active = all.filter(
+      (s) => s.status === "idle" || s.status === "running" || s.status === "pending",
+    );
     for (const s of active) {
       await client.core.killAgent({ id: s.id });
     }
@@ -121,7 +126,11 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
       while (Date.now() < deadline) {
         const recheck = await client.core.listSessions({});
         const remaining = recheck.sessions as Array<{ status: string }>;
-        if (!remaining.some((s) => s.status === "idle" || s.status === "running" || s.status === "pending")) {
+        if (
+          !remaining.some(
+            (s) => s.status === "idle" || s.status === "running" || s.status === "pending",
+          )
+        ) {
           break;
         }
         await new Promise((resolve) => setTimeout(resolve, 250));
@@ -220,11 +229,13 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
 
     // 5. Done child should remain under original parent (not reparented)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const doneTask = await client.orchestration.getTask({ id: doneChildId }) as any;
+    const doneTask = (await client.orchestration.getTask({ id: doneChildId })) as any;
     expect(doneTask.parentTaskId).toBe(parentId);
   });
 
-  test("pipe fds transfer to grandparent when parent completes", async ({ grackle: { client } }) => {
+  test("pipe fds transfer to grandparent when parent completes", async ({
+    grackle: { client },
+  }) => {
     test.setTimeout(90_000);
 
     // 1. Create workspace + hierarchy: grandparent → parent (stub-mcp, spawns piped child)
@@ -272,7 +283,7 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
 
     // 5. Verify parent session has a pipe fd (from ipc_spawn)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const parentFds = await client.core.getSessionFds({ id: parentSessionId }) as any;
+    const parentFds = (await client.core.getSessionFds({ id: parentSessionId })) as any;
     const parentPipeFds = (parentFds.fds || []).filter(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (f: any) => f.streamName?.startsWith("pipe:"),
@@ -288,7 +299,7 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
     let gpPipeFdCount = 0;
     while (Date.now() < deadline) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const gpFds = await client.core.getSessionFds({ id: gpSessionId }) as any;
+      const gpFds = (await client.core.getSessionFds({ id: gpSessionId })) as any;
       gpPipeFdCount = (gpFds.fds || []).filter(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (f: any) => f.streamName?.startsWith("pipe:"),
@@ -305,7 +316,9 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
     await waitForSessionStatus(client, gpSessionId, "stopped");
   });
 
-  test("pipe fds transfer to grandparent when parent is force-killed", async ({ grackle: { client } }) => {
+  test("pipe fds transfer to grandparent when parent is force-killed", async ({
+    grackle: { client },
+  }) => {
     test.setTimeout(90_000);
 
     // 1. Create workspace + hierarchy
@@ -353,7 +366,7 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
 
     // 5. Verify parent has pipe fd
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const parentFds = await client.core.getSessionFds({ id: parentSessionId }) as any;
+    const parentFds = (await client.core.getSessionFds({ id: parentSessionId })) as any;
     const parentPipeFds = (parentFds.fds || []).filter(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (f: any) => f.streamName?.startsWith("pipe:"),
@@ -370,7 +383,7 @@ test.describe("Orphan reparenting — task adoption", { tag: ["@task"] }, () => 
     let gpPipeFdCount = 0;
     while (Date.now() < deadline) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const gpFds = await client.core.getSessionFds({ id: gpSessionId }) as any;
+      const gpFds = (await client.core.getSessionFds({ id: gpSessionId })) as any;
       gpPipeFdCount = (gpFds.fds || []).filter(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (f: any) => f.streamName?.startsWith("pipe:"),

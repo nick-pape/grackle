@@ -19,7 +19,11 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
       await client.knowledge.searchKnowledge({ query: "probe", limit: 1 });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
-      if (message.includes("not available") || message.includes("Unavailable") || message.includes("unavailable")) {
+      if (
+        message.includes("not available") ||
+        message.includes("Unavailable") ||
+        message.includes("unavailable")
+      ) {
         test.skip(true, "Knowledge graph not available in this environment");
       }
       throw error;
@@ -32,7 +36,10 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     await page.locator('[data-testid="knowledge-page"]').waitFor({ timeout: 5_000 });
   }
 
-  test("knowledge page renders and shows graph container", async ({ appPage, grackle: { client } }) => {
+  test("knowledge page renders and shows graph container", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     await skipIfKnowledgeUnavailable(client);
     await navigateToKnowledge(appPage);
 
@@ -40,7 +47,9 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     await expect(appPage.locator('[data-testid="knowledge-nav"]')).toBeVisible({ timeout: 5_000 });
   });
 
-  test("derived mirror projects entities, structural edges, and is idempotent", async ({ grackle: { client } }) => {
+  test("derived mirror projects entities, structural edges, and is idempotent", async ({
+    grackle: { client },
+  }) => {
     await skipIfKnowledgeUnavailable(client);
 
     // Create a workspace + parent/child tasks. Their create events drive the
@@ -51,7 +60,9 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     // Parent needs decomposition rights to allow a child task.
     const parent = await createTaskDirect(client, wsId, `${marker}-parent`, { canDecompose: true });
     const parentId = (parent as unknown as { id: string }).id;
-    const child = await createTaskDirect(client, wsId, `${marker}-child`, { parentTaskId: parentId });
+    const child = await createTaskDirect(client, wsId, `${marker}-child`, {
+      parentTaskId: parentId,
+    });
     const childId = (child as unknown as { id: string }).id;
 
     // 1) Nodes project. listRecentKnowledgeNodes needs no embeddings, so this is
@@ -80,10 +91,16 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
           if (!childNode) {
             return [];
           }
-          const expanded = await client.knowledge.expandKnowledgeNode({ id: childNode.id, depth: 1 });
+          const expanded = await client.knowledge.expandKnowledgeNode({
+            id: childNode.id,
+            depth: 1,
+          });
           return expanded.nodes.map((node) => `${node.sourceType}:${node.sourceId}`);
         },
-        { timeout: 20_000, message: "child should reach its parent (PART_OF) and workspace (IN_WORKSPACE)" },
+        {
+          timeout: 20_000,
+          message: "child should reach its parent (PART_OF) and workspace (IN_WORKSPACE)",
+        },
       )
       .toEqual(expect.arrayContaining([`task:${parentId}`, `workspace:${wsId}`]));
 
@@ -106,7 +123,10 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
           );
           return parentNodes.length === 1 && (parentNodes[0].label?.includes("parent-v2") ?? false);
         },
-        { timeout: 20_000, message: "re-projection must update in place, not create a duplicate node" },
+        {
+          timeout: 20_000,
+          message: "re-projection must update in place, not create a duplicate node",
+        },
       )
       .toBe(true);
   });
@@ -145,7 +165,9 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
       .toBe(false);
   });
 
-  test("workspace LINKED_TO its environment projects as a structural edge", async ({ grackle: { client } }) => {
+  test("workspace LINKED_TO its environment projects as a structural edge", async ({
+    grackle: { client },
+  }) => {
     await skipIfKnowledgeUnavailable(client);
 
     // createWorkspace links the workspace to test-local, so a LINKED_TO edge from
@@ -161,7 +183,9 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
       .poll(
         async () => {
           const recent = await client.knowledge.listRecentKnowledgeNodes({ limit: 200 });
-          const wsNode = recent.nodes.find((n) => n.sourceType === "workspace" && n.sourceId === wsId);
+          const wsNode = recent.nodes.find(
+            (n) => n.sourceType === "workspace" && n.sourceId === wsId,
+          );
           if (!wsNode) {
             return [];
           }
@@ -173,7 +197,9 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
       .toEqual(expect.arrayContaining(["environment:test-local"]));
   });
 
-  test("re-projection converges (stable node count across reconciliation ticks)", async ({ grackle: { client } }) => {
+  test("re-projection converges (stable node count across reconciliation ticks)", async ({
+    grackle: { client },
+  }) => {
     await skipIfKnowledgeUnavailable(client);
 
     // MERGE-keyed projection must be idempotent: repeated reconciliation ticks
@@ -201,7 +227,9 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     expect(await countMarkerNodes()).toBe(first);
   });
 
-  test("transcript chunks are chunked, embedded, and semantically searchable", async ({ stubTask }) => {
+  test("transcript chunks are chunked, embedded, and semantically searchable", async ({
+    stubTask,
+  }) => {
     // Sessions/transcripts are reconciliation-driven (not event-driven), so this
     // waits for a reconciliation tick + local embedding — beyond the default 30s.
     test.setTimeout(90_000);
@@ -212,7 +240,9 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     const marker = `KGMARKER-${Date.now()}`;
     await stubTask.createAndNavigate(
       "kg-transcript",
-      stubScenario(emitText(`The deployment pipeline uses blue-green rollouts. Reference token ${marker}.`)),
+      stubScenario(
+        emitText(`The deployment pipeline uses blue-green rollouts. Reference token ${marker}.`),
+      ),
     );
     // Just start the task — the stub emits the line into the session's
     // stream.jsonl on spawn. (No need to drive the chat to completion; the
@@ -237,12 +267,17 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
           });
           return result.results.some((hit) => hit.node?.content?.includes(marker));
         },
-        { timeout: 45_000, message: "transcript chunk should be chunked, embedded, and searchable" },
+        {
+          timeout: 45_000,
+          message: "transcript chunk should be chunked, embedded, and searchable",
+        },
       )
       .toBe(true);
   });
 
-  test("updating an entity refreshes its embedding so search reflects the new text", async ({ grackle: { client } }) => {
+  test("updating an entity refreshes its embedding so search reflects the new text", async ({
+    grackle: { client },
+  }) => {
     // Entity embeddings are backfilled off the write path, then must be
     // invalidated + recomputed when the projected text changes — otherwise
     // semantic search stays stale. Waits for two backfill cycles → > default 30s.
@@ -252,12 +287,18 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     const oldMarker = `quokka${Date.now()}`;
     const newMarker = `pangolin${Date.now()}`;
     const wsId = await createWorkspace(client, `embedrefresh-ws-${Date.now()}`);
-    const task = await createTaskDirect(client, wsId, `Investigate ${oldMarker} migration patterns`);
+    const task = await createTaskDirect(
+      client,
+      wsId,
+      `Investigate ${oldMarker} migration patterns`,
+    );
     const taskId = (task as unknown as { id: string }).id;
 
     const searchHitsTask = async (query: string): Promise<boolean> => {
       const r = await client.knowledge.searchKnowledge({ query, limit: 20 });
-      return r.results.some((hit) => hit.node?.sourceType === "task" && hit.node?.sourceId === taskId);
+      return r.results.some(
+        (hit) => hit.node?.sourceType === "task" && hit.node?.sourceId === taskId,
+      );
     };
 
     // Backfill embeds the new task node → findable by its original term.
@@ -294,7 +335,11 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
 
   /** Start a task with the stub runtime and return its session ID. */
   async function startTaskStub(client: TestClient, taskId: string): Promise<string> {
-    const resp = await client.orchestration.startTask({ taskId, personaId: "stub", environmentId: "test-local" });
+    const resp = await client.orchestration.startTask({
+      taskId,
+      personaId: "stub",
+      environmentId: "test-local",
+    });
     if (!resp.id) {
       throw new Error(`No session ID from startTask for ${taskId}`);
     }
@@ -302,7 +347,11 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
   }
 
   /** Poll a session's events for the systemContext (first SYSTEM event) and return its content. */
-  async function pollSystemContext(client: TestClient, sessionId: string, timeoutMs = 30_000): Promise<string> {
+  async function pollSystemContext(
+    client: TestClient,
+    sessionId: string,
+    timeoutMs = 30_000,
+  ): Promise<string> {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       const resp = await client.core.getSessionEvents({ id: sessionId });
@@ -323,7 +372,9 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     throw new Error(`No systemContext event for session ${sessionId} within ${timeoutMs}ms`);
   }
 
-  test("spawn injects Related prior work from the knowledge graph", async ({ grackle: { client } }) => {
+  test("spawn injects Related prior work from the knowledge graph", async ({
+    grackle: { client },
+  }) => {
     test.setTimeout(120_000);
     await skipIfKnowledgeUnavailable(client);
 
@@ -331,9 +382,14 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     const wsId = await createWorkspace(client, `${marker}-ws`);
 
     // A prior task in the workspace whose label the spawn push should surface.
-    await createTaskDirect(client, wsId, `Implement OAuth2 authentication with refresh tokens ${marker}`, {
-      description: "JWT access tokens with refresh-token rotation",
-    });
+    await createTaskDirect(
+      client,
+      wsId,
+      `Implement OAuth2 authentication with refresh tokens ${marker}`,
+      {
+        description: "JWT access tokens with refresh-token rotation",
+      },
+    );
     // Wait until it is embedded + searchable (entity embeddings backfill asynchronously).
     await expect
       .poll(
@@ -365,7 +421,9 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     expect(systemContext).not.toContain(`ratelimit${marker}`); // self-exclusion
   });
 
-  test("a task with injectKnowledge disabled gets no Related prior work block", async ({ grackle: { client } }) => {
+  test("a task with injectKnowledge disabled gets no Related prior work block", async ({
+    grackle: { client },
+  }) => {
     test.setTimeout(120_000);
     await skipIfKnowledgeUnavailable(client);
 
@@ -375,7 +433,10 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     await expect
       .poll(
         async () => {
-          const r = await client.knowledge.searchKnowledge({ query: `OAuth2 authentication ${marker}`, limit: 10 });
+          const r = await client.knowledge.searchKnowledge({
+            query: `OAuth2 authentication ${marker}`,
+            limit: 10,
+          });
           return r.results.some((hit) => hit.node?.label?.includes(marker));
         },
         { timeout: 90_000, message: "prior task should become searchable" },

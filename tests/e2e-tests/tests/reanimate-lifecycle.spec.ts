@@ -21,10 +21,7 @@ import {
 /**
  * Helper: start a task via RPC and return its session ID.
  */
-async function startTaskAndGetSessionId(
-  client: GrackleClient,
-  taskId: string,
-): Promise<string> {
+async function startTaskAndGetSessionId(client: GrackleClient, taskId: string): Promise<string> {
   const resp = await client.orchestration.startTask({
     taskId,
     personaId: "stub",
@@ -55,19 +52,19 @@ async function waitForSessionStatus(
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  throw new Error(`Session ${sessionId} did not reach status "${targetStatus}" within ${timeoutMs}ms`);
+  throw new Error(
+    `Session ${sessionId} did not reach status "${targetStatus}" within ${timeoutMs}ms`,
+  );
 }
 
 test.describe("Reanimate lifecycle stream (#828)", { tag: ["@task"] }, () => {
-  test("resumeTask recreates lifecycle stream — completeTask cascades to stop session", async ({ grackle: { client } }) => {
+  test("resumeTask recreates lifecycle stream — completeTask cascades to stop session", async ({
+    grackle: { client },
+  }) => {
     test.setTimeout(60_000);
 
     // 1. Create workspace and task with a stub scenario that goes idle
-    const scenario = stubScenario(
-      emitText("Working..."),
-      onInput("next"),
-      idle(),
-    );
+    const scenario = stubScenario(emitText("Working..."), onInput("next"), idle());
     await createWorkspace(client, "Lifecycle Reanimate");
     const workspaceId = await getWorkspaceId(client, "Lifecycle Reanimate");
     const task = await createTaskDirect(client, workspaceId, "Reanimate Test", {

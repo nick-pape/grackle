@@ -1,4 +1,4 @@
-@use '../../styles/mixins' as *;
+@use "../../styles/mixins" as *;
 
 // =============================================================================
 // Sidebar — left panel with permanent workspace/task tree
@@ -42,13 +42,15 @@
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
-  transition: color 150ms, border-color 150ms;
+  transition:
+    color 150ms,
+    border-color 150ms;
 
   &:hover {
     color: var(--text-secondary);
   }
 
-  &[data-active='true'] {
+  &[data-active="true"] {
     color: var(--text-primary);
     border-bottom-color: var(--accent-blue);
   }

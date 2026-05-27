@@ -13,7 +13,13 @@ SQLite persistence layer for Grackle — schema definitions, store modules, migr
 ## Usage
 
 ```typescript
-import { openDatabase, initDatabase, seedDatabase, sqlite, sessionStore } from "@grackle-ai/database";
+import {
+  openDatabase,
+  initDatabase,
+  seedDatabase,
+  sqlite,
+  sessionStore,
+} from "@grackle-ai/database";
 
 // Initialize at startup
 openDatabase();

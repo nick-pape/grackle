@@ -34,15 +34,23 @@ export function SearchCard({ tool, args, result, isError }: ToolCardProps): JSX.
       data-testid="tool-card-search"
     >
       <div className={styles.header}>
-        <span className={styles.icon}><Search size={ICON_MD} /></span>
-        <span className={styles.toolName} style={{ color: "var(--accent-purple, #a78bfa)" }}>{tool}</span>
+        <span className={styles.icon}>
+          <Search size={ICON_MD} />
+        </span>
+        <span className={styles.toolName} style={{ color: "var(--accent-purple, #a78bfa)" }}>
+          {tool}
+        </span>
         {pattern && (
           <span className={styles.fileName} data-testid="tool-card-pattern">
             &quot;{pattern}&quot;
           </span>
         )}
         {path && (
-          <span className={styles.fileName} style={{ flexShrink: 1 }} data-testid="tool-card-search-path">
+          <span
+            className={styles.fileName}
+            style={{ flexShrink: 1 }}
+            data-testid="tool-card-search-path"
+          >
             in {path}
           </span>
         )}
@@ -71,11 +79,18 @@ export function SearchCard({ tool, args, result, isError }: ToolCardProps): JSX.
             <button
               type="button"
               className={styles.bodyToggle}
-              onClick={() => { setExpanded((v) => !v); }}
+              onClick={() => {
+                setExpanded((v) => !v);
+              }}
               aria-expanded={expanded}
               data-testid="tool-card-toggle"
             >
-              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`} aria-hidden="true"><ChevronRight size={ICON_SM} /></span>
+              <span
+                className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}
+                aria-hidden="true"
+              >
+                <ChevronRight size={ICON_SM} />
+              </span>
               {expanded ? "collapse" : `${lines.length - PREVIEW_LINES} more matches`}
             </button>
           )}

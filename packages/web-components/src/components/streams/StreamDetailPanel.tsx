@@ -39,21 +39,19 @@ const KIND_LABEL: Record<StreamKind, string> = {
 
 /** Render a permission badge with appropriate color. */
 function PermissionBadge({ permission }: { permission: string }): JSX.Element {
-  const cls = permission === "rw"
-    ? styles.badgeRw
-    : permission === "r"
-      ? styles.badgeR
-      : styles.badgeW;
+  const cls =
+    permission === "rw" ? styles.badgeRw : permission === "r" ? styles.badgeR : styles.badgeW;
   return <span className={cls}>{permission}</span>;
 }
 
 /** Render a delivery mode badge with appropriate color. */
 function DeliveryModeBadge({ mode }: { mode: string }): JSX.Element {
-  const cls = mode === "async"
-    ? styles.badgeAsync
-    : mode === "detach"
-      ? styles.badgeDetach
-      : styles.badgeSync;
+  const cls =
+    mode === "async"
+      ? styles.badgeAsync
+      : mode === "detach"
+        ? styles.badgeDetach
+        : styles.badgeSync;
   return <span className={cls}>{mode}</span>;
 }
 
@@ -61,7 +59,12 @@ function DeliveryModeBadge({ mode }: { mode: string }): JSX.Element {
  * Pull-out right drawer showing stream metadata: overview, participants, and an
  * Advanced disclosure with low-level wiring. Conversation content is V2.
  */
-export function StreamDetailPanel({ stream, messages, transcriptLoading, onClose }: StreamDetailPanelProps): JSX.Element {
+export function StreamDetailPanel({
+  stream,
+  messages,
+  transcriptLoading,
+  onClose,
+}: StreamDetailPanelProps): JSX.Element {
   const navigate = useAppNavigate();
 
   // Close on Escape key
@@ -72,14 +75,21 @@ export function StreamDetailPanel({ stream, messages, transcriptLoading, onClose
       }
     };
     document.addEventListener("keydown", handleKeyDown);
-    return () => { document.removeEventListener("keydown", handleKeyDown); };
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [onClose]);
 
   return (
     <div className={styles.panel} data-testid="stream-detail-panel">
       <div className={styles.header}>
         <h3 className={styles.title}>{stream.name}</h3>
-        <button type="button" className={styles.closeButton} onClick={onClose} aria-label="Close stream details">
+        <button
+          type="button"
+          className={styles.closeButton}
+          onClick={onClose}
+          aria-label="Close stream details"
+        >
           &times;
         </button>
       </div>
@@ -109,11 +119,17 @@ export function StreamDetailPanel({ stream, messages, transcriptLoading, onClose
             <div className={styles.emptySubscribers}>No active subscribers</div>
           ) : (
             stream.subscribers.map((sub) => (
-              <div key={sub.subscriptionId} className={styles.subscriberCard} data-testid={`subscriber-card-${sub.subscriptionId}`}>
+              <div
+                key={sub.subscriptionId}
+                className={styles.subscriberCard}
+                data-testid={`subscriber-card-${sub.subscriptionId}`}
+              >
                 <button
                   type="button"
                   className={styles.sessionLink}
-                  onClick={() => { navigate(sessionUrl(sub.sessionId)); }}
+                  onClick={() => {
+                    navigate(sessionUrl(sub.sessionId));
+                  }}
                   title={sub.sessionId}
                 >
                   {sub.sessionId.slice(0, 12)}…
@@ -141,7 +157,9 @@ export function StreamDetailPanel({ stream, messages, transcriptLoading, onClose
             <div key={sub.subscriptionId} className={styles.subscriberCard}>
               <div className={styles.subscriberHeader}>
                 <span className={styles.fdNumber}>fd {sub.fd}</span>
-                <span className={styles.metaValueMono} title={sub.subscriptionId}>{sub.subscriptionId.slice(0, 12)}…</span>
+                <span className={styles.metaValueMono} title={sub.subscriptionId}>
+                  {sub.subscriptionId.slice(0, 12)}…
+                </span>
               </div>
               <div className={styles.badges}>
                 <PermissionBadge permission={sub.permission} />

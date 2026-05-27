@@ -5,11 +5,18 @@ import { TaskEditPanel, useToast } from "@grackle-ai/web-components";
 
 /** Page for creating a new task, reading workspaceId and parentTaskId from route or query params. */
 export function NewTaskPage(): JSX.Element {
-  const { workspaceId: routeWorkspaceId, environmentId: routeEnvironmentId } = useParams<{ workspaceId?: string; environmentId?: string }>();
+  const { workspaceId: routeWorkspaceId, environmentId: routeEnvironmentId } = useParams<{
+    workspaceId?: string;
+    environmentId?: string;
+  }>();
   const [searchParams] = useSearchParams();
   const workspaceId = routeWorkspaceId ?? searchParams.get("workspace") ?? "";
   const parentTaskId = searchParams.get("parent") ?? undefined;
-  const { tasks: { tasks, createTask, updateTask }, workspaces: { workspaces }, personas: { personas } } = useGrackle();
+  const {
+    tasks: { tasks, createTask, updateTask },
+    workspaces: { workspaces },
+    personas: { personas },
+  } = useGrackle();
   const { showToast } = useToast();
 
   return (
@@ -21,8 +28,34 @@ export function NewTaskPage(): JSX.Element {
       tasks={tasks}
       workspaces={workspaces}
       personas={personas}
-      onCreateTask={(wsId, title, desc, deps, parentId, personaId, canDecompose, injectKnowledge, onSuccess, onError) => { createTask(wsId, title, desc, deps, parentId, personaId, canDecompose, injectKnowledge, onSuccess, onError).catch(() => {}); }}
-      onUpdateTask={(tid, title, desc, deps, personaId) => { updateTask(tid, title, desc, deps, personaId).catch(() => {}); }}
+      onCreateTask={(
+        wsId,
+        title,
+        desc,
+        deps,
+        parentId,
+        personaId,
+        canDecompose,
+        injectKnowledge,
+        onSuccess,
+        onError,
+      ) => {
+        createTask(
+          wsId,
+          title,
+          desc,
+          deps,
+          parentId,
+          personaId,
+          canDecompose,
+          injectKnowledge,
+          onSuccess,
+          onError,
+        ).catch(() => {});
+      }}
+      onUpdateTask={(tid, title, desc, deps, personaId) => {
+        updateTask(tid, title, desc, deps, personaId).catch(() => {});
+      }}
       onShowToast={showToast}
     />
   );

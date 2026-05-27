@@ -34,22 +34,19 @@ export function useTokens(): UseTokensResult {
     }
   }, [trackTokens]);
 
-  const handleEvent = useCallback((event: GrackleEvent): boolean => {
-    if (event.type === "token.changed") {
-      loadTokens().catch(() => {});
-      return true;
-    }
-    return false;
-  }, [loadTokens]);
+  const handleEvent = useCallback(
+    (event: GrackleEvent): boolean => {
+      if (event.type === "token.changed") {
+        loadTokens().catch(() => {});
+        return true;
+      }
+      return false;
+    },
+    [loadTokens],
+  );
 
   const setToken = useCallback(
-    async (
-      name: string,
-      value: string,
-      tokenType: string,
-      envVar: string,
-      filePath: string,
-    ) => {
+    async (name: string, value: string, tokenType: string, envVar: string, filePath: string) => {
       try {
         await grackleClient.setToken({ name, value, type: tokenType, envVar, filePath });
       } catch {
@@ -59,16 +56,13 @@ export function useTokens(): UseTokensResult {
     [],
   );
 
-  const deleteToken = useCallback(
-    async (name: string) => {
-      try {
-        await grackleClient.deleteToken({ name });
-      } catch {
-        // empty
-      }
-    },
-    [],
-  );
+  const deleteToken = useCallback(async (name: string) => {
+    try {
+      await grackleClient.deleteToken({ name });
+    } catch {
+      // empty
+    }
+  }, []);
 
   const domainHook: DomainHook = {
     onConnect: () => loadTokens(),

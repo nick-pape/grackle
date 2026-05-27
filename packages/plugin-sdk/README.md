@@ -13,21 +13,24 @@ const myPlugin: GracklePlugin = {
   name: "my-plugin",
   dependencies: ["core"], // loaded after "core"
 
-  grpcHandlers: (ctx) => [
-    { service: MyProtoService, handlers: { listItems, createItem } },
-  ],
+  grpcHandlers: (ctx) => [{ service: MyProtoService, handlers: { listItems, createItem } }],
 
   reconciliationPhases: (ctx) => [
-    { name: "my-phase", execute: async () => { /* runs every tick */ } },
+    {
+      name: "my-phase",
+      execute: async () => {
+        /* runs every tick */
+      },
+    },
   ],
 
-  mcpTools: (ctx) => [
-    { name: "my_tool", group: "my", description: "...", /* ... */ },
-  ],
+  mcpTools: (ctx) => [{ name: "my_tool", group: "my", description: "..." /* ... */ }],
 
   eventSubscribers: (ctx) => {
     const unsub = ctx.subscribe((event) => {
-      if (event.type === "task.created") { /* react */ }
+      if (event.type === "task.created") {
+        /* react */
+      }
     });
     return [{ dispose: unsub }];
   },
@@ -50,8 +53,8 @@ Plugins receive a thin runtime context. Database stores are accessed via direct 
 interface PluginContext {
   subscribe: (cb: (event: GrackleEvent) => void) => () => void;
   emit: (type: GrackleEventType, payload: Record<string, unknown>) => GrackleEvent;
-  logger: Logger;        // pino structured logger
-  config: ServerConfig;  // ports, host, grackleHome, apiKey, etc.
+  logger: Logger; // pino structured logger
+  config: ServerConfig; // ports, host, grackleHome, apiKey, etc.
 }
 ```
 
@@ -82,11 +85,11 @@ await result.shutdown(); // disposes subscribers, then calls plugin.shutdown() i
 
 ## Extension Points
 
-| Method | What it contributes | Consumed by |
-|---|---|---|
-| `grpcHandlers` | `ServiceRegistration[]` — proto service + handler pairs | `ServiceCollector` |
-| `reconciliationPhases` | `ReconciliationPhase[]` — named async phases | `ReconciliationManager` |
-| `mcpTools` | `PluginToolDefinition[]` — MCP tool definitions | `ToolRegistry` |
-| `eventSubscribers` | `Disposable[]` — event bus subscriptions | Server shutdown |
-| `initialize` | Async startup hook (e.g., connect to Neo4j) | Plugin loader |
-| `shutdown` | Async teardown hook | Plugin loader (reverse order) |
+| Method                 | What it contributes                                     | Consumed by                   |
+| ---------------------- | ------------------------------------------------------- | ----------------------------- |
+| `grpcHandlers`         | `ServiceRegistration[]` — proto service + handler pairs | `ServiceCollector`            |
+| `reconciliationPhases` | `ReconciliationPhase[]` — named async phases            | `ReconciliationManager`       |
+| `mcpTools`             | `PluginToolDefinition[]` — MCP tool definitions         | `ToolRegistry`                |
+| `eventSubscribers`     | `Disposable[]` — event bus subscriptions                | Server shutdown               |
+| `initialize`           | Async startup hook (e.g., connect to Neo4j)             | Plugin loader                 |
+| `shutdown`             | Async teardown hook                                     | Plugin loader (reverse order) |

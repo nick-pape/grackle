@@ -1,4 +1,11 @@
-import { useState, useLayoutEffect, useRef, type FormEvent, type KeyboardEvent, type JSX } from "react";
+import {
+  useState,
+  useLayoutEffect,
+  useRef,
+  type FormEvent,
+  type KeyboardEvent,
+  type JSX,
+} from "react";
 import type { ToastVariant } from "../../context/ToastContext.js";
 import type { Environment, PersonaData } from "../../hooks/types.js";
 import styles from "./ChatInput.module.scss";
@@ -12,7 +19,10 @@ const MAX_COMPOSER_HEIGHT_PX: number = 200;
 // --- Helpers ---
 
 /** Returns true when the environment with the given ID is disconnected or in error. */
-function isEnvDisconnected(environmentId: string | undefined, environments: Environment[]): boolean {
+function isEnvDisconnected(
+  environmentId: string | undefined,
+  environments: Environment[],
+): boolean {
   if (!environmentId) {
     return false;
   }
@@ -163,7 +173,6 @@ export function ChatInput({
   onProvisionEnvironment,
   onShowToast,
 }: ChatInputProps): JSX.Element {
-
   const [text, setText] = useState("");
   const [spawnPersonaId, setSpawnPersonaId] = useState("");
 
@@ -208,19 +217,37 @@ export function ChatInput({
   if (mode === "spawn") {
     return (
       <form onSubmit={handleSubmit} className={styles.bar}>
-        <span className={styles.badge}>
-          new chat
-        </span>
-        <ComposerTextArea value={text} onChange={setText} onSubmit={submit} placeholder="Enter prompt..." autoFocus ariaLabel="Enter prompt" />
+        <span className={styles.badge}>new chat</span>
+        <ComposerTextArea
+          value={text}
+          onChange={setText}
+          onSubmit={submit}
+          placeholder="Enter prompt..."
+          autoFocus
+          ariaLabel="Enter prompt"
+        />
         {showPersonaSelect && (
-          <select value={spawnPersonaId} onChange={(e) => setSpawnPersonaId(e.target.value)} className={styles.select} aria-label="Select persona">
+          <select
+            value={spawnPersonaId}
+            onChange={(e) => setSpawnPersonaId(e.target.value)}
+            className={styles.select}
+            aria-label="Select persona"
+          >
             <option value="">(Default)</option>
             {personas.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
             ))}
           </select>
         )}
-        <button type="submit" disabled={!text.trim() || !environmentId} className={styles.btnPrimary}>Go</button>
+        <button
+          type="submit"
+          disabled={!text.trim() || !environmentId}
+          className={styles.btnPrimary}
+        >
+          Go
+        </button>
       </form>
     );
   }
@@ -229,8 +256,17 @@ export function ChatInput({
   if (mode === "start") {
     return (
       <form onSubmit={handleSubmit} className={styles.bar}>
-        <ComposerTextArea value={text} onChange={setText} onSubmit={submit} placeholder="Type a message..." autoFocus ariaLabel="Type a message" />
-        <button type="submit" disabled={!text.trim()} className={styles.btnPrimary}>Send</button>
+        <ComposerTextArea
+          value={text}
+          onChange={setText}
+          onSubmit={submit}
+          placeholder="Type a message..."
+          autoFocus
+          ariaLabel="Type a message"
+        />
+        <button type="submit" disabled={!text.trim()} className={styles.btnPrimary}>
+          Send
+        </button>
       </form>
     );
   }
@@ -241,9 +277,23 @@ export function ChatInput({
       {envDisconnected && environmentId && (
         <DisconnectedBanner environmentId={environmentId} onReconnect={onProvisionEnvironment} />
       )}
-      <ComposerTextArea value={text} onChange={setText} onSubmit={submit} placeholder="Type a message..." autoFocus={!envDisconnected} disabled={envDisconnected} ariaLabel="Type a message" />
+      <ComposerTextArea
+        value={text}
+        onChange={setText}
+        onSubmit={submit}
+        placeholder="Type a message..."
+        autoFocus={!envDisconnected}
+        disabled={envDisconnected}
+        ariaLabel="Type a message"
+      />
       <span title={envDisconnected ? "Environment is unavailable — reconnect first" : undefined}>
-        <button type="submit" disabled={!text.trim() || envDisconnected} className={styles.btnPrimary}>Send</button>
+        <button
+          type="submit"
+          disabled={!text.trim() || envDisconnected}
+          className={styles.btnPrimary}
+        >
+          Send
+        </button>
       </span>
     </form>
   );

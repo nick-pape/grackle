@@ -1,5 +1,12 @@
 import type { Environment, TaskData, Workspace } from "../hooks/types.js";
-import { ENVIRONMENTS_URL, environmentUrl, HOME_URL, SETTINGS_URL, taskUrl, workspaceUrl } from "./navigation.js";
+import {
+  ENVIRONMENTS_URL,
+  environmentUrl,
+  HOME_URL,
+  SETTINGS_URL,
+  taskUrl,
+  workspaceUrl,
+} from "./navigation.js";
 
 /** A single segment in the breadcrumb trail. */
 export interface BreadcrumbSegment {
@@ -44,7 +51,11 @@ export function buildHomeBreadcrumbs(): BreadcrumbSegment[] {
 /** Build breadcrumbs for the settings page, optionally showing the active tab. */
 export function buildSettingsBreadcrumbs(tabLabel?: string): BreadcrumbSegment[] {
   if (tabLabel) {
-    return [HOME_SEGMENT, { label: "Settings", url: SETTINGS_URL }, { label: tabLabel, url: undefined }];
+    return [
+      HOME_SEGMENT,
+      { label: "Settings", url: SETTINGS_URL },
+      { label: tabLabel, url: undefined },
+    ];
   }
   return [HOME_SEGMENT, { label: "Settings", url: undefined }];
 }
@@ -183,4 +194,3 @@ export function buildNewTaskBreadcrumbs(
   segments.push({ label: "New Task", url: undefined });
   return segments;
 }
-

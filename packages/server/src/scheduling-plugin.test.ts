@@ -6,7 +6,11 @@ import type { Logger } from "pino";
 // (The real createSchedulingPlugin() is imported below — no mock of the plugin itself)
 
 vi.mock("@grackle-ai/database", () => ({
-  scheduleStore: { getDueSchedules: vi.fn(), advanceSchedule: vi.fn(), setScheduleEnabled: vi.fn() },
+  scheduleStore: {
+    getDueSchedules: vi.fn(),
+    advanceSchedule: vi.fn(),
+    setScheduleEnabled: vi.fn(),
+  },
   taskStore: { createTask: vi.fn(), setTaskScheduleId: vi.fn() },
   personaStore: { getPersona: vi.fn() },
   dispatchQueueStore: { enqueue: vi.fn() },

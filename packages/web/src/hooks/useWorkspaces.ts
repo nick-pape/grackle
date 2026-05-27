@@ -42,20 +42,23 @@ export function useWorkspaces(): UseWorkspacesResult {
     }
   }, [trackWorkspaces]);
 
-  const handleEvent = useCallback((event: GrackleEvent): boolean => {
-    switch (event.type) {
-      case "workspace.created":
-        setWorkspaceCreating(false);
-        loadWorkspaces().catch(() => {});
-        return true;
-      case "workspace.archived":
-      case "workspace.updated":
-        loadWorkspaces().catch(() => {});
-        return true;
-      default:
-        return false;
-    }
-  }, [loadWorkspaces]);
+  const handleEvent = useCallback(
+    (event: GrackleEvent): boolean => {
+      switch (event.type) {
+        case "workspace.created":
+          setWorkspaceCreating(false);
+          loadWorkspaces().catch(() => {});
+          return true;
+        case "workspace.archived":
+        case "workspace.updated":
+          loadWorkspaces().catch(() => {});
+          return true;
+        default:
+          return false;
+      }
+    },
+    [loadWorkspaces],
+  );
 
   const onDisconnect = useCallback(() => {
     setWorkspaceCreating(false);
@@ -89,7 +92,9 @@ export function useWorkspaces(): UseWorkspacesResult {
         // to renders immediately, rather than waiting for the workspace.created
         // WebSocket event to refresh the list. The later loadWorkspaces() replaces
         // the whole array, so the dedupe guard prevents a transient duplicate.
-        setWorkspaces((prev) => (prev.some((w) => w.id === workspace.id) ? prev : [...prev, workspace]));
+        setWorkspaces((prev) =>
+          prev.some((w) => w.id === workspace.id) ? prev : [...prev, workspace],
+        );
         setWorkspaceCreating(false);
         onSuccess?.(workspace);
       } catch (err) {
@@ -101,16 +106,13 @@ export function useWorkspaces(): UseWorkspacesResult {
     [],
   );
 
-  const archiveWorkspace = useCallback(
-    async (workspaceId: string) => {
-      try {
-        await grackleClient.archiveWorkspace({ id: workspaceId });
-      } catch {
-        // empty
-      }
-    },
-    [],
-  );
+  const archiveWorkspace = useCallback(async (workspaceId: string) => {
+    try {
+      await grackleClient.archiveWorkspace({ id: workspaceId });
+    } catch {
+      // empty
+    }
+  }, []);
 
   const updateWorkspace = useCallback(
     async (
@@ -133,7 +135,9 @@ export function useWorkspaces(): UseWorkspacesResult {
     [],
   );
 
-  const clearLinkOperationError = useCallback(() => { setLinkOperationError(""); }, []);
+  const clearLinkOperationError = useCallback(() => {
+    setLinkOperationError("");
+  }, []);
 
   const linkEnvironment = useCallback(
     async (workspaceId: string, environmentId: string) => {

@@ -26,12 +26,12 @@ The user's prompt drives your behavior. Don't assume a rigid workflow — be fle
 
 ## Available Subagents
 
-| Agent | Purpose | When to use |
-|-------|---------|-------------|
-| `task-finder` | Recommends the next ticket from a backlog, or resolves/creates a specific issue + Grackle task pair | **Always call first** — whether you need a recommendation ("next from epic #282") or need to resolve a known issue (#450) into a Grackle task |
-| `ticket-shepherd` | Starts and monitors a Grackle task until PR is ready | After task-finder returns a resolved Grackle task ID |
-| `pr-merger` | Verifies CI + reviews and merges a PR | After ticket-shepherd reports a PR is ready |
-| `bug-researcher` | Investigates failures and files bug issues | When something fails unexpectedly and you suspect a codebase bug |
+| Agent             | Purpose                                                                                             | When to use                                                                                                                                   |
+| ----------------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `task-finder`     | Recommends the next ticket from a backlog, or resolves/creates a specific issue + Grackle task pair | **Always call first** — whether you need a recommendation ("next from epic #282") or need to resolve a known issue (#450) into a Grackle task |
+| `ticket-shepherd` | Starts and monitors a Grackle task until PR is ready                                                | After task-finder returns a resolved Grackle task ID                                                                                          |
+| `pr-merger`       | Verifies CI + reviews and merges a PR                                                               | After ticket-shepherd reports a PR is ready                                                                                                   |
+| `bug-researcher`  | Investigates failures and files bug issues                                                          | When something fails unexpectedly and you suspect a codebase bug                                                                              |
 
 ## Typical Flow
 
@@ -40,6 +40,7 @@ For each piece of work: **task-finder** (resolve) → **ticket-shepherd** (execu
 ## Examples
 
 ### "Burn down the #282 UX epic, go one at a time"
+
 1. Create a task: "Get next ticket from epic #282"
 2. Spawn `task-finder` in recommend mode with the epic context
 3. Create a task for the returned ticket
@@ -48,23 +49,27 @@ For each piece of work: **task-finder** (resolve) → **ticket-shepherd** (execu
 6. Loop: task-finder → ticket-shepherd → pr-merger
 
 ### "Work on issue #450"
+
 1. Create a task for #450
 2. Spawn `task-finder` in resolve mode for #450 (ensures GH issue + Grackle task exist)
 3. Spawn `ticket-shepherd` with the Grackle task ID
 4. When PR is ready, spawn `pr-merger`
 
 ### "Fix the login bug"
+
 1. Create a task for the described work
 2. Spawn `task-finder` in create mode with the description (it searches for existing issues, creates one if needed)
 3. Spawn `ticket-shepherd` with the Grackle task ID
 4. When PR is ready, spawn `pr-merger`
 
 ### "Investigate why task X failed"
+
 1. Spawn `bug-researcher` with the failure details
 
 ## Sequencing and Parallelism
 
 Follow what the user asks:
+
 - **"One at a time"** — sequential: finish one ticket before starting the next
 - **"Work through these"** with no constraint — you can run multiple ticket-shepherds in parallel if the tickets are independent
 - **"Go autonomously"** — don't pause for confirmation, just work through the list

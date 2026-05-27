@@ -21,22 +21,24 @@ const meta: Meta<typeof CoordinationGraph> = {
     (Story) => (
       <ReactFlowProvider>
         <div
-          style={{
-            width: "800px",
-            height: "600px",
-            "--text-primary": "#e6e6e6",
-            "--text-secondary": "#b0b8c4",
-            "--text-tertiary": "#6b7a8d",
-            "--text-disabled": "#444",
-            "--accent-green": "#22c55e",
-            "--accent-yellow": "#eab308",
-            "--accent-red": "#ef4444",
-            "--accent-blue": "#3b82f6",
-            "--bg-elevated": "#252535",
-            "--bg-inset": "#1e1e2e",
-            "--bg-overlay": "rgba(0,0,0,0.4)",
-            "--border-subtle": "#33384a",
-          } as CSSProperties}
+          style={
+            {
+              width: "800px",
+              height: "600px",
+              "--text-primary": "#e6e6e6",
+              "--text-secondary": "#b0b8c4",
+              "--text-tertiary": "#6b7a8d",
+              "--text-disabled": "#444",
+              "--accent-green": "#22c55e",
+              "--accent-yellow": "#eab308",
+              "--accent-red": "#ef4444",
+              "--accent-blue": "#3b82f6",
+              "--bg-elevated": "#252535",
+              "--bg-inset": "#1e1e2e",
+              "--bg-overlay": "rgba(0,0,0,0.4)",
+              "--border-subtle": "#33384a",
+            } as CSSProperties
+          }
         >
           <Story />
         </div>

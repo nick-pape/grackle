@@ -16,13 +16,26 @@ vi.mock("@grackle-ai/core", () => ({
 }));
 
 vi.mock("@grackle-ai/plugin-core", () => ({
-  createDispatchPhase: vi.fn((deps: unknown) => ({ name: "dispatch", execute: async () => {}, _deps: deps })),
+  createDispatchPhase: vi.fn((deps: unknown) => ({
+    name: "dispatch",
+    execute: async () => {},
+    _deps: deps,
+  })),
   lifecycleCleanupPhase: { name: "lifecycle-cleanup", execute: async () => {} },
-  createEnvironmentReconciliationPhase: vi.fn(() => ({ name: "environment-status", execute: async () => {} })),
+  createEnvironmentReconciliationPhase: vi.fn(() => ({
+    name: "environment-status",
+    execute: async () => {},
+  })),
 }));
 
 vi.mock("@grackle-ai/common", () => ({
-  TASK_STATUS: { NOT_STARTED: "not_started", WORKING: "working", PAUSED: "paused", COMPLETE: "complete", FAILED: "failed" },
+  TASK_STATUS: {
+    NOT_STARTED: "not_started",
+    WORKING: "working",
+    PAUSED: "paused",
+    COMPLETE: "complete",
+    FAILED: "failed",
+  },
   ROOT_TASK_ID: "system",
 }));
 

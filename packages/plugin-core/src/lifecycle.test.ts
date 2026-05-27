@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 // ── Mocks ───────────────────────────────────────────────────
 vi.mock("@grackle-ai/core", async (importOriginal) => {
-  const actual = await importOriginal() as Record<string, unknown>;
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -157,7 +157,17 @@ describe("lifecycle manager", () => {
 
   it("auto-stops child when all subscriptions removed (parent + child)", () => {
     sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
-    sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent");
+    sessionStore.createSession(
+      "child",
+      "test-env",
+      "claude-code",
+      "c",
+      "sonnet",
+      "/tmp/c",
+      "",
+      "",
+      "parent",
+    );
     sessionStore.updateSessionStatus("child", "idle");
 
     // Create lifecycle stream for child (parent holds fd)
@@ -184,7 +194,14 @@ describe("lifecycle manager", () => {
     disposable.dispose();
 
     // Now orphaning a session should NOT auto-stop it (no callback registered)
-    sessionStore.createSession("sess-disposed", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+    sessionStore.createSession(
+      "sess-disposed",
+      "test-env",
+      "claude-code",
+      "test",
+      "sonnet",
+      "/tmp/log",
+    );
     sessionStore.updateSessionStatus("sess-disposed", "running");
     const stream = streamRegistry.createStream("lifecycle:sess-disposed");
     const sub = streamRegistry.subscribe(stream.id, "sess-disposed", "rw", "detach", false);
@@ -222,9 +239,18 @@ describe("SIGTERM end reason derivation", () => {
   });
 
   it("sets endReason to terminated when IDLE session has sigtermSentAt", () => {
-    sessionStore.createSession("sess-sigterm", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+    sessionStore.createSession(
+      "sess-sigterm",
+      "test-env",
+      "claude-code",
+      "test",
+      "sonnet",
+      "/tmp/log",
+    );
     sessionStore.updateSessionStatus("sess-sigterm", "idle");
-    sqlite.exec("UPDATE sessions SET sigterm_sent_at = '2026-01-01T00:00:00Z' WHERE id = 'sess-sigterm'");
+    sqlite.exec(
+      "UPDATE sessions SET sigterm_sent_at = '2026-01-01T00:00:00Z' WHERE id = 'sess-sigterm'",
+    );
 
     const stream = streamRegistry.createStream("lifecycle:sess-sigterm");
     const sub = streamRegistry.subscribe(stream.id, "sess-sigterm", "rw", "detach", false);
@@ -237,7 +263,14 @@ describe("SIGTERM end reason derivation", () => {
   });
 
   it("sets endReason to completed when IDLE session has no sigtermSentAt", () => {
-    sessionStore.createSession("sess-normal", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+    sessionStore.createSession(
+      "sess-normal",
+      "test-env",
+      "claude-code",
+      "test",
+      "sonnet",
+      "/tmp/log",
+    );
     sessionStore.updateSessionStatus("sess-normal", "idle");
 
     const stream = streamRegistry.createStream("lifecycle:sess-normal");
@@ -251,9 +284,18 @@ describe("SIGTERM end reason derivation", () => {
   });
 
   it("sets endReason to killed when RUNNING session has sigtermSentAt", () => {
-    sessionStore.createSession("sess-running", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+    sessionStore.createSession(
+      "sess-running",
+      "test-env",
+      "claude-code",
+      "test",
+      "sonnet",
+      "/tmp/log",
+    );
     sessionStore.updateSessionStatus("sess-running", "running");
-    sqlite.exec("UPDATE sessions SET sigterm_sent_at = '2026-01-01T00:00:00Z' WHERE id = 'sess-running'");
+    sqlite.exec(
+      "UPDATE sessions SET sigterm_sent_at = '2026-01-01T00:00:00Z' WHERE id = 'sess-running'",
+    );
 
     const stream = streamRegistry.createStream("lifecycle:sess-running");
     const sub = streamRegistry.subscribe(stream.id, "sess-running", "rw", "detach", false);
@@ -352,7 +394,9 @@ describe("ensureLifecycleStream", () => {
     expect(recreated!.subscriptions.size).toBe(2);
 
     // Verify orphan cascade still works: remove both subs → auto-stop
-    const serverSub = Array.from(recreated!.subscriptions.values()).find((s) => s.sessionId === "__server__")!;
+    const serverSub = Array.from(recreated!.subscriptions.values()).find(
+      (s) => s.sessionId === "__server__",
+    )!;
     streamRegistry.unsubscribe(serverSub.id);
 
     // Session still running (one sub remains)
@@ -386,7 +430,11 @@ describe("auto-reanimate on subscribe", () => {
     disposable = createLifecycleSubscriber(ctx);
 
     mockKill = vi.fn().mockResolvedValue({});
-    mockResume = vi.fn().mockReturnValue((async function* () { /* empty stream */ })());
+    mockResume = vi.fn().mockReturnValue(
+      (async function* () {
+        /* empty stream */
+      })(),
+    );
     vi.spyOn(adapterManager, "getConnection").mockReturnValue({
       client: { kill: mockKill, resume: mockResume },
     } as unknown as ReturnType<typeof adapterManager.getConnection>);
@@ -442,10 +490,24 @@ describe("auto-reanimate on subscribe", () => {
   });
 
   it("does NOT reanimate when environment has another active session", () => {
-    sessionStore.createSession("active-sess", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+    sessionStore.createSession(
+      "active-sess",
+      "test-env",
+      "claude-code",
+      "test",
+      "sonnet",
+      "/tmp/log",
+    );
     sessionStore.updateSessionStatus("active-sess", "running");
 
-    sessionStore.createSession("stopped-sess", "test-env", "claude-code", "test", "sonnet", "/tmp/log2");
+    sessionStore.createSession(
+      "stopped-sess",
+      "test-env",
+      "claude-code",
+      "test",
+      "sonnet",
+      "/tmp/log2",
+    );
     sessionStore.updateSession("stopped-sess", "stopped", undefined, undefined, "completed");
     sqlite.exec("UPDATE sessions SET runtime_session_id = 'rt-2' WHERE id = 'stopped-sess'");
 
@@ -463,7 +525,9 @@ describe("auto-reanimate on subscribe", () => {
     sqlite.exec("UPDATE sessions SET runtime_session_id = 'rt-1' WHERE id = 'sess-1'");
 
     // Override mock to return undefined (disconnected)
-    vi.spyOn(adapterManager, "getConnection").mockReturnValue(undefined as unknown as ReturnType<typeof adapterManager.getConnection>);
+    vi.spyOn(adapterManager, "getConnection").mockReturnValue(
+      undefined as unknown as ReturnType<typeof adapterManager.getConnection>,
+    );
 
     const stream = streamRegistry.createStream("lifecycle:sess-1");
     streamRegistry.subscribe(stream.id, "sess-1", "rw", "detach", false);
@@ -479,9 +543,18 @@ describe("auto-reanimate on subscribe", () => {
       disposable.dispose();
       disposable = createLifecycleSubscriber(createMockContext());
 
-      sessionStore.createSession(`sess-${reason}`, "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+      sessionStore.createSession(
+        `sess-${reason}`,
+        "test-env",
+        "claude-code",
+        "test",
+        "sonnet",
+        "/tmp/log",
+      );
       sessionStore.updateSession(`sess-${reason}`, "stopped", undefined, undefined, reason);
-      sqlite.exec(`UPDATE sessions SET runtime_session_id = 'rt-${reason}' WHERE id = 'sess-${reason}'`);
+      sqlite.exec(
+        `UPDATE sessions SET runtime_session_id = 'rt-${reason}' WHERE id = 'sess-${reason}'`,
+      );
 
       const stream = streamRegistry.createStream(`lifecycle:sess-${reason}`);
       streamRegistry.subscribe(stream.id, `sess-${reason}`, "rw", "detach", false);

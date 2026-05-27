@@ -90,7 +90,12 @@ function createMockDeps(): RootTaskBootDeps {
     getTask: vi.fn().mockReturnValue(makeTask()),
     listSessionsForTask: vi.fn().mockReturnValue([]),
     getLatestSessionForTask: vi.fn().mockReturnValue(undefined),
-    computeTaskStatus: vi.fn().mockReturnValue({ status: TASK_STATUS.NOT_STARTED, latestSessionId: "" } satisfies TaskStatusResult),
+    computeTaskStatus: vi
+      .fn()
+      .mockReturnValue({
+        status: TASK_STATUS.NOT_STARTED,
+        latestSessionId: "",
+      } satisfies TaskStatusResult),
     findFirstConnectedEnvironment: vi.fn().mockReturnValue(makeEnv()),
     startTaskSession: vi.fn().mockResolvedValue(undefined),
     reanimateAgent: vi.fn().mockReturnValue(makeSession({ status: "running" })),
@@ -125,7 +130,10 @@ describe("createRootTaskBoot", () => {
 
     it("skips when root task is already WORKING", async () => {
       const deps = createMockDeps();
-      vi.mocked(deps.computeTaskStatus).mockReturnValue({ status: TASK_STATUS.WORKING, latestSessionId: "sess-1" });
+      vi.mocked(deps.computeTaskStatus).mockReturnValue({
+        status: TASK_STATUS.WORKING,
+        latestSessionId: "sess-1",
+      });
 
       const boot = createRootTaskBoot(deps);
       await boot();
@@ -161,7 +169,10 @@ describe("createRootTaskBoot", () => {
       // startTaskSession blocks until we resolve it
       let resolveStart!: () => void;
       vi.mocked(deps.startTaskSession).mockImplementation(
-        () => new Promise((resolve) => { resolveStart = () => resolve(undefined); }),
+        () =>
+          new Promise((resolve) => {
+            resolveStart = () => resolve(undefined);
+          }),
       );
 
       const boot = createRootTaskBoot(deps);
@@ -194,7 +205,9 @@ describe("createRootTaskBoot", () => {
       const deps = createMockDeps();
       const session = makeSession({ runtimeSessionId: "rt-abc-123", status: "stopped" });
       vi.mocked(deps.getLatestSessionForTask).mockReturnValue(session);
-      vi.mocked(deps.reanimateAgent).mockImplementation(() => { throw new Error("SDK session expired"); });
+      vi.mocked(deps.reanimateAgent).mockImplementation(() => {
+        throw new Error("SDK session expired");
+      });
 
       const boot = createRootTaskBoot(deps);
       await boot();
@@ -355,7 +368,10 @@ describe("createRootTaskBoot", () => {
       expect(deps.startTaskSession).toHaveBeenCalledTimes(10);
 
       // Boot is now blocked. But session recovery reanimates the root task externally.
-      vi.mocked(deps.computeTaskStatus).mockReturnValue({ status: TASK_STATUS.WORKING, latestSessionId: "sess-ext" });
+      vi.mocked(deps.computeTaskStatus).mockReturnValue({
+        status: TASK_STATUS.WORKING,
+        latestSessionId: "sess-ext",
+      });
 
       // First WORKING observation: begins tracking stability (lastSessionStartedAt set)
       vi.advanceTimersByTime(1_000);
@@ -366,7 +382,10 @@ describe("createRootTaskBoot", () => {
       await boot(); // resets backoff
 
       // Task crashes again — should be able to retry (backoff was reset)
-      vi.mocked(deps.computeTaskStatus).mockReturnValue({ status: TASK_STATUS.PAUSED, latestSessionId: "sess-ext" });
+      vi.mocked(deps.computeTaskStatus).mockReturnValue({
+        status: TASK_STATUS.PAUSED,
+        latestSessionId: "sess-ext",
+      });
       vi.mocked(deps.startTaskSession).mockResolvedValue(undefined);
       await boot();
       expect(deps.startTaskSession).toHaveBeenCalledTimes(11); // allowed after reset
@@ -389,12 +408,18 @@ describe("createRootTaskBoot", () => {
       expect(deps.startTaskSession).toHaveBeenCalledTimes(2);
 
       // Task is now WORKING and stays working past the stability threshold
-      vi.mocked(deps.computeTaskStatus).mockReturnValue({ status: TASK_STATUS.WORKING, latestSessionId: "sess-2" });
+      vi.mocked(deps.computeTaskStatus).mockReturnValue({
+        status: TASK_STATUS.WORKING,
+        latestSessionId: "sess-2",
+      });
       vi.advanceTimersByTime(31_000);
       await boot(); // sees WORKING, resets backoff
 
       // Task crashes again — goes back to PAUSED
-      vi.mocked(deps.computeTaskStatus).mockReturnValue({ status: TASK_STATUS.PAUSED, latestSessionId: "sess-2" });
+      vi.mocked(deps.computeTaskStatus).mockReturnValue({
+        status: TASK_STATUS.PAUSED,
+        latestSessionId: "sess-2",
+      });
 
       // Should be able to start immediately (backoff was reset by stability check)
       await boot();
@@ -412,7 +437,10 @@ describe("createRootTaskBoot", () => {
 
       // 5s later, session crashes — task goes back to not working
       vi.advanceTimersByTime(5_000);
-      vi.mocked(deps.computeTaskStatus).mockReturnValue({ status: TASK_STATUS.PAUSED, latestSessionId: "sess-1" });
+      vi.mocked(deps.computeTaskStatus).mockReturnValue({
+        status: TASK_STATUS.PAUSED,
+        latestSessionId: "sess-1",
+      });
 
       // Second boot — crash-loop detection records a failure, then backoff blocks retry
       await boot();
@@ -427,7 +455,10 @@ describe("createRootTaskBoot", () => {
       // (lastSessionStartedAt is now set from the second start, no crash-loop yet
       //  but the previous failure backoff is still in effect until stability resets it)
       vi.advanceTimersByTime(1_000);
-      vi.mocked(deps.computeTaskStatus).mockReturnValue({ status: TASK_STATUS.PAUSED, latestSessionId: "sess-2" });
+      vi.mocked(deps.computeTaskStatus).mockReturnValue({
+        status: TASK_STATUS.PAUSED,
+        latestSessionId: "sess-2",
+      });
       await boot();
       // crash-loop detection fires again (1s < 30s) → failure count bumps to 2
       // backoff = 1s * 2^1 = 2s, elapsed = 0 → throttled
@@ -460,12 +491,18 @@ describe("createRootTaskBoot", () => {
       expect(deps.reanimateAgent).toHaveBeenCalledTimes(1);
 
       // Session stays working past stability threshold, then crashes
-      vi.mocked(deps.computeTaskStatus).mockReturnValue({ status: TASK_STATUS.WORKING, latestSessionId: "sess-1" });
+      vi.mocked(deps.computeTaskStatus).mockReturnValue({
+        status: TASK_STATUS.WORKING,
+        latestSessionId: "sess-1",
+      });
       vi.advanceTimersByTime(31_000); // past stability threshold
       await boot(); // sees WORKING, resets backoff
 
       // Task crashes
-      vi.mocked(deps.computeTaskStatus).mockReturnValue({ status: TASK_STATUS.PAUSED, latestSessionId: "sess-1" });
+      vi.mocked(deps.computeTaskStatus).mockReturnValue({
+        status: TASK_STATUS.PAUSED,
+        latestSessionId: "sess-1",
+      });
       await boot();
       // Should reanimate immediately — backoff was reset by stability check
       expect(deps.reanimateAgent).toHaveBeenCalledTimes(2);
@@ -473,7 +510,9 @@ describe("createRootTaskBoot", () => {
 
     it("catches unexpected exceptions without crashing", async () => {
       const deps = createMockDeps();
-      vi.mocked(deps.getTask).mockImplementation(() => { throw new Error("DB corruption"); });
+      vi.mocked(deps.getTask).mockImplementation(() => {
+        throw new Error("DB corruption");
+      });
 
       const boot = createRootTaskBoot(deps);
 

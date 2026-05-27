@@ -81,39 +81,9 @@ describe("persona-store", () => {
   });
 
   it("lists all personas ordered by name", () => {
-    personaStore.createPersona(
-      "b",
-      "Beta",
-      "",
-      "prompt",
-      "{}",
-      "",
-      "",
-      0,
-      "[]",
-    );
-    personaStore.createPersona(
-      "a",
-      "Alpha",
-      "",
-      "prompt",
-      "{}",
-      "",
-      "",
-      0,
-      "[]",
-    );
-    personaStore.createPersona(
-      "c",
-      "Charlie",
-      "",
-      "prompt",
-      "{}",
-      "",
-      "",
-      0,
-      "[]",
-    );
+    personaStore.createPersona("b", "Beta", "", "prompt", "{}", "", "", 0, "[]");
+    personaStore.createPersona("a", "Alpha", "", "prompt", "{}", "", "", 0, "[]");
+    personaStore.createPersona("c", "Charlie", "", "prompt", "{}", "", "", 0, "[]");
     const list = personaStore.listPersonas();
     expect(list).toHaveLength(3);
     expect(list[0].name).toBe("Alpha");
@@ -122,17 +92,7 @@ describe("persona-store", () => {
   });
 
   it("updates a persona", () => {
-    personaStore.createPersona(
-      "p1",
-      "Original",
-      "",
-      "old prompt",
-      "{}",
-      "",
-      "",
-      0,
-      "[]",
-    );
+    personaStore.createPersona("p1", "Original", "", "old prompt", "{}", "", "", 0, "[]");
     personaStore.updatePersona(
       "p1",
       "Updated",
@@ -154,76 +114,26 @@ describe("persona-store", () => {
   });
 
   it("update sets updatedAt", () => {
-    personaStore.createPersona(
-      "p1",
-      "Test",
-      "",
-      "prompt",
-      "{}",
-      "",
-      "",
-      0,
-      "[]",
-    );
+    personaStore.createPersona("p1", "Test", "", "prompt", "{}", "", "", 0, "[]");
     const before = personaStore.getPersona("p1")!.updatedAt;
     // SQLite datetime('now') has second-level precision, so we just check it's set
-    personaStore.updatePersona(
-      "p1",
-      "Test2",
-      "",
-      "prompt2",
-      "{}",
-      "",
-      "",
-      0,
-      "[]",
-    );
+    personaStore.updatePersona("p1", "Test2", "", "prompt2", "{}", "", "", 0, "[]");
     const after = personaStore.getPersona("p1")!.updatedAt;
     expect(after).toBeDefined();
     expect(before).toBeDefined();
   });
 
   it("deletes a persona", () => {
-    personaStore.createPersona(
-      "del",
-      "ToDelete",
-      "",
-      "prompt",
-      "{}",
-      "",
-      "",
-      0,
-      "[]",
-    );
+    personaStore.createPersona("del", "ToDelete", "", "prompt", "{}", "", "", 0, "[]");
     expect(personaStore.getPersona("del")).toBeDefined();
     personaStore.deletePersona("del");
     expect(personaStore.getPersona("del")).toBeUndefined();
   });
 
   it("enforces unique name constraint", () => {
-    personaStore.createPersona(
-      "p1",
-      "Same Name",
-      "",
-      "prompt",
-      "{}",
-      "",
-      "",
-      0,
-      "[]",
-    );
+    personaStore.createPersona("p1", "Same Name", "", "prompt", "{}", "", "", 0, "[]");
     expect(() => {
-      personaStore.createPersona(
-        "p2",
-        "Same Name",
-        "",
-        "prompt",
-        "{}",
-        "",
-        "",
-        0,
-        "[]",
-      );
+      personaStore.createPersona("p2", "Same Name", "", "prompt", "{}", "", "", 0, "[]");
     }).toThrow();
   });
 
@@ -267,7 +177,17 @@ describe("persona-store", () => {
   it("updates type and script fields", () => {
     personaStore.createPersona("p1", "Test", "", "prompt", "{}", "claude-code", "sonnet", 0, "[]");
     personaStore.updatePersona(
-      "p1", "Test", "", "", "{}", "genaiscript", "", 0, "[]", "script", "console.log('hi');"
+      "p1",
+      "Test",
+      "",
+      "",
+      "{}",
+      "genaiscript",
+      "",
+      0,
+      "[]",
+      "script",
+      "console.log('hi');",
     );
     const p = personaStore.getPersona("p1");
     expect(p!.type).toBe("script");
@@ -283,8 +203,18 @@ describe("persona-store", () => {
 
   it("creates persona with allowedMcpTools and retrieves it", () => {
     personaStore.createPersona(
-      "mcp-1", "MCP Test", "", "prompt", "{}", "", "", 0, "[]",
-      "agent", "", '["workpad_read","task_list"]',
+      "mcp-1",
+      "MCP Test",
+      "",
+      "prompt",
+      "{}",
+      "",
+      "",
+      0,
+      "[]",
+      "agent",
+      "",
+      '["workpad_read","task_list"]',
     );
     const p = personaStore.getPersona("mcp-1");
     expect(p).toBeDefined();
@@ -300,12 +230,32 @@ describe("persona-store", () => {
 
   it("updates allowedMcpTools", () => {
     personaStore.createPersona(
-      "mcp-3", "Update MCP", "", "prompt", "{}", "", "", 0, "[]",
-      "agent", "", '["workpad_read"]',
+      "mcp-3",
+      "Update MCP",
+      "",
+      "prompt",
+      "{}",
+      "",
+      "",
+      0,
+      "[]",
+      "agent",
+      "",
+      '["workpad_read"]',
     );
     personaStore.updatePersona(
-      "mcp-3", "Update MCP", "", "prompt", "{}", "", "", 0, "[]",
-      "agent", "", '["task_list","task_create"]',
+      "mcp-3",
+      "Update MCP",
+      "",
+      "prompt",
+      "{}",
+      "",
+      "",
+      0,
+      "[]",
+      "agent",
+      "",
+      '["task_list","task_create"]',
     );
     const p = personaStore.getPersona("mcp-3");
     expect(p!.allowedMcpTools).toBe('["task_list","task_create"]');

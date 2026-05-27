@@ -1,4 +1,4 @@
-@use '../styles/mixins' as *;
+@use "../styles/mixins" as *;
 
 .wizard {
   min-height: 100vh;
@@ -109,7 +109,9 @@
 
   &[data-selected="true"] {
     border-color: var(--accent-green);
-    box-shadow: 0 0 0 1px var(--accent-green), var(--shadow-xs);
+    box-shadow:
+      0 0 0 1px var(--accent-green),
+      var(--shadow-xs);
   }
 }
 
@@ -154,8 +156,9 @@
   height: 8px;
   border-radius: var(--radius-full);
   background: var(--text-disabled);
-  transition: background var(--transition-fast),
-              transform var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    transform var(--transition-fast);
 
   &[data-active="true"] {
     background: var(--accent-green);

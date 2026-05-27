@@ -8,7 +8,7 @@ module.exports = [
     rules: {
       "@typescript-eslint/naming-convention": [
         "warn",
-        { selector: "interface", format: ["PascalCase"] }
+        { selector: "interface", format: ["PascalCase"] },
       ],
       "@typescript-eslint/no-misused-promises": "warn",
       "@typescript-eslint/await-thenable": "warn",
@@ -19,7 +19,7 @@ module.exports = [
       "@typescript-eslint/no-unsafe-assignment": "warn",
       "@typescript-eslint/restrict-plus-operands": "warn",
       "@typescript-eslint/no-unnecessary-condition": "warn",
-      "@typescript-eslint/prefer-optional-chain": "warn"
-    }
-  }
+      "@typescript-eslint/prefer-optional-chain": "warn",
+    },
+  },
 ];

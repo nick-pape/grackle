@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { getTraceId, runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace } from "./trace-context.js";
+import {
+  getTraceId,
+  runWithTrace,
+  isValidTraceId,
+  wrapAsyncIterableWithTrace,
+} from "./trace-context.js";
 
 describe("trace-context", () => {
   describe("getTraceId()", () => {

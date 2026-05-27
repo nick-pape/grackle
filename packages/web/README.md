@@ -27,18 +27,18 @@ The Grackle web dashboard -- a single-page application for managing remote AI co
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Framework | React 19 |
-| Build | Vite 6 |
-| Language | TypeScript (strict) |
-| Styling | SCSS Modules + CSS custom properties (theme tokens) |
-| Routing | React Router 7 |
-| Animation | Motion (Framer Motion) |
-| Graphs | React Flow + dagre |
-| Markdown | react-markdown + remark-gfm + rehype-prism-plus |
-| Testing | Vitest + React Testing Library |
-| Shared types | `@grackle-ai/common` (protobuf-generated) |
+| Layer        | Technology                                          |
+| ------------ | --------------------------------------------------- |
+| Framework    | React 19                                            |
+| Build        | Vite 6                                              |
+| Language     | TypeScript (strict)                                 |
+| Styling      | SCSS Modules + CSS custom properties (theme tokens) |
+| Routing      | React Router 7                                      |
+| Animation    | Motion (Framer Motion)                              |
+| Graphs       | React Flow + dagre                                  |
+| Markdown     | react-markdown + remark-gfm + rehype-prism-plus     |
+| Testing      | Vitest + React Testing Library                      |
+| Shared types | `@grackle-ai/common` (protobuf-generated)           |
 
 ## Development
 

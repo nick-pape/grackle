@@ -54,13 +54,8 @@ export const workspaceTools: ToolDefinition[] = [
       "Create a new Grackle workspace with a name, optional description, repository URL, and initial environment.",
     inputSchema: z.object({
       name: z.string().describe("Display name for the new workspace"),
-      environmentId: z
-        .string()
-        .describe("ID of the initial environment to link (required)"),
-      description: z
-        .string()
-        .optional()
-        .describe("Optional description of the workspace"),
+      environmentId: z.string().describe("ID of the initial environment to link (required)"),
+      description: z.string().optional().describe("Optional description of the workspace"),
       repoUrl: z
         .string()
         .optional()
@@ -69,10 +64,7 @@ export const workspaceTools: ToolDefinition[] = [
         .string()
         .optional()
         .describe("Working directory / repo root on the environment (e.g. /workspaces/my-repo)"),
-      useWorktrees: z
-        .boolean()
-        .optional()
-        .describe("Enable worktree isolation (defaults to true)"),
+      useWorktrees: z.boolean().optional().describe("Enable worktree isolation (defaults to true)"),
       defaultPersonaId: z
         .string()
         .optional()
@@ -132,8 +124,7 @@ export const workspaceTools: ToolDefinition[] = [
   {
     name: "workspace_get",
     group: "workspace",
-    description:
-      "Get full details of a specific Grackle workspace by its unique identifier.",
+    description: "Get full details of a specific Grackle workspace by its unique identifier.",
     inputSchema: z.object({
       workspaceId: z.string().describe("Unique identifier of the workspace to retrieve"),
     }),
@@ -174,26 +165,14 @@ export const workspaceTools: ToolDefinition[] = [
       "Update an existing Grackle workspace's name, description, repository URL, or worktree settings. To change linked environments, use workspace_link_environment or workspace_unlink_environment.",
     inputSchema: z.object({
       workspaceId: z.string().describe("Unique identifier of the workspace to update"),
-      name: z
-        .string()
-        .optional()
-        .describe("New display name for the workspace"),
-      description: z
-        .string()
-        .optional()
-        .describe("New description for the workspace"),
-      repoUrl: z
-        .string()
-        .optional()
-        .describe("New repository URL for the workspace"),
+      name: z.string().optional().describe("New display name for the workspace"),
+      description: z.string().optional().describe("New description for the workspace"),
+      repoUrl: z.string().optional().describe("New repository URL for the workspace"),
       workingDirectory: z
         .string()
         .optional()
         .describe("New working directory / repo root (e.g. /workspaces/my-repo)"),
-      useWorktrees: z
-        .boolean()
-        .optional()
-        .describe("Enable or disable worktree isolation"),
+      useWorktrees: z.boolean().optional().describe("Enable or disable worktree isolation"),
       defaultPersonaId: z
         .string()
         .optional()
@@ -313,8 +292,7 @@ export const workspaceTools: ToolDefinition[] = [
   {
     name: "workspace_unlink_environment",
     group: "workspace",
-    description:
-      "Remove a linked environment from a workspace's environment pool.",
+    description: "Remove a linked environment from a workspace's environment pool.",
     inputSchema: z.object({
       workspaceId: z.string().describe("Workspace to unlink the environment from"),
       environmentId: z.string().describe("Environment to unlink"),

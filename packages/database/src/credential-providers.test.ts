@@ -133,20 +133,26 @@ describe("credential-providers", () => {
     });
 
     it("upserts on repeated calls", () => {
-      setCredentialProviders({
-        claude: "api_key",
-        github: "off",
-        copilot: "off",
-        codex: "off",
-        goose: "off",
-      }, testDb);
-      setCredentialProviders({
-        claude: "subscription",
-        github: "on",
-        copilot: "on",
-        codex: "on",
-        goose: "off",
-      }, testDb);
+      setCredentialProviders(
+        {
+          claude: "api_key",
+          github: "off",
+          copilot: "off",
+          codex: "off",
+          goose: "off",
+        },
+        testDb,
+      );
+      setCredentialProviders(
+        {
+          claude: "subscription",
+          github: "on",
+          copilot: "on",
+          codex: "on",
+          goose: "off",
+        },
+        testDb,
+      );
 
       const result = getCredentialProviders(testDb);
       expect(result.claude).toBe("subscription");

@@ -22,9 +22,12 @@ export interface PersonaManagerProps {
 
 /** Persona list view — shows cards and navigates to detail pages for create/edit. */
 export function PersonaManager({
-  personas, appDefaultPersonaId,
-  onDeletePersona, onSetAppDefaultPersonaId,
-  onNavigateToNew, onNavigateToPersona,
+  personas,
+  appDefaultPersonaId,
+  onDeletePersona,
+  onSetAppDefaultPersonaId,
+  onNavigateToNew,
+  onNavigateToPersona,
 }: PersonaManagerProps): JSX.Element {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const personaToDelete = confirmDelete ? personas.find((p) => p.id === confirmDelete) : undefined;
@@ -38,7 +41,12 @@ export function PersonaManager({
     <div className={styles.container}>
       <div className={styles.header}>
         <h2>Personas</h2>
-        <Button variant="primary" size="md" onClick={onNavigateToNew} data-testid="persona-new-button">
+        <Button
+          variant="primary"
+          size="md"
+          onClick={onNavigateToNew}
+          data-testid="persona-new-button"
+        >
           + New Persona
         </Button>
       </div>
@@ -72,25 +80,39 @@ export function PersonaManager({
                       {isScript ? "Script" : "Agent"}
                     </span>
                     {isAppDefault && (
-                      <span className={styles.defaultBadge} data-testid={`persona-default-badge-${p.id}`}>App Default</span>
+                      <span
+                        className={styles.defaultBadge}
+                        data-testid={`persona-default-badge-${p.id}`}
+                      >
+                        App Default
+                      </span>
                     )}
                   </span>
                   <div className={styles.cardActions} onClick={(e) => e.stopPropagation()}>
                     {!isAppDefault && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            onSetAppDefaultPersonaId(p.id).catch(() => undefined);
-                          }}
-                          data-testid={`persona-set-default-${p.id}`}
-                          title="Set as app default persona"
-                        >
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          onSetAppDefaultPersonaId(p.id).catch(() => undefined);
+                        }}
+                        data-testid={`persona-set-default-${p.id}`}
+                        title="Set as app default persona"
+                      >
                         Set Default
                       </Button>
                     )}
-                    <Button variant="ghost" size="sm" onClick={() => onNavigateToPersona(p.id)}>Edit</Button>
-                    <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(p.id)} data-testid={`persona-delete-${p.id}`}>Delete</Button>
+                    <Button variant="ghost" size="sm" onClick={() => onNavigateToPersona(p.id)}>
+                      Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setConfirmDelete(p.id)}
+                      data-testid={`persona-delete-${p.id}`}
+                    >
+                      Delete
+                    </Button>
                   </div>
                 </div>
                 {p.description && <p className={styles.description}>{p.description}</p>}

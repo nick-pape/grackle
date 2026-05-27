@@ -40,7 +40,13 @@ export function deleteToken(name: string): void {
 }
 
 /** List all stored tokens (values are omitted for security). */
-export function listTokens(): Array<{ name: string; type: string; envVar?: string; filePath?: string; expiresAt?: string }> {
+export function listTokens(): Array<{
+  name: string;
+  type: string;
+  envVar?: string;
+  filePath?: string;
+  expiresAt?: string;
+}> {
   const rows = db.select().from(tokens).all();
   return rows.map((row: TokenRow) => {
     const cfg = JSON.parse(row.config) as TokenConfig;

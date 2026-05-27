@@ -2,7 +2,18 @@ import { useEffect, useMemo, useRef, type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import { useSandboxProxyUrl } from "../context/ManifestContext.js";
-import { Breadcrumbs, ChatInput, EventStream, SplitButton, buildSessionBreadcrumbs, formatCost, formatTokens, groupConsecutiveTextEvents, pairToolEvents, useToast } from "@grackle-ai/web-components";
+import {
+  Breadcrumbs,
+  ChatInput,
+  EventStream,
+  SplitButton,
+  buildSessionBreadcrumbs,
+  formatCost,
+  formatTokens,
+  groupConsecutiveTextEvents,
+  pairToolEvents,
+  useToast,
+} from "@grackle-ai/web-components";
 import type { Session } from "../hooks/useGrackleSocket.js";
 import { SessionShimmer } from "./SessionShimmer.js";
 import styles from "./page-layout.module.scss";
@@ -17,19 +28,27 @@ interface SessionHeaderProps {
 }
 
 /** Displays session metadata and stop/kill controls for active sessions. */
-function SessionHeader({ sessionId, session, isActive, onStop, onKill }: SessionHeaderProps): JSX.Element {
+function SessionHeader({
+  sessionId,
+  session,
+  isActive,
+  onStop,
+  onKill,
+}: SessionHeaderProps): JSX.Element {
   return (
     <div className={styles.header}>
       <span>
         Session: {sessionId.slice(0, 8)}
         {session && ` | ${session.runtime} | ${session.endReason || session.status}`}
-        {(session?.inputTokens || session?.outputTokens || session?.costMillicents)
+        {session?.inputTokens || session?.outputTokens || session?.costMillicents
           ? ` | ${formatTokens((session!.inputTokens ?? 0) + (session!.outputTokens ?? 0))} tokens · ${formatCost(session!.costMillicents ?? 0)}`
           : ""}
       </span>
       <span className={styles.headerInfo}>
         {session && (
-          <span>{session.prompt.length > 60 ? session.prompt.slice(0, 60) + "..." : session.prompt}</span>
+          <span>
+            {session.prompt.length > 60 ? session.prompt.slice(0, 60) + "..." : session.prompt}
+          </span>
         )}
         {isActive && (
           <SplitButton
@@ -65,7 +84,17 @@ export function SessionPage(): JSX.Element {
   const { sessionId } = useParams<{ sessionId: string }>();
   const sandboxProxyUrl = useSandboxProxyUrl();
   const {
-    sessions: { events, eventsDropped, sessions, sessionsLoading, kill, stopGraceful, loadSessionEvents, sendInput, spawn },
+    sessions: {
+      events,
+      eventsDropped,
+      sessions,
+      sessionsLoading,
+      kill,
+      stopGraceful,
+      loadSessionEvents,
+      sendInput,
+      spawn,
+    },
     tasks: { startTask },
     personas: { personas },
     environments: { environments, provisionEnvironment },
@@ -78,9 +107,7 @@ export function SessionPage(): JSX.Element {
   const session = sessions.find((s) => s.id === sessionId) ?? undefined;
 
   const groupedEvents = useMemo(() => {
-    const filtered = sessionId
-      ? events.filter((e) => e.sessionId === sessionId)
-      : [];
+    const filtered = sessionId ? events.filter((e) => e.sessionId === sessionId) : [];
     return pairToolEvents(groupConsecutiveTextEvents(filtered));
   }, [events, sessionId]);
 
@@ -97,11 +124,7 @@ export function SessionPage(): JSX.Element {
   }
 
   if (!sessionId) {
-    return (
-      <div className={styles.emptyState}>
-        No session selected
-      </div>
-    );
+    return <div className={styles.emptyState}>No session selected</div>;
   }
 
   const isActive = session?.status === "running" || session?.status === "idle";
@@ -113,8 +136,12 @@ export function SessionPage(): JSX.Element {
         sessionId={sessionId!}
         session={session}
         isActive={isActive}
-        onStop={() => { stopGraceful(sessionId!).catch(() => {}); }}
-        onKill={() => { kill(sessionId!).catch(() => {}); }}
+        onStop={() => {
+          stopGraceful(sessionId!).catch(() => {});
+        }}
+        onKill={() => {
+          kill(sessionId!).catch(() => {});
+        }}
       />
       <EventStream
         events={groupedEvents}
@@ -135,10 +162,20 @@ export function SessionPage(): JSX.Element {
           environmentId={session!.environmentId}
           personas={personas}
           environments={environments}
-          onSendInput={(sid, text) => { sendInput(sid, text).catch(() => { showToast("Failed to send message", "error"); }); }}
-          onSpawn={(eid, prompt, pid) => { spawn(eid, prompt, pid).catch(() => {}); }}
-          onStartTask={(tid, pid, eid) => { startTask(tid, pid, eid).catch(() => {}); }}
-          onProvisionEnvironment={(eid) => { provisionEnvironment(eid).catch(() => {}); }}
+          onSendInput={(sid, text) => {
+            sendInput(sid, text).catch(() => {
+              showToast("Failed to send message", "error");
+            });
+          }}
+          onSpawn={(eid, prompt, pid) => {
+            spawn(eid, prompt, pid).catch(() => {});
+          }}
+          onStartTask={(tid, pid, eid) => {
+            startTask(tid, pid, eid).catch(() => {});
+          }}
+          onProvisionEnvironment={(eid) => {
+            provisionEnvironment(eid).catch(() => {});
+          }}
           onShowToast={showToast}
         />
       )}

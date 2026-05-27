@@ -17,18 +17,22 @@ export interface AppearancePanelProps {
 }
 
 /** Appearance settings panel with theme picker and system preference toggle. */
-export function AppearancePanel({ themeId, resolvedThemeId, onSetTheme, preferSystem, onSetPreferSystem }: AppearancePanelProps): JSX.Element {
+export function AppearancePanel({
+  themeId,
+  resolvedThemeId,
+  onSetTheme,
+  preferSystem,
+  onSetPreferSystem,
+}: AppearancePanelProps): JSX.Element {
   return (
     <section className={styles.section}>
       <h3 className={styles.sectionTitle}>Appearance</h3>
-      <p className={styles.sectionDescription}>
-        Choose how Grackle looks across the app.
-      </p>
+      <p className={styles.sectionDescription}>Choose how Grackle looks across the app.</p>
       <div className={styles.themeOptions}>
         {THEMES.filter((t) => !t.hidden).map((t) => {
           const hasVariants = !!(t.variantLightId && t.variantDarkId);
           const isSelected = hasVariants
-            ? (themeId === t.id || themeId === t.variantLightId || themeId === t.variantDarkId)
+            ? themeId === t.id || themeId === t.variantLightId || themeId === t.variantDarkId
             : themeId === t.id;
           const isLight = hasVariants && resolvedThemeId === t.variantLightId;
           return (
@@ -50,20 +54,46 @@ export function AppearancePanel({ themeId, resolvedThemeId, onSetTheme, preferSy
                       role="button"
                       tabIndex={0}
                       className={`${styles.variantButton} ${isSelected && isLight ? styles.variantActive : ""}`}
-                      onClick={(e) => { e.stopPropagation(); onSetPreferSystem(false); onSetTheme(t.variantLightId!); }}
-                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onSetPreferSystem(false); onSetTheme(t.variantLightId!); } }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSetPreferSystem(false);
+                        onSetTheme(t.variantLightId!);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onSetPreferSystem(false);
+                          onSetTheme(t.variantLightId!);
+                        }
+                      }}
                       aria-label="Light variant"
                       aria-pressed={isSelected && isLight}
-                    >&#9788;</span>
+                    >
+                      &#9788;
+                    </span>
                     <span
                       role="button"
                       tabIndex={0}
                       className={`${styles.variantButton} ${isSelected && !isLight ? styles.variantActive : ""}`}
-                      onClick={(e) => { e.stopPropagation(); onSetPreferSystem(false); onSetTheme(t.variantDarkId!); }}
-                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onSetPreferSystem(false); onSetTheme(t.variantDarkId!); } }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSetPreferSystem(false);
+                        onSetTheme(t.variantDarkId!);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onSetPreferSystem(false);
+                          onSetTheme(t.variantDarkId!);
+                        }
+                      }}
                       aria-label="Dark variant"
                       aria-pressed={isSelected && !isLight}
-                    >&#9790;</span>
+                    >
+                      &#9790;
+                    </span>
                   </span>
                 )}
               </span>

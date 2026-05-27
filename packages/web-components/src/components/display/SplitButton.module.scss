@@ -1,4 +1,4 @@
-@use '../../styles/mixins' as *;
+@use "../../styles/mixins" as *;
 
 // =============================================================================
 // SplitButton — compound button with main action + chevron dropdown
@@ -18,8 +18,9 @@
   cursor: pointer;
   font-family: var(--font-ui);
   border: none;
-  transition: background var(--transition-fast),
-              box-shadow var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    box-shadow var(--transition-fast);
 
   &:focus-visible {
     outline: 2px solid var(--ring);
@@ -45,7 +46,9 @@
   font-size: 0.6em;
 
   // Override size-class padding to keep chevron compact
-  &.sm, &.md, &.lg {
+  &.sm,
+  &.md,
+  &.lg {
     padding-left: var(--space-xs);
     padding-right: var(--space-xs);
   }

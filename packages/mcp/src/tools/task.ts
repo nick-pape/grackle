@@ -28,9 +28,18 @@ export const taskTools: ToolDefinition[] = [
     description:
       "List all tasks in a Grackle workspace with their status, title, and assignment information. Supports optional search and status filters.",
     inputSchema: z.object({
-      workspaceId: z.string().optional().describe("The workspace ID to list tasks for (optional — omit to list all tasks)"),
-      search: z.string().optional().describe("Case-insensitive substring filter on task title or description"),
-      status: z.string().optional().describe("Filter by task status: not_started, working, paused, complete, failed"),
+      workspaceId: z
+        .string()
+        .optional()
+        .describe("The workspace ID to list tasks for (optional — omit to list all tasks)"),
+      search: z
+        .string()
+        .optional()
+        .describe("Case-insensitive substring filter on task title or description"),
+      status: z
+        .string()
+        .optional()
+        .describe("Filter by task status: not_started, working, paused, complete, failed"),
     }),
     rpcMethod: "listTasks",
     mutating: false,
@@ -73,9 +82,20 @@ export const taskTools: ToolDefinition[] = [
       "Fuzzy search for tasks by title or description. Returns results ranked by relevance with scores. Use this when you need approximate matching (e.g. 'login bug' matches 'Fix authentication failure on login page').",
     inputSchema: z.object({
       query: z.string().describe("Fuzzy search query string"),
-      workspaceId: z.string().optional().describe("Scope to a specific workspace (optional — omit to search all workspaces)"),
-      limit: z.number().int().positive().optional().describe("Maximum number of results to return (default 10)"),
-      status: z.enum(["not_started", "working", "paused", "complete", "failed"]).optional().describe("Filter by task status"),
+      workspaceId: z
+        .string()
+        .optional()
+        .describe("Scope to a specific workspace (optional — omit to search all workspaces)"),
+      limit: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Maximum number of results to return (default 10)"),
+      status: z
+        .enum(["not_started", "working", "paused", "complete", "failed"])
+        .optional()
+        .describe("Filter by task status"),
     }),
     rpcMethod: "searchTasks",
     mutating: false,
@@ -88,15 +108,17 @@ export const taskTools: ToolDefinition[] = [
     async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
       try {
         const response = await client.searchTasks({
-          query: (args.query as string),
+          query: args.query as string,
           workspaceId: (args.workspaceId as string | undefined) ?? "",
           limit: (args.limit as number | undefined) ?? 0,
           status: (args.status as string | undefined) ?? "",
         });
-        return jsonResult(response.results.map((r) => ({
-          ...taskToJson(r.task!),
-          relevanceScore: Math.round(r.relevanceScore * 100) / 100,
-        })));
+        return jsonResult(
+          response.results.map((r) => ({
+            ...taskToJson(r.task!),
+            relevanceScore: Math.round(r.relevanceScore * 100) / 100,
+          })),
+        );
       } catch (error) {
         return grpcErrorToToolResult(error);
       }
@@ -110,12 +132,12 @@ export const taskTools: ToolDefinition[] = [
     description:
       "Create a new task in a Grackle workspace with a title, optional description, and dependency configuration.",
     inputSchema: z.object({
-      workspaceId: z.string().optional().describe("The workspace ID to create the task in (optional — omit for root tasks)"),
-      title: z.string().describe("Short descriptive title for the task"),
-      description: z
+      workspaceId: z
         .string()
         .optional()
-        .describe("Detailed description of what the task involves"),
+        .describe("The workspace ID to create the task in (optional — omit for root tasks)"),
+      title: z.string().describe("Short descriptive title for the task"),
+      description: z.string().optional().describe("Detailed description of what the task involves"),
       dependsOn: z
         .array(z.string())
         .optional()
@@ -124,10 +146,7 @@ export const taskTools: ToolDefinition[] = [
         .string()
         .optional()
         .describe("Parent task ID (auto-set when called by an agent working on a task)"),
-      canDecompose: z
-        .boolean()
-        .optional()
-        .describe("Allow this task to create subtasks"),
+      canDecompose: z.boolean().optional().describe("Allow this task to create subtasks"),
       defaultPersonaId: z
         .string()
         .optional()
@@ -211,22 +230,11 @@ export const taskTools: ToolDefinition[] = [
     inputSchema: z.object({
       taskId: z.string().describe("The ID of the task to update"),
       title: z.string().optional().describe("New title for the task"),
-      description: z
-        .string()
-        .optional()
-        .describe("New description for the task"),
+      description: z.string().optional().describe("New description for the task"),
       status: z
-        .enum([
-          "not_started",
-          "working",
-          "paused",
-          "complete",
-          "failed",
-        ])
+        .enum(["not_started", "working", "paused", "complete", "failed"])
         .optional()
-        .describe(
-          "New status for the task (not_started, working, paused, complete, failed)",
-        ),
+        .describe("New status for the task (not_started, working, paused, complete, failed)"),
       dependsOn: z
         .array(z.string())
         .optional()
@@ -260,12 +268,13 @@ export const taskTools: ToolDefinition[] = [
       try {
         const taskId = args.taskId as string;
         if (taskId === ROOT_TASK_ID && args.status) {
-          return { content: [{ type: "text", text: "Cannot change the status of the system task" }], isError: true };
+          return {
+            content: [{ type: "text", text: "Cannot change the status of the system task" }],
+            isError: true,
+          };
         }
         const statusString = args.status as string | undefined;
-        const statusValue = statusString
-          ? taskStatusToEnum(statusString)
-          : 0;
+        const statusValue = statusString ? taskStatusToEnum(statusString) : 0;
         const task = await client.updateTask({
           id: args.taskId as string,
           title: (args.title as string | undefined) ?? "",
@@ -306,7 +315,9 @@ export const taskTools: ToolDefinition[] = [
       pipe: z
         .enum(["sync", "async", "detach"])
         .optional()
-        .describe("IPC pipe mode: sync (block until done), async (receive results between turns), detach (fire-and-forget)"),
+        .describe(
+          "IPC pipe mode: sync (block until done), async (receive results between turns), detach (fire-and-forget)",
+        ),
     }),
     rpcMethod: "startTask",
     mutating: true,
@@ -316,7 +327,11 @@ export const taskTools: ToolDefinition[] = [
       idempotentHint: false,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, { orchestration: client, core }: GrackleClients, authContext?: AuthContext) {
+    async handler(
+      args: Record<string, unknown>,
+      { orchestration: client, core }: GrackleClients,
+      authContext?: AuthContext,
+    ) {
       try {
         await assertCallerIsAncestor(client, authContext, args.taskId as string);
         const pipe = (args.pipe as string) || "";
@@ -325,7 +340,12 @@ export const taskTools: ToolDefinition[] = [
         // Reject sync/async pipe modes without scoped auth (same guard as ipc_spawn)
         if (pipe && pipe !== "detach" && !parentSessionId) {
           return {
-            content: [{ type: "text" as const, text: "Error: sync and async pipe modes require scoped auth (agent context)" }],
+            content: [
+              {
+                type: "text" as const,
+                text: "Error: sync and async pipe modes require scoped auth (agent context)",
+              },
+            ],
             isError: true,
           };
         }
@@ -372,8 +392,7 @@ export const taskTools: ToolDefinition[] = [
   {
     name: "task_delete",
     group: "task",
-    description:
-      "Permanently delete a task from the workspace. This action cannot be undone.",
+    description: "Permanently delete a task from the workspace. This action cannot be undone.",
     inputSchema: z.object({
       taskId: z.string().describe("The ID of the task to delete"),
     }),
@@ -389,7 +408,10 @@ export const taskTools: ToolDefinition[] = [
       try {
         const taskId = args.taskId as string;
         if (taskId === ROOT_TASK_ID) {
-          return { content: [{ type: "text", text: "Cannot delete the system task" }], isError: true };
+          return {
+            content: [{ type: "text", text: "Cannot delete the system task" }],
+            isError: true,
+          };
         }
         await client.deleteTask({ id: taskId });
         return jsonResult({ success: true });
@@ -416,11 +438,18 @@ export const taskTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients, authContext?: AuthContext) {
+    async handler(
+      args: Record<string, unknown>,
+      { orchestration: client }: GrackleClients,
+      authContext?: AuthContext,
+    ) {
       try {
         const taskId = args.taskId as string;
         if (taskId === ROOT_TASK_ID) {
-          return { content: [{ type: "text", text: "Cannot complete the system task" }], isError: true };
+          return {
+            content: [{ type: "text", text: "Cannot complete the system task" }],
+            isError: true,
+          };
         }
         await assertCallerIsAncestor(client, authContext, taskId);
         const task = await client.completeTask({ id: taskId });
@@ -435,8 +464,7 @@ export const taskTools: ToolDefinition[] = [
   {
     name: "task_resume",
     group: "task",
-    description:
-      "Resume the latest interrupted or completed session for a task.",
+    description: "Resume the latest interrupted or completed session for a task.",
     inputSchema: z.object({
       taskId: z.string().describe("The ID of the task to resume"),
     }),
@@ -459,5 +487,4 @@ export const taskTools: ToolDefinition[] = [
       }
     },
   },
-
 ];

@@ -20,6 +20,7 @@ grackle env list
 ```
 
 The API key is used for:
+
 - **CLI** — Sent as `Authorization: Bearer <key>` on every gRPC call
 - **WebSocket** — Passed as `?token=<key>` query parameter
 - **MCP clients** — Used as the global auth token (full access)
@@ -45,6 +46,7 @@ Pairing is rate-limited: 5 failed attempts per IP per minute. After that, the IP
 After pairing, the browser uses a session cookie for authentication. The cookie contains a session ID and an HMAC-SHA256 signature (using the API key as the secret).
 
 Session cookies are accepted by:
+
 - Web UI HTTP requests (static files, pairing, authorization)
 - WebSocket connections (as an alternative to `?token=`)
 
@@ -60,6 +62,7 @@ External MCP clients (like Claude Desktop or other AI tools) authenticate via **
 4. Client exchanges authorization code for access + refresh tokens at `/token`
 
 Key details:
+
 - Authorization codes expire after **30 seconds** (single-use)
 - Refresh tokens last **30 days** (rotated on each use)
 - Client registrations expire after **7 days**
@@ -81,6 +84,7 @@ grackle token set SSH_KEY --file ~/.ssh/id_ed25519 --type file --file-path ~/.ss
 ```
 
 Each token specifies how it should be delivered to environments:
+
 - **Environment variable** (default) — Injected into the agent's process environment
 - **File** — Written to a path inside the environment
 
@@ -104,12 +108,12 @@ grackle credential-provider set claude api_key
 grackle credential-provider set github on
 ```
 
-| Provider | Modes | Notes |
-|----------|-------|-------|
-| `claude` | `off`, `subscription`, `api_key` | `subscription` uses your Anthropic plan; `api_key` uses a stored token |
-| `github` | `off`, `on` | Needed for Copilot runtime and Codespace adapter |
-| `copilot` | `off`, `on` | GitHub Copilot authentication |
-| `codex` | `off`, `on` | OpenAI API authentication |
+| Provider  | Modes                            | Notes                                                                  |
+| --------- | -------------------------------- | ---------------------------------------------------------------------- |
+| `claude`  | `off`, `subscription`, `api_key` | `subscription` uses your Anthropic plan; `api_key` uses a stored token |
+| `github`  | `off`, `on`                      | Needed for Copilot runtime and Codespace adapter                       |
+| `copilot` | `off`, `on`                      | GitHub Copilot authentication                                          |
+| `codex`   | `off`, `on`                      | OpenAI API authentication                                              |
 
 ## LAN access
 

@@ -21,7 +21,7 @@ export interface ExecResult {
 export async function exec(
   cmd: string,
   args: string[],
-  opts?: { timeout?: number; cwd?: string; env?: NodeJS.ProcessEnv }
+  opts?: { timeout?: number; cwd?: string; env?: NodeJS.ProcessEnv },
 ): Promise<ExecResult> {
   const { stdout, stderr } = await execFileAsync(cmd, args, {
     timeout: opts?.timeout ?? DEFAULT_EXEC_TIMEOUT_MS,

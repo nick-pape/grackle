@@ -42,7 +42,9 @@ function createMockProcess(): ChildProcess {
 }
 
 /** Build default test options with injected mocks. */
-function createMockOptions(overrides?: Partial<StartLocalPowerLineOptions>): StartLocalPowerLineOptions {
+function createMockOptions(
+  overrides?: Partial<StartLocalPowerLineOptions>,
+): StartLocalPowerLineOptions {
   const mockProcess = createMockProcess();
   const processFactory: ProcessFactory = {
     spawn: vi.fn(() => mockProcess),
@@ -76,7 +78,7 @@ describe("startLocalPowerLine", () => {
     const options = createMockOptions();
     await startLocalPowerLine(options);
 
-    const spawnFn = (options.processFactory!.spawn as Mock);
+    const spawnFn = options.processFactory!.spawn as Mock;
     expect(spawnFn).toHaveBeenCalledOnce();
 
     const [command, args, spawnOpts] = spawnFn.mock.calls[0];
@@ -90,7 +92,7 @@ describe("startLocalPowerLine", () => {
     const options = createMockOptions();
     await startLocalPowerLine(options);
 
-    const waitFn = (options.portProbe!.waitForPort as Mock);
+    const waitFn = options.portProbe!.waitForPort as Mock;
     expect(waitFn).toHaveBeenCalledOnce();
     expect(waitFn).toHaveBeenCalledWith(7433, "127.0.0.1", 15_000);
   });
@@ -182,7 +184,7 @@ describe("startLocalPowerLine", () => {
     const options = createMockOptions({ host: "0.0.0.0" });
     await startLocalPowerLine(options);
 
-    const waitFn = (options.portProbe!.waitForPort as Mock);
+    const waitFn = options.portProbe!.waitForPort as Mock;
     expect(waitFn).toHaveBeenCalledWith(7433, "127.0.0.1", 15_000);
   });
 

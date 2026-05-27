@@ -2,7 +2,12 @@ import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
 import { DEFAULT_WEB_PORT } from "@grackle-ai/common";
-import { settingsStore, personaStore, envRegistry, isAllowedSettingKey } from "@grackle-ai/database";
+import {
+  settingsStore,
+  personaStore,
+  envRegistry,
+  isAllowedSettingKey,
+} from "@grackle-ai/database";
 import { generatePairingCode as authGeneratePairingCode } from "@grackle-ai/auth";
 import { checkVersionStatus } from "@grackle-ai/core";
 import { detectLanIp } from "@grackle-ai/core";
@@ -74,8 +79,10 @@ export async function generatePairingCode(): Promise<grackle.PairingCodeResponse
   const bindHost = process.env.GRACKLE_HOST || "127.0.0.1";
   const WILDCARD_ADDRESSES: ReadonlySet<string> = new Set(["0.0.0.0", "::", "0:0:0:0:0:0:0:0"]);
   const pairingHost = WILDCARD_ADDRESSES.has(bindHost)
-    ? (detectLanIp() || "localhost")
-    : (bindHost === "127.0.0.1" || bindHost === "::1" ? "localhost" : bindHost);
+    ? detectLanIp() || "localhost"
+    : bindHost === "127.0.0.1" || bindHost === "::1"
+      ? "localhost"
+      : bindHost;
   const url = `http://${pairingHost}:${webPort}/pair?code=${code}`;
   return create(grackle.PairingCodeResponseSchema, { code, url });
 }

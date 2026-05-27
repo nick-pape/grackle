@@ -17,7 +17,11 @@ export const AllPending: Story = {
     args: {
       todos: [
         { content: "Get bread", activeForm: "Getting bread", status: "pending" },
-        { content: "Spread peanut butter", activeForm: "Spreading peanut butter", status: "pending" },
+        {
+          content: "Spread peanut butter",
+          activeForm: "Spreading peanut butter",
+          status: "pending",
+        },
         { content: "Spread jelly", activeForm: "Spreading jelly", status: "pending" },
         { content: "Combine slices", activeForm: "Combining slices", status: "pending" },
         { content: "Cut in half", activeForm: "Cutting in half", status: "pending" },
@@ -40,7 +44,11 @@ export const FirstInProgress: Story = {
     args: {
       todos: [
         { content: "Get bread", activeForm: "Getting bread", status: "in_progress" },
-        { content: "Spread peanut butter", activeForm: "Spreading peanut butter", status: "pending" },
+        {
+          content: "Spread peanut butter",
+          activeForm: "Spreading peanut butter",
+          status: "pending",
+        },
         { content: "Spread jelly", activeForm: "Spreading jelly", status: "pending" },
         { content: "Combine slices", activeForm: "Combining slices", status: "pending" },
         { content: "Cut in half", activeForm: "Cutting in half", status: "pending" },
@@ -63,7 +71,11 @@ export const MidwayThrough: Story = {
     args: {
       todos: [
         { content: "Get bread", activeForm: "Getting bread", status: "completed" },
-        { content: "Spread peanut butter", activeForm: "Spreading peanut butter", status: "completed" },
+        {
+          content: "Spread peanut butter",
+          activeForm: "Spreading peanut butter",
+          status: "completed",
+        },
         { content: "Spread jelly", activeForm: "Spreading jelly", status: "in_progress" },
         { content: "Combine slices", activeForm: "Combining slices", status: "pending" },
         { content: "Cut in half", activeForm: "Cutting in half", status: "pending" },
@@ -83,7 +95,11 @@ export const AllCompleted: Story = {
     args: {
       todos: [
         { content: "Get bread", activeForm: "Getting bread", status: "completed" },
-        { content: "Spread peanut butter", activeForm: "Spreading peanut butter", status: "completed" },
+        {
+          content: "Spread peanut butter",
+          activeForm: "Spreading peanut butter",
+          status: "completed",
+        },
         { content: "Spread jelly", activeForm: "Spreading jelly", status: "completed" },
         { content: "Combine slices", activeForm: "Combining slices", status: "completed" },
         { content: "Cut in half", activeForm: "Cutting in half", status: "completed" },
@@ -117,7 +133,11 @@ export const NearEnd: Story = {
     args: {
       todos: [
         { content: "Get bread", activeForm: "Getting bread", status: "completed" },
-        { content: "Spread peanut butter", activeForm: "Spreading peanut butter", status: "completed" },
+        {
+          content: "Spread peanut butter",
+          activeForm: "Spreading peanut butter",
+          status: "completed",
+        },
         { content: "Spread jelly", activeForm: "Spreading jelly", status: "completed" },
         { content: "Combine slices", activeForm: "Combining slices", status: "completed" },
         { content: "Cut in half", activeForm: "Cutting in half", status: "in_progress" },
@@ -143,7 +163,9 @@ export const NoActiveForm: Story = {
     },
   },
   play: async ({ canvas }) => {
-    await expect(canvas.getByTestId("tool-card-todo-active")).toHaveTextContent("Research API options");
+    await expect(canvas.getByTestId("tool-card-todo-active")).toHaveTextContent(
+      "Research API options",
+    );
   },
 };
 
@@ -165,7 +187,9 @@ export const CodexPlan: Story = {
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("tool-card-todo-progress")).toHaveTextContent("1/4");
-    await expect(canvas.getByTestId("tool-card-todo-active")).toHaveTextContent("Spread peanut butter on slice");
+    await expect(canvas.getByTestId("tool-card-todo-active")).toHaveTextContent(
+      "Spread peanut butter on slice",
+    );
     await expect(canvas.getAllByTestId("tool-card-todo-item")).toHaveLength(4);
   },
 };
@@ -177,12 +201,15 @@ export const GooseMarkdown: Story = {
   args: {
     tool: "todo_write",
     args: {
-      content: "- [x] Get two slices of bread\n- [x] Open peanut butter jar\n- [~] Spread PB on first slice\n- [ ] Spread jelly on second slice\n- [ ] Press slices together\n- [ ] Cut diagonally",
+      content:
+        "- [x] Get two slices of bread\n- [x] Open peanut butter jar\n- [~] Spread PB on first slice\n- [ ] Spread jelly on second slice\n- [ ] Press slices together\n- [ ] Cut diagonally",
     },
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("tool-card-todo-progress")).toHaveTextContent("2/6");
-    await expect(canvas.getByTestId("tool-card-todo-active")).toHaveTextContent("Spread PB on first slice");
+    await expect(canvas.getByTestId("tool-card-todo-active")).toHaveTextContent(
+      "Spread PB on first slice",
+    );
     await expect(canvas.getAllByTestId("tool-card-todo-item")).toHaveLength(6);
   },
 };

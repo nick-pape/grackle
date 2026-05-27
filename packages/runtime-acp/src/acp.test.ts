@@ -35,7 +35,13 @@ vi.mock("node:child_process", async (importOriginal) => {
   };
 });
 
-import { mapSessionUpdate, autoApprovePermission, selectEnvVarAuthMethod, AcpRuntime, _setAcpSdkForTesting } from "./acp.js";
+import {
+  mapSessionUpdate,
+  autoApprovePermission,
+  selectEnvVarAuthMethod,
+  AcpRuntime,
+  _setAcpSdkForTesting,
+} from "./acp.js";
 import type { AcpSdkModule } from "./acp.js";
 import { convertMcpServers } from "@grackle-ai/runtime-sdk";
 
@@ -276,24 +282,17 @@ describe("autoApprovePermission", () => {
 
 describe("selectEnvVarAuthMethod", () => {
   it("returns methodId when required env var is set", () => {
-    const methods = [
-      { id: "GithubToken", type: "env_var", vars: [{ name: "GITHUB_TOKEN" }] },
-    ];
+    const methods = [{ id: "GithubToken", type: "env_var", vars: [{ name: "GITHUB_TOKEN" }] }];
     expect(selectEnvVarAuthMethod(methods, { GITHUB_TOKEN: "ghp_test" })).toBe("GithubToken");
   });
 
   it("returns undefined when required env var is missing", () => {
-    const methods = [
-      { id: "GithubToken", type: "env_var", vars: [{ name: "GITHUB_TOKEN" }] },
-    ];
+    const methods = [{ id: "GithubToken", type: "env_var", vars: [{ name: "GITHUB_TOKEN" }] }];
     expect(selectEnvVarAuthMethod(methods, {})).toBeUndefined();
   });
 
   it("skips non-env_var methods", () => {
-    const methods = [
-      { id: "claude-login", type: "terminal" },
-      { id: "gateway" },
-    ];
+    const methods = [{ id: "claude-login", type: "terminal" }, { id: "gateway" }];
     expect(selectEnvVarAuthMethod(methods, { ANTHROPIC_API_KEY: "sk-test" })).toBeUndefined();
   });
 
@@ -311,7 +310,11 @@ describe("selectEnvVarAuthMethod", () => {
 
   it("treats optional vars as satisfied when missing", () => {
     const methods = [
-      { id: "M", type: "env_var", vars: [{ name: "REQUIRED" }, { name: "OPTIONAL", optional: true }] },
+      {
+        id: "M",
+        type: "env_var",
+        vars: [{ name: "REQUIRED" }, { name: "OPTIONAL", optional: true }],
+      },
     ];
     expect(selectEnvVarAuthMethod(methods, { REQUIRED: "val" })).toBe("M");
   });
@@ -325,13 +328,15 @@ describe("convertMcpServers", () => {
       grackle: { command: "node", args: ["mcp.js"], env: { FOO: "bar" } },
     };
     const result = convertMcpServers(servers);
-    expect(result).toEqual([{
-      name: "grackle",
-      type: "stdio",
-      command: "node",
-      args: ["mcp.js"],
-      env: [{ name: "FOO", value: "bar" }],
-    }]);
+    expect(result).toEqual([
+      {
+        name: "grackle",
+        type: "stdio",
+        command: "node",
+        args: ["mcp.js"],
+        env: [{ name: "FOO", value: "bar" }],
+      },
+    ]);
   });
 
   it("handles multiple servers", () => {
@@ -515,7 +520,11 @@ describe("AcpRuntime — runtime_session_id emission", () => {
     const mockSdk: AcpSdkModule = {
       ndJsonStream: vi.fn(() => ({})),
       PROTOCOL_VERSION: 1,
-      ClientSideConnection: class { constructor() { return mockConnectionObj; } } as unknown as AcpSdkModule["ClientSideConnection"],
+      ClientSideConnection: class {
+        constructor() {
+          return mockConnectionObj;
+        }
+      } as unknown as AcpSdkModule["ClientSideConnection"],
     };
 
     _setAcpSdkForTesting(mockSdk);
@@ -529,29 +538,46 @@ describe("AcpRuntime — runtime_session_id emission", () => {
 
   it("real setupSdk() emits runtime_session_id event with the ACP-assigned session ID", async () => {
     const runtime = new AcpRuntime(config);
-    const session = runtime.spawn({ sessionId: "acp-new", prompt: "hi", model: "test", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "acp-new",
+      prompt: "hi",
+      model: "test",
+      maxTurns: 1,
+    });
 
     const events: AgentEvent[] = [];
     for await (const event of session.stream()) {
       events.push(event);
-      if (event.type === "status" && event.content === "waiting_input") { session.kill(); break; }
+      if (event.type === "status" && event.content === "waiting_input") {
+        session.kill();
+        break;
+      }
       if (event.type === "status" && event.content === "failed") break;
     }
 
     const rtIdEvent = events.find((e) => e.type === "runtime_session_id");
-    expect(rtIdEvent, `Expected runtime_session_id event. Got: ${JSON.stringify(events.map(e => e.type))}`).toBeDefined();
+    expect(
+      rtIdEvent,
+      `Expected runtime_session_id event. Got: ${JSON.stringify(events.map((e) => e.type))}`,
+    ).toBeDefined();
     expect(rtIdEvent!.content).toBe("acp-test-session-xyz");
     expect(rtIdEvent!.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
   it("real setupSdk() does not re-emit runtime_session_id for a resumed session (already known)", async () => {
     const runtime = new AcpRuntime(config);
-    const session = runtime.resume({ sessionId: "acp-resumed", runtimeSessionId: "acp-old-session-456" });
+    const session = runtime.resume({
+      sessionId: "acp-resumed",
+      runtimeSessionId: "acp-old-session-456",
+    });
 
     const events: AgentEvent[] = [];
     for await (const event of session.stream()) {
       events.push(event);
-      if (event.type === "status" && event.content === "waiting_input") { session.kill(); break; }
+      if (event.type === "status" && event.content === "waiting_input") {
+        session.kill();
+        break;
+      }
       if (event.type === "status" && event.content === "failed") break;
     }
 
@@ -569,7 +595,9 @@ import { drainUntilStatus } from "@grackle-ai/runtime-sdk";
 
 describe("AcpRuntime — multi-turn", () => {
   const acpConfig = { name: "test-acp", command: "echo", args: ["--acp"] };
-  let capturedHandlerFactory: (() => { sessionUpdate: (params: Record<string, unknown>) => void }) | undefined;
+  let capturedHandlerFactory:
+    | (() => { sessionUpdate: (params: Record<string, unknown>) => void })
+    | undefined;
   let promptCallCount: number;
   let mockConnection: Record<string, ReturnType<typeof vi.fn>>;
 
@@ -674,14 +702,28 @@ describe("AcpRuntime — multi-turn", () => {
       const handler = capturedHandlerFactory!();
       if (localCallCount === 1) {
         handler.sessionUpdate({
-          update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text: "initial" } },
+          update: {
+            sessionUpdate: "agent_message_chunk",
+            content: { type: "text", text: "initial" },
+          },
         });
       } else {
         handler.sessionUpdate({
-          update: { sessionUpdate: "tool_call", toolCallId: "tc-mt", title: "read_file", status: "pending", rawInput: { path: "/tmp/test" } },
+          update: {
+            sessionUpdate: "tool_call",
+            toolCallId: "tc-mt",
+            title: "read_file",
+            status: "pending",
+            rawInput: { path: "/tmp/test" },
+          },
         });
         handler.sessionUpdate({
-          update: { sessionUpdate: "tool_call_update", toolCallId: "tc-mt", status: "completed", rawOutput: { result: "file contents" } },
+          update: {
+            sessionUpdate: "tool_call_update",
+            toolCallId: "tc-mt",
+            status: "completed",
+            rawOutput: { result: "file contents" },
+          },
         });
       }
     });
@@ -711,14 +753,20 @@ describe("AcpRuntime — multi-turn", () => {
       if (localCallCount === 1) {
         const handler = capturedHandlerFactory!();
         handler.sessionUpdate({
-          update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text: "initial" } },
+          update: {
+            sessionUpdate: "agent_message_chunk",
+            content: { type: "text", text: "initial" },
+          },
         });
       } else if (localCallCount === 2) {
         throw new Error("ACP subprocess crashed");
       } else {
         const handler = capturedHandlerFactory!();
         handler.sessionUpdate({
-          update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text: "recovered" } },
+          update: {
+            sessionUpdate: "agent_message_chunk",
+            content: { type: "text", text: "recovered" },
+          },
         });
       }
     });

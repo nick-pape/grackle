@@ -33,7 +33,9 @@ export const UnknownTool: Story = {
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByText("custom_tool")).toBeInTheDocument();
-    await expect(canvas.getByTestId("tool-card-result")).toHaveTextContent("Found 12 TODO comments");
+    await expect(canvas.getByTestId("tool-card-result")).toHaveTextContent(
+      "Found 12 TODO comments",
+    );
   },
 };
 
@@ -55,7 +57,8 @@ export const LongResult: Story = {
   args: {
     tool: "WebSearch",
     args: { query: "nodejs best practices 2026" },
-    result: "Result 1: Use ESM modules\nResult 2: Adopt Node 22\nResult 3: Use built-in test runner\nResult 4: Prefer fetch over axios\nResult 5: Use structured logging\nResult 6: Type-check with tsc\nResult 7: Use Biome for formatting\nResult 8: Pin dependency versions",
+    result:
+      "Result 1: Use ESM modules\nResult 2: Adopt Node 22\nResult 3: Use built-in test runner\nResult 4: Prefer fetch over axios\nResult 5: Use structured logging\nResult 6: Type-check with tsc\nResult 7: Use Biome for formatting\nResult 8: Pin dependency versions",
   },
   play: async ({ canvas }) => {
     const toggle = canvas.getByTestId("tool-card-toggle");

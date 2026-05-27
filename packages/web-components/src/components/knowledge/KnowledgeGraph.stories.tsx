@@ -54,10 +54,13 @@ export const WithNodesAndLinks: Story = {
   play: async ({ canvas }) => {
     const container = canvas.getByTestId("knowledge-graph");
     // Wait for D3 force simulation to create SVG elements
-    await waitFor(async () => {
-      const nodeGroups = container.querySelectorAll("g.kg-node");
-      await expect(nodeGroups.length).toBe(3);
-    }, { timeout: 3000 });
+    await waitFor(
+      async () => {
+        const nodeGroups = container.querySelectorAll("g.kg-node");
+        await expect(nodeGroups.length).toBe(3);
+      },
+      { timeout: 3000 },
+    );
 
     // Links should be rendered as <line> elements
     const lines = container.querySelectorAll("line");
@@ -76,25 +79,26 @@ export const SelectedNodeHighlight: Story = {
   args: {
     graphData: {
       nodes: [nodeA, nodeB, nodeC],
-      links: [
-        makeGraphLink({ source: "n-1", target: "n-2", type: "relates_to" }),
-      ],
+      links: [makeGraphLink({ source: "n-1", target: "n-2", type: "relates_to" })],
     },
     selectedNodeId: "n-1",
   },
   play: async ({ canvas }) => {
     const container = canvas.getByTestId("knowledge-graph");
     // Wait for D3 to render and selection classes to be applied (separate effect)
-    await waitFor(async () => {
-      const nodeGroups = container.querySelectorAll("g.kg-node");
-      await expect(nodeGroups.length).toBe(3);
-      // At least one node should have a selection-related CSS class
-      // (the exact class name is from CSS modules, so check that classes differ)
-      const classLists = Array.from(nodeGroups).map((g) => g.getAttribute("class") ?? "");
-      // Selected node (n-1) and connected node (n-2) should differ from unconnected node (n-3)
-      const uniqueClasses = new Set(classLists);
-      await expect(uniqueClasses.size).toBeGreaterThan(1);
-    }, { timeout: 3000 });
+    await waitFor(
+      async () => {
+        const nodeGroups = container.querySelectorAll("g.kg-node");
+        await expect(nodeGroups.length).toBe(3);
+        // At least one node should have a selection-related CSS class
+        // (the exact class name is from CSS modules, so check that classes differ)
+        const classLists = Array.from(nodeGroups).map((g) => g.getAttribute("class") ?? "");
+        // Selected node (n-1) and connected node (n-2) should differ from unconnected node (n-3)
+        const uniqueClasses = new Set(classLists);
+        await expect(uniqueClasses.size).toBeGreaterThan(1);
+      },
+      { timeout: 3000 },
+    );
   },
 };
 
@@ -113,25 +117,28 @@ export const DraggableNodes: Story = {
     const container = canvas.getByTestId("knowledge-graph");
 
     // Wait for D3 force simulation to create and position nodes
-    await waitFor(async () => {
-      const nodeGroups = container.querySelectorAll("g.kg-node");
-      await expect(nodeGroups.length).toBe(3);
+    await waitFor(
+      async () => {
+        const nodeGroups = container.querySelectorAll("g.kg-node");
+        await expect(nodeGroups.length).toBe(3);
 
-      // d3-drag attaches internal __on listeners for mousedown/touchstart
-      // Verify at least one drag-related listener is registered
-      const firstNode = nodeGroups[0];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- d3 internal property
-      const listeners: Array<{ type: string }> | undefined = (firstNode as any).__on;
-      await expect(listeners).toBeDefined();
-      const hasDragListener: boolean = listeners!.some(
-        (l: { type: string }) => l.type === "mousedown" || l.type === "start"
-      );
-      await expect(hasDragListener).toBe(true);
+        // d3-drag attaches internal __on listeners for mousedown/touchstart
+        // Verify at least one drag-related listener is registered
+        const firstNode = nodeGroups[0];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- d3 internal property
+        const listeners: Array<{ type: string }> | undefined = (firstNode as any).__on;
+        await expect(listeners).toBeDefined();
+        const hasDragListener: boolean = listeners!.some(
+          (l: { type: string }) => l.type === "mousedown" || l.type === "start",
+        );
+        await expect(hasDragListener).toBe(true);
 
-      // Nodes should use grab cursor (from CSS module class)
-      const style = window.getComputedStyle(firstNode);
-      await expect(style.cursor).toBe("grab");
-    }, { timeout: 3000 });
+        // Nodes should use grab cursor (from CSS module class)
+        const style = window.getComputedStyle(firstNode);
+        await expect(style.cursor).toBe("grab");
+      },
+      { timeout: 3000 },
+    );
   },
 };
 
@@ -153,14 +160,17 @@ export const ZoomToFitOnLoad: Story = {
 
     // d3-force converges in ~300 iterations (~5s at 60fps), plus 500ms transition.
     // The root <g> has no transform until the zoom-to-fit fires after simulation end.
-    await waitFor(async () => {
-      const g = svg!.querySelector(":scope > g");
-      await expect(g).not.toBeNull();
-      const transform = g!.getAttribute("transform");
-      await expect(transform).toBeTruthy();
-      await expect(transform).toMatch(/translate/);
-      await expect(transform).toMatch(/scale/);
-    }, { timeout: 15000 });
+    await waitFor(
+      async () => {
+        const g = svg!.querySelector(":scope > g");
+        await expect(g).not.toBeNull();
+        const transform = g!.getAttribute("transform");
+        await expect(transform).toBeTruthy();
+        await expect(transform).toMatch(/translate/);
+        await expect(transform).toMatch(/scale/);
+      },
+      { timeout: 15000 },
+    );
   },
 };
 

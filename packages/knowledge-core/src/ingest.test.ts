@@ -54,7 +54,11 @@ describe("ingest", () => {
   });
 
   it("should return empty array when chunker produces no chunks", async () => {
-    const emptyChunker = { chunk() { return []; } };
+    const emptyChunker = {
+      chunk() {
+        return [];
+      },
+    };
     const results = await ingest("ignored", emptyChunker, embedder);
     expect(results).toEqual([]);
   });

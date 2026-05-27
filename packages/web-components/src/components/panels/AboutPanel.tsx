@@ -29,7 +29,11 @@ interface AboutPanelProps {
 }
 
 /** About panel showing connection status, environment summary, session count, and version. */
-export function AboutPanel({ connectionStatus, environments, sessions }: AboutPanelProps): JSX.Element {
+export function AboutPanel({
+  connectionStatus,
+  environments,
+  sessions,
+}: AboutPanelProps): JSX.Element {
   const connectedEnvs = environments.filter((e) => e.status === "connected").length;
   const totalEnvs = environments.length;
   const activeSessionCount = sessions.filter((s) => ["running", "idle"].includes(s.status)).length;
@@ -37,9 +41,7 @@ export function AboutPanel({ connectionStatus, environments, sessions }: AboutPa
   return (
     <section className={styles.section} data-testid="about-panel">
       <h3 className={styles.sectionTitle}>About</h3>
-      <p className={styles.sectionDescription}>
-        Connection status and application information.
-      </p>
+      <p className={styles.sectionDescription}>Connection status and application information.</p>
       <div className={styles.aboutGrid}>
         <div className={styles.aboutItem}>
           <span className={styles.aboutLabel}>Connection</span>
@@ -50,7 +52,9 @@ export function AboutPanel({ connectionStatus, environments, sessions }: AboutPa
         </div>
         <div className={styles.aboutItem}>
           <span className={styles.aboutLabel}>Environments</span>
-          <span className={styles.aboutValue}>{connectedEnvs}/{totalEnvs} connected</span>
+          <span className={styles.aboutValue}>
+            {connectedEnvs}/{totalEnvs} connected
+          </span>
         </div>
         <div className={styles.aboutItem}>
           <span className={styles.aboutLabel}>Active Sessions</span>
@@ -58,7 +62,9 @@ export function AboutPanel({ connectionStatus, environments, sessions }: AboutPa
         </div>
         <div className={styles.aboutItem}>
           <span className={styles.aboutLabel}>Version</span>
-          <span className={styles.aboutValue}>{typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "unknown"}</span>
+          <span className={styles.aboutValue}>
+            {typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "unknown"}
+          </span>
         </div>
       </div>
     </section>

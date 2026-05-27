@@ -1,13 +1,38 @@
 import { useCallback, useMemo, useRef, type JSX, type KeyboardEvent, type ReactNode } from "react";
 import { useLocation } from "react-router";
-import { Brain, ClipboardList, Home, MessageSquare, Monitor, Network, Settings } from "lucide-react";
-import { CHAT_URL, COORDINATION_URL, ENVIRONMENTS_URL, HOME_URL, KNOWLEDGE_URL, SETTINGS_URL, SETTINGS_CREDENTIALS_URL, TASKS_URL, useAppNavigate } from "../../utils/navigation.js";
+import {
+  Brain,
+  ClipboardList,
+  Home,
+  MessageSquare,
+  Monitor,
+  Network,
+  Settings,
+} from "lucide-react";
+import {
+  CHAT_URL,
+  COORDINATION_URL,
+  ENVIRONMENTS_URL,
+  HOME_URL,
+  KNOWLEDGE_URL,
+  SETTINGS_URL,
+  SETTINGS_CREDENTIALS_URL,
+  TASKS_URL,
+  useAppNavigate,
+} from "../../utils/navigation.js";
 import { ICON_LG } from "../../utils/iconSize.js";
 import { Tooltip } from "../display/Tooltip.js";
 import styles from "./AppNav.module.scss";
 
 /** Application view identifiers. */
-export type AppView = "dashboard" | "chat" | "tasks" | "environments" | "knowledge" | "coordination" | "settings";
+export type AppView =
+  | "dashboard"
+  | "chat"
+  | "tasks"
+  | "environments"
+  | "knowledge"
+  | "coordination"
+  | "settings";
 
 /** Tab definition for the application navigation bar. */
 export interface AppTab {
@@ -33,13 +58,62 @@ export interface AppTab {
 
 /** Ordered list of all app navigation tabs. Exported for plugin registry use. */
 export const TABS: AppTab[] = [
-  { view: "dashboard", label: "Dashboard", icon: <Home size={ICON_LG} />, route: HOME_URL, testId: "sidebar-tab-dashboard", order: 0 },
-  { view: "tasks", label: "Tasks", icon: <ClipboardList size={ICON_LG} />, route: TASKS_URL, testId: "sidebar-tab-tasks", order: 1 },
-  { view: "environments", label: "Environments", icon: <Monitor size={ICON_LG} />, route: ENVIRONMENTS_URL, testId: "sidebar-tab-environments", order: 2 },
-  { view: "chat", label: "Root", icon: <MessageSquare size={ICON_LG} />, route: CHAT_URL, testId: "sidebar-tab-chat", order: 3 },
-  { view: "knowledge", label: "Knowledge", icon: <Brain size={ICON_LG} />, route: KNOWLEDGE_URL, testId: "sidebar-tab-knowledge", order: 5 },
-  { view: "coordination", label: "Coordination", icon: <Network size={ICON_LG} />, route: COORDINATION_URL, testId: "sidebar-tab-coordination", order: 6 },
-  { view: "settings", label: "Settings", icon: <Settings size={ICON_LG} />, route: SETTINGS_CREDENTIALS_URL, testId: "sidebar-tab-settings", align: "end" },
+  {
+    view: "dashboard",
+    label: "Dashboard",
+    icon: <Home size={ICON_LG} />,
+    route: HOME_URL,
+    testId: "sidebar-tab-dashboard",
+    order: 0,
+  },
+  {
+    view: "tasks",
+    label: "Tasks",
+    icon: <ClipboardList size={ICON_LG} />,
+    route: TASKS_URL,
+    testId: "sidebar-tab-tasks",
+    order: 1,
+  },
+  {
+    view: "environments",
+    label: "Environments",
+    icon: <Monitor size={ICON_LG} />,
+    route: ENVIRONMENTS_URL,
+    testId: "sidebar-tab-environments",
+    order: 2,
+  },
+  {
+    view: "chat",
+    label: "Root",
+    icon: <MessageSquare size={ICON_LG} />,
+    route: CHAT_URL,
+    testId: "sidebar-tab-chat",
+    order: 3,
+  },
+  {
+    view: "knowledge",
+    label: "Knowledge",
+    icon: <Brain size={ICON_LG} />,
+    route: KNOWLEDGE_URL,
+    testId: "sidebar-tab-knowledge",
+    order: 5,
+  },
+  {
+    view: "coordination",
+    label: "Coordination",
+    icon: <Network size={ICON_LG} />,
+    route: COORDINATION_URL,
+    testId: "sidebar-tab-coordination",
+    order: 6,
+  },
+  {
+    view: "settings",
+    label: "Settings",
+    icon: <Settings size={ICON_LG} />,
+    route: SETTINGS_CREDENTIALS_URL,
+    testId: "sidebar-tab-settings",
+    align: "end",
+  },
 ];
 
 /** Derive the active application view from a URL pathname. */
@@ -87,38 +161,45 @@ export function AppNav({ tabs = TABS }: { tabs?: AppTab[] }): JSX.Element {
   }, [tabs]);
   const firstEndAlignedView = orderedTabs.find((t) => t.align === "end")?.view;
 
-  const handleClick = useCallback((tab: AppTab) => {
-    navigate(tab.route);
-  }, [navigate]);
+  const handleClick = useCallback(
+    (tab: AppTab) => {
+      navigate(tab.route);
+    },
+    [navigate],
+  );
 
-  const handleKeyDown = useCallback((e: KeyboardEvent<HTMLElement>) => {
-    const buttons = tabListRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
-    if (!buttons) {
-      return;
-    }
-    const focusedIndex = Array.from(buttons).findIndex((b) => b === document.activeElement);
-    const currentIndex = focusedIndex >= 0 ? focusedIndex : orderedTabs.findIndex((t) => t.view === activeView);
-    let nextIndex = currentIndex;
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLElement>) => {
+      const buttons = tabListRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+      if (!buttons) {
+        return;
+      }
+      const focusedIndex = Array.from(buttons).findIndex((b) => b === document.activeElement);
+      const currentIndex =
+        focusedIndex >= 0 ? focusedIndex : orderedTabs.findIndex((t) => t.view === activeView);
+      let nextIndex = currentIndex;
 
-    if (e.key === "ArrowRight" || e.key === "j" || e.key === "J") {
-      e.preventDefault();
-      nextIndex = (currentIndex + 1) % orderedTabs.length;
-    } else if (e.key === "ArrowLeft" || e.key === "k" || e.key === "K") {
-      e.preventDefault();
-      nextIndex = (currentIndex - 1 + orderedTabs.length) % orderedTabs.length;
-    } else if (e.key === "Home") {
-      e.preventDefault();
-      nextIndex = 0;
-    } else if (e.key === "End") {
-      e.preventDefault();
-      nextIndex = orderedTabs.length - 1;
-    } else {
-      return;
-    }
+      if (e.key === "ArrowRight" || e.key === "j" || e.key === "J") {
+        e.preventDefault();
+        nextIndex = (currentIndex + 1) % orderedTabs.length;
+      } else if (e.key === "ArrowLeft" || e.key === "k" || e.key === "K") {
+        e.preventDefault();
+        nextIndex = (currentIndex - 1 + orderedTabs.length) % orderedTabs.length;
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        nextIndex = 0;
+      } else if (e.key === "End") {
+        e.preventDefault();
+        nextIndex = orderedTabs.length - 1;
+      } else {
+        return;
+      }
 
-    navigate(orderedTabs[nextIndex].route);
-    buttons[nextIndex]?.focus(); // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- index may be out of bounds
-  }, [activeView, navigate, orderedTabs]);
+      navigate(orderedTabs[nextIndex].route);
+      buttons[nextIndex]?.focus(); // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- index may be out of bounds
+    },
+    [activeView, navigate, orderedTabs],
+  );
 
   return (
     <nav
@@ -134,7 +215,12 @@ export function AppNav({ tabs = TABS }: { tabs?: AppTab[] }): JSX.Element {
         const isActive = tab.view === activeView;
         const isFirstEndAligned = tab.view === firstEndAlignedView;
         return (
-          <Tooltip key={tab.view} text={tab.label} placement="bottom" className={isFirstEndAligned ? styles.tabEnd : undefined}>
+          <Tooltip
+            key={tab.view}
+            text={tab.label}
+            placement="bottom"
+            className={isFirstEndAligned ? styles.tabEnd : undefined}
+          >
             <button
               role="tab"
               type="button"
@@ -145,7 +231,9 @@ export function AppNav({ tabs = TABS }: { tabs?: AppTab[] }): JSX.Element {
               data-testid={tab.testId}
               aria-label={tab.label}
             >
-              <span className={styles.tabIcon} aria-hidden="true">{tab.icon}</span>
+              <span className={styles.tabIcon} aria-hidden="true">
+                {tab.icon}
+              </span>
               <span className={styles.tabLabel}>{tab.label}</span>
             </button>
           </Tooltip>

@@ -100,10 +100,7 @@ export async function findReferenceNodeBySource(
     try {
       await session.close();
     } catch (closeError) {
-      logger.warn(
-        { err: closeError },
-        "Failed to close session after findReferenceNodeBySource",
-      );
+      logger.warn({ err: closeError }, "Failed to close session after findReferenceNodeBySource");
     }
   }
 }
@@ -138,10 +135,7 @@ export async function deleteReferenceNodeBySource(
     try {
       await session.close();
     } catch (closeError) {
-      logger.warn(
-        { err: closeError },
-        "Failed to close session after deleteReferenceNodeBySource",
-      );
+      logger.warn({ err: closeError }, "Failed to close session after deleteReferenceNodeBySource");
     }
   }
 }
@@ -166,10 +160,7 @@ export async function syncReferenceNode(
 ): Promise<string> {
   const { vector } = await embedder.embed(input.text);
 
-  const existing = await findReferenceNodeBySource(
-    input.sourceType,
-    input.sourceId,
-  );
+  const existing = await findReferenceNodeBySource(input.sourceType, input.sourceId);
 
   if (existing) {
     await updateNode(existing.id, { label: input.label, embedding: vector });
@@ -221,11 +212,7 @@ export function deriveTaskText(title: string, description: string): string {
  * @param tags - Free-form tags for categorization.
  * @returns A formatted text string suitable for embedding.
  */
-export function deriveFindingText(
-  title: string,
-  content: string,
-  tags: string[],
-): string {
+export function deriveFindingText(title: string, content: string, tags: string[]): string {
   const parts: string[] = [`[Finding] ${title}`];
   if (content) {
     parts.push(content);

@@ -5,21 +5,38 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const callOrder: string[] = [];
 
 vi.mock("@grackle-ai/database", () => ({
-  openDatabase: vi.fn(() => { callOrder.push("openDatabase"); }),
-  checkDatabaseIntegrity: vi.fn(() => { callOrder.push("checkDatabaseIntegrity"); }),
-  initDatabase: vi.fn(() => { callOrder.push("initDatabase"); }),
-  seedDatabase: vi.fn(() => { callOrder.push("seedDatabase"); }),
+  openDatabase: vi.fn(() => {
+    callOrder.push("openDatabase");
+  }),
+  checkDatabaseIntegrity: vi.fn(() => {
+    callOrder.push("checkDatabaseIntegrity");
+  }),
+  initDatabase: vi.fn(() => {
+    callOrder.push("initDatabase");
+  }),
+  seedDatabase: vi.fn(() => {
+    callOrder.push("seedDatabase");
+  }),
   sqlite: { __mock: true },
-  startWalCheckpointTimer: vi.fn(() => { callOrder.push("startWalCheckpointTimer"); }),
+  startWalCheckpointTimer: vi.fn(() => {
+    callOrder.push("startWalCheckpointTimer");
+  }),
   envRegistry: {
-    resetAllStatuses: vi.fn(() => { callOrder.push("resetAllStatuses"); }),
+    resetAllStatuses: vi.fn(() => {
+      callOrder.push("resetAllStatuses");
+    }),
   },
 }));
 
 import { initializeDatabase } from "./database-init.js";
 import {
-  openDatabase, checkDatabaseIntegrity, initDatabase,
-  seedDatabase, sqlite, startWalCheckpointTimer, envRegistry,
+  openDatabase,
+  checkDatabaseIntegrity,
+  initDatabase,
+  seedDatabase,
+  sqlite,
+  startWalCheckpointTimer,
+  envRegistry,
 } from "@grackle-ai/database";
 
 beforeEach(() => {

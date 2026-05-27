@@ -52,15 +52,18 @@ describe("notification-router", () => {
       const esc = makeEscalation();
       await routeEscalation(esc);
 
-      expect(emit).toHaveBeenCalledWith("notification.escalated", expect.objectContaining({
-        escalationId: "esc-001",
-        taskId: "task-001",
-        title: "Need help",
-        message: "What auth method should I use?",
-        source: "explicit",
-        urgency: "normal",
-        taskUrl: "http://localhost:3000/tasks/task-001",
-      }));
+      expect(emit).toHaveBeenCalledWith(
+        "notification.escalated",
+        expect.objectContaining({
+          escalationId: "esc-001",
+          taskId: "task-001",
+          title: "Need help",
+          message: "What auth method should I use?",
+          source: "explicit",
+          urgency: "normal",
+          taskUrl: "http://localhost:3000/tasks/task-001",
+        }),
+      );
     });
 
     it("updates escalation status to delivered", async () => {
@@ -99,9 +102,12 @@ describe("notification-router", () => {
       const esc = makeEscalation();
       await routeEscalation(esc);
 
-      expect(emit).toHaveBeenCalledWith("notification.escalated", expect.objectContaining({
-        escalationId: "esc-001",
-      }));
+      expect(emit).toHaveBeenCalledWith(
+        "notification.escalated",
+        expect.objectContaining({
+          escalationId: "esc-001",
+        }),
+      );
     });
 
     it("logs error on webhook failure and does not throw", async () => {

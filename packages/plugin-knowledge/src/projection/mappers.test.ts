@@ -45,7 +45,13 @@ function task(overrides: Partial<TaskRow> = {}): TaskRow {
   } as unknown as TaskRow;
 }
 function workspace(overrides: Partial<WorkspaceRow> = {}): WorkspaceRow {
-  return { id: "w1", name: "Demo", description: "a ws", status: "active", ...overrides } as unknown as WorkspaceRow;
+  return {
+    id: "w1",
+    name: "Demo",
+    description: "a ws",
+    status: "active",
+    ...overrides,
+  } as unknown as WorkspaceRow;
 }
 function session(overrides: Partial<SessionRow> = {}): SessionRow {
   return {
@@ -62,10 +68,21 @@ function session(overrides: Partial<SessionRow> = {}): SessionRow {
   } as unknown as SessionRow;
 }
 function persona(overrides: Partial<PersonaRow> = {}): PersonaRow {
-  return { id: "p1", name: "Engineer", description: "writes code", ...overrides } as unknown as PersonaRow;
+  return {
+    id: "p1",
+    name: "Engineer",
+    description: "writes code",
+    ...overrides,
+  } as unknown as PersonaRow;
 }
 function environment(overrides: Partial<EnvironmentRow> = {}): EnvironmentRow {
-  return { id: "e1", displayName: "Local", adapterType: "local", status: "connected", ...overrides } as unknown as EnvironmentRow;
+  return {
+    id: "e1",
+    displayName: "Local",
+    adapterType: "local",
+    status: "connected",
+    ...overrides,
+  } as unknown as EnvironmentRow;
 }
 
 describe("derive-text", () => {
@@ -108,7 +125,8 @@ describe("node-mappers", () => {
   it("folds the linked-env set into the workspace hash (order-independent)", () => {
     const base = workspaceToNodeInput(workspace()).extraProps?.projectionHash;
     const linked = workspaceToNodeInput(workspace(), ["e1", "e2"]).extraProps?.projectionHash;
-    const linkedReordered = workspaceToNodeInput(workspace(), ["e2", "e1"]).extraProps?.projectionHash;
+    const linkedReordered = workspaceToNodeInput(workspace(), ["e2", "e1"]).extraProps
+      ?.projectionHash;
     // A link change must change the hash (so the scan re-projects LINKED_TO)…
     expect(linked).not.toBe(base);
     // …but link *order* must not (the link set is what matters).
@@ -148,9 +166,11 @@ describe("edge-mappers", () => {
   });
 
   it("emits ATTEMPT_OF / RAN_IN / USED_PERSONA for a session, skipping empties", () => {
-    expect(sessionEdges(session()).map((edge) => edge.type).sort()).toEqual(
-      [EDGE_TYPE.ATTEMPT_OF, EDGE_TYPE.RAN_IN, EDGE_TYPE.USED_PERSONA].sort(),
-    );
+    expect(
+      sessionEdges(session())
+        .map((edge) => edge.type)
+        .sort(),
+    ).toEqual([EDGE_TYPE.ATTEMPT_OF, EDGE_TYPE.RAN_IN, EDGE_TYPE.USED_PERSONA].sort());
     expect(sessionEdges(session({ taskId: "", personaId: "" })).map((edge) => edge.type)).toEqual([
       EDGE_TYPE.RAN_IN,
     ]);

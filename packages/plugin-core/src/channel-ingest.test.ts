@@ -7,7 +7,10 @@ import { grackle } from "@grackle-ai/common";
 vi.mock("@grackle-ai/auth", () => ({ verifyChannelToken: vi.fn() }));
 vi.mock("@grackle-ai/database", () => ({ channelGrantStore: { getGrant: vi.fn() } }));
 vi.mock("./channel-config.js", () => ({
-  getChannelConfig: vi.fn(() => ({ signingSecret: "secret", ingressBaseUrl: "http://localhost:3000" })),
+  getChannelConfig: vi.fn(() => ({
+    signingSecret: "secret",
+    ingressBaseUrl: "http://localhost:3000",
+  })),
 }));
 vi.mock("./session-handlers.js", () => ({ sendInput: vi.fn() }));
 
@@ -20,7 +23,13 @@ const verifyMock = vi.mocked(verifyChannelToken);
 const getGrantMock = vi.mocked(channelGrantStore.getGrant);
 const sendInputMock = vi.mocked(sendInput);
 
-const CLAIMS = { chan: "grackle:/sessions/s1", verbs: ["send_input"], jti: "g1", iat: 1, exp: 9_999_999_999 };
+const CLAIMS = {
+  chan: "grackle:/sessions/s1",
+  verbs: ["send_input"],
+  jti: "g1",
+  iat: 1,
+  exp: 9_999_999_999,
+};
 const GRANT = {
   id: "g1",
   channelUri: "grackle:/sessions/s1",

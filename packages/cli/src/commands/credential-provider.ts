@@ -2,10 +2,7 @@ import type { Command } from "commander";
 import chalk from "chalk";
 import Table from "cli-table3";
 import { createGrackleClients } from "../client.js";
-import {
-  claudeProviderModeToString,
-  providerToggleToString,
-} from "@grackle-ai/common";
+import { claudeProviderModeToString, providerToggleToString } from "@grackle-ai/common";
 
 /** Valid provider names. */
 const VALID_PROVIDERS: readonly string[] = ["claude", "github", "copilot", "codex", "goose"];
@@ -56,22 +53,22 @@ export function registerCredentialProviderCommands(program: Command): void {
       const allowed = VALID_VALUES[provider];
       if (!allowed.includes(value)) {
         console.error(
-          chalk.red(`Invalid value for ${provider}: ${value}. Must be one of: ${allowed.join(", ")}`),
+          chalk.red(
+            `Invalid value for ${provider}: ${value}. Must be one of: ${allowed.join(", ")}`,
+          ),
         );
         process.exit(1);
       }
 
       const { core: client } = createGrackleClients();
       const updated = await client.setCredentialProvider({ provider, value });
-      console.log(
-        chalk.green(`${provider} → ${value}`),
-      );
+      console.log(chalk.green(`${provider} → ${value}`));
       console.log(
         `  claude: ${claudeProviderModeToString(updated.claude) || "off"}  ` +
-        `github: ${providerToggleToString(updated.github) || "off"}  ` +
-        `copilot: ${providerToggleToString(updated.copilot) || "off"}  ` +
-        `codex: ${providerToggleToString(updated.codex) || "off"}  ` +
-        `goose: ${providerToggleToString(updated.goose) || "off"}`,
+          `github: ${providerToggleToString(updated.github) || "off"}  ` +
+          `copilot: ${providerToggleToString(updated.copilot) || "off"}  ` +
+          `codex: ${providerToggleToString(updated.codex) || "off"}  ` +
+          `goose: ${providerToggleToString(updated.goose) || "off"}`,
       );
     });
 }

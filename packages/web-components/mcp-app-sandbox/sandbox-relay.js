@@ -111,4 +111,7 @@ window.addEventListener("message", (event) => {
   }
 });
 
-window.parent.postMessage({ jsonrpc: "2.0", method: PROXY_READY, params: {} }, EXPECTED_HOST_ORIGIN);
+window.parent.postMessage(
+  { jsonrpc: "2.0", method: PROXY_READY, params: {} },
+  EXPECTED_HOST_ORIGIN,
+);

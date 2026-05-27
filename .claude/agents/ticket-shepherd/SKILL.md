@@ -21,6 +21,7 @@ You manage a single Grackle task through its execution lifecycle: start an agent
 ## Inputs
 
 The orchestrator will provide:
+
 - **Grackle task ID** — the task to start and monitor
 - **GitHub issue number** — for cross-referencing PRs
 - Any special instructions
@@ -30,6 +31,7 @@ The orchestrator will provide:
 ### 1. Start the Task
 
 Use the Grackle MCP `task_start` tool:
+
 - `taskId`: the provided task ID
 
 This spawns an AI agent session that will work on the issue. Note the session details from the response.
@@ -39,6 +41,7 @@ This spawns an AI agent session that will work on the issue. Note the session de
 Poll the task and session status periodically:
 
 **Check task status** with `task_show`:
+
 - `pending` / `assigned` — still initializing, keep waiting
 - `in_progress` — agent is working, keep monitoring
 - `waiting_input` — agent needs input (check session for details)
@@ -47,6 +50,7 @@ Poll the task and session status periodically:
 - `failed` — task failed
 
 **Check session status** with `session_status` or `session_attach`:
+
 - Look for session events indicating progress
 - If the session is waiting for input, check what it needs
 
@@ -57,6 +61,7 @@ Poll the task and session status periodically:
 When the task reaches `review` status or the session indicates a PR was created:
 
 Use GitHub MCP to find the PR:
+
 - Search for open PRs with the issue number in the branch name or body
 - Verify the PR exists and links back to the issue
 
@@ -65,13 +70,16 @@ Use GitHub MCP to find the PR:
 Once a PR exists, monitor CI and reviews:
 
 **Check CI status** via GitHub MCP:
+
 - Look at PR check runs / status checks
 - Wait for all checks to complete
 
 **Check for review comments** via GitHub MCP:
+
 - Look for unresolved review threads (especially from Copilot)
 
 **If CI fails or reviews need addressing**:
+
 1. Send `/pr-fixup <PR_URL>` to the session via `session_send_input`
 2. Wait for the session to process the fixup
 3. Re-check CI and reviews
@@ -82,6 +90,7 @@ Once a PR exists, monitor CI and reviews:
 Report the final status to the orchestrator:
 
 **Success case**:
+
 ```
 ## Ticket Complete
 
@@ -95,6 +104,7 @@ Report the final status to the orchestrator:
 ```
 
 **Failure case**:
+
 ```
 ## Ticket Failed
 

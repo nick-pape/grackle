@@ -30,7 +30,9 @@ export function ToolSearchCard({ args, result, isError }: ToolCardProps): JSX.El
       data-testid="tool-card-tool-search"
     >
       <div className={styles.header}>
-        <span className={styles.icon} aria-hidden="true">&#x1F527;</span>
+        <span className={styles.icon} aria-hidden="true">
+          &#x1F527;
+        </span>
         <span className={styles.toolName}>ToolSearch</span>
         {query && (
           <span className={styles.fileName} data-testid="tool-card-tool-search-query">
@@ -71,11 +73,15 @@ export function ToolSearchCard({ args, result, isError }: ToolCardProps): JSX.El
             <button
               type="button"
               className={styles.bodyToggle}
-              onClick={() => { setExpanded((v) => !v); }}
+              onClick={() => {
+                setExpanded((v) => !v);
+              }}
               aria-expanded={expanded}
               data-testid="tool-card-toggle"
             >
-              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}>&#x25B8;</span>
+              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}>
+                &#x25B8;
+              </span>
               {expanded ? "collapse" : `${resultLines.length - PREVIEW_LINES} more lines`}
             </button>
           )}

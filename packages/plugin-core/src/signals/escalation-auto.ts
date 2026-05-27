@@ -49,7 +49,9 @@ export function createEscalationAutoSubscriber(ctx: PluginContext): Disposable {
       } catch (err) {
         logger.error({ err, taskId }, "Escalation auto-detect handler error");
       }
-    })().catch(() => { /* swallowed — logged above */ });
+    })().catch(() => {
+      /* swallowed — logged above */
+    });
   });
 
   logger.info("Escalation auto-detect subscriber initialized");

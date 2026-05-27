@@ -224,9 +224,7 @@ describe("topologicalSortIssues", () => {
       for (let i = 1; i < sorted.length; i++) {
         const current = sorted[i];
         if (current.parentNumber !== undefined) {
-          const parentIdx = sorted.findIndex(
-            (s) => s.number === current.parentNumber,
-          );
+          const parentIdx = sorted.findIndex((s) => s.number === current.parentNumber);
           expect(parentIdx).toBeLessThan(i);
         }
       }
@@ -368,10 +366,7 @@ describe("planImport", () => {
   });
 
   it("handles circular blocking relationships", () => {
-    const issues = [
-      ghIssue(1, "A", { blockedBy: [2] }),
-      ghIssue(2, "B", { blockedBy: [1] }),
-    ];
+    const issues = [ghIssue(1, "A", { blockedBy: [2] }), ghIssue(2, "B", { blockedBy: [1] })];
     const plan = planImport(issues, new Set(), new Map(), generateId);
 
     expect(plan.tasksToCreate).toHaveLength(2);
@@ -379,10 +374,7 @@ describe("planImport", () => {
   });
 
   it("handles child-before-parent ordering", () => {
-    const issues = [
-      ghIssue(2, "Child", { parentNumber: 1 }),
-      ghIssue(1, "Parent"),
-    ];
+    const issues = [ghIssue(2, "Child", { parentNumber: 1 }), ghIssue(1, "Parent")];
     const plan = planImport(issues, new Set(), new Map(), generateId);
 
     // Parent should be created before child due to topo sort

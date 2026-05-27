@@ -6,7 +6,10 @@
  * based on per-environment overrides, global settings, and defaults.
  */
 
-import { DEFAULT_MAX_CONCURRENT_SESSIONS, SETTINGS_KEY_MAX_CONCURRENT_SESSIONS } from "@grackle-ai/common";
+import {
+  DEFAULT_MAX_CONCURRENT_SESSIONS,
+  SETTINGS_KEY_MAX_CONCURRENT_SESSIONS,
+} from "@grackle-ai/common";
 
 /** Dependencies for concurrency checks, injected for testability. */
 export interface ConcurrencyDeps {

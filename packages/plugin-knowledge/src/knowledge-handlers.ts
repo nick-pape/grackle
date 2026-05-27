@@ -61,7 +61,9 @@ function wrapNeo4jError(err: unknown): never {
 }
 
 /** Search the knowledge graph using semantic similarity. */
-export async function searchKnowledge(req: grackle.SearchKnowledgeRequest): Promise<grackle.SearchKnowledgeResponse> {
+export async function searchKnowledge(
+  req: grackle.SearchKnowledgeRequest,
+): Promise<grackle.SearchKnowledgeResponse> {
   const embedder: Embedder = requireEmbedder();
 
   try {
@@ -85,7 +87,9 @@ export async function searchKnowledge(req: grackle.SearchKnowledgeRequest): Prom
 }
 
 /** Get a knowledge node by ID. */
-export async function getKnowledgeNode(req: grackle.GetKnowledgeNodeRequest): Promise<grackle.GetKnowledgeNodeResponse> {
+export async function getKnowledgeNode(
+  req: grackle.GetKnowledgeNodeRequest,
+): Promise<grackle.GetKnowledgeNodeResponse> {
   requireKnowledgeReady();
 
   try {
@@ -104,7 +108,9 @@ export async function getKnowledgeNode(req: grackle.GetKnowledgeNodeRequest): Pr
 }
 
 /** Expand a knowledge node to retrieve its neighbors. */
-export async function expandKnowledgeNode(req: grackle.ExpandKnowledgeNodeRequest): Promise<grackle.ExpandKnowledgeNodeResponse> {
+export async function expandKnowledgeNode(
+  req: grackle.ExpandKnowledgeNodeRequest,
+): Promise<grackle.ExpandKnowledgeNodeResponse> {
   requireKnowledgeReady();
 
   try {
@@ -123,14 +129,13 @@ export async function expandKnowledgeNode(req: grackle.ExpandKnowledgeNodeReques
 }
 
 /** List recently created knowledge nodes. */
-export async function listRecentKnowledgeNodes(req: grackle.ListRecentKnowledgeNodesRequest): Promise<grackle.ListRecentKnowledgeNodesResponse> {
+export async function listRecentKnowledgeNodes(
+  req: grackle.ListRecentKnowledgeNodesRequest,
+): Promise<grackle.ListRecentKnowledgeNodesResponse> {
   requireKnowledgeReady();
 
   try {
-    const result = await listRecentNodes(
-      req.limit || 20,
-      req.workspaceId || undefined,
-    );
+    const result = await listRecentNodes(req.limit || 20, req.workspaceId || undefined);
 
     return create(grackle.ListRecentKnowledgeNodesResponseSchema, {
       nodes: result.nodes.map(knowledgeNodeToProto),
