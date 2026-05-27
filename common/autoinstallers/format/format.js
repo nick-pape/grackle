@@ -130,8 +130,12 @@ function baseArgs(mode) {
     "--cache",
     "--cache-location",
     path.join(CACHE_DIR, "cache"),
+    // "content" hashes the file body — slightly slower than "metadata" but
+    // immune to mtime jitter from git checkouts / cross-platform clones that
+    // can otherwise cause prettier to wrongly treat an unformatted file as
+    // already-checked.
     "--cache-strategy",
-    "metadata",
+    "content",
     "--log-level",
     "warn",
     mode === "write" ? "--write" : "--check",

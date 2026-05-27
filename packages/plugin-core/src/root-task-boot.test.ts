@@ -90,12 +90,10 @@ function createMockDeps(): RootTaskBootDeps {
     getTask: vi.fn().mockReturnValue(makeTask()),
     listSessionsForTask: vi.fn().mockReturnValue([]),
     getLatestSessionForTask: vi.fn().mockReturnValue(undefined),
-    computeTaskStatus: vi
-      .fn()
-      .mockReturnValue({
-        status: TASK_STATUS.NOT_STARTED,
-        latestSessionId: "",
-      } satisfies TaskStatusResult),
+    computeTaskStatus: vi.fn().mockReturnValue({
+      status: TASK_STATUS.NOT_STARTED,
+      latestSessionId: "",
+    } satisfies TaskStatusResult),
     findFirstConnectedEnvironment: vi.fn().mockReturnValue(makeEnv()),
     startTaskSession: vi.fn().mockResolvedValue(undefined),
     reanimateAgent: vi.fn().mockReturnValue(makeSession({ status: "running" })),
