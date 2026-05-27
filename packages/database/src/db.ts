@@ -344,7 +344,7 @@ const MIGRATIONS: Migration[] = [
       }
     },
   },
-    {
+  {
     version: 17,
     name: "session-snapshots",
     up: (conn) => {

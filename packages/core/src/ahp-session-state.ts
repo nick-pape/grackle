@@ -63,7 +63,7 @@ export class SessionStateManager {
   /** Event index for the mapper — ensures turn IDs are unique per turn_started event. */
   private eventIndex: number;
 
-  /**
+ /**
     * Number of actions between automatic snapshot flushes.
     * Set to `0` to disable automatic flushing (use explicit snapshots only).
    */
@@ -95,7 +95,7 @@ export class SessionStateManager {
     }
   }
 
- /**
+  /**
     * Process a single AgentEvent through the mapper and reducer,
     * and flush a snapshot if the threshold or turn_complete is reached.
     *
@@ -105,95 +105,91 @@ export class SessionStateManager {
     * @returns The last action's ULID included in the snapshot, or `undefined`
     *   if no actions were produced or the threshold was not reached.
    */
-    public processEvent(event: powerline.AgentEvent, serverSeq: string): string | undefined {
-     const idx = this.eventIndex++;
-     const { actions, notes } = mapAgentEvent(event, idx, this.context);
+   public processEvent(event: powerline.AgentEvent, serverSeq: string): string | undefined {
+    const idx = this.eventIndex++;
+    const { actions, notes } = mapAgentEvent(event, idx, this.context);
 
-    // Fold each action through the reducer.
-    // All actions from the mapper are session-specific, so casting to SessionAction is safe.
-      for (const action of actions) {
-        this.state = sessionReducer(this.state, action as SessionAction);
-        this.actionCountSinceLastFlush += 1;
-      }
+   // Fold each action through the reducer.
+   // All actions from the mapper are session-specific, so casting to SessionAction is safe.
+    for (const action of actions) {
+      this.state = sessionReducer(this.state, action as SessionAction);
+      this.actionCountSinceLastFlush += 1;
+    }
 
-      // Apply mapper carries (_meta fields the reducer doesn't handle)
-      if (this.context.metaAccumulator.costMillicents !== undefined) {
-        this.state._meta = { ...this.state._meta, costMillicents: this.context.metaAccumulator.costMillicents };
-      }
-      if (this.context.metaAccumulator.runtimeSessionId !== undefined) {
-        this.state._meta = { ...this.state._meta, runtimeSessionId: this.context.metaAccumulator.runtimeSessionId };
-      }
+    // Apply mapper carries (_meta fields the reducer doesn't handle)
+    if (this.context.metaAccumulator.costMillicents !== undefined) {
+      this.state._meta = { ...this.state._meta, costMillicents: this.context.metaAccumulator.costMillicents };
+    }
+    if (this.context.metaAccumulator.runtimeSessionId !== undefined) {
+      this.state._meta = { ...this.state._meta, runtimeSessionId: this.context.metaAccumulator.runtimeSessionId };
+    }
 
-      let lastSeq: string | undefined;
+    let lastSeq: string | undefined;
 
-     // Check snapshot threshold
-     if (
-       this.snapshotThreshold > 0 &&
-       this.actionCountSinceLastFlush >= this.snapshotThreshold
-     ) {
-       this.snapshot(serverSeq);
-       lastSeq = serverSeq;
-     }
-     // Auto-snapshot on turn_complete (only if not already flushed above)
-     else if (notes.some((n) => n.disposition === "mapped" && n.type === "turn_complete")) {
-       this.snapshot(serverSeq);
-       lastSeq = serverSeq;
-     }
-
-     return lastSeq;
+   // Check snapshot threshold
+   if (
+     this.snapshotThreshold > 0 &&
+     this.actionCountSinceLastFlush >= this.snapshotThreshold
+   ) {
+     this.snapshot(serverSeq);
+     lastSeq = serverSeq;
    }
+   // Auto-snapshot on turn_complete (only if not already flushed above)
+   else if (notes.some((n) => n.disposition === "mapped" && n.type === "turn_complete")) {
+     this.snapshot(serverSeq);
+     lastSeq = serverSeq;
+   }
+
+   return lastSeq;
+ }
 
   /**
     * Get the current SessionState.
     *
-    * Returns a shallow copy with nested objects frozen to prevent callers
-    * from mutating the manager's internal state.
+    * Returns a deep clone frozen to prevent callers from mutating the
+    * manager's internal state.
     *
-    * @returns A copy of the current state.
+    * @returns A frozen deep clone of the current state.
   */
-    public getState(): SessionState {
-     const copy = { ...this.state };
-     // Freeze nested arrays/objects to prevent mutation of internal state.
-     // State always initializes turns as [], queuedMessages as [], inputRequests as [],
-     // config as {} — all truthy. _meta is optional.
-     copy.turns.forEach((turn) => {
-        Object.freeze(turn);
-      });
-     Object.freeze(copy.turns);
-     Object.freeze(copy.queuedMessages);
-     Object.freeze(copy.inputRequests);
-     Object.freeze(copy.config);
-     if (copy._meta) Object.freeze(copy._meta);
-     Object.freeze(copy);
-     return copy;
-   }
-
-   /**
-    * Get the current mapper context (useful for debugging or external state sync).
-    *
-    * Returns a shallow copy with nested arrays frozen to prevent mutation
-    * of the manager's internal state.
-    *
-    * @returns The current mapper context.
-*/
-    public getContext(): MapperContext {
-     const copy = { ...this.context };
-     // openToolCalls is always initialized as [], so always truthy.
-     Object.freeze(copy.openToolCalls);
-     Object.freeze(copy);
-     return copy;
-   }
+   public getState(): SessionState {
+    const copy = structuredClone(this.state);
+    // Freeze everything to prevent mutation of internal state.
+    // structuredClone already deep-copies turns, activeTurn, etc.
+    try { Object.freeze(copy.turns); } catch { /* ignore */ }
+    try { copy.turns.forEach(Object.freeze); } catch { /* ignore */ }
+    try { Object.freeze(copy.queuedMessages); } catch { /* ignore */ }
+    try { Object.freeze(copy.inputRequests); } catch { /* ignore */ }
+    try { Object.freeze(copy.config); } catch { /* ignore */ }
+    try { Object.freeze(copy._meta); } catch { /* ignore */ }
+    try { Object.freeze(copy); } catch { /* ignore */ }
+    return copy;
+  }
 
   /**
-   * Persist a snapshot of the current SessionState to the database.
-   *
-   * Serializes key fields from SessionState (summary, lifecycle, turns,
-   * activeTurn, steeringMessage, queuedMessages, inputRequests, config, _meta)
-   * into JSON. Excludes serverTools, activeClient, and customizations.
-   *
-   * @param lastSeq - ULID string of the last action included in this snapshot.
-   * @returns Result describing whether a snapshot was persisted.
-*/
+    * Get the current mapper context (useful for debugging or external state sync).
+    *
+    * Returns a deep clone frozen to prevent callers from mutating the
+    * manager's internal state.
+    *
+    * @returns A frozen deep clone of the current context.
+  */
+   public getContext(): MapperContext {
+    const copy = structuredClone(this.context);
+    try { Object.freeze(copy.openToolCalls); } catch { /* ignore */ }
+    try { Object.freeze(copy); } catch { /* ignore */ }
+    return copy;
+  }
+
+  /**
+    * Persist a snapshot of the current SessionState to the database.
+    *
+    * Serializes key fields from SessionState (summary, lifecycle, turns,
+    * activeTurn, steeringMessage, queuedMessages, inputRequests, config, _meta)
+    * into JSON. Excludes serverTools, activeClient, and customizations.
+    *
+    * @param lastSeq - ULID string of the last action included in this snapshot.
+    * @returns Result describing whether a snapshot was persisted.
+  */
    public snapshot(lastSeq: string = "0"): SnapshotResult {
     try {
       const snapshotData = this.serializeSnapshot();
@@ -220,8 +216,8 @@ export class SessionStateManager {
   }
 
   /**
-   * Clear internal state. Call on session shutdown.
- */
+    * Clear internal state. Call on session shutdown.
+  */
    public clear(): void {
     this.state = this.createInitialState();
     this.context = {
@@ -233,7 +229,7 @@ export class SessionStateManager {
     this.actionCountSinceLastFlush = 0;
   }
 
- /**
+  /**
     * Reconstruct SessionState from the latest snapshot plus delta actions.
     *
     * Loads the most recent snapshot for the session, then replays all
@@ -248,52 +244,52 @@ export class SessionStateManager {
     * @returns Reconstructed SessionState, or a minimal initial state if no
     *          snapshot or actions exist.
   */
-    public static reconstruct(sessionId: string): SessionState {
-     // Load latest snapshot
-     const snapshots = querySnapshot(sessionId, 1);
-     if (snapshots.length === 0) {
-       // No snapshot — return initial state
-       return {
-          summary: {
-            resource: `ahp-session:${sessionId}`,
-            provider: "grackle",
-            title: "",
-            status: SessionStatus.Idle,
-            createdAt: Date.now(),
-            modifiedAt: Date.now(),
-          },
-          lifecycle: SessionLifecycle.Creating,
-          turns: [],
-        };
-     }
+   public static reconstruct(sessionId: string): SessionState {
+    // Load latest snapshot
+    const snapshots = querySnapshot(sessionId, 1);
+    if (snapshots.length === 0) {
+      // No snapshot — return initial state
+      return {
+         summary: {
+           resource: `ahp-session:${sessionId}`,
+           provider: "grackle",
+           title: "",
+           status: SessionStatus.Idle,
+           createdAt: Date.now(),
+           modifiedAt: Date.now(),
+         },
+         lifecycle: SessionLifecycle.Creating,
+         turns: [],
+       };
+    }
 
-     const latest = snapshots[0];
-     const initialState = JSON.parse(latest.state) as SessionState;
+    const latest = snapshots[0];
+    const initialState = JSON.parse(latest.state) as SessionState;
 
-     // Replay delta actions from the snapshot seq onward.
-     // Currently parseSessionActionToAhpAction returns undefined for each
-     // delta (session_actions store raw AgentEvents, not AHP actions).
-     // The snapshot baseline is still valid; delta replay is future work.
-     const deltaActions = querySessionActions({
-       sessionId,
-       fromSeq: latest.seq,
-       limit: 10000,
-     });
+    // Replay delta actions from the snapshot seq onward.
+    // Currently parseSessionActionToAhpAction returns undefined for each
+    // delta (session_actions store raw AgentEvents, not AHP actions).
+    // The snapshot baseline is still valid; delta replay is future work.
+    const deltaActions = querySessionActions({
+      sessionId,
+      fromSeq: latest.seq,
+      limit: 10000,
+    });
 
-     let state = initialState;
-     for (const deltaAction of deltaActions) {
-       try {
-         const action = parseSessionActionToAhpAction(deltaAction);
-         if (action) {
-           state = sessionReducer(state, action);
-         }
-       } catch {
-         // Non-critical: skip actions that can't be parsed
-       }
-     }
+    let state = initialState;
+    for (const deltaAction of deltaActions) {
+      try {
+        const action = parseSessionActionToAhpAction(deltaAction);
+        if (action) {
+          state = sessionReducer(state, action);
+        }
+      } catch {
+        // Non-critical: skip actions that can't be parsed
+      }
+    }
 
-     return state;
-   }
+    return state;
+  }
 
   /**
    * Create a minimal initial SessionState.

@@ -7,23 +7,9 @@
  * between the last snapshot and the present.
  */
 
-import { and, desc, eq, lt, type SQL } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import db from "./db.js";
 import { sessionSnapshots, type SessionSnapshotRow } from "./schema.js";
-
-// Lazily prepared insert statement, cached for performance.
-// Guarded by db.$client existence so it doesn't crash when database isn't initialized.
-let insertStmtCache: unknown | null = null;
-
-function getInsertStmt(): unknown {
-  if (!db.$client) return undefined;
-  if (insertStmtCache === null) {
-    insertStmtCache = db.$client.prepare(
-      "INSERT INTO session_snapshots (seq, session_id, snapshot_at, state) VALUES (?, ?, ?, ?)",
-    );
-  }
-  return insertStmtCache;
-}
 
 /**
  * A snapshot row to persist — the key fields of a `SessionState`
@@ -47,17 +33,32 @@ const DEFAULT_SNAPSHOT_LIMIT: number = 10;
 /**
  * Persist a snapshot to the `session_snapshots` table. Best-effort:
  * a persistence failure is logged but never interrupts event processing.
+ * Uses INSERT OR REPLACE to handle deduplication when two flush triggers
+ * fire for the same serverSeq (threshold + turn_complete).
  *
  * @param snapshot - The snapshot record to persist.
  */
 export function persistSnapshot(snapshot: SnapshotRecord): void {
-  const stmt = getInsertStmt();
-  if (stmt && typeof stmt === "object" && "run" in stmt) {
-    try {
-      (stmt as { run: (params: unknown[]) => void }).run([snapshot.seq, snapshot.sessionId, snapshot.snapshotAt, snapshot.state]);
-    } catch {
-      // Non-critical — snapshot failures must not interrupt event processing
-    }
+  try {
+    db
+      .insert(sessionSnapshots)
+      .values({
+        seq: snapshot.seq,
+        sessionId: snapshot.sessionId,
+        snapshotAt: snapshot.snapshotAt,
+        state: snapshot.state,
+      })
+      .onConflictDoUpdate({
+        target: sessionSnapshots.seq,
+        set: {
+          sessionId: snapshot.sessionId,
+          snapshotAt: snapshot.snapshotAt,
+          state: snapshot.state,
+        },
+      })
+      .run();
+  } catch {
+    // Non-critical — snapshot failures must not interrupt event processing
   }
 }
 
@@ -80,30 +81,5 @@ export function querySnapshot(
     .where(eq(sessionSnapshots.sessionId, sessionId))
     .orderBy(desc(sessionSnapshots.seq))
     .limit(limit)
-    .all();
-}
-
-/**
- * Query all snapshots for a session with optional fromSeq cursor.
- * Returns rows ordered newest-first for replay ordering.
- *
- * @param sessionId - The session to query.
- * @param fromSeq - Return only snapshots whose `seq` sorts before this value (exclusive) — older checkpoints.
- * @returns Matching rows, newest first.
- */
-export function querySnapshots(
-  sessionId: string,
-  fromSeq?: string,
-): SessionSnapshotRow[] {
-  const conditions: SQL[] = [eq(sessionSnapshots.sessionId, sessionId)];
-  if (fromSeq) {
-    // We want older snapshots, so seq must be less than fromSeq
-    conditions.push(lt(sessionSnapshots.seq, fromSeq));
-  }
-  return db
-    .select()
-    .from(sessionSnapshots)
-    .where(and(...conditions))
-    .orderBy(desc(sessionSnapshots.seq))
     .all();
 }

@@ -116,14 +116,21 @@ function isDiagnosticEvent(event: powerline.AgentEvent): boolean {
 
 /**
  * Get a string field from parsed JSON content with fallbacks.
- * Usage: `str(parsed, "field1", "field2", "default")`
+ * @param parsed - The parsed JSON object to look up.
+ * @param fields - Field names to try (in order).
+ * @param fallback - Literal fallback value if no field is found.
+ * @returns The first found field value as a string, or the fallback.
  */
-function str(parsed: Record<string, unknown>, ...fields: Array<string | string>): string {
+function str(
+  parsed: Record<string, unknown>,
+  fields: string[],
+  fallback: string,
+): string {
   for (const field of fields) {
     const val = parsed[field];
     if (val !== undefined) return String(val);
   }
-  return String(fields[fields.length - 1]);
+  return fallback;
 }
 
 /**
@@ -167,19 +174,21 @@ export function mapAgentEvent(
 
     case "turn_started": {
       const userMessage = hasParsed
-        ? str(parsed, "user_message", content || "")
+        ? str(parsed, ["user_message"], content || "")
         : content || "";
-      const turnId = eventTurnId || context.turnId;
+      // Always derive a fresh turnId when eventTurnId is absent — don't inherit stale context.turnId
+      const derivedTurnId = eventTurnId || `turn-${index}`;
 
       actions.push({
         type: ActionType.SessionTurnStarted,
-        turnId: turnId || `turn-${index}`,
+        turnId: derivedTurnId,
         userMessage: { text: userMessage },
       });
 
-      context.turnId = turnId || `turn-${index}`;
+      context.turnId = derivedTurnId;
       context.openToolCalls = [];
-      context.partCounter += 1;
+      // partCounter starts at 0; first response part will be part-0
+      context.partCounter = 0;
 
       notes.push({
         index,
@@ -278,11 +287,11 @@ export function mapAgentEvent(
       }
 
       const toolCallIdValue = toolCallId || `tc-${context.partCounter++}`;
-      const toolName = hasParsed ? str(parsed, "tool_name", "name", "unknown_tool") : "unknown_tool";
-      const displayName = hasParsed ? str(parsed, "display_name", toolName) : toolName;
-      const invocationMessage = hasParsed
-        ? str(parsed, "invocation_message", `Running ${toolName}`)
-        : `Running ${toolName}`;
+const toolName = hasParsed ? str(parsed, ["tool_name", "name"], "unknown_tool") : "unknown_tool";
+       const displayName = hasParsed ? str(parsed, ["display_name"], toolName) : toolName;
+       const invocationMessage = hasParsed
+         ? str(parsed, ["invocation_message"], `Running ${toolName}`)
+         : `Running ${toolName}`;
 
       // SessionToolCallStart
       actions.push({
@@ -350,10 +359,10 @@ export function mapAgentEvent(
         ? ("is_ok" in parsed ? parsed.is_ok === true : ("success" in parsed ? parsed.success === true : true))
         : true;
       const pastTenseMessage = hasParsed
-        ? str(parsed, "past_tense_message", content || "")
+        ? str(parsed, ["past_tense_message"], content || "")
         : content || "";
       const resultText = hasParsed
-        ? str(parsed, "content", content || "")
+        ? str(parsed, ["content"], content || "")
         : content || "";
 
       actions.push({
