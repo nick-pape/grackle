@@ -32,7 +32,7 @@
     "clean": "heft clean",
     "test": "vitest run",
     "_phase:build": "heft run --only build -- --clean",
-    "_phase:test": "vitest run"
+    "_phase:test": "vitest run --coverage"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.5.0",
