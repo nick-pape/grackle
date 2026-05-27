@@ -22,9 +22,15 @@ const baseConfig = defineConfig({
     environment: "node",
     testTimeout: 10_000,
     isolate: true,
-    passWithNoTests: true,
+    // Note: `passWithNoTests` is intentionally NOT set here. If a package's
+    // test glob silently breaks (e.g. after a refactor) we want vitest to
+    // fail loudly. Per-package configs can opt-in via overrides if they
+    // genuinely have no tests yet.
     coverage: {
-      enabled: true,
+      // `enabled` is intentionally NOT set — coverage is opt-in via the CLI
+      // `--coverage` flag (passed by @grackle-ai/heft-web-test-plugin's
+      // VitestPlugin during `rush test`). Local `vitest`/`vitest watch`
+      // runs stay fast for TDD.
       provider: "v8",
       reporter: ["text-summary", "json-summary", "lcov"],
       reportsDirectory: "./coverage",
