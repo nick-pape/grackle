@@ -27,24 +27,26 @@ import { SessionStateManager } from "./ahp-session-state.js";
 
 /**
  * Construct a minimal AgentEvent for injected events (system context, initial prompt).
- * The `type` argument is the raw AgentEvent type string — callers pass "system",
- * "turn_started", etc. directly rather than going through eventTypeToString.
+ * Uses the protobuf `create()` helper so the result satisfies the `AgentEvent`
+ * type contract without unsafe casts.
  */
 function makeAgentEvent(
+  sessionId: string,
   type: string,
   content: string,
   raw?: string,
   turnId?: string,
 ): powerline.AgentEvent {
-  return {
+  return create(powerline.AgentEventSchema, {
+    sessionId,
     type,
     timestamp: new Date().toISOString(),
     content,
-    raw,
-    toolCallId: undefined,
-    turnId,
-    diagnostic: undefined,
-  } as unknown as powerline.AgentEvent;
+    raw: raw ?? "",
+    toolCallId: "",
+    diagnostic: false,
+    turnId: turnId ?? "",
+  });
 }
 
 /** Options for processing an agent event stream. */
@@ -183,7 +185,10 @@ export function processEventStream(
           lastServerSeq = sysSeq;
           // System events are dropped by the mapper when there's no active turn (no turn_started yet).
           // The mapper only processes system events within an active turn context.
-          stateManager.processEvent(makeAgentEvent("system", options.systemContext), sysSeq);
+          stateManager.processEvent(
+            makeAgentEvent(sessionId, "system", options.systemContext),
+            sysSeq,
+          );
         }
       }
       if (options.prompt && options.taskId) {
@@ -199,9 +204,15 @@ export function processEventStream(
         if (promptSeq) {
           lastServerSeq = promptSeq;
           stateManager.processEvent(
-            makeAgentEvent("turn_started", JSON.stringify({ user_message: options.prompt })),
+            makeAgentEvent(
+              sessionId,
+              "turn_started",
+              JSON.stringify({ user_message: options.prompt }),
+            ),
             promptSeq,
           );
+          // Mark so the runtime's first turn_started is deduplicated.
+          stateManager.markInjectedInitialTurn();
         }
       }
 
@@ -470,7 +481,10 @@ export function processEventStream(
         const suspSeq = recordSessionAction(suspendedEvent);
         if (suspSeq) {
           lastServerSeq = suspSeq;
-          stateManager.processEvent(makeAgentEvent("status", SESSION_STATUS.SUSPENDED), suspSeq);
+          stateManager.processEvent(
+            makeAgentEvent(sessionId, "status", SESSION_STATUS.SUSPENDED),
+            suspSeq,
+          );
         }
         if (ctx.taskId) {
           emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });

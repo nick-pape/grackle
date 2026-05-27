@@ -511,4 +511,95 @@ describe("SessionStateManager", () => {
     const state = manager.getState();
     expect(state.activeTurn?.responseParts.length).toBe(1);
   });
+
+  // ─── Injected prompt dedup ──────────────────────────────────────
+
+  it("skips runtime turn_started when prompt was injected", () => {
+    const manager = new SessionStateManager("session-001");
+
+    // Inject prompt as turn_started
+    manager.processEvent(
+      makeEvent("turn_started", {
+        content: JSON.stringify({ user_message: "Injected prompt" }),
+      }),
+      "0",
+    );
+    manager.markInjectedInitialTurn();
+
+    // Runtime also emits turn_started — should be skipped
+    manager.processEvent(
+      makeEvent("turn_started", {
+        content: JSON.stringify({ user_message: "Runtime prompt" }),
+      }),
+      "1",
+    );
+
+    // Only one turn_started action (from the injected prompt)
+    const state = manager.getState();
+    expect(state.turns.length).toBe(0); // turn not yet complete
+    expect(state.activeTurn).toBeDefined();
+    expect(state.activeTurn?.responseParts.length).toBe(0); // no response parts
+  });
+
+  // ─── Error mid-turn ends turn and drops subsequent events ────────
+
+  it("error event mid-turn ends the turn, subsequent text is dropped", () => {
+    const manager = new SessionStateManager("session-001");
+
+    // Start a turn
+    manager.processEvent(
+      makeEvent("turn_started", {
+        content: JSON.stringify({ user_message: "Prompt" }),
+      }),
+      "0",
+    );
+
+    // Add text
+    manager.processEvent(makeEvent("text", { content: "Partial response" }), "1");
+
+    // Error event — ends the turn
+    manager.processEvent(makeEvent("error", { content: "Something failed" }), "2");
+
+    // Text after error — mapper returns no actions (no active turn)
+    manager.processEvent(makeEvent("text", { content: "After error" }), "3");
+
+    const state = manager.getState();
+    // Error ends the turn: activeTurn is cleared, turn moved to turns[]
+    expect(state.activeTurn).toBeUndefined();
+    expect(state.turns.length).toBe(1);
+    expect(state.turns[0].state).toBe("error");
+    // Partial response preserved in turn's responseParts
+    expect(state.turns[0].responseParts.length).toBe(1);
+    expect(state.turns[0].responseParts[0]).toMatchObject({
+      kind: "markdown",
+      content: "Partial response",
+    });
+  });
+
+  // ─── snapshotThreshold = 0 ─────────────────────────────────────
+
+  it("snapshotThreshold=0 disables count-based flush but turn_complete still flushes", () => {
+    const manager = new SessionStateManager("session-001");
+    manager.snapshotThreshold = 0;
+
+    // Start a turn
+    manager.processEvent(
+      makeEvent("turn_started", {
+        content: JSON.stringify({ user_message: "Prompt" }),
+      }),
+      "0",
+    );
+
+    // Add 20 text actions — should NOT trigger count-based snapshot.
+    for (let i = 0; i < 20; i++) {
+      const lastSeq = manager.processEvent(makeEvent("text", { content: `Item ${i}` }), `${i}`);
+      expect(lastSeq).toBe(undefined);
+    }
+
+    // Complete the turn — should trigger auto-snapshot.
+    manager.processEvent(makeEvent("turn_complete", { turnId: "turn-0" }), "20");
+    const state = manager.getState();
+    expect(state.activeTurn).toBeUndefined();
+    expect(state.turns.length).toBe(1);
+  });
 });

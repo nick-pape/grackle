@@ -67,6 +67,13 @@ export class SessionStateManager {
   public snapshotThreshold: number;
 
   /**
+   * Set to true when the initial prompt is injected as turn_started.
+   * The first runtime turn_started for the same turn is then skipped
+   * to avoid a duplicate SessionTurnStarted action.
+   */
+  private injectedInitialTurn: boolean;
+
+  /**
    * Create a new SessionStateManager.
    *
    * @param sessionId - The session ID to manage.
@@ -77,6 +84,7 @@ export class SessionStateManager {
     this.actionCountSinceLastFlush = 0;
     this.eventIndex = 0;
     this.snapshotThreshold = DEFAULT_SNAPSHOT_THRESHOLD;
+    this.injectedInitialTurn = false;
     this.context = {
       turnId: undefined,
       openToolCalls: [],
@@ -103,6 +111,13 @@ export class SessionStateManager {
    *   if no actions were produced or the threshold was not reached.
    */
   public processEvent(event: powerline.AgentEvent, serverSeq: string): string | undefined {
+    // Dedup: skip the first runtime turn_started if we injected the initial prompt.
+    // The mapper would otherwise produce a duplicate SessionTurnStarted action.
+    if (this.injectedInitialTurn && event.type === "turn_started") {
+      this.injectedInitialTurn = false;
+      // Emit a note so the action is recorded but the reducer is skipped.
+      return undefined;
+    }
     const idx = this.eventIndex++;
     const { actions, note } = mapAgentEvent(event, idx, this.context);
 
@@ -152,6 +167,14 @@ export class SessionStateManager {
     }
 
     return lastSeq;
+  }
+
+  /**
+   * Mark that the initial prompt was injected as turn_started.
+   * The next runtime turn_started will be skipped to avoid a duplicate.
+   */
+  public markInjectedInitialTurn(): void {
+    this.injectedInitialTurn = true;
   }
 
   /**
