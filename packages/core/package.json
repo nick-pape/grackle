@@ -1,7 +1,7 @@
 {
   "name": "@grackle-ai/core",
   "version": "0.131.0",
-  "description": "Core gRPC business logic for Grackle \u2014 RPC handlers, event system, streaming, session lifecycle",
+  "description": "Core gRPC business logic for Grackle — RPC handlers, event system, streaming, session lifecycle",
   "license": "MIT",
   "repository": {
     "type": "git",

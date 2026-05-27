@@ -1,7 +1,7 @@
 {
   "name": "@grackle-ai/plugin-sdk",
   "version": "0.131.0",
-  "description": "Plugin contract and loader for Grackle \u2014 defines GracklePlugin, PluginContext, and loadPlugins()",
+  "description": "Plugin contract and loader for Grackle — defines GracklePlugin, PluginContext, and loadPlugins()",
   "license": "MIT",
   "repository": {
     "type": "git",
