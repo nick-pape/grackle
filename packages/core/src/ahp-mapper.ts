@@ -404,6 +404,7 @@ export function mapAgentEvent(
 
     case "usage": {
       const rawCost = hasParsed ? parsed.cost_millicents : undefined;
+      // eslint-disable-next-line eqeqeq -- `!= null` checks both null and undefined in one expression
       if (rawCost != null && Number.isFinite(Number(rawCost))) {
         const prevCost = context.metaAccumulator.costMillicents ?? 0;
         const cost = Number(rawCost);
