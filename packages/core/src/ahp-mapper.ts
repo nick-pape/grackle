@@ -18,9 +18,19 @@ import {
   ToolResultContentType,
   ResponsePartKind,
   type ErrorInfo,
+  type StateAction,
+  type ToolResultContent,
 } from "@grackle-ai/ahp";
-import type { SessionAction } from "@grackle-ai/ahp/src/vendor/ahp/action-origin.generated.js";
-import type { ToolResultTextContent } from "@grackle-ai/ahp/src/vendor/ahp/channels-session/state.js";
+
+/** Safely parse an event's content JSON, returning a record or undefined on failure. */
+function safeParseContent(content?: string): Record<string, unknown> | undefined {
+  if (!content) return undefined;
+  try {
+    return JSON.parse(content) as Record<string, unknown>;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * Disposition of a single AgentEvent after mapping.
@@ -72,22 +82,10 @@ export interface MapperContext {
 
 /** Result of mapping a single AgentEvent. */
 export interface MapResult {
-  /** AHP SessionAction[] produced from this event. */
-  actions: SessionAction[];
+  /** AHP StateAction[] produced from this event (all session-specific). */
+  actions: StateAction[];
   /** Notes describing the mapping disposition for each event. */
   notes: MappingNote[];
-}
-
-// ─── Helpers ────────────────────────────────────────────────────────
-
-/** Safely parse an event's content JSON, returning a record or undefined on failure. */
-function safeParseContent(content?: string): Record<string, unknown> | undefined {
-  if (!content) return undefined;
-  try {
-    return JSON.parse(content) as Record<string, unknown>;
-  } catch {
-    return undefined;
-  }
 }
 
 /** Build an ErrorInfo from a message string. */
@@ -95,9 +93,9 @@ function makeErrorInfo(message: string): ErrorInfo {
   return { message, errorType: "unknown" } as ErrorInfo;
 }
 
-/** Build a ToolResultTextContent from a string. */
-function makeTextResult(text: string): ToolResultTextContent {
-  return { type: ToolResultContentType.Text, text } as ToolResultTextContent;
+/** Build a ToolResultContent from a string. */
+function makeTextResult(text: string): ToolResultContent {
+  return { type: ToolResultContentType.Text, text } as ToolResultContent;
 }
 
 /** Check whether a system event is a diagnostic (HR7) that routes to OTLP. */
@@ -129,16 +127,6 @@ function str(parsed: Record<string, unknown>, ...fields: Array<string | string>)
 }
 
 /**
- * Get a boolean field from parsed JSON content with fallbacks.
- * Returns true when no value found.
- */
-function bool(parsed: Record<string, unknown>, field: string): boolean {
-  const val = parsed[field];
-  if (typeof val === "boolean") return val;
-  return true;
-}
-
-/**
  * Map a PowerLine `AgentEvent` into AHP `SessionAction` payloads.
  *
  * | AgentEvent type | AHP action(s) | Disposition |
@@ -164,7 +152,7 @@ export function mapAgentEvent(
   index: number,
   context: MapperContext,
 ): MapResult {
-  const actions: SessionAction[] = [];
+  const actions: StateAction[] = [];
   const notes: MappingNote[] = [];
 
   const { type, content, toolCallId, turnId } = event;
@@ -340,6 +328,14 @@ export function mapAgentEvent(
       // Pair by first-class toolCallId (HR3), with LIFO stack fallback
       const pairedToolCallId = toolCallId || context.openToolCalls.pop() || "";
 
+      // Remove matched id from stack when first-class toolCallId is provided
+      if (toolCallId) {
+        const idx = context.openToolCalls.indexOf(toolCallId);
+        if (idx !== -1) {
+          context.openToolCalls.splice(idx, 1);
+        }
+      }
+
       if (!pairedToolCallId) {
         notes.push({
           index,
@@ -351,7 +347,7 @@ export function mapAgentEvent(
       }
 
       const isOk = hasParsed
-        ? bool(parsed, "is_ok") || bool(parsed, "success")
+        ? ("is_ok" in parsed ? parsed.is_ok === true : ("success" in parsed ? parsed.success === true : true))
         : true;
       const pastTenseMessage = hasParsed
         ? str(parsed, "past_tense_message", content || "")

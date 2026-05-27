@@ -257,8 +257,8 @@ describe("tool_result", () => {
     expect(complete.toolCallId).toBe("tc-xyz");
     expect(complete.result.success).toBe(true);
 
-    // First-class toolCallId (HR3) is used; LIFO stack is NOT popped
-    expect(context.openToolCalls).toEqual(["tc-xyz"]);
+    // First-class toolCallId (HR3) is used; matched id is removed from LIFO stack
+    expect(context.openToolCalls).toEqual([]);
     expect(result.notes[0].disposition).toBe("mapped");
   });
 

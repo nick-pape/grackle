@@ -7,9 +7,18 @@
  * between the last snapshot and the present.
  */
 
-import { and, asc, desc, eq, gt, lt, type SQL } from "drizzle-orm";
+import { and, desc, eq, lt, type SQL } from "drizzle-orm";
 import db from "./db.js";
 import { sessionSnapshots, type SessionSnapshotRow } from "./schema.js";
+
+// Lazily prepared insert statement for performance (called on every snapshot flush).
+// Guarded by db.$client existence so it doesn't crash when database isn't initialized.
+function getInsertStmt(): unknown {
+  if (!db.$client) return undefined;
+  return db.$client.prepare(
+    "INSERT INTO session_snapshots (seq, session_id, snapshot_at, state) VALUES (?, ?, ?, ?)",
+  );
+}
 
 /**
  * A snapshot row to persist — the key fields of a `SessionState`
@@ -37,10 +46,10 @@ const DEFAULT_SNAPSHOT_LIMIT: number = 10;
  * @param snapshot - The snapshot record to persist.
  */
 export function persistSnapshot(snapshot: SnapshotRecord): void {
-  const stmt = db.$client.prepare(
-    "INSERT INTO session_snapshots (seq, session_id, snapshot_at, state) VALUES (?, ?, ?, ?)",
-  );
-  stmt.run([snapshot.seq, snapshot.sessionId, snapshot.snapshotAt, snapshot.state]);
+  const stmt = getInsertStmt();
+  if (stmt && typeof stmt === "object" && "run" in stmt) {
+    (stmt as { run: (params: unknown[]) => void }).run([snapshot.seq, snapshot.sessionId, snapshot.snapshotAt, snapshot.state]);
+  }
 }
 
 /**

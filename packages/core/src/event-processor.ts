@@ -18,6 +18,27 @@ import { checkBudget } from "./budget-checker.js";
 import type { ProcessorContext } from "./processor-registry.js";
 import { SessionStateManager } from "./ahp-session-state.js";
 
+/**
+ * Construct a minimal AgentEvent for injected events (system context, initial prompt).
+ * Uses eventTypeToString for the type field since these aren't real AgentEvents.
+ */
+function makeAgentEvent(
+  type: string,
+  content: string,
+  raw?: string,
+  turnId?: string,
+): powerline.AgentEvent {
+  return {
+    type,
+    timestamp: new Date().toISOString(),
+    content,
+    raw,
+    toolCallId: undefined,
+    turnId,
+    diagnostic: undefined,
+  } as unknown as powerline.AgentEvent;
+}
+
 /** Options for processing an agent event stream. */
 export interface EventStreamOptions {
   sessionId: string;
@@ -130,7 +151,7 @@ export function processEventStream(
 
   /** Inner processing logic, extracted so it can be wrapped in runWithTrace. */
   const processEvents = async (): Promise<void> => {
-    let eventIndex = 0;
+    let lastServerSeq: string | undefined;
     try {
       logWriter.initLog(logPath);
       sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.RUNNING);
@@ -148,7 +169,11 @@ export function processEventStream(
         });
         await logWriter.writeEvent(logPath, sysCtxEvent);
         streamHub.publish(sysCtxEvent);
-        recordSessionAction(sysCtxEvent);
+        const sysSeq = recordSessionAction(sysCtxEvent);
+        if (sysSeq) {
+          lastServerSeq = sysSeq;
+          stateManager.processEvent(makeAgentEvent("system", options.systemContext), sysSeq);
+        }
       }
       if (options.prompt && options.taskId) {
         const promptEvent = create(grackle.SessionEventSchema, {
@@ -159,13 +184,20 @@ export function processEventStream(
         });
         await logWriter.writeEvent(logPath, promptEvent);
         streamHub.publish(promptEvent);
-        recordSessionAction(promptEvent);
+        const promptSeq = recordSessionAction(promptEvent);
+        if (promptSeq) {
+          lastServerSeq = promptSeq;
+          stateManager.processEvent(
+            makeAgentEvent(
+              "turn_started",
+              JSON.stringify({ user_message: options.prompt }),
+            ),
+            promptSeq,
+          );
+        }
       }
 
       for await (const event of events) {
-        // AHP HR1b: process event through state manager (mapper + reducer + snapshot)
-        stateManager.processEvent(event, eventIndex++);
-
         // runtime_session_id is an internal control event: persist it then skip
         // logging/publishing — it has no proto enum value and is not client-visible.
         if (event.type === "runtime_session_id") {
@@ -187,7 +219,13 @@ export function processEventStream(
         });
         await logWriter.writeEvent(logPath, sessionEvent);
         streamHub.publish(sessionEvent);
-        recordSessionAction(sessionEvent);
+        const serverSeq = recordSessionAction(sessionEvent);
+        if (serverSeq) {
+          lastServerSeq = serverSeq;
+          // AHP HR1b: process event through state manager (mapper + reducer + snapshot)
+          // Pass serverSeq so snapshots are anchored to real action ULIDs for reconstruction.
+          stateManager.processEvent(event, serverSeq);
+        }
 
         // HR7: tee runtime diagnostics to the additive OTLP logs sink (no-op
         // unless OTEL_EXPORTER_OTLP_ENDPOINT is set). Existing sinks above are
@@ -304,7 +342,7 @@ export function processEventStream(
 
           // AHP HR1b: flush snapshot on terminal status for clean state capture
           if (["completed", "killed", "failed", "terminated"].includes(event.content)) {
-            try { stateManager.snapshot(`status-${event.content}`); } catch { /* non-critical */ }
+            try { stateManager.snapshot(serverSeq); } catch { /* non-critical */ }
           }
 
           // Broadcast task_updated on status changes so frontend re-fetches computed status.
@@ -325,6 +363,7 @@ export function processEventStream(
         }
       }
     } catch (err) {
+      // Track the serverSeq from the suspended event for the final snapshot below
       const current = sessionStore.getSession(sessionId);
       if (current && !TERMINAL_SESSION_STATUSES.has(current.status as SessionStatus)) {
         // Transport error during active or idle session — suspend for auto-recovery
@@ -346,7 +385,11 @@ export function processEventStream(
           content: SESSION_STATUS.SUSPENDED,
         });
         streamHub.publish(suspendedEvent);
-        recordSessionAction(suspendedEvent);
+        const suspSeq = recordSessionAction(suspendedEvent);
+        if (suspSeq) {
+          lastServerSeq = suspSeq;
+          stateManager.processEvent(makeAgentEvent("status", SESSION_STATUS.SUSPENDED), suspSeq);
+        }
         if (ctx.taskId) {
           emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
         }
@@ -356,7 +399,7 @@ export function processEventStream(
       // emitted — skip the duplicate to avoid interfering with SIGCHLD delivery.
     } finally {
       // AHP HR1b: flush final snapshot on stream completion
-      try { stateManager.snapshot(`final-${eventIndex}`); } catch { /* non-critical */ }
+      try { stateManager.snapshot(lastServerSeq || "0"); } catch { /* non-critical */ }
       stateManager.clear();
 
       processorRegistry.unregister(sessionId);
