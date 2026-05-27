@@ -28,9 +28,10 @@ const baseConfig = defineConfig({
     // genuinely have no tests yet.
     coverage: {
       // `enabled` is intentionally NOT set — coverage is opt-in via the CLI
-      // `--coverage` flag (passed by @grackle-ai/heft-web-test-plugin's
-      // VitestPlugin during `rush test`). Local `vitest`/`vitest watch`
-      // runs stay fast for TDD.
+      // `--coverage` flag, which is passed by the heft Vitest task plugin
+      // in `rigs/heft-storybook-plugin/src/VitestPlugin.ts` (package name
+      // `@grackle-ai/heft-web-test-plugin`) during `rush test`. Local
+      // `vitest` / `vitest watch` runs stay fast for TDD.
       provider: "v8",
       reporter: ["text-summary", "json-summary", "lcov"],
       reportsDirectory: "./coverage",
