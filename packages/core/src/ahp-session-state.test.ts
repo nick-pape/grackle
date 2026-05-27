@@ -67,7 +67,7 @@ describe("SessionStateManager", () => {
       turnId: "turn-0",
       content: JSON.stringify({ user_message: "Hello" }),
     });
-    manager.processEvent(event, 0);
+    manager.processEvent(event, "0");
 
     const state = manager.getState();
     expect(state.activeTurn).toBeDefined();

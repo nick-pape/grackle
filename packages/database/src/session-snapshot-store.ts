@@ -11,13 +11,18 @@ import { and, desc, eq, lt, type SQL } from "drizzle-orm";
 import db from "./db.js";
 import { sessionSnapshots, type SessionSnapshotRow } from "./schema.js";
 
-// Lazily prepared insert statement for performance (called on every snapshot flush).
+// Lazily prepared insert statement, cached for performance.
 // Guarded by db.$client existence so it doesn't crash when database isn't initialized.
+let insertStmtCache: unknown | null = null;
+
 function getInsertStmt(): unknown {
   if (!db.$client) return undefined;
-  return db.$client.prepare(
-    "INSERT INTO session_snapshots (seq, session_id, snapshot_at, state) VALUES (?, ?, ?, ?)",
-  );
+  if (insertStmtCache === null) {
+    insertStmtCache = db.$client.prepare(
+      "INSERT INTO session_snapshots (seq, session_id, snapshot_at, state) VALUES (?, ?, ?, ?)",
+    );
+  }
+  return insertStmtCache;
 }
 
 /**
@@ -48,7 +53,11 @@ const DEFAULT_SNAPSHOT_LIMIT: number = 10;
 export function persistSnapshot(snapshot: SnapshotRecord): void {
   const stmt = getInsertStmt();
   if (stmt && typeof stmt === "object" && "run" in stmt) {
-    (stmt as { run: (params: unknown[]) => void }).run([snapshot.seq, snapshot.sessionId, snapshot.snapshotAt, snapshot.state]);
+    try {
+      (stmt as { run: (params: unknown[]) => void }).run([snapshot.seq, snapshot.sessionId, snapshot.snapshotAt, snapshot.state]);
+    } catch {
+      // Non-critical — snapshot failures must not interrupt event processing
+    }
   }
 }
 

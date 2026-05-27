@@ -556,13 +556,13 @@ export function mapAgentEvent(
             kind: ResponsePartKind.SystemNotification,
             content: content || "",
           },
+       });
+        notes.push({
+          index,
+          type: "system",
+          disposition: "mapped",
+          detail: "Mapped to SessionResponsePart(systemNotification)",
         });
- notes.push({
-           index,
-           type: "system",
-           disposition: "mapped",
-           detail: "Mapped to SessionResponsePart(systemNotification)",
-         });
       } else {
         notes.push({
           index,

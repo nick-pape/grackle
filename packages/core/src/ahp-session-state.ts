@@ -57,24 +57,28 @@ export class SessionStateManager {
   /** Current session ID. */
   private sessionId: string;
 
-  /** Number of actions since last snapshot flush. */
+ /** Number of actions since last snapshot flush. */
   private actionCountSinceLastFlush: number;
 
+  /** Event index for the mapper — ensures turn IDs are unique per turn_started event. */
+  private eventIndex: number;
+
   /**
-   * Number of actions between automatic snapshot flushes.
-   * Set to `0` to disable automatic flushing (use explicit snapshots only).
-  */
+    * Number of actions between automatic snapshot flushes.
+    * Set to `0` to disable automatic flushing (use explicit snapshots only).
+   */
    public snapshotThreshold: number;
 
   /**
-   * Create a new SessionStateManager.
-   *
-   * @param sessionId - The session ID to manage.
-   * @param initialSnapshot - Optional initial SessionState from reconstruction.
-  */
+    * Create a new SessionStateManager.
+    *
+    * @param sessionId - The session ID to manage.
+    * @param initialSnapshot - Optional initial SessionState from reconstruction.
+   */
    public constructor(sessionId: string, initialSnapshot?: SessionState) {
     this.sessionId = sessionId;
     this.actionCountSinceLastFlush = 0;
+    this.eventIndex = 0;
     this.snapshotThreshold = DEFAULT_SNAPSHOT_THRESHOLD;
     this.context = {
       turnId: undefined,
@@ -102,7 +106,8 @@ export class SessionStateManager {
     *   if no actions were produced or the threshold was not reached.
    */
     public processEvent(event: powerline.AgentEvent, serverSeq: string): string | undefined {
-     const { actions, notes } = mapAgentEvent(event, 0, this.context);
+     const idx = this.eventIndex++;
+     const { actions, notes } = mapAgentEvent(event, idx, this.context);
 
     // Fold each action through the reducer.
     // All actions from the mapper are session-specific, so casting to SessionAction is safe.
@@ -121,7 +126,7 @@ export class SessionStateManager {
 
       let lastSeq: string | undefined;
 
-      // Check snapshot threshold
+     // Check snapshot threshold
      if (
        this.snapshotThreshold > 0 &&
        this.actionCountSinceLastFlush >= this.snapshotThreshold
@@ -129,9 +134,8 @@ export class SessionStateManager {
        this.snapshot(serverSeq);
        lastSeq = serverSeq;
      }
-
-     // Auto-snapshot on turn_complete
-     if (notes.some((n) => n.disposition === "mapped" && n.type === "turn_complete")) {
+     // Auto-snapshot on turn_complete (only if not already flushed above)
+     else if (notes.some((n) => n.disposition === "mapped" && n.type === "turn_complete")) {
        this.snapshot(serverSeq);
        lastSeq = serverSeq;
      }

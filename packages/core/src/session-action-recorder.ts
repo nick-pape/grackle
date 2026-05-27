@@ -48,8 +48,8 @@ export function recordSessionAction(event: grackle.SessionEvent): string | undef
       timestamp: event.timestamp,
     });
     return seq;
-  } catch {
-    logger.error({ err: null, sessionId: event.sessionId }, "Failed to persist session action");
+  } catch (err) {
+    logger.error({ err, sessionId: event.sessionId }, "Failed to persist session action");
     return undefined;
   }
 }
