@@ -26,10 +26,10 @@ import type { ProcessorContext } from "./processor-registry.js";
 import { SessionStateManager } from "./ahp-session-state.js";
 
 /**
-  * Construct a minimal AgentEvent for injected events (system context, initial prompt).
-  * The `type` argument is the raw AgentEvent type string — callers pass "system",
-  * "turn_started", etc. directly rather than going through eventTypeToString.
-  */
+ * Construct a minimal AgentEvent for injected events (system context, initial prompt).
+ * The `type` argument is the raw AgentEvent type string — callers pass "system",
+ * "turn_started", etc. directly rather than going through eventTypeToString.
+ */
 function makeAgentEvent(
   type: string,
   content: string,
@@ -199,10 +199,7 @@ export function processEventStream(
         if (promptSeq) {
           lastServerSeq = promptSeq;
           stateManager.processEvent(
-            makeAgentEvent(
-              "turn_started",
-              JSON.stringify({ user_message: options.prompt }),
-            ),
+            makeAgentEvent("turn_started", JSON.stringify({ user_message: options.prompt })),
             promptSeq,
           );
         }
@@ -407,14 +404,19 @@ export function processEventStream(
 
           // AHP HR1b: flush snapshot on terminal status for clean state capture
           // Guard: serverSeq is undefined when recordSessionAction() silently fails.
-          if (["completed", "killed", "failed", "terminated"].includes(event.content) && serverSeq) {
-             try {
-               const result = stateManager.snapshot(serverSeq);
-               if (result.persisted) {
-                 terminalSnapshotFlushed = true;
-               }
-             } catch { /* non-critical */ }
-           }
+          if (
+            ["completed", "killed", "failed", "terminated"].includes(event.content) &&
+            serverSeq
+          ) {
+            try {
+              const result = stateManager.snapshot(serverSeq);
+              if (result.persisted) {
+                terminalSnapshotFlushed = true;
+              }
+            } catch {
+              /* non-critical */
+            }
+          }
 
           // Broadcast task_updated on status changes so frontend re-fetches computed status.
           // This covers both terminal events (completed/killed/failed) and non-terminal
@@ -481,7 +483,11 @@ export function processEventStream(
       // AHP HR1b: flush final snapshot on stream completion.
       // Skip if terminal status already flushed a snapshot (avoids duplicates with same serverSeq).
       if (lastServerSeq && !terminalSnapshotFlushed) {
-        try { stateManager.snapshot(lastServerSeq); } catch { /* non-critical */ }
+        try {
+          stateManager.snapshot(lastServerSeq);
+        } catch {
+          /* non-critical */
+        }
       }
       stateManager.clear();
 

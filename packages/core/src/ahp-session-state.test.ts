@@ -204,10 +204,7 @@ describe("SessionStateManager", () => {
 
   it("carries runtime_session_id into _meta", () => {
     const manager = new SessionStateManager("session-001");
-    manager.processEvent(
-      makeEvent("runtime_session_id", { content: "runtime-abc" }),
-      "0",
-    );
+    manager.processEvent(makeEvent("runtime_session_id", { content: "runtime-abc" }), "0");
 
     const meta = manager.getState()._meta;
     expect(meta?.runtimeSessionId).toBe("runtime-abc");
