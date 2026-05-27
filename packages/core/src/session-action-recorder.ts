@@ -46,6 +46,9 @@ export function recordSessionAction(event: grackle.SessionEvent): string | undef
       content: event.content,
       raw: event.raw,
       timestamp: event.timestamp,
+      toolCallId: event.toolCallId,
+      turnId: event.turnId,
+      diagnostic: event.diagnostic,
     });
     return seq;
   } catch (err) {

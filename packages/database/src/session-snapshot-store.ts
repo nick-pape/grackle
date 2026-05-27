@@ -25,6 +25,8 @@ export interface SnapshotRecord {
   snapshotAt: string;
   /** JSON-serialized SessionState key fields. */
   state: string;
+  /** JSON-serialized MapperContext at the snapshot boundary. Used for delta reconstruction. */
+  mapperContext?: string;
 }
 
 /** Default rows returned by {@link querySnapshot} when no limit is given. */
@@ -41,18 +43,24 @@ const DEFAULT_SNAPSHOT_LIMIT: number = 10;
  * @throws on database write failure (caller handles the error).
  */
 export function persistSnapshot(snapshot: SnapshotRecord): void {
+  // Normalize `mapperContext` to `null` when omitted so the column is always
+  // explicitly written. Otherwise Drizzle may treat `undefined` as "do not
+  // update this column" on conflict, leaving a previous value in place.
+  const mapperContext: string | null = snapshot.mapperContext ?? null;
   db.insert(sessionSnapshots)
     .values({
       seq: snapshot.seq,
       sessionId: snapshot.sessionId,
       snapshotAt: snapshot.snapshotAt,
       state: snapshot.state,
+      mapperContext,
     })
     .onConflictDoUpdate({
       target: [sessionSnapshots.sessionId, sessionSnapshots.seq],
       set: {
         snapshotAt: snapshot.snapshotAt,
         state: snapshot.state,
+        mapperContext,
       },
     })
     .run();
