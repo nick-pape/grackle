@@ -25,11 +25,13 @@ import {
 import type { SessionAction } from "@grackle-ai/ahp/src/vendor/ahp/action-origin.generated.js";
 import { mapAgentEvent, type MapperContext } from "./ahp-mapper.js";
 import {
-  persistSnapshot,
-  querySnapshot,
-  querySessionActions,
+  persistSnapshot as dbPersistSnapshot,
+  querySnapshot as dbQuerySnapshot,
+  querySessionActions as dbQuerySessionActions,
+  type SessionActionQuery,
   type SessionActionRow,
   type SnapshotRecord,
+  type SessionSnapshotRow,
 } from "@grackle-ai/database";
 
 /** Default flush interval (actions between snapshots). */
@@ -39,6 +41,29 @@ const DEFAULT_SNAPSHOT_THRESHOLD: number = 100;
 const MAX_RECONSTRUCTION_EVENTS: number = 10_000;
 
 /**
+ * Persistence interface for `SessionStateManager`.
+ *
+ * Injecting a custom implementation lets unit and integration tests exercise
+ * the full processEvent → snapshot → reconstruct pipeline against an in-memory
+ * store instead of a real SQLite database.
+ */
+export interface SessionStore {
+  /** Persist a snapshot of the current `SessionState` and `MapperContext`. */
+  persistSnapshot(record: SnapshotRecord): void;
+  /** Load the latest snapshot(s) for a session, newest first. */
+  querySnapshot(sessionId: string, limit?: number): SessionSnapshotRow[];
+  /** Load session actions for replay, oldest first. */
+  querySessionActions(query: SessionActionQuery): SessionActionRow[];
+}
+
+/** Default store backed by the real SQLite database. */
+const defaultStore: SessionStore = {
+  persistSnapshot: dbPersistSnapshot,
+  querySnapshot: dbQuerySnapshot,
+  querySessionActions: dbQuerySessionActions,
+};
+
+/**
  * Callback for snapshot results.
  */
 export interface SnapshotResult {
@@ -46,6 +71,19 @@ export interface SnapshotResult {
   persisted: boolean;
   /** The ULID of the last action included, or `undefined` if nothing was saved. */
   lastSeq?: string;
+}
+
+/**
+ * Options for creating a `SessionStateManager`.
+ */
+export interface SessionStateManagerOptions {
+  /** Initial `SessionState` from a prior reconstruction (skips `createInitialState`). */
+  initialSnapshot?: SessionState;
+  /**
+   * Custom persistence store. Defaults to the real SQLite-backed store.
+   * Pass an in-memory implementation for testing.
+   */
+  store?: SessionStore;
 }
 
 /**
@@ -68,6 +106,9 @@ export class SessionStateManager {
   /** Event index for the mapper — ensures turn IDs are unique per turn_started event. */
   private eventIndex: number;
 
+  /** Persistence store (real DB by default; injectable for tests). */
+  private store: SessionStore;
+
   /**
    * Number of actions between automatic snapshot flushes.
    * Set to `0` to disable count-based flushing only; event-triggered
@@ -86,14 +127,15 @@ export class SessionStateManager {
    * Create a new SessionStateManager.
    *
    * @param sessionId - The session ID to manage.
-   * @param initialSnapshot - Optional initial SessionState from reconstruction.
+   * @param options - Optional initial snapshot and persistence store.
    */
-  public constructor(sessionId: string, initialSnapshot?: SessionState) {
+  public constructor(sessionId: string, options?: SessionStateManagerOptions) {
     this.sessionId = sessionId;
     this.actionCountSinceLastFlush = 0;
     this.eventIndex = 0;
     this.snapshotThreshold = DEFAULT_SNAPSHOT_THRESHOLD;
     this.injectedInitialTurn = false;
+    this.store = options?.store ?? defaultStore;
     this.context = {
       turnId: undefined,
       openToolCalls: [],
@@ -101,9 +143,8 @@ export class SessionStateManager {
       metaAccumulator: {},
     };
 
-    // Start with a minimal SessionState if no snapshot was provided
-    if (initialSnapshot) {
-      this.state = initialSnapshot;
+    if (options?.initialSnapshot) {
+      this.state = options.initialSnapshot;
     } else {
       this.state = this.createInitialState();
     }
@@ -124,7 +165,6 @@ export class SessionStateManager {
     // The mapper would otherwise produce a duplicate SessionTurnStarted action.
     if (this.injectedInitialTurn && event.type === "turn_started") {
       this.injectedInitialTurn = false;
-      // Emit a note so the action is recorded but the reducer is skipped.
       return undefined;
     }
     const idx = this.eventIndex++;
@@ -196,8 +236,6 @@ export class SessionStateManager {
    */
   public getState(): SessionState {
     const copy = structuredClone(this.state);
-    // Freeze everything to prevent mutation of internal state.
-    // structuredClone already deep-copies turns, activeTurn, etc.
     try {
       Object.freeze(copy.turns);
     } catch {
@@ -260,7 +298,7 @@ export class SessionStateManager {
   }
 
   /**
-   * Persist a snapshot of the current SessionState and MapperContext to the database.
+   * Persist a snapshot of the current SessionState and MapperContext to the store.
    *
    * Serializes key fields from SessionState (summary, lifecycle, turns,
    * activeTurn, steeringMessage, queuedMessages, inputRequests, config, _meta)
@@ -280,7 +318,7 @@ export class SessionStateManager {
         state: snapshotData,
         mapperContext: JSON.stringify(this.context),
       };
-      persistSnapshot(record);
+      this.store.persistSnapshot(record);
 
       this.actionCountSinceLastFlush = 0;
 
@@ -318,20 +356,21 @@ export class SessionStateManager {
    * - If there is no snapshot at all: full replay from the beginning.
    *
    * @param sessionId - The session to reconstruct.
+   * @param store - Persistence store to read from. Defaults to the real DB store.
+   *   Pass the same store used during `processEvent` when testing.
    * @returns Reconstructed SessionState, or a minimal initial state if no
    *          snapshot or actions exist.
    */
-  public static reconstruct(sessionId: string): SessionState {
-    const snapshots = querySnapshot(sessionId, 1);
+  public static reconstruct(sessionId: string, store?: SessionStore): SessionState {
+    const s = store ?? defaultStore;
+    const snapshots = s.querySnapshot(sessionId, 1);
 
     if (snapshots.length === 0) {
-      // No snapshot — full replay from start
-      return SessionStateManager.replayAllActions(sessionId);
+      return SessionStateManager.replayAllActions(sessionId, s);
     }
 
     const latest = snapshots[0];
 
-    // Parse snapshot state
     let baseState: SessionState;
     try {
       baseState = JSON.parse(latest.state) as SessionState;
@@ -340,7 +379,7 @@ export class SessionStateManager {
         { err, sessionId, seq: latest.seq },
         "Corrupted snapshot state — falling back to full replay",
       );
-      return SessionStateManager.replayAllActions(sessionId);
+      return SessionStateManager.replayAllActions(sessionId, s);
     }
 
     // Delta replay: use stored MapperContext to seed the replay
@@ -353,10 +392,10 @@ export class SessionStateManager {
           { err, sessionId, seq: latest.seq },
           "Corrupted snapshot mapperContext — falling back to full replay",
         );
-        return SessionStateManager.replayAllActions(sessionId);
+        return SessionStateManager.replayAllActions(sessionId, s);
       }
 
-      const deltaRows = querySessionActions({
+      const deltaRows = s.querySessionActions({
         sessionId,
         fromSeq: latest.seq,
         limit: MAX_RECONSTRUCTION_EVENTS,
@@ -370,22 +409,13 @@ export class SessionStateManager {
       { sessionId, seq: latest.seq },
       "Snapshot missing mapperContext — falling back to full replay",
     );
-    return SessionStateManager.replayAllActions(sessionId);
+    return SessionStateManager.replayAllActions(sessionId, s);
   }
 
-  /**
-   * Create a minimal initial SessionState.
-   */
   private createInitialState(): SessionState {
     return SessionStateManager.createInitialState(this.sessionId);
   }
 
-  /**
-   * Create a minimal initial SessionState (static helper for use in
-   * `reconstruct()` and `createInitialState()`).
-   * @param sessionId - The session ID for the resource field.
-   * @returns A fresh initial SessionState.
-   */
   private static createInitialState(sessionId: string): SessionState {
     return {
       summary: {
@@ -401,12 +431,8 @@ export class SessionStateManager {
     };
   }
 
-  /**
-   * Full replay: fetch all session_actions and replay from initial state with a fresh context.
-   * Used when no snapshot is available or the snapshot's mapperContext is missing/corrupt.
-   */
-  private static replayAllActions(sessionId: string): SessionState {
-    const allRows = querySessionActions({
+  private static replayAllActions(sessionId: string, store: SessionStore): SessionState {
+    const allRows = store.querySessionActions({
       sessionId,
       limit: MAX_RECONSTRUCTION_EVENTS,
     });
@@ -429,15 +455,6 @@ export class SessionStateManager {
     );
   }
 
-  /**
-   * Replay a sequence of session_action rows through the mapper and reducer,
-   * starting from `baseState` with `context`.
-   *
-   * @param baseState - The SessionState to start from (snapshot or initial).
-   * @param context - MapperContext to use for replay (mutated in place).
-   * @param rows - Session action rows to replay, oldest first.
-   * @returns The reconstructed SessionState after replaying all rows.
-   */
   private static replayRows(
     baseState: SessionState,
     context: MapperContext,
@@ -454,7 +471,6 @@ export class SessionStateManager {
         state = sessionReducer(state, action as SessionAction);
       }
 
-      // Apply meta carries (mirrors processEvent logic)
       if (context.metaAccumulator.costMillicents !== undefined) {
         state._meta = {
           ...(state._meta ?? {}),
@@ -472,13 +488,6 @@ export class SessionStateManager {
     return state;
   }
 
-  /**
-   * Reconstruct a PowerLine AgentEvent from a session_action row.
-   *
-   * `user_input` rows (injected prompt events) are preserved as-is; the mapper
-   * has no `user_input` case and drops them, which is correct — it avoids a
-   * duplicate `SessionTurnStarted` alongside the runtime's own `turn_started`.
-   */
   private static reconstructAgentEvent(row: SessionActionRow): powerline.AgentEvent {
     return create(powerline.AgentEventSchema, {
       sessionId: row.sessionId,
@@ -492,12 +501,6 @@ export class SessionStateManager {
     });
   }
 
-  /**
-   * Serialize key fields of SessionState for snapshot storage.
-   *
-   * Excludes: serverTools, activeClient, customizations (these are
-   * reconstructed from actions on replay).
-   */
   private serializeSnapshot(): string {
     const {
       summary,
