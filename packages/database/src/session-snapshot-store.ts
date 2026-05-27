@@ -50,9 +50,8 @@ export function persistSnapshot(snapshot: SnapshotRecord): void {
       state: snapshot.state,
     })
     .onConflictDoUpdate({
-      target: sessionSnapshots.seq,
+      target: [sessionSnapshots.sessionId, sessionSnapshots.seq],
       set: {
-        sessionId: snapshot.sessionId,
         snapshotAt: snapshot.snapshotAt,
         state: snapshot.state,
       },

@@ -347,18 +347,19 @@ const MIGRATIONS: Migration[] = [
   {
     version: 17,
     name: "session-snapshots",
-    up: (conn) => {
-      conn.exec(`
-        CREATE TABLE IF NOT EXISTS session_snapshots (
-          seq         TEXT PRIMARY KEY,
-          session_id  TEXT NOT NULL,
-          snapshot_at TEXT NOT NULL,
-          state       TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_session_snapshots_session
-          ON session_snapshots(session_id, seq DESC);
-      `);
-    },
+  up: (conn) => {
+       conn.exec(`
+         CREATE TABLE IF NOT EXISTS session_snapshots (
+           session_id  TEXT NOT NULL,
+           seq         TEXT NOT NULL,
+           snapshot_at TEXT NOT NULL,
+           state       TEXT NOT NULL,
+           PRIMARY KEY (session_id, seq)
+         );
+         CREATE INDEX IF NOT EXISTS idx_session_snapshots_session
+           ON session_snapshots(session_id, seq DESC);
+       `);
+     },
   },
 ];
 

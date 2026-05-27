@@ -144,7 +144,7 @@ function str(
  * | `text` | `SessionResponsePart(markdown)` | mapped |
  * | `tool_use` | `SessionToolCallStart` + `SessionToolCallReady` | mapped |
  * | `tool_result` | `SessionToolCallComplete` | mapped |
- * | `usage` | `SessionUsage` (+ cost via `_meta`) | carried |
+ * | `usage` | (none — cost accumulated in `_meta`) | carried |
  * | `error` (in-turn) | `SessionError` | mapped |
  * | `error` (pre-turn) | `SessionCreationFailed` | mapped |
  * | `status: failed` | `SessionError` or `SessionCreationFailed` | mapped |

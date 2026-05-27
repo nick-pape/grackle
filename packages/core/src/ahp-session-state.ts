@@ -64,9 +64,10 @@ export class SessionStateManager {
   private eventIndex: number;
 
  /**
-    * Number of actions between automatic snapshot flushes.
-    * Set to `0` to disable automatic flushing (use explicit snapshots only).
-   */
+     * Number of actions between automatic snapshot flushes.
+     * Set to `0` to disable count-based flushing only; event-triggered
+     * flushes (turn_complete, terminal status, shutdown) still occur.
+    */
    public snapshotThreshold: number;
 
   /**
@@ -266,18 +267,7 @@ export class SessionStateManager {
     const snapshots = querySnapshot(sessionId, 1);
     if (snapshots.length === 0) {
       // No snapshot — return initial state
-      return {
-         summary: {
-           resource: `ahp-session:${sessionId}`,
-           provider: "grackle",
-           title: "",
-           status: SessionStatus.Idle,
-           createdAt: Date.now(),
-           modifiedAt: Date.now(),
-         },
-         lifecycle: SessionLifecycle.Creating,
-         turns: [],
-       };
+      return SessionStateManager.createInitialState(sessionId);
     }
 
 const latest = snapshots[0];
@@ -285,21 +275,9 @@ const latest = snapshots[0];
      try {
        initialState = JSON.parse(latest.state) as SessionState;
      } catch (err) {
-       logger.error({ err, sessionId, seq: latest.seq }, "Corrupted snapshot data — returning initial state");
-       // Static method can't call instance method, so inline the initial state creation
-       return {
-         summary: {
-           resource: `ahp-session:${sessionId}`,
-           provider: "grackle",
-           title: "",
-           status: SessionStatus.Idle,
-           createdAt: Date.now(),
-           modifiedAt: Date.now(),
-         },
-         lifecycle: SessionLifecycle.Creating,
-         turns: [],
-       };
-     }
+        logger.error({ err, sessionId, seq: latest.seq }, "Corrupted snapshot data — returning initial state");
+        return SessionStateManager.createInitialState(sessionId);
+      }
 
     // Replay delta actions from the snapshot seq onward.
     // Currently parseSessionActionToAhpAction returns undefined for each
@@ -326,22 +304,32 @@ const latest = snapshots[0];
     return state;
   }
 
-  /**
-   * Create a minimal initial SessionState.
-   */
-  private createInitialState(): SessionState {
-    return {
-      summary: {
-        resource: `ahp-session:${this.sessionId}`,
-        provider: "grackle",
-        title: "",
-        status: SessionStatus.Idle,
-        createdAt: Date.now(),
-        modifiedAt: Date.now(),
-      },
-      lifecycle: SessionLifecycle.Creating,
-      turns: [],
-    };
+ /**
+    * Create a minimal initial SessionState.
+    */
+   private createInitialState(): SessionState {
+     return SessionStateManager.createInitialState(this.sessionId);
+   }
+
+   /**
+    * Create a minimal initial SessionState (static helper for use in
+    * `reconstruct()` and `createInitialState()`).
+    * @param sessionId - The session ID for the resource field.
+    * @returns A fresh initial SessionState.
+    */
+   private static createInitialState(sessionId: string): SessionState {
+     return {
+       summary: {
+         resource: `ahp-session:${sessionId}`,
+         provider: "grackle",
+         title: "",
+         status: SessionStatus.Idle,
+         createdAt: Date.now(),
+         modifiedAt: Date.now(),
+       },
+       lifecycle: SessionLifecycle.Creating,
+       turns: [],
+     };
   }
 
   /**
