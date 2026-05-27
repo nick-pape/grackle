@@ -674,7 +674,14 @@ describe("SessionStateManager", () => {
     const snapshotState = {
       lifecycle: "creating",
       turns: [{ id: "turn-0", userMessage: { text: "Hello" }, responseParts: [] }],
-      summary: { resource: "ahp-session:s", provider: "grackle", title: "", status: "idle", createdAt: 0, modifiedAt: 0 },
+      summary: {
+        resource: "ahp-session:s",
+        provider: "grackle",
+        title: "",
+        status: "idle",
+        createdAt: 0,
+        modifiedAt: 0,
+      },
     };
     const snapshotCtx = {
       turnId: undefined,
@@ -713,12 +720,24 @@ describe("SessionStateManager", () => {
 
   it("reconstruct falls back to full replay when snapshot has no mapperContext", () => {
     // Old-format snapshot without mapperContext
+    const oldState = {
+      lifecycle: "creating",
+      turns: [],
+      summary: {
+        resource: "ahp-session:session-old",
+        provider: "grackle",
+        title: "",
+        status: "idle",
+        createdAt: 0,
+        modifiedAt: 0,
+      },
+    };
     mockDb.querySnapshot.mockReturnValueOnce([
       {
         sessionId: "session-old",
         seq: "01AAA",
         snapshotAt: "2026-05-27T00:00:00Z",
-        state: JSON.stringify({ lifecycle: "creating", turns: [], summary: { resource: "ahp-session:session-old", provider: "grackle", title: "", status: "idle", createdAt: 0, modifiedAt: 0 } }),
+        state: JSON.stringify(oldState),
         mapperContext: null,
       },
     ]);
@@ -748,12 +767,25 @@ describe("SessionStateManager", () => {
       partCounter: 2,
       metaAccumulator: {},
     };
+    const toolsState = {
+      lifecycle: "creating",
+      turns: [],
+      summary: {
+        resource: "ahp-session:session-tools",
+        provider: "grackle",
+        title: "",
+        status: "idle",
+        createdAt: 0,
+        modifiedAt: 0,
+      },
+      activeTurn: { id: "turn-0", userMessage: { text: "Prompt" }, responseParts: [] },
+    };
     mockDb.querySnapshot.mockReturnValueOnce([
       {
         sessionId: "session-tools",
         seq: "01AAA",
         snapshotAt: "2026-05-27T00:00:00Z",
-        state: JSON.stringify({ lifecycle: "creating", turns: [], summary: { resource: "ahp-session:session-tools", provider: "grackle", title: "", status: "idle", createdAt: 0, modifiedAt: 0 }, activeTurn: { id: "turn-0", userMessage: { text: "Prompt" }, responseParts: [] } }),
+        state: JSON.stringify(toolsState),
         mapperContext: JSON.stringify(snapshotCtx),
       },
     ]);

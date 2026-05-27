@@ -359,9 +359,9 @@ const MIGRATIONS: Migration[] = [
     up: (conn) => {
       // Add tool_call_id and turn_id to session_actions for AHP mapper replay (#1292 Fold read path).
       // Guard each ALTER so re-runs and fresh installs don't fail.
-      const actionCols = conn
-        .prepare("PRAGMA table_info(session_actions)")
-        .all() as Array<{ name: string }>;
+      const actionCols = conn.prepare("PRAGMA table_info(session_actions)").all() as Array<{
+        name: string;
+      }>;
       if (!actionCols.some((c) => c.name === "tool_call_id")) {
         conn.exec("ALTER TABLE session_actions ADD COLUMN tool_call_id TEXT NOT NULL DEFAULT ''");
       }
@@ -369,9 +369,9 @@ const MIGRATIONS: Migration[] = [
         conn.exec("ALTER TABLE session_actions ADD COLUMN turn_id TEXT NOT NULL DEFAULT ''");
       }
       // Add mapper_context to session_snapshots for delta-replay context seeding (#1292).
-      const snapCols = conn
-        .prepare("PRAGMA table_info(session_snapshots)")
-        .all() as Array<{ name: string }>;
+      const snapCols = conn.prepare("PRAGMA table_info(session_snapshots)").all() as Array<{
+        name: string;
+      }>;
       if (!snapCols.some((c) => c.name === "mapper_context")) {
         conn.exec("ALTER TABLE session_snapshots ADD COLUMN mapper_context TEXT");
       }
