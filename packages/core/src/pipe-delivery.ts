@@ -247,8 +247,8 @@ function isPromotedSyncPipe(pipeStream: streamRegistry.Stream, parentSessionId: 
  * Build a rich completion message from the child session's log,
  * including the status and the child's last text output.
  */
-// eslint-disable-next-line @rushstack/no-new-null -- matches DB schema types
 function buildCompletionMessage(
+  // eslint-disable-next-line @rushstack/no-new-null -- matches DB schema types
   session: { logPath: string | null; error: string | null },
   status: string,
 ): string {

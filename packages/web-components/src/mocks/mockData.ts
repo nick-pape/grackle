@@ -1,3 +1,5 @@
+/* eslint-disable max-lines -- Large but flat mock dataset; splitting would obscure the test scenarios it represents. */
+
 /**
  * Static mock data for visual testing (`?mock` mode).
  *
