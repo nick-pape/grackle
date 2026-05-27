@@ -146,6 +146,17 @@ Rush monorepo with packages under `packages/`:
 
 ## Code Style
 
+### Formatting (Prettier)
+
+Prettier is the canonical formatter. Config lives at `.prettierrc.json`; ignore rules at `.prettierignore`. Prettier is provisioned by Rush via the `format` autoinstaller (`common/autoinstallers/format/`) — no per-package install.
+
+- `rush format` — format files changed vs `origin/main` (fast; default).
+- `rush format --all` — format the whole repo.
+- `rush format:check [--all]` — same scopes, check-only. CI runs `format:check` on PR-changed files; the build fails if anything is unformatted.
+- **Pre-commit hook** (`common/git-hooks/pre-commit`, installed by `rush install`) auto-formats staged files and re-stages them. Use `git commit --no-verify` only in genuine emergencies.
+- Both CLI and hook pass `--cache` (metadata strategy), so warm runs are sub-second.
+- The initial mass-format commit's SHA is recorded in `.git-blame-ignore-revs` so `git blame` skips it.
+
 ### TypeScript
 - **TSDoc**: All exported functions, interfaces, types, and classes must have TSDoc comments
 - **No magic numbers**: Extract numeric constants (timeouts, retries, byte lengths) into named constants at module scope

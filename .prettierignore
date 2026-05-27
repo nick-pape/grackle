@@ -1,0 +1,34 @@
+# Build output
+**/dist/
+**/lib/
+**/temp/
+common/temp/
+**/*.tsbuildinfo
+
+# Generated proto code
+packages/common/src/gen/
+
+# Lock files and Rush-managed change records
+**/pnpm-lock.yaml
+common/config/rush/pnpm-lock.yaml
+common/changes/
+
+# Node + Rush worktrees
+**/node_modules/
+.claude/worktrees/
+
+# Storybook output
+**/storybook-static/
+
+# Playwright artifacts
+**/playwright-report/
+**/test-results/
+
+# Vendored / binary assets we should not reflow
+buildpulse-test-reporter
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.ico
+*.pdf

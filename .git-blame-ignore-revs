@@ -1,0 +1,4 @@
+# Revisions listed here are skipped by `git blame` (and GitHub's blame view).
+# Add the SHA of large mechanical-formatting commits so reviewers see the real authors.
+#
+# Format: one SHA per line, optional trailing `# comment`.

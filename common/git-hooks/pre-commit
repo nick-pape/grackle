@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Auto-format staged files with Prettier and re-stage the results.
+# Installed automatically by `rush install` (Rush copies common/git-hooks/* into .git/hooks/).
+#
+# To bypass for an emergency commit, use `git commit --no-verify` (discouraged).
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+FORMATTER="$REPO_ROOT/common/autoinstallers/format/format.js"
+
+if [ ! -f "$FORMATTER" ]; then
+  echo "pre-commit: $FORMATTER not found; skipping (run 'rush install' to provision)." >&2
+  exit 0
+fi
+
+# Run prettier --write on staged, formattable files; re-stage the rewrites.
+# The script handles extension filtering and ignore rules itself.
+STAGED_BEFORE="$(git diff --cached --name-only --diff-filter=ACMR)"
+
+node "$FORMATTER" write --staged
+
+# Re-stage only the files that were already staged (don't pick up new edits the
+# user hasn't decided to include).
+if [ -n "$STAGED_BEFORE" ]; then
+  # Newline-delimited list → xargs with -d. macOS xargs lacks -d; fall back to a loop.
+  echo "$STAGED_BEFORE" | while IFS= read -r f; do
+    [ -n "$f" ] && [ -f "$REPO_ROOT/$f" ] && git add -- "$f"
+  done
+fi
