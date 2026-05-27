@@ -602,4 +602,36 @@ describe("SessionStateManager", () => {
     expect(state.activeTurn).toBeUndefined();
     expect(state.turns.length).toBe(1);
   });
+
+  // ─── Snapshot serialization ────────────────────────────────────
+
+  it("snapshot() serializes turns and _meta into valid JSON", () => {
+    const manager = new SessionStateManager("session-snap");
+    manager.processEvent(
+      makeEvent("turn_started", {
+        turnId: "turn-0",
+        content: JSON.stringify({ user_message: "Hello" }),
+      }),
+      "01ABC000",
+    );
+    manager.processEvent(makeEvent("text", { content: "World" }), "01ABC001");
+    manager.processEvent(
+      makeEvent("usage", { content: JSON.stringify({ cost_millicents: 42 }) }),
+      "01ABC002",
+    );
+    manager.processEvent(makeEvent("turn_complete", { turnId: "turn-0" }), "01ABC003");
+
+    // Capture the snapshot that persistSnapshot would have been called with
+    const snapshotArg = mockDb.persistSnapshot.mock.calls.at(-1)?.[0] as
+      | { state: string }
+      | undefined;
+    expect(snapshotArg).toBeDefined();
+
+    const parsed = JSON.parse(snapshotArg!.state);
+    expect(parsed.turns).toBeDefined();
+    expect(parsed.turns.length).toBe(1);
+    expect(parsed.turns[0].id).toBe("turn-0");
+    expect(parsed._meta?.costMillicents).toBe(42);
+    expect(parsed.lifecycle).toBeDefined();
+  });
 });

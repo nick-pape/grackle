@@ -340,6 +340,16 @@ describe("usage", () => {
     mapAgentEvent(event, 6, context);
     expect(context.metaAccumulator.costMillicents).toBeUndefined();
   });
+
+  it("handles zero cost_millicents without breaking accumulator", () => {
+    const context = makeContext({ metaAccumulator: { costMillicents: 100 } });
+    const event = makeEvent("usage", {
+      content: JSON.stringify({ cost_millicents: 0 }),
+    });
+    mapAgentEvent(event, 6, context);
+    // 0 is a valid (non-null) cost — accumulator should be 100 + 0 = 100
+    expect(context.metaAccumulator.costMillicents).toBe(100);
+  });
 });
 
 // ─── error ─────────────────────────────────────────────────────────
@@ -359,6 +369,17 @@ describe("error", () => {
     expect(action.turnId).toBe("turn-abc");
     expect(action.error.message).toBe("Something went wrong");
     expect(result.note.disposition).toBe("mapped");
+    // context.turnId must be cleared so subsequent events aren't mapped to the defunct turn
+    expect(context.turnId).toBeUndefined();
+  });
+
+  it("clears context.turnId so subsequent text events are dropped after in-turn error", () => {
+    const context = makeContext({ turnId: "turn-abc" });
+    mapAgentEvent(makeEvent("error", { content: "Oops" }), 7, context);
+
+    const textResult = mapAgentEvent(makeEvent("text", { content: "After error" }), 8, context);
+    expect(textResult.actions.length).toBe(0);
+    expect(textResult.note?.disposition).toBe("dropped");
   });
 
   it("maps to SessionCreationFailed when pre-turn", () => {
