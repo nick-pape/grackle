@@ -120,9 +120,12 @@ function ensureCacheDir() {
   fs.mkdirSync(CACHE_DIR, { recursive: true });
 }
 
-function runPrettier(mode, fileList) {
-  ensureCacheDir();
-  const args = [
+// Windows' CreateProcess command-line limit is ~32 KB. Keep each spawn well
+// under that so chunked invocations never overflow.
+const MAX_ARGV_BYTES = 24000;
+
+function baseArgs(mode) {
+  return [
     PRETTIER_BIN,
     "--cache",
     "--cache-location",
@@ -133,16 +136,30 @@ function runPrettier(mode, fileList) {
     "warn",
     mode === "write" ? "--write" : "--check",
   ];
-  if (fileList === null) {
-    // Whole repo; rely on .prettierignore for exclusions.
-    args.push(".");
-  } else {
-    if (fileList.length === 0) {
-      process.stdout.write("format.js: no formattable files in scope.\n");
-      return 0;
+}
+
+function chunkFiles(files, fixedArgs) {
+  const fixedLen = fixedArgs.reduce((n, a) => n + Buffer.byteLength(a) + 1, 0);
+  const chunks = [];
+  let current = [];
+  let currentLen = fixedLen;
+  for (const f of files) {
+    const flen = Buffer.byteLength(f) + 1;
+    if (current.length > 0 && currentLen + flen > MAX_ARGV_BYTES) {
+      chunks.push(current);
+      current = [];
+      currentLen = fixedLen;
     }
-    args.push(...fileList);
+    current.push(f);
+    currentLen += flen;
   }
+  if (current.length > 0) {
+    chunks.push(current);
+  }
+  return chunks;
+}
+
+function spawnPrettier(args) {
   const result = spawnSync(process.execPath, args, {
     cwd: REPO_ROOT,
     stdio: "inherit",
@@ -152,6 +169,30 @@ function runPrettier(mode, fileList) {
     return 1;
   }
   return result.status ?? 1;
+}
+
+function runPrettier(mode, fileList) {
+  ensureCacheDir();
+  const fixed = baseArgs(mode);
+  if (fileList === null) {
+    // Whole repo; rely on .prettierignore for exclusions.
+    return spawnPrettier([...fixed, "."]);
+  }
+  if (fileList.length === 0) {
+    process.stdout.write("format.js: no formattable files in scope.\n");
+    return 0;
+  }
+  const chunks = chunkFiles(fileList, fixed);
+  let worstStatus = 0;
+  for (const chunk of chunks) {
+    const status = spawnPrettier([...fixed, ...chunk]);
+    // Aggregate: any non-zero status survives. Prefer the highest (1 = format
+    // issues, 2 = config / usage error) so callers see the most serious result.
+    if (status > worstStatus) {
+      worstStatus = status;
+    }
+  }
+  return worstStatus;
 }
 
 function main() {
