@@ -25,6 +25,8 @@ export interface SnapshotRecord {
   snapshotAt: string;
   /** JSON-serialized SessionState key fields. */
   state: string;
+  /** JSON-serialized MapperContext at the snapshot boundary. Used for delta reconstruction. */
+  mapperContext?: string;
 }
 
 /** Default rows returned by {@link querySnapshot} when no limit is given. */
@@ -47,12 +49,14 @@ export function persistSnapshot(snapshot: SnapshotRecord): void {
       sessionId: snapshot.sessionId,
       snapshotAt: snapshot.snapshotAt,
       state: snapshot.state,
+      mapperContext: snapshot.mapperContext,
     })
     .onConflictDoUpdate({
       target: [sessionSnapshots.sessionId, sessionSnapshots.seq],
       set: {
         snapshotAt: snapshot.snapshotAt,
         state: snapshot.state,
+        mapperContext: snapshot.mapperContext,
       },
     })
     .run();

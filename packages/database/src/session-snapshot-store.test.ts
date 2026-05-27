@@ -6,14 +6,15 @@ vi.mock("./db.js", async () => await import("./test-db.js"));
 import { sqlite } from "./test-db.js";
 import { persistSnapshot, querySnapshot, type SnapshotRecord } from "./session-snapshot-store.js";
 
-/** Create the session_snapshots table with composite PK. */
+/** Create the session_snapshots table with composite PK (mirrors migration v17 + v18). */
 function applySchema(): void {
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS session_snapshots (
-      session_id  TEXT NOT NULL,
-      seq         TEXT NOT NULL,
-      snapshot_at TEXT NOT NULL,
-      state       TEXT NOT NULL,
+      session_id     TEXT NOT NULL,
+      seq            TEXT NOT NULL,
+      snapshot_at    TEXT NOT NULL,
+      state          TEXT NOT NULL,
+      mapper_context TEXT,
       PRIMARY KEY (session_id, seq)
     );
     CREATE INDEX IF NOT EXISTS idx_session_snapshots_session
@@ -97,5 +98,45 @@ describe("session-snapshot-store", () => {
     expect(JSON.parse(rows[0].state).seq).toBe("first");
     expect(JSON.parse(rows[1].state).seq).toBe("second");
     expect(JSON.parse(rows[2].state).seq).toBe("third");
+  });
+
+  // ─── MapperContext round-trip ──────────────────────────────
+
+  it("round-trips mapperContext alongside state", () => {
+    const ctx = {
+      turnId: "turn-abc",
+      openToolCalls: ["tc-1", "tc-2"],
+      partCounter: 7,
+      metaAccumulator: { costMillicents: 500 },
+    };
+    persistSnapshot({
+      seq: "01JKAAA010",
+      sessionId: "session-ctx",
+      snapshotAt: "2026-05-27T00:00:00.000Z",
+      state: JSON.stringify({ lifecycle: "ready" }),
+      mapperContext: JSON.stringify(ctx),
+    });
+
+    const rows = querySnapshot("session-ctx");
+    expect(rows.length).toBe(1);
+    expect(rows[0].mapperContext).toBeDefined();
+    const parsed = JSON.parse(rows[0].mapperContext!);
+    expect(parsed.turnId).toBe("turn-abc");
+    expect(parsed.openToolCalls).toEqual(["tc-1", "tc-2"]);
+    expect(parsed.partCounter).toBe(7);
+    expect(parsed.metaAccumulator.costMillicents).toBe(500);
+  });
+
+  it("round-trips null mapperContext for snapshots without context", () => {
+    persistSnapshot({
+      seq: "01JKAAA020",
+      sessionId: "session-no-ctx",
+      snapshotAt: "2026-05-27T00:00:00.000Z",
+      state: JSON.stringify({ lifecycle: "creating" }),
+    });
+
+    const rows = querySnapshot("session-no-ctx");
+    expect(rows.length).toBe(1);
+    expect(rows[0].mapperContext).toBeNull();
   });
 });

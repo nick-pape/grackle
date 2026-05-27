@@ -412,6 +412,8 @@ export const sessionActions = sqliteTable("session_actions", {
   content: text("content").notNull(),
   raw: text("raw").notNull().default(""),
   timestamp: text("timestamp").notNull(),
+  toolCallId: text("tool_call_id").notNull().default(""),
+  turnId: text("turn_id").notNull().default(""),
 });
 
 /** Row shape returned by a SELECT on the session_actions table. */
@@ -439,6 +441,7 @@ export const sessionSnapshots = sqliteTable(
     seq: text("seq").notNull(),
     snapshotAt: text("snapshot_at").notNull(),
     state: text("state").notNull(),
+    mapperContext: text("mapper_context"),
   },
   (table) => [primaryKey({ columns: [table.sessionId, table.seq] })],
 );

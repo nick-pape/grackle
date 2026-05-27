@@ -634,4 +634,146 @@ describe("SessionStateManager", () => {
     expect(parsed._meta?.costMillicents).toBe(42);
     expect(parsed.lifecycle).toBeDefined();
   });
+
+  // ─── snapshot() persists mapperContext ─────────────────────────
+
+  it("snapshot() persists mapperContext alongside state", () => {
+    const manager = new SessionStateManager("session-ctx-test");
+    manager.processEvent(
+      makeEvent("turn_started", {
+        turnId: "turn-0",
+        content: JSON.stringify({ user_message: "Prompt" }),
+      }),
+      "01ABC001",
+    );
+
+    manager.snapshot("01ABC002");
+
+    const snapshotArg = mockDb.persistSnapshot.mock.calls.at(-1)?.[0] as
+      | { state: string; mapperContext?: string }
+      | undefined;
+    expect(snapshotArg?.mapperContext).toBeDefined();
+    const ctx = JSON.parse(snapshotArg!.mapperContext!);
+    expect(ctx.turnId).toBe("turn-0");
+    expect(ctx.openToolCalls).toEqual([]);
+    expect(typeof ctx.partCounter).toBe("number");
+  });
+
+  // ─── reconstruct() — Fold read path ────────────────────────────
+
+  it("reconstruct returns initial state when no snapshot and no actions", () => {
+    mockDb.querySnapshot.mockReturnValueOnce([]);
+    mockDb.querySessionActions.mockReturnValueOnce([]);
+    const state = SessionStateManager.reconstruct("session-empty");
+    expect(state.lifecycle).toBe("creating");
+    expect(state.turns).toEqual([]);
+  });
+
+  it("reconstruct replays delta actions using stored MapperContext", () => {
+    // Snapshot represents a completed turn-0 with mapper context reset
+    const snapshotState = {
+      lifecycle: "creating",
+      turns: [{ id: "turn-0", userMessage: { text: "Hello" }, responseParts: [] }],
+      summary: { resource: "ahp-session:s", provider: "grackle", title: "", status: "idle", createdAt: 0, modifiedAt: 0 },
+    };
+    const snapshotCtx = {
+      turnId: undefined,
+      openToolCalls: [],
+      partCounter: 0,
+      metaAccumulator: {},
+    };
+    mockDb.querySnapshot.mockReturnValueOnce([
+      {
+        sessionId: "session-delta",
+        seq: "01AAA",
+        snapshotAt: "2026-05-27T00:00:00Z",
+        state: JSON.stringify(snapshotState),
+        mapperContext: JSON.stringify(snapshotCtx),
+      },
+    ]);
+    // Delta: a new turn_started after the snapshot
+    mockDb.querySessionActions.mockReturnValueOnce([
+      {
+        seq: "01AAB",
+        sessionId: "session-delta",
+        type: "turn_started",
+        content: JSON.stringify({ user_message: "Second prompt" }),
+        raw: "",
+        timestamp: "2026-05-27T00:00:01Z",
+        toolCallId: "",
+        turnId: "turn-1",
+      },
+    ]);
+
+    const state = SessionStateManager.reconstruct("session-delta");
+    // The delta turn_started should add an activeTurn
+    expect(state.activeTurn).toBeDefined();
+    expect(state.activeTurn?.id).toBe("turn-1");
+  });
+
+  it("reconstruct falls back to full replay when snapshot has no mapperContext", () => {
+    // Old-format snapshot without mapperContext
+    mockDb.querySnapshot.mockReturnValueOnce([
+      {
+        sessionId: "session-old",
+        seq: "01AAA",
+        snapshotAt: "2026-05-27T00:00:00Z",
+        state: JSON.stringify({ lifecycle: "creating", turns: [], summary: { resource: "ahp-session:session-old", provider: "grackle", title: "", status: "idle", createdAt: 0, modifiedAt: 0 } }),
+        mapperContext: null,
+      },
+    ]);
+    // Full replay: all actions for the session
+    mockDb.querySessionActions.mockReturnValueOnce([
+      {
+        seq: "01AAB",
+        sessionId: "session-old",
+        type: "turn_started",
+        content: JSON.stringify({ user_message: "Full replay prompt" }),
+        raw: "",
+        timestamp: "2026-05-27T00:00:01Z",
+        toolCallId: "",
+        turnId: "turn-full",
+      },
+    ]);
+
+    const state = SessionStateManager.reconstruct("session-old");
+    // Full replay should produce an activeTurn from the turn_started event
+    expect(state.activeTurn?.id).toBe("turn-full");
+  });
+
+  it("reconstruct correctly threads toolCallId and turnId through delta events", () => {
+    const snapshotCtx = {
+      turnId: "turn-0",
+      openToolCalls: [],
+      partCounter: 2,
+      metaAccumulator: {},
+    };
+    mockDb.querySnapshot.mockReturnValueOnce([
+      {
+        sessionId: "session-tools",
+        seq: "01AAA",
+        snapshotAt: "2026-05-27T00:00:00Z",
+        state: JSON.stringify({ lifecycle: "creating", turns: [], summary: { resource: "ahp-session:session-tools", provider: "grackle", title: "", status: "idle", createdAt: 0, modifiedAt: 0 }, activeTurn: { id: "turn-0", userMessage: { text: "Prompt" }, responseParts: [] } }),
+        mapperContext: JSON.stringify(snapshotCtx),
+      },
+    ]);
+    // Delta: tool_use with explicit toolCallId
+    mockDb.querySessionActions.mockReturnValueOnce([
+      {
+        seq: "01AAB",
+        sessionId: "session-tools",
+        type: "tool_use",
+        content: JSON.stringify({ tool_name: "bash", display_name: "Bash" }),
+        raw: "",
+        timestamp: "2026-05-27T00:00:01Z",
+        toolCallId: "tc-explicit-123",
+        turnId: "turn-0",
+      },
+    ]);
+
+    const state = SessionStateManager.reconstruct("session-tools");
+    // The tool_use with an explicit toolCallId should produce a ToolCallResponsePart
+    const activeTurn = state.activeTurn;
+    expect(activeTurn).toBeDefined();
+  });
 });

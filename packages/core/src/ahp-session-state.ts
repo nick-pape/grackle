@@ -9,8 +9,9 @@
  * @module ahp-session-state
  */
 
+import { create } from "@bufbuild/protobuf";
 import { logger } from "./logger.js";
-import type { powerline } from "@grackle-ai/common";
+import { powerline } from "@grackle-ai/common";
 import {
   sessionReducer,
   SessionLifecycle,
@@ -23,11 +24,19 @@ import {
 // @grackle-ai/core never see it since .d.ts resolution is confined to dist/.
 import type { SessionAction } from "@grackle-ai/ahp/src/vendor/ahp/action-origin.generated.js";
 import { mapAgentEvent, type MapperContext } from "./ahp-mapper.js";
-import { persistSnapshot, querySnapshot, type SnapshotRecord } from "@grackle-ai/database";
-import { querySessionActions } from "@grackle-ai/database";
+import {
+  persistSnapshot,
+  querySnapshot,
+  querySessionActions,
+  type SessionActionRow,
+  type SnapshotRecord,
+} from "@grackle-ai/database";
 
 /** Default flush interval (actions between snapshots). */
 const DEFAULT_SNAPSHOT_THRESHOLD: number = 100;
+
+/** Hard cap on events replayed during reconstruction (guards against unbounded replay). */
+const MAX_RECONSTRUCTION_EVENTS: number = 10_000;
 
 /**
  * Callback for snapshot results.
@@ -251,11 +260,12 @@ export class SessionStateManager {
   }
 
   /**
-   * Persist a snapshot of the current SessionState to the database.
+   * Persist a snapshot of the current SessionState and MapperContext to the database.
    *
    * Serializes key fields from SessionState (summary, lifecycle, turns,
    * activeTurn, steeringMessage, queuedMessages, inputRequests, config, _meta)
-   * into JSON. Excludes serverTools, activeClient, and customizations.
+   * and the full MapperContext into JSON. Excludes serverTools, activeClient,
+   * and customizations.
    *
    * @param lastSeq - ULID string of the last action included in this snapshot.
    * @returns Result describing whether a snapshot was persisted.
@@ -268,6 +278,7 @@ export class SessionStateManager {
         sessionId: this.sessionId,
         snapshotAt: new Date().toISOString(),
         state: snapshotData,
+        mapperContext: JSON.stringify(this.context),
       };
       persistSnapshot(record);
 
@@ -299,61 +310,67 @@ export class SessionStateManager {
   /**
    * Reconstruct SessionState from the latest snapshot plus delta actions.
    *
-   * Loads the most recent snapshot for the session, then replays all
-   * actions from that snapshot's seq onward through the reducer.
-   *
-   * **Limitation**: Delta replay currently returns `undefined` for each
-   * action because session_actions store raw AgentEvents, not AHP actions.
-   * The snapshot alone provides a valid baseline; delta replay is reserved
-   * for a future implementation that stores AHP action JSON directly.
+   * Strategy:
+   * - If the snapshot includes a `mapperContext`: delta replay — replay only the
+   *   actions since the snapshot using the stored context (O(delta)).
+   * - If the snapshot is missing a `mapperContext` (older snapshot): full replay —
+   *   replay all session_actions from the start with a fresh context (O(n) fallback).
+   * - If there is no snapshot at all: full replay from the beginning.
    *
    * @param sessionId - The session to reconstruct.
    * @returns Reconstructed SessionState, or a minimal initial state if no
    *          snapshot or actions exist.
    */
   public static reconstruct(sessionId: string): SessionState {
-    // Load latest snapshot
     const snapshots = querySnapshot(sessionId, 1);
+
     if (snapshots.length === 0) {
-      // No snapshot — return initial state
-      return SessionStateManager.createInitialState(sessionId);
+      // No snapshot — full replay from start
+      return SessionStateManager.replayAllActions(sessionId);
     }
 
     const latest = snapshots[0];
-    let initialState: SessionState;
+
+    // Parse snapshot state
+    let baseState: SessionState;
     try {
-      initialState = JSON.parse(latest.state) as SessionState;
+      baseState = JSON.parse(latest.state) as SessionState;
     } catch (err) {
       logger.error(
         { err, sessionId, seq: latest.seq },
-        "Corrupted snapshot data — returning initial state",
+        "Corrupted snapshot state — falling back to full replay",
       );
-      return SessionStateManager.createInitialState(sessionId);
+      return SessionStateManager.replayAllActions(sessionId);
     }
 
-    // Replay delta actions from the snapshot seq onward.
-    // Currently parseSessionActionToAhpAction returns undefined for each
-    // delta (session_actions store raw AgentEvents, not AHP actions).
-    // The snapshot baseline is still valid; delta replay is future work.
-    const deltaActions = querySessionActions({
-      sessionId,
-      fromSeq: latest.seq,
-      limit: 10000,
-    });
-
-    let state = initialState;
-    for (const deltaAction of deltaActions) {
+    // Delta replay: use stored MapperContext to seed the replay
+    if (latest.mapperContext) {
+      let replayContext: MapperContext;
       try {
-        const action = parseSessionActionToAhpAction(deltaAction);
-        if (action) {
-          state = sessionReducer(state, action);
-        }
-      } catch {
-        // Non-critical: skip actions that can't be parsed
+        replayContext = JSON.parse(latest.mapperContext) as MapperContext;
+      } catch (err) {
+        logger.warn(
+          { err, sessionId, seq: latest.seq },
+          "Corrupted snapshot mapperContext — falling back to full replay",
+        );
+        return SessionStateManager.replayAllActions(sessionId);
       }
+
+      const deltaRows = querySessionActions({
+        sessionId,
+        fromSeq: latest.seq,
+        limit: MAX_RECONSTRUCTION_EVENTS,
+      });
+
+      return SessionStateManager.replayRows(baseState, replayContext, deltaRows);
     }
 
-    return state;
+    // Snapshot exists but has no mapperContext (old snapshot format) — full replay
+    logger.debug(
+      { sessionId, seq: latest.seq },
+      "Snapshot missing mapperContext — falling back to full replay",
+    );
+    return SessionStateManager.replayAllActions(sessionId);
   }
 
   /**
@@ -382,6 +399,97 @@ export class SessionStateManager {
       lifecycle: SessionLifecycle.Creating,
       turns: [],
     };
+  }
+
+  /**
+   * Full replay: fetch all session_actions and replay from initial state with a fresh context.
+   * Used when no snapshot is available or the snapshot's mapperContext is missing/corrupt.
+   */
+  private static replayAllActions(sessionId: string): SessionState {
+    const allRows = querySessionActions({
+      sessionId,
+      limit: MAX_RECONSTRUCTION_EVENTS,
+    });
+
+    if (allRows.length === 0) {
+      return SessionStateManager.createInitialState(sessionId);
+    }
+
+    const freshContext: MapperContext = {
+      turnId: undefined,
+      openToolCalls: [],
+      partCounter: 0,
+      metaAccumulator: {},
+    };
+
+    return SessionStateManager.replayRows(
+      SessionStateManager.createInitialState(allRows[0].sessionId),
+      freshContext,
+      allRows,
+    );
+  }
+
+  /**
+   * Replay a sequence of session_action rows through the mapper and reducer,
+   * starting from `baseState` with `context`.
+   *
+   * @param baseState - The SessionState to start from (snapshot or initial).
+   * @param context - MapperContext to use for replay (mutated in place).
+   * @param rows - Session action rows to replay, oldest first.
+   * @returns The reconstructed SessionState after replaying all rows.
+   */
+  private static replayRows(
+    baseState: SessionState,
+    context: MapperContext,
+    rows: SessionActionRow[],
+  ): SessionState {
+    let state = baseState;
+    let replayIdx = 0;
+
+    for (const row of rows) {
+      const event = SessionStateManager.reconstructAgentEvent(row);
+      const { actions } = mapAgentEvent(event, replayIdx++, context);
+
+      for (const action of actions) {
+        state = sessionReducer(state, action as SessionAction);
+      }
+
+      // Apply meta carries (mirrors processEvent logic)
+      if (context.metaAccumulator.costMillicents !== undefined) {
+        state._meta = {
+          ...(state._meta ?? {}),
+          costMillicents: context.metaAccumulator.costMillicents,
+        };
+      }
+      if (context.metaAccumulator.runtimeSessionId !== undefined) {
+        state._meta = {
+          ...(state._meta ?? {}),
+          runtimeSessionId: context.metaAccumulator.runtimeSessionId,
+        };
+      }
+    }
+
+    return state;
+  }
+
+  /**
+   * Reconstruct a PowerLine AgentEvent from a session_action row.
+   *
+   * `user_input` rows (injected prompt events) are preserved as-is; the mapper
+   * has no `user_input` case and drops them, which is correct — it avoids a
+   * duplicate `SessionTurnStarted` alongside the runtime's own `turn_started`.
+   */
+  private static reconstructAgentEvent(row: SessionActionRow): powerline.AgentEvent {
+    return create(powerline.AgentEventSchema, {
+      sessionId: row.sessionId,
+      type: row.type,
+      timestamp: row.timestamp,
+      content: row.content,
+      raw: row.raw,
+      toolCallId: row.toolCallId,
+      turnId: row.turnId,
+      diagnostic: false,
+    });
   }
 
   /**
@@ -415,28 +523,4 @@ export class SessionStateManager {
       _meta,
     });
   }
-}
-
-/**
- * Parse a session_action row back into an AHP SessionAction for replay.
- *
- * Session actions store event types as strings (e.g. "text", "tool_use")
- * and content as JSON. This function reconstructs the corresponding
- * AHP action from those stored fields.
- *
- * **Current limitation**: session_actions store raw AgentEvents, not AHP
- * actions. Direct reconstruction is not possible without going through
- * the mapper again. This function returns `undefined` pending a future
- * implementation that stores AHP action JSON in session_actions.
- */
-function parseSessionActionToAhpAction(_deltaAction: {
-  type: string;
-  content: string;
-  raw: string;
-  timestamp: string;
-}): SessionAction | undefined {
-  // session_actions store raw AgentEvent data, not AHP actions.
-  // Direct reconstruction requires re-running the mapper.
-  // Future: store AHP action JSON directly in session_actions.
-  return undefined;
 }
