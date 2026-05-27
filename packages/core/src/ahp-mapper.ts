@@ -287,7 +287,7 @@ export function mapAgentEvent(
       }
 
       const toolCallIdValue = toolCallId || `tc-${context.partCounter++}`;
-const toolName = hasParsed ? str(parsed, ["tool_name", "name"], "unknown_tool") : "unknown_tool";
+      const toolName = hasParsed ? str(parsed, ["tool_name", "name"], "unknown_tool") : "unknown_tool";
        const displayName = hasParsed ? str(parsed, ["display_name"], toolName) : toolName;
        const invocationMessage = hasParsed
          ? str(parsed, ["invocation_message"], `Running ${toolName}`)

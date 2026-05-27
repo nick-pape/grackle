@@ -116,12 +116,13 @@ export class SessionStateManager {
       this.actionCountSinceLastFlush += 1;
     }
 
-    // Apply mapper carries (_meta fields the reducer doesn't handle)
+    // Apply mapper carries (_meta fields the reducer doesn't handle).
+    // Guard against this.state._meta being undefined (initial state has no _meta).
     if (this.context.metaAccumulator.costMillicents !== undefined) {
-      this.state._meta = { ...this.state._meta, costMillicents: this.context.metaAccumulator.costMillicents };
+      this.state._meta = { ...this.state._meta ?? {}, costMillicents: this.context.metaAccumulator.costMillicents };
     }
     if (this.context.metaAccumulator.runtimeSessionId !== undefined) {
-      this.state._meta = { ...this.state._meta, runtimeSessionId: this.context.metaAccumulator.runtimeSessionId };
+      this.state._meta = { ...this.state._meta ?? {}, runtimeSessionId: this.context.metaAccumulator.runtimeSessionId };
     }
 
     let lastSeq: string | undefined;
@@ -263,8 +264,26 @@ export class SessionStateManager {
        };
     }
 
-    const latest = snapshots[0];
-    const initialState = JSON.parse(latest.state) as SessionState;
+const latest = snapshots[0];
+     let initialState: SessionState;
+     try {
+       initialState = JSON.parse(latest.state) as SessionState;
+     } catch (err) {
+       logger.error({ err, sessionId, seq: latest.seq }, "Corrupted snapshot data — returning initial state");
+       // Static method can't call instance method, so inline the initial state creation
+       return {
+         summary: {
+           resource: `ahp-session:${sessionId}`,
+           provider: "grackle",
+           title: "",
+           status: SessionStatus.Idle,
+           createdAt: Date.now(),
+           modifiedAt: Date.now(),
+         },
+         lifecycle: SessionLifecycle.Creating,
+         turns: [],
+       };
+     }
 
     // Replay delta actions from the snapshot seq onward.
     // Currently parseSessionActionToAhpAction returns undefined for each

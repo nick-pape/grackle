@@ -32,34 +32,32 @@ const DEFAULT_SNAPSHOT_LIMIT: number = 10;
 
 /**
  * Persist a snapshot to the `session_snapshots` table. Best-effort:
- * a persistence failure is logged but never interrupts event processing.
+ * a persistence failure throws and is handled by the caller (e.g. SessionStateManager),
+ * which logs and returns `{ persisted: false }`.
  * Uses INSERT OR REPLACE to handle deduplication when two flush triggers
  * fire for the same serverSeq (threshold + turn_complete).
  *
  * @param snapshot - The snapshot record to persist.
+ * @throws on database write failure (caller handles the error).
  */
 export function persistSnapshot(snapshot: SnapshotRecord): void {
-  try {
-    db
-      .insert(sessionSnapshots)
-      .values({
-        seq: snapshot.seq,
+  db
+    .insert(sessionSnapshots)
+    .values({
+      seq: snapshot.seq,
+      sessionId: snapshot.sessionId,
+      snapshotAt: snapshot.snapshotAt,
+      state: snapshot.state,
+    })
+    .onConflictDoUpdate({
+      target: sessionSnapshots.seq,
+      set: {
         sessionId: snapshot.sessionId,
         snapshotAt: snapshot.snapshotAt,
         state: snapshot.state,
-      })
-      .onConflictDoUpdate({
-        target: sessionSnapshots.seq,
-        set: {
-          sessionId: snapshot.sessionId,
-          snapshotAt: snapshot.snapshotAt,
-          state: snapshot.state,
-        },
-      })
-      .run();
-  } catch {
-    // Non-critical — snapshot failures must not interrupt event processing
-  }
+      },
+    })
+    .run();
 }
 
 /**

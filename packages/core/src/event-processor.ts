@@ -152,7 +152,7 @@ export function processEventStream(
   /** Inner processing logic, extracted so it can be wrapped in runWithTrace. */
   const processEvents = async (): Promise<void> => {
     let lastServerSeq: string | undefined;
-    let terminalSnapshotFlashed: boolean = false;
+    let terminalSnapshotFlushed: boolean = false;
     try {
       logWriter.initLog(logPath);
       sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.RUNNING);
@@ -342,8 +342,9 @@ export function processEventStream(
           }
 
           // AHP HR1b: flush snapshot on terminal status for clean state capture
-          if (["completed", "killed", "failed", "terminated"].includes(event.content)) {
-            try { stateManager.snapshot(serverSeq); terminalSnapshotFlashed = true; } catch { /* non-critical */ }
+          // Guard: serverSeq is undefined when recordSessionAction() silently fails.
+          if (["completed", "killed", "failed", "terminated"].includes(event.content) && serverSeq) {
+            try { stateManager.snapshot(serverSeq); terminalSnapshotFlushed = true; } catch { /* non-critical */ }
           }
 
           // Broadcast task_updated on status changes so frontend re-fetches computed status.
@@ -401,7 +402,7 @@ export function processEventStream(
     } finally {
       // AHP HR1b: flush final snapshot on stream completion.
       // Skip if terminal status already flushed a snapshot (avoids duplicates with same serverSeq).
-      if (lastServerSeq && !terminalSnapshotFlashed) {
+      if (lastServerSeq && !terminalSnapshotFlushed) {
         try { stateManager.snapshot(lastServerSeq); } catch { /* non-critical */ }
       }
       stateManager.clear();

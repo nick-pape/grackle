@@ -87,7 +87,7 @@ describe("SessionStateManager", () => {
     );
 
     // Add text
-    manager.processEvent(makeEvent("text", { content: "Response text" }), 1);
+    manager.processEvent(makeEvent("text", { content: "Response text" }), "1");
 
     const state = manager.getState();
     expect(state.activeTurn).toBeDefined();
@@ -166,8 +166,8 @@ describe("SessionStateManager", () => {
       }),
       0,
     );
-    manager.processEvent(makeEvent("text", { content: "Response" }), 1);
-    manager.processEvent(makeEvent("turn_complete", { turnId: "turn-0" }), 2);
+    manager.processEvent(makeEvent("text", { content: "Response" }), "1");
+    manager.processEvent(makeEvent("turn_complete", { turnId: "turn-0" }), "2");
 
     const state = manager.getState();
     expect(state.activeTurn).toBeUndefined();
@@ -178,7 +178,7 @@ describe("SessionStateManager", () => {
 
   it("drops input_needed", () => {
     const manager = new SessionStateManager("session-001");
-    manager.processEvent(makeEvent("input_needed"), 0);
+    manager.processEvent(makeEvent("input_needed"), "0");
     expect(manager.getState().turns).toEqual([]);
   });
 
@@ -245,7 +245,7 @@ describe("SessionStateManager", () => {
 
     // Process enough events to exceed threshold
     for (let i = 0; i < 5; i++) {
-      manager.processEvent(makeEvent("text", { content: `Event ${i}` }), i + 1);
+      manager.processEvent(makeEvent("text", { content: `Event ${i}` }), `${i + 1}`);
     }
     // Snapshot should have been triggered (try/catch handles DB failure)
     const state = manager.getState();
@@ -266,7 +266,7 @@ describe("SessionStateManager", () => {
     );
 
     for (let i = 0; i < 3; i++) {
-      manager.processEvent(makeEvent("text", { content: `Event ${i}` }), i + 1);
+      manager.processEvent(makeEvent("text", { content: `Event ${i}` }), `${i + 1}`);
     }
 
     // Should still have active turn with 3 parts (no snapshot flushed)
@@ -289,13 +289,13 @@ describe("SessionStateManager", () => {
 
     // First flush at 3 events
     for (let i = 0; i < 3; i++) {
-      manager.processEvent(makeEvent("text", { content: `Event ${i}` }), i + 1);
+      manager.processEvent(makeEvent("text", { content: `Event ${i}` }), `${i + 1}`);
     }
     // Counter reset to 0 after snapshot
 
     // Process 2 more — should NOT trigger another flush (threshold=3)
-    manager.processEvent(makeEvent("text", { content: "Event 3" }), 4);
-    manager.processEvent(makeEvent("text", { content: "Event 4" }), 5);
+    manager.processEvent(makeEvent("text", { content: "Event 3" }), "4");
+    manager.processEvent(makeEvent("text", { content: "Event 4" }), "5");
 
     // 5 total parts, only 1 snapshot flushed
     expect(manager.getState().activeTurn?.responseParts.length).toBe(5);
@@ -314,8 +314,8 @@ describe("SessionStateManager", () => {
       }),
       0,
     );
-    manager.processEvent(makeEvent("text", { content: "Response" }), 1);
-    manager.processEvent(makeEvent("turn_complete", { turnId: "turn-0" }), 2);
+    manager.processEvent(makeEvent("text", { content: "Response" }), "1");
+    manager.processEvent(makeEvent("turn_complete", { turnId: "turn-0" }), "2");
 
     // Turn completed, state should reflect a finished turn
     const state = manager.getState();
@@ -350,8 +350,8 @@ describe("SessionStateManager", () => {
       }),
       0,
     );
-    manager.processEvent(makeEvent("text", { content: "Response" }), 1);
-    manager.processEvent(makeEvent("turn_complete", { turnId: "turn-0" }), 2);
+    manager.processEvent(makeEvent("text", { content: "Response" }), "1");
+    manager.processEvent(makeEvent("turn_complete", { turnId: "turn-0" }), "2");
 
     expect(manager.getState().turns.length).toBe(1);
 
@@ -386,7 +386,7 @@ describe("SessionStateManager", () => {
         turnId: "turn-0",
         content: JSON.stringify({ user_message: "Hello" }),
       }),
-      0,
+      "0",
     );
     manager.processEvent(
       makeEvent("tool_use", {
@@ -394,7 +394,7 @@ describe("SessionStateManager", () => {
         toolCallId: "tc-1",
         content: JSON.stringify({ tool_name: "read_file" }),
       }),
-      1,
+      "1",
     );
 
     const ctx = manager.getContext();
