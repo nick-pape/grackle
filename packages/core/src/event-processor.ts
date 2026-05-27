@@ -23,6 +23,31 @@ import { cleanupLifecycleStream } from "./lifecycle-streams.js";
 import { sendInputToSession } from "./signals/signal-delivery.js";
 import { checkBudget } from "./budget-checker.js";
 import type { ProcessorContext } from "./processor-registry.js";
+import { SessionStateManager } from "./ahp-session-state.js";
+
+/**
+ * Construct a minimal AgentEvent for injected events (system context, initial prompt).
+ * Uses the protobuf `create()` helper so the result satisfies the `AgentEvent`
+ * type contract without unsafe casts.
+ */
+function makeAgentEvent(
+  sessionId: string,
+  type: string,
+  content: string,
+  raw?: string,
+  turnId?: string,
+): powerline.AgentEvent {
+  return create(powerline.AgentEventSchema, {
+    sessionId,
+    type,
+    timestamp: new Date().toISOString(),
+    content,
+    raw: raw ?? "",
+    toolCallId: "",
+    diagnostic: false,
+    turnId: turnId ?? "",
+  });
+}
 
 /** Options for processing an agent event stream. */
 export interface EventStreamOptions {
@@ -131,8 +156,13 @@ export function processEventStream(
 
   processorRegistry.register(ctx);
 
+  // AHP HR1b: session state manager — mapper + reducer + snapshots
+  const stateManager = new SessionStateManager(sessionId);
+
   /** Inner processing logic, extracted so it can be wrapped in runWithTrace. */
   const processEvents = async (): Promise<void> => {
+    let lastServerSeq: string | undefined;
+    let terminalSnapshotFlushed: boolean = false;
     try {
       logWriter.initLog(logPath);
       sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.RUNNING);
@@ -150,7 +180,16 @@ export function processEventStream(
         });
         await logWriter.writeEvent(logPath, sysCtxEvent);
         streamHub.publish(sysCtxEvent);
-        recordSessionAction(sysCtxEvent);
+        const sysSeq = recordSessionAction(sysCtxEvent);
+        if (sysSeq) {
+          lastServerSeq = sysSeq;
+          // System events are dropped by the mapper when there's no active turn (no turn_started yet).
+          // The mapper only processes system events within an active turn context.
+          stateManager.processEvent(
+            makeAgentEvent(sessionId, "system", options.systemContext),
+            sysSeq,
+          );
+        }
       }
       if (options.prompt && options.taskId) {
         const promptEvent = create(grackle.SessionEventSchema, {
@@ -161,7 +200,20 @@ export function processEventStream(
         });
         await logWriter.writeEvent(logPath, promptEvent);
         streamHub.publish(promptEvent);
-        recordSessionAction(promptEvent);
+        const promptSeq = recordSessionAction(promptEvent);
+        if (promptSeq) {
+          lastServerSeq = promptSeq;
+          stateManager.processEvent(
+            makeAgentEvent(
+              sessionId,
+              "turn_started",
+              JSON.stringify({ user_message: options.prompt }),
+            ),
+            promptSeq,
+          );
+          // Mark so the runtime's first turn_started is deduplicated.
+          stateManager.markInjectedInitialTurn();
+        }
       }
 
       for await (const event of events) {
@@ -186,7 +238,13 @@ export function processEventStream(
         });
         await logWriter.writeEvent(logPath, sessionEvent);
         streamHub.publish(sessionEvent);
-        recordSessionAction(sessionEvent);
+        const serverSeq = recordSessionAction(sessionEvent);
+        if (serverSeq) {
+          lastServerSeq = serverSeq;
+          // AHP HR1b: process event through state manager (mapper + reducer + snapshot)
+          // Pass serverSeq so snapshots are anchored to real action ULIDs for reconstruction.
+          stateManager.processEvent(event, serverSeq);
+        }
 
         // HR7: tee runtime diagnostics to the additive OTLP logs sink (no-op
         // unless OTEL_EXPORTER_OTLP_ENDPOINT is set). Existing sinks above are
@@ -355,6 +413,22 @@ export function processEventStream(
             }
           }
 
+          // AHP HR1b: flush snapshot on terminal status for clean state capture
+          // Guard: serverSeq is undefined when recordSessionAction() silently fails.
+          if (
+            ["completed", "killed", "failed", "terminated"].includes(event.content) &&
+            serverSeq
+          ) {
+            try {
+              const result = stateManager.snapshot(serverSeq);
+              if (result.persisted) {
+                terminalSnapshotFlushed = true;
+              }
+            } catch {
+              /* non-critical */
+            }
+          }
+
           // Broadcast task_updated on status changes so frontend re-fetches computed status.
           // This covers both terminal events (completed/killed/failed) and non-terminal
           // transitions (running, waiting_input) that affect the computed task status.
@@ -382,6 +456,7 @@ export function processEventStream(
         }
       }
     } catch (err) {
+      // Track the serverSeq from the suspended event for the final snapshot below
       const current = sessionStore.getSession(sessionId);
       if (current && !TERMINAL_SESSION_STATUSES.has(current.status as SessionStatus)) {
         // Transport error during active or idle session — suspend for auto-recovery
@@ -403,7 +478,14 @@ export function processEventStream(
           content: SESSION_STATUS.SUSPENDED,
         });
         streamHub.publish(suspendedEvent);
-        recordSessionAction(suspendedEvent);
+        const suspSeq = recordSessionAction(suspendedEvent);
+        if (suspSeq) {
+          lastServerSeq = suspSeq;
+          stateManager.processEvent(
+            makeAgentEvent(sessionId, "status", SESSION_STATUS.SUSPENDED),
+            suspSeq,
+          );
+        }
         if (ctx.taskId) {
           emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
         }
@@ -412,6 +494,17 @@ export function processEventStream(
       // died), the session is in its correct final state and task.updated was already
       // emitted — skip the duplicate to avoid interfering with SIGCHLD delivery.
     } finally {
+      // AHP HR1b: flush final snapshot on stream completion.
+      // Skip if terminal status already flushed a snapshot (avoids duplicates with same serverSeq).
+      if (lastServerSeq && !terminalSnapshotFlushed) {
+        try {
+          stateManager.snapshot(lastServerSeq);
+        } catch {
+          /* non-critical */
+        }
+      }
+      stateManager.clear();
+
       processorRegistry.unregister(sessionId);
       logWriter.endSession(logPath);
       try {

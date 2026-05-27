@@ -429,3 +429,19 @@ export const plugins = sqliteTable("plugins", {
 
 /** Row shape returned by a SELECT on the plugins table. */
 export type PluginRow = typeof plugins.$inferSelect;
+
+// ─── Session Snapshots (AHP HR1b / #1292) ───────────────
+
+export const sessionSnapshots = sqliteTable(
+  "session_snapshots",
+  {
+    sessionId: text("session_id").notNull(),
+    seq: text("seq").notNull(),
+    snapshotAt: text("snapshot_at").notNull(),
+    state: text("state").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.sessionId, table.seq] })],
+);
+
+/** Row shape returned by a SELECT on the session_snapshots table. */
+export type SessionSnapshotRow = typeof sessionSnapshots.$inferSelect;

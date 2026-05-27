@@ -316,6 +316,9 @@ importers:
       '@grackle-ai/adapter-sdk':
         specifier: workspace:*
         version: link:../adapter-sdk
+      '@grackle-ai/ahp':
+        specifier: workspace:*
+        version: link:../ahp
       '@grackle-ai/auth':
         specifier: workspace:*
         version: link:../auth
