@@ -2,3 +2,5 @@
 # Add the SHA of large mechanical-formatting commits so reviewers see the real authors.
 #
 # Format: one SHA per line, optional trailing `# comment`.
+
+0881ff5b9b16d675e5cc80a64b01b5bdaf3e3530 # chore: format codebase with prettier (https://github.com/nick-pape/grackle/pull/<TBD>)
