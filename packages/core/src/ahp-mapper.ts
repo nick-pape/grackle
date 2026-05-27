@@ -69,6 +69,12 @@ export interface MapperContext {
    */
   partCounter: number;
   /**
+   * Monotonically increasing event index. Stored in snapshots so delta replay
+   * can seed the starting index and generate consistent synthetic turn/tool IDs
+   * (e.g. `turn-${index}`) for events that lack explicit IDs.
+   */
+  eventIndex: number;
+  /**
    * Accumulated `_meta` fields carried across events. The mapper merges
    * cost and runtimeSessionId into this object.
    */

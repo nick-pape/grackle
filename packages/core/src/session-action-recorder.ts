@@ -48,6 +48,7 @@ export function recordSessionAction(event: grackle.SessionEvent): string | undef
       timestamp: event.timestamp,
       toolCallId: event.toolCallId,
       turnId: event.turnId,
+      diagnostic: event.diagnostic,
     });
     return seq;
   } catch (err) {

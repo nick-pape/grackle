@@ -414,6 +414,7 @@ export const sessionActions = sqliteTable("session_actions", {
   timestamp: text("timestamp").notNull(),
   toolCallId: text("tool_call_id").notNull().default(""),
   turnId: text("turn_id").notNull().default(""),
+  diagnostic: integer("diagnostic", { mode: "boolean" }).notNull().default(false),
 });
 
 /** Row shape returned by a SELECT on the session_actions table. */

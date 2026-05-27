@@ -9,10 +9,7 @@
 
 import { describe, it, expect } from "vitest";
 import type { powerline } from "@grackle-ai/common";
-import {
-  SessionStateManager,
-  type SessionStore,
-} from "./ahp-session-state.js";
+import { SessionStateManager, type SessionStore } from "./ahp-session-state.js";
 import type {
   SessionActionQuery,
   SessionActionRow,
@@ -109,6 +106,7 @@ function drive(manager: SessionStateManager, store: MemorySessionStore, events: 
       timestamp: new Date().toISOString(),
       toolCallId: spec.toolCallId ?? "",
       turnId: spec.turnId ?? "",
+      diagnostic: false,
     });
     manager.processEvent(
       makeEvent(spec.type, {
@@ -129,7 +127,12 @@ describe("SessionStateManager.reconstruct() — round-trip", () => {
     const manager = new SessionStateManager("sess", { store });
 
     drive(manager, store, [
-      { seq: "01A", type: "turn_started", content: JSON.stringify({ user_message: "Hello" }), turnId: "t0" },
+      {
+        seq: "01A",
+        type: "turn_started",
+        content: JSON.stringify({ user_message: "Hello" }),
+        turnId: "t0",
+      },
       { seq: "01B", type: "text", content: "Response text", turnId: "t0" },
       { seq: "01C", type: "usage", content: JSON.stringify({ cost_millicents: 250 }) },
       { seq: "01D", type: "turn_complete", turnId: "t0" },
@@ -154,14 +157,24 @@ describe("SessionStateManager.reconstruct() — round-trip", () => {
 
     // First turn — turn_complete triggers snapshot at "01D"
     drive(manager, store, [
-      { seq: "01A", type: "turn_started", content: JSON.stringify({ user_message: "First" }), turnId: "t0" },
+      {
+        seq: "01A",
+        type: "turn_started",
+        content: JSON.stringify({ user_message: "First" }),
+        turnId: "t0",
+      },
       { seq: "01B", type: "text", content: "First response", turnId: "t0" },
       { seq: "01D", type: "turn_complete", turnId: "t0" },
     ]);
 
     // Delta events after the snapshot
     drive(manager, store, [
-      { seq: "01E", type: "turn_started", content: JSON.stringify({ user_message: "Second" }), turnId: "t1" },
+      {
+        seq: "01E",
+        type: "turn_started",
+        content: JSON.stringify({ user_message: "Second" }),
+        turnId: "t1",
+      },
       { seq: "01F", type: "text", content: "Second response", turnId: "t1" },
     ]);
 
@@ -183,7 +196,12 @@ describe("SessionStateManager.reconstruct() — round-trip", () => {
     manager.snapshotThreshold = 0; // disables count-based flush; no turn_complete → no snapshot
 
     drive(manager, store, [
-      { seq: "01A", type: "turn_started", content: JSON.stringify({ user_message: "Hi" }), turnId: "t0" },
+      {
+        seq: "01A",
+        type: "turn_started",
+        content: JSON.stringify({ user_message: "Hi" }),
+        turnId: "t0",
+      },
       { seq: "01B", type: "text", content: "Hello back", turnId: "t0" },
     ]);
 
@@ -204,7 +222,12 @@ describe("SessionStateManager.reconstruct() — round-trip", () => {
     manager.snapshotThreshold = 1000;
 
     drive(manager, store, [
-      { seq: "01A", type: "turn_started", content: JSON.stringify({ user_message: "Run" }), turnId: "t0" },
+      {
+        seq: "01A",
+        type: "turn_started",
+        content: JSON.stringify({ user_message: "Run" }),
+        turnId: "t0",
+      },
       {
         seq: "01B",
         type: "tool_use",
@@ -238,7 +261,12 @@ describe("SessionStateManager.reconstruct() — round-trip", () => {
     manager.snapshotThreshold = 0; // force full replay path
 
     drive(manager, store, [
-      { seq: "01A", type: "turn_started", content: JSON.stringify({ user_message: "Q" }), turnId: "t0" },
+      {
+        seq: "01A",
+        type: "turn_started",
+        content: JSON.stringify({ user_message: "Q" }),
+        turnId: "t0",
+      },
       { seq: "01B", type: "usage", content: JSON.stringify({ cost_millicents: 100 }) },
       { seq: "01C", type: "usage", content: JSON.stringify({ cost_millicents: 75 }) },
     ]);

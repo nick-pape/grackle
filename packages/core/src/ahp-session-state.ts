@@ -37,8 +37,13 @@ import {
 /** Default flush interval (actions between snapshots). */
 const DEFAULT_SNAPSHOT_THRESHOLD: number = 100;
 
-/** Hard cap on events replayed during reconstruction (guards against unbounded replay). */
-const MAX_RECONSTRUCTION_EVENTS: number = 10_000;
+/**
+ * Hard cap on events replayed during reconstruction.
+ * Must not exceed `MAX_SESSION_ACTION_LIMIT` (5 000) from `@grackle-ai/database`
+ * or `querySessionActions` will silently truncate and reconstruction will be
+ * incomplete. Paging support can raise this ceiling in a future iteration.
+ */
+const MAX_RECONSTRUCTION_EVENTS: number = 5_000;
 
 /**
  * Persistence interface for `SessionStateManager`.
@@ -103,9 +108,6 @@ export class SessionStateManager {
   /** Number of actions since last snapshot flush. */
   private actionCountSinceLastFlush: number;
 
-  /** Event index for the mapper — ensures turn IDs are unique per turn_started event. */
-  private eventIndex: number;
-
   /** Persistence store (real DB by default; injectable for tests). */
   private store: SessionStore;
 
@@ -132,7 +134,6 @@ export class SessionStateManager {
   public constructor(sessionId: string, options?: SessionStateManagerOptions) {
     this.sessionId = sessionId;
     this.actionCountSinceLastFlush = 0;
-    this.eventIndex = 0;
     this.snapshotThreshold = DEFAULT_SNAPSHOT_THRESHOLD;
     this.injectedInitialTurn = false;
     this.store = options?.store ?? defaultStore;
@@ -140,6 +141,7 @@ export class SessionStateManager {
       turnId: undefined,
       openToolCalls: [],
       partCounter: 0,
+      eventIndex: 0,
       metaAccumulator: {},
     };
 
@@ -167,7 +169,7 @@ export class SessionStateManager {
       this.injectedInitialTurn = false;
       return undefined;
     }
-    const idx = this.eventIndex++;
+    const idx = this.context.eventIndex++;
     const { actions, note } = mapAgentEvent(event, idx, this.context);
 
     // Fold each action through the reducer.
@@ -340,6 +342,7 @@ export class SessionStateManager {
       turnId: undefined,
       openToolCalls: [],
       partCounter: 0,
+      eventIndex: 0,
       metaAccumulator: {},
     };
     this.actionCountSinceLastFlush = 0;
@@ -445,6 +448,7 @@ export class SessionStateManager {
       turnId: undefined,
       openToolCalls: [],
       partCounter: 0,
+      eventIndex: 0,
       metaAccumulator: {},
     };
 
@@ -461,11 +465,12 @@ export class SessionStateManager {
     rows: SessionActionRow[],
   ): SessionState {
     let state = baseState;
-    let replayIdx = 0;
 
     for (const row of rows) {
       const event = SessionStateManager.reconstructAgentEvent(row);
-      const { actions } = mapAgentEvent(event, replayIdx++, context);
+      // Use context.eventIndex so delta replay starts from the correct offset,
+      // keeping synthetic turn/tool IDs consistent with the live processing run.
+      const { actions } = mapAgentEvent(event, context.eventIndex++, context);
 
       for (const action of actions) {
         state = sessionReducer(state, action as SessionAction);
@@ -497,7 +502,7 @@ export class SessionStateManager {
       raw: row.raw,
       toolCallId: row.toolCallId,
       turnId: row.turnId,
-      diagnostic: false,
+      diagnostic: row.diagnostic,
     });
   }
 

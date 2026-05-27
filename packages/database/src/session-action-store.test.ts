@@ -17,7 +17,8 @@ function applySchema(): void {
       raw          TEXT NOT NULL DEFAULT '',
       timestamp    TEXT NOT NULL,
       tool_call_id TEXT NOT NULL DEFAULT '',
-      turn_id      TEXT NOT NULL DEFAULT ''
+      turn_id      TEXT NOT NULL DEFAULT '',
+      diagnostic   INTEGER NOT NULL DEFAULT 0
     );
     CREATE INDEX IF NOT EXISTS idx_session_actions_session ON session_actions(session_id, seq);
   `);
@@ -155,7 +156,7 @@ describe("querySessionActions", () => {
     // more than the cap and request far above it: the result must be capped.
     const MAX: number = 5000;
     const insert = sqlite.prepare(
-      "INSERT INTO session_actions (seq, session_id, type, content, raw, timestamp, tool_call_id, turn_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO session_actions (seq, session_id, type, content, raw, timestamp, tool_call_id, turn_id, diagnostic) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     );
     const insertMany = sqlite.transaction((count: number) => {
       for (let i = 0; i < count; i++) {
@@ -169,6 +170,7 @@ describe("querySessionActions", () => {
           "2026-05-24T00:00:00.000Z",
           "",
           "",
+          0,
         );
       }
     });

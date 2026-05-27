@@ -21,10 +21,12 @@ export interface SessionActionRecord {
   raw: string;
   /** ISO 8601 timestamp. */
   timestamp: string;
-  /** Tool call ID from the originating AgentEvent ("" when absent). Used by the AHP mapper for tool-call pairing during reconstruction. */
-  toolCallId: string;
-  /** Turn ID from the originating AgentEvent ("" when absent). Used by the AHP mapper for turn attribution during reconstruction. */
-  turnId: string;
+  /** Tool call ID from the originating AgentEvent. Used by the AHP mapper for tool-call pairing during reconstruction. Defaults to "" when omitted. */
+  toolCallId?: string;
+  /** Turn ID from the originating AgentEvent. Used by the AHP mapper for turn attribution during reconstruction. Defaults to "" when omitted. */
+  turnId?: string;
+  /** Whether this event was a diagnostic (HR7 telemetry) event. Used to correctly drop diagnostic system events during reconstruction. Defaults to false when omitted. */
+  diagnostic?: boolean;
 }
 
 /** Default rows returned by {@link querySessionActions} when no limit is given. */
@@ -56,7 +58,7 @@ let insertStmt: ReturnType<typeof db.$client.prepare> | undefined;
 export function persistSessionAction(action: SessionActionRecord): void {
   if (!insertStmt) {
     insertStmt = db.$client.prepare(
-      "INSERT INTO session_actions (seq, session_id, type, content, raw, timestamp, tool_call_id, turn_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO session_actions (seq, session_id, type, content, raw, timestamp, tool_call_id, turn_id, diagnostic) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     );
   }
   insertStmt.run([
@@ -66,8 +68,9 @@ export function persistSessionAction(action: SessionActionRecord): void {
     action.content,
     action.raw,
     action.timestamp,
-    action.toolCallId,
-    action.turnId,
+    action.toolCallId ?? "",
+    action.turnId ?? "",
+    action.diagnostic ? 1 : 0,
   ]);
 }
 
