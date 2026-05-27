@@ -264,20 +264,20 @@ export class SessionStateManager {
   */
    public static reconstruct(sessionId: string): SessionState {
     // Load latest snapshot
-    const snapshots = querySnapshot(sessionId, 1);
-    if (snapshots.length === 0) {
-      // No snapshot — return initial state
-      return SessionStateManager.createInitialState(sessionId);
-    }
+     const snapshots = querySnapshot(sessionId, 1);
+     if (snapshots.length === 0) {
+       // No snapshot — return initial state
+       return SessionStateManager.createInitialState(sessionId);
+     }
 
-const latest = snapshots[0];
+     const latest = snapshots[0];
      let initialState: SessionState;
      try {
        initialState = JSON.parse(latest.state) as SessionState;
      } catch (err) {
-        logger.error({ err, sessionId, seq: latest.seq }, "Corrupted snapshot data — returning initial state");
-        return SessionStateManager.createInitialState(sessionId);
-      }
+       logger.error({ err, sessionId, seq: latest.seq }, "Corrupted snapshot data — returning initial state");
+       return SessionStateManager.createInitialState(sessionId);
+     }
 
     // Replay delta actions from the snapshot seq onward.
     // Currently parseSessionActionToAhpAction returns undefined for each

@@ -19,9 +19,10 @@ import type { ProcessorContext } from "./processor-registry.js";
 import { SessionStateManager } from "./ahp-session-state.js";
 
 /**
- * Construct a minimal AgentEvent for injected events (system context, initial prompt).
- * Uses eventTypeToString for the type field since these aren't real AgentEvents.
- */
+  * Construct a minimal AgentEvent for injected events (system context, initial prompt).
+  * The `type` argument is the raw AgentEvent type string — callers pass "system",
+  * "turn_started", etc. directly rather than going through eventTypeToString.
+  */
 function makeAgentEvent(
   type: string,
   content: string,
@@ -173,6 +174,8 @@ export function processEventStream(
         const sysSeq = recordSessionAction(sysCtxEvent);
         if (sysSeq) {
           lastServerSeq = sysSeq;
+          // System events are dropped by the mapper when there's no active turn (no turn_started yet).
+          // The mapper only processes system events within an active turn context.
           stateManager.processEvent(makeAgentEvent("system", options.systemContext), sysSeq);
         }
       }

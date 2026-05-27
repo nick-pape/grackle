@@ -83,7 +83,7 @@ describe("SessionStateManager", () => {
         turnId: "turn-0",
         content: JSON.stringify({ user_message: "Prompt" }),
       }),
-      0,
+      "0",
     );
 
     // Add text
@@ -105,7 +105,7 @@ describe("SessionStateManager", () => {
         turnId: "turn-0",
         content: JSON.stringify({ user_message: "Prompt" }),
       }),
-      0,
+      "0",
     );
 
     manager.processEvent(
@@ -114,7 +114,7 @@ describe("SessionStateManager", () => {
         toolCallId: "tc-1",
         content: JSON.stringify({ tool_name: "read_file", display_name: "Read File" }),
       }),
-      1,
+      "1",
     );
 
     const state = manager.getState();
@@ -132,7 +132,7 @@ describe("SessionStateManager", () => {
         turnId: "turn-0",
         content: JSON.stringify({ user_message: "Prompt" }),
       }),
-      0,
+      "0",
     );
 
     manager.processEvent(
@@ -141,7 +141,7 @@ describe("SessionStateManager", () => {
         toolCallId: "tc-1",
         content: JSON.stringify({ tool_name: "shell", display_name: "Shell" }),
       }),
-      1,
+      "1",
     );
 
     manager.processEvent(
@@ -150,7 +150,7 @@ describe("SessionStateManager", () => {
         toolCallId: "tc-1",
         content: JSON.stringify({ is_ok: true, content: "output" }),
       }),
-      2,
+      "2",
     );
 
     const state = manager.getState();
@@ -164,7 +164,7 @@ describe("SessionStateManager", () => {
         turnId: "turn-0",
         content: JSON.stringify({ user_message: "Prompt" }),
       }),
-      0,
+      "0",
     );
     manager.processEvent(makeEvent("text", { content: "Response" }), "1");
     manager.processEvent(makeEvent("turn_complete", { turnId: "turn-0" }), "2");
@@ -189,13 +189,13 @@ describe("SessionStateManager", () => {
         turnId: "turn-0",
         content: JSON.stringify({ user_message: "Prompt" }),
       }),
-      0,
+      "0",
     );
     manager.processEvent(
       makeEvent("usage", {
         content: JSON.stringify({ cost_millicents: 50 }),
       }),
-      1,
+      "1",
     );
 
     const meta = manager.getState()._meta;
@@ -206,7 +206,7 @@ describe("SessionStateManager", () => {
     const manager = new SessionStateManager("session-001");
     manager.processEvent(
       makeEvent("runtime_session_id", { content: "runtime-abc" }),
-      0,
+      "0",
     );
 
     const meta = manager.getState()._meta;
@@ -220,7 +220,7 @@ describe("SessionStateManager", () => {
         diagnostic: true,
         content: JSON.stringify({ level: "info" }),
       }),
-      0,
+      "0",
     );
     expect(manager.getState().turns).toEqual([]);
   });
@@ -240,7 +240,7 @@ describe("SessionStateManager", () => {
         turnId: "turn-0",
         content: JSON.stringify({ user_message: "Prompt" }),
       }),
-      0,
+      "0",
     );
 
     // Process enough events to exceed threshold
@@ -262,7 +262,7 @@ describe("SessionStateManager", () => {
         turnId: "turn-0",
         content: JSON.stringify({ user_message: "Prompt" }),
       }),
-      0,
+      "0",
     );
 
     for (let i = 0; i < 3; i++) {
@@ -284,7 +284,7 @@ describe("SessionStateManager", () => {
         turnId: "turn-0",
         content: JSON.stringify({ user_message: "Prompt" }),
       }),
-      0,
+      "0",
     );
 
     // First flush at 3 events
@@ -312,7 +312,7 @@ describe("SessionStateManager", () => {
         turnId: "turn-0",
         content: JSON.stringify({ user_message: "Prompt" }),
       }),
-      0,
+      "0",
     );
     manager.processEvent(makeEvent("text", { content: "Response" }), "1");
     manager.processEvent(makeEvent("turn_complete", { turnId: "turn-0" }), "2");
@@ -332,7 +332,7 @@ describe("SessionStateManager", () => {
         turnId: "turn-0",
         content: JSON.stringify({ user_message: "Hello" }),
       }),
-      0,
+      "0",
     );
 
     const state = manager.getState();
@@ -348,7 +348,7 @@ describe("SessionStateManager", () => {
         turnId: "turn-0",
         content: JSON.stringify({ user_message: "Hello" }),
       }),
-      0,
+      "0",
     );
     manager.processEvent(makeEvent("text", { content: "Response" }), "1");
     manager.processEvent(makeEvent("turn_complete", { turnId: "turn-0" }), "2");
@@ -372,7 +372,7 @@ describe("SessionStateManager", () => {
         turnId: "turn-abc",
         content: JSON.stringify({ user_message: "Hello" }),
       }),
-      0,
+      "0",
     );
 
     const ctx = manager.getContext();

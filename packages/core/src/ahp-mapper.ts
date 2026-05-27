@@ -404,7 +404,7 @@ export function mapAgentEvent(
 
     case "usage": {
       const rawCost = hasParsed ? parsed.cost_millicents : undefined;
-      if (rawCost && Number.isFinite(Number(rawCost))) {
+      if (rawCost != null && Number.isFinite(Number(rawCost))) {
         const prevCost = context.metaAccumulator.costMillicents ?? 0;
         const cost = Number(rawCost);
         context.metaAccumulator.costMillicents = Math.max(
