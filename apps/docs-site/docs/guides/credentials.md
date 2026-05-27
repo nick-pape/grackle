@@ -17,13 +17,13 @@ Credential providers control which runtimes have access to their backing service
 grackle credential-provider list
 ```
 
-| Provider | Modes | What it provides |
-|----------|-------|-----------------|
-| **Claude** | `off`, `subscription`, `api_key` | Anthropic API access for Claude Code |
-| **GitHub** | `off`, `on` | GitHub token for Copilot and Codespace operations |
-| **Copilot** | `off`, `on` | GitHub Copilot agent authentication |
-| **Codex** | `off`, `on` | OpenAI API access for Codex |
-| **Goose** | `off`, `on` | Goose provider configuration and API keys |
+| Provider    | Modes                            | What it provides                                  |
+| ----------- | -------------------------------- | ------------------------------------------------- |
+| **Claude**  | `off`, `subscription`, `api_key` | Anthropic API access for Claude Code              |
+| **GitHub**  | `off`, `on`                      | GitHub token for Copilot and Codespace operations |
+| **Copilot** | `off`, `on`                      | GitHub Copilot agent authentication               |
+| **Codex**   | `off`, `on`                      | OpenAI API access for Codex                       |
+| **Goose**   | `off`, `on`                      | Goose provider configuration and API keys         |
 
 ### Setting providers
 
@@ -77,15 +77,18 @@ For `env_var` type tokens, values exist only in the agent's process environment.
 Claude Code uses the [Anthropic Claude Agent SDK](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview).
 
 **Option A — API key:**
+
 ```bash
 grackle credential-provider set claude api_key
 grackle token set ANTHROPIC_API_KEY --env-var ANTHROPIC_API_KEY
 ```
 
 **Option B — Subscription (Max plan):**
+
 ```bash
 grackle credential-provider set claude subscription
 ```
+
 Uses your existing Claude subscription. Requires `claude` CLI to be authenticated on the machine.
 
 ### GitHub Copilot

@@ -10,11 +10,7 @@ type WsPayload = Record<string, any>;
  * Call a ConnectRPC method from the browser page context via fetch.
  * Used internally by navigation helpers that need the Playwright page.
  */
-async function callRpc(
-  page: Page,
-  method: string,
-  body: WsPayload,
-): Promise<WsPayload> {
+async function callRpc(page: Page, method: string, body: WsPayload): Promise<WsPayload> {
   return page.evaluate(
     async ({ method: m, body: b }) => {
       const serviceMap: Record<string, string> = {
@@ -22,7 +18,9 @@ async function callRpc(
         ListTasks: "grackle.GrackleOrchestration",
       };
       const svc = serviceMap[m];
-      if (!svc) { throw new Error(`callRpc: no service mapping for method "${m}"`); }
+      if (!svc) {
+        throw new Error(`callRpc: no service mapping for method "${m}"`);
+      }
       const resp = await fetch(`/${svc}/${m}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -35,7 +33,9 @@ async function callRpc(
         try {
           const errObj = JSON.parse(text);
           errMsg = errObj.message || errObj.code || text;
-        } catch { /* raw text */ }
+        } catch {
+          /* raw text */
+        }
         throw new Error(errMsg);
       }
       return text ? JSON.parse(text) : {};
@@ -146,10 +146,9 @@ export async function navigateToWorkspace(page: Page, workspaceName: string): Pr
     throw new Error(`Workspace "${workspaceName}" not found`);
   }
   await page.goto(`/workspaces/${workspace.id}`);
-  await page.waitForFunction(
-    () => document.body.innerText.includes("Connected"),
-    { timeout: 10_000 },
-  );
+  await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
+    timeout: 10_000,
+  });
   await page.locator('[data-testid="workspace-name"]').waitFor({ timeout: 5_000 });
 }
 
@@ -157,10 +156,7 @@ export async function navigateToWorkspace(page: Page, workspaceName: string): Pr
  * Navigate to a task view by clicking its name on the page.
  * Falls back to looking up the task ID via RPC and navigating by URL.
  */
-export async function navigateToTask(
-  page: Page,
-  taskTitle: string,
-): Promise<void> {
+export async function navigateToTask(page: Page, taskTitle: string): Promise<void> {
   const taskLink = page.getByText(taskTitle, { exact: true }).first();
   const isVisible = await taskLink.isVisible().catch(() => false);
 
@@ -190,19 +186,22 @@ export async function navigateToTask(
     }
 
     await page.goto(`/tasks/${taskId}`);
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
+    await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
   }
 
-  await page.locator(`[data-testid="task-title"]:has-text("${taskTitle}")`).waitFor({ timeout: 5_000 });
+  await page
+    .locator(`[data-testid="task-title"]:has-text("${taskTitle}")`)
+    .waitFor({ timeout: 5_000 });
 }
 
 /** Navigate to settings and wait for the tab nav to appear. */
 export async function goToSettings(page: Page): Promise<void> {
   await page.locator('[data-testid="sidebar-tab-settings"]').click();
-  await page.getByRole("tablist", { name: "Settings" }).waitFor({ state: "visible", timeout: 5_000 });
+  await page
+    .getByRole("tablist", { name: "Settings" })
+    .waitFor({ state: "visible", timeout: 5_000 });
 }
 
 /** Navigate to the Environments tab in the sidebar. */
@@ -216,16 +215,27 @@ export async function goToEnvironments(page: Page): Promise<void> {
  * Monkey-patch fetch() to force the "Stub" persona and inject environmentId on
  * StartTask/SpawnAgent requests.
  */
-export async function patchWsForStubRuntime(page: Page, environmentId: string = "test-local"): Promise<void> {
+export async function patchWsForStubRuntime(
+  page: Page,
+  environmentId: string = "test-local",
+): Promise<void> {
   await page.evaluate((envId: string) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const origFetch = (window as any).__origFetch__ || window.fetch;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).__origFetch__ = origFetch;
 
-    window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-      const url = typeof input === "string" ? input : (input instanceof URL ? input.toString() : input.url);
-      if ((url.includes("/grackle.GrackleOrchestration/StartTask") || url.includes("/grackle.GrackleCore/SpawnAgent")) && init?.body) {
+    window.fetch = async function (
+      input: RequestInfo | URL,
+      init?: RequestInit,
+    ): Promise<Response> {
+      const url =
+        typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+      if (
+        (url.includes("/grackle.GrackleOrchestration/StartTask") ||
+          url.includes("/grackle.GrackleCore/SpawnAgent")) &&
+        init?.body
+      ) {
         try {
           let bodyStr: string;
           if (init.body instanceof Uint8Array) {
@@ -253,16 +263,27 @@ export async function patchWsForStubRuntime(page: Page, environmentId: string = 
  * Monkey-patch fetch() to force the "Stub MCP" persona and inject environmentId
  * on StartTask/SpawnAgent requests.
  */
-export async function patchWsForStubMcpRuntime(page: Page, environmentId: string = "test-local"): Promise<void> {
+export async function patchWsForStubMcpRuntime(
+  page: Page,
+  environmentId: string = "test-local",
+): Promise<void> {
   await page.evaluate((envId: string) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const origFetch = (window as any).__origFetch__ || window.fetch;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).__origFetch__ = origFetch;
 
-    window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-      const url = typeof input === "string" ? input : (input instanceof URL ? input.toString() : input.url);
-      if ((url.includes("/grackle.GrackleOrchestration/StartTask") || url.includes("/grackle.GrackleCore/SpawnAgent")) && init?.body) {
+    window.fetch = async function (
+      input: RequestInfo | URL,
+      init?: RequestInit,
+    ): Promise<Response> {
+      const url =
+        typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+      if (
+        (url.includes("/grackle.GrackleOrchestration/StartTask") ||
+          url.includes("/grackle.GrackleCore/SpawnAgent")) &&
+        init?.body
+      ) {
         try {
           let bodyStr: string;
           if (init.body instanceof Uint8Array) {
@@ -298,9 +319,7 @@ export async function runStubTaskToCompletion(page: Page): Promise<void> {
   await inputField.fill("continue");
   await page.getByRole("button", { name: "Send", exact: true }).click();
 
-  await page
-    .getByRole("button", { name: "Resume", exact: true })
-    .waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Resume", exact: true }).waitFor({ timeout: 15_000 });
 }
 
 /**
@@ -315,9 +334,7 @@ export async function runStubMcpTaskToCompletion(page: Page): Promise<void> {
   await inputField.fill("continue");
   await page.getByRole("button", { name: "Send", exact: true }).click();
 
-  await page
-    .getByRole("button", { name: "Resume", exact: true })
-    .waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Resume", exact: true }).waitFor({ timeout: 15_000 });
 }
 
 /** Timeout for provision stream drain (ms). */
@@ -419,7 +436,9 @@ export function onInput(action: "echo" | "fail" | "ignore" | "next"): ScenarioSt
 }
 
 /** Set pattern-matching rules for input handling. Use "*" as the fallback key. */
-export function onInputMatch(rules: Record<string, "echo" | "fail" | "ignore" | "next">): ScenarioStep {
+export function onInputMatch(
+  rules: Record<string, "echo" | "fail" | "ignore" | "next">,
+): ScenarioStep {
   return { on_input_match: rules };
 }
 

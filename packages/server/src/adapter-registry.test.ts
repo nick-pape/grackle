@@ -74,7 +74,9 @@ describe("registerAllAdapters", () => {
   it("registers a CodespaceAdapter", () => {
     registerAllAdapters();
     expect(CodespaceAdapter).toHaveBeenCalledOnce();
-    expect(registerAdapter).toHaveBeenCalledWith(expect.any(CodespaceAdapter as unknown as Function));
+    expect(registerAdapter).toHaveBeenCalledWith(
+      expect.any(CodespaceAdapter as unknown as Function),
+    );
   });
 
   it("passes exec and logger to Docker, SSH, and Codespace adapter deps", () => {
@@ -99,7 +101,9 @@ describe("registerAllAdapters", () => {
     const adapterDeps = (DockerAdapter as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0];
 
     // Change the mock to return "off"
-    (credentialProviders.getCredentialProviders as ReturnType<typeof vi.fn>).mockReturnValue({ github: "off" });
+    (credentialProviders.getCredentialProviders as ReturnType<typeof vi.fn>).mockReturnValue({
+      github: "off",
+    });
     expect(adapterDeps.isGitHubProviderEnabled()).toBe(false);
   });
 

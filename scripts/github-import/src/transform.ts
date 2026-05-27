@@ -111,9 +111,10 @@ export function buildDescriptionWithComments(
  * @param existingTasks - Tasks already in the workspace.
  * @returns Maps and sets for deduplication during import planning.
  */
-export function buildExistingIssueMap(
-  existingTasks: Array<{ id: string; title: string }>,
-): { issueNumberToTaskId: Map<number, string>; existingIssueNumbers: Set<number> } {
+export function buildExistingIssueMap(existingTasks: Array<{ id: string; title: string }>): {
+  issueNumberToTaskId: Map<number, string>;
+  existingIssueNumbers: Set<number>;
+} {
   const issueNumberPattern: RegExp = /^#(\d+):/;
   const issueNumberToTaskId = new Map<number, string>();
   const existingIssueNumbers = new Set<number>();
@@ -181,7 +182,11 @@ export function planImport(
       }
     }
 
-    const description = buildDescriptionWithComments(issue.body, issue.comments, issue.commentsHasNextPage);
+    const description = buildDescriptionWithComments(
+      issue.body,
+      issue.comments,
+      issue.commentsHasNextPage,
+    );
 
     tasksToCreate.push({ id, title, description, parentTaskId, issueNumber: issue.number });
   }
@@ -224,10 +229,9 @@ export function planImport(
  * @param issueSet - Set of issue numbers in the current import batch.
  * @returns A new array of issues sorted with parents before children.
  */
-export function topologicalSortIssues<T extends { number: number; parentNumber: number | undefined }>(
-  issues: T[],
-  issueSet: Set<number>,
-): T[] {
+export function topologicalSortIssues<
+  T extends { number: number; parentNumber: number | undefined },
+>(issues: T[], issueSet: Set<number>): T[] {
   const issueByNumber = new Map(issues.map((i) => [i.number, i]));
   const visited = new Set<number>();
   const sorted: T[] = [];

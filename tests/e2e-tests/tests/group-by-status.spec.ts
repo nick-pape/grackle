@@ -1,9 +1,5 @@
 import { test, expect } from "./fixtures.js";
-import {
-  createWorkspace,
-  createTask,
-  navigateToTask,
-} from "./helpers.js";
+import { createWorkspace, createTask, navigateToTask } from "./helpers.js";
 
 /** Navigate to the Tasks sidebar tab so the TaskList with group-by-status toggle is visible. */
 async function goToTasksTab(page: import("@playwright/test").Page): Promise<void> {
@@ -26,7 +22,9 @@ test.describe("Group-by-status toggle", { tag: ["@workspace"] }, () => {
 
     // Enable group-by-status
     await page.getByTestId("task-group-by-status-toggle").click();
-    await expect(page.getByTestId("status-group-not_started").first()).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId("status-group-not_started").first()).toBeVisible({
+      timeout: 5_000,
+    });
 
     // Verify localStorage was set (TaskList uses "grackle-task-group-by-status")
     const stored = await page.evaluate(() => localStorage.getItem("grackle-task-group-by-status"));
@@ -34,10 +32,9 @@ test.describe("Group-by-status toggle", { tag: ["@workspace"] }, () => {
 
     // Reload and navigate back to Tasks tab
     await page.reload();
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
+    await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
     await goToTasksTab(page);
 
     const toggle = page.getByTestId("task-group-by-status-toggle");
@@ -46,7 +43,9 @@ test.describe("Group-by-status toggle", { tag: ["@workspace"] }, () => {
     await expect(toggle).toHaveAttribute("aria-label", "Switch to tree view");
 
     // localStorage should still hold the value after reload
-    const storedAfter = await page.evaluate(() => localStorage.getItem("grackle-task-group-by-status"));
+    const storedAfter = await page.evaluate(() =>
+      localStorage.getItem("grackle-task-group-by-status"),
+    );
     expect(storedAfter).toBe("true");
   });
 
@@ -62,14 +61,16 @@ test.describe("Group-by-status toggle", { tag: ["@workspace"] }, () => {
 
     // Enable grouped view
     await page.getByTestId("task-group-by-status-toggle").click();
-    await expect(page.getByTestId("status-group-not_started").first()).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId("status-group-not_started").first()).toBeVisible({
+      timeout: 5_000,
+    });
 
     // Click the task in the grouped view
     await navigateToTask(page, "nav-target");
 
     // Task detail should load
-    await expect(
-      page.locator('[data-testid="task-title"]:has-text("nav-target")'),
-    ).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="task-title"]:has-text("nav-target")')).toBeVisible({
+      timeout: 5_000,
+    });
   });
 });

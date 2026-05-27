@@ -10,6 +10,7 @@ This skill creates a new GitHub issue with proper labels and epic assignment, th
 ## Step 0: Gather Information
 
 If a title was provided as an argument, use it. Otherwise, ask the user for:
+
 - **Title**: Short, descriptive issue title
 - **Description**: What is this feature/bug/refactor? (can be brief — the spec will expand it)
 
@@ -34,6 +35,7 @@ gh issue list -R $REPO --state open --search "Epic:" --json number,title --jq '.
 ```
 
 Key epics to know:
+
 - **#270** — Epic: Orchestration (multi-agent coordination, swarming, reconciliation, escalation)
 - **#272** — Epic: Web UI features (all frontend/UX work)
 - **#271** — Epic: Code quality and refactoring
@@ -44,12 +46,14 @@ Key epics to know:
 Based on the title and description, determine:
 
 ### Labels (select all that apply):
+
 - **Type**: `feature`, `bug`, `refactor`, `infra`
 - **Packages**: `web`, `server`, `cli`, `powerline`, `common` (based on which packages are affected)
 - **Domain**: `orchestration` (if related to multi-agent, swarming, task lifecycle, reconciliation, escalation)
 - **Priority**: `priority:critical`, `priority:high`, `priority:low` (if the user specifies, otherwise omit)
 
 ### Parent Epic:
+
 - Web/UX features → #272
 - Orchestration/multi-agent → #270
 - Refactoring/code quality → #271
@@ -90,6 +94,7 @@ Use the Skill tool to invoke `write-spec` with the new issue number as the argum
 ## Step 7: Report
 
 Summarize:
+
 - Issue number and URL
 - Labels applied
 - Parent epic (with real sub-issue relationship)

@@ -199,12 +199,14 @@ describe("McpCallStep", () => {
   });
 
   it("parseScenario parses mcp_call steps", () => {
-    const scenario = parseScenario(JSON.stringify({
-      steps: [
-        { mcp_call: "workpad_write", args: { status: "completed", summary: "Done" } },
-        { mcp_call: "task_list" },
-      ],
-    }));
+    const scenario = parseScenario(
+      JSON.stringify({
+        steps: [
+          { mcp_call: "workpad_write", args: { status: "completed", summary: "Done" } },
+          { mcp_call: "task_list" },
+        ],
+      }),
+    );
 
     expect(scenario).toBeDefined();
     expect(scenario!.steps).toHaveLength(2);
@@ -215,9 +217,11 @@ describe("McpCallStep", () => {
   });
 
   it("mcp_call step without args defaults to undefined", () => {
-    const scenario = parseScenario(JSON.stringify({
-      steps: [{ mcp_call: "task_list" }],
-    }));
+    const scenario = parseScenario(
+      JSON.stringify({
+        steps: [{ mcp_call: "task_list" }],
+      }),
+    );
 
     const step = scenario!.steps[0] as McpCallStep;
     expect(step.mcp_call).toBe("task_list");
@@ -234,9 +238,18 @@ describe("AwaitToolChangeStep (#1297)", () => {
   });
 
   it("parseScenario parses an await_tool_change step with a trigger", () => {
-    const scenario = parseScenario(JSON.stringify({
-      steps: [{ await_tool_change: { trigger: { tool: "component_promote", args: { name: "X" } }, expect: "render_X" } }],
-    }));
+    const scenario = parseScenario(
+      JSON.stringify({
+        steps: [
+          {
+            await_tool_change: {
+              trigger: { tool: "component_promote", args: { name: "X" } },
+              expect: "render_X",
+            },
+          },
+        ],
+      }),
+    );
     expect(scenario).toBeDefined();
     expect(isAwaitToolChangeStep(scenario!.steps[0])).toBe(true);
     const step = scenario!.steps[0] as AwaitToolChangeStep;

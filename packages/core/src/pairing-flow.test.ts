@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import http from "node:http";
-import { SESSION_COOKIE_NAME, clearSessions, clearPairing, generatePairingCode } from "@grackle-ai/auth";
+import {
+  SESSION_COOKIE_NAME,
+  clearSessions,
+  clearPairing,
+  generatePairingCode,
+} from "@grackle-ai/auth";
 
 // Mock logger
 vi.mock("./logger.js", () => ({
@@ -31,14 +36,13 @@ function request(
 ): Promise<{ status: number; headers: http.IncomingHttpHeaders; body: string }> {
   return new Promise((resolve, reject) => {
     const addr = server.address() as { port: number };
-    const req = http.request(
-      { hostname: "127.0.0.1", port: addr.port, path, headers },
-      (res) => {
-        let body = "";
-        res.on("data", (chunk: Buffer) => { body += chunk.toString(); });
-        res.on("end", () => resolve({ status: res.statusCode!, headers: res.headers, body }));
-      },
-    );
+    const req = http.request({ hostname: "127.0.0.1", port: addr.port, path, headers }, (res) => {
+      let body = "";
+      res.on("data", (chunk: Buffer) => {
+        body += chunk.toString();
+      });
+      res.on("end", () => resolve({ status: res.statusCode!, headers: res.headers, body }));
+    });
     req.on("error", reject);
     req.end();
   });
@@ -53,7 +57,9 @@ describe("pairing flow integration", () => {
 
     // Dynamically import to get the createWebHandler after mocks are applied
     // We can't import index.ts (it calls main()), so we replicate the handler setup
-    const { createSession, validateSessionCookie, redeemPairingCode } = await import("@grackle-ai/auth");
+    const { createSession, validateSessionCookie, redeemPairingCode } = await import(
+      "@grackle-ai/auth"
+    );
 
     server = http.createServer((req, res) => {
       const urlParts = (req.url || "/").split("?");

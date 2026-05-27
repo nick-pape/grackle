@@ -12,7 +12,12 @@
 
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
 import type { Session, StreamData, StreamSubscriberData } from "../../hooks/types.js";
-import { attributeStreamWithMap, streamKind, type StreamKind, type StreamOwnership } from "../../utils/streamCoordination.js";
+import {
+  attributeStreamWithMap,
+  streamKind,
+  type StreamKind,
+  type StreamOwnership,
+} from "../../utils/streamCoordination.js";
 
 /** React Flow node type id for session nodes. */
 export const SESSION_NODE_TYPE: string = "session";
@@ -88,7 +93,14 @@ export function streamNodeId(streamId: string): string {
 
 /** Minimal placeholder session for a subscriber whose session is not in the list. */
 function syntheticSession(sessionId: string): Session {
-  return { id: sessionId, environmentId: "", runtime: "external", status: "external", prompt: "", startedAt: "" };
+  return {
+    id: sessionId,
+    environmentId: "",
+    runtime: "external",
+    status: "external",
+    prompt: "",
+    startedAt: "",
+  };
 }
 
 /** Edge stroke style derived from delivery mode (detach reads as dashed + dimmed). */
@@ -127,7 +139,10 @@ function resolvePipeDirection(
  * `showInternals` filtering is the caller's responsibility — the streams passed
  * in are assumed already filtered (the page calls `loadStreams(includeInternal)`).
  */
-export function buildCoordinationGraph(streams: StreamData[], sessions: Session[]): CoordinationLayoutResult {
+export function buildCoordinationGraph(
+  streams: StreamData[],
+  sessions: Session[],
+): CoordinationLayoutResult {
   if (streams.length === 0) {
     return { nodes: [], edges: [] };
   }
@@ -157,7 +172,11 @@ export function buildCoordinationGraph(streams: StreamData[], sessions: Session[
     const kind = streamKind(stream);
 
     // Collapse a 2-party pipe into a single direct session->session edge.
-    if (kind === "pipe" && stream.subscribers.length === 2 && stream.subscribers[0].sessionId !== stream.subscribers[1].sessionId) {
+    if (
+      kind === "pipe" &&
+      stream.subscribers.length === 2 &&
+      stream.subscribers[0].sessionId !== stream.subscribers[1].sessionId
+    ) {
       const [a, b] = stream.subscribers;
       ensureSessionNode(a.sessionId).streamCount += 1;
       ensureSessionNode(b.sessionId).streamCount += 1;
@@ -185,7 +204,12 @@ export function buildCoordinationGraph(streams: StreamData[], sessions: Session[
     }
 
     // Otherwise render a hub node with one participation edge per subscriber.
-    streamNodeData.set(stream.id, { kind: "stream", stream, streamKind: kind, ownership: attributeStreamWithMap(stream, sessionsById) });
+    streamNodeData.set(stream.id, {
+      kind: "stream",
+      stream,
+      streamKind: kind,
+      ownership: attributeStreamWithMap(stream, sessionsById),
+    });
 
     for (const sub of stream.subscribers) {
       ensureSessionNode(sub.sessionId).streamCount += 1;
@@ -215,7 +239,12 @@ export function buildCoordinationGraph(streams: StreamData[], sessions: Session[
         source,
         target,
         type: COORD_EDGE_TYPE,
-        data: { edgeKind: "participation", streamId: stream.id, permission: sub.permission, deliveryMode: sub.deliveryMode },
+        data: {
+          edgeKind: "participation",
+          streamId: stream.id,
+          permission: sub.permission,
+          deliveryMode: sub.deliveryMode,
+        },
         style: deliveryStyle(sub.deliveryMode, "var(--text-tertiary)"),
         markerEnd: { type: MarkerType.ArrowClosed },
         markerStart: bidirectional ? { type: MarkerType.ArrowClosed } : undefined,
@@ -226,10 +255,20 @@ export function buildCoordinationGraph(streams: StreamData[], sessions: Session[
 
   const nodes: Node<CoordNodeData>[] = [];
   for (const [sessionId, data] of sessionNodeData) {
-    nodes.push({ id: sessionNodeId(sessionId), type: SESSION_NODE_TYPE, position: { x: 0, y: 0 }, data });
+    nodes.push({
+      id: sessionNodeId(sessionId),
+      type: SESSION_NODE_TYPE,
+      position: { x: 0, y: 0 },
+      data,
+    });
   }
   for (const [streamId, data] of streamNodeData) {
-    nodes.push({ id: streamNodeId(streamId), type: STREAM_NODE_TYPE, position: { x: 0, y: 0 }, data });
+    nodes.push({
+      id: streamNodeId(streamId),
+      type: STREAM_NODE_TYPE,
+      position: { x: 0, y: 0 },
+      data,
+    });
   }
 
   return { nodes, edges };

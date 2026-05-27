@@ -81,10 +81,11 @@ describe("createDispatchPhase", () => {
     const phase = createDispatchPhase(deps);
     await phase.execute();
 
-    expect(deps.startTaskSession).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "task-1" }),
-      { environmentId: "env-1", personaId: "persona-1", notes: "" },
-    );
+    expect(deps.startTaskSession).toHaveBeenCalledWith(expect.objectContaining({ id: "task-1" }), {
+      environmentId: "env-1",
+      personaId: "persona-1",
+      notes: "",
+    });
     // Dequeued after successful start (startTaskSession emits task.started internally)
     expect(deps.dequeueEntry).toHaveBeenCalledWith("task-1");
   });
@@ -104,9 +105,7 @@ describe("createDispatchPhase", () => {
   it("resolves environment for entry with empty environmentId", async () => {
     const deps = createMockDeps();
     vi.mocked(deps.resolveEnvironment).mockReturnValue("resolved-env");
-    vi.mocked(deps.listPendingEntries).mockReturnValue([
-      makeQueueEntry({ environmentId: "" }),
-    ]);
+    vi.mocked(deps.listPendingEntries).mockReturnValue([makeQueueEntry({ environmentId: "" })]);
 
     const phase = createDispatchPhase(deps);
     await phase.execute();
@@ -122,9 +121,7 @@ describe("createDispatchPhase", () => {
   it("stays queued when environment resolution returns undefined", async () => {
     const deps = createMockDeps();
     vi.mocked(deps.resolveEnvironment).mockReturnValue(undefined);
-    vi.mocked(deps.listPendingEntries).mockReturnValue([
-      makeQueueEntry({ environmentId: "" }),
-    ]);
+    vi.mocked(deps.listPendingEntries).mockReturnValue([makeQueueEntry({ environmentId: "" })]);
 
     const phase = createDispatchPhase(deps);
     await phase.execute();

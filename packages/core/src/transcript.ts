@@ -13,7 +13,9 @@ function renderEntry(entry: LogEntry): string {
           if (raw.systemContext === true) {
             return `<details>\n<summary>System Prompt</summary>\n\n\`\`\`\n${entry.content}\n\`\`\`\n</details>\n`;
           }
-        } catch { /* not JSON, render as normal */ }
+        } catch {
+          /* not JSON, render as normal */
+        }
       }
       return `> _${entry.content}_\n`;
     }
@@ -39,7 +41,7 @@ function renderEntry(entry: LogEntry): string {
       }
       const lines = entry.content.split("\n");
       const renderedLines = lines.map((line, index) =>
-        index === 0 ? `> **[SIGNAL]** ${line}` : `> ${line}`
+        index === 0 ? `> **[SIGNAL]** ${line}` : `> ${line}`,
       );
       return renderedLines.join("\n") + "\n";
     }

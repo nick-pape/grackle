@@ -21,7 +21,11 @@ interface CopyButtonProps extends CopyButtonBuiltinProps {
  * Shows a clipboard emoji by default, switches to a checkmark on click,
  * then reverts after 2 seconds.
  */
-export function CopyButton({ text, className, "data-testid": testId }: CopyButtonProps): JSX.Element {
+export function CopyButton({
+  text,
+  className,
+  "data-testid": testId,
+}: CopyButtonProps): JSX.Element {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -53,11 +57,19 @@ export function CopyButton({ text, className, "data-testid": testId }: CopyButto
     <button
       type="button"
       className={`${styles.copyButton} ${className ?? ""}`}
-      onClick={() => { handleClick().catch(() => { /* clipboard unavailable */ }); }}
+      onClick={() => {
+        handleClick().catch(() => {
+          /* clipboard unavailable */
+        });
+      }}
       aria-label={copied ? "Copied" : "Copy to clipboard"}
       data-testid={testId ?? "copy-button"}
     >
-      {copied ? <Check size={ICON_MD} aria-hidden="true" /> : <Clipboard size={ICON_MD} aria-hidden="true" />}
+      {copied ? (
+        <Check size={ICON_MD} aria-hidden="true" />
+      ) : (
+        <Clipboard size={ICON_MD} aria-hidden="true" />
+      )}
     </button>
   );
 }

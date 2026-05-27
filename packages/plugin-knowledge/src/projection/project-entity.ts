@@ -126,7 +126,10 @@ export async function projectWorkspace(workspace: WorkspaceRow): Promise<void> {
   // The link set feeds the projection hash (so link changes trigger re-project)
   // and the LINKED_TO edge reconciliation below.
   const nodeId = await upsertEntityNode(
-    workspaceToNodeInput(workspace, workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(workspace.id)),
+    workspaceToNodeInput(
+      workspace,
+      workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(workspace.id),
+    ),
   );
   await reconcileEdges(nodeId, WORKSPACE_EDGE_TYPES, workspaceLinkEdges(workspace.id), true);
 }

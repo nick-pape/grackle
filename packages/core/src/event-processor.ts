@@ -1,5 +1,12 @@
 import { create } from "@bufbuild/protobuf";
-import { grackle, powerline, eventTypeToEnum, SESSION_STATUS, TERMINAL_SESSION_STATUSES, END_REASON } from "@grackle-ai/common";
+import {
+  grackle,
+  powerline,
+  eventTypeToEnum,
+  SESSION_STATUS,
+  TERMINAL_SESSION_STATUSES,
+  END_REASON,
+} from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 import { sessionStore, taskStore } from "@grackle-ai/database";
 import { recordSessionAction } from "./session-action-recorder.js";
@@ -213,26 +220,48 @@ export function processEventStream(
                 const budgetResult = checkBudget(ctx.taskId, ctx.workspaceId);
                 if (budgetResult) {
                   const session = sessionStore.getSession(sessionId);
-                  if (session && !session.sigtermSentAt && !TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
+                  if (
+                    session &&
+                    !session.sigtermSentAt &&
+                    !TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)
+                  ) {
                     const sigMessage =
                       `[SIGTERM] Budget exceeded (${budgetResult.scope} ${budgetResult.reason}): ${budgetResult.message}. ` +
                       "Finish your current operation, save your work, close any open IPC fds, " +
                       "then call task_complete and stop.";
                     sessionStore.setSigtermSentAt(sessionId);
                     ctx.budgetSigtermSent = true;
-                    sendInputToSession(sessionId, session.environmentId, sigMessage, "budget_exceeded").then((delivered: boolean) => {
-                      if (!delivered) {
-                        logger.error({ sessionId }, "Budget-exceeded SIGTERM delivery failed (env not connected)");
+                    sendInputToSession(
+                      sessionId,
+                      session.environmentId,
+                      sigMessage,
+                      "budget_exceeded",
+                    )
+                      .then((delivered: boolean) => {
+                        if (!delivered) {
+                          logger.error(
+                            { sessionId },
+                            "Budget-exceeded SIGTERM delivery failed (env not connected)",
+                          );
+                          sessionStore.clearSigtermSentAt(sessionId);
+                          ctx.budgetSigtermSent = false;
+                        }
+                      })
+                      .catch((err: unknown) => {
+                        logger.error(
+                          { err, sessionId },
+                          "Failed to deliver budget-exceeded SIGTERM",
+                        );
                         sessionStore.clearSigtermSentAt(sessionId);
                         ctx.budgetSigtermSent = false;
-                      }
-                    }).catch((err: unknown) => {
-                      logger.error({ err, sessionId }, "Failed to deliver budget-exceeded SIGTERM");
-                      sessionStore.clearSigtermSentAt(sessionId);
-                      ctx.budgetSigtermSent = false;
-                    });
+                      });
                     logger.info(
-                      { sessionId, taskId: ctx.taskId, scope: budgetResult.scope, reason: budgetResult.reason },
+                      {
+                        sessionId,
+                        taskId: ctx.taskId,
+                        scope: budgetResult.scope,
+                        reason: budgetResult.reason,
+                      },
                       "Budget exceeded - SIGTERM sent",
                     );
                   }
@@ -255,24 +284,56 @@ export function processEventStream(
             const session = sessionStore.getSession(sessionId);
             const endReason = ctx.budgetSigtermSent
               ? END_REASON.BUDGET_EXCEEDED
-              : session?.sigtermSentAt ? END_REASON.TERMINATED : END_REASON.COMPLETED;
-            sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, endReason);
+              : session?.sigtermSentAt
+                ? END_REASON.TERMINATED
+                : END_REASON.COMPLETED;
+            sessionStore.updateSession(
+              sessionId,
+              SESSION_STATUS.STOPPED,
+              undefined,
+              undefined,
+              endReason,
+            );
           } else if (event.content === "killed") {
-            const killedEndReason = ctx.budgetSigtermSent ? END_REASON.BUDGET_EXCEEDED : END_REASON.KILLED;
-            sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, killedEndReason);
+            const killedEndReason = ctx.budgetSigtermSent
+              ? END_REASON.BUDGET_EXCEEDED
+              : END_REASON.KILLED;
+            sessionStore.updateSession(
+              sessionId,
+              SESSION_STATUS.STOPPED,
+              undefined,
+              undefined,
+              killedEndReason,
+            );
           } else if (event.content === "failed") {
-            sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.INTERRUPTED);
+            sessionStore.updateSession(
+              sessionId,
+              SESSION_STATUS.STOPPED,
+              undefined,
+              undefined,
+              END_REASON.INTERRUPTED,
+            );
             cleanupLifecycleStream(sessionId);
           } else if (event.content === "terminated") {
-            const terminatedEndReason = ctx.budgetSigtermSent ? END_REASON.BUDGET_EXCEEDED : END_REASON.TERMINATED;
-            sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, terminatedEndReason);
+            const terminatedEndReason = ctx.budgetSigtermSent
+              ? END_REASON.BUDGET_EXCEEDED
+              : END_REASON.TERMINATED;
+            sessionStore.updateSession(
+              sessionId,
+              SESSION_STATUS.STOPPED,
+              undefined,
+              undefined,
+              terminatedEndReason,
+            );
           }
 
           // On terminal status (or idle for sync pipes): publish child completion
           // to IPC pipe stream. `waiting_input` is included so that sync pipes
           // unblock when a child goes idle without calling task_complete (#824).
           // publishChildCompletion internally skips waiting_input for async pipes.
-          if (["completed", "killed", "failed", "terminated", "waiting_input"].includes(event.content)) {
+          if (
+            ["completed", "killed", "failed", "terminated", "waiting_input"].includes(event.content)
+          ) {
             await publishChildCompletion(sessionId, event.content);
           }
 
@@ -297,7 +358,12 @@ export function processEventStream(
           // Broadcast task_updated on status changes so frontend re-fetches computed status.
           // This covers both terminal events (completed/killed/failed) and non-terminal
           // transitions (running, waiting_input) that affect the computed task status.
-          if (ctx.taskId && ["completed", "killed", "failed", "terminated", "running", "waiting_input"].includes(event.content)) {
+          if (
+            ctx.taskId &&
+            ["completed", "killed", "failed", "terminated", "running", "waiting_input"].includes(
+              event.content,
+            )
+          ) {
             emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
           }
         }
@@ -306,7 +372,11 @@ export function processEventStream(
       // Fallback: if stream ended without a terminal status event, emit a UI refresh
       // without changing status. Guard against overwriting terminal or SUSPENDED states.
       const current = sessionStore.getSession(sessionId);
-      if (current && !TERMINAL_SESSION_STATUSES.has(current.status as SessionStatus) && current.status !== SESSION_STATUS.SUSPENDED) {
+      if (
+        current &&
+        !TERMINAL_SESSION_STATUSES.has(current.status as SessionStatus) &&
+        current.status !== SESSION_STATUS.SUSPENDED
+      ) {
         if (ctx.taskId) {
           emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
         }
@@ -344,7 +414,11 @@ export function processEventStream(
     } finally {
       processorRegistry.unregister(sessionId);
       logWriter.endSession(logPath);
-      try { writeTranscript(logPath); } catch { /* non-critical */ }
+      try {
+        writeTranscript(logPath);
+      } catch {
+        /* non-critical */
+      }
     }
   };
 

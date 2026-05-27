@@ -112,7 +112,9 @@ function applySchema(): void {
 
 /** Suspend a session and give it a runtimeSessionId so reanimateAgent accepts it. */
 function prepareSuspendedSession(id: string): void {
-  sqlite.exec(`UPDATE sessions SET status = 'suspended', runtime_session_id = 'rt-${id}' WHERE id = '${id}'`);
+  sqlite.exec(
+    `UPDATE sessions SET status = 'suspended', runtime_session_id = 'rt-${id}' WHERE id = '${id}'`,
+  );
 }
 
 // ── Tests ───────────────────────────────────────────────────
@@ -140,7 +142,18 @@ describe("reanimateAgent — pipe stream reconstruction", () => {
   it("reconstructs async pipe stream when child session is reanimated", () => {
     // Parent on env-parent (running), child on env-child (to be reanimated)
     sessionStore.createSession("parent", "env-parent", "claude-code", "p", "sonnet", "/tmp/p");
-    sessionStore.createSession("child", "env-child", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+    sessionStore.createSession(
+      "child",
+      "env-child",
+      "claude-code",
+      "c",
+      "sonnet",
+      "/tmp/c",
+      "",
+      "",
+      "parent",
+      "async",
+    );
     prepareSuspendedSession("child");
 
     reanimateAgent("child");
@@ -155,7 +168,18 @@ describe("reanimateAgent — pipe stream reconstruction", () => {
 
   it("async delivery listener is active after reanimate — parent receives child publish", () => {
     sessionStore.createSession("parent", "env-parent", "claude-code", "p", "sonnet", "/tmp/p");
-    sessionStore.createSession("child", "env-child", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+    sessionStore.createSession(
+      "child",
+      "env-child",
+      "claude-code",
+      "c",
+      "sonnet",
+      "/tmp/c",
+      "",
+      "",
+      "parent",
+      "async",
+    );
     prepareSuspendedSession("child");
 
     reanimateAgent("child");
@@ -173,7 +197,18 @@ describe("reanimateAgent — pipe stream reconstruction", () => {
   it("reconstructs pipe streams for active async-piped children when parent is reanimated", () => {
     // Parent on env-parent (to be reanimated); child on env-child (idle — non-terminal)
     sessionStore.createSession("parent", "env-parent", "claude-code", "p", "sonnet", "/tmp/p");
-    sessionStore.createSession("child", "env-child", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+    sessionStore.createSession(
+      "child",
+      "env-child",
+      "claude-code",
+      "c",
+      "sonnet",
+      "/tmp/c",
+      "",
+      "",
+      "parent",
+      "async",
+    );
     sqlite.exec("UPDATE sessions SET status = 'idle' WHERE id = 'child'");
     prepareSuspendedSession("parent");
 
@@ -184,7 +219,18 @@ describe("reanimateAgent — pipe stream reconstruction", () => {
 
   it("replays buffered undelivered messages during reanimate", async () => {
     sessionStore.createSession("parent", "env-parent", "claude-code", "p", "sonnet", "/tmp/p");
-    sessionStore.createSession("child", "env-child", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+    sessionStore.createSession(
+      "child",
+      "env-child",
+      "claude-code",
+      "c",
+      "sonnet",
+      "/tmp/c",
+      "",
+      "",
+      "parent",
+      "async",
+    );
 
     // Simulate: stream exists but message was published with no listener (env offline)
     const pipeStream = streamRegistry.createStream("pipe:child");
@@ -209,7 +255,18 @@ describe("reanimateAgent — pipe stream reconstruction", () => {
 
   it("does not reconstruct pipe stream for stopped children", () => {
     sessionStore.createSession("parent", "env-parent", "claude-code", "p", "sonnet", "/tmp/p");
-    sessionStore.createSession("child", "env-child", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+    sessionStore.createSession(
+      "child",
+      "env-child",
+      "claude-code",
+      "c",
+      "sonnet",
+      "/tmp/c",
+      "",
+      "",
+      "parent",
+      "async",
+    );
     sqlite.exec("UPDATE sessions SET status = 'stopped' WHERE id = 'child'");
     prepareSuspendedSession("parent");
 
@@ -220,7 +277,18 @@ describe("reanimateAgent — pipe stream reconstruction", () => {
 
   it("reconstructs pipe stream for sync-piped child with async subscriptions (promotion)", () => {
     sessionStore.createSession("parent", "env-parent", "claude-code", "p", "sonnet", "/tmp/p");
-    sessionStore.createSession("child", "env-child", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+    sessionStore.createSession(
+      "child",
+      "env-child",
+      "claude-code",
+      "c",
+      "sonnet",
+      "/tmp/c",
+      "",
+      "",
+      "parent",
+      "sync",
+    );
     prepareSuspendedSession("child");
 
     reanimateAgent("child");
@@ -237,7 +305,18 @@ describe("reanimateAgent — pipe stream reconstruction", () => {
 
   it("promoted sync pipe delivers completion to parent via sendInput", () => {
     sessionStore.createSession("parent", "env-parent", "claude-code", "p", "sonnet", "/tmp/p");
-    sessionStore.createSession("child", "env-child", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+    sessionStore.createSession(
+      "child",
+      "env-child",
+      "claude-code",
+      "c",
+      "sonnet",
+      "/tmp/c",
+      "",
+      "",
+      "parent",
+      "sync",
+    );
     prepareSuspendedSession("child");
 
     reanimateAgent("child");
@@ -255,7 +334,18 @@ describe("reanimateAgent — pipe stream reconstruction", () => {
   it("reconstructs pipe streams for active sync-piped children when parent is reanimated", () => {
     // Parent on env-parent (to be reanimated); child on env-child (idle — non-terminal)
     sessionStore.createSession("parent", "env-parent", "claude-code", "p", "sonnet", "/tmp/p");
-    sessionStore.createSession("child", "env-child", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+    sessionStore.createSession(
+      "child",
+      "env-child",
+      "claude-code",
+      "c",
+      "sonnet",
+      "/tmp/c",
+      "",
+      "",
+      "parent",
+      "sync",
+    );
     sqlite.exec("UPDATE sessions SET status = 'idle' WHERE id = 'child'");
     prepareSuspendedSession("parent");
 

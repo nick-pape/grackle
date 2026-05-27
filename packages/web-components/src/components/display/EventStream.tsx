@@ -9,7 +9,12 @@ import { ConfirmDialog } from "./ConfirmDialog.js";
 import { Tooltip } from "./Tooltip.js";
 import { useSmartScroll } from "../../hooks/useSmartScroll.js";
 import { useEventSelection } from "../../hooks/useEventSelection.js";
-import { isContentBearingEvent, getEventCopyText, formatEventsAsMarkdown, formatForwardEnvelope } from "../../utils/eventContent.js";
+import {
+  isContentBearingEvent,
+  getEventCopyText,
+  formatEventsAsMarkdown,
+  formatForwardEnvelope,
+} from "../../utils/eventContent.js";
 import type { ToastVariant } from "../../context/ToastContext.js";
 import { ICON_MD } from "../../utils/iconSize.js";
 import type { DisplayEvent } from "../../utils/sessionEvents.js";
@@ -60,7 +65,9 @@ function EventOverflowBanner({ eventsDropped }: { eventsDropped: number }): JSX.
   }
   return (
     <div className={styles.eventOverflowWarning} role="alert">
-      <AlertTriangle size={ICON_MD} aria-hidden="true" /> {eventsDropped.toLocaleString()} older event{eventsDropped === 1 ? "" : "s"} were dropped — only the most recent 5,000 are shown. Full history is available in the session log.
+      <AlertTriangle size={ICON_MD} aria-hidden="true" /> {eventsDropped.toLocaleString()} older
+      event{eventsDropped === 1 ? "" : "s"} were dropped — only the most recent 5,000 are shown.
+      Full history is available in the session log.
     </div>
   );
 }
@@ -115,7 +122,9 @@ export function EventStream({
   // Forward flow state
   const [showSessionPicker, setShowSessionPicker] = useState(false);
   const [confirmLargeMessage, setConfirmLargeMessage] = useState(false);
-  const [pendingForward, setPendingForward] = useState<{ sessionId: string; text: string } | undefined>(undefined);
+  const [pendingForward, setPendingForward] = useState<
+    { sessionId: string; text: string } | undefined
+  >(undefined);
 
   // Multi-select state
   const selection = useEventSelection({
@@ -124,19 +133,14 @@ export function EventStream({
   });
 
   // Count of selectable events (for floating action bar)
-  const totalSelectable = useMemo(
-    () => events.filter(isContentBearingEvent).length,
-    [events],
-  );
+  const totalSelectable = useMemo(() => events.filter(isContentBearingEvent).length, [events]);
 
   // Active sessions that can receive a forwarded message (excluding current)
   const forwardTargets = useMemo<Session[]>(() => {
     if (!sessions) {
       return [];
     }
-    return sessions.filter(
-      (s) => ACTIVE_STATUSES.has(s.status) && s.id !== currentSessionId,
-    );
+    return sessions.filter((s) => ACTIVE_STATUSES.has(s.status) && s.id !== currentSessionId);
   }, [sessions, currentSessionId]);
 
   const displayEvents = useMemo(() => {
@@ -158,7 +162,9 @@ export function EventStream({
     setIsReversed(next);
     try {
       localStorage.setItem(DIRECTION_STORAGE_KEY, next ? "reversed" : "default");
-    } catch { /* storage unavailable */ }
+    } catch {
+      /* storage unavailable */
+    }
   };
 
   // Escape key exits selection mode, but not while a modal is open
@@ -173,73 +179,88 @@ export function EventStream({
       }
     };
     window.addEventListener("keydown", handler);
-    return () => { window.removeEventListener("keydown", handler); };
+    return () => {
+      window.removeEventListener("keydown", handler);
+    };
   }, [selection.isSelecting, selection.cancelSelection, showSessionPicker, confirmLargeMessage]);
 
   // Copy handler for the floating action bar
   const handleCopySelected = useCallback(async () => {
     const ok = await selection.copySelected();
     if (ok) {
-      onShowToast?.(`Copied ${selection.selectedCount} message${selection.selectedCount === 1 ? "" : "s"} to clipboard`, "success");
+      onShowToast?.(
+        `Copied ${selection.selectedCount} message${selection.selectedCount === 1 ? "" : "s"} to clipboard`,
+        "success",
+      );
     }
   }, [selection, onShowToast]);
 
   /** Build the sorted list of selected DisplayEvents in chronological order. */
   const getSelectedEvents = useCallback((): DisplayEvent[] => {
     const sorted = [...selection.selectedIndices].sort((a, b) => a - b);
-    return sorted
-      .filter((i) => i < events.length)
-      .map((i) => events[i]);
+    return sorted.filter((i) => i < events.length).map((i) => events[i]);
   }, [selection.selectedIndices, events]);
 
   /**
    * Returns a human-readable label for a session by its ID.
    * Falls back to "this session" when sessionId is undefined/empty.
    */
-  const getSessionLabel = useCallback((sessionId: string | undefined): string => {
-    if (!sessionId) {
-      return "this session";
-    }
-    const session = sessions?.find((s) => s.id === sessionId);
-    if (!session) {
-      return sessionId.slice(0, 8);
-    }
-    const env = environments?.find((e) => e.id === session.environmentId);
-    return env?.displayName ?? session.environmentId.slice(0, 8);
-  }, [sessions, environments]);
+  const getSessionLabel = useCallback(
+    (sessionId: string | undefined): string => {
+      if (!sessionId) {
+        return "this session";
+      }
+      const session = sessions?.find((s) => s.id === sessionId);
+      if (!session) {
+        return sessionId.slice(0, 8);
+      }
+      const env = environments?.find((e) => e.id === session.environmentId);
+      return env?.displayName ?? session.environmentId.slice(0, 8);
+    },
+    [sessions, environments],
+  );
 
   /** Execute the actual forward after all confirmations. */
-  const executeForward = useCallback(async (sessionId: string, text: string) => {
-    if (!onForward) {
-      return;
-    }
-    const targetLabel = getSessionLabel(sessionId);
-    try {
-      await onForward(sessionId, text);
-      const count = selection.selectedCount;
-      onShowToast?.(`Forwarded ${count} message${count === 1 ? "" : "s"} to ${targetLabel}`, "success");
-      selection.cancelSelection();
-    } catch {
-      onShowToast?.("Failed to forward messages", "error");
-    }
-  }, [onForward, getSessionLabel, onShowToast, selection]);
+  const executeForward = useCallback(
+    async (sessionId: string, text: string) => {
+      if (!onForward) {
+        return;
+      }
+      const targetLabel = getSessionLabel(sessionId);
+      try {
+        await onForward(sessionId, text);
+        const count = selection.selectedCount;
+        onShowToast?.(
+          `Forwarded ${count} message${count === 1 ? "" : "s"} to ${targetLabel}`,
+          "success",
+        );
+        selection.cancelSelection();
+      } catch {
+        onShowToast?.("Failed to forward messages", "error");
+      }
+    },
+    [onForward, getSessionLabel, onShowToast, selection],
+  );
 
   /** Called when the user picks a target session in the picker. */
-  const handlePickSession = useCallback((sessionId: string) => {
-    setShowSessionPicker(false);
+  const handlePickSession = useCallback(
+    (sessionId: string) => {
+      setShowSessionPicker(false);
 
-    const selectedEvents = getSelectedEvents();
-    const sourceLabel = getSessionLabel(currentSessionId);
-    const envelope = formatForwardEnvelope(sourceLabel, selectedEvents);
+      const selectedEvents = getSelectedEvents();
+      const sourceLabel = getSessionLabel(currentSessionId);
+      const envelope = formatForwardEnvelope(sourceLabel, selectedEvents);
 
-    if (new TextEncoder().encode(envelope).length > LARGE_MESSAGE_THRESHOLD_BYTES) {
-      setPendingForward({ sessionId, text: envelope });
-      setConfirmLargeMessage(true);
-      return;
-    }
+      if (new TextEncoder().encode(envelope).length > LARGE_MESSAGE_THRESHOLD_BYTES) {
+        setPendingForward({ sessionId, text: envelope });
+        setConfirmLargeMessage(true);
+        return;
+      }
 
-    executeForward(sessionId, envelope).catch(() => {});
-  }, [getSelectedEvents, getSessionLabel, currentSessionId, executeForward]);
+      executeForward(sessionId, envelope).catch(() => {});
+    },
+    [getSelectedEvents, getSessionLabel, currentSessionId, executeForward],
+  );
 
   const handleConfirmLargeMessage = useCallback(() => {
     setConfirmLargeMessage(false);
@@ -272,7 +293,11 @@ export function EventStream({
             aria-label={isReversed ? "Switch to newest at bottom" : "Switch to newest at top"}
             data-testid="direction-toggle"
           >
-            {isReversed ? <ArrowDown size={ICON_MD} aria-hidden="true" /> : <ArrowUp size={ICON_MD} aria-hidden="true" />}
+            {isReversed ? (
+              <ArrowDown size={ICON_MD} aria-hidden="true" />
+            ) : (
+              <ArrowUp size={ICON_MD} aria-hidden="true" />
+            )}
           </button>
         </Tooltip>
       </div>
@@ -302,11 +327,22 @@ export function EventStream({
                   isSelecting={selection.isSelecting}
                   isSelected={selection.selectedIndices.has(originalIndex)}
                   checkboxLabel={buildCheckboxLabel(event)}
-                  onSelect={() => { selection.enterSelectionMode(originalIndex); }}
-                  onToggle={(shiftKey) => { selection.toggleEvent(originalIndex, shiftKey); }}
-                  onCopied={() => { onShowToast?.("Copied to clipboard", "success"); }}
+                  onSelect={() => {
+                    selection.enterSelectionMode(originalIndex);
+                  }}
+                  onToggle={(shiftKey) => {
+                    selection.toggleEvent(originalIndex, shiftKey);
+                  }}
+                  onCopied={() => {
+                    onShowToast?.("Copied to clipboard", "success");
+                  }}
                 >
-                  <EventRenderer event={event} toolUseCtx={event.toolUseCtx} settled={event.settled} sandboxProxyUrl={sandboxProxyUrl} />
+                  <EventRenderer
+                    event={event}
+                    toolUseCtx={event.toolUseCtx}
+                    settled={event.settled}
+                    sandboxProxyUrl={sandboxProxyUrl}
+                  />
                 </EventHoverRow>
               </motion.div>
             );
@@ -322,8 +358,16 @@ export function EventStream({
             totalSelectable={totalSelectable}
             onSelectAll={selection.selectAll}
             onDeselectAll={selection.deselectAll}
-            onCopy={() => { handleCopySelected().catch(() => {}); }}
-            onForward={onForward !== undefined ? () => { setShowSessionPicker(true); } : undefined}
+            onCopy={() => {
+              handleCopySelected().catch(() => {});
+            }}
+            onForward={
+              onForward !== undefined
+                ? () => {
+                    setShowSessionPicker(true);
+                  }
+                : undefined
+            }
             forwardDisabled={forwardTargets.length === 0}
             onCancel={selection.cancelSelection}
           />
@@ -337,7 +381,9 @@ export function EventStream({
         environments={environments ?? []}
         personas={personas}
         onSelect={handlePickSession}
-        onCancel={() => { setShowSessionPicker(false); }}
+        onCancel={() => {
+          setShowSessionPicker(false);
+        }}
       />
 
       {/* Large message confirmation */}
@@ -363,7 +409,12 @@ export function EventStream({
             aria-label="Scroll to latest"
             data-testid="scroll-to-anchor"
           >
-            {isReversed ? <ArrowUp size={ICON_MD} aria-hidden="true" /> : <ArrowDown size={ICON_MD} aria-hidden="true" />} New events
+            {isReversed ? (
+              <ArrowUp size={ICON_MD} aria-hidden="true" />
+            ) : (
+              <ArrowDown size={ICON_MD} aria-hidden="true" />
+            )}{" "}
+            New events
           </motion.button>
         )}
       </AnimatePresence>

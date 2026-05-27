@@ -9,17 +9,19 @@ import {
 import type { GrackleClient } from "./rpc-client.js";
 
 /** Archive all existing workspaces via RPC so the welcome CTA appears. */
-async function archiveAllWorkspaces(client: GrackleClient, page: import("@playwright/test").Page): Promise<void> {
+async function archiveAllWorkspaces(
+  client: GrackleClient,
+  page: import("@playwright/test").Page,
+): Promise<void> {
   const resp = await client.core.listWorkspaces({});
   for (const workspace of resp.workspaces) {
     await client.core.archiveWorkspace({ id: workspace.id });
   }
   // Navigate to home so the UI reflects the empty state (welcome CTA is on the home page)
   await page.goto("/");
-  await page.waitForFunction(
-    () => document.body.innerText.includes("Connected"),
-    { timeout: 10_000 },
-  );
+  await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
+    timeout: 10_000,
+  });
 }
 
 test.describe("Workspaces", { tag: ["@workspace"] }, () => {
@@ -32,7 +34,10 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.getByTestId("env-nav-item")).toBeVisible();
   });
 
-  test("welcome CTA navigates to create workspace page", async ({ appPage, grackle: { client } }) => {
+  test("welcome CTA navigates to create workspace page", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     // Ensure no workspaces exist so the welcome CTA is visible
@@ -42,12 +47,16 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.locator('[data-testid="welcome-cta"]')).toBeVisible();
 
     // Wait for button to be enabled (environments must load before it's clickable)
-    await expect(page.locator('[data-testid="welcome-create-button"]')).toBeEnabled({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="welcome-create-button"]')).toBeEnabled({
+      timeout: 5_000,
+    });
     await page.locator('[data-testid="welcome-create-button"]').click();
     await expect(page).toHaveURL(/\/workspaces\/new/);
 
     // Create form fields should be visible
-    await expect(page.locator('[data-testid="workspace-form-name"]')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="workspace-form-name"]')).toBeVisible({
+      timeout: 5_000,
+    });
     await expect(page.locator('[data-testid="workspace-form-environment"]')).toBeVisible();
 
     // Fill in workspace name and submit
@@ -58,16 +67,22 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     // (The page renders the name immediately from optimistically seeded state,
     // so this also guards against a blank-flash regression.)
     await page.waitForURL(/\/environments\/[^/]+\/workspaces\/[^/]+/, { timeout: 5_000 });
-    await expect(page.locator('[data-testid="workspace-name"]')).toContainText("cta-workspace", { timeout: 5_000 });
+    await expect(page.locator('[data-testid="workspace-name"]')).toContainText("cta-workspace", {
+      timeout: 5_000,
+    });
 
     // Navigate to the environment detail page — workspace card should appear there
     await page.locator('[data-testid="sidebar-tab-environments"]').click();
     await page.getByTestId("env-nav-item").first().click();
-    await expect(page.getByTestId("workspace-card").filter({ hasText: "cta-workspace" })).toBeVisible({ timeout: 5_000 });
+    await expect(
+      page.getByTestId("workspace-card").filter({ hasText: "cta-workspace" }),
+    ).toBeVisible({ timeout: 5_000 });
 
     // Welcome CTA should no longer be visible (workspaces exist now — dashboard shows instead)
     await page.goto("/");
-    await page.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
+    await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
     await expect(page.locator('[data-testid="welcome-cta"]')).not.toBeVisible({ timeout: 5_000 });
   });
 
@@ -76,10 +91,14 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
 
     // Navigate to the workspace create page
     await page.goto("/workspaces/new");
-    await page.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
+    await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
 
     // Create form should be visible (wait for router to fully render the page)
-    await expect(page.locator('[data-testid="workspace-form-name"]')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-testid="workspace-form-name"]')).toBeVisible({
+      timeout: 10_000,
+    });
 
     // Click cancel to go back
     await page.locator('[data-testid="workspace-create-cancel"]').click();
@@ -88,8 +107,10 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page).not.toHaveURL(/\/workspaces\/new/);
   });
 
-
-  test("create a workspace and see it on environment detail page", async ({ appPage, grackle: { client } }) => {
+  test("create a workspace and see it on environment detail page", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     // Create a workspace via RPC
@@ -98,10 +119,15 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     // Navigate to environment detail page — workspace card should appear
     await page.locator('[data-testid="sidebar-tab-environments"]').click();
     await page.getByTestId("env-nav-item").first().click();
-    await expect(page.getByTestId("workspace-card").filter({ hasText: "my-workspace" })).toBeVisible({ timeout: 5_000 });
+    await expect(
+      page.getByTestId("workspace-card").filter({ hasText: "my-workspace" }),
+    ).toBeVisible({ timeout: 5_000 });
   });
 
-  test("navigate to workspace shows empty task list and workspace view", async ({ appPage, grackle: { client } }) => {
+  test("navigate to workspace shows empty task list and workspace view", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     // Create a workspace via RPC and navigate to it
@@ -151,14 +177,19 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await navigateToTask(page, "my task");
 
     // Task header should be visible with title and status
-    await expect(page.locator('[data-testid="task-status"]')).toContainText("not_started", { timeout: 5_000 });
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("not_started", {
+      timeout: 5_000,
+    });
 
     // Tab bar should show Overview, Stream
     await expect(page.getByRole("tab", { name: "Overview", exact: true })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Stream", exact: true })).toBeVisible();
 
     // Overview tab (default for pending) should be active
-    await expect(page.getByRole("tab", { name: "Overview", exact: true })).toHaveAttribute("class", /active/);
+    await expect(page.getByRole("tab", { name: "Overview", exact: true })).toHaveAttribute(
+      "class",
+      /active/,
+    );
 
     // Header shows "Start" button
     await expect(page.getByTestId("task-header-start")).toBeVisible();
@@ -177,7 +208,11 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
   // ─── Workspace Detail View Tests ───────────────────────────────
 
   /** Helper: create a workspace via RPC and navigate to its detail page */
-  async function createAndSelectWorkspace(client: GrackleClient, page: import("@playwright/test").Page, name: string) {
+  async function createAndSelectWorkspace(
+    client: GrackleClient,
+    page: import("@playwright/test").Page,
+    name: string,
+  ) {
     await createWorkspace(client, name);
     await navigateToWorkspace(page, name);
   }
@@ -222,7 +257,10 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(nameInput).not.toBeVisible({ timeout: 2_000 });
 
     // Name should update after server round trip
-    await expect(page.locator('[data-testid="workspace-name"]')).toContainText("renamed-workspace", { timeout: 10_000 });
+    await expect(page.locator('[data-testid="workspace-name"]')).toContainText(
+      "renamed-workspace",
+      { timeout: 10_000 },
+    );
   });
 
   test("cancel name edit with Escape", async ({ appPage, grackle: { client } }) => {
@@ -302,13 +340,21 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.getByText("Archive Workspace?")).toBeVisible();
 
     // Confirm archive
-    await page.getByRole("dialog", { name: "Archive Workspace?" }).getByRole("button", { name: "Archive" }).click();
+    await page
+      .getByRole("dialog", { name: "Archive Workspace?" })
+      .getByRole("button", { name: "Archive" })
+      .click();
 
     // Should navigate away from workspace page (redirected to home)
-    await expect(page.locator('[data-testid="workspace-name"]')).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="workspace-name"]')).not.toBeVisible({
+      timeout: 5_000,
+    });
   });
 
-  test("linked environment chip is shown for initial environment", async ({ appPage, grackle: { client } }) => {
+  test("linked environment chip is shown for initial environment", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
     await createAndSelectWorkspace(client, page, "env-edit-test");
 
@@ -336,7 +382,10 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await page.keyboard.press("Escape");
   });
 
-  test("keyboard activation of edit button (Enter/Space)", async ({ appPage, grackle: { client } }) => {
+  test("keyboard activation of edit button (Enter/Space)", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
     await createAndSelectWorkspace(client, page, "keyboard-activate-test");
 
@@ -440,7 +489,10 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
 
   // ─── Link / Unlink Environment Tests ────────────────────────────
 
-  test("link environment via dropdown adds chip, unlink removes it", async ({ appPage, grackle: { client } }) => {
+  test("link environment via dropdown adds chip, unlink removes it", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     // Add a second environment so we have something to link
@@ -477,7 +529,10 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.getByTestId("linked-env-test-local")).toBeVisible();
   });
 
-  test("linked workspace appears on environment detail page with unlink button", async ({ appPage, grackle: { client } }) => {
+  test("linked workspace appears on environment detail page with unlink button", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     // Add a second environment

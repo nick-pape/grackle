@@ -39,10 +39,10 @@ Requires **Node.js >= 22**.
 
 ## Configuration
 
-| Variable | Description | Default |
-| --- | --- | --- |
-| `GRACKLE_URL` | Full URL of the Grackle MCP HTTP endpoint | `http://127.0.0.1:7435/mcp` |
-| `GRACKLE_API_KEY` | API key for authenticating with the Grackle server. **Required** — the proxy exits with an error if not set. | *(none)* |
+| Variable          | Description                                                                                                  | Default                     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ | --------------------------- |
+| `GRACKLE_URL`     | Full URL of the Grackle MCP HTTP endpoint                                                                    | `http://127.0.0.1:7435/mcp` |
+| `GRACKLE_API_KEY` | API key for authenticating with the Grackle server. **Required** — the proxy exits with an error if not set. | _(none)_                    |
 
 The API key is the 64-character hex token stored in `~/.grackle/api-key` on the machine running the Grackle server. For a Docker deployment, see the section below.
 

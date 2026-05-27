@@ -1,9 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import {
-  generatePairingCode,
-  redeemPairingCode,
-  clearPairing,
-} from "./pairing.js";
+import { generatePairingCode, redeemPairingCode, clearPairing } from "./pairing.js";
 
 // Suppress logger output during tests
 import { setAuthLogger } from "./auth-logger.js";

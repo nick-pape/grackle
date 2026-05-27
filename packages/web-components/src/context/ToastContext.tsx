@@ -1,4 +1,12 @@
-import React, { createContext, useContext, useState, useRef, useCallback, type ReactNode, type JSX } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useRef,
+  useCallback,
+  type ReactNode,
+  type JSX,
+} from "react";
 
 /** Visual style variant for a toast notification. */
 export type ToastVariant = "success" | "error" | "warning" | "info";
@@ -20,7 +28,9 @@ interface ToastContextValue {
   dismissToast: (id: string) => void;
 }
 
-const ToastContext: React.Context<ToastContextValue | undefined> = createContext<ToastContextValue | undefined>(undefined);
+const ToastContext: React.Context<ToastContextValue | undefined> = createContext<
+  ToastContextValue | undefined
+>(undefined);
 
 const DEFAULT_DURATION_MS: number = 4_000;
 

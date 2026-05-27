@@ -2,7 +2,12 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { DEFAULT_MCP_PORT, DEFAULT_SERVER_PORT, GRACKLE_DIR, API_KEY_FILENAME } from "@grackle-ai/common";
+import {
+  DEFAULT_MCP_PORT,
+  DEFAULT_SERVER_PORT,
+  GRACKLE_DIR,
+  API_KEY_FILENAME,
+} from "@grackle-ai/common";
 import { createMcpServer } from "./mcp-server.js";
 
 /** Allowed loopback bind addresses — security policy: never expose to the network. */
@@ -17,12 +22,16 @@ function loadApiKey(): string {
   try {
     const key = readFileSync(keyPath, "utf8").trim();
     if (!key) {
-      console.error(`Error: API key file is empty: ${keyPath}\nRun "grackle serve" first to generate a key.`);
+      console.error(
+        `Error: API key file is empty: ${keyPath}\nRun "grackle serve" first to generate a key.`,
+      );
       process.exit(1);
     }
     return key;
   } catch {
-    console.error(`Error: Could not read API key from ${keyPath}\nRun "grackle serve" first to generate a key, or set GRACKLE_API_KEY.`);
+    console.error(
+      `Error: Could not read API key from ${keyPath}\nRun "grackle serve" first to generate a key, or set GRACKLE_API_KEY.`,
+    );
     process.exit(1);
   }
 }
@@ -34,7 +43,9 @@ function main(): void {
   const apiKey = process.env.GRACKLE_API_KEY || loadApiKey();
 
   if (!ALLOWED_BIND_HOSTS.has(bindHost)) {
-    console.error(`Error: GRACKLE_HOST must be a loopback address (127.0.0.1 or ::1). Got: ${bindHost}`);
+    console.error(
+      `Error: GRACKLE_HOST must be a loopback address (127.0.0.1 or ::1). Got: ${bindHost}`,
+    );
     process.exit(1);
   }
 

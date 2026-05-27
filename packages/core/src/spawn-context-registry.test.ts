@@ -20,7 +20,9 @@ const input: SpawnContextInput = {
   injectKnowledge: true,
 };
 
-function provider(fn: (i: SpawnContextInput) => Promise<string | undefined>): SystemPromptContributor {
+function provider(
+  fn: (i: SpawnContextInput) => Promise<string | undefined>,
+): SystemPromptContributor {
   return { contribute: fn };
 }
 
@@ -64,7 +66,11 @@ describe("spawn-context-registry", () => {
   it("isolates a provider that throws SYNCHRONOUSLY (never rejects)", async () => {
     setSpawnContextProviders([
       // contribute throws before returning a promise — must not reject Promise.all.
-      { contribute: (): Promise<string | undefined> => { throw new Error("sync boom"); } },
+      {
+        contribute: (): Promise<string | undefined> => {
+          throw new Error("sync boom");
+        },
+      },
       provider(async () => "ok"),
     ]);
     await expect(runSpawnContextProviders(input)).resolves.toEqual(["ok"]);

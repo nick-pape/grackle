@@ -1,4 +1,4 @@
-@use './styles/mixins' as *;
+@use "./styles/mixins" as *;
 
 // =============================================================================
 // App — root layout (flex column: StatusBar / body / BottomStatusBar)
@@ -46,15 +46,17 @@
     transform: translateX(-100%);
     visibility: hidden;
     pointer-events: none;
-    transition: transform var(--transition-slow),
-                visibility 0s linear 400ms;
+    transition:
+      transform var(--transition-slow),
+      visibility 0s linear 400ms;
 
     &[data-sidebar-open="true"] {
       transform: translateX(0);
       visibility: visible;
       pointer-events: auto;
-      transition: transform var(--transition-slow),
-                  visibility 0s;
+      transition:
+        transform var(--transition-slow),
+        visibility 0s;
     }
   }
 }

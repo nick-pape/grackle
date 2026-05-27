@@ -1,11 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent, within } from "@storybook/test";
 import { McpToolSelector } from "./McpToolSelector.js";
-import {
-  DEFAULT_SCOPED_MCP_TOOLS,
-  WORKER_MCP_TOOLS,
-  ALL_MCP_TOOL_NAMES,
-} from "@grackle-ai/common";
+import { DEFAULT_SCOPED_MCP_TOOLS, WORKER_MCP_TOOLS, ALL_MCP_TOOL_NAMES } from "@grackle-ai/common";
 
 const meta: Meta<typeof McpToolSelector> = {
   title: "Grackle/Personas/McpToolSelector",
@@ -50,9 +46,7 @@ export const WithPresetWorker: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByTestId("preset-worker"));
-    await expect(args.onChange).toHaveBeenCalledWith(
-      expect.arrayContaining([...WORKER_MCP_TOOLS]),
-    );
+    await expect(args.onChange).toHaveBeenCalledWith(expect.arrayContaining([...WORKER_MCP_TOOLS]));
   },
 };
 
@@ -71,7 +65,9 @@ export const CustomSelection: Story = {
     const envList = canvas.getByTestId("tool-env_list") as HTMLInputElement;
     await expect(envList.checked).toBe(false);
     // Verify count display
-    await expect(canvas.getByText(`3 of ${ALL_MCP_TOOL_NAMES.size} tools selected`)).toBeInTheDocument();
+    await expect(
+      canvas.getByText(`3 of ${ALL_MCP_TOOL_NAMES.size} tools selected`),
+    ).toBeInTheDocument();
   },
 };
 

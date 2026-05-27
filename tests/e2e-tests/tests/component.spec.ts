@@ -1,5 +1,10 @@
 import { test, expect } from "./fixtures.js";
-import { createWorkspace, createTaskDirect, navigateToTask, patchWsForStubMcpRuntime } from "./helpers.js";
+import {
+  createWorkspace,
+  createTaskDirect,
+  navigateToTask,
+  patchWsForStubMcpRuntime,
+} from "./helpers.js";
 
 /**
  * Component registry (#1269) — render-by-reference, end-to-end.
@@ -24,22 +29,28 @@ const REACT_SCENARIO = JSON.stringify({
       },
     },
     { mcp_call: "component_list", args: {} },
-    { mcp_call: "component_render", args: { name: "labeled-button", props: { label: "Reused JSX" } } },
+    {
+      mcp_call: "component_render",
+      args: { name: "labeled-button", props: { label: "Reused JSX" } },
+    },
   ],
 });
 
 // ── Test 2: register a raw-HTML component (inline script), render by reference ──
 const HTML_BODY = [
-  "<!doctype html><html><head><meta charset=\"utf-8\"/></head><body>",
-  "<div class=\"card\"><h2>Agent Component</h2>",
-  "<div>Inline JS ran: <code id=\"js\">no</code></div></div>",
-  "<script>document.getElementById(\"js\").textContent=\"yes\";</script>",
+  '<!doctype html><html><head><meta charset="utf-8"/></head><body>',
+  '<div class="card"><h2>Agent Component</h2>',
+  '<div>Inline JS ran: <code id="js">no</code></div></div>',
+  '<script>document.getElementById("js").textContent="yes";</script>',
   "</body></html>",
 ].join("");
 const HTML_SCENARIO = JSON.stringify({
   steps: [
     { emit: "text", content: "Registering and rendering a raw-HTML component:" },
-    { mcp_call: "component_register", args: { name: "raw-card", source: HTML_BODY, rendererKind: "mcp-app-html" } },
+    {
+      mcp_call: "component_register",
+      args: { name: "raw-card", source: HTML_BODY, rendererKind: "mcp-app-html" },
+    },
     { mcp_call: "component_render", args: { name: "raw-card" } },
   ],
 });
@@ -48,7 +59,13 @@ const HTML_SCENARIO = JSON.stringify({
 const SHOW_SCENARIO = JSON.stringify({
   steps: [
     { emit: "text", content: "Rendering a React component from source:" },
-    { mcp_call: "component_show", args: { source: "render(<Button>{props.label}</Button>)", props: { label: "Hello from JSX" } } },
+    {
+      mcp_call: "component_show",
+      args: {
+        source: "render(<Button>{props.label}</Button>)",
+        props: { label: "Hello from JSX" },
+      },
+    },
   ],
 });
 
@@ -56,7 +73,14 @@ const SHOW_SCENARIO = JSON.stringify({
 const SEARCH_SCENARIO = JSON.stringify({
   steps: [
     { emit: "text", content: "Registering then searching components:" },
-    { mcp_call: "component_register", args: { name: "revenue-chart", source: "render(<Spinner/>)", description: "a chart of revenue over time" } },
+    {
+      mcp_call: "component_register",
+      args: {
+        name: "revenue-chart",
+        source: "render(<Spinner/>)",
+        description: "a chart of revenue over time",
+      },
+    },
     { mcp_call: "component_search", args: { query: "chart" } },
   ],
 });
@@ -93,7 +117,10 @@ const COMPOSE_SCENARIO = JSON.stringify({
       },
     },
     // Parent references the registered Child by JSX tag; the server resolves + bundles it.
-    { mcp_call: "component_register", args: { name: "Parent", source: 'render(<div><Child label="Nested"/></div>)' } },
+    {
+      mcp_call: "component_register",
+      args: { name: "Parent", source: 'render(<div><Child label="Nested"/></div>)' },
+    },
     { mcp_call: "component_render", args: { name: "Parent" } },
   ],
 });
@@ -104,12 +131,20 @@ const NOTIFY_SCENARIO = JSON.stringify({
     { emit: "text", content: "Promote then await tools/list_changed:" },
     { mcp_call: "component_register", args: { name: "NotifyChild", source: "render(<Spinner/>)" } },
     // A conformant client: promote, then wait for the server-pushed tools/list_changed and re-list.
-    { await_tool_change: { trigger: { tool: "component_promote", args: { name: "NotifyChild" } }, expect: "render_NotifyChild" } },
+    {
+      await_tool_change: {
+        trigger: { tool: "component_promote", args: { name: "NotifyChild" } },
+        expect: "render_NotifyChild",
+      },
+    },
   ],
 });
 
 test.describe("Component registry (#1269)", { tag: ["@persona"] }, () => {
-  test("component_register + component_render renders a React component by name", async ({ appPage, grackle: { client } }) => {
+  test("component_register + component_render renders a React component by name", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
     const wsId = await createWorkspace(client, "component-react-e2e-proj");
     await createTaskDirect(client, wsId, "render registered component", {
@@ -124,10 +159,15 @@ test.describe("Component registry (#1269)", { tag: ["@persona"] }, () => {
     await expect(page.getByTestId("mcp-app-widget")).toBeVisible({ timeout: 15_000 });
     // Render-by-reference: the stored JSX rendered a real Grackle <Button> with fresh props.
     const frame = page.frameLocator('[data-testid="mcp-app-widget"]').frameLocator("iframe");
-    await expect(frame.getByRole("button", { name: "Reused JSX" })).toBeVisible({ timeout: 25_000 });
+    await expect(frame.getByRole("button", { name: "Reused JSX" })).toBeVisible({
+      timeout: 25_000,
+    });
   });
 
-  test("component_render of an mcp-app-html component runs its inline script", async ({ appPage, grackle: { client } }) => {
+  test("component_render of an mcp-app-html component runs its inline script", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
     const wsId = await createWorkspace(client, "component-html-e2e-proj");
     await createTaskDirect(client, wsId, "render html component", {
@@ -144,7 +184,10 @@ test.describe("Component registry (#1269)", { tag: ["@persona"] }, () => {
     await expect(frame.locator("#js")).toHaveText("yes", { timeout: 20_000 });
   });
 
-  test("component_show renders agent JSX against the Grackle component library", async ({ appPage, grackle: { client } }) => {
+  test("component_show renders agent JSX against the Grackle component library", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
     const wsId = await createWorkspace(client, "component-show-e2e-proj");
     await createTaskDirect(client, wsId, "render react component", {
@@ -157,10 +200,15 @@ test.describe("Component registry (#1269)", { tag: ["@persona"] }, () => {
 
     await expect(page.getByTestId("mcp-app-widget")).toBeVisible({ timeout: 15_000 });
     const frame = page.frameLocator('[data-testid="mcp-app-widget"]').frameLocator("iframe");
-    await expect(frame.getByRole("button", { name: "Hello from JSX" })).toBeVisible({ timeout: 25_000 });
+    await expect(frame.getByRole("button", { name: "Hello from JSX" })).toBeVisible({
+      timeout: 25_000,
+    });
   });
 
-  test("component_register + component_search runs end-to-end via a scoped agent", async ({ appPage, grackle: { client } }) => {
+  test("component_register + component_search runs end-to-end via a scoped agent", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
     const wsId = await createWorkspace(client, "component-search-e2e-proj");
     await createTaskDirect(client, wsId, "search components", {
@@ -173,11 +221,16 @@ test.describe("Component registry (#1269)", { tag: ["@persona"] }, () => {
 
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });
     // Both MCP tools were reachable + executed; the search result surfaces the registered component.
-    await expect(page.locator('[data-testid^="tool-card-"]').first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('[data-testid^="tool-card-"]').first()).toBeVisible({
+      timeout: 15_000,
+    });
     await expect(page.getByText("revenue-chart").first()).toBeVisible({ timeout: 15_000 });
   });
 
-  test("component_promote exposes a render_<name> tool that renders by props (#1272)", async ({ appPage, grackle: { client } }) => {
+  test("component_promote exposes a render_<name> tool that renders by props (#1272)", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
     const wsId = await createWorkspace(client, "component-promote-e2e-proj");
     await createTaskDirect(client, wsId, "promote and render", {
@@ -193,10 +246,15 @@ test.describe("Component registry (#1269)", { tag: ["@persona"] }, () => {
     // rendered the stored JSX with the props passed straight to the tool.
     await expect(page.getByTestId("mcp-app-widget")).toBeVisible({ timeout: 15_000 });
     const frame = page.frameLocator('[data-testid="mcp-app-widget"]').frameLocator("iframe");
-    await expect(frame.getByRole("button", { name: "Promoted via tool" })).toBeVisible({ timeout: 25_000 });
+    await expect(frame.getByRole("button", { name: "Promoted via tool" })).toBeVisible({
+      timeout: 25_000,
+    });
   });
 
-  test("component_render composes a referenced registry component (#1270)", async ({ appPage, grackle: { client } }) => {
+  test("component_render composes a referenced registry component (#1270)", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
     const wsId = await createWorkspace(client, "component-compose-e2e-proj");
     await createTaskDirect(client, wsId, "compose components", {
@@ -215,7 +273,10 @@ test.describe("Component registry (#1269)", { tag: ["@persona"] }, () => {
     await expect(frame.getByRole("button", { name: "Nested" })).toBeVisible({ timeout: 25_000 });
   });
 
-  test("promoting a component pushes tools/list_changed to a connected client (#1297)", async ({ appPage, grackle: { client } }) => {
+  test("promoting a component pushes tools/list_changed to a connected client (#1297)", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
     const wsId = await createWorkspace(client, "component-notify-e2e-proj");
     await createTaskDirect(client, wsId, "notify on promote", {
@@ -230,6 +291,8 @@ test.describe("Component registry (#1269)", { tag: ["@persona"] }, () => {
     // The conformant client promoted NotifyChild, received the server-pushed
     // tools/list_changed, re-listed, and saw render_NotifyChild — the success marker
     // is emitted only on that path.
-    await expect(page.getByText("tools/list_changed received: render_NotifyChild is now available")).toBeVisible({ timeout: 25_000 });
+    await expect(
+      page.getByText("tools/list_changed received: render_NotifyChild is now available"),
+    ).toBeVisible({ timeout: 25_000 });
   });
 });

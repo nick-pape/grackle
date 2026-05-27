@@ -16,15 +16,33 @@ const {
   mockKnowledgeMcpTools,
 } = vi.hoisted(() => ({
   mockInitKnowledge: vi.fn().mockResolvedValue(vi.fn()),
-  mockCreateKnowledgeHealthPhase: vi.fn().mockReturnValue({ name: "knowledge-health", execute: vi.fn() }),
+  mockCreateKnowledgeHealthPhase: vi
+    .fn()
+    .mockReturnValue({ name: "knowledge-health", execute: vi.fn() }),
   mockMarkKnowledgeInitFailed: vi.fn(),
   mockSearchKnowledge: vi.fn(),
   mockGetKnowledgeNode: vi.fn(),
   mockExpandKnowledgeNode: vi.fn(),
   mockListRecentKnowledgeNodes: vi.fn(),
   mockKnowledgeMcpTools: [
-    { name: "knowledge_search", group: "knowledge", description: "Search", inputSchema: {}, rpcMethod: "searchKnowledge", mutating: false, handler: vi.fn() },
-    { name: "knowledge_get_node", group: "knowledge", description: "Get", inputSchema: {}, rpcMethod: "getKnowledgeNode", mutating: false, handler: vi.fn() },
+    {
+      name: "knowledge_search",
+      group: "knowledge",
+      description: "Search",
+      inputSchema: {},
+      rpcMethod: "searchKnowledge",
+      mutating: false,
+      handler: vi.fn(),
+    },
+    {
+      name: "knowledge_get_node",
+      group: "knowledge",
+      description: "Get",
+      inputSchema: {},
+      rpcMethod: "getKnowledgeNode",
+      mutating: false,
+      handler: vi.fn(),
+    },
   ],
 }));
 
@@ -41,7 +59,9 @@ vi.mock("./knowledge-health.js", () => ({
 }));
 
 vi.mock("./knowledge-projection-phase.js", () => ({
-  createKnowledgeProjectionPhase: vi.fn().mockReturnValue({ name: "knowledge-projection", execute: vi.fn() }),
+  createKnowledgeProjectionPhase: vi
+    .fn()
+    .mockReturnValue({ name: "knowledge-projection", execute: vi.fn() }),
 }));
 
 vi.mock("./entity-sync.js", () => ({
@@ -77,10 +97,20 @@ function makeCtx(): PluginContext {
   return {
     subscribe: vi.fn().mockReturnValue(vi.fn()),
     emit: vi.fn(),
-    logger: { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() } as unknown as PluginContext["logger"],
+    logger: {
+      info: vi.fn(),
+      debug: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    } as unknown as PluginContext["logger"],
     config: {
-      grpcPort: 7434, webPort: 3000, mcpPort: 7435, powerlinePort: 7433,
-      host: "127.0.0.1", grackleHome: "/tmp/.grackle", apiKey: "test-key",
+      grpcPort: 7434,
+      webPort: 3000,
+      mcpPort: 7435,
+      powerlinePort: 7433,
+      host: "127.0.0.1",
+      grackleHome: "/tmp/.grackle",
+      apiKey: "test-key",
     },
   };
 }

@@ -7,7 +7,9 @@ import { personaStore, envRegistry, taskStore, safeParseJsonArray } from "@grack
 import type { PersonaResolveInput, OrchestratorContextInput } from "@grackle-ai/prompt";
 
 /** Convert a database PersonaRow to a PersonaResolveInput for prompt resolution. */
-export function toPersonaResolveInput(row: PersonaRow | undefined): PersonaResolveInput | undefined {
+export function toPersonaResolveInput(
+  row: PersonaRow | undefined,
+): PersonaResolveInput | undefined {
   if (!row) {
     return undefined;
   }

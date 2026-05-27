@@ -1,7 +1,5 @@
 import { test, expect } from "./fixtures.js";
-import {
-  goToEnvironments,
-} from "./helpers.js";
+import { goToEnvironments } from "./helpers.js";
 
 /**
  * Navigate to the environment detail page for the first environment.
@@ -39,7 +37,9 @@ test.describe("Environment Detail Page — Lifecycle Actions", { tag: ["@environ
     await navigateToEnvDetailPage(appPage);
   });
 
-  test("environment detail page shows lifecycle buttons for connected environment", async ({ appPage }) => {
+  test("environment detail page shows lifecycle buttons for connected environment", async ({
+    appPage,
+  }) => {
     const page = appPage;
 
     // For a connected environment, "Stop" and "Delete" should be visible on the detail page
@@ -74,7 +74,10 @@ test.describe("Environment Detail Page — Lifecycle Actions", { tag: ["@environ
 });
 
 test.describe("Environment Lifecycle — Server Events", { tag: ["@environment"] }, () => {
-  test("stop_environment changes status to disconnected", async ({ appPage, grackle: { client } }) => {
+  test("stop_environment changes status to disconnected", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     // Navigate to environment detail page
@@ -93,7 +96,10 @@ test.describe("Environment Lifecycle — Server Events", { tag: ["@environment"]
     await reprovisionTestLocal(page);
   });
 
-  test("provision_environment connects a disconnected environment", async ({ appPage, grackle: { client } }) => {
+  test("provision_environment connects a disconnected environment", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     // Navigate to environment detail page
@@ -112,7 +118,10 @@ test.describe("Environment Lifecycle — Server Events", { tag: ["@environment"]
     await expect(page.locator("button", { hasText: "Stop" })).toBeVisible({ timeout: 15_000 });
   });
 
-  test("provision_progress messages update UI during provisioning", async ({ appPage, grackle: { client } }) => {
+  test("provision_progress messages update UI during provisioning", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     // Navigate to environment detail page
@@ -131,7 +140,10 @@ test.describe("Environment Lifecycle — Server Events", { tag: ["@environment"]
     await expect(page.locator("button", { hasText: "Stop" })).toBeVisible({ timeout: 15_000 });
   });
 
-  test("remove_environment removes the environment from the nav", async ({ appPage, grackle: { client } }) => {
+  test("remove_environment removes the environment from the nav", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     await goToEnvironments(page);
@@ -158,7 +170,10 @@ test.describe("Environment Lifecycle — Server Events", { tag: ["@environment"]
     await expect(navItems).toHaveCount(1, { timeout: 5_000 });
   });
 
-  test("auto-provision on spawn when environment is disconnected", async ({ appPage, grackle: { client } }) => {
+  test("auto-provision on spawn when environment is disconnected", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     // Navigate to environment detail page

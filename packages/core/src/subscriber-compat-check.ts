@@ -11,8 +11,14 @@
  * @module
  */
 
-import type { PluginContext as SdkContext, Disposable as SdkDisposable } from "@grackle-ai/plugin-sdk";
-import type { PluginContext as CoreContext, Disposable as CoreDisposable } from "./subscriber-types.js";
+import type {
+  PluginContext as SdkContext,
+  Disposable as SdkDisposable,
+} from "@grackle-ai/plugin-sdk";
+import type {
+  PluginContext as CoreContext,
+  Disposable as CoreDisposable,
+} from "./subscriber-types.js";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- compile-time assertion only
 type AssertContextCompat = SdkContext extends CoreContext ? true : never;

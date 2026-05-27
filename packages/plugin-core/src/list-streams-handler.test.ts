@@ -118,7 +118,9 @@ describe("listStreams", () => {
     const filtered = await listStreams(create(grackle.ListStreamsRequestSchema, {}));
     expect(filtered.streams.map((s) => s.name)).toEqual(["user-channel"]);
 
-    const all = await listStreams(create(grackle.ListStreamsRequestSchema, { includeInternal: true }));
+    const all = await listStreams(
+      create(grackle.ListStreamsRequestSchema, { includeInternal: true }),
+    );
     expect(all.streams.map((s) => s.name).sort()).toEqual([
       "lifecycle:guid-1",
       "pipe:guid-2",

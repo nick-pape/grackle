@@ -26,12 +26,16 @@ beforeEach(() => {
 describe("useDockerContainers", () => {
   it("populates containers from the RPC result", async () => {
     mockClient.listDockerContainers.mockResolvedValue({
-      containers: [{ id: "abc", name: "demo-ext", image: "node:22", state: "running", status: "Up 1m" }],
+      containers: [
+        { id: "abc", name: "demo-ext", image: "node:22", state: "running", status: "Up 1m" },
+      ],
       error: "",
     });
 
     const { result } = renderHook(() => useDockerContainers());
-    await act(async () => { await result.current.listDockerContainers(); });
+    await act(async () => {
+      await result.current.listDockerContainers();
+    });
 
     expect(result.current.dockerContainers).toHaveLength(1);
     expect(result.current.dockerContainers[0]!.name).toBe("demo-ext");
@@ -45,7 +49,9 @@ describe("useDockerContainers", () => {
     });
 
     const { result } = renderHook(() => useDockerContainers());
-    await act(async () => { await result.current.listDockerContainers(); });
+    await act(async () => {
+      await result.current.listDockerContainers();
+    });
 
     expect(result.current.dockerContainers).toHaveLength(0);
     expect(result.current.dockerContainersError).toContain("command not found");
@@ -55,7 +61,9 @@ describe("useDockerContainers", () => {
     mockClient.listDockerContainers.mockRejectedValue(new Error("network down"));
 
     const { result } = renderHook(() => useDockerContainers());
-    await act(async () => { await result.current.listDockerContainers(); });
+    await act(async () => {
+      await result.current.listDockerContainers();
+    });
 
     expect(result.current.dockerContainers).toEqual([]);
     expect(result.current.dockerContainersError).toContain("network down");

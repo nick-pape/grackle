@@ -32,7 +32,9 @@ export function MetadataCard({ tool, args }: ToolCardProps): JSX.Element {
 
   return (
     <div className={styles.metadata} data-testid="tool-card-metadata">
-      <span className={styles.metadataPrefix}><CornerDownRight size={ICON_SM} /></span>
+      <span className={styles.metadataPrefix}>
+        <CornerDownRight size={ICON_SM} />
+      </span>
       {summary}
     </div>
   );

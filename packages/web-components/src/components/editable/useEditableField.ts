@@ -119,27 +119,33 @@ export function useEditableField(options: UseEditableFieldOptions): UseEditableF
     setError("");
   }, [fieldId, value, onActivate]);
 
-  const handleBlur = useCallback((event: React.FocusEvent) => {
-    if (ignoreInitialBlurRef.current) {
-      ignoreInitialBlurRef.current = false;
-      return;
-    }
-    if (
-      event.relatedTarget instanceof HTMLElement &&
-      event.relatedTarget.dataset.editAction === fieldId
-    ) {
-      return;
-    }
-    save();
-  }, [fieldId, save]);
-
-  const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
-    if (event.key === "Escape") {
-      cancelEdit();
-    } else if (event.key === "Enter" && enterToSave) {
+  const handleBlur = useCallback(
+    (event: React.FocusEvent) => {
+      if (ignoreInitialBlurRef.current) {
+        ignoreInitialBlurRef.current = false;
+        return;
+      }
+      if (
+        event.relatedTarget instanceof HTMLElement &&
+        event.relatedTarget.dataset.editAction === fieldId
+      ) {
+        return;
+      }
       save();
-    }
-  }, [cancelEdit, enterToSave, save]);
+    },
+    [fieldId, save],
+  );
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        cancelEdit();
+      } else if (event.key === "Enter" && enterToSave) {
+        save();
+      }
+    },
+    [cancelEdit, enterToSave, save],
+  );
 
   const isDirty = (() => {
     if (!isEditing) return false;

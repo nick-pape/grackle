@@ -32,7 +32,11 @@ vi.mock("@grackle-ai/plugin-core", () => ({
     })),
   })),
   // Phases
-  createOrphanPhase: vi.fn((deps: unknown) => ({ name: "orphan-reparent", execute: async () => {}, _deps: deps })),
+  createOrphanPhase: vi.fn((deps: unknown) => ({
+    name: "orphan-reparent",
+    execute: async () => {},
+    _deps: deps,
+  })),
   // Subscribers
   createSigchldSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
   createEscalationAutoSubscriber: vi.fn(() => ({ dispose: vi.fn() })),

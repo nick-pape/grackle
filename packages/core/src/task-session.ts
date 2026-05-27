@@ -11,17 +11,26 @@
 
 import { create } from "@bufbuild/protobuf";
 import { powerline } from "@grackle-ai/common";
-import { envRegistry, sessionStore, workspaceStore, taskStore, personaStore, settingsStore, grackleHome } from "@grackle-ai/database";
+import {
+  envRegistry,
+  sessionStore,
+  workspaceStore,
+  taskStore,
+  personaStore,
+  settingsStore,
+  grackleHome,
+} from "@grackle-ai/database";
 import * as adapterManager from "./adapter-manager.js";
 import * as tokenPush from "./token-push.js";
 import { v4 as uuid } from "uuid";
 import { join } from "node:path";
+import { LOGS_DIR, DEFAULT_MCP_PORT, ROOT_TASK_ID } from "@grackle-ai/common";
 import {
-  LOGS_DIR,
-  DEFAULT_MCP_PORT,
-  ROOT_TASK_ID,
-} from "@grackle-ai/common";
-import { resolvePersona, buildOrchestratorContext, SystemPromptBuilder, buildTaskPrompt } from "@grackle-ai/prompt";
+  resolvePersona,
+  buildOrchestratorContext,
+  SystemPromptBuilder,
+  buildTaskPrompt,
+} from "@grackle-ai/prompt";
 import { logger } from "./logger.js";
 import { processEventStream } from "./event-processor.js";
 import { personaMcpServersToJson } from "./grpc-mcp-config.js";
@@ -46,19 +55,13 @@ export async function startTaskSession(
 ): Promise<string | undefined> {
   const workspace = task.workspaceId ? workspaceStore.getWorkspace(task.workspaceId) : undefined;
   if (task.workspaceId && !workspace) {
-    logger.warn(
-      { taskId: task.id },
-      "startTaskSession failed: workspace not found",
-    );
+    logger.warn({ taskId: task.id }, "startTaskSession failed: workspace not found");
     return `Workspace not found: ${task.workspaceId}`;
   }
 
   const environmentId = options?.environmentId;
   if (!environmentId) {
-    logger.warn(
-      { taskId: task.id },
-      "startTaskSession failed: environmentId not provided",
-    );
+    logger.warn({ taskId: task.id }, "startTaskSession failed: environmentId not provided");
     return "Environment ID is required to start a task session";
   }
   const env = envRegistry.getEnvironment(environmentId);
@@ -97,40 +100,59 @@ export async function startTaskSession(
   // For the root/System task, use the user's chat message (passed as notes)
   // as the initial prompt instead of the task title "System".
   // For regular tasks, build the prompt from title + description.
-  const taskPrompt = freshTask.id === ROOT_TASK_ID
-    ? (options.notes || "")
-    : buildTaskPrompt(freshTask.title, freshTask.description, options.notes);
+  const taskPrompt =
+    freshTask.id === ROOT_TASK_ID
+      ? options.notes || ""
+      : buildTaskPrompt(freshTask.title, freshTask.description, options.notes);
 
   const isOrchestrator = freshTask.canDecompose && freshTask.depth <= 1 && !!freshTask.workspaceId;
   const orchestratorCtx = isOrchestrator
-    ? buildOrchestratorContext(buildOrchestratorContextInput(
-      freshTask.workspaceId!,
-      workspace ? { name: workspace.name, description: workspace.description, repoUrl: workspace.repoUrl } : undefined,
-    ))
+    ? buildOrchestratorContext(
+        buildOrchestratorContextInput(
+          freshTask.workspaceId!,
+          workspace
+            ? {
+                name: workspace.name,
+                description: workspace.description,
+                repoUrl: workspace.repoUrl,
+              }
+            : undefined,
+        ),
+      )
     : undefined;
 
   // Knowledge retrieval loop (#1259): when the knowledge plugin is active and
   // this task opted in, gather the "Related prior work" PUSH block + enable the
   // PULL search guidance. Best-effort (never blocks spawn); skips root/no-workspace.
-  const knowledgeOn = hasSpawnContextProviders()
-    && freshTask.injectKnowledge
-    && !!freshTask.workspaceId
-    && freshTask.id !== ROOT_TASK_ID;
+  const knowledgeOn =
+    hasSpawnContextProviders() &&
+    freshTask.injectKnowledge &&
+    !!freshTask.workspaceId &&
+    freshTask.id !== ROOT_TASK_ID;
   const relatedPriorWork = knowledgeOn
-    ? (await runSpawnContextProviders({
-        taskId: freshTask.id,
-        title: freshTask.title,
-        description: freshTask.description,
-        workspaceId: freshTask.workspaceId ?? "",
-        isOrchestrator,
-        injectKnowledge: freshTask.injectKnowledge,
-      })).join("\n\n") || undefined
+    ? (
+        await runSpawnContextProviders({
+          taskId: freshTask.id,
+          title: freshTask.title,
+          description: freshTask.description,
+          workspaceId: freshTask.workspaceId ?? "",
+          isOrchestrator,
+          injectKnowledge: freshTask.injectKnowledge,
+        })
+      ).join("\n\n") || undefined
     : undefined;
 
   const systemContext = new SystemPromptBuilder({
-    task: { title: freshTask.title, description: freshTask.description, notes: freshTask.id === ROOT_TASK_ID ? "" : (options.notes || "") },
-    taskId: freshTask.id, canDecompose: freshTask.canDecompose, personaPrompt: systemPrompt,
-    taskDepth: freshTask.depth, ...orchestratorCtx,
+    task: {
+      title: freshTask.title,
+      description: freshTask.description,
+      notes: freshTask.id === ROOT_TASK_ID ? "" : options.notes || "",
+    },
+    taskId: freshTask.id,
+    canDecompose: freshTask.canDecompose,
+    personaPrompt: systemPrompt,
+    taskDepth: freshTask.depth,
+    ...orchestratorCtx,
     ...(orchestratorCtx && { triggerMode: "fresh" as const }),
     relatedPriorWork,
     knowledgeGuidance: knowledgeOn,
@@ -155,8 +177,11 @@ export async function startTaskSession(
 
   // Supply credentials on demand for this runtime, just before spawn (AHP HR6).
   // For local envs, skip file tokens — the PowerLine is on the same machine.
-  await tokenPush.authenticateForRuntime(environmentId, runtime,
-    env.adapterType === "local" ? { excludeFileTokens: true } : undefined);
+  await tokenPush.authenticateForRuntime(
+    environmentId,
+    runtime,
+    env.adapterType === "local" ? { excludeFileTokens: true } : undefined,
+  );
 
   const mcpServersJson = personaMcpServersToJson(resolved.mcpServers, resolved.personaId);
 
@@ -165,7 +190,12 @@ export async function startTaskSession(
   const mcpDialHost = toDialableHost(process.env.GRACKLE_HOST || "127.0.0.1");
   const mcpUrl = `http://${mcpDialHost}:${mcpPort}/mcp`;
   const mcpToken = createScopedToken(
-    { sub: freshTask.id, pid: freshTask.workspaceId || "", per: resolved.personaId, sid: sessionId },
+    {
+      sub: freshTask.id,
+      pid: freshTask.workspaceId || "",
+      per: resolved.personaId,
+      sid: sessionId,
+    },
     loadOrCreateApiKey(grackleHome),
   );
 
@@ -179,7 +209,10 @@ export async function startTaskSession(
     maxTurns,
     branch: freshTask.branch,
     workingDirectory: freshTask.branch
-      ? (workspace?.workingDirectory || process.env.GRACKLE_WORKING_DIRECTORY || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
+      ? workspace?.workingDirectory ||
+        process.env.GRACKLE_WORKING_DIRECTORY ||
+        process.env.GRACKLE_WORKTREE_BASE ||
+        "/workspace"
       : "",
     useWorktrees,
     systemContext,

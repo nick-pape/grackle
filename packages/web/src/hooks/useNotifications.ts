@@ -49,9 +49,11 @@ export function useNotifications(): {
     // Request permission on first escalation event (user gesture proxy — the
     // event is triggered by agent activity, not page load)
     if (permissionRef.current === "default") {
-      Notification.requestPermission().then((perm) => {
-        permissionRef.current = perm;
-      }).catch(() => {});
+      Notification.requestPermission()
+        .then((perm) => {
+          permissionRef.current = perm;
+        })
+        .catch(() => {});
       return true;
     }
 

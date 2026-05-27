@@ -28,11 +28,29 @@ export const CONNECT_GRACE_PERIOD_MS: number = RECONNECT_DELAY_MS;
 /** Options for the event stream hook. */
 export interface UseEventStreamOptions {
   /** Called for each session event (agent output, status changes). */
-  onSessionEvent: (event: { sessionId: string; type: number; timestamp: string; content: string; raw: string; toolCallId: string }) => void;
+  onSessionEvent: (event: {
+    sessionId: string;
+    type: number;
+    timestamp: string;
+    content: string;
+    raw: string;
+    toolCallId: string;
+  }) => void;
   /** Called for each domain event (task.created, environment.changed, etc.). */
-  onDomainEvent: (event: { id: string; type: string; timestamp: string; payloadJson: string }) => void;
+  onDomainEvent: (event: {
+    id: string;
+    type: string;
+    timestamp: string;
+    payloadJson: string;
+  }) => void;
   /** Called for each live IPC stream message (RFC #1264 Phase 2). */
-  onStreamMessage?: (event: { streamId: string; seq: string; senderId: string; content: string; timestamp: string }) => void;
+  onStreamMessage?: (event: {
+    streamId: string;
+    seq: string;
+    senderId: string;
+    content: string;
+    timestamp: string;
+  }) => void;
   /** Called immediately after a new stream is created (including reconnects), before any events are received. */
   onConnect?: () => void | Promise<void>;
   /** Called when the stream disconnects. */

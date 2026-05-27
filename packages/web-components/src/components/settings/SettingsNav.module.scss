@@ -1,4 +1,4 @@
-@use '../../styles/mixins' as *;
+@use "../../styles/mixins" as *;
 
 .nav {
   display: flex;
@@ -35,9 +35,10 @@
   font-size: var(--font-size-sm);
   font-family: var(--font-ui);
   cursor: pointer;
-  transition: background var(--transition-fast),
-              color var(--transition-fast),
-              border-color var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast);
   text-align: left;
   width: 100%;
 

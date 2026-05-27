@@ -129,7 +129,9 @@ export function AgentToolCard({ tool, args, result, isError }: ToolCardProps): J
     >
       {/* Header row */}
       <div className={styles.header}>
-        <span className={styles.icon} style={{ color: "var(--accent-teal, #2dd4bf)" }}>&#9654;</span>
+        <span className={styles.icon} style={{ color: "var(--accent-teal, #2dd4bf)" }}>
+          &#9654;
+        </span>
         <span className={styles.toolName} style={{ color: "var(--accent-teal, #2dd4bf)" }}>
           {headerLabel}
         </span>
@@ -148,7 +150,11 @@ export function AgentToolCard({ tool, args, result, isError }: ToolCardProps): J
 
         {info.isBackground && (
           <span className={agentStyles.backgroundBadge} data-testid="tool-card-agent-background">
-            <span className={inProgress ? agentStyles.backgroundDotPulsing : agentStyles.backgroundDot}>&#9679;</span>
+            <span
+              className={inProgress ? agentStyles.backgroundDotPulsing : agentStyles.backgroundDot}
+            >
+              &#9679;
+            </span>
             BG
           </span>
         )}
@@ -168,9 +174,10 @@ export function AgentToolCard({ tool, args, result, isError }: ToolCardProps): J
         <span className={styles.spacer} />
 
         {inProgress && !info.isBackground && (
-          <span className={styles.exitPending} data-testid="tool-card-pending">&#9679;</span>
+          <span className={styles.exitPending} data-testid="tool-card-pending">
+            &#9679;
+          </span>
         )}
-
       </div>
 
       {/* Description */}
@@ -183,11 +190,15 @@ export function AgentToolCard({ tool, args, result, isError }: ToolCardProps): J
       {/* read_agent status line */}
       {parsedPoll && (
         <div className={agentStyles.statusLine} data-testid="tool-card-agent-status">
-          <span className={
-            parsedPoll.status === "completed" ? agentStyles.statusCompleted
-              : parsedPoll.status === "running" ? agentStyles.statusRunning
-                : agentStyles.statusError
-          }>
+          <span
+            className={
+              parsedPoll.status === "completed"
+                ? agentStyles.statusCompleted
+                : parsedPoll.status === "running"
+                  ? agentStyles.statusRunning
+                  : agentStyles.statusError
+            }
+          >
             {parsedPoll.status}
           </span>
           {parsedPoll.metadata && <span>{parsedPoll.metadata}</span>}
@@ -200,11 +211,15 @@ export function AgentToolCard({ tool, args, result, isError }: ToolCardProps): J
           <button
             type="button"
             className={agentStyles.promptToggle}
-            onClick={() => { setPromptExpanded((v) => !v); }}
+            onClick={() => {
+              setPromptExpanded((v) => !v);
+            }}
             aria-expanded={promptExpanded}
             data-testid="tool-card-prompt-toggle"
           >
-            <span className={`${styles.chevron} ${promptExpanded ? styles.chevronExpanded : ""}`}>&#9656;</span>
+            <span className={`${styles.chevron} ${promptExpanded ? styles.chevronExpanded : ""}`}>
+              &#9656;
+            </span>
             prompt
           </button>
           {promptExpanded && (
@@ -232,11 +247,15 @@ export function AgentToolCard({ tool, args, result, isError }: ToolCardProps): J
             <button
               type="button"
               className={styles.bodyToggle}
-              onClick={() => { setExpanded((v) => !v); }}
+              onClick={() => {
+                setExpanded((v) => !v);
+              }}
               aria-expanded={expanded}
               data-testid="tool-card-toggle"
             >
-              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}>&#9656;</span>
+              <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}>
+                &#9656;
+              </span>
               {expanded ? "collapse" : `${resultLines.length - PREVIEW_LINES} more lines`}
             </button>
           )}

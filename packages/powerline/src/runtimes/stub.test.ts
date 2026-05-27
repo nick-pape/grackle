@@ -71,7 +71,12 @@ describe("StubRuntime", () => {
           setTimeout(() => session.sendInput("user reply"), 0);
         }
         // When we see the second waiting_input (after reply), kill to finish
-        if (event.type === "status" && event.content === "waiting_input" && inputSent && events.filter((e) => e.type === "status" && e.content === "waiting_input").length === 2) {
+        if (
+          event.type === "status" &&
+          event.content === "waiting_input" &&
+          inputSent &&
+          events.filter((e) => e.type === "status" && e.content === "waiting_input").length === 2
+        ) {
           session.kill();
           break;
         }
@@ -85,17 +90,17 @@ describe("StubRuntime", () => {
     expect(types).toEqual([
       "system",
       "runtime_session_id",
-      "turn_started",   // initial turn (AHP HR2)
+      "turn_started", // initial turn (AHP HR2)
       "text",
       "tool_use",
       "tool_result",
-      "turn_complete",  // initial turn (AHP HR2)
-      "status",     // waiting_input
-      "status",     // running
-      "turn_started",   // follow-up turn (AHP HR2)
-      "text",       // user reply echo
-      "turn_complete",  // follow-up turn (AHP HR2)
-      "status",     // waiting_input (stub goes idle, not completed)
+      "turn_complete", // initial turn (AHP HR2)
+      "status", // waiting_input
+      "status", // running
+      "turn_started", // follow-up turn (AHP HR2)
+      "text", // user reply echo
+      "turn_complete", // follow-up turn (AHP HR2)
+      "status", // waiting_input (stub goes idle, not completed)
     ]);
 
     // Verify content
@@ -395,10 +400,10 @@ describe("StubRuntime scenario mode", () => {
     expect(types).toEqual([
       "system",
       "runtime_session_id",
-      "status",     // waiting_input
-      "status",     // running
-      "text",       // echo
-      "status",     // completed
+      "status", // waiting_input
+      "status", // running
+      "text", // echo
+      "status", // completed
     ]);
     expect(events[4].content).toBe("You said: hello");
     expect(events[5].content).toBe("completed");
@@ -406,10 +411,7 @@ describe("StubRuntime scenario mode", () => {
 
   it("on_input 'fail' causes failure on input", async () => {
     const session = spawnScenario({
-      steps: [
-        { on_input: "fail" },
-        { idle: true },
-      ],
+      steps: [{ on_input: "fail" }, { idle: true }],
     });
 
     const events: AgentEvent[] = [];
@@ -431,11 +433,7 @@ describe("StubRuntime scenario mode", () => {
 
   it("on_input 'next' silently advances past idle", async () => {
     const session = spawnScenario({
-      steps: [
-        { on_input: "next" },
-        { idle: true },
-        { emit: "text", content: "after idle" },
-      ],
+      steps: [{ on_input: "next" }, { idle: true }, { emit: "text", content: "after idle" }],
     });
 
     const events: AgentEvent[] = [];
@@ -458,11 +456,7 @@ describe("StubRuntime scenario mode", () => {
 
   it("on_input 'ignore' silently continues past idle without echo", async () => {
     const session = spawnScenario({
-      steps: [
-        { on_input: "ignore" },
-        { idle: true },
-        { emit: "text", content: "continued" },
-      ],
+      steps: [{ on_input: "ignore" }, { idle: true }, { emit: "text", content: "continued" }],
     });
 
     const events: AgentEvent[] = [];
@@ -484,10 +478,7 @@ describe("StubRuntime scenario mode", () => {
 
   it("on_input_match routes different inputs to different actions", async () => {
     const session = spawnScenario({
-      steps: [
-        { on_input_match: { fail: "fail", continue: "next", "*": "echo" } },
-        { idle: true },
-      ],
+      steps: [{ on_input_match: { fail: "fail", continue: "next", "*": "echo" } }, { idle: true }],
     });
 
     // Test with "continue" — should use "next" action
@@ -511,10 +502,7 @@ describe("StubRuntime scenario mode", () => {
 
   it("on_input_match with '*' fallback echoes unmatched input", async () => {
     const session = spawnScenario({
-      steps: [
-        { on_input_match: { fail: "fail", "*": "echo" } },
-        { idle: true },
-      ],
+      steps: [{ on_input_match: { fail: "fail", "*": "echo" } }, { idle: true }],
     });
 
     const events: AgentEvent[] = [];
@@ -667,12 +655,7 @@ describe("StubRuntime scenario mode", () => {
 
   it("multiple idle steps with changing input handlers", async () => {
     const session = spawnScenario({
-      steps: [
-        { on_input: "next" },
-        { idle: true },
-        { on_input: "echo" },
-        { idle: true },
-      ],
+      steps: [{ on_input: "next" }, { idle: true }, { on_input: "echo" }, { idle: true }],
     });
 
     let idleCount = 0;

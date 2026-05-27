@@ -43,17 +43,19 @@ function assertBodyWithinCap(body: string): void {
 /** Insert a new component definition. */
 export function registerComponent(fields: RegisterComponentFields): void {
   assertBodyWithinCap(fields.body);
-  db.insert(components).values({
-    id: fields.id,
-    workspaceId: fields.workspaceId,
-    name: fields.name,
-    description: fields.description ?? "",
-    rendererKind: fields.rendererKind ?? "grackle-react",
-    body: fields.body,
-    propsSchema: fields.propsSchema ?? "",
-    ownerTaskId: fields.ownerTaskId ?? "",
-    ownerSessionId: fields.ownerSessionId ?? "",
-  }).run();
+  db.insert(components)
+    .values({
+      id: fields.id,
+      workspaceId: fields.workspaceId,
+      name: fields.name,
+      description: fields.description ?? "",
+      rendererKind: fields.rendererKind ?? "grackle-react",
+      body: fields.body,
+      propsSchema: fields.propsSchema ?? "",
+      ownerTaskId: fields.ownerTaskId ?? "",
+      ownerSessionId: fields.ownerSessionId ?? "",
+    })
+    .run();
 }
 
 /**
@@ -91,7 +93,9 @@ export function getComponent(id: string): ComponentRow | undefined {
 
 /** Retrieve a component by name within a workspace (most recent wins on duplicate names). */
 export function findComponentByName(workspaceId: string, name: string): ComponentRow | undefined {
-  return db.select().from(components)
+  return db
+    .select()
+    .from(components)
     .where(and(eq(components.workspaceId, workspaceId), eq(components.name, name)))
     .orderBy(desc(components.createdAt))
     .get();
@@ -99,7 +103,9 @@ export function findComponentByName(workspaceId: string, name: string): Componen
 
 /** List all components registered in a workspace, most recently updated first. */
 export function listComponents(workspaceId: string): ComponentRow[] {
-  return db.select().from(components)
+  return db
+    .select()
+    .from(components)
     .where(eq(components.workspaceId, workspaceId))
     .orderBy(desc(components.updatedAt))
     .all();

@@ -31,6 +31,7 @@ The root `.env.example` documents every supported environment variable with defa
 **All feature work must happen in a worktree**, not on the main working copy. Use Claude Code's built-in `EnterWorktree` tool to create an isolated worktree — it handles cwd, branch creation, and cleanup automatically.
 
 **Starting work:**
+
 1. Call `EnterWorktree` with a descriptive name (e.g., `EnterWorktree({ name: "123-my-feature" })`)
 2. This creates `.claude/worktrees/123-my-feature/` with branch `worktree-123-my-feature` and switches your cwd there
 3. Rename the branch to match our naming convention: `git branch -m <github-username>/123-my-feature`
@@ -38,10 +39,12 @@ The root `.env.example` documents every supported environment variable with defa
 5. Do all your work — cwd stays in the worktree, hooks fire correctly
 
 **Finishing work:**
+
 - After the PR is merged: call `ExitWorktree({ action: "remove" })` to clean up
 - To pause and come back later: call `ExitWorktree({ action: "keep" })`
 
 **Rules:**
+
 - Never check out a feature branch on the main worktree — always use `EnterWorktree`
 - Rename the branch immediately after entering (`git branch -m <github-username>/<issue>-<feature>`) to match our branch naming convention
 - Each worktree needs its own `rush install && rush build` (node_modules are per-worktree)
@@ -60,6 +63,7 @@ The root `.env.example` documents every supported environment variable with defa
 - **Never disable or skip failing tests to make CI pass.** If tests fail, investigate the root cause and fix the actual bug. Do not use `test.skip`, `test.fixme`, or equivalent to silence failures — the tests exist for a reason. If tests fail on your branch but pass on main, your changes broke them.
 
 **Run `rush install` frequently.** Always run it:
+
 - Before starting work (ensures dependencies are linked)
 - After switching branches or merging main (lockfile may have changed)
 - After changing any `package.json` (then `rush update` if install tells you to)
@@ -79,7 +83,7 @@ npx buf generate
 ```
 
 - **Treat "SUCCESS WITH WARNINGS" as a build failure.** CI runs `rush build` with warnings-as-errors. If your local `rush build` reports `Operations succeeded with warnings`, fix every warning before pushing — it **will** fail CI. Common culprits: missing type annotations (`@rushstack/typedef-var`), `null` instead of `undefined` (`@rushstack/no-new-null`), unused imports, and Vite chunk size warnings.
-- **Do not introduce new bare `tsc`, `npx`, or package-local script usages for builds/tests/tooling.** All *new* build, test, and tooling commands MUST go through Rush (`rush build`, `rush install`, `rushx`) or Heft (`heft build`, `heft test`). Bare commands like `npx tsc`, `npx vitest`, or `node_modules/.bin/...` bypass Rush's orchestration, miss dependency resolution, and may use wrong tool versions. The only exceptions are explicitly documented ones in this repo (e.g., `npx buf generate` for proto codegen and Storybook commands documented below).
+- **Do not introduce new bare `tsc`, `npx`, or package-local script usages for builds/tests/tooling.** All _new_ build, test, and tooling commands MUST go through Rush (`rush build`, `rush install`, `rushx`) or Heft (`heft build`, `heft test`). Bare commands like `npx tsc`, `npx vitest`, or `node_modules/.bin/...` bypass Rush's orchestration, miss dependency resolution, and may use wrong tool versions. The only exceptions are explicitly documented ones in this repo (e.g., `npx buf generate` for proto codegen and Storybook commands documented below).
 - **Rebuild before manual testing**: After making code changes to any package, you must run `rush build -t @grackle-ai/<package>` before starting or restarting the server. The server runs compiled JS from `dist/`, not TypeScript source files.
 - **CLI uses `GRACKLE_URL`, not `GRACKLE_PORT`**: The CLI client reads `GRACKLE_URL` (e.g., `http://127.0.0.1:7500`) to find the gRPC server. Setting `GRACKLE_PORT` only affects the server's listen port, not the CLI's connection target.
 - **Playwright runs in parallel**: Each worker spawns its own isolated Grackle stack (4 ports + GRACKLE_HOME). Worker count defaults to `min(4, cpuCount/2)` locally, 2 in CI. Override via `E2E_WORKERS` env var.
@@ -100,15 +104,18 @@ npx concurrently -k -s first \
 ```
 
 Storybook is integrated into the Heft build pipeline via `@grackle-ai/heft-web-test-plugin`:
+
 - **`rush build`** runs `storybook build` as a heft build task (produces `storybook-static/`)
 - **`rush test`** runs both vitest and `test-storybook` via heft test phase
 - No separate CI step needed — it's part of the standard build/test flow
 
 **When to use Storybook vs E2E:**
+
 - **Storybook:** Pure component rendering, form validation, keyboard interaction, CSS checks, toggle behavior — anything that doesn't need the server
 - **E2E (Playwright):** Flows requiring real WebSocket/gRPC (session spawning, task lifecycle, event streaming, server-side validation)
 
 **Writing stories:**
+
 - Place `.stories.tsx` next to the component file
 - Import `expect, fn, userEvent` from `"@storybook/test"`
 - Import mock data from `../../test-utils/storybook-helpers.js`
@@ -131,6 +138,7 @@ Storybook is integrated into the Heft build pipeline via `@grackle-ai/heft-web-t
 ## Project Structure
 
 Rush monorepo with packages under `packages/`:
+
 - `@grackle-ai/adapter-sdk` — SDK for building environment adapters (interfaces, bootstrap, tunnel helpers)
 - `@grackle-ai/common` — Proto definitions, generated code, shared types
 - `@grackle-ai/powerline` — gRPC PowerLine server (ConnectRPC on HTTP/2)
@@ -146,7 +154,19 @@ Rush monorepo with packages under `packages/`:
 
 ## Code Style
 
+### Formatting (Prettier)
+
+Prettier is the canonical formatter. Config lives at `.prettierrc.json`; ignore rules at `.prettierignore`. Prettier is provisioned by Rush via the `format` autoinstaller (`common/autoinstallers/format/`) — no per-package install.
+
+- `rush format` — format files changed vs `origin/main` (fast; default).
+- `rush format --all` — format the whole repo.
+- `rush format:check [--all]` — same scopes, check-only. CI runs `format:check` on PR-changed files; the build fails if anything is unformatted.
+- **Pre-commit hook** (`common/git-hooks/pre-commit`, installed by `rush install`) auto-formats staged files and re-stages them. Use `git commit --no-verify` only in genuine emergencies.
+- Both CLI and hook pass `--cache` (metadata strategy), so warm runs are sub-second.
+- The initial mass-format commit's SHA is recorded in `.git-blame-ignore-revs` so `git blame` skips it.
+
 ### TypeScript
+
 - **TSDoc**: All exported functions, interfaces, types, and classes must have TSDoc comments
 - **No magic numbers**: Extract numeric constants (timeouts, retries, byte lengths) into named constants at module scope
 - **DRY**: Don't duplicate constants, types, or logic across packages. If a value is defined in `@grackle-ai/common` (or another shared package), import it — never copy it with a "mirrors X" comment. Large blocks of near-identical code should be extracted into shared helpers.
@@ -156,17 +176,20 @@ Rush monorepo with packages under `packages/`:
 - **No side effects on import**: Entry points (index.ts) wrap initialization in a `main()` function
 
 ### Proto
+
 - Message names: full English (e.g., `EnvironmentId`, `AddEnvironmentRequest`)
 - Enums: use proto enums with `UPPER_SNAKE_CASE` values prefixed by type name
 - Services: `Grackle` and `GracklePowerLine` (no `*Service` suffix)
 - Generated code: `import { grackle, powerline } from "@grackle-ai/common"`
 
 ### Logging
+
 - Server/PowerLine: use `pino` structured logger (`import { logger } from "./logger.js"`)
 - CLI: use `chalk` for colored output, `console.log` for user-facing messages
 - Never use `console.log` in server or PowerLine packages
 
 ### Security
+
 - Validate file paths to prevent path traversal (token-writer, file operations)
 - Use `ConnectError` with proper gRPC status codes (e.g., `Code.Unauthenticated`)
 - Constant-time comparison for API key verification
@@ -180,11 +203,13 @@ Rush monorepo with packages under `packages/`:
 - **Domain hooks must implement `DomainHook`.** Every `use*.ts` hook in `packages/web/src/hooks/` that manages server-side state must export a `domainHook: DomainHook` property (from `domainHook.ts`) and must also be manually added to the `domainHooks` array in `useGrackleSocket.ts`. This ensures reconnect, disconnect, and event routing are wired automatically. The compile-time type assertions in `domainHook.test.ts` only verify that each hook exposes a correctly typed `domainHook` property; they do **not** enforce that the hook has been registered in the `domainHooks` array.
 
 ### Dependencies
+
 - Cross-package deps use `"workspace:*"` (pnpm rewrites to real versions at publish time)
 - `@bufbuild/protobuf` must be a direct dependency in any package using `create()`
 - Pin specific versions for runtime SDKs (not `@latest`)
 
 ### Database
+
 - **Never access SQLite directly** — always go through the CLI (`grackle` commands)
 - If the CLI is missing a needed operation, add it to `@grackle-ai/cli` rather than using raw SQL
 
@@ -195,9 +220,11 @@ PRs that modify publishable packages need a change file. The `/create-pr` skill 
 - If `/create-pr` or CI indicates a lockstep change is required for `@grackle-ai/cli`, do not delete that generated change file just because the visible code changes are in `@grackle-ai/web`; `rush change --verify` can still require the lockstep main project change description for this repo's release policy.
 
 **Publishable packages** (lockstep versioning):
+
 - `@grackle-ai/adapter-sdk`, `@grackle-ai/adapter-local`, `@grackle-ai/adapter-ssh`, `@grackle-ai/adapter-codespace`, `@grackle-ai/adapter-docker`, `@grackle-ai/auth`, `@grackle-ai/cli`, `@grackle-ai/common`, `@grackle-ai/core`, `@grackle-ai/powerline`, `@grackle-ai/prompt`, `@grackle-ai/runtime-sdk`, `@grackle-ai/runtime-claude-code`, `@grackle-ai/runtime-copilot`, `@grackle-ai/runtime-codex`, `@grackle-ai/runtime-genaiscript`, `@grackle-ai/runtime-acp`, `@grackle-ai/server`, `@grackle-ai/web-server`
 
 **Not publishable** (never need change files):
+
 - `@grackle-ai/web`, `@grackle-ai/heft-rig`, `@grackle-ai/heft-buf-plugin`, `@grackle-ai/heft-playwright-plugin`, `@grackle-ai/heft-vite-plugin`
 
 ## PR Workflow
@@ -208,14 +235,15 @@ PRs that modify publishable packages need a change file. The `/create-pr` skill 
 
 ## Ports
 
-| Service | Port | Constant |
-|---------|------|----------|
-| PowerLine | 7433 | `DEFAULT_POWERLINE_PORT` |
-| Server gRPC | 7434 | `DEFAULT_SERVER_PORT` |
-| Web UI + WS | 3000 | `DEFAULT_WEB_PORT` |
-| MCP | 7435 | `DEFAULT_MCP_PORT` |
+| Service     | Port | Constant                 |
+| ----------- | ---- | ------------------------ |
+| PowerLine   | 7433 | `DEFAULT_POWERLINE_PORT` |
+| Server gRPC | 7434 | `DEFAULT_SERVER_PORT`    |
+| Web UI + WS | 3000 | `DEFAULT_WEB_PORT`       |
+| MCP         | 7435 | `DEFAULT_MCP_PORT`       |
 
 ### Multi-Session Safety
+
 Multiple Claude Code sessions may be running concurrently against the same repo. **Never kill server processes (node, grackle) unless you are certain they belong to your session.** Another agent may be using them.
 
 **Always use `/launch-grackle`** to start a test server. It guarantees free ports, an isolated database, and reports back the correct URLs. Never use the default ports (7434, 3000, 7435, 7433) or the user's `~/.grackle` database directly.

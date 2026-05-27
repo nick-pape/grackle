@@ -11,9 +11,24 @@ const mockEnvironments: Environment[] = [
 ];
 
 const mockSessions: Session[] = [
-  makeSession({ id: "sess-1", environmentId: "env-1", status: "running", prompt: "Refactor the authentication module and update tests" }),
-  makeSession({ id: "sess-2", environmentId: "env-2", status: "idle", prompt: "Fix the login redirect bug in the frontend" }),
-  makeSession({ id: "sess-3", environmentId: "env-3", status: "running", prompt: "Add dark mode support to the settings page" }),
+  makeSession({
+    id: "sess-1",
+    environmentId: "env-1",
+    status: "running",
+    prompt: "Refactor the authentication module and update tests",
+  }),
+  makeSession({
+    id: "sess-2",
+    environmentId: "env-2",
+    status: "idle",
+    prompt: "Fix the login redirect bug in the frontend",
+  }),
+  makeSession({
+    id: "sess-3",
+    environmentId: "env-3",
+    status: "running",
+    prompt: "Add dark mode support to the settings page",
+  }),
 ];
 
 const meta: Meta<typeof SessionPicker> = {
@@ -91,11 +106,26 @@ export const NoSessions: Story = {
 export const FilterInput: Story = {
   args: {
     sessions: [
-      makeSession({ id: "sess-a", environmentId: "env-1", status: "running", prompt: "Task alpha" }),
+      makeSession({
+        id: "sess-a",
+        environmentId: "env-1",
+        status: "running",
+        prompt: "Task alpha",
+      }),
       makeSession({ id: "sess-b", environmentId: "env-1", status: "idle", prompt: "Task beta" }),
-      makeSession({ id: "sess-c", environmentId: "env-2", status: "running", prompt: "Task gamma" }),
+      makeSession({
+        id: "sess-c",
+        environmentId: "env-2",
+        status: "running",
+        prompt: "Task gamma",
+      }),
       makeSession({ id: "sess-d", environmentId: "env-2", status: "idle", prompt: "Task delta" }),
-      makeSession({ id: "sess-e", environmentId: "env-3", status: "running", prompt: "Task epsilon" }),
+      makeSession({
+        id: "sess-e",
+        environmentId: "env-3",
+        status: "running",
+        prompt: "Task epsilon",
+      }),
     ],
   },
   play: async ({ canvas }) => {
@@ -117,11 +147,36 @@ export const FilterInput: Story = {
 export const FilterByPrompt: Story = {
   args: {
     sessions: [
-      makeSession({ id: "sess-a", environmentId: "env-1", status: "running", prompt: "Fix authentication bug" }),
-      makeSession({ id: "sess-b", environmentId: "env-1", status: "idle", prompt: "Add dark mode" }),
-      makeSession({ id: "sess-c", environmentId: "env-2", status: "running", prompt: "Fix database migration" }),
-      makeSession({ id: "sess-d", environmentId: "env-2", status: "idle", prompt: "Update dependencies" }),
-      makeSession({ id: "sess-e", environmentId: "env-3", status: "running", prompt: "Fix CSS layout" }),
+      makeSession({
+        id: "sess-a",
+        environmentId: "env-1",
+        status: "running",
+        prompt: "Fix authentication bug",
+      }),
+      makeSession({
+        id: "sess-b",
+        environmentId: "env-1",
+        status: "idle",
+        prompt: "Add dark mode",
+      }),
+      makeSession({
+        id: "sess-c",
+        environmentId: "env-2",
+        status: "running",
+        prompt: "Fix database migration",
+      }),
+      makeSession({
+        id: "sess-d",
+        environmentId: "env-2",
+        status: "idle",
+        prompt: "Update dependencies",
+      }),
+      makeSession({
+        id: "sess-e",
+        environmentId: "env-3",
+        status: "running",
+        prompt: "Fix CSS layout",
+      }),
     ],
   },
   play: async ({ canvas }) => {
@@ -141,11 +196,26 @@ export const FilterByPrompt: Story = {
 export const FilterNoMatch: Story = {
   args: {
     sessions: [
-      makeSession({ id: "sess-a", environmentId: "env-1", status: "running", prompt: "Task alpha" }),
+      makeSession({
+        id: "sess-a",
+        environmentId: "env-1",
+        status: "running",
+        prompt: "Task alpha",
+      }),
       makeSession({ id: "sess-b", environmentId: "env-1", status: "idle", prompt: "Task beta" }),
-      makeSession({ id: "sess-c", environmentId: "env-2", status: "running", prompt: "Task gamma" }),
+      makeSession({
+        id: "sess-c",
+        environmentId: "env-2",
+        status: "running",
+        prompt: "Task gamma",
+      }),
       makeSession({ id: "sess-d", environmentId: "env-2", status: "idle", prompt: "Task delta" }),
-      makeSession({ id: "sess-e", environmentId: "env-3", status: "running", prompt: "Task epsilon" }),
+      makeSession({
+        id: "sess-e",
+        environmentId: "env-3",
+        status: "running",
+        prompt: "Task epsilon",
+      }),
     ],
   },
   play: async ({ canvas }) => {

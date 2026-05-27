@@ -34,17 +34,20 @@ export function usePersonas(): UsePersonasResult {
     }
   }, [trackPersonas]);
 
-  const handleEvent = useCallback((event: GrackleEvent): boolean => {
-    switch (event.type) {
-      case "persona.created":
-      case "persona.updated":
-      case "persona.deleted":
-        loadPersonas().catch(() => {});
-        return true;
-      default:
-        return false;
-    }
-  }, [loadPersonas]);
+  const handleEvent = useCallback(
+    (event: GrackleEvent): boolean => {
+      switch (event.type) {
+        case "persona.created":
+        case "persona.updated":
+        case "persona.deleted":
+          loadPersonas().catch(() => {});
+          return true;
+        default:
+          return false;
+      }
+    },
+    [loadPersonas],
+  );
 
   const createPersona = useCallback(
     async (
@@ -70,7 +73,10 @@ export function usePersonas(): UsePersonasResult {
         allowedMcpTools: allowedMcpTools || [],
       });
       const createdPersona = protoToPersona(resp);
-      setPersonas((prev) => [...prev.filter((persona) => persona.id !== createdPersona.id), createdPersona]);
+      setPersonas((prev) => [
+        ...prev.filter((persona) => persona.id !== createdPersona.id),
+        createdPersona,
+      ]);
       return createdPersona;
     },
     [],
@@ -92,32 +98,47 @@ export function usePersonas(): UsePersonasResult {
       // Build the request with only defined fields so the server can distinguish
       // "not provided" (keep existing) from "set to empty" (clear).
       const request: Record<string, unknown> = { id: personaId };
-      if (name !== undefined) { request.name = name; }
-      if (description !== undefined) { request.description = description; }
-      if (systemPrompt !== undefined) { request.systemPrompt = systemPrompt; }
-      if (runtime !== undefined) { request.runtime = runtime; }
-      if (model !== undefined) { request.model = model; }
-      if (maxTurns !== undefined) { request.maxTurns = maxTurns; }
-      if (type !== undefined) { request.type = type; }
-      if (script !== undefined) { request.script = script; }
-      if (allowedMcpTools !== undefined) { request.allowedMcpTools = { tools: allowedMcpTools }; }
+      if (name !== undefined) {
+        request.name = name;
+      }
+      if (description !== undefined) {
+        request.description = description;
+      }
+      if (systemPrompt !== undefined) {
+        request.systemPrompt = systemPrompt;
+      }
+      if (runtime !== undefined) {
+        request.runtime = runtime;
+      }
+      if (model !== undefined) {
+        request.model = model;
+      }
+      if (maxTurns !== undefined) {
+        request.maxTurns = maxTurns;
+      }
+      if (type !== undefined) {
+        request.type = type;
+      }
+      if (script !== undefined) {
+        request.script = script;
+      }
+      if (allowedMcpTools !== undefined) {
+        request.allowedMcpTools = { tools: allowedMcpTools };
+      }
       const resp = await grackleClient.updatePersona(request);
       const updatedPersona = protoToPersona(resp);
-      setPersonas((prev) => prev.map((persona) => (
-        persona.id === updatedPersona.id ? updatedPersona : persona
-      )));
+      setPersonas((prev) =>
+        prev.map((persona) => (persona.id === updatedPersona.id ? updatedPersona : persona)),
+      );
       return updatedPersona;
     },
     [],
   );
 
-  const deletePersona = useCallback(
-    async (personaId: string): Promise<void> => {
-      await grackleClient.deletePersona({ id: personaId });
-      setPersonas((prev) => prev.filter((persona) => persona.id !== personaId));
-    },
-    [],
-  );
+  const deletePersona = useCallback(async (personaId: string): Promise<void> => {
+    await grackleClient.deletePersona({ id: personaId });
+    setPersonas((prev) => prev.filter((persona) => persona.id !== personaId));
+  }, []);
 
   const domainHook: DomainHook = {
     onConnect: () => loadPersonas(),
@@ -125,5 +146,14 @@ export function usePersonas(): UsePersonasResult {
     handleEvent,
   };
 
-  return { personas, personasLoading, loadPersonas, createPersona, updatePersona, deletePersona, handleEvent, domainHook };
+  return {
+    personas,
+    personasLoading,
+    loadPersonas,
+    createPersona,
+    updatePersona,
+    deletePersona,
+    handleEvent,
+    domainHook,
+  };
 }

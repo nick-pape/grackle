@@ -20,10 +20,18 @@ vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => {
     // Stub ProcessTunnel so SshTunnel doesn't spawn real processes (tested in tunnel.test.ts)
     ProcessTunnel: class {
       public localPort: number;
-      public constructor(localPort: number) { this.localPort = localPort; }
-      public async open(): Promise<void> { /* no-op */ }
-      public async close(): Promise<void> { /* no-op */ }
-      public isAlive(): boolean { return true; }
+      public constructor(localPort: number) {
+        this.localPort = localPort;
+      }
+      public async open(): Promise<void> {
+        /* no-op */
+      }
+      public async close(): Promise<void> {
+        /* no-op */
+      }
+      public isAlive(): boolean {
+        return true;
+      }
     },
   };
 });
@@ -62,7 +70,9 @@ describe("SshAdapter.reconnect()", () => {
   });
 
   it("yields reconnecting progress events on happy path", async () => {
-    const events = await collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token));
+    const events = await collectEvents(
+      adapter.reconnect!(envId, config as Record<string, unknown>, token),
+    );
 
     expect(events.length).toBeGreaterThanOrEqual(3);
     expect(events.every((e) => e.stage === "reconnecting")).toBe(true);
@@ -78,15 +88,20 @@ describe("SshAdapter.reconnect()", () => {
     const options = mocks.startRemotePowerLine.mock.calls[0][2];
     expect(options).toMatchObject({ probeFirst: true });
     expect(options.autoDetectWorkspace).toBeUndefined();
-    expect(mocks.registerTunnel).toHaveBeenCalledWith(envId, expect.objectContaining({
-      tunnel: expect.objectContaining({ localPort: 9999 }),
-    }));
+    expect(mocks.registerTunnel).toHaveBeenCalledWith(
+      envId,
+      expect.objectContaining({
+        tunnel: expect.objectContaining({ localPort: 9999 }),
+      }),
+    );
   });
 
   it("yields 'restarted' event when PowerLine was not already running", async () => {
     mocks.startRemotePowerLine.mockResolvedValueOnce({ alreadyRunning: false });
 
-    const events = await collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token));
+    const events = await collectEvents(
+      adapter.reconnect!(envId, config as Record<string, unknown>, token),
+    );
 
     expect(events.some((e) => e.message.includes("restarted"))).toBe(true);
     expect(events[events.length - 1].message).toContain("Reconnected");
@@ -95,7 +110,9 @@ describe("SshAdapter.reconnect()", () => {
   it("does not yield 'restarted' event when PowerLine was already running", async () => {
     mocks.startRemotePowerLine.mockResolvedValueOnce({ alreadyRunning: true });
 
-    const events = await collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token));
+    const events = await collectEvents(
+      adapter.reconnect!(envId, config as Record<string, unknown>, token),
+    );
 
     expect(events.some((e) => e.message.includes("restarted"))).toBe(false);
   });
@@ -105,20 +122,23 @@ describe("SshAdapter.reconnect()", () => {
       new Error("PowerLine process died immediately after starting"),
     );
 
-    await expect(collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token)))
-      .rejects.toThrow("PowerLine process died immediately after starting");
+    await expect(
+      collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token)),
+    ).rejects.toThrow("PowerLine process died immediately after starting");
   });
 
   it("propagates error when SSH is unreachable", async () => {
     mocks.startRemotePowerLine.mockRejectedValueOnce(new Error("ssh connection refused"));
 
-    await expect(collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token)))
-      .rejects.toThrow("ssh connection refused");
+    await expect(
+      collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token)),
+    ).rejects.toThrow("ssh connection refused");
   });
 
   it("throws if host is missing", async () => {
-    await expect(collectEvents(adapter.reconnect!(envId, {} as Record<string, unknown>, token)))
-      .rejects.toThrow("host");
+    await expect(
+      collectEvents(adapter.reconnect!(envId, {} as Record<string, unknown>, token)),
+    ).rejects.toThrow("host");
   });
 
   it("forwards extraEnv from config", async () => {

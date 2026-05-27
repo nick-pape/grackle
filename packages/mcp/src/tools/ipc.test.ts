@@ -49,7 +49,8 @@ describe("ipc_terminate", () => {
     (mockClient.killAgent as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     const result = await getTool("ipc_terminate").handler(
-      { fd: 3 }, { core: mockClient },
+      { fd: 3 },
+      { core: mockClient },
       SCOPED_AUTH,
     );
     const parsed = JSON.parse(result.content[0].text);
@@ -66,7 +67,8 @@ describe("ipc_terminate", () => {
     });
 
     const result = await getTool("ipc_terminate").handler(
-      { fd: 99 }, { core: mockClient },
+      { fd: 99 },
+      { core: mockClient },
       SCOPED_AUTH,
     );
 
@@ -90,7 +92,8 @@ describe("ipc_terminate", () => {
     });
 
     const result = await getTool("ipc_terminate").handler(
-      { fd: 3 }, { core: mockClient },
+      { fd: 3 },
+      { core: mockClient },
       SCOPED_AUTH,
     );
 
@@ -114,7 +117,8 @@ describe("ipc_terminate", () => {
     });
 
     const result = await getTool("ipc_terminate").handler(
-      { fd: 3 }, { core: mockClient },
+      { fd: 3 },
+      { core: mockClient },
       SCOPED_AUTH,
     );
 
@@ -126,7 +130,8 @@ describe("ipc_terminate", () => {
     const mockClient = createMockClient();
 
     const result = await getTool("ipc_terminate").handler(
-      { fd: 3 }, { core: mockClient },
+      { fd: 3 },
+      { core: mockClient },
       undefined,
     );
 
@@ -174,7 +179,11 @@ describe("ipc_share_stream", () => {
     (mockClient.attachStream as ReturnType<typeof vi.fn>).mockResolvedValue({ fd: 7 });
     (mockClient.writeToFd as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
-    const result = await getTool("ipc_share_stream").handler({ fd: 4 }, { core: mockClient }, CHILD_AUTH);
+    const result = await getTool("ipc_share_stream").handler(
+      { fd: 4 },
+      { core: mockClient },
+      CHILD_AUTH,
+    );
     const parsed = JSON.parse(result.content[0].text);
 
     expect(result.isError).toBeFalsy();
@@ -199,7 +208,11 @@ describe("ipc_share_stream", () => {
   test("requires scoped auth", async () => {
     const mockClient = createMockClient();
 
-    const result = await getTool("ipc_share_stream").handler({ fd: 4 }, { core: mockClient }, undefined);
+    const result = await getTool("ipc_share_stream").handler(
+      { fd: 4 },
+      { core: mockClient },
+      undefined,
+    );
 
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("scoped auth");
@@ -220,7 +233,11 @@ describe("ipc_share_stream", () => {
       ],
     });
 
-    const result = await getTool("ipc_share_stream").handler({ fd: 4 }, { core: mockClient }, CHILD_AUTH);
+    const result = await getTool("ipc_share_stream").handler(
+      { fd: 4 },
+      { core: mockClient },
+      CHILD_AUTH,
+    );
 
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("no parent pipe");
@@ -249,7 +266,11 @@ describe("ipc_share_stream", () => {
       ],
     });
 
-    const result = await getTool("ipc_share_stream").handler({ fd: 4 }, { core: mockClient }, CHILD_AUTH);
+    const result = await getTool("ipc_share_stream").handler(
+      { fd: 4 },
+      { core: mockClient },
+      CHILD_AUTH,
+    );
 
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("parent has disconnected");
@@ -259,7 +280,11 @@ describe("ipc_share_stream", () => {
     const mockClient = createMockClient();
     (mockClient.getSessionFds as ReturnType<typeof vi.fn>).mockResolvedValue(makeFds());
 
-    const result = await getTool("ipc_share_stream").handler({ fd: 99 }, { core: mockClient }, CHILD_AUTH);
+    const result = await getTool("ipc_share_stream").handler(
+      { fd: 99 },
+      { core: mockClient },
+      CHILD_AUTH,
+    );
 
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("fd 99 not found");
@@ -270,7 +295,11 @@ describe("ipc_share_stream", () => {
     (mockClient.getSessionFds as ReturnType<typeof vi.fn>).mockResolvedValue(makeFds());
 
     // fd 3 is the pipe fd (streamName: "pipe:child-sess")
-    const result = await getTool("ipc_share_stream").handler({ fd: 3 }, { core: mockClient }, CHILD_AUTH);
+    const result = await getTool("ipc_share_stream").handler(
+      { fd: 3 },
+      { core: mockClient },
+      CHILD_AUTH,
+    );
 
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("internal stream");
@@ -309,7 +338,11 @@ describe("ipc_share_stream", () => {
     });
 
     for (const fd of [10, 11]) {
-      const result = await getTool("ipc_share_stream").handler({ fd }, { core: mockClient }, CHILD_AUTH);
+      const result = await getTool("ipc_share_stream").handler(
+        { fd },
+        { core: mockClient },
+        CHILD_AUTH,
+      );
       expect(result.isError).toBe(true);
       expect(result.content[0].text).toContain("internal stream");
     }
@@ -330,7 +363,9 @@ describe("ipc_share_stream", () => {
 
     expect(result.isError).toBeFalsy();
     expect(parsed.parentFd).toBe(8);
-    expect(mockClient.attachStream).toHaveBeenCalledWith(expect.objectContaining({ permission: "r" }));
+    expect(mockClient.attachStream).toHaveBeenCalledWith(
+      expect.objectContaining({ permission: "r" }),
+    );
   });
 
   test("permission escalation — attach throws PERMISSION_DENIED, returned as error", async () => {
@@ -387,11 +422,7 @@ describe("ipc_share_stream", () => {
     const mockClient = createMockClient();
     (mockClient.getSessionFds as ReturnType<typeof vi.fn>).mockResolvedValue(makeFds());
 
-    const result = await getTool("ipc_share_stream").handler(
-      {},
-      { core: mockClient },
-      CHILD_AUTH,
-    );
+    const result = await getTool("ipc_share_stream").handler({}, { core: mockClient }, CHILD_AUTH);
 
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("either fd or streamName");

@@ -13,8 +13,12 @@ const mockPragma = vi.fn();
 vi.mock("@grackle-ai/database", () => {
   let sqliteInstance: { pragma: ReturnType<typeof vi.fn> } | undefined;
   return {
-    get sqlite() { return sqliteInstance; },
-    __setSqlite(val: { pragma: ReturnType<typeof vi.fn> } | undefined): void { sqliteInstance = val; },
+    get sqlite() {
+      return sqliteInstance;
+    },
+    __setSqlite(val: { pragma: ReturnType<typeof vi.fn> } | undefined): void {
+      sqliteInstance = val;
+    },
     stopWalCheckpointTimer: vi.fn(),
   };
 });
@@ -24,7 +28,7 @@ import { logger } from "@grackle-ai/core";
 import { stopWalCheckpointTimer } from "@grackle-ai/database";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const { __setSqlite } = await import("@grackle-ai/database") as unknown as {
+const { __setSqlite } = (await import("@grackle-ai/database")) as unknown as {
   __setSqlite: (val: { pragma: ReturnType<typeof vi.fn> } | undefined) => void;
 };
 
@@ -62,7 +66,9 @@ describe("handleFatalError", () => {
   });
 
   it("does not throw if WAL checkpoint fails", () => {
-    mockPragma.mockImplementation(() => { throw new Error("WAL error"); });
+    mockPragma.mockImplementation(() => {
+      throw new Error("WAL error");
+    });
     expect(() => handleFatalError(new Error("test"), "test")).not.toThrow();
   });
 

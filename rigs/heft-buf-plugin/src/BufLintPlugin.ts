@@ -4,7 +4,7 @@ import type {
   HeftConfiguration,
   IHeftTaskPlugin,
   IHeftTaskSession,
-  IHeftTaskRunHookOptions
+  IHeftTaskRunHookOptions,
 } from "@rushstack/heft";
 
 const PLUGIN_NAME: string = "buf-lint-plugin";
@@ -22,7 +22,7 @@ class BufLintPlugin implements IHeftTaskPlugin {
       execFileSync(bufBin, ["lint"], {
         cwd: buildFolder,
         stdio: "inherit",
-        shell: isWindows
+        shell: isWindows,
       });
       session.logger.terminal.writeLine("buf lint completed.");
     });

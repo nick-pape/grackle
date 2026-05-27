@@ -56,7 +56,9 @@ describe("useEnvironments loading state", () => {
     mockClient.listEnvironments.mockResolvedValueOnce({ environments: [] });
     const { result } = renderHook(() => useEnvironments());
 
-    act(() => { result.current.loadEnvironments().catch(() => {}); });
+    act(() => {
+      result.current.loadEnvironments().catch(() => {});
+    });
     expect(result.current.environmentsLoading).toBe(true);
 
     await waitFor(() => {
@@ -68,7 +70,9 @@ describe("useEnvironments loading state", () => {
     mockClient.listEnvironments.mockRejectedValueOnce(new Error("fail"));
     const { result } = renderHook(() => useEnvironments());
 
-    act(() => { result.current.loadEnvironments().catch(() => {}); });
+    act(() => {
+      result.current.loadEnvironments().catch(() => {});
+    });
 
     await waitFor(() => {
       expect(result.current.environmentsLoading).toBe(false);

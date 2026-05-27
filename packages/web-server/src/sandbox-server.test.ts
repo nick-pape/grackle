@@ -19,7 +19,9 @@ function request(
       { hostname: "127.0.0.1", port, path, method: "GET", headers },
       (res) => {
         let body = "";
-        res.on("data", (chunk: Buffer) => { body += chunk.toString(); });
+        res.on("data", (chunk: Buffer) => {
+          body += chunk.toString();
+        });
         res.on("end", () => resolve({ status: res.statusCode!, headers: res.headers, body }));
       },
     );
@@ -33,11 +35,15 @@ describe("createSandboxServer", () => {
 
   beforeEach(async () => {
     server = createSandboxServer({ bindHost: "127.0.0.1", sandboxPort: 0 });
-    await new Promise<void>((resolve) => { server.listen(0, "127.0.0.1", resolve); });
+    await new Promise<void>((resolve) => {
+      server.listen(0, "127.0.0.1", resolve);
+    });
   });
 
   afterEach(async () => {
-    await new Promise<void>((resolve) => { server.close(() => resolve()); });
+    await new Promise<void>((resolve) => {
+      server.close(() => resolve());
+    });
   });
 
   it("serves sandbox.html with a locked-down CSP header by default", async () => {
@@ -59,10 +65,12 @@ describe("createSandboxServer", () => {
   });
 
   it("widens the CSP from a ?csp= param of http(s) origins", async () => {
-    const csp = encodeURIComponent(JSON.stringify({
-      resourceDomains: ["http://127.0.0.1:7435"],
-      connectDomains: ["http://127.0.0.1:7435"],
-    }));
+    const csp = encodeURIComponent(
+      JSON.stringify({
+        resourceDomains: ["http://127.0.0.1:7435"],
+        connectDomains: ["http://127.0.0.1:7435"],
+      }),
+    );
     const resp = await request(server, `/sandbox.html?csp=${csp}`);
     expect(resp.status).toBe(200);
     const header = resp.headers["content-security-policy"] as string;

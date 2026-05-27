@@ -76,8 +76,22 @@ export const ListFds: Story = {
     args: {},
     result: JSON.stringify({
       fds: [
-        { fd: 3, streamName: "child-1", permission: "rw", deliveryMode: "async", owned: true, targetSessionId: "sess-1" },
-        { fd: 4, streamName: "child-2", permission: "r", deliveryMode: "detach", owned: false, targetSessionId: "sess-2" },
+        {
+          fd: 3,
+          streamName: "child-1",
+          permission: "rw",
+          deliveryMode: "async",
+          owned: true,
+          targetSessionId: "sess-1",
+        },
+        {
+          fd: 4,
+          streamName: "child-2",
+          permission: "r",
+          deliveryMode: "detach",
+          owned: false,
+          targetSessionId: "sess-2",
+        },
       ],
     }),
   },

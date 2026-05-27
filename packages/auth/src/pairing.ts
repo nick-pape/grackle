@@ -141,7 +141,10 @@ export function redeemPairingCode(code: string, remoteIp: string): boolean {
         limit.attempts++;
         if (limit.attempts >= MAX_FAILED_ATTEMPTS) {
           limit.blockedUntil = now + RATE_LIMIT_BLOCK_MS;
-          getAuthLogger().warn({ remoteIp, attempts: limit.attempts }, "Rate limit triggered for pairing attempts");
+          getAuthLogger().warn(
+            { remoteIp, attempts: limit.attempts },
+            "Rate limit triggered for pairing attempts",
+          );
         }
       }
     } else {

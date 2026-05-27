@@ -4,7 +4,11 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 import { useLoadingState } from "./useLoadingState.js";
 
 /** Create a deferred promise whose resolve/reject can be called externally. */
-function deferred<T>(): { promise: Promise<T>; resolve: (v: T) => void; reject: (e: Error) => void } {
+function deferred<T>(): {
+  promise: Promise<T>;
+  resolve: (v: T) => void;
+  reject: (e: Error) => void;
+} {
   let resolve!: (v: T) => void;
   let reject!: (e: Error) => void;
   const promise = new Promise<T>((_resolve, _reject) => {
@@ -24,10 +28,14 @@ describe("useLoadingState", () => {
     const { result } = renderHook(() => useLoadingState());
     const d = deferred<string>();
 
-    act(() => { result.current.track(d.promise).catch(() => {}); });
+    act(() => {
+      result.current.track(d.promise).catch(() => {});
+    });
     expect(result.current.loading).toBe(true);
 
-    act(() => { d.resolve("done"); });
+    act(() => {
+      d.resolve("done");
+    });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -38,10 +46,14 @@ describe("useLoadingState", () => {
     const { result } = renderHook(() => useLoadingState());
     const d = deferred<string>();
 
-    act(() => { result.current.track(d.promise).catch(() => {}); });
+    act(() => {
+      result.current.track(d.promise).catch(() => {});
+    });
     expect(result.current.loading).toBe(true);
 
-    act(() => { d.reject(new Error("fail")); });
+    act(() => {
+      d.reject(new Error("fail"));
+    });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -60,13 +72,17 @@ describe("useLoadingState", () => {
     expect(result.current.loading).toBe(true);
 
     // Resolve first — should STILL be loading (second is in-flight)
-    act(() => { d1.resolve("first"); });
+    act(() => {
+      d1.resolve("first");
+    });
     await waitFor(() => {
       expect(result.current.loading).toBe(true);
     });
 
     // Resolve second — now loading should be false
-    act(() => { d2.resolve("second"); });
+    act(() => {
+      d2.resolve("second");
+    });
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
     });

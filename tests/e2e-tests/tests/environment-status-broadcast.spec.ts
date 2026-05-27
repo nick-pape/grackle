@@ -10,7 +10,10 @@ import { provisionEnvironmentDirect } from "./helpers.js";
  */
 
 test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }, () => {
-  test("stop environment shows disconnected toast and updates StatusBar", async ({ appPage, grackle: { client } }) => {
+  test("stop environment shows disconnected toast and updates StatusBar", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     // Ensure connected before starting (may have been left disconnected)
@@ -33,7 +36,10 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     await expect(page.getByText("1/1 env")).toBeVisible({ timeout: 15_000 });
   });
 
-  test("provision environment shows connected toast and updates StatusBar", async ({ appPage, grackle: { client } }) => {
+  test("provision environment shows connected toast and updates StatusBar", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     // Stop the environment first

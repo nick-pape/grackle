@@ -33,46 +33,54 @@ export function SettingsNav(): JSX.Element {
   const navigate = useAppNavigate();
   const tabListRef = useRef<HTMLElement>(null);
 
-  const activeTab = TABS.find((tab) => {
-    const tabPath = `${SETTINGS_URL}/${tab.path}`;
-    return location.pathname === tabPath || location.pathname.startsWith(`${tabPath}/`);
-  })?.path ?? TABS[0].path;
+  const activeTab =
+    TABS.find((tab) => {
+      const tabPath = `${SETTINGS_URL}/${tab.path}`;
+      return location.pathname === tabPath || location.pathname.startsWith(`${tabPath}/`);
+    })?.path ?? TABS[0].path;
 
-  const handleClick = useCallback((path: string) => {
-    navigate(`${SETTINGS_URL}/${path}`);
-  }, [navigate]);
+  const handleClick = useCallback(
+    (path: string) => {
+      navigate(`${SETTINGS_URL}/${path}`);
+    },
+    [navigate],
+  );
 
-  const handleKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>) => {
-    // Derive current index from the focused element rather than location
-    // to avoid stale closures during rapid keyboard navigation.
-    const buttons = tabListRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
-    if (!buttons) {
-      return;
-    }
-    const focusedIndex = Array.from(buttons).findIndex((b) => b === document.activeElement);
-    const currentIndex = focusedIndex >= 0 ? focusedIndex : TABS.findIndex((t) => t.path === activeTab);
-    let nextIndex = currentIndex;
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLDivElement>) => {
+      // Derive current index from the focused element rather than location
+      // to avoid stale closures during rapid keyboard navigation.
+      const buttons = tabListRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+      if (!buttons) {
+        return;
+      }
+      const focusedIndex = Array.from(buttons).findIndex((b) => b === document.activeElement);
+      const currentIndex =
+        focusedIndex >= 0 ? focusedIndex : TABS.findIndex((t) => t.path === activeTab);
+      let nextIndex = currentIndex;
 
-    if (e.key === "ArrowDown" || e.key === "j" || e.key === "J") {
-      e.preventDefault();
-      nextIndex = (currentIndex + 1) % TABS.length;
-    } else if (e.key === "ArrowUp" || e.key === "k" || e.key === "K") {
-      e.preventDefault();
-      nextIndex = (currentIndex - 1 + TABS.length) % TABS.length;
-    } else if (e.key === "Home") {
-      e.preventDefault();
-      nextIndex = 0;
-    } else if (e.key === "End") {
-      e.preventDefault();
-      nextIndex = TABS.length - 1;
-    } else {
-      return;
-    }
+      if (e.key === "ArrowDown" || e.key === "j" || e.key === "J") {
+        e.preventDefault();
+        nextIndex = (currentIndex + 1) % TABS.length;
+      } else if (e.key === "ArrowUp" || e.key === "k" || e.key === "K") {
+        e.preventDefault();
+        nextIndex = (currentIndex - 1 + TABS.length) % TABS.length;
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        nextIndex = 0;
+      } else if (e.key === "End") {
+        e.preventDefault();
+        nextIndex = TABS.length - 1;
+      } else {
+        return;
+      }
 
-    const nextPath = TABS[nextIndex].path;
-    navigate(`${SETTINGS_URL}/${nextPath}`);
-    buttons[nextIndex]?.focus(); // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- index may be out of bounds
-  }, [activeTab, navigate]);
+      const nextPath = TABS[nextIndex].path;
+      navigate(`${SETTINGS_URL}/${nextPath}`);
+      buttons[nextIndex]?.focus(); // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- index may be out of bounds
+    },
+    [activeTab, navigate],
+  );
 
   return (
     <nav
@@ -95,7 +103,9 @@ export function SettingsNav(): JSX.Element {
             className={`${styles.tab} ${isActive ? styles.tabActive : ""}`}
             onClick={() => handleClick(tab.path)}
           >
-            <span className={styles.tabIcon} aria-hidden="true">{tab.icon}</span>
+            <span className={styles.tabIcon} aria-hidden="true">
+              {tab.icon}
+            </span>
             {tab.label}
           </button>
         );

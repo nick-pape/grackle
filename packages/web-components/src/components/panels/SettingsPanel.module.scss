@@ -1,4 +1,4 @@
-@use '../../styles/mixins' as *;
+@use "../../styles/mixins" as *;
 
 // =============================================================================
 // Settings Panel — token management and future settings
@@ -164,8 +164,9 @@
   border: 1px solid var(--border-subtle);
   background: var(--bg-surface);
   cursor: pointer;
-  transition: border-color var(--transition-fast),
-              background var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
   font-family: var(--font-ui);
 
   &:hover {
@@ -219,9 +220,10 @@
   color: var(--text-tertiary);
   font-size: 14px;
   cursor: pointer;
-  transition: background var(--transition-fast),
-              color var(--transition-fast),
-              border-color var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast);
 
   &:hover {
     background: var(--bg-overlay);

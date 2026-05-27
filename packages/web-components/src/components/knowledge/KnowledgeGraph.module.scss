@@ -1,4 +1,4 @@
-@use '../../styles/mixins' as *;
+@use "../../styles/mixins" as *;
 
 .graphContainer {
   flex: 1;
@@ -6,8 +6,11 @@
   height: 100%;
   position: relative;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(var(--accent-blue-rgb, 74, 158, 255), 0.03) 0%, transparent 70%);
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(var(--accent-blue-rgb, 74, 158, 255), 0.03) 0%,
+    transparent 70%
+  );
 }
 
 .svg {
@@ -25,7 +28,9 @@
   stroke: var(--text-disabled, rgba(255, 255, 255, 0.2));
   stroke-width: 1.5;
   opacity: 0.7;
-  transition: opacity 0.3s ease, stroke 0.3s ease;
+  transition:
+    opacity 0.3s ease,
+    stroke 0.3s ease;
 
   &:hover {
     opacity: 1;
@@ -81,7 +86,10 @@
   stroke: var(--border-default, rgba(255, 255, 255, 0.06));
   stroke-width: 1;
   fill-opacity: 0.8;
-  transition: fill-opacity 0.3s ease, stroke 0.3s ease, stroke-width 0.2s ease;
+  transition:
+    fill-opacity 0.3s ease,
+    stroke 0.3s ease,
+    stroke-width 0.2s ease;
 }
 
 .nodeIndicator {

@@ -67,7 +67,9 @@ export function WorkspaceFormFields({
     <div className={styles.formContent}>
       {/* Name */}
       <div className={styles.section}>
-        <label className={styles.label} htmlFor="ws-name">Name</label>
+        <label className={styles.label} htmlFor="ws-name">
+          Name
+        </label>
         <input
           id="ws-name"
           className={styles.titleInput}
@@ -80,12 +82,18 @@ export function WorkspaceFormFields({
           disabled={disabled}
           data-testid="workspace-form-name"
         />
-        {errors?.name && <span className={styles.fieldError} data-testid="workspace-form-error-name">{errors.name}</span>}
+        {errors?.name && (
+          <span className={styles.fieldError} data-testid="workspace-form-error-name">
+            {errors.name}
+          </span>
+        )}
       </div>
 
       {/* Description */}
       <div className={styles.section}>
-        <label className={styles.label} htmlFor="ws-description">Description</label>
+        <label className={styles.label} htmlFor="ws-description">
+          Description
+        </label>
         <textarea
           id="ws-description"
           className={styles.descriptionTextarea}
@@ -99,7 +107,9 @@ export function WorkspaceFormFields({
 
       {/* Repository URL */}
       <div className={styles.section}>
-        <label className={styles.label} htmlFor="ws-repo">Repository URL</label>
+        <label className={styles.label} htmlFor="ws-repo">
+          Repository URL
+        </label>
         <input
           id="ws-repo"
           className={styles.titleInput}
@@ -110,12 +120,18 @@ export function WorkspaceFormFields({
           disabled={disabled}
           data-testid="workspace-form-repo"
         />
-        {errors?.repoUrl && <span className={styles.fieldError} data-testid="workspace-form-error-repoUrl">{errors.repoUrl}</span>}
+        {errors?.repoUrl && (
+          <span className={styles.fieldError} data-testid="workspace-form-error-repoUrl">
+            {errors.repoUrl}
+          </span>
+        )}
       </div>
 
       {/* Environment */}
       <div className={styles.section}>
-        <label className={styles.label} htmlFor="ws-environment">Environment</label>
+        <label className={styles.label} htmlFor="ws-environment">
+          Environment
+        </label>
         <select
           id="ws-environment"
           className={styles.selectField}
@@ -131,12 +147,18 @@ export function WorkspaceFormFields({
             </option>
           ))}
         </select>
-        {errors?.environmentId && <span className={styles.fieldError} data-testid="workspace-form-error-environmentId">{errors.environmentId}</span>}
+        {errors?.environmentId && (
+          <span className={styles.fieldError} data-testid="workspace-form-error-environmentId">
+            {errors.environmentId}
+          </span>
+        )}
       </div>
 
       {/* Default Persona */}
       <div className={styles.section}>
-        <label className={styles.label} htmlFor="ws-persona">Default Persona</label>
+        <label className={styles.label} htmlFor="ws-persona">
+          Default Persona
+        </label>
         <select
           id="ws-persona"
           className={styles.selectField}
@@ -147,7 +169,9 @@ export function WorkspaceFormFields({
         >
           <option value="">(Inherit)</option>
           {personas.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
           ))}
         </select>
       </div>
@@ -168,7 +192,9 @@ export function WorkspaceFormFields({
 
       {/* Working directory */}
       <div className={styles.section}>
-        <label className={styles.label} htmlFor="ws-workdir">Working Directory</label>
+        <label className={styles.label} htmlFor="ws-workdir">
+          Working Directory
+        </label>
         <input
           id="ws-workdir"
           className={styles.titleInput}

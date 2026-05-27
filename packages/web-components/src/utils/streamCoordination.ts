@@ -57,7 +57,10 @@ export function attributeStream(stream: StreamData, sessions: readonly Session[]
  * Attribute a stream to its owning task against a precomputed session map —
  * avoids rebuilding the map per stream when attributing many streams at once.
  */
-export function attributeStreamWithMap(stream: StreamData, sessionsById: ReadonlyMap<string, Session>): StreamOwnership {
+export function attributeStreamWithMap(
+  stream: StreamData,
+  sessionsById: ReadonlyMap<string, Session>,
+): StreamOwnership {
   let sawKnownSession = false;
   for (const sub of stream.subscribers) {
     const session = sessionsById.get(sub.sessionId);
@@ -84,7 +87,10 @@ export interface StreamGroup {
  * that are unattached or external are collected into a single trailing bucket
  * with `taskId === undefined`.
  */
-export function groupStreamsByTask(streams: readonly StreamData[], sessions: readonly Session[]): StreamGroup[] {
+export function groupStreamsByTask(
+  streams: readonly StreamData[],
+  sessions: readonly Session[],
+): StreamGroup[] {
   const sessionsById = new Map(sessions.map((s) => [s.id, s]));
   const taskGroups = new Map<string, StreamData[]>();
   const orphans: StreamData[] = [];
@@ -103,7 +109,10 @@ export function groupStreamsByTask(streams: readonly StreamData[], sessions: rea
     }
   }
 
-  const groups: StreamGroup[] = Array.from(taskGroups, ([taskId, groupStreams]) => ({ taskId, streams: groupStreams }));
+  const groups: StreamGroup[] = Array.from(taskGroups, ([taskId, groupStreams]) => ({
+    taskId,
+    streams: groupStreams,
+  }));
   if (orphans.length > 0) {
     groups.push({ taskId: undefined, streams: orphans });
   }

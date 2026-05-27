@@ -73,7 +73,10 @@ export function createOAuthAccessToken(
  * @param signingSecret - The secret used to verify the HMAC signature.
  * @returns The decoded claims if valid, or `undefined` if verification fails.
  */
-export function verifyOAuthAccessToken(token: string, signingSecret: string): OAuthTokenClaims | undefined {
+export function verifyOAuthAccessToken(
+  token: string,
+  signingSecret: string,
+): OAuthTokenClaims | undefined {
   const dotIndex = token.indexOf(".");
   if (dotIndex === -1 || dotIndex === 0 || dotIndex === token.length - 1) {
     return undefined;

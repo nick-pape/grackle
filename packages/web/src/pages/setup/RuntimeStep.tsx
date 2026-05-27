@@ -26,7 +26,12 @@ interface RuntimeStepProps {
 }
 
 /** Runtime selection screen — three cards for choosing the primary agent runtime. */
-export function RuntimeStep({ currentRuntime, onFinish, onBack, finishDisabled }: RuntimeStepProps): JSX.Element {
+export function RuntimeStep({
+  currentRuntime,
+  onFinish,
+  onBack,
+  finishDisabled,
+}: RuntimeStepProps): JSX.Element {
   const [selected, setSelected] = useState(currentRuntime || "claude-code");
 
   // Sync selection when currentRuntime arrives asynchronously (persona load)
@@ -39,7 +44,9 @@ export function RuntimeStep({ currentRuntime, onFinish, onBack, finishDisabled }
   return (
     <div className={styles.stepContent} data-testid="setup-runtime">
       <h2 className={styles.heading}>Choose Your Runtime</h2>
-      <p className={styles.subtitle}>Select the primary agent runtime for your workspace. You can change this later.</p>
+      <p className={styles.subtitle}>
+        Select the primary agent runtime for your workspace. You can change this later.
+      </p>
       <div className={styles.runtimeGrid}>
         {RUNTIMES.map((rt) => (
           <button
@@ -57,17 +64,15 @@ export function RuntimeStep({ currentRuntime, onFinish, onBack, finishDisabled }
         ))}
       </div>
       <div className={styles.buttonRow}>
-        <button
-          type="button"
-          className={styles.ghostButton}
-          onClick={onBack}
-        >
+        <button type="button" className={styles.ghostButton} onClick={onBack}>
           Back
         </button>
         <button
           type="button"
           className={styles.primaryButton}
-          onClick={() => { onFinish(selected); }}
+          onClick={() => {
+            onFinish(selected);
+          }}
           disabled={finishDisabled}
           data-testid="setup-runtime-next"
         >

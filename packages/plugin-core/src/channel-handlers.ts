@@ -31,7 +31,9 @@ function grantRowToProto(row: ChannelGrantRow): grackle.ChannelGrant {
  *
  * v0 supports session targets only (`grackle:/sessions/<id>`).
  */
-export async function exposeChannel(req: grackle.ExposeChannelRequest): Promise<grackle.ExposeChannelResponse> {
+export async function exposeChannel(
+  req: grackle.ExposeChannelRequest,
+): Promise<grackle.ExposeChannelResponse> {
   if (req.target.case !== "sessionId" || !req.target.value) {
     throw new ConnectError("a session_id target is required", Code.InvalidArgument);
   }
@@ -69,13 +71,17 @@ export async function exposeChannel(req: grackle.ExposeChannelRequest): Promise<
 }
 
 /** List all channel grants. */
-export async function listChannelGrants(_req: grackle.ListChannelGrantsRequest): Promise<grackle.ChannelGrantList> {
+export async function listChannelGrants(
+  _req: grackle.ListChannelGrantsRequest,
+): Promise<grackle.ChannelGrantList> {
   const rows = channelGrantStore.listGrants();
   return create(grackle.ChannelGrantListSchema, { grants: rows.map(grantRowToProto) });
 }
 
 /** Revoke a channel grant; its webhook token stops working immediately. */
-export async function revokeChannelGrant(req: grackle.RevokeChannelGrantRequest): Promise<grackle.Empty> {
+export async function revokeChannelGrant(
+  req: grackle.RevokeChannelGrantRequest,
+): Promise<grackle.Empty> {
   if (!req.grantId) {
     throw new ConnectError("grant_id is required", Code.InvalidArgument);
   }

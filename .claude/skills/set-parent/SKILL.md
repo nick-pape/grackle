@@ -57,6 +57,7 @@ gh api graphql -f query='mutation {
 ```
 
 **Field names** (easy to mix up):
+
 - `issueId` = the **parent**
 - `subIssueId` = the **child**
 

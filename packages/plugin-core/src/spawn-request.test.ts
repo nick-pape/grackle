@@ -27,25 +27,41 @@ const serverInputs = {
 
 describe("resolveSpawnSelection", () => {
   it("uses an explicit provider over the persona runtime", () => {
-    expect(resolveSpawnSelection("copilot", "", persona)).toEqual({ runtime: "copilot", model: "sonnet" });
+    expect(resolveSpawnSelection("copilot", "", persona)).toEqual({
+      runtime: "copilot",
+      model: "sonnet",
+    });
   });
 
   it("uses an explicit model id over the persona model", () => {
-    expect(resolveSpawnSelection("", "opus", persona)).toEqual({ runtime: "claude-code", model: "opus" });
+    expect(resolveSpawnSelection("", "opus", persona)).toEqual({
+      runtime: "claude-code",
+      model: "opus",
+    });
   });
 
   it("overrides both when both are provided", () => {
-    expect(resolveSpawnSelection("codex", "o3", persona)).toEqual({ runtime: "codex", model: "o3" });
+    expect(resolveSpawnSelection("codex", "o3", persona)).toEqual({
+      runtime: "codex",
+      model: "o3",
+    });
   });
 
   it("falls back to the persona when neither is provided", () => {
-    expect(resolveSpawnSelection("", "", persona)).toEqual({ runtime: "claude-code", model: "sonnet" });
+    expect(resolveSpawnSelection("", "", persona)).toEqual({
+      runtime: "claude-code",
+      model: "sonnet",
+    });
   });
 });
 
 describe("buildPowerlineSpawnRequest", () => {
   it("plumbs task_id from config (no longer hardcoded empty)", () => {
-    const config = create(grackle.SessionConfigSchema, { taskId: "task-42", branch: "feat", pipe: "async" });
+    const config = create(grackle.SessionConfigSchema, {
+      taskId: "task-42",
+      branch: "feat",
+      pipe: "async",
+    });
     const req = buildPowerlineSpawnRequest({ ...serverInputs, config });
 
     expect(req.taskId).toBe("task-42");
@@ -88,7 +104,13 @@ describe("buildPowerlineSpawnRequest", () => {
   });
 
   it("forwards a resolved workspaceId, leaving it unset when empty", () => {
-    expect(buildPowerlineSpawnRequest({ ...serverInputs, workspaceId: "ws-1", config: undefined }).workspaceId).toBe("ws-1");
-    expect(buildPowerlineSpawnRequest({ ...serverInputs, workspaceId: "", config: undefined }).workspaceId).toBeUndefined();
+    expect(
+      buildPowerlineSpawnRequest({ ...serverInputs, workspaceId: "ws-1", config: undefined })
+        .workspaceId,
+    ).toBe("ws-1");
+    expect(
+      buildPowerlineSpawnRequest({ ...serverInputs, workspaceId: "", config: undefined })
+        .workspaceId,
+    ).toBeUndefined();
   });
 });

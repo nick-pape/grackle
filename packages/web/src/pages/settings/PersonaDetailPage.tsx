@@ -1,7 +1,20 @@
 import { useState, useEffect, type JSX, type FormEvent } from "react";
 import { useParams, Navigate } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
-import { Breadcrumbs, Button, ConfirmDialog, EditableSelect, EditableTextArea, EditableTextField, McpToolSelector, PERSONAS_URL, SETTINGS_URL, personaUrl, useAppNavigate, useToast } from "@grackle-ai/web-components";
+import {
+  Breadcrumbs,
+  Button,
+  ConfirmDialog,
+  EditableSelect,
+  EditableTextArea,
+  EditableTextField,
+  McpToolSelector,
+  PERSONAS_URL,
+  SETTINGS_URL,
+  personaUrl,
+  useAppNavigate,
+  useToast,
+} from "@grackle-ai/web-components";
 import type { BreadcrumbSegment, PersonaData, SelectOption } from "@grackle-ai/web-components";
 import styles from "./PersonaDetail.module.scss";
 
@@ -16,9 +29,7 @@ const RUNTIME_OPTIONS: SelectOption[] = [
   { value: "copilot-acp", label: "copilot-acp (experimental)" },
 ];
 
-const SCRIPT_RUNTIME_OPTIONS: SelectOption[] = [
-  { value: "genaiscript", label: "genaiscript" },
-];
+const SCRIPT_RUNTIME_OPTIONS: SelectOption[] = [{ value: "genaiscript", label: "genaiscript" }];
 
 const MAX_TURNS_PLACEHOLDER: string = "0";
 
@@ -29,11 +40,14 @@ export function PersonaDetailPage(): JSX.Element {
   const { showToast } = useToast();
   const {
     personas: { personas, createPersona, updatePersona, deletePersona },
-    appDefaultPersonaId, setAppDefaultPersonaId,
+    appDefaultPersonaId,
+    setAppDefaultPersonaId,
   } = useGrackle();
 
   const isNew = personaId === undefined;
-  const existing: PersonaData | undefined = isNew ? undefined : personas.find((p) => p.id === personaId);
+  const existing: PersonaData | undefined = isNew
+    ? undefined
+    : personas.find((p) => p.id === personaId);
 
   // Redirect to list if persona not found (and personas have loaded)
   if (!isNew && personas.length > 0 && !existing) {
@@ -74,12 +88,29 @@ interface PersonaFormProps {
   existing: PersonaData | undefined;
   isNew: boolean;
   appDefaultPersonaId: string;
-  onCreatePersona: (name: string, description: string, systemPrompt: string,
-    runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string,
-    allowedMcpTools?: string[]) => Promise<PersonaData>;
-  onUpdatePersona: (personaId: string, name?: string, description?: string,
-    systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number,
-    type?: string, script?: string, allowedMcpTools?: string[]) => Promise<PersonaData>;
+  onCreatePersona: (
+    name: string,
+    description: string,
+    systemPrompt: string,
+    runtime?: string,
+    model?: string,
+    maxTurns?: number,
+    type?: string,
+    script?: string,
+    allowedMcpTools?: string[],
+  ) => Promise<PersonaData>;
+  onUpdatePersona: (
+    personaId: string,
+    name?: string,
+    description?: string,
+    systemPrompt?: string,
+    runtime?: string,
+    model?: string,
+    maxTurns?: number,
+    type?: string,
+    script?: string,
+    allowedMcpTools?: string[],
+  ) => Promise<PersonaData>;
   onDeletePersona: (personaId: string) => Promise<void>;
   onSetAppDefaultPersonaId: (personaId: string) => Promise<void>;
   onDone: () => void;
@@ -87,9 +118,15 @@ interface PersonaFormProps {
 }
 
 function PersonaForm({
-  existing, isNew, appDefaultPersonaId,
-  onCreatePersona, onUpdatePersona, onDeletePersona,
-  onSetAppDefaultPersonaId, onDone, showToast,
+  existing,
+  isNew,
+  appDefaultPersonaId,
+  onCreatePersona,
+  onUpdatePersona,
+  onDeletePersona,
+  onSetAppDefaultPersonaId,
+  onDone,
+  showToast,
 }: PersonaFormProps): JSX.Element {
   const navigate = useAppNavigate();
   const [name, setName] = useState(existing?.name ?? "");
@@ -115,7 +152,7 @@ function PersonaForm({
       setDescription(existing.description);
       setSystemPrompt(existing.systemPrompt);
       const editType = existing.type === "script" ? "script" : "agent";
-      setRuntime(editType === "script" ? (existing.runtime || "genaiscript") : existing.runtime);
+      setRuntime(editType === "script" ? existing.runtime || "genaiscript" : existing.runtime);
       setModel(existing.model);
       setMaxTurns(existing.maxTurns);
       setPersonaType(editType);
@@ -135,17 +172,18 @@ function PersonaForm({
 
   const isLoadingExisting = !isNew && existing === undefined;
 
-  const canSubmit = name.trim().length > 0
-    && !isLoadingExisting
-    && systemPrompt.trim().length > 0
-    && (personaType === "script" ? script.trim().length > 0 : (!!runtime && !!model));
+  const canSubmit =
+    name.trim().length > 0 &&
+    !isLoadingExisting &&
+    systemPrompt.trim().length > 0 &&
+    (personaType === "script" ? script.trim().length > 0 : !!runtime && !!model);
   const canCreate = isNew && canSubmit;
 
   const isAppDefault = !isNew && appDefaultPersonaId === existing?.id;
 
   /** Whether this persona is eligible to be set as app default. */
-  const canSetDefault = !isNew && existing && !isAppDefault
-    && personaType === "agent" && !!runtime && !!model;
+  const canSetDefault =
+    !isNew && existing && !isAppDefault && personaType === "agent" && !!runtime && !!model;
 
   const validateRequired = (value: string, fieldName: string): string | undefined => {
     if (!value.trim()) {
@@ -160,7 +198,17 @@ function PersonaForm({
       return;
     }
     if (existing) {
-      onUpdatePersona(existing.id, name, description, systemPrompt, runtime, model, maxTurns, personaType, script).then(
+      onUpdatePersona(
+        existing.id,
+        name,
+        description,
+        systemPrompt,
+        runtime,
+        model,
+        maxTurns,
+        personaType,
+        script,
+      ).then(
         () => {
           showToast("Persona updated", "success");
           onDone();
@@ -171,7 +219,17 @@ function PersonaForm({
       );
       return;
     }
-    onCreatePersona(name, description, systemPrompt, runtime, model, maxTurns, personaType, script, allowedMcpTools).then(
+    onCreatePersona(
+      name,
+      description,
+      systemPrompt,
+      runtime,
+      model,
+      maxTurns,
+      personaType,
+      script,
+      allowedMcpTools,
+    ).then(
       (createdPersona) => {
         showToast("Persona created", "success");
         navigate(personaUrl(createdPersona.id), { replace: true });
@@ -213,33 +271,50 @@ function PersonaForm({
     );
   };
 
-  const handleFieldSave = (field: "name" | "description" | "systemPrompt" | "runtime" | "model" | "maxTurns" | "type" | "script", value: string | number): void => {
+  const handleFieldSave = (
+    field:
+      | "name"
+      | "description"
+      | "systemPrompt"
+      | "runtime"
+      | "model"
+      | "maxTurns"
+      | "type"
+      | "script",
+    value: string | number,
+  ): void => {
     if (!existing) {
       return;
     }
     const nextType = field === "type" ? String(value) : personaType;
-    const nextRuntime = field === "runtime"
-      ? String(value)
-      : field === "type"
-        ? (String(value) === "script" ? "genaiscript" : runtime === "genaiscript" ? "claude-code" : runtime)
-        : runtime;
+    const nextRuntime =
+      field === "runtime"
+        ? String(value)
+        : field === "type"
+          ? String(value) === "script"
+            ? "genaiscript"
+            : runtime === "genaiscript"
+              ? "claude-code"
+              : runtime
+          : runtime;
     const nextModel = field === "model" ? String(value) : model;
     const nextMaxTurns = field === "maxTurns" ? Number(value) : maxTurns;
     const nextSystemPrompt = field === "systemPrompt" ? String(value) : systemPrompt;
     const nextScript = field === "script" ? String(value) : script;
 
     saveField(
-      () => onUpdatePersona(
-        existing.id,
-        field === "name" ? String(value) : name,
-        field === "description" ? String(value) : description,
-        nextSystemPrompt,
-        nextRuntime,
-        nextModel,
-        nextMaxTurns,
-        nextType,
-        nextScript,
-      ),
+      () =>
+        onUpdatePersona(
+          existing.id,
+          field === "name" ? String(value) : name,
+          field === "description" ? String(value) : description,
+          nextSystemPrompt,
+          nextRuntime,
+          nextModel,
+          nextMaxTurns,
+          nextType,
+          nextScript,
+        ),
       () => {
         if (field === "type") {
           const newType = String(value) === "script" ? "script" : "agent";
@@ -329,7 +404,9 @@ function PersonaForm({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={personaType === "script" ? "e.g. Nightly Report" : "e.g. Frontend Engineer"}
+              placeholder={
+                personaType === "script" ? "e.g. Nightly Report" : "e.g. Frontend Engineer"
+              }
               required
               data-testid="persona-detail-name"
             />
@@ -346,10 +423,18 @@ function PersonaForm({
           </label>
           <label>
             Runtime
-            <select value={runtime} onChange={(e) => setRuntime(e.target.value)} data-testid="persona-runtime-select">
-              {(personaType === "script" ? SCRIPT_RUNTIME_OPTIONS : RUNTIME_OPTIONS).map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
+            <select
+              value={runtime}
+              onChange={(e) => setRuntime(e.target.value)}
+              data-testid="persona-runtime-select"
+            >
+              {(personaType === "script" ? SCRIPT_RUNTIME_OPTIONS : RUNTIME_OPTIONS).map(
+                (option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ),
+              )}
             </select>
           </label>
           {personaType === "agent" && (
@@ -415,7 +500,9 @@ function PersonaForm({
                 <textarea
                   value={script}
                   onChange={(e) => setScript(e.target.value)}
-                  placeholder={'script({ model: "openai:gpt-4o" });\n\nconst grackle = await host.mcpServer({\n  id: "grackle",\n  url: env.vars.GRACKLE_MCP_URL,\n});\n\n$`Summarize the current tasks.`;'}
+                  placeholder={
+                    'script({ model: "openai:gpt-4o" });\n\nconst grackle = await host.mcpServer({\n  id: "grackle",\n  url: env.vars.GRACKLE_MCP_URL,\n});\n\n$`Summarize the current tasks.`;'
+                  }
                   rows={20}
                   className={styles.scriptEditor}
                   required
@@ -427,17 +514,26 @@ function PersonaForm({
           {personaType === "agent" && (
             <div>
               <label>Allowed MCP Tools</label>
-              <McpToolSelector
-                selectedTools={allowedMcpTools}
-                onChange={setAllowedMcpTools}
-              />
+              <McpToolSelector selectedTools={allowedMcpTools} onChange={setAllowedMcpTools} />
             </div>
           )}
           <div className={styles.formActions}>
-            <Button type="submit" variant="primary" size="md" disabled={!canCreate} data-testid="persona-detail-save">
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              disabled={!canCreate}
+              data-testid="persona-detail-save"
+            >
               Create
             </Button>
-            <Button type="button" variant="outline" size="md" onClick={onDone} data-testid="persona-detail-cancel">
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={onDone}
+              data-testid="persona-detail-cancel"
+            >
               Cancel
             </Button>
           </div>
@@ -446,7 +542,13 @@ function PersonaForm({
         <div className={styles.form}>
           <h3>Edit Persona</h3>
           <div className={styles.formActions}>
-            <Button type="button" variant="outline" size="md" onClick={onDone} data-testid="persona-detail-cancel">
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={onDone}
+              data-testid="persona-detail-cancel"
+            >
               Back to Personas
             </Button>
             {canSetDefault && (
@@ -460,9 +562,7 @@ function PersonaForm({
                 Set as App Default
               </Button>
             )}
-            {isAppDefault && (
-              <span className={styles.defaultBadge}>App Default</span>
-            )}
+            {isAppDefault && <span className={styles.defaultBadge}>App Default</span>}
             <Button
               type="button"
               variant="danger"
@@ -479,7 +579,9 @@ function PersonaForm({
               Name
               <EditableTextField
                 value={name}
-                onSave={(value) => { handleFieldSave("name", value); }}
+                onSave={(value) => {
+                  handleFieldSave("name", value);
+                }}
                 validate={(value) => validateRequired(value, "Name")}
                 fieldId="persona-name"
                 activeFieldId={activeFieldId}
@@ -492,7 +594,9 @@ function PersonaForm({
               Description
               <EditableTextField
                 value={description}
-                onSave={(value) => { handleFieldSave("description", value); }}
+                onSave={(value) => {
+                  handleFieldSave("description", value);
+                }}
                 fieldId="persona-description"
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}
@@ -505,7 +609,9 @@ function PersonaForm({
               Type
               <EditableSelect
                 value={personaType}
-                onSave={(value) => { handleFieldSave("type", value); }}
+                onSave={(value) => {
+                  handleFieldSave("type", value);
+                }}
                 options={[
                   { value: "agent", label: "Agent" },
                   { value: "script", label: "Script" },
@@ -521,7 +627,9 @@ function PersonaForm({
               Runtime
               <EditableSelect
                 value={runtime}
-                onSave={(value) => { handleFieldSave("runtime", value); }}
+                onSave={(value) => {
+                  handleFieldSave("runtime", value);
+                }}
                 options={personaType === "script" ? SCRIPT_RUNTIME_OPTIONS : RUNTIME_OPTIONS}
                 fieldId="persona-runtime"
                 activeFieldId={activeFieldId}
@@ -534,12 +642,20 @@ function PersonaForm({
               Model{personaType === "script" ? ` (${"optional"})` : ""}
               <EditableTextField
                 value={model}
-                onSave={(value) => { handleFieldSave("model", value); }}
-                validate={personaType === "agent" ? (value) => validateRequired(value, "Model") : undefined}
+                onSave={(value) => {
+                  handleFieldSave("model", value);
+                }}
+                validate={
+                  personaType === "agent" ? (value) => validateRequired(value, "Model") : undefined
+                }
                 fieldId="persona-model"
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}
-                placeholder={personaType === "script" ? "e.g. sonnet (leave empty for script-only)" : "e.g. sonnet"}
+                placeholder={
+                  personaType === "script"
+                    ? "e.g. sonnet (leave empty for script-only)"
+                    : "e.g. sonnet"
+                }
                 ariaLabel="Persona model"
                 data-testid="persona-detail-model"
               />
@@ -548,8 +664,14 @@ function PersonaForm({
               Max Turns
               <EditableTextField
                 value={String(maxTurns)}
-                onSave={(value) => { handleFieldSave("maxTurns", parseInt(value, 10) || 0); }}
-                validate={(value) => (/^\d+$/.test(value.trim()) ? undefined : "Max Turns must be a non-negative integer")}
+                onSave={(value) => {
+                  handleFieldSave("maxTurns", parseInt(value, 10) || 0);
+                }}
+                validate={(value) =>
+                  /^\d+$/.test(value.trim())
+                    ? undefined
+                    : "Max Turns must be a non-negative integer"
+                }
                 fieldId="persona-max-turns"
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}
@@ -562,12 +684,18 @@ function PersonaForm({
               System Prompt
               <EditableTextArea
                 value={systemPrompt}
-                onSave={(value) => { handleFieldSave("systemPrompt", value); }}
+                onSave={(value) => {
+                  handleFieldSave("systemPrompt", value);
+                }}
                 validate={(value) => validateRequired(value, "System Prompt")}
                 fieldId="persona-system-prompt"
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}
-                placeholder={personaType === "script" ? "Context for the script..." : "You are a senior frontend engineer..."}
+                placeholder={
+                  personaType === "script"
+                    ? "Context for the script..."
+                    : "You are a senior frontend engineer..."
+                }
                 ariaLabel="Persona system prompt"
                 data-testid="persona-detail-prompt"
               />
@@ -577,12 +705,16 @@ function PersonaForm({
                 Script
                 <EditableTextArea
                   value={script}
-                  onSave={(value) => { handleFieldSave("script", value); }}
+                  onSave={(value) => {
+                    handleFieldSave("script", value);
+                  }}
                   validate={(value) => validateRequired(value, "Script")}
                   fieldId="persona-script"
                   activeFieldId={activeFieldId}
                   onActivate={setActiveFieldId}
-                  placeholder={'script({ model: "openai:gpt-4o" });\n\nconst grackle = await host.mcpServer({\n  id: "grackle",\n  url: env.vars.GRACKLE_MCP_URL,\n});\n\n$`Summarize the current tasks.`;'}
+                  placeholder={
+                    'script({ model: "openai:gpt-4o" });\n\nconst grackle = await host.mcpServer({\n  id: "grackle",\n  url: env.vars.GRACKLE_MCP_URL,\n});\n\n$`Summarize the current tasks.`;'
+                  }
                   ariaLabel="Persona script"
                   data-testid="persona-script-editor"
                 />
@@ -596,11 +728,19 @@ function PersonaForm({
                   onChange={(tools) => {
                     setAllowedMcpTools(tools);
                     saveField(
-                      () => onUpdatePersona(
-                        existing!.id,
-                        undefined, undefined, undefined, undefined, undefined,
-                        undefined, undefined, undefined, tools,
-                      ),
+                      () =>
+                        onUpdatePersona(
+                          existing!.id,
+                          undefined,
+                          undefined,
+                          undefined,
+                          undefined,
+                          undefined,
+                          undefined,
+                          undefined,
+                          undefined,
+                          tools,
+                        ),
                       () => {},
                       "MCP tools updated",
                       "Failed to update MCP tools",
@@ -612,7 +752,13 @@ function PersonaForm({
           </div>
 
           {!canSetDefault && !isAppDefault && (
-            <p style={{ fontSize: "var(--font-size-xs)", color: "var(--text-tertiary)", marginTop: "var(--space-xs)" }}>
+            <p
+              style={{
+                fontSize: "var(--font-size-xs)",
+                color: "var(--text-tertiary)",
+                marginTop: "var(--space-xs)",
+              }}
+            >
               Only agent personas with a runtime and model can be set as app default.
             </p>
           )}

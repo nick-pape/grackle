@@ -35,8 +35,9 @@ describe("ToolRegistry", () => {
     const registry = new ToolRegistry();
     registry.register(createTestTool("duplicate"));
 
-    expect(() => registry.register(createTestTool("duplicate")))
-      .toThrow("Duplicate tool name: duplicate");
+    expect(() => registry.register(createTestTool("duplicate"))).toThrow(
+      "Duplicate tool name: duplicate",
+    );
   });
 
   it("throws when a tool name uses the reserved render_ prefix (#1272)", () => {
@@ -44,8 +45,7 @@ describe("ToolRegistry", () => {
     // The render_ namespace belongs to dynamic per-workspace component tools, so
     // no static/plugin tool may claim it — enforced at registration, not just by
     // a built-in allowlist test.
-    expect(() => registry.register(createTestTool("render_evil")))
-      .toThrow(/reserved/);
+    expect(() => registry.register(createTestTool("render_evil"))).toThrow(/reserved/);
   });
 
   it("lists all registered tools", () => {
@@ -118,10 +118,7 @@ describe("createToolRegistry with plugin tools", () => {
   const builtinCount = createToolRegistry().list().length;
 
   it("registers plugin-contributed tools alongside built-ins", () => {
-    const pluginTools = [
-      createTestTool("plugin_alpha"),
-      createTestTool("plugin_beta"),
-    ];
+    const pluginTools = [createTestTool("plugin_alpha"), createTestTool("plugin_beta")];
     const registry = createToolRegistry([pluginTools]);
     expect(registry.list()).toHaveLength(builtinCount + 2);
     expect(registry.get("plugin_alpha")).toBeDefined();
@@ -221,7 +218,24 @@ describe("Full tool registry", () => {
   it("groups are consistent within tool files", () => {
     const registry = createToolRegistry();
     const expectedGroups = new Set([
-      "env", "session", "workspace", "task", "persona", "logs", "credential", "token", "config", "ipc", "usage", "knowledge", "workpad", "schedule", "system", "escalation", "widget", "component",
+      "env",
+      "session",
+      "workspace",
+      "task",
+      "persona",
+      "logs",
+      "credential",
+      "token",
+      "config",
+      "ipc",
+      "usage",
+      "knowledge",
+      "workpad",
+      "schedule",
+      "system",
+      "escalation",
+      "widget",
+      "component",
     ]);
     for (const tool of registry.list()) {
       expect(expectedGroups.has(tool.group), `unexpected group: ${tool.group}`).toBe(true);

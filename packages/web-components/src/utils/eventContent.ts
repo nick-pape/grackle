@@ -52,7 +52,9 @@ export function getEventCopyText(event: DisplayEvent): string {
           if (typeof parsed.content === "string") {
             resultContent = parsed.content;
           }
-        } catch { /* use as-is */ }
+        } catch {
+          /* use as-is */
+        }
       }
       return resultContent;
     }
@@ -138,7 +140,9 @@ export function formatEventsAsMarkdown(events: DisplayEvent[]): string {
               if (typeof parsed.content === "string") {
                 resultContent = parsed.content;
               }
-            } catch { /* use as-is */ }
+            } catch {
+              /* use as-is */
+            }
           }
         }
 
@@ -160,11 +164,15 @@ export function formatEventsAsMarkdown(events: DisplayEvent[]): string {
           const parsed = JSON.parse(event.content) as { tool?: string; args?: unknown };
           tool = parsed.tool ?? "tool";
           args = parsed.args;
-        } catch { /* use defaults */ }
+        } catch {
+          /* use defaults */
+        }
         const summary = toolArgsSummary(args);
         const label = summary ? `**Tool: ${tool}** ${summary}` : `**Tool: ${tool}**`;
         if (args !== undefined) {
-          parts.push(`${label} (${time}):\n\`\`\`json\n${JSON.stringify(args, undefined, 2)}\n\`\`\``);
+          parts.push(
+            `${label} (${time}):\n\`\`\`json\n${JSON.stringify(args, undefined, 2)}\n\`\`\``,
+          );
         } else {
           parts.push(`${label} (${time}):`);
         }
@@ -205,5 +213,8 @@ export function formatForwardEnvelope(sourceLabel: string, events: DisplayEvent[
  * cannot be confused with the envelope's own `---` markers.
  */
 function sanitizeSourceLabel(label: string): string {
-  return label.replace(/[\r\n]+/g, " ").trim().replace(/---/g, "\u2014");
+  return label
+    .replace(/[\r\n]+/g, " ")
+    .trim()
+    .replace(/---/g, "\u2014");
 }

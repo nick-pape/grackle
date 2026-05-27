@@ -10,8 +10,8 @@ export const envTools: ToolDefinition[] = [
     name: "env_list_docker_containers",
     group: "env",
     description:
-      "List running Docker containers that an environment can attach to (Docker adapter attach mode). "
-      + "Use the returned container name with env_add (adapterType 'docker', adapterConfig.attach).",
+      "List running Docker containers that an environment can attach to (Docker adapter attach mode). " +
+      "Use the returned container name with env_add (adapterType 'docker', adapterConfig.attach).",
     inputSchema: z.object({}),
     rpcMethod: "listDockerContainers",
     mutating: false,
@@ -113,10 +113,7 @@ export const envTools: ToolDefinition[] = [
         adapterConfig: z
           .strictObject({
             host: z.string().describe("Required. SSH hostname or IP address of the target"),
-            user: z
-              .string()
-              .optional()
-              .describe("SSH username (defaults to the current OS user)"),
+            user: z.string().optional().describe("SSH username (defaults to the current OS user)"),
             sshPort: z
               .number()
               .int()
@@ -124,10 +121,7 @@ export const envTools: ToolDefinition[] = [
               .max(65535)
               .optional()
               .describe("SSH port on the target (default 22)"),
-            identityFile: z
-              .string()
-              .optional()
-              .describe("Path to an SSH private key file"),
+            identityFile: z.string().optional().describe("Path to an SSH private key file"),
             sshOptions: z
               .record(z.string(), z.string())
               .optional()
@@ -152,9 +146,7 @@ export const envTools: ToolDefinition[] = [
         adapterType: z.literal("codespace"),
         adapterConfig: z
           .strictObject({
-            codespaceName: z
-              .string()
-              .describe("Required. Codespace name from `gh codespace list`"),
+            codespaceName: z.string().describe("Required. Codespace name from `gh codespace list`"),
             localPort: z
               .number()
               .int()
@@ -185,8 +177,8 @@ export const envTools: ToolDefinition[] = [
               .string()
               .optional()
               .describe(
-                "Attach to an existing container by name/ID instead of creating one. "
-                + "When set, Grackle never creates/stops/removes the container, and image/repo/volumes are ignored.",
+                "Attach to an existing container by name/ID instead of creating one. " +
+                  "When set, Grackle never creates/stops/removes the container, and image/repo/volumes are ignored.",
               ),
             image: z
               .string()
@@ -304,11 +296,15 @@ export const envTools: ToolDefinition[] = [
             content: [
               {
                 type: "text" as const,
-                text: JSON.stringify({
-                  events,
-                  finalStatus: "error",
-                  error: error instanceof Error ? error.message : String(error),
-                }, null, 2),
+                text: JSON.stringify(
+                  {
+                    events,
+                    finalStatus: "error",
+                    error: error instanceof Error ? error.message : String(error),
+                  },
+                  null,
+                  2,
+                ),
               },
             ],
             isError: true,
@@ -409,9 +405,7 @@ export const envTools: ToolDefinition[] = [
     description:
       "Wake a stopped environment by re-provisioning it. This starts its backing resources and reconnects the PowerLine agent.",
     inputSchema: z.object({
-      environmentId: z
-        .string()
-        .describe("ID of the stopped environment to wake"),
+      environmentId: z.string().describe("ID of the stopped environment to wake"),
     }),
     rpcMethod: "provisionEnvironment",
     mutating: true,
@@ -443,11 +437,15 @@ export const envTools: ToolDefinition[] = [
             content: [
               {
                 type: "text" as const,
-                text: JSON.stringify({
-                  events,
-                  finalStatus: "error",
-                  error: error instanceof Error ? error.message : String(error),
-                }, null, 2),
+                text: JSON.stringify(
+                  {
+                    events,
+                    finalStatus: "error",
+                    error: error instanceof Error ? error.message : String(error),
+                  },
+                  null,
+                  2,
+                ),
               },
             ],
             isError: true,

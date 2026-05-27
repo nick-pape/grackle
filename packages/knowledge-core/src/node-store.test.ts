@@ -126,9 +126,7 @@ describe("createReferenceNode", () => {
       workspaceId: "ws-1",
     });
 
-    expect(id).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
-    );
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     expect(mockSessionRun).toHaveBeenCalledTimes(1);
 
     const [cypher, params] = mockSessionRun.mock.calls[0] as [string, Record<string, unknown>];
@@ -327,7 +325,11 @@ describe("updateNode", () => {
   });
 
   it("merges updates and sets updatedAt", async () => {
-    const updatedProps = { ...NATIVE_PROPS, title: "Updated", updatedAt: "2026-06-01T00:00:00.000Z" };
+    const updatedProps = {
+      ...NATIVE_PROPS,
+      title: "Updated",
+      updatedAt: "2026-06-01T00:00:00.000Z",
+    };
     const record = makeNeo4jRecord({ n: makeNeo4jNode(updatedProps) });
     mockSessionRun.mockResolvedValueOnce({ records: [record] });
 
@@ -460,7 +462,14 @@ describe("listNodesMissingEmbedding", () => {
     mockSessionRun.mockResolvedValueOnce({
       records: [
         makeNeo4jRecord({
-          props: { id: "n1", kind: "reference", sourceType: "task", sourceId: "t1", label: "L", embedding: [] },
+          props: {
+            id: "n1",
+            kind: "reference",
+            sourceType: "task",
+            sourceId: "t1",
+            label: "L",
+            embedding: [],
+          },
         }),
       ],
     });

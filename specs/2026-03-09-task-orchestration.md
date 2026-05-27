@@ -20,15 +20,14 @@ Two existing systems informed this design. Neither does what Grackle needs, but 
 
 **Where Grackle differs from both:**
 
-| | Symphony | Agent Teams | Grackle |
-|---|---|---|---|
-| Agent-to-agent collaboration | None | Direct messaging | Hierarchical only (parent/child + findings) |
-| Task decomposition | None | One level (lead → teammates) | Arbitrary depth (with decomposition rights) |
-| Agent specialization | One agent type | Per-teammate definitions | Persona roster |
-| State | In-memory, no DB | File-system JSON | SQLite + gRPC |
-| Coordination | Issue tracker state | Shared task list + mailbox | Orchestrator-driven task tree |
-| Multi-machine | No | No | Yes (PowerLine architecture) |
-
+|                              | Symphony            | Agent Teams                  | Grackle                                     |
+| ---------------------------- | ------------------- | ---------------------------- | ------------------------------------------- |
+| Agent-to-agent collaboration | None                | Direct messaging             | Hierarchical only (parent/child + findings) |
+| Task decomposition           | None                | One level (lead → teammates) | Arbitrary depth (with decomposition rights) |
+| Agent specialization         | One agent type      | Per-teammate definitions     | Persona roster                              |
+| State                        | In-memory, no DB    | File-system JSON             | SQLite + gRPC                               |
+| Coordination                 | Issue tracker state | Shared task list + mailbox   | Orchestrator-driven task tree               |
+| Multi-machine                | No                  | No                           | Yes (PowerLine architecture)                |
 
 ## Core Principles
 
@@ -49,6 +48,7 @@ Two existing systems informed this design. Neither does what Grackle needs, but 
 A persona is the Grackle equivalent of what other systems call an "agent." It is a reusable template that defines how a task gets executed.
 
 A persona consists of:
+
 - **System prompt** — identity, expertise, behavioral instructions
 - **Tool configuration** — which MCP tools are available
 - **Runtime configuration** — which agent runtime to use (Claude Code, Copilot, etc.)
@@ -56,6 +56,7 @@ A persona consists of:
 Personas are a runtime/database concept, not hardcoded. They are created and managed through the system. Initial setup involves manually defining personas, but the long-term vision includes a "recruiter" persona that can create new specialized personas as the system learns what's needed.
 
 Examples of personas:
+
 - Orchestrator / Project Manager
 - Software Architect
 - Frontend Engineer (React specialist)
@@ -137,13 +138,13 @@ Mechanically, escalation likely means: the child task completes (or pauses) with
 
 Triggers are the entry points that create or resume tasks. They are a first-class concept.
 
-| Trigger Type | Example | Creates or Resumes |
-|---|---|---|
-| **Human** | User types "implement dark mode" | Creates root task |
-| **Scheduled** | Every 15 min, poll ADO for new work items | Creates fresh task each time |
-| **Webhook** | GitHub push event, ADO work item update | Creates root task |
-| **Event** | Child task completed, escalation received | Resumes parent task |
-| **Agent-initiated** | Running agent creates child tasks | Creates child tasks |
+| Trigger Type        | Example                                   | Creates or Resumes           |
+| ------------------- | ----------------------------------------- | ---------------------------- |
+| **Human**           | User types "implement dark mode"          | Creates root task            |
+| **Scheduled**       | Every 15 min, poll ADO for new work items | Creates fresh task each time |
+| **Webhook**         | GitHub push event, ADO work item update   | Creates root task            |
+| **Event**           | Child task completed, escalation received | Resumes parent task          |
+| **Agent-initiated** | Running agent creates child tasks         | Creates child tasks          |
 
 All trigger types flow through the same system. A scheduled ADO poll creates a task with the "ADO Watcher" persona, which checks for new items and creates root tasks for the orchestrator. The orchestrator decomposes those just like human-initiated work.
 
@@ -156,6 +157,7 @@ pending → assigned → in_progress → review → done / failed
 ```
 
 New additions:
+
 - **Waiting**: a parent task that has created children and is waiting for them to complete. Not consuming an environment — will be resumed when children finish.
 - The transition from `waiting → in_progress` happens when a trigger resumes the task (child completed, escalation received).
 
@@ -169,19 +171,18 @@ The server runs a periodic **reconciliation loop** (inspired by Symphony's poll-
 
 This prevents the system from silently drifting — a crashed environment, a missed event, or a stuck agent gets caught on the next tick rather than waiting for a human to notice.
 
-
 ## What This Architecture Supports
 
-| Pattern | How It Works |
-|---|---|
-| **Simple task** | Human creates task → assigned to persona → runs → completes |
-| **Workflow (spec → code → review)** | Orchestrator decomposes into child tasks with dependencies |
-| **Team / roster** | Orchestrator picks personas from the roster based on task needs |
-| **Swarm** | Deep decomposition with many concurrent leaf tasks; tree grows organically |
-| **Scheduled automation** | Scheduled trigger creates fresh tasks on a cadence |
-| **Event-driven** | Webhook trigger creates tasks from external system events |
-| **Human-in-the-loop** | Escalation chain reaches human only when agents can't resolve |
-| **Agent-to-agent knowledge sharing** | Findings system (existing), scoped to project/task/global |
+| Pattern                              | How It Works                                                               |
+| ------------------------------------ | -------------------------------------------------------------------------- |
+| **Simple task**                      | Human creates task → assigned to persona → runs → completes                |
+| **Workflow (spec → code → review)**  | Orchestrator decomposes into child tasks with dependencies                 |
+| **Team / roster**                    | Orchestrator picks personas from the roster based on task needs            |
+| **Swarm**                            | Deep decomposition with many concurrent leaf tasks; tree grows organically |
+| **Scheduled automation**             | Scheduled trigger creates fresh tasks on a cadence                         |
+| **Event-driven**                     | Webhook trigger creates tasks from external system events                  |
+| **Human-in-the-loop**                | Escalation chain reaches human only when agents can't resolve              |
+| **Agent-to-agent knowledge sharing** | Findings system (existing), scoped to project/task/global                  |
 
 ## Open Questions
 

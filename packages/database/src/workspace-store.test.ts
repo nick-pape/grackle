@@ -65,7 +65,12 @@ describe("workspace-store", () => {
   });
 
   it("creates and retrieves a workspace", () => {
-    workspaceStore.createWorkspace("p1", "My Workspace", "A description", "https://github.com/acme/repo");
+    workspaceStore.createWorkspace(
+      "p1",
+      "My Workspace",
+      "A description",
+      "https://github.com/acme/repo",
+    );
     const p = workspaceStore.getWorkspace("p1");
     expect(p).toBeDefined();
     expect(p!.name).toBe("My Workspace");
@@ -149,7 +154,9 @@ describe("workspace-store", () => {
 
   it("updates repo URL", () => {
     workspaceStore.createWorkspace("p1", "Name", "", "");
-    const updated = workspaceStore.updateWorkspace("p1", { repoUrl: "https://github.com/new/repo" });
+    const updated = workspaceStore.updateWorkspace("p1", {
+      repoUrl: "https://github.com/new/repo",
+    });
     expect(updated!.repoUrl).toBe("https://github.com/new/repo");
   });
 
@@ -250,7 +257,9 @@ describe("workspace-store", () => {
 
     it("updates workingDirectory", () => {
       workspaceStore.createWorkspace("p1", "Name", "", "");
-      const updated = workspaceStore.updateWorkspace("p1", { workingDirectory: "/workspaces/my-repo" });
+      const updated = workspaceStore.updateWorkspace("p1", {
+        workingDirectory: "/workspaces/my-repo",
+      });
       expect(updated!.workingDirectory).toBe("/workspaces/my-repo");
     });
 

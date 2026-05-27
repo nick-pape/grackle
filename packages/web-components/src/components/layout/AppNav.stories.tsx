@@ -3,7 +3,14 @@ import { expect, userEvent } from "@storybook/test";
 import { Brain, ClipboardList, Home, MessageSquare, Monitor, Settings } from "lucide-react";
 import { AppNav } from "./AppNav.js";
 import { ICON_LG } from "../../utils/iconSize.js";
-import { HOME_URL, CHAT_URL, ENVIRONMENTS_URL, SETTINGS_CREDENTIALS_URL, TASKS_URL, KNOWLEDGE_URL } from "../../utils/navigation.js";
+import {
+  HOME_URL,
+  CHAT_URL,
+  ENVIRONMENTS_URL,
+  SETTINGS_CREDENTIALS_URL,
+  TASKS_URL,
+  KNOWLEDGE_URL,
+} from "../../utils/navigation.js";
 
 const meta: Meta<typeof AppNav> = {
   title: "Grackle/Layout/AppNav",
@@ -29,10 +36,34 @@ export const AllTabsRendered: Story = {
 export const CoreOnlyTabs: Story = {
   args: {
     tabs: [
-      { view: "dashboard", label: "Dashboard", icon: <Home size={ICON_LG} />, route: HOME_URL, testId: "sidebar-tab-dashboard" },
-      { view: "chat", label: "Root", icon: <MessageSquare size={ICON_LG} />, route: CHAT_URL, testId: "sidebar-tab-chat" },
-      { view: "environments", label: "Environments", icon: <Monitor size={ICON_LG} />, route: ENVIRONMENTS_URL, testId: "sidebar-tab-environments" },
-      { view: "settings", label: "Settings", icon: <Settings size={ICON_LG} />, route: SETTINGS_CREDENTIALS_URL, testId: "sidebar-tab-settings" },
+      {
+        view: "dashboard",
+        label: "Dashboard",
+        icon: <Home size={ICON_LG} />,
+        route: HOME_URL,
+        testId: "sidebar-tab-dashboard",
+      },
+      {
+        view: "chat",
+        label: "Root",
+        icon: <MessageSquare size={ICON_LG} />,
+        route: CHAT_URL,
+        testId: "sidebar-tab-chat",
+      },
+      {
+        view: "environments",
+        label: "Environments",
+        icon: <Monitor size={ICON_LG} />,
+        route: ENVIRONMENTS_URL,
+        testId: "sidebar-tab-environments",
+      },
+      {
+        view: "settings",
+        label: "Settings",
+        icon: <Settings size={ICON_LG} />,
+        route: SETTINGS_CREDENTIALS_URL,
+        testId: "sidebar-tab-settings",
+      },
     ],
   },
   play: async ({ canvas }) => {
@@ -50,12 +81,48 @@ export const CoreOnlyTabs: Story = {
 export const AllTabsExplicit: Story = {
   args: {
     tabs: [
-      { view: "dashboard", label: "Dashboard", icon: <Home size={ICON_LG} />, route: HOME_URL, testId: "sidebar-tab-dashboard" },
-      { view: "chat", label: "Root", icon: <MessageSquare size={ICON_LG} />, route: CHAT_URL, testId: "sidebar-tab-chat" },
-      { view: "tasks", label: "Tasks", icon: <ClipboardList size={ICON_LG} />, route: TASKS_URL, testId: "sidebar-tab-tasks" },
-      { view: "environments", label: "Environments", icon: <Monitor size={ICON_LG} />, route: ENVIRONMENTS_URL, testId: "sidebar-tab-environments" },
-      { view: "knowledge", label: "Knowledge", icon: <Brain size={ICON_LG} />, route: KNOWLEDGE_URL, testId: "sidebar-tab-knowledge" },
-      { view: "settings", label: "Settings", icon: <Settings size={ICON_LG} />, route: SETTINGS_CREDENTIALS_URL, testId: "sidebar-tab-settings" },
+      {
+        view: "dashboard",
+        label: "Dashboard",
+        icon: <Home size={ICON_LG} />,
+        route: HOME_URL,
+        testId: "sidebar-tab-dashboard",
+      },
+      {
+        view: "chat",
+        label: "Root",
+        icon: <MessageSquare size={ICON_LG} />,
+        route: CHAT_URL,
+        testId: "sidebar-tab-chat",
+      },
+      {
+        view: "tasks",
+        label: "Tasks",
+        icon: <ClipboardList size={ICON_LG} />,
+        route: TASKS_URL,
+        testId: "sidebar-tab-tasks",
+      },
+      {
+        view: "environments",
+        label: "Environments",
+        icon: <Monitor size={ICON_LG} />,
+        route: ENVIRONMENTS_URL,
+        testId: "sidebar-tab-environments",
+      },
+      {
+        view: "knowledge",
+        label: "Knowledge",
+        icon: <Brain size={ICON_LG} />,
+        route: KNOWLEDGE_URL,
+        testId: "sidebar-tab-knowledge",
+      },
+      {
+        view: "settings",
+        label: "Settings",
+        icon: <Settings size={ICON_LG} />,
+        route: SETTINGS_CREDENTIALS_URL,
+        testId: "sidebar-tab-settings",
+      },
     ],
   },
   play: async ({ canvas }) => {
@@ -75,12 +142,49 @@ export const SettingsPinnedRight: Story = {
   parameters: { layout: "fullscreen" },
   args: {
     tabs: [
-      { view: "dashboard", label: "Dashboard", icon: <Home size={ICON_LG} />, route: HOME_URL, testId: "sidebar-tab-dashboard" },
-      { view: "chat", label: "Root", icon: <MessageSquare size={ICON_LG} />, route: CHAT_URL, testId: "sidebar-tab-chat" },
-      { view: "environments", label: "Environments", icon: <Monitor size={ICON_LG} />, route: ENVIRONMENTS_URL, testId: "sidebar-tab-environments" },
-      { view: "settings", label: "Settings", icon: <Settings size={ICON_LG} />, route: SETTINGS_CREDENTIALS_URL, testId: "sidebar-tab-settings", align: "end" },
-      { view: "tasks", label: "Tasks", icon: <ClipboardList size={ICON_LG} />, route: TASKS_URL, testId: "sidebar-tab-tasks" },
-      { view: "knowledge", label: "Knowledge", icon: <Brain size={ICON_LG} />, route: KNOWLEDGE_URL, testId: "sidebar-tab-knowledge" },
+      {
+        view: "dashboard",
+        label: "Dashboard",
+        icon: <Home size={ICON_LG} />,
+        route: HOME_URL,
+        testId: "sidebar-tab-dashboard",
+      },
+      {
+        view: "chat",
+        label: "Root",
+        icon: <MessageSquare size={ICON_LG} />,
+        route: CHAT_URL,
+        testId: "sidebar-tab-chat",
+      },
+      {
+        view: "environments",
+        label: "Environments",
+        icon: <Monitor size={ICON_LG} />,
+        route: ENVIRONMENTS_URL,
+        testId: "sidebar-tab-environments",
+      },
+      {
+        view: "settings",
+        label: "Settings",
+        icon: <Settings size={ICON_LG} />,
+        route: SETTINGS_CREDENTIALS_URL,
+        testId: "sidebar-tab-settings",
+        align: "end",
+      },
+      {
+        view: "tasks",
+        label: "Tasks",
+        icon: <ClipboardList size={ICON_LG} />,
+        route: TASKS_URL,
+        testId: "sidebar-tab-tasks",
+      },
+      {
+        view: "knowledge",
+        label: "Knowledge",
+        icon: <Brain size={ICON_LG} />,
+        route: KNOWLEDGE_URL,
+        testId: "sidebar-tab-knowledge",
+      },
     ],
   },
   play: async ({ canvas }) => {
@@ -96,7 +200,9 @@ export const SettingsPinnedRight: Story = {
     if (!settingsFlexItem) {
       throw new Error("expected the Settings tab to have a flex-item wrapper");
     }
-    const settingsMarginLeft = Number.parseFloat(globalThis.getComputedStyle(settingsFlexItem).marginLeft);
+    const settingsMarginLeft = Number.parseFloat(
+      globalThis.getComputedStyle(settingsFlexItem).marginLeft,
+    );
     await expect(settingsMarginLeft).toBeGreaterThan(0);
 
     // The neighbor immediately before it (Knowledge) must NOT have an auto
@@ -105,7 +211,9 @@ export const SettingsPinnedRight: Story = {
     if (!neighborFlexItem) {
       throw new Error("expected the neighbor tab to have a flex-item wrapper");
     }
-    const neighborMarginLeft = Number.parseFloat(globalThis.getComputedStyle(neighborFlexItem).marginLeft);
+    const neighborMarginLeft = Number.parseFloat(
+      globalThis.getComputedStyle(neighborFlexItem).marginLeft,
+    );
     await expect(neighborMarginLeft).toBe(0);
   },
 };

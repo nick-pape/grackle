@@ -207,7 +207,9 @@ describe("github-account-store", () => {
 
   it("stored token is encrypted (not stored as plaintext)", () => {
     store.addGitHubAccount("personal", "alice", "ghp_plaintext", false);
-    const raw = sqlite.prepare("SELECT token FROM github_accounts WHERE label = ?").get("personal") as { token: string };
+    const raw = sqlite
+      .prepare("SELECT token FROM github_accounts WHERE label = ?")
+      .get("personal") as { token: string };
     expect(raw.token).not.toBe("ghp_plaintext");
     expect(raw.token.length).toBeGreaterThan(0);
   });

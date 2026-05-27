@@ -8,7 +8,7 @@ vi.mock("@grackle-ai/database", async () => {
 });
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {
-  const actual = await importOriginal() as Record<string, unknown>;
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -147,9 +147,12 @@ describe("createSigchldSubscriber", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       makeSession({ status: "idle" }) as any,
     );
-    vi.mocked(readLastTextEntry).mockReturnValue(
-      { session_id: "sess-child", type: "text", timestamp: "", content: "Created PR #42." },
-    );
+    vi.mocked(readLastTextEntry).mockReturnValue({
+      session_id: "sess-child",
+      type: "text",
+      timestamp: "",
+      content: "Created PR #42.",
+    });
 
     fireTaskUpdated("task-child");
     await flush();
@@ -264,9 +267,12 @@ describe("createSigchldSubscriber", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       makeSession({ status: "idle" }) as any,
     );
-    vi.mocked(readLastTextEntry).mockReturnValue(
-      { session_id: "sess-child", type: "text", timestamp: "", content: "All tests pass. PR created." },
-    );
+    vi.mocked(readLastTextEntry).mockReturnValue({
+      session_id: "sess-child",
+      type: "text",
+      timestamp: "",
+      content: "All tests pass. PR created.",
+    });
 
     fireTaskUpdated("task-child");
     await flush();
@@ -288,8 +294,8 @@ describe("createSigchldSubscriber", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       makeSession({
         status: "idle",
-        parentSessionId: "",  // web UI starts sessions without parentSessionId
-        pipeMode: "",         // no pipe — not started via orchestrator IPC
+        parentSessionId: "", // web UI starts sessions without parentSessionId
+        pipeMode: "", // no pipe — not started via orchestrator IPC
       }) as any,
     );
     vi.mocked(readLastTextEntry).mockReturnValue(undefined);
@@ -319,9 +325,7 @@ describe("createSigchldSubscriber", () => {
     vi.mocked(readLastTextEntry).mockReturnValue(undefined);
 
     // First delivery fails, retry should succeed
-    vi.mocked(deliverSignalToTask)
-      .mockResolvedValueOnce(false)
-      .mockResolvedValueOnce(true);
+    vi.mocked(deliverSignalToTask).mockResolvedValueOnce(false).mockResolvedValueOnce(true);
 
     fireTaskUpdated("task-child");
     // Advance past retry delays (MAX_DELIVERY_RETRIES * 1000ms + buffer)
@@ -345,9 +349,7 @@ describe("createSigchldSubscriber", () => {
     vi.mocked(readLastTextEntry).mockReturnValue(undefined);
 
     // First attempt fails, retry succeeds
-    vi.mocked(deliverSignalToTask)
-      .mockResolvedValueOnce(false)
-      .mockResolvedValueOnce(true);
+    vi.mocked(deliverSignalToTask).mockResolvedValueOnce(false).mockResolvedValueOnce(true);
 
     // Fire two events concurrently — handler B should be deduped,
     // but handler A should retry and succeed

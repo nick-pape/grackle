@@ -108,15 +108,15 @@
 
 .viewLink {
   background: none;
-  border: 1px solid var(--accent-blue, #4A9EFF);
-  color: var(--accent-blue, #4A9EFF);
+  border: 1px solid var(--accent-blue, #4a9eff);
+  color: var(--accent-blue, #4a9eff);
   padding: 6px 12px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
 
   &:hover {
-    background: var(--accent-blue, #4A9EFF);
+    background: var(--accent-blue, #4a9eff);
     color: #fff;
   }
 }
@@ -145,7 +145,7 @@
 .edgeNodeLink {
   background: none;
   border: none;
-  color: var(--accent-blue, #4A9EFF);
+  color: var(--accent-blue, #4a9eff);
   cursor: pointer;
   font-size: 12px;
   font-family: monospace;

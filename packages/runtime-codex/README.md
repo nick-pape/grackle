@@ -22,12 +22,12 @@ When a session starts, the runtime creates a Codex thread, runs the prompt with 
 
 All configuration is supplied via environment variables so the runtime behaves identically across every environment type.
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `OPENAI_API_KEY` | yes* | OpenAI API key. Read automatically by the Codex SDK. |
-| `CODEX_API_KEY` | no | Explicit API-key override; takes precedence over `OPENAI_API_KEY`. |
-| `OPENAI_BASE_URL` | no | Custom base URL for the OpenAI API. |
-| `CODEX_CLI_PATH` | no | Path to the Codex CLI binary, overriding default PATH resolution. |
+| Variable          | Required | Description                                                        |
+| ----------------- | -------- | ------------------------------------------------------------------ |
+| `OPENAI_API_KEY`  | yes\*    | OpenAI API key. Read automatically by the Codex SDK.               |
+| `CODEX_API_KEY`   | no       | Explicit API-key override; takes precedence over `OPENAI_API_KEY`. |
+| `OPENAI_BASE_URL` | no       | Custom base URL for the OpenAI API.                                |
+| `CODEX_CLI_PATH`  | no       | Path to the Codex CLI binary, overriding default PATH resolution.  |
 
 \* Either `OPENAI_API_KEY` or `CODEX_API_KEY` must be set. If neither is present, Codex returns no messages and the session reports an authentication error.
 

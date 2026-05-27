@@ -88,10 +88,7 @@ export function reanimateAgent(sessionId: string): SessionRow {
   try {
     resumeStream = conn.client.resume(powerlineReq);
   } catch (err) {
-    throw new ConnectError(
-      `Failed to initiate resume stream: ${String(err)}`,
-      Code.Internal,
-    );
+    throw new ConnectError(`Failed to initiate resume stream: ${String(err)}`, Code.Internal);
   }
 
   sessionStore.reanimateSession(session.id);

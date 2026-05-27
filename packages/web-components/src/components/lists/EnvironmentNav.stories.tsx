@@ -10,8 +10,18 @@ const meta: Meta<typeof EnvironmentNav> = {
   args: {
     environments: [
       buildEnvironment({ id: "env-1", displayName: "test-local", status: "connected" }),
-      buildEnvironment({ id: "env-2", displayName: "test-ssh", status: "disconnected", adapterType: "ssh" }),
-      buildEnvironment({ id: "env-3", displayName: "test-docker", status: "error", adapterType: "docker" }),
+      buildEnvironment({
+        id: "env-2",
+        displayName: "test-ssh",
+        status: "disconnected",
+        adapterType: "ssh",
+      }),
+      buildEnvironment({
+        id: "env-3",
+        displayName: "test-docker",
+        status: "error",
+        adapterType: "docker",
+      }),
     ],
   },
 };
@@ -33,7 +43,11 @@ export const StatusDotColored: Story = {
   args: {
     environments: [
       buildEnvironment({ id: "env-connected", displayName: "Connected Env", status: "connected" }),
-      buildEnvironment({ id: "env-disconnected", displayName: "Disconnected Env", status: "disconnected" }),
+      buildEnvironment({
+        id: "env-disconnected",
+        displayName: "Disconnected Env",
+        status: "disconnected",
+      }),
       buildEnvironment({ id: "env-error", displayName: "Error Env", status: "error" }),
     ],
   },

@@ -25,10 +25,12 @@ const TRACE_ID_PATTERN: RegExp = /^[A-Za-z0-9_.-]+$/;
 
 /** Validate that a trace ID is non-empty, within length limits, and uses safe characters. */
 export function isValidTraceId(value: string | undefined): boolean {
-  return typeof value === "string"
-    && value.length > 0
-    && value.length <= MAX_TRACE_ID_LENGTH
-    && TRACE_ID_PATTERN.test(value);
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= MAX_TRACE_ID_LENGTH &&
+    TRACE_ID_PATTERN.test(value)
+  );
 }
 
 /**
@@ -36,7 +38,10 @@ export function isValidTraceId(value: string | undefined): boolean {
  * This is needed for streaming RPCs where the generator body runs outside the interceptor's
  * {@link runWithTrace} scope.
  */
-export function wrapAsyncIterableWithTrace<T>(traceId: string, iterable: AsyncIterable<T>): AsyncIterable<T> {
+export function wrapAsyncIterableWithTrace<T>(
+  traceId: string,
+  iterable: AsyncIterable<T>,
+): AsyncIterable<T> {
   return {
     [Symbol.asyncIterator](): AsyncIterator<T> {
       const iterator = iterable[Symbol.asyncIterator]();

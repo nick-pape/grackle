@@ -147,7 +147,10 @@ const asyncListeners: Map<string, AsyncMessageListener> = new Map();
  * in flight for this message. Used by replayUndeliveredMessages() to skip duplicate
  * dispatch when called again before the prior delivery Promise settles.
  */
-const pendingDeliveries: Map<string, { streamId: string; promises: Array<Promise<void>>; inflightSubIds: Set<string> }> = new Map();
+const pendingDeliveries: Map<
+  string,
+  { streamId: string; promises: Array<Promise<void>>; inflightSubIds: Set<string> }
+> = new Map();
 
 /** Blocking queues for sync subscriptions, keyed by subscription ID. */
 const syncQueues: Map<string, AsyncQueue<StreamMessage>> = new Map();
@@ -480,8 +483,15 @@ export function publish(streamId: string, senderId: string, content: string): St
             const subId = sub.id;
             const streamId = sub.streamId;
             const deliveryPromise = (result as Promise<void>).then(
-              () => { msg.deliveredTo.add(subId); },
-              (err: unknown) => { logger.warn({ err, subscriptionId: subId }, "Async listener delivery failed — message left undelivered"); },
+              () => {
+                msg.deliveredTo.add(subId);
+              },
+              (err: unknown) => {
+                logger.warn(
+                  { err, subscriptionId: subId },
+                  "Async listener delivery failed — message left undelivered",
+                );
+              },
             );
             let pending = pendingDeliveries.get(msg.id);
             if (!pending) {
@@ -494,7 +504,10 @@ export function publish(streamId: string, senderId: string, content: string): St
             msg.deliveredTo.add(sub.id);
           }
         } catch (err) {
-          logger.warn({ err, subscriptionId: sub.id }, "Async listener threw — message left undelivered");
+          logger.warn(
+            { err, subscriptionId: sub.id },
+            "Async listener threw — message left undelivered",
+          );
         }
       }
       // No listener registered: message stays undelivered (buffered)
@@ -517,20 +530,25 @@ export function publish(streamId: string, senderId: string, content: string): St
     pruneDeliveredMessages(stream);
   } else {
     const streamId = stream.id;
-    Promise.allSettled(pending.promises).then(() => {
-      // Only clean up if this entry still exists; it may already have been removed by
-      // a previous auto-finalization pass or by stream teardown (deleteStream/unsubscribe/_resetForTesting).
-      if (pendingDeliveries.has(msg.id)) {
-        pendingDeliveries.delete(msg.id);
-        const s = streams.get(streamId);
-        if (s) {
-          pruneDeliveredMessages(s);
+    Promise.allSettled(pending.promises)
+      .then(() => {
+        // Only clean up if this entry still exists; it may already have been removed by
+        // a previous auto-finalization pass or by stream teardown (deleteStream/unsubscribe/_resetForTesting).
+        if (pendingDeliveries.has(msg.id)) {
+          pendingDeliveries.delete(msg.id);
+          const s = streams.get(streamId);
+          if (s) {
+            pruneDeliveredMessages(s);
+          }
         }
-      }
-    }).catch((err: unknown) => {
-      // allSettled never rejects; this catches unexpected errors in the pruning logic
-      logger.error({ err, streamId, messageId: msg.id }, "Error while finalizing async deliveries for stream");
-    });
+      })
+      .catch((err: unknown) => {
+        // allSettled never rejects; this catches unexpected errors in the pruning logic
+        logger.error(
+          { err, streamId, messageId: msg.id },
+          "Error while finalizing async deliveries for stream",
+        );
+      });
   }
 
   return msg;
@@ -540,7 +558,9 @@ export function publish(streamId: string, senderId: string, content: string): St
 export async function consumeSync(subscriptionId: string): Promise<StreamMessage> {
   const queue = syncQueues.get(subscriptionId);
   if (!queue) {
-    throw new Error(`No sync queue for subscription: ${subscriptionId}. Is it a sync subscription?`);
+    throw new Error(
+      `No sync queue for subscription: ${subscriptionId}. Is it a sync subscription?`,
+    );
   }
 
   const msg = await queue.shift();
@@ -567,8 +587,7 @@ export function hasUndeliveredMessages(subscriptionId: string): boolean {
 
   return stream.messages.some(
     (msg) =>
-      !msg.deliveredTo.has(subscriptionId) &&
-      (stream.selfEcho || msg.senderId !== sub.sessionId),
+      !msg.deliveredTo.has(subscriptionId) && (stream.selfEcho || msg.senderId !== sub.sessionId),
   );
 }
 
@@ -630,9 +649,15 @@ export function replayUndeliveredMessages(subscriptionId: string): void {
         }
         pending.inflightSubIds.add(subId);
         const deliveryPromise = (result as Promise<void>).then(
-          () => { msg.deliveredTo.add(subId); pending!.inflightSubIds.delete(subId); },
+          () => {
+            msg.deliveredTo.add(subId);
+            pending!.inflightSubIds.delete(subId);
+          },
           (err: unknown) => {
-            logger.warn({ err, subscriptionId: subId }, "replayUndeliveredMessages: async listener delivery failed");
+            logger.warn(
+              { err, subscriptionId: subId },
+              "replayUndeliveredMessages: async listener delivery failed",
+            );
             pending!.inflightSubIds.delete(subId);
           },
         );
@@ -643,7 +668,10 @@ export function replayUndeliveredMessages(subscriptionId: string): void {
         hadSyncDelivery = true;
       }
     } catch (err) {
-      logger.warn({ err, subscriptionId: sub.id }, "replayUndeliveredMessages: async listener threw — message left undelivered");
+      logger.warn(
+        { err, subscriptionId: sub.id },
+        "replayUndeliveredMessages: async listener threw — message left undelivered",
+      );
     }
   }
 
@@ -654,17 +682,22 @@ export function replayUndeliveredMessages(subscriptionId: string): void {
     const pending = pendingDeliveries.get(msgId);
     if (pending) {
       const streamId = pending.streamId;
-      Promise.allSettled(pending.promises).then(() => {
-        if (pendingDeliveries.has(msgId)) {
-          pendingDeliveries.delete(msgId);
-          const s = streams.get(streamId);
-          if (s) {
-            pruneDeliveredMessages(s);
+      Promise.allSettled(pending.promises)
+        .then(() => {
+          if (pendingDeliveries.has(msgId)) {
+            pendingDeliveries.delete(msgId);
+            const s = streams.get(streamId);
+            if (s) {
+              pruneDeliveredMessages(s);
+            }
           }
-        }
-      }).catch((err: unknown) => {
-        logger.error({ err, streamId, messageId: msgId }, "replayUndeliveredMessages: error during auto-finalization");
-      });
+        })
+        .catch((err: unknown) => {
+          logger.error(
+            { err, streamId, messageId: msgId },
+            "replayUndeliveredMessages: error during auto-finalization",
+          );
+        });
     }
   }
 
@@ -680,7 +713,10 @@ export function replayUndeliveredMessages(subscriptionId: string): void {
  * Register a callback invoked when a message arrives on any async subscription
  * for the given session. Returns an unsubscribe function.
  */
-export function registerAsyncListener(sessionId: string, callback: AsyncMessageListener): () => void {
+export function registerAsyncListener(
+  sessionId: string,
+  callback: AsyncMessageListener,
+): () => void {
   asyncListeners.set(sessionId, callback);
   return () => {
     asyncListeners.delete(sessionId);

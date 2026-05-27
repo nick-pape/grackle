@@ -33,7 +33,10 @@ function makeTask(overrides: Partial<TaskData> & { id: string }): TaskData {
 
 describe("taskStatusToToast", () => {
   it("returns info for working", () => {
-    expect(taskStatusToToast("working")).toEqual({ message: "Task is now running", variant: "info" });
+    expect(taskStatusToToast("working")).toEqual({
+      message: "Task is now running",
+      variant: "info",
+    });
   });
 
   it("returns warning for paused", () => {
@@ -45,7 +48,10 @@ describe("taskStatusToToast", () => {
   });
 
   it("returns error for failed", () => {
-    expect(taskStatusToToast("failed")).toEqual({ message: "Task failed to complete", variant: "error" });
+    expect(taskStatusToToast("failed")).toEqual({
+      message: "Task failed to complete",
+      variant: "error",
+    });
   });
 
   it("returns undefined for not_started", () => {
@@ -87,9 +93,7 @@ describe("diffTasksForToasts", () => {
   it("detects working → paused", () => {
     const prev = [makeTask({ id: "t1", status: "working" })];
     const cur = [makeTask({ id: "t1", status: "paused" })];
-    expect(diffTasksForToasts(prev, cur)).toEqual([
-      { message: "Task paused", variant: "warning" },
-    ]);
+    expect(diffTasksForToasts(prev, cur)).toEqual([{ message: "Task paused", variant: "warning" }]);
   });
 
   it("detects working → complete", () => {
@@ -117,9 +121,7 @@ describe("diffTasksForToasts", () => {
   it("detects removed tasks", () => {
     const prev = [makeTask({ id: "t1", status: "working" })];
     const cur: TaskData[] = [];
-    expect(diffTasksForToasts(prev, cur)).toEqual([
-      { message: "Task deleted", variant: "info" },
-    ]);
+    expect(diffTasksForToasts(prev, cur)).toEqual([{ message: "Task deleted", variant: "info" }]);
   });
 
   it("handles multiple simultaneous transitions", () => {

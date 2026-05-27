@@ -62,7 +62,10 @@ test.describe("Environments Page", { tag: ["@environment"] }, () => {
     await expect(page.getByTestId("env-edit-btn")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("clicking + Add Environment opens form panel and returns to list after submit", async ({ appPage, grackle: { client } }) => {
+  test("clicking + Add Environment opens form panel and returns to list after submit", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     // Click + Add Environment
@@ -80,7 +83,9 @@ test.describe("Environments Page", { tag: ["@environment"] }, () => {
     await expect(page.getByTestId("env-create-panel")).not.toBeVisible({ timeout: 5_000 });
 
     // New environment should appear in the nav
-    await expect(page.getByText("settings-test-env", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("settings-test-env", { exact: true })).toBeVisible({
+      timeout: 5_000,
+    });
 
     // Clean up
     const listResponse = await client.core.listEnvironments({});
@@ -104,7 +109,11 @@ test.describe("Navigation Between Settings and Environments", { tag: ["@environm
     await page.getByTestId("statusbar-brand").click();
 
     // Should navigate to home (settings tab no longer active)
-    await expect(page.locator('[data-testid="sidebar-tab-settings"]')).toHaveAttribute("aria-selected", "false", { timeout: 5_000 });
+    await expect(page.locator('[data-testid="sidebar-tab-settings"]')).toHaveAttribute(
+      "aria-selected",
+      "false",
+      { timeout: 5_000 },
+    );
   });
 
   test("settings tab returns to Settings from environment view", async ({ appPage }) => {

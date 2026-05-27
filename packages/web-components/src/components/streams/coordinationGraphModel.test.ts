@@ -10,8 +10,19 @@ import {
 } from "./coordinationGraphModel.js";
 import type { Edge, Node } from "@xyflow/react";
 
-function makeSub(sessionId: string, permission: string = "rw", deliveryMode: string = "async"): StreamSubscriberData {
-  return { subscriptionId: `sub-${sessionId}`, sessionId, fd: 3, permission, deliveryMode, createdBySpawn: false };
+function makeSub(
+  sessionId: string,
+  permission: string = "rw",
+  deliveryMode: string = "async",
+): StreamSubscriberData {
+  return {
+    subscriptionId: `sub-${sessionId}`,
+    sessionId,
+    fd: 3,
+    permission,
+    deliveryMode,
+    createdBySpawn: false,
+  };
 }
 
 function makeStream(over: Partial<StreamData> & { id: string; name: string }): StreamData {
@@ -25,7 +36,15 @@ function makeStream(over: Partial<StreamData> & { id: string; name: string }): S
 }
 
 function makeSession(id: string, taskId?: string): Session {
-  return { id, environmentId: "env-1", runtime: "claude-code", status: "running", prompt: "", startedAt: "2026-01-01T00:00:00Z", taskId };
+  return {
+    id,
+    environmentId: "env-1",
+    runtime: "claude-code",
+    status: "running",
+    prompt: "",
+    startedAt: "2026-01-01T00:00:00Z",
+    taskId,
+  };
 }
 
 function sessionNodes(nodes: Node<CoordNodeData>[]): Node<CoordNodeData>[] {
@@ -56,7 +75,10 @@ describe("buildCoordinationGraph", () => {
       selfEcho: true,
       subscribers: [makeSub("s1", "rw"), makeSub("s2", "r")],
     });
-    const { nodes, edges } = buildCoordinationGraph([stream], [makeSession("s1", "task-1"), makeSession("s2", "task-1")]);
+    const { nodes, edges } = buildCoordinationGraph(
+      [stream],
+      [makeSession("s1", "task-1"), makeSession("s2", "task-1")],
+    );
 
     expect(streamNodes(nodes)).toHaveLength(1);
     expect(sessionNodes(nodes)).toHaveLength(2);
@@ -64,7 +86,12 @@ describe("buildCoordinationGraph", () => {
   });
 
   it("emits a single bidirectional edge for an rw subscriber (never two)", () => {
-    const stream = makeStream({ id: "room1", name: "planning", selfEcho: true, subscribers: [makeSub("s1", "rw")] });
+    const stream = makeStream({
+      id: "room1",
+      name: "planning",
+      selfEcho: true,
+      subscribers: [makeSub("s1", "rw")],
+    });
     const { edges } = buildCoordinationGraph([stream], [makeSession("s1")]);
 
     expect(edges).toHaveLength(1);
@@ -94,8 +121,15 @@ describe("buildCoordinationGraph", () => {
   });
 
   it("collapses a 2-party pipe into a direct writer -> reader edge with no hub node", () => {
-    const stream = makeStream({ id: "p1", name: "pipe:s1-s2", subscribers: [makeSub("s1", "w"), makeSub("s2", "r")] });
-    const { nodes, edges } = buildCoordinationGraph([stream], [makeSession("s1"), makeSession("s2")]);
+    const stream = makeStream({
+      id: "p1",
+      name: "pipe:s1-s2",
+      subscribers: [makeSub("s1", "w"), makeSub("s2", "r")],
+    });
+    const { nodes, edges } = buildCoordinationGraph(
+      [stream],
+      [makeSession("s1"), makeSession("s2")],
+    );
 
     expect(streamNodes(nodes)).toHaveLength(0);
     expect(sessionNodes(nodes)).toHaveLength(2);
@@ -109,7 +143,11 @@ describe("buildCoordinationGraph", () => {
   });
 
   it("draws a collapsed rw/rw pipe as bidirectional in deterministic order", () => {
-    const stream = makeStream({ id: "p2", name: "pipe:b-a", subscribers: [makeSub("b", "rw"), makeSub("a", "rw")] });
+    const stream = makeStream({
+      id: "p2",
+      name: "pipe:b-a",
+      subscribers: [makeSub("b", "rw"), makeSub("a", "rw")],
+    });
     const { edges } = buildCoordinationGraph([stream], [makeSession("a"), makeSession("b")]);
 
     expect(edges).toHaveLength(1);
@@ -127,12 +165,19 @@ describe("buildCoordinationGraph", () => {
       name: "pipe:multi",
       subscribers: [makeSub("s1"), makeSub("s2"), makeSub("s3")],
     });
-    const { nodes } = buildCoordinationGraph([stream], [makeSession("s1"), makeSession("s2"), makeSession("s3")]);
+    const { nodes } = buildCoordinationGraph(
+      [stream],
+      [makeSession("s1"), makeSession("s2"), makeSession("s3")],
+    );
     expect(streamNodes(nodes)).toHaveLength(1);
   });
 
   it("synthesizes an external session node for an unknown subscriber id", () => {
-    const stream = makeStream({ id: "cli", name: "cli-inspector", subscribers: [makeSub("ext-1", "rw")] });
+    const stream = makeStream({
+      id: "cli",
+      name: "cli-inspector",
+      subscribers: [makeSub("ext-1", "rw")],
+    });
     const { nodes } = buildCoordinationGraph([stream], []);
 
     const sessNodes = sessionNodes(nodes);
@@ -141,7 +186,12 @@ describe("buildCoordinationGraph", () => {
   });
 
   it("counts the streams each session participates in", () => {
-    const a = makeStream({ id: "room", name: "room", selfEcho: true, subscribers: [makeSub("s1", "rw"), makeSub("s2", "r")] });
+    const a = makeStream({
+      id: "room",
+      name: "room",
+      selfEcho: true,
+      subscribers: [makeSub("s1", "rw"), makeSub("s2", "r")],
+    });
     const b = makeStream({ id: "chan", name: "metrics", subscribers: [makeSub("s1", "r")] });
     const { nodes } = buildCoordinationGraph([a, b], [makeSession("s1"), makeSession("s2")]);
 

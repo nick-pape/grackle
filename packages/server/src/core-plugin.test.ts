@@ -32,7 +32,10 @@ vi.mock("@grackle-ai/plugin-core", () => ({
   createRootTaskBootSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
   createDispatchPhase: vi.fn(() => ({ name: "dispatch", execute: vi.fn() })),
   lifecycleCleanupPhase: { name: "lifecycle-cleanup", execute: vi.fn() },
-  createEnvironmentReconciliationPhase: vi.fn(() => ({ name: "environment-status", execute: vi.fn() })),
+  createEnvironmentReconciliationPhase: vi.fn(() => ({
+    name: "environment-status",
+    execute: vi.fn(),
+  })),
 }));
 
 vi.mock("@grackle-ai/common", () => ({
@@ -42,11 +45,26 @@ vi.mock("@grackle-ai/common", () => ({
 }));
 
 vi.mock("@grackle-ai/database", () => ({
-  taskStore: { createTask: vi.fn(), setTaskScheduleId: vi.fn(), getTask: vi.fn(), listTasks: vi.fn(), reparentTask: vi.fn(), areDependenciesMet: vi.fn() },
+  taskStore: {
+    createTask: vi.fn(),
+    setTaskScheduleId: vi.fn(),
+    getTask: vi.fn(),
+    listTasks: vi.fn(),
+    reparentTask: vi.fn(),
+    areDependenciesMet: vi.fn(),
+  },
   workspaceStore: { listWorkspaces: vi.fn(() => []) },
   personaStore: { getPersona: vi.fn() },
-  envRegistry: { getEnvironment: vi.fn(), listEnvironments: vi.fn(() => []), updateEnvironmentStatus: vi.fn() },
-  sessionStore: { listSessionsForTask: vi.fn(), getLatestSessionForTask: vi.fn(), countActiveForEnvironment: vi.fn() },
+  envRegistry: {
+    getEnvironment: vi.fn(),
+    listEnvironments: vi.fn(() => []),
+    updateEnvironmentStatus: vi.fn(),
+  },
+  sessionStore: {
+    listSessionsForTask: vi.fn(),
+    getLatestSessionForTask: vi.fn(),
+    countActiveForEnvironment: vi.fn(),
+  },
   settingsStore: { getSetting: vi.fn() },
   dispatchQueueStore: { listPending: vi.fn(() => []), dequeue: vi.fn() },
   workspaceEnvironmentLinkStore: { getLinkedEnvironmentIds: vi.fn(() => []) },

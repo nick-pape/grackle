@@ -1,4 +1,9 @@
-import { startLocalPowerLine, type LocalPowerLineHandle, type ProcessFactory, type PortProbe } from "./local-powerline.js";
+import {
+  startLocalPowerLine,
+  type LocalPowerLineHandle,
+  type ProcessFactory,
+  type PortProbe,
+} from "./local-powerline.js";
 import type { EnvironmentStatus } from "@grackle-ai/common";
 import { logger as parentLogger } from "@grackle-ai/core";
 
@@ -46,8 +51,16 @@ export class LocalPowerLineManager {
   private restartPending: boolean = false;
   private restartPromise: Promise<void> | undefined;
   private readonly restartTimestamps: number[] = [];
-  private readonly options: Required<Pick<LocalPowerLineManagerOptions, "port" | "host" | "token" | "maxRestarts" | "restartWindowMs">>
-    & Pick<LocalPowerLineManagerOptions, "onStatusChange" | "onRestarted" | "processFactory" | "portProbe" | "resolveEntryPoint">;
+  private readonly options: Required<
+    Pick<
+      LocalPowerLineManagerOptions,
+      "port" | "host" | "token" | "maxRestarts" | "restartWindowMs"
+    >
+  > &
+    Pick<
+      LocalPowerLineManagerOptions,
+      "onStatusChange" | "onRestarted" | "processFactory" | "portProbe" | "resolveEntryPoint"
+    >;
 
   public constructor(options: LocalPowerLineManagerOptions) {
     this.options = {
@@ -65,7 +78,10 @@ export class LocalPowerLineManager {
     this.stoppingGracefully = false;
     this.restartPending = false;
     this.handle = await this.spawnProcess();
-    logger.info({ port: this.options.port, pid: this.handle.process.pid }, "Local PowerLine started");
+    logger.info(
+      { port: this.options.port, pid: this.handle.process.pid },
+      "Local PowerLine started",
+    );
   }
 
   /**
@@ -148,7 +164,10 @@ export class LocalPowerLineManager {
       const { maxRestarts, restartWindowMs } = this.options;
 
       // Prune timestamps outside the window
-      while (this.restartTimestamps.length > 0 && this.restartTimestamps[0] < now - restartWindowMs) {
+      while (
+        this.restartTimestamps.length > 0 &&
+        this.restartTimestamps[0] < now - restartWindowMs
+      ) {
         this.restartTimestamps.shift();
       }
 
@@ -176,9 +195,11 @@ export class LocalPowerLineManager {
         return;
       }
 
-      logger.info({ port: this.options.port, pid: this.handle.process.pid }, "Local PowerLine restarted successfully");
+      logger.info(
+        { port: this.options.port, pid: this.handle.process.pid },
+        "Local PowerLine restarted successfully",
+      );
       this.options.onRestarted?.();
-
     } catch (err) {
       logger.error({ err, port: this.options.port }, "Failed to restart local PowerLine");
       this.handle = undefined;

@@ -8,7 +8,15 @@
  * @module
  */
 
-import { createContext, useContext, useEffect, useState, type Context, type JSX, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type Context,
+  type JSX,
+  type ReactNode,
+} from "react";
 
 /** All plugin names known to the web client. Used as the fail-open fallback. */
 const ALL_KNOWN_PLUGINS: readonly string[] = ["core", "orchestration", "scheduling"];
@@ -85,7 +93,9 @@ export function ManifestProvider({ children }: { children: ReactNode }): JSX.Ele
         }
       });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (

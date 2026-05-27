@@ -4,9 +4,27 @@ import type { StreamMessageData } from "../../hooks/types.js";
 import { StreamTranscript } from "./StreamTranscript.js";
 
 const messages: StreamMessageData[] = [
-  { streamId: "s1", seq: "01A", senderId: "session-aabbccdd-eeff", content: "Proposing JWT with RS256.", timestamp: "2026-05-24T18:00:01.000Z" },
-  { streamId: "s1", seq: "01B", senderId: "session-11223344-5566", content: "Agreed; rotate refresh tokens on use.", timestamp: "2026-05-24T18:00:07.000Z" },
-  { streamId: "s1", seq: "01C", senderId: "session-aabbccdd-eeff", content: "Ship it.", timestamp: "2026-05-24T18:00:14.000Z" },
+  {
+    streamId: "s1",
+    seq: "01A",
+    senderId: "session-aabbccdd-eeff",
+    content: "Proposing JWT with RS256.",
+    timestamp: "2026-05-24T18:00:01.000Z",
+  },
+  {
+    streamId: "s1",
+    seq: "01B",
+    senderId: "session-11223344-5566",
+    content: "Agreed; rotate refresh tokens on use.",
+    timestamp: "2026-05-24T18:00:07.000Z",
+  },
+  {
+    streamId: "s1",
+    seq: "01C",
+    senderId: "session-aabbccdd-eeff",
+    content: "Ship it.",
+    timestamp: "2026-05-24T18:00:14.000Z",
+  },
 ];
 
 const meta: Meta<typeof StreamTranscript> = {

@@ -84,13 +84,23 @@ describe("checkBudget", () => {
 
   it("returns undefined when usage is under token budget", () => {
     mockGetTask.mockReturnValue(fakeTask({ tokenBudget: 5000 }));
-    mockAggregateUsage.mockReturnValue({ inputTokens: 1000, outputTokens: 500, costMillicents: 0, sessionCount: 1 });
+    mockAggregateUsage.mockReturnValue({
+      inputTokens: 1000,
+      outputTokens: 500,
+      costMillicents: 0,
+      sessionCount: 1,
+    });
     expect(checkBudget("t1")).toBeUndefined();
   });
 
   it("returns task/token when task token budget is exceeded", () => {
     mockGetTask.mockReturnValue(fakeTask({ tokenBudget: 1000 }));
-    mockAggregateUsage.mockReturnValue({ inputTokens: 800, outputTokens: 300, costMillicents: 0, sessionCount: 1 });
+    mockAggregateUsage.mockReturnValue({
+      inputTokens: 800,
+      outputTokens: 300,
+      costMillicents: 0,
+      sessionCount: 1,
+    });
     const result = checkBudget("t1");
     expect(result).not.toBeUndefined();
     expect(result!.scope).toBe("task");
@@ -99,7 +109,12 @@ describe("checkBudget", () => {
 
   it("returns task/cost when task cost budget is exceeded", () => {
     mockGetTask.mockReturnValue(fakeTask({ costBudgetMillicents: 4000 }));
-    mockAggregateUsage.mockReturnValue({ inputTokens: 0, outputTokens: 0, costMillicents: 5000, sessionCount: 1 });
+    mockAggregateUsage.mockReturnValue({
+      inputTokens: 0,
+      outputTokens: 0,
+      costMillicents: 5000,
+      sessionCount: 1,
+    });
     // 5000 millicents > 4000
     const result = checkBudget("t1");
     expect(result).not.toBeUndefined();
@@ -110,7 +125,12 @@ describe("checkBudget", () => {
   it("returns undefined when workspace has no budget (0)", () => {
     mockGetTask.mockReturnValue(fakeTask({ workspaceId: "ws1" }));
     mockGetWorkspace.mockReturnValue(fakeWorkspace({ tokenBudget: 0, costBudgetMillicents: 0 }));
-    mockAggregateUsage.mockReturnValue({ inputTokens: 1000, outputTokens: 500, costMillicents: 50000, sessionCount: 1 });
+    mockAggregateUsage.mockReturnValue({
+      inputTokens: 1000,
+      outputTokens: 500,
+      costMillicents: 50000,
+      sessionCount: 1,
+    });
     expect(checkBudget("t1", "ws1")).toBeUndefined();
   });
 
@@ -120,8 +140,12 @@ describe("checkBudget", () => {
     mockListTasks.mockReturnValue([fakeTask({ id: "t1" }), fakeTask({ id: "t2" })]);
     // Task has no budget, so task-level aggregation is skipped.
     // Only the workspace-level aggregation call happens.
-    mockAggregateUsage
-      .mockReturnValueOnce({ inputTokens: 3000, outputTokens: 2500, costMillicents: 0, sessionCount: 3 });
+    mockAggregateUsage.mockReturnValueOnce({
+      inputTokens: 3000,
+      outputTokens: 2500,
+      costMillicents: 0,
+      sessionCount: 3,
+    });
     const result = checkBudget("t1", "ws1");
     expect(result).not.toBeUndefined();
     expect(result!.scope).toBe("workspace");
@@ -132,7 +156,12 @@ describe("checkBudget", () => {
     mockGetTask.mockReturnValue(fakeTask({ tokenBudget: 500 }));
     mockGetWorkspace.mockReturnValue(fakeWorkspace({ tokenBudget: 50000 }));
     mockListTasks.mockReturnValue([fakeTask({ id: "t1" })]);
-    mockAggregateUsage.mockReturnValue({ inputTokens: 400, outputTokens: 200, costMillicents: 0, sessionCount: 1 });
+    mockAggregateUsage.mockReturnValue({
+      inputTokens: 400,
+      outputTokens: 200,
+      costMillicents: 0,
+      sessionCount: 1,
+    });
     const result = checkBudget("t1", "ws1");
     // Task budget (500) is exceeded (600 tokens used), should report task not workspace
     expect(result!.scope).toBe("task");
@@ -140,7 +169,12 @@ describe("checkBudget", () => {
 
   it("handles edge: budget = 1, usage = 0 -> not exceeded", () => {
     mockGetTask.mockReturnValue(fakeTask({ tokenBudget: 1 }));
-    mockAggregateUsage.mockReturnValue({ inputTokens: 0, outputTokens: 0, costMillicents: 0, sessionCount: 0 });
+    mockAggregateUsage.mockReturnValue({
+      inputTokens: 0,
+      outputTokens: 0,
+      costMillicents: 0,
+      sessionCount: 0,
+    });
     expect(checkBudget("t1")).toBeUndefined();
   });
 
@@ -151,7 +185,12 @@ describe("checkBudget", () => {
 
   it("includes a human-readable message", () => {
     mockGetTask.mockReturnValue(fakeTask({ tokenBudget: 1000 }));
-    mockAggregateUsage.mockReturnValue({ inputTokens: 800, outputTokens: 300, costMillicents: 0, sessionCount: 1 });
+    mockAggregateUsage.mockReturnValue({
+      inputTokens: 800,
+      outputTokens: 300,
+      costMillicents: 0,
+      sessionCount: 1,
+    });
     const result = checkBudget("t1");
     expect(result!.message).toContain("1100");
     expect(result!.message).toContain("1000");

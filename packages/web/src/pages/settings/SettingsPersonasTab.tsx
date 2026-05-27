@@ -1,10 +1,20 @@
 import type { JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
-import { NEW_PERSONA_URL, PersonaManager, personaUrl, useAppNavigate, useToast } from "@grackle-ai/web-components";
+import {
+  NEW_PERSONA_URL,
+  PersonaManager,
+  personaUrl,
+  useAppNavigate,
+  useToast,
+} from "@grackle-ai/web-components";
 
 /** Settings tab wrapping the persona list. */
 export function SettingsPersonasTab(): JSX.Element {
-  const { personas: { personas, deletePersona }, appDefaultPersonaId, setAppDefaultPersonaId } = useGrackle();
+  const {
+    personas: { personas, deletePersona },
+    appDefaultPersonaId,
+    setAppDefaultPersonaId,
+  } = useGrackle();
   const { showToast } = useToast();
   const navigate = useAppNavigate();
 

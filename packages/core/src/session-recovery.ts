@@ -1,6 +1,13 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle, powerline, eventTypeToEnum, SESSION_STATUS, LOGS_DIR, END_REASON } from "@grackle-ai/common";
+import {
+  grackle,
+  powerline,
+  eventTypeToEnum,
+  SESSION_STATUS,
+  LOGS_DIR,
+  END_REASON,
+} from "@grackle-ai/common";
 import type { PowerLineConnection } from "@grackle-ai/adapter-sdk";
 import { join } from "node:path";
 import { sessionStore, taskStore, grackleHome } from "@grackle-ai/database";
@@ -48,7 +55,10 @@ export async function recoverSuspendedSessions(
   }
 
   recoveringEnvironments.add(environmentId);
-  logger.info({ environmentId, count: suspended.length }, "Beginning recovery of suspended sessions");
+  logger.info(
+    { environmentId, count: suspended.length },
+    "Beginning recovery of suspended sessions",
+  );
 
   try {
     // Only reanimate the first session — the one-active-session-per-env
@@ -119,13 +129,15 @@ export async function recoverSuspendedSessions(
       reanimateAgent(session.id);
       logger.info({ sessionId: session.id }, "Successfully reanimated suspended session");
       emitTaskUpdated(session.taskId);
-
     } catch (err) {
       // If the environment acquired an active session between our check and
       // reanimateAgent's check, this is a benign race — leave the session
       // SUSPENDED for future recovery instead of marking it permanently failed.
-      if (err instanceof ConnectError && err.code === Code.FailedPrecondition
-          && err.message.includes("already has active session")) {
+      if (
+        err instanceof ConnectError &&
+        err.code === Code.FailedPrecondition &&
+        err.message.includes("already has active session")
+      ) {
         logger.info(
           { sessionId: session.id, environmentId },
           "Recovery skipped — environment already has an active session",
@@ -135,7 +147,13 @@ export async function recoverSuspendedSessions(
           { sessionId: session.id, err },
           "Failed to recover suspended session — marking stopped (interrupted)",
         );
-        sessionStore.updateSession(session.id, SESSION_STATUS.STOPPED, undefined, `Recovery failed: ${String(err)}`, END_REASON.INTERRUPTED);
+        sessionStore.updateSession(
+          session.id,
+          SESSION_STATUS.STOPPED,
+          undefined,
+          `Recovery failed: ${String(err)}`,
+          END_REASON.INTERRUPTED,
+        );
         emitTaskUpdated(session.taskId);
       }
     }

@@ -48,44 +48,57 @@ export interface McpToolSelectorProps {
   disabled?: boolean;
 }
 
-export function McpToolSelector({ selectedTools, onChange, disabled }: McpToolSelectorProps): JSX.Element {
+export function McpToolSelector({
+  selectedTools,
+  onChange,
+  disabled,
+}: McpToolSelectorProps): JSX.Element {
   const [filter, setFilter] = useState("");
   const selectedSet = useMemo(() => new Set(selectedTools), [selectedTools]);
 
-  const toggleTool = useCallback((tool: string) => {
-    if (disabled) {
-      return;
-    }
-    const next = new Set(selectedSet);
-    if (next.has(tool)) {
-      next.delete(tool);
-    } else {
-      next.add(tool);
-    }
-    onChange([...next].sort());
-  }, [selectedSet, onChange, disabled]);
-
-  const toggleGroup = useCallback((tools: string[], allSelected: boolean) => {
-    if (disabled) {
-      return;
-    }
-    const next = new Set(selectedSet);
-    for (const t of tools) {
-      if (allSelected) {
-        next.delete(t);
-      } else {
-        next.add(t);
+  const toggleTool = useCallback(
+    (tool: string) => {
+      if (disabled) {
+        return;
       }
-    }
-    onChange([...next].sort());
-  }, [selectedSet, onChange, disabled]);
+      const next = new Set(selectedSet);
+      if (next.has(tool)) {
+        next.delete(tool);
+      } else {
+        next.add(tool);
+      }
+      onChange([...next].sort());
+    },
+    [selectedSet, onChange, disabled],
+  );
 
-  const applyPreset = useCallback((tools: readonly string[]) => {
-    if (disabled) {
-      return;
-    }
-    onChange([...tools].sort());
-  }, [onChange, disabled]);
+  const toggleGroup = useCallback(
+    (tools: string[], allSelected: boolean) => {
+      if (disabled) {
+        return;
+      }
+      const next = new Set(selectedSet);
+      for (const t of tools) {
+        if (allSelected) {
+          next.delete(t);
+        } else {
+          next.add(t);
+        }
+      }
+      onChange([...next].sort());
+    },
+    [selectedSet, onChange, disabled],
+  );
+
+  const applyPreset = useCallback(
+    (tools: readonly string[]) => {
+      if (disabled) {
+        return;
+      }
+      onChange([...tools].sort());
+    },
+    [onChange, disabled],
+  );
 
   const lowerFilter = filter.toLowerCase();
 

@@ -12,7 +12,9 @@ test.describe("Mobile Drawer", { tag: ["@webui"] }, () => {
   test("sidebar is hidden by default on mobile", async ({ appPage }) => {
     // Navigate to a page with sidebar content
     await appPage.goto("/tasks");
-    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
+    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
 
     const sidebar = appPage.getByTestId("sidebar");
     await expect(sidebar).not.toBeVisible();
@@ -21,7 +23,9 @@ test.describe("Mobile Drawer", { tag: ["@webui"] }, () => {
   test("hamburger opens and closes the sidebar drawer", async ({ appPage }) => {
     // Navigate to a page with sidebar content
     await appPage.goto("/tasks");
-    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
+    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
 
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
     const sidebar = appPage.getByTestId("sidebar");
@@ -40,7 +44,9 @@ test.describe("Mobile Drawer", { tag: ["@webui"] }, () => {
   test("overlay click closes the drawer", async ({ appPage }) => {
     // Navigate to a page with sidebar content
     await appPage.goto("/tasks");
-    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
+    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
 
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
     const sidebar = appPage.getByTestId("sidebar");
@@ -56,7 +62,9 @@ test.describe("Mobile Drawer", { tag: ["@webui"] }, () => {
   test("Escape key closes the drawer", async ({ appPage }) => {
     // Navigate to a page with sidebar content
     await appPage.goto("/tasks");
-    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
+    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
 
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
     const sidebar = appPage.getByTestId("sidebar");
@@ -73,7 +81,9 @@ test.describe("Mobile Drawer", { tag: ["@webui"] }, () => {
 
     // Navigate to settings programmatically (sidebar tab click has z-index issues on mobile)
     await appPage.goto("/settings/credentials");
-    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
+    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
 
     // Open the drawer
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
@@ -95,7 +105,9 @@ test.describe("Mobile Drawer", { tag: ["@webui"] }, () => {
 
     // Navigate to settings programmatically
     await appPage.goto("/settings/credentials");
-    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
+    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
 
     // Open the drawer
     await hamburger.click();

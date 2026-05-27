@@ -31,13 +31,13 @@ interface GracklePlugin {
 
 ### Extension points
 
-| Extension Point | What it does |
-|-----------------|-------------|
-| **gRPC handlers** | Registers proto service handlers for the ConnectRPC server |
-| **Reconciliation phases** | Named async functions that run on every reconciliation tick |
-| **MCP tools** | Declares tools that agents can call through the MCP server |
-| **Event subscribers** | Reacts to system events (task created, session completed, etc.) |
-| **Lifecycle hooks** | `initialize()` for setup, `shutdown()` for cleanup |
+| Extension Point           | What it does                                                    |
+| ------------------------- | --------------------------------------------------------------- |
+| **gRPC handlers**         | Registers proto service handlers for the ConnectRPC server      |
+| **Reconciliation phases** | Named async functions that run on every reconciliation tick     |
+| **MCP tools**             | Declares tools that agents can call through the MCP server      |
+| **Event subscribers**     | Reacts to system events (task created, session completed, etc.) |
+| **Lifecycle hooks**       | `initialize()` for setup, `shutdown()` for cleanup              |
 
 ### Plugin loader lifecycle
 
@@ -65,29 +65,29 @@ Grackle ships with four plugins. All are enabled by default except knowledge (op
 
 **Always loaded.** Provides the foundational services that everything else depends on.
 
-| Contribution | Details |
-|-------------|---------|
-| **gRPC handlers** | Environments, sessions, workspaces, tokens, codespaces, settings |
+| Contribution              | Details                                                                                                                                                      |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **gRPC handlers**         | Environments, sessions, workspaces, tokens, codespaces, settings                                                                                             |
 | **Reconciliation phases** | `dispatch` (assign queued tasks to environments), `lifecycle-cleanup` (clean up stale streams), `environment-status` (monitor environment connection status) |
-| **Event subscribers** | Session and environment lifecycle management, optional root task auto-start |
+| **Event subscribers**     | Session and environment lifecycle management, optional root task auto-start                                                                                  |
 
 ### Orchestration
 
 **Enabled by default.** Adds the task DAG, personas, and escalation system. Without this plugin, Grackle runs as a pure session + environment manager — no tasks, no orchestration.
 
-| Contribution | Details |
-|-------------|---------|
-| **gRPC handlers** | Tasks (create, start, complete, resume, stop, delete), personas, escalations |
-| **Reconciliation phases** | `orphan-reparent` (re-parent tasks whose parent session has ended) |
-| **Event subscribers** | SIGCHLD (child completion notification), escalation auto-routing, orphan re-parenting |
+| Contribution              | Details                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------- |
+| **gRPC handlers**         | Tasks (create, start, complete, resume, stop, delete), personas, escalations          |
+| **Reconciliation phases** | `orphan-reparent` (re-parent tasks whose parent session has ended)                    |
+| **Event subscribers**     | SIGCHLD (child completion notification), escalation auto-routing, orphan re-parenting |
 
 ### Scheduling
 
 **Enabled by default.** Adds cron-style scheduled task creation.
 
-| Contribution | Details |
-|-------------|---------|
-| **gRPC handlers** | Schedule CRUD (create, list, get, update, delete) |
+| Contribution              | Details                                                            |
+| ------------------------- | ------------------------------------------------------------------ |
+| **gRPC handlers**         | Schedule CRUD (create, list, get, update, delete)                  |
 | **Reconciliation phases** | `cron` (fires due schedules, creates tasks, enqueues for dispatch) |
 
 Supports both standard cron syntax (`0 0 * * *`) and interval shorthand (`30s`, `5m`, `1h`, `1d`).
@@ -96,11 +96,11 @@ Supports both standard cron syntax (`0 0 * * *`) and interval shorthand (`30s`, 
 
 **Opt-in** (requires `GRACKLE_KNOWLEDGE_ENABLED=true` and a running Neo4j instance). Adds the semantic knowledge graph.
 
-| Contribution | Details |
-|-------------|---------|
-| **gRPC handlers** | `searchKnowledge`, `getKnowledgeNode`, `expandKnowledgeNode`, `listRecentKnowledgeNodes` |
-| **Reconciliation phases** | `knowledge-health` (monitors Neo4j connectivity) |
-| **MCP tools** | `knowledge_search`, `knowledge_get_node` |
+| Contribution              | Details                                                                                  |
+| ------------------------- | ---------------------------------------------------------------------------------------- |
+| **gRPC handlers**         | `searchKnowledge`, `getKnowledgeNode`, `expandKnowledgeNode`, `listRecentKnowledgeNodes` |
+| **Reconciliation phases** | `knowledge-health` (monitors Neo4j connectivity)                                         |
+| **MCP tools**             | `knowledge_search`, `knowledge_get_node`                                                 |
 
 If Neo4j is unreachable at startup, the plugin logs an error (`Knowledge plugin initialization failed — running degraded`) and enters degraded mode — the rest of the server continues normally.
 
@@ -108,11 +108,11 @@ If Neo4j is unreachable at startup, the plugin logs an error (`Knowledge plugin 
 
 Control which plugins load via environment variables:
 
-| Variable | Default | Effect |
-|----------|---------|--------|
-| `GRACKLE_SKIP_ORCHESTRATION` | unset | Set to `1` to disable orchestration (no tasks, personas) |
-| `GRACKLE_SKIP_SCHEDULING` | unset | Set to `1` to disable scheduled triggers |
-| `GRACKLE_KNOWLEDGE_ENABLED` | unset | Set to `true` to enable the knowledge graph plugin |
+| Variable                     | Default | Effect                                                   |
+| ---------------------------- | ------- | -------------------------------------------------------- |
+| `GRACKLE_SKIP_ORCHESTRATION` | unset   | Set to `1` to disable orchestration (no tasks, personas) |
+| `GRACKLE_SKIP_SCHEDULING`    | unset   | Set to `1` to disable scheduled triggers                 |
+| `GRACKLE_KNOWLEDGE_ENABLED`  | unset   | Set to `true` to enable the knowledge graph plugin       |
 
 **Minimal mode** — run with only the core plugin for a lightweight session manager:
 
@@ -124,12 +124,12 @@ GRACKLE_SKIP_ORCHESTRATION=1 GRACKLE_SKIP_SCHEDULING=1 grackle serve
 
 Plugins can subscribe to these system events:
 
-| Event | When it fires |
-|-------|--------------|
-| `task.created`, `task.updated`, `task.started`, `task.completed`, `task.deleted`, `task.reparented` | Task lifecycle changes |
-| `workspace.created`, `workspace.archived`, `workspace.updated` | Workspace changes |
-| `persona.created`, `persona.updated`, `persona.deleted` | Persona changes |
-| `environment.added`, `environment.removed`, `environment.changed`, `environment.provision_progress` | Environment lifecycle |
-| `token.changed`, `credential.providers_changed` | Credential changes |
-| `schedule.created`, `schedule.updated`, `schedule.deleted`, `schedule.fired` | Schedule lifecycle |
-| `notification.escalated` | Escalation notification sent |
+| Event                                                                                               | When it fires                |
+| --------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `task.created`, `task.updated`, `task.started`, `task.completed`, `task.deleted`, `task.reparented` | Task lifecycle changes       |
+| `workspace.created`, `workspace.archived`, `workspace.updated`                                      | Workspace changes            |
+| `persona.created`, `persona.updated`, `persona.deleted`                                             | Persona changes              |
+| `environment.added`, `environment.removed`, `environment.changed`, `environment.provision_progress` | Environment lifecycle        |
+| `token.changed`, `credential.providers_changed`                                                     | Credential changes           |
+| `schedule.created`, `schedule.updated`, `schedule.deleted`, `schedule.fired`                        | Schedule lifecycle           |
+| `notification.escalated`                                                                            | Escalation notification sent |

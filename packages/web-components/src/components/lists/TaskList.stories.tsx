@@ -49,7 +49,12 @@ export const MultipleTasks: Story = {
     tasks: [
       buildTask({ id: "t-alpha", workspaceId: WORKSPACE_ID, title: "task-alpha", sortOrder: 1 }),
       buildTask({ id: "t-bravo", workspaceId: WORKSPACE_ID, title: "task-bravo", sortOrder: 2 }),
-      buildTask({ id: "t-charlie", workspaceId: WORKSPACE_ID, title: "task-charlie", sortOrder: 3 }),
+      buildTask({
+        id: "t-charlie",
+        workspaceId: WORKSPACE_ID,
+        title: "task-charlie",
+        sortOrder: 3,
+      }),
     ],
   },
   play: async ({ canvas }) => {
@@ -71,8 +76,20 @@ export const GroupByStatusToggle: Story = {
   name: "Group-by-status toggle shows headers",
   args: {
     tasks: [
-      buildTask({ id: "t-a", workspaceId: WORKSPACE_ID, title: "task-a", status: "not_started", sortOrder: 1 }),
-      buildTask({ id: "t-b", workspaceId: WORKSPACE_ID, title: "task-b", status: "not_started", sortOrder: 2 }),
+      buildTask({
+        id: "t-a",
+        workspaceId: WORKSPACE_ID,
+        title: "task-a",
+        status: "not_started",
+        sortOrder: 1,
+      }),
+      buildTask({
+        id: "t-b",
+        workspaceId: WORKSPACE_ID,
+        title: "task-b",
+        status: "not_started",
+        sortOrder: 2,
+      }),
     ],
   },
   play: async ({ canvas }) => {
@@ -98,7 +115,13 @@ export const GroupCollapseExpand: Story = {
   name: "Collapse and expand status group",
   args: {
     tasks: [
-      buildTask({ id: "t-collapse", workspaceId: WORKSPACE_ID, title: "collapse-task", status: "not_started", sortOrder: 1 }),
+      buildTask({
+        id: "t-collapse",
+        workspaceId: WORKSPACE_ID,
+        title: "collapse-task",
+        status: "not_started",
+        sortOrder: 1,
+      }),
     ],
   },
   play: async ({ canvas }) => {
@@ -135,7 +158,13 @@ export const EmptyGroupsHidden: Story = {
   name: "Empty status groups are hidden",
   args: {
     tasks: [
-      buildTask({ id: "t-only", workspaceId: WORKSPACE_ID, title: "only-not-started", status: "not_started", sortOrder: 1 }),
+      buildTask({
+        id: "t-only",
+        workspaceId: WORKSPACE_ID,
+        title: "only-not-started",
+        status: "not_started",
+        sortOrder: 1,
+      }),
     ],
   },
   play: async ({ canvas }) => {
@@ -161,7 +190,13 @@ export const ToggleBackRestoresTree: Story = {
   name: "Toggle off restores tree view",
   args: {
     tasks: [
-      buildTask({ id: "t-restore", workspaceId: WORKSPACE_ID, title: "restore-parent", status: "not_started", sortOrder: 1 }),
+      buildTask({
+        id: "t-restore",
+        workspaceId: WORKSPACE_ID,
+        title: "restore-parent",
+        status: "not_started",
+        sortOrder: 1,
+      }),
     ],
   },
   play: async ({ canvas }) => {
@@ -190,7 +225,13 @@ export const TaskNavigationFromGroupedView: Story = {
   name: "Task navigation from grouped view",
   args: {
     tasks: [
-      buildTask({ id: "t-nav", workspaceId: WORKSPACE_ID, title: "nav-target", status: "not_started", sortOrder: 1 }),
+      buildTask({
+        id: "t-nav",
+        workspaceId: WORKSPACE_ID,
+        title: "nav-target",
+        status: "not_started",
+        sortOrder: 1,
+      }),
     ],
   },
   play: async ({ canvas }) => {
@@ -218,7 +259,13 @@ export const KeyboardToggleGroup: Story = {
   name: "Enter toggles group collapse",
   args: {
     tasks: [
-      buildTask({ id: "t-kb", workspaceId: WORKSPACE_ID, title: "kb-toggle-task", status: "not_started", sortOrder: 1 }),
+      buildTask({
+        id: "t-kb",
+        workspaceId: WORKSPACE_ID,
+        title: "kb-toggle-task",
+        status: "not_started",
+        sortOrder: 1,
+      }),
     ],
   },
   play: async ({ canvas }) => {

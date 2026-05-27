@@ -4,20 +4,47 @@ import type { Session, StreamData } from "../../hooks/types.js";
 import { CoordinationList } from "./CoordinationList.js";
 
 function sub(sessionId: string): StreamData["subscribers"][number] {
-  return { subscriptionId: `sub-${sessionId}`, sessionId, fd: 3, permission: "rw", deliveryMode: "async", createdBySpawn: false };
+  return {
+    subscriptionId: `sub-${sessionId}`,
+    sessionId,
+    fd: 3,
+    permission: "rw",
+    deliveryMode: "async",
+    createdBySpawn: false,
+  };
 }
 function stream(over: Partial<StreamData> & { id: string; name: string }): StreamData {
-  return { subscriberCount: over.subscribers?.length ?? 1, messageBufferDepth: 0, selfEcho: false, subscribers: over.subscribers ?? [sub("s1")], ...over };
+  return {
+    subscriberCount: over.subscribers?.length ?? 1,
+    messageBufferDepth: 0,
+    selfEcho: false,
+    subscribers: over.subscribers ?? [sub("s1")],
+    ...over,
+  };
 }
 function session(id: string, taskId?: string): Session {
-  return { id, environmentId: "env-1", runtime: "claude-code", status: "running", prompt: "", startedAt: "2026-01-01T00:00:00Z", taskId };
+  return {
+    id,
+    environmentId: "env-1",
+    runtime: "claude-code",
+    status: "running",
+    prompt: "",
+    startedAt: "2026-01-01T00:00:00Z",
+    taskId,
+  };
 }
 
 const sessions: Session[] = [session("s1", "task-1"), session("s2", "task-1"), session("s3")];
 const tasks: { id: string; title: string }[] = [{ id: "task-1", title: "Implement JWT auth" }];
 
 const mixedStreams: StreamData[] = [
-  stream({ id: "room", name: "agent-chat", selfEcho: true, subscribers: [sub("s1"), sub("s2")], subscriberCount: 2 }),
+  stream({
+    id: "room",
+    name: "agent-chat",
+    selfEcho: true,
+    subscribers: [sub("s1"), sub("s2")],
+    subscriberCount: 2,
+  }),
   stream({ id: "chan", name: "telemetry", subscribers: [sub("s2")] }),
   stream({ id: "orphan", name: "cli-inspector", subscribers: [sub("s3")] }),
 ];

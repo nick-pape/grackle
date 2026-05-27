@@ -58,6 +58,7 @@ Based on the issue's domain, explore the codebase to understand the current stat
 - **Common/types**: `packages/common/src/types.ts` — shared type definitions
 
 Use Grep, Glob, and Read to find relevant code. Focus on:
+
 - How the feature's domain currently works
 - What data models and APIs already exist
 - What's missing vs what's already partially implemented
@@ -68,6 +69,7 @@ Use Grep, Glob, and Read to find relevant code. Focus on:
 Write a comprehensive spec covering these sections. Adapt the sections to the issue type (feature vs bug vs refactor):
 
 ### For Features:
+
 - **Overview**: What is this feature and why does it matter? (2-3 sentences)
 - **Functional Requirements**: Numbered FR-1, FR-2, etc. Be specific and testable. Describe WHAT, not HOW.
 - **Non-Functional Requirements**: Performance, accessibility, reliability, backwards compatibility constraints
@@ -79,6 +81,7 @@ Write a comprehensive spec covering these sections. Adapt the sections to the is
 - **Open Questions**: Unresolved decisions or ambiguities discovered during research. **These are blockers — all open questions must be resolved before implementation begins.** Be specific: state the question, explain why it matters, and suggest options where possible. Number them OQ-1, OQ-2, etc.
 
 ### For Bugs:
+
 - **Overview**: What is the bug and what's the user impact?
 - **Current Behavior**: Describe exactly what happens now. Reference specific code paths.
 - **Expected Behavior**: What should happen instead?
@@ -86,6 +89,7 @@ Write a comprehensive spec covering these sections. Adapt the sections to the is
 - (Then the same NFR, Integration Points, Acceptance Criteria, Out of Scope, Open Questions sections as above — including the blocker requirement on Open Questions)
 
 ### Important Guidelines:
+
 - This is a **REQUIREMENTS** doc, not an implementation plan. Describe WHAT, not HOW.
 - Don't prescribe specific classes, file structures, or code patterns — let the implementer decide.
 - You CAN reference existing code to describe the current state and integration points.
@@ -129,6 +133,7 @@ This marks the issue as spec'd and ready for development.
 ## Step 8: Report
 
 Summarize what was done:
+
 - How many functional requirements were defined
 - Key findings from the code review (e.g., missing APIs, partially implemented features, existing patterns to leverage)
 - Any open questions that need team input

@@ -11,6 +11,7 @@ Grackle exposes its full API as an **MCP (Model Context Protocol) server**. This
 ## What it enables
 
 With the MCP server, you can:
+
 - Have Claude Code manage Grackle tasks without the CLI
 - Build orchestration workflows where one agent controls others through Grackle
 - Connect external AI tools to your Grackle instance
@@ -40,68 +41,75 @@ For tools that support OAuth (like Claude Desktop), the MCP server handles the O
 The MCP server exposes tools grouped by domain:
 
 ### Environments
-| Tool | Description |
-|------|------------|
-| `env_list` | List all environments with status |
-| `env_add` | Register a new environment |
-| `env_provision` | Start and connect an environment |
-| `env_stop` | Stop a running environment |
-| `env_destroy` | Permanently remove an environment |
-| `env_remove` | Unregister an environment |
-| `env_wake` | Restart a stopped environment |
+
+| Tool            | Description                       |
+| --------------- | --------------------------------- |
+| `env_list`      | List all environments with status |
+| `env_add`       | Register a new environment        |
+| `env_provision` | Start and connect an environment  |
+| `env_stop`      | Stop a running environment        |
+| `env_destroy`   | Permanently remove an environment |
+| `env_remove`    | Unregister an environment         |
+| `env_wake`      | Restart a stopped environment     |
 
 ### Sessions
-| Tool | Description |
-|------|------------|
-| `session_spawn` | Start a new agent session |
-| `session_resume` | Resume a terminated session |
-| `session_status` | List sessions (filter by environment) |
-| `session_kill` | Terminate a running session |
-| `session_attach` | Stream session events |
-| `session_send_input` | Send input to a waiting session |
+
+| Tool                 | Description                           |
+| -------------------- | ------------------------------------- |
+| `session_spawn`      | Start a new agent session             |
+| `session_resume`     | Resume a terminated session           |
+| `session_status`     | List sessions (filter by environment) |
+| `session_kill`       | Terminate a running session           |
+| `session_attach`     | Stream session events                 |
+| `session_send_input` | Send input to a waiting session       |
 
 ### Tasks
-| Tool | Description |
-|------|------------|
-| `task_list` | List tasks (with search and status filters) |
-| `task_create` | Create a new task |
-| `task_show` | Get full task details |
-| `task_update` | Update task metadata |
-| `task_start` | Start a task (spawns a session) |
-| `task_complete` | Mark a task as complete |
-| `task_resume` | Resume a paused task |
-| `task_delete` | Delete a task |
+
+| Tool            | Description                                 |
+| --------------- | ------------------------------------------- |
+| `task_list`     | List tasks (with search and status filters) |
+| `task_create`   | Create a new task                           |
+| `task_show`     | Get full task details                       |
+| `task_update`   | Update task metadata                        |
+| `task_start`    | Start a task (spawns a session)             |
+| `task_complete` | Mark a task as complete                     |
+| `task_resume`   | Resume a paused task                        |
+| `task_delete`   | Delete a task                               |
 
 ### Workspaces
-| Tool | Description |
-|------|------------|
-| `workspace_list` | List all workspaces |
-| `workspace_create` | Create a new workspace |
-| `workspace_get` | Get workspace details |
-| `workspace_update` | Update workspace metadata |
-| `workspace_archive` | Archive a workspace |
+
+| Tool                | Description               |
+| ------------------- | ------------------------- |
+| `workspace_list`    | List all workspaces       |
+| `workspace_create`  | Create a new workspace    |
+| `workspace_get`     | Get workspace details     |
+| `workspace_update`  | Update workspace metadata |
+| `workspace_archive` | Archive a workspace       |
 
 ### Personas
-| Tool | Description |
-|------|------------|
-| `persona_list` | List all personas |
+
+| Tool             | Description          |
+| ---------------- | -------------------- |
+| `persona_list`   | List all personas    |
 | `persona_create` | Create a new persona |
-| `persona_edit` | Update a persona |
-| `persona_delete` | Delete a persona |
+| `persona_edit`   | Update a persona     |
+| `persona_delete` | Delete a persona     |
 
 ### Knowledge (when enabled)
-| Tool | Description |
-|------|------------|
-| `knowledge_search` | Semantic search over the knowledge graph |
-| `knowledge_get_node` | Retrieve a knowledge node by ID |
+
+| Tool                 | Description                              |
+| -------------------- | ---------------------------------------- |
+| `knowledge_search`   | Semantic search over the knowledge graph |
+| `knowledge_get_node` | Retrieve a knowledge node by ID          |
 
 These tools are only available when the [knowledge graph plugin](./knowledge-graph) is enabled.
 
 ### Configuration
-| Tool | Description |
-|------|------------|
+
+| Tool                         | Description                     |
+| ---------------------------- | ------------------------------- |
 | `config_get_default_persona` | Get the default persona setting |
-| `config_set_default_persona` | Set the default persona |
+| `config_set_default_persona` | Set the default persona         |
 
 ## MCP broker architecture
 
@@ -134,6 +142,7 @@ graph LR
 When an agent runs inside Grackle, the MCP server is automatically configured as an available tool source. The agent sees tools like `mcp__grackle__task_create` and `mcp__grackle__session_spawn` alongside its built-in tools.
 
 This is what enables patterns like:
+
 - An orchestrator agent that decomposes a task into subtasks using `task_create`
 - A researcher agent that searches the knowledge graph for prior context
 - A supervisor agent that monitors task status and provides feedback

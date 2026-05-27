@@ -2,8 +2,8 @@ name: Docker Nightly
 
 on:
   schedule:
-    - cron: '0 11 * * *'  # 11:00 UTC (05:00 CST / 06:00 CDT)
-  workflow_dispatch:        # Manual trigger
+    - cron: "0 11 * * *" # 11:00 UTC (05:00 CST / 06:00 CDT)
+  workflow_dispatch: # Manual trigger
 
 concurrency:
   group: docker-nightly

@@ -16,7 +16,11 @@ function getArgs(args: unknown): { status?: string; summary?: string } {
 }
 
 /** Parses workpad result. Could be { taskId, workpad: {...} } or the workpad object itself. */
-function parseResult(result: string | undefined): { status?: string; summary?: string; extra?: Record<string, unknown> } {
+function parseResult(result: string | undefined): {
+  status?: string;
+  summary?: string;
+  extra?: Record<string, unknown>;
+} {
   if (!result) {
     return {};
   }
@@ -27,17 +31,21 @@ function parseResult(result: string | undefined): { status?: string; summary?: s
     }
     const obj = parsed as Record<string, unknown>;
     // workpad_write returns { taskId, workpad: { status, summary, extra } }
-    const workpad = (typeof obj.workpad === "object" && obj.workpad !== null)
-      ? obj.workpad as Record<string, unknown>
-      : obj;
+    const workpad =
+      typeof obj.workpad === "object" && obj.workpad !== null
+        ? (obj.workpad as Record<string, unknown>)
+        : obj;
     return {
       status: typeof workpad.status === "string" ? workpad.status : undefined,
       summary: typeof workpad.summary === "string" ? workpad.summary : undefined,
-      extra: typeof workpad.extra === "object" && workpad.extra !== null
-        ? workpad.extra as Record<string, unknown>
-        : undefined,
+      extra:
+        typeof workpad.extra === "object" && workpad.extra !== null
+          ? (workpad.extra as Record<string, unknown>)
+          : undefined,
     };
-  } catch { /* fall through */ }
+  } catch {
+    /* fall through */
+  }
   return {};
 }
 
@@ -58,7 +66,9 @@ export function WorkpadCard({ tool, args, result, isError }: ToolCardProps): JSX
       data-testid="tool-card-workpad"
     >
       <div className={styles.header}>
-        <span className={styles.icon} aria-hidden="true">&#x1F4D3;</span>
+        <span className={styles.icon} aria-hidden="true">
+          &#x1F4D3;
+        </span>
         <span className={styles.toolName} style={{ color: "var(--accent-green, #4ade80)" }}>
           {bareName}
         </span>
@@ -74,7 +84,11 @@ export function WorkpadCard({ tool, args, result, isError }: ToolCardProps): JSX
 
       {/* Summary */}
       {displaySummary && (
-        <pre className={styles.pre} style={{ whiteSpace: "pre-wrap" }} data-testid="tool-card-workpad-summary">
+        <pre
+          className={styles.pre}
+          style={{ whiteSpace: "pre-wrap" }}
+          data-testid="tool-card-workpad-summary"
+        >
           {displaySummary}
         </pre>
       )}
@@ -94,11 +108,16 @@ export function WorkpadCard({ tool, args, result, isError }: ToolCardProps): JSX
       )}
 
       {/* Raw result fallback when parsing yields nothing structured */}
-      {!isError && !inProgress && result && !displaySummary && !displayStatus && !resultData.extra && (
-        <pre className={styles.pre} data-testid="tool-card-result">
-          {result}
-        </pre>
-      )}
+      {!isError &&
+        !inProgress &&
+        result &&
+        !displaySummary &&
+        !displayStatus &&
+        !resultData.extra && (
+          <pre className={styles.pre} data-testid="tool-card-result">
+            {result}
+          </pre>
+        )}
 
       {/* Extra data (expandable) */}
       {!isError && resultData.extra && (
@@ -106,11 +125,15 @@ export function WorkpadCard({ tool, args, result, isError }: ToolCardProps): JSX
           <button
             type="button"
             className={styles.bodyToggle}
-            onClick={() => { setExpanded((v) => !v); }}
+            onClick={() => {
+              setExpanded((v) => !v);
+            }}
             aria-expanded={expanded}
             data-testid="tool-card-toggle"
           >
-            <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}>&#x25B8;</span>
+            <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}>
+              &#x25B8;
+            </span>
             {expanded ? "collapse" : "extra data"}
           </button>
           {expanded && (

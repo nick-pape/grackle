@@ -196,7 +196,10 @@ describe("pairToolEvents", () => {
         }),
         makeEvent({
           eventType: "tool_use",
-          content: JSON.stringify({ tool: "mcp__grackle__workpad_write", args: { status: "done" } }),
+          content: JSON.stringify({
+            tool: "mcp__grackle__workpad_write",
+            args: { status: "done" },
+          }),
           raw: JSON.stringify({ type: "item.started", item: { id: "item_2" } }),
         }),
         makeEvent({
@@ -232,8 +235,16 @@ describe("pairToolEvents", () => {
       // A_use, B_use, B_result, A_result — the removed adjacent heuristic would never
       // have paired A, and a naive order match would pair A_use→B_result. The id is exact.
       const events = [
-        makeEvent({ eventType: "tool_use", content: JSON.stringify({ tool: "toolA", args: {} }), toolCallId: "A" }),
-        makeEvent({ eventType: "tool_use", content: JSON.stringify({ tool: "toolB", args: {} }), toolCallId: "B" }),
+        makeEvent({
+          eventType: "tool_use",
+          content: JSON.stringify({ tool: "toolA", args: {} }),
+          toolCallId: "A",
+        }),
+        makeEvent({
+          eventType: "tool_use",
+          content: JSON.stringify({ tool: "toolB", args: {} }),
+          toolCallId: "B",
+        }),
         makeEvent({ eventType: "tool_result", content: "resultB", toolCallId: "B" }),
         makeEvent({ eventType: "tool_result", content: "resultA", toolCallId: "A" }),
       ];
@@ -278,13 +289,18 @@ describe("pairToolEvents", () => {
         }),
         makeEvent({
           eventType: "tool_result",
-          content: JSON.stringify({ content: "Applied changes", detailedContent: "--- a/test.ts\n+++ b/test.ts\n@@ -1 +1 @@\n-old\n+new" }),
+          content: JSON.stringify({
+            content: "Applied changes",
+            detailedContent: "--- a/test.ts\n+++ b/test.ts\n@@ -1 +1 @@\n-old\n+new",
+          }),
           raw: JSON.stringify({ data: { toolCallId: "call_1" } }),
         }),
       ];
       const result = pairToolEvents(events);
       expect(result).toHaveLength(1);
-      expect(result[0].toolUseCtx!.detailedResult).toBe("--- a/test.ts\n+++ b/test.ts\n@@ -1 +1 @@\n-old\n+new");
+      expect(result[0].toolUseCtx!.detailedResult).toBe(
+        "--- a/test.ts\n+++ b/test.ts\n@@ -1 +1 @@\n-old\n+new",
+      );
     });
   });
 

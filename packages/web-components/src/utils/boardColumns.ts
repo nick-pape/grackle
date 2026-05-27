@@ -7,7 +7,13 @@
  */
 
 import type { TaskData } from "../hooks/types.js";
-import { BOARD_COLUMN_ORDER, getStatusStyle, resolveStatus, type TaskStatusKey, type TaskStatusStyle } from "./taskStatus.js";
+import {
+  BOARD_COLUMN_ORDER,
+  getStatusStyle,
+  resolveStatus,
+  type TaskStatusKey,
+  type TaskStatusStyle,
+} from "./taskStatus.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -81,9 +87,7 @@ export function buildBoardColumns({
   }
 
   // Pre-build empty buckets keyed by status
-  const buckets = new Map<TaskStatusKey, BoardTask[]>(
-    BOARD_COLUMN_ORDER.map((s) => [s, []]),
-  );
+  const buckets = new Map<TaskStatusKey, BoardTask[]>(BOARD_COLUMN_ORDER.map((s) => [s, []]));
 
   for (const task of tasks) {
     const column = resolveStatus(task.status);

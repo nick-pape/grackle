@@ -23,15 +23,24 @@ interface Props {
   personas: PersonaData[];
   /** Callback to create a new task. */
   onCreateTask: (
-    workspaceId: string, title: string, description?: string,
-    dependsOn?: string[], parentTaskId?: string, defaultPersonaId?: string,
-    canDecompose?: boolean, injectKnowledge?: boolean,
-    onSuccess?: () => void, onError?: (message: string) => void,
+    workspaceId: string,
+    title: string,
+    description?: string,
+    dependsOn?: string[],
+    parentTaskId?: string,
+    defaultPersonaId?: string,
+    canDecompose?: boolean,
+    injectKnowledge?: boolean,
+    onSuccess?: () => void,
+    onError?: (message: string) => void,
   ) => void;
   /** Callback to update an existing task. */
   onUpdateTask: (
-    taskId: string, title: string, description: string,
-    dependsOn: string[], defaultPersonaId?: string,
+    taskId: string,
+    title: string,
+    description: string,
+    dependsOn: string[],
+    defaultPersonaId?: string,
   ) => void;
   /** Optional callback invoked when inline edit completes (save or cancel). When provided, navigation is skipped. */
   onEditDone?: () => void;
@@ -47,15 +56,26 @@ interface Props {
  * - edit: pre-populated form; calls updateTask on save, then navigates
  *         back to the task overview.
  */
-export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, parentTaskId: parentTaskIdProp, environmentId: environmentIdProp, tasks, workspaces, personas, onCreateTask, onUpdateTask, onEditDone, onShowToast }: Props): JSX.Element {
+export function TaskEditPanel({
+  mode,
+  taskId,
+  workspaceId: workspaceIdProp,
+  parentTaskId: parentTaskIdProp,
+  environmentId: environmentIdProp,
+  tasks,
+  workspaces,
+  personas,
+  onCreateTask,
+  onUpdateTask,
+  onEditDone,
+  onShowToast,
+}: Props): JSX.Element {
   const navigate = useAppNavigate();
 
   const isEdit = mode === "edit";
   const existingTask = isEdit && taskId ? tasks.find((t) => t.id === taskId) : undefined;
 
-  const initialWorkspaceId = isEdit
-    ? (existingTask?.workspaceId ?? "")
-    : (workspaceIdProp ?? "");
+  const initialWorkspaceId = isEdit ? (existingTask?.workspaceId ?? "") : (workspaceIdProp ?? "");
 
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(initialWorkspaceId);
   const workspaceId = initialWorkspaceId || selectedWorkspaceId;
@@ -67,9 +87,7 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
   /** Whether the workspace dropdown should be shown (new mode without pre-set workspace). */
   const showWorkspaceSelector = !isEdit && !workspaceIdProp;
 
-  const parentTaskId = isEdit
-    ? (existingTask?.parentTaskId ?? "")
-    : (parentTaskIdProp ?? "");
+  const parentTaskId = isEdit ? (existingTask?.parentTaskId ?? "") : (parentTaskIdProp ?? "");
 
   const parentTask = parentTaskId ? tasks.find((t) => t.id === parentTaskId) : undefined;
 
@@ -100,18 +118,14 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
 
   // All tasks in the same workspace, excluding the task being edited (self)
   const siblingTasks = tasks.filter(
-    (t) =>
-      t.workspaceId === workspaceId &&
-      (!isEdit || t.id !== taskId) &&
-      t.id !== parentTaskId,
+    (t) => t.workspaceId === workspaceId && (!isEdit || t.id !== taskId) && t.id !== parentTaskId,
   );
 
   // In edit mode, also require that task data has loaded before allowing save
   // to prevent overwriting server data with blank form values.
   // Workspace is required: the user must pick one from the dropdown.
-  const canSave = title.trim().length > 0
-    && (!isEdit || existingTask !== undefined)
-    && workspaceId.length > 0;
+  const canSave =
+    title.trim().length > 0 && (!isEdit || existingTask !== undefined) && workspaceId.length > 0;
 
   const toggleDep = (depId: string): void => {
     setSelectedDeps((prev) =>
@@ -148,7 +162,9 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
         injectKnowledge,
         () => {
           onShowToast?.("Task created", "success");
-          navigate(workspaceIdProp ? workspaceUrl(workspaceIdProp, environmentId) : "/tasks", { replace: true });
+          navigate(workspaceIdProp ? workspaceUrl(workspaceIdProp, environmentId) : "/tasks", {
+            replace: true,
+          });
         },
         (message: string) => {
           onShowToast?.(message, "error");
@@ -170,7 +186,7 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
     }
   };
 
-  const modeLabel = isEdit ? "edit task" : (parentTaskId ? "child task" : "new task");
+  const modeLabel = isEdit ? "edit task" : parentTaskId ? "child task" : "new task";
 
   return (
     <div className={styles.container}>
@@ -218,7 +234,9 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
               >
                 <option value="">Select a workspace...</option>
                 {workspaces.map((w) => (
-                  <option key={w.id} value={w.id}>{w.name}</option>
+                  <option key={w.id} value={w.id}>
+                    {w.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -276,7 +294,9 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
             >
               <option value="">(Inherit)</option>
               {personas.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
               ))}
             </select>
           </div>
@@ -324,11 +344,7 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
                       className={`${styles.depItem} ${isChecked ? styles.depItemSelected : ""}`}
                       data-testid={`dep-option-${t.id}`}
                     >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => toggleDep(t.id)}
-                      />
+                      <input type="checkbox" checked={isChecked} onChange={() => toggleDep(t.id)} />
                       {t.title}
                       <span style={{ opacity: 0.5, fontSize: "11px", marginLeft: "4px" }}>
                         ({t.status})

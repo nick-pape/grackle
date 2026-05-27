@@ -25,7 +25,7 @@ describe("buildCspHeader", () => {
 
   it("sanitizes domain entries that could break out of a directive", () => {
     const csp = buildCspHeader({
-      resourceDomains: ["http://ok.example", "evil.com; script-src *", "has space", "has\"quote"],
+      resourceDomains: ["http://ok.example", "evil.com; script-src *", "has space", 'has"quote'],
     });
     expect(csp).toContain("http://ok.example");
     expect(csp).not.toContain("evil.com");
@@ -57,16 +57,24 @@ describe("buildCspHeader", () => {
   it("allows inline scripts only when allowInlineScripts is set (agent widgets)", () => {
     const locked = buildCspHeader({ resourceDomains: ["https://ok.example"] });
     expect(locked).not.toMatch(/script-src[^;]*'unsafe-inline'/);
-    const inline = buildCspHeader({ resourceDomains: ["https://ok.example"], allowInlineScripts: true });
+    const inline = buildCspHeader({
+      resourceDomains: ["https://ok.example"],
+      allowInlineScripts: true,
+    });
     expect(inline).toMatch(/script-src 'self' 'unsafe-inline' blob:/);
     // Non-boolean / falsey values do not enable it.
-    expect(buildCspHeader({ allowInlineScripts: "yes" })).not.toMatch(/script-src[^;]*'unsafe-inline'/);
+    expect(buildCspHeader({ allowInlineScripts: "yes" })).not.toMatch(
+      /script-src[^;]*'unsafe-inline'/,
+    );
   });
 
   it("allows unsafe-eval only when allowUnsafeEval is set (React runtime, #1268)", () => {
     const locked = buildCspHeader({ resourceDomains: ["https://ok.example"] });
     expect(locked).not.toMatch(/script-src[^;]*'unsafe-eval'/);
-    const evalCsp = buildCspHeader({ resourceDomains: ["https://ok.example"], allowUnsafeEval: true });
+    const evalCsp = buildCspHeader({
+      resourceDomains: ["https://ok.example"],
+      allowUnsafeEval: true,
+    });
     expect(evalCsp).toMatch(/script-src 'self' 'unsafe-eval' blob:/);
     // Non-boolean / falsey values do not enable it.
     expect(buildCspHeader({ allowUnsafeEval: "yes" })).not.toMatch(/script-src[^;]*'unsafe-eval'/);

@@ -31,7 +31,10 @@ import { listRuntimes } from "./runtime-handlers.js";
 import { RUNTIME_CATALOG } from "@grackle-ai/common";
 import type { grackle } from "@grackle-ai/common";
 
-function find(res: grackle.ListRuntimesResponse, provider: string): grackle.RuntimeInfo | undefined {
+function find(
+  res: grackle.ListRuntimesResponse,
+  provider: string,
+): grackle.RuntimeInfo | undefined {
   return res.runtimes.find((r) => r.provider === provider);
 }
 
@@ -54,7 +57,9 @@ describe("listRuntimes", () => {
     const res = await listRuntimes();
     const claude = find(res, "claude-code");
 
-    const anthropic = claude?.protectedResources.find((p) => p.resource === "https://api.anthropic.com");
+    const anthropic = claude?.protectedResources.find(
+      (p) => p.resource === "https://api.anthropic.com",
+    );
     expect(anthropic?.credentialKinds).toEqual(["oauth-subscription-file"]);
     const github = claude?.protectedResources.find((p) => p.resource === "https://api.github.com");
     expect(github?.credentialKinds).toEqual(["env-api-key"]);
@@ -64,8 +69,12 @@ describe("listRuntimes", () => {
     const res = await listRuntimes();
     const copilot = find(res, "copilot");
 
-    expect(copilot?.protectedResources.some((p) => p.resource === "https://api.githubcopilot.com")).toBe(false);
-    expect(copilot?.protectedResources.some((p) => p.resource === "https://api.github.com")).toBe(true);
+    expect(
+      copilot?.protectedResources.some((p) => p.resource === "https://api.githubcopilot.com"),
+    ).toBe(false);
+    expect(copilot?.protectedResources.some((p) => p.resource === "https://api.github.com")).toBe(
+      true,
+    );
   });
 
   it("advertises no credential needs for the stub runtime", async () => {

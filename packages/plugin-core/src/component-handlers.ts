@@ -1,6 +1,12 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle, fuzzySearch, type FuzzyKey, BUILTIN_COMPONENTS, extractComponentReferenceNames } from "@grackle-ai/common";
+import {
+  grackle,
+  fuzzySearch,
+  type FuzzyKey,
+  BUILTIN_COMPONENTS,
+  extractComponentReferenceNames,
+} from "@grackle-ai/common";
 import { componentStore, workspaceStore } from "@grackle-ai/database";
 import { emit } from "@grackle-ai/core";
 import { v4 as uuid } from "uuid";
@@ -22,7 +28,9 @@ function asInvalidArgument(err: unknown): never {
 }
 
 /** Register a new agent-authored component in the caller's workspace. */
-export async function registerComponent(req: grackle.RegisterComponentRequest): Promise<grackle.Component> {
+export async function registerComponent(
+  req: grackle.RegisterComponentRequest,
+): Promise<grackle.Component> {
   requireWorkspace(req.workspaceId);
   if (!req.name) {
     throw new ConnectError("name is required", Code.InvalidArgument);
@@ -53,7 +61,9 @@ export async function registerComponent(req: grackle.RegisterComponentRequest): 
 }
 
 /** Update a component's mutable fields (only set fields change); bumps version. */
-export async function updateComponent(req: grackle.UpdateComponentRequest): Promise<grackle.Component> {
+export async function updateComponent(
+  req: grackle.UpdateComponentRequest,
+): Promise<grackle.Component> {
   if (!req.id) {
     throw new ConnectError("id is required", Code.InvalidArgument);
   }
@@ -92,7 +102,10 @@ export async function getComponent(req: grackle.GetComponentRequest): Promise<gr
     }
   } else if (req.name) {
     if (!req.workspaceId) {
-      throw new ConnectError("workspaceId is required to resolve a component by name", Code.InvalidArgument);
+      throw new ConnectError(
+        "workspaceId is required to resolve a component by name",
+        Code.InvalidArgument,
+      );
     }
     row = componentStore.findComponentByName(req.workspaceId, req.name);
   } else {
@@ -105,7 +118,9 @@ export async function getComponent(req: grackle.GetComponentRequest): Promise<gr
 }
 
 /** List all components registered in a workspace. */
-export async function listComponents(req: grackle.ListComponentsRequest): Promise<grackle.ComponentList> {
+export async function listComponents(
+  req: grackle.ListComponentsRequest,
+): Promise<grackle.ComponentList> {
   requireWorkspace(req.workspaceId);
   return create(grackle.ComponentListSchema, {
     components: componentStore.listComponents(req.workspaceId).map(componentRowToProto),
@@ -143,7 +158,9 @@ interface SearchableComponent {
  * Built-in results carry `builtin: true` (they are composed in JSX, not rendered
  * by reference).
  */
-export async function searchComponents(req: grackle.SearchComponentsRequest): Promise<grackle.SearchComponentsResponse> {
+export async function searchComponents(
+  req: grackle.SearchComponentsRequest,
+): Promise<grackle.SearchComponentsResponse> {
   const query = req.query.trim();
   if (!query) {
     throw new ConnectError("query is required", Code.InvalidArgument);
@@ -157,7 +174,12 @@ export async function searchComponents(req: grackle.SearchComponentsRequest): Pr
     // is allowed — it searches built-ins only.
     requireWorkspace(req.workspaceId);
     for (const row of componentStore.listComponents(req.workspaceId)) {
-      items.push({ name: row.name, description: row.description, builtin: false, component: componentRowToProto(row) });
+      items.push({
+        name: row.name,
+        description: row.description,
+        builtin: false,
+        component: componentRowToProto(row),
+      });
     }
   }
   for (const b of BUILTIN_COMPONENTS) {
@@ -194,7 +216,9 @@ export async function searchComponents(req: grackle.SearchComponentsRequest): Pr
  * workspace is treated as not found) is the authorization boundary for the
  * dynamic tool. Promotion does not bump the component's version.
  */
-export async function setComponentPromotion(req: grackle.SetComponentPromotionRequest): Promise<grackle.Component> {
+export async function setComponentPromotion(
+  req: grackle.SetComponentPromotionRequest,
+): Promise<grackle.Component> {
   requireWorkspace(req.workspaceId);
   let row: componentStore.ComponentRow | undefined;
   if (req.id) {
@@ -287,7 +311,10 @@ export async function resolveComponentGraph(
       }
       visited.add(dep.id);
       walk(dep.body, depth + 1); // recurse first → post-order (deepest dependency first)
-      if (ordered.length >= MAX_COMPOSITION_COMPONENTS || totalBytes + dep.body.length > MAX_COMPOSITION_BYTES) {
+      if (
+        ordered.length >= MAX_COMPOSITION_COMPONENTS ||
+        totalBytes + dep.body.length > MAX_COMPOSITION_BYTES
+      ) {
         continue;
       }
       totalBytes += dep.body.length;

@@ -27,14 +27,16 @@ export function addEnvironment(
   githubAccountId?: string,
 ): void {
   const powerlineToken = randomBytes(POWERLINE_TOKEN_BYTE_LENGTH).toString("hex");
-  db.insert(environments).values({
-    id,
-    displayName,
-    adapterType,
-    adapterConfig,
-    powerlineToken,
-    ...(githubAccountId !== undefined ? { githubAccountId } : {}),
-  }).run();
+  db.insert(environments)
+    .values({
+      id,
+      displayName,
+      adapterType,
+      adapterConfig,
+      powerlineToken,
+      ...(githubAccountId !== undefined ? { githubAccountId } : {}),
+    })
+    .run();
 }
 
 /** Delete an environment record from the database. */
@@ -52,26 +54,17 @@ export function updateEnvironmentStatus(id: string, status: EnvironmentStatus): 
 
 /** Mark an environment as having completed first-time bootstrap. */
 export function markBootstrapped(id: string): void {
-  db.update(environments)
-    .set({ bootstrapped: true })
-    .where(eq(environments.id, id))
-    .run();
+  db.update(environments).set({ bootstrapped: true }).where(eq(environments.id, id)).run();
 }
 
 /** Store serialized environment info (e.g. OS, node version) from the PowerLine. */
 export function setEnvInfo(id: string, info: string): void {
-  db.update(environments)
-    .set({ envInfo: info })
-    .where(eq(environments.id, id))
-    .run();
+  db.update(environments).set({ envInfo: info }).where(eq(environments.id, id)).run();
 }
 
 /** Update the adapter config JSON for an existing environment. */
 export function updateAdapterConfig(id: string, config: string): void {
-  db.update(environments)
-    .set({ adapterConfig: config })
-    .where(eq(environments.id, id))
-    .run();
+  db.update(environments).set({ adapterConfig: config }).where(eq(environments.id, id)).run();
 }
 
 /** Updatable fields for an existing environment. */
@@ -83,7 +76,9 @@ export interface UpdateEnvironmentFields {
 
 /** Update mutable fields (displayName, adapterConfig, githubAccountId) of an existing environment. */
 export function updateEnvironment(id: string, fields: UpdateEnvironmentFields): void {
-  const updates: Partial<Pick<EnvironmentRow, "displayName" | "adapterConfig" | "githubAccountId">> = {};
+  const updates: Partial<
+    Pick<EnvironmentRow, "displayName" | "adapterConfig" | "githubAccountId">
+  > = {};
   if (fields.displayName !== undefined) {
     updates.displayName = fields.displayName;
   }
@@ -96,18 +91,12 @@ export function updateEnvironment(id: string, fields: UpdateEnvironmentFields): 
   if (Object.keys(updates).length === 0) {
     return;
   }
-  db.update(environments)
-    .set(updates)
-    .where(eq(environments.id, id))
-    .run();
+  db.update(environments).set(updates).where(eq(environments.id, id)).run();
 }
 
 /** Update the default bootstrap runtime for an environment. */
 export function updateDefaultRuntime(id: string, runtime: string): void {
-  db.update(environments)
-    .set({ defaultRuntime: runtime })
-    .where(eq(environments.id, id))
-    .run();
+  db.update(environments).set({ defaultRuntime: runtime }).where(eq(environments.id, id)).run();
 }
 
 /** Reset all environment statuses to disconnected on server startup. */

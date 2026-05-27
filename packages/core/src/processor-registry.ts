@@ -36,11 +36,7 @@ export function get(sessionId: string): ProcessorContext | undefined {
  * Throws if the session is already bound to a different task (FR-6).
  * Throws if the session is not registered (not actively processing).
  */
-export function lateBind(
-  sessionId: string,
-  taskId: string,
-  workspaceId?: string,
-): void {
+export function lateBind(sessionId: string, taskId: string, workspaceId?: string): void {
   const ctx = registry.get(sessionId);
   if (!ctx) {
     throw new Error(`No active event processor for session ${sessionId}`);

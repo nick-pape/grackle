@@ -18,9 +18,7 @@ function resolveSettingKey(key: string): string {
 
 /** Register configuration commands: `config get`, `config set`. */
 export function registerConfigCommands(program: Command): void {
-  const config = program
-    .command("config")
-    .description("Manage app-level settings");
+  const config = program.command("config").description("Manage app-level settings");
 
   config
     .command("get <key>")

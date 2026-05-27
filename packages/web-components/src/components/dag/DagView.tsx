@@ -35,7 +35,12 @@ const nodeTypes: NodeTypes = {
 };
 
 /** Interactive DAG visualization of task hierarchy and dependency relationships. */
-export function DagView({ workspaceId, environmentId, tasks, resolvedThemeId }: Props): JSX.Element {
+export function DagView({
+  workspaceId,
+  environmentId,
+  tasks,
+  resolvedThemeId,
+}: Props): JSX.Element {
   const navigate = useAppNavigate();
 
   const workspaceTasks = useMemo(
@@ -63,10 +68,13 @@ export function DagView({ workspaceId, environmentId, tasks, resolvedThemeId }: 
   );
 
   /** Returns a hex color for the MiniMap based on task status. */
-  const minimapNodeColor = useCallback((node: Node): string => {
-    const data = node.data as TaskNodeData;
-    return statusColors[data.task.status] || statusColors.pending;
-  }, [statusColors]);
+  const minimapNodeColor = useCallback(
+    (node: Node): string => {
+      const data = node.data as TaskNodeData;
+      return statusColors[data.task.status] || statusColors.pending;
+    },
+    [statusColors],
+  );
 
   if (workspaceTasks.length === 0) {
     return (
@@ -77,9 +85,7 @@ export function DagView({ workspaceId, environmentId, tasks, resolvedThemeId }: 
         >
           Create Task
         </button>
-        <div className={styles.ctaDescription}>
-          Create tasks to see the dependency graph
-        </div>
+        <div className={styles.ctaDescription}>Create tasks to see the dependency graph</div>
       </div>
     );
   }
@@ -99,7 +105,12 @@ export function DagView({ workspaceId, environmentId, tasks, resolvedThemeId }: 
         minZoom={0.3}
         maxZoom={2}
       >
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="var(--text-disabled)" />
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={24}
+          size={1}
+          color="var(--text-disabled)"
+        />
         <Controls showInteractive={false} />
         <MiniMap
           nodeColor={minimapNodeColor}

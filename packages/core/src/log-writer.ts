@@ -62,11 +62,7 @@ export async function writeEvent(logPath: string, event: grackle.SessionEvent): 
     }
     logger.warn({ logPath }, "Log writer backpressure — waiting for drain");
     // Race drain against error/close to avoid hanging indefinitely
-    await Promise.race([
-      once(ws, "drain"),
-      once(ws, "error"),
-      once(ws, "close"),
-    ]);
+    await Promise.race([once(ws, "drain"), once(ws, "error"), once(ws, "close")]);
   }
 }
 

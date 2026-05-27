@@ -16,45 +16,52 @@ export function registerTokenCommands(program: Command): void {
     .option("--type <type>", "Token type: env_var or file", "env_var")
     .option("--env-var <name>", "Environment variable name to set on PowerLine")
     .option("--file-path <path>", "File path to write on PowerLine")
-    .action(async (name: string, opts: { file?: string; env?: string; type: string; envVar?: string; filePath?: string }) => {
-      const { core: client } = createGrackleClients();
-      let value: string;
+    .action(
+      async (
+        name: string,
+        opts: { file?: string; env?: string; type: string; envVar?: string; filePath?: string },
+      ) => {
+        const { core: client } = createGrackleClients();
+        let value: string;
 
-      if (opts.file) {
-        value = readFileSync(opts.file, "utf-8").trim();
-      } else if (opts.env) {
-        value = process.env[opts.env] || "";
-        if (!value) {
-          console.error(`Environment variable ${opts.env} is not set`);
+        if (opts.file) {
+          value = readFileSync(opts.file, "utf-8").trim();
+        } else if (opts.env) {
+          value = process.env[opts.env] || "";
+          if (!value) {
+            console.error(`Environment variable ${opts.env} is not set`);
+            process.exit(1);
+          }
+        } else {
+          // Interactive
+          value = await new Promise<string>((resolve) => {
+            const rl = createInterface({ input: process.stdin, output: process.stdout });
+            rl.question(`Enter value for ${name}: `, (answer) => {
+              rl.close();
+              resolve(answer);
+            });
+          });
+        }
+
+        const validTokenTypes = ["env_var", "file"];
+        if (!validTokenTypes.includes(opts.type)) {
+          console.error(
+            `Invalid token type: ${opts.type}. Must be one of: ${validTokenTypes.join(", ")}`,
+          );
           process.exit(1);
         }
-      } else {
-        // Interactive
-        value = await new Promise<string>((resolve) => {
-          const rl = createInterface({ input: process.stdin, output: process.stdout });
-          rl.question(`Enter value for ${name}: `, (answer) => {
-            rl.close();
-            resolve(answer);
-          });
+
+        await client.setToken({
+          name,
+          type: opts.type,
+          envVar: opts.envVar || name.toUpperCase() + "_TOKEN",
+          filePath: opts.filePath || "",
+          value,
+          expiresAt: "",
         });
-      }
-
-      const validTokenTypes = ["env_var", "file"];
-      if (!validTokenTypes.includes(opts.type)) {
-        console.error(`Invalid token type: ${opts.type}. Must be one of: ${validTokenTypes.join(", ")}`);
-        process.exit(1);
-      }
-
-      await client.setToken({
-        name,
-        type: opts.type,
-        envVar: opts.envVar || name.toUpperCase() + "_TOKEN",
-        filePath: opts.filePath || "",
-        value,
-        expiresAt: "",
-      });
-      console.log(`Token set: ${name}`);
-    });
+        console.log(`Token set: ${name}`);
+      },
+    );
 
   token
     .command("delete <name>")

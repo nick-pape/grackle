@@ -85,9 +85,7 @@ describe("workpad_write", () => {
 
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
-      setWorkpad: vi.fn().mockRejectedValue(
-        new ConnectError("task not found", Code.NotFound),
-      ),
+      setWorkpad: vi.fn().mockRejectedValue(new ConnectError("task not found", Code.NotFound)),
       getTask: vi.fn(),
     } as unknown as GrackleClient;
 
@@ -100,7 +98,8 @@ describe("workpad_write", () => {
     };
 
     const result = await tool.handler(
-      { status: "done" }, { orchestration: mockClient },
+      { status: "done" },
+      { orchestration: mockClient },
       scopedAuth,
     );
 
@@ -165,7 +164,11 @@ describe("workpad_read", () => {
     const mockClient = {
       getTask: vi.fn().mockImplementation(({ id }: { id: string }) => {
         if (id === "child-1") {
-          return { id: "child-1", parentTaskId: "t-1", workpad: JSON.stringify({ status: "done" }) };
+          return {
+            id: "child-1",
+            parentTaskId: "t-1",
+            workpad: JSON.stringify({ status: "done" }),
+          };
         }
         return { id, parentTaskId: "" };
       }),
@@ -179,7 +182,11 @@ describe("workpad_read", () => {
       taskSessionId: "sess-1",
     };
 
-    const result = await tool.handler({ taskId: "child-1" }, { orchestration: mockClient }, scopedAuth);
+    const result = await tool.handler(
+      { taskId: "child-1" },
+      { orchestration: mockClient },
+      scopedAuth,
+    );
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.status).toBe("done");
   });
@@ -213,9 +220,7 @@ describe("workpad_read", () => {
 
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
-      getTask: vi.fn().mockRejectedValue(
-        new ConnectError("task not found", Code.NotFound),
-      ),
+      getTask: vi.fn().mockRejectedValue(new ConnectError("task not found", Code.NotFound)),
     } as unknown as GrackleClient;
 
     const scopedAuth: AuthContext = {
@@ -226,7 +231,11 @@ describe("workpad_read", () => {
       taskSessionId: "sess-1",
     };
 
-    const result = await tool.handler({ taskId: "t-missing" }, { orchestration: mockClient }, scopedAuth);
+    const result = await tool.handler(
+      { taskId: "t-missing" },
+      { orchestration: mockClient },
+      scopedAuth,
+    );
     expect(result.isError).toBe(true);
   });
 });

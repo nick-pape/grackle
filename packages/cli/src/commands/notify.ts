@@ -3,7 +3,9 @@ import { createGrackleClients } from "../client.js";
 import Table from "cli-table3";
 
 export function registerNotifyCommands(program: Command): void {
-  const notify = program.command("notify").description("Manage human notifications and escalations");
+  const notify = program
+    .command("notify")
+    .description("Manage human notifications and escalations");
 
   notify
     .command("send <title>")
@@ -12,17 +14,22 @@ export function registerNotifyCommands(program: Command): void {
     .option("--task <id>", "Task ID", "")
     .option("--message <text>", "Detailed message", "")
     .option("--urgency <level>", "Urgency: low, normal, high", "normal")
-    .action(async (title: string, opts: { workspace: string; task: string; message: string; urgency: string }) => {
-      const { orchestration } = createGrackleClients();
-      const esc = await orchestration.createEscalation({
-        workspaceId: opts.workspace,
-        taskId: opts.task,
-        title,
-        message: opts.message || title,
-        urgency: opts.urgency,
-      });
-      console.log(`Escalation created: ${esc.id} (status: ${esc.status})`);
-    });
+    .action(
+      async (
+        title: string,
+        opts: { workspace: string; task: string; message: string; urgency: string },
+      ) => {
+        const { orchestration } = createGrackleClients();
+        const esc = await orchestration.createEscalation({
+          workspaceId: opts.workspace,
+          taskId: opts.task,
+          title,
+          message: opts.message || title,
+          urgency: opts.urgency,
+        });
+        console.log(`Escalation created: ${esc.id} (status: ${esc.status})`);
+      },
+    );
 
   notify
     .command("list")

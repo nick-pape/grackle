@@ -20,7 +20,9 @@ describe("publish() observation log (RFC #1264 Phase 2)", () => {
     bus._resetForTesting();
     persistMock.mockReset();
     emitted = [];
-    bus.subscribeStreamMessages((e) => { emitted.push(e); });
+    bus.subscribeStreamMessages((e) => {
+      emitted.push(e);
+    });
   });
 
   it("persists and emits for an observable (non-reserved) stream", () => {
@@ -59,7 +61,9 @@ describe("publish() observation log (RFC #1264 Phase 2)", () => {
   });
 
   it("is non-fatal: a persistence failure breaks neither delivery nor the live feed", () => {
-    persistMock.mockImplementation(() => { throw new Error("db down"); });
+    persistMock.mockImplementation(() => {
+      throw new Error("db down");
+    });
     const stream = registry.createStream("resilient-room");
 
     const msg = registry.publish(stream.id, "sess-1", "still delivered");

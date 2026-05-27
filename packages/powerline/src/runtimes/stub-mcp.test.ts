@@ -72,17 +72,17 @@ describe("StubMcpRuntime", () => {
     expect(types).toEqual([
       "system",
       "runtime_session_id",
-      "turn_started",   // initial turn (AHP HR2)
+      "turn_started", // initial turn (AHP HR2)
       "text",
       "tool_use",
       "tool_result",
-      "turn_complete",  // initial turn (AHP HR2)
-      "status",     // waiting_input
-      "status",     // running
-      "turn_started",   // follow-up turn (AHP HR2)
-      "text",       // user reply echo
-      "turn_complete",  // follow-up turn (AHP HR2)
-      "status",     // waiting_input (idle after processing input)
+      "turn_complete", // initial turn (AHP HR2)
+      "status", // waiting_input
+      "status", // running
+      "turn_started", // follow-up turn (AHP HR2)
+      "text", // user reply echo
+      "turn_complete", // follow-up turn (AHP HR2)
+      "status", // waiting_input (idle after processing input)
     ]);
 
     // Verify content
@@ -195,13 +195,18 @@ describe("StubMcpRuntime", () => {
     expect(toolUse).toBeDefined();
     expect(JSON.parse(toolUse!.content)).toEqual({ tool: "task_list", args: {} });
     expect(toolUse!.raw).toEqual({
-      type: "tool_use", id: "toolu_stub_mcp_1", name: "task_list", input: {},
+      type: "tool_use",
+      id: "toolu_stub_mcp_1",
+      name: "task_list",
+      input: {},
     });
 
     const toolResult = events.find((e) => e.type === "tool_result");
     expect(toolResult).toBeDefined();
     expect(toolResult!.raw).toEqual({
-      type: "tool_result", tool_use_id: "toolu_stub_mcp_1", is_error: false,
+      type: "tool_result",
+      tool_use_id: "toolu_stub_mcp_1",
+      is_error: false,
     });
 
     // Verify MCP client was closed
@@ -239,7 +244,9 @@ describe("StubMcpRuntime", () => {
     const toolResult = events.find((e) => e.type === "tool_result");
     expect(toolResult).toBeDefined();
     expect(toolResult!.raw).toEqual({
-      type: "tool_result", tool_use_id: "toolu_stub_mcp_1", is_error: true,
+      type: "tool_result",
+      tool_use_id: "toolu_stub_mcp_1",
+      is_error: true,
     });
     const resultContent = JSON.parse(toolResult!.content);
     expect(resultContent.error).toBe("Connection refused");

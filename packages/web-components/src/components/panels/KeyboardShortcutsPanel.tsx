@@ -90,7 +90,9 @@ export function KeyboardShortcutsPanel(): JSX.Element {
               <div key={shortcut.description} className={shortcutStyles.shortcutRow}>
                 <span className={shortcutStyles.keys}>
                   {shortcut.keys.map((k) => (
-                    <kbd key={k} className={shortcutStyles.kbd}>{k}</kbd>
+                    <kbd key={k} className={shortcutStyles.kbd}>
+                      {k}
+                    </kbd>
                   ))}
                 </span>
                 <span className={shortcutStyles.description}>{shortcut.description}</span>

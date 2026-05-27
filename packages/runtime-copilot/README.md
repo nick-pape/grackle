@@ -22,11 +22,11 @@ The Copilot SDK (`@github/copilot-sdk`) and the Copilot CLI (`@github/copilot`) 
 
 All configuration is driven by environment variables so the runtime behaves identically across local, Docker, SSH, and other environments.
 
-| Variable | Description |
-|----------|-------------|
-| `COPILOT_CLI_PATH` | Path to the Copilot CLI binary. Defaults to `copilot` resolved via `PATH`. |
-| `COPILOT_CLI_URL` | URL of an external Copilot CLI server (e.g. `localhost:4321`). When set, the runtime connects to it instead of spawning a local CLI process. |
-| `COPILOT_PROVIDER_CONFIG` | JSON-encoded provider config for bring-your-own-key (BYOK) scenarios (e.g. `type`, `baseUrl`, `apiKey`). Malformed JSON is ignored. |
+| Variable                  | Description                                                                                                                                  |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `COPILOT_CLI_PATH`        | Path to the Copilot CLI binary. Defaults to `copilot` resolved via `PATH`.                                                                   |
+| `COPILOT_CLI_URL`         | URL of an external Copilot CLI server (e.g. `localhost:4321`). When set, the runtime connects to it instead of spawning a local CLI process. |
+| `COPILOT_PROVIDER_CONFIG` | JSON-encoded provider config for bring-your-own-key (BYOK) scenarios (e.g. `type`, `baseUrl`, `apiKey`). Malformed JSON is ignored.          |
 
 Session-level options are passed through from Grackle: the model, an optional system message (injected via the SDK's `systemMessage` in `append` mode), MCP servers, and the working directory. Tool permission prompts are auto-approved (`approveAll`) for headless operation.
 
@@ -40,11 +40,11 @@ The model is selected per session and passed straight through to the Copilot SDK
 
 The runtime resolves a GitHub token from the following environment variables, in priority order:
 
-| Variable | Priority |
-|----------|----------|
-| `COPILOT_GITHUB_TOKEN` | 1 |
-| `GH_TOKEN` | 2 |
-| `GITHUB_TOKEN` | 3 |
+| Variable               | Priority |
+| ---------------------- | -------- |
+| `COPILOT_GITHUB_TOKEN` | 1        |
+| `GH_TOKEN`             | 2        |
+| `GITHUB_TOKEN`         | 3        |
 
 If a token is found, it is passed to the `CopilotClient` and the SDK uses it directly. If none is set, the runtime falls back to the logged-in Copilot user (`useLoggedInUser`). For BYOK setups, supply provider credentials via `COPILOT_PROVIDER_CONFIG` instead.
 

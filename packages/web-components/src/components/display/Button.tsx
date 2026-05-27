@@ -14,7 +14,9 @@ export type { ButtonVariant, ButtonSize };
  * drift from the component; `disabled` and the rest come from the native button
  * attributes.
  */
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, Omit<ButtonBuiltinProps, "disabled"> {}
+export interface ButtonProps
+  extends ButtonHTMLAttributes<HTMLButtonElement>,
+    Omit<ButtonBuiltinProps, "disabled"> {}
 
 /**
  * Standardized button with consistent sizing and styling across the app.
@@ -22,19 +24,17 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, Om
  * Uses the existing mixin-based design tokens so colours/radii stay in sync
  * with the rest of the UI.
  */
-export const Button: React.ForwardRefExoticComponent<ButtonProps & React.RefAttributes<HTMLButtonElement>> = forwardRef<HTMLButtonElement, ButtonProps>(
-  function Button({ variant = "primary", size = "md", className, children, ...rest }: ButtonProps, ref: React.ForwardedRef<HTMLButtonElement>): JSX.Element {
-    const cls = [
-      styles.btn,
-      styles[variant],
-      styles[size],
-      className,
-    ].filter(Boolean).join(" ");
+export const Button: React.ForwardRefExoticComponent<
+  ButtonProps & React.RefAttributes<HTMLButtonElement>
+> = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { variant = "primary", size = "md", className, children, ...rest }: ButtonProps,
+  ref: React.ForwardedRef<HTMLButtonElement>,
+): JSX.Element {
+  const cls = [styles.btn, styles[variant], styles[size], className].filter(Boolean).join(" ");
 
-    return (
-      <button ref={ref} className={cls} {...rest}>
-        {children}
-      </button>
-    );
-  },
-);
+  return (
+    <button ref={ref} className={cls} {...rest}>
+      {children}
+    </button>
+  );
+});

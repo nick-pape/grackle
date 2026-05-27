@@ -20,11 +20,7 @@ export function AboutStep({ onNext, onBack }: AboutStepProps): JSX.Element {
         <li>Live-stream agent sessions with full terminal replay</li>
       </ul>
       <div className={styles.buttonRow}>
-        <button
-          type="button"
-          className={styles.ghostButton}
-          onClick={onBack}
-        >
+        <button type="button" className={styles.ghostButton} onClick={onBack}>
           Back
         </button>
         <button

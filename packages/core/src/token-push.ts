@@ -30,7 +30,11 @@ export interface AuthenticateOptions {
  * (read fresh from env/disk) and delivers them via the PowerLine `authenticate`
  * RPC. Best-effort: failures are logged and do not block the spawn.
  */
-export async function authenticateForRuntime(environmentId: string, runtime: string, options?: AuthenticateOptions): Promise<void> {
+export async function authenticateForRuntime(
+  environmentId: string,
+  runtime: string,
+  options?: AuthenticateOptions,
+): Promise<void> {
   const conn = adapterManager.getConnection(environmentId);
   if (!conn) {
     return;
@@ -51,7 +55,9 @@ export async function authenticateForRuntime(environmentId: string, runtime: str
   }
 
   try {
-    await conn.client.authenticate(create(powerline.AuthenticateRequestSchema, { provider: runtime, tokens }));
+    await conn.client.authenticate(
+      create(powerline.AuthenticateRequestSchema, { provider: runtime, tokens }),
+    );
   } catch (err) {
     logger.warn({ environmentId, runtime, err }, "Failed to authenticate credentials before spawn");
   }

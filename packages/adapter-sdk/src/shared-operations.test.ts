@@ -13,7 +13,12 @@ import type { PowerLineConnection } from "./adapter.js";
 // ── Mock helpers ─────────────────────────────────────────────
 
 function createMockTunnel(alive: boolean) {
-  return { isAlive: vi.fn().mockReturnValue(alive), localPort: 12345, open: vi.fn(), close: vi.fn() };
+  return {
+    isAlive: vi.fn().mockReturnValue(alive),
+    localPort: 12345,
+    open: vi.fn(),
+    close: vi.fn(),
+  };
 }
 
 function createMockConnection(pingFn?: () => Promise<unknown>): PowerLineConnection {

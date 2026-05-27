@@ -58,11 +58,9 @@ export interface ImportAccountsResult {
 export async function importAccountsFromGhCli(): Promise<ImportAccountsResult> {
   let statusOutput: GhAuthStatusOutput;
   try {
-    const result = await exec(
-      "gh",
-      ["auth", "status", "--json", "hosts"],
-      { timeout: GH_AUTH_STATUS_TIMEOUT_MS },
-    );
+    const result = await exec("gh", ["auth", "status", "--json", "hosts"], {
+      timeout: GH_AUTH_STATUS_TIMEOUT_MS,
+    });
     statusOutput = JSON.parse(result.stdout) as GhAuthStatusOutput;
   } catch {
     // gh CLI not installed, not logged in, or command failed — silently skip
@@ -99,7 +97,10 @@ export async function importAccountsFromGhCli(): Promise<ImportAccountsResult> {
         );
         token = tokenResult.stdout.trim();
       } catch {
-        logger.warn({ username: account.login, host }, "Could not resolve gh auth token for account; skipping");
+        logger.warn(
+          { username: account.login, host },
+          "Could not resolve gh auth token for account; skipping",
+        );
         continue;
       }
 
@@ -116,7 +117,10 @@ export async function importAccountsFromGhCli(): Promise<ImportAccountsResult> {
           defaultAssigned = true;
         }
         imported.push(account.login);
-        logger.info({ username: account.login, host, label, isDefault }, "Imported GitHub account from gh CLI");
+        logger.info(
+          { username: account.login, host, label, isDefault },
+          "Imported GitHub account from gh CLI",
+        );
       } catch {
         logger.warn(
           { username: account.login, host, label },

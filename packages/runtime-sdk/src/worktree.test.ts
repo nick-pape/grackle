@@ -5,12 +5,7 @@ vi.mock("./logger.js", () => ({
   logger: { warn: vi.fn(), info: vi.fn() },
 }));
 
-import {
-  sanitizeBranch,
-  worktreeDir,
-  ensureWorktree,
-  removeWorktree,
-} from "./worktree.js";
+import { sanitizeBranch, worktreeDir, ensureWorktree, removeWorktree } from "./worktree.js";
 import type { GitExecutor, WorktreeFileSystem } from "./worktree.js";
 
 describe("sanitizeBranch", () => {
@@ -102,10 +97,10 @@ describe("ensureWorktree", () => {
   it("calls git fetch origin before git worktree add", async () => {
     const git = createFakeGitExecutor({
       "rev-parse": { stdout: ".git" },
-      "status": { stdout: "" },
-      "fetch": { stdout: "" },
+      status: { stdout: "" },
+      fetch: { stdout: "" },
       "symbolic-ref": { stdout: "refs/remotes/origin/main\n" },
-      "worktree": { stdout: "" },
+      worktree: { stdout: "" },
     });
 
     await ensureWorktree("/repo", "feature/test", git, createFakeFileSystem());
@@ -120,10 +115,10 @@ describe("ensureWorktree", () => {
   it("includes origin/main as start point and returns synced: true", async () => {
     const git = createFakeGitExecutor({
       "rev-parse": { stdout: ".git" },
-      "status": { stdout: "" },
-      "fetch": { stdout: "" },
+      status: { stdout: "" },
+      fetch: { stdout: "" },
       "symbolic-ref": { stdout: "refs/remotes/origin/main\n" },
-      "worktree": { stdout: "" },
+      worktree: { stdout: "" },
     });
 
     const result = await ensureWorktree("/repo", "feature/sync", git, createFakeFileSystem());
@@ -140,9 +135,9 @@ describe("ensureWorktree", () => {
   it("still creates worktree when fetch fails, with synced: false", async () => {
     const git = createFakeGitExecutor({
       "rev-parse": { stdout: ".git" },
-      "status": { stdout: "" },
-      "fetch": { error: new Error("network error") },
-      "worktree": { stdout: "" },
+      status: { stdout: "" },
+      fetch: { error: new Error("network error") },
+      worktree: { stdout: "" },
     });
 
     const result = await ensureWorktree("/repo", "feature/offline", git, createFakeFileSystem());
@@ -159,7 +154,7 @@ describe("ensureWorktree", () => {
   it("returns created: false and synced: false for existing worktree without fetching", async () => {
     const git = createFakeGitExecutor({
       "rev-parse": { stdout: ".git" },
-      "status": { stdout: "" },
+      status: { stdout: "" },
     });
 
     const result = await ensureWorktree("/repo", "feature/exists", git, createFakeFileSystem(true));
@@ -175,10 +170,10 @@ describe("ensureWorktree", () => {
   it("falls back to origin/main when symbolic-ref fails", async () => {
     const git = createFakeGitExecutor({
       "rev-parse": { stdout: ".git" },
-      "status": { stdout: "" },
-      "fetch": { stdout: "" },
+      status: { stdout: "" },
+      fetch: { stdout: "" },
       "symbolic-ref": { error: new Error("no symbolic ref") },
-      "worktree": { stdout: "" },
+      worktree: { stdout: "" },
     });
 
     const result = await ensureWorktree("/repo", "feature/fallback", git, createFakeFileSystem());
@@ -197,7 +192,7 @@ describe("ensureWorktree", () => {
 describe("removeWorktree", () => {
   it("calls git worktree remove with correct args", async () => {
     const git = createFakeGitExecutor({
-      "worktree": { stdout: "" },
+      worktree: { stdout: "" },
     });
 
     await removeWorktree("/repo", "feature/done", git);
@@ -214,7 +209,7 @@ describe("removeWorktree", () => {
 
   it("does not throw when git worktree remove fails", async () => {
     const git = createFakeGitExecutor({
-      "worktree": { error: new Error("not a worktree") },
+      worktree: { error: new Error("not a worktree") },
     });
 
     // Should not throw

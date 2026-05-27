@@ -20,7 +20,11 @@ import { grackle } from "@grackle-ai/common";
  * current `globalThis.fetch`, making test patches visible.
  */
 const customFetch: typeof globalThis.fetch = new Proxy(globalThis.fetch, {
-  apply(_target: typeof globalThis.fetch, thisArg: unknown, args: Parameters<typeof globalThis.fetch>): Promise<Response> {
+  apply(
+    _target: typeof globalThis.fetch,
+    thisArg: unknown,
+    args: Parameters<typeof globalThis.fetch>,
+  ): Promise<Response> {
     return Reflect.apply(globalThis.fetch, thisArg, args) as Promise<Response>;
   },
 });
@@ -32,13 +36,25 @@ const transport: ReturnType<typeof createConnectTransport> = createConnectTransp
 });
 
 /** Typed ConnectRPC client for core RPCs (environments, sessions, workspaces, etc.). */
-export const coreClient: Client<typeof grackle.GrackleCore> = createClient(grackle.GrackleCore, transport);
+export const coreClient: Client<typeof grackle.GrackleCore> = createClient(
+  grackle.GrackleCore,
+  transport,
+);
 
 /** Typed ConnectRPC client for orchestration RPCs (tasks, personas, findings, escalations). */
-export const orchestrationClient: Client<typeof grackle.GrackleOrchestration> = createClient(grackle.GrackleOrchestration, transport);
+export const orchestrationClient: Client<typeof grackle.GrackleOrchestration> = createClient(
+  grackle.GrackleOrchestration,
+  transport,
+);
 
 /** Typed ConnectRPC client for scheduling RPCs. */
-export const schedulingClient: Client<typeof grackle.GrackleScheduling> = createClient(grackle.GrackleScheduling, transport);
+export const schedulingClient: Client<typeof grackle.GrackleScheduling> = createClient(
+  grackle.GrackleScheduling,
+  transport,
+);
 
 /** Typed ConnectRPC client for knowledge graph RPCs. */
-export const knowledgeClient: Client<typeof grackle.GrackleKnowledge> = createClient(grackle.GrackleKnowledge, transport);
+export const knowledgeClient: Client<typeof grackle.GrackleKnowledge> = createClient(
+  grackle.GrackleKnowledge,
+  transport,
+);

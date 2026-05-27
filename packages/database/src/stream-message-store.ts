@@ -50,7 +50,13 @@ export function persistStreamMessage(message: StreamMessageRecord): void {
       "INSERT INTO stream_messages (seq, stream_id, sender_id, content, timestamp) VALUES (?, ?, ?, ?, ?)",
     );
   }
-  insertStmt.run([message.seq, message.streamId, message.senderId, message.content, message.timestamp]);
+  insertStmt.run([
+    message.seq,
+    message.streamId,
+    message.senderId,
+    message.content,
+    message.timestamp,
+  ]);
 }
 
 /**

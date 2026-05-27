@@ -44,9 +44,7 @@ describe("workspace_list", () => {
   /** Verify gRPC ConnectError is surfaced as an error result. */
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
-      listWorkspaces: vi.fn().mockRejectedValue(
-        new ConnectError("unavailable", Code.Unavailable),
-      ),
+      listWorkspaces: vi.fn().mockRejectedValue(new ConnectError("unavailable", Code.Unavailable)),
     } as unknown as GrackleClient;
 
     const result = await tool.handler({}, { core: mockClient });
@@ -117,7 +115,10 @@ describe("workspace_create", () => {
       }),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({ name: "Minimal", environmentId: "env-1" }, { core: mockClient });
+    const result = await tool.handler(
+      { name: "Minimal", environmentId: "env-1" },
+      { core: mockClient },
+    );
 
     expect(mockClient.createWorkspace).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -135,9 +136,9 @@ describe("workspace_create", () => {
   /** Verify gRPC ConnectError is surfaced as an error result. */
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
-      createWorkspace: vi.fn().mockRejectedValue(
-        new ConnectError("already exists", Code.AlreadyExists),
-      ),
+      createWorkspace: vi
+        .fn()
+        .mockRejectedValue(new ConnectError("already exists", Code.AlreadyExists)),
     } as unknown as GrackleClient;
 
     const result = await tool.handler({ name: "Dupe" }, { core: mockClient });
@@ -181,9 +182,9 @@ describe("workspace_get", () => {
   /** Verify gRPC NotFound ConnectError is surfaced as an error result. */
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
-      getWorkspace: vi.fn().mockRejectedValue(
-        new ConnectError("workspace not found", Code.NotFound),
-      ),
+      getWorkspace: vi
+        .fn()
+        .mockRejectedValue(new ConnectError("workspace not found", Code.NotFound)),
     } as unknown as GrackleClient;
 
     const result = await tool.handler({ workspaceId: "proj-missing" }, { core: mockClient });
@@ -263,9 +264,9 @@ describe("workspace_update", () => {
   /** Verify gRPC ConnectError is surfaced as an error result. */
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
-      updateWorkspace: vi.fn().mockRejectedValue(
-        new ConnectError("workspace not found", Code.NotFound),
-      ),
+      updateWorkspace: vi
+        .fn()
+        .mockRejectedValue(new ConnectError("workspace not found", Code.NotFound)),
     } as unknown as GrackleClient;
 
     const result = await tool.handler(
@@ -300,9 +301,9 @@ describe("workspace_archive", () => {
   /** Verify gRPC ConnectError is surfaced as an error result. */
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
-      archiveWorkspace: vi.fn().mockRejectedValue(
-        new ConnectError("workspace not found", Code.NotFound),
-      ),
+      archiveWorkspace: vi
+        .fn()
+        .mockRejectedValue(new ConnectError("workspace not found", Code.NotFound)),
     } as unknown as GrackleClient;
 
     const result = await tool.handler({ workspaceId: "proj-missing" }, { core: mockClient });
@@ -343,9 +344,11 @@ describe("workspace_link_environment", () => {
 
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
-      linkEnvironment: vi.fn().mockRejectedValue(
-        new ConnectError("Cannot link the primary environment", Code.InvalidArgument),
-      ),
+      linkEnvironment: vi
+        .fn()
+        .mockRejectedValue(
+          new ConnectError("Cannot link the primary environment", Code.InvalidArgument),
+        ),
     } as unknown as GrackleClient;
 
     const result = await tool.handler(
@@ -389,9 +392,9 @@ describe("workspace_unlink_environment", () => {
 
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
-      unlinkEnvironment: vi.fn().mockRejectedValue(
-        new ConnectError("link not found", Code.NotFound),
-      ),
+      unlinkEnvironment: vi
+        .fn()
+        .mockRejectedValue(new ConnectError("link not found", Code.NotFound)),
     } as unknown as GrackleClient;
 
     const result = await tool.handler(

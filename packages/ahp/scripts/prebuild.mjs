@@ -86,7 +86,11 @@ async function transformFile(filePath) {
 
 async function main() {
   // Verify the git dependency is installed
-  if (!(await stat(SRC_TYPES_DIR).then(() => true).catch(() => false))) {
+  if (
+    !(await stat(SRC_TYPES_DIR)
+      .then(() => true)
+      .catch(() => false))
+  ) {
     console.error(
       `Prebuild failed: "${TYPES_SUBDIR}/" not found at ${SRC_TYPES_DIR}. ` +
         "Run \`rush install\` to install the agent-host-protocol git dependency.",
@@ -141,7 +145,9 @@ async function main() {
   // Derive pinned commit from this package's devDependencies git: spec
   const depSpec = depPkg.dependencies?.["agent-host-protocol"] || "";
   const ahpCommit = depSpec.replace(/^git\+.*#/, "").replace(/\.git$/, "");
-  const ahpRepoUrl = depPkg.repository?.url?.replace(/^git\+/, "").replace(/\.git$/, "") || "https://github.com/microsoft/agent-host-protocol";
+  const ahpRepoUrl =
+    depPkg.repository?.url?.replace(/^git\+/, "").replace(/\.git$/, "") ||
+    "https://github.com/microsoft/agent-host-protocol";
   const sourceMd = `# Vendored: Agent Host Protocol types
 
 This directory is the \`types/\` tree from Microsoft's Agent Host

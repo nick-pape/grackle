@@ -15,7 +15,10 @@ async function goToTasksTab(page: import("@playwright/test").Page): Promise<void
 }
 
 test.describe("Task tree hierarchy", { tag: ["@task"] }, () => {
-  test("creates a child task and displays tree structure with expand/collapse", async ({ appPage, grackle: { client } }) => {
+  test("creates a child task and displays tree structure with expand/collapse", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     // Create workspace and root task via RPC
@@ -87,7 +90,10 @@ test.describe("Task tree hierarchy", { tag: ["@task"] }, () => {
     const level0Id = await getTaskId(client, workspaceId, "level-0");
 
     // Create child and grandchild via RPC (level-1 needs canDecompose to allow level-2)
-    const level1 = await createTaskDirect(client, workspaceId, "level-1", { parentTaskId: level0Id, canDecompose: true });
+    const level1 = await createTaskDirect(client, workspaceId, "level-1", {
+      parentTaskId: level0Id,
+      canDecompose: true,
+    });
     const level1Id = level1.id as string;
     await createTaskDirect(client, workspaceId, "level-2", { parentTaskId: level1Id });
 
@@ -108,7 +114,10 @@ test.describe("Task tree hierarchy", { tag: ["@task"] }, () => {
     await expect(page.getByText("level-1")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("add child task button creates a nested child via UI", async ({ appPage, grackle: { client } }) => {
+  test("add child task button creates a nested child via UI", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     await createWorkspace(client, "tree-add-child");
@@ -137,7 +146,9 @@ test.describe("Task tree hierarchy", { tag: ["@task"] }, () => {
     await page.locator('[data-testid="task-edit-save"]').click();
 
     // Wait for the edit panel to close, confirming the save round-trip completed
-    await expect(page.locator('[data-testid="task-edit-title"]')).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="task-edit-title"]')).not.toBeVisible({
+      timeout: 5_000,
+    });
 
     // Navigate back to Tasks tab to see the updated tree
     await goToTasksTab(page);
@@ -154,7 +165,10 @@ test.describe("Task tree hierarchy", { tag: ["@task"] }, () => {
     await expect(badge).toHaveText("0/1");
   });
 
-  test("prevents deletion of parent tasks with children", async ({ appPage, grackle: { client } }) => {
+  test("prevents deletion of parent tasks with children", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     await createWorkspace(client, "tree-del");
@@ -167,7 +181,9 @@ test.describe("Task tree hierarchy", { tag: ["@task"] }, () => {
     const parentId = await getTaskId(client, workspaceId, "del-parent");
 
     // Create a child
-    const child = await createTaskDirect(client, workspaceId, "del-child", { parentTaskId: parentId });
+    const child = await createTaskDirect(client, workspaceId, "del-child", {
+      parentTaskId: parentId,
+    });
 
     // Attempt to delete parent — should get an error
     let error: Error | undefined;
@@ -189,7 +205,10 @@ test.describe("Task tree hierarchy", { tag: ["@task"] }, () => {
     await expect(page.getByText("del-parent")).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("breadcrumbs show ancestor chain for nested task", async ({ appPage, grackle: { client } }) => {
+  test("breadcrumbs show ancestor chain for nested task", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     await createWorkspace(client, "tree-bc");
@@ -228,13 +247,17 @@ test.describe("Task tree hierarchy", { tag: ["@task"] }, () => {
 
     // Navigate to child
     await navigateToTask(page, "nav-child");
-    await expect(page.locator('[data-testid="task-title"]')).toContainText("nav-child", { timeout: 5_000 });
+    await expect(page.locator('[data-testid="task-title"]')).toContainText("nav-child", {
+      timeout: 5_000,
+    });
 
     // Click the parent task in the breadcrumb trail
     const breadcrumbs = page.getByTestId("breadcrumbs");
     await breadcrumbs.locator("a", { hasText: "nav-root" }).click();
 
     // Should now show the parent task
-    await expect(page.locator('[data-testid="task-title"]')).toContainText("nav-root", { timeout: 5_000 });
+    await expect(page.locator('[data-testid="task-title"]')).toContainText("nav-root", {
+      timeout: 5_000,
+    });
   });
 });

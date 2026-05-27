@@ -17,7 +17,8 @@ export const FromOldNewStrings: Story = {
     args: {
       file_path: "/src/middleware/auth.ts",
       old_string: 'const secret = "hardcoded";\nconst expiry = 3600;',
-      new_string: 'const secret = process.env.JWT_SECRET;\nif (!secret) {\n  throw new Error("JWT_SECRET is required");\n}\nconst expiry = 86400;',
+      new_string:
+        'const secret = process.env.JWT_SECRET;\nif (!secret) {\n  throw new Error("JWT_SECRET is required");\n}\nconst expiry = 86400;',
     },
     result: "File updated successfully",
   },
@@ -36,7 +37,8 @@ export const FromUnifiedDiff: Story = {
     args: {
       path: "C:\\Users\\nickp\\src\\grackle4\\README.md",
       old_str: "## Requirements",
-      new_str: "## Getting Started\n\n```bash\nnpm install\nrush build\nrush serve\n```\n\n## Requirements",
+      new_str:
+        "## Getting Started\n\n```bash\nnpm install\nrush build\nrush serve\n```\n\n## Requirements",
     },
     result: "File updated with changes.",
     detailedResult: `diff --git a/README.md b/README.md
@@ -92,7 +94,8 @@ export const LargeDiffExpandCollapse: Story = {
     args: {
       file_path: "/src/routes/api.ts",
       old_string: "line 1\nline 2\nline 3\nline 4\nline 5",
-      new_string: "new line 1\nnew line 2\nnew line 3\nnew line 4\nnew line 5\nnew line 6\nnew line 7\nnew line 8",
+      new_string:
+        "new line 1\nnew line 2\nnew line 3\nnew line 4\nnew line 5\nnew line 6\nnew line 7\nnew line 8",
     },
     result: "File updated",
   },

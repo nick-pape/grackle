@@ -1,11 +1,7 @@
 import type { Command } from "commander";
 import { ConnectError, Code } from "@connectrpc/connect";
 import { createGrackleClients } from "../client.js";
-import {
-  taskStatusToString,
-  taskStatusToEnum,
-  ROOT_TASK_ID,
-} from "@grackle-ai/common";
+import { taskStatusToString, taskStatusToEnum, ROOT_TASK_ID } from "@grackle-ai/common";
 import Table from "cli-table3";
 import chalk from "chalk";
 import { formatTokens, formatCost, formatBudget } from "../format.js";
@@ -17,20 +13,14 @@ export function registerTaskCommands(program: Command): void {
     .command("list [workspace-id]")
     .description("List tasks (optionally scoped to a workspace)")
     .option("--search <query>", "Filter tasks by title/description substring")
-    .option("--status <status>", "Filter tasks by status (not_started, working, paused, complete, failed)")
+    .option(
+      "--status <status>",
+      "Filter tasks by status (not_started, working, paused, complete, failed)",
+    )
     .action(async (workspaceId: string | undefined, opts: { search?: string; status?: string }) => {
-      const VALID_STATUSES = new Set([
-        "not_started",
-        "working",
-        "paused",
-        "complete",
-        "failed",
-      ]);
+      const VALID_STATUSES = new Set(["not_started", "working", "paused", "complete", "failed"]);
 
-      if (
-        opts.status !== undefined &&
-        !VALID_STATUSES.has(String(opts.status).toLowerCase())
-      ) {
+      if (opts.status !== undefined && !VALID_STATUSES.has(String(opts.status).toLowerCase())) {
         console.error(
           `Invalid status: "${opts.status}". Valid values are: ${[...VALID_STATUSES].join(", ")}`,
         );
@@ -70,55 +60,54 @@ export function registerTaskCommands(program: Command): void {
     .description("Fuzzy search for tasks by title or description, ranked by relevance")
     .option("--workspace <workspace-id>", "Scope to a specific workspace (optional)")
     .option("--limit <n>", "Maximum results to return (default 10)", parseInt)
-    .option("--status <status>", "Filter by status (not_started, working, paused, complete, failed)")
-    .action(async (query: string, opts: { workspace?: string; limit?: number; status?: string }) => {
-      const VALID_STATUSES = new Set([
-        "not_started",
-        "working",
-        "paused",
-        "complete",
-        "failed",
-      ]);
+    .option(
+      "--status <status>",
+      "Filter by status (not_started, working, paused, complete, failed)",
+    )
+    .action(
+      async (query: string, opts: { workspace?: string; limit?: number; status?: string }) => {
+        const VALID_STATUSES = new Set(["not_started", "working", "paused", "complete", "failed"]);
 
-      if (opts.status !== undefined && !VALID_STATUSES.has(String(opts.status).toLowerCase())) {
-        console.error(
-          `Invalid status: "${opts.status}". Valid values are: ${[...VALID_STATUSES].join(", ")}`,
-        );
-        process.exitCode = 1;
-        return;
-      }
+        if (opts.status !== undefined && !VALID_STATUSES.has(String(opts.status).toLowerCase())) {
+          console.error(
+            `Invalid status: "${opts.status}". Valid values are: ${[...VALID_STATUSES].join(", ")}`,
+          );
+          process.exitCode = 1;
+          return;
+        }
 
-      if (opts.limit !== undefined && (isNaN(opts.limit) || opts.limit < 1)) {
-        console.error("Invalid limit: must be a positive integer.");
-        process.exitCode = 1;
-        return;
-      }
+        if (opts.limit !== undefined && (isNaN(opts.limit) || opts.limit < 1)) {
+          console.error("Invalid limit: must be a positive integer.");
+          process.exitCode = 1;
+          return;
+        }
 
-      const { orchestration: client } = createGrackleClients();
-      const res = await client.searchTasks({
-        query,
-        workspaceId: opts.workspace || "",
-        limit: opts.limit ?? 0,
-        status: opts.status ? String(opts.status).toLowerCase() : "",
-      });
-      if (res.results.length === 0) {
-        console.log("No matching tasks.");
-        return;
-      }
-      const table = new Table({
-        head: ["Score", "ID", "Title", "Status"],
-      });
-      for (const r of res.results) {
-        const t = r.task!;
-        table.push([
-          chalk.yellow((r.relevanceScore * 100).toFixed(0) + "%"),
-          t.id,
-          t.title.slice(0, 40),
-          taskStatusToString(t.status),
-        ]);
-      }
-      console.log(table.toString());
-    });
+        const { orchestration: client } = createGrackleClients();
+        const res = await client.searchTasks({
+          query,
+          workspaceId: opts.workspace || "",
+          limit: opts.limit ?? 0,
+          status: opts.status ? String(opts.status).toLowerCase() : "",
+        });
+        if (res.results.length === 0) {
+          console.log("No matching tasks.");
+          return;
+        }
+        const table = new Table({
+          head: ["Score", "ID", "Title", "Status"],
+        });
+        for (const r of res.results) {
+          const t = r.task!;
+          table.push([
+            chalk.yellow((r.relevanceScore * 100).toFixed(0) + "%"),
+            t.id,
+            t.title.slice(0, 40),
+            taskStatusToString(t.status),
+          ]);
+        }
+        console.log(table.toString());
+      },
+    );
 
   task
     .command("create <title>")
@@ -127,29 +116,53 @@ export function registerTaskCommands(program: Command): void {
     .option("--desc <text>", "Task description")
     .option("--depends-on <ids>", "Comma-separated dependency task IDs")
     .option("--can-decompose", "Allow this task to create subtasks")
-    .option("--no-inject-knowledge", "Disable knowledge-graph context injection at spawn (on by default)")
+    .option(
+      "--no-inject-knowledge",
+      "Disable knowledge-graph context injection at spawn (on by default)",
+    )
     .option("--parent <task-id>", "Parent task ID (creates a subtask)")
     .option("--token-budget <n>", "Total token cap (input + output); 0 = unlimited", parseInt)
-    .option("--cost-budget-millicents <n>", "Cost cap in millicents ($0.00001 units); 0 = unlimited", parseInt)
-    .action(async (title: string, opts: { workspace?: string; dependsOn?: string; desc?: string; canDecompose?: boolean; injectKnowledge?: boolean; parent?: string; tokenBudget?: number; costBudgetMillicents?: number }) => {
-      const { orchestration: client } = createGrackleClients();
-      const dependsOn: string[] = opts.dependsOn
-        ? opts.dependsOn.split(",").map((s: string) => s.trim()).filter(Boolean)
-        : [];
-      const t = await client.createTask({
-        workspaceId: opts.workspace || "",
-        title,
-        description: opts.desc || "",
-        dependsOn,
-        canDecompose: opts.canDecompose || false,
-        // Commander sets injectKnowledge=false only when --no-inject-knowledge is passed.
-        injectKnowledge: opts.injectKnowledge ?? true,
-        parentTaskId: opts.parent || "",
-        tokenBudget: opts.tokenBudget,
-        costBudgetMillicents: opts.costBudgetMillicents,
-      });
-      console.log(`Created task: ${t.id} (${t.title}) branch: ${t.branch}`);
-    });
+    .option(
+      "--cost-budget-millicents <n>",
+      "Cost cap in millicents ($0.00001 units); 0 = unlimited",
+      parseInt,
+    )
+    .action(
+      async (
+        title: string,
+        opts: {
+          workspace?: string;
+          dependsOn?: string;
+          desc?: string;
+          canDecompose?: boolean;
+          injectKnowledge?: boolean;
+          parent?: string;
+          tokenBudget?: number;
+          costBudgetMillicents?: number;
+        },
+      ) => {
+        const { orchestration: client } = createGrackleClients();
+        const dependsOn: string[] = opts.dependsOn
+          ? opts.dependsOn
+              .split(",")
+              .map((s: string) => s.trim())
+              .filter(Boolean)
+          : [];
+        const t = await client.createTask({
+          workspaceId: opts.workspace || "",
+          title,
+          description: opts.desc || "",
+          dependsOn,
+          canDecompose: opts.canDecompose || false,
+          // Commander sets injectKnowledge=false only when --no-inject-knowledge is passed.
+          injectKnowledge: opts.injectKnowledge ?? true,
+          parentTaskId: opts.parent || "",
+          tokenBudget: opts.tokenBudget,
+          costBudgetMillicents: opts.costBudgetMillicents,
+        });
+        console.log(`Created task: ${t.id} (${t.title}) branch: ${t.branch}`);
+      },
+    );
 
   task
     .command("show <task-id>")
@@ -162,9 +175,7 @@ export function registerTaskCommands(program: Command): void {
       console.log(`Status:      ${taskStatusToString(t.status)}`);
       console.log(`Branch:      ${t.branch}`);
       console.log(`Session:     ${t.latestSessionId || "-"}`);
-      console.log(
-        `Depends On:  ${t.dependsOn.length > 0 ? t.dependsOn.join(", ") : "none"}`,
-      );
+      console.log(`Depends On:  ${t.dependsOn.length > 0 ? t.dependsOn.join(", ") : "none"}`);
       console.log(`Decompose:   ${t.canDecompose ? "yes" : "no"}`);
       console.log(`Knowledge:   ${t.injectKnowledge ? "yes" : "no"}`);
       if (t.description) {
@@ -174,7 +185,9 @@ export function registerTaskCommands(program: Command): void {
       try {
         const usage = await core.getUsage({ scope: "task", id: taskId });
         if (usage.inputTokens || usage.outputTokens || usage.costMillicents) {
-          console.log(`Tokens:      ${formatTokens(usage.inputTokens)} in / ${formatTokens(usage.outputTokens)} out`);
+          console.log(
+            `Tokens:      ${formatTokens(usage.inputTokens)} in / ${formatTokens(usage.outputTokens)} out`,
+          );
           console.log(`Cost:        ${formatCost(usage.costMillicents)}`);
         }
         if (t.tokenBudget > 0) {
@@ -182,7 +195,9 @@ export function registerTaskCommands(program: Command): void {
           console.log(`Token Budget:  ${formatBudget(usedTokens, t.tokenBudget, "token")}`);
         }
         if (t.costBudgetMillicents > 0) {
-          console.log(`Cost Budget:   ${formatBudget(usage.costMillicents, t.costBudgetMillicents, "cost")}`);
+          console.log(
+            `Cost Budget:   ${formatBudget(usage.costMillicents, t.costBudgetMillicents, "cost")}`,
+          );
         }
       } catch (err: unknown) {
         // Only suppress NotFound (session cleaned up); surface other errors
@@ -221,66 +236,74 @@ export function registerTaskCommands(program: Command): void {
     .description("Update a task")
     .option("--title <text>", "New title")
     .option("--desc <text>", "New description")
-    .option(
-      "--status <status>",
-      "Task status (not_started, working, paused, complete, failed)",
-    )
+    .option("--status <status>", "Task status (not_started, working, paused, complete, failed)")
     .option("--depends-on <ids>", "Comma-separated dependency task IDs")
     .option("--session <session-id>", "Bind an existing session to this task")
     .option("--persona <id>", "Default persona ID for this task")
     .option("--inject-knowledge", "Enable knowledge-graph context injection at spawn")
     .option("--no-inject-knowledge", "Disable knowledge-graph context injection at spawn")
     .option("--token-budget <n>", "Total token cap (input + output); 0 = unlimited", parseInt)
-    .option("--cost-budget-millicents <n>", "Cost cap in millicents ($0.00001 units); 0 = unlimited", parseInt)
-    .action(async (taskId: string, opts: { status?: string; dependsOn?: string; title?: string; desc?: string; session?: string; persona?: string; injectKnowledge?: boolean; tokenBudget?: number; costBudgetMillicents?: number }) => {
-      if (taskId === ROOT_TASK_ID && opts.status) {
-        console.error(chalk.red("Cannot change the status of the system task"));
-        process.exitCode = 1;
-        return;
-      }
+    .option(
+      "--cost-budget-millicents <n>",
+      "Cost cap in millicents ($0.00001 units); 0 = unlimited",
+      parseInt,
+    )
+    .action(
+      async (
+        taskId: string,
+        opts: {
+          status?: string;
+          dependsOn?: string;
+          title?: string;
+          desc?: string;
+          session?: string;
+          persona?: string;
+          injectKnowledge?: boolean;
+          tokenBudget?: number;
+          costBudgetMillicents?: number;
+        },
+      ) => {
+        if (taskId === ROOT_TASK_ID && opts.status) {
+          console.error(chalk.red("Cannot change the status of the system task"));
+          process.exitCode = 1;
+          return;
+        }
 
-      const VALID_STATUSES = new Set([
-        "not_started",
-        "working",
-        "paused",
-        "complete",
-        "failed",
-      ]);
+        const VALID_STATUSES = new Set(["not_started", "working", "paused", "complete", "failed"]);
 
-      if (
-        opts.status !== undefined &&
-        !VALID_STATUSES.has(String(opts.status).toLowerCase())
-      ) {
-        console.error(
-          `Invalid status: "${opts.status}". Valid values are: ${[...VALID_STATUSES].join(", ")}`,
-        );
-        process.exitCode = 1;
-        return;
-      }
+        if (opts.status !== undefined && !VALID_STATUSES.has(String(opts.status).toLowerCase())) {
+          console.error(
+            `Invalid status: "${opts.status}". Valid values are: ${[...VALID_STATUSES].join(", ")}`,
+          );
+          process.exitCode = 1;
+          return;
+        }
 
-      const { orchestration: client } = createGrackleClients();
-      const dependsOn: string[] = opts.dependsOn
-        ? opts.dependsOn.split(",").map((s: string) => s.trim()).filter(Boolean)
-        : [];
-      const t = await client.updateTask({
-        id: taskId,
-        title: opts.title || "",
-        description: opts.desc || "",
-        status: opts.status
-          ? taskStatusToEnum(String(opts.status).toLowerCase())
-          : taskStatusToEnum(""),
-        dependsOn,
-        sessionId: opts.session || "",
-        defaultPersonaId: opts.persona,
-        // undefined unless --inject-knowledge / --no-inject-knowledge passed (leave unchanged).
-        injectKnowledge: opts.injectKnowledge,
-        tokenBudget: opts.tokenBudget,
-        costBudgetMillicents: opts.costBudgetMillicents,
-      });
-      console.log(
-        `Updated: ${t.id} (${t.title}) status: ${taskStatusToString(t.status)}`,
-      );
-    });
+        const { orchestration: client } = createGrackleClients();
+        const dependsOn: string[] = opts.dependsOn
+          ? opts.dependsOn
+              .split(",")
+              .map((s: string) => s.trim())
+              .filter(Boolean)
+          : [];
+        const t = await client.updateTask({
+          id: taskId,
+          title: opts.title || "",
+          description: opts.desc || "",
+          status: opts.status
+            ? taskStatusToEnum(String(opts.status).toLowerCase())
+            : taskStatusToEnum(""),
+          dependsOn,
+          sessionId: opts.session || "",
+          defaultPersonaId: opts.persona,
+          // undefined unless --inject-knowledge / --no-inject-knowledge passed (leave unchanged).
+          injectKnowledge: opts.injectKnowledge,
+          tokenBudget: opts.tokenBudget,
+          costBudgetMillicents: opts.costBudgetMillicents,
+        });
+        console.log(`Updated: ${t.id} (${t.title}) status: ${taskStatusToString(t.status)}`);
+      },
+    );
 
   task
     .command("start <task-id>")
@@ -335,5 +358,4 @@ export function registerTaskCommands(program: Command): void {
       const session = await client.resumeTask({ id: taskId });
       console.log(`Resumed task. Session: ${session.id}`);
     });
-
 }

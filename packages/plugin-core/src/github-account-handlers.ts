@@ -22,14 +22,10 @@ const GH_API_TIMEOUT_MS: number = 10_000;
  */
 async function resolveGitHubUsername(token: string): Promise<string> {
   try {
-    const result = await exec(
-      "gh",
-      ["api", "user", "--jq", ".login"],
-      {
-        timeout: GH_API_TIMEOUT_MS,
-        env: { ...process.env, GH_TOKEN: token },
-      },
-    );
+    const result = await exec("gh", ["api", "user", "--jq", ".login"], {
+      timeout: GH_API_TIMEOUT_MS,
+      env: { ...process.env, GH_TOKEN: token },
+    });
     return result.stdout.trim();
   } catch (err) {
     logger.warn({ err }, "Failed to resolve GitHub username from token");
@@ -57,7 +53,9 @@ export async function listGitHubAccounts(): Promise<grackle.GitHubAccountList> {
 }
 
 /** Register a new GitHub account. Resolves the GitHub username if not provided. */
-export async function addGitHubAccount(req: grackle.AddGitHubAccountRequest): Promise<grackle.GitHubAccount> {
+export async function addGitHubAccount(
+  req: grackle.AddGitHubAccountRequest,
+): Promise<grackle.GitHubAccount> {
   if (!req.label.trim()) {
     throw new ConnectError("label is required", Code.InvalidArgument);
   }
@@ -73,16 +71,14 @@ export async function addGitHubAccount(req: grackle.AddGitHubAccountRequest): Pr
 
   let id: string;
   try {
-    id = githubAccountStore.addGitHubAccount(
-      req.label.trim(),
-      username,
-      token,
-      req.isDefault,
-    );
+    id = githubAccountStore.addGitHubAccount(req.label.trim(), username, token, req.isDefault);
   } catch (err) {
     // Translate SQLite UNIQUE constraint violation into a user-facing gRPC error.
     if (err instanceof Error && err.message.includes("UNIQUE constraint failed")) {
-      throw new ConnectError(`A GitHub account with label "${req.label.trim()}" already exists`, Code.AlreadyExists);
+      throw new ConnectError(
+        `A GitHub account with label "${req.label.trim()}" already exists`,
+        Code.AlreadyExists,
+      );
     }
     throw err;
   }
@@ -98,7 +94,9 @@ export async function addGitHubAccount(req: grackle.AddGitHubAccountRequest): Pr
 }
 
 /** Update a registered GitHub account (label, token, or default status). */
-export async function updateGitHubAccount(req: grackle.UpdateGitHubAccountRequest): Promise<grackle.GitHubAccount> {
+export async function updateGitHubAccount(
+  req: grackle.UpdateGitHubAccountRequest,
+): Promise<grackle.GitHubAccount> {
   if (!req.id) {
     throw new ConnectError("id is required", Code.InvalidArgument);
   }
@@ -136,7 +134,9 @@ export async function updateGitHubAccount(req: grackle.UpdateGitHubAccountReques
 }
 
 /** Remove a registered GitHub account. */
-export async function removeGitHubAccount(req: grackle.RemoveGitHubAccountRequest): Promise<grackle.Empty> {
+export async function removeGitHubAccount(
+  req: grackle.RemoveGitHubAccountRequest,
+): Promise<grackle.Empty> {
   if (!req.id) {
     throw new ConnectError("id is required", Code.InvalidArgument);
   }

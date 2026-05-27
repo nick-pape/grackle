@@ -26,8 +26,12 @@ describe("RUNTIME_CATALOG", () => {
 
   it("every entry has a non-empty displayName and description", () => {
     for (const [name, entry] of Object.entries(RUNTIME_CATALOG)) {
-      expect(entry.displayName.length, `Runtime "${name}" has empty displayName`).toBeGreaterThan(0);
-      expect(entry.description.length, `Runtime "${name}" has empty description`).toBeGreaterThan(0);
+      expect(entry.displayName.length, `Runtime "${name}" has empty displayName`).toBeGreaterThan(
+        0,
+      );
+      expect(entry.description.length, `Runtime "${name}" has empty description`).toBeGreaterThan(
+        0,
+      );
       expect(Array.isArray(entry.models), `Runtime "${name}" models is not an array`).toBe(true);
     }
   });
@@ -36,7 +40,10 @@ describe("RUNTIME_CATALOG", () => {
     for (const name of installableRuntimes) {
       const install = RUNTIME_CATALOG[name]!.install;
       expect(install, `Runtime "${name}" missing install manifest`).toBeDefined();
-      expect(Object.keys(install!.packages).length, `Runtime "${name}" has no packages`).toBeGreaterThan(0);
+      expect(
+        Object.keys(install!.packages).length,
+        `Runtime "${name}" has no packages`,
+      ).toBeGreaterThan(0);
     }
   });
 
@@ -66,7 +73,10 @@ describe("RUNTIME_CATALOG", () => {
       if (name === "copilot") {
         expect(entry.install?.needsJsonRpcHook).toBe(true);
       } else {
-        expect(entry.install?.needsJsonRpcHook, `Runtime "${name}" should not have needsJsonRpcHook`).toBeFalsy();
+        expect(
+          entry.install?.needsJsonRpcHook,
+          `Runtime "${name}" should not have needsJsonRpcHook`,
+        ).toBeFalsy();
       }
     }
   });
@@ -81,8 +91,13 @@ describe("RUNTIME_CATALOG", () => {
     for (const [name, entry] of Object.entries(RUNTIME_CATALOG)) {
       for (const model of entry.models) {
         expect(model.id.length, `Runtime "${name}" has a model with empty id`).toBeGreaterThan(0);
-        expect(model.name.length, `Runtime "${name}" model "${model.id}" has empty name`).toBeGreaterThan(0);
-        expect(model.provider, `Runtime "${name}" model "${model.id}" provider mismatch`).toBe(name);
+        expect(
+          model.name.length,
+          `Runtime "${name}" model "${model.id}" has empty name`,
+        ).toBeGreaterThan(0);
+        expect(model.provider, `Runtime "${name}" model "${model.id}" provider mismatch`).toBe(
+          name,
+        );
       }
     }
   });

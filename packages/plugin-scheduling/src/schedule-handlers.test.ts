@@ -63,29 +63,57 @@ describe("createScheduleHandlers", () => {
       createdAt: "2026-01-01",
       updatedAt: "2026-01-01",
     });
-    vi.mocked(scheduleStore.getSchedule).mockReturnValue(makeRow() as ReturnType<typeof scheduleStore.getSchedule>);
-    vi.mocked(scheduleStore.listSchedules).mockReturnValue([makeRow()] as ReturnType<typeof scheduleStore.listSchedules>);
+    vi.mocked(scheduleStore.getSchedule).mockReturnValue(
+      makeRow() as ReturnType<typeof scheduleStore.getSchedule>,
+    );
+    vi.mocked(scheduleStore.listSchedules).mockReturnValue([makeRow()] as ReturnType<
+      typeof scheduleStore.listSchedules
+    >);
   });
 
   // ── createSchedule ──────────────────────────────────────
 
   describe("createSchedule", () => {
     it("throws InvalidArgument when title is empty", async () => {
-      const req = { title: "", scheduleExpression: "30s", personaId: "p-1", description: "", environmentId: "", workspaceId: "", parentTaskId: "" } as grackle.CreateScheduleRequest;
+      const req = {
+        title: "",
+        scheduleExpression: "30s",
+        personaId: "p-1",
+        description: "",
+        environmentId: "",
+        workspaceId: "",
+        parentTaskId: "",
+      } as grackle.CreateScheduleRequest;
       await expect(handlers.createSchedule(req)).rejects.toThrow(
         expect.objectContaining({ code: Code.InvalidArgument }),
       );
     });
 
     it("throws InvalidArgument when scheduleExpression is empty", async () => {
-      const req = { title: "Test", scheduleExpression: "", personaId: "p-1", description: "", environmentId: "", workspaceId: "", parentTaskId: "" } as grackle.CreateScheduleRequest;
+      const req = {
+        title: "Test",
+        scheduleExpression: "",
+        personaId: "p-1",
+        description: "",
+        environmentId: "",
+        workspaceId: "",
+        parentTaskId: "",
+      } as grackle.CreateScheduleRequest;
       await expect(handlers.createSchedule(req)).rejects.toThrow(
         expect.objectContaining({ code: Code.InvalidArgument }),
       );
     });
 
     it("throws InvalidArgument when personaId is empty", async () => {
-      const req = { title: "Test", scheduleExpression: "30s", personaId: "", description: "", environmentId: "", workspaceId: "", parentTaskId: "" } as grackle.CreateScheduleRequest;
+      const req = {
+        title: "Test",
+        scheduleExpression: "30s",
+        personaId: "",
+        description: "",
+        environmentId: "",
+        workspaceId: "",
+        parentTaskId: "",
+      } as grackle.CreateScheduleRequest;
       await expect(handlers.createSchedule(req)).rejects.toThrow(
         expect.objectContaining({ code: Code.InvalidArgument }),
       );
@@ -93,25 +121,52 @@ describe("createScheduleHandlers", () => {
 
     it("throws NotFound when persona does not exist", async () => {
       vi.mocked(personaStore.getPersona).mockReturnValue(undefined);
-      const req = { title: "Test", scheduleExpression: "30s", personaId: "missing", description: "", environmentId: "", workspaceId: "", parentTaskId: "" } as grackle.CreateScheduleRequest;
+      const req = {
+        title: "Test",
+        scheduleExpression: "30s",
+        personaId: "missing",
+        description: "",
+        environmentId: "",
+        workspaceId: "",
+        parentTaskId: "",
+      } as grackle.CreateScheduleRequest;
       await expect(handlers.createSchedule(req)).rejects.toThrow(
         expect.objectContaining({ code: Code.NotFound }),
       );
     });
 
     it("throws InvalidArgument when expression is invalid", async () => {
-      const req = { title: "Test", scheduleExpression: "not-valid!!!", personaId: "p-1", description: "", environmentId: "", workspaceId: "", parentTaskId: "" } as grackle.CreateScheduleRequest;
+      const req = {
+        title: "Test",
+        scheduleExpression: "not-valid!!!",
+        personaId: "p-1",
+        description: "",
+        environmentId: "",
+        workspaceId: "",
+        parentTaskId: "",
+      } as grackle.CreateScheduleRequest;
       await expect(handlers.createSchedule(req)).rejects.toThrow(
         expect.objectContaining({ code: Code.InvalidArgument }),
       );
     });
 
     it("creates schedule, emits event, returns proto on success", async () => {
-      const req = { title: "Test", scheduleExpression: "30s", personaId: "p-1", description: "d", environmentId: "", workspaceId: "", parentTaskId: "" } as grackle.CreateScheduleRequest;
+      const req = {
+        title: "Test",
+        scheduleExpression: "30s",
+        personaId: "p-1",
+        description: "d",
+        environmentId: "",
+        workspaceId: "",
+        parentTaskId: "",
+      } as grackle.CreateScheduleRequest;
       const result = await handlers.createSchedule(req);
 
       expect(scheduleStore.createSchedule).toHaveBeenCalledOnce();
-      expect(emit).toHaveBeenCalledWith("schedule.created", expect.objectContaining({ scheduleId: expect.any(String) }));
+      expect(emit).toHaveBeenCalledWith(
+        "schedule.created",
+        expect.objectContaining({ scheduleId: expect.any(String) }),
+      );
       expect(result.id).toBe("sched-1");
       expect(result.title).toBe("My Schedule");
     });
@@ -213,7 +268,10 @@ describe("createScheduleHandlers", () => {
     it("emits schedule.updated on success", async () => {
       const req = { id: "sched-1", title: "New Title" } as grackle.UpdateScheduleRequest;
       await handlers.updateSchedule(req);
-      expect(emit).toHaveBeenCalledWith("schedule.updated", expect.objectContaining({ scheduleId: "sched-1" }));
+      expect(emit).toHaveBeenCalledWith(
+        "schedule.updated",
+        expect.objectContaining({ scheduleId: "sched-1" }),
+      );
     });
   });
 
@@ -229,7 +287,10 @@ describe("createScheduleHandlers", () => {
     it("emits schedule.deleted", async () => {
       const req = { id: "sched-1" } as grackle.ScheduleId;
       await handlers.deleteSchedule(req);
-      expect(emit).toHaveBeenCalledWith("schedule.deleted", expect.objectContaining({ scheduleId: "sched-1" }));
+      expect(emit).toHaveBeenCalledWith(
+        "schedule.deleted",
+        expect.objectContaining({ scheduleId: "sched-1" }),
+      );
     });
 
     it("returns Empty", async () => {

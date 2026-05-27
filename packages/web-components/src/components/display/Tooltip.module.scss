@@ -1,4 +1,4 @@
-@use '../../styles/mixins' as *;
+@use "../../styles/mixins" as *;
 
 // =============================================================================
 // Tooltip — lightweight hover/focus tooltip
@@ -50,7 +50,7 @@ $tooltip-gap: 6px;
 
 // Arrow — CSS triangle via ::after pseudo-element
 .tooltip::after {
-  content: '';
+  content: "";
   position: absolute;
   border: $arrow-size solid transparent;
 }

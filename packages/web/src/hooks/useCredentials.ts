@@ -9,7 +9,11 @@
 
 import { useState, useCallback } from "react";
 import { isCredentialProviderConfig } from "@grackle-ai/web-components";
-import type { CredentialProviderConfig, GrackleEvent, UseCredentialsResult } from "@grackle-ai/web-components";
+import type {
+  CredentialProviderConfig,
+  GrackleEvent,
+  UseCredentialsResult,
+} from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
 import { coreClient as grackleClient } from "./useGrackleClient.js";
 import { protoToCredentialConfig } from "./proto-converters.js";
@@ -51,23 +55,20 @@ export function useCredentials(): UseCredentialsResult {
     return false;
   }, []);
 
-  const updateCredentialProviders = useCallback(
-    async (config: CredentialProviderConfig) => {
-      const entries: Array<{ provider: string; value: string }> = [
-        { provider: "claude", value: config.claude },
-        { provider: "github", value: config.github },
-        { provider: "copilot", value: config.copilot },
-        { provider: "codex", value: config.codex },
-        { provider: "goose", value: config.goose },
-      ];
-      await Promise.allSettled(
-        entries.map(({ provider, value }) =>
-          grackleClient.setCredentialProvider({ provider, value }),
-        ),
-      );
-    },
-    [],
-  );
+  const updateCredentialProviders = useCallback(async (config: CredentialProviderConfig) => {
+    const entries: Array<{ provider: string; value: string }> = [
+      { provider: "claude", value: config.claude },
+      { provider: "github", value: config.github },
+      { provider: "copilot", value: config.copilot },
+      { provider: "codex", value: config.codex },
+      { provider: "goose", value: config.goose },
+    ];
+    await Promise.allSettled(
+      entries.map(({ provider, value }) =>
+        grackleClient.setCredentialProvider({ provider, value }),
+      ),
+    );
+  }, []);
 
   const domainHook: DomainHook = {
     onConnect: () => loadCredentials(),
@@ -75,5 +76,12 @@ export function useCredentials(): UseCredentialsResult {
     handleEvent,
   };
 
-  return { credentialProviders, credentialsLoading, loadCredentials, updateCredentialProviders, handleEvent, domainHook };
+  return {
+    credentialProviders,
+    credentialsLoading,
+    loadCredentials,
+    updateCredentialProviders,
+    handleEvent,
+    domainHook,
+  };
 }

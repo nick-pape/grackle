@@ -16,7 +16,13 @@ import { createScopedToken } from "@grackle-ai/auth";
 import { ROOT_TASK_ID } from "@grackle-ai/common";
 import type { AuthContext } from "@grackle-ai/auth";
 import type { ToolDefinition } from "./tool-registry.js";
-import { createMcpServer, resolveAssetBaseUrl, dynamicRenderInputSchema, sessionIdsForWorkspace, type PublishWidgetEvent } from "./mcp-server.js";
+import {
+  createMcpServer,
+  resolveAssetBaseUrl,
+  dynamicRenderInputSchema,
+  sessionIdsForWorkspace,
+  type PublishWidgetEvent,
+} from "./mcp-server.js";
 import { HELLO_WIDGET_URI } from "./resources/hello-widget.js";
 import { WIDGET_RENDER_META_KEY } from "./widget-render-meta.js";
 
@@ -24,7 +30,10 @@ import { WIDGET_RENDER_META_KEY } from "./widget-render-meta.js";
 const TEST_API_KEY = "a".repeat(64);
 
 /** Spin up a real MCP server on an ephemeral port. */
-function startServer(toolGroups?: ToolDefinition[][], publishWidgetEvent?: PublishWidgetEvent): Promise<http.Server> {
+function startServer(
+  toolGroups?: ToolDefinition[][],
+  publishWidgetEvent?: PublishWidgetEvent,
+): Promise<http.Server> {
   const server = createMcpServer({
     bindHost: "127.0.0.1",
     mcpPort: 0,
@@ -47,8 +56,8 @@ function port(server: http.Server): number {
 function postHeaders(sessionId?: string, authHeader?: string): Record<string, string> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "Accept": "application/json, text/event-stream",
-    "Authorization": authHeader ?? `Bearer ${TEST_API_KEY}`,
+    Accept: "application/json, text/event-stream",
+    Authorization: authHeader ?? `Bearer ${TEST_API_KEY}`,
   };
   if (sessionId) {
     headers["mcp-session-id"] = sessionId;
@@ -125,7 +134,9 @@ function postToSession(
       },
       (res) => {
         let responseBody = "";
-        res.on("data", (chunk: Buffer) => { responseBody += chunk.toString(); });
+        res.on("data", (chunk: Buffer) => {
+          responseBody += chunk.toString();
+        });
         res.on("end", () => resolve({ status: res.statusCode!, body: responseBody }));
       },
     );
@@ -165,7 +176,9 @@ function callTool(
       },
       (res) => {
         let rawBody = "";
-        res.on("data", (chunk: Buffer) => { rawBody += chunk.toString(); });
+        res.on("data", (chunk: Buffer) => {
+          rawBody += chunk.toString();
+        });
         res.on("end", () => {
           // Response is SSE: parse first `data:` line
           const dataLine = rawBody.split("\n").find((l) => l.startsWith("data:"));
@@ -204,28 +217,31 @@ function openSseStream(
     rejectConnected = reject;
   });
 
-  const req = http.request({
-    hostname: "127.0.0.1",
-    port: port(server),
-    path: "/mcp",
-    method: "GET",
-    headers: {
-      "Accept": "text/event-stream",
-      "Authorization": `Bearer ${TEST_API_KEY}`,
-      "mcp-session-id": sessionId,
-      "mcp-protocol-version": "2025-03-26",
+  const req = http.request(
+    {
+      hostname: "127.0.0.1",
+      port: port(server),
+      path: "/mcp",
+      method: "GET",
+      headers: {
+        Accept: "text/event-stream",
+        Authorization: `Bearer ${TEST_API_KEY}`,
+        "mcp-session-id": sessionId,
+        "mcp-protocol-version": "2025-03-26",
+      },
     },
-  }, (res) => {
-    if (res.statusCode !== 200) {
-      rejectConnected!(new Error(`Unexpected SSE status code: ${res.statusCode}`));
-      res.resume();
-      return;
-    }
-    resolveConnected!();
-    // Keep consuming data so the stream stays open
-    res.on("data", () => {});
-    res.on("end", () => {});
-  });
+    (res) => {
+      if (res.statusCode !== 200) {
+        rejectConnected!(new Error(`Unexpected SSE status code: ${res.statusCode}`));
+        res.resume();
+        return;
+      }
+      resolveConnected!();
+      // Keep consuming data so the stream stays open
+      res.on("data", () => {});
+      res.on("end", () => {});
+    },
+  );
 
   req.on("error", (err: NodeJS.ErrnoException) => {
     // Ignore the expected error when the client aborts the request,
@@ -262,7 +278,9 @@ describe("OAuth Protected Resource Metadata", () => {
 
   afterEach(async () => {
     if (server) {
-      await new Promise<void>((resolve) => { server!.close(() => resolve()); });
+      await new Promise<void>((resolve) => {
+        server!.close(() => resolve());
+      });
       server = undefined;
     }
   });
@@ -293,11 +311,13 @@ describe("OAuth Protected Resource Metadata", () => {
           port: port(srv),
           path: "/.well-known/oauth-protected-resource/mcp",
           method: "GET",
-          headers: { "Host": hostHeader },
+          headers: { Host: hostHeader },
         },
         (res) => {
           let body = "";
-          res.on("data", (chunk: Buffer) => { body += chunk.toString(); });
+          res.on("data", (chunk: Buffer) => {
+            body += chunk.toString();
+          });
           res.on("end", () => resolve({ status: res.statusCode!, body }));
         },
       );
@@ -343,7 +363,9 @@ describe("MCP session cleanup on SSE disconnect", () => {
 
   afterEach(async () => {
     if (server) {
-      await new Promise<void>((resolve) => { server!.close(() => resolve()); });
+      await new Promise<void>((resolve) => {
+        server!.close(() => resolve());
+      });
       server = undefined;
     }
   });
@@ -389,7 +411,7 @@ describe("MCP session cleanup on SSE disconnect", () => {
           path: "/mcp",
           method: "DELETE",
           headers: {
-            "Authorization": `Bearer ${TEST_API_KEY}`,
+            Authorization: `Bearer ${TEST_API_KEY}`,
             "mcp-session-id": sessionId,
             "mcp-protocol-version": "2025-03-26",
           },
@@ -454,7 +476,12 @@ function makeSpyTool(
     inputSchema: schema,
     rpcMethod: "getWorkspace",
     mutating: false,
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
     async handler(args) {
       capturedArgs.push({ ...args });
       return { content: [{ type: "text", text: JSON.stringify({ ok: true }) }] };
@@ -467,7 +494,9 @@ describe("scoped token workspaceId injection", () => {
 
   afterEach(async () => {
     if (server) {
-      await new Promise<void>((resolve) => { server!.close(() => resolve()); });
+      await new Promise<void>((resolve) => {
+        server!.close(() => resolve());
+      });
       server = undefined;
     }
   });
@@ -479,7 +508,12 @@ describe("scoped token workspaceId injection", () => {
    */
   it("root task: workspace group tool receives caller-provided workspaceId", async () => {
     const capturedArgs: Record<string, unknown>[] = [];
-    const spyTool = makeSpyTool("workspace_spy", "workspace", capturedArgs, z.object({ workspaceId: z.string() }));
+    const spyTool = makeSpyTool(
+      "workspace_spy",
+      "workspace",
+      capturedArgs,
+      z.object({ workspaceId: z.string() }),
+    );
 
     server = await startServer([[spyTool]]);
 
@@ -491,7 +525,13 @@ describe("scoped token workspaceId injection", () => {
     const authHeader = `Bearer ${scopedToken}`;
 
     const sessionId = await initialize(server!, authHeader);
-    const { result } = await callTool(server!, sessionId, "workspace_spy", { workspaceId: "target-ws" }, authHeader);
+    const { result } = await callTool(
+      server!,
+      sessionId,
+      "workspace_spy",
+      { workspaceId: "target-ws" },
+      authHeader,
+    );
 
     expect(capturedArgs).toHaveLength(1);
     // Handler must receive the caller-provided ID, not the token's "default-ws"
@@ -509,7 +549,12 @@ describe("scoped token workspaceId injection", () => {
    */
   it("non-root scoped agent: cross-workspace workspace tool call is rejected", async () => {
     const capturedArgs: Record<string, unknown>[] = [];
-    const spyTool = makeSpyTool("workspace_spy", "workspace", capturedArgs, z.object({ workspaceId: z.string() }));
+    const spyTool = makeSpyTool(
+      "workspace_spy",
+      "workspace",
+      capturedArgs,
+      z.object({ workspaceId: z.string() }),
+    );
 
     server = await startServer([[spyTool]]);
 
@@ -521,7 +566,13 @@ describe("scoped token workspaceId injection", () => {
     const authHeader = `Bearer ${scopedToken}`;
 
     const sessionId = await initialize(server!, authHeader);
-    const { result } = await callTool(server!, sessionId, "workspace_spy", { workspaceId: "ws-b" }, authHeader);
+    const { result } = await callTool(
+      server!,
+      sessionId,
+      "workspace_spy",
+      { workspaceId: "ws-b" },
+      authHeader,
+    );
 
     // Handler must NOT have been called — rejected before or at injection
     expect(capturedArgs).toHaveLength(0);
@@ -536,7 +587,12 @@ describe("scoped token workspaceId injection", () => {
    */
   it("non-workspace group tool has workspaceId overridden by scoped token", async () => {
     const capturedArgs: Record<string, unknown>[] = [];
-    const spyTool = makeSpyTool("task_spy", "task", capturedArgs, z.object({ workspaceId: z.string().optional() }));
+    const spyTool = makeSpyTool(
+      "task_spy",
+      "task",
+      capturedArgs,
+      z.object({ workspaceId: z.string().optional() }),
+    );
 
     server = await startServer([[spyTool]]);
 
@@ -562,7 +618,12 @@ describe("scoped token workspaceId injection", () => {
    */
   it("scoped tool receives workspaceId injected from scoped token", async () => {
     const capturedArgs: Record<string, unknown>[] = [];
-    const spyTool = makeSpyTool("inject_spy", "task", capturedArgs, z.object({ workspaceId: z.string().optional() }));
+    const spyTool = makeSpyTool(
+      "inject_spy",
+      "task",
+      capturedArgs,
+      z.object({ workspaceId: z.string().optional() }),
+    );
 
     server = await startServer([[spyTool]]);
 
@@ -587,7 +648,9 @@ describe("MCP Apps app-side (#1237)", () => {
 
   afterEach(async () => {
     if (server) {
-      await new Promise<void>((resolve) => { server!.close(() => resolve()); });
+      await new Promise<void>((resolve) => {
+        server!.close(() => resolve());
+      });
       server = undefined;
     }
   });
@@ -620,16 +683,31 @@ describe("MCP Apps app-side (#1237)", () => {
         jsonrpc: "2.0",
         id: 1,
         method: "initialize",
-        params: { protocolVersion: "2025-03-26", capabilities, clientInfo: { name: "test-client", version: "1.0.0" } },
+        params: {
+          protocolVersion: "2025-03-26",
+          capabilities,
+          clientInfo: { name: "test-client", version: "1.0.0" },
+        },
       });
       const req = http.request(
-        { hostname: "127.0.0.1", port: port(srv), path: "/mcp", method: "POST", headers: postHeaders() },
+        {
+          hostname: "127.0.0.1",
+          port: port(srv),
+          path: "/mcp",
+          method: "POST",
+          headers: postHeaders(),
+        },
         (res) => {
           const sessionId = res.headers["mcp-session-id"] as string | undefined;
           let raw = "";
-          res.on("data", (chunk: Buffer) => { raw += chunk.toString(); });
+          res.on("data", (chunk: Buffer) => {
+            raw += chunk.toString();
+          });
           res.on("end", () => {
-            if (!sessionId) { reject(new Error("No session ID in initialize response")); return; }
+            if (!sessionId) {
+              reject(new Error("No session ID in initialize response"));
+              return;
+            }
             resolve({ sessionId, response: parseResponse(raw) });
           });
         },
@@ -650,12 +728,24 @@ describe("MCP Apps app-side (#1237)", () => {
     return new Promise((resolve, reject) => {
       const body = JSON.stringify({ jsonrpc: "2.0", id: 7, method, params });
       const req = http.request(
-        { hostname: "127.0.0.1", port: port(srv), path: "/mcp", method: "POST", headers: postHeaders(sessionId) },
+        {
+          hostname: "127.0.0.1",
+          port: port(srv),
+          path: "/mcp",
+          method: "POST",
+          headers: postHeaders(sessionId),
+        },
         (res) => {
           let raw = "";
-          res.on("data", (chunk: Buffer) => { raw += chunk.toString(); });
+          res.on("data", (chunk: Buffer) => {
+            raw += chunk.toString();
+          });
           res.on("end", () => {
-            try { resolve(parseResponse(raw)); } catch (e) { reject(e as Error); }
+            try {
+              resolve(parseResponse(raw));
+            } catch (e) {
+              reject(e as Error);
+            }
           });
         },
       );
@@ -675,12 +765,16 @@ describe("MCP Apps app-side (#1237)", () => {
         { hostname: "127.0.0.1", port: port(srv), path, method: "GET" },
         (res) => {
           let raw = "";
-          res.on("data", (chunk: Buffer) => { raw += chunk.toString(); });
-          res.on("end", () => resolve({
-            status: res.statusCode!,
-            contentType: String(res.headers["content-type"] ?? ""),
-            body: raw,
-          }));
+          res.on("data", (chunk: Buffer) => {
+            raw += chunk.toString();
+          });
+          res.on("end", () =>
+            resolve({
+              status: res.statusCode!,
+              contentType: String(res.headers["content-type"] ?? ""),
+              body: raw,
+            }),
+          );
         },
       );
       req.on("error", reject);
@@ -699,7 +793,10 @@ describe("MCP Apps app-side (#1237)", () => {
     server = await startServer();
     const { sessionId } = await initializeWith(server, UI_CAPABILITIES);
     const response = await rpc(server, sessionId, "resources/list", {});
-    const resources = (response.result?.resources ?? []) as Array<{ uri: string; mimeType: string }>;
+    const resources = (response.result?.resources ?? []) as Array<{
+      uri: string;
+      mimeType: string;
+    }>;
     const widget = resources.find((r) => r.uri === HELLO_URI);
     expect(widget).toBeDefined();
     expect(widget!.mimeType).toBe("text/html;profile=mcp-app");
@@ -717,7 +814,9 @@ describe("MCP Apps app-side (#1237)", () => {
   it("returns a JSON-RPC error for an unknown resource uri", async () => {
     server = await startServer();
     const { sessionId } = await initializeWith(server, UI_CAPABILITIES);
-    const response = await rpc(server, sessionId, "resources/read", { uri: "ui://grackle/missing" });
+    const response = await rpc(server, sessionId, "resources/read", {
+      uri: "ui://grackle/missing",
+    });
     expect(response.error).toBeDefined();
   });
 
@@ -800,7 +899,9 @@ describe("MCP Apps widget capture (#1238)", () => {
 
   afterEach(async () => {
     if (server) {
-      await new Promise<void>((resolve) => { server!.close(() => resolve()); });
+      await new Promise<void>((resolve) => {
+        server!.close(() => resolve());
+      });
       server = undefined;
     }
   });
@@ -821,7 +922,12 @@ describe("MCP Apps widget capture (#1238)", () => {
   /** A widget tool (uiResourceUri set) that captures its args, for capture testing. */
   function makeWidgetSpyTool(capturedArgs: Record<string, unknown>[]): ToolDefinition {
     return {
-      ...makeSpyTool("widget_spy", "widget", capturedArgs, z.object({ message: z.string().optional() })),
+      ...makeSpyTool(
+        "widget_spy",
+        "widget",
+        capturedArgs,
+        z.object({ message: z.string().optional() }),
+      ),
       uiResourceUri: HELLO_WIDGET_URI,
     };
   }
@@ -853,10 +959,9 @@ describe("MCP Apps widget capture (#1238)", () => {
 
   it("emits a widget event when a scoped agent calls a widget tool", async () => {
     const widgetCalls: WidgetCall[] = [];
-    server = await startServer(
-      [[makeWidgetSpyTool([])]],
-      (sessionId, payload) => { widgetCalls.push({ sessionId, payload } as WidgetCall); },
-    );
+    server = await startServer([[makeWidgetSpyTool([])]], (sessionId, payload) => {
+      widgetCalls.push({ sessionId, payload } as WidgetCall);
+    });
     const scopedToken = createScopedToken(
       { sub: ROOT_TASK_ID, pid: "default-ws", per: "system", sid: "sess-widget" },
       TEST_API_KEY,
@@ -878,17 +983,22 @@ describe("MCP Apps widget capture (#1238)", () => {
 
   it("emits a dynamic widget event from a tool's _meta render descriptor (#1239)", async () => {
     const widgetCalls: WidgetCall[] = [];
-    server = await startServer(
-      [[makeDynamicWidgetTool()]],
-      (sessionId, payload) => { widgetCalls.push({ sessionId, payload } as WidgetCall); },
-    );
+    server = await startServer([[makeDynamicWidgetTool()]], (sessionId, payload) => {
+      widgetCalls.push({ sessionId, payload } as WidgetCall);
+    });
     const scopedToken = createScopedToken(
       { sub: ROOT_TASK_ID, pid: "default-ws", per: "system", sid: "sess-dyn" },
       TEST_API_KEY,
     );
     const authHeader = `Bearer ${scopedToken}`;
     const sessionId = await initialize(server, authHeader);
-    await callTool(server, sessionId, "widget_show_test", { body: "<div>agent widget</div>" }, authHeader);
+    await callTool(
+      server,
+      sessionId,
+      "widget_show_test",
+      { body: "<div>agent widget</div>" },
+      authHeader,
+    );
 
     expect(widgetCalls).toHaveLength(1);
     const payload = widgetCalls[0]!.payload;
@@ -922,17 +1032,22 @@ describe("MCP Apps widget capture (#1238)", () => {
         };
       },
     };
-    server = await startServer(
-      [[reactTool]],
-      (sessionId, payload) => { widgetCalls.push({ sessionId, payload } as WidgetCall); },
-    );
+    server = await startServer([[reactTool]], (sessionId, payload) => {
+      widgetCalls.push({ sessionId, payload } as WidgetCall);
+    });
     const scopedToken = createScopedToken(
       { sub: ROOT_TASK_ID, pid: "default-ws", per: "system", sid: "sess-react" },
       TEST_API_KEY,
     );
     const authHeader = `Bearer ${scopedToken}`;
     const sessionId = await initialize(server, authHeader);
-    await callTool(server, sessionId, "component_show_test", { source: "render(<Button>{props.label}</Button>)" }, authHeader);
+    await callTool(
+      server,
+      sessionId,
+      "component_show_test",
+      { source: "render(<Button>{props.label}</Button>)" },
+      authHeader,
+    );
 
     expect(widgetCalls).toHaveLength(1);
     const payload = widgetCalls[0]!.payload;
@@ -944,11 +1059,15 @@ describe("MCP Apps widget capture (#1238)", () => {
 
   it("does not emit a widget event for a non-widget tool", async () => {
     const widgetCalls: WidgetCall[] = [];
-    const plainSpy = makeSpyTool("workspace_spy", "workspace", [], z.object({ workspaceId: z.string() }));
-    server = await startServer(
-      [[plainSpy]],
-      (sessionId, payload) => { widgetCalls.push({ sessionId, payload } as WidgetCall); },
+    const plainSpy = makeSpyTool(
+      "workspace_spy",
+      "workspace",
+      [],
+      z.object({ workspaceId: z.string() }),
     );
+    server = await startServer([[plainSpy]], (sessionId, payload) => {
+      widgetCalls.push({ sessionId, payload } as WidgetCall);
+    });
     const scopedToken = createScopedToken(
       { sub: ROOT_TASK_ID, pid: "default-ws", per: "system", sid: "sess-plain" },
       TEST_API_KEY,
@@ -963,7 +1082,10 @@ describe("MCP Apps widget capture (#1238)", () => {
 
 describe("dynamicRenderInputSchema (#1272)", () => {
   it("falls back to a passthrough object for an empty propsSchema (the DB default)", () => {
-    const schema = dynamicRenderInputSchema("") as { type?: string; additionalProperties?: unknown };
+    const schema = dynamicRenderInputSchema("") as {
+      type?: string;
+      additionalProperties?: unknown;
+    };
     expect(schema.type).toBe("object");
     // Must allow arbitrary props — the call path doesn't validate when there's no
     // schema, so a closed object would make the promoted tool look uncallable.
@@ -976,7 +1098,9 @@ describe("dynamicRenderInputSchema (#1272)", () => {
   });
 
   it("derives the input schema from a valid propsSchema", () => {
-    const schema = dynamicRenderInputSchema('{"type":"object","properties":{"label":{"type":"string"}}}') as {
+    const schema = dynamicRenderInputSchema(
+      '{"type":"object","properties":{"label":{"type":"string"}}}',
+    ) as {
       properties?: Record<string, unknown>;
     };
     expect(schema.properties?.label).toBeDefined();
@@ -985,7 +1109,11 @@ describe("dynamicRenderInputSchema (#1272)", () => {
 
 describe("sessionIdsForWorkspace (#1297 fan-out selection)", () => {
   const scoped = (workspaceId: string): AuthContext => ({
-    type: "scoped", taskId: "t", workspaceId, personaId: "p", taskSessionId: "s",
+    type: "scoped",
+    taskId: "t",
+    workspaceId,
+    personaId: "p",
+    taskSessionId: "s",
   });
 
   it("selects only scoped sessions bound to the given workspace", () => {

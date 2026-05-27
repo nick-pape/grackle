@@ -30,8 +30,12 @@ function TabSwitcher(): JSX.Element {
 
   return (
     <div data-testid="tab-switcher">
-      <button role="tab" aria-selected={tab === "overview"}>Overview</button>
-      <button role="tab" aria-selected={tab === "stream"}>Stream</button>
+      <button role="tab" aria-selected={tab === "overview"}>
+        Overview
+      </button>
+      <button role="tab" aria-selected={tab === "stream"}>
+        Stream
+      </button>
     </div>
   );
 }

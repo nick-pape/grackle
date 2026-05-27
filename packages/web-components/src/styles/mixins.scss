@@ -17,10 +17,18 @@ $mobile: 768px;
 $tablet: 1024px;
 
 /// Mobile breakpoint — applies when viewport is 768px or narrower.
-@mixin mobile { @media (max-width: $mobile) { @content; } }
+@mixin mobile {
+  @media (max-width: $mobile) {
+    @content;
+  }
+}
 
 /// Tablet media query (max-width: 1024px).
-@mixin tablet { @media (max-width: $tablet) { @content; } }
+@mixin tablet {
+  @media (max-width: $tablet) {
+    @content;
+  }
+}
 
 // =============================================================================
 // Surfaces
@@ -37,7 +45,7 @@ $tablet: 1024px;
   position: relative;
 
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     background: linear-gradient(180deg, var(--glass-highlight) 0%, transparent 40px);
@@ -75,9 +83,10 @@ $tablet: 1024px;
 /// Standard accent hover — subtle background tint on hover.
 /// Includes backdrop-filter for glass theme.
 @mixin hover-accent {
-  transition: background var(--transition-fast),
-              color var(--transition-fast),
-              backdrop-filter var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    backdrop-filter var(--transition-fast);
 
   &:hover {
     background: var(--bg-overlay);
@@ -88,9 +97,10 @@ $tablet: 1024px;
 
 /// Card hover — increases shadow depth and border on hover.
 @mixin card-hover {
-  transition: box-shadow var(--transition-fast),
-              border-color var(--transition-fast),
-              backdrop-filter var(--transition-fast);
+  transition:
+    box-shadow var(--transition-fast),
+    border-color var(--transition-fast),
+    backdrop-filter var(--transition-fast);
 
   &:hover {
     box-shadow: var(--shadow-sm), var(--highlight-top);
@@ -116,9 +126,10 @@ $tablet: 1024px;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
   box-shadow: var(--shadow-xs);
-  transition: background var(--transition-fast),
-              box-shadow var(--transition-fast),
-              transform var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 
   &:hover {
     box-shadow: var(--shadow-glow-green);
@@ -163,8 +174,9 @@ $tablet: 1024px;
   cursor: pointer;
   font-family: var(--font-ui);
   box-shadow: var(--shadow-xs);
-  transition: background var(--transition-fast),
-              border-color var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
 
   &:hover {
     background: var(--bg-overlay);
@@ -223,13 +235,16 @@ $tablet: 1024px;
   font-size: var(--font-size-md);
   outline: none;
   box-shadow: var(--shadow-xs);
-  transition: border-color var(--transition-fast),
-              box-shadow var(--transition-fast),
-              backdrop-filter var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    backdrop-filter var(--transition-fast);
 
   &:focus {
     border-color: var(--ring);
-    box-shadow: 0 0 0 3px var(--ring-alpha), var(--highlight-top);
+    box-shadow:
+      0 0 0 3px var(--ring-alpha),
+      var(--highlight-top);
     backdrop-filter: blur(var(--glass-blur-inset));
     -webkit-backdrop-filter: blur(var(--glass-blur-inset));
   }
@@ -272,14 +287,25 @@ $tablet: 1024px;
 /// lists, links, etc.). Applied to any container that renders markdown output,
 /// e.g. agent text events and user message bubbles.
 @mixin markdown-content {
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     margin: var(--space-sm) 0 var(--space-xs);
     font-weight: var(--font-weight-bold);
   }
 
-  h1 { font-size: 1.4em; }
-  h2 { font-size: 1.2em; }
-  h3 { font-size: 1.1em; }
+  h1 {
+    font-size: 1.4em;
+  }
+  h2 {
+    font-size: 1.2em;
+  }
+  h3 {
+    font-size: 1.1em;
+  }
 
   p {
     margin: var(--space-xs) 0;
@@ -314,7 +340,8 @@ $tablet: 1024px;
     width: 100%;
   }
 
-  th, td {
+  th,
+  td {
     border: 1px solid var(--border-subtle);
     padding: var(--space-xs) var(--space-sm);
     text-align: left;
@@ -325,7 +352,8 @@ $tablet: 1024px;
     font-weight: var(--font-weight-bold);
   }
 
-  ul, ol {
+  ul,
+  ol {
     padding-left: var(--space-lg);
     margin: var(--space-xs) 0;
   }

@@ -4,10 +4,9 @@ import { goToSettings } from "./helpers.js";
 const test = base.extend<{ mockPage: import("@playwright/test").Page }>({
   mockPage: async ({ page }, use) => {
     await page.goto("/?mock");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
+    await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
     await use(page);
   },
 });
@@ -19,7 +18,10 @@ test.describe("Settings Tabs", { tag: ["@settings"] }, () => {
     await goToSettings(mockPage);
 
     await expect(page).toHaveURL(/\/settings\/credentials/);
-    await expect(page.getByRole("tab", { name: "Credentials" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("tab", { name: "Credentials" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 
   test("tab switching updates URL", async ({ mockPage }) => {
@@ -33,7 +35,10 @@ test.describe("Settings Tabs", { tag: ["@settings"] }, () => {
     for (let i = 0; i < tabs.length; i++) {
       await page.getByRole("tab", { name: tabs[i] }).click();
       await expect(page).toHaveURL(new RegExp(`/settings/${paths[i]}`));
-      await expect(page.getByRole("tab", { name: tabs[i] })).toHaveAttribute("aria-selected", "true");
+      await expect(page.getByRole("tab", { name: tabs[i] })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
     }
   });
 
@@ -42,11 +47,12 @@ test.describe("Settings Tabs", { tag: ["@settings"] }, () => {
 
     await page.goto("/settings/credentials?mock");
     await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByRole("tab", { name: "Credentials" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("tab", { name: "Credentials" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
     await expect(page.getByRole("heading", { name: "Credential Providers" })).toBeVisible();
   });
-
-
 
   test("back/forward works between tabs", async ({ mockPage }) => {
     const page = mockPage;
@@ -60,7 +66,10 @@ test.describe("Settings Tabs", { tag: ["@settings"] }, () => {
 
     await page.goBack();
     await expect(page).toHaveURL(/\/settings\/personas/);
-    await expect(page.getByRole("tab", { name: "Personas" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("tab", { name: "Personas" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
 
     await page.goForward();
     await expect(page).toHaveURL(/\/settings\/about/);

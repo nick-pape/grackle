@@ -33,9 +33,7 @@ export const Empty: Story = {
 /** Container with a single toast. */
 export const SingleToast: Story = {
   args: {
-    toasts: [
-      { id: "t1", message: "File saved", variant: "success", duration: TEST_DURATION },
-    ],
+    toasts: [{ id: "t1", message: "File saved", variant: "success", duration: TEST_DURATION }],
   },
   play: async ({ canvas }) => {
     const container = canvas.getByTestId("toast-container");

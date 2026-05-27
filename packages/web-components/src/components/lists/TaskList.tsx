@@ -8,11 +8,20 @@ import { ICON_SM, ICON_MD } from "../../utils/iconSize.js";
 import { taskUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
 import { getStatusStyle, resolveStatus } from "../../utils/taskStatus.js";
 import { Tooltip } from "../display/Tooltip.js";
-import { HighlightedText, buildTaskTree, groupTasksByStatus, type TaskNode, type StatusGroup } from "./listHelpers.js";
+import {
+  HighlightedText,
+  buildTaskTree,
+  groupTasksByStatus,
+  type TaskNode,
+  type StatusGroup,
+} from "./listHelpers.js";
 import styles from "./TaskList.module.scss";
 
 /** Fuzzy search keys for task matching. */
-const TASK_SEARCH_KEYS: FuzzyKey[] = [{ name: "title", weight: 2 }, { name: "description", weight: 1 }];
+const TASK_SEARCH_KEYS: FuzzyKey[] = [
+  { name: "title", weight: 2 },
+  { name: "description", weight: 1 },
+];
 
 /** Base left-padding for task rows. */
 const TASK_BASE_INDENT_PX: number = 16;
@@ -85,10 +94,17 @@ function StatusGroupAccordion({
           }
         }}
       >
-        <span className={`${styles.expandArrow} ${isExpanded ? styles.expanded : ""}`} aria-hidden="true">
+        <span
+          className={`${styles.expandArrow} ${isExpanded ? styles.expanded : ""}`}
+          aria-hidden="true"
+        >
           <ChevronRight size={ICON_SM} />
         </span>
-        <span className={styles.statusGroupIcon} style={{ color: group.style.color }} aria-hidden="true">
+        <span
+          className={styles.statusGroupIcon}
+          style={{ color: group.style.color }}
+          aria-hidden="true"
+        >
           {group.style.icon}
         </span>
         <span className={styles.statusGroupLabel}>{group.label}</span>
@@ -107,7 +123,10 @@ function StatusGroupAccordion({
             {group.tasks.map((task) => {
               const statusStyle = getStatusStyle(task.status);
               const isSelected = selectedTaskId === task.id;
-              const wsName = task.parentTaskId || !task.workspaceId ? undefined : workspaceNames.get(task.workspaceId);
+              const wsName =
+                task.parentTaskId || !task.workspaceId
+                  ? undefined
+                  : workspaceNames.get(task.workspaceId);
               return (
                 <div
                   key={task.id}
@@ -122,18 +141,29 @@ function StatusGroupAccordion({
                     }
                   }}
                   className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
-                  style={{ '--task-indent': `${TASK_BASE_INDENT_PX}px` } as CSSProperties}
+                  style={{ "--task-indent": `${TASK_BASE_INDENT_PX}px` } as CSSProperties}
                   data-task-id={task.id}
                 >
                   <span className={styles.leafSpacer} />
-                  <span className={styles.taskStatusIcon} style={{ color: statusStyle.color }} aria-hidden="true" data-testid={`task-status-${resolveStatus(task.status)}`}>
+                  <span
+                    className={styles.taskStatusIcon}
+                    style={{ color: statusStyle.color }}
+                    aria-hidden="true"
+                    data-testid={`task-status-${resolveStatus(task.status)}`}
+                  >
                     {statusStyle.icon}
                   </span>
                   <span className={styles.taskTitle} title={task.title}>
-                    <HighlightedText text={task.title} indices={titleHighlights.get(task.id)} highlightClass={styles.searchHighlight} />
+                    <HighlightedText
+                      text={task.title}
+                      indices={titleHighlights.get(task.id)}
+                      highlightClass={styles.searchHighlight}
+                    />
                   </span>
                   {wsName && (
-                    <span className={styles.workspaceBadge} title={wsName}>{wsName}</span>
+                    <span className={styles.workspaceBadge} title={wsName}>
+                      {wsName}
+                    </span>
                   )}
                 </div>
               );
@@ -171,14 +201,18 @@ function TaskTreeNode({
   workspaceNames,
 }: TaskTreeNodeProps): JSX.Element {
   const statusStyle = getStatusStyle(node.status);
-  const isBlocked = node.dependsOn.length > 0 &&
+  const isBlocked =
+    node.dependsOn.length > 0 &&
     node.dependsOn.some((depId) => taskStatusById.get(depId) !== "complete");
   const isExpanded = expandedTasks.has(node.id);
   const hasChildren = node.children.length > 0;
   const isSelected = selectedTaskId === node.id;
   const indent = TASK_BASE_INDENT_PX + depth * TASK_DEPTH_INDENT_PX;
   const isRoot = depth === 0;
-  const wsName = isRoot && !node.parentTaskId && node.workspaceId ? workspaceNames.get(node.workspaceId) : undefined;
+  const wsName =
+    isRoot && !node.parentTaskId && node.workspaceId
+      ? workspaceNames.get(node.workspaceId)
+      : undefined;
   return (
     <>
       <div
@@ -193,7 +227,7 @@ function TaskTreeNode({
           }
         }}
         className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
-        style={{ '--task-indent': `${indent}px` } as CSSProperties}
+        style={{ "--task-indent": `${indent}px` } as CSSProperties}
         data-task-id={node.id}
       >
         {hasChildren && (
@@ -202,7 +236,10 @@ function TaskTreeNode({
             role="button"
             tabIndex={0}
             aria-label={isExpanded ? "Collapse task" : "Expand task"}
-            onClick={(e) => { e.stopPropagation(); toggleTask(node.id); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleTask(node.id);
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
@@ -215,18 +252,29 @@ function TaskTreeNode({
           </span>
         )}
         {!hasChildren && <span className={styles.leafSpacer} />}
-        <span className={styles.taskStatusIcon} style={{ color: statusStyle.color }} aria-hidden="true" data-testid={`task-status-${resolveStatus(node.status)}`}>
+        <span
+          className={styles.taskStatusIcon}
+          style={{ color: statusStyle.color }}
+          aria-hidden="true"
+          data-testid={`task-status-${resolveStatus(node.status)}`}
+        >
           {statusStyle.icon}
         </span>
         <span className={styles.taskTitle} title={node.title}>
-          <HighlightedText text={node.title} indices={titleHighlights.get(node.id)} highlightClass={styles.searchHighlight} />
+          <HighlightedText
+            text={node.title}
+            indices={titleHighlights.get(node.id)}
+            highlightClass={styles.searchHighlight}
+          />
         </span>
         {wsName && (
-          <span className={styles.workspaceBadge} title={wsName}>{wsName}</span>
+          <span className={styles.workspaceBadge} title={wsName}>
+            {wsName}
+          </span>
         )}
         {hasChildren && (
           <span className={styles.childCountBadge}>
-            {node.children.filter(c => c.status === "complete").length}/{node.children.length}
+            {node.children.filter((c) => c.status === "complete").length}/{node.children.length}
           </span>
         )}
         {node.dependsOn.length > 0 && (
@@ -262,7 +310,7 @@ function TaskTreeNode({
             transition={{ duration: 0.15 }}
             style={{ overflow: "hidden" }}
           >
-            {node.children.map(child => (
+            {node.children.map((child) => (
               <TaskTreeNode
                 key={child.id}
                 node={child}
@@ -308,16 +356,12 @@ export function TaskList({ workspaces, tasks }: TaskListProps): JSX.Element {
   const taskMatch = useMatch("/tasks/:taskId/*");
   const selectedTaskId = taskMatch?.params.taskId !== "new" ? taskMatch?.params.taskId : undefined;
 
-  const taskStatusById = useMemo(
-    () => new Map(tasks.map((t) => [t.id, t.status])),
-    [tasks],
-  );
+  const taskStatusById = useMemo(() => new Map(tasks.map((t) => [t.id, t.status])), [tasks]);
 
   const workspaceNames = useMemo(
     () => new Map(workspaces.map((w) => [w.id, w.name])),
     [workspaces],
   );
-
 
   /** Toggle group-by-status mode. */
   const toggleGroupByStatus = (): void => {
@@ -342,7 +386,9 @@ export function TaskList({ workspaces, tasks }: TaskListProps): JSX.Element {
 
   /** Check if a status group is expanded. */
   const isGroupExpanded = (status: string): boolean => {
-    return groupExpandOverrides.has(status) ? groupExpandOverrides.get(status)! : groupExpandDefault;
+    return groupExpandOverrides.has(status)
+      ? groupExpandOverrides.get(status)!
+      : groupExpandDefault;
   };
 
   const toggleTask = (tid: string): void => {
@@ -365,9 +411,7 @@ export function TaskList({ workspaces, tasks }: TaskListProps): JSX.Element {
 
   // Auto-expand parent tasks that have children (skip manually collapsed ones)
   useEffect(() => {
-    const parentIds = new Set(
-      tasks.filter(t => t.parentTaskId).map(t => t.parentTaskId),
-    );
+    const parentIds = new Set(tasks.filter((t) => t.parentTaskId).map((t) => t.parentTaskId));
     if (parentIds.size > 0) {
       setExpandedTasks((prev) => {
         const next = new Set(prev);
@@ -386,7 +430,11 @@ export function TaskList({ workspaces, tasks }: TaskListProps): JSX.Element {
 
   const { directMatchTaskIds, treeMatchTaskIds, titleHighlights } = useMemo(() => {
     if (!searchQuery.trim()) {
-      return { directMatchTaskIds: null, treeMatchTaskIds: null, titleHighlights: new Map<string, readonly MatchIndex[]>() };
+      return {
+        directMatchTaskIds: null,
+        treeMatchTaskIds: null,
+        titleHighlights: new Map<string, readonly MatchIndex[]>(),
+      };
     }
     const taskResults = fuzzySearch(tasks, searchQuery, TASK_SEARCH_KEYS);
     const directIds = new Set(taskResults.map((r) => r.item.id));
@@ -410,16 +458,20 @@ export function TaskList({ workspaces, tasks }: TaskListProps): JSX.Element {
       }
     }
 
-    return { directMatchTaskIds: directIds, treeMatchTaskIds: treeIds, titleHighlights: highlights };
+    return {
+      directMatchTaskIds: directIds,
+      treeMatchTaskIds: treeIds,
+      titleHighlights: highlights,
+    };
   }, [searchQuery, tasks]);
 
   const isSearching = directMatchTaskIds !== null;
   const activeMatchIds = isSearching
-    ? (groupByStatus ? directMatchTaskIds : treeMatchTaskIds)
+    ? groupByStatus
+      ? directMatchTaskIds
+      : treeMatchTaskIds
     : null;
-  const visibleTasks = activeMatchIds
-    ? tasks.filter((t) => activeMatchIds.has(t.id))
-    : tasks;
+  const visibleTasks = activeMatchIds ? tasks.filter((t) => activeMatchIds.has(t.id)) : tasks;
 
   const tree = !groupByStatus ? buildTaskTree(visibleTasks) : [];
 
@@ -464,45 +516,39 @@ export function TaskList({ workspaces, tasks }: TaskListProps): JSX.Element {
         />
       )}
 
-      {groupByStatus ? (
-        groupTasksByStatus(visibleTasks, taskStatusById).map(group => (
-          <StatusGroupAccordion
-            key={group.status}
-            group={group}
-            isExpanded={isGroupExpanded(group.status)}
-            onToggle={() => toggleStatusGroup(group.status)}
-            selectedTaskId={selectedTaskId}
-            navigate={navigate}
-            titleHighlights={titleHighlights}
-            workspaceNames={workspaceNames}
-          />
-        ))
-      ) : (
-        tree.map(node => (
-          <TaskTreeNode
-            key={node.id}
-            node={node}
-            depth={0}
-            expandedTasks={expandedTasks}
-            toggleTask={toggleTask}
-            selectedTaskId={selectedTaskId}
-            navigate={navigate}
-            taskStatusById={taskStatusById}
-            titleHighlights={titleHighlights}
-            workspaceNames={workspaceNames}
-          />
-        ))
-      )}
+      {groupByStatus
+        ? groupTasksByStatus(visibleTasks, taskStatusById).map((group) => (
+            <StatusGroupAccordion
+              key={group.status}
+              group={group}
+              isExpanded={isGroupExpanded(group.status)}
+              onToggle={() => toggleStatusGroup(group.status)}
+              selectedTaskId={selectedTaskId}
+              navigate={navigate}
+              titleHighlights={titleHighlights}
+              workspaceNames={workspaceNames}
+            />
+          ))
+        : tree.map((node) => (
+            <TaskTreeNode
+              key={node.id}
+              node={node}
+              depth={0}
+              expandedTasks={expandedTasks}
+              toggleTask={toggleTask}
+              selectedTaskId={selectedTaskId}
+              navigate={navigate}
+              taskStatusById={taskStatusById}
+              titleHighlights={titleHighlights}
+              workspaceNames={workspaceNames}
+            />
+          ))}
 
       {visibleTasks.length === 0 && !isSearching && (
-        <div className={styles.emptyState}>
-          No tasks yet. Click + to create one.
-        </div>
+        <div className={styles.emptyState}>No tasks yet. Click + to create one.</div>
       )}
       {visibleTasks.length === 0 && isSearching && (
-        <div className={styles.emptyState}>
-          No matching tasks
-        </div>
+        <div className={styles.emptyState}>No matching tasks</div>
       )}
     </div>
   );

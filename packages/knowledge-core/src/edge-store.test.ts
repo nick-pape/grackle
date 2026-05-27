@@ -149,9 +149,7 @@ describe("createEdge", () => {
   it("closes the session after failure", async () => {
     mockSessionRun.mockRejectedValueOnce(new Error("neo4j error"));
 
-    await expect(
-      createEdge("a", "b", EDGE_TYPE.RELATES_TO),
-    ).rejects.toThrow("neo4j error");
+    await expect(createEdge("a", "b", EDGE_TYPE.RELATES_TO)).rejects.toThrow("neo4j error");
     expect(mockSessionClose).toHaveBeenCalledTimes(1);
   });
 });
@@ -226,9 +224,17 @@ describe("upsertEdge", () => {
   });
 
   it("accepts the new structural edge types", async () => {
-    for (const type of [EDGE_TYPE.ATTEMPT_OF, EDGE_TYPE.RAN_IN, EDGE_TYPE.USED_PERSONA, EDGE_TYPE.SPAWNED, EDGE_TYPE.LINKED_TO]) {
+    for (const type of [
+      EDGE_TYPE.ATTEMPT_OF,
+      EDGE_TYPE.RAN_IN,
+      EDGE_TYPE.USED_PERSONA,
+      EDGE_TYPE.SPAWNED,
+      EDGE_TYPE.LINKED_TO,
+    ]) {
       mockSessionRun.mockResolvedValueOnce({
-        records: [makeNeo4jRecord({ fromId: "a", toId: "b", type, metadata: null, createdAt: "t" })],
+        records: [
+          makeNeo4jRecord({ fromId: "a", toId: "b", type, metadata: null, createdAt: "t" }),
+        ],
       });
       await expect(upsertEdge("a", "b", type)).resolves.toMatchObject({ type });
     }

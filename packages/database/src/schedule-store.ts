@@ -62,11 +62,7 @@ export function getSchedule(id: string): ScheduleRow | undefined {
  */
 export function listSchedules(workspaceId?: string): ScheduleRow[] {
   if (workspaceId) {
-    return db
-      .select()
-      .from(schedules)
-      .where(eq(schedules.workspaceId, workspaceId))
-      .all();
+    return db.select().from(schedules).where(eq(schedules.workspaceId, workspaceId)).all();
   }
   return db.select().from(schedules).all();
 }
@@ -111,12 +107,7 @@ export function getDueSchedules(): ScheduleRow[] {
   return db
     .select()
     .from(schedules)
-    .where(
-      and(
-        eq(schedules.enabled, true),
-        lte(schedules.nextRunAt, now),
-      ),
-    )
+    .where(and(eq(schedules.enabled, true), lte(schedules.nextRunAt, now)))
     .all();
 }
 
@@ -127,11 +118,7 @@ export function getDueSchedules(): ScheduleRow[] {
  * @param lastRunAt - Timestamp of this fire
  * @param nextRunAt - Pre-computed next fire time
  */
-export function advanceSchedule(
-  id: string,
-  lastRunAt: string,
-  nextRunAt: string,
-): void {
+export function advanceSchedule(id: string, lastRunAt: string, nextRunAt: string): void {
   db.update(schedules)
     .set({
       lastRunAt,
@@ -150,11 +137,7 @@ export function advanceSchedule(
  * @param enabled - New enabled state
  * @param nextRunAt - Next run time (non-null when enabling, null when disabling)
  */
-export function setScheduleEnabled(
-  id: string,
-  enabled: boolean,
-  nextRunAt: string | null,
-): void {
+export function setScheduleEnabled(id: string, enabled: boolean, nextRunAt: string | null): void {
   db.update(schedules)
     .set({
       enabled,

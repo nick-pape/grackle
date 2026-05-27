@@ -1,5 +1,11 @@
 import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
-import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent, AdapterDependencies } from "@grackle-ai/adapter-sdk";
+import type {
+  EnvironmentAdapter,
+  BaseEnvironmentConfig,
+  PowerLineConnection,
+  ProvisionEvent,
+  AdapterDependencies,
+} from "@grackle-ai/adapter-sdk";
 import { createPowerLineClient, sleep as defaultSleep } from "@grackle-ai/adapter-sdk";
 
 const POWERLINE_RETRY_DELAY_MS: number = 1_000;
@@ -19,12 +25,20 @@ export class LocalAdapter implements EnvironmentAdapter {
     this.sleep = deps.sleep ?? defaultSleep;
   }
 
-  public async *provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
+  public async *provision(
+    environmentId: string,
+    config: Record<string, unknown>,
+    powerlineToken: string,
+  ): AsyncGenerator<ProvisionEvent> {
     const cfg = config as unknown as LocalEnvironmentConfig;
     const port = cfg.port || DEFAULT_POWERLINE_PORT;
     const host = cfg.host || "localhost";
 
-    yield { stage: "connecting", message: `Connecting to PowerLine at ${host}:${port}...`, progress: 0.5 };
+    yield {
+      stage: "connecting",
+      message: `Connecting to PowerLine at ${host}:${port}...`,
+      progress: 0.5,
+    };
 
     const client = createPowerLineClient(`http://${host}:${port}`, powerlineToken);
 
@@ -36,15 +50,27 @@ export class LocalAdapter implements EnvironmentAdapter {
         return;
       } catch (err) {
         lastErr = err;
-        yield { stage: "connecting", message: `Waiting for PowerLine (attempt ${attempt + 1}/${POWERLINE_MAX_RETRIES})...`, progress: 0.5 + attempt * 0.1 };
+        yield {
+          stage: "connecting",
+          message: `Waiting for PowerLine (attempt ${attempt + 1}/${POWERLINE_MAX_RETRIES})...`,
+          progress: 0.5 + attempt * 0.1,
+        };
         await this.sleep(POWERLINE_RETRY_DELAY_MS);
       }
     }
 
-    yield { stage: "error", message: `Could not reach PowerLine: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`, progress: 0 };
+    yield {
+      stage: "error",
+      message: `Could not reach PowerLine: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`,
+      progress: 0,
+    };
   }
 
-  public async connect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection> {
+  public async connect(
+    environmentId: string,
+    config: Record<string, unknown>,
+    powerlineToken: string,
+  ): Promise<PowerLineConnection> {
     const cfg = config as unknown as LocalEnvironmentConfig;
     const port = cfg.port || DEFAULT_POWERLINE_PORT;
     const host = cfg.host || "localhost";

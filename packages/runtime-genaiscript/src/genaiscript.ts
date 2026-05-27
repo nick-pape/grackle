@@ -6,7 +6,13 @@ import { tmpdir, homedir } from "node:os";
 import { createInterface } from "node:readline";
 import { createRequire } from "node:module";
 import { randomUUID } from "node:crypto";
-import type { AgentRuntime, AgentSession, AgentEvent, SpawnOptions, ResumeOptions } from "@grackle-ai/runtime-sdk";
+import type {
+  AgentRuntime,
+  AgentSession,
+  AgentEvent,
+  SpawnOptions,
+  ResumeOptions,
+} from "@grackle-ai/runtime-sdk";
 import { logger, ensureRuntimeInstalled } from "@grackle-ai/runtime-sdk";
 import { SESSION_STATUS } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
@@ -45,11 +51,12 @@ function resolveGenAIScriptBin(runtimeDir: string): string {
       const pkgPath = esmRequire.resolve("genaiscript/package.json");
       const pkgDir = dirname(pkgPath);
       const pkg = esmRequire(pkgPath) as { bin?: Record<string, string> | string };
-      const binRelative = typeof pkg.bin === "string"
-        ? pkg.bin
-        : (pkg.bin?.genaiscript ?? "built/genaiscript.cjs");
+      const binRelative =
+        typeof pkg.bin === "string" ? pkg.bin : (pkg.bin?.genaiscript ?? "built/genaiscript.cjs");
       return join(pkgDir, binRelative);
-    } catch { /* try next base */ }
+    } catch {
+      /* try next base */
+    }
   }
   throw new Error("Cannot resolve genaiscript binary. Run: npm install genaiscript");
 }
@@ -115,7 +122,12 @@ class GenAIScriptSession implements AgentSession {
       const genaiscriptBin = resolveGenAIScriptBin(runtimeDir);
       logger.info({ sessionId: this.id, scriptPath, genaiscriptBin }, "genaiscript: spawning");
 
-      yield { type: "system", timestamp: ts(), content: "Starting GenAIScript...", diagnostic: true };
+      yield {
+        type: "system",
+        timestamp: ts(),
+        content: "Starting GenAIScript...",
+        diagnostic: true,
+      };
 
       // GenAIScript is one-shot: wrap the whole run in a single turn (AHP HR2).
       const turnId = randomUUID();
@@ -171,7 +183,10 @@ class GenAIScriptSession implements AgentSession {
         const resJson = await readFile(join(outputDir, "res.json"), "utf8");
         result = JSON.parse(resJson) as GenAIResult;
       } catch {
-        logger.warn({ sessionId: this.id, outputDir }, "genaiscript: res.json not found or invalid");
+        logger.warn(
+          { sessionId: this.id, outputDir },
+          "genaiscript: res.json not found or invalid",
+        );
       }
 
       // Emit usage data from the result
@@ -180,9 +195,16 @@ class GenAIScriptSession implements AgentSession {
         const outputTokens = result.usage.completion;
         const costMillicents = Math.round((result.usage.cost ?? 0) * 100_000);
         if (inputTokens > 0 || outputTokens > 0 || costMillicents > 0) {
-          yield { type: "usage", timestamp: ts(), turnId, content: JSON.stringify({
-            input_tokens: inputTokens, output_tokens: outputTokens, cost_millicents: costMillicents,
-          }) };
+          yield {
+            type: "usage",
+            timestamp: ts(),
+            turnId,
+            content: JSON.stringify({
+              input_tokens: inputTokens,
+              output_tokens: outputTokens,
+              cost_millicents: costMillicents,
+            }),
+          };
         }
       }
 
@@ -213,18 +235,27 @@ class GenAIScriptSession implements AgentSession {
         this.status = SESSION_STATUS.IDLE;
         yield { type: "status", timestamp: ts(), content: "waiting_input" };
       } else {
-        const errorText = result?.statusText ?? result?.status ?? `Process exited with code ${exitCode}`;
+        const errorText =
+          result?.statusText ?? result?.status ?? `Process exited with code ${exitCode}`;
         yield { type: "error", timestamp: ts(), content: String(errorText) };
         this.status = SESSION_STATUS.STOPPED;
         yield { type: "status", timestamp: ts(), content: "failed" };
       }
     } catch (err) {
-      yield { type: "error", timestamp: ts(), content: err instanceof Error ? err.message : String(err) };
+      yield {
+        type: "error",
+        timestamp: ts(),
+        content: err instanceof Error ? err.message : String(err),
+      };
       this.status = SESSION_STATUS.STOPPED;
       yield { type: "status", timestamp: ts(), content: "failed" };
     } finally {
       if (this.tmpDir) {
-        try { await rm(this.tmpDir, { recursive: true, force: true }); } catch { /* ignore */ }
+        try {
+          await rm(this.tmpDir, { recursive: true, force: true });
+        } catch {
+          /* ignore */
+        }
       }
     }
   }

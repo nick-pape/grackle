@@ -1,10 +1,5 @@
 import { test, expect } from "./fixtures.js";
-import {
-  stubScenario,
-  emitText,
-  idle,
-  onInput,
-} from "./helpers.js";
+import { stubScenario, emitText, idle, onInput } from "./helpers.js";
 
 /** Start a task, wait for idle, send input to advance past idle. */
 async function runScenarioToCompletion(page: import("@playwright/test").Page): Promise<void> {
@@ -22,15 +17,16 @@ test.describe("Task Stop & Pause buttons", { tag: ["@task"] }, () => {
   test("Stop button completes a paused task", async ({ stubTask }) => {
     const { page } = stubTask;
 
-    await stubTask.createAndNavigate("stop task", stubScenario(
-      emitText("Processing..."),
-      onInput("next"),
-      idle(),
-    ));
+    await stubTask.createAndNavigate(
+      "stop task",
+      stubScenario(emitText("Processing..."), onInput("next"), idle()),
+    );
     await runScenarioToCompletion(page);
 
     // Task is now paused — Resume confirms paused state
-    await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible({
+      timeout: 5_000,
+    });
 
     // Click Stop (should kill active sessions + mark task complete)
     await page.getByRole("button", { name: "Stop", exact: true }).click();
@@ -39,46 +35,54 @@ test.describe("Task Stop & Pause buttons", { tag: ["@task"] }, () => {
     await expect(page.getByText("Task completed")).toBeVisible({ timeout: 10_000 });
 
     // Delete button should be visible (complete state actions)
-    await expect(page.getByRole("button", { name: "Delete", exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("button", { name: "Delete", exact: true })).toBeVisible({
+      timeout: 5_000,
+    });
   });
 
   test("paused state shows Stop and Resume buttons", async ({ stubTask }) => {
     const { page } = stubTask;
 
     // Scenario with just an idle step — task goes to paused immediately
-    await stubTask.createAndNavigate("pause task", stubScenario(
-      emitText("Working..."),
-      idle(),
-    ));
+    await stubTask.createAndNavigate("pause task", stubScenario(emitText("Working..."), idle()));
 
     // Start the task — the scenario transitions to idle, causing paused state
     await page.getByTestId("task-header-start").click();
 
     // Wait for the task to reach paused state (Resume only appears in paused)
-    await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
 
     // Stop and Delete buttons should also be visible
-    await expect(page.getByRole("button", { name: "Stop", exact: true })).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByRole("button", { name: "Delete", exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("button", { name: "Stop", exact: true })).toBeVisible({
+      timeout: 5_000,
+    });
+    await expect(page.getByRole("button", { name: "Delete", exact: true })).toBeVisible({
+      timeout: 5_000,
+    });
   });
 
   test("paused task can be resumed", async ({ stubTask }) => {
     const { page } = stubTask;
 
-    await stubTask.createAndNavigate("resume task", stubScenario(
-      emitText("Processing..."),
-      onInput("next"),
-      idle(),
-    ));
+    await stubTask.createAndNavigate(
+      "resume task",
+      stubScenario(emitText("Processing..."), onInput("next"), idle()),
+    );
     await runScenarioToCompletion(page);
 
     // Task is paused — Resume button should be visible
-    await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible({
+      timeout: 5_000,
+    });
 
     // Resume the task
     await page.getByRole("button", { name: "Resume", exact: true }).click();
 
     // Task should go back to working/paused — Stop button reappears
-    await expect(page.getByRole("button", { name: "Stop", exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Stop", exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });

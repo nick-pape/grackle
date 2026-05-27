@@ -29,7 +29,9 @@ export const MockTokensDisplayed: Story = {
     // Targets should be shown
     await expect(canvas.getByText("ANTHROPIC_API_KEY")).toBeInTheDocument();
     await expect(canvas.getByText("GITHUB_TOKEN")).toBeInTheDocument();
-    await expect(canvas.getByText("/home/user/.config/gcloud/credentials.json")).toBeInTheDocument();
+    await expect(
+      canvas.getByText("/home/user/.config/gcloud/credentials.json"),
+    ).toBeInTheDocument();
   },
 };
 

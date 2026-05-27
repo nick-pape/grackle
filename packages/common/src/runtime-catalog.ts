@@ -61,7 +61,7 @@ export const RUNTIME_CATALOG: Readonly<Record<string, RuntimeCatalogEntry>> = {
     ],
     install: { packages: { "@anthropic-ai/claude-agent-sdk": "^0.2.50" } },
   },
-  "copilot": {
+  copilot: {
     displayName: "GitHub Copilot",
     description: "GitHub Copilot via the Copilot SDK.",
     models: [{ id: "gpt-4o", name: "GPT-4o", provider: "copilot" }],
@@ -70,13 +70,13 @@ export const RUNTIME_CATALOG: Readonly<Record<string, RuntimeCatalogEntry>> = {
       needsJsonRpcHook: true,
     },
   },
-  "codex": {
+  codex: {
     displayName: "Codex",
     description: "OpenAI Codex via the Codex SDK.",
     models: [{ id: "o3", name: "OpenAI o3", provider: "codex" }],
     install: { packages: { "@openai/codex-sdk": "^0.111.0" } },
   },
-  "goose": {
+  goose: {
     displayName: "Goose",
     description: "Block Goose via the Agent Client Protocol (experimental).",
     models: [],
@@ -86,7 +86,9 @@ export const RUNTIME_CATALOG: Readonly<Record<string, RuntimeCatalogEntry>> = {
     displayName: "Codex (ACP)",
     description: "OpenAI Codex via the Agent Client Protocol (experimental).",
     models: [],
-    install: { packages: { "@agentclientprotocol/sdk": "^0.16.1", "@zed-industries/codex-acp": "^0.10.0" } },
+    install: {
+      packages: { "@agentclientprotocol/sdk": "^0.16.1", "@zed-industries/codex-acp": "^0.10.0" },
+    },
   },
   "copilot-acp": {
     displayName: "Copilot (ACP)",
@@ -98,15 +100,20 @@ export const RUNTIME_CATALOG: Readonly<Record<string, RuntimeCatalogEntry>> = {
     displayName: "Claude Code (ACP)",
     description: "Claude Code via the Agent Client Protocol (experimental).",
     models: [],
-    install: { packages: { "@agentclientprotocol/sdk": "^0.16.1", "@zed-industries/claude-agent-acp": "^0.22.0" } },
+    install: {
+      packages: {
+        "@agentclientprotocol/sdk": "^0.16.1",
+        "@zed-industries/claude-agent-acp": "^0.22.0",
+      },
+    },
   },
-  "genaiscript": {
+  genaiscript: {
     displayName: "GenAIScript",
     description: "GenAIScript CLI scripting runtime.",
     models: [],
-    install: { packages: { "genaiscript": "^2.5.1" } },
+    install: { packages: { genaiscript: "^2.5.1" } },
   },
-  "stub": {
+  stub: {
     displayName: "Stub",
     description: "In-process test stub runtime.",
     models: [],

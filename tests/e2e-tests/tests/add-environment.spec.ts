@@ -9,7 +9,10 @@ test.describe("Add Environment — UI Form", { tag: ["@environment"] }, () => {
     await appPage.locator('[data-testid="sidebar-tab-environments"]').click();
   });
 
-  test("add environment via UI form creates environment in server", async ({ appPage, grackle: { client } }) => {
+  test("add environment via UI form creates environment in server", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     // Switch to Environments tab, open form

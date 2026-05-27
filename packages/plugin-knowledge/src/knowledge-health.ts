@@ -54,9 +54,7 @@ export interface KnowledgeReadinessCheck {
  * Logs only on state transitions (healthy to unhealthy or vice versa) to
  * avoid log flooding during sustained outages.
  */
-export function createKnowledgeHealthPhase(
-  deps: KnowledgeHealthPhaseDeps,
-): ReconciliationPhase {
+export function createKnowledgeHealthPhase(deps: KnowledgeHealthPhaseDeps): ReconciliationPhase {
   return {
     name: "knowledge-health",
     execute: async (): Promise<void> => {

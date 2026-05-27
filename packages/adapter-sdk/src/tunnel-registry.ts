@@ -20,11 +20,17 @@ export function registerTunnel(
   const existing = tunnelMap.get(environmentId);
   if (existing) {
     existing.tunnel.close().catch((err) => {
-      logger.warn({ err, environmentId }, "Failed to close existing tunnel before registering new one");
+      logger.warn(
+        { err, environmentId },
+        "Failed to close existing tunnel before registering new one",
+      );
     });
     if (existing.reverseTunnel) {
       existing.reverseTunnel.close().catch((err) => {
-        logger.warn({ err, environmentId }, "Failed to close existing reverse tunnel before registering new one");
+        logger.warn(
+          { err, environmentId },
+          "Failed to close existing reverse tunnel before registering new one",
+        );
       });
     }
   }

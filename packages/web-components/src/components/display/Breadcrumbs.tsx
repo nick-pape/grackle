@@ -25,11 +25,7 @@ export function Breadcrumbs({ segments }: BreadcrumbsProps): JSX.Element {
                 </span>
               )}
               {segment.url && !isLast ? (
-                <Link
-                  className={styles.link}
-                  to={segment.url}
-                  title={segment.label}
-                >
+                <Link className={styles.link} to={segment.url} title={segment.label}>
                   {segment.label}
                 </Link>
               ) : (

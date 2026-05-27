@@ -9,19 +9,22 @@ test.describe("Settings Page", { tag: ["@settings"] }, () => {
 
     // Should redirect to /settings/credentials (default settings tab)
     await expect(page).toHaveURL(/\/settings\/credentials/);
-    await expect(page.getByRole("tab", { name: "Credentials" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("tab", { name: "Credentials" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 
-  test("settings page renders token section after clicking Credentials tab", async ({ appPage }) => {
+  test("settings page renders token section after clicking Credentials tab", async ({
+    appPage,
+  }) => {
     const page = appPage;
 
     await goToSettings(appPage);
     await page.getByRole("tab", { name: "Credentials" }).click();
 
     await expect(page.getByRole("heading", { name: "Credential Providers" })).toBeVisible();
-    await expect(
-      page.getByText("API tokens are auto-pushed to environments"),
-    ).toBeVisible();
+    await expect(page.getByText("API tokens are auto-pushed to environments")).toBeVisible();
   });
 
   test("theme selection updates document theme and persists across reload", async ({ appPage }) => {
@@ -36,15 +39,16 @@ test.describe("Settings Page", { tag: ["@settings"] }, () => {
     await lightToggle.click();
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "grackle-light");
-    await expect.poll(async () => {
-      return page.evaluate(() => localStorage.getItem("grackle-theme"));
-    }).toBe("grackle-light");
+    await expect
+      .poll(async () => {
+        return page.evaluate(() => localStorage.getItem("grackle-theme"));
+      })
+      .toBe("grackle-light");
 
     await page.reload();
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
+    await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
+      timeout: 10_000,
+    });
     await goToSettings(appPage);
     await page.getByRole("tab", { name: "Appearance" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "grackle-light");
@@ -98,7 +102,9 @@ test.describe("Settings Page", { tag: ["@settings"] }, () => {
     await expect(page.getByText("Delete Token?")).not.toBeVisible({ timeout: 5_000 });
 
     // Token should disappear
-    await expect(page.getByText("ui-delete-test", { exact: true })).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("ui-delete-test", { exact: true })).not.toBeVisible({
+      timeout: 5_000,
+    });
   });
 
   // "add token with file type shows file path field" removed — field switching covered by TokensPanel.stories.tsx (TypeSelectorSwitchesFields).
@@ -117,7 +123,9 @@ test.describe("Settings Page", { tag: ["@settings"] }, () => {
     await page.locator("button", { hasText: "Add Token" }).click();
 
     // Wait for token to appear in list
-    await expect(page.getByText("clear-test-token", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("clear-test-token", { exact: true })).toBeVisible({
+      timeout: 5_000,
+    });
 
     // Form fields should be cleared
     await expect(nameInput).toHaveValue("");
@@ -154,6 +162,9 @@ test.describe("Settings Page", { tag: ["@settings"] }, () => {
 
     await page.goto("/settings/tokens");
     await expect(page).toHaveURL(/\/settings\/credentials/);
-    await expect(page.getByRole("tab", { name: "Credentials" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("tab", { name: "Credentials" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 });

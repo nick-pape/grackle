@@ -2,21 +2,47 @@ import { GrackleProvider } from "./context/GrackleContext.js";
 import { ManifestProvider, useManifest } from "./context/ManifestContext.js";
 import { buildTabs } from "./plugin-registry.js";
 import {
-  ToastProvider, ThemeProvider, SidebarProvider,
-  StatusBar, AppNav, Sidebar, BottomStatusBar,
-  ToastContainer, SplashScreen, DemoBanner,
+  ToastProvider,
+  ThemeProvider,
+  SidebarProvider,
+  StatusBar,
+  AppNav,
+  Sidebar,
+  BottomStatusBar,
+  ToastContainer,
+  SplashScreen,
+  DemoBanner,
   MockGrackleProvider,
-  useSidebarContent, useToast,
-  sessionUrl, useAppNavigate,
+  useSidebarContent,
+  useToast,
+  sessionUrl,
+  useAppNavigate,
   type AppTab,
 } from "@grackle-ai/web-components";
-import { useCallback, useEffect, useState, Suspense, lazy, type LazyExoticComponent, type JSX } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  Suspense,
+  lazy,
+  type LazyExoticComponent,
+  type JSX,
+} from "react";
 import { useGrackle } from "./context/GrackleContext.js";
 import { useEnvironmentToasts } from "./hooks/useEnvironmentToasts.js";
 import { useEnvironmentOperationToasts } from "./hooks/useEnvironmentOperationToasts.js";
 import { useTaskToasts } from "./hooks/useTaskToasts.js";
 import { AnimatePresence, motion } from "motion/react";
-import { BrowserRouter, HashRouter, Routes, Route, Navigate, Outlet, useLocation, useParams } from "react-router";
+import {
+  BrowserRouter,
+  HashRouter,
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+  useLocation,
+  useParams,
+} from "react-router";
 import { EmptyPage, TasksEmptyPage, EnvironmentsEmptyPage } from "./pages/EmptyPage.js";
 import { ChatPage } from "./pages/ChatPage.js";
 import { CoordinationPage } from "./pages/CoordinationPage.js";
@@ -42,12 +68,19 @@ import { SettingsAboutTab } from "./pages/settings/SettingsAboutTab.js";
 import { SettingsShortcutsTab } from "./pages/settings/SettingsShortcutsTab.js";
 import { SettingsPluginsTab } from "./pages/settings/SettingsPluginsTab.js";
 import { GlobalShortcuts } from "./components/layout/GlobalShortcuts.js";
-import { WithTaskSidebar, WithEnvironmentSidebar, WithSettingsSidebar, WithKnowledgeSidebar } from "./components/layout/WithSidebar.js";
+import {
+  WithTaskSidebar,
+  WithEnvironmentSidebar,
+  WithSettingsSidebar,
+  WithKnowledgeSidebar,
+} from "./components/layout/WithSidebar.js";
 import { SetupWizard } from "./pages/SetupWizard.js";
 import styles from "./App.module.scss";
 
 // Lazy-loaded to keep the main bundle under the chunk size limit
-const KnowledgePage: LazyExoticComponent<() => JSX.Element> = lazy(() => import("./pages/KnowledgePage.js").then((m) => ({ default: m.KnowledgePage })));
+const KnowledgePage: LazyExoticComponent<() => JSX.Element> = lazy(() =>
+  import("./pages/KnowledgePage.js").then((m) => ({ default: m.KnowledgePage })),
+);
 
 /** Build-time flag set when producing a static demo build (see vite.config.ts). */
 declare const __DEMO_MODE__: boolean;
@@ -57,11 +90,17 @@ declare const __BASE_URL__: string;
 
 /** Whether the app is running in mock mode (`?mock` query parameter or demo build). */
 const IS_MOCK_MODE: boolean =
-  __DEMO_MODE__ || (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("mock"));
+  __DEMO_MODE__ ||
+  (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("mock"));
 
 /** Inner layout body that conditionally renders the sidebar based on context content. */
 function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
-  const { connectionStatus, environments: { environments }, sessions: { sessions }, tasks: { tasks } } = useGrackle();
+  const {
+    connectionStatus,
+    environments: { environments },
+    sessions: { sessions },
+    tasks: { tasks },
+  } = useGrackle();
   const { toasts, dismissToast } = useToast();
   const location = useLocation();
   const sidebarContent = useSidebarContent();
@@ -72,7 +111,9 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
   const toggleSidebar = useCallback(() => setSidebarOpen((prev) => !prev), []);
 
   // Auto-close sidebar on navigation (mobile drawer)
-  useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
 
   // Close sidebar on Escape key
   useEffect(() => {
@@ -85,19 +126,24 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
       }
     };
     document.addEventListener("keydown", handleKeyDown);
-    return () => { document.removeEventListener("keydown", handleKeyDown); };
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [sidebarOpen]);
 
   return (
     <>
-      <StatusBar connectionStatus={connectionStatus} environments={environments} sessions={sessions} onToggleSidebar={hasSidebar ? toggleSidebar : undefined} sidebarOpen={sidebarOpen} />
+      <StatusBar
+        connectionStatus={connectionStatus}
+        environments={environments}
+        sessions={sessions}
+        onToggleSidebar={hasSidebar ? toggleSidebar : undefined}
+        sidebarOpen={sidebarOpen}
+      />
       <AppNav tabs={tabs} />
       <div className={styles.body}>
         {hasSidebar && (
-          <div
-            className={styles.sidebarWrapper}
-            data-sidebar-open={sidebarOpen}
-          >
+          <div className={styles.sidebarWrapper} data-sidebar-open={sidebarOpen}>
             <Sidebar content={sidebarContent} />
           </div>
         )}
@@ -127,12 +173,26 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
 
 /** Application shell layout with StatusBar, Sidebar, Outlet, and BottomStatusBar. */
 function AppShell(): JSX.Element {
-  const { sessions: { lastSpawnedId }, environments: { environments, operationError: environmentOperationError, clearOperationError: clearEnvironmentOperationError }, tasks: { tasks }, connectionStatus, onboardingCompleted } = useGrackle();
+  const {
+    sessions: { lastSpawnedId },
+    environments: {
+      environments,
+      operationError: environmentOperationError,
+      clearOperationError: clearEnvironmentOperationError,
+    },
+    tasks: { tasks },
+    connectionStatus,
+    onboardingCompleted,
+  } = useGrackle();
   const { pluginNames } = useManifest();
   const { showToast } = useToast();
   useEnvironmentToasts(environments, showToast);
   useTaskToasts(tasks, showToast);
-  useEnvironmentOperationToasts(environmentOperationError, clearEnvironmentOperationError, showToast);
+  useEnvironmentOperationToasts(
+    environmentOperationError,
+    clearEnvironmentOperationError,
+    showToast,
+  );
   const navigate = useAppNavigate();
 
   const location = useLocation();
@@ -171,7 +231,9 @@ function AppShell(): JSX.Element {
  */
 function WorkspaceRedirect(): JSX.Element | undefined {
   const { workspaceId } = useParams<{ workspaceId: string }>();
-  const { workspaces: { workspaces } } = useGrackle();
+  const {
+    workspaces: { workspaces },
+  } = useGrackle();
   const location = useLocation();
 
   const workspace = workspaces.find((w) => w.id === workspaceId);
@@ -224,7 +286,14 @@ function AppRoutes(): JSX.Element {
         {/* Knowledge sidebar (knowledge plugin) */}
         {hasKnowledge && (
           <Route element={<WithKnowledgeSidebar />}>
-            <Route path="knowledge" element={<Suspense fallback={<SplashScreen />}><KnowledgePage /></Suspense>} />
+            <Route
+              path="knowledge"
+              element={
+                <Suspense fallback={<SplashScreen />}>
+                  <KnowledgePage />
+                </Suspense>
+              }
+            />
           </Route>
         )}
 
@@ -246,11 +315,26 @@ function AppRoutes(): JSX.Element {
           <Route path="workspaces/:workspaceId" element={<WorkspaceRedirect />} />
           <Route path="workspaces/:workspaceId/tasks/:taskId" element={<WorkspaceRedirect />} />
           <Route path="workspaces/:workspaceId/tasks/:taskId/*" element={<WorkspaceRedirect />} />
-          <Route path="environments/:environmentId/workspaces/:workspaceId" element={<WorkspacePage />} />
-          <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/new" element={<NewTaskPage />} />
-          <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId" element={<TaskPage />} />
-          <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/edit" element={<TaskPage />} />
-          <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/stream" element={<TaskPage />} />
+          <Route
+            path="environments/:environmentId/workspaces/:workspaceId"
+            element={<WorkspacePage />}
+          />
+          <Route
+            path="environments/:environmentId/workspaces/:workspaceId/tasks/new"
+            element={<NewTaskPage />}
+          />
+          <Route
+            path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId"
+            element={<TaskPage />}
+          />
+          <Route
+            path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/edit"
+            element={<TaskPage />}
+          />
+          <Route
+            path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/stream"
+            element={<TaskPage />}
+          />
           <Route path="environments" element={<EnvironmentsPage />}>
             <Route index element={<EnvironmentsEmptyPage />} />
             <Route path="new" element={<NewEnvironmentPage />} />

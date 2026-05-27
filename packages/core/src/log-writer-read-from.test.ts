@@ -45,7 +45,10 @@ describe("readLogFrom (incremental byte-offset reader)", () => {
     expect(second.content).toBe(`${line(2)}\n${line(3)}`);
     expect(second.nextOffset).toBeGreaterThan(first.nextOffset);
     // A third call with no new data yields nothing and a stable offset.
-    expect(readLogFrom(dir, second.nextOffset)).toEqual({ content: "", nextOffset: second.nextOffset });
+    expect(readLogFrom(dir, second.nextOffset)).toEqual({
+      content: "",
+      nextOffset: second.nextOffset,
+    });
   });
 
   it("does not consume a trailing partial (newline-less) line", () => {

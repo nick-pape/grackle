@@ -50,11 +50,17 @@ export interface RootTaskBootDeps {
   /** Get the most recent session for a task (by startedAt DESC). */
   getLatestSessionForTask: (taskId: string) => SessionRow | undefined;
   /** Compute effective task status from stored status + session history. */
-  computeTaskStatus: (storedStatus: string, sessions: Pick<SessionRow, "id" | "status" | "startedAt">[]) => TaskStatusResult;
+  computeTaskStatus: (
+    storedStatus: string,
+    sessions: Pick<SessionRow, "id" | "status" | "startedAt">[],
+  ) => TaskStatusResult;
   /** Find the first connected environment, preferring local. */
   findFirstConnectedEnvironment: () => EnvironmentRow | undefined;
   /** Start a new agent session for a task. Returns error string on failure, undefined on success. */
-  startTaskSession: (task: TaskRow, options?: { environmentId?: string; notes?: string }) => Promise<string | undefined>;
+  startTaskSession: (
+    task: TaskRow,
+    options?: { environmentId?: string; notes?: string },
+  ) => Promise<string | undefined>;
   /** Reanimate a terminal session by resuming it on PowerLine. Throws on failure. */
   reanimateAgent: (sessionId: string) => SessionRow;
   /** Whether onboarding is complete. Boot is deferred until the user has chosen a runtime (#1031). */
@@ -114,20 +120,27 @@ export function createRootTaskBoot(deps: RootTaskBootDeps): () => Promise<void> 
  * @param deps - Injected dependencies for testability.
  * @returns A Disposable that unsubscribes the handler.
  */
-export function createRootTaskBootSubscriber(ctx: PluginContext, deps: RootTaskBootDeps): Disposable {
+export function createRootTaskBootSubscriber(
+  ctx: PluginContext,
+  deps: RootTaskBootDeps,
+): Disposable {
   const bootState = createInitialState();
   const tryBoot = createRootTaskBootHandler(deps, bootState);
 
   const unsubscribe = ctx.subscribe((event: GrackleEvent) => {
     if (event.type === "environment.changed") {
-      tryBoot().catch(() => { /* logged inside */ });
+      tryBoot().catch(() => {
+        /* logged inside */
+      });
     }
     // Also try when onboarding completes — the environment is already
     // connected but boot was deferred until the user chose a runtime.
     if (event.type === "setting.changed") {
       const payload = event.payload as { key?: string; value?: string };
       if (payload.key === "onboarding_completed" && payload.value === "true") {
-        tryBoot().catch(() => { /* logged inside */ });
+        tryBoot().catch(() => {
+          /* logged inside */
+        });
       }
     }
   });

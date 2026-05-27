@@ -43,11 +43,16 @@ function Runtime(): JSX.Element {
     capabilities: {},
     onAppCreated: (createdApp): void => {
       createdApp.ontoolinput = (params): void => {
-        const args = (params.arguments ?? {}) as { source?: unknown; props?: unknown; components?: unknown };
+        const args = (params.arguments ?? {}) as {
+          source?: unknown;
+          props?: unknown;
+          components?: unknown;
+        };
         const components: RenderDependency[] = Array.isArray(args.components)
           ? (args.components as unknown[]).filter(
               (d): d is RenderDependency =>
-                d !== null && typeof d === "object" &&
+                d !== null &&
+                typeof d === "object" &&
                 typeof (d as RenderDependency).name === "string" &&
                 typeof (d as RenderDependency).body === "string",
             )
@@ -68,7 +73,9 @@ function Runtime(): JSX.Element {
   useHostStyleVariables(app, app?.getHostContext());
 
   if (error) {
-    return <div style={{ color: "var(--color-text-danger, #c00)" }}>Runtime error: {error.message}</div>;
+    return (
+      <div style={{ color: "var(--color-text-danger, #c00)" }}>Runtime error: {error.message}</div>
+    );
   }
   if (!input) {
     return <div style={{ opacity: 0.6, padding: "0.5rem" }}>Loading component…</div>;

@@ -12,10 +12,12 @@ type Story = StoryObj<typeof meta>;
 
 /** Workspace page renders with workspace name and tasks tab visible. */
 export const WorkspaceWithTasks: Story = {
-  decorators: [withMockGrackleRoute(
-    ["/environments/env-local-01/workspaces/proj-alpha"],
-    "/environments/:environmentId/workspaces/:workspaceId",
-  )],
+  decorators: [
+    withMockGrackleRoute(
+      ["/environments/env-local-01/workspaces/proj-alpha"],
+      "/environments/:environmentId/workspaces/:workspaceId",
+    ),
+  ],
   play: async ({ canvas }) => {
     // Workspace name should be visible
     await expect(canvas.getByTestId("workspace-name")).toBeInTheDocument();
@@ -27,10 +29,12 @@ export const WorkspaceWithTasks: Story = {
 
 /** Metadata section shows Description, Repository, Environments, and Persona fields. */
 export const MetadataSection: Story = {
-  decorators: [withMockGrackleRoute(
-    ["/environments/env-local-01/workspaces/proj-alpha"],
-    "/environments/:environmentId/workspaces/:workspaceId",
-  )],
+  decorators: [
+    withMockGrackleRoute(
+      ["/environments/env-local-01/workspaces/proj-alpha"],
+      "/environments/:environmentId/workspaces/:workspaceId",
+    ),
+  ],
   play: async ({ canvas }) => {
     // The metadata panel should be visible by default
     const meta = canvas.getByTestId("workspace-meta");
@@ -46,10 +50,12 @@ export const MetadataSection: Story = {
 
 /** Linked environments section shows chips for each linked environment. */
 export const LinkedEnvironments: Story = {
-  decorators: [withMockGrackleRoute(
-    ["/environments/env-local-01/workspaces/proj-alpha"],
-    "/environments/:environmentId/workspaces/:workspaceId",
-  )],
+  decorators: [
+    withMockGrackleRoute(
+      ["/environments/env-local-01/workspaces/proj-alpha"],
+      "/environments/:environmentId/workspaces/:workspaceId",
+    ),
+  ],
   play: async ({ canvas }) => {
     // proj-alpha has linkedEnvironmentIds: ["env-docker-01"] in mock data
     const linkedSection = canvas.getByTestId("linked-environments");
@@ -61,10 +67,12 @@ export const LinkedEnvironments: Story = {
 
 /** Workspace with one linked environment shows the chip and the unlink button is disabled. */
 export const NoLinkedEnvironments: Story = {
-  decorators: [withMockGrackleRoute(
-    ["/environments/env-docker-01/workspaces/proj-beta"],
-    "/environments/:environmentId/workspaces/:workspaceId",
-  )],
+  decorators: [
+    withMockGrackleRoute(
+      ["/environments/env-docker-01/workspaces/proj-beta"],
+      "/environments/:environmentId/workspaces/:workspaceId",
+    ),
+  ],
   play: async ({ canvas }) => {
     // proj-beta has linkedEnvironmentIds: ["env-docker-01"] — only one env, so unlink is disabled
     const linkedSection = canvas.getByTestId("linked-environments");
@@ -78,10 +86,12 @@ export const NoLinkedEnvironments: Story = {
 
 /** Linked environment chip has a dismiss (unlink) button. */
 export const UnlinkButtonOnChip: Story = {
-  decorators: [withMockGrackleRoute(
-    ["/environments/env-local-01/workspaces/proj-alpha"],
-    "/environments/:environmentId/workspaces/:workspaceId",
-  )],
+  decorators: [
+    withMockGrackleRoute(
+      ["/environments/env-local-01/workspaces/proj-alpha"],
+      "/environments/:environmentId/workspaces/:workspaceId",
+    ),
+  ],
   play: async ({ canvas }) => {
     // proj-alpha has env-docker-01 linked
     const unlinkButton = canvas.getByTestId("unlink-env-env-docker-01");
@@ -91,10 +101,12 @@ export const UnlinkButtonOnChip: Story = {
 
 /** Link environment dropdown shows available environments. */
 export const LinkEnvironmentDropdown: Story = {
-  decorators: [withMockGrackleRoute(
-    ["/environments/env-docker-01/workspaces/proj-beta"],
-    "/environments/:environmentId/workspaces/:workspaceId",
-  )],
+  decorators: [
+    withMockGrackleRoute(
+      ["/environments/env-docker-01/workspaces/proj-beta"],
+      "/environments/:environmentId/workspaces/:workspaceId",
+    ),
+  ],
   play: async ({ canvas }) => {
     // proj-beta has no linked envs and primary is env-docker-01
     // Should show a link dropdown with available environments
@@ -105,10 +117,12 @@ export const LinkEnvironmentDropdown: Story = {
 
 /** Clicking unlink removes the linked environment chip; remaining chip stays. */
 export const UnlinkRemovesChip: Story = {
-  decorators: [withMockGrackleRoute(
-    ["/environments/env-local-01/workspaces/proj-alpha"],
-    "/environments/:environmentId/workspaces/:workspaceId",
-  )],
+  decorators: [
+    withMockGrackleRoute(
+      ["/environments/env-local-01/workspaces/proj-alpha"],
+      "/environments/:environmentId/workspaces/:workspaceId",
+    ),
+  ],
   play: async ({ canvas }) => {
     // proj-alpha starts with env-local-01 and env-docker-01 linked
     await expect(canvas.getByTestId("linked-env-env-docker-01")).toBeInTheDocument();
@@ -127,10 +141,12 @@ export const UnlinkRemovesChip: Story = {
 
 /** Selecting error-env from the link dropdown shows an error message. */
 export const LinkErrorShowsMessage: Story = {
-  decorators: [withMockGrackleRoute(
-    ["/environments/env-docker-01/workspaces/proj-beta"],
-    "/environments/:environmentId/workspaces/:workspaceId",
-  )],
+  decorators: [
+    withMockGrackleRoute(
+      ["/environments/env-docker-01/workspaces/proj-beta"],
+      "/environments/:environmentId/workspaces/:workspaceId",
+    ),
+  ],
   play: async ({ canvas }) => {
     // Select "error-env" from the link dropdown to trigger a mock error
     const linkSelect = canvas.getByTestId("link-env-select");
@@ -140,16 +156,20 @@ export const LinkErrorShowsMessage: Story = {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       expect(canvas.getByTestId("link-operation-error")).toBeInTheDocument();
     });
-    await expect(canvas.getByTestId("link-operation-error")).toHaveTextContent("Failed to link environment");
+    await expect(canvas.getByTestId("link-operation-error")).toHaveTextContent(
+      "Failed to link environment",
+    );
   },
 };
 
 /** Clicking the error message dismisses it. */
 export const LinkErrorDismissible: Story = {
-  decorators: [withMockGrackleRoute(
-    ["/environments/env-docker-01/workspaces/proj-beta"],
-    "/environments/:environmentId/workspaces/:workspaceId",
-  )],
+  decorators: [
+    withMockGrackleRoute(
+      ["/environments/env-docker-01/workspaces/proj-beta"],
+      "/environments/:environmentId/workspaces/:workspaceId",
+    ),
+  ],
   play: async ({ canvas }) => {
     // Trigger the error first
     const linkSelect = canvas.getByTestId("link-env-select");
@@ -169,10 +189,12 @@ export const LinkErrorDismissible: Story = {
 
 /** Selecting from the link dropdown adds a linked environment chip. */
 export const LinkAddsChip: Story = {
-  decorators: [withMockGrackleRoute(
-    ["/environments/env-docker-01/workspaces/proj-beta"],
-    "/environments/:environmentId/workspaces/:workspaceId",
-  )],
+  decorators: [
+    withMockGrackleRoute(
+      ["/environments/env-docker-01/workspaces/proj-beta"],
+      "/environments/:environmentId/workspaces/:workspaceId",
+    ),
+  ],
   play: async ({ canvas }) => {
     // proj-beta starts with env-docker-01 linked; env-local-01 is available to link
     await expect(canvas.getByTestId("linked-env-env-docker-01")).toBeInTheDocument();

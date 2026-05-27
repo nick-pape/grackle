@@ -24,7 +24,9 @@ describe("URL builder functions", () => {
 
   it("workspaceUrl encodes workspaceId under environments", () => {
     expect(workspaceUrl("proj-1", "env-1")).toBe("/environments/env-1/workspaces/proj-1");
-    expect(workspaceUrl("proj with space", "env-1")).toBe("/environments/env-1/workspaces/proj%20with%20space");
+    expect(workspaceUrl("proj with space", "env-1")).toBe(
+      "/environments/env-1/workspaces/proj%20with%20space",
+    );
   });
 
   it("taskUrl without tab produces base path", () => {
@@ -41,8 +43,12 @@ describe("URL builder functions", () => {
   });
 
   it("taskUrl with workspace and environment produces environment-scoped path", () => {
-    expect(taskUrl("task-1", undefined, "ws-1", "env-1")).toBe("/environments/env-1/workspaces/ws-1/tasks/task-1");
-    expect(taskUrl("task-1", "stream", "ws-1", "env-1")).toBe("/environments/env-1/workspaces/ws-1/tasks/task-1/stream");
+    expect(taskUrl("task-1", undefined, "ws-1", "env-1")).toBe(
+      "/environments/env-1/workspaces/ws-1/tasks/task-1",
+    );
+    expect(taskUrl("task-1", "stream", "ws-1", "env-1")).toBe(
+      "/environments/env-1/workspaces/ws-1/tasks/task-1/stream",
+    );
   });
 
   it("taskUrl with only workspaceId (no environmentId) falls back to legacy workspace path", () => {
@@ -54,7 +60,9 @@ describe("URL builder functions", () => {
   });
 
   it("taskEditUrl with workspace and environment produces scoped path", () => {
-    expect(taskEditUrl("task-1", "ws-1", "env-1")).toBe("/environments/env-1/workspaces/ws-1/tasks/task-1/edit");
+    expect(taskEditUrl("task-1", "ws-1", "env-1")).toBe(
+      "/environments/env-1/workspaces/ws-1/tasks/task-1/edit",
+    );
   });
 
   it("newTaskUrl with no params produces base path", () => {
@@ -71,8 +79,12 @@ describe("URL builder functions", () => {
   });
 
   it("newTaskUrl with environment produces scoped path", () => {
-    expect(newTaskUrl("ws-1", undefined, "env-1")).toBe("/environments/env-1/workspaces/ws-1/tasks/new");
-    expect(newTaskUrl("ws-1", "parent-1", "env-1")).toBe("/environments/env-1/workspaces/ws-1/tasks/new?parent=parent-1");
+    expect(newTaskUrl("ws-1", undefined, "env-1")).toBe(
+      "/environments/env-1/workspaces/ws-1/tasks/new",
+    );
+    expect(newTaskUrl("ws-1", "parent-1", "env-1")).toBe(
+      "/environments/env-1/workspaces/ws-1/tasks/new?parent=parent-1",
+    );
   });
 
   it("newChatUrl includes env param", () => {
@@ -93,5 +105,4 @@ describe("URL builder functions", () => {
     expect(personaUrl("p-1")).toBe("/settings/personas/p-1");
     expect(personaUrl("has space")).toBe("/settings/personas/has%20space");
   });
-
 });

@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import http from "node:http";
 import { createHash } from "node:crypto";
-import { SESSION_COOKIE_NAME, clearSessions, clearPairing, generatePairingCode, clearOAuthState } from "@grackle-ai/auth";
+import {
+  SESSION_COOKIE_NAME,
+  clearSessions,
+  clearPairing,
+  generatePairingCode,
+  clearOAuthState,
+} from "@grackle-ai/auth";
 
 // Mock logger
 vi.mock("./logger.js", () => ({
@@ -54,7 +60,9 @@ function request(
       },
       (res) => {
         let body = "";
-        res.on("data", (chunk: Buffer) => { body += chunk.toString(); });
+        res.on("data", (chunk: Buffer) => {
+          body += chunk.toString();
+        });
         res.on("end", () => resolve({ status: res.statusCode!, headers: res.headers, body }));
       },
     );
@@ -77,12 +85,17 @@ describe("OAuth flow integration", () => {
 
     // Dynamically import modules after mocks are applied
     const {
-      createSession, validateSessionCookie,
+      createSession,
+      validateSessionCookie,
       redeemPairingCode,
-      registerClient, getClient,
-      createAuthorizationCode, consumeAuthorizationCode,
-      createRefreshToken, consumeRefreshToken,
-      createOAuthAccessToken, OAUTH_ACCESS_TOKEN_TTL_MS,
+      registerClient,
+      getClient,
+      createAuthorizationCode,
+      consumeAuthorizationCode,
+      createRefreshToken,
+      consumeRefreshToken,
+      createOAuthAccessToken,
+      OAUTH_ACCESS_TOKEN_TTL_MS,
     } = await import("@grackle-ai/auth");
 
     server = http.createServer(async (req, res) => {
@@ -95,15 +108,17 @@ describe("OAuth flow integration", () => {
       // OAuth Authorization Server Metadata
       if (rawPath === "/.well-known/oauth-authorization-server") {
         res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({
-          issuer: webBaseUrl,
-          authorization_endpoint: `${webBaseUrl}/authorize`,
-          token_endpoint: `${webBaseUrl}/token`,
-          registration_endpoint: `${webBaseUrl}/register`,
-          response_types_supported: ["code"],
-          grant_types_supported: ["authorization_code", "refresh_token"],
-          code_challenge_methods_supported: ["S256"],
-        }));
+        res.end(
+          JSON.stringify({
+            issuer: webBaseUrl,
+            authorization_endpoint: `${webBaseUrl}/authorize`,
+            token_endpoint: `${webBaseUrl}/token`,
+            registration_endpoint: `${webBaseUrl}/register`,
+            response_types_supported: ["code"],
+            grant_types_supported: ["authorization_code", "refresh_token"],
+            code_challenge_methods_supported: ["S256"],
+          }),
+        );
         return;
       }
 
@@ -124,11 +139,13 @@ describe("OAuth flow integration", () => {
         }
         const client = registerClient(parsed.redirect_uris, parsed.client_name);
         res.writeHead(201, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({
-          client_id: client.clientId,
-          redirect_uris: client.redirectUris,
-          client_name: client.clientName,
-        }));
+        res.end(
+          JSON.stringify({
+            client_id: client.clientId,
+            redirect_uris: client.redirectUris,
+            client_name: client.clientName,
+          }),
+        );
         return;
       }
 
@@ -169,7 +186,9 @@ describe("OAuth flow integration", () => {
 
         const buildRedirect = (p: Record<string, string>): string => {
           const qs = new URLSearchParams(p);
-          if (state) { qs.set("state", state); }
+          if (state) {
+            qs.set("state", state);
+          }
           return `${redirectUri}?${qs.toString()}`;
         };
 
@@ -223,7 +242,13 @@ describe("OAuth flow integration", () => {
           const codeVerifier = formData.get("code_verifier") || "";
           const resource = formData.get("resource") || "";
 
-          const record = consumeAuthorizationCode(code, clientId, redirectUri, codeVerifier, resource);
+          const record = consumeAuthorizationCode(
+            code,
+            clientId,
+            redirectUri,
+            codeVerifier,
+            resource,
+          );
           if (!record) {
             res.writeHead(400, { "Content-Type": "application/json" });
             res.end(JSON.stringify({ error: "invalid_grant" }));
@@ -233,12 +258,14 @@ describe("OAuth flow integration", () => {
           const accessToken = createOAuthAccessToken(clientId, resource, MOCK_API_KEY);
           const refreshTokenValue = createRefreshToken(clientId, resource);
           res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({
-            access_token: accessToken,
-            token_type: "Bearer",
-            expires_in: Math.floor(OAUTH_ACCESS_TOKEN_TTL_MS / 1000),
-            refresh_token: refreshTokenValue,
-          }));
+          res.end(
+            JSON.stringify({
+              access_token: accessToken,
+              token_type: "Bearer",
+              expires_in: Math.floor(OAUTH_ACCESS_TOKEN_TTL_MS / 1000),
+              refresh_token: refreshTokenValue,
+            }),
+          );
           return;
         }
 
@@ -254,12 +281,14 @@ describe("OAuth flow integration", () => {
           const accessToken = createOAuthAccessToken(clientId, record.resource, MOCK_API_KEY);
           const newRefreshToken = createRefreshToken(clientId, record.resource);
           res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({
-            access_token: accessToken,
-            token_type: "Bearer",
-            expires_in: Math.floor(OAUTH_ACCESS_TOKEN_TTL_MS / 1000),
-            refresh_token: newRefreshToken,
-          }));
+          res.end(
+            JSON.stringify({
+              access_token: accessToken,
+              token_type: "Bearer",
+              expires_in: Math.floor(OAUTH_ACCESS_TOKEN_TTL_MS / 1000),
+              refresh_token: newRefreshToken,
+            }),
+          );
           return;
         }
 
