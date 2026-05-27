@@ -389,7 +389,15 @@ export class SessionStateManager {
     if (latest.mapperContext) {
       let replayContext: MapperContext;
       try {
-        replayContext = JSON.parse(latest.mapperContext) as MapperContext;
+        const parsed = JSON.parse(latest.mapperContext) as MapperContext;
+        // Normalize fields that may be missing from snapshots written before they were added.
+        // eventIndex defaults to 0 so synthetic IDs (turn-N, tc-N) start fresh rather than NaN.
+        replayContext = {
+          ...parsed,
+          eventIndex: Number.isFinite(parsed.eventIndex) ? parsed.eventIndex : 0,
+          openToolCalls: Array.isArray(parsed.openToolCalls) ? parsed.openToolCalls : [],
+          partCounter: Number.isFinite(parsed.partCounter) ? parsed.partCounter : 0,
+        };
       } catch (err) {
         logger.warn(
           { err, sessionId, seq: latest.seq },

@@ -367,6 +367,7 @@ describe("SessionStateManager", () => {
       turnId: undefined,
       openToolCalls: [],
       partCounter: 0,
+      eventIndex: 0,
       metaAccumulator: {},
     };
     const store = makeTestStore({
