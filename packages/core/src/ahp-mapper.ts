@@ -549,7 +549,6 @@ export function mapAgentEvent(
       }
 
       if (turnId) {
-        const partId = `part-${context.partCounter++}`;
         actions.push({
           type: ActionType.SessionResponsePart,
           turnId,
@@ -558,12 +557,12 @@ export function mapAgentEvent(
             content: content || "",
           },
         });
-        notes.push({
-          index,
-          type: "system",
-          disposition: "mapped",
-          detail: `Mapped to SessionResponsePart(systemNotification, partId=${partId})`,
-        });
+ notes.push({
+           index,
+           type: "system",
+           disposition: "mapped",
+           detail: "Mapped to SessionResponsePart(systemNotification)",
+         });
       } else {
         notes.push({
           index,
