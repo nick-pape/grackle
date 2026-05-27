@@ -72,6 +72,13 @@
       "longName": "--all",
       "description": "Operate on the whole repo instead of just files changed vs origin/main.",
       "associatedCommands": ["format", "format:check"]
+    },
+    {
+      "parameterKind": "string",
+      "longName": "--changed",
+      "argumentName": "BASE_REF",
+      "description": "Operate on files changed vs BASE_REF (e.g. origin/main). Overrides the default base ref.",
+      "associatedCommands": ["format", "format:check"]
     }
   ]
 }
