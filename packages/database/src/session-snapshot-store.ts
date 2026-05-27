@@ -41,8 +41,7 @@ const DEFAULT_SNAPSHOT_LIMIT: number = 10;
  * @throws on database write failure (caller handles the error).
  */
 export function persistSnapshot(snapshot: SnapshotRecord): void {
-  db
-    .insert(sessionSnapshots)
+  db.insert(sessionSnapshots)
     .values({
       seq: snapshot.seq,
       sessionId: snapshot.sessionId,
@@ -60,17 +59,17 @@ export function persistSnapshot(snapshot: SnapshotRecord): void {
 }
 
 /**
-  * Query the latest snapshot for a session, ordered by `seq` descending.
-  *
-  * `seq` stores ULID strings; because ULIDs are time-sorted, a lexicographic
-  * TEXT `DESC` sort correctly returns the most recent checkpoint first.
-  * Returns the newest checkpoint so delta actions can be replayed
-  * from that point forward.
-  *
-  * @param sessionId - The session to query.
-  * @param limit - Max rows to return (default {@link DEFAULT_SNAPSHOT_LIMIT}).
-  * @returns Matching rows, newest first.
-  */
+ * Query the latest snapshot for a session, ordered by `seq` descending.
+ *
+ * `seq` stores ULID strings; because ULIDs are time-sorted, a lexicographic
+ * TEXT `DESC` sort correctly returns the most recent checkpoint first.
+ * Returns the newest checkpoint so delta actions can be replayed
+ * from that point forward.
+ *
+ * @param sessionId - The session to query.
+ * @param limit - Max rows to return (default {@link DEFAULT_SNAPSHOT_LIMIT}).
+ * @returns Matching rows, newest first.
+ */
 export function querySnapshot(
   sessionId: string,
   limit: number = DEFAULT_SNAPSHOT_LIMIT,

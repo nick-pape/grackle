@@ -252,7 +252,11 @@ describe("tool_result", () => {
       type: string;
       turnId: string;
       toolCallId: string;
-      result: { success: boolean; pastTenseMessage: string; content?: Array<{ type: string; text: string }> };
+      result: {
+        success: boolean;
+        pastTenseMessage: string;
+        content?: Array<{ type: string; text: string }>;
+      };
     }>(result.actions, ActionType.SessionToolCallComplete);
     expect(complete.toolCallId).toBe("tc-xyz");
     expect(complete.result.success).toBe(true);
@@ -522,8 +526,16 @@ describe("context mutation", () => {
   it("metaAccumulator persists across events", () => {
     const context = makeContext({ metaAccumulator: {} });
 
-    mapAgentEvent(makeEvent("usage", { content: JSON.stringify({ cost_millicents: 10 }) }), 0, context);
-    mapAgentEvent(makeEvent("usage", { content: JSON.stringify({ cost_millicents: 20 }) }), 1, context);
+    mapAgentEvent(
+      makeEvent("usage", { content: JSON.stringify({ cost_millicents: 10 }) }),
+      0,
+      context,
+    );
+    mapAgentEvent(
+      makeEvent("usage", { content: JSON.stringify({ cost_millicents: 20 }) }),
+      1,
+      context,
+    );
 
     expect(context.metaAccumulator.costMillicents).toBe(30);
   });

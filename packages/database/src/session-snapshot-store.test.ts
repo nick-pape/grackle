@@ -4,11 +4,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 vi.mock("./db.js", async () => await import("./test-db.js"));
 
 import { sqlite } from "./test-db.js";
-import {
-  persistSnapshot,
-  querySnapshot,
-  type SnapshotRecord,
-} from "./session-snapshot-store.js";
+import { persistSnapshot, querySnapshot, type SnapshotRecord } from "./session-snapshot-store.js";
 
 /** Create the session_snapshots table with composite PK. */
 function applySchema(): void {
