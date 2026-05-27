@@ -371,9 +371,7 @@ const MIGRATIONS: Migration[] = [
       // Persist the diagnostic flag so reconstruction can correctly drop diagnostic
       // system events (rather than re-folding them as systemNotification parts).
       if (!actionCols.some((c) => c.name === "diagnostic")) {
-        conn.exec(
-          "ALTER TABLE session_actions ADD COLUMN diagnostic INTEGER NOT NULL DEFAULT 0",
-        );
+        conn.exec("ALTER TABLE session_actions ADD COLUMN diagnostic INTEGER NOT NULL DEFAULT 0");
       }
       // Add mapper_context to session_snapshots for delta-replay context seeding (#1292).
       const snapCols = conn.prepare("PRAGMA table_info(session_snapshots)").all() as Array<{
