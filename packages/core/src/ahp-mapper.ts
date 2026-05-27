@@ -84,8 +84,8 @@ export interface MapperContext {
 export interface MapResult {
   /** AHP StateAction[] produced from this event (all session-specific). */
   actions: StateAction[];
-  /** Notes describing the mapping disposition for each event. */
-  notes: MappingNote[];
+  /** Mapping disposition for this event (always zero or one). */
+  note?: MappingNote;
 }
 
 /** Build an ErrorInfo from a message string. */
@@ -160,7 +160,7 @@ export function mapAgentEvent(
   context: MapperContext,
 ): MapResult {
   const actions: StateAction[] = [];
-  const notes: MappingNote[] = [];
+  let note: MappingNote | undefined;
 
   const { type, content, toolCallId, turnId } = event;
   // Proto string fields default to "", treat empty as undefined
@@ -190,7 +190,7 @@ export function mapAgentEvent(
       // partCounter starts at 0; first response part will be part-0
       context.partCounter = 0;
 
-      notes.push({
+      (note = {
         index,
         type: "turn_started",
         disposition: "mapped",
@@ -209,14 +209,14 @@ export function mapAgentEvent(
         context.turnId = undefined;
         context.openToolCalls = [];
 
-        notes.push({
+        (note = {
           index,
           type: "turn_complete",
           disposition: "mapped",
           detail: `Mapped to SessionTurnComplete (turnId=${turnId})`,
         });
       } else {
-        notes.push({
+        (note = {
           index,
           type: "turn_complete",
           disposition: "dropped",
@@ -229,7 +229,7 @@ export function mapAgentEvent(
     // ─── Dropped: advisory only ────────────────────────────────────
 
     case "input_needed": {
-      notes.push({
+      (note = {
         index,
         type: "input_needed",
         disposition: "dropped",
@@ -243,7 +243,7 @@ export function mapAgentEvent(
     case "text": {
       const turnId = eventTurnId || context.turnId;
       if (!turnId) {
-        notes.push({
+        (note = {
           index,
           type: "text",
           disposition: "dropped",
@@ -263,7 +263,7 @@ export function mapAgentEvent(
         },
       });
 
-      notes.push({
+      (note = {
         index,
         type: "text",
         disposition: "mapped",
@@ -277,7 +277,7 @@ export function mapAgentEvent(
     case "tool_use": {
       const turnId = eventTurnId || context.turnId;
       if (!turnId) {
-        notes.push({
+        (note = {
           index,
           type: "tool_use",
           disposition: "dropped",
@@ -313,7 +313,7 @@ export function mapAgentEvent(
 
       context.openToolCalls.push(toolCallIdValue);
 
-      notes.push({
+      (note = {
         index,
         type: "tool_use",
         disposition: "mapped",
@@ -325,7 +325,7 @@ export function mapAgentEvent(
     case "tool_result": {
       const turnId = eventTurnId || context.turnId;
       if (!turnId) {
-        notes.push({
+        (note = {
           index,
           type: "tool_result",
           disposition: "dropped",
@@ -346,7 +346,7 @@ export function mapAgentEvent(
       }
 
       if (!pairedToolCallId) {
-        notes.push({
+        (note = {
           index,
           type: "tool_result",
           disposition: "dropped",
@@ -391,7 +391,7 @@ export function mapAgentEvent(
         });
       }
 
-      notes.push({
+      (note = {
         index,
         type: "tool_result",
         disposition: "mapped",
@@ -413,7 +413,7 @@ export function mapAgentEvent(
         );
       }
 
-      notes.push({
+      (note = {
         index,
         type: "usage",
         disposition: "carried",
@@ -434,18 +434,19 @@ export function mapAgentEvent(
           turnId,
           error: makeErrorInfo(errorDetail),
         });
-        notes.push({
+        (note = {
           index,
           type: "error",
           disposition: "mapped",
           detail: `Mapped to SessionError (turnId=${turnId})`,
         });
+        context.turnId = undefined;
       } else {
         actions.push({
           type: ActionType.SessionCreationFailed,
           error: makeErrorInfo(errorDetail),
         });
-        notes.push({
+        (note = {
           index,
           type: "error",
           disposition: "mapped",
@@ -470,7 +471,7 @@ export function mapAgentEvent(
               error: makeErrorInfo("Session failed during turn"),
             });
             context.turnId = undefined;
-            notes.push({
+            (note = {
               index,
               type: "status",
               disposition: "mapped",
@@ -481,7 +482,7 @@ export function mapAgentEvent(
               type: ActionType.SessionCreationFailed,
               error: makeErrorInfo("Session creation failed"),
             });
-            notes.push({
+            (note = {
               index,
               type: "status",
               disposition: "mapped",
@@ -501,14 +502,14 @@ export function mapAgentEvent(
             });
             context.turnId = undefined;
             context.openToolCalls = [];
-            notes.push({
+            (note = {
               index,
               type: "status",
               disposition: "mapped",
               detail: `Mapped to SessionError (status=${statusContent})`,
             });
           } else {
-            notes.push({
+            (note = {
               index,
               type: "status",
               disposition: "dropped",
@@ -521,7 +522,7 @@ export function mapAgentEvent(
         case "completed":
         case "waiting_input":
         case "running": {
-          notes.push({
+          (note = {
             index,
             type: "status",
             disposition: "dropped",
@@ -531,7 +532,7 @@ export function mapAgentEvent(
         }
 
         default: {
-          notes.push({
+          (note = {
             index,
             type: "status",
             disposition: "dropped",
@@ -548,7 +549,7 @@ export function mapAgentEvent(
       const turnId = eventTurnId || context.turnId;
 
       if (isDiagnosticEvent(event)) {
-        notes.push({
+        (note = {
           index,
           type: "system",
           disposition: "carried",
@@ -566,14 +567,14 @@ export function mapAgentEvent(
             content: content || "",
           },
        });
-        notes.push({
+        (note = {
           index,
           type: "system",
           disposition: "mapped",
           detail: "Mapped to SessionResponsePart(systemNotification)",
         });
       } else {
-        notes.push({
+        (note = {
           index,
           type: "system",
           disposition: "dropped",
@@ -588,14 +589,14 @@ export function mapAgentEvent(
     case "runtime_session_id": {
       if (content) {
         context.metaAccumulator.runtimeSessionId = content;
-        notes.push({
+        (note = {
           index,
           type: "runtime_session_id",
           disposition: "carried",
           detail: "Carried as _meta.runtimeSessionId",
         });
       } else {
-        notes.push({
+        (note = {
           index,
           type: "runtime_session_id",
           disposition: "dropped",
@@ -608,7 +609,7 @@ export function mapAgentEvent(
     // ─── Unknown event types ───────────────────────────────────────
 
     default: {
-      notes.push({
+      (note = {
         index,
         type,
         disposition: "dropped",
@@ -617,5 +618,5 @@ export function mapAgentEvent(
     }
   }
 
-  return { actions, notes };
+  return { actions, note };
 }

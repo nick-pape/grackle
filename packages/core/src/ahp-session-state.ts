@@ -107,7 +107,7 @@ export class SessionStateManager {
    */
    public processEvent(event: powerline.AgentEvent, serverSeq: string): string | undefined {
     const idx = this.eventIndex++;
-    const { actions, notes } = mapAgentEvent(event, idx, this.context);
+    const { actions, note } = mapAgentEvent(event, idx, this.context);
 
    // Fold each action through the reducer.
    // All actions from the mapper are session-specific, so casting to SessionAction is safe.
@@ -117,12 +117,23 @@ export class SessionStateManager {
     }
 
     // Apply mapper carries (_meta fields the reducer doesn't handle).
-    // Guard against this.state._meta being undefined (initial state has no _meta).
+    // Only re-create _meta when values actually change (avoids unnecessary
+    // object identity updates that break equality checks downstream).
+    const metaChanges: Partial<SessionState["_meta"]> = {};
     if (this.context.metaAccumulator.costMillicents !== undefined) {
-      this.state._meta = { ...this.state._meta ?? {}, costMillicents: this.context.metaAccumulator.costMillicents };
+      const existing = this.state._meta?.costMillicents;
+      if (existing === undefined || existing !== this.context.metaAccumulator.costMillicents) {
+        metaChanges.costMillicents = this.context.metaAccumulator.costMillicents;
+      }
     }
     if (this.context.metaAccumulator.runtimeSessionId !== undefined) {
-      this.state._meta = { ...this.state._meta ?? {}, runtimeSessionId: this.context.metaAccumulator.runtimeSessionId };
+      const existing = this.state._meta?.runtimeSessionId;
+      if (existing === undefined || existing !== this.context.metaAccumulator.runtimeSessionId) {
+        metaChanges.runtimeSessionId = this.context.metaAccumulator.runtimeSessionId;
+      }
+    }
+    if (Object.keys(metaChanges).length > 0) {
+      this.state._meta = { ...this.state._meta ?? {}, ...metaChanges };
     }
 
     let lastSeq: string | undefined;
@@ -136,7 +147,12 @@ export class SessionStateManager {
      lastSeq = serverSeq;
    }
    // Auto-snapshot on turn_complete (only if not already flushed above)
-   else if (notes.some((n) => n.disposition === "mapped" && n.type === "turn_complete")) {
+   else if (
+    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain -- note.type is always defined when note is non-null
+    note &&
+    note.disposition === "mapped" &&
+    note.type === "turn_complete"
+  ) {
      this.snapshot(serverSeq);
      lastSeq = serverSeq;
    }

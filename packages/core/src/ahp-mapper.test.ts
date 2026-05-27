@@ -70,7 +70,7 @@ describe("turn_started", () => {
     expect(action.userMessage.text).toBe("Hello world");
     expect(context.turnId).toBe("turn-abc");
     expect(context.openToolCalls).toEqual([]);
-    expect(result.notes[0].disposition).toBe("mapped");
+    expect(result.note.disposition).toBe("mapped");
   });
 
   it("uses generated turnId when none provided", () => {
@@ -115,7 +115,7 @@ describe("turn_complete", () => {
     );
     expect(context.turnId).toBeUndefined();
     expect(context.openToolCalls).toEqual([]);
-    expect(result.notes[0].disposition).toBe("mapped");
+    expect(result.note.disposition).toBe("mapped");
   });
 
   it("drops when no active turn", () => {
@@ -124,7 +124,7 @@ describe("turn_complete", () => {
     const result = mapAgentEvent(event, 1, context);
 
     expect(result.actions.length).toBe(0);
-    expect(result.notes[0].disposition).toBe("dropped");
+    expect(result.note.disposition).toBe("dropped");
   });
 });
 
@@ -137,8 +137,8 @@ describe("input_needed", () => {
     const result = mapAgentEvent(event, 2, context);
 
     expect(result.actions.length).toBe(0);
-    expect(result.notes[0].disposition).toBe("dropped");
-    expect(result.notes[0].detail).toContain("Advisory event");
+    expect(result.note.disposition).toBe("dropped");
+    expect(result.note.detail).toContain("Advisory event");
   });
 });
 
@@ -159,7 +159,7 @@ describe("text", () => {
     expect(action.part.kind).toBe("markdown");
     expect(action.part.id).toBe("part-5");
     expect(action.part.content).toBe("Hello there");
-    expect(result.notes[0].disposition).toBe("mapped");
+    expect(result.note.disposition).toBe("mapped");
   });
 
   it("drops when no active turn", () => {
@@ -168,7 +168,7 @@ describe("text", () => {
     const result = mapAgentEvent(event, 3, context);
 
     expect(result.actions.length).toBe(0);
-    expect(result.notes[0].disposition).toBe("dropped");
+    expect(result.note.disposition).toBe("dropped");
   });
 });
 
@@ -209,8 +209,8 @@ describe("tool_use", () => {
     expect(ready.confirmed).toBe("not-needed");
 
     expect(context.openToolCalls).toEqual(["tc-xyz"]);
-    expect(result.notes.length).toBe(1);
-    expect(result.notes[0].disposition).toBe("mapped");
+    expect(result.note ? 1 : 0).toBe(1);
+    expect(result.note.disposition).toBe("mapped");
   });
 
   it("generates toolCallId when none provided", () => {
@@ -228,7 +228,7 @@ describe("tool_use", () => {
     const result = mapAgentEvent(event, 4, context);
 
     expect(result.actions.length).toBe(0);
-    expect(result.notes[0].disposition).toBe("dropped");
+    expect(result.note.disposition).toBe("dropped");
   });
 });
 
@@ -259,7 +259,7 @@ describe("tool_result", () => {
 
     // First-class toolCallId (HR3) is used; matched id is removed from LIFO stack
     expect(context.openToolCalls).toEqual([]);
-    expect(result.notes[0].disposition).toBe("mapped");
+    expect(result.note.disposition).toBe("mapped");
   });
 
   it("pairs by LIFO stack when no toolCallId", () => {
@@ -282,7 +282,7 @@ describe("tool_result", () => {
     const result = mapAgentEvent(event, 5, context);
 
     expect(result.actions.length).toBe(0);
-    expect(result.notes[0].disposition).toBe("dropped");
+    expect(result.note.disposition).toBe("dropped");
   });
 
   it("adds system notification for successful result", () => {
@@ -297,8 +297,8 @@ describe("tool_result", () => {
     const result = mapAgentEvent(event, 5, context);
 
     expect(result.actions.length).toBe(2);
-    const note = result.notes.find((n) => n.disposition === "mapped");
-    expect(note).toBeDefined();
+    expect(result.note).toBeDefined();
+    expect(result.note.disposition).toBe("mapped");
   });
 
   it("drops when no active turn", () => {
@@ -307,7 +307,7 @@ describe("tool_result", () => {
     const result = mapAgentEvent(event, 5, context);
 
     expect(result.actions.length).toBe(0);
-    expect(result.notes[0].disposition).toBe("dropped");
+    expect(result.note.disposition).toBe("dropped");
   });
 });
 
@@ -325,7 +325,7 @@ describe("usage", () => {
 
     expect(context.metaAccumulator.costMillicents).toBe(150);
     expect(result.actions.length).toBe(0);
-    expect(result.notes[0].disposition).toBe("carried");
+    expect(result.note.disposition).toBe("carried");
   });
 
   it("ignores non-finite cost_millicents", () => {
@@ -354,7 +354,7 @@ describe("error", () => {
     }>(result.actions, ActionType.SessionError);
     expect(action.turnId).toBe("turn-abc");
     expect(action.error.message).toBe("Something went wrong");
-    expect(result.notes[0].disposition).toBe("mapped");
+    expect(result.note.disposition).toBe("mapped");
   });
 
   it("maps to SessionCreationFailed when pre-turn", () => {
@@ -368,7 +368,7 @@ describe("error", () => {
       error: { message: string };
     }>(result.actions, ActionType.SessionCreationFailed);
     expect(action.error.message).toBe("Init failed");
-    expect(result.notes[0].disposition).toBe("mapped");
+    expect(result.note.disposition).toBe("mapped");
   });
 });
 
@@ -383,7 +383,7 @@ describe("status", () => {
     expect(result.actions.length).toBe(1);
     assertActionType<{ type: string }>(result.actions, ActionType.SessionError);
     expect(context.turnId).toBeUndefined();
-    expect(result.notes[0].disposition).toBe("mapped");
+    expect(result.note.disposition).toBe("mapped");
   });
 
   it("maps failed to SessionCreationFailed when pre-turn", () => {
@@ -393,7 +393,7 @@ describe("status", () => {
 
     expect(result.actions.length).toBe(1);
     assertActionType<{ type: string }>(result.actions, ActionType.SessionCreationFailed);
-    expect(result.notes[0].disposition).toBe("mapped");
+    expect(result.note.disposition).toBe("mapped");
   });
 
   it("maps killed to SessionError when in-turn", () => {
@@ -413,7 +413,7 @@ describe("status", () => {
     const result = mapAgentEvent(event, 9, context);
 
     expect(result.actions.length).toBe(0);
-    expect(result.notes[0].disposition).toBe("dropped");
+    expect(result.note.disposition).toBe("dropped");
   });
 
   it("drops completed/waiting_input/running", () => {
@@ -423,7 +423,7 @@ describe("status", () => {
       const result = mapAgentEvent(event, 10, context);
 
       expect(result.actions.length).toBe(0);
-      expect(result.notes[0].disposition).toBe("dropped");
+      expect(result.note.disposition).toBe("dropped");
     }
   });
 });
@@ -443,7 +443,7 @@ describe("system", () => {
     }>(result.actions, ActionType.SessionResponsePart);
     expect(action.part.kind).toBe("systemNotification");
     expect(action.part.content).toBe("Subagent completed");
-    expect(result.notes[0].disposition).toBe("mapped");
+    expect(result.note.disposition).toBe("mapped");
   });
 
   it("drops diagnostic system events", () => {
@@ -455,8 +455,8 @@ describe("system", () => {
     const result = mapAgentEvent(event, 12, context);
 
     expect(result.actions.length).toBe(0);
-    expect(result.notes[0].disposition).toBe("carried");
-    expect(result.notes[0].detail).toContain("diagnostic");
+    expect(result.note.disposition).toBe("carried");
+    expect(result.note.detail).toContain("diagnostic");
   });
 
   it("drops non-diagnostic system when no active turn", () => {
@@ -465,7 +465,7 @@ describe("system", () => {
     const result = mapAgentEvent(event, 11, context);
 
     expect(result.actions.length).toBe(0);
-    expect(result.notes[0].disposition).toBe("dropped");
+    expect(result.note.disposition).toBe("dropped");
   });
 });
 
@@ -479,7 +479,7 @@ describe("runtime_session_id", () => {
 
     expect(context.metaAccumulator.runtimeSessionId).toBe("runtime-abc-123");
     expect(result.actions.length).toBe(0);
-    expect(result.notes[0].disposition).toBe("carried");
+    expect(result.note.disposition).toBe("carried");
   });
 
   it("drops when no content", () => {
@@ -488,7 +488,7 @@ describe("runtime_session_id", () => {
     const result = mapAgentEvent(event, 13, context);
 
     expect(result.actions.length).toBe(0);
-    expect(result.notes[0].disposition).toBe("dropped");
+    expect(result.note.disposition).toBe("dropped");
   });
 });
 
@@ -501,8 +501,8 @@ describe("unknown event types", () => {
     const result = mapAgentEvent(event, 100, context);
 
     expect(result.actions.length).toBe(0);
-    expect(result.notes[0].disposition).toBe("dropped");
-    expect(result.notes[0].detail).toContain("Unrecognized event type");
+    expect(result.note.disposition).toBe("dropped");
+    expect(result.note.detail).toContain("Unrecognized event type");
   });
 });
 
