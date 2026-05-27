@@ -181,8 +181,8 @@ export function mapAgentEvent(
 
       context.turnId = derivedTurnId;
       context.openToolCalls = [];
-      // partCounter starts at 0; first response part will be part-0
-      context.partCounter = 0;
+      // partCounter is NOT reset here — it increments across turns so part IDs
+      // are globally unique within a session (part-0, part-1, … across all turns).
 
       note = {
         index,
