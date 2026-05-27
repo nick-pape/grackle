@@ -24,6 +24,10 @@ common/api/
 common/config/rush/pnpm-lock.yaml
 common/changes/
 
+# Vendored Rush bootstrapper scripts (Rush validates these by content and
+# refuses to install if they have been edited).
+common/scripts/
+
 # Node + Rush worktrees
 **/node_modules/
 .claude/worktrees/
