@@ -363,6 +363,15 @@ export function reverseMapAction(
             });
           }
         }
+        // HR8d status rescue: PowerLine forwards lifecycle status events
+        // (running / waiting_input / idle / completed) as `_meta.status`
+        // because mapAgentEvent unconditionally drops them as "redundant
+        // with turn_* events". Grackle's consumer uses these to flip
+        // `sessions.status`; rehydrate them here.
+        const statusRaw = meta.status;
+        if (typeof statusRaw === "string") {
+          events.push({ type: "status", content: statusRaw });
+        }
       }
       return {
         events,

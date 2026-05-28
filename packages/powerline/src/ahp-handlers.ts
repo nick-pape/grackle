@@ -457,6 +457,36 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
       timestamp: event.timestamp,
       raw: event.raw !== undefined ? JSON.stringify(event.raw) : undefined,
     };
+
+    // Status rescue (HR8d): mapAgentEvent unconditionally drops status events
+    // with content in {running, waiting_input, completed} as "redundant with
+    // turn_* events" — but Grackle's consumer uses these to update
+    // `sessions.status` (`useSessions.ts` calls `mapSessionStatus(event.content)`).
+    // Without them, the UI never observes `latestSession.status === "idle"`
+    // and queued chat input never auto-sends. We synthesize a
+    // `SessionMetaChangedAction` with `_meta.status` so the consumer's reverse
+    // mapper can rehydrate a `status` event with the original content.
+    const STATUS_RESCUE_CONTENTS: ReadonlySet<string> = new Set([
+      "running",
+      "waiting_input",
+      "completed",
+      "idle",
+    ]);
+    if (event.type === "status" && event.content !== undefined && STATUS_RESCUE_CONTENTS.has(event.content)) {
+      forwarder.serverSeq += 1;
+      const statusAction: StateAction = {
+        type: ActionType.SessionMetaChanged,
+        _meta: { status: event.content },
+      };
+      conn.session.notify("action", {
+        channel: sessionChannel(sessionId),
+        serverSeq: forwarder.serverSeq,
+        action: statusAction,
+        origin: undefined,
+      });
+      return;
+    }
+
     let result = mapAgentEvent(normalized, idx, forwarder.mapperContext);
     let synthesizedOrphanTurnId: string | undefined;
 
