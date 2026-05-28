@@ -8,11 +8,7 @@
 
 import type { ActionEnvelope, StateAction } from "@grackle-ai/ahp";
 import { ActionType, JsonRpcErrorCodes, SessionStatus as SessionStatusE } from "@grackle-ai/ahp";
-import {
-  AhpClientSocket,
-  InMemoryClientIdStore,
-  WsCloseCode,
-} from "@grackle-ai/ahp-transport";
+import { AhpClientSocket, InMemoryClientIdStore, WsCloseCode } from "@grackle-ai/ahp-transport";
 import type {
   AgentEvent,
   AgentRuntime,
@@ -363,9 +359,7 @@ describe("ahp-handlers: subscribe", () => {
         ActionType.SessionResponsePart,
       ]);
       // Verify content fidelity for parked text events.
-      const parts = client.received.filter(
-        (e) => e.action.type === ActionType.SessionResponsePart,
-      );
+      const parts = client.received.filter((e) => e.action.type === ActionType.SessionResponsePart);
       const contents = parts.map((p) => {
         const act = p.action as { part: { content: string } };
         return act.part.content;
@@ -531,9 +525,7 @@ describe("ahp-handlers: authenticate", () => {
   it("parses a grackle://provider/{p}/{n} resource + JSON token and calls writeTokens", async () => {
     // We intercept writeTokens via a vi.spyOn on the module surface so we
     // don't have to mount a real file-write.
-    const tokenWriterModule: typeof import("./token-writer.js") = await import(
-      "./token-writer.js"
-    );
+    const tokenWriterModule: typeof import("./token-writer.js") = await import("./token-writer.js");
     const spy = vi.spyOn(tokenWriterModule, "writeTokens").mockResolvedValue(undefined);
     const lb = await spinUpLoopback();
     const client = await openClient(lb.port);
