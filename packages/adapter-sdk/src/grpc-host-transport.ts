@@ -86,8 +86,9 @@ export class GrpcHostTransport implements IHostTransport {
    * Reanimate a suspended session via PowerLine's `resume` RPC.
    *
    * Returns a live stream of envelopes for the reanimated session. Note that
-   * `resume` alone does NOT replay buffered events — use
-   * {@link IHostTransport.subscribe} with `fromServerSeq` for that.
+   * `resume` alone does NOT replay buffered events — call
+   * {@link IHostTransport.drainBuffered} first to replay the parked queue,
+   * then this method to start the live stream.
    */
   public reanimate(params: ReanimateParams): AsyncIterable<ServerActionEnvelope> {
     const resumeReq = create(powerline.ResumeRequestSchema, {
