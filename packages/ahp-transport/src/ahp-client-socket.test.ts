@@ -424,6 +424,79 @@ describe("AhpClientSocket", () => {
       }
     });
 
+    it("terminates the lifecycle when close() is called during loadOrMintClientId", async () => {
+      // Inject a slow store so we can call close() in the gap between the
+      // synchronous open() entry and the async store load.
+      const slowStore = {
+        load: async () =>
+          new Promise<undefined>((r) => {
+            setTimeout(() => r(undefined), 50);
+          }),
+        save: async () => undefined,
+      };
+      const harness = await bootServer();
+      const client = new AhpClientSocket({
+        url: harness.url,
+        powerlineToken: "tok",
+        clientIdStore: slowStore,
+        clientIdKey: "k",
+      });
+      try {
+        const openP = client.open();
+        // Close while load is in flight.
+        await client.close();
+        await expect(openP).rejects.toMatchObject({ kind: "user-closed" });
+        expect(client.state).toBe("closed");
+      } finally {
+        await harness.close();
+      }
+    });
+
+    it("treats reconnect-time HTTP 401 upgrade rejection as terminal (no retry loop)", async () => {
+      // Two servers on the same port, sequenced. First accepts the client,
+      // then we kill it. Second listens on the same port but requires a
+      // different token, so the client's reconnect attempt gets 401.
+      const { createServer } = await import("node:http");
+      const v1 = createServer();
+      await new Promise<void>((r) => v1.listen(0, "127.0.0.1", r));
+      const port = (v1.address() as { port: number }).port;
+      const v1Ahp = new AhpServerSocket({
+        server: v1,
+        powerlineToken: "good",
+        onInitialize: () => DEFAULT_INIT_RESULT,
+      });
+      const client = new AhpClientSocket({
+        url: `ws://127.0.0.1:${port}/ahp`,
+        powerlineToken: "good",
+        clientIdStore: new InMemoryClientIdStore(),
+        clientIdKey: "k",
+        backoff: exponentialBackoff({ initialMs: 20, maxMs: 20, jitter: 0 }),
+      });
+      try {
+        await client.open();
+        // Bring down v1.
+        await v1Ahp.close();
+        await new Promise<void>((r) => v1.close(() => r()));
+        // Bring up v2 with a different token on the same port.
+        const v2 = createServer();
+        await new Promise<void>((r) => v2.listen(port, "127.0.0.1", r));
+        const v2Ahp = new AhpServerSocket({
+          server: v2,
+          powerlineToken: "different",
+          onInitialize: () => DEFAULT_INIT_RESULT,
+        });
+        try {
+          // Client should reconnect, get 401, and terminate (NOT loop).
+          await waitForState(client, "closed", 5_000);
+        } finally {
+          await v2Ahp.close();
+          await new Promise<void>((r) => v2.close(() => r()));
+        }
+      } finally {
+        await client.close();
+      }
+    });
+
     it("terminates reconnect cycle when a reconnect-time initialize fails (no infinite retry)", async () => {
       // Start with a server that accepts initialize, get the client to "open",
       // then swap the handler to throw on initialize and kick the connection.

@@ -249,9 +249,14 @@ export class AhpServerSocket {
           remoteAddress: httpReq.socket.remoteAddress,
         };
         state.connection = connection;
-        // Surface the connection AFTER the response is queued so callers
-        // see the initialize success before any subsequent activity.
-        queueMicrotask(() => this.onConnection?.(connection));
+        // Surface the connection AFTER the initialize response has been
+        // flushed to the socket — setImmediate runs as a macrotask, by which
+        // point JsonRpcSession's await on this handler has resumed and
+        // socket.send(response) has executed. If onConnection sends a
+        // notification, that frame goes out *after* the initialize response.
+        // (queueMicrotask runs too early: it fires before the awaiting
+        // continuation resumes and gets to call socket.send.)
+        setImmediate(() => this.onConnection?.(connection));
         return { jsonrpc: "2.0", id: req.id, result };
       } catch (err) {
         return {
@@ -298,10 +303,14 @@ export class AhpServerSocket {
   }
 
   private handleNotification(notif: AhpNotification, state: ConnectionState): void {
-    // Pre-initialize notifications have no surface to route through (no
-    // AhpServerConnection exists yet) and aren't part of the AHP contract;
-    // drop silently. After the handshake, route to the consumer.
-    if (state.connection === undefined || this.onNotification === undefined) {
+    if (state.connection === undefined) {
+      // Pre-initialize notification violates the handshake contract.
+      // Close the session (deferred so the AHP-level close frame lands
+      // after any inflight outbound writes).
+      setImmediate(() => state.session.close(WsCloseCode.Normal, "initialize required first"));
+      return;
+    }
+    if (this.onNotification === undefined) {
       return;
     }
     try {

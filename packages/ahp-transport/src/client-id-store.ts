@@ -1,10 +1,14 @@
 /**
- * Persistence for the AHP `clientId` minted by the server during `initialize`.
- * The client supplies the stored id back on every reconnect so the host can
+ * Persistence for the AHP `clientId`. Per the AHP spec, the client owns
+ * its identifier — `InitializeParams.clientId` is supplied by the client
+ * on every connect. {@link AhpClientSocket} mints a fresh UUID via
+ * `randomUUID()` the first time it sees an empty store, persists it here,
+ * and replays the same id on every subsequent connect so the host can
  * resume in-flight subscriptions.
  *
- * Keyed by an opaque string so a single store can serve multiple connections
- * (e.g., one `ClientIdStore` per `MultiHostClient` keyed by host id).
+ * Keyed by an opaque string so a single store can serve multiple
+ * connections (e.g., one `ClientIdStore` per `MultiHostClient` keyed
+ * by host id).
  */
 
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";

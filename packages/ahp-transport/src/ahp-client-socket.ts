@@ -117,6 +117,11 @@ export class AhpClientSocket {
     this.openInProgress = true;
     try {
       this.currentClientId = this.currentClientId ?? (await this.loadOrMintClientId());
+      // close() may have been called while we were awaiting storage I/O. If
+      // so, don't establish a WebSocket — surface a user-closed error.
+      if (this.userClosed) {
+        throw new TransportError("user-closed", "close() called during open()");
+      }
       return await this.connectOnce(/* isReconnect */ false);
     } finally {
       this.openInProgress = false;
@@ -235,12 +240,35 @@ export class AhpClientSocket {
       }
       this.socket = ws;
 
+      // `ws` emits `unexpected-response` for non-101 HTTP responses to the
+      // upgrade (typically 401 from our `Authorization: Bearer` check).
+      // Auth rejection is terminal regardless of whether this is the first
+      // attempt or a reconnect — there is no token rotation here, so
+      // retrying with the same bad creds would loop forever.
+      let authRejected = false;
+      ws.once("unexpected-response", (_req, res) => {
+        if (res.statusCode === 401) {
+          authRejected = true;
+          // Drain + destroy so the response doesn't hang the test harness.
+          res.resume();
+          res.on("end", () => {
+            failHandshake(new TransportError("auth-failed", "host rejected upgrade with HTTP 401"));
+          });
+        }
+      });
+
       const onError = (err: Error): void => {
         // ws emits "error" before "close" on transport failures. If the
         // session is already constructed (we're past initialize), let
         // handleSessionClose drive recovery; otherwise this is a transport
-        // failure during the upgrade.
+        // failure during the upgrade. Auth rejections are handled by the
+        // `unexpected-response` listener above.
         if (this.session !== undefined) {
+          return;
+        }
+        if (authRejected) {
+          // `unexpected-response` will call failHandshake; suppress here so
+          // we don't double-fail.
           return;
         }
         failTransport(err);
