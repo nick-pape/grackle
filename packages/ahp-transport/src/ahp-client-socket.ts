@@ -227,7 +227,6 @@ export class AhpClientSocket {
           channel: "ahp-root://",
           protocolVersions: SUPPORTED_PROTOCOL_VERSIONS as string[],
           clientId: this.currentClientId as string,
-          _meta: undefined,
           ...(this.locale !== undefined ? { locale: this.locale } : {}),
         };
         session.request("initialize", params).then(
