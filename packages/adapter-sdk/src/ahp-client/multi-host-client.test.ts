@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { MultiHostClient } from "./multi-host-client.js";
 import { spinUpLoopbackHost, type LoopbackHost } from "./test-fixtures.js";
+import type { SubscriptionMessage } from "./types.js";
 
 const INIT_RESULT: InitializeResult = {
   protocolVersion: "0.1.0",
@@ -299,6 +300,20 @@ describe("MultiHostClient", () => {
   it("removeHost is a no-op for unknown environmentIds", async () => {
     client = new MultiHostClient();
     await expect(client.removeHost("missing")).resolves.toBeUndefined();
+  });
+
+  it("aggregatedSessions rejects after close() (symmetric with other public methods)", async () => {
+    programDefaultHost(hostA, []);
+    client = new MultiHostClient();
+    client.addHost({
+      environmentId: "a",
+      baseUrl: hostA.url,
+      powerlineToken: hostA.powerlineToken,
+    });
+    await waitOpen(client, "a");
+    await client.close();
+    await expect(client.aggregatedSessions()).rejects.toThrow(/after close/);
+    client = undefined;
   });
 
   it("close() closes every supervisor; further calls reject; idempotent", async () => {

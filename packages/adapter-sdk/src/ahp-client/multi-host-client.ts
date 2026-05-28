@@ -138,6 +138,9 @@ export class MultiHostClient {
    * shape, though our current implementation reads cache synchronously).
    */
   public aggregatedSessions(): Promise<HostedSessionSummary[]> {
+    if (this.isClosed) {
+      return Promise.reject(new Error("MultiHostClient: called after close()"));
+    }
     const all: HostedSessionSummary[] = [];
     for (const supervisor of this.hosts.values()) {
       all.push(...supervisor.hostedSessionSummaries());
