@@ -117,6 +117,17 @@ export function reverseMapAction(
   switch (action.type) {
     case ActionType.SessionTurnStarted: {
       const a = action as SessionTurnStartedAction;
+      // PowerLine's orphan rescue emits a SessionTurnStarted with a
+      // `turn-orphan-N` synthetic turnId to wrap pre-turn content events.
+      // Hide those synthetic starts from the consumer — they don't
+      // correspond to real user turns and would pollute the event stream.
+      if (a.turnId.startsWith("turn-orphan-")) {
+        return {
+          events: [],
+          disposition: "carried",
+          detail: `synthetic orphan turn_started (turnId=${a.turnId}) suppressed`,
+        };
+      }
       context.turnId = a.turnId;
       const userText = a.userMessage.text;
       return {
@@ -134,6 +145,15 @@ export function reverseMapAction(
 
     case ActionType.SessionTurnComplete: {
       const a = action as SessionTurnCompleteAction;
+      // Suppress synthetic orphan turn_complete events (paired with the
+      // suppressed turn_started above).
+      if (a.turnId.startsWith("turn-orphan-")) {
+        return {
+          events: [],
+          disposition: "carried",
+          detail: `synthetic orphan turn_complete (turnId=${a.turnId}) suppressed`,
+        };
+      }
       context.turnId = undefined;
       return {
         events: [
@@ -149,11 +169,23 @@ export function reverseMapAction(
 
     case ActionType.SessionResponsePart: {
       const a = action as SessionResponsePartAction;
+      // PowerLine wraps orphan events (text/system/tool_* emitted outside a
+      // turn under gRPC) in a synthetic `turn-orphan-N` turn so AHP's
+      // action stream can carry them. On the consumer side, strip the
+      // synthetic turnId so the resulting AgentEvent matches the gRPC
+      // wire shape (which had no turnId for pre-turn events).
+      const stripOrphan = (tid: string): string | undefined =>
+        tid.startsWith("turn-orphan-") ? undefined : tid;
       // Only Markdown and SystemNotification parts have AgentEvent representations;
       // ContentRef/ToolCall/Reasoning parts don't map to AgentEvent (drop).
       if (a.part.kind === ResponsePartKind.Markdown) {
+        const evt: AgentEventFields = { type: "text", content: a.part.content };
+        const tid = stripOrphan(a.turnId);
+        if (tid !== undefined) {
+          evt.turnId = tid;
+        }
         return {
-          events: [{ type: "text", turnId: a.turnId, content: a.part.content }],
+          events: [evt],
           disposition: "mapped",
           detail: "text part",
         };
@@ -162,8 +194,13 @@ export function reverseMapAction(
         const partContent = a.part.content;
         // SystemNotification.content is StringOrMarkdown (string | { markdown: string }).
         const contentStr = typeof partContent === "string" ? partContent : partContent.markdown;
+        const evt: AgentEventFields = { type: "system", content: contentStr };
+        const tid = stripOrphan(a.turnId);
+        if (tid !== undefined) {
+          evt.turnId = tid;
+        }
         return {
-          events: [{ type: "system", turnId: a.turnId, content: contentStr }],
+          events: [evt],
           disposition: "mapped",
           detail: "system notification part",
         };
