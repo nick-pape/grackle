@@ -283,6 +283,17 @@ export type {
   ProtocolMessage,
 } from "./vendor/ahp/messages.js";
 
+// ─── Error codes ────────────────────────────────────────────────
+
+export { JsonRpcErrorCodes, AhpErrorCodes } from "./vendor/ahp/common/errors.js";
+export type {
+  JsonRpcErrorCode,
+  AhpErrorCode,
+  AuthRequiredErrorData,
+  PermissionDeniedErrorData,
+  UnsupportedProtocolVersionErrorData,
+} from "./vendor/ahp/common/errors.js";
+
 // ─── Reducer functions ──────────────────────────────────────────
 
 export {
