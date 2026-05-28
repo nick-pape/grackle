@@ -446,13 +446,13 @@ type SpawnRequest = Message<"grackle.powerline.SpawnRequest"> & {
     branch: string;
     workingDirectory: string;
     systemContext: string;
-    workspaceId?: string | undefined;
+    workspaceId?: string;
     taskId: string;
     mcpServersJson: string;
     mcpUrl: string;
     mcpToken: string;
     scriptContent: string;
-    useWorktrees?: boolean | undefined;
+    useWorktrees?: boolean;
     pipe: string;
 };
 

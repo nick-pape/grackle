@@ -426,7 +426,7 @@ type CreatePersonaRequest = Message<"grackle.CreatePersonaRequest"> & {
     name: string;
     description: string;
     systemPrompt: string;
-    toolConfig?: ToolConfig | undefined;
+    toolConfig?: ToolConfig;
     runtime: string;
     model: string;
     maxTurns: number;
@@ -473,16 +473,16 @@ const CreateStreamResponseSchema: GenMessage<CreateStreamResponse>;
 
 // @public
 type CreateTaskRequest = Message<"grackle.CreateTaskRequest"> & {
-    workspaceId?: string | undefined;
+    workspaceId?: string;
     title: string;
     description: string;
     dependsOn: string[];
     parentTaskId: string;
-    canDecompose?: boolean | undefined;
-    defaultPersonaId?: string | undefined;
-    tokenBudget?: number | undefined;
-    costBudgetMillicents?: number | undefined;
-    injectKnowledge?: boolean | undefined;
+    canDecompose?: boolean;
+    defaultPersonaId?: string;
+    tokenBudget?: number;
+    costBudgetMillicents?: number;
+    injectKnowledge?: boolean;
 };
 
 // @public
@@ -493,12 +493,12 @@ type CreateWorkspaceRequest = Message<"grackle.CreateWorkspaceRequest"> & {
     name: string;
     description: string;
     repoUrl: string;
-    useWorktrees?: boolean | undefined;
-    workingDirectory?: string | undefined;
-    defaultPersonaId?: string | undefined;
+    useWorktrees?: boolean;
+    workingDirectory?: string;
+    defaultPersonaId?: string;
     environmentId: string;
-    tokenBudget?: number | undefined;
-    costBudgetMillicents?: number | undefined;
+    tokenBudget?: number;
+    costBudgetMillicents?: number;
 };
 
 // @public
@@ -856,7 +856,7 @@ const GetKnowledgeNodeRequestSchema: GenMessage<GetKnowledgeNodeRequest>;
 
 // @public
 type GetKnowledgeNodeResponse = Message<"grackle.GetKnowledgeNodeResponse"> & {
-    node?: KnowledgeNodeProto | undefined;
+    node?: KnowledgeNodeProto;
     edges: KnowledgeEdgeProto[];
 };
 
@@ -2039,7 +2039,7 @@ type Persona = Message<"grackle.Persona"> & {
     name: string;
     description: string;
     systemPrompt: string;
-    toolConfig?: ToolConfig | undefined;
+    toolConfig?: ToolConfig;
     runtime: string;
     model: string;
     maxTurns: number;
@@ -2244,7 +2244,7 @@ const ResolveComponentGraphRequestSchema: GenMessage<ResolveComponentGraphReques
 
 // @public
 type ResolveComponentGraphResponse = Message<"grackle.ResolveComponentGraphResponse"> & {
-    root?: Component | undefined;
+    root?: Component;
     dependencies: Component[];
 };
 
@@ -2360,7 +2360,7 @@ const ScheduleSchema: GenMessage<Schedule>;
 
 // @public
 type SearchComponentResult = Message<"grackle.SearchComponentResult"> & {
-    component?: Component | undefined;
+    component?: Component;
     relevanceScore: number;
     builtin: boolean;
 };
@@ -2407,7 +2407,7 @@ const SearchKnowledgeResponseSchema: GenMessage<SearchKnowledgeResponse>;
 // @public
 type SearchKnowledgeResult = Message<"grackle.SearchKnowledgeResult"> & {
     score: number;
-    node?: KnowledgeNodeProto | undefined;
+    node?: KnowledgeNodeProto;
     edges: KnowledgeEdgeProto[];
 };
 
@@ -2416,7 +2416,7 @@ const SearchKnowledgeResultSchema: GenMessage<SearchKnowledgeResult>;
 
 // @public
 type SearchTaskResult = Message<"grackle.SearchTaskResult"> & {
-    task?: Task | undefined;
+    task?: Task;
     relevanceScore: number;
 };
 
@@ -2550,7 +2550,7 @@ type SessionConfig = Message<"grackle.SessionConfig"> & {
     taskId: string;
     workspaceId: string;
     personaId: string;
-    useWorktrees?: boolean | undefined;
+    useWorktrees?: boolean;
     systemContext: string;
     pipe: string;
     workingDirectory: string;
@@ -2655,7 +2655,7 @@ type SetComponentPromotionRequest = Message<"grackle.SetComponentPromotionReques
     id: string;
     name: string;
     workspaceId: string;
-    promoted?: boolean | undefined;
+    promoted?: boolean;
 };
 
 // @public
@@ -2756,8 +2756,8 @@ type SpawnRequest = Message<"grackle.SpawnRequest"> & {
     environmentId: string;
     prompt: string;
     provider: string;
-    config?: SessionConfig | undefined;
-    model?: ModelSelection | undefined;
+    config?: SessionConfig;
+    model?: ModelSelection;
 };
 
 // @public
@@ -2770,13 +2770,13 @@ type SpawnRequest_2 = Message<"grackle.powerline.SpawnRequest"> & {
     branch: string;
     workingDirectory: string;
     systemContext: string;
-    workspaceId?: string | undefined;
+    workspaceId?: string;
     taskId: string;
     mcpServersJson: string;
     mcpUrl: string;
     mcpToken: string;
     scriptContent: string;
-    useWorktrees?: boolean | undefined;
+    useWorktrees?: boolean;
     pipe: string;
 };
 
@@ -2909,7 +2909,7 @@ export const SYSTEM_PERSONA_NAME: string;
 // @public
 type Task = Message<"grackle.Task"> & {
     id: string;
-    workspaceId?: string | undefined;
+    workspaceId?: string;
     title: string;
     description: string;
     status: TaskStatus_2;
@@ -3098,10 +3098,10 @@ const UnlinkEnvironmentRequestSchema: GenMessage<UnlinkEnvironmentRequest>;
 type UpdateComponentRequest = Message<"grackle.UpdateComponentRequest"> & {
     id: string;
     workspaceId: string;
-    name?: string | undefined;
-    description?: string | undefined;
-    body?: string | undefined;
-    propsSchema?: string | undefined;
+    name?: string;
+    description?: string;
+    body?: string;
+    propsSchema?: string;
 };
 
 // @public
@@ -3110,9 +3110,9 @@ const UpdateComponentRequestSchema: GenMessage<UpdateComponentRequest>;
 // @public
 type UpdateEnvironmentRequest = Message<"grackle.UpdateEnvironmentRequest"> & {
     id: string;
-    displayName?: string | undefined;
-    adapterConfig?: string | undefined;
-    githubAccountId?: string | undefined;
+    displayName?: string;
+    adapterConfig?: string;
+    githubAccountId?: string;
 };
 
 // @public
@@ -3121,9 +3121,9 @@ const UpdateEnvironmentRequestSchema: GenMessage<UpdateEnvironmentRequest>;
 // @public
 type UpdateGitHubAccountRequest = Message<"grackle.UpdateGitHubAccountRequest"> & {
     id: string;
-    label?: string | undefined;
-    token?: string | undefined;
-    isDefault?: boolean | undefined;
+    label?: string;
+    token?: string;
+    isDefault?: boolean;
 };
 
 // @public
@@ -3135,14 +3135,14 @@ type UpdatePersonaRequest = Message<"grackle.UpdatePersonaRequest"> & {
     name: string;
     description: string;
     systemPrompt: string;
-    toolConfig?: ToolConfig | undefined;
+    toolConfig?: ToolConfig;
     runtime: string;
     model: string;
     maxTurns: number;
     mcpServers: McpServerConfig[];
     type: string;
     script: string;
-    allowedMcpTools?: AllowedMcpTools | undefined;
+    allowedMcpTools?: AllowedMcpTools;
 };
 
 // @public
@@ -3151,11 +3151,11 @@ const UpdatePersonaRequestSchema: GenMessage<UpdatePersonaRequest>;
 // @public
 type UpdateScheduleRequest = Message<"grackle.UpdateScheduleRequest"> & {
     id: string;
-    title?: string | undefined;
-    description?: string | undefined;
-    scheduleExpression?: string | undefined;
-    personaId?: string | undefined;
-    enabled?: boolean | undefined;
+    title?: string;
+    description?: string;
+    scheduleExpression?: string;
+    personaId?: string;
+    enabled?: boolean;
 };
 
 // @public
@@ -3169,10 +3169,10 @@ type UpdateTaskRequest = Message<"grackle.UpdateTaskRequest"> & {
     status: TaskStatus_2;
     dependsOn: string[];
     sessionId: string;
-    defaultPersonaId?: string | undefined;
-    tokenBudget?: number | undefined;
-    costBudgetMillicents?: number | undefined;
-    injectKnowledge?: boolean | undefined;
+    defaultPersonaId?: string;
+    tokenBudget?: number;
+    costBudgetMillicents?: number;
+    injectKnowledge?: boolean;
 };
 
 // @public
@@ -3181,14 +3181,14 @@ const UpdateTaskRequestSchema: GenMessage<UpdateTaskRequest>;
 // @public
 type UpdateWorkspaceRequest = Message<"grackle.UpdateWorkspaceRequest"> & {
     id: string;
-    name?: string | undefined;
-    description?: string | undefined;
-    repoUrl?: string | undefined;
-    useWorktrees?: boolean | undefined;
-    workingDirectory?: string | undefined;
-    defaultPersonaId?: string | undefined;
-    tokenBudget?: number | undefined;
-    costBudgetMillicents?: number | undefined;
+    name?: string;
+    description?: string;
+    repoUrl?: string;
+    useWorktrees?: boolean;
+    workingDirectory?: string;
+    defaultPersonaId?: string;
+    tokenBudget?: number;
+    costBudgetMillicents?: number;
 };
 
 // @public
