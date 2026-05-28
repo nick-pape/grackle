@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 28 May 2026 07:47:01 GMT and should not be manually modified.
+This log was last generated on Thu, 28 May 2026 08:10:10 GMT and should not be manually modified.
+
+## 0.132.1
+Thu, 28 May 2026 08:10:10 GMT
+
+### Patches
+
+- AHP HR8c: introduce IHostTransport abstraction in @grackle-ai/adapter-sdk (GrpcHostTransport wraps the existing PowerLine client). Relocate the AgentEvent→AHP mapper to @grackle-ai/common. Migrate the consumer call-sites (spawn/resume/drain/sendInput/authenticate) in core and plugin-core to go through the transport. Refactor only — gRPC remains the wire. Closes #1335.
 
 ## 0.132.0
 Thu, 28 May 2026 07:47:01 GMT

@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.132.1",
+      "tag": "@grackle-ai/cli_v0.132.1",
+      "date": "Thu, 28 May 2026 08:10:10 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "AHP HR8c: introduce IHostTransport abstraction in @grackle-ai/adapter-sdk (GrpcHostTransport wraps the existing PowerLine client). Relocate the AgentEvent→AHP mapper to @grackle-ai/common. Migrate the consumer call-sites (spawn/resume/drain/sendInput/authenticate) in core and plugin-core to go through the transport. Refactor only — gRPC remains the wire. Closes #1335."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.132.0",
       "tag": "@grackle-ai/cli_v0.132.0",
       "date": "Thu, 28 May 2026 07:47:01 GMT",
