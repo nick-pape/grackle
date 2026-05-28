@@ -203,9 +203,17 @@ export function processEventStream(
 
       for await (const envelope of envelopes) {
         const event = envelope.event;
-        // Normalize optional fields to proto-default semantics so downstream
-        // string operations can rely on a non-undefined `content`.
+        // Normalize optional AgentEventFields to proto-default semantics so
+        // BOTH downstream string operations and the grackle.SessionEvent
+        // we persist/broadcast see non-undefined values consistently — proto
+        // string fields default to "" and bool to false anyway, so this just
+        // makes the intent explicit at the source.
         const eventContent: string = event.content ?? "";
+        const eventTimestamp: string = event.timestamp ?? "";
+        const eventRaw: string = event.raw ?? "";
+        const eventToolCallId: string = event.toolCallId ?? "";
+        const eventTurnId: string = event.turnId ?? "";
+        const eventDiagnostic: boolean = event.diagnostic ?? false;
         // runtime_session_id is an internal control event: persist it then skip
         // logging/publishing — it has no proto enum value and is not client-visible.
         if (event.type === "runtime_session_id") {
@@ -218,12 +226,12 @@ export function processEventStream(
         const sessionEvent = create(grackle.SessionEventSchema, {
           sessionId,
           type: eventTypeToEnum(event.type),
-          timestamp: event.timestamp,
-          content: event.content,
-          raw: event.raw,
-          toolCallId: event.toolCallId,
-          diagnostic: event.diagnostic,
-          turnId: event.turnId,
+          timestamp: eventTimestamp,
+          content: eventContent,
+          raw: eventRaw,
+          toolCallId: eventToolCallId,
+          diagnostic: eventDiagnostic,
+          turnId: eventTurnId,
         });
         await logWriter.writeEvent(logPath, sessionEvent);
         streamHub.publish(sessionEvent);
