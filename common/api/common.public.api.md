@@ -2082,6 +2082,16 @@ type PairingCodeResponse = Message<"grackle.PairingCodeResponse"> & {
 const PairingCodeResponseSchema: GenMessage<PairingCodeResponse>;
 
 // @public
+export interface PendingToolCall {
+    // (undocumented)
+    readonly displayName: string;
+    // (undocumented)
+    readonly toolName: string;
+    // (undocumented)
+    readonly turnId: string;
+}
+
+// @public
 type Persona = Message<"grackle.Persona"> & {
     id: string;
     name: string;
@@ -2326,7 +2336,6 @@ export interface ReverseMapperContext {
         costMillicents?: number;
         runtimeSessionId?: string;
     };
-    // Warning: (ae-forgotten-export) The symbol "PendingToolCall" needs to be exported by the entry point index.d.ts
     readonly pendingToolCalls: Map<string, PendingToolCall>;
     turnId?: string;
 }

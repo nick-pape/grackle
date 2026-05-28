@@ -51,10 +51,23 @@ import type {
 } from "./host-transport.js";
 
 const ROOT_CHANNEL = "ahp-root://" as const;
+const SESSION_CHANNEL_PREFIX = "ahp-session:/";
 
 /** Build the AHP session channel URI for a Grackle session id. */
 function sessionChannel(sessionId: string): URI {
-  return `ahp-session:/${sessionId}`;
+  return `${SESSION_CHANNEL_PREFIX}${sessionId}`;
+}
+
+/**
+ * Accept either a plain Grackle session id (e.g. `"sess-1"`) or an
+ * already-formed AHP session URI (`"ahp-session:/sess-1"`) and return the
+ * URI form. `IHostTransport`'s `dispatchInput` / `dispose` historically
+ * pass a session id; this helper keeps the boundary forgiving.
+ */
+function toSessionChannel(sessionIdOrUri: string): URI {
+  return sessionIdOrUri.startsWith(SESSION_CHANNEL_PREFIX)
+    ? sessionIdOrUri
+    : sessionChannel(sessionIdOrUri);
 }
 
 /**
@@ -242,7 +255,7 @@ export class AhpHostTransport implements IHostTransport {
       userMessage: { text },
     };
     this.socket.notify("dispatchAction", {
-      channel: sessionUri,
+      channel: toSessionChannel(sessionUri),
       clientSeq: this.nextClientSeq,
       action,
     });
@@ -296,10 +309,11 @@ export class AhpHostTransport implements IHostTransport {
    * Acceptable for HR8d — `reason` was informational in the gRPC path too.
    */
   public async dispose(sessionUri: string, _reason?: string): Promise<void> {
+    const channel = toSessionChannel(sessionUri);
     try {
-      await this.socket.request("disposeSession", { channel: sessionUri });
+      await this.socket.request("disposeSession", { channel });
     } finally {
-      this.closeSession(sessionUri);
+      this.closeSession(channel);
     }
   }
 

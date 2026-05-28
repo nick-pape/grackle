@@ -38,9 +38,10 @@ import type { AgentEventFields } from "./ahp-mapper.js";
 
 /**
  * Pending half of a tool call (waiting for the matching `SessionToolCallReady`
- * to complete the pair before emitting one `tool_use` event).
+ * to complete the pair before emitting one `tool_use` event). Exported so
+ * the public `ReverseMapperContext` type doesn't leak an unexported symbol.
  */
-interface PendingToolCall {
+export interface PendingToolCall {
   readonly turnId: string;
   readonly toolName: string;
   readonly displayName: string;

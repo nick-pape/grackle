@@ -25,4 +25,8 @@ export type {
   Disposition,
 } from "./ahp-mapper.js";
 export { newReverseMapperContext, reverseMapAction } from "./ahp-reverse-mapper.js";
-export type { ReverseMapperContext, ReverseMapResult } from "./ahp-reverse-mapper.js";
+export type {
+  ReverseMapperContext,
+  ReverseMapResult,
+  PendingToolCall,
+} from "./ahp-reverse-mapper.js";
