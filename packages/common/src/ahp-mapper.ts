@@ -6,9 +6,10 @@
  * more AHP `SessionAction` payloads. The mapper requires a {@link MapperContext}
  * from the caller to track turn state and tool-call pairing.
  *
- * Lives in `@grackle-ai/common` (not core) because both the live gRPC transport
- * (`GrpcHostTransport` in `@grackle-ai/adapter-sdk`) and the in-core delta-replay
- * path (`SessionStateManager.reconstruct`) consume it. Decoupling from
+ * Lives in `@grackle-ai/common` because the live gRPC transport
+ * (`GrpcHostTransport` in `@grackle-ai/adapter-sdk`) consumes it, and
+ * HR8d's PowerLine-side AHP wire emits AHP actions by running this mapper
+ * forward against the runtime's `AgentEvent` stream. Decoupling from
  * `powerline.AgentEvent` lets HR8d remove the gRPC path entirely without
  * touching the mapper.
  *
@@ -86,8 +87,8 @@ export interface MappingNote {
 }
 
 /**
- * Context maintained by `SessionStateManager` and passed to the mapper.
- * Tracks turn state and tool-call pairing across a stream of events.
+ * Context maintained by the caller across a stream of events.
+ * Tracks turn state and tool-call pairing.
  */
 export interface MapperContext {
   /** ID of the currently active turn, or `undefined` if no turn has started. */
