@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "MultiHostClient: Node port of the Rust SDK supervisor (HR8b, #1334). Adds packages/adapter-sdk/src/ahp-client/ with MultiHostClient, HostSupervisor, SubscriptionTracker, SessionCache, GenerationCounter; built on @grackle-ai/ahp-transport. No consumers wired yet.",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

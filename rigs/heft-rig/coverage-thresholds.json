@@ -18,10 +18,10 @@
     "statements": 30
   },
   "@grackle-ai/adapter-sdk": {
-    "branches": 80,
-    "functions": 50,
-    "lines": 40,
-    "statements": 40
+    "branches": 85,
+    "functions": 75,
+    "lines": 60,
+    "statements": 60
   },
   "@grackle-ai/adapter-ssh": {
     "branches": 80,

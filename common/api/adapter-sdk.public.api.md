@@ -4,14 +4,36 @@
 
 ```ts
 
+import type { ActionEnvelope } from '@grackle-ai/ahp';
+import { AhpConnectionState } from '@grackle-ai/ahp-transport';
+import type { AuthRequiredParams } from '@grackle-ai/ahp';
+import type { ChangesetOperationsChangedAction } from '@grackle-ai/ahp';
 import { ChildProcess } from 'node:child_process';
 import type { Client } from '@connectrpc/connect';
+import { ClientIdStore } from '@grackle-ai/ahp-transport';
+import type { CommandMap } from '@grackle-ai/ahp';
 import type { GenFile } from '@bufbuild/protobuf/codegenv2';
 import type { GenMessage } from '@bufbuild/protobuf/codegenv2';
 import type { GenService } from '@bufbuild/protobuf/codegenv2';
 import type { Message } from '@bufbuild/protobuf';
+import type { RootConfigChangedAction } from '@grackle-ai/ahp';
+import type { SessionInputAnswerChangedAction } from '@grackle-ai/ahp';
+import type { SessionInputCompletedAction } from '@grackle-ai/ahp';
+import type { SessionIsArchivedChangedAction } from '@grackle-ai/ahp';
+import type { SessionIsReadChangedAction } from '@grackle-ai/ahp';
+import type { SessionMetaChangedAction } from '@grackle-ai/ahp';
+import type { SessionQueuedMessagesReorderedAction } from '@grackle-ai/ahp';
+import type { SessionSummary } from '@grackle-ai/ahp';
+import type { SessionToolCallApprovedAction } from '@grackle-ai/ahp';
+import type { SessionToolCallDeniedAction } from '@grackle-ai/ahp';
+import type { SessionToolCallResultConfirmedAction } from '@grackle-ai/ahp';
+import type { SessionTurnCancelledAction } from '@grackle-ai/ahp';
+import type { SessionTurnStartedAction } from '@grackle-ai/ahp';
+import type { Snapshot } from '@grackle-ai/ahp';
 import { SpawnOptions } from 'node:child_process';
 import type { StateAction } from '@grackle-ai/ahp';
+import type { TerminalInputAction } from '@grackle-ai/ahp';
+import type { URI } from '@grackle-ai/ahp';
 
 // @public
 export interface AdapterDependencies {
@@ -32,6 +54,14 @@ export interface AdapterLogger {
     info(obj: object, msg: string): void;
     // (undocumented)
     warn(obj: object, msg: string): void;
+}
+
+// @public
+export interface AddHostOptions {
+    readonly baseUrl: string;
+    readonly environmentId: string;
+    readonly locale?: string;
+    readonly powerlineToken: string;
 }
 
 // @public
@@ -108,6 +138,9 @@ export function buildEnvFileContent(powerlineToken: string, extraEnv?: Record<st
 
 // @public
 export function buildRemoteKillCommand(): string;
+
+// @public
+export type ClientDispatchableAction = RootConfigChangedAction | SessionTurnStartedAction | SessionToolCallApprovedAction | SessionToolCallDeniedAction | SessionToolCallResultConfirmedAction | SessionTurnCancelledAction | SessionInputAnswerChangedAction | SessionInputCompletedAction | SessionQueuedMessagesReorderedAction | SessionIsReadChangedAction | SessionIsArchivedChangedAction | SessionMetaChangedAction | TerminalInputAction | ChangesetOperationsChangedAction;
 
 // @public
 export function closeAllTunnels(logger?: AdapterLogger): Promise<void>;
@@ -300,10 +333,41 @@ export class GrpcHostTransport implements IHostTransport {
 }
 
 // @public
+export interface HostedSessionSummary {
+    readonly environmentId: string;
+    readonly summary: SessionSummary;
+}
+
+// @public
 export interface HostSessionInfo {
     runtime: string;
     sessionId: string;
     status: string;
+}
+
+// @public
+export class HostSupervisor {
+    constructor(opts: HostSupervisorOptions);
+    close(): Promise<void>;
+    dispatchAction(channel: URI, action: ClientDispatchableAction): void;
+    get environmentId(): string;
+    generation(): number;
+    hostedSessionSummaries(): HostedSessionSummary[];
+    listSessionSummaries(): SessionSummary[];
+    onStateChange(listener: (state: AhpConnectionState) => void): () => void;
+    open(): Promise<void>;
+    request<M extends keyof CommandMap>(method: M, params: CommandMap[M]["params"]): Promise<CommandMap[M]["result"]>;
+    get state(): AhpConnectionState;
+    subscribe(channel: URI, fromServerSeq?: number): AsyncIterable<SubscriptionMessage>;
+}
+
+// @public
+export interface HostSupervisorOptions {
+    readonly clientIdStore: ClientIdStore;
+    readonly host: AddHostOptions;
+    readonly logger?: SupervisorLogger;
+    readonly onAuthRequired?: (params: AuthRequiredParams) => void;
+    readonly onTelemetry?: (stream: TelemetryStream, params: unknown) => void;
 }
 
 // @public
@@ -337,6 +401,29 @@ type KillRequest = Message<"grackle.powerline.KillRequest"> & {
 
 // @public
 const KillRequestSchema: GenMessage<KillRequest>;
+
+// @public
+export class MultiHostClient {
+    constructor(opts?: MultiHostClientOptions);
+    addHost(opts: AddHostOptions): HostSupervisor;
+    aggregatedSessions(): Promise<HostedSessionSummary[]>;
+    close(): Promise<void>;
+    dispatchAction(envId: string, channel: URI, action: ClientDispatchableAction): void;
+    environmentIds(): string[];
+    generation(envId: string): number;
+    getHostState(envId: string): AhpConnectionState;
+    host(envId: string): HostSupervisor | undefined;
+    onStateChange(envId: string, listener: (state: AhpConnectionState) => void): () => void;
+    removeHost(environmentId: string): Promise<void>;
+    request<M extends keyof CommandMap>(envId: string, method: M, params: CommandMap[M]["params"]): Promise<CommandMap[M]["result"]>;
+    subscribe(envId: string, channel: URI, fromServerSeq?: number): AsyncIterable<SubscriptionMessage>;
+}
+
+// @public
+export interface MultiHostClientOptions {
+    readonly clientIdStoreFactory?: (environmentId: string) => ClientIdStore;
+    readonly logger?: SupervisorLogger;
+}
 
 // @public
 type Pong = Message<"grackle.powerline.Pong"> & {
@@ -575,7 +662,38 @@ export interface StartRemotePowerLineOptions {
 }
 
 // @public
+export type SubscriptionMessage = {
+    readonly kind: "snapshot";
+    readonly serverSeq: number;
+    readonly snapshot: Snapshot;
+} | {
+    readonly kind: "action";
+    readonly serverSeq: number;
+    readonly action: StateAction;
+    readonly origin?: ActionEnvelope["origin"];
+} | {
+    readonly kind: "unavailable";
+    readonly serverSeq: number;
+    readonly reason: string;
+};
+
+// @public
+export interface SupervisorLogger {
+    // (undocumented)
+    debug(msg: unknown, ...args: unknown[]): void;
+    // (undocumented)
+    error(msg: unknown, ...args: unknown[]): void;
+    // (undocumented)
+    info(msg: unknown, ...args: unknown[]): void;
+    // (undocumented)
+    warn(msg: unknown, ...args: unknown[]): void;
+}
+
+// @public
 export const TCP_PORT_PROBER: PortProber;
+
+// @public
+export type TelemetryStream = "logs" | "traces" | "metrics";
 
 // @public
 type TokenBundle = Message<"grackle.powerline.TokenBundle"> & {

@@ -158,6 +158,9 @@ importers:
       '@grackle-ai/ahp':
         specifier: workspace:*
         version: link:../ahp
+      '@grackle-ai/ahp-transport':
+        specifier: workspace:*
+        version: link:../ahp-transport
       '@grackle-ai/common':
         specifier: workspace:*
         version: link:../common

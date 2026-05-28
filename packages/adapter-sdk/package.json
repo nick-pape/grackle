@@ -39,6 +39,7 @@
     "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-node": "^2.0.0",
     "@grackle-ai/ahp": "workspace:*",
+    "@grackle-ai/ahp-transport": "workspace:*",
     "@grackle-ai/common": "workspace:*"
   },
   "devDependencies": {

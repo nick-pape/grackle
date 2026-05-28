@@ -69,6 +69,19 @@ export {
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
 } from "./utils.js";
 
+// ─── AHP Multi-Host Client (HR8b, #1334) ───────────────────
+export { MultiHostClient, HostSupervisor } from "./ahp-client/index.js";
+export type {
+  MultiHostClientOptions,
+  HostSupervisorOptions,
+  SupervisorLogger,
+  TelemetryStream,
+  AddHostOptions,
+  ClientDispatchableAction,
+  HostedSessionSummary,
+  SubscriptionMessage,
+} from "./ahp-client/index.js";
+
 // ─── Host Transport (AHP HR8c) ──────────────────────────────
 // Re-export AgentEventFields from common so consumers of `ServerActionEnvelope`
 // (which references it) don't have to import @grackle-ai/common just for the
