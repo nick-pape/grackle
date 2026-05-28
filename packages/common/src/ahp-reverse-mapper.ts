@@ -229,6 +229,18 @@ export function reverseMapAction(
 
     case ActionType.SessionToolCallReady: {
       const a = action as SessionToolCallReadyAction;
+      // Rehydrate the args payload from the AHP-spec `toolInput` field so the
+      // UI's tool-card preview ("filename" line, expanded JSON view) has the
+      // arguments to render. Producer side stringifies them; we parse back to
+      // the original shape if possible, else carry as a string.
+      let args: unknown;
+      if (a.toolInput !== undefined && a.toolInput !== "") {
+        try {
+          args = JSON.parse(a.toolInput) as unknown;
+        } catch {
+          args = a.toolInput;
+        }
+      }
       const pending = context.pendingToolCalls.get(a.toolCallId);
       if (pending === undefined) {
         // Orphan Ready (Start was missed). Emit a degraded tool_use using
@@ -240,9 +252,11 @@ export function reverseMapAction(
               turnId: a.turnId,
               toolCallId: a.toolCallId,
               content: JSON.stringify({
+                tool: "unknown_tool",
                 tool_name: "unknown_tool",
                 display_name: "unknown_tool",
                 invocation_message: a.invocationMessage,
+                ...(args !== undefined ? { args } : {}),
               }),
             },
           ],
@@ -257,10 +271,15 @@ export function reverseMapAction(
             type: "tool_use",
             turnId: pending.turnId,
             toolCallId: a.toolCallId,
+            // Emit both `tool` and `tool_name` so downstream code reading
+            // either key works (web's pairToolEvents reads `tool`; older
+            // paths read `tool_name`).
             content: JSON.stringify({
+              tool: pending.toolName,
               tool_name: pending.toolName,
               display_name: pending.displayName,
               invocation_message: a.invocationMessage,
+              ...(args !== undefined ? { args } : {}),
             }),
           },
         ],
