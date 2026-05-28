@@ -160,10 +160,13 @@ export class AhpServerSocket {
       return true;
     }
     const header = (req.headers["authorization"] ?? "").toString();
-    const supplied = header.replace(/^Bearer\s+/i, "");
-    if (supplied.length === 0) {
+    const bearerMatch = /^Bearer\s+(\S+)$/i.exec(header);
+    if (bearerMatch === null) {
+      // Reject anything that isn't an `Authorization: Bearer <token>` header
+      // — including a raw token with no scheme prefix.
       return false;
     }
+    const supplied = bearerMatch[1] ?? "";
     const a = Buffer.from(supplied);
     const b = Buffer.from(this.powerlineToken);
     if (a.length !== b.length) {

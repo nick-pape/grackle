@@ -81,6 +81,7 @@ export class AhpClientSocket {
   private session: JsonRpcSession | undefined;
   private socket: WebSocket | undefined;
   private userClosed = false;
+  private openInProgress = false;
   private reconnectTimer: NodeJS.Timeout | undefined;
   private readonly pendingOps: PendingOperation[] = [];
 
@@ -112,12 +113,20 @@ export class AhpClientSocket {
     if (this.userClosed) {
       throw new TransportError("user-closed", "open() called after close()");
     }
-    if (this.currentState === "open") {
-      throw new TransportError("connection-lost", "already open");
+    if (this.openInProgress || this.currentState !== "closed") {
+      // "connecting", "open", "reconnecting", or a concurrent open() in
+      // flight before the first await reached `connectOnce()`.
+      throw new TransportError("connection-lost", `open() called in state '${this.currentState}'`);
     }
-    this.userClosed = false;
-    this.currentClientId = this.currentClientId ?? (await this.loadOrMintClientId());
-    return this.connectOnce();
+    // Synchronously claim the lifecycle so a concurrent open() call (which
+    // also runs to its first await without yielding) sees the flag and bails.
+    this.openInProgress = true;
+    try {
+      this.currentClientId = this.currentClientId ?? (await this.loadOrMintClientId());
+      return await this.connectOnce(/* isReconnect */ false);
+    } finally {
+      this.openInProgress = false;
+    }
   }
 
   /** Sends a request; queues during reconnect, rejects after `.close()`. */
@@ -188,36 +197,49 @@ export class AhpClientSocket {
     return minted;
   }
 
-  private connectOnce(): Promise<InitializeResult> {
-    this.setState(this.currentState === "reconnecting" ? "reconnecting" : "connecting");
+  private connectOnce(isReconnect: boolean): Promise<InitializeResult> {
+    this.setState(isReconnect ? "reconnecting" : "connecting");
     return new Promise<InitializeResult>((resolveOuter, rejectOuter) => {
+      // Distinguishes "expected" closes (handshake failed, terminal teardown
+      // during connectOnce) from real transport drops that should trigger
+      // reconnect. Set BEFORE calling session.close() in the failure paths.
+      let suppressReconnect = false;
+
+      const failAttempt = (err: unknown): void => {
+        rejectOuter(err);
+        if (isReconnect && !this.userClosed) {
+          // Reconnect retry failed — schedule the next attempt.
+          this.scheduleReconnect();
+        } else {
+          // Initial open failed — go back to "closed" and fail queued ops so
+          // callers don't wait forever.
+          this.socket = undefined;
+          this.session = undefined;
+          this.failPendingOps(err);
+          this.setState("closed");
+        }
+      };
+
       let ws: WebSocket;
       try {
         ws = new this.WebSocketCtor(this.url, {
           headers: this.headersForUpgrade(),
         });
       } catch (err) {
-        rejectOuter(err);
-        this.scheduleReconnect();
+        failAttempt(err);
         return;
       }
       this.socket = ws;
-      // Capture the state at the moment we kicked off this connection. If
-      // we're already in "reconnecting" mode, a pre-`open` failure should
-      // chain another reconnect attempt. If this is the first open() call
-      // (state was "closed" → "connecting"), let the caller decide.
-      const wasReconnecting = this.currentState === "reconnecting";
 
       const onError = (err: Error): void => {
-        // ws emits "error" before "close" on transport failures. Since the
-        // session hasn't been constructed yet, handleSessionClose won't be
-        // called — for reconnect attempts we have to schedule the next
-        // retry ourselves.
-        rejectOuter(err);
-        this.socket = undefined;
-        if (wasReconnecting && !this.userClosed) {
-          this.scheduleReconnect();
+        // ws emits "error" before "close" on transport failures. Session
+        // isn't constructed yet, so handleSessionClose won't fire.
+        if (this.session !== undefined) {
+          // Session was created (we're past initialize); let handleSessionClose
+          // drive the next state.
+          return;
         }
+        failAttempt(err);
       };
 
       ws.once("open", () => {
@@ -226,7 +248,20 @@ export class AhpClientSocket {
           socket: ws,
           onRequest: this.onRequest,
           onNotification: this.onNotification,
-          onClose: (code, reason) => this.handleSessionClose(code, reason),
+          onClose: (code, reason) => {
+            if (suppressReconnect) {
+              // Expected close after a handshake failure — don't reconnect.
+              this.session = undefined;
+              this.socket = undefined;
+              if (!isReconnect) {
+                this.setState("closed");
+              }
+              void code;
+              void reason;
+              return;
+            }
+            this.handleSessionClose(code, reason);
+          },
         });
         this.session = session;
         // Send initialize.
@@ -244,9 +279,10 @@ export class AhpClientSocket {
             resolveOuter(result);
           },
           (err) => {
-            // Initialize rejected — close the socket and surface the error.
+            // Handshake failure is terminal — close without scheduling reconnect.
+            suppressReconnect = true;
             session.close(WsCloseCode.Normal, "initialize failed");
-            rejectOuter(err);
+            failAttempt(err);
           },
         );
       });
@@ -289,7 +325,7 @@ export class AhpClientSocket {
         return;
       }
       // Fire-and-forget; on success/failure we update state internally.
-      this.connectOnce().catch(() => {
+      this.connectOnce(/* isReconnect */ true).catch(() => {
         // connectOnce schedules its own reconnect on failure.
       });
     }, delay);

@@ -163,6 +163,33 @@ describe("AhpServerSocket", () => {
         await harness.close();
       }
     });
+
+    it("rejects a raw token without the Bearer scheme (no implicit fallback)", async () => {
+      // Hand-roll a WS connection that sends `Authorization: <token>` without
+      // the `Bearer ` prefix. The server MUST reject with 401.
+      const harness = await bootHarness();
+      try {
+        const wrong = new WebSocket(harness.url, {
+          // ws's `headers` option accepts arbitrary key-value strings.
+          headers: { Authorization: "tok" },
+        });
+        const status = await new Promise<number>((resolve) => {
+          wrong.on("unexpected-response", (_req, res) => {
+            res.destroy();
+            resolve(res.statusCode ?? 0);
+          });
+          wrong.on("error", () => resolve(0));
+          wrong.on("open", () => {
+            wrong.close();
+            resolve(101);
+          });
+          setTimeout(() => resolve(-1), 500);
+        });
+        expect(status).toBe(401);
+      } finally {
+        await harness.close();
+      }
+    });
   });
 
   describe("initialize handshake", () => {

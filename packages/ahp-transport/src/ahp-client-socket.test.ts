@@ -333,10 +333,94 @@ describe("AhpClientSocket", () => {
         webSocketCtor: ThrowingCtor,
         backoff: exponentialBackoff({ initialMs: 1_000_000, maxMs: 1_000_000, jitter: 0 }),
       });
+      await expect(client.open()).rejects.toThrow(/bad url/);
+      // Synchronous initial failure must transition to "closed" so the caller
+      // can call open() again, AND must NOT start background retries.
+      expect(client.state).toBe("closed");
+      await client.close();
+    });
+
+    it("rejects open() called while connecting (no race)", async () => {
+      const harness = await bootServer();
+      const client = new AhpClientSocket({
+        url: harness.url,
+        powerlineToken: "tok",
+        clientIdStore: new InMemoryClientIdStore(),
+        clientIdKey: "k",
+      });
       try {
-        await expect(client.open()).rejects.toThrow(/bad url/);
+        const first = client.open();
+        // Don't await first; second call should reject immediately.
+        await expect(client.open()).rejects.toMatchObject({ kind: "connection-lost" });
+        await first;
       } finally {
         await client.close();
+        await harness.close();
+      }
+    });
+
+    it("rejects open() called while reconnecting", async () => {
+      const harness = await bootServer();
+      const client = new AhpClientSocket({
+        url: harness.url,
+        powerlineToken: "tok",
+        clientIdStore: new InMemoryClientIdStore(),
+        clientIdKey: "k",
+        // Slow backoff so the client stays in "reconnecting" long enough.
+        backoff: exponentialBackoff({ initialMs: 5_000, maxMs: 5_000, jitter: 0 }),
+      });
+      try {
+        await client.open();
+        const conn = harness.connections[0]!;
+        conn.session.close(1011, "restart");
+        await waitForState(client, "reconnecting", 1_000);
+        await expect(client.open()).rejects.toMatchObject({ kind: "connection-lost" });
+      } finally {
+        await client.close();
+        await harness.close();
+      }
+    });
+
+    it("fails initial open() and transitions to closed on auth rejection (401)", async () => {
+      const harness = await bootServer();
+      const client = new AhpClientSocket({
+        url: harness.url,
+        powerlineToken: "wrong-token",
+        clientIdStore: new InMemoryClientIdStore(),
+        clientIdKey: "k",
+        // Long backoff: if we mistakenly scheduled a reconnect, it would
+        // remain in "reconnecting" long enough to fail the state assertion.
+        backoff: exponentialBackoff({ initialMs: 1_000_000, maxMs: 1_000_000, jitter: 0 }),
+      });
+      try {
+        await expect(client.open()).rejects.toBeDefined();
+        expect(client.state).toBe("closed");
+      } finally {
+        await client.close();
+        await harness.close();
+      }
+    });
+
+    it("fails initial open() terminally when initialize handler throws", async () => {
+      const harness = await bootServer({
+        onInitialize: () => {
+          throw new Error("boot failure");
+        },
+      });
+      const client = new AhpClientSocket({
+        url: harness.url,
+        powerlineToken: "tok",
+        clientIdStore: new InMemoryClientIdStore(),
+        clientIdKey: "k",
+        backoff: exponentialBackoff({ initialMs: 1_000_000, maxMs: 1_000_000, jitter: 0 }),
+      });
+      try {
+        await expect(client.open()).rejects.toBeDefined();
+        // Handshake failure is terminal — must NOT start background retries.
+        expect(client.state).toBe("closed");
+      } finally {
+        await client.close();
+        await harness.close();
       }
     });
   });
