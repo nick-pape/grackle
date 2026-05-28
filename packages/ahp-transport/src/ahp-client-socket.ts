@@ -57,7 +57,33 @@ interface PendingOperation {
   reject(err: unknown): void;
 }
 
-/** Bidirectional AHP transport over a single WebSocket with reconnect. */
+/**
+ * Bidirectional AHP transport over a single WebSocket with automatic
+ * reconnect, persistent client identity, and queued operations during
+ * reconnect.
+ *
+ * @example Connect, issue a typed request, react to server notifications:
+ * ```ts
+ * const client = new AhpClientSocket({
+ *   url: "ws://127.0.0.1:7433/ahp",
+ *   powerlineToken: process.env.GRACKLE_POWERLINE_TOKEN ?? "",
+ *   clientIdStore: new FileClientIdStore(join(homedir(), ".grackle", "ahp")),
+ *   clientIdKey: "powerline-1",
+ *   onNotification: (n) => {
+ *     if (n.method === "action") applyAction(n.params);
+ *   },
+ *   onStateChange: (state) => console.log("transport state:", state),
+ * });
+ * const result = await client.open();
+ * await client.request("createSession", { ... });
+ * ```
+ *
+ * @example Clean shutdown:
+ * ```ts
+ * await client.close();
+ * // client.state === "closed"; further request() calls reject immediately.
+ * ```
+ */
 export class AhpClientSocket {
   private readonly url: string;
   private readonly powerlineToken: string;
@@ -240,35 +266,43 @@ export class AhpClientSocket {
       }
       this.socket = ws;
 
-      // `ws` emits `unexpected-response` for non-101 HTTP responses to the
-      // upgrade (typically 401 from our `Authorization: Bearer` check).
-      // Auth rejection is terminal regardless of whether this is the first
-      // attempt or a reconnect — there is no token rotation here, so
-      // retrying with the same bad creds would loop forever.
-      let authRejected = false;
+      // `ws` emits `unexpected-response` for every non-101 HTTP response to
+      // the upgrade. ws delegates response handling to us once this event
+      // fires, so we MUST drain (or destroy) the response — otherwise the
+      // socket leaks. 401 is terminal (auth-failed, no point retrying with
+      // the same creds); other statuses (404, 426, 500, ...) are treated as
+      // transport failures so reconnect attempts chain via the backoff.
+      let upgradeRejected = false;
       ws.once("unexpected-response", (_req, res) => {
-        if (res.statusCode === 401) {
-          authRejected = true;
-          // Drain + destroy so the response doesn't hang the test harness.
-          res.resume();
-          res.on("end", () => {
+        upgradeRejected = true;
+        const status = res.statusCode ?? 0;
+        // Drain the response body so the socket can close cleanly.
+        res.resume();
+        const done = (): void => {
+          if (status === 401) {
             failHandshake(new TransportError("auth-failed", "host rejected upgrade with HTTP 401"));
-          });
-        }
+          } else {
+            failTransport(
+              new TransportError("connection-lost", `host rejected upgrade with HTTP ${status}`),
+            );
+          }
+        };
+        // Drain then complete. Use both 'end' and 'close' so we don't hang
+        // if the server destroys the response without an explicit end.
+        res.once("end", done);
+        res.once("close", done);
       });
 
       const onError = (err: Error): void => {
         // ws emits "error" before "close" on transport failures. If the
         // session is already constructed (we're past initialize), let
         // handleSessionClose drive recovery; otherwise this is a transport
-        // failure during the upgrade. Auth rejections are handled by the
-        // `unexpected-response` listener above.
+        // failure during the upgrade. `unexpected-response` handles non-101
+        // statuses; suppress here so we don't double-fail.
         if (this.session !== undefined) {
           return;
         }
-        if (authRejected) {
-          // `unexpected-response` will call failHandshake; suppress here so
-          // we don't double-fail.
+        if (upgradeRejected) {
           return;
         }
         failTransport(err);

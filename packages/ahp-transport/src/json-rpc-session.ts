@@ -54,7 +54,33 @@ interface PendingRequest {
   timeoutHandle: NodeJS.Timeout | undefined;
 }
 
-/** Bidirectional JSON-RPC session over one WebSocket. */
+/**
+ * Bidirectional JSON-RPC session over one WebSocket.
+ *
+ * @example Wrap an already-OPEN ws connection and exchange a typed request:
+ * ```ts
+ * import { WebSocket } from "ws";
+ * const socket = new WebSocket(url);
+ * await new Promise((r) => socket.once("open", r));
+ *
+ * const session = new JsonRpcSession({
+ *   socket,
+ *   onNotification: (n) => console.log("inbound:", n.method),
+ * });
+ * const result = await session.request("ping", { channel: "ahp-root://" });
+ * ```
+ *
+ * @example Send a response that closes the session after the frame flushes:
+ * ```ts
+ * const session = new JsonRpcSession({
+ *   socket,
+ *   onRequest: async (req) => ({
+ *     response: { jsonrpc: "2.0", id: req.id, error: { code: -32600, message: "bad" } },
+ *     afterSend: () => session.close(1000, "bye"),
+ *   }),
+ * });
+ * ```
+ */
 export class JsonRpcSession {
   private readonly socket: WebSocket;
   private readonly onRequest: RequestHandler | undefined;

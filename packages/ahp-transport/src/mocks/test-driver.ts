@@ -38,6 +38,11 @@ export interface TestDriver {
   readonly transitions: StateTransition[];
   /** Settle-history for every request the driver issued. */
   readonly requestOutcomes: Array<"resolved" | "rejected">;
+  /**
+   * Set if any request promise settled MORE than once. The fuzzer asserts
+   * this stays empty as invariant I3 (exactly-once settle).
+   */
+  readonly doubleSettleErrors: string[];
 
   /** Start (or restart) the server on the original port. */
   startServer(opts?: Partial<AhpServerSocketOptions>): Promise<void>;
@@ -62,7 +67,12 @@ export interface TestDriverOptions {
 
 export async function createTestDriver(options: TestDriverOptions = {}): Promise<TestDriver> {
   const backoffMs = options.backoffMs ?? 5;
-  // Pick a port up-front; reuse it across server restarts.
+  // Grab a free port via a brief listen-then-close. There's a small
+  // theoretical race against other vitest workers that could grab the
+  // same port between close and the next startServer, but in practice
+  // operating systems hold recently-freed ports in TIME_WAIT long enough
+  // for the test to re-bind. We tolerate the rare flake rather than pay
+  // the complexity of port-keeping with a fallback upgrade handler.
   const initialServer = createServer();
   await new Promise<void>((r) => initialServer.listen(0, "127.0.0.1", r));
   const port = (initialServer.address() as AddressInfo).port;
@@ -73,7 +83,9 @@ export async function createTestDriver(options: TestDriverOptions = {}): Promise
   const serverConnections: AhpServerConnection[] = [];
   const transitions: StateTransition[] = [];
   const requestOutcomes: Array<"resolved" | "rejected"> = [];
+  const doubleSettleErrors: string[] = [];
   let startedAt = Date.now();
+  let requestSeq = 0;
 
   const client = new AhpClientSocket({
     url: `ws://127.0.0.1:${port}/ahp`,
@@ -89,6 +101,7 @@ export async function createTestDriver(options: TestDriverOptions = {}): Promise
     serverConnections,
     transitions,
     requestOutcomes,
+    doubleSettleErrors,
     async startServer(opts) {
       if (server !== undefined) {
         return;
@@ -125,11 +138,21 @@ export async function createTestDriver(options: TestDriverOptions = {}): Promise
       }
     },
     async request() {
+      const id = requestSeq++;
+      let settled = false;
+      const recordSettle = (outcome: "resolved" | "rejected"): void => {
+        if (settled) {
+          doubleSettleErrors.push(`request ${id} settled twice (last: ${outcome})`);
+          return;
+        }
+        settled = true;
+        requestOutcomes.push(outcome);
+      };
       try {
         await client.request("ping", { channel: "ahp-root://" });
-        requestOutcomes.push("resolved");
+        recordSettle("resolved");
       } catch {
-        requestOutcomes.push("rejected");
+        recordSettle("rejected");
       }
     },
     notify() {

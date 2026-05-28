@@ -7,8 +7,11 @@
  *
  *   I1. state ∈ {connecting, open, reconnecting, closed}.
  *   I2. After dispose(), the state stays "closed" (no late transitions).
- *   I3. Every issued request() promise settles exactly once.
+ *   I3. Every issued request() promise settles EXACTLY ONCE (no double-
+ *       resolve and no double-reject). Tracked via a sentinel wrapper.
  *   I4. clientId, once known, is stable across reconnects.
+ *   I5. After dispose() + idle, no Node timers/handles remain attributable
+ *       to this driver. Catches orphan setTimeout/setInterval leaks.
  *
  * The harness lives in mocks/test-driver.ts. fast-check shrinks failures
  * to a minimal failing op sequence.
@@ -96,8 +99,22 @@ function assertInvariants(driver: TestDriver, lastClientId: string | undefined):
   }
 }
 
+/**
+ * Capture the count of active Node handles attributable to this process.
+ * Uses the undocumented `process._getActiveHandles()` introspection hook.
+ * A growing count after dispose indicates orphaned timers/sockets.
+ */
+function countActiveHandles(): number {
+  const proc = process as unknown as { _getActiveHandles?: () => unknown[] };
+  return proc._getActiveHandles?.()?.length ?? 0;
+}
+
 describe("AhpClientSocket fuzz", () => {
   it("preserves invariants across random op sequences", async () => {
+    // Baseline handle count for I5. Other vitest workers and Node internals
+    // contribute to this; we only flag *growth* beyond a generous bound.
+    const baselineHandles = countActiveHandles();
+
     await fc.assert(
       fc.asyncProperty(fc.array(opArb, { minLength: 1, maxLength: 20 }), async (ops) => {
         const driver = await createTestDriver();
@@ -119,15 +136,12 @@ describe("AhpClientSocket fuzz", () => {
           await driver.wait(60);
 
           // I3: every issued request settled exactly once.
-          // The driver records each outcome on settle, never twice (we use
-          // a single try/catch with one push). Sanity-check the count
-          // matches the number of {kind: "request"} ops, OR is less by
-          // however many are still pending after the settle window. We
-          // accept "<= ops.request count" — a fuzz sequence can outrun the
-          // server's ability to settle.
+          expect(driver.doubleSettleErrors).toEqual([]);
           const requestCount = ops.filter((o) => o.kind === "request").length;
+          // Issued count is upper-bound; unsettled-at-settle-window pending
+          // ones drop off the lower end.
           expect(driver.requestOutcomes.length).toBeLessThanOrEqual(requestCount);
-          expect(driver.requestOutcomes.length).toBeGreaterThanOrEqual(0);
+
           // I2: after dispose, state stays "closed".
           await driver.dispose();
           const transitionsBefore = driver.transitions.length;
@@ -135,6 +149,13 @@ describe("AhpClientSocket fuzz", () => {
           expect(driver.client.state).toBe("closed");
           // No new transitions arrived after dispose (post-close should be silent).
           expect(driver.transitions.length).toBe(transitionsBefore);
+
+          // I5: dispose() must not leak handles. We allow a generous slack
+          // (10 handles above baseline) since vitest/node have background
+          // I/O. A persistent leak across many iterations would still
+          // accumulate well beyond this.
+          const handlesAfter = countActiveHandles();
+          expect(handlesAfter).toBeLessThanOrEqual(baselineHandles + 10);
         } catch (err) {
           // On any assertion failure, ensure cleanup before fast-check
           // shrinks. Failure to clean up here leaks ports across shrink iterations.
@@ -142,6 +163,9 @@ describe("AhpClientSocket fuzz", () => {
           throw err;
         }
       }),
+      // 50 runs × max 20 ops. Larger numbers (e.g. 200 × 30) give more
+      // state-space coverage but multiply CI cost; stuck at 50 × 20 to
+      // keep this file under ~15s.
       { numRuns: 50, timeout: 30_000 },
     );
   }, 120_000);

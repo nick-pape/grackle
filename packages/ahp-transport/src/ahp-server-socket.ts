@@ -56,9 +56,9 @@ export interface AhpServerSocketOptions {
   /** Path component of the WS URL. Defaults to "/ahp". */
   readonly path?: string;
   /**
-   * Builds the {@link InitializeResult} given the client's `InitializeParams`.
-   * May return a Promise. Throw or reject to fail the handshake — the session
-   * will receive a JSON-RPC error response and close.
+   * Builds the `InitializeResult` (from `@grackle-ai/ahp`) given the client's
+   * `InitializeParams`. May return a Promise. Throw or reject to fail the
+   * handshake — the session will receive a JSON-RPC error response and close.
    */
   readonly onInitialize: (params: InitializeParams) => Promise<InitializeResult> | InitializeResult;
   /** Handles requests other than `initialize`. */
@@ -87,7 +87,36 @@ interface ConnectionState {
   heartbeat: Heartbeat;
 }
 
-/** AHP-spec JSON-RPC/WebSocket server. */
+/**
+ * AHP-spec JSON-RPC/WebSocket server. Mounts on an existing
+ * `http.Server`/`http2.SecureServer` and surfaces fully-initialized
+ * `AhpServerConnection`s to the application.
+ *
+ * @example Mount on an HTTP server and accept one client:
+ * ```ts
+ * import { createServer } from "node:http";
+ * const server = createServer();
+ * server.listen(7433, "127.0.0.1");
+ *
+ * const ahp = new AhpServerSocket({
+ *   server,
+ *   powerlineToken: process.env.GRACKLE_POWERLINE_TOKEN ?? "",
+ *   onInitialize: (params) => ({
+ *     protocolVersion: "0.1.0",
+ *     serverSeq: 0,
+ *     snapshots: [],
+ *   }),
+ *   onConnection: (conn) => {
+ *     console.log("client connected:", conn.clientId);
+ *     conn.session.notify("action", { channel: "ahp-session:/x", serverSeq: 1, action: {...} });
+ *   },
+ *   onRequest: async (req, conn) => {
+ *     // typed dispatch on req.method
+ *     return { jsonrpc: "2.0", id: req.id, result: null };
+ *   },
+ * });
+ * ```
+ */
 export class AhpServerSocket {
   private readonly server: HttpServer | Http2SecureServer;
   private readonly powerlineToken: string;
@@ -238,13 +267,19 @@ export class AhpServerSocket {
           afterSend: () => this.onConnection?.(connection),
         };
       } catch (err) {
+        // onInitialize failure: send the error response, then close the
+        // session. The handshake boundary requires the peer can't retry
+        // initialize on the same socket after a handshake-layer failure.
         return {
-          jsonrpc: "2.0",
-          id: req.id,
-          error: {
-            code: JsonRpcErrorCodes.InternalError,
-            message: (err as Error).message || "onInitialize threw",
+          response: {
+            jsonrpc: "2.0",
+            id: req.id,
+            error: {
+              code: JsonRpcErrorCodes.InternalError,
+              message: (err as Error).message || "onInitialize threw",
+            },
           },
+          afterSend: () => state.session.close(WsCloseCode.Normal, "initialize failed"),
         };
       }
     }

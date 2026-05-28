@@ -204,6 +204,77 @@ describe("AhpServerSocket + AhpClientSocket loopback", () => {
     }
   });
 
+  it("handles 10K notifications without unbounded memory growth or frame loss", async () => {
+    // Stress: sustained-rate pipelining. Catches:
+    //   - frame loss under load (e.g., if write-buffer backpressure handling
+    //     in our framing drops frames)
+    //   - unbounded buffer growth (e.g., if `pendingRequests` or any
+    //     internal map accumulates entries that never get cleaned up)
+    const { server, port } = await listenOn(0);
+    const received: number[] = [];
+    const ahp = new AhpServerSocket({
+      server,
+      powerlineToken: "tok",
+      onInitialize: () => INIT_RESULT,
+      onNotification: (notif) => {
+        if (notif.method === "dispatchAction") {
+          const params = notif.params as { _seq?: number };
+          if (typeof params._seq === "number") {
+            received.push(params._seq);
+          }
+        }
+      },
+    });
+    const client = new AhpClientSocket({
+      url: `ws://127.0.0.1:${port}/ahp`,
+      powerlineToken: "tok",
+      clientIdStore: new InMemoryClientIdStore(),
+      clientIdKey: "stress",
+    });
+    try {
+      await client.open();
+      const heapBefore = process.memoryUsage().heapUsed;
+
+      const total = 10_000;
+      for (let i = 0; i < total; i++) {
+        client.notify("dispatchAction", {
+          channel: "ahp-session:/stress",
+          _seq: i,
+          action: { type: "noop" },
+        });
+        // Yield periodically so the receiver can drain.
+        if (i % 1000 === 0) {
+          await new Promise((r) => setImmediate(r));
+        }
+      }
+      // Drain.
+      const deadline = Date.now() + 10_000;
+      while (received.length < total) {
+        if (Date.now() > deadline) {
+          throw new Error(`stress: received ${received.length} / ${total} after 10s`);
+        }
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      expect(received.length).toBe(total);
+      // Every seq accounted for, in order.
+      for (let i = 0; i < total; i++) {
+        expect(received[i]).toBe(i);
+      }
+      // Heap growth bound: encourage GC to free anything still reachable.
+      // (We can't force GC without --expose-gc, so this is a soft check.)
+      const heapAfter = process.memoryUsage().heapUsed;
+      const growthMB = (heapAfter - heapBefore) / (1024 * 1024);
+      // 50MB is generous; the test sent ~10K ~100-byte notifications =
+      // ~1MB on the wire. Anything more than 50MB suggests an unbounded
+      // buffer somewhere.
+      expect(growthMB).toBeLessThan(50);
+    } finally {
+      await client.close();
+      await ahp.close();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
   it("delivers 100 client→server notifications in order without loss", async () => {
     const { server, port } = await listenOn(0);
     const received: number[] = [];
