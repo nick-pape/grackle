@@ -90,6 +90,7 @@ export function publishWidgetEvent(sessionId: string, payload: WidgetEventPayloa
       content: JSON.stringify(payload),
       raw: JSON.stringify({ widget: true, toolName: payload.toolName }),
     });
+    event.serverSeq = recordSessionAction(event) ?? "";
     const session = sessionStore.getSession(sessionId);
     if (session?.logPath) {
       logWriter.ensureLogInitialized(session.logPath);
@@ -98,7 +99,6 @@ export function publishWidgetEvent(sessionId: string, payload: WidgetEventPayloa
       });
     }
     streamHub.publish(event);
-    recordSessionAction(event);
   } catch (err) {
     logger.error({ err, sessionId }, "Failed to publish widget event");
   }
@@ -148,9 +148,12 @@ export function processEventStream(
           content: options.systemContext,
           raw: JSON.stringify({ systemContext: true }),
         });
+        // Stamp the ULID BEFORE persisting + broadcasting so the UI's dedup
+        // key (`serverSeq` first, `${timestamp}|${eventType}` fallback) is
+        // consistent across the WS push, the JSONL replay, and `session_actions`.
+        sysCtxEvent.serverSeq = recordSessionAction(sysCtxEvent) ?? "";
         await logWriter.writeEvent(logPath, sysCtxEvent);
         streamHub.publish(sysCtxEvent);
-        recordSessionAction(sysCtxEvent);
       }
       if (options.prompt && options.taskId) {
         const promptEvent = create(grackle.SessionEventSchema, {
@@ -159,9 +162,9 @@ export function processEventStream(
           timestamp: new Date().toISOString(),
           content: options.prompt,
         });
+        promptEvent.serverSeq = recordSessionAction(promptEvent) ?? "";
         await logWriter.writeEvent(logPath, promptEvent);
         streamHub.publish(promptEvent);
-        recordSessionAction(promptEvent);
       }
 
       for await (const envelope of envelopes) {
@@ -172,7 +175,16 @@ export function processEventStream(
         // string fields default to "" and bool to false anyway, so this just
         // makes the intent explicit at the source.
         const eventContent: string = event.content ?? "";
-        const eventTimestamp: string = event.timestamp ?? "";
+        // AHP wire boundary: the AHP forward mapper doesn't carry `timestamp`
+        // through StateAction (the spec has no per-action timestamp), so events
+        // arrive here with timestamp="". Synthesize one at receive time so the
+        // UI can sort/dedupe (the dedup key in `useSessions.loadSessionEvents`
+        // is `${timestamp}|${eventType}`, and two events sharing `""|system`
+        // would collapse into one). The synthesized timestamp is approximate
+        // (when consumer received it, not when producer emitted), which is
+        // acceptable for display purposes — events still arrive in causal
+        // order via the action stream's serverSeq monotonicity.
+        const eventTimestamp: string = event.timestamp || new Date().toISOString();
         const eventRaw: string = event.raw ?? "";
         const eventToolCallId: string = event.toolCallId ?? "";
         const eventTurnId: string = event.turnId ?? "";
@@ -196,9 +208,11 @@ export function processEventStream(
           diagnostic: eventDiagnostic,
           turnId: eventTurnId,
         });
+        // ULID first — JSONL + WS push carry it so the UI can dedup/sort on
+        // a stable key independent of the (possibly synthesized) timestamp.
+        sessionEvent.serverSeq = recordSessionAction(sessionEvent) ?? "";
         await logWriter.writeEvent(logPath, sessionEvent);
         streamHub.publish(sessionEvent);
-        recordSessionAction(sessionEvent);
 
         // HR7: tee runtime diagnostics to the additive OTLP logs sink (no-op
         // unless OTEL_EXPORTER_OTLP_ENDPOINT is set). Existing sinks above are
@@ -414,8 +428,8 @@ export function processEventStream(
           timestamp: new Date().toISOString(),
           content: SESSION_STATUS.SUSPENDED,
         });
+        suspendedEvent.serverSeq = recordSessionAction(suspendedEvent) ?? "";
         streamHub.publish(suspendedEvent);
-        recordSessionAction(suspendedEvent);
         if (ctx.taskId) {
           emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
         }

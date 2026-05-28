@@ -2649,6 +2649,7 @@ type SessionEvent = Message<"grackle.SessionEvent"> & {
     toolCallId: string;
     diagnostic: boolean;
     turnId: string;
+    serverSeq: string;
 };
 
 // @public
