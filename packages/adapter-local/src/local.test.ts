@@ -16,7 +16,7 @@ describe("LocalAdapter", () => {
   it("healthCheck returns false when ping fails", async () => {
     const adapter = new LocalAdapter();
     const connection = {
-      client: { ping: vi.fn().mockRejectedValue(new Error("unreachable")) },
+      ping: vi.fn().mockRejectedValue(new Error("unreachable")),
       environmentId: "local",
       port: 7433,
     };
@@ -27,7 +27,7 @@ describe("LocalAdapter", () => {
   it("healthCheck returns true when ping succeeds", async () => {
     const adapter = new LocalAdapter();
     const connection = {
-      client: { ping: vi.fn().mockResolvedValue({}) },
+      ping: vi.fn().mockResolvedValue(undefined),
       environmentId: "local",
       port: 7433,
     };

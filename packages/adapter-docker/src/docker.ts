@@ -718,8 +718,8 @@ export class DockerAdapter implements EnvironmentAdapter {
       // When on a shared Docker network, connect directly to the sibling container
       // by name on the default PowerLine port. Otherwise, use the mapped host port.
       connectUrl = DOCKER_NETWORK
-        ? `ws://${containerName}:${DEFAULT_POWERLINE_PORT}`
-        : `ws://127.0.0.1:${localPort}`;
+        ? `http://${containerName}:${DEFAULT_POWERLINE_PORT}`
+        : `http://127.0.0.1:${localPort}`;
     }
     // For attach-mode connectUrl is http:// from resolveAttachConnectivity;
     // createAhpHostTransport normalizes http(s) to ws(s).
