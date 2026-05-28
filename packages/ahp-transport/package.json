@@ -38,7 +38,7 @@
   "dependencies": {
     "@grackle-ai/ahp": "workspace:*",
     "pino": "^10.3.1",
-    "ws": "^8.18.0"
+    "ws": "8.20.1"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
