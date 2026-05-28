@@ -417,6 +417,20 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     }
   }
 
+  /**
+   * Event types whose mapper-drop ("no active turn") should be rescued by
+   * synthesizing an orphan turn-started. These are runtime-emitted content
+   * events that, under the gRPC wire, flowed through regardless of turn
+   * context. The AHP wire is action-only, so an orphan emission would be
+   * silently lost — we patch around that here at the wire boundary.
+   */
+  const ORPHAN_RESCUABLE_TYPES: ReadonlySet<string> = new Set([
+    "text",
+    "tool_use",
+    "tool_result",
+    "system",
+  ]);
+
   function emitActionsForEvent(
     conn: AhpServerConnection,
     sessionId: string,
@@ -435,7 +449,42 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
       timestamp: event.timestamp,
       raw: event.raw !== undefined ? JSON.stringify(event.raw) : undefined,
     };
-    const result = mapAgentEvent(normalized, idx, forwarder.mapperContext);
+    let result = mapAgentEvent(normalized, idx, forwarder.mapperContext);
+
+    // Orphan rescue (HR8d): if the mapper dropped a content event because
+    // no turn is active, synthesize a `SessionTurnStarted` and re-run the
+    // mapper so the event lands inside a turn. Without this, runtimes that
+    // emit text/tool events outside a turn (legitimate under the gRPC wire)
+    // would have their content silently dropped on the AHP wire.
+    if (
+      result.actions.length === 0 &&
+      result.note?.disposition === "dropped" &&
+      ORPHAN_RESCUABLE_TYPES.has(normalized.type) &&
+      forwarder.mapperContext.turnId === undefined
+    ) {
+      const orphanTurnId = `turn-orphan-${String(idx)}`;
+      const synthAction: StateAction = {
+        type: ActionType.SessionTurnStarted,
+        turnId: orphanTurnId,
+        userMessage: { text: "" },
+      };
+      forwarder.serverSeq += 1;
+      conn.session.notify("action", {
+        channel: sessionChannel(sessionId),
+        serverSeq: forwarder.serverSeq,
+        action: synthAction,
+        origin: undefined,
+      });
+      // Update context so the re-run sees the synthetic turn as active.
+      forwarder.mapperContext.turnId = orphanTurnId;
+      // Re-run the mapper with a fresh index. The mapperContext is mutable
+      // so the orphan turn is now in scope. partCounter / openToolCalls
+      // remain whatever the mapper produced on the dropped pass (should be
+      // unchanged since the action set was empty).
+      const reIdx = forwarder.mapperContext.eventIndex++;
+      result = mapAgentEvent(normalized, reIdx, forwarder.mapperContext);
+    }
+
     for (const action of result.actions) {
       forwarder.serverSeq += 1;
       conn.session.notify("action", {
