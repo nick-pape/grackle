@@ -10,7 +10,7 @@
  */
 
 import { create } from "@bufbuild/protobuf";
-import { grackle, powerline } from "@grackle-ai/common";
+import { grackle } from "@grackle-ai/common";
 import {
   ROOT_TASK_ID,
   SESSION_STATUS,
@@ -75,14 +75,12 @@ export function killSessionAndCleanup(session: SessionRow): void {
   // after subscription cleanup — this ensures immediate process termination.
   const conn = adapterManager.getConnection(session.environmentId);
   if (conn) {
-    conn.client
-      .kill(create(powerline.KillRequestSchema, { id: session.id, reason: END_REASON.KILLED }))
-      .catch((err: unknown) => {
-        logger.debug(
-          { err, sessionId: session.id },
-          "PowerLine kill failed (process may have already exited)",
-        );
-      });
+    conn.transport.dispose(session.id, END_REASON.KILLED).catch((err: unknown) => {
+      logger.debug(
+        { err, sessionId: session.id },
+        "Host transport dispose failed (process may have already exited)",
+      );
+    });
   }
 
   // Transfer ALL pipe fds to grandparent BEFORE cleaning up subscriptions.

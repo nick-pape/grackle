@@ -152,8 +152,9 @@ function makeSession(
 /** Build a mock adapter connection with a resumable client. */
 function makeConnection() {
   return {
-    client: {
-      resume: vi.fn(() => (async function* () {})()),
+    client: {},
+    transport: {
+      reanimate: vi.fn(() => (async function* () {})()),
     },
   };
 }

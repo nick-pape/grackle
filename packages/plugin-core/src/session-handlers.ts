@@ -42,7 +42,7 @@ import { deliverPendingEscalations } from "@grackle-ai/core";
 import { createEventStream } from "@grackle-ai/core";
 import { sessionRowToProto } from "./grpc-proto-converters.js";
 import { validatePipeInputs, toDialableHost, killSessionAndCleanup } from "./grpc-shared.js";
-import { resolveSpawnSelection, buildPowerlineSpawnRequest } from "./spawn-request.js";
+import { resolveSpawnSelection, buildCreateSessionParams } from "./spawn-request.js";
 import { personaMcpServersToJson } from "@grackle-ai/core";
 import { getTraceId } from "@grackle-ai/core";
 import { resolveBootstrapRuntime } from "@grackle-ai/core";
@@ -210,7 +210,7 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
       process.env.GRACKLE_WORKTREE_BASE ||
       "/workspace"
     : "";
-  const powerlineReq = buildPowerlineSpawnRequest({
+  const createParams = buildCreateSessionParams({
     sessionId,
     runtime,
     model,
@@ -270,7 +270,8 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
     env.adapterType === "local" ? { excludeFileTokens: true } : undefined,
   );
 
-  processEventStream(conn.client.spawn(powerlineReq), {
+  const { stream } = conn.transport.createSession(createParams);
+  processEventStream(stream, {
     sessionId,
     logPath,
     systemContext,

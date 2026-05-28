@@ -1,17 +1,20 @@
 /**
  * AgentEvent → AHP SessionAction mapper (AHP HR1b / RFC #1292).
  *
- * Stateless function that translates a single PowerLine `AgentEvent` into one
- * or more AHP `SessionAction` payloads. The mapper is stateless — it requires
- * a `MapperContext` from the caller to track turn state and tool-call pairing.
+ * Stateless function that translates a single PowerLine `AgentEvent` (or any
+ * structurally-compatible value — see {@link AgentEventFields}) into one or
+ * more AHP `SessionAction` payloads. The mapper requires a {@link MapperContext}
+ * from the caller to track turn state and tool-call pairing.
  *
- * This mapper is an interim bridge while PowerLine still produces AgentEvents
- * and the AHP host eventually takes over the transport (HR8).
+ * Lives in `@grackle-ai/common` (not core) because both the live gRPC transport
+ * (`GrpcHostTransport` in `@grackle-ai/adapter-sdk`) and the in-core delta-replay
+ * path (`SessionStateManager.reconstruct`) consume it. Decoupling from
+ * `powerline.AgentEvent` lets HR8d remove the gRPC path entirely without
+ * touching the mapper.
  *
  * @module ahp-mapper
  */
 
-import type { powerline } from "@grackle-ai/common";
 import {
   ActionType,
   ToolCallConfirmationReason,
@@ -21,6 +24,37 @@ import {
   type StateAction,
   type ToolResultContent,
 } from "@grackle-ai/ahp";
+
+/**
+ * Structural subset of `powerline.AgentEvent` that the mapper plus its
+ * downstream consumers actually read.
+ *
+ * Any object with these fields can be passed to `mapAgentEvent` —
+ * proto-generated `AgentEvent` messages from the live gRPC stream and plain
+ * objects reconstructed from `session_actions` rows during replay both qualify.
+ *
+ * The fields the mapper itself reads are `type`, `content`, `toolCallId`,
+ * `turnId`, and `diagnostic`. `timestamp` and `raw` are not consulted by the
+ * mapper but are included here so downstream consumers (e.g. `event-processor`
+ * in `@grackle-ai/core`) can convert envelopes back into `grackle.SessionEvent`
+ * proto messages without re-importing the powerline types.
+ */
+export interface AgentEventFields {
+  /** Event type discriminator (e.g. `"turn_started"`, `"tool_use"`). */
+  type: string;
+  /** Event payload (string, often JSON). Empty/missing maps to `""`. */
+  content?: string;
+  /** First-class tool call ID for `tool_use` / `tool_result` pairing (HR3). */
+  toolCallId?: string;
+  /** Turn ID this event belongs to (overrides the active context turn). */
+  turnId?: string;
+  /** `true` for diagnostic system events that route to OTLP telemetry (HR7). */
+  diagnostic?: boolean;
+  /** ISO-8601 timestamp string (passed through from the runtime). */
+  timestamp?: string;
+  /** Raw event body — opaque to the mapper, used by JSONL persistence. */
+  raw?: string;
+}
 
 /** Safely parse an event's content JSON, returning a record or undefined on failure. */
 function safeParseContent(content?: string): Record<string, unknown> | undefined {
@@ -105,7 +139,7 @@ function makeTextResult(text: string): ToolResultContent {
 }
 
 /** Check whether a system event is a diagnostic (HR7) that routes to OTLP. */
-function isDiagnosticEvent(event: powerline.AgentEvent): boolean {
+function isDiagnosticEvent(event: AgentEventFields): boolean {
   if (event.diagnostic) return true;
   const parsed = safeParseContent(event.content);
   if (parsed) {
@@ -157,7 +191,7 @@ function str(parsed: Record<string, unknown>, fields: string[], fallback: string
  * | `runtime_session_id` | `_meta.runtimeSessionId` | carried |
  */
 export function mapAgentEvent(
-  event: powerline.AgentEvent,
+  event: AgentEventFields,
   index: number,
   context: MapperContext,
 ): MapResult {

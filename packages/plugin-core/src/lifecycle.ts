@@ -13,13 +13,7 @@
  */
 
 import { create } from "@bufbuild/protobuf";
-import {
-  grackle,
-  SESSION_STATUS,
-  TERMINAL_SESSION_STATUSES,
-  END_REASON,
-  powerline,
-} from "@grackle-ai/common";
+import { grackle, SESSION_STATUS, TERMINAL_SESSION_STATUSES, END_REASON } from "@grackle-ai/common";
 import type { SessionStatus, EndReason } from "@grackle-ai/common";
 import { sessionStore, taskStore } from "@grackle-ai/database";
 import {
@@ -71,14 +65,12 @@ export function createLifecycleSubscriber(ctx: PluginContext): Disposable {
       } else {
         reason = END_REASON.KILLED;
       }
-      conn.client
-        .kill(create(powerline.KillRequestSchema, { id: sessionId, reason }))
-        .catch((err: unknown) => {
-          logger.debug(
-            { err, sessionId },
-            "Lifecycle: PowerLine kill failed (process may have already exited)",
-          );
-        });
+      conn.transport.dispose(sessionId, reason).catch((err: unknown) => {
+        logger.debug(
+          { err, sessionId },
+          "Lifecycle: host transport dispose failed (process may have already exited)",
+        );
+      });
     }
 
     // Skip status change and broadcast if already terminal (killAgent already handled it)

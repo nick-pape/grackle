@@ -77,9 +77,10 @@ describe("pipe-delivery integration", () => {
     streamRegistry._resetForTesting();
     pipeDelivery._resetForTesting();
 
-    mockSendInput = vi.fn().mockResolvedValue({});
+    mockSendInput = vi.fn().mockResolvedValue(undefined);
     vi.spyOn(adapterManager, "getConnection").mockReturnValue({
-      client: { sendInput: mockSendInput },
+      client: {},
+      transport: { dispatchInput: mockSendInput },
     } as unknown as ReturnType<typeof adapterManager.getConnection>);
   });
 
@@ -120,12 +121,12 @@ describe("pipe-delivery integration", () => {
       // Trigger child completion
       await pipeDelivery.publishChildCompletion("child", "completed");
 
-      // Verify sendInput called on parent with message containing status + child output
+      // Verify dispatchInput called on parent with message containing status + child output
       expect(mockSendInput).toHaveBeenCalledOnce();
-      const call = mockSendInput.mock.calls[0][0];
-      expect(call.sessionId).toBe("parent");
-      expect(call.text).toContain("completed");
-      expect(call.text).toContain("Child's final output");
+      const [sessionUri, text] = mockSendInput.mock.calls[0];
+      expect(sessionUri).toBe("parent");
+      expect(text).toContain("completed");
+      expect(text).toContain("Child's final output");
     });
   });
 
@@ -217,11 +218,11 @@ describe("pipe-delivery integration", () => {
       // Parent publishes to stream (mimics writeToFd calling streamRegistry.publish)
       streamRegistry.publish(stream.id, "parent", "Hello from parent");
 
-      // Child should receive via sendInput (listener for child session fires)
+      // Child should receive via dispatchInput (listener for child session fires)
       expect(mockSendInput).toHaveBeenCalledOnce();
-      const call = mockSendInput.mock.calls[0][0];
-      expect(call.sessionId).toBe("child");
-      expect(call.text).toContain("Hello from parent");
+      const [sessionUri, text] = mockSendInput.mock.calls[0];
+      expect(sessionUri).toBe("child");
+      expect(text).toContain("Hello from parent");
     });
 
     it("delivers child publish to parent via async listener", () => {
@@ -251,9 +252,9 @@ describe("pipe-delivery integration", () => {
 
       // Parent should receive
       expect(mockSendInput).toHaveBeenCalledOnce();
-      const call = mockSendInput.mock.calls[0][0];
-      expect(call.sessionId).toBe("parent");
-      expect(call.text).toContain("Result from child");
+      const [sessionUri, text] = mockSendInput.mock.calls[0];
+      expect(sessionUri).toBe("parent");
+      expect(text).toContain("Result from child");
     });
   });
 
@@ -286,11 +287,11 @@ describe("pipe-delivery integration", () => {
       // Child publishes to selfEcho stream
       streamRegistry.publish(stream.id, "child", "Hello from child");
 
-      // sendInput should be called exactly once — for parent, not child
+      // dispatchInput should be called exactly once — for parent, not child
       expect(mockSendInput).toHaveBeenCalledOnce();
-      const call = mockSendInput.mock.calls[0][0];
-      expect(call.sessionId).toBe("parent");
-      expect(call.text).toContain("Hello from child");
+      const [sessionUri, text] = mockSendInput.mock.calls[0];
+      expect(sessionUri).toBe("parent");
+      expect(text).toContain("Hello from child");
     });
   });
 
@@ -771,9 +772,10 @@ describe("pipe-delivery integration", () => {
 
       // Wait deterministically for the async replay delivery to settle
       await vi.waitFor(() => {
-        const calls = mockSendInput.mock.calls.map(
-          (c: unknown[]) => c[0] as { sessionId: string; text: string },
-        );
+        const calls = mockSendInput.mock.calls.map((c: unknown[]) => ({
+          sessionId: c[0] as string,
+          text: c[1] as string,
+        }));
         const parentCall = calls.find((c) => c.sessionId === "parent");
         expect(parentCall).toBeDefined();
         expect(parentCall!.text).toContain("Buffered message from offline window");

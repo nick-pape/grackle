@@ -77,7 +77,24 @@ type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
 };
 
 // @public
+export interface AgentEventFields {
+    content?: string;
+    diagnostic?: boolean;
+    raw?: string;
+    timestamp?: string;
+    toolCallId?: string;
+    turnId?: string;
+    type: string;
+}
+
+// @public
 const AgentEventSchema: GenMessage<AgentEvent>;
+
+// @public
+export interface AuthenticateParams {
+    provider: string;
+    tokens: AuthenticateTokenItem[];
+}
 
 // @public
 type AuthenticateRequest = Message<"grackle.powerline.AuthenticateRequest"> & {
@@ -87,6 +104,15 @@ type AuthenticateRequest = Message<"grackle.powerline.AuthenticateRequest"> & {
 
 // @public
 const AuthenticateRequestSchema: GenMessage<AuthenticateRequest>;
+
+// @public
+export interface AuthenticateTokenItem {
+    envVar?: string;
+    filePath?: string;
+    name: string;
+    type: string;
+    value: string;
+}
 
 // @public
 export interface BaseEnvironmentConfig {
@@ -127,6 +153,32 @@ export function connectThroughTunnel(environmentId: string, localPort: number, p
 
 // @public
 export function createPowerLineClient(baseUrl: string, powerlineToken: string, traceId?: string): PowerLineClient;
+
+// @public
+export interface CreateSessionParams {
+    branch: string;
+    maxTurns: number;
+    mcpServersJson: string;
+    mcpToken: string;
+    mcpUrl: string;
+    model: string;
+    pipe?: string;
+    prompt: string;
+    runtime: string;
+    scriptContent?: string;
+    sessionId: string;
+    systemContext: string;
+    taskId: string;
+    useWorktrees?: boolean;
+    workingDirectory: string;
+    workspaceId?: string;
+}
+
+// @public
+export interface CreateSessionResult {
+    sessionUri: string;
+    stream: AsyncIterable<ServerActionEnvelope>;
+}
 
 // @public
 export const defaultLogger: AdapterLogger;
@@ -269,9 +321,28 @@ const GracklePowerLine: GenService<{
 }>;
 
 // @public
+export class GrpcHostTransport implements IHostTransport {
+    constructor(client: PowerLineClient);
+    authenticate(params: AuthenticateParams): Promise<void>;
+    createSession(params: CreateSessionParams): CreateSessionResult;
+    dispatchInput(sessionUri: string, text: string): Promise<void>;
+    dispose(sessionUri: string, reason?: string): Promise<void>;
+    drainBuffered(sessionUri: string): AsyncIterable<ServerActionEnvelope>;
+    listSessions(): Promise<HostSessionInfo[]>;
+    reanimate(params: ReanimateParams): AsyncIterable<ServerActionEnvelope>;
+}
+
+// @public
 export interface HostedSessionSummary {
     readonly environmentId: string;
     readonly summary: SessionSummary;
+}
+
+// @public
+export interface HostSessionInfo {
+    runtime: string;
+    sessionId: string;
+    status: string;
 }
 
 // @public
@@ -297,6 +368,17 @@ export interface HostSupervisorOptions {
     readonly logger?: SupervisorLogger;
     readonly onAuthRequired?: (params: AuthRequiredParams) => void;
     readonly onTelemetry?: (stream: TelemetryStream, params: unknown) => void;
+}
+
+// @public
+export interface IHostTransport {
+    authenticate(params: AuthenticateParams): Promise<void>;
+    createSession(params: CreateSessionParams): CreateSessionResult;
+    dispatchInput(sessionUri: string, text: string): Promise<void>;
+    dispose(sessionUri: string, reason?: string): Promise<void>;
+    drainBuffered(sessionUri: string): AsyncIterable<ServerActionEnvelope>;
+    listSessions(): Promise<HostSessionInfo[]>;
+    reanimate(params: ReanimateParams): AsyncIterable<ServerActionEnvelope>;
 }
 
 // @public
@@ -406,6 +488,7 @@ export interface PowerLineConnection {
     environmentId: string;
     // (undocumented)
     port: number;
+    transport: IHostTransport;
 }
 
 // @public
@@ -443,6 +526,13 @@ export interface ProvisionEvent {
     progress: number;
     // (undocumented)
     stage: string;
+}
+
+// @public
+export interface ReanimateParams {
+    runtime: string;
+    runtimeSessionId: string;
+    sessionId: string;
 }
 
 // @public
@@ -491,6 +581,12 @@ type ResumeRequest = Message<"grackle.powerline.ResumeRequest"> & {
 
 // @public
 const ResumeRequestSchema: GenMessage<ResumeRequest>;
+
+// @public
+export interface ServerActionEnvelope {
+    actions: StateAction[];
+    event: AgentEventFields;
+}
 
 // @public
 type SessionId = Message<"grackle.powerline.SessionId"> & {

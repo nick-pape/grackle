@@ -10,8 +10,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { create } from "@bufbuild/protobuf";
-import { powerline, type RuntimeName } from "@grackle-ai/common";
+import { type RuntimeName } from "@grackle-ai/common";
 import {
   credentialProviders,
   githubAccountStore,
@@ -19,6 +18,35 @@ import {
   type DatabaseInstance,
 } from "@grackle-ai/database";
 import { exec } from "./utils/exec.js";
+
+/**
+ * A single credential token, structurally compatible with both the legacy
+ * `powerline.TokenItem` proto message and the AHP-shaped
+ * `AuthenticateTokenItem` exported by `@grackle-ai/adapter-sdk`.
+ */
+export interface TokenItem {
+  /** Logical name of the token (e.g. "github-token"). */
+  name: string;
+  /** Delivery kind ("env_var" or "file"). */
+  type: string;
+  /** Environment variable name (when `type === "env_var"`). */
+  envVar?: string;
+  /** Target file path on the remote (when `type === "file"`). */
+  filePath?: string;
+  /** The credential value. */
+  value: string;
+}
+
+/** A bundle of tokens — the return shape of {@link buildProviderTokenBundle}. */
+export interface ProviderTokenBundle {
+  /** The collected token items, in the order they should be delivered. */
+  tokens: TokenItem[];
+}
+
+/** Type-asserting identity helper; replaces the proto-bound `create()` factory. */
+function tokenItem(data: TokenItem): TokenItem {
+  return data;
+}
 
 /**
  * Maps each runtime to the credential providers it needs.
@@ -210,7 +238,7 @@ export async function buildProviderTokenBundle(
   runtime?: string,
   database?: DatabaseInstance,
   githubAccountId?: string,
-): Promise<powerline.TokenBundle> {
+): Promise<ProviderTokenBundle> {
   const config = credentialProviders.getCredentialProviders(database);
   // When runtime is given, look it up in the map. Unknown runtimes get [] (empty, not all providers).
   const runtimeProviders =
@@ -220,7 +248,7 @@ export async function buildProviderTokenBundle(
         : []
       : undefined;
   const allowedProviders = runtimeProviders !== undefined ? new Set(runtimeProviders) : undefined;
-  const items: powerline.TokenItem[] = [];
+  const items: TokenItem[] = [];
 
   // Lazily resolved GitHub token from the `gh` CLI — shared across provider blocks
   // to avoid spawning the subprocess more than once per call. Stores a Promise
@@ -240,7 +268,7 @@ export async function buildProviderTokenBundle(
       const value = readFileSync(credentialsPath, "utf-8");
       if (value.trim()) {
         items.push(
-          create(powerline.TokenItemSchema, {
+          tokenItem({
             name: "claude-credentials",
             type: "file",
             filePath: "~/.claude/.credentials.json",
@@ -253,7 +281,7 @@ export async function buildProviderTokenBundle(
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (apiKey) {
       items.push(
-        create(powerline.TokenItemSchema, {
+        tokenItem({
           name: "anthropic-api-key",
           type: "env_var",
           envVar: "ANTHROPIC_API_KEY",
@@ -275,7 +303,7 @@ export async function buildProviderTokenBundle(
 
     if (storedToken) {
       items.push(
-        create(powerline.TokenItemSchema, {
+        tokenItem({
           name: "github-token",
           type: "env_var",
           envVar: "GH_TOKEN",
@@ -290,7 +318,7 @@ export async function buildProviderTokenBundle(
         if (value) {
           hasGitHubEnvVar = true;
           items.push(
-            create(powerline.TokenItemSchema, {
+            tokenItem({
               name: varName.toLowerCase().replace(/_/g, "-"),
               type: "env_var",
               envVar: varName,
@@ -306,7 +334,7 @@ export async function buildProviderTokenBundle(
         const cliToken = await getCliToken();
         if (cliToken) {
           items.push(
-            create(powerline.TokenItemSchema, {
+            tokenItem({
               name: "github-token",
               type: "env_var",
               envVar: "GITHUB_TOKEN",
@@ -329,7 +357,7 @@ export async function buildProviderTokenBundle(
       const value = readFileSync(copilotConfigPath, "utf-8");
       if (value.trim()) {
         items.push(
-          create(powerline.TokenItemSchema, {
+          tokenItem({
             name: "copilot-config",
             type: "file",
             filePath: "~/.copilot/config.json",
@@ -351,7 +379,7 @@ export async function buildProviderTokenBundle(
           hasGitHubToken = true;
         }
         items.push(
-          create(powerline.TokenItemSchema, {
+          tokenItem({
             name: varName.toLowerCase().replace(/_/g, "-"),
             type: "env_var",
             envVar: varName,
@@ -372,7 +400,7 @@ export async function buildProviderTokenBundle(
         // Only push if not already included by the GitHub provider block above
         if (!items.some((item) => item.envVar === envVarName)) {
           items.push(
-            create(powerline.TokenItemSchema, {
+            tokenItem({
               name: envVarName.toLowerCase().replace(/_/g, "-"),
               type: "env_var",
               envVar: envVarName,
@@ -384,7 +412,7 @@ export async function buildProviderTokenBundle(
         const cliToken = await getCliToken();
         if (cliToken && !items.some((item) => item.envVar === "GITHUB_TOKEN")) {
           items.push(
-            create(powerline.TokenItemSchema, {
+            tokenItem({
               name: "github-token",
               type: "env_var",
               envVar: "GITHUB_TOKEN",
@@ -404,7 +432,7 @@ export async function buildProviderTokenBundle(
       const value = readFileSync(codexAuthPath, "utf-8");
       if (value.trim()) {
         items.push(
-          create(powerline.TokenItemSchema, {
+          tokenItem({
             name: "codex-auth",
             type: "file",
             filePath: "~/.codex/auth.json",
@@ -416,7 +444,7 @@ export async function buildProviderTokenBundle(
     const openaiKey = process.env.OPENAI_API_KEY;
     if (openaiKey) {
       items.push(
-        create(powerline.TokenItemSchema, {
+        tokenItem({
           name: "openai-api-key",
           type: "env_var",
           envVar: "OPENAI_API_KEY",
@@ -446,7 +474,7 @@ export async function buildProviderTokenBundle(
       const value = readFileSync(gooseConfigPath, "utf-8");
       if (value.trim()) {
         items.push(
-          create(powerline.TokenItemSchema, {
+          tokenItem({
             name: "goose-config",
             type: "file",
             filePath: gooseConfigFilePath,
@@ -465,7 +493,7 @@ export async function buildProviderTokenBundle(
       const value = process.env[varName];
       if (value) {
         items.push(
-          create(powerline.TokenItemSchema, {
+          tokenItem({
             name: varName.toLowerCase().replace(/_/g, "-"),
             type: "env_var",
             envVar: varName,
@@ -476,5 +504,5 @@ export async function buildProviderTokenBundle(
     }
   }
 
-  return create(powerline.TokenBundleSchema, { tokens: items });
+  return { tokens: items };
 }

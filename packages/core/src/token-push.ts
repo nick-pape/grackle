@@ -11,8 +11,7 @@
  * Pure persistence lives in `@grackle-ai/database` (tokenStore); credential
  * bundle building lives in {@link ./credential-bundle.ts}.
  */
-import { create } from "@bufbuild/protobuf";
-import { powerline } from "@grackle-ai/common";
+import { type AuthenticateTokenItem } from "@grackle-ai/adapter-sdk";
 import * as adapterManager from "./adapter-manager.js";
 import { envRegistry, tokenStore } from "@grackle-ai/database";
 import { buildProviderTokenBundle } from "./credential-bundle.js";
@@ -27,8 +26,9 @@ export interface AuthenticateOptions {
 /**
  * Supply credentials for a runtime to its environment on demand, just before a
  * spawn. Combines stored user tokens with the runtime-scoped provider bundle
- * (read fresh from env/disk) and delivers them via the PowerLine `authenticate`
- * RPC. Best-effort: failures are logged and do not block the spawn.
+ * (read fresh from env/disk) and delivers them via the host transport's
+ * `authenticate` method. Best-effort: failures are logged and do not block the
+ * spawn.
  */
 export async function authenticateForRuntime(
   environmentId: string,
@@ -46,18 +46,24 @@ export async function authenticateForRuntime(
   const stored = tokenStore.getBundle();
   const provider = await buildProviderTokenBundle(runtime, undefined, githubAccountId);
   // Provider credentials come last so they win over any same-target stored token.
-  let tokens = [...stored.tokens, ...provider.tokens];
+  let combined = [...stored.tokens, ...provider.tokens];
   if (options?.excludeFileTokens) {
-    tokens = tokens.filter((t) => t.type !== "file");
+    combined = combined.filter((t) => t.type !== "file");
   }
-  if (tokens.length === 0) {
+  if (combined.length === 0) {
     return;
   }
 
+  const tokens: AuthenticateTokenItem[] = combined.map((t) => ({
+    name: t.name,
+    type: t.type,
+    envVar: t.envVar,
+    filePath: t.filePath,
+    value: t.value,
+  }));
+
   try {
-    await conn.client.authenticate(
-      create(powerline.AuthenticateRequestSchema, { provider: runtime, tokens }),
-    );
+    await conn.transport.authenticate({ provider: runtime, tokens });
   } catch (err) {
     logger.warn({ environmentId, runtime, err }, "Failed to authenticate credentials before spawn");
   }

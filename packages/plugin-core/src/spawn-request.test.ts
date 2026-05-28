@@ -6,7 +6,7 @@
 import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
-import { resolveSpawnSelection, buildPowerlineSpawnRequest } from "./spawn-request.js";
+import { resolveSpawnSelection, buildCreateSessionParams } from "./spawn-request.js";
 
 const persona = { runtime: "claude-code", model: "sonnet" };
 
@@ -55,14 +55,14 @@ describe("resolveSpawnSelection", () => {
   });
 });
 
-describe("buildPowerlineSpawnRequest", () => {
+describe("buildCreateSessionParams", () => {
   it("plumbs task_id from config (no longer hardcoded empty)", () => {
     const config = create(grackle.SessionConfigSchema, {
       taskId: "task-42",
       branch: "feat",
       pipe: "async",
     });
-    const req = buildPowerlineSpawnRequest({ ...serverInputs, config });
+    const req = buildCreateSessionParams({ ...serverInputs, config });
 
     expect(req.taskId).toBe("task-42");
     expect(req.branch).toBe("feat");
@@ -71,21 +71,21 @@ describe("buildPowerlineSpawnRequest", () => {
 
   it("passes use_worktrees=false through explicitly", () => {
     const config = create(grackle.SessionConfigSchema, { useWorktrees: false });
-    expect(buildPowerlineSpawnRequest({ ...serverInputs, config }).useWorktrees).toBe(false);
+    expect(buildCreateSessionParams({ ...serverInputs, config }).useWorktrees).toBe(false);
   });
 
   it("passes use_worktrees=true through explicitly", () => {
     const config = create(grackle.SessionConfigSchema, { useWorktrees: true });
-    expect(buildPowerlineSpawnRequest({ ...serverInputs, config }).useWorktrees).toBe(true);
+    expect(buildCreateSessionParams({ ...serverInputs, config }).useWorktrees).toBe(true);
   });
 
   it("leaves use_worktrees unset when config omits it (host default applies)", () => {
     const config = create(grackle.SessionConfigSchema, {});
-    expect(buildPowerlineSpawnRequest({ ...serverInputs, config }).useWorktrees).toBeUndefined();
+    expect(buildCreateSessionParams({ ...serverInputs, config }).useWorktrees).toBeUndefined();
   });
 
   it("defaults cleanly when config is undefined", () => {
-    const req = buildPowerlineSpawnRequest({ ...serverInputs, config: undefined });
+    const req = buildCreateSessionParams({ ...serverInputs, config: undefined });
 
     expect(req.taskId).toBe("");
     expect(req.branch).toBe("");
@@ -94,7 +94,7 @@ describe("buildPowerlineSpawnRequest", () => {
   });
 
   it("forwards server-resolved values verbatim", () => {
-    const req = buildPowerlineSpawnRequest({ ...serverInputs, config: undefined });
+    const req = buildCreateSessionParams({ ...serverInputs, config: undefined });
 
     expect(req.sessionId).toBe("sess-1");
     expect(req.runtime).toBe("claude-code");
@@ -105,12 +105,11 @@ describe("buildPowerlineSpawnRequest", () => {
 
   it("forwards a resolved workspaceId, leaving it unset when empty", () => {
     expect(
-      buildPowerlineSpawnRequest({ ...serverInputs, workspaceId: "ws-1", config: undefined })
+      buildCreateSessionParams({ ...serverInputs, workspaceId: "ws-1", config: undefined })
         .workspaceId,
     ).toBe("ws-1");
     expect(
-      buildPowerlineSpawnRequest({ ...serverInputs, workspaceId: "", config: undefined })
-        .workspaceId,
+      buildCreateSessionParams({ ...serverInputs, workspaceId: "", config: undefined }).workspaceId,
     ).toBeUndefined();
   });
 });

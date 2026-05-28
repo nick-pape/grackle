@@ -2,6 +2,32 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.132.0",
+      "tag": "@grackle-ai/cli_v0.132.0",
+      "date": "Thu, 28 May 2026 07:47:01 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "AHP HR1b Fold read path: store toolCallId/turnId in session_actions, store MapperContext in session_snapshots, implement delta replay in SessionStateManager.reconstruct() — closes #1292 step 3"
+          },
+          {
+            "comment": "Add AHP session state manager with AgentEvent mapper and session snapshots. The mapper translates PowerLine AgentEvents into AHP SessionActions, and SessionStateManager maintains live session state via the AHP sessionReducer with automatic snapshot flushing."
+          },
+          {
+            "comment": "AHP HR8a: new @grackle-ai/ahp-transport package with WebSocket + JSON-RPC 2.0 framing primitive (JsonRpcSession / AhpServerSocket / AhpClientSocket / ClientIdStore / exponentialBackoff). No consumers wired yet — paves the way for HR8b (MultiHostClient), HR8c (IHostTransport abstraction), and HR8d (the wire flip). Also exposes JsonRpcErrorCodes + AhpErrorCodes from @grackle-ai/ahp (small additive re-export the vendored constants weren't visible to consumers before)."
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Enable Vitest v8 code coverage across all packages; CI uploads coverage as an artifact. Adds shared vitest config base in heft-rig."
+          },
+          {
+            "comment": "Set up Prettier as a PR gate and pre-commit hook; mechanical reformat of all source files."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.131.0",
       "tag": "@grackle-ai/cli_v0.131.0",
       "date": "Tue, 26 May 2026 16:32:59 GMT",

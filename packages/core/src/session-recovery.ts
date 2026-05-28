@@ -1,14 +1,7 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import {
-  grackle,
-  powerline,
-  eventTypeToEnum,
-  SESSION_STATUS,
-  LOGS_DIR,
-  END_REASON,
-} from "@grackle-ai/common";
-import type { PowerLineConnection } from "@grackle-ai/adapter-sdk";
+import { grackle, eventTypeToEnum, SESSION_STATUS, LOGS_DIR, END_REASON } from "@grackle-ai/common";
+import { type PowerLineConnection } from "@grackle-ai/adapter-sdk";
 import { join } from "node:path";
 import { sessionStore, taskStore, grackleHome } from "@grackle-ai/database";
 import * as logWriter from "./log-writer.js";
@@ -68,30 +61,31 @@ export async function recoverSuspendedSessions(
     try {
       // Step 1: Drain buffered events from PowerLine and append to JSONL
       const logPath = session.logPath || join(grackleHome, LOGS_DIR, session.id);
-      const drainReq = create(powerline.DrainRequestSchema, {
-        sessionId: session.id,
-      });
 
       let drainedCount = 0;
       try {
-        const drainStream = connection.client.drainBufferedEvents(drainReq);
+        const drainStream = connection.transport.drainBuffered(session.id);
         logWriter.ensureLogInitialized(logPath);
 
-        for await (const event of drainStream) {
+        for await (const envelope of drainStream) {
+          const event = envelope.event;
           // Skip internal events (e.g. runtime_session_id) that would map
           // to UNSPECIFIED — those are handled by processEventStream, not the drain.
           const eventType = eventTypeToEnum(event.type);
           if (eventType === grackle.EventType.UNSPECIFIED) {
             continue;
           }
+          // Normalize AgentEventFields to proto-default semantics ("" for
+          // string fields) so the persisted SessionEvent / JSONL row never
+          // has missing keys regardless of what the transport emits.
           const sessionEvent = create(grackle.SessionEventSchema, {
             sessionId: session.id,
             type: eventType,
-            timestamp: event.timestamp,
-            content: event.content,
-            raw: event.raw,
-            toolCallId: event.toolCallId,
-            turnId: event.turnId,
+            timestamp: event.timestamp ?? "",
+            content: event.content ?? "",
+            raw: event.raw ?? "",
+            toolCallId: event.toolCallId ?? "",
+            turnId: event.turnId ?? "",
           });
           await logWriter.writeEvent(logPath, sessionEvent);
           drainedCount++;

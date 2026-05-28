@@ -343,6 +343,9 @@ importers:
       '@connectrpc/connect':
         specifier: ^2.0.0
         version: 2.1.1(@bufbuild/protobuf@2.11.0)
+      '@grackle-ai/ahp':
+        specifier: workspace:*
+        version: link:../ahp
       fuse.js:
         specifier: ^7.0.0
         version: 7.1.0

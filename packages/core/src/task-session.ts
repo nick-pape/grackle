@@ -9,8 +9,6 @@
  * @module
  */
 
-import { create } from "@bufbuild/protobuf";
-import { powerline } from "@grackle-ai/common";
 import {
   envRegistry,
   sessionStore,
@@ -201,7 +199,7 @@ export async function startTaskSession(
 
   const useWorktrees = workspace?.useWorktrees ?? false;
 
-  const powerlineReq = create(powerline.SpawnRequestSchema, {
+  const { stream } = conn.transport.createSession({
     sessionId,
     runtime,
     prompt: taskPrompt,
@@ -223,7 +221,7 @@ export async function startTaskSession(
     mcpToken,
   });
 
-  processEventStream(conn.client.spawn(powerlineReq), {
+  processEventStream(stream, {
     sessionId,
     logPath,
     workspaceId: freshTask.workspaceId ?? undefined,

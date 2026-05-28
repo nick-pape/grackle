@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { powerline, grackle } from "@grackle-ai/common";
+import type { ServerActionEnvelope } from "@grackle-ai/adapter-sdk";
+
+/** Wrap an AgentEvent as a ServerActionEnvelope with no mapped actions. */
+function envelope(event: powerline.AgentEvent): ServerActionEnvelope {
+  return { event, actions: [] };
+}
 
 // ── Mock all heavy dependencies before importing ──────────────
 vi.mock("./trace-context.js", () => ({
@@ -141,10 +147,10 @@ function applySchema(): void {
   `);
 }
 
-/** Create an async iterable from an array of AgentEvent messages. */
-async function* eventStream(events: powerline.AgentEvent[]): AsyncIterable<powerline.AgentEvent> {
+/** Create an async iterable of envelopes from an array of AgentEvent messages. */
+async function* eventStream(events: powerline.AgentEvent[]): AsyncIterable<ServerActionEnvelope> {
   for (const event of events) {
-    yield event;
+    yield envelope(event);
   }
 }
 
@@ -195,13 +201,13 @@ describe("stream error handling", () => {
     workspaceStore.createWorkspace("proj1", "Test Project", "desc", "", "env1");
   });
 
-  /** Create an async iterable that yields events, then throws an error. */
+  /** Create an async iterable of envelopes that yields events, then throws an error. */
   async function* throwingStream(
     events: powerline.AgentEvent[],
     error: Error,
-  ): AsyncIterable<powerline.AgentEvent> {
+  ): AsyncIterable<ServerActionEnvelope> {
     for (const event of events) {
-      yield event;
+      yield envelope(event);
     }
     throw error;
   }
@@ -556,18 +562,18 @@ describe("late-binding", () => {
    * Call push() to emit events and end() to close the stream.
    */
   function controllableStream(): {
-    stream: AsyncIterable<powerline.AgentEvent>;
+    stream: AsyncIterable<ServerActionEnvelope>;
     push: (event: powerline.AgentEvent) => void;
     end: () => void;
   } {
-    const queue: powerline.AgentEvent[] = [];
+    const queue: ServerActionEnvelope[] = [];
     let waiting: (() => void) | undefined;
     let done = false;
 
-    const stream: AsyncIterable<powerline.AgentEvent> = {
+    const stream: AsyncIterable<ServerActionEnvelope> = {
       [Symbol.asyncIterator]() {
         return {
-          async next(): Promise<IteratorResult<powerline.AgentEvent>> {
+          async next(): Promise<IteratorResult<ServerActionEnvelope>> {
             while (queue.length === 0 && !done) {
               await new Promise<void>((resolve) => {
                 waiting = resolve;
@@ -576,7 +582,7 @@ describe("late-binding", () => {
             if (queue.length > 0) {
               return { value: queue.shift()!, done: false };
             }
-            return { value: undefined as unknown as powerline.AgentEvent, done: true };
+            return { value: undefined as unknown as ServerActionEnvelope, done: true };
           },
         };
       },
@@ -585,7 +591,7 @@ describe("late-binding", () => {
     return {
       stream,
       push(event: powerline.AgentEvent) {
-        queue.push(event);
+        queue.push(envelope(event));
         if (waiting) {
           waiting();
           waiting = undefined;
@@ -819,12 +825,12 @@ describe("budget-exceeded end reason on killed/terminated", () => {
   async function* eventsWithHook(
     events: powerline.AgentEvent[],
     afterFirst: () => void,
-  ): AsyncIterable<powerline.AgentEvent> {
+  ): AsyncIterable<ServerActionEnvelope> {
     for (let i = 0; i < events.length; i++) {
       if (i === 1) {
         afterFirst();
       }
-      yield events[i];
+      yield envelope(events[i]);
     }
   }
 
