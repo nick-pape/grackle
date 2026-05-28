@@ -155,9 +155,18 @@ importers:
       '@connectrpc/connect-node':
         specifier: ^2.0.0
         version: 2.1.1(@bufbuild/protobuf@2.11.0)(@connectrpc/connect@2.1.1(@bufbuild/protobuf@2.11.0))
+      '@grackle-ai/ahp':
+        specifier: workspace:*
+        version: link:../ahp
+      '@grackle-ai/ahp-transport':
+        specifier: workspace:*
+        version: link:../ahp-transport
       '@grackle-ai/common':
         specifier: workspace:*
         version: link:../common
+      ws:
+        specifier: 8.20.1
+        version: 8.20.1
     devDependencies:
       '@grackle-ai/heft-rig':
         specifier: workspace:*
@@ -168,6 +177,9 @@ importers:
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.15
+      '@types/ws':
+        specifier: ^8.5.13
+        version: 8.18.1
       '@vitest/coverage-v8':
         specifier: ^3.1.1
         version: 3.2.4(vitest@3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1))

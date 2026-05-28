@@ -68,3 +68,16 @@ export {
   SSH_CONNECTIVITY_TIMEOUT_MS,
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
 } from "./utils.js";
+
+// ─── AHP Multi-Host Client (HR8b, #1334) ───────────────────
+export { MultiHostClient, HostSupervisor } from "./ahp-client/index.js";
+export type {
+  MultiHostClientOptions,
+  HostSupervisorOptions,
+  SupervisorLogger,
+  TelemetryStream,
+  AddHostOptions,
+  ClientDispatchableAction,
+  HostedSessionSummary,
+  SubscriptionMessage,
+} from "./ahp-client/index.js";
