@@ -371,7 +371,7 @@ describe("ahp-handlers: subscribe", () => {
     }
   });
 
-  it("[orphan rescue] synthesizes SessionTurnStarted around an orphan text event", async () => {
+  it("[orphan rescue] wraps an orphan text event in a complete synthetic turn", async () => {
     const lb = await spinUpLoopback();
     const client = await openClient(lb.port);
     try {
@@ -384,17 +384,21 @@ describe("ahp-handlers: subscribe", () => {
       const session = TEST_RUNTIME.lastSession!;
       await client.socket.request("subscribe", { channel: `ahp-session:/${sessionId}` });
       // Emit text with NO turnId — under gRPC this flowed; under bare AHP
-      // mapper it'd be dropped. The orphan-rescue path should synthesize a
-      // turn_started before the response-part action.
+      // mapper it'd be dropped. The orphan-rescue path wraps the event in
+      // a complete synthetic turn so the consumer's turn-grouping renders
+      // it without hanging on an unterminated turn.
       session.push({ type: "text", content: "Ready for input..." });
-      await waitForCount(client.received, 2);
+      await waitForCount(client.received, 3);
       expect(client.received[0]?.action.type).toBe(ActionType.SessionTurnStarted);
       expect(client.received[1]?.action.type).toBe(ActionType.SessionResponsePart);
+      expect(client.received[2]?.action.type).toBe(ActionType.SessionTurnComplete);
       const synth = client.received[0]!.action as { turnId: string };
       expect(synth.turnId.startsWith("turn-orphan-")).toBe(true);
       const part = client.received[1]!.action as { turnId: string; part: { content: string } };
       expect(part.turnId).toBe(synth.turnId);
       expect(part.part.content).toBe("Ready for input...");
+      const completed = client.received[2]!.action as { turnId: string };
+      expect(completed.turnId).toBe(synth.turnId);
     } finally {
       await client.cleanup();
       await lb.cleanup();

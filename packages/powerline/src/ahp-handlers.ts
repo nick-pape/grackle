@@ -450,6 +450,7 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
       raw: event.raw !== undefined ? JSON.stringify(event.raw) : undefined,
     };
     let result = mapAgentEvent(normalized, idx, forwarder.mapperContext);
+    let synthesizedOrphanTurnId: string | undefined;
 
     // Orphan rescue (HR8d): if the mapper dropped a content event because
     // no turn is active, synthesize a `SessionTurnStarted` and re-run the
@@ -462,25 +463,23 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
       ORPHAN_RESCUABLE_TYPES.has(normalized.type) &&
       forwarder.mapperContext.turnId === undefined
     ) {
-      const orphanTurnId = `turn-orphan-${String(idx)}`;
-      const synthAction: StateAction = {
+      synthesizedOrphanTurnId = `turn-orphan-${String(idx)}`;
+      const startAction: StateAction = {
         type: ActionType.SessionTurnStarted,
-        turnId: orphanTurnId,
+        turnId: synthesizedOrphanTurnId,
         userMessage: { text: "" },
       };
       forwarder.serverSeq += 1;
       conn.session.notify("action", {
         channel: sessionChannel(sessionId),
         serverSeq: forwarder.serverSeq,
-        action: synthAction,
+        action: startAction,
         origin: undefined,
       });
       // Update context so the re-run sees the synthetic turn as active.
-      forwarder.mapperContext.turnId = orphanTurnId;
+      forwarder.mapperContext.turnId = synthesizedOrphanTurnId;
       // Re-run the mapper with a fresh index. The mapperContext is mutable
-      // so the orphan turn is now in scope. partCounter / openToolCalls
-      // remain whatever the mapper produced on the dropped pass (should be
-      // unchanged since the action set was empty).
+      // so the orphan turn is now in scope.
       const reIdx = forwarder.mapperContext.eventIndex++;
       result = mapAgentEvent(normalized, reIdx, forwarder.mapperContext);
     }
@@ -493,6 +492,29 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
         action,
         origin: undefined,
       });
+    }
+
+    // Close the synthetic orphan turn after the rescued event lands. This
+    // matters for the consumer's UI grouping: an open turn with no `turn_complete`
+    // may be held back until completion. Each orphan event gets its own
+    // single-content synthetic turn that opens and closes immediately.
+    if (synthesizedOrphanTurnId !== undefined) {
+      const completeAction: StateAction = {
+        type: ActionType.SessionTurnComplete,
+        turnId: synthesizedOrphanTurnId,
+      };
+      forwarder.serverSeq += 1;
+      conn.session.notify("action", {
+        channel: sessionChannel(sessionId),
+        serverSeq: forwarder.serverSeq,
+        action: completeAction,
+        origin: undefined,
+      });
+      // The mapper sets context.turnId = undefined inside its
+      // SessionTurnComplete case, but we manage the context for the wire
+      // forwarder ourselves — clear it now so any subsequent real turn
+      // can claim the active-turn slot cleanly.
+      forwarder.mapperContext.turnId = undefined;
     }
     // Also synthesize a SessionMetaChangedAction whenever the meta
     // accumulator advances, so the consumer's reverse mapper can rehydrate
