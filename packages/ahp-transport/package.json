@@ -1,0 +1,51 @@
+{
+  "name": "@grackle-ai/ahp-transport",
+  "version": "0.131.0",
+  "description": "AHP (Agent Host Protocol) wire transport: WebSocket + JSON-RPC 2.0 framing primitive (JsonRpcSession, AhpServerSocket, AhpClientSocket).",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nick-pape/grackle.git",
+    "directory": "packages/ahp-transport"
+  },
+  "keywords": [
+    "grackle",
+    "ahp",
+    "agent-host-protocol",
+    "json-rpc",
+    "websocket"
+  ],
+  "homepage": "https://github.com/nick-pape/grackle#readme",
+  "bugs": {
+    "url": "https://github.com/nick-pape/grackle/issues"
+  },
+  "engines": {
+    "node": ">=22.0.0 <24.0.0"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/"
+  ],
+  "scripts": {
+    "build": "heft build --clean",
+    "clean": "heft clean",
+    "test": "vitest run",
+    "_phase:build": "heft run --only build -- --clean",
+    "_phase:test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@grackle-ai/ahp": "workspace:*",
+    "pino": "^10.3.1",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@grackle-ai/heft-rig": "workspace:*",
+    "@rushstack/heft": "1.2.7",
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.5.13",
+    "@vitest/coverage-v8": "^3.1.1",
+    "vitest": "^3.1.1"
+  }
+}
