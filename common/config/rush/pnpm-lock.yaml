@@ -226,9 +226,6 @@ importers:
       '@grackle-ai/ahp':
         specifier: workspace:*
         version: link:../ahp
-      pino:
-        specifier: ^10.3.1
-        version: 10.3.1
       ws:
         specifier: 8.20.1
         version: 8.20.1

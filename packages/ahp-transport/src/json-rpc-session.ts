@@ -16,12 +16,12 @@ import type { RawData, WebSocket } from "ws";
 import { TransportError, WsCloseCode } from "./error-codes.js";
 
 /**
- * Result returned by a {@link RequestHandler}. Either a bare {@link AhpResponse}
- * (the common case), or a wrapped result that includes an `afterSend` callback
- * fired AFTER the response frame has been flushed to the wire. The wrapped
- * form is the deterministic ordering primitive: use it whenever a side
- * effect (e.g., close the session, emit a notification) must follow the
- * response on the wire rather than precede it.
+ * Result returned by a {@link RequestHandler}. Either a bare `AhpResponse`
+ * (from `@grackle-ai/ahp`, the common case), or a wrapped result that
+ * includes an `afterSend` callback fired AFTER the response frame has been
+ * flushed to the wire. The wrapped form is the deterministic ordering
+ * primitive: use it whenever a side effect (e.g., close the session, emit
+ * a notification) must follow the response on the wire rather than precede it.
  */
 export type RequestHandlerResult =
   | AhpResponse

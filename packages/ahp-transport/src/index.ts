@@ -12,6 +12,7 @@ export { JsonRpcSession } from "./json-rpc-session.js";
 export type {
   JsonRpcSessionOptions,
   RequestHandler,
+  RequestHandlerResult,
   NotificationHandler,
 } from "./json-rpc-session.js";
 

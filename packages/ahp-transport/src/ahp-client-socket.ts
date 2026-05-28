@@ -278,7 +278,15 @@ export class AhpClientSocket {
         const status = res.statusCode ?? 0;
         // Drain the response body so the socket can close cleanly.
         res.resume();
+        // IncomingMessage can emit BOTH 'end' and 'close' during an upgrade
+        // rejection. Guard so fail-* fires exactly once — otherwise a
+        // reconnect-time non-401 would schedule duplicate retries.
+        let finished = false;
         const done = (): void => {
+          if (finished) {
+            return;
+          }
+          finished = true;
           if (status === 401) {
             failHandshake(new TransportError("auth-failed", "host rejected upgrade with HTTP 401"));
           } else {
@@ -287,8 +295,9 @@ export class AhpClientSocket {
             );
           }
         };
-        // Drain then complete. Use both 'end' and 'close' so we don't hang
-        // if the server destroys the response without an explicit end.
+        // Use both 'end' and 'close' so we don't hang if the server destroys
+        // the response without an explicit end. The `finished` guard above
+        // ensures we still complete exactly once.
         res.once("end", done);
         res.once("close", done);
       });

@@ -132,10 +132,14 @@ export interface JsonRpcSessionOptions {
 // @public
 export type NotificationHandler = (notif: AhpNotification) => void;
 
-// Warning: (ae-forgotten-export) The symbol "RequestHandlerResult" needs to be exported by the entry point index.d.ts
-//
 // @public
 export type RequestHandler = (req: AhpRequest) => Promise<RequestHandlerResult>;
+
+// @public
+export type RequestHandlerResult = AhpResponse | {
+    readonly response: AhpResponse;
+    readonly afterSend: () => void;
+};
 
 // @public
 export class TransportError extends Error {
