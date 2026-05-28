@@ -52,7 +52,6 @@ export type {
   NewChannelGrant,
   StreamMessageRow,
   SessionActionRow,
-  SessionSnapshotRow,
 } from "./schema.js";
 
 // ─── Stores ────────────────────────────────────────────────
@@ -94,10 +93,6 @@ export { persistStreamMessage, queryStreamMessages } from "./stream-message-stor
 export type { StreamMessageRecord, StreamMessageQuery } from "./stream-message-store.js";
 export { persistSessionAction, querySessionActions } from "./session-action-store.js";
 export type { SessionActionRecord, SessionActionQuery } from "./session-action-store.js";
-
-// ─── Session Snapshot Store (AHP HR1b / #1292) ───────────────
-export { persistSnapshot, querySnapshot } from "./session-snapshot-store.js";
-export type { SnapshotRecord } from "./session-snapshot-store.js";
 
 // ─── Utilities ─────────────────────────────────────────────
 export { grackleHome } from "./paths.js";
