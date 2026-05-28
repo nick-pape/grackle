@@ -11,6 +11,7 @@ import type { GenMessage } from '@bufbuild/protobuf/codegenv2';
 import type { GenService } from '@bufbuild/protobuf/codegenv2';
 import type { Message } from '@bufbuild/protobuf';
 import { SpawnOptions } from 'node:child_process';
+import type { StateAction } from '@grackle-ai/ahp';
 
 // @public
 export interface AdapterDependencies {
@@ -49,6 +50,12 @@ type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
 const AgentEventSchema: GenMessage<AgentEvent>;
 
 // @public
+export interface AuthenticateParams {
+    provider: string;
+    tokens: AuthenticateTokenItem[];
+}
+
+// @public
 type AuthenticateRequest = Message<"grackle.powerline.AuthenticateRequest"> & {
     provider: string;
     tokens: TokenItem[];
@@ -56,6 +63,15 @@ type AuthenticateRequest = Message<"grackle.powerline.AuthenticateRequest"> & {
 
 // @public
 const AuthenticateRequestSchema: GenMessage<AuthenticateRequest>;
+
+// @public
+export interface AuthenticateTokenItem {
+    envVar?: string;
+    filePath?: string;
+    name: string;
+    type: string;
+    value: string;
+}
 
 // @public
 export interface BaseEnvironmentConfig {
@@ -93,6 +109,32 @@ export function connectThroughTunnel(environmentId: string, localPort: number, p
 
 // @public
 export function createPowerLineClient(baseUrl: string, powerlineToken: string, traceId?: string): PowerLineClient;
+
+// @public
+export interface CreateSessionParams {
+    branch: string;
+    maxTurns: number;
+    mcpServersJson: string;
+    mcpToken: string;
+    mcpUrl: string;
+    model: string;
+    pipe?: string;
+    prompt: string;
+    runtime: string;
+    scriptContent?: string;
+    sessionId: string;
+    systemContext: string;
+    taskId: string;
+    useWorktrees?: boolean;
+    workingDirectory: string;
+    workspaceId?: string;
+}
+
+// @public
+export interface CreateSessionResult {
+    sessionUri: string;
+    stream: AsyncIterable<ServerActionEnvelope>;
+}
 
 // @public
 export const defaultLogger: AdapterLogger;
@@ -235,6 +277,36 @@ const GracklePowerLine: GenService<{
 }>;
 
 // @public
+export class GrpcHostTransport implements IHostTransport {
+    constructor(client: PowerLineClient);
+    authenticate(params: AuthenticateParams): Promise<void>;
+    createSession(params: CreateSessionParams): CreateSessionResult;
+    dispatchInput(sessionUri: string, text: string): Promise<void>;
+    dispose(sessionUri: string, reason?: string): Promise<void>;
+    listSessions(): Promise<HostSessionInfo[]>;
+    reanimate(params: ReanimateParams): AsyncIterable<ServerActionEnvelope>;
+    subscribe(sessionUri: string, fromServerSeq?: string): AsyncIterable<ServerActionEnvelope>;
+}
+
+// @public
+export interface HostSessionInfo {
+    runtime: string;
+    sessionId: string;
+    status: string;
+}
+
+// @public
+export interface IHostTransport {
+    authenticate(params: AuthenticateParams): Promise<void>;
+    createSession(params: CreateSessionParams): CreateSessionResult;
+    dispatchInput(sessionUri: string, text: string): Promise<void>;
+    dispose(sessionUri: string, reason?: string): Promise<void>;
+    listSessions(): Promise<HostSessionInfo[]>;
+    reanimate(params: ReanimateParams): AsyncIterable<ServerActionEnvelope>;
+    subscribe(sessionUri: string, fromServerSeq?: string): AsyncIterable<ServerActionEnvelope>;
+}
+
+// @public
 type InputMessage = Message<"grackle.powerline.InputMessage"> & {
     sessionId: string;
     text: string;
@@ -358,6 +430,13 @@ export interface ProvisionEvent {
 }
 
 // @public
+export interface ReanimateParams {
+    runtime: string;
+    runtimeSessionId: string;
+    sessionId: string;
+}
+
+// @public
 export function reconnectOrProvision(environmentId: string, adapter: EnvironmentAdapter, config: Record<string, unknown>, powerlineToken: string, bootstrapped: boolean, force?: boolean, logger?: AdapterLogger): AsyncGenerator<ProvisionEvent>;
 
 // @public
@@ -403,6 +482,13 @@ type ResumeRequest = Message<"grackle.powerline.ResumeRequest"> & {
 
 // @public
 const ResumeRequestSchema: GenMessage<ResumeRequest>;
+
+// @public
+export interface ServerActionEnvelope {
+    actions: StateAction[];
+    // Warning: (ae-forgotten-export) The symbol "AgentEventFields" needs to be exported by the entry point index.d.ts
+    event: AgentEventFields;
+}
 
 // @public
 type SessionId = Message<"grackle.powerline.SessionId"> & {

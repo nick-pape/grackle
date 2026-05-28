@@ -1,6 +1,6 @@
 import { ConnectError, Code } from "@connectrpc/connect";
-import { create } from "@bufbuild/protobuf";
-import { powerline, SESSION_STATUS, LOGS_DIR } from "@grackle-ai/common";
+import { SESSION_STATUS, LOGS_DIR } from "@grackle-ai/common";
+import { GrpcHostTransport, type ServerActionEnvelope } from "@grackle-ai/adapter-sdk";
 import { join } from "node:path";
 import { sessionStore, taskStore, grackleHome } from "@grackle-ai/database";
 import type { SessionRow } from "@grackle-ai/database";
@@ -64,12 +64,6 @@ export function reanimateAgent(sessionId: string): SessionRow {
     );
   }
 
-  const powerlineReq = create(powerline.ResumeRequestSchema, {
-    sessionId: session.id,
-    runtimeSessionId: session.runtimeSessionId,
-    runtime: session.runtime,
-  });
-
   const logPath = session.logPath || join(grackleHome, LOGS_DIR, session.id);
 
   let workspaceId: string | undefined;
@@ -82,11 +76,16 @@ export function reanimateAgent(sessionId: string): SessionRow {
     }
   }
 
-  // Initiate the stream before mutating the DB. If resume() throws synchronously
+  // Initiate the stream before mutating the DB. If reanimate() throws synchronously
   // the DB is never touched, so no rollback is needed.
-  let resumeStream: ReturnType<typeof conn.client.resume>;
+  const transport = new GrpcHostTransport(conn.client);
+  let resumeStream: AsyncIterable<ServerActionEnvelope>;
   try {
-    resumeStream = conn.client.resume(powerlineReq);
+    resumeStream = transport.reanimate({
+      sessionId: session.id,
+      runtimeSessionId: session.runtimeSessionId,
+      runtime: session.runtime,
+    });
   } catch (err) {
     throw new ConnectError(`Failed to initiate resume stream: ${String(err)}`, Code.Internal);
   }

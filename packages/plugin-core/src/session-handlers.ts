@@ -20,7 +20,7 @@ import {
 } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { join } from "node:path";
-import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
+import { reconnectOrProvision, GrpcHostTransport } from "@grackle-ai/adapter-sdk";
 import { adapterManager } from "@grackle-ai/core";
 import { streamHub } from "@grackle-ai/core";
 import { tokenPush } from "@grackle-ai/core";
@@ -42,7 +42,7 @@ import { deliverPendingEscalations } from "@grackle-ai/core";
 import { createEventStream } from "@grackle-ai/core";
 import { sessionRowToProto } from "./grpc-proto-converters.js";
 import { validatePipeInputs, toDialableHost, killSessionAndCleanup } from "./grpc-shared.js";
-import { resolveSpawnSelection, buildPowerlineSpawnRequest } from "./spawn-request.js";
+import { resolveSpawnSelection, buildCreateSessionParams } from "./spawn-request.js";
 import { personaMcpServersToJson } from "@grackle-ai/core";
 import { getTraceId } from "@grackle-ai/core";
 import { resolveBootstrapRuntime } from "@grackle-ai/core";
@@ -210,7 +210,7 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
       process.env.GRACKLE_WORKTREE_BASE ||
       "/workspace"
     : "";
-  const powerlineReq = buildPowerlineSpawnRequest({
+  const createParams = buildCreateSessionParams({
     sessionId,
     runtime,
     model,
@@ -270,7 +270,9 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
     env.adapterType === "local" ? { excludeFileTokens: true } : undefined,
   );
 
-  processEventStream(conn.client.spawn(powerlineReq), {
+  const transport = new GrpcHostTransport(conn.client);
+  const { stream } = transport.createSession(createParams);
+  processEventStream(stream, {
     sessionId,
     logPath,
     systemContext,

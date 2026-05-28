@@ -1,6 +1,7 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle, powerline } from "@grackle-ai/common";
+import { grackle } from "@grackle-ai/common";
+import { GrpcHostTransport } from "@grackle-ai/adapter-sdk";
 import type { PipeMode } from "@grackle-ai/common";
 import {
   DEFAULT_MCP_PORT,
@@ -512,7 +513,8 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
     loadOrCreateApiKey(grackleHome),
   );
 
-  const powerlineReq = create(powerline.SpawnRequestSchema, {
+  const transport = new GrpcHostTransport(conn.client);
+  const { stream: spawnStream } = transport.createSession({
     sessionId,
     runtime,
     prompt: taskPrompt,
@@ -562,7 +564,7 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
     }
   }
 
-  processEventStream(conn.client.spawn(powerlineReq), {
+  processEventStream(spawnStream, {
     sessionId,
     logPath,
     workspaceId: task.workspaceId ?? undefined,
@@ -704,17 +706,16 @@ export async function resumeTask(req: grackle.TaskId): Promise<grackle.Session> 
     );
   }
 
-  const powerlineReq = create(powerline.ResumeRequestSchema, {
+  const logPath = latestSession.logPath || join(grackleHome, LOGS_DIR, latestSession.id);
+
+  // Initiate the stream before mutating the DB. If reanimate() throws
+  // synchronously the DB is never touched, so no rollback is needed.
+  const resumeTransport = new GrpcHostTransport(conn.client);
+  const resumeStream = resumeTransport.reanimate({
     sessionId: latestSession.id,
     runtimeSessionId: latestSession.runtimeSessionId,
     runtime: latestSession.runtime,
   });
-
-  const logPath = latestSession.logPath || join(grackleHome, LOGS_DIR, latestSession.id);
-
-  // Initiate the stream before mutating the DB. If resume() throws
-  // synchronously the DB is never touched, so no rollback is needed.
-  const resumeStream = conn.client.resume(powerlineReq);
 
   // Reset session DB row to RUNNING (clears endedAt, error, etc.)
   sessionStore.reanimateSession(latestSession.id);

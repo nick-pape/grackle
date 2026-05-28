@@ -1,5 +1,6 @@
 import { create } from "@bufbuild/protobuf";
-import { grackle, powerline, SESSION_STATUS, END_REASON } from "@grackle-ai/common";
+import { grackle, SESSION_STATUS, END_REASON } from "@grackle-ai/common";
+import { GrpcHostTransport } from "@grackle-ai/adapter-sdk";
 import { sessionStore } from "@grackle-ai/database";
 import * as adapterManager from "../adapter-manager.js";
 import { reanimateAgent } from "../reanimate-agent.js";
@@ -140,7 +141,8 @@ export async function sendInputToSession(
     streamHub.publish(signalEvent);
     recordSessionAction(signalEvent);
 
-    await conn.client.sendInput(create(powerline.InputMessageSchema, { sessionId, text }));
+    const transport = new GrpcHostTransport(conn.client);
+    await transport.dispatchInput(sessionId, text);
     logger.info({ sessionId, signalType }, "Signal delivered to session");
     return true;
   } catch (err) {

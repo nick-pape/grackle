@@ -68,3 +68,16 @@ export {
   SSH_CONNECTIVITY_TIMEOUT_MS,
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
 } from "./utils.js";
+
+// ─── Host Transport (AHP HR8c) ──────────────────────────────
+export type {
+  IHostTransport,
+  ServerActionEnvelope,
+  CreateSessionParams,
+  CreateSessionResult,
+  ReanimateParams,
+  AuthenticateParams,
+  AuthenticateTokenItem,
+  HostSessionInfo,
+} from "./host-transport.js";
+export { GrpcHostTransport } from "./grpc-host-transport.js";

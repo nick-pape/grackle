@@ -1,14 +1,7 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import {
-  grackle,
-  powerline,
-  eventTypeToEnum,
-  SESSION_STATUS,
-  LOGS_DIR,
-  END_REASON,
-} from "@grackle-ai/common";
-import type { PowerLineConnection } from "@grackle-ai/adapter-sdk";
+import { grackle, eventTypeToEnum, SESSION_STATUS, LOGS_DIR, END_REASON } from "@grackle-ai/common";
+import { GrpcHostTransport, type PowerLineConnection } from "@grackle-ai/adapter-sdk";
 import { join } from "node:path";
 import { sessionStore, taskStore, grackleHome } from "@grackle-ai/database";
 import * as logWriter from "./log-writer.js";
@@ -68,16 +61,15 @@ export async function recoverSuspendedSessions(
     try {
       // Step 1: Drain buffered events from PowerLine and append to JSONL
       const logPath = session.logPath || join(grackleHome, LOGS_DIR, session.id);
-      const drainReq = create(powerline.DrainRequestSchema, {
-        sessionId: session.id,
-      });
+      const transport = new GrpcHostTransport(connection.client);
 
       let drainedCount = 0;
       try {
-        const drainStream = connection.client.drainBufferedEvents(drainReq);
+        const drainStream = transport.subscribe(session.id);
         logWriter.ensureLogInitialized(logPath);
 
-        for await (const event of drainStream) {
+        for await (const envelope of drainStream) {
+          const event = envelope.event;
           // Skip internal events (e.g. runtime_session_id) that would map
           // to UNSPECIFIED — those are handled by processEventStream, not the drain.
           const eventType = eventTypeToEnum(event.type);
