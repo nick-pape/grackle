@@ -47,6 +47,17 @@ type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
 };
 
 // @public
+export interface AgentEventFields {
+    content?: string;
+    diagnostic?: boolean;
+    raw?: string;
+    timestamp?: string;
+    toolCallId?: string;
+    turnId?: string;
+    type: string;
+}
+
+// @public
 const AgentEventSchema: GenMessage<AgentEvent>;
 
 // @public
@@ -486,7 +497,6 @@ const ResumeRequestSchema: GenMessage<ResumeRequest>;
 // @public
 export interface ServerActionEnvelope {
     actions: StateAction[];
-    // Warning: (ae-forgotten-export) The symbol "AgentEventFields" needs to be exported by the entry point index.d.ts
     event: AgentEventFields;
 }
 

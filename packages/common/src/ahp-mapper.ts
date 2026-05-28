@@ -29,7 +29,7 @@ import {
  * Structural subset of `powerline.AgentEvent` that the mapper plus its
  * downstream consumers actually read.
  *
- * Any object with these fields can be passed to {@link mapAgentEvent} —
+ * Any object with these fields can be passed to `mapAgentEvent` —
  * proto-generated `AgentEvent` messages from the live gRPC stream and plain
  * objects reconstructed from `session_actions` rows during replay both qualify.
  *

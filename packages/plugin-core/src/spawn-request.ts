@@ -26,7 +26,7 @@ export function resolveSpawnSelection(
 }
 
 /** Server-resolved values for a spawn that don't come from the client `config`. */
-export interface PowerlineSpawnInputs {
+export interface CreateSessionInputs {
   sessionId: string;
   runtime: string;
   model: string;
@@ -49,7 +49,7 @@ export interface PowerlineSpawnInputs {
  * mapping — including `task_id` plumbing and the optional `use_worktrees`
  * passthrough — is unit-testable in isolation from `spawnAgent`'s side effects.
  */
-export function buildCreateSessionParams(args: PowerlineSpawnInputs): CreateSessionParams {
+export function buildCreateSessionParams(args: CreateSessionInputs): CreateSessionParams {
   const cfg = args.config;
   return {
     sessionId: args.sessionId,
