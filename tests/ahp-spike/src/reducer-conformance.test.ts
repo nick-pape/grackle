@@ -10,11 +10,21 @@
 
 import { describe, it, beforeEach, afterEach } from "vitest";
 import { strict as assert } from "node:assert";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
-import { rootReducer, sessionReducer, terminalReducer, changesetReducer } from "./vendor/ahp/reducers.js";
+// Spike now uses the productionized @grackle-ai/ahp package (PR #1320).
+// The conformance corpus still lives in the AHP package's vendored source
+// (prebuilt from the upstream microsoft/agent-host-protocol git dep), so we
+// resolve it through that package rather than carrying a duplicate copy here.
+import {
+  rootReducer,
+  sessionReducer,
+  terminalReducer,
+  changesetReducer,
+} from "@grackle-ai/ahp";
 
 interface Fixture {
   description: string;
@@ -42,7 +52,23 @@ function nullToUndefined<T>(value: T): T {
   return value;
 }
 
-const fixtureDir = resolve(dirname(fileURLToPath(import.meta.url)), "vendor", "ahp", "test-cases", "reducers");
+/**
+ * Resolve the AHP conformance corpus from the productionized `@grackle-ai/ahp`
+ * package. The package's prebuild step writes the upstream `types/test-cases/`
+ * tree under `src/vendor/ahp/test-cases/` — we use the package's `main` (dist)
+ * entry to locate it, then walk back to `src/vendor/...` since fixtures live in
+ * source, not dist.
+ */
+const require = createRequire(import.meta.url);
+const ahpDistEntry = require.resolve("@grackle-ai/ahp");
+// dist/index.js → ../src/vendor/ahp/test-cases/reducers
+const ahpPackageRoot = resolve(dirname(ahpDistEntry), "..");
+const fixtureDir = resolve(ahpPackageRoot, "src", "vendor", "ahp", "test-cases", "reducers");
+if (!existsSync(fixtureDir)) {
+  throw new Error(
+    `AHP conformance corpus not found at ${fixtureDir}. Run \`rush build -t @grackle-ai/ahp\` to prebuild the vendored upstream sources.`,
+  );
+}
 const fixtures: Fixture[] = readdirSync(fixtureDir)
   .filter((f) => f.endsWith(".json"))
   .sort()

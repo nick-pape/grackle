@@ -33,15 +33,22 @@
 import type { AgentEvent } from "@grackle-ai/runtime-sdk";
 import type { AgentEventType } from "@grackle-ai/common";
 
-import { ActionType } from "./vendor/ahp/common/actions.js";
-import type { SessionAction } from "./vendor/ahp/action-origin.generated.js";
+// Spike now imports from the productionized @grackle-ai/ahp package
+// (which is itself the vendored AHP, prebuilt + re-exported). See PR #1320.
+// SessionAction (the session-specific subset of StateAction) isn't part of the
+// public API, so we use StateAction here and cast at the boundary.
 import {
+  ActionType,
   ResponsePartKind,
   ToolCallConfirmationReason,
   ToolResultContentType,
-} from "./vendor/ahp/channels-session/state.js";
-import type { ResponsePart, ToolCallResult } from "./vendor/ahp/channels-session/state.js";
-import type { ErrorInfo, UsageInfo } from "./vendor/ahp/common/state.js";
+  type ResponsePart,
+  type ToolCallResult,
+  type ErrorInfo,
+  type UsageInfo,
+  type StateAction,
+} from "@grackle-ai/ahp";
+type SessionAction = StateAction;
 
 // ─── Result shape ────────────────────────────────────────────────────────────
 

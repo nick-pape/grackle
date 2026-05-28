@@ -16,6 +16,7 @@
     "_phase:test": "vitest run"
   },
   "devDependencies": {
+    "@grackle-ai/ahp": "workspace:*",
     "@grackle-ai/heft-rig": "workspace:*",
     "@grackle-ai/common": "workspace:*",
     "@grackle-ai/runtime-sdk": "workspace:*",

@@ -7,15 +7,18 @@
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mapAgentEvents } from "./mapper.js";
-import { sessionReducer } from "./vendor/ahp/reducers.js";
+// Spike now imports the AHP reducer + state types from the productionized
+// @grackle-ai/ahp package (PR #1320). The replay still proves the same
+// invariant — Grackle's events fold cleanly into AHP's session model.
 import {
+  sessionReducer,
   ResponsePartKind,
   ToolCallStatus,
   TurnState,
   SessionStatus,
   SessionLifecycle,
-} from "./vendor/ahp/channels-session/state.js";
-import type { SessionState } from "./vendor/ahp/channels-session/state.js";
+  type SessionState,
+} from "@grackle-ai/ahp";
 import { makeInitialSessionState, happyPath, errorPath, missingIdFallback, preTurnFailure } from "./fixtures.js";
 import type { AgentEvent } from "@grackle-ai/runtime-sdk";
 import type { SpawnOptions } from "@grackle-ai/runtime-sdk";

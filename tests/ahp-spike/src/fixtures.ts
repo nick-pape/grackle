@@ -11,8 +11,7 @@
  */
 
 import type { AgentEvent } from "@grackle-ai/runtime-sdk";
-import { SessionLifecycle, SessionStatus } from "./vendor/ahp/channels-session/state.js";
-import type { SessionState } from "./vendor/ahp/channels-session/state.js";
+import { SessionLifecycle, SessionStatus, type SessionState } from "@grackle-ai/ahp";
 
 /** Fixed timestamp so fixtures are deterministic. */
 const TS = "2026-05-21T00:00:00.000Z";
