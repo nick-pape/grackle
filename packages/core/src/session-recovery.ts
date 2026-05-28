@@ -1,10 +1,7 @@
 import { ConnectError, Code } from "@connectrpc/connect";
-import { create } from "@bufbuild/protobuf";
-import { grackle, eventTypeToEnum, SESSION_STATUS, LOGS_DIR, END_REASON } from "@grackle-ai/common";
+import { SESSION_STATUS, END_REASON } from "@grackle-ai/common";
 import { type PowerLineConnection } from "@grackle-ai/adapter-sdk";
-import { join } from "node:path";
-import { sessionStore, taskStore, grackleHome } from "@grackle-ai/database";
-import * as logWriter from "./log-writer.js";
+import { sessionStore, taskStore } from "@grackle-ai/database";
 import { reanimateAgent } from "./reanimate-agent.js";
 import { logger } from "./logger.js";
 import { emit } from "./event-bus.js";
@@ -25,7 +22,7 @@ const recoveringEnvironments: Set<string> = new Set<string>();
  */
 export async function recoverSuspendedSessions(
   environmentId: string,
-  connection: PowerLineConnection,
+  _connection: PowerLineConnection,
 ): Promise<void> {
   if (recoveringEnvironments.has(environmentId)) {
     logger.warn({ environmentId }, "Recovery already in progress — skipping");
@@ -59,67 +56,26 @@ export async function recoverSuspendedSessions(
     // SUSPENDED for manual reanimate or future recovery.
     const session = suspended[0]!;
     try {
-      // Step 1: Drain buffered events from PowerLine and append to JSONL
-      const logPath = session.logPath || join(grackleHome, LOGS_DIR, session.id);
+      // HR8d: drain of parked events is no longer an explicit step. The
+      // AHP wire's `subscribe` (issued by AhpHostTransport.reanimate) replays
+      // any parked events as leading `action` notifications, so the
+      // recovery's processEventStream sees them as the first events on
+      // the resume stream — identical end behavior, simpler call site.
 
-      let drainedCount = 0;
-      try {
-        const drainStream = connection.transport.drainBuffered(session.id);
-        logWriter.ensureLogInitialized(logPath);
-
-        for await (const envelope of drainStream) {
-          const event = envelope.event;
-          // Skip internal events (e.g. runtime_session_id) that would map
-          // to UNSPECIFIED — those are handled by processEventStream, not the drain.
-          const eventType = eventTypeToEnum(event.type);
-          if (eventType === grackle.EventType.UNSPECIFIED) {
-            continue;
-          }
-          // Normalize AgentEventFields to proto-default semantics ("" for
-          // string fields) so the persisted SessionEvent / JSONL row never
-          // has missing keys regardless of what the transport emits.
-          const sessionEvent = create(grackle.SessionEventSchema, {
-            sessionId: session.id,
-            type: eventType,
-            timestamp: event.timestamp ?? "",
-            content: event.content ?? "",
-            raw: event.raw ?? "",
-            toolCallId: event.toolCallId ?? "",
-            turnId: event.turnId ?? "",
-          });
-          await logWriter.writeEvent(logPath, sessionEvent);
-          drainedCount++;
-        }
-      } catch (drainErr) {
-        // Drain may fail if PowerLine was restarted (no parked events).
-        // This is expected — continue to reanimate anyway.
-        logger.info(
-          { sessionId: session.id, err: drainErr },
-          "Drain returned no buffered events (PowerLine may have restarted)",
-        );
-      } finally {
-        // Always close the log stream to avoid leaking file descriptors.
-        logWriter.endSession(logPath);
-      }
-
-      if (drainedCount > 0) {
-        logger.info(
-          { sessionId: session.id, drainedCount },
-          "Drained buffered events for suspended session",
-        );
-      }
-
-      // Re-check: a new session may have started during the async drain window
+      // Re-check: a new session may have started during the recovery setup window
       const currentActive = sessionStore.getActiveForEnv(environmentId);
       if (currentActive) {
         logger.info(
           { sessionId: session.id, activeSessionId: currentActive.id, environmentId },
-          "Skipping recovery — environment acquired a new active session during drain",
+          "Skipping recovery — environment acquired a new active session during setup",
         );
         return;
       }
 
-      // Step 2: Reanimate the session (starts resume stream + processEventStream)
+      // Reanimate the session (starts resume stream + processEventStream).
+      // Any parked events from a prior disconnect arrive as the first
+      // envelopes on the resume stream (via AhpHostTransport's subscribe
+      // replay).
       reanimateAgent(session.id);
       logger.info({ sessionId: session.id }, "Successfully reanimated suspended session");
       emitTaskUpdated(session.taskId);

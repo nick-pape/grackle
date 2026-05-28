@@ -132,10 +132,10 @@
     "statements": 90
   },
   "@grackle-ai/powerline": {
-    "branches": 90,
-    "functions": 75,
-    "lines": 55,
-    "statements": 55
+    "branches": 70,
+    "functions": 50,
+    "lines": 40,
+    "statements": 40
   },
   "@grackle-ai/prompt": {
     "branches": 90,

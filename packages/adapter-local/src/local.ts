@@ -6,11 +6,7 @@ import type {
   ProvisionEvent,
   AdapterDependencies,
 } from "@grackle-ai/adapter-sdk";
-import {
-  createPowerLineClient,
-  GrpcHostTransport,
-  sleep as defaultSleep,
-} from "@grackle-ai/adapter-sdk";
+import { createAhpHostTransport, sleep as defaultSleep } from "@grackle-ai/adapter-sdk";
 
 const POWERLINE_RETRY_DELAY_MS: number = 1_000;
 const POWERLINE_MAX_RETRIES: number = 5;
@@ -44,12 +40,14 @@ export class LocalAdapter implements EnvironmentAdapter {
       progress: 0.5,
     };
 
-    const client = createPowerLineClient(`http://${host}:${port}`, powerlineToken);
+    const baseUrl = `ws://${host}:${port}`;
 
     let lastErr: unknown;
     for (let attempt = 0; attempt < POWERLINE_MAX_RETRIES; attempt++) {
       try {
-        await client.ping({});
+        const { socket } = await createAhpHostTransport(baseUrl, powerlineToken, environmentId);
+        await socket.request("ping", { channel: "ahp-root://" });
+        await socket.close();
         yield { stage: "ready", message: "Connected to local PowerLine", progress: 1 };
         return;
       } catch (err) {
@@ -79,10 +77,22 @@ export class LocalAdapter implements EnvironmentAdapter {
     const port = cfg.port || DEFAULT_POWERLINE_PORT;
     const host = cfg.host || "localhost";
 
-    const client = createPowerLineClient(`http://${host}:${port}`, powerlineToken);
-    await client.ping({});
+    const baseUrl = `ws://${host}:${port}`;
+    const { transport, socket } = await createAhpHostTransport(
+      baseUrl,
+      powerlineToken,
+      environmentId,
+    );
+    await socket.request("ping", { channel: "ahp-root://" });
 
-    return { client, environmentId, port, transport: new GrpcHostTransport(client) };
+    return {
+      environmentId,
+      port,
+      transport,
+      ping: async () => {
+        await socket.request("ping", { channel: "ahp-root://" });
+      },
+    };
   }
 
   public async disconnect(): Promise<void> {
@@ -99,7 +109,7 @@ export class LocalAdapter implements EnvironmentAdapter {
 
   public async healthCheck(connection: PowerLineConnection): Promise<boolean> {
     try {
-      await connection.client.ping({});
+      await connection.ping();
       return true;
     } catch {
       return false;

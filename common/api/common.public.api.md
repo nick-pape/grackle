@@ -4,6 +4,7 @@
 
 ```ts
 
+import { ActionEnvelope } from '@grackle-ai/ahp';
 import type { GenEnum } from '@bufbuild/protobuf/codegenv2';
 import type { GenFile } from '@bufbuild/protobuf/codegenv2';
 import type { GenMessage } from '@bufbuild/protobuf/codegenv2';
@@ -2066,6 +2067,9 @@ type ModelSelection = Message<"grackle.ModelSelection"> & {
 const ModelSelectionSchema: GenMessage<ModelSelection>;
 
 // @public
+export function newReverseMapperContext(): ReverseMapperContext;
+
+// @public
 export const ORCHESTRATOR_MCP_TOOLS: readonly string[];
 
 // @public
@@ -2312,6 +2316,27 @@ const ResumeRequestSchema: GenMessage<ResumeRequest>;
 
 // @public
 const ResumeRequestSchema_2: GenMessage<ResumeRequest_2>;
+
+// @public
+export function reverseMapAction(envelope: ActionEnvelope, context: ReverseMapperContext): ReverseMapResult;
+
+// @public
+export interface ReverseMapperContext {
+    readonly metaAccumulator: {
+        costMillicents?: number;
+        runtimeSessionId?: string;
+    };
+    // Warning: (ae-forgotten-export) The symbol "PendingToolCall" needs to be exported by the entry point index.d.ts
+    readonly pendingToolCalls: Map<string, PendingToolCall>;
+    turnId?: string;
+}
+
+// @public
+export interface ReverseMapResult {
+    readonly detail: string;
+    readonly disposition: "mapped" | "carried" | "dropped" | "buffered";
+    readonly events: AgentEventFields[];
+}
 
 // @public
 type RevokeChannelGrantRequest = Message<"grackle.RevokeChannelGrantRequest"> & {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import http2 from "node:http2";
+import http from "node:http";
 import net from "node:net";
 import { execFile, type ChildProcess } from "node:child_process";
 import { join } from "node:path";
@@ -41,42 +41,31 @@ function waitForPort(port: number, timeoutMs: number = 10_000): Promise<void> {
   });
 }
 
-/** Make an HTTP/2 request to the given port and path. */
+/** Make an HTTP/1 GET request to the given port and path. */
 function request(
   port: number,
   path: string,
 ): Promise<{ status: number; headers: Record<string, string>; body: string }> {
   return new Promise((resolve, reject) => {
-    const client = http2.connect(`http://127.0.0.1:${port}`);
-    client.on("error", (err) => {
-      client.destroy();
-      reject(err);
-    });
-
-    const req = client.request({ ":method": "GET", ":path": path });
-    let body = "";
-    let status = 0;
-    const headers: Record<string, string> = {};
-
-    req.on("response", (hdrs) => {
-      status = hdrs[":status"] as number;
-      for (const [key, value] of Object.entries(hdrs)) {
-        if (!key.startsWith(":") && typeof value === "string") {
-          headers[key] = value;
+    const req = http.request(
+      { host: "127.0.0.1", port, path, method: "GET" },
+      (res) => {
+        let body = "";
+        const headers: Record<string, string> = {};
+        for (const [key, value] of Object.entries(res.headers)) {
+          if (typeof value === "string") {
+            headers[key] = value;
+          }
         }
-      }
-    });
-    req.on("data", (chunk: Buffer) => {
-      body += chunk.toString();
-    });
-    req.on("end", () => {
-      client.close();
-      resolve({ status, headers, body });
-    });
-    req.on("error", (err) => {
-      client.destroy();
-      reject(err);
-    });
+        res.on("data", (chunk: Buffer) => {
+          body += chunk.toString();
+        });
+        res.on("end", () => {
+          resolve({ status: res.statusCode ?? 0, headers, body });
+        });
+      },
+    );
+    req.on("error", reject);
     req.end();
   });
 }

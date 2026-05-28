@@ -10,7 +10,7 @@ import type {
   ExecResult,
 } from "@grackle-ai/adapter-sdk";
 import {
-  createPowerLineClient,
+  createAhpHostTransport,
   isDevMode,
   bootstrapPowerLine,
   startRemotePowerLine,
@@ -20,7 +20,6 @@ import {
   exec as defaultExec,
   sleep as defaultSleep,
   defaultLogger,
-  GrpcHostTransport,
   type RemoteExecutor,
 } from "@grackle-ai/adapter-sdk";
 import { existsSync } from "node:fs";
@@ -679,8 +678,9 @@ export class DockerAdapter implements EnvironmentAdapter {
   /** Probe whether a PowerLine URL answers a ping (used to test direct host→container reachability). */
   private async canReachPowerLine(url: string, powerlineToken: string): Promise<boolean> {
     try {
-      const client = createPowerLineClient(url, powerlineToken);
-      await client.ping({});
+      const { socket } = await createAhpHostTransport(url, powerlineToken, "reachability-probe");
+      await socket.request("ping", { channel: "ahp-root://" });
+      await socket.close();
       return true;
     } catch {
       return false;
@@ -718,16 +718,28 @@ export class DockerAdapter implements EnvironmentAdapter {
       // When on a shared Docker network, connect directly to the sibling container
       // by name on the default PowerLine port. Otherwise, use the mapped host port.
       connectUrl = DOCKER_NETWORK
-        ? `http://${containerName}:${DEFAULT_POWERLINE_PORT}`
-        : `http://127.0.0.1:${localPort}`;
+        ? `ws://${containerName}:${DEFAULT_POWERLINE_PORT}`
+        : `ws://127.0.0.1:${localPort}`;
     }
-    const client = createPowerLineClient(connectUrl, powerlineToken);
-
+    // For attach-mode connectUrl is http:// from resolveAttachConnectivity;
+    // createAhpHostTransport normalizes http(s) to ws(s).
     let lastErr: unknown;
     for (let attempt = 0; attempt < CONNECT_MAX_RETRIES; attempt++) {
       try {
-        await client.ping({});
-        return { client, environmentId, port, transport: new GrpcHostTransport(client) };
+        const { transport, socket } = await createAhpHostTransport(
+          connectUrl,
+          powerlineToken,
+          environmentId,
+        );
+        await socket.request("ping", { channel: "ahp-root://" });
+        return {
+          environmentId,
+          port,
+          transport,
+          ping: async () => {
+            await socket.request("ping", { channel: "ahp-root://" });
+          },
+        };
       } catch (err) {
         lastErr = err;
         await this.sleepFn(CONNECT_RETRY_DELAY_MS);
@@ -794,7 +806,7 @@ export class DockerAdapter implements EnvironmentAdapter {
 
   public async healthCheck(connection: PowerLineConnection): Promise<boolean> {
     try {
-      await connection.client.ping({});
+      await connection.ping();
       return true;
     } catch {
       return false;
