@@ -202,10 +202,22 @@ export class AhpClientSocket {
         return;
       }
       this.socket = ws;
+      // Capture the state at the moment we kicked off this connection. If
+      // we're already in "reconnecting" mode, a pre-`open` failure should
+      // chain another reconnect attempt. If this is the first open() call
+      // (state was "closed" → "connecting"), let the caller decide.
+      const wasReconnecting = this.currentState === "reconnecting";
 
       const onError = (err: Error): void => {
-        // ws emits "error" before "close" on transport failures.
+        // ws emits "error" before "close" on transport failures. Since the
+        // session hasn't been constructed yet, handleSessionClose won't be
+        // called — for reconnect attempts we have to schedule the next
+        // retry ourselves.
         rejectOuter(err);
+        this.socket = undefined;
+        if (wasReconnecting && !this.userClosed) {
+          this.scheduleReconnect();
+        }
       };
 
       ws.once("open", () => {

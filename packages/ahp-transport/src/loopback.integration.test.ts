@@ -90,7 +90,7 @@ describe("AhpServerSocket + AhpClientSocket loopback", () => {
 
   it("propagates notifications in both directions", async () => {
     const { server, port } = await listenOn(0);
-    const serverSawNotifications: string[] = [];
+    const serverSawNotifications: Array<{ method: string; clientId: string }> = [];
     const clientSawNotifications: string[] = [];
 
     const ahp = new AhpServerSocket({
@@ -107,17 +107,10 @@ describe("AhpServerSocket + AhpClientSocket loopback", () => {
           });
         });
       },
+      onNotification: (notif, conn) => {
+        serverSawNotifications.push({ method: notif.method, clientId: conn.clientId });
+      },
     });
-
-    // We need a way to capture inbound notifications on the SERVER side.
-    // AhpServerSocket doesn't expose onNotification per-session today; the
-    // server-side JsonRpcSession was constructed without one. To hook in
-    // here, we wrap the onConnection to install a session-level handler.
-    // Currently AhpServerSocket constructs the session with onNotification
-    // unset (notifications dropped). For the loopback test, we verify only
-    // the server-→-client direction here; the client-→-server direction is
-    // covered by AhpServerSocket tests (dispatchAction handler).
-    void serverSawNotifications;
 
     const client = new AhpClientSocket({
       url: `ws://127.0.0.1:${port}/ahp`,
@@ -130,9 +123,20 @@ describe("AhpServerSocket + AhpClientSocket loopback", () => {
     });
     try {
       await client.open();
-      // Wait a beat for the server to fire its notification.
+      // Wait a beat for the server's initial notification.
       await new Promise((r) => setTimeout(r, 50));
       expect(clientSawNotifications).toEqual(["action"]);
+
+      // Client → server direction: send a dispatchAction notification.
+      client.notify("dispatchAction", {
+        channel: "ahp-session:/demo",
+        clientSeq: 1,
+        action: { type: "user/input", payload: { text: "hi" } },
+      });
+      await new Promise((r) => setTimeout(r, 50));
+      expect(serverSawNotifications).toEqual([
+        { method: "dispatchAction", clientId: client.clientId },
+      ]);
     } finally {
       await client.close();
       await ahp.close();

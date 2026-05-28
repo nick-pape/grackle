@@ -333,7 +333,7 @@ describe("AhpServerSocket", () => {
 
     it("closes with code 4001 when missed-pong threshold is exceeded", async () => {
       // With missedLimit=0, the FIRST interval tick increments missedPongs to
-      // 1 (> 0) and closes immediately, before any auto-pong can reset it.
+      // 1 (>= 0) and closes immediately, before any auto-pong can reset it.
       const harness = await bootHarness({
         heartbeatIntervalMs: 30,
         heartbeatMissedLimit: 0,

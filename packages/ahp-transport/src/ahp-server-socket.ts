@@ -9,7 +9,13 @@
  * close with code 4001.
  */
 
-import type { InitializeParams, InitializeResult, AhpRequest, AhpResponse } from "@grackle-ai/ahp";
+import type {
+  InitializeParams,
+  InitializeResult,
+  AhpNotification,
+  AhpRequest,
+  AhpResponse,
+} from "@grackle-ai/ahp";
 import { JsonRpcErrorCodes } from "@grackle-ai/ahp";
 import { timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, Server as HttpServer } from "node:http";
@@ -56,6 +62,11 @@ export interface AhpServerSocketOptions {
   readonly onInitialize: (params: InitializeParams) => Promise<InitializeResult> | InitializeResult;
   /** Handles requests other than `initialize`. */
   readonly onRequest?: (req: AhpRequest, conn: AhpServerConnection) => Promise<AhpResponse>;
+  /**
+   * Handles client→server notifications (e.g., `dispatchAction`, `unsubscribe`).
+   * Fires only after the handshake completes; pre-initialize notifications are dropped.
+   */
+  readonly onNotification?: (notif: AhpNotification, conn: AhpServerConnection) => void;
   /** Called once the handshake succeeds and the connection is usable. */
   readonly onConnection?: (conn: AhpServerConnection) => void;
   /** Called when a connection closes. */
@@ -83,6 +94,7 @@ export class AhpServerSocket {
   private readonly path: string;
   private readonly onInitialize: AhpServerSocketOptions["onInitialize"];
   private readonly onRequest: AhpServerSocketOptions["onRequest"];
+  private readonly onNotification: AhpServerSocketOptions["onNotification"];
   private readonly onConnection: AhpServerSocketOptions["onConnection"];
   private readonly onDisconnect: AhpServerSocketOptions["onDisconnect"];
   private readonly heartbeatIntervalMs: number;
@@ -99,6 +111,7 @@ export class AhpServerSocket {
     this.path = opts.path ?? DEFAULT_PATH;
     this.onInitialize = opts.onInitialize;
     this.onRequest = opts.onRequest;
+    this.onNotification = opts.onNotification;
     this.onConnection = opts.onConnection;
     this.onDisconnect = opts.onDisconnect;
     this.heartbeatIntervalMs = opts.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS;
@@ -172,6 +185,7 @@ export class AhpServerSocket {
     state.session = new JsonRpcSession({
       socket: ws,
       onRequest: (innerReq) => this.handleRequest(innerReq, state, req),
+      onNotification: (notif) => this.handleNotification(notif, state),
       onClose: (code, reason) => this.handleSocketClose(state, code, reason),
     });
     this.connections.add(state);
@@ -184,7 +198,7 @@ export class AhpServerSocket {
     });
     state.heartbeatTimer = setInterval(() => {
       state.missedPongs += 1;
-      if (state.missedPongs > this.heartbeatMissedLimit) {
+      if (state.missedPongs >= this.heartbeatMissedLimit) {
         state.session.close(WsCloseCode.HeartbeatTimeout, "heartbeat timeout");
         return;
       }
@@ -262,6 +276,20 @@ export class AhpServerSocket {
     }
 
     return this.onRequest(req, connection);
+  }
+
+  private handleNotification(notif: AhpNotification, state: ConnectionState): void {
+    // Pre-initialize notifications have no surface to route through (no
+    // AhpServerConnection exists yet) and aren't part of the AHP contract;
+    // drop silently. After the handshake, route to the consumer.
+    if (state.connection === undefined || this.onNotification === undefined) {
+      return;
+    }
+    try {
+      this.onNotification(notif, state.connection);
+    } catch {
+      // Handler errors are swallowed to keep the session alive.
+    }
   }
 
   private handleSocketClose(state: ConnectionState, code: number, reason: string): void {
