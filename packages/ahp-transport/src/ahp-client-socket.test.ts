@@ -423,6 +423,42 @@ describe("AhpClientSocket", () => {
         await harness.close();
       }
     });
+
+    it("terminates reconnect cycle when a reconnect-time initialize fails (no infinite retry)", async () => {
+      // Start with a server that accepts initialize, get the client to "open",
+      // then swap the handler to throw on initialize and kick the connection.
+      let initShouldThrow = false;
+      const harness = await bootServer({
+        onInitialize: () => {
+          if (initShouldThrow) {
+            throw new Error("handshake denied on retry");
+          }
+          return DEFAULT_INIT_RESULT;
+        },
+      });
+      const client = new AhpClientSocket({
+        url: harness.url,
+        powerlineToken: "tok",
+        clientIdStore: new InMemoryClientIdStore(),
+        clientIdKey: "k",
+        backoff: exponentialBackoff({ initialMs: 20, maxMs: 20, jitter: 0 }),
+      });
+      try {
+        await client.open();
+        // Flip the server to reject the next initialize.
+        initShouldThrow = true;
+        // Kick the connection — client will reconnect and the initialize will
+        // be rejected by the server, which must terminate the lifecycle.
+        const conn = harness.connections[0]!;
+        conn.session.close(1011, "restart");
+        // Wait for the state to settle into "closed". If the client mistakenly
+        // kept retrying, this would time out (still in "reconnecting").
+        await waitForState(client, "closed", 2_000);
+      } finally {
+        await client.close();
+        await harness.close();
+      }
+    });
   });
 
   describe("backoff sequence", () => {

@@ -9,13 +9,7 @@
  * (HR8b). This class only owns the per-host connection lifecycle.
  */
 
-import type {
-  AhpRequest,
-  AhpResponse,
-  CommandMap,
-  InitializeParams,
-  InitializeResult,
-} from "@grackle-ai/ahp";
+import type { CommandMap, InitializeParams, InitializeResult } from "@grackle-ai/ahp";
 import { randomUUID } from "node:crypto";
 import { WebSocket } from "ws";
 
@@ -205,19 +199,29 @@ export class AhpClientSocket {
       // reconnect. Set BEFORE calling session.close() in the failure paths.
       let suppressReconnect = false;
 
-      const failAttempt = (err: unknown): void => {
+      const failTransport = (err: unknown): void => {
+        // Transport-layer failure (TCP error, WS upgrade rejected, etc.).
+        // On reconnect attempts, chain the next retry; on initial open,
+        // terminate.
         rejectOuter(err);
         if (isReconnect && !this.userClosed) {
-          // Reconnect retry failed — schedule the next attempt.
           this.scheduleReconnect();
         } else {
-          // Initial open failed — go back to "closed" and fail queued ops so
-          // callers don't wait forever.
           this.socket = undefined;
           this.session = undefined;
           this.failPendingOps(err);
           this.setState("closed");
         }
+      };
+
+      const failHandshake = (err: unknown): void => {
+        // Handshake-layer failure (initialize rejected). Always terminal —
+        // a stale clientId or unsupported protocol won't fix itself on retry.
+        rejectOuter(err);
+        this.socket = undefined;
+        this.session = undefined;
+        this.failPendingOps(err);
+        this.setState("closed");
       };
 
       let ws: WebSocket;
@@ -226,20 +230,20 @@ export class AhpClientSocket {
           headers: this.headersForUpgrade(),
         });
       } catch (err) {
-        failAttempt(err);
+        failTransport(err);
         return;
       }
       this.socket = ws;
 
       const onError = (err: Error): void => {
-        // ws emits "error" before "close" on transport failures. Session
-        // isn't constructed yet, so handleSessionClose won't fire.
+        // ws emits "error" before "close" on transport failures. If the
+        // session is already constructed (we're past initialize), let
+        // handleSessionClose drive recovery; otherwise this is a transport
+        // failure during the upgrade.
         if (this.session !== undefined) {
-          // Session was created (we're past initialize); let handleSessionClose
-          // drive the next state.
           return;
         }
-        failAttempt(err);
+        failTransport(err);
       };
 
       ws.once("open", () => {
@@ -250,12 +254,8 @@ export class AhpClientSocket {
           onNotification: this.onNotification,
           onClose: (code, reason) => {
             if (suppressReconnect) {
-              // Expected close after a handshake failure — don't reconnect.
-              this.session = undefined;
-              this.socket = undefined;
-              if (!isReconnect) {
-                this.setState("closed");
-              }
+              // Expected close after a handshake failure — failHandshake
+              // already cleaned up the session/socket and set state.
               void code;
               void reason;
               return;
@@ -279,10 +279,12 @@ export class AhpClientSocket {
             resolveOuter(result);
           },
           (err) => {
-            // Handshake failure is terminal — close without scheduling reconnect.
+            // Handshake failure is terminal on both initial and reconnect
+            // attempts. Suppress the session-close handler so it doesn't
+            // schedule a reconnect, then run the handshake-failure cleanup.
             suppressReconnect = true;
             session.close(WsCloseCode.Normal, "initialize failed");
-            failAttempt(err);
+            failHandshake(err);
           },
         );
       });
@@ -357,9 +359,5 @@ export class AhpClientSocket {
   }
 }
 
-/**
- * Helper for fetching the `AhpRequest` / `AhpResponse` typings from the AHP
- * package without forcing consumers to import them separately. Re-exported
- * by `src/index.ts`.
- */
-export type { AhpRequest, AhpResponse };
+// AhpRequest / AhpResponse are not re-exported from this package — consumers
+// import them directly from `@grackle-ai/ahp`.

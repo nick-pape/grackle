@@ -83,6 +83,9 @@ interface ConnectionState {
   session: JsonRpcSession;
   /** Populated by the `initialize` handler once the handshake completes. */
   connection: AhpServerConnection | undefined;
+  /** True once a ping has been sent and the matching pong hasn't yet arrived. */
+  pingOutstanding: boolean;
+  /** Count of consecutive pings that didn't get a pong before the next tick. */
   missedPongs: number;
   heartbeatTimer: NodeJS.Timeout | undefined;
 }
@@ -182,6 +185,7 @@ export class AhpServerSocket {
       socket: ws,
       session: undefined as unknown as JsonRpcSession,
       connection: undefined,
+      pingOutstanding: false,
       missedPongs: 0,
       heartbeatTimer: undefined,
     };
@@ -197,16 +201,22 @@ export class AhpServerSocket {
 
   private startHeartbeat(state: ConnectionState): void {
     state.socket.on("pong", () => {
+      state.pingOutstanding = false;
       state.missedPongs = 0;
     });
     state.heartbeatTimer = setInterval(() => {
-      state.missedPongs += 1;
-      if (state.missedPongs >= this.heartbeatMissedLimit) {
-        state.session.close(WsCloseCode.HeartbeatTimeout, "heartbeat timeout");
-        return;
+      // Each tick: if the prior tick's ping didn't get a pong before this
+      // tick, that's a real missed pong. Count it, then send the next ping.
+      if (state.pingOutstanding) {
+        state.missedPongs += 1;
+        if (state.missedPongs >= this.heartbeatMissedLimit) {
+          state.session.close(WsCloseCode.HeartbeatTimeout, "heartbeat timeout");
+          return;
+        }
       }
       try {
         state.socket.ping();
+        state.pingOutstanding = true;
       } catch {
         // Socket already closing; the close handler will clean up.
       }
@@ -257,6 +267,12 @@ export class AhpServerSocket {
 
     const connection = state.connection;
     if (connection === undefined) {
+      // Enforce the handshake boundary: the first inbound JSON-RPC must be
+      // `initialize`. Close the session after the error response has had a
+      // chance to flush to the wire (setImmediate puts it after the response
+      // send's I/O turn). The session-close handler then prevents any further
+      // initialize on the same connection.
+      setImmediate(() => state.session.close(WsCloseCode.Normal, "initialize required first"));
       return {
         jsonrpc: "2.0",
         id: req.id,
