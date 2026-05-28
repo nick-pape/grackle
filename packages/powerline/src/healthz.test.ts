@@ -47,24 +47,21 @@ function request(
   path: string,
 ): Promise<{ status: number; headers: Record<string, string>; body: string }> {
   return new Promise((resolve, reject) => {
-    const req = http.request(
-      { host: "127.0.0.1", port, path, method: "GET" },
-      (res) => {
-        let body = "";
-        const headers: Record<string, string> = {};
-        for (const [key, value] of Object.entries(res.headers)) {
-          if (typeof value === "string") {
-            headers[key] = value;
-          }
+    const req = http.request({ host: "127.0.0.1", port, path, method: "GET" }, (res) => {
+      let body = "";
+      const headers: Record<string, string> = {};
+      for (const [key, value] of Object.entries(res.headers)) {
+        if (typeof value === "string") {
+          headers[key] = value;
         }
-        res.on("data", (chunk: Buffer) => {
-          body += chunk.toString();
-        });
-        res.on("end", () => {
-          resolve({ status: res.statusCode ?? 0, headers, body });
-        });
-      },
-    );
+      }
+      res.on("data", (chunk: Buffer) => {
+        body += chunk.toString();
+      });
+      res.on("end", () => {
+        resolve({ status: res.statusCode ?? 0, headers, body });
+      });
+    });
     req.on("error", reject);
     req.end();
   });

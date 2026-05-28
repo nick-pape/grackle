@@ -62,11 +62,7 @@ import type {
   AhpResponse,
   AhpNotification,
 } from "@grackle-ai/ahp";
-import {
-  ActionType,
-  JsonRpcErrorCodes,
-  SessionStatus,
-} from "@grackle-ai/ahp";
+import { ActionType, JsonRpcErrorCodes, SessionStatus } from "@grackle-ai/ahp";
 import {
   AhpServerSocket,
   type AhpServerConnection,
@@ -233,9 +229,10 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
 
     const config = params.config ?? {};
     const cfg = config as Record<string, unknown>;
-    const resumeId = typeof cfg.resumeFromRuntimeSessionId === "string"
-      ? cfg.resumeFromRuntimeSessionId
-      : undefined;
+    const resumeId =
+      typeof cfg.resumeFromRuntimeSessionId === "string"
+        ? cfg.resumeFromRuntimeSessionId
+        : undefined;
 
     let session: AgentSession;
     try {
@@ -248,7 +245,8 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
         const prompt = typeof cfg.prompt === "string" ? cfg.prompt : "";
         const model = typeof cfg.model === "string" ? cfg.model : "";
         const maxTurns = typeof cfg.maxTurns === "number" ? cfg.maxTurns : 0;
-        const branchVal = typeof cfg.branch === "string" && cfg.branch !== "" ? cfg.branch : undefined;
+        const branchVal =
+          typeof cfg.branch === "string" && cfg.branch !== "" ? cfg.branch : undefined;
         const wdVal =
           typeof cfg.workingDirectory === "string" && cfg.workingDirectory !== ""
             ? cfg.workingDirectory
@@ -259,7 +257,9 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
             ? cfg.systemContext
             : undefined;
         const workspaceId =
-          typeof cfg.workspaceId === "string" && cfg.workspaceId !== "" ? cfg.workspaceId : undefined;
+          typeof cfg.workspaceId === "string" && cfg.workspaceId !== ""
+            ? cfg.workspaceId
+            : undefined;
         const taskId = typeof cfg.taskId === "string" ? cfg.taskId : undefined;
         const mcpServersJson = typeof cfg.mcpServersJson === "string" ? cfg.mcpServersJson : "";
         const mcpUrl = typeof cfg.mcpUrl === "string" ? cfg.mcpUrl : "";
@@ -313,10 +313,7 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     } as AhpResponse;
   }
 
-  function handleSubscribe(
-    params: SubscribeParams,
-    conn: AhpServerConnection,
-  ): AhpResponse {
+  function handleSubscribe(params: SubscribeParams, conn: AhpServerConnection): AhpResponse {
     const sessionId = sessionIdFromChannel(params.channel);
     if (sessionId === undefined) {
       // Subscribing to non-session channels (e.g. ahp-root://) — return an
@@ -453,8 +450,7 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     // `usage` / `runtime_session_id` events.
     const metaSnapshot: Record<string, unknown> = {};
     if (forwarder.mapperContext.metaAccumulator.runtimeSessionId !== undefined) {
-      metaSnapshot.runtime_session_id =
-        forwarder.mapperContext.metaAccumulator.runtimeSessionId;
+      metaSnapshot.runtime_session_id = forwarder.mapperContext.metaAccumulator.runtimeSessionId;
     }
     if (forwarder.mapperContext.metaAccumulator.costMillicents !== undefined) {
       metaSnapshot.cost_millicents = forwarder.mapperContext.metaAccumulator.costMillicents;
@@ -477,10 +473,7 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     }
   }
 
-  function handleDispatchAction(
-    params: DispatchActionParams,
-    _conn: AhpServerConnection,
-  ): void {
+  function handleDispatchAction(params: DispatchActionParams, _conn: AhpServerConnection): void {
     const sessionId = sessionIdFromChannel(params.channel);
     if (sessionId === undefined) {
       return;

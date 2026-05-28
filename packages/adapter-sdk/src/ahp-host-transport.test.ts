@@ -306,7 +306,7 @@ describe("AhpHostTransport", () => {
             name: "token-file",
             type: "file",
             filePath: "/home/.creds/anthropic.json",
-            value: "{\"foo\":1}",
+            value: '{"foo":1}',
           },
         ],
       };

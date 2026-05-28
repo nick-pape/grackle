@@ -360,9 +360,7 @@ export class AhpHostTransport implements IHostTransport {
       ...(params.scriptContent !== undefined && params.scriptContent !== ""
         ? { scriptContent: params.scriptContent }
         : {}),
-      ...(resumeFromRuntimeSessionId !== undefined
-        ? { resumeFromRuntimeSessionId }
-        : {}),
+      ...(resumeFromRuntimeSessionId !== undefined ? { resumeFromRuntimeSessionId } : {}),
     };
     const ahpParams: AhpCreateSessionParams = {
       channel,
@@ -398,8 +396,6 @@ export class AhpHostTransport implements IHostTransport {
  * @returns A function suitable for passing as `onNotification` to
  *   `AhpClientSocket`'s constructor options.
  */
-export function bindNotificationHandler(
-  transport: AhpHostTransport,
-): (n: AhpNotification) => void {
+export function bindNotificationHandler(transport: AhpHostTransport): (n: AhpNotification) => void {
   return (n) => transport.handleNotification(n);
 }

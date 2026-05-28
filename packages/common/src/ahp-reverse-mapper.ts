@@ -160,8 +160,7 @@ export function reverseMapAction(
       if (a.part.kind === ResponsePartKind.SystemNotification) {
         const partContent = a.part.content;
         // SystemNotification.content is StringOrMarkdown (string | { markdown: string }).
-        const contentStr =
-          typeof partContent === "string" ? partContent : partContent.markdown;
+        const contentStr = typeof partContent === "string" ? partContent : partContent.markdown;
         return {
           events: [{ type: "system", turnId: a.turnId, content: contentStr }],
           disposition: "mapped",

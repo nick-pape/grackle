@@ -15,11 +15,7 @@ import {
 } from "@grackle-ai/ahp";
 import { describe, expect, it } from "vitest";
 
-import {
-  type AgentEventFields,
-  mapAgentEvent,
-  type MapperContext,
-} from "./ahp-mapper.js";
+import { type AgentEventFields, mapAgentEvent, type MapperContext } from "./ahp-mapper.js";
 import {
   newReverseMapperContext,
   reverseMapAction,
@@ -381,11 +377,7 @@ describe("reverseMapAction", () => {
         fctx,
         rctx,
       );
-      const out = pushRoundTrip(
-        { type: "text", content: "answer", turnId: "turn-1" },
-        fctx,
-        rctx,
-      );
+      const out = pushRoundTrip({ type: "text", content: "answer", turnId: "turn-1" }, fctx, rctx);
       expect(out).toEqual([{ type: "text", turnId: "turn-1", content: "answer" }]);
     });
 
@@ -415,7 +407,10 @@ describe("reverseMapAction", () => {
       const evt = out[0]!;
       expect(evt.type).toBe("tool_use");
       expect(evt.toolCallId).toBe("tc-1");
-      const parsed = JSON.parse(evt.content ?? "") as { tool_name: string; invocation_message: string };
+      const parsed = JSON.parse(evt.content ?? "") as {
+        tool_name: string;
+        invocation_message: string;
+      };
       expect(parsed.tool_name).toBe("ls");
       expect(parsed.invocation_message).toBe("Listing files");
     });
@@ -433,7 +428,11 @@ describe("reverseMapAction", () => {
           type: "tool_use",
           turnId: "turn-1",
           toolCallId: "tc-1",
-          content: JSON.stringify({ tool_name: "ls", display_name: "List", invocation_message: "Listing" }),
+          content: JSON.stringify({
+            tool_name: "ls",
+            display_name: "List",
+            invocation_message: "Listing",
+          }),
         },
         fctx,
         rctx,
@@ -464,11 +463,7 @@ describe("reverseMapAction", () => {
         fctx,
         rctx,
       );
-      const out = pushRoundTrip(
-        { type: "turn_complete", turnId: "turn-1" },
-        fctx,
-        rctx,
-      );
+      const out = pushRoundTrip({ type: "turn_complete", turnId: "turn-1" }, fctx, rctx);
       expect(out).toEqual([{ type: "turn_complete", turnId: "turn-1" }]);
     });
   });
