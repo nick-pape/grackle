@@ -130,11 +130,12 @@ describe("reanimateAgent — pipe stream reconstruction", () => {
     streamRegistry._resetForTesting();
     pipeDelivery._resetForTesting();
 
-    mockSendInput = vi.fn().mockResolvedValue({});
+    mockSendInput = vi.fn().mockResolvedValue(undefined);
     vi.spyOn(adapterManager, "getConnection").mockReturnValue({
-      client: {
-        sendInput: mockSendInput,
-        resume: vi.fn(() => (async function* () {})()),
+      client: {},
+      transport: {
+        dispatchInput: mockSendInput,
+        reanimate: vi.fn(() => (async function* () {})()),
       },
     } as unknown as ReturnType<typeof adapterManager.getConnection>);
   });
@@ -189,9 +190,9 @@ describe("reanimateAgent — pipe stream reconstruction", () => {
     streamRegistry.publish(pipeStream.id, "child", "Hello from child post-reanimate");
 
     expect(mockSendInput).toHaveBeenCalledOnce();
-    const call = mockSendInput.mock.calls[0][0] as { sessionId: string; text: string };
-    expect(call.sessionId).toBe("parent");
-    expect(call.text).toContain("Hello from child post-reanimate");
+    const [sessionUri, text] = mockSendInput.mock.calls[0] as [string, string];
+    expect(sessionUri).toBe("parent");
+    expect(text).toContain("Hello from child post-reanimate");
   });
 
   it("reconstructs pipe streams for active async-piped children when parent is reanimated", () => {
@@ -244,9 +245,10 @@ describe("reanimateAgent — pipe stream reconstruction", () => {
 
     // Replay delivers the buffered message via sendInput
     await vi.waitFor(() => {
-      const calls = mockSendInput.mock.calls.map(
-        (c: unknown[]) => c[0] as { sessionId: string; text: string },
-      );
+      const calls = mockSendInput.mock.calls.map((c: unknown[]) => ({
+        sessionId: c[0] as string,
+        text: c[1] as string,
+      }));
       const parentCall = calls.find((c) => c.sessionId === "parent");
       expect(parentCall).toBeDefined();
       expect(parentCall!.text).toContain("Message sent while offline");
@@ -326,9 +328,9 @@ describe("reanimateAgent — pipe stream reconstruction", () => {
     streamRegistry.publish(pipeStream.id, "child", "Sync child result after reanimate");
 
     expect(mockSendInput).toHaveBeenCalledOnce();
-    const call = mockSendInput.mock.calls[0][0] as { sessionId: string; text: string };
-    expect(call.sessionId).toBe("parent");
-    expect(call.text).toContain("Sync child result after reanimate");
+    const [sessionUri, text] = mockSendInput.mock.calls[0] as [string, string];
+    expect(sessionUri).toBe("parent");
+    expect(text).toContain("Sync child result after reanimate");
   });
 
   it("reconstructs pipe streams for active sync-piped children when parent is reanimated", () => {

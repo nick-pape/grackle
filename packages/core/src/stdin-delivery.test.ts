@@ -77,9 +77,10 @@ describe("stdin-delivery", () => {
     streamRegistry._resetForTesting();
     pipeDelivery._resetForTesting();
 
-    mockSendInput = vi.fn().mockResolvedValue({});
+    mockSendInput = vi.fn().mockResolvedValue(undefined);
     vi.spyOn(adapterManager, "getConnection").mockReturnValue({
-      client: { sendInput: mockSendInput },
+      client: {},
+      transport: { dispatchInput: mockSendInput },
     } as unknown as ReturnType<typeof adapterManager.getConnection>);
   });
 
@@ -183,11 +184,11 @@ describe("stdin-delivery", () => {
       publishToStdin("session-1", "hello from user");
 
       expect(mockSendInput).toHaveBeenCalledOnce();
-      const call = mockSendInput.mock.calls[0][0];
-      expect(call.sessionId).toBe("session-1");
+      const [sessionUri, text] = mockSendInput.mock.calls[0];
+      expect(sessionUri).toBe("session-1");
       // Should be plain text — NO [fd:N] prefix
-      expect(call.text).toBe("hello from user");
-      expect(call.text).not.toContain("[fd:");
+      expect(text).toBe("hello from user");
+      expect(text).not.toContain("[fd:");
     });
   });
 
@@ -207,8 +208,8 @@ describe("stdin-delivery", () => {
 
       publishToStdin("session-1", "user input");
 
-      const call = mockSendInput.mock.calls[0][0];
-      expect(call.text).toBe("user input");
+      const [, text] = mockSendInput.mock.calls[0];
+      expect(text).toBe("user input");
     });
 
     it("pipe messages still arrive with [fd:N] prefix", () => {
@@ -235,10 +236,10 @@ describe("stdin-delivery", () => {
       streamRegistry.publish(pipeStream.id, "parent", "instruction from parent");
 
       expect(mockSendInput).toHaveBeenCalledOnce();
-      const call = mockSendInput.mock.calls[0][0];
-      expect(call.sessionId).toBe("child");
-      expect(call.text).toContain("[fd:");
-      expect(call.text).toContain("instruction from parent");
+      const [sessionUri, text] = mockSendInput.mock.calls[0];
+      expect(sessionUri).toBe("child");
+      expect(text).toContain("[fd:");
+      expect(text).toContain("instruction from parent");
     });
 
     it("both stdin and pipe can coexist on the same session", () => {
@@ -269,7 +270,7 @@ describe("stdin-delivery", () => {
       publishToStdin("child", "stdin message");
 
       expect(mockSendInput).toHaveBeenCalledTimes(1);
-      expect(mockSendInput.mock.calls[0][0].text).toBe("stdin message");
+      expect(mockSendInput.mock.calls[0][1]).toBe("stdin message");
 
       mockSendInput.mockClear();
 
@@ -277,8 +278,8 @@ describe("stdin-delivery", () => {
       streamRegistry.publish(pipeStream.id, "parent", "pipe message");
 
       expect(mockSendInput).toHaveBeenCalledTimes(1);
-      expect(mockSendInput.mock.calls[0][0].text).toContain("[fd:");
-      expect(mockSendInput.mock.calls[0][0].text).toContain("pipe message");
+      expect(mockSendInput.mock.calls[0][1]).toContain("[fd:");
+      expect(mockSendInput.mock.calls[0][1]).toContain("pipe message");
     });
   });
 

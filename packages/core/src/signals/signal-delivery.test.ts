@@ -45,11 +45,12 @@ import { deliverSignalToTask, sendInputToSession } from "./signal-delivery.js";
 
 // ── Helpers ──────────────────────────────────────────────────
 
-function makeMockConnection(sendInputMock = vi.fn().mockResolvedValue({})) {
+function makeMockConnection(dispatchInputMock = vi.fn().mockResolvedValue(undefined)) {
   return {
-    client: { sendInput: sendInputMock },
+    client: {},
     environmentId: "env-1",
     port: 7433,
+    transport: { dispatchInput: dispatchInputMock },
   };
 }
 
@@ -108,7 +109,7 @@ describe("deliverSignalToTask", () => {
     const result = await deliverSignalToTask("task-child", "sigchld", "[SIGCHLD] test");
 
     expect(result).toBe(true);
-    expect(mockConn.client.sendInput).toHaveBeenCalledOnce();
+    expect(mockConn.transport.dispatchInput).toHaveBeenCalledOnce();
     expect(adapterManager.getConnection).toHaveBeenCalledWith("env-1");
 
     // Verify the event published to streamHub uses EVENT_TYPE_SIGNAL, not USER_INPUT
@@ -168,7 +169,7 @@ describe("deliverSignalToTask", () => {
     const result = await deliverSignalToTask("task-parent", "sigchld", "[SIGCHLD] test");
 
     expect(result).toBe(true);
-    expect(mockConn.client.sendInput).toHaveBeenCalledOnce();
+    expect(mockConn.transport.dispatchInput).toHaveBeenCalledOnce();
   });
 
   it("reanimates dead session, waits for IDLE, then delivers", async () => {
@@ -220,7 +221,7 @@ describe("deliverSignalToTask", () => {
 
     expect(reanimateAgent).toHaveBeenCalledWith("sess-dead");
     expect(result).toBe(true);
-    expect(mockConn.client.sendInput).toHaveBeenCalledOnce();
+    expect(mockConn.transport.dispatchInput).toHaveBeenCalledOnce();
   });
 
   it("returns false when no sessions exist (logs warning)", async () => {
@@ -303,7 +304,7 @@ describe("sendInputToSession", () => {
     const result = await sendInputToSession("sess-1", "env-1", "[SIGTERM] stop", "sigterm");
 
     expect(result).toBe(true);
-    expect(mockConn.client.sendInput).toHaveBeenCalledOnce();
+    expect(mockConn.transport.dispatchInput).toHaveBeenCalledOnce();
     expect(streamHub.publish).toHaveBeenCalledWith(
       expect.objectContaining({
         type: grackle.EventType.SIGNAL,

@@ -159,11 +159,15 @@ const ACTIVE_SESSION = {
   sigtermSentAt: null,
 };
 
-function makeMockConnection(killMock = vi.fn().mockResolvedValue({})) {
+function makeMockConnection(killMock = vi.fn().mockResolvedValue(undefined)) {
   return {
-    client: { kill: killMock, sendInput: vi.fn().mockResolvedValue({}) },
+    client: {},
     environmentId: "env-1",
     port: 7433,
+    transport: {
+      dispose: killMock,
+      dispatchInput: vi.fn().mockResolvedValue(undefined),
+    },
   };
 }
 

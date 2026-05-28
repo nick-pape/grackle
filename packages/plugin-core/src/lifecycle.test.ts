@@ -94,7 +94,8 @@ describe("lifecycle manager", () => {
 
     mockKill = vi.fn().mockResolvedValue({});
     vi.spyOn(adapterManager, "getConnection").mockReturnValue({
-      client: { kill: mockKill },
+      client: {},
+      transport: { dispose: mockKill },
     } as unknown as ReturnType<typeof adapterManager.getConnection>);
   });
 
@@ -230,7 +231,8 @@ describe("SIGTERM end reason derivation", () => {
 
     mockKill = vi.fn().mockResolvedValue({});
     vi.spyOn(adapterManager, "getConnection").mockReturnValue({
-      client: { kill: mockKill },
+      client: {},
+      transport: { dispose: mockKill },
     } as unknown as ReturnType<typeof adapterManager.getConnection>);
   });
 
@@ -325,7 +327,8 @@ describe("ensureLifecycleStream", () => {
 
     mockKill = vi.fn().mockResolvedValue({});
     vi.spyOn(adapterManager, "getConnection").mockReturnValue({
-      client: { kill: mockKill },
+      client: {},
+      transport: { dispose: mockKill },
     } as unknown as ReturnType<typeof adapterManager.getConnection>);
   });
 
@@ -436,7 +439,8 @@ describe("auto-reanimate on subscribe", () => {
       })(),
     );
     vi.spyOn(adapterManager, "getConnection").mockReturnValue({
-      client: { kill: mockKill, resume: mockResume },
+      client: {},
+      transport: { dispose: mockKill, reanimate: mockResume },
     } as unknown as ReturnType<typeof adapterManager.getConnection>);
   });
 

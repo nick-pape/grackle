@@ -202,7 +202,7 @@ describe("session recovery", () => {
     await recoverSuspendedSessions("env1", conn);
 
     // Drain should have been called
-    expect(conn.client.drainBufferedEvents).toHaveBeenCalled();
+    expect(conn.transport.drainBuffered).toHaveBeenCalled();
     // Events should have been written to log
     expect(logWriter.writeEvent).toHaveBeenCalled();
     // Log stream should be closed
@@ -236,7 +236,7 @@ describe("session recovery", () => {
 
     await recoverSuspendedSessions("env1", conn);
 
-    expect(conn.client.drainBufferedEvents).toHaveBeenCalled();
+    expect(conn.transport.drainBuffered).toHaveBeenCalled();
     expect(logWriter.writeEvent).not.toHaveBeenCalled();
     expect(reanimateAgent).toHaveBeenCalledWith("sess1");
   });
@@ -262,7 +262,7 @@ describe("session recovery", () => {
     const conn = makeConnection([]);
     await recoverSuspendedSessions("env1", conn);
 
-    expect(conn.client.drainBufferedEvents).not.toHaveBeenCalled();
+    expect(conn.transport.drainBuffered).not.toHaveBeenCalled();
     expect(reanimateAgent).not.toHaveBeenCalled();
   });
 

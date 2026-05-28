@@ -282,9 +282,9 @@ describe("task-start token push", () => {
       // Cutover proof: the deprecated proactive push is never called.
       expect(mockConn.client.pushTokens).not.toHaveBeenCalled();
 
-      // Authenticate happens before spawn.
+      // Authenticate happens before spawn (via transport.createSession).
       const authOrder = authSpy.mock.invocationCallOrder[0];
-      const spawnOrder = mockConn.client.spawn.mock.invocationCallOrder[0];
+      const spawnOrder = mockConn.transport.createSession.mock.invocationCallOrder[0];
       expect(authOrder).toBeLessThan(spawnOrder);
     });
   });

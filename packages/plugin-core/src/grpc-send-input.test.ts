@@ -202,7 +202,8 @@ describe("gRPC sendInput", () => {
       personaId: "",
     });
     vi.mocked(adapterManager.getConnection).mockReturnValue({
-      client: { sendInput: vi.fn().mockResolvedValue({}) } as never,
+      client: {},
+      transport: { dispatchInput: vi.fn().mockResolvedValue(undefined) },
     } as never);
 
     const result = await handlers.sendInput({
