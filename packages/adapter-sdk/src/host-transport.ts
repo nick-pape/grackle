@@ -8,8 +8,9 @@
  * - `createSession`  → AHP `createSession` + `subscribe`
  * - `reanimate`      → AHP `createSession` with `config.resumeFromRuntimeSessionId`
  * - `dispatchInput`  → AHP `dispatchAction` (SessionTurnStartedAction)
- * - `authenticate`   → `grackle/authenticate` (custom — AHP's `authenticate` is
- *   OAuth-shaped and doesn't fit Grackle's batch-of-credentials delivery)
+ * - `authenticate`   → AHP `authenticate` (one call per token, with
+ *   `resource: grackle://provider/{provider}/{name}` + JSON-encoded token).
+ *   On-spec method, contorted field values — see `ahp-host-transport.ts`.
  * - `dispose`        → AHP `disposeSession`
  * - `listSessions`   → AHP `listSessions`
  *

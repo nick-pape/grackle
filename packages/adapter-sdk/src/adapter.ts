@@ -17,6 +17,12 @@ export interface PowerLineConnection {
    * any transport-layer error.
    */
   ping(): Promise<void>;
+  /**
+   * Tear down the underlying transport (WebSocket + pending RPCs). Idempotent.
+   * Adapters MUST call this from `disconnect()` to avoid socket leaks —
+   * under HR8d the AHP transport is persistent and only closes here.
+   */
+  close(): Promise<void>;
 }
 
 /** Progress event emitted during environment provisioning. */

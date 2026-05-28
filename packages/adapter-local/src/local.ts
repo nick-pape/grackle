@@ -92,6 +92,9 @@ export class LocalAdapter implements EnvironmentAdapter {
       ping: async () => {
         await socket.request("ping", { channel: "ahp-root://" });
       },
+      close: async () => {
+        await socket.close();
+      },
     };
   }
 

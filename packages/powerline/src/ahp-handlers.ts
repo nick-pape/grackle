@@ -408,11 +408,19 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     } catch {
       // Internal error — let the session die normally; no parking here.
     } finally {
-      // Clean up forwarder map entry; session-mgr cleanup happens via
-      // disposeSession or onDisconnect.
+      // Clean up forwarder map entry.
       const cState = clients.get(conn.clientId);
       if (cState?.forwarders.get(sessionId) === forwarder) {
         cState.forwarders.delete(sessionId);
+      }
+      // If we exited NOT because of cancellation (natural completion or
+      // an internal error), the session has nothing more to emit and the
+      // runtime has finished — remove it from the registry and from the
+      // owning client's session set so `listSessions` doesn't surface
+      // ghost entries and memory doesn't accumulate.
+      if (!forwarder.cancelled) {
+        removeSession(sessionId);
+        cState?.sessionIds.delete(sessionId);
       }
     }
   }

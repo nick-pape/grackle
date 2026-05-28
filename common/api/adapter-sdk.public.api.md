@@ -217,6 +217,7 @@ export interface PortProber {
 
 // @public
 export interface PowerLineConnection {
+    close(): Promise<void>;
     // (undocumented)
     environmentId: string;
     ping(): Promise<void>;

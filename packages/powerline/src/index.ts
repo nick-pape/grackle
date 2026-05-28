@@ -102,20 +102,22 @@ function main(): void {
         );
       });
 
-      // Graceful shutdown
+      // Graceful shutdown: always attempt server.close() regardless of
+      // whether the AHP teardown succeeded — otherwise an AHP-close error
+      // would skip HTTP teardown and abruptly exit.
       function shutdown(): void {
         logger.info("Shutting down PowerLine...");
+        let ahpErr: unknown;
         ahp
           .close()
-          .then(() => {
-            server.close(() => {
-              process.exit(process.exitCode || 0);
-            });
+          .catch((err: unknown) => {
+            ahpErr = err;
+            logger.error({ err }, "AHP teardown failed");
           })
-          .catch(() => {
-            // If AHP teardown errors, still exit — the server.close finalizer
-            // is best-effort during shutdown.
-            process.exit(1);
+          .finally(() => {
+            server.close(() => {
+              process.exit(ahpErr !== undefined ? 1 : process.exitCode || 0);
+            });
           });
       }
 

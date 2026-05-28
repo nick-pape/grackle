@@ -114,6 +114,9 @@ export async function connectThroughTunnel(
         ping: async () => {
           await socket.request("ping", { channel: "ahp-root://" });
         },
+        close: async () => {
+          await socket.close();
+        },
       };
     } catch (err) {
       lastError = err;
