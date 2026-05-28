@@ -338,26 +338,22 @@ const MIGRATIONS: Migration[] = [
   },
   {
     version: 17,
-    name: "session-snapshots",
-    up: (conn) => {
-      conn.exec(`
-        CREATE TABLE IF NOT EXISTS session_snapshots (
-          session_id  TEXT NOT NULL,
-          seq         TEXT NOT NULL,
-          snapshot_at TEXT NOT NULL,
-          state       TEXT NOT NULL,
-          PRIMARY KEY (session_id, seq)
-        );
-        CREATE INDEX IF NOT EXISTS idx_session_snapshots_session
-          ON session_snapshots(session_id, seq DESC);
-      `);
+    name: "session-snapshots-removed",
+    up: (_conn) => {
+      // No-op. Originally created the `session_snapshots` table for the AHP
+      // HR1b reconstruct path (#1292). That machinery had no production
+      // consumer and was removed in #1349; v19 drops the table on
+      // existing deployments. Kept as a slot to preserve monotonic
+      // versioning for databases that already advanced past v17.
     },
   },
   {
     version: 18,
     name: "session-action-context-fields",
     up: (conn) => {
-      // Add tool_call_id and turn_id to session_actions for AHP mapper replay (#1292 Fold read path).
+      // Add tool_call_id and turn_id to session_actions for richer event provenance
+      // (originally added for the AHP mapper replay path; the columns remain useful
+      // for the timeline read-side and future wire-replay).
       // Guard each ALTER so re-runs and fresh installs don't fail.
       const actionCols = conn.prepare("PRAGMA table_info(session_actions)").all() as Array<{
         name: string;
@@ -368,18 +364,24 @@ const MIGRATIONS: Migration[] = [
       if (!actionCols.some((c) => c.name === "turn_id")) {
         conn.exec("ALTER TABLE session_actions ADD COLUMN turn_id TEXT NOT NULL DEFAULT ''");
       }
-      // Persist the diagnostic flag so reconstruction can correctly drop diagnostic
-      // system events (rather than re-folding them as systemNotification parts).
+      // Persist the diagnostic flag so the timeline can correctly classify diagnostic
+      // system events without re-deriving from content.
       if (!actionCols.some((c) => c.name === "diagnostic")) {
         conn.exec("ALTER TABLE session_actions ADD COLUMN diagnostic INTEGER NOT NULL DEFAULT 0");
       }
-      // Add mapper_context to session_snapshots for delta-replay context seeding (#1292).
-      const snapCols = conn.prepare("PRAGMA table_info(session_snapshots)").all() as Array<{
-        name: string;
-      }>;
-      if (!snapCols.some((c) => c.name === "mapper_context")) {
-        conn.exec("ALTER TABLE session_snapshots ADD COLUMN mapper_context TEXT");
-      }
+      // The originally-included `mapper_context` ALTER on `session_snapshots` was
+      // removed in #1349 alongside the rest of the HR1b reconstruct machinery.
+    },
+  },
+  {
+    version: 19,
+    name: "drop-session-snapshots",
+    up: (conn) => {
+      // Drop the `session_snapshots` table created in v17. The HR1b
+      // reconstruct machinery (#1322 / #1329) had no production consumer
+      // and was removed in #1349. Existing deployments lose the zombie
+      // table on next start; fresh installs never see it.
+      conn.exec("DROP TABLE IF EXISTS session_snapshots");
     },
   },
 ];

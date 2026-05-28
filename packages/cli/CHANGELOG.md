@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 28 May 2026 08:10:10 GMT and should not be manually modified.
+This log was last generated on Thu, 28 May 2026 17:48:51 GMT and should not be manually modified.
+
+## 0.132.2
+Thu, 28 May 2026 17:48:51 GMT
+
+### Patches
+
+- Delete unused HR1b SessionStateManager + session_snapshots infrastructure. The state-machine + snapshot/reconstruct pipeline shipped in #1322/#1329 had no production consumer — closed self-loop. session_actions table (HR1a) and its REST/gRPC endpoint stay alive. Net: -1854 / +35 lines. Closes #1349.
 
 ## 0.132.1
 Thu, 28 May 2026 08:10:10 GMT
