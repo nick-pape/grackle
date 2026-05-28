@@ -98,6 +98,7 @@ export async function connectThroughTunnel(
 
   let lastError: unknown;
   for (let attempt = 0; attempt < CONNECT_MAX_RETRIES; attempt++) {
+    let attemptSocket: AhpClientSocket | undefined;
     try {
       const { transport, socket } = await createAhpHostTransport(
         baseUrl,
@@ -105,6 +106,7 @@ export async function connectThroughTunnel(
         environmentId,
         logger,
       );
+      attemptSocket = socket;
       // Liveness probe via AHP `ping` to verify the wire is alive.
       await socket.request("ping", { channel: "ahp-root://" });
       return {
@@ -120,6 +122,16 @@ export async function connectThroughTunnel(
       };
     } catch (err) {
       lastError = err;
+      // Close the per-attempt socket so we don't leak open WS connections
+      // across retries (e.g. when `createAhpHostTransport` succeeded but
+      // the subsequent `ping` rejected).
+      if (attemptSocket !== undefined) {
+        try {
+          await attemptSocket.close();
+        } catch (closeErr) {
+          logger.error({ environmentId, err: closeErr }, "Failed to close socket after attempt");
+        }
+      }
       await sleep(CONNECT_RETRY_DELAY_MS);
     }
   }

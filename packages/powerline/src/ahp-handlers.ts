@@ -108,7 +108,30 @@ interface ForwarderState {
   readonly mapperContext: MapperContext;
   serverSeq: number;
   cancelled: boolean;
+  /**
+   * Snapshot of the last `_meta` payload we emitted via
+   * `SessionMetaChangedAction`. Used to suppress no-op re-emissions when the
+   * mapper's `carried` disposition fires for a non-meta reason (e.g.
+   * diagnostic system events).
+   */
+  lastMetaSnapshot: Record<string, unknown> | undefined;
 }
+
+/**
+ * Status-event contents that PowerLine rescues by synthesizing a
+ * `SessionMetaChangedAction` with `_meta.status`. mapAgentEvent drops these
+ * as "redundant with turn_* events", but Grackle's consumer relies on them
+ * to flip `session.status` in the UI.
+ *
+ * Hoisted to module scope (not per-call) since the set is constant and
+ * `emitActionsForEvent` is a hot path.
+ */
+const STATUS_RESCUE_CONTENTS: ReadonlySet<string> = new Set([
+  "running",
+  "waiting_input",
+  "completed",
+  "idle",
+]);
 
 /**
  * Per-client tracking so {@link onDisconnect} can kill+park each session
@@ -354,6 +377,7 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
       },
       serverSeq: 0,
       cancelled: false,
+      lastMetaSnapshot: undefined,
     };
     cState.forwarders.set(sessionId, forwarder);
 
@@ -466,12 +490,6 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     // and queued chat input never auto-sends. We synthesize a
     // `SessionMetaChangedAction` with `_meta.status` so the consumer's reverse
     // mapper can rehydrate a `status` event with the original content.
-    const STATUS_RESCUE_CONTENTS: ReadonlySet<string> = new Set([
-      "running",
-      "waiting_input",
-      "completed",
-      "idle",
-    ]);
     if (event.type === "status" && STATUS_RESCUE_CONTENTS.has(event.content)) {
       forwarder.serverSeq += 1;
       const statusAction: StateAction = {
@@ -557,6 +575,13 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     // Also synthesize a SessionMetaChangedAction whenever the meta
     // accumulator advances, so the consumer's reverse mapper can rehydrate
     // `usage` / `runtime_session_id` events.
+    //
+    // Detect "advanced" by comparing against the last snapshot we emitted, not
+    // by `result.note?.disposition === "carried"`. The mapper returns
+    // `carried` for several non-meta cases too (diagnostic system events,
+    // runtime_session_id with no content, etc.), so a disposition check alone
+    // re-emits the same `_meta` payload on every carried event and floods the
+    // wire. Comparing snapshots makes the emit truly edge-triggered.
     const metaSnapshot: Record<string, unknown> = {};
     if (forwarder.mapperContext.metaAccumulator.runtimeSessionId !== undefined) {
       metaSnapshot.runtime_session_id = forwarder.mapperContext.metaAccumulator.runtimeSessionId;
@@ -564,10 +589,10 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     if (forwarder.mapperContext.metaAccumulator.costMillicents !== undefined) {
       metaSnapshot.cost_millicents = forwarder.mapperContext.metaAccumulator.costMillicents;
     }
-    // Only emit if there's actually meta to communicate AND it isn't a
-    // re-emission of the last snapshot (the reverse mapper dedups, but we
-    // can save a wire frame by checking the disposition).
-    if (result.note?.disposition === "carried" && Object.keys(metaSnapshot).length > 0) {
+    if (
+      Object.keys(metaSnapshot).length > 0 &&
+      !shallowEqualSnapshots(forwarder.lastMetaSnapshot, metaSnapshot)
+    ) {
       forwarder.serverSeq += 1;
       const metaAction: StateAction = {
         type: ActionType.SessionMetaChanged,
@@ -579,7 +604,29 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
         action: metaAction,
         origin: undefined,
       });
+      forwarder.lastMetaSnapshot = metaSnapshot;
     }
+  }
+
+  /** Shallow-equality check for `_meta` snapshot dedup in the forwarder. */
+  function shallowEqualSnapshots(
+    a: Record<string, unknown> | undefined,
+    b: Record<string, unknown>,
+  ): boolean {
+    if (a === undefined) {
+      return false;
+    }
+    const aKeys = Object.keys(a);
+    const bKeys = Object.keys(b);
+    if (aKeys.length !== bKeys.length) {
+      return false;
+    }
+    for (const k of aKeys) {
+      if (a[k] !== b[k]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   function handleDispatchAction(params: DispatchActionParams, _conn: AhpServerConnection): void {

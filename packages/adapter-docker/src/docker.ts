@@ -677,13 +677,25 @@ export class DockerAdapter implements EnvironmentAdapter {
 
   /** Probe whether a PowerLine URL answers a ping (used to test direct host→container reachability). */
   private async canReachPowerLine(url: string, powerlineToken: string): Promise<boolean> {
+    const opened = await createAhpHostTransport(url, powerlineToken, "reachability-probe").catch(
+      () => undefined,
+    );
+    if (opened === undefined) {
+      return false;
+    }
     try {
-      const { socket } = await createAhpHostTransport(url, powerlineToken, "reachability-probe");
-      await socket.request("ping", { channel: "ahp-root://" });
-      await socket.close();
+      await opened.socket.request("ping", { channel: "ahp-root://" });
       return true;
     } catch {
       return false;
+    } finally {
+      // Always close — covers the success path AND the case where
+      // `ping` threw after the socket was opened.
+      try {
+        await opened.socket.close();
+      } catch {
+        /* best-effort cleanup on a probe */
+      }
     }
   }
 
@@ -725,12 +737,14 @@ export class DockerAdapter implements EnvironmentAdapter {
     // createAhpHostTransport normalizes http(s) to ws(s).
     let lastErr: unknown;
     for (let attempt = 0; attempt < CONNECT_MAX_RETRIES; attempt++) {
+      let attemptSocket: { close(): Promise<void> } | undefined;
       try {
         const { transport, socket } = await createAhpHostTransport(
           connectUrl,
           powerlineToken,
           environmentId,
         );
+        attemptSocket = socket;
         await socket.request("ping", { channel: "ahp-root://" });
         return {
           environmentId,
@@ -745,6 +759,19 @@ export class DockerAdapter implements EnvironmentAdapter {
         };
       } catch (err) {
         lastErr = err;
+        // Close any socket opened by a failed attempt (e.g. `ping` rejected
+        // after `createAhpHostTransport` succeeded) so we don't leak open WS
+        // connections across the retry loop.
+        if (attemptSocket !== undefined) {
+          try {
+            await attemptSocket.close();
+          } catch (closeErr) {
+            this.logger.error(
+              { environmentId, err: closeErr },
+              "Failed to close socket after attempt",
+            );
+          }
+        }
         await this.sleepFn(CONNECT_RETRY_DELAY_MS);
       }
     }

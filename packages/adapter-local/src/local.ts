@@ -83,7 +83,18 @@ export class LocalAdapter implements EnvironmentAdapter {
       powerlineToken,
       environmentId,
     );
-    await socket.request("ping", { channel: "ahp-root://" });
+    try {
+      await socket.request("ping", { channel: "ahp-root://" });
+    } catch (err) {
+      // Liveness probe failed — close the socket we just opened so we don't
+      // leak it back to the caller, then re-raise.
+      try {
+        await socket.close();
+      } catch {
+        /* best-effort cleanup */
+      }
+      throw err;
+    }
 
     return {
       environmentId,
