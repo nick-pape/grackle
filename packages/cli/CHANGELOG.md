@@ -1,9 +1,22 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 26 May 2026 16:32:59 GMT and should not be manually modified.
+This log was last generated on Thu, 28 May 2026 07:47:01 GMT and should not be manually modified.
+
+## 0.132.0
+Thu, 28 May 2026 07:47:01 GMT
+
+### Minor changes
+
+- AHP HR1b Fold read path: store toolCallId/turnId in session_actions, store MapperContext in session_snapshots, implement delta replay in SessionStateManager.reconstruct() — closes #1292 step 3
+- Add AHP session state manager with AgentEvent mapper and session snapshots. The mapper translates PowerLine AgentEvents into AHP SessionActions, and SessionStateManager maintains live session state via the AHP sessionReducer with automatic snapshot flushing.
+- AHP HR8a: new @grackle-ai/ahp-transport package with WebSocket + JSON-RPC 2.0 framing primitive (JsonRpcSession / AhpServerSocket / AhpClientSocket / ClientIdStore / exponentialBackoff). No consumers wired yet — paves the way for HR8b (MultiHostClient), HR8c (IHostTransport abstraction), and HR8d (the wire flip). Also exposes JsonRpcErrorCodes + AhpErrorCodes from @grackle-ai/ahp (small additive re-export the vendored constants weren't visible to consumers before).
+
+### Patches
+
+- Enable Vitest v8 code coverage across all packages; CI uploads coverage as an artifact. Adds shared vitest config base in heft-rig.
+- Set up Prettier as a PR gate and pre-commit hook; mechanical reformat of all source files.
 
 ## 0.131.0
-
 Tue, 26 May 2026 16:32:59 GMT
 
 ### Minor changes
@@ -11,7 +24,6 @@ Tue, 26 May 2026 16:32:59 GMT
 - AHP package (Phase A): publishable @grackle-ai/ahp with build-time prebuild vendoring of Microsoft's Agent Host Protocol types
 
 ## 0.130.0
-
 Tue, 26 May 2026 02:14:36 GMT
 
 ### Minor changes
@@ -19,7 +31,6 @@ Tue, 26 May 2026 02:14:36 GMT
 - Native turn framing (AHP HR2): session events now carry a turn_id and explicit turn_started/turn_complete/input_needed event types, anchored on the real prompt/sendInput, replacing the overloaded waiting_input signal. Producer-side, behind the existing wire; behavior-preserving.
 
 ## 0.129.0
-
 Tue, 26 May 2026 01:34:17 GMT
 
 ### Minor changes
@@ -27,7 +38,6 @@ Tue, 26 May 2026 01:34:17 GMT
 - AHP HR4+5: add a runtime catalog (RUNTIME_CATALOG) and ListRuntimes RPC surfacing RootState.agents with per-runtime credential needs (protectedResources via deriveCredentialNeeds); reshape SpawnRequest toward AHP createSession with first-class provider/model and a typed SessionConfig (plumbing task_id + use_worktrees); add the `grackle runtimes` CLI command.
 
 ## 0.128.0
-
 Mon, 25 May 2026 21:24:16 GMT
 
 ### Minor changes
@@ -35,15 +45,13 @@ Mon, 25 May 2026 21:24:16 GMT
 - AHP HR7: add a `diagnostic` flag to agent/session events (set at runtime lifecycle emit sites, threaded through PowerLine, the event processor, the JSONL log, and session-event readback) and an additive, opt-in OpenTelemetry logs sink for runtime diagnostics gated on OTEL_EXPORTER_OTLP_ENDPOINT (no-op when unset).
 
 ## 0.127.0
-
 Mon, 25 May 2026 19:35:47 GMT
 
 ### Minor changes
 
-- GenUX live tool refresh (#1297): when a workspace's promoted-component set changes (component*promote/demote, or a promoted component edited), the co-located MCP server pushes notifications/tools/list_changed to that workspace's live sessions so dynamic render*<name> tools refresh without the agent re-listing. Adds a `component.changed` domain event emitted by the registry handlers, retains per-session MCP Server instances, and declares the tools.listChanged capability. Broker-mode only.
+- GenUX live tool refresh (#1297): when a workspace's promoted-component set changes (component_promote/demote, or a promoted component edited), the co-located MCP server pushes notifications/tools/list_changed to that workspace's live sessions so dynamic render_<name> tools refresh without the agent re-listing. Adds a `component.changed` domain event emitted by the registry handlers, retains per-session MCP Server instances, and declares the tools.listChanged capability. Broker-mode only.
 
 ## 0.126.1
-
 Mon, 25 May 2026 19:15:09 GMT
 
 ### Patches
@@ -51,7 +59,6 @@ Mon, 25 May 2026 19:15:09 GMT
 - Cut over credential delivery to demand-driven Authenticate RPC (AHP HR6): supply per-runtime credentials on demand just before spawn instead of proactively pushing a blanket all-provider bundle; deprecate PushTokens.
 
 ## 0.126.0
-
 Mon, 25 May 2026 18:55:12 GMT
 
 ### Minor changes
@@ -59,7 +66,6 @@ Mon, 25 May 2026 18:55:12 GMT
 - Remove the vestigial subtask_create/escalation agent-event interception (the pre-MCP "fake MCP call" path); orchestration is MCP-only. Reserves EVENT_TYPE_SUBTASK_CREATE (8) and EVENT_TYPE_ESCALATION (12) in the proto and drops them from the AgentEventType union (AHP HR7 Part 1).
 
 ## 0.125.2
-
 Mon, 25 May 2026 17:22:09 GMT
 
 ### Patches
@@ -67,7 +73,6 @@ Mon, 25 May 2026 17:22:09 GMT
 - Make the read-only Coordination and Task DAG graphs non-connectable: disable React Flow drag-to-connect and hide the node connection handles so users can't attempt connections that can't be created (#1303).
 
 ## 0.125.1
-
 Mon, 25 May 2026 15:38:19 GMT
 
 ### Patches
@@ -75,15 +80,13 @@ Mon, 25 May 2026 15:38:19 GMT
 - Self-host web fonts (Fira Code, JetBrains Mono, DM Sans) via @fontsource-variable so they load under the strict CSP instead of being blocked as external @import stylesheets (#1252).
 
 ## 0.125.0
-
 Mon, 25 May 2026 15:13:29 GMT
 
 ### Minor changes
 
-- GenUX cross-component composition (#1270): a registered grackle-react component's body can reference other registry components as JSX tags (`<RevenueChart/>`). The server resolves the transitive registry graph at render time (`ResolveComponentGraph` RPC) — scanning for capitalized tags, resolving workspace components (excluding built-ins), cycle-safe with depth/count/size caps, late-bound to current versions — and ships the dependency bundle in the render descriptor; the sandbox runtime composes them into scope. Applies to component*render, component_show, and promoted render*<name> tools.
+- GenUX cross-component composition (#1270): a registered grackle-react component's body can reference other registry components as JSX tags (`<RevenueChart/>`). The server resolves the transitive registry graph at render time (`ResolveComponentGraph` RPC) — scanning for capitalized tags, resolving workspace components (excluding built-ins), cycle-safe with depth/count/size caps, late-bound to current versions — and ships the dependency bundle in the render descriptor; the sandbox runtime composes them into scope. Applies to component_render, component_show, and promoted render_<name> tools.
 
 ## 0.124.0
-
 Mon, 25 May 2026 13:49:04 GMT
 
 ### Minor changes
@@ -91,7 +94,6 @@ Mon, 25 May 2026 13:49:04 GMT
 - Add a first-class tool_call_id to AgentEvent/SessionEvent so tool_result pairs to the right tool_use across all runtimes (Claude Code, Copilot, ACP, Codex via synthesized ids), retiring the fragile positional pairing heuristic (AHP HR3).
 
 ## 0.123.2
-
 Mon, 25 May 2026 13:18:11 GMT
 
 ### Patches
@@ -100,7 +102,6 @@ Mon, 25 May 2026 13:18:11 GMT
 - Emit a structured kg_spawn_retrieval metrics log at spawn-time knowledge injection (instrumentation for KG Phase 4 / #1260).
 
 ## 0.123.1
-
 Mon, 25 May 2026 05:44:41 GMT
 
 ### Patches
@@ -108,7 +109,6 @@ Mon, 25 May 2026 05:44:41 GMT
 - Coordination tab: live bipartite network graph of agent sessions and IPC streams with a List/Graph toggle (web UI).
 
 ## 0.123.0
-
 Mon, 25 May 2026 05:24:59 GMT
 
 ### Minor changes
@@ -116,7 +116,6 @@ Mon, 25 May 2026 05:24:59 GMT
 - GenUX promote-to-tools (#1272): a registered component can be promoted to its own typed `render_<name>` MCP tool whose inputSchema is the component's propsSchema. Adds a `promoted` column + `SetComponentPromotion` gRPC RPC + `component_promote` MCP tool; the MCP server synthesizes per-workspace `render_<name>` tools in tools/list (UI-capable scoped sessions only) and dispatches their calls by workspace ownership, reusing the existing render path. Promotion is a lifecycle toggle that does not bump the component version.
 
 ## 0.122.0
-
 Mon, 25 May 2026 04:49:44 GMT
 
 ### Minor changes
@@ -124,7 +123,6 @@ Mon, 25 May 2026 04:49:44 GMT
 - KG Phase 3 (#1259): close the retrieval loop — knowledge_search guidance (pull) + a thin spawn-time "Related prior work" injection (push) via a new systemPromptContributors plugin hook, gated by a per-task injectKnowledge flag (default on).
 
 ## 0.121.0
-
 Mon, 25 May 2026 04:20:46 GMT
 
 ### Minor changes
@@ -132,7 +130,6 @@ Mon, 25 May 2026 04:20:46 GMT
 - Add a durable, server-sequenced session-action log (AHP HR1a): session_actions store, monotonic serverSeq assignment in the event processor, GetSessionActions gRPC RPC + handler, and a `grackle session events` CLI reader.
 
 ## 0.120.0
-
 Sun, 24 May 2026 21:03:54 GMT
 
 ### Minor changes
@@ -141,7 +138,6 @@ Sun, 24 May 2026 21:03:54 GMT
 - GenUX component search + built-in catalog (#1271): make the component registry discoverable. Adds a `component_search` MCP tool (and `SearchComponents` gRPC RPC) that keyword-matches a workspace's registered components plus a catalog of Grackle's built-in components via fuzzy search, returning a `builtin` flag and relevance scores. Built-ins are a static manifest (`BUILTIN_COMPONENTS`) of the 9 curated, context-free components the GenUX runtime renders; their prop types and JSON-Schema propsSchema are both derived from a single source of truth — zod schemas in `@grackle-ai/common` (`BUILTIN_COMPONENT_SCHEMAS`) that the web-components consume for their prop types, so the catalog can't drift from the components. Agents discover and compose built-ins in JSX instead of re-authoring; component_register/component_show descriptions now point agents at component_search.
 
 ## 0.119.0
-
 Sun, 24 May 2026 18:32:19 GMT
 
 ### Minor changes
@@ -149,7 +145,6 @@ Sun, 24 May 2026 18:32:19 GMT
 - Durable IPC stream rooms (RFC #1264 Phase 2): persist + replay stream messages (stream_messages table, ULID seq, survive restart); live StreamMessageEvent + GetStreamTranscript RPC; `grackle streams transcript` CLI; Coordination tab transcript view. Retention/compaction deferred to a follow-up.
 
 ## 0.118.0
-
 Sun, 24 May 2026 15:06:43 GMT
 
 ### Minor changes
@@ -157,7 +152,6 @@ Sun, 24 May 2026 15:06:43 GMT
 - GenUX component registry (#1269): evolve the #1239 widget registry into a generic component registry and wire render-by-reference through the #1268 React runtime. Renames the registry widget->component end-to-end (proto Component messages + RPCs, a `components` table via a guarded migration, store + plugin-core handlers, and the MCP tools component_register/update/list/render); the render-event path stays 'widget'. component_register takes an optional rendererKind (default grackle-react) that subsumes raw-HTML registration; component_render renders a stored component by id/name and sets the correct sandbox CSP per renderer kind (unsafe-eval for grackle-react, inline-scripts for mcp-app-html). propsSchema is now a validated JSON-Schema contract (well-formedness at register; render-time props validated via zod's fromJSONSchema). component_show (JSX one-off), widget_show (raw-HTML one-off), and show_hello_widget are retained.
 
 ## 0.117.0
-
 Sun, 24 May 2026 02:29:04 GMT
 
 ### Minor changes
@@ -166,7 +160,6 @@ Sun, 24 May 2026 02:29:04 GMT
 - Add a domain-event query reader (RFC #1264 Phase 1): queryDomainEvents in @grackle-ai/database (offset/type/time filters), a QueryDomainEvents gRPC RPC, and a `grackle events` CLI command.
 
 ## 0.116.0
-
 Sun, 24 May 2026 00:00:41 GMT
 
 ### Minor changes
@@ -178,7 +171,6 @@ Sun, 24 May 2026 00:00:41 GMT
 - Introduce the SequencedLog<T> / LogSink<T> substrate in @grackle-ai/common and route the domain_events write path in @grackle-ai/core through it (behavior-preserving). RFC #1264 Phase 0.
 
 ## 0.115.2
-
 Sat, 23 May 2026 21:02:48 GMT
 
 ### Patches
@@ -186,7 +178,6 @@ Sat, 23 May 2026 21:02:48 GMT
 - Fix: oversized HTTP request bodies now return a clean 413 (with Connection: close) instead of a connection reset
 
 ## 0.115.1
-
 Sat, 23 May 2026 14:23:06 GMT
 
 ### Patches
@@ -194,15 +185,13 @@ Sat, 23 May 2026 14:23:06 GMT
 - Add capability-scoped channel exposure: mint revocable webhook tokens to inject user messages into a session (ExposeChannel/ListChannelGrants/RevokeChannelGrant RPCs, POST /hook/<token>, and `grackle channel` CLI)
 
 ## 0.115.0
-
 Sat, 23 May 2026 13:35:14 GMT
 
 ### Minor changes
 
-- Agent-authored MCP Apps widget registry (#1239): new widgets table + gRPC RPCs (RegisterWidget/UpdateWidget/GetWidget/ListWidgets) with workspace isolation; MCP tools widget_register/update/list/render/show (in the default scoped + orchestrator presets); the broker capture now emits dynamic agent-authored widgets via a result \_meta descriptor; agent widget bodies render with inline scripts allowed (GRACKLE sandbox CSP allowInlineScripts) in the origin-isolated sandbox; web EventRenderer dispatches on rendererKind.
+- Agent-authored MCP Apps widget registry (#1239): new widgets table + gRPC RPCs (RegisterWidget/UpdateWidget/GetWidget/ListWidgets) with workspace isolation; MCP tools widget_register/update/list/render/show (in the default scoped + orchestrator presets); the broker capture now emits dynamic agent-authored widgets via a result _meta descriptor; agent widget bodies render with inline scripts allowed (GRACKLE sandbox CSP allowInlineScripts) in the origin-isolated sandbox; web EventRenderer dispatches on rendererKind.
 
 ## 0.114.0
-
 Sat, 23 May 2026 08:24:19 GMT
 
 ### Minor changes
@@ -210,7 +199,6 @@ Sat, 23 May 2026 08:24:19 GMT
 - Split the Sessions tab into Root (root-task chat) + a new read-only Coordination tab (task-grouped IPC stream inventory); filter internal streams via ListStreams include_internal (CLI --internal)
 
 ## 0.113.0
-
 Sat, 23 May 2026 03:18:01 GMT
 
 ### Minor changes
@@ -218,7 +206,6 @@ Sat, 23 May 2026 03:18:01 GMT
 - Render MCP Apps widgets inline in chat (#1238): when a scoped agent calls a ui:// widget tool, the in-process MCP server broker captures it and pushes a self-contained widget event into the session stream (new EVENT_TYPE_WIDGET + core publishWidgetEvent), and the web chat renders it via McpAppWidget served from a new production sandbox server on GRACKLE_SANDBOX_PORT. Also wires widget tools through the tool-authz layer (broker exposes them regardless of the agent client's ui extension; show_hello_widget added to the scoped/orchestrator/all tool sets) and widens the web-app CSP frame-src so the chat can embed the sandbox origin.
 
 ## 0.112.2
-
 Fri, 22 May 2026 23:59:52 GMT
 
 ### Patches
@@ -226,7 +213,6 @@ Fri, 22 May 2026 23:59:52 GMT
 - Fix: creating a workspace now navigates to the new workspace's detail view instead of the home dashboard
 
 ## 0.112.1
-
 Fri, 22 May 2026 23:27:43 GMT
 
 ### Patches
@@ -235,7 +221,6 @@ Fri, 22 May 2026 23:27:43 GMT
 - Nav: reorder so Tasks comes before Sessions, and rename the Chat tab to Sessions (route unchanged)
 
 ## 0.112.0
-
 Fri, 22 May 2026 22:14:10 GMT
 
 ### Minor changes
@@ -243,7 +228,6 @@ Fri, 22 May 2026 22:14:10 GMT
 - Chat: multiline auto-resizing composer (Enter for newline, Ctrl/Cmd+Enter to send) and render user messages as markdown
 
 ## 0.111.0
-
 Fri, 22 May 2026 18:26:16 GMT
 
 ### Minor changes
@@ -251,7 +235,6 @@ Fri, 22 May 2026 18:26:16 GMT
 - Add an MCP Apps (SEP-1865) app-side layer to @grackle-ai/mcp: resources capability (resources/list + resources/read), io.modelcontextprotocol/ui negotiation, and a static ui:// widget tool. Bump @modelcontextprotocol/sdk to ^1.29 across server packages.
 
 ## 0.110.3
-
 Fri, 22 May 2026 15:02:19 GMT
 
 ### Patches
@@ -259,7 +242,6 @@ Fri, 22 May 2026 15:02:19 GMT
 - Add MCP Apps (SEP-1865) host widget render component to @grackle-ai/web-components (McpAppWidget + cross-origin sandbox proxy + host theming).
 
 ## 0.110.2
-
 Thu, 21 May 2026 05:30:57 GMT
 
 ### Patches
@@ -267,7 +249,6 @@ Thu, 21 May 2026 05:30:57 GMT
 - Patch high-severity vulnerabilities: bump protobufjs transitive override to 7.5.6 and raise the @github/copilot runtime floor to ^1.0.43 (Docker image pinned to 1.0.51). No behavior change.
 
 ## 0.110.1
-
 Wed, 20 May 2026 20:50:50 GMT
 
 ### Patches
@@ -275,7 +256,6 @@ Wed, 20 May 2026 20:50:50 GMT
 - Add npm README files for previously undocumented published packages: runtime-sdk, runtime-claude-code, runtime-codex, runtime-copilot, runtime-genaiscript, runtime-acp, and web-components
 
 ## 0.110.0
-
 Wed, 20 May 2026 13:57:19 GMT
 
 ### Minor changes
@@ -283,7 +263,6 @@ Wed, 20 May 2026 13:57:19 GMT
 - Docker adapter: add attach mode to drive agent sessions inside a pre-existing, externally-managed container instead of creating one. Adds the `attach` config and `grackle env add --docker --attach <container>`, a ListDockerContainers RPC + `env_list_docker_containers` MCP tool for discovery, and a web container picker. Grackle never creates, stops, or removes an attached container.
 
 ## 0.109.2
-
 Wed, 20 May 2026 13:14:31 GMT
 
 ### Patches
@@ -291,7 +270,6 @@ Wed, 20 May 2026 13:14:31 GMT
 - Pin the Settings tab to the right edge of the top navigation bar so it stays in a consistent position regardless of which plugins contribute tabs.
 
 ## 0.109.1
-
 Wed, 20 May 2026 12:22:00 GMT
 
 ### Patches
@@ -299,7 +277,6 @@ Wed, 20 May 2026 12:22:00 GMT
 - MCP: make env_add self-describing — replace the opaque adapterType/adapterConfig schema with a per-adapter discriminated union (local/ssh/codespace/docker) and forward githubAccountId for codespace/docker.
 
 ## 0.109.0
-
 Wed, 20 May 2026 02:48:11 GMT
 
 ### Minor changes
@@ -307,7 +284,6 @@ Wed, 20 May 2026 02:48:11 GMT
 - Add @grackle-ai/mcp-stdio — an npx-able stdio-to-HTTP MCP proxy that bridges stdio-only clients (Claude Desktop, Codex CLI, Clawpilot) to Grackle's HTTP MCP server using static API-key auth
 
 ## 0.108.4
-
 Sat, 09 May 2026 08:10:31 GMT
 
 ### Patches
@@ -315,7 +291,6 @@ Sat, 09 May 2026 08:10:31 GMT
 - Bump uuid to 11.1.1 (buffer bounds check fix) and override @babel/plugin-transform-modules-systemjs to 7.29.4 (arbitrary code generation fix).
 
 ## 0.108.3
-
 Sat, 09 May 2026 07:41:00 GMT
 
 ### Patches
@@ -323,7 +298,6 @@ Sat, 09 May 2026 07:41:00 GMT
 - Bump drizzle-orm 0.38 -> 0.45.2 to patch SQL injection (high, alerts #49 #50).
 
 ## 0.108.2
-
 Sat, 09 May 2026 05:59:32 GMT
 
 ### Patches
@@ -335,7 +309,6 @@ Sat, 09 May 2026 05:59:32 GMT
 - Bump security-vulnerable transitive deps (protobufjs, axios, lodash, fast-uri) and direct dep vite to patched versions. No code changes.
 
 ## 0.108.1
-
 Sun, 26 Apr 2026 02:39:49 GMT
 
 ### Patches
@@ -343,7 +316,6 @@ Sun, 26 Apr 2026 02:39:49 GMT
 - Fix startTask to resolve environment from workspace linkedEnvironmentIds when no explicit environment or ancestor environment is specified; surface startTask errors as toasts instead of silently swallowing them
 
 ## 0.108.0
-
 Sun, 05 Apr 2026 14:00:09 GMT
 
 ### Minor changes
@@ -363,7 +335,6 @@ Sun, 05 Apr 2026 14:00:09 GMT
 - Remove all reserved field markers from proto files for clean 1.0 contract
 
 ## 0.107.2
-
 Wed, 01 Apr 2026 16:08:37 GMT
 
 ### Patches
@@ -371,7 +342,6 @@ Wed, 01 Apr 2026 16:08:37 GMT
 - Add @grackle-ai/web-components to version policy so it is published to npm
 
 ## 0.107.1
-
 Wed, 01 Apr 2026 03:52:53 GMT
 
 ### Patches
@@ -379,7 +349,6 @@ Wed, 01 Apr 2026 03:52:53 GMT
 - Improve error handling when sending input to sessions — show an error toast instead of silently discarding failures.
 
 ## 0.107.0
-
 Wed, 01 Apr 2026 03:01:05 GMT
 
 ### Minor changes
@@ -391,7 +360,6 @@ Wed, 01 Apr 2026 03:01:05 GMT
 - Add streams sidebar and detail drawer to Chat page with IPC stream listing and stream detail panel
 
 ## 0.106.3
-
 Wed, 01 Apr 2026 00:41:45 GMT
 
 ### Patches
@@ -399,7 +367,6 @@ Wed, 01 Apr 2026 00:41:45 GMT
 - Show Connecting... status in StatusBar and AboutPanel during event stream reconnection attempts
 
 ## 0.106.2
-
 Tue, 31 Mar 2026 22:07:04 GMT
 
 ### Patches
@@ -407,7 +374,6 @@ Tue, 31 Mar 2026 22:07:04 GMT
 - Track async pipe delivery end-to-end: defer marking delivered until gRPC sendInput Promise resolves, expose awaitPendingDeliveries(), fix hasUndeliveredMessages accuracy for post-dispatch failures
 
 ## 0.106.1
-
 Tue, 31 Mar 2026 21:45:28 GMT
 
 ### Patches
@@ -415,7 +381,6 @@ Tue, 31 Mar 2026 21:45:28 GMT
 - Fix scheduled tasks bypassing workspace environment pool by removing environment_id from schedules; cron-fired tasks now resolve via workspace linked envs with load balancing
 
 ## 0.106.0
-
 Tue, 31 Mar 2026 19:07:08 GMT
 
 ### Minor changes
@@ -423,7 +388,6 @@ Tue, 31 Mar 2026 19:07:08 GMT
 - Remove legacy workspace.environmentId FK; all environments are now equal links via the workspace_environment_links join table
 
 ## 0.105.0
-
 Tue, 31 Mar 2026 18:56:53 GMT
 
 ### Minor changes
@@ -431,7 +395,6 @@ Tue, 31 Mar 2026 18:56:53 GMT
 - Add ipc_share_stream MCP tool for child-to-parent stream reference passing with capability attenuation
 
 ## 0.104.0
-
 Tue, 31 Mar 2026 16:23:11 GMT
 
 ### Minor changes
@@ -439,7 +402,6 @@ Tue, 31 Mar 2026 16:23:11 GMT
 - Add plugin enable/disable management: plugins DB table, proto RPCs (ListPlugins, SetPluginEnabled), CLI commands (grackle plugin list/enable/disable), and MCP tools (plugin_list, plugin_set_enabled)
 
 ## 0.103.0
-
 Tue, 31 Mar 2026 15:27:16 GMT
 
 ### Minor changes
@@ -447,7 +409,6 @@ Tue, 31 Mar 2026 15:27:16 GMT
 - Add server-side fuzzy task search: new SearchTasks gRPC RPC, task_search MCP tool, and grackle task search CLI command with relevance scoring
 
 ## 0.102.0
-
 Tue, 31 Mar 2026 14:52:41 GMT
 
 ### Minor changes
@@ -459,7 +420,6 @@ Tue, 31 Mar 2026 14:52:41 GMT
 - Add schedule management UI: Settings > Schedules tab with list, create/edit form, enable/disable, and delete
 
 ## 0.101.0
-
 Tue, 31 Mar 2026 13:50:31 GMT
 
 ### Minor changes
@@ -467,7 +427,6 @@ Tue, 31 Mar 2026 13:50:31 GMT
 - Split monolithic grackle.proto into per-plugin gRPC services (GrackleCore, GrackleOrchestration, GrackleScheduling, GrackleKnowledge); update all clients, tools, and tests to use typed per-service clients
 
 ## 0.100.1
-
 Tue, 31 Mar 2026 06:01:21 GMT
 
 ### Patches
@@ -475,7 +434,6 @@ Tue, 31 Mar 2026 06:01:21 GMT
 - Migrate cost storage from floating-point USD to integer millicents across proto, database, runtimes, event processor, budget checker, and display layers
 
 ## 0.100.0
-
 Tue, 31 Mar 2026 05:30:18 GMT
 
 ### Minor changes
@@ -483,7 +441,6 @@ Tue, 31 Mar 2026 05:30:18 GMT
 - Add GET /api/manifest endpoint; add pluginNames to LoadedPlugins; manifest-driven nav tabs, routes, and domain hooks in web UI
 
 ## 0.99.0
-
 Tue, 31 Mar 2026 04:41:40 GMT
 
 ### Minor changes
@@ -491,7 +448,6 @@ Tue, 31 Mar 2026 04:41:40 GMT
 - Extract knowledge graph functionality (Neo4j, embeddings, gRPC handlers, MCP tools) into new @grackle-ai/plugin-knowledge package
 
 ## 0.98.0
-
 Tue, 31 Mar 2026 03:27:06 GMT
 
 ### Minor changes
@@ -499,7 +455,6 @@ Tue, 31 Mar 2026 03:27:06 GMT
 - Add @grackle-ai/plugin-scheduling with schedule handlers, cron reconciliation phase, and expression parsing. Remove schedule code from plugin-core. Server loads scheduling plugin alongside core and orchestration plugins.
 
 ## 0.97.0
-
 Tue, 31 Mar 2026 02:21:56 GMT
 
 ### Minor changes
@@ -507,7 +462,6 @@ Tue, 31 Mar 2026 02:21:56 GMT
 - Add @grackle-ai/plugin-orchestration with task/persona/finding/escalation handlers, orphan-reparent phase, and sigchld/escalation-auto/orphan-reparent subscribers. Add createCoreCollector() and createOrchestrationCollector() to plugin-core. Slim down core plugin to exclude orchestration concerns.
 
 ## 0.96.3
-
 Tue, 31 Mar 2026 01:19:21 GMT
 
 ### Patches
@@ -515,7 +469,6 @@ Tue, 31 Mar 2026 01:19:21 GMT
 - Extract plugin-core package from core — gRPC handlers, subscriber factories, and phase factories moved to @grackle-ai/plugin-core
 
 ## 0.96.2
-
 Tue, 31 Mar 2026 00:58:00 GMT
 
 ### Patches
@@ -523,7 +476,6 @@ Tue, 31 Mar 2026 00:58:00 GMT
 - Add interactive link/unlink environment controls to workspace and environment detail pages
 
 ## 0.96.1
-
 Mon, 30 Mar 2026 21:53:45 GMT
 
 ### Patches
@@ -531,7 +483,6 @@ Mon, 30 Mar 2026 21:53:45 GMT
 - Add automatic environment resolution for dispatch (ancestor, workspace, linked, global fallback)
 
 ## 0.96.0
-
 Mon, 30 Mar 2026 21:39:41 GMT
 
 ### Minor changes
@@ -539,7 +490,6 @@ Mon, 30 Mar 2026 21:39:41 GMT
 - Add per-task and workspace token/cost budget enforcement with pre-spawn checks, mid-run SIGTERM, and BUDGET_EXCEEDED end reason
 
 ## 0.95.2
-
 Mon, 30 Mar 2026 20:03:42 GMT
 
 ### Patches
@@ -547,7 +497,6 @@ Mon, 30 Mar 2026 20:03:42 GMT
 - Wire server startup to use loadPlugins() with core plugin
 
 ## 0.95.1
-
 Mon, 30 Mar 2026 19:25:19 GMT
 
 ### Patches
@@ -555,7 +504,6 @@ Mon, 30 Mar 2026 19:25:19 GMT
 - Decouple cron schedule firing from session start — cron creates tasks and enqueues for dispatch
 
 ## 0.95.0
-
 Mon, 30 Mar 2026 18:59:55 GMT
 
 ### Minor changes
@@ -563,7 +511,6 @@ Mon, 30 Mar 2026 18:59:55 GMT
 - Add @grackle-ai/plugin-sdk with GracklePlugin contract and loadPlugins() loader
 
 ## 0.94.0
-
 Mon, 30 Mar 2026 17:31:12 GMT
 
 ### Minor changes
@@ -571,7 +518,6 @@ Mon, 30 Mar 2026 17:31:12 GMT
 - Add dispatch queue with concurrency limits — startTask defers to reconciliation tick when environment is at capacity
 
 ## 0.93.0
-
 Mon, 30 Mar 2026 16:06:29 GMT
 
 ### Minor changes
@@ -580,7 +526,6 @@ Mon, 30 Mar 2026 16:06:29 GMT
 - Add linked environments: workspaces can now link multiple environments for future task dispatch pooling
 
 ## 0.92.3
-
 Mon, 30 Mar 2026 15:00:21 GMT
 
 ### Patches
@@ -588,7 +533,6 @@ Mon, 30 Mar 2026 15:00:21 GMT
 - Add notification permission step to onboarding wizard
 
 ## 0.92.2
-
 Mon, 30 Mar 2026 14:24:19 GMT
 
 ### Patches
@@ -596,7 +540,6 @@ Mon, 30 Mar 2026 14:24:19 GMT
 - Introduce ServiceCollector for modular gRPC handler registration
 
 ## 0.92.1
-
 Mon, 30 Mar 2026 12:53:35 GMT
 
 ### Patches
@@ -604,7 +547,6 @@ Mon, 30 Mar 2026 12:53:35 GMT
 - MCP tool registration is now plugin-contributable via optional additionalToolGroups parameter
 
 ## 0.92.0
-
 Mon, 30 Mar 2026 02:41:47 GMT
 
 ### Minor changes
@@ -612,7 +554,6 @@ Mon, 30 Mar 2026 02:41:47 GMT
 - Add ListStreams RPC, grackle streams list CLI command, and ipc_list_streams MCP tool for debugging active IPC streams
 
 ## 0.91.4
-
 Mon, 30 Mar 2026 02:02:43 GMT
 
 ### Patches
@@ -621,7 +562,6 @@ Mon, 30 Mar 2026 02:02:43 GMT
 - Decompose server/index.ts into 6 testable modules with 72 new unit tests
 
 ## 0.91.3
-
 Mon, 30 Mar 2026 00:49:02 GMT
 
 ### Patches
@@ -630,7 +570,6 @@ Mon, 30 Mar 2026 00:49:02 GMT
 - Clean up abandoned MCP sessions when SSE stream disconnects
 
 ## 0.91.2
-
 Sun, 29 Mar 2026 23:27:43 GMT
 
 ### Patches
@@ -639,7 +578,6 @@ Sun, 29 Mar 2026 23:27:43 GMT
 - Add environment status reconciliation phase to detect and fix drift between in-memory connections and database status
 
 ## 0.91.1
-
 Sun, 29 Mar 2026 18:40:32 GMT
 
 ### Patches
@@ -647,7 +585,6 @@ Sun, 29 Mar 2026 18:40:32 GMT
 - Add shimmer loading states to all pages and findingsLoading flag
 
 ## 0.91.0
-
 Sun, 29 Mar 2026 17:16:34 GMT
 
 ### Minor changes
@@ -659,7 +596,6 @@ Sun, 29 Mar 2026 17:16:34 GMT
 - Add per-domain loading flags to useGrackle context for shimmer/skeleton loading states
 
 ## 0.90.0
-
 Sun, 29 Mar 2026 15:36:04 GMT
 
 ### Minor changes
@@ -672,7 +608,6 @@ Sun, 29 Mar 2026 15:36:04 GMT
 - Fix Dependabot and CodeQL security alerts: add pnpm overrides for vulnerable transitive deps, delete unused docker lockfile, fix ReDoS regexes, sanitize error in readiness endpoint
 
 ## 0.89.4
-
 Sun, 29 Mar 2026 04:51:59 GMT
 
 ### Patches
@@ -680,7 +615,6 @@ Sun, 29 Mar 2026 04:51:59 GMT
 - Standardize web hooks on async/await
 
 ## 0.89.3
-
 Sun, 29 Mar 2026 01:57:32 GMT
 
 ### Patches
@@ -688,7 +622,6 @@ Sun, 29 Mar 2026 01:57:32 GMT
 - Remove canAcceptInput() guard so sendInput() always queues messages, even before SDK initialization completes
 
 ## 0.89.2
-
 Sat, 28 Mar 2026 22:37:21 GMT
 
 ### Patches
@@ -704,7 +637,6 @@ Sat, 28 Mar 2026 22:37:21 GMT
 - Fix stuck MCP stub sessions by fire-and-forget close instead of blocking the generator
 
 ## 0.89.1
-
 Sat, 28 Mar 2026 03:24:11 GMT
 
 ### Patches
@@ -712,7 +644,6 @@ Sat, 28 Mar 2026 03:24:11 GMT
 - Add circuit breaker with auto-recovery to environment reconnect logic
 
 ## 0.89.0
-
 Sat, 28 Mar 2026 03:00:43 GMT
 
 ### Minor changes
@@ -720,7 +651,6 @@ Sat, 28 Mar 2026 03:00:43 GMT
 - Add GetFinding RPC, cross-workspace QueryFindings, and first-class /findings routes with list/detail pages
 
 ## 0.88.0
-
 Sat, 28 Mar 2026 02:50:43 GMT
 
 ### Minor changes
@@ -728,12 +658,11 @@ Sat, 28 Mar 2026 02:50:43 GMT
 - Add createStream and attachStream gRPC endpoints and MCP tools for capability-based global streams
 
 ## 0.87.0
-
 Sat, 28 Mar 2026 02:26:43 GMT
 
 ### Minor changes
 
-- refactor: replace **clear** sentinel with AllowedMcpTools wrapper message for proto3 presence tracking on UpdatePersonaRequest
+- refactor: replace __clear__ sentinel with AllowedMcpTools wrapper message for proto3 presence tracking on UpdatePersonaRequest
 
 ### Patches
 
@@ -742,7 +671,6 @@ Sat, 28 Mar 2026 02:26:43 GMT
 - Add backpressure to log-writer (async drain handling) and bounded queues to stream-hub (drop oldest on overflow)
 
 ## 0.86.1
-
 Sat, 28 Mar 2026 00:14:57 GMT
 
 ### Patches
@@ -750,7 +678,6 @@ Sat, 28 Mar 2026 00:14:57 GMT
 - Add database integrity checks, pre-migration backup, and WAL checkpoint management
 
 ## 0.86.0
-
 Fri, 27 Mar 2026 22:24:49 GMT
 
 ### Minor changes
@@ -764,7 +691,6 @@ Fri, 27 Mar 2026 22:24:49 GMT
 - Extract presentational components into @grackle-ai/web-components package
 
 ## 0.85.2
-
 Fri, 27 Mar 2026 21:24:58 GMT
 
 ### Patches
@@ -772,7 +698,6 @@ Fri, 27 Mar 2026 21:24:58 GMT
 - Add Neo4j health monitoring: periodic health check in reconciliation loop, circuit breaker on event sync, error wrapping in gRPC handlers, and /readyz visibility
 
 ## 0.85.1
-
 Fri, 27 Mar 2026 19:02:42 GMT
 
 ### Patches
@@ -780,7 +705,6 @@ Fri, 27 Mar 2026 19:02:42 GMT
 - fix: resolve bootstrap runtime from default persona instead of hardcoded env column; await persona updates during onboarding
 
 ## 0.85.0
-
 Fri, 27 Mar 2026 16:13:58 GMT
 
 ### Minor changes
@@ -795,7 +719,6 @@ Fri, 27 Mar 2026 16:13:58 GMT
 - Add Storybook stories for DemoBanner component
 
 ## 0.84.1
-
 Fri, 27 Mar 2026 05:31:41 GMT
 
 ### Patches
@@ -803,7 +726,6 @@ Fri, 27 Mar 2026 05:31:41 GMT
 - Lift context hooks (useToast, useThemeContext, useSidebarContent) out of 8 components into props for component library extraction
 
 ## 0.84.0
-
 Fri, 27 Mar 2026 05:00:06 GMT
 
 ### Minor changes
@@ -816,7 +738,6 @@ Fri, 27 Mar 2026 05:00:06 GMT
 - Rewrite README with value-prop-first structure, fresh screenshots, and new knowledge graph screenshot
 
 ## 0.83.2
-
 Fri, 27 Mar 2026 04:31:22 GMT
 
 ### Patches
@@ -825,7 +746,6 @@ Fri, 27 Mar 2026 04:31:22 GMT
 - Add copy-to-clipboard buttons to session chat UI; fix pipe fd transfer on task completion/kill
 
 ## 0.83.1
-
 Fri, 27 Mar 2026 04:01:50 GMT
 
 ### Patches
@@ -835,7 +755,6 @@ Fri, 27 Mar 2026 04:01:50 GMT
 - fix: restore pipe fd transfer before subscription cleanup, debounce task reloads
 
 ## 0.83.0
-
 Thu, 26 Mar 2026 14:54:35 GMT
 
 ### Minor changes
@@ -844,7 +763,6 @@ Thu, 26 Mar 2026 14:54:35 GMT
 - Migrate web UI real-time streaming from WebSocket to ConnectRPC StreamEvents
 
 ## 0.82.2
-
 Thu, 26 Mar 2026 06:35:08 GMT
 
 ### Patches
@@ -857,7 +775,6 @@ Thu, 26 Mar 2026 06:35:08 GMT
 - Enhanced demo mock data with realistic session events and knowledge graph
 
 ## 0.82.1
-
 Thu, 26 Mar 2026 05:16:56 GMT
 
 ### Patches
@@ -866,7 +783,6 @@ Thu, 26 Mar 2026 05:16:56 GMT
 - Add Node.js engine constraint (>=22 <24) to warn about incompatible Node versions where better-sqlite3 has no prebuilt binaries
 
 ## 0.82.0
-
 Thu, 26 Mar 2026 04:36:32 GMT
 
 ### Minor changes
@@ -874,7 +790,6 @@ Thu, 26 Mar 2026 04:36:32 GMT
 - Auto-reanimate on lifecycle stream subscribe + lifecycle cleanup reconciliation phase
 
 ## 0.81.0
-
 Thu, 26 Mar 2026 04:19:23 GMT
 
 ### Minor changes
@@ -887,7 +802,6 @@ Thu, 26 Mar 2026 04:19:23 GMT
 - placeholder
 
 ## 0.80.0
-
 Thu, 26 Mar 2026 03:07:51 GMT
 
 ### Minor changes
@@ -895,7 +809,6 @@ Thu, 26 Mar 2026 03:07:51 GMT
 - Add session_attach and logs_get to scoped MCP tools with ancestry enforcement for orchestrator agents
 
 ## 0.79.1
-
 Thu, 26 Mar 2026 02:24:24 GMT
 
 ### Patches
@@ -903,7 +816,6 @@ Thu, 26 Mar 2026 02:24:24 GMT
 - Generalize CronManager into ReconciliationManager with pluggable tick phases
 
 ## 0.79.0
-
 Wed, 25 Mar 2026 20:38:47 GMT
 
 ### Minor changes
@@ -915,7 +827,6 @@ Wed, 25 Mar 2026 20:38:47 GMT
 - placeholder
 
 ## 0.78.0
-
 Wed, 25 Mar 2026 17:14:49 GMT
 
 ### Minor changes
@@ -927,7 +838,6 @@ Wed, 25 Mar 2026 17:14:49 GMT
 - Fix knowledge sidebar workspace filter scope not preserved across search/clear
 
 ## 0.77.0
-
 Wed, 25 Mar 2026 16:30:59 GMT
 
 ### Minor changes
@@ -939,7 +849,6 @@ Wed, 25 Mar 2026 16:30:59 GMT
 - placeholder
 
 ## 0.76.3
-
 Wed, 25 Mar 2026 15:08:59 GMT
 
 ### Patches
@@ -947,7 +856,6 @@ Wed, 25 Mar 2026 15:08:59 GMT
 - Add Storybook and E2E test coverage for knowledge graph components, refactor KnowledgeNav to presentational
 
 ## 0.76.2
-
 Wed, 25 Mar 2026 14:21:23 GMT
 
 ### Patches
@@ -955,7 +863,6 @@ Wed, 25 Mar 2026 14:21:23 GMT
 - Unify stub and stub-mcp runtimes; add mcp_call scenario step for scriptable MCP tool calls in tests
 
 ## 0.76.1
-
 Wed, 25 Mar 2026 13:29:39 GMT
 
 ### Patches
@@ -968,7 +875,6 @@ Wed, 25 Mar 2026 13:29:39 GMT
 - placeholder
 
 ## 0.76.0
-
 Wed, 25 Mar 2026 06:32:16 GMT
 
 ### Minor changes
@@ -982,7 +888,6 @@ Wed, 25 Mar 2026 06:32:16 GMT
 - Add toast notifications for task state changes in the web UI
 
 ## 0.75.13
-
 Wed, 25 Mar 2026 04:51:42 GMT
 
 ### Patches
@@ -994,7 +899,6 @@ Wed, 25 Mar 2026 04:51:42 GMT
 - placeholder
 
 ## 0.75.12
-
 Wed, 25 Mar 2026 03:23:53 GMT
 
 ### Patches
@@ -1006,7 +910,6 @@ Wed, 25 Mar 2026 03:23:53 GMT
 - Audit and fix flaky E2E tests, move markdown rendering to Storybook
 
 ## 0.75.11
-
 Wed, 25 Mar 2026 00:31:42 GMT
 
 ### Patches
@@ -1014,7 +917,6 @@ Wed, 25 Mar 2026 00:31:42 GMT
 - Add logo, badges, homepage, and bugs fields to all package READMEs and package.json files
 
 ## 0.75.10
-
 Tue, 24 Mar 2026 23:59:57 GMT
 
 ### Patches
@@ -1023,7 +925,6 @@ Tue, 24 Mar 2026 23:59:57 GMT
 - Add regression tests for Codex runtime on Docker without git repo
 
 ## 0.75.9
-
 Tue, 24 Mar 2026 19:32:32 GMT
 
 ### Patches
@@ -1031,7 +932,6 @@ Tue, 24 Mar 2026 19:32:32 GMT
 - Fix persistent stream throw leaving waitForTurnComplete dangling
 
 ## 0.75.8
-
 Tue, 24 Mar 2026 19:03:57 GMT
 
 ### Patches
@@ -1039,7 +939,6 @@ Tue, 24 Mar 2026 19:03:57 GMT
 - Add multi-turn integration tests for all PowerLine runtimes
 
 ## 0.75.7
-
 Tue, 24 Mar 2026 16:30:39 GMT
 
 ### Patches
@@ -1052,7 +951,6 @@ Tue, 24 Mar 2026 16:30:39 GMT
 - placeholder
 
 ## 0.75.6
-
 Tue, 24 Mar 2026 15:56:44 GMT
 
 ### Patches
@@ -1060,7 +958,6 @@ Tue, 24 Mar 2026 15:56:44 GMT
 - Reject subtask creation when depends_on references an unknown local_id instead of silently dropping the dependency
 
 ## 0.75.5
-
 Tue, 24 Mar 2026 15:28:52 GMT
 
 ### Patches
@@ -1073,7 +970,6 @@ Tue, 24 Mar 2026 15:28:52 GMT
 - placeholder
 
 ## 0.75.4
-
 Tue, 24 Mar 2026 13:18:20 GMT
 
 ### Patches
@@ -1085,7 +981,6 @@ Tue, 24 Mar 2026 13:18:20 GMT
 - placeholder
 
 ## 0.75.3
-
 Tue, 24 Mar 2026 07:26:12 GMT
 
 ### Patches
@@ -1094,7 +989,6 @@ Tue, 24 Mar 2026 07:26:12 GMT
 - Replace logo with new mech-grackle design
 
 ## 0.75.2
-
 Tue, 24 Mar 2026 06:50:00 GMT
 
 ### Patches
@@ -1106,7 +1000,6 @@ Tue, 24 Mar 2026 06:50:00 GMT
 - placeholder
 
 ## 0.75.1
-
 Tue, 24 Mar 2026 06:19:57 GMT
 
 ### Patches
@@ -1118,7 +1011,6 @@ Tue, 24 Mar 2026 06:19:57 GMT
 - placeholder
 
 ## 0.75.0
-
 Tue, 24 Mar 2026 05:12:35 GMT
 
 ### Minor changes
@@ -1126,7 +1018,6 @@ Tue, 24 Mar 2026 05:12:35 GMT
 - Migrate web UI from WebSocket RPC to ConnectRPC; add 6 new gRPC RPCs; slim ws-bridge to pub/sub only
 
 ## 0.74.1
-
 Tue, 24 Mar 2026 04:46:48 GMT
 
 ### Patches
@@ -1134,7 +1025,6 @@ Tue, 24 Mar 2026 04:46:48 GMT
 - Normalize create_workspace WS error type to match all other handlers
 
 ## 0.74.0
-
 Tue, 24 Mar 2026 04:08:14 GMT
 
 ### Minor changes
@@ -1150,7 +1040,6 @@ Tue, 24 Mar 2026 04:08:14 GMT
 - placeholder
 
 ## 0.73.1
-
 Mon, 23 Mar 2026 19:41:20 GMT
 
 ### Patches
@@ -1162,7 +1051,6 @@ Mon, 23 Mar 2026 19:41:20 GMT
 - placeholder
 
 ## 0.73.0
-
 Mon, 23 Mar 2026 18:49:25 GMT
 
 ### Minor changes
@@ -1170,7 +1058,6 @@ Mon, 23 Mar 2026 18:49:25 GMT
 - Extract @grackle-ai/database package — stores, schema, migrations, and crypto moved out of server
 
 ## 0.72.6
-
 Mon, 23 Mar 2026 18:28:31 GMT
 
 ### Patches
@@ -1178,7 +1065,6 @@ Mon, 23 Mar 2026 18:28:31 GMT
 - Decouple FindingsPanel, DagView, and TokensPanel from useGrackle() hook
 
 ## 0.72.5
-
 Mon, 23 Mar 2026 18:09:06 GMT
 
 ### Patches
@@ -1186,7 +1072,6 @@ Mon, 23 Mar 2026 18:09:06 GMT
 - Fix dev mode bootstrap to include @grackle-ai/auth package on remote hosts, fixing codespace provisioning
 
 ## 0.72.4
-
 Mon, 23 Mar 2026 17:24:08 GMT
 
 ### Patches
@@ -1194,7 +1079,6 @@ Mon, 23 Mar 2026 17:24:08 GMT
 - Fix session recovery race condition that caused flaky E2E failures when an environment acquired a new active session during the async drain window
 
 ## 0.72.3
-
 Mon, 23 Mar 2026 15:03:48 GMT
 
 ### Patches
@@ -1202,7 +1086,6 @@ Mon, 23 Mar 2026 15:03:48 GMT
 - Extract auth/security primitives into standalone @grackle-ai/auth package (api-key, sessions, pairing, OAuth, tokens, MCP auth middleware)
 
 ## 0.72.2
-
 Mon, 23 Mar 2026 13:34:53 GMT
 
 ### Patches
@@ -1210,7 +1093,6 @@ Mon, 23 Mar 2026 13:34:53 GMT
 - Extract adapter implementations into standalone packages (adapter-local, adapter-ssh, adapter-codespace, adapter-docker) with constructor dependency injection
 
 ## 0.72.1
-
 Mon, 23 Mar 2026 13:21:08 GMT
 
 ### Patches
@@ -1218,7 +1100,6 @@ Mon, 23 Mar 2026 13:21:08 GMT
 - Decouple database layer from business/service logic in preparation for @grackle-ai/database extraction
 
 ## 0.72.0
-
 Mon, 23 Mar 2026 07:13:27 GMT
 
 ### Minor changes
@@ -1226,7 +1107,6 @@ Mon, 23 Mar 2026 07:13:27 GMT
 - Collapse session terminal states (COMPLETED/FAILED/INTERRUPTED/HIBERNATING) into STOPPED + endReason. Add KillRequest with reason to PowerLine protocol. Simplify task status derivation.
 
 ## 0.71.3
-
 Mon, 23 Mar 2026 06:41:40 GMT
 
 ### Patches
@@ -1234,7 +1114,6 @@ Mon, 23 Mar 2026 06:41:40 GMT
 - feat: make system task immortal (cannot be closed/deleted) and grant it full MCP tool access
 
 ## 0.71.2
-
 Mon, 23 Mar 2026 05:44:01 GMT
 
 ### Patches
@@ -1242,7 +1121,6 @@ Mon, 23 Mar 2026 05:44:01 GMT
 - Add a dedicated workspace creation page and confirm workspace creation before the UI reports success.
 
 ## 0.71.1
-
 Mon, 23 Mar 2026 05:01:39 GMT
 
 ### Patches
@@ -1250,7 +1128,6 @@ Mon, 23 Mar 2026 05:01:39 GMT
 - fix: seed default workspace for system task so it can start on the local environment
 
 ## 0.71.0
-
 Sun, 22 Mar 2026 23:08:49 GMT
 
 ### Minor changes
@@ -1262,7 +1139,6 @@ Sun, 22 Mar 2026 23:08:49 GMT
 - placeholder
 
 ## 0.70.6
-
 Sun, 22 Mar 2026 21:18:31 GMT
 
 ### Patches
@@ -1270,7 +1146,6 @@ Sun, 22 Mar 2026 21:18:31 GMT
 - Wrap JSON.parse of adapterConfig in try-catch to prevent unhandled exceptions from corrupted DB data
 
 ## 0.70.5
-
 Sun, 22 Mar 2026 21:10:14 GMT
 
 ### Patches
@@ -1278,7 +1153,6 @@ Sun, 22 Mar 2026 21:10:14 GMT
 - Add Secure flag to session cookie when --allow-network is enabled
 
 ## 0.70.4
-
 Sun, 22 Mar 2026 21:01:41 GMT
 
 ### Patches
@@ -1286,7 +1160,6 @@ Sun, 22 Mar 2026 21:01:41 GMT
 - Add Content-Security-Policy, X-Frame-Options, and X-Content-Type-Options headers to all web responses
 
 ## 0.70.3
-
 Sun, 22 Mar 2026 19:10:10 GMT
 
 ### Patches
@@ -1295,7 +1168,6 @@ Sun, 22 Mar 2026 19:10:10 GMT
 - Validate WebSocket Origin header to prevent cross-origin hijacking (GHSA-w3hv-x4fp-6h6j)
 
 ## 0.70.2
-
 Sun, 22 Mar 2026 18:48:36 GMT
 
 ### Patches
@@ -1303,7 +1175,6 @@ Sun, 22 Mar 2026 18:48:36 GMT
 - Fix workspace authorization bypass in knowledge_search and knowledge_get_node MCP tools (GHSA-647h-p824-99w7)
 
 ## 0.70.1
-
 Sun, 22 Mar 2026 18:06:20 GMT
 
 ### Patches
@@ -1315,7 +1186,6 @@ Sun, 22 Mar 2026 18:06:20 GMT
 - Add polished README for npm
 
 ## 0.70.0
-
 Sun, 22 Mar 2026 15:10:22 GMT
 
 ### Minor changes
@@ -1323,7 +1193,6 @@ Sun, 22 Mar 2026 15:10:22 GMT
 - Add Goose runtime (ACP-based) with credential provider, CLI, and web UI support
 
 ## 0.69.1
-
 Sun, 22 Mar 2026 14:07:12 GMT
 
 ### Patches
@@ -1331,7 +1200,6 @@ Sun, 22 Mar 2026 14:07:12 GMT
 - Nest workspace URLs under /environments and fix breadcrumbs
 
 ## 0.69.0
-
 Sun, 22 Mar 2026 13:29:43 GMT
 
 ### Minor changes
@@ -1343,7 +1211,6 @@ Sun, 22 Mar 2026 13:29:43 GMT
 - Bump ESLint, Rush/Heft toolchain, and Docusaurus dependencies to reduce audit vulnerabilities
 
 ## 0.68.3
-
 Sun, 22 Mar 2026 06:07:06 GMT
 
 ### Patches
@@ -1351,7 +1218,6 @@ Sun, 22 Mar 2026 06:07:06 GMT
 - Refactor ws-bridge session termination to use fd closure instead of direct INTERRUPTED status
 
 ## 0.68.2
-
 Sun, 22 Mar 2026 05:56:14 GMT
 
 ### Patches
@@ -1359,7 +1225,6 @@ Sun, 22 Mar 2026 05:56:14 GMT
 - feat(web): surface SUSPENDED session state with yellow status dot in dashboard
 
 ## 0.68.1
-
 Sun, 22 Mar 2026 05:42:46 GMT
 
 ### Patches
@@ -1367,7 +1232,6 @@ Sun, 22 Mar 2026 05:42:46 GMT
 - Emit usage events from Codex, ACP, and GenAIScript runtimes
 
 ## 0.68.0
-
 Sun, 22 Mar 2026 05:34:41 GMT
 
 ### Minor changes
@@ -1381,7 +1245,6 @@ Sun, 22 Mar 2026 05:34:41 GMT
 - Add relationship edges (PART_OF, DEPENDS_ON, DERIVED_FROM) when syncing entities to knowledge graph
 
 ## 0.67.0
-
 Sun, 22 Mar 2026 04:43:26 GMT
 
 ### Minor changes
@@ -1394,7 +1257,6 @@ Sun, 22 Mar 2026 04:43:26 GMT
 - feat(server): SUSPENDED status on transport disconnect + auto-recovery of sessions on reconnect
 
 ## 0.66.0
-
 Sun, 22 Mar 2026 04:14:36 GMT
 
 ### Minor changes
@@ -1402,7 +1264,6 @@ Sun, 22 Mar 2026 04:14:36 GMT
 - Lifecycle streams for all sessions: auto-hibernate when last fd closed, killAgent via fd closure
 
 ## 0.65.0
-
 Sun, 22 Mar 2026 03:46:09 GMT
 
 ### Minor changes
@@ -1410,7 +1271,6 @@ Sun, 22 Mar 2026 03:46:09 GMT
 - Add knowledge graph MCP tools: knowledge_search, knowledge_get_node, knowledge_create_node
 
 ## 0.64.2
-
 Sun, 22 Mar 2026 03:31:33 GMT
 
 ### Patches
@@ -1418,7 +1278,6 @@ Sun, 22 Mar 2026 03:31:33 GMT
 - feat(powerline): session parking on disconnect — kill agent, buffer events, drain on reconnect
 
 ## 0.64.1
-
 Sun, 22 Mar 2026 03:15:17 GMT
 
 ### Patches
@@ -1426,7 +1285,6 @@ Sun, 22 Mar 2026 03:15:17 GMT
 - Add usage_get MCP tool for querying token usage and cost by scope
 
 ## 0.64.0
-
 Sun, 22 Mar 2026 02:55:30 GMT
 
 ### Minor changes
@@ -1438,7 +1296,6 @@ Sun, 22 Mar 2026 02:55:30 GMT
 - Display task usage cost in overview tab with subtask tree rollup
 
 ## 0.63.0
-
 Sun, 22 Mar 2026 02:21:37 GMT
 
 ### Minor changes
@@ -1450,7 +1307,6 @@ Sun, 22 Mar 2026 02:21:37 GMT
 - Add workspace usage display with loadUsage hook for server-side aggregation
 
 ## 0.62.2
-
 Sun, 22 Mar 2026 01:37:20 GMT
 
 ### Patches
@@ -1458,7 +1314,6 @@ Sun, 22 Mar 2026 01:37:20 GMT
 - Unify writeToFd delivery via stream-registry async listeners instead of direct sendInput
 
 ## 0.62.1
-
 Sun, 22 Mar 2026 01:26:28 GMT
 
 ### Patches
@@ -1466,7 +1321,6 @@ Sun, 22 Mar 2026 01:26:28 GMT
 - Add graph expansion (multi-hop traversal) to @grackle-ai/knowledge
 
 ## 0.62.0
-
 Sun, 22 Mar 2026 00:48:48 GMT
 
 ### Minor changes
@@ -1474,7 +1328,6 @@ Sun, 22 Mar 2026 00:48:48 GMT
 - Add reference node sync primitives for syncing Grackle entities to the knowledge graph
 
 ## 0.61.3
-
 Sat, 21 Mar 2026 23:55:29 GMT
 
 ### Patches
@@ -1482,7 +1335,6 @@ Sat, 21 Mar 2026 23:55:29 GMT
 - Display session usage in web UI session headers and environment detail with live streaming updates
 
 ## 0.61.2
-
 Sat, 21 Mar 2026 23:43:23 GMT
 
 ### Patches
@@ -1490,7 +1342,6 @@ Sat, 21 Mar 2026 23:43:23 GMT
 - Add integration tests for pipe delivery flow (async/sync delivery, cleanup, no-ops)
 
 ## 0.61.1
-
 Sat, 21 Mar 2026 22:42:52 GMT
 
 ### Patches
@@ -1498,7 +1349,6 @@ Sat, 21 Mar 2026 22:42:52 GMT
 - Add semantic vector search to @grackle-ai/knowledge
 
 ## 0.61.0
-
 Sat, 21 Mar 2026 22:01:36 GMT
 
 ### Minor changes
@@ -1506,7 +1356,6 @@ Sat, 21 Mar 2026 22:01:36 GMT
 - Make task_start pipe-aware: add pipe and parent_session_id to StartTaskRequest for structured IPC
 
 ## 0.60.0
-
 Sat, 21 Mar 2026 21:49:59 GMT
 
 ### Minor changes
@@ -1519,7 +1368,6 @@ Sat, 21 Mar 2026 21:49:59 GMT
 - fix(powerline): surface lazy runtime installer errors with actionable details instead of failing silently
 
 ## 0.59.1
-
 Sat, 21 Mar 2026 21:09:49 GMT
 
 ### Patches
@@ -1527,7 +1375,6 @@ Sat, 21 Mar 2026 21:09:49 GMT
 - Decompose UnifiedBar into ChatInput (page-owned) and ContextHintBar (page chrome)
 
 ## 0.59.0
-
 Sat, 21 Mar 2026 21:01:20 GMT
 
 ### Minor changes
@@ -1541,7 +1388,6 @@ Sat, 21 Mar 2026 21:01:20 GMT
 - Add session transcript chunker to @grackle-ai/knowledge
 
 ## 0.58.0
-
 Sat, 21 Mar 2026 20:22:13 GMT
 
 ### Minor changes
@@ -1549,7 +1395,6 @@ Sat, 21 Mar 2026 20:22:13 GMT
 - Add ipc_write and ipc_close MCP tools with WriteToFd and CloseFd gRPC endpoints
 
 ## 0.57.1
-
 Sat, 21 Mar 2026 20:06:12 GMT
 
 ### Patches
@@ -1557,7 +1402,6 @@ Sat, 21 Mar 2026 20:06:12 GMT
 - Emit usage events (input_tokens, output_tokens, cost_usd) from Claude Code runtime
 
 ## 0.57.0
-
 Sat, 21 Mar 2026 19:53:31 GMT
 
 ### Minor changes
@@ -1571,7 +1415,6 @@ Sat, 21 Mar 2026 19:53:31 GMT
 - Add chunker interface, pass-through chunker, and ingest pipeline to @grackle-ai/knowledge
 
 ## 0.56.3
-
 Sat, 21 Mar 2026 18:26:26 GMT
 
 ### Patches
@@ -1580,7 +1423,6 @@ Sat, 21 Mar 2026 18:26:26 GMT
 - Add @grackle-ai/knowledge package scaffold for the knowledge graph subsystem
 
 ## 0.56.2
-
 Sat, 21 Mar 2026 18:10:39 GMT
 
 ### Patches
@@ -1588,7 +1430,6 @@ Sat, 21 Mar 2026 18:10:39 GMT
 - Promote Environments to top-level page view, replacing the standalone Workspaces tab
 
 ## 0.56.1
-
 Sat, 21 Mar 2026 17:58:15 GMT
 
 ### Patches
@@ -1596,7 +1437,6 @@ Sat, 21 Mar 2026 17:58:15 GMT
 - Move task title and description from system prompt to user prompt so agents receive work instructions as the first message
 
 ## 0.56.0
-
 Sat, 21 Mar 2026 17:06:15 GMT
 
 ### Minor changes
@@ -1605,7 +1445,6 @@ Sat, 21 Mar 2026 17:06:15 GMT
 - Install runtime SDK packages lazily at spawn time instead of bundling all 8 as hard dependencies, reducing provisioning time and disk usage
 
 ## 0.55.0
-
 Sat, 21 Mar 2026 16:01:10 GMT
 
 ### Minor changes
@@ -1613,7 +1452,6 @@ Sat, 21 Mar 2026 16:01:10 GMT
 - Add stream-registry: in-memory streams and subscriptions model for agent IPC
 
 ## 0.54.1
-
 Sat, 21 Mar 2026 15:32:23 GMT
 
 ### Patches
@@ -1621,7 +1459,6 @@ Sat, 21 Mar 2026 15:32:23 GMT
 - Allow sendInput while agent is running by only rejecting terminal session statuses
 
 ## 0.54.0
-
 Sat, 21 Mar 2026 14:51:13 GMT
 
 ### Minor changes
@@ -1634,7 +1471,6 @@ Sat, 21 Mar 2026 14:51:13 GMT
 - Fix System task chat: use user message as prompt instead of title, handle read-only SDK config dir, recover session state on sendInput failure
 
 ## 0.53.5
-
 Sat, 21 Mar 2026 05:03:11 GMT
 
 ### Patches
@@ -1642,7 +1478,6 @@ Sat, 21 Mar 2026 05:03:11 GMT
 - Serialize sendInput follow-ups via input queue to prevent concurrent executeFollowUp calls
 
 ## 0.53.4
-
 Fri, 20 Mar 2026 23:34:14 GMT
 
 ### Patches
@@ -1650,16 +1485,14 @@ Fri, 20 Mar 2026 23:34:14 GMT
 - Extract injectable interfaces and pure functions from github-import.ts to separate fetch, transform, and persist phases
 
 ## 0.53.3
-
 Fri, 20 Mar 2026 23:15:27 GMT
 
 ### Patches
 
 - Inject database dependency into credential-providers for testability
-- Add \_setAcpSdkForTesting injection hook for real setupSdk() test coverage
+- Add _setAcpSdkForTesting injection hook for real setupSdk() test coverage
 
 ## 0.53.2
-
 Fri, 20 Mar 2026 22:15:12 GMT
 
 ### Patches
@@ -1667,7 +1500,6 @@ Fri, 20 Mar 2026 22:15:12 GMT
 - Extract injectable ProcessFactory and PortProbe into tunnel adapters for testability
 
 ## 0.53.1
-
 Fri, 20 Mar 2026 22:05:09 GMT
 
 ### Patches
@@ -1676,7 +1508,6 @@ Fri, 20 Mar 2026 22:05:09 GMT
 - Make waitForLocalPort() injectable with PortProber interface for testability
 
 ## 0.53.0
-
 Fri, 20 Mar 2026 21:06:17 GMT
 
 ### Minor changes
@@ -1693,7 +1524,6 @@ Fri, 20 Mar 2026 21:06:17 GMT
 - Extract injectable seams (ProcessFactory, PortProbe) from local-powerline for testability
 
 ## 0.52.4
-
 Fri, 20 Mar 2026 16:16:43 GMT
 
 ### Patches
@@ -1701,7 +1531,6 @@ Fri, 20 Mar 2026 16:16:43 GMT
 - Serve favicon, manifest, and logo assets without requiring session auth
 
 ## 0.52.3
-
 Fri, 20 Mar 2026 15:25:10 GMT
 
 ### Patches
@@ -1713,7 +1542,6 @@ Fri, 20 Mar 2026 15:25:10 GMT
 - Web-only: add sidebar view switcher with global task tree
 
 ## 0.52.2
-
 Fri, 20 Mar 2026 14:48:26 GMT
 
 ### Patches
@@ -1722,7 +1550,6 @@ Fri, 20 Mar 2026 14:48:26 GMT
 - Harden parseWsMessage to return a discriminated WsMessage | GrackleEvent union, replacing the unsafe type-widening hack
 
 ## 0.52.1
-
 Fri, 20 Mar 2026 14:30:15 GMT
 
 ### Patches
@@ -1730,7 +1557,6 @@ Fri, 20 Mar 2026 14:30:15 GMT
 - Normalize IPv6 literals in GRACKLE_DOCKER_HOST by wrapping them in brackets for well-formed URLs
 
 ## 0.52.0
-
 Fri, 20 Mar 2026 08:47:53 GMT
 
 ### Minor changes
@@ -1738,7 +1564,6 @@ Fri, 20 Mar 2026 08:47:53 GMT
 - Add operations dashboard and home route UX
 
 ## 0.51.0
-
 Fri, 20 Mar 2026 05:25:01 GMT
 
 ### Minor changes
@@ -1746,7 +1571,6 @@ Fri, 20 Mar 2026 05:25:01 GMT
 - Refactor system prompt into SystemPromptBuilder, inject via native SDK mechanisms, add EVENT_TYPE_SIGNAL for signal event rendering
 
 ## 0.50.1
-
 Fri, 20 Mar 2026 04:35:17 GMT
 
 ### Patches
@@ -1758,7 +1582,6 @@ Fri, 20 Mar 2026 04:35:17 GMT
 - Add unit tests for resolveAncestorEnvironmentId
 
 ## 0.50.0
-
 Fri, 20 Mar 2026 04:17:00 GMT
 
 ### Minor changes
@@ -1766,7 +1589,6 @@ Fri, 20 Mar 2026 04:17:00 GMT
 - Add root task (PID 0), System persona, and /chat tab for conversational orchestration
 
 ## 0.49.0
-
 Fri, 20 Mar 2026 04:01:06 GMT
 
 ### Minor changes
@@ -1778,7 +1600,6 @@ Fri, 20 Mar 2026 04:01:06 GMT
 - Remove dead GetDiff RPC, PowerLine handler, and task_diff WebSocket handler
 
 ## 0.48.0
-
 Thu, 19 Mar 2026 19:33:07 GMT
 
 ### Minor changes
@@ -1786,7 +1607,6 @@ Thu, 19 Mar 2026 19:33:07 GMT
 - Reparent workspaces under environments: workspaces now require an environment_id, env deletion is blocked when child workspaces exist, and ListWorkspaces supports filtering by environment
 
 ## 0.47.1
-
 Thu, 19 Mar 2026 18:56:01 GMT
 
 ### Patches
@@ -1794,7 +1614,6 @@ Thu, 19 Mar 2026 18:56:01 GMT
 - fix: pass worktreeBasePath to PowerLine when worktrees disabled, normalize localhost in MCP OAuth audience check
 
 ## 0.47.0
-
 Thu, 19 Mar 2026 16:27:42 GMT
 
 ### Minor changes
@@ -1802,7 +1621,6 @@ Thu, 19 Mar 2026 16:27:42 GMT
 - Rename Project to Workspace across all packages (proto, server, CLI, MCP, web UI, PowerLine)
 
 ## 0.46.0
-
 Thu, 19 Mar 2026 14:39:39 GMT
 
 ### Minor changes
@@ -1810,7 +1628,6 @@ Thu, 19 Mar 2026 14:39:39 GMT
 - Add splash screen during first-run experience to prevent main app flash, add grackle logo to FRE and docs site
 
 ## 0.45.1
-
 Thu, 19 Mar 2026 14:01:06 GMT
 
 ### Patches
@@ -1822,7 +1639,6 @@ Thu, 19 Mar 2026 14:01:06 GMT
 - placeholder
 
 ## 0.45.0
-
 Thu, 19 Mar 2026 12:25:13 GMT
 
 ### Minor changes
@@ -1831,7 +1647,6 @@ Thu, 19 Mar 2026 12:25:13 GMT
 - Expose task_start, task_complete, and session_send_input for scoped agents with descendant enforcement; add environment inheritance for startTask
 
 ## 0.44.0
-
 Thu, 19 Mar 2026 07:29:14 GMT
 
 ### Minor changes
@@ -1839,7 +1654,6 @@ Thu, 19 Mar 2026 07:29:14 GMT
 - Add script persona support with --type, --script, and --script-file flags for persona create/edit, and Type column in persona list
 
 ## 0.43.0
-
 Thu, 19 Mar 2026 07:05:32 GMT
 
 ### Minor changes
@@ -1851,7 +1665,6 @@ Thu, 19 Mar 2026 07:05:32 GMT
 - placeholder
 
 ## 0.42.0
-
 Thu, 19 Mar 2026 05:48:47 GMT
 
 ### Minor changes
@@ -1864,7 +1677,6 @@ Thu, 19 Mar 2026 05:48:47 GMT
 - Add phased build scripts and rush-project.json for Rush build cache and parallel CI
 
 ## 0.41.1
-
 Wed, 18 Mar 2026 21:54:32 GMT
 
 ### Patches
@@ -1876,7 +1688,6 @@ Wed, 18 Mar 2026 21:54:32 GMT
 - No user-facing CLI changes (web-only refactor of editable field components)
 
 ## 0.41.0
-
 Wed, 18 Mar 2026 20:54:11 GMT
 
 ### Minor changes
@@ -1891,7 +1702,6 @@ Wed, 18 Mar 2026 20:54:11 GMT
 - No CLI changes (lockstep versioning entry)
 
 ## 0.40.0
-
 Wed, 18 Mar 2026 13:51:51 GMT
 
 ### Minor changes
@@ -1899,7 +1709,6 @@ Wed, 18 Mar 2026 13:51:51 GMT
 - Replace ad-hoc runtime/model resolution with persona cascade at app/project/task levels
 
 ## 0.39.1
-
 Wed, 18 Mar 2026 13:38:45 GMT
 
 ### Patches
@@ -1911,7 +1720,6 @@ Wed, 18 Mar 2026 13:38:45 GMT
 - No CLI changes (pnpm-lock merge artifact)
 
 ## 0.39.0
-
 Wed, 18 Mar 2026 05:13:05 GMT
 
 ### Minor changes
@@ -1928,7 +1736,6 @@ Wed, 18 Mar 2026 05:13:05 GMT
 - No CLI changes — change file required by Rush merge-commit detection
 
 ## 0.38.2
-
 Wed, 18 Mar 2026 04:44:23 GMT
 
 ### Patches
@@ -1940,7 +1747,6 @@ Wed, 18 Mar 2026 04:44:23 GMT
 - placeholder
 
 ## 0.38.1
-
 Wed, 18 Mar 2026 04:06:45 GMT
 
 ### Patches
@@ -1952,7 +1758,6 @@ Wed, 18 Mar 2026 04:06:45 GMT
 - placeholder
 
 ## 0.38.0
-
 Tue, 17 Mar 2026 18:17:47 GMT
 
 ### Minor changes
@@ -1960,7 +1765,6 @@ Tue, 17 Mar 2026 18:17:47 GMT
 - Auto-parent subtasks from agent context; expose task_list and task_show to scoped agents
 
 ## 0.37.0
-
 Tue, 17 Mar 2026 15:03:49 GMT
 
 ### Minor changes
@@ -1974,7 +1778,6 @@ Tue, 17 Mar 2026 15:03:49 GMT
 - Add API Extractor to heft build pipeline for API surface tracking
 
 ## 0.36.0
-
 Tue, 17 Mar 2026 03:48:25 GMT
 
 ### Minor changes
@@ -1986,7 +1789,6 @@ Tue, 17 Mar 2026 03:48:25 GMT
 - No functional changes — merge commit false positive
 
 ## 0.35.1
-
 Tue, 17 Mar 2026 03:26:49 GMT
 
 ### Patches
@@ -1994,7 +1796,6 @@ Tue, 17 Mar 2026 03:26:49 GMT
 - Add GetSession RPC for direct session lookup by ID
 
 ## 0.35.0
-
 Tue, 17 Mar 2026 03:20:19 GMT
 
 ### Minor changes
@@ -2002,7 +1803,6 @@ Tue, 17 Mar 2026 03:20:19 GMT
 - Add useWorktrees field to project MCP tools (list, create, get, update)
 
 ## 0.34.1
-
 Tue, 17 Mar 2026 01:31:02 GMT
 
 ### Patches
@@ -2014,7 +1814,6 @@ Tue, 17 Mar 2026 01:31:02 GMT
 - No CLI changes — merge-commit false positive for lockstep versioning
 
 ## 0.34.0
-
 Tue, 17 Mar 2026 00:33:11 GMT
 
 ### Minor changes
@@ -2022,7 +1821,6 @@ Tue, 17 Mar 2026 00:33:11 GMT
 - Add OAuth authentication flow for MCP clients (browser-based authorization with PKCE)
 
 ## 0.33.0
-
 Mon, 16 Mar 2026 18:27:18 GMT
 
 ### Minor changes
@@ -2030,7 +1828,6 @@ Mon, 16 Mar 2026 18:27:18 GMT
 - Replace stdio MCP stub with in-process HTTP MCP broker for unified agent-to-platform tool access
 
 ## 0.32.0
-
 Mon, 16 Mar 2026 14:30:53 GMT
 
 ### Minor changes
@@ -2038,7 +1835,6 @@ Mon, 16 Mar 2026 14:30:53 GMT
 - Add CLI and MCP commands for credential provider configuration
 
 ## 0.31.2
-
 Mon, 16 Mar 2026 06:43:40 GMT
 
 ### Patches
@@ -2050,7 +1846,6 @@ Mon, 16 Mar 2026 06:43:40 GMT
 - Add a new kanban view
 
 ## 0.31.1
-
 Mon, 16 Mar 2026 05:45:22 GMT
 
 ### Patches
@@ -2063,7 +1858,6 @@ Mon, 16 Mar 2026 05:45:22 GMT
 - No CLI changes — merge commit false positive
 
 ## 0.31.0
-
 Mon, 16 Mar 2026 04:29:47 GMT
 
 ### Minor changes
@@ -2071,7 +1865,6 @@ Mon, 16 Mar 2026 04:29:47 GMT
 - Add pairing-code session auth for secure LAN access. Server binds to 0.0.0.0, web UI uses session cookies, new `grackle pair` command.
 
 ## 0.30.0
-
 Mon, 16 Mar 2026 03:56:16 GMT
 
 ### Minor changes
@@ -2083,7 +1876,6 @@ Mon, 16 Mar 2026 03:56:16 GMT
 - No CLI changes — change file addresses merge-commit false positive
 
 ## 0.29.1
-
 Mon, 16 Mar 2026 00:01:13 GMT
 
 ### Patches
@@ -2095,7 +1887,6 @@ Mon, 16 Mar 2026 00:01:13 GMT
 - No CLI changes (merge artifact from main sync)
 
 ## 0.29.0
-
 Sun, 15 Mar 2026 23:23:30 GMT
 
 ### Minor changes
@@ -2103,7 +1894,6 @@ Sun, 15 Mar 2026 23:23:30 GMT
 - Add --search and --status filters to task list across proto, store, gRPC, WS, MCP, and CLI
 
 ## 0.28.0
-
 Sun, 15 Mar 2026 21:27:25 GMT
 
 ### Minor changes
@@ -2116,7 +1906,6 @@ Sun, 15 Mar 2026 21:27:25 GMT
 - Add session-scoped authentication to MCP server (scoped tokens, auth middleware, revocation)
 
 ## 0.27.0
-
 Sun, 15 Mar 2026 20:02:35 GMT
 
 ### Minor changes
@@ -2141,7 +1930,6 @@ Sun, 15 Mar 2026 20:02:35 GMT
 - No CLI changes (merge commit false positive)
 
 ## 0.26.0
-
 Sun, 15 Mar 2026 04:23:26 GMT
 
 ### Minor changes
@@ -2149,7 +1937,6 @@ Sun, 15 Mar 2026 04:23:26 GMT
 - Decouple tasks from sessions: tasks are durable goals, sessions are ephemeral execution attempts. Task status computed from session history. Environment and persona selected at start time.
 
 ## 0.25.0
-
 Sat, 14 Mar 2026 21:33:40 GMT
 
 ### Minor changes
@@ -2157,7 +1944,6 @@ Sat, 14 Mar 2026 21:33:40 GMT
 - feat: late-bind session to task — add --session flag to task update, processor registry for mutable event context, and pre-association event replay
 
 ## 0.24.1
-
 Sat, 14 Mar 2026 21:14:30 GMT
 
 ### Patches
@@ -2169,7 +1955,6 @@ Sat, 14 Mar 2026 21:14:30 GMT
 - Fix Copilot task stop action failing with internal error
 
 ## 0.24.0
-
 Sat, 14 Mar 2026 14:08:18 GMT
 
 ### Minor changes
@@ -2185,7 +1970,6 @@ Sat, 14 Mar 2026 14:08:18 GMT
 - No CLI changes — picking up server patch for raw field forwarding in WebSocket events
 
 ## 0.23.0
-
 Sat, 14 Mar 2026 13:49:54 GMT
 
 ### Minor changes
@@ -2197,7 +1981,6 @@ Sat, 14 Mar 2026 13:49:54 GMT
 - Fix Copilot task stop action failing with internal error
 
 ## 0.22.0
-
 Sat, 14 Mar 2026 08:13:46 GMT
 
 ### Minor changes
@@ -2205,7 +1988,6 @@ Sat, 14 Mar 2026 08:13:46 GMT
 - Allow editing persona and environment on pending tasks
 
 ## 0.21.0
-
 Sat, 14 Mar 2026 08:04:11 GMT
 
 ### Minor changes
@@ -2217,7 +1999,6 @@ Sat, 14 Mar 2026 08:04:11 GMT
 - Re-push stored tokens and Claude credentials before each task start to prevent stale OAuth token failures
 
 ## 0.20.0
-
 Sat, 14 Mar 2026 07:25:55 GMT
 
 ### Minor changes
@@ -2225,7 +2006,6 @@ Sat, 14 Mar 2026 07:25:55 GMT
 - feat: import blocking/blocked-by relationships from GitHub Issues as task dependsOn arrays
 
 ## 0.19.0
-
 Sat, 14 Mar 2026 05:55:32 GMT
 
 ### Minor changes
@@ -2238,7 +2018,6 @@ Sat, 14 Mar 2026 05:55:32 GMT
 - Add a none bump change file for @grackle-ai/cli because merge commits from origin/main make rush change --verify falsely detect CLI changes on this web-only PR.
 
 ## 0.18.3
-
 Sat, 14 Mar 2026 04:23:29 GMT
 
 ### Patches
@@ -2246,7 +2025,6 @@ Sat, 14 Mar 2026 04:23:29 GMT
 - Fix CLI connecting via IPv6 (::1) when server binds IPv4-only (127.0.0.1); change CLI default URL from localhost to 127.0.0.1, add --host flag to grackle serve, bind PowerLine to 127.0.0.1 explicitly, and reflect actual bind address in log messages
 
 ## 0.18.2
-
 Sat, 14 Mar 2026 04:00:53 GMT
 
 ### Patches
@@ -2259,7 +2037,6 @@ Sat, 14 Mar 2026 04:00:53 GMT
 - No changes to CLI (merge commit false positive)
 
 ## 0.18.1
-
 Fri, 13 Mar 2026 21:32:39 GMT
 
 ### Patches
@@ -2267,7 +2044,6 @@ Fri, 13 Mar 2026 21:32:39 GMT
 - Add the UpdateProject RPC and project detail view inline editing flow.
 
 ## 0.18.0
-
 Fri, 13 Mar 2026 18:20:02 GMT
 
 ### Minor changes
@@ -2279,7 +2055,6 @@ Fri, 13 Mar 2026 18:20:02 GMT
 - Add breadcrumbs
 
 ## 0.17.1
-
 Fri, 13 Mar 2026 17:07:19 GMT
 
 ### Patches
@@ -2291,7 +2066,6 @@ Fri, 13 Mar 2026 17:07:19 GMT
 - Address persona CLI UI gaps by adding missing tasks help and examples
 
 ## 0.17.0
-
 Fri, 13 Mar 2026 08:26:43 GMT
 
 ### Minor changes
@@ -2303,7 +2077,6 @@ Fri, 13 Mar 2026 08:26:43 GMT
 - No CLI changes — false positive from Rush merge detection
 
 ## 0.16.0
-
 Fri, 13 Mar 2026 07:19:57 GMT
 
 ### Minor changes
@@ -2317,7 +2090,6 @@ Fri, 13 Mar 2026 07:19:57 GMT
 - No CLI changes — change file added to satisfy rush change --verify false positive from merge commits
 
 ## 0.15.1
-
 Fri, 13 Mar 2026 05:32:15 GMT
 
 ### Patches
@@ -2332,7 +2104,6 @@ Fri, 13 Mar 2026 05:32:15 GMT
 - placeholder
 
 ## 0.15.0
-
 Fri, 13 Mar 2026 00:56:54 GMT
 
 ### Minor changes
@@ -2350,7 +2121,6 @@ Fri, 13 Mar 2026 00:56:54 GMT
 - No publishable changes (merge commit false positive)
 
 ## 0.14.10
-
 Thu, 12 Mar 2026 17:36:37 GMT
 
 ### Patches
@@ -2363,7 +2133,6 @@ Thu, 12 Mar 2026 17:36:37 GMT
 - No changes (merge commit false positive)
 
 ## 0.14.9
-
 Thu, 12 Mar 2026 15:30:40 GMT
 
 ### Patches
@@ -2371,7 +2140,6 @@ Thu, 12 Mar 2026 15:30:40 GMT
 - Auto-retry task on rejection with review notes
 
 ## 0.14.8
-
 Thu, 12 Mar 2026 15:00:24 GMT
 
 ### Patches
@@ -2379,7 +2147,6 @@ Thu, 12 Mar 2026 15:00:24 GMT
 - Auto-detect git repo path for worktrees, add task update CLI, capture codespace git credentials
 
 ## 0.14.7
-
 Thu, 12 Mar 2026 11:30:47 GMT
 
 ### Patches
@@ -2391,7 +2158,6 @@ Thu, 12 Mar 2026 11:30:47 GMT
 - No actual changes to this package
 
 ## 0.14.6
-
 Thu, 12 Mar 2026 08:11:55 GMT
 
 ### Patches
@@ -2399,7 +2165,6 @@ Thu, 12 Mar 2026 08:11:55 GMT
 - Harden add_environment input validation: port range [1,65535], adapterConfig double-encoding fix, ID collision retry loop
 
 ## 0.14.5
-
 Thu, 12 Mar 2026 07:09:34 GMT
 
 ### Patches
@@ -2407,7 +2172,6 @@ Thu, 12 Mar 2026 07:09:34 GMT
 - Allow retrying failed tasks by adding 'failed' to allowed start statuses
 
 ## 0.14.4
-
 Thu, 12 Mar 2026 06:27:52 GMT
 
 ### Patches
@@ -2415,7 +2179,6 @@ Thu, 12 Mar 2026 06:27:52 GMT
 - Fast reconnect: restart remote PowerLine (~8s) instead of full reprovision (~3min) when the process has stopped
 
 ## 0.14.3
-
 Thu, 12 Mar 2026 06:04:15 GMT
 
 ### Patches
@@ -2424,15 +2187,13 @@ Thu, 12 Mar 2026 06:04:15 GMT
 - Fix false task failures when session disconnects while idle
 
 ## 0.14.2
-
 Thu, 12 Mar 2026 05:17:32 GMT
 
 ### Patches
 
-- Migrate cross-package dependencies to workspace:\* protocol; bump MAX_TASK_DEPTH to 8; import shared constants from @grackle-ai/common instead of duplicating
+- Migrate cross-package dependencies to workspace:* protocol; bump MAX_TASK_DEPTH to 8; import shared constants from @grackle-ai/common instead of duplicating
 
 ## 0.14.1
-
 Thu, 12 Mar 2026 02:00:22 GMT
 
 ### Patches
@@ -2440,7 +2201,6 @@ Thu, 12 Mar 2026 02:00:22 GMT
 - Fix CD pipeline: rewrite version bump to push directly to main instead of creating temp branches and PRs
 
 ## 0.14.0
-
 Thu, 12 Mar 2026 00:56:21 GMT
 
 ### Minor changes
@@ -2460,7 +2220,6 @@ Thu, 12 Mar 2026 00:56:21 GMT
 - No functional changes (merge commit artifact)
 
 ## 0.13.0
-
 Tue, 10 Mar 2026 20:25:56 GMT
 
 ### Minor changes
@@ -2468,7 +2227,6 @@ Tue, 10 Mar 2026 20:25:56 GMT
 - Add interactive DAG visualization for task dependency graphs
 
 ## 0.12.0
-
 Tue, 10 Mar 2026 18:09:01 GMT
 
 ### Minor changes
@@ -2476,7 +2234,6 @@ Tue, 10 Mar 2026 18:09:01 GMT
 - Add task tree hierarchy
 
 ## 0.11.2
-
 Tue, 10 Mar 2026 15:57:59 GMT
 
 ### Patches
@@ -2484,7 +2241,6 @@ Tue, 10 Mar 2026 15:57:59 GMT
 - Extract shared runtime utilities and BaseAgentRuntime to deduplicate PowerLine runtimes
 
 ## 0.11.1
-
 Tue, 10 Mar 2026 14:35:26 GMT
 
 ### Patches
@@ -2497,7 +2253,6 @@ Tue, 10 Mar 2026 14:35:26 GMT
 - Add unit tests for powerline package
 
 ## 0.11.0
-
 Tue, 10 Mar 2026 08:23:27 GMT
 
 ### Patches
@@ -2505,7 +2260,6 @@ Tue, 10 Mar 2026 08:23:27 GMT
 - Wire-proto-enums-to-message-fields
 
 ## 0.10.0
-
 Tue, 10 Mar 2026 07:50:14 GMT
 
 ### Patches
@@ -2513,7 +2267,6 @@ Tue, 10 Mar 2026 07:50:14 GMT
 - Fix ClaudeCodeSession.sendInput to use eventQueue and resumed query pattern
 
 ## 0.9.0
-
 Tue, 10 Mar 2026 07:45:46 GMT
 
 ### Minor changes
@@ -2521,7 +2274,6 @@ Tue, 10 Mar 2026 07:45:46 GMT
 - Add environment creation UI to web app
 
 ## 0.8.0
-
 Tue, 10 Mar 2026 07:36:11 GMT
 
 ### Minor changes
@@ -2529,7 +2281,6 @@ Tue, 10 Mar 2026 07:36:11 GMT
 - Add token management UI with settings page
 
 ## 0.7.0
-
 Tue, 10 Mar 2026 07:31:32 GMT
 
 ### Patches
@@ -2537,7 +2288,6 @@ Tue, 10 Mar 2026 07:31:32 GMT
 - Fix Codex runtime: sendInput race condition, resume sends junk prompt, resource leak on kill, disallowedTools ignored
 
 ## 0.6.0
-
 Tue, 10 Mar 2026 07:13:31 GMT
 
 ### Patches
@@ -2545,7 +2295,6 @@ Tue, 10 Mar 2026 07:13:31 GMT
 - Code quality sweep 4: SessionPanel stable keys, null guard, useEffect deps, mock state read via ref, shared remote adapter helpers
 
 ## 0.5.0
-
 Tue, 10 Mar 2026 06:59:12 GMT
 
 ### Patches
@@ -2553,7 +2302,6 @@ Tue, 10 Mar 2026 06:59:12 GMT
 - Code quality sweep 3: attach race fix, resume event logging, WS status handling, systemContext dedup, events cap
 
 ## 0.4.0
-
 Tue, 10 Mar 2026 06:41:29 GMT
 
 ### Patches
@@ -2561,7 +2309,6 @@ Tue, 10 Mar 2026 06:41:29 GMT
 - Code quality sweep 2: fail-fast API key, gRPC error handling, session cleanup, structured logging, slug collision fix, output event rendering
 
 ## 0.3.0
-
 Tue, 10 Mar 2026 06:33:40 GMT
 
 ### Patches
@@ -2569,7 +2316,6 @@ Tue, 10 Mar 2026 06:33:40 GMT
 - Code quality sweep: constant-time auth, deduplicate slugify, fix updateTask field clearing, remove dead exports
 
 ## 0.2.0
-
 Tue, 10 Mar 2026 06:13:42 GMT
 
 ### Updates
@@ -2577,7 +2323,6 @@ Tue, 10 Mar 2026 06:13:42 GMT
 - Add "codex" to RuntimeName type
 
 ## 0.1.0
-
 Tue, 10 Mar 2026 06:04:37 GMT
 
 ### Minor changes
@@ -2585,7 +2330,6 @@ Tue, 10 Mar 2026 06:04:37 GMT
 - Add CLI options for SSH and Codespace environment adapters.
 
 ## 0.0.6
-
 Tue, 10 Mar 2026 06:01:07 GMT
 
 ### Patches
@@ -2593,19 +2337,16 @@ Tue, 10 Mar 2026 06:01:07 GMT
 - Publish @grackle-ai/web and bundle it with the server so the web UI is available out of the box.
 
 ## 0.0.5
-
 Tue, 10 Mar 2026 02:21:30 GMT
 
 _Version update only_
 
 ## 0.0.4
-
 Mon, 09 Mar 2026 23:17:39 GMT
 
 _Version update only_
 
 ## 0.0.3
-
 Mon, 09 Mar 2026 14:40:59 GMT
 
 ### Minor changes
@@ -2613,9 +2354,9 @@ Mon, 09 Mar 2026 14:40:59 GMT
 - Add CLI options for SSH and Codespace environment adapters.
 
 ## 0.0.2
-
 Sun, 08 Mar 2026 05:58:05 GMT
 
 ### Updates
 
 - Rename npm scope from @grackle to @grackle-ai
+
