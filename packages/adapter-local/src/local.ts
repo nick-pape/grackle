@@ -6,7 +6,11 @@ import type {
   ProvisionEvent,
   AdapterDependencies,
 } from "@grackle-ai/adapter-sdk";
-import { createPowerLineClient, sleep as defaultSleep } from "@grackle-ai/adapter-sdk";
+import {
+  createPowerLineClient,
+  GrpcHostTransport,
+  sleep as defaultSleep,
+} from "@grackle-ai/adapter-sdk";
 
 const POWERLINE_RETRY_DELAY_MS: number = 1_000;
 const POWERLINE_MAX_RETRIES: number = 5;
@@ -78,7 +82,7 @@ export class LocalAdapter implements EnvironmentAdapter {
     const client = createPowerLineClient(`http://${host}:${port}`, powerlineToken);
     await client.ping({});
 
-    return { client, environmentId, port };
+    return { client, environmentId, port, transport: new GrpcHostTransport(client) };
   }
 
   public async disconnect(): Promise<void> {

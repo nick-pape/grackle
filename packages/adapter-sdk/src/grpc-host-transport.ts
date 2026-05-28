@@ -100,23 +100,14 @@ export class GrpcHostTransport implements IHostTransport {
   }
 
   /**
-   * Drain previously-parked buffered events for a session (HR8c scope).
+   * Drain previously-parked buffered events for a session.
    *
-   * In HR8c this is the gRPC `drainBufferedEvents` RPC, full stop: the
-   * returned stream yields the buffered envelopes and then terminates. It
-   * does **not** continue into the live event stream — callers compose
-   * `subscribe` + `reanimate` to do recovery (see `session-recovery.ts`).
-   *
-   * `fromServerSeq` is accepted for forward compatibility (HR8d will use it
-   * as a true "subscribe from seq N" cursor) but is currently ignored —
-   * `drainBufferedEvents` replays all parked events regardless.
+   * Maps to the gRPC `drainBufferedEvents` RPC. The returned stream yields
+   * the buffered envelopes and then terminates — it does NOT continue into
+   * the live event stream. Callers compose `drainBuffered` + `reanimate`
+   * to do recovery.
    */
-  public async *subscribe(
-    sessionUri: string,
-    fromServerSeq?: string,
-  ): AsyncIterable<ServerActionEnvelope> {
-    void fromServerSeq;
-
+  public async *drainBuffered(sessionUri: string): AsyncIterable<ServerActionEnvelope> {
     const drainReq = create(powerline.DrainRequestSchema, {
       sessionId: sessionUri,
     });

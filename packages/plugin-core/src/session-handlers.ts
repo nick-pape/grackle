@@ -20,7 +20,7 @@ import {
 } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { join } from "node:path";
-import { reconnectOrProvision, GrpcHostTransport } from "@grackle-ai/adapter-sdk";
+import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { adapterManager } from "@grackle-ai/core";
 import { streamHub } from "@grackle-ai/core";
 import { tokenPush } from "@grackle-ai/core";
@@ -270,8 +270,7 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
     env.adapterType === "local" ? { excludeFileTokens: true } : undefined,
   );
 
-  const transport = new GrpcHostTransport(conn.client);
-  const { stream } = transport.createSession(createParams);
+  const { stream } = conn.transport.createSession(createParams);
   processEventStream(stream, {
     sessionId,
     logPath,

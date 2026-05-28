@@ -11,7 +11,7 @@
  * Pure persistence lives in `@grackle-ai/database` (tokenStore); credential
  * bundle building lives in {@link ./credential-bundle.ts}.
  */
-import { GrpcHostTransport, type AuthenticateTokenItem } from "@grackle-ai/adapter-sdk";
+import { type AuthenticateTokenItem } from "@grackle-ai/adapter-sdk";
 import * as adapterManager from "./adapter-manager.js";
 import { envRegistry, tokenStore } from "@grackle-ai/database";
 import { buildProviderTokenBundle } from "./credential-bundle.js";
@@ -63,8 +63,7 @@ export async function authenticateForRuntime(
   }));
 
   try {
-    const transport = new GrpcHostTransport(conn.client);
-    await transport.authenticate({ provider: runtime, tokens });
+    await conn.transport.authenticate({ provider: runtime, tokens });
   } catch (err) {
     logger.warn({ environmentId, runtime, err }, "Failed to authenticate credentials before spawn");
   }

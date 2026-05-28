@@ -1,7 +1,7 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle, eventTypeToEnum, SESSION_STATUS, LOGS_DIR, END_REASON } from "@grackle-ai/common";
-import { GrpcHostTransport, type PowerLineConnection } from "@grackle-ai/adapter-sdk";
+import { type PowerLineConnection } from "@grackle-ai/adapter-sdk";
 import { join } from "node:path";
 import { sessionStore, taskStore, grackleHome } from "@grackle-ai/database";
 import * as logWriter from "./log-writer.js";
@@ -61,11 +61,10 @@ export async function recoverSuspendedSessions(
     try {
       // Step 1: Drain buffered events from PowerLine and append to JSONL
       const logPath = session.logPath || join(grackleHome, LOGS_DIR, session.id);
-      const transport = new GrpcHostTransport(connection.client);
 
       let drainedCount = 0;
       try {
-        const drainStream = transport.subscribe(session.id);
+        const drainStream = connection.transport.drainBuffered(session.id);
         logWriter.ensureLogInitialized(logPath);
 
         for await (const envelope of drainStream) {

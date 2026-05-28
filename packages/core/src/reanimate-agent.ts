@@ -1,6 +1,6 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { SESSION_STATUS, LOGS_DIR } from "@grackle-ai/common";
-import { GrpcHostTransport, type ServerActionEnvelope } from "@grackle-ai/adapter-sdk";
+import { type ServerActionEnvelope } from "@grackle-ai/adapter-sdk";
 import { join } from "node:path";
 import { sessionStore, taskStore, grackleHome } from "@grackle-ai/database";
 import type { SessionRow } from "@grackle-ai/database";
@@ -78,10 +78,9 @@ export function reanimateAgent(sessionId: string): SessionRow {
 
   // Initiate the stream before mutating the DB. If reanimate() throws synchronously
   // the DB is never touched, so no rollback is needed.
-  const transport = new GrpcHostTransport(conn.client);
   let resumeStream: AsyncIterable<ServerActionEnvelope>;
   try {
-    resumeStream = transport.reanimate({
+    resumeStream = conn.transport.reanimate({
       sessionId: session.id,
       runtimeSessionId: session.runtimeSessionId,
       runtime: session.runtime,

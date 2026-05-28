@@ -294,9 +294,9 @@ export class GrpcHostTransport implements IHostTransport {
     createSession(params: CreateSessionParams): CreateSessionResult;
     dispatchInput(sessionUri: string, text: string): Promise<void>;
     dispose(sessionUri: string, reason?: string): Promise<void>;
+    drainBuffered(sessionUri: string): AsyncIterable<ServerActionEnvelope>;
     listSessions(): Promise<HostSessionInfo[]>;
     reanimate(params: ReanimateParams): AsyncIterable<ServerActionEnvelope>;
-    subscribe(sessionUri: string, fromServerSeq?: string): AsyncIterable<ServerActionEnvelope>;
 }
 
 // @public
@@ -312,9 +312,9 @@ export interface IHostTransport {
     createSession(params: CreateSessionParams): CreateSessionResult;
     dispatchInput(sessionUri: string, text: string): Promise<void>;
     dispose(sessionUri: string, reason?: string): Promise<void>;
+    drainBuffered(sessionUri: string): AsyncIterable<ServerActionEnvelope>;
     listSessions(): Promise<HostSessionInfo[]>;
     reanimate(params: ReanimateParams): AsyncIterable<ServerActionEnvelope>;
-    subscribe(sessionUri: string, fromServerSeq?: string): AsyncIterable<ServerActionEnvelope>;
 }
 
 // @public
@@ -401,6 +401,7 @@ export interface PowerLineConnection {
     environmentId: string;
     // (undocumented)
     port: number;
+    transport: IHostTransport;
 }
 
 // @public

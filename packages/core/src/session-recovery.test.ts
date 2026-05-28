@@ -150,26 +150,32 @@ function makeConnection(
     toolCallId?: string;
   }> = [],
 ): PowerLineConnection {
-  return {
-    client: {
-      drainBufferedEvents: vi.fn(() =>
-        (async function* () {
-          for (const event of drainEvents) {
-            yield {
-              sessionId: "",
+  const transport = {
+    drainBuffered: vi.fn((_uri: string) =>
+      (async function* () {
+        for (const event of drainEvents) {
+          yield {
+            event: {
               type: event.type,
               timestamp: event.timestamp,
               content: event.content,
               raw: "",
               toolCallId: event.toolCallId ?? "",
-            };
-          }
-        })(),
-      ),
-      resume: vi.fn(() => (async function* () {})()),
-    },
+              turnId: "",
+              diagnostic: false,
+            },
+            actions: [],
+          };
+        }
+      })(),
+    ),
+    reanimate: vi.fn(() => (async function* () {})()),
+  };
+  return {
+    client: {} as PowerLineConnection["client"],
     environmentId: "env1",
     port: 7433,
+    transport,
   } as unknown as PowerLineConnection;
 }
 
@@ -303,8 +309,11 @@ describe("session recovery", () => {
 
     // Simulate: another session is spawned on env1 during the async drain window
     const conn = {
-      client: {
-        drainBufferedEvents: vi.fn(() =>
+      client: {} as PowerLineConnection["client"],
+      environmentId: "env1",
+      port: 7433,
+      transport: {
+        drainBuffered: vi.fn(() =>
           (async function* () {
             // Mid-drain, a new session appears on the same environment
             sessionStore.createSession(
@@ -319,8 +328,6 @@ describe("session recovery", () => {
           })(),
         ),
       },
-      environmentId: "env1",
-      port: 7433,
     } as unknown as PowerLineConnection;
 
     await recoverSuspendedSessions("env1", conn);
@@ -359,15 +366,16 @@ describe("session recovery", () => {
     sessionStore.suspendSession("sess1");
 
     const conn = {
-      client: {
-        drainBufferedEvents: vi.fn(() =>
+      client: {} as PowerLineConnection["client"],
+      environmentId: "env1",
+      port: 7433,
+      transport: {
+        drainBuffered: vi.fn(() =>
           (async function* () {
             throw new Error("transport error mid-drain");
           })(),
         ),
       },
-      environmentId: "env1",
-      port: 7433,
     } as unknown as PowerLineConnection;
 
     await recoverSuspendedSessions("env1", conn);

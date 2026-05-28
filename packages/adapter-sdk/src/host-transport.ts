@@ -147,25 +147,26 @@ export interface IHostTransport {
    * Reanimate a suspended session, returning its live event stream.
    *
    * Maps directly to `resume`. For recovery flows that also need the
-   * previously-parked buffered events, call `subscribe` first to drain
-   * them, then call `reanimate` to start the live stream.
+   * previously-parked buffered events, call `drainBuffered` first, then
+   * call `reanimate` to start the live stream.
    */
   reanimate(params: ReanimateParams): AsyncIterable<ServerActionEnvelope>;
 
   /**
-   * Drain previously-parked buffered events for a session (HR8c scope).
+   * Drain previously-parked buffered events for a session.
    *
-   * In HR8c the gRPC transport implements this against `drainBufferedEvents`:
-   * the returned stream contains the buffered events and then terminates. It
-   * does **not** continue into the live event stream — callers compose
-   * `subscribe` + `reanimate` to do recovery (see `session-recovery.ts`).
+   * Returns a finite stream of envelopes for events the host has been
+   * holding since the consumer disconnected; the stream terminates once
+   * the parked queue is exhausted. It does NOT continue into the live
+   * event stream — callers compose `drainBuffered` + `reanimate` to do
+   * recovery (see `session-recovery.ts`).
    *
-   * `fromServerSeq` is accepted for forward compatibility (HR8d will honor
-   * it as a real "subscribe from seq N" semantic) but is currently ignored
-   * by the gRPC transport — `drainBufferedEvents` replays all parked events
-   * regardless.
+   * Note: HR8d's AHP wire will add a true seq-cursor `subscribe` method
+   * for "resume from server seq N" semantics. That's intentionally a
+   * separate method on this interface; this one stays narrowly scoped to
+   * the parked-queue drain that gRPC supports today.
    */
-  subscribe(sessionUri: string, fromServerSeq?: string): AsyncIterable<ServerActionEnvelope>;
+  drainBuffered(sessionUri: string): AsyncIterable<ServerActionEnvelope>;
 
   /**
    * Send input text to a session.

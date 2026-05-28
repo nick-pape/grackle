@@ -9,7 +9,6 @@
  * @module
  */
 
-import { GrpcHostTransport } from "@grackle-ai/adapter-sdk";
 import {
   envRegistry,
   sessionStore,
@@ -200,8 +199,7 @@ export async function startTaskSession(
 
   const useWorktrees = workspace?.useWorktrees ?? false;
 
-  const transport = new GrpcHostTransport(conn.client);
-  const { stream } = transport.createSession({
+  const { stream } = conn.transport.createSession({
     sessionId,
     runtime,
     prompt: taskPrompt,

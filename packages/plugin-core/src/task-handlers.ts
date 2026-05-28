@@ -1,7 +1,6 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
-import { GrpcHostTransport } from "@grackle-ai/adapter-sdk";
 import type { PipeMode } from "@grackle-ai/common";
 import {
   DEFAULT_MCP_PORT,
@@ -513,8 +512,7 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
     loadOrCreateApiKey(grackleHome),
   );
 
-  const transport = new GrpcHostTransport(conn.client);
-  const { stream: spawnStream } = transport.createSession({
+  const { stream: spawnStream } = conn.transport.createSession({
     sessionId,
     runtime,
     prompt: taskPrompt,
@@ -710,8 +708,7 @@ export async function resumeTask(req: grackle.TaskId): Promise<grackle.Session> 
 
   // Initiate the stream before mutating the DB. If reanimate() throws
   // synchronously the DB is never touched, so no rollback is needed.
-  const resumeTransport = new GrpcHostTransport(conn.client);
-  const resumeStream = resumeTransport.reanimate({
+  const resumeStream = conn.transport.reanimate({
     sessionId: latestSession.id,
     runtimeSessionId: latestSession.runtimeSessionId,
     runtime: latestSession.runtime,

@@ -161,7 +161,7 @@ describe("GrpcHostTransport.reanimate", () => {
   });
 });
 
-describe("GrpcHostTransport.subscribe", () => {
+describe("GrpcHostTransport.drainBuffered", () => {
   it("calls client.drainBufferedEvents and folds events into envelopes", async () => {
     const { client, drainBufferedEvents } = makeMockClient();
     const textEvent = create(powerline.AgentEventSchema, {
@@ -173,7 +173,7 @@ describe("GrpcHostTransport.subscribe", () => {
     drainBufferedEvents.mockReturnValue(eventStream([textEvent]));
     const transport = new GrpcHostTransport(client);
 
-    const stream = transport.subscribe("sess-3", "01HX");
+    const stream = transport.drainBuffered("sess-3");
     const envelopes: unknown[] = [];
     for await (const envelope of stream) {
       envelopes.push(envelope);

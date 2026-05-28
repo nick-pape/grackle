@@ -105,6 +105,7 @@ function makeAdapter(connectResult?: PowerLineConnection): EnvironmentAdapter {
     client: {} as PowerLineConnection["client"],
     environmentId: "env1",
     port: 7433,
+    transport: {} as PowerLineConnection["transport"],
   };
   return {
     type: "test",
@@ -264,6 +265,7 @@ describe("auto-reconnect", () => {
               client: {} as PowerLineConnection["client"],
               environmentId: "env1",
               port: 7433,
+              transport: {} as PowerLineConnection["transport"],
             }),
           100,
         ),
@@ -394,6 +396,7 @@ describe("auto-reconnect", () => {
               client: {} as PowerLineConnection["client"],
               environmentId: "env1",
               port: 7433,
+              transport: {} as PowerLineConnection["transport"],
             }),
           100,
         ),
@@ -502,6 +505,7 @@ describe("auto-reconnect", () => {
       client: {} as PowerLineConnection["client"],
       environmentId: "env1",
       port: 7433,
+      transport: {} as PowerLineConnection["transport"],
     };
     (adapter.connect as ReturnType<typeof vi.fn>).mockResolvedValue(conn);
 
