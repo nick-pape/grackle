@@ -633,6 +633,59 @@ describe("branch coverage", () => {
     expect(ready.invocationMessage).toBe("running shell `ls`");
   });
 
+  it("tool_use accepts the legacy `tool` field as a toolName alias (HR8d)", () => {
+    // Stub fixtures and Claude Code's tool_use events both serialize as
+    // `{tool, args}` rather than `{tool_name}`. Without the `tool` alias the
+    // forward mapper falls through to "unknown_tool" and the consumer sees
+    // a degraded tool card.
+    const context = makeContext({ turnId: "t1", partCounter: 0 });
+    const event = makeEvent("tool_use", { content: JSON.stringify({ tool: "echo", args: {} }) });
+    const result = mapAgentEvent(event, 0, context);
+
+    const start = result.actions[0] as { toolName: string };
+    expect(start.toolName).toBe("echo");
+  });
+
+  it("tool_use packs `args` into SessionToolCallReady.toolInput (HR8d)", () => {
+    const context = makeContext({ turnId: "t1", partCounter: 0 });
+    const event = makeEvent("tool_use", {
+      content: JSON.stringify({ tool: "echo", args: { message: "hello" } }),
+    });
+    const result = mapAgentEvent(event, 0, context);
+
+    const ready = result.actions[1] as { toolInput?: string };
+    expect(ready.toolInput).toBeDefined();
+    expect(JSON.parse(ready.toolInput!)).toEqual({ message: "hello" });
+  });
+
+  it("tool_use packs `input` and `arguments` as toolInput aliases (HR8d)", () => {
+    // Claude Code emits `input` on some paths; Copilot emits `arguments`.
+    const ctx1 = makeContext({ turnId: "t1", partCounter: 0 });
+    const ev1 = makeEvent("tool_use", {
+      content: JSON.stringify({ tool: "bash", input: { command: "ls" } }),
+    });
+    const r1 = mapAgentEvent(ev1, 0, ctx1);
+    const ready1 = r1.actions[1] as { toolInput?: string };
+    expect(JSON.parse(ready1.toolInput!)).toEqual({ command: "ls" });
+
+    const ctx2 = makeContext({ turnId: "t1", partCounter: 0 });
+    const ev2 = makeEvent("tool_use", {
+      content: JSON.stringify({ tool: "search", arguments: { query: "foo" } }),
+    });
+    const r2 = mapAgentEvent(ev2, 0, ctx2);
+    const ready2 = r2.actions[1] as { toolInput?: string };
+    expect(JSON.parse(ready2.toolInput!)).toEqual({ query: "foo" });
+  });
+
+  it("tool_use omits toolInput when no args are present (HR8d)", () => {
+    const context = makeContext({ turnId: "t1", partCounter: 0 });
+    const event = makeEvent("tool_use", { content: JSON.stringify({ tool: "ping" }) });
+    const result = mapAgentEvent(event, 0, context);
+
+    const ready = result.actions[1] as { toolInput?: string };
+    expect(ready.toolInput).toBeUndefined();
+  });
+
   it("tool_result with is_ok:false emits failure result with error", () => {
     const context = makeContext({ turnId: "t1", openToolCalls: ["tc-1"] });
     const event = makeEvent("tool_result", {

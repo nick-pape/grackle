@@ -157,6 +157,84 @@ describe("reverseMapAction", () => {
       expect(parsed.tool_name).toBe("unknown_tool");
     });
 
+    it("Ready rehydrates `args` from toolInput onto the coalesced tool_use (HR8d)", () => {
+      const ctx = newReverseMapperContext();
+      reverseMapAction(
+        envelope({
+          type: ActionType.SessionToolCallStart,
+          turnId: "turn-1",
+          toolCallId: "tc-1",
+          toolName: "echo",
+          displayName: "echo",
+        }),
+        ctx,
+      );
+      const res = reverseMapAction(
+        envelope({
+          type: ActionType.SessionToolCallReady,
+          turnId: "turn-1",
+          toolCallId: "tc-1",
+          invocationMessage: "Running echo",
+          confirmed: ToolCallConfirmationReason.NotNeeded,
+          toolInput: JSON.stringify({ message: "hello world" }),
+        }),
+        ctx,
+      );
+      const parsed = JSON.parse(res.events[0]?.content ?? "") as {
+        tool: string;
+        tool_name: string;
+        args: { message: string };
+      };
+      // Both `tool` (legacy / web pairToolEvents) and `tool_name` (mapper docs)
+      // are emitted so consumers reading either key work.
+      expect(parsed.tool).toBe("echo");
+      expect(parsed.tool_name).toBe("echo");
+      expect(parsed.args).toEqual({ message: "hello world" });
+    });
+
+    it("Ready with unparseable toolInput carries it as a string fallback (HR8d)", () => {
+      const ctx = newReverseMapperContext();
+      reverseMapAction(
+        envelope({
+          type: ActionType.SessionToolCallStart,
+          turnId: "turn-1",
+          toolCallId: "tc-2",
+          toolName: "raw",
+          displayName: "raw",
+        }),
+        ctx,
+      );
+      const res = reverseMapAction(
+        envelope({
+          type: ActionType.SessionToolCallReady,
+          turnId: "turn-1",
+          toolCallId: "tc-2",
+          invocationMessage: "Running raw",
+          confirmed: ToolCallConfirmationReason.NotNeeded,
+          toolInput: "not-json",
+        }),
+        ctx,
+      );
+      const parsed = JSON.parse(res.events[0]?.content ?? "") as { args: unknown };
+      expect(parsed.args).toBe("not-json");
+    });
+
+    it("Orphan Ready also rehydrates args from toolInput (HR8d)", () => {
+      const res = reverseMapAction(
+        envelope({
+          type: ActionType.SessionToolCallReady,
+          turnId: "turn-1",
+          toolCallId: "tc-orphan",
+          invocationMessage: "Running mystery",
+          confirmed: ToolCallConfirmationReason.NotNeeded,
+          toolInput: JSON.stringify({ x: 1 }),
+        }),
+        newReverseMapperContext(),
+      );
+      const parsed = JSON.parse(res.events[0]?.content ?? "") as { args: { x: number } };
+      expect(parsed.args).toEqual({ x: 1 });
+    });
+
     it("SessionToolCallComplete (success) → tool_result with is_ok=true", () => {
       const res = reverseMapAction(
         envelope({
