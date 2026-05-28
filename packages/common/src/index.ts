@@ -16,3 +16,11 @@ export type {
 } from "./runtime-catalog.js";
 export { SequencedLog } from "./sequenced-log.js";
 export type { Sequenced, LogSink, SequencedLogOptions } from "./sequenced-log.js";
+export { mapAgentEvent } from "./ahp-mapper.js";
+export type {
+  AgentEventFields,
+  MapperContext,
+  MapResult,
+  MappingNote,
+  Disposition,
+} from "./ahp-mapper.js";

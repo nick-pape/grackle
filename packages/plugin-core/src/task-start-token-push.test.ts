@@ -197,18 +197,27 @@ function applySchema(): void {
   `);
 }
 
-/** Build a mock PowerLineConnection with a spawn method and pushTokens. */
+/** Build a mock PowerLineConnection that exposes both the legacy client and the new transport. */
 function makeMockConnection() {
-  const spawnStream = (async function* () {})();
+  const envelopeStream = (async function* () {})();
   return {
     client: {
-      spawn: vi.fn(() => spawnStream),
+      spawn: vi.fn(() => envelopeStream),
       authenticate: vi.fn().mockResolvedValue({}),
       pushTokens: vi.fn().mockResolvedValue({}),
       sendInput: vi.fn().mockResolvedValue({}),
     },
     environmentId: "env-1",
     port: 7433,
+    transport: {
+      createSession: vi.fn(() => ({ sessionUri: "sess-1", stream: envelopeStream })),
+      reanimate: vi.fn(() => envelopeStream),
+      drainBuffered: vi.fn(() => envelopeStream),
+      dispatchInput: vi.fn().mockResolvedValue(undefined),
+      authenticate: vi.fn().mockResolvedValue(undefined),
+      dispose: vi.fn().mockResolvedValue(undefined),
+      listSessions: vi.fn().mockResolvedValue([]),
+    },
   };
 }
 
@@ -273,9 +282,9 @@ describe("task-start token push", () => {
       // Cutover proof: the deprecated proactive push is never called.
       expect(mockConn.client.pushTokens).not.toHaveBeenCalled();
 
-      // Authenticate happens before spawn.
+      // Authenticate happens before spawn (via transport.createSession).
       const authOrder = authSpy.mock.invocationCallOrder[0];
-      const spawnOrder = mockConn.client.spawn.mock.invocationCallOrder[0];
+      const spawnOrder = mockConn.transport.createSession.mock.invocationCallOrder[0];
       expect(authOrder).toBeLessThan(spawnOrder);
     });
   });

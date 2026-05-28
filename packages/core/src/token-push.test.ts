@@ -35,14 +35,16 @@ function tok(name: string, type: string, envVar: string): TokenItemLike {
 }
 
 function mockConn(): {
-  client: { authenticate: ReturnType<typeof vi.fn> };
+  client: object;
   environmentId: string;
   port: number;
+  transport: { authenticate: ReturnType<typeof vi.fn> };
 } {
   return {
-    client: { authenticate: vi.fn().mockResolvedValue({}) },
+    client: {},
     environmentId: "env-1",
     port: 7433,
+    transport: { authenticate: vi.fn().mockResolvedValue(undefined) },
   };
 }
 
@@ -70,8 +72,8 @@ describe("authenticateForRuntime", () => {
 
     await authenticateForRuntime("env-1", "claude-code");
 
-    expect(conn.client.authenticate).toHaveBeenCalledTimes(1);
-    const arg = conn.client.authenticate.mock.calls[0][0] as {
+    expect(conn.transport.authenticate).toHaveBeenCalledTimes(1);
+    const arg = conn.transport.authenticate.mock.calls[0][0] as {
       provider: string;
       tokens: TokenItemLike[];
     };
@@ -89,7 +91,7 @@ describe("authenticateForRuntime", () => {
 
     await authenticateForRuntime("env-1", "claude-code", { excludeFileTokens: true });
 
-    const arg = conn.client.authenticate.mock.calls[0][0] as { tokens: TokenItemLike[] };
+    const arg = conn.transport.authenticate.mock.calls[0][0] as { tokens: TokenItemLike[] };
     expect(arg.tokens.map((t) => t.name)).toEqual(["e"]);
   });
 
@@ -97,12 +99,12 @@ describe("authenticateForRuntime", () => {
     const conn = mockConn();
     vi.mocked(adapterManager.getConnection).mockReturnValue(conn as never);
     await authenticateForRuntime("env-1", "claude-code");
-    expect(conn.client.authenticate).not.toHaveBeenCalled();
+    expect(conn.transport.authenticate).not.toHaveBeenCalled();
   });
 
   it("swallows delivery errors (best-effort, never throws)", async () => {
     const conn = mockConn();
-    conn.client.authenticate.mockRejectedValue(new Error("boom"));
+    conn.transport.authenticate.mockRejectedValue(new Error("boom"));
     vi.mocked(adapterManager.getConnection).mockReturnValue(conn as never);
     vi.mocked(tokenStore.getBundle).mockReturnValue({
       tokens: [tok("e", "env_var", "E")],

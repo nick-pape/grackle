@@ -20,6 +20,7 @@ import {
   exec as defaultExec,
   sleep as defaultSleep,
   defaultLogger,
+  GrpcHostTransport,
   type RemoteExecutor,
 } from "@grackle-ai/adapter-sdk";
 import { existsSync } from "node:fs";
@@ -726,7 +727,7 @@ export class DockerAdapter implements EnvironmentAdapter {
     for (let attempt = 0; attempt < CONNECT_MAX_RETRIES; attempt++) {
       try {
         await client.ping({});
-        return { client, environmentId, port };
+        return { client, environmentId, port, transport: new GrpcHostTransport(client) };
       } catch (err) {
         lastErr = err;
         await this.sleepFn(CONNECT_RETRY_DELAY_MS);

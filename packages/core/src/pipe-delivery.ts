@@ -9,8 +9,6 @@
  *   by the WaitForPipe consumer after it reads the message.
  */
 
-import { create } from "@bufbuild/protobuf";
-import { powerline } from "@grackle-ai/common";
 import { sessionStore } from "@grackle-ai/database";
 import * as adapterManager from "./adapter-manager.js";
 import * as streamRegistry from "./stream-registry.js";
@@ -63,16 +61,13 @@ export function ensureAsyncDeliveryListener(sessionId: string): void {
     const stream = streamRegistry.getStream(sub.streamId);
     const isStdin = stream?.name.startsWith("stdin:");
     const text = isStdin ? msg.content : `[fd:${sub.fd}] ${msg.content}`;
-    return conn.client
-      .sendInput(create(powerline.InputMessageSchema, { sessionId, text }))
-      .then(() => {})
-      .catch((err: unknown) => {
-        logger.warn(
-          { err, sessionId },
-          "Async pipe delivery: sendInput failed — message left undelivered",
-        );
-        throw err;
-      });
+    return conn.transport.dispatchInput(sessionId, text).catch((err: unknown) => {
+      logger.warn(
+        { err, sessionId },
+        "Async pipe delivery: dispatchInput failed — message left undelivered",
+      );
+      throw err;
+    });
   });
 
   asyncListenerCleanups.set(sessionId, unsubscribe);

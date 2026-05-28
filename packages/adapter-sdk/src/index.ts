@@ -68,3 +68,20 @@ export {
   SSH_CONNECTIVITY_TIMEOUT_MS,
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
 } from "./utils.js";
+
+// ─── Host Transport (AHP HR8c) ──────────────────────────────
+// Re-export AgentEventFields from common so consumers of `ServerActionEnvelope`
+// (which references it) don't have to import @grackle-ai/common just for the
+// type and api-extractor doesn't flag `ae-forgotten-export`.
+export type { AgentEventFields } from "@grackle-ai/common";
+export type {
+  IHostTransport,
+  ServerActionEnvelope,
+  CreateSessionParams,
+  CreateSessionResult,
+  ReanimateParams,
+  AuthenticateParams,
+  AuthenticateTokenItem,
+  HostSessionInfo,
+} from "./host-transport.js";
+export { GrpcHostTransport } from "./grpc-host-transport.js";

@@ -9,9 +9,8 @@
  * @module ahp-session-state
  */
 
-import { create } from "@bufbuild/protobuf";
 import { logger } from "./logger.js";
-import { powerline } from "@grackle-ai/common";
+import { mapAgentEvent, type AgentEventFields, type MapperContext } from "@grackle-ai/common";
 import {
   sessionReducer,
   SessionLifecycle,
@@ -23,7 +22,6 @@ import {
 // This import is types-only and scoped to this package's internal build — consumers of
 // @grackle-ai/core never see it since .d.ts resolution is confined to dist/.
 import type { SessionAction } from "@grackle-ai/ahp/src/vendor/ahp/action-origin.generated.js";
-import { mapAgentEvent, type MapperContext } from "./ahp-mapper.js";
 import {
   persistSnapshot as dbPersistSnapshot,
   querySnapshot as dbQuerySnapshot,
@@ -185,7 +183,7 @@ export class SessionStateManager {
    * @returns The last action's ULID included in the snapshot, or `undefined`
    *   if no actions were produced or the threshold was not reached.
    */
-  public processEvent(event: powerline.AgentEvent, serverSeq: string): string | undefined {
+  public processEvent(event: AgentEventFields, serverSeq: string): string | undefined {
     // Dedup: skip the first runtime turn_started if we injected the initial prompt.
     // The mapper would otherwise produce a duplicate SessionTurnStarted action.
     if (this.injectedInitialTurn && event.type === "turn_started") {
@@ -553,17 +551,14 @@ export class SessionStateManager {
     return state;
   }
 
-  private static reconstructAgentEvent(row: SessionActionRow): powerline.AgentEvent {
-    return create(powerline.AgentEventSchema, {
-      sessionId: row.sessionId,
+  private static reconstructAgentEvent(row: SessionActionRow): AgentEventFields {
+    return {
       type: row.type,
-      timestamp: row.timestamp,
       content: row.content,
-      raw: row.raw,
       toolCallId: row.toolCallId,
       turnId: row.turnId,
       diagnostic: row.diagnostic,
-    });
+    };
   }
 
   private serializeSnapshot(): string {

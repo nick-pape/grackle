@@ -1,13 +1,14 @@
 import { create } from "@bufbuild/protobuf";
 import {
   grackle,
-  powerline,
   eventTypeToEnum,
   SESSION_STATUS,
   TERMINAL_SESSION_STATUSES,
   END_REASON,
+  type AgentEventFields,
 } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
+import type { ServerActionEnvelope } from "@grackle-ai/adapter-sdk";
 import { sessionStore, taskStore } from "@grackle-ai/database";
 import { recordSessionAction } from "./session-action-recorder.js";
 import * as streamHub from "./stream-hub.js";
@@ -26,27 +27,18 @@ import type { ProcessorContext } from "./processor-registry.js";
 import { SessionStateManager } from "./ahp-session-state.js";
 
 /**
- * Construct a minimal AgentEvent for injected events (system context, initial prompt).
- * Uses the protobuf `create()` helper so the result satisfies the `AgentEvent`
- * type contract without unsafe casts.
+ * Construct a minimal AgentEventFields for injected events (system context,
+ * initial prompt). Returns a plain object structurally compatible with the
+ * mapper's input contract.
  */
-function makeAgentEvent(
-  sessionId: string,
-  type: string,
-  content: string,
-  raw?: string,
-  turnId?: string,
-): powerline.AgentEvent {
-  return create(powerline.AgentEventSchema, {
-    sessionId,
+function makeAgentEvent(type: string, content: string, turnId?: string): AgentEventFields {
+  return {
     type,
-    timestamp: new Date().toISOString(),
     content,
-    raw: raw ?? "",
     toolCallId: "",
     diagnostic: false,
     turnId: turnId ?? "",
-  });
+  };
 }
 
 /** Options for processing an agent event stream. */
@@ -141,7 +133,7 @@ export function publishWidgetEvent(sessionId: string, payload: WidgetEventPayloa
  * events are replayed from the session log.
  */
 export function processEventStream(
-  events: AsyncIterable<powerline.AgentEvent>,
+  envelopes: AsyncIterable<ServerActionEnvelope>,
   options: EventStreamOptions,
 ): void {
   const { sessionId, logPath } = options;
@@ -185,10 +177,7 @@ export function processEventStream(
           lastServerSeq = sysSeq;
           // System events are dropped by the mapper when there's no active turn (no turn_started yet).
           // The mapper only processes system events within an active turn context.
-          stateManager.processEvent(
-            makeAgentEvent(sessionId, "system", options.systemContext),
-            sysSeq,
-          );
+          stateManager.processEvent(makeAgentEvent("system", options.systemContext), sysSeq);
         }
       }
       if (options.prompt && options.taskId) {
@@ -204,11 +193,7 @@ export function processEventStream(
         if (promptSeq) {
           lastServerSeq = promptSeq;
           stateManager.processEvent(
-            makeAgentEvent(
-              sessionId,
-              "turn_started",
-              JSON.stringify({ user_message: options.prompt }),
-            ),
+            makeAgentEvent("turn_started", JSON.stringify({ user_message: options.prompt })),
             promptSeq,
           );
           // Mark so the runtime's first turn_started is deduplicated.
@@ -216,12 +201,24 @@ export function processEventStream(
         }
       }
 
-      for await (const event of events) {
+      for await (const envelope of envelopes) {
+        const event = envelope.event;
+        // Normalize optional AgentEventFields to proto-default semantics so
+        // BOTH downstream string operations and the grackle.SessionEvent
+        // we persist/broadcast see non-undefined values consistently — proto
+        // string fields default to "" and bool to false anyway, so this just
+        // makes the intent explicit at the source.
+        const eventContent: string = event.content ?? "";
+        const eventTimestamp: string = event.timestamp ?? "";
+        const eventRaw: string = event.raw ?? "";
+        const eventToolCallId: string = event.toolCallId ?? "";
+        const eventTurnId: string = event.turnId ?? "";
+        const eventDiagnostic: boolean = event.diagnostic ?? false;
         // runtime_session_id is an internal control event: persist it then skip
         // logging/publishing — it has no proto enum value and is not client-visible.
         if (event.type === "runtime_session_id") {
-          if (event.content) {
-            sessionStore.updateRuntimeSessionId(sessionId, event.content);
+          if (eventContent) {
+            sessionStore.updateRuntimeSessionId(sessionId, eventContent);
           }
           continue;
         }
@@ -229,12 +226,12 @@ export function processEventStream(
         const sessionEvent = create(grackle.SessionEventSchema, {
           sessionId,
           type: eventTypeToEnum(event.type),
-          timestamp: event.timestamp,
-          content: event.content,
-          raw: event.raw,
-          toolCallId: event.toolCallId,
-          diagnostic: event.diagnostic,
-          turnId: event.turnId,
+          timestamp: eventTimestamp,
+          content: eventContent,
+          raw: eventRaw,
+          toolCallId: eventToolCallId,
+          diagnostic: eventDiagnostic,
+          turnId: eventTurnId,
         });
         await logWriter.writeEvent(logPath, sessionEvent);
         streamHub.publish(sessionEvent);
@@ -256,7 +253,7 @@ export function processEventStream(
         // Intercept usage events and accumulate token counts on the session record
         if (event.type === "usage") {
           try {
-            const data = JSON.parse(event.content) as {
+            const data = JSON.parse(eventContent || "{}") as {
               input_tokens?: number;
               output_tokens?: number;
               cost_millicents?: number;
@@ -333,11 +330,11 @@ export function processEventStream(
 
         if (event.type === "status") {
           // Map runtime status strings to our session status model
-          if (event.content === "waiting_input") {
+          if (eventContent === "waiting_input") {
             sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.IDLE);
-          } else if (event.content === "running") {
+          } else if (eventContent === "running") {
             sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.RUNNING);
-          } else if (event.content === "completed") {
+          } else if (eventContent === "completed") {
             // Derive end reason: budget SIGTERM → BUDGET_EXCEEDED, user SIGTERM → TERMINATED, normal → COMPLETED
             const session = sessionStore.getSession(sessionId);
             const endReason = ctx.budgetSigtermSent
@@ -352,7 +349,7 @@ export function processEventStream(
               undefined,
               endReason,
             );
-          } else if (event.content === "killed") {
+          } else if (eventContent === "killed") {
             const killedEndReason = ctx.budgetSigtermSent
               ? END_REASON.BUDGET_EXCEEDED
               : END_REASON.KILLED;
@@ -363,7 +360,7 @@ export function processEventStream(
               undefined,
               killedEndReason,
             );
-          } else if (event.content === "failed") {
+          } else if (eventContent === "failed") {
             sessionStore.updateSession(
               sessionId,
               SESSION_STATUS.STOPPED,
@@ -372,7 +369,7 @@ export function processEventStream(
               END_REASON.INTERRUPTED,
             );
             cleanupLifecycleStream(sessionId);
-          } else if (event.content === "terminated") {
+          } else if (eventContent === "terminated") {
             const terminatedEndReason = ctx.budgetSigtermSent
               ? END_REASON.BUDGET_EXCEEDED
               : END_REASON.TERMINATED;
@@ -390,21 +387,21 @@ export function processEventStream(
           // unblock when a child goes idle without calling task_complete (#824).
           // publishChildCompletion internally skips waiting_input for async pipes.
           if (
-            ["completed", "killed", "failed", "terminated", "waiting_input"].includes(event.content)
+            ["completed", "killed", "failed", "terminated", "waiting_input"].includes(eventContent)
           ) {
-            await publishChildCompletion(sessionId, event.content);
+            await publishChildCompletion(sessionId, eventContent);
           }
 
           // On abnormal exit (killed/failed), write a minimal server-enriched workpad
           // if no workpad exists yet on the task.
-          if (ctx.taskId && ["killed", "failed"].includes(event.content)) {
+          if (ctx.taskId && ["killed", "failed"].includes(eventContent)) {
             try {
               const task = taskStore.getTask(ctx.taskId);
               if (task && !task.workpad) {
                 const minimalWorkpad = JSON.stringify({
-                  status: event.content,
-                  summary: `Session ended abnormally (${event.content}). No agent-reported workpad.`,
-                  extra: { endReason: event.content, sessionId },
+                  status: eventContent,
+                  summary: `Session ended abnormally (${eventContent}). No agent-reported workpad.`,
+                  extra: { endReason: eventContent, sessionId },
                 });
                 taskStore.setWorkpad(ctx.taskId, minimalWorkpad);
               }
@@ -415,10 +412,7 @@ export function processEventStream(
 
           // AHP HR1b: flush snapshot on terminal status for clean state capture
           // Guard: serverSeq is undefined when recordSessionAction() silently fails.
-          if (
-            ["completed", "killed", "failed", "terminated"].includes(event.content) &&
-            serverSeq
-          ) {
+          if (["completed", "killed", "failed", "terminated"].includes(eventContent) && serverSeq) {
             try {
               const result = stateManager.snapshot(serverSeq);
               if (result.persisted) {
@@ -435,7 +429,7 @@ export function processEventStream(
           if (
             ctx.taskId &&
             ["completed", "killed", "failed", "terminated", "running", "waiting_input"].includes(
-              event.content,
+              eventContent,
             )
           ) {
             emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
@@ -481,10 +475,7 @@ export function processEventStream(
         const suspSeq = recordSessionAction(suspendedEvent);
         if (suspSeq) {
           lastServerSeq = suspSeq;
-          stateManager.processEvent(
-            makeAgentEvent(sessionId, "status", SESSION_STATUS.SUSPENDED),
-            suspSeq,
-          );
+          stateManager.processEvent(makeAgentEvent("status", SESSION_STATUS.SUSPENDED), suspSeq);
         }
         if (ctx.taskId) {
           emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });

@@ -3,6 +3,7 @@ import type { powerline } from "@grackle-ai/common";
 import type { AdapterLogger } from "./logger.js";
 import { defaultLogger } from "./logger.js";
 import { FatalAdapterError } from "./fatal-error.js";
+import type { IHostTransport } from "./host-transport.js";
 
 /** Type-safe ConnectRPC client for the PowerLine gRPC service. */
 export type PowerLineClient = Client<typeof powerline.GracklePowerLine>;
@@ -12,6 +13,13 @@ export interface PowerLineConnection {
   client: PowerLineClient;
   environmentId: string;
   port: number;
+  /**
+   * Transport-agnostic host interface (AHP HR8c). One instance per connection,
+   * constructed when the connection is established. Consumers use this
+   * instead of touching `client` directly so the HR8d wire-flip is a
+   * swap of one `IHostTransport` impl for another.
+   */
+  transport: IHostTransport;
 }
 
 /** Progress event emitted during environment provisioning. */

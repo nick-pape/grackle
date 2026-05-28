@@ -9,6 +9,7 @@ import type { GenFile } from '@bufbuild/protobuf/codegenv2';
 import type { GenMessage } from '@bufbuild/protobuf/codegenv2';
 import type { GenService } from '@bufbuild/protobuf/codegenv2';
 import type { Message } from '@bufbuild/protobuf';
+import { StateAction } from '@grackle-ai/ahp';
 import { z } from 'zod';
 
 // @public
@@ -58,6 +59,17 @@ type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
     diagnostic: boolean;
     turnId: string;
 };
+
+// @public
+export interface AgentEventFields {
+    content?: string;
+    diagnostic?: boolean;
+    raw?: string;
+    timestamp?: string;
+    toolCallId?: string;
+    turnId?: string;
+    type: string;
+}
 
 // @public
 const AgentEventSchema: GenMessage<AgentEvent>;
@@ -149,8 +161,8 @@ export const BUILTIN_COMPONENT_SCHEMAS: {
         variant: z.ZodOptional<z.ZodEnum<{
             success: "success";
             error: "error";
-            warning: "warning";
             info: "info";
+            warning: "warning";
         }>>;
         dismissible: z.ZodOptional<z.ZodBoolean>;
     }, z.core.$strip>;
@@ -259,8 +271,8 @@ export const calloutPropsSchema: z.ZodObject<{
     variant: z.ZodOptional<z.ZodEnum<{
         success: "success";
         error: "error";
-        warning: "warning";
         info: "info";
+        warning: "warning";
     }>>;
     dismissible: z.ZodOptional<z.ZodBoolean>;
 }, z.core.$strip>;
@@ -272,8 +284,8 @@ export type CalloutVariant = z.infer<typeof calloutVariantSchema>;
 export const calloutVariantSchema: z.ZodEnum<{
     success: "success";
     error: "error";
-    warning: "warning";
     info: "info";
+    warning: "warning";
 }>;
 
 // @public
@@ -545,6 +557,9 @@ export const DEFAULT_WEB_PORT: number;
 
 // @public
 export const DEFAULT_WORKSPACE_ID: string;
+
+// @public
+export type Disposition = "mapped" | "carried" | "dropped";
 
 // @public
 type DockerContainerInfo = Message<"grackle.DockerContainerInfo"> & {
@@ -1981,6 +1996,35 @@ export const LOGS_DIR: string;
 // @public
 export interface LogSink<T> {
     append(channelId: string, entry: Sequenced<T>): void;
+}
+
+// @public
+export function mapAgentEvent(event: AgentEventFields, index: number, context: MapperContext): MapResult;
+
+// @public
+export interface MapperContext {
+    eventIndex: number;
+    metaAccumulator: {
+        costMillicents?: number;
+        runtimeSessionId?: string;
+    };
+    openToolCalls: string[];
+    partCounter: number;
+    turnId?: string;
+}
+
+// @public
+export interface MappingNote {
+    detail: string;
+    disposition: Disposition;
+    index: number;
+    type: string;
+}
+
+// @public
+export interface MapResult {
+    actions: StateAction[];
+    note?: MappingNote;
 }
 
 // @public

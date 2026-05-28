@@ -28,6 +28,7 @@ function createMockConnection(pingFn?: () => Promise<unknown>): PowerLineConnect
     client: {
       ping: pingFn ? vi.fn().mockImplementation(pingFn) : vi.fn().mockResolvedValue({}),
     } as unknown as PowerLineConnection["client"],
+    transport: {} as PowerLineConnection["transport"],
   };
 }
 

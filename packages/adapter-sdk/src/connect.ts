@@ -3,6 +3,7 @@ import { createGrpcTransport } from "@connectrpc/connect-node";
 import { powerline } from "@grackle-ai/common";
 import { createConnection } from "node:net";
 import type { PowerLineClient, PowerLineConnection } from "./adapter.js";
+import { GrpcHostTransport } from "./grpc-host-transport.js";
 import { closeTunnel } from "./tunnel-registry.js";
 import { sleep } from "./utils.js";
 import type { AdapterLogger } from "./logger.js";
@@ -76,7 +77,12 @@ export async function connectThroughTunnel(
   for (let attempt = 0; attempt < CONNECT_MAX_RETRIES; attempt++) {
     try {
       await client.ping({});
-      return { client, environmentId, port: localPort };
+      return {
+        client,
+        environmentId,
+        port: localPort,
+        transport: new GrpcHostTransport(client),
+      };
     } catch (err) {
       lastError = err;
       await sleep(CONNECT_RETRY_DELAY_MS);

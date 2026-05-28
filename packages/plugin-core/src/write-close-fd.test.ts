@@ -41,11 +41,12 @@ describe("writeToFd + closeFd — async delivery integration", () => {
     pipeDelivery._resetForTesting();
     vi.clearAllMocks();
 
-    mockSendInput = vi.fn().mockResolvedValue({});
+    mockSendInput = vi.fn().mockResolvedValue(undefined);
 
-    // Inject a controllable sendInput so the real pipe-delivery async listener can fire.
+    // Inject a controllable dispatchInput so the real pipe-delivery async listener can fire.
     vi.spyOn(adapterManager, "getConnection").mockReturnValue({
-      client: { sendInput: mockSendInput },
+      client: {},
+      transport: { dispatchInput: mockSendInput },
     } as unknown as ReturnType<typeof adapterManager.getConnection>);
 
     // Make sessionStore.getSession return a valid session so the listener doesn't throw.
@@ -83,8 +84,8 @@ describe("writeToFd + closeFd — async delivery integration", () => {
 
       expect(result).toBeDefined();
       expect(mockSendInput).toHaveBeenCalledOnce();
-      // sendInput is called for the parent (the async reader), not the sender
-      expect(mockSendInput.mock.calls[0][0].sessionId).toBe("parent");
+      // dispatchInput is called for the parent (the async reader), not the sender
+      expect(mockSendInput.mock.calls[0][0]).toBe("parent");
     });
 
     it("throws ConnectError(FailedPrecondition) when sendInput rejects", async () => {
