@@ -472,11 +472,7 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
       "completed",
       "idle",
     ]);
-    if (
-      event.type === "status" &&
-      event.content !== undefined &&
-      STATUS_RESCUE_CONTENTS.has(event.content)
-    ) {
+    if (event.type === "status" && STATUS_RESCUE_CONTENTS.has(event.content)) {
       forwarder.serverSeq += 1;
       const statusAction: StateAction = {
         type: ActionType.SessionMetaChanged,
