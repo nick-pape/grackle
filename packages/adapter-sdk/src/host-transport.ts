@@ -7,13 +7,13 @@
  * changing this interface.
  *
  * Each consumer call-site goes through one of these methods:
- * - `createSession` ← `PowerLineClient.spawn`
- * - `reanimate`     ← `PowerLineClient.resume`
- * - `subscribe`     ← `PowerLineClient.drainBufferedEvents` + `resume` (composed)
- * - `dispatchInput` ← `PowerLineClient.sendInput`
- * - `authenticate`  ← `PowerLineClient.authenticate`
- * - `dispose`       ← `PowerLineClient.kill`
- * - `listSessions`  ← `PowerLineClient.listSessions`
+ * - `createSession`  ← `PowerLineClient.spawn`
+ * - `reanimate`      ← `PowerLineClient.resume`
+ * - `drainBuffered`  ← `PowerLineClient.drainBufferedEvents`
+ * - `dispatchInput`  ← `PowerLineClient.sendInput`
+ * - `authenticate`   ← `PowerLineClient.authenticate`
+ * - `dispose`        ← `PowerLineClient.kill`
+ * - `listSessions`   ← `PowerLineClient.listSessions`
  *
  * @module host-transport
  */

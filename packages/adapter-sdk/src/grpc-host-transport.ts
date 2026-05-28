@@ -177,8 +177,8 @@ export class GrpcHostTransport implements IHostTransport {
       }
     } finally {
       // Context lifetime tracks the stream; recover paths create a fresh one
-      // on the next subscribe/reanimate. Clearing here prevents memory growth
-      // for sessions that close cleanly.
+      // on the next drainBuffered/reanimate. Clearing here prevents memory
+      // growth for sessions that close cleanly.
       this.mapperContexts.delete(sessionUri);
     }
   }

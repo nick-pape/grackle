@@ -75,14 +75,17 @@ export async function recoverSuspendedSessions(
           if (eventType === grackle.EventType.UNSPECIFIED) {
             continue;
           }
+          // Normalize AgentEventFields to proto-default semantics ("" for
+          // string fields) so the persisted SessionEvent / JSONL row never
+          // has missing keys regardless of what the transport emits.
           const sessionEvent = create(grackle.SessionEventSchema, {
             sessionId: session.id,
             type: eventType,
-            timestamp: event.timestamp,
-            content: event.content,
-            raw: event.raw,
-            toolCallId: event.toolCallId,
-            turnId: event.turnId,
+            timestamp: event.timestamp ?? "",
+            content: event.content ?? "",
+            raw: event.raw ?? "",
+            toolCallId: event.toolCallId ?? "",
+            turnId: event.turnId ?? "",
           });
           await logWriter.writeEvent(logPath, sessionEvent);
           drainedCount++;
