@@ -32,11 +32,7 @@ import {
 const SUPPORTED_PROTOCOL_VERSIONS: readonly string[] = ["0.1.0"];
 
 /** Connection-lifecycle state for an {@link AhpClientSocket}. */
-export type AhpConnectionState =
-  | "connecting"
-  | "open"
-  | "reconnecting"
-  | "closed";
+export type AhpConnectionState = "connecting" | "open" | "reconnecting" | "closed";
 
 /** Construction options for {@link AhpClientSocket}. */
 export interface AhpClientSocketOptions {
@@ -120,8 +116,7 @@ export class AhpClientSocket {
       throw new TransportError("connection-lost", "already open");
     }
     this.userClosed = false;
-    this.currentClientId =
-      this.currentClientId ?? (await this.loadOrMintClientId());
+    this.currentClientId = this.currentClientId ?? (await this.loadOrMintClientId());
     return this.connectOnce();
   }
 

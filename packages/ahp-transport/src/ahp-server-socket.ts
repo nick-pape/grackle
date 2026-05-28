@@ -53,9 +53,7 @@ export interface AhpServerSocketOptions {
    * May return a Promise. Throw or reject to fail the handshake — the session
    * will receive a JSON-RPC error response and close.
    */
-  readonly onInitialize: (
-    params: InitializeParams,
-  ) => Promise<InitializeResult> | InitializeResult;
+  readonly onInitialize: (params: InitializeParams) => Promise<InitializeResult> | InitializeResult;
   /** Handles requests other than `initialize`. */
   readonly onRequest?: (req: AhpRequest, conn: AhpServerConnection) => Promise<AhpResponse>;
   /** Called once the handshake succeeds and the connection is usable. */
@@ -92,11 +90,7 @@ export class AhpServerSocket {
 
   private readonly wss: WebSocketServer;
   private readonly connections = new Set<ConnectionState>();
-  private readonly upgradeListener: (
-    req: IncomingMessage,
-    socket: Duplex,
-    head: Buffer,
-  ) => void;
+  private readonly upgradeListener: (req: IncomingMessage, socket: Duplex, head: Buffer) => void;
   private closed = false;
 
   public constructor(opts: AhpServerSocketOptions) {

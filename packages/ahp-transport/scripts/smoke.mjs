@@ -15,11 +15,7 @@
 import { createServer } from "node:http";
 import { parseArgs } from "node:util";
 
-import {
-  AhpClientSocket,
-  AhpServerSocket,
-  InMemoryClientIdStore,
-} from "../dist/index.js";
+import { AhpClientSocket, AhpServerSocket, InMemoryClientIdStore } from "../dist/index.js";
 
 const INIT_RESULT = {
   protocolVersion: "0.1.0",

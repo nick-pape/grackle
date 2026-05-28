@@ -9,12 +9,7 @@
  * `MultiHostClient`'s job. This class only does framing.
  */
 
-import type {
-  AhpNotification,
-  AhpRequest,
-  AhpResponse,
-  CommandMap,
-} from "@grackle-ai/ahp";
+import type { AhpNotification, AhpRequest, AhpResponse, CommandMap } from "@grackle-ai/ahp";
 import { JsonRpcErrorCodes } from "@grackle-ai/ahp";
 import type { RawData, WebSocket } from "ws";
 

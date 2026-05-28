@@ -84,9 +84,7 @@ describe("JsonRpcSession", () => {
           seen.push(n);
         },
       });
-      ws.receive(
-        JSON.stringify({ jsonrpc: "2.0", method: "action", params: { channel: "x" } }),
-      );
+      ws.receive(JSON.stringify({ jsonrpc: "2.0", method: "action", params: { channel: "x" } }));
       expect(seen).toHaveLength(1);
       expect(seen[0]).toMatchObject({ method: "action", params: { channel: "x" } });
       expect(session.isOpen).toBe(true);
@@ -262,7 +260,10 @@ describe("JsonRpcSession", () => {
       const ws = makeOpenSocket();
       new JsonRpcSession({ socket: ws as unknown as WebSocket });
       ws.receiveBinary(Buffer.from([0xde, 0xad, 0xbe, 0xef]));
-      expect(ws.closedBy).toEqual({ code: WsCloseCode.UnsupportedData, reason: expect.any(String) });
+      expect(ws.closedBy).toEqual({
+        code: WsCloseCode.UnsupportedData,
+        reason: expect.any(String),
+      });
     });
   });
 

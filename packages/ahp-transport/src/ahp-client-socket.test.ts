@@ -28,9 +28,7 @@ interface ServerHarness {
   close(): Promise<void>;
 }
 
-async function bootServer(
-  overrides: Partial<AhpServerSocketOptions> = {},
-): Promise<ServerHarness> {
+async function bootServer(overrides: Partial<AhpServerSocketOptions> = {}): Promise<ServerHarness> {
   const server = createServer();
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const port = (server.address() as AddressInfo).port;
@@ -223,7 +221,6 @@ describe("AhpClientSocket", () => {
       await harness.close();
     });
 
-
     it("rejects queued requests on close() during reconnect", async () => {
       const harness = await bootServer();
       const client = new AhpClientSocket({
@@ -325,9 +322,9 @@ describe("AhpClientSocket", () => {
 
     it("rejects open() if the WebSocket constructor throws synchronously", async () => {
       // Inject a ctor that throws on `new` to simulate a malformed URL.
-      const ThrowingCtor = (function (_url: string) {
+      const ThrowingCtor = function (_url: string) {
         throw new Error("bad url");
-      }) as unknown as typeof WebSocket;
+      } as unknown as typeof WebSocket;
       const client = new AhpClientSocket({
         url: "ws://localhost:0/ahp",
         powerlineToken: "",

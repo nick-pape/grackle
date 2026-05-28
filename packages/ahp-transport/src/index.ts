@@ -16,16 +16,10 @@ export type {
 } from "./json-rpc-session.js";
 
 export { AhpServerSocket } from "./ahp-server-socket.js";
-export type {
-  AhpServerSocketOptions,
-  AhpServerConnection,
-} from "./ahp-server-socket.js";
+export type { AhpServerSocketOptions, AhpServerConnection } from "./ahp-server-socket.js";
 
 export { AhpClientSocket } from "./ahp-client-socket.js";
-export type {
-  AhpClientSocketOptions,
-  AhpConnectionState,
-} from "./ahp-client-socket.js";
+export type { AhpClientSocketOptions, AhpConnectionState } from "./ahp-client-socket.js";
 
 export type { ClientIdStore } from "./client-id-store.js";
 export { FileClientIdStore, InMemoryClientIdStore } from "./client-id-store.js";

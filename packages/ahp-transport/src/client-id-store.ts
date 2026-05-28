@@ -67,8 +67,9 @@ export class FileClientIdStore implements ClientIdStore {
 
   private fileFor(key: string): string {
     // Sanitize: only allow [A-Za-z0-9._-]. Other characters are URL-encoded.
-    const safe = key.replace(/[^A-Za-z0-9._-]/g, (c) =>
-      `%${c.charCodeAt(0).toString(16).padStart(2, "0")}`,
+    const safe = key.replace(
+      /[^A-Za-z0-9._-]/g,
+      (c) => `%${c.charCodeAt(0).toString(16).padStart(2, "0")}`,
     );
     return join(this.rootDir, `${safe}.clientid`);
   }

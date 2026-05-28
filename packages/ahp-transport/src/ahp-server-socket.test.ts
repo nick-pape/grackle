@@ -36,9 +36,7 @@ interface TestHarness {
   close(): Promise<void>;
 }
 
-async function bootHarness(
-  overrides: Partial<AhpServerSocketOptions> = {},
-): Promise<TestHarness> {
+async function bootHarness(overrides: Partial<AhpServerSocketOptions> = {}): Promise<TestHarness> {
   const server = createServer();
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const port = (server.address() as AddressInfo).port;
@@ -165,7 +163,6 @@ describe("AhpServerSocket", () => {
         await harness.close();
       }
     });
-
   });
 
   describe("initialize handshake", () => {
