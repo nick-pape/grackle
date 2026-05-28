@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "AHP HR8a: new @grackle-ai/ahp-transport package with WebSocket + JSON-RPC 2.0 framing primitive (JsonRpcSession / AhpServerSocket / AhpClientSocket / ClientIdStore / exponentialBackoff). No consumers wired yet — paves the way for HR8b (MultiHostClient), HR8c (IHostTransport abstraction), and HR8d (the wire flip). Also exposes JsonRpcErrorCodes + AhpErrorCodes from @grackle-ai/ahp (small additive re-export the vendored constants weren't visible to consumers before).",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
