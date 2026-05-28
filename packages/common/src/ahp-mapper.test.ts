@@ -556,3 +556,265 @@ describe("context mutation", () => {
     expect(context.metaAccumulator.costMillicents).toBe(30);
   });
 });
+
+// ─── Branch-coverage supplement ────────────────────────────────────
+//
+// The tests above cover the headline mappings. This block fills in the
+// remaining branches (parse fallbacks, ternary "else" arms, missing-field
+// paths) so v8 coverage hits the per-package `branches` floor in
+// rigs/heft-rig/coverage-thresholds.json.
+
+describe("branch coverage", () => {
+  it("turn_started with non-JSON content uses raw content as userMessage", () => {
+    const context = makeContext();
+    const event = makeEvent("turn_started", { content: "just a plain string", turnId: "t1" });
+    const result = mapAgentEvent(event, 0, context);
+
+    const action = result.actions[0] as { userMessage: { text: string } };
+    expect(action.userMessage.text).toBe("just a plain string");
+  });
+
+  it("turn_started with empty content yields empty userMessage text", () => {
+    const context = makeContext();
+    const event = makeEvent("turn_started", { turnId: "t1" });
+    const result = mapAgentEvent(event, 0, context);
+
+    const action = result.actions[0] as { userMessage: { text: string } };
+    expect(action.userMessage.text).toBe("");
+  });
+
+  it("text with no content emits empty markdown part", () => {
+    const context = makeContext({ turnId: "t1", partCounter: 0 });
+    const event = makeEvent("text");
+    const result = mapAgentEvent(event, 0, context);
+
+    const action = result.actions[0] as { part: { content: string } };
+    expect(action.part.content).toBe("");
+  });
+
+  it("tool_use with non-JSON content falls back to unknown_tool / generated invocation", () => {
+    const context = makeContext({ turnId: "t1", partCounter: 0 });
+    const event = makeEvent("tool_use", { content: "not json" });
+    const result = mapAgentEvent(event, 0, context);
+
+    const start = result.actions[0] as { toolName: string; displayName: string };
+    const ready = result.actions[1] as { invocationMessage: string };
+    expect(start.toolName).toBe("unknown_tool");
+    expect(start.displayName).toBe("unknown_tool");
+    expect(ready.invocationMessage).toBe("Running unknown_tool");
+  });
+
+  it("tool_use accepts `name` field when `tool_name` is absent", () => {
+    const context = makeContext({ turnId: "t1", partCounter: 0 });
+    const event = makeEvent("tool_use", { content: JSON.stringify({ name: "shell" }) });
+    const result = mapAgentEvent(event, 0, context);
+
+    const start = result.actions[0] as { toolName: string };
+    expect(start.toolName).toBe("shell");
+  });
+
+  it("tool_use falls back to toolName when display_name is absent", () => {
+    const context = makeContext({ turnId: "t1", partCounter: 0 });
+    const event = makeEvent("tool_use", { content: JSON.stringify({ tool_name: "edit" }) });
+    const result = mapAgentEvent(event, 0, context);
+
+    const start = result.actions[0] as { displayName: string };
+    expect(start.displayName).toBe("edit");
+  });
+
+  it("tool_use uses provided invocation_message when present", () => {
+    const context = makeContext({ turnId: "t1", partCounter: 0 });
+    const event = makeEvent("tool_use", {
+      content: JSON.stringify({ tool_name: "shell", invocation_message: "running shell `ls`" }),
+    });
+    const result = mapAgentEvent(event, 0, context);
+
+    const ready = result.actions[1] as { invocationMessage: string };
+    expect(ready.invocationMessage).toBe("running shell `ls`");
+  });
+
+  it("tool_result with is_ok:false emits failure result with error", () => {
+    const context = makeContext({ turnId: "t1", openToolCalls: ["tc-1"] });
+    const event = makeEvent("tool_result", {
+      toolCallId: "tc-1",
+      content: JSON.stringify({ is_ok: false, past_tense_message: "failed to read" }),
+    });
+    const result = mapAgentEvent(event, 0, context);
+
+    const action = result.actions[0] as {
+      result: { success: boolean; content?: unknown; error?: { message: string } };
+    };
+    expect(action.result.success).toBe(false);
+    expect(action.result.content).toBeUndefined();
+    expect(action.result.error?.message).toBe("failed to read");
+    // No system notification on failure
+    expect(result.actions.length).toBe(1);
+  });
+
+  it("tool_result accepts `success` field when `is_ok` is absent", () => {
+    const context = makeContext({ turnId: "t1", openToolCalls: ["tc-1"] });
+    const event = makeEvent("tool_result", {
+      toolCallId: "tc-1",
+      content: JSON.stringify({ success: false, content: "nope" }),
+    });
+    const result = mapAgentEvent(event, 0, context);
+
+    const action = result.actions[0] as { result: { success: boolean } };
+    expect(action.result.success).toBe(false);
+  });
+
+  it("tool_result defaults to success=true when neither is_ok nor success present", () => {
+    const context = makeContext({ turnId: "t1", openToolCalls: ["tc-1"] });
+    const event = makeEvent("tool_result", {
+      toolCallId: "tc-1",
+      content: JSON.stringify({ content: "ok" }),
+    });
+    const result = mapAgentEvent(event, 0, context);
+
+    const action = result.actions[0] as { result: { success: boolean } };
+    expect(action.result.success).toBe(true);
+  });
+
+  it("tool_result with non-JSON content keeps default success=true", () => {
+    const context = makeContext({ turnId: "t1", openToolCalls: ["tc-1"] });
+    const event = makeEvent("tool_result", { toolCallId: "tc-1", content: "raw text result" });
+    const result = mapAgentEvent(event, 0, context);
+
+    const action = result.actions[0] as { result: { success: boolean; pastTenseMessage: string } };
+    expect(action.result.success).toBe(true);
+    expect(action.result.pastTenseMessage).toBe("raw text result");
+  });
+
+  it("tool_result with no content emits no system notification", () => {
+    const context = makeContext({ turnId: "t1", openToolCalls: ["tc-1"] });
+    const event = makeEvent("tool_result", { toolCallId: "tc-1" });
+    const result = mapAgentEvent(event, 0, context);
+
+    expect(result.actions.length).toBe(1);
+  });
+
+  it("tool_result with content > 200 chars truncates the system notification", () => {
+    const context = makeContext({ turnId: "t1", openToolCalls: ["tc-1"] });
+    const longText = "x".repeat(250);
+    const event = makeEvent("tool_result", {
+      toolCallId: "tc-1",
+      content: JSON.stringify({ is_ok: true, content: longText }),
+    });
+    const result = mapAgentEvent(event, 0, context);
+
+    const notification = result.actions[1] as { part: { content: string } };
+    expect(notification.part.content.length).toBe(203); // 200 chars + "..."
+    expect(notification.part.content.endsWith("...")).toBe(true);
+  });
+
+  it("usage with null cost_millicents leaves accumulator untouched", () => {
+    const context = makeContext({ metaAccumulator: { costMillicents: 50 } });
+    const event = makeEvent("usage", { content: JSON.stringify({ cost_millicents: null }) });
+    mapAgentEvent(event, 0, context);
+
+    expect(context.metaAccumulator.costMillicents).toBe(50);
+  });
+
+  it("usage with no parsed content leaves accumulator untouched", () => {
+    const context = makeContext({ metaAccumulator: { costMillicents: 50 } });
+    const event = makeEvent("usage");
+    mapAgentEvent(event, 0, context);
+
+    expect(context.metaAccumulator.costMillicents).toBe(50);
+  });
+
+  it("error with no content falls back to 'Unknown error'", () => {
+    const context = makeContext({ turnId: "t1" });
+    const event = makeEvent("error");
+    const result = mapAgentEvent(event, 0, context);
+
+    const action = result.actions[0] as { error: { message: string } };
+    expect(action.error.message).toBe("Unknown error");
+  });
+
+  it("status with unknown content is dropped", () => {
+    const context = makeContext({ turnId: "t1" });
+    const event = makeEvent("status", { content: "made_up_status" });
+    const result = mapAgentEvent(event, 0, context);
+
+    expect(result.actions.length).toBe(0);
+    expect(result.note?.disposition).toBe("dropped");
+    expect(result.note?.detail).toContain("unrecognized");
+  });
+
+  it("status with no content is dropped (empty default branch)", () => {
+    const context = makeContext({ turnId: "t1" });
+    const event = makeEvent("status");
+    const result = mapAgentEvent(event, 0, context);
+
+    expect(result.actions.length).toBe(0);
+    expect(result.note?.disposition).toBe("dropped");
+  });
+
+  it("status terminated maps to SessionError when in-turn", () => {
+    const context = makeContext({ turnId: "t1", openToolCalls: ["tc-1"] });
+    const event = makeEvent("status", { content: "terminated" });
+    const result = mapAgentEvent(event, 0, context);
+
+    expect(result.actions.length).toBe(1);
+    const action = result.actions[0] as { type: string };
+    expect(action.type).toBe(ActionType.SessionError);
+    expect(context.turnId).toBeUndefined();
+    expect(context.openToolCalls).toEqual([]);
+  });
+
+  it("status terminated drops when no active turn", () => {
+    const context = makeContext();
+    const event = makeEvent("status", { content: "terminated" });
+    const result = mapAgentEvent(event, 0, context);
+
+    expect(result.actions.length).toBe(0);
+    expect(result.note?.disposition).toBe("dropped");
+  });
+
+  it("system diagnostic via parsed `span`/`trace`/`level` keys is carried (not mapped)", () => {
+    const context = makeContext({ turnId: "t1" });
+    const event = makeEvent("system", {
+      content: JSON.stringify({ span: "x", trace: "y" }),
+    });
+    const result = mapAgentEvent(event, 0, context);
+
+    expect(result.actions.length).toBe(0);
+    expect(result.note?.disposition).toBe("carried");
+  });
+
+  it("system with diagnostic-looking keys but also `text` is treated as user-visible", () => {
+    const context = makeContext({ turnId: "t1" });
+    const event = makeEvent("system", {
+      content: JSON.stringify({ span: "x", text: "user-visible content" }),
+    });
+    const result = mapAgentEvent(event, 0, context);
+
+    expect(result.actions.length).toBe(1);
+    expect(result.note?.disposition).toBe("mapped");
+  });
+
+  it("tool_result with explicit toolCallId splices from middle of LIFO stack", () => {
+    const context = makeContext({
+      turnId: "t1",
+      openToolCalls: ["tc-old", "tc-target", "tc-newer"],
+    });
+    const event = makeEvent("tool_result", {
+      toolCallId: "tc-target",
+      content: JSON.stringify({ is_ok: true, content: "done" }),
+    });
+    mapAgentEvent(event, 0, context);
+
+    // Splice removed "tc-target" from the middle, preserving order
+    expect(context.openToolCalls).toEqual(["tc-old", "tc-newer"]);
+  });
+
+  it("text uses event.turnId when context.turnId is unset", () => {
+    const context = makeContext();
+    const event = makeEvent("text", { content: "hi", turnId: "from-event" });
+    const result = mapAgentEvent(event, 0, context);
+
+    const action = result.actions[0] as { turnId: string };
+    expect(action.turnId).toBe("from-event");
+  });
+});
