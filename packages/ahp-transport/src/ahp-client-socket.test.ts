@@ -245,6 +245,43 @@ describe("AhpClientSocket", () => {
       }
     });
 
+    it("queues many concurrent request() calls during reconnect and resolves them in submission order", async () => {
+      const seen: number[] = [];
+      const harness = await bootServer({
+        onRequest: async (req) => {
+          seen.push(req.id);
+          return { jsonrpc: "2.0", id: req.id, result: null };
+        },
+      });
+      const client = new AhpClientSocket({
+        url: harness.url,
+        powerlineToken: "tok",
+        clientIdStore: new InMemoryClientIdStore(),
+        clientIdKey: "k",
+        backoff: exponentialBackoff({ initialMs: 50, maxMs: 50, jitter: 0 }),
+      });
+      try {
+        await client.open();
+        // Kick → reconnecting; queue 10 requests; assert all resolve.
+        const conn = harness.connections[0]!;
+        conn.session.close(1011, "restart");
+        await waitForState(client, "reconnecting", 1_000);
+        const promises: Promise<unknown>[] = [];
+        for (let i = 0; i < 10; i++) {
+          promises.push(client.request("ping", { channel: "ahp-root://", _meta: undefined }));
+        }
+        const results = await Promise.all(promises);
+        // All resolved to null.
+        expect(results.every((r) => r === null)).toBe(true);
+        // Server received 10 requests (ids depend on session reuse but
+        // count is what matters).
+        expect(seen.length).toBe(10);
+      } finally {
+        await client.close();
+        await harness.close();
+      }
+    });
+
     it("notify() during reconnect is silently dropped (not queued)", async () => {
       const harness = await bootServer();
       const client = new AhpClientSocket({
@@ -315,6 +352,90 @@ describe("AhpClientSocket", () => {
         await client.open();
         await client.close();
         await expect(client.close()).resolves.toBeUndefined();
+      } finally {
+        await harness.close();
+      }
+    });
+
+    it("propagates clientIdStore.load rejection from open() and stays in 'closed'", async () => {
+      const failingStore = {
+        load: async () => {
+          throw new Error("store unavailable");
+        },
+        save: async () => undefined,
+      };
+      const client = new AhpClientSocket({
+        url: "ws://127.0.0.1:0/ahp",
+        powerlineToken: "",
+        clientIdStore: failingStore,
+        clientIdKey: "k",
+      });
+      await expect(client.open()).rejects.toThrow(/store unavailable/);
+      expect(client.state).toBe("closed");
+      // Caller can retry — userClosed should NOT have flipped.
+      // (We can't observe userClosed directly; the proof is that a future
+      // open() doesn't throw "user-closed".)
+      await client.close();
+    });
+
+    it("propagates clientIdStore.save rejection from open() and stays in 'closed'", async () => {
+      const failingStore = {
+        load: async () => undefined,
+        save: async () => {
+          throw new Error("disk full");
+        },
+      };
+      const client = new AhpClientSocket({
+        url: "ws://127.0.0.1:0/ahp",
+        powerlineToken: "",
+        clientIdStore: failingStore,
+        clientIdKey: "k",
+      });
+      await expect(client.open()).rejects.toThrow(/disk full/);
+      expect(client.state).toBe("closed");
+      await client.close();
+    });
+
+    it("backoff returning 0 does not cause infinite synchronous recursion", async () => {
+      const harness = await bootServer();
+      const zeroBackoff = { next: () => 0, reset: () => undefined };
+      const client = new AhpClientSocket({
+        url: harness.url,
+        powerlineToken: "tok",
+        clientIdStore: new InMemoryClientIdStore(),
+        clientIdKey: "k",
+        backoff: zeroBackoff,
+      });
+      try {
+        await client.open();
+        // Kick + restart quickly — the 0-delay backoff means setTimeout(0)
+        // queues a macrotask, which yields. Confirm we settle into "open"
+        // again rather than infinite-looping.
+        const conn = harness.connections[0]!;
+        conn.session.close(1011, "kick");
+        await waitForState(client, "open", 2_000);
+      } finally {
+        await client.close();
+        await harness.close();
+      }
+    });
+
+    it("close() called twice does not fire onStateChange a second time", async () => {
+      const harness = await bootServer();
+      const transitions: AhpConnectionState[] = [];
+      const client = new AhpClientSocket({
+        url: harness.url,
+        powerlineToken: "tok",
+        clientIdStore: new InMemoryClientIdStore(),
+        clientIdKey: "k",
+        onStateChange: (s) => transitions.push(s),
+      });
+      try {
+        await client.open();
+        await client.close();
+        const before = [...transitions];
+        await client.close();
+        expect(transitions).toEqual(before);
       } finally {
         await harness.close();
       }

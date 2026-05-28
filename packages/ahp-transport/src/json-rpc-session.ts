@@ -15,8 +15,20 @@ import type { RawData, WebSocket } from "ws";
 
 import { TransportError, WsCloseCode } from "./error-codes.js";
 
+/**
+ * Result returned by a {@link RequestHandler}. Either a bare {@link AhpResponse}
+ * (the common case), or a wrapped result that includes an `afterSend` callback
+ * fired AFTER the response frame has been flushed to the wire. The wrapped
+ * form is the deterministic ordering primitive: use it whenever a side
+ * effect (e.g., close the session, emit a notification) must follow the
+ * response on the wire rather than precede it.
+ */
+export type RequestHandlerResult =
+  | AhpResponse
+  | { readonly response: AhpResponse; readonly afterSend: () => void };
+
 /** Handler for inbound peer-initiated requests. */
-export type RequestHandler = (req: AhpRequest) => Promise<AhpResponse>;
+export type RequestHandler = (req: AhpRequest) => Promise<RequestHandlerResult>;
 
 /** Handler for inbound peer-initiated notifications. */
 export type NotificationHandler = (notif: AhpNotification) => void;
@@ -223,14 +235,52 @@ export class JsonRpcSession {
       return;
     }
     try {
-      const response = await this.onRequest(req);
-      this.socket.send(JSON.stringify(response));
+      const result = await this.onRequest(req);
+      const isWrapped = isObject(result) && "response" in result && "afterSend" in result;
+      if (isWrapped) {
+        const { response, afterSend } = result as {
+          response: AhpResponse;
+          afterSend: () => void;
+        };
+        this.sendAndThen(response, afterSend);
+      } else {
+        this.socket.send(JSON.stringify(result));
+      }
     } catch (err) {
       this.writeError(
         req.id,
         JsonRpcErrorCodes.InternalError,
         (err as Error).message || "handler threw",
       );
+    }
+  }
+
+  /**
+   * Sends `frame` and invokes `after` once the data has been flushed to the
+   * OS socket buffer. Use this when a side effect (e.g., closing the session)
+   * MUST follow the frame on the wire.
+   *
+   * `after` runs even if `socket.send` errors — the typical close-after-error
+   * caller wants the close to proceed regardless.
+   */
+  public sendAndThen(frame: unknown, after: () => void): void {
+    if (this.closed) {
+      // Fire `after` immediately if the socket is already gone; otherwise the
+      // callback would leak.
+      after();
+      return;
+    }
+    try {
+      this.socket.send(JSON.stringify(frame), (err) => {
+        // The callback fires once the data is flushed to the kernel buffer
+        // (or immediately with an error if the socket is no longer writable).
+        // We always run `after` regardless.
+        void err;
+        after();
+      });
+    } catch {
+      // Synchronous send failure (socket already closed mid-call). Run after.
+      after();
     }
   }
 

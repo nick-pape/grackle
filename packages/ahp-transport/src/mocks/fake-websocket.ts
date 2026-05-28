@@ -32,11 +32,20 @@ export class FakeWebSocket extends EventEmitter {
 
   // ─── ws.WebSocket surface used by JsonRpcSession ───────────────────
 
-  public send(data: string | Buffer): void {
+  /**
+   * Mirrors `ws.WebSocket.send(data[, cb])`. The callback (when provided) is
+   * invoked on the next microtask with `undefined` as the error parameter,
+   * matching ws's "flushed cleanly" semantics. Tests can override the
+   * delivery timing by stubbing this method.
+   */
+  public send(data: string | Buffer, cb?: (err?: Error) => void): void {
     if (this.readyState !== FakeReadyState.Open) {
       throw new Error(`FakeWebSocket: send() called in readyState=${this.readyState}`);
     }
     this.sent.push(data);
+    if (cb !== undefined) {
+      queueMicrotask(() => cb());
+    }
   }
 
   public close(code?: number, reason?: string): void {

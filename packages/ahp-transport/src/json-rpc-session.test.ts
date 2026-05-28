@@ -267,6 +267,54 @@ describe("JsonRpcSession", () => {
     });
   });
 
+  describe("sendAndThen (send-completion callback)", () => {
+    it("invokes the callback after the frame is sent (microtask ordering)", async () => {
+      const ws = makeOpenSocket();
+      const session = new JsonRpcSession({ socket: ws as unknown as WebSocket });
+      const order: string[] = [];
+      session.sendAndThen({ jsonrpc: "2.0", method: "test", params: {} }, () => {
+        order.push("after");
+      });
+      // The send call is synchronous; the callback fires on the next
+      // microtask (per FakeWebSocket's queueMicrotask).
+      expect(ws.sent).toHaveLength(1);
+      order.push("post-send-sync");
+      await new Promise((r) => queueMicrotask(() => r(undefined)));
+      expect(order).toEqual(["post-send-sync", "after"]);
+    });
+
+    it("still fires the callback when the socket is already closed", async () => {
+      const ws = makeOpenSocket();
+      const session = new JsonRpcSession({ socket: ws as unknown as WebSocket });
+      session.close();
+      await new Promise((r) => setImmediate(r));
+      let fired = false;
+      session.sendAndThen({ jsonrpc: "2.0", method: "test", params: {} }, () => {
+        fired = true;
+      });
+      expect(fired).toBe(true);
+    });
+
+    it("wrapped onRequest result fires afterSend AFTER the response is on the wire", async () => {
+      const ws = makeOpenSocket();
+      const order: string[] = [];
+      new JsonRpcSession({
+        socket: ws as unknown as WebSocket,
+        onRequest: async (req) => ({
+          response: { jsonrpc: "2.0", id: req.id, result: null },
+          afterSend: () => order.push("after-send"),
+        }),
+      });
+      ws.receive(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "ping", params: {} }));
+      // Let the await chain + microtask resolve.
+      await new Promise((r) => setImmediate(r));
+      // The response is in `sent[0]`; afterSend fired after.
+      expect(ws.sent).toHaveLength(1);
+      expect(order).toEqual(["after-send"]);
+      expect(sentJson(ws)).toMatchObject({ id: 1, result: null });
+    });
+  });
+
   describe("request timeout", () => {
     beforeEach(() => {
       vi.useFakeTimers();
@@ -301,6 +349,28 @@ describe("JsonRpcSession", () => {
       expect(() =>
         ws.receive(JSON.stringify({ jsonrpc: "2.0", id: 1, result: "late" })),
       ).not.toThrow();
+    });
+
+    it("ignores a late response after the request id was reused by a new request", async () => {
+      const ws = makeOpenSocket();
+      const session = new JsonRpcSession({
+        socket: ws as unknown as WebSocket,
+        requestTimeoutMs: 5_000,
+      });
+      // Request 1: id=1, times out.
+      const p1 = session.request("ping", { _meta: undefined });
+      p1.catch(() => undefined);
+      vi.advanceTimersByTime(5_001);
+      await expect(p1).rejects.toMatchObject({ kind: "request-timeout" });
+      // Late response for id=1 arrives — must be silently dropped, NOT
+      // resolve some other pending entry.
+      expect(() =>
+        ws.receive(JSON.stringify({ jsonrpc: "2.0", id: 1, result: "late" })),
+      ).not.toThrow();
+      // Issue a new request — different id (id=2), should still work.
+      const p2 = session.request("ping", { _meta: undefined });
+      ws.receive(JSON.stringify({ jsonrpc: "2.0", id: 2, result: "fresh" }));
+      await expect(p2).resolves.toBe("fresh");
     });
 
     it("clears the timeout when the response arrives in time", async () => {

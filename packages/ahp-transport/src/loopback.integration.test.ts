@@ -144,6 +144,108 @@ describe("AhpServerSocket + AhpClientSocket loopback", () => {
     }
   });
 
+  it("initialize response precedes onConnection-triggered notification on the wire", async () => {
+    // Regression: previously this ordering depended on a setImmediate
+    // dance; now it's guaranteed by JsonRpcSession.sendAndThen using ws's
+    // send-completion callback. We capture frames at the WIRE level (the
+    // client's underlying ws receive order) rather than at the Promise-
+    // resolution level, because Promise resolution is a microtask and runs
+    // after synchronous notification dispatch even when the wire order is
+    // correct.
+    const { default: WebSocket } = await import("ws");
+    const { server, port } = await listenOn(0);
+    const ahp = new AhpServerSocket({
+      server,
+      powerlineToken: "tok",
+      onInitialize: () => INIT_RESULT,
+      onConnection: (conn) => {
+        conn.session.notify("action", {
+          channel: "ahp-session:/demo",
+          serverSeq: 1,
+          action: { type: "session/ready", payload: {} },
+        });
+      },
+    });
+    // Connect a raw WebSocket so we can observe every inbound frame in order.
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ahp`, {
+      headers: { Authorization: "Bearer tok" },
+    });
+    const receivedFrames: Array<Record<string, unknown>> = [];
+    ws.on("message", (data) => {
+      receivedFrames.push(JSON.parse(data.toString()));
+    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        ws.once("open", () => resolve());
+        ws.once("error", reject);
+      });
+      ws.send(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: {
+            channel: "ahp-root://",
+            protocolVersions: ["0.1.0"],
+            clientId: "wire-order-test",
+          },
+        }),
+      );
+      // Wait for both frames to land.
+      await new Promise((r) => setTimeout(r, 100));
+      // Expect frame 0 = initialize response, frame 1 = action notification.
+      expect(receivedFrames).toHaveLength(2);
+      expect(receivedFrames[0]).toMatchObject({ id: 1, result: INIT_RESULT });
+      expect(receivedFrames[1]).toMatchObject({ method: "action" });
+    } finally {
+      ws.close();
+      await ahp.close();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
+  it("delivers 100 client→server notifications in order without loss", async () => {
+    const { server, port } = await listenOn(0);
+    const received: number[] = [];
+    const ahp = new AhpServerSocket({
+      server,
+      powerlineToken: "tok",
+      onInitialize: () => INIT_RESULT,
+      onNotification: (notif) => {
+        if (notif.method === "dispatchAction") {
+          const params = notif.params as { _seq?: number };
+          if (typeof params._seq === "number") {
+            received.push(params._seq);
+          }
+        }
+      },
+    });
+    const client = new AhpClientSocket({
+      url: `ws://127.0.0.1:${port}/ahp`,
+      powerlineToken: "tok",
+      clientIdStore: new InMemoryClientIdStore(),
+      clientIdKey: "loopback",
+    });
+    try {
+      await client.open();
+      for (let i = 0; i < 100; i++) {
+        client.notify("dispatchAction", {
+          channel: "ahp-session:/burst",
+          _seq: i,
+          action: { type: "noop" },
+        });
+      }
+      // Wait for delivery; on loopback this is fast but real I/O so give it
+      // a generous beat.
+      await new Promise((r) => setTimeout(r, 200));
+      expect(received).toEqual(Array.from({ length: 100 }, (_, i) => i));
+    } finally {
+      await client.close();
+      await ahp.close();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
   it("client reconnects to a restarted server preserving its clientId", async () => {
     // Boot v1 of the server on a known free port.
     const { server: v1Server, port } = await listenOn(0);

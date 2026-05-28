@@ -24,7 +24,8 @@ import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
 
 import { WsCloseCode } from "./error-codes.js";
-import { JsonRpcSession } from "./json-rpc-session.js";
+import { Heartbeat } from "./heartbeat.js";
+import { JsonRpcSession, type RequestHandlerResult } from "./json-rpc-session.js";
 
 /** Default WS path mounted on the host HTTP server. */
 const DEFAULT_PATH = "/ahp";
@@ -83,11 +84,7 @@ interface ConnectionState {
   session: JsonRpcSession;
   /** Populated by the `initialize` handler once the handshake completes. */
   connection: AhpServerConnection | undefined;
-  /** True once a ping has been sent and the matching pong hasn't yet arrived. */
-  pingOutstanding: boolean;
-  /** Count of consecutive pings that didn't get a pong before the next tick. */
-  missedPongs: number;
-  heartbeatTimer: NodeJS.Timeout | undefined;
+  heartbeat: Heartbeat;
 }
 
 /** AHP-spec JSON-RPC/WebSocket server. */
@@ -133,9 +130,7 @@ export class AhpServerSocket {
     this.closed = true;
     this.server.off("upgrade", this.upgradeListener);
     for (const conn of this.connections) {
-      if (conn.heartbeatTimer !== undefined) {
-        clearInterval(conn.heartbeatTimer);
-      }
+      conn.heartbeat.stop();
       conn.session.close(WsCloseCode.Normal, "server shutting down");
     }
     this.connections.clear();
@@ -185,9 +180,7 @@ export class AhpServerSocket {
       socket: ws,
       session: undefined as unknown as JsonRpcSession,
       connection: undefined,
-      pingOutstanding: false,
-      missedPongs: 0,
-      heartbeatTimer: undefined,
+      heartbeat: undefined as unknown as Heartbeat,
     };
     state.session = new JsonRpcSession({
       socket: ws,
@@ -195,39 +188,26 @@ export class AhpServerSocket {
       onNotification: (notif) => this.handleNotification(notif, state),
       onClose: (code, reason) => this.handleSocketClose(state, code, reason),
     });
-    this.connections.add(state);
-    this.startHeartbeat(state);
-  }
-
-  private startHeartbeat(state: ConnectionState): void {
-    state.socket.on("pong", () => {
-      state.pingOutstanding = false;
-      state.missedPongs = 0;
+    state.heartbeat = new Heartbeat({
+      target: {
+        ping: () => ws.ping(),
+        close: (code, reason) => state.session.close(code, reason),
+        on: (event, listener) => {
+          ws.on(event, listener);
+        },
+      },
+      intervalMs: this.heartbeatIntervalMs,
+      missedLimit: this.heartbeatMissedLimit,
     });
-    state.heartbeatTimer = setInterval(() => {
-      // Each tick: if the prior tick's ping didn't get a pong before this
-      // tick, that's a real missed pong. Count it, then send the next ping.
-      if (state.pingOutstanding) {
-        state.missedPongs += 1;
-        if (state.missedPongs >= this.heartbeatMissedLimit) {
-          state.session.close(WsCloseCode.HeartbeatTimeout, "heartbeat timeout");
-          return;
-        }
-      }
-      try {
-        state.socket.ping();
-        state.pingOutstanding = true;
-      } catch {
-        // Socket already closing; the close handler will clean up.
-      }
-    }, this.heartbeatIntervalMs);
+    this.connections.add(state);
+    state.heartbeat.start();
   }
 
   private async handleRequest(
     req: AhpRequest,
     state: ConnectionState,
     httpReq: IncomingMessage,
-  ): Promise<AhpResponse> {
+  ): Promise<RequestHandlerResult> {
     if (req.method === "initialize") {
       if (state.connection !== undefined) {
         return {
@@ -250,14 +230,13 @@ export class AhpServerSocket {
         };
         state.connection = connection;
         // Surface the connection AFTER the initialize response has been
-        // flushed to the socket — setImmediate runs as a macrotask, by which
-        // point JsonRpcSession's await on this handler has resumed and
-        // socket.send(response) has executed. If onConnection sends a
-        // notification, that frame goes out *after* the initialize response.
-        // (queueMicrotask runs too early: it fires before the awaiting
-        // continuation resumes and gets to call socket.send.)
-        setImmediate(() => this.onConnection?.(connection));
-        return { jsonrpc: "2.0", id: req.id, result };
+        // flushed to the wire. `afterSend` runs in JsonRpcSession's
+        // `ws.send(data, callback)` completion path — deterministic ordering,
+        // no event-loop assumptions.
+        return {
+          response: { jsonrpc: "2.0", id: req.id, result },
+          afterSend: () => this.onConnection?.(connection),
+        };
       } catch (err) {
         return {
           jsonrpc: "2.0",
@@ -273,18 +252,17 @@ export class AhpServerSocket {
     const connection = state.connection;
     if (connection === undefined) {
       // Enforce the handshake boundary: the first inbound JSON-RPC must be
-      // `initialize`. Close the session after the error response has had a
-      // chance to flush to the wire (setImmediate puts it after the response
-      // send's I/O turn). The session-close handler then prevents any further
-      // initialize on the same connection.
-      setImmediate(() => state.session.close(WsCloseCode.Normal, "initialize required first"));
+      // `initialize`. Close the session after the error response is flushed.
       return {
-        jsonrpc: "2.0",
-        id: req.id,
-        error: {
-          code: JsonRpcErrorCodes.InvalidRequest,
-          message: "first request must be initialize",
+        response: {
+          jsonrpc: "2.0",
+          id: req.id,
+          error: {
+            code: JsonRpcErrorCodes.InvalidRequest,
+            message: "first request must be initialize",
+          },
         },
+        afterSend: () => state.session.close(WsCloseCode.Normal, "initialize required first"),
       };
     }
 
@@ -305,9 +283,9 @@ export class AhpServerSocket {
   private handleNotification(notif: AhpNotification, state: ConnectionState): void {
     if (state.connection === undefined) {
       // Pre-initialize notification violates the handshake contract.
-      // Close the session (deferred so the AHP-level close frame lands
-      // after any inflight outbound writes).
-      setImmediate(() => state.session.close(WsCloseCode.Normal, "initialize required first"));
+      // Notifications have no response to flush, so we can close
+      // immediately — no ordering concern.
+      state.session.close(WsCloseCode.Normal, "initialize required first");
       return;
     }
     if (this.onNotification === undefined) {
@@ -321,10 +299,7 @@ export class AhpServerSocket {
   }
 
   private handleSocketClose(state: ConnectionState, code: number, reason: string): void {
-    if (state.heartbeatTimer !== undefined) {
-      clearInterval(state.heartbeatTimer);
-      state.heartbeatTimer = undefined;
-    }
+    state.heartbeat.stop();
     this.connections.delete(state);
     if (state.connection !== undefined) {
       this.onDisconnect?.(state.connection.clientId, code, reason);
