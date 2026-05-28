@@ -19,12 +19,7 @@ import { createRequire } from "node:module";
 // The conformance corpus still lives in the AHP package's vendored source
 // (prebuilt from the upstream microsoft/agent-host-protocol git dep), so we
 // resolve it through that package rather than carrying a duplicate copy here.
-import {
-  rootReducer,
-  sessionReducer,
-  terminalReducer,
-  changesetReducer,
-} from "@grackle-ai/ahp";
+import { rootReducer, sessionReducer, terminalReducer, changesetReducer } from "@grackle-ai/ahp";
 
 interface Fixture {
   description: string;
@@ -72,7 +67,9 @@ if (!existsSync(fixtureDir)) {
 const fixtures: Fixture[] = readdirSync(fixtureDir)
   .filter((f) => f.endsWith(".json"))
   .sort()
-  .map((f) => nullToUndefined(JSON.parse(readFileSync(resolve(fixtureDir, f), "utf-8"))) as Fixture);
+  .map(
+    (f) => nullToUndefined(JSON.parse(readFileSync(resolve(fixtureDir, f), "utf-8"))) as Fixture,
+  );
 
 // Upstream fixtures were generated with Date.now() pinned to 9999.
 let realNow: typeof Date.now;

@@ -19,7 +19,13 @@ import {
   SessionLifecycle,
   type SessionState,
 } from "@grackle-ai/ahp";
-import { makeInitialSessionState, happyPath, errorPath, missingIdFallback, preTurnFailure } from "./fixtures.js";
+import {
+  makeInitialSessionState,
+  happyPath,
+  errorPath,
+  missingIdFallback,
+  preTurnFailure,
+} from "./fixtures.js";
 import type { AgentEvent } from "@grackle-ai/runtime-sdk";
 import type { SpawnOptions } from "@grackle-ai/runtime-sdk";
 
@@ -54,15 +60,26 @@ describe("happy path", () => {
     const turn = state.turns[0];
     expect(turn.state).toBe(TurnState.Complete);
 
-    const markdown = turn.responseParts.filter((p) => p.kind === ResponsePartKind.Markdown) as Array<{ content: string }>;
-    expect(markdown.map((p) => p.content)).toEqual(["Hello — I'll take a look.", "Done — it looks fine."]);
+    const markdown = turn.responseParts.filter(
+      (p) => p.kind === ResponsePartKind.Markdown,
+    ) as Array<{ content: string }>;
+    expect(markdown.map((p) => p.content)).toEqual([
+      "Hello — I'll take a look.",
+      "Done — it looks fine.",
+    ]);
 
-    const tools = turn.responseParts.filter((p) => p.kind === ResponsePartKind.ToolCall) as Array<{ toolCall: { status: ToolCallStatus; success?: boolean } }>;
+    const tools = turn.responseParts.filter((p) => p.kind === ResponsePartKind.ToolCall) as Array<{
+      toolCall: { status: ToolCallStatus; success?: boolean };
+    }>;
     expect(tools).toHaveLength(1);
     expect(tools[0].toolCall.status).toBe(ToolCallStatus.Completed);
     expect(tools[0].toolCall.success).toBe(true);
 
-    expect(turn.usage).toEqual({ inputTokens: 150, outputTokens: 50, _meta: { cost_millicents: 12 } });
+    expect(turn.usage).toEqual({
+      inputTokens: 150,
+      outputTokens: 50,
+      _meta: { cost_millicents: 12 },
+    });
   });
 
   it("pairs the tool_result by the first-class toolCallId (HR3), not a heuristic", () => {
@@ -80,7 +97,9 @@ describe("happy path", () => {
     const completeNote = result.notes.find((n) => n.type === "turn_complete");
     expect(completeNote?.disposition).toBe("mapped");
     // status=completed is now dropped (redundant with turn events).
-    const statusNote = result.notes.find((n) => n.type === "status" && n.detail.includes("redundant"));
+    const statusNote = result.notes.find(
+      (n) => n.type === "status" && n.detail.includes("redundant"),
+    );
     expect(statusNote?.disposition).toBe("dropped");
   });
 
@@ -88,7 +107,9 @@ describe("happy path", () => {
     const result = mapAgentEvents(happyPath);
     // HR7: the pre-turn "Starting runtime…" diagnostic is now carried to the
     // ahp-otlp telemetry channel, not dropped as an unrepresentable gap.
-    expect(result.carried.map((n) => n.type)).toEqual(expect.arrayContaining(["runtime_session_id", "usage", "system"]));
+    expect(result.carried.map((n) => n.type)).toEqual(
+      expect.arrayContaining(["runtime_session_id", "usage", "system"]),
+    );
     expect(result.unmapped.some((n) => n.type === "system")).toBe(false);
 
     const state = replay(happyPath);
@@ -130,8 +151,18 @@ describe("pre-turn failure", () => {
 describe("HR2 turn events", () => {
   it("drops input_needed as advisory (plumb-only; no structured input requests)", () => {
     const result = mapAgentEvents([
-      { type: "turn_started" as const, timestamp: "2026-01-01T00:00:00.000Z", content: "prompt", turnId: "t-1" },
-      { type: "turn_complete" as const, timestamp: "2026-01-01T00:00:00.000Z", content: "", turnId: "t-1" },
+      {
+        type: "turn_started" as const,
+        timestamp: "2026-01-01T00:00:00.000Z",
+        content: "prompt",
+        turnId: "t-1",
+      },
+      {
+        type: "turn_complete" as const,
+        timestamp: "2026-01-01T00:00:00.000Z",
+        content: "",
+        turnId: "t-1",
+      },
       { type: "input_needed" as const, timestamp: "2026-01-01T00:00:00.000Z", content: "" },
     ]);
     const inputNote = result.notes.find((n) => n.type === "input_needed");
@@ -141,9 +172,19 @@ describe("HR2 turn events", () => {
 
   it("drops status=waiting_input as redundant with turn_complete (HR2 takes over)", () => {
     const result = mapAgentEvents([
-      { type: "turn_started" as const, timestamp: "2026-01-01T00:00:00.000Z", content: "hi", turnId: "t-1" },
+      {
+        type: "turn_started" as const,
+        timestamp: "2026-01-01T00:00:00.000Z",
+        content: "hi",
+        turnId: "t-1",
+      },
       { type: "text" as const, timestamp: "2026-01-01T00:00:00.000Z", content: "response" },
-      { type: "turn_complete" as const, timestamp: "2026-01-01T00:00:00.000Z", content: "", turnId: "t-1" },
+      {
+        type: "turn_complete" as const,
+        timestamp: "2026-01-01T00:00:00.000Z",
+        content: "",
+        turnId: "t-1",
+      },
       { type: "status" as const, timestamp: "2026-01-01T00:00:00.000Z", content: "waiting_input" },
     ]);
     const statusNote = result.notes.find((n) => n.type === "status");
@@ -160,7 +201,9 @@ describe("missing-id fallback (no toolCallId)", () => {
     expect(resultNote?.detail).toContain("last-open fallback");
 
     const state = replay(missingIdFallback);
-    const tools = state.turns[0].responseParts.filter((p) => p.kind === ResponsePartKind.ToolCall) as Array<{ toolCall: { status: ToolCallStatus } }>;
+    const tools = state.turns[0].responseParts.filter(
+      (p) => p.kind === ResponsePartKind.ToolCall,
+    ) as Array<{ toolCall: { status: ToolCallStatus } }>;
     expect(tools).toHaveLength(1);
     expect(tools[0].toolCall.status).toBe(ToolCallStatus.Completed);
   });
@@ -172,7 +215,9 @@ describe("realism: a live StubRuntime scenario", () => {
     // built dist — which requires a prior `rush build` of powerline (CI always
     // builds deps before `rush test`). When vitest runs in isolation with no
     // prior dep build, skip gracefully rather than fail at import time.
-    type StubModule = { StubRuntime: new () => { spawn(opts: SpawnOptions): { stream(): AsyncIterable<AgentEvent> } } };
+    type StubModule = {
+      StubRuntime: new () => { spawn(opts: SpawnOptions): { stream(): AsyncIterable<AgentEvent> } };
+    };
     let mod: StubModule;
     try {
       mod = (await import("@grackle-ai/powerline/dist/runtimes/stub.js")) as StubModule;
@@ -192,7 +237,12 @@ describe("realism: a live StubRuntime scenario", () => {
         { emit: "turn_complete", content: "" },
       ],
     };
-    const session = runtime.spawn({ sessionId: "stub-1", prompt: JSON.stringify(scenario), model: "m", maxTurns: 1 });
+    const session = runtime.spawn({
+      sessionId: "stub-1",
+      prompt: JSON.stringify(scenario),
+      model: "m",
+      maxTurns: 1,
+    });
 
     const events: AgentEvent[] = [];
     for await (const event of session.stream()) {

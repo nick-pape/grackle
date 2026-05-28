@@ -10,14 +10,14 @@ It records what we learned by mapping Grackle's `AgentEvent` stream onto AHP
 session **actions** and folding them through AHP's own (vendored) `sessionReducer`
 to reconstruct an AHP `SessionState`.
 
-**What this validates:** *fit / implementability* — whether Grackle's session
+**What this validates:** _fit / implementability_ — whether Grackle's session
 model expresses faithfully in AHP's. It does **not** validate "two independent
 teams converged, therefore the abstraction is correct": Grackle was pitched
 internally at Microsoft, so the PowerLine ≡ AHP-reference-host resemblance may be
 partly influence. Fit is testable; independence is not, so we don't lean on it.
 
 **What this is not:** the mapper is throwaway scaffolding. The end state for
-#1232 is *PowerLine becomes an AHP host* (it owns AHP-native state and speaks AHP
+#1232 is _PowerLine becomes an AHP host_ (it owns AHP-native state and speaks AHP
 over the wire to the Server) — there is no long-lived `AgentEvent→action` mapper
 in that world. The mapper exists only to surface the gaps that work must close,
 enumerated in "Host requirements" below.
@@ -32,14 +32,14 @@ conformance corpus, so we're testing against faithful upstream behavior).
 
 These Grackle events have a faithful native AHP representation:
 
-| AgentEvent | AHP | Notes |
-|---|---|---|
-| `text` | `session/responsePart` (markdown) [+ `session/delta`] | one part per event; deltas available if we stream |
-| `tool_use` | `session/toolCallStart` + `session/toolCallReady` | tool-call lifecycle is *richer* in AHP than in Grackle today |
-| `tool_result` | `session/toolCallComplete` | clean **iff** the runtime gives a stable tool-call id (see below) |
-| `usage` (tokens) | `session/usage` | input/output tokens map 1:1 |
-| `error` | `session/error` (in-turn) / `session/creationFailed` (pre-turn) | |
-| `status: completed/waiting_input` | `session/turnComplete` | with the turn-framing rule below |
+| AgentEvent                        | AHP                                                             | Notes                                                             |
+| --------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `text`                            | `session/responsePart` (markdown) [+ `session/delta`]           | one part per event; deltas available if we stream                 |
+| `tool_use`                        | `session/toolCallStart` + `session/toolCallReady`               | tool-call lifecycle is _richer_ in AHP than in Grackle today      |
+| `tool_result`                     | `session/toolCallComplete`                                      | clean **iff** the runtime gives a stable tool-call id (see below) |
+| `usage` (tokens)                  | `session/usage`                                                 | input/output tokens map 1:1                                       |
+| `error`                           | `session/error` (in-turn) / `session/creationFailed` (pre-turn) |                                                                   |
+| `status: completed/waiting_input` | `session/turnComplete`                                          | with the turn-framing rule below                                  |
 
 The core agent-conversation shape — turns of text + tool calls with usage — is a
 clean fit. The AHP tool-call state machine is a **superset** of what Grackle
@@ -50,10 +50,10 @@ AHP would let the two unify.
 
 ## Carried with strain (no native action; rode an extension point)
 
-| AgentEvent | Carried via | Strain |
-|---|---|---|
-| `usage.cost_millicents` | `usage._meta.cost_millicents` | AHP `UsageInfo` has no cost field (only tokens/model/cacheReadTokens) |
-| `runtime_session_id` | `session/metaChanged` → `_meta.runtimeSessionId` | internal id; a host owns the native session id directly |
+| AgentEvent              | Carried via                                      | Strain                                                                |
+| ----------------------- | ------------------------------------------------ | --------------------------------------------------------------------- |
+| `usage.cost_millicents` | `usage._meta.cost_millicents`                    | AHP `UsageInfo` has no cost field (only tokens/model/cacheReadTokens) |
+| `runtime_session_id`    | `session/metaChanged` → `_meta.runtimeSessionId` | internal id; a host owns the native session id directly               |
 
 Both are minor — small bits of Grackle metadata with no first-class AHP field.
 
@@ -70,7 +70,7 @@ events on the agent-conversation transport:
   ordinary `tool_use`/`tool_result`, which map cleanly.
 - **No production runtime emits `finding`/`subtask_create` AgentEvents** — only the
   `StubRuntime` does, to exercise `event-processor.ts`'s legacy structured-event
-  path. The mapper's carry-handling for these exists *solely* to process the stub
+  path. The mapper's carry-handling for these exists _solely_ to process the stub
   fixtures; it does not reflect how real agents work.
 
 So orchestration never needs an AHP session action. This is exactly the
@@ -78,7 +78,7 @@ So orchestration never needs an AHP session action. This is exactly the
 findings/subtasks/escalations live); AHP carries only the agent conversation. The
 apparent "strain" was an artifact of feeding the spike the stub's legacy events.
 
-(The sub-agent observation still stands as a *latent* nicety: AHP's
+(The sub-agent observation still stands as a _latent_ nicety: AHP's
 `ToolResultSubagentContent` references a subscribable child-session URI, so a
 subtask spawned via a real MCP tool call could surface its child session natively
 in the conversation — but that's an option, not a requirement.)
@@ -95,7 +95,7 @@ in the conversation — but that's an option, not a requirement.)
 AHP is **turn-structured**: `session/turnStarted` MUST precede any
 `delta`/`responsePart`/`toolCall*` action or the reducer silently no-ops. Grackle
 has **no turn concept** — only a `status` flag oscillating `running ↔
-waiting_input`. The mapper bridges this by *synthesizing* turn boundaries: open a
+waiting_input`. The mapper bridges this by _synthesizing_ turn boundaries: open a
 turn lazily on the first content event (or `status: running`), close it on a
 turn-ending status.
 
@@ -105,7 +105,7 @@ This works for the common case but is lossy at the edges:
   stream doesn't carry one, so we synthesize a placeholder. A host would anchor
   turns on the actual prompt / `sendInput` text it already has.
 - **`waiting_input` is overloaded.** In Grackle it means both "turn done, idle"
-  *and* "blocked awaiting input." AHP distinguishes these (`Idle` vs the
+  _and_ "blocked awaiting input." AHP distinguishes these (`Idle` vs the
   `InputNeeded` status + structured `inputRequests`/elicitation). Mapping
   `waiting_input → turnComplete` collapses that distinction; Grackle emits no
   structured input requests today.
@@ -124,7 +124,7 @@ the runtime directly tracks tool-call ids natively** and never needs the heurist
 
 ## Host requirements (the real #1232 work)
 
-Translating the gaps into what *PowerLine-as-AHP-host* must own (beyond any mapper):
+Translating the gaps into what _PowerLine-as-AHP-host_ must own (beyond any mapper):
 
 1. **Authoritative state + sequencing.** Own `SessionState` per session, assign a
    monotonic `serverSeq` to every action, keep a replay buffer, and serve
@@ -154,13 +154,13 @@ Translating the gaps into what *PowerLine-as-AHP-host* must own (beyond any mapp
 
 ## Bottom line
 
-The agent-conversation core maps cleanly; Grackle's abstractions are *expressible*
+The agent-conversation core maps cleanly; Grackle's abstractions are _expressible_
 in AHP. Orchestration (findings, subtasks, escalations) is **not** friction for
 the session channel at all — it rides the MCP syscall plane, out of band, and
 never needed an AHP action (the apparent strain was a stub-fixture artifact). The
-real, residual friction is purely where Grackle *under-specifies* the conversation
+real, residual friction is purely where Grackle _under-specifies_ the conversation
 relative to AHP: no turns, no user message, no structured input requests, no
 stable tool ids in the flattened `AgentEvent` stream. None of these are blockers
 for PowerLine-as-host — they are a precise to-do list, and several (turns, tool
-ids) *disappear* once the host consumes the runtime directly instead of through
+ids) _disappear_ once the host consumes the runtime directly instead of through
 the lossy flattening.

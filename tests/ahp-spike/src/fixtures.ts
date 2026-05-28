@@ -70,14 +70,19 @@ export const happyPath: AgentEvent[] = [
   ev("runtime_session_id", "rt-abc-123"),
   ev("turn_started", "say hello", { turnId: "t-1" }),
   ev("text", "Hello — I'll take a look.", { turnId: "t-1" }),
-  ev(
-    "tool_use",
-    JSON.stringify({ tool: "read_file", args: { path: "/src/index.ts" } }),
-    { toolCallId: "toolu_1", turnId: "t-1" },
-  ),
-  ev("tool_result", "export const x = 1;", { toolCallId: "toolu_1", raw: { is_error: false }, turnId: "t-1" }),
+  ev("tool_use", JSON.stringify({ tool: "read_file", args: { path: "/src/index.ts" } }), {
+    toolCallId: "toolu_1",
+    turnId: "t-1",
+  }),
+  ev("tool_result", "export const x = 1;", {
+    toolCallId: "toolu_1",
+    raw: { is_error: false },
+    turnId: "t-1",
+  }),
   ev("text", "Done — it looks fine.", { turnId: "t-1" }),
-  ev("usage", JSON.stringify({ input_tokens: 150, output_tokens: 50, cost_millicents: 12 }), { turnId: "t-1" }),
+  ev("usage", JSON.stringify({ input_tokens: 150, output_tokens: 50, cost_millicents: 12 }), {
+    turnId: "t-1",
+  }),
   ev("turn_complete", "", { turnId: "t-1" }),
   // status=completed fires after turn_complete (Grackle lifecycle signal);
   // the mapper drops it as redundant with the real turn_complete.

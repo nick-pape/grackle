@@ -91,7 +91,9 @@ export interface MapResult {
 function parseContent(content: string): Record<string, unknown> | undefined {
   try {
     const parsed: unknown = JSON.parse(content);
-    return typeof parsed === "object" && parsed !== null ? (parsed as Record<string, unknown>) : undefined;
+    return typeof parsed === "object" && parsed !== null
+      ? (parsed as Record<string, unknown>)
+      : undefined;
   } catch {
     return undefined;
   }
@@ -120,7 +122,12 @@ export function mapAgentEvents(events: AgentEvent[]): MapResult {
   /** Accumulated session `_meta` (full-replacement action, so we merge ourselves). */
   const meta: Record<string, unknown> = {};
 
-  const note = (index: number, type: AgentEventType, disposition: Disposition, detail: string): void => {
+  const note = (
+    index: number,
+    type: AgentEventType,
+    disposition: Disposition,
+    detail: string,
+  ): void => {
     notes.push({ index, type, disposition, detail });
   };
 
@@ -155,7 +162,6 @@ export function mapAgentEvents(events: AgentEvent[]): MapResult {
 
   events.forEach((event, index) => {
     switch (event.type) {
-
       // ─── HR2: real turn boundaries ──────────────────────────────────────
 
       case "turn_started": {
@@ -178,7 +184,12 @@ export function mapAgentEvents(events: AgentEvent[]): MapResult {
           endTurn({ type: ActionType.SessionTurnComplete, turnId: currentTurnId });
           note(index, event.type, "mapped", "→ session/turnComplete (HR2)");
         } else {
-          note(index, event.type, "dropped", "turn_complete with no open turn (resume boundary or repeated close)");
+          note(
+            index,
+            event.type,
+            "dropped",
+            "turn_complete with no open turn (resume boundary or repeated close)",
+          );
         }
         break;
       }
@@ -188,7 +199,12 @@ export function mapAgentEvents(events: AgentEvent[]): MapResult {
         // AHP has a richer `InputNeeded` state (structured elicitation / input
         // requests), but Grackle has no mid-turn-blocking producer today — so
         // this is plumb-only. The turn is already closed by `turn_complete`.
-        note(index, event.type, "dropped", "input_needed → advisory (no structured input requests); turn already closed by turn_complete");
+        note(
+          index,
+          event.type,
+          "dropped",
+          "input_needed → advisory (no structured input requests); turn already closed by turn_complete",
+        );
         break;
       }
 
@@ -232,7 +248,12 @@ export function mapAgentEvents(events: AgentEvent[]): MapResult {
           toolInput: args === undefined ? undefined : JSON.stringify(args),
           confirmed: ToolCallConfirmationReason.NotNeeded,
         });
-        note(index, event.type, "mapped", "→ session/toolCallStart + toolCallReady(NotNeeded→running)");
+        note(
+          index,
+          event.type,
+          "mapped",
+          "→ session/toolCallStart + toolCallReady(NotNeeded→running)",
+        );
         break;
       }
 
@@ -242,7 +263,12 @@ export function mapAgentEvents(events: AgentEvent[]): MapResult {
         const explicitId = event.toolCallId || undefined;
         const toolCallId = explicitId ?? openToolCalls[openToolCalls.length - 1];
         if (toolCallId === undefined) {
-          note(index, event.type, "dropped", "tool_result with no matching open tool call (pairing failed)");
+          note(
+            index,
+            event.type,
+            "dropped",
+            "tool_result with no matching open tool call (pairing failed)",
+          );
           break;
         }
         const pairedById = explicitId !== undefined;
@@ -250,7 +276,9 @@ export function mapAgentEvents(events: AgentEvent[]): MapResult {
         if (idx >= 0) {
           openToolCalls.splice(idx, 1);
         }
-        const rawObj = (typeof event.raw === "object" && event.raw !== null ? event.raw : {}) as Record<string, unknown>;
+        const rawObj = (
+          typeof event.raw === "object" && event.raw !== null ? event.raw : {}
+        ) as Record<string, unknown>;
         const isError = rawObj["is_error"] === true || rawObj["status"] === "failed";
         const result: ToolCallResult = {
           success: !isError,
@@ -271,13 +299,27 @@ export function mapAgentEvents(events: AgentEvent[]): MapResult {
         const turnId = ensureTurn("(defensive: pre-HR2 stream or missed turn_started)");
         const parsed = parseContent(event.content) ?? {};
         const usage: UsageInfo = {
-          inputTokens: typeof parsed["input_tokens"] === "number" ? (parsed["input_tokens"] as number) : undefined,
-          outputTokens: typeof parsed["output_tokens"] === "number" ? (parsed["output_tokens"] as number) : undefined,
+          inputTokens:
+            typeof parsed["input_tokens"] === "number"
+              ? (parsed["input_tokens"] as number)
+              : undefined,
+          outputTokens:
+            typeof parsed["output_tokens"] === "number"
+              ? (parsed["output_tokens"] as number)
+              : undefined,
           // AHP UsageInfo has no cost field → cost rides in _meta. Residual AHP gap.
-          _meta: parsed["cost_millicents"] !== undefined ? { cost_millicents: parsed["cost_millicents"] } : undefined,
+          _meta:
+            parsed["cost_millicents"] !== undefined
+              ? { cost_millicents: parsed["cost_millicents"] }
+              : undefined,
         };
         actions.push({ type: ActionType.SessionUsage, turnId, usage });
-        note(index, event.type, "carried", "→ session/usage; cost_millicents has no AHP field → usage._meta (AHP upstream gap)");
+        note(
+          index,
+          event.type,
+          "carried",
+          "→ session/usage; cost_millicents has no AHP field → usage._meta (AHP upstream gap)",
+        );
         break;
       }
 
@@ -309,11 +351,21 @@ export function mapAgentEvents(events: AgentEvent[]): MapResult {
               turnId: currentTurnId,
               error: { errorType: s, message: `session ${s}` },
             });
-            note(index, event.type, "mapped", `status=${s} mid-turn → session/error (turn abandoned)`);
+            note(
+              index,
+              event.type,
+              "mapped",
+              `status=${s} mid-turn → session/error (turn abandoned)`,
+            );
           } else {
             // Turn already closed cleanly by turn_complete — this is just the
             // Grackle session reaching a terminal Grackle state; no AHP action.
-            note(index, event.type, "dropped", `status=${s} after clean turn_complete → no AHP session action needed`);
+            note(
+              index,
+              event.type,
+              "dropped",
+              `status=${s} after clean turn_complete → no AHP session action needed`,
+            );
           }
         } else {
           // status=running, waiting_input, completed, and any future values:
@@ -347,16 +399,31 @@ export function mapAgentEvents(events: AgentEvent[]): MapResult {
         if (event.diagnostic) {
           // HR7 (#1290): lifecycle/diagnostic system events route to the
           // `ahp-otlp:` telemetry channel, NOT session state — by design.
-          note(index, event.type, "carried", "diagnostic=true → ahp-otlp telemetry channel (HR7), out of SessionState by design");
+          note(
+            index,
+            event.type,
+            "carried",
+            "diagnostic=true → ahp-otlp telemetry channel (HR7), out of SessionState by design",
+          );
         } else if (currentTurnId !== undefined) {
           const part: ResponsePart = {
             kind: ResponsePartKind.SystemNotification,
             content: event.content,
           };
           actions.push({ type: ActionType.SessionResponsePart, turnId: currentTurnId, part });
-          note(index, event.type, "mapped", "substantive system → session/responsePart(systemNotification)");
+          note(
+            index,
+            event.type,
+            "mapped",
+            "substantive system → session/responsePart(systemNotification)",
+          );
         } else {
-          note(index, event.type, "dropped", "pre-turn non-diagnostic system message → no open turn to attach to");
+          note(
+            index,
+            event.type,
+            "dropped",
+            "pre-turn non-diagnostic system message → no open turn to attach to",
+          );
         }
         break;
       }
@@ -364,7 +431,12 @@ export function mapAgentEvents(events: AgentEvent[]): MapResult {
       case "runtime_session_id": {
         meta["runtimeSessionId"] = event.content;
         flushMeta();
-        note(index, event.type, "carried", "→ session/_meta.runtimeSessionId (no first-class AHP field)");
+        note(
+          index,
+          event.type,
+          "carried",
+          "→ session/_meta.runtimeSessionId (no first-class AHP field)",
+        );
         break;
       }
 
