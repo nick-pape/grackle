@@ -87,11 +87,15 @@ export interface MapResult {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Parse an event's JSON `content`, returning `undefined` on failure. */
+/**
+ * Parse an event's JSON `content` into a plain object, returning `undefined`
+ * on parse failure, non-objects, or arrays. Arrays are explicitly excluded so
+ * callers don't accidentally treat indexed array values as keyed object props.
+ */
 function parseContent(content: string): Record<string, unknown> | undefined {
   try {
     const parsed: unknown = JSON.parse(content);
-    return typeof parsed === "object" && parsed !== null
+    return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
       ? (parsed as Record<string, unknown>)
       : undefined;
   } catch {

@@ -221,9 +221,15 @@ describe("realism: a live StubRuntime scenario", () => {
     let mod: StubModule;
     try {
       mod = (await import("@grackle-ai/powerline/dist/runtimes/stub.js")) as StubModule;
-    } catch {
-      ctx.skip();
-      return;
+    } catch (err) {
+      // Only skip when the dist file truly hasn't been built yet
+      // (ERR_MODULE_NOT_FOUND). Rethrow any other import-time error so real
+      // regressions inside StubRuntime can't be silently swallowed as a skip.
+      if ((err as NodeJS.ErrnoException)?.code === "ERR_MODULE_NOT_FOUND") {
+        ctx.skip();
+        return;
+      }
+      throw err;
     }
     const runtime = new mod.StubRuntime();
     // Include real HR2 turn events so the scenario reflects production emission.

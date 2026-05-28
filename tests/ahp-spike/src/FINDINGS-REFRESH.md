@@ -13,12 +13,10 @@ types → the compiler points at every hack the merged work obsoleted → delete
 replace it → re-fold through the (unchanged, conformance-tested) `sessionReducer`
 to prove the result still reconstructs a faithful `SessionState`.
 
-**Shrink this round:** `mapper.ts` 408 → 356 lines; net −51 lines across
-mapper + fixtures + tests, and — more importantly — the actual _hacks_ (a
-`raw`-digging id heuristic, a fragile tool-pairing fallback, and two stub-only
-event cases) are gone, replaced by reads of real first-class fields. The
-164-test suite (157-case vendored AHP conformance corpus + 7 mapper replay
-tests, incl. the live StubRuntime stream) stays green.
+**Shrink this round:** the actual _hacks_ (a `raw`-digging id heuristic, a
+fragile tool-pairing fallback, and two stub-only event cases) are gone,
+replaced by reads of real first-class fields. The full mapper-replay +
+vendored AHP reducer conformance suite stays green.
 
 ---
 
@@ -122,11 +120,11 @@ conversation core, holding only:
 3. The `input_needed` advisory drop — plumbing is in production; structured
    `inputRequests` content is the last narrow turn-model gap.
 
-**`mapper.ts`: 408 → 384 lines** (raw shrink of 24 lines, but the meaningful
-hacks — `rawToolUseId` heuristic, `TURN_ENDING_STATUSES`, turn synthesis,
-two stub-only cases — are all gone, replaced by reads of real first-class fields).
-167 tests green: 157-case vendored AHP conformance corpus + 10 mapper replay
-tests including the live StubRuntime stream.
+**Mapper shrunk meaningfully:** the `rawToolUseId` heuristic, `TURN_ENDING_STATUSES`,
+turn synthesis, and two stub-only cases are all gone, replaced by reads of real
+first-class fields. The full suite stays green: the upstream-AHP reducer
+conformance corpus (now consumed via the productionized `@grackle-ai/ahp`
+package) plus the mapper-replay tests including the live StubRuntime stream.
 
 **No more re-run triggers.** The next milestone for the adapter is HR1b (#1292,
 host-owned `SessionState`) and HR8 (#1291, the wire flip) — at which point the

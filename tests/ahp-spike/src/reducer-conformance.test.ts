@@ -12,7 +12,6 @@ import { describe, it, beforeEach, afterEach } from "vitest";
 import { strict as assert } from "node:assert";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 
 // Spike now uses the productionized @grackle-ai/ahp package (PR #1320).
