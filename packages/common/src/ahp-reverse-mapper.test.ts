@@ -235,6 +235,67 @@ describe("reverseMapAction", () => {
       expect(parsed.args).toEqual({ x: 1 });
     });
 
+    it("Coalesced tool_use strips synthetic turn-orphan-* turnId (HR8d)", () => {
+      // Symmetric with response-part stripping: when PowerLine wrapped a
+      // tool_use without an active turn in a `turn-orphan-N` synthetic turn,
+      // the AgentEvent the consumer sees must NOT carry the synthetic id —
+      // it should match the gRPC wire shape (turnId absent).
+      const ctx = newReverseMapperContext();
+      reverseMapAction(
+        envelope({
+          type: ActionType.SessionToolCallStart,
+          turnId: "turn-orphan-3",
+          toolCallId: "tc-7",
+          toolName: "echo",
+          displayName: "echo",
+        }),
+        ctx,
+      );
+      const res = reverseMapAction(
+        envelope({
+          type: ActionType.SessionToolCallReady,
+          turnId: "turn-orphan-3",
+          toolCallId: "tc-7",
+          invocationMessage: "Running echo",
+          confirmed: ToolCallConfirmationReason.NotNeeded,
+        }),
+        ctx,
+      );
+      expect(res.events[0]?.turnId).toBeUndefined();
+    });
+
+    it("Orphan-Ready also strips synthetic turn-orphan-* turnId (HR8d)", () => {
+      const res = reverseMapAction(
+        envelope({
+          type: ActionType.SessionToolCallReady,
+          turnId: "turn-orphan-5",
+          toolCallId: "tc-stray",
+          invocationMessage: "Running stray",
+          confirmed: ToolCallConfirmationReason.NotNeeded,
+        }),
+        newReverseMapperContext(),
+      );
+      expect(res.events[0]?.turnId).toBeUndefined();
+    });
+
+    it("tool_result strips synthetic turn-orphan-* turnId (HR8d)", () => {
+      const res = reverseMapAction(
+        envelope({
+          type: ActionType.SessionToolCallComplete,
+          turnId: "turn-orphan-9",
+          toolCallId: "tc-z",
+          result: {
+            success: true,
+            pastTenseMessage: "did the thing",
+            content: [textContent("done")],
+            error: undefined,
+          },
+        }),
+        newReverseMapperContext(),
+      );
+      expect(res.events[0]?.turnId).toBeUndefined();
+    });
+
     it("SessionToolCallComplete (success) → tool_result with is_ok=true", () => {
       const res = reverseMapAction(
         envelope({

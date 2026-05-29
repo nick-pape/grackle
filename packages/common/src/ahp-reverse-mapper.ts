@@ -101,6 +101,17 @@ export interface ReverseMapResult {
 }
 
 /**
+ * Strip the synthetic `turn-orphan-N` turnId that PowerLine's forwarder
+ * attaches to events emitted outside an active turn (text/system/tool_*).
+ * Returns `undefined` for synthetic turns so the resulting AgentEvent
+ * matches the gRPC wire shape (which had no `turnId` for pre-turn events).
+ * Returns the original turnId for real turns.
+ */
+function stripOrphanTurn(turnId: string): string | undefined {
+  return turnId.startsWith("turn-orphan-") ? undefined : turnId;
+}
+
+/**
  * Reverse-map one AHP action envelope into 0..N PowerLine AgentEvents.
  *
  * @param envelope - The inbound `ActionEnvelope` carrying the AHP action.
@@ -174,13 +185,11 @@ export function reverseMapAction(
       // action stream can carry them. On the consumer side, strip the
       // synthetic turnId so the resulting AgentEvent matches the gRPC
       // wire shape (which had no turnId for pre-turn events).
-      const stripOrphan = (tid: string): string | undefined =>
-        tid.startsWith("turn-orphan-") ? undefined : tid;
       // Only Markdown and SystemNotification parts have AgentEvent representations;
       // ContentRef/ToolCall/Reasoning parts don't map to AgentEvent (drop).
       if (a.part.kind === ResponsePartKind.Markdown) {
         const evt: AgentEventFields = { type: "text", content: a.part.content };
-        const tid = stripOrphan(a.turnId);
+        const tid = stripOrphanTurn(a.turnId);
         if (tid !== undefined) {
           evt.turnId = tid;
         }
@@ -195,7 +204,7 @@ export function reverseMapAction(
         // SystemNotification.content is StringOrMarkdown (string | { markdown: string }).
         const contentStr = typeof partContent === "string" ? partContent : partContent.markdown;
         const evt: AgentEventFields = { type: "system", content: contentStr };
-        const tid = stripOrphan(a.turnId);
+        const tid = stripOrphanTurn(a.turnId);
         if (tid !== undefined) {
           evt.turnId = tid;
         }
@@ -245,44 +254,52 @@ export function reverseMapAction(
       if (pending === undefined) {
         // Orphan Ready (Start was missed). Emit a degraded tool_use using
         // only Ready's data — better than dropping.
+        const orphanEvt: AgentEventFields = {
+          type: "tool_use",
+          toolCallId: a.toolCallId,
+          content: JSON.stringify({
+            tool: "unknown_tool",
+            tool_name: "unknown_tool",
+            display_name: "unknown_tool",
+            invocation_message: a.invocationMessage,
+            ...(args !== undefined ? { args } : {}),
+          }),
+        };
+        // Strip the synthetic orphan turnId — symmetric with text/system
+        // response parts above. Without this, orphan tool_use events leak
+        // the turn-orphan-N id and break the "match the gRPC wire shape"
+        // contract for downstream consumers (turn-keyed UI grouping, JSONL).
+        const orphanTid = stripOrphanTurn(a.turnId);
+        if (orphanTid !== undefined) {
+          orphanEvt.turnId = orphanTid;
+        }
         return {
-          events: [
-            {
-              type: "tool_use",
-              turnId: a.turnId,
-              toolCallId: a.toolCallId,
-              content: JSON.stringify({
-                tool: "unknown_tool",
-                tool_name: "unknown_tool",
-                display_name: "unknown_tool",
-                invocation_message: a.invocationMessage,
-                ...(args !== undefined ? { args } : {}),
-              }),
-            },
-          ],
+          events: [orphanEvt],
           disposition: "mapped",
           detail: `tool_use (orphan Ready, toolCallId=${a.toolCallId})`,
         };
       }
       context.pendingToolCalls.delete(a.toolCallId);
+      const evt: AgentEventFields = {
+        type: "tool_use",
+        toolCallId: a.toolCallId,
+        // Emit both `tool` and `tool_name` so downstream code reading either
+        // key works (web's pairToolEvents reads `tool`; older paths read
+        // `tool_name`).
+        content: JSON.stringify({
+          tool: pending.toolName,
+          tool_name: pending.toolName,
+          display_name: pending.displayName,
+          invocation_message: a.invocationMessage,
+          ...(args !== undefined ? { args } : {}),
+        }),
+      };
+      const tid = stripOrphanTurn(pending.turnId);
+      if (tid !== undefined) {
+        evt.turnId = tid;
+      }
       return {
-        events: [
-          {
-            type: "tool_use",
-            turnId: pending.turnId,
-            toolCallId: a.toolCallId,
-            // Emit both `tool` and `tool_name` so downstream code reading
-            // either key works (web's pairToolEvents reads `tool`; older
-            // paths read `tool_name`).
-            content: JSON.stringify({
-              tool: pending.toolName,
-              tool_name: pending.toolName,
-              display_name: pending.displayName,
-              invocation_message: a.invocationMessage,
-              ...(args !== undefined ? { args } : {}),
-            }),
-          },
-        ],
+        events: [evt],
         disposition: "mapped",
         detail: `tool_use coalesced (toolCallId=${a.toolCallId})`,
       };
@@ -300,19 +317,21 @@ export function reverseMapAction(
         }
       }
       const pastTenseMessage = a.result.pastTenseMessage;
+      const trEvt: AgentEventFields = {
+        type: "tool_result",
+        toolCallId: a.toolCallId,
+        content: JSON.stringify({
+          is_ok: isOk,
+          content: resultText,
+          past_tense_message: pastTenseMessage,
+        }),
+      };
+      const trTid = stripOrphanTurn(a.turnId);
+      if (trTid !== undefined) {
+        trEvt.turnId = trTid;
+      }
       return {
-        events: [
-          {
-            type: "tool_result",
-            turnId: a.turnId,
-            toolCallId: a.toolCallId,
-            content: JSON.stringify({
-              is_ok: isOk,
-              content: resultText,
-              past_tense_message: pastTenseMessage,
-            }),
-          },
-        ],
+        events: [trEvt],
         disposition: "mapped",
         detail: `tool_result (toolCallId=${a.toolCallId}, ok=${String(isOk)})`,
       };

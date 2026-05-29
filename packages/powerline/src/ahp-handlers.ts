@@ -86,12 +86,18 @@ import { writeTokens } from "./token-writer.js";
 const PROTOCOL_VERSION: string = "0.1.0";
 const SESSION_CHANNEL_PREFIX: string = "ahp-session:/";
 
-/** Decode a session URI to its underlying sessionId. Returns undefined for non-session URIs. */
+/**
+ * Decode a session URI to its underlying sessionId. Returns undefined for
+ * non-session URIs OR for the bare prefix `ahp-session:/` with no id
+ * (which would otherwise produce an empty sessionId and collide on
+ * createSession/subscribe/dispose).
+ */
 function sessionIdFromChannel(channel: URI): string | undefined {
   if (!channel.startsWith(SESSION_CHANNEL_PREFIX)) {
     return undefined;
   }
-  return channel.slice(SESSION_CHANNEL_PREFIX.length);
+  const id = channel.slice(SESSION_CHANNEL_PREFIX.length);
+  return id.length > 0 ? id : undefined;
 }
 
 /** Encode a sessionId as an AHP session URI. */

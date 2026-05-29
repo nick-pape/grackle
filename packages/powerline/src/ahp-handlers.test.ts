@@ -264,6 +264,27 @@ describe("ahp-handlers: createSession", () => {
     }
   });
 
+  it("rejects the bare `ahp-session:/` channel with an empty sessionId (HR8d)", async () => {
+    // Without the empty-id guard in sessionIdFromChannel, this would slice to
+    // sessionId="" and proceed to register it, creating registry collisions.
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      await expect(
+        client.socket.request("createSession", {
+          channel: `ahp-session:/`,
+          provider: TEST_RUNTIME.name,
+          config: {},
+        }),
+      ).rejects.toMatchObject({
+        code: JsonRpcErrorCodes.InvalidParams,
+      });
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  });
+
   it("returns a JSON-RPC InvalidParams error when the provider is unknown", async () => {
     const lb = await spinUpLoopback();
     const client = await openClient(lb.port);
