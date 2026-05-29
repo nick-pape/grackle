@@ -63,7 +63,7 @@ export async function remoteHealthCheck(connection: PowerLineConnection): Promis
     return false;
   }
   try {
-    await connection.client.ping({});
+    await connection.ping();
     return true;
   } catch {
     return false;

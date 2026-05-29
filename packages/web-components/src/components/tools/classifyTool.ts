@@ -33,6 +33,12 @@ const KNOWN_MCP_SERVERS: Set<string> = new Set(["grackle"]);
  * - Built-in: `Read` -> `read` (unchanged, lowered later)
  */
 export function extractBareName(toolName: string): string {
+  // Defensive: callers may pass undefined for legacy events that never carried
+  // a tool name (e.g. stub fixtures, runtimes that emit tool_use with only
+  // tool_name / display_name in `content`). Treat as empty string.
+  if (!toolName) {
+    return "";
+  }
   // MCP double-underscore format: mcp__<server>__<tool> (only for known servers)
   if (toolName.startsWith("mcp__")) {
     const serverSep = toolName.indexOf("__", 5);

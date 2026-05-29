@@ -9,9 +9,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ── Mock adapter-sdk ────────────────────────────────────────
-// bootstrapPowerLine / startRemotePowerLine / createPowerLineClient are mocked
-// so no real container or network is touched.
-const pingMock = vi.hoisted(() => vi.fn().mockResolvedValue({}));
+// bootstrapPowerLine / startRemotePowerLine / createAhpHostTransport are mocked
+// so no real container or network is touched. `pingMock` controls whether
+// the AHP `ping` RPC succeeds — used to model reachability of a target IP.
+const pingMock = vi.hoisted(() => vi.fn().mockResolvedValue(null));
+const createAhpMock = vi.hoisted(() =>
+  vi.fn().mockImplementation(async () => ({
+    transport: { handleNotification: () => {} } as never,
+    socket: { request: pingMock, close: () => Promise.resolve() } as never,
+  })),
+);
 vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@grackle-ai/adapter-sdk")>()),
   isDevMode: vi.fn().mockReturnValue(false),
@@ -22,7 +29,7 @@ vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
   ),
   startRemotePowerLine: vi.fn().mockResolvedValue({ alreadyRunning: false }),
   buildRemoteKillCommand: vi.fn().mockReturnValue("KILL_PL"),
-  createPowerLineClient: vi.fn().mockReturnValue({ ping: pingMock }),
+  createAhpHostTransport: createAhpMock,
 }));
 
 import * as sdk from "@grackle-ai/adapter-sdk";
@@ -210,9 +217,10 @@ describe("DockerAdapter attach mode — connectivity", () => {
       { attach: ATTACH } as unknown as Record<string, unknown>,
       TOKEN,
     );
-    expect(sdk.createPowerLineClient).toHaveBeenCalledWith(
+    expect(sdk.createAhpHostTransport).toHaveBeenCalledWith(
       `http://172.18.0.7:${DEFAULT_POWERLINE_PORT}`,
       TOKEN,
+      "env-ip",
     );
   });
 
@@ -251,9 +259,10 @@ describe("DockerAdapter attach mode — connectivity", () => {
       TOKEN,
     );
 
-    expect(sdk.createPowerLineClient).toHaveBeenCalledWith(
+    expect(sdk.createAhpHostTransport).toHaveBeenCalledWith(
       `http://172.18.0.7:${DEFAULT_POWERLINE_PORT}`,
       TOKEN,
+      "env-recover",
     );
     expect(conn.port).toBe(DEFAULT_POWERLINE_PORT);
   });

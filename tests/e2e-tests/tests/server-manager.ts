@@ -304,12 +304,16 @@ export async function stopGrackleStack(state: E2EState): Promise<void> {
   // Small delay to let processes exit
   await new Promise((resolve) => setTimeout(resolve, TEARDOWN_GRACE_MS));
 
-  // Remove temp directory
-  try {
-    rmSync(state.grackleHome, { recursive: true, force: true });
-    console.log(`${tag} Removed temp dir: ${state.grackleHome}`);
-  } catch {
-    console.warn(`${tag} Could not remove temp dir: ${state.grackleHome}`);
+  // Remove temp directory (skip if DEBUG_KEEP_TEMP=1 for failure inspection)
+  if (process.env.DEBUG_KEEP_TEMP === "1") {
+    console.log(`${tag} Kept temp dir for inspection: ${state.grackleHome}`);
+  } else {
+    try {
+      rmSync(state.grackleHome, { recursive: true, force: true });
+      console.log(`${tag} Removed temp dir: ${state.grackleHome}`);
+    } catch {
+      console.warn(`${tag} Could not remove temp dir: ${state.grackleHome}`);
+    }
   }
 
   console.log(`${tag} Teardown complete`);

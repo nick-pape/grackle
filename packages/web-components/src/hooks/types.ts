@@ -82,6 +82,14 @@ export interface SessionEvent {
    * rendering; absent on out-of-band/liveness events and pre-HR2 logs.
    */
   turnId?: string;
+  /**
+   * Server-assigned ULID (`recordSessionAction()` return value, AHP HR8d).
+   * Used as the canonical dedup + sort key by the UI — independent of
+   * `timestamp`, which the AHP wire doesn't preserve and which the consumer
+   * synthesizes at receive time. Absent on legacy WS pushes / log replays
+   * predating HR8d; consumers should fall back to `${timestamp}|${eventType}`.
+   */
+  serverSeq?: string;
 }
 
 /** A workspace that groups tasks. */
@@ -722,7 +730,8 @@ export function isSessionEvent(v: unknown): v is SessionEvent {
     typeof v.content === "string" &&
     (v.raw === undefined || typeof v.raw === "string") &&
     (v.toolCallId === undefined || typeof v.toolCallId === "string") &&
-    (v.turnId === undefined || typeof v.turnId === "string")
+    (v.turnId === undefined || typeof v.turnId === "string") &&
+    (v.serverSeq === undefined || typeof v.serverSeq === "string")
   );
 }
 

@@ -275,13 +275,23 @@ describe("tool_result", () => {
     expect(context.openToolCalls).toEqual(["tc-first"]);
   });
 
-  it("drops when no matching tool call", () => {
-    const context = makeContext({ turnId: "turn-abc", openToolCalls: [] });
+  it("synthesizes a toolCallId when no matching tool call (HR8d)", () => {
+    // Pre-HR8d this dropped. Now: emit SessionToolCallComplete with a
+    // synthesized `tc-orphan-result-N` so the gRPC unpaired-tool_result
+    // behavior survives the wire flip (the consumer's reverse mapper
+    // emits a tool_result event, the UI's pairToolEvents finds no match
+    // in toolUseById and renders it via the unpaired GenericToolCard).
+    const context = makeContext({ turnId: "turn-abc", openToolCalls: [], partCounter: 0 });
     const event = makeEvent("tool_result", { content: "{}" });
     const result = mapAgentEvent(event, 5, context);
 
-    expect(result.actions.length).toBe(0);
-    expect(result.note?.disposition).toBe("dropped");
+    expect(result.note?.disposition).toBe("mapped");
+    expect(result.actions.length).toBeGreaterThan(0);
+    const complete = result.actions.find((a) => a.type === ActionType.SessionToolCallComplete) as
+      | { toolCallId: string }
+      | undefined;
+    expect(complete).toBeDefined();
+    expect(complete!.toolCallId).toMatch(/^tc-orphan-result-/);
   });
 
   it("adds system notification for successful result", () => {
@@ -631,6 +641,59 @@ describe("branch coverage", () => {
 
     const ready = result.actions[1] as { invocationMessage: string };
     expect(ready.invocationMessage).toBe("running shell `ls`");
+  });
+
+  it("tool_use accepts the legacy `tool` field as a toolName alias (HR8d)", () => {
+    // Stub fixtures and Claude Code's tool_use events both serialize as
+    // `{tool, args}` rather than `{tool_name}`. Without the `tool` alias the
+    // forward mapper falls through to "unknown_tool" and the consumer sees
+    // a degraded tool card.
+    const context = makeContext({ turnId: "t1", partCounter: 0 });
+    const event = makeEvent("tool_use", { content: JSON.stringify({ tool: "echo", args: {} }) });
+    const result = mapAgentEvent(event, 0, context);
+
+    const start = result.actions[0] as { toolName: string };
+    expect(start.toolName).toBe("echo");
+  });
+
+  it("tool_use packs `args` into SessionToolCallReady.toolInput (HR8d)", () => {
+    const context = makeContext({ turnId: "t1", partCounter: 0 });
+    const event = makeEvent("tool_use", {
+      content: JSON.stringify({ tool: "echo", args: { message: "hello" } }),
+    });
+    const result = mapAgentEvent(event, 0, context);
+
+    const ready = result.actions[1] as { toolInput?: string };
+    expect(ready.toolInput).toBeDefined();
+    expect(JSON.parse(ready.toolInput!)).toEqual({ message: "hello" });
+  });
+
+  it("tool_use packs `input` and `arguments` as toolInput aliases (HR8d)", () => {
+    // Claude Code emits `input` on some paths; Copilot emits `arguments`.
+    const ctx1 = makeContext({ turnId: "t1", partCounter: 0 });
+    const ev1 = makeEvent("tool_use", {
+      content: JSON.stringify({ tool: "bash", input: { command: "ls" } }),
+    });
+    const r1 = mapAgentEvent(ev1, 0, ctx1);
+    const ready1 = r1.actions[1] as { toolInput?: string };
+    expect(JSON.parse(ready1.toolInput!)).toEqual({ command: "ls" });
+
+    const ctx2 = makeContext({ turnId: "t1", partCounter: 0 });
+    const ev2 = makeEvent("tool_use", {
+      content: JSON.stringify({ tool: "search", arguments: { query: "foo" } }),
+    });
+    const r2 = mapAgentEvent(ev2, 0, ctx2);
+    const ready2 = r2.actions[1] as { toolInput?: string };
+    expect(JSON.parse(ready2.toolInput!)).toEqual({ query: "foo" });
+  });
+
+  it("tool_use omits toolInput when no args are present (HR8d)", () => {
+    const context = makeContext({ turnId: "t1", partCounter: 0 });
+    const event = makeEvent("tool_use", { content: JSON.stringify({ tool: "ping" }) });
+    const result = mapAgentEvent(event, 0, context);
+
+    const ready = result.actions[1] as { toolInput?: string };
+    expect(ready.toolInput).toBeUndefined();
   });
 
   it("tool_result with is_ok:false emits failure result with error", () => {

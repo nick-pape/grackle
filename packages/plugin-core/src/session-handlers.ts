@@ -803,6 +803,8 @@ export async function getSessionEvents(req: grackle.SessionId): Promise<grackle.
         raw: e.raw || "",
         toolCallId: e.tool_call_id || "",
         diagnostic: e.diagnostic || false,
+        turnId: e.turn_id || "",
+        serverSeq: e.server_seq || "",
       }),
     ),
   });

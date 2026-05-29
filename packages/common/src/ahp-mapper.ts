@@ -322,13 +322,36 @@ export function mapAgentEvent(
       }
 
       const toolCallIdValue = toolCallId || `tc-${context.partCounter++}`;
+      // Accept the legacy `tool` key alongside `tool_name`/`name`. Production
+      // runtimes (Claude Code, Copilot, Codex) serialize their tool_use content
+      // as `{tool, args}` — only the runScenario stub fixture uses `tool_name`.
+      // Without this fallback the reverse mapper sees "unknown_tool" for every
+      // real runtime, losing the actual tool identity on the wire.
       const toolName = hasParsed
-        ? str(parsed, ["tool_name", "name"], "unknown_tool")
+        ? str(parsed, ["tool_name", "name", "tool"], "unknown_tool")
         : "unknown_tool";
       const displayName = hasParsed ? str(parsed, ["display_name"], toolName) : toolName;
       const invocationMessage = hasParsed
         ? str(parsed, ["invocation_message"], `Running ${toolName}`)
         : `Running ${toolName}`;
+      // Serialize args as `toolInput` (AHP-spec field on SessionToolCallReady)
+      // so the consumer can rehydrate them. The mapper sees several arg shapes:
+      // `args` (stub + Claude Code), `input` (Claude Code raw form on some
+      // paths), `arguments` (Copilot). Preserve the first that's present.
+      let toolInput: string | undefined;
+      if (hasParsed) {
+        const argsValue =
+          (parsed as Record<string, unknown>).args ??
+          (parsed as Record<string, unknown>).input ??
+          (parsed as Record<string, unknown>).arguments;
+        if (argsValue !== undefined) {
+          try {
+            toolInput = JSON.stringify(argsValue);
+          } catch {
+            /* circular / unserializable — skip the toolInput field. */
+          }
+        }
+      }
 
       // SessionToolCallStart
       actions.push({
@@ -346,6 +369,7 @@ export function mapAgentEvent(
         toolCallId: toolCallIdValue,
         invocationMessage,
         confirmed: ToolCallConfirmationReason.NotNeeded,
+        ...(toolInput !== undefined ? { toolInput } : {}),
       });
 
       context.openToolCalls.push(toolCallIdValue);
@@ -371,8 +395,16 @@ export function mapAgentEvent(
         break;
       }
 
-      // Pair by first-class toolCallId (HR3), with LIFO stack fallback
-      const pairedToolCallId = toolCallId || context.openToolCalls.pop() || "";
+      // Pair by first-class toolCallId (HR3), with LIFO stack fallback.
+      // HR8d: when no tool_use precedes (an "unpaired tool_result" — legal
+      // under the gRPC wire and exercised by the tool-result-accordion
+      // E2E test), synthesize an id rather than dropping. The reverse
+      // mapper emits a tool_result with the synthetic id, the UI's
+      // pairToolEvents finds no matching tool_use in `toolUseById`, and
+      // the event falls through to the unpaired tool-card render path
+      // (GenericToolCard). Dropping silently masked the event entirely.
+      const pairedToolCallId =
+        toolCallId || context.openToolCalls.pop() || `tc-orphan-result-${context.partCounter++}`;
 
       // Remove matched id from stack when first-class toolCallId is provided
       if (toolCallId) {
@@ -380,16 +412,6 @@ export function mapAgentEvent(
         if (idx !== -1) {
           context.openToolCalls.splice(idx, 1);
         }
-      }
-
-      if (!pairedToolCallId) {
-        note = {
-          index,
-          type: "tool_result",
-          disposition: "dropped",
-          detail: "No matching tool call for result",
-        };
-        break;
       }
 
       const isOk = hasParsed

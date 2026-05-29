@@ -5,12 +5,8 @@ export type { AdapterLogger } from "./logger.js";
 export { FatalAdapterError } from "./fatal-error.js";
 export { defaultLogger } from "./logger.js";
 
-// ─── Proto Types ──────────────────────────────────────────────
-export { powerline } from "@grackle-ai/common";
-
 // ─── Core Adapter Types ─────────────────────────────────────
 export type {
-  PowerLineClient,
   PowerLineConnection,
   ProvisionEvent,
   BaseEnvironmentConfig,
@@ -30,7 +26,7 @@ export { registerTunnel, getTunnel, closeTunnel, closeAllTunnels } from "./tunne
 // ─── Connect ────────────────────────────────────────────────
 export type { PortProber, WaitForLocalPortOptions } from "./connect.js";
 export {
-  createPowerLineClient,
+  createAhpHostTransport,
   connectThroughTunnel,
   waitForLocalPort,
   TCP_PORT_PROBER,
@@ -69,7 +65,7 @@ export {
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
 } from "./utils.js";
 
-// ─── Host Transport (AHP HR8c) ──────────────────────────────
+// ─── Host Transport (AHP HR8c/HR8d) ─────────────────────────
 // Re-export AgentEventFields from common so consumers of `ServerActionEnvelope`
 // (which references it) don't have to import @grackle-ai/common just for the
 // type and api-extractor doesn't flag `ae-forgotten-export`.
@@ -84,4 +80,4 @@ export type {
   AuthenticateTokenItem,
   HostSessionInfo,
 } from "./host-transport.js";
-export { GrpcHostTransport } from "./grpc-host-transport.js";
+export { AhpHostTransport, bindNotificationHandler } from "./ahp-host-transport.js";

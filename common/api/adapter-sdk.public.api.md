@@ -4,12 +4,9 @@
 
 ```ts
 
+import { AhpClientSocket } from '@grackle-ai/ahp-transport';
+import type { AhpNotification } from '@grackle-ai/ahp';
 import { ChildProcess } from 'node:child_process';
-import type { Client } from '@connectrpc/connect';
-import type { GenFile } from '@bufbuild/protobuf/codegenv2';
-import type { GenMessage } from '@bufbuild/protobuf/codegenv2';
-import type { GenService } from '@bufbuild/protobuf/codegenv2';
-import type { Message } from '@bufbuild/protobuf';
 import { SpawnOptions } from 'node:child_process';
 import type { StateAction } from '@grackle-ai/ahp';
 
@@ -35,18 +32,6 @@ export interface AdapterLogger {
 }
 
 // @public
-type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
-    sessionId: string;
-    type: string;
-    timestamp: string;
-    content: string;
-    raw: string;
-    toolCallId: string;
-    diagnostic: boolean;
-    turnId: string;
-};
-
-// @public
 export interface AgentEventFields {
     content?: string;
     diagnostic?: boolean;
@@ -58,22 +43,22 @@ export interface AgentEventFields {
 }
 
 // @public
-const AgentEventSchema: GenMessage<AgentEvent>;
+export class AhpHostTransport implements IHostTransport {
+    constructor(socket: AhpClientSocket);
+    authenticate(params: AuthenticateParams): Promise<void>;
+    createSession(params: CreateSessionParams): CreateSessionResult;
+    dispatchInput(sessionUri: string, text: string): Promise<void>;
+    dispose(sessionUri: string, _reason?: string): Promise<void>;
+    handleNotification(notif: AhpNotification): void;
+    listSessions(): Promise<HostSessionInfo[]>;
+    reanimate(params: ReanimateParams): AsyncIterable<ServerActionEnvelope>;
+}
 
 // @public
 export interface AuthenticateParams {
     provider: string;
     tokens: AuthenticateTokenItem[];
 }
-
-// @public
-type AuthenticateRequest = Message<"grackle.powerline.AuthenticateRequest"> & {
-    provider: string;
-    tokens: TokenItem[];
-};
-
-// @public
-const AuthenticateRequestSchema: GenMessage<AuthenticateRequest>;
 
 // @public
 export interface AuthenticateTokenItem {
@@ -89,6 +74,9 @@ export interface BaseEnvironmentConfig {
     host?: string;
     port?: number;
 }
+
+// @public
+export function bindNotificationHandler(transport: AhpHostTransport): (n: AhpNotification) => void;
 
 // @public
 export interface BootstrapOptions {
@@ -116,10 +104,13 @@ export function closeAllTunnels(logger?: AdapterLogger): Promise<void>;
 export function closeTunnel(environmentId: string): Promise<void>;
 
 // @public
-export function connectThroughTunnel(environmentId: string, localPort: number, powerlineToken: string, logger?: AdapterLogger, traceId?: string): Promise<PowerLineConnection>;
+export function connectThroughTunnel(environmentId: string, localPort: number, powerlineToken: string, logger?: AdapterLogger): Promise<PowerLineConnection>;
 
 // @public
-export function createPowerLineClient(baseUrl: string, powerlineToken: string, traceId?: string): PowerLineClient;
+export function createAhpHostTransport(baseUrl: string, powerlineToken: string, environmentId: string, logger?: AdapterLogger): Promise<{
+    transport: AhpHostTransport;
+    socket: AhpClientSocket;
+}>;
 
 // @public
 export interface CreateSessionParams {
@@ -151,20 +142,6 @@ export interface CreateSessionResult {
 export const defaultLogger: AdapterLogger;
 
 // @public
-type DrainRequest = Message<"grackle.powerline.DrainRequest"> & {
-    sessionId: string;
-};
-
-// @public
-const DrainRequestSchema: GenMessage<DrainRequest>;
-
-// @public
-type Empty = Message<"grackle.powerline.Empty"> & {};
-
-// @public
-const EmptySchema: GenMessage<Empty>;
-
-// @public
 export interface EnvironmentAdapter {
     connect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection>;
     destroy(environmentId: string, config: Record<string, unknown>): Promise<void>;
@@ -176,18 +153,6 @@ export interface EnvironmentAdapter {
     // (undocumented)
     type: string;
 }
-
-// @public
-type EnvironmentInfo = Message<"grackle.powerline.EnvironmentInfo"> & {
-    hostname: string;
-    os: string;
-    nodeVersion: string;
-    availableRuntimes: string[];
-    uptimeSeconds: bigint;
-};
-
-// @public
-const EnvironmentInfoSchema: GenMessage<EnvironmentInfo>;
 
 // @public
 export function exec(cmd: string, args: string[], opts?: {
@@ -217,9 +182,6 @@ export class FatalAdapterError extends Error {
 }
 
 // @public
-const file_grackle_powerline_powerline: GenFile;
-
-// @public
 export function findFreePort(): Promise<number>;
 
 // @public
@@ -227,77 +189,6 @@ export function getPackageVersion(): string;
 
 // @public
 export function getTunnel(environmentId: string): TunnelState | undefined;
-
-// @public
-const GracklePowerLine: GenService<{
-    getInfo: {
-        methodKind: "unary";
-        input: typeof EmptySchema;
-        output: typeof EnvironmentInfoSchema;
-    };
-    spawn: {
-        methodKind: "server_streaming";
-        input: typeof SpawnRequestSchema;
-        output: typeof AgentEventSchema;
-    };
-    resume: {
-        methodKind: "server_streaming";
-        input: typeof ResumeRequestSchema;
-        output: typeof AgentEventSchema;
-    };
-    sendInput: {
-        methodKind: "unary";
-        input: typeof InputMessageSchema;
-        output: typeof EmptySchema;
-    };
-    kill: {
-        methodKind: "unary";
-        input: typeof KillRequestSchema;
-        output: typeof EmptySchema;
-    };
-    listSessions: {
-        methodKind: "unary";
-        input: typeof EmptySchema;
-        output: typeof SessionListSchema;
-    };
-    ping: {
-        methodKind: "unary";
-        input: typeof EmptySchema;
-        output: typeof PongSchema;
-    };
-    pushTokens: {
-        methodKind: "unary";
-        input: typeof TokenBundleSchema;
-        output: typeof EmptySchema;
-    };
-    authenticate: {
-        methodKind: "unary";
-        input: typeof AuthenticateRequestSchema;
-        output: typeof EmptySchema;
-    };
-    cleanupWorktree: {
-        methodKind: "unary";
-        input: typeof WorktreeCleanupRequestSchema;
-        output: typeof EmptySchema;
-    };
-    drainBufferedEvents: {
-        methodKind: "server_streaming";
-        input: typeof DrainRequestSchema;
-        output: typeof AgentEventSchema;
-    };
-}>;
-
-// @public
-export class GrpcHostTransport implements IHostTransport {
-    constructor(client: PowerLineClient);
-    authenticate(params: AuthenticateParams): Promise<void>;
-    createSession(params: CreateSessionParams): CreateSessionResult;
-    dispatchInput(sessionUri: string, text: string): Promise<void>;
-    dispose(sessionUri: string, reason?: string): Promise<void>;
-    drainBuffered(sessionUri: string): AsyncIterable<ServerActionEnvelope>;
-    listSessions(): Promise<HostSessionInfo[]>;
-    reanimate(params: ReanimateParams): AsyncIterable<ServerActionEnvelope>;
-}
 
 // @public
 export interface HostSessionInfo {
@@ -312,93 +203,24 @@ export interface IHostTransport {
     createSession(params: CreateSessionParams): CreateSessionResult;
     dispatchInput(sessionUri: string, text: string): Promise<void>;
     dispose(sessionUri: string, reason?: string): Promise<void>;
-    drainBuffered(sessionUri: string): AsyncIterable<ServerActionEnvelope>;
     listSessions(): Promise<HostSessionInfo[]>;
     reanimate(params: ReanimateParams): AsyncIterable<ServerActionEnvelope>;
 }
 
 // @public
-type InputMessage = Message<"grackle.powerline.InputMessage"> & {
-    sessionId: string;
-    text: string;
-};
-
-// @public
-const InputMessageSchema: GenMessage<InputMessage>;
-
-// @public
 export function isDevMode(): boolean;
-
-// @public
-type KillRequest = Message<"grackle.powerline.KillRequest"> & {
-    id: string;
-    reason: string;
-};
-
-// @public
-const KillRequestSchema: GenMessage<KillRequest>;
-
-// @public
-type Pong = Message<"grackle.powerline.Pong"> & {
-    timestamp: bigint;
-};
-
-// @public
-const PongSchema: GenMessage<Pong>;
 
 // @public
 export interface PortProber {
     probe(port: number, host?: string): Promise<boolean>;
 }
 
-declare namespace powerline {
-    export {
-        file_grackle_powerline_powerline,
-        Empty,
-        EmptySchema,
-        SessionId,
-        SessionIdSchema,
-        KillRequest,
-        KillRequestSchema,
-        EnvironmentInfo,
-        EnvironmentInfoSchema,
-        Pong,
-        PongSchema,
-        SpawnRequest,
-        SpawnRequestSchema,
-        ResumeRequest,
-        ResumeRequestSchema,
-        InputMessage,
-        InputMessageSchema,
-        AgentEvent,
-        AgentEventSchema,
-        SessionInfo,
-        SessionInfoSchema,
-        SessionList,
-        SessionListSchema,
-        TokenItem,
-        TokenItemSchema,
-        TokenBundle,
-        TokenBundleSchema,
-        AuthenticateRequest,
-        AuthenticateRequestSchema,
-        WorktreeCleanupRequest,
-        WorktreeCleanupRequestSchema,
-        DrainRequest,
-        DrainRequestSchema,
-        GracklePowerLine
-    }
-}
-
-// @public
-export type PowerLineClient = Client<typeof powerline.GracklePowerLine>;
-
 // @public
 export interface PowerLineConnection {
-    // (undocumented)
-    client: PowerLineClient;
+    close(): Promise<void>;
     // (undocumented)
     environmentId: string;
+    ping(): Promise<void>;
     // (undocumented)
     port: number;
     transport: IHostTransport;
@@ -486,75 +308,16 @@ export interface RemoteTunnel {
 }
 
 // @public
-type ResumeRequest = Message<"grackle.powerline.ResumeRequest"> & {
-    sessionId: string;
-    runtimeSessionId: string;
-    runtime: string;
-};
-
-// @public
-const ResumeRequestSchema: GenMessage<ResumeRequest>;
-
-// @public
 export interface ServerActionEnvelope {
     actions: StateAction[];
     event: AgentEventFields;
 }
 
 // @public
-type SessionId = Message<"grackle.powerline.SessionId"> & {
-    id: string;
-};
-
-// @public
-const SessionIdSchema: GenMessage<SessionId>;
-
-// @public
-type SessionInfo = Message<"grackle.powerline.SessionInfo"> & {
-    sessionId: string;
-    runtime: string;
-    status: string;
-};
-
-// @public
-const SessionInfoSchema: GenMessage<SessionInfo>;
-
-// @public
-type SessionList = Message<"grackle.powerline.SessionList"> & {
-    sessions: SessionInfo[];
-};
-
-// @public
-const SessionListSchema: GenMessage<SessionList>;
-
-// @public
 export function shellEscape(value: string): string;
 
 // @public
 export function sleep(ms: number): Promise<void>;
-
-// @public
-type SpawnRequest = Message<"grackle.powerline.SpawnRequest"> & {
-    sessionId: string;
-    runtime: string;
-    prompt: string;
-    model: string;
-    maxTurns: number;
-    branch: string;
-    workingDirectory: string;
-    systemContext: string;
-    workspaceId?: string;
-    taskId: string;
-    mcpServersJson: string;
-    mcpUrl: string;
-    mcpToken: string;
-    scriptContent: string;
-    useWorktrees?: boolean;
-    pipe: string;
-};
-
-// @public
-const SpawnRequestSchema: GenMessage<SpawnRequest>;
 
 // @public
 export const SSH_CONNECTIVITY_TIMEOUT_MS: number;
@@ -576,26 +339,6 @@ export interface StartRemotePowerLineOptions {
 
 // @public
 export const TCP_PORT_PROBER: PortProber;
-
-// @public
-type TokenBundle = Message<"grackle.powerline.TokenBundle"> & {
-    tokens: TokenItem[];
-};
-
-// @public
-const TokenBundleSchema: GenMessage<TokenBundle>;
-
-// @public
-type TokenItem = Message<"grackle.powerline.TokenItem"> & {
-    name: string;
-    type: string;
-    envVar: string;
-    filePath: string;
-    value: string;
-};
-
-// @public
-const TokenItemSchema: GenMessage<TokenItem>;
 
 // @public
 export interface TunnelPortProbe {
@@ -622,15 +365,6 @@ export interface WaitForLocalPortOptions {
     portProber?: PortProber;
     sleep?: (ms: number) => Promise<void>;
 }
-
-// @public
-type WorktreeCleanupRequest = Message<"grackle.powerline.WorktreeCleanupRequest"> & {
-    branch: string;
-    workingDirectory: string;
-};
-
-// @public
-const WorktreeCleanupRequestSchema: GenMessage<WorktreeCleanupRequest>;
 
 // @public
 export function writeRemoteEnvFile(executor: RemoteExecutor, powerlineToken: string, extraEnv?: Record<string, string>, logger?: AdapterLogger): Promise<void>;

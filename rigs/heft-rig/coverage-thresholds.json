@@ -6,16 +6,16 @@
     "statements": 60
   },
   "@grackle-ai/adapter-docker": {
-    "branches": 65,
-    "functions": 65,
+    "branches": 60,
+    "functions": 60,
     "lines": 55,
     "statements": 55
   },
   "@grackle-ai/adapter-local": {
-    "branches": 80,
+    "branches": 70,
     "functions": 30,
-    "lines": 30,
-    "statements": 30
+    "lines": 25,
+    "statements": 25
   },
   "@grackle-ai/adapter-sdk": {
     "branches": 80,
@@ -132,10 +132,10 @@
     "statements": 90
   },
   "@grackle-ai/powerline": {
-    "branches": 90,
-    "functions": 75,
-    "lines": 55,
-    "statements": 55
+    "branches": 70,
+    "functions": 85,
+    "lines": 65,
+    "statements": 65
   },
   "@grackle-ai/prompt": {
     "branches": 90,

@@ -278,18 +278,28 @@ export function useSessions(): UseSessionsResult {
       if (replayEvents.length > 0) {
         let replayDropped = 0;
         setEvents((prev) => {
+          // Prefer the server-assigned ULID (`serverSeq`) as the dedup key —
+          // it's monotonic, globally unique, and assigned at the same
+          // recordSessionAction() write that produces both the WS push and
+          // the JSONL line. Falls back to `${timestamp}|${eventType}` for
+          // legacy events that predate the HR8d serverSeq plumbing.
+          const dedupKey = (e: SessionEvent): string =>
+            e.serverSeq ? `seq:${e.serverSeq}` : `t:${e.timestamp}|${e.eventType}`;
           const existingKeys = new Set<string>();
           for (const e of prev) {
             if (e.sessionId === sessionId) {
-              existingKeys.add(`${e.timestamp}|${e.eventType}`);
+              existingKeys.add(dedupKey(e));
             }
           }
-          const newFromReplay = replayEvents.filter(
-            (e) => !existingKeys.has(`${e.timestamp}|${e.eventType}`),
-          );
+          const newFromReplay = replayEvents.filter((e) => !existingKeys.has(dedupKey(e)));
           const merged = [...prev, ...newFromReplay].sort((a, b) => {
             if (a.sessionId !== b.sessionId) {
               return 0;
+            }
+            // ULID order is causal; fall back to timestamp when one side lacks
+            // a serverSeq (mixed legacy + new events on the same session).
+            if (a.serverSeq && b.serverSeq) {
+              return a.serverSeq.localeCompare(b.serverSeq);
             }
             return a.timestamp.localeCompare(b.timestamp);
           });

@@ -1,9 +1,6 @@
 import { Command } from "commander";
-import { connectNodeAdapter } from "@connectrpc/connect-node";
-import { ConnectError, Code, type Interceptor } from "@connectrpc/connect";
-import http2 from "node:http2";
-import { timingSafeEqual, randomUUID } from "node:crypto";
-import { registerPowerLineRoutes } from "./grpc-server.js";
+import http from "node:http";
+import { mountAhpServer } from "./ahp-handlers.js";
 import { registerRuntime } from "./runtime-registry.js";
 import { StubRuntime } from "./runtimes/stub.js";
 import { StubMcpRuntime } from "./runtimes/stub-mcp.js";
@@ -15,7 +12,6 @@ import { AcpRuntime } from "@grackle-ai/runtime-acp";
 import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
 import { createRequire } from "node:module";
 import { logger } from "./logger.js";
-import { runWithTrace, isValidTraceId, wrapAsyncIterableWithTrace } from "./trace-context.js";
 
 const esmRequire: NodeRequire = createRequire(import.meta.url);
 const { version } = esmRequire("../package.json") as { version: string };
@@ -68,54 +64,22 @@ function main(): void {
         new AcpRuntime({ name: "claude-code-acp", command: "claude-agent-acp", args: [] }),
       );
 
-      // Start HTTP/2 server with optional auth
-      const interceptors: Interceptor[] = [
-        // Trace ID interceptor: extract or generate a trace ID for request correlation.
-        // For streaming RPCs, wraps the response's message iterable so the generator
-        // body runs within the trace context on each iteration step.
-        (next) => async (req) => {
-          const rawTraceId = req.header.get("x-trace-id") ?? undefined;
-          const traceId = isValidTraceId(rawTraceId) ? rawTraceId! : randomUUID();
-          const response = await runWithTrace(traceId, () => next(req));
-          if ("stream" in response && response.stream) {
-            const wrapped = wrapAsyncIterableWithTrace(
-              traceId,
-              response.message as AsyncIterable<unknown>,
-            );
-            (response as { message: AsyncIterable<unknown> }).message = wrapped;
-          }
-          return response;
-        },
-      ];
-
-      if (powerlineToken) {
-        interceptors.push((next) => async (req) => {
-          const authHeader = req.header.get("authorization") || "";
-          const token = authHeader.replace(/^Bearer\s+/i, "");
-          const a = Buffer.from(token);
-          const b = Buffer.from(powerlineToken);
-          if (a.length !== b.length || !timingSafeEqual(a, b)) {
-            throw new ConnectError("Unauthorized", Code.Unauthenticated);
-          }
-          return next(req);
-        });
-      }
-
-      const handler = connectNodeAdapter({
-        routes: registerPowerLineRoutes,
-        interceptors,
-      });
-
-      const server = http2.createServer((req, res) => {
-        // Health probe — no auth, bypasses ConnectRPC
+      // HR8d: PowerLine speaks AHP JSON-RPC over WebSocket (not gRPC).
+      // AhpServerSocket handles the HTTP upgrade and Bearer-token auth.
+      const server = http.createServer((req, res) => {
+        // Health probe — no auth, bypasses AHP entirely.
         if (req.url === "/healthz") {
           res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
           res.end(JSON.stringify({ status: "ok" }));
           return;
         }
-        // All other requests go through ConnectRPC (gRPC)
-        handler(req, res);
+        // Anything else hitting the HTTP path (not WS) gets 404 — the AHP
+        // wire is WS-only on /ahp.
+        res.writeHead(404, { "Content-Type": "text/plain" });
+        res.end("Not Found — AHP WebSocket endpoint is /ahp");
       });
+
+      const ahp = mountAhpServer({ server, powerlineToken });
 
       server.on("error", (err: NodeJS.ErrnoException) => {
         if (err.code === "EADDRINUSE") {
@@ -131,19 +95,30 @@ function main(): void {
         const authStatus = powerlineToken ? "authenticated" : "NO AUTH (development only)";
         logger.info(
           { port, host, authStatus },
-          "PowerLine listening on http://%s:%d [%s]",
+          "PowerLine listening on ws://%s:%d/ahp [%s]",
           host,
           port,
           authStatus,
         );
       });
 
-      // Graceful shutdown
+      // Graceful shutdown: always attempt server.close() regardless of
+      // whether the AHP teardown succeeded — otherwise an AHP-close error
+      // would skip HTTP teardown and abruptly exit.
       function shutdown(): void {
         logger.info("Shutting down PowerLine...");
-        server.close(() => {
-          process.exit(process.exitCode || 0);
-        });
+        let ahpErr: unknown;
+        ahp
+          .close()
+          .catch((err: unknown) => {
+            ahpErr = err;
+            logger.error({ err }, "AHP teardown failed");
+          })
+          .finally(() => {
+            server.close(() => {
+              process.exit(ahpErr !== undefined ? 1 : process.exitCode || 0);
+            });
+          });
       }
 
       process.on("SIGINT", shutdown);

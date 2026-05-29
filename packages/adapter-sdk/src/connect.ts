@@ -1,9 +1,7 @@
-import { createClient, type Interceptor } from "@connectrpc/connect";
-import { createGrpcTransport } from "@connectrpc/connect-node";
-import { powerline } from "@grackle-ai/common";
+import { AhpClientSocket, InMemoryClientIdStore } from "@grackle-ai/ahp-transport";
 import { createConnection } from "node:net";
-import type { PowerLineClient, PowerLineConnection } from "./adapter.js";
-import { GrpcHostTransport } from "./grpc-host-transport.js";
+import type { PowerLineConnection } from "./adapter.js";
+import { AhpHostTransport } from "./ahp-host-transport.js";
 import { closeTunnel } from "./tunnel-registry.js";
 import { sleep } from "./utils.js";
 import type { AdapterLogger } from "./logger.js";
@@ -11,10 +9,10 @@ import { defaultLogger } from "./logger.js";
 
 // ─── Constants ──────────────────────────────────────────────
 
-/** Delay between gRPC connect-with-retry attempts. */
+/** Delay between connect-with-retry attempts. */
 const CONNECT_RETRY_DELAY_MS: number = 1_500;
 
-/** Maximum number of gRPC connect-with-retry attempts. */
+/** Maximum number of connect-with-retry attempts. */
 const CONNECT_MAX_RETRIES: number = 10;
 
 /** Delay between port availability polls. */
@@ -23,68 +21,117 @@ const TUNNEL_PORT_POLL_DELAY_MS: number = 500;
 /** Maximum number of port availability polls. */
 const TUNNEL_PORT_POLL_MAX_ATTEMPTS: number = 20;
 
-// ─── PowerLine Client ───────────────────────────────────────
+// ─── AHP Host Transport Helper ──────────────────────────────
 
 /**
- * Create an authenticated gRPC client for a PowerLine.
- * The PowerLine token is sent as a Bearer token on every request.
- * When `traceId` is provided, it is forwarded as the `x-trace-id` header for request correlation.
+ * Construct an opened {@link AhpHostTransport} for a single PowerLine.
+ *
+ * Opens an `AhpClientSocket` to `${baseUrl}/ahp`, awaits the AHP
+ * `initialize` handshake, and returns the transport ready for use.
+ *
+ * `InMemoryClientIdStore` is used by default — Grackle's adapter
+ * connections are ephemeral (one per provision; reconnect creates a fresh
+ * one). Persistent `clientId` across server restarts is not required for
+ * HR8d. A future optimization (HR8a-followup #1344) would persist for
+ * reconnect-RPC replay efficiency.
+ *
+ * @param baseUrl - Origin URL of the PowerLine (e.g. `ws://127.0.0.1:7433`).
+ *   The helper appends `/ahp` to form the WebSocket URL.
+ * @param powerlineToken - Bearer token sent on the HTTP upgrade.
+ * @param environmentId - Used as the `clientIdKey` to namespace the
+ *   persisted clientId within the store.
+ * @param logger - Optional logger for state transitions.
+ * @returns The opened transport.
  */
-export function createPowerLineClient(
+export async function createAhpHostTransport(
   baseUrl: string,
   powerlineToken: string,
-  traceId?: string,
-): PowerLineClient {
-  const interceptors: Interceptor[] = [];
+  environmentId: string,
+  logger: AdapterLogger = defaultLogger,
+): Promise<{ transport: AhpHostTransport; socket: AhpClientSocket }> {
+  // Normalize: AHP wire is WebSocket. If baseUrl is http://...; convert to ws://...
+  const wsBase = baseUrl.replace(/^http(s?):\/\//, "ws$1://");
+  const url = `${wsBase}/ahp`;
 
-  if (powerlineToken) {
-    interceptors.push((next) => async (req) => {
-      req.header.set("Authorization", `Bearer ${powerlineToken}`);
-      return next(req);
-    });
-  }
-
-  if (traceId) {
-    interceptors.push((next) => async (req) => {
-      req.header.set("x-trace-id", traceId);
-      return next(req);
-    });
-  }
-
-  const transport = createGrpcTransport({
-    baseUrl,
-    interceptors,
+  let transport: AhpHostTransport | undefined;
+  const socket = new AhpClientSocket({
+    url,
+    powerlineToken,
+    clientIdStore: new InMemoryClientIdStore(),
+    clientIdKey: environmentId,
+    onNotification: (n) => {
+      // Lazily route to the transport once constructed. The transport binds
+      // to the socket after construction (chicken-and-egg with onNotification).
+      if (transport !== undefined) {
+        transport.handleNotification(n);
+      }
+    },
+    onStateChange: (state) => {
+      logger.info({ environmentId, state }, "AHP transport state");
+    },
   });
-  return createClient(powerline.GracklePowerLine, transport);
+
+  await socket.open();
+  transport = new AhpHostTransport(socket);
+  return { transport, socket };
 }
 
 // ─── Connect Through Tunnel ─────────────────────────────────
 
 /**
- * Connect to a PowerLine through a local tunnel port, retrying until the gRPC
- * service responds to a ping.
+ * Connect to a PowerLine through a local tunnel port, retrying until the AHP
+ * `ping` succeeds.
+ *
+ * @param environmentId - Stable identifier for the environment.
+ * @param localPort - Local TCP port the tunnel forwards to the PowerLine.
+ * @param powerlineToken - Bearer token for the PowerLine.
+ * @param logger - Optional logger.
+ * @returns A {@link PowerLineConnection} ready for session operations.
  */
 export async function connectThroughTunnel(
   environmentId: string,
   localPort: number,
   powerlineToken: string,
   logger: AdapterLogger = defaultLogger,
-  traceId?: string,
 ): Promise<PowerLineConnection> {
-  const client = createPowerLineClient(`http://127.0.0.1:${localPort}`, powerlineToken, traceId);
+  const baseUrl = `ws://127.0.0.1:${localPort}`;
 
   let lastError: unknown;
   for (let attempt = 0; attempt < CONNECT_MAX_RETRIES; attempt++) {
+    let attemptSocket: AhpClientSocket | undefined;
     try {
-      await client.ping({});
+      const { transport, socket } = await createAhpHostTransport(
+        baseUrl,
+        powerlineToken,
+        environmentId,
+        logger,
+      );
+      attemptSocket = socket;
+      // Liveness probe via AHP `ping` to verify the wire is alive.
+      await socket.request("ping", { channel: "ahp-root://" });
       return {
-        client,
         environmentId,
         port: localPort,
-        transport: new GrpcHostTransport(client),
+        transport,
+        ping: async () => {
+          await socket.request("ping", { channel: "ahp-root://" });
+        },
+        close: async () => {
+          await socket.close();
+        },
       };
     } catch (err) {
       lastError = err;
+      // Close the per-attempt socket so we don't leak open WS connections
+      // across retries (e.g. when `createAhpHostTransport` succeeded but
+      // the subsequent `ping` rejected).
+      if (attemptSocket !== undefined) {
+        try {
+          await attemptSocket.close();
+        } catch (closeErr) {
+          logger.error({ environmentId, err: closeErr }, "Failed to close socket after attempt");
+        }
+      }
       await sleep(CONNECT_RETRY_DELAY_MS);
     }
   }
