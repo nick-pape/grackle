@@ -781,18 +781,19 @@ export async function stopTask(req: grackle.TaskId): Promise<grackle.Task> {
     }
   }
 
-  // Stop is NOT completion. Leave the stored task status untouched so that
-  // computeTaskStatus derives `paused` from the now-terminal sessions, keeping
-  // the task resumable. `complete` is reserved for explicit "Mark Complete" or
-  // the agent's `task_complete` MCP call. We deliberately do NOT mark the task
-  // complete or unblock dependents here — stopping a task does not finish it.
+  // Mark task complete
+  taskStore.markTaskComplete(req.id, TASK_STATUS.COMPLETE);
 
-  // Revoke the task's scoped MCP tokens (GHSA-f9ff-5x35-7gfw F12). The active
-  // sessions were just terminated; a later task_resume mints a fresh token that
-  // supersedes this (see createScopedToken).
+  // Check for newly unblocked tasks
+  if (task.workspaceId) {
+    taskStore.checkAndUnblock(task.workspaceId);
+  }
+
+  // Revoke the task's scoped MCP tokens (GHSA-f9ff-5x35-7gfw F12). A later
+  // task_resume mints a fresh token that supersedes this (see createScopedToken).
   revokeTask(req.id);
 
-  emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
+  emit("task.completed", { taskId: task.id, workspaceId: task.workspaceId || "" });
   logger.info({ taskId: req.id }, "Task stopped");
   const updated = taskStore.getTask(req.id);
   const taskSessions = sessionStore.listSessionsForTask(req.id);

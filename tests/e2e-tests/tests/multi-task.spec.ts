@@ -83,12 +83,8 @@ test.describe("Multi-Task", { tag: ["@task"] }, () => {
       timeout: 15_000,
     });
 
-    // Stop the task — this pauses it (does NOT complete it); the task stays
-    // resumable rather than flipping to a terminal complete state (#1356).
+    // Complete — stop the task
     await page.locator("button", { hasText: "Stop" }).click();
-    await expect(page.locator('[data-testid="task-status"]')).toContainText("paused", {
-      timeout: 5_000,
-    });
-    await expect(page.getByText("Task completed")).not.toBeVisible();
+    await expect(page.getByText("Task completed")).toBeVisible({ timeout: 5_000 });
   });
 });
