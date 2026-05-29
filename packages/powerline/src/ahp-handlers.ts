@@ -74,13 +74,15 @@ import { validateGitBranchName } from "@grackle-ai/runtime-sdk";
 
 import { getRuntime } from "./runtime-registry.js";
 import {
-  addSession,
+  deleteSessionPump,
   drainParkedSession,
   getSession,
+  getSessionPump,
   isParked,
   listAllSessions,
   parkSession,
   removeSession,
+  startSessionPump,
 } from "./session-mgr.js";
 import { writeTokens } from "./token-writer.js";
 
@@ -122,6 +124,17 @@ interface ForwarderState {
    * diagnostic system events).
    */
   lastMetaSnapshot: Record<string, unknown> | undefined;
+  /**
+   * Index into the {@link SessionPump.buffer} this forwarder has consumed up
+   * to. The disconnect path reads this to compute the unsent tail to park.
+   */
+  pos: number;
+  /**
+   * If set, the resolver for the forwarder's current sleep on the pump's
+   * `waiters` set. Stashed so cancellation paths can wake the forwarder
+   * synchronously instead of waiting on the next buffer push.
+   */
+  wake?: () => void;
 }
 
 /**
@@ -348,7 +361,12 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
       } satisfies AhpResponse;
     }
 
-    addSession(session);
+    // Drive `session.stream()` exactly once via a per-session pump. Each AHP
+    // `subscribe` for this channel attaches a forwarder that tails the pump's
+    // buffer — re-entering `stream()` per subscribe would re-kick the
+    // runtime's driver (`BaseAgentSession.runSession`) and stack listeners on
+    // stub-style sessions. See ForwarderState.pos.
+    startSessionPump(session);
     clientState(conn).sessionIds.add(sessionId);
 
     return {
@@ -383,10 +401,13 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
 
     const cState = clientState(conn);
     // Tear down any prior forwarder for this session (avoid double-forwarding
-    // if subscribe is called twice for the same channel).
+    // if subscribe is called twice for the same channel). Wake it
+    // synchronously so its tail loop notices `cancelled` and exits without
+    // waiting on the next pump push.
     const prior = cState.forwarders.get(sessionId);
     if (prior !== undefined) {
       prior.cancelled = true;
+      prior.wake?.();
     }
 
     const forwarder: ForwarderState = {
@@ -400,6 +421,7 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
       serverSeq: 0,
       cancelled: false,
       lastMetaSnapshot: undefined,
+      pos: 0,
     };
     cState.forwarders.set(sessionId, forwarder);
 
@@ -425,7 +447,8 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     sessionId: string,
     forwarder: ForwarderState,
   ): Promise<void> {
-    // Step 1: drain any parked events first.
+    // Step 1: drain any parked events first. These are the "what did I miss
+    // while disconnected" tail from a prior owner of this channel.
     const parked = drainParkedSession(sessionId);
     if (parked !== undefined) {
       for (const event of parked) {
@@ -435,38 +458,51 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
         emitActionsForEvent(conn, sessionId, event, forwarder);
       }
     }
-    // Step 2: forward live events from the active session, if any.
-    const session = getSession(sessionId);
-    if (session === undefined) {
-      // Session was parked-only (no live runtime). Forwarder is idle until
-      // a reanimate spawns a new one — but reanimate would be a fresh
-      // createSession on the same URI, which goes through a different code
-      // path. So just return.
-      return;
-    }
-    try {
-      for await (const event of session.stream()) {
-        if (forwarder.cancelled) {
-          return;
-        }
-        emitActionsForEvent(conn, sessionId, event, forwarder);
-      }
-    } catch {
-      // Internal error — let the session die normally; no parking here.
-    } finally {
-      // Clean up forwarder map entry.
+    // Step 2: tail the live pump. If the session has no pump (parked-only
+    // or already disposed) there's nothing live to forward.
+    const pump = getSessionPump(sessionId);
+    if (pump === undefined) {
+      // Forwarder map cleanup still needs to run.
       const cState = clients.get(conn.clientId);
       if (cState?.forwarders.get(sessionId) === forwarder) {
         cState.forwarders.delete(sessionId);
       }
-      // If we exited NOT because of cancellation (natural completion or
-      // an internal error), the session has nothing more to emit and the
-      // runtime has finished — remove it from the registry and from the
-      // owning client's session set so `listSessions` doesn't surface
-      // ghost entries and memory doesn't accumulate.
-      if (!forwarder.cancelled) {
-        removeSession(sessionId);
-        cState?.sessionIds.delete(sessionId);
+      return;
+    }
+    // Late subscribers start at the current pump tail — mid-stream resubscribes
+    // see only future events. Missed events from a prior subscriber on this
+    // channel arrive via Step 1's parked replay, not by replaying the pump
+    // buffer from the top.
+    forwarder.pos = pump.buffer.length;
+    try {
+      while (!forwarder.cancelled) {
+        while (forwarder.pos < pump.buffer.length) {
+          emitActionsForEvent(conn, sessionId, pump.buffer[forwarder.pos]!, forwarder);
+          forwarder.pos++;
+        }
+        if (pump.done) {
+          return;
+        }
+        // Sleep until the pump pushes another event, or until we're cancelled
+        // and woken via `forwarder.wake`. The wake closure clears the field
+        // itself before resolving, so the outer `while (!cancelled)` is the
+        // sole observer of cancellation on the next iteration.
+        await new Promise<void>((resolve) => {
+          forwarder.wake = () => {
+            forwarder.wake = undefined;
+            pump.waiters.delete(resolve);
+            resolve();
+          };
+          pump.waiters.add(resolve);
+        });
+      }
+    } finally {
+      // Forwarder map cleanup. Session/pump removal is the pump's
+      // responsibility (it removes itself when `stream()` returns) or the
+      // disconnect path's responsibility (which removes them before parking).
+      const cState = clients.get(conn.clientId);
+      if (cState?.forwarders.get(sessionId) === forwarder) {
+        cState.forwarders.delete(sessionId);
       }
     }
   }
@@ -692,7 +728,11 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     const session = getSession(sessionId);
     if (session !== undefined) {
       session.kill("disposed");
+      // Synchronous removal so the caller sees the session gone immediately
+      // on return. The pump's natural-exit cleanup is idempotent — it won't
+      // re-remove what's already been removed.
       removeSession(sessionId);
+      deleteSessionPump(sessionId);
     }
     const cState = clients.get(conn.clientId);
     if (cState !== undefined) {
@@ -700,6 +740,7 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
       const fwd = cState.forwarders.get(sessionId);
       if (fwd !== undefined) {
         fwd.cancelled = true;
+        fwd.wake?.();
         cState.forwarders.delete(sessionId);
       }
     }
@@ -832,22 +873,33 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
       if (cState === undefined) {
         return;
       }
-      // For each session this client owned, kill + park its events for
+      // For each session this client owned, kill + park its unsent events for
       // replay on next subscribe (whoever calls subscribe next, including
       // a reconnecting same-client).
+      //
+      // The "unsent tail" is the slice of `pump.buffer` past the forwarder's
+      // position, concatenated with anything still in the runtime's own
+      // queue that the pump hasn't yet pulled. `session.kill()` is sync and
+      // closes the runtime queue; the pump task's natural exit (a microtask
+      // later) is idempotent — see `runPump`'s finally.
       for (const sessionId of cState.sessionIds) {
         const session = getSession(sessionId);
-        if (session !== undefined) {
+        const pump = getSessionPump(sessionId);
+        const fwd = cState.forwarders.get(sessionId);
+        if (session !== undefined && pump !== undefined) {
           session.kill("disconnected");
-          const buffered = session.drainBufferedEvents();
-          if (buffered.length > 0) {
-            parkSession(sessionId, buffered);
+          const stillInRuntimeQueue = session.drainBufferedEvents();
+          const fromPos = fwd?.pos ?? 0;
+          const tail = [...pump.buffer.slice(fromPos), ...stillInRuntimeQueue];
+          if (tail.length > 0) {
+            parkSession(sessionId, tail);
           }
           removeSession(sessionId);
+          deleteSessionPump(sessionId);
         }
-        const fwd = cState.forwarders.get(sessionId);
         if (fwd !== undefined) {
           fwd.cancelled = true;
+          fwd.wake?.();
         }
       }
       clients.delete(clientId);
