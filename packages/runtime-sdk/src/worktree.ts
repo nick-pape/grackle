@@ -13,9 +13,11 @@ const FETCH_TIMEOUT_MS: number = 30_000;
 const MAX_BRANCH_NAME_LENGTH: number = 255;
 
 /**
- * Characters permitted in a git branch name. Deliberately a strict allowlist
- * (the same charset as {@link sanitizeBranch}) that excludes every shell
- * metacharacter and whitespace.
+ * Characters permitted in a git branch name: a strict allowlist that excludes
+ * every shell metacharacter and whitespace. This is a superset of
+ * {@link sanitizeBranch}'s charset — it additionally allows `.`, which is
+ * valid in git refs (e.g. `release-1.2.3`) but which `sanitizeBranch` replaces
+ * because it is producing a filesystem path rather than validating a ref.
  */
 const VALID_BRANCH_NAME_PATTERN: RegExp = /^[A-Za-z0-9._/-]+$/;
 
