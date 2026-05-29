@@ -120,13 +120,15 @@ describe("KnowledgePage", () => {
     expect(loadRecent).toHaveBeenCalledTimes(2); // retry
   });
 
-  it("hides the error and shows the empty state once loading begins", () => {
-    // While a (re)load is in flight we should not flash the error panel.
+  it("hides the error panel while a (re)load is in flight", () => {
+    // While loading, neither the error nor the empty state shows (both branches
+    // require !loading) — importantly, a stale error must not flash during retry.
     holder.knowledge = makeKnowledge({ loadError: "unavailable", loading: true });
 
     render(<KnowledgePage />);
 
     expect(screen.queryByTestId("knowledge-error")).toBeNull();
+    expect(screen.queryByText(/No knowledge nodes found/i)).toBeNull();
   });
 
   it("shows the empty state when there are no nodes and no error", () => {

@@ -21,6 +21,7 @@ import styles from "./KnowledgePage.module.scss";
 export function KnowledgePage(): JSX.Element {
   const { knowledge } = useGrackle();
   const { loadRecent, loadError, loading, graphData, selectedId, selectedNode } = knowledge;
+  const { selectNode, expandNode, clearSelection } = knowledge;
 
   // Load recent nodes once on mount.
   //
@@ -38,23 +39,26 @@ export function KnowledgePage(): JSX.Element {
     loadRecent().catch(() => {});
   }, [loadRecent]);
 
+  // Depend on the specific stable callback refs, not the whole `knowledge`
+  // object — `knowledge` changes identity on any knowledge state change, which
+  // would needlessly recreate these handlers and re-render the graph/detail.
   const handleNodeClick = useCallback(
     (nodeId: string) => {
-      knowledge.selectNode(nodeId).catch(() => {});
+      selectNode(nodeId).catch(() => {});
     },
-    [knowledge],
+    [selectNode],
   );
 
   const handleNodeDoubleClick = useCallback(
     (nodeId: string) => {
-      knowledge.expandNode(nodeId).catch(() => {});
+      expandNode(nodeId).catch(() => {});
     },
-    [knowledge],
+    [expandNode],
   );
 
   const handleCloseDetail = useCallback(() => {
-    knowledge.clearSelection();
-  }, [knowledge]);
+    clearSelection();
+  }, [clearSelection]);
 
   const breadcrumbs = [{ label: "Knowledge", url: KNOWLEDGE_URL }];
 
