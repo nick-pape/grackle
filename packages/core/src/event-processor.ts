@@ -189,6 +189,7 @@ export function processEventStream(
         const eventToolCallId: string = event.toolCallId ?? "";
         const eventTurnId: string = event.turnId ?? "";
         const eventDiagnostic: boolean = event.diagnostic ?? false;
+        const eventToolError: boolean = event.toolError ?? false;
         // runtime_session_id is an internal control event: persist it then skip
         // logging/publishing — it has no proto enum value and is not client-visible.
         if (event.type === "runtime_session_id") {
@@ -207,6 +208,7 @@ export function processEventStream(
           toolCallId: eventToolCallId,
           diagnostic: eventDiagnostic,
           turnId: eventTurnId,
+          toolError: eventToolError,
         });
         // ULID first — JSONL + WS push carry it so the UI can dedup/sort on
         // a stable key independent of the (possibly synthesized) timestamp.

@@ -1,4 +1,15 @@
 import { spawn } from "node:child_process";
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
 import type { ChildProcess } from "node:child_process";
 import type { AgentSession, AgentEvent, CreateSessionOptions } from "@grackle-ai/runtime-sdk";
@@ -10,6 +21,7 @@ import {
   ensureRuntimeInstalled,
   importFromRuntime,
   getRuntimeBinDirectory,
+  getRuntimeConfigDirectory,
 } from "@grackle-ai/runtime-sdk";
 
 // ─── Configuration ──────────────────────────────────────────
@@ -24,6 +36,14 @@ export interface AcpAgentConfig {
   args: string[];
   /** Additional environment variables for the subprocess. */
   env?: Record<string, string>;
+  /**
+   * When true, point `CLAUDE_CONFIG_DIR` at an isolated, Grackle-managed config
+   * directory before spawning so the agent does not inherit the developer's
+   * personal `~/.claude/settings.json`. Set for Claude-backed ACP bridges (e.g.
+   * `claude-code-acp`), whose headless permission-mode enum rejects
+   * interactive-only settings such as `permissions.defaultMode: "auto"`. See #1366.
+   */
+  isolateClaudeConfig?: boolean;
 }
 
 // ─── Dynamic import ─────────────────────────────────────────
@@ -154,7 +174,16 @@ export function mapSessionUpdate(update: Record<string, unknown>): AgentEvent[] 
           update.rawOutput !== null && update.rawOutput !== undefined
             ? JSON.stringify(update.rawOutput)
             : ((update.content || "") as string);
-        return [{ type: "tool_result", timestamp: ts, content: output, raw, toolCallId }];
+        return [
+          {
+            type: "tool_result",
+            timestamp: ts,
+            content: output,
+            raw,
+            toolCallId,
+            toolError: false,
+          },
+        ];
       }
       if (status === "failed") {
         const rawOutput = update.rawOutput as Record<string, unknown> | undefined;
@@ -166,6 +195,8 @@ export function mapSessionUpdate(update: Record<string, unknown>): AgentEvent[] 
             content: typeof errorContent === "string" ? errorContent : JSON.stringify(errorContent),
             raw,
             toolCallId,
+            // ACP signals failure via the update status, not content (#1362).
+            toolError: true,
           },
         ];
       }
@@ -256,6 +287,70 @@ export function selectEnvVarAuthMethod(
   return undefined;
 }
 
+/** Directory name of the developer's default Claude config (under the home dir). */
+const CLAUDE_CONFIG_DIRNAME = ".claude";
+
+/** Credentials filename the Claude bridge/SDK reads from the config dir. */
+const CLAUDE_CREDENTIALS_FILENAME = ".credentials.json";
+
+/**
+ * Prepare an isolated Claude config directory for a spawned ACP agent.
+ *
+ * Writes an empty `settings.json` so the Claude bridge reads a clean, valid
+ * config instead of the developer's personal `~/.claude/settings.json` — whose
+ * interactive-only values (e.g. `permissions.defaultMode: "auto"`, a research
+ * preview) are rejected by the headless Claude Agent SDK permission-mode enum
+ * and crash `session/new` (#1366). With no `defaultMode`, the bridge resolves
+ * `"default"`, and Grackle's ACP client auto-approves permission requests.
+ *
+ * Existing OAuth/subscription credentials are made available inside the isolated
+ * dir by symlinking `.credentials.json` from the real config dir (so a token
+ * refresh writes through to the single source of truth), falling back to a copy
+ * where symlinks are unavailable.
+ *
+ * @param realConfigDir - The developer's real Claude config dir (e.g. `~/.claude`).
+ * @param isolatedConfigDir - The Grackle-managed dir to populate and point `CLAUDE_CONFIG_DIR` at.
+ * @returns The isolated config dir path (same value as `isolatedConfigDir`).
+ */
+export function prepareIsolatedClaudeConfig(
+  realConfigDir: string,
+  isolatedConfigDir: string,
+): string {
+  mkdirSync(isolatedConfigDir, { recursive: true });
+  writeFileSync(join(isolatedConfigDir, "settings.json"), "{}\n", "utf8");
+
+  const realCredentials = join(realConfigDir, CLAUDE_CREDENTIALS_FILENAME);
+  const isolatedCredentials = join(isolatedConfigDir, CLAUDE_CREDENTIALS_FILENAME);
+  // Always clear any stale link/copy from a previous spawn first, so that if the
+  // real credentials were since deleted/moved the isolated dir behaves like a
+  // no-credentials environment rather than retaining outdated credentials.
+  try {
+    rmSync(isolatedCredentials, { force: true });
+  } catch {
+    // best-effort cleanup
+  }
+  if (existsSync(realCredentials)) {
+    try {
+      symlinkSync(realCredentials, isolatedCredentials, "file");
+    } catch {
+      try {
+        copyFileSync(realCredentials, isolatedCredentials);
+        // A symlink target keeps its own (typically 0600) perms, but a fresh
+        // copy may inherit a permissive umask — restrict the OAuth token to the
+        // owner. Best-effort: chmod is a no-op on Windows.
+        try {
+          chmodSync(isolatedCredentials, 0o600);
+        } catch {
+          // best-effort hardening
+        }
+      } catch (err: unknown) {
+        logger.warn({ err }, "Failed to provision Claude credentials into isolated config dir");
+      }
+    }
+  }
+  return isolatedConfigDir;
+}
+
 // ─── Session ────────────────────────────────────────────────
 
 /** An in-progress agent session that communicates via the Agent Client Protocol over stdio. */
@@ -298,11 +393,44 @@ class AcpSession extends BaseAgentSession {
     const spawnCwd = cwd || process.cwd();
     const pathSeparator = process.platform === "win32" ? ";" : ":";
     const runtimeBinDir = getRuntimeBinDirectory(this.config.name);
-    const childEnv = {
+    const childEnv: Record<string, string | undefined> = {
       ...process.env,
       ...this.config.env,
       PATH: `${runtimeBinDir}${pathSeparator}${process.env.PATH || ""}`,
     };
+
+    // Claude-backed ACP bridges read user-scope ~/.claude/settings.json and
+    // reject interactive-only permission modes (e.g. defaultMode "auto"),
+    // crashing session/new (#1366). Point CLAUDE_CONFIG_DIR at a clean,
+    // Grackle-managed dir so headless agents don't inherit personal config.
+    if (this.config.isolateClaudeConfig) {
+      // Source from the merged env (config `env` override > process.env > default)
+      // so we provision credentials from wherever the agent would otherwise look.
+      // Read before overwriting childEnv.CLAUDE_CONFIG_DIR below. An empty string
+      // is treated as unset (a common way to "clear" an env var) so we don't
+      // resolve credentials relative to the cwd.
+      const inheritedConfigDir = childEnv.CLAUDE_CONFIG_DIR?.trim();
+      const realConfigDir = inheritedConfigDir
+        ? inheritedConfigDir
+        : join(homedir(), CLAUDE_CONFIG_DIRNAME);
+      const isolatedConfigDir = getRuntimeConfigDirectory(this.config.name);
+      try {
+        prepareIsolatedClaudeConfig(realConfigDir, isolatedConfigDir);
+        childEnv.CLAUDE_CONFIG_DIR = isolatedConfigDir;
+        this.emit({
+          type: "system",
+          timestamp: ts(),
+          content: "ACP using isolated Claude config dir",
+          diagnostic: true,
+        });
+      } catch (err: unknown) {
+        logger.warn(
+          { err },
+          "Failed to prepare isolated Claude config dir; continuing with inherited config",
+        );
+      }
+    }
+
     this.child = spawn(this.config.command, this.config.args, {
       stdio: ["pipe", "pipe", "inherit"],
       cwd: spawnCwd,

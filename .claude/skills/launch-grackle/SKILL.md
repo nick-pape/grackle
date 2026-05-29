@@ -79,7 +79,7 @@ rm -rf "$GRACKLE_HOME"
 ## Important Notes
 
 - **Never kill processes you didn't start.** Only kill the PID from your own launch.
-- **Never use the user's default ports** (7434, 3000, 7435, 7433). Always use this skill to get isolated ports.
+- **Never use the user's default ports** (7434, 3000, 7435, 7433, 7436). Always use this skill to get isolated ports. (7436 is the MCP Apps sandbox port — the script now randomizes it too, so concurrent test servers don't collide on it.)
 - **Always use `GRACKLE_URL` (not `GRACKLE_PORT`)** when running CLI commands against your test server.
 - **Always pair before browsing.** Navigate to the pairing URL before any Playwright testing.
 - The database at `$GRACKLE_HOME/.grackle/grackle.db` is fully isolated from `~/.grackle/grackle.db`.

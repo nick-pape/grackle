@@ -1176,6 +1176,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         graphData: { nodes: knowledgeNodes, links: knowledgeLinks },
         selectedNode: knowledgeSelectedNode,
         loading: false,
+        loadError: undefined,
         selectedId: knowledgeSelectedId,
         searchQuery: knowledgeSearchQuery,
         search: async (query: string) => {

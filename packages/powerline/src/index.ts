@@ -61,7 +61,14 @@ function main(): void {
         new AcpRuntime({ name: "copilot-acp", command: "copilot", args: ["--acp", "--stdio"] }),
       );
       registerRuntime(
-        new AcpRuntime({ name: "claude-code-acp", command: "claude-agent-acp", args: [] }),
+        new AcpRuntime({
+          name: "claude-code-acp",
+          command: "claude-agent-acp",
+          args: [],
+          // Isolate from ~/.claude so interactive-only settings (e.g.
+          // permissions.defaultMode "auto") don't crash session/new (#1366).
+          isolateClaudeConfig: true,
+        }),
       );
 
       // HR8d: PowerLine speaks AHP JSON-RPC over WebSocket (not gRPC).

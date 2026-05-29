@@ -595,6 +595,7 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
       toolCallId: event.toolCallId,
       turnId: event.turnId,
       diagnostic: event.diagnostic,
+      toolError: event.toolError,
       timestamp: event.timestamp,
       raw: event.raw !== undefined ? JSON.stringify(event.raw) : undefined,
     };

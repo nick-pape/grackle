@@ -90,6 +90,13 @@ export interface SessionEvent {
    * predating HR8d; consumers should fall back to `${timestamp}|${eventType}`.
    */
   serverSeq?: string;
+  /**
+   * `true` when a `tool_result` reported a tool failure (#1362). First-class
+   * outcome flag, preferred over parsing `is_ok` out of `content` or
+   * `is_error` out of the legacy `raw` payload. Absent/false on success and
+   * on non-tool events.
+   */
+  toolError?: boolean;
 }
 
 /** A workspace that groups tasks. */
@@ -672,6 +679,16 @@ export interface UseStreamsResult {
 
 // ─── Knowledge hook result ────────────────────────────────────────────────────
 
+/**
+ * Reason the knowledge graph failed to load.
+ *
+ * - `"unavailable"` — the knowledge server (Neo4j) is not running or is
+ *   unreachable (the RPC returned gRPC `Unavailable`). Surfaced to the user as
+ *   a "knowledge server can't be reached" state.
+ * - `"error"` — any other failure (malformed response, unexpected status).
+ */
+export type KnowledgeLoadError = "unavailable" | "error";
+
 /** Result returned by useKnowledge. */
 export interface UseKnowledgeResult {
   graphData: { nodes: GraphNode[]; links: GraphLink[] };
@@ -679,6 +696,8 @@ export interface UseKnowledgeResult {
   /** Currently selected node ID. */
   selectedId: string | undefined;
   loading: boolean;
+  /** Set when the most recent graph load failed; `undefined` when it succeeded. */
+  loadError: KnowledgeLoadError | undefined;
   searchQuery: string;
   search(query: string): Promise<void>;
   clearSearch(): void;
