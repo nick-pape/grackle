@@ -38,7 +38,7 @@ The Claude Agent SDK runs tools **internally** and (in streaming mode) does **no
 
 Verified live: prompting Claude Code to run a failing command (`cat /nonexistent`) produced `tool_result` events with `content: {"is_ok":true,...}` (empty) — the failure was **not** observable. This is the separate **bug 1c** (filed off #1355).
 
-**Implication:** you cannot demonstrate a tool _failure_ through native `claude-code`. The adapter's `b.is_error` read (`packages/runtime-claude-code/src/claude-code.ts`) is only exercised when the SDK _does_ surface `tool_result` blocks (some non-streaming modes). To observe a real Claude tool failure, use the **ACP** variant once #1366 is fixed (see /test-acp-runtime) — its `tool_call_update` carries a real `status: failed`.
+**Implication:** you cannot demonstrate a tool _failure_ through native `claude-code`. The adapter's `b.is_error` read (`packages/runtime-claude-code/src/claude-code.ts`) is only exercised when the SDK _does_ surface `tool_result` blocks (some non-streaming modes). To observe a real Claude tool failure, use the **ACP** variant (see /test-acp-runtime — now that #1366 is fixed) — its `tool_call_update` carries a real `status: failed` (validated live).
 
 ## Inspecting results
 
