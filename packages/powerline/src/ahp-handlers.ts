@@ -143,6 +143,11 @@ interface ForwarderState {
  * as "redundant with turn_* events", but Grackle's consumer relies on them
  * to flip `session.status` in the UI.
  *
+ * Includes the terminal statuses (`killed` / `terminated` / `failed`) a runtime
+ * emits on SIGTERM/abort — without them, a killed session's final status is
+ * dropped on the wire and the UI is left believing the session is still alive
+ * (#1356). They all map to `stopped` via the consumer's `mapSessionStatus`.
+ *
  * Hoisted to module scope (not per-call) since the set is constant and
  * `emitActionsForEvent` is a hot path.
  */
@@ -151,6 +156,9 @@ const STATUS_RESCUE_CONTENTS: ReadonlySet<string> = new Set([
   "waiting_input",
   "completed",
   "idle",
+  "killed",
+  "terminated",
+  "failed",
 ]);
 
 /**
@@ -727,7 +735,7 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     }
     const session = getSession(sessionId);
     if (session !== undefined) {
-      session.kill("disposed");
+      session.kill("killed");
       // Synchronous removal so the caller sees the session gone immediately
       // on return. The pump's natural-exit cleanup is idempotent — it won't
       // re-remove what's already been removed.
@@ -739,6 +747,24 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
       cState.sessionIds.delete(sessionId);
       const fwd = cState.forwarders.get(sessionId);
       if (fwd !== undefined) {
+        // Synthesize a terminal `killed` status as the LAST action on the wire
+        // before tearing down the forwarder (#1356). The runtime's abort can
+        // emit a trailing synthetic `waiting_input`; if that were the final
+        // forwarded event the UI would believe the killed session is still
+        // alive. Emitting `killed` here and immediately cancelling the
+        // forwarder guarantees the session's terminal state is what the
+        // consumer sees last. Mirrors the status-rescue block above.
+        fwd.serverSeq += 1;
+        const killedAction: StateAction = {
+          type: ActionType.SessionMetaChanged,
+          _meta: { status: "killed" },
+        };
+        conn.session.notify("action", {
+          channel: sessionChannel(sessionId),
+          serverSeq: fwd.serverSeq,
+          action: killedAction,
+          origin: undefined,
+        });
         fwd.cancelled = true;
         fwd.wake?.();
         cState.forwarders.delete(sessionId);

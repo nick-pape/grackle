@@ -494,6 +494,31 @@ describe("ahp-handlers: subscribe", () => {
       await lb.cleanup();
     }
   });
+
+  it("[status rescue] forwards a terminal `killed` status as SessionMetaChanged (#1356)", async () => {
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      const sessionId = `s-killstatus-${String(Date.now())}`;
+      await client.socket.request("createSession", {
+        channel: `ahp-session:/${sessionId}`,
+        provider: TEST_RUNTIME.name,
+        config: {},
+      });
+      const session = TEST_RUNTIME.lastSession!;
+      await client.socket.request("subscribe", { channel: `ahp-session:/${sessionId}` });
+      // A runtime emits `killed` on SIGTERM/abort. Before #1356 the mapper
+      // dropped it; now it must be rescued so the UI sees the terminal state.
+      session.push({ type: "status", content: "killed" });
+      await waitForCount(client.received, 1);
+      const action = client.received[0]!.action as { type: unknown; _meta?: { status?: string } };
+      expect(action.type).toBe(ActionType.SessionMetaChanged);
+      expect(action._meta?.status).toBe("killed");
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  });
 });
 
 describe("ahp-handlers: dispatchAction", () => {
@@ -547,6 +572,36 @@ describe("ahp-handlers: disposeSession", () => {
       await client.socket.request("disposeSession", { channel: `ahp-session:/${sessionId}` });
       expect(session.killed).toBe(true);
       expect(listAllSessions().some((s) => s.id === sessionId)).toBe(false);
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  });
+
+  it("synthesizes a terminal `killed` status as the last wire action (#1356)", async () => {
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      const sessionId = `s-dispose-killed-${String(Date.now())}`;
+      await client.socket.request("createSession", {
+        channel: `ahp-session:/${sessionId}`,
+        provider: TEST_RUNTIME.name,
+        config: {},
+      });
+      // Subscribe so a forwarder exists for the synthesized action to ride on.
+      await client.socket.request("subscribe", { channel: `ahp-session:/${sessionId}` });
+      await client.socket.request("disposeSession", { channel: `ahp-session:/${sessionId}` });
+      await waitForCount(client.received, 1);
+      // A `killed` SessionMetaChanged must be present, and the final action the
+      // consumer sees must be terminal (never a trailing `waiting_input`).
+      const killedMeta = client.received.find((e) => {
+        const a = e.action as { type: unknown; _meta?: { status?: string } };
+        return a.type === ActionType.SessionMetaChanged && a._meta?.status === "killed";
+      });
+      expect(killedMeta).toBeDefined();
+      const last = client.received.at(-1)!.action as { type: unknown; _meta?: { status?: string } };
+      expect(last.type).toBe(ActionType.SessionMetaChanged);
+      expect(last._meta?.status).toBe("killed");
     } finally {
       await client.cleanup();
       await lb.cleanup();
