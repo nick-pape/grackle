@@ -200,7 +200,7 @@ describe("startTask environment resolution", () => {
   });
 });
 
-describe("terminal lifecycle revokes scoped tokens (GHSA-f9ff-5x35-7gfw F12)", () => {
+describe("scoped-token revocation on task lifecycle (GHSA-f9ff-5x35-7gfw F12)", () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let handlers: Record<string, (...args: any[]) => any>;
 
@@ -214,19 +214,20 @@ describe("terminal lifecycle revokes scoped tokens (GHSA-f9ff-5x35-7gfw F12)", (
     vi.mocked(taskStore.checkAndUnblock).mockReturnValue([]);
   });
 
-  it("completeTask revokes the task's tokens", async () => {
-    expect(isRevokedTask("task-1")).toBe(false);
+  // complete/stop are resumable, and resume reuses the original scoped token
+  // (powerline `runtime.resume` does not re-mint) — revoking here would 401 the
+  // resumed agent. So only deleteTask (truly terminal) revokes.
+  it("completeTask does NOT revoke the task's tokens (resumable)", async () => {
     await handlers.completeTask({ id: "task-1" });
-    expect(isRevokedTask("task-1")).toBe(true);
-  });
-
-  it("stopTask revokes the task's tokens", async () => {
     expect(isRevokedTask("task-1")).toBe(false);
-    await handlers.stopTask({ id: "task-1" });
-    expect(isRevokedTask("task-1")).toBe(true);
   });
 
-  it("deleteTask revokes the task's tokens", async () => {
+  it("stopTask does NOT revoke the task's tokens (resumable)", async () => {
+    await handlers.stopTask({ id: "task-1" });
+    expect(isRevokedTask("task-1")).toBe(false);
+  });
+
+  it("deleteTask revokes the task's tokens (terminal, never resumed)", async () => {
     vi.mocked(taskStore.getChildren).mockReturnValue([]);
     vi.mocked(taskStore.deleteTask).mockReturnValue(1 as never);
     expect(isRevokedTask("task-1")).toBe(false);

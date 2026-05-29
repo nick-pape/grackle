@@ -629,11 +629,10 @@ export async function completeTask(req: grackle.TaskId): Promise<grackle.Task> {
     }
   }
 
-  // Revoke the task's scoped MCP tokens (GHSA-f9ff-5x35-7gfw F12): a completed
-  // task's agent should not keep authenticating. A later task_resume mints a
-  // fresh token, which supersedes this revocation (see createScopedToken).
-  revokeTask(task.id);
-
+  // NB: we do NOT revoke the task's scoped tokens here. complete/stop are not
+  // truly terminal — the task can be resumed, and resume reuses the original
+  // token (powerline `runtime.resume` does not re-mint), so revoking here would
+  // 401 the resumed agent's MCP calls. Only deleteTask revokes (GHSA-f9ff F12).
   emit("task.completed", { taskId: task.id, workspaceId: task.workspaceId || "" });
   logger.info({ taskId: task.id }, "Task completed");
   const row = taskStore.getTask(task.id);
@@ -789,10 +788,8 @@ export async function stopTask(req: grackle.TaskId): Promise<grackle.Task> {
     taskStore.checkAndUnblock(task.workspaceId);
   }
 
-  // Revoke the task's scoped MCP tokens (GHSA-f9ff-5x35-7gfw F12). A later
-  // task_resume mints a fresh token that supersedes this (see createScopedToken).
-  revokeTask(req.id);
-
+  // NB: stop is resumable and resume reuses the original scoped token, so we do
+  // NOT revoke here (it would 401 the resumed agent). Only deleteTask revokes.
   emit("task.completed", { taskId: task.id, workspaceId: task.workspaceId || "" });
   logger.info({ taskId: req.id }, "Task stopped");
   const updated = taskStore.getTask(req.id);
