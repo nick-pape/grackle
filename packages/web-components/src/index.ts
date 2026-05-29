@@ -195,6 +195,7 @@ export type {
   GraphLink,
   NodeDetail,
   UseKnowledgeResult,
+  KnowledgeLoadError,
   UseEnvironmentsResult,
   UseSessionsResult,
   UseWorkspacesResult,

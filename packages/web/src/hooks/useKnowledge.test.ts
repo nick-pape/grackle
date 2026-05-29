@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
+import { ConnectError, Code } from "@connectrpc/connect";
 import { useKnowledge } from "./useKnowledge.js";
 
 // ---------------------------------------------------------------------------
@@ -53,9 +54,12 @@ function makeProtoEdge(overrides: Record<string, unknown> = {}): Record<string, 
   };
 }
 
-function setup(): { result: { current: ReturnType<typeof useKnowledge> } } {
-  const { result } = renderHook(() => useKnowledge());
-  return { result };
+function setup(): {
+  result: { current: ReturnType<typeof useKnowledge> };
+  rerender: () => void;
+} {
+  const { result, rerender } = renderHook(() => useKnowledge());
+  return { result, rerender };
 }
 
 beforeEach(() => {
@@ -144,6 +148,61 @@ describe("useKnowledge", () => {
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
+      });
+    });
+
+    // ── loadError classification (#1357) ──────────────────────────
+
+    it("starts with no loadError", () => {
+      const { result } = setup();
+      expect(result.current.loadError).toBeUndefined();
+    });
+
+    it('sets loadError="unavailable" when the knowledge server is unreachable', async () => {
+      mockClient.listRecentKnowledgeNodes.mockRejectedValue(
+        new ConnectError("Neo4j unreachable", Code.Unavailable),
+      );
+      const { result } = setup();
+      act(() => {
+        result.current.loadRecent().catch(() => {});
+      });
+
+      await waitFor(() => {
+        expect(result.current.loadError).toBe("unavailable");
+      });
+      expect(result.current.loading).toBe(false);
+    });
+
+    it('sets loadError="error" for non-Unavailable failures', async () => {
+      mockClient.listRecentKnowledgeNodes.mockRejectedValue(new Error("boom"));
+      const { result } = setup();
+      act(() => {
+        result.current.loadRecent().catch(() => {});
+      });
+
+      await waitFor(() => {
+        expect(result.current.loadError).toBe("error");
+      });
+    });
+
+    it("clears a prior loadError on a subsequent successful load", async () => {
+      mockClient.listRecentKnowledgeNodes.mockRejectedValueOnce(
+        new ConnectError("Neo4j unreachable", Code.Unavailable),
+      );
+      const { result } = setup();
+      act(() => {
+        result.current.loadRecent().catch(() => {});
+      });
+      await waitFor(() => {
+        expect(result.current.loadError).toBe("unavailable");
+      });
+
+      mockClient.listRecentKnowledgeNodes.mockResolvedValue({ nodes: [], edges: [] });
+      act(() => {
+        result.current.loadRecent().catch(() => {});
+      });
+      await waitFor(() => {
+        expect(result.current.loadError).toBeUndefined();
       });
     });
   });
@@ -382,6 +441,23 @@ describe("useKnowledge", () => {
         });
       });
       expect(handled).toBe(false);
+    });
+  });
+
+  // ── referential stability hardening (#1357) ───────────────────
+
+  describe("referential stability", () => {
+    it("keeps a stable object identity across renders with no state change", () => {
+      const { result, rerender } = setup();
+      const first = result.current;
+      rerender();
+      // A new object identity every render is what let a consumer's
+      // `useEffect([knowledge])` re-fire endlessly and storm the server.
+      // Whole-object identity stability also guarantees the callbacks and
+      // nested objects are stable (same reference ⇒ same members).
+      expect(result.current).toBe(first);
+      expect(result.current.graphData).toBe(first.graphData);
+      expect(result.current.domainHook).toBe(first.domainHook);
     });
   });
 
