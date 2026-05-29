@@ -10,6 +10,7 @@ const meta: Meta<typeof TaskActionButtons> = {
   args: {
     task: makeTask({ id: "t-1", status: "not_started" }),
     sessionId: undefined,
+    latestSessionStatus: undefined,
     isBlocked: false,
     onStart: fn(),
     onResume: fn(),
@@ -69,14 +70,32 @@ export const WorkingNoSession: Story = {
   },
 };
 
-/** Paused status shows Stop, Resume, and Delete. */
-export const Paused: Story = {
+/** Paused with a stopped session shows Stop, Resume, and Delete. */
+export const PausedStoppedSession: Story = {
   args: {
     task: makeTask({ id: "t-4", status: "paused" }),
+    latestSessionStatus: "stopped",
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("task-action-stop")).toBeInTheDocument();
     await expect(canvas.getByTestId("task-action-resume")).toBeInTheDocument();
+    await expect(canvas.getByTestId("task-action-delete")).toBeInTheDocument();
+  },
+};
+
+/**
+ * Paused while the session is still alive and idle (awaiting input) hides
+ * Resume: the session is not resumable, so the button would be a no-op.
+ */
+export const PausedIdleSession: Story = {
+  args: {
+    task: makeTask({ id: "t-4b", status: "paused" }),
+    sessionId: "sess-idle",
+    latestSessionStatus: "idle",
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByTestId("task-action-stop")).toBeInTheDocument();
+    await expect(canvas.queryByTestId("task-action-resume")).toBeNull();
     await expect(canvas.getByTestId("task-action-delete")).toBeInTheDocument();
   },
 };

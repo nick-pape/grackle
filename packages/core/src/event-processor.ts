@@ -300,11 +300,24 @@ export function processEventStream(
         }
 
         if (event.type === "status") {
+          // Terminal session status is sticky: once a session is STOPPED (e.g.
+          // killed), a late or raced non-terminal status (`waiting_input` /
+          // `running`) from the runtime's abort must NOT flip it back to alive
+          // (#1356). Terminal transitions below still apply (they are
+          // idempotent re-writes of STOPPED).
+          const statusSession = sessionStore.getSession(sessionId);
+          const isTerminal =
+            statusSession !== undefined &&
+            TERMINAL_SESSION_STATUSES.has(statusSession.status as SessionStatus);
           // Map runtime status strings to our session status model
           if (eventContent === "waiting_input") {
-            sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.IDLE);
+            if (!isTerminal) {
+              sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.IDLE);
+            }
           } else if (eventContent === "running") {
-            sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.RUNNING);
+            if (!isTerminal) {
+              sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.RUNNING);
+            }
           } else if (eventContent === "completed") {
             // Derive end reason: budget SIGTERM → BUDGET_EXCEEDED, user SIGTERM → TERMINATED, normal → COMPLETED
             const session = sessionStore.getSession(sessionId);

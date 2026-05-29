@@ -52,17 +52,19 @@ test.describe("Task Lifecycle (stub runtime)", { tag: ["@task", "@smoke"] }, () 
       timeout: 15_000,
     });
 
-    // --- Step 8: Stop the task (kill session + mark complete) ---
+    // --- Step 8: Stop the task — pauses it, does NOT complete it (#1356) ---
     await page.getByRole("button", { name: "Stop", exact: true }).click();
 
-    // Task status changes to complete
-    await expect(page.getByText("Task completed")).toBeVisible({ timeout: 5_000 });
-
-    // "+ New Task" button appears
-    await expect(page.locator("button", { hasText: "+ New Task" })).toBeVisible();
+    // Task stays paused (resumable), not complete
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("paused", {
+      timeout: 5_000,
+    });
+    await expect(page.getByText("Task completed")).not.toBeVisible();
+    // Resume remains available — the session is stopped, so the task is resumable
+    await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible();
   });
 
-  test("paused task can be stopped (completed)", async ({ stubTask }) => {
+  test("paused task can be stopped without completing it", async ({ stubTask }) => {
     const { page } = stubTask;
 
     // --- Create task with scenario ---
@@ -81,15 +83,18 @@ test.describe("Task Lifecycle (stub runtime)", { tag: ["@task", "@smoke"] }, () 
     await page.getByRole("button", { name: "Send", exact: true }).click();
 
     // Wait for paused (review) state
-    await page.getByRole("button", { name: "Resume", exact: true }).waitFor({ timeout: 15_000 });
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("paused", {
+      timeout: 15_000,
+    });
 
-    // Stop the task (kill session + mark complete)
+    // Stop the task — pauses it (does NOT complete it — #1356)
     await page.getByRole("button", { name: "Stop", exact: true }).click();
 
-    // Task should be marked complete
-    await expect(page.getByText("Task completed")).toBeVisible({ timeout: 5_000 });
-
-    // Verify no task failure
+    // Task stays paused, never complete or failed
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("paused", {
+      timeout: 5_000,
+    });
+    await expect(page.getByText("Task completed")).not.toBeVisible();
     await expect(page.getByText("Task failed")).not.toBeVisible();
   });
 });

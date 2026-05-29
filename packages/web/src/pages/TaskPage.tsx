@@ -282,6 +282,7 @@ export function TaskPage(): JSX.Element {
           <TaskActionButtons
             task={task}
             sessionId={sessionId}
+            latestSessionStatus={sessions.find((s) => s.id === sessionId)?.status}
             isBlocked={isTaskBlocked}
             onStart={() => {
               startTask(task.id, undefined, selectedEnvId).catch((err) => {

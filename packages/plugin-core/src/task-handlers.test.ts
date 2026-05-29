@@ -28,7 +28,11 @@ vi.mock("@grackle-ai/core", async (importOriginal) => {
         return Object.assign(iter, { cancel: vi.fn() });
       }),
     },
-    streamRegistry: { register: vi.fn() },
+    streamRegistry: {
+      register: vi.fn(),
+      getSubscriptionsForSession: vi.fn(() => []),
+      unsubscribe: vi.fn(),
+    },
     tokenPush: { authenticateForRuntime: vi.fn().mockResolvedValue(undefined) },
     adapterManager: { getConnection: vi.fn(() => ({ id: "mock-conn" })) },
     personasStore: {
@@ -84,6 +88,8 @@ vi.mock("node:path", async () => {
 // ── Import AFTER mocks ───────────────────────────────────────────────
 
 import { registerGrackleRoutes } from "./grpc-service.js";
+import { emit } from "@grackle-ai/core";
+import { taskRowToProto } from "./grpc-proto-converters.js";
 import {
   taskStore,
   sessionStore,
@@ -194,5 +200,59 @@ describe("startTask environment resolution", () => {
 
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
+  });
+});
+
+describe("stopTask leaves the task paused (not complete)", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let handlers: Record<string, (...args: any[]) => any>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    handlers = getHandlers();
+
+    vi.mocked(taskStore.getTask).mockReturnValue(makeTaskRow({ status: "working" }) as never);
+    // One active session that will be terminated by stopTask.
+    vi.mocked(sessionStore.getActiveSessionsForTask).mockReturnValue([
+      { id: "sess-1", status: "running" },
+    ] as never);
+    vi.mocked(sessionStore.getSession).mockReturnValue({
+      id: "sess-1",
+      status: "running",
+    } as never);
+    // After stop, the only session is terminal → computeTaskStatus derives "paused".
+    vi.mocked(sessionStore.listSessionsForTask).mockReturnValue([
+      { id: "sess-1", status: "stopped", startedAt: "2026-01-01T00:00:00Z" },
+    ] as never);
+  });
+
+  it("terminates active sessions, does NOT mark the task complete, and emits task.updated", async () => {
+    await handlers.stopTask({ id: "task-1" });
+
+    // Session is stopped (interrupted) ...
+    expect(sessionStore.updateSession).toHaveBeenCalledWith(
+      "sess-1",
+      "stopped",
+      undefined,
+      undefined,
+      "interrupted",
+    );
+    // ... but the task is NOT marked complete and dependents are NOT unblocked.
+    expect(taskStore.markTaskComplete).not.toHaveBeenCalled();
+    expect(taskStore.checkAndUnblock).not.toHaveBeenCalled();
+    // It emits a plain update, not a completion.
+    expect(emit).toHaveBeenCalledWith(
+      "task.updated",
+      expect.objectContaining({ taskId: "task-1" }),
+    );
+    expect(emit).not.toHaveBeenCalledWith("task.completed", expect.anything());
+  });
+
+  it("returns the task with computed status 'paused' so Resume stays available", async () => {
+    await handlers.stopTask({ id: "task-1" });
+
+    // taskRowToProto(row, childIds, status, latestSessionId) — 3rd arg is the computed status.
+    const lastCall = vi.mocked(taskRowToProto).mock.calls.at(-1);
+    expect(lastCall?.[2]).toBe("paused");
   });
 });

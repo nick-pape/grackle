@@ -32,5 +32,10 @@ test.describe("Kill Session", { tag: ["@session"] }, () => {
 
     // Status shows killed
     await expect(page.locator("text=Session killed")).toBeVisible();
+
+    // The session must NOT revert to idle: a trailing waiting_input from the
+    // runtime's abort must not flip the killed session back to alive (#1356).
+    // The idle input box is the alive signal — it must be gone.
+    await expect(inputField).toBeHidden();
   });
 });
