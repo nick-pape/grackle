@@ -37,6 +37,7 @@ export interface UseEventStreamOptions {
     toolCallId: string;
     turnId: string;
     serverSeq: string;
+    toolError: boolean;
   }) => void;
   /** Called for each domain event (task.created, environment.changed, etc.). */
   onDomainEvent: (event: {
@@ -138,6 +139,7 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
               toolCallId: v.toolCallId,
               turnId: v.turnId,
               serverSeq: v.serverSeq,
+              toolError: v.toolError,
             });
           } else if (evt.case === "domainEvent") {
             const v = evt.value;

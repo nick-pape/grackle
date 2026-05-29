@@ -77,6 +77,7 @@ export function protoToSessionEvent(p: grackle.SessionEvent): SessionEvent {
     toolCallId: p.toolCallId || undefined,
     turnId: p.turnId || undefined,
     serverSeq: p.serverSeq || undefined,
+    toolError: p.toolError || undefined,
   };
 }
 
