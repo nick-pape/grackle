@@ -619,6 +619,13 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     if (forwarder.mapperContext.metaAccumulator.costMillicents !== undefined) {
       metaSnapshot.cost_millicents = forwarder.mapperContext.metaAccumulator.costMillicents;
     }
+    // HR8d follow-up #1355: carry token totals alongside cost.
+    if (forwarder.mapperContext.metaAccumulator.inputTokens !== undefined) {
+      metaSnapshot.input_tokens = forwarder.mapperContext.metaAccumulator.inputTokens;
+    }
+    if (forwarder.mapperContext.metaAccumulator.outputTokens !== undefined) {
+      metaSnapshot.output_tokens = forwarder.mapperContext.metaAccumulator.outputTokens;
+    }
     if (
       Object.keys(metaSnapshot).length > 0 &&
       !shallowEqualSnapshots(forwarder.lastMetaSnapshot, metaSnapshot)
