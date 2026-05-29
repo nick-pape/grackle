@@ -11,7 +11,7 @@ import {
   drainParkedSession,
 } from "./session-mgr.js";
 import { writeTokens } from "./token-writer.js";
-import { removeWorktree } from "@grackle-ai/runtime-sdk";
+import { removeWorktree, validateGitBranchName } from "@grackle-ai/runtime-sdk";
 import os from "node:os";
 import type { AgentEvent, AgentSession } from "@grackle-ai/runtime-sdk";
 
@@ -96,6 +96,21 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
           content: `Unknown runtime: ${req.runtime}`,
         });
         return;
+      }
+
+      // Reject unsafe branch names at the boundary before they reach git (GHSA-vv65).
+      if (req.branch) {
+        try {
+          validateGitBranchName(req.branch);
+        } catch (err) {
+          yield create(powerline.AgentEventSchema, {
+            sessionId: req.sessionId,
+            type: "error",
+            timestamp: new Date().toISOString(),
+            content: err instanceof Error ? err.message : "Invalid branch name",
+          });
+          return;
+        }
       }
 
       // Pass through MCP URL + scoped token from the server (no local broker needed).

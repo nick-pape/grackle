@@ -9,6 +9,59 @@ const execRaw: typeof execFile.__promisify__ = promisify(execFile);
 /** Timeout for `git fetch origin` in milliseconds. */
 const FETCH_TIMEOUT_MS: number = 30_000;
 
+/** Maximum permitted length of a git branch name. */
+const MAX_BRANCH_NAME_LENGTH: number = 255;
+
+/**
+ * Characters permitted in a git branch name. Deliberately a strict allowlist
+ * (the same charset as {@link sanitizeBranch}) that excludes every shell
+ * metacharacter and whitespace.
+ */
+const VALID_BRANCH_NAME_PATTERN: RegExp = /^[A-Za-z0-9._/-]+$/;
+
+/**
+ * Validate that a branch name is safe to pass to the git CLI.
+ *
+ * This is a security control against command/argument injection
+ * (GHSA-vv65): a branch name flows from an untrusted gRPC request into
+ * `git worktree` invocations. Rather than silently rewriting the value (a
+ * branch is a meaningful ref), this rejects anything outside a strict
+ * allowlist so callers fail closed.
+ *
+ * @param branch - The branch name to validate.
+ * @throws Error if the branch name is empty, too long, contains characters
+ *   outside `[A-Za-z0-9._/-]`, or violates git ref rules (leading `-` or `/`,
+ *   trailing `/`, a `..` sequence, or a trailing `.` / `.lock`).
+ */
+export function validateGitBranchName(branch: string): void {
+  if (branch.length === 0) {
+    throw new Error("Invalid branch name: must not be empty");
+  }
+  if (branch.length > MAX_BRANCH_NAME_LENGTH) {
+    throw new Error(`Invalid branch name: exceeds ${MAX_BRANCH_NAME_LENGTH} characters`);
+  }
+  if (!VALID_BRANCH_NAME_PATTERN.test(branch)) {
+    throw new Error(
+      "Invalid branch name: only letters, digits, '.', '_', '/', and '-' are allowed",
+    );
+  }
+  if (branch.startsWith("-")) {
+    throw new Error("Invalid branch name: must not start with '-'");
+  }
+  if (branch.startsWith("/") || branch.endsWith("/")) {
+    throw new Error("Invalid branch name: must not start or end with '/'");
+  }
+  if (branch.includes("..")) {
+    throw new Error("Invalid branch name: must not contain '..'");
+  }
+  if (branch.endsWith(".lock")) {
+    throw new Error("Invalid branch name: must not end with '.lock'");
+  }
+  if (branch.endsWith(".")) {
+    throw new Error("Invalid branch name: must not end with '.'");
+  }
+}
+
 /** Abstraction over git command execution used by worktree operations. */
 export interface GitExecutor {
   /** Run a git command and return stdout/stderr. */
@@ -18,11 +71,15 @@ export interface GitExecutor {
   ): Promise<{ stdout: string; stderr: string }>;
 }
 
-/** Default implementation that shells out to the real git binary. */
+/** Default implementation that runs the real git binary. */
 const NODE_GIT_EXECUTOR: GitExecutor = {
   async exec(args: string[], options: { cwd: string; timeout?: number }) {
-    const shell = process.env.SHELL || true;
-    const result = await execRaw("git", args, { ...options, shell });
+    // NOTE: no `shell` option — execFile passes `args` directly to the git
+    // process as an argv vector with no shell interpretation. Using a shell
+    // here would concatenate the args into a string and allow command
+    // injection via untrusted branch names (GHSA-vv65). `git` is a real
+    // executable resolved from PATH, so no shell is needed on any platform.
+    const result = await execRaw("git", args, options);
     return { stdout: String(result.stdout), stderr: String(result.stderr) };
   },
 };
@@ -105,6 +162,9 @@ export async function ensureWorktree(
   git: GitExecutor = NODE_GIT_EXECUTOR,
   fileSystem: WorktreeFileSystem = NODE_WORKTREE_FILE_SYSTEM,
 ): Promise<WorktreeResult> {
+  // Reject unsafe branch names before they reach the git CLI (GHSA-vv65).
+  validateGitBranchName(branch);
+
   // Pre-check: verify basePath is a git repository
   try {
     await git.exec(["rev-parse", "--git-dir"], { cwd: basePath });
@@ -130,17 +190,19 @@ export async function ensureWorktree(
   // Fetch origin so the new worktree branches from an up-to-date commit
   const { synced, startPoint } = await fetchAndDetectDefault(basePath, git);
 
-  // Try creating a new branch worktree first
+  // Try creating a new branch worktree first.
+  // `--` terminates option parsing so the positional path/commit-ish can never
+  // be misread as a flag (defense in depth alongside validateGitBranchName).
   try {
     const addArgs = startPoint
-      ? ["worktree", "add", "-b", branch, wtPath, startPoint]
-      : ["worktree", "add", "-b", branch, wtPath];
+      ? ["worktree", "add", "-b", branch, "--", wtPath, startPoint]
+      : ["worktree", "add", "-b", branch, "--", wtPath];
     await git.exec(addArgs, { cwd: basePath });
     return { worktreePath: wtPath, branch, created: true, synced };
   } catch {
     // Branch may already exist — try without -b
     try {
-      await git.exec(["worktree", "add", wtPath, branch], { cwd: basePath });
+      await git.exec(["worktree", "add", "--", wtPath, branch], { cwd: basePath });
       return { worktreePath: wtPath, branch, created: true, synced };
     } catch (err) {
       throw new Error(
@@ -155,9 +217,11 @@ export async function removeWorktree(
   branch: string,
   git: GitExecutor = NODE_GIT_EXECUTOR,
 ): Promise<void> {
+  validateGitBranchName(branch);
   const wtPath = worktreeDir(basePath, branch);
   try {
-    await git.exec(["worktree", "remove", wtPath, "--force"], { cwd: basePath });
+    // `--force` is a real flag, then `--` ends option parsing before the path.
+    await git.exec(["worktree", "remove", "--force", "--", wtPath], { cwd: basePath });
   } catch {
     // Already removed or doesn't exist — that's fine
   }

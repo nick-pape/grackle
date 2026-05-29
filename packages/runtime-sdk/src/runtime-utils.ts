@@ -3,7 +3,7 @@ import type { AsyncQueue } from "./async-queue.js";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { ensureWorktree } from "./worktree.js";
+import { ensureWorktree, validateGitBranchName } from "./worktree.js";
 import { logger } from "./logger.js";
 
 // ─── Injectable interfaces ──────────────────────────────────
@@ -46,6 +46,8 @@ export const NODE_GIT_REPOSITORY: GitRepository = (() => {
       }
     },
     async checkoutBranch(repoPath: string, branch: string): Promise<void> {
+      // Reject unsafe branch names before they reach the git CLI (GHSA-vv65).
+      validateGitBranchName(branch);
       try {
         // "--" prevents branch names starting with "-" from being interpreted as flags
         await execFileAsync("git", ["checkout", "--", branch], { cwd: repoPath });
