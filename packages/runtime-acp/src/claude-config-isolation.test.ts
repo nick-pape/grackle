@@ -75,4 +75,17 @@ describe("prepareIsolatedClaudeConfig", () => {
 
     expect(readFileSync(join(isolatedConfigDir, ".credentials.json"), "utf8")).toBe("new");
   });
+
+  it("clears a stale isolated credential when the real one is gone", () => {
+    // First spawn provisions credentials.
+    writeFileSync(join(realConfigDir, ".credentials.json"), "secret", "utf8");
+    prepareIsolatedClaudeConfig(realConfigDir, isolatedConfigDir);
+    expect(existsSync(join(isolatedConfigDir, ".credentials.json"))).toBe(true);
+
+    // The developer later deletes their real credentials; the next spawn must
+    // behave like a no-credentials environment, not retain the stale copy/link.
+    rmSync(join(realConfigDir, ".credentials.json"), { force: true });
+    prepareIsolatedClaudeConfig(realConfigDir, isolatedConfigDir);
+    expect(existsSync(join(isolatedConfigDir, ".credentials.json"))).toBe(false);
+  });
 });

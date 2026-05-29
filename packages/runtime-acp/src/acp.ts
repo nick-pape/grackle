@@ -313,13 +313,15 @@ export function prepareIsolatedClaudeConfig(
 
   const realCredentials = join(realConfigDir, CLAUDE_CREDENTIALS_FILENAME);
   const isolatedCredentials = join(isolatedConfigDir, CLAUDE_CREDENTIALS_FILENAME);
+  // Always clear any stale link/copy from a previous spawn first, so that if the
+  // real credentials were since deleted/moved the isolated dir behaves like a
+  // no-credentials environment rather than retaining outdated credentials.
+  try {
+    rmSync(isolatedCredentials, { force: true });
+  } catch {
+    // best-effort cleanup
+  }
   if (existsSync(realCredentials)) {
-    // Remove any stale link/copy from a previous spawn before re-provisioning.
-    try {
-      rmSync(isolatedCredentials, { force: true });
-    } catch {
-      // best-effort cleanup
-    }
     try {
       symlinkSync(realCredentials, isolatedCredentials, "file");
     } catch {
@@ -386,7 +388,10 @@ class AcpSession extends BaseAgentSession {
     // crashing session/new (#1366). Point CLAUDE_CONFIG_DIR at a clean,
     // Grackle-managed dir so headless agents don't inherit personal config.
     if (this.config.isolateClaudeConfig) {
-      const realConfigDir = process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), CLAUDE_CONFIG_DIRNAME);
+      // Source from the merged env (config `env` override > process.env > default)
+      // so we provision credentials from wherever the agent would otherwise look.
+      // Read before overwriting childEnv.CLAUDE_CONFIG_DIR below.
+      const realConfigDir = childEnv.CLAUDE_CONFIG_DIR ?? join(homedir(), CLAUDE_CONFIG_DIRNAME);
       const isolatedConfigDir = getRuntimeConfigDirectory(this.config.name);
       try {
         prepareIsolatedClaudeConfig(realConfigDir, isolatedConfigDir);
