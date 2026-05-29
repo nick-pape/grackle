@@ -58,7 +58,7 @@ The pinned upstream commit lives in **one place**: `devDependencies["agent-host-
 
 ## Requirements
 
-- Node.js >= 22
+- Node.js >= 22 and < 24
 
 ## License
 
