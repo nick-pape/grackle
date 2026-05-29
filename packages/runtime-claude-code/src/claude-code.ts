@@ -118,6 +118,8 @@ export function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
             content: typeof b.content === "string" ? b.content : JSON.stringify(b.content),
             raw: b,
             toolCallId: typeof b.tool_use_id === "string" ? b.tool_use_id : undefined,
+            // Anthropic tool_result blocks carry the failure flag here (#1362).
+            toolError: b.is_error === true,
           });
         }
       }
@@ -617,6 +619,9 @@ class ClaudeCodeSession extends BaseAgentSession {
         content: "",
         raw: { tool_use_id: id, is_error: false, synthetic: true },
         toolCallId: id,
+        // Synthetic results stand in for tools the SDK ran internally and
+        // didn't surface — treat as successful completions (#1362).
+        toolError: false,
       });
     }
     this.pendingToolUseIds.clear();

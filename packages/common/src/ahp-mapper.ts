@@ -77,6 +77,13 @@ export interface AgentEventFields {
   turnId?: string;
   /** `true` for diagnostic system events that route to OTLP telemetry (HR7). */
   diagnostic?: boolean;
+  /**
+   * `true` when a `tool_result` reported a tool failure (#1362). Set by the
+   * runtime adapter from its native outcome signal; this is the authoritative
+   * source for `SessionToolCallComplete.result.success` (the AHP wire drops
+   * `raw`, where the runtimes' error flags used to live).
+   */
+  toolError?: boolean;
   /** ISO-8601 timestamp string (passed through from the runtime). */
   timestamp?: string;
   /** Raw event body — opaque to the mapper, used by JSONL persistence. */
@@ -449,13 +456,22 @@ export function mapAgentEvent(
         }
       }
 
-      const isOk = hasParsed
-        ? "is_ok" in parsed
-          ? parsed.is_ok === true
-          : "success" in parsed
-            ? parsed.success === true
-            : true
-        : true;
+      // The first-class `toolError` field (#1362) is authoritative — every
+      // runtime adapter sets it from its native outcome signal, which the AHP
+      // wire would otherwise lose (it doesn't carry `raw`). Fall back to the
+      // content `is_ok`/`success` keys only when `toolError` is absent (e.g.
+      // legacy/replayed events reconstructed from `content` by the reverse
+      // mapper), defaulting to success when nothing indicates failure.
+      const isOk =
+        event.toolError !== undefined
+          ? !event.toolError
+          : hasParsed
+            ? "is_ok" in parsed
+              ? parsed.is_ok === true
+              : "success" in parsed
+                ? parsed.success === true
+                : true
+            : true;
       const pastTenseMessage = hasParsed
         ? str(parsed, ["past_tense_message"], content || "")
         : content || "";

@@ -154,7 +154,16 @@ export function mapSessionUpdate(update: Record<string, unknown>): AgentEvent[] 
           update.rawOutput !== null && update.rawOutput !== undefined
             ? JSON.stringify(update.rawOutput)
             : ((update.content || "") as string);
-        return [{ type: "tool_result", timestamp: ts, content: output, raw, toolCallId }];
+        return [
+          {
+            type: "tool_result",
+            timestamp: ts,
+            content: output,
+            raw,
+            toolCallId,
+            toolError: false,
+          },
+        ];
       }
       if (status === "failed") {
         const rawOutput = update.rawOutput as Record<string, unknown> | undefined;
@@ -166,6 +175,8 @@ export function mapSessionUpdate(update: Record<string, unknown>): AgentEvent[] 
             content: typeof errorContent === "string" ? errorContent : JSON.stringify(errorContent),
             raw,
             toolCallId,
+            // ACP signals failure via the update status, not content (#1362).
+            toolError: true,
           },
         ];
       }
