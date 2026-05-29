@@ -119,6 +119,14 @@ export interface SessionPump {
    * missed events from a prior subscriber arrive via the parked-replay path.
    */
   totalForwardersAttached: number;
+  /**
+   * Captured at startSessionPump time. Fired exactly once on the
+   * last-forwarder-detach path *after* a natural pump exit, so handler-level
+   * owners (ahp-handlers' `ClientState.sessionIds`) get to clean up.
+   * Stashed here rather than as a `runPump` parameter so `unregisterPumpForwarder`
+   * can dispatch it from its own callsite.
+   */
+  onNaturalExit?: PumpNaturalExitHandler;
   /** Handle to the pump task — used to coordinate teardown on dispose. */
   readonly task: Promise<void>;
 }
@@ -126,11 +134,17 @@ export interface SessionPump {
 const sessionPumps: Map<string, SessionPump> = new Map<string, SessionPump>();
 
 /**
- * Optional cleanup hook fired when a pump exits naturally (i.e.
- * `session.stream()` returned without being torn down by dispose/onDisconnect).
- * Lets callers — typically ahp-handlers — prune their own owning bookkeeping
- * (`ClientState.sessionIds`) for the now-dead session without scanning every
- * client on every session end.
+ * Optional cleanup hook fired on the *last-forwarder-detach path* after a
+ * natural pump exit. Lets handler-level owners (typically ahp-handlers) prune
+ * their own owning bookkeeping (`ClientState.sessionIds`) for the now-dead
+ * session without scanning every client on every session end.
+ *
+ * Specifically NOT fired from the pump's own finally — the pump can complete
+ * before any forwarder ever attaches (a "fast child" stub finishes between
+ * `createSession` and `subscribe` over the wire). Auto-removing the session
+ * there would race the still-arriving subscribe and cause it to fail with
+ * "Unknown session channel," surface as a synthetic `status: failed` on the
+ * server side, and break the createSession+subscribe pairing.
  */
 export type PumpNaturalExitHandler = (sessionId: string) => void;
 
@@ -161,9 +175,10 @@ export function startSessionPump(
     waiters: new Set<() => void>(),
     forwarders: new Set<PumpForwarder>(),
     totalForwardersAttached: 0,
+    onNaturalExit,
     task: Promise.resolve(),
   };
-  (pump as { task: Promise<void> }).task = runPump(pump, onNaturalExit);
+  (pump as { task: Promise<void> }).task = runPump(pump);
   sessionPumps.set(session.id, pump);
   return pump;
 }
@@ -183,9 +198,27 @@ export function registerPumpForwarder(pump: SessionPump, forwarder: PumpForwarde
   pump.totalForwardersAttached++;
 }
 
-/** Unregister a forwarder; safe to call multiple times. */
+/**
+ * Unregister a forwarder; safe to call multiple times. When the *last*
+ * forwarder leaves *after* the pump has already finished naturally
+ * (`pump.done && pump.totalForwardersAttached > 0`), this is also where the
+ * session + pump get removed from the registry — keeping the session alive
+ * until the wire-side reader has drained it avoids the createSession-then-
+ * subscribe race where a fast child completes before the server's subscribe
+ * arrives.
+ */
 export function unregisterPumpForwarder(pump: SessionPump, forwarder: PumpForwarder): void {
   pump.forwarders.delete(forwarder);
+  if (
+    pump.done &&
+    pump.forwarders.size === 0 &&
+    pump.totalForwardersAttached > 0 &&
+    sessions.has(pump.session.id)
+  ) {
+    removeSession(pump.session.id);
+    sessionPumps.delete(pump.session.id);
+    pump.onNaturalExit?.(pump.session.id);
+  }
 }
 
 /** Retrieve the pump record for a session, if one is registered. */
@@ -207,10 +240,7 @@ function wakePumpWaiters(pump: SessionPump): void {
   }
 }
 
-async function runPump(
-  pump: SessionPump,
-  onNaturalExit: PumpNaturalExitHandler | undefined,
-): Promise<void> {
+async function runPump(pump: SessionPump): Promise<void> {
   try {
     for await (const event of pump.session.stream()) {
       pump.buffer.push(event);
@@ -218,22 +248,19 @@ async function runPump(
       trimPumpBuffer(pump);
     }
   } catch {
-    // Stream errored — let the session die normally. The pump's natural-exit
-    // cleanup below still runs.
+    // Stream errored — let the session die normally. The pump just goes
+    // `done` here; cleanup happens on the last-forwarder-detach path.
   } finally {
     pump.done = true;
     wakePumpWaiters(pump);
-    // Natural pump exit removes the session and notifies the handler-level
-    // owner so it can prune its own per-client bookkeeping (otherwise the
-    // `ClientState.sessionIds` set would accumulate dead session IDs across
-    // the connection's lifetime). The disconnect/dispose paths take care of
-    // their own cleanup before this runs, so we gate on `sessions.has` to
-    // stay idempotent.
-    if (sessions.has(pump.session.id)) {
-      removeSession(pump.session.id);
-      sessionPumps.delete(pump.session.id);
-      onNaturalExit?.(pump.session.id);
-    }
+    // We intentionally do *not* removeSession/deleteSessionPump here. A fast
+    // child can finish between `createSession` and `subscribe` on the wire;
+    // removing the session at this point would race the still-arriving
+    // subscribe and cause it to fail with "Unknown session channel," which
+    // surfaces as a synthetic `status: failed` on the server side. Instead,
+    // `unregisterPumpForwarder` does the removal when the last forwarder
+    // leaves *after* a natural pump exit; if no forwarder ever attaches the
+    // session lingers until dispose/onDisconnect explicitly tears it down.
   }
 }
 

@@ -255,40 +255,50 @@ describe("session pumps", () => {
     await tick();
   });
 
-  it("fires the natural-exit hook with the session id when session.stream() ends on its own", async () => {
-    // Verifies the cleanup-callback contract that lets ahp-handlers prune
-    // ClientState.sessionIds without the pump knowing about clients.
+  it("fires the natural-exit hook when the last forwarder detaches after a natural pump exit", async () => {
+    // The hook intentionally does NOT fire from the pump's own finally
+    // (which would race the createSession+subscribe sequence). It fires when
+    // the last forwarder unregisters *after* pump.done is set.
     const session = new ControllableSession("natural-exit-1");
     const seen: string[] = [];
     const pump = startSessionPump(session, (id) => {
       seen.push(id);
     });
+    const forwarder: PumpForwarder = { pos: 0, cancelled: false };
+    registerPumpForwarder(pump, forwarder);
 
-    expect(seen).toHaveLength(0);
+    // Pump ends on its own — but the hook hasn't fired yet because a
+    // forwarder is still attached.
     session.endStream();
     await pump.task;
+    expect(seen).toHaveLength(0);
+    expect(getSession("natural-exit-1")).toBeDefined();
+
+    // Now the forwarder detaches. With pump.done true and the last forwarder
+    // gone, the hook fires and the session is reaped.
+    unregisterPumpForwarder(pump, forwarder);
     expect(seen).toEqual(["natural-exit-1"]);
-    // Also confirms session-mgr's own bookkeeping: the session is gone.
     expect(getSession("natural-exit-1")).toBeUndefined();
     expect(getSessionPump("natural-exit-1")).toBeUndefined();
   });
 
-  it("does NOT fire the natural-exit hook when a caller has already removed the session (dispose/disconnect path)", async () => {
-    // Mirrors the dispose path: the handler explicitly removes the session
-    // and pump before the pump's natural-exit `finally` runs. The hook must
-    // not double-fire — handlers do their own cleanup in this case.
+  it("does NOT fire the natural-exit hook if no forwarder has ever attached", async () => {
+    // The "fast child completes before subscribe arrives" case. The pump
+    // finishes naturally with no forwarder ever registered — we leave the
+    // session in place so the still-arriving subscribe can find it (it
+    // replays from buffer start since it's the first forwarder).
     const session = new ControllableSession("natural-exit-2");
     const seen: string[] = [];
     const pump = startSessionPump(session, (id) => {
       seen.push(id);
     });
 
-    // Simulate the dispose path: remove session + pump *before* killing.
-    removeSession("natural-exit-2");
-    deleteSessionPump("natural-exit-2");
     session.endStream();
     await pump.task;
     expect(seen).toHaveLength(0);
+    // Session intentionally stays in the registry.
+    expect(getSession("natural-exit-2")).toBeDefined();
+    expect(getSessionPump("natural-exit-2")).toBeDefined();
   });
 
   it("caps the buffer when no forwarders are attached so emit-into-the-void doesn't grow without bound", async () => {
