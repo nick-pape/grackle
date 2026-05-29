@@ -9,7 +9,7 @@ set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
-# === Find 4 free ports ===
+# === Find 5 free ports ===
 GRACKLE_PORTS="$(node -e "
 const net = require('net');
 function findPort() {
@@ -24,7 +24,7 @@ function findPort() {
 }
 async function main() {
   const ports = new Set();
-  while (ports.size < 4) { ports.add(await findPort()); }
+  while (ports.size < 5) { ports.add(await findPort()); }
   console.log([...ports].join(' '));
 }
 main();
@@ -33,13 +33,13 @@ if [ -z "$GRACKLE_PORTS" ]; then
   echo "Error: node port-finder produced no output" >&2
   exit 1
 fi
-read -r GRPC_PORT WEB_PORT MCP_PORT POWERLINE_PORT <<< "$GRACKLE_PORTS"
-for p in "$GRPC_PORT" "$WEB_PORT" "$MCP_PORT" "$POWERLINE_PORT"; do
+read -r GRPC_PORT WEB_PORT MCP_PORT POWERLINE_PORT SANDBOX_PORT <<< "$GRACKLE_PORTS"
+for p in "$GRPC_PORT" "$WEB_PORT" "$MCP_PORT" "$POWERLINE_PORT" "$SANDBOX_PORT"; do
   case "$p" in
     ''|*[!0-9]*) echo "Error: invalid port value '$p' in GRACKLE_PORTS='$GRACKLE_PORTS'" >&2; exit 1 ;;
   esac
 done
-echo "Ports: gRPC=$GRPC_PORT web=$WEB_PORT mcp=$MCP_PORT powerline=$POWERLINE_PORT"
+echo "Ports: gRPC=$GRPC_PORT web=$WEB_PORT mcp=$MCP_PORT powerline=$POWERLINE_PORT sandbox=$SANDBOX_PORT"
 
 # === Create isolated home directory ===
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
@@ -53,6 +53,7 @@ GRACKLE_PORT=$GRPC_PORT \
 GRACKLE_WEB_PORT=$WEB_PORT \
 GRACKLE_MCP_PORT=$MCP_PORT \
 GRACKLE_POWERLINE_PORT=$POWERLINE_PORT \
+GRACKLE_SANDBOX_PORT=$SANDBOX_PORT \
 GRACKLE_HOST=127.0.0.1 \
 GRACKLE_HOME="$GRACKLE_HOME" \
 node "$REPO_ROOT/packages/server/dist/index.js" > "$GRACKLE_HOME/server.log" 2>&1 &
@@ -137,6 +138,7 @@ echo "Pairing URL:  $PAIRING_URL"
   printf 'export WEB_PORT=%q\n' "$WEB_PORT"
   printf 'export MCP_PORT=%q\n' "$MCP_PORT"
   printf 'export POWERLINE_PORT=%q\n' "$POWERLINE_PORT"
+  printf 'export SANDBOX_PORT=%q\n' "$SANDBOX_PORT"
   printf 'export GRACKLE_HOME=%q\n' "$GRACKLE_HOME"
   printf 'export REPO_ROOT=%q\n' "$REPO_ROOT"
   printf 'export SERVER_PID=%q\n' "$SERVER_PID"
@@ -153,6 +155,7 @@ echo "  Web UI:       http://127.0.0.1:$WEB_PORT"
 echo "  Pairing URL:  $PAIRING_URL"
 echo "  gRPC:         http://127.0.0.1:$GRPC_PORT"
 echo "  MCP:          http://127.0.0.1:$MCP_PORT/mcp"
+echo "  Sandbox:      http://127.0.0.1:$SANDBOX_PORT/sandbox.html"
 echo "  PowerLine:    http://127.0.0.1:$POWERLINE_PORT"
 echo "  API Key:      $GRACKLE_API_KEY"
 echo "  Home:         $GRACKLE_HOME"
