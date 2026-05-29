@@ -257,6 +257,21 @@ export function getRuntimeBinDirectory(runtimeName: string): string {
   return join(RUNTIMES_BASE_DIR, runtimeName, "node_modules", ".bin");
 }
 
+/**
+ * Get the path to a runtime's private, Grackle-managed config directory.
+ *
+ * Used to isolate a spawned agent subprocess from the developer's personal
+ * tool config (e.g. `~/.claude`) so interactive-only settings do not leak into
+ * headless agents. The directory is not created by this function — callers
+ * populate it as needed.
+ *
+ * @param runtimeName - Runtime identifier (e.g. "claude-code-acp")
+ * @returns Absolute path to `~/.grackle/runtimes/<name>/config`
+ */
+export function getRuntimeConfigDirectory(runtimeName: string): string {
+  return join(RUNTIMES_BASE_DIR, runtimeName, "config");
+}
+
 // ─── Internal Helpers ───────────────────────────────────────
 
 /** Check if the persisted manifest matches the current state. */

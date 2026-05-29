@@ -178,6 +178,9 @@ export function findGitRepoPath(basePath?: string, git?: GitRepository, locator?
 export function getRuntimeBinDirectory(runtimeName: string): string;
 
 // @public
+export function getRuntimeConfigDirectory(runtimeName: string): string;
+
+// @public
 export interface GitExecutor {
     exec(args: string[], options: {
         cwd: string;

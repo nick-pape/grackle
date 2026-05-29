@@ -36,6 +36,7 @@ export {
   ensureRuntimeInstalled,
   importFromRuntime,
   getRuntimeBinDirectory,
+  getRuntimeConfigDirectory,
   isDevMode,
 } from "./runtime-installer.js";
 export type { RuntimeInstallOptions } from "./runtime-installer.js";
