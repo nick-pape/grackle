@@ -46,8 +46,9 @@ test.describe("Task Resume after crash (paused → working)", { tag: ["@task"] }
     await inputField.fill("continue");
     await page.getByRole("button", { name: "Send", exact: true }).click();
 
-    // --- Verify task reaches paused (review) ---
-    await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible({
+    // --- Verify task reaches paused (review). The resumed (legacy) session is
+    // idle/alive, so Resume is hidden (#1356) — the task badge is the signal. ---
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("paused", {
       timeout: 15_000,
     });
   });
