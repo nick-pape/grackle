@@ -41,6 +41,18 @@ describe("parseDelegationArgs", () => {
     expect(info.prompt).toBe("run the suite");
   });
 
+  it("captures agent_id on a Copilot task spawn so spawn and polls converge", () => {
+    const info = parseDelegationArgs("task", {
+      agent_type: "worker",
+      name: "find-tests",
+      agent_id: "ag-42",
+      prompt: "run the suite",
+    });
+    expect(info.agentId).toBe("ag-42");
+    // delegationIdentityKey prefers agentId — matches a later read_agent poll for ag-42.
+    expect(delegationIdentityKey(info, "tc-1")).toBe("ag-42");
+  });
+
   it("parses Copilot read_agent poll (agent_id)", () => {
     const info = parseDelegationArgs("read_agent", { agent_id: "agent-123" });
     expect(info.isPoll).toBe(true);
@@ -68,6 +80,12 @@ describe("detectDelegation", () => {
     const info = detectDelegation("task", { name: "reviewer", prompt: "review this" });
     expect(info).toBeDefined();
     expect(info?.agentName).toBe("reviewer");
+  });
+
+  it("detects a task identified only by agent_id + prompt", () => {
+    const info = detectDelegation("task", { agent_id: "ag-7", prompt: "do it" });
+    expect(info).toBeDefined();
+    expect(info?.agentId).toBe("ag-7");
   });
 
   it("detects a Copilot read_agent poll", () => {

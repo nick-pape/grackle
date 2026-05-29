@@ -66,14 +66,21 @@ export function parseDelegationArgs(tool: string, args: unknown): DelegationInfo
     };
   }
 
-  // Copilot task — has `agent_type` and/or `name` fields
-  if (typeof a.agent_type === "string" || typeof a.name === "string") {
+  // Copilot task — identified by `agent_type`, `name`, and/or `agent_id`. Capture
+  // `agent_id` when present so a spawn and its later read_agent polls derive the
+  // same child id (delegationIdentityKey prefers agentId).
+  if (
+    typeof a.agent_type === "string" ||
+    typeof a.name === "string" ||
+    typeof a.agent_id === "string"
+  ) {
     return {
       agentType: typeof a.agent_type === "string" ? a.agent_type : undefined,
       description: typeof a.description === "string" ? a.description : undefined,
       prompt: typeof a.prompt === "string" ? a.prompt : undefined,
       isBackground: a.mode === "background",
       agentName: typeof a.name === "string" ? a.name : undefined,
+      agentId: typeof a.agent_id === "string" ? a.agent_id : undefined,
     };
   }
 
@@ -112,7 +119,8 @@ export function detectDelegation(tool: string, args: unknown): DelegationInfo | 
   const hasPrompt = typeof info.prompt === "string" && info.prompt.length > 0;
   const hasDelegationId =
     (typeof info.agentType === "string" && info.agentType.length > 0) ||
-    (typeof info.agentName === "string" && info.agentName.length > 0);
+    (typeof info.agentName === "string" && info.agentName.length > 0) ||
+    (typeof info.agentId === "string" && info.agentId.length > 0);
   if (hasPrompt && hasDelegationId) {
     return info;
   }

@@ -267,13 +267,16 @@ export function processEventStream(
           const link = delegationByToolCall.get(eventToolCallId);
           if (link) {
             if (link.isPoll) {
-              // A read_agent poll surfaces partial output; append it, and close
-              // the child only when the poll reports a terminal status.
-              appendChildActivity(link.childId, eventContent);
+              // A read_agent poll surfaces partial output. On a terminal status,
+              // closeChildSession records the result and stops the child; otherwise
+              // append the partial output. Recording happens in exactly one path so
+              // the terminal poll output isn't duplicated in the child log.
               const status = readAgentResultStatus(eventContent);
               if (status === "completed" || status === "failed" || status === "error") {
                 closeChildSession(link.childId, eventContent, status !== "completed");
                 delegationByToolCall.delete(eventToolCallId);
+              } else {
+                appendChildActivity(link.childId, eventContent);
               }
             } else if (link.isBackground) {
               // A background spawn's result is just a handle, not completion —

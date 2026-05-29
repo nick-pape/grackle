@@ -1535,5 +1535,11 @@ describe("subagent child sessions (#1075)", () => {
       .listSessionsForTask("task1")
       .filter((s) => s.id.startsWith("sub_"));
     expect(allSubs).toHaveLength(1);
+    // The terminal poll result is recorded exactly once (closeChildSession records
+    // it; the append path is skipped for terminal polls — no duplication).
+    const completedEntries = querySessionActions({ sessionId: childId }).filter((a) =>
+      a.content.includes("all done"),
+    );
+    expect(completedEntries).toHaveLength(1);
   });
 });
