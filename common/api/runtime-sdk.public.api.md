@@ -308,8 +308,8 @@ export interface WorktreeResult {
 
 // Warnings were encountered during analysis:
 //
-// src/worktree.ts:107:1 - (ae-internal-missing-underscore) The name "sanitizeBranch" should be prefixed with an underscore because the declaration is marked as @internal
-// src/worktree.ts:112:1 - (ae-internal-missing-underscore) The name "worktreeDir" should be prefixed with an underscore because the declaration is marked as @internal
+// src/worktree.ts:109:1 - (ae-internal-missing-underscore) The name "sanitizeBranch" should be prefixed with an underscore because the declaration is marked as @internal
+// src/worktree.ts:114:1 - (ae-internal-missing-underscore) The name "worktreeDir" should be prefixed with an underscore because the declaration is marked as @internal
 
 // (No @packageDocumentation comment for this package)
 
