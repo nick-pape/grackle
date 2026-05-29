@@ -353,9 +353,15 @@ export interface UnsatisfiedNeed {
  * returning the needs that are not satisfied. A need is unsatisfied when:
  *
  * - **missing** — the bundle contains no token tagged for the need's provider, or
- * - **expired** — the provider's credential is an OAuth file whose access token
- *   has expired *and* carries no refresh token (re-login required). A refreshable
- *   expiry is treated as satisfied: the runtime refreshes it on launch.
+ * - **expired** — the provider materialized credential(s) but **every** one is an
+ *   expired OAuth file with no refresh token (re-login required).
+ *
+ * A token counts as usable unless it is `expired-unrecoverable` — a refreshable
+ * expiry (the runtime refreshes on launch) and an `unknown`-expiry token (e.g. an
+ * API key, whose expiry is not offline-knowable) both satisfy the need. So when a
+ * provider emits more than one credential (e.g. Codex emits both `~/.codex/auth.json`
+ * *and* `OPENAI_API_KEY`), a stale OAuth file does not fail the spawn as long as a
+ * working fallback is present.
  *
  * Pure: derives entirely from `needs` + `bundle` + `now`, reads nothing.
  */
@@ -371,7 +377,9 @@ export function findUnsatisfiedNeeds(
       unsatisfied.push({ need, reason: "missing" });
       continue;
     }
-    if (tokens.some((t) => inspectFileCredentialExpiry(t, now) === "expired-unrecoverable")) {
+    // Report expired only when there is no usable credential — i.e. every token
+    // for the provider is an expired, non-refreshable OAuth file.
+    if (tokens.every((t) => inspectFileCredentialExpiry(t, now) === "expired-unrecoverable")) {
       unsatisfied.push({ need, reason: "expired" });
     }
   }

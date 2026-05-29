@@ -959,6 +959,35 @@ describe("findUnsatisfiedNeeds()", () => {
     expect(findUnsatisfiedNeeds([need("claude")], bundle(tokens), NOW)).toEqual([]);
   });
 
+  it("is satisfied when an expired OAuth file is accompanied by a usable fallback", () => {
+    // Codex emits both ~/.codex/auth.json (expired, no refresh) AND OPENAI_API_KEY;
+    // the API key would authenticate fine, so the need must NOT be flagged expired.
+    const tokens: TokenItem[] = [
+      {
+        name: "codex-auth",
+        type: "file",
+        value: codexFile({ access_token: makeJwt({ exp: NOW / 1000 - 60 }) }),
+        provider: "codex",
+      },
+      { name: "openai-api-key", type: "env_var", value: "sk-test", provider: "codex" },
+    ];
+    expect(findUnsatisfiedNeeds([need("codex")], bundle(tokens), NOW)).toEqual([]);
+  });
+
+  it("reports expired only when EVERY token for the provider is expired-unrecoverable", () => {
+    const tokens: TokenItem[] = [
+      {
+        name: "codex-auth",
+        type: "file",
+        value: codexFile({ access_token: makeJwt({ exp: NOW / 1000 - 60 }) }),
+        provider: "codex",
+      },
+    ];
+    expect(findUnsatisfiedNeeds([need("codex")], bundle(tokens), NOW)).toEqual([
+      { need: need("codex"), reason: "expired" },
+    ]);
+  });
+
   it("reports each unmet need across multiple providers", () => {
     const tokens: TokenItem[] = [
       { name: "github-token", type: "env_var", value: "k", provider: "github" },
