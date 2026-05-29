@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix F12 resume regression (GHSA-f9ff-5x35-7gfw): revoke a task's scoped MCP tokens only on delete, not on complete/stop. Resume reuses the original token (powerline runtime.resume does not re-mint), so revoking on the resumable complete/stop states 401'd resumed agents' MCP calls.",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
