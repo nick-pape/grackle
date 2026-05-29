@@ -1,5 +1,13 @@
 import { spawn } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
@@ -327,6 +335,14 @@ export function prepareIsolatedClaudeConfig(
     } catch {
       try {
         copyFileSync(realCredentials, isolatedCredentials);
+        // A symlink target keeps its own (typically 0600) perms, but a fresh
+        // copy may inherit a permissive umask — restrict the OAuth token to the
+        // owner. Best-effort: chmod is a no-op on Windows.
+        try {
+          chmodSync(isolatedCredentials, 0o600);
+        } catch {
+          // best-effort hardening
+        }
       } catch (err: unknown) {
         logger.warn({ err }, "Failed to provision Claude credentials into isolated config dir");
       }
@@ -390,8 +406,13 @@ class AcpSession extends BaseAgentSession {
     if (this.config.isolateClaudeConfig) {
       // Source from the merged env (config `env` override > process.env > default)
       // so we provision credentials from wherever the agent would otherwise look.
-      // Read before overwriting childEnv.CLAUDE_CONFIG_DIR below.
-      const realConfigDir = childEnv.CLAUDE_CONFIG_DIR ?? join(homedir(), CLAUDE_CONFIG_DIRNAME);
+      // Read before overwriting childEnv.CLAUDE_CONFIG_DIR below. An empty string
+      // is treated as unset (a common way to "clear" an env var) so we don't
+      // resolve credentials relative to the cwd.
+      const inheritedConfigDir = childEnv.CLAUDE_CONFIG_DIR?.trim();
+      const realConfigDir = inheritedConfigDir
+        ? inheritedConfigDir
+        : join(homedir(), CLAUDE_CONFIG_DIRNAME);
       const isolatedConfigDir = getRuntimeConfigDirectory(this.config.name);
       try {
         prepareIsolatedClaudeConfig(realConfigDir, isolatedConfigDir);

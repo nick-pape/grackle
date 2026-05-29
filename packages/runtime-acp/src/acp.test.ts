@@ -609,6 +609,9 @@ describe("AcpRuntime — multi-turn", () => {
 
   beforeEach(() => {
     vi.stubEnv("GRACKLE_MCP_CONFIG", "");
+    // Deterministic baseline: treat the inherited CLAUDE_CONFIG_DIR as unset so
+    // isolation tests don't depend on the developer's shell environment.
+    vi.stubEnv("CLAUDE_CONFIG_DIR", "");
     capturedHandlerFactory = undefined;
     promptCallCount = 0;
 
@@ -723,6 +726,9 @@ describe("AcpRuntime — multi-turn", () => {
   });
 
   it("continues with inherited config when isolated config preparation throws", async () => {
+    // An inherited CLAUDE_CONFIG_DIR must be preserved if isolation setup fails.
+    const inherited = "/tmp/inherited-claude-config";
+    vi.stubEnv("CLAUDE_CONFIG_DIR", inherited);
     // mkdirSync throwing simulates an unwritable isolated dir; spawn must still
     // proceed (the isolation block swallows the error and logs a warning).
     const fs = await import("node:fs");
@@ -745,7 +751,8 @@ describe("AcpRuntime — multi-turn", () => {
 
     const spawnCall = vi.mocked(spawn).mock.calls.at(-1);
     const env = spawnCall?.[2]?.env as Record<string, string> | undefined;
-    expect(env?.CLAUDE_CONFIG_DIR).toBeUndefined();
+    // Isolation did not take effect; the inherited value is left untouched.
+    expect(env?.CLAUDE_CONFIG_DIR).toBe(inherited);
 
     session.kill();
   });
