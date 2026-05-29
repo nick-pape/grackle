@@ -459,6 +459,45 @@ describe("ahp-handlers: subscribe", () => {
     }
   });
 
+  it("a rapid resubscribe that cancels its predecessor still gets the first-subscribe replay", async () => {
+    // Race regression: handleSubscribe runs synchronously and `queueMicrotask`s
+    // a runForwarder for each subscribe. If a second subscribe arrives before
+    // the first's microtask runs, the first forwarder is cancelled. The
+    // *second* one is then the real first subscriber — it must replay from
+    // the buffer start, not start at the current tail. Pre-fix the cancelled
+    // forwarder still ran far enough to bump `totalForwardersAttached`, and
+    // the second forwarder mis-detected itself as a resubscriber.
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      const sessionId = `s-rapid-${String(Date.now())}`;
+      await client.socket.request("createSession", {
+        channel: `ahp-session:/${sessionId}`,
+        provider: TEST_RUNTIME.name,
+        config: {},
+      });
+      const session = TEST_RUNTIME.lastSession!;
+      // Push setup events the first real subscriber must see.
+      session.push({ type: "turn_started", turnId: "t1", content: JSON.stringify({}) });
+      session.push({ type: "text", turnId: "t1", content: "setup" });
+      // Fire two subscribes back-to-back. With `await` they're sequential on
+      // the wire, but the server-side runForwarder for each is queued via
+      // microtask so the second wins the cancellation race.
+      await client.socket.request("subscribe", { channel: `ahp-session:/${sessionId}` });
+      await client.socket.request("subscribe", { channel: `ahp-session:/${sessionId}` });
+      await waitForCount(client.received, 2);
+      // The second subscribe should have seen turn_started + text (both
+      // events from before its arrival), not just "future events only."
+      expect(client.received.map((env) => env.action.type)).toEqual([
+        ActionType.SessionTurnStarted,
+        ActionType.SessionResponsePart,
+      ]);
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  });
+
   it("a resubscribe on a live session sees only events that arrive after the resubscribe", async () => {
     // Codifies the new live-tail semantic. The first subscriber drained A/B/C;
     // a fresh subscribe should pick up at the current pump tail, not replay

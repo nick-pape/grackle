@@ -467,11 +467,30 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     sessionId: string,
     forwarder: ForwarderState,
   ): Promise<void> {
+    // If a rapid resubscribe cancelled us between handleSubscribe's
+    // `queueMicrotask` and this microtask actually running, bail before we
+    // touch anything — in particular don't drain parked events (the
+    // next forwarder needs them) and don't register on the pump (a cancelled
+    // forwarder bumping `totalForwardersAttached` would cause the *real*
+    // next forwarder to skip the first-subscribe replay and start at the
+    // tail, missing the runtime's setup events).
+    if (forwarder.cancelled) {
+      const cState = clients.get(conn.clientId);
+      if (cState?.forwarders.get(sessionId) === forwarder) {
+        cState.forwarders.delete(sessionId);
+      }
+      return;
+    }
     // Step 1: drain any parked events first. These are the "what did I miss
     // while disconnected" tail from a prior owner of this channel.
     const parked = drainParkedSession(sessionId);
     if (parked !== undefined) {
       for (const event of parked) {
+        // forwarder.cancelled is narrowed to false by the entry-check above,
+        // but it's mutated externally by handleSubscribe/disposeSession/
+        // onDisconnect — re-check between events so a fast cancellation
+        // arriving via an unrelated wire op stops emission mid-stream.
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (forwarder.cancelled) {
           return;
         }
@@ -506,6 +525,10 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
         : pump.bufferStartIndex + pump.buffer.length;
     registerPumpForwarder(pump, forwarder);
     try {
+      // Same TS-narrowing caveat as the parked-replay loop: forwarder.cancelled
+      // is mutated by external wire ops and the await below yields control,
+      // so the re-check is real even though TS thinks it's always false.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       while (!forwarder.cancelled) {
         const bufLen = pump.bufferStartIndex + pump.buffer.length;
         while (forwarder.pos < bufLen) {

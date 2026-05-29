@@ -153,14 +153,16 @@ export type PumpNaturalExitHandler = (sessionId: string) => void;
  * the caller can hand it directly to a forwarder without a separate lookup.
  *
  * The pump task drains `session.stream()` into `pump.buffer` and wakes any
- * sleeping forwarders. On natural exit it removes the session from the
- * registry — handlers don't need to do that cleanup themselves.
+ * sleeping forwarders. The pump itself does **not** remove the session from
+ * the registry on natural exit — see {@link unregisterPumpForwarder} for
+ * where that happens (and why the pump's `finally` deliberately doesn't).
  *
- * @param onNaturalExit Optional callback fired from the pump's `finally`
- *   block when the pump exits because `session.stream()` returned (not when
- *   dispose / disconnect tore it down — those paths take responsibility for
- *   their own cleanup). The pump invokes the callback after removing itself
- *   from the session registry, so subsequent lookups see the session gone.
+ * @param onNaturalExit Optional callback stashed on the pump record. Fires
+ *   from {@link unregisterPumpForwarder} when the last forwarder leaves
+ *   *after* a natural pump exit, so callers — typically ahp-handlers —
+ *   can prune per-client bookkeeping for the now-dead session. Dispose /
+ *   disconnect paths take responsibility for their own cleanup and do not
+ *   trigger this callback.
  */
 export function startSessionPump(
   session: AgentSession,
