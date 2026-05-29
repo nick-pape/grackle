@@ -61,6 +61,10 @@ export interface ReverseMapperContext {
   /** Accumulated meta carried from `SessionMetaChangedAction` envelopes. */
   readonly metaAccumulator: {
     costMillicents?: number;
+    /** Last-seen total — used to compute deltas for the rehydrated `usage` event. HR8d follow-up #1355. */
+    inputTokens?: number;
+    /** Last-seen total — used to compute deltas for the rehydrated `usage` event. HR8d follow-up #1355. */
+    outputTokens?: number;
     runtimeSessionId?: string;
   };
 }
@@ -140,13 +144,19 @@ export function reverseMapAction(
         };
       }
       context.turnId = a.turnId;
-      const userText = a.userMessage.text;
+      // HR8d-followup #1355: emit the user message as plain text content,
+      // matching the gRPC-era wire shape that all runtimes produce
+      // (BaseAgentSession.beginTurn() emits `content: userMessage`). The
+      // forward mapper at ahp-mapper.ts case "turn_started" accepts both
+      // wrapped (`{user_message: "..."}`) and unwrapped via its
+      // `str(parsed, ["user_message"], content || "")` fallback, so round-trip
+      // stays consistent for any legacy producer that emitted the wrapped shape.
       return {
         events: [
           {
             type: "turn_started",
             turnId: a.turnId,
-            content: JSON.stringify({ user_message: userText }),
+            content: a.userMessage.text,
           },
         ],
         disposition: "mapped",
@@ -389,17 +399,44 @@ export function reverseMapAction(
           context.metaAccumulator.runtimeSessionId = runtimeSessionIdRaw;
           events.push({ type: "runtime_session_id", content: runtimeSessionIdRaw });
         }
+        // HR8d follow-up #1355: cost + tokens are all carried on `_meta` and
+        // rehydrated together as a single `usage` event so the consumer's
+        // event-processor pipeline (which accumulates all three onto the
+        // session row via `sessions.{input,output}_tokens` / `cost_millicents`)
+        // sees one delta-shaped event with the same shape gRPC used to deliver.
         const costRaw = meta.cost_millicents;
+        const inputTokensRaw = meta.input_tokens;
+        const outputTokensRaw = meta.output_tokens;
+        const usagePayload: Record<string, number> = {};
         if (typeof costRaw === "number") {
-          const prevCost = context.metaAccumulator.costMillicents ?? 0;
-          const delta = costRaw - prevCost;
+          const prev = context.metaAccumulator.costMillicents ?? 0;
+          const delta = costRaw - prev;
           context.metaAccumulator.costMillicents = costRaw;
           if (delta !== 0) {
-            events.push({
-              type: "usage",
-              content: JSON.stringify({ cost_millicents: delta }),
-            });
+            usagePayload.cost_millicents = delta;
           }
+        }
+        if (typeof inputTokensRaw === "number") {
+          const prev = context.metaAccumulator.inputTokens ?? 0;
+          const delta = inputTokensRaw - prev;
+          context.metaAccumulator.inputTokens = inputTokensRaw;
+          if (delta !== 0) {
+            usagePayload.input_tokens = delta;
+          }
+        }
+        if (typeof outputTokensRaw === "number") {
+          const prev = context.metaAccumulator.outputTokens ?? 0;
+          const delta = outputTokensRaw - prev;
+          context.metaAccumulator.outputTokens = outputTokensRaw;
+          if (delta !== 0) {
+            usagePayload.output_tokens = delta;
+          }
+        }
+        if (Object.keys(usagePayload).length > 0) {
+          events.push({
+            type: "usage",
+            content: JSON.stringify(usagePayload),
+          });
         }
         // HR8d status rescue: PowerLine forwards lifecycle status events
         // (running / waiting_input / idle / completed) as `_meta.status`

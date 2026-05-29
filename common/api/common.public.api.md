@@ -2007,6 +2007,8 @@ export interface MapperContext {
     eventIndex: number;
     metaAccumulator: {
         costMillicents?: number;
+        inputTokens?: number;
+        outputTokens?: number;
         runtimeSessionId?: string;
     };
     openToolCalls: string[];
@@ -2334,6 +2336,8 @@ export function reverseMapAction(envelope: ActionEnvelope, context: ReverseMappe
 export interface ReverseMapperContext {
     readonly metaAccumulator: {
         costMillicents?: number;
+        inputTokens?: number;
+        outputTokens?: number;
         runtimeSessionId?: string;
     };
     readonly pendingToolCalls: Map<string, PendingToolCall>;

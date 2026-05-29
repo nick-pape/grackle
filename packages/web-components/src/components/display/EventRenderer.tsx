@@ -331,8 +331,23 @@ export function EventRenderer({ event, toolUseCtx, settled, sandboxProxyUrl }: P
     case "tool_result": {
       // When paired, toolUseCtx provides the tool name, args, and optional detailedResult.
       // When unpaired, fall back to a generic display.
+      //
+      // HR8d follow-up #1355: error detection. The AHP wire doesn't carry
+      // `event.raw` (the runtime-native block) — the reverse mapper instead
+      // produces a structured `{is_ok, content, past_tense_message}` JSON
+      // content shape that encodes the success flag. Read `is_ok === false`
+      // from the content for HR8d-era events; fall back to the legacy
+      // `raw.is_error` path for pre-HR8d JSONL replay.
       let isError = false;
-      if (event.raw) {
+      try {
+        const parsed = JSON.parse(event.content) as Record<string, unknown>;
+        if (parsed.is_ok === false) {
+          isError = true;
+        }
+      } catch {
+        /* content not JSON — fall through to legacy raw check */
+      }
+      if (!isError && event.raw) {
         try {
           const rawData = JSON.parse(event.raw) as Record<string, unknown>;
           isError = rawData.is_error === true;

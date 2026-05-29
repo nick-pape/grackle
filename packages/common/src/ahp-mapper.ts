@@ -13,6 +13,32 @@
  * `powerline.AgentEvent` lets HR8d remove the gRPC path entirely without
  * touching the mapper.
  *
+ * **Wire fidelity notes (HR8d follow-up #1355):**
+ *
+ * AHP `StateAction` is a typed, normalized envelope — it deliberately does
+ * NOT carry the runtime-native event payload (`AgentEvent.raw`). Anything
+ * a consumer used to read out of `event.raw` MUST come through a
+ * first-class structured field on the action instead:
+ *
+ * - Tool ID pairing (was `raw.id` / `raw.tool_use_id`) → use
+ *   `event.toolCallId`, which both the forward mapper and PowerLine's
+ *   runtime adapters set as a first-class HR3 field.
+ * - Tool result success/error (was `raw.is_error`) → use
+ *   `SessionToolCallCompleteAction.result.success`. The reverse mapper
+ *   reconstructs a JSON content of `{is_ok, content, past_tense_message}`
+ *   that downstream code (`EventRenderer.tsx`) can parse.
+ * - System-context marker (was `raw.systemContext === true`) → the
+ *   consumer-side `event-processor.ts` injects its system-context event
+ *   directly and sets `raw: '{"systemContext":true}'` locally, so the
+ *   wire never has to carry it.
+ *
+ * Token / cost counters (`input_tokens`, `output_tokens`, `cost_millicents`)
+ * are carried via the `_meta` channel on `SessionMetaChangedAction`:
+ * accumulated on the producer side, emitted as a single `usage` event
+ * with the delta on the consumer side. Producer-side accumulation lives
+ * in `MapperContext.metaAccumulator`; reverse-side delta computation in
+ * `ahp-reverse-mapper.ts`'s `SessionMetaChanged` case.
+ *
  * @module ahp-mapper
  */
 
@@ -116,6 +142,15 @@ export interface MapperContext {
   metaAccumulator: {
     /** Accumulated cost in millicents (AHP-upstream gap; rides on `_meta`). */
     costMillicents?: number;
+    /**
+     * Accumulated input tokens (HR8d follow-up #1355). Same wire treatment as
+     * `costMillicents` — added on every `usage` event, the reverse mapper
+     * emits the delta back as a `usage` event for the consumer's existing
+     * token-tracking pipeline (`event-processor.ts:case "usage"`).
+     */
+    inputTokens?: number;
+    /** Accumulated output tokens (HR8d follow-up #1355). */
+    outputTokens?: number;
     /** Runtime-provided session ID from the `runtime_session_id` event. */
     runtimeSessionId?: string;
   };
@@ -470,12 +505,31 @@ export function mapAgentEvent(
         const cost = Number(rawCost);
         context.metaAccumulator.costMillicents = Math.max(0, prevCost + Math.trunc(cost));
       }
+      // HR8d follow-up #1355: accumulate input/output tokens alongside cost.
+      // The reverse mapper emits a single `usage` event carrying whichever of
+      // the three deltas changed — preserves the gRPC-era event-processor
+      // pipeline that already reads `{input_tokens, output_tokens, cost_millicents}`
+      // and updates `sessions.{input_tokens, output_tokens, cost_millicents}` cumulatively.
+      const rawInputTokens = hasParsed ? parsed.input_tokens : undefined;
+      // eslint-disable-next-line eqeqeq
+      if (rawInputTokens != null && Number.isFinite(Number(rawInputTokens))) {
+        const prev = context.metaAccumulator.inputTokens ?? 0;
+        const v = Number(rawInputTokens);
+        context.metaAccumulator.inputTokens = Math.max(0, prev + Math.trunc(v));
+      }
+      const rawOutputTokens = hasParsed ? parsed.output_tokens : undefined;
+      // eslint-disable-next-line eqeqeq
+      if (rawOutputTokens != null && Number.isFinite(Number(rawOutputTokens))) {
+        const prev = context.metaAccumulator.outputTokens ?? 0;
+        const v = Number(rawOutputTokens);
+        context.metaAccumulator.outputTokens = Math.max(0, prev + Math.trunc(v));
+      }
 
       note = {
         index,
         type: "usage",
         disposition: "carried",
-        detail: `Usage tracked — costMillicents now ${context.metaAccumulator.costMillicents ?? 0}`,
+        detail: `Usage tracked — costMillicents=${context.metaAccumulator.costMillicents ?? 0} inputTokens=${context.metaAccumulator.inputTokens ?? 0} outputTokens=${context.metaAccumulator.outputTokens ?? 0}`,
       };
       break;
     }
