@@ -381,7 +381,21 @@ export class AhpHostTransport implements IHostTransport {
       provider: params.runtime,
       config,
     };
-    await this.socket.request("createSession", ahpParams);
+    const isReanimate = resumeFromRuntimeSessionId !== undefined;
+    try {
+      await this.socket.request("createSession", ahpParams);
+    } catch (err) {
+      // Reanimate path: if the channel is already live on PowerLine (env was
+      // never actually torn down — happens with the local adapter whose
+      // `stop()` is a no-op), the server returns "Session already active".
+      // For reanimate that's success: the underlying runtime never died, we
+      // just need to re-subscribe to its action stream.
+      if (isReanimate && isSessionAlreadyActiveError(err)) {
+        // intentional fall-through to subscribe()
+      } else {
+        throw err;
+      }
+    }
     await this.socket.request("subscribe", { channel });
     // After subscribe resolves, PowerLine starts firing action notifications
     // (including any replayed parked events) — the handleNotification handler
@@ -391,7 +405,7 @@ export class AhpHostTransport implements IHostTransport {
   private surfaceErrorAndClose(session: SessionStream, channel: URI, err: unknown): void {
     // Synthesize an error event so the downstream pipeline sees the failure
     // through the same channel it sees normal events.
-    const message = err instanceof Error ? err.message : String(err);
+    const message = formatTransportError(err);
     const errorEvent: AgentEventFields = { type: "error", content: message };
     session.queue.push({ event: errorEvent, actions: [] });
     session.queue.push({ event: { type: "status", content: "failed" }, actions: [] });
@@ -410,6 +424,56 @@ export class AhpHostTransport implements IHostTransport {
  * @returns A function suitable for passing as `onNotification` to
  *   `AhpClientSocket`'s constructor options.
  */
+/**
+ * True if `err` is the JSON-RPC "Session already active" error PowerLine
+ * returns when `createSession` targets a channel whose underlying session
+ * is still live in the registry. Tested with both message-prefix and
+ * code+message-shape since the error can arrive as a rejected
+ * `TransportError` or a raw JSON-RPC error object depending on the
+ * `request()` path.
+ */
+function isSessionAlreadyActiveError(err: unknown): boolean {
+  const message =
+    err instanceof Error
+      ? err.message
+      : err !== null && typeof err === "object" && typeof (err as { message?: unknown }).message === "string"
+        ? (err as { message: string }).message
+        : "";
+  return message.startsWith("Session already active");
+}
+
+/**
+ * Stringify an unknown error into a readable message for the synthesized
+ * `type: "error"` event surfaced into the downstream pipeline.
+ *
+ * Handles four shapes:
+ * - `Error` (and subclasses, including `TransportError` from
+ *   `@grackle-ai/ahp-transport`): use `.message`.
+ * - JSON-RPC error object `{ code, message }` (what `request()` rejects with
+ *   on a server-returned error): use `.message`, prefix with code if present.
+ *   Without this branch, `String(err)` returns `"[object Object]"` and the
+ *   UI renders an opaque "Error: [object Object]" with no diagnostic value.
+ * - String: pass through.
+ * - Anything else: best-effort `String(err)`.
+ */
+function formatTransportError(err: unknown): string {
+  if (err instanceof Error) {
+    return err.message;
+  }
+  if (typeof err === "string") {
+    return err;
+  }
+  if (err !== null && typeof err === "object") {
+    const obj = err as { message?: unknown; code?: unknown };
+    if (typeof obj.message === "string" && obj.message.length > 0) {
+      return typeof obj.code === "number" || typeof obj.code === "string"
+        ? `JSON-RPC error ${String(obj.code)}: ${obj.message}`
+        : obj.message;
+    }
+  }
+  return String(err);
+}
+
 export function bindNotificationHandler(transport: AhpHostTransport): (n: AhpNotification) => void {
   return (n) => transport.handleNotification(n);
 }

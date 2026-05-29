@@ -275,13 +275,23 @@ describe("tool_result", () => {
     expect(context.openToolCalls).toEqual(["tc-first"]);
   });
 
-  it("drops when no matching tool call", () => {
-    const context = makeContext({ turnId: "turn-abc", openToolCalls: [] });
+  it("synthesizes a toolCallId when no matching tool call (HR8d)", () => {
+    // Pre-HR8d this dropped. Now: emit SessionToolCallComplete with a
+    // synthesized `tc-orphan-result-N` so the gRPC unpaired-tool_result
+    // behavior survives the wire flip (the consumer's reverse mapper
+    // emits a tool_result event, the UI's pairToolEvents finds no match
+    // in toolUseById and renders it via the unpaired GenericToolCard).
+    const context = makeContext({ turnId: "turn-abc", openToolCalls: [], partCounter: 0 });
     const event = makeEvent("tool_result", { content: "{}" });
     const result = mapAgentEvent(event, 5, context);
 
-    expect(result.actions.length).toBe(0);
-    expect(result.note?.disposition).toBe("dropped");
+    expect(result.note?.disposition).toBe("mapped");
+    expect(result.actions.length).toBeGreaterThan(0);
+    const complete = result.actions.find((a) => a.type === ActionType.SessionToolCallComplete) as
+      | { toolCallId: string }
+      | undefined;
+    expect(complete).toBeDefined();
+    expect(complete!.toolCallId).toMatch(/^tc-orphan-result-/);
   });
 
   it("adds system notification for successful result", () => {

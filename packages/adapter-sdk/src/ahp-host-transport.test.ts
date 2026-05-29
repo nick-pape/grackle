@@ -439,6 +439,109 @@ describe("AhpHostTransport", () => {
       expect(events[0]?.event.content).toBe("boot failure");
       expect(events[1]?.event.content).toBe("failed");
     });
+
+    it("renders a JSON-RPC error object as 'JSON-RPC error <code>: <message>' (HR8d)", async () => {
+      // Without formatTransportError, the rejected JSON-RPC error
+      // {code, message} would stringify to "[object Object]" and surface
+      // an opaque error event to the consumer.
+      const { stub, socket } = makeStubSocket();
+      stub.requestResponder = (method) => {
+        if (method === "createSession") {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error
+          throw { code: -32600, message: "Session already active: s-1" };
+        }
+        return null;
+      };
+      const transport = new AhpHostTransport(socket);
+      stub.bindHandler(bindNotificationHandler(transport));
+
+      const { stream } = transport.createSession(makeSpawnParams());
+      const events: ServerActionEnvelope[] = [];
+      for await (const env of stream) {
+        events.push(env);
+      }
+      expect(events[0]?.event.content).toBe(
+        "JSON-RPC error -32600: Session already active: s-1",
+      );
+    });
+  });
+
+  describe("reanimate on still-live session (HR8d)", () => {
+    it("tolerates `Session already active` on createSession + subscribes anyway", async () => {
+      // The local adapter's `stop()` is a no-op — PowerLine keeps running
+      // when the env "stops". On reconnect + auto-reanimate, createSession
+      // sees the session is still in the registry and returns
+      // InvalidRequest. For reanimate that's a success: re-subscribing
+      // attaches to the live action stream. Without this tolerance the
+      // consumer would surface an error event and the session would
+      // appear to fail.
+      const { stub, socket } = makeStubSocket();
+      let createSessionCalls = 0;
+      let subscribeCalls = 0;
+      stub.requestResponder = (method) => {
+        if (method === "createSession") {
+          createSessionCalls += 1;
+          // eslint-disable-next-line @typescript-eslint/only-throw-error
+          throw { code: -32600, message: "Session already active: s-live" };
+        }
+        if (method === "subscribe") {
+          subscribeCalls += 1;
+          return { snapshot: undefined };
+        }
+        return null;
+      };
+      const transport = new AhpHostTransport(socket);
+      stub.bindHandler(bindNotificationHandler(transport));
+
+      const stream = transport.reanimate({
+        sessionId: "s-live",
+        runtime: "stub",
+        runtimeSessionId: "runtime-abc",
+      });
+
+      // Push a single live action so we know the queue is wired up.
+      stub.pushNotification("action", {
+        channel: "ahp-session:/s-live",
+        serverSeq: 1,
+        action: {
+          type: ActionType.SessionResponsePart,
+          turnId: "t",
+          part: { kind: ResponsePartKind.Markdown, id: "p", content: "alive" },
+        },
+        origin: undefined,
+      });
+
+      const seen = await collectN(stream, 1, 200);
+      expect(createSessionCalls).toBe(1);
+      expect(subscribeCalls).toBe(1);
+      expect(seen[0]?.event.type).toBe("text");
+      expect(seen[0]?.event.content).toBe("alive");
+    });
+
+    it("still surfaces non-`already-active` createSession errors on reanimate", async () => {
+      // Belt-and-suspenders: only the specific "already active" message is
+      // tolerated. A genuine boot failure should still produce error+failed.
+      const { stub, socket } = makeStubSocket();
+      stub.requestResponder = (method) => {
+        if (method === "createSession") throw new Error("resume failed: runtime gone");
+        return null;
+      };
+      const transport = new AhpHostTransport(socket);
+      stub.bindHandler(bindNotificationHandler(transport));
+
+      const stream = transport.reanimate({
+        sessionId: "s-dead",
+        runtime: "stub",
+        runtimeSessionId: "runtime-xyz",
+      });
+
+      const events: ServerActionEnvelope[] = [];
+      for await (const env of stream) {
+        events.push(env);
+      }
+      expect(events.map((e) => e.event.type)).toEqual(["error", "status"]);
+      expect(events[0]?.event.content).toBe("resume failed: runtime gone");
+    });
   });
 
   describe("multiple coexisting sessions", () => {

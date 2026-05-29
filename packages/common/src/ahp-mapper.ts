@@ -395,8 +395,16 @@ export function mapAgentEvent(
         break;
       }
 
-      // Pair by first-class toolCallId (HR3), with LIFO stack fallback
-      const pairedToolCallId = toolCallId || context.openToolCalls.pop() || "";
+      // Pair by first-class toolCallId (HR3), with LIFO stack fallback.
+      // HR8d: when no tool_use precedes (an "unpaired tool_result" — legal
+      // under the gRPC wire and exercised by the tool-result-accordion
+      // E2E test), synthesize an id rather than dropping. The reverse
+      // mapper emits a tool_result with the synthetic id, the UI's
+      // pairToolEvents finds no matching tool_use in `toolUseById`, and
+      // the event falls through to the unpaired tool-card render path
+      // (GenericToolCard). Dropping silently masked the event entirely.
+      const pairedToolCallId =
+        toolCallId || context.openToolCalls.pop() || `tc-orphan-result-${context.partCounter++}`;
 
       // Remove matched id from stack when first-class toolCallId is provided
       if (toolCallId) {
@@ -404,16 +412,6 @@ export function mapAgentEvent(
         if (idx !== -1) {
           context.openToolCalls.splice(idx, 1);
         }
-      }
-
-      if (!pairedToolCallId) {
-        note = {
-          index,
-          type: "tool_result",
-          disposition: "dropped",
-          detail: "No matching tool call for result",
-        };
-        break;
       }
 
       const isOk = hasParsed
