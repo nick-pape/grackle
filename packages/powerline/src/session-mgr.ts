@@ -109,6 +109,16 @@ export interface SessionPump {
    * advanced past an event, the pump drops it from {@link buffer}.
    */
   readonly forwarders: Set<PumpForwarder>;
+  /**
+   * Monotonic count of forwarders ever attached to this pump. The first
+   * subscriber on a fresh pump replays from the buffer's logical start
+   * (`bufferStartIndex`) so it sees runtime-emitted setup events
+   * (`runtime_session_id`, initial system messages) that landed between
+   * `createSession` and `subscribe`. Subsequent forwarders attach at the
+   * current tail — true mid-stream resubscribes see only future events;
+   * missed events from a prior subscriber arrive via the parked-replay path.
+   */
+  totalForwardersAttached: number;
   /** Handle to the pump task — used to coordinate teardown on dispose. */
   readonly task: Promise<void>;
 }
@@ -132,6 +142,7 @@ export function startSessionPump(session: AgentSession): SessionPump {
     done: false,
     waiters: new Set<() => void>(),
     forwarders: new Set<PumpForwarder>(),
+    totalForwardersAttached: 0,
     task: Promise.resolve(),
   };
   (pump as { task: Promise<void> }).task = runPump(pump);
@@ -144,10 +155,14 @@ export function startSessionPump(session: AgentSession): SessionPump {
  * the set on each push to decide what's safe to trim. The caller is
  * responsible for calling {@link unregisterPumpForwarder} when the forwarder
  * exits — failure to unregister pins the buffer at the forwarder's last
- * position and defeats the trim.
+ * position and defeats the trim. Also bumps the pump's monotonic
+ * `totalForwardersAttached` counter, which forwarders read to decide whether
+ * they're the first-ever subscriber (replay from buffer start) or a
+ * resubscriber (start at current tail).
  */
 export function registerPumpForwarder(pump: SessionPump, forwarder: PumpForwarder): void {
   pump.forwarders.add(forwarder);
+  pump.totalForwardersAttached++;
 }
 
 /** Unregister a forwarder; safe to call multiple times. */

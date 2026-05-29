@@ -479,12 +479,21 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
       }
       return;
     }
-    // Late subscribers start at the current pump tail — mid-stream resubscribes
-    // see only future events. Missed events from a prior subscriber on this
-    // channel arrive via Step 1's parked replay, not by replaying the pump
-    // buffer from the top. `forwarder.pos` is in the pump's *absolute* event
-    // index space, so trims of pump.buffer don't shift its meaning.
-    forwarder.pos = pump.bufferStartIndex + pump.buffer.length;
+    // First-ever forwarder on this pump replays from the buffer's logical
+    // start so it observes setup events (`runtime_session_id`, initial system
+    // messages) the runtime emits between createSession and subscribe — those
+    // are the same wire frames the server's processEventStream needs to write
+    // `runtimeSessionId` into the DB row, which `recoverSuspendedSessions`
+    // later reads to know if reanimate is even possible. Subsequent
+    // forwarders are true mid-stream resubscribes and pick up at the current
+    // tail; events missed in a disconnect window arrive via the parked-replay
+    // path (Step 1 above), not by replaying the live buffer. `forwarder.pos`
+    // is always in the pump's *absolute* event-index space so trims of
+    // pump.buffer don't shift its meaning.
+    forwarder.pos =
+      pump.totalForwardersAttached === 0
+        ? pump.bufferStartIndex
+        : pump.bufferStartIndex + pump.buffer.length;
     registerPumpForwarder(pump, forwarder);
     try {
       while (!forwarder.cancelled) {
