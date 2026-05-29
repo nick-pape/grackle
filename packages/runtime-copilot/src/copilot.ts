@@ -327,6 +327,8 @@ export class CopilotSession extends BaseAgentSession {
         content: output,
         raw: event,
         toolCallId: typeof data?.toolCallId === "string" ? data.toolCallId : undefined,
+        // Copilot reports the outcome on the event data, not in content (#1362).
+        toolError: data?.success === false || Boolean(error),
       });
     });
 

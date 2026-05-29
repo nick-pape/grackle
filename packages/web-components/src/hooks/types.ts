@@ -90,6 +90,13 @@ export interface SessionEvent {
    * predating HR8d; consumers should fall back to `${timestamp}|${eventType}`.
    */
   serverSeq?: string;
+  /**
+   * `true` when a `tool_result` reported a tool failure (#1362). First-class
+   * outcome flag, preferred over parsing `is_ok` out of `content` or
+   * `is_error` out of the legacy `raw` payload. Absent/false on success and
+   * on non-tool events.
+   */
+  toolError?: boolean;
 }
 
 /** A workspace that groups tasks. */

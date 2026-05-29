@@ -16,6 +16,7 @@ export interface AgentEvent {
     // (undocumented)
     timestamp: string;
     toolCallId?: string;
+    toolError?: boolean;
     turnId?: string;
     // Warning: (ae-forgotten-export) The symbol "AgentEventType" needs to be exported by the entry point index.d.ts
     //

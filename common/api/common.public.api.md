@@ -59,6 +59,7 @@ type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
     toolCallId: string;
     diagnostic: boolean;
     turnId: string;
+    toolError: boolean;
 };
 
 // @public
@@ -68,6 +69,7 @@ export interface AgentEventFields {
     raw?: string;
     timestamp?: string;
     toolCallId?: string;
+    toolError?: boolean;
     turnId?: string;
     type: string;
 }
@@ -2654,6 +2656,7 @@ type SessionEvent = Message<"grackle.SessionEvent"> & {
     diagnostic: boolean;
     turnId: string;
     serverSeq: string;
+    toolError: boolean;
 };
 
 // @public
