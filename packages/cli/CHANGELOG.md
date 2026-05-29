@@ -1,6 +1,25 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 28 May 2026 17:48:51 GMT and should not be manually modified.
+This log was last generated on Fri, 29 May 2026 22:14:18 GMT and should not be manually modified.
+
+## 0.133.0
+Fri, 29 May 2026 22:14:18 GMT
+
+### Minor changes
+
+- AHP HR8d: switch server <-> PowerLine wire from gRPC (ConnectRPC) to AHP (JSON-RPC over WebSocket). Wire-only swap — no internal AHP-native rewrite. Forward + reverse mappers in @grackle-ai/common; AhpHostTransport in @grackle-ai/adapter-sdk; AhpServerSocket-mounted handlers in @grackle-ai/powerline; ConnectRPC code paths deleted. See #1336.
+- Fix command/argument injection via git branch name (GHSA-vv65): the worktree git executor no longer runs through a shell, branch names are validated against a strict allowlist before reaching git, and positional git args are terminated with `--`. Invalid branch names are now rejected.
+
+### Patches
+
+- Fix AHP mapper round-trip gaps for tokens, turn_started, is_error (HR8d follow-up #1355): plumb input_tokens/output_tokens through _meta alongside cost_millicents, emit turn_started content as plain text (not JSON-wrapped), refactor EventRenderer is_error detection to read structured content.is_ok with raw fallback. Documents the wire-level event.raw loss decision in ahp-mapper module TSDoc.
+- Fix task page Resume/Kill semantics (#1356): Resume is hidden while the session is alive (idle) instead of being a silent no-op; Kill now emits a terminal killed status on the AHP wire and terminal session status is sticky so a killed session cannot revert to idle.
+- Fix Knowledge tab 503 retry storm and frozen tab navigation when the knowledge server (Neo4j) is unreachable, and surface an explicit "Knowledge server can't be reached" state with a Retry action (#1357).
+- Fix tool-result failures serializing as success=true over the AHP wire: lift each runtime's native outcome signal to a first-class AgentEvent.tool_error field that the forward mapper reads (the wire drops `raw`, where the error flags lived), round-tripped through the reverse mapper, SessionEvent, and web consumers (#1362).
+- Fix claude-code-acp (and other Claude-backed ACP runtimes) failing to spawn with "Invalid permissions.defaultMode: auto". Isolate the spawned agent's CLAUDE_CONFIG_DIR from the developer's personal ~/.claude config so interactive-only settings don't crash session/new; credentials are symlinked through so subscription auth is preserved.
+- Fix fail-open authorization in the MCP tool layer (GHSA-f9ff-5x35-7gfw): enforce ancestry centrally and fail closed for scoped agents on task/session-mutating tools, gate ID-resolving reads by workspace membership (including workspaceless tokens), and revoke a task's scoped tokens on terminal lifecycle states.
+- PowerLine: drive AgentSession.stream() exactly once per session via an internal per-session pump; `subscribe` now tails the pump's buffer instead of re-driving the runtime. Fixes a listener leak introduced in HR8d that surfaced as a publish-CI failure (MaxListenersExceededWarning under warnings-as-errors) and a latent issue where each AHP resubscribe re-entered BaseAgentSession.runSession() on production runtimes. Mid-stream resubscribers now see only future events; missed-while-disconnected events still arrive via the existing parked-replay path.
+- Bump the Codex runtime SDK pin to ^0.135.0 and advertise gpt-5.5 (the o3 default was unusable on a ChatGPT account; gpt-5.5 needs SDK >= 0.135.0).
 
 ## 0.132.2
 Thu, 28 May 2026 17:48:51 GMT

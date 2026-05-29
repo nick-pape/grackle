@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "@grackle-ai/ahp cleanup: prebuild script now reads the pinned AHP commit SHA from the package's own devDependencies (SOURCE.md SHA was previously always empty), transforms vendored files in a single read/write pass, and the package gained a README.",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
