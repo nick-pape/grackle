@@ -330,6 +330,10 @@ export function reverseMapAction(
       const trEvt: AgentEventFields = {
         type: "tool_result",
         toolCallId: a.toolCallId,
+        // Carry the outcome on both the first-class `toolError` field (#1362)
+        // and the structured `content.is_ok` so consumers that prefer the
+        // field and those that still parse content both see the failure.
+        toolError: !isOk,
         content: JSON.stringify({
           is_ok: isOk,
           content: resultText,

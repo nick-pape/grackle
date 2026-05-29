@@ -27,6 +27,15 @@ export interface AgentEvent {
    * status, worktree setup, kill). Process-scoped — a resume starts a new turn.
    */
   turnId?: string;
+  /**
+   * True when a `tool_result` event reports a tool failure (AHP-followup #1362).
+   * Set by the runtime adapter from its SDK's native outcome signal (Claude
+   * Code `is_error`, Copilot `data.success`/`error`, Codex exit code/status,
+   * ACP `status === "failed"`). Left unset on success and on non-tool events.
+   * The AHP wire drops `raw`, so this first-class field is what carries the
+   * pass/fail outcome into `SessionToolCallComplete.result.success`.
+   */
+  toolError?: boolean;
 }
 
 /** Parameters for spawning a new agent session. */

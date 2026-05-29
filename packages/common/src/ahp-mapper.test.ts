@@ -31,6 +31,7 @@ function makeEvent(type: string, overrides?: Record<string, unknown>): AgentEven
     toolCallId: overrides?.toolCallId as string | undefined,
     turnId: overrides?.turnId as string | undefined,
     diagnostic: overrides?.diagnostic as boolean | undefined,
+    toolError: overrides?.toolError as boolean | undefined,
   };
 }
 
@@ -783,7 +784,9 @@ describe("branch coverage", () => {
     expect(action.result.success).toBe(true);
   });
 
-  it("tool_result with non-JSON content keeps default success=true", () => {
+  it("tool_result with non-JSON content keeps default success=true (no toolError field)", () => {
+    // Fallback path: when the first-class `toolError` field is absent AND the
+    // content isn't structured JSON, default to success.
     const context = makeContext({ turnId: "t1", openToolCalls: ["tc-1"] });
     const event = makeEvent("tool_result", { toolCallId: "tc-1", content: "raw text result" });
     const result = mapAgentEvent(event, 0, context);
@@ -791,6 +794,58 @@ describe("branch coverage", () => {
     const action = result.actions[0] as { result: { success: boolean; pastTenseMessage: string } };
     expect(action.result.success).toBe(true);
     expect(action.result.pastTenseMessage).toBe("raw text result");
+  });
+
+  // ─── #1362: first-class toolError field is authoritative ──────────────
+  // Real runtimes (Claude Code, Copilot, Codex, ACP) carry the failure flag in
+  // `raw`, never in `content` — which the AHP wire drops. The producer lifts it
+  // to `toolError`; the mapper MUST read that, not the (always-absent) content
+  // `is_ok`. This is the regression #1359 left unaddressed on the producer side.
+
+  it("tool_result with toolError:true maps to success=false even with plain-text content", () => {
+    const context = makeContext({ turnId: "t1", openToolCalls: ["tc-1"] });
+    const event = makeEvent("tool_result", {
+      toolCallId: "tc-1",
+      content: "bash: command not found",
+      toolError: true,
+    });
+    const result = mapAgentEvent(event, 0, context);
+
+    const action = result.actions[0] as {
+      result: { success: boolean; error?: { message: string }; content?: unknown };
+    };
+    expect(action.result.success).toBe(false);
+    expect(action.result.error?.message).toBe("bash: command not found");
+    // No success-only system notification when the tool failed
+    expect(result.actions.length).toBe(1);
+  });
+
+  it("tool_result with toolError:false maps to success=true", () => {
+    const context = makeContext({ turnId: "t1", openToolCalls: ["tc-1"] });
+    const event = makeEvent("tool_result", {
+      toolCallId: "tc-1",
+      content: "file written",
+      toolError: false,
+    });
+    const result = mapAgentEvent(event, 0, context);
+
+    const action = result.actions[0] as { result: { success: boolean } };
+    expect(action.result.success).toBe(true);
+  });
+
+  it("toolError field overrides a conflicting content is_ok flag", () => {
+    // The first-class field wins over content — guards against a runtime whose
+    // output text happens to contain a misleading `is_ok` key.
+    const context = makeContext({ turnId: "t1", openToolCalls: ["tc-1"] });
+    const event = makeEvent("tool_result", {
+      toolCallId: "tc-1",
+      content: JSON.stringify({ is_ok: true, content: "looks ok but failed" }),
+      toolError: true,
+    });
+    const result = mapAgentEvent(event, 0, context);
+
+    const action = result.actions[0] as { result: { success: boolean } };
+    expect(action.result.success).toBe(false);
   });
 
   it("tool_result with no content emits no system notification", () => {

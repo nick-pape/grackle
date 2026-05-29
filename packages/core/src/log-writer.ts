@@ -54,6 +54,7 @@ export async function writeEvent(logPath: string, event: grackle.SessionEvent): 
     diagnostic: event.diagnostic || undefined,
     turn_id: event.turnId || undefined,
     server_seq: event.serverSeq || undefined,
+    tool_error: event.toolError || undefined,
   });
 
   const ok = ws.write(line + "\n");
@@ -91,6 +92,8 @@ export interface LogEntry {
   turn_id?: string;
   /** ULID assigned by `recordSessionAction()` — canonical dedup + sort key. Absent on legacy logs predating HR8d. */
   server_seq?: string;
+  /** True when a tool_result reported failure (#1362). Absent on success and non-tool events. */
+  tool_error?: boolean;
 }
 
 /** Number of bytes to read from the tail of a log file when searching for the last text entry. */

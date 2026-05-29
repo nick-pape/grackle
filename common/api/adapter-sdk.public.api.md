@@ -38,6 +38,7 @@ export interface AgentEventFields {
     raw?: string;
     timestamp?: string;
     toolCallId?: string;
+    toolError?: boolean;
     turnId?: string;
     type: string;
 }
