@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Pre-flight credential validation (#1316): the demand-driven authenticate chokepoint now fails a spawn fast with a typed FailedPrecondition error when a runtime's enabled credential is missing, or its OAuth login (Claude subscription / Codex) is expired with no refresh token, instead of surfacing an opaque 401 deep inside the runtime. Behavior change: authenticateForRuntime is no longer best-effort never-throws.",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
