@@ -40,27 +40,25 @@ test.describe("Task Stop & Pause buttons", { tag: ["@task"] }, () => {
     });
   });
 
-  test("paused state shows Stop and Resume buttons", async ({ stubTask }) => {
+  test("Resume is hidden while the session is alive (idle) (#1356)", async ({ stubTask }) => {
     const { page } = stubTask;
 
-    // Scenario with just an idle step — task goes to paused immediately
+    // Scenario goes idle and waits — the session stays ALIVE (waiting_input),
+    // it is not terminated, so the task shows as paused with the input box open.
     await stubTask.createAndNavigate("pause task", stubScenario(emitText("Working..."), idle()));
 
-    // Start the task — the scenario transitions to idle, causing paused state
+    // Start the task — the scenario transitions to idle, causing paused state.
     await page.getByTestId("task-header-start").click();
-
-    // Wait for the task to reach paused state (Resume only appears in paused)
-    await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible({
+    await page.locator('textarea[placeholder="Type a message..."]').waitFor({ timeout: 15_000 });
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("paused", {
       timeout: 15_000,
     });
 
-    // Stop and Delete buttons should also be visible
-    await expect(page.getByRole("button", { name: "Stop", exact: true })).toBeVisible({
-      timeout: 5_000,
-    });
-    await expect(page.getByRole("button", { name: "Delete", exact: true })).toBeVisible({
-      timeout: 5_000,
-    });
+    // The session is idle (alive), so Resume would be a silent no-op — it must
+    // be hidden. Stop and Delete remain available.
+    await expect(page.getByRole("button", { name: "Stop", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Delete", exact: true })).toBeVisible();
   });
 
   test("paused task can be resumed", async ({ stubTask }) => {

@@ -282,6 +282,10 @@ export function TaskPage(): JSX.Element {
           <TaskActionButtons
             task={task}
             sessionId={sessionId}
+            // Resume gating must track the task's LATEST session — resumeTask
+            // always reanimates that one, regardless of which attempt the user
+            // has selected to view (#1356).
+            latestSessionStatus={sessions.find((s) => s.id === task.latestSessionId)?.status}
             isBlocked={isTaskBlocked}
             onStart={() => {
               startTask(task.id, undefined, selectedEnvId).catch((err) => {

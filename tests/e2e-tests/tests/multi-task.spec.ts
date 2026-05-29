@@ -19,8 +19,9 @@ test.describe("Multi-Task", { tag: ["@task"] }, () => {
     await navigateToTask(page, "preserve-task-a");
     await runStubTaskToCompletion(page);
 
-    // Verify task A is in paused state (Resume only appears in paused)
-    await expect(page.locator("button", { hasText: "Resume" })).toBeVisible();
+    // Verify task A is in paused state (the task badge is the stable signal;
+    // the legacy stub session is idle, so Resume is hidden — #1356)
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("paused");
 
     // Navigate to task B (pending)
     await navigateToTask(page, "preserve-task-b");
@@ -31,7 +32,9 @@ test.describe("Multi-Task", { tag: ["@task"] }, () => {
 
     // Navigate back to task A — should still show paused state
     await navigateToTask(page, "preserve-task-a");
-    await expect(page.locator("button", { hasText: "Resume" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("paused", {
+      timeout: 5_000,
+    });
   });
 
   test("multiple workspaces with tasks are navigable via board", async ({ stubTask }) => {
@@ -76,7 +79,9 @@ test.describe("Multi-Task", { tag: ["@task"] }, () => {
     await page.locator("button", { hasText: "Send" }).click();
 
     // Wait for paused (review) state
-    await page.locator("button", { hasText: "Resume" }).waitFor({ timeout: 15_000 });
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("paused", {
+      timeout: 15_000,
+    });
 
     // Complete — stop the task
     await page.locator("button", { hasText: "Stop" }).click();

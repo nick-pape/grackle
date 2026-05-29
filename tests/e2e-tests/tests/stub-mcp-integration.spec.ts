@@ -42,8 +42,12 @@ test.describe("Stub MCP Integration", { tag: ["@persona"] }, () => {
     await inputField.fill("continue");
     await page.getByRole("button", { name: "Send", exact: true }).click();
 
-    // Verify full lifecycle completes
-    await page.getByRole("button", { name: "Resume", exact: true }).waitFor({ timeout: 15_000 });
+    // Verify full lifecycle reaches review (paused). The legacy stub session
+    // returns to idle after input, so the stable signal is the task badge, not
+    // the Resume button (hidden while the session is alive — #1356).
+    await page.locator('[data-testid="task-status"]', { hasText: "paused" }).waitFor({
+      timeout: 15_000,
+    });
   });
 
   test("stub-mcp renders paired tool_use + tool_result correctly", async ({

@@ -319,7 +319,13 @@ export async function runStubTaskToCompletion(page: Page): Promise<void> {
   await inputField.fill("continue");
   await page.getByRole("button", { name: "Send", exact: true }).click();
 
-  await page.getByRole("button", { name: "Resume", exact: true }).waitFor({ timeout: 15_000 });
+  // Wait for the task to settle into its review state. The task badge reads
+  // "paused" whether the underlying session went idle (legacy stub) or
+  // terminated (scenario stub) — unlike the Resume button, which is now hidden
+  // while the session is still alive/idle (#1356).
+  await page.locator('[data-testid="task-status"]', { hasText: "paused" }).waitFor({
+    timeout: 15_000,
+  });
 }
 
 /**
@@ -334,7 +340,11 @@ export async function runStubMcpTaskToCompletion(page: Page): Promise<void> {
   await inputField.fill("continue");
   await page.getByRole("button", { name: "Send", exact: true }).click();
 
-  await page.getByRole("button", { name: "Resume", exact: true }).waitFor({ timeout: 15_000 });
+  // See runStubTaskToCompletion: the "paused" badge is the stable review signal
+  // (Resume is hidden while the session is still alive/idle — #1356).
+  await page.locator('[data-testid="task-status"]', { hasText: "paused" }).waitFor({
+    timeout: 15_000,
+  });
 }
 
 /** Timeout for provision stream drain (ms). */

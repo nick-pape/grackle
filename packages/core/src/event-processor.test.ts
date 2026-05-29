@@ -1311,3 +1311,60 @@ describe("turn_id threading (AHP HR2)", () => {
     expect(statusSessionEvent?.turnId).toBeFalsy();
   });
 });
+
+describe("sticky terminal session status (#1356)", () => {
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS findings");
+    sqlite.exec("DROP TABLE IF EXISTS tasks");
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    sqlite.exec("DROP TABLE IF EXISTS workspaces");
+    applySchema();
+    vi.clearAllMocks();
+
+    workspaceStore.createWorkspace("proj1", "Test Project", "desc", "", "env1");
+  });
+
+  /** Resolve once the whole stream has been consumed (endSession fires in the finally). */
+  function waitForStreamEnd(events: powerline.AgentEvent[], sessionId: string): Promise<void> {
+    const before = vi.mocked(logWriter.endSession).mock.calls.length;
+    return new Promise<void>((resolve, reject) => {
+      const deadline = Date.now() + 2000;
+      const interval = setInterval(() => {
+        if (vi.mocked(logWriter.endSession).mock.calls.length > before) {
+          clearInterval(interval);
+          setTimeout(resolve, 20);
+        } else if (Date.now() > deadline) {
+          clearInterval(interval);
+          reject(new Error("stream did not complete in time"));
+        }
+      }, 20);
+      processEventStream(eventStream(events), { sessionId, logPath: "/tmp/log" });
+    });
+  }
+
+  it("keeps a killed session STOPPED when a trailing waiting_input arrives", async () => {
+    sessionStore.createSession("sess-sticky", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+
+    const killedEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess-sticky",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "killed",
+    });
+    // The runtime's SIGTERM abort can emit a synthetic waiting_input AFTER the
+    // kill. Without the sticky-terminal guard this would flip the session back
+    // to idle in the UI even though it was killed.
+    const trailingWaiting = create(powerline.AgentEventSchema, {
+      sessionId: "sess-sticky",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "waiting_input",
+    });
+
+    await waitForStreamEnd([killedEvent, trailingWaiting], "sess-sticky");
+
+    const session = sessionStore.getSession("sess-sticky");
+    expect(session?.status).toBe("stopped");
+    expect(session?.endReason).toBe("killed");
+  });
+});
