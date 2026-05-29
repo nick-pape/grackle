@@ -414,17 +414,6 @@ export class AhpHostTransport implements IHostTransport {
 }
 
 /**
- * Helper to wire {@link AhpHostTransport}'s notification handler into an
- * `AhpClientSocket` at construction time. The transport's
- * {@link AhpHostTransport.handleNotification} method must be bound to the
- * socket BEFORE `socket.open()` so the first inbound `action` notifications
- * are routed correctly.
- *
- * @param transport - The transport whose handler should be bound.
- * @returns A function suitable for passing as `onNotification` to
- *   `AhpClientSocket`'s constructor options.
- */
-/**
  * True if `err` is the JSON-RPC "Session already active" error PowerLine
  * returns when `createSession` targets a channel whose underlying session
  * is still live in the registry. Tested with both message-prefix and
@@ -476,6 +465,17 @@ function formatTransportError(err: unknown): string {
   return String(err);
 }
 
+/**
+ * Helper to wire {@link AhpHostTransport}'s notification handler into an
+ * `AhpClientSocket` at construction time. The transport's
+ * {@link AhpHostTransport.handleNotification} method must be bound to the
+ * socket BEFORE `socket.open()` so the first inbound `action` notifications
+ * are routed correctly.
+ *
+ * @param transport - The transport whose handler should be bound.
+ * @returns A function suitable for passing as `onNotification` to
+ *   `AhpClientSocket`'s constructor options.
+ */
 export function bindNotificationHandler(transport: AhpHostTransport): (n: AhpNotification) => void {
   return (n) => transport.handleNotification(n);
 }

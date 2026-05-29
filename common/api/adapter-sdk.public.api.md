@@ -75,7 +75,7 @@ export interface BaseEnvironmentConfig {
     port?: number;
 }
 
-// @public (undocumented)
+// @public
 export function bindNotificationHandler(transport: AhpHostTransport): (n: AhpNotification) => void;
 
 // @public
