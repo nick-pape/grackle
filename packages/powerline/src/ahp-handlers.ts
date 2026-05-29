@@ -555,10 +555,15 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
         });
       }
     } finally {
+      // Forwarder map cleanup. Session/pump removal happens in one of three
+      // places, none of which is here:
+      //   - `unregisterPumpForwarder` above, on the *last*-forwarder-detach
+      //     path after `pump.done` (the natural-exit ladder);
+      //   - `handleDisposeSession`, when the wire explicitly tears down;
+      //   - `onDisconnect`, when the wire drops and we park the unsent tail.
+      // This `finally` only owns the per-(client, session) forwarder map
+      // entry — the runtime-level registry is somebody else's job.
       unregisterPumpForwarder(pump, forwarder);
-      // Forwarder map cleanup. Session/pump removal is the pump's
-      // responsibility (it removes itself when `stream()` returns) or the
-      // disconnect path's responsibility (which removes them before parking).
       const cState = clients.get(conn.clientId);
       if (cState?.forwarders.get(sessionId) === forwarder) {
         cState.forwarders.delete(sessionId);

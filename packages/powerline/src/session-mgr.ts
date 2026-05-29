@@ -228,7 +228,14 @@ export function getSessionPump(id: string): SessionPump | undefined {
   return sessionPumps.get(id);
 }
 
-/** Remove and unregister a session's pump (idempotent). */
+/**
+ * Drop a pump record from the registry. Does **not** stop the underlying
+ * `runPump()` task — the pump's `for await (… of session.stream())` keeps
+ * running until the session itself ends (kill, throw, or natural exit).
+ * Callers that want to actually stop the pump call `session.kill()`
+ * (typically via `disposeSession` or `onDisconnect`) and then call this to
+ * remove the record. Idempotent — safe to call on an already-deleted pump.
+ */
 export function deleteSessionPump(id: string): void {
   sessionPumps.delete(id);
 }
