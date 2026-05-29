@@ -11,10 +11,16 @@
  * Pure persistence lives in `@grackle-ai/database` (tokenStore); credential
  * bundle building lives in {@link ./credential-bundle.ts}.
  */
+import { ConnectError, Code } from "@connectrpc/connect";
 import { type AuthenticateTokenItem } from "@grackle-ai/adapter-sdk";
 import * as adapterManager from "./adapter-manager.js";
-import { envRegistry, tokenStore } from "@grackle-ai/database";
-import { buildProviderTokenBundle } from "./credential-bundle.js";
+import { credentialProviders, envRegistry, tokenStore } from "@grackle-ai/database";
+import {
+  buildProviderTokenBundle,
+  deriveCredentialNeeds,
+  findUnsatisfiedNeeds,
+  formatPreflightCredentialError,
+} from "./credential-bundle.js";
 import { logger } from "./logger.js";
 
 /** Options for {@link authenticateForRuntime}. */
@@ -27,8 +33,20 @@ export interface AuthenticateOptions {
  * Supply credentials for a runtime to its environment on demand, just before a
  * spawn. Combines stored user tokens with the runtime-scoped provider bundle
  * (read fresh from env/disk) and delivers them via the host transport's
- * `authenticate` method. Best-effort: failures are logged and do not block the
- * spawn.
+ * `authenticate` method.
+ *
+ * **Fail-fast pre-flight (#1316):** before delivery, this validates that every
+ * credential the runtime advertises a need for (a provider that is *enabled* in
+ * the credential-provider config) is actually present — and, for OAuth-file
+ * credentials, not expired-beyond-refresh. When a required credential is missing
+ * or its login has expired with no refresh token, it throws a
+ * `ConnectError(FailedPrecondition)` with an actionable message rather than
+ * letting the runtime fail with an opaque 401 mid-agent. (Providers that are
+ * *off* are not validated.) Note this changes the function from never-throws to
+ * fail-fast on a required-but-missing credential.
+ *
+ * Once the pre-flight gate passes, *delivery* remains best-effort: a transport
+ * `authenticate` failure is logged and does not block the spawn.
  */
 export async function authenticateForRuntime(
   environmentId: string,
@@ -45,6 +63,24 @@ export async function authenticateForRuntime(
 
   const stored = tokenStore.getBundle();
   const provider = await buildProviderTokenBundle(runtime, undefined, githubAccountId);
+
+  // Pre-flight credential validation (#1316). Validate the runtime's advertised
+  // needs against the *unfiltered* provider bundle, so the local-env file-token
+  // stripping below cannot mask a credential that is present on disk. Throws
+  // before delivery (and before any session row is created at the call site).
+  const config = credentialProviders.getCredentialProviders();
+  const unsatisfied = findUnsatisfiedNeeds(
+    deriveCredentialNeeds(runtime, config),
+    provider,
+    Date.now(),
+  );
+  if (unsatisfied.length > 0) {
+    throw new ConnectError(
+      formatPreflightCredentialError(runtime, unsatisfied),
+      Code.FailedPrecondition,
+    );
+  }
+
   // Provider credentials come last so they win over any same-target stored token.
   let combined = [...stored.tokens, ...provider.tokens];
   if (options?.excludeFileTokens) {

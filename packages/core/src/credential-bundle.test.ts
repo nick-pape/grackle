@@ -34,9 +34,16 @@ import {
   buildProviderTokenBundle,
   resolveGitHubTokenFromCli,
   deriveCredentialNeeds,
+  findUnsatisfiedNeeds,
+  inspectFileCredentialExpiry,
+  formatPreflightCredentialError,
   RUNTIME_PROVIDERS,
 } from "./credential-bundle.js";
-import type { ProtectedResourceDescriptor } from "./credential-bundle.js";
+import type {
+  ProtectedResourceDescriptor,
+  ProviderTokenBundle,
+  TokenItem,
+} from "./credential-bundle.js";
 import { RUNTIME_CATALOG } from "@grackle-ai/common";
 import { existsSync, readFileSync } from "node:fs";
 import type { CredentialProviderConfig } from "@grackle-ai/database";
@@ -736,5 +743,243 @@ describe("deriveCredentialNeeds()", () => {
         `Runtime "${runtime}" missing from RUNTIME_CATALOG`,
       ).toBeDefined();
     }
+  });
+});
+
+// ─── Pre-flight credential validation (#1316) ─────────────────────────
+
+/** Build a base64url-encoded string (mirrors Node's "base64url" Buffer encoding). */
+function b64url(value: string): string {
+  return Buffer.from(value, "utf-8").toString("base64url");
+}
+
+/** Build a syntactically valid 3-segment JWT carrying the given claims (no real signature). */
+function makeJwt(claims: Record<string, unknown>): string {
+  return `${b64url(JSON.stringify({ alg: "none" }))}.${b64url(JSON.stringify(claims))}.sig`;
+}
+
+/** Build a Claude `~/.claude/.credentials.json` blob. */
+function claudeFile(oauth: Record<string, unknown>): string {
+  return JSON.stringify({ claudeAiOauth: oauth });
+}
+
+/** Build a Codex `~/.codex/auth.json` blob. */
+function codexFile(tokens: Record<string, unknown>): string {
+  return JSON.stringify({ tokens });
+}
+
+/** Construct a minimal need descriptor for the given provider. */
+function need(provider: ProtectedResourceDescriptor["provider"]): ProtectedResourceDescriptor {
+  return {
+    resource: `https://example.test/${provider}`,
+    resourceName: provider,
+    authorizationServers: [],
+    scopesSupported: [],
+    credentialKinds: [],
+    provider,
+  };
+}
+
+/** Wrap token items into a {@link ProviderTokenBundle}. */
+function bundle(tokens: TokenItem[]): ProviderTokenBundle {
+  return { tokens };
+}
+
+describe("buildProviderTokenBundle() — provider tagging (#1316)", () => {
+  it("tags an ANTHROPIC_API_KEY env token with provider 'claude'", async () => {
+    mockGetCredentialProviders.mockReturnValue({ ...allOff(), claude: "api_key" });
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-api03-test");
+
+    const result = await buildProviderTokenBundle("claude-code");
+    const item = result.tokens.find((t) => t.envVar === "ANTHROPIC_API_KEY");
+
+    expect(item?.provider).toBe("claude");
+  });
+
+  it("tags a resolved GitHub token with provider 'github'", async () => {
+    mockGetCredentialProviders.mockReturnValue({ ...allOff(), github: "on" });
+    vi.stubEnv("GITHUB_TOKEN", "ghp_test");
+
+    const result = await buildProviderTokenBundle("claude-code");
+    const item = result.tokens.find((t) => t.envVar === "GITHUB_TOKEN");
+
+    expect(item?.provider).toBe("github");
+  });
+
+  it("tags the codex auth file with provider 'codex'", async () => {
+    mockGetCredentialProviders.mockReturnValue({ ...allOff(), codex: "on" });
+    vi.mocked(existsSync).mockReturnValue(true);
+    vi.mocked(readFileSync).mockReturnValue(codexFile({ access_token: "x" }) as never);
+
+    const result = await buildProviderTokenBundle("codex");
+    const item = result.tokens.find((t) => t.name === "codex-auth");
+
+    expect(item?.provider).toBe("codex");
+  });
+});
+
+describe("inspectFileCredentialExpiry()", () => {
+  const NOW = 1_000_000_000_000; // fixed clock for determinism
+
+  it("returns 'unknown' for non-file tokens", () => {
+    const token: TokenItem = { name: "anthropic-api-key", type: "env_var", value: "k" };
+    expect(inspectFileCredentialExpiry(token, NOW)).toBe("unknown");
+  });
+
+  it("returns 'unknown' for an unrecognized file token name", () => {
+    const token: TokenItem = { name: "copilot-config", type: "file", value: "{}" };
+    expect(inspectFileCredentialExpiry(token, NOW)).toBe("unknown");
+  });
+
+  describe("claude-credentials", () => {
+    function token(value: string): TokenItem {
+      return { name: "claude-credentials", type: "file", value };
+    }
+
+    it("'valid' when expiresAt is in the future (beyond skew)", () => {
+      const value = claudeFile({
+        accessToken: "a",
+        expiresAt: NOW + 10 * 60_000,
+        refreshToken: "r",
+      });
+      expect(inspectFileCredentialExpiry(token(value), NOW)).toBe("valid");
+    });
+
+    it("'expired-unrecoverable' when past expiry with no refresh token", () => {
+      const value = claudeFile({ accessToken: "a", expiresAt: NOW - 1 });
+      expect(inspectFileCredentialExpiry(token(value), NOW)).toBe("expired-unrecoverable");
+    });
+
+    it("'expired-recoverable' when past expiry but a refresh token is present", () => {
+      const value = claudeFile({ accessToken: "a", expiresAt: NOW - 1, refreshToken: "r" });
+      expect(inspectFileCredentialExpiry(token(value), NOW)).toBe("expired-recoverable");
+    });
+
+    it("treats expiry within the skew window as expired", () => {
+      const value = claudeFile({ accessToken: "a", expiresAt: NOW + 100 });
+      expect(inspectFileCredentialExpiry(token(value), NOW)).toBe("expired-unrecoverable");
+    });
+
+    it("fails open to 'unknown' on malformed JSON", () => {
+      expect(inspectFileCredentialExpiry(token("not json"), NOW)).toBe("unknown");
+    });
+
+    it("fails open to 'unknown' when the shape is unexpected", () => {
+      expect(inspectFileCredentialExpiry(token(JSON.stringify({ foo: 1 })), NOW)).toBe("unknown");
+    });
+  });
+
+  describe("codex-auth", () => {
+    function token(value: string): TokenItem {
+      return { name: "codex-auth", type: "file", value };
+    }
+
+    it("'valid' when the access_token JWT exp is in the future", () => {
+      const value = codexFile({
+        access_token: makeJwt({ exp: NOW / 1000 + 600 }),
+        refresh_token: "r",
+      });
+      expect(inspectFileCredentialExpiry(token(value), NOW)).toBe("valid");
+    });
+
+    it("'expired-unrecoverable' when the JWT exp is past with no refresh token", () => {
+      const value = codexFile({ access_token: makeJwt({ exp: NOW / 1000 - 60 }) });
+      expect(inspectFileCredentialExpiry(token(value), NOW)).toBe("expired-unrecoverable");
+    });
+
+    it("'expired-recoverable' when the JWT exp is past but a refresh token is present", () => {
+      const value = codexFile({
+        access_token: makeJwt({ exp: NOW / 1000 - 60 }),
+        refresh_token: "r",
+      });
+      expect(inspectFileCredentialExpiry(token(value), NOW)).toBe("expired-recoverable");
+    });
+
+    it("fails open to 'unknown' on a malformed (non-JWT) access token", () => {
+      const value = codexFile({ access_token: "not-a-jwt" });
+      expect(inspectFileCredentialExpiry(token(value), NOW)).toBe("unknown");
+    });
+
+    it("fails open to 'unknown' when the JWT payload has no exp claim", () => {
+      const value = codexFile({ access_token: makeJwt({ sub: "x" }) });
+      expect(inspectFileCredentialExpiry(token(value), NOW)).toBe("unknown");
+    });
+  });
+});
+
+describe("findUnsatisfiedNeeds()", () => {
+  const NOW = 1_000_000_000_000;
+
+  it("returns [] when there are no needs", () => {
+    expect(findUnsatisfiedNeeds([], bundle([]), NOW)).toEqual([]);
+  });
+
+  it("reports a need as 'missing' when no token is tagged for its provider", () => {
+    const result = findUnsatisfiedNeeds([need("claude")], bundle([]), NOW);
+    expect(result).toEqual([{ need: need("claude"), reason: "missing" }]);
+  });
+
+  it("treats a need as satisfied when a token is tagged for its provider", () => {
+    const tokens: TokenItem[] = [
+      { name: "anthropic-api-key", type: "env_var", value: "k", provider: "claude" },
+    ];
+    expect(findUnsatisfiedNeeds([need("claude")], bundle(tokens), NOW)).toEqual([]);
+  });
+
+  it("ignores tokens tagged for a different provider", () => {
+    const tokens: TokenItem[] = [
+      { name: "github-token", type: "env_var", value: "k", provider: "github" },
+    ];
+    const result = findUnsatisfiedNeeds([need("claude")], bundle(tokens), NOW);
+    expect(result).toEqual([{ need: need("claude"), reason: "missing" }]);
+  });
+
+  it("reports 'expired' for an unrecoverable expired OAuth file", () => {
+    const tokens: TokenItem[] = [
+      {
+        name: "claude-credentials",
+        type: "file",
+        value: claudeFile({ accessToken: "a", expiresAt: NOW - 1 }),
+        provider: "claude",
+      },
+    ];
+    const result = findUnsatisfiedNeeds([need("claude")], bundle(tokens), NOW);
+    expect(result).toEqual([{ need: need("claude"), reason: "expired" }]);
+  });
+
+  it("does NOT report a recoverable (refreshable) expired OAuth file", () => {
+    const tokens: TokenItem[] = [
+      {
+        name: "claude-credentials",
+        type: "file",
+        value: claudeFile({ accessToken: "a", expiresAt: NOW - 1, refreshToken: "r" }),
+        provider: "claude",
+      },
+    ];
+    expect(findUnsatisfiedNeeds([need("claude")], bundle(tokens), NOW)).toEqual([]);
+  });
+
+  it("reports each unmet need across multiple providers", () => {
+    const tokens: TokenItem[] = [
+      { name: "github-token", type: "env_var", value: "k", provider: "github" },
+    ];
+    const result = findUnsatisfiedNeeds([need("claude"), need("github")], bundle(tokens), NOW);
+    expect(result).toEqual([{ need: need("claude"), reason: "missing" }]);
+  });
+});
+
+describe("formatPreflightCredentialError()", () => {
+  it("names the runtime and uses distinct wording for missing vs expired", () => {
+    const msg = formatPreflightCredentialError("claude-code", [
+      { need: need("claude"), reason: "missing" },
+      { need: need("github"), reason: "expired" },
+    ]);
+
+    expect(msg).toContain('"claude-code"');
+    expect(msg).toContain("no credential was found");
+    expect(msg).toContain("re-login required");
+    expect(msg).toContain('provider "claude"');
+    expect(msg).toContain('provider "github"');
+    expect(msg).toContain("grackle credential-provider set");
   });
 });

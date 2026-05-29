@@ -412,6 +412,17 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
   const { runtime, model, maxTurns, systemPrompt } = resolved;
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
+  // Supply credentials on demand for this runtime, just before spawn (AHP HR6).
+  // For local envs, skip file tokens — the PowerLine is on the same machine.
+  // Runs a fail-fast pre-flight (#1316): a required-but-missing/expired credential
+  // throws here, before the (expensive) knowledge retrieval below and before any
+  // session row is created or "task.started" emitted.
+  await tokenPush.authenticateForRuntime(
+    environmentId,
+    runtime,
+    env?.adapterType === "local" ? { excludeFileTokens: true } : undefined,
+  );
+
   // Root task always starts with the hardcoded greeting prompt; user messages
   // are sent as follow-ups via sendInput.  Other tasks use buildTaskPrompt.
   const taskPrompt =
@@ -485,14 +496,6 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
     taskPipeMode || "", // pipeMode
   );
   emit("task.started", { taskId: task.id, sessionId, workspaceId: task.workspaceId || "" });
-
-  // Supply credentials on demand for this runtime, just before spawn (AHP HR6).
-  // For local envs, skip file tokens — the PowerLine is on the same machine.
-  await tokenPush.authenticateForRuntime(
-    environmentId,
-    runtime,
-    env?.adapterType === "local" ? { excludeFileTokens: true } : undefined,
-  );
 
   const mcpServersJson = personaMcpServersToJson(resolved.mcpServers, resolved.personaId);
 
