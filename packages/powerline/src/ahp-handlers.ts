@@ -70,6 +70,7 @@ import {
 } from "@grackle-ai/ahp-transport";
 import { mapAgentEvent, type MapperContext } from "@grackle-ai/common";
 import type { AgentEvent, AgentSession } from "@grackle-ai/runtime-sdk";
+import { validateGitBranchName } from "@grackle-ai/runtime-sdk";
 
 import { getRuntime } from "./runtime-registry.js";
 import {
@@ -276,6 +277,21 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
         const maxTurns = typeof cfg.maxTurns === "number" ? cfg.maxTurns : 0;
         const branchVal =
           typeof cfg.branch === "string" && cfg.branch !== "" ? cfg.branch : undefined;
+        // Reject unsafe branch names at the boundary before they reach git (GHSA-vv65).
+        if (branchVal !== undefined) {
+          try {
+            validateGitBranchName(branchVal);
+          } catch (err) {
+            return {
+              jsonrpc: "2.0",
+              id: 0,
+              error: {
+                code: JsonRpcErrorCodes.InvalidParams,
+                message: err instanceof Error ? err.message : "Invalid branch name",
+              },
+            } satisfies AhpResponse;
+          }
+        }
         const wdVal =
           typeof cfg.workingDirectory === "string" && cfg.workingDirectory !== ""
             ? cfg.workingDirectory

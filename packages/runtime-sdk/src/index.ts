@@ -24,7 +24,13 @@ export type {
   BrokerConfig,
 } from "./runtime-utils.js";
 export { AsyncQueue } from "./async-queue.js";
-export { ensureWorktree, removeWorktree, worktreeDir, sanitizeBranch } from "./worktree.js";
+export {
+  ensureWorktree,
+  removeWorktree,
+  worktreeDir,
+  sanitizeBranch,
+  validateGitBranchName,
+} from "./worktree.js";
 export type { GitExecutor, WorktreeFileSystem, WorktreeResult } from "./worktree.js";
 export {
   ensureRuntimeInstalled,

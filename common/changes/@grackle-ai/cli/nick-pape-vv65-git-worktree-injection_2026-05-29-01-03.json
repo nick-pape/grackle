@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "packageName": "@grackle-ai/cli",
+      "comment": "Fix command/argument injection via git branch name (GHSA-vv65): the worktree git executor no longer runs through a shell, branch names are validated against a strict allowlist before reaching git, and positional git args are terminated with `--`. Invalid branch names are now rejected.",
+      "type": "minor"
+    }
+  ]
+}
