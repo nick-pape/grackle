@@ -18,6 +18,11 @@ vi.mock("node:fs", () => ({
   existsSync: vi.fn(() => false),
   readFileSync: vi.fn(() => "{}"),
   readdirSync: vi.fn(() => []),
+  mkdirSync: vi.fn(),
+  writeFileSync: vi.fn(),
+  rmSync: vi.fn(),
+  symlinkSync: vi.fn(),
+  copyFileSync: vi.fn(),
 }));
 vi.mock("node:child_process", async (importOriginal) => {
   const original = await importOriginal<typeof import("node:child_process")>();
@@ -43,7 +48,8 @@ import {
   _setAcpSdkForTesting,
 } from "./acp.js";
 import type { AcpSdkModule } from "./acp.js";
-import { convertMcpServers } from "@grackle-ai/runtime-sdk";
+import { spawn } from "node:child_process";
+import { convertMcpServers, getRuntimeConfigDirectory } from "@grackle-ai/runtime-sdk";
 
 // ─── mapSessionUpdate ───────────────────────────────────────
 
@@ -690,6 +696,56 @@ describe("AcpRuntime — multi-turn", () => {
 
     expect(mockConnection.newSession).toHaveBeenCalledTimes(1);
     expect(promptCallCount).toBe(2); // once per turn
+
+    session.kill();
+  });
+
+  it("sets CLAUDE_CONFIG_DIR to an isolated dir when isolateClaudeConfig is enabled", async () => {
+    const runtime = new AcpRuntime({ ...acpConfig, isolateClaudeConfig: true });
+    const session = runtime.spawn({
+      sessionId: "acp-iso",
+      prompt: "hello",
+      model: "test",
+      maxTurns: 0,
+    });
+    const streamIterator = session.stream()[Symbol.asyncIterator]();
+    const nextEvent = async (): Promise<AgentEvent | undefined> => {
+      const result = await streamIterator.next();
+      return result.done ? undefined : result.value;
+    };
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    const spawnCall = vi.mocked(spawn).mock.calls.at(-1);
+    const env = spawnCall?.[2]?.env as Record<string, string> | undefined;
+    expect(env?.CLAUDE_CONFIG_DIR).toBe(getRuntimeConfigDirectory("test-acp"));
+
+    session.kill();
+  });
+
+  it("continues with inherited config when isolated config preparation throws", async () => {
+    // mkdirSync throwing simulates an unwritable isolated dir; spawn must still
+    // proceed (the isolation block swallows the error and logs a warning).
+    const fs = await import("node:fs");
+    vi.mocked(fs.mkdirSync).mockImplementationOnce(() => {
+      throw new Error("EACCES");
+    });
+    const runtime = new AcpRuntime({ ...acpConfig, isolateClaudeConfig: true });
+    const session = runtime.spawn({
+      sessionId: "acp-iso-fail",
+      prompt: "hello",
+      model: "test",
+      maxTurns: 0,
+    });
+    const streamIterator = session.stream()[Symbol.asyncIterator]();
+    const nextEvent = async (): Promise<AgentEvent | undefined> => {
+      const result = await streamIterator.next();
+      return result.done ? undefined : result.value;
+    };
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    const spawnCall = vi.mocked(spawn).mock.calls.at(-1);
+    const env = spawnCall?.[2]?.env as Record<string, string> | undefined;
+    expect(env?.CLAUDE_CONFIG_DIR).toBeUndefined();
 
     session.kill();
   });
