@@ -325,6 +325,10 @@ Predefined presets are available for convenience (via CLI `--mcp-tools-preset` o
 
 Scoped tokens also enforce workspace isolation — agents can only see tasks within their own workspace. Subtasks created by a scoped agent are automatically parented to the agent's own task. Tool calls to non-permitted tools return an error with a descriptive message listing the available tools.
 
+### Cross-Task / Cross-Session Authorization
+
+Beyond the per-persona allowlist, tools that target a specific task or session are authorized centrally and **fail closed** for scoped (agent) callers: a non-root agent may only act on its **own descendant** tasks/sessions. This covers the mutating tools (`task_update`, `task_delete`, `task_resume`, `task_complete`, `task_start`, `session_kill`, `session_resume`, `session_attach`, `session_send_input`) — an agent cannot delete a sibling's task or kill another agent's session even if it learns the ID. Read tools that resolve a record by ID (`task_show`, `schedule_show`) are gated by workspace membership; a caller with no workspace may read only workspaceless records. The root/system task (the central orchestrator) is exempt. When a task reaches a terminal state (complete/stop/delete) its scoped tokens are revoked; resuming the task mints a fresh token.
+
 ## Requirements
 
 - Node.js >= 22

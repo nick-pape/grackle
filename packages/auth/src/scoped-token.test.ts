@@ -109,6 +109,26 @@ describe("scoped-token", () => {
     expect(isRevokedTask("task-2")).toBe(false);
   });
 
+  /**
+   * Minting a fresh token clears a prior revocation for the same task
+   * (GHSA-f9ff-5x35-7gfw): revoke-on-complete must not lock out a later resume.
+   */
+  test("createScopedToken clears a prior revocation for the same task", () => {
+    revokeTask(CLAIMS.sub);
+    expect(isRevokedTask(CLAIMS.sub)).toBe(true);
+    const token = createScopedToken(CLAIMS, SIGNING_SECRET);
+    expect(isRevokedTask(CLAIMS.sub)).toBe(false);
+    // The freshly minted token is valid (it was not rejected by the revocation).
+    expect(verifyScopedToken(token, SIGNING_SECRET)).not.toBeUndefined();
+  });
+
+  /** Minting a token for one task does not clear another task's revocation. */
+  test("createScopedToken does not clear an unrelated task's revocation", () => {
+    revokeTask("other-task");
+    createScopedToken(CLAIMS, SIGNING_SECRET);
+    expect(isRevokedTask("other-task")).toBe(true);
+  });
+
   /** pruneRevocations removes stale entries. */
   test("pruneRevocations removes old entries", () => {
     revokeTask("task-old");
