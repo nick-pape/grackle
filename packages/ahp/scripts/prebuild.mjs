@@ -63,23 +63,13 @@ async function copyDir(src, dest, isRoot = false) {
   }
 }
 
-async function prependHeader(filePath, header) {
-  const content = await readFile(filePath, "utf-8");
-  await writeFile(filePath, header + "\n" + content);
-}
-
-async function convertConstEnum(filePath) {
-  const content = await readFile(filePath, "utf-8");
-  const transformed = content.replace(/const\s+enum\s+/g, "enum ");
-  if (transformed !== content) {
-    await writeFile(filePath, transformed);
-  }
-}
-
 async function transformFile(filePath) {
+  // Apply both transforms in a single read/write cycle:
+  //  1. Prepend the eslint-disable header.
+  //  2. Convert `const enum` to a plain `enum` (esbuild compatibility).
   const header = "/* eslint-disable -- vendored third-party code, see SOURCE.md */";
-  await prependHeader(filePath, header);
-  await convertConstEnum(filePath);
+  const content = await readFile(filePath, "utf-8");
+  await writeFile(filePath, header + "\n" + content.replace(/const\s+enum\s+/g, "enum "));
 }
 
 // ─── Main ──────────────────────────────────────────────────────────────
@@ -139,15 +129,15 @@ async function main() {
     await transformFile(file);
   }
 
-  // Read the pinned commit from the git dependency's package.json for SOURCE.md
-  const depPackageJson = join(NODE_MODULES_DIR, "agent-host-protocol", "package.json");
-  const depPkg = JSON.parse(await readFile(depPackageJson, "utf-8"));
-  // Derive pinned commit from this package's devDependencies git: spec
-  const depSpec = depPkg.dependencies?.["agent-host-protocol"] || "";
+  // Derive the pinned commit SHA for SOURCE.md from THIS package's own
+  // package.json — the `devDependencies["agent-host-protocol"]` git: spec is
+  // the authoritative pin. (The upstream package.json in node_modules has no
+  // self-reference, so it cannot supply the SHA.)
+  const ownPackageJson = join(SCRIPT_DIR, "..", "package.json");
+  const ownPkg = JSON.parse(await readFile(ownPackageJson, "utf-8"));
+  const depSpec = ownPkg.devDependencies?.["agent-host-protocol"] || "";
   const ahpCommit = depSpec.replace(/^git\+.*#/, "").replace(/\.git$/, "");
-  const ahpRepoUrl =
-    depPkg.repository?.url?.replace(/^git\+/, "").replace(/\.git$/, "") ||
-    "https://github.com/microsoft/agent-host-protocol";
+  const ahpRepoUrl = "https://github.com/microsoft/agent-host-protocol";
   const sourceMd = `# Vendored: Agent Host Protocol types
 
 This directory is the \`types/\` tree from Microsoft's Agent Host
