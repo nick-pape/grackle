@@ -7,11 +7,13 @@
  * @module
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
+import { ConnectError, Code } from "@connectrpc/connect";
 import type {
   GrackleEvent,
   GraphNode,
   GraphLink,
+  KnowledgeLoadError,
   NodeDetail,
   UseKnowledgeResult,
 } from "@grackle-ai/web-components";
@@ -26,6 +28,7 @@ import { protoToGraphNode, protoToGraphLink } from "./proto-converters.js";
 export type {
   GraphNode,
   GraphLink,
+  KnowledgeLoadError,
   NodeDetail,
   UseKnowledgeResult,
 } from "@grackle-ai/web-components";
@@ -46,6 +49,17 @@ function safeParseJson(json: string): Record<string, unknown> | undefined {
   }
 }
 
+/**
+ * Classify a failed knowledge RPC into a {@link KnowledgeLoadError}.
+ *
+ * The backend throws `ConnectError` with `Code.Unavailable` when Neo4j is not
+ * running or unreachable; that maps to the "knowledge server can't be reached"
+ * UX. Everything else is a generic `"error"`.
+ */
+function classifyLoadError(err: unknown): KnowledgeLoadError {
+  return ConnectError.from(err).code === Code.Unavailable ? "unavailable" : "error";
+}
+
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
@@ -57,6 +71,7 @@ export function useKnowledge(): UseKnowledgeResult {
   const [selectedNode, setSelectedNode] = useState<NodeDetail | undefined>(undefined);
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<KnowledgeLoadError | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState("");
 
   /** Tracks the active workspace filter so search and clearSearch can use it. */
@@ -66,6 +81,7 @@ export function useKnowledge(): UseKnowledgeResult {
     const effectiveWsId = workspaceId ?? "";
     workspaceIdRef.current = effectiveWsId;
     setSearchQuery("");
+    setLoadError(undefined);
     setLoading(true);
     try {
       const resp = await grackleClient.listRecentKnowledgeNodes({
@@ -96,8 +112,8 @@ export function useKnowledge(): UseKnowledgeResult {
 
       setNodes(nodeMap);
       setLinks(linkList);
-    } catch {
-      // empty
+    } catch (err) {
+      setLoadError(classifyLoadError(err));
     } finally {
       setLoading(false);
     }
@@ -110,6 +126,7 @@ export function useKnowledge(): UseKnowledgeResult {
     setSearchQuery(query);
     setSelectedId(undefined);
     setSelectedNode(undefined);
+    setLoadError(undefined);
     setLoading(true);
     try {
       const resp = await grackleClient.searchKnowledge({
@@ -131,8 +148,8 @@ export function useKnowledge(): UseKnowledgeResult {
 
       setNodes(nodeMap);
       setLinks(linkList);
-    } catch {
-      // empty
+    } catch (err) {
+      setLoadError(classifyLoadError(err));
     } finally {
       setLoading(false);
     }
@@ -206,25 +223,59 @@ export function useKnowledge(): UseKnowledgeResult {
     return false;
   }, []);
 
-  const domainHook: DomainHook = {
-    onConnect: async () => {}, // Knowledge is page-scoped; no global reload needed
-    onDisconnect: () => {},
-    handleEvent,
-  };
+  // Knowledge is page-scoped; no global reload needed. Memoized so the hook's
+  // public object identity stays stable across renders (see return below).
+  const domainHook = useMemo<DomainHook>(
+    () => ({
+      onConnect: async () => {},
+      onDisconnect: () => {},
+      handleEvent,
+    }),
+    [handleEvent],
+  );
 
-  return {
-    graphData: { nodes: [...nodes.values()], links },
-    selectedNode,
-    selectedId,
-    loading,
-    searchQuery,
-    search,
-    clearSearch,
-    selectNode,
-    clearSelection,
-    expandNode,
-    loadRecent,
-    handleEvent,
-    domainHook,
-  };
+  // Derive graphData only when the underlying node/link state changes, so the
+  // force-directed graph isn't handed a brand-new prop (and re-simulated) on
+  // every unrelated render.
+  const graphData = useMemo(() => ({ nodes: [...nodes.values()], links }), [nodes, links]);
+
+  // Hardening (#1357): return a referentially stable object. All callbacks are
+  // stable (`useCallback([])`) and `graphData`/`domainHook` are memoized, so
+  // this object only changes identity when real state changes. That keeps the
+  // `knowledge` slice from re-triggering consumer effects/`useCallback`s that
+  // depend on it on every render — the render-loop footgun that froze the tab.
+  return useMemo<UseKnowledgeResult>(
+    () => ({
+      graphData,
+      selectedNode,
+      selectedId,
+      loading,
+      loadError,
+      searchQuery,
+      search,
+      clearSearch,
+      selectNode,
+      clearSelection,
+      expandNode,
+      loadRecent,
+      handleEvent,
+      domainHook,
+    }),
+    [
+      graphData,
+      selectedNode,
+      selectedId,
+      loading,
+      loadError,
+      searchQuery,
+      search,
+      clearSearch,
+      selectNode,
+      clearSelection,
+      expandNode,
+      loadRecent,
+      handleEvent,
+      domainHook,
+    ],
+  );
 }

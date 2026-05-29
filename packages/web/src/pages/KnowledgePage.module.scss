@@ -29,3 +29,10 @@
     font-size: 14px;
   }
 }
+
+.retryButton {
+  @include btn-outline;
+  margin-top: var(--space-md);
+  padding: var(--space-xs) var(--space-md);
+  font-size: 14px;
+}
