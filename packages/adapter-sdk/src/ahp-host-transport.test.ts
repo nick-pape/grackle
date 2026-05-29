@@ -460,9 +460,7 @@ describe("AhpHostTransport", () => {
       for await (const env of stream) {
         events.push(env);
       }
-      expect(events[0]?.event.content).toBe(
-        "JSON-RPC error -32600: Session already active: s-1",
-      );
+      expect(events[0]?.event.content).toBe("JSON-RPC error -32600: Session already active: s-1");
     });
   });
 

@@ -436,7 +436,9 @@ function isSessionAlreadyActiveError(err: unknown): boolean {
   const message =
     err instanceof Error
       ? err.message
-      : err !== null && typeof err === "object" && typeof (err as { message?: unknown }).message === "string"
+      : err !== null &&
+          typeof err === "object" &&
+          typeof (err as { message?: unknown }).message === "string"
         ? (err as { message: string }).message
         : "";
   return message.startsWith("Session already active");
