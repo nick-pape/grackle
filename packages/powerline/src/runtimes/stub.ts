@@ -257,6 +257,7 @@ export class StubSession implements AgentSession {
             }),
             raw: { type: "tool_result", tool_use_id: toolUseId, is_error: true },
             toolCallId: toolUseId,
+            toolError: true,
           };
         } else {
           const mcpEvents = await this.performMcpToolCall(ts, step.mcp_call, step.args ?? {});
@@ -338,6 +339,7 @@ export class StubSession implements AgentSession {
         content: JSON.stringify(result),
         raw: { type: "tool_result", tool_use_id: toolUseId, is_error: false },
         toolCallId: toolUseId,
+        toolError: false,
       });
     } catch (err) {
       logger.warn(
@@ -363,6 +365,7 @@ export class StubSession implements AgentSession {
         }),
         raw: { type: "tool_result", tool_use_id: toolUseId, is_error: true },
         toolCallId: toolUseId,
+        toolError: true,
       });
     } finally {
       if (mcpClient) {
@@ -464,6 +467,7 @@ export class StubSession implements AgentSession {
         }),
         raw: { type: "tool_result", tool_use_id: toolUseId, is_error: !present },
         toolCallId: toolUseId,
+        toolError: !present,
       });
       // Distinctive marker (only on the success path) so a test can assert the
       // notification actually drove the re-list, not just that the tool name appears.
@@ -488,6 +492,7 @@ export class StubSession implements AgentSession {
         }),
         raw: { type: "tool_result", tool_use_id: toolUseId, is_error: true },
         toolCallId: toolUseId,
+        toolError: true,
       });
     } finally {
       if (mcpClient) {
