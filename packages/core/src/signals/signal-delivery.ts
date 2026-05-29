@@ -131,6 +131,9 @@ export async function sendInputToSession(
       timestamp: new Date().toISOString(),
       content: text,
     });
+    // Stamp the ULID before persisting + broadcasting so the UI can dedup the
+    // signal event against any later replay.
+    signalEvent.serverSeq = recordSessionAction(signalEvent) ?? "";
     if (session?.logPath) {
       // Ensure the stream is open before writing — the session may still be
       // PENDING and processEventStream may not have called initLog yet.
@@ -138,7 +141,6 @@ export async function sendInputToSession(
       await logWriter.writeEvent(session.logPath, signalEvent);
     }
     streamHub.publish(signalEvent);
-    recordSessionAction(signalEvent);
 
     await conn.transport.dispatchInput(sessionId, text);
     logger.info({ sessionId, signalType }, "Signal delivered to session");

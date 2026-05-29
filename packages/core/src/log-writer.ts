@@ -53,6 +53,7 @@ export async function writeEvent(logPath: string, event: grackle.SessionEvent): 
     tool_call_id: event.toolCallId || undefined,
     diagnostic: event.diagnostic || undefined,
     turn_id: event.turnId || undefined,
+    server_seq: event.serverSeq || undefined,
   });
 
   const ok = ws.write(line + "\n");
@@ -88,6 +89,8 @@ export interface LogEntry {
   diagnostic?: boolean;
   /** Turn this event belongs to (AHP HR2). Absent for out-of-band/liveness events. */
   turn_id?: string;
+  /** ULID assigned by `recordSessionAction()` — canonical dedup + sort key. Absent on legacy logs predating HR8d. */
+  server_seq?: string;
 }
 
 /** Number of bytes to read from the tail of a log file when searching for the last text entry. */

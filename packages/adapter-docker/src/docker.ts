@@ -10,7 +10,7 @@ import type {
   ExecResult,
 } from "@grackle-ai/adapter-sdk";
 import {
-  createPowerLineClient,
+  createAhpHostTransport,
   isDevMode,
   bootstrapPowerLine,
   startRemotePowerLine,
@@ -20,7 +20,6 @@ import {
   exec as defaultExec,
   sleep as defaultSleep,
   defaultLogger,
-  GrpcHostTransport,
   type RemoteExecutor,
 } from "@grackle-ai/adapter-sdk";
 import { existsSync } from "node:fs";
@@ -678,12 +677,25 @@ export class DockerAdapter implements EnvironmentAdapter {
 
   /** Probe whether a PowerLine URL answers a ping (used to test direct host→container reachability). */
   private async canReachPowerLine(url: string, powerlineToken: string): Promise<boolean> {
+    const opened = await createAhpHostTransport(url, powerlineToken, "reachability-probe").catch(
+      () => undefined,
+    );
+    if (opened === undefined) {
+      return false;
+    }
     try {
-      const client = createPowerLineClient(url, powerlineToken);
-      await client.ping({});
+      await opened.socket.request("ping", { channel: "ahp-root://" });
       return true;
     } catch {
       return false;
+    } finally {
+      // Always close — covers the success path AND the case where
+      // `ping` threw after the socket was opened.
+      try {
+        await opened.socket.close();
+      } catch {
+        /* best-effort cleanup on a probe */
+      }
     }
   }
 
@@ -721,15 +733,45 @@ export class DockerAdapter implements EnvironmentAdapter {
         ? `http://${containerName}:${DEFAULT_POWERLINE_PORT}`
         : `http://127.0.0.1:${localPort}`;
     }
-    const client = createPowerLineClient(connectUrl, powerlineToken);
-
+    // For attach-mode connectUrl is http:// from resolveAttachConnectivity;
+    // createAhpHostTransport normalizes http(s) to ws(s).
     let lastErr: unknown;
     for (let attempt = 0; attempt < CONNECT_MAX_RETRIES; attempt++) {
+      let attemptSocket: { close(): Promise<void> } | undefined;
       try {
-        await client.ping({});
-        return { client, environmentId, port, transport: new GrpcHostTransport(client) };
+        const { transport, socket } = await createAhpHostTransport(
+          connectUrl,
+          powerlineToken,
+          environmentId,
+        );
+        attemptSocket = socket;
+        await socket.request("ping", { channel: "ahp-root://" });
+        return {
+          environmentId,
+          port,
+          transport,
+          ping: async () => {
+            await socket.request("ping", { channel: "ahp-root://" });
+          },
+          close: async () => {
+            await socket.close();
+          },
+        };
       } catch (err) {
         lastErr = err;
+        // Close any socket opened by a failed attempt (e.g. `ping` rejected
+        // after `createAhpHostTransport` succeeded) so we don't leak open WS
+        // connections across the retry loop.
+        if (attemptSocket !== undefined) {
+          try {
+            await attemptSocket.close();
+          } catch (closeErr) {
+            this.logger.error(
+              { environmentId, err: closeErr },
+              "Failed to close socket after attempt",
+            );
+          }
+        }
         await this.sleepFn(CONNECT_RETRY_DELAY_MS);
       }
     }
@@ -794,7 +836,7 @@ export class DockerAdapter implements EnvironmentAdapter {
 
   public async healthCheck(connection: PowerLineConnection): Promise<boolean> {
     try {
-      await connection.client.ping({});
+      await connection.ping();
       return true;
     } catch {
       return false;

@@ -1,19 +1,22 @@
 /**
- * Transport-agnostic host interface (AHP HR8c).
+ * Transport-agnostic host interface (AHP HR8c / HR8d).
  *
- * Wraps the PowerLine gRPC client behind an AHP-shaped API so consumers in
- * `@grackle-ai/core` no longer need to import `powerline.*` proto types. HR8d
- * will replace the gRPC implementation with a native AHP host without
- * changing this interface.
+ * Wraps the PowerLine wire behind an AHP-shaped API so consumers in
+ * `@grackle-ai/core` don't need to know the underlying transport.
  *
  * Each consumer call-site goes through one of these methods:
- * - `createSession`  ← `PowerLineClient.spawn`
- * - `reanimate`      ← `PowerLineClient.resume`
- * - `drainBuffered`  ← `PowerLineClient.drainBufferedEvents`
- * - `dispatchInput`  ← `PowerLineClient.sendInput`
- * - `authenticate`   ← `PowerLineClient.authenticate`
- * - `dispose`        ← `PowerLineClient.kill`
- * - `listSessions`   ← `PowerLineClient.listSessions`
+ * - `createSession`  → AHP `createSession` + `subscribe`
+ * - `reanimate`      → AHP `createSession` with `config.resumeFromRuntimeSessionId`
+ * - `dispatchInput`  → AHP `dispatchAction` (SessionTurnStartedAction)
+ * - `authenticate`   → AHP `authenticate` (one call per token, with
+ *   `resource: grackle://provider/{provider}/{name}` + JSON-encoded token).
+ *   On-spec method, contorted field values — see `ahp-host-transport.ts`.
+ * - `dispose`        → AHP `disposeSession`
+ * - `listSessions`   → AHP `listSessions`
+ *
+ * Drain semantics: PowerLine replays parked events as `action` notifications
+ * immediately after `subscribe`, so they arrive on the same stream — no
+ * separate `drainBuffered` method on the interface (removed in HR8d).
  *
  * @module host-transport
  */
@@ -151,22 +154,6 @@ export interface IHostTransport {
    * call `reanimate` to start the live stream.
    */
   reanimate(params: ReanimateParams): AsyncIterable<ServerActionEnvelope>;
-
-  /**
-   * Drain previously-parked buffered events for a session.
-   *
-   * Returns a finite stream of envelopes for events the host has been
-   * holding since the consumer disconnected; the stream terminates once
-   * the parked queue is exhausted. It does NOT continue into the live
-   * event stream — callers compose `drainBuffered` + `reanimate` to do
-   * recovery (see `session-recovery.ts`).
-   *
-   * Note: HR8d's AHP wire will add a true seq-cursor `subscribe` method
-   * for "resume from server seq N" semantics. That's intentionally a
-   * separate method on this interface; this one stays narrowly scoped to
-   * the parked-queue drain that gRPC supports today.
-   */
-  drainBuffered(sessionUri: string): AsyncIterable<ServerActionEnvelope>;
 
   /**
    * Send input text to a session.

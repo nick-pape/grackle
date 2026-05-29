@@ -13,6 +13,15 @@ const ORIGINAL_NETWORK = vi.hoisted(() => {
 });
 
 // ── Mock adapter-sdk ────────────────────────────────────────
+const createAhpMockNet = vi.hoisted(() =>
+  vi.fn().mockImplementation(async () => ({
+    transport: { handleNotification: () => {} } as never,
+    socket: {
+      request: vi.fn().mockResolvedValue(null),
+      close: () => Promise.resolve(),
+    } as never,
+  })),
+);
 vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@grackle-ai/adapter-sdk")>()),
   isDevMode: vi.fn().mockReturnValue(false),
@@ -23,9 +32,7 @@ vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
   ),
   startRemotePowerLine: vi.fn().mockResolvedValue({ alreadyRunning: false }),
   buildRemoteKillCommand: vi.fn().mockReturnValue("true"),
-  createPowerLineClient: vi.fn().mockReturnValue({
-    ping: vi.fn().mockResolvedValue({}),
-  }),
+  createAhpHostTransport: createAhpMockNet,
 }));
 
 import { DockerAdapter, type DockerEnvironmentConfig } from "./docker.js";
@@ -102,7 +109,7 @@ describe("DockerAdapter attach mode with GRACKLE_DOCKER_NETWORK set", () => {
   });
 
   it("connects to the attached container by name on the shared network (no sidecar)", async () => {
-    const { createPowerLineClient } = await import("@grackle-ai/adapter-sdk");
+    const { createAhpHostTransport } = await import("@grackle-ai/adapter-sdk");
     for await (const _ of adapter.provision(
       "env-dood",
       { attach: "ext-box" } as unknown as Record<string, unknown>,
@@ -115,6 +122,6 @@ describe("DockerAdapter attach mode with GRACKLE_DOCKER_NETWORK set", () => {
       { attach: "ext-box" } as unknown as Record<string, unknown>,
       "tok",
     );
-    expect(createPowerLineClient).toHaveBeenCalledWith("http://ext-box:7433", "tok");
+    expect(createAhpHostTransport).toHaveBeenCalledWith("http://ext-box:7433", "tok", "env-dood");
   });
 });

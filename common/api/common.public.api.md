@@ -4,6 +4,7 @@
 
 ```ts
 
+import { ActionEnvelope } from '@grackle-ai/ahp';
 import type { GenEnum } from '@bufbuild/protobuf/codegenv2';
 import type { GenFile } from '@bufbuild/protobuf/codegenv2';
 import type { GenMessage } from '@bufbuild/protobuf/codegenv2';
@@ -2066,6 +2067,9 @@ type ModelSelection = Message<"grackle.ModelSelection"> & {
 const ModelSelectionSchema: GenMessage<ModelSelection>;
 
 // @public
+export function newReverseMapperContext(): ReverseMapperContext;
+
+// @public
 export const ORCHESTRATOR_MCP_TOOLS: readonly string[];
 
 // @public
@@ -2076,6 +2080,16 @@ type PairingCodeResponse = Message<"grackle.PairingCodeResponse"> & {
 
 // @public
 const PairingCodeResponseSchema: GenMessage<PairingCodeResponse>;
+
+// @public
+export interface PendingToolCall {
+    // (undocumented)
+    readonly displayName: string;
+    // (undocumented)
+    readonly toolName: string;
+    // (undocumented)
+    readonly turnId: string;
+}
 
 // @public
 type Persona = Message<"grackle.Persona"> & {
@@ -2312,6 +2326,26 @@ const ResumeRequestSchema: GenMessage<ResumeRequest>;
 
 // @public
 const ResumeRequestSchema_2: GenMessage<ResumeRequest_2>;
+
+// @public
+export function reverseMapAction(envelope: ActionEnvelope, context: ReverseMapperContext): ReverseMapResult;
+
+// @public
+export interface ReverseMapperContext {
+    readonly metaAccumulator: {
+        costMillicents?: number;
+        runtimeSessionId?: string;
+    };
+    readonly pendingToolCalls: Map<string, PendingToolCall>;
+    turnId?: string;
+}
+
+// @public
+export interface ReverseMapResult {
+    readonly detail: string;
+    readonly disposition: "mapped" | "carried" | "dropped" | "buffered";
+    readonly events: AgentEventFields[];
+}
 
 // @public
 type RevokeChannelGrantRequest = Message<"grackle.RevokeChannelGrantRequest"> & {
@@ -2615,6 +2649,7 @@ type SessionEvent = Message<"grackle.SessionEvent"> & {
     toolCallId: string;
     diagnostic: boolean;
     turnId: string;
+    serverSeq: string;
 };
 
 // @public

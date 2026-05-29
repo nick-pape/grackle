@@ -25,9 +25,7 @@ function createMockConnection(pingFn?: () => Promise<unknown>): PowerLineConnect
   return {
     environmentId: "env-1",
     port: 12345,
-    client: {
-      ping: pingFn ? vi.fn().mockImplementation(pingFn) : vi.fn().mockResolvedValue({}),
-    } as unknown as PowerLineConnection["client"],
+    ping: pingFn ? vi.fn().mockImplementation(pingFn) : vi.fn().mockResolvedValue(undefined),
     transport: {} as PowerLineConnection["transport"],
   };
 }
@@ -43,7 +41,7 @@ describe("remoteHealthCheck", () => {
     vi.mocked(getTunnel).mockReturnValue(undefined);
     const conn = createMockConnection();
     await expect(remoteHealthCheck(conn)).resolves.toBe(false);
-    expect(conn.client.ping).not.toHaveBeenCalled();
+    expect(conn.ping).not.toHaveBeenCalled();
   });
 
   it("returns false when the forward tunnel is dead", async () => {
@@ -52,7 +50,7 @@ describe("remoteHealthCheck", () => {
     });
     const conn = createMockConnection();
     await expect(remoteHealthCheck(conn)).resolves.toBe(false);
-    expect(conn.client.ping).not.toHaveBeenCalled();
+    expect(conn.ping).not.toHaveBeenCalled();
   });
 
   it("returns false when the reverse tunnel is dead but the forward tunnel is alive", async () => {
@@ -62,7 +60,7 @@ describe("remoteHealthCheck", () => {
     });
     const conn = createMockConnection();
     await expect(remoteHealthCheck(conn)).resolves.toBe(false);
-    expect(conn.client.ping).not.toHaveBeenCalled();
+    expect(conn.ping).not.toHaveBeenCalled();
   });
 
   it("returns true when both tunnels are alive and ping succeeds", async () => {
@@ -72,7 +70,7 @@ describe("remoteHealthCheck", () => {
     });
     const conn = createMockConnection();
     await expect(remoteHealthCheck(conn)).resolves.toBe(true);
-    expect(conn.client.ping).toHaveBeenCalledOnce();
+    expect(conn.ping).toHaveBeenCalledOnce();
   });
 
   it("returns true when no reverse tunnel is registered (local/docker adapters)", async () => {
@@ -82,7 +80,7 @@ describe("remoteHealthCheck", () => {
     });
     const conn = createMockConnection();
     await expect(remoteHealthCheck(conn)).resolves.toBe(true);
-    expect(conn.client.ping).toHaveBeenCalledOnce();
+    expect(conn.ping).toHaveBeenCalledOnce();
   });
 
   it("returns false when both tunnels are alive but ping throws", async () => {
