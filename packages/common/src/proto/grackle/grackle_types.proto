@@ -174,6 +174,7 @@ message Session {
   int32 cost_millicents = 18; // int32 sufficient: max ~$21,474 (2^31-1 millicents); avoids BigInt in TS clients
   int32 pipe_fd = 19; // fd assigned to parent for pipe IPC (0 = no pipe)
   string end_reason = 20; // Why the session stopped: "completed", "killed", "interrupted"
+  string parent_session_id = 21; // Delegating/spawning session ("" if none); enables parent/child navigation (#1075)
 }
 
 message SessionList {

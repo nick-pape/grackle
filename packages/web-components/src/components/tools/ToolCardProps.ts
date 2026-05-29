@@ -17,4 +17,11 @@ export interface ToolCardProps {
   isError?: boolean;
   /** Extended result content (e.g. Copilot's detailedContent with diffs). */
   detailedResult?: string;
+  /**
+   * For delegation tool calls (Agent/task/read_agent), the id of the
+   * materialized child session this call spawned (#1075). When present, the
+   * agent card links to the subagent's activity view. Undefined for
+   * non-delegation tools.
+   */
+  childSessionId?: string;
 }

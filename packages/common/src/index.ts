@@ -16,6 +16,15 @@ export type {
 } from "./runtime-catalog.js";
 export { SequencedLog } from "./sequenced-log.js";
 export type { Sequenced, LogSink, SequencedLogOptions } from "./sequenced-log.js";
+export {
+  parseDelegationArgs,
+  detectDelegation,
+  delegationIdentityKey,
+  deriveChildSessionId,
+  readAgentResultStatus,
+  SUBAGENT_SESSION_PREFIX,
+} from "./subagent.js";
+export type { DelegationInfo, ReadAgentStatus } from "./subagent.js";
 export { mapAgentEvent } from "./ahp-mapper.js";
 export type {
   AgentEventFields,

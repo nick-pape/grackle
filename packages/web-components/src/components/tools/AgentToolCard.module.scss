@@ -64,6 +64,28 @@
   }
 }
 
+// --- View activity link (navigates to the materialized child session, #1075) ---
+
+.viewActivity {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: var(--font-weight-medium);
+  color: var(--accent-teal, #2dd4bf);
+  background: rgba(45, 212, 191, 0.12);
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: background var(--transition-fast);
+
+  &:hover {
+    background: rgba(45, 212, 191, 0.22);
+  }
+}
+
 // --- Description line ---
 
 .description {

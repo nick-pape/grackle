@@ -5,6 +5,10 @@ import {
   SESSION_STATUS,
   TERMINAL_SESSION_STATUSES,
   END_REASON,
+  detectDelegation,
+  delegationIdentityKey,
+  deriveChildSessionId,
+  readAgentResultStatus,
 } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 import type { ServerActionEnvelope } from "@grackle-ai/adapter-sdk";
@@ -19,6 +23,7 @@ import { logger } from "./logger.js";
 import { runWithTrace } from "./trace-context.js";
 import { emitDiagnostic } from "./telemetry.js";
 import { publishChildCompletion } from "./pipe-delivery.js";
+import { ensureChildSession, closeChildSession, appendChildActivity } from "./subagent-session.js";
 import { cleanupLifecycleStream } from "./lifecycle-streams.js";
 import { sendInputToSession } from "./signals/signal-delivery.js";
 import { checkBudget } from "./budget-checker.js";
@@ -167,6 +172,14 @@ export function processEventStream(
         streamHub.publish(promptEvent);
       }
 
+      // #1075: maps a delegation tool_use call id → the child session it
+      // materialized, so the paired tool_result can append/close that child.
+      // Scoped to this stream (per parent session), so no cross-session leakage.
+      const delegationByToolCall = new Map<
+        string,
+        { childId: string; isPoll: boolean; isBackground: boolean }
+      >();
+
       for await (const envelope of envelopes) {
         const event = envelope.event;
         // Normalize optional AgentEventFields to proto-default semantics so
@@ -221,6 +234,57 @@ export function processEventStream(
         // unchanged — diagnostics still flow to JSONL/streamHub/session_actions.
         if (sessionEvent.diagnostic) {
           emitDiagnostic(sessionEvent);
+        }
+
+        // #1075: materialize/link subagent child sessions from delegation tool
+        // calls (Claude Code `Agent`, Copilot `task`/`read_agent`). The child is
+        // a first-class session so the existing activity view can render it.
+        if (event.type === "tool_use" && eventToolCallId) {
+          try {
+            const parsed = JSON.parse(eventContent || "{}") as Record<string, unknown>;
+            const toolName = String(parsed.tool ?? parsed.tool_name ?? parsed.name ?? "");
+            const toolArgs = parsed.args ?? parsed.input ?? parsed.arguments;
+            const info = toolName ? detectDelegation(toolName, toolArgs) : undefined;
+            if (info) {
+              const identityKey = delegationIdentityKey(info, eventToolCallId);
+              const childId = deriveChildSessionId(sessionId, identityKey);
+              ensureChildSession({
+                childSessionId: childId,
+                parentSessionId: sessionId,
+                taskId: ctx.taskId,
+                info,
+              });
+              delegationByToolCall.set(eventToolCallId, {
+                childId,
+                isPoll: info.isPoll === true,
+                isBackground: info.isBackground === true,
+              });
+            }
+          } catch (err) {
+            logger.warn({ err, sessionId }, "Failed to process delegation tool_use");
+          }
+        } else if (event.type === "tool_result" && eventToolCallId) {
+          const link = delegationByToolCall.get(eventToolCallId);
+          if (link) {
+            if (link.isPoll) {
+              // A read_agent poll surfaces partial output; append it, and close
+              // the child only when the poll reports a terminal status.
+              appendChildActivity(link.childId, eventContent);
+              const status = readAgentResultStatus(eventContent);
+              if (status === "completed" || status === "failed" || status === "error") {
+                closeChildSession(link.childId, eventContent, status !== "completed");
+                delegationByToolCall.delete(eventToolCallId);
+              }
+            } else if (link.isBackground) {
+              // A background spawn's result is just a handle, not completion —
+              // keep the child running; its output arrives via read_agent polls.
+              appendChildActivity(link.childId, eventContent);
+            } else {
+              // Synchronous spawn (e.g. Claude `Agent`): the result IS the summary.
+              closeChildSession(link.childId, eventContent, eventToolError);
+              delegationByToolCall.delete(eventToolCallId);
+            }
+          }
         }
 
         // Intercept usage events and accumulate token counts on the session record

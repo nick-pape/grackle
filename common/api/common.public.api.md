@@ -562,6 +562,28 @@ export const DEFAULT_WEB_PORT: number;
 export const DEFAULT_WORKSPACE_ID: string;
 
 // @public
+export function delegationIdentityKey(info: DelegationInfo, toolCallId: string): string;
+
+// @public
+export interface DelegationInfo {
+    agentId?: string;
+    agentName?: string;
+    agentType?: string;
+    description?: string;
+    isBackground?: boolean;
+    isPoll?: boolean;
+    isResume?: boolean;
+    model?: string;
+    prompt?: string;
+}
+
+// @public
+export function deriveChildSessionId(parentSessionId: string, identityKey: string): string;
+
+// @public
+export function detectDelegation(tool: string, args: unknown): DelegationInfo | undefined;
+
+// @public
 export type Disposition = "mapped" | "carried" | "dropped";
 
 // @public
@@ -2086,6 +2108,9 @@ type PairingCodeResponse = Message<"grackle.PairingCodeResponse"> & {
 const PairingCodeResponseSchema: GenMessage<PairingCodeResponse>;
 
 // @public
+export function parseDelegationArgs(tool: string, args: unknown): DelegationInfo;
+
+// @public
 export interface PendingToolCall {
     // (undocumented)
     readonly displayName: string;
@@ -2266,6 +2291,12 @@ type QueryDomainEventsRequest = Message<"grackle.QueryDomainEventsRequest"> & {
 
 // @public
 const QueryDomainEventsRequestSchema: GenMessage<QueryDomainEventsRequest>;
+
+// @public
+export function readAgentResultStatus(result: string): ReadAgentStatus | undefined;
+
+// @public
+export type ReadAgentStatus = "completed" | "running" | "failed" | "error";
 
 // @public
 type RegisterComponentRequest = Message<"grackle.RegisterComponentRequest"> & {
@@ -2596,6 +2627,7 @@ type Session = Message<"grackle.Session"> & {
     costMillicents: number;
     pipeFd: number;
     endReason: string;
+    parentSessionId: string;
 };
 
 // @public
@@ -2985,6 +3017,9 @@ type StreamTranscript = Message<"grackle.StreamTranscript"> & {
 
 // @public
 const StreamTranscriptSchema: GenMessage<StreamTranscript>;
+
+// @public
+export const SUBAGENT_SESSION_PREFIX: string;
 
 // @public
 export const SYSTEM_PERSONA_ID: string;

@@ -144,6 +144,18 @@ function applySchema(): void {
       tags          TEXT NOT NULL DEFAULT '[]',
       created_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS session_actions (
+      seq           TEXT PRIMARY KEY,
+      session_id    TEXT NOT NULL,
+      type          TEXT NOT NULL,
+      content       TEXT NOT NULL,
+      raw           TEXT NOT NULL DEFAULT '',
+      timestamp     TEXT NOT NULL,
+      tool_call_id  TEXT NOT NULL DEFAULT '',
+      turn_id       TEXT NOT NULL DEFAULT '',
+      diagnostic    INTEGER NOT NULL DEFAULT 0
+    );
   `);
 }
 
@@ -1366,5 +1378,162 @@ describe("sticky terminal session status (#1356)", () => {
     const session = sessionStore.getSession("sess-sticky");
     expect(session?.status).toBe("stopped");
     expect(session?.endReason).toBe("killed");
+  });
+});
+
+describe("subagent child sessions (#1075)", () => {
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS findings");
+    sqlite.exec("DROP TABLE IF EXISTS tasks");
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    sqlite.exec("DROP TABLE IF EXISTS workspaces");
+    applySchema();
+    vi.clearAllMocks();
+    workspaceStore.createWorkspace("proj1", "Test Project", "desc", "", "env1");
+  });
+
+  /** Build a tool_use AgentEvent carrying `{tool, args}` JSON content. */
+  function toolUse(
+    sessionId: string,
+    tool: string,
+    args: unknown,
+    toolCallId: string,
+  ): powerline.AgentEvent {
+    return create(powerline.AgentEventSchema, {
+      sessionId,
+      type: "tool_use",
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify({ tool, args }),
+      toolCallId,
+    });
+  }
+
+  /** Build a tool_result AgentEvent. */
+  function toolResult(
+    sessionId: string,
+    content: string,
+    toolCallId: string,
+    toolError = false,
+  ): powerline.AgentEvent {
+    return create(powerline.AgentEventSchema, {
+      sessionId,
+      type: "tool_result",
+      timestamp: new Date().toISOString(),
+      content,
+      toolCallId,
+      toolError,
+    });
+  }
+
+  /** Build a terminal status event so waitForProcessing resolves. */
+  function statusCompleted(sessionId: string): powerline.AgentEvent {
+    return create(powerline.AgentEventSchema, {
+      sessionId,
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    });
+  }
+
+  it("materializes a linked child session for a Claude Agent delegation", async () => {
+    sessionStore.createSession("p1", "env1", "claude-code", "test", "sonnet", "/tmp/p1", "task1");
+    const childId = "sub_p1_tc1";
+
+    await waitForProcessing(
+      [
+        toolUse("p1", "Agent", { subagent_type: "Explore", prompt: "find the bug" }, "tc1"),
+        toolResult("p1", "I found it in foo.ts", "tc1"),
+        statusCompleted("p1"),
+      ],
+      { sessionId: "p1", logPath: "/tmp/p1", taskId: "task1" },
+    );
+
+    const child = sessionStore.getSession(childId);
+    expect(child).toBeDefined();
+    expect(child?.parentSessionId).toBe("p1");
+    expect(child?.taskId).toBe("task1");
+    expect(child?.status).toBe("stopped");
+    expect(child?.endReason).toBe("completed");
+
+    const actions = querySessionActions({ sessionId: childId });
+    const contents = actions.map((a) => a.content);
+    expect(contents).toContain("find the bug");
+    expect(contents).toContain("I found it in foo.ts");
+  });
+
+  it("marks the child errored when the delegation result is an error", async () => {
+    sessionStore.createSession("p2", "env1", "claude-code", "test", "sonnet", "/tmp/p2", "task1");
+
+    await waitForProcessing(
+      [
+        toolUse("p2", "Agent", { subagent_type: "Plan", prompt: "plan it" }, "tcE"),
+        toolResult("p2", "subagent crashed", "tcE", true),
+        statusCompleted("p2"),
+      ],
+      { sessionId: "p2", logPath: "/tmp/p2", taskId: "task1" },
+    );
+
+    const child = sessionStore.getSession("sub_p2_tcE");
+    expect(child?.status).toBe("stopped");
+    expect(child?.endReason).toBe("interrupted");
+  });
+
+  it("does not create a child for an ordinary tool with a prompt but no delegation id", async () => {
+    sessionStore.createSession("p3", "env1", "claude-code", "test", "sonnet", "/tmp/p3", "task1");
+
+    await waitForProcessing(
+      [
+        toolUse("p3", "search", { prompt: "a query" }, "tcS"),
+        toolResult("p3", "results", "tcS"),
+        statusCompleted("p3"),
+      ],
+      { sessionId: "p3", logPath: "/tmp/p3", taskId: "task1" },
+    );
+
+    expect(sessionStore.getSession("sub_p3_tcS")).toBeUndefined();
+  });
+
+  it("dedupes a re-emitted delegation tool_use onto one child (idempotent floor)", async () => {
+    sessionStore.createSession("p4", "env1", "claude-code", "test", "sonnet", "/tmp/p4", "task1");
+
+    await waitForProcessing(
+      [
+        toolUse("p4", "Agent", { subagent_type: "Explore", prompt: "look" }, "tcD"),
+        toolUse("p4", "Agent", { subagent_type: "Explore", prompt: "look" }, "tcD"),
+        statusCompleted("p4"),
+      ],
+      { sessionId: "p4", logPath: "/tmp/p4", taskId: "task1" },
+    );
+
+    const childId = "sub_p4_tcD";
+    expect(sessionStore.getSession(childId)).toBeDefined();
+    const prompts = querySessionActions({ sessionId: childId }).filter((a) => a.content === "look");
+    expect(prompts).toHaveLength(1);
+  });
+
+  it("dedupes Copilot read_agent polls onto one child by agent_id and appends activity", async () => {
+    sessionStore.createSession("p5", "env1", "copilot", "test", "sonnet", "/tmp/p5", "task1");
+
+    await waitForProcessing(
+      [
+        toolUse("p5", "read_agent", { agent_id: "ag-7" }, "poll1"),
+        toolResult("p5", "Agent running. agent_id: ag-7\n\nworking...", "poll1"),
+        toolUse("p5", "read_agent", { agent_id: "ag-7" }, "poll2"),
+        toolResult("p5", "Agent completed. agent_id: ag-7\n\nall done", "poll2"),
+        statusCompleted("p5"),
+      ],
+      { sessionId: "p5", logPath: "/tmp/p5", taskId: "task1" },
+    );
+
+    const childId = "sub_p5_ag-7";
+    const child = sessionStore.getSession(childId);
+    expect(child).toBeDefined();
+    expect(child?.status).toBe("stopped");
+    expect(child?.endReason).toBe("completed");
+    // Two distinct child records must NOT exist — both polls share agent_id ag-7.
+    const allSubs = sessionStore
+      .listSessionsForTask("task1")
+      .filter((s) => s.id.startsWith("sub_"));
+    expect(allSubs).toHaveLength(1);
   });
 });

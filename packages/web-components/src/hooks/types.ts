@@ -50,6 +50,8 @@ export interface Session {
   personaId?: string;
   /** ID of the task this session belongs to, if any (root/orchestrated work). */
   taskId?: string;
+  /** ID of the delegating/spawning parent session, if this is a subagent child (#1075). */
+  parentSessionId?: string;
   inputTokens?: number;
   outputTokens?: number;
   costMillicents?: number;
