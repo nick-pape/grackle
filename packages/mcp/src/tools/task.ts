@@ -9,7 +9,6 @@ import type { GrackleClients, ToolDefinition } from "../tool-registry.js";
 import type { AuthContext } from "@grackle-ai/auth";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
-import { assertCallerIsAncestor } from "../scope-enforcement.js";
 
 /** Convert a proto Task message to a plain object with human-readable status. */
 function taskToJson(task: grackle.Task): Record<string, unknown> {
@@ -258,6 +257,7 @@ export const taskTools: ToolDefinition[] = [
     }),
     rpcMethod: "updateTask",
     mutating: true,
+    scope: { taskIdArg: "taskId" },
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
@@ -321,6 +321,8 @@ export const taskTools: ToolDefinition[] = [
     }),
     rpcMethod: "startTask",
     mutating: true,
+    // Ancestry is enforced centrally by enforceToolScope (GHSA-f9ff-5x35-7gfw).
+    scope: { taskIdArg: "taskId" },
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
@@ -333,7 +335,6 @@ export const taskTools: ToolDefinition[] = [
       authContext?: AuthContext,
     ) {
       try {
-        await assertCallerIsAncestor(client, authContext, args.taskId as string);
         const pipe = (args.pipe as string) || "";
         const parentSessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
 
@@ -398,6 +399,7 @@ export const taskTools: ToolDefinition[] = [
     }),
     rpcMethod: "deleteTask",
     mutating: true,
+    scope: { taskIdArg: "taskId" },
     annotations: {
       readOnlyHint: false,
       destructiveHint: true,
@@ -432,17 +434,15 @@ export const taskTools: ToolDefinition[] = [
     }),
     rpcMethod: "completeTask",
     mutating: true,
+    // Ancestry is enforced centrally by enforceToolScope (GHSA-f9ff-5x35-7gfw).
+    scope: { taskIdArg: "taskId" },
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(
-      args: Record<string, unknown>,
-      { orchestration: client }: GrackleClients,
-      authContext?: AuthContext,
-    ) {
+    async handler(args: Record<string, unknown>, { orchestration: client }: GrackleClients) {
       try {
         const taskId = args.taskId as string;
         if (taskId === ROOT_TASK_ID) {
@@ -451,7 +451,6 @@ export const taskTools: ToolDefinition[] = [
             isError: true,
           };
         }
-        await assertCallerIsAncestor(client, authContext, taskId);
         const task = await client.completeTask({ id: taskId });
         return jsonResult(taskToJson(task));
       } catch (error) {
@@ -470,6 +469,7 @@ export const taskTools: ToolDefinition[] = [
     }),
     rpcMethod: "resumeTask",
     mutating: true,
+    scope: { taskIdArg: "taskId" },
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,

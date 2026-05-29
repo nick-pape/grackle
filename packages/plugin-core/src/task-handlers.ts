@@ -48,7 +48,7 @@ import {
   buildTaskPrompt,
 } from "@grackle-ai/prompt";
 import { toPersonaResolveInput, buildOrchestratorContextInput } from "@grackle-ai/core";
-import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
+import { createScopedToken, loadOrCreateApiKey, revokeTask } from "@grackle-ai/auth";
 import { cleanupLifecycleStream, ensureLifecycleStream } from "./lifecycle.js";
 import { ensureAsyncDeliveryListener } from "@grackle-ai/core";
 import { ensureStdinStream } from "@grackle-ai/core";
@@ -629,6 +629,11 @@ export async function completeTask(req: grackle.TaskId): Promise<grackle.Task> {
     }
   }
 
+  // Revoke the task's scoped MCP tokens (GHSA-f9ff-5x35-7gfw F12): a completed
+  // task's agent should not keep authenticating. A later task_resume mints a
+  // fresh token, which supersedes this revocation (see createScopedToken).
+  revokeTask(task.id);
+
   emit("task.completed", { taskId: task.id, workspaceId: task.workspaceId || "" });
   logger.info({ taskId: task.id }, "Task completed");
   const row = taskStore.getTask(task.id);
@@ -781,6 +786,12 @@ export async function stopTask(req: grackle.TaskId): Promise<grackle.Task> {
   // the task resumable. `complete` is reserved for explicit "Mark Complete" or
   // the agent's `task_complete` MCP call. We deliberately do NOT mark the task
   // complete or unblock dependents here — stopping a task does not finish it.
+
+  // Revoke the task's scoped MCP tokens (GHSA-f9ff-5x35-7gfw F12). The active
+  // sessions were just terminated; a later task_resume mints a fresh token that
+  // supersedes this (see createScopedToken).
+  revokeTask(req.id);
+
   emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
   logger.info({ taskId: req.id }, "Task stopped");
   const updated = taskStore.getTask(req.id);
@@ -821,6 +832,10 @@ export async function deleteTask(req: grackle.TaskId): Promise<grackle.Empty> {
     logger.error({ taskId: req.id }, "deleteTask returned 0 changes despite task existing");
     throw new ConnectError(`Failed to delete task ${req.id}: no rows affected`, Code.Internal);
   }
+  // Revoke the deleted task's scoped MCP tokens (GHSA-f9ff-5x35-7gfw F12). A
+  // deleted task is never resumed, so this is permanent (until the 24h TTL prune).
+  revokeTask(req.id);
+
   emit("task.deleted", { taskId: req.id, workspaceId: task.workspaceId || "" });
   logger.info({ taskId: req.id }, "Task deleted");
   return create(grackle.EmptySchema, {});

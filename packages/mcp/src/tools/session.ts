@@ -1,11 +1,9 @@
-import { ConnectError, Code } from "@connectrpc/connect";
 import { z } from "zod";
 import { grackle, eventTypeToString, SESSION_STATUS } from "@grackle-ai/common";
 import type { GrackleClients, ToolDefinition } from "../tool-registry.js";
 import type { AuthContext } from "@grackle-ai/auth";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
-import { assertCallerIsAncestor } from "../scope-enforcement.js";
 
 /** Default timeout in seconds for session_attach streaming. */
 const DEFAULT_TIMEOUT_SECONDS: number = 30;
@@ -86,6 +84,8 @@ export const sessionTools: ToolDefinition[] = [
     }),
     rpcMethod: "resumeAgent",
     mutating: true,
+    // Ancestry is enforced centrally by enforceToolScope (GHSA-f9ff-5x35-7gfw).
+    scope: { sessionIdArg: "sessionId" },
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
@@ -169,6 +169,8 @@ export const sessionTools: ToolDefinition[] = [
     }),
     rpcMethod: "killAgent",
     mutating: true,
+    // Ancestry is enforced centrally by enforceToolScope (GHSA-f9ff-5x35-7gfw).
+    scope: { sessionIdArg: "sessionId" },
     annotations: {
       readOnlyHint: false,
       destructiveHint: true,
@@ -211,29 +213,16 @@ export const sessionTools: ToolDefinition[] = [
     }),
     rpcMethod: "streamSession",
     mutating: false,
+    // Ancestry is enforced centrally by enforceToolScope (GHSA-f9ff-5x35-7gfw).
+    scope: { sessionIdArg: "sessionId" },
     annotations: {
       readOnlyHint: true,
       destructiveHint: false,
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(
-      args: Record<string, unknown>,
-      { core: client, orchestration }: GrackleClients,
-      authContext?: AuthContext,
-    ) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients) {
       try {
-        if (authContext?.type === "scoped") {
-          const session = await client.getSession({ id: args.sessionId as string });
-          if (!session.taskId) {
-            throw new ConnectError(
-              "Cannot attach to a taskless session via scoped auth",
-              Code.PermissionDenied,
-            );
-          }
-          await assertCallerIsAncestor(orchestration, authContext, session.taskId);
-        }
-
         const timeout = Math.min(
           (args.timeoutSeconds as number | undefined) ?? DEFAULT_TIMEOUT_SECONDS,
           MAX_TIMEOUT_SECONDS,
@@ -291,28 +280,16 @@ export const sessionTools: ToolDefinition[] = [
     }),
     rpcMethod: "sendInput",
     mutating: true,
+    // Ancestry is enforced centrally by enforceToolScope (GHSA-f9ff-5x35-7gfw).
+    scope: { sessionIdArg: "sessionId" },
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
       idempotentHint: false,
       openWorldHint: false,
     },
-    async handler(
-      args: Record<string, unknown>,
-      { core: client, orchestration }: GrackleClients,
-      authContext?: AuthContext,
-    ) {
+    async handler(args: Record<string, unknown>, { core: client }: GrackleClients) {
       try {
-        if (authContext?.type === "scoped") {
-          const session = await client.getSession({ id: args.sessionId as string });
-          if (!session.taskId) {
-            throw new ConnectError(
-              "Cannot send input to a taskless session via scoped auth",
-              Code.PermissionDenied,
-            );
-          }
-          await assertCallerIsAncestor(orchestration, authContext, session.taskId);
-        }
         await client.sendInput({
           sessionId: args.sessionId as string,
           text: args.text as string,

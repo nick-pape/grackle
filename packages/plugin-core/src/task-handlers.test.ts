@@ -96,6 +96,9 @@ import {
   workspaceStore,
   workspaceEnvironmentLinkStore,
 } from "@grackle-ai/database";
+// @grackle-ai/auth is intentionally NOT mocked here: revokeTask/isRevokedTask use
+// the real in-memory revocation set so we can assert lifecycle wiring (F12).
+import { isRevokedTask, clearRevocations } from "@grackle-ai/auth";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getHandlers(): Record<string, (...args: any[]) => any> {
@@ -254,5 +257,40 @@ describe("stopTask leaves the task paused (not complete)", () => {
     // taskRowToProto(row, childIds, status, latestSessionId) — 3rd arg is the computed status.
     const lastCall = vi.mocked(taskRowToProto).mock.calls.at(-1);
     expect(lastCall?.[2]).toBe("paused");
+  });
+});
+
+describe("terminal lifecycle revokes scoped tokens (GHSA-f9ff-5x35-7gfw F12)", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let handlers: Record<string, (...args: any[]) => any>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    clearRevocations();
+    handlers = getHandlers();
+    vi.mocked(taskStore.getTask).mockReturnValue(makeTaskRow() as never);
+    vi.mocked(sessionStore.getActiveSessionsForTask).mockReturnValue([]);
+    vi.mocked(sessionStore.listSessionsForTask).mockReturnValue([]);
+    vi.mocked(taskStore.checkAndUnblock).mockReturnValue([]);
+  });
+
+  it("completeTask revokes the task's tokens", async () => {
+    expect(isRevokedTask("task-1")).toBe(false);
+    await handlers.completeTask({ id: "task-1" });
+    expect(isRevokedTask("task-1")).toBe(true);
+  });
+
+  it("stopTask revokes the task's tokens", async () => {
+    expect(isRevokedTask("task-1")).toBe(false);
+    await handlers.stopTask({ id: "task-1" });
+    expect(isRevokedTask("task-1")).toBe(true);
+  });
+
+  it("deleteTask revokes the task's tokens", async () => {
+    vi.mocked(taskStore.getChildren).mockReturnValue([]);
+    vi.mocked(taskStore.deleteTask).mockReturnValue(1 as never);
+    expect(isRevokedTask("task-1")).toBe(false);
+    await handlers.deleteTask({ id: "task-1" });
+    expect(isRevokedTask("task-1")).toBe(true);
   });
 });
