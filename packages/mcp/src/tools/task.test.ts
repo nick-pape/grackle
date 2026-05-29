@@ -2,7 +2,6 @@ import { describe, test, expect, vi } from "vitest";
 import { ConnectError, Code } from "@connectrpc/connect";
 import type { Client } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
-import type { AuthContext } from "@grackle-ai/auth";
 import { taskTools } from "./task.js";
 
 type GrackleClient = Client<typeof grackle.GrackleOrchestration>;
@@ -400,61 +399,8 @@ describe("task_start", () => {
     expect(result.isError).toBe(true);
   });
 
-  /** Should reject when scoped auth and target is not a descendant. */
-  test("rejects when scoped auth and target is not a descendant", async () => {
-    const scopedAuth: AuthContext = {
-      type: "scoped",
-      taskId: "parent-task",
-      workspaceId: "proj-1",
-      personaId: "p-1",
-      taskSessionId: "sess-1",
-    };
-    const mockClient = createMockClient();
-    (mockClient.getTask as ReturnType<typeof vi.fn>).mockResolvedValue({
-      id: "unrelated-task",
-      parentTaskId: "",
-    });
-
-    const result = await getTool("task_start").handler(
-      { taskId: "unrelated-task" },
-      { orchestration: mockClient },
-      scopedAuth,
-    );
-
-    expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.code).toBe("PERMISSION_DENIED");
-  });
-
-  /** Should pass when scoped auth and target is a descendant. */
-  test("passes when scoped auth and target is a descendant", async () => {
-    const scopedAuth: AuthContext = {
-      type: "scoped",
-      taskId: "parent-task",
-      workspaceId: "proj-1",
-      personaId: "p-1",
-      taskSessionId: "sess-1",
-    };
-    const mockClient = createMockClient();
-    (mockClient.getTask as ReturnType<typeof vi.fn>).mockResolvedValue({
-      id: "child-task",
-      parentTaskId: "parent-task",
-    });
-    (mockClient.startTask as ReturnType<typeof vi.fn>).mockResolvedValue({
-      id: "s1",
-      pipeFd: 0,
-    });
-
-    const result = await getTool("task_start").handler(
-      { taskId: "child-task" },
-      { orchestration: mockClient },
-      scopedAuth,
-    );
-
-    expect(result.isError).toBeUndefined();
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.sessionId).toBe("s1");
-  });
+  // Ancestry enforcement for task_start moved to the central dispatcher
+  // (enforceToolScope); see scope-enforcement.test.ts and mcp-server.test.ts.
 });
 
 describe("task_delete", () => {
@@ -525,62 +471,8 @@ describe("task_complete", () => {
     expect(result.isError).toBe(true);
   });
 
-  /** Should reject when scoped auth and target is not a descendant. */
-  test("rejects when scoped auth and target is not a descendant", async () => {
-    const scopedAuth: AuthContext = {
-      type: "scoped",
-      taskId: "parent-task",
-      workspaceId: "proj-1",
-      personaId: "p-1",
-      taskSessionId: "sess-1",
-    };
-    const mockClient = createMockClient();
-    (mockClient.getTask as ReturnType<typeof vi.fn>).mockResolvedValue({
-      id: "unrelated-task",
-      parentTaskId: "",
-    });
-
-    const result = await getTool("task_complete").handler(
-      { taskId: "unrelated-task" },
-      { orchestration: mockClient },
-      scopedAuth,
-    );
-
-    expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.code).toBe("PERMISSION_DENIED");
-  });
-
-  /** Should pass when scoped auth and target is a descendant. */
-  test("passes when scoped auth and target is a descendant", async () => {
-    const scopedAuth: AuthContext = {
-      type: "scoped",
-      taskId: "parent-task",
-      workspaceId: "proj-1",
-      personaId: "p-1",
-      taskSessionId: "sess-1",
-    };
-    const mockClient = createMockClient();
-    (mockClient.getTask as ReturnType<typeof vi.fn>).mockResolvedValue({
-      id: "child-task",
-      parentTaskId: "parent-task",
-    });
-    (mockClient.completeTask as ReturnType<typeof vi.fn>).mockResolvedValue({
-      id: "child-task",
-      title: "Done",
-      status: 3,
-    });
-
-    const result = await getTool("task_complete").handler(
-      { taskId: "child-task" },
-      { orchestration: mockClient },
-      scopedAuth,
-    );
-
-    expect(result.isError).toBeUndefined();
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.id).toBe("child-task");
-  });
+  // Ancestry enforcement for task_complete moved to the central dispatcher
+  // (enforceToolScope); see scope-enforcement.test.ts and mcp-server.test.ts.
 });
 
 describe("task_resume", () => {

@@ -44,12 +44,19 @@ function sign(payload: string, secret: string): Buffer {
  * @param signingSecret - Secret used to HMAC-sign the token (typically the API key).
  * @param ttlMs - Token time-to-live in milliseconds (default: 24 hours).
  * @returns The signed opaque token string.
+ *
+ * @remarks Minting a fresh token for a task clears any prior revocation for that
+ * task (GHSA-f9ff-5x35-7gfw): the new valid token supersedes the revocation, so
+ * starting or resuming a previously completed/stopped task is not locked out by
+ * the revoke-on-terminal-state wiring.
  */
 export function createScopedToken(
   claims: Pick<ScopedTokenClaims, "sub" | "pid" | "per" | "sid">,
   signingSecret: string,
   ttlMs: number = DEFAULT_TTL_MS,
 ): string {
+  // A freshly issued token supersedes any prior revocation for this task.
+  revokedTasks.delete(claims.sub);
   const now = Math.floor(Date.now() / 1000);
   const payload: ScopedTokenClaims = {
     ...claims,

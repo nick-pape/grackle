@@ -33,6 +33,7 @@ import type { ToolDefinition, ToolResult, GrackleClients } from "./tool-registry
 import { createToolRegistry } from "./tools/index.js";
 import { buildComponentRenderResult, propsValidationError } from "./tools/component.js";
 import { resolveToolForAuth, listToolsForAuth } from "./tool-scoping.js";
+import { enforceToolScope, enforceReadMembership } from "./scope-enforcement.js";
 import { createResourceRegistry } from "./resources/index.js";
 import { hostSupportsUiApps, uiToolMeta } from "./ui-app.js";
 import { WIDGET_RENDER_META_KEY, type WidgetRenderDescriptor } from "./widget-render-meta.js";
@@ -184,6 +185,16 @@ export function dynamicRenderInputSchema(
     }
   }
   return z.toJSONSchema(z.looseObject({}));
+}
+
+/** Build an `isError` tool result carrying a `PERMISSION_DENIED` JSON envelope. */
+function permissionDeniedResult(error: string): CallToolResult {
+  return {
+    content: [
+      { type: "text", text: JSON.stringify({ error, code: "PERMISSION_DENIED" }, null, 2) },
+    ],
+    isError: true,
+  };
 }
 
 async function createMcpServerInstance(
@@ -542,22 +553,7 @@ async function createMcpServerInstance(
               ? rawArgs.workspaceId
               : undefined;
           if (requestedWorkspaceId !== undefined && requestedWorkspaceId !== boundWorkspace) {
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: JSON.stringify(
-                    {
-                      error: "workspaceId does not match the authenticated workspace",
-                      code: "PERMISSION_DENIED",
-                    },
-                    null,
-                    2,
-                  ),
-                },
-              ],
-              isError: true,
-            };
+            return permissionDeniedResult("workspaceId does not match the authenticated workspace");
           }
           rawArgs.workspaceId = boundWorkspace;
         }
@@ -569,35 +565,20 @@ async function createMcpServerInstance(
       if (name === "task_create" && authContext.taskId) {
         rawArgs.parentTaskId = authContext.taskId;
       }
-      // Enforce workspace scoping: verify task belongs to the caller's workspace.
-      // Skip check when caller has no workspace (root task agents can see any task).
-      if (
-        name === "task_show" &&
-        authContext.workspaceId &&
-        typeof rawArgs.taskId === "string" &&
-        rawArgs.taskId
-      ) {
-        try {
-          const task = await grpcClients.orchestration.getTask({ id: rawArgs.taskId as string });
-          if ((task.workspaceId || undefined) !== authContext.workspaceId) {
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: JSON.stringify(
-                    { error: "Task belongs to a different workspace", code: "PERMISSION_DENIED" },
-                    null,
-                    2,
-                  ),
-                },
-              ],
-              isError: true,
-            };
-          }
-        } catch (error) {
-          return grpcErrorToToolResult(error) as CallToolResult;
-        }
-      }
+    }
+
+    // Central, fail-closed authorization for scoped (agent) callers
+    // (GHSA-f9ff-5x35-7gfw). enforceReadMembership gates ID-resolving reads
+    // (task_show / schedule_show) by workspace membership — even for workspaceless
+    // callers, which previously failed open (F7). enforceToolScope requires a
+    // scoped, non-root caller to be an ancestor of any targeted task/session,
+    // driven by each tool's declarative `scope` descriptor so new mutating tools
+    // fail closed. Both no-op for non-scoped/root callers.
+    try {
+      await enforceReadMembership(grpcClients, name, authContext, rawArgs);
+      await enforceToolScope(grpcClients, tool, authContext, rawArgs);
+    } catch (error) {
+      return grpcErrorToToolResult(error) as CallToolResult;
     }
 
     // Validate inputs against Zod schema

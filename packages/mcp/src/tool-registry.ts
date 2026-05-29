@@ -42,6 +42,23 @@ export interface ToolAnnotations {
   openWorldHint?: boolean;
 }
 
+/**
+ * Declarative authorization target for central, fail-closed scope enforcement
+ * (GHSA-f9ff-5x35-7gfw). When a tool sets `scope`, the dispatcher verifies — for
+ * every scoped, non-root caller — that the caller is an ancestor of the targeted
+ * task (or of the task owning the targeted session) *before* invoking the
+ * handler. Because the backend gRPC handlers perform no caller-based
+ * authorization, this is the sole authorization boundary for agent callers, so
+ * any task/session-mutating tool that omits a descriptor fails *closed* only if
+ * the omission is deliberate. Exactly one of the arg fields should be set.
+ */
+export interface ToolScope {
+  /** Name of the input arg holding the target task ID; caller must be its ancestor. */
+  taskIdArg?: string;
+  /** Name of the input arg holding a session ID; resolved to its task, then ancestry-checked. */
+  sessionIdArg?: string;
+}
+
 /** Declarative definition of an MCP tool backed by a ConnectRPC call. */
 export interface ToolDefinition {
   /** Unique tool name (snake_case by convention). */
@@ -64,6 +81,11 @@ export interface ToolDefinition {
    * hosts that advertise the `io.modelcontextprotocol/ui` extension.
    */
   uiResourceUri?: string;
+  /**
+   * Optional declarative scope target for central fail-closed authorization of
+   * scoped (agent) callers. See {@link ToolScope}.
+   */
+  scope?: ToolScope;
   /** Execute the tool, forwarding to the ConnectRPC backend. */
   handler: (
     args: Record<string, unknown>,
