@@ -81,8 +81,10 @@ import {
   isParked,
   listAllSessions,
   parkSession,
+  registerPumpForwarder,
   removeSession,
   startSessionPump,
+  unregisterPumpForwarder,
 } from "./session-mgr.js";
 import { writeTokens } from "./token-writer.js";
 
@@ -480,31 +482,38 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     // Late subscribers start at the current pump tail — mid-stream resubscribes
     // see only future events. Missed events from a prior subscriber on this
     // channel arrive via Step 1's parked replay, not by replaying the pump
-    // buffer from the top.
-    forwarder.pos = pump.buffer.length;
+    // buffer from the top. `forwarder.pos` is in the pump's *absolute* event
+    // index space, so trims of pump.buffer don't shift its meaning.
+    forwarder.pos = pump.bufferStartIndex + pump.buffer.length;
+    registerPumpForwarder(pump, forwarder);
     try {
       while (!forwarder.cancelled) {
-        while (forwarder.pos < pump.buffer.length) {
-          emitActionsForEvent(conn, sessionId, pump.buffer[forwarder.pos]!, forwarder);
+        const bufLen = pump.bufferStartIndex + pump.buffer.length;
+        while (forwarder.pos < bufLen) {
+          const localIdx = forwarder.pos - pump.bufferStartIndex;
+          emitActionsForEvent(conn, sessionId, pump.buffer[localIdx]!, forwarder);
           forwarder.pos++;
         }
         if (pump.done) {
           return;
         }
         // Sleep until the pump pushes another event, or until we're cancelled
-        // and woken via `forwarder.wake`. The wake closure clears the field
-        // itself before resolving, so the outer `while (!cancelled)` is the
-        // sole observer of cancellation on the next iteration.
+        // and woken via `forwarder.wake`. The same `settle` closure is used by
+        // both wake paths (pump push via wakePumpWaiters, and external
+        // cancellation via forwarder.wake?.()) — it clears forwarder.wake so
+        // the field never holds a stale reference between iterations.
         await new Promise<void>((resolve) => {
-          forwarder.wake = () => {
+          const settle = (): void => {
             forwarder.wake = undefined;
-            pump.waiters.delete(resolve);
+            pump.waiters.delete(settle);
             resolve();
           };
-          pump.waiters.add(resolve);
+          forwarder.wake = settle;
+          pump.waiters.add(settle);
         });
       }
     } finally {
+      unregisterPumpForwarder(pump, forwarder);
       // Forwarder map cleanup. Session/pump removal is the pump's
       // responsibility (it removes itself when `stream()` returns) or the
       // disconnect path's responsibility (which removes them before parking).
@@ -915,8 +924,12 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
         if (session !== undefined && pump !== undefined) {
           session.kill("disconnected");
           const stillInRuntimeQueue = session.drainBufferedEvents();
-          const fromPos = fwd?.pos ?? 0;
-          const tail = [...pump.buffer.slice(fromPos), ...stillInRuntimeQueue];
+          // Translate the forwarder's absolute pos into the local buffer
+          // slice. If there's no forwarder, start at the buffer's logical
+          // start so we capture every event the pump has read.
+          const fromAbs = fwd?.pos ?? pump.bufferStartIndex;
+          const localStart = Math.max(0, fromAbs - pump.bufferStartIndex);
+          const tail = [...pump.buffer.slice(localStart), ...stillInRuntimeQueue];
           if (tail.length > 0) {
             parkSession(sessionId, tail);
           }

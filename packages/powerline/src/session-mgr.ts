@@ -62,14 +62,39 @@ export function isParked(sessionId: string): boolean {
  * stack listeners (stub runtimes) or re-kick `runSession()` (production
  * runtimes via `BaseAgentSession`).
  */
+/**
+ * Minimal cross-module shape of a forwarder's tracking state. Mirrors the
+ * private interface in `ahp-handlers.ts` to the fields the pump needs without
+ * dragging in the mapper/serverSeq machinery. Keeping the surface small means
+ * adding a new forwarder field doesn't ripple here.
+ */
+export interface PumpForwarder {
+  /** Absolute index into the pump's event stream (in `bufferStartIndex` space). */
+  pos: number;
+  /** True once the forwarder has been cancelled (e.g. resubscribe, disconnect). */
+  cancelled: boolean;
+}
+
 export interface SessionPump {
   /** The session being driven. */
   readonly session: AgentSession;
   /**
-   * Events the pump has pulled from `session.stream()`. Forwarders read this
-   * by index; the buffer is append-only for the life of the session.
+   * Events the pump has pulled from `session.stream()` and not yet trimmed.
+   * Indexed locally — translate to absolute event index by adding
+   * {@link bufferStartIndex}. The pump trims from the front once every
+   * registered forwarder has advanced past an event, so memory is bounded by
+   * the slowest forwarder's lag (typically a handful of events; zero when no
+   * subscribers are attached).
    */
   readonly buffer: AgentEvent[];
+  /**
+   * Total number of events the pump has dropped from the front of
+   * {@link buffer}. The absolute index of the oldest still-buffered event is
+   * `bufferStartIndex`; of the next-to-come is `bufferStartIndex +
+   * buffer.length`. Forwarders track their position in this absolute space so
+   * trims don't shift their cursor.
+   */
+  bufferStartIndex: number;
   /** True once `session.stream()` has returned (kill, natural exit, or error). */
   done: boolean;
   /**
@@ -78,6 +103,12 @@ export interface SessionPump {
    * the set before resolving, so cleanup is local.
    */
   readonly waiters: Set<() => void>;
+  /**
+   * Forwarders currently tailing this pump. Their `pos` is consulted on each
+   * push to compute the trim watermark — once every registered forwarder has
+   * advanced past an event, the pump drops it from {@link buffer}.
+   */
+  readonly forwarders: Set<PumpForwarder>;
   /** Handle to the pump task — used to coordinate teardown on dispose. */
   readonly task: Promise<void>;
 }
@@ -97,13 +128,31 @@ export function startSessionPump(session: AgentSession): SessionPump {
   const pump: SessionPump = {
     session,
     buffer: [],
+    bufferStartIndex: 0,
     done: false,
     waiters: new Set<() => void>(),
+    forwarders: new Set<PumpForwarder>(),
     task: Promise.resolve(),
   };
   (pump as { task: Promise<void> }).task = runPump(pump);
   sessionPumps.set(session.id, pump);
   return pump;
+}
+
+/**
+ * Register a forwarder as an active tail-reader of `pump`. The pump consults
+ * the set on each push to decide what's safe to trim. The caller is
+ * responsible for calling {@link unregisterPumpForwarder} when the forwarder
+ * exits — failure to unregister pins the buffer at the forwarder's last
+ * position and defeats the trim.
+ */
+export function registerPumpForwarder(pump: SessionPump, forwarder: PumpForwarder): void {
+  pump.forwarders.add(forwarder);
+}
+
+/** Unregister a forwarder; safe to call multiple times. */
+export function unregisterPumpForwarder(pump: SessionPump, forwarder: PumpForwarder): void {
+  pump.forwarders.delete(forwarder);
 }
 
 /** Retrieve the pump record for a session, if one is registered. */
@@ -130,6 +179,7 @@ async function runPump(pump: SessionPump): Promise<void> {
     for await (const event of pump.session.stream()) {
       pump.buffer.push(event);
       wakePumpWaiters(pump);
+      trimPumpBuffer(pump);
     }
   } catch {
     // Stream errored — let the session die normally. The pump's natural-exit
@@ -145,4 +195,51 @@ async function runPump(pump: SessionPump): Promise<void> {
       sessionPumps.delete(pump.session.id);
     }
   }
+}
+
+/**
+ * Hard cap on the pump buffer when no active forwarders constrain it. Keeps
+ * memory bounded for the "session is emitting but nobody's subscribed yet"
+ * window (typically short, but could be longer if a client createSession's
+ * and then takes its time before subscribe). The cap discards from the front;
+ * future late subscribers see only the surviving tail, which matches the
+ * "subscribe = future events only" semantics — old events are *not* meant
+ * to be replayed across resubscribes (that's the parked-replay path's job).
+ */
+const PUMP_BUFFER_NO_SUBSCRIBER_CAP: number = 1000;
+
+/**
+ * Drop events from the front of the pump buffer once every registered
+ * forwarder has advanced past them. Called after each push so the buffer is
+ * bounded by the slowest active forwarder's lag. When no forwarders are
+ * attached the buffer is held intact (so events stay parkable on disconnect),
+ * subject to {@link PUMP_BUFFER_NO_SUBSCRIBER_CAP} as a backstop against
+ * unbounded growth in the no-subscriber window.
+ */
+function trimPumpBuffer(pump: SessionPump): void {
+  let safe: number = Number.POSITIVE_INFINITY;
+  for (const f of pump.forwarders) {
+    if (f.cancelled) {
+      continue;
+    }
+    if (f.pos < safe) {
+      safe = f.pos;
+    }
+  }
+  if (!Number.isFinite(safe)) {
+    // No active forwarder — fall back to a buffer-size cap so a session
+    // emitting into the void doesn't grow without bound.
+    const overflow = pump.buffer.length - PUMP_BUFFER_NO_SUBSCRIBER_CAP;
+    if (overflow > 0) {
+      pump.buffer.splice(0, overflow);
+      pump.bufferStartIndex += overflow;
+    }
+    return;
+  }
+  const dropCount = safe - pump.bufferStartIndex;
+  if (dropCount <= 0) {
+    return;
+  }
+  pump.buffer.splice(0, dropCount);
+  pump.bufferStartIndex += dropCount;
 }
