@@ -41,7 +41,10 @@ function textContent(text: string): ToolResultContent {
 
 describe("reverseMapAction", () => {
   describe("turn lifecycle", () => {
-    it("SessionTurnStarted → turn_started with user_message JSON content", () => {
+    it("SessionTurnStarted → turn_started with plain-text user_message content (HR8d follow-up #1355)", () => {
+      // Plain text matches the gRPC-era wire shape that all runtimes emit
+      // via BaseAgentSession.beginTurn() (content: userMessage). Forward
+      // mapper still accepts the legacy JSON-wrapped shape for backward compat.
       const ctx = newReverseMapperContext();
       const res = reverseMapAction(
         envelope({
@@ -54,8 +57,7 @@ describe("reverseMapAction", () => {
       expect(res.events).toHaveLength(1);
       expect(res.events[0]?.type).toBe("turn_started");
       expect(res.events[0]?.turnId).toBe("turn-1");
-      const parsed = JSON.parse(res.events[0]?.content ?? "") as { user_message: string };
-      expect(parsed.user_message).toBe("hello");
+      expect(res.events[0]?.content).toBe("hello");
       expect(ctx.turnId).toBe("turn-1");
     });
 
@@ -448,6 +450,80 @@ describe("reverseMapAction", () => {
       );
       expect(res.events).toEqual([]);
     });
+
+    // HR8d follow-up #1355: input/output token rehydration
+    it("SessionMetaChanged with input_tokens / output_tokens → emits delta-based usage (HR8d follow-up #1355)", () => {
+      const ctx = newReverseMapperContext();
+      const res1 = reverseMapAction(
+        envelope({
+          type: ActionType.SessionMetaChanged,
+          _meta: { input_tokens: 100, output_tokens: 25 },
+        }),
+        ctx,
+      );
+      expect(res1.events).toHaveLength(1);
+      const parsed1 = JSON.parse(res1.events[0]?.content ?? "") as {
+        input_tokens?: number;
+        output_tokens?: number;
+        cost_millicents?: number;
+      };
+      expect(parsed1.input_tokens).toBe(100);
+      expect(parsed1.output_tokens).toBe(25);
+      expect(parsed1.cost_millicents).toBeUndefined();
+      expect(ctx.metaAccumulator.inputTokens).toBe(100);
+      expect(ctx.metaAccumulator.outputTokens).toBe(25);
+
+      const res2 = reverseMapAction(
+        envelope({
+          type: ActionType.SessionMetaChanged,
+          _meta: { input_tokens: 175, output_tokens: 60 },
+        }),
+        ctx,
+      );
+      const parsed2 = JSON.parse(res2.events[0]?.content ?? "") as {
+        input_tokens: number;
+        output_tokens: number;
+      };
+      expect(parsed2.input_tokens).toBe(75); // delta
+      expect(parsed2.output_tokens).toBe(35); // delta
+    });
+
+    it("SessionMetaChanged with all three usage fields → single combined usage event (HR8d follow-up #1355)", () => {
+      const ctx = newReverseMapperContext();
+      const res = reverseMapAction(
+        envelope({
+          type: ActionType.SessionMetaChanged,
+          _meta: { cost_millicents: 500, input_tokens: 200, output_tokens: 50 },
+        }),
+        ctx,
+      );
+      expect(res.events).toHaveLength(1);
+      expect(res.events[0]?.type).toBe("usage");
+      const parsed = JSON.parse(res.events[0]?.content ?? "") as Record<string, number>;
+      expect(parsed.cost_millicents).toBe(500);
+      expect(parsed.input_tokens).toBe(200);
+      expect(parsed.output_tokens).toBe(50);
+    });
+
+    it("SessionMetaChanged with token totals that haven't changed → no usage event (HR8d follow-up #1355)", () => {
+      const ctx = newReverseMapperContext();
+      reverseMapAction(
+        envelope({
+          type: ActionType.SessionMetaChanged,
+          _meta: { input_tokens: 100, output_tokens: 25 },
+        }),
+        ctx,
+      );
+      const res = reverseMapAction(
+        envelope({
+          type: ActionType.SessionMetaChanged,
+          _meta: { input_tokens: 100, output_tokens: 25 },
+        }),
+        ctx,
+      );
+      expect(res.events).toEqual([]);
+      expect(res.disposition).toBe("carried");
+    });
   });
 
   describe("dropped action types", () => {
@@ -491,8 +567,20 @@ describe("reverseMapAction", () => {
       return events;
     }
 
-    it("turn_started round-trips type + turnId + user_message", () => {
-      const out = pushRoundTrip(
+    it("turn_started round-trips type + turnId + user_message text (HR8d follow-up #1355)", () => {
+      // Producer side may emit either plain text (BaseAgentSession-style) OR
+      // the legacy JSON-wrapped shape; consumer always sees plain text after
+      // the wire round-trip.
+      const fromPlain = pushRoundTrip(
+        { type: "turn_started", content: "hi", turnId: "turn-1" },
+        freshMapperContext(),
+        newReverseMapperContext(),
+      );
+      expect(fromPlain[0]?.type).toBe("turn_started");
+      expect(fromPlain[0]?.turnId).toBe("turn-1");
+      expect(fromPlain[0]?.content).toBe("hi");
+
+      const fromWrapped = pushRoundTrip(
         {
           type: "turn_started",
           content: JSON.stringify({ user_message: "hi" }),
@@ -501,11 +589,7 @@ describe("reverseMapAction", () => {
         freshMapperContext(),
         newReverseMapperContext(),
       );
-      expect(out).toHaveLength(1);
-      expect(out[0]?.type).toBe("turn_started");
-      expect(out[0]?.turnId).toBe("turn-1");
-      const parsed = JSON.parse(out[0]?.content ?? "") as { user_message: string };
-      expect(parsed.user_message).toBe("hi");
+      expect(fromWrapped[0]?.content).toBe("hi");
     });
 
     it("text inside a turn round-trips", () => {

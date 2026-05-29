@@ -355,6 +355,51 @@ describe("usage", () => {
     // 0 is a valid (non-null) cost — accumulator should be 100 + 0 = 100
     expect(context.metaAccumulator.costMillicents).toBe(100);
   });
+
+  // HR8d follow-up #1355: input/output token plumbing
+  it("carries input_tokens / output_tokens into metaAccumulator alongside cost (HR8d follow-up #1355)", () => {
+    const context = makeContext({
+      metaAccumulator: { costMillicents: 100, inputTokens: 50, outputTokens: 10 },
+    });
+    const event = makeEvent("usage", {
+      content: JSON.stringify({ cost_millicents: 20, input_tokens: 5, output_tokens: 3 }),
+    });
+    mapAgentEvent(event, 6, context);
+    expect(context.metaAccumulator.costMillicents).toBe(120);
+    expect(context.metaAccumulator.inputTokens).toBe(55);
+    expect(context.metaAccumulator.outputTokens).toBe(13);
+  });
+
+  it("ignores non-finite input_tokens / output_tokens (HR8d follow-up #1355)", () => {
+    const context = makeContext();
+    const event = makeEvent("usage", {
+      content: JSON.stringify({ input_tokens: NaN, output_tokens: "abc" }),
+    });
+    mapAgentEvent(event, 6, context);
+    expect(context.metaAccumulator.inputTokens).toBeUndefined();
+    expect(context.metaAccumulator.outputTokens).toBeUndefined();
+  });
+
+  it("accumulates input_tokens / output_tokens with zero increments (HR8d follow-up #1355)", () => {
+    const context = makeContext({ metaAccumulator: { inputTokens: 7, outputTokens: 11 } });
+    const event = makeEvent("usage", {
+      content: JSON.stringify({ input_tokens: 0, output_tokens: 0 }),
+    });
+    mapAgentEvent(event, 6, context);
+    expect(context.metaAccumulator.inputTokens).toBe(7);
+    expect(context.metaAccumulator.outputTokens).toBe(11);
+  });
+
+  it("usage event with only token fields (no cost) still updates accumulator (HR8d follow-up #1355)", () => {
+    const context = makeContext();
+    const event = makeEvent("usage", {
+      content: JSON.stringify({ input_tokens: 42, output_tokens: 11 }),
+    });
+    mapAgentEvent(event, 6, context);
+    expect(context.metaAccumulator.costMillicents).toBeUndefined();
+    expect(context.metaAccumulator.inputTokens).toBe(42);
+    expect(context.metaAccumulator.outputTokens).toBe(11);
+  });
 });
 
 // ─── error ─────────────────────────────────────────────────────────
