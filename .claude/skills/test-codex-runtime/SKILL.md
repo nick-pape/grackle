@@ -1,50 +1,43 @@
 ---
 name: test-codex-runtime
-description: Spawn the `codex` runtime against a test server. WARNING: with a ChatGPT-account login + Codex SDK 0.111.0, every tested model was rejected — records the rejected list. Run with /test-codex-runtime. Pairs with /launch-grackle.
+description: Spawn the `codex` runtime against a test server. Use model `gpt-5.5` (requires Codex SDK >= 0.135.0). Run with /test-codex-runtime. Pairs with /launch-grackle.
 ---
 
 # Test the Codex runtime
 
 How to spawn the **`codex`** runtime against an isolated test server. Assumes a server from `/launch-grackle` (with `GRACKLE_URL` + `GRACKLE_API_KEY` exported).
 
-## ⚠️ Status: blocked on a ChatGPT account (as of 2026-05-29)
+## Allowed model names ✅ / ❌ (ChatGPT-account auth)
 
-With **ChatGPT-account auth** and the installed **Codex SDK `0.111.0`**, **no tested model worked** — Codex could not be spawned successfully. Recorded so future testers don't repeat the guess-and-check:
+| Model                                                            | Works?                | Notes                                                                                                                                                                |
+| ---------------------------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `gpt-5.5`                                                        | ✅ **confirmed live** | Needs **Codex SDK >= 0.135.0** (the catalog pin). On the old 0.111.0 it errored "requires a newer version of Codex."                                                 |
+| `o3`, `o3-mini`, `gpt-5-codex`, `gpt-5`, `gpt-5.1`, `gpt-5-mini` | ❌                    | "not supported when using Codex with a ChatGPT account" — these are **account-gated** (likely need OpenAI API-key auth or a higher tier), independent of SDK version |
 
-| Model         | Result                                                                                                  |
-| ------------- | ------------------------------------------------------------------------------------------------------- |
-| `o3`          | ❌ "not supported when using Codex with a ChatGPT account" (this is what `grackle runtimes` advertises) |
-| `o3-mini`     | ❌ same                                                                                                 |
-| `gpt-5-codex` | ❌ same                                                                                                 |
-| `gpt-5`       | ❌ same                                                                                                 |
-| `gpt-5.1`     | ❌ same                                                                                                 |
-| `gpt-5-mini`  | ❌ same                                                                                                 |
-| `gpt-5.5`     | ❌ "requires a newer version of Codex. Please upgrade" (SDK 0.111.0 too old)                            |
+> The catalog (`packages/common/src/runtime-catalog.ts`) advertises **`gpt-5.5`** and pins `@openai/codex-sdk ^0.135.0`. If `grackle runtimes` still shows `o3`, the catalog hasn't been rebuilt/installed.
 
-Two distinct walls: most models are **account-gated** ("not supported … with a ChatGPT account"), and the newest (`gpt-5.5`) is **CLI-version-gated**.
+History: the SDK was bumped `^0.111.0 → ^0.135.0` precisely to unlock `gpt-5.5` (validated 2026-05-29). The runtime installer (`runtime-installer.ts`) auto-reinstalls when the catalog spec changes (it compares the persisted package spec), so the global `~/.grackle/runtimes/codex/` upgrades on the next codex spawn.
 
-## How to get Codex working (hypotheses to try)
-
-Pick one, then **record the model that works in the table above**:
-
-1. **OpenAI API-key auth** instead of a ChatGPT account — the account gating wording strongly implies API-key auth unlocks more models.
-2. **A higher ChatGPT tier** (Pro/Team) that includes Codex model access.
-3. **A newer Codex SDK** (`@openai/codex-sdk` > 0.111.0, installed under `~/.grackle/runtimes/codex/`) so `gpt-5.5`/`gpt-5.x-codex` are recognized.
-
-The model string is passed **verbatim** to the SDK (`packages/runtime-codex/src/codex.ts` — `threadOptions.model = this.model`); Grackle does no validation, so any string the installed Codex accepts is valid.
-
-## Spawn it (once a working model is known)
+## Spawn it
 
 ```bash
-grackle persona create "Codex Tester" --runtime codex --model <WORKING_MODEL> --prompt "You are a test agent."
+grackle persona create "Codex Tester" --runtime codex --model gpt-5.5 --prompt "You are a test agent."
 grackle spawn local "Run exactly this one shell command and nothing else, then stop: cat /nonexistent_file_xyz" --persona codex-tester
 ```
 
-Errors surface as `error` + `status: failed` events in the session log — check there to distinguish a model-gating rejection from a real run.
+The model string is passed **verbatim** to the SDK (`packages/runtime-codex/src/codex.ts` — `threadOptions.model = this.model`); Grackle does no validation, so any model the installed Codex accepts is valid.
 
-## What it would prove
+## What it proves (confirmed live #1362)
 
-Codex surfaces real per-tool outcomes by type: `command_execution` non-zero `exit_code`, `file_change` `status`, `mcp_tool_call` `error` — all lifted to the first-class `toolError` field (`packages/runtime-codex/src/codex.ts`). Inspect `$GRACKLE_HOME/.grackle/logs/<session-id>/stream.jsonl` for `tool_result` `{is_ok,...}` + `"tool_error":true`.
+Codex surfaces real per-tool outcomes by type — `command_execution` non-zero `exit_code`, `file_change` `status`, `mcp_tool_call` `error` — lifted to the first-class `toolError` field. Verified end-to-end: a failing command (`cat /nonexistent` → `[exit 1]`) persisted as `content {is_ok:false}` **and** `"tool_error":true`. A successful command omits `tool_error`.
+
+## Inspecting results
+
+```
+$GRACKLE_HOME/.grackle/logs/<session-id>/stream.jsonl
+```
+
+`tool_result` content = `{is_ok, content, past_tense_message}`; failures carry `"tool_error":true`. Model-gating rejections show up as `error` + `status: failed` events (check the log to distinguish a rejection from a real run).
 
 ## See also
 
