@@ -43,6 +43,8 @@ class StubSession implements AgentSession {
   public lastInput: string | undefined;
   public killed: boolean = false;
   public killReason: string | undefined;
+  /** Number of times `stream()` has been invoked (the contract is one call per session lifetime). */
+  public streamCallCount: number = 0;
 
   public constructor(id: string, runtimeName: string, runtimeSessionId: string) {
     this.id = id;
@@ -68,6 +70,7 @@ class StubSession implements AgentSession {
   }
 
   public async *stream(): AsyncIterable<AgentEvent> {
+    this.streamCallCount++;
     while (true) {
       const head = this.buffer.shift();
       if (head !== undefined) {
@@ -426,6 +429,111 @@ describe("ahp-handlers: subscribe", () => {
     }
   });
 
+  it("invokes session.stream() exactly once across many resubscribes on the same channel", async () => {
+    // Regression for the HR8d listener-leak: PowerLine's subscribe handler
+    // used to call session.stream() once per subscribe, which (a) parked a new
+    // EventEmitter "input" listener on stub sessions and (b) re-entered
+    // BaseAgentSession.runSession() on production runtimes. The contract is:
+    // session.stream() is the session's *driver*; PowerLine drives it exactly
+    // once per session lifetime, no matter how many subscribes arrive on the
+    // same channel.
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      const sessionId = `s-stream-once-${String(Date.now())}`;
+      await client.socket.request("createSession", {
+        channel: `ahp-session:/${sessionId}`,
+        provider: TEST_RUNTIME.name,
+        config: {},
+      });
+      const session = TEST_RUNTIME.lastSession!;
+      // 12 subscribes — well past Node's default MaxListeners of 10. Pre-fix,
+      // this is where MaxListenersExceededWarning would fire on a real stub.
+      for (let i = 0; i < 12; i++) {
+        await client.socket.request("subscribe", { channel: `ahp-session:/${sessionId}` });
+      }
+      expect(session.streamCallCount).toBe(1);
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  });
+
+  it("a rapid resubscribe that cancels its predecessor still gets the first-subscribe replay", async () => {
+    // Race regression: handleSubscribe runs synchronously and `queueMicrotask`s
+    // a runForwarder for each subscribe. If a second subscribe arrives before
+    // the first's microtask runs, the first forwarder is cancelled. The
+    // *second* one is then the real first subscriber — it must replay from
+    // the buffer start, not start at the current tail. Pre-fix the cancelled
+    // forwarder still ran far enough to bump `totalForwardersAttached`, and
+    // the second forwarder mis-detected itself as a resubscriber.
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      const sessionId = `s-rapid-${String(Date.now())}`;
+      await client.socket.request("createSession", {
+        channel: `ahp-session:/${sessionId}`,
+        provider: TEST_RUNTIME.name,
+        config: {},
+      });
+      const session = TEST_RUNTIME.lastSession!;
+      // Push setup events the first real subscriber must see.
+      session.push({ type: "turn_started", turnId: "t1", content: JSON.stringify({}) });
+      session.push({ type: "text", turnId: "t1", content: "setup" });
+      // Fire two subscribes back-to-back. With `await` they're sequential on
+      // the wire, but the server-side runForwarder for each is queued via
+      // microtask so the second wins the cancellation race.
+      await client.socket.request("subscribe", { channel: `ahp-session:/${sessionId}` });
+      await client.socket.request("subscribe", { channel: `ahp-session:/${sessionId}` });
+      await waitForCount(client.received, 2);
+      // The second subscribe should have seen turn_started + text (both
+      // events from before its arrival), not just "future events only."
+      expect(client.received.map((env) => env.action.type)).toEqual([
+        ActionType.SessionTurnStarted,
+        ActionType.SessionResponsePart,
+      ]);
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  });
+
+  it("a resubscribe on a live session sees only events that arrive after the resubscribe", async () => {
+    // Codifies the new live-tail semantic. The first subscriber drained A/B/C;
+    // a fresh subscribe should pick up at the current pump tail, not replay
+    // the history. "What did I miss while disconnected" is the parked-replay
+    // path's responsibility (covered by the existing parked-replay test).
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      const sessionId = `s-late-${String(Date.now())}`;
+      await client.socket.request("createSession", {
+        channel: `ahp-session:/${sessionId}`,
+        provider: TEST_RUNTIME.name,
+        config: {},
+      });
+      const session = TEST_RUNTIME.lastSession!;
+      await client.socket.request("subscribe", { channel: `ahp-session:/${sessionId}` });
+      session.push({ type: "turn_started", turnId: "t1", content: JSON.stringify({}) });
+      session.push({ type: "text", turnId: "t1", content: "A" });
+      session.push({ type: "text", turnId: "t1", content: "B" });
+      await waitForCount(client.received, 3);
+      const sawBeforeResubscribe = client.received.length;
+      // Resubscribe — should NOT replay A/B from the top.
+      await client.socket.request("subscribe", { channel: `ahp-session:/${sessionId}` });
+      session.push({ type: "text", turnId: "t1", content: "C" });
+      await waitForCount(client.received, sawBeforeResubscribe + 1);
+      const newlyReceived = client.received
+        .slice(sawBeforeResubscribe)
+        .map((env) => env.action) as Array<{ part?: { content?: string } }>;
+      expect(newlyReceived).toHaveLength(1);
+      expect(newlyReceived[0]?.part?.content).toBe("C");
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  });
+
   it("[status rescue] forwards a terminal `killed` status as SessionMetaChanged (#1356)", async () => {
     const lb = await spinUpLoopback();
     const client = await openClient(lb.port);
@@ -570,6 +678,7 @@ describe("ahp-handlers: onDisconnect", () => {
   it("kills + parks each session owned by a disconnecting client; next subscribe replays them", async () => {
     const lb = await spinUpLoopback();
     const clientA = await openClient(lb.port, "client-A");
+    let clientB: Client | undefined;
     const sessionId = `s-park-${String(Date.now())}`;
     try {
       await clientA.socket.request("createSession", {
@@ -578,23 +687,38 @@ describe("ahp-handlers: onDisconnect", () => {
         config: {},
       });
       const session = TEST_RUNTIME.lastSession!;
-      // Subscribe so the forwarder starts and drains queued events into the
-      // wire — but we'll let some events accumulate in the session buffer
-      // before disconnecting, so they survive as parked events.
-      await clientA.socket.request("subscribe", { channel: `ahp-session:/${sessionId}` });
-      // Push events into the session BEFORE the disconnect, but don't wait
-      // for them to all reach the client — the in-flight ones get parked.
+      // Deliberately do NOT subscribe — the session pump still drains events
+      // into pump.buffer regardless of subscribers. With no forwarder
+      // delivering anything to the wire, `onDisconnect` parks the full
+      // buffer (fromPos defaults to 0). This makes the park-the-tail path
+      // deterministically testable without racing against wire delivery.
       session.push({ type: "turn_started", turnId: "tp", content: JSON.stringify({}) });
-      session.push({ type: "text", turnId: "tp", content: "pre-disconnect" });
-      // Force a hard disconnect on the wire (simulates heartbeat timeout).
+      session.push({ type: "text", turnId: "tp", content: "park-1" });
+      session.push({ type: "text", turnId: "tp", content: "park-2" });
+      // Yield once so the pump's microtasks drain stub.buffer into pump.buffer
+      // before the disconnect handler runs.
+      await new Promise((r) => setTimeout(r, 20));
       await clientA.socket.close();
-      // Push more events while disconnected — these accumulate in
-      // session.buffer (until parkSession drains them on disconnect handler).
-      // Note: the onDisconnect handler kills the session + parks remaining
-      // events synchronously. After a brief wait, we re-connect and see them.
-      await new Promise((r) => setTimeout(r, 100));
+      await new Promise((r) => setTimeout(r, 50));
       expect(session.killed).toBe(true);
+
+      // A fresh client subscribing to the same channel should receive the
+      // parked tail (turn_started + 2 text parts) as the replay.
+      clientB = await openClient(lb.port, "client-B");
+      await clientB.socket.request("subscribe", { channel: `ahp-session:/${sessionId}` });
+      await waitForCount(clientB.received, 3);
+      const types = clientB.received.map((env) => env.action.type);
+      expect(types).toEqual([
+        ActionType.SessionTurnStarted,
+        ActionType.SessionResponsePart,
+        ActionType.SessionResponsePart,
+      ]);
+      const contents = clientB.received
+        .filter((e) => e.action.type === ActionType.SessionResponsePart)
+        .map((e) => (e.action as { part: { content: string } }).part.content);
+      expect(contents).toEqual(["park-1", "park-2"]);
     } finally {
+      await clientB?.cleanup();
       await clientA.cleanup();
       await lb.cleanup();
     }
@@ -653,5 +777,119 @@ describe("ahp-handlers: heartbeat / WsCloseCode constants", () => {
     // Touches the imported constant so it stays referenced; the real
     // heartbeat path is verified by @grackle-ai/ahp-transport's own tests.
     expect(WsCloseCode.HeartbeatTimeout).toBe(4001);
+  });
+});
+
+// ─── Production-StubSession integration (defensive-depth) ─────
+//
+// The tests above use the in-file mock StubSession (a plain queue + waiters).
+// The real StubSession in `./runtimes/stub.ts` is what CI runs and what
+// originally tripped MaxListenersExceededWarning — its `EventEmitter`-backed
+// `waitForInput()` was the leaking party. These tests use that production
+// session so any regression that re-introduces listener accumulation, or
+// that loses early events under a fast createSession+subscribe pairing, is
+// caught locally without waiting for the e2e suite to find it.
+
+describe("ahp-handlers: production-StubSession defensive-depth", () => {
+  it("[regression] 12 subscribes on a real StubSession scenario emit no MaxListenersExceededWarning", async () => {
+    // Mirrors the failure pattern from publish-CI run 26618127961: the
+    // recovery flow re-attaches to the same session many times in quick
+    // succession; if any subscribe re-enters `session.stream()` it parks a
+    // new `EventEmitter.once("input", …)` listener on the per-session
+    // emitter, and after 11 the runtime emits a process warning. Rush's
+    // e2e operation treats stderr warnings as warnings-as-errors and the
+    // publish job fails. This test fires the same pattern and asserts the
+    // listener count stays bounded.
+    const { StubRuntime: ProdStubRuntime } = await import("./runtimes/stub.js");
+    const realStub = new ProdStubRuntime();
+    registerRuntime(realStub);
+
+    const warnings: Error[] = [];
+    const onWarning = (w: Error): void => {
+      warnings.push(w);
+    };
+    process.on("warning", onWarning);
+
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      const sessionId = `s-prod-stub-${String(Date.now())}`;
+      // Scenario that emits one text event then idles (so the session parks
+      // on `StubSession.waitForInput()` — the line that registers the
+      // emitter listener that originally leaked).
+      const scenario = JSON.stringify({
+        steps: [{ emit: "text", content: "hello" }, { idle: true }],
+      });
+      await client.socket.request("createSession", {
+        channel: `ahp-session:/${sessionId}`,
+        provider: realStub.name,
+        config: { prompt: scenario },
+      });
+      // 12 subscribes — well past Node's default MaxListeners of 10. With
+      // the pump-driven design, `session.stream()` should be invoked
+      // exactly once and no new `"input"` listeners should accumulate.
+      for (let i = 0; i < 12; i++) {
+        await client.socket.request("subscribe", { channel: `ahp-session:/${sessionId}` });
+      }
+      // Settle pending microtasks so any process warnings emitted as
+      // a side-effect of subscribe complete delivery have a chance to fire.
+      await new Promise((r) => setTimeout(r, 50));
+
+      const maxListenerWarnings = warnings.filter((w) => w.name === "MaxListenersExceededWarning");
+      expect(maxListenerWarnings).toEqual([]);
+    } finally {
+      process.off("warning", onWarning);
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  });
+
+  it("[regression] a fast-completing scenario that races subscribe still delivers turn_started + text on the wire", async () => {
+    // The sync-pipe-idle.spec.ts:106 failure shape: a stub child runs the
+    // scenario to completion *between* the server's createSession reply and
+    // its follow-up subscribe over the wire. Pre-fix, the pump removed the
+    // session from the registry in its `finally`, the still-arriving
+    // subscribe got "Unknown session channel," and surfaceErrorAndClose
+    // injected a synthetic `status: failed`. This test runs the smallest
+    // version of that race directly against the production StubSession.
+    const { StubRuntime: ProdStubRuntime } = await import("./runtimes/stub.js");
+    const realStub = new ProdStubRuntime();
+    registerRuntime(realStub);
+
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      const sessionId = `s-fast-${String(Date.now())}`;
+      // No idle step → scenario runs to completion immediately on the pump.
+      const scenario = JSON.stringify({
+        steps: [{ emit: "text", content: "Done!" }],
+      });
+      await client.socket.request("createSession", {
+        channel: `ahp-session:/${sessionId}`,
+        provider: realStub.name,
+        config: { prompt: scenario },
+      });
+      // Give the pump a tick to drain the entire scenario before we
+      // subscribe — this is the worst-case for the race the bug fixed.
+      await new Promise((r) => setTimeout(r, 50));
+      await client.socket.request("subscribe", { channel: `ahp-session:/${sessionId}` });
+      // After subscribe, the first-forwarder replay should deliver the
+      // setup events (system, runtime_session_id) AND the text event AND
+      // the terminal status. We assert specifically that turn_started
+      // (synthesized via orphan-rescue on the text event) and the
+      // SessionResponsePart with "Done!" land on the wire — the failure
+      // mode pre-fix was "Child session failed." because nothing landed.
+      await waitForCount(client.received, 2, 3000);
+      const types = client.received.map((env) => env.action.type);
+      expect(types).toContain(ActionType.SessionTurnStarted);
+      expect(types).toContain(ActionType.SessionResponsePart);
+      // And, critically, NO SessionError action — the wire delivered the
+      // real terminal status, not the synthetic "failed."
+      const errors = client.received.filter((env) => env.action.type === ActionType.SessionError);
+      expect(errors).toEqual([]);
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
   });
 });
