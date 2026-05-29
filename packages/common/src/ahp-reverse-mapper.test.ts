@@ -325,6 +325,8 @@ describe("reverseMapAction", () => {
       expect(parsed.is_ok).toBe(true);
       expect(parsed.content).toBe("file contents");
       expect(parsed.past_tense_message).toBe("Read foo.txt");
+      // #1362: success also clears the first-class field.
+      expect(evt.toolError).toBe(false);
     });
 
     it("SessionToolCallComplete (failure) → tool_result with is_ok=false", () => {
@@ -344,6 +346,8 @@ describe("reverseMapAction", () => {
       );
       const parsed = JSON.parse(res.events[0]?.content ?? "") as { is_ok: boolean };
       expect(parsed.is_ok).toBe(false);
+      // #1362: failure sets the first-class field so consumers needn't parse content.
+      expect(res.events[0]?.toolError).toBe(true);
     });
   });
 

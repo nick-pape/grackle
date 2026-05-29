@@ -353,6 +353,8 @@ class CodexSession extends BaseAgentSession {
               content: exitCode !== undefined ? `[exit ${exitCode}] ${output}` : output,
               raw: event,
               toolCallId,
+              // Non-zero exit code is a command failure (#1362).
+              toolError: exitCode !== undefined && exitCode !== 0,
             });
           } else if (type === "file_change") {
             messageCount++;
@@ -369,6 +371,8 @@ class CodexSession extends BaseAgentSession {
               }),
               raw: event,
               toolCallId,
+              // Codex marks a rejected/failed patch via `status` (#1362).
+              toolError: item.status === "failed",
             });
           } else if (type === "agent_message") {
             messageCount++;
@@ -398,6 +402,8 @@ class CodexSession extends BaseAgentSession {
               content: errorStr || resultStr || "",
               raw: event,
               toolCallId,
+              // An `error` object on the MCP result means the call failed (#1362).
+              toolError: errorObj !== undefined,
             });
           } else if (type === "reasoning") {
             messageCount++;

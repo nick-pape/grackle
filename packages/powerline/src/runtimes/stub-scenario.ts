@@ -226,6 +226,13 @@ export function buildEventFromEmitStep(
   if (raw !== undefined) {
     event.raw = raw;
   }
+  // Mirror the synthetic raw.is_error onto the first-class toolError field
+  // (#1362) so scenario fixtures faithfully exercise failure propagation, not
+  // just the legacy raw reader.
+  if (step.emit === "tool_result") {
+    const rawObj = typeof raw === "object" && raw !== null ? (raw as { is_error?: unknown }) : {};
+    event.toolError = rawObj.is_error === true;
+  }
   // Surface the synthesized id on the first-class field (AHP HR3) so fixtures
   // exercise tool_call_id pairing, not just the legacy raw reader.
   if (step.emit === "tool_use") {
