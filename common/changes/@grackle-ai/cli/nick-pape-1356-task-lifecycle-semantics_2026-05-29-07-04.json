@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix task page Stop/Resume/Kill semantics (#1356): Stop pauses the task instead of completing it; Resume is hidden while the session is alive (idle); Kill emits a terminal killed status on the AHP wire and terminal session status is now sticky.",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
