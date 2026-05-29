@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 29 May 2026 22:14:18 GMT and should not be manually modified.
+This log was last generated on Fri, 29 May 2026 22:56:33 GMT and should not be manually modified.
+
+## 0.133.1
+Fri, 29 May 2026 22:56:33 GMT
+
+### Patches
+
+- @grackle-ai/ahp cleanup: prebuild script now reads the pinned AHP commit SHA from the package's own devDependencies (SOURCE.md SHA was previously always empty), transforms vendored files in a single read/write pass, and the package gained a README.
 
 ## 0.133.0
 Fri, 29 May 2026 22:14:18 GMT

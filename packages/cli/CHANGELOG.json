@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.133.1",
+      "tag": "@grackle-ai/cli_v0.133.1",
+      "date": "Fri, 29 May 2026 22:56:33 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "@grackle-ai/ahp cleanup: prebuild script now reads the pinned AHP commit SHA from the package's own devDependencies (SOURCE.md SHA was previously always empty), transforms vendored files in a single read/write pass, and the package gained a README."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.133.0",
       "tag": "@grackle-ai/cli_v0.133.0",
       "date": "Fri, 29 May 2026 22:14:18 GMT",
