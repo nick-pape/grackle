@@ -74,13 +74,17 @@ import { validateGitBranchName } from "@grackle-ai/runtime-sdk";
 
 import { getRuntime } from "./runtime-registry.js";
 import {
-  addSession,
+  deleteSessionPump,
   drainParkedSession,
   getSession,
+  getSessionPump,
   isParked,
   listAllSessions,
   parkSession,
+  registerPumpForwarder,
   removeSession,
+  startSessionPump,
+  unregisterPumpForwarder,
 } from "./session-mgr.js";
 import { writeTokens } from "./token-writer.js";
 
@@ -122,6 +126,17 @@ interface ForwarderState {
    * diagnostic system events).
    */
   lastMetaSnapshot: Record<string, unknown> | undefined;
+  /**
+   * Index into the {@link SessionPump.buffer} this forwarder has consumed up
+   * to. The disconnect path reads this to compute the unsent tail to park.
+   */
+  pos: number;
+  /**
+   * If set, the resolver for the forwarder's current sleep on the pump's
+   * `waiters` set. Stashed so cancellation paths can wake the forwarder
+   * synchronously instead of waiting on the next buffer push.
+   */
+  wake?: () => void;
 }
 
 /**
@@ -356,7 +371,22 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
       } satisfies AhpResponse;
     }
 
-    addSession(session);
+    // Drive `session.stream()` exactly once via a per-session pump. Each AHP
+    // `subscribe` for this channel attaches a forwarder that tails the pump's
+    // buffer — re-entering `stream()` per subscribe would re-kick the
+    // runtime's driver (`BaseAgentSession.runSession`) and stack listeners on
+    // stub-style sessions. See ForwarderState.pos.
+    //
+    // The natural-exit hook prunes our `ClientState.sessionIds` set when the
+    // pump completes on its own (session.stream() returned without being torn
+    // down by dispose/onDisconnect). Without this the set would accumulate
+    // dead session IDs across the connection's lifetime. Capture clientId
+    // here so the closure doesn't keep `conn` alive.
+    const ownerClientId = conn.clientId;
+    startSessionPump(session, (deadSessionId) => {
+      const owner = clients.get(ownerClientId);
+      owner?.sessionIds.delete(deadSessionId);
+    });
     clientState(conn).sessionIds.add(sessionId);
 
     return {
@@ -391,10 +421,13 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
 
     const cState = clientState(conn);
     // Tear down any prior forwarder for this session (avoid double-forwarding
-    // if subscribe is called twice for the same channel).
+    // if subscribe is called twice for the same channel). Wake it
+    // synchronously so its tail loop notices `cancelled` and exits without
+    // waiting on the next pump push.
     const prior = cState.forwarders.get(sessionId);
     if (prior !== undefined) {
       prior.cancelled = true;
+      prior.wake?.();
     }
 
     const forwarder: ForwarderState = {
@@ -408,6 +441,7 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
       serverSeq: 0,
       cancelled: false,
       lastMetaSnapshot: undefined,
+      pos: 0,
     };
     cState.forwarders.set(sessionId, forwarder);
 
@@ -433,48 +467,106 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     sessionId: string,
     forwarder: ForwarderState,
   ): Promise<void> {
-    // Step 1: drain any parked events first.
-    const parked = drainParkedSession(sessionId);
-    if (parked !== undefined) {
-      for (const event of parked) {
-        if (forwarder.cancelled) {
-          return;
-        }
-        emitActionsForEvent(conn, sessionId, event, forwarder);
-      }
-    }
-    // Step 2: forward live events from the active session, if any.
-    const session = getSession(sessionId);
-    if (session === undefined) {
-      // Session was parked-only (no live runtime). Forwarder is idle until
-      // a reanimate spawns a new one — but reanimate would be a fresh
-      // createSession on the same URI, which goes through a different code
-      // path. So just return.
-      return;
-    }
-    try {
-      for await (const event of session.stream()) {
-        if (forwarder.cancelled) {
-          return;
-        }
-        emitActionsForEvent(conn, sessionId, event, forwarder);
-      }
-    } catch {
-      // Internal error — let the session die normally; no parking here.
-    } finally {
-      // Clean up forwarder map entry.
+    // If a rapid resubscribe cancelled us between handleSubscribe's
+    // `queueMicrotask` and this microtask actually running, bail before we
+    // touch anything — in particular don't drain parked events (the
+    // next forwarder needs them) and don't register on the pump (a cancelled
+    // forwarder bumping `totalForwardersAttached` would cause the *real*
+    // next forwarder to skip the first-subscribe replay and start at the
+    // tail, missing the runtime's setup events).
+    if (forwarder.cancelled) {
       const cState = clients.get(conn.clientId);
       if (cState?.forwarders.get(sessionId) === forwarder) {
         cState.forwarders.delete(sessionId);
       }
-      // If we exited NOT because of cancellation (natural completion or
-      // an internal error), the session has nothing more to emit and the
-      // runtime has finished — remove it from the registry and from the
-      // owning client's session set so `listSessions` doesn't surface
-      // ghost entries and memory doesn't accumulate.
-      if (!forwarder.cancelled) {
-        removeSession(sessionId);
-        cState?.sessionIds.delete(sessionId);
+      return;
+    }
+    // Step 1: drain any parked events first. These are the "what did I miss
+    // while disconnected" tail from a prior owner of this channel.
+    const parked = drainParkedSession(sessionId);
+    if (parked !== undefined) {
+      for (const event of parked) {
+        // forwarder.cancelled is narrowed to false by the entry-check above,
+        // but it's mutated externally by handleSubscribe/disposeSession/
+        // onDisconnect — re-check between events so a fast cancellation
+        // arriving via an unrelated wire op stops emission mid-stream.
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        if (forwarder.cancelled) {
+          return;
+        }
+        emitActionsForEvent(conn, sessionId, event, forwarder);
+      }
+    }
+    // Step 2: tail the live pump. If the session has no pump (parked-only
+    // or already disposed) there's nothing live to forward.
+    const pump = getSessionPump(sessionId);
+    if (pump === undefined) {
+      // Forwarder map cleanup still needs to run.
+      const cState = clients.get(conn.clientId);
+      if (cState?.forwarders.get(sessionId) === forwarder) {
+        cState.forwarders.delete(sessionId);
+      }
+      return;
+    }
+    // First-ever forwarder on this pump replays from the buffer's logical
+    // start so it observes setup events (`runtime_session_id`, initial system
+    // messages) the runtime emits between createSession and subscribe — those
+    // are the same wire frames the server's processEventStream needs to write
+    // `runtimeSessionId` into the DB row, which `recoverSuspendedSessions`
+    // later reads to know if reanimate is even possible. Subsequent
+    // forwarders are true mid-stream resubscribes and pick up at the current
+    // tail; events missed in a disconnect window arrive via the parked-replay
+    // path (Step 1 above), not by replaying the live buffer. `forwarder.pos`
+    // is always in the pump's *absolute* event-index space so trims of
+    // pump.buffer don't shift its meaning.
+    forwarder.pos =
+      pump.totalForwardersAttached === 0
+        ? pump.bufferStartIndex
+        : pump.bufferStartIndex + pump.buffer.length;
+    registerPumpForwarder(pump, forwarder);
+    try {
+      // Same TS-narrowing caveat as the parked-replay loop: forwarder.cancelled
+      // is mutated by external wire ops and the await below yields control,
+      // so the re-check is real even though TS thinks it's always false.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      while (!forwarder.cancelled) {
+        const bufLen = pump.bufferStartIndex + pump.buffer.length;
+        while (forwarder.pos < bufLen) {
+          const localIdx = forwarder.pos - pump.bufferStartIndex;
+          emitActionsForEvent(conn, sessionId, pump.buffer[localIdx]!, forwarder);
+          forwarder.pos++;
+        }
+        if (pump.done) {
+          return;
+        }
+        // Sleep until the pump pushes another event, or until we're cancelled
+        // and woken via `forwarder.wake`. The same `settle` closure is used by
+        // both wake paths (pump push via wakePumpWaiters, and external
+        // cancellation via forwarder.wake?.()) — it clears forwarder.wake so
+        // the field never holds a stale reference between iterations.
+        await new Promise<void>((resolve) => {
+          const settle = (): void => {
+            forwarder.wake = undefined;
+            pump.waiters.delete(settle);
+            resolve();
+          };
+          forwarder.wake = settle;
+          pump.waiters.add(settle);
+        });
+      }
+    } finally {
+      // Forwarder map cleanup. Session/pump removal happens in one of three
+      // places, none of which is here:
+      //   - `unregisterPumpForwarder` above, on the *last*-forwarder-detach
+      //     path after `pump.done` (the natural-exit ladder);
+      //   - `handleDisposeSession`, when the wire explicitly tears down;
+      //   - `onDisconnect`, when the wire drops and we park the unsent tail.
+      // This `finally` only owns the per-(client, session) forwarder map
+      // entry — the runtime-level registry is somebody else's job.
+      unregisterPumpForwarder(pump, forwarder);
+      const cState = clients.get(conn.clientId);
+      if (cState?.forwarders.get(sessionId) === forwarder) {
+        cState.forwarders.delete(sessionId);
       }
     }
   }
@@ -701,7 +793,11 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     const session = getSession(sessionId);
     if (session !== undefined) {
       session.kill("killed");
+      // Synchronous removal so the caller sees the session gone immediately
+      // on return. The pump's natural-exit cleanup is idempotent — it won't
+      // re-remove what's already been removed.
       removeSession(sessionId);
+      deleteSessionPump(sessionId);
     }
     const cState = clients.get(conn.clientId);
     if (cState !== undefined) {
@@ -727,6 +823,7 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
           origin: undefined,
         });
         fwd.cancelled = true;
+        fwd.wake?.();
         cState.forwarders.delete(sessionId);
       }
     }
@@ -859,22 +956,37 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
       if (cState === undefined) {
         return;
       }
-      // For each session this client owned, kill + park its events for
+      // For each session this client owned, kill + park its unsent events for
       // replay on next subscribe (whoever calls subscribe next, including
       // a reconnecting same-client).
+      //
+      // The "unsent tail" is the slice of `pump.buffer` past the forwarder's
+      // position, concatenated with anything still in the runtime's own
+      // queue that the pump hasn't yet pulled. `session.kill()` is sync and
+      // closes the runtime queue; the pump task's natural exit (a microtask
+      // later) is idempotent — see `runPump`'s finally.
       for (const sessionId of cState.sessionIds) {
         const session = getSession(sessionId);
-        if (session !== undefined) {
+        const pump = getSessionPump(sessionId);
+        const fwd = cState.forwarders.get(sessionId);
+        if (session !== undefined && pump !== undefined) {
           session.kill("disconnected");
-          const buffered = session.drainBufferedEvents();
-          if (buffered.length > 0) {
-            parkSession(sessionId, buffered);
+          const stillInRuntimeQueue = session.drainBufferedEvents();
+          // Translate the forwarder's absolute pos into the local buffer
+          // slice. If there's no forwarder, start at the buffer's logical
+          // start so we capture every event the pump has read.
+          const fromAbs = fwd?.pos ?? pump.bufferStartIndex;
+          const localStart = Math.max(0, fromAbs - pump.bufferStartIndex);
+          const tail = [...pump.buffer.slice(localStart), ...stillInRuntimeQueue];
+          if (tail.length > 0) {
+            parkSession(sessionId, tail);
           }
           removeSession(sessionId);
+          deleteSessionPump(sessionId);
         }
-        const fwd = cState.forwarders.get(sessionId);
         if (fwd !== undefined) {
           fwd.cancelled = true;
+          fwd.wake?.();
         }
       }
       clients.delete(clientId);

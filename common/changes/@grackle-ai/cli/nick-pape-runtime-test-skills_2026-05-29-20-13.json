@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Bump the Codex runtime SDK pin to ^0.135.0 and advertise gpt-5.5 (the o3 default was unusable on a ChatGPT account; gpt-5.5 needs SDK >= 0.135.0).",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

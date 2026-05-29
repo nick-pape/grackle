@@ -73,8 +73,8 @@ export const RUNTIME_CATALOG: Readonly<Record<string, RuntimeCatalogEntry>> = {
   codex: {
     displayName: "Codex",
     description: "OpenAI Codex via the Codex SDK.",
-    models: [{ id: "o3", name: "OpenAI o3", provider: "codex" }],
-    install: { packages: { "@openai/codex-sdk": "^0.111.0" } },
+    models: [{ id: "gpt-5.5", name: "GPT-5.5", provider: "codex" }],
+    install: { packages: { "@openai/codex-sdk": "^0.135.0" } },
   },
   goose: {
     displayName: "Goose",
