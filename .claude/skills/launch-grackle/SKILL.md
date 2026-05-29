@@ -76,6 +76,19 @@ To fully reset the database, delete the home directory:
 rm -rf "$GRACKLE_HOME"
 ```
 
+## Testing specific runtimes
+
+Once the server is up, the per-runtime test skills document **exactly which model names work** for each runtime (it varies a lot, and `grackle runtimes` advertises some that don't actually work) plus how to spawn and inspect results:
+
+- `/test-claude-runtime` — native `claude-code` (`sonnet`/`opus`/`haiku`; can't surface real tool failures — synthetic results)
+- `/test-copilot-runtime` — `copilot` (use `claude-sonnet-4.5`; **`gpt-4o` does NOT work**)
+- `/test-codex-runtime` — `codex` (every model rejected on a ChatGPT account + SDK 0.111.0 — see the skill)
+- `/test-acp-runtime` — `claude-code-acp` / `codex-acp` / `copilot-acp` (currently blocked by #1366)
+
+Quick recipe shared by all of them: `grackle persona create "<name>" --runtime <r> --model <m> --prompt "..."` → `grackle spawn local "<prompt>" --persona <slug>` (spawn has no `--runtime`/`--model` flag — the runtime comes from the persona) → inspect `$GRACKLE_HOME/.grackle/logs/<session-id>/stream.jsonl`.
+
+> Note: if you launch a server while another Grackle instance is already running, the hardcoded MCP Apps sandbox port (7436) collides and the server self-terminates. Until #1367 lands, set a free `GRACKLE_SANDBOX_PORT` in the launch env to run concurrently.
+
 ## Important Notes
 
 - **Never kill processes you didn't start.** Only kill the PID from your own launch.
