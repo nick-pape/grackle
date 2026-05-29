@@ -126,14 +126,32 @@ export interface SessionPump {
 const sessionPumps: Map<string, SessionPump> = new Map<string, SessionPump>();
 
 /**
+ * Optional cleanup hook fired when a pump exits naturally (i.e.
+ * `session.stream()` returned without being torn down by dispose/onDisconnect).
+ * Lets callers — typically ahp-handlers — prune their own owning bookkeeping
+ * (`ClientState.sessionIds`) for the now-dead session without scanning every
+ * client on every session end.
+ */
+export type PumpNaturalExitHandler = (sessionId: string) => void;
+
+/**
  * Register a session and start its pump. Returns the {@link SessionPump} so
  * the caller can hand it directly to a forwarder without a separate lookup.
  *
  * The pump task drains `session.stream()` into `pump.buffer` and wakes any
  * sleeping forwarders. On natural exit it removes the session from the
  * registry — handlers don't need to do that cleanup themselves.
+ *
+ * @param onNaturalExit Optional callback fired from the pump's `finally`
+ *   block when the pump exits because `session.stream()` returned (not when
+ *   dispose / disconnect tore it down — those paths take responsibility for
+ *   their own cleanup). The pump invokes the callback after removing itself
+ *   from the session registry, so subsequent lookups see the session gone.
  */
-export function startSessionPump(session: AgentSession): SessionPump {
+export function startSessionPump(
+  session: AgentSession,
+  onNaturalExit?: PumpNaturalExitHandler,
+): SessionPump {
   addSession(session);
   const pump: SessionPump = {
     session,
@@ -145,7 +163,7 @@ export function startSessionPump(session: AgentSession): SessionPump {
     totalForwardersAttached: 0,
     task: Promise.resolve(),
   };
-  (pump as { task: Promise<void> }).task = runPump(pump);
+  (pump as { task: Promise<void> }).task = runPump(pump, onNaturalExit);
   sessionPumps.set(session.id, pump);
   return pump;
 }
@@ -189,7 +207,10 @@ function wakePumpWaiters(pump: SessionPump): void {
   }
 }
 
-async function runPump(pump: SessionPump): Promise<void> {
+async function runPump(
+  pump: SessionPump,
+  onNaturalExit: PumpNaturalExitHandler | undefined,
+): Promise<void> {
   try {
     for await (const event of pump.session.stream()) {
       pump.buffer.push(event);
@@ -202,12 +223,16 @@ async function runPump(pump: SessionPump): Promise<void> {
   } finally {
     pump.done = true;
     wakePumpWaiters(pump);
-    // Natural pump exit removes the session. The disconnect path (which parks
-    // the unsent tail) calls `deleteSessionPump` + `removeSession` explicitly
-    // before this runs, so the `sessions.has` guard keeps us idempotent.
+    // Natural pump exit removes the session and notifies the handler-level
+    // owner so it can prune its own per-client bookkeeping (otherwise the
+    // `ClientState.sessionIds` set would accumulate dead session IDs across
+    // the connection's lifetime). The disconnect/dispose paths take care of
+    // their own cleanup before this runs, so we gate on `sessions.has` to
+    // stay idempotent.
     if (sessions.has(pump.session.id)) {
       removeSession(pump.session.id);
       sessionPumps.delete(pump.session.id);
+      onNaturalExit?.(pump.session.id);
     }
   }
 }
@@ -215,11 +240,15 @@ async function runPump(pump: SessionPump): Promise<void> {
 /**
  * Hard cap on the pump buffer when no active forwarders constrain it. Keeps
  * memory bounded for the "session is emitting but nobody's subscribed yet"
- * window (typically short, but could be longer if a client createSession's
- * and then takes its time before subscribe). The cap discards from the front;
- * future late subscribers see only the surviving tail, which matches the
- * "subscribe = future events only" semantics — old events are *not* meant
- * to be replayed across resubscribes (that's the parked-replay path's job).
+ * window (typically short, but could be longer if a client calls
+ * `createSession` and then takes its time before `subscribe`). The cap
+ * discards from the front; future late subscribers see only the surviving
+ * tail, matching the "subscribe = future events only" semantics for
+ * resubscribes — old events are *not* meant to be replayed across
+ * resubscribes (that's the parked-replay path's job). The first-ever
+ * subscribe on a fresh pump is the only exception: it replays from
+ * `bufferStartIndex`, so if events were capped before the first subscribe
+ * attached, they're lost (acceptable for the bounded-memory backstop).
  */
 const PUMP_BUFFER_NO_SUBSCRIBER_CAP: number = 1000;
 

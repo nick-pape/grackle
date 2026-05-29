@@ -255,6 +255,42 @@ describe("session pumps", () => {
     await tick();
   });
 
+  it("fires the natural-exit hook with the session id when session.stream() ends on its own", async () => {
+    // Verifies the cleanup-callback contract that lets ahp-handlers prune
+    // ClientState.sessionIds without the pump knowing about clients.
+    const session = new ControllableSession("natural-exit-1");
+    const seen: string[] = [];
+    const pump = startSessionPump(session, (id) => {
+      seen.push(id);
+    });
+
+    expect(seen).toHaveLength(0);
+    session.endStream();
+    await pump.task;
+    expect(seen).toEqual(["natural-exit-1"]);
+    // Also confirms session-mgr's own bookkeeping: the session is gone.
+    expect(getSession("natural-exit-1")).toBeUndefined();
+    expect(getSessionPump("natural-exit-1")).toBeUndefined();
+  });
+
+  it("does NOT fire the natural-exit hook when a caller has already removed the session (dispose/disconnect path)", async () => {
+    // Mirrors the dispose path: the handler explicitly removes the session
+    // and pump before the pump's natural-exit `finally` runs. The hook must
+    // not double-fire — handlers do their own cleanup in this case.
+    const session = new ControllableSession("natural-exit-2");
+    const seen: string[] = [];
+    const pump = startSessionPump(session, (id) => {
+      seen.push(id);
+    });
+
+    // Simulate the dispose path: remove session + pump *before* killing.
+    removeSession("natural-exit-2");
+    deleteSessionPump("natural-exit-2");
+    session.endStream();
+    await pump.task;
+    expect(seen).toHaveLength(0);
+  });
+
   it("caps the buffer when no forwarders are attached so emit-into-the-void doesn't grow without bound", async () => {
     // Push enough events to exceed the no-subscriber cap. Buffer should hold
     // only the most recent ≤ cap events (older entries discarded via

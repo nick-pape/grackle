@@ -376,7 +376,17 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     // buffer — re-entering `stream()` per subscribe would re-kick the
     // runtime's driver (`BaseAgentSession.runSession`) and stack listeners on
     // stub-style sessions. See ForwarderState.pos.
-    startSessionPump(session);
+    //
+    // The natural-exit hook prunes our `ClientState.sessionIds` set when the
+    // pump completes on its own (session.stream() returned without being torn
+    // down by dispose/onDisconnect). Without this the set would accumulate
+    // dead session IDs across the connection's lifetime. Capture clientId
+    // here so the closure doesn't keep `conn` alive.
+    const ownerClientId = conn.clientId;
+    startSessionPump(session, (deadSessionId) => {
+      const owner = clients.get(ownerClientId);
+      owner?.sessionIds.delete(deadSessionId);
+    });
     clientState(conn).sessionIds.add(sessionId);
 
     return {
