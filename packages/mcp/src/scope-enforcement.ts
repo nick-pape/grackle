@@ -61,16 +61,21 @@ export async function assertCallerIsAncestor(
  * - No-op for non-scoped auth (api-key, oauth) — they have full access.
  * - No-op for the root/system task (the central orchestrator), mirroring
  *   `hasFullAccess` in tool-scoping.ts.
- * - No-op for tools without a `scope` descriptor.
+ * - No-op for tools without a `scope` descriptor (a tool opts in by declaring
+ *   one — a task/session-targeting tool that needs protection MUST set it).
  * - For a `taskIdArg` tool: the caller must be an ancestor of the target task.
  * - For a `sessionIdArg` tool: the session is resolved to its task (a taskless
  *   session is rejected for scoped callers) and the caller must be its ancestor.
  *
- * A missing or empty target arg is left to the tool's Zod validation, which runs
- * after this check and returns INVALID_ARGUMENT.
+ * A descriptor that is present but malformed (neither or both arg fields set)
+ * **fails closed** — it throws rather than silently skipping the check — so a
+ * misconfigured new tool surfaces immediately instead of becoming a bypass.
+ *
+ * A missing or empty target *value* is left to the tool's Zod validation, which
+ * runs after this check and returns INVALID_ARGUMENT.
  *
  * @throws ConnectError with `Code.PermissionDenied` when the caller is not
- *   authorized for the target.
+ *   authorized for the target, or when the tool's `scope` descriptor is malformed.
  */
 export async function enforceToolScope(
   clients: GrackleClients,
@@ -89,6 +94,16 @@ export async function enforceToolScope(
     return;
   }
 
+  // Fail closed on a malformed descriptor: a `scope` must target exactly one of
+  // a task or a session. Both-or-neither is a programming error that would
+  // otherwise silently skip the authorization branch (an accidental bypass).
+  if (Boolean(scope.taskIdArg) === Boolean(scope.sessionIdArg)) {
+    throw new ConnectError(
+      `Tool "${tool.name}" has a malformed scope descriptor (set exactly one of taskIdArg / sessionIdArg)`,
+      Code.PermissionDenied,
+    );
+  }
+
   if (scope.taskIdArg) {
     const targetTaskId = args[scope.taskIdArg];
     if (typeof targetTaskId === "string" && targetTaskId) {
@@ -97,6 +112,7 @@ export async function enforceToolScope(
     return;
   }
 
+  // scope.sessionIdArg is set (the exactly-one invariant is enforced above).
   if (scope.sessionIdArg) {
     const sessionId = args[scope.sessionIdArg];
     if (typeof sessionId === "string" && sessionId) {

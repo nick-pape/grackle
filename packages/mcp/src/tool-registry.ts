@@ -43,14 +43,22 @@ export interface ToolAnnotations {
 }
 
 /**
- * Declarative authorization target for central, fail-closed scope enforcement
+ * Declarative authorization target for central scope enforcement
  * (GHSA-f9ff-5x35-7gfw). When a tool sets `scope`, the dispatcher verifies — for
  * every scoped, non-root caller — that the caller is an ancestor of the targeted
  * task (or of the task owning the targeted session) *before* invoking the
- * handler. Because the backend gRPC handlers perform no caller-based
- * authorization, this is the sole authorization boundary for agent callers, so
- * any task/session-mutating tool that omits a descriptor fails *closed* only if
- * the omission is deliberate. Exactly one of the arg fields should be set.
+ * handler, denying the call otherwise. Because the backend gRPC handlers perform
+ * no caller-based authorization, this is the sole authorization boundary for
+ * agent callers.
+ *
+ * The "fail-closed" property is per-target: a tool that *declares* a target is
+ * denied for non-ancestors, and a malformed descriptor (see below) throws rather
+ * than silently passing. It is NOT automatic — a tool with **no** `scope` is not
+ * scope-checked at all, so any new task/session-targeting tool MUST add a
+ * descriptor to be protected.
+ *
+ * Exactly one of the arg fields must be set; both-or-neither is a programming
+ * error that `enforceToolScope` rejects at call time.
  */
 export interface ToolScope {
   /** Name of the input arg holding the target task ID; caller must be its ancestor. */

@@ -213,6 +213,36 @@ describe("enforceToolScope", () => {
     expect(clients.orchestration.getTask).not.toHaveBeenCalled();
   });
 
+  test("fails closed on a malformed descriptor (neither arg set)", async () => {
+    const clients = createClients({ "child-task": { parentTaskId: "parent-task" } });
+    await expect(
+      enforceToolScope(clients, toolWithScope({}), SCOPED_AUTH, { taskId: "child-task" }),
+    ).rejects.toThrow("malformed scope descriptor");
+    expect(clients.orchestration.getTask).not.toHaveBeenCalled();
+  });
+
+  test("fails closed on a malformed descriptor (both args set)", async () => {
+    const clients = createClients({ "child-task": { parentTaskId: "parent-task" } });
+    await expect(
+      enforceToolScope(
+        clients,
+        toolWithScope({ taskIdArg: "taskId", sessionIdArg: "sessionId" }),
+        SCOPED_AUTH,
+        { taskId: "child-task" },
+      ),
+    ).rejects.toThrow("malformed scope descriptor");
+    expect(clients.orchestration.getTask).not.toHaveBeenCalled();
+  });
+
+  test("a malformed descriptor is not enforced for non-scoped/root callers", async () => {
+    const clients = createClients({});
+    // The malformed-descriptor guard runs only for scoped non-root callers, so a
+    // misconfig never breaks api-key/root paths (they have full access anyway).
+    await expect(
+      enforceToolScope(clients, toolWithScope({}), { type: "api-key" }, {}),
+    ).resolves.toBeUndefined();
+  });
+
   test("taskIdArg: allows a descendant target", async () => {
     const clients = createClients({ "child-task": { parentTaskId: "parent-task" } });
     await expect(
