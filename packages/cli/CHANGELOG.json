@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.136.2",
+      "tag": "@grackle-ai/cli_v0.136.2",
+      "date": "Sat, 30 May 2026 17:20:48 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Bump vendored AHP pin to upstream 6f01e3d (adds resource-watch channel; pulls session-customizations redesign, UserMessage->Message rename, new resource* commands, spec 0.3.0). No wire behavior change for existing flows."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.136.1",
       "tag": "@grackle-ai/cli_v0.136.1",
       "date": "Sat, 30 May 2026 14:59:51 GMT",

@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 30 May 2026 14:59:51 GMT and should not be manually modified.
+This log was last generated on Sat, 30 May 2026 17:20:48 GMT and should not be manually modified.
+
+## 0.136.2
+Sat, 30 May 2026 17:20:48 GMT
+
+### Patches
+
+- Bump vendored AHP pin to upstream 6f01e3d (adds resource-watch channel; pulls session-customizations redesign, UserMessage->Message rename, new resource* commands, spec 0.3.0). No wire behavior change for existing flows.
 
 ## 0.136.1
 Sat, 30 May 2026 14:59:51 GMT
