@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 30 May 2026 13:54:50 GMT and should not be manually modified.
+This log was last generated on Sat, 30 May 2026 14:24:33 GMT and should not be manually modified.
+
+## 0.136.0
+Sat, 30 May 2026 14:24:33 GMT
+
+### Minor changes
+
+- feat: native TLS via GRACKLE_TLS_CERT/KEY (+ optional GRACKLE_TLS_CHAIN for intermediate-CA chain serving) → http2.createSecureServer. Web/sandbox/MCP listeners use allowHTTP1: true for HTTP/1.1 fallback; gRPC is h2-only. Closes the no-proxy half of GHSA-wcpf-6gwv-47c8: when set, all four listeners terminate TLS in-process; otherwise behavior is unchanged. The `Secure` cookie and OAuth metadata scheme now follow the public scheme (reconciles with #1371's GRACKLE_PUBLIC_URL). Fixes a forbidden `Connection: close` on the HTTP/2 413 path. Adds h2-aware getRequestHost helper that prefers `:authority` over `Host` for OAuth metadata. Lands #844 HTTP/2 where it pays off (h2 over TLS). mTLS / client-cert verification tracked at #1393.
 
 ## 0.135.2
 Sat, 30 May 2026 13:54:50 GMT
