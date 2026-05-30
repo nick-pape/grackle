@@ -354,6 +354,20 @@ export function countActiveForEnvironment(environmentId: string): number {
 }
 
 /**
+ * List all materialized subagent child sessions (#1075) currently in RUNNING.
+ * Drives the subagent-reconciliation sweep (#1386), which interrupts those whose
+ * parent session has reached a terminal state (so a background/polled child whose
+ * parent stream ended is never left stranded RUNNING forever).
+ */
+export function listRunningSubagentChildren(): SessionRow[] {
+  return db
+    .select()
+    .from(sessions)
+    .where(and(eq(sessions.runtime, SUBAGENT_RUNTIME), eq(sessions.status, SESSION_STATUS.RUNNING)))
+    .all();
+}
+
+/**
  * Count all active (pending/running/idle) sessions across the entire server.
  * Excludes subagent children (#1075) so they don't consume global concurrency.
  */

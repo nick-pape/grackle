@@ -545,10 +545,10 @@ export function processEventStream(
       // NOT be interrupted here even if their handle/result never arrived (e.g.
       // the stream ended right after the spawn tool_use).
       //
-      // Known limitation (#1386): a background/polled child whose parent stream
-      // ends before a terminal poll stays RUNNING in the DB. It is excluded from
-      // all env/task/concurrency queries so it is harmless, but never reaches a
-      // terminal state — a reconciliation sweep is tracked as a follow-up.
+      // A background/polled child whose parent stream ends before a terminal poll
+      // would otherwise stay RUNNING here. That case is reaped out-of-band by the
+      // `subagent-reconciliation` phase (#1386), which interrupts any RUNNING
+      // subagent child once its parent session reaches a terminal state.
       for (const link of delegationByToolCall.values()) {
         if (!link.isBackground && !link.isPoll) {
           interruptChildSession(link.childId);

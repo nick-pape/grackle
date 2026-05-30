@@ -17,6 +17,7 @@ vi.mock("@grackle-ai/core", () => ({
   listConnections: vi.fn(() => new Map()),
   removeConnection: vi.fn(),
   hasCapacity: vi.fn(() => true),
+  interruptChildSession: vi.fn(),
 }));
 
 vi.mock("@grackle-ai/plugin-core", () => ({
@@ -34,6 +35,10 @@ vi.mock("@grackle-ai/plugin-core", () => ({
   lifecycleCleanupPhase: { name: "lifecycle-cleanup", execute: vi.fn() },
   createEnvironmentReconciliationPhase: vi.fn(() => ({
     name: "environment-status",
+    execute: vi.fn(),
+  })),
+  createSubagentReconciliationPhase: vi.fn(() => ({
+    name: "subagent-reconciliation",
     execute: vi.fn(),
   })),
 }));
@@ -64,6 +69,8 @@ vi.mock("@grackle-ai/database", () => ({
     listSessionsForTask: vi.fn(),
     getLatestSessionForTask: vi.fn(),
     countActiveForEnvironment: vi.fn(),
+    listRunningSubagentChildren: vi.fn(() => []),
+    getSession: vi.fn(),
   },
   settingsStore: { getSetting: vi.fn() },
   dispatchQueueStore: { listPending: vi.fn(() => []), dequeue: vi.fn() },
@@ -126,6 +133,7 @@ describe("createCorePlugin", () => {
     expect(names).toContain("dispatch");
     expect(names).not.toContain("cron");
     expect(names).toContain("lifecycle-cleanup");
+    expect(names).toContain("subagent-reconciliation");
     expect(names).toContain("environment-status");
     // orphan-reparent belongs to the orchestration plugin
     expect(names).not.toContain("orphan-reparent");

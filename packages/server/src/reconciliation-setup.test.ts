@@ -12,6 +12,7 @@ vi.mock("@grackle-ai/core", () => ({
   computeTaskStatus: vi.fn(() => ({ status: "not_started", latestSessionId: undefined })),
   resolveDispatchEnvironment: vi.fn(),
   resolveAncestorEnvironmentId: vi.fn(),
+  interruptChildSession: vi.fn(),
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
@@ -24,6 +25,10 @@ vi.mock("@grackle-ai/plugin-core", () => ({
   lifecycleCleanupPhase: { name: "lifecycle-cleanup", execute: async () => {} },
   createEnvironmentReconciliationPhase: vi.fn(() => ({
     name: "environment-status",
+    execute: async () => {},
+  })),
+  createSubagentReconciliationPhase: vi.fn(() => ({
+    name: "subagent-reconciliation",
     execute: async () => {},
   })),
 }));
@@ -64,6 +69,8 @@ vi.mock("@grackle-ai/database", () => ({
     countActiveForEnvironment: vi.fn(() => 0),
     getActiveSessionsForTask: vi.fn(() => []),
     listSessionsForTask: vi.fn(() => []),
+    listRunningSubagentChildren: vi.fn(() => []),
+    getSession: vi.fn(),
   },
   settingsStore: {
     getSetting: vi.fn(),
@@ -85,13 +92,18 @@ beforeEach(() => {
 });
 
 describe("createCoreReconciliationPhases", () => {
-  it("returns dispatch, lifecycle-cleanup, and environment-status phases (no cron, no knowledge-health, no orphan-reparent)", () => {
+  it("returns dispatch, lifecycle-cleanup, subagent-reconciliation, and environment-status phases (no cron, no knowledge-health, no orphan-reparent)", () => {
     const phases = createCoreReconciliationPhases();
     const names = phases.map((p) => p.name);
-    expect(names).toEqual(["dispatch", "lifecycle-cleanup", "environment-status"]);
+    expect(names).toEqual([
+      "dispatch",
+      "lifecycle-cleanup",
+      "subagent-reconciliation",
+      "environment-status",
+    ]);
     expect(names).not.toContain("cron");
     expect(names).not.toContain("orphan-reparent");
     expect(names).not.toContain("knowledge-health");
-    expect(phases).toHaveLength(3);
+    expect(phases).toHaveLength(4);
   });
 });

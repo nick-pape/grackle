@@ -9,12 +9,14 @@ import {
   resolveDispatchEnvironment,
   resolveAncestorEnvironmentId,
   findFirstConnectedEnvironment,
+  interruptChildSession,
 } from "@grackle-ai/core";
 import type { ReconciliationPhase } from "@grackle-ai/core";
 import {
   createDispatchPhase,
   lifecycleCleanupPhase,
   createEnvironmentReconciliationPhase,
+  createSubagentReconciliationPhase,
 } from "@grackle-ai/plugin-core";
 import { TASK_STATUS, ROOT_TASK_ID } from "@grackle-ai/common";
 import {
@@ -97,9 +99,16 @@ export function createCoreReconciliationPhases(): ReconciliationPhase[] {
     },
   });
 
+  const subagentReconciliationPhase = createSubagentReconciliationPhase({
+    listRunningSubagentChildren: sessionStore.listRunningSubagentChildren,
+    getSession: sessionStore.getSession,
+    interruptChildSession,
+  });
+
   const phases: ReconciliationPhase[] = [
     dispatchPhase,
     lifecycleCleanupPhase,
+    subagentReconciliationPhase,
     environmentReconciliationPhase,
   ];
 
