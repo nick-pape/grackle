@@ -21,7 +21,7 @@ import {
   SessionStatus as SessionStatusE,
 } from "@grackle-ai/ahp";
 import { AhpClientSocket, InMemoryClientIdStore, WsCloseCode } from "@grackle-ai/ahp-transport";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -1177,6 +1177,65 @@ describe("createResourceWatch", () => {
     } finally {
       await client.cleanup();
       await lb.cleanup();
+    }
+  }, 12_000);
+
+  it("emits watch URIs under the lexical root so a follow-up resourceRead round-trips", async () => {
+    // Working dir is a symlink to the real dir. chokidar watches the realpath,
+    // but emitted change URIs must use the lexical (symlink) path — otherwise a
+    // client that follows the notification with resourceRead hits PermissionDenied
+    // because allowedRoots holds the lexical path, not its realpath.
+    const realDir = await mkdtemp(join(tmpdir(), "grackle-ahp-wreal-"));
+    const linkDir = `${realDir}-link`;
+    try {
+      await symlink(realDir, linkDir, "dir");
+    } catch {
+      // No symlink privilege (Windows): nothing to assert.
+      await rm(realDir, { recursive: true, force: true });
+      return;
+    }
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      await client.socket.request("createSession", {
+        channel: "ahp-session:/watch-symlink-1",
+        provider: TEST_RUNTIME.name,
+        config: { workingDirectory: linkDir },
+      });
+      const { channel } = (await client.socket.request("createResourceWatch", {
+        channel: "ahp-root://",
+        uri: pathToFileURL(linkDir).href,
+      })) as { channel: string };
+      await client.socket.request("subscribe", { channel });
+      await new Promise((r) => setTimeout(r, 400));
+      await writeFile(join(linkDir, "note.md"), "# Note", "utf-8");
+
+      const deadline = Date.now() + 5000;
+      let changedUri: string | undefined;
+      const lexicalPrefix = pathToFileURL(linkDir).href;
+      while (changedUri === undefined && Date.now() < deadline) {
+        for (const e of client.received.filter((r) => r.channel === channel)) {
+          const items = (e.action as { changes: { items: Array<{ uri: string }> } }).changes.items;
+          changedUri = items.find((c) => c.uri.endsWith("note.md"))?.uri;
+        }
+        if (changedUri === undefined) {
+          await new Promise((r) => setTimeout(r, 50));
+        }
+      }
+      expect(changedUri).toBeDefined();
+      // Emitted under the lexical (symlink) root, not the realpath.
+      expect(changedUri!.startsWith(lexicalPrefix)).toBe(true);
+      // And that URI is readable through the sandbox (the actual round-trip).
+      const read = (await client.socket.request("resourceRead", {
+        channel: "ahp-root://",
+        uri: changedUri!,
+      })) as ResourceReadResult;
+      expect(read.data).toBe("# Note");
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+      await rm(linkDir, { recursive: true, force: true });
+      await rm(realDir, { recursive: true, force: true });
     }
   }, 12_000);
 

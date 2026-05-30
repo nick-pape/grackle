@@ -89,7 +89,12 @@ import { type FSWatcher, watch as chokidarWatch } from "chokidar";
 import picomatch from "picomatch";
 import { existsSync } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { relative as relativePath, resolve as resolvePath, sep as pathSep } from "node:path";
+import {
+  join as joinPath,
+  relative as relativePath,
+  resolve as resolvePath,
+  sep as pathSep,
+} from "node:path";
 import { pathToFileURL } from "node:url";
 
 import {
@@ -101,6 +106,7 @@ import {
   resourceUriToPath,
 } from "./resource-fs.js";
 
+import { logger } from "./logger.js";
 import { getRuntime } from "./runtime-registry.js";
 import {
   deleteSessionPump,
@@ -589,6 +595,19 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     const includeMatchers = (descriptor.includes?.items ?? []).map((g) => picomatch(g));
     const relForMatch = (p: string): string => relativePath(rootPath, p).split(pathSep).join("/");
 
+    // chokidar watches `rootPath`, which is the realpath of the requested URI
+    // (assertWithinRoots resolves symlinks). Emit change URIs under the *lexical*
+    // root the client asked to watch, so a client that follows a notification
+    // with resourceRead passes the lexical sandbox check (allowedRoots holds the
+    // lexical working tree, not its realpath). When the root isn't a symlink the
+    // two coincide and this is a no-op.
+    const lexicalRoot = resourceUriToPath(descriptor.root);
+    const emitUriFor = (changedPath: string): string => {
+      const rel = relativePath(rootPath, changedPath);
+      const lexicalPath = rel === "" ? lexicalRoot : joinPath(lexicalRoot, rel);
+      return pathToFileURL(lexicalPath).href;
+    };
+
     const watcher = chokidarWatch(rootPath, {
       ignoreInitial: true,
       awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 50 },
@@ -623,7 +642,7 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
             return;
           }
         }
-        const uri = pathToFileURL(changedPath).href;
+        const uri = emitUriFor(changedPath);
         entry.pending.set(uri, { uri, type });
         if (entry.flushTimer === undefined) {
           entry.flushTimer = setTimeout(() => {
@@ -637,6 +656,12 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     watcher.on("change", record(ResourceChangeType.Updated));
     watcher.on("unlink", record(ResourceChangeType.Deleted));
     watcher.on("unlinkDir", record(ResourceChangeType.Deleted));
+    // FSWatcher is an EventEmitter: an unhandled "error" event would crash the
+    // PowerLine process. Log and tear the watch down (the client can recreate it).
+    watcher.on("error", (err: unknown): void => {
+      logger.error({ err, channel }, "Resource watch error; tearing down watch");
+      stopResourceWatch(entry);
+    });
   }
 
   /** Release a watch's filesystem resources (watcher + pending flush timer). */
