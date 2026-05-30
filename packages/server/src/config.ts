@@ -5,6 +5,7 @@ import {
   DEFAULT_POWERLINE_PORT,
   DEFAULT_SANDBOX_PORT,
 } from "@grackle-ai/common";
+import { parsePublicOrigin } from "@grackle-ai/auth";
 
 /** Validated server configuration resolved from environment variables. */
 export interface ServerConfig {
@@ -85,35 +86,20 @@ function parseFlag(envName: string): boolean {
 /**
  * Parse and validate the canonical public origin from an environment variable.
  *
- * Returns `undefined` when unset. When set, the value must be an absolute
- * http(s) URL with no path, query, or fragment — sub-path reverse-proxy
- * deployments (e.g. `https://example.com/grackle`) are not supported because
- * the OAuth and pairing routes append absolute paths. Throws a clear error on
- * an invalid value so the server fails fast at startup. The returned value is
- * the normalized origin (no trailing slash).
+ * Returns `undefined` when unset or blank. When set, delegates to the shared
+ * {@link parsePublicOrigin} validator: the value must be a bare absolute http(s)
+ * origin (no path/query/fragment/userinfo) — sub-path reverse-proxy deployments
+ * (e.g. `https://example.com/grackle`) are not supported because the OAuth and
+ * pairing routes append absolute paths. Throws a clear error on an invalid value
+ * so the server fails fast at startup. The returned value is the normalized
+ * origin (no trailing slash).
  */
 function parsePublicUrl(envName: string): string | undefined {
   const raw = process.env[envName];
-  if (!raw) {
+  if (!raw?.trim()) {
     return undefined;
   }
-  let parsed: URL;
-  try {
-    parsed = new URL(raw);
-  } catch {
-    throw new Error(
-      `Invalid ${envName}: "${raw}". Must be an absolute http(s) origin, e.g. https://grackle.home.`,
-    );
-  }
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new Error(`Invalid ${envName}: "${raw}". Scheme must be http or https.`);
-  }
-  if ((parsed.pathname !== "" && parsed.pathname !== "/") || parsed.search || parsed.hash) {
-    throw new Error(
-      `Invalid ${envName}: "${raw}". Must be a bare origin with no path, query, or fragment.`,
-    );
-  }
-  return parsed.origin;
+  return parsePublicOrigin(raw, envName).origin;
 }
 
 /**

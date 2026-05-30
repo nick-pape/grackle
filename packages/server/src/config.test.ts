@@ -148,6 +148,21 @@ describe("resolveServerConfig", () => {
       vi.stubEnv("GRACKLE_PUBLIC_URL", "https://grackle.home?foo=bar");
       expect(() => resolveServerConfig()).toThrow("bare origin with no path");
     });
+
+    it("throws when the URL embeds userinfo", () => {
+      vi.stubEnv("GRACKLE_PUBLIC_URL", "https://user:pass@grackle.home");
+      expect(() => resolveServerConfig()).toThrow("must not contain a username or password");
+    });
+
+    it("trims surrounding whitespace", () => {
+      vi.stubEnv("GRACKLE_PUBLIC_URL", "  https://grackle.home  ");
+      expect(resolveServerConfig().publicUrl).toBe("https://grackle.home");
+    });
+
+    it("treats a whitespace-only value as unset", () => {
+      vi.stubEnv("GRACKLE_PUBLIC_URL", "   ");
+      expect(resolveServerConfig().publicUrl).toBeUndefined();
+    });
   });
 
   it("returns a frozen object", () => {

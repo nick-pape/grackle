@@ -18,6 +18,7 @@ import {
   consumeRefreshToken,
   createOAuthAccessToken,
   OAUTH_ACCESS_TOKEN_TTL_MS,
+  parsePublicOrigin,
 } from "@grackle-ai/auth";
 
 // ─── Options ────────────────────────────────────────────────
@@ -405,11 +406,18 @@ export function createWebServer(options: WebServerOptions): http.Server {
 
   // When GRACKLE_PUBLIC_URL is set it is the source of truth for the
   // browser-facing scheme + host (behind a TLS-terminating reverse proxy).
-  const publicUrlParsed = publicUrl ? new URL(publicUrl) : undefined;
+  // Validate here too (not just in the server's config parser) so a direct
+  // consumer of this exported factory fails fast with a clear error rather than
+  // a low-signal URL exception deep in a request handler.
+  const publicUrlParsed = publicUrl ? parsePublicOrigin(publicUrl, "publicUrl") : undefined;
   const publicIsHttps = publicUrlParsed?.protocol === "https:";
   // Session cookie `Secure`: keyed off the public scheme when configured, else
   // the wildcard-bind heuristic (unchanged for the casual local user).
   const cookieSecure = publicUrlParsed ? publicIsHttps : allowNetwork;
+  // CSP form-action / frame-src host: use the configured public host when set
+  // (consistent with ignoring the spoofable request Host elsewhere); otherwise
+  // fall back to the request Host for the loopback / LAN case.
+  const cspHost = publicUrlParsed ? publicUrlParsed.host : undefined;
 
   /** ConnectRPC handler for browser gRPC calls (Connect protocol over HTTP/1.1). */
   const webConnectHandler = connectRoutes
@@ -418,7 +426,7 @@ export function createWebServer(options: WebServerOptions): http.Server {
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   const handler = async (req: http.IncomingMessage, res: http.ServerResponse): Promise<void> => {
-    setSecurityHeaders(res, req.headers.host, { hsts: publicIsHttps });
+    setSecurityHeaders(res, cspHost ?? req.headers.host, { hsts: publicIsHttps });
 
     let rawPath: string;
     let queryString = "";

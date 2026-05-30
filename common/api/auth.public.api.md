@@ -148,6 +148,9 @@ export interface OAuthTokenClaims {
 export function parseCookies(header: string): Record<string, string>;
 
 // @public
+export function parsePublicOrigin(value: string, label: string): URL;
+
+// @public
 export function pruneRevocations(ttlMs?: number): void;
 
 // @public

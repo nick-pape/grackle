@@ -77,3 +77,6 @@ export {
   setSecurityHeaders,
   type SecurityHeaderOptions,
 } from "./security-headers.js";
+
+// ─── Public Origin ─────────────────────────────────────────
+export { parsePublicOrigin } from "./public-origin.js";

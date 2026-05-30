@@ -1,22 +1,27 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import http from "node:http";
 
-// Mock @grackle-ai/auth
-vi.mock("@grackle-ai/auth", () => ({
-  setSecurityHeaders: vi.fn(),
-  validateSessionCookie: vi.fn(() => false),
-  verifyApiKey: vi.fn(() => false),
-  redeemPairingCode: vi.fn(() => false),
-  createSession: vi.fn(() => "grackle_session=test; HttpOnly"),
-  registerClient: vi.fn(),
-  getClient: vi.fn(),
-  createAuthorizationCode: vi.fn(),
-  consumeAuthorizationCode: vi.fn(),
-  createRefreshToken: vi.fn(),
-  consumeRefreshToken: vi.fn(),
-  createOAuthAccessToken: vi.fn(),
-  OAUTH_ACCESS_TOKEN_TTL_MS: 3600000,
-}));
+// Mock @grackle-ai/auth — stub the stateful auth functions, but keep the real
+// pure `parsePublicOrigin` validator so publicUrl validation behaves correctly.
+vi.mock("@grackle-ai/auth", async (importActual) => {
+  const actual = await importActual<typeof import("@grackle-ai/auth")>();
+  return {
+    setSecurityHeaders: vi.fn(),
+    validateSessionCookie: vi.fn(() => false),
+    verifyApiKey: vi.fn(() => false),
+    redeemPairingCode: vi.fn(() => false),
+    createSession: vi.fn(() => "grackle_session=test; HttpOnly"),
+    registerClient: vi.fn(),
+    getClient: vi.fn(),
+    createAuthorizationCode: vi.fn(),
+    consumeAuthorizationCode: vi.fn(),
+    createRefreshToken: vi.fn(),
+    consumeRefreshToken: vi.fn(),
+    createOAuthAccessToken: vi.fn(),
+    OAUTH_ACCESS_TOKEN_TTL_MS: 3600000,
+    parsePublicOrigin: actual.parsePublicOrigin,
+  };
+});
 
 import { createWebServer, isWildcardAddress } from "./web-server.js";
 import {
@@ -243,6 +248,38 @@ describe("createWebServer behind a public https origin", () => {
     expect(setSecurityHeaders).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
       hsts: true,
     });
+  });
+
+  it("derives CSP from the configured public host, not the request Host", async () => {
+    await request(server, "/healthz", { Host: "attacker.example.com" });
+
+    expect(setSecurityHeaders).toHaveBeenCalledWith(expect.anything(), "grackle.home", {
+      hsts: true,
+    });
+  });
+});
+
+describe("createWebServer publicUrl validation", () => {
+  it("throws a clear error when publicUrl is not a bare origin", () => {
+    expect(() =>
+      createWebServer({
+        apiKey: "x".repeat(64),
+        webPort: 0,
+        bindHost: "127.0.0.1",
+        publicUrl: "https://grackle.home/some/path",
+      }),
+    ).toThrow("publicUrl");
+  });
+
+  it("throws when publicUrl is not a valid URL", () => {
+    expect(() =>
+      createWebServer({
+        apiKey: "x".repeat(64),
+        webPort: 0,
+        bindHost: "127.0.0.1",
+        publicUrl: "not-a-url",
+      }),
+    ).toThrow("Invalid publicUrl");
   });
 });
 
