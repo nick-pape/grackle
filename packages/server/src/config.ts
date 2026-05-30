@@ -1,3 +1,4 @@
+import { accessSync, constants as fsConstants } from "node:fs";
 import {
   DEFAULT_SERVER_PORT,
   DEFAULT_WEB_PORT,
@@ -6,6 +7,32 @@ import {
   DEFAULT_SANDBOX_PORT,
 } from "@grackle-ai/common";
 import { parsePublicOrigin } from "@grackle-ai/auth";
+
+/**
+ * Native-TLS configuration resolved from environment variables.
+ *
+ * When present, every browser- and client-facing Grackle listener (web,
+ * sandbox, MCP, gRPC) terminates TLS in-process. The web/sandbox/MCP
+ * listeners use `http2.createSecureServer({ allowHTTP1: true })` so HTTP/1.1
+ * clients still negotiate via ALPN; the gRPC listener is intentionally
+ * h2-only (`createSecureServer` without `allowHTTP1`) because gRPC clients
+ * always speak h2. Used by deployments that expose the server on the network
+ * without a fronting TLS proxy (#1373).
+ */
+export interface TlsConfig {
+  /** Filesystem path to the PEM-encoded server certificate (`GRACKLE_TLS_CERT`). */
+  certPath: string;
+  /** Filesystem path to the PEM-encoded private key (`GRACKLE_TLS_KEY`). */
+  keyPath: string;
+  /**
+   * Optional filesystem path to an intermediate-CA PEM bundle
+   * (`GRACKLE_TLS_CHAIN`). When set, the contents are appended to the server
+   * certificate at load time so the full chain is served to clients. This is
+   * **server identity** only — for client-cert verification (mTLS) see #1393
+   * (`GRACKLE_TLS_CLIENT_CA`, future).
+   */
+  chainPath?: string;
+}
 
 /** Validated server configuration resolved from environment variables. */
 export interface ServerConfig {
@@ -57,6 +84,12 @@ export interface ServerConfig {
   worktreeBase?: string;
   /** Docker host for host mapping (GRACKLE_DOCKER_HOST). */
   dockerHost?: string;
+  /**
+   * Native-TLS configuration (`GRACKLE_TLS_CERT` + `GRACKLE_TLS_KEY`, optional
+   * `GRACKLE_TLS_CHAIN`). When present, the server terminates TLS in-process on
+   * every listener. When unset, listeners serve cleartext (current behavior).
+   */
+  tls?: TlsConfig;
 }
 
 /**
@@ -84,6 +117,54 @@ function parseFlag(envName: string): boolean {
 }
 
 /**
+ * Parse the native-TLS config from env vars. Returns `undefined` when neither
+ * cert nor key is set (the cleartext default). Throws when only one is set, or
+ * when any referenced file is missing/unreadable, so the operator sees a clear
+ * startup error rather than a confusing handshake failure later.
+ */
+function parseTlsConfig(): TlsConfig | undefined {
+  const certPath = process.env.GRACKLE_TLS_CERT;
+  const keyPath = process.env.GRACKLE_TLS_KEY;
+  const chainPath = process.env.GRACKLE_TLS_CHAIN;
+
+  if (!certPath && !keyPath) {
+    if (chainPath) {
+      throw new Error(
+        "GRACKLE_TLS_CHAIN is set but GRACKLE_TLS_CERT and GRACKLE_TLS_KEY are not. " +
+          "Set both cert and key (or unset chain).",
+      );
+    }
+    return undefined;
+  }
+  if (!certPath || !keyPath) {
+    throw new Error(
+      "GRACKLE_TLS_CERT and GRACKLE_TLS_KEY must both be set, or neither. " +
+        `Got cert=${certPath ? "set" : "unset"}, key=${keyPath ? "set" : "unset"}.`,
+    );
+  }
+
+  const checkReadable = (envName: string, path: string): void => {
+    try {
+      accessSync(path, fsConstants.R_OK);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(`${envName} path "${path}" is not readable: ${message}`);
+    }
+  };
+  checkReadable("GRACKLE_TLS_CERT", certPath);
+  checkReadable("GRACKLE_TLS_KEY", keyPath);
+  if (chainPath) {
+    checkReadable("GRACKLE_TLS_CHAIN", chainPath);
+  }
+
+  return {
+    certPath,
+    keyPath,
+    ...(chainPath ? { chainPath } : {}),
+  };
+}
+
+/**
  * Parse and validate the canonical public origin from an environment variable.
  *
  * Returns `undefined` when unset or blank. When set, delegates to the shared
@@ -107,6 +188,7 @@ function parsePublicUrl(envName: string): string | undefined {
  * Throws on invalid values so the server fails fast at startup with a clear error.
  */
 export function resolveServerConfig(): ServerConfig {
+  const tls = parseTlsConfig();
   return Object.freeze({
     grpcPort: parsePort("GRACKLE_PORT", DEFAULT_SERVER_PORT),
     webPort: parsePort("GRACKLE_WEB_PORT", DEFAULT_WEB_PORT),
@@ -127,5 +209,6 @@ export function resolveServerConfig(): ServerConfig {
     workingDirectory: process.env.GRACKLE_WORKING_DIRECTORY || undefined,
     worktreeBase: process.env.GRACKLE_WORKTREE_BASE || undefined,
     dockerHost: process.env.GRACKLE_DOCKER_HOST || undefined,
+    ...(tls ? { tls } : {}),
   });
 }
