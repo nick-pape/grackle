@@ -11,6 +11,7 @@ The Grackle web dashboard -- a single-page application for managing remote AI co
 - **DAG visualization** -- interactive dependency graph powered by React Flow, showing task hierarchy and dependency edges at a glance.
 - **Environment management** -- add, configure, and monitor Docker, SSH, Local, and Codespace environments from a unified panel.
 - **Workspace boards** -- group tasks and sessions around a shared repo and environment; track progress, cost, and session history per workspace.
+- **Sessions activity monitor** -- a live, environment-grouped view of every session (task-bound and ad-hoc alike), with status filters, search, and links through to each session's detail and owning task.
 - **Chat with the orchestrator** -- talk directly to the root agent through a chat interface with full access to every Grackle MCP tool.
 - **Findings panel** -- browse categorized discoveries shared across agents within a workspace.
 - **Persona management** -- create and configure specialized agent personas with custom runtimes, models, and system prompts.

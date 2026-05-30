@@ -44,6 +44,10 @@ export { SessionAttemptSelector } from "./components/display/SessionAttemptSelec
 export type { SessionAttemptSelectorProps } from "./components/display/SessionAttemptSelector.js";
 export { SessionPicker } from "./components/display/SessionPicker.js";
 export type { SessionPickerProps, SessionPickerEntry } from "./components/display/SessionPicker.js";
+export { SessionsTable } from "./components/sessions/SessionsTable.js";
+export type { SessionsTableProps } from "./components/sessions/SessionsTable.js";
+export { describeSessionStatus, isActiveSession } from "./components/sessions/sessionsView.js";
+export type { StatusTone, SessionStatusDescriptor } from "./components/sessions/sessionsView.js";
 
 // Editable fields
 export {
@@ -272,6 +276,7 @@ export {
   HOME_URL,
   CHAT_URL,
   COORDINATION_URL,
+  SESSIONS_URL,
   TASKS_URL,
 } from "./utils/navigation.js";
 

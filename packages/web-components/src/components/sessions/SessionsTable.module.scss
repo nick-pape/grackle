@@ -1,0 +1,488 @@
+// =============================================================================
+// SessionsTable — live, environment-grouped session activity monitor
+// =============================================================================
+
+@use "../../styles/mixins" as *;
+
+// Map each status tone to an accent colour. Applied via a `--tone` custom
+// property so dots, labels, and chips share one source of truth.
+$tones: (
+  "running": var(--accent-green),
+  "idle": var(--accent-yellow),
+  "pending": var(--accent-blue),
+  "success": var(--accent-green),
+  "error": var(--accent-red),
+  "paused": var(--accent-purple),
+  "neutral": var(--text-tertiary),
+);
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+// ── Toolbar: status chips + search ──────────────────────────────────────────
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+
+  @include mobile {
+    flex-wrap: wrap;
+  }
+}
+
+.chips {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-ui);
+  color: var(--text-secondary);
+  background: var(--bg-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+
+  &:hover {
+    color: var(--text-primary);
+    border-color: var(--border-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 1px;
+  }
+
+  // A small tone swatch on each non-"All" chip.
+  &[data-tone]::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--tone, var(--text-tertiary));
+  }
+
+  @each $tone, $color in $tones {
+    &[data-tone="#{$tone}"] {
+      --tone: #{$color};
+    }
+  }
+}
+
+.chipActive {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border-color: var(--tone, var(--accent-blue));
+}
+
+.chipCount {
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+}
+
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+
+  @include mobile {
+    margin-left: 0;
+    flex: 1 1 100%;
+  }
+}
+
+.searchIcon {
+  position: absolute;
+  left: var(--space-sm);
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+.searchInput {
+  @include input-field;
+  padding-left: calc(var(--space-sm) * 2 + 14px);
+  min-width: 220px;
+
+  @include mobile {
+    width: 100%;
+  }
+}
+
+// ── Scroll body ─────────────────────────────────────────────────────────────
+
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-sm) var(--space-md) var(--space-xl);
+}
+
+// ── Environment group ───────────────────────────────────────────────────────
+
+.group {
+  margin-top: var(--space-md);
+
+  &:first-child {
+    margin-top: var(--space-xs);
+  }
+}
+
+.groupHeader {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-sm);
+  background: var(--bg-surface);
+  backdrop-filter: blur(var(--glass-blur-inset));
+  -webkit-backdrop-filter: blur(var(--glass-blur-inset));
+  border: none;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  transition: color var(--transition-fast);
+
+  &:hover {
+    color: var(--text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
+  }
+}
+
+.groupIcon {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.groupName {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.envStatusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  flex-shrink: 0;
+
+  &[data-status="connected"],
+  &[data-status="active"],
+  &[data-status="running"] {
+    background: var(--accent-green);
+    box-shadow: var(--shadow-glow-green);
+  }
+
+  &[data-status="disconnected"],
+  &[data-status="stopped"],
+  &[data-status="error"] {
+    background: var(--accent-red);
+  }
+}
+
+.missingEnv {
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  color: var(--accent-red);
+  border: 1px solid var(--accent-red);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-xs);
+  opacity: 0.8;
+}
+
+.groupSpacer {
+  flex: 1;
+}
+
+.activePill {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--accent-green);
+  background: var(--accent-green-dim, rgba(78, 204, 163, 0.12));
+  border-radius: var(--radius-pill, 999px);
+  padding: 2px var(--space-sm);
+}
+
+.countBadge {
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+  min-width: 20px;
+  text-align: center;
+}
+
+// ── Rows ────────────────────────────────────────────────────────────────────
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.row {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--border-subtle);
+
+  // A faint tone-coloured left rail per row.
+  @each $tone, $color in $tones {
+    &[data-status-tone="#{$tone}"] {
+      --tone: #{$color};
+    }
+  }
+
+  &:hover {
+    background: var(--bg-overlay);
+  }
+}
+
+// The primary clickable area (opens the session). A real <button> so it is
+// keyboard-accessible; button chrome is reset to look like a table row.
+.rowButton {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-sm) var(--space-sm) var(--space-md);
+  background: none;
+  border: none;
+  border-left: 2px solid transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+
+  .row:hover & {
+    border-left-color: var(--tone, var(--border-primary));
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
+  }
+}
+
+// The task-association control (task link or ad-hoc marker), a sibling of the
+// clickable session area so it never nests an interactive element.
+.association {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: var(--space-sm) var(--space-md) var(--space-sm) var(--space-sm);
+}
+
+.statusDot {
+  width: 9px;
+  height: 9px;
+  margin-top: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--tone, var(--text-tertiary));
+
+  @each $tone, $color in $tones {
+    &[data-tone="#{$tone}"] {
+      --tone: #{$color};
+    }
+  }
+
+  // Live sessions pulse with a soft halo.
+  &[data-tone="running"] {
+    box-shadow: 0 0 0 0 rgba(78, 204, 163, 0.5);
+    animation: pulse 1.8s ease-out infinite;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(78, 204, 163, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(78, 204, 163, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(78, 204, 163, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .statusDot[data-tone="running"] {
+    animation: none;
+  }
+}
+
+.rowContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.promptLine {
+  display: flex;
+  align-items: center;
+}
+
+.prompt {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.promptEmpty {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: 3px;
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.statusLabel {
+  font-weight: var(--font-weight-bold);
+  color: var(--tone, var(--text-secondary));
+
+  @each $tone, $color in $tones {
+    &[data-tone="#{$tone}"] {
+      --tone: #{$color};
+    }
+  }
+}
+
+.runtimeBadge,
+.personaBadge {
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  background: var(--bg-inset);
+  border-radius: var(--radius-sm);
+  padding: 1px var(--space-xs);
+}
+
+.personaBadge {
+  color: var(--accent-purple);
+}
+
+.taskChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  max-width: 220px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--accent-blue);
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 1px var(--space-xs);
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+
+  &:hover {
+    border-color: var(--accent-blue);
+    background: var(--bg-inset);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 1px;
+  }
+}
+
+.taskChipLabel {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.adHocChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 1px var(--space-xs);
+}
+
+.time {
+  font-family: var(--font-mono);
+}
+
+.tokens,
+.cost {
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+// ── Empty state ─────────────────────────────────────────────────────────────
+
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  color: var(--text-tertiary);
+  padding: var(--space-xl);
+  text-align: center;
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-secondary);
+}
+
+.emptyHint {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  max-width: 320px;
+}
