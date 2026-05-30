@@ -149,7 +149,6 @@ in \`scripts/prebuild.mjs\` if upstream changes are needed.
 - **Source:** ${ahpRepoUrl}
 - **Path:** \`types/\`
 - **Pinned commit:** \`${ahpCommit}\`
-  (\`Add ahp-otlp: telemetry channel for OpenTelemetry pass-through (#140)\`)
 - **License:** MIT (C) Microsoft Corporation
 
 ## Local transforms (applied by \`scripts/prebuild.mjs\`)

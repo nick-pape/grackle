@@ -36,7 +36,7 @@ export type {
   SessionInputBooleanQuestion,
   SessionInputSingleSelectQuestion,
   SessionInputMultiSelectQuestion,
-  UserMessage,
+  Message,
   MessageAttachment,
   MessageAttachmentBase,
   ResponsePart,
@@ -47,9 +47,18 @@ export type {
   ToolDefinition,
   ToolAnnotations,
   SessionActiveClient,
-  SessionCustomization,
-  CustomizationRef,
-  CustomizationAgentRef,
+  Customization,
+  PluginCustomization,
+  DirectoryCustomization,
+  ClientPluginCustomization,
+  ChildCustomization,
+  AgentCustomization,
+  SkillCustomization,
+  PromptCustomization,
+  RuleCustomization,
+  HookCustomization,
+  McpServerCustomization,
+  CustomizationLoadState,
   SessionInputRequest,
   SessionInputAnswer,
   SessionInputAnswerValue,
@@ -79,6 +88,8 @@ export type {
   UsageInfo,
   ErrorInfo,
   TelemetryCapabilities,
+  ResourceWatchState,
+  ResourceChange,
 } from "./vendor/ahp/state.js";
 
 // ─── Enum values (runtime constants) ───────────────────────────
@@ -100,10 +111,13 @@ export {
   ToolCallCancellationReason,
   ConfirmationOptionKind,
   ToolResultContentType,
-  CustomizationStatus,
+  MessageKind,
+  CustomizationType,
+  CustomizationLoadStatus,
   TerminalClaimKind,
   ChangesetStatus,
   ChangesetOperationScope,
+  ResourceChangeType,
 } from "./vendor/ahp/state.js";
 
 // ─── Action types ───────────────────────────────────────────────
@@ -151,6 +165,7 @@ export type {
   SessionCustomizationsChangedAction,
   SessionCustomizationToggledAction,
   SessionCustomizationUpdatedAction,
+  SessionCustomizationRemovedAction,
   SessionTruncatedAction,
   SessionIsReadChangedAction,
   SessionIsArchivedChangedAction,
@@ -176,6 +191,8 @@ export type {
   ChangesetFileRemovedAction,
   ChangesetOperationsChangedAction,
   ChangesetClearedAction,
+  // Resource-watch actions
+  ResourceWatchChangedAction,
 } from "./vendor/ahp/actions.js";
 
 // ─── Action enum values (runtime constant) ──────────────────────
@@ -210,6 +227,12 @@ export type {
   ResourceRequestResult,
   ResourceMoveParams,
   ResourceMoveResult,
+  ResourceResolveParams,
+  ResourceResolveResult,
+  ResourceMkdirParams,
+  ResourceMkdirResult,
+  CreateResourceWatchParams,
+  CreateResourceWatchResult,
   AuthenticateParams,
   AuthenticateResult,
   ListSessionsParams,
@@ -239,6 +262,8 @@ export type {
 export {
   ReconnectResultType,
   ContentEncoding,
+  ResourceWriteMode,
+  ResourceType,
   CompletionItemKind,
   ChangesetOperationTargetKind,
 } from "./vendor/ahp/commands.js";
@@ -301,6 +326,7 @@ export {
   sessionReducer,
   terminalReducer,
   changesetReducer,
+  resourceWatchReducer,
   softAssertNever,
   isClientDispatchable,
 } from "./vendor/ahp/reducers.js";

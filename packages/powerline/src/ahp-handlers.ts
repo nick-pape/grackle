@@ -21,7 +21,7 @@
  *   `SubscribeResult { snapshot: undefined }` — session channels are
  *   stateless from AHP's POV; state is conveyed via the action stream.
  * - `dispatchAction` notification — if the action is
- *   `SessionTurnStartedAction`, route the `userMessage.text` to
+ *   `SessionTurnStartedAction`, route the `message.text` to
  *   `session.sendInput`. Other client-dispatchable actions are no-ops
  *   for now (none used by Grackle today).
  * - `disposeSession` — `session.kill()` + remove from registry.
@@ -62,7 +62,7 @@ import type {
   AhpResponse,
   AhpNotification,
 } from "@grackle-ai/ahp";
-import { ActionType, JsonRpcErrorCodes, SessionStatus } from "@grackle-ai/ahp";
+import { ActionType, JsonRpcErrorCodes, MessageKind, SessionStatus } from "@grackle-ai/ahp";
 import {
   AhpServerSocket,
   type AhpServerConnection,
@@ -646,7 +646,7 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
       const startAction: StateAction = {
         type: ActionType.SessionTurnStarted,
         turnId: synthesizedOrphanTurnId,
-        userMessage: { text: "" },
+        message: { text: "", origin: { kind: MessageKind.User } },
       };
       forwarder.serverSeq += 1;
       conn.session.notify("action", {
@@ -770,8 +770,8 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     }
     // Only SessionTurnStartedAction maps to Grackle's `sendInput` semantics.
     if ((params.action as { type: ActionTypeT }).type === ActionType.SessionTurnStarted) {
-      const a = params.action as { userMessage: { text: string } };
-      session.sendInput(a.userMessage.text);
+      const a = params.action as { message: { text: string } };
+      session.sendInput(a.message.text);
     }
   }
 

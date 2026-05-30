@@ -5,6 +5,7 @@
 
 import {
   ActionType,
+  MessageKind,
   ResponsePartKind,
   ToolCallConfirmationReason,
   ToolResultContentType,
@@ -50,7 +51,7 @@ describe("reverseMapAction", () => {
         envelope({
           type: ActionType.SessionTurnStarted,
           turnId: "turn-1",
-          userMessage: { text: "hello" },
+          message: { text: "hello", origin: { kind: MessageKind.User } },
         }),
         ctx,
       );

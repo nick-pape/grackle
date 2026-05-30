@@ -7,7 +7,12 @@
  */
 
 import type { ActionEnvelope, StateAction } from "@grackle-ai/ahp";
-import { ActionType, JsonRpcErrorCodes, SessionStatus as SessionStatusE } from "@grackle-ai/ahp";
+import {
+  ActionType,
+  JsonRpcErrorCodes,
+  MessageKind,
+  SessionStatus as SessionStatusE,
+} from "@grackle-ai/ahp";
 import { AhpClientSocket, InMemoryClientIdStore, WsCloseCode } from "@grackle-ai/ahp-transport";
 import type {
   AgentEvent,
@@ -561,7 +566,7 @@ describe("ahp-handlers: subscribe", () => {
 });
 
 describe("ahp-handlers: dispatchAction", () => {
-  it("routes SessionTurnStartedAction.userMessage.text to session.sendInput", async () => {
+  it("routes SessionTurnStartedAction.message.text to session.sendInput", async () => {
     const lb = await spinUpLoopback();
     const client = await openClient(lb.port);
     try {
@@ -575,7 +580,7 @@ describe("ahp-handlers: dispatchAction", () => {
       const action: StateAction = {
         type: ActionType.SessionTurnStarted,
         turnId: "turn-input",
-        userMessage: { text: "hello from webhook" },
+        message: { text: "hello from webhook", origin: { kind: MessageKind.User } },
       };
       client.socket.notify("dispatchAction", {
         channel: `ahp-session:/${sessionId}`,
