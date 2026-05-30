@@ -123,15 +123,26 @@ function main(): void {
       readFileSync(resolve(options.combinedThresholds), "utf8"),
     );
     const perPackage = summarizeByPackage(analysis.combined);
-    const { violations, unenforced } = checkCombinedThresholds(perPackage, floors);
+    const { violations, unenforced, missingCoverage, enforcedCount } = checkCombinedThresholds(
+      perPackage,
+      floors,
+    );
     for (const pkg of unenforced) {
       process.stderr.write(
         `[coverage-merge] WARNING: ${pkg} has combined coverage but no threshold entry — unenforced.\n`,
       );
     }
-    if (violations.length > 0) {
+    for (const pkg of missingCoverage) {
       process.stderr.write(
-        `\n[coverage-merge] ERROR: ${violations.length} package(s) below their combined coverage floor:\n`,
+        `[coverage-merge] WARNING: ${pkg} has a threshold entry but no combined coverage — ` +
+          `not enforced (missing artifact or removed package?).\n`,
+      );
+    }
+    if (violations.length > 0) {
+      const pkgCount: number = new Set(violations.map((v) => v.pkg)).size;
+      process.stderr.write(
+        `\n[coverage-merge] ERROR: ${violations.length} combined-coverage floor violation(s) ` +
+          `across ${pkgCount} package(s):\n`,
       );
       for (const v of violations) {
         process.stderr.write(`  ✗ ${v.message}\n`);
@@ -139,7 +150,7 @@ function main(): void {
       process.exit(1);
     }
     process.stdout.write(
-      `\n[coverage-merge] All ${Object.keys(floors).length} packages meet their combined coverage floor.\n`,
+      `\n[coverage-merge] All ${enforcedCount} enforced package(s) meet their combined coverage floor.\n`,
     );
   }
 }

@@ -102,8 +102,13 @@ describe("checkCombinedThresholds", () => {
     const floors: Record<string, CombinedFloor> = {
       "packages/web": { lines: 30, functions: 40, branches: 20 },
     };
-    const { violations } = checkCombinedThresholds(summaries(35, 45, 25), floors);
+    const { violations, enforcedCount, missingCoverage } = checkCombinedThresholds(
+      summaries(35, 45, 25),
+      floors,
+    );
     expect(violations).toHaveLength(0);
+    expect(enforcedCount).toBe(1);
+    expect(missingCoverage).toEqual([]);
   });
 
   it("flags each metric below its floor", () => {
@@ -117,12 +122,17 @@ describe("checkCombinedThresholds", () => {
     ]);
   });
 
-  it("skips floors for packages with no coverage, warns on uncovered floors gap", () => {
+  it("reports floors with no coverage as missingCoverage, and coverage with no floor as unenforced", () => {
     const floors: Record<string, CombinedFloor> = {
       "packages/absent": { lines: 90, functions: 90, branches: 90 },
     };
-    const { violations, unenforced } = checkCombinedThresholds(summaries(35, 45, 25), floors);
-    expect(violations).toHaveLength(0); // packages/absent has no combined coverage → skipped
+    const { violations, unenforced, missingCoverage, enforcedCount } = checkCombinedThresholds(
+      summaries(35, 45, 25),
+      floors,
+    );
+    expect(violations).toHaveLength(0); // packages/absent has no coverage → not a violation
+    expect(missingCoverage).toEqual(["packages/absent"]); // floor entry, no coverage
     expect(unenforced).toEqual(["packages/web"]); // has coverage, no floor entry
+    expect(enforcedCount).toBe(0); // nothing was actually enforced
   });
 });

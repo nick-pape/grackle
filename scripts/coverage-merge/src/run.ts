@@ -230,26 +230,46 @@ export interface CombinedFloor {
   branches: number;
 }
 
-/** A single threshold violation, formatted for the error output. */
+/** A single per-metric threshold violation. */
 export interface ThresholdViolation {
+  /** The package that violated (e.g. `packages/web`). */
+  pkg: string;
+  /** Human-readable detail, e.g. `packages/web lines 35.0% < floor 40%`. */
   message: string;
 }
 
+/** Outcome of checking per-package combined coverage against floors. */
+export interface ThresholdResult {
+  /** Per-metric violations (a package can appear more than once). */
+  violations: ThresholdViolation[];
+  /** Packages with coverage but no floor entry (sorted) — unenforced. */
+  unenforced: string[];
+  /** Packages with a floor entry but no combined coverage (sorted) — not enforced. */
+  missingCoverage: string[];
+  /** Number of packages actually enforced (had both a floor and coverage). */
+  enforcedCount: number;
+}
+
 /**
- * Check per-package combined coverage against floors. Packages in `floors` with
- * no combined coverage are skipped; packages with coverage but no floor entry
- * yield a warning (returned separately). Returns the list of violations.
+ * Check per-package combined coverage against floors. Returns per-metric
+ * violations, plus diagnostics: packages whose floor could not be enforced
+ * because they have no combined coverage (e.g. a missing artifact or a removed
+ * package), and packages with coverage but no floor entry.
  */
 export function checkCombinedThresholds(
   combined: Map<string, CoverageSummary>,
   floors: Record<string, CombinedFloor>,
-): { violations: ThresholdViolation[]; unenforced: string[] } {
+): ThresholdResult {
   const violations: ThresholdViolation[] = [];
+  const missingCoverage: string[] = [];
+  let enforcedCount: number = 0;
   for (const [pkg, floor] of Object.entries(floors)) {
     const summary: CoverageSummary | undefined = combined.get(pkg);
     if (summary === undefined) {
+      missingCoverage.push(pkg);
       continue;
     }
+    enforcedCount += 1;
     const metrics: Array<[string, number, number]> = [
       ["lines", percentValue(summary.lines), floor.lines],
       ["functions", percentValue(summary.functions), floor.functions],
@@ -258,13 +278,15 @@ export function checkCombinedThresholds(
     for (const [name, actual, floorValue] of metrics) {
       if (actual + 1e-9 < floorValue) {
         violations.push({
+          pkg,
           message: `${pkg} ${name} ${actual.toFixed(1)}% < floor ${floorValue}%`,
         });
       }
     }
   }
-  const unenforced: string[] = [...combined.keys()].filter((k) => !(k in floors));
-  return { violations, unenforced };
+  const unenforced: string[] = [...combined.keys()].filter((k) => !(k in floors)).sort();
+  missingCoverage.sort();
+  return { violations, unenforced, missingCoverage, enforcedCount };
 }
 
 /** Render the summary as a GitHub-flavored Markdown table for the job summary. */
