@@ -1644,4 +1644,54 @@ describe("subagent child sessions (#1075)", () => {
     expect(contents).toContain("clean summary text");
     expect(contents.some((c) => c.includes("is_ok"))).toBe(false);
   });
+
+  it("is idempotent across a parent stream restart (reanimate) — no duplicate child", async () => {
+    sessionStore.createSession("p10", "env1", "claude-code", "test", "sonnet", "/tmp/p10", "task1");
+    const childId = "sub_p10_tcR";
+    const delegation = [
+      toolUse("p10", "Agent", { subagent_type: "Explore", prompt: "investigate" }, "tcR"),
+      toolResult("p10", "first result", "tcR"),
+      statusCompleted("p10"),
+    ];
+
+    // First stream run materializes + closes the child.
+    await waitForProcessing(delegation, { sessionId: "p10", logPath: "/tmp/p10", taskId: "task1" });
+    // Stream restarts (e.g. reanimate): the same events replay through a fresh
+    // delegationByToolCall map. ensureChildSession must dedupe on the existing child.
+    await waitForProcessing(delegation, { sessionId: "p10", logPath: "/tmp/p10", taskId: "task1" });
+
+    expect(sessionStore.listSessionsByParent("p10").map((s) => s.id)).toEqual([childId]);
+    const prompts = querySessionActions({ sessionId: childId }).filter(
+      (a) => a.content === "investigate",
+    );
+    expect(prompts).toHaveLength(1);
+  });
+
+  it("converges a Copilot task spawn and its read_agent polls onto one child via agent_id", async () => {
+    sessionStore.createSession("p11", "env1", "copilot", "test", "gpt-4o", "/tmp/p11", "task1");
+
+    await waitForProcessing(
+      [
+        // Spawn carries agent_id; identity = agent_id.
+        toolUse(
+          "p11",
+          "task",
+          { agent_type: "worker", name: "reviewer", agent_id: "ag-99", prompt: "review the diff" },
+          "spawn1",
+        ),
+        toolResult("p11", "Agent started in background with agent_id: ag-99", "spawn1"),
+        // Poll references the same agent_id → same child id.
+        toolUse("p11", "read_agent", { agent_id: "ag-99" }, "poll1"),
+        toolResult("p11", "Agent completed. agent_id: ag-99\n\nLGTM", "poll1"),
+        statusCompleted("p11"),
+      ],
+      { sessionId: "p11", logPath: "/tmp/p11", taskId: "task1" },
+    );
+
+    // Both spawn and poll resolve to one child keyed on agent_id.
+    const children = sessionStore.listSessionsByParent("p11");
+    expect(children.map((s) => s.id)).toEqual(["sub_p11_ag-99"]);
+    expect(children[0]?.status).toBe("stopped");
+    expect(children[0]?.endReason).toBe("completed");
+  });
 });
