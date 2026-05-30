@@ -22,7 +22,7 @@ Same kernel under both. Different posture toward the human.
 
 ## GrackleGate — one wire for the tools
 
-Today an agent reaches its tools through a single shared mouth. We want a real [aggregator and gateway](./features/coordination): many MCP servers folded behind one, an mcp-gateway swallowed whole.
+Today an agent reaches its tools through a single shared [MCP server](./features/mcp-server). We want a real aggregator and gateway: many MCP servers folded behind one, an mcp-gateway swallowed whole.
 
 The point is identity. Every tool call routed in the agent's name, signed with the agent's key, leaving the agent's name in the log. When one does something it shouldn't, you read the log and you know which one. No shared credential, no anonymous reach.
 

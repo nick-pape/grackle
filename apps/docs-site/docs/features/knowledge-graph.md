@@ -79,7 +79,7 @@ grackle serve
 
 On startup the plugin connects, lays down schema constraints and indexes, loads the local embedding model, and begins projecting your entities into the graph. It populates itself — tasks, sessions, workspaces, personas, environments, and transcripts mirror in automatically. No one feeds it by hand.
 
-To shut the whole thing off, set `GRACKLE_KNOWLEDGE_ENABLED=false`.
+To shut the whole thing off on a running install: `grackle plugin disable knowledge`, then restart. (`GRACKLE_KNOWLEDGE_ENABLED=false` only seeds the disabled state on a fresh database — once the database exists, the variable is inert and plugin state is database-authoritative.)
 
 ## When the wire goes quiet
 

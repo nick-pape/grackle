@@ -107,7 +107,7 @@ A persona is an agent's preset — its system prompt, its runtime, the slice of 
 | `knowledge_search`   | Natural-language semantic search over the knowledge graph, ranked by similarity | `query`, `limit?`, `workspaceId?`, `expand?`, `expandDepth?` |
 | `knowledge_get_node` | Retrieve a knowledge node by ID, with its edges                                 | `id`, `expand?`, `expandDepth?`                              |
 
-These come from the [knowledge graph plugin](./knowledge-graph), enabled by default. They vanish only if you disable the plugin outright (`plugin_set_enabled`, or `GRACKLE_KNOWLEDGE_ENABLED=false`).
+These come from the [knowledge graph plugin](./knowledge-graph), enabled by default. They vanish only if you disable the plugin (`grackle plugin disable knowledge`, or the `plugin_set_enabled` tool — then restart). `GRACKLE_KNOWLEDGE_ENABLED` only sets the initial state when the database is first seeded; on an existing install it does nothing.
 
 ### Configuration
 

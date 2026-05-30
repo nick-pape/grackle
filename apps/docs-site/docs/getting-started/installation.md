@@ -6,15 +6,15 @@ sidebar_position: 1
 
 # Installation
 
-Get the server up. Get past the pairing gate. Everything else is a later recipe.
+Get Grackle running and pair the web UI. Two paths: Docker, or npm/source.
 
-:::warning Experimental
-Grackle is experimental. You are handing an AI ambient access to real machines. Run it where a mistake stays cheap.
+:::warning
+Grackle is pre-1.0 and experimental. Unresolved security issues, sharp edges, broken workflows. Not for production.
 :::
 
 ## Requirements
 
-- **Node.js** — supported range `>=22.0.0 <24.0.0`. Node 24+ does not run.
+- **Node.js 22** — supported range `>=22.0.0 <24.0.0`. Node 24+ is not yet supported.
 - **Docker** — only if you want containerized [environments](../building-blocks/environments-workspaces).
 
 ## Docker (recommended)
@@ -22,7 +22,7 @@ Grackle is experimental. You are handing an AI ambient access to real machines. 
 Pull the image and run the whole stack in one container.
 
 ```bash
-docker run -it --rm \
+docker run -d --name grackle \
   -p 3000:3000 -p 7434:7434 -p 7435:7435 \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v grackle-data:/data \
@@ -42,85 +42,58 @@ npm install -g @grackle-ai/cli
 grackle serve
 ```
 
-No global install? Prefix with `npx`:
+Build from source when you want the bleeding edge:
 
 ```bash
-npx @grackle-ai/cli serve
-```
-
-From source:
-
-```bash
-git clone https://github.com/nick-pape/grackle.git
+git clone https://github.com/nick-pape/grackle
 cd grackle
 rush install && rush build
 node packages/server/dist/index.js
 ```
 
-:::note pnpm blocks native builds
-pnpm v8+ refuses install scripts by default. If `grackle serve` dies with `Could not locate the bindings file`, run `pnpm approve-builds`, or pin it in `package.json`:
-
-```json
-{ "pnpm": { "onlyBuiltDependencies": ["better-sqlite3"] } }
-```
-
-:::
-
 :::note Knowledge graph is Docker-only by default
-On npm and from-source installs the [knowledge graph](../features/knowledge-graph) is off. To run it, stand up your own Neo4j and set `GRACKLE_KNOWLEDGE_ENABLED=true` plus the `GRACKLE_NEO4J_*` settings (see `.env.example`).
+The knowledge graph is **off** on npm and from-source installs. To enable it, run your own Neo4j and set `GRACKLE_KNOWLEDGE_ENABLED=true` (plus the `GRACKLE_NEO4J_*` connection settings — see `.env.example`). The Docker image bundles Neo4j and enables it for you.
 :::
 
 ## What starts
 
-However you install, the server binds three services to localhost — plus a local PowerLine, so an agent can run on your own machine right away.
+`grackle serve` brings up four things on localhost:
 
-| Service     | Port | What it carries                 |
-| ----------- | ---- | ------------------------------- |
-| Web UI      | 3000 | Dashboard, chat, live streaming |
-| gRPC server | 7434 | CLI and PowerLine traffic       |
-| MCP server  | 7435 | Agent tool access               |
+| Service     | Port | What it is               |
+| ----------- | ---- | ------------------------ |
+| Web UI + WS | 3000 | The browser interface    |
+| Server gRPC | 7434 | What the CLI talks to    |
+| MCP server  | 7435 | Tools for outside agents |
+| PowerLine   | 7433 | A local wire to run on   |
 
-## The pairing gate
+## First launch
 
-The web UI is locked. Any request to `http://localhost:3000/` without a valid session is bounced to `/pair`.
-
-On startup the server prints a pairing URL:
+The web UI is gated behind a one-time **pairing** step. On startup the server prints a pairing URL:
 
 ```text
 Open in browser:
 http://localhost:3000/pair?code=ABC123
-
-Pairing code expires in 5 minutes.
-Run `grackle pair` to generate a new code.
 ```
 
-Open that URL — it carries the 6-character code and pairs you. Or open `http://localhost:3000/pair` and type the code by hand.
-
-On Docker, the URL is in the logs:
+Open it, or go to `http://localhost:3000/pair` and type the six-character code. Running in Docker, read the URL from the container logs:
 
 ```bash
-docker logs <container>
+docker logs grackle
 ```
 
-Look for the `Open in browser: ...` line.
-
 :::warning The code expires in 5 minutes
-See `Invalid or expired pairing code`? Run `grackle pair` for a fresh code and URL, then open it.
+If it lapses, mint a new one with `grackle pair` (in Docker, `docker exec grackle grackle pair`).
 :::
 
 ## The setup wizard
 
-Once paired, a four-step wizard runs:
+After pairing, a four-step wizard runs once:
 
-| Step              | What it does                                                     |
-| ----------------- | ---------------------------------------------------------------- |
-| **Welcome**       | What Grackle is.                                                 |
-| **About**         | How it works.                                                    |
-| **Runtime**       | Pick your default agent — Claude Code, Copilot, Codex, or Goose. |
-| **Notifications** | Optionally enable browser notifications, then finish.            |
+1. **Welcome** — what you're looking at.
+2. **About** — what Grackle does.
+3. **Runtime** — pick the default runtime.
+4. **Notifications** — grant browser notifications, or don't.
 
-Finishing mints your default persona and drops you into the root chat.
+It writes your default persona and drops you into the root chat.
 
----
-
-The server is up and you are in. Next: [Using the Root Chat](./root-chat).
+→ [Using the Root Chat](./root-chat)
