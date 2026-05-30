@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.136.1",
+      "tag": "@grackle-ai/cli_v0.136.1",
+      "date": "Sat, 30 May 2026 14:59:51 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add Storybook interaction-test coverage: instrument the web-components Storybook build and union its lcov into the combined repo-wide total (#1384)."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.136.0",
       "tag": "@grackle-ai/cli_v0.136.0",
       "date": "Sat, 30 May 2026 14:24:33 GMT",

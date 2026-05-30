@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 30 May 2026 14:24:33 GMT and should not be manually modified.
+This log was last generated on Sat, 30 May 2026 14:59:51 GMT and should not be manually modified.
+
+## 0.136.1
+Sat, 30 May 2026 14:59:51 GMT
+
+### Patches
+
+- Add Storybook interaction-test coverage: instrument the web-components Storybook build and union its lcov into the combined repo-wide total (#1384).
 
 ## 0.136.0
 Sat, 30 May 2026 14:24:33 GMT
