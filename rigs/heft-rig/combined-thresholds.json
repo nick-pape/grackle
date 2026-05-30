@@ -1,0 +1,177 @@
+{
+  "packages/adapter-codespace": {
+    "lines": 60,
+    "functions": 25,
+    "branches": 25
+  },
+  "packages/adapter-docker": {
+    "lines": 55,
+    "functions": 35,
+    "branches": 30
+  },
+  "packages/adapter-local": {
+    "lines": 70,
+    "functions": 60,
+    "branches": 80
+  },
+  "packages/adapter-sdk": {
+    "lines": 55,
+    "functions": 50,
+    "branches": 45
+  },
+  "packages/adapter-ssh": {
+    "lines": 40,
+    "functions": 15,
+    "branches": 30
+  },
+  "packages/ahp": {
+    "lines": 100,
+    "functions": 0,
+    "branches": 0
+  },
+  "packages/ahp-transport": {
+    "lines": 90,
+    "functions": 85,
+    "branches": 75
+  },
+  "packages/auth": {
+    "lines": 85,
+    "functions": 90,
+    "branches": 60
+  },
+  "packages/cli": {
+    "lines": 5,
+    "functions": 80,
+    "branches": 95
+  },
+  "packages/common": {
+    "lines": 95,
+    "functions": 85,
+    "branches": 70
+  },
+  "packages/core": {
+    "lines": 75,
+    "functions": 75,
+    "branches": 60
+  },
+  "packages/database": {
+    "lines": 80,
+    "functions": 85,
+    "branches": 60
+  },
+  "packages/knowledge": {
+    "lines": 90,
+    "functions": 100,
+    "branches": 55
+  },
+  "packages/knowledge-core": {
+    "lines": 85,
+    "functions": 85,
+    "branches": 70
+  },
+  "packages/mcp": {
+    "lines": 80,
+    "functions": 50,
+    "branches": 55
+  },
+  "packages/mcp-stdio": {
+    "lines": 40,
+    "functions": 50,
+    "branches": 90
+  },
+  "packages/plugin-core": {
+    "lines": 70,
+    "functions": 75,
+    "branches": 60
+  },
+  "packages/plugin-knowledge": {
+    "lines": 70,
+    "functions": 75,
+    "branches": 65
+  },
+  "packages/plugin-orchestration": {
+    "lines": 90,
+    "functions": 75,
+    "branches": 80
+  },
+  "packages/plugin-scheduling": {
+    "lines": 95,
+    "functions": 100,
+    "branches": 65
+  },
+  "packages/plugin-sdk": {
+    "lines": 90,
+    "functions": 60,
+    "branches": 80
+  },
+  "packages/powerline": {
+    "lines": 80,
+    "functions": 80,
+    "branches": 65
+  },
+  "packages/prompt": {
+    "lines": 95,
+    "functions": 95,
+    "branches": 80
+  },
+  "packages/runtime-acp": {
+    "lines": 75,
+    "functions": 45,
+    "branches": 30
+  },
+  "packages/runtime-claude-code": {
+    "lines": 80,
+    "functions": 45,
+    "branches": 30
+  },
+  "packages/runtime-codex": {
+    "lines": 85,
+    "functions": 40,
+    "branches": 20
+  },
+  "packages/runtime-copilot": {
+    "lines": 75,
+    "functions": 40,
+    "branches": 20
+  },
+  "packages/runtime-genaiscript": {
+    "lines": 5,
+    "functions": 5,
+    "branches": 0
+  },
+  "packages/runtime-sdk": {
+    "lines": 60,
+    "functions": 40,
+    "branches": 40
+  },
+  "packages/server": {
+    "lines": 65,
+    "functions": 45,
+    "branches": 50
+  },
+  "packages/web": {
+    "lines": 30,
+    "functions": 55,
+    "branches": 60
+  },
+  "packages/web-components": {
+    "lines": 35,
+    "functions": 60,
+    "branches": 55
+  },
+  "packages/web-server": {
+    "lines": 50,
+    "functions": 75,
+    "branches": 50
+  },
+  "scripts/coverage-merge": {
+    "lines": 80,
+    "functions": 100,
+    "branches": 90
+  },
+  "scripts/github-import": {
+    "lines": 65,
+    "functions": 100,
+    "branches": 95
+  }
+}

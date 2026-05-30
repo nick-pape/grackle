@@ -288,6 +288,14 @@ export function summarize(files: Map<string, FileCoverage>): CoverageSummary {
   return summary;
 }
 
+/**
+ * Numeric coverage percentage for a metric. A metric with nothing found is
+ * treated as 100% (vacuously covered) so it never trips a threshold gate.
+ */
+export function percentValue(metric: MetricTotal): number {
+  return metric.found === 0 ? 100 : (metric.hit / metric.found) * 100;
+}
+
 /** Format a {@link MetricTotal} as a percentage string with one decimal (e.g. `83.1%`). */
 export function formatPercent(metric: MetricTotal): string {
   const PERCENT_DECIMALS: number = 1;

@@ -244,12 +244,13 @@ jobs:
       - name: Build coverage-merge
         run: node common/scripts/install-run-rush.js build -t @grackle-ai/coverage-merge
 
-      - name: Merge coverage and write combined total
+      - name: Merge coverage, write combined total, gate per-package
         run: |
           node scripts/coverage-merge/dist/index.js coverage-input \
             --out coverage/combined/lcov.info \
             --summary "$GITHUB_STEP_SUMMARY" \
-            --require-source packages/web/src
+            --require-source packages/web/src \
+            --combined-thresholds rigs/heft-rig/combined-thresholds.json
 
       # Guard that BACKEND E2E coverage (Node server/PowerLine) landed. Checks
       # the per-shard backend lcov artifact directly — the merged lcov can't
