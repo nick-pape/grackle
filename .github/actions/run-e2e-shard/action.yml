@@ -16,6 +16,10 @@ inputs:
     description: Override E2E_WORKERS (number of Playwright workers per shard)
     required: false
     default: ""
+  coverage-artifact-name:
+    description: Name for the uploaded E2E coverage artifact (empty = skip coverage collection)
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -76,6 +80,9 @@ runs:
       working-directory: tests/e2e-tests
       env:
         E2E_WORKERS: ${{ inputs.workers }}
+        # Enable Playwright V8 coverage collection only when a coverage artifact
+        # name is supplied (the global teardown writes coverage/lcov.info).
+        E2E_COVERAGE: ${{ inputs.coverage-artifact-name != '' && 'true' || '' }}
       run: |
         ARGS="--project=${{ inputs.project }}"
         if [ -n "${{ inputs.shard }}" ]; then
@@ -91,3 +98,12 @@ runs:
         path: tests/e2e-tests/test-results/e2e-results.xml
         if-no-files-found: ignore
         retention-days: 30
+
+    - name: Upload E2E coverage
+      if: always() && inputs.coverage-artifact-name != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.coverage-artifact-name }}
+        path: tests/e2e-tests/coverage/lcov.info
+        if-no-files-found: warn
+        retention-days: 14

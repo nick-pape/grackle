@@ -17,6 +17,14 @@ export default defineConfig({
   },
   build: {
     chunkSizeWarningLimit: 800,
+    // Emit external source maps (separate `*.js.map` files). These let the
+    // Playwright E2E coverage pass map V8 coverage of the minified bundle back
+    // to `packages/web/src/**` source (#1383). External maps (not `inline`)
+    // are NOT counted toward `chunkSizeWarningLimit`, so they don't trip the
+    // warnings-as-errors CI gate; inline maps would. The repo is public OSS, so
+    // shipping maps leaks nothing. `@grackle-ai/web-server` serves any dist
+    // file, so the `.map` files are reachable when the app is served.
+    sourcemap: true,
     // Never inline font files as base64 `data:` URIs. Vite inlines assets under
     // ~4 KB by default, which would emit small self-hosted font subsets (e.g.
     // JetBrains Mono's tiny cyrillic-ext subset) as `data:font/woff2;base64,...`.

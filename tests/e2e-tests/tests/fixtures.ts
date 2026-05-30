@@ -11,6 +11,7 @@ import {
   patchWsForStubRuntime,
   getWorkspaceId,
 } from "./helpers.js";
+import { startCoverage, collectCoverage } from "../coverage-helpers.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ScenarioStep = Record<string, any>;
@@ -105,7 +106,10 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     await use(`http://127.0.0.1:${workerServer.webPort}`);
   },
 
-  // Inject the session cookie into every page context automatically
+  // Inject the session cookie into every page context automatically, and
+  // (when E2E_COVERAGE=true) collect V8 coverage for the whole test. Coverage
+  // starts here, before `appPage` navigates, so the initial app load is
+  // captured; it is appended to the shared monocart cache on teardown.
   page: async ({ page, baseURL, workerServer }, use) => {
     const eqIdx = workerServer.pairingCookie.indexOf("=");
     const cookieName = workerServer.pairingCookie.slice(0, eqIdx);
@@ -117,7 +121,12 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         url: baseURL!,
       },
     ]);
-    await use(page);
+    await startCoverage(page);
+    try {
+      await use(page);
+    } finally {
+      await collectCoverage(page);
+    }
   },
 
   grackle: async ({ baseURL, workerServer }, use) => {
