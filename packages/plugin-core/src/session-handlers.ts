@@ -157,6 +157,17 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
     runtime: resolved.runtime,
     model: resolved.model,
   });
+
+  // Supply credentials on demand for this runtime, just before spawn (AHP HR6).
+  // For local envs, skip file tokens — the PowerLine is on the same machine.
+  // Runs a fail-fast pre-flight (#1316): a required-but-missing/expired credential
+  // throws here, before any session row is created below.
+  await tokenPush.authenticateForRuntime(
+    req.environmentId,
+    runtime,
+    env.adapterType === "local" ? { excludeFileTokens: true } : undefined,
+  );
+
   const maxTurns = cfg?.maxTurns || resolved.maxTurns;
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
@@ -261,14 +272,6 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
       pipeDelivery.ensureAsyncDeliveryListener(sessionId); // child receives parent messages
     }
   }
-
-  // Supply credentials on demand for this runtime, just before spawn (AHP HR6).
-  // For local envs, skip file tokens — the PowerLine is on the same machine.
-  await tokenPush.authenticateForRuntime(
-    req.environmentId,
-    runtime,
-    env.adapterType === "local" ? { excludeFileTokens: true } : undefined,
-  );
 
   const { stream } = conn.transport.createSession(createParams);
   processEventStream(stream, {
