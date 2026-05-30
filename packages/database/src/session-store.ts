@@ -251,6 +251,19 @@ export function listSessionsForTask(taskId: string): SessionRow[] {
     .all();
 }
 
+/**
+ * List all sessions spawned by a given parent session (e.g. materialized
+ * subagent child sessions, #1075), oldest first.
+ */
+export function listSessionsByParent(parentSessionId: string): SessionRow[] {
+  return db
+    .select()
+    .from(sessions)
+    .where(eq(sessions.parentSessionId, parentSessionId))
+    .orderBy(asc(sessions.startedAt), asc(sessions.id))
+    .all();
+}
+
 /** Get the most recent session for a task (by startedAt DESC, id DESC). */
 export function getLatestSessionForTask(taskId: string): SessionRow | undefined {
   return db

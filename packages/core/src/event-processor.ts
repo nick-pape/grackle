@@ -23,7 +23,12 @@ import { logger } from "./logger.js";
 import { runWithTrace } from "./trace-context.js";
 import { emitDiagnostic } from "./telemetry.js";
 import { publishChildCompletion } from "./pipe-delivery.js";
-import { ensureChildSession, closeChildSession, appendChildActivity } from "./subagent-session.js";
+import {
+  ensureChildSession,
+  closeChildSession,
+  appendChildActivity,
+  interruptChildSession,
+} from "./subagent-session.js";
 import { cleanupLifecycleStream } from "./lifecycle-streams.js";
 import { sendInputToSession } from "./signals/signal-delivery.js";
 import { checkBudget } from "./budget-checker.js";
@@ -136,6 +141,15 @@ export function processEventStream(
 
   processorRegistry.register(ctx);
 
+  // #1075: maps a delegation tool_use call id → the child session it
+  // materialized, so the paired tool_result can append/close that child, and so
+  // the finally block can interrupt any child still open when the stream ends.
+  // Scoped to this stream (per parent session), so no cross-session leakage.
+  const delegationByToolCall = new Map<
+    string,
+    { childId: string; isPoll: boolean; isBackground: boolean }
+  >();
+
   /** Inner processing logic, extracted so it can be wrapped in runWithTrace. */
   const processEvents = async (): Promise<void> => {
     try {
@@ -171,14 +185,6 @@ export function processEventStream(
         await logWriter.writeEvent(logPath, promptEvent);
         streamHub.publish(promptEvent);
       }
-
-      // #1075: maps a delegation tool_use call id → the child session it
-      // materialized, so the paired tool_result can append/close that child.
-      // Scoped to this stream (per parent session), so no cross-session leakage.
-      const delegationByToolCall = new Map<
-        string,
-        { childId: string; isPoll: boolean; isBackground: boolean }
-      >();
 
       for await (const envelope of envelopes) {
         const event = envelope.event;
@@ -251,7 +257,6 @@ export function processEventStream(
               ensureChildSession({
                 childSessionId: childId,
                 parentSessionId: sessionId,
-                taskId: ctx.taskId,
                 info,
               });
               delegationByToolCall.set(eventToolCallId, {
@@ -521,6 +526,13 @@ export function processEventStream(
       // emitted — skip the duplicate to avoid interfering with SIGCHLD delivery.
     } finally {
       processorRegistry.unregister(sessionId);
+      // #1075: the stream ended (normally, killed, or crashed) — interrupt any
+      // subagent child whose tool_result never arrived so it isn't stranded
+      // RUNNING with no environment to reconnect to.
+      for (const { childId } of delegationByToolCall.values()) {
+        interruptChildSession(childId);
+      }
+      delegationByToolCall.clear();
       logWriter.endSession(logPath);
       try {
         writeTranscript(logPath);

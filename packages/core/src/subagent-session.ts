@@ -24,8 +24,8 @@
 
 import { dirname, join } from "node:path";
 import { create } from "@bufbuild/protobuf";
-import { grackle, SESSION_STATUS, END_REASON } from "@grackle-ai/common";
-import type { DelegationInfo } from "@grackle-ai/common";
+import { grackle, SESSION_STATUS, END_REASON, TERMINAL_SESSION_STATUSES } from "@grackle-ai/common";
+import type { DelegationInfo, SessionStatus } from "@grackle-ai/common";
 import { sessionStore } from "@grackle-ai/database";
 import { recordSessionAction } from "./session-action-recorder.js";
 import * as streamHub from "./stream-hub.js";
@@ -83,8 +83,6 @@ export interface EnsureChildSessionParams {
   childSessionId: string;
   /** The delegating (parent) session id. */
   parentSessionId: string;
-  /** Task the parent belongs to (folds the child into the same task tree); "" if none. */
-  taskId: string;
   /** Normalized delegation info parsed from the tool args. */
   info: DelegationInfo;
 }
@@ -95,14 +93,18 @@ export interface EnsureChildSessionParams {
  * or a re-emitted event), this is a no-op so no duplicate session or floor
  * action is created.
  *
- * The child is created with `environmentId=""` (it owns no real environment —
- * its activity is fed from the parent's stream) and a log directory alongside
- * the parent's, so the standard session activity view renders it.
+ * The child is attached to its parent **session** (via `parentSessionId`), not a
+ * task: it is created with `environmentId=""` AND `taskId=""` so it is invisible
+ * to every task- and environment-scoped query (status computation, active/latest
+ * session lookups used for signal routing, usage aggregation, reconciliation).
+ * It remains addressable by id for navigation, and the parent edge is recovered
+ * via `parentSessionId`. The log directory sits alongside the parent's so the
+ * standard session activity view renders it.
  *
- * @param params - Child id, parent id, task id, and parsed delegation info.
+ * @param params - Child id, parent id, and parsed delegation info.
  */
 export function ensureChildSession(params: EnsureChildSessionParams): void {
-  const { childSessionId, parentSessionId, taskId, info } = params;
+  const { childSessionId, parentSessionId, info } = params;
   if (sessionStore.getSession(childSessionId)) {
     return; // already materialized — dedupe
   }
@@ -119,7 +121,7 @@ export function ensureChildSession(params: EnsureChildSessionParams): void {
     info.prompt ?? "",
     info.model ?? "",
     logPath,
-    taskId,
+    "", // taskId — attached to the parent session, not a task (see above)
     "", // personaId
     parentSessionId,
     "", // pipeMode — not an IPC pipe child
@@ -174,4 +176,27 @@ export function appendChildActivity(childSessionId: string, content: string): vo
     return;
   }
   recordChildEvent(childSessionId, session.logPath ?? "", grackle.EventType.TEXT, content);
+}
+
+/**
+ * Mark a still-open child session as interrupted (terminal) without recording a
+ * result. Called when the parent stream ends while a delegation is still
+ * outstanding (e.g. the parent crashed mid-subagent), so a child is never left
+ * stranded in `RUNNING` with no environment to reconnect to. No-op if the child
+ * does not exist or is already terminal.
+ *
+ * @param childSessionId - The child session id.
+ */
+export function interruptChildSession(childSessionId: string): void {
+  const session = sessionStore.getSession(childSessionId);
+  if (!session || TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
+    return;
+  }
+  sessionStore.updateSession(
+    childSessionId,
+    SESSION_STATUS.STOPPED,
+    undefined,
+    undefined,
+    END_REASON.INTERRUPTED,
+  );
 }

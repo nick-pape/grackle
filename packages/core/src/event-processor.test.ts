@@ -1451,7 +1451,10 @@ describe("subagent child sessions (#1075)", () => {
     const child = sessionStore.getSession(childId);
     expect(child).toBeDefined();
     expect(child?.parentSessionId).toBe("p1");
-    expect(child?.taskId).toBe("task1");
+    // Attached to the parent SESSION, not the task (avoids polluting task-scoped
+    // queries used for status/signal routing).
+    expect(child?.taskId).toBe("");
+    expect(child?.environmentId).toBe("");
     expect(child?.status).toBe("stopped");
     expect(child?.endReason).toBe("completed");
 
@@ -1531,9 +1534,7 @@ describe("subagent child sessions (#1075)", () => {
     expect(child?.status).toBe("stopped");
     expect(child?.endReason).toBe("completed");
     // Two distinct child records must NOT exist — both polls share agent_id ag-7.
-    const allSubs = sessionStore
-      .listSessionsForTask("task1")
-      .filter((s) => s.id.startsWith("sub_"));
+    const allSubs = sessionStore.listSessionsByParent("p5");
     expect(allSubs).toHaveLength(1);
     // The terminal poll result is recorded exactly once (closeChildSession records
     // it; the append path is skipped for terminal polls — no duplication).
@@ -1541,5 +1542,45 @@ describe("subagent child sessions (#1075)", () => {
       a.content.includes("all done"),
     );
     expect(completedEntries).toHaveLength(1);
+  });
+
+  it("keeps the child out of task-scoped queries (status/signal routing unaffected)", async () => {
+    sessionStore.createSession("p6", "env1", "claude-code", "test", "sonnet", "/tmp/p6", "task1");
+
+    await waitForProcessing(
+      [
+        toolUse("p6", "Agent", { subagent_type: "Explore", prompt: "look" }, "tc6"),
+        toolResult("p6", "found it", "tc6"),
+        statusCompleted("p6"),
+      ],
+      { sessionId: "p6", logPath: "/tmp/p6", taskId: "task1" },
+    );
+
+    const childId = "sub_p6_tc6";
+    expect(sessionStore.getSession(childId)).toBeDefined();
+    // The virtual child must NOT appear in any task-scoped query: the "latest
+    // session" pointer (UI + signal routing) and the task session list must
+    // resolve to the real parent, never the env-less child.
+    expect(sessionStore.getLatestSessionForTask("task1")?.id).toBe("p6");
+    const taskSessions = sessionStore.listSessionsForTask("task1");
+    expect(taskSessions.map((s) => s.id)).toEqual(["p6"]);
+    expect(sessionStore.getActiveSessionsForTask("task1").map((s) => s.id)).not.toContain(childId);
+    // But it remains reachable via its parent session (navigation edge).
+    expect(sessionStore.listSessionsByParent("p6").map((s) => s.id)).toEqual([childId]);
+  });
+
+  it("interrupts an open child when the parent stream ends without a tool_result", async () => {
+    sessionStore.createSession("p7", "env1", "claude-code", "test", "sonnet", "/tmp/p7", "task1");
+
+    // Delegation tool_use with NO paired tool_result, then the stream ends.
+    await waitForProcessing(
+      [toolUse("p7", "Agent", { subagent_type: "Explore", prompt: "go" }, "tc7")],
+      { sessionId: "p7", logPath: "/tmp/p7", taskId: "task1" },
+    );
+
+    const child = sessionStore.getSession("sub_p7_tc7");
+    expect(child).toBeDefined();
+    expect(child?.status).toBe("stopped");
+    expect(child?.endReason).toBe("interrupted");
   });
 });
