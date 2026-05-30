@@ -1,7 +1,7 @@
 /**
  * Transport-fidelity conformance test.
  *
- * Reuses the 156 reducer-conformance JSON fixtures vendored from
+ * Reuses the 160 reducer-conformance JSON fixtures vendored from
  * `microsoft/agent-host-protocol` into `@grackle-ai/ahp`'s
  * `src/vendor/ahp/test-cases/reducers/`. For each fixture:
  *
@@ -13,7 +13,7 @@
  *      (proves the wire preserved every action in order without loss,
  *      duplication, or field-level mangling).
  *
- * 156 small fixtures = 156 wire-fidelity stress runs, each exercising a
+ * 160 small fixtures = 160 wire-fidelity stress runs, each exercising a
  * different shape of AHP action payload (session lifecycle, tool calls,
  * response parts, errors, root/terminal/changeset variants). If the wire
  * silently coerces a type or drops a frame, at least one fixture lights up.
@@ -26,7 +26,7 @@
  * `reducer-conformance.test.ts`. Our concern is the WIRE, and "received
  * actions deep-equal sent actions" is the right primitive for that.
  *
- * This test is integration-level (real http + real ws). It runs ~156
+ * This test is integration-level (real http + real ws). It runs ~160
  * mini sessions back-to-back; total ~5s.
  */
 
@@ -125,8 +125,8 @@ async function teardownHarness(h: Harness): Promise<void> {
 describe("Transport fidelity vs AHP reducer corpus", () => {
   const fixtures = loadFixtures();
 
-  it(`loads exactly 156 fixtures (sanity)`, () => {
-    expect(fixtures.length).toBe(156);
+  it(`loads exactly 160 fixtures (sanity)`, () => {
+    expect(fixtures.length).toBe(160);
   });
 
   for (const { name, fixture } of fixtures) {
