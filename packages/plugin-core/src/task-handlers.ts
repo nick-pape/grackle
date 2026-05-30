@@ -412,6 +412,17 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
   const { runtime, model, maxTurns, systemPrompt } = resolved;
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
+  // Supply credentials on demand for this runtime, just before spawn (AHP HR6).
+  // For local envs, skip file tokens — the PowerLine is on the same machine.
+  // Runs a fail-fast pre-flight (#1316): a required-but-missing/expired credential
+  // throws here, before the (expensive) knowledge retrieval below and before any
+  // session row is created or "task.started" emitted.
+  await tokenPush.authenticateForRuntime(
+    environmentId,
+    runtime,
+    env?.adapterType === "local" ? { excludeFileTokens: true } : undefined,
+  );
+
   // Root task always starts with the hardcoded greeting prompt; user messages
   // are sent as follow-ups via sendInput.  Other tasks use buildTaskPrompt.
   const taskPrompt =
@@ -485,14 +496,6 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
     taskPipeMode || "", // pipeMode
   );
   emit("task.started", { taskId: task.id, sessionId, workspaceId: task.workspaceId || "" });
-
-  // Supply credentials on demand for this runtime, just before spawn (AHP HR6).
-  // For local envs, skip file tokens — the PowerLine is on the same machine.
-  await tokenPush.authenticateForRuntime(
-    environmentId,
-    runtime,
-    env?.adapterType === "local" ? { excludeFileTokens: true } : undefined,
-  );
 
   const mcpServersJson = personaMcpServersToJson(resolved.mcpServers, resolved.personaId);
 
@@ -629,11 +632,10 @@ export async function completeTask(req: grackle.TaskId): Promise<grackle.Task> {
     }
   }
 
-  // Revoke the task's scoped MCP tokens (GHSA-f9ff-5x35-7gfw F12): a completed
-  // task's agent should not keep authenticating. A later task_resume mints a
-  // fresh token, which supersedes this revocation (see createScopedToken).
-  revokeTask(task.id);
-
+  // NB: we do NOT revoke the task's scoped tokens here. complete/stop are not
+  // truly terminal — the task can be resumed, and resume reuses the original
+  // token (powerline `runtime.resume` does not re-mint), so revoking here would
+  // 401 the resumed agent's MCP calls. Only deleteTask revokes (GHSA-f9ff F12).
   emit("task.completed", { taskId: task.id, workspaceId: task.workspaceId || "" });
   logger.info({ taskId: task.id }, "Task completed");
   const row = taskStore.getTask(task.id);
@@ -789,10 +791,8 @@ export async function stopTask(req: grackle.TaskId): Promise<grackle.Task> {
     taskStore.checkAndUnblock(task.workspaceId);
   }
 
-  // Revoke the task's scoped MCP tokens (GHSA-f9ff-5x35-7gfw F12). A later
-  // task_resume mints a fresh token that supersedes this (see createScopedToken).
-  revokeTask(req.id);
-
+  // NB: stop is resumable and resume reuses the original scoped token, so we do
+  // NOT revoke here (it would 401 the resumed agent). Only deleteTask revokes.
   emit("task.completed", { taskId: task.id, workspaceId: task.workspaceId || "" });
   logger.info({ taskId: req.id }, "Task stopped");
   const updated = taskStore.getTask(req.id);
