@@ -155,6 +155,19 @@ export const MOCK_SESSIONS: Session[] = [
     outputTokens: 19_300,
     costMillicents: 38_000,
   },
+  {
+    // Materialized subagent child of sess-002 (#1075). Carries parentSessionId so
+    // the SessionPage renders the parent back-link.
+    id: "sub_sess-002_toolu_1",
+    environmentId: "env-docker-01",
+    runtime: "subagent",
+    status: "stopped",
+    endReason: "completed",
+    prompt: "Investigate the failing registration test",
+    startedAt: "2026-02-27T07:31:00Z",
+    endedAt: "2026-02-27T07:32:30Z",
+    parentSessionId: "sess-002",
+  },
 ];
 
 // ─── Session Events ─────────────────────────────────

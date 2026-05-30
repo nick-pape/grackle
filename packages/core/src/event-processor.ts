@@ -530,8 +530,15 @@ export function processEventStream(
     } finally {
       processorRegistry.unregister(sessionId);
       // #1075: the stream ended (normally, killed, or crashed) — interrupt any
-      // subagent child whose tool_result never arrived so it isn't stranded
-      // RUNNING with no environment to reconnect to.
+      // synchronous-spawn child whose tool_result never arrived so it isn't
+      // stranded RUNNING with no environment to reconnect to. Background spawns
+      // and polled children were already removed from the map when their
+      // tool_result paired (they run independently of the parent stream).
+      //
+      // Known limitation (#1386): a background/polled child whose parent stream
+      // ends before a terminal poll stays RUNNING in the DB. It is excluded from
+      // all env/task/concurrency queries so it is harmless, but never reaches a
+      // terminal state — a reconciliation sweep is tracked as a follow-up.
       for (const { childId } of delegationByToolCall.values()) {
         interruptChildSession(childId);
       }

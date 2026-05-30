@@ -22,6 +22,19 @@ export const ActiveSession: Story = {
   },
 };
 
+/** A subagent child session shows a back-link to its parent (#1075). */
+export const SubagentChildWithParentLink: Story = {
+  decorators: [withMockGrackleRoute(["/sessions/sub_sess-002_toolu_1"], "/sessions/:sessionId")],
+  play: async ({ canvas }) => {
+    // Header shows the truncated child id + subagent runtime
+    await expect(canvas.getByText(/Session:\s*sub_sess/)).toBeInTheDocument();
+    // Parent back-link points at the parent session, URL-encoded via sessionUrl()
+    const parentLink: HTMLAnchorElement = canvas.getByTestId("session-parent-link");
+    await expect(parentLink).toBeInTheDocument();
+    await expect(parentLink).toHaveAttribute("href", "/sessions/sess-002");
+  },
+};
+
 /** Stopped session shows end reason and no stop button. */
 export const StoppedSession: Story = {
   decorators: [withMockGrackleRoute(["/sessions/sess-002"], "/sessions/:sessionId")],
