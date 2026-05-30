@@ -29,8 +29,9 @@ test.describe("Settings Tabs", { tag: ["@settings"] }, () => {
 
     await goToSettings(mockPage);
 
-    const tabs = ["Personas", "Appearance", "About", "Credentials"];
-    const paths = ["personas", "appearance", "about", "credentials"];
+    // Personas was promoted to a top-level page (#1413); no longer in this rail.
+    const tabs = ["GitHub Accounts", "Appearance", "About", "Credentials"];
+    const paths = ["github-accounts", "appearance", "about", "credentials"];
 
     for (let i = 0; i < tabs.length; i++) {
       await page.getByRole("tab", { name: tabs[i] }).click();
@@ -58,15 +59,15 @@ test.describe("Settings Tabs", { tag: ["@settings"] }, () => {
     const page = mockPage;
 
     await goToSettings(mockPage);
-    await page.getByRole("tab", { name: "Personas" }).click();
-    await expect(page).toHaveURL(/\/settings\/personas/);
+    await page.getByRole("tab", { name: "GitHub Accounts" }).click();
+    await expect(page).toHaveURL(/\/settings\/github-accounts/);
 
     await page.getByRole("tab", { name: "About" }).click();
     await expect(page).toHaveURL(/\/settings\/about/);
 
     await page.goBack();
-    await expect(page).toHaveURL(/\/settings\/personas/);
-    await expect(page.getByRole("tab", { name: "Personas" })).toHaveAttribute(
+    await expect(page).toHaveURL(/\/settings\/github-accounts/);
+    await expect(page.getByRole("tab", { name: "GitHub Accounts" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
@@ -78,9 +79,9 @@ test.describe("Settings Tabs", { tag: ["@settings"] }, () => {
 
   // Tests removed — covered by Storybook stories:
   // - "keyboard navigation" → SettingsNav.stories.tsx (KeyboardNavigation)
-  // - "Personas tab shows PersonaManager" → SettingsPage.stories.tsx (PersonasTab)
   // - "About tab shows connection info" → SettingsPage.stories.tsx (AboutTab)
   // - "persona button removed from StatusBar" → StatusBar.stories.tsx (NoPersonaButton)
   // - "breadcrumbs show Home > Settings" → SettingsPage.stories.tsx (BreadcrumbsVisible)
   // - "Appearance tab shows theme picker" → SettingsPage.stories.tsx (AppearanceTab)
+  // - Persona library coverage moved to persona-library.spec.ts (#1413) + PersonaLibraryPage.stories.tsx
 });

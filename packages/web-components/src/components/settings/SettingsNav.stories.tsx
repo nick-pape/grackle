@@ -14,11 +14,12 @@ export const AllTabsRendered: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("tab", { name: /Credentials/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /GitHub Accounts/ })).toBeInTheDocument();
-    await expect(canvas.getByRole("tab", { name: /Personas/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Schedules/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Appearance/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Shortcuts/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /About/ })).toBeInTheDocument();
+    // Personas was moved to a top-level surface (#1413); it must not appear here.
+    await expect(canvas.queryByRole("tab", { name: /Personas/ })).not.toBeInTheDocument();
   },
 };
 
@@ -36,21 +37,21 @@ export const KeyboardNavigation: Story = {
     const credentialsTab = canvas.getByRole("tab", { name: /Credentials/ });
     credentialsTab.focus();
 
-    // ArrowDown should move to GitHub (now second tab)
+    // ArrowDown should move to GitHub Accounts (second tab).
     await userEvent.keyboard("{ArrowDown}");
     const githubTab = canvas.getByRole("tab", { name: /GitHub Accounts/ });
     await expect(githubTab).toHaveFocus();
 
-    // ArrowDown again to Personas
+    // ArrowDown again to Schedules (third tab — Personas is no longer here).
     await userEvent.keyboard("{ArrowDown}");
-    const personasTab = canvas.getByRole("tab", { name: /Personas/ });
-    await expect(personasTab).toHaveFocus();
+    const schedulesTab = canvas.getByRole("tab", { name: /Schedules/ });
+    await expect(schedulesTab).toHaveFocus();
 
-    // Home goes to first tab
+    // Home goes to first tab.
     await userEvent.keyboard("{Home}");
     await expect(credentialsTab).toHaveFocus();
 
-    // End goes to last tab
+    // End goes to last tab.
     await userEvent.keyboard("{End}");
     const aboutTab = canvas.getByRole("tab", { name: /About/ });
     await expect(aboutTab).toHaveFocus();

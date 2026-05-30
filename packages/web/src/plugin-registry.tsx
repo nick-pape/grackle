@@ -22,7 +22,7 @@ const CORE_VIEWS: ReadonlySet<string> = new Set([
 ]);
 
 /** Views contributed by the orchestration plugin. */
-const ORCHESTRATION_VIEWS: ReadonlySet<string> = new Set(["tasks"]);
+const ORCHESTRATION_VIEWS: ReadonlySet<string> = new Set(["tasks", "personas"]);
 
 /** Views contributed by the knowledge plugin. */
 const KNOWLEDGE_VIEWS: ReadonlySet<string> = new Set(["knowledge"]);
