@@ -141,9 +141,9 @@ Create and manage [scheduled triggers](./scheduled-triggers) that run agents on 
 
 ### Appearance
 
-Theme selection with 10 built-in themes.
+Theme selection with 9 built-in themes (several with light/dark variants).
 
-![Themes — 10 built-in color schemes](/img/theme-grid.png)
+![Themes — built-in color schemes](/img/theme-grid.png)
 
 ### Shortcuts
 

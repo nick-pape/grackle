@@ -129,19 +129,23 @@ Your chosen runtime needs API credentials. See the [full credential setup guide]
 ```bash
 # For Claude Code
 grackle credential-provider set claude api_key
-grackle token set ANTHROPIC_API_KEY --env ANTHROPIC_API_KEY
+grackle token set ANTHROPIC_API_KEY --env ANTHROPIC_API_KEY --env-var ANTHROPIC_API_KEY
 
 # For Codex
 grackle credential-provider set codex on
-grackle token set OPENAI_API_KEY --env OPENAI_API_KEY
+grackle token set OPENAI_API_KEY --env OPENAI_API_KEY --env-var OPENAI_API_KEY
 
 # For Copilot
 grackle credential-provider set github on
 grackle credential-provider set copilot on
 ```
 
-:::note Where the value comes from
-`grackle token set <name> --env <VAR>` reads the value from the named environment variable in your current shell. Use `--file <path>` to read it from a file instead. With **neither** flag, `grackle token set` drops into an interactive prompt and asks you to type the value — it does not read the matching environment variable implicitly.
+:::note Two different flags: value source vs. target name
+These commands pass two flags that do different things:
+
+- `--env <VAR>` is the **value source** — it reads the secret from the named environment variable in your current shell (use `--file <path>` to read from a file instead). With **neither**, `grackle token set` prompts you to type the value; it does not read the matching variable implicitly.
+- `--env-var <NAME>` is the **target variable name** injected into the agent on PowerLine. Without it, the injected variable defaults to `<NAME>_TOKEN` (e.g. `ANTHROPIC_API_KEY_TOKEN`), which is **not** what the runtimes expect — so pass `--env-var ANTHROPIC_API_KEY` to inject the exact name. See the [credential setup guide](./guides/credentials) for details.
+
 :::
 
 ## Add a Docker environment
