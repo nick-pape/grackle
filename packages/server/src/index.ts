@@ -91,6 +91,26 @@ async function main(): Promise<void> {
   const secureContext: SecureContext | undefined = config.tls
     ? loadSecureContext(config.tls, logger)
     : undefined;
+
+  // Surface the deliberate-insecure choice on every startup so it lands in
+  // operator logs — `GRACKLE_ALLOW_INSECURE=1` on a non-loopback bind without
+  // TLS is allowed by the gate (#1374) but should never be invisible. The
+  // typical example is the Docker image, which ships with the flag set so
+  // `docker run` is unchanged; this line documents what's happening.
+  if (
+    config.allowInsecure &&
+    !secureContext &&
+    !config.publicUrl?.startsWith("https://") &&
+    config.host !== "127.0.0.1" &&
+    config.host !== "localhost" &&
+    config.host !== "::1"
+  ) {
+    logger.warn(
+      { host: config.host, webPort: config.webPort, mcpPort: config.mcpPort },
+      "Running with GRACKLE_ALLOW_INSECURE=1 — API key and session cookie traverse the network in cleartext. " +
+        "Add GRACKLE_TLS_CERT/KEY or front with a TLS proxy + GRACKLE_PUBLIC_URL=https://… for production use.",
+    );
+  }
   // Effective public origin. Operator-set GRACKLE_PUBLIC_URL wins (#1371 — TLS
   // terminates upstream); else if native TLS is enabled (#1373) synthesize a
   // local https origin so every downstream piece (Secure cookie, OAuth

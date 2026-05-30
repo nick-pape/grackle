@@ -109,6 +109,9 @@ describe("resolveServerConfig", () => {
 
   it("uses GRACKLE_HOST when set", () => {
     vi.stubEnv("GRACKLE_HOST", "0.0.0.0");
+    // 0.0.0.0 trips the #1374 network-exposure gate; satisfy it via the
+    // explicit opt-in so this test stays focused on the host-resolution path.
+    vi.stubEnv("GRACKLE_ALLOW_INSECURE", "1");
     expect(resolveServerConfig().host).toBe("0.0.0.0");
   });
 
@@ -246,5 +249,125 @@ describe("resolveServerConfig — TLS (#1373)", () => {
     vi.stubEnv("GRACKLE_TLS_KEY", keyPath);
     vi.stubEnv("GRACKLE_TLS_CHAIN", join(tmp, "nope.pem"));
     expect(() => resolveServerConfig()).toThrow(/GRACKLE_TLS_CHAIN.*not readable/);
+  });
+});
+
+describe("resolveServerConfig — network exposure gate (#1374)", () => {
+  let tmp: string;
+  let certPath: string;
+  let keyPath: string;
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), "grackle-exposure-"));
+    certPath = join(tmp, "cert.pem");
+    keyPath = join(tmp, "key.pem");
+    writeFileSync(certPath, "CERT");
+    writeFileSync(keyPath, "KEY");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  // ── Pass-through (loopback) ────────────────────────────────
+  it("loopback 127.0.0.1 + no opt-in: OK", () => {
+    // Default — no env vars set; host falls back to "127.0.0.1".
+    expect(() => resolveServerConfig()).not.toThrow();
+  });
+
+  it("loopback localhost + no opt-in: OK", () => {
+    vi.stubEnv("GRACKLE_HOST", "localhost");
+    expect(() => resolveServerConfig()).not.toThrow();
+  });
+
+  it("loopback ::1 + no opt-in: OK", () => {
+    vi.stubEnv("GRACKLE_HOST", "::1");
+    expect(() => resolveServerConfig()).not.toThrow();
+  });
+
+  // ── Pass-through (non-loopback with TLS or opt-in) ─────────
+  it("0.0.0.0 + native TLS: OK", () => {
+    vi.stubEnv("GRACKLE_HOST", "0.0.0.0");
+    vi.stubEnv("GRACKLE_TLS_CERT", certPath);
+    vi.stubEnv("GRACKLE_TLS_KEY", keyPath);
+    const cfg = resolveServerConfig();
+    expect(cfg.host).toBe("0.0.0.0");
+    expect(cfg.tls).toBeTruthy();
+    expect(cfg.allowInsecure).toBe(false);
+  });
+
+  it("0.0.0.0 + https publicUrl: OK", () => {
+    vi.stubEnv("GRACKLE_HOST", "0.0.0.0");
+    vi.stubEnv("GRACKLE_PUBLIC_URL", "https://grackle.example");
+    expect(() => resolveServerConfig()).not.toThrow();
+  });
+
+  it("0.0.0.0 + GRACKLE_ALLOW_INSECURE=1: OK", () => {
+    vi.stubEnv("GRACKLE_HOST", "0.0.0.0");
+    vi.stubEnv("GRACKLE_ALLOW_INSECURE", "1");
+    const cfg = resolveServerConfig();
+    expect(cfg.allowInsecure).toBe(true);
+  });
+
+  it("0.0.0.0 + http publicUrl + opt-in: OK (deliberate cleartext proxy)", () => {
+    // Operator advertises an http://internal proxy origin and explicitly
+    // accepts cleartext via the opt-in. Allowed because the choice is conscious.
+    vi.stubEnv("GRACKLE_HOST", "0.0.0.0");
+    vi.stubEnv("GRACKLE_PUBLIC_URL", "http://grackle.internal");
+    vi.stubEnv("GRACKLE_ALLOW_INSECURE", "1");
+    expect(() => resolveServerConfig()).not.toThrow();
+  });
+
+  // ── Fail-fast (non-loopback without any satisfier) ─────────
+  it("0.0.0.0 + nothing: throws with all three satisfiers in the message", () => {
+    vi.stubEnv("GRACKLE_HOST", "0.0.0.0");
+    const run = (): unknown => resolveServerConfig();
+    expect(run).toThrow(/Insecure network exposure/);
+    expect(run).toThrow(/GRACKLE_TLS_CERT/);
+    expect(run).toThrow(/GRACKLE_PUBLIC_URL=https/);
+    expect(run).toThrow(/GRACKLE_ALLOW_INSECURE=1/);
+    expect(run).toThrow(/GHSA-wcpf-6gwv-47c8/);
+  });
+
+  it("0.0.0.0 + http publicUrl alone (no opt-in): throws", () => {
+    vi.stubEnv("GRACKLE_HOST", "0.0.0.0");
+    vi.stubEnv("GRACKLE_PUBLIC_URL", "http://grackle.internal");
+    expect(() => resolveServerConfig()).toThrow(/Insecure network exposure/);
+  });
+
+  it("IPv6 wildcard :: + nothing: throws", () => {
+    vi.stubEnv("GRACKLE_HOST", "::");
+    expect(() => resolveServerConfig()).toThrow(/Insecure network exposure/);
+  });
+
+  it("IPv6 wildcard 0:0:0:0:0:0:0:0 + nothing: throws", () => {
+    vi.stubEnv("GRACKLE_HOST", "0:0:0:0:0:0:0:0");
+    expect(() => resolveServerConfig()).toThrow(/Insecure network exposure/);
+  });
+
+  it("explicit LAN IP + nothing: throws", () => {
+    vi.stubEnv("GRACKLE_HOST", "192.168.1.10");
+    expect(() => resolveServerConfig()).toThrow(/Insecure network exposure/);
+  });
+
+  it("explicit LAN IP + insecure opt-in: OK", () => {
+    vi.stubEnv("GRACKLE_HOST", "192.168.1.10");
+    vi.stubEnv("GRACKLE_ALLOW_INSECURE", "1");
+    expect(() => resolveServerConfig()).not.toThrow();
+  });
+
+  it("allowInsecure boolean is in the resolved config", () => {
+    expect(resolveServerConfig().allowInsecure).toBe(false);
+    vi.stubEnv("GRACKLE_ALLOW_INSECURE", "1");
+    expect(resolveServerConfig().allowInsecure).toBe(true);
+  });
+
+  it("allowInsecure parses '1' only — 'true' / 'yes' do NOT enable it", () => {
+    vi.stubEnv("GRACKLE_HOST", "0.0.0.0");
+    vi.stubEnv("GRACKLE_ALLOW_INSECURE", "true");
+    expect(() => resolveServerConfig()).toThrow(/Insecure network exposure/);
+    vi.stubEnv("GRACKLE_ALLOW_INSECURE", "yes");
+    expect(() => resolveServerConfig()).toThrow(/Insecure network exposure/);
   });
 });

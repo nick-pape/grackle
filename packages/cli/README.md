@@ -73,8 +73,15 @@ Start the Grackle server, web UI, MCP server, and local PowerLine.
 ```bash
 grackle serve
 grackle serve --port 8000 --web-port 4000
-grackle serve --allow-network    # bind to 0.0.0.0 for LAN access
+
+# LAN access — needs TLS or an explicit insecure opt-in:
+GRACKLE_TLS_CERT=/etc/grackle/cert.pem GRACKLE_TLS_KEY=/etc/grackle/key.pem \
+  grackle serve --allow-network                          # native TLS
+GRACKLE_PUBLIC_URL=https://grackle.home grackle serve --allow-network  # behind TLS proxy
+grackle serve --allow-network --insecure                 # deliberate cleartext (logged at warn)
 ```
+
+> **Non-loopback binds require TLS or `--insecure`** (#1374, advisory GHSA-wcpf-6gwv-47c8). A `--allow-network` invocation without one of TLS / https `--public-url` / `--insecure` fails fast at startup with the three satisfiers in the error message. The Docker image ships with `GRACKLE_ALLOW_INSECURE=1` baked in for `docker run` ergonomics.
 
 | Option                      | Description                                                                                                                                                                  | Default                                |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
@@ -86,7 +93,8 @@ grackle serve --allow-network    # bind to 0.0.0.0 for LAN access
 | `--sandbox-port <port>`     | MCP Apps widget sandbox port                                                                                                                                                 | `7436`                                 |
 | `--sandbox-origin <origin>` | Browser-facing MCP Apps sandbox origin (e.g. `https://sandbox.example.com`) for reverse-proxy/TLS deployments                                                                | (derived from host + `--sandbox-port`) |
 | `--powerline-port <port>`   | Local PowerLine port                                                                                                                                                         | `7433`                                 |
-| `--allow-network`           | Bind to all interfaces (0.0.0.0)                                                                                                                                             | Off (127.0.0.1)                        |
+| `--allow-network`           | Bind to all interfaces (0.0.0.0). Requires TLS or `--insecure` (see above).                                                                                                  | Off (127.0.0.1)                        |
+| `--insecure`                | Deliberately accept cleartext on a non-loopback bind. Sets `GRACKLE_ALLOW_INSECURE=1`. Logged at warn level on every startup.                                                | Off                                    |
 
 ---
 

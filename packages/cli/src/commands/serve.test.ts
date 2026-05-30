@@ -16,6 +16,7 @@ describe("registerServeCommand", () => {
     delete process.env.GRACKLE_WEB_PORT;
     delete process.env.GRACKLE_HOST;
     delete process.env.GRACKLE_PUBLIC_URL;
+    delete process.env.GRACKLE_ALLOW_INSECURE;
     vi.restoreAllMocks();
     vi.resetModules();
   });
@@ -80,5 +81,47 @@ describe("registerServeCommand", () => {
     await program.parseAsync(["serve"], { from: "user" });
 
     expect(process.env.GRACKLE_PUBLIC_URL).toBeUndefined();
+  });
+
+  it("--insecure sets GRACKLE_ALLOW_INSECURE=1 (#1374)", async () => {
+    const { registerServeCommand } = await import("./serve.js");
+    const program = new Command();
+    program.exitOverride();
+    registerServeCommand(program);
+
+    await program.parseAsync(["serve", "--allow-network", "--insecure"], { from: "user" });
+
+    expect(process.env.GRACKLE_ALLOW_INSECURE).toBe("1");
+  });
+
+  it("--insecure is independent of --allow-network (loopback bind + opt-in still sets the env var)", async () => {
+    // The CLI flag is a pure env-var setter; the gate logic lives in the
+    // server. The loopback bind makes the gate a no-op, but the env var is
+    // still set so this scenario is predictable in tests + scripts.
+    const { registerServeCommand } = await import("./serve.js");
+    const program = new Command();
+    program.exitOverride();
+    registerServeCommand(program);
+
+    await program.parseAsync(["serve", "--insecure"], { from: "user" });
+
+    expect(process.env.GRACKLE_HOST).toBe("127.0.0.1");
+    expect(process.env.GRACKLE_ALLOW_INSECURE).toBe("1");
+  });
+
+  it("preserves an env-supplied GRACKLE_ALLOW_INSECURE=1 when --insecure is NOT passed (Docker image case)", async () => {
+    // The Docker image bakes in ENV GRACKLE_ALLOW_INSECURE=1; --insecure
+    // would be redundant but should be permitted. When NOT passed, the CLI
+    // must not clobber the env value to empty.
+    process.env.GRACKLE_ALLOW_INSECURE = "1";
+
+    const { registerServeCommand } = await import("./serve.js");
+    const program = new Command();
+    program.exitOverride();
+    registerServeCommand(program);
+
+    await program.parseAsync(["serve", "--allow-network"], { from: "user" });
+
+    expect(process.env.GRACKLE_ALLOW_INSECURE).toBe("1");
   });
 });

@@ -23,6 +23,10 @@ export function registerServeCommand(program: Command): void {
     )
     .option("--powerline-port <port>", "Local PowerLine port", "7433")
     .option("--allow-network", "Bind to all interfaces (0.0.0.0) for LAN access")
+    .option(
+      "--insecure",
+      "Deliberately allow cleartext on a non-loopback bind. Required without TLS (GRACKLE_TLS_CERT/KEY) or a https GRACKLE_PUBLIC_URL. Sets GRACKLE_ALLOW_INSECURE=1.",
+    )
     .action(
       async (opts: {
         port: string;
@@ -34,6 +38,7 @@ export function registerServeCommand(program: Command): void {
         sandboxOrigin?: string;
         powerlinePort: string;
         allowNetwork: boolean;
+        insecure?: boolean;
       }) => {
         process.env.GRACKLE_PORT = opts.port;
         process.env.GRACKLE_WEB_PORT = opts.webPort;
@@ -50,6 +55,11 @@ export function registerServeCommand(program: Command): void {
         }
         process.env.GRACKLE_POWERLINE_PORT = opts.powerlinePort;
         process.env.GRACKLE_HOST = opts.allowNetwork ? "0.0.0.0" : "127.0.0.1";
+        // Don't clobber an env-supplied opt-in (e.g. from the Docker image,
+        // systemd unit, or `.env` file) when --insecure wasn't passed.
+        if (opts.insecure) {
+          process.env.GRACKLE_ALLOW_INSECURE = "1";
+        }
 
         console.log(`Starting Grackle server...`);
         console.log(

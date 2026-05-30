@@ -183,6 +183,7 @@ Rush monorepo with packages under `packages/`:
 - Constant-time comparison for API key verification
 - Web UI uses pairing-code → session-cookie auth. The API key is never injected into HTML. gRPC uses Bearer token auth. WebSocket accepts either session cookie or `?token=` query param.
 - The server binds to `127.0.0.1` by default. Use `grackle serve --allow-network` to bind to `0.0.0.0` for LAN access (e.g., phone). Use `grackle pair` to generate new pairing codes.
+- **Non-loopback binds require TLS or an explicit insecure opt-in** (#1374, advisory GHSA-wcpf-6gwv-47c8). The startup gate in `packages/server/src/config.ts` accepts any one of: (a) `GRACKLE_TLS_CERT` + `GRACKLE_TLS_KEY` (native TLS, #1373), (b) `GRACKLE_PUBLIC_URL=https://…` (fronting TLS proxy, #1371), or (c) `GRACKLE_ALLOW_INSECURE=1` / `grackle serve --insecure` (deliberate cleartext, logged at warn on every startup). Without one of those, `--allow-network` fails fast with the three satisfiers listed in the error. The Docker image (`docker/Dockerfile.server`) bakes in `ENV GRACKLE_ALLOW_INSECURE=1` so `docker run` works unchanged; production deployments should override with `-e GRACKLE_ALLOW_INSECURE=` after adding TLS.
 
 ### React Component Architecture
 
