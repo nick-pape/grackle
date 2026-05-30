@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, type JSX } from "react";
-import { useParams } from "react-router";
+import { useParams, Link } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import { useSandboxProxyUrl } from "../context/ManifestContext.js";
 import {
@@ -12,6 +12,7 @@ import {
   formatTokens,
   groupConsecutiveTextEvents,
   pairToolEvents,
+  sessionUrl,
   useToast,
 } from "@grackle-ai/web-components";
 import type { Session } from "../hooks/useGrackleSocket.js";
@@ -38,6 +39,15 @@ function SessionHeader({
   return (
     <div className={styles.header}>
       <span>
+        {session?.parentSessionId && (
+          <Link
+            to={sessionUrl(session.parentSessionId)}
+            data-testid="session-parent-link"
+            title="Back to parent session"
+          >
+            &#8592; parent{" | "}
+          </Link>
+        )}
         Session: {sessionId.slice(0, 8)}
         {session && ` | ${session.runtime} | ${session.endReason || session.status}`}
         {session?.inputTokens || session?.outputTokens || session?.costMillicents

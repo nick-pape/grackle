@@ -50,6 +50,7 @@ export function sessionRowToProto(row: SessionRow): grackle.Session {
     outputTokens: row.outputTokens,
     costMillicents: row.costMillicents,
     endReason: row.endReason ?? "",
+    parentSessionId: row.parentSessionId ?? "",
   });
 }
 

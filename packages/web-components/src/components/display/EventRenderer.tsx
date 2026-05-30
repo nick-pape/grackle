@@ -12,6 +12,7 @@ import Markdown from "react-markdown";
 import rehypePrismPlus from "rehype-prism-plus/common";
 import remarkGfm from "remark-gfm";
 import type { SessionEvent } from "../../hooks/types.js";
+import { detectDelegation, delegationIdentityKey, deriveChildSessionId } from "@grackle-ai/common";
 import { formatTokens, formatCost } from "../../utils/format.js";
 import { ICON_SM } from "../../utils/iconSize.js";
 import { ToolCard } from "../tools/ToolCard.js";
@@ -37,6 +38,28 @@ interface Props {
   settled?: boolean;
   /** Sandbox proxy origin URL for rendering MCP Apps widget events (different origin than the app). */
   sandboxProxyUrl?: string;
+}
+
+/**
+ * Compute the materialized child session id for a delegation tool call, using
+ * the same shared derivation the server uses to create the child (#1075), so the
+ * agent card can link to the subagent's activity view. Returns undefined for
+ * non-delegation tools or when the parent session / tool-call id is unknown.
+ */
+function delegationChildId(
+  parentSessionId: string,
+  toolCallId: string | undefined,
+  tool: string,
+  args: unknown,
+): string | undefined {
+  if (!parentSessionId || !toolCallId) {
+    return undefined;
+  }
+  const info = detectDelegation(tool, args);
+  if (!info) {
+    return undefined;
+  }
+  return deriveChildSessionId(parentSessionId, delegationIdentityKey(info, toolCallId));
 }
 
 // --- Individual event type renderers ---
@@ -326,7 +349,14 @@ export function EventRenderer({ event, toolUseCtx, settled, sandboxProxyUrl }: P
       }
       // When settled, pass empty result so the card shows as completed (no spinner)
       // rather than in-progress. This handles Claude Code which emits results as text.
-      return <ToolCard tool={tool} args={args} result={settled ? "" : undefined} />;
+      return (
+        <ToolCard
+          tool={tool}
+          args={args}
+          result={settled ? "" : undefined}
+          childSessionId={delegationChildId(event.sessionId, event.toolCallId, tool, args)}
+        />
+      );
     }
     case "tool_result": {
       // When paired, toolUseCtx provides the tool name, args, and optional detailedResult.
@@ -380,6 +410,12 @@ export function EventRenderer({ event, toolUseCtx, settled, sandboxProxyUrl }: P
             result={resultContent}
             isError={isError}
             detailedResult={toolUseCtx.detailedResult}
+            childSessionId={delegationChildId(
+              event.sessionId,
+              event.toolCallId,
+              toolUseCtx.tool,
+              toolUseCtx.args,
+            )}
           />
         );
       }

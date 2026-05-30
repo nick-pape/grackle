@@ -1,7 +1,7 @@
 import db from "./db.js";
 import { sessions, type SessionRow } from "./schema.js";
-import { eq, and, inArray, desc, asc, sql } from "drizzle-orm";
-import { SESSION_STATUS } from "@grackle-ai/common";
+import { eq, and, inArray, desc, asc, ne, sql } from "drizzle-orm";
+import { SESSION_STATUS, SUBAGENT_RUNTIME } from "@grackle-ai/common";
 import type { SessionStatus, PipeMode, EndReason } from "@grackle-ai/common";
 
 export type { SessionRow };
@@ -64,12 +64,16 @@ export function listSessions(environmentId?: string, status?: string): SessionRo
   return query.orderBy(desc(sessions.startedAt)).all();
 }
 
-/** List all sessions belonging to a specific environment. */
+/**
+ * List all real sessions belonging to a specific environment. Excludes
+ * materialized subagent child sessions (#1075) — they are virtual activity logs
+ * that merely inherit the parent's env, not lifecycle-managed env sessions.
+ */
 export function listByEnv(environmentId: string): SessionRow[] {
   return db
     .select()
     .from(sessions)
-    .where(eq(sessions.environmentId, environmentId))
+    .where(and(eq(sessions.environmentId, environmentId), ne(sessions.runtime, SUBAGENT_RUNTIME)))
     .orderBy(desc(sessions.startedAt))
     .all();
 }
@@ -123,6 +127,9 @@ export function getActiveForEnv(environmentId: string): SessionRow | undefined {
     .where(
       and(
         eq(sessions.environmentId, environmentId),
+        // Exclude virtual subagent children (#1075): they inherit the parent's
+        // env but must never be picked as the env's session to reanimate/recover.
+        ne(sessions.runtime, SUBAGENT_RUNTIME),
         inArray(sessions.status, [
           SESSION_STATUS.PENDING,
           SESSION_STATUS.RUNNING,
@@ -251,12 +258,30 @@ export function listSessionsForTask(taskId: string): SessionRow[] {
     .all();
 }
 
-/** Get the most recent session for a task (by startedAt DESC, id DESC). */
+/**
+ * List all sessions spawned by a given parent session (e.g. materialized
+ * subagent child sessions, #1075), oldest first.
+ */
+export function listSessionsByParent(parentSessionId: string): SessionRow[] {
+  return db
+    .select()
+    .from(sessions)
+    .where(eq(sessions.parentSessionId, parentSessionId))
+    .orderBy(asc(sessions.startedAt), asc(sessions.id))
+    .all();
+}
+
+/**
+ * Get the most recent real session for a task (by startedAt DESC, id DESC).
+ * Excludes subagent children (#1075) — defense in depth: they already carry
+ * taskId="", but this query drives signal routing and the UI "latest session"
+ * pointer, so it must never resolve to a virtual child.
+ */
 export function getLatestSessionForTask(taskId: string): SessionRow | undefined {
   return db
     .select()
     .from(sessions)
-    .where(eq(sessions.taskId, taskId))
+    .where(and(eq(sessions.taskId, taskId), ne(sessions.runtime, SUBAGENT_RUNTIME)))
     .orderBy(desc(sessions.startedAt), desc(sessions.id))
     .limit(1)
     .get();
@@ -270,6 +295,7 @@ export function getActiveSessionsForTask(taskId: string): SessionRow[] {
     .where(
       and(
         eq(sessions.taskId, taskId),
+        ne(sessions.runtime, SUBAGENT_RUNTIME),
         inArray(sessions.status, [
           SESSION_STATUS.PENDING,
           SESSION_STATUS.RUNNING,
@@ -303,7 +329,11 @@ export function getChildSessions(parentSessionId: string): SessionRow[] {
     .all();
 }
 
-/** Count active (pending/running/idle) sessions for a specific environment. */
+/**
+ * Count active (pending/running/idle) sessions for a specific environment.
+ * Excludes subagent children (#1075): they inherit the parent's env but are
+ * virtual activity logs and must not consume dispatch concurrency slots.
+ */
 export function countActiveForEnvironment(environmentId: string): number {
   const result = db
     .select({ count: sql<number>`COUNT(*)` })
@@ -311,6 +341,7 @@ export function countActiveForEnvironment(environmentId: string): number {
     .where(
       and(
         eq(sessions.environmentId, environmentId),
+        ne(sessions.runtime, SUBAGENT_RUNTIME),
         inArray(sessions.status, [
           SESSION_STATUS.PENDING,
           SESSION_STATUS.RUNNING,
@@ -322,17 +353,23 @@ export function countActiveForEnvironment(environmentId: string): number {
   return result?.count ?? 0;
 }
 
-/** Count all active (pending/running/idle) sessions across the entire server. */
+/**
+ * Count all active (pending/running/idle) sessions across the entire server.
+ * Excludes subagent children (#1075) so they don't consume global concurrency.
+ */
 export function countActiveGlobal(): number {
   const result = db
     .select({ count: sql<number>`COUNT(*)` })
     .from(sessions)
     .where(
-      inArray(sessions.status, [
-        SESSION_STATUS.PENDING,
-        SESSION_STATUS.RUNNING,
-        SESSION_STATUS.IDLE,
-      ]),
+      and(
+        ne(sessions.runtime, SUBAGENT_RUNTIME),
+        inArray(sessions.status, [
+          SESSION_STATUS.PENDING,
+          SESSION_STATUS.RUNNING,
+          SESSION_STATUS.IDLE,
+        ]),
+      ),
     )
     .get();
   return result?.count ?? 0;

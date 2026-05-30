@@ -144,6 +144,18 @@ function applySchema(): void {
       tags          TEXT NOT NULL DEFAULT '[]',
       created_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS session_actions (
+      seq           TEXT PRIMARY KEY,
+      session_id    TEXT NOT NULL,
+      type          TEXT NOT NULL,
+      content       TEXT NOT NULL,
+      raw           TEXT NOT NULL DEFAULT '',
+      timestamp     TEXT NOT NULL,
+      tool_call_id  TEXT NOT NULL DEFAULT '',
+      turn_id       TEXT NOT NULL DEFAULT '',
+      diagnostic    INTEGER NOT NULL DEFAULT 0
+    );
   `);
 }
 
@@ -1366,5 +1378,519 @@ describe("sticky terminal session status (#1356)", () => {
     const session = sessionStore.getSession("sess-sticky");
     expect(session?.status).toBe("stopped");
     expect(session?.endReason).toBe("killed");
+  });
+});
+
+describe("subagent child sessions (#1075)", () => {
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS findings");
+    sqlite.exec("DROP TABLE IF EXISTS tasks");
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    sqlite.exec("DROP TABLE IF EXISTS workspaces");
+    applySchema();
+    vi.clearAllMocks();
+    workspaceStore.createWorkspace("proj1", "Test Project", "desc", "", "env1");
+  });
+
+  /** Build a tool_use AgentEvent carrying `{tool, args}` JSON content. */
+  function toolUse(
+    sessionId: string,
+    tool: string,
+    args: unknown,
+    toolCallId: string,
+  ): powerline.AgentEvent {
+    return create(powerline.AgentEventSchema, {
+      sessionId,
+      type: "tool_use",
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify({ tool, args }),
+      toolCallId,
+    });
+  }
+
+  /** Build a tool_result AgentEvent. */
+  function toolResult(
+    sessionId: string,
+    content: string,
+    toolCallId: string,
+    toolError = false,
+  ): powerline.AgentEvent {
+    return create(powerline.AgentEventSchema, {
+      sessionId,
+      type: "tool_result",
+      timestamp: new Date().toISOString(),
+      content,
+      toolCallId,
+      toolError,
+    });
+  }
+
+  /** Build a terminal status event so waitForProcessing resolves. */
+  function statusCompleted(sessionId: string): powerline.AgentEvent {
+    return create(powerline.AgentEventSchema, {
+      sessionId,
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    });
+  }
+
+  it("materializes a linked child session for a Claude Agent delegation", async () => {
+    sessionStore.createSession("p1", "env1", "claude-code", "test", "sonnet", "/tmp/p1", "task1");
+    const childId = "sub_p1_tc1";
+
+    await waitForProcessing(
+      [
+        toolUse("p1", "Agent", { subagent_type: "Explore", prompt: "find the bug" }, "tc1"),
+        toolResult("p1", "I found it in foo.ts", "tc1"),
+        statusCompleted("p1"),
+      ],
+      { sessionId: "p1", logPath: "/tmp/p1", taskId: "task1" },
+    );
+
+    const child = sessionStore.getSession(childId);
+    expect(child).toBeDefined();
+    expect(child?.parentSessionId).toBe("p1");
+    // Attached to the parent SESSION, not the task (avoids polluting task-scoped
+    // queries used for status/signal routing).
+    expect(child?.taskId).toBe("");
+    // Inherits the parent's env to satisfy the sessions.env_id FK (the subagent
+    // ran in the parent's environment); the `subagent` runtime keeps it out of
+    // env/lifecycle queries. NOTE: this in-memory test schema does not enforce
+    // FKs — the live/integration run is the real FK guard.
+    expect(child?.environmentId).toBe("env1");
+    expect(child?.runtime).toBe("subagent");
+    expect(child?.status).toBe("stopped");
+    expect(child?.endReason).toBe("completed");
+
+    const actions = querySessionActions({ sessionId: childId });
+    const contents = actions.map((a) => a.content);
+    expect(contents).toContain("find the bug");
+    expect(contents).toContain("I found it in foo.ts");
+  });
+
+  it("marks the child errored when the delegation result is an error", async () => {
+    sessionStore.createSession("p2", "env1", "claude-code", "test", "sonnet", "/tmp/p2", "task1");
+
+    await waitForProcessing(
+      [
+        toolUse("p2", "Agent", { subagent_type: "Plan", prompt: "plan it" }, "tcE"),
+        toolResult("p2", "subagent crashed", "tcE", true),
+        statusCompleted("p2"),
+      ],
+      { sessionId: "p2", logPath: "/tmp/p2", taskId: "task1" },
+    );
+
+    const child = sessionStore.getSession("sub_p2_tcE");
+    expect(child?.status).toBe("stopped");
+    expect(child?.endReason).toBe("interrupted");
+  });
+
+  it("does not create a child for an ordinary tool with a prompt but no delegation id", async () => {
+    sessionStore.createSession("p3", "env1", "claude-code", "test", "sonnet", "/tmp/p3", "task1");
+
+    await waitForProcessing(
+      [
+        toolUse("p3", "search", { prompt: "a query" }, "tcS"),
+        toolResult("p3", "results", "tcS"),
+        statusCompleted("p3"),
+      ],
+      { sessionId: "p3", logPath: "/tmp/p3", taskId: "task1" },
+    );
+
+    expect(sessionStore.getSession("sub_p3_tcS")).toBeUndefined();
+  });
+
+  it("dedupes a re-emitted delegation tool_use onto one child (idempotent floor)", async () => {
+    sessionStore.createSession("p4", "env1", "claude-code", "test", "sonnet", "/tmp/p4", "task1");
+
+    await waitForProcessing(
+      [
+        toolUse("p4", "Agent", { subagent_type: "Explore", prompt: "look" }, "tcD"),
+        toolUse("p4", "Agent", { subagent_type: "Explore", prompt: "look" }, "tcD"),
+        statusCompleted("p4"),
+      ],
+      { sessionId: "p4", logPath: "/tmp/p4", taskId: "task1" },
+    );
+
+    const childId = "sub_p4_tcD";
+    expect(sessionStore.getSession(childId)).toBeDefined();
+    const prompts = querySessionActions({ sessionId: childId }).filter((a) => a.content === "look");
+    expect(prompts).toHaveLength(1);
+  });
+
+  it("dedupes Copilot read_agent polls onto one child by agent_id and appends activity", async () => {
+    sessionStore.createSession("p5", "env1", "copilot", "test", "sonnet", "/tmp/p5", "task1");
+
+    await waitForProcessing(
+      [
+        toolUse("p5", "read_agent", { agent_id: "ag-7" }, "poll1"),
+        toolResult("p5", "Agent running. agent_id: ag-7\n\nworking...", "poll1"),
+        toolUse("p5", "read_agent", { agent_id: "ag-7" }, "poll2"),
+        toolResult("p5", "Agent completed. agent_id: ag-7\n\nall done", "poll2"),
+        statusCompleted("p5"),
+      ],
+      { sessionId: "p5", logPath: "/tmp/p5", taskId: "task1" },
+    );
+
+    const childId = "sub_p5_ag-7";
+    const child = sessionStore.getSession(childId);
+    expect(child).toBeDefined();
+    expect(child?.status).toBe("stopped");
+    expect(child?.endReason).toBe("completed");
+    // Two distinct child records must NOT exist — both polls share agent_id ag-7.
+    const allSubs = sessionStore.listSessionsByParent("p5");
+    expect(allSubs).toHaveLength(1);
+    // The terminal poll result is recorded exactly once (closeChildSession records
+    // it; the append path is skipped for terminal polls — no duplication).
+    const completedEntries = querySessionActions({ sessionId: childId }).filter((a) =>
+      a.content.includes("all done"),
+    );
+    expect(completedEntries).toHaveLength(1);
+  });
+
+  it("keeps the child out of task-scoped queries (status/signal routing unaffected)", async () => {
+    sessionStore.createSession("p6", "env1", "claude-code", "test", "sonnet", "/tmp/p6", "task1");
+
+    await waitForProcessing(
+      [
+        toolUse("p6", "Agent", { subagent_type: "Explore", prompt: "look" }, "tc6"),
+        toolResult("p6", "found it", "tc6"),
+        statusCompleted("p6"),
+      ],
+      { sessionId: "p6", logPath: "/tmp/p6", taskId: "task1" },
+    );
+
+    const childId = "sub_p6_tc6";
+    expect(sessionStore.getSession(childId)).toBeDefined();
+    // The virtual child must NOT appear in any task-scoped query: the "latest
+    // session" pointer (UI + signal routing) and the task session list must
+    // resolve to the real parent, never the env-less child.
+    expect(sessionStore.getLatestSessionForTask("task1")?.id).toBe("p6");
+    const taskSessions = sessionStore.listSessionsForTask("task1");
+    expect(taskSessions.map((s) => s.id)).toEqual(["p6"]);
+    expect(sessionStore.getActiveSessionsForTask("task1").map((s) => s.id)).not.toContain(childId);
+    // The child inherits the parent's env but must NOT be picked by env-scoped
+    // lifecycle queries (reanimate/recovery) — it's a virtual subagent runtime.
+    expect(sessionStore.getActiveForEnv("env1")?.id).not.toBe(childId);
+    expect(sessionStore.listByEnv("env1").map((s) => s.id)).not.toContain(childId);
+    // But it remains reachable via its parent session (navigation edge).
+    expect(sessionStore.listSessionsByParent("p6").map((s) => s.id)).toEqual([childId]);
+  });
+
+  it("does not count subagent children toward environment concurrency", () => {
+    // A real running session + a running subagent child in the same env.
+    sessionStore.createSession("real1", "env1", "claude-code", "p", "sonnet", "/tmp/r1", "task1");
+    sessionStore.updateSessionStatus("real1", "running");
+    sessionStore.createSession(
+      "sub_real1_x",
+      "env1", // inherits parent's env
+      "subagent",
+      "p",
+      "stub",
+      "",
+      "",
+      "",
+      "real1",
+      "",
+    );
+    sessionStore.updateSessionStatus("sub_real1_x", "running");
+
+    // Only the real session consumes a dispatch slot.
+    expect(sessionStore.countActiveForEnvironment("env1")).toBe(1);
+    expect(sessionStore.countActiveGlobal()).toBe(1);
+  });
+
+  it("interrupts an open child when the parent stream ends without a tool_result", async () => {
+    sessionStore.createSession("p7", "env1", "claude-code", "test", "sonnet", "/tmp/p7", "task1");
+
+    // Delegation tool_use with NO paired tool_result, then the stream ends.
+    await waitForProcessing(
+      [toolUse("p7", "Agent", { subagent_type: "Explore", prompt: "go" }, "tc7")],
+      { sessionId: "p7", logPath: "/tmp/p7", taskId: "task1" },
+    );
+
+    const child = sessionStore.getSession("sub_p7_tc7");
+    expect(child).toBeDefined();
+    expect(child?.status).toBe("stopped");
+    expect(child?.endReason).toBe("interrupted");
+  });
+
+  it("detects delegation from the real AHP-mapped tool_use content shape", async () => {
+    // Captured verbatim from a live run: after the AHP round-trip the tool_use
+    // content carries tool_name/display_name/invocation_message alongside the
+    // original {tool, args}. This locks the content-shape contract the parser
+    // reads (parsed.tool / parsed.args).
+    sessionStore.createSession("p9", "env1", "stub", "test", "stub", "/tmp/p9", "task1");
+    const realContent =
+      '{"tool":"Agent","tool_name":"Agent","display_name":"Agent","invocation_message":"Running Agent","args":{"subagent_type":"Explore","description":"find the failing test root cause","prompt":"Search for why the auth test fails and report the root cause."}}';
+    const evt = create(powerline.AgentEventSchema, {
+      sessionId: "p9",
+      type: "tool_use",
+      timestamp: new Date().toISOString(),
+      content: realContent,
+      toolCallId: "toolu_scenario_1",
+    });
+
+    await waitForProcessing(
+      [
+        evt,
+        toolResult("p9", '{"is_ok":true,"content":"done"}', "toolu_scenario_1"),
+        statusCompleted("p9"),
+      ],
+      { sessionId: "p9", logPath: "/tmp/p9", taskId: "task1" },
+    );
+
+    const child = sessionStore.getSession("sub_p9_toolu_scenario_1");
+    expect(child).toBeDefined();
+    expect(child?.endReason).toBe("completed");
+    const contents = querySessionActions({ sessionId: "sub_p9_toolu_scenario_1" }).map(
+      (a) => a.content,
+    );
+    expect(contents).toContain("Search for why the auth test fails and report the root cause.");
+    expect(contents).toContain("done");
+  });
+
+  it("detects a Copilot delegation from the real AHP-mapped task content shape", async () => {
+    // Captured verbatim from a live Copilot-shaped run through the real pipeline:
+    // the `task` args (agent_type/name/agent_id/mode/prompt) survive the AHP
+    // round-trip under `args`, alongside tool_name/display_name/invocation_message.
+    sessionStore.createSession("pcp", "env1", "copilot", "test", "gpt-4o", "/tmp/pcp", "task1");
+    const realContent =
+      '{"tool":"task","tool_name":"task","display_name":"task","invocation_message":"Running task","args":{"agent_type":"explore","name":"find-tests","agent_id":"ag-cp1","mode":"background","prompt":"Find all test files."}}';
+    const spawn = create(powerline.AgentEventSchema, {
+      sessionId: "pcp",
+      type: "tool_use",
+      timestamp: new Date().toISOString(),
+      content: realContent,
+      toolCallId: "tc-spawn",
+    });
+
+    await waitForProcessing(
+      [
+        spawn,
+        toolResult("pcp", "Agent started in background with agent_id: ag-cp1", "tc-spawn"),
+        toolUse("pcp", "read_agent", { agent_id: "ag-cp1" }, "tc-poll"),
+        toolResult("pcp", "Agent completed. agent_id: ag-cp1\n\nFound 42 test files.", "tc-poll"),
+        statusCompleted("pcp"),
+      ],
+      { sessionId: "pcp", logPath: "/tmp/pcp", taskId: "task1" },
+    );
+
+    // Identity = agent_id, so spawn + poll converge on ONE child.
+    const children = sessionStore.listSessionsByParent("pcp");
+    expect(children.map((s) => s.id)).toEqual(["sub_pcp_ag-cp1"]);
+    expect(children[0]?.endReason).toBe("completed");
+    const contents = querySessionActions({ sessionId: "sub_pcp_ag-cp1" }).map((a) => a.content);
+    expect(contents).toContain("Find all test files.");
+    expect(contents.some((c) => c.includes("Found 42 test files."))).toBe(true);
+  });
+
+  it("does not materialize a child for Codex-style tools (no native subagent tool)", async () => {
+    // Codex delegates via Grackle MCP tools, not a native subagent tool, so its
+    // tool calls must never be mistaken for delegations.
+    sessionStore.createSession("pcx", "env1", "codex", "test", "gpt-5.5", "/tmp/pcx", "task1");
+
+    await waitForProcessing(
+      [
+        toolUse("pcx", "shell", { command: "ls -la" }, "tc-sh"),
+        toolResult("pcx", "file listing", "tc-sh"),
+        statusCompleted("pcx"),
+      ],
+      { sessionId: "pcx", logPath: "/tmp/pcx", taskId: "task1" },
+    );
+
+    expect(sessionStore.listSessionsByParent("pcx")).toHaveLength(0);
+  });
+
+  it("unwraps JSON-wrapped tool results into clean floor text", async () => {
+    sessionStore.createSession("p8", "env1", "claude-code", "test", "sonnet", "/tmp/p8", "task1");
+
+    await waitForProcessing(
+      [
+        toolUse("p8", "Agent", { subagent_type: "Explore", prompt: "look" }, "tc8"),
+        toolResult("p8", '{"is_ok":true,"content":"clean summary text"}', "tc8"),
+        statusCompleted("p8"),
+      ],
+      { sessionId: "p8", logPath: "/tmp/p8", taskId: "task1" },
+    );
+
+    const contents = querySessionActions({ sessionId: "sub_p8_tc8" }).map((a) => a.content);
+    expect(contents).toContain("clean summary text");
+    expect(contents.some((c) => c.includes("is_ok"))).toBe(false);
+  });
+
+  it("is idempotent across a parent stream restart (reanimate) — no duplicate child", async () => {
+    sessionStore.createSession("p10", "env1", "claude-code", "test", "sonnet", "/tmp/p10", "task1");
+    const childId = "sub_p10_tcR";
+    const delegation = [
+      toolUse("p10", "Agent", { subagent_type: "Explore", prompt: "investigate" }, "tcR"),
+      toolResult("p10", "first result", "tcR"),
+      statusCompleted("p10"),
+    ];
+
+    // First stream run materializes + closes the child.
+    await waitForProcessing(delegation, { sessionId: "p10", logPath: "/tmp/p10", taskId: "task1" });
+    // Stream restarts (e.g. reanimate): the same events replay through a fresh
+    // delegationByToolCall map. ensureChildSession must dedupe on the existing child.
+    await waitForProcessing(delegation, { sessionId: "p10", logPath: "/tmp/p10", taskId: "task1" });
+
+    expect(sessionStore.listSessionsByParent("p10").map((s) => s.id)).toEqual([childId]);
+    const actions = querySessionActions({ sessionId: childId });
+    // Neither the prompt floor nor the result floor may be duplicated by the
+    // replayed tool_use / tool_result (closeChildSession is a no-op once terminal).
+    expect(actions.filter((a) => a.content === "investigate")).toHaveLength(1);
+    expect(actions.filter((a) => a.content === "first result")).toHaveLength(1);
+  });
+
+  it("closes a polled child when the terminal status arrives as a JSON envelope", async () => {
+    sessionStore.createSession("pe1", "env1", "copilot", "test", "gpt-4o", "/tmp/pe1", "task1");
+
+    // The AHP reverse mapper can wrap the read_agent result as a JSON envelope;
+    // the status prefix lives inside `content`, so it must be unwrapped before
+    // readAgentResultStatus, else the child would wrongly stay RUNNING.
+    await waitForProcessing(
+      [
+        toolUse("pe1", "read_agent", { agent_id: "env-1" }, "poll-env"),
+        toolResult(
+          "pe1",
+          '{"is_ok":true,"content":"Agent completed. agent_id: env-1\\n\\nall done"}',
+          "poll-env",
+        ),
+        statusCompleted("pe1"),
+      ],
+      { sessionId: "pe1", logPath: "/tmp/pe1", taskId: "task1" },
+    );
+
+    const child = sessionStore.getSession("sub_pe1_env-1");
+    expect(child?.status).toBe("stopped");
+    expect(child?.endReason).toBe("completed");
+  });
+
+  it("closes a polled child on a cancelled status", async () => {
+    sessionStore.createSession("pe2", "env1", "copilot", "test", "gpt-4o", "/tmp/pe2", "task1");
+
+    await waitForProcessing(
+      [
+        toolUse("pe2", "read_agent", { agent_id: "cx-1" }, "poll-cx"),
+        toolResult("pe2", "Agent cancelled. agent_id: cx-1\n\nstopped by user", "poll-cx"),
+        statusCompleted("pe2"),
+      ],
+      { sessionId: "pe2", logPath: "/tmp/pe2", taskId: "task1" },
+    );
+
+    const child = sessionStore.getSession("sub_pe2_cx-1");
+    expect(child?.status).toBe("stopped");
+    expect(child?.endReason).toBe("interrupted");
+  });
+
+  it("does NOT interrupt a background spawn whose handle never arrives at stream end", async () => {
+    sessionStore.createSession("pe3", "env1", "copilot", "test", "gpt-4o", "/tmp/pe3", "task1");
+
+    // Background spawn tool_use, then the stream ends with NO tool_result at all.
+    // The finally block must not interrupt it — background children run
+    // independently of the parent stream.
+    await waitForProcessing(
+      [
+        toolUse(
+          "pe3",
+          "task",
+          { agent_type: "worker", name: "bg", agent_id: "bg-9", mode: "background", prompt: "go" },
+          "spawn-bg",
+        ),
+      ],
+      { sessionId: "pe3", logPath: "/tmp/pe3", taskId: "task1" },
+    );
+
+    const child = sessionStore.getSession("sub_pe3_bg-9");
+    expect(child).toBeDefined();
+    expect(child?.status).toBe("running");
+  });
+
+  it("does NOT interrupt a background spawn child when the parent stream ends", async () => {
+    sessionStore.createSession("pb1", "env1", "copilot", "test", "gpt-4o", "/tmp/pb1", "task1");
+
+    // Background spawn: the tool_result is just a handle. No terminal poll, then
+    // the stream ends. The subagent runs independently, so it must stay running.
+    await waitForProcessing(
+      [
+        toolUse(
+          "pb1",
+          "task",
+          { agent_type: "worker", name: "bg", agent_id: "bg-1", mode: "background", prompt: "go" },
+          "spawnB",
+        ),
+        toolResult("pb1", "Agent started in background with agent_id: bg-1", "spawnB"),
+        statusCompleted("pb1"),
+      ],
+      { sessionId: "pb1", logPath: "/tmp/pb1", taskId: "task1" },
+    );
+
+    const child = sessionStore.getSession("sub_pb1_bg-1");
+    expect(child).toBeDefined();
+    expect(child?.status).toBe("running");
+    expect(child?.endReason).toBeNull();
+  });
+
+  it("does NOT interrupt a child after a non-terminal poll when the parent stream ends", async () => {
+    sessionStore.createSession("pb2", "env1", "copilot", "test", "gpt-4o", "/tmp/pb2", "task1");
+
+    // A read_agent poll reports "running" (non-terminal), then the parent stream
+    // ends. The poll already paired, so the child must not be interrupted.
+    await waitForProcessing(
+      [
+        toolUse("pb2", "read_agent", { agent_id: "p-2" }, "pollB"),
+        toolResult("pb2", "Agent running. agent_id: p-2\n\nworking", "pollB"),
+        statusCompleted("pb2"),
+      ],
+      { sessionId: "pb2", logPath: "/tmp/pb2", taskId: "task1" },
+    );
+
+    const child = sessionStore.getSession("sub_pb2_p-2");
+    expect(child).toBeDefined();
+    expect(child?.status).toBe("running");
+  });
+
+  it("DOES interrupt a synchronous spawn child whose result never arrives", async () => {
+    sessionStore.createSession("pb3", "env1", "claude-code", "test", "sonnet", "/tmp/pb3", "task1");
+
+    // Synchronous Claude Agent: no tool_result, stream ends → child interrupted
+    // (the subagent died with the parent; this is the genuinely-unpaired case).
+    await waitForProcessing(
+      [toolUse("pb3", "Agent", { subagent_type: "Explore", prompt: "go" }, "syncB")],
+      { sessionId: "pb3", logPath: "/tmp/pb3", taskId: "task1" },
+    );
+
+    const child = sessionStore.getSession("sub_pb3_syncB");
+    expect(child?.status).toBe("stopped");
+    expect(child?.endReason).toBe("interrupted");
+  });
+
+  it("converges a Copilot task spawn and its read_agent polls onto one child via agent_id", async () => {
+    sessionStore.createSession("p11", "env1", "copilot", "test", "gpt-4o", "/tmp/p11", "task1");
+
+    await waitForProcessing(
+      [
+        // Spawn carries agent_id; identity = agent_id.
+        toolUse(
+          "p11",
+          "task",
+          { agent_type: "worker", name: "reviewer", agent_id: "ag-99", prompt: "review the diff" },
+          "spawn1",
+        ),
+        toolResult("p11", "Agent started in background with agent_id: ag-99", "spawn1"),
+        // Poll references the same agent_id → same child id.
+        toolUse("p11", "read_agent", { agent_id: "ag-99" }, "poll1"),
+        toolResult("p11", "Agent completed. agent_id: ag-99\n\nLGTM", "poll1"),
+        statusCompleted("p11"),
+      ],
+      { sessionId: "p11", logPath: "/tmp/p11", taskId: "task1" },
+    );
+
+    // Both spawn and poll resolve to one child keyed on agent_id.
+    const children = sessionStore.listSessionsByParent("p11");
+    expect(children.map((s) => s.id)).toEqual(["sub_p11_ag-99"]);
+    expect(children[0]?.status).toBe("stopped");
+    expect(children[0]?.endReason).toBe("completed");
   });
 });

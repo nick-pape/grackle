@@ -50,6 +50,12 @@ export interface Session {
   personaId?: string;
   /** ID of the task this session belongs to, if any (root/orchestrated work). */
   taskId?: string;
+  /**
+   * ID of the parent session that spawned this one, if any. Set for IPC/spawned
+   * child sessions and for materialized subagent children (#1075). Empty/absent
+   * for top-level sessions. Enables parent/child navigation.
+   */
+  parentSessionId?: string;
   inputTokens?: number;
   outputTokens?: number;
   costMillicents?: number;
