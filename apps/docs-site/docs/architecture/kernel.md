@@ -76,7 +76,7 @@ Wires drop. When the transport breaks, the agent goes **suspended** — parked o
 
 ## Plugins are kernel modules
 
-The server is a flock of plugins, assembled in dependency order. Some of them _are_ the kernel — they ship the primitives this page describes. `core` is the kernel proper: it can't be disabled and is always loaded. The orchestration, scheduling, and knowledge plugins are kernel modules layered on it.
+The server is a set of plugins, assembled in dependency order. Some of them _are_ the kernel — they ship the primitives this page describes. `core` is the kernel proper: it can't be disabled and is always loaded. The orchestration, scheduling, and knowledge plugins are kernel modules layered on it.
 
 | Plugin          | What it contributes to the kernel                                                             |
 | --------------- | --------------------------------------------------------------------------------------------- |
