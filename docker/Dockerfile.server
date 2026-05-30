@@ -112,6 +112,13 @@ VOLUME /data
 ENV GRACKLE_KNOWLEDGE_ENABLED=true
 # HuggingFace model cache — writable by node user, persists across restarts.
 ENV HF_HOME=/data/.hf-cache
+# Default to cleartext for `docker run` ergonomics — the entrypoint runs
+# `grackle serve --allow-network` and the #1374 startup gate would otherwise
+# fail-fast on a 0.0.0.0 bind without TLS. Operators fronting with a TLS
+# proxy (Caddy / nginx / Traefik) or mounting a cert into the container
+# (GRACKLE_TLS_CERT/KEY) should override with `-e GRACKLE_ALLOW_INSECURE=`
+# (empty) so the gate enforces TLS again. See GHSA-wcpf-6gwv-47c8.
+ENV GRACKLE_ALLOW_INSECURE=1
 
 # ── s6-overlay service definitions ──────────────────────────
 COPY docker/s6-overlay/ /etc/s6-overlay/
