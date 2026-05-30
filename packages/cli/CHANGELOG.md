@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 30 May 2026 13:36:18 GMT and should not be manually modified.
+This log was last generated on Sat, 30 May 2026 13:54:50 GMT and should not be manually modified.
+
+## 0.135.2
+Sat, 30 May 2026 13:54:50 GMT
+
+### Patches
+
+- Add backend E2E coverage via NODE_V8_COVERAGE: instrument the spawned server/PowerLine processes and union their coverage into the combined repo-wide total (#1389).
 
 ## 0.135.1
 Sat, 30 May 2026 13:36:18 GMT
