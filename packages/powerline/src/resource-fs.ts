@@ -148,6 +148,20 @@ export async function assertWithinRoots(
   if (rootList.length === 0) {
     throw resourceError(AhpErrorCodes.PermissionDenied, "No accessible roots for this connection");
   }
+  // Realpath-normalised form of the roots, used for the realpath-based symlink
+  // checks below. A session's working directory may itself be a symlink (e.g.
+  // `/tmp` -> `/private/tmp` on macOS); without this every realpath'd target
+  // would fall outside the lexical root and be wrongly rejected. The lexical
+  // `rootList` is kept for the initial containment check.
+  const realRootList = await Promise.all(
+    rootList.map(async (root) => {
+      try {
+        return await fs.realpath(root);
+      } catch {
+        return root;
+      }
+    }),
+  );
   const resolved = resolve(targetPath);
   if (!rootList.some((root) => isUnderRoot(resolved, root))) {
     throw resourceError(
@@ -170,7 +184,7 @@ export async function assertWithinRoots(
       `Cannot resolve real path for: ${targetPath}`,
     );
   }
-  if (!rootList.some((root) => isUnderRoot(realAncestor, root))) {
+  if (!realRootList.some((root) => isUnderRoot(realAncestor, root))) {
     throw resourceError(
       AhpErrorCodes.PermissionDenied,
       `Path resolves outside the allowed roots via symlink: ${targetPath}`,
@@ -189,7 +203,7 @@ export async function assertWithinRoots(
         `Cannot resolve real path for: ${targetPath}`,
       );
     }
-    if (!rootList.some((root) => isUnderRoot(realTarget, root))) {
+    if (!realRootList.some((root) => isUnderRoot(realTarget, root))) {
       throw resourceError(
         AhpErrorCodes.PermissionDenied,
         `Path resolves outside the allowed roots via symlink: ${targetPath}`,

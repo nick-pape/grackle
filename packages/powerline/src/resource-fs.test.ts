@@ -158,6 +158,19 @@ describe("readResource", () => {
     const err = await expectResourceError(readResource(uriIn(root, "link.txt"), [root]));
     expect(err.code).toBe(AhpErrorCodes.PermissionDenied);
   });
+
+  it("allows reading under a root that is itself a symlink", async () => {
+    await writeFile(join(root, "a.txt"), "hi", "utf-8");
+    const rootLink = join(outside, "root-link");
+    try {
+      await symlink(root, rootLink, "dir");
+    } catch {
+      // Symlink creation can fail without privilege on Windows; skip in that case.
+      return;
+    }
+    const result = await readResource(uriIn(rootLink, "a.txt"), [rootLink]);
+    expect(result.data).toBe("hi");
+  });
 });
 
 describe("listResource", () => {
