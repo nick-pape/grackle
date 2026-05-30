@@ -309,7 +309,8 @@ async function main(): Promise<void> {
   const ingressUrlHost = ingressHost.includes(":") ? `[${ingressHost}]` : ingressHost;
   setChannelConfig({
     signingSecret: apiKey,
-    ingressBaseUrl: `http://${ingressUrlHost}:${webPort}`,
+    // Behind a TLS reverse proxy, external callers reach us at the public origin.
+    ingressBaseUrl: config.publicUrl ?? `http://${ingressUrlHost}:${webPort}`,
   });
 
   const webServer = createWebServer({
@@ -321,6 +322,7 @@ async function main(): Promise<void> {
     pluginNames: loaded.pluginNames,
     sandboxPort: config.sandboxPort,
     ...(config.sandboxOrigin !== undefined ? { sandboxOrigin: config.sandboxOrigin } : {}),
+    ...(config.publicUrl !== undefined ? { publicUrl: config.publicUrl } : {}),
     readinessCheck: (): ReadinessResult => {
       const checks: ReadinessResult["checks"] = {};
       try {
@@ -367,7 +369,9 @@ async function main(): Promise<void> {
     const code = generatePairingCode();
     if (code) {
       const pairingHost = isWildcardAddress(bindHost) ? detectLanIp() || "localhost" : bindHost;
-      const pairingUrl = `http://${pairingHost}:${webPort}/pair?code=${code}`;
+      const pairingUrl = config.publicUrl
+        ? `${config.publicUrl}/pair?code=${code}`
+        : `http://${pairingHost}:${webPort}/pair?code=${code}`;
 
       process.stdout.write("\n");
       process.stdout.write("  Open in browser:\n");
@@ -402,10 +406,13 @@ async function main(): Promise<void> {
   });
 
   // --- MCP server (HTTP/1.1, Streamable HTTP) ---
-  // Use dialable host for OAuth URLs (wildcard → 127.0.0.1)
+  // The MCP protected-resource metadata points clients at this authorization
+  // server. Behind a TLS reverse proxy, use the public origin so discovery
+  // carries the right scheme/host; otherwise the dialable loopback host
+  // (wildcard → 127.0.0.1).
   const dialableHost = isWildcardAddress(bindHost) ? "127.0.0.1" : bindHost;
   const dialableUrlHost = dialableHost.includes(":") ? `[${dialableHost}]` : dialableHost;
-  const authServerUrl = `http://${dialableUrlHost}:${webPort}`;
+  const authServerUrl = config.publicUrl ?? `http://${dialableUrlHost}:${webPort}`;
   // Adapt plugin-contributed tools to the concrete ToolDefinition type expected by MCP.
   // Validates shape at startup so runtime failures surface immediately with a clear message.
   const pluginToolGroups: ToolDefinition[][] =

@@ -9,6 +9,10 @@ export function registerServeCommand(program: Command): void {
     .option("--web-port <port>", "Web UI port", "3000")
     .option("--mcp-port <port>", "MCP server port", "7435")
     .option(
+      "--public-url <url>",
+      "Canonical browser-facing origin (e.g. https://grackle.home) when behind a TLS reverse proxy; source of truth for the OAuth scheme/host, Secure cookie, HSTS, and pairing URL",
+    )
+    .option(
       "--mcp-origin <origin>",
       "Browser-facing MCP origin (e.g. https://mcp.example.com) for reverse-proxy/TLS deployments; trusted asset/CSP origin for widgets",
     )
@@ -24,6 +28,7 @@ export function registerServeCommand(program: Command): void {
         port: string;
         webPort: string;
         mcpPort: string;
+        publicUrl?: string;
         mcpOrigin?: string;
         sandboxPort: string;
         sandboxOrigin?: string;
@@ -33,6 +38,9 @@ export function registerServeCommand(program: Command): void {
         process.env.GRACKLE_PORT = opts.port;
         process.env.GRACKLE_WEB_PORT = opts.webPort;
         process.env.GRACKLE_MCP_PORT = opts.mcpPort;
+        if (opts.publicUrl !== undefined) {
+          process.env.GRACKLE_PUBLIC_URL = opts.publicUrl;
+        }
         if (opts.mcpOrigin !== undefined) {
           process.env.GRACKLE_MCP_ORIGIN = opts.mcpOrigin;
         }

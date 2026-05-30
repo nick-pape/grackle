@@ -109,6 +109,62 @@ describe("resolveServerConfig", () => {
     expect(resolveServerConfig().host).toBe("0.0.0.0");
   });
 
+  describe("GRACKLE_PUBLIC_URL", () => {
+    it("is undefined when unset", () => {
+      expect(resolveServerConfig().publicUrl).toBeUndefined();
+    });
+
+    it("accepts an https origin and normalizes it", () => {
+      vi.stubEnv("GRACKLE_PUBLIC_URL", "https://grackle.home");
+      expect(resolveServerConfig().publicUrl).toBe("https://grackle.home");
+    });
+
+    it("accepts an http origin", () => {
+      vi.stubEnv("GRACKLE_PUBLIC_URL", "http://grackle.home:8080");
+      expect(resolveServerConfig().publicUrl).toBe("http://grackle.home:8080");
+    });
+
+    it("strips a trailing slash via origin normalization", () => {
+      vi.stubEnv("GRACKLE_PUBLIC_URL", "https://grackle.home/");
+      expect(resolveServerConfig().publicUrl).toBe("https://grackle.home");
+    });
+
+    it("throws on a non-URL value", () => {
+      vi.stubEnv("GRACKLE_PUBLIC_URL", "not-a-url");
+      expect(() => resolveServerConfig()).toThrow("Invalid GRACKLE_PUBLIC_URL");
+    });
+
+    it("throws on a non-http(s) scheme", () => {
+      vi.stubEnv("GRACKLE_PUBLIC_URL", "ftp://grackle.home");
+      expect(() => resolveServerConfig()).toThrow("Scheme must be http or https");
+    });
+
+    it("throws when the URL has a path", () => {
+      vi.stubEnv("GRACKLE_PUBLIC_URL", "https://grackle.home/grackle");
+      expect(() => resolveServerConfig()).toThrow("bare origin with no path");
+    });
+
+    it("throws when the URL has a query string", () => {
+      vi.stubEnv("GRACKLE_PUBLIC_URL", "https://grackle.home?foo=bar");
+      expect(() => resolveServerConfig()).toThrow("bare origin with no path");
+    });
+
+    it("throws when the URL embeds userinfo", () => {
+      vi.stubEnv("GRACKLE_PUBLIC_URL", "https://user:pass@grackle.home");
+      expect(() => resolveServerConfig()).toThrow("must not contain a username or password");
+    });
+
+    it("trims surrounding whitespace", () => {
+      vi.stubEnv("GRACKLE_PUBLIC_URL", "  https://grackle.home  ");
+      expect(resolveServerConfig().publicUrl).toBe("https://grackle.home");
+    });
+
+    it("treats a whitespace-only value as unset", () => {
+      vi.stubEnv("GRACKLE_PUBLIC_URL", "   ");
+      expect(resolveServerConfig().publicUrl).toBeUndefined();
+    });
+  });
+
   it("returns a frozen object", () => {
     const config = resolveServerConfig();
     expect(Object.isFrozen(config)).toBe(true);

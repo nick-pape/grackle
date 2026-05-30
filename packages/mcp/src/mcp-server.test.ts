@@ -356,6 +356,40 @@ describe("OAuth Protected Resource Metadata", () => {
     const metadata = JSON.parse(res.body);
     expect(metadata.authorization_servers).toEqual(["http://grackle:3000"]);
   });
+
+  /** Start an MCP server behind a TLS reverse proxy (public origins configured). */
+  function startProxiedServer(): Promise<http.Server> {
+    const srv = createMcpServer({
+      bindHost: "127.0.0.1",
+      mcpPort: 0,
+      grpcPort: 19999,
+      apiKey: TEST_API_KEY,
+      authorizationServerUrl: "https://grackle.home",
+      mcpOrigin: "https://mcp.grackle.home",
+    });
+    return new Promise<http.Server>((resolve) => {
+      srv.listen(0, "127.0.0.1", () => resolve(srv));
+    });
+  }
+
+  it("advertises the configured public resource (GRACKLE_MCP_ORIGIN), ignoring request Host", async () => {
+    server = await startProxiedServer();
+
+    const res = await getMetadata(server!, "attacker.example.com");
+
+    expect(res.status).toBe(200);
+    const metadata = JSON.parse(res.body);
+    expect(metadata.resource).toBe("https://mcp.grackle.home");
+  });
+
+  it("advertises the explicit public auth server verbatim, ignoring request Host", async () => {
+    server = await startProxiedServer();
+
+    const res = await getMetadata(server!, "attacker.example.com");
+
+    const metadata = JSON.parse(res.body);
+    expect(metadata.authorization_servers).toEqual(["https://grackle.home"]);
+  });
 });
 
 describe("MCP session cleanup on SSE disconnect", () => {

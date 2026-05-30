@@ -40,7 +40,12 @@ export type AuthContext = {
 };
 
 // @public
-export function authenticateMcpRequest(req: http.IncomingMessage, apiKey: string): AuthContext | undefined;
+export function authenticateMcpRequest(req: http.IncomingMessage, apiKey: string, options?: AuthenticateMcpRequestOptions): AuthContext | undefined;
+
+// @public
+export interface AuthenticateMcpRequestOptions {
+    expectedResource?: string;
+}
 
 // @public
 export interface AuthLogger {
@@ -143,6 +148,9 @@ export interface OAuthTokenClaims {
 export function parseCookies(header: string): Record<string, string>;
 
 // @public
+export function parsePublicOrigin(value: string, label: string): URL;
+
+// @public
 export function pruneRevocations(ttlMs?: number): void;
 
 // @public
@@ -179,13 +187,19 @@ export interface ScopedTokenClaims {
 }
 
 // @public
+export interface SecurityHeaderOptions {
+    hsts?: boolean;
+    sandboxOrigin?: string;
+}
+
+// @public
 export const SESSION_COOKIE_NAME: string;
 
 // @public
 export function setAuthLogger(l: AuthLogger): void;
 
 // @public
-export function setSecurityHeaders(res: ServerResponse, requestHost?: string): void;
+export function setSecurityHeaders(res: ServerResponse, requestHost?: string, options?: SecurityHeaderOptions): void;
 
 // @public
 export function startOAuthCleanup(): void;

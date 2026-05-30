@@ -69,7 +69,14 @@ export { createChannelToken, verifyChannelToken } from "./channel-token.js";
 export type { AuthContext } from "./auth-context.js";
 
 // ─── Auth Middleware ────────────────────────────────────────
-export { authenticateMcpRequest } from "./auth-middleware.js";
+export { authenticateMcpRequest, type AuthenticateMcpRequestOptions } from "./auth-middleware.js";
 
 // ─── Security Headers ──────────────────────────────────────
-export { WEB_CONTENT_SECURITY_POLICY, setSecurityHeaders } from "./security-headers.js";
+export {
+  WEB_CONTENT_SECURITY_POLICY,
+  setSecurityHeaders,
+  type SecurityHeaderOptions,
+} from "./security-headers.js";
+
+// ─── Public Origin ─────────────────────────────────────────
+export { parsePublicOrigin } from "./public-origin.js";

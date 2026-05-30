@@ -72,6 +72,7 @@ export interface WebServerOptions {
     connectRoutes?: (router: ConnectRouter) => void;
     handleWebhook?: (token: string, body: WebhookBody) => Promise<WebhookResult>;
     pluginNames?: string[];
+    publicUrl?: string;
     readinessCheck?: () => ReadinessResult | Promise<ReadinessResult>;
     sandboxOrigin?: string;
     sandboxPort?: number;
