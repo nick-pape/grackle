@@ -250,6 +250,16 @@ jobs:
             --summary "$GITHUB_STEP_SUMMARY" \
             --require-source packages/web/src
 
+      # Guard that BACKEND E2E coverage (Node server/PowerLine) landed. Checks
+      # the per-shard backend lcov artifact directly — the merged lcov can't
+      # tell backend E2E apart, since backend unit tests cover the same paths.
+      - name: Verify backend E2E coverage landed
+        run: |
+          if [ -z "$(find coverage-input/e2e -path '*coverage-backend/lcov.info' -size +1c -print -quit 2>/dev/null)" ]; then
+            echo "::error::No non-empty backend E2E lcov (coverage-backend/lcov.info) found."
+            exit 1
+          fi
+
       - name: Upload combined coverage
         if: always()
         uses: actions/upload-artifact@v4

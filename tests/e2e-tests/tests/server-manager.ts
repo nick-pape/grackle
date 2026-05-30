@@ -11,17 +11,37 @@ import { mkdtempSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createTestClient, type GrackleClient } from "./rpc-client.js";
+import { COVERAGE_ENABLED } from "../coverage-helpers.js";
+import { BACKEND_V8_DIR } from "../coverage-options-backend.js";
 
 const POLL_INTERVAL_MS = 300;
 const POLL_TIMEOUT_MS = 15_000;
 const MAX_PORT_RETRIES = 10;
-const TEARDOWN_GRACE_MS = 500;
+/**
+ * Max time to wait for a child to exit after SIGTERM before forcing SIGKILL.
+ * Set above the server's own graceful-shutdown timeout so backend coverage
+ * (which Node flushes only on clean exit) is written before we give up.
+ */
+const PROCESS_EXIT_TIMEOUT_MS = 10_000;
+
+/**
+ * Extra env that instruments the spawned Node processes with V8 coverage when
+ * `E2E_COVERAGE=true`. Both the server and PowerLine write raw dumps (with
+ * embedded source maps) into the shared {@link BACKEND_V8_DIR}; Node assigns
+ * each process a unique filename, so a shared dir is safe. Empty when disabled.
+ */
+const backendCoverageEnv: NodeJS.ProcessEnv = COVERAGE_ENABLED
+  ? { NODE_V8_COVERAGE: BACKEND_V8_DIR }
+  : {};
 
 /** State produced by {@link startGrackleStack}, consumed by fixtures and {@link stopGrackleStack}. */
 export interface E2EState {
   grackleHome: string;
   apiKey: string;
   pairingCookie: string;
+  /** Child process handles, used to await clean exit (and flush V8 coverage) at teardown. */
+  powerlineProc: ChildProcess;
+  serverProc: ChildProcess;
   powerlinePid: number;
   serverPid: number;
   powerlinePort: number;
@@ -202,7 +222,7 @@ export async function startGrackleStack(options: GrackleStackOptions = {}): Prom
       "--no-auth",
     ],
     {
-      env: { ...process.env, GRACKLE_HOME: grackleHome },
+      env: { ...process.env, GRACKLE_HOME: grackleHome, ...backendCoverageEnv },
       stdio: "pipe",
     },
   );
@@ -231,6 +251,7 @@ export async function startGrackleStack(options: GrackleStackOptions = {}): Prom
         // Only enable knowledge for the knowledge project to avoid Neo4j
         // contention and reference-node sync overhead in other tests.
         GRACKLE_KNOWLEDGE_ENABLED: options.knowledgeEnabled ? "true" : "",
+        ...backendCoverageEnv,
       },
       stdio: "pipe",
     },
@@ -277,6 +298,8 @@ export async function startGrackleStack(options: GrackleStackOptions = {}): Prom
     grackleHome,
     apiKey,
     pairingCookie,
+    powerlineProc: powerline,
+    serverProc: server,
     powerlinePid: powerline.pid!,
     serverPid: server.pid!,
     powerlinePort,
@@ -287,22 +310,51 @@ export async function startGrackleStack(options: GrackleStackOptions = {}): Prom
   };
 }
 
-/** Tear down a Grackle stack: kill processes and remove the temp directory. */
+/**
+ * Send SIGTERM and await the process's clean exit, forcing SIGKILL after
+ * {@link PROCESS_EXIT_TIMEOUT_MS}. Awaiting the actual exit (rather than a fixed
+ * delay) lets the graceful-shutdown handler run to completion — which is what
+ * flushes the process's `NODE_V8_COVERAGE` dump when backend coverage is on.
+ * (On Windows there are no real signals, so SIGTERM terminates immediately and
+ * no dump is written; that's expected — backend coverage is Linux/CI only.)
+ */
+async function terminateProcess(proc: ChildProcess, label: string, tag: string): Promise<void> {
+  if (proc.exitCode !== null || proc.signalCode !== null) {
+    return;
+  }
+  await new Promise<void>((resolve) => {
+    const killTimer = setTimeout(() => {
+      try {
+        proc.kill("SIGKILL");
+      } catch {
+        // Already gone.
+      }
+    }, PROCESS_EXIT_TIMEOUT_MS);
+    proc.once("exit", () => {
+      clearTimeout(killTimer);
+      console.log(`${tag} ${label} exited`);
+      resolve();
+    });
+    try {
+      proc.kill("SIGTERM");
+    } catch {
+      // Already dead — nothing to await.
+      clearTimeout(killTimer);
+      resolve();
+    }
+  });
+}
+
+/** Tear down a Grackle stack: kill processes (awaiting clean exit) and remove the temp directory. */
 export async function stopGrackleStack(state: E2EState): Promise<void> {
   const tag = `[e2e:${process.pid}]`;
 
-  // Kill server + PowerLine
-  for (const pid of [state.serverPid, state.powerlinePid]) {
-    try {
-      process.kill(pid, "SIGTERM");
-      console.log(`${tag} Killed process ${pid}`);
-    } catch {
-      // Process may already be dead
-    }
-  }
-
-  // Small delay to let processes exit
-  await new Promise((resolve) => setTimeout(resolve, TEARDOWN_GRACE_MS));
+  // Send SIGTERM and await clean exit so graceful shutdown completes (and, when
+  // enabled, the backend V8 coverage dump is flushed) before we continue.
+  await Promise.all([
+    terminateProcess(state.serverProc, "server", tag),
+    terminateProcess(state.powerlineProc, "powerline", tag),
+  ]);
 
   // Remove temp directory (skip if DEBUG_KEEP_TEMP=1 for failure inspection)
   if (process.env.DEBUG_KEEP_TEMP === "1") {

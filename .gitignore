@@ -1,6 +1,9 @@
 node_modules/
 dist/
 coverage/
+# Backend E2E coverage (#1389): raw NODE_V8_COVERAGE dumps + the converted report.
+coverage-backend/
+.v8-backend/
 common/temp/
 # Autoinstaller source (package.json, pnpm-lock.yaml, scripts) IS tracked;
 # only the provisioned node_modules is ignored (covered by node_modules/ above).
