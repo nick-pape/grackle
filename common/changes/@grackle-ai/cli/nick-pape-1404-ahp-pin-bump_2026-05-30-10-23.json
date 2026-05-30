@@ -6,5 +6,6 @@
       "type": "patch"
     }
   ],
-  "changeFiles": []
+  "packageName": "@grackle-ai/cli",
+  "email": "nickpape@outlook.com"
 }
