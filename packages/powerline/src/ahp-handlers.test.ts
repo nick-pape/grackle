@@ -1124,6 +1124,62 @@ describe("createResourceWatch", () => {
     }
   }, 10_000);
 
+  it("applies includes/excludes and reports nested + deleted paths on a recursive watch", async () => {
+    // Pre-create a file that will be deleted (so the unlink event fires) and a
+    // nested directory to exercise the recursive descent + addDir handling.
+    await writeFile(join(workdir, "old.md"), "stale", "utf-8");
+    await mkdir(join(workdir, "nested"));
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      await client.socket.request("createSession", {
+        channel: "ahp-session:/watch-2",
+        provider: TEST_RUNTIME.name,
+        config: { workingDirectory: workdir },
+      });
+      const { channel } = (await client.socket.request("createResourceWatch", {
+        channel: "ahp-root://",
+        uri: pathToFileURL(workdir).href,
+        recursive: true,
+        excludes: { items: ["*.log"] },
+        includes: { items: ["**/*.md"] },
+      })) as { channel: string };
+      await client.socket.request("subscribe", { channel });
+      await new Promise((r) => setTimeout(r, 400));
+
+      // Matches includes -> reported; matches excludes -> ignored; nested .md ->
+      // reported (recursive); deletion of old.md -> reported.
+      await writeFile(join(workdir, "plan.md"), "# Plan", "utf-8");
+      await writeFile(join(workdir, "debug.log"), "noise", "utf-8");
+      await writeFile(join(workdir, "nested", "deep.md"), "# Deep", "utf-8");
+      await rm(join(workdir, "old.md"));
+
+      const deadline = Date.now() + 5000;
+      const seen = new Map<string, string>();
+      while (Date.now() < deadline) {
+        for (const e of client.received.filter((r) => r.channel === channel)) {
+          const items = (e.action as { changes: { items: Array<{ uri: string; type: string }> } })
+            .changes.items;
+          for (const it of items) {
+            seen.set(it.uri, it.type);
+          }
+        }
+        if ([...seen.keys()].some((u) => u.endsWith("plan.md")) && seen.size >= 2) {
+          break;
+        }
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      const uris = [...seen.keys()];
+      expect(uris.some((u) => u.endsWith("plan.md"))).toBe(true);
+      expect(uris.some((u) => u.endsWith("deep.md"))).toBe(true);
+      expect(uris.some((u) => u.endsWith("debug.log"))).toBe(false);
+      expect(uris.some((u) => u.endsWith("old.md"))).toBe(true);
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  }, 12_000);
+
   it("rejects createResourceWatch outside the allowed roots", async () => {
     const elsewhere = await mkdtemp(join(tmpdir(), "grackle-ahp-watchout-"));
     const lb = await spinUpLoopback();
