@@ -1,35 +1,35 @@
 ---
 id: intro
-title: Introduction
+title: Grackle
 slug: /
 sidebar_position: 1
 ---
 
-# Stop babysitting your AI agents
+# A plague of grackles
 
-You have 6 agents running across 4 machines. You're tab-switching between terminals, copy-pasting context from one agent's output into another's prompt, and restarting dead sessions at 2 AM. Every agent has its own CLI, its own auth flow, its own way of crashing silently.
+That's the collective noun. Also what you get when you stop babysitting one agent in a terminal and start running many — each on its own wire, with its own key, leaving its own name in the log.
 
-**Grackle is the control plane for AI coding agents.** Configure once, supervise by exception.
+**Grackle is a self-hosted control plane for AI agents.** Spawn one and watch it work. Run a hundred and close the laptop. When one does something stupid at 3 AM, you know which one — not "the platform," not "your token," _that one_.
 
-One platform to run [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview), [Copilot](https://github.com/features/copilot), [Codex](https://openai.com/index/codex/), or [Goose](https://block.github.io/goose/) on any environment — Docker, SSH, Codespaces, local. It handles provisioning, credentials, transport, and lifecycle. You get a CLI, web UI, and MCP server out of the box.
+Run [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview), [Copilot](https://github.com/features/copilot), [Codex](https://openai.com/index/codex/), [GenAIScript](https://microsoft.github.io/genaiscript/), or any [ACP](https://agentclientprotocol.com/) agent — on Docker, an SSH box, a Codespace, or this machine. Grackle handles the provisioning, the credentials, the transport, the lifecycle. You get a CLI, a web UI, and an MCP server out of the box.
 
 ![Dashboard — active sessions, task triage, and workspaces](/img/dashboard-projects-tasks.png)
 
 :::warning
-Grackle is pre-1.0 and still experimental. It may have unresolved security issues, annoying bugs, and broken workflows. Not recommended for use in production systems.
+Grackle is pre-1.0 and experimental. Unresolved security issues, sharp edges, broken workflows. Not for production.
 :::
 
-## What makes Grackle different
+## What makes it different
 
-**Agent IPC** — Parent sessions spawn children with bidirectional pipes. Structured communication between agents — no polling, no shared files, no prompt-stuffing.
+**Agents talk to each other.** A parent session spawns children over real pipes — structured messages, not polling, not shared files, not prompt-stuffing.
 
-**Knowledge persistence** — A [semantic knowledge graph](./guides/knowledge-graph) backed by Neo4j. One agent's architectural insight becomes another agent's context automatically. Search by concept, not keyword.
+**Knowledge persists.** A [semantic knowledge graph](./features/knowledge-graph) backed by Neo4j. One agent's insight becomes another's context, automatically. Search by concept, not keyword.
 
-**Session resilience** — Environments auto-reconnect on disconnect. Suspended sessions resume where they left off. Events buffer during outages and drain on reconnect. No lost work.
+**Work survives the wire dropping.** Environments reconnect. Suspended sessions resume where they stopped. Events buffer through the outage and drain on return.
 
-**Multi-vendor, one interface** — Swap runtimes per persona or per task. Your orchestration doesn't break when you switch from Claude to Codex or add Copilot as a second opinion.
+**One interface, every vendor.** Swap runtimes per persona or per task. Your orchestration doesn't break when you trade Claude for Codex or bring in Copilot for a second opinion.
 
-**Plugin architecture** — The server is [composed of plugins](./guides/plugins) that you can toggle on and off. Run the full orchestration stack or strip down to a lightweight session manager.
+**Not everything needs an LLM.** [Script personas](./advanced/scripting) run deterministic TypeScript — linters, formatters, analyzers — under the same session and task primitives as any agent.
 
 ## How it fits together
 
@@ -49,44 +49,25 @@ graph TD
     end
 
     subgraph CS["☁️ Codespace"]
-        CS1A["🤖 Claude"] & CS1B["🤖 Goose"]
+        CS1A["🤖 Claude"] & CS1B["🤖 GenAIScript"]
     end
 
     S --- D1 & SSH & CS
 ```
 
-The **Grackle Server** is the control plane. It manages environments, sessions, tasks, and credentials. You interact with it through the **[chat interface](./guides/chat)**, **CLI**, **web UI**, or **[MCP server](./guides/mcp)**. Inside each environment, **[PowerLine](./concepts/powerline)** runs the actual agent and streams events back to the server.
+The **server** is the control plane — environments, sessions, tasks, credentials. You reach it through the [chat](./features/chat), the [CLI](./features/cli), the [web UI](./features/web-ui), or the [MCP server](./features/mcp-server). Inside each environment, [PowerLine](./architecture/powerline-ahp) is the wire: it runs the agent and streams every event back.
 
-## Features
+## Three ways to run Grackle
 
-| Feature                                               | Description                                                                    |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------ |
-| **[Chat interface](./guides/chat)**                   | Natural language command interface — just describe what you want               |
-| **Real-time streaming**                               | Watch agent tool calls and output as they happen                               |
-| **Git worktree isolation**                            | Every task gets its own branch — zero interference between agents              |
-| **[Knowledge graph](./guides/knowledge-graph)**       | Semantic memory backed by Neo4j — agents share knowledge automatically         |
-| **Multi-runtime**                                     | Claude Code, Copilot, Codex, and Goose — swap freely                           |
-| **[Task trees](./concepts/projects-tasks)**           | Decompose work into parent/child subtasks up to 8 levels deep                  |
-| **[Signals](./guides/orchestration#signals)**         | SIGTERM, SIGCHLD, cascade kill, orphan adoption — kernel-style process control |
-| **[Personas](./concepts/personas)**                   | Specialized agent configs with system prompts, tools, and model selection      |
-| **[Scheduled triggers](./guides/scheduled-triggers)** | Cron-style automated task creation                                             |
-| **[Plugin system](./guides/plugins)**                 | Compose server capabilities — orchestration, scheduling, knowledge graph       |
-| **[MCP server](./guides/mcp)**                        | Expose Grackle's full API as MCP tools for any AI agent                        |
+- **Alone.** Spawn one agent, give it a task, watch the stream. Same shape as your CLI agent — different hardware, different keys.
+- **In formation.** Pre-wire a room, spawn several agents into it, kick off a task. Drop into the room mid-flight and your reply lands in their next turn.
+- **Loose.** Wire a webhook and close the laptop. An agent fires on the trigger, works, and stops. When it hits something privileged, it asks before it acts.
 
-## Scales from remote control to swarms
+You don't adopt all of it at once. Each builds on the last — see [Orchestration](./features/orchestration).
 
-| Level                       | What you get                                                      | What you use                      |
-| --------------------------- | ----------------------------------------------------------------- | --------------------------------- |
-| **1. Remote control**       | One agent, one environment, you watch it work                     | Sessions, environments            |
-| **2. Structured tasks**     | Break work into tasks with branches and review gates              | + Workspaces, tasks, personas     |
-| **3. Parallel agents**      | Multiple agents working independently across environments         | + Multiple environments           |
-| **4. Orchestrator pattern** | Parent agent decomposes work and coordinates child agents via MCP | + Task trees, MCP broker, signals |
+## Next
 
-You don't need to adopt everything at once. Each level builds on the last — see the [orchestration guide](./guides/orchestration) for details.
-
-## Next steps
-
-- **[Getting Started](./getting-started)** — Install Grackle and run your first agent in 5 minutes
-- **[Credential Setup](./guides/credentials)** — Configure API keys for Claude, Copilot, Codex, and Goose
-- **[Concepts](./concepts/environments)** — Understand environments, sessions, tasks, and the rest of the model
-- **[Guides](./guides/web-ui)** — Web UI, orchestration, chat, plugins, and more
+- **[Getting Started](./getting-started/installation)** — install Grackle and spawn your first agent in five minutes.
+- **[Building Blocks](./building-blocks/environments-workspaces)** — environments, sessions, tasks, personas, and how they fit.
+- **[Features](./features/web-ui)** — the web UI, the CLI, orchestration, coordination, and the rest.
+- **[Architecture](./architecture/kernel)** — how the wire, the protocols, and the kernel actually work.
