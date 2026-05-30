@@ -159,6 +159,25 @@ describe("readResource", () => {
     expect(err.code).toBe(AhpErrorCodes.PermissionDenied);
   });
 
+  it("is case-sensitive on a case-sensitive filesystem", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "grackle-rfs-case-"));
+    const upper = join(parent, "Repo");
+    const lower = join(parent, "repo");
+    await mkdir(upper);
+    try {
+      await mkdir(lower);
+    } catch {
+      // Case-insensitive FS (Windows / macOS default): the two paths collide,
+      // so case folding is correct there — nothing to assert.
+      await rm(parent, { recursive: true, force: true });
+      return;
+    }
+    await writeFile(join(lower, "secret.txt"), "leak", "utf-8");
+    const err = await expectResourceError(readResource(uriIn(lower, "secret.txt"), [upper]));
+    expect(err.code).toBe(AhpErrorCodes.PermissionDenied);
+    await rm(parent, { recursive: true, force: true });
+  });
+
   it("allows reading under a root that is itself a symlink", async () => {
     await writeFile(join(root, "a.txt"), "hi", "utf-8");
     const rootLink = join(outside, "root-link");

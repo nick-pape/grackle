@@ -308,7 +308,13 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     const root = resolvePath(wd);
     cState.allowedRoots.add(root);
     const branch = typeof cfg.branch === "string" && cfg.branch !== "" ? cfg.branch : undefined;
-    const useWorktrees = cfg.useWorktrees === true;
+    // Mirror the runtime default: BaseAgentSession treats an omitted useWorktrees
+    // as `true` (`opts.useWorktrees ?? true`), so only an explicit `false` disables
+    // worktrees. If the host required an explicit `true` here, a session created
+    // with a branch and no useWorktrees would edit in the sibling worktree while
+    // the sandbox stayed pinned to the original working directory — rejecting the
+    // actual edited files with PermissionDenied.
+    const useWorktrees = cfg.useWorktrees !== false;
     if (useWorktrees && branch !== undefined) {
       cState.allowedRoots.add(worktreeDir(root, branch));
     }

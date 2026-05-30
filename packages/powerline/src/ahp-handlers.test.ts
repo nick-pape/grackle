@@ -32,6 +32,7 @@ import type {
   ResumeOptions,
   SpawnOptions,
 } from "@grackle-ai/runtime-sdk";
+import { worktreeDir } from "@grackle-ai/runtime-sdk";
 import { SESSION_STATUS, type SessionStatus } from "@grackle-ai/common";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -960,6 +961,34 @@ describe("resourceRead / resourceList", () => {
       expect(result.contentType).toBe("text/markdown");
       expect(result.data).toBe("# Plan");
     } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  });
+
+  it("includes the sibling worktree root when a branch is set and useWorktrees is omitted", async () => {
+    // BaseAgentSession defaults useWorktrees to true, so a session created with a
+    // branch but no explicit useWorktrees edits in the sibling worktree dir; the
+    // sandbox must therefore include that path, not just the working directory.
+    const branch = "feature/x";
+    const wt = worktreeDir(workdir, branch);
+    await mkdir(wt, { recursive: true });
+    await writeFile(join(wt, "doc.md"), "# WT", "utf-8");
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      await client.socket.request("createSession", {
+        channel: "ahp-session:/res-wt-1",
+        provider: TEST_RUNTIME.name,
+        config: { workingDirectory: workdir, branch },
+      });
+      const result = (await client.socket.request("resourceRead", {
+        channel: "ahp-root://",
+        uri: pathToFileURL(join(wt, "doc.md")).href,
+      })) as ResourceReadResult;
+      expect(result.data).toBe("# WT");
+    } finally {
+      await rm(wt, { recursive: true, force: true });
       await client.cleanup();
       await lb.cleanup();
     }

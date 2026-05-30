@@ -62,6 +62,14 @@ const VALID_ENCODINGS: ReadonlySet<ContentEncoding> = new Set([
 ]);
 
 /**
+ * Whether the host filesystem is case-insensitive. Containment checks fold case
+ * only on these platforms; folding unconditionally would let a request for
+ * `/tmp/repo/...` pass a sandbox rooted at `/tmp/Repo` on a case-sensitive
+ * (Linux) filesystem where both directories can independently exist.
+ */
+const CASE_INSENSITIVE_FS: boolean = process.platform === "win32" || process.platform === "darwin";
+
+/**
  * Filesystem operations used by this module, abstracted so unit tests can
  * inject an in-memory implementation. Mirrors the seam in
  * {@link ./token-writer.ts}.
@@ -113,13 +121,19 @@ export function resourceUriToPath(uri: string): string {
 }
 
 /**
- * Case- and separator-normalised containment check: is `child` equal to, or a
- * descendant of, `root`? Prevents prefix collisions (e.g. `/home/user` vs
- * `/home/username`) by requiring a trailing separator on the root.
+ * Separator-normalised containment check: is `child` equal to, or a descendant
+ * of, `root`? Prevents prefix collisions (e.g. `/home/user` vs `/home/username`)
+ * by requiring a trailing separator on the root. Case is folded only on
+ * case-insensitive filesystems (see {@link CASE_INSENSITIVE_FS}) so the sandbox
+ * stays exact on case-sensitive ones.
  */
 function isUnderRoot(child: string, root: string): boolean {
-  const c = child.toLowerCase().replace(/\\/g, "/");
-  const r = root.toLowerCase().replace(/\\/g, "/");
+  const fold = (p: string): string => {
+    const slashed = p.replace(/\\/g, "/");
+    return CASE_INSENSITIVE_FS ? slashed.toLowerCase() : slashed;
+  };
+  const c = fold(child);
+  const r = fold(root);
   const rWithSep = r.endsWith("/") ? r : `${r}/`;
   return c === r || c.startsWith(rWithSep);
 }
