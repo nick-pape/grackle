@@ -146,14 +146,25 @@ export interface Analysis {
 
 /** Parse + union a set of lcov files, keeping each suite's contribution separate. */
 export function analyzeCoverage(files: readonly string[]): Analysis {
-  const bySuite: SuiteMaps = { unit: new Map(), e2e: new Map(), storybook: new Map() };
+  // Collect each file's parsed map per suite, then merge each suite (and the
+  // overall combined) exactly once — avoids rebuilding a suite's union on every
+  // file (quadratic over many inputs).
+  const perSuite: Record<Suite, Array<Map<string, FileCoverage>>> = {
+    unit: [],
+    e2e: [],
+    storybook: [],
+  };
   const all: Array<Map<string, FileCoverage>> = [];
   for (const file of files) {
     const map: Map<string, FileCoverage> = parseLcov(readFileSync(file, "utf8"), file);
-    const suite: Suite = classifySuite(file);
-    bySuite[suite] = mergeCoverageMaps([bySuite[suite], map]);
+    perSuite[classifySuite(file)].push(map);
     all.push(map);
   }
+  const bySuite: SuiteMaps = {
+    unit: mergeCoverageMaps(perSuite.unit),
+    e2e: mergeCoverageMaps(perSuite.e2e),
+    storybook: mergeCoverageMaps(perSuite.storybook),
+  };
   const combined: Map<string, FileCoverage> = mergeCoverageMaps(all);
   return { combined, bySuite, summary: summarize(combined), fileCount: files.length };
 }
