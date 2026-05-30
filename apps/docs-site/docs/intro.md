@@ -9,7 +9,7 @@ sidebar_position: 1
 
 That's the collective noun. Also what you get when you stop babysitting one agent in a terminal and start running many — each on its own wire, with its own key, leaving its own name in the log.
 
-**Grackle is a self-hosted control plane for AI agents.** Spawn one and watch it work. Spawn a hundred and close the laptop. When one does something stupid at 3 AM, you know which one — not "the platform," not "your token," _that one_.
+**Grackle is a self-hosted control plane for AI agents.** Spawn one and watch it work. Run a hundred and close the laptop. When one does something stupid at 3 AM, you know which one — not "the platform," not "your token," _that one_.
 
 Run [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview), [Copilot](https://github.com/features/copilot), [Codex](https://openai.com/index/codex/), [GenAIScript](https://microsoft.github.io/genaiscript/), or any [ACP](https://agentclientprotocol.com/) agent — on Docker, an SSH box, a Codespace, or this machine. Grackle handles the provisioning, the credentials, the transport, the lifecycle. You get a CLI, a web UI, and an MCP server out of the box.
 
@@ -57,17 +57,17 @@ graph TD
 
 The **server** is the control plane — environments, sessions, tasks, credentials. You reach it through the [chat](./features/chat), the [CLI](./features/cli), the [web UI](./features/web-ui), or the [MCP server](./features/mcp-server). Inside each environment, [PowerLine](./architecture/powerline-ahp) is the wire: it runs the agent and streams every event back.
 
-## Three ways to fly a plague
+## Three ways to run Grackle
 
-- **Alone.** Spawn one claw, give it a task, watch the stream. Same shape as your CLI agent — different hardware, different keys.
-- **In formation.** Pre-wire a room, spawn several claws into it, kick off a task. Drop into the room mid-flight and your reply lands in their next turn.
-- **Loose.** Wire a webhook and close the laptop. A claw fires on the trigger, works, and stops. When it hits something privileged, it asks before it acts.
+- **Alone.** Spawn one agent, give it a task, watch the stream. Same shape as your CLI agent — different hardware, different keys.
+- **In formation.** Pre-wire a room, spawn several agents into it, kick off a task. Drop into the room mid-flight and your reply lands in their next turn.
+- **Loose.** Wire a webhook and close the laptop. An agent fires on the trigger, works, and stops. When it hits something privileged, it asks before it acts.
 
 You don't adopt all of it at once. Each builds on the last — see [Orchestration](./features/orchestration).
 
 ## Next
 
-- **[Getting Started](./getting-started/installation)** — install Grackle and spawn your first claw in five minutes.
+- **[Getting Started](./getting-started/installation)** — install Grackle and spawn your first agent in five minutes.
 - **[Building Blocks](./building-blocks/environments-workspaces)** — environments, sessions, tasks, personas, and how they fit.
 - **[Features](./features/web-ui)** — the web UI, the CLI, orchestration, coordination, and the rest.
 - **[Architecture](./architecture/kernel)** — how the wire, the protocols, and the kernel actually work.

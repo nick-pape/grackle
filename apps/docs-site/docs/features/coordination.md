@@ -6,24 +6,24 @@ sidebar_position: 6
 
 # Coordination (IPC)
 
-[Orchestration](./orchestration) is the task-level layer: decompose work, gate it on dependencies, signal completion up the tree. Coordination is the plumbing under it — how claws talk to each other while they work, and how the server keeps a durable, ordered record of everything that happened.
+[Orchestration](./orchestration) is the task-level layer: decompose work, gate it on dependencies, signal completion up the tree. Coordination is the plumbing under it — how agents talk to each other while they work, and how the server keeps a durable, ordered record of everything that happened.
 
 Two parts:
 
-- **IPC streams and file descriptors** — a Unix-pipe abstraction. Claws use it to spawn children, pass messages, and share named streams claw-to-claw. Exposed as `ipc_*` MCP tools.
+- **IPC streams and file descriptors** — a Unix-pipe abstraction. Agents use it to spawn children, pass messages, and share named streams agent-to-agent. Exposed as `ipc_*` MCP tools.
 - **The durable, server-sequenced action log** — every event in a [session](../building-blocks/tasks-sessions) is appended to a monotonic log. Replay it, resume from it, audit it.
 
 The web UI lays all of this out on the **Coordination** tab.
 
 :::info Orchestration vs. coordination
-You rarely touch IPC by hand. The orchestrator pattern — parent task, child tasks, `SIGCHLD` notifications — is built on top of these pipes. Reach for `ipc_*` when you need claw-to-claw traffic that doesn't fit the parent/child tree: a shared room between siblings, say.
+You rarely touch IPC by hand. The orchestrator pattern — parent task, child tasks, `SIGCHLD` notifications — is built on top of these pipes. Reach for `ipc_*` when you need agent-to-agent traffic that doesn't fit the parent/child tree: a shared room between siblings, say.
 :::
 
 ## IPC streams and file descriptors
 
 A session is modeled like a process. It holds **file descriptors** (fds), each pointing at a **stream** — a named, multi-subscriber channel. Spawn a child and you get a pipe fd to it. You can also create free-standing named streams and grant other sessions onto them.
 
-These operations reach claws as MCP tools in the `ipc` group. Most need **scoped auth** — the caller is a claw inside a session, not an outside client — because the server needs the caller's session id to resolve fds and permissions.
+These operations reach agents as MCP tools in the `ipc` group. Most need **scoped auth** — the caller is an agent inside a session, not an outside client — because the server needs the caller's session id to resolve fds and permissions.
 
 ### Tool reference
 
@@ -34,7 +34,7 @@ These operations reach claws as MCP tools in the `ipc` group. Most need **scoped
 | `ipc_close`         | Close an fd, dropping the connection. Closing the last fd to a child stops it. Refuses if messages are still undelivered — process them first.                                                                                   | `fd`                                                         |
 | `ipc_list_fds`      | List your open fds. Check before you exit: owned fds (`owned=true`) must be closed before you stop.                                                                                                                              | _(none)_                                                     |
 | `ipc_terminate`     | Send a graceful `SIGTERM` to a child via its fd. The child gets a `[SIGTERM]` message and is expected to wrap up and stop. The fd stays open — close it with `ipc_close` after.                                                  | `fd`                                                         |
-| `ipc_list_streams`  | List active streams with subscriber details and message-buffer depth. A debugging surface. Scoped claws only see streams they're in.                                                                                             | _(none)_                                                     |
+| `ipc_list_streams`  | List active streams with subscriber details and message-buffer depth. A debugging surface. Scoped agents only see streams they're in.                                                                                            | _(none)_                                                     |
 | `ipc_create_stream` | Create a named stream for inter-session traffic. Returns an `rw` fd. `selfEcho` controls whether participants see their own messages (chatroom case).                                                                            | `name`, `selfEcho?`                                          |
 | `ipc_attach`        | Grant another session onto a stream you hold. The target gets a new fd with the given `permission` and `deliveryMode`. Permission must be **equal to or less than** your own. Write-only (`w`) requires `deliveryMode:'detach'`. | `fd`, `targetSessionId`, `permission`, `deliveryMode`        |
 | `ipc_share_stream`  | Share a stream with your **parent**. Auto-discovers the parent via the inherited pipe fd, grants access, sends a `[stream-ref]` notice. For sibling-to-sibling: share up to the parent, who can `ipc_attach` it onward.          | `fd?` _or_ `streamName?`, `permission?`, `deliveryMode?`     |
@@ -55,7 +55,7 @@ graph LR
 ```
 
 :::tip Close your fds before you exit
-`ipc_close` refuses to close an fd with undelivered messages, and `ipc_list_fds` exists so a claw can confirm every owned child fd is closed before it stops. A claw that exits with owned fds open leaves its children hanging.
+`ipc_close` refuses to close an fd with undelivered messages, and `ipc_list_fds` exists so an agent can confirm every owned child fd is closed before it stops. An agent that exits with owned fds open leaves its children hanging.
 :::
 
 ## The durable action log
@@ -150,7 +150,7 @@ The web UI exposes a **Coordination** page at `/coordination` — a **read-only 
 
 It gives you:
 
-- **List / Graph toggle** — List is the stream inventory grouped by owning task; Graph is a live network of sessions and the streams between them. A mob, drawn.
+- **List / Graph toggle** — List is the stream inventory grouped by owning task; Graph is a live network of sessions and the streams between them. A group of agents on one problem, drawn.
 - **Show internals** toggle — internal plumbing streams (`lifecycle`/`pipe`/`stdin`) are hidden by default and revealed here, mirroring `--internal` on `grackle streams list`.
 - **Stream detail drawer** — select a stream to load its durable transcript (scrollback) and merge in live messages as they land.
 - **Refresh** — re-fetch the inventory on demand.
@@ -168,6 +168,6 @@ Coordination is the substrate. [Orchestration](./orchestration) is the policy on
 | **Orchestration** | Tasks, dependencies, `SIGCHLD`/`SIGTERM` over the task tree, escalation | `grackle task ...`, orchestrator personas                                                    |
 | **Coordination**  | Streams, file descriptors, message delivery, the durable action log     | `ipc_*` MCP tools, `grackle session events` / `events` / `streams ...`, the Coordination tab |
 
-When an orchestrator spawns a child task, parent and child are joined by an IPC pipe — the same machinery `ipc_spawn` exposes. The `SIGTERM` from orchestration rides to a child through `ipc_terminate` over that pipe fd. Orchestration is _what_ the claws are doing. Coordination is _how_ they talk while they do it.
+When an orchestrator spawns a child task, parent and child are joined by an IPC pipe — the same machinery `ipc_spawn` exposes. The `SIGTERM` from orchestration rides to a child through `ipc_terminate` over that pipe fd. Orchestration is _what_ the agents are doing. Coordination is _how_ they talk while they do it.
 
 The tools that carry it all live in the [MCP server](./mcp-server).

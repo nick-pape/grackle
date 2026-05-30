@@ -6,7 +6,7 @@ sidebar_position: 1
 
 # Scripting (GenAIScript)
 
-Not every claw needs an LLM. Some run deterministic TypeScript — a linter, a formatter, an analyzer, a nightly report — under the same task and session primitives as the agents.
+Not every agent needs an LLM. Some run deterministic TypeScript — a linter, a formatter, an analyzer, a nightly report — under the same task and session primitives as the agents.
 
 That is a **script persona**: a [GenAIScript](../building-blocks/personas-runtimes) program that runs to completion. No conversation, no turn limit, no model required. It starts, it does the work, it ends.
 
@@ -46,7 +46,7 @@ $`Count the test files and list any that lack an assertion.`;
 
 ## How it runs
 
-A script persona slots into a [task](../getting-started/create-task) like any other claw. Spawn a session against it, and PowerLine runs the script on the wire:
+A script persona slots into a [task](../getting-started/create-task) like any other agent. Spawn a session against it, and PowerLine runs the script on the wire:
 
 - It runs **once**. One run is one turn. When the script exits, the session goes idle — done.
 - It does **not** take interactive input, and it cannot be resumed. Kill it and it stops.

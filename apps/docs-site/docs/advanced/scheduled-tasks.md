@@ -6,7 +6,7 @@ sidebar_position: 2
 
 # Scheduled Tasks (Cron)
 
-The plague keeps a calendar. A claw wakes on a schedule, does the job, and goes back to the wire — no human at the keyboard. Define a schedule, bind it to a persona and workspace, and the server creates and starts the task when the clock comes round.
+Grackle keeps a calendar. A task wakes on a schedule, does the job, and goes back to the wire — no human at the keyboard. Define a schedule, bind it to a persona and workspace, and the server creates and starts the task when the clock comes round.
 
 ## Create a schedule
 

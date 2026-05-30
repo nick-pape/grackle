@@ -6,7 +6,7 @@ sidebar_position: 2
 
 # Chat
 
-The landing page is a conversation with the **System agent** — the claw that runs on the root task. Plain language in, work out. It does not memorize commands for you; it drives Grackle directly through MCP tools.
+The landing page is a conversation with the **System agent** — the agent that runs on the root task. Plain language in, work out. It does not memorize commands for you; it drives Grackle directly through MCP tools.
 
 This is the full reference. For the install-and-go path, start with [Using the Root Chat](../getting-started/root-chat).
 
@@ -14,13 +14,13 @@ This is the full reference. For the install-and-go path, start with [Using the R
 
 It sees every Grackle capability as a tool — environments, tasks, sessions, personas, knowledge. Describe the outcome; it picks the calls.
 
-| You say                                                         | It does                                        |
-| --------------------------------------------------------------- | ---------------------------------------------- |
-| "Add a Docker environment called build-server and provision it" | creates and provisions an environment          |
-| "Fix the flaky auth test in the API workspace and start it"     | spawns a task, spawns a claw on it             |
-| "What's running? Any failures?"                                 | reads task and session state                   |
-| "What do we know about the payment module?"                     | queries the knowledge graph (when enabled)     |
-| "Stand up three Docker envs and start the top three tasks"      | runs the whole sequence, several claws at once |
+| You say                                                         | It does                                         |
+| --------------------------------------------------------------- | ----------------------------------------------- |
+| "Add a Docker environment called build-server and provision it" | creates and provisions an environment           |
+| "Fix the flaky auth test in the API workspace and start it"     | spawns a task, spawns an agent on it            |
+| "What's running? Any failures?"                                 | reads task and session state                    |
+| "What do we know about the payment module?"                     | queries the knowledge graph (when enabled)      |
+| "Stand up three Docker envs and start the top three tasks"      | runs the whole sequence, several agents at once |
 
 Anything the MCP server exposes is reachable here. The agent is the front door to the rest of the system, not a separate one.
 
@@ -32,13 +32,13 @@ The chat is not ephemeral. It is the persistent root-task conversation, written 
 - The same conversation is shared across browser tabs — open two, see one thread.
 - Picking it back up continues where you left off. There is no fresh start, no suggested-action cards offered to you.
 
-When a wire drops mid-thought, the claw suspends and events buffer. Reconnect and it resumes. You steer; the conversation holds.
+When a wire drops mid-thought, the agent suspends and events buffer. Reconnect and it resumes. You steer; the conversation holds.
 
 ## History and sessions
 
 The chat is one long thread, but the work underneath it is many [tasks and sessions](../building-blocks/tasks-sessions).
 
-When you ask for structured work, the System agent creates tasks and spawns claws to run them. Each claw is its own session with its own name and key — it perches on a wire, runs, reports back, and dies. The chat is where you watch and redirect; the sessions are where the work actually happens.
+When you ask for structured work, the System agent creates tasks and spawns agents to run them. Each agent is its own session with its own name and key — it runs on a wire, reports back, and dies. The chat is where you watch and redirect; the sessions are where the work actually happens.
 
 You do not manage those sessions by hand from here. Ask, and the agent spawns, checks, or kills them on your behalf.
 
@@ -60,9 +60,9 @@ Set the runtime during first-run setup, or later under **Settings → Personas**
 
 The chat is strictly the root-task conversation — you and the System agent, nothing else.
 
-When claws talk to each other, that traffic does not surface here. Agent-to-agent IPC lives in the [Coordination](./coordination) tab. Older `/chat/:streamId` links redirect there.
+When agents talk to each other, that traffic does not surface here. Agent-to-agent IPC lives in the [Coordination](./coordination) tab. Older `/chat/:streamId` links redirect there.
 
-So: the chat is the spine. [Coordination](./coordination) is the cross-talk between the claws it spawns. [Orchestration](./orchestration) is how one agent decomposes work and hands pieces out.
+So: the chat is the spine. [Coordination](./coordination) is the cross-talk between the agents it spawns. [Orchestration](./orchestration) is how one agent decomposes work and hands pieces out.
 
 ## Next
 

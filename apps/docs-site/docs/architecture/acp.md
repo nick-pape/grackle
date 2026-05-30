@@ -18,7 +18,7 @@ Inside an environment, [PowerLine](./powerline-ahp) registers an `AcpRuntime` fo
 2. It opens an ACP connection over the child's stdin/stdout (newline-delimited JSON-RPC).
 3. The prompt goes in, events stream back, and PowerLine relays them up the wire over AHP — same as any other runtime.
 
-The agent process is the claw. ACP is the only language Grackle and that process share.
+The agent process is the running agent. ACP is the only language Grackle and that process share.
 
 ## The runtimes
 
@@ -44,10 +44,10 @@ Grackle composes standard protocols rather than inventing one. Each speaks acros
 | Protocol | Boundary                  | Carries                                                |
 | -------- | ------------------------- | ------------------------------------------------------ |
 | **AHP**  | server ↔ host (the wire) | spawn, events, credentials — JSON-RPC over a WebSocket |
-| **ACP**  | host ↔ agent (the claw)  | prompts and events to a subprocess over stdio          |
+| **ACP**  | host ↔ agent             | prompts and events to a subprocess over stdio          |
 | **MCP**  | agent ↔ tools            | the tool surface the agent calls out to                |
 
-AHP is the wire. ACP is how a claw that knows neither AHP nor a Grackle SDK still perches on it. [MCP](./mcp) is what the agent reaches for once it's running.
+AHP is the wire. ACP is how an agent that knows neither AHP nor a Grackle SDK still runs on it. [MCP](./mcp) is what the agent reaches for once it's running.
 
 ACP and AHP look alike — both are JSON-RPC — and that is the trap. AHP is Grackle's own host protocol between the server and PowerLine. ACP is a foreign protocol Grackle speaks _down_ to an agent it doesn't own. Different seam, different direction.
 

@@ -6,7 +6,7 @@ sidebar_position: 6
 
 # Let Claude Drive Grackle
 
-Turn the tables. Point an outside agent — Claude Code, Copilot CLI, Codex CLI, any MCP client — at Grackle's MCP server, and the agent drives Grackle for you. It creates tasks, spawns claws, searches the knowledge graph. You ask in plain language; it pulls the levers.
+Turn the tables. Point an outside agent — Claude Code, Copilot CLI, Codex CLI, any MCP client — at Grackle's MCP server, and the agent drives Grackle for you. It creates tasks, spawns agents, searches the knowledge graph. You ask in plain language; it pulls the levers.
 
 ## The endpoint
 
@@ -47,7 +47,7 @@ Every tool is namespaced `mcp__grackle__<tool>`. The agent sees the full set —
 | Tool                             | Does                                     |
 | -------------------------------- | ---------------------------------------- |
 | `mcp__grackle__task_create`      | Open a task                              |
-| `mcp__grackle__session_spawn`    | Spawn a claw against an environment      |
+| `mcp__grackle__session_spawn`    | Spawn an agent against an environment    |
 | `mcp__grackle__knowledge_search` | Semantic search over the knowledge graph |
 
 Ask the agent in its own chat:

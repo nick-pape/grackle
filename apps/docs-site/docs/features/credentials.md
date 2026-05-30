@@ -6,13 +6,13 @@ sidebar_position: 7
 
 # Credentials & Access
 
-Every claw gets its own name and its own key. Hand an agent ambient credentials and you lose the thread the moment one does something stupid at 3 AM. Grackle keeps the secrets, decides which runtimes may touch them, and pushes them onto the wire only when a session needs them. Every move leaves its name in the log.
+Every agent gets its own name and its own key. Hand an agent ambient credentials and you lose the thread the moment one does something stupid at 3 AM. Grackle keeps the secrets, decides which runtimes may touch them, and pushes them onto the wire only when a session needs them. Every move leaves its name in the log.
 
 This page covers three things: what each runtime is allowed to authenticate against (**credential providers**), the secrets themselves and how they reach the wire (**the token broker**), and who is allowed to reach the server at all (**access**).
 
 ## Credential providers
 
-A provider is a gate, per runtime. It decides whether a runtime may authenticate against its backing service at all. Off means off — no token reaches a claw it isn't cleared for.
+A provider is a gate, per runtime. It decides whether a runtime may authenticate against its backing service at all. Off means off — no token reaches an agent it isn't cleared for.
 
 ```bash
 # What's allowed right now
@@ -78,7 +78,7 @@ grackle token set OPENAI_API_KEY --env OPENAI_API_KEY --env-var OPENAI_API_KEY
 grackle token set SSH_KEY --file ~/.ssh/id_ed25519 --type file
 ```
 
-### How a token reaches a claw
+### How a token reaches an agent
 
 Nothing is pushed ahead of need. When a session spawns, the broker authenticates to that environment's PowerLine on demand:
 
@@ -87,11 +87,11 @@ Nothing is pushed ahead of need. When a session spawns, the broker authenticates
 3. Call **Authenticate** on the environment's PowerLine over gRPC, naming the provider and token.
 4. PowerLine writes them — `env_var` tokens into the agent's process environment, `file` tokens to a path on the environment.
 
-`env_var` values live only in the agent's process. `file` values are written to disk on the environment. Neither lands until a claw is there to use it, and every delivery is named in the log.
+`env_var` values live only in the agent's process. `file` values are written to disk on the environment. Neither lands until an agent is there to use it, and every delivery is named in the log.
 
 ## GitHub accounts (multi-identity)
 
-One GitHub token is one identity. Run a plague across repos owned by different identities and a single token won't do. Register accounts under labels and pick which one is default.
+One GitHub token is one identity. Run a fleet of agents across repos owned by different identities and a single token won't do. Register accounts under labels and pick which one is default.
 
 ```bash
 # Register an account with a PAT. Username resolves automatically if omitted.

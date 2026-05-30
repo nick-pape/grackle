@@ -6,7 +6,7 @@ sidebar_position: 1
 
 # Environments & Workspaces
 
-An **environment** is a place for a claw to perch. A **workspace** is the scope of the work it does there.
+An **environment** is a place for an agent to run. A **workspace** is the scope of the work it does there.
 
 ## Environments
 
@@ -34,7 +34,7 @@ grackle env add my-docker --docker --volume /host/path:/container/path --gpu
 
 #### Attach to an existing container
 
-When something else owns the container — say a [Coder](https://github.com/coder/coder) dev-environment — use `--attach`. Grackle bootstraps PowerLine inside it and perches claws there. It **never creates, stops, or removes** the container.
+When something else owns the container — say a [Coder](https://github.com/coder/coder) dev-environment — use `--attach`. Grackle bootstraps PowerLine inside it and runs agents there. It **never creates, stops, or removes** the container.
 
 ```bash
 # Someone else made `my-workspace`; Grackle only attaches.
@@ -163,7 +163,7 @@ See [Connect an environment](../getting-started/connect-environment) to add your
 A workspace is the scope of a unit of work. It links one or more environments, carries budgets, and sets the defaults every task inside it inherits:
 
 - **Linked environments** — Where its tasks can run. A workspace is created against an initial environment (auto-linked); link more later.
-- **Default persona** — Which agent configuration the claws wear.
+- **Default persona** — Which agent configuration the agents wear.
 - **Repository URL** — The git repo agents work on.
 - **Worktree isolation** — Whether each task gets its own git branch. On by default.
 
@@ -176,7 +176,7 @@ grackle workspace create "Auth Rewrite" \
 
 ### Many environments, not one
 
-A workspace can link **multiple environments** — not just the one it was born against. A plague of claws can perch across all of them. Manage the set:
+A workspace can link **multiple environments** — not just the one it was born against. A fleet of agents can run across all of them. Manage the set:
 
 ```bash
 grackle workspace link-env <workspace-id> --env another-env
@@ -198,7 +198,7 @@ workspace-slug/task-slug          # root task
 workspace-slug/task-slug/subtask  # child task
 ```
 
-Agents work in isolated [git worktrees](https://git-scm.com/docs/git-worktree). A mob can hit the same repo at once without trampling each other — every claw sees its own branch and its own working tree.
+Agents work in isolated [git worktrees](https://git-scm.com/docs/git-worktree). Several agents can hit the same repo at once without trampling each other — every agent sees its own branch and its own working tree.
 
 The working directory defaults to the repo root. Override it per-workspace:
 

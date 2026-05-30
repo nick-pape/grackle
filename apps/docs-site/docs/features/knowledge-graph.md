@@ -6,7 +6,7 @@ sidebar_position: 10
 
 # Knowledge Graph
 
-What one claw learns, the next claw inherits. Every task it touched, every session it ran, every transcript it left behind — mirrored into a graph and waiting. The plague has a memory. Spawn another and it lands already knowing what the last one knew.
+What one agent learns, the next agent inherits. Every task it touched, every session it ran, every transcript it left behind — mirrored into a graph and waiting. Grackle has a memory. Spawn another and it lands already knowing what the last one knew.
 
 The graph is a derived mirror of Grackle's own entities — tasks, sessions, workspaces, personas, environments, and session-transcript chunks. Nothing the agent writes; nothing for it to forge. It reads.
 
@@ -41,9 +41,9 @@ These tools reach the graph through Grackle's MCP server. See [MCP Server](./mcp
 
 ## Context arrives uninvited
 
-A claw doesn't have to ask. When a task spawns a session, Grackle searches the graph with the task's title and description, walks one hop from the top hit, drops the task's own node, scopes to its workspace, and renders a budgeted `## Related prior work` block straight into the agent's system prompt.
+An agent doesn't have to ask. When a task spawns a session, Grackle searches the graph with the task's title and description, walks one hop from the top hit, drops the task's own node, scopes to its workspace, and renders a budgeted `## Related prior work` block straight into the agent's system prompt.
 
-So the claw perches already briefed on what came before — without ever calling a tool.
+So the agent starts already briefed on what came before — without ever calling a tool.
 
 This runs when the per-task `injectKnowledge` flag is on (default on), Neo4j is healthy, and something clears a conservative similarity floor. Tune the knobs with `GRACKLE_KG_RELATED_*` environment variables.
 
@@ -98,5 +98,5 @@ The graph explorer lives in the sidebar:
 ## Next
 
 - [MCP Server](./mcp-server) — every tool the agents can reach.
-- [Tasks & Sessions](../building-blocks/tasks-sessions) — what spawns a claw and feeds it context.
+- [Tasks & Sessions](../building-blocks/tasks-sessions) — what spawns an agent and feeds it context.
 - [Plugins](../extending/plugins) — how the knowledge plugin loads, and how to write your own.

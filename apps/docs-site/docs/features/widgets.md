@@ -6,7 +6,7 @@ sidebar_position: 9
 
 # Generative UX (Widgets)
 
-A claw does not have to answer in text. It can build the panel you read it in.
+An agent does not have to answer in text. It can build the panel you read it in.
 
 Grackle lets an agent author **generative UI** — interactive widgets and React
 components that render inline in the chat instead of plain prose. This is Grackle's
@@ -28,7 +28,7 @@ Two renderers, picked per component via `rendererKind`:
 
 ## How it works
 
-When a claw runs inside a Grackle session, the tools below are in scope. The render
+When an agent runs inside a Grackle session, the tools below are in scope. The render
 path:
 
 1. **The agent calls a render tool** — `widget_show` (raw HTML), `component_show`
@@ -45,7 +45,7 @@ path:
 :::note Broker capture, not host rendering
 The widget event is produced by Grackle's in-process **broker** when a scoped session
 invokes a render tool. It does not depend on the agent's MCP client preserving `_meta`.
-Capture only happens for scoped sessions — claws running inside Grackle. For external
+Capture only happens for scoped sessions — agents running inside Grackle. For external
 API-key clients it is a no-op.
 :::
 

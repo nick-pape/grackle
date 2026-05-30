@@ -6,7 +6,7 @@ sidebar_position: 3
 
 # Webhooks
 
-A channel is a door the outside world can knock on. Mint a URL, hand it out, and when something hits it the message lands in a live session. A claw that answers the wire.
+A channel is a door the outside world can knock on. Mint a URL, hand it out, and when something hits it the message lands in a live session. An agent that answers the wire.
 
 The agent keeps working. The webhook just adds a voice from outside the room.
 
@@ -42,7 +42,7 @@ curl -X POST https://<host>/hook/<token> \
   -d '{"message": "deploy finished, look at the logs"}'
 ```
 
-The message is injected into the session via the same path as typed input. The claw sees it and responds.
+The message is injected into the session via the same path as typed input. The agent sees it and responds.
 
 | Field             | Does                                                                  |
 | ----------------- | --------------------------------------------------------------------- |
@@ -81,6 +81,6 @@ Mint narrow. Set a TTL. Revoke when done.
 ---
 
 - [Scheduled tasks](./scheduled-tasks) — trigger a session on a clock instead of a knock.
-- [Credentials](../features/credentials) — every claw gets its own name and key.
-- [Coordination](../features/coordination) — many claws, reporting back.
+- [Credentials](../features/credentials) — every agent gets its own name and key.
+- [Coordination](../features/coordination) — many agents, reporting back.
 - [Tasks and sessions](../building-blocks/tasks-sessions) — what a session is, and what injecting input does to one.

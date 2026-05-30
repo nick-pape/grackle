@@ -6,7 +6,7 @@ sidebar_position: 2
 
 # PowerLine & AHP
 
-Every environment has a wire. **PowerLine** is that wire — the host process where a claw actually perches and runs. The server never touches a runtime directly. It speaks to PowerLine, and PowerLine speaks to the agent.
+Every environment has a wire. **PowerLine** is that wire — the host process where an agent actually runs. The server never touches a runtime directly. It speaks to PowerLine, and PowerLine speaks to the agent.
 
 PowerLine speaks one protocol on the wire: **AHP**, the Agent Host Protocol. This page covers both — the wire, then the language it speaks.
 
@@ -28,7 +28,7 @@ PowerLine runs inside the environment, bound to `127.0.0.1`. It listens for AHP 
 3. Starts the agent with your prompt.
 4. Streams every event back to the server as it happens.
 
-It also handles input mid-turn, resumption of a suspended claw, and termination.
+It also handles input mid-turn, resumption of a suspended session, and termination.
 
 ### How it gets there
 
@@ -51,7 +51,7 @@ Pull, not push. Credentials are fetched the moment they're needed, never staged 
 
 ### Git worktrees
 
-When a workspace runs with worktree isolation, PowerLine cuts a [git worktree](https://git-scm.com/docs/git-worktree) per task branch before the agent starts. Each claw works its own copy of the repo, so a mob can swarm one repo without clawing each other. When the session ends, the server tears the worktree down through PowerLine's `disposeSession` and worktree-cleanup path. More on the shape of an environment in [Environments & Workspaces](../building-blocks/environments-workspaces).
+When a workspace runs with worktree isolation, PowerLine cuts a [git worktree](https://git-scm.com/docs/git-worktree) per task branch before the agent starts. Each agent works its own copy of the repo, so several agents can work one repo without colliding with each other. When the session ends, the server tears the worktree down through PowerLine's `disposeSession` and worktree-cleanup path. More on the shape of an environment in [Environments & Workspaces](../building-blocks/environments-workspaces).
 
 ### Health checks
 
@@ -70,9 +70,9 @@ Work is framed as turns. The server dispatches a turn; the host runs it and stre
 | Action                                 | Meaning                                            |
 | -------------------------------------- | -------------------------------------------------- |
 | `SessionTurnStarted`                   | A turn begins — the server's input, or the host's. |
-| `SessionDelta` / `SessionResponsePart` | Streamed output as the claw works.                 |
+| `SessionDelta` / `SessionResponsePart` | Streamed output as the agent works.                |
 | `SessionToolCall*`                     | Tool calls open, stream, and resolve.              |
-| `SessionInputRequested`                | The claw needs input before it can continue.       |
+| `SessionInputRequested`                | The agent needs input before it can continue.      |
 | `SessionTurnComplete`                  | The turn is done.                                  |
 | `SessionError`                         | The turn failed.                                   |
 
@@ -89,14 +89,14 @@ A session lives on a channel — one AHP channel per Grackle session. The shape 
 | list           | `listSessions`                                                      |
 | kill           | `disposeSession`                                                    |
 
-After `subscribe` resolves, the host replays any parked events down the same stream, then streams live `action` notifications as the claw works. One channel, one stream — no second drain call.
+After `subscribe` resolves, the host replays any parked events down the same stream, then streams live `action` notifications as the agent works. One channel, one stream — no second drain call.
 
-The server never decodes runtime-specific event shapes. The reducers do that, the same way every AHP host does. The wire stays uniform; the claw on the far end can be anything.
+The server never decodes runtime-specific event shapes. The reducers do that, the same way every AHP host does. The wire stays uniform; the agent on the far end can be anything.
 
 ## Related
 
 - [Kernel & adapters](./kernel) — how environments are provisioned.
-- [MCP](./mcp) — tools the claw can reach.
+- [MCP](./mcp) — tools the agent can reach.
 - [ACP](./acp) — a runtime family PowerLine hosts over stdio.
 - [Environments & Workspaces](../building-blocks/environments-workspaces) — where the wire lives.
 - [Credentials](../features/credentials) — what `authenticate` hands back.

@@ -72,7 +72,7 @@ On npm and from-source installs the [knowledge graph](../features/knowledge-grap
 
 ## What starts
 
-However you install, the server binds three services to localhost — plus a local PowerLine, so a claw can perch on your own machine right away.
+However you install, the server binds three services to localhost — plus a local PowerLine, so an agent can run on your own machine right away.
 
 | Service     | Port | What it carries                 |
 | ----------- | ---- | ------------------------------- |

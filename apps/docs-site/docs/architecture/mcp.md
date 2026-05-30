@@ -22,34 +22,34 @@ For the walkthrough — Claude on one end, Grackle on the other — see [Claude 
 
 The other half is harder, and it is the half that matters.
 
-When Grackle spawns a claw, that claw needs tools. Grackle assembles them and hands them over the wire as a single MCP surface:
+When Grackle spawns an agent, that agent needs tools. Grackle assembles them and hands them over the wire as a single MCP surface:
 
-- **Grackle's own tools**, scoped down — not the full catalog, the subset this claw is allowed to call.
-- **External MCP servers** configured for the claw's persona — a GitHub server, a database server, whatever the persona declares. Grackle merges them into the spawn request alongside its own.
+- **Grackle's own tools**, scoped down — not the full catalog, the subset this agent is allowed to call.
+- **External MCP servers** configured for the agent's persona — a GitHub server, a database server, whatever the persona declares. Grackle merges them into the spawn request alongside its own.
 
-The claw sees one tool list. It does not know or care which tools came from Grackle and which from a third-party server three networks away. That seam is the broker's job.
+The agent sees one tool list. It does not know or care which tools came from Grackle and which from a third-party server three networks away. That seam is the broker's job.
 
-## Per-claw scoping
+## Per-agent scoping
 
-A claw does not get an API key. It gets a **session token** — its own identity, its own scope.
+An agent does not get an API key. It gets a **session token** — its own identity, its own scope.
 
-What that token can call is decided by the claw's persona:
+What that token can call is decided by the agent's persona:
 
-- A **persona allowlist** filters Grackle's tools. A reviewer claw might see only read-only tools. A worker claw cannot spawn children. An orchestrator claw can.
+- A **persona allowlist** filters Grackle's tools. A reviewer agent might see only read-only tools. A worker agent cannot spawn children. An orchestrator agent can.
 - Presets — `worker`, `orchestrator`, `admin` — are named starting points. A persona overrides them as needed.
-- With no override, the claw gets the default scoped set: enough to do work and report back, nothing more.
-- `workspaceId` is injected. The claw cannot reach across workspaces. It cannot see what it was not given.
+- With no override, the agent gets the default scoped set: enough to do work and report back, nothing more.
+- `workspaceId` is injected. The agent cannot reach across workspaces. It cannot see what it was not given.
 
-A claw that does something stupid at 3 AM can only do it with the tools you handed it.
+An agent that does something stupid at 3 AM can only do it with the tools you handed it.
 
 ## The seam
 
-This is where external agents plug in. An MCP client connects and Grackle is just a server. A spawned claw connects and Grackle is its broker. Same protocol, two postures.
+This is where external agents plug in. An MCP client connects and Grackle is just a server. A spawned agent connects and Grackle is its broker. Same protocol, two postures.
 
 Related surfaces:
 
-- [ACP](./acp) — the protocol a claw speaks back to its runtime.
+- [ACP](./acp) — the protocol an agent speaks back to its runtime.
 - [MCP Apps](./mcp-apps) — agents rendering UI through the same broker.
 - [Personas and runtimes](../building-blocks/personas-runtimes) — where allowlists and external servers are declared.
 
-A first-party MCP gateway — one front door for every external server, brokered once — is on the [Roadmap](../roadmap). Today the broker merges servers per claw, at spawn.
+A first-party MCP gateway — one front door for every external server, brokered once — is on the [Roadmap](../roadmap). Today the broker merges servers per agent, at spawn.

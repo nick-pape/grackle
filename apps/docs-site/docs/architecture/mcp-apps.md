@@ -37,13 +37,13 @@ panel.
 
 ```mermaid
 flowchart LR
-  A[claw calls a render tool] --> B[tool result + _meta descriptor]
+  A[agent calls a render tool] --> B[tool result + _meta descriptor]
   B --> C[broker captures _meta]
   C --> D[EVENT_TYPE_WIDGET event]
   D --> E[sandboxed iframe in the web UI]
 ```
 
-1. A claw running in a session calls a render tool. The handler builds the
+1. An agent running in a session calls a render tool. The handler builds the
    descriptor and returns it on the result's `_meta`
    (`packages/mcp/src/tools/component.ts:31`, `:110`).
 2. The broker — Grackle's own MCP server, acting as the UI-capable host — reads

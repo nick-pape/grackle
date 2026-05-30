@@ -6,9 +6,9 @@ sidebar_position: 5
 
 # Create an Orchestration
 
-One claw is a start. A plague gets work done.
+One agent is a start. A fleet of agents gets work done.
 
-Here you turn a single agent into a coordinated mob: a parent claw breaks a task apart, spawns subtasks, and herds them to done. You set the persona and the rule that lets it decompose. The agent does the rest.
+Here you turn a single agent into a coordinated group: a parent agent breaks a task apart, spawns subtasks, and herds them to done. You set the persona and the rule that lets it decompose. The agent does the rest.
 
 ## 1. Create a persona
 
@@ -26,7 +26,7 @@ grackle persona create "Orchestrator" \
 
 ## 2. Create a task that can decompose
 
-`--can-decompose` is the switch. Without it, a claw works one task and stops. With it, it's allowed to spawn subtasks.
+`--can-decompose` is the switch. Without it, an agent works one task and stops. With it, it's allowed to spawn subtasks.
 
 ```bash
 grackle task create "Implement OAuth2 support" --workspace <workspace-id> --can-decompose
@@ -40,9 +40,9 @@ grackle task update <task-id> --persona <persona-id>
 
 The persona resolves through a cascade — task default, then workspace, then app. You can also override it at start with `grackle task start <task-id> --persona orchestrator`.
 
-## 3. Let the parent claw run
+## 3. Let the parent agent run
 
-Start it. The parent perches, reads the work, and breaks it down.
+Start it. The parent runs, reads the work, and breaks it down.
 
 ```bash
 grackle task start <task-id>
@@ -55,7 +55,7 @@ From here it's hands-off:
 - When a child completes, the parent is woken with its result. No polling.
 - Results flow back up the tree until the root is done.
 
-## 4. Watch the plague
+## 4. Watch the agents
 
 The task tree is the map of the run.
 
@@ -64,7 +64,7 @@ grackle task list <workspace-id>
 grackle task show <task-id>
 ```
 
-Or open the web UI to watch the tree fill in and step into any claw mid-run. See [Orchestration](../features/orchestration) and [Coordination](../features/coordination) for the full picture.
+Or open the web UI to watch the tree fill in and step into any agent mid-run. See [Orchestration](../features/orchestration) and [Coordination](../features/coordination) for the full picture.
 
 ---
 

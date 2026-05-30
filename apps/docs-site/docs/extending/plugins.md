@@ -6,7 +6,7 @@ sidebar_position: 1
 
 # Building a Plugin
 
-The server is a flock of plugins. Each one contributes capability through a single contract — `GracklePlugin` from `@grackle-ai/plugin-sdk` — and the loader assembles them in dependency order. Write your own to add gRPC handlers, MCP tools, reconciliation work, event reactions, or context the agent reads before it perches.
+The server is a set of plugins. Each one contributes capability through a single contract — `GracklePlugin` from `@grackle-ai/plugin-sdk` — and the loader assembles them in dependency order. Write your own to add gRPC handlers, MCP tools, reconciliation work, event reactions, or context the agent reads before it runs.
 
 This page is for authors — how to write, register, and enable your own plugin.
 
@@ -55,7 +55,7 @@ export function createMyPlugin(): GracklePlugin {
 }
 ```
 
-Export a factory, not a singleton. The loader takes an array of plugins; the server builds that array and hands it to `loadPlugins()`. Your factory runs once, when the server assembles the flock.
+Export a factory, not a singleton. The loader takes an array of plugins; the server builds that array and hands it to `loadPlugins()`. Your factory runs once, when the server assembles the set.
 
 ## Extension points
 

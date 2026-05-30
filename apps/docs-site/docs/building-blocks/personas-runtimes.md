@@ -6,7 +6,7 @@ sidebar_position: 3
 
 # Personas & Runtimes
 
-A **persona** is the recipe for a claw — a named, reusable agent config. A **runtime** is the engine it flies on. Pick a runtime and model, write the prompt, set the limits. Spawn the persona; the claw runs as a session.
+A **persona** is the recipe for an agent — a named, reusable agent config. A **runtime** is the engine it flies on. Pick a runtime and model, write the prompt, set the limits. Spawn the persona; the agent runs as a session.
 
 ## What a persona holds
 
@@ -184,6 +184,6 @@ grackle persona delete <id>
 ## Next
 
 - [Create an orchestration](../getting-started/create-orchestration) — put a persona to work.
-- [Tasks & sessions](./tasks-sessions) — what a claw runs against.
-- [Credentials](../features/credentials) — names and keys for every claw.
+- [Tasks & sessions](./tasks-sessions) — what an agent runs against.
+- [Credentials](../features/credentials) — names and keys for every agent.
 - [Scripting](../advanced/scripting) — script personas and GenAIScript.

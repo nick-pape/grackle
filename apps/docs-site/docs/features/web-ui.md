@@ -6,7 +6,7 @@ sidebar_position: 1
 
 # Web UI
 
-A window onto the plague. The web UI is where you watch claws perch, work, and stray — in real time, from one browser tab. The server hosts it at **http://localhost:3000** by default.
+A window onto your agents. The web UI is where you watch agents run, work, and stray — in real time, from one browser tab. The server hosts it at **http://localhost:3000** by default.
 
 ![Dashboard — environments, tasks, and session overview](/img/dashboard-projects-tasks.png)
 
@@ -42,7 +42,7 @@ A bar across the top switches the main views:
 | **Environments** | Your environments, and the workspaces nested under them.                                    |
 | **Root**         | The [root-task chat](./chat).                                                               |
 | **Knowledge**    | The [knowledge graph](./knowledge-graph) explorer. Shown when the knowledge plugin is live. |
-| **Coordination** | A read-only inventory of [how concurrent claws talk to each other](./coordination).         |
+| **Coordination** | A read-only inventory of [how concurrent agents talk to each other](./coordination).        |
 | **Settings**     | Pinned to the right. Credentials, personas, and the rest.                                   |
 
 Grackle is **environment-centric**. Workspaces live under environments — the real path is `/environments/:envId/workspaces/:wsId`. **Environments** is the way in. Visit `/workspaces` and you land on `/environments`; any old `/workspaces/:id` link is rewritten to its environment-scoped home.
@@ -53,10 +53,10 @@ Grackle is **environment-centric**. Workspaces live under environments — the r
 graph LR
   E[Environment] --> W[Workspace]
   W --> T[Task]
-  T --> S[Session — a claw]
+  T --> S[Session — an agent]
 ```
 
-An environment is a wire. Workspaces perch on it. Tasks live in workspaces. A running task is a claw — a `session` — and that's what you watch.
+An environment is a wire. Workspaces live on it. Tasks live in workspaces. A running task is an agent — a `session` — and that's what you watch.
 
 ### Contextual sidebar
 
@@ -89,7 +89,7 @@ Click a task for the full-page detail view. Fields are click-to-edit: click, typ
 
 **Overview** — status badge, metadata (branch, environment, persona, timestamps), token usage, and the buttons that move it: Start, Complete, Resume, Delete.
 
-**Stream** — the live event feed from the task's latest session. Agent text, tool calls rendered as cards (file edits show diffs, grep shows matches, bash shows output), collapsible results, status changes. When the claw waits on you, an input field appears at the bottom.
+**Stream** — the live event feed from the task's latest session. Agent text, tool calls rendered as cards (file edits show diffs, grep shows matches, bash shows output), collapsible results, status changes. When the agent waits on you, an input field appears at the bottom.
 
 ![Live stream — tool cards and real-time output](/img/task-stream-view.png)
 
@@ -101,7 +101,7 @@ Tabs down the side:
 
 | Tab                 | What it holds                                                                                                      |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| **Credentials**     | [Credential providers](./credentials) and encrypted tokens — a name and key per claw.                              |
+| **Credentials**     | [Credential providers](./credentials) and encrypted tokens — a name and key per agent.                             |
 | **GitHub Accounts** | The accounts used for repository access.                                                                           |
 | **Personas**        | [Personas](../building-blocks/personas-runtimes) — runtime, model, max turns, system prompt, MCP tool permissions. |
 | **Schedules**       | [Triggers that run agents on cron](../advanced/scheduled-tasks).                                                   |
@@ -121,7 +121,7 @@ Environments left Settings — they live at the top-level **Environments** view 
 ## Where next
 
 - [Install Grackle](../getting-started/installation) if you haven't.
-- [Spawn a claw from the Root chat](./chat).
-- [Watch a mob coordinate](./coordination).
-- [Read what the claws left behind](./knowledge-graph).
+- [Spawn an agent from the Root chat](./chat).
+- [Watch agents coordinate](./coordination).
+- [Read what the agents left behind](./knowledge-graph).
 - [Hand widgets to a running agent](./widgets).

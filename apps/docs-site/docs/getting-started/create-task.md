@@ -6,9 +6,9 @@ sidebar_position: 4
 
 # Create a Task
 
-Stop babysitting an agent in a terminal. Create a task, perch a claw on it, walk away. The work streams to the server, lands in a log, and survives a dropped wire. Come back and pick up where it left off.
+Stop babysitting an agent in a terminal. Create a task, run an agent on it, walk away. The work streams to the server, lands in a log, and survives a dropped wire. Come back and pick up where it left off.
 
-This is the single-claw flow. One workspace, one task, one claw.
+This is the single-agent flow. One workspace, one task, one agent.
 
 ## 1. Make a workspace
 
@@ -22,23 +22,23 @@ It prints a workspace id. The environment passed to `--env` is auto-linked.
 
 ## 2. Create a task
 
-A task is one unit of work — a title the claw runs as its prompt, a description it gets as context.
+A task is one unit of work — a title the agent runs as its prompt, a description it gets as context.
 
 ```bash
 grackle task create "Implement JWT middleware" --workspace auth-rewrite --desc "Replace session auth with RS256 JWTs."
 ```
 
-It prints a task id and the branch the claw will work on.
+It prints a task id and the branch the agent will work on.
 
-## 3. Start the claw
+## 3. Start the agent
 
-Spawn a [session](../building-blocks/tasks-sessions) on the task. It perches on the wire and starts working.
+Spawn a [session](../building-blocks/tasks-sessions) on the task. It runs on the wire and starts working.
 
 ```bash
 grackle task start <task-id>
 ```
 
-It prints the session id. The claw is now working on the wire.
+It prints the session id. The agent is now working on the wire.
 
 ## 4. Watch, then detach
 
@@ -48,7 +48,7 @@ Attach to the live stream — text, tool calls, results — whenever you want ey
 grackle attach <session-id>
 ```
 
-`Ctrl+C` detaches. The claw keeps working; events keep buffering on the server.
+`Ctrl+C` detaches. The agent keeps working; events keep buffering on the server.
 
 ## 5. Resume
 
@@ -58,11 +58,11 @@ Come back to a live stream and an input prompt whenever you want.
 grackle resume <session-id>
 ```
 
-A dropped wire suspends the claw on its own; `resume` brings it back too. Full history intact.
+A dropped wire suspends the agent on its own; `resume` brings it back too. Full history intact.
 
-## 6. Check the plague
+## 6. Check your agents
 
-See what's perched right now.
+See what's running right now.
 
 ```bash
 grackle status
@@ -72,6 +72,6 @@ Add `--all` to include stopped sessions and their end reasons.
 
 ---
 
-That's one claw on one task. To split work across a [mob](./create-orchestration) — one claw decomposing, others working the pieces — see [Create an Orchestration](./create-orchestration).
+That's one agent on one task. To split work across [a group of agents](./create-orchestration) — one agent decomposing, others working the pieces — see [Create an Orchestration](./create-orchestration).
 
 More: [the CLI](../features/cli), [usage budgets](../features/usage-budgets).

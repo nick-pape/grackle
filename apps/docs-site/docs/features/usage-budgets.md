@@ -6,7 +6,7 @@ sidebar_position: 8
 
 # Usage & Budgets
 
-Every claw burns tokens, and tokens cost money. Grackle counts both, per session, and rolls them up. Set a ceiling and a claw that runs past it gets told to stop.
+Every agent burns tokens, and tokens cost money. Grackle counts both, per session, and rolls them up. Set a ceiling and an agent that runs past it gets told to stop.
 
 ## What's tracked
 
@@ -18,7 +18,7 @@ Each [session](../building-blocks/tasks-sessions) carries its own meter:
 | `output_tokens`   | Tokens the model sent back                |
 | `cost_millicents` | Spend in millicents — `$0.00001` per unit |
 
-The runtime reports these as the claw works; the server tallies them into the session row.
+The runtime reports these as the agent works; the server tallies them into the session row.
 
 ## Where to see it
 
@@ -66,16 +66,16 @@ grackle workspace create my-repo --token-budget 5000000 --cost-budget-millicents
 grackle workspace update <id> --cost-budget-millicents 2000000
 ```
 
-The task cap is checked first, then the workspace cap. A claw under both answers to whichever it hits first.
+The task cap is checked first, then the workspace cap. An agent under both answers to whichever it hits first.
 
 ## The ceiling
 
-When a session crosses a budget, the server doesn't pull the plug. It sends the claw a SIGTERM prompt: finish the current operation, save your work, close your pipes, then call `task_complete` and stop. The claw gets to land cleanly.
+When a session crosses a budget, the server doesn't pull the plug. It sends the agent a SIGTERM prompt: finish the current operation, save your work, close your pipes, then call `task_complete` and stop. The agent gets to land cleanly.
 
-The session ends with `end_reason` set to `budget_exceeded`. That's the mark you look for — a claw that didn't finish its work, it finished its allowance.
+The session ends with `end_reason` set to `budget_exceeded`. That's the mark you look for — an agent that didn't finish its work, it finished its allowance.
 
-A budget caps spend. It doesn't cap a claw mid-thought — it tells it the run is over and waits for it to wind down.
+A budget caps spend. It doesn't cap an agent mid-thought — it tells it the run is over and waits for it to wind down.
 
 ---
 
-Next: drive these from the [CLI](./cli), or let a parent claw spend within them under [Orchestration](./orchestration).
+Next: drive these from the [CLI](./cli), or let a parent agent spend within them under [Orchestration](./orchestration).

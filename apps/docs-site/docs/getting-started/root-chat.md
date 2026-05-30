@@ -6,7 +6,7 @@ sidebar_position: 2
 
 # Using the Root Chat
 
-The root chat is your conversation with the System agent. Plain language in, work out. Describe what you want; the System agent drives Grackle — creating tasks, spawning claws, managing environments.
+The root chat is your conversation with the System agent. Plain language in, work out. Describe what you want; the System agent drives Grackle — creating tasks, spawning agents, managing environments.
 
 It is durable. History persists server-side and reloads on mount, so it survives a refresh and follows you across tabs. Pick it back up and the same conversation continues. No suggested actions, no fresh start.
 

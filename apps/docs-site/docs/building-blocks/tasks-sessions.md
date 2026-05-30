@@ -6,13 +6,13 @@ sidebar_position: 2
 
 # Tasks & Sessions
 
-A **task** is the unit of work. A **session** — a claw — is one run of an agent against a task.
+A **task** is the unit of work. A **session** is one run of an agent against a task.
 
-Tasks form a tree. Sessions come and go beneath them. A task outlives its claws; it holds the work, the history, the budget. A claw perches, works, stops. Spawn another when you need it.
+Tasks form a tree. Sessions come and go beneath them. A task outlives its sessions; it holds the work, the history, the budget. An agent runs, works, stops. Spawn another when you need it.
 
 ## Tasks
 
-A task is a single piece of work — a title, a description, and the state that survives every claw that touches it.
+A task is a single piece of work — a title, a description, and the state that survives every session that touches it.
 
 ```bash
 grackle task create "Implement JWT middleware" \
@@ -28,7 +28,7 @@ grackle task start <task-id>
 
 Beyond title and description, a task carries:
 
-- **Workpad** — Persistent structured context (a JSON document) that survives across the task's sessions. Successive claws share state through it.
+- **Workpad** — Persistent structured context (a JSON document) that survives across the task's sessions. Successive sessions share state through it.
 - **Knowledge injection** — Whether knowledge-graph context is injected when a session spawns (`inject_knowledge`, on by default).
 - **Schedule origin** — Tasks born from a [scheduled trigger](../features/orchestration) carry that schedule's `schedule_id`. Hand-made tasks leave it empty.
 
@@ -50,7 +50,7 @@ When a task completes, review the work:
 grackle task complete <task-id>
 ```
 
-If it's wrong, set it back to `failed` with notes and start it again. The next claw gets the feedback.
+If it's wrong, set it back to `failed` with notes and start it again. The next session gets the feedback.
 
 ### Budgets
 
@@ -103,7 +103,7 @@ The web UI draws these as a DAG in the **Graph** tab and a kanban in the **Board
 
 ## Sessions
 
-A session is one run of an agent — a claw against a task. Spawn it, watch it work, kill it when it strays.
+A session is one run of an agent against a task. Spawn it, watch it work, kill it when it strays.
 
 ```bash
 grackle spawn my-env "Refactor the auth module to use JWT"
@@ -138,7 +138,7 @@ stateDiagram-v2
 | Status      | Meaning                                    |
 | ----------- | ------------------------------------------ |
 | `pending`   | Session created, agent starting up         |
-| `running`   | The claw is working                        |
+| `running`   | The agent is working                       |
 | `idle`      | Waiting for input                          |
 | `stopped`   | Ended — the reason lives in `end_reason`   |
 | `suspended` | Parked on the server, consuming no compute |
@@ -187,7 +187,7 @@ When a session is `idle`, hand it text:
 grackle send-input <session-id> "Yes, apply that change"
 ```
 
-Or type in the input field the web UI surfaces when the claw is waiting.
+Or type in the input field the web UI surfaces when the session is waiting.
 
 ### Attaching
 
@@ -233,7 +233,7 @@ A `stopped` session — whatever its end reason — or a `suspended` one can be 
 grackle resume <session-id>
 ```
 
-The claw picks up where it left off, full history intact, back to `running`. Useful for iterating: review the work, resume with feedback. Live sessions (`pending`, `running`, `idle`) can't be resumed — they're already running.
+The session picks up where it left off, full history intact, back to `running`. Useful for iterating: review the work, resume with feedback. Live sessions (`pending`, `running`, `idle`) can't be resumed — they're already running.
 
 ### Logs
 
@@ -251,6 +251,6 @@ Session IDs match on prefix — no full UUID required.
 
 - [Create a task](../getting-started/create-task)
 - [Run an orchestration](../getting-started/create-orchestration)
-- [Environments & workspaces](./environments-workspaces) — where claws perch
-- [Personas & runtimes](./personas-runtimes) — what a claw is made of
-- [Orchestration](../features/orchestration) and [coordination](../features/coordination) — many claws, one problem
+- [Environments & workspaces](./environments-workspaces) — where agents run
+- [Personas & runtimes](./personas-runtimes) — what an agent is made of
+- [Orchestration](../features/orchestration) and [coordination](../features/coordination) — many agents, one problem
