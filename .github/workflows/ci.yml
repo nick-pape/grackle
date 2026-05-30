@@ -227,6 +227,16 @@ jobs:
           path: coverage-input/e2e
           merge-multiple: false
 
+      # Guard that E2E coverage actually landed: web unit tests already cover
+      # packages/web/src, so the merge's --require-source check alone can't tell
+      # E2E coverage apart. Assert at least one E2E lcov was downloaded.
+      - name: Verify E2E coverage artifacts present
+        run: |
+          if [ -z "$(find coverage-input/e2e -name lcov.info -print -quit 2>/dev/null)" ]; then
+            echo "::error::No E2E coverage lcov found — E2E coverage did not land."
+            exit 1
+          fi
+
       - name: Rush install
         run: node common/scripts/install-run-rush.js install
 
