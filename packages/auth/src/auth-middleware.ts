@@ -8,8 +8,26 @@ import { isRevokedTask, verifyScopedToken } from "./scoped-token.js";
 const API_KEY_LENGTH: number = 64;
 
 /**
- * Normalize loopback hostnames so that `localhost` and `127.0.0.1` compare equal.
- * Parses the URL and replaces `localhost` with `127.0.0.1`, returning the origin.
+ * Strip trailing `/` characters from a string with a linear scan.
+ *
+ * Avoids a `/\/+$/` regex, which CodeQL flags as a polynomial-ReDoS risk on
+ * uncontrolled (library) input.
+ */
+function stripTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47 /* "/" */) {
+    end--;
+  }
+  return value.slice(0, end);
+}
+
+/**
+ * Normalize loopback hostnames so that `localhost` and `127.0.0.1` compare equal,
+ * and strip any trailing slash so `http://h/` matches `http://h`.
+ *
+ * Parses the URL and replaces `localhost` with `127.0.0.1`, returning the origin
+ * (which is already trailing-slash-free). Falls back to a trailing-slash-trimmed
+ * copy of the raw input when the value does not parse as a URL.
  */
 function normalizeLoopback(url: string): string {
   try {
@@ -19,7 +37,7 @@ function normalizeLoopback(url: string): string {
     }
     return parsed.origin;
   } catch {
-    return url;
+    return stripTrailingSlashes(url);
   }
 }
 
@@ -91,11 +109,11 @@ export function authenticateMcpRequest(
       if (oauthClaims.aud) {
         const localPort = req.socket.localPort;
         const expectedAudience = options?.expectedResource
-          ? normalizeLoopback(options.expectedResource.replace(/\/+$/, ""))
+          ? normalizeLoopback(options.expectedResource)
           : localPort
             ? `http://127.0.0.1:${localPort}`
             : undefined;
-        const normalizedAud = normalizeLoopback(oauthClaims.aud.replace(/\/+$/, ""));
+        const normalizedAud = normalizeLoopback(oauthClaims.aud);
         if (!expectedAudience || normalizedAud !== expectedAudience) {
           return undefined;
         }
