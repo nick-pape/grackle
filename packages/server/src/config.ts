@@ -90,6 +90,16 @@ export interface ServerConfig {
    * every listener. When unset, listeners serve cleartext (current behavior).
    */
   tls?: TlsConfig;
+  /**
+   * Deliberate opt-in (`GRACKLE_ALLOW_INSECURE=1`) to run a non-loopback bind
+   * without TLS. Required by the startup gate (#1374) on any host that isn't
+   * loopback (`127.0.0.1` / `::1` / `localhost`) when neither native TLS nor an
+   * `https://` public URL is configured. Remediates GHSA-wcpf-6gwv-47c8 by
+   * making cleartext-on-the-network a conscious choice instead of the silent
+   * default. The Docker image bakes this in (`ENV GRACKLE_ALLOW_INSECURE=1`)
+   * for `docker run` ergonomics — clear it when adding TLS.
+   */
+  allowInsecure: boolean;
 }
 
 /**
@@ -184,31 +194,96 @@ function parsePublicUrl(envName: string): string | undefined {
 }
 
 /**
+ * Whether `GRACKLE_HOST` resolves to a loopback bind. Treats `localhost` as
+ * loopback because the DNS resolver always maps it to `127.0.0.1` / `::1`;
+ * operators who write `GRACKLE_HOST=localhost` mean "loopback only", which is
+ * what we want for the gate's pass-through case.
+ *
+ * Exported so the server entry point (`index.ts`) can apply the SAME predicate
+ * when deciding whether to emit the insecure-mode warn line — preventing the
+ * gate's pass-through set from drifting out of sync with the warn condition.
+ *
+ * Duplicates `isLoopbackHostname` in `packages/mcp/src/mcp-server.ts`; a
+ * follow-up can hoist both into `@grackle-ai/auth/public-origin.ts` so there's
+ * one source of truth across packages.
+ */
+export function isLoopbackBind(host: string): boolean {
+  return host === "127.0.0.1" || host === "localhost" || host === "::1";
+}
+
+/**
+ * Startup gate for advisory GHSA-wcpf-6gwv-47c8 (#1374). A non-loopback bind
+ * (anything that puts the API key + session cookie on a wire other operators
+ * can sniff) must be backed by TLS — either native (`GRACKLE_TLS_CERT/KEY`,
+ * #1373) or a fronting proxy that terminates TLS upstream (`GRACKLE_PUBLIC_URL`
+ * with an `https://` scheme, #1371). Operators who deliberately want cleartext
+ * on the network (testing, an internal trust boundary, an http-only proxy)
+ * set `GRACKLE_ALLOW_INSECURE=1` so the choice is conscious and auditable.
+ *
+ * Throws a fail-fast error naming every satisfier so the message is enough to
+ * fix the deployment without a doc round-trip.
+ */
+function validateNetworkExposure(args: {
+  host: string;
+  hasTls: boolean;
+  publicUrl: string | undefined;
+  allowInsecure: boolean;
+}): void {
+  const { host, hasTls, publicUrl, allowInsecure } = args;
+  if (isLoopbackBind(host)) {
+    return;
+  }
+  if (hasTls) {
+    return;
+  }
+  if (publicUrl?.startsWith("https://")) {
+    return;
+  }
+  if (allowInsecure) {
+    return;
+  }
+  throw new Error(
+    `Insecure network exposure: GRACKLE_HOST="${host}" is not loopback ` +
+      "and no TLS is configured. Pick one:\n" +
+      "  1. Set GRACKLE_TLS_CERT + GRACKLE_TLS_KEY for native TLS, OR\n" +
+      "  2. Set GRACKLE_PUBLIC_URL=https://<host> when fronting with a TLS proxy, OR\n" +
+      "  3. Set GRACKLE_ALLOW_INSECURE=1 to deliberately accept cleartext on the network.\n" +
+      "Without one of these the API key and session cookie would traverse the network " +
+      "in cleartext (advisory GHSA-wcpf-6gwv-47c8).",
+  );
+}
+
+/**
  * Resolve and validate all server configuration from environment variables.
  * Throws on invalid values so the server fails fast at startup with a clear error.
  */
 export function resolveServerConfig(): ServerConfig {
   const tls = parseTlsConfig();
+  const host = process.env.GRACKLE_HOST || "127.0.0.1";
+  const publicUrl = parsePublicUrl("GRACKLE_PUBLIC_URL");
+  const allowInsecure = parseFlag("GRACKLE_ALLOW_INSECURE");
+  // Run the network-exposure gate (#1374) before we finish building the config
+  // so the throw fires before any caller can spin up a listener with insecure
+  // defaults. Loopback binds are always allowed (today's casual local default).
+  validateNetworkExposure({ host, hasTls: !!tls, publicUrl, allowInsecure });
   return Object.freeze({
     grpcPort: parsePort("GRACKLE_PORT", DEFAULT_SERVER_PORT),
     webPort: parsePort("GRACKLE_WEB_PORT", DEFAULT_WEB_PORT),
     mcpPort: parsePort("GRACKLE_MCP_PORT", DEFAULT_MCP_PORT),
-    ...((): { publicUrl?: string } => {
-      const publicUrl = parsePublicUrl("GRACKLE_PUBLIC_URL");
-      return publicUrl ? { publicUrl } : {};
-    })(),
+    ...(publicUrl ? { publicUrl } : {}),
     ...(process.env.GRACKLE_MCP_ORIGIN ? { mcpOrigin: process.env.GRACKLE_MCP_ORIGIN } : {}),
     sandboxPort: parsePort("GRACKLE_SANDBOX_PORT", DEFAULT_SANDBOX_PORT),
     ...(process.env.GRACKLE_SANDBOX_ORIGIN
       ? { sandboxOrigin: process.env.GRACKLE_SANDBOX_ORIGIN }
       : {}),
     powerlinePort: parsePort("GRACKLE_POWERLINE_PORT", DEFAULT_POWERLINE_PORT),
-    host: process.env.GRACKLE_HOST || "127.0.0.1",
+    host,
     skipLocalPowerline: parseFlag("GRACKLE_SKIP_LOCAL_POWERLINE"),
     skipRootAutostart: parseFlag("GRACKLE_SKIP_ROOT_AUTOSTART"),
     workingDirectory: process.env.GRACKLE_WORKING_DIRECTORY || undefined,
     worktreeBase: process.env.GRACKLE_WORKTREE_BASE || undefined,
     dockerHost: process.env.GRACKLE_DOCKER_HOST || undefined,
     ...(tls ? { tls } : {}),
+    allowInsecure,
   });
 }

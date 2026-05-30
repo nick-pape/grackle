@@ -37,9 +37,10 @@ Start the server: gRPC, web UI, WebSocket, and MCP, all in one process.
 | `--sandbox-port <port>`     | 7436    | MCP Apps widget sandbox port                                                                                                       |
 | `--sandbox-origin <origin>` | —       | Browser-facing MCP Apps sandbox origin (e.g. `https://sandbox.example.com`) for reverse-proxy/TLS deployments                      |
 | `--powerline-port <port>`   | 7433    | Local PowerLine port                                                                                                               |
-| `--allow-network`           | off     | Bind to all interfaces (0.0.0.0) for LAN access                                                                                    |
+| `--allow-network`           | off     | Bind to all interfaces (0.0.0.0). Requires TLS or `--insecure` (see below).                                                        |
+| `--insecure`                | off     | Deliberately accept cleartext on a non-loopback bind. Sets `GRACKLE_ALLOW_INSECURE=1`. Logged at warn level on every startup.      |
 
-By default the server binds to `127.0.0.1` — it answers only to the machine it runs on. `--allow-network` opens it to the LAN. Know what you're doing before you do.
+By default the server binds to `127.0.0.1` — it answers only to the machine it runs on. `--allow-network` opens it to the LAN. **Non-loopback binds require TLS or an explicit insecure opt-in** (advisory GHSA-wcpf-6gwv-47c8): the startup gate accepts (a) `GRACKLE_TLS_CERT` + `GRACKLE_TLS_KEY`, (b) `GRACKLE_PUBLIC_URL=https://…` (fronting TLS proxy), or (c) `--insecure` / `GRACKLE_ALLOW_INSECURE=1`. Without one, `--allow-network` fails fast with the three satisfiers listed in the error. The Docker image bakes in the insecure opt-in so `docker run` is unchanged.
 
 ### `grackle pair`
 
