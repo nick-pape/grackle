@@ -1,24 +1,20 @@
 ---
-id: mcp
+id: mcp-server
 title: MCP Server
-sidebar_position: 6
+sidebar_position: 4
 ---
 
 # MCP Server
 
-Grackle exposes its full API as an **MCP (Model Context Protocol) server**. This means any AI agent with MCP support — Claude Desktop, Claude Code, or anything else — can create tasks, spawn sessions, and manage environments through Grackle.
+Grackle's whole API, handed to an agent as tools. Let a claw drive the plague.
 
-## What it enables
+The server speaks **MCP (Model Context Protocol)**. Any MCP-capable agent — Claude Desktop, Claude Code, anything else — gets the same verbs you do: create tasks, spawn sessions, manage environments, search the knowledge graph. A claw with these tools can run Grackle itself.
 
-With the MCP server, you can:
+For the worked example, see [Claude drives Grackle](../getting-started/claude-drives-grackle).
 
-- Have Claude Code manage Grackle tasks without the CLI
-- Build orchestration workflows where one agent controls others through Grackle
-- Connect external AI tools to your Grackle instance
+## Connecting
 
-## Connecting to the MCP server
-
-The MCP server starts automatically with `grackle serve` on port **7435**. Configure your AI tool to connect to it:
+The MCP server comes up with `grackle serve` on port **7435**. Point your tool at it:
 
 ```json
 {
@@ -34,11 +30,11 @@ The MCP server starts automatically with `grackle serve` on port **7435**. Confi
 }
 ```
 
-For tools that support OAuth (like Claude Desktop), the MCP server handles the OAuth flow automatically — no manual API key configuration needed. The server advertises its OAuth metadata at `/.well-known/oauth-protected-resource/mcp`.
+Tools that speak OAuth (Claude Desktop, say) skip the key entirely — the server runs the flow and advertises its metadata at `/.well-known/oauth-protected-resource/mcp`.
 
-## Available tools
+## The tool surface
 
-The MCP server exposes roughly 80 tools grouped by domain. Every tool is namespaced when an agent calls it — e.g. `task_create` is invoked as `mcp__grackle__task_create`. Tool group availability depends on which plugins are enabled.
+Roughly 80 tools, grouped by domain across 18 groups. Every tool is namespaced at call time: `task_create` is invoked as `mcp__grackle__task_create`. Which groups appear depends on which plugins are enabled.
 
 ### Environments
 
@@ -54,6 +50,8 @@ The MCP server exposes roughly 80 tools grouped by domain. Every tool is namespa
 | `env_list_docker_containers` | List running Docker containers an environment can attach to (Docker adapter attach mode) |
 
 ### Sessions
+
+A session is a claw on the wire. These tools spawn it, watch it, kill it when it strays.
 
 | Tool                 | Description                           |
 | -------------------- | ------------------------------------- |
@@ -92,6 +90,8 @@ The MCP server exposes roughly 80 tools grouped by domain. Every tool is namespa
 
 ### Personas
 
+A persona is a claw's preset — its system prompt, its runtime, the slice of tools it's allowed to touch. See [Personas & runtimes](../building-blocks/personas-runtimes).
+
 | Tool             | Description                                              |
 | ---------------- | -------------------------------------------------------- |
 | `persona_list`   | List all personas                                        |
@@ -107,7 +107,7 @@ The MCP server exposes roughly 80 tools grouped by domain. Every tool is namespa
 | `knowledge_search`   | Natural-language semantic search over the knowledge graph, ranked by similarity | `query`, `limit?`, `workspaceId?`, `expand?`, `expandDepth?` |
 | `knowledge_get_node` | Retrieve a knowledge node by ID, with its edges                                 | `id`, `expand?`, `expandDepth?`                              |
 
-These tools come from the [knowledge graph plugin](./knowledge-graph), which is **enabled by default**. They are unavailable only if you explicitly disable the plugin (e.g. `plugin_set_enabled` or `GRACKLE_KNOWLEDGE_ENABLED=false`).
+These come from the [knowledge graph plugin](./knowledge-graph), enabled by default. They vanish only if you disable the plugin outright (`plugin_set_enabled`, or `GRACKLE_KNOWLEDGE_ENABLED=false`).
 
 ### Configuration
 
@@ -118,7 +118,7 @@ These tools come from the [knowledge graph plugin](./knowledge-graph), which is 
 
 ### Schedules
 
-Scheduled triggers fire a persona on a cadence (interval shorthand like `5m`, or a 5-field cron expression like `0 9 * * MON`).
+A schedule fires a persona on a cadence — interval shorthand like `5m`, or a 5-field cron expression like `0 9 * * MON`. The claw wakes on its own clock.
 
 | Tool              | Description                                     | Parameters                                                                                  |
 | ----------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------- |
@@ -130,7 +130,7 @@ Scheduled triggers fire a persona on a cadence (interval shorthand like `5m`, or
 
 ### Escalations
 
-Escalations let an agent ask the human for input; the message is routed to configured notification channels.
+When a claw hits a wall it can't decide, it asks the human. The message routes to your configured notification channels.
 
 | Tool                     | Description                                       | Parameters                                    |
 | ------------------------ | ------------------------------------------------- | --------------------------------------------- |
@@ -140,7 +140,7 @@ Escalations let an agent ask the human for input; the message is routed to confi
 
 ### Workpad
 
-A workpad is persistent structured context attached to a task — agents record what they accomplished before completing.
+A workpad is structured context bolted to a task — what the claw did, recorded before it completes.
 
 | Tool            | Description                                     | Parameters                              |
 | --------------- | ----------------------------------------------- | --------------------------------------- |
@@ -149,7 +149,7 @@ A workpad is persistent structured context attached to a task — agents record 
 
 ### Inter-agent IPC
 
-These tools let an agent spawn child agents and coordinate with siblings/parents over named streams and pipes. They require **scoped auth** (i.e. they only work when called from inside a Grackle agent session, not from an external API-key client). File descriptors (`fd`) returned by `ipc_spawn`/`ipc_create_stream` identify a connection; `permission` is one of `r`/`w`/`rw` and `deliveryMode`/`pipe` is one of `sync`/`async`/`detach`.
+How claws talk to each other while they work — spawn children, pass messages, share named streams sibling-to-sibling and child-to-parent. These need **scoped auth**: they only fire from inside a Grackle session, never from an external API-key client. The `fd` values returned by `ipc_spawn`/`ipc_create_stream` name a connection; `permission` is one of `r`/`w`/`rw`, and `deliveryMode`/`pipe` is one of `sync`/`async`/`detach`. Full mechanics in [Coordination](./coordination).
 
 | Tool                | Description                                                      | Parameters                                                    |
 | ------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------- |
@@ -165,7 +165,7 @@ These tools let an agent spawn child agents and coordinate with siblings/parents
 
 ### Components & widgets (MCP Apps)
 
-These tools let an agent author and render generative UI (MCP Apps) inline in the chat — either one-off renders or reusable components persisted in the workspace registry. The default renderer is `grackle-react` (JSX); `mcp-app-html` renders raw HTML. Promoting a component via `component_promote` exposes it as a dynamic, per-workspace `render_<name>` tool whose input schema is the component's `propsSchema`.
+A claw can author and render UI inline in the chat — one-off renders, or reusable components persisted in the workspace registry. Default renderer is `grackle-react` (JSX); `mcp-app-html` renders raw HTML. Promote a component with `component_promote` and it gains a dynamic, per-workspace `render_<name>` tool whose input schema is the component's `propsSchema`. See [Generative UX](./widgets).
 
 | Tool                 | Description                                               | Parameters                                                                        |
 | -------------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------- |
@@ -179,9 +179,11 @@ These tools let an agent author and render generative UI (MCP Apps) inline in th
 | `widget_show`        | Render a one-off raw-HTML widget (no persistence)         | `body`, `props?`, `workspaceId?`                                                  |
 | `show_hello_widget`  | Demo widget that echoes a message (MCP Apps sample)       | `message?`                                                                        |
 
-In addition to the tools above, each **promoted** component contributes a dynamic `render_<name>` tool to that workspace's tool list, so any agent can render it by name with validated props.
+Each **promoted** component also adds a dynamic `render_<name>` tool to that workspace's tool list, so any claw can render it by name with validated props.
 
 ### Credentials & tokens
+
+Every claw gets its own name and its own key. These tools wire the keys.
 
 | Tool                       | Description                                                    | Parameters          |
 | -------------------------- | -------------------------------------------------------------- | ------------------- |
@@ -206,38 +208,38 @@ In addition to the tools above, each **promoted** component contributes a dynami
 | `logs_get`           | Retrieve session logs (raw events, transcript, or live tail)                       | session id |
 | `get_version_status` | Check whether a newer Grackle version is available (and whether running in Docker) | _(none)_   |
 
-## MCP broker architecture
+## Two endpoints, one codebase
 
-Grackle has two MCP endpoints that share the same tool codebase but differ in auth and scope:
+Grackle exposes the tools through two doors. Same tools underneath; different auth, different reach.
 
 ### Global MCP server (port 7435)
 
-The standalone MCP server you connect external tools to. Authenticates via API key or OAuth. Full access to all tools and all workspaces.
+The standalone server you point external tools at. API key or OAuth. Full access to every tool and every workspace. This is the door you walk through.
 
 ### PowerLine MCP broker (per-session)
 
-When Grackle spawns an agent session, the server passes the agent a **scoped MCP URL and session token** via PowerLine. The agent connects to the central MCP server using this token rather than your API key:
+When Grackle spawns a claw, the server hands it a **scoped MCP URL and session token** over PowerLine. The claw connects with that token — never your API key:
 
-- The agent gets a **session token** (not your API key) that identifies it
-- Tool access is filtered by the agent's **persona** — a reviewer persona might only see read-only tools
-- Task creation is automatically parented to the agent's own task
-- `workspaceId` is injected automatically — no cross-workspace access
+- It holds a **session token** that identifies it, not your key.
+- Tool access is filtered by its **persona** — a reviewer claw might see only read-only tools.
+- Tasks it creates are parented to its own task automatically.
+- `workspaceId` is injected. No reaching across workspaces.
 
-This is what enables the orchestrator pattern: an agent can create subtasks and monitor progress through MCP without seeing anything outside its scope.
+This is the orchestrator pattern's spine: a claw spawns subtasks and watches them through MCP, and sees nothing outside its own scope.
 
 ```mermaid
 graph LR
-    A["🤖 Agent"] -->|scoped token + MCP URL| PL["PowerLine"]
+    A["Agent"] -->|scoped token + MCP URL| PL["PowerLine"]
     PL -->|session token| S["Grackle MCP Server"]
-    S --> DB["📦 Database"]
+    S --> DB["Database"]
 ```
 
-### How agents see MCP tools
+### How a claw sees the tools
 
-When an agent runs inside Grackle, the MCP server is automatically configured as an available tool source. The agent sees tools like `mcp__grackle__task_create` and `mcp__grackle__session_spawn` alongside its built-in tools.
+A claw running inside Grackle finds the MCP server already wired as a tool source. It sees `mcp__grackle__task_create`, `mcp__grackle__session_spawn`, and the rest, sitting alongside its built-in tools. That's all it takes:
 
-This is what enables patterns like:
+- An orchestrator decomposes a task into subtasks with `task_create`.
+- A researcher searches the [knowledge graph](./knowledge-graph) for prior context.
+- A supervisor watches task status and feeds corrections back down.
 
-- An orchestrator agent that decomposes a task into subtasks using `task_create`
-- A researcher agent that searches the knowledge graph for prior context
-- A supervisor agent that monitors task status and provides feedback
+One claw, the whole API, the plague at its command.

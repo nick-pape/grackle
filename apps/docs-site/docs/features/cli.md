@@ -1,16 +1,20 @@
 ---
-id: cli-reference
-title: CLI Reference
-sidebar_position: 5
+id: cli
+title: CLI
+sidebar_position: 3
 ---
 
-# CLI Reference
+# CLI
 
-The Grackle CLI (`@grackle-ai/cli`) is the primary interface for managing environments, sessions, tasks, and configuration.
+`@grackle-ai/cli` is how you drive Grackle from a terminal. Environments, sessions, tasks, credentials, schedules — every lever the server exposes, you pull from here. The web UI is the same machine with a face on it; this is the bare metal.
+
+Install it with the rest of the stack — see [Installation](../getting-started/installation).
+
+This page is a full reference. Every command group, every flag. The prose around the tables is thin on purpose; the tables are the contract.
 
 ## Connection
 
-The CLI connects to the Grackle server via gRPC. Configuration:
+The CLI talks to the server over gRPC. Point it somewhere, hand it a key, tell it where home is.
 
 | Setting        | Default                 | Environment Variable |
 | -------------- | ----------------------- | -------------------- |
@@ -22,7 +26,7 @@ The CLI connects to the Grackle server via gRPC. Configuration:
 
 ### `grackle serve`
 
-Start the Grackle server (gRPC + Web UI + WebSocket + MCP).
+Start the server: gRPC, web UI, WebSocket, and MCP, all in one process.
 
 | Flag                        | Default | Description                                                                                                                        |
 | --------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------- |
@@ -35,11 +39,15 @@ Start the Grackle server (gRPC + Web UI + WebSocket + MCP).
 | `--powerline-port <port>`   | 7433    | Local PowerLine port                                                                                                               |
 | `--allow-network`           | off     | Bind to all interfaces (0.0.0.0) for LAN access                                                                                    |
 
+By default the server binds to `127.0.0.1` — it answers only to the machine it runs on. `--allow-network` opens it to the LAN. Know what you're doing before you do.
+
 ### `grackle pair`
 
 Generate a pairing code for web UI authentication. Prints the code, a URL, and a QR code. Codes expire after 5 minutes.
 
 ## Environments
+
+An environment is a place a claw can perch — a wire it runs on. Add one, provision it, and it's ready to take work.
 
 ### `grackle env list`
 
@@ -96,6 +104,8 @@ Remove an environment from the registry.
 
 ## Sessions
 
+A claw runs as a **session**. Spawn one, watch it work, kill it when it strays. Detaching doesn't stop it — the claw stays on the wire; you just stop looking.
+
 ### `grackle spawn <env-id> <prompt>`
 
 Start a new agent session and stream its output (`Ctrl+C` to detach).
@@ -144,7 +154,11 @@ Show a session's durable, server-sequenced action log (oldest first / replay ord
 | `--from <seq>` | Only actions after this seq (resume from a cursor) |
 | `--limit <n>`  | Max actions to return (default: 500)               |
 
+For the deeper model of sessions and the work they carry, see [Tasks & Sessions](../building-blocks/tasks-sessions).
+
 ## Workspaces
+
+A workspace is the context a claw works inside — a repo, a budget, an environment to perch on. Bind sessions to one and they share that ground.
 
 ### `grackle workspace list`
 
@@ -205,7 +219,11 @@ Remove a linked environment from a workspace.
 | ------------ | --------------------------------------- |
 | `--env <id>` | Environment ID to unlink (**required**) |
 
+Budgets here cap the whole workspace. For the per-task math, see [Usage budgets](./usage-budgets).
+
 ## Tasks
+
+Tasks are the work itself — a tree of it. A task can depend on others, decompose into children, and bind to the session that runs it.
 
 ### `grackle task list [workspace-id]`
 
@@ -282,6 +300,8 @@ Delete a task (kills active sessions first).
 
 ## Personas
 
+A persona is a claw's name and disposition — the system prompt, the runtime, the model, the tools it's allowed to touch. Spawn against one and the claw wears it.
+
 ### `grackle persona list`
 
 List all personas.
@@ -339,6 +359,8 @@ List available agent runtimes, their models, and credential needs. Prints a tabl
 
 ## Tokens
 
+A token is a secret a claw carries onto the wire — an env var or a file on PowerLine. The CLI sets it; the value never comes back out.
+
 ### `grackle token set <name>`
 
 | Flag                 | Description                                       |
@@ -361,6 +383,8 @@ Delete a token.
 
 ## Credential Providers
 
+Every agent gets its own name and its own key. These commands decide which providers are live and how they hand over credentials.
+
 ### `grackle credential-provider list`
 
 Show current provider configuration.
@@ -374,6 +398,8 @@ Show current provider configuration.
 | `copilot` | `off`, `on`                      |
 | `codex`   | `off`, `on`                      |
 | `goose`   | `off`, `on`                      |
+
+The full model — who holds what, and how it reaches the wire — is in [Credentials](./credentials).
 
 ## Configuration
 
@@ -397,6 +423,8 @@ Set a setting value.
 Session IDs support prefix matching.
 
 ## Schedules
+
+A schedule fires a claw on a clock — an interval or a cron expression — so work happens whether or not you're watching.
 
 ### `grackle schedule list`
 
@@ -434,7 +462,11 @@ Disable a schedule.
 
 Delete a schedule (running tasks are not affected).
 
+For what fires and when, see [Scheduled tasks](../advanced/scheduled-tasks).
+
 ## Notifications
+
+When a claw hits something it can't decide, it escalates. These commands send, list, and acknowledge those escalations — and wire up a webhook so a human gets pinged.
 
 ### `grackle notify send <title>`
 
@@ -475,7 +507,7 @@ Show notification configuration (webhook URL and pending escalation count).
 
 ## GitHub Accounts
 
-Manage GitHub account credentials for multi-identity support.
+One human, many identities. These commands register the GitHub accounts a claw can act as, so the right name signs the right commit.
 
 ### `grackle github-account list`
 
@@ -505,6 +537,8 @@ Import accounts from the local `gh` CLI authentication state.
 
 ## Plugins
 
+Whole feature sets — orchestration, the knowledge graph — are plugins. Toggle them here. The change lands after a restart, not before.
+
 ### `grackle plugin list`
 
 List all plugins and their current state (name, description, enabled, loaded, required).
@@ -519,7 +553,7 @@ Disable a plugin. Disabling **requires a server restart to take effect.**
 
 ## Channels
 
-Expose sessions to external systems via capability-scoped webhooks.
+A channel is a narrow seam to the outside — a capability-scoped webhook that can drop messages into one session and nothing more. Mint it, use it, revoke it.
 
 ### `grackle channel expose`
 
@@ -541,6 +575,8 @@ List channel grants.
 Revoke a channel grant (its webhook URL stops working immediately).
 
 ## Event & Stream Inspection
+
+The forensics layer. Every domain event is persisted; every live stream is inspectable. When one does something stupid at 3 AM, this is where you find out which.
 
 ### `grackle events`
 
@@ -570,3 +606,7 @@ Show a stream room's durable transcript (most recent first).
 | ---------------- | ----------------------------------------------------- |
 | `--before <seq>` | Only messages older than this seq (page into history) |
 | `--limit <n>`    | Max messages to return (default: 100)                 |
+
+---
+
+The same machine wears a face in the browser — see [Web UI](./web-ui). To let a claw drive Grackle itself, point it at the [MCP server](./mcp-server).

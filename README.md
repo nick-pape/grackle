@@ -13,13 +13,13 @@
   <img src="https://raw.githubusercontent.com/nick-pape/grackle/main/apps/docs-site/static/img/grackle-logo.png" alt="Grackle" width="200" />
 </p>
 
-## Stop babysitting your AI agents
+## A plague of grackles
 
-You have 6 agents running across 4 machines. You're tab-switching between terminals, copy-pasting context from one agent's output into another's prompt, and restarting dead sessions at 2 AM. Every agent has its own CLI, its own auth flow, its own way of crashing silently.
+That's the collective noun. Also what you get when you stop babysitting one agent in a terminal and start running many — each on its own wire, with its own key, leaving its own name in the log.
 
-Grackle is the control plane for AI coding agents. **Configure once, supervise by exception.**
+**Grackle is a self-hosted control plane for AI agents.** Spawn one and watch it work. Spawn a hundred and close the laptop. When one does something stupid at 3 AM, you know which one — not "the platform," not "your token," _that one_.
 
-One platform to run [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview), [Copilot](https://github.com/features/copilot), [Codex](https://openai.com/index/codex/), [Goose](https://block.github.io/goose/), or [GenAIScript](https://microsoft.github.io/genaiscript/) on any environment — Docker, SSH, Codespaces, local. It handles provisioning, credentials, transport, and lifecycle. You get a CLI, web UI, and MCP server out of the box.
+Run [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview), [Copilot](https://github.com/features/copilot), [Codex](https://openai.com/index/codex/), [GenAIScript](https://microsoft.github.io/genaiscript/), or any [ACP](https://agentclientprotocol.com/) agent — on Docker, an SSH box, a Codespace, or this machine. Grackle handles the provisioning, the credentials, the transport, the lifecycle. You get a CLI, web UI, and MCP server out of the box.
 
 ![Dashboard — active sessions, task triage, environment health, and workspaces](screenshots/dashboard-projects-tasks.png)
 
