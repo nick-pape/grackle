@@ -18,6 +18,7 @@ import {
   settingsStore,
   grackleHome,
 } from "@grackle-ai/database";
+import { ConnectError } from "@connectrpc/connect";
 import * as adapterManager from "./adapter-manager.js";
 import * as tokenPush from "./token-push.js";
 import { v4 as uuid } from "uuid";
@@ -156,6 +157,26 @@ export async function startTaskSession(
     knowledgeGuidance: knowledgeOn,
   }).build();
 
+  // Supply credentials on demand for this runtime, just before spawn (AHP HR6).
+  // For local envs, skip file tokens — the PowerLine is on the same machine.
+  // Pre-flight (#1316): a required-but-missing/expired credential throws here;
+  // surface it as a returned error string (the function's failure contract) so
+  // the dispatcher keeps the task queued for retry — and crucially before any
+  // session row is created or "task.started" emitted below.
+  try {
+    await tokenPush.authenticateForRuntime(
+      environmentId,
+      runtime,
+      env.adapterType === "local" ? { excludeFileTokens: true } : undefined,
+    );
+  } catch (err) {
+    logger.warn(
+      { taskId: freshTask.id, environmentId, runtime },
+      "startTaskSession failed: pre-flight credential check",
+    );
+    return err instanceof ConnectError ? err.rawMessage : (err as Error).message;
+  }
+
   sessionStore.createSession(
     sessionId,
     environmentId,
@@ -172,14 +193,6 @@ export async function startTaskSession(
     sessionId,
     workspaceId: freshTask.workspaceId || "",
   });
-
-  // Supply credentials on demand for this runtime, just before spawn (AHP HR6).
-  // For local envs, skip file tokens — the PowerLine is on the same machine.
-  await tokenPush.authenticateForRuntime(
-    environmentId,
-    runtime,
-    env.adapterType === "local" ? { excludeFileTokens: true } : undefined,
-  );
 
   const mcpServersJson = personaMcpServersToJson(resolved.mcpServers, resolved.personaId);
 

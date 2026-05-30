@@ -1,6 +1,24 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 29 May 2026 22:14:18 GMT and should not be manually modified.
+This log was last generated on Sat, 30 May 2026 01:06:03 GMT and should not be manually modified.
+
+## 0.134.0
+Sat, 30 May 2026 01:06:03 GMT
+
+### Minor changes
+
+- Pre-flight credential validation (#1316): the demand-driven authenticate chokepoint now fails a spawn fast with a typed FailedPrecondition error when a runtime's enabled credential is missing, or its OAuth login (Claude subscription / Codex) is expired with no refresh token, instead of surfacing an opaque 401 deep inside the runtime. Behavior change: authenticateForRuntime is no longer best-effort never-throws.
+
+### Patches
+
+- Fix F12 resume regression (GHSA-f9ff-5x35-7gfw): revoke a task's scoped MCP tokens only on delete, not on complete/stop. Resume reuses the original token (powerline runtime.resume does not re-mint), so revoking on the resumable complete/stop states 401'd resumed agents' MCP calls.
+
+## 0.133.1
+Fri, 29 May 2026 22:56:33 GMT
+
+### Patches
+
+- @grackle-ai/ahp cleanup: prebuild script now reads the pinned AHP commit SHA from the package's own devDependencies (SOURCE.md SHA was previously always empty), transforms vendored files in a single read/write pass, and the package gained a README.
 
 ## 0.133.0
 Fri, 29 May 2026 22:14:18 GMT

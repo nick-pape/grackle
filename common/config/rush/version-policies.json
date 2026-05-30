@@ -2,7 +2,7 @@
   {
     "policyName": "grackle",
     "definitionName": "lockStepVersion",
-    "version": "0.133.0",
+    "version": "0.134.0",
     "nextBump": "minor",
     "mainProject": "@grackle-ai/cli"
   }

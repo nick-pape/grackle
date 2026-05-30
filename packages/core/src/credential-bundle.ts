@@ -35,6 +35,13 @@ export interface TokenItem {
   filePath?: string;
   /** The credential value. */
   value: string;
+  /**
+   * The credential-provider block that materialized this token. Server-internal
+   * source tag used by {@link findUnsatisfiedNeeds} to decide whether a runtime's
+   * advertised needs are met; it is **never delivered** over the wire (the
+   * `authenticate` mapper picks only `name`/`type`/`envVar`/`filePath`/`value`).
+   */
+  provider?: keyof CredentialProviderConfig;
 }
 
 /** A bundle of tokens — the return shape of {@link buildProviderTokenBundle}. */
@@ -207,6 +214,200 @@ export function deriveCredentialNeeds(
   return needs;
 }
 
+// ─── Pre-flight credential validation (#1316) ──────────────
+
+/** Clock-skew buffer: treat a credential expiring within this window as already expired. */
+const CREDENTIAL_EXPIRY_SKEW_MS: number = 60_000;
+
+/**
+ * The expiry state of a credential, as far as is knowable from a purely offline
+ * inspection of a credential file. Only the OAuth-file providers (Claude
+ * subscription, Codex) carry an embedded, parseable expiry; for every other
+ * credential kind (API keys, GitHub/Copilot/Goose tokens) expiry is not knowable
+ * offline and inspection returns `"unknown"`.
+ *
+ * - `valid` — present and not past expiry.
+ * - `expired-recoverable` — past expiry but a refresh token is present, so the
+ *   runtime transparently refreshes it on launch (not a spawn blocker).
+ * - `expired-unrecoverable` — past expiry with no refresh token; re-login required
+ *   (the genuine "will 401 deep in the runtime" case worth failing fast on).
+ * - `unknown` — expiry is not offline-knowable, or the file shape is unexpected
+ *   (fail open: never treated as a blocker).
+ */
+export type CredentialExpiryState =
+  | "valid"
+  | "expired-recoverable"
+  | "expired-unrecoverable"
+  | "unknown";
+
+/**
+ * Decode a JWT payload **without verifying its signature**, returning the parsed
+ * claims or `undefined` when the token is not a well-formed three-segment JWT.
+ * Offline only — we trust the locally stored file and only read the `exp` claim.
+ */
+function decodeJwtPayload(token: string): Record<string, unknown> | undefined {
+  const segments = token.split(".");
+  if (segments.length !== 3) {
+    return undefined;
+  }
+  try {
+    const json = Buffer.from(segments[1], "base64url").toString("utf-8");
+    const parsed = JSON.parse(json) as unknown;
+    return typeof parsed === "object" && parsed !== null
+      ? (parsed as Record<string, unknown>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Inspect a Claude subscription credentials file (`~/.claude/.credentials.json`):
+ * the OAuth access token's `expiresAt` is a unix-ms timestamp sibling to a
+ * `refreshToken`. Fails open (`"unknown"`) on any unexpected shape.
+ */
+function inspectClaudeCredentials(value: string, now: number): CredentialExpiryState {
+  let oauth: { expiresAt?: unknown; refreshToken?: unknown; accessToken?: unknown } | undefined;
+  try {
+    // A non-object parse (`null`, a primitive) throws on property access and is
+    // caught below, yielding "unknown" — exactly the fail-open behavior we want.
+    const parsed = JSON.parse(value) as { claudeAiOauth?: typeof oauth };
+    oauth = parsed.claudeAiOauth;
+  } catch {
+    return "unknown";
+  }
+  if (!oauth || typeof oauth.accessToken !== "string" || typeof oauth.expiresAt !== "number") {
+    return "unknown";
+  }
+  if (oauth.expiresAt >= now + CREDENTIAL_EXPIRY_SKEW_MS) {
+    return "valid";
+  }
+  return typeof oauth.refreshToken === "string" && oauth.refreshToken.length > 0
+    ? "expired-recoverable"
+    : "expired-unrecoverable";
+}
+
+/**
+ * Inspect a Codex auth file (`~/.codex/auth.json`): `tokens.access_token` is a
+ * JWT whose `exp` claim (unix seconds) carries the expiry, sibling to a
+ * `refresh_token`. Fails open (`"unknown"`) on any unexpected shape — the token
+ * format is owned by the Codex runtime and may drift.
+ */
+function inspectCodexAuth(value: string, now: number): CredentialExpiryState {
+  let tokens: { access_token?: unknown; refresh_token?: unknown } | undefined;
+  try {
+    const parsed = JSON.parse(value) as { tokens?: typeof tokens };
+    tokens = parsed.tokens;
+  } catch {
+    return "unknown";
+  }
+  if (!tokens || typeof tokens.access_token !== "string") {
+    return "unknown";
+  }
+  const exp = decodeJwtPayload(tokens.access_token)?.exp;
+  if (typeof exp !== "number") {
+    return "unknown";
+  }
+  if (exp * 1000 >= now + CREDENTIAL_EXPIRY_SKEW_MS) {
+    return "valid";
+  }
+  return typeof tokens.refresh_token === "string" && tokens.refresh_token.length > 0
+    ? "expired-recoverable"
+    : "expired-unrecoverable";
+}
+
+/**
+ * Determine the offline-knowable {@link CredentialExpiryState} of a materialized
+ * credential {@link TokenItem}. Only OAuth-file tokens (`claude-credentials`,
+ * `codex-auth`) carry a parseable expiry; every other token returns `"unknown"`
+ * because expiry is not derivable without a network call. Pure; fails open.
+ */
+export function inspectFileCredentialExpiry(token: TokenItem, now: number): CredentialExpiryState {
+  if (token.type !== "file") {
+    return "unknown";
+  }
+  switch (token.name) {
+    case "claude-credentials": {
+      return inspectClaudeCredentials(token.value, now);
+    }
+    case "codex-auth": {
+      return inspectCodexAuth(token.value, now);
+    }
+    default: {
+      return "unknown";
+    }
+  }
+}
+
+/** A credential need that the materialized bundle does not satisfy, with the reason. */
+export interface UnsatisfiedNeed {
+  /** The advertised need that is not met. */
+  need: ProtectedResourceDescriptor;
+  /** Why the need is unmet: no credential at all, or an expired non-refreshable one. */
+  reason: "missing" | "expired";
+}
+
+/**
+ * Cross-check a runtime's advertised {@link ProtectedResourceDescriptor needs}
+ * against the credentials a {@link buildProviderTokenBundle} actually materialized,
+ * returning the needs that are not satisfied. A need is unsatisfied when:
+ *
+ * - **missing** — the bundle contains no token tagged for the need's provider, or
+ * - **expired** — the provider materialized credential(s) but **every** one is an
+ *   expired OAuth file with no refresh token (re-login required).
+ *
+ * A token counts as usable unless it is `expired-unrecoverable` — a refreshable
+ * expiry (the runtime refreshes on launch) and an `unknown`-expiry token (e.g. an
+ * API key, whose expiry is not offline-knowable) both satisfy the need. So when a
+ * provider emits more than one credential (e.g. Codex emits both `~/.codex/auth.json`
+ * *and* `OPENAI_API_KEY`), a stale OAuth file does not fail the spawn as long as a
+ * working fallback is present.
+ *
+ * Pure: derives entirely from `needs` + `bundle` + `now`, reads nothing.
+ */
+export function findUnsatisfiedNeeds(
+  needs: ProtectedResourceDescriptor[],
+  bundle: ProviderTokenBundle,
+  now: number,
+): UnsatisfiedNeed[] {
+  const unsatisfied: UnsatisfiedNeed[] = [];
+  for (const need of needs) {
+    const tokens = bundle.tokens.filter((t) => t.provider === need.provider);
+    if (tokens.length === 0) {
+      unsatisfied.push({ need, reason: "missing" });
+      continue;
+    }
+    // Report expired only when there is no usable credential — i.e. every token
+    // for the provider is an expired, non-refreshable OAuth file.
+    if (tokens.every((t) => inspectFileCredentialExpiry(t, now) === "expired-unrecoverable")) {
+      unsatisfied.push({ need, reason: "expired" });
+    }
+  }
+  return unsatisfied;
+}
+
+/**
+ * Build a human-readable, actionable pre-flight error message for credentials
+ * that are required but missing or expired — surfaced to the CLI and web before
+ * a spawn instead of as an opaque 401 deep inside the runtime.
+ */
+export function formatPreflightCredentialError(
+  runtime: string,
+  unsatisfied: UnsatisfiedNeed[],
+): string {
+  const lines = unsatisfied.map(({ need, reason }) => {
+    const subject = `${need.resourceName} (provider "${need.provider}")`;
+    return reason === "missing"
+      ? `  • ${subject}: enabled but no credential was found`
+      : `  • ${subject}: login expired and cannot be refreshed — re-login required`;
+  });
+  return (
+    `Cannot start runtime "${runtime}": required credential(s) unavailable.\n` +
+    `${lines.join("\n")}\n` +
+    `Configure or disable the provider with \`grackle credential-provider set <provider> <value>\`, then retry.`
+  );
+}
+
 /** Timeout for the `gh auth token` subprocess call. */
 const GH_AUTH_TOKEN_TIMEOUT_MS: number = 5_000;
 
@@ -273,6 +474,7 @@ export async function buildProviderTokenBundle(
             type: "file",
             filePath: "~/.claude/.credentials.json",
             value,
+            provider: "claude",
           }),
         );
       }
@@ -286,6 +488,7 @@ export async function buildProviderTokenBundle(
           type: "env_var",
           envVar: "ANTHROPIC_API_KEY",
           value: apiKey,
+          provider: "claude",
         }),
       );
     }
@@ -308,6 +511,7 @@ export async function buildProviderTokenBundle(
           type: "env_var",
           envVar: "GH_TOKEN",
           value: storedToken,
+          provider: "github",
         }),
       );
     } else {
@@ -323,6 +527,7 @@ export async function buildProviderTokenBundle(
               type: "env_var",
               envVar: varName,
               value,
+              provider: "github",
             }),
           );
         }
@@ -339,6 +544,7 @@ export async function buildProviderTokenBundle(
               type: "env_var",
               envVar: "GITHUB_TOKEN",
               value: cliToken,
+              provider: "github",
             }),
           );
         }
@@ -362,6 +568,7 @@ export async function buildProviderTokenBundle(
             type: "file",
             filePath: "~/.copilot/config.json",
             value,
+            provider: "copilot",
           }),
         );
       }
@@ -384,6 +591,7 @@ export async function buildProviderTokenBundle(
             type: "env_var",
             envVar: varName,
             value,
+            provider: "copilot",
           }),
         );
       }
@@ -405,6 +613,7 @@ export async function buildProviderTokenBundle(
               type: "env_var",
               envVar: envVarName,
               value: envToken,
+              provider: "copilot",
             }),
           );
         }
@@ -417,6 +626,7 @@ export async function buildProviderTokenBundle(
               type: "env_var",
               envVar: "GITHUB_TOKEN",
               value: cliToken,
+              provider: "copilot",
             }),
           );
         }
@@ -437,6 +647,7 @@ export async function buildProviderTokenBundle(
             type: "file",
             filePath: "~/.codex/auth.json",
             value,
+            provider: "codex",
           }),
         );
       }
@@ -449,6 +660,7 @@ export async function buildProviderTokenBundle(
           type: "env_var",
           envVar: "OPENAI_API_KEY",
           value: openaiKey,
+          provider: "codex",
         }),
       );
     }
@@ -479,6 +691,7 @@ export async function buildProviderTokenBundle(
             type: "file",
             filePath: gooseConfigFilePath,
             value,
+            provider: "goose",
           }),
         );
       }
@@ -498,6 +711,7 @@ export async function buildProviderTokenBundle(
             type: "env_var",
             envVar: varName,
             value,
+            provider: "goose",
           }),
         );
       }
