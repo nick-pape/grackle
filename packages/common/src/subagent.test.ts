@@ -148,9 +148,10 @@ describe("readAgentResultStatus", () => {
     expect(readAgentResultStatus("Agent completed. agent_id: ag-1\n\ndone")).toBe("completed");
   });
 
-  it("parses running and failed", () => {
+  it("parses running, failed, and cancelled", () => {
     expect(readAgentResultStatus("Agent running. agent_id: ag-1")).toBe("running");
     expect(readAgentResultStatus("Agent failed. agent_id: ag-1")).toBe("failed");
+    expect(readAgentResultStatus("Agent cancelled. agent_id: ag-1")).toBe("cancelled");
   });
 
   it("returns undefined for unstructured results", () => {

@@ -55,10 +55,12 @@ function clamp(text: string): string {
 /**
  * Tool results often arrive JSON-wrapped (e.g. `{"is_ok":true,"content":"…"}`).
  * Extract the human-readable `content` string so the child's floor activity
- * shows clean text rather than the raw envelope. Returns the input unchanged if
- * it isn't a JSON object with a string `content` field.
+ * shows clean text rather than the raw envelope — and so status parsing
+ * (`readAgentResultStatus`) sees the real `read_agent` prefix rather than the
+ * envelope. Returns the input unchanged if it isn't a JSON object with a string
+ * `content` field.
  */
-function unwrapResultContent(result: string): string {
+export function unwrapResultContent(result: string): string {
   if (!result.trimStart().startsWith("{")) {
     return result;
   }

@@ -2296,7 +2296,7 @@ const QueryDomainEventsRequestSchema: GenMessage<QueryDomainEventsRequest>;
 export function readAgentResultStatus(result: string): ReadAgentStatus | undefined;
 
 // @public
-export type ReadAgentStatus = "completed" | "running" | "failed" | "error";
+export type ReadAgentStatus = "completed" | "running" | "failed" | "error" | "cancelled";
 
 // @public
 type RegisterComponentRequest = Message<"grackle.RegisterComponentRequest"> & {

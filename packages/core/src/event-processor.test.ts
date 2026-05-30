@@ -1743,6 +1743,70 @@ describe("subagent child sessions (#1075)", () => {
     expect(actions.filter((a) => a.content === "first result")).toHaveLength(1);
   });
 
+  it("closes a polled child when the terminal status arrives as a JSON envelope", async () => {
+    sessionStore.createSession("pe1", "env1", "copilot", "test", "gpt-4o", "/tmp/pe1", "task1");
+
+    // The AHP reverse mapper can wrap the read_agent result as a JSON envelope;
+    // the status prefix lives inside `content`, so it must be unwrapped before
+    // readAgentResultStatus, else the child would wrongly stay RUNNING.
+    await waitForProcessing(
+      [
+        toolUse("pe1", "read_agent", { agent_id: "env-1" }, "poll-env"),
+        toolResult(
+          "pe1",
+          '{"is_ok":true,"content":"Agent completed. agent_id: env-1\\n\\nall done"}',
+          "poll-env",
+        ),
+        statusCompleted("pe1"),
+      ],
+      { sessionId: "pe1", logPath: "/tmp/pe1", taskId: "task1" },
+    );
+
+    const child = sessionStore.getSession("sub_pe1_env-1");
+    expect(child?.status).toBe("stopped");
+    expect(child?.endReason).toBe("completed");
+  });
+
+  it("closes a polled child on a cancelled status", async () => {
+    sessionStore.createSession("pe2", "env1", "copilot", "test", "gpt-4o", "/tmp/pe2", "task1");
+
+    await waitForProcessing(
+      [
+        toolUse("pe2", "read_agent", { agent_id: "cx-1" }, "poll-cx"),
+        toolResult("pe2", "Agent cancelled. agent_id: cx-1\n\nstopped by user", "poll-cx"),
+        statusCompleted("pe2"),
+      ],
+      { sessionId: "pe2", logPath: "/tmp/pe2", taskId: "task1" },
+    );
+
+    const child = sessionStore.getSession("sub_pe2_cx-1");
+    expect(child?.status).toBe("stopped");
+    expect(child?.endReason).toBe("interrupted");
+  });
+
+  it("does NOT interrupt a background spawn whose handle never arrives at stream end", async () => {
+    sessionStore.createSession("pe3", "env1", "copilot", "test", "gpt-4o", "/tmp/pe3", "task1");
+
+    // Background spawn tool_use, then the stream ends with NO tool_result at all.
+    // The finally block must not interrupt it — background children run
+    // independently of the parent stream.
+    await waitForProcessing(
+      [
+        toolUse(
+          "pe3",
+          "task",
+          { agent_type: "worker", name: "bg", agent_id: "bg-9", mode: "background", prompt: "go" },
+          "spawn-bg",
+        ),
+      ],
+      { sessionId: "pe3", logPath: "/tmp/pe3", taskId: "task1" },
+    );
+
+    const child = sessionStore.getSession("sub_pe3_bg-9");
+    expect(child).toBeDefined();
+    expect(child?.status).toBe("running");
+  });
+
   it("does NOT interrupt a background spawn child when the parent stream ends", async () => {
     sessionStore.createSession("pb1", "env1", "copilot", "test", "gpt-4o", "/tmp/pb1", "task1");
 

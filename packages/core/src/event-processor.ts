@@ -28,6 +28,7 @@ import {
   closeChildSession,
   appendChildActivity,
   interruptChildSession,
+  unwrapResultContent,
 } from "./subagent-session.js";
 import { cleanupLifecycleStream } from "./lifecycle-streams.js";
 import { sendInputToSession } from "./signals/signal-delivery.js";
@@ -281,8 +282,16 @@ export function processEventStream(
               // closeChildSession records the result and stops the child; otherwise
               // append the partial output. Recording happens in exactly one path so
               // the terminal poll output isn't duplicated in the child log.
-              const status = readAgentResultStatus(eventContent);
-              if (status === "completed" || status === "failed" || status === "error") {
+              // Unwrap first: the result may be a JSON envelope
+              // ({"is_ok":true,"content":"Agent completed. agent_id: …"}), and the
+              // status prefix lives in `content`, not the envelope.
+              const status = readAgentResultStatus(unwrapResultContent(eventContent));
+              if (
+                status === "completed" ||
+                status === "failed" ||
+                status === "error" ||
+                status === "cancelled"
+              ) {
                 closeChildSession(link.childId, eventContent, status !== "completed");
               } else {
                 appendChildActivity(link.childId, eventContent);
@@ -530,17 +539,20 @@ export function processEventStream(
     } finally {
       processorRegistry.unregister(sessionId);
       // #1075: the stream ended (normally, killed, or crashed) — interrupt any
-      // synchronous-spawn child whose tool_result never arrived so it isn't
+      // SYNCHRONOUS-spawn child whose tool_result never arrived so it isn't
       // stranded RUNNING with no environment to reconnect to. Background spawns
-      // and polled children were already removed from the map when their
-      // tool_result paired (they run independently of the parent stream).
+      // and polled children run independently of the parent stream, so they must
+      // NOT be interrupted here even if their handle/result never arrived (e.g.
+      // the stream ended right after the spawn tool_use).
       //
       // Known limitation (#1386): a background/polled child whose parent stream
       // ends before a terminal poll stays RUNNING in the DB. It is excluded from
       // all env/task/concurrency queries so it is harmless, but never reaches a
       // terminal state — a reconciliation sweep is tracked as a follow-up.
-      for (const { childId } of delegationByToolCall.values()) {
-        interruptChildSession(childId);
+      for (const link of delegationByToolCall.values()) {
+        if (!link.isBackground && !link.isPoll) {
+          interruptChildSession(link.childId);
+        }
       }
       delegationByToolCall.clear();
       logWriter.endSession(logPath);

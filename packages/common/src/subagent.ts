@@ -145,11 +145,11 @@ export function delegationIdentityKey(info: DelegationInfo, toolCallId: string):
 }
 
 /** Lifecycle status reported by a Copilot `read_agent` poll result. */
-export type ReadAgentStatus = "completed" | "running" | "failed" | "error";
+export type ReadAgentStatus = "completed" | "running" | "failed" | "error" | "cancelled";
 
 /** Matches the structured status prefix Copilot emits on a `read_agent` result. */
 const READ_AGENT_STATUS_PATTERN: RegExp =
-  /^Agent\s+(completed|running|failed|error)\.\s*agent_id:/i;
+  /^Agent\s+(completed|running|failed|error|cancelled)\.\s*agent_id:/i;
 
 /**
  * Extract the lifecycle status from a Copilot `read_agent` poll result, if it
