@@ -24,16 +24,19 @@
 
 import { dirname, join } from "node:path";
 import { create } from "@bufbuild/protobuf";
-import { grackle, SESSION_STATUS, END_REASON, TERMINAL_SESSION_STATUSES } from "@grackle-ai/common";
+import {
+  grackle,
+  SESSION_STATUS,
+  END_REASON,
+  TERMINAL_SESSION_STATUSES,
+  SUBAGENT_RUNTIME,
+} from "@grackle-ai/common";
 import type { DelegationInfo, SessionStatus } from "@grackle-ai/common";
 import { sessionStore } from "@grackle-ai/database";
 import { recordSessionAction } from "./session-action-recorder.js";
 import * as streamHub from "./stream-hub.js";
 import * as logWriter from "./log-writer.js";
 import { logger } from "./logger.js";
-
-/** Runtime marker for materialized subagent sessions (distinguishes them from real PowerLine sessions). */
-export const SUBAGENT_RUNTIME: string = "subagent";
 
 /**
  * Maximum length of a floor activity entry (delegation prompt / result) written
@@ -47,6 +50,27 @@ function clamp(text: string): string {
     return text;
   }
   return `${text.slice(0, MAX_FLOOR_ENTRY_LENGTH)}\n…[truncated]`;
+}
+
+/**
+ * Tool results often arrive JSON-wrapped (e.g. `{"is_ok":true,"content":"…"}`).
+ * Extract the human-readable `content` string so the child's floor activity
+ * shows clean text rather than the raw envelope. Returns the input unchanged if
+ * it isn't a JSON object with a string `content` field.
+ */
+function unwrapResultContent(result: string): string {
+  if (!result.trimStart().startsWith("{")) {
+    return result;
+  }
+  try {
+    const parsed = JSON.parse(result) as Record<string, unknown>;
+    if (typeof parsed.content === "string") {
+      return parsed.content;
+    }
+  } catch {
+    /* not JSON — use as-is */
+  }
+  return result;
 }
 
 /**
@@ -94,12 +118,16 @@ export interface EnsureChildSessionParams {
  * action is created.
  *
  * The child is attached to its parent **session** (via `parentSessionId`), not a
- * task: it is created with `environmentId=""` AND `taskId=""` so it is invisible
- * to every task- and environment-scoped query (status computation, active/latest
- * session lookups used for signal routing, usage aggregation, reconciliation).
- * It remains addressable by id for navigation, and the parent edge is recovered
- * via `parentSessionId`. The log directory sits alongside the parent's so the
- * standard session activity view renders it.
+ * task: it is created with `taskId=""` so it is invisible to every task-scoped
+ * query (status computation, active/latest session lookups used for signal
+ * routing, usage aggregation, reconciliation). It inherits the parent's
+ * `environmentId` (the subagent ran in the parent's environment, and the
+ * `sessions.env_id` foreign key requires a real environment), but the `subagent`
+ * runtime marker keeps it out of env- and lifecycle-scoped queries
+ * (`getActiveForEnv`, `listByEnv`, etc.) so reanimate/recovery never tries to
+ * reconnect a virtual child. It remains addressable by id for navigation, and
+ * the parent edge is recovered via `parentSessionId`. The log directory sits
+ * alongside the parent's so the standard session activity view renders it.
  *
  * @param params - Child id, parent id, and parsed delegation info.
  */
@@ -110,13 +138,16 @@ export function ensureChildSession(params: EnsureChildSessionParams): void {
   }
 
   const parent = sessionStore.getSession(parentSessionId);
+  if (!parent) {
+    return; // can't attach a child to a parent that doesn't exist
+  }
   // Child log dir sits alongside the parent's (same logs root); empty if the
   // parent is an ad-hoc session without a log path (then activity is session_actions-only).
-  const logPath = parent?.logPath ? join(dirname(parent.logPath), childSessionId) : "";
+  const logPath = parent.logPath ? join(dirname(parent.logPath), childSessionId) : "";
 
   sessionStore.createSession(
     childSessionId,
-    "", // environmentId — virtual subagent, no real environment
+    parent.environmentId, // inherit parent's env (satisfies the env_id FK; subagent runtime excludes it from env queries)
     SUBAGENT_RUNTIME,
     info.prompt ?? "",
     info.model ?? "",
@@ -148,7 +179,12 @@ export function closeChildSession(childSessionId: string, result: string, isErro
     return;
   }
   if (result) {
-    recordChildEvent(childSessionId, session.logPath ?? "", grackle.EventType.TEXT, result);
+    recordChildEvent(
+      childSessionId,
+      session.logPath ?? "",
+      grackle.EventType.TEXT,
+      unwrapResultContent(result),
+    );
   }
   sessionStore.updateSession(
     childSessionId,
@@ -175,7 +211,12 @@ export function appendChildActivity(childSessionId: string, content: string): vo
   if (!session) {
     return;
   }
-  recordChildEvent(childSessionId, session.logPath ?? "", grackle.EventType.TEXT, content);
+  recordChildEvent(
+    childSessionId,
+    session.logPath ?? "",
+    grackle.EventType.TEXT,
+    unwrapResultContent(content),
+  );
 }
 
 /**

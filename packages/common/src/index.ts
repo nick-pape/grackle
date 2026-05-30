@@ -23,6 +23,7 @@ export {
   deriveChildSessionId,
   readAgentResultStatus,
   SUBAGENT_SESSION_PREFIX,
+  SUBAGENT_RUNTIME,
 } from "./subagent.js";
 export type { DelegationInfo, ReadAgentStatus } from "./subagent.js";
 export { mapAgentEvent } from "./ahp-mapper.js";

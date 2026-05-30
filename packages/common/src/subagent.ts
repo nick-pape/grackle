@@ -169,6 +169,14 @@ export function readAgentResultStatus(result: string): ReadAgentStatus | undefin
 export const SUBAGENT_SESSION_PREFIX: string = "sub_";
 
 /**
+ * Runtime marker for materialized subagent child sessions (#1075). These are
+ * not real PowerLine sessions — they are virtual activity logs attached to a
+ * parent session — so env- and lifecycle-scoped queries (active/latest session,
+ * reanimate, recovery) must exclude them by this runtime.
+ */
+export const SUBAGENT_RUNTIME: string = "subagent";
+
+/**
  * Derive the deterministic child session id for a delegation. The server uses
  * this to create/resolve the child session; the web uses the *same* function to
  * compute the navigation target — so both always agree without a wire field.

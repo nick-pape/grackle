@@ -3019,6 +3019,9 @@ type StreamTranscript = Message<"grackle.StreamTranscript"> & {
 const StreamTranscriptSchema: GenMessage<StreamTranscript>;
 
 // @public
+export const SUBAGENT_RUNTIME: string;
+
+// @public
 export const SUBAGENT_SESSION_PREFIX: string;
 
 // @public

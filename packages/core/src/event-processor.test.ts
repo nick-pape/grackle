@@ -1454,7 +1454,12 @@ describe("subagent child sessions (#1075)", () => {
     // Attached to the parent SESSION, not the task (avoids polluting task-scoped
     // queries used for status/signal routing).
     expect(child?.taskId).toBe("");
-    expect(child?.environmentId).toBe("");
+    // Inherits the parent's env to satisfy the sessions.env_id FK (the subagent
+    // ran in the parent's environment); the `subagent` runtime keeps it out of
+    // env/lifecycle queries. NOTE: this in-memory test schema does not enforce
+    // FKs — the live/integration run is the real FK guard.
+    expect(child?.environmentId).toBe("env1");
+    expect(child?.runtime).toBe("subagent");
     expect(child?.status).toBe("stopped");
     expect(child?.endReason).toBe("completed");
 
@@ -1565,6 +1570,10 @@ describe("subagent child sessions (#1075)", () => {
     const taskSessions = sessionStore.listSessionsForTask("task1");
     expect(taskSessions.map((s) => s.id)).toEqual(["p6"]);
     expect(sessionStore.getActiveSessionsForTask("task1").map((s) => s.id)).not.toContain(childId);
+    // The child inherits the parent's env but must NOT be picked by env-scoped
+    // lifecycle queries (reanimate/recovery) — it's a virtual subagent runtime.
+    expect(sessionStore.getActiveForEnv("env1")?.id).not.toBe(childId);
+    expect(sessionStore.listByEnv("env1").map((s) => s.id)).not.toContain(childId);
     // But it remains reachable via its parent session (navigation edge).
     expect(sessionStore.listSessionsByParent("p6").map((s) => s.id)).toEqual([childId]);
   });
@@ -1582,5 +1591,57 @@ describe("subagent child sessions (#1075)", () => {
     expect(child).toBeDefined();
     expect(child?.status).toBe("stopped");
     expect(child?.endReason).toBe("interrupted");
+  });
+
+  it("detects delegation from the real AHP-mapped tool_use content shape", async () => {
+    // Captured verbatim from a live run: after the AHP round-trip the tool_use
+    // content carries tool_name/display_name/invocation_message alongside the
+    // original {tool, args}. This locks the content-shape contract the parser
+    // reads (parsed.tool / parsed.args).
+    sessionStore.createSession("p9", "env1", "stub", "test", "stub", "/tmp/p9", "task1");
+    const realContent =
+      '{"tool":"Agent","tool_name":"Agent","display_name":"Agent","invocation_message":"Running Agent","args":{"subagent_type":"Explore","description":"find the failing test root cause","prompt":"Search for why the auth test fails and report the root cause."}}';
+    const evt = create(powerline.AgentEventSchema, {
+      sessionId: "p9",
+      type: "tool_use",
+      timestamp: new Date().toISOString(),
+      content: realContent,
+      toolCallId: "toolu_scenario_1",
+    });
+
+    await waitForProcessing(
+      [
+        evt,
+        toolResult("p9", '{"is_ok":true,"content":"done"}', "toolu_scenario_1"),
+        statusCompleted("p9"),
+      ],
+      { sessionId: "p9", logPath: "/tmp/p9", taskId: "task1" },
+    );
+
+    const child = sessionStore.getSession("sub_p9_toolu_scenario_1");
+    expect(child).toBeDefined();
+    expect(child?.endReason).toBe("completed");
+    const contents = querySessionActions({ sessionId: "sub_p9_toolu_scenario_1" }).map(
+      (a) => a.content,
+    );
+    expect(contents).toContain("Search for why the auth test fails and report the root cause.");
+    expect(contents).toContain("done");
+  });
+
+  it("unwraps JSON-wrapped tool results into clean floor text", async () => {
+    sessionStore.createSession("p8", "env1", "claude-code", "test", "sonnet", "/tmp/p8", "task1");
+
+    await waitForProcessing(
+      [
+        toolUse("p8", "Agent", { subagent_type: "Explore", prompt: "look" }, "tc8"),
+        toolResult("p8", '{"is_ok":true,"content":"clean summary text"}', "tc8"),
+        statusCompleted("p8"),
+      ],
+      { sessionId: "p8", logPath: "/tmp/p8", taskId: "task1" },
+    );
+
+    const contents = querySessionActions({ sessionId: "sub_p8_tc8" }).map((a) => a.content);
+    expect(contents).toContain("clean summary text");
+    expect(contents.some((c) => c.includes("is_ok"))).toBe(false);
   });
 });
