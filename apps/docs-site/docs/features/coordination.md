@@ -64,7 +64,7 @@ Every session event — agent output, injected prompts, injected input and signa
 
 Sequencing is centralized on purpose. If each publisher minted its own ULID factory, same-millisecond events from different sources could not be totally ordered. One generator sidesteps that.
 
-Writes are **best-effort**: a persistence failure is logged, never allowed to interrupt live delivery. The live paths — the [PowerLine](../architecture/kernel) event stream and stream-hub publish — stay primary. The durable log is the audit and replay record.
+Writes are **best-effort**: a persistence failure is logged, never allowed to interrupt live delivery. The live paths — the [PowerLine](../architecture/powerline-ahp) event stream and stream-hub publish — stay primary. The durable log is the audit and replay record.
 
 Three CLI commands read different slices of this substrate.
 

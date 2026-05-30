@@ -99,16 +99,16 @@ Creating and editing follow one pattern everywhere — workspaces, tasks, person
 
 Tabs down the side:
 
-| Tab                 | What it holds                                                                                 |
-| ------------------- | --------------------------------------------------------------------------------------------- |
-| **Credentials**     | [Credential providers](./credentials) and encrypted tokens — a name and key per claw.         |
-| **GitHub Accounts** | The accounts used for repository access.                                                      |
-| **Personas**        | [Personas](./orchestration) — runtime, model, max turns, system prompt, MCP tool permissions. |
-| **Schedules**       | [Triggers that run agents on cron](../advanced/scheduled-tasks).                              |
-| **Appearance**      | Nine themes, several with light and dark cuts.                                                |
-| **Shortcuts**       | The keyboard map.                                                                             |
-| **Plugins**         | Which plugins are live, and what each contributes.                                            |
-| **About**           | Version and links.                                                                            |
+| Tab                 | What it holds                                                                                                      |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **Credentials**     | [Credential providers](./credentials) and encrypted tokens — a name and key per claw.                              |
+| **GitHub Accounts** | The accounts used for repository access.                                                                           |
+| **Personas**        | [Personas](../building-blocks/personas-runtimes) — runtime, model, max turns, system prompt, MCP tool permissions. |
+| **Schedules**       | [Triggers that run agents on cron](../advanced/scheduled-tasks).                                                   |
+| **Appearance**      | Nine themes, several with light and dark cuts.                                                                     |
+| **Shortcuts**       | The keyboard map.                                                                                                  |
+| **Plugins**         | Which plugins are live, and what each contributes.                                                                 |
+| **About**           | Version and links.                                                                                                 |
 
 ![Personas — runtime, model, and MCP configuration](/img/persona-management-view.png)
 
