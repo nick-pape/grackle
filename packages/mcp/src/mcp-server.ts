@@ -108,19 +108,13 @@ export interface McpServerOptions {
    */
   onComponentChangeSubscribe?: (notify: (workspaceId: string) => void) => () => void;
   /**
-   * Browser-facing scheme — `"http"` (default) or `"https"`. Drives the
-   * brokered MCP origin (the trusted asset/CSP origin for widgets) and the
-   * `resource` URL advertised by `/.well-known/oauth-protected-resource/mcp`.
-   * Set to `"https"` whenever the operator advertises the MCP server over TLS
-   * — either via a reverse proxy (#1371) or native TLS on this listener
-   * (#1373).
-   */
-  publicScheme?: "http" | "https";
-  /**
    * Optional native-TLS material (#1373). When set, the MCP listener is built
-   * with `http2.createSecureServer({ allowHTTP1: true })` and the in-process
-   * gRPC client connects to the co-located server over TLS, trusting `cert`
-   * as the loopback chain anchor (no skip-verify).
+   * with `http2.createSecureServer({ allowHTTP1: true })`, the in-process gRPC
+   * client connects to the co-located server over TLS (trusting `cert` as the
+   * loopback chain anchor, no skip-verify), and the local effective scheme
+   * flips to https for the broker asset origin + the OAuth resource URL
+   * fallback. Reverse-proxy TLS termination is signaled separately via
+   * `GRACKLE_PUBLIC_URL` / `GRACKLE_MCP_ORIGIN` (#1371).
    */
   secureContext?: {
     cert: Buffer;
@@ -689,6 +683,11 @@ async function createMcpServerInstance(
 /** Interval for pruning stale revocation entries (1 hour). */
 const REVOCATION_PRUNE_INTERVAL_MS: number = 60 * 60 * 1000;
 
+/** Whether a hostname is a loopback address (`localhost`, `127.0.0.1`, or `::1`). */
+function isLoopbackHostname(hostname: string): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+}
+
 /**
  * Session ids whose scoped auth context is bound to `workspaceId`. Pure helper so
  * the promoted-tool `tools/list_changed` fan-out (#1297) is unit-testable without
@@ -724,9 +723,13 @@ export function createMcpServer(options: McpServerOptions): http.Server | http2.
     publishWidgetEvent,
     mcpOrigin,
     onComponentChangeSubscribe,
-    publicScheme = "http",
     secureContext,
   } = options;
+  // Effective browser-facing scheme. https when TLS terminates here (#1373) or
+  // when the configured GRACKLE_MCP_ORIGIN/authServer is https (proxy, #1371);
+  // otherwise http. Drives the broker asset origin and OAuth resource URL
+  // fallback so they stay consistent with the wire-level scheme.
+  const localScheme: "http" | "https" = secureContext ? "https" : "http";
   // Trusted, browser-facing MCP origin for broker-captured widgets (their
   // `<script src>` + CSP allowlist). Derived from server config — NOT the request
   // `Host` header, which a hostile MCP client could spoof to point widget assets
@@ -734,7 +737,7 @@ export function createMcpServer(options: McpServerOptions): http.Server | http2.
   // reverse-proxy / TLS deployments where loopback isn't browser-reachable.
   const dialableMcpHost: string =
     bindHost === "0.0.0.0" || bindHost === "::" ? "127.0.0.1" : bindHost;
-  const brokerAssetOrigin: string = mcpOrigin ?? `${publicScheme}://${dialableMcpHost}:${mcpPort}`;
+  const brokerAssetOrigin: string = mcpOrigin ?? `${localScheme}://${dialableMcpHost}:${mcpPort}`;
   /** Parsed auth server URL, used for dynamic derivation of authorization_servers. */
   const parsedAuthServerUrl = authorizationServerUrl ? new URL(authorizationServerUrl) : undefined;
   /** Effective port (explicit or protocol default). */
@@ -743,6 +746,16 @@ export function createMcpServer(options: McpServerOptions): http.Server | http2.
     : undefined;
   /** Scheme to use for derived auth URLs (preserves https when configured). */
   const authServerScheme = parsedAuthServerUrl?.protocol ?? "http:";
+  /**
+   * When the configured auth server host is a real (non-loopback) hostname — i.e.
+   * `GRACKLE_PUBLIC_URL` is set behind a TLS reverse proxy — advertise it verbatim
+   * so discovery points at the correct public origin. For a loopback default we
+   * keep request-host derivation (preserves the localhost-vs-127.0.0.1 CSP fix).
+   */
+  const explicitAuthOrigin =
+    parsedAuthServerUrl && !isLoopbackHostname(parsedAuthServerUrl.hostname)
+      ? `${parsedAuthServerUrl.protocol}//${parsedAuthServerUrl.host}`
+      : undefined;
   const grpcClients = createGrpcClients(bindHost, grpcPort, apiKey, secureContext);
 
   /** Map of active session transports, keyed by session ID. */
@@ -792,24 +805,28 @@ export function createMcpServer(options: McpServerOptions): http.Server | http2.
         ? authorityHeader[0]
         : undefined) ||
       req.headers.host;
-    const url = new URL(req.url || "/", `${publicScheme}://${requestHost || "localhost"}`);
+    const url = new URL(req.url || "/", `${localScheme}://${requestHost || "localhost"}`);
 
-    // Derive resource URL from the request host (dialable by the client).
-    // `publicScheme` follows the operator-advertised scheme — http for cleartext
-    // loopback (default), https when TLS terminates here (#1373) or upstream
-    // (#1371) — so the URL we hand back to a client always works.
-    const requestResourceUrl = `${publicScheme}://${requestHost || url.host}`;
+    // Canonical resource (OAuth audience) identifying this MCP server. Prefer
+    // the configured public MCP origin (GRACKLE_MCP_ORIGIN) when set — behind a
+    // TLS reverse proxy, so the advertised resource isn't a downgraded http://
+    // URL — else derive from the request host using the local wire scheme so
+    // native TLS (#1373) emits https. NOT just the request Host when configured:
+    // a hostile client could spoof it to mint a token for an attacker audience.
+    const resourceUrl = mcpOrigin ?? `${localScheme}://${requestHost || url.host}`;
 
-    // OAuth Protected Resource Metadata (RFC 9728) — no auth required
-    // Derive auth server URL from request hostname so the browser stays on the
-    // same host — avoids CSP form-action 'self' mismatch (localhost vs 127.0.0.1).
+    // OAuth Protected Resource Metadata (RFC 9728) — no auth required.
+    // For a loopback auth server, derive its URL from the request hostname so the
+    // browser stays on the same host (avoids CSP form-action 'self' mismatch,
+    // localhost vs 127.0.0.1); for an explicit public auth origin, use it verbatim.
     if (authServerPort && url.pathname === "/.well-known/oauth-protected-resource/mcp") {
       const hostPart = url.hostname.includes(":") ? `[${url.hostname}]` : url.hostname;
-      const derivedAuthUrl = `${authServerScheme}//${hostPart}:${authServerPort}`;
+      const derivedAuthUrl =
+        explicitAuthOrigin ?? `${authServerScheme}//${hostPart}:${authServerPort}`;
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
-          resource: requestResourceUrl,
+          resource: resourceUrl,
           authorization_servers: [derivedAuthUrl],
         }),
       );
@@ -830,13 +847,18 @@ export function createMcpServer(options: McpServerOptions): http.Server | http2.
       return;
     }
 
-    // Auth check on every request
-    const authContext = authenticateMcpRequest(req, apiKey);
+    // Auth check on every request. When a public MCP origin is configured, OAuth
+    // tokens are audience-validated against it (not the loopback default).
+    const authContext = authenticateMcpRequest(
+      req,
+      apiKey,
+      mcpOrigin ? { expectedResource: mcpOrigin } : undefined,
+    );
     if (!authContext) {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (authorizationServerUrl) {
         headers["WWW-Authenticate"] =
-          `Bearer resource_metadata="${requestResourceUrl}/.well-known/oauth-protected-resource/mcp"`;
+          `Bearer resource_metadata="${resourceUrl}/.well-known/oauth-protected-resource/mcp"`;
       }
       res.writeHead(401, headers);
       res.end(JSON.stringify({ error: "Unauthorized" }));

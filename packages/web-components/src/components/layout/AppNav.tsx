@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, type JSX, type KeyboardEvent, type ReactNode } from "react";
 import { useLocation } from "react-router";
 import {
+  Activity,
   Brain,
   ClipboardList,
   Home,
@@ -15,6 +16,7 @@ import {
   ENVIRONMENTS_URL,
   HOME_URL,
   KNOWLEDGE_URL,
+  SESSIONS_URL,
   SETTINGS_URL,
   SETTINGS_CREDENTIALS_URL,
   TASKS_URL,
@@ -30,6 +32,7 @@ export type AppView =
   | "chat"
   | "tasks"
   | "environments"
+  | "sessions"
   | "knowledge"
   | "coordination"
   | "settings";
@@ -91,6 +94,14 @@ export const TABS: AppTab[] = [
     order: 3,
   },
   {
+    view: "sessions",
+    label: "Sessions",
+    icon: <Activity size={ICON_LG} />,
+    route: SESSIONS_URL,
+    testId: "sidebar-tab-sessions",
+    order: 4,
+  },
+  {
     view: "knowledge",
     label: "Knowledge",
     icon: <Brain size={ICON_LG} />,
@@ -124,7 +135,10 @@ export function getActiveView(pathname: string): AppView {
   if (pathname.startsWith(COORDINATION_URL)) {
     return "coordination";
   }
-  if (pathname.startsWith("/chat") || pathname.startsWith("/sessions")) {
+  if (pathname.startsWith(SESSIONS_URL)) {
+    return "sessions";
+  }
+  if (pathname.startsWith("/chat")) {
     return "chat";
   }
   if (pathname.startsWith("/workspaces") || pathname.startsWith("/environments")) {

@@ -85,6 +85,7 @@ jobs:
           project: chromium
           shard: "${{ matrix.shard }}/3"
           artifact-name: "e2e-results-chromium-${{ matrix.shard }}"
+          coverage-artifact-name: "e2e-coverage-chromium-${{ matrix.shard }}"
 
   e2e-knowledge:
     runs-on: ubuntu-latest
@@ -155,6 +156,7 @@ jobs:
         with:
           project: knowledge
           artifact-name: "e2e-results-knowledge"
+          coverage-artifact-name: "e2e-coverage-knowledge"
 
   report:
     runs-on: ubuntu-latest
@@ -192,3 +194,67 @@ jobs:
           path: "test-results/**/*.xml"
           key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
           secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
+
+  # Union per-suite lcov (unit from `build`, E2E from the shards) into one
+  # repo-wide total and surface it in the job summary (#1383).
+  coverage:
+    runs-on: ubuntu-latest
+    needs: [build, e2e-chromium, e2e-knowledge]
+    if: always() && needs.build.result == 'success'
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Download unit coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage
+          path: coverage-input/unit
+
+      - name: Download E2E coverage
+        uses: actions/download-artifact@v4
+        with:
+          pattern: e2e-coverage-*
+          path: coverage-input/e2e
+          merge-multiple: false
+
+      # Guard that E2E coverage actually landed: web unit tests already cover
+      # packages/web/src, so the merge's --require-source check alone can't tell
+      # E2E coverage apart. Assert at least one E2E lcov was downloaded.
+      - name: Verify E2E coverage artifacts present
+        run: |
+          if [ -z "$(find coverage-input/e2e -name lcov.info -print -quit 2>/dev/null)" ]; then
+            echo "::error::No E2E coverage lcov found — E2E coverage did not land."
+            exit 1
+          fi
+
+      - name: Rush install
+        run: node common/scripts/install-run-rush.js install
+
+      - name: Build coverage-merge
+        run: node common/scripts/install-run-rush.js build -t @grackle-ai/coverage-merge
+
+      - name: Merge coverage and write combined total
+        run: |
+          node scripts/coverage-merge/dist/index.js coverage-input \
+            --out coverage/combined/lcov.info \
+            --summary "$GITHUB_STEP_SUMMARY" \
+            --require-source packages/web/src
+
+      - name: Upload combined coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: combined-coverage
+          path: coverage/combined/lcov.info
+          if-no-files-found: warn
+          retention-days: 14

@@ -34,6 +34,32 @@ export const WEB_CONTENT_SECURITY_POLICY: string = [
 ].join("; ");
 
 /**
+ * `Strict-Transport-Security` value emitted when the connection is served over
+ * HTTPS. One year, without `includeSubDomains` — the latter could force HTTPS
+ * onto sibling subdomains of a shared apex (e.g. `grackle.home`) and is hard to
+ * roll back, so it is intentionally omitted.
+ */
+const HSTS_MAX_AGE_SECONDS: number = 31_536_000;
+
+/** Optional flags controlling scheme-dependent security headers. */
+export interface SecurityHeaderOptions {
+  /**
+   * When true, emit a `Strict-Transport-Security` header. Set this only when the
+   * browser-facing scheme is HTTPS (e.g. `GRACKLE_PUBLIC_URL` is an https
+   * origin), never for a plain-http origin.
+   */
+  hsts?: boolean;
+  /**
+   * Explicit browser-facing MCP Apps sandbox origin (`GRACKLE_SANDBOX_ORIGIN`),
+   * added to the CSP `frame-src` directive. Behind a reverse proxy the sandbox
+   * iframe may live on a *different host* than the web app, which the
+   * request-host wildcard does not cover; without this the browser would block
+   * the widget iframe. Invalid values are ignored.
+   */
+  sandboxOrigin?: string;
+}
+
+/**
  * Set defense-in-depth security headers on every web response.
  *
  * Called at the top of `createWebHandler`'s returned function so that all
@@ -45,10 +71,18 @@ export const WEB_CONTENT_SECURITY_POLICY: string = [
  *   provided, the CSP `form-action` directive explicitly includes the
  *   request origin to work around a Chromium bug where `'self'` does not
  *   match form submissions on non-standard ports.
+ * @param options - Optional scheme-dependent headers (e.g. {@link SecurityHeaderOptions.hsts}).
  */
-export function setSecurityHeaders(res: ServerResponse, requestHost?: string): void {
+export function setSecurityHeaders(
+  res: ServerResponse,
+  requestHost?: string,
+  options?: SecurityHeaderOptions,
+): void {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
+  if (options?.hsts) {
+    res.setHeader("Strict-Transport-Security", `max-age=${HSTS_MAX_AGE_SECONDS}`);
+  }
   // Chromium does not reliably match 'self' or explicit origin+port for
   // form-action on non-standard ports. Use the request hostname with a
   // wildcard port so the form POST is allowed regardless of port.
@@ -61,17 +95,28 @@ export function setSecurityHeaders(res: ServerResponse, requestHost?: string): v
   // hostname on any port (same workaround as form-action). The framed sandbox
   // is itself origin-isolated with its own locked-down CSP, so this only widens
   // which origins the app may *embed*, not what runs inside them.
-  let frameSrc = "frame-src 'self'";
+  const frameSrcSources: string[] = ["'self'"];
   if (requestHost) {
     try {
       const parsed = new URL(`http://${requestHost}`);
       const hostname = parsed.hostname;
       formAction = `form-action 'self' http://${hostname}:* https://${hostname}:*`;
-      frameSrc = `frame-src 'self' http://${hostname}:* https://${hostname}:*`;
+      frameSrcSources.push(`http://${hostname}:*`, `https://${hostname}:*`);
     } catch {
       // Malformed Host header — fall back to 'self' only
     }
   }
+  // Allow the explicitly-configured sandbox origin (which may be a different host
+  // behind a reverse proxy, uncovered by the request-host wildcard above). Parse
+  // via URL to normalize and prevent CSP injection through a malformed value.
+  if (options?.sandboxOrigin) {
+    try {
+      frameSrcSources.push(new URL(options.sandboxOrigin).origin);
+    } catch {
+      // Invalid sandbox origin — ignore.
+    }
+  }
+  const frameSrc = `frame-src ${frameSrcSources.join(" ")}`;
   const csp = [...BASE_CSP_DIRECTIVES, frameSrc, formAction].join("; ");
   res.setHeader("Content-Security-Policy", csp);
 }

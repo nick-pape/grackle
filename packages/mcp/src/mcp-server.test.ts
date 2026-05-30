@@ -358,6 +358,40 @@ describe("OAuth Protected Resource Metadata", () => {
     const metadata = JSON.parse(res.body);
     expect(metadata.authorization_servers).toEqual(["http://grackle:3000"]);
   });
+
+  /** Start an MCP server behind a TLS reverse proxy (public origins configured). */
+  function startProxiedServer(): Promise<http.Server> {
+    const srv = createMcpServer({
+      bindHost: "127.0.0.1",
+      mcpPort: 0,
+      grpcPort: 19999,
+      apiKey: TEST_API_KEY,
+      authorizationServerUrl: "https://grackle.home",
+      mcpOrigin: "https://mcp.grackle.home",
+    });
+    return new Promise<http.Server>((resolve) => {
+      srv.listen(0, "127.0.0.1", () => resolve(srv));
+    });
+  }
+
+  it("advertises the configured public resource (GRACKLE_MCP_ORIGIN), ignoring request Host", async () => {
+    server = await startProxiedServer();
+
+    const res = await getMetadata(server!, "attacker.example.com");
+
+    expect(res.status).toBe(200);
+    const metadata = JSON.parse(res.body);
+    expect(metadata.resource).toBe("https://mcp.grackle.home");
+  });
+
+  it("advertises the explicit public auth server verbatim, ignoring request Host", async () => {
+    server = await startProxiedServer();
+
+    const res = await getMetadata(server!, "attacker.example.com");
+
+    const metadata = JSON.parse(res.body);
+    expect(metadata.authorization_servers).toEqual(["https://grackle.home"]);
+  });
 });
 
 describe("MCP session cleanup on SSE disconnect", () => {
@@ -1139,7 +1173,7 @@ describe("sessionIdsForWorkspace (#1297 fan-out selection)", () => {
   });
 });
 
-describe("createMcpServer publicScheme + secureContext (#1373)", () => {
+describe("createMcpServer secureContext + native TLS (#1373)", () => {
   let server: Server | undefined;
   const FIXTURE_DIR: string = join(dirname(fileURLToPath(import.meta.url)), "__fixtures__");
 
@@ -1161,14 +1195,14 @@ describe("createMcpServer publicScheme + secureContext (#1373)", () => {
     }
   });
 
-  it("emits https resource URL in oauth-protected-resource when publicScheme=https", async () => {
+  it("emits mcpOrigin verbatim as the resource URL in oauth-protected-resource (proxy / TLS)", async () => {
     const srv = createMcpServer({
       bindHost: "127.0.0.1",
       mcpPort: 0,
       grpcPort: 19999,
       apiKey: TEST_API_KEY,
-      authorizationServerUrl: "https://127.0.0.1:3000",
-      publicScheme: "https",
+      authorizationServerUrl: "https://grackle.example:3000",
+      mcpOrigin: "https://grackle.example:8443",
     });
     await new Promise<void>((resolve) => srv.listen(0, "127.0.0.1", resolve));
     server = srv;
@@ -1196,7 +1230,7 @@ describe("createMcpServer publicScheme + secureContext (#1373)", () => {
 
     expect(res.status).toBe(200);
     const meta = JSON.parse(res.body);
-    expect(meta.resource).toBe(`https://grackle.example:${port(srv)}`);
+    expect(meta.resource).toBe(`https://grackle.example:8443`);
     expect(meta.authorization_servers).toEqual(["https://grackle.example:3000"]);
   });
 
@@ -1210,7 +1244,6 @@ describe("createMcpServer publicScheme + secureContext (#1373)", () => {
       mcpPort: 0,
       grpcPort: 19999,
       apiKey: TEST_API_KEY,
-      publicScheme: "https",
       secureContext: fx,
     });
     // `Http2SecureServer` isn't exposed as a runtime constructor on the http2

@@ -1,74 +1,10 @@
 import { useState, type JSX } from "react";
+import { Link } from "react-router";
+import { parseDelegationArgs } from "@grackle-ai/common";
+import { sessionUrl } from "../../utils/navigation.js";
 import type { ToolCardProps } from "./ToolCardProps.js";
 import styles from "./toolCards.module.scss";
 import agentStyles from "./AgentToolCard.module.scss";
-
-/** Normalized info extracted from agent tool args across runtimes. */
-interface AgentInfo {
-  /** Agent type: "Explore", "Plan", "general-purpose", "explore", "worker", etc. */
-  agentType?: string;
-  /** Short description of the subagent task. */
-  description?: string;
-  /** Full prompt sent to the subagent. */
-  prompt?: string;
-  /** Whether the subagent runs in the background. */
-  isBackground?: boolean;
-  /** Model override (e.g. "sonnet", "opus", "claude-sonnet-4-20250514"). */
-  model?: string;
-  /** Copilot: human-readable agent name (e.g. "find-tests"). */
-  agentName?: string;
-  /** Copilot read_agent: the agent_id being polled. */
-  agentId?: string;
-  /** Whether this is a resume of a prior subagent. */
-  isResume?: boolean;
-  /** Whether this is a read_agent poll (not a spawn). */
-  isPoll?: boolean;
-}
-
-/**
- * Parses agent tool args from all supported runtimes into a normalized shape.
- *
- * Handles:
- * - Claude Code `Agent` / `Task`: `{ subagent_type, description, prompt, run_in_background, model, resume }`
- * - Copilot `task`: `{ agent_type, description, prompt, mode, name }`
- * - Copilot `read_agent`: `{ agent_id }`
- */
-function parseAgentArgs(tool: string, args: unknown): AgentInfo {
-  if (args === null || args === undefined || typeof args !== "object") {
-    return {};
-  }
-  const a = args as Record<string, unknown>;
-  const toolLower = tool.toLowerCase();
-
-  // Copilot read_agent — polling a background agent
-  if (toolLower === "read_agent") {
-    return {
-      agentId: typeof a.agent_id === "string" ? a.agent_id : undefined,
-      isPoll: true,
-    };
-  }
-
-  // Copilot task — has `agent_type` and `name` fields
-  if (typeof a.agent_type === "string" || typeof a.name === "string") {
-    return {
-      agentType: typeof a.agent_type === "string" ? a.agent_type : undefined,
-      description: typeof a.description === "string" ? a.description : undefined,
-      prompt: typeof a.prompt === "string" ? a.prompt : undefined,
-      isBackground: a.mode === "background",
-      agentName: typeof a.name === "string" ? a.name : undefined,
-    };
-  }
-
-  // Claude Code Agent / Task — has `subagent_type` field
-  return {
-    agentType: typeof a.subagent_type === "string" ? a.subagent_type : undefined,
-    description: typeof a.description === "string" ? a.description : undefined,
-    prompt: typeof a.prompt === "string" ? a.prompt : undefined,
-    isBackground: a.run_in_background === true,
-    model: typeof a.model === "string" ? a.model : undefined,
-    isResume: typeof a.resume === "string" && a.resume.length > 0,
-  };
-}
 
 /** Regex to parse Copilot read_agent structured result prefix. */
 const READ_AGENT_STATUS_PATTERN: RegExp =
@@ -105,10 +41,16 @@ function parseReadAgentResult(result: string): ReadAgentResult | undefined {
 const PREVIEW_LINES: number = 5;
 
 /** Renders a subagent tool call (Claude Code Agent, Copilot task/read_agent). */
-export function AgentToolCard({ tool, args, result, isError }: ToolCardProps): JSX.Element {
+export function AgentToolCard({
+  tool,
+  args,
+  result,
+  isError,
+  childSessionId,
+}: ToolCardProps): JSX.Element {
   const [expanded, setExpanded] = useState(false);
   const [promptExpanded, setPromptExpanded] = useState(false);
-  const info = parseAgentArgs(tool, args);
+  const info = parseDelegationArgs(tool, args);
   const inProgress = result === undefined;
 
   // For read_agent, try to parse the structured result
@@ -172,6 +114,16 @@ export function AgentToolCard({ tool, args, result, isError }: ToolCardProps): J
         )}
 
         <span className={styles.spacer} />
+
+        {childSessionId && (
+          <Link
+            to={sessionUrl(childSessionId)}
+            className={agentStyles.viewActivity}
+            data-testid="tool-card-agent-view-activity"
+          >
+            View activity &#8594;
+          </Link>
+        )}
 
         {inProgress && !info.isBackground && (
           <span className={styles.exitPending} data-testid="tool-card-pending">

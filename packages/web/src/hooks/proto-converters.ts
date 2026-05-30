@@ -60,6 +60,7 @@ export function protoToSession(p: grackle.Session): Session {
     endReason: p.endReason || undefined,
     personaId: p.personaId || undefined,
     taskId: p.taskId || undefined,
+    parentSessionId: p.parentSessionId || undefined,
     inputTokens: p.inputTokens,
     outputTokens: p.outputTokens,
     costMillicents: p.costMillicents,

@@ -322,3 +322,43 @@ export const LegacyTask: Story = {
     await expect(canvas.getByTestId("tool-card-agent-type")).toHaveTextContent("Explore");
   },
 };
+
+// ---------------------------------------------------------------------------
+// Subagent activity link (#1075)
+// ---------------------------------------------------------------------------
+
+export const WithActivityLink: Story = {
+  name: "Links to subagent activity view",
+  args: {
+    tool: "Agent",
+    args: {
+      subagent_type: "Explore",
+      description: "Investigate the failing test",
+      prompt: "Find why the auth test fails and report the root cause.",
+    },
+    result: "The test fails because the token refresh is mocked incorrectly.",
+    childSessionId: "sub_parent1_tc1",
+  },
+  play: async ({ canvas }) => {
+    const link = canvas.getByTestId("tool-card-agent-view-activity");
+    await expect(link).toBeInTheDocument();
+    await expect(link).toHaveAttribute("href", "/sessions/sub_parent1_tc1");
+  },
+};
+
+export const NoActivityLinkWhenNoChild: Story = {
+  name: "No activity link when there is no child session",
+  args: {
+    tool: "Agent",
+    args: {
+      subagent_type: "Explore",
+      description: "A plain delegation",
+      prompt: "Do the thing.",
+    },
+    result: "Done.",
+    // childSessionId intentionally omitted
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.queryByTestId("tool-card-agent-view-activity")).not.toBeInTheDocument();
+  },
+};

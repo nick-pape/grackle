@@ -72,6 +72,7 @@ import {
   consumeRefreshToken,
   createOAuthAccessToken,
   OAUTH_ACCESS_TOKEN_TTL_MS,
+  parsePublicOrigin,
 } from "@grackle-ai/auth";
 
 // ─── Options ────────────────────────────────────────────────
@@ -136,17 +137,12 @@ export interface WebServerOptions {
   /** Bind host (e.g. "127.0.0.1" or "0.0.0.0"). */
   bindHost: string;
   /**
-   * Browser-facing scheme: `"http"` for cleartext (default), `"https"` when
-   * either a TLS-terminating reverse proxy is in front (#1371) or native TLS
-   * is enabled via {@link WebServerOptions.secureContext} (#1373). Controls
-   * the `Secure` cookie flag, OAuth metadata URLs, and any browser-facing URL
-   * the server emits.
-   */
-  publicScheme?: "http" | "https";
-  /**
    * Optional TLS material. When provided, the returned server is an
    * `Http2SecureServer` (h2 over TLS, with HTTP/1.1 fallback for legacy
-   * clients) instead of a cleartext `http.Server` (#1373).
+   * clients) instead of a cleartext `http.Server` (#1373). When set without
+   * an explicit {@link WebServerOptions.publicUrl}, the server entry point
+   * should synthesize one from the bind host + port so the public scheme
+   * stays https end-to-end (Secure cookie, OAuth metadata, HSTS).
    */
   secureContext?: SecureContext;
   /** ConnectRPC route registration function (injected from grpc-service). */
@@ -166,6 +162,16 @@ export interface WebServerOptions {
    * `window.location` + `sandboxPort`.
    */
   sandboxOrigin?: string;
+  /**
+   * Canonical browser-facing origin (e.g. `https://grackle.home`), from
+   * `GRACKLE_PUBLIC_URL`. When set, it is the source of truth for the
+   * browser-facing scheme + host behind a TLS-terminating reverse proxy:
+   * the OAuth authorization-server metadata uses its scheme + host, the
+   * session cookie gets the `Secure` flag iff its scheme is https, and HSTS
+   * is emitted iff https. When unset, behavior is unchanged (request-host
+   * derivation for OAuth metadata; cookie `Secure` keyed off the wildcard bind).
+   */
+  publicUrl?: string;
   /**
    * Inbound channel webhook handler (injected). Verifies the capability token
    * and delivers the message. When omitted, the `/hook` route is disabled.
@@ -490,7 +496,6 @@ export function createWebServer(options: WebServerOptions): GrackleServer {
     apiKey,
     webPort,
     bindHost,
-    publicScheme = "http",
     secureContext,
     connectRoutes,
     webDistDir,
@@ -498,16 +503,31 @@ export function createWebServer(options: WebServerOptions): GrackleServer {
     pluginNames,
     sandboxPort,
     sandboxOrigin,
+    publicUrl,
     handleWebhook,
   } = options;
   const distDir = webDistDir ?? resolveWebDistDir();
-  const dialableHost = isWildcardAddress(bindHost) ? "127.0.0.1" : bindHost;
+  const allowNetwork = isWildcardAddress(bindHost);
+  const dialableHost = allowNetwork ? "127.0.0.1" : bindHost;
   const urlHost = dialableHost.includes(":") ? `[${dialableHost}]` : dialableHost;
-  // The `Secure` cookie flag follows the browser-facing scheme, NOT the bind
-  // address. Browsers refuse a `Secure` cookie sent over plain http (broken
-  // login), and accept one over https regardless of how the server reached
-  // them. Combine with native TLS (#1373) or a TLS-terminating proxy (#1371).
-  const secureCookie = publicScheme === "https";
+
+  // When GRACKLE_PUBLIC_URL is set it is the source of truth for the
+  // browser-facing scheme + host (behind a TLS-terminating reverse proxy).
+  // Validate here too (not just in the server's config parser) so a direct
+  // consumer of this exported factory fails fast with a clear error rather than
+  // a low-signal URL exception deep in a request handler.
+  const publicUrlParsed = publicUrl ? parsePublicOrigin(publicUrl, "publicUrl") : undefined;
+  // Treat native TLS (#1373) as an implicit https public scheme — secureContext
+  // means this listener IS terminating TLS, so https is what the browser sees
+  // even when the operator didn't separately set GRACKLE_PUBLIC_URL.
+  const publicIsHttps = publicUrlParsed?.protocol === "https:" || !!secureContext;
+  // Session cookie `Secure`: keyed off the effective public scheme when known,
+  // else the wildcard-bind heuristic (unchanged for the casual local user).
+  const cookieSecure = publicUrlParsed || secureContext ? publicIsHttps : allowNetwork;
+  // CSP form-action / frame-src host: use the configured public host when set
+  // (consistent with ignoring the spoofable request Host elsewhere); otherwise
+  // fall back to the request Host for the loopback / LAN case.
+  const cspHost = publicUrlParsed ? publicUrlParsed.host : undefined;
 
   /** ConnectRPC handler for browser gRPC calls (Connect protocol over HTTP/1.1). */
   const webConnectHandler = connectRoutes
@@ -516,7 +536,15 @@ export function createWebServer(options: WebServerOptions): GrackleServer {
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   const handler = async (req: http.IncomingMessage, res: http.ServerResponse): Promise<void> => {
-    setSecurityHeaders(res, getRequestHost(req));
+    // CSP host: prefer the configured public host; else the request's authority
+    // (h2 :authority via getRequestHost) or Host header. HSTS follows the public
+    // scheme so it's emitted whenever the operator advertises https — covers
+    // both reverse-proxy TLS (#1371) and native TLS (#1373 via synthesized
+    // publicUrl from the server entry point).
+    setSecurityHeaders(res, cspHost ?? getRequestHost(req), {
+      hsts: publicIsHttps,
+      ...(sandboxOrigin !== undefined ? { sandboxOrigin } : {}),
+    });
 
     let rawPath: string;
     let queryString = "";
@@ -572,11 +600,19 @@ export function createWebServer(options: WebServerOptions): GrackleServer {
     }
 
     // --- OAuth Authorization Server Metadata (no auth) ---
-    // Derive base URL from request Host header so URLs match the origin the
-    // browser is on — avoids CSP form-action 'self' mismatch (#1180).
+    // When GRACKLE_PUBLIC_URL is set, advertise its scheme + host so OAuth
+    // clients reaching us over https (behind a TLS proxy) get https endpoints
+    // (RFC 8414). Otherwise derive the base URL from the request Host header so
+    // URLs match the origin the browser is on — avoids CSP form-action 'self'
+    // mismatch (#1180).
     if (rawPath === "/.well-known/oauth-authorization-server") {
+      // Prefer configured publicUrl (proxy or synthesized for native TLS), else
+      // derive from the request's authority (h2 :authority via getRequestHost
+      // or Host) so URLs match the origin the browser actually reached.
       const requestHost = getRequestHost(req) || `${urlHost}:${webPort}`;
-      const baseUrl = `${publicScheme}://${requestHost}`;
+      const baseUrl = publicUrlParsed
+        ? `${publicUrlParsed.protocol}//${publicUrlParsed.host}`
+        : `${secureContext ? "https" : "http"}://${requestHost}`;
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
@@ -826,7 +862,7 @@ export function createWebServer(options: WebServerOptions): GrackleServer {
           }
 
           // Pairing succeeded — also create a browser session
-          const setCookie = createSession(apiKey, { secure: secureCookie });
+          const setCookie = createSession(apiKey, { secure: cookieSecure });
           responseHeaders["Set-Cookie"] = setCookie;
           hasPairedSession = true;
         }
@@ -939,7 +975,7 @@ export function createWebServer(options: WebServerOptions): GrackleServer {
       if (code) {
         const remoteIp = getRemoteIp(req);
         if (redeemPairingCode(code, remoteIp)) {
-          const setCookie = createSession(apiKey, { secure: secureCookie });
+          const setCookie = createSession(apiKey, { secure: cookieSecure });
           res.writeHead(302, {
             Location: "/",
             "Set-Cookie": setCookie,

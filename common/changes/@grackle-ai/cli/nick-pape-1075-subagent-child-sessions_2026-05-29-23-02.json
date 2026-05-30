@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Materialize SDK-internal subagents (Claude Agent, Copilot task/read_agent) as first-class child sessions: shared delegation detection, deterministic child session ids, event-processor materialization with floor activity, Session.parent_session_id, and parent/child navigation in the web UI (#1075)",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

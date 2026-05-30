@@ -91,10 +91,24 @@ async function main(): Promise<void> {
   const secureContext: SecureContext | undefined = config.tls
     ? loadSecureContext(config.tls, logger)
     : undefined;
-  // Browser-facing scheme — flips to https when TLS terminates here.
-  // #1371 (GRACKLE_PUBLIC_URL) will widen this to also follow an explicit
-  // public URL when behind a TLS-terminating reverse proxy.
-  const publicScheme: "http" | "https" = secureContext ? "https" : "http";
+  // Effective public origin. Operator-set GRACKLE_PUBLIC_URL wins (#1371 — TLS
+  // terminates upstream); else if native TLS is enabled (#1373) synthesize a
+  // local https origin so every downstream piece (Secure cookie, OAuth
+  // metadata, HSTS, pairing URL, channel ingress) sees the right scheme.
+  // For the synthesized form prefer "localhost" over 127.0.0.1: it lets self-
+  // signed CN=localhost certs validate, browsers prefer it, and on Windows the
+  // IPv4 loopback alone has a Node h2 cross-process quirk that ::1 avoids.
+  const synthesizedPublicHost: string = isWildcardAddress(config.host)
+    ? detectLanIp() || "localhost"
+    : config.host === "127.0.0.1"
+      ? "localhost"
+      : config.host;
+  const effectivePublicUrl: string | undefined =
+    config.publicUrl ??
+    (secureContext ? `https://${synthesizedPublicHost}:${config.webPort}` : undefined);
+  const publicScheme: "http" | "https" = effectivePublicUrl?.startsWith("https://")
+    ? "https"
+    : "http";
 
   // AHP HR7: initialize the additive OTLP logs sink for runtime diagnostics.
   // No-op unless OTEL_EXPORTER_OTLP_ENDPOINT is set; never breaks startup.
@@ -326,20 +340,24 @@ async function main(): Promise<void> {
   const ingressUrlHost = ingressHost.includes(":") ? `[${ingressHost}]` : ingressHost;
   setChannelConfig({
     signingSecret: apiKey,
-    ingressBaseUrl: `${publicScheme}://${ingressUrlHost}:${webPort}`,
+    // External callers reach us at the effective public origin: an explicit
+    // GRACKLE_PUBLIC_URL when behind a TLS reverse proxy (#1371), the
+    // synthesized https origin when native TLS terminates here (#1373), or the
+    // local http origin otherwise.
+    ingressBaseUrl: effectivePublicUrl ?? `http://${ingressUrlHost}:${webPort}`,
   });
 
   const webServer = createWebServer({
     apiKey,
     webPort,
     bindHost,
-    publicScheme,
     ...(secureContext ? { secureContext } : {}),
     connectRoutes: routes,
     handleWebhook: ingestChannelMessage,
     pluginNames: loaded.pluginNames,
     sandboxPort: config.sandboxPort,
     ...(config.sandboxOrigin !== undefined ? { sandboxOrigin: config.sandboxOrigin } : {}),
+    ...(effectivePublicUrl !== undefined ? { publicUrl: effectivePublicUrl } : {}),
     readinessCheck: (): ReadinessResult => {
       const checks: ReadinessResult["checks"] = {};
       try {
@@ -392,7 +410,12 @@ async function main(): Promise<void> {
     const code = generatePairingCode();
     if (code) {
       const pairingHost = isWildcardAddress(bindHost) ? detectLanIp() || "localhost" : bindHost;
-      const pairingUrl = `${publicScheme}://${pairingHost}:${webPort}/pair?code=${code}`;
+      // Prefer the effective public URL (explicit GRACKLE_PUBLIC_URL or the
+      // synthesized https origin under native TLS) so the printed URL is the
+      // one the browser will actually open. Falls back to cleartext loopback.
+      const pairingUrl = effectivePublicUrl
+        ? `${effectivePublicUrl}/pair?code=${code}`
+        : `http://${pairingHost}:${webPort}/pair?code=${code}`;
 
       process.stdout.write("\n");
       process.stdout.write("  Open in browser:\n");
@@ -427,10 +450,13 @@ async function main(): Promise<void> {
   });
 
   // --- MCP server (Streamable HTTP; h2-over-TLS when secureContext is set) ---
-  // Use dialable host for OAuth URLs (wildcard → 127.0.0.1)
+  // The MCP protected-resource metadata points clients at this authorization
+  // server. Use the effective public URL (explicit GRACKLE_PUBLIC_URL or the
+  // synthesized https origin under native TLS) so discovery carries the right
+  // scheme/host; otherwise the dialable loopback host (wildcard → 127.0.0.1).
   const dialableHost = isWildcardAddress(bindHost) ? "127.0.0.1" : bindHost;
   const dialableUrlHost = dialableHost.includes(":") ? `[${dialableHost}]` : dialableHost;
-  const authServerUrl = `${publicScheme}://${dialableUrlHost}:${webPort}`;
+  const authServerUrl = effectivePublicUrl ?? `http://${dialableUrlHost}:${webPort}`;
   // Adapt plugin-contributed tools to the concrete ToolDefinition type expected by MCP.
   // Validates shape at startup so runtime failures surface immediately with a clear message.
   const pluginToolGroups: ToolDefinition[][] =
@@ -457,7 +483,6 @@ async function main(): Promise<void> {
     authorizationServerUrl: authServerUrl,
     toolGroups: pluginToolGroups,
     publishWidgetEvent,
-    publicScheme,
     ...(secureContext ? { secureContext } : {}),
     // Push tools/list_changed to a workspace's MCP sessions when its promoted
     // component set changes (#1297), via the domain-event bus.

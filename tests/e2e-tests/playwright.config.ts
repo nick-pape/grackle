@@ -24,6 +24,11 @@ export default defineConfig({
   timeout: 30_000,
   retries: process.env.CI ? 1 : 0,
   fullyParallel: true,
+  // Coverage hooks are no-ops unless E2E_COVERAGE=true (see coverage-helpers.ts).
+  // globalSetup clears stale monocart cache; globalTeardown aggregates each
+  // worker's V8 coverage into coverage/lcov.info, source-mapped to web src.
+  globalSetup: "./coverage-global-setup.ts",
+  globalTeardown: "./coverage-global-teardown.ts",
   reporter: [["list"], ["junit", { outputFile: "test-results/e2e-results.xml" }]],
   projects: [
     {
