@@ -134,6 +134,35 @@ const RESOURCE_WATCH_CHANNEL_PREFIX: string = "ahp-resource-watch:/";
 const WATCH_COALESCE_MS: number = 75;
 
 /**
+ * Maximum number of concurrent resource watches a single connection may hold.
+ * Each subscribed watch consumes OS file-watch descriptors, so this bounds a
+ * buggy or hostile client's ability to exhaust them. Generous for any real
+ * document-viewer consumer.
+ */
+const MAX_RESOURCE_WATCHES_PER_CONNECTION: number = 64;
+
+/**
+ * Validate an optional AHP `GlobSet` ({@link ResourceWatchState.excludes} /
+ * `includes`) from untrusted client params: it must be `undefined` or an object
+ * with an `items` array of strings.
+ *
+ * @throws ResourceError with `InvalidParams` for any other shape.
+ */
+function assertGlobSet(value: unknown, field: string): void {
+  if (value === undefined) {
+    return;
+  }
+  const items =
+    typeof value === "object" && value !== null ? (value as { items?: unknown }).items : undefined;
+  if (!Array.isArray(items) || !items.every((g) => typeof g === "string")) {
+    throw new ResourceError(
+      JsonRpcErrorCodes.InvalidParams,
+      `createResourceWatch: ${field} must be { items: string[] }`,
+    );
+  }
+}
+
+/**
  * Decode a session URI to its underlying sessionId. Returns undefined for
  * non-session URIs OR for the bare prefix `ahp-session:/` with no id
  * (which would otherwise produce an empty sessionId and collide on
@@ -225,6 +254,12 @@ interface ResourceWatchEntry {
   readonly pending: Map<string, ResourceChange>;
   /** Active coalesce-flush timer, if one is scheduled. */
   flushTimer?: ReturnType<typeof setTimeout>;
+  /**
+   * Set once the watch has been torn down. Guards against a late chokidar event
+   * (delivered after the async `watcher.close()` is requested) re-arming a flush
+   * timer and emitting a phantom batch on an already-unsubscribed channel.
+   */
+  stopped?: boolean;
 }
 
 /**
@@ -531,6 +566,18 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     conn: AhpServerConnection,
   ): Promise<CreateResourceWatchResult> {
     const cState = clientState(conn);
+    if (cState.watches.size >= MAX_RESOURCE_WATCHES_PER_CONNECTION) {
+      throw new ResourceError(
+        JsonRpcErrorCodes.InvalidParams,
+        `Too many active resource watches (max ${MAX_RESOURCE_WATCHES_PER_CONNECTION})`,
+      );
+    }
+    // Validate the untrusted glob sets before storing them: startResourceWatch
+    // maps over `.items`, so a malformed `{ items: <non-array> }` would otherwise
+    // throw a raw TypeError at subscribe time (surfacing as InternalError instead
+    // of InvalidParams). Mirrors the encoding guard in readResource.
+    assertGlobSet(params.excludes, "excludes");
+    assertGlobSet(params.includes, "includes");
     const rootPath = await assertWithinRoots(resourceUriToPath(params.uri), cState.allowedRoots);
     if (!existsSync(rootPath)) {
       throw new ResourceError(AhpErrorCodes.NotFound, `Watch target does not exist: ${params.uri}`);
@@ -556,7 +603,7 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     entry: ResourceWatchEntry,
   ): void {
     entry.flushTimer = undefined;
-    if (entry.pending.size === 0) {
+    if (entry.stopped === true || entry.pending.size === 0) {
       return;
     }
     const items = [...entry.pending.values()];
@@ -590,6 +637,9 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     if (entry.watcher !== undefined) {
       return;
     }
+    // Clear any stopped flag from a prior teardown (e.g. an error-handler tear
+    // down followed by a re-subscribe) so the fresh watcher's events are emitted.
+    entry.stopped = false;
     const { rootPath, descriptor } = entry;
     const excludeMatchers = (descriptor.excludes?.items ?? []).map((g) => picomatch(g));
     const includeMatchers = (descriptor.includes?.items ?? []).map((g) => picomatch(g));
@@ -636,6 +686,11 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     const record =
       (type: ResourceChangeType): ((changedPath: string) => void) =>
       (changedPath: string): void => {
+        // A late event delivered after teardown (watcher.close() is async) must
+        // not re-arm a timer or emit on the unsubscribed channel.
+        if (entry.stopped === true) {
+          return;
+        }
         if (includeMatchers.length > 0) {
           const rel = relForMatch(changedPath);
           if (rel !== "" && !includeMatchers.some((m) => m(rel))) {
@@ -643,8 +698,18 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
           }
         }
         const uri = emitUriFor(changedPath);
-        entry.pending.set(uri, { uri, type });
-        if (entry.flushTimer === undefined) {
+        // Coalesce: an add followed by a delete of the same path within one
+        // window is a net no-op the client never saw created — drop it rather
+        // than emitting a Deleted for a path it has no record of.
+        if (
+          type === ResourceChangeType.Deleted &&
+          entry.pending.get(uri)?.type === ResourceChangeType.Added
+        ) {
+          entry.pending.delete(uri);
+        } else {
+          entry.pending.set(uri, { uri, type });
+        }
+        if (entry.pending.size > 0 && entry.flushTimer === undefined) {
           entry.flushTimer = setTimeout(() => {
             flushResourceWatch(conn, channel, entry);
           }, WATCH_COALESCE_MS);
@@ -666,11 +731,24 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
 
   /** Release a watch's filesystem resources (watcher + pending flush timer). */
   function stopResourceWatch(entry: ResourceWatchEntry): void {
+    // Mark stopped first so any event already queued behind the async close()
+    // is ignored by `record`/`flushResourceWatch`.
+    entry.stopped = true;
     if (entry.flushTimer !== undefined) {
       clearTimeout(entry.flushTimer);
       entry.flushTimer = undefined;
     }
-    entry.watcher?.close().catch(() => undefined);
+    entry.pending.clear();
+    // Detach our event listeners synchronously (close() is async) so no further
+    // events reach `record` even within the close window. Only our own events are
+    // removed (not chokidar internals).
+    const w = entry.watcher;
+    if (w !== undefined) {
+      for (const ev of ["add", "addDir", "change", "unlink", "unlinkDir", "error"]) {
+        w.removeAllListeners(ev);
+      }
+      w.close().catch(() => undefined);
+    }
     entry.watcher = undefined;
   }
 

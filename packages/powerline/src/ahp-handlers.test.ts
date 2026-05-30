@@ -1239,6 +1239,81 @@ describe("createResourceWatch", () => {
     }
   }, 12_000);
 
+  it("delivers no further change notifications after unsubscribe", async () => {
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      await client.socket.request("createSession", {
+        channel: "ahp-session:/watch-unsub-1",
+        provider: TEST_RUNTIME.name,
+        config: { workingDirectory: workdir },
+      });
+      const { channel } = (await client.socket.request("createResourceWatch", {
+        channel: "ahp-root://",
+        uri: pathToFileURL(workdir).href,
+      })) as { channel: string };
+      await client.socket.request("subscribe", { channel });
+      await new Promise((r) => setTimeout(r, 400));
+      // Unsubscribe, THEN mutate — the torn-down watch must emit nothing, and no
+      // late event may re-arm a flush onto the unsubscribed channel.
+      client.socket.notify("unsubscribe", { channel });
+      await new Promise((r) => setTimeout(r, 100));
+      await writeFile(join(workdir, "after.md"), "# After", "utf-8");
+      await new Promise((r) => setTimeout(r, 1200));
+      expect(client.received.filter((e) => e.channel === channel).length).toBe(0);
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  }, 10_000);
+
+  it("rejects malformed excludes with InvalidParams", async () => {
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      await client.socket.request("createSession", {
+        channel: "ahp-session:/watch-badglob-1",
+        provider: TEST_RUNTIME.name,
+        config: { workingDirectory: workdir },
+      });
+      const code = await expectRequestErrorCode(
+        client.socket.request("createResourceWatch", {
+          channel: "ahp-root://",
+          uri: pathToFileURL(workdir).href,
+          excludes: { items: 5 } as unknown as { items: string[] },
+        }),
+      );
+      expect(code).toBe(JsonRpcErrorCodes.InvalidParams);
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  });
+
+  it("caps the number of concurrent watches per connection", async () => {
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      await client.socket.request("createSession", {
+        channel: "ahp-session:/watch-cap-1",
+        provider: TEST_RUNTIME.name,
+        config: { workingDirectory: workdir },
+      });
+      const uri = pathToFileURL(workdir).href;
+      // 64 is MAX_RESOURCE_WATCHES_PER_CONNECTION; the 65th must be rejected.
+      for (let i = 0; i < 64; i++) {
+        await client.socket.request("createResourceWatch", { channel: "ahp-root://", uri });
+      }
+      const code = await expectRequestErrorCode(
+        client.socket.request("createResourceWatch", { channel: "ahp-root://", uri }),
+      );
+      expect(code).toBe(JsonRpcErrorCodes.InvalidParams);
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  }, 15_000);
+
   it("rejects createResourceWatch outside the allowed roots", async () => {
     const elsewhere = await mkdtemp(join(tmpdir(), "grackle-ahp-watchout-"));
     const lb = await spinUpLoopback();
