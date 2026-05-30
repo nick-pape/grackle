@@ -1651,6 +1651,58 @@ describe("subagent child sessions (#1075)", () => {
     expect(contents).toContain("done");
   });
 
+  it("detects a Copilot delegation from the real AHP-mapped task content shape", async () => {
+    // Captured verbatim from a live Copilot-shaped run through the real pipeline:
+    // the `task` args (agent_type/name/agent_id/mode/prompt) survive the AHP
+    // round-trip under `args`, alongside tool_name/display_name/invocation_message.
+    sessionStore.createSession("pcp", "env1", "copilot", "test", "gpt-4o", "/tmp/pcp", "task1");
+    const realContent =
+      '{"tool":"task","tool_name":"task","display_name":"task","invocation_message":"Running task","args":{"agent_type":"explore","name":"find-tests","agent_id":"ag-cp1","mode":"background","prompt":"Find all test files."}}';
+    const spawn = create(powerline.AgentEventSchema, {
+      sessionId: "pcp",
+      type: "tool_use",
+      timestamp: new Date().toISOString(),
+      content: realContent,
+      toolCallId: "tc-spawn",
+    });
+
+    await waitForProcessing(
+      [
+        spawn,
+        toolResult("pcp", "Agent started in background with agent_id: ag-cp1", "tc-spawn"),
+        toolUse("pcp", "read_agent", { agent_id: "ag-cp1" }, "tc-poll"),
+        toolResult("pcp", "Agent completed. agent_id: ag-cp1\n\nFound 42 test files.", "tc-poll"),
+        statusCompleted("pcp"),
+      ],
+      { sessionId: "pcp", logPath: "/tmp/pcp", taskId: "task1" },
+    );
+
+    // Identity = agent_id, so spawn + poll converge on ONE child.
+    const children = sessionStore.listSessionsByParent("pcp");
+    expect(children.map((s) => s.id)).toEqual(["sub_pcp_ag-cp1"]);
+    expect(children[0]?.endReason).toBe("completed");
+    const contents = querySessionActions({ sessionId: "sub_pcp_ag-cp1" }).map((a) => a.content);
+    expect(contents).toContain("Find all test files.");
+    expect(contents.some((c) => c.includes("Found 42 test files."))).toBe(true);
+  });
+
+  it("does not materialize a child for Codex-style tools (no native subagent tool)", async () => {
+    // Codex delegates via Grackle MCP tools, not a native subagent tool, so its
+    // tool calls must never be mistaken for delegations.
+    sessionStore.createSession("pcx", "env1", "codex", "test", "gpt-5.5", "/tmp/pcx", "task1");
+
+    await waitForProcessing(
+      [
+        toolUse("pcx", "shell", { command: "ls -la" }, "tc-sh"),
+        toolResult("pcx", "file listing", "tc-sh"),
+        statusCompleted("pcx"),
+      ],
+      { sessionId: "pcx", logPath: "/tmp/pcx", taskId: "task1" },
+    );
+
+    expect(sessionStore.listSessionsByParent("pcx")).toHaveLength(0);
+  });
+
   it("unwraps JSON-wrapped tool results into clean floor text", async () => {
     sessionStore.createSession("p8", "env1", "claude-code", "test", "sonnet", "/tmp/p8", "task1");
 
@@ -1689,6 +1741,65 @@ describe("subagent child sessions (#1075)", () => {
     // replayed tool_use / tool_result (closeChildSession is a no-op once terminal).
     expect(actions.filter((a) => a.content === "investigate")).toHaveLength(1);
     expect(actions.filter((a) => a.content === "first result")).toHaveLength(1);
+  });
+
+  it("does NOT interrupt a background spawn child when the parent stream ends", async () => {
+    sessionStore.createSession("pb1", "env1", "copilot", "test", "gpt-4o", "/tmp/pb1", "task1");
+
+    // Background spawn: the tool_result is just a handle. No terminal poll, then
+    // the stream ends. The subagent runs independently, so it must stay running.
+    await waitForProcessing(
+      [
+        toolUse(
+          "pb1",
+          "task",
+          { agent_type: "worker", name: "bg", agent_id: "bg-1", mode: "background", prompt: "go" },
+          "spawnB",
+        ),
+        toolResult("pb1", "Agent started in background with agent_id: bg-1", "spawnB"),
+        statusCompleted("pb1"),
+      ],
+      { sessionId: "pb1", logPath: "/tmp/pb1", taskId: "task1" },
+    );
+
+    const child = sessionStore.getSession("sub_pb1_bg-1");
+    expect(child).toBeDefined();
+    expect(child?.status).toBe("running");
+    expect(child?.endReason).toBeNull();
+  });
+
+  it("does NOT interrupt a child after a non-terminal poll when the parent stream ends", async () => {
+    sessionStore.createSession("pb2", "env1", "copilot", "test", "gpt-4o", "/tmp/pb2", "task1");
+
+    // A read_agent poll reports "running" (non-terminal), then the parent stream
+    // ends. The poll already paired, so the child must not be interrupted.
+    await waitForProcessing(
+      [
+        toolUse("pb2", "read_agent", { agent_id: "p-2" }, "pollB"),
+        toolResult("pb2", "Agent running. agent_id: p-2\n\nworking", "pollB"),
+        statusCompleted("pb2"),
+      ],
+      { sessionId: "pb2", logPath: "/tmp/pb2", taskId: "task1" },
+    );
+
+    const child = sessionStore.getSession("sub_pb2_p-2");
+    expect(child).toBeDefined();
+    expect(child?.status).toBe("running");
+  });
+
+  it("DOES interrupt a synchronous spawn child whose result never arrives", async () => {
+    sessionStore.createSession("pb3", "env1", "claude-code", "test", "sonnet", "/tmp/pb3", "task1");
+
+    // Synchronous Claude Agent: no tool_result, stream ends → child interrupted
+    // (the subagent died with the parent; this is the genuinely-unpaired case).
+    await waitForProcessing(
+      [toolUse("pb3", "Agent", { subagent_type: "Explore", prompt: "go" }, "syncB")],
+      { sessionId: "pb3", logPath: "/tmp/pb3", taskId: "task1" },
+    );
+
+    const child = sessionStore.getSession("sub_pb3_syncB");
+    expect(child?.status).toBe("stopped");
+    expect(child?.endReason).toBe("interrupted");
   });
 
   it("converges a Copilot task spawn and its read_agent polls onto one child via agent_id", async () => {
