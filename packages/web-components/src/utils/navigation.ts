@@ -174,6 +174,9 @@ export const CHAT_URL: string = "/chat";
 /** URL for the Coordination page (read-only IPC stream inventory). */
 export const COORDINATION_URL: string = "/coordination";
 
+/** URL for the Sessions activity monitor (all sessions, grouped by environment). */
+export const SESSIONS_URL: string = "/sessions";
+
 /** URL for the home dashboard page. */
 export const HOME_URL: string = "/";
 

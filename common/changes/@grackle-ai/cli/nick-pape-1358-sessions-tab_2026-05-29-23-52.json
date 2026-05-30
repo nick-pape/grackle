@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add a Sessions tab: a live, environment-grouped activity monitor that surfaces every session (task-bound and ad-hoc) with status filters, search, and links to each session detail and owning task (#1358).",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

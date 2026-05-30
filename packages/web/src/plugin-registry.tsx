@@ -16,6 +16,7 @@ const CORE_VIEWS: ReadonlySet<string> = new Set([
   "dashboard",
   "chat",
   "environments",
+  "sessions",
   "coordination",
   "settings",
 ]);

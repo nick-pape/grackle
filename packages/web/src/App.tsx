@@ -22,6 +22,7 @@ import {
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
   Suspense,
   lazy,
@@ -80,6 +81,9 @@ import styles from "./App.module.scss";
 // Lazy-loaded to keep the main bundle under the chunk size limit
 const KnowledgePage: LazyExoticComponent<() => JSX.Element> = lazy(() =>
   import("./pages/KnowledgePage.js").then((m) => ({ default: m.KnowledgePage })),
+);
+const SessionsListPage: LazyExoticComponent<() => JSX.Element> = lazy(() =>
+  import("./pages/SessionsListPage.js").then((m) => ({ default: m.SessionsListPage })),
 );
 
 /** Build-time flag set when producing a static demo build (see vite.config.ts). */
@@ -200,8 +204,19 @@ function AppShell(): JSX.Element {
   // Auto-select newly spawned sessions — but only if the user is not
   // already viewing a task (task-spawned sessions should keep the user on
   // the task page rather than redirecting to the raw session view).
+  //
+  // One-shot per spawn: redirect only when `lastSpawnedId` first changes, not on
+  // every later navigation. Otherwise the effect re-fires on each pathname change
+  // (lastSpawnedId is never cleared) and bounces the user back to the spawned
+  // session whenever they try to leave it — e.g. clicking the Sessions tab.
+  const autoSelectedSpawnRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (lastSpawnedId && !location.pathname.includes("/tasks/")) {
+    if (
+      lastSpawnedId &&
+      lastSpawnedId !== autoSelectedSpawnRef.current &&
+      !location.pathname.includes("/tasks/")
+    ) {
+      autoSelectedSpawnRef.current = lastSpawnedId;
       navigate(sessionUrl(lastSpawnedId), { replace: true });
     }
   }, [lastSpawnedId, navigate, location.pathname]);
@@ -281,6 +296,14 @@ function AppRoutes(): JSX.Element {
         {/* Coordination: read-only IPC stream inventory (no sidebar) */}
         <Route path="coordination" element={<CoordinationPage />} />
 
+        <Route
+          path="sessions"
+          element={
+            <Suspense fallback={<SplashScreen />}>
+              <SessionsListPage />
+            </Suspense>
+          }
+        />
         <Route path="sessions/:sessionId" element={<SessionPage />} />
 
         {/* Knowledge sidebar (knowledge plugin) */}
