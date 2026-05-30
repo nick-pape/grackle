@@ -47,7 +47,7 @@ Generate a pairing code for web UI authentication. Prints the code, a URL, and a
 
 ## Environments
 
-An environment is a place an agent can run — a wire it runs on. Add one, provision it, and it's ready to take work.
+An environment is a place a claw can perch — a wire it runs on. Add one, provision it, and it's ready to take work.
 
 ### `grackle env list`
 
@@ -104,7 +104,7 @@ Remove an environment from the registry.
 
 ## Sessions
 
-An agent runs as a **session**. Spawn one, watch it work, kill it when it strays. Detaching doesn't stop it — the agent stays on the wire; you just stop looking.
+A claw runs as a **session**. Spawn one, watch it work, kill it when it strays. Detaching doesn't stop it — the claw stays on the wire; you just stop looking.
 
 ### `grackle spawn <env-id> <prompt>`
 
@@ -158,7 +158,7 @@ For the deeper model of sessions and the work they carry, see [Tasks & Sessions]
 
 ## Workspaces
 
-A workspace is the context an agent works inside — a repo, a budget, an environment to run on. Bind sessions to one and they share that ground.
+A workspace is the context a claw works inside — a repo, a budget, an environment to perch on. Bind sessions to one and they share that ground.
 
 ### `grackle workspace list`
 
@@ -300,7 +300,7 @@ Delete a task (kills active sessions first).
 
 ## Personas
 
-A persona is an agent's name and disposition — the system prompt, the runtime, the model, the tools it's allowed to touch. Spawn against one and the agent wears it.
+A persona is a claw's name and disposition — the system prompt, the runtime, the model, the tools it's allowed to touch. Spawn against one and the claw wears it.
 
 ### `grackle persona list`
 
@@ -359,7 +359,7 @@ List available agent runtimes, their models, and credential needs. Prints a tabl
 
 ## Tokens
 
-A token is a secret an agent carries onto the wire — an env var or a file on PowerLine. The CLI sets it; the value never comes back out.
+A token is a secret a claw carries onto the wire — an env var or a file on PowerLine. The CLI sets it; the value never comes back out.
 
 ### `grackle token set <name>`
 
@@ -424,7 +424,7 @@ Session IDs support prefix matching.
 
 ## Schedules
 
-A schedule fires an agent on a clock — an interval or a cron expression — so work happens whether or not you're watching.
+A schedule fires a claw on a clock — an interval or a cron expression — so work happens whether or not you're watching.
 
 ### `grackle schedule list`
 
@@ -466,7 +466,7 @@ For what fires and when, see [Scheduled tasks](../advanced/scheduled-tasks).
 
 ## Notifications
 
-When an agent hits something it can't decide, it escalates. These commands send, list, and acknowledge those escalations — and wire up a webhook so a human gets pinged.
+When a claw hits something it can't decide, it escalates. These commands send, list, and acknowledge those escalations — and wire up a webhook so a human gets pinged.
 
 ### `grackle notify send <title>`
 
@@ -507,7 +507,7 @@ Show notification configuration (webhook URL and pending escalation count).
 
 ## GitHub Accounts
 
-One human, many identities. These commands register the GitHub accounts an agent can act as, so the right name signs the right commit.
+One human, many identities. These commands register the GitHub accounts a claw can act as, so the right name signs the right commit.
 
 ### `grackle github-account list`
 
@@ -609,4 +609,4 @@ Show a stream room's durable transcript (most recent first).
 
 ---
 
-The same machine wears a face in the browser — see [Web UI](./web-ui). To let an agent drive Grackle itself, point it at the [MCP server](./mcp-server).
+The same machine wears a face in the browser — see [Web UI](./web-ui). To let a claw drive Grackle itself, point it at the [MCP server](./mcp-server).
