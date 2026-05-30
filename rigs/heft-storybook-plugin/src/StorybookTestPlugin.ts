@@ -33,9 +33,15 @@ async function convertStorybookCoverage(
     "storybook",
     "coverage-storybook.json",
   );
+  // Fail loudly: with coverage requested, a missing istanbul file means
+  // `test-storybook --coverage` stopped producing coverage (or it was deleted
+  // before conversion). Skipping would make the coverage path silently
+  // ineffective — the upload only warns and the merge doesn't require it.
   if (!existsSync(istanbulJsonPath)) {
-    log(`No Storybook coverage at ${istanbulJsonPath} — skipping lcov conversion.`);
-    return;
+    throw new Error(
+      `STORYBOOK_COVERAGE is set but no coverage was produced at ${istanbulJsonPath}. ` +
+        `Expected test-storybook --coverage to write it.`,
+    );
   }
   const istanbulData: unknown = JSON.parse(readFileSync(istanbulJsonPath, "utf8"));
   const report: MCR.CoverageReport = new MCR.CoverageReport({
@@ -47,6 +53,11 @@ async function convertStorybookCoverage(
   });
   await report.add(istanbulData as never);
   await report.generate();
+  // Verify the lcov actually landed (guards against an empty/failed conversion).
+  const lcovPath: string = path.join(buildFolder, "coverage-storybook", "lcov.info");
+  if (!existsSync(lcovPath) || readFileSync(lcovPath, "utf8").trim().length === 0) {
+    throw new Error(`Storybook coverage conversion produced no lcov at ${lcovPath}.`);
+  }
   log("Storybook coverage written to coverage-storybook/lcov.info");
 }
 
