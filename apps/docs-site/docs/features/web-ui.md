@@ -16,7 +16,7 @@ A four-step wizard opens on first launch:
 
 1. **Welcome** — what you're looking at.
 2. **About** — what Grackle does.
-3. **Runtime** — pick the default runtime: Claude Code, Copilot, Codex, or Goose.
+3. **Runtime** — pick the default runtime: Claude Code, Copilot, Codex, or Goose (ACP-bridged, experimental).
 4. **Notifications** — grant browser notifications, or don't.
 
 It writes your default persona's runtime and drops you into the [Root chat](./chat). You won't see it again.

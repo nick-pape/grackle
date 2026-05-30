@@ -107,7 +107,7 @@ Each agent runs inside an isolated environment. Connect one or many:
 | 🎭  | **Personas**               | Named agent configs with system prompts, runtime/model, and scoped MCP tool allowlists                                                                                                         |
 | 🔁  | **Session history**        | Every task tracks its full session history — retry failed runs and compare attempts                                                                                                            |
 | ✅  | **Task review & approval** | Approve or reject completed tasks with feedback that feeds into the next attempt                                                                                                               |
-| 🔌  | **MCP server**             | 50+ tools — any agent with MCP connected can create tasks, spawn sessions, query knowledge, and orchestrate work                                                                               |
+| 🔌  | **MCP server**             | 80+ tools — any agent with MCP connected can create tasks, spawn sessions, query knowledge, and orchestrate work                                                                               |
 | 💬  | **Chat**                   | Talk to the orchestrator directly — it has access to every MCP tool in Grackle                                                                                                                 |
 | 💰  | **Usage tracking**         | Token counts and cost per session, task, or workspace                                                                                                                                          |
 | 🔄  | **Session recovery**       | Environments auto-reconnect. Suspended sessions resume where they left off                                                                                                                     |
@@ -122,10 +122,10 @@ Each agent runs inside an isolated environment. Connect one or many:
 One command — includes the server, web UI, knowledge graph (Neo4j), and a local agent environment:
 
 ```bash
-docker run -d --name grackle -p 3000:3000 -p 7435:7435 -v grackle-data:/data ghcr.io/nick-pape/grackle:latest
+docker run -d --name grackle -p 3000:3000 -p 7434:7434 -p 7435:7435 -v grackle-data:/data ghcr.io/nick-pape/grackle:latest
 ```
 
-(Port `7435` exposes the MCP HTTP endpoint for MCP clients — omit it if you only need the web UI.)
+(Port `7434` is the gRPC server the host CLI talks to; `7435` exposes the MCP HTTP endpoint for MCP clients — omit `7435` if you only need the web UI.)
 
 Open **http://localhost:3000**, pair with the code from `docker logs grackle`, and start working. Run `grackle pair` (or `docker exec grackle grackle pair`) to regenerate a pairing code.
 
