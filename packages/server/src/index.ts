@@ -42,7 +42,7 @@ import {
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { LocalPowerLineManager } from "./local-powerline-manager.js";
 import { registerCrashHandlers } from "./crash-handler.js";
-import { resolveServerConfig } from "./config.js";
+import { resolveServerConfig, isLoopbackBind } from "./config.js";
 import { loadSecureContext, type SecureContext } from "./tls.js";
 import { createMcpServer, type ToolDefinition } from "@grackle-ai/mcp";
 import {
@@ -97,13 +97,15 @@ async function main(): Promise<void> {
   // TLS is allowed by the gate (#1374) but should never be invisible. The
   // typical example is the Docker image, which ships with the flag set so
   // `docker run` is unchanged; this line documents what's happening.
+  // Use the SAME loopback predicate as the gate (config.ts) so the warn-line
+  // condition can never drift from the pass-through set; adding e.g. another
+  // IPv4 loopback alias to one but not the other would otherwise silently
+  // change which deployments get the cleartext warning.
   if (
     config.allowInsecure &&
     !secureContext &&
     !config.publicUrl?.startsWith("https://") &&
-    config.host !== "127.0.0.1" &&
-    config.host !== "localhost" &&
-    config.host !== "::1"
+    !isLoopbackBind(config.host)
   ) {
     logger.warn(
       { host: config.host, webPort: config.webPort, mcpPort: config.mcpPort },

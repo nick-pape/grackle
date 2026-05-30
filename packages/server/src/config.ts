@@ -197,11 +197,17 @@ function parsePublicUrl(envName: string): string | undefined {
  * Whether `GRACKLE_HOST` resolves to a loopback bind. Treats `localhost` as
  * loopback because the DNS resolver always maps it to `127.0.0.1` / `::1`;
  * operators who write `GRACKLE_HOST=localhost` mean "loopback only", which is
- * what we want for the gate's pass-through case. Duplicates the predicate in
- * `packages/mcp/src/mcp-server.ts:isLoopbackHostname` — a follow-up can hoist
- * both into `@grackle-ai/auth/public-origin.ts` so there's one source of truth.
+ * what we want for the gate's pass-through case.
+ *
+ * Exported so the server entry point (`index.ts`) can apply the SAME predicate
+ * when deciding whether to emit the insecure-mode warn line — preventing the
+ * gate's pass-through set from drifting out of sync with the warn condition.
+ *
+ * Duplicates `isLoopbackHostname` in `packages/mcp/src/mcp-server.ts`; a
+ * follow-up can hoist both into `@grackle-ai/auth/public-origin.ts` so there's
+ * one source of truth across packages.
  */
-function isLoopbackBind(host: string): boolean {
+export function isLoopbackBind(host: string): boolean {
   return host === "127.0.0.1" || host === "localhost" || host === "::1";
 }
 
