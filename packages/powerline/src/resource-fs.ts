@@ -23,6 +23,7 @@ import {
   stat as statNode,
 } from "node:fs/promises";
 import { existsSync as existsSyncNode } from "node:fs";
+import { Buffer } from "node:buffer";
 import { dirname, extname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
