@@ -62,12 +62,17 @@ const VALID_ENCODINGS: ReadonlySet<ContentEncoding> = new Set([
 ]);
 
 /**
- * Whether the host filesystem is case-insensitive. Containment checks fold case
- * only on these platforms; folding unconditionally would let a request for
- * `/tmp/repo/...` pass a sandbox rooted at `/tmp/Repo` on a case-sensitive
- * (Linux) filesystem where both directories can independently exist.
+ * Whether to fold case in containment checks. Only Windows is treated as
+ * case-insensitive: its Win32 path layer is reliably case-insensitive, so a
+ * client may legitimately vary case. We deliberately do NOT fold on macOS —
+ * APFS/HFS+ can be formatted case-sensitive, and folding there would let a
+ * request for `.../repo/...` pass a sandbox rooted at `.../Repo` (the same
+ * bypass we avoid on Linux). Treating non-Windows as case-sensitive is the
+ * safe-by-default choice for a security boundary: the worst case is a spurious
+ * `PermissionDenied` for a mis-cased path (and realpath canonicalises the
+ * comparands anyway), never an out-of-root read.
  */
-const CASE_INSENSITIVE_FS: boolean = process.platform === "win32" || process.platform === "darwin";
+const CASE_INSENSITIVE_FS: boolean = process.platform === "win32";
 
 /**
  * Filesystem operations used by this module, abstracted so unit tests can
