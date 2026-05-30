@@ -432,6 +432,26 @@ function getRemoteIp(req: http.IncomingMessage): string {
   return req.socket.remoteAddress || "unknown";
 }
 
+/**
+ * Return the host:port the client believes it dialed, regardless of HTTP
+ * version. HTTP/1.x carries this in the `Host` request header; HTTP/2 carries
+ * it in the `:authority` pseudo-header (Node's compat layer surfaces it under
+ * `req.headers[":authority"]` but does NOT mirror it into `host`). Falling
+ * back through both keeps OAuth metadata + protected-resource URLs matching
+ * the origin the browser actually used — over h2 TLS otherwise we'd advertise
+ * the configured loopback host instead.
+ */
+export function getRequestHost(req: http.IncomingMessage): string | undefined {
+  const authority = (req.headers as Record<string, string | string[] | undefined>)[":authority"];
+  if (typeof authority === "string" && authority) {
+    return authority;
+  }
+  if (Array.isArray(authority) && authority.length > 0 && authority[0]) {
+    return authority[0];
+  }
+  return req.headers.host;
+}
+
 /** Static assets served without session authentication (favicons, manifest, logo). */
 const PUBLIC_ASSETS: Set<string> = new Set([
   "/favicon.ico",
@@ -496,7 +516,7 @@ export function createWebServer(options: WebServerOptions): GrackleServer {
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   const handler = async (req: http.IncomingMessage, res: http.ServerResponse): Promise<void> => {
-    setSecurityHeaders(res, req.headers.host);
+    setSecurityHeaders(res, getRequestHost(req));
 
     let rawPath: string;
     let queryString = "";
@@ -555,7 +575,7 @@ export function createWebServer(options: WebServerOptions): GrackleServer {
     // Derive base URL from request Host header so URLs match the origin the
     // browser is on — avoids CSP form-action 'self' mismatch (#1180).
     if (rawPath === "/.well-known/oauth-authorization-server") {
-      const requestHost = req.headers.host || `${urlHost}:${webPort}`;
+      const requestHost = getRequestHost(req) || `${urlHost}:${webPort}`;
       const baseUrl = `${publicScheme}://${requestHost}`;
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(

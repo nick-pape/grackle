@@ -338,6 +338,41 @@ describe("createWebServer h1 413 (#1373 regression guard)", () => {
   });
 });
 
+describe("getRequestHost (h1/h2 host extraction, #1373)", () => {
+  /** Minimal fake req — only fields the helper reads. */
+  function fakeReq(headers: Record<string, string | string[] | undefined>): {
+    headers: Record<string, string | string[] | undefined>;
+  } {
+    return { headers };
+  }
+
+  it("returns Host for HTTP/1.x requests", async () => {
+    const { getRequestHost } = await import("./web-server.js");
+    expect(getRequestHost(fakeReq({ host: "example.com:443" }) as never)).toBe("example.com:443");
+  });
+
+  it("prefers :authority (HTTP/2) over Host when both are set", async () => {
+    const { getRequestHost } = await import("./web-server.js");
+    expect(
+      getRequestHost(
+        fakeReq({ ":authority": "grackle.example:443", host: "grackle.example:443" }) as never,
+      ),
+    ).toBe("grackle.example:443");
+  });
+
+  it("returns :authority when Host is absent (typical h2)", async () => {
+    const { getRequestHost } = await import("./web-server.js");
+    expect(getRequestHost(fakeReq({ ":authority": "grackle.example:8443" }) as never)).toBe(
+      "grackle.example:8443",
+    );
+  });
+
+  it("returns undefined when neither is present", async () => {
+    const { getRequestHost } = await import("./web-server.js");
+    expect(getRequestHost(fakeReq({}) as never)).toBeUndefined();
+  });
+});
+
 describe("createWebServer publicScheme (#1373)", () => {
   let server: Server | undefined;
   afterEach(async () => {

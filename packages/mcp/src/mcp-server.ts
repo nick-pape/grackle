@@ -146,9 +146,13 @@ function createGrpcClients(
   secureContext?: { cert: Buffer; key: Buffer },
 ): GrackleClients {
   const loopbackHost = bindHost === "0.0.0.0" || bindHost === "::" ? "127.0.0.1" : bindHost;
+  // IPv6 literals (`::1`, `fe80::…`) must be bracketed in URLs per RFC 2732,
+  // otherwise the colons in the address are read as the port separator and
+  // the URL parses as nonsense (e.g. `http://::1:7434` is invalid).
+  const baseUrlHost = loopbackHost.includes(":") ? `[${loopbackHost}]` : loopbackHost;
   const scheme = secureContext ? "https" : "http";
   const transport = createGrpcTransport({
-    baseUrl: `${scheme}://${loopbackHost}:${grpcPort}`,
+    baseUrl: `${scheme}://${baseUrlHost}:${grpcPort}`,
     ...(secureContext
       ? {
           nodeOptions: {
@@ -775,13 +779,26 @@ export function createMcpServer(options: McpServerOptions): http.Server | http2.
   pruneInterval.unref();
 
   const handler = async (req: http.IncomingMessage, res: http.ServerResponse): Promise<void> => {
-    const url = new URL(req.url || "/", `${publicScheme}://${req.headers.host || "localhost"}`);
+    // HTTP/1.x carries the dialed host in the `Host` header; HTTP/2 carries it
+    // in the `:authority` pseudo-header (Node's compat layer surfaces it under
+    // `req.headers[":authority"]` but does NOT mirror it into `host`). Prefer
+    // `:authority`, fall back to `Host`, so OAuth metadata and the protected-
+    // resource URL match the origin the client actually reached over h2 TLS.
+    const headerBag = req.headers as Record<string, string | string[] | undefined>;
+    const authorityHeader = headerBag[":authority"];
+    const requestHost: string | undefined =
+      (typeof authorityHeader === "string" && authorityHeader) ||
+      (Array.isArray(authorityHeader) && authorityHeader.length > 0
+        ? authorityHeader[0]
+        : undefined) ||
+      req.headers.host;
+    const url = new URL(req.url || "/", `${publicScheme}://${requestHost || "localhost"}`);
 
-    // Derive resource URL from request Host header (dialable by the client).
+    // Derive resource URL from the request host (dialable by the client).
     // `publicScheme` follows the operator-advertised scheme — http for cleartext
     // loopback (default), https when TLS terminates here (#1373) or upstream
     // (#1371) — so the URL we hand back to a client always works.
-    const requestResourceUrl = `${publicScheme}://${req.headers.host || url.host}`;
+    const requestResourceUrl = `${publicScheme}://${requestHost || url.host}`;
 
     // OAuth Protected Resource Metadata (RFC 9728) — no auth required
     // Derive auth server URL from request hostname so the browser stays on the

@@ -1218,4 +1218,19 @@ describe("createMcpServer publicScheme + secureContext (#1373)", () => {
     expect(srv.constructor.name).toBe("Http2SecureServer");
     server = srv;
   });
+
+  it("does not crash on createMcpServer when bindHost is an IPv6 literal (::1)", () => {
+    // Regression for #1385 review: the loopback baseUrl for the in-process gRPC
+    // client must bracket IPv6 literals; otherwise the URL parses as invalid
+    // and the standalone MCP entrypoint cannot create working clients.
+    expect(() => {
+      const srv = createMcpServer({
+        bindHost: "::1",
+        mcpPort: 0,
+        grpcPort: 19999,
+        apiKey: TEST_API_KEY,
+      });
+      srv.close();
+    }).not.toThrow();
+  });
 });
