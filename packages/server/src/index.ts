@@ -111,9 +111,12 @@ async function main(): Promise<void> {
   const effectivePublicUrl: string | undefined =
     config.publicUrl ??
     (secureContext ? `https://${synthesizedUrlHost}:${config.webPort}` : undefined);
-  const publicScheme: "http" | "https" = effectivePublicUrl?.startsWith("https://")
-    ? "https"
-    : "http";
+  // Listener (wire) scheme. What each listener actually speaks on its socket —
+  // driven solely by secureContext, NOT effectivePublicUrl. A TLS-terminating
+  // reverse proxy could publish https while the listener serves cleartext, or
+  // an operator could pair native TLS with `GRACKLE_PUBLIC_URL=http://...` —
+  // in either case the startup log should reflect on-the-wire reality.
+  const listenerScheme: "http" | "https" = secureContext ? "https" : "http";
 
   // AHP HR7: initialize the additive OTLP logs sink for runtime diagnostics.
   // No-op unless OTEL_EXPORTER_OTLP_ENDPOINT is set; never breaks startup.
@@ -326,9 +329,9 @@ async function main(): Promise<void> {
 
   grpcServer.listen(grpcPort, bindHost, () => {
     logger.info(
-      { port: grpcPort, host: bindHost, scheme: publicScheme },
+      { port: grpcPort, host: bindHost, scheme: listenerScheme },
       "gRPC server listening on %s://%s:%d",
-      publicScheme,
+      listenerScheme,
       urlHost,
       grpcPort,
     );
@@ -404,9 +407,9 @@ async function main(): Promise<void> {
 
   webServer.listen(webPort, bindHost, () => {
     logger.info(
-      { port: webPort, host: bindHost, scheme: publicScheme },
+      { port: webPort, host: bindHost, scheme: listenerScheme },
       "Web UI on %s://%s:%d",
-      publicScheme,
+      listenerScheme,
       urlHost,
       webPort,
     );
@@ -521,9 +524,9 @@ async function main(): Promise<void> {
 
   mcpServer.listen(mcpPort, bindHost, () => {
     logger.info(
-      { port: mcpPort, host: bindHost, scheme: publicScheme },
+      { port: mcpPort, host: bindHost, scheme: listenerScheme },
       "MCP server on %s://%s:%d/mcp",
-      publicScheme,
+      listenerScheme,
       urlHost,
       mcpPort,
     );
@@ -553,9 +556,9 @@ async function main(): Promise<void> {
   });
   sandboxServer.listen(sandboxPort, bindHost, () => {
     logger.info(
-      { port: sandboxPort, host: bindHost, scheme: publicScheme },
+      { port: sandboxPort, host: bindHost, scheme: listenerScheme },
       "MCP Apps sandbox on %s://%s:%d/sandbox.html",
-      publicScheme,
+      listenerScheme,
       urlHost,
       sandboxPort,
     );
