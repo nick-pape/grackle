@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/web-components",
-  "version": "0.135.2",
+  "version": "0.136.1",
   "description": "Presentational React component library for the Grackle web UI",
   "license": "MIT",
   "sideEffects": [
@@ -91,6 +91,7 @@
     "storybook": "8.6.18",
     "vite": "^6.4.2",
     "vite-plugin-css-injected-by-js": "^4.0.1",
+    "vite-plugin-istanbul": "~7.2.0",
     "vitest": "^3.1.1",
     "wait-on": "^8.0.0"
   }

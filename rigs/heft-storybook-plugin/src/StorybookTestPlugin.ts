@@ -1,6 +1,8 @@
 import { execFileSync, spawn, type ChildProcess } from "child_process";
 import * as path from "path";
 import * as net from "net";
+import { existsSync, readFileSync } from "fs";
+import MCR = require("monocart-coverage-reports");
 import type {
   HeftConfiguration,
   IHeftTaskPlugin,
@@ -9,6 +11,55 @@ import type {
 } from "@rushstack/heft";
 
 const PLUGIN_NAME: string = "storybook-test-plugin";
+
+/** When true, run `test-storybook --coverage` and convert the result to lcov (#1384). */
+const COVERAGE_ENABLED: boolean = process.env.STORYBOOK_COVERAGE === "true";
+
+/**
+ * Convert the istanbul coverage map that `test-storybook --coverage` writes
+ * (`coverage/storybook/coverage-storybook.json`) into
+ * `coverage-storybook/lcov.info`, source-mapped to `packages/<pkg>/src` via
+ * monocart's `baseDir`. Written to a sibling of `coverage/` so the parallel
+ * Vitest task (which cleans `coverage/`) can't race-delete it. The merge tool
+ * (`@grackle-ai/coverage-merge`) then unions it into the combined total.
+ */
+async function convertStorybookCoverage(
+  buildFolder: string,
+  log: (message: string) => void,
+): Promise<void> {
+  const istanbulJsonPath: string = path.join(
+    buildFolder,
+    "coverage",
+    "storybook",
+    "coverage-storybook.json",
+  );
+  // Fail loudly: with coverage requested, a missing istanbul file means
+  // `test-storybook --coverage` stopped producing coverage (or it was deleted
+  // before conversion). Skipping would make the coverage path silently
+  // ineffective — the upload only warns and the merge doesn't require it.
+  if (!existsSync(istanbulJsonPath)) {
+    throw new Error(
+      `STORYBOOK_COVERAGE is set but no coverage was produced at ${istanbulJsonPath}. ` +
+        `Expected test-storybook --coverage to write it.`,
+    );
+  }
+  const istanbulData: unknown = JSON.parse(readFileSync(istanbulJsonPath, "utf8"));
+  const report: MCR.CoverageReport = new MCR.CoverageReport({
+    name: "Grackle Storybook Coverage",
+    outputDir: path.join(buildFolder, "coverage-storybook"),
+    baseDir: path.join(buildFolder, "..", ".."),
+    reports: ["lcovonly"],
+    logging: "info",
+  });
+  await report.add(istanbulData as never);
+  await report.generate();
+  // Verify the lcov actually landed (guards against an empty/failed conversion).
+  const lcovPath: string = path.join(buildFolder, "coverage-storybook", "lcov.info");
+  if (!existsSync(lcovPath) || readFileSync(lcovPath, "utf8").trim().length === 0) {
+    throw new Error(`Storybook coverage conversion produced no lcov at ${lcovPath}.`);
+  }
+  log("Storybook coverage written to coverage-storybook/lcov.info");
+}
 
 /** Maximum time (ms) to wait for the HTTP server to accept connections. */
 const SERVER_READY_TIMEOUT_MS: number = 30_000;
@@ -113,8 +164,12 @@ class StorybookTestPlugin implements IHeftTaskPlugin {
 
         // Capture stderr via pipe — on success discard it (suppresses Jest
         // noise that heft treats as warnings); on failure print it.
+        const testArgs: string[] = ["--url", `http://127.0.0.1:${port}`];
+        if (COVERAGE_ENABLED) {
+          testArgs.push("--coverage");
+        }
         try {
-          execFileSync(testStorybookBin, ["--url", `http://127.0.0.1:${port}`], {
+          execFileSync(testStorybookBin, testArgs, {
             cwd: buildFolder,
             stdio: ["ignore", "inherit", "pipe"],
             shell: isWindows,
@@ -129,6 +184,10 @@ class StorybookTestPlugin implements IHeftTaskPlugin {
         }
 
         session.logger.terminal.writeLine("Storybook interaction tests completed.");
+
+        if (COVERAGE_ENABLED) {
+          await convertStorybookCoverage(buildFolder, (m) => session.logger.terminal.writeLine(m));
+        }
       } finally {
         server.kill();
       }

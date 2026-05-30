@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/web",
-  "version": "0.135.2",
+  "version": "0.136.1",
   "description": "React web UI for the Grackle multi-agent coordination platform",
   "license": "MIT",
   "repository": {
@@ -72,6 +72,7 @@
     "sass": "^1.86.0",
     "storybook": "8.6.18",
     "vite": "^6.4.2",
+    "vite-plugin-istanbul": "~7.2.0",
     "vitest": "^3.1.1",
     "wait-on": "^8.0.0"
   }

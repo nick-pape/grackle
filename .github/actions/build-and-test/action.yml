@@ -40,6 +40,11 @@ runs:
 
     - name: Rush build
       shell: bash
+      # Instrument the web-components Storybook build for coverage (#1384).
+      # Set for ALL CI builds so the cached `storybook-static` is consistently
+      # instrumented; `rush test` (below) then runs `test-storybook --coverage`.
+      env:
+        STORYBOOK_COVERAGE: "true"
       run: node common/scripts/install-run-rush.js build
 
     - name: Cache Playwright browsers
@@ -63,6 +68,10 @@ runs:
 
     - name: Run unit tests
       shell: bash
+      # STORYBOOK_COVERAGE makes the storybook-test task run `test-storybook
+      # --coverage` and emit packages/web-components/coverage-storybook/lcov.info.
+      env:
+        STORYBOOK_COVERAGE: "true"
       run: node common/scripts/install-run-rush.js test --verbose
 
     - name: Run E2E tests
