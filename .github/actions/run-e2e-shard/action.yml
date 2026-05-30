@@ -104,6 +104,10 @@ runs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.coverage-artifact-name }}
-        path: tests/e2e-tests/coverage/lcov.info
+        # Both the browser bundle coverage and the backend (Node server +
+        # PowerLine) coverage; the merge job's recursive scan picks up both.
+        path: |
+          tests/e2e-tests/coverage/lcov.info
+          tests/e2e-tests/coverage-backend/lcov.info
         if-no-files-found: warn
         retention-days: 14
