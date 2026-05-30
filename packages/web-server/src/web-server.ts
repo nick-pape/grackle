@@ -99,6 +99,16 @@ export interface WebServerOptions {
    */
   sandboxOrigin?: string;
   /**
+   * Canonical browser-facing origin (e.g. `https://grackle.home`), from
+   * `GRACKLE_PUBLIC_URL`. When set, it is the source of truth for the
+   * browser-facing scheme + host behind a TLS-terminating reverse proxy:
+   * the OAuth authorization-server metadata uses its scheme + host, the
+   * session cookie gets the `Secure` flag iff its scheme is https, and HSTS
+   * is emitted iff https. When unset, behavior is unchanged (request-host
+   * derivation for OAuth metadata; cookie `Secure` keyed off the wildcard bind).
+   */
+  publicUrl?: string;
+  /**
    * Inbound channel webhook handler (injected). Verifies the capability token
    * and delivers the message. When omitted, the `/hook` route is disabled.
    */
@@ -384,6 +394,7 @@ export function createWebServer(options: WebServerOptions): http.Server {
     pluginNames,
     sandboxPort,
     sandboxOrigin,
+    publicUrl,
     handleWebhook,
   } = options;
   const distDir = webDistDir ?? resolveWebDistDir();
@@ -392,6 +403,14 @@ export function createWebServer(options: WebServerOptions): http.Server {
   const urlHost = dialableHost.includes(":") ? `[${dialableHost}]` : dialableHost;
   const webBaseUrl = `http://${urlHost}:${webPort}`;
 
+  // When GRACKLE_PUBLIC_URL is set it is the source of truth for the
+  // browser-facing scheme + host (behind a TLS-terminating reverse proxy).
+  const publicUrlParsed = publicUrl ? new URL(publicUrl) : undefined;
+  const publicIsHttps = publicUrlParsed?.protocol === "https:";
+  // Session cookie `Secure`: keyed off the public scheme when configured, else
+  // the wildcard-bind heuristic (unchanged for the casual local user).
+  const cookieSecure = publicUrlParsed ? publicIsHttps : allowNetwork;
+
   /** ConnectRPC handler for browser gRPC calls (Connect protocol over HTTP/1.1). */
   const webConnectHandler = connectRoutes
     ? connectNodeAdapter({ routes: connectRoutes })
@@ -399,7 +418,7 @@ export function createWebServer(options: WebServerOptions): http.Server {
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   const handler = async (req: http.IncomingMessage, res: http.ServerResponse): Promise<void> => {
-    setSecurityHeaders(res, req.headers.host);
+    setSecurityHeaders(res, req.headers.host, { hsts: publicIsHttps });
 
     let rawPath: string;
     let queryString = "";
@@ -455,11 +474,16 @@ export function createWebServer(options: WebServerOptions): http.Server {
     }
 
     // --- OAuth Authorization Server Metadata (no auth) ---
-    // Derive base URL from request Host header so URLs match the origin the
-    // browser is on — avoids CSP form-action 'self' mismatch (#1180).
+    // When GRACKLE_PUBLIC_URL is set, advertise its scheme + host so OAuth
+    // clients reaching us over https (behind a TLS proxy) get https endpoints
+    // (RFC 8414). Otherwise derive the base URL from the request Host header so
+    // URLs match the origin the browser is on — avoids CSP form-action 'self'
+    // mismatch (#1180).
     if (rawPath === "/.well-known/oauth-authorization-server") {
       const requestHost = req.headers.host || `${urlHost}:${webPort}`;
-      const baseUrl = `http://${requestHost}`;
+      const baseUrl = publicUrlParsed
+        ? `${publicUrlParsed.protocol}//${publicUrlParsed.host}`
+        : `http://${requestHost}`;
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
@@ -709,7 +733,7 @@ export function createWebServer(options: WebServerOptions): http.Server {
           }
 
           // Pairing succeeded — also create a browser session
-          const setCookie = createSession(apiKey, { secure: allowNetwork });
+          const setCookie = createSession(apiKey, { secure: cookieSecure });
           responseHeaders["Set-Cookie"] = setCookie;
           hasPairedSession = true;
         }
@@ -822,7 +846,7 @@ export function createWebServer(options: WebServerOptions): http.Server {
       if (code) {
         const remoteIp = getRemoteIp(req);
         if (redeemPairingCode(code, remoteIp)) {
-          const setCookie = createSession(apiKey, { secure: allowNetwork });
+          const setCookie = createSession(apiKey, { secure: cookieSecure });
           res.writeHead(302, {
             Location: "/",
             "Set-Cookie": setCookie,

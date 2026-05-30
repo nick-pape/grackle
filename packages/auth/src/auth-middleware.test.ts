@@ -159,6 +159,38 @@ describe("authenticateMcpRequest", () => {
     expect(result).toEqual({ type: "oauth", clientId: OAUTH_CLIENT_ID });
   });
 
+  /**
+   * With an explicit expectedResource (GRACKLE_MCP_ORIGIN behind a TLS proxy), an
+   * OAuth token whose audience matches the configured https origin is accepted —
+   * even though the socket's local port would not match the loopback default.
+   */
+  test("OAuth token matching expectedResource is accepted", () => {
+    const publicResource = "https://mcp.example.com";
+    const token = createOAuthAccessToken(OAUTH_CLIENT_ID, publicResource, API_KEY);
+    const req = mockRequest(`Bearer ${token}`, OAUTH_PORT);
+    const result = authenticateMcpRequest(req, API_KEY, { expectedResource: publicResource });
+    expect(result).toEqual({ type: "oauth", clientId: OAUTH_CLIENT_ID });
+  });
+
+  /** With expectedResource set, the loopback-derived audience is rejected. */
+  test("OAuth token with loopback audience is rejected when expectedResource is set", () => {
+    const token = createOAuthAccessToken(OAUTH_CLIENT_ID, OAUTH_RESOURCE, API_KEY);
+    const req = mockRequest(`Bearer ${token}`, OAUTH_PORT);
+    const result = authenticateMcpRequest(req, API_KEY, {
+      expectedResource: "https://mcp.example.com",
+    });
+    expect(result).toBeUndefined();
+  });
+
+  /** expectedResource tolerates a trailing slash on the token audience. */
+  test("OAuth token with trailing-slash audience matches expectedResource", () => {
+    const publicResource = "https://mcp.example.com";
+    const token = createOAuthAccessToken(OAUTH_CLIENT_ID, publicResource + "/", API_KEY);
+    const req = mockRequest(`Bearer ${token}`, OAUTH_PORT);
+    const result = authenticateMcpRequest(req, API_KEY, { expectedResource: publicResource });
+    expect(result).toEqual({ type: "oauth", clientId: OAUTH_CLIENT_ID });
+  });
+
   /** All three auth types work independently. */
   test("api key, scoped, and oauth tokens work independently", () => {
     const apiKeyReq = mockRequest(`Bearer ${API_KEY}`);

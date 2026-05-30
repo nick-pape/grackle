@@ -76,16 +76,17 @@ grackle serve --port 8000 --web-port 4000
 grackle serve --allow-network    # bind to 0.0.0.0 for LAN access
 ```
 
-| Option                      | Description                                                                                                                        | Default                                |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| `--port <port>`             | Server gRPC port                                                                                                                   | `7434`                                 |
-| `--web-port <port>`         | Web UI port                                                                                                                        | `3000`                                 |
-| `--mcp-port <port>`         | MCP server port                                                                                                                    | `7435`                                 |
-| `--mcp-origin <origin>`     | Browser-facing MCP origin (e.g. `https://mcp.example.com`) for reverse-proxy/TLS deployments; trusted asset/CSP origin for widgets | (derived from host + `--mcp-port`)     |
-| `--sandbox-port <port>`     | MCP Apps widget sandbox port                                                                                                       | `7436`                                 |
-| `--sandbox-origin <origin>` | Browser-facing MCP Apps sandbox origin (e.g. `https://sandbox.example.com`) for reverse-proxy/TLS deployments                      | (derived from host + `--sandbox-port`) |
-| `--powerline-port <port>`   | Local PowerLine port                                                                                                               | `7433`                                 |
-| `--allow-network`           | Bind to all interfaces (0.0.0.0)                                                                                                   | Off (127.0.0.1)                        |
+| Option                      | Description                                                                                                                                                                  | Default                                |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| `--port <port>`             | Server gRPC port                                                                                                                                                             | `7434`                                 |
+| `--web-port <port>`         | Web UI port                                                                                                                                                                  | `3000`                                 |
+| `--mcp-port <port>`         | MCP server port                                                                                                                                                              | `7435`                                 |
+| `--public-url <url>`        | Canonical browser-facing origin (e.g. `https://grackle.home`) when behind a TLS reverse proxy; source of truth for OAuth scheme/host, `Secure` cookie, HSTS, and pairing URL | (loopback http defaults)               |
+| `--mcp-origin <origin>`     | Browser-facing MCP origin (e.g. `https://mcp.example.com`) for reverse-proxy/TLS deployments; trusted asset/CSP origin for widgets and OAuth resource/audience               | (derived from host + `--mcp-port`)     |
+| `--sandbox-port <port>`     | MCP Apps widget sandbox port                                                                                                                                                 | `7436`                                 |
+| `--sandbox-origin <origin>` | Browser-facing MCP Apps sandbox origin (e.g. `https://sandbox.example.com`) for reverse-proxy/TLS deployments                                                                | (derived from host + `--sandbox-port`) |
+| `--powerline-port <port>`   | Local PowerLine port                                                                                                                                                         | `7433`                                 |
+| `--allow-network`           | Bind to all interfaces (0.0.0.0)                                                                                                                                             | Off (127.0.0.1)                        |
 
 ---
 

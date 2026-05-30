@@ -62,9 +62,10 @@ function sign(value: string, secret: string): string {
  * is an HMAC-SHA256 of the session ID using the API key as secret.
  *
  * When `options.secure` is true the cookie includes the `Secure` flag,
- * which tells browsers to only send it over HTTPS. This should be
- * enabled when the server is network-accessible (`--allow-network`)
- * behind a TLS-terminating reverse proxy.
+ * which tells browsers to only send it over HTTPS. The caller should set
+ * this from the browser-facing scheme (i.e. `GRACKLE_PUBLIC_URL` is an
+ * https origin), not from the bind address — a `Secure` cookie is refused
+ * by browsers over plain http and would break login.
  */
 export function createSession(apiKey: string, options?: { secure?: boolean }): string {
   const sessionId = randomBytes(SESSION_ID_BYTES).toString("hex");

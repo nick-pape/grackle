@@ -147,6 +147,48 @@ describe("security headers", () => {
       }
     });
 
+    it("emits Strict-Transport-Security when hsts is true", async () => {
+      const server = http.createServer((req, res) => {
+        setSecurityHeaders(res, "grackle.home", { hsts: true });
+        res.writeHead(200, { "Content-Type": "text/html" });
+        res.end("<html></html>");
+      });
+
+      await new Promise<void>((resolve) => {
+        server.listen(0, "127.0.0.1", resolve);
+      });
+
+      try {
+        const resp = await request(server, "/");
+        expect(resp.headers["strict-transport-security"]).toBe("max-age=31536000");
+      } finally {
+        await new Promise<void>((resolve) => {
+          server.close(() => resolve());
+        });
+      }
+    });
+
+    it("omits Strict-Transport-Security when hsts is false or absent", async () => {
+      const server = http.createServer((req, res) => {
+        setSecurityHeaders(res, "grackle.home", { hsts: false });
+        res.writeHead(200, { "Content-Type": "text/html" });
+        res.end("<html></html>");
+      });
+
+      await new Promise<void>((resolve) => {
+        server.listen(0, "127.0.0.1", resolve);
+      });
+
+      try {
+        const resp = await request(server, "/");
+        expect(resp.headers["strict-transport-security"]).toBeUndefined();
+      } finally {
+        await new Promise<void>((resolve) => {
+          server.close(() => resolve());
+        });
+      }
+    });
+
     it("widens frame-src to the request hostname so the chat can embed the widget sandbox", async () => {
       // The MCP Apps widget sandbox runs on the same hostname, different port
       // (GRACKLE_SANDBOX_PORT); frame-src must allow it across ports.

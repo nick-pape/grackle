@@ -19,7 +19,12 @@ vi.mock("@grackle-ai/auth", () => ({
 }));
 
 import { createWebServer, isWildcardAddress } from "./web-server.js";
-import { validateSessionCookie, redeemPairingCode, createSession } from "@grackle-ai/auth";
+import {
+  validateSessionCookie,
+  redeemPairingCode,
+  createSession,
+  setSecurityHeaders,
+} from "@grackle-ai/auth";
 
 /** Make an HTTP request to the test server. */
 function request(
@@ -167,6 +172,114 @@ describe("createWebServer", () => {
     expect(res.status).toBe(302);
     expect(res.headers.location).toBe("/");
     expect(res.headers["set-cookie"]).toBeDefined();
+  });
+
+  it("creates a non-Secure cookie on a loopback bind (no publicUrl)", async () => {
+    vi.mocked(redeemPairingCode).mockReturnValueOnce(true);
+
+    await request(server, "/pair?code=ABC123");
+
+    expect(createSession).toHaveBeenCalledWith(expect.any(String), { secure: false });
+  });
+
+  it("does not request HSTS on a loopback bind (no publicUrl)", async () => {
+    await request(server, "/healthz");
+
+    expect(setSecurityHeaders).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+      hsts: false,
+    });
+  });
+});
+
+describe("createWebServer behind a public https origin", () => {
+  let server: http.Server;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    server = createWebServer({
+      apiKey: "x".repeat(64),
+      webPort: 0,
+      bindHost: "127.0.0.1",
+      publicUrl: "https://grackle.home",
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  });
+
+  afterEach(async () => {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("advertises https OAuth metadata endpoints from the public origin", async () => {
+    const res = await request(server, "/.well-known/oauth-authorization-server");
+
+    expect(res.status).toBe(200);
+    const metadata = JSON.parse(res.body);
+    expect(metadata.issuer).toBe("https://grackle.home");
+    expect(metadata.authorization_endpoint).toBe("https://grackle.home/authorize");
+    expect(metadata.token_endpoint).toBe("https://grackle.home/token");
+    expect(metadata.registration_endpoint).toBe("https://grackle.home/register");
+  });
+
+  it("ignores the request Host header for OAuth metadata when publicUrl is set", async () => {
+    const res = await request(server, "/.well-known/oauth-authorization-server", {
+      Host: "attacker.example.com",
+    });
+
+    const metadata = JSON.parse(res.body);
+    expect(metadata.issuer).toBe("https://grackle.home");
+  });
+
+  it("creates a Secure cookie", async () => {
+    vi.mocked(redeemPairingCode).mockReturnValueOnce(true);
+
+    await request(server, "/pair?code=ABC123");
+
+    expect(createSession).toHaveBeenCalledWith(expect.any(String), { secure: true });
+  });
+
+  it("requests HSTS", async () => {
+    await request(server, "/healthz");
+
+    expect(setSecurityHeaders).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+      hsts: true,
+    });
+  });
+});
+
+describe("createWebServer behind a public http origin", () => {
+  let server: http.Server;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    server = createWebServer({
+      apiKey: "x".repeat(64),
+      webPort: 0,
+      bindHost: "0.0.0.0",
+      publicUrl: "http://grackle.home:8080",
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  });
+
+  afterEach(async () => {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("advertises http OAuth metadata endpoints from the public origin", async () => {
+    const res = await request(server, "/.well-known/oauth-authorization-server");
+
+    const metadata = JSON.parse(res.body);
+    expect(metadata.issuer).toBe("http://grackle.home:8080");
+  });
+
+  it("creates a non-Secure cookie and does not request HSTS for an http public origin", async () => {
+    vi.mocked(redeemPairingCode).mockReturnValueOnce(true);
+
+    await request(server, "/pair?code=ABC123");
+
+    expect(createSession).toHaveBeenCalledWith(expect.any(String), { secure: false });
+    expect(setSecurityHeaders).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+      hsts: false,
+    });
   });
 });
 

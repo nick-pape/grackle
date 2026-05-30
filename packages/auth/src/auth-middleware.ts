@@ -23,6 +23,19 @@ function normalizeLoopback(url: string): string {
   }
 }
 
+/** Options for {@link authenticateMcpRequest}. */
+export interface AuthenticateMcpRequestOptions {
+  /**
+   * Canonical resource (audience) this server is reachable as, e.g.
+   * `https://mcp.example.com`. When set, an OAuth token's `aud` is validated
+   * against this configured origin instead of the loopback-derived default.
+   * Set it from a static, operator-provided origin (`GRACKLE_MCP_ORIGIN`) — never
+   * from the request `Host` header, which a client could spoof. When unset, the
+   * audience is validated against the server-controlled `http://127.0.0.1:<localPort>`.
+   */
+  expectedResource?: string;
+}
+
 /**
  * Authenticate an incoming MCP HTTP request.
  *
@@ -33,11 +46,13 @@ function normalizeLoopback(url: string): string {
  *
  * @param req - The incoming HTTP request.
  * @param apiKey - The server's API key (used for both direct comparison and as the HMAC signing secret).
+ * @param options - Optional audience-validation overrides (see {@link AuthenticateMcpRequestOptions}).
  * @returns An {@link AuthContext} if authentication succeeds, or `undefined` for a 401.
  */
 export function authenticateMcpRequest(
   req: http.IncomingMessage,
   apiKey: string,
+  options?: AuthenticateMcpRequestOptions,
 ): AuthContext | undefined {
   const authHeader = req.headers.authorization || "";
   const match = /^Bearer\s+(\S+)$/i.exec(authHeader);
@@ -67,13 +82,19 @@ export function authenticateMcpRequest(
     if (oauthClaims) {
       // Validate audience if present — when non-empty, must match this server's resource URL.
       // Empty aud is accepted because the client may omit the resource indicator (RFC 8707).
-      // Use the socket's local port (server-controlled) rather than the Host header (client-controlled)
-      // to prevent token replay via Host spoofing.
+      // When an explicit resource is configured (GRACKLE_MCP_ORIGIN, e.g. behind a
+      // TLS reverse proxy) validate against that static, operator-provided origin.
+      // Otherwise fall back to the socket's local port (server-controlled) rather than
+      // the Host header (client-controlled) to prevent token replay via Host spoofing.
       // Normalize trailing slashes and treat "localhost" as equivalent to "127.0.0.1" since
       // MCP clients may connect via either hostname.
       if (oauthClaims.aud) {
         const localPort = req.socket.localPort;
-        const expectedAudience = localPort ? `http://127.0.0.1:${localPort}` : undefined;
+        const expectedAudience = options?.expectedResource
+          ? normalizeLoopback(options.expectedResource.replace(/\/+$/, ""))
+          : localPort
+            ? `http://127.0.0.1:${localPort}`
+            : undefined;
         const normalizedAud = normalizeLoopback(oauthClaims.aud.replace(/\/+$/, ""));
         if (!expectedAudience || normalizedAud !== expectedAudience) {
           return undefined;

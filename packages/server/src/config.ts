@@ -15,6 +15,17 @@ export interface ServerConfig {
   /** MCP server port (GRACKLE_MCP_PORT). */
   mcpPort: number;
   /**
+   * Canonical browser-facing origin (GRACKLE_PUBLIC_URL), e.g.
+   * `https://grackle.home`. When set, it is the source of truth for the
+   * browser-facing scheme + host behind a TLS-terminating reverse proxy: it
+   * drives the OAuth authorization-server metadata scheme/host, the session
+   * cookie `Secure` flag, HSTS emission, the pairing/QR URL, the channel
+   * ingress base URL, and the MCP authorization-server URL. When unset, every
+   * consumer falls back to today's loopback-http behavior. Must be an http(s)
+   * origin with no path/query/fragment.
+   */
+  publicUrl?: string;
+  /**
    * Explicit browser-facing MCP origin (GRACKLE_MCP_ORIGIN), e.g.
    * `https://mcp.example.com`. Used as the trusted asset/CSP origin for
    * broker-captured MCP Apps widgets (so it never depends on the request `Host`).
@@ -72,6 +83,40 @@ function parseFlag(envName: string): boolean {
 }
 
 /**
+ * Parse and validate the canonical public origin from an environment variable.
+ *
+ * Returns `undefined` when unset. When set, the value must be an absolute
+ * http(s) URL with no path, query, or fragment — sub-path reverse-proxy
+ * deployments (e.g. `https://example.com/grackle`) are not supported because
+ * the OAuth and pairing routes append absolute paths. Throws a clear error on
+ * an invalid value so the server fails fast at startup. The returned value is
+ * the normalized origin (no trailing slash).
+ */
+function parsePublicUrl(envName: string): string | undefined {
+  const raw = process.env[envName];
+  if (!raw) {
+    return undefined;
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    throw new Error(
+      `Invalid ${envName}: "${raw}". Must be an absolute http(s) origin, e.g. https://grackle.home.`,
+    );
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error(`Invalid ${envName}: "${raw}". Scheme must be http or https.`);
+  }
+  if ((parsed.pathname !== "" && parsed.pathname !== "/") || parsed.search || parsed.hash) {
+    throw new Error(
+      `Invalid ${envName}: "${raw}". Must be a bare origin with no path, query, or fragment.`,
+    );
+  }
+  return parsed.origin;
+}
+
+/**
  * Resolve and validate all server configuration from environment variables.
  * Throws on invalid values so the server fails fast at startup with a clear error.
  */
@@ -80,6 +125,10 @@ export function resolveServerConfig(): ServerConfig {
     grpcPort: parsePort("GRACKLE_PORT", DEFAULT_SERVER_PORT),
     webPort: parsePort("GRACKLE_WEB_PORT", DEFAULT_WEB_PORT),
     mcpPort: parsePort("GRACKLE_MCP_PORT", DEFAULT_MCP_PORT),
+    ...((): { publicUrl?: string } => {
+      const publicUrl = parsePublicUrl("GRACKLE_PUBLIC_URL");
+      return publicUrl ? { publicUrl } : {};
+    })(),
     ...(process.env.GRACKLE_MCP_ORIGIN ? { mcpOrigin: process.env.GRACKLE_MCP_ORIGIN } : {}),
     sandboxPort: parsePort("GRACKLE_SANDBOX_PORT", DEFAULT_SANDBOX_PORT),
     ...(process.env.GRACKLE_SANDBOX_ORIGIN

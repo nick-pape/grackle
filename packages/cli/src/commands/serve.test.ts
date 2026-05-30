@@ -15,6 +15,7 @@ describe("registerServeCommand", () => {
     delete process.env.GRACKLE_PORT;
     delete process.env.GRACKLE_WEB_PORT;
     delete process.env.GRACKLE_HOST;
+    delete process.env.GRACKLE_PUBLIC_URL;
     vi.restoreAllMocks();
     vi.resetModules();
   });
@@ -57,5 +58,27 @@ describe("registerServeCommand", () => {
     expect(process.env.GRACKLE_PORT).toBe("8000");
     expect(process.env.GRACKLE_WEB_PORT).toBe("8001");
     expect(process.env.GRACKLE_MCP_PORT).toBe("8002");
+  });
+
+  it("--public-url sets GRACKLE_PUBLIC_URL", async () => {
+    const { registerServeCommand } = await import("./serve.js");
+    const program = new Command();
+    program.exitOverride();
+    registerServeCommand(program);
+
+    await program.parseAsync(["serve", "--public-url", "https://grackle.home"], { from: "user" });
+
+    expect(process.env.GRACKLE_PUBLIC_URL).toBe("https://grackle.home");
+  });
+
+  it("leaves GRACKLE_PUBLIC_URL unset when --public-url is omitted", async () => {
+    const { registerServeCommand } = await import("./serve.js");
+    const program = new Command();
+    program.exitOverride();
+    registerServeCommand(program);
+
+    await program.parseAsync(["serve"], { from: "user" });
+
+    expect(process.env.GRACKLE_PUBLIC_URL).toBeUndefined();
   });
 });

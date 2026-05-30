@@ -34,6 +34,24 @@ export const WEB_CONTENT_SECURITY_POLICY: string = [
 ].join("; ");
 
 /**
+ * `Strict-Transport-Security` value emitted when the connection is served over
+ * HTTPS. One year, without `includeSubDomains` — the latter could force HTTPS
+ * onto sibling subdomains of a shared apex (e.g. `grackle.home`) and is hard to
+ * roll back, so it is intentionally omitted.
+ */
+const HSTS_MAX_AGE_SECONDS: number = 31_536_000;
+
+/** Optional flags controlling scheme-dependent security headers. */
+export interface SecurityHeaderOptions {
+  /**
+   * When true, emit a `Strict-Transport-Security` header. Set this only when the
+   * browser-facing scheme is HTTPS (e.g. `GRACKLE_PUBLIC_URL` is an https
+   * origin), never for a plain-http origin.
+   */
+  hsts?: boolean;
+}
+
+/**
  * Set defense-in-depth security headers on every web response.
  *
  * Called at the top of `createWebHandler`'s returned function so that all
@@ -45,10 +63,18 @@ export const WEB_CONTENT_SECURITY_POLICY: string = [
  *   provided, the CSP `form-action` directive explicitly includes the
  *   request origin to work around a Chromium bug where `'self'` does not
  *   match form submissions on non-standard ports.
+ * @param options - Optional scheme-dependent headers (e.g. {@link SecurityHeaderOptions.hsts}).
  */
-export function setSecurityHeaders(res: ServerResponse, requestHost?: string): void {
+export function setSecurityHeaders(
+  res: ServerResponse,
+  requestHost?: string,
+  options?: SecurityHeaderOptions,
+): void {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
+  if (options?.hsts) {
+    res.setHeader("Strict-Transport-Security", `max-age=${HSTS_MAX_AGE_SECONDS}`);
+  }
   // Chromium does not reliably match 'self' or explicit origin+port for
   // form-action on non-standard ports. Use the request hostname with a
   // wildcard port so the form POST is allowed regardless of port.

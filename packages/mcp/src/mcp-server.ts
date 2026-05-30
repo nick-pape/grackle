@@ -638,6 +638,11 @@ async function createMcpServerInstance(
 /** Interval for pruning stale revocation entries (1 hour). */
 const REVOCATION_PRUNE_INTERVAL_MS: number = 60 * 60 * 1000;
 
+/** Whether a hostname is a loopback address (`localhost`, `127.0.0.1`, or `::1`). */
+function isLoopbackHostname(hostname: string): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+}
+
 /**
  * Session ids whose scoped auth context is bound to `workspaceId`. Pure helper so
  * the promoted-tool `tools/list_changed` fan-out (#1297) is unit-testable without
@@ -690,6 +695,16 @@ export function createMcpServer(options: McpServerOptions): http.Server {
     : undefined;
   /** Scheme to use for derived auth URLs (preserves https when configured). */
   const authServerScheme = parsedAuthServerUrl?.protocol ?? "http:";
+  /**
+   * When the configured auth server host is a real (non-loopback) hostname — i.e.
+   * `GRACKLE_PUBLIC_URL` is set behind a TLS reverse proxy — advertise it verbatim
+   * so discovery points at the correct public origin. For a loopback default we
+   * keep request-host derivation (preserves the localhost-vs-127.0.0.1 CSP fix).
+   */
+  const explicitAuthOrigin =
+    parsedAuthServerUrl && !isLoopbackHostname(parsedAuthServerUrl.hostname)
+      ? `${parsedAuthServerUrl.protocol}//${parsedAuthServerUrl.host}`
+      : undefined;
   const grpcClients = createGrpcClients(bindHost, grpcPort, apiKey);
 
   /** Map of active session transports, keyed by session ID. */
@@ -729,19 +744,26 @@ export function createMcpServer(options: McpServerOptions): http.Server {
   const httpServer = http.createServer(async (req, res) => {
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
 
-    // Derive resource URL from request Host header (dialable by the client)
-    const requestResourceUrl = `http://${req.headers.host || url.host}`;
+    // Canonical resource (OAuth audience) identifying this MCP server. Use the
+    // configured public MCP origin (GRACKLE_MCP_ORIGIN) when set — e.g. behind a
+    // TLS reverse proxy, so the advertised resource isn't a downgraded http://
+    // URL — otherwise derive it from the request Host header (dialable by the
+    // client on loopback / LAN). NOT the request Host when configured: a hostile
+    // client could spoof it to mint a token for an attacker-controlled audience.
+    const resourceUrl = mcpOrigin ?? `http://${req.headers.host || url.host}`;
 
-    // OAuth Protected Resource Metadata (RFC 9728) — no auth required
-    // Derive auth server URL from request hostname so the browser stays on the
-    // same host — avoids CSP form-action 'self' mismatch (localhost vs 127.0.0.1).
+    // OAuth Protected Resource Metadata (RFC 9728) — no auth required.
+    // For a loopback auth server, derive its URL from the request hostname so the
+    // browser stays on the same host (avoids CSP form-action 'self' mismatch,
+    // localhost vs 127.0.0.1); for an explicit public auth origin, use it verbatim.
     if (authServerPort && url.pathname === "/.well-known/oauth-protected-resource/mcp") {
       const hostPart = url.hostname.includes(":") ? `[${url.hostname}]` : url.hostname;
-      const derivedAuthUrl = `${authServerScheme}//${hostPart}:${authServerPort}`;
+      const derivedAuthUrl =
+        explicitAuthOrigin ?? `${authServerScheme}//${hostPart}:${authServerPort}`;
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
-          resource: requestResourceUrl,
+          resource: resourceUrl,
           authorization_servers: [derivedAuthUrl],
         }),
       );
@@ -762,13 +784,18 @@ export function createMcpServer(options: McpServerOptions): http.Server {
       return;
     }
 
-    // Auth check on every request
-    const authContext = authenticateMcpRequest(req, apiKey);
+    // Auth check on every request. When a public MCP origin is configured, OAuth
+    // tokens are audience-validated against it (not the loopback default).
+    const authContext = authenticateMcpRequest(
+      req,
+      apiKey,
+      mcpOrigin ? { expectedResource: mcpOrigin } : undefined,
+    );
     if (!authContext) {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (authorizationServerUrl) {
         headers["WWW-Authenticate"] =
-          `Bearer resource_metadata="${requestResourceUrl}/.well-known/oauth-protected-resource/mcp"`;
+          `Bearer resource_metadata="${resourceUrl}/.well-known/oauth-protected-resource/mcp"`;
       }
       res.writeHead(401, headers);
       res.end(JSON.stringify({ error: "Unauthorized" }));
