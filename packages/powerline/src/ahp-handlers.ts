@@ -44,6 +44,8 @@ import type {
   ActionType as ActionTypeT,
   AuthenticateParams,
   AuthenticateResult,
+  CreateResourceWatchParams,
+  CreateResourceWatchResult,
   CreateSessionParams,
   DispatchActionParams,
   DisposeSessionParams,
@@ -52,6 +54,11 @@ import type {
   ListSessionsParams,
   ListSessionsResult,
   PingParams,
+  ResourceChange,
+  ResourceListParams,
+  ResourceReadParams,
+  ResourceWatchChangedAction,
+  ResourceWatchState,
   SessionStatus as SessionStatusT,
   SessionSummary,
   StateAction,
@@ -62,7 +69,14 @@ import type {
   AhpResponse,
   AhpNotification,
 } from "@grackle-ai/ahp";
-import { ActionType, JsonRpcErrorCodes, MessageKind, SessionStatus } from "@grackle-ai/ahp";
+import {
+  ActionType,
+  AhpErrorCodes,
+  JsonRpcErrorCodes,
+  MessageKind,
+  ResourceChangeType,
+  SessionStatus,
+} from "@grackle-ai/ahp";
 import {
   AhpServerSocket,
   type AhpServerConnection,
@@ -70,7 +84,22 @@ import {
 } from "@grackle-ai/ahp-transport";
 import { mapAgentEvent, type MapperContext } from "@grackle-ai/common";
 import type { AgentEvent, AgentSession } from "@grackle-ai/runtime-sdk";
-import { validateGitBranchName } from "@grackle-ai/runtime-sdk";
+import { validateGitBranchName, worktreeDir } from "@grackle-ai/runtime-sdk";
+import { type FSWatcher, watch as chokidarWatch } from "chokidar";
+import picomatch from "picomatch";
+import { existsSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { relative as relativePath, resolve as resolvePath, sep as pathSep } from "node:path";
+import { pathToFileURL } from "node:url";
+
+import {
+  assertWithinRoots,
+  isResourceError,
+  listResource,
+  readResource,
+  ResourceError,
+  resourceUriToPath,
+} from "./resource-fs.js";
 
 import { getRuntime } from "./runtime-registry.js";
 import {
@@ -90,6 +119,13 @@ import { writeTokens } from "./token-writer.js";
 
 const PROTOCOL_VERSION: string = "0.1.0";
 const SESSION_CHANNEL_PREFIX: string = "ahp-session:/";
+const RESOURCE_WATCH_CHANNEL_PREFIX: string = "ahp-resource-watch:/";
+/**
+ * Window over which raw filesystem events are coalesced into a single
+ * `resourceWatch/changed` action batch, to keep the action stream tractable
+ * under bursty writes (e.g. an editor's atomic save).
+ */
+const WATCH_COALESCE_MS: number = 75;
 
 /**
  * Decode a session URI to its underlying sessionId. Returns undefined for
@@ -164,6 +200,28 @@ const STATUS_RESCUE_CONTENTS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * A live filesystem watch created via `createResourceWatch`. The watcher is
+ * lazily started when a client `subscribe`s to the watch channel and released
+ * on unsubscribe / disconnect. Change events are coalesced into batched
+ * {@link ResourceWatchChangedAction}s delivered over the standard `action`
+ * notification.
+ */
+interface ResourceWatchEntry {
+  /** Absolute, sandbox-validated root path being watched. */
+  readonly rootPath: string;
+  /** Descriptor returned to a (re)subscribing client. */
+  readonly descriptor: ResourceWatchState;
+  /** Monotonic per-channel sequence for emitted action envelopes. */
+  serverSeq: number;
+  /** The chokidar watcher, once subscription has started it. */
+  watcher?: FSWatcher;
+  /** Pending coalesced changes keyed by URI (latest type wins). */
+  readonly pending: Map<string, ResourceChange>;
+  /** Active coalesce-flush timer, if one is scheduled. */
+  flushTimer?: ReturnType<typeof setTimeout>;
+}
+
+/**
  * Per-client tracking so {@link onDisconnect} can kill+park each session
  * owned by that client.
  */
@@ -171,6 +229,15 @@ interface ClientState {
   readonly sessionIds: Set<string>;
   /** Active forwarders keyed by sessionId (we tear them down on disconnect). */
   readonly forwarders: Map<string, ForwarderState>;
+  /**
+   * Filesystem roots this connection may read/list/watch — the union of each
+   * created session's working directory and (when worktrees are enabled) its
+   * sibling worktree path. Shared by `resourceRead`/`resourceList`/
+   * `createResourceWatch` sandboxing.
+   */
+  readonly allowedRoots: Set<string>;
+  /** Resource watches keyed by their `ahp-resource-watch:/<id>` channel URI. */
+  readonly watches: Map<string, ResourceWatchEntry>;
 }
 
 /** Options for {@link mountAhpServer}. */
@@ -196,7 +263,12 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
   function clientState(conn: AhpServerConnection): ClientState {
     let state = clients.get(conn.clientId);
     if (state === undefined) {
-      state = { sessionIds: new Set<string>(), forwarders: new Map() };
+      state = {
+        sessionIds: new Set<string>(),
+        forwarders: new Map(),
+        allowedRoots: new Set<string>(),
+        watches: new Map(),
+      };
       clients.set(conn.clientId, state);
     }
     return state;
@@ -216,6 +288,42 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
       id: req.id,
       result,
     } as AhpResponse;
+  }
+
+  /**
+   * Record the filesystem roots a newly-created session exposes for resource
+   * read/list/watch: the session's working directory and, when worktrees are
+   * enabled, its sibling worktree path (computed with the same {@link worktreeDir}
+   * the runtime uses, so the host and runtime agree on the location). Best
+   * effort — a session without a working directory contributes no root.
+   */
+  function addSessionRoots(cState: ClientState, cfg: Record<string, unknown>): void {
+    const wd =
+      typeof cfg.workingDirectory === "string" && cfg.workingDirectory !== ""
+        ? cfg.workingDirectory
+        : undefined;
+    if (wd === undefined) {
+      return;
+    }
+    const root = resolvePath(wd);
+    cState.allowedRoots.add(root);
+    const branch = typeof cfg.branch === "string" && cfg.branch !== "" ? cfg.branch : undefined;
+    const useWorktrees = cfg.useWorktrees === true;
+    if (useWorktrees && branch !== undefined) {
+      cState.allowedRoots.add(worktreeDir(root, branch));
+    }
+  }
+
+  /** Translate a thrown {@link ResourceError} (or unknown error) into a wire response. */
+  function resourceErrorToResponse(req: AhpRequest, err: unknown): AhpResponse {
+    if (isResourceError(err)) {
+      return jsonRpcError(req, err.code, err.message);
+    }
+    return jsonRpcError(
+      req,
+      JsonRpcErrorCodes.InternalError,
+      err instanceof Error ? err.message : String(err),
+    );
   }
 
   // ─── handler bodies ───────────────────────────────────────────
@@ -387,7 +495,9 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
       const owner = clients.get(ownerClientId);
       owner?.sessionIds.delete(deadSessionId);
     });
-    clientState(conn).sessionIds.add(sessionId);
+    const cState = clientState(conn);
+    cState.sessionIds.add(sessionId);
+    addSessionRoots(cState, cfg);
 
     return {
       jsonrpc: "2.0",
@@ -396,7 +506,164 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     } as AhpResponse;
   }
 
+  /**
+   * Allocate a resource-watch channel for a sandbox-validated URI. The watcher
+   * itself is started lazily when the client subscribes to the returned channel
+   * ({@link startResourceWatch}).
+   *
+   * @throws ResourceError — `InvalidParams`/`PermissionDenied` (sandbox) or
+   * `NotFound` if the watch target does not exist.
+   */
+  async function createResourceWatchEntry(
+    params: CreateResourceWatchParams,
+    conn: AhpServerConnection,
+  ): Promise<CreateResourceWatchResult> {
+    const cState = clientState(conn);
+    const rootPath = await assertWithinRoots(resourceUriToPath(params.uri), cState.allowedRoots);
+    if (!existsSync(rootPath)) {
+      throw new ResourceError(AhpErrorCodes.NotFound, `Watch target does not exist: ${params.uri}`);
+    }
+    const channel = `${RESOURCE_WATCH_CHANNEL_PREFIX}${randomUUID()}`;
+    const descriptor: ResourceWatchState = {
+      root: params.uri,
+      recursive: params.recursive ?? false,
+      ...(params.excludes !== undefined ? { excludes: params.excludes } : {}),
+      ...(params.includes !== undefined ? { includes: params.includes } : {}),
+    };
+    cState.watches.set(channel, { rootPath, descriptor, serverSeq: 0, pending: new Map() });
+    return { channel };
+  }
+
+  /**
+   * Flush the coalesced change batch for a watch as a single
+   * `resourceWatch/changed` action. Never dispatches an empty batch (per spec).
+   */
+  function flushResourceWatch(
+    conn: AhpServerConnection,
+    channel: string,
+    entry: ResourceWatchEntry,
+  ): void {
+    entry.flushTimer = undefined;
+    if (entry.pending.size === 0) {
+      return;
+    }
+    const items = [...entry.pending.values()];
+    entry.pending.clear();
+    const action: ResourceWatchChangedAction = {
+      type: ActionType.ResourceWatchChanged,
+      changes: { items },
+    };
+    conn.session.notify("action", {
+      channel,
+      serverSeq: entry.serverSeq++,
+      action,
+      origin: undefined,
+    });
+  }
+
+  /**
+   * Start the chokidar watcher for a previously-created watch entry and wire its
+   * events into coalesced `resourceWatch/changed` notifications. Idempotent: a
+   * second subscribe to the same channel is a no-op.
+   *
+   * Excludes and `.git` are matched via path-relative {@link picomatch}
+   * predicates (uniform across platforms); `includes` is applied as a
+   * post-filter on emitted paths (omitted = report everything not excluded).
+   */
+  function startResourceWatch(
+    conn: AhpServerConnection,
+    channel: string,
+    entry: ResourceWatchEntry,
+  ): void {
+    if (entry.watcher !== undefined) {
+      return;
+    }
+    const { rootPath, descriptor } = entry;
+    const excludeMatchers = (descriptor.excludes?.items ?? []).map((g) => picomatch(g));
+    const includeMatchers = (descriptor.includes?.items ?? []).map((g) => picomatch(g));
+    const relForMatch = (p: string): string => relativePath(rootPath, p).split(pathSep).join("/");
+
+    const watcher = chokidarWatch(rootPath, {
+      ignoreInitial: true,
+      awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 50 },
+      // Always skip .git; apply excludes relative to the watch root.
+      ignored: (p: string): boolean => {
+        if (p.split(pathSep).includes(".git")) {
+          return true;
+        }
+        if (excludeMatchers.length === 0) {
+          return false;
+        }
+        const rel = relForMatch(p);
+        return rel !== "" && excludeMatchers.some((m) => m(rel));
+      },
+      // recursive => unlimited depth; non-recursive => root + direct children.
+      depth: descriptor.recursive ? undefined : 1,
+    });
+    entry.watcher = watcher;
+
+    const record =
+      (type: ResourceChangeType): ((changedPath: string) => void) =>
+      (changedPath: string): void => {
+        if (includeMatchers.length > 0) {
+          const rel = relForMatch(changedPath);
+          if (rel !== "" && !includeMatchers.some((m) => m(rel))) {
+            return;
+          }
+        }
+        const uri = pathToFileURL(changedPath).href;
+        entry.pending.set(uri, { uri, type });
+        if (entry.flushTimer === undefined) {
+          entry.flushTimer = setTimeout(() => {
+            flushResourceWatch(conn, channel, entry);
+          }, WATCH_COALESCE_MS);
+        }
+      };
+
+    watcher.on("add", record(ResourceChangeType.Added));
+    watcher.on("addDir", record(ResourceChangeType.Added));
+    watcher.on("change", record(ResourceChangeType.Updated));
+    watcher.on("unlink", record(ResourceChangeType.Deleted));
+    watcher.on("unlinkDir", record(ResourceChangeType.Deleted));
+  }
+
+  /** Release a watch's filesystem resources (watcher + pending flush timer). */
+  function stopResourceWatch(entry: ResourceWatchEntry): void {
+    if (entry.flushTimer !== undefined) {
+      clearTimeout(entry.flushTimer);
+      entry.flushTimer = undefined;
+    }
+    entry.watcher?.close().catch(() => undefined);
+    entry.watcher = undefined;
+  }
+
   function handleSubscribe(params: SubscribeParams, conn: AhpServerConnection): AhpResponse {
+    // Resource-watch channels: start the lazily-created watcher and stream
+    // change batches. Events-only — the snapshot is omitted (the vendored
+    // `Snapshot.state` union does not include `ResourceWatchState`).
+    if (params.channel.startsWith(RESOURCE_WATCH_CHANNEL_PREFIX)) {
+      const entry = clientState(conn).watches.get(params.channel);
+      if (entry === undefined) {
+        return {
+          jsonrpc: "2.0",
+          id: 0,
+          error: {
+            code: JsonRpcErrorCodes.InvalidParams,
+            message: `Unknown resource-watch channel: ${params.channel}`,
+          },
+        } satisfies AhpResponse;
+      }
+      startResourceWatch(conn, params.channel, entry);
+      return {
+        jsonrpc: "2.0",
+        id: 0,
+        result: { snapshot: undefined } satisfies SubscribeResult,
+      } as AhpResponse;
+    }
+    return handleSessionSubscribe(params, conn);
+  }
+
+  function handleSessionSubscribe(params: SubscribeParams, conn: AhpServerConnection): AhpResponse {
     const sessionId = sessionIdFromChannel(params.channel);
     if (sessionId === undefined) {
       // Subscribing to non-session channels (e.g. ahp-root://) — return an
@@ -938,6 +1205,35 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
         }
         case "ping":
           return jsonRpcSuccess(req, handlePing(req.params as PingParams));
+        case "resourceRead": {
+          const p = req.params as ResourceReadParams;
+          try {
+            return jsonRpcSuccess(
+              req,
+              await readResource(p.uri, clientState(conn).allowedRoots, p.encoding),
+            );
+          } catch (err) {
+            return resourceErrorToResponse(req, err);
+          }
+        }
+        case "resourceList": {
+          const p = req.params as ResourceListParams;
+          try {
+            return jsonRpcSuccess(req, await listResource(p.uri, clientState(conn).allowedRoots));
+          } catch (err) {
+            return resourceErrorToResponse(req, err);
+          }
+        }
+        case "createResourceWatch": {
+          try {
+            return jsonRpcSuccess(
+              req,
+              await createResourceWatchEntry(req.params as CreateResourceWatchParams, conn),
+            );
+          } catch (err) {
+            return resourceErrorToResponse(req, err);
+          }
+        }
         default:
           return jsonRpcError(req, JsonRpcErrorCodes.MethodNotFound, `Unknown method: ${method}`);
       }
@@ -946,9 +1242,25 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     onNotification: (notif: AhpNotification, conn: AhpServerConnection): void => {
       if (notif.method === "dispatchAction") {
         handleDispatchAction(notif.params as DispatchActionParams, conn);
+        return;
       }
-      // Other client-dispatchable notifications (unsubscribe, etc.) — no-op
-      // for the wire-only scope.
+      if (notif.method === "unsubscribe") {
+        // Releasing a resource-watch subscription closes its watcher (the watch
+        // lifecycle is tied to subscription — there is no dispose command).
+        const channel = (notif.params as { channel?: string }).channel;
+        if (channel?.startsWith(RESOURCE_WATCH_CHANNEL_PREFIX) === true) {
+          const cState = clients.get(conn.clientId);
+          if (cState !== undefined) {
+            const entry = cState.watches.get(channel);
+            if (entry !== undefined) {
+              stopResourceWatch(entry);
+              cState.watches.delete(channel);
+            }
+          }
+        }
+        // Session-channel unsubscribe stays a no-op (the forwarder is torn down
+        // on resubscribe / dispose / disconnect).
+      }
     },
 
     onDisconnect: (clientId: string): void => {
@@ -989,6 +1301,11 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
           fwd.wake?.();
         }
       }
+      // Release any filesystem watches this client held.
+      for (const entry of cState.watches.values()) {
+        stopResourceWatch(entry);
+      }
+      cState.watches.clear();
       clients.delete(clientId);
     },
   });

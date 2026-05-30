@@ -39,6 +39,24 @@ PowerLine uses a pluggable runtime architecture. Each runtime implements a commo
 
 Additional runtimes can be added by implementing the `AgentRuntime` interface.
 
+## Resource access (AHP)
+
+As an AHP host, PowerLine exposes a read-only view of the filesystem its
+sessions run in, over the standard AHP `resource*` methods. Access is sandboxed
+to the working trees of the connection's sessions — each `createSession` adds
+that session's working directory (and, when worktrees are enabled, its sibling
+worktree path) to the connection's allowed roots. Requests for paths outside
+every allowed root are rejected with `PermissionDenied` (`-32009`).
+
+- **`resourceRead`** — read a file's contents by `file://` URI. Returns `utf-8`
+  for text content and `base64` for binary (or the explicitly requested
+  encoding), with a best-effort `contentType`.
+- **`resourceList`** — list a directory's entries (name + `file`/`directory`).
+- **`createResourceWatch`** — start a filesystem watcher over a `file://` URI
+  and return an `ahp-resource-watch:/<id>` channel. Subscribe to that channel to
+  receive batched `resourceWatch/changed` actions (`added`/`updated`/`deleted`);
+  unsubscribe — or disconnect — to release the watcher.
+
 ## Installation
 
 ```bash

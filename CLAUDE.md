@@ -224,6 +224,7 @@ Prettier is the canonical formatter. Config lives at `.prettierrc.json`; ignore 
 - Cross-package deps use `"workspace:*"` (pnpm rewrites to real versions at publish time)
 - `@bufbuild/protobuf` must be a direct dependency in any package using `create()`
 - Pin specific versions for runtime SDKs (not `@latest`)
+- **`moduleResolution` is classic `node` (Node10)** (`rigs/heft-rig/profiles/default/tsconfig-base.json`), which does **not** read a package's `exports` map. ESM-only packages that expose their types _only_ via `exports` (e.g. `chokidar@4`, `picomatch@4`) fail to compile with `TS2307 Cannot find module` even when installed and resolvable at runtime. Use a major version that still ships a top-level `types`/`main` field (e.g. `chokidar@^3.6.0`, `picomatch@^2.3.1` + `@types/picomatch@^2`), or bump the rig to `nodenext`/`bundler` resolution (a repo-wide change) to unlock the newer majors.
 
 ### Database
 
