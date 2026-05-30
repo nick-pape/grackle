@@ -271,6 +271,11 @@ export function processEventStream(
         } else if (event.type === "tool_result" && eventToolCallId) {
           const link = delegationByToolCall.get(eventToolCallId);
           if (link) {
+            // Every tool_result pairs (and consumes) its tool_use entry, so only
+            // genuinely-unpaired synchronous spawns remain in the map for the
+            // finally block to interrupt. A background/polled child whose work
+            // outlives the parent stream is independent and must NOT be interrupted.
+            delegationByToolCall.delete(eventToolCallId);
             if (link.isPoll) {
               // A read_agent poll surfaces partial output. On a terminal status,
               // closeChildSession records the result and stops the child; otherwise
@@ -279,7 +284,6 @@ export function processEventStream(
               const status = readAgentResultStatus(eventContent);
               if (status === "completed" || status === "failed" || status === "error") {
                 closeChildSession(link.childId, eventContent, status !== "completed");
-                delegationByToolCall.delete(eventToolCallId);
               } else {
                 appendChildActivity(link.childId, eventContent);
               }
@@ -290,7 +294,6 @@ export function processEventStream(
             } else {
               // Synchronous spawn (e.g. Claude `Agent`): the result IS the summary.
               closeChildSession(link.childId, eventContent, eventToolError);
-              delegationByToolCall.delete(eventToolCallId);
             }
           }
         }

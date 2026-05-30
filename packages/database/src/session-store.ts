@@ -329,7 +329,11 @@ export function getChildSessions(parentSessionId: string): SessionRow[] {
     .all();
 }
 
-/** Count active (pending/running/idle) sessions for a specific environment. */
+/**
+ * Count active (pending/running/idle) sessions for a specific environment.
+ * Excludes subagent children (#1075): they inherit the parent's env but are
+ * virtual activity logs and must not consume dispatch concurrency slots.
+ */
 export function countActiveForEnvironment(environmentId: string): number {
   const result = db
     .select({ count: sql<number>`COUNT(*)` })
@@ -337,6 +341,7 @@ export function countActiveForEnvironment(environmentId: string): number {
     .where(
       and(
         eq(sessions.environmentId, environmentId),
+        ne(sessions.runtime, SUBAGENT_RUNTIME),
         inArray(sessions.status, [
           SESSION_STATUS.PENDING,
           SESSION_STATUS.RUNNING,
@@ -348,17 +353,23 @@ export function countActiveForEnvironment(environmentId: string): number {
   return result?.count ?? 0;
 }
 
-/** Count all active (pending/running/idle) sessions across the entire server. */
+/**
+ * Count all active (pending/running/idle) sessions across the entire server.
+ * Excludes subagent children (#1075) so they don't consume global concurrency.
+ */
 export function countActiveGlobal(): number {
   const result = db
     .select({ count: sql<number>`COUNT(*)` })
     .from(sessions)
     .where(
-      inArray(sessions.status, [
-        SESSION_STATUS.PENDING,
-        SESSION_STATUS.RUNNING,
-        SESSION_STATUS.IDLE,
-      ]),
+      and(
+        ne(sessions.runtime, SUBAGENT_RUNTIME),
+        inArray(sessions.status, [
+          SESSION_STATUS.PENDING,
+          SESSION_STATUS.RUNNING,
+          SESSION_STATUS.IDLE,
+        ]),
+      ),
     )
     .get();
   return result?.count ?? 0;

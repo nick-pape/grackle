@@ -178,6 +178,11 @@ export function closeChildSession(childSessionId: string, result: string, isErro
   if (!session) {
     return;
   }
+  // Idempotent: a replayed/reanimated tool_result must not append the summary
+  // again to an already-terminal child.
+  if (TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
+    return;
+  }
   if (result) {
     recordChildEvent(
       childSessionId,

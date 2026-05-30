@@ -12,6 +12,7 @@ import {
   formatTokens,
   groupConsecutiveTextEvents,
   pairToolEvents,
+  sessionUrl,
   useToast,
 } from "@grackle-ai/web-components";
 import type { Session } from "../hooks/useGrackleSocket.js";
@@ -40,7 +41,7 @@ function SessionHeader({
       <span>
         {session?.parentSessionId && (
           <Link
-            to={`/sessions/${session.parentSessionId}`}
+            to={sessionUrl(session.parentSessionId)}
             data-testid="session-parent-link"
             title="Back to parent session"
           >

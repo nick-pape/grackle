@@ -1,6 +1,7 @@
 import { useState, type JSX } from "react";
 import { Link } from "react-router";
 import { parseDelegationArgs } from "@grackle-ai/common";
+import { sessionUrl } from "../../utils/navigation.js";
 import type { ToolCardProps } from "./ToolCardProps.js";
 import styles from "./toolCards.module.scss";
 import agentStyles from "./AgentToolCard.module.scss";
@@ -116,7 +117,7 @@ export function AgentToolCard({
 
         {childSessionId && (
           <Link
-            to={`/sessions/${childSessionId}`}
+            to={sessionUrl(childSessionId)}
             className={agentStyles.viewActivity}
             data-testid="tool-card-agent-view-activity"
           >

@@ -1578,6 +1578,29 @@ describe("subagent child sessions (#1075)", () => {
     expect(sessionStore.listSessionsByParent("p6").map((s) => s.id)).toEqual([childId]);
   });
 
+  it("does not count subagent children toward environment concurrency", () => {
+    // A real running session + a running subagent child in the same env.
+    sessionStore.createSession("real1", "env1", "claude-code", "p", "sonnet", "/tmp/r1", "task1");
+    sessionStore.updateSessionStatus("real1", "running");
+    sessionStore.createSession(
+      "sub_real1_x",
+      "env1", // inherits parent's env
+      "subagent",
+      "p",
+      "stub",
+      "",
+      "",
+      "",
+      "real1",
+      "",
+    );
+    sessionStore.updateSessionStatus("sub_real1_x", "running");
+
+    // Only the real session consumes a dispatch slot.
+    expect(sessionStore.countActiveForEnvironment("env1")).toBe(1);
+    expect(sessionStore.countActiveGlobal()).toBe(1);
+  });
+
   it("interrupts an open child when the parent stream ends without a tool_result", async () => {
     sessionStore.createSession("p7", "env1", "claude-code", "test", "sonnet", "/tmp/p7", "task1");
 
@@ -1661,10 +1684,11 @@ describe("subagent child sessions (#1075)", () => {
     await waitForProcessing(delegation, { sessionId: "p10", logPath: "/tmp/p10", taskId: "task1" });
 
     expect(sessionStore.listSessionsByParent("p10").map((s) => s.id)).toEqual([childId]);
-    const prompts = querySessionActions({ sessionId: childId }).filter(
-      (a) => a.content === "investigate",
-    );
-    expect(prompts).toHaveLength(1);
+    const actions = querySessionActions({ sessionId: childId });
+    // Neither the prompt floor nor the result floor may be duplicated by the
+    // replayed tool_use / tool_result (closeChildSession is a no-op once terminal).
+    expect(actions.filter((a) => a.content === "investigate")).toHaveLength(1);
+    expect(actions.filter((a) => a.content === "first result")).toHaveLength(1);
   });
 
   it("converges a Copilot task spawn and its read_agent polls onto one child via agent_id", async () => {
