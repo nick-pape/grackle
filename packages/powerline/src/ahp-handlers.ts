@@ -586,6 +586,11 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
     const watcher = chokidarWatch(rootPath, {
       ignoreInitial: true,
       awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 50 },
+      // Do not follow symlinks: a symlinked directory inside the root could
+      // otherwise lead the watcher to emit events for paths that live outside
+      // the sandbox, bypassing the realpath containment guard enforced by
+      // resourceRead/resourceList.
+      followSymlinks: false,
       // Always skip .git; apply excludes relative to the watch root.
       ignored: (p: string): boolean => {
         if (p.split(pathSep).includes(".git")) {
@@ -597,8 +602,9 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
         const rel = relForMatch(p);
         return rel !== "" && excludeMatchers.some((m) => m(rel));
       },
-      // recursive => unlimited depth; non-recursive => root + direct children.
-      depth: descriptor.recursive ? undefined : 1,
+      // recursive => unlimited depth; non-recursive => only the root's direct
+      // entries (depth 0; depth 1 would descend into immediate subdirectories).
+      depth: descriptor.recursive ? undefined : 0,
     });
     entry.watcher = watcher;
 

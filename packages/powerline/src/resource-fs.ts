@@ -55,6 +55,12 @@ function resourceError(code: number, message: string): ResourceError {
   return new ResourceError(code, message);
 }
 
+/** The encodings a client may request for `resourceRead`. */
+const VALID_ENCODINGS: ReadonlySet<ContentEncoding> = new Set([
+  ContentEncoding.Utf8,
+  ContentEncoding.Base64,
+]);
+
 /**
  * Filesystem operations used by this module, abstracted so unit tests can
  * inject an in-memory implementation. Mirrors the seam in
@@ -254,6 +260,15 @@ export async function readResource(
   encoding?: ContentEncoding,
   fs: FsLike = NODE_FS,
 ): Promise<ResourceReadResult> {
+  // Reject an unsupported encoding before touching the filesystem: the wire
+  // handler casts untrusted JSON params, so `encoding` may be any string.
+  if (encoding !== undefined && !VALID_ENCODINGS.has(encoding)) {
+    throw resourceError(
+      JsonRpcErrorCodes.InvalidParams,
+      `Unsupported encoding: ${String(encoding)} (expected utf-8 or base64)`,
+    );
+  }
+
   const requested = resourceUriToPath(uri);
   const path = await assertWithinRoots(requested, roots, fs);
 

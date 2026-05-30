@@ -116,6 +116,14 @@ describe("readResource", () => {
     expect(Buffer.from(result.data, "base64").toString("utf-8")).toBe("hi");
   });
 
+  it("rejects an unsupported encoding with InvalidParams", async () => {
+    await writeFile(join(root, "a.txt"), "hi", "utf-8");
+    const err = await expectResourceError(
+      readResource(uriIn(root, "a.txt"), [root], "latin1" as ContentEncoding),
+    );
+    expect(err.code).toBe(JsonRpcErrorCodes.InvalidParams);
+  });
+
   it("throws NotFound for a missing file", async () => {
     const err = await expectResourceError(readResource(uriIn(root, "nope.txt"), [root]));
     expect(err.code).toBe(AhpErrorCodes.NotFound);
