@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 30 May 2026 17:20:48 GMT and should not be manually modified.
+This log was last generated on Sat, 30 May 2026 18:05:30 GMT and should not be manually modified.
+
+## 0.137.0
+Sat, 30 May 2026 18:05:30 GMT
+
+### Minor changes
+
+- feat(#1374): require TLS or explicit insecure opt-in for non-loopback binds (advisory GHSA-wcpf-6gwv-47c8). Startup gate in resolveServerConfig() throws on a non-loopback bind unless one of (a) GRACKLE_TLS_CERT+KEY (native TLS, #1373), (b) GRACKLE_PUBLIC_URL=https:// (fronting proxy, #1371), or (c) GRACKLE_ALLOW_INSECURE=1 (deliberate cleartext) is set. CLI: new `grackle serve --insecure` flag. Server: logs a warn line on every startup when insecure mode is active so the choice is visible. Docker image bakes in `ENV GRACKLE_ALLOW_INSECURE=1` so `docker run` is unchanged; production deployments override with `-e GRACKLE_ALLOW_INSECURE=` after adding TLS. Closes epic #1372.
+
+### Patches
+
+- Replace per-package Vitest unit floors with a single per-package COMBINED coverage gate (unit + E2E + Storybook), plus a per-package report in the CI job summary (#1390).
 
 ## 0.136.2
 Sat, 30 May 2026 17:20:48 GMT
