@@ -26,10 +26,12 @@ export interface TlsConfig {
   keyPath: string;
   /**
    * Optional filesystem path to an intermediate-CA PEM bundle
-   * (`GRACKLE_TLS_CA`). When set, the contents are appended to the server
-   * certificate at load time so the full chain is served to clients.
+   * (`GRACKLE_TLS_CHAIN`). When set, the contents are appended to the server
+   * certificate at load time so the full chain is served to clients. This is
+   * **server identity** only — for client-cert verification (mTLS) see #1393
+   * (`GRACKLE_TLS_CLIENT_CA`, future).
    */
-  caPath?: string;
+  chainPath?: string;
 }
 
 /** Validated server configuration resolved from environment variables. */
@@ -84,7 +86,7 @@ export interface ServerConfig {
   dockerHost?: string;
   /**
    * Native-TLS configuration (`GRACKLE_TLS_CERT` + `GRACKLE_TLS_KEY`, optional
-   * `GRACKLE_TLS_CA`). When present, the server terminates TLS in-process on
+   * `GRACKLE_TLS_CHAIN`). When present, the server terminates TLS in-process on
    * every listener. When unset, listeners serve cleartext (current behavior).
    */
   tls?: TlsConfig;
@@ -123,13 +125,13 @@ function parseFlag(envName: string): boolean {
 function parseTlsConfig(): TlsConfig | undefined {
   const certPath = process.env.GRACKLE_TLS_CERT;
   const keyPath = process.env.GRACKLE_TLS_KEY;
-  const caPath = process.env.GRACKLE_TLS_CA;
+  const chainPath = process.env.GRACKLE_TLS_CHAIN;
 
   if (!certPath && !keyPath) {
-    if (caPath) {
+    if (chainPath) {
       throw new Error(
-        "GRACKLE_TLS_CA is set but GRACKLE_TLS_CERT and GRACKLE_TLS_KEY are not. " +
-          "Set both cert and key (or unset CA).",
+        "GRACKLE_TLS_CHAIN is set but GRACKLE_TLS_CERT and GRACKLE_TLS_KEY are not. " +
+          "Set both cert and key (or unset chain).",
       );
     }
     return undefined;
@@ -151,14 +153,14 @@ function parseTlsConfig(): TlsConfig | undefined {
   };
   checkReadable("GRACKLE_TLS_CERT", certPath);
   checkReadable("GRACKLE_TLS_KEY", keyPath);
-  if (caPath) {
-    checkReadable("GRACKLE_TLS_CA", caPath);
+  if (chainPath) {
+    checkReadable("GRACKLE_TLS_CHAIN", chainPath);
   }
 
   return {
     certPath,
     keyPath,
-    ...(caPath ? { caPath } : {}),
+    ...(chainPath ? { chainPath } : {}),
   };
 }
 

@@ -24,8 +24,8 @@ describe("loadSecureContext (#1373)", () => {
     expect(ctx.key.toString("utf8")).toMatch(/-----BEGIN (RSA )?PRIVATE KEY-----/);
   });
 
-  it("appends the CA chain to cert when caPath is set", () => {
-    const tls: TlsConfig = { certPath: CERT_PATH, keyPath: KEY_PATH, caPath: CA_PATH };
+  it("appends the CA chain to cert when chainPath is set", () => {
+    const tls: TlsConfig = { certPath: CERT_PATH, keyPath: KEY_PATH, chainPath: CA_PATH };
     const ctx = loadSecureContext(tls, silentLogger());
     const certText = ctx.cert.toString("utf8");
     // Two BEGIN CERTIFICATE blocks — leaf + chain.

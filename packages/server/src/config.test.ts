@@ -178,17 +178,17 @@ describe("resolveServerConfig — TLS (#1373)", () => {
   let tmp: string;
   let certPath: string;
   let keyPath: string;
-  let caPath: string;
+  let chainPath: string;
 
   beforeEach(() => {
     tmp = mkdtempSync(join(tmpdir(), "grackle-tls-cfg-"));
     certPath = join(tmp, "cert.pem");
     keyPath = join(tmp, "key.pem");
-    caPath = join(tmp, "chain.pem");
+    chainPath = join(tmp, "chain.pem");
     // Contents don't matter for config validation — only readability.
     writeFileSync(certPath, "CERT");
     writeFileSync(keyPath, "KEY");
-    writeFileSync(caPath, "CHAIN");
+    writeFileSync(chainPath, "CHAIN");
   });
 
   afterEach(() => {
@@ -207,11 +207,11 @@ describe("resolveServerConfig — TLS (#1373)", () => {
     expect(cfg.tls).toEqual({ certPath, keyPath });
   });
 
-  it("carries caPath through when GRACKLE_TLS_CA is set", () => {
+  it("carries chainPath through when GRACKLE_TLS_CHAIN is set", () => {
     vi.stubEnv("GRACKLE_TLS_CERT", certPath);
     vi.stubEnv("GRACKLE_TLS_KEY", keyPath);
-    vi.stubEnv("GRACKLE_TLS_CA", caPath);
-    expect(resolveServerConfig().tls).toEqual({ certPath, keyPath, caPath });
+    vi.stubEnv("GRACKLE_TLS_CHAIN", chainPath);
+    expect(resolveServerConfig().tls).toEqual({ certPath, keyPath, chainPath });
   });
 
   it("throws when only GRACKLE_TLS_CERT is set", () => {
@@ -224,9 +224,9 @@ describe("resolveServerConfig — TLS (#1373)", () => {
     expect(() => resolveServerConfig()).toThrow(/must both be set, or neither/);
   });
 
-  it("throws when GRACKLE_TLS_CA is set without cert+key", () => {
-    vi.stubEnv("GRACKLE_TLS_CA", caPath);
-    expect(() => resolveServerConfig()).toThrow(/GRACKLE_TLS_CA is set but/);
+  it("throws when GRACKLE_TLS_CHAIN is set without cert+key", () => {
+    vi.stubEnv("GRACKLE_TLS_CHAIN", chainPath);
+    expect(() => resolveServerConfig()).toThrow(/GRACKLE_TLS_CHAIN is set but/);
   });
 
   it("throws when GRACKLE_TLS_CERT points to a missing file", () => {
@@ -241,10 +241,10 @@ describe("resolveServerConfig — TLS (#1373)", () => {
     expect(() => resolveServerConfig()).toThrow(/GRACKLE_TLS_KEY.*not readable/);
   });
 
-  it("throws when GRACKLE_TLS_CA points to a missing file", () => {
+  it("throws when GRACKLE_TLS_CHAIN points to a missing file", () => {
     vi.stubEnv("GRACKLE_TLS_CERT", certPath);
     vi.stubEnv("GRACKLE_TLS_KEY", keyPath);
-    vi.stubEnv("GRACKLE_TLS_CA", join(tmp, "nope.pem"));
-    expect(() => resolveServerConfig()).toThrow(/GRACKLE_TLS_CA.*not readable/);
+    vi.stubEnv("GRACKLE_TLS_CHAIN", join(tmp, "nope.pem"));
+    expect(() => resolveServerConfig()).toThrow(/GRACKLE_TLS_CHAIN.*not readable/);
   });
 });

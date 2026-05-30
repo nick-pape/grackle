@@ -550,6 +550,65 @@ describe("getRequestHost (h1/h2 host extraction, #1373)", () => {
     const { getRequestHost } = await import("./web-server.js");
     expect(getRequestHost(fakeReq({}) as never)).toBeUndefined();
   });
+
+  // P5.4 hardening — exotic header shapes shouldn't crash callers. The helper
+  // is a flat string accessor; downstream URL construction is where validation
+  // happens (URL constructor + form-action CSP that wraps with try/catch).
+  it("returns empty string when :authority is empty (falls through to Host)", async () => {
+    const { getRequestHost } = await import("./web-server.js");
+    expect(getRequestHost(fakeReq({ ":authority": "", host: "fallback.example" }) as never)).toBe(
+      "fallback.example",
+    );
+  });
+
+  it("returns the first element when :authority is unexpectedly an array (HPACK quirk)", async () => {
+    const { getRequestHost } = await import("./web-server.js");
+    expect(
+      getRequestHost(fakeReq({ ":authority": ["first.example:443", "ignored"] }) as never),
+    ).toBe("first.example:443");
+  });
+
+  it("returns the bracketed IPv6 authority verbatim (callers handle parsing)", async () => {
+    const { getRequestHost } = await import("./web-server.js");
+    expect(getRequestHost(fakeReq({ ":authority": "[::1]:8443" }) as never)).toBe("[::1]:8443");
+  });
+
+  it("returns an authority containing multiple colons verbatim", async () => {
+    // Malformed but non-fatal: downstream URL parsing will reject. The helper
+    // intentionally doesn't validate — it's a flat accessor.
+    const { getRequestHost } = await import("./web-server.js");
+    expect(getRequestHost(fakeReq({ ":authority": "host:80:extra" }) as never)).toBe(
+      "host:80:extra",
+    );
+  });
+});
+
+describe("createWebServer cert/key mismatch (#1373 — P5.3)", () => {
+  const FIXTURE_DIR: string = join(dirname(fileURLToPath(import.meta.url)), "__fixtures__");
+
+  it("fails fast at construct time when cert and key are from different keypairs", () => {
+    // tls-test-ca.pem is a different cert (different keypair) than
+    // tls-test-key.pem — using them together should make Node's TLS context
+    // builder throw ERR_OSSL_X509_KEY_VALUES_MISMATCH at createSecureServer
+    // time, not silently fail at first handshake.
+    let cert: Buffer;
+    let key: Buffer;
+    try {
+      cert = readFileSync(join(FIXTURE_DIR, "tls-test-ca.pem"));
+      key = readFileSync(join(FIXTURE_DIR, "tls-test-key.pem"));
+    } catch {
+      return; // fixture missing — skip
+    }
+
+    expect(() =>
+      createWebServer({
+        apiKey: "x".repeat(64),
+        webPort: 0,
+        bindHost: "127.0.0.1",
+        secureContext: { cert, key },
+      }),
+    ).toThrow(/KEY_VALUES_MISMATCH|key values mismatch|PEM/);
+  });
 });
 
 describe("createWebServer public scheme — secureContext + publicUrl (#1373)", () => {
@@ -765,6 +824,206 @@ describe("createWebServer secureContext (#1373)", () => {
       // h2 must NOT carry a Connection header — sending one would have crashed
       // the response with ERR_HTTP2_INVALID_CONNECTION_HEADERS.
       expect(result.hasConnectionHeader).toBe(false);
+    } finally {
+      await new Promise<void>((resolve) => session.close(() => resolve()));
+    }
+  });
+});
+
+/**
+ * Phase 3+5 integration coverage: tests that exercise the full TLS server with
+ * a real h2 client, so the behavior we care about (response headers, status,
+ * session survival) is observed on the wire — not just inferred from the
+ * factory's pure outputs.
+ */
+describe("createWebServer h2 wire-level (Phase 3 + 5)", () => {
+  let server: Server | undefined;
+  const FIXTURE_DIR: string = join(dirname(fileURLToPath(import.meta.url)), "__fixtures__");
+  function loadFx(): { cert: Buffer; key: Buffer } | undefined {
+    try {
+      return {
+        cert: readFileSync(join(FIXTURE_DIR, "tls-test-cert.pem")),
+        key: readFileSync(join(FIXTURE_DIR, "tls-test-key.pem")),
+      };
+    } catch {
+      return undefined;
+    }
+  }
+  async function hardClose(s: Server): Promise<void> {
+    (s as { closeAllConnections?: () => void }).closeAllConnections?.();
+    await new Promise<void>((resolve) => s.close(() => resolve()));
+  }
+  afterEach(async () => {
+    if (server) {
+      await hardClose(server);
+      server = undefined;
+    }
+  });
+
+  /**
+   * Drive an h2 request with explicit `:authority`, returning status + response
+   * headers + body. The test client trusts the same cert it loaded so a
+   * self-signed CN=localhost dev cert validates over IPv4 loopback.
+   */
+  async function h2Request(
+    port: number,
+    ca: Buffer,
+    options: { path: string; method?: string; authority?: string; body?: string },
+  ): Promise<{
+    status: number;
+    headers: Record<string, string | string[] | undefined>;
+    body: string;
+  }> {
+    const session = http2.connect(`https://127.0.0.1:${port}`, {
+      ca,
+      checkServerIdentity: () => undefined,
+    });
+    session.on("error", () => {
+      /* ignore on teardown */
+    });
+    await new Promise<void>((resolve) => session.on("connect", resolve));
+    try {
+      return await new Promise((resolve, reject) => {
+        const reqHeaders: Record<string, string> = {
+          ":method": options.method ?? "GET",
+          ":path": options.path,
+        };
+        if (options.authority) {
+          reqHeaders[":authority"] = options.authority;
+        }
+        if (options.body) {
+          reqHeaders["content-type"] = "application/json";
+          reqHeaders["content-length"] = String(Buffer.byteLength(options.body));
+        }
+        const req = session.request(reqHeaders);
+        let respHeaders: Record<string, string | string[] | undefined> = {};
+        let body = "";
+        req.on("response", (h) => {
+          respHeaders = h;
+        });
+        req.on("data", (c) => (body += c.toString()));
+        req.on("end", () =>
+          resolve({ status: Number(respHeaders[":status"]), headers: respHeaders, body }),
+        );
+        req.on("error", reject);
+        setTimeout(() => reject(new Error("h2Request timeout")), 5000);
+        if (options.body) {
+          req.end(options.body);
+        } else {
+          req.end();
+        }
+      });
+    } finally {
+      await new Promise<void>((resolve) => session.close(() => resolve()));
+    }
+  }
+
+  it("P3.1 — OAuth metadata reflects :authority over h2 (not Host)", async () => {
+    const fx = loadFx();
+    if (!fx) {
+      return;
+    }
+    server = createWebServer({
+      apiKey: "x".repeat(64),
+      webPort: 0,
+      bindHost: "127.0.0.1",
+      secureContext: fx,
+    });
+    await new Promise<void>((resolve) => server!.listen(0, "127.0.0.1", resolve));
+    const port = (server.address() as { port: number }).port;
+
+    const r = await h2Request(port, fx.cert, {
+      path: "/.well-known/oauth-authorization-server",
+      authority: "grackle.example:8443",
+    });
+    expect(r.status).toBe(200);
+    const meta = JSON.parse(r.body);
+    // requestHost picked from :authority, scheme from secureContext → https
+    expect(meta.issuer).toBe("https://grackle.example:8443");
+    expect(meta.authorization_endpoint).toBe("https://grackle.example:8443/authorize");
+  });
+
+  it("P5.1 — h2 response carries no forbidden connection-specific headers", async () => {
+    const fx = loadFx();
+    if (!fx) {
+      return;
+    }
+    server = createWebServer({
+      apiKey: "x".repeat(64),
+      webPort: 0,
+      bindHost: "127.0.0.1",
+      secureContext: fx,
+    });
+    await new Promise<void>((resolve) => server!.listen(0, "127.0.0.1", resolve));
+    const port = (server.address() as { port: number }).port;
+
+    const r = await h2Request(port, fx.cert, { path: "/healthz" });
+    expect(r.status).toBe(200);
+    // RFC 9113 §8.2.2 — these are forbidden on h2 responses. Node strips them
+    // on the compat layer, but any user code that calls res.setHeader("Connection",
+    // ...) would re-introduce them. This is the regression guard.
+    const forbidden = ["connection", "transfer-encoding", "keep-alive", "upgrade", "te"];
+    for (const f of forbidden) {
+      expect(r.headers[f], `forbidden h2 header "${f}" present`).toBeUndefined();
+    }
+  });
+
+  it("P5.2 — h2-413 closes only the offending stream; session survives", async () => {
+    const fx = loadFx();
+    if (!fx) {
+      return;
+    }
+    server = createWebServer({
+      apiKey: "x".repeat(64),
+      webPort: 0,
+      bindHost: "127.0.0.1",
+      secureContext: fx,
+    });
+    await new Promise<void>((resolve) => server!.listen(0, "127.0.0.1", resolve));
+    const port = (server.address() as { port: number }).port;
+
+    const session = http2.connect(`https://127.0.0.1:${port}`, {
+      ca: fx.cert,
+      checkServerIdentity: () => undefined,
+    });
+    session.on("error", () => {});
+    await new Promise<void>((resolve) => session.on("connect", resolve));
+    try {
+      // Stream 1: oversized POST → 413
+      const overstatus = await new Promise<number>((resolve, reject) => {
+        const r = session.request({
+          ":method": "POST",
+          ":path": "/register",
+          "content-type": "application/json",
+          "content-length": "20000",
+        });
+        let captured = 0;
+        r.on("response", (h) => {
+          captured = Number(h[":status"]);
+        });
+        r.on("data", () => {});
+        r.on("end", () => resolve(captured));
+        r.on("error", reject);
+        setTimeout(() => reject(new Error("stream1 timeout")), 5000);
+        r.end("x".repeat(20000));
+      });
+      expect(overstatus).toBe(413);
+
+      // Stream 3 (h2 client streams are odd-numbered): another request on the
+      // SAME session must still succeed — 413 must not have torn down the conn.
+      const okstatus = await new Promise<number>((resolve, reject) => {
+        const r = session.request({ ":path": "/healthz" });
+        let captured = 0;
+        r.on("response", (h) => {
+          captured = Number(h[":status"]);
+        });
+        r.on("data", () => {});
+        r.on("end", () => resolve(captured));
+        r.on("error", reject);
+        setTimeout(() => reject(new Error("stream2 timeout")), 5000);
+        r.end();
+      });
+      expect(okstatus).toBe(200);
     } finally {
       await new Promise<void>((resolve) => session.close(() => resolve()));
     }

@@ -7,7 +7,7 @@ import type { TlsConfig } from "./config.js";
  * Loaded native-TLS material ready to hand to `http2.createSecureServer`.
  *
  * The `cert` buffer already includes any intermediate-chain content from
- * `GRACKLE_TLS_CA` appended via {@link loadSecureContext}, so callers do not
+ * `GRACKLE_TLS_CHAIN` appended via {@link loadSecureContext}, so callers do not
  * need to set a separate `ca` field on the secure-server options.
  */
 export interface SecureContext {
@@ -44,12 +44,12 @@ export function loadSecureContext(tls: TlsConfig, logger: Logger): SecureContext
     throw new Error(`Failed to read GRACKLE_TLS_KEY at "${tls.keyPath}": ${describe(err)}`);
   }
 
-  if (tls.caPath) {
+  if (tls.chainPath) {
     let chain: Buffer;
     try {
-      chain = readFileSync(tls.caPath);
+      chain = readFileSync(tls.chainPath);
     } catch (err) {
-      throw new Error(`Failed to read GRACKLE_TLS_CA at "${tls.caPath}": ${describe(err)}`);
+      throw new Error(`Failed to read GRACKLE_TLS_CHAIN at "${tls.chainPath}": ${describe(err)}`);
     }
     // Ensure a newline separator so two PEM blocks don't run together.
     const sep =
@@ -68,7 +68,7 @@ export function loadSecureContext(tls: TlsConfig, logger: Logger): SecureContext
         validTo: x509.validTo,
         certPath: tls.certPath,
         keyPath: tls.keyPath,
-        caPath: tls.caPath,
+        chainPath: tls.chainPath,
       },
       "TLS enabled — terminating TLS in-process on all listeners",
     );
