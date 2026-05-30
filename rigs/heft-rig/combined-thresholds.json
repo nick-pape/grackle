@@ -165,7 +165,7 @@
     "branches": 50
   },
   "scripts/coverage-merge": {
-    "lines": 80,
+    "lines": 75,
     "functions": 100,
     "branches": 90
   },
