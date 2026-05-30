@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 30 May 2026 12:43:12 GMT and should not be manually modified.
+This log was last generated on Sat, 30 May 2026 13:36:18 GMT and should not be manually modified.
+
+## 0.135.1
+Sat, 30 May 2026 13:36:18 GMT
+
+### Patches
+
+- Add a subagent-reconciliation phase that interrupts stranded RUNNING subagent child sessions (#1075) once their parent session reaches a terminal state, so a background/polled child whose parent stream ended is never left RUNNING forever (#1386).
 
 ## 0.135.0
 Sat, 30 May 2026 12:43:12 GMT

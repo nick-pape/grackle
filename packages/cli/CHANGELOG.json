@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.135.1",
+      "tag": "@grackle-ai/cli_v0.135.1",
+      "date": "Sat, 30 May 2026 13:36:18 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add a subagent-reconciliation phase that interrupts stranded RUNNING subagent child sessions (#1075) once their parent session reaches a terminal state, so a background/polled child whose parent stream ended is never left RUNNING forever (#1386)."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.135.0",
       "tag": "@grackle-ai/cli_v0.135.0",
       "date": "Sat, 30 May 2026 12:43:12 GMT",
