@@ -25,7 +25,7 @@ export function registerServeCommand(program: Command): void {
     .option("--allow-network", "Bind to all interfaces (0.0.0.0) for LAN access")
     .option(
       "--insecure",
-      "Deliberately allow cleartext on a non-loopback bind. Required without TLS (GRACKLE_TLS_CERT/KEY) or a https GRACKLE_PUBLIC_URL. Sets GRACKLE_ALLOW_INSECURE=1.",
+      "Deliberately allow cleartext on a non-loopback bind. Required without TLS (GRACKLE_TLS_CERT/KEY) or an https GRACKLE_PUBLIC_URL. Sets GRACKLE_ALLOW_INSECURE=1.",
     )
     .action(
       async (opts: {
