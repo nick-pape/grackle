@@ -69,6 +69,16 @@ describe("describeSessionStatus", () => {
     expect(describeSessionStatus({ status: "stopped", endReason: "terminated" }).tone).toBe(
       "error",
     );
+    // budget_exceeded and error are non-clean stops -> error tone (Failed bucket),
+    // not the neutral "Stopped" fallback (grackle.END_REASON parity).
+    expect(describeSessionStatus({ status: "stopped", endReason: "budget_exceeded" })).toEqual({
+      tone: "error",
+      label: "Budget exceeded",
+    });
+    expect(describeSessionStatus({ status: "stopped", endReason: "error" })).toEqual({
+      tone: "error",
+      label: "Error",
+    });
     expect(describeSessionStatus({ status: "stopped" })).toEqual({
       tone: "neutral",
       label: "Stopped",

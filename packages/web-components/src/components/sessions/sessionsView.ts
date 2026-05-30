@@ -74,6 +74,9 @@ export const TONE_LABELS: Readonly<Record<StatusTone, string>> = {
  * `endReason` distinguishes a clean completion from an error/kill.
  */
 function describeStopped(endReason: string | undefined): SessionStatusDescriptor {
+  // Cases mirror grackle.END_REASON. A non-clean stop (killed/interrupted/
+  // terminated/budget_exceeded/error) is an error tone so it lands in the
+  // "Failed" filter bucket rather than the neutral "Stopped" fallback.
   switch (endReason) {
     case "completed":
       return { tone: "success", label: "Completed" };
@@ -83,6 +86,10 @@ function describeStopped(endReason: string | undefined): SessionStatusDescriptor
       return { tone: "error", label: "Interrupted" };
     case "terminated":
       return { tone: "error", label: "Terminated" };
+    case "budget_exceeded":
+      return { tone: "error", label: "Budget exceeded" };
+    case "error":
+      return { tone: "error", label: "Error" };
     default:
       return { tone: "neutral", label: "Stopped" };
   }

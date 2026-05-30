@@ -65,6 +65,9 @@ function SessionRow({
   const status = describeSessionStatus(session);
   const totalTokens = (session.inputTokens ?? 0) + (session.outputTokens ?? 0);
   const cost = session.costMillicents ?? 0;
+  // Bind to a const so TypeScript narrows it to `string` inside the branch
+  // below (a property access would not narrow within the onClick closure).
+  const taskId = session.taskId;
 
   // The clickable session area and the task-association control are siblings,
   // not nested, so each is an independent, keyboard-accessible <button> (no
@@ -108,16 +111,16 @@ function SessionRow({
         </div>
       </button>
       <div className={styles.association}>
-        {session.taskId ? (
+        {taskId ? (
           <button
             type="button"
             className={styles.taskChip}
-            title={taskTitle ?? session.taskId}
-            onClick={() => onOpenTask(session.taskId ?? "")}
+            title={taskTitle ?? taskId}
+            onClick={() => onOpenTask(taskId)}
             data-testid={`session-task-${session.id}`}
           >
             <ClipboardList size={ICON_SM} aria-hidden="true" />
-            <span className={styles.taskChipLabel}>{taskTitle ?? session.taskId}</span>
+            <span className={styles.taskChipLabel}>{taskTitle ?? taskId}</span>
           </button>
         ) : (
           <span className={styles.adHocChip} data-testid={`session-adhoc-${session.id}`}>
