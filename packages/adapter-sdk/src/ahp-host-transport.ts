@@ -31,7 +31,7 @@ import type {
   URI,
   AhpNotification,
 } from "@grackle-ai/ahp";
-import { ActionType } from "@grackle-ai/ahp";
+import { ActionType, MessageKind } from "@grackle-ai/ahp";
 import {
   type AgentEventFields,
   newReverseMapperContext,
@@ -252,7 +252,7 @@ export class AhpHostTransport implements IHostTransport {
     const action: StateAction = {
       type: ActionType.SessionTurnStarted,
       turnId: `turn-input-${String(this.nextClientSeq)}`,
-      userMessage: { text },
+      message: { text, origin: { kind: MessageKind.User } },
     };
     this.socket.notify("dispatchAction", {
       channel: toSessionChannel(sessionUri),

@@ -156,7 +156,7 @@ export function reverseMapAction(
           {
             type: "turn_started",
             turnId: a.turnId,
-            content: a.userMessage.text,
+            content: a.message.text,
           },
         ],
         disposition: "mapped",

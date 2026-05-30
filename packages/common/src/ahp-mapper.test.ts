@@ -48,7 +48,7 @@ function assertActionType<T extends { type: string }>(
 // ─── turn_started ──────────────────────────────────────────────────
 
 describe("turn_started", () => {
-  it("maps to SessionTurnStarted with userMessage", () => {
+  it("maps to SessionTurnStarted with message", () => {
     const context = makeContext();
     const event = makeEvent("turn_started", {
       turnId: "turn-abc",
@@ -60,10 +60,10 @@ describe("turn_started", () => {
     const action = assertActionType<{
       type: string;
       turnId: string;
-      userMessage: { text: string };
+      message: { text: string };
     }>(result.actions, ActionType.SessionTurnStarted);
     expect(action.turnId).toBe("turn-abc");
-    expect(action.userMessage.text).toBe("Hello world");
+    expect(action.message.text).toBe("Hello world");
     expect(context.turnId).toBe("turn-abc");
     expect(context.openToolCalls).toEqual([]);
     expect(result.note?.disposition).toBe("mapped");
@@ -621,22 +621,22 @@ describe("context mutation", () => {
 // rigs/heft-rig/coverage-thresholds.json.
 
 describe("branch coverage", () => {
-  it("turn_started with non-JSON content uses raw content as userMessage", () => {
+  it("turn_started with non-JSON content uses raw content as message", () => {
     const context = makeContext();
     const event = makeEvent("turn_started", { content: "just a plain string", turnId: "t1" });
     const result = mapAgentEvent(event, 0, context);
 
-    const action = result.actions[0] as { userMessage: { text: string } };
-    expect(action.userMessage.text).toBe("just a plain string");
+    const action = result.actions[0] as { message: { text: string } };
+    expect(action.message.text).toBe("just a plain string");
   });
 
-  it("turn_started with empty content yields empty userMessage text", () => {
+  it("turn_started with empty content yields empty message text", () => {
     const context = makeContext();
     const event = makeEvent("turn_started", { turnId: "t1" });
     const result = mapAgentEvent(event, 0, context);
 
-    const action = result.actions[0] as { userMessage: { text: string } };
-    expect(action.userMessage.text).toBe("");
+    const action = result.actions[0] as { message: { text: string } };
+    expect(action.message.text).toBe("");
   });
 
   it("text with no content emits empty markdown part", () => {

@@ -11,6 +11,7 @@
 
 import {
   ActionType,
+  MessageKind,
   AuthRequiredReason,
   ResponsePartKind,
   SessionStatus,
@@ -198,7 +199,7 @@ describe("AhpHostTransport", () => {
       const action: StateAction = {
         type: ActionType.SessionTurnStarted,
         turnId: "turn-1",
-        userMessage: { text: "hi from server" },
+        message: { text: "hi from server", origin: { kind: MessageKind.User } },
       };
       stub.pushNotification("action", {
         channel: "ahp-session:/sess-1",
@@ -223,7 +224,11 @@ describe("AhpHostTransport", () => {
         stub.pushNotification("action", {
           channel: "ahp-session:/nonexistent",
           serverSeq: 1,
-          action: { type: ActionType.SessionTurnStarted, turnId: "t", userMessage: { text: "x" } },
+          action: {
+            type: ActionType.SessionTurnStarted,
+            turnId: "t",
+            message: { text: "x", origin: { kind: MessageKind.User } },
+          },
           origin: undefined,
         }),
       ).not.toThrow();
@@ -280,12 +285,12 @@ describe("AhpHostTransport", () => {
       const first = dispatches[0]!.params as {
         channel: string;
         clientSeq: number;
-        action: { type: string; userMessage: { text: string } };
+        action: { type: string; message: { text: string } };
       };
       expect(first.channel).toBe("ahp-session:/sess-1");
       expect(first.clientSeq).toBe(1);
       expect(first.action.type).toBe(ActionType.SessionTurnStarted);
-      expect(first.action.userMessage.text).toBe("hi");
+      expect(first.action.message.text).toBe("hi");
       const second = dispatches[1]!.params as { clientSeq: number };
       expect(second.clientSeq).toBe(2);
     });

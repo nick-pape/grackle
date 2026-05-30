@@ -212,8 +212,8 @@ importers:
         specifier: ^3.1.1
         version: 3.2.4(vitest@3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1))
       agent-host-protocol:
-        specifier: git+https://github.com/microsoft/agent-host-protocol.git#7c6b727bde61bc2c490201fb0e47a86759172782
-        version: https://codeload.github.com/microsoft/agent-host-protocol/tar.gz/7c6b727bde61bc2c490201fb0e47a86759172782
+        specifier: git+https://github.com/microsoft/agent-host-protocol.git#6f01e3d81e2751dcb827ffaf6d57d3b157c9d457
+        version: https://codeload.github.com/microsoft/agent-host-protocol/tar.gz/6f01e3d81e2751dcb827ffaf6d57d3b157c9d457
       vitest:
         specifier: ^3.1.1
         version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
@@ -5116,8 +5116,8 @@ packages:
     resolution: {integrity: sha512-4B/qKCfeE/ODUaAUpSwfzazo5x29WD4r3vXiWsB7I2mSDAihwEqKO+g8GELZUQSSAo5e1XTYh3ZVfLyxBc12nA==}
     engines: {node: '>= 10.0.0'}
 
-  agent-host-protocol@https://codeload.github.com/microsoft/agent-host-protocol/tar.gz/7c6b727bde61bc2c490201fb0e47a86759172782:
-    resolution: {tarball: https://codeload.github.com/microsoft/agent-host-protocol/tar.gz/7c6b727bde61bc2c490201fb0e47a86759172782}
+  agent-host-protocol@https://codeload.github.com/microsoft/agent-host-protocol/tar.gz/6f01e3d81e2751dcb827ffaf6d57d3b157c9d457:
+    resolution: {tarball: https://codeload.github.com/microsoft/agent-host-protocol/tar.gz/6f01e3d81e2751dcb827ffaf6d57d3b157c9d457}
     version: 1.0.0
 
   aggregate-error@3.1.0:
@@ -15765,7 +15765,7 @@ snapshots:
 
   address@1.2.2: {}
 
-  agent-host-protocol@https://codeload.github.com/microsoft/agent-host-protocol/tar.gz/7c6b727bde61bc2c490201fb0e47a86759172782: {}
+  agent-host-protocol@https://codeload.github.com/microsoft/agent-host-protocol/tar.gz/6f01e3d81e2751dcb827ffaf6d57d3b157c9d457: {}
 
   aggregate-error@3.1.0:
     dependencies:

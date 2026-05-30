@@ -47,6 +47,7 @@ import {
   ToolCallConfirmationReason,
   ToolResultContentType,
   ResponsePartKind,
+  MessageKind,
   type ErrorInfo,
   type StateAction,
   type ToolResultContent,
@@ -259,7 +260,7 @@ export function mapAgentEvent(
       actions.push({
         type: ActionType.SessionTurnStarted,
         turnId: derivedTurnId,
-        userMessage: { text: userMessage },
+        message: { text: userMessage, origin: { kind: MessageKind.User } },
       });
 
       context.turnId = derivedTurnId;
