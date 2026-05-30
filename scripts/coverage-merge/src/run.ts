@@ -10,6 +10,7 @@ import {
   mergeCoverageMaps,
   summarize,
   formatPercent,
+  percentValue,
   type FileCoverage,
   type CoverageSummary,
 } from "./merge.js";
@@ -103,6 +104,200 @@ export function renderTextTable(result: MergeResult, sourceCount: number): strin
     `  Functions: ${formatPercent(summary.functions)}  (${summary.functions.hit}/${summary.functions.found})`,
     `  Branches:  ${formatPercent(summary.branches)}  (${summary.branches.hit}/${summary.branches.found})`,
   ].join("\n");
+}
+
+/** Which test suite an lcov file came from. */
+export type Suite = "unit" | "e2e" | "storybook";
+
+/** All suites in display order. */
+export const SUITES: readonly Suite[] = ["unit", "e2e", "storybook"];
+
+/**
+ * Classify an lcov file by suite from its path tokens. Handles both the CI
+ * artifact layout (coverage-input/{unit,e2e}/..., with coverage-storybook and
+ * coverage-backend subdirs) and local paths (tests/e2e-tests/..., a package's
+ * coverage-storybook dir).
+ */
+export function classifySuite(filePath: string): Suite {
+  const p: string = filePath.replace(/\\/g, "/");
+  if (p.includes("coverage-storybook")) {
+    return "storybook";
+  }
+  if (p.includes("coverage-backend") || /(^|\/)e2e(\/|-)/.test(p)) {
+    return "e2e";
+  }
+  return "unit";
+}
+
+/** Per-suite merged coverage maps. */
+export interface SuiteMaps {
+  unit: Map<string, FileCoverage>;
+  e2e: Map<string, FileCoverage>;
+  storybook: Map<string, FileCoverage>;
+}
+
+/** Full analysis: the combined union plus each suite's contribution. */
+export interface Analysis {
+  combined: Map<string, FileCoverage>;
+  bySuite: SuiteMaps;
+  summary: CoverageSummary;
+  fileCount: number;
+}
+
+/** Parse + union a set of lcov files, keeping each suite's contribution separate. */
+export function analyzeCoverage(files: readonly string[]): Analysis {
+  // Collect each file's parsed map per suite, then merge each suite (and the
+  // overall combined) exactly once — avoids rebuilding a suite's union on every
+  // file (quadratic over many inputs).
+  const perSuite: Record<Suite, Array<Map<string, FileCoverage>>> = {
+    unit: [],
+    e2e: [],
+    storybook: [],
+  };
+  const all: Array<Map<string, FileCoverage>> = [];
+  for (const file of files) {
+    const map: Map<string, FileCoverage> = parseLcov(readFileSync(file, "utf8"), file);
+    perSuite[classifySuite(file)].push(map);
+    all.push(map);
+  }
+  const bySuite: SuiteMaps = {
+    unit: mergeCoverageMaps(perSuite.unit),
+    e2e: mergeCoverageMaps(perSuite.e2e),
+    storybook: mergeCoverageMaps(perSuite.storybook),
+  };
+  const combined: Map<string, FileCoverage> = mergeCoverageMaps(all);
+  return { combined, bySuite, summary: summarize(combined), fileCount: files.length };
+}
+
+/** The package a repo-relative source path belongs to (e.g. `packages/web-components`), or undefined. */
+export function packageKey(sourcePath: string): string | undefined {
+  const parts: string[] = sourcePath.split("/");
+  if ((parts[0] === "packages" || parts[0] === "scripts") && parts.length >= 2) {
+    return `${parts[0]}/${parts[1]}`;
+  }
+  return undefined;
+}
+
+/** Summarize merged coverage grouped by package. */
+export function summarizeByPackage(
+  merged: Map<string, FileCoverage>,
+): Map<string, CoverageSummary> {
+  const byPkg: Map<string, Map<string, FileCoverage>> = new Map();
+  for (const [path, cov] of merged) {
+    const key: string | undefined = packageKey(path);
+    if (key === undefined) {
+      continue;
+    }
+    let group: Map<string, FileCoverage> | undefined = byPkg.get(key);
+    if (group === undefined) {
+      group = new Map();
+      byPkg.set(key, group);
+    }
+    group.set(path, cov);
+  }
+  const out: Map<string, CoverageSummary> = new Map();
+  for (const [key, group] of byPkg) {
+    out.set(key, summarize(group));
+  }
+  return out;
+}
+
+/** Render the per-package table (per-suite + combined lines, plus combined fns/branches). */
+export function renderPerPackageMarkdown(analysis: Analysis): string {
+  const comb: Map<string, CoverageSummary> = summarizeByPackage(analysis.combined);
+  const bySuite: Record<Suite, Map<string, CoverageSummary>> = {
+    unit: summarizeByPackage(analysis.bySuite.unit),
+    e2e: summarizeByPackage(analysis.bySuite.e2e),
+    storybook: summarizeByPackage(analysis.bySuite.storybook),
+  };
+  const cell = (m: Map<string, CoverageSummary>, key: string): string => {
+    const s: CoverageSummary | undefined = m.get(key);
+    return s ? formatPercent(s.lines) : "–";
+  };
+  const lines: string[] = [
+    "### Per-package combined coverage",
+    "",
+    "Lines per suite; **combined** is the union (covered by any suite).",
+    "",
+    "| Package | unit | e2e | storybook | **combined** | fns | branches |",
+    "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+  ];
+  for (const key of [...comb.keys()].sort()) {
+    const c: CoverageSummary = comb.get(key)!;
+    lines.push(
+      `| ${key} | ${cell(bySuite.unit, key)} | ${cell(bySuite.e2e, key)} | ` +
+        `${cell(bySuite.storybook, key)} | **${formatPercent(c.lines)}** | ` +
+        `${formatPercent(c.functions)} | ${formatPercent(c.branches)} |`,
+    );
+  }
+  lines.push("");
+  return lines.join("\n");
+}
+
+/** A per-package combined floor (lines/functions/branches percentages). */
+export interface CombinedFloor {
+  lines: number;
+  functions: number;
+  branches: number;
+}
+
+/** A single per-metric threshold violation. */
+export interface ThresholdViolation {
+  /** The package that violated (e.g. `packages/web`). */
+  pkg: string;
+  /** Human-readable detail, e.g. `packages/web lines 35.0% < floor 40%`. */
+  message: string;
+}
+
+/** Outcome of checking per-package combined coverage against floors. */
+export interface ThresholdResult {
+  /** Per-metric violations (a package can appear more than once). */
+  violations: ThresholdViolation[];
+  /** Packages with coverage but no floor entry (sorted) — unenforced. */
+  unenforced: string[];
+  /** Packages with a floor entry but no combined coverage (sorted) — not enforced. */
+  missingCoverage: string[];
+  /** Number of packages actually enforced (had both a floor and coverage). */
+  enforcedCount: number;
+}
+
+/**
+ * Check per-package combined coverage against floors. Returns per-metric
+ * violations, plus diagnostics: packages whose floor could not be enforced
+ * because they have no combined coverage (e.g. a missing artifact or a removed
+ * package), and packages with coverage but no floor entry.
+ */
+export function checkCombinedThresholds(
+  combined: Map<string, CoverageSummary>,
+  floors: Record<string, CombinedFloor>,
+): ThresholdResult {
+  const violations: ThresholdViolation[] = [];
+  const missingCoverage: string[] = [];
+  let enforcedCount: number = 0;
+  for (const [pkg, floor] of Object.entries(floors)) {
+    const summary: CoverageSummary | undefined = combined.get(pkg);
+    if (summary === undefined) {
+      missingCoverage.push(pkg);
+      continue;
+    }
+    enforcedCount += 1;
+    const metrics: Array<[string, number, number]> = [
+      ["lines", percentValue(summary.lines), floor.lines],
+      ["functions", percentValue(summary.functions), floor.functions],
+      ["branches", percentValue(summary.branches), floor.branches],
+    ];
+    for (const [name, actual, floorValue] of metrics) {
+      if (actual + 1e-9 < floorValue) {
+        violations.push({
+          pkg,
+          message: `${pkg} ${name} ${actual.toFixed(1)}% < floor ${floorValue}%`,
+        });
+      }
+    }
+  }
+  const unenforced: string[] = [...combined.keys()].filter((k) => !(k in floors)).sort();
+  missingCoverage.sort();
+  return { violations, unenforced, missingCoverage, enforcedCount };
 }
 
 /** Render the summary as a GitHub-flavored Markdown table for the job summary. */
