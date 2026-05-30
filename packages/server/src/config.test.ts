@@ -1,4 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   DEFAULT_SERVER_PORT,
   DEFAULT_WEB_PORT,
@@ -168,5 +171,80 @@ describe("resolveServerConfig", () => {
   it("returns a frozen object", () => {
     const config = resolveServerConfig();
     expect(Object.isFrozen(config)).toBe(true);
+  });
+});
+
+describe("resolveServerConfig — TLS (#1373)", () => {
+  let tmp: string;
+  let certPath: string;
+  let keyPath: string;
+  let chainPath: string;
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), "grackle-tls-cfg-"));
+    certPath = join(tmp, "cert.pem");
+    keyPath = join(tmp, "key.pem");
+    chainPath = join(tmp, "chain.pem");
+    // Contents don't matter for config validation — only readability.
+    writeFileSync(certPath, "CERT");
+    writeFileSync(keyPath, "KEY");
+    writeFileSync(chainPath, "CHAIN");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  it("returns tls=undefined when no TLS env vars are set", () => {
+    expect(resolveServerConfig().tls).toBeUndefined();
+  });
+
+  it("populates tls when both cert and key are set", () => {
+    vi.stubEnv("GRACKLE_TLS_CERT", certPath);
+    vi.stubEnv("GRACKLE_TLS_KEY", keyPath);
+    const cfg = resolveServerConfig();
+    expect(cfg.tls).toEqual({ certPath, keyPath });
+  });
+
+  it("carries chainPath through when GRACKLE_TLS_CHAIN is set", () => {
+    vi.stubEnv("GRACKLE_TLS_CERT", certPath);
+    vi.stubEnv("GRACKLE_TLS_KEY", keyPath);
+    vi.stubEnv("GRACKLE_TLS_CHAIN", chainPath);
+    expect(resolveServerConfig().tls).toEqual({ certPath, keyPath, chainPath });
+  });
+
+  it("throws when only GRACKLE_TLS_CERT is set", () => {
+    vi.stubEnv("GRACKLE_TLS_CERT", certPath);
+    expect(() => resolveServerConfig()).toThrow(/must both be set, or neither/);
+  });
+
+  it("throws when only GRACKLE_TLS_KEY is set", () => {
+    vi.stubEnv("GRACKLE_TLS_KEY", keyPath);
+    expect(() => resolveServerConfig()).toThrow(/must both be set, or neither/);
+  });
+
+  it("throws when GRACKLE_TLS_CHAIN is set without cert+key", () => {
+    vi.stubEnv("GRACKLE_TLS_CHAIN", chainPath);
+    expect(() => resolveServerConfig()).toThrow(/GRACKLE_TLS_CHAIN is set but/);
+  });
+
+  it("throws when GRACKLE_TLS_CERT points to a missing file", () => {
+    vi.stubEnv("GRACKLE_TLS_CERT", join(tmp, "nope.pem"));
+    vi.stubEnv("GRACKLE_TLS_KEY", keyPath);
+    expect(() => resolveServerConfig()).toThrow(/GRACKLE_TLS_CERT.*not readable/);
+  });
+
+  it("throws when GRACKLE_TLS_KEY points to a missing file", () => {
+    vi.stubEnv("GRACKLE_TLS_CERT", certPath);
+    vi.stubEnv("GRACKLE_TLS_KEY", join(tmp, "nope.pem"));
+    expect(() => resolveServerConfig()).toThrow(/GRACKLE_TLS_KEY.*not readable/);
+  });
+
+  it("throws when GRACKLE_TLS_CHAIN points to a missing file", () => {
+    vi.stubEnv("GRACKLE_TLS_CERT", certPath);
+    vi.stubEnv("GRACKLE_TLS_KEY", keyPath);
+    vi.stubEnv("GRACKLE_TLS_CHAIN", join(tmp, "nope.pem"));
+    expect(() => resolveServerConfig()).toThrow(/GRACKLE_TLS_CHAIN.*not readable/);
   });
 });

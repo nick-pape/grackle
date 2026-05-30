@@ -43,6 +43,7 @@ import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { LocalPowerLineManager } from "./local-powerline-manager.js";
 import { registerCrashHandlers } from "./crash-handler.js";
 import { resolveServerConfig } from "./config.js";
+import { loadSecureContext, type SecureContext } from "./tls.js";
 import { createMcpServer, type ToolDefinition } from "@grackle-ai/mcp";
 import {
   loadOrCreateApiKey,
@@ -84,6 +85,38 @@ async function main(): Promise<void> {
   // Resolve and validate all server configuration from env vars (fail fast on invalid values)
   const config = resolveServerConfig();
   logger.info({ config }, "Server configuration resolved");
+
+  // Load TLS material once, before any listener is constructed (#1373). When
+  // unset (the default), all listeners serve cleartext as before.
+  const secureContext: SecureContext | undefined = config.tls
+    ? loadSecureContext(config.tls, logger)
+    : undefined;
+  // Effective public origin. Operator-set GRACKLE_PUBLIC_URL wins (#1371 — TLS
+  // terminates upstream); else if native TLS is enabled (#1373) synthesize a
+  // local https origin so every downstream piece (Secure cookie, OAuth
+  // metadata, HSTS, pairing URL, channel ingress) sees the right scheme.
+  // For the synthesized form prefer "localhost" over 127.0.0.1: it lets self-
+  // signed CN=localhost certs validate, browsers prefer it, and on Windows the
+  // IPv4 loopback alone has a Node h2 cross-process quirk that ::1 avoids.
+  const synthesizedPublicHost: string = isWildcardAddress(config.host)
+    ? detectLanIp() || "localhost"
+    : config.host === "127.0.0.1"
+      ? "localhost"
+      : config.host;
+  // Bracket IPv6 literals per RFC 2732 — `https://::1:port` is an invalid URL
+  // and parsePublicOrigin would reject it downstream in createWebServer.
+  const synthesizedUrlHost: string = synthesizedPublicHost.includes(":")
+    ? `[${synthesizedPublicHost}]`
+    : synthesizedPublicHost;
+  const effectivePublicUrl: string | undefined =
+    config.publicUrl ??
+    (secureContext ? `https://${synthesizedUrlHost}:${config.webPort}` : undefined);
+  // Listener (wire) scheme. What each listener actually speaks on its socket —
+  // driven solely by secureContext, NOT effectivePublicUrl. A TLS-terminating
+  // reverse proxy could publish https while the listener serves cleartext, or
+  // an operator could pair native TLS with `GRACKLE_PUBLIC_URL=http://...` —
+  // in either case the startup log should reflect on-the-wire reality.
+  const listenerScheme: "http" | "https" = secureContext ? "https" : "http";
 
   // AHP HR7: initialize the additive OTLP logs sink for runtime diagnostics.
   // No-op unless OTEL_EXPORTER_OTLP_ENDPOINT is set; never breaks startup.
@@ -271,7 +304,12 @@ async function main(): Promise<void> {
       },
     ],
   });
-  const grpcServer = http2.createServer(grpcHandler);
+  // gRPC always runs over http2. When TLS is enabled (#1373) we switch to
+  // `createSecureServer` so the same handler terminates h2 over TLS instead of
+  // cleartext h2c. allowHTTP1 is irrelevant here: gRPC clients always speak h2.
+  const grpcServer = secureContext
+    ? http2.createSecureServer({ cert: secureContext.cert, key: secureContext.key }, grpcHandler)
+    : http2.createServer(grpcHandler);
 
   grpcServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {
@@ -291,8 +329,9 @@ async function main(): Promise<void> {
 
   grpcServer.listen(grpcPort, bindHost, () => {
     logger.info(
-      { port: grpcPort, host: bindHost },
-      "gRPC server listening on http://%s:%d",
+      { port: grpcPort, host: bindHost, scheme: listenerScheme },
+      "gRPC server listening on %s://%s:%d",
+      listenerScheme,
       urlHost,
       grpcPort,
     );
@@ -309,20 +348,24 @@ async function main(): Promise<void> {
   const ingressUrlHost = ingressHost.includes(":") ? `[${ingressHost}]` : ingressHost;
   setChannelConfig({
     signingSecret: apiKey,
-    // Behind a TLS reverse proxy, external callers reach us at the public origin.
-    ingressBaseUrl: config.publicUrl ?? `http://${ingressUrlHost}:${webPort}`,
+    // External callers reach us at the effective public origin: an explicit
+    // GRACKLE_PUBLIC_URL when behind a TLS reverse proxy (#1371), the
+    // synthesized https origin when native TLS terminates here (#1373), or the
+    // local http origin otherwise.
+    ingressBaseUrl: effectivePublicUrl ?? `http://${ingressUrlHost}:${webPort}`,
   });
 
   const webServer = createWebServer({
     apiKey,
     webPort,
     bindHost,
+    ...(secureContext ? { secureContext } : {}),
     connectRoutes: routes,
     handleWebhook: ingestChannelMessage,
     pluginNames: loaded.pluginNames,
     sandboxPort: config.sandboxPort,
     ...(config.sandboxOrigin !== undefined ? { sandboxOrigin: config.sandboxOrigin } : {}),
-    ...(config.publicUrl !== undefined ? { publicUrl: config.publicUrl } : {}),
+    ...(effectivePublicUrl !== undefined ? { publicUrl: effectivePublicUrl } : {}),
     readinessCheck: (): ReadinessResult => {
       const checks: ReadinessResult["checks"] = {};
       try {
@@ -363,14 +406,23 @@ async function main(): Promise<void> {
   });
 
   webServer.listen(webPort, bindHost, () => {
-    logger.info({ port: webPort, host: bindHost }, "Web UI on http://%s:%d", urlHost, webPort);
+    logger.info(
+      { port: webPort, host: bindHost, scheme: listenerScheme },
+      "Web UI on %s://%s:%d",
+      listenerScheme,
+      urlHost,
+      webPort,
+    );
 
     // Generate initial pairing code and print to terminal
     const code = generatePairingCode();
     if (code) {
       const pairingHost = isWildcardAddress(bindHost) ? detectLanIp() || "localhost" : bindHost;
-      const pairingUrl = config.publicUrl
-        ? `${config.publicUrl}/pair?code=${code}`
+      // Prefer the effective public URL (explicit GRACKLE_PUBLIC_URL or the
+      // synthesized https origin under native TLS) so the printed URL is the
+      // one the browser will actually open. Falls back to cleartext loopback.
+      const pairingUrl = effectivePublicUrl
+        ? `${effectivePublicUrl}/pair?code=${code}`
         : `http://${pairingHost}:${webPort}/pair?code=${code}`;
 
       process.stdout.write("\n");
@@ -405,14 +457,14 @@ async function main(): Promise<void> {
     }
   });
 
-  // --- MCP server (HTTP/1.1, Streamable HTTP) ---
+  // --- MCP server (Streamable HTTP; h2-over-TLS when secureContext is set) ---
   // The MCP protected-resource metadata points clients at this authorization
-  // server. Behind a TLS reverse proxy, use the public origin so discovery
-  // carries the right scheme/host; otherwise the dialable loopback host
-  // (wildcard → 127.0.0.1).
+  // server. Use the effective public URL (explicit GRACKLE_PUBLIC_URL or the
+  // synthesized https origin under native TLS) so discovery carries the right
+  // scheme/host; otherwise the dialable loopback host (wildcard → 127.0.0.1).
   const dialableHost = isWildcardAddress(bindHost) ? "127.0.0.1" : bindHost;
   const dialableUrlHost = dialableHost.includes(":") ? `[${dialableHost}]` : dialableHost;
-  const authServerUrl = config.publicUrl ?? `http://${dialableUrlHost}:${webPort}`;
+  const authServerUrl = effectivePublicUrl ?? `http://${dialableUrlHost}:${webPort}`;
   // Adapt plugin-contributed tools to the concrete ToolDefinition type expected by MCP.
   // Validates shape at startup so runtime failures surface immediately with a clear message.
   const pluginToolGroups: ToolDefinition[][] =
@@ -439,6 +491,7 @@ async function main(): Promise<void> {
     authorizationServerUrl: authServerUrl,
     toolGroups: pluginToolGroups,
     publishWidgetEvent,
+    ...(secureContext ? { secureContext } : {}),
     // Push tools/list_changed to a workspace's MCP sessions when its promoted
     // component set changes (#1297), via the domain-event bus.
     onComponentChangeSubscribe: (notify) =>
@@ -471,8 +524,9 @@ async function main(): Promise<void> {
 
   mcpServer.listen(mcpPort, bindHost, () => {
     logger.info(
-      { port: mcpPort, host: bindHost },
-      "MCP server on http://%s:%d/mcp",
+      { port: mcpPort, host: bindHost, scheme: listenerScheme },
+      "MCP server on %s://%s:%d/mcp",
+      listenerScheme,
       urlHost,
       mcpPort,
     );
@@ -480,7 +534,11 @@ async function main(): Promise<void> {
 
   // --- MCP Apps widget sandbox server (separate origin) ---
   const sandboxPort = config.sandboxPort;
-  const sandboxServer = createSandboxServer({ bindHost, sandboxPort });
+  const sandboxServer = createSandboxServer({
+    bindHost,
+    sandboxPort,
+    ...(secureContext ? { secureContext } : {}),
+  });
   sandboxServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {
       logger.fatal(
@@ -498,8 +556,9 @@ async function main(): Promise<void> {
   });
   sandboxServer.listen(sandboxPort, bindHost, () => {
     logger.info(
-      { port: sandboxPort, host: bindHost },
-      "MCP Apps sandbox on http://%s:%d/sandbox.html",
+      { port: sandboxPort, host: bindHost, scheme: listenerScheme },
+      "MCP Apps sandbox on %s://%s:%d/sandbox.html",
+      listenerScheme,
       urlHost,
       sandboxPort,
     );

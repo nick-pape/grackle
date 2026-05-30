@@ -1,9 +1,63 @@
 import http from "node:http";
+import http2 from "node:http2";
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname, extname, normalize, resolve, relative } from "node:path";
 import { createRequire } from "node:module";
 import { connectNodeAdapter } from "@connectrpc/connect-node";
 import type { ConnectRouter } from "@connectrpc/connect";
+
+/**
+ * Common server type returned by {@link createWebServer} and the sandbox
+ * factory. The cleartext path returns a vanilla `http.Server`; the TLS path
+ * returns `http2.Http2SecureServer` configured with `allowHTTP1: true` so
+ * HTTP/1.1 clients still negotiate. Both expose the `.listen`, `.close`, and
+ * `EventEmitter` surface the server entry-point uses.
+ */
+export type GrackleServer = http.Server | http2.Http2SecureServer;
+
+/**
+ * Native-TLS material wired through to `http2.createSecureServer`.
+ *
+ * Loaded once at server startup (see `packages/server/src/tls.ts`) and shared
+ * across web, sandbox, MCP, and gRPC listeners so a single cert covers every
+ * port. Optional intermediate-chain content is concatenated onto `cert`
+ * upstream; downstream factories never see a separate CA buffer.
+ */
+export interface SecureContext {
+  /** PEM cert (possibly concatenated with the intermediate-CA chain). */
+  cert: Buffer;
+  /** PEM private key. */
+  key: Buffer;
+}
+
+/**
+ * Build a Node HTTP server that runs `handler`. When `secureContext` is
+ * provided, returns an `Http2SecureServer` (h2 over TLS with HTTP/1.1
+ * fallback); otherwise returns a plain cleartext `http.Server`.
+ *
+ * The Connect / handler signature is uniform across the two server types in
+ * Node's compat layer, so `handler` can be reused unchanged. Used by both
+ * {@link createWebServer} and `createSandboxServer`.
+ */
+export function buildServer(
+  handler: (req: http.IncomingMessage, res: http.ServerResponse) => void | Promise<void>,
+  secureContext?: SecureContext,
+): GrackleServer {
+  if (secureContext) {
+    // The http2 compat layer (`Http2ServerRequest` / `Http2ServerResponse`) is
+    // wire-compatible with the http1 request/response types our handler uses;
+    // cast through `unknown` to bridge the differing static signatures.
+    const h2Handler = handler as unknown as (
+      req: http2.Http2ServerRequest,
+      res: http2.Http2ServerResponse,
+    ) => void;
+    return http2.createSecureServer(
+      { cert: secureContext.cert, key: secureContext.key, allowHTTP1: true },
+      h2Handler,
+    );
+  }
+  return http.createServer(handler);
+}
 import {
   setSecurityHeaders,
   createSession,
@@ -82,6 +136,15 @@ export interface WebServerOptions {
   webPort: number;
   /** Bind host (e.g. "127.0.0.1" or "0.0.0.0"). */
   bindHost: string;
+  /**
+   * Optional TLS material. When provided, the returned server is an
+   * `Http2SecureServer` (h2 over TLS, with HTTP/1.1 fallback for legacy
+   * clients) instead of a cleartext `http.Server` (#1373). When set without
+   * an explicit {@link WebServerOptions.publicUrl}, the server entry point
+   * should synthesize one from the bind host + port so the public scheme
+   * stays https end-to-end (Secure cookie, OAuth metadata, HSTS).
+   */
+  secureContext?: SecureContext;
   /** ConnectRPC route registration function (injected from grpc-service). */
   connectRoutes?: (router: ConnectRouter) => void;
   /** Override the web UI dist directory (default: resolve from `grackle-ai/web`). */
@@ -285,18 +348,37 @@ function readBody(req: http.IncomingMessage): Promise<string> {
 }
 
 /**
- * Send a `413 Payload Too Large` response and close the (half-read) connection.
+ * Send a `413 Payload Too Large` response and tear down the (half-read)
+ * request so the client can't keep streaming an oversized body after we've
+ * responded.
  *
- * `Connection: close` lets Node flush the response and tear down the socket
- * whose request body was not fully consumed, discarding the unsent upload.
+ * On HTTP/1.1, `Connection: close` lets Node flush the response and discard
+ * the socket whose request body was not fully consumed.
+ *
+ * On HTTP/2, the `Connection` header is *forbidden*
+ * (`ERR_HTTP2_INVALID_CONNECTION_HEADERS`) — sending it crashes the response.
+ * h2 streams are independent, so we omit the header and close just the
+ * underlying stream after the response flushes; the TCP connection stays open
+ * for other multiplexed requests.
  */
 function respondPayloadTooLarge(req: http.IncomingMessage, res: http.ServerResponse): void {
-  // Tear down the (paused, half-read) request once the 413 has flushed, so the
-  // client can't keep streaming an oversized body after we've responded.
+  const isHttp2 = req.httpVersionMajor === 2;
   res.once("finish", () => {
-    req.destroy();
+    if (isHttp2) {
+      // Close just this h2 stream — leaves the TCP connection available for
+      // other in-flight or future requests on the same connection.
+      const stream = (req as unknown as { stream?: { close?: (code?: number) => void } }).stream;
+      stream?.close?.(http2.constants.NGHTTP2_NO_ERROR);
+    } else {
+      // h1: drop the socket entirely so the half-read body is discarded.
+      req.destroy();
+    }
   });
-  res.writeHead(413, { "Content-Type": "application/json", Connection: "close" });
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (!isHttp2) {
+    headers.Connection = "close";
+  }
+  res.writeHead(413, headers);
   res.end(JSON.stringify({ error: "payload too large" }));
 }
 
@@ -356,6 +438,26 @@ function getRemoteIp(req: http.IncomingMessage): string {
   return req.socket.remoteAddress || "unknown";
 }
 
+/**
+ * Return the host:port the client believes it dialed, regardless of HTTP
+ * version. HTTP/1.x carries this in the `Host` request header; HTTP/2 carries
+ * it in the `:authority` pseudo-header (Node's compat layer surfaces it under
+ * `req.headers[":authority"]` but does NOT mirror it into `host`). Falling
+ * back through both keeps OAuth metadata + protected-resource URLs matching
+ * the origin the browser actually used — over h2 TLS otherwise we'd advertise
+ * the configured loopback host instead.
+ */
+export function getRequestHost(req: http.IncomingMessage): string | undefined {
+  const authority = (req.headers as Record<string, string | string[] | undefined>)[":authority"];
+  if (typeof authority === "string" && authority) {
+    return authority;
+  }
+  if (Array.isArray(authority) && authority.length > 0 && authority[0]) {
+    return authority[0];
+  }
+  return req.headers.host;
+}
+
 /** Static assets served without session authentication (favicons, manifest, logo). */
 const PUBLIC_ASSETS: Set<string> = new Set([
   "/favicon.ico",
@@ -378,17 +480,23 @@ export function isWildcardAddress(host: string): boolean {
 // ─── Factory ────────────────────────────────────────────────
 
 /**
- * Create an HTTP server that serves the Grackle web UI, pairing flow,
+ * Create an HTTP(/2) server that serves the Grackle web UI, pairing flow,
  * OAuth authorization server, and optionally proxies ConnectRPC requests.
  *
+ * Returns an `http.Server` for the cleartext default. When
+ * `options.secureContext` is supplied, returns an `Http2SecureServer`
+ * (`http2.createSecureServer({ allowHTTP1: true })`) instead — HTTP/2 over
+ * TLS for capable clients, HTTP/1.1 fallback otherwise (#1373).
+ *
  * @param options - Server configuration.
- * @returns An `http.Server` ready to `.listen()`.
+ * @returns A {@link GrackleServer} ready to `.listen()`.
  */
-export function createWebServer(options: WebServerOptions): http.Server {
+export function createWebServer(options: WebServerOptions): GrackleServer {
   const {
     apiKey,
     webPort,
     bindHost,
+    secureContext,
     connectRoutes,
     webDistDir,
     readinessCheck,
@@ -402,7 +510,6 @@ export function createWebServer(options: WebServerOptions): http.Server {
   const allowNetwork = isWildcardAddress(bindHost);
   const dialableHost = allowNetwork ? "127.0.0.1" : bindHost;
   const urlHost = dialableHost.includes(":") ? `[${dialableHost}]` : dialableHost;
-  const webBaseUrl = `http://${urlHost}:${webPort}`;
 
   // When GRACKLE_PUBLIC_URL is set it is the source of truth for the
   // browser-facing scheme + host (behind a TLS-terminating reverse proxy).
@@ -410,10 +517,14 @@ export function createWebServer(options: WebServerOptions): http.Server {
   // consumer of this exported factory fails fast with a clear error rather than
   // a low-signal URL exception deep in a request handler.
   const publicUrlParsed = publicUrl ? parsePublicOrigin(publicUrl, "publicUrl") : undefined;
-  const publicIsHttps = publicUrlParsed?.protocol === "https:";
-  // Session cookie `Secure`: keyed off the public scheme when configured, else
-  // the wildcard-bind heuristic (unchanged for the casual local user).
-  const cookieSecure = publicUrlParsed ? publicIsHttps : allowNetwork;
+  // Effective public scheme. When publicUrl is set, it WINS — the operator told
+  // us what the browser sees, even if it's http://example (e.g. proxy stripping
+  // TLS internally). Native TLS is the implicit https signal only when no
+  // publicUrl is configured, so we don't override an explicit http public URL.
+  const publicIsHttps = publicUrlParsed ? publicUrlParsed.protocol === "https:" : !!secureContext;
+  // Session cookie `Secure`: keyed off the effective public scheme when known,
+  // else the wildcard-bind heuristic (unchanged for the casual local user).
+  const cookieSecure = publicUrlParsed || secureContext ? publicIsHttps : allowNetwork;
   // CSP form-action / frame-src host: use the configured public host when set
   // (consistent with ignoring the spoofable request Host elsewhere); otherwise
   // fall back to the request Host for the loopback / LAN case.
@@ -426,7 +537,12 @@ export function createWebServer(options: WebServerOptions): http.Server {
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   const handler = async (req: http.IncomingMessage, res: http.ServerResponse): Promise<void> => {
-    setSecurityHeaders(res, cspHost ?? req.headers.host, {
+    // CSP host: prefer the configured public host; else the request's authority
+    // (h2 :authority via getRequestHost) or Host header. HSTS follows the public
+    // scheme so it's emitted whenever the operator advertises https — covers
+    // both reverse-proxy TLS (#1371) and native TLS (#1373 via synthesized
+    // publicUrl from the server entry point).
+    setSecurityHeaders(res, cspHost ?? getRequestHost(req), {
       hsts: publicIsHttps,
       ...(sandboxOrigin !== undefined ? { sandboxOrigin } : {}),
     });
@@ -491,10 +607,13 @@ export function createWebServer(options: WebServerOptions): http.Server {
     // URLs match the origin the browser is on — avoids CSP form-action 'self'
     // mismatch (#1180).
     if (rawPath === "/.well-known/oauth-authorization-server") {
-      const requestHost = req.headers.host || `${urlHost}:${webPort}`;
+      // Prefer configured publicUrl (proxy or synthesized for native TLS), else
+      // derive from the request's authority (h2 :authority via getRequestHost
+      // or Host) so URLs match the origin the browser actually reached.
+      const requestHost = getRequestHost(req) || `${urlHost}:${webPort}`;
       const baseUrl = publicUrlParsed
         ? `${publicUrlParsed.protocol}//${publicUrlParsed.host}`
-        : `http://${requestHost}`;
+        : `${secureContext ? "https" : "http"}://${requestHost}`;
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
@@ -987,5 +1106,5 @@ export function createWebServer(options: WebServerOptions): http.Server {
     serveStaticFile(res, rawPath, distDir);
   };
 
-  return http.createServer(handler);
+  return buildServer(handler, secureContext);
 }
