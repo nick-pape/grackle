@@ -191,6 +191,40 @@ describe("authenticateMcpRequest", () => {
     expect(result).toEqual({ type: "oauth", clientId: OAUTH_CLIENT_ID });
   });
 
+  /**
+   * Audience isolation: a token whose `aud` carries a path must NOT match a
+   * bare-origin `expectedResource` (path is preserved, not stripped to origin).
+   */
+  test("OAuth token with a path in the audience is rejected against an origin expectedResource", () => {
+    const token = createOAuthAccessToken(
+      OAUTH_CLIENT_ID,
+      "https://mcp.example.com/some/path",
+      API_KEY,
+    );
+    const req = mockRequest(`Bearer ${token}`, OAUTH_PORT);
+    const result = authenticateMcpRequest(req, API_KEY, {
+      expectedResource: "https://mcp.example.com",
+    });
+    expect(result).toBeUndefined();
+  });
+
+  /** Same path is preserved on both sides, so an exact path audience still matches. */
+  test("OAuth token with a matching path audience is accepted", () => {
+    const resource = "https://mcp.example.com/some/path";
+    const token = createOAuthAccessToken(OAUTH_CLIENT_ID, resource, API_KEY);
+    const req = mockRequest(`Bearer ${token}`, OAUTH_PORT);
+    const result = authenticateMcpRequest(req, API_KEY, { expectedResource: resource });
+    expect(result).toEqual({ type: "oauth", clientId: OAUTH_CLIENT_ID });
+  });
+
+  /** Audience with a path is also rejected on the loopback default path. */
+  test("OAuth token with a path is rejected on the loopback-derived audience", () => {
+    const token = createOAuthAccessToken(OAUTH_CLIENT_ID, `${OAUTH_RESOURCE}/some/path`, API_KEY);
+    const req = mockRequest(`Bearer ${token}`, OAUTH_PORT);
+    const result = authenticateMcpRequest(req, API_KEY);
+    expect(result).toBeUndefined();
+  });
+
   /** All three auth types work independently. */
   test("api key, scoped, and oauth tokens work independently", () => {
     const apiKeyReq = mockRequest(`Bearer ${API_KEY}`);

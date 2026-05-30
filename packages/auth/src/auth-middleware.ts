@@ -22,12 +22,14 @@ function stripTrailingSlashes(value: string): string {
 }
 
 /**
- * Normalize loopback hostnames so that `localhost` and `127.0.0.1` compare equal,
- * and strip any trailing slash so `http://h/` matches `http://h`.
+ * Normalize an audience URL for comparison: treat `localhost` and `127.0.0.1`
+ * as equal, and ignore a single trailing slash so `http://h/` matches `http://h`.
  *
- * Parses the URL and replaces `localhost` with `127.0.0.1`, returning the origin
- * (which is already trailing-slash-free). Falls back to a trailing-slash-trimmed
- * copy of the raw input when the value does not parse as a URL.
+ * Crucially, any non-root path, query, or fragment is **preserved** — dropping
+ * it (e.g. via `URL.origin`) would let a token minted for
+ * `https://mcp.example.com/some/path` be accepted when the expected resource is
+ * just `https://mcp.example.com`, weakening audience isolation. Falls back to a
+ * trailing-slash-trimmed copy of the raw input when the value does not parse.
  */
 function normalizeLoopback(url: string): string {
   try {
@@ -35,7 +37,10 @@ function normalizeLoopback(url: string): string {
     if (parsed.hostname === "localhost") {
       parsed.hostname = "127.0.0.1";
     }
-    return parsed.origin;
+    // Collapse a bare "/" path to empty so origin-only audiences match with or
+    // without a trailing slash; otherwise keep the path (minus a trailing slash).
+    const path = parsed.pathname === "/" ? "" : stripTrailingSlashes(parsed.pathname);
+    return `${parsed.origin}${path}${parsed.search}${parsed.hash}`;
   } catch {
     return stripTrailingSlashes(url);
   }
