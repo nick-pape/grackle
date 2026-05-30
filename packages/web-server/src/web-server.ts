@@ -517,10 +517,11 @@ export function createWebServer(options: WebServerOptions): GrackleServer {
   // consumer of this exported factory fails fast with a clear error rather than
   // a low-signal URL exception deep in a request handler.
   const publicUrlParsed = publicUrl ? parsePublicOrigin(publicUrl, "publicUrl") : undefined;
-  // Treat native TLS (#1373) as an implicit https public scheme — secureContext
-  // means this listener IS terminating TLS, so https is what the browser sees
-  // even when the operator didn't separately set GRACKLE_PUBLIC_URL.
-  const publicIsHttps = publicUrlParsed?.protocol === "https:" || !!secureContext;
+  // Effective public scheme. When publicUrl is set, it WINS — the operator told
+  // us what the browser sees, even if it's http://example (e.g. proxy stripping
+  // TLS internally). Native TLS is the implicit https signal only when no
+  // publicUrl is configured, so we don't override an explicit http public URL.
+  const publicIsHttps = publicUrlParsed ? publicUrlParsed.protocol === "https:" : !!secureContext;
   // Session cookie `Secure`: keyed off the effective public scheme when known,
   // else the wildcard-bind heuristic (unchanged for the casual local user).
   const cookieSecure = publicUrlParsed || secureContext ? publicIsHttps : allowNetwork;

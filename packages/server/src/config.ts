@@ -12,9 +12,12 @@ import { parsePublicOrigin } from "@grackle-ai/auth";
  * Native-TLS configuration resolved from environment variables.
  *
  * When present, every browser- and client-facing Grackle listener (web,
- * sandbox, MCP, gRPC) terminates TLS in-process via
- * `http2.createSecureServer({ allowHTTP1: true })`. Used by deployments that
- * expose the server on the network without a fronting TLS proxy (#1373).
+ * sandbox, MCP, gRPC) terminates TLS in-process. The web/sandbox/MCP
+ * listeners use `http2.createSecureServer({ allowHTTP1: true })` so HTTP/1.1
+ * clients still negotiate via ALPN; the gRPC listener is intentionally
+ * h2-only (`createSecureServer` without `allowHTTP1`) because gRPC clients
+ * always speak h2. Used by deployments that expose the server on the network
+ * without a fronting TLS proxy (#1373).
  */
 export interface TlsConfig {
   /** Filesystem path to the PEM-encoded server certificate (`GRACKLE_TLS_CERT`). */

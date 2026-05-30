@@ -103,9 +103,14 @@ async function main(): Promise<void> {
     : config.host === "127.0.0.1"
       ? "localhost"
       : config.host;
+  // Bracket IPv6 literals per RFC 2732 — `https://::1:port` is an invalid URL
+  // and parsePublicOrigin would reject it downstream in createWebServer.
+  const synthesizedUrlHost: string = synthesizedPublicHost.includes(":")
+    ? `[${synthesizedPublicHost}]`
+    : synthesizedPublicHost;
   const effectivePublicUrl: string | undefined =
     config.publicUrl ??
-    (secureContext ? `https://${synthesizedPublicHost}:${config.webPort}` : undefined);
+    (secureContext ? `https://${synthesizedUrlHost}:${config.webPort}` : undefined);
   const publicScheme: "http" | "https" = effectivePublicUrl?.startsWith("https://")
     ? "https"
     : "http";

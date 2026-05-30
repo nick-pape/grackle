@@ -737,7 +737,13 @@ export function createMcpServer(options: McpServerOptions): http.Server | http2.
   // reverse-proxy / TLS deployments where loopback isn't browser-reachable.
   const dialableMcpHost: string =
     bindHost === "0.0.0.0" || bindHost === "::" ? "127.0.0.1" : bindHost;
-  const brokerAssetOrigin: string = mcpOrigin ?? `${localScheme}://${dialableMcpHost}:${mcpPort}`;
+  // Bracket IPv6 literals per RFC 2732 — `http://::1:port` is invalid, so an
+  // explicit IPv6 bind without a GRACKLE_MCP_ORIGIN override would otherwise
+  // produce a malformed widget asset/CSP origin in broker mode.
+  const brokerHostInUrl: string = dialableMcpHost.includes(":")
+    ? `[${dialableMcpHost}]`
+    : dialableMcpHost;
+  const brokerAssetOrigin: string = mcpOrigin ?? `${localScheme}://${brokerHostInUrl}:${mcpPort}`;
   /** Parsed auth server URL, used for dynamic derivation of authorization_servers. */
   const parsedAuthServerUrl = authorizationServerUrl ? new URL(authorizationServerUrl) : undefined;
   /** Effective port (explicit or protocol default). */
