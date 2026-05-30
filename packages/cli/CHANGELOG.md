@@ -1,6 +1,19 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 30 May 2026 01:06:03 GMT and should not be manually modified.
+This log was last generated on Sat, 30 May 2026 12:43:12 GMT and should not be manually modified.
+
+## 0.135.0
+Sat, 30 May 2026 12:43:12 GMT
+
+### Minor changes
+
+- Materialize SDK-internal subagents (Claude Agent, Copilot task/read_agent) as first-class child sessions: shared delegation detection, deterministic child session ids, event-processor materialization with floor activity, Session.parent_session_id, and parent/child navigation in the web UI (#1075)
+- Make the web/MCP servers reverse-proxy aware (#1371). New GRACKLE_PUBLIC_URL (--public-url) is the canonical browser-facing origin behind a TLS-terminating proxy: it drives the OAuth authorization-server metadata scheme/host, the session cookie Secure flag, HSTS emission, the pairing/QR URL, and the channel webhook ingress base URL. GRACKLE_MCP_ORIGIN now also fixes the MCP server's OAuth resource identifier / token audience (RFC 9728) so it isn't a downgraded http:// URL behind TLS. When both are unset, behavior is unchanged (loopback http defaults). Remediation for draft advisory GHSA-wcpf-6gwv-47c8 (Pattern E).
+
+### Patches
+
+- Add Playwright E2E V8 coverage collection and a coverage-merge step that unions unit + E2E lcov into one repo-wide total (#1383).
+- Add a Sessions tab: a live, environment-grouped activity monitor that surfaces every session (task-bound and ad-hoc) with status filters, search, and links to each session detail and owning task (#1358).
 
 ## 0.134.0
 Sat, 30 May 2026 01:06:03 GMT
