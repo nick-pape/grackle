@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import http from "node:http";
+import http2 from "node:http2";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@connectrpc/connect";
@@ -106,12 +107,58 @@ export interface McpServerOptions {
    * standalone omits it.
    */
   onComponentChangeSubscribe?: (notify: (workspaceId: string) => void) => () => void;
+  /**
+   * Browser-facing scheme — `"http"` (default) or `"https"`. Drives the
+   * brokered MCP origin (the trusted asset/CSP origin for widgets) and the
+   * `resource` URL advertised by `/.well-known/oauth-protected-resource/mcp`.
+   * Set to `"https"` whenever the operator advertises the MCP server over TLS
+   * — either via a reverse proxy (#1371) or native TLS on this listener
+   * (#1373).
+   */
+  publicScheme?: "http" | "https";
+  /**
+   * Optional native-TLS material (#1373). When set, the MCP listener is built
+   * with `http2.createSecureServer({ allowHTTP1: true })` and the in-process
+   * gRPC client connects to the co-located server over TLS, trusting `cert`
+   * as the loopback chain anchor (no skip-verify).
+   */
+  secureContext?: {
+    cert: Buffer;
+    key: Buffer;
+  };
 }
 
-/** Create per-service ConnectRPC clients pointing at the co-located Grackle gRPC server. */
-function createGrpcClients(bindHost: string, grpcPort: number, apiKey: string): GrackleClients {
+/**
+ * Create per-service ConnectRPC clients pointing at the co-located Grackle
+ * gRPC server.
+ *
+ * When `secureContext` is supplied, the gRPC server is terminating TLS (#1373)
+ * and this in-process loopback client must speak TLS too. We use the server's
+ * own cert/chain as the trust anchor (no `rejectUnauthorized: false`), so a
+ * self-signed dev cert still validates without weakening verification. Always
+ * connects via `127.0.0.1` to keep the dial address routable on every OS even
+ * when the server binds `0.0.0.0`.
+ */
+function createGrpcClients(
+  bindHost: string,
+  grpcPort: number,
+  apiKey: string,
+  secureContext?: { cert: Buffer; key: Buffer },
+): GrackleClients {
+  const loopbackHost = bindHost === "0.0.0.0" || bindHost === "::" ? "127.0.0.1" : bindHost;
+  const scheme = secureContext ? "https" : "http";
   const transport = createGrpcTransport({
-    baseUrl: `http://${bindHost}:${grpcPort}`,
+    baseUrl: `${scheme}://${loopbackHost}:${grpcPort}`,
+    ...(secureContext
+      ? {
+          nodeOptions: {
+            ca: secureContext.cert,
+            // Self-signed dev certs often use CN=localhost; trust the chain
+            // but skip hostname matching since we dial 127.0.0.1 by IP.
+            checkServerIdentity: () => undefined,
+          },
+        }
+      : {}),
     interceptors: [
       (next) => async (req) => {
         req.header.set("Authorization", `Bearer ${apiKey}`);
@@ -662,7 +709,7 @@ export function sessionIdsForWorkspace(
  * The server manages stateful sessions — each MCP client gets its own transport
  * and Server instance, tracked by session ID.
  */
-export function createMcpServer(options: McpServerOptions): http.Server {
+export function createMcpServer(options: McpServerOptions): http.Server | http2.Http2SecureServer {
   const {
     bindHost,
     mcpPort,
@@ -673,6 +720,8 @@ export function createMcpServer(options: McpServerOptions): http.Server {
     publishWidgetEvent,
     mcpOrigin,
     onComponentChangeSubscribe,
+    publicScheme = "http",
+    secureContext,
   } = options;
   // Trusted, browser-facing MCP origin for broker-captured widgets (their
   // `<script src>` + CSP allowlist). Derived from server config — NOT the request
@@ -681,7 +730,7 @@ export function createMcpServer(options: McpServerOptions): http.Server {
   // reverse-proxy / TLS deployments where loopback isn't browser-reachable.
   const dialableMcpHost: string =
     bindHost === "0.0.0.0" || bindHost === "::" ? "127.0.0.1" : bindHost;
-  const brokerAssetOrigin: string = mcpOrigin ?? `http://${dialableMcpHost}:${mcpPort}`;
+  const brokerAssetOrigin: string = mcpOrigin ?? `${publicScheme}://${dialableMcpHost}:${mcpPort}`;
   /** Parsed auth server URL, used for dynamic derivation of authorization_servers. */
   const parsedAuthServerUrl = authorizationServerUrl ? new URL(authorizationServerUrl) : undefined;
   /** Effective port (explicit or protocol default). */
@@ -690,7 +739,7 @@ export function createMcpServer(options: McpServerOptions): http.Server {
     : undefined;
   /** Scheme to use for derived auth URLs (preserves https when configured). */
   const authServerScheme = parsedAuthServerUrl?.protocol ?? "http:";
-  const grpcClients = createGrpcClients(bindHost, grpcPort, apiKey);
+  const grpcClients = createGrpcClients(bindHost, grpcPort, apiKey, secureContext);
 
   /** Map of active session transports, keyed by session ID. */
   const transports: Map<string, StreamableHTTPServerTransport> = new Map();
@@ -725,12 +774,14 @@ export function createMcpServer(options: McpServerOptions): http.Server {
   const pruneInterval = setInterval(() => pruneRevocations(), REVOCATION_PRUNE_INTERVAL_MS);
   pruneInterval.unref();
 
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  const httpServer = http.createServer(async (req, res) => {
-    const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+  const handler = async (req: http.IncomingMessage, res: http.ServerResponse): Promise<void> => {
+    const url = new URL(req.url || "/", `${publicScheme}://${req.headers.host || "localhost"}`);
 
-    // Derive resource URL from request Host header (dialable by the client)
-    const requestResourceUrl = `http://${req.headers.host || url.host}`;
+    // Derive resource URL from request Host header (dialable by the client).
+    // `publicScheme` follows the operator-advertised scheme — http for cleartext
+    // loopback (default), https when TLS terminates here (#1373) or upstream
+    // (#1371) — so the URL we hand back to a client always works.
+    const requestResourceUrl = `${publicScheme}://${req.headers.host || url.host}`;
 
     // OAuth Protected Resource Metadata (RFC 9728) — no auth required
     // Derive auth server URL from request hostname so the browser stays on the
@@ -798,7 +849,31 @@ export function createMcpServer(options: McpServerOptions): http.Server {
       res.writeHead(405, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Method not allowed" }));
     }
-  });
+  };
+
+  // The async handler returns a Promise; Node's HTTP servers expect a sync
+  // `void` return for the request listener. Wrap to discard the promise (the
+  // handler itself awaits everything it cares about — no unhandled rejections
+  // because every code path resolves with a response). This single wrapper
+  // shape satisfies both http.createServer and http2.createSecureServer.
+  const voidHandler = (req: http.IncomingMessage, res: http.ServerResponse): void => {
+    handler(req, res).catch((err: unknown) =>
+      logger.warn({ err }, "Unhandled MCP request handler rejection"),
+    );
+  };
+
+  // TLS path (#1373): h2 over TLS with HTTP/1.1 fallback; cleartext otherwise.
+  // Node's http2 compat layer derives `Http2ServerRequest`/`Response` from the
+  // http1 types, so the same voidHandler works for both.
+  const httpServer: http.Server | http2.Http2SecureServer = secureContext
+    ? http2.createSecureServer(
+        { cert: secureContext.cert, key: secureContext.key, allowHTTP1: true },
+        voidHandler as unknown as (
+          req: http2.Http2ServerRequest,
+          res: http2.Http2ServerResponse,
+        ) => void,
+      )
+    : http.createServer(voidHandler);
 
   // Drop the component-change subscription when the server closes (clean teardown for tests).
   httpServer.on("close", () => unsubscribeComponentChanges?.());

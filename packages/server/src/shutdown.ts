@@ -16,13 +16,13 @@ interface Closeable {
 
 /** Resources that must be cleaned up during graceful shutdown. */
 export interface ShutdownContext {
-  /** The HTTP/2 gRPC server. */
+  /** The HTTP/2 gRPC server (cleartext, or h2-over-TLS when GRACKLE_TLS_* is set). */
   grpcServer: Closeable;
-  /** The HTTP/1.1 web + WebSocket server. */
+  /** The web + WebSocket server (HTTP/1.1 cleartext, or h2-over-TLS via createSecureServer). */
   webServer: Closeable;
-  /** The HTTP/1.1 MCP server. */
+  /** The MCP server (HTTP/1.1 cleartext, or h2-over-TLS via createSecureServer). */
   mcpServer: Closeable;
-  /** The HTTP/1.1 MCP Apps widget sandbox server. */
+  /** The MCP Apps widget sandbox server (HTTP/1.1 cleartext, or h2-over-TLS). */
   sandboxServer: Closeable;
   /** The reconciliation manager (cron, orphan, lifecycle phases). */
   reconciliationManager: { stop: () => Promise<void> };

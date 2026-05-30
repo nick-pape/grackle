@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import http from "node:http";
+import http2 from "node:http2";
+import { readFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import type { Server } from "node:net";
 
 // Mock @grackle-ai/auth
 vi.mock("@grackle-ai/auth", () => ({
@@ -23,7 +28,7 @@ import { validateSessionCookie, redeemPairingCode, createSession } from "@grackl
 
 /** Make an HTTP request to the test server. */
 function request(
-  server: http.Server,
+  server: Server,
   path: string,
   headers: Record<string, string> = {},
 ): Promise<{ status: number; headers: http.IncomingHttpHeaders; body: string }> {
@@ -43,11 +48,11 @@ function request(
 
 /** POST a raw body to the test server. */
 function postBody(
-  server: http.Server,
+  server: Server,
   path: string,
   body: string,
   headers: Record<string, string> = {},
-): Promise<{ status: number; body: string }> {
+): Promise<{ status: number; body: string; headers: http.IncomingHttpHeaders }> {
   return new Promise((resolve, reject) => {
     const addr = server.address() as { port: number };
     const req = http.request(
@@ -63,7 +68,7 @@ function postBody(
         res.on("data", (chunk: Buffer) => {
           b += chunk.toString();
         });
-        res.on("end", () => resolve({ status: res.statusCode!, body: b }));
+        res.on("end", () => resolve({ status: res.statusCode!, body: b, headers: res.headers }));
       },
     );
     req.on("error", reject);
@@ -72,7 +77,7 @@ function postBody(
 }
 
 describe("createWebServer", () => {
-  let server: http.Server;
+  let server: Server;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -171,7 +176,7 @@ describe("createWebServer", () => {
 });
 
 describe("createWebServer readiness check", () => {
-  let server: http.Server | undefined;
+  let server: Server | undefined;
 
   afterEach(async () => {
     if (!server) {
@@ -244,7 +249,7 @@ describe("createWebServer readiness check", () => {
 });
 
 describe("createWebServer /api/manifest", () => {
-  let server: http.Server | undefined;
+  let server: Server | undefined;
 
   afterEach(async () => {
     if (!server) {
@@ -312,5 +317,232 @@ describe("isWildcardAddress", () => {
 
   it("returns false for 127.0.0.1", () => {
     expect(isWildcardAddress("127.0.0.1")).toBe(false);
+  });
+});
+
+describe("createWebServer h1 413 (#1373 regression guard)", () => {
+  let server: Server | undefined;
+  afterEach(async () => {
+    if (server) {
+      await new Promise<void>((resolve) => server!.close(() => resolve()));
+    }
+  });
+
+  it("sets Connection: close on the h1 413 path so the half-read socket tears down", async () => {
+    server = createWebServer({ apiKey: "x".repeat(64), webPort: 0, bindHost: "127.0.0.1" });
+    await new Promise<void>((resolve) => server!.listen(0, "127.0.0.1", resolve));
+    const oversized = JSON.stringify({ client_name: "x".repeat(20_000) });
+    const res = await postBody(server, "/register", oversized);
+    expect(res.status).toBe(413);
+    expect(res.headers.connection).toBe("close");
+  });
+});
+
+describe("createWebServer publicScheme (#1373)", () => {
+  let server: Server | undefined;
+  afterEach(async () => {
+    if (server) {
+      await new Promise<void>((resolve) => server!.close(() => resolve()));
+    }
+  });
+
+  it("emits https endpoints in OAuth metadata when publicScheme=https", async () => {
+    server = createWebServer({
+      apiKey: "x".repeat(64),
+      webPort: 0,
+      bindHost: "127.0.0.1",
+      publicScheme: "https",
+    });
+    await new Promise<void>((resolve) => server!.listen(0, "127.0.0.1", resolve));
+
+    const addr = server.address() as { port: number };
+    const res = await request(server, "/.well-known/oauth-authorization-server", {
+      Host: `grackle.example:${addr.port}`,
+    });
+    expect(res.status).toBe(200);
+    const meta = JSON.parse(res.body);
+    expect(meta.issuer).toBe(`https://grackle.example:${addr.port}`);
+    expect(meta.authorization_endpoint).toBe(`https://grackle.example:${addr.port}/authorize`);
+    expect(meta.token_endpoint).toBe(`https://grackle.example:${addr.port}/token`);
+    expect(meta.registration_endpoint).toBe(`https://grackle.example:${addr.port}/register`);
+  });
+
+  it("passes secure=true to createSession iff publicScheme=https", async () => {
+    vi.mocked(redeemPairingCode).mockReturnValue(true);
+    vi.mocked(createSession).mockClear();
+    vi.mocked(createSession).mockReturnValue("grackle_session=test; HttpOnly; Secure");
+
+    server = createWebServer({
+      apiKey: "x".repeat(64),
+      webPort: 0,
+      bindHost: "127.0.0.1",
+      publicScheme: "https",
+    });
+    await new Promise<void>((resolve) => server!.listen(0, "127.0.0.1", resolve));
+    await request(server, "/pair?code=ABC123");
+
+    expect(createSession).toHaveBeenCalledWith(expect.any(String), { secure: true });
+  });
+
+  it("passes secure=false to createSession when publicScheme=http (default)", async () => {
+    vi.mocked(redeemPairingCode).mockReturnValue(true);
+    vi.mocked(createSession).mockClear();
+    vi.mocked(createSession).mockReturnValue("grackle_session=test; HttpOnly");
+
+    server = createWebServer({
+      apiKey: "x".repeat(64),
+      webPort: 0,
+      bindHost: "0.0.0.0",
+      // publicScheme omitted → "http"
+    });
+    await new Promise<void>((resolve) => server!.listen(0, "127.0.0.1", resolve));
+    await request(server, "/pair?code=ABC123");
+
+    expect(createSession).toHaveBeenCalledWith(expect.any(String), { secure: false });
+  });
+});
+
+describe("createWebServer secureContext (#1373)", () => {
+  let server: Server | undefined;
+  const FIXTURE_DIR: string = join(dirname(fileURLToPath(import.meta.url)), "__fixtures__");
+
+  function loadFixture(): { cert: Buffer; key: Buffer } | undefined {
+    try {
+      return {
+        cert: readFileSync(join(FIXTURE_DIR, "tls-test-cert.pem")),
+        key: readFileSync(join(FIXTURE_DIR, "tls-test-key.pem")),
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Hard close — `Http2SecureServer#close` waits for open sessions to finish.
+   * Fast-path the teardown so afterEach doesn't time out if a session lingered.
+   */
+  async function hardClose(s: Server): Promise<void> {
+    const maybeH2 = s as { closeAllConnections?: () => void };
+    maybeH2.closeAllConnections?.();
+    await new Promise<void>((resolve) => s.close(() => resolve()));
+  }
+
+  afterEach(async () => {
+    if (server) {
+      await hardClose(server);
+      server = undefined;
+    }
+  });
+
+  it("returns an Http2SecureServer when secureContext is provided", async () => {
+    const fx = loadFixture();
+    if (!fx) {
+      return;
+    }
+    server = createWebServer({
+      apiKey: "x".repeat(64),
+      webPort: 0,
+      bindHost: "127.0.0.1",
+      publicScheme: "https",
+      secureContext: fx,
+    });
+    // `Http2SecureServer` isn't exposed as a runtime constructor on the `http2`
+    // namespace (Node only exports factory functions like `createSecureServer`),
+    // so we have to identify the class by its runtime name.
+    expect(server.constructor.name).toBe("Http2SecureServer");
+    await new Promise<void>((resolve) => server!.listen(0, "127.0.0.1", resolve));
+  });
+
+  it("serves /healthz over h2 TLS", async () => {
+    const fx = loadFixture();
+    if (!fx) {
+      return;
+    }
+    server = createWebServer({
+      apiKey: "x".repeat(64),
+      webPort: 0,
+      bindHost: "127.0.0.1",
+      publicScheme: "https",
+      secureContext: fx,
+    });
+    await new Promise<void>((resolve) => server!.listen(0, "127.0.0.1", resolve));
+    const addr = server.address() as { port: number };
+
+    const session = http2.connect(`https://127.0.0.1:${addr.port}`, {
+      ca: fx.cert,
+      // Self-signed CN=localhost — dial by IP, skip hostname matching.
+      checkServerIdentity: () => undefined,
+    });
+    try {
+      const status: number = await new Promise((resolve, reject) => {
+        const req = session.request({ ":path": "/healthz" });
+        let captured: number | undefined;
+        req.on("response", (headers) => {
+          captured = Number(headers[":status"]);
+        });
+        // Must consume the response body — leaving it unread keeps the h2
+        // stream half-open and stalls session.close() in the finally block.
+        req.on("data", () => {});
+        req.on("end", () => resolve(captured ?? 0));
+        req.on("error", reject);
+        req.end();
+      });
+      expect(status).toBe(200);
+    } finally {
+      await new Promise<void>((resolve) => session.close(() => resolve()));
+    }
+  });
+
+  it("returns 413 on an oversized h2 POST without sending a forbidden Connection header", async () => {
+    const fx = loadFixture();
+    if (!fx) {
+      return;
+    }
+    server = createWebServer({
+      apiKey: "x".repeat(64),
+      webPort: 0,
+      bindHost: "127.0.0.1",
+      publicScheme: "https",
+      secureContext: fx,
+    });
+    await new Promise<void>((resolve) => server!.listen(0, "127.0.0.1", resolve));
+    const addr = server.address() as { port: number };
+
+    const session = http2.connect(`https://127.0.0.1:${addr.port}`, {
+      ca: fx.cert,
+      checkServerIdentity: () => undefined,
+    });
+    try {
+      const oversized = JSON.stringify({ client_name: "x".repeat(20_000) });
+      const result: { status: number; hasConnectionHeader: boolean } = await new Promise(
+        (resolve, reject) => {
+          const req = session.request({
+            ":method": "POST",
+            ":path": "/register",
+            "content-type": "application/json",
+          });
+          let responded = false;
+          req.on("response", (headers) => {
+            responded = true;
+            resolve({
+              status: Number(headers[":status"]),
+              hasConnectionHeader: "connection" in headers,
+            });
+          });
+          req.on("error", (err) => {
+            if (!responded) {
+              reject(err);
+            }
+          });
+          req.end(oversized);
+        },
+      );
+      expect(result.status).toBe(413);
+      // h2 must NOT carry a Connection header — sending one would have crashed
+      // the response with ERR_HTTP2_INVALID_CONNECTION_HEADERS.
+      expect(result.hasConnectionHeader).toBe(false);
+    } finally {
+      await new Promise<void>((resolve) => session.close(() => resolve()));
+    }
   });
 });

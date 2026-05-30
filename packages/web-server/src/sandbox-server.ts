@@ -1,7 +1,7 @@
-import http from "node:http";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { buildCspHeader, type SandboxCsp } from "./sandbox-csp.js";
+import { buildServer, type GrackleServer, type SecureContext } from "./web-server.js";
 
 const nodeRequire: NodeRequire = createRequire(import.meta.url);
 
@@ -11,6 +11,15 @@ export interface SandboxServerOptions {
   bindHost: string;
   /** Port the sandbox origin listens on (GRACKLE_SANDBOX_PORT). */
   sandboxPort: number;
+  /**
+   * Optional native-TLS material (#1373). When set, the sandbox listens via
+   * `http2.createSecureServer({ allowHTTP1: true })` instead of plain http.
+   *
+   * If the web app is served over https (`GRACKLE_PUBLIC_URL=https://…` or
+   * native TLS), the sandbox MUST also be https — browsers block mixed-content
+   * iframes — so the same secure context is wired through to both servers.
+   */
+  secureContext?: SecureContext;
 }
 
 /** Read an asset shipped in @grackle-ai/web-components (path relative to its package root). */
@@ -51,11 +60,11 @@ const JS_HEADERS: Readonly<Record<string, string>> = {
  * unreachable per the MCP Apps spec (SEP-1865). Assets are the canonical copies
  * from `@grackle-ai/web-components` (no drift on the security-critical relay).
  */
-export function createSandboxServer(options: SandboxServerOptions): http.Server {
+export function createSandboxServer(options: SandboxServerOptions): GrackleServer {
   const sandboxHtml: string = readSandboxAsset("sandbox.html");
   const sandboxRelay: string = readSandboxAsset("sandbox-relay.js");
 
-  return http.createServer((req, res) => {
+  return buildServer((req, res) => {
     // A malformed request target or Host header makes `new URL` throw; never let
     // that crash the server process — answer 400 and move on.
     let url: URL;
@@ -112,5 +121,5 @@ export function createSandboxServer(options: SandboxServerOptions): http.Server 
 
     res.writeHead(404, { "Content-Type": "text/plain" });
     res.end("Only sandbox.html, sandbox-relay.js and runtime.js are served on this port.");
-  });
+  }, options.secureContext);
 }

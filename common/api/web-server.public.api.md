@@ -6,15 +6,22 @@
 
 import type { ConnectRouter } from '@connectrpc/connect';
 import http from 'node:http';
+import http2 from 'node:http2';
 
 // @public
 export function buildCspHeader(csp: SandboxCsp | undefined): string;
 
 // @public
-export function createSandboxServer(options: SandboxServerOptions): http.Server;
+export function buildServer(handler: (req: http.IncomingMessage, res: http.ServerResponse) => void | Promise<void>, secureContext?: SecureContext): GrackleServer;
 
 // @public
-export function createWebServer(options: WebServerOptions): http.Server;
+export function createSandboxServer(options: SandboxServerOptions): GrackleServer;
+
+// @public
+export function createWebServer(options: WebServerOptions): GrackleServer;
+
+// @public
+export type GrackleServer = http.Server | http2.Http2SecureServer;
 
 // @public
 export function isWildcardAddress(host: string): boolean;
@@ -49,6 +56,13 @@ export interface SandboxCsp {
 export interface SandboxServerOptions {
     bindHost: string;
     sandboxPort: number;
+    secureContext?: SecureContext;
+}
+
+// @public
+export interface SecureContext {
+    cert: Buffer;
+    key: Buffer;
 }
 
 // @public
@@ -72,9 +86,11 @@ export interface WebServerOptions {
     connectRoutes?: (router: ConnectRouter) => void;
     handleWebhook?: (token: string, body: WebhookBody) => Promise<WebhookResult>;
     pluginNames?: string[];
+    publicScheme?: "http" | "https";
     readinessCheck?: () => ReadinessResult | Promise<ReadinessResult>;
     sandboxOrigin?: string;
     sandboxPort?: number;
+    secureContext?: SecureContext;
     webDistDir?: string;
     webPort: number;
 }

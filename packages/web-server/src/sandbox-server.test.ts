@@ -1,11 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import http from "node:http";
-import type { AddressInfo } from "node:net";
+import http2 from "node:http2";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import type { AddressInfo, Server } from "node:net";
 import { createSandboxServer } from "./sandbox-server.js";
 
 /** Make a GET request (with optional Host override) and return response details. */
 function request(
-  server: http.Server,
+  server: Server,
   path: string,
   hostHeader?: string,
 ): Promise<{ status: number; headers: http.IncomingHttpHeaders; body: string }> {
@@ -31,7 +35,7 @@ function request(
 }
 
 describe("createSandboxServer", () => {
-  let server: http.Server;
+  let server: Server;
 
   beforeEach(async () => {
     server = createSandboxServer({ bindHost: "127.0.0.1", sandboxPort: 0 });
@@ -104,5 +108,84 @@ describe("createSandboxServer", () => {
     // Server is still alive for the next request.
     const ok = await request(server, "/sandbox.html");
     expect(ok.status).toBe(200);
+  });
+});
+
+describe("createSandboxServer secureContext (#1373)", () => {
+  let server: Server | undefined;
+  const FIXTURE_DIR: string = join(dirname(fileURLToPath(import.meta.url)), "__fixtures__");
+
+  function loadFixture(): { cert: Buffer; key: Buffer } | undefined {
+    try {
+      return {
+        cert: readFileSync(join(FIXTURE_DIR, "tls-test-cert.pem")),
+        key: readFileSync(join(FIXTURE_DIR, "tls-test-key.pem")),
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
+  async function hardClose(s: Server): Promise<void> {
+    const maybeH2 = s as { closeAllConnections?: () => void };
+    maybeH2.closeAllConnections?.();
+    await new Promise<void>((resolve) => s.close(() => resolve()));
+  }
+
+  afterEach(async () => {
+    if (server) {
+      await hardClose(server);
+      server = undefined;
+    }
+  });
+
+  it("returns an Http2SecureServer when secureContext is provided", () => {
+    const fx = loadFixture();
+    if (!fx) {
+      return;
+    }
+    server = createSandboxServer({
+      bindHost: "127.0.0.1",
+      sandboxPort: 0,
+      secureContext: fx,
+    });
+    expect(server.constructor.name).toBe("Http2SecureServer");
+  });
+
+  it("serves sandbox.html over h2 TLS", async () => {
+    const fx = loadFixture();
+    if (!fx) {
+      return;
+    }
+    server = createSandboxServer({
+      bindHost: "127.0.0.1",
+      sandboxPort: 0,
+      secureContext: fx,
+    });
+    await new Promise<void>((resolve) => server!.listen(0, "127.0.0.1", resolve));
+    const { port } = server.address() as AddressInfo;
+
+    const session = http2.connect(`https://127.0.0.1:${port}`, {
+      ca: fx.cert,
+      checkServerIdentity: () => undefined,
+    });
+    try {
+      const status: number = await new Promise((resolve, reject) => {
+        const req = session.request({ ":path": "/sandbox.html" });
+        let captured: number | undefined;
+        req.on("response", (headers) => {
+          captured = Number(headers[":status"]);
+        });
+        // Consume the body so the h2 stream half-closes cleanly; otherwise
+        // session.close() in the finally block stalls waiting for it.
+        req.on("data", () => {});
+        req.on("end", () => resolve(captured ?? 0));
+        req.on("error", reject);
+        req.end();
+      });
+      expect(status).toBe(200);
+    } finally {
+      await new Promise<void>((resolve) => session.close(() => resolve()));
+    }
   });
 });

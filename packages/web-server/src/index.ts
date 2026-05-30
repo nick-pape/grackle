@@ -1,10 +1,12 @@
-export { createWebServer } from "./web-server.js";
+export { createWebServer, buildServer } from "./web-server.js";
 export type {
   WebServerOptions,
   ReadinessResult,
   ReadinessCheck,
   WebhookBody,
   WebhookResult,
+  GrackleServer,
+  SecureContext,
 } from "./web-server.js";
 export { isWildcardAddress } from "./web-server.js";
 export { createSandboxServer } from "./sandbox-server.js";

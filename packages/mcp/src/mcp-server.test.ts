@@ -11,6 +11,11 @@
  */
 import { describe, it, expect, afterEach } from "vitest";
 import http from "node:http";
+import http2 from "node:http2";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import type { Server } from "node:net";
 import { z } from "zod";
 import { createScopedToken } from "@grackle-ai/auth";
 import { ROOT_TASK_ID } from "@grackle-ai/common";
@@ -33,7 +38,7 @@ const TEST_API_KEY = "a".repeat(64);
 function startServer(
   toolGroups?: ToolDefinition[][],
   publishWidgetEvent?: PublishWidgetEvent,
-): Promise<http.Server> {
+): Promise<Server> {
   const server = createMcpServer({
     bindHost: "127.0.0.1",
     mcpPort: 0,
@@ -42,13 +47,13 @@ function startServer(
     toolGroups,
     publishWidgetEvent,
   });
-  return new Promise<http.Server>((resolve) => {
+  return new Promise<Server>((resolve) => {
     server.listen(0, "127.0.0.1", () => resolve(server));
   });
 }
 
 /** Get the port the server is listening on. */
-function port(server: http.Server): number {
+function port(server: Server): number {
   return (server.address() as { port: number }).port;
 }
 
@@ -67,7 +72,7 @@ function postHeaders(sessionId?: string, authHeader?: string): Record<string, st
 }
 
 /** Send an MCP initialize request and return the session ID. */
-function initialize(server: http.Server, authHeader?: string): Promise<string> {
+function initialize(server: Server, authHeader?: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
       jsonrpc: "2.0",
@@ -113,7 +118,7 @@ function initialize(server: http.Server, authHeader?: string): Promise<string> {
  * Returns the HTTP status code.
  */
 function postToSession(
-  server: http.Server,
+  server: Server,
   sessionId: string,
 ): Promise<{ status: number; body: string }> {
   return new Promise((resolve, reject) => {
@@ -152,7 +157,7 @@ function postToSession(
  * The response arrives as SSE; this helper reads the first data event.
  */
 function callTool(
-  server: http.Server,
+  server: Server,
   sessionId: string,
   toolName: string,
   toolArgs: Record<string, unknown>,
@@ -207,7 +212,7 @@ function callTool(
  * so the caller can abort it to simulate a client crash.
  */
 function openSseStream(
-  server: http.Server,
+  server: Server,
   sessionId: string,
 ): { req: http.ClientRequest; connected: Promise<void> } {
   let resolveConnected: () => void;
@@ -274,7 +279,7 @@ async function waitUntil(
 }
 
 describe("OAuth Protected Resource Metadata", () => {
-  let server: http.Server | undefined;
+  let server: Server | undefined;
 
   afterEach(async () => {
     if (server) {
@@ -286,7 +291,7 @@ describe("OAuth Protected Resource Metadata", () => {
   });
 
   /** Start an MCP server with OAuth enabled (authorizationServerUrl set). */
-  function startOAuthServer(): Promise<http.Server> {
+  function startOAuthServer(): Promise<Server> {
     const srv = createMcpServer({
       bindHost: "127.0.0.1",
       mcpPort: 0,
@@ -294,16 +299,13 @@ describe("OAuth Protected Resource Metadata", () => {
       apiKey: TEST_API_KEY,
       authorizationServerUrl: "http://127.0.0.1:3000",
     });
-    return new Promise<http.Server>((resolve) => {
+    return new Promise<Server>((resolve) => {
       srv.listen(0, "127.0.0.1", () => resolve(srv));
     });
   }
 
   /** GET request with a custom Host header. */
-  function getMetadata(
-    srv: http.Server,
-    hostHeader: string,
-  ): Promise<{ status: number; body: string }> {
+  function getMetadata(srv: Server, hostHeader: string): Promise<{ status: number; body: string }> {
     return new Promise((resolve, reject) => {
       const req = http.request(
         {
@@ -359,7 +361,7 @@ describe("OAuth Protected Resource Metadata", () => {
 });
 
 describe("MCP session cleanup on SSE disconnect", () => {
-  let server: http.Server | undefined;
+  let server: Server | undefined;
 
   afterEach(async () => {
     if (server) {
@@ -490,7 +492,7 @@ function makeSpyTool(
 }
 
 describe("scoped token workspaceId injection", () => {
-  let server: http.Server | undefined;
+  let server: Server | undefined;
 
   afterEach(async () => {
     if (server) {
@@ -644,7 +646,7 @@ describe("scoped token workspaceId injection", () => {
 });
 
 describe("MCP Apps app-side (#1237)", () => {
-  let server: http.Server | undefined;
+  let server: Server | undefined;
 
   afterEach(async () => {
     if (server) {
@@ -675,7 +677,7 @@ describe("MCP Apps app-side (#1237)", () => {
 
   /** Initialize with explicit capabilities; returns the session id + parsed result. */
   function initializeWith(
-    srv: http.Server,
+    srv: Server,
     capabilities: Record<string, unknown>,
   ): Promise<{ sessionId: string; response: JsonRpcResponse }> {
     return new Promise((resolve, reject) => {
@@ -720,7 +722,7 @@ describe("MCP Apps app-side (#1237)", () => {
 
   /** Send a JSON-RPC request to an existing session and parse the SSE result. */
   function rpc(
-    srv: http.Server,
+    srv: Server,
     sessionId: string,
     method: string,
     params: Record<string, unknown>,
@@ -757,7 +759,7 @@ describe("MCP Apps app-side (#1237)", () => {
 
   /** GET a static asset (no auth). */
   function getAsset(
-    srv: http.Server,
+    srv: Server,
     path: string,
   ): Promise<{ status: number; contentType: string; body: string }> {
     return new Promise((resolve, reject) => {
@@ -895,7 +897,7 @@ describe("resolveAssetBaseUrl", () => {
 });
 
 describe("MCP Apps widget capture (#1238)", () => {
-  let server: http.Server | undefined;
+  let server: Server | undefined;
 
   afterEach(async () => {
     if (server) {
@@ -1134,5 +1136,86 @@ describe("sessionIdsForWorkspace (#1297 fan-out selection)", () => {
       ["s2", { type: "oauth", clientId: "c" }],
     ]);
     expect(sessionIdsForWorkspace(ctxs, "wsA")).toEqual([]);
+  });
+});
+
+describe("createMcpServer publicScheme + secureContext (#1373)", () => {
+  let server: Server | undefined;
+  const FIXTURE_DIR: string = join(dirname(fileURLToPath(import.meta.url)), "__fixtures__");
+
+  function loadFixture(): { cert: Buffer; key: Buffer } | undefined {
+    try {
+      return {
+        cert: readFileSync(join(FIXTURE_DIR, "tls-test-cert.pem")),
+        key: readFileSync(join(FIXTURE_DIR, "tls-test-key.pem")),
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
+  afterEach(async () => {
+    if (server) {
+      await new Promise<void>((resolve) => server!.close(() => resolve()));
+      server = undefined;
+    }
+  });
+
+  it("emits https resource URL in oauth-protected-resource when publicScheme=https", async () => {
+    const srv = createMcpServer({
+      bindHost: "127.0.0.1",
+      mcpPort: 0,
+      grpcPort: 19999,
+      apiKey: TEST_API_KEY,
+      authorizationServerUrl: "https://127.0.0.1:3000",
+      publicScheme: "https",
+    });
+    await new Promise<void>((resolve) => srv.listen(0, "127.0.0.1", resolve));
+    server = srv;
+
+    const res = await new Promise<{ status: number; body: string }>((resolve, reject) => {
+      const req = http.request(
+        {
+          hostname: "127.0.0.1",
+          port: port(srv),
+          path: "/.well-known/oauth-protected-resource/mcp",
+          method: "GET",
+          headers: { Host: `grackle.example:${port(srv)}` },
+        },
+        (r) => {
+          let body = "";
+          r.on("data", (c: Buffer) => {
+            body += c.toString();
+          });
+          r.on("end", () => resolve({ status: r.statusCode!, body }));
+        },
+      );
+      req.on("error", reject);
+      req.end();
+    });
+
+    expect(res.status).toBe(200);
+    const meta = JSON.parse(res.body);
+    expect(meta.resource).toBe(`https://grackle.example:${port(srv)}`);
+    expect(meta.authorization_servers).toEqual(["https://grackle.example:3000"]);
+  });
+
+  it("returns an Http2SecureServer when secureContext is provided", () => {
+    const fx = loadFixture();
+    if (!fx) {
+      return;
+    }
+    const srv = createMcpServer({
+      bindHost: "127.0.0.1",
+      mcpPort: 0,
+      grpcPort: 19999,
+      apiKey: TEST_API_KEY,
+      publicScheme: "https",
+      secureContext: fx,
+    });
+    // `Http2SecureServer` isn't exposed as a runtime constructor on the http2
+    // namespace — match the class by its runtime name instead.
+    expect(srv.constructor.name).toBe("Http2SecureServer");
+    server = srv;
   });
 });
