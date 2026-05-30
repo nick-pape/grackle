@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: native TLS via GRACKLE_TLS_CERT/KEY/CA → http2.createSecureServer with HTTP/1.1 fallback on every Grackle listener (web, sandbox, MCP, gRPC). Closes the no-proxy half of GHSA-wcpf-6gwv-47c8: when set, all four servers terminate TLS in-process; otherwise behavior is unchanged. The `Secure` cookie and OAuth metadata scheme now follow the public scheme, not the bind address (reconciles with #1371). Fixes a forbidden `Connection: close` on the HTTP/2 413 path. Lands #844 HTTP/2 where it pays off (h2 over TLS).",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
