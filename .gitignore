@@ -3,6 +3,8 @@ dist/
 coverage/
 # Backend E2E coverage (#1389): raw NODE_V8_COVERAGE dumps + the converted report.
 coverage-backend/
+# Storybook interaction coverage (#1384): converted lcov report.
+coverage-storybook/
 .v8-backend/
 common/temp/
 # Autoinstaller source (package.json, pnpm-lock.yaml, scripts) IS tracked;

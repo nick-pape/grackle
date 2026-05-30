@@ -72,6 +72,7 @@
     "sass": "^1.86.0",
     "storybook": "8.6.18",
     "vite": "^6.4.2",
+    "vite-plugin-istanbul": "~7.2.0",
     "vitest": "^3.1.1",
     "wait-on": "^8.0.0"
   }

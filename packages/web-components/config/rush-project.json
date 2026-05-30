@@ -6,7 +6,7 @@
     },
     {
       "operationName": "_phase:test",
-      "outputFolderNames": ["coverage"]
+      "outputFolderNames": ["coverage", "coverage-storybook"]
     }
   ]
 }
