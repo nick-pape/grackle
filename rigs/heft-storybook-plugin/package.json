@@ -15,6 +15,9 @@
     "@rushstack/heft": "1.2.7",
     "storybook": ">=8.0.0"
   },
+  "dependencies": {
+    "monocart-coverage-reports": "~2.12.12"
+  },
   "devDependencies": {
     "@rushstack/heft": "1.2.7",
     "@types/node": "^22.0.0",

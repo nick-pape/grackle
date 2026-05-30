@@ -54,6 +54,7 @@ jobs:
           path: |
             packages/*/coverage/lcov.info
             packages/*/coverage/coverage-summary.json
+            packages/*/coverage-storybook/lcov.info
             scripts/*/coverage/lcov.info
             scripts/*/coverage/coverage-summary.json
           if-no-files-found: warn
