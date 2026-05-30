@@ -189,6 +189,7 @@ export interface ScopedTokenClaims {
 // @public
 export interface SecurityHeaderOptions {
     hsts?: boolean;
+    sandboxOrigin?: string;
 }
 
 // @public

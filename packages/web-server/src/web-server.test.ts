@@ -259,6 +259,35 @@ describe("createWebServer behind a public https origin", () => {
   });
 });
 
+describe("createWebServer sandbox origin in CSP", () => {
+  let server: http.Server;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    server = createWebServer({
+      apiKey: "x".repeat(64),
+      webPort: 0,
+      bindHost: "127.0.0.1",
+      publicUrl: "https://web.grackle.test",
+      sandboxOrigin: "https://sandbox.grackle.test:8445",
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  });
+
+  afterEach(async () => {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("passes the sandbox origin to setSecurityHeaders so frame-src allows the widget iframe", async () => {
+    await request(server, "/healthz");
+
+    expect(setSecurityHeaders).toHaveBeenCalledWith(expect.anything(), "web.grackle.test", {
+      hsts: true,
+      sandboxOrigin: "https://sandbox.grackle.test:8445",
+    });
+  });
+});
+
 describe("createWebServer publicUrl validation", () => {
   it("throws a clear error when publicUrl is not a bare origin", () => {
     expect(() =>

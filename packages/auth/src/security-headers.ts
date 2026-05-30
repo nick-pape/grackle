@@ -49,6 +49,14 @@ export interface SecurityHeaderOptions {
    * origin), never for a plain-http origin.
    */
   hsts?: boolean;
+  /**
+   * Explicit browser-facing MCP Apps sandbox origin (`GRACKLE_SANDBOX_ORIGIN`),
+   * added to the CSP `frame-src` directive. Behind a reverse proxy the sandbox
+   * iframe may live on a *different host* than the web app, which the
+   * request-host wildcard does not cover; without this the browser would block
+   * the widget iframe. Invalid values are ignored.
+   */
+  sandboxOrigin?: string;
 }
 
 /**
@@ -87,17 +95,28 @@ export function setSecurityHeaders(
   // hostname on any port (same workaround as form-action). The framed sandbox
   // is itself origin-isolated with its own locked-down CSP, so this only widens
   // which origins the app may *embed*, not what runs inside them.
-  let frameSrc = "frame-src 'self'";
+  const frameSrcSources: string[] = ["'self'"];
   if (requestHost) {
     try {
       const parsed = new URL(`http://${requestHost}`);
       const hostname = parsed.hostname;
       formAction = `form-action 'self' http://${hostname}:* https://${hostname}:*`;
-      frameSrc = `frame-src 'self' http://${hostname}:* https://${hostname}:*`;
+      frameSrcSources.push(`http://${hostname}:*`, `https://${hostname}:*`);
     } catch {
       // Malformed Host header — fall back to 'self' only
     }
   }
+  // Allow the explicitly-configured sandbox origin (which may be a different host
+  // behind a reverse proxy, uncovered by the request-host wildcard above). Parse
+  // via URL to normalize and prevent CSP injection through a malformed value.
+  if (options?.sandboxOrigin) {
+    try {
+      frameSrcSources.push(new URL(options.sandboxOrigin).origin);
+    } catch {
+      // Invalid sandbox origin — ignore.
+    }
+  }
+  const frameSrc = `frame-src ${frameSrcSources.join(" ")}`;
   const csp = [...BASE_CSP_DIRECTIVES, frameSrc, formAction].join("; ");
   res.setHeader("Content-Security-Policy", csp);
 }

@@ -426,7 +426,10 @@ export function createWebServer(options: WebServerOptions): http.Server {
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   const handler = async (req: http.IncomingMessage, res: http.ServerResponse): Promise<void> => {
-    setSecurityHeaders(res, cspHost ?? req.headers.host, { hsts: publicIsHttps });
+    setSecurityHeaders(res, cspHost ?? req.headers.host, {
+      hsts: publicIsHttps,
+      ...(sandboxOrigin !== undefined ? { sandboxOrigin } : {}),
+    });
 
     let rawPath: string;
     let queryString = "";

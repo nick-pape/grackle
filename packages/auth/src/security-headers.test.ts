@@ -189,6 +189,61 @@ describe("security headers", () => {
       }
     });
 
+    it("adds the configured sandbox origin to frame-src (different-host proxy case)", async () => {
+      const server = http.createServer((req, res) => {
+        setSecurityHeaders(res, "web.grackle.test", {
+          sandboxOrigin: "https://sandbox.grackle.test:8445",
+        });
+        res.writeHead(200, { "Content-Type": "text/html" });
+        res.end("<html></html>");
+      });
+
+      await new Promise<void>((resolve) => {
+        server.listen(0, "127.0.0.1", resolve);
+      });
+
+      try {
+        const resp = await request(server, "/");
+        const csp = resp.headers["content-security-policy"] as string;
+        const frameSrc = csp
+          .split(";")
+          .map((d) => d.trim())
+          .find((d) => d.startsWith("frame-src"));
+        expect(frameSrc).toContain("https://sandbox.grackle.test:8445");
+        // The request-host wildcard is still present too.
+        expect(frameSrc).toContain("https://web.grackle.test:*");
+      } finally {
+        await new Promise<void>((resolve) => {
+          server.close(() => resolve());
+        });
+      }
+    });
+
+    it("ignores an invalid sandbox origin without breaking the CSP", async () => {
+      const server = http.createServer((req, res) => {
+        setSecurityHeaders(res, "web.grackle.test", { sandboxOrigin: "not a url" });
+        res.writeHead(200, { "Content-Type": "text/html" });
+        res.end("<html></html>");
+      });
+
+      await new Promise<void>((resolve) => {
+        server.listen(0, "127.0.0.1", resolve);
+      });
+
+      try {
+        const resp = await request(server, "/");
+        const csp = resp.headers["content-security-policy"] as string;
+        expect(csp).toContain(
+          "frame-src 'self' http://web.grackle.test:* https://web.grackle.test:*",
+        );
+        expect(csp).not.toContain("not a url");
+      } finally {
+        await new Promise<void>((resolve) => {
+          server.close(() => resolve());
+        });
+      }
+    });
+
     it("widens frame-src to the request hostname so the chat can embed the widget sandbox", async () => {
       // The MCP Apps widget sandbox runs on the same hostname, different port
       // (GRACKLE_SANDBOX_PORT); frame-src must allow it across ports.
