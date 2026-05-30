@@ -18,30 +18,27 @@ Dark Folkish. The voice of someone who has seen what happens when you hand an AI
 - No hype words: revolutionary, next-gen, AI-powered, seamless, powerful, robust, blazing-fast, effortless. Cut them.
 - Don't explain the metaphor. Inhabit it.
 
-## The metaphor (load-bearing)
+## The metaphor (use sparingly)
 
-Birds on wires. Grackles are loud, sharp, and they travel in numbers. The product is named for them; PowerLine is where they perch.
+Birds on wires. Grackles are loud, sharp, and they travel in numbers. The name carries the mood; PowerLine is the wire agents run on. The metaphor sets the _tone_ — it is not a vocabulary you sprinkle on every noun.
 
-Use these — they map to things that exist:
+For now, keep the literal bird-nouns out of the prose:
 
-| Word                 | Means                                                        |
-| -------------------- | ------------------------------------------------------------ |
-| **claw**             | a running agent (the technical term stays `session`)         |
-| **wire** / PowerLine | the host inside an environment where the agent actually runs |
-| **perch**            | an agent landing and running on a wire                       |
-| **plague**           | many claws at once (the actual collective noun for grackles) |
-| **mob**              | a plague swarming a single problem                           |
-| **name + key**       | every agent gets its own identity and its own credentials    |
+- **Don't** call a running agent a "claw." Call it what the sentence means — **an agent**, **a session**, or **a task**.
+- **Don't** call many agents "a plague" or "a mob." Say **many agents**, **a fleet of agents**, or just **Grackle**.
+- "**wire**" for PowerLine is fine as an occasional descriptor; don't lean on "perch."
 
-Do **not** use these as names — they are product splits we have not built:
+The full bird lexicon (plague, claw, mob, flock, roost, nest, gate) is held in reserve for top-level brand surfaces and the [Roadmap](./roadmap), not working docs. When in doubt, use the plain technical noun.
 
-- **roost, nest, gate** — someday GrackleRoost / GrackleNest / GrackleGate. Today there is "the server," "approval," and so on. Don't write them as if they ship. Anything still on the drawing board goes in [Roadmap](./roadmap), never in a feature or concept page.
+Do **not** use these as product names — they are splits we have not built:
+
+- **roost, nest, gate** — someday GrackleRoost / GrackleNest / GrackleGate. Today there is "the server," "approval," and so on. Don't write them as if they ship. Anything on the drawing board goes in [Roadmap](./roadmap), never in a feature or concept page.
 
 ## Nouns stay technical
 
-The voice is a skin over accurate docs. Headings and the words a reader types stay literal and match the CLI: **environment, session, task, persona, workspace, runtime, plugin**. Flavor lives in the prose around them — never rename a command.
+The voice is a skin over accurate docs. Headings and the words a reader types stay literal and match the CLI: **environment, session, task, persona, workspace, runtime, plugin**. Flavor lives in the rhythm and the menace, not in renamed nouns — and never rename a command.
 
-> A claw runs as a **session**. Spawn one, watch it work, kill it when it strays.
+> A task runs as a **session**. Spawn one, watch it work, kill it when it strays.
 >
 > `grackle spawn prod "..."` → a session on the wire.
 
@@ -56,10 +53,10 @@ The voice is a skin over accurate docs. Headings and the words a reader types st
 
 ## Do / don't
 
-| Don't                                                                                         | Do                                                                                 |
-| --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| "Welcome! In this guide we'll walk through spawning your first agent session. Let's dive in!" | "Spawn a claw, give it a task, watch it work."                                     |
-| "Grackle's powerful orchestration engine enables seamless multi-agent coordination."          | "One agent decomposes the work and hands pieces to others. They report back."      |
-| "Don't worry if a session disconnects — Grackle has you covered!"                             | "Wires drop. The claw suspends, events buffer, and it picks up where it left off." |
+| Don't                                                                                         | Do                                                                                    |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| "Welcome! In this guide we'll walk through spawning your first agent session. Let's dive in!" | "Spawn an agent, give it a task, watch it work."                                      |
+| "Grackle's powerful orchestration engine enables seamless multi-agent coordination."          | "One agent decomposes the work and hands pieces to others. They report back."         |
+| "Don't worry if a session disconnects — Grackle has you covered!"                             | "Wires drop. The session suspends, events buffer, and it picks up where it left off." |
 
 When in doubt: shorter, colder, truer.
