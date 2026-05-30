@@ -202,6 +202,10 @@
     {
       "packageName": "@grackle-ai/github-import",
       "projectFolder": "scripts/github-import"
+    },
+    {
+      "packageName": "@grackle-ai/coverage-merge",
+      "projectFolder": "scripts/coverage-merge"
     }
   ]
 }

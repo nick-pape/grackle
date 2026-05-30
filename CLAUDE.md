@@ -93,9 +93,16 @@ npx buf generate
 `rush test` collects unit-test coverage via Vitest's v8 provider. Reports land in each package's `coverage/` directory (`lcov.info`, `coverage-summary.json`, and an `index.html` for browser viewing). CI uploads them as a single `coverage` artifact on the `build` job. The shared config lives at `rigs/heft-rig/vitest-base.mjs` — per-package `vitest.config.ts` files just call `createVitestConfig()` and add overrides if needed.
 
 - **Per-package thresholds enforced** ([#1326](https://github.com/nick-pape/grackle/issues/1326)). Floors for each metric (branches/lines/functions/statements) live in `rigs/heft-rig/coverage-thresholds.json`. CI fails if any package drops below its floor. Frozen — no auto-ratchet; bump by hand when a package's real coverage climbs and you want to lock the new floor in.
-- **Unit tests only** ([#1327](https://github.com/nick-pape/grackle/issues/1327)) — Storybook interaction tests and Playwright E2E aren't yet instrumented.
 - Excluded by default: `src/gen/**` (proto), `src/vendor/**` (vendored AHP), `src/mocks/**`, `*.stories.tsx`, `*.test.{ts,tsx}`.
 - New packages without a thresholds entry log a one-line warning and run unenforced. Add an entry once the package has a stable baseline.
+
+#### Combined coverage (unit + E2E)
+
+Beyond the per-package unit floors, CI computes a **real repo-wide merged total** that unions Vitest unit coverage with Playwright E2E coverage ([#1383](https://github.com/nick-pape/grackle/issues/1383); Storybook is the follow-up [#1384](https://github.com/nick-pape/grackle/issues/1384)).
+
+- **E2E coverage** is opt-in via `E2E_COVERAGE=true`. When set, the `page` fixture (`tests/e2e-tests/tests/fixtures.ts`) collects V8 coverage per test; a Playwright `globalTeardown` runs monocart-coverage-reports to write `tests/e2e-tests/coverage/lcov.info`, source-mapped back to `packages/web/src` via `coverage-options.ts` (which resolves `.map` files from `packages/web/dist` on disk, since the per-worker servers are gone by teardown). The web bundle always emits external source maps (`packages/web/vite.config.ts`) — external, so they don't count toward the Vite chunk-size gate.
+- **Merge.** `scripts/coverage-merge` (`@grackle-ai/coverage-merge`) unions every `*/coverage/lcov.info` into one combined lcov + total, normalizing `SF:` paths to repo-relative POSIX so the same web file from unit and E2E collapses to one key (a line is covered if any suite hit it). The CI `coverage` job downloads the unit + per-shard E2E artifacts, merges, prints the total to `$GITHUB_STEP_SUMMARY`, and uploads `combined-coverage`. `--require-source packages/web/src` makes the job fail loudly if E2E coverage didn't land.
+- The combined total is **informational** — not yet a PR gate.
 
 ### Storybook Component Tests
 
