@@ -330,4 +330,48 @@ describe("session-store", () => {
       expect(sessionStore.countActiveGlobal()).toBe(2);
     });
   });
+
+  describe("listRunningSubagentChildren", () => {
+    it("returns an empty array when no sessions exist", () => {
+      expect(sessionStore.listRunningSubagentChildren()).toEqual([]);
+    });
+
+    it("returns only RUNNING subagent children, excluding terminal ones and non-subagent runtimes", () => {
+      // A running subagent child — should match.
+      sessionStore.createSession(
+        "sub-running",
+        "test-env",
+        "subagent",
+        "p",
+        "m",
+        "/tmp/sub",
+        "",
+        "",
+        "parent-1",
+      );
+      sessionStore.updateSessionStatus("sub-running", "running");
+
+      // A terminal subagent child — should NOT match.
+      sessionStore.createSession(
+        "sub-stopped",
+        "test-env",
+        "subagent",
+        "p",
+        "m",
+        "/tmp/sub2",
+        "",
+        "",
+        "parent-1",
+      );
+      sessionStore.updateSession("sub-stopped", "stopped", undefined, undefined, "completed");
+
+      // A RUNNING non-subagent session — should NOT match.
+      sessionStore.createSession("real-running", "test-env", "claude-code", "p", "m", "/tmp/real");
+      sessionStore.updateSessionStatus("real-running", "running");
+
+      const rows = sessionStore.listRunningSubagentChildren();
+      expect(rows.map((r) => r.id)).toEqual(["sub-running"]);
+      expect(rows[0].parentSessionId).toBe("parent-1");
+    });
+  });
 });

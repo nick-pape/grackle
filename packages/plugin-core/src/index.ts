@@ -25,6 +25,8 @@ export type { OrphanPhaseDeps } from "./orphan-phase.js";
 export { lifecycleCleanupPhase } from "./lifecycle-cleanup.js";
 export { createEnvironmentReconciliationPhase } from "./environment-reconciliation.js";
 export type { EnvironmentReconciliationDeps } from "./environment-reconciliation.js";
+export { createSubagentReconciliationPhase } from "./subagent-reconciliation.js";
+export type { SubagentReconciliationDeps } from "./subagent-reconciliation.js";
 
 // ─── Plugin Registry ────────────────────────────────────────
 export { setLoadedPluginNames, PLUGIN_REGISTRY } from "./plugin-registry.js";

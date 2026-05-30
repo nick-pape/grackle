@@ -65,6 +65,9 @@ export function createRootTaskBootSubscriber(ctx: PluginContext, deps: RootTaskB
 export function createSigchldSubscriber(ctx: PluginContext): Disposable_2;
 
 // @public
+export function createSubagentReconciliationPhase(deps: SubagentReconciliationDeps): ReconciliationPhase;
+
+// @public
 export interface DispatchPhaseDeps {
     dequeueEntry: (taskId: string) => void;
     environmentExists: (environmentId: string) => boolean;
@@ -158,6 +161,13 @@ export function setChannelConfig(next: ChannelConfig): void;
 
 // @public
 export function setLoadedPluginNames(names: Set<string>): void;
+
+// @public
+export interface SubagentReconciliationDeps {
+    getSession: (id: string) => SessionRow | undefined;
+    interruptChildSession: (childSessionId: string) => void;
+    listRunningSubagentChildren: () => SessionRow[];
+}
 
 export { toDialableHost }
 
