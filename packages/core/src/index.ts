@@ -90,6 +90,9 @@ export * as pipeDelivery from "./pipe-delivery.js";
 // ─── Individual Exports for Plugin-Core ──────────────────────
 export { processEventStream, publishWidgetEvent } from "./event-processor.js";
 export type { WidgetEventPayload, PublishWidgetEvent } from "./event-processor.js";
+// #1386: the subagent-reconciliation phase (plugin-core) uses this to reap
+// stranded RUNNING subagent children whose parent session has gone terminal.
+export { interruptChildSession } from "./subagent-session.js";
 export { createEventStream } from "./event-hub.js";
 export { RESERVED_PREFIXES, isReservedStreamName, LIFECYCLE_PREFIX } from "./stream-names.js";
 export { subscribeStreamMessages } from "./stream-message-bus.js";

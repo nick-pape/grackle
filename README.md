@@ -13,13 +13,13 @@
   <img src="https://raw.githubusercontent.com/nick-pape/grackle/main/apps/docs-site/static/img/grackle-logo.png" alt="Grackle" width="200" />
 </p>
 
-## Stop babysitting your AI agents
+## A plague of grackles
 
-You have 6 agents running across 4 machines. You're tab-switching between terminals, copy-pasting context from one agent's output into another's prompt, and restarting dead sessions at 2 AM. Every agent has its own CLI, its own auth flow, its own way of crashing silently.
+That's the collective noun. Also what you get when you stop babysitting one agent in a terminal and start running many — each on its own wire, with its own key, leaving its own name in the log.
 
-Grackle is the control plane for AI coding agents. **Configure once, supervise by exception.**
+**Grackle is a self-hosted control plane for AI agents.** Spawn one and watch it work. Spawn a hundred and close the laptop. When one does something stupid at 3 AM, you know which one — not "the platform," not "your token," _that one_.
 
-One platform to run [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview), [Copilot](https://github.com/features/copilot), [Codex](https://openai.com/index/codex/), [Goose](https://block.github.io/goose/), or [GenAIScript](https://microsoft.github.io/genaiscript/) on any environment — Docker, SSH, Codespaces, local. It handles provisioning, credentials, transport, and lifecycle. You get a CLI, web UI, and MCP server out of the box.
+Run [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview), [Copilot](https://github.com/features/copilot), [Codex](https://openai.com/index/codex/), [GenAIScript](https://microsoft.github.io/genaiscript/), or any [ACP](https://agentclientprotocol.com/) agent — on Docker, an SSH box, a Codespace, or this machine. Grackle handles the provisioning, the credentials, the transport, the lifecycle. You get a CLI, web UI, and MCP server out of the box.
 
 ![Dashboard — active sessions, task triage, environment health, and workspaces](screenshots/dashboard-projects-tasks.png)
 
@@ -90,30 +90,30 @@ Each agent runs inside an isolated environment. Connect one or many:
 
 ### Themes
 
-10 built-in themes — Grackle, Grackle Light, Glassmorphism, Matrix, Neubrutalism, Monokai, Ubuntu, Sandstone, Verdigris, and Primer. Switch in Settings or match your system preference.
+9 built-in themes — Grackle, Glassmorphism, Matrix, Neubrutalism, Monokai, Ubuntu, Sandstone, Verdigris, and Primer (several with light/dark variants). Switch in Settings or match your system preference.
 
 ![Themes — Grackle, Matrix, Grackle Light, Sandstone](screenshots/theme-grid.png)
 
 ## Features
 
-|     | Feature                    | Description                                                                                                      |
-| --- | -------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| 📡  | **Real-time streaming**    | Watch agent tool calls and output as they happen — specialized cards for each tool type                          |
-| 🌳  | **Git worktree isolation** | Every task gets its own branch in its own worktree — zero interference between agents                            |
-| 🧠  | **Knowledge graph**        | Semantic search over findings and task context — agents build shared understanding across sessions               |
-| 🔄  | **Multi-runtime support**  | Claude Code, Copilot, Codex, Goose, and GenAIScript — swap runtimes per persona or per task                      |
-| 🌲  | **Task tree hierarchy**    | Parent/child subtrees with recursive tree view, expand/collapse, and progress badges                             |
-| 🔗  | **Task dependencies**      | Dependency gating — blocked tasks wait for their dependencies to complete                                        |
-| 🎭  | **Personas**               | Named agent configs with system prompts, runtime/model, and scoped MCP tool allowlists                           |
-| 🔁  | **Session history**        | Every task tracks its full session history — retry failed runs and compare attempts                              |
-| ✅  | **Task review & approval** | Approve or reject completed tasks with feedback that feeds into the next attempt                                 |
-| 🔌  | **MCP server**             | 50+ tools — any agent with MCP connected can create tasks, spawn sessions, query knowledge, and orchestrate work |
-| 💬  | **Chat**                   | Talk to the orchestrator directly — it has access to every MCP tool in Grackle                                   |
-| 💰  | **Usage tracking**         | Token counts and cost per session, task, or workspace                                                            |
-| 🔄  | **Session recovery**       | Environments auto-reconnect. Suspended sessions resume where they left off                                       |
-| 🔀  | **IPC pipes**              | Parent sessions spawn children with bidirectional pipes for structured communication                             |
-| ⏰  | **Scheduled triggers**     | Cron expressions and interval shortcuts for recurring task creation                                              |
-| ⌨️  | **Keyboard shortcuts**     | Global shortcuts for navigation and common actions                                                               |
+|     | Feature                    | Description                                                                                                                                                                                    |
+| --- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 📡  | **Real-time streaming**    | Watch agent tool calls and output as they happen — specialized cards for each tool type                                                                                                        |
+| 🌳  | **Git worktree isolation** | Every task gets its own branch in its own worktree — zero interference between agents                                                                                                          |
+| 🧠  | **Knowledge graph**        | Semantic search over findings and task context — agents build shared understanding across sessions                                                                                             |
+| 🔄  | **Multi-runtime support**  | Claude Code, Copilot, Codex, and GenAIScript — plus experimental Agent Client Protocol (ACP) runtimes (Goose, codex-acp, copilot-acp, claude-code-acp) — swap runtimes per persona or per task |
+| 🌲  | **Task tree hierarchy**    | Parent/child subtrees with recursive tree view, expand/collapse, and progress badges                                                                                                           |
+| 🔗  | **Task dependencies**      | Dependency gating — blocked tasks wait for their dependencies to complete                                                                                                                      |
+| 🎭  | **Personas**               | Named agent configs with system prompts, runtime/model, and scoped MCP tool allowlists                                                                                                         |
+| 🔁  | **Session history**        | Every task tracks its full session history — retry failed runs and compare attempts                                                                                                            |
+| ✅  | **Task review & approval** | Approve or reject completed tasks with feedback that feeds into the next attempt                                                                                                               |
+| 🔌  | **MCP server**             | 80+ tools — any agent with MCP connected can create tasks, spawn sessions, query knowledge, and orchestrate work                                                                               |
+| 💬  | **Chat**                   | Talk to the orchestrator directly — it has access to every MCP tool in Grackle                                                                                                                 |
+| 💰  | **Usage tracking**         | Token counts and cost per session, task, or workspace                                                                                                                                          |
+| 🔄  | **Session recovery**       | Environments auto-reconnect. Suspended sessions resume where they left off                                                                                                                     |
+| 🔀  | **IPC pipes**              | Parent sessions spawn children with bidirectional pipes for structured communication                                                                                                           |
+| ⏰  | **Scheduled triggers**     | Cron expressions and interval shortcuts for recurring task creation                                                                                                                            |
+| ⌨️  | **Keyboard shortcuts**     | Global shortcuts for navigation and common actions                                                                                                                                             |
 
 ## Quick Start
 
@@ -122,15 +122,17 @@ Each agent runs inside an isolated environment. Connect one or many:
 One command — includes the server, web UI, knowledge graph (Neo4j), and a local agent environment:
 
 ```bash
-docker run -d --name grackle -p 3000:3000 -v grackle-data:/data ghcr.io/nick-pape/grackle:latest
+docker run -d --name grackle -p 3000:3000 -p 7434:7434 -p 7435:7435 -v grackle-data:/data ghcr.io/nick-pape/grackle:latest
 ```
 
-Open **http://localhost:3000**, pair with the code from `docker logs grackle`, and start working.
+(Port `7434` is the gRPC server the host CLI talks to; `7435` exposes the MCP HTTP endpoint for MCP clients — omit `7435` if you only need the web UI.)
+
+Open **http://localhost:3000**, pair with the code from `docker logs grackle`, and start working. Run `grackle pair` (or `docker exec grackle grackle pair`) to regenerate a pairing code.
 
 To mount your Claude Code credentials so agents can authenticate:
 
 ```bash
-docker run -d --name grackle -p 3000:3000 -v grackle-data:/data \
+docker run -d --name grackle -p 3000:3000 -p 7435:7435 -v grackle-data:/data \
   -v "${HOME}/.claude:/home/node/.claude:ro" \
   ghcr.io/nick-pape/grackle:latest
 ```
@@ -141,7 +143,7 @@ docker run -d --name grackle -p 3000:3000 -v grackle-data:/data \
 <summary>Mount credentials for all runtimes</summary>
 
 ```bash
-docker run -d --name grackle -p 3000:3000 -v grackle-data:/data \
+docker run -d --name grackle -p 3000:3000 -p 7435:7435 -v grackle-data:/data \
   -v "${HOME}/.claude:/home/node/.claude:ro" \
   -v "${HOME}/.copilot:/home/node/.copilot" \
   -v "${HOME}/.codex:/home/node/.codex" \
@@ -225,7 +227,7 @@ Grackle covers the whole spectrum — start simple, scale up.
 ## Requirements
 
 - Docker (recommended — the Grackle app and its dependencies are bundled in the image)
-- Node.js >= 22 (for npm install)
+- Node.js >= 22, < 24 (for npm install — Node 24+ is not yet supported)
 
 > You still need to provide your own model credentials (via environment variables or mounted config files). Some features like the Docker adapter require access to the host Docker socket.
 
