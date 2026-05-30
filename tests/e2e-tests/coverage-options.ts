@@ -16,6 +16,9 @@ import type { CoverageReportOptions } from "monocart-coverage-reports";
 /** Absolute path to the built web bundle that the E2E stack serves. */
 const WEB_DIST_DIR: string = fileURLToPath(new URL("../../packages/web/dist/", import.meta.url));
 
+/** monocart's source-map resolver signature, derived to match exactly. */
+type SourceMapResolver = NonNullable<CoverageReportOptions["sourceMapResolver"]>;
+
 /**
  * Resolve a source map from the local `packages/web/dist` on disk rather than
  * fetching it over HTTP. `generate()` runs in global teardown AFTER every
@@ -24,10 +27,7 @@ const WEB_DIST_DIR: string = fileURLToPath(new URL("../../packages/web/dist/", i
  * V8 coverage would stay at the minified-bundle level and never map back to
  * `packages/web/src/**`.
  */
-async function resolveSourceMapFromDist(
-  url: string,
-  defaultResolver: (u: string) => Promise<unknown>,
-): Promise<unknown> {
+const resolveSourceMapFromDist: SourceMapResolver = async (url, defaultResolver) => {
   // `url` may be an absolute http(s) URL (served map) or a relative path; try
   // both the full pathname under dist and the basename under dist/assets.
   let pathname: string;
@@ -49,7 +49,7 @@ async function resolveSourceMapFromDist(
     }
   }
   return defaultResolver(url);
-}
+};
 
 /**
  * Keep only first-party web UI source unpacked from the bundle's source maps.
