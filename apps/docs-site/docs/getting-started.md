@@ -10,7 +10,7 @@ Get Grackle running and spawn your first AI agent session in about 5 minutes.
 
 ## Requirements
 
-- **Node.js 22** or later
+- **Node.js 22** (supported range is `>=22.0.0 <24.0.0` — Node 24+ is not yet supported)
 - **Docker** (if you want containerized environments)
 
 ## Option 1: Docker (recommended) {#docker-install}
@@ -27,7 +27,17 @@ docker run -it --rm \
 
 The image sets `GRACKLE_HOME=/data` and runs as the `node` user, so mount the named volume at `/data` to persist your database and API key across container restarts.
 
-This gives you the full Grackle stack — server, web UI, MCP server, and a local PowerLine instance — in one container. Mount the Docker socket to let Grackle create agent environments as sibling containers.
+This gives you the full Grackle stack — server, web UI, MCP server, and a local PowerLine instance — in one container. Mount the Docker socket to let Grackle create agent environments as sibling containers. The Docker image also bundles Neo4j and enables the knowledge graph by default.
+
+:::tip Find the pairing URL in the container logs
+The web UI is gated behind a one-time pairing step. The container prints a pairing URL on startup, so grab it from the logs:
+
+```bash
+docker logs <container>
+```
+
+Look for the `Open in browser: http://...:3000/pair?code=XXXXXX` line and open that URL (or copy the 6-character code into the pairing page at http://localhost:3000/pair). The code expires after 5 minutes — see [First launch](#first-launch) below.
+:::
 
 ## Option 2: npm / CLI
 
@@ -66,6 +76,10 @@ rush install && rush build
 node packages/server/dist/index.js
 ```
 
+:::note Knowledge graph is Docker-only by default
+The knowledge graph subsystem is **off** on npm and from-source installs. To enable it you must run your own Neo4j instance and set `GRACKLE_KNOWLEDGE_ENABLED=true` (plus the `GRACKLE_NEO4J_*` connection settings — see `.env.example`). The Docker image bundles Neo4j and sets `GRACKLE_KNOWLEDGE_ENABLED=true` for you, so the knowledge graph works out of the box there.
+:::
+
 ## What starts
 
 However you install, the server starts three services on localhost:
@@ -80,11 +94,31 @@ A local PowerLine instance also starts automatically — you can run agents on y
 
 ## First launch
 
-Navigate to **http://localhost:3000**. The setup wizard walks you through:
+The web UI is gated behind a one-time **pairing** step. Any request to `http://localhost:3000/` without a valid session cookie is redirected to `/pair`.
 
-1. **Welcome** — Brief intro to what Grackle does
-2. **Runtime selection** — Pick your default agent (Claude Code, Copilot, Codex, or Goose)
-3. **Done** — Creates your default persona and drops you into the chat interface
+1. On startup, the server prints a pairing URL to your terminal:
+
+   ```text
+   Open in browser:
+   http://localhost:3000/pair?code=ABC123
+
+   Pairing code expires in 5 minutes.
+   Run `grackle pair` to generate a new code.
+   ```
+
+   Open that URL. It carries the 6-character code in the query string and pairs you automatically. Alternatively, open **http://localhost:3000/pair** and type the 6-character code into the form.
+
+2. After pairing, the **setup wizard** appears and walks you through four steps:
+   1. **Welcome** — Brief intro to what Grackle does
+   2. **About** — A bit more on how Grackle works
+   3. **Runtime selection** — Pick your default agent (Claude Code, Copilot, Codex, or Goose)
+   4. **Notifications** — Optionally enable browser notifications, then finish
+
+   Finishing creates your default persona and drops you into the chat interface.
+
+:::warning Pairing code expires in 5 minutes
+If the code has expired (the pairing page shows "Invalid or expired pairing code"), run `grackle pair` to generate a fresh code and URL, then open it.
+:::
 
 ![Live agent stream — tool cards, code output, and interaction](/img/task-stream-view.png)
 
@@ -95,16 +129,20 @@ Your chosen runtime needs API credentials. See the [full credential setup guide]
 ```bash
 # For Claude Code
 grackle credential-provider set claude api_key
-grackle token set ANTHROPIC_API_KEY --env-var ANTHROPIC_API_KEY
+grackle token set ANTHROPIC_API_KEY --env ANTHROPIC_API_KEY
 
 # For Codex
 grackle credential-provider set codex on
-grackle token set OPENAI_API_KEY --env-var OPENAI_API_KEY
+grackle token set OPENAI_API_KEY --env OPENAI_API_KEY
 
 # For Copilot
 grackle credential-provider set github on
 grackle credential-provider set copilot on
 ```
+
+:::note Where the value comes from
+`grackle token set <name> --env <VAR>` reads the value from the named environment variable in your current shell. Use `--file <path>` to read it from a file instead. With **neither** flag, `grackle token set` drops into an interactive prompt and asks you to type the value — it does not read the matching environment variable implicitly.
+:::
 
 ## Add a Docker environment
 

@@ -24,6 +24,7 @@ const sidebars = {
         "guides/web-ui",
         "guides/chat",
         "guides/orchestration",
+        "guides/coordination",
         "guides/credentials",
         "guides/auth",
         "guides/cli-reference",
@@ -35,6 +36,7 @@ const sidebars = {
       collapsed: false,
       items: [
         "guides/mcp",
+        "guides/widgets",
         "guides/plugins",
         "guides/knowledge-graph",
         "guides/scheduled-triggers",

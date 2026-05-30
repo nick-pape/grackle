@@ -22,24 +22,35 @@ Options:
 
 - `--max-turns` — Limit how many turns the agent can take
 - `--persona` — Use a specific [persona](./personas) (otherwise uses the default)
+- `--workspace` — Associate the session with a workspace (enables workspace-scoped MCP tools)
 
 ## Streaming events
 
 Once spawned, Grackle streams the session's events in real time. Each event has a type:
 
-| Event         | Description                                             |
-| ------------- | ------------------------------------------------------- |
-| `text`        | Agent response text                                     |
-| `tool_use`    | Agent invoked a tool (shows tool name and input)        |
-| `tool_result` | Tool execution result                                   |
-| `status`      | Status change (running, idle, completed, failed)        |
-| `error`       | Error message                                           |
-| `system`      | Internal messages (setup info, worktree creation, etc.) |
-| `user_input`  | Input sent by a user or parent task                     |
+| Event           | Description                                              |
+| --------------- | -------------------------------------------------------- |
+| `text`          | Agent response text                                      |
+| `tool_use`      | Agent invoked a tool (shows tool name and input)         |
+| `tool_result`   | Tool execution result                                    |
+| `status`        | Status change (`pending`, `running`, `idle`, `stopped`)  |
+| `error`         | Error message                                            |
+| `system`        | Internal messages (setup info, worktree creation, etc.)  |
+| `user_input`    | Input sent by a user or parent task                      |
+| `usage`         | Token and cost accounting for the turn                   |
+| `signal`        | Control signal delivered to the agent (e.g. `SIGTERM`)   |
+| `widget`        | Agent-rendered UI widget (MCP App)                       |
+| `turn_started`  | A turn opened (carries the user message that started it) |
+| `turn_complete` | A turn finished (session went idle)                      |
+| `input_needed`  | A turn is blocked awaiting user input                    |
 
-The CLI renders these with color coding. The web UI shows them in a chat-style transcript.
+The CLI renders these with color coding. The web UI shows them in a chat-style transcript. The list above is illustrative — see the `EventType` enum in `grackle_types.proto` for the authoritative set.
+
+`usage` events feed per-session accounting: each session tracks cumulative `input_tokens`, `output_tokens`, and `cost_millicents`, visible in `grackle status` and the web UI.
 
 ## Session lifecycle
+
+A session always has one of **five** statuses: `pending`, `running`, `idle`, `stopped`, or `suspended`. There is no separate `completed`, `failed`, or `interrupted` status — those are _end reasons_ recorded on a session once it reaches `stopped`.
 
 ```mermaid
 stateDiagram-v2
@@ -47,24 +58,31 @@ stateDiagram-v2
     pending --> running: agent starts
     running --> idle: waiting for input
     idle --> running: input received
-    running --> completed: agent finishes
-    running --> failed: error
-    running --> interrupted: kill
-    idle --> interrupted: kill
-    running --> suspended: suspend
-    idle --> suspended: suspend
+    running --> stopped: finishes / error / kill / budget
+    idle --> stopped: kill
+    running --> suspended: transport drops
+    idle --> suspended: transport drops
     suspended --> running: resume
-    completed --> running: resume
-    interrupted --> running: resume
+    stopped --> running: resume
 ```
 
 - **pending** — Session created, agent starting up
 - **running** — Agent is actively working
 - **idle** — Agent is waiting for user input
-- **completed** — Agent finished successfully
-- **failed** — Agent hit an error
-- **interrupted** — Manually killed
-- **suspended** — Parked in memory, not consuming compute (see below)
+- **stopped** — Session has ended; the reason is recorded in its `end_reason` (see below)
+- **suspended** — Parked on the server, not consuming compute (see below)
+
+`stopped` is the only terminal status. When a session stops, an **end reason** explains why:
+
+| End reason        | Meaning                                                 |
+| ----------------- | ------------------------------------------------------- |
+| `completed`       | Agent finished its work normally                        |
+| `killed`          | Hard kill (`SIGKILL`) — terminated immediately          |
+| `interrupted`     | Graceful kill (`SIGTERM`) — asked to stop and wind down |
+| `terminated`      | Stopped by the runtime or environment                   |
+| `budget_exceeded` | Hit a configured limit (e.g. max turns)                 |
+
+A stopped session can be **resumed** (it returns to `running`); see below.
 
 ## Session suspension
 
@@ -103,13 +121,13 @@ This streams all events and gives you an interactive prompt when the session is 
 
 ## Resuming a session
 
-Completed or interrupted sessions can be resumed:
+A `stopped` session (whatever its end reason) or a `suspended` one can be resumed:
 
 ```bash
 grackle resume <session-id>
 ```
 
-The agent picks up where it left off with its full conversation history intact. This is useful for iterating — review the agent's work, then resume with feedback.
+The agent picks up where it left off with its full conversation history intact, transitioning back to `running`. This is useful for iterating — review the agent's work, then resume with feedback. (Active sessions — `pending`, `running`, or `idle` — can't be resumed; they're already live.)
 
 ## Killing a session
 
@@ -117,7 +135,11 @@ The agent picks up where it left off with its full conversation history intact. 
 grackle kill <session-id>
 ```
 
-This terminates the agent immediately. The session status changes to **interrupted**.
+By default this hard-kills the agent (`SIGKILL`) immediately: the session moves to **stopped** with end reason `killed`. Pass `-g`/`--graceful` to send a `SIGTERM` instead — the agent is asked to finish its current operation and wind down, ending as **stopped** with end reason `interrupted`:
+
+```bash
+grackle kill <session-id> --graceful
+```
 
 ## Viewing logs
 

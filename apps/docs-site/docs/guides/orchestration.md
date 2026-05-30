@@ -8,6 +8,10 @@ sidebar_position: 3
 
 Grackle scales from a single agent on a single box to coordinated teams of agents working in parallel. You don't need to adopt everything at once — each layer builds on the last.
 
+:::note
+Tasks, personas, and escalations are provided by the **orchestration plugin**. It's enabled by default but can be turned off (the plugin state is stored in the database) with `grackle plugin disable orchestration`, which takes effect after a server restart. With it disabled, Grackle runs as a lightweight session manager (Level 1) without the task tree. See the [plugin system](./plugins) guide.
+:::
+
 ## Level 1: Remote control
 
 The simplest use case. One environment, one agent, one session. You watch it work and send input when needed.
@@ -144,6 +148,8 @@ When an agent can't proceed (needs human input, hit an error it can't resolve), 
 
 This composed pattern means escalation works at any depth without a dedicated escalation subsystem.
 
+To deliver escalations outside the browser, configure an outbound webhook with `grackle notify set-webhook <url>`. You can also drive task creation on a recurring basis with `grackle schedule` — see [scheduled triggers](./scheduled-triggers).
+
 ## Environment scheduling
 
 When you start a task without specifying an environment, Grackle's **dispatch phase** automatically assigns it to an available environment based on:
@@ -173,3 +179,4 @@ Each persona can have different runtimes, models, system prompts, and tool acces
 - **Limit decomposition depth.** Deep task trees add coordination overhead. 2-3 levels is usually enough.
 - **Review intermediate results.** Don't let an orchestrator run unsupervised on critical work.
 - **Match environments to workload.** Use Docker for isolation, local for speed, Codespaces for team access.
+- **Bound a run with budgets.** Tasks and workspaces carry token and cost budgets (`token_budget` / `cost_budget_millicents`) that cap how much an orchestrated run can consume — see [Workspaces & Tasks](../concepts/projects-tasks).

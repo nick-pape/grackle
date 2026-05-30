@@ -11,7 +11,7 @@ You have 6 agents running across 4 machines. You're tab-switching between termin
 
 **Grackle is the control plane for AI coding agents.** Configure once, supervise by exception.
 
-One platform to run [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview), [Copilot](https://github.com/features/copilot), [Codex](https://openai.com/index/codex/), or [Goose](https://block.github.io/goose/) on any environment — Docker, SSH, Codespaces, local. It handles provisioning, credentials, transport, and lifecycle. You get a CLI, web UI, and MCP server out of the box.
+One platform to run [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview), [Copilot](https://github.com/features/copilot), [Codex](https://openai.com/index/codex/), or any [ACP](https://agentclientprotocol.com/)-compatible agent such as [Goose](https://block.github.io/goose/) on any environment — Docker, SSH, Codespaces, local. It handles provisioning, credentials, transport, and lifecycle. You get a CLI, web UI, and MCP server out of the box.
 
 ![Dashboard — active sessions, task triage, and workspaces](/img/dashboard-projects-tasks.png)
 
@@ -59,19 +59,19 @@ The **Grackle Server** is the control plane. It manages environments, sessions, 
 
 ## Features
 
-| Feature                                               | Description                                                                    |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------ |
-| **[Chat interface](./guides/chat)**                   | Natural language command interface — just describe what you want               |
-| **Real-time streaming**                               | Watch agent tool calls and output as they happen                               |
-| **Git worktree isolation**                            | Every task gets its own branch — zero interference between agents              |
-| **[Knowledge graph](./guides/knowledge-graph)**       | Semantic memory backed by Neo4j — agents share knowledge automatically         |
-| **Multi-runtime**                                     | Claude Code, Copilot, Codex, and Goose — swap freely                           |
-| **[Task trees](./concepts/projects-tasks)**           | Decompose work into parent/child subtasks up to 8 levels deep                  |
-| **[Signals](./guides/orchestration#signals)**         | SIGTERM, SIGCHLD, cascade kill, orphan adoption — kernel-style process control |
-| **[Personas](./concepts/personas)**                   | Specialized agent configs with system prompts, tools, and model selection      |
-| **[Scheduled triggers](./guides/scheduled-triggers)** | Cron-style automated task creation                                             |
-| **[Plugin system](./guides/plugins)**                 | Compose server capabilities — orchestration, scheduling, knowledge graph       |
-| **[MCP server](./guides/mcp)**                        | Expose Grackle's full API as MCP tools for any AI agent                        |
+| Feature                                               | Description                                                                           |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **[Chat interface](./guides/chat)**                   | Natural language command interface — just describe what you want                      |
+| **Real-time streaming**                               | Watch agent tool calls and output as they happen                                      |
+| **Git worktree isolation**                            | Every task gets its own branch — zero interference between agents                     |
+| **[Knowledge graph](./guides/knowledge-graph)**       | Semantic memory backed by Neo4j — agents share knowledge automatically                |
+| **Multi-runtime**                                     | Claude Code, Copilot, Codex — plus experimental ACP runtimes like Goose — swap freely |
+| **[Task trees](./concepts/projects-tasks)**           | Decompose work into parent/child subtasks up to 8 levels deep                         |
+| **[Signals](./guides/orchestration#signals)**         | SIGTERM, SIGCHLD, cascade kill, orphan adoption — kernel-style process control        |
+| **[Personas](./concepts/personas)**                   | Specialized agent configs with system prompts, tools, and model selection             |
+| **[Scheduled triggers](./guides/scheduled-triggers)** | Cron-style automated task creation                                                    |
+| **[Plugin system](./guides/plugins)**                 | Compose server capabilities — orchestration, scheduling, knowledge graph              |
+| **[MCP server](./guides/mcp)**                        | Expose Grackle's full API as MCP tools for any AI agent                               |
 
 ## Scales from remote control to swarms
 
@@ -87,6 +87,6 @@ You don't need to adopt everything at once. Each level builds on the last — se
 ## Next steps
 
 - **[Getting Started](./getting-started)** — Install Grackle and run your first agent in 5 minutes
-- **[Credential Setup](./guides/credentials)** — Configure API keys for Claude, Copilot, Codex, and Goose
+- **[Credential Setup](./guides/credentials)** — Configure API keys for Claude, Copilot, and Codex
 - **[Concepts](./concepts/environments)** — Understand environments, sessions, tasks, and the rest of the model
 - **[Guides](./guides/web-ui)** — Web UI, orchestration, chat, plugins, and more

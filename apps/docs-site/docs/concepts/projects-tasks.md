@@ -12,7 +12,7 @@ sidebar_position: 4
 
 A workspace is a container for tasks. It defines defaults that all its tasks inherit:
 
-- **Default environment** — Where tasks run unless overridden
+- **Linked environments** — Where tasks can run. A workspace is created against an initial environment (auto-linked), and you can link more later.
 - **Default persona** — Which agent configuration to use
 - **Repository URL** — The git repo agents work on
 - **Worktree isolation** — Whether each task gets its own git branch (enabled by default)
@@ -24,6 +24,17 @@ grackle workspace create "Auth Rewrite" \
   --desc "Migrate from session tokens to JWT"
 ```
 
+A workspace can link **multiple environments**, not just the one it was created with. Manage the set with:
+
+```bash
+grackle workspace link-env <workspace-id> --env another-env
+grackle workspace unlink-env <workspace-id> --env another-env
+```
+
+### Budgets
+
+A workspace can carry an aggregate **token budget** and **cost budget** (in millicents) that apply across all of its tasks. Both default to `0`, meaning unlimited. Tasks can also set their own budgets (see [Task budgets](#task-budgets)).
+
 ## Tasks
 
 A task represents a single piece of work. When you start a task, Grackle spawns an agent session with the task's title as the prompt and its description as context.
@@ -33,6 +44,16 @@ grackle task create "Implement JWT middleware" \
   --workspace auth-rewrite \
   --desc "Replace the existing session-based auth with JWT tokens. Use RS256 signing."
 ```
+
+Beyond title and description, a task also tracks:
+
+- **Workpad** — Persistent structured context (a JSON document) that survives across the task's sessions, so successive agent runs share state.
+- **Knowledge injection** — Whether knowledge-graph context is injected when a session spawns (`inject_knowledge`, on by default).
+- **Schedule origin** — Tasks created by a [scheduled trigger](../guides/scheduled-triggers.md) carry that schedule's ID; manually-created tasks leave it empty.
+
+### Task budgets
+
+A task can set its own **token budget** and **cost budget** (in millicents), independent of its workspace's aggregate budgets. Both default to `0` (unlimited). These cap the total input + output tokens and the spend for the task.
 
 ### Task status
 
@@ -52,7 +73,7 @@ Tasks move through a lifecycle:
 grackle task start <task-id>
 ```
 
-This spawns an agent session in the workspace's default environment (or a specified one). The agent receives:
+This spawns an agent session in one of the workspace's linked environments (you can specify which one). The agent receives:
 
 - The task title as its prompt
 - The task description as system context
@@ -95,7 +116,7 @@ grackle task create "Write JWT validator" --workspace auth-rewrite --parent <par
 grackle task create "Implement auth" --workspace auth-rewrite --can-decompose
 ```
 
-Tasks can be nested up to 8 levels deep. Use `--can-decompose` to allow a task to create children — this is off by default to prevent runaway nesting. The web UI and MCP tools also support setting this flag.
+Tasks can be nested up to 8 levels deep below the root (the root sits at depth 0, and the depth limit is enforced server-side). Use `--can-decompose` to allow a task to create children — this is off by default for child tasks to prevent runaway nesting. The web UI and MCP tools also support setting this flag.
 
 ## Task dependencies
 

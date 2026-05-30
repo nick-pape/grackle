@@ -114,6 +114,7 @@ grackle credential-provider set github on
 | `github`  | `off`, `on`                      | Needed for Copilot runtime and Codespace adapter                       |
 | `copilot` | `off`, `on`                      | GitHub Copilot authentication                                          |
 | `codex`   | `off`, `on`                      | OpenAI API authentication                                              |
+| `goose`   | `off`, `on`                      | Goose provider configuration and API keys                              |
 
 ## LAN access
 

@@ -10,33 +10,43 @@ A **runtime** is the AI agent engine that actually does the work inside a sessio
 
 ## Supported runtimes
 
-| Runtime            | ID            | Default Model          | SDK                        |
-| ------------------ | ------------- | ---------------------- | -------------------------- |
-| **Claude Code**    | `claude-code` | `sonnet`               | Anthropic Claude Agent SDK |
-| **GitHub Copilot** | `copilot`     | `gpt-4o`               | GitHub Copilot SDK         |
-| **OpenAI Codex**   | `codex`       | `o3`                   | OpenAI Codex SDK           |
-| **Goose**          | `goose`       | _(provider-dependent)_ | ACP (native)               |
+Grackle ships two families of runtimes: **native** runtimes that wrap a vendor SDK directly, and an **ACP-bridged** family that talks to agents over the cross-vendor [Agent Client Protocol](#acp-agent-client-protocol).
 
-All four runtimes support the same Grackle features: streaming, tool use, session resume, MCP integration, and worktree isolation.
+### Native runtimes
+
+| Runtime            | ID            | Default Model      | Models                    | SDK                        |
+| ------------------ | ------------- | ------------------ | ------------------------- | -------------------------- |
+| **Claude Code**    | `claude-code` | `sonnet`           | `sonnet`, `opus`, `haiku` | Anthropic Claude Agent SDK |
+| **GitHub Copilot** | `copilot`     | `gpt-4o`           | `gpt-4o`                  | GitHub Copilot SDK         |
+| **OpenAI Codex**   | `codex`       | `gpt-5.5`          | `gpt-5.5`                 | OpenAI Codex SDK           |
+| **GenAIScript**    | `genaiscript` | _(script-defined)_ | _(script-defined)_        | GenAIScript CLI            |
+
+The native runtimes support the core Grackle features: streaming, tool use, session resume, MCP integration, and worktree isolation. **GenAIScript** is a scripting runtime rather than a conversational agent — it powers [script personas](./personas), where the persona's behavior is defined by a GenAIScript program instead of a system prompt.
+
+### ACP-bridged runtimes (experimental)
+
+These runtimes connect through the [Agent Client Protocol](#acp-agent-client-protocol). They are **experimental**, and their model selection is provider-dependent (the catalog exposes no fixed model list).
+
+| Runtime               | ID                | Bridge                                            |
+| --------------------- | ----------------- | ------------------------------------------------- |
+| **Goose**             | `goose`           | Native ACP (`goose acp`)                          |
+| **Codex (ACP)**       | `codex-acp`       | stdio bridge (`@zed-industries/codex-acp`)        |
+| **Copilot (ACP)**     | `copilot-acp`     | stdio bridge (`copilot --acp --stdio`)            |
+| **Claude Code (ACP)** | `claude-code-acp` | stdio bridge (`@zed-industries/claude-agent-acp`) |
 
 Goose is provider-agnostic — it can use Anthropic, OpenAI, Google, and many other LLM providers. Configure your Goose provider and model via `goose configure` or environment variables (`GOOSE_PROVIDER`, `GOOSE_MODEL`). Goose must be [installed](https://block.github.io/goose/docs/getting-started/installation/) separately on the system.
 
 ## Runtime × environment compatibility
 
-All runtimes are tested across all environment types. Here's the current support matrix:
+Runtimes are **host-agnostic**. Availability is not reported by the host: PowerLine lazily `npm`-installs a runtime's packages on demand the first time it's used, so the entire catalog is available on any environment type — Local, Docker, SSH, or Codespace. "Available" simply means "in the catalog."
 
-| Runtime         | Local | Docker | SSH | Codespace |
-| --------------- | :---: | :----: | :-: | :-------: |
-| **Claude Code** |  ✅   |   ✅   | ✅  |    ✅     |
-| **Copilot**     |  ✅   |   ✅   | ✅  |    ✅     |
-| **Codex**       |  ✅   |   ✅   | ✅  |    ✅     |
-| **Goose**       |  ✅   |   ✅   | ✅  |    ✅     |
+This means there's no per-runtime support list to memorize: any runtime can run on any environment. Note, however, that not every runtime × environment combination is exercised by CI, so experimental runtimes (Goose and the ACP-bridged family) may need extra setup on a given host.
 
 Grackle handles credential injection, git repo setup, and agent bootstrapping for each combination. If a runtime needs a specific token on a remote environment (e.g., `GITHUB_TOKEN` for Copilot on Docker), the [token broker](../guides/credentials) pushes it automatically.
 
 ### ACP (Agent Client Protocol)
 
-Grackle also supports runtimes that implement the **Agent Client Protocol** — a cross-vendor standard for agent communication. ACP variants exist for Claude, Copilot, and Codex. Goose natively speaks ACP, so it uses this protocol directly. The other ACP variants use a stdio-based bridge instead of the native SDKs.
+Grackle also supports runtimes that implement the **Agent Client Protocol** — a cross-vendor standard for agent communication. Goose natively speaks ACP, so it uses this protocol directly. The `codex-acp`, `copilot-acp`, and `claude-code-acp` variants reach their respective agents through a stdio-based bridge instead of the native SDKs. All ACP-bridged runtimes are experimental.
 
 ## How runtimes work
 

@@ -56,7 +56,9 @@ grackle token set OPENAI_API_KEY --env-var OPENAI_API_KEY
 ```
 
 :::note Token name vs environment variable
-The first argument to `grackle token set` is the token's **name** in Grackle's store. By default the injected environment variable is `<NAME>_TOKEN` (e.g., `ANTHROPIC_API_KEY_TOKEN`). Use `--env-var` to specify the exact variable name the runtime expects.
+The first argument to `grackle token set` is the token's **name** in Grackle's store. By default the injected environment variable is `<NAME>_TOKEN` (e.g., `ANTHROPIC_API_KEY_TOKEN`). Use `--env-var` to specify the exact variable name the runtime expects — `--env-var` sets the **target variable name on PowerLine**, not where the secret value comes from.
+
+The value itself comes from `--file <path>` (read from a file) or `--env <var>` (read from one of your local environment variables). With neither, `grackle token set` prompts for the value interactively.
 :::
 
 ### How tokens reach agents
@@ -71,6 +73,8 @@ When a session spawns, the token broker:
 For `env_var` type tokens, values exist only in the agent's process environment. For `file` type tokens, they are written to a file on the remote environment.
 
 ## Per-runtime setup
+
+Run `grackle runtimes` to list every available runtime alongside its **credential needs** — including the ACP-bridged runtimes (`codex-acp`, `copilot-acp`, `claude-code-acp`, and `goose`). Use that as the authoritative source for which credentials each runtime expects.
 
 ### Claude Code
 
@@ -115,9 +119,11 @@ grackle credential-provider set codex on
 grackle token set OPENAI_API_KEY --env-var OPENAI_API_KEY
 ```
 
-### Goose
+### Goose (ACP-bridged)
 
-[Goose](https://block.github.io/goose/) is provider-agnostic — it can use Anthropic, OpenAI, Google, and many other LLM providers.
+[Goose](https://block.github.io/goose/) isn't a dedicated Grackle runtime — it runs through the generic ACP runtime, which launches `goose acp` and speaks the [Agent Client Protocol](https://agentclientprotocol.com/) over stdio. Goose itself is provider-agnostic, so it can use Anthropic, OpenAI, Google, and many other LLM providers.
+
+The `goose` credential provider toggle still applies:
 
 ```bash
 grackle credential-provider set goose on

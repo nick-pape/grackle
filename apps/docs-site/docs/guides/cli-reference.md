@@ -24,13 +24,16 @@ The CLI connects to the Grackle server via gRPC. Configuration:
 
 Start the Grackle server (gRPC + Web UI + WebSocket + MCP).
 
-| Flag               | Default | Description                    |
-| ------------------ | ------- | ------------------------------ |
-| `--port`           | 7434    | gRPC server port               |
-| `--web-port`       | 3000    | Web UI port                    |
-| `--mcp-port`       | 7435    | MCP server port                |
-| `--powerline-port` | 7433    | Local PowerLine port           |
-| `--allow-network`  | off     | Bind to 0.0.0.0 for LAN access |
+| Flag                        | Default | Description                                                                                                                        |
+| --------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `--port <port>`             | 7434    | Server port                                                                                                                        |
+| `--web-port <port>`         | 3000    | Web UI port                                                                                                                        |
+| `--mcp-port <port>`         | 7435    | MCP server port                                                                                                                    |
+| `--mcp-origin <origin>`     | —       | Browser-facing MCP origin (e.g. `https://mcp.example.com`) for reverse-proxy/TLS deployments; trusted asset/CSP origin for widgets |
+| `--sandbox-port <port>`     | 7436    | MCP Apps widget sandbox port                                                                                                       |
+| `--sandbox-origin <origin>` | —       | Browser-facing MCP Apps sandbox origin (e.g. `https://sandbox.example.com`) for reverse-proxy/TLS deployments                      |
+| `--powerline-port <port>`   | 7433    | Local PowerLine port                                                                                                               |
+| `--allow-network`           | off     | Bind to all interfaces (0.0.0.0) for LAN access                                                                                    |
 
 ### `grackle pair`
 
@@ -44,86 +47,112 @@ List all environments with ID, type, status, and bootstrap state.
 
 ### `grackle env add <name>`
 
-Register a new environment.
+Add an environment. Defaults to the Docker adapter when no adapter flag is given.
 
-| Flag                      | Description                                       |
-| ------------------------- | ------------------------------------------------- |
-| `--docker`                | Docker adapter                                    |
-| `--ssh`                   | SSH adapter                                       |
-| `--local`                 | Local adapter                                     |
-| `--codespace`             | GitHub Codespace adapter                          |
-| `--image <image>`         | Docker image                                      |
-| `--repo <repo>`           | Git repo to clone (Docker)                        |
-| `--volume <v>`            | Volume mount — `host:container[:ro]` (repeatable) |
-| `--gpu [gpus]`            | GPU passthrough (Docker)                          |
-| `--host <host>`           | SSH hostname (required for SSH)                   |
-| `--user <user>`           | SSH user                                          |
-| `--ssh-port <port>`       | SSH port (default: 22)                            |
-| `--identity-file <path>`  | SSH private key path                              |
-| `--codespace-name <name>` | Codespace name (required for Codespace)           |
-| `--port <port>`           | PowerLine port (Local)                            |
+| Flag                       | Description                                                                     |
+| -------------------------- | ------------------------------------------------------------------------------- |
+| `--codespace`              | Codespace adapter                                                               |
+| `--docker`                 | Docker adapter                                                                  |
+| `--ssh`                    | SSH adapter                                                                     |
+| `--local`                  | Local PowerLine adapter                                                         |
+| `--repo <repo>`            | GitHub repo to clone (docker)                                                   |
+| `--image <image>`          | Docker image                                                                    |
+| `--attach <container>`     | Attach to an existing container by name/ID instead of creating one (docker)     |
+| `--host <host>`            | SSH host / local host                                                           |
+| `--port <port>`            | PowerLine port (local adapter)                                                  |
+| `--user <user>`            | SSH user                                                                        |
+| `--volume <volumes...>`    | Docker volume mounts (format: `host:container[:ro]`, repeatable)                |
+| `--gpu [gpus]`             | Enable GPU passthrough (default: `all`)                                         |
+| `--ssh-port <sshPort>`     | SSH port (default: 22)                                                          |
+| `--identity-file <path>`   | SSH identity file (private key)                                                 |
+| `--codespace-name <name>`  | Codespace name (from `gh codespace list`)                                       |
+| `--github-account <label>` | GitHub account label to use for `gh` CLI operations (codespace/docker adapters) |
+
+`--ssh` requires `--host`; `--codespace` requires `--codespace-name`.
 
 ### `grackle env provision <id>`
 
-Bootstrap and connect an environment. Streams progress.
+Provision and connect an environment. Streams progress.
+
+| Flag      | Description                                     |
+| --------- | ----------------------------------------------- |
+| `--force` | Force full reprovision, killing active sessions |
 
 ### `grackle env wake <id>`
 
-Reconnect a stopped environment (same as provision).
+Wake a sleeping environment (same provisioning flow as `provision`).
 
 ### `grackle env stop <id>`
 
-Gracefully disconnect an environment.
+Stop an environment.
 
 ### `grackle env destroy <id>`
 
-Stop and tear down environment resources.
+Destroy an environment.
 
 ### `grackle env remove <id>`
 
-Unregister an environment from Grackle.
+Remove an environment from the registry.
 
 ## Sessions
 
 ### `grackle spawn <env-id> <prompt>`
 
-Start a new agent session and stream its output.
+Start a new agent session and stream its output (`Ctrl+C` to detach).
 
-| Flag              | Description         |
-| ----------------- | ------------------- |
-| `--max-turns <n>` | Maximum agent turns |
-| `--persona <id>`  | Persona to use      |
+| Flag               | Description                                                                   |
+| ------------------ | ----------------------------------------------------------------------------- |
+| `--max-turns <n>`  | Maximum turns                                                                 |
+| `--persona <id>`   | Persona to use (falls back to app default)                                    |
+| `--workspace <id>` | Workspace to associate with this session (enables workspace-scoped MCP tools) |
 
 ### `grackle attach <session-id>`
 
-Attach to a running session. Interactive — prompts for input when the session is waiting. `Ctrl+C` to detach.
+Attach to a live session. Interactive — prompts for input when the session is waiting. `Ctrl+C` to detach.
 
 ### `grackle resume <session-id>`
 
-Resume a completed or interrupted session.
+Resume a paused session.
 
 ### `grackle send-input <session-id> <text>`
 
-Send text input to a session waiting for input.
+Send input to a waiting session.
 
 ### `grackle kill <session-id>`
 
-Terminate a running session.
+Stop a running session.
+
+| Flag             | Description                                             |
+| ---------------- | ------------------------------------------------------- |
+| `-g, --graceful` | Send SIGTERM for graceful shutdown instead of hard kill |
 
 ### `grackle status`
 
-List active sessions.
+List agent sessions.
 
-| Flag         | Description                |
-| ------------ | -------------------------- |
-| `--env <id>` | Filter by environment      |
-| `--all`      | Include completed sessions |
+| Flag         | Description                         |
+| ------------ | ----------------------------------- |
+| `--env <id>` | Filter by environment               |
+| `--all`      | Show all sessions including stopped |
+
+### `grackle session events <session-id>`
+
+Show a session's durable, server-sequenced action log (oldest first / replay order).
+
+| Flag           | Description                                        |
+| -------------- | -------------------------------------------------- |
+| `--from <seq>` | Only actions after this seq (resume from a cursor) |
+| `--limit <n>`  | Max actions to return (default: 500)               |
 
 ## Workspaces
 
 ### `grackle workspace list`
 
 List all active workspaces.
+
+| Flag         | Description              |
+| ------------ | ------------------------ |
+| `--env <id>` | Filter by environment ID |
 
 ### `grackle workspace create <name>`
 
@@ -143,28 +172,72 @@ Show full workspace details.
 
 ### `grackle workspace update <id>`
 
-Update workspace properties. Same flags as `create` (all optional).
+Update a workspace. All flags optional; only provided fields change.
+
+| Flag                           | Description                                                      |
+| ------------------------------ | ---------------------------------------------------------------- |
+| `--name <name>`                | Workspace name                                                   |
+| `--desc <text>`                | Workspace description                                            |
+| `--repo <url>`                 | Repository URL                                                   |
+| `--worktrees`                  | Enable worktree isolation (default)                              |
+| `--no-worktrees`               | Disable worktree isolation (agents share the main checkout)      |
+| `--working-directory <path>`   | Working directory / repo root on the environment                 |
+| `--token-budget <n>`           | Aggregate token cap across all tasks; 0 = unlimited              |
+| `--cost-budget-millicents <n>` | Aggregate cost cap in millicents ($0.00001 units); 0 = unlimited |
 
 ### `grackle workspace archive <id>`
 
 Archive a workspace.
 
+### `grackle workspace link-env <workspace-id>`
+
+Link an additional environment to a workspace.
+
+| Flag         | Description                           |
+| ------------ | ------------------------------------- |
+| `--env <id>` | Environment ID to link (**required**) |
+
+### `grackle workspace unlink-env <workspace-id>`
+
+Remove a linked environment from a workspace.
+
+| Flag         | Description                             |
+| ------------ | --------------------------------------- |
+| `--env <id>` | Environment ID to unlink (**required**) |
+
 ## Tasks
 
 ### `grackle task list [workspace-id]`
 
-| Flag                | Description                 |
-| ------------------- | --------------------------- |
-| `--search <query>`  | Filter by title/description |
-| `--status <status>` | Filter by status            |
+List tasks (optionally scoped to a workspace).
+
+| Flag                | Description                                                                 |
+| ------------------- | --------------------------------------------------------------------------- |
+| `--search <query>`  | Filter tasks by title/description substring                                 |
+| `--status <status>` | Filter by status (`not_started`, `working`, `paused`, `complete`, `failed`) |
+
+### `grackle task search <query>`
+
+Fuzzy search for tasks by title or description, ranked by relevance.
+
+| Flag                | Description                                                                 |
+| ------------------- | --------------------------------------------------------------------------- |
+| `--workspace <id>`  | Scope to a specific workspace (optional)                                    |
+| `--limit <n>`       | Maximum results to return (default: 10)                                     |
+| `--status <status>` | Filter by status (`not_started`, `working`, `paused`, `complete`, `failed`) |
 
 ### `grackle task create <title>`
 
-| Flag                 | Description                         |
-| -------------------- | ----------------------------------- |
-| `--workspace <id>`   | Workspace to create in              |
-| `--desc <text>`      | Description                         |
-| `--depends-on <ids>` | Comma-separated dependency task IDs |
+| Flag                           | Description                                                        |
+| ------------------------------ | ------------------------------------------------------------------ |
+| `--workspace <id>`             | Workspace to create the task in (optional)                         |
+| `--desc <text>`                | Task description                                                   |
+| `--depends-on <ids>`           | Comma-separated dependency task IDs                                |
+| `--can-decompose`              | Allow this task to create subtasks                                 |
+| `--no-inject-knowledge`        | Disable knowledge-graph context injection at spawn (on by default) |
+| `--parent <task-id>`           | Parent task ID (creates a subtask)                                 |
+| `--token-budget <n>`           | Total token cap (input + output); 0 = unlimited                    |
+| `--cost-budget-millicents <n>` | Cost cap in millicents ($0.00001 units); 0 = unlimited             |
 
 ### `grackle task show <task-id>`
 
@@ -172,13 +245,18 @@ Display full task details.
 
 ### `grackle task update <task-id>`
 
-| Flag                 | Description                           |
-| -------------------- | ------------------------------------- |
-| `--title <text>`     | New title                             |
-| `--desc <text>`      | New description                       |
-| `--status <status>`  | New status                            |
-| `--depends-on <ids>` | Dependency task IDs                   |
-| `--session <id>`     | Bind an existing session to this task |
+| Flag                           | Description                                                            |
+| ------------------------------ | ---------------------------------------------------------------------- |
+| `--title <text>`               | New title                                                              |
+| `--desc <text>`                | New description                                                        |
+| `--status <status>`            | Task status (`not_started`, `working`, `paused`, `complete`, `failed`) |
+| `--depends-on <ids>`           | Comma-separated dependency task IDs                                    |
+| `--session <id>`               | Bind an existing session to this task                                  |
+| `--persona <id>`               | Default persona ID for this task                                       |
+| `--inject-knowledge`           | Enable knowledge-graph context injection at spawn                      |
+| `--no-inject-knowledge`        | Disable knowledge-graph context injection at spawn                     |
+| `--token-budget <n>`           | Total token cap (input + output); 0 = unlimited                        |
+| `--cost-budget-millicents <n>` | Cost cap in millicents ($0.00001 units); 0 = unlimited                 |
 
 ### `grackle task start <task-id>`
 
@@ -210,14 +288,21 @@ List all personas.
 
 ### `grackle persona create <name>`
 
-| Flag                   | Description                                               |
-| ---------------------- | --------------------------------------------------------- |
-| `--prompt <text>`      | System prompt (inline)                                    |
-| `--prompt-file <path>` | System prompt from file                                   |
-| `--desc <text>`        | Description                                               |
-| `--runtime <runtime>`  | Runtime (claude-code, copilot, codex, goose, genaiscript) |
-| `--model <model>`      | Model (sonnet, gpt-4o, o3, etc.)                          |
-| `--max-turns <n>`      | Maximum turns                                             |
+| Flag                          | Description                                                                 |
+| ----------------------------- | --------------------------------------------------------------------------- |
+| `--type <type>`               | Persona type: `agent` or `script` (default: `agent`)                        |
+| `--prompt <text>`             | System prompt text                                                          |
+| `--prompt-file <path>`        | Read system prompt from file                                                |
+| `--script <code>`             | Script source code (for script personas)                                    |
+| `--script-file <path>`        | Read script from file (for script personas)                                 |
+| `--desc <text>`               | Description                                                                 |
+| `--runtime <runtime>`         | Default runtime (`claude-code`, `copilot`, `codex`, `goose`, `genaiscript`) |
+| `--model <model>`             | Default model                                                               |
+| `--max-turns <n>`             | Maximum turns                                                               |
+| `--mcp-tools <tools>`         | Comma-separated list of allowed MCP tool names                              |
+| `--mcp-tools-preset <preset>` | Use a preset: `default`, `worker`, `orchestrator`, `admin`                  |
+
+Agent personas require a system prompt (`--prompt` or `--prompt-file`); script personas require a script (`--script` or `--script-file`). `--mcp-tools` and `--mcp-tools-preset` are mutually exclusive.
 
 ### `grackle persona show <id>`
 
@@ -225,11 +310,32 @@ Display full persona details including system prompt.
 
 ### `grackle persona edit <id>`
 
-Update persona properties. Same flags as `create` (all optional).
+Update a persona. All flags optional; only provided fields change.
+
+| Flag                          | Description                                                |
+| ----------------------------- | ---------------------------------------------------------- |
+| `--name <name>`               | New name                                                   |
+| `--type <type>`               | New type (`agent` or `script`)                             |
+| `--prompt <text>`             | New system prompt                                          |
+| `--prompt-file <path>`        | Read system prompt from file                               |
+| `--script <code>`             | New script source code                                     |
+| `--script-file <path>`        | Read script from file                                      |
+| `--desc <text>`               | New description                                            |
+| `--runtime <runtime>`         | New runtime                                                |
+| `--model <model>`             | New model                                                  |
+| `--max-turns <n>`             | New max turns                                              |
+| `--mcp-tools <tools>`         | Comma-separated list of allowed MCP tool names             |
+| `--mcp-tools-preset <preset>` | Use a preset: `default`, `worker`, `orchestrator`, `admin` |
 
 ### `grackle persona delete <id>`
 
 Delete a persona.
+
+## Runtimes
+
+### `grackle runtimes`
+
+List available agent runtimes, their models, and credential needs. Prints a table of provider, name, models, and the credentials each runtime requires.
 
 ## Tokens
 
@@ -267,6 +373,7 @@ Show current provider configuration.
 | `github`  | `off`, `on`                      |
 | `copilot` | `off`, `on`                      |
 | `codex`   | `off`, `on`                      |
+| `goose`   | `off`, `on`                      |
 
 ## Configuration
 
@@ -288,3 +395,178 @@ Set a setting value.
 | `--tail`       | Follow live events                             |
 
 Session IDs support prefix matching.
+
+## Schedules
+
+### `grackle schedule list`
+
+List all schedules.
+
+| Flag               | Description            |
+| ------------------ | ---------------------- |
+| `--workspace <id>` | Filter by workspace ID |
+
+### `grackle schedule create <title>`
+
+Create a scheduled trigger.
+
+| Flag                      | Description                                                                        |
+| ------------------------- | ---------------------------------------------------------------------------------- |
+| `--schedule <expression>` | Interval (e.g. `30s`, `5m`) or cron expression (e.g. `0 9 * * MON`) (**required**) |
+| `--persona <id>`          | Persona ID to use when firing (**required**)                                       |
+| `--desc <text>`           | Description                                                                        |
+| `--workspace <id>`        | Workspace scope                                                                    |
+| `--parent-task <id>`      | Parent task for spawned children                                                   |
+
+### `grackle schedule show <id>`
+
+Show schedule details.
+
+### `grackle schedule enable <id>`
+
+Enable a schedule.
+
+### `grackle schedule disable <id>`
+
+Disable a schedule.
+
+### `grackle schedule delete <id>`
+
+Delete a schedule (running tasks are not affected).
+
+## Notifications
+
+### `grackle notify send <title>`
+
+Send an escalation notification to the human.
+
+| Flag                | Description                                          |
+| ------------------- | ---------------------------------------------------- |
+| `--workspace <id>`  | Workspace ID                                         |
+| `--task <id>`       | Task ID                                              |
+| `--message <text>`  | Detailed message                                     |
+| `--urgency <level>` | Urgency: `low`, `normal`, `high` (default: `normal`) |
+
+### `grackle notify list`
+
+List recent escalations.
+
+| Flag                | Description                                              |
+| ------------------- | -------------------------------------------------------- |
+| `--workspace <id>`  | Filter by workspace ID                                   |
+| `--status <status>` | Filter by status: `pending`, `delivered`, `acknowledged` |
+| `--limit <n>`       | Max results (default: 20)                                |
+
+### `grackle notify ack <id>`
+
+Acknowledge an escalation.
+
+### `grackle notify set-webhook <url>`
+
+Configure a webhook URL for outbound notifications.
+
+### `grackle notify clear-webhook`
+
+Remove the configured webhook URL.
+
+### `grackle notify status`
+
+Show notification configuration (webhook URL and pending escalation count).
+
+## GitHub Accounts
+
+Manage GitHub account credentials for multi-identity support.
+
+### `grackle github-account list`
+
+List all registered GitHub accounts.
+
+### `grackle github-account add <label>`
+
+Register a GitHub account with a personal access token.
+
+| Flag                    | Description                                         |
+| ----------------------- | --------------------------------------------------- |
+| `--token <token>`       | GitHub personal access token (PAT) (**required**)   |
+| `--username <username>` | GitHub username (resolved automatically if omitted) |
+| `--default`             | Set as the default account                          |
+
+### `grackle github-account remove <label-or-id>`
+
+Remove a registered GitHub account.
+
+### `grackle github-account set-default <label-or-id>`
+
+Set a GitHub account as the default.
+
+### `grackle github-account import`
+
+Import accounts from the local `gh` CLI authentication state.
+
+## Plugins
+
+### `grackle plugin list`
+
+List all plugins and their current state (name, description, enabled, loaded, required).
+
+### `grackle plugin enable <name>`
+
+Enable a plugin. Enabling **requires a server restart to take effect.**
+
+### `grackle plugin disable <name>`
+
+Disable a plugin. Disabling **requires a server restart to take effect.**
+
+## Channels
+
+Expose sessions to external systems via capability-scoped webhooks.
+
+### `grackle channel expose`
+
+Mint a capability webhook URL that injects user messages into a session.
+
+| Flag              | Description                                    |
+| ----------------- | ---------------------------------------------- |
+| `--session <id>`  | Session ID to expose (**required**)            |
+| `--verb <verb>`   | Permitted verb (default: `send_input`)         |
+| `--ttl <seconds>` | Token lifetime in seconds (0 = server default) |
+| `--label <text>`  | Label for audit and revocation                 |
+
+### `grackle channel ls`
+
+List channel grants.
+
+### `grackle channel revoke <grant-id>`
+
+Revoke a channel grant (its webhook URL stops working immediately).
+
+## Event & Stream Inspection
+
+### `grackle events`
+
+Query the persisted domain-event log (most recent first).
+
+| Flag            | Description                                        |
+| --------------- | -------------------------------------------------- |
+| `--type <type>` | Filter by exact event type (e.g. `task.created`)   |
+| `--since <iso>` | Only events at/after this ISO 8601 timestamp       |
+| `--until <iso>` | Only events at/before this ISO 8601 timestamp      |
+| `--before <id>` | Only events older than this id (page into history) |
+| `--limit <n>`   | Max rows to return (default: 100)                  |
+
+### `grackle streams list`
+
+List active IPC streams with subscriber details.
+
+| Flag         | Description                                         |
+| ------------ | --------------------------------------------------- |
+| `--internal` | Include internal IPC streams (lifecycle/pipe/stdin) |
+
+### `grackle streams transcript <streamId>`
+
+Show a stream room's durable transcript (most recent first).
+
+| Flag             | Description                                           |
+| ---------------- | ----------------------------------------------------- |
+| `--before <seq>` | Only messages older than this seq (page into history) |
+| `--limit <n>`    | Max messages to return (default: 100)                 |
