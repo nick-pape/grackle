@@ -212,11 +212,22 @@ export function ContextNav({
             </div>
           );
         })}
-      </div>
-
-      {onCreateAgent &&
-        (collapsed ? (
-          <Tooltip text={createAgentLabel} placement="right" inline={false}>
+        {onCreateAgent &&
+          (collapsed ? (
+            <Tooltip text={createAgentLabel} placement="right" inline={false}>
+              <button
+                type="button"
+                className={styles.createAgent}
+                onClick={onCreateAgent}
+                aria-label={createAgentLabel}
+                data-testid="context-nav-create-agent"
+              >
+                <span className={styles.tabIcon} aria-hidden="true">
+                  <Plus size={ICON_LG} />
+                </span>
+              </button>
+            </Tooltip>
+          ) : (
             <button
               type="button"
               className={styles.createAgent}
@@ -227,22 +238,10 @@ export function ContextNav({
               <span className={styles.tabIcon} aria-hidden="true">
                 <Plus size={ICON_LG} />
               </span>
+              <span className={styles.tabLabel}>{createAgentLabel}</span>
             </button>
-          </Tooltip>
-        ) : (
-          <button
-            type="button"
-            className={styles.createAgent}
-            onClick={onCreateAgent}
-            aria-label={createAgentLabel}
-            data-testid="context-nav-create-agent"
-          >
-            <span className={styles.tabIcon} aria-hidden="true">
-              <Plus size={ICON_LG} />
-            </span>
-            <span className={styles.tabLabel}>{createAgentLabel}</span>
-          </button>
-        ))}
+          ))}
+      </div>
 
       {onToggleCollapsed && (
         <button

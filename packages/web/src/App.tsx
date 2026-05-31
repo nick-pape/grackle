@@ -203,8 +203,19 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
     [agents],
   );
 
+  // Fleet/overview altitude (#1415): the `fleet`-group tabs (Coordination today)
+  // are pulled out of the view bar and rendered at the top of the context rail.
+  // Data-driven from `tabs`, so any future `fleet` tab appears here automatically.
+  const fleetTabs = useMemo(() => tabs.filter((t) => t.group === "fleet"), [tabs]);
+  const fleetItems = useMemo<ContextItem[]>(
+    () => fleetTabs.map((t) => ({ id: t.view, label: t.label, icon: t.icon, testId: t.testId })),
+    [fleetTabs],
+  );
+  const activeView = getActiveView(location.pathname);
+  const activeFleetId = fleetTabs.some((t) => t.view === activeView) ? activeView : undefined;
+
   // Derive the active context from the route: `/agents/:id` activates that agent
-  // row; everything else falls back to the default `Code` context.
+  // row; fleet pages deselect all contexts; everything else falls back to `Code`.
   // `decodeURIComponent` throws on malformed percent-encoding (e.g. `/agents/%E0`),
   // which would otherwise crash the shell while deriving `activeContextId`.
   const agentRouteMatch = location.pathname.match(/^\/agents\/([^/]+)$/);
@@ -218,7 +229,9 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
   }
   const activeContextId = activeAgentId
     ? `${AGENT_CONTEXT_PREFIX}${activeAgentId}`
-    : DEFAULT_CONTEXT_ID;
+    : activeFleetId
+      ? ""
+      : DEFAULT_CONTEXT_ID;
 
   // Selecting a context navigates: agent rows open the agent view; `Code` returns
   // to the default landing route. Always dismiss the mobile drawer.
@@ -239,17 +252,6 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
     setContextNavOpen(false);
     navigate("/agents/new");
   }, [navigate]);
-
-  // Fleet/overview altitude (#1415): the `fleet`-group tabs (Coordination today)
-  // are pulled out of the view bar and rendered at the top of the context rail.
-  // Data-driven from `tabs`, so any future `fleet` tab appears here automatically.
-  const fleetTabs = useMemo(() => tabs.filter((t) => t.group === "fleet"), [tabs]);
-  const fleetItems = useMemo<ContextItem[]>(
-    () => fleetTabs.map((t) => ({ id: t.view, label: t.label, icon: t.icon, testId: t.testId })),
-    [fleetTabs],
-  );
-  const activeView = getActiveView(location.pathname);
-  const activeFleetId = fleetTabs.some((t) => t.view === activeView) ? activeView : undefined;
 
   const handleSelectFleet = useCallback(
     (id: string) => {
@@ -320,7 +322,9 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
           />
         )}
         <div className={styles.contextPane}>
-          {!activeFleetId && <AppNav tabs={tabs} groups={["workbench", "global"]} />}
+          {!activeFleetId && !location.pathname.startsWith("/agents/") && (
+            <AppNav tabs={tabs} groups={["workbench", "global"]} />
+          )}
           <div className={styles.body}>
             {hasSidebar && (
               <div className={styles.sidebarWrapper} data-sidebar-open={sidebarOpen}>

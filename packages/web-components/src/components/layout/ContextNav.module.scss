@@ -63,8 +63,8 @@ $rail-width-collapsed: 56px;
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-  flex: 1;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
 }
 
@@ -171,7 +171,7 @@ $rail-width-collapsed: 56px;
   gap: var(--space-sm);
   width: 100%;
   padding: var(--space-sm) var(--space-md);
-  margin-top: var(--space-xs);
+  margin-top: auto;
   border: none;
   border-top: 1px solid var(--border-subtle);
   background: transparent;

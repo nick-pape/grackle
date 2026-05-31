@@ -184,35 +184,37 @@ export function BottomStatusBar({
   // --- session mode ---
   if (sessionId) {
     const session = sessions.find((s) => s.id === sessionId);
-    const isEnded = session?.status === "stopped";
-    const isActive = session !== undefined && !isEnded;
 
-    // Active session — ChatInput on the page handles this; return empty
-    if (isActive) {
-      return <></>;
-    }
-
-    if (isEnded) {
+    if (!session) {
       return (
         <div className={styles.bar}>
-          <span className={`${styles.statusText} ${styles.hintText}`}>
-            Session {session.endReason || session.status}
-          </span>
-          <button
-            onClick={() => navigate(newChatUrl(session.environmentId))}
-            className={styles.btnPrimary}
-          >
-            + New Chat
-          </button>
+          <span className={styles.hintText}>Loading...</span>
         </div>
       );
     }
+
+    const isEnded = session.status === "stopped";
+
+    // Active session — ChatInput on the page handles this; return empty
+    if (!isEnded) {
+      return <></>;
+    }
+
+    return (
+      <div className={styles.bar}>
+        <span className={`${styles.statusText} ${styles.hintText}`}>
+          Session {session.endReason || session.status}
+        </span>
+        <button
+          onClick={() => navigate(newChatUrl(session.environmentId))}
+          className={styles.btnPrimary}
+        >
+          + New Chat
+        </button>
+      </div>
+    );
   }
 
-  // fallback
-  return (
-    <div className={styles.bar}>
-      <span className={styles.hintText}>Loading...</span>
-    </div>
-  );
+  // No task or session context on this route — nothing to display.
+  return <></>;
 }
