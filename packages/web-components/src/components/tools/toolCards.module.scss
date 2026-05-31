@@ -76,6 +76,27 @@
   white-space: nowrap;
 }
 
+// Clickable filename that opens the live-docs pane (#1396). Looks like .fileName
+// but is a button; underlines on hover to signal interactivity.
+.fileNameLink {
+  color: var(--accent-blue);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+  }
+}
+
 .badge {
   font-size: 10px;
   font-family: var(--font-mono);

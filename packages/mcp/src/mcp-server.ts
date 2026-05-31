@@ -38,6 +38,7 @@ import { enforceToolScope, enforceReadMembership } from "./scope-enforcement.js"
 import { createResourceRegistry } from "./resources/index.js";
 import { hostSupportsUiApps, uiToolMeta } from "./ui-app.js";
 import { WIDGET_RENDER_META_KEY, type WidgetRenderDescriptor } from "./widget-render-meta.js";
+import { DOCUMENT_SHOW_META_KEY, type DocumentShowDescriptor } from "./document-show-meta.js";
 import { tryServeWidgetAsset } from "./widget-asset-server.js";
 
 /** Read the package version from package.json at module load time. */
@@ -76,6 +77,14 @@ export type PublishWidgetEvent = (
   },
 ) => void;
 
+/**
+ * Emits a `document.show` domain event for a session so the UI opens a read-only
+ * live view of a file (#1396 live docs v0). Injected by the server (wraps
+ * `@grackle-ai/core`'s `publishDocumentShow`). Declared structurally to avoid
+ * widening this package's runtime dependencies onto core.
+ */
+export type PublishDocumentShow = (sessionId: string, payload: { uri: string }) => void;
+
 /** Options for creating an MCP server. */
 export interface McpServerOptions {
   /** Host address to bind the MCP server to. */
@@ -99,6 +108,8 @@ export interface McpServerOptions {
   toolGroups?: ToolDefinition[][];
   /** Push MCP Apps widget render events into session streams (in-process, from the server). */
   publishWidgetEvent?: PublishWidgetEvent;
+  /** Emit `document.show` domain events when `show_file` runs (in-process, from the server). */
+  publishDocumentShow?: PublishDocumentShow;
   /**
    * Subscribe to "a workspace's promoted-component set changed" signals so the
    * server can push `tools/list_changed` to that workspace's sessions (#1297).
@@ -248,6 +259,7 @@ async function createMcpServerInstance(
   assetBaseUrl: string,
   brokerAssetOrigin: string,
   publishWidgetEvent: PublishWidgetEvent | undefined,
+  publishDocumentShow: PublishDocumentShow | undefined,
   toolGroups?: ToolDefinition[][],
 ): Promise<Server> {
   const registry = createToolRegistry(toolGroups);
@@ -344,6 +356,28 @@ async function createMcpServerInstance(
       }
     } catch (widgetErr) {
       logger.warn({ tool: toolName, err: widgetErr }, "Widget event capture failed (non-fatal)");
+    }
+  }
+
+  /**
+   * Broker capture for the live-docs `show_file` tool (#1396): when a scoped
+   * tool result carries a {@link DOCUMENT_SHOW_META_KEY} descriptor, emit a
+   * `document.show` domain event carrying the URI reference (not baked content)
+   * so the web `useDocuments` hook opens a read-only live tab. Non-fatal.
+   */
+  function captureDocumentShow(toolName: string, result: ToolResult): void {
+    if (authContext.type !== "scoped" || !publishDocumentShow) {
+      return;
+    }
+    try {
+      const descriptor = result._meta?.[DOCUMENT_SHOW_META_KEY] as
+        | DocumentShowDescriptor
+        | undefined;
+      if (descriptor?.uri) {
+        publishDocumentShow(authContext.taskSessionId, { uri: descriptor.uri });
+      }
+    } catch (docErr) {
+      logger.warn({ tool: toolName, err: docErr }, "document.show capture failed (non-fatal)");
     }
   }
 
@@ -662,6 +696,9 @@ async function createMcpServerInstance(
         result,
         parsed.data as Record<string, unknown>,
       );
+      // Live docs (#1396): when `show_file` runs, emit a `document.show` domain
+      // event so the UI opens a read-only live tab bound to the URI reference.
+      captureDocumentShow(tool.name, result);
       return result as CallToolResult;
     } catch (error: unknown) {
       logger.error({ tool: name, err: error }, "Tool execution failed: %s", name);
@@ -721,6 +758,7 @@ export function createMcpServer(options: McpServerOptions): http.Server | http2.
     authorizationServerUrl,
     toolGroups,
     publishWidgetEvent,
+    publishDocumentShow,
     mcpOrigin,
     onComponentChangeSubscribe,
     secureContext,
@@ -883,6 +921,7 @@ export function createMcpServer(options: McpServerOptions): http.Server | http2.
         mcpServers,
         authContext,
         publishWidgetEvent,
+        publishDocumentShow,
         brokerAssetOrigin,
         toolGroups,
       );
@@ -991,6 +1030,7 @@ async function handlePost(
   mcpServers: Map<string, Server>,
   authContext: AuthContext,
   publishWidgetEvent: PublishWidgetEvent | undefined,
+  publishDocumentShow: PublishDocumentShow | undefined,
   brokerAssetOrigin: string,
   toolGroups?: ToolDefinition[][],
 ): Promise<void> {
@@ -1032,6 +1072,7 @@ async function handlePost(
         assetBaseUrl,
         brokerAssetOrigin,
         publishWidgetEvent,
+        publishDocumentShow,
         toolGroups,
       );
 

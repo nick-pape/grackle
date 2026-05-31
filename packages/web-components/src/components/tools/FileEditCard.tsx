@@ -3,6 +3,7 @@ import { ChevronRight, Pencil } from "lucide-react";
 import type { ToolCardProps } from "./ToolCardProps.js";
 import { parseUnifiedDiff, diffFromOldNew, diffStats, type DiffLine } from "./parseDiff.js";
 import { ICON_SM, ICON_MD } from "../../utils/iconSize.js";
+import { toFileUri } from "../../utils/fileUri.js";
 import styles from "./toolCards.module.scss";
 
 /** Extracts file path from edit tool args (handles `file_path`, `path` variants). */
@@ -90,11 +91,14 @@ export function FileEditCard({
   result,
   isError,
   detailedResult,
+  onOpenDocument,
 }: ToolCardProps): JSX.Element {
   const [expanded, setExpanded] = useState(false);
   const filePath = getFilePath(args);
   const name = basename(filePath);
   const inProgress = result === undefined;
+  // Clickable only when the page wired an opener and the path is absolute (#1396).
+  const fileUri = onOpenDocument ? toFileUri(filePath) : undefined;
 
   const diffLines = resolveDiff(args, detailedResult);
   const stats = diffLines ? diffStats(diffLines) : null;
@@ -113,11 +117,22 @@ export function FileEditCard({
         <span className={styles.toolName} style={{ color: "var(--accent-yellow)" }}>
           {tool}
         </span>
-        {name && (
-          <span className={styles.fileName} title={filePath}>
-            {name}
-          </span>
-        )}
+        {name &&
+          (fileUri && onOpenDocument ? (
+            <button
+              type="button"
+              className={styles.fileNameLink}
+              title={`Open ${filePath}`}
+              onClick={() => onOpenDocument(fileUri)}
+              data-testid="tool-card-file-link"
+            >
+              {name}
+            </button>
+          ) : (
+            <span className={styles.fileName} title={filePath}>
+              {name}
+            </span>
+          ))}
         {stats && (
           <>
             <span className={styles.spacer} />

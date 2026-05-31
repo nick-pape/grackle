@@ -72,7 +72,8 @@ export type GrackleEventType =
   | "github_account.changed"
   // Keep in sync with the same union in @grackle-ai/core event-bus.ts.
   | "component.changed"
-  | "resource.changed";
+  | "resource.changed"
+  | "document.show";
 
 /** A domain event from the event bus. */
 export interface GrackleEvent {

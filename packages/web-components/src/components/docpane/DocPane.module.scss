@@ -1,0 +1,175 @@
+@use "../../styles/mixins" as *;
+
+// =============================================================================
+// DocPane — live-docs read-only viewer (#1396)
+// Desktop: a resizable right-hand pane (flex sibling of the main content).
+// Mobile: a full-width overlay over the content.
+// =============================================================================
+
+.pane {
+  position: relative;
+  flex: 0 0 auto; // width is set inline (resizable)
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border-subtle);
+  overflow: hidden;
+
+  @include mobile {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    width: 100% !important; // override the inline desktop width
+    border-left: none;
+  }
+}
+
+.resizeHandle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 1;
+  background: transparent;
+  transition: background var(--transition-fast);
+
+  &:hover {
+    background: var(--accent-blue-dim);
+  }
+
+  @include mobile {
+    display: none; // no resize on the full-screen mobile overlay
+  }
+}
+
+.tabStrip {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 2px;
+  padding: var(--space-xs) var(--space-xs) 0;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  max-width: 220px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: transparent;
+  color: var(--text-secondary);
+
+  &:hover {
+    background: var(--bg-overlay);
+  }
+}
+
+.tabActive {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.tabLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  max-width: 180px;
+  padding: var(--space-xs) var(--space-sm);
+  border: none;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.unseenDot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-blue);
+}
+
+.tabClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  margin-right: 2px;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-overlay);
+  }
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--bg-surface);
+}
+
+.placeholder {
+  padding: var(--space-lg);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+// Markdown render surface — trusted first-party content.
+.markdownBody {
+  padding: var(--space-lg);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  word-break: break-word;
+
+  pre {
+    overflow-x: auto;
+  }
+}
+
+// CodeMirror host — let the editor fill the body and scroll internally.
+.codeHost {
+  height: 100%;
+
+  :global(.cm-editor) {
+    height: 100%;
+    font-size: var(--font-size-sm);
+  }
+}
+
+.fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-lg);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.fallbackMessage {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.fallbackPath {
+  font-size: 11px;
+  color: var(--text-secondary);
+  word-break: break-all;
+}

@@ -16,6 +16,7 @@ import { versionTools } from "./version.js";
 import { escalationTools } from "./escalation.js";
 import { pluginTools } from "./plugin.js";
 import { componentTools } from "./component.js";
+import { documentsTools } from "./documents.js";
 
 /** Built-in tool groups shipped with the MCP package. */
 const builtinToolGroups: ToolDefinition[][] = [
@@ -36,6 +37,7 @@ const builtinToolGroups: ToolDefinition[][] = [
   escalationTools,
   pluginTools,
   componentTools,
+  documentsTools,
 ];
 
 /**

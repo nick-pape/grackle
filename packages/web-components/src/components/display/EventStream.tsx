@@ -97,6 +97,12 @@ interface EventStreamProps {
   onForward?: (sessionId: string, text: string) => Promise<void>;
   /** Sandbox proxy origin URL for rendering MCP Apps widget events. */
   sandboxProxyUrl?: string;
+  /**
+   * Open a file in the live-docs pane (#1396). Wired by the page to
+   * `documents.openDocument` with the environment bound. When provided,
+   * `file://` links and tool-call file paths in the stream become clickable.
+   */
+  onOpenDocument?: (uri: string) => void;
 }
 
 /**
@@ -114,6 +120,7 @@ export function EventStream({
   personas,
   onForward,
   sandboxProxyUrl,
+  onOpenDocument,
 }: EventStreamProps): JSX.Element {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isReversed, setIsReversed] = useState(readStoredDirection);
@@ -342,6 +349,7 @@ export function EventStream({
                     toolUseCtx={event.toolUseCtx}
                     settled={event.settled}
                     sandboxProxyUrl={sandboxProxyUrl}
+                    onOpenDocument={onOpenDocument}
                   />
                 </EventHoverRow>
               </motion.div>

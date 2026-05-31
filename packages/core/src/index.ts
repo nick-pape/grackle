@@ -88,8 +88,13 @@ export * as logWriter from "./log-writer.js";
 export * as pipeDelivery from "./pipe-delivery.js";
 
 // ─── Individual Exports for Plugin-Core ──────────────────────
-export { processEventStream, publishWidgetEvent } from "./event-processor.js";
-export type { WidgetEventPayload, PublishWidgetEvent } from "./event-processor.js";
+export { processEventStream, publishWidgetEvent, publishDocumentShow } from "./event-processor.js";
+export type {
+  WidgetEventPayload,
+  PublishWidgetEvent,
+  DocumentShowPayload,
+  PublishDocumentShow,
+} from "./event-processor.js";
 // #1386: the subagent-reconciliation phase (plugin-core) uses this to reap
 // stranded RUNNING subagent children whose parent session has gone terminal.
 export { interruptChildSession } from "./subagent-session.js";

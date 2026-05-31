@@ -44,6 +44,10 @@ export default defineConfig({
           react: ["react", "react-dom", "react-dom/client"],
           markdown: ["react-markdown", "remark-gfm", "rehype-prism-plus"],
           dagview: ["@xyflow/react", "@dagrejs/dagre"],
+          // CodeMirror 6 (live-docs code preview, #1396) is lazy-loaded via
+          // React.lazy in DocPane, so Rollup already splits it into its own async
+          // chunk — no manualChunks entry needed (and listing transitive deps web
+          // doesn't import directly breaks entry resolution).
           grpc: [
             "@connectrpc/connect",
             "@connectrpc/connect-web",

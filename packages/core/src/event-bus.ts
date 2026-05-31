@@ -41,7 +41,12 @@ export type GrackleEventType =
   // worktree (#1395). Forwarded from the AHP resource-watch channel; the web
   // `useResources` hook re-reads the affected URIs. payload:
   // { environmentId, uri, changes: [{ uri, type }] }
-  | "resource.changed";
+  | "resource.changed"
+  // An agent asked the UI to open a read-only live view of a file (#1396 live
+  // docs v0). Emitted when the `show_file` MCP tool's result carries a document
+  // descriptor; the web `useDocuments` hook opens a tab bound to the URI
+  // reference (NOT baked content). payload: { environmentId, uri, sessionId }
+  | "document.show";
 
 /** A domain event emitted by the event bus. */
 export interface GrackleEvent {
