@@ -40,6 +40,20 @@ export type AppView =
   | "coordination"
   | "settings";
 
+/**
+ * Conceptual axis a nav tab belongs to, introduced with the context-axis
+ * workbench shell (#1414). Tabs are grouped so the view bar can reason about
+ * them by altitude rather than as one flat list:
+ *
+ * - `workbench` — the Code context's primary views (chat, sessions, tasks,
+ *   knowledge, dashboard).
+ * - `fleet` — cross-context overview surfaces (coordination). Relocated to a
+ *   dedicated fleet altitude in #1415; rendered inline in the view bar for now.
+ * - `global` — infrastructure / settings that sit outside the workbench
+ *   (environments, settings); rendered as an end-aligned cluster.
+ */
+export type NavGroup = "workbench" | "global" | "fleet";
+
 /** Tab definition for the application navigation bar. */
 export interface AppTab {
   /** View identifier. */
@@ -60,6 +74,12 @@ export interface AppTab {
   order?: number;
   /** Horizontal alignment within the nav bar. `"end"` pins the tab to the right edge. */
   align?: "end";
+  /**
+   * Conceptual axis this tab belongs to. Used by the shell to reason about tabs
+   * by altitude (and, later, to relocate `fleet`/`global` tabs out of the view
+   * bar). Optional so external tab lists keep working; defaults to `workbench`.
+   */
+  group?: NavGroup;
 }
 
 /** Ordered list of all app navigation tabs. Exported for plugin registry use. */
@@ -71,6 +91,7 @@ export const TABS: AppTab[] = [
     route: HOME_URL,
     testId: "sidebar-tab-dashboard",
     order: 0,
+    group: "workbench",
   },
   {
     view: "tasks",
@@ -79,6 +100,7 @@ export const TABS: AppTab[] = [
     route: TASKS_URL,
     testId: "sidebar-tab-tasks",
     order: 1,
+    group: "workbench",
   },
   {
     view: "personas",
@@ -87,14 +109,7 @@ export const TABS: AppTab[] = [
     route: PERSONAS_URL,
     testId: "sidebar-tab-personas",
     order: 1.5,
-  },
-  {
-    view: "environments",
-    label: "Environments",
-    icon: <Monitor size={ICON_LG} />,
-    route: ENVIRONMENTS_URL,
-    testId: "sidebar-tab-environments",
-    order: 2,
+    group: "workbench",
   },
   {
     view: "chat",
@@ -103,6 +118,7 @@ export const TABS: AppTab[] = [
     route: CHAT_URL,
     testId: "sidebar-tab-chat",
     order: 3,
+    group: "workbench",
   },
   {
     view: "sessions",
@@ -111,6 +127,7 @@ export const TABS: AppTab[] = [
     route: SESSIONS_URL,
     testId: "sidebar-tab-sessions",
     order: 4,
+    group: "workbench",
   },
   {
     view: "knowledge",
@@ -119,6 +136,7 @@ export const TABS: AppTab[] = [
     route: KNOWLEDGE_URL,
     testId: "sidebar-tab-knowledge",
     order: 5,
+    group: "workbench",
   },
   {
     view: "coordination",
@@ -127,6 +145,20 @@ export const TABS: AppTab[] = [
     route: COORDINATION_URL,
     testId: "sidebar-tab-coordination",
     order: 6,
+    group: "fleet",
+  },
+  // `global` infrastructure tabs are pinned to the right edge (`align: "end"`)
+  // so they read as a cluster separate from the workbench views. Environments
+  // moved here from the workbench row as part of the context-axis reframing
+  // (#1414); the page itself is unchanged and still fully reachable.
+  {
+    view: "environments",
+    label: "Environments",
+    icon: <Monitor size={ICON_LG} />,
+    route: ENVIRONMENTS_URL,
+    testId: "sidebar-tab-environments",
+    align: "end",
+    group: "global",
   },
   {
     view: "settings",
@@ -135,6 +167,7 @@ export const TABS: AppTab[] = [
     route: SETTINGS_CREDENTIALS_URL,
     testId: "sidebar-tab-settings",
     align: "end",
+    group: "global",
   },
 ];
 
@@ -167,8 +200,21 @@ export function getActiveView(pathname: string): AppView {
   return "tasks";
 }
 
+/** Props for the {@link AppNav} component. */
+export interface AppNavProps {
+  /** Tabs to render. Defaults to the canonical {@link TABS}. */
+  tabs?: AppTab[];
+  /**
+   * When provided, only tabs whose {@link AppTab.group} is in this list are
+   * rendered (tabs without a `group` are treated as `workbench`). Omit to
+   * render every tab. This is the lever the fleet/overview relocation (#1415)
+   * uses to pull `fleet` tabs out of the view bar without changing `TABS`.
+   */
+  groups?: NavGroup[];
+}
+
 /** Full-width navigation bar below the StatusBar for switching between app views. */
-export function AppNav({ tabs = TABS }: { tabs?: AppTab[] }): JSX.Element {
+export function AppNav({ tabs = TABS, groups }: AppNavProps): JSX.Element {
   const location = useLocation();
   const navigate = useAppNavigate();
   const tabListRef = useRef<HTMLElement>(null);
@@ -178,15 +224,18 @@ export function AppNav({ tabs = TABS }: { tabs?: AppTab[] }): JSX.Element {
   // Sort by explicit `order`, then render end-aligned tabs (e.g. Settings) last
   // regardless of order, so they stay pinned to the right edge no matter which
   // plugins contribute tabs. Tabs without an `order` keep their incoming order
-  // (stable sort) and fall after explicitly-ordered ones.
+  // (stable sort) and fall after explicitly-ordered ones. When `groups` is set,
+  // restrict to those axes first (a missing `group` counts as `workbench`).
   const orderedTabs = useMemo(() => {
     const byOrder = (a: AppTab, b: AppTab): number =>
       (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER);
+    const visible =
+      groups === undefined ? tabs : tabs.filter((t) => groups.includes(t.group ?? "workbench"));
     return [
-      ...tabs.filter((t) => t.align !== "end").sort(byOrder),
-      ...tabs.filter((t) => t.align === "end"),
+      ...visible.filter((t) => t.align !== "end").sort(byOrder),
+      ...visible.filter((t) => t.align === "end"),
     ];
-  }, [tabs]);
+  }, [tabs, groups]);
   const firstEndAlignedView = orderedTabs.find((t) => t.align === "end")?.view;
 
   const handleClick = useCallback(

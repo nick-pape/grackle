@@ -10,6 +10,26 @@
   height: 100vh;
 }
 
+// ---------------------------------------------------------------------------
+// Shell — the context-axis row: ContextNav rail + the per-context pane, sitting
+// between the StatusBar and the view/detail layout (#1414).
+// ---------------------------------------------------------------------------
+
+.shell {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.contextPane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  min-width: 0;
+}
+
 .body {
   display: flex;
   flex: 1;
@@ -51,6 +71,40 @@
       visibility 0s linear 400ms;
 
     &[data-sidebar-open="true"] {
+      transform: translateX(0);
+      visibility: visible;
+      pointer-events: auto;
+      transition:
+        transform var(--transition-slow),
+        visibility 0s;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Context-nav rail / drawer (mobile). Mirrors .sidebarWrapper so the context
+// axis behaves like the detail sidebar on small screens.
+// ---------------------------------------------------------------------------
+
+.contextNavWrapper {
+  display: flex;
+  flex-shrink: 0;
+
+  @include mobile {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 240px;
+    z-index: 100;
+    transform: translateX(-100%);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      transform var(--transition-slow),
+      visibility 0s linear 400ms;
+
+    &[data-context-nav-open="true"] {
       transform: translateX(0);
       visibility: visible;
       pointer-events: auto;

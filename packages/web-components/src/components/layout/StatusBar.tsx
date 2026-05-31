@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import { Circle, Menu } from "lucide-react";
+import { Circle, Menu, PanelLeft } from "lucide-react";
 import type { ConnectionStatus, Environment, Session } from "../../hooks/types.js";
 import { ICON_LG, ICON_XS } from "../../utils/iconSize.js";
 import { HOME_URL, useAppNavigate } from "../../utils/navigation.js";
@@ -33,6 +33,10 @@ interface StatusBarProps {
   onToggleSidebar?: () => void;
   /** Whether the sidebar drawer is currently open (for aria-expanded). */
   sidebarOpen?: boolean;
+  /** Callback to toggle the mobile context-nav drawer. */
+  onToggleContextNav?: () => void;
+  /** Whether the context-nav drawer is currently open (for aria-expanded). */
+  contextNavOpen?: boolean;
 }
 
 /** Top status bar showing connection state, environment counts, and active session count. */
@@ -42,6 +46,8 @@ export function StatusBar({
   sessions,
   onToggleSidebar,
   sidebarOpen,
+  onToggleContextNav,
+  contextNavOpen,
 }: StatusBarProps): JSX.Element {
   const navigate = useAppNavigate();
   const totalEnvs = environments.length;
@@ -51,16 +57,32 @@ export function StatusBar({
 
   return (
     <div className={styles.container}>
-      {onToggleSidebar && (
-        <button
-          type="button"
-          className={styles.hamburger}
-          onClick={onToggleSidebar}
-          aria-label="Toggle sidebar"
-          aria-expanded={sidebarOpen}
-        >
-          <Menu size={ICON_LG} aria-hidden="true" />
-        </button>
+      {(onToggleContextNav ?? onToggleSidebar) && (
+        <div className={styles.drawerControls}>
+          {onToggleContextNav && (
+            <button
+              type="button"
+              className={styles.hamburger}
+              onClick={onToggleContextNav}
+              aria-label="Toggle contexts"
+              aria-expanded={contextNavOpen}
+              data-testid="statusbar-context-toggle"
+            >
+              <PanelLeft size={ICON_LG} aria-hidden="true" />
+            </button>
+          )}
+          {onToggleSidebar && (
+            <button
+              type="button"
+              className={styles.hamburger}
+              onClick={onToggleSidebar}
+              aria-label="Toggle sidebar"
+              aria-expanded={sidebarOpen}
+            >
+              <Menu size={ICON_LG} aria-hidden="true" />
+            </button>
+          )}
+        </div>
       )}
       <Tooltip text="Home" placement="bottom">
         <button

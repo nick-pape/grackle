@@ -265,3 +265,33 @@ export const AriaAttributes: Story = {
     await expect(tablist).toHaveAttribute("aria-label", "App navigation");
   },
 };
+
+/**
+ * Default canonical TABS: the `global` cluster (Environments + Settings) is
+ * pinned to the right edge, after the workbench/fleet views (#1414).
+ */
+export const GlobalClusterEndAligned: Story = {
+  play: async ({ canvas }) => {
+    const tabs = canvas.getAllByRole("tab");
+    // Settings is rightmost; Environments sits immediately before it.
+    await expect(tabs[tabs.length - 1]).toHaveAccessibleName(/Settings/);
+    await expect(tabs[tabs.length - 2]).toHaveAccessibleName(/Environments/);
+    // Workbench views lead the row.
+    await expect(tabs[0]).toHaveAccessibleName(/Dashboard/);
+  },
+};
+
+/**
+ * The `groups` filter restricts the bar to chosen axes — the lever #1415 uses to
+ * pull `fleet`/`global` tabs out of the view bar. Here only workbench + fleet
+ * render, so Environments and Settings (both `global`) are absent.
+ */
+export const WorkbenchAndFleetOnly: Story = {
+  args: { groups: ["workbench", "fleet"] },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("tab", { name: /Tasks/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("tab", { name: /Coordination/ })).toBeInTheDocument();
+    await expect(canvas.queryByRole("tab", { name: /Environments/ })).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("tab", { name: /Settings/ })).not.toBeInTheDocument();
+  },
+};

@@ -1,0 +1,135 @@
+@use "../../styles/mixins" as *;
+
+// =============================================================================
+// ContextNav — vertical left rail for the context axis (context level of the
+// context -> view -> detail spine). Sits outermost-left, beneath the StatusBar.
+// =============================================================================
+
+/** Expanded rail width. */
+$rail-width: 200px;
+/** Collapsed (icon-only) rail width. */
+$rail-width-collapsed: 56px;
+
+.rail {
+  @include surface-panel;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: $rail-width;
+  border-right: 1px solid var(--border-subtle);
+  padding: var(--space-sm) 0;
+  overflow: hidden;
+  transition: width var(--transition-fast);
+
+  &[data-collapsed="true"] {
+    width: $rail-width-collapsed;
+  }
+
+  @include mobile {
+    width: 100% !important;
+    height: 100%;
+    border-right: none;
+  }
+}
+
+.tabList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.tabWrapper {
+  display: flex;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border: none;
+  border-left: 3px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--font-size-base);
+  font-family: var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast);
+
+  &:hover {
+    background: var(--bg-overlay);
+    color: var(--text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-green);
+    outline-offset: -2px;
+  }
+}
+
+// Center the icon when the rail is collapsed (no label to anchor against).
+.rail[data-collapsed="true"] .tab {
+  justify-content: center;
+  padding: var(--space-sm);
+}
+
+.tabActive {
+  border-left-color: var(--accent-green);
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+  background: var(--bg-overlay);
+}
+
+.tabIcon {
+  display: inline-flex;
+  line-height: 1;
+}
+
+.tabLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  margin-top: var(--space-xs);
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-ui);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+
+  &:hover {
+    background: var(--bg-overlay);
+    color: var(--text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-green);
+    outline-offset: -2px;
+  }
+}
+
+.rail[data-collapsed="true"] .toggle {
+  justify-content: center;
+  padding: var(--space-sm);
+}

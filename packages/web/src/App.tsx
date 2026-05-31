@@ -8,6 +8,9 @@ import {
   StatusBar,
   AppNav,
   Sidebar,
+  ContextNav,
+  CONTEXTS,
+  DEFAULT_CONTEXT_ID,
   BottomStatusBar,
   ToastContainer,
   SplashScreen,
@@ -93,6 +96,9 @@ declare const __DEMO_MODE__: boolean;
 /** Build-time base URL path for the router (see vite.config.ts). */
 declare const __BASE_URL__: string;
 
+/** Matches the `$mobile` breakpoint in `packages/web-components/src/styles/mixins.scss`. */
+const MOBILE_MAX_WIDTH_PX: number = 768;
+
 /** Whether the app is running in mock mode (`?mock` query parameter or demo build). */
 const IS_MOCK_MODE: boolean =
   __DEMO_MODE__ ||
@@ -111,30 +117,60 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
   const sidebarContent = useSidebarContent();
   const hasSidebar = sidebarContent !== undefined;
 
-  // Sidebar drawer state for mobile
+  // Sidebar (detail) drawer state for mobile
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const toggleSidebar = useCallback(() => setSidebarOpen((prev) => !prev), []);
 
-  // Auto-close sidebar on navigation (mobile drawer)
+  // Context-nav (context axis) state: a drawer on mobile, a collapsible rail on
+  // desktop. The two are independent — `open` gates the mobile pullout, while
+  // `collapsed` toggles the icon-only desktop rail.
+  const [contextNavOpen, setContextNavOpen] = useState(false);
+  const [contextNavCollapsed, setContextNavCollapsed] = useState(false);
+  const toggleContextNav = useCallback(() => setContextNavOpen((prev) => !prev), []);
+  const toggleContextNavCollapsed = useCallback(() => setContextNavCollapsed((prev) => !prev), []);
+
+  // Track mobile viewport so the collapsed-rail state is never applied inside the drawer.
+  const [isMobile, setIsMobile] = useState(
+    () => window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH_PX}px)`).matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH_PX}px)`);
+    const handler = (e: MediaQueryListEvent): void => {
+      setIsMobile(e.matches);
+    };
+    mq.addEventListener("change", handler);
+    return () => {
+      mq.removeEventListener("change", handler);
+    };
+  }, []);
+
+  // Selecting a context is inert in Phase 0 (Code is the only/default context);
+  // it just dismisses the mobile drawer. Agent contexts + real switching arrive
+  // in #1417.
+  const handleSelectContext = useCallback(() => setContextNavOpen(false), []);
+
+  // Auto-close both mobile drawers on navigation
   useEffect(() => {
     setSidebarOpen(false);
+    setContextNavOpen(false);
   }, [location.pathname]);
 
-  // Close sidebar on Escape key
+  // Close whichever mobile drawer is open on Escape
   useEffect(() => {
-    if (!sidebarOpen) {
+    if (!sidebarOpen && !contextNavOpen) {
       return;
     }
     const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === "Escape") {
         setSidebarOpen(false);
+        setContextNavOpen(false);
       }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [sidebarOpen]);
+  }, [sidebarOpen, contextNavOpen]);
 
   return (
     <>
@@ -144,24 +180,47 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
         sessions={sessions}
         onToggleSidebar={hasSidebar ? toggleSidebar : undefined}
         sidebarOpen={sidebarOpen}
+        onToggleContextNav={toggleContextNav}
+        contextNavOpen={contextNavOpen}
       />
-      <AppNav tabs={tabs} />
-      <div className={styles.body}>
-        {hasSidebar && (
-          <div className={styles.sidebarWrapper} data-sidebar-open={sidebarOpen}>
-            <Sidebar content={sidebarContent} />
-          </div>
-        )}
-        {hasSidebar && sidebarOpen && (
+      {/* Context axis (outermost-left) -> view axis (AppNav) -> detail (Sidebar). */}
+      <div className={styles.shell}>
+        <div className={styles.contextNavWrapper} data-context-nav-open={contextNavOpen}>
+          <ContextNav
+            contexts={CONTEXTS}
+            activeContextId={DEFAULT_CONTEXT_ID}
+            onSelectContext={handleSelectContext}
+            collapsed={isMobile ? false : contextNavCollapsed}
+            onToggleCollapsed={isMobile ? undefined : toggleContextNavCollapsed}
+          />
+        </div>
+        {contextNavOpen && (
           <div
             className={styles.overlay}
-            data-testid="drawer-overlay"
-            onClick={() => setSidebarOpen(false)}
+            data-testid="context-nav-overlay"
+            onClick={() => setContextNavOpen(false)}
           />
         )}
-        <div className={styles.main}>
-          <Outlet />
-          <BottomStatusBar sessions={sessions} tasks={tasks} environments={environments} />
+        <div className={styles.contextPane}>
+          <AppNav tabs={tabs} />
+          <div className={styles.body}>
+            {hasSidebar && (
+              <div className={styles.sidebarWrapper} data-sidebar-open={sidebarOpen}>
+                <Sidebar content={sidebarContent} />
+              </div>
+            )}
+            {hasSidebar && sidebarOpen && (
+              <div
+                className={styles.overlay}
+                data-testid="drawer-overlay"
+                onClick={() => setSidebarOpen(false)}
+              />
+            )}
+            <div className={styles.main}>
+              <Outlet />
+              <BottomStatusBar sessions={sessions} tasks={tasks} environments={environments} />
+            </div>
+          </div>
         </div>
       </div>
       {/* Toast messages (including environment status toasts from
