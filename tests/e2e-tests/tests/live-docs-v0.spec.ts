@@ -6,20 +6,22 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 /**
- * End-to-end proof of the live-docs v0 viewer (#1396): a human clicks a filepath
- * in the chat, a read-only document tab opens in the side pane bound to the
- * file's `file://` URI, renders its markdown via the AHP resource bridge (#1395),
- * and live-refreshes when the file changes on disk.
+ * End-to-end proof of the live-docs v0 viewer (#1396) against a real PowerLine +
+ * Server stack. Two tests cover both producer paths:
  *
- * The agent-initiated `show_file` path + the `document.show` -> tab routing are
- * covered by unit tests (packages/mcp `show_file`, packages/web `useDocuments`)
- * and Storybook (DocPane render states); this spec exercises the full browser
- * pipeline — clickable path -> openDocument -> bridge read/watch -> render —
- * against a real PowerLine + Server stack.
+ * 1. **Human-click path**: a stub session emits a Write tool-call event → the
+ *    chat renders a clickable filepath chip → click opens a doc tab → tab renders
+ *    markdown via the resource bridge → file rewrite live-refreshes the tab.
  *
- * A stub session is spawned sandboxed to a temp dir we own (useWorktrees:false)
- * and scripted to emit a Write tool call referencing the file, so the chat shows
- * a clickable filepath at a deterministic location.
+ * 2. **Agent show_file path**: a stub-mcp session calls the real `show_file` MCP
+ *    tool via the broker → the broker captures the `_meta` descriptor → emits a
+ *    `document.show` domain event → the web `useDocuments` hook opens a tab
+ *    (no user click, no focus steal). Proves the full integration chain that unit
+ *    tests can't cover: tool handler → broker capture → publishDocumentShow →
+ *    event-bus → StreamEvents → domain hook → tab render.
+ *
+ * Both tests spawn a session sandboxed to a temp dir (useWorktrees:false) so
+ * PowerLine's allowedRoots covers the test file and URIs are deterministic.
  */
 test.describe("Live docs v0 viewer", { tag: ["@session"] }, () => {
   test.beforeEach(async ({ grackle: { client } }) => {
@@ -105,6 +107,74 @@ test.describe("Live docs v0 viewer", { tag: ["@session"] }, () => {
         timeout: 20_000,
       });
 
+      await page.screenshot({ path: "test-results/live-docs-human-click.png" });
+      await killQuietly(client, sessionId);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("show_file MCP tool opens a doc tab via the document.show domain event", async ({
+    appPage,
+    grackle: { client },
+  }) => {
+    test.setTimeout(60_000);
+    const page = appPage;
+
+    const dir = await mkdtemp(join(tmpdir(), "grackle-showfile-"));
+    try {
+      const filePath = join(dir, "report.md");
+      await writeFile(filePath, "# Agent Report\n\nGenerated content.\n", "utf-8");
+      const fileUri = pathToFileURL(filePath).href;
+
+      // Stub-mcp session: calls the real show_file MCP tool via the broker.
+      // The broker captures the _meta descriptor, resolves environmentId from the
+      // session, and emits a document.show domain event → useDocuments opens a tab.
+      const scenario = JSON.stringify({
+        steps: [
+          { emit: "text", content: "Generating the report." },
+          { mcp_call: "show_file", args: { path: filePath } },
+        ],
+      });
+      const spawn = await client.core.spawnAgent({
+        environmentId: "test-local",
+        prompt: scenario,
+        provider: "stub",
+        config: {
+          personaId: "stub-mcp",
+          branch: "e2e-showfile",
+          workingDirectory: dir,
+          useWorktrees: false,
+        },
+      });
+      const sessionId = spawn.id;
+      expect(sessionId).toBeTruthy();
+
+      // Wait for the sandbox to arm (same pattern as the human-click test).
+      await expect(async () => {
+        const content = await client.core.readResource({
+          environmentId: "test-local",
+          uri: fileUri,
+          encoding: "",
+        });
+        expect(content.data).toContain("Agent Report");
+      }).toPass({ timeout: 20_000, intervals: [250, 500, 1000] });
+
+      // Navigate to the session. The document.show event arrives over the stream;
+      // no user click needed — the doc pane should open automatically.
+      await page.goto(`/sessions/${sessionId}`);
+      await expect(page.getByText("Generating the report.").first()).toBeVisible({
+        timeout: 20_000,
+      });
+
+      // The doc pane opened from the agent's show_file, not a user click.
+      await expect(page.getByTestId("doc-pane")).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByTestId("doc-markdown")).toContainText("Agent Report", {
+        timeout: 15_000,
+      });
+      await expect(page.getByTestId("doc-tab")).toContainText("report.md");
+
+      await page.screenshot({ path: "test-results/live-docs-agent-show-file.png" });
       await killQuietly(client, sessionId);
     } finally {
       await rm(dir, { recursive: true, force: true });
