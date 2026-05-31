@@ -81,6 +81,7 @@ describe("DEFAULT_SCOPED_MCP_TOOLS", () => {
       "schedule_show",
       "session_attach",
       "session_send_input",
+      "show_file",
       "show_hello_widget",
       "task_complete",
       "task_create",

@@ -101,6 +101,8 @@ export const ALL_MCP_TOOL_NAMES: ReadonlySet<string> = new Set([
   "widget_show",
   // GenUX React runtime (#1268) — render-by-source JSX
   "component_show",
+  // Live docs (#1396) — open a read-only file view in the doc pane
+  "show_file",
 ]);
 
 // ─── Preset Tool Sets ────────────────────────────────────────
@@ -149,6 +151,8 @@ export const DEFAULT_SCOPED_MCP_TOOLS: readonly string[] = [
   "widget_show",
   // GenUX React runtime (#1268)
   "component_show",
+  // Live docs (#1396)
+  "show_file",
 ] as const;
 
 /**
@@ -217,6 +221,8 @@ export const ORCHESTRATOR_MCP_TOOLS: readonly string[] = [
   "component_promote",
   "widget_show",
   "component_show",
+  // Live docs (#1396)
+  "show_file",
   // Additional management tools
   "task_update",
   "task_delete",
