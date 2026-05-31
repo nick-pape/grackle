@@ -127,13 +127,17 @@ test.describe("Live docs v0 viewer", { tag: ["@session"] }, () => {
       await writeFile(filePath, "# Agent Report\n\nGenerated content.\n", "utf-8");
       const fileUri = pathToFileURL(filePath).href;
 
-      // Stub-mcp session: calls the real show_file MCP tool via the broker.
-      // The broker captures the _meta descriptor, resolves environmentId from the
-      // session, and emits a document.show domain event → useDocuments opens a tab.
+      // Stub-mcp session: idles first so the browser can connect the event
+      // stream, then calls show_file when we send input. The domain event is
+      // fire-and-forget (not replayed), so the browser MUST be listening before
+      // the tool runs.
       const scenario = JSON.stringify({
         steps: [
           { emit: "text", content: "Generating the report." },
+          { on_input: "next" },
+          { idle: true },
           { mcp_call: "show_file", args: { path: filePath } },
+          { emit: "text", content: "Report shown." },
         ],
       });
       const spawn = await client.core.spawnAgent({
@@ -160,12 +164,17 @@ test.describe("Live docs v0 viewer", { tag: ["@session"] }, () => {
         expect(content.data).toContain("Agent Report");
       }).toPass({ timeout: 20_000, intervals: [250, 500, 1000] });
 
-      // Navigate to the session. The document.show event arrives over the stream;
-      // no user click needed — the doc pane should open automatically.
+      // Navigate to the session and wait for the stream to connect (the stub
+      // idles, so the text event proves the stream is flowing).
       await page.goto(`/sessions/${sessionId}`);
       await expect(page.getByText("Generating the report.").first()).toBeVisible({
         timeout: 20_000,
       });
+
+      // Now send input to resume the stub — it calls show_file, the broker
+      // captures the _meta, publishDocumentShow emits the domain event, and the
+      // web useDocuments hook (already listening) opens a tab.
+      await client.core.sendInput({ id: sessionId, text: "go" });
 
       // The doc pane opened from the agent's show_file, not a user click.
       await expect(page.getByTestId("doc-pane")).toBeVisible({ timeout: 15_000 });
