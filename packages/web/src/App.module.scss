@@ -90,14 +90,16 @@
   display: flex;
   flex-shrink: 0;
 
-  // Slide-in pullout, anchored top-left. Intentionally no `bottom` — the drawer
-  // hugs the rail's content height (the rail caps itself at max-height: 100%)
-  // instead of spanning the full viewport, so a short context list doesn't leave
-  // a tall empty panel below it (#1425).
+  // Slide-in pullout. Positioned `absolute` (not `fixed`) so it anchors to the
+  // shell — the row *below* the StatusBar — rather than the viewport top. The
+  // StatusBar has a higher z-index, so a viewport-anchored drawer would slide
+  // under it and clip its top rows (Fleet/Coordination); anchoring to the shell
+  // keeps the whole rail visible while still spanning the full content height (#1425).
   @include mobile {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
+    bottom: 0;
     width: 240px;
     z-index: 100;
     transform: translateX(-100%);

@@ -123,23 +123,26 @@ test.describe("Context nav drawer (mobile)", { tag: ["@webui"] }, () => {
     await expect(rail).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("drawer hugs its content instead of spanning the full viewport height", async ({
-    appPage,
-  }) => {
+  test("drawer content sits below the StatusBar (top rows not clipped)", async ({ appPage }) => {
     const page = appPage;
     await page.goto("/");
     await waitForConnected(page);
 
+    const toggle = page.getByRole("button", { name: "Toggle contexts" });
+    await toggle.click();
     const rail = page.getByTestId("context-nav");
-    await page.getByRole("button", { name: "Toggle contexts" }).click();
     await expect(rail).toBeVisible();
 
-    // Regression guard for #1425: a short context list must not leave a tall
-    // empty panel below it. The drawer sizes to its rows, so its height stays
-    // well under the viewport rather than filling the whole screen.
-    const box = await rail.boundingBox();
-    expect(box).not.toBeNull();
-    expect(box!.height).toBeLessThan(MOBILE_VIEWPORT.height * 0.6);
+    // Regression guard for #1425: the drawer is anchored to the content area
+    // below the StatusBar (not the viewport top), so its topmost rows
+    // (Fleet/Coordination) are not clipped behind the higher-z-index StatusBar.
+    await expect(rail.getByTestId("sidebar-tab-coordination")).toBeVisible();
+    const toggleBox = await toggle.boundingBox();
+    const railBox = await rail.boundingBox();
+    expect(toggleBox).not.toBeNull();
+    expect(railBox).not.toBeNull();
+    // The rail starts at or below the bottom edge of the StatusBar's controls.
+    expect(railBox!.y).toBeGreaterThanOrEqual(toggleBox!.y + toggleBox!.height - 1);
   });
 
   test("Escape closes the context drawer", async ({ appPage }) => {

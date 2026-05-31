@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Fix mobile ContextNav drawer spanning the full screen height with a short context list; it now hugs its content instead of stranding a few rows above an empty panel.",
+      "comment": "Fix the mobile ContextNav drawer anchoring to the viewport top, where its top rows (Fleet/Coordination) were clipped behind the higher-z-index StatusBar; it now anchors to the content area below the StatusBar so the whole rail is visible.",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
