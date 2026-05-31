@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 30 May 2026 18:05:30 GMT and should not be manually modified.
+This log was last generated on Sun, 31 May 2026 00:33:25 GMT and should not be manually modified.
+
+## 0.137.1
+Sun, 31 May 2026 00:33:25 GMT
+
+### Patches
+
+- Promote personas from a Settings sub-tab to a top-level Persona Library (#1413); /settings/personas* now redirects to /personas*.
 
 ## 0.137.0
 Sat, 30 May 2026 18:05:30 GMT

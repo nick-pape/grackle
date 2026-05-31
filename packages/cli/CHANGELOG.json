@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.137.1",
+      "tag": "@grackle-ai/cli_v0.137.1",
+      "date": "Sun, 31 May 2026 00:33:25 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Promote personas from a Settings sub-tab to a top-level Persona Library (#1413); /settings/personas* now redirects to /personas*."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.137.0",
       "tag": "@grackle-ai/cli_v0.137.0",
       "date": "Sat, 30 May 2026 18:05:30 GMT",
