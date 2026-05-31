@@ -13,6 +13,33 @@ import { Command } from "commander";
 import chalk from "chalk";
 import { createGrackleClients } from "../client.js";
 
+/** Max characters of an avatar to inline in `agent list`. */
+const INLINE_AVATAR_MAX_CHARS: number = 6;
+
+/**
+ * Return the avatar string when it's a short inline glyph (emoji / monogram),
+ * or `""` when it's a URL / `data:` URI that would spam the terminal. The
+ * full value is always available via `agent show`.
+ */
+function renderInlineAvatar(avatar: string): string {
+  if (!avatar) {
+    return "";
+  }
+  if (
+    avatar.startsWith("http://") ||
+    avatar.startsWith("https://") ||
+    avatar.startsWith("/") ||
+    avatar.startsWith("data:")
+  ) {
+    return "";
+  }
+  // Multi-codepoint emoji can be > 1 character; cap at a small ceiling.
+  if ([...avatar].length > INLINE_AVATAR_MAX_CHARS) {
+    return "";
+  }
+  return avatar;
+}
+
 /**
  * Register the `agent` command group on the root program.
  *
@@ -32,8 +59,12 @@ export function registerAgentCommands(program: Command): void {
         return;
       }
       for (const a of res.agents) {
-        const avatar = a.avatar ? `${a.avatar} ` : "";
-        console.log(`${avatar}${chalk.bold(a.name)} ${chalk.dim(`(${a.id})`)}`);
+        // Inline only short glyphs (emoji / monogram). URLs and base64
+        // data URIs would wrap and spam the terminal — `show` is where
+        // the full value belongs.
+        const inlineAvatar = renderInlineAvatar(a.avatar);
+        const prefix = inlineAvatar ? `${inlineAvatar} ` : "";
+        console.log(`${prefix}${chalk.bold(a.name)} ${chalk.dim(`(${a.id})`)}`);
         console.log(`  persona: ${a.primaryPersonaId || "(none)"}`);
       }
     });
