@@ -384,6 +384,26 @@ const MIGRATIONS: Migration[] = [
       conn.exec("DROP TABLE IF EXISTS session_snapshots");
     },
   },
+  {
+    version: 20,
+    name: "add-agents",
+    up: (conn) => {
+      // Minimal standing-Agent entity (#1417, epic #1412). Phase 0: no
+      // lifecycle. The Agent holds only identity (name + avatar) and a
+      // reference to its primary persona; config-bearing fields arrive with
+      // #1418.
+      conn.exec(`
+        CREATE TABLE IF NOT EXISTS agents (
+          id                  TEXT PRIMARY KEY,
+          name                TEXT NOT NULL UNIQUE,
+          avatar              TEXT NOT NULL DEFAULT '',
+          primary_persona_id  TEXT NOT NULL DEFAULT '',
+          created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+          updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+      `);
+    },
+  },
 ];
 
 /** The highest schema version defined by BASELINE + MIGRATIONS. */
