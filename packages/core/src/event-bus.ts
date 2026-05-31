@@ -40,7 +40,7 @@ export type GrackleEventType =
   // A watched resource (file/dir) changed on an environment's PowerLine-owned
   // worktree (#1395). Forwarded from the AHP resource-watch channel; the web
   // `useResources` hook re-reads the affected URIs. payload:
-  // { environmentId, watchId, uri, changes: [{ uri, type }] }
+  // { environmentId, uri, changes: [{ uri, type }] }
   | "resource.changed";
 
 /** A domain event emitted by the event bus. */

@@ -389,8 +389,11 @@ export class AhpHostTransport implements IHostTransport {
     try {
       await this.socket.request("subscribe", { channel });
     } catch (err) {
-      // Subscribe failed — drop the listener so we don't leak it, and surface.
+      // Subscribe failed after the host allocated the watch entry — drop the
+      // local listener AND tell the host to release its watcher, otherwise it
+      // leaks until the whole AHP connection disconnects.
       this.resourceWatchers.delete(channel);
+      this.socket.notify("unsubscribe", { channel });
       throw err;
     }
     let closed = false;

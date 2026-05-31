@@ -694,6 +694,43 @@ describe("AhpHostTransport", () => {
       expect(batches).toHaveLength(1); // no new batch after close
     });
 
+    it("releases the host watcher (unsubscribe) and drops the listener when subscribe fails", async () => {
+      const { stub, socket } = makeStubSocket();
+      const watchChannel = "ahp-resource-watch:/wid-fail";
+      stub.requestResponder = (method) => {
+        if (method === "createResourceWatch") {
+          return { channel: watchChannel } satisfies CreateResourceWatchResult;
+        }
+        if (method === "subscribe") {
+          throw new Error("subscribe rejected");
+        }
+        return null;
+      };
+      const transport = new AhpHostTransport(socket);
+      stub.bindHandler(bindNotificationHandler(transport));
+
+      const seen: unknown[] = [];
+      await expect(
+        transport.createResourceWatch({ uri: "file:///w/doc.md" }, (c) => seen.push(c)),
+      ).rejects.toThrow("subscribe rejected");
+
+      // The host is told to release the orphaned watch entry.
+      expect(stub.recordedNotifies.find((n) => n.method === "unsubscribe")?.params).toEqual({
+        channel: watchChannel,
+      });
+      // The listener was dropped, so a late change batch on that channel is ignored.
+      stub.pushNotification("action", {
+        channel: watchChannel,
+        serverSeq: 1,
+        action: {
+          type: ActionType.ResourceWatchChanged,
+          changes: { items: [{ uri: "file:///w/doc.md", type: ResourceChangeType.Updated }] },
+        },
+        origin: undefined,
+      });
+      expect(seen).toHaveLength(0);
+    });
+
     it("a ResourceWatchChanged action on an unknown channel is a no-op", () => {
       const { stub, socket } = makeStubSocket();
       const transport = new AhpHostTransport(socket);
