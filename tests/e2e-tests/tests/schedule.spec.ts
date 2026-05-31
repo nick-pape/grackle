@@ -88,7 +88,10 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     // Open the create form
     await page.getByTestId("schedule-new-button").click();
     await page.waitForURL("**/schedules/new", { timeout: 5_000 });
-    await expect(page.getByRole("tab", { name: "Schedules", selected: true })).toBeVisible();
+    // Schedules is a fleet surface (#1416): its entry lives in the context rail
+    // (#1415) and marks the active route via aria-current rather than a tab's
+    // selected state.
+    await expect(page.getByTestId("sidebar-tab-schedules")).toHaveAttribute("aria-current", "page");
 
     // Fill in the create form
     await page.getByTestId("schedule-detail-title").fill("UI Created Schedule");

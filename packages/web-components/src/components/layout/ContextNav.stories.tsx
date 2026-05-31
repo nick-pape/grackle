@@ -1,8 +1,18 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent } from "@storybook/test";
-import { Bot, Code2 } from "lucide-react";
+import { Bot, Code2, Network } from "lucide-react";
 import { ContextNav, type ContextItem } from "./ContextNav.js";
 import { ICON_LG } from "../../utils/iconSize.js";
+
+/** Fleet/overview items (Coordination today) rendered above the contexts (#1415). */
+const FLEET_ITEMS: ContextItem[] = [
+  {
+    id: "coordination",
+    label: "Coordination",
+    icon: <Network size={ICON_LG} />,
+    testId: "sidebar-tab-coordination",
+  },
+];
 
 /** The single Code context shipped in Phase 0. */
 const CODE_CONTEXT: ContextItem = {
@@ -110,5 +120,43 @@ export const AriaAttributes: Story = {
     const tablist = canvas.getByRole("tablist");
     await expect(tablist).toHaveAttribute("aria-orientation", "vertical");
     await expect(tablist).toHaveAttribute("aria-label", "Context navigation");
+  },
+};
+
+/**
+ * Fleet section (#1415): Coordination renders above the contexts, marked active
+ * via `aria-current`, and selecting it fires `onSelectFleet` with its id. Fleet
+ * items are plain buttons, not part of the context `tablist`.
+ */
+export const WithFleet: Story = {
+  args: { fleetItems: FLEET_ITEMS, activeFleetId: "coordination", onSelectFleet: fn() },
+  play: async ({ canvas, args }) => {
+    const coordination = canvas.getByTestId("sidebar-tab-coordination");
+    await expect(coordination).toBeInTheDocument();
+    await expect(coordination).toHaveTextContent("Coordination");
+    await expect(coordination).toHaveAttribute("aria-current", "page");
+    // The fleet item is a button, not a tab — the only tablist is the contexts.
+    await expect(coordination).not.toHaveAttribute("role", "tab");
+
+    await userEvent.click(coordination);
+    await expect(args.onSelectFleet).toHaveBeenCalledWith("coordination");
+  },
+};
+
+/** Collapsed: the fleet item is icon-only (label moves into a tooltip). */
+export const WithFleetCollapsed: Story = {
+  args: {
+    fleetItems: FLEET_ITEMS,
+    activeFleetId: "coordination",
+    onSelectFleet: fn(),
+    collapsed: true,
+    onToggleCollapsed: fn(),
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByTestId("context-nav")).toHaveAttribute("data-collapsed", "true");
+    // Label is not rendered inline when collapsed.
+    await expect(canvas.getByTestId("sidebar-tab-coordination")).not.toHaveTextContent(
+      "Coordination",
+    );
   },
 };

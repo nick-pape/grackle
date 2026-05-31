@@ -83,6 +83,7 @@ export {
   Sidebar,
   BottomStatusBar,
   TABS,
+  getActiveView,
   ContextNav,
   CONTEXTS,
   DEFAULT_CONTEXT_ID,
