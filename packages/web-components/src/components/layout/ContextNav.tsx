@@ -102,14 +102,17 @@ export function ContextNav({
   return (
     <nav
       className={styles.rail}
-      role="tablist"
-      aria-orientation="vertical"
       aria-label="Context navigation"
       data-testid="context-nav"
       data-collapsed={collapsed}
-      onKeyDown={handleKeyDown}
     >
-      <div className={styles.tabList} ref={tabListRef}>
+      <div
+        className={styles.tabList}
+        ref={tabListRef}
+        role="tablist"
+        aria-orientation="vertical"
+        onKeyDown={handleKeyDown}
+      >
         {contexts.map((context) => {
           const isActive = context.id === activeContextId;
           const button = (
