@@ -22,7 +22,7 @@ const PERSONAS: PersonaData[] = [
     mcpServers: "[]",
     type: "agent",
     script: "",
-    allowedMcpTools: "[]",
+    allowedMcpTools: [],
     createdAt: "",
     updatedAt: "",
   },
@@ -58,6 +58,7 @@ describe("isImageAvatar", () => {
   it("rejects bare strings (emoji, monogram, junk)", () => {
     expect(isImageAvatar("B")).toBe(false);
     expect(isImageAvatar("🐦")).toBe(false);
+    // eslint-disable-next-line no-script-url -- this is the value we're proving gets REJECTED
     expect(isImageAvatar("javascript:alert(1)")).toBe(false);
     expect(isImageAvatar("")).toBe(false);
   });
