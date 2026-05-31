@@ -1,6 +1,18 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 31 May 2026 16:46:28 GMT and should not be manually modified.
+This log was last generated on Sun, 31 May 2026 17:38:29 GMT and should not be manually modified.
+
+## 0.141.0
+Sun, 31 May 2026 17:38:29 GMT
+
+### Minor changes
+
+- Add operator stream control plane (#1309): OperatorCreateStream/AttachTask/DetachTask/ListTaskAttachments/CloseStream RPCs + operator:* anchor principal, stream.created/attached/detached/closed lifecycle events (live Coordination roster), and `grackle streams create/attach/detach/attachments/close` CLI commands.
+
+### Patches
+
+- Fix the mobile ContextNav drawer anchoring to the viewport top, where its top rows (Fleet/Coordination) were clipped behind the higher-z-index StatusBar; it now anchors to the content area below the StatusBar so the whole rail is visible.
+- Hide the workbench tab bar on fleet-altitude pages (Coordination, Schedules); clicking Code in the context rail navigates home
 
 ## 0.140.0
 Sun, 31 May 2026 16:46:28 GMT
