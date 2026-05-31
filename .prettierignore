@@ -24,6 +24,10 @@ common/api/
 **/pnpm-lock.yaml
 common/config/rush/pnpm-lock.yaml
 common/changes/
+# Rush-generated changelogs ("should not be manually modified"); their canonical
+# generated form is not Prettier-clean and bump commits land via [skip ci].
+**/CHANGELOG.md
+**/CHANGELOG.json
 
 # Vendored Rush bootstrapper scripts (Rush validates these by content and
 # refuses to install if they have been edited).
