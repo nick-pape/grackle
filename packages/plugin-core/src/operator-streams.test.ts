@@ -271,6 +271,20 @@ describe("operatorCloseStream", () => {
     ).rejects.toMatchObject({ code: Code.NotFound });
   });
 
+  it("deregisters async-delivery listeners for the sessions it evicts", async () => {
+    const streamId = await newRoom("room");
+    setLiveTask("task-1", "sess-1");
+    await operatorAttachTask(
+      create(grackle.OperatorAttachTaskRequestSchema, { taskId: "task-1", streamId }),
+    );
+    vi.mocked(pipeDelivery.cleanupAsyncListenerIfEmpty).mockClear();
+
+    await operatorCloseStream(create(grackle.OperatorCloseStreamRequestSchema, { streamId }));
+
+    // The attached agent session's listener is cleaned up (no leak on close).
+    expect(pipeDelivery.cleanupAsyncListenerIfEmpty).toHaveBeenCalledWith("sess-1");
+  });
+
   it("refuses to close a reserved plumbing stream", async () => {
     const plumbing = streamRegistry.createStream("pipe:internal");
     await expect(

@@ -1005,7 +1005,19 @@ export async function operatorCloseStream(
     );
   }
 
+  // Snapshot the affected sessions before teardown so we can deregister their
+  // async-delivery listeners afterward — deleteStream removes the subscriptions
+  // but not the per-session listeners. Mirrors closeFd / operatorDetachTask;
+  // skipping it leaks a listener when the room held a session's last async sub.
+  const affectedSessionIds = new Set(
+    Array.from(stream.subscriptions.values()).map((sub) => sub.sessionId),
+  );
+
   streamRegistry.deleteStream(req.streamId);
+
+  for (const sessionId of affectedSessionIds) {
+    pipeDelivery.cleanupAsyncListenerIfEmpty(sessionId);
+  }
 
   return create(grackle.OperatorCloseStreamResponseSchema, { closed: true });
 }
