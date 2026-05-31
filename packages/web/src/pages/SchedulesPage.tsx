@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import { useGrackle } from "../../context/GrackleContext.js";
+import { useGrackle } from "../context/GrackleContext.js";
 import {
   NEW_SCHEDULE_URL,
   ScheduleManager,
@@ -8,8 +8,8 @@ import {
   useToast,
 } from "@grackle-ai/web-components";
 
-/** Settings tab wrapping the schedule list. */
-export function SettingsSchedulesTab(): JSX.Element {
+/** Top-level Schedules surface (relocated out of Settings, #1416). */
+export function SchedulesPage(): JSX.Element {
   const {
     schedules: { schedules, deleteSchedule, updateSchedule },
     personas: { personas },

@@ -28,6 +28,7 @@ export const AllTabsRendered: Story = {
     await expect(canvas.getByRole("tab", { name: /Tasks/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Environments/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Knowledge/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("tab", { name: /Schedules/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Settings/ })).toBeInTheDocument();
   },
 };
@@ -290,8 +291,28 @@ export const WorkbenchAndFleetOnly: Story = {
   args: { groups: ["workbench", "fleet"] },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("tab", { name: /Tasks/ })).toBeInTheDocument();
+    // Both fleet surfaces (Coordination + Schedules) render at this altitude.
     await expect(canvas.getByRole("tab", { name: /Coordination/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("tab", { name: /Schedules/ })).toBeInTheDocument();
     await expect(canvas.queryByRole("tab", { name: /Environments/ })).not.toBeInTheDocument();
     await expect(canvas.queryByRole("tab", { name: /Settings/ })).not.toBeInTheDocument();
+  },
+};
+
+/**
+ * The composition the app actually ships (#1415): the view bar renders only
+ * `workbench` + `global` tabs, so every `fleet` tab is pulled out — Coordination
+ * and Schedules now live at the fleet altitude in the context rail. Guards that
+ * the new Schedules tab (#1416) participates in that move rather than being
+ * stranded in the view bar.
+ */
+export const WorkbenchAndGlobalOnly: Story = {
+  args: { groups: ["workbench", "global"] },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("tab", { name: /Tasks/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("tab", { name: /Environments/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("tab", { name: /Settings/ })).toBeInTheDocument();
+    await expect(canvas.queryByRole("tab", { name: /Coordination/ })).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("tab", { name: /Schedules/ })).not.toBeInTheDocument();
   },
 };

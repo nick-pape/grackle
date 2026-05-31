@@ -32,6 +32,33 @@ $rail-width-collapsed: 56px;
   }
 }
 
+// Fleet/overview section — the cross-context altitude pinned above the contexts
+// (Coordination, #1415). A divider separates it from the context list below.
+.fleetSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+  padding-bottom: var(--space-sm);
+  margin-bottom: var(--space-xs);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.sectionLabel {
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+}
+
+.fleetList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
 .tabList {
   display: flex;
   flex-direction: column;

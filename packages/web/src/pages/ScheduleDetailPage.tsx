@@ -1,6 +1,6 @@
 import { useState, useEffect, type JSX, type FormEvent } from "react";
 import { useParams, Navigate } from "react-router";
-import { useGrackle } from "../../context/GrackleContext.js";
+import { useGrackle } from "../context/GrackleContext.js";
 import {
   Breadcrumbs,
   Button,
@@ -8,7 +8,6 @@ import {
   EditableSelect,
   EditableTextField,
   SCHEDULES_URL,
-  SETTINGS_URL,
   scheduleUrl,
   useAppNavigate,
   useToast,
@@ -23,7 +22,7 @@ import type {
 } from "@grackle-ai/web-components";
 import styles from "./ScheduleDetail.module.scss";
 
-/** ScheduleDetailPage handles both create (/settings/schedules/new) and edit (/settings/schedules/:scheduleId). */
+/** ScheduleDetailPage handles both create (/schedules/new) and edit (/schedules/:scheduleId). */
 export function ScheduleDetailPage(): JSX.Element {
   const { scheduleId } = useParams<{ scheduleId: string }>();
   const navigate = useAppNavigate();
@@ -45,7 +44,6 @@ export function ScheduleDetailPage(): JSX.Element {
   }
 
   const breadcrumbs: BreadcrumbSegment[] = [
-    { label: "Settings", url: SETTINGS_URL },
     { label: "Schedules", url: SCHEDULES_URL },
     { label: isNew ? "New Schedule" : (existing?.title ?? "Schedule"), url: undefined },
   ];

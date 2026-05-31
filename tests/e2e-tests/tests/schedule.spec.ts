@@ -27,8 +27,7 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
       personaId: persona.id,
     });
 
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
-    await page.getByRole("tab", { name: "Schedules" }).click();
+    await page.locator('[data-testid="sidebar-tab-schedules"]').click();
 
     await expect(page.getByRole("heading", { name: "Schedules" })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("Nightly Review")).toBeVisible({ timeout: 5_000 });
@@ -38,8 +37,7 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
   test("empty state is shown when no schedules exist", async ({ appPage }) => {
     const page = appPage;
 
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
-    await page.getByRole("tab", { name: "Schedules" }).click();
+    await page.locator('[data-testid="sidebar-tab-schedules"]').click();
 
     await expect(page.getByTestId("schedule-empty-state")).toBeVisible({ timeout: 5_000 });
   });
@@ -62,8 +60,7 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
       personaId: persona.id,
     });
 
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
-    await page.getByRole("tab", { name: "Schedules" }).click();
+    await page.locator('[data-testid="sidebar-tab-schedules"]').click();
     await expect(page.getByText("Soon Deleted Schedule")).toBeVisible({ timeout: 5_000 });
 
     // Delete via RPC
@@ -85,14 +82,16 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
       runtime: "stub",
     });
 
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
-    await page.getByRole("tab", { name: "Schedules" }).click();
+    await page.locator('[data-testid="sidebar-tab-schedules"]').click();
     await expect(page.getByRole("heading", { name: "Schedules" })).toBeVisible({ timeout: 5_000 });
 
     // Open the create form
     await page.getByTestId("schedule-new-button").click();
-    await page.waitForURL("**/settings/schedules/new", { timeout: 5_000 });
-    await expect(page.getByRole("tab", { name: "Schedules", selected: true })).toBeVisible();
+    await page.waitForURL("**/schedules/new", { timeout: 5_000 });
+    // Schedules is a fleet surface (#1416): its entry lives in the context rail
+    // (#1415) and marks the active route via aria-current rather than a tab's
+    // selected state.
+    await expect(page.getByTestId("sidebar-tab-schedules")).toHaveAttribute("aria-current", "page");
 
     // Fill in the create form
     await page.getByTestId("schedule-detail-title").fill("UI Created Schedule");
@@ -102,7 +101,7 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     await page.getByTestId("schedule-detail-save").click();
 
     // Should redirect to the edit page for the new schedule
-    await page.waitForURL(/\/settings\/schedules\/[^/]+$/, { timeout: 5_000 });
+    await page.waitForURL(/\/schedules\/[^/]+$/, { timeout: 5_000 });
 
     // Verify schedule was created in the backend
     let createdSchedule: { id: string; title: string } | undefined;
@@ -128,7 +127,7 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
 
     // Go back to list and verify updated title appears
     await page.getByTestId("schedule-detail-cancel").click();
-    await expect(page).toHaveURL(/\/settings\/schedules$/, { timeout: 5_000 });
+    await expect(page).toHaveURL(/\/schedules$/, { timeout: 5_000 });
 
     let updatedSchedule: { id: string; title: string } | undefined;
     await expect
@@ -149,14 +148,55 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
 
     // Delete via UI
     await page.getByTestId(`schedule-card-${updatedSchedule!.id}`).click();
-    await page.waitForURL(`**/settings/schedules/${updatedSchedule!.id}`, { timeout: 5_000 });
+    await page.waitForURL(`**/schedules/${updatedSchedule!.id}`, { timeout: 5_000 });
     await page.getByTestId("schedule-detail-delete").click();
 
     const dialog = page.getByRole("dialog", { name: "Delete Schedule?" });
     await expect(dialog).toBeVisible({ timeout: 5_000 });
     await dialog.getByRole("button", { name: "Delete" }).click();
 
-    await expect(page).toHaveURL(/\/settings\/schedules$/, { timeout: 5_000 });
+    await expect(page).toHaveURL(/\/schedules$/, { timeout: 5_000 });
     await expect(page.getByTestId(`schedule-card-${updatedSchedule!.id}`)).toHaveCount(0);
+  });
+
+  test("legacy /settings/schedules* URLs redirect to /schedules*", async ({
+    appPage,
+    grackle: { client },
+  }) => {
+    const page = appPage;
+
+    // Old bookmarks/deep links must keep working after the relocation (#1416).
+    // All three shapes have back-compat redirects, so exercise each one.
+
+    // List: /settings/schedules -> /schedules
+    await page.goto("/settings/schedules");
+    await expect(page).toHaveURL(/\/schedules$/, { timeout: 5_000 });
+    await expect(page.getByRole("heading", { name: "Schedules" })).toBeVisible({ timeout: 5_000 });
+
+    // Create form: /settings/schedules/new -> /schedules/new
+    await page.goto("/settings/schedules/new");
+    await expect(page).toHaveURL(/\/schedules\/new$/, { timeout: 5_000 });
+    await expect(page.getByRole("heading", { name: "Create Schedule" })).toBeVisible({
+      timeout: 5_000,
+    });
+
+    // Detail: /settings/schedules/:id -> /schedules/:id (ScheduleSettingsRedirect
+    // re-encodes the param). Seed a schedule so there is a real id to redirect to.
+    const persona = await client.orchestration.createPersona({
+      name: "Redirect Persona",
+      systemPrompt: "For redirect testing.",
+      runtime: "stub",
+    });
+    const created = await client.scheduling.createSchedule({
+      title: "Redirect Target Schedule",
+      scheduleExpression: "5m",
+      personaId: persona.id,
+    });
+
+    await page.goto(`/settings/schedules/${created.id}`);
+    await expect(page).toHaveURL(new RegExp(`/schedules/${created.id}$`), { timeout: 5_000 });
+    await expect(page.getByRole("heading", { name: "Edit Schedule" })).toBeVisible({
+      timeout: 5_000,
+    });
   });
 });

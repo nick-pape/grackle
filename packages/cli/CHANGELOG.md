@@ -1,6 +1,20 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 31 May 2026 05:24:54 GMT and should not be manually modified.
+This log was last generated on Sun, 31 May 2026 15:07:03 GMT and should not be manually modified.
+
+## 0.139.2
+Sun, 31 May 2026 15:07:03 GMT
+
+### Patches
+
+- Relocate the Schedules surface out of Settings to a top-level /schedules route (fleet-altitude nav tab), with back-compat redirects from /settings/schedules* (#1416).
+
+## 0.139.1
+Sun, 31 May 2026 14:40:44 GMT
+
+### Patches
+
+- Move Coordination to the fleet/overview altitude: render fleet-group tabs in a new Fleet section at the top of the context rail instead of the flat view bar (#1415)
 
 ## 0.139.0
 Sun, 31 May 2026 05:24:54 GMT

@@ -3,6 +3,7 @@ import { useLocation } from "react-router";
 import {
   Activity,
   Brain,
+  CalendarClock,
   ClipboardList,
   Home,
   MessageSquare,
@@ -18,6 +19,7 @@ import {
   HOME_URL,
   KNOWLEDGE_URL,
   PERSONAS_URL,
+  SCHEDULES_URL,
   SESSIONS_URL,
   SETTINGS_URL,
   SETTINGS_CREDENTIALS_URL,
@@ -38,6 +40,7 @@ export type AppView =
   | "sessions"
   | "knowledge"
   | "coordination"
+  | "schedules"
   | "settings";
 
 /**
@@ -147,6 +150,20 @@ export const TABS: AppTab[] = [
     order: 6,
     group: "fleet",
   },
+  // Schedules is a cross-context "fleet" surface (an agent's heartbeat), not a
+  // per-context view — relocated out of Settings (#1416) as a holding home until
+  // per-agent ownership (#1418). Tagged `group: "fleet"` so it rides the same
+  // altitude as Coordination and is swept into the fleet rail by #1415 with no
+  // further shell changes.
+  {
+    view: "schedules",
+    label: "Schedules",
+    icon: <CalendarClock size={ICON_LG} />,
+    route: SCHEDULES_URL,
+    testId: "sidebar-tab-schedules",
+    order: 6.5,
+    group: "fleet",
+  },
   // `global` infrastructure tabs are pinned to the right edge (`align: "end"`)
   // so they read as a cluster separate from the workbench views. Environments
   // moved here from the workbench row as part of the context-axis reframing
@@ -181,6 +198,9 @@ export function getActiveView(pathname: string): AppView {
   }
   if (pathname.startsWith(COORDINATION_URL)) {
     return "coordination";
+  }
+  if (pathname.startsWith(SCHEDULES_URL)) {
+    return "schedules";
   }
   if (pathname.startsWith(SESSIONS_URL)) {
     return "sessions";

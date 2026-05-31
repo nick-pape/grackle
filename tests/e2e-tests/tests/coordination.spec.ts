@@ -6,9 +6,10 @@ test.describe("Coordination tab", { tag: ["@session"] }, () => {
   }) => {
     const page = appPage;
 
-    // Both halves of the split are present in the nav.
+    // Root lives in the view bar; Coordination now lives at the fleet altitude
+    // in the context rail (#1415), not the flat tab row.
     await expect(page.getByTestId("sidebar-tab-chat")).toBeVisible();
-    const coordTab = page.getByTestId("sidebar-tab-coordination");
+    const coordTab = page.getByTestId("context-nav").getByTestId("sidebar-tab-coordination");
     await expect(coordTab).toBeVisible();
 
     await coordTab.click();

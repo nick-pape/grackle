@@ -24,6 +24,9 @@ const CORE_VIEWS: ReadonlySet<string> = new Set([
 /** Views contributed by the orchestration plugin. */
 const ORCHESTRATION_VIEWS: ReadonlySet<string> = new Set(["tasks", "personas"]);
 
+/** Views contributed by the scheduling plugin. */
+const SCHEDULING_VIEWS: ReadonlySet<string> = new Set(["schedules"]);
+
 /** Views contributed by the knowledge plugin. */
 const KNOWLEDGE_VIEWS: ReadonlySet<string> = new Set(["knowledge"]);
 
@@ -64,7 +67,7 @@ export const PLUGIN_REGISTRY: Readonly<Record<string, PluginClientEntry | undefi
     domainHookKeys: ["tasks", "personas", "notifications"],
   },
   scheduling: {
-    navItems: [],
+    navItems: TABS.filter((t) => SCHEDULING_VIEWS.has(t.view)),
     domainHookKeys: ["schedules"],
   },
   knowledge: {

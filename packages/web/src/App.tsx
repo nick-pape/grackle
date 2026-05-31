@@ -12,7 +12,7 @@ import {
   CONTEXTS,
   DEFAULT_CONTEXT_ID,
   agentUrl,
-  type ContextItem,
+  getActiveView,
   BottomStatusBar,
   ToastContainer,
   SplashScreen,
@@ -22,8 +22,10 @@ import {
   useToast,
   sessionUrl,
   personaUrl,
+  scheduleUrl,
   useAppNavigate,
   type AppTab,
+  type ContextItem,
 } from "@grackle-ai/web-components";
 import {
   useCallback,
@@ -70,8 +72,8 @@ import { SettingsGitHubAccountsTab } from "./pages/settings/SettingsGitHubAccoun
 import { PersonaLibraryPage } from "./pages/PersonaLibraryPage.js";
 import { PersonaDetailPage } from "./pages/PersonaDetailPage.js";
 import { AgentDetailPage } from "./pages/AgentDetailPage.js";
-import { SettingsSchedulesTab } from "./pages/settings/SettingsSchedulesTab.js";
-import { ScheduleDetailPage } from "./pages/settings/ScheduleDetailPage.js";
+import { SchedulesPage } from "./pages/SchedulesPage.js";
+import { ScheduleDetailPage } from "./pages/ScheduleDetailPage.js";
 import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js";
 import { SettingsAboutTab } from "./pages/settings/SettingsAboutTab.js";
 import { SettingsShortcutsTab } from "./pages/settings/SettingsShortcutsTab.js";
@@ -236,6 +238,28 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
     navigate("/agents/new");
   }, [navigate]);
 
+  // Fleet/overview altitude (#1415): the `fleet`-group tabs (Coordination today)
+  // are pulled out of the view bar and rendered at the top of the context rail.
+  // Data-driven from `tabs`, so any future `fleet` tab appears here automatically.
+  const fleetTabs = useMemo(() => tabs.filter((t) => t.group === "fleet"), [tabs]);
+  const fleetItems = useMemo<ContextItem[]>(
+    () => fleetTabs.map((t) => ({ id: t.view, label: t.label, icon: t.icon, testId: t.testId })),
+    [fleetTabs],
+  );
+  const activeView = getActiveView(location.pathname);
+  const activeFleetId = fleetTabs.some((t) => t.view === activeView) ? activeView : undefined;
+  const handleSelectFleet = useCallback(
+    (id: string) => {
+      const tab = fleetTabs.find((t) => t.view === id);
+      if (tab) {
+        navigate(tab.route);
+      }
+      // Mirror handleSelectContext: dismiss the mobile context drawer on select.
+      setContextNavOpen(false);
+    },
+    [fleetTabs, navigate],
+  );
+
   // Auto-close both mobile drawers on navigation
   useEffect(() => {
     setSidebarOpen(false);
@@ -278,6 +302,9 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
             activeContextId={activeContextId}
             onSelectContext={handleSelectContext}
             onCreateAgent={handleCreateAgent}
+            fleetItems={fleetItems}
+            activeFleetId={activeFleetId}
+            onSelectFleet={handleSelectFleet}
             collapsed={isMobile ? false : contextNavCollapsed}
             onToggleCollapsed={isMobile ? undefined : toggleContextNavCollapsed}
           />
@@ -290,7 +317,9 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
           />
         )}
         <div className={styles.contextPane}>
-          <AppNav tabs={tabs} />
+          {/* Fleet tabs (Coordination) live at the fleet altitude in the context
+              rail (#1415); the view bar shows only workbench + global tabs. */}
+          <AppNav tabs={tabs} groups={["workbench", "global"]} />
           <div className={styles.body}>
             {hasSidebar && (
               <div className={styles.sidebarWrapper} data-sidebar-open={sidebarOpen}>
@@ -432,10 +461,21 @@ function PersonaSettingsRedirect(): JSX.Element {
   return <Navigate to={personaUrl(personaId ?? "")} replace />;
 }
 
+/**
+ * Back-compat redirect for legacy `/settings/schedules/:scheduleId` URLs.
+ * Re-encodes the `scheduleId` param via `scheduleUrl()` so reserved characters
+ * survive the redirect (useParams URL-decodes; scheduleUrl re-encodes).
+ */
+function ScheduleSettingsRedirect(): JSX.Element {
+  const { scheduleId } = useParams<{ scheduleId: string }>();
+  return <Navigate to={scheduleUrl(scheduleId ?? "")} replace />;
+}
+
 /** Route configuration for the application. */
 function AppRoutes(): JSX.Element {
   const { pluginNames } = useManifest();
   const hasOrchestration = pluginNames.includes("orchestration");
+  const hasScheduling = pluginNames.includes("scheduling");
   const hasKnowledge = pluginNames.includes("knowledge");
 
   return (
@@ -498,6 +538,16 @@ function AppRoutes(): JSX.Element {
           </>
         )}
 
+        {/* Schedules — top-level surface (no sidebar), relocated out of Settings (#1416).
+            A holding home at the fleet altitude until per-agent ownership (#1418). */}
+        {hasScheduling && (
+          <>
+            <Route path="schedules" element={<SchedulesPage />} />
+            <Route path="schedules/new" element={<ScheduleDetailPage />} />
+            <Route path="schedules/:scheduleId" element={<ScheduleDetailPage />} />
+          </>
+        )}
+
         {/* Environments sidebar */}
         <Route element={<WithEnvironmentSidebar />}>
           <Route path="workspaces" element={<Navigate to="/environments" replace />} />
@@ -541,9 +591,6 @@ function AppRoutes(): JSX.Element {
             <Route path="credentials" element={<SettingsCredentialsTab />} />
             <Route path="github-accounts" element={<SettingsGitHubAccountsTab />} />
             <Route path="tokens" element={<Navigate to="../credentials" replace />} />
-            <Route path="schedules" element={<SettingsSchedulesTab />} />
-            <Route path="schedules/new" element={<ScheduleDetailPage />} />
-            <Route path="schedules/:scheduleId" element={<ScheduleDetailPage />} />
             <Route path="appearance" element={<SettingsAppearanceTab />} />
             <Route path="shortcuts" element={<SettingsShortcutsTab />} />
             <Route path="plugins" element={<SettingsPluginsTab />} />
@@ -556,6 +603,12 @@ function AppRoutes(): JSX.Element {
         <Route path="settings/personas" element={<Navigate to="/personas" replace />} />
         <Route path="settings/personas/new" element={<Navigate to="/personas/new" replace />} />
         <Route path="settings/personas/:personaId" element={<PersonaSettingsRedirect />} />
+
+        {/* Back-compat redirects for the legacy /settings/schedules* URLs (#1416).
+            Always on (no plugin gate) so old bookmarks/deep links keep working. */}
+        <Route path="settings/schedules" element={<Navigate to="/schedules" replace />} />
+        <Route path="settings/schedules/new" element={<Navigate to="/schedules/new" replace />} />
+        <Route path="settings/schedules/:scheduleId" element={<ScheduleSettingsRedirect />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
