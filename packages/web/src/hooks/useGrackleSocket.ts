@@ -29,6 +29,7 @@ import { useStreams } from "./useStreams.js";
 import { usePlugins } from "./usePlugins.js";
 import { useGitHubAccounts } from "./useGitHubAccounts.js";
 import { useResources } from "./useResources.js";
+import { useDocuments } from "./useDocuments.js";
 import { coreClient as grackleClient } from "./useGrackleClient.js";
 import { protoToUsageStats } from "./proto-converters.js";
 
@@ -105,6 +106,12 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   const pluginsHook = usePlugins();
   const githubAccountsHook = useGitHubAccounts();
   const resourcesHook = useResources();
+  // Live-docs pane (#1396) drives the resource bridge's read/watch actions.
+  const documentsHook = useDocuments({
+    readResource: resourcesHook.readResource,
+    watchResource: resourcesHook.watchResource,
+    unwatchResource: resourcesHook.unwatchResource,
+  });
 
   // --- Domain hook registry ---
   // Plugin-scoped hooks are only registered when their plugin is active.
@@ -126,6 +133,9 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     ...(activeHookKeys.has("streams") ? [streamsHook.domainHook] : []),
     ...(activeHookKeys.has("plugins") ? [pluginsHook.domainHook] : []),
     githubAccountsHook.domainHook, // core hook — always active
+    // Documents BEFORE resources: it observes resource.changed (returns false to
+    // badge inactive tabs) then lets the resource bridge consume it (#1396).
+    documentsHook.domainHook, // core hook — always active (live docs v0 #1396)
     resourcesHook.domainHook, // core hook — always active (AHP resource bridge #1395)
   ];
 
@@ -415,6 +425,15 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       getResourceContent: resourcesHook.getResourceContent,
       watchResource: resourcesHook.watchResource,
       unwatchResource: resourcesHook.unwatchResource,
+    },
+    documents: {
+      tabs: documentsHook.tabs,
+      activeTabId: documentsHook.activeTabId,
+      paneOpen: documentsHook.paneOpen,
+      unseenTabIds: documentsHook.unseenTabIds,
+      openDocument: documentsHook.openDocument,
+      closeTab: documentsHook.closeTab,
+      setActiveTab: documentsHook.setActiveTab,
     },
     appDefaultPersonaId,
     setAppDefaultPersonaId,

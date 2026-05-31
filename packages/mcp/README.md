@@ -245,6 +245,14 @@ Query aggregated token usage and cost data.
 | ----------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `usage_get` | Get token usage and cost for a session, task, task tree, workspace, or environment. | `scope` (`session` \| `task` \| `task_tree` \| `workspace` \| `environment`), `id` (string) |
 
+### Document Tools
+
+Open files in the user's Grackle document pane (live docs v0, #1396). Unlike widgets, `show_file` carries a **URI reference** rather than baked content — the web reads the file over the AHP resource bridge and live-refreshes it as the file changes on disk.
+
+| Tool        | Description                                                                                                                                                     | Parameters      |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| `show_file` | Open a read-only, live-updating view of a file (absolute path) in the user's document pane. Markdown renders richly; other text/code renders with highlighting. | `path` (string) |
+
 ### Component & Widget Tools
 
 [MCP Apps](#mcp-apps-ui-widgets) UI rendered inline by capable hosts (and always by Grackle's own chat pane via the broker).

@@ -2,6 +2,7 @@ import { useState, type JSX, type ReactNode } from "react";
 import { ChevronRight, FilePen, FileText } from "lucide-react";
 import type { ToolCardProps } from "./ToolCardProps.js";
 import { ICON_SM, ICON_MD } from "../../utils/iconSize.js";
+import { toFileUri } from "../../utils/fileUri.js";
 import styles from "./toolCards.module.scss";
 
 /** Extracts the file path from tool args (handles both `file_path` and `path` variants). */
@@ -41,11 +42,14 @@ export function FileReadCard({
   result,
   isError,
   writeVariant,
+  onOpenDocument,
 }: FileReadCardProps): JSX.Element {
   const [expanded, setExpanded] = useState(false);
   const filePath = getFilePath(args);
   const name = basename(filePath);
   const inProgress = result === undefined;
+  // Clickable only when the page wired an opener and the path is absolute (#1396).
+  const fileUri = onOpenDocument ? toFileUri(filePath) : undefined;
 
   const accentClass: string = isError
     ? styles.cardRed
@@ -70,11 +74,22 @@ export function FileReadCard({
         <span className={styles.toolName} style={{ color: accentColor }}>
           {tool}
         </span>
-        {name && (
-          <span className={styles.fileName} title={filePath}>
-            {name}
-          </span>
-        )}
+        {name &&
+          (fileUri && onOpenDocument ? (
+            <button
+              type="button"
+              className={styles.fileNameLink}
+              title={`Open ${filePath}`}
+              onClick={() => onOpenDocument(fileUri)}
+              data-testid="tool-card-file-link"
+            >
+              {name}
+            </button>
+          ) : (
+            <span className={styles.fileName} title={filePath}>
+              {name}
+            </span>
+          ))}
         {!inProgress && lines.length > 0 && (
           <>
             <span className={styles.spacer} />

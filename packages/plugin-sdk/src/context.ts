@@ -76,7 +76,8 @@ export type GrackleEventType =
   | "stream.created"
   | "stream.attached"
   | "stream.detached"
-  | "stream.closed";
+  | "stream.closed"
+  | "document.show";
 
 /** A domain event from the event bus. */
 export interface GrackleEvent {

@@ -53,7 +53,12 @@ export type GrackleEventType =
   | "stream.created"
   | "stream.attached"
   | "stream.detached"
-  | "stream.closed";
+  | "stream.closed"
+  // An agent asked the UI to open a read-only live view of a file (#1396 live
+  // docs v0). Emitted when the `show_file` MCP tool's result carries a document
+  // descriptor; the web `useDocuments` hook opens a tab bound to the URI
+  // reference (NOT baked content). payload: { environmentId, uri, sessionId }
+  | "document.show";
 
 /** A domain event emitted by the event bus. */
 export interface GrackleEvent {

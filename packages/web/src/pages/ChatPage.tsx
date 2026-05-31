@@ -55,6 +55,7 @@ export function ChatPage(): JSX.Element {
     },
     environments: { environments, provisionEnvironment },
     personas: { personas },
+    documents: { openDocument },
   } = useGrackle();
   const { showToast } = useToast();
 
@@ -93,6 +94,10 @@ export function ChatPage(): JSX.Element {
   const localEnvironment = environments.find(
     (e) => e.adapterType === "local" && e.status === "connected",
   );
+
+  // Environment to resolve clicked filepaths against: the active session's env,
+  // else the local env backing the root chat (#1396).
+  const docEnvironmentId: string | undefined = latestSession?.environmentId ?? localEnvironment?.id;
 
   const isSessionActive =
     latestSession !== undefined &&
@@ -175,6 +180,11 @@ export function ChatPage(): JSX.Element {
         sandboxProxyUrl={sandboxProxyUrl}
         emptyState={<ChatEmptyState hasLocalEnvironment={!!localEnvironment} />}
         onShowToast={showToast}
+        onOpenDocument={
+          docEnvironmentId
+            ? (uri) => openDocument({ environmentId: docEnvironmentId, uri }, { focus: true })
+            : undefined
+        }
       />
 
       {/* Single ChatInput instance so typed text survives isSessionActive flips */}
