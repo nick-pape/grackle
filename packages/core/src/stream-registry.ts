@@ -16,6 +16,7 @@ import { persistStreamMessage } from "@grackle-ai/database";
 import { logger } from "./logger.js";
 import { isReservedStreamName, LIFECYCLE_PREFIX } from "./stream-names.js";
 import { emitStreamMessage } from "./stream-message-bus.js";
+import { emit, type GrackleEventType } from "./event-bus.js";
 
 /**
  * Monotonic ULID generator for transcript sequence keys. Unlike plain `ulid()`,
@@ -230,6 +231,38 @@ function pruneDeliveredMessages(stream: Stream): void {
   }
 }
 
+/** Lifecycle event types emitted for observable rooms (#1309). */
+type StreamLifecycleType = Extract<
+  GrackleEventType,
+  "stream.created" | "stream.attached" | "stream.detached" | "stream.closed"
+>;
+
+/**
+ * Emit a room lifecycle domain event for an observable (non-reserved) stream so
+ * the Coordination roster stays live (#1309). Reserved plumbing streams
+ * (lifecycle:/pipe:/stdin:) are excluded — same boundary as the durable
+ * observation log in {@link publish}. Best-effort: a domain-event failure must
+ * never break subscription bookkeeping.
+ *
+ * @param type - The lifecycle event type.
+ * @param stream - The stream the event concerns.
+ * @param extra - Event-specific payload fields (merged with streamId + name).
+ */
+function emitStreamLifecycle(
+  type: StreamLifecycleType,
+  stream: Stream,
+  extra: Record<string, unknown> = {},
+): void {
+  if (isReservedStreamName(stream.name)) {
+    return;
+  }
+  try {
+    emit(type, { streamId: stream.id, name: stream.name, ...extra });
+  } catch (err) {
+    logger.error({ err, streamId: stream.id, type }, "Failed to emit stream lifecycle event");
+  }
+}
+
 // ─── Stream Lifecycle ─────────────────────────────────────────────────────────
 
 /** Create a new named stream. Names must be unique — throws if a stream with the same name exists. */
@@ -247,6 +280,7 @@ export function createStream(name: string, selfEcho: boolean = false): Stream {
   };
   streams.set(stream.id, stream);
   streamsByName.set(name, stream.id);
+  emitStreamLifecycle("stream.created", stream, { selfEcho });
   return stream;
 }
 
@@ -287,6 +321,7 @@ export function deleteStream(id: string): void {
   }
   streamsByName.delete(stream.name);
   streams.delete(id);
+  emitStreamLifecycle("stream.closed", stream);
 }
 
 // ─── Subscriptions ────────────────────────────────────────────────────────────
@@ -329,6 +364,8 @@ export function subscribe(
     syncQueues.set(sub.id, new AsyncQueue<StreamMessage>());
   }
 
+  emitStreamLifecycle("stream.attached", stream, { sessionId, permission, deliveryMode });
+
   // Fire revived callback when an external session subscribes to a lifecycle stream.
   // "External" means the subscriber is not the target session itself.
   if (revivedCallback && stream.name.startsWith(LIFECYCLE_PREFIX)) {
@@ -363,6 +400,7 @@ export function unsubscribe(subscriptionId: string): void {
   const stream = streams.get(sub.streamId);
   if (stream) {
     stream.subscriptions.delete(sub.id);
+    emitStreamLifecycle("stream.detached", stream, { sessionId: sub.sessionId });
     if (stream.subscriptions.size === 0) {
       // Clean up any pending delivery entries for messages in this stream
       for (const msg of stream.messages) {
@@ -370,6 +408,7 @@ export function unsubscribe(subscriptionId: string): void {
       }
       streamsByName.delete(stream.name);
       streams.delete(sub.streamId);
+      emitStreamLifecycle("stream.closed", stream);
     }
   }
 

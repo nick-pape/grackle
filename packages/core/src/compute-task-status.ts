@@ -87,3 +87,22 @@ function getLatestSession(
     return latest;
   });
 }
+
+/**
+ * Resolve the latest *live* (pending/running/idle) session id for a task from
+ * its session history. Pure function — no DB access, no side effects.
+ *
+ * Used by the operator stream control plane (#1309) to attach a task's live
+ * session to a room. Terminal-only or empty histories return `""` (the caller
+ * treats "no live session" as a precondition failure in T1; durable, re-applied
+ * attachment intent lands in T2 / #1310).
+ *
+ * @param sessions - All sessions for the task, in any order.
+ * @returns The id of the most recent active session, or `""` if none is live.
+ */
+export function getLatestLiveSessionId(
+  sessions: Pick<SessionRow, "id" | "status" | "startedAt">[],
+): string {
+  const live = sessions.filter((s) => ACTIVE_SESSION_STATUSES.has(s.status));
+  return live.length > 0 ? getLatestSession(live).id : "";
+}

@@ -1049,6 +1049,28 @@ declare namespace grackle {
         ListStreamsRequestSchema,
         ListStreamsResponse,
         ListStreamsResponseSchema,
+        OperatorCreateStreamRequest,
+        OperatorCreateStreamRequestSchema,
+        OperatorCreateStreamResponse,
+        OperatorCreateStreamResponseSchema,
+        OperatorAttachTaskRequest,
+        OperatorAttachTaskRequestSchema,
+        OperatorAttachTaskResponse,
+        OperatorAttachTaskResponseSchema,
+        OperatorDetachTaskRequest,
+        OperatorDetachTaskRequestSchema,
+        OperatorDetachTaskResponse,
+        OperatorDetachTaskResponseSchema,
+        TaskAttachment,
+        TaskAttachmentSchema,
+        ListTaskAttachmentsRequest,
+        ListTaskAttachmentsRequestSchema,
+        ListTaskAttachmentsResponse,
+        ListTaskAttachmentsResponseSchema,
+        OperatorCloseStreamRequest,
+        OperatorCloseStreamRequestSchema,
+        OperatorCloseStreamResponse,
+        OperatorCloseStreamResponseSchema,
         SessionEvent,
         SessionEventSchema,
         SessionEventList,
@@ -1516,6 +1538,31 @@ const GrackleCore: GenService<{
         methodKind: "unary";
         input: typeof ListStreamsRequestSchema;
         output: typeof ListStreamsResponseSchema;
+    };
+    operatorCreateStream: {
+        methodKind: "unary";
+        input: typeof OperatorCreateStreamRequestSchema;
+        output: typeof OperatorCreateStreamResponseSchema;
+    };
+    operatorAttachTask: {
+        methodKind: "unary";
+        input: typeof OperatorAttachTaskRequestSchema;
+        output: typeof OperatorAttachTaskResponseSchema;
+    };
+    operatorDetachTask: {
+        methodKind: "unary";
+        input: typeof OperatorDetachTaskRequestSchema;
+        output: typeof OperatorDetachTaskResponseSchema;
+    };
+    listTaskAttachments: {
+        methodKind: "unary";
+        input: typeof ListTaskAttachmentsRequestSchema;
+        output: typeof ListTaskAttachmentsResponseSchema;
+    };
+    operatorCloseStream: {
+        methodKind: "unary";
+        input: typeof OperatorCloseStreamRequestSchema;
+        output: typeof OperatorCloseStreamResponseSchema;
     };
     getVersionStatus: {
         methodKind: "unary";
@@ -2043,6 +2090,22 @@ type ListStreamsResponse = Message<"grackle.ListStreamsResponse"> & {
 const ListStreamsResponseSchema: GenMessage<ListStreamsResponse>;
 
 // @public
+type ListTaskAttachmentsRequest = Message<"grackle.ListTaskAttachmentsRequest"> & {
+    taskId: string;
+};
+
+// @public
+const ListTaskAttachmentsRequestSchema: GenMessage<ListTaskAttachmentsRequest>;
+
+// @public
+type ListTaskAttachmentsResponse = Message<"grackle.ListTaskAttachmentsResponse"> & {
+    attachments: TaskAttachment[];
+};
+
+// @public
+const ListTaskAttachmentsResponseSchema: GenMessage<ListTaskAttachmentsResponse>;
+
+// @public
 type ListTasksRequest = Message<"grackle.ListTasksRequest"> & {
     workspaceId: string;
     search: string;
@@ -2139,6 +2202,76 @@ const ModelSelectionSchema: GenMessage<ModelSelection>;
 
 // @public
 export function newReverseMapperContext(): ReverseMapperContext;
+
+// @public
+type OperatorAttachTaskRequest = Message<"grackle.OperatorAttachTaskRequest"> & {
+    taskId: string;
+    streamId: string;
+    permission: string;
+    deliveryMode: string;
+};
+
+// @public
+const OperatorAttachTaskRequestSchema: GenMessage<OperatorAttachTaskRequest>;
+
+// @public
+type OperatorAttachTaskResponse = Message<"grackle.OperatorAttachTaskResponse"> & {
+    sessionId: string;
+    fd: number;
+};
+
+// @public
+const OperatorAttachTaskResponseSchema: GenMessage<OperatorAttachTaskResponse>;
+
+// @public
+type OperatorCloseStreamRequest = Message<"grackle.OperatorCloseStreamRequest"> & {
+    streamId: string;
+};
+
+// @public
+const OperatorCloseStreamRequestSchema: GenMessage<OperatorCloseStreamRequest>;
+
+// @public
+type OperatorCloseStreamResponse = Message<"grackle.OperatorCloseStreamResponse"> & {
+    closed: boolean;
+};
+
+// @public
+const OperatorCloseStreamResponseSchema: GenMessage<OperatorCloseStreamResponse>;
+
+// @public
+type OperatorCreateStreamRequest = Message<"grackle.OperatorCreateStreamRequest"> & {
+    name: string;
+    selfEcho: boolean;
+};
+
+// @public
+const OperatorCreateStreamRequestSchema: GenMessage<OperatorCreateStreamRequest>;
+
+// @public
+type OperatorCreateStreamResponse = Message<"grackle.OperatorCreateStreamResponse"> & {
+    streamId: string;
+};
+
+// @public
+const OperatorCreateStreamResponseSchema: GenMessage<OperatorCreateStreamResponse>;
+
+// @public
+type OperatorDetachTaskRequest = Message<"grackle.OperatorDetachTaskRequest"> & {
+    taskId: string;
+    streamId: string;
+};
+
+// @public
+const OperatorDetachTaskRequestSchema: GenMessage<OperatorDetachTaskRequest>;
+
+// @public
+type OperatorDetachTaskResponse = Message<"grackle.OperatorDetachTaskResponse"> & {
+    detached: boolean;
+};
+
+// @public
+const OperatorDetachTaskResponseSchema: GenMessage<OperatorDetachTaskResponse>;
 
 // @public
 export const ORCHESTRATOR_MCP_TOOLS: readonly string[];
@@ -3147,6 +3280,18 @@ export const TASK_STATUS: {
     readonly COMPLETE: "complete";
     readonly FAILED: "failed";
 };
+
+// @public
+type TaskAttachment = Message<"grackle.TaskAttachment"> & {
+    streamId: string;
+    streamName: string;
+    sessionId: string;
+    permission: string;
+    deliveryMode: string;
+};
+
+// @public
+const TaskAttachmentSchema: GenMessage<TaskAttachment>;
 
 // @public
 type TaskId = Message<"grackle.TaskId"> & {

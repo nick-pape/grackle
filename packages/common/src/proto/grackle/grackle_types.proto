@@ -357,6 +357,67 @@ message ListStreamsResponse {
   repeated StreamInfo streams = 1;
 }
 
+// ─── Operator stream control plane (#1309) ──────────────────
+// Operator-facing RPCs let a human (via the server) create/attach/detach/close
+// streams without being an agent holding an fd. The server-side `operator:*`
+// principal anchors a room so it survives at zero agents and appears in the
+// roster. Attachment here is ephemeral (resolves task -> latest live session);
+// durable task-keyed intent lands in T2 (#1310).
+
+message OperatorCreateStreamRequest {
+  string name = 1;       // Room name (must be unique, must not use a reserved prefix)
+  bool self_echo = 2;    // When true, publishers receive their own messages echoed back (chatroom mode)
+}
+
+message OperatorCreateStreamResponse {
+  string stream_id = 1;  // Opaque stream identifier
+}
+
+message OperatorAttachTaskRequest {
+  string task_id = 1;        // Task to attach (its latest live session is subscribed)
+  string stream_id = 2;      // Stream to attach the session to
+  string permission = 3;     // "r", "w", or "rw" (default "rw")
+  string delivery_mode = 4;  // "sync", "async", or "detach" (default "async")
+}
+
+message OperatorAttachTaskResponse {
+  string session_id = 1;     // The live session that was attached
+  int32 fd = 2;              // The fd allocated on that session
+}
+
+message OperatorDetachTaskRequest {
+  string task_id = 1;        // Task whose latest live session is detached
+  string stream_id = 2;      // Stream to detach from
+}
+
+message OperatorDetachTaskResponse {
+  bool detached = 1;         // True if a subscription was found and removed
+}
+
+message TaskAttachment {
+  string stream_id = 1;
+  string stream_name = 2;
+  string session_id = 3;     // The live session holding the attachment
+  string permission = 4;     // "r", "w", or "rw"
+  string delivery_mode = 5;  // "sync", "async", or "detach"
+}
+
+message ListTaskAttachmentsRequest {
+  string task_id = 1;
+}
+
+message ListTaskAttachmentsResponse {
+  repeated TaskAttachment attachments = 1;
+}
+
+message OperatorCloseStreamRequest {
+  string stream_id = 1;      // Stream to close (evict all subscribers, incl. the operator anchor)
+}
+
+message OperatorCloseStreamResponse {
+  bool closed = 1;           // True if the stream existed and was removed
+}
+
 // ─── Streaming Events ───────────────────────────────────────
 
 message SessionEvent {

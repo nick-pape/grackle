@@ -41,7 +41,19 @@ export type GrackleEventType =
   // worktree (#1395). Forwarded from the AHP resource-watch channel; the web
   // `useResources` hook re-reads the affected URIs. payload:
   // { environmentId, uri, changes: [{ uri, type }] }
-  | "resource.changed";
+  | "resource.changed"
+  // IPC stream (room) lifecycle (#1309). Emitted from the stream registry for
+  // observable (non-reserved) rooms so the Coordination roster updates live as
+  // streams are created/joined/left/closed by either agents or the operator.
+  // payloads:
+  //   stream.created  { streamId, name, selfEcho }
+  //   stream.attached { streamId, name, sessionId, permission, deliveryMode }
+  //   stream.detached { streamId, name, sessionId }
+  //   stream.closed   { streamId, name }
+  | "stream.created"
+  | "stream.attached"
+  | "stream.detached"
+  | "stream.closed";
 
 /** A domain event emitted by the event bus. */
 export interface GrackleEvent {

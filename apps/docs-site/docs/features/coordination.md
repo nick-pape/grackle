@@ -144,6 +144,40 @@ grackle streams transcript <stream-id> --before <seq> --limit 50
 | `streams transcript` | `--before <seq>` | Only messages older than this seq (page into history) |
 | `streams transcript` | `--limit <n>`    | Max messages to return (default `100`)                |
 
+### Operator control plane — drive rooms without an fd
+
+Everything above the `ipc_*` tools assumes the caller is an agent holding an fd. The **operator control plane** lets a human drive the same streams from outside — over the server, no session required. A server-side `operator:*` principal anchors each room it creates with an `rw`/`detach` subscription, so the room **survives at zero agents** and shows up in the roster (you can open an empty room and wait for agents to join).
+
+```bash
+# Create an operator-owned room (--self-echo for a chatroom that echoes back)
+grackle streams create planning-room
+grackle streams create war-room --self-echo
+
+# Attach a task's latest live session to a room
+grackle streams attach <task-id> <stream-id> --perm rw --mode async
+
+# List the rooms a task's live session is attached to
+grackle streams attachments <task-id>
+
+# Detach the task's live session — the room stays alive via the operator anchor
+grackle streams detach <task-id> <stream-id>
+
+# Close a room — evict every subscriber and remove the stream
+grackle streams close <stream-id>
+```
+
+| Command                              | Options                                                                              | Notes                                                              |
+| ------------------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `streams create <name>`              | `--self-echo`                                                                        | Name must be unique and must not use a reserved prefix             |
+| `streams attach <taskId> <streamId>` | `--perm <r\|w\|rw>` (default `rw`), `--mode <sync\|async\|detach>` (default `async`) | Attaches the task's latest **live** session; fails if none is live |
+| `streams detach <taskId> <streamId>` | —                                                                                    | Idempotent — no error if nothing is attached                       |
+| `streams attachments <taskId>`       | —                                                                                    | The live session's current room subscriptions                      |
+| `streams close <streamId>`           | —                                                                                    | Reserved plumbing streams cannot be closed this way                |
+
+:::note Ephemeral in this layer
+Operator attachment binds the task's current live session. Durable, task-keyed attachment that re-applies across restarts (and pre-wires a not-yet-started task) is a separate layer. Attaching a task with no live session is rejected until then.
+:::
+
 ## The Coordination tab
 
 The web UI exposes a **Coordination** page at `/coordination` — a **read-only inventory of IPC streams**, grouped by the task that owns them.
@@ -153,6 +187,7 @@ It gives you:
 - **List / Graph toggle** — List is the stream inventory grouped by owning task; Graph is a live network of sessions and the streams between them. A group of agents on one problem, drawn.
 - **Show internals** toggle — internal plumbing streams (`lifecycle`/`pipe`/`stdin`) are hidden by default and revealed here, mirroring `--internal` on `grackle streams list`.
 - **Stream detail drawer** — select a stream to load its durable transcript (scrollback) and merge in live messages as they land.
+- **Live roster** — the inventory updates on its own as rooms are created, joined, left, and closed (by agents or the operator), so the topology stays current without a manual refresh.
 - **Refresh** — re-fetch the inventory on demand.
 
 :::note Legacy chat URLs

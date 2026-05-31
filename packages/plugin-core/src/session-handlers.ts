@@ -31,7 +31,8 @@ import { recoverSuspendedSessions } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
 import { reanimateAgent } from "@grackle-ai/core";
 import { streamRegistry } from "@grackle-ai/core";
-import { RESERVED_PREFIXES, isReservedStreamName } from "@grackle-ai/core";
+import { RESERVED_PREFIXES, isReservedStreamName, OPERATOR_PRINCIPAL } from "@grackle-ai/core";
+import { getLatestLiveSessionId } from "@grackle-ai/core";
 import { pipeDelivery } from "@grackle-ai/core";
 import { logWriter } from "@grackle-ai/core";
 import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
@@ -763,6 +764,201 @@ export async function listStreams(
       });
     }),
   });
+}
+
+// ─── Operator Stream Control Plane (#1309) ─────────────────────────────────────
+
+/**
+ * Resolve a task's latest live (pending/running/idle) session, or throw if the
+ * task is unknown. Shared by the operator attach/detach/list handlers.
+ *
+ * @param taskId - The task whose live session to resolve.
+ * @returns The latest live session id, or `""` if the task has no live session.
+ */
+function resolveLiveSessionForTask(taskId: string): string {
+  const task = taskStore.getTask(taskId);
+  if (!task) {
+    throw new ConnectError(`Task not found: ${taskId}`, Code.NotFound);
+  }
+  return getLatestLiveSessionId(sessionStore.listSessionsForTask(taskId));
+}
+
+/**
+ * Create an operator-owned room. Unlike {@link createStream} (agent-driven, needs
+ * a creator session), this is human-driven via the server: it plants the
+ * `operator:*` anchor (`rw`/`detach`) so the room survives at zero agents and
+ * appears in the roster. Reserved-prefix and duplicate names are rejected.
+ */
+export async function operatorCreateStream(
+  req: grackle.OperatorCreateStreamRequest,
+): Promise<grackle.OperatorCreateStreamResponse> {
+  if (!req.name) {
+    throw new ConnectError("name is required", Code.InvalidArgument);
+  }
+  if (RESERVED_PREFIXES.some((prefix) => req.name.startsWith(prefix))) {
+    throw new ConnectError(
+      `Stream name "${req.name}" uses a reserved prefix`,
+      Code.InvalidArgument,
+    );
+  }
+
+  let stream;
+  try {
+    stream = streamRegistry.createStream(req.name, req.selfEcho);
+  } catch {
+    throw new ConnectError(`Stream name "${req.name}" already exists`, Code.AlreadyExists);
+  }
+
+  // Anchor the room with the operator principal: `rw` so a later OperatorPublish
+  // (T5) can write, `detach` so the server-side principal holds the room open and
+  // shows in the roster without being async-pushed messages.
+  streamRegistry.subscribe(stream.id, OPERATOR_PRINCIPAL, "rw", "detach", false);
+
+  return create(grackle.OperatorCreateStreamResponseSchema, { streamId: stream.id });
+}
+
+/**
+ * Attach a task's latest live session to a stream (operator-driven). The
+ * attachment is ephemeral in T1 — it lives with the resolved session; durable,
+ * re-applied task-keyed intent lands in T2 (#1310). Fails with FailedPrecondition
+ * when the task has no live session to attach.
+ */
+export async function operatorAttachTask(
+  req: grackle.OperatorAttachTaskRequest,
+): Promise<grackle.OperatorAttachTaskResponse> {
+  if (!req.taskId) {
+    throw new ConnectError("task_id is required", Code.InvalidArgument);
+  }
+  if (!req.streamId) {
+    throw new ConnectError("stream_id is required", Code.InvalidArgument);
+  }
+
+  const stream = streamRegistry.getStream(req.streamId);
+  if (!stream) {
+    throw new ConnectError(`Stream not found: ${req.streamId}`, Code.NotFound);
+  }
+
+  const permission = req.permission || "rw";
+  const deliveryMode = req.deliveryMode || "async";
+  validateSubscriptionParams(permission, deliveryMode);
+
+  const sessionId = resolveLiveSessionForTask(req.taskId);
+  if (!sessionId) {
+    throw new ConnectError(
+      `Task ${req.taskId} has no live session to attach (durable attach lands in T2)`,
+      Code.FailedPrecondition,
+    );
+  }
+
+  const sub = streamRegistry.subscribe(
+    req.streamId,
+    sessionId,
+    permission as "r" | "w" | "rw",
+    deliveryMode as "sync" | "async" | "detach",
+    false,
+  );
+
+  if (deliveryMode === "async") {
+    pipeDelivery.ensureAsyncDeliveryListener(sessionId);
+  }
+
+  return create(grackle.OperatorAttachTaskResponseSchema, { sessionId, fd: sub.fd });
+}
+
+/**
+ * Detach a task's latest live session from a stream (operator-driven). The
+ * operator anchor keeps the room alive after the agent leaves. Idempotent:
+ * returns `detached=false` when the task has no live session or no matching
+ * subscription on the stream.
+ */
+export async function operatorDetachTask(
+  req: grackle.OperatorDetachTaskRequest,
+): Promise<grackle.OperatorDetachTaskResponse> {
+  if (!req.taskId) {
+    throw new ConnectError("task_id is required", Code.InvalidArgument);
+  }
+  if (!req.streamId) {
+    throw new ConnectError("stream_id is required", Code.InvalidArgument);
+  }
+
+  const sessionId = resolveLiveSessionForTask(req.taskId);
+  if (!sessionId) {
+    return create(grackle.OperatorDetachTaskResponseSchema, { detached: false });
+  }
+
+  const sub = streamRegistry
+    .getSubscriptionsForSession(sessionId)
+    .find((s) => s.streamId === req.streamId);
+  if (!sub) {
+    return create(grackle.OperatorDetachTaskResponseSchema, { detached: false });
+  }
+
+  streamRegistry.unsubscribe(sub.id);
+  pipeDelivery.cleanupAsyncListenerIfEmpty(sessionId);
+
+  return create(grackle.OperatorDetachTaskResponseSchema, { detached: true });
+}
+
+/**
+ * List the rooms a task's latest live session is attached to (operator-driven).
+ * Reserved plumbing streams are excluded. In T1 this reflects the live session's
+ * current subscriptions; durable task-keyed intent (including not-yet-started
+ * tasks) lands in T2 (#1310).
+ */
+export async function listTaskAttachments(
+  req: grackle.ListTaskAttachmentsRequest,
+): Promise<grackle.ListTaskAttachmentsResponse> {
+  if (!req.taskId) {
+    throw new ConnectError("task_id is required", Code.InvalidArgument);
+  }
+
+  const sessionId = resolveLiveSessionForTask(req.taskId);
+  if (!sessionId) {
+    return create(grackle.ListTaskAttachmentsResponseSchema, { attachments: [] });
+  }
+
+  const attachments = streamRegistry
+    .getSubscriptionsForSession(sessionId)
+    .map((sub) => ({ sub, stream: streamRegistry.getStream(sub.streamId) }))
+    .filter((entry) => entry.stream && !isReservedStreamName(entry.stream.name))
+    .map((entry) =>
+      create(grackle.TaskAttachmentSchema, {
+        streamId: entry.sub.streamId,
+        streamName: entry.stream!.name,
+        sessionId,
+        permission: entry.sub.permission,
+        deliveryMode: entry.sub.deliveryMode,
+      }),
+    );
+
+  return create(grackle.ListTaskAttachmentsResponseSchema, { attachments });
+}
+
+/**
+ * Close an operator room — evict all subscribers (including the operator anchor)
+ * and remove the stream. Reserved plumbing streams cannot be closed this way.
+ */
+export async function operatorCloseStream(
+  req: grackle.OperatorCloseStreamRequest,
+): Promise<grackle.OperatorCloseStreamResponse> {
+  if (!req.streamId) {
+    throw new ConnectError("stream_id is required", Code.InvalidArgument);
+  }
+
+  const stream = streamRegistry.getStream(req.streamId);
+  if (!stream) {
+    throw new ConnectError(`Stream not found: ${req.streamId}`, Code.NotFound);
+  }
+  if (isReservedStreamName(stream.name)) {
+    throw new ConnectError(
+      `Stream "${stream.name}" is an internal plumbing stream and cannot be closed`,
+      Code.InvalidArgument,
+    );
+  }
+
+  streamRegistry.deleteStream(req.streamId);
+
+  return create(grackle.OperatorCloseStreamResponseSchema, { closed: true });
 }
 
 /** List sessions with optional filters. */
