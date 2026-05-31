@@ -26,6 +26,14 @@ import { usePlugins } from "./usePlugins.js";
 import { useStreams } from "./useStreams.js";
 import { useGitHubAccounts } from "./useGitHubAccounts.js";
 import { useResources } from "./useResources.js";
+import { useDocuments } from "./useDocuments.js";
+
+/** No-op resource bridge for exercising useDocuments without the gRPC client. */
+const mockBridge = {
+  readResource: async () => ({ data: "", encoding: "utf-8", contentType: "" }),
+  watchResource: async () => "mock-watch-id",
+  unwatchResource: async () => {},
+};
 
 // ---------------------------------------------------------------------------
 // Mock grackleClient (all hooks import it)
@@ -144,6 +152,7 @@ type _Plg = AssertHasDomainHook<ReturnType<typeof usePlugins>>;
 type _Str = AssertHasDomainHook<ReturnType<typeof useStreams>>;
 type _GhA = AssertHasDomainHook<ReturnType<typeof useGitHubAccounts>>;
 type _Res = AssertHasDomainHook<ReturnType<typeof useResources>>;
+type _Doc = AssertHasDomainHook<ReturnType<typeof useDocuments>>;
 
 // Suppress unused-variable warnings — these exist solely for the type check
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -163,7 +172,8 @@ type _All =
   | _Plg
   | _Str
   | _GhA
-  | _Res;
+  | _Res
+  | _Doc;
 
 // ---------------------------------------------------------------------------
 // Runtime tests
@@ -198,10 +208,11 @@ const ALL_HOOKS = [
   { name: "useStreams", hook: useStreams },
   { name: "useGitHubAccounts", hook: useGitHubAccounts },
   { name: "useResources", hook: useResources },
+  { name: "useDocuments", hook: () => useDocuments(mockBridge) },
 ] as const;
 
 /** Expected number of domain hooks. Bump this when adding a new hook. */
-const EXPECTED_HOOK_COUNT = 16;
+const EXPECTED_HOOK_COUNT = 17;
 
 describe("DomainHook registry", () => {
   it(`has exactly ${EXPECTED_HOOK_COUNT} registered hooks`, () => {

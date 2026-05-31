@@ -64,6 +64,7 @@ export function TaskPage(): JSX.Element {
     environments: { environments, provisionEnvironment },
     workspaces: { workspaces },
     personas: { personas },
+    documents: { openDocument },
     usageCache,
     loadUsage,
   } = useGrackle();
@@ -133,6 +134,12 @@ export function TaskPage(): JSX.Element {
   } else {
     sessionId = task?.latestSessionId || undefined;
   }
+
+  // Environment to resolve clicked filepaths against: the shown session's env,
+  // else the selected start-env (#1396).
+  const docEnvironmentId: string | undefined =
+    (sessionId ? sessions.find((s) => s.id === sessionId)?.environmentId : undefined) ??
+    (selectedEnvId !== "" ? selectedEnvId : undefined);
 
   const handleDeleteTask = (): void => {
     setShowDeleteConfirm(true);
@@ -455,6 +462,11 @@ export function TaskPage(): JSX.Element {
                 ) : undefined
               }
               onShowToast={showToast}
+              onOpenDocument={
+                docEnvironmentId
+                  ? (uri) => openDocument({ environmentId: docEnvironmentId, uri })
+                  : undefined
+              }
             />
           </motion.div>
         )}

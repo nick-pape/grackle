@@ -24,4 +24,10 @@ export interface ToolCardProps {
    * non-delegation tools.
    */
   childSessionId?: string;
+  /**
+   * Open a file in the live-docs pane (#1396). When provided, file cards render
+   * their target path as a clickable link that opens a read-only view. Wired
+   * from the page with the environment bound.
+   */
+  onOpenDocument?: (uri: string) => void;
 }

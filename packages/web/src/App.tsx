@@ -12,6 +12,7 @@ import {
   CONTEXTS,
   DEFAULT_CONTEXT_ID,
   BottomStatusBar,
+  DocPane,
   ToastContainer,
   SplashScreen,
   DemoBanner,
@@ -111,6 +112,8 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
     environments: { environments },
     sessions: { sessions },
     tasks: { tasks },
+    documents,
+    resources,
   } = useGrackle();
   const { toasts, dismissToast } = useToast();
   const location = useLocation();
@@ -220,6 +223,18 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
               <Outlet />
               <BottomStatusBar sessions={sessions} tasks={tasks} environments={environments} />
             </div>
+            {/* Live-docs pane (#1396): read-only file viewer, opened by the
+                show_file MCP tool or by clicking a filepath in chat. Renders
+                nothing while no documents are open. */}
+            <DocPane
+              tabs={documents.tabs}
+              activeTabId={documents.activeTabId}
+              unseenTabIds={documents.unseenTabIds}
+              getContent={resources.getResourceContent}
+              onSelectTab={documents.setActiveTab}
+              onCloseTab={documents.closeTab}
+              onOpenUri={(environmentId, uri) => documents.openDocument({ environmentId, uri })}
+            />
           </div>
         </div>
       </div>

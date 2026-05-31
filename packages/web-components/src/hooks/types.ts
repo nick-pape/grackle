@@ -1000,6 +1000,54 @@ export interface UseResourcesResult {
   domainHook: DomainHook;
 }
 
+// ─── Documents hook result (live docs v0 viewer, #1396) ──────────────────────
+
+/** An open document tab in the live-docs pane — one resource subscription per tab. */
+export interface DocumentTab {
+  /** Stable tab id (`${environmentId} ${uri}`). */
+  id: string;
+  /** Environment whose worktree owns the file. */
+  environmentId: string;
+  /** The `file://` resource URI this tab renders. */
+  uri: string;
+  /** Display label (the file's basename). */
+  title: string;
+}
+
+/**
+ * Values returned by the documents domain hook (#1396). Manages the read-only
+ * live-document pane: open tabs (each a resource subscription via the bridge,
+ * #1395), the active tab, and pane visibility. The `document.show` domain event
+ * (from the agent's `show_file` tool) and human filepath clicks both funnel
+ * through {@link UseDocumentsResult.openDocument}.
+ */
+export interface UseDocumentsResult {
+  /** Currently open document tabs (insertion order). */
+  tabs: DocumentTab[];
+  /** Id of the active tab, or `undefined` when the pane is empty. */
+  activeTabId: string | undefined;
+  /** Whether the document pane is shown (true while any tab is open). */
+  paneOpen: boolean;
+  /** Ids of tabs whose content changed while they were not the active tab (badge). */
+  unseenTabIds: string[];
+  /**
+   * Open (or re-activate) a document tab bound to an environment + `file://`
+   * URI. Dedupes by `(environmentId, uri)`. Starts a resource watch and an
+   * initial read. `focus` defaults to `false` (add tab + badge, do not steal
+   * focus); the `document.show` event always opens unfocused.
+   */
+  openDocument: (
+    args: { environmentId: string; uri: string },
+    options?: { focus?: boolean },
+  ) => void;
+  /** Close a tab by id (stops its watch). */
+  closeTab: (tabId: string) => void;
+  /** Make a tab active (clears its unseen badge). */
+  setActiveTab: (tabId: string) => void;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
+}
+
 /** Delay in milliseconds before attempting a WebSocket reconnect. */
 export const WS_RECONNECT_DELAY_MS: number = 3_000;
 
