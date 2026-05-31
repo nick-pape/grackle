@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "packageName": "@grackle-ai/cli",
+      "comment": "Live docs v0: tabbed read-only file viewer. Adds a show_file MCP tool and a document.show domain event that open a split-pane, live-refreshing view of a file (markdown via react-markdown, code/text via CodeMirror 6 read-only), plus clickable file paths in the chat (#1396).",
+      "type": "minor"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "nickpape@outlook.com"
+}

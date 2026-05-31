@@ -23,6 +23,7 @@ import {
   initOtlpLogs,
   importAccountsFromGhCli,
   publishWidgetEvent,
+  publishDocumentShow,
   setSpawnContextProviders,
 } from "@grackle-ai/core";
 import { createKnowledgePlugin, getKnowledgeReadinessCheck } from "@grackle-ai/plugin-knowledge";
@@ -513,6 +514,7 @@ async function main(): Promise<void> {
     authorizationServerUrl: authServerUrl,
     toolGroups: pluginToolGroups,
     publishWidgetEvent,
+    publishDocumentShow,
     ...(secureContext ? { secureContext } : {}),
     // Push tools/list_changed to a workspace's MCP sessions when its promoted
     // component set changes (#1297), via the domain-event bus.

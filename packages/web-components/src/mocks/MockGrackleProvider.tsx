@@ -1385,6 +1385,24 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         },
       },
 
+      // ── Documents (live docs v0 viewer #1396) ───────
+
+      documents: {
+        tabs: [],
+        activeTabId: undefined,
+        paneOpen: false,
+        unseenTabIds: [],
+        openDocument: (args: { environmentId: string; uri: string }) => {
+          console.log("[MockGrackle] openDocument", args.environmentId, args.uri);
+        },
+        closeTab: (tabId: string) => {
+          console.log("[MockGrackle] closeTab", tabId);
+        },
+        setActiveTab: (tabId: string) => {
+          console.log("[MockGrackle] setActiveTab", tabId);
+        },
+      },
+
       // ── Plugins ─────────────────────────────────────
 
       plugins: {

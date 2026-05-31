@@ -115,6 +115,47 @@ export function publishWidgetEvent(sessionId: string, payload: WidgetEventPayloa
   }
 }
 
+/** Payload for a `document.show` domain event (live docs v0, #1396). */
+export interface DocumentShowPayload {
+  /** The `file://` resource URI the UI should open a read-only live view of. */
+  uri: string;
+}
+
+/**
+ * Callback that emits a `document.show` domain event for a session (injected
+ * into the MCP server, mirroring {@link PublishWidgetEvent}).
+ */
+export type PublishDocumentShow = (sessionId: string, payload: DocumentShowPayload) => void;
+
+/**
+ * Emit a `document.show` domain event so the web `useDocuments` hook opens a
+ * read-only live view of a file (#1396 live docs v0).
+ *
+ * Called by Grackle's MCP server (the broker) when an agent invokes `show_file`.
+ * Unlike the widget broker — which bakes HTML into a persisted session event —
+ * this carries only the URI **reference** and rides the domain-event bus (like
+ * `resource.changed`), so the doc stays live for multiple viewers and the tab is
+ * client UI state rather than chat-stream content. The `environmentId` is
+ * resolved from the session here (so the caller only supplies the URI).
+ * Non-fatal on error / unknown session.
+ */
+export function publishDocumentShow(sessionId: string, payload: DocumentShowPayload): void {
+  try {
+    const session = sessionStore.getSession(sessionId);
+    if (!session) {
+      logger.warn({ sessionId }, "Cannot publish document.show: unknown session");
+      return;
+    }
+    emit("document.show", {
+      environmentId: session.environmentId,
+      uri: payload.uri,
+      sessionId,
+    });
+  } catch (err) {
+    logger.error({ err, sessionId }, "Failed to publish document.show event");
+  }
+}
+
 /**
  * Process an async iterable of agent events from a PowerLine spawn or resume stream.
  * Handles event transformation, logging, status updates, and cleanup.

@@ -8,7 +8,7 @@ import {
   type JSX,
 } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import Markdown from "react-markdown";
+import Markdown, { type Components, type ExtraProps } from "react-markdown";
 import rehypePrismPlus from "rehype-prism-plus/common";
 import remarkGfm from "remark-gfm";
 import type { SessionEvent } from "../../hooks/types.js";
@@ -38,6 +38,8 @@ interface Props {
   settled?: boolean;
   /** Sandbox proxy origin URL for rendering MCP Apps widget events (different origin than the app). */
   sandboxProxyUrl?: string;
+  /** Open a file in the live-docs pane (#1396) — makes `file://` links and tool file paths clickable. */
+  onOpenDocument?: (uri: string) => void;
 }
 
 /**
@@ -153,34 +155,62 @@ function CodeBlockWrapper({ children, node, ...preProps }: PreProps): JSX.Elemen
   );
 }
 
-/** Markdown component overrides for adding copy buttons to code blocks. */
-const markdownComponents: Record<string, typeof CodeBlockWrapper> = {
-  pre: CodeBlockWrapper,
-};
-
 /**
  * Renders a markdown string with GFM support and syntax-highlighted code blocks.
  *
  * Shared by both assistant text events and user input events so the two render
- * through an identical pipeline.
+ * through an identical pipeline. When `onOpenDocument` is provided, `file://`
+ * links open in the live-docs pane instead of navigating (#1396).
  */
-function MarkdownContent({ content }: { content: string }): JSX.Element {
+function MarkdownContent({
+  content,
+  onOpenDocument,
+}: {
+  content: string;
+  onOpenDocument?: (uri: string) => void;
+}): JSX.Element {
+  const components: Components = {
+    pre: CodeBlockWrapper,
+    a(props: JSX.IntrinsicElements["a"] & ExtraProps) {
+      const { href, children } = props;
+      if (href && href.startsWith("file://") && onOpenDocument) {
+        return (
+          <a
+            href={href}
+            onClick={(e) => {
+              e.preventDefault();
+              onOpenDocument(href);
+            }}
+          >
+            {children}
+          </a>
+        );
+      }
+      return (
+        <a href={href} target="_blank" rel="noreferrer noopener">
+          {children}
+        </a>
+      );
+    },
+  };
   return (
-    <Markdown
-      remarkPlugins={[remarkGfm]}
-      rehypePlugins={[rehypePrismPlus]}
-      components={markdownComponents}
-    >
+    <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrismPlus]} components={components}>
       {content}
     </Markdown>
   );
 }
 
 /** Renders an assistant text output event with markdown formatting. */
-function TextEvent({ content }: { content: string }): JSX.Element {
+function TextEvent({
+  content,
+  onOpenDocument,
+}: {
+  content: string;
+  onOpenDocument?: (uri: string) => void;
+}): JSX.Element {
   return (
     <div className={styles.textEvent}>
-      <MarkdownContent content={content} />
+      <MarkdownContent content={content} onOpenDocument={onOpenDocument} />
     </div>
   );
 }
@@ -248,7 +278,13 @@ function DefaultEvent({ content }: { content: string }): JSX.Element {
 // --- Main component ---
 
 /** Renders a single session event, dispatching to the appropriate type-specific renderer. */
-export function EventRenderer({ event, toolUseCtx, settled, sandboxProxyUrl }: Props): JSX.Element {
+export function EventRenderer({
+  event,
+  toolUseCtx,
+  settled,
+  sandboxProxyUrl,
+  onOpenDocument,
+}: Props): JSX.Element {
   const time = new Date(event.timestamp).toLocaleTimeString();
 
   switch (event.eventType) {
@@ -336,7 +372,7 @@ export function EventRenderer({ event, toolUseCtx, settled, sandboxProxyUrl }: P
     }
     case "text":
     case "output":
-      return <TextEvent content={event.content} />;
+      return <TextEvent content={event.content} onOpenDocument={onOpenDocument} />;
     case "tool_use": {
       let tool = "";
       let args: unknown = {};
@@ -355,6 +391,7 @@ export function EventRenderer({ event, toolUseCtx, settled, sandboxProxyUrl }: P
           args={args}
           result={settled ? "" : undefined}
           childSessionId={delegationChildId(event.sessionId, event.toolCallId, tool, args)}
+          onOpenDocument={onOpenDocument}
         />
       );
     }
@@ -416,12 +453,19 @@ export function EventRenderer({ event, toolUseCtx, settled, sandboxProxyUrl }: P
               toolUseCtx.tool,
               toolUseCtx.args,
             )}
+            onOpenDocument={onOpenDocument}
           />
         );
       }
       // Unpaired tool_result — use generic card with fallback label
       return (
-        <ToolCard tool="Tool output" args={undefined} result={resultContent} isError={isError} />
+        <ToolCard
+          tool="Tool output"
+          args={undefined}
+          result={resultContent}
+          isError={isError}
+          onOpenDocument={onOpenDocument}
+        />
       );
     }
     case "error":

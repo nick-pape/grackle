@@ -108,6 +108,7 @@ export function SessionPage(): JSX.Element {
     tasks: { startTask },
     personas: { personas },
     environments: { environments, provisionEnvironment },
+    documents: { openDocument },
   } = useGrackle();
   const { showToast } = useToast();
   const loadedRef = useRef<string | undefined>(undefined);
@@ -164,6 +165,11 @@ export function SessionPage(): JSX.Element {
         environments={environments}
         personas={personas}
         onForward={(targetSessionId, text) => sendInput(targetSessionId, text)}
+        onOpenDocument={
+          session
+            ? (uri) => openDocument({ environmentId: session.environmentId, uri }, { focus: true })
+            : undefined
+        }
       />
       {isActive && (
         <ChatInput

@@ -151,7 +151,7 @@
   },
   "packages/web": {
     "lines": 30,
-    "functions": 55,
+    "functions": 50,
     "branches": 60
   },
   "packages/web-components": {

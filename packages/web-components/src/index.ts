@@ -44,6 +44,10 @@ export { SessionAttemptSelector } from "./components/display/SessionAttemptSelec
 export type { SessionAttemptSelectorProps } from "./components/display/SessionAttemptSelector.js";
 export { SessionPicker } from "./components/display/SessionPicker.js";
 export type { SessionPickerProps, SessionPickerEntry } from "./components/display/SessionPicker.js";
+export { DocPane } from "./components/docpane/DocPane.js";
+export type { DocPaneProps } from "./components/docpane/DocPane.js";
+export { resolvePreviewKind } from "./components/docpane/PreviewRegistry.js";
+export type { PreviewKind } from "./components/docpane/PreviewRegistry.js";
 export { SessionsTable } from "./components/sessions/SessionsTable.js";
 export type { SessionsTableProps } from "./components/sessions/SessionsTable.js";
 export { describeSessionStatus, isActiveSession } from "./components/sessions/sessionsView.js";
@@ -243,6 +247,8 @@ export type {
   GitHubAccountData,
   UseResourcesResult,
   ResourceContentState,
+  UseDocumentsResult,
+  DocumentTab,
   DomainHook,
   ConnectionStatus,
 } from "./hooks/types.js";
