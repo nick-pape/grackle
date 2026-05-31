@@ -34,16 +34,31 @@ export interface AgentManagerProps {
 }
 
 /**
- * True when the avatar string points to a renderable image source. Only
- * `http(s)://`, root-relative paths, and `data:image/...` URIs qualify; other
- * `data:` MIME types (e.g. `text/html`) are rejected so they fall through to
- * the glyph branch instead of becoming an `<img src>`. See CodeQL alert #26.
+ * Allowed `data:` URI subtypes for inline avatars. Excludes `svg+xml`, which
+ * can embed `<script>`/event-handler payloads — modern browsers don't execute
+ * scripts inside SVGs rendered via `<img>`, but CodeQL flags the flow anyway
+ * (`js/xss-through-dom`), and there's no real UX cost to dropping SVG support
+ * for a paste-an-image-string avatar field.
+ */
+const SAFE_DATA_IMAGE_PREFIXES: readonly string[] = [
+  "data:image/png;",
+  "data:image/jpeg;",
+  "data:image/gif;",
+  "data:image/webp;",
+];
+
+/**
+ * True when the avatar string points to a renderable image source. Allows
+ * `http(s)://`, root-relative paths, and a fixed allow-list of safe `data:`
+ * image MIME types; anything else (other `data:` schemes, `javascript:`,
+ * `vbscript:`, etc.) falls through to the inline-glyph branch instead of
+ * becoming an `<img src>`. See CodeQL alerts #26 and #27.
  */
 function isImageAvatar(avatar: string): boolean {
   if (avatar.startsWith("http://") || avatar.startsWith("https://") || avatar.startsWith("/")) {
     return true;
   }
-  return avatar.startsWith("data:image/");
+  return SAFE_DATA_IMAGE_PREFIXES.some((p) => avatar.startsWith(p));
 }
 
 /** Render an agent's avatar: image, emoji glyph, or a name-derived monogram. */

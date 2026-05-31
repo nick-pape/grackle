@@ -112,17 +112,28 @@ const AGENT_CONTEXT_PREFIX: string = "agent:";
 const AGENT_ICON_SIZE_PX: number = 18;
 
 /**
- * True when the avatar string points to a renderable image source. Only
- * `http(s)://`, root-relative paths, and `data:image/...` URIs qualify; other
- * `data:` MIME types (e.g. `text/html`) are rejected so they fall through to
- * the glyph branch instead of becoming an `<img src>` — same policy as the
- * full-size `AvatarPreview` in `AgentManager`.
+ * Allowed `data:` URI subtypes for inline avatars. Excludes `svg+xml` (can
+ * carry script payloads). Mirrors the allow-list in `AgentManager`.
+ */
+const SAFE_DATA_IMAGE_PREFIXES: readonly string[] = [
+  "data:image/png;",
+  "data:image/jpeg;",
+  "data:image/gif;",
+  "data:image/webp;",
+];
+
+/**
+ * True when the avatar string points to a renderable image source. Allows
+ * `http(s)://`, root-relative paths, and a fixed allow-list of safe `data:`
+ * image MIME types; anything else falls through to the inline-glyph branch
+ * instead of becoming an `<img src>`. Same policy as `AvatarPreview` in
+ * `AgentManager`. See CodeQL alerts #26 and #27.
  */
 function isImageAvatar(avatar: string): boolean {
   if (avatar.startsWith("http://") || avatar.startsWith("https://") || avatar.startsWith("/")) {
     return true;
   }
-  return avatar.startsWith("data:image/");
+  return SAFE_DATA_IMAGE_PREFIXES.some((p) => avatar.startsWith(p));
 }
 
 /** Render an agent's rail icon: image, emoji glyph, or a name-derived monogram. */
