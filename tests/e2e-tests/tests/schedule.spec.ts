@@ -156,12 +156,44 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     await expect(page.getByTestId(`schedule-card-${updatedSchedule!.id}`)).toHaveCount(0);
   });
 
-  test("legacy /settings/schedules URL redirects to /schedules", async ({ appPage }) => {
+  test("legacy /settings/schedules* URLs redirect to /schedules*", async ({
+    appPage,
+    grackle: { client },
+  }) => {
     const page = appPage;
 
     // Old bookmarks/deep links must keep working after the relocation (#1416).
+    // All three shapes have back-compat redirects, so exercise each one.
+
+    // List: /settings/schedules -> /schedules
     await page.goto("/settings/schedules");
     await expect(page).toHaveURL(/\/schedules$/, { timeout: 5_000 });
     await expect(page.getByRole("heading", { name: "Schedules" })).toBeVisible({ timeout: 5_000 });
+
+    // Create form: /settings/schedules/new -> /schedules/new
+    await page.goto("/settings/schedules/new");
+    await expect(page).toHaveURL(/\/schedules\/new$/, { timeout: 5_000 });
+    await expect(page.getByRole("heading", { name: "Create Schedule" })).toBeVisible({
+      timeout: 5_000,
+    });
+
+    // Detail: /settings/schedules/:id -> /schedules/:id (ScheduleSettingsRedirect
+    // re-encodes the param). Seed a schedule so there is a real id to redirect to.
+    const persona = await client.orchestration.createPersona({
+      name: "Redirect Persona",
+      systemPrompt: "For redirect testing.",
+      runtime: "stub",
+    });
+    const created = await client.scheduling.createSchedule({
+      title: "Redirect Target Schedule",
+      scheduleExpression: "5m",
+      personaId: persona.id,
+    });
+
+    await page.goto(`/settings/schedules/${created.id}`);
+    await expect(page).toHaveURL(new RegExp(`/schedules/${created.id}$`), { timeout: 5_000 });
+    await expect(page.getByRole("heading", { name: "Edit Schedule" })).toBeVisible({
+      timeout: 5_000,
+    });
   });
 });
