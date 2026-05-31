@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Hide the workbench tab bar on fleet-altitude pages (Coordination, Schedules); clicking Code in the context rail navigates home",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
