@@ -164,6 +164,15 @@ describe("agent-handlers", () => {
     ).rejects.toThrow(/cannot be empty/i);
   });
 
+  it("updateAgent rejects a request with no updatable fields", async () => {
+    const created = await agentHandlers.createAgent(
+      create(grackle.CreateAgentRequestSchema, { name: "NoOp" }),
+    );
+    await expect(
+      agentHandlers.updateAgent(create(grackle.UpdateAgentRequestSchema, { id: created.id })),
+    ).rejects.toThrow(/no updatable fields/i);
+  });
+
   it("updateAgent trims the name and rejects a name colliding with another agent", async () => {
     await agentHandlers.createAgent(create(grackle.CreateAgentRequestSchema, { name: "Taken" }));
     const other = await agentHandlers.createAgent(
