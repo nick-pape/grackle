@@ -15,7 +15,7 @@ export function AgentDetailPage(): JSX.Element {
   const { agentId } = useParams<{ agentId: string }>();
   const navigate = useAppNavigate();
   const {
-    agents: { agents, createAgent, deleteAgent },
+    agents: { agents, agentsLoading, createAgent, deleteAgent },
     personas: { personas },
   } = useGrackle();
 
@@ -50,6 +50,7 @@ export function AgentDetailPage(): JSX.Element {
       agents={agents}
       personas={personas}
       agentId={agentId}
+      agentsLoading={agentsLoading}
       onCreate={handleCreate}
       onDelete={handleDelete}
       onNavigateBack={handleBack}

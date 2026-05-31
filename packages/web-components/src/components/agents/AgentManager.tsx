@@ -19,6 +19,12 @@ export interface AgentManagerProps {
   personas: PersonaData[];
   /** When set and found in `agents`, render the read-only view; else create form. */
   agentId?: string;
+  /**
+   * True while the parent's agent list is still loading. Suppresses the
+   * not-found view while a route-matched `agentId` may still arrive, so the
+   * user never briefly sees "Agent not found" between mount and first fetch.
+   */
+  agentsLoading?: boolean;
   /** Create a new agent. Called only in create mode. */
   onCreate: (name: string, avatar: string, primaryPersonaId: string) => void;
   /** Delete the viewed agent. Called only in view mode. */
@@ -69,11 +75,24 @@ export function AgentManager({
   agents,
   personas,
   agentId,
+  agentsLoading = false,
   onCreate,
   onDelete,
   onNavigateBack,
 }: AgentManagerProps): JSX.Element {
   const agent = agentId ? agents.find((a) => a.id === agentId) : undefined;
+
+  // ── Loading view ────────────────────────────────────────────────────────
+  // Suppress the not-found / create branches while the parent's agent list is
+  // still loading, so the user never sees a "not found" flash before the
+  // matching agent arrives.
+  if (agentId && !agent && agentsLoading) {
+    return (
+      <div className={styles.container} data-testid="agent-loading">
+        <p className={styles.placeholder}>Loading…</p>
+      </div>
+    );
+  }
 
   // ── Not-found view ───────────────────────────────────────────────────────
   // If the route names an `agentId` but it doesn't exist (deleted, bad URL),

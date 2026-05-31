@@ -2,9 +2,9 @@
  * `grackle agent` command group — manage standing agents (#1417).
  *
  * Distinct from the top-level agent-session verbs (`spawn`, `status`, `kill`,
- * …) in `agent.ts`: this group is CRUD over the standing-Agent entity. Phase 0
- * — the Agent has no lifecycle yet, so these are plain create/list/show/edit/
- * delete commands.
+ * …) in `session-verbs.ts`: this group is CRUD over the standing-Agent entity.
+ * Phase 0 — the Agent has no lifecycle yet, so these are plain create / list /
+ * show / edit / delete commands.
  *
  * @module
  */

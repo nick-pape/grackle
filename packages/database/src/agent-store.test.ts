@@ -1,32 +1,18 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 
-// Mock the db module before importing the store
-let sqlite: import("better-sqlite3").Database;
-
-vi.mock("./db.js", () => {
-  return {
-    get default() {
-      // Lazily resolve so each test file gets the in-memory DB created in beforeEach
-      return testDb;
-    },
-  };
+// ── Mock ./db.js to use the shared in-memory test database, matching
+//    persona-store.test.ts so module-load-time imports of `db` in agent-store
+//    resolve to a stable instance (not `undefined`).
+vi.mock("./db.js", async () => {
+  return await import("./test-db.js");
 });
 
-let testDb: ReturnType<typeof import("drizzle-orm/better-sqlite3").drizzle>;
+// Import modules AFTER the mock is set up.
+import * as agentStore from "./agent-store.js";
+import { sqlite } from "./test-db.js";
 
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import {
-  createAgent,
-  getAgent,
-  getAgentByName,
-  listAgents,
-  updateAgent,
-  deleteAgent,
-} from "./agent-store.js";
-
-beforeEach(() => {
-  sqlite = new Database(":memory:");
+/** Apply the schema DDL to the in-memory database. */
+function applySchema(): void {
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS agents (
       id                 TEXT PRIMARY KEY,
@@ -37,44 +23,44 @@ beforeEach(() => {
       updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
-  testDb = drizzle(sqlite);
-});
-
-afterEach(() => {
-  sqlite.close();
-});
+}
 
 describe("agent-store", () => {
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS agents");
+    applySchema();
+  });
+
   it("creates and retrieves an agent", () => {
-    createAgent("a1", "Refactor Bot", "🐦", "p1");
-    const a = getAgent("a1");
+    agentStore.createAgent("a1", "Refactor Bot", "🐦", "p1");
+    const a = agentStore.getAgent("a1");
     expect(a?.name).toBe("Refactor Bot");
     expect(a?.avatar).toBe("🐦");
     expect(a?.primaryPersonaId).toBe("p1");
   });
 
   it("retrieves an agent by name", () => {
-    createAgent("a2", "ByName", "", "");
-    const a = getAgentByName("ByName");
+    agentStore.createAgent("a2", "ByName", "", "");
+    const a = agentStore.getAgentByName("ByName");
     expect(a?.id).toBe("a2");
   });
 
   it("enforces a unique name", () => {
-    createAgent("a3", "Dupe", "", "");
-    expect(() => createAgent("a4", "Dupe", "", "")).toThrow();
+    agentStore.createAgent("a3", "Dupe", "", "");
+    expect(() => agentStore.createAgent("a4", "Dupe", "", "")).toThrow();
   });
 
   it("lists all agents ordered by name", () => {
-    createAgent("a5", "Zeta", "", "");
-    createAgent("a6", "Alpha", "", "");
-    const all = listAgents();
+    agentStore.createAgent("a5", "Zeta", "", "");
+    agentStore.createAgent("a6", "Alpha", "", "");
+    const all = agentStore.listAgents();
     expect(all.map((a) => a.name)).toEqual(["Alpha", "Zeta"]);
   });
 
   it("updates only the provided fields", () => {
-    createAgent("a7", "Before", "x", "p1");
-    updateAgent("a7", { name: "After", primaryPersonaId: "p2" });
-    const a = getAgent("a7");
+    agentStore.createAgent("a7", "Before", "x", "p1");
+    agentStore.updateAgent("a7", { name: "After", primaryPersonaId: "p2" });
+    const a = agentStore.getAgent("a7");
     expect(a?.name).toBe("After");
     expect(a?.primaryPersonaId).toBe("p2");
     // avatar was not passed → unchanged
@@ -82,8 +68,8 @@ describe("agent-store", () => {
   });
 
   it("deletes an agent", () => {
-    createAgent("a8", "Doomed", "", "");
-    deleteAgent("a8");
-    expect(getAgent("a8")).toBeUndefined();
+    agentStore.createAgent("a8", "Doomed", "", "");
+    agentStore.deleteAgent("a8");
+    expect(agentStore.getAgent("a8")).toBeUndefined();
   });
 });
