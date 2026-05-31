@@ -19,6 +19,7 @@ function applySchema(): void {
       name               TEXT NOT NULL UNIQUE,
       avatar             TEXT NOT NULL DEFAULT '',
       primary_persona_id TEXT NOT NULL DEFAULT '',
+      environment_id     TEXT NOT NULL DEFAULT '',
       created_at         TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
     );
