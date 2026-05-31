@@ -9,6 +9,7 @@ import {
   Monitor,
   Network,
   Settings,
+  User,
 } from "lucide-react";
 import {
   CHAT_URL,
@@ -16,6 +17,7 @@ import {
   ENVIRONMENTS_URL,
   HOME_URL,
   KNOWLEDGE_URL,
+  PERSONAS_URL,
   SESSIONS_URL,
   SETTINGS_URL,
   SETTINGS_CREDENTIALS_URL,
@@ -31,6 +33,7 @@ export type AppView =
   | "dashboard"
   | "chat"
   | "tasks"
+  | "personas"
   | "environments"
   | "sessions"
   | "knowledge"
@@ -76,6 +79,14 @@ export const TABS: AppTab[] = [
     route: TASKS_URL,
     testId: "sidebar-tab-tasks",
     order: 1,
+  },
+  {
+    view: "personas",
+    label: "Personas",
+    icon: <User size={ICON_LG} />,
+    route: PERSONAS_URL,
+    testId: "sidebar-tab-personas",
+    order: 1.5,
   },
   {
     view: "environments",
@@ -131,6 +142,9 @@ export const TABS: AppTab[] = [
 export function getActiveView(pathname: string): AppView {
   if (pathname === HOME_URL || pathname === "/") {
     return "dashboard";
+  }
+  if (pathname.startsWith(PERSONAS_URL)) {
+    return "personas";
   }
   if (pathname.startsWith(COORDINATION_URL)) {
     return "coordination";

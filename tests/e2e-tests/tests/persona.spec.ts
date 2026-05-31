@@ -21,8 +21,7 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     });
 
     // Navigate to persona management view via the personas button in status bar
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
-    await page.getByRole("tab", { name: "Personas" }).click();
+    await page.locator('[data-testid="sidebar-tab-personas"]').click();
 
     // Verify the persona management view is shown with our persona
     await expect(page.getByRole("heading", { name: "Personas" })).toBeVisible({ timeout: 5_000 });
@@ -47,8 +46,7 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     });
 
     // Navigate to persona management view
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
-    await page.getByRole("tab", { name: "Personas" }).click();
+    await page.locator('[data-testid="sidebar-tab-personas"]').click();
     await expect(page.getByRole("heading", { name: "Personas" })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("Detailed Persona")).toBeVisible({
       timeout: 5_000,
@@ -69,8 +67,7 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     });
 
     // Navigate to management view and verify it appears
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
-    await page.getByRole("tab", { name: "Personas" }).click();
+    await page.locator('[data-testid="sidebar-tab-personas"]').click();
     await expect(page.getByRole("heading", { name: "Personas" })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("Soon Deleted")).toBeVisible({
       timeout: 5_000,
@@ -106,11 +103,10 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     });
 
     // Navigate to the persona detail page
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
-    await page.getByRole("tab", { name: "Personas" }).click();
+    await page.locator('[data-testid="sidebar-tab-personas"]').click();
     await expect(page.getByText("Worker Agent")).toBeVisible({ timeout: 5_000 });
     await page.getByTestId(`persona-card-${persona.id}`).click();
-    await page.waitForURL(`**/settings/personas/${persona.id}`, { timeout: 5_000 });
+    await page.waitForURL(`**/personas/${persona.id}`, { timeout: 5_000 });
 
     // Verify the MCP tool selector is visible with the correct count
     const selector = page.getByTestId("mcp-tool-selector");
@@ -140,11 +136,10 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     });
 
     // Navigate to persona detail
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
-    await page.getByRole("tab", { name: "Personas" }).click();
+    await page.locator('[data-testid="sidebar-tab-personas"]').click();
     await expect(page.getByText("Unscoped Tester")).toBeVisible({ timeout: 5_000 });
     await page.getByTestId(`persona-card-${persona.id}`).click();
-    await page.waitForURL(`**/settings/personas/${persona.id}`, { timeout: 5_000 });
+    await page.waitForURL(`**/personas/${persona.id}`, { timeout: 5_000 });
 
     // Verify it shows "Using default" message
     const selector = page.getByTestId("mcp-tool-selector");
@@ -166,11 +161,10 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     });
 
     // Navigate to persona detail
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
-    await page.getByRole("tab", { name: "Personas" }).click();
+    await page.locator('[data-testid="sidebar-tab-personas"]').click();
     await expect(page.getByText("Preset Test Agent")).toBeVisible({ timeout: 5_000 });
     await page.getByTestId(`persona-card-${persona.id}`).click();
-    await page.waitForURL(`**/settings/personas/${persona.id}`, { timeout: 5_000 });
+    await page.waitForURL(`**/personas/${persona.id}`, { timeout: 5_000 });
 
     // Click "Worker" preset
     await page.getByTestId("preset-worker").click();
@@ -187,16 +181,17 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     );
   });
 
-  test("personas tab shows breadcrumbs with Home > Settings", async ({ appPage }) => {
+  test("persona library page shows breadcrumbs with Home > Personas", async ({ appPage }) => {
     const page = appPage;
 
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
-    await page.getByRole("tab", { name: "Personas" }).click();
+    await page.locator('[data-testid="sidebar-tab-personas"]').click();
 
     const breadcrumbs = page.getByTestId("breadcrumbs");
     await expect(breadcrumbs).toBeVisible({ timeout: 5_000 });
     await expect(breadcrumbs).toContainText("Home");
-    await expect(breadcrumbs).toContainText("Settings");
+    await expect(breadcrumbs).toContainText("Personas");
+    // After #1413, the Settings segment is no longer part of the persona trail.
+    await expect(breadcrumbs).not.toContainText("Settings");
   });
 
   test("persona detail routes support create, edit, and delete", async ({
@@ -205,11 +200,10 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
   }) => {
     const page = appPage;
 
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
-    await page.getByRole("tab", { name: "Personas" }).click();
+    await page.locator('[data-testid="sidebar-tab-personas"]').click();
     await page.getByTestId("persona-new-button").click();
 
-    await page.waitForURL("**/settings/personas/new", { timeout: 5_000 });
+    await page.waitForURL("**/personas/new", { timeout: 5_000 });
     await expect(page.getByRole("tab", { name: "Personas", selected: true })).toBeVisible();
 
     await page.getByTestId("persona-detail-name").fill("Route Created Persona");
@@ -222,7 +216,7 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     await page.getByTestId("persona-detail-save").click();
 
     // Wait for navigation to the new persona's detail page before querying the server
-    await page.waitForURL(/\/settings\/personas\/[^/]+$/, { timeout: 5_000 });
+    await page.waitForURL(/\/personas\/[^/]+$/, { timeout: 5_000 });
 
     // Poll listPersonas until the created persona appears (avoids racing the create RPC)
     let createdPersona: { id: string; name: string } | undefined;
@@ -239,20 +233,20 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
       )
       .toBeDefined();
 
-    await page.waitForURL(`**/settings/personas/${createdPersona!.id}`, { timeout: 5_000 });
+    await page.waitForURL(`**/personas/${createdPersona!.id}`, { timeout: 5_000 });
     await expect(page.getByRole("heading", { name: "Edit Persona" })).toBeVisible({
       timeout: 5_000,
     });
 
     await page.getByTestId("persona-detail-cancel").click();
-    await expect(page).toHaveURL(/\/settings\/personas$/, { timeout: 5_000 });
+    await expect(page).toHaveURL(/\/personas$/, { timeout: 5_000 });
     await expect(page.getByTestId(`persona-card-${createdPersona!.id}`)).toContainText(
       "Route Created Persona",
       { timeout: 5_000 },
     );
 
     await page.getByTestId(`persona-card-${createdPersona!.id}`).click();
-    await page.waitForURL(`**/settings/personas/${createdPersona!.id}`, { timeout: 5_000 });
+    await page.waitForURL(`**/personas/${createdPersona!.id}`, { timeout: 5_000 });
     await expect(page.getByRole("tab", { name: "Personas", selected: true })).toBeVisible();
 
     await page.getByTestId("persona-detail-name-button").click();
@@ -282,21 +276,21 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
       )
       .toBeDefined();
 
-    await expect(page).toHaveURL(/\/settings\/personas$/, { timeout: 5_000 });
+    await expect(page).toHaveURL(/\/personas$/, { timeout: 5_000 });
     await expect(page.getByTestId(`persona-card-${updatedPersona!.id}`)).toContainText(
       "Route Updated Persona",
       { timeout: 5_000 },
     );
 
     await page.getByTestId(`persona-card-${updatedPersona!.id}`).click();
-    await page.waitForURL(`**/settings/personas/${updatedPersona!.id}`, { timeout: 5_000 });
+    await page.waitForURL(`**/personas/${updatedPersona!.id}`, { timeout: 5_000 });
     await page.getByTestId("persona-detail-delete").click();
 
     const dialog = page.getByRole("dialog", { name: "Delete Persona?" });
     await expect(dialog).toBeVisible({ timeout: 5_000 });
     await dialog.getByRole("button", { name: "Delete" }).click();
 
-    await expect(page).toHaveURL(/\/settings\/personas$/, { timeout: 5_000 });
+    await expect(page).toHaveURL(/\/personas$/, { timeout: 5_000 });
     await expect(page.getByTestId(`persona-card-${updatedPersona!.id}`)).toHaveCount(0);
   });
 });

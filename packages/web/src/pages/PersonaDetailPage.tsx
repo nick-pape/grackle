@@ -1,8 +1,9 @@
 import { useState, useEffect, type JSX, type FormEvent } from "react";
 import { useParams, Navigate } from "react-router";
-import { useGrackle } from "../../context/GrackleContext.js";
+import { useGrackle } from "../context/GrackleContext.js";
 import {
   Breadcrumbs,
+  buildPersonaDetailBreadcrumbs,
   Button,
   ConfirmDialog,
   EditableSelect,
@@ -10,12 +11,11 @@ import {
   EditableTextField,
   McpToolSelector,
   PERSONAS_URL,
-  SETTINGS_URL,
   personaUrl,
   useAppNavigate,
   useToast,
 } from "@grackle-ai/web-components";
-import type { BreadcrumbSegment, PersonaData, SelectOption } from "@grackle-ai/web-components";
+import type { PersonaData, SelectOption } from "@grackle-ai/web-components";
 import styles from "./PersonaDetail.module.scss";
 
 const RUNTIME_OPTIONS: SelectOption[] = [
@@ -33,7 +33,7 @@ const SCRIPT_RUNTIME_OPTIONS: SelectOption[] = [{ value: "genaiscript", label: "
 
 const MAX_TURNS_PLACEHOLDER: string = "0";
 
-/** PersonaDetailPage handles both create (/settings/personas/new) and edit (/settings/personas/:personaId). */
+/** PersonaDetailPage handles both create (/personas/new) and edit (/personas/:personaId). */
 export function PersonaDetailPage(): JSX.Element {
   const { personaId } = useParams<{ personaId: string }>();
   const navigate = useAppNavigate();
@@ -54,11 +54,9 @@ export function PersonaDetailPage(): JSX.Element {
     return <Navigate to={PERSONAS_URL} replace />;
   }
 
-  const breadcrumbs: BreadcrumbSegment[] = [
-    { label: "Settings", url: SETTINGS_URL },
-    { label: "Personas", url: PERSONAS_URL },
-    { label: isNew ? "New Persona" : (existing?.name ?? "Persona"), url: undefined },
-  ];
+  const breadcrumbs = buildPersonaDetailBreadcrumbs(
+    isNew ? "New Persona" : (existing?.name ?? "Persona"),
+  );
 
   return (
     <div className={styles.container}>
