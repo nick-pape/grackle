@@ -25,10 +25,17 @@ $rail-width-collapsed: 56px;
     width: $rail-width-collapsed;
   }
 
+  // On mobile the rail is a slide-in pullout (see App.module.scss
+  // .contextNavWrapper), so it hugs its rows rather than spanning the full
+  // screen height — a short context list would otherwise strand its few rows at
+  // the top of an empty full-height panel (#1425). max-height caps it so a
+  // longer list (Agent rows, #1417) scrolls instead of overflowing the viewport.
   @include mobile {
-    width: 100% !important;
-    height: 100%;
+    width: 100%;
+    height: auto;
+    max-height: 100%;
     border-right: none;
+    border-bottom-right-radius: var(--radius-lg);
   }
 }
 

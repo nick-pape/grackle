@@ -123,6 +123,25 @@ test.describe("Context nav drawer (mobile)", { tag: ["@webui"] }, () => {
     await expect(rail).not.toBeVisible({ timeout: 5_000 });
   });
 
+  test("drawer hugs its content instead of spanning the full viewport height", async ({
+    appPage,
+  }) => {
+    const page = appPage;
+    await page.goto("/");
+    await waitForConnected(page);
+
+    const rail = page.getByTestId("context-nav");
+    await page.getByRole("button", { name: "Toggle contexts" }).click();
+    await expect(rail).toBeVisible();
+
+    // Regression guard for #1425: a short context list must not leave a tall
+    // empty panel below it. The drawer sizes to its rows, so its height stays
+    // well under the viewport rather than filling the whole screen.
+    const box = await rail.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.height).toBeLessThan(MOBILE_VIEWPORT.height * 0.6);
+  });
+
   test("Escape closes the context drawer", async ({ appPage }) => {
     const page = appPage;
     await page.goto("/");
