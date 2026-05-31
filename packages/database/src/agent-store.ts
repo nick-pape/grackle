@@ -44,8 +44,8 @@ export function updateAgent(
   id: string,
   fields: { name?: string; avatar?: string; primaryPersonaId?: string },
 ): void {
-  const updates: Partial<typeof agents.$inferInsert> = {
-    updatedAt: sql`datetime('now')` as unknown as string,
+  const updates: Record<string, unknown> = {
+    updatedAt: sql`datetime('now')`,
   };
   if (fields.name !== undefined) {
     updates.name = fields.name;

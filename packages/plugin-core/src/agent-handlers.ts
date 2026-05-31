@@ -64,6 +64,10 @@ export async function updateAgent(req: grackle.UpdateAgentRequest): Promise<grac
     throw new ConnectError(`Agent not found: ${req.id}`, Code.NotFound);
   }
 
+  if (req.name === undefined && req.avatar === undefined && req.primaryPersonaId === undefined) {
+    throw new ConnectError("No updatable fields provided", Code.InvalidArgument);
+  }
+
   // Optional (presence-tracked) fields: undefined = keep existing. When `name`
   // is explicitly sent, trim it and reject empty (the DB's NOT NULL constraint
   // allows empty strings, which would persist an invalid record).

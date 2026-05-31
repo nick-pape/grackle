@@ -55,7 +55,11 @@ const SAFE_DATA_IMAGE_PREFIXES: readonly string[] = [
  * becoming an `<img src>`. See CodeQL alerts #26 and #27.
  */
 export function isImageAvatar(avatar: string): boolean {
-  if (avatar.startsWith("http://") || avatar.startsWith("https://") || avatar.startsWith("/")) {
+  if (
+    avatar.startsWith("http://") ||
+    avatar.startsWith("https://") ||
+    (avatar.startsWith("/") && !avatar.startsWith("//"))
+  ) {
     return true;
   }
   return SAFE_DATA_IMAGE_PREFIXES.some((p) => avatar.startsWith(p));

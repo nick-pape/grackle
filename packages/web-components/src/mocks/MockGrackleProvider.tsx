@@ -1124,7 +1124,10 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           if (!existing) {
             throw new Error(`Agent not found: ${id}`);
           }
-          const updated: AgentData = { ...existing, ...updates };
+          const defined = Object.fromEntries(
+            Object.entries(updates).filter(([, v]) => v !== undefined),
+          );
+          const updated: AgentData = { ...existing, ...defined };
           setAgents((prev) => prev.map((a) => (a.id === id ? updated : a)));
           return updated;
         },
