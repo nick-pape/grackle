@@ -19,6 +19,16 @@
   }
 }
 
+.drawerControls {
+  display: none;
+  align-items: center;
+  gap: var(--space-xs);
+
+  @include mobile {
+    display: flex;
+  }
+}
+
 .hamburger {
   display: none;
   background: none;

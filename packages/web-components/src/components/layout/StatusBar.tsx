@@ -57,28 +57,32 @@ export function StatusBar({
 
   return (
     <div className={styles.container}>
-      {onToggleContextNav && (
-        <button
-          type="button"
-          className={styles.hamburger}
-          onClick={onToggleContextNav}
-          aria-label="Toggle contexts"
-          aria-expanded={contextNavOpen}
-          data-testid="statusbar-context-toggle"
-        >
-          <PanelLeft size={ICON_LG} aria-hidden="true" />
-        </button>
-      )}
-      {onToggleSidebar && (
-        <button
-          type="button"
-          className={styles.hamburger}
-          onClick={onToggleSidebar}
-          aria-label="Toggle sidebar"
-          aria-expanded={sidebarOpen}
-        >
-          <Menu size={ICON_LG} aria-hidden="true" />
-        </button>
+      {(onToggleContextNav ?? onToggleSidebar) && (
+        <div className={styles.drawerControls}>
+          {onToggleContextNav && (
+            <button
+              type="button"
+              className={styles.hamburger}
+              onClick={onToggleContextNav}
+              aria-label="Toggle contexts"
+              aria-expanded={contextNavOpen}
+              data-testid="statusbar-context-toggle"
+            >
+              <PanelLeft size={ICON_LG} aria-hidden="true" />
+            </button>
+          )}
+          {onToggleSidebar && (
+            <button
+              type="button"
+              className={styles.hamburger}
+              onClick={onToggleSidebar}
+              aria-label="Toggle sidebar"
+              aria-expanded={sidebarOpen}
+            >
+              <Menu size={ICON_LG} aria-hidden="true" />
+            </button>
+          )}
+        </div>
       )}
       <Tooltip text="Home" placement="bottom">
         <button

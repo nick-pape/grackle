@@ -172,8 +172,8 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
             contexts={CONTEXTS}
             activeContextId={DEFAULT_CONTEXT_ID}
             onSelectContext={handleSelectContext}
-            collapsed={contextNavCollapsed}
-            onToggleCollapsed={toggleContextNavCollapsed}
+            collapsed={contextNavOpen ? false : contextNavCollapsed}
+            onToggleCollapsed={contextNavOpen ? undefined : toggleContextNavCollapsed}
           />
         </div>
         {contextNavOpen && (
