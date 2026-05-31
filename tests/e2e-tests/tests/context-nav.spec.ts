@@ -99,6 +99,33 @@ test.describe("Context nav (context axis)", { tag: ["@webui", "@smoke"] }, () =>
     await toggle.click();
     await expect(rail).toHaveAttribute("data-collapsed", "false");
   });
+
+  test("AppNav is hidden on fleet pages", async ({ appPage }) => {
+    const page = appPage;
+    await page.goto("/");
+    await waitForConnected(page);
+
+    // View bar is visible on workbench pages.
+    await expect(page.getByTestId("sidebar-nav")).toBeVisible();
+
+    // Navigate to a fleet page — the view bar should disappear.
+    await page.getByTestId("context-nav").getByTestId("sidebar-tab-coordination").click();
+    await expect(page).toHaveURL(/\/coordination/);
+    await expect(page.getByTestId("sidebar-nav")).toHaveCount(0);
+  });
+
+  test("clicking Code from a fleet page navigates back to the workbench", async ({ appPage }) => {
+    const page = appPage;
+    await page.goto("/coordination");
+    await waitForConnected(page);
+
+    await expect(page.getByTestId("coordination-page")).toBeVisible();
+
+    // Clicking the Code context should navigate home.
+    await page.getByTestId("context-code").click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByTestId("sidebar-nav")).toBeVisible();
+  });
 });
 
 test.describe("Context nav drawer (mobile)", { tag: ["@webui"] }, () => {
