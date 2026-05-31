@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "packageName": "@grackle-ai/powerline",
+      "comment": "Implement the AHP resources read capability in the host: resourceRead, resourceList, and createResourceWatch (live, batched resourceWatch/changed notifications), sandboxed to each connection's session working trees (including sibling worktrees).",
+      "type": "minor"
+    }
+  ],
+  "packageName": "@grackle-ai/powerline",
+  "email": "nickpape@outlook.com"
+}

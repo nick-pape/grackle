@@ -6,14 +6,25 @@
  * notification → reverse-mapping path.
  */
 
-import type { ActionEnvelope, StateAction } from "@grackle-ai/ahp";
+import type {
+  ActionEnvelope,
+  ResourceListResult,
+  ResourceReadResult,
+  StateAction,
+} from "@grackle-ai/ahp";
 import {
   ActionType,
+  AhpErrorCodes,
+  ContentEncoding,
   JsonRpcErrorCodes,
   MessageKind,
   SessionStatus as SessionStatusE,
 } from "@grackle-ai/ahp";
 import { AhpClientSocket, InMemoryClientIdStore, WsCloseCode } from "@grackle-ai/ahp-transport";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import type {
   AgentEvent,
   AgentRuntime,
@@ -21,6 +32,7 @@ import type {
   ResumeOptions,
   SpawnOptions,
 } from "@grackle-ai/runtime-sdk";
+import { worktreeDir } from "@grackle-ai/runtime-sdk";
 import { SESSION_STATUS, type SessionStatus } from "@grackle-ai/common";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -895,6 +907,469 @@ describe("ahp-handlers: production-StubSession defensive-depth", () => {
     } finally {
       await client.cleanup();
       await lb.cleanup();
+    }
+  });
+});
+
+// ─── resources: read / list / watch ───────────────────────────
+
+/** Extract the JSON-RPC error `code` from a rejected `request()` promise. */
+async function expectRequestErrorCode(promise: Promise<unknown>): Promise<number> {
+  try {
+    await promise;
+  } catch (err) {
+    const code = (err as { code?: number }).code;
+    if (typeof code === "number") {
+      return code;
+    }
+    throw new Error(`Expected a JSON-RPC error with numeric code, got: ${String(err)}`);
+  }
+  throw new Error("Expected request() to reject");
+}
+
+describe("resourceRead / resourceList", () => {
+  let workdir: string;
+
+  beforeEach(async () => {
+    workdir = await mkdtemp(join(tmpdir(), "grackle-ahp-res-"));
+  });
+
+  afterEach(async () => {
+    await rm(workdir, { recursive: true, force: true });
+  });
+
+  /** Create a session whose working directory is `workdir`, populating allowedRoots. */
+  async function createSessionInWorkdir(client: Client, sessionId: string): Promise<void> {
+    await client.socket.request("createSession", {
+      channel: `ahp-session:/${sessionId}`,
+      provider: TEST_RUNTIME.name,
+      config: { workingDirectory: workdir },
+    });
+  }
+
+  it("reads a file under the session working directory", async () => {
+    await writeFile(join(workdir, "plan.md"), "# Plan", "utf-8");
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      await createSessionInWorkdir(client, "res-read-1");
+      const result = (await client.socket.request("resourceRead", {
+        channel: "ahp-root://",
+        uri: pathToFileURL(join(workdir, "plan.md")).href,
+      })) as ResourceReadResult;
+      expect(result.encoding).toBe(ContentEncoding.Utf8);
+      expect(result.contentType).toBe("text/markdown");
+      expect(result.data).toBe("# Plan");
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  });
+
+  it("includes the sibling worktree root when a branch is set and useWorktrees is omitted", async () => {
+    // BaseAgentSession defaults useWorktrees to true, so a session created with a
+    // branch but no explicit useWorktrees edits in the sibling worktree dir; the
+    // sandbox must therefore include that path, not just the working directory.
+    const branch = "feature/x";
+    const wt = worktreeDir(workdir, branch);
+    await mkdir(wt, { recursive: true });
+    await writeFile(join(wt, "doc.md"), "# WT", "utf-8");
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      await client.socket.request("createSession", {
+        channel: "ahp-session:/res-wt-1",
+        provider: TEST_RUNTIME.name,
+        config: { workingDirectory: workdir, branch },
+      });
+      const result = (await client.socket.request("resourceRead", {
+        channel: "ahp-root://",
+        uri: pathToFileURL(join(wt, "doc.md")).href,
+      })) as ResourceReadResult;
+      expect(result.data).toBe("# WT");
+    } finally {
+      await rm(wt, { recursive: true, force: true });
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  });
+
+  it("lists entries under the session working directory", async () => {
+    await writeFile(join(workdir, "a.txt"), "x", "utf-8");
+    await mkdir(join(workdir, "sub"));
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      await createSessionInWorkdir(client, "res-list-1");
+      const result = (await client.socket.request("resourceList", {
+        channel: "ahp-root://",
+        uri: pathToFileURL(workdir).href,
+      })) as ResourceListResult;
+      const byName = new Map(result.entries.map((e) => [e.name, e.type]));
+      expect(byName.get("a.txt")).toBe("file");
+      expect(byName.get("sub")).toBe("directory");
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  });
+
+  it("rejects a read outside the allowed roots with PermissionDenied", async () => {
+    const elsewhere = await mkdtemp(join(tmpdir(), "grackle-ahp-out-"));
+    await writeFile(join(elsewhere, "secret.txt"), "nope", "utf-8");
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      await createSessionInWorkdir(client, "res-deny-1");
+      const code = await expectRequestErrorCode(
+        client.socket.request("resourceRead", {
+          channel: "ahp-root://",
+          uri: pathToFileURL(join(elsewhere, "secret.txt")).href,
+        }),
+      );
+      expect(code).toBe(AhpErrorCodes.PermissionDenied);
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+      await rm(elsewhere, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a read on a connection with no sessions (no roots)", async () => {
+    await writeFile(join(workdir, "a.txt"), "x", "utf-8");
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      const code = await expectRequestErrorCode(
+        client.socket.request("resourceRead", {
+          channel: "ahp-root://",
+          uri: pathToFileURL(join(workdir, "a.txt")).href,
+        }),
+      );
+      expect(code).toBe(AhpErrorCodes.PermissionDenied);
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  });
+
+  it("returns NotFound for a missing file", async () => {
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      await createSessionInWorkdir(client, "res-missing-1");
+      const code = await expectRequestErrorCode(
+        client.socket.request("resourceRead", {
+          channel: "ahp-root://",
+          uri: pathToFileURL(join(workdir, "nope.txt")).href,
+        }),
+      );
+      expect(code).toBe(AhpErrorCodes.NotFound);
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  });
+});
+
+describe("createResourceWatch", () => {
+  let workdir: string;
+
+  beforeEach(async () => {
+    workdir = await mkdtemp(join(tmpdir(), "grackle-ahp-watch-"));
+  });
+
+  afterEach(async () => {
+    await rm(workdir, { recursive: true, force: true });
+  });
+
+  it("streams a resourceWatch/changed action when a file changes", async () => {
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      await client.socket.request("createSession", {
+        channel: "ahp-session:/watch-1",
+        provider: TEST_RUNTIME.name,
+        config: { workingDirectory: workdir },
+      });
+      const { channel } = (await client.socket.request("createResourceWatch", {
+        channel: "ahp-root://",
+        uri: pathToFileURL(workdir).href,
+      })) as { channel: string };
+      expect(channel.startsWith("ahp-resource-watch:/")).toBe(true);
+      await client.socket.request("subscribe", { channel });
+      // Let chokidar's initial scan settle before mutating.
+      await new Promise((r) => setTimeout(r, 400));
+      await writeFile(join(workdir, "plan.md"), "# Plan", "utf-8");
+
+      const deadline = Date.now() + 4000;
+      let batch: ActionEnvelope | undefined;
+      while (batch === undefined && Date.now() < deadline) {
+        batch = client.received.find((e) => e.channel === channel);
+        if (batch === undefined) {
+          await new Promise((r) => setTimeout(r, 50));
+        }
+      }
+      expect(batch).toBeDefined();
+      const action = batch!.action as {
+        type: string;
+        changes: { items: Array<{ uri: string; type: string }> };
+      };
+      expect(action.type).toBe(ActionType.ResourceWatchChanged);
+      expect(action.changes.items.length).toBeGreaterThan(0);
+      expect(action.changes.items.some((c) => c.uri.endsWith("plan.md"))).toBe(true);
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  }, 10_000);
+
+  it("applies includes/excludes and reports nested + deleted paths on a recursive watch", async () => {
+    // Pre-create a file that will be deleted (so the unlink event fires) and a
+    // nested directory to exercise the recursive descent + addDir handling.
+    await writeFile(join(workdir, "old.md"), "stale", "utf-8");
+    await mkdir(join(workdir, "nested"));
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      await client.socket.request("createSession", {
+        channel: "ahp-session:/watch-2",
+        provider: TEST_RUNTIME.name,
+        config: { workingDirectory: workdir },
+      });
+      const { channel } = (await client.socket.request("createResourceWatch", {
+        channel: "ahp-root://",
+        uri: pathToFileURL(workdir).href,
+        recursive: true,
+        excludes: { items: ["*.log"] },
+        includes: { items: ["**/*.md"] },
+      })) as { channel: string };
+      await client.socket.request("subscribe", { channel });
+      await new Promise((r) => setTimeout(r, 400));
+
+      // Matches includes -> reported; matches excludes -> ignored; nested .md ->
+      // reported (recursive); deletion of old.md -> reported.
+      await writeFile(join(workdir, "plan.md"), "# Plan", "utf-8");
+      await writeFile(join(workdir, "debug.log"), "noise", "utf-8");
+      await writeFile(join(workdir, "nested", "deep.md"), "# Deep", "utf-8");
+      await rm(join(workdir, "old.md"));
+
+      const deadline = Date.now() + 5000;
+      const seen = new Map<string, string>();
+      const expected = ["plan.md", "deep.md", "old.md"];
+      while (Date.now() < deadline) {
+        for (const e of client.received.filter((r) => r.channel === channel)) {
+          const items = (e.action as { changes: { items: Array<{ uri: string; type: string }> } })
+            .changes.items;
+          for (const it of items) {
+            seen.set(it.uri, it.type);
+          }
+        }
+        // Wait for all expected paths (events may arrive across several coalesced
+        // batches), not just a count — a size-based break races under load.
+        if (expected.every((name) => [...seen.keys()].some((u) => u.endsWith(name)))) {
+          break;
+        }
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      const uris = [...seen.keys()];
+      expect(uris.some((u) => u.endsWith("plan.md"))).toBe(true);
+      expect(uris.some((u) => u.endsWith("deep.md"))).toBe(true);
+      expect(uris.some((u) => u.endsWith("debug.log"))).toBe(false);
+      expect(uris.some((u) => u.endsWith("old.md"))).toBe(true);
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  }, 12_000);
+
+  it("emits watch URIs under the lexical root so a follow-up resourceRead round-trips", async () => {
+    // Working dir is a symlink to the real dir. chokidar watches the realpath,
+    // but emitted change URIs must use the lexical (symlink) path — otherwise a
+    // client that follows the notification with resourceRead hits PermissionDenied
+    // because allowedRoots holds the lexical path, not its realpath.
+    const realDir = await mkdtemp(join(tmpdir(), "grackle-ahp-wreal-"));
+    const linkDir = `${realDir}-link`;
+    try {
+      await symlink(realDir, linkDir, "dir");
+    } catch {
+      // No symlink privilege (Windows): nothing to assert.
+      await rm(realDir, { recursive: true, force: true });
+      return;
+    }
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      await client.socket.request("createSession", {
+        channel: "ahp-session:/watch-symlink-1",
+        provider: TEST_RUNTIME.name,
+        config: { workingDirectory: linkDir },
+      });
+      const { channel } = (await client.socket.request("createResourceWatch", {
+        channel: "ahp-root://",
+        uri: pathToFileURL(linkDir).href,
+      })) as { channel: string };
+      await client.socket.request("subscribe", { channel });
+      await new Promise((r) => setTimeout(r, 400));
+      await writeFile(join(linkDir, "note.md"), "# Note", "utf-8");
+
+      const deadline = Date.now() + 5000;
+      let changedUri: string | undefined;
+      const lexicalPrefix = pathToFileURL(linkDir).href;
+      while (changedUri === undefined && Date.now() < deadline) {
+        for (const e of client.received.filter((r) => r.channel === channel)) {
+          const items = (e.action as { changes: { items: Array<{ uri: string }> } }).changes.items;
+          changedUri = items.find((c) => c.uri.endsWith("note.md"))?.uri;
+        }
+        if (changedUri === undefined) {
+          await new Promise((r) => setTimeout(r, 50));
+        }
+      }
+      expect(changedUri).toBeDefined();
+      // Emitted under the lexical (symlink) root, not the realpath.
+      expect(changedUri!.startsWith(lexicalPrefix)).toBe(true);
+      // And that URI is readable through the sandbox (the actual round-trip).
+      const read = (await client.socket.request("resourceRead", {
+        channel: "ahp-root://",
+        uri: changedUri!,
+      })) as ResourceReadResult;
+      expect(read.data).toBe("# Note");
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+      await rm(linkDir, { recursive: true, force: true });
+      await rm(realDir, { recursive: true, force: true });
+    }
+  }, 12_000);
+
+  it("delivers no further change notifications after unsubscribe", async () => {
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      await client.socket.request("createSession", {
+        channel: "ahp-session:/watch-unsub-1",
+        provider: TEST_RUNTIME.name,
+        config: { workingDirectory: workdir },
+      });
+      const { channel } = (await client.socket.request("createResourceWatch", {
+        channel: "ahp-root://",
+        uri: pathToFileURL(workdir).href,
+      })) as { channel: string };
+      await client.socket.request("subscribe", { channel });
+      await new Promise((r) => setTimeout(r, 400));
+      // Unsubscribe, THEN mutate — the torn-down watch must emit nothing, and no
+      // late event may re-arm a flush onto the unsubscribed channel.
+      client.socket.notify("unsubscribe", { channel });
+      await new Promise((r) => setTimeout(r, 100));
+      await writeFile(join(workdir, "after.md"), "# After", "utf-8");
+      await new Promise((r) => setTimeout(r, 1200));
+      expect(client.received.filter((e) => e.channel === channel).length).toBe(0);
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  }, 10_000);
+
+  it("rejects malformed excludes with InvalidParams", async () => {
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      await client.socket.request("createSession", {
+        channel: "ahp-session:/watch-badglob-1",
+        provider: TEST_RUNTIME.name,
+        config: { workingDirectory: workdir },
+      });
+      const code = await expectRequestErrorCode(
+        client.socket.request("createResourceWatch", {
+          channel: "ahp-root://",
+          uri: pathToFileURL(workdir).href,
+          excludes: { items: 5 } as unknown as { items: string[] },
+        }),
+      );
+      expect(code).toBe(JsonRpcErrorCodes.InvalidParams);
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  });
+
+  it("rejects a null glob set and a non-string glob item with InvalidParams", async () => {
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      await client.socket.request("createSession", {
+        channel: "ahp-session:/watch-badglob-2",
+        provider: TEST_RUNTIME.name,
+        config: { workingDirectory: workdir },
+      });
+      const uri = pathToFileURL(workdir).href;
+      const nullCode = await expectRequestErrorCode(
+        client.socket.request("createResourceWatch", {
+          channel: "ahp-root://",
+          uri,
+          excludes: null as unknown as { items: string[] },
+        }),
+      );
+      expect(nullCode).toBe(JsonRpcErrorCodes.InvalidParams);
+      const itemCode = await expectRequestErrorCode(
+        client.socket.request("createResourceWatch", {
+          channel: "ahp-root://",
+          uri,
+          includes: { items: ["ok", 2] } as unknown as { items: string[] },
+        }),
+      );
+      expect(itemCode).toBe(JsonRpcErrorCodes.InvalidParams);
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  });
+
+  it("caps the number of concurrent watches per connection", async () => {
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      await client.socket.request("createSession", {
+        channel: "ahp-session:/watch-cap-1",
+        provider: TEST_RUNTIME.name,
+        config: { workingDirectory: workdir },
+      });
+      const uri = pathToFileURL(workdir).href;
+      // 64 is MAX_RESOURCE_WATCHES_PER_CONNECTION; the 65th must be rejected.
+      for (let i = 0; i < 64; i++) {
+        await client.socket.request("createResourceWatch", { channel: "ahp-root://", uri });
+      }
+      const code = await expectRequestErrorCode(
+        client.socket.request("createResourceWatch", { channel: "ahp-root://", uri }),
+      );
+      expect(code).toBe(JsonRpcErrorCodes.InvalidParams);
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  }, 15_000);
+
+  it("rejects createResourceWatch outside the allowed roots", async () => {
+    const elsewhere = await mkdtemp(join(tmpdir(), "grackle-ahp-watchout-"));
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      await client.socket.request("createSession", {
+        channel: "ahp-session:/watch-deny-1",
+        provider: TEST_RUNTIME.name,
+        config: { workingDirectory: workdir },
+      });
+      const code = await expectRequestErrorCode(
+        client.socket.request("createResourceWatch", {
+          channel: "ahp-root://",
+          uri: pathToFileURL(elsewhere).href,
+        }),
+      );
+      expect(code).toBe(AhpErrorCodes.PermissionDenied);
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+      await rm(elsewhere, { recursive: true, force: true });
     }
   });
 });
