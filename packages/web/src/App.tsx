@@ -69,6 +69,7 @@ import { SettingsCredentialsTab } from "./pages/settings/SettingsCredentialsTab.
 import { SettingsGitHubAccountsTab } from "./pages/settings/SettingsGitHubAccountsTab.js";
 import { PersonaLibraryPage } from "./pages/PersonaLibraryPage.js";
 import { PersonaDetailPage } from "./pages/PersonaDetailPage.js";
+import { AgentDetailPage } from "./pages/AgentDetailPage.js";
 import { SettingsSchedulesTab } from "./pages/settings/SettingsSchedulesTab.js";
 import { ScheduleDetailPage } from "./pages/settings/ScheduleDetailPage.js";
 import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js";
@@ -91,9 +92,6 @@ const KnowledgePage: LazyExoticComponent<() => JSX.Element> = lazy(() =>
 );
 const SessionsListPage: LazyExoticComponent<() => JSX.Element> = lazy(() =>
   import("./pages/SessionsListPage.js").then((m) => ({ default: m.SessionsListPage })),
-);
-const AgentDetailPage: LazyExoticComponent<() => JSX.Element> = lazy(() =>
-  import("./pages/AgentDetailPage.js").then((m) => ({ default: m.AgentDetailPage })),
 );
 
 /** Build-time flag set when producing a static demo build (see vite.config.ts). */
@@ -137,7 +135,7 @@ function renderAgentIcon(name: string, avatar: string): JSX.Element {
       />
     );
   }
-  const glyph = avatar || (name.trim()[0] ?? "?").toUpperCase();
+  const glyph = avatar || (name.trim().charAt(0) || "?").toUpperCase();
   return (
     <span style={{ fontSize: AGENT_ICON_SIZE_PX, lineHeight: 1 }} aria-hidden="true">
       {glyph}
@@ -207,8 +205,8 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
     [agents],
   );
 
-  // Derive the active context from the current route: `/agents/:id` activates
-  // that agent row, everything else falls back to the default `Code` context.
+  // Derive the active context from the route: `/agents/:id` activates that agent
+  // row; everything else falls back to the default `Code` context.
   const agentRouteMatch = location.pathname.match(/^\/agents\/([^/]+)$/);
   const activeAgentId =
     agentRouteMatch && agentRouteMatch[1] !== "new"
@@ -218,8 +216,8 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
     ? `${AGENT_CONTEXT_PREFIX}${activeAgentId}`
     : DEFAULT_CONTEXT_ID;
 
-  // Selecting a context navigates: agent rows open the agent view; the `Code`
-  // context returns to the default landing route. Always dismiss the mobile drawer.
+  // Selecting a context navigates: agent rows open the agent view; `Code` returns
+  // to the default landing route. Always dismiss the mobile drawer.
   const handleSelectContext = useCallback(
     (id: string) => {
       setContextNavOpen(false);
@@ -495,22 +493,8 @@ function AppRoutes(): JSX.Element {
             <Route path="personas/new" element={<PersonaDetailPage />} />
             <Route path="personas/:personaId" element={<PersonaDetailPage />} />
             {/* Agents — context-axis entities (#1417). Create form + read-only view. */}
-            <Route
-              path="agents/new"
-              element={
-                <Suspense fallback={<SplashScreen />}>
-                  <AgentDetailPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="agents/:agentId"
-              element={
-                <Suspense fallback={<SplashScreen />}>
-                  <AgentDetailPage />
-                </Suspense>
-              }
-            />
+            <Route path="agents/new" element={<AgentDetailPage />} />
+            <Route path="agents/:agentId" element={<AgentDetailPage />} />
           </>
         )}
 

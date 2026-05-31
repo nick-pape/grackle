@@ -19,24 +19,36 @@ export function AgentDetailPage(): JSX.Element {
     personas: { personas },
   } = useGrackle();
 
+  const handleCreate = (name: string, avatar: string, primaryPersonaId: string): void => {
+    createAgent(name, avatar, primaryPersonaId).then(
+      (created) => {
+        navigate(agentUrl(created.id));
+      },
+      () => {},
+    );
+  };
+
+  const handleDelete = (id: string): void => {
+    deleteAgent(id).then(
+      () => {
+        navigate("/");
+      },
+      () => {},
+    );
+  };
+
+  const handleBack = (): void => {
+    navigate("/");
+  };
+
   return (
     <AgentManager
       agents={agents}
       personas={personas}
       agentId={agentId}
-      onCreate={(name, avatar, primaryPersonaId) => {
-        createAgent(name, avatar, primaryPersonaId).then(
-          (created) => navigate(agentUrl(created.id)),
-          () => {},
-        );
-      }}
-      onDelete={(id) => {
-        deleteAgent(id).then(
-          () => navigate("/"),
-          () => {},
-        );
-      }}
-      onNavigateBack={() => navigate("/")}
+      onCreate={handleCreate}
+      onDelete={handleDelete}
+      onNavigateBack={handleBack}
     />
   );
 }
