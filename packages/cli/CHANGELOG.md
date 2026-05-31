@@ -1,6 +1,14 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 31 May 2026 00:33:25 GMT and should not be manually modified.
+This log was last generated on Sun, 31 May 2026 00:56:51 GMT and should not be manually modified.
+
+## 0.138.0
+Sun, 31 May 2026 00:56:51 GMT
+
+### Minor changes
+
+- Lockstep version bump for the AHP resources read capability (resourceRead/resourceList/createResourceWatch) added to @grackle-ai/powerline.
+- Implement the AHP resources read capability in the host: resourceRead, resourceList, and createResourceWatch (live, batched resourceWatch/changed notifications), sandboxed to each connection's session working trees (including sibling worktrees).
 
 ## 0.137.1
 
