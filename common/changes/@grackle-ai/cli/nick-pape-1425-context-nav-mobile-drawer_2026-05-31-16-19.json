@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix mobile ContextNav drawer spanning the full screen height with a short context list; it now hugs its content instead of stranding a few rows above an empty panel.",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
