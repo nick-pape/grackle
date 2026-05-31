@@ -1,6 +1,6 @@
-import { useParams, useNavigate } from "react-router";
+import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
-import { AgentManager, agentUrl } from "@grackle-ai/web-components";
+import { AgentManager, agentUrl, useAppNavigate } from "@grackle-ai/web-components";
 import type { JSX } from "react";
 
 /**
@@ -13,7 +13,7 @@ import type { JSX } from "react";
  */
 export function AgentDetailPage(): JSX.Element {
   const { agentId } = useParams<{ agentId: string }>();
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const {
     agents: { agents, createAgent, deleteAgent },
     personas: { personas },
@@ -24,7 +24,9 @@ export function AgentDetailPage(): JSX.Element {
       (created) => {
         navigate(agentUrl(created.id));
       },
-      () => {},
+      () => {
+        /* ignore — error toasts handled elsewhere */
+      },
     );
   };
 
@@ -33,7 +35,9 @@ export function AgentDetailPage(): JSX.Element {
       () => {
         navigate("/");
       },
-      () => {},
+      () => {
+        /* ignore */
+      },
     );
   };
 
