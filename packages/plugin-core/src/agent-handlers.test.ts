@@ -173,6 +173,46 @@ describe("agent-handlers", () => {
     ).rejects.toThrow(/no updatable fields/i);
   });
 
+  it("createAgent trims avatar and primaryPersonaId before storing", async () => {
+    const created = await agentHandlers.createAgent(
+      create(grackle.CreateAgentRequestSchema, {
+        name: "Trimmer",
+        avatar: "   ",
+        primaryPersonaId: "  claude-code  ",
+      }),
+    );
+    // Whitespace-only avatar collapses to "" so the UI's monogram fallback fires.
+    expect(created.avatar).toBe("");
+    expect(created.primaryPersonaId).toBe("claude-code");
+  });
+
+  it("updateAgent trims avatar / primaryPersonaId; empty string clears, undefined preserves", async () => {
+    const created = await agentHandlers.createAgent(
+      create(grackle.CreateAgentRequestSchema, {
+        name: "Clearer",
+        avatar: "X",
+        primaryPersonaId: "p1",
+      }),
+    );
+
+    // Whitespace-only avatar clears the avatar (presence-tracked + trim).
+    const cleared = await agentHandlers.updateAgent(
+      create(grackle.UpdateAgentRequestSchema, { id: created.id, avatar: "   " }),
+    );
+    expect(cleared.avatar).toBe("");
+    // primaryPersonaId left unset (undefined) → preserved.
+    expect(cleared.primaryPersonaId).toBe("p1");
+
+    // Trim a value-carrying primaryPersonaId.
+    const trimmed = await agentHandlers.updateAgent(
+      create(grackle.UpdateAgentRequestSchema, {
+        id: created.id,
+        primaryPersonaId: "  p2  ",
+      }),
+    );
+    expect(trimmed.primaryPersonaId).toBe("p2");
+  });
+
   it("updateAgent trims the name and rejects a name colliding with another agent", async () => {
     await agentHandlers.createAgent(create(grackle.CreateAgentRequestSchema, { name: "Taken" }));
     const other = await agentHandlers.createAgent(

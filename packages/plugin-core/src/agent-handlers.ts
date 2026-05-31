@@ -42,7 +42,12 @@ export async function createAgent(req: grackle.CreateAgentRequest): Promise<grac
     id = `${id}-${uuid().slice(0, 4)}`;
   }
 
-  agentStore.createAgent(id, name, req.avatar, req.primaryPersonaId);
+  // Trim `avatar` and `primaryPersonaId` so whitespace-only input (e.g. "   ")
+  // is stored as the empty string — keeps the UI's "no avatar" path working
+  // (otherwise a string of spaces is truthy and skips the monogram fallback)
+  // and prevents " https://..." style values from breaking the isImageAvatar
+  // prefix check downstream.
+  agentStore.createAgent(id, name, req.avatar.trim(), req.primaryPersonaId.trim());
   emit("agent.created", { agentId: id });
   const row = agentStore.getAgent(id);
   return agentRowToProto(row!);
@@ -82,10 +87,12 @@ export async function updateAgent(req: grackle.UpdateAgentRequest): Promise<grac
     }
   }
 
+  // Trim avatar / primaryPersonaId on the way through too (presence-tracked:
+  // undefined = keep existing, "" or whitespace-only = clear).
   agentStore.updateAgent(req.id, {
     name: trimmedName,
-    avatar: req.avatar,
-    primaryPersonaId: req.primaryPersonaId,
+    avatar: req.avatar === undefined ? undefined : req.avatar.trim(),
+    primaryPersonaId: req.primaryPersonaId === undefined ? undefined : req.primaryPersonaId.trim(),
   });
   emit("agent.updated", { agentId: req.id });
   const row = agentStore.getAgent(req.id);
