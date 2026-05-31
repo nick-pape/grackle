@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.139.1",
+      "tag": "@grackle-ai/cli_v0.139.1",
+      "date": "Sun, 31 May 2026 14:40:44 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Move Coordination to the fleet/overview altitude: render fleet-group tabs in a new Fleet section at the top of the context rail instead of the flat view bar (#1415)"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.139.0",
       "tag": "@grackle-ai/cli_v0.139.0",
       "date": "Sun, 31 May 2026 05:24:54 GMT",
