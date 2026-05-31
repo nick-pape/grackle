@@ -7,8 +7,13 @@ import {
   reanimateAgent,
 } from "@grackle-ai/core";
 import type { Disposable, PluginContext, SubscriberFactory } from "@grackle-ai/core";
-import { createLifecycleSubscriber, createRootTaskBootSubscriber } from "@grackle-ai/plugin-core";
-import { taskStore, sessionStore, settingsStore } from "@grackle-ai/database";
+import {
+  createLifecycleSubscriber,
+  createRootTaskBootSubscriber,
+  createAgentRootTaskSubscriber,
+} from "@grackle-ai/plugin-core";
+import { agentStore, taskStore, sessionStore, settingsStore } from "@grackle-ai/database";
+import { randomUUID } from "node:crypto";
 
 /**
  * Context accepted by createEventSubscribers.
@@ -47,6 +52,17 @@ export function createEventSubscribers(ctx: SubscriberContext): Disposable[] {
       }),
     );
   }
+
+  // Auto-create the root task for each new Agent (#1418). Independent of the
+  // root-task autostart flag above (which gates the *system* root task).
+  factories.push((pluginCtx) =>
+    createAgentRootTaskSubscriber(pluginCtx, {
+      getAgent: agentStore.getAgent,
+      getRootTaskForAgent: taskStore.getRootTaskForAgent,
+      insertTask: taskStore.insertTask,
+      newId: () => randomUUID(),
+    }),
+  );
 
   return factories.map((factory) => factory(ctx));
 }

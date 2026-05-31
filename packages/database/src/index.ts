@@ -52,6 +52,8 @@ export type {
   NewChannelGrant,
   StreamMessageRow,
   SessionActionRow,
+  AgentRow,
+  NewAgent,
 } from "./schema.js";
 
 // ─── Stores ────────────────────────────────────────────────
